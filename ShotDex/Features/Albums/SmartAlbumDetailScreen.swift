@@ -425,7 +425,7 @@ struct SmartAlbumDetailScreen: View {
         let assets = selectedImageIDs(model).compactMap { model.asset(for: $0) }
         guard assets.count >= CombinePurpose.minimumPhotoCount else { return }
         switch purpose {
-        case .focusStack, .stackExposures:
+        case .focusStack, .hdr, .stackExposures:
             stackPresentation = PhotoStackPresentation(assets: assets, purpose: purpose)
         case .panorama:
             panoramaPresentation = PanoramaMergePresentation(assets: assets)

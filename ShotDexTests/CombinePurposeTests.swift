@@ -7,9 +7,13 @@ import Testing
 /// in what order, and which stack mode each screen runs.
 struct CombinePurposeTests {
 
-    @Test func theSubmenuIsThreeRowsInOrder() {
-        #expect(CombinePurpose.allCases == [.focusStack, .panorama, .stackExposures])
-        #expect(CombinePurpose.allCases.map(\.title) == ["Focus Stack", "Panorama", "Stack Exposures"])
+    /// FS-01.11 AC-18: HDR is the third of four rows.
+    @Test func theSubmenuIsFourRowsInOrder() {
+        #expect(CombinePurpose.allCases == [.focusStack, .panorama, .hdr, .stackExposures])
+        #expect(CombinePurpose.allCases.map(\.title) == ["Focus Stack", "Panorama", "HDR", "Stack Exposures"])
+        #expect(!CombinePurpose.hdr.isEnabled(imageCount: 1))
+        #expect(CombinePurpose.hdr.isEnabled(imageCount: 2))
+        #expect(CombinePurpose.hdr.stackModes.isEmpty)
     }
 
     @Test func everyPurposeHasAScreenBehindIt() {
@@ -18,7 +22,7 @@ struct CombinePurposeTests {
         for purpose in CombinePurpose.allCases {
             #expect(purpose.isAvailable, "\(purpose.title)")
         }
-        #expect(CombinePurpose.menuRows == [.focusStack, .panorama, .stackExposures])
+        #expect(CombinePurpose.menuRows == [.focusStack, .panorama, .hdr, .stackExposures])
     }
 
     @Test func noRowIsNamedAfterABlend() {

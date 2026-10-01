@@ -5,7 +5,7 @@ import Photos
 import UniformTypeIdentifiers
 
 /// One frame of an HDR series as a file on this device (FS-01.11 §5).
-struct HDRFrameFile: Equatable {
+struct HDRFrameFile: Equatable, Sendable {
     var url: URL
     var isRAW: Bool
     var shutterSeconds: Double?

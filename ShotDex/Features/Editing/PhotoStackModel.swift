@@ -2,6 +2,7 @@ import ImageIO
 import Photos
 import ShotDexKit
 import SwiftUI
+import UniformTypeIdentifiers
 
 /// The state behind a Focus Stack or Stack Exposures screen: frames loaded
 /// once, the preview for the mode in hand, and the save that turns it into a
@@ -46,6 +47,13 @@ final class PhotoStackModel {
     var focusOptions = FocusStackOptions.standard {
         didSet { if focusOptions != oldValue { renderPreview() } }
     }
+    /// Deghost and Strength of an HDR merge (FS-01.11 §3). A change re-merges
+    /// the frames already lined up; nothing is read again.
+    var hdrOptions = HDROptions.standard {
+        didSet { if hdrOptions != oldValue { renderPreview() } }
+    }
+    /// The HDR series behind the screen; nil for the other purposes.
+    private(set) var hdr: HDRMergeSession?
     private(set) var preview: UIImage?
     private(set) var isWorking = false
     private(set) var statusText: String?
@@ -98,6 +106,7 @@ final class PhotoStackModel {
         self.mode = purpose.defaultMode ?? .average
         self.photoLibrary = photoLibrary
         self.indexPipeline = indexPipeline
+        hdr = purpose == .hdr ? try? HDRMergeSession(renderer: renderer) : nil
     }
 
     var canSave: Bool { preview != nil && !isWorking }
@@ -107,7 +116,7 @@ final class PhotoStackModel {
     var excludedFramesMessage: String? {
         guard !excludedFrames.isEmpty else { return nil }
         return String(
-            localized: "\(excludedFrames.count) of \(previewFrames.count) frames couldn't be lined up and were left out.",
+            localized: "\(excludedFrames.count) of \(loadedPhotos.count) frames couldn't be lined up and were left out.",
             comment: "Focus Stack panel: frames dropped because alignment failed. First number is dropped frames, second is all frames."
         )
     }
@@ -134,11 +143,17 @@ final class PhotoStackModel {
 
         var frames: [CIImage] = []
         var loaded: [PhotoEditOrigin] = []
-        for photo in photos {
-            guard let image = await Self.previewImage(for: photo, photoLibrary: photoLibrary),
-                  let ciImage = CIImage(image: image) else { continue }
-            frames.append(ciImage)
-            loaded.append(photo)
+        if let hdr {
+            // The series' own files, read linear and put in exposure order
+            // (FS-01.11 §4); the HDR session keeps the frames.
+            loaded = await hdr.load(photos)
+        } else {
+            for photo in photos {
+                guard let image = await Self.previewImage(for: photo, photoLibrary: photoLibrary),
+                      let ciImage = CIImage(image: image) else { continue }
+                frames.append(ciImage)
+                loaded.append(photo)
+            }
         }
         previewFrames = frames
         loadedPhotos = loaded
@@ -148,7 +163,7 @@ final class PhotoStackModel {
         retouchStrokes = []
         retouchFrame = nil
         excludedFrames = []
-        guard frames.count >= CombinePurpose.minimumPhotoCount else {
+        guard loaded.count >= CombinePurpose.minimumPhotoCount else {
             preview = nil
             // A missing frame is already on the panel with its Retry; an alert
             // on top would say the same thing twice.
@@ -166,6 +181,9 @@ final class PhotoStackModel {
     }
 
     func cancel() { renderTask?.cancel() }
+
+    /// Waits for the render or save in flight — for tests.
+    func settle() async { await renderTask?.value }
 
     /// Switches method and puts Radius and Smoothing back to its defaults.
     func selectFocusMethod(_ method: FocusStackOptions.Method) {
@@ -270,13 +288,16 @@ final class PhotoStackModel {
     }
 
     private func render() async {
-        guard previewFrames.count >= CombinePurpose.minimumPhotoCount else { return }
+        guard loadedPhotos.count >= CombinePurpose.minimumPhotoCount else { return }
         isWorking = true
         statusText = workingText
         defer { isWorking = false }
         do {
             let cgImage: CGImage
-            if mode == .focusStack {
+            if let hdr {
+                cgImage = try await hdr.render(hdrOptions)
+                excludedFrames = hdr.prepared?.excludedFrames ?? []
+            } else if mode == .focusStack {
                 let prepared: PreparedFocusStack
                 if let preparedFocus {
                     prepared = preparedFocus
@@ -310,7 +331,12 @@ final class PhotoStackModel {
     }
 
     private var workingText: String {
-        mode.needsAlignment
+        if hdr != nil {
+            return hdr?.prepared == nil
+                ? String(localized: "Lining frames up…", comment: "Stack screen status while frames are aligned")
+                : String(localized: "Merging…", comment: "HDR screen status while the series is merged for the preview")
+        }
+        return mode.needsAlignment
             ? String(localized: "Lining frames up…", comment: "Stack screen status while frames are aligned")
             : String(localized: "Combining…", comment: "Stack screen status while frames are combined")
     }
@@ -326,7 +352,11 @@ final class PhotoStackModel {
     /// Originals go to a session folder one at a time and are read back lazily
     /// from there, so only one original's bytes are in memory while they load.
     /// The folder is gone when the save ends, cancelled or not.
-    func save() {
+    func save(format: PhotoOutputFormat = .jpeg) {
+        if let hdr {
+            saveHDR(hdr, format: format)
+            return
+        }
         renderTask?.cancel()
         let photos = loadedPhotos
         renderTask = Task {
@@ -453,7 +483,72 @@ extension PhotoStackModel {
 
     /// The name the export sheet starts from: the first frame's, with the
     /// tool's suffix.
-    var composedTool: ServerComposedName.Tool { purpose == .focusStack ? .focusStack : .stack }
+    var composedTool: ServerComposedName.Tool {
+        switch purpose {
+        case .focusStack: .focusStack
+        case .hdr: .hdr
+        case .panorama, .stackExposures: .stack
+        }
+    }
+
+    /// The panel's HDR warnings — frames left out, not a bracket, not all
+    /// RAW, highlights clipped in every frame (FS-01.11 §4, §5).
+    var hdrNotes: [String] { hdr?.notes ?? [] }
+
+    /// False where this device cannot write HEIC: Save says so and writes
+    /// JPEG (FS-01.11 §6, as the editor's Save).
+    var canSaveHEIC: Bool { PhotoEditingService.supportsHEICEncoding }
+
+    /// Saves the HDR merge at full resolution as `format`, JPEG where HEIC
+    /// cannot be written.
+    private func saveHDR(_ hdr: HDRMergeSession, format: PhotoOutputFormat) {
+        renderTask?.cancel()
+        let written: PhotoOutputFormat = format == .heic && canSaveHEIC ? .heic : .jpeg
+        let options = hdrOptions
+        renderTask = Task {
+            isWorking = true
+            statusText = String(localized: "Merging at full resolution…", comment: "HDR screen status while the full-resolution merge is saved")
+            defer { isWorking = false }
+            let type: UTType = written == .heic ? .heic : .jpeg
+            let folder = FileManager.default.temporaryDirectory
+                .appendingPathComponent("HDR-\(UUID().uuidString)", isDirectory: true)
+            defer { try? FileManager.default.removeItem(at: folder) }
+            do {
+                try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+                let url = folder.appendingPathComponent("hdr.\(written.fileExtension)")
+                try await hdr.save(options: options, type: type, to: url) { fraction in
+                    Task { @MainActor in
+                        self.statusText = String(
+                            localized: "Merging… \(Int(fraction * 100))%",
+                            comment: "HDR status while saving: how far the full-resolution merge has got, as a percentage"
+                        )
+                    }
+                }
+                try Task.checkCancellation()
+                statusText = String(localized: "Saving…", comment: "Stack screen status while the new photo is written")
+                if let serverWorkDirectory {
+                    let out = serverWorkDirectory.appendingPathComponent("Compose-\(UUID().uuidString)", isDirectory: true)
+                    try FileManager.default.createDirectory(at: out, withIntermediateDirectories: true)
+                    let target = out.appendingPathComponent(url.lastPathComponent)
+                    try FileManager.default.moveItem(at: url, to: target)
+                    composedFile = target
+                    return
+                }
+                let data = try Data(contentsOf: url)
+                let name = "ShotDex-HDR-\(Int(Date().timeIntervalSince1970)).\(written.fileExtension)"
+                let assetID = try await photoLibrary.saveImage(data, filename: name)
+                _ = await indexPipeline.indexSingle(assetId: assetID)
+                photoLibrary.publishAppCreatedAsset()
+                savedAssetID = assetID
+            } catch is CancellationError {
+                // Cancel closed the screen; nothing saved.
+            } catch StripImageWriter.Failure.cancelled {
+                // The same, caught inside the merge.
+            } catch {
+                failure = .save(error.localizedDescription)
+            }
+        }
+    }
 
     /// The original on disk for the full-resolution pass: a server copy as it
     /// is, a library original written into the session folder.

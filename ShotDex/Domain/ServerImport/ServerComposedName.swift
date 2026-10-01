@@ -8,6 +8,7 @@ enum ServerComposedName {
     enum Tool: String, Sendable, CaseIterable {
         case collage
         case focusStack = "focus-stack"
+        case hdr
         case panorama
         case stack
         case video
@@ -19,6 +20,7 @@ enum ServerComposedName {
             switch self {
             case .collage: String(localized: "Collage", comment: "Server export: kind of the one file a tool made")
             case .focusStack: String(localized: "Focus Stack", comment: "Server export: kind of the one file a tool made")
+            case .hdr: String(localized: "HDR", comment: "Server export: kind of the one file a tool made")
             case .panorama: String(localized: "Panorama", comment: "Server export: kind of the one file a tool made")
             case .stack: String(localized: "Stacked Photo", comment: "Server export: kind of the one file a tool made")
             case .video: String(localized: "Video", comment: "Server export: kind of the one file a tool made")

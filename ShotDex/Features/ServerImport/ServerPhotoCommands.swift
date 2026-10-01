@@ -192,7 +192,7 @@ struct ServerPhotoCommandHost: ViewModifier {
         case .combine(let purpose):
             guard finished.photos.count >= CombinePurpose.minimumPhotoCount else { return closeTool() }
             switch purpose {
-            case .focusStack, .stackExposures:
+            case .focusStack, .hdr, .stackExposures:
                 stacking = PhotoStackPresentation(serverPhotos: finished.photos, purpose: purpose, export: finished.exportContext)
             case .panorama:
                 panorama = PanoramaMergePresentation(serverPhotos: finished.photos, export: finished.exportContext)

@@ -10,6 +10,10 @@ import ShotDexKit
 enum CombinePurpose: String, CaseIterable, Identifiable, Sendable {
     case focusStack
     case panorama
+    /// Merges a bracketed series (FS-01.11). Third: the three rows that make
+    /// a new picture from different frames come first, then the one that
+    /// combines frames of one exposure (chosen 2026-10-01).
+    case hdr
     case stackExposures
 
     var id: String { rawValue }
@@ -31,6 +35,8 @@ enum CombinePurpose: String, CaseIterable, Identifiable, Sendable {
             String(localized: "Focus Stack", comment: "Combine Photos submenu row and screen title: focus stacking")
         case .panorama:
             String(localized: "Panorama", comment: "Combine Photos submenu row: stitch a panorama")
+        case .hdr:
+            String(localized: "HDR", comment: "Combine Photos submenu row and screen title: merge a bracketed exposure series into one photo")
         case .stackExposures:
             String(localized: "Stack Exposures", comment: "Combine Photos submenu row and screen title: average, lighten or darken a sequence of one scene")
         }
@@ -40,16 +46,17 @@ enum CombinePurpose: String, CaseIterable, Identifiable, Sendable {
         switch self {
         case .focusStack: "camera.macro"
         case .panorama: "pano"
+        case .hdr: "circle.lefthalf.filled"
         case .stackExposures: "camera.filters"
         }
     }
 
     /// The stack modes this row's screen offers, the first being the one it
-    /// opens on. Panorama is not a stack, so it has none.
+    /// opens on. Panorama and HDR are not stacks, so they have none.
     var stackModes: [PhotoStackMode] {
         switch self {
         case .focusStack: [.focusStack]
-        case .panorama: []
+        case .panorama, .hdr: []
         case .stackExposures: [.average, .lighten, .darken]
         }
     }
