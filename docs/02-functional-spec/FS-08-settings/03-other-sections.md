@@ -23,13 +23,17 @@ Support.
 - Thông báo bắn lúc app đang mở **vẫn hiện biểu ngữ**: nó là lời mời vào xem một ngày cụ thể, vẫn dùng được
   giữa phiên và vẫn chạm được.
 
-## 2. Display (Thumbnail Metadata)
+## 2. Display
 
-| Hàng | Mặc định |
-|---|---|
-| Nhãn định dạng file ở góc thumbnail | bật |
-| Thông số dưới thumbnail — ISO · khẩu · tốc độ · tiêu cự · megapixel · dung lượng | từng thứ một công tắc |
-| Focal Length Style | Actual / Equivalent |
+Hai nhóm: **Thumbnail Metadata** rồi **Statistics** (mục tên "Thumbnail Metadata" đổi thành Display, người dùng
+chốt 2026-10-01).
+
+| Nhóm | Hàng | Mặc định |
+|---|---|---|
+| Thumbnail Metadata | Nhãn định dạng file ở góc thumbnail | bật |
+| Thumbnail Metadata | Thông số dưới thumbnail — ISO · khẩu · tốc độ · tiêu cự · megapixel · dung lượng | từng thứ một công tắc |
+| Thumbnail Metadata | Focal Length Style | Actual / Equivalent |
+| Statistics | **Show Insights** — thẻ Insights đầu màn Statistics ([FS-07.02 §6](../FS-07-statistics/02-insights.md)); Hide Insights trong menu thẻ ghi tắt, công tắc này bật lại. Tìm được bằng "insights" hoặc "statistics" | bật |
 
 Mật độ lưới **không phải công tắc** — chỉ có một dòng chú nói pinch trên lưới để đổi.
 

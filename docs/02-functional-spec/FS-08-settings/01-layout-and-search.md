@@ -32,7 +32,7 @@ thoại, trong khi Settings của chính iPadOS ở đúng bề rộng đó đan
 | 1 | Photo Library | Photo Library + Library Size + Privacy |
 | 2 | Notifications | Notifications |
 | 3 | Widgets | Widgets |
-| 4 | Display | Thumbnail Metadata |
+| 4 | Display | Thumbnail Metadata + Statistics (Show Insights, [FS-07.02 §6](../FS-07-statistics/02-insights.md)) |
 | 5 | Playback | Playback |
 | 6 | People and Pets | Subject Scan |
 | 7 | Sharing and Export | Sharing + Export |

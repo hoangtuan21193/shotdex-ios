@@ -28,7 +28,7 @@ struct SettingsLayoutTests {
         #expect(Set(mapped) == Set(SettingsGroup.allCases))
         #expect(mapped.count == SettingsGroup.allCases.count)
         #expect(SettingsSection.allCases.count == 9)
-        #expect(SettingsGroup.allCases.count == 13)
+        #expect(SettingsGroup.allCases.count == 14)
     }
 
     /// The sidebar reads in the order FS-08 lists it.
@@ -43,7 +43,7 @@ struct SettingsLayoutTests {
     /// after Export (FS-15) — the reason `SettingsGroup` exists.
     @Test func compactOrderIsUnchangedFromBeforeTheSplitView() {
         #expect(SettingsGroup.allCases == [
-            .photoLibrary, .notifications, .widgets, .display, .playback,
+            .photoLibrary, .notifications, .widgets, .display, .statistics, .playback,
             .subjectScan, .libraryStorage, .sharing, .export, .fileServers,
             .cameraDatabase, .support, .privacy,
         ])
@@ -53,6 +53,8 @@ struct SettingsLayoutTests {
     /// with the photo library.
     @Test func libraryStorageAndPrivacyBelongToPhotoLibrary() {
         #expect(SettingsSection.photoLibrary.groups == [.photoLibrary, .libraryStorage, .privacy])
+        // Display holds Thumbnail Metadata and Statistics (Show Insights, FS-07.02 §6).
+        #expect(SettingsSection.display.groups == [.display, .statistics])
         // File Servers joins them rather than taking a tenth item: nine is what
         // fits the Duo's 669pt without scrolling (FS-15.01 §1).
         #expect(SettingsSection.sharingAndExport.groups == [.sharing, .export, .fileServers])

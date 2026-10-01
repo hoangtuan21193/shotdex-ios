@@ -67,6 +67,10 @@ enum SettingsKeys {
     /// with the whole set, on an install seeded with the old two by appending
     /// the other four. Never cleared, so a deleted chart does not grow back.
     static let hasSeededStatChartsV2 = "stats.didSeedCharts.v2"
+    /// The Insights card on Statistics. Unwritten means shown; Hide Insights
+    /// in the card's menu writes false, Settings → Display → Show Insights
+    /// writes it back.
+    static let showsInsights = "stats.showsInsights"
 
     /// Daily "On This Day" reminder on/off. Defaults to false — notification
     /// permission is only asked for once the user turns it on.

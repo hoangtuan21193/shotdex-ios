@@ -26,7 +26,7 @@ enum SettingsSection: String, CaseIterable, Identifiable, Hashable, Sendable {
         case .photoLibrary: "Photo Library"
         case .notifications: "Notifications"
         case .widgets: "Widgets"
-        case .display: "Thumbnail Metadata"
+        case .display: "Display"
         case .playback: "Playback"
         case .subjectScan: "People and Pets"
         case .sharingAndExport: "Sharing and Export"
@@ -64,7 +64,7 @@ enum SettingsSection: String, CaseIterable, Identifiable, Hashable, Sendable {
         case .photoLibrary: [.photoLibrary, .libraryStorage, .privacy]
         case .notifications: [.notifications]
         case .widgets: [.widgets]
-        case .display: [.display]
+        case .display: [.display, .statistics]
         case .playback: [.playback]
         case .subjectScan: [.subjectScan]
         case .sharingAndExport: [.sharing, .export, .fileServers]
@@ -88,6 +88,9 @@ enum SettingsGroup: String, CaseIterable, Identifiable, Hashable, Sendable {
     case notifications
     case widgets
     case display
+    /// Show Insights (FS-07.02 §6) — drawn under Thumbnail Metadata, in the
+    /// sidebar's Display item.
+    case statistics
     case playback
     case subjectScan
     case libraryStorage

@@ -76,7 +76,7 @@ struct SettingsSearchTests {
             .photoLibrary: 13,      // SettingsScreen.swift:127 (10) + :463 (2) + :543 (1); Import gone (FS-10)
             .notifications: 4,      // :346
             .widgets: 1,            // :413
-            .display: 8,            // :429
+            .display: 9,            // :429 (8) + Statistics → Show Insights (1, FS-07)
             .playback: 2,           // :449
             .subjectScan: 4,        // :279
             .sharingAndExport: 3,   // :258 (1) + :496 (1) + File Servers (1, FS-15)
@@ -89,7 +89,7 @@ struct SettingsSearchTests {
                 "\(section) indexes \(SettingsSearchIndex.entries(in: section).count) rows"
             )
         }
-        #expect(SettingsSearchIndex.entries.count == 38)
+        #expect(SettingsSearchIndex.entries.count == 39)
     }
 
     /// One case, one entry — a copy-pasted case that forgot to change its text

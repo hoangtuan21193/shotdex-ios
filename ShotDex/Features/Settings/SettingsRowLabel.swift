@@ -51,6 +51,9 @@ enum SettingsRowLabel: String, CaseIterable, Identifiable, Hashable, Sendable {
     case megapixels
     case fileSize
 
+    // Statistics
+    case showInsights
+
     // Playback
     case autoplayVideos
     case viewFullHDR
@@ -116,6 +119,7 @@ enum SettingsRowLabel: String, CaseIterable, Identifiable, Hashable, Sendable {
         case .focalLengthStyle: "Focal Length Style"
         case .megapixels: "Megapixels"
         case .fileSize: "File Size"
+        case .showInsights: "Show Insights"
         case .autoplayVideos: "Autoplay Videos"
         case .viewFullHDR: "View Full HDR"
         case .scanned: "Scanned"
@@ -153,6 +157,8 @@ enum SettingsRowLabel: String, CaseIterable, Identifiable, Hashable, Sendable {
         case .fileTypeBadge, .iso, .aperture, .shutterSpeed, .focalLength,
              .focalLengthStyle, .megapixels, .fileSize:
             .display
+        case .showInsights:
+            .statistics
         case .autoplayVideos, .viewFullHDR:
             .playback
         case .scanned, .findPeopleAndPets, .scanAgain, .clearScanResults:
@@ -181,6 +187,7 @@ enum SettingsRowLabel: String, CaseIterable, Identifiable, Hashable, Sendable {
         switch self {
         case .fileServers: ["SMB", "SFTP", "NAS", "upload"]
         case .metadataWhenSharing: ["location", "GPS", "EXIF", "privacy"]
+        case .showInsights: ["Statistics"]
         default: []
         }
     }

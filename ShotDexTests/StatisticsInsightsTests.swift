@@ -515,4 +515,16 @@ struct StatisticsInsightsTests {
         #expect(InsightSelector.slowShutter(inputs) == nil)
         #expect(!InsightSelector.select(inputs).contains { if case .slowShutter = $0.kind { true } else { false } })
     }
+
+    /// AC-16: the switch that brings a hidden card back lives in Settings →
+    /// Display → Statistics, and search finds it.
+    @Test func showInsightsLivesInDisplayStatistics() {
+        #expect(SettingsRowLabel.showInsights.group == .statistics)
+        #expect(SettingsSection.display.groups.contains(.statistics))
+        #expect(String(localized: SettingsSection.display.title) == "Display")
+        let hits = SettingsSearchIndex.results(for: "insights")
+        #expect(hits.map(\.label) == [.showInsights])
+        #expect(hits.first?.section == .display)
+        #expect(SettingsSearchIndex.results(for: "statistics").contains { $0.label == .showInsights })
+    }
 }

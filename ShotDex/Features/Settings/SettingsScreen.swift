@@ -29,6 +29,7 @@ struct SettingsScreen: View {
     @AppStorage(SettingsKeys.showFileTypeBadge) private var showsFileTypeBadge = true
     @AppStorage("display.focalStyleEquivalent") private var showsEquivalentFocalLength = false
     @AppStorage(SettingsKeys.allowCellularIndexing) private var allowCellularIndexing = false
+    @AppStorage(SettingsKeys.showsInsights) private var showsInsights = true
     @AppStorage(SettingsKeys.keepScreenAwake) private var keepScreenAwake = false
     @AppStorage(SettingsKeys.lookUpPlaces) private var looksUpPlaces = true
     @AppStorage(SettingsKeys.onThisDayNotificationsEnabled) private var isOnThisDayReminderEnabled = false
@@ -340,6 +341,7 @@ struct SettingsScreen: View {
         case .notifications: notificationsSection
         case .widgets: widgetsSection
         case .display: displaySection
+        case .statistics: statisticsSection
         case .playback: playbackSection
         case .subjectScan: subjectScanSection
         case .libraryStorage: storageSection
@@ -692,6 +694,16 @@ struct SettingsScreen: View {
             Text("Thumbnail Metadata")
         } footer: {
             Text("Pinch the photo grid to change how many columns it shows.")
+        }
+    }
+
+    private var statisticsSection: some View {
+        Section {
+            Toggle(Row.showInsights.title, isOn: $showsInsights).settingsRow(.showInsights)
+        } header: {
+            Text("Statistics")
+        } footer: {
+            Text("Insights are short sentences about your own library at the top of Statistics.")
         }
     }
 

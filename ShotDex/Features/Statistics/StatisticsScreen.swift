@@ -12,6 +12,8 @@ struct StatisticsScreen: View {
     /// sentences describe only what has been read so far.
     var isIndexing = false
 
+    @AppStorage(SettingsKeys.showsInsights) private var showsInsights = true
+
     @State private var model: StatisticsModel?
     @State private var editMode: EditMode = .inactive
     @State private var editorTarget: EditorTarget?
@@ -174,7 +176,7 @@ struct StatisticsScreen: View {
     }
 
     private func showsInsightsCard(_ model: StatisticsModel) -> Bool {
-        model.insights != .loaded(.hidden)
+        showsInsights && model.insights != .loaded(.hidden)
     }
 
     private func insightsCard(_ model: StatisticsModel, columns: Int) -> some View {
@@ -183,7 +185,7 @@ struct StatisticsScreen: View {
             isIndexing: isIndexing,
             columns: columns,
             onOpen: { navigation.openLibrary(with: $0) },
-            onHide: {},
+            onHide: { withAnimation { showsInsights = false } },
             onRetry: { model.loadInsights() },
             onUnknownCameras: { navigation.openSettings(at: .unknownCameras) }
         )

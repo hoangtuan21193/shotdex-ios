@@ -1,0 +1,147 @@
+{
+  "steps": [
+    {
+      "action": "launch"
+    },
+    {
+      "action": "wait",
+      "seconds": 6
+    },
+    {
+      "action": "tap",
+      "label": "Statistics"
+    },
+    {
+      "action": "wait",
+      "seconds": 8
+    },
+    {
+      "action": "screenshot",
+      "name": "01-card"
+    },
+    {
+      "action": "dump",
+      "name": "01-card"
+    },
+    {
+      "action": "tap",
+      "label": "Insights options"
+    },
+    {
+      "action": "wait",
+      "seconds": 1.5
+    },
+    {
+      "action": "tap",
+      "label": "Hide Insights"
+    },
+    {
+      "action": "wait",
+      "seconds": 2
+    },
+    {
+      "action": "screenshot",
+      "name": "02-hidden"
+    },
+    {
+      "action": "dump",
+      "name": "02-hidden"
+    },
+    {
+      "action": "launch"
+    },
+    {
+      "action": "wait",
+      "seconds": 6
+    },
+    {
+      "action": "tap",
+      "label": "Statistics"
+    },
+    {
+      "action": "wait",
+      "seconds": 6
+    },
+    {
+      "action": "screenshot",
+      "name": "03-hidden-after-relaunch"
+    },
+    {
+      "action": "dump",
+      "name": "03-hidden-after-relaunch"
+    },
+    {
+      "action": "tap",
+      "label": "Settings"
+    },
+    {
+      "action": "wait",
+      "seconds": 2
+    },
+    {
+      "action": "tap",
+      "label": "Search Settings"
+    },
+    {
+      "action": "wait",
+      "seconds": 1
+    },
+    {
+      "action": "typeText",
+      "text": "insights"
+    },
+    {
+      "action": "wait",
+      "seconds": 1.5
+    },
+    {
+      "action": "screenshot",
+      "name": "04a-search"
+    },
+    {
+      "action": "tap",
+      "label": "Show Insights"
+    },
+    {
+      "action": "wait",
+      "seconds": 2
+    },
+    {
+      "action": "screenshot",
+      "name": "04-settings-display"
+    },
+    {
+      "action": "dump",
+      "name": "04-settings-display"
+    },
+    {
+      "action": "tap",
+      "x": 0.85,
+      "y": 0.547
+    },
+    {
+      "action": "wait",
+      "seconds": 1
+    },
+    {
+      "action": "screenshot",
+      "name": "05-show-insights-on"
+    },
+    {
+      "action": "tap",
+      "label": "Done"
+    },
+    {
+      "action": "wait",
+      "seconds": 3
+    },
+    {
+      "action": "screenshot",
+      "name": "06-card-back"
+    },
+    {
+      "action": "dump",
+      "name": "06-card-back"
+    }
+  ]
+}
