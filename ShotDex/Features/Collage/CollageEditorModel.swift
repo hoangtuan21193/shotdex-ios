@@ -75,6 +75,13 @@ final class CollageEditorModel {
     /// the pixels follow the asset, not the slot.
     private(set) var imagesByAsset: [String: UIImage] = [:]
     private(set) var isExporting = false
+    /// The cells' originals on their way down for an export, and — when a
+    /// cell did not arrive — the failure the export screen shows with Retry
+    /// (FS-02.06 AC-12). Nil when there is nothing to say.
+    private(set) var exportPreparation: CollageExportPreparation?
+    /// Asks about and downloads the cells' originals (FS-02.06).
+    @ObservationIgnored var originalFetcher: any OriginalFetching = PhotoKitOriginalFetcher()
+    @ObservationIgnored var indexGate: IndexInteractionGate?
     private(set) var didSave = false
     /// The saved collage's asset id, so the screen can open its detail (§12).
     private(set) var didSaveAssetID: String?
@@ -657,6 +664,8 @@ final class CollageEditorModel {
         var images: [Int: CGImage] = [:]
         let photosByID = Dictionary(photos.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
         var firstPlaced: PhotoEditOrigin?
+        var cloudCells: [CollageExportPreparation.Cell] = []
+        var assetsByCell: [Int: PHAsset] = [:]
         for (index, cell) in recipe.cells.enumerated() {
             guard let assetID = cell.assetID,
                   let photo = photosByID[assetID],
@@ -666,19 +675,33 @@ final class CollageEditorModel {
             // 1.5× headroom over the placed size keeps the clipped region sharp
             // after the aspect-fill crop without pulling the full original.
             let side = max(frame.width, frame.height) * CGFloat(cell.contentScale) * 1.5
-            let image: UIImage?
             switch photo {
             case .serverFile(let file):
-                image = await PhotoOriginFile.loadImage(at: file.primaryURL, maxPixelSize: Int(side.rounded(.up)))
+                let image = await PhotoOriginFile.loadImage(at: file.primaryURL, maxPixelSize: Int(side.rounded(.up)))
+                if let cgImage = image?.cgImage {
+                    images[index] = cgImage
+                }
             case .asset(let asset):
-                image = await requestExportImage(
-                    asset: asset,
-                    targetSize: CGSize(width: side, height: side)
-                )
+                cloudCells.append(.init(index: index, item: OriginalItem(asset: asset), side: Int(side.rounded(.up))))
+                assetsByCell[index] = asset
             }
-            if let cgImage = image?.cgImage {
-                images[index] = cgImage
+        }
+
+        // The library cells at cell size, one at a time, before anything is
+        // drawn: one that does not come down stops the export (§5).
+        if !cloudCells.isEmpty {
+            let preparation = CollageExportPreparation(cells: cloudCells, fetcher: originalFetcher, gate: indexGate)
+            exportPreparation = preparation
+            let outcome = await preparation.run { [weak self] cell, progress in
+                guard let self, let asset = assetsByCell[cell.index] else { return nil }
+                let side = CGFloat(cell.side)
+                return await self.requestExportImage(
+                    asset: asset, targetSize: CGSize(width: side, height: side), progress: progress
+                )?.cgImage
             }
+            guard case .ready(let loaded) = outcome else { return }
+            images.merge(loaded) { first, _ in first }
+            exportPreparation = nil
         }
 
         guard !images.isEmpty else {
@@ -744,6 +767,11 @@ final class CollageEditorModel {
         }
     }
 
+    /// Puts the export failure away (its Cancel).
+    func dismissExportFailure() {
+        exportPreparation = nil
+    }
+
     /// Files the finished collage under Creations, with the recipe that made
     /// it, so it can be reopened and edited instead of re-made from scratch.
     /// Failure here never fails the save — the photo is already in the
@@ -798,14 +826,18 @@ final class CollageEditorModel {
 
     /// One final (non-degraded) rendition, or nil on failure. Degraded
     /// callbacks are skipped — export must never bake a blurry rendition in.
-    private func requestExportImage(asset: PHAsset, targetSize: CGSize) async -> UIImage? {
+    private func requestExportImage(
+        asset: PHAsset,
+        targetSize: CGSize,
+        progress: @escaping @Sendable (Double) -> Void = { _ in }
+    ) async -> UIImage? {
         await withCheckedContinuation { continuation in
             var resumed = false
             _ = photoLibrary.requestDetailImage(
                 for: asset,
                 targetSize: targetSize,
                 allowNetwork: true,
-                progress: { _ in }
+                progress: { progress($0) }
             ) { image, degraded in
                 guard !resumed, !degraded else { return }
                 resumed = true

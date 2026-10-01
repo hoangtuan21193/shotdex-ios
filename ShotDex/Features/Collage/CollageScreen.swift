@@ -87,6 +87,8 @@ struct CollageScreen: View {
                 restoring: restoring,
                 serverWorkDirectory: serverExport?.workDirectory
             )
+            newModel.originalFetcher = dependencies.originalFetcher
+            newModel.indexGate = dependencies.indexInteractionGate
             model = newModel
             newModel.loadPreviews()
         }

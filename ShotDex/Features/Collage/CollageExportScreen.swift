@@ -205,26 +205,18 @@ struct CollageExportScreen: View {
                     .foregroundStyle(EditorTheme.secondaryText)
             }
 
-            Button {
-                Task { await model.export(options) }
-            } label: {
-                Group {
-                    if model.isExporting {
-                        ProgressView().tint(.black)
-                    } else {
-                        Text(serverExport == nil
-                             ? String(localized: "Save to Photos")
-                             : String(localized: "Export…", comment: "Collage of server photos: choose where the collage goes"))
-                            .font(.system(size: 16, weight: .semibold))
-                    }
+            if let preparation = model.exportPreparation, preparation.state.phase == .failed {
+                exportFailure(preparation.state)
+            } else {
+                if let preparation = model.exportPreparation, preparation.isShown,
+                   preparation.state.downloadCount > 0 {
+                    // The cells' originals come down before the collage is
+                    // drawn (FS-02.06 §9): the line and its bar, here.
+                    OriginalDownloadLine(state: preparation.state, textColor: EditorTheme.secondaryText)
+                        .tint(EditorTheme.accent)
                 }
-                .foregroundStyle(.black)
-                .frame(maxWidth: .infinity)
-                .frame(height: AppTheme.Size.primaryActionHeight)
-                .background(EditorTheme.accent, in: RoundedRectangle.app(AppTheme.Radius.md))
+                saveButton
             }
-            .buttonStyle(.plain)
-            .disabled(model.isExporting)
 
             Text(serverExport == nil
                  ? String(localized: "Opens the new photo when done")
@@ -235,6 +227,68 @@ struct CollageExportScreen: View {
         .padding(.horizontal, AppTheme.Size.screenMargin)
         .padding(.top, AppTheme.Spacing.md)
         .padding(.bottom, AppTheme.Spacing.lg)
+    }
+
+    private var saveButton: some View {
+        Button {
+            Task { await model.export(options) }
+        } label: {
+            Group {
+                if model.isExporting {
+                    ProgressView().tint(.black)
+                } else {
+                    Text(serverExport == nil
+                         ? String(localized: "Save to Photos")
+                         : String(localized: "Export…", comment: "Collage of server photos: choose where the collage goes"))
+                        .font(.system(size: 16, weight: .semibold))
+                }
+            }
+            .foregroundStyle(.black)
+            .frame(maxWidth: .infinity)
+            .frame(height: AppTheme.Size.primaryActionHeight)
+            .background(EditorTheme.accent, in: RoundedRectangle.app(AppTheme.Radius.md))
+        }
+        .buttonStyle(.plain)
+        .disabled(model.isExporting)
+    }
+
+    /// A cell's original did not come down (FS-02.06 AC-12): nothing was
+    /// saved. Retry runs the export again; Cancel puts the message away.
+    private func exportFailure(_ state: OriginalPreparationState) -> some View {
+        VStack(spacing: AppTheme.Spacing.sm) {
+            Label(state.failureTitle, systemImage: "exclamationmark.icloud")
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(.white)
+                .multilineTextAlignment(.center)
+            Text(state.failureNamesText)
+                .font(.footnote)
+                .foregroundStyle(EditorTheme.secondaryText)
+                .multilineTextAlignment(.center)
+            HStack(spacing: AppTheme.Spacing.sm) {
+                Button {
+                    model.dismissExportFailure()
+                } label: {
+                    Text("Cancel")
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundStyle(.white)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: AppTheme.Size.primaryActionHeight)
+                        .editorGlass(cornerRadius: AppTheme.Radius.md)
+                }
+                Button {
+                    Task { await model.export(options) }
+                } label: {
+                    Text("Retry")
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundStyle(.black)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: AppTheme.Size.primaryActionHeight)
+                        .background(EditorTheme.accent, in: RoundedRectangle.app(AppTheme.Radius.md))
+                }
+                .disabled(model.isExporting)
+            }
+            .buttonStyle(.plain)
+        }
     }
 }
 
