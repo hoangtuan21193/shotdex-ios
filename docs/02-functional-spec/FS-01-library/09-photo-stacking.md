@@ -3,7 +3,7 @@
 `FS-01.09` · `ShotDexKit/Render/PhotoStackRenderer.swift` · `PhotoStackScreen` · `SelectionBarViews`
 · cập nhật 2026-09-23 · nguồn [intent](../../_intents/2026-09-23-combine-photos-purpose-menu.md)
 
-**Một câu:** chọn ≥ 2 ảnh → ⋯ → **Combine Photos ▸** → **Focus Stack**, **Panorama** hoặc **Stack Exposures**
+**Một câu:** chọn ≥ 2 ảnh → ⋯ → **Combine Photos ▸** → **Focus Stack**, **Panorama**, **HDR** hoặc **Stack Exposures**
 → một màn cho việc đó.
 
 > Trạng thái: **đã build** (2026-09-23, plan [fs-01-09-combine-menu](../../_plans/2026-09-23-fs-01-09-combine-menu.md));
@@ -27,7 +27,8 @@
 |---|---|---|---|---|
 | 1 | **Focus Stack** | lấy nét toàn cảnh — macro, phong cảnh gần-xa | điểm nét nhất (§4) | Keeps the sharpest part of every frame, for depth of field no single shot can reach. |
 | 2 | **Panorama** | nối khung cạnh nhau | [FS-14](../FS-14-panorama/README.md) | (màn riêng của FS-14) |
-| 3 | **Stack Exposures** | ghép nhiều lần bấm một khung cảnh | bộ chọn bên dưới | theo mode đang chọn |
+| 3 | **HDR** | ghép loạt bù trừ sáng thành một ảnh | [FS-01.11](11-hdr-merge.md) | Merges a bracketed series into one photo that keeps the highlights and the shadows. |
+| 4 | **Stack Exposures** | ghép nhiều lần bấm một khung cảnh | bộ chọn bên dưới | theo mode đang chọn |
 
 Bộ chọn trong màn Stack Exposures, **mặc định `Average`**:
 
@@ -86,7 +87,7 @@ Frame sau align phải kéo giãn mép ra vô hạn **trước khi** crop, nếu
 | # | Cho | Khi | Thì | Chứng minh bằng |
 |---|---|---|---|---|
 | AC-1 | Library, chọn 4 ảnh | mở ⋯ | có **một** dòng Combine Photos; không dòng Focus Stack/Panorama nào đứng riêng ở cấp ngoài | ✅ `combine-menu.json`, dump `01-menu-one-photo` (iPhone 17 Pro 26.5) |
-| AC-2 | chọn 4 ảnh | ⋯ → Combine Photos | menu con ghi đúng ba dòng Focus Stack · Panorama · Stack Exposures, không dòng Average/Lighten/Darken nào (Panorama chỉ khi FS-14 đã build) | ✅ `combine-menu.json`, dump `03-submenu-three-photos` (26.5 và 18.6) |
+| AC-2 | chọn 4 ảnh | ⋯ → Combine Photos | menu con ghi đúng bốn dòng Focus Stack · Panorama · HDR · Stack Exposures (HDR từ 2026-10-01, [FS-01.11](11-hdr-merge.md) AC-18), không dòng Average/Lighten/Darken nào (Panorama chỉ khi FS-14 đã build) | ✅ `combine-menu.json`, dump `03-submenu-three-photos` (26.5 và 18.6) |
 | AC-3 | chọn 1 ảnh + 3 video | ⋯ → Combine Photos | mở được; mọi dòng mờ | ✅ dump `02-submenu-one-photo`: ba dòng `enabled: false` (26.5) |
 | AC-4 | 4 khung cố định, cùng một bộ | chạy Focus Stack, rồi Stack Exposures ở cả ba mode | ảnh ra trùng từng pixel với mode Average, Lighten, Darken cũ | ✅ `PhotoStackRendererTests` + `CombinePurposeTests.everyStackModeIsReachableFromExactlyOneRow`. Focus Stack nay căn theo FS-01.10 — cố ý khác cũ |
 | AC-5 | chọn 6 ảnh + 2 video | ⋯ → Combine Photos ▸ Stack Exposures | màn mở với 6 khung, tiêu đề `Stack Exposures`, bộ chọn `Average · Lighten · Darken` đang ở `Average`; không có Focus Stack trong bộ chọn | ✅ dump `04-stack-exposures-average` (Average `selected`) + ảnh (26.5, 18.6) |

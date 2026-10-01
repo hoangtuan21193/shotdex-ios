@@ -1,0 +1,27 @@
+{
+  "steps": [
+    { "action": "launch" },
+    { "action": "wait", "seconds": 6 },
+    { "action": "tap", "label": "Select photos", "type": "button" },
+    { "action": "wait", "seconds": 1 },
+    { "action": "tap", "x": 0.607, "y": 0.163 },
+    { "action": "tap", "x": 0.742, "y": 0.163 },
+    { "action": "tap", "x": 0.877, "y": 0.163 },
+    { "action": "tap", "label": "More selection actions" },
+    { "action": "wait", "seconds": 1 },
+    { "action": "tap", "label": "Combine Photos" },
+    { "action": "wait", "seconds": 1 },
+    { "action": "tap", "label": "HDR" },
+    { "action": "wait", "seconds": 16 },
+    { "action": "screenshot", "name": "01-hdr-ipad" },
+    { "action": "dump", "name": "01-hdr-ipad" },
+    { "action": "tap", "label": "Save", "type": "button" },
+    { "action": "wait", "seconds": 2 },
+    { "action": "screenshot", "name": "02-save-format-ipad" },
+    { "action": "tap", "label": "Cancel", "type": "button" },
+    { "action": "wait", "seconds": 1 },
+    { "action": "tap", "label": "Cancel", "type": "button" },
+    { "action": "wait", "seconds": 2 },
+    { "action": "tap", "label": "Done Selecting" }
+  ]
+}

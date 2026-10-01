@@ -1,0 +1,26 @@
+{
+  "steps": [
+    { "action": "launch" },
+    { "action": "wait", "seconds": 6 },
+    { "action": "tap", "label": "Select photos", "type": "button" },
+    { "action": "wait", "seconds": 1 },
+    { "action": "tap", "x": 0.136, "y": 0.636 },
+    { "action": "tap", "x": 0.411, "y": 0.636 },
+    { "action": "tap", "x": 0.686, "y": 0.636 },
+    { "action": "wait", "seconds": 8 },
+    { "action": "tap", "label": "More selection actions" },
+    { "action": "wait", "seconds": 1 },
+    { "action": "tap", "label": "Combine Photos" },
+    { "action": "wait", "seconds": 1 },
+    { "action": "tap", "label": "HDR" },
+    { "action": "wait", "seconds": 40 },
+    { "action": "dump", "name": "01-hdr-duo-cover" },
+    { "action": "tap", "label": "Save", "type": "button" },
+    { "action": "wait", "seconds": 15 },
+    { "action": "tap", "label": "Cancel", "type": "button" },
+    { "action": "wait", "seconds": 1 },
+    { "action": "tap", "label": "Cancel", "type": "button" },
+    { "action": "wait", "seconds": 2 },
+    { "action": "tap", "label": "Done Selecting" }
+  ]
+}
