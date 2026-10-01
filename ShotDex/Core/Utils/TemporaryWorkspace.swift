@@ -27,6 +27,7 @@ enum TemporaryWorkspace {
         serverDownloadPrefix,
         thumbnailPrefix,
         serverEditPrefix,
+        ShareExportPipeline.prefix,
     ]
 
     /// The upload's one-file-at-a-time copy of an original (FS-15.02 §4).

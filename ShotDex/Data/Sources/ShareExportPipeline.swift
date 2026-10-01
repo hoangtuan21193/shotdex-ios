@@ -1,0 +1,90 @@
+import Foundation
+
+/// One photo or video on its way out of the app (FS-08.06): what the share
+/// pipeline needs to know about it, and nothing PhotoKit-shaped, so the
+/// pipeline runs in a unit test without a library.
+struct ShareSource: Sendable, Equatable {
+    enum Kind: Sendable, Equatable {
+        /// A still — including a Live Photo, which shares its still only
+        /// (spec §5): the motion file is never handed over.
+        case photo
+        /// Shared as it is at every level (spec §2).
+        case video
+    }
+
+    let id: String
+    let kind: Kind
+    /// The name the shared file gets, e.g. `IMG_1234.HEIC`.
+    let filename: String
+}
+
+/// Where the share pipeline reads the bytes it hands over. `PhotoKitShareReader`
+/// in the app; a fake over fixture files in the tests.
+protocol ShareAssetReader: Sendable {
+    /// Writes the photo's current version — the edited one if it was edited,
+    /// like the share sheet always handed over — to `url`, downloading it from
+    /// iCloud when the device only has a preview.
+    func writePhoto(_ source: ShareSource, to url: URL) async throws
+    /// The video file, shared as it is.
+    func videoURL(for source: ShareSource) async throws -> URL
+}
+
+/// What a share run produced: the files for the share sheet, in order, and
+/// the names of the items that could not be prepared.
+struct ShareExportResult: Sendable, Equatable {
+    var files: [URL] = []
+    var failed: [String] = []
+}
+
+/// Gathers a share one item at a time into a scratch folder of its own
+/// (`ShotDexShare-<uuid>`), so a twenty-photo share holds one file in memory
+/// at a time rather than twenty (spec §5). The caller removes the folder when
+/// the share sheet closes; `TemporaryWorkspace` sweeps any the app never came
+/// back for.
+struct ShareExportPipeline: Sendable {
+    let reader: any ShareAssetReader
+    let folder: URL
+
+    static let prefix = "ShotDexShare-"
+
+    /// A new, empty folder under the temporary directory.
+    static func makeFolder(in directory: URL = FileManager.default.temporaryDirectory) throws -> URL {
+        let folder = directory.appendingPathComponent(prefix + UUID().uuidString, isDirectory: true)
+        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        return folder
+    }
+
+    /// Prepares one item. Each lands in a numbered subfolder, so two photos
+    /// both called `IMG_0001.JPG` (two cameras, one counter) keep their names.
+    func export(_ source: ShareSource, index: Int) async throws -> URL {
+        switch source.kind {
+        case .video:
+            return try await reader.videoURL(for: source)
+        case .photo:
+            let slot = folder.appendingPathComponent(String(index), isDirectory: true)
+            try FileManager.default.createDirectory(at: slot, withIntermediateDirectories: true)
+            let file = slot.appendingPathComponent(source.filename)
+            try await reader.writePhoto(source, to: file)
+            return file
+        }
+    }
+
+    /// Prepares every item in order. One that fails is named in `failed` and
+    /// left out, rather than ending the whole share.
+    func export(_ sources: [ShareSource]) async -> ShareExportResult {
+        var result = ShareExportResult()
+        for (index, source) in sources.enumerated() {
+            do {
+                result.files.append(try await export(source, index: index))
+            } catch {
+                result.failed.append(source.filename)
+            }
+        }
+        return result
+    }
+
+    /// Removes the folder and everything gathered into it.
+    func removeFolder() {
+        try? FileManager.default.removeItem(at: folder)
+    }
+}
