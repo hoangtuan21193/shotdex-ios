@@ -52,4 +52,13 @@ struct ShareBatchPlanTests {
         #expect(sheet.contains("let again = await regather(level)"))
         #expect(!sheet.contains("UserDefaults"))
     }
+
+    /// AC-6 / AC-7: the header adds "Videos keep their metadata" only when
+    /// the share has a video and the level removes something.
+    @Test func videoNote() {
+        #expect(ShareBatchPlan(level: .noLocation, photoCount: 1, videoCount: 1).notesVideosKeepMetadata)
+        #expect(ShareBatchPlan(level: .noMetadata, photoCount: 1, videoCount: 2).notesVideosKeepMetadata)
+        #expect(!ShareBatchPlan(level: .all, photoCount: 1, videoCount: 1).notesVideosKeepMetadata)
+        #expect(!ShareBatchPlan(level: .noLocation, photoCount: 1, videoCount: 0).notesVideosKeepMetadata)
+    }
 }

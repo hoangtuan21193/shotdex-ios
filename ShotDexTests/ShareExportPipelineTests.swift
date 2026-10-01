@@ -291,4 +291,26 @@ struct ShareExportPipelineTests {
         print("FOOTPRINT share gather: 1 photo +\(one / 1_048_576) MB, 20 photos +\(twenty / 1_048_576) MB, file \(fileSize / 1_048_576) MB")
         #expect(twenty <= one + fileSize, "1: \(one) B, 20: \(twenty) B, file: \(fileSize) B")
     }
+
+    /// AC-6: a video goes as it is at every level — the library's own file,
+    /// byte for byte — next to a photo whose location is removed.
+    @Test func videoGoesAsItIs() async throws {
+        defer { cleanUp() }
+        let movie = fixtures.appendingPathComponent("IMG_0004.MOV")
+        try Data((0..<4096).map { UInt8(truncatingIfNeeded: $0 &* 31) }).write(to: movie)
+        let photoA = try MetadataFixture.write(.heic, in: fixtures)
+        let pipeline = ShareExportPipeline(
+            reader: FakeReader(photos: ["A": photoA], videos: ["V": movie]),
+            folder: try ShareExportPipeline.makeFolder(in: shareRoot),
+            level: .noLocation
+        )
+        let result = await pipeline.export([
+            ShareSource(id: "V", kind: .video, filename: "IMG_0004.MOV"),
+            ShareSource(id: "A", kind: .photo, filename: "IMG_0001.HEIC"),
+        ])
+        #expect(result.files.count == 2)
+        #expect(result.files[0] == movie)
+        #expect(try Self.sha256(result.files[0]) == Self.sha256(movie))
+        #expect(MetadataFixture.dictionary(kCGImagePropertyGPSDictionary, of: result.files[1]) == nil)
+    }
 }

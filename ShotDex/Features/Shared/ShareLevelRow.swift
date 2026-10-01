@@ -49,10 +49,19 @@ final class ShareLevelRow: UIActivity {
 final class ShareHeaderItem: NSObject, UIActivityItemSource {
     let file: URL
     let title: String
+    /// The header's second line, in place of the file name — the share
+    /// sheet draws that line from the link's URL, and `LPLinkMetadata` has
+    /// no subtitle of its own.
+    let note: String?
+    /// Whether the file is a still the header can show; a video gets the
+    /// system's icon.
+    let showsImage: Bool
 
-    init(file: URL, title: String) {
+    init(file: URL, title: String, note: String? = nil, showsImage: Bool = true) {
         self.file = file
         self.title = title
+        self.note = note
+        self.showsImage = showsImage
     }
 
     func activityViewControllerPlaceholderItem(_ activityViewController: UIActivityViewController) -> Any { file }
@@ -65,11 +74,14 @@ final class ShareHeaderItem: NSObject, UIActivityItemSource {
     func activityViewControllerLinkMetadata(_ activityViewController: UIActivityViewController) -> LPLinkMetadata? {
         let metadata = LPLinkMetadata()
         metadata.title = title
-        metadata.originalURL = file
-        metadata.url = file
-        let provider = NSItemProvider(contentsOf: file)
-        metadata.imageProvider = provider
-        metadata.iconProvider = provider
+        let shown = note.map { URL(fileURLWithPath: "/" + $0) } ?? file
+        metadata.originalURL = shown
+        metadata.url = shown
+        if showsImage {
+            let provider = NSItemProvider(contentsOf: file)
+            metadata.imageProvider = provider
+            metadata.iconProvider = provider
+        }
         return metadata
     }
 }

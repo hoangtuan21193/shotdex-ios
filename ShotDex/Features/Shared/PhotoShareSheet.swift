@@ -109,7 +109,11 @@ enum PhotoShareSheet {
         if plan.photoCount > 0, let first = items.first as? URL {
             let name = first.deletingPathExtension().lastPathComponent
             let title = items.count == 1 ? "\(name) · \(plan.subtitle.text)" : plan.subtitle.text
-            items[0] = ShareHeaderItem(file: first, title: title)
+            // One line each: the level on the title, the video note on the
+            // line below it, where the file name would be.
+            let note = plan.notesVideosKeepMetadata ? String(localized: "Videos keep their metadata") : nil
+            let isPhoto = prepared.folder.map { first.path.hasPrefix($0.path) } ?? false
+            items[0] = ShareHeaderItem(file: first, title: title, note: note, showsImage: isPhoto)
         }
         let rows = prepared.regather == nil ? [] : plan.rows.map(ShareLevelRow.init(level:))
         present(items: items, activities: rows) { chosen in

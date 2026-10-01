@@ -29,6 +29,10 @@ struct ShareBatchPlan: Equatable, Sendable {
         }
     }
 
+    /// Whether the header also says videos keep their metadata: only when
+    /// the share has a video and the level removes something (spec §5).
+    var notesVideosKeepMetadata: Bool { videoCount > 0 && level != .all }
+
     enum Subtitle: Equatable, Sendable {
         case allMetadata, locationRemoved, metadataRemoved
     }
