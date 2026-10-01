@@ -33,6 +33,32 @@ enum StackedPhotoMetadata {
 }
 
 extension StackedPhotoMetadata {
+    /// An HDR merge's metadata (FS-01.11 §6, AC-15): the reference frame's,
+    /// as for a stack, less its exposure — shutter, ISO, aperture and bias
+    /// describe one frame of the series, not the merge.
+    static func properties(fromReference source: [String: Any]) -> [String: Any] {
+        var result = properties(fromFirstFrame: source)
+        if var exif = result[kCGImagePropertyExifDictionary as String] as? [String: Any] {
+            for key in [kCGImagePropertyExifExposureTime, kCGImagePropertyExifShutterSpeedValue,
+                        kCGImagePropertyExifFNumber, kCGImagePropertyExifApertureValue,
+                        kCGImagePropertyExifISOSpeedRatings, kCGImagePropertyExifISOSpeed,
+                        kCGImagePropertyExifRecommendedExposureIndex, kCGImagePropertyExifStandardOutputSensitivity,
+                        kCGImagePropertyExifSensitivityType, kCGImagePropertyExifExposureBiasValue,
+                        kCGImagePropertyExifBrightnessValue, kCGImagePropertyExifExposureIndex] {
+                exif.removeValue(forKey: key as String)
+            }
+            result[kCGImagePropertyExifDictionary as String] = exif
+        }
+        // A RAW's own dictionaries mean nothing on a JPEG or HEIC.
+        for key in [kCGImagePropertyDNGDictionary, kCGImagePropertyCIFFDictionary, kCGImagePropertyRawDictionary,
+                    kCGImagePropertyMakerCanonDictionary, kCGImagePropertyMakerNikonDictionary] {
+            result.removeValue(forKey: key as String)
+        }
+        return result
+    }
+}
+
+extension StackedPhotoMetadata {
     /// The combined picture as a JPEG carrying `properties` — what
     /// `properties(fromFirstFrame:)` kept — so the saved photo reads back with
     /// the first frame's camera, lens and date.

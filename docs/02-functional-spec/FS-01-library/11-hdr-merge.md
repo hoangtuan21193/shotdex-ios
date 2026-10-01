@@ -99,8 +99,10 @@ xuống:
 - Như FS-01.09 §3: Save → ảnh mới, Cancel giữ lựa chọn, lưu xong mở viewer theo màn đang đứng.
 - **Full-res theo dải**: 128–256 hàng, mọi khung cùng mở, đọc xen kẽ theo dải (spike §5: 5 × 24 MP, ~400–500 MB trên
   Mac). Radiance của dải ghép xong thì đi qua tone map.
-- **Tone map của bản lưu chạy trên cả tấm**, dạng lát trên GPU như bộ trộn đa dải của [FS-14](../FS-14-panorama/README.md),
-  không suy ra từ preview (spike §6: chênh ~30 dB).
+- **Tone map của bản lưu chạy trên cả tấm**, không suy ra từ preview (spike §6: chênh ~30 dB). Hai lượt (`HDRExporter`):
+  radiance full-res theo dải 256 hàng vào một bộ đệm half-float (192 MB ở 24 MP), mọi bộ giải mã cùng sống; rồi thả
+  bộ giải mã, tone map từ bộ đệm theo dải 512 hàng, mỗi dải chỉ lấy các hàng radiance mà dải thô nhất với tới (3σ),
+  ghi thẳng vào bộ ghi theo dải `StripImageWriter` (tách từ panorama). File lưu khớp render một mảnh 43,5 dB.
 - **Định dạng ra theo luật lưu của editor** ([FS-03.06](../FS-03-photo-editor/06-saving-recipe-and-live-photo.md)):
   Save hỏi JPEG hay HEIC, **mặc định JPEG**; máy không ghi được HEIC thì báo trước là dùng JPEG. JPEG ở chất lượng
   0,95 như Focus Stack. Cả hai đường ghi phải đi **theo dải** (chốt 2026-10-01).
@@ -140,15 +142,15 @@ Loạt thử là khung ảo có đáp án như spike §1: cảnh 14 EV dựng t�
 | AC-11 | 5 khung cùng phơi sáng (lệch < 0,5 EV) | mở màn | vẫn ghép; dòng báo *These photos have about the same exposure…* | 🟡 cờ: `HDRBracketOrderTests.framesAtOneExposureAreFlagged`; dòng báo: task 9 |
 | AC-12 | loạt 3 khung, khung tối nhất vẫn cháy 5% diện tích | mở màn | dòng báo *Some highlights are bright in every frame…* | ⚠️ chưa có |
 | AC-13 | preview 1600px và bản lưu của cùng loạt | thu bản lưu về 1600px rồi so | ≥ 32 dB — số tầng kim tự tháp theo cỡ ảnh | `HDRToneMapTests.thePreviewMatchesTheSave` — 35,1 dB (loạt ±2, cảnh 10 EV, 960→256). Fixture 14 EV cạnh cứng: 30,0 dB, nhưng chỉ clamp không tone map đã 30,7 — trần của phép đo, không phải của tone map |
-| AC-14 | 5 khung RAW × 24 MP | Save trên iPhone 12 | footprint đỉnh ≤ 700 MB, ≤ 60 s; như nhau (± 10%) ở 3 khung | ⚠️ chưa có |
-| AC-15 | ảnh HDR đã lưu | xem EXIF trong viewer | máy, ống kính, ngày, vị trí của khung tham chiếu; không thời gian phơi, ISO, khẩu, Exposure Bias | ⚠️ chưa có |
+| AC-14 | 5 khung RAW × 24 MP | Save trên iPhone 12 | footprint đỉnh ≤ 700 MB, ≤ 60 s; như nhau (± 10%) ở 3 khung | 🟡 simulator: `HDRExportTests.aFullSizeRAWSaveStaysUnderTheCeiling` — 5 khung +533 MB / 18 s (HEIC +498 MB), 3 khung +407 MB / 13 s. iPhone 12 chưa đo; ±10% **không đạt** (−24%): mọi khung cùng mở là thiết kế của §6, nên bộ nhớ theo số khung |
+| AC-15 | ảnh HDR đã lưu | xem EXIF trong viewer | máy, ống kính, ngày, vị trí của khung tham chiếu; không thời gian phơi, ISO, khẩu, Exposure Bias | 🟡 `HDRMetadataTests.theReferencesGearStaysAndItsExposureGoes`; trong viewer: task 9 |
 | AC-16 | 2 khung chỉ có trên iCloud, máy mất mạng | mở màn | *2 photos couldn't be downloaded* + Retry; không ghép thiếu khung mà không báo | ⚠️ chưa có |
-| AC-17 | đang lưu | Cancel | không asset nào được tạo; thư mục tạm của phiên rỗng | ⚠️ chưa có |
+| AC-17 | đang lưu | Cancel | không asset nào được tạo; thư mục tạm của phiên rỗng | 🟡 renderer: `HDRExportTests.cancellingLeavesNoFile`; model: task 9 |
 | AC-18 | chọn 2 ảnh | mở ⋯ ▸ Combine Photos | bốn dòng Focus Stack · Panorama · HDR · Stack Exposures; chọn 1 ảnh thì dòng HDR mờ | ⚠️ chưa có |
 | AC-19 | iPhone 26.5 + 18.6, iPad 13", Duo trong và ngoài | mở màn HDR với loạt 3 khung, đổi từng control, Save | ảnh từng trạng thái; không control bị cắt hay che; viewer mở ảnh vừa lưu | ⚠️ chưa có |
 | AC-20 | quyền ảnh `.limited`, cả loạt nằm trong tập được chọn | Save | ảnh mới hiện trong lưới Library | ⚠️ chưa có |
 | AC-21 | loạt 3 CR3 + 2 JPEG | mở màn | ghép từ bản đã render của cả 5; dòng báo *Some of these photos aren't RAW…* | 🟡 cờ: `HDRBracketOrderTests.aMixedSeriesIsFlaggedAndDoesNotMergeFromRAW`; nguồn: `HDRFrameSourceTests.aRAWReadsLinearOrProcessed` (RAW qua đường tông của bộ giải: trung vị −1,19 so với −2,27 stop tuyến tính); dòng báo: task 9 |
-| AC-22 | Save, chọn HEIC | lưu | ảnh ra là HEIC; máy không ghi được HEIC thì báo trước và lưu JPEG | ⚠️ chưa có |
+| AC-22 | Save, chọn HEIC | lưu | ảnh ra là HEIC; máy không ghi được HEIC thì báo trước và lưu JPEG | 🟡 ghi đúng định dạng: `HDRExportTests.writesTheFormatAskedFor`; hỏi định dạng + lùi về JPEG: task 9 |
 
 ## 9. Rủi ro đã biết
 

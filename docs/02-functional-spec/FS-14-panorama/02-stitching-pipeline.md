@@ -92,6 +92,9 @@
   rồi ánh xạ lại vào bộ nhớ; mỗi dải chiếu + trộn rồi đẩy thẳng vào bộ ghi. Spike: đọc 1,1 GB khung qua
   ánh xạ chỉ thêm 1 MB footprint; giữ cả canvas float trong RAM tốn 4,5–6,9 GB cho 32–37 MP.
 - Trộn đa dải theo dải: tầng thô tính một lần trên cả canvas thu nhỏ, tầng mịn tính theo dải có viền chồng.
+- Bộ ghi theo dải là `StripImageWriter` của kit, dùng chung với HDR ([FS-01.11](../FS-01-library/11-hdr-merge.md) §6)
+  từ 2026-10-01. Cùng lượt sửa một lỗi có từ đầu: mỗi dải 256 hàng bị lật ngược trong chính nó (Core Image ghi hàng
+  trên trước, code lại đảo); test cũ chỉ có ảnh đều theo chiều dọc. Khoá bằng `StripImageWriterTests.rowsComeOutInOrder`.
 - **Luôn JPEG**, chất lượng 0,95. Ghi JPEG theo luồng: 720 MP chỉ thêm 2 MB footprint; HEIC giữ cả ảnh
   (240 MP thêm 1,4 GB — vượt trần bộ nhớ của app trên iPhone). Một luật, không ngưỡng phải đo trên từng máy.
 - **Vượt 65535 px một cạnh** (trần cứng của JPEG): thu nhỏ cho vừa 65535 và **nói trước khi lưu**, dưới

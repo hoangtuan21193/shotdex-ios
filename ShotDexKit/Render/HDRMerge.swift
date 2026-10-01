@@ -169,6 +169,11 @@ public enum HDRMerge {
     /// exposures' white across into the highlights next to large mid-tones
     /// (an eighth left 0.9 % of a ±2 series at white, a sixteenth 0.4 %).
     static let coarsestFraction = 16.0
+
+    /// How far past a strip the tone map reads: three of its widest σ.
+    public static func toneMapMargin(pictureSize: CGSize) -> Int {
+        Int((3 * Double(min(pictureSize.width, pictureSize.height)) / coarsestFraction).rounded(.up))
+    }
     /// Stops below the darkest frame of the extra virtual exposure. Room for
     /// the fusion's overshoot next to a highlight the darkest frame only
     /// just held: with it, nothing of the ±2 test series is left at white at
@@ -188,7 +193,11 @@ public enum HDRMerge {
     /// stop at Strength 0 (median, ±2 test series). Confining it to where
     /// the next exposure nears clipping halves that but leaves 0.2 % of the
     /// picture white at 100 — measured 2026-10-01, chose the white-free one.
-    public static func toneMapped(_ radiance: CIImage, stops: [Double], strength: Double) -> CIImage? {
+    ///
+    /// `pictureSize` is the whole picture's when `radiance` is only the part
+    /// of it a strip needs: the bands are sized by the picture, not the part.
+    public static func toneMapped(_ radiance: CIImage, stops: [Double], strength: Double,
+                                  pictureSize: CGSize? = nil) -> CIImage? {
         let extent = radiance.extent
         guard extent.width > 0, extent.height > 0 else { return nil }
         let clamp = min(1, max(0, strength))
@@ -218,7 +227,8 @@ public enum HDRMerge {
 
         // σ of each band, finest first: the coarsest an eighth of the short
         // side (a pyramid whose top is ~6 px), halving down from there.
-        let short = Double(min(extent.width, extent.height))
+        let size = pictureSize ?? extent.size
+        let short = Double(min(size.width, size.height))
         let sigmas = (0..<fusionBands).map { short / coarsestFraction / pow(2, Double(fusionBands - 1 - $0)) }
         func blurred(_ image: CIImage, _ sigma: Double) -> CIImage {
             sigma < 0.3 ? image : image.clampedToExtent().applyingGaussianBlur(sigma: sigma).cropped(to: extent)
