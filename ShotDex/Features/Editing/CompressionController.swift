@@ -9,14 +9,31 @@ struct CompressionFailure: Identifiable {
     let message: String
 }
 
+/// What Resize does to the library, one photo at a time. The app's comes
+/// from `PhotoEditingService`; a test's counts what would have been created
+/// and deleted.
+struct ResizeOperations {
+    /// Makes the resized copy of a photo; `prepared` is its original when
+    /// the preparation downloaded it (FS-02.06 §5).
+    var compress: @MainActor (OriginalItem, _ prepared: URL?) async throws -> PhotoSaveResult
+    var deleteOriginals: @MainActor ([String]) async throws -> Void
+    var removeCreated: @MainActor ([String]) async throws -> Void
+}
+
 @MainActor
 @Observable
 final class CompressionController {
     let assets: [PHAsset]
+    /// The batch, one item per photo, in order.
+    let photos: [OriginalItem]
     let sourceAlbum: PHAssetCollection?
 
-    private let service: PhotoEditingService
-    private let presetStore: CompressionPresetStore
+    private let service: PhotoEditingService?
+    private let presetStore: CompressionPresetStore?
+    private let fetcher: any OriginalFetching
+    private let gate: IndexInteractionGate?
+    private let availableBytes: @Sendable () -> Int64?
+    @ObservationIgnored private var operations: ResizeOperations!
     private var previewSession: PhotoEditingSession?
     private var previewSource: LoadedPhotoEditSource?
 
@@ -37,6 +54,11 @@ final class CompressionController {
     private(set) var isEstimating = false
     private(set) var isExporting = false
     private(set) var isDeletingOriginals = false
+    /// The originals of the batch are being prepared (FS-02.06 §5): nothing
+    /// is created or deleted until this ends.
+    private(set) var isPreparing = false
+    /// The preparation the processing modal draws its download line from.
+    private(set) var preparation: OriginalPreparation?
     private(set) var processedCount = 0
     private(set) var createdAssetIDs: [String] = []
     private(set) var compressedOriginalIDs: [String] = []
@@ -56,15 +78,56 @@ final class CompressionController {
         assets: [PHAsset],
         sourceAlbum: PHAssetCollection?,
         service: PhotoEditingService,
-        presetStore: CompressionPresetStore
+        presetStore: CompressionPresetStore,
+        fetcher: any OriginalFetching = PhotoKitOriginalFetcher(),
+        gate: IndexInteractionGate? = nil,
+        availableBytes: @escaping @Sendable () -> Int64? = { DiskSpace.availableBytes() }
     ) {
         self.assets = assets
+        self.photos = assets.map { OriginalItem(asset: $0) }
         self.sourceAlbum = sourceAlbum
         self.service = service
         self.presetStore = presetStore
+        self.fetcher = fetcher
+        self.gate = gate
+        self.availableBytes = availableBytes
+        let byID = Dictionary(assets.map { ($0.localIdentifier, $0) }, uniquingKeysWith: { first, _ in first })
+        self.operations = ResizeOperations(
+            compress: { [weak self] photo, prepared in
+                guard let self, let asset = byID[photo.id] else { throw PhotoEditingError.unavailable }
+                return try await service.compress(
+                    asset: asset,
+                    options: self.exportOptions,
+                    album: self.sourceAlbum,
+                    cropAnchor: self.photos.count > 1 ? .center : self.cropAnchor,
+                    preparedOriginal: prepared
+                )
+            },
+            deleteOriginals: { try await service.deleteAssets(ids: $0) },
+            removeCreated: { try await service.deleteCreatedAssets(ids: $0) }
+        )
     }
 
-    var presets: [ResizePreset] { presetStore.allPresets }
+    /// A batch with no library behind it: the tests' (FS-02.06 AC-9, 10, 16).
+    init(
+        photos: [OriginalItem],
+        operations: ResizeOperations,
+        fetcher: any OriginalFetching,
+        gate: IndexInteractionGate? = nil,
+        availableBytes: @escaping @Sendable () -> Int64? = { nil }
+    ) {
+        self.assets = []
+        self.photos = photos
+        self.sourceAlbum = nil
+        self.service = nil
+        self.presetStore = nil
+        self.fetcher = fetcher
+        self.gate = gate
+        self.availableBytes = availableBytes
+        self.operations = operations
+    }
+
+    var presets: [ResizePreset] { presetStore?.allPresets ?? [] }
 
     var selectedPreset: ResizePreset {
         presets.first(where: { $0.id == selectedPresetID }) ?? .original
@@ -79,7 +142,7 @@ final class CompressionController {
             quality: quality,
             preset: preset,
             metadata: metadata,
-            cropAnchor: assets.count > 1 ? .center : cropAnchor
+            cropAnchor: photos.count > 1 ? .center : cropAnchor
         )
     }
 
@@ -95,8 +158,8 @@ final class CompressionController {
     }
 
     var progressFraction: Double {
-        guard !assets.isEmpty else { return 0 }
-        return Double(processedCount) / Double(assets.count)
+        guard !photos.isEmpty else { return 0 }
+        return Double(processedCount) / Double(photos.count)
     }
 
     var estimatedSizeText: String? {
@@ -118,7 +181,7 @@ final class CompressionController {
     }
 
     func load() async {
-        guard let first = assets.first else {
+        guard let service, let first = assets.first else {
             errorMessage = "No photos were selected."
             isLoading = false
             return
@@ -143,8 +206,9 @@ final class CompressionController {
     func close() {
         previewTask?.cancel()
         exportTask?.cancel()
+        preparation?.cancel()
         if let previewSession {
-            service.endSession(previewSession)
+            service?.endSession(previewSession)
         }
     }
 
@@ -193,24 +257,43 @@ final class CompressionController {
 
         exportTask = Task { [weak self] in
             guard let self else { return }
-            for asset in self.assets {
+            // §5 first: every original is here, or the user has chosen,
+            // before a single copy is created or an original deleted.
+            let preparation = OriginalPreparation(
+                items: self.photos, fetcher: self.fetcher, gate: self.gate, availableBytes: self.availableBytes
+            )
+            self.preparation = preparation
+            self.isPreparing = true
+            let outcome = await preparation.run()
+            self.isPreparing = false
+            defer { preparation.removeFiles() }
+            guard case .ready(let prepared, let skipped) = outcome, !Task.isCancelled, !self.wasCancelled else {
+                // Cancelled while downloading: nothing was made, so there is
+                // nothing to roll back — back to the form.
+                self.preparation = nil
+                self.isExporting = false
+                self.wasCancelled = false
+                return
+            }
+            for photo in self.photos where skipped.contains(photo.id) {
+                self.failures.append(CompressionFailure(
+                    filename: photo.filename,
+                    message: String(localized: "Couldn't be downloaded from iCloud.", comment: "Resize summary: a photo left out")
+                ))
+            }
+            for photo in self.photos where !skipped.contains(photo.id) {
                 if Task.isCancelled { break }
                 do {
-                    let result = try await self.service.compress(
-                        asset: asset,
-                        options: self.exportOptions,
-                        album: self.sourceAlbum,
-                        cropAnchor: self.assets.count > 1 ? .center : self.cropAnchor
-                    )
+                    let result = try await self.operations.compress(photo, prepared[photo.id])
                     self.createdAssetIDs.append(result.assetID)
-                    self.compressedOriginalIDs.append(asset.localIdentifier)
+                    self.compressedOriginalIDs.append(photo.id)
                     if result.fellBackToJPEG {
                         self.fallbackToJPEGCount += 1
                     }
                 } catch {
                     self.failures.append(
                         CompressionFailure(
-                            filename: Self.filename(for: asset),
+                            filename: photo.filename,
                             message: error.localizedDescription
                         )
                     )
@@ -228,9 +311,15 @@ final class CompressionController {
         }
     }
 
+    /// Cancel in the processing modal. While the originals are still
+    /// downloading nothing has been made, so it stops at once (AC-10);
+    /// later it removes the copies already saved.
     func cancelExport() {
         guard isExporting else { return }
         wasCancelled = true
+        if isPreparing {
+            preparation?.cancel()
+        }
         exportTask?.cancel()
     }
 
@@ -239,7 +328,7 @@ final class CompressionController {
     }
 
     private func updatePreviewAndEstimate() async {
-        guard let previewSource else { return }
+        guard let service, let previewSource else { return }
         do {
             let rendered = try await service.renderer.render(
                 source: previewSource.info,
@@ -260,7 +349,7 @@ final class CompressionController {
     }
 
     private func updateEstimate() async {
-        guard let previewSession, let previewSource else { return }
+        guard let service, let previewSession, let previewSource else { return }
         isEstimating = true
         defer { isEstimating = false }
         do {
@@ -283,7 +372,9 @@ final class CompressionController {
         isDeletingOriginals = true
         defer { isDeletingOriginals = false }
         do {
-            try await service.deleteAssets(ids: compressedOriginalIDs)
+            // Only the photos whose copy was saved: one left out at the
+            // download, or one that failed, keeps its original (AC-9).
+            try await operations.deleteOriginals(compressedOriginalIDs)
             deletedOriginalCount = compressedOriginalIDs.count
         } catch {
             deleteOriginalsErrorMessage = error.localizedDescription
@@ -292,7 +383,7 @@ final class CompressionController {
 
     private func removeCreatedAssetsAfterCancellation() async {
         do {
-            try await service.deleteCreatedAssets(ids: createdAssetIDs)
+            try await operations.removeCreated(createdAssetIDs)
             createdAssetIDs.removeAll()
         } catch {
             let message =
@@ -304,8 +395,4 @@ final class CompressionController {
         didFinish = true
     }
 
-    private static func filename(for asset: PHAsset) -> String {
-        PHAssetResource.assetResources(for: asset).first?.originalFilename
-            ?? asset.localIdentifier
-    }
 }

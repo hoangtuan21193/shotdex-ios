@@ -77,7 +77,10 @@ struct CompressionScreen: View {
                 assets: assets,
                 sourceAlbum: sourceAlbum,
                 service: dependencies.photoEditing,
-                presetStore: dependencies.compressionPresets
+                presetStore: dependencies.compressionPresets,
+                fetcher: dependencies.originalFetcher,
+                gate: dependencies.indexInteractionGate,
+                availableBytes: dependencies.originalDownloads.availableBytes
             )
             controller = newController
             await newController.load()
@@ -344,9 +347,12 @@ struct CompressionScreen: View {
     /// a dimming scrim that captures every touch, so the controls below can't be
     /// tapped mid-export (DESIGN.md §11).
     private func exportOverlay(_ controller: CompressionController) -> some View {
-        let current = min(controller.processedCount + 1, assets.count)
+        let total = controller.photos.count
+        let current = min(controller.processedCount + 1, total)
         let title = controller.isDeletingOriginals ? "Deleting originals…" : "Resizing…"
-        let counter = "Processing \(current) of \(assets.count)"
+        let counter = "Processing \(current) of \(total)"
+        let download = controller.isPreparing ? controller.preparation : nil
+        let downloadState = download?.state
         return ZStack {
             Color.black.opacity(0.6)
                 .ignoresSafeArea()
@@ -354,27 +360,56 @@ struct CompressionScreen: View {
                 .onTapGesture {}
 
             VStack(spacing: AppTheme.Spacing.md) {
-                ProgressView()
-                    .controlSize(.large)
-                    .tint(accent)
-
-                Text(title)
-                    .font(.headline)
-                    .foregroundStyle(.white)
-
-                if !controller.isDeletingOriginals {
-                    ProgressView(value: controller.progressFraction)
+                switch downloadState?.phase {
+                case .failed?:
+                    if let download, let downloadState { downloadFailure(download, state: downloadState) }
+                case .notEnoughSpace(let needed, let free)?:
+                    Text(OriginalPreparationState.notEnoughSpaceMessage(needed: needed, free: free))
+                        .font(.headline)
+                        .foregroundStyle(.white)
+                        .multilineTextAlignment(.center)
+                    Button("OK") { download?.choose(.cancel) }
+                        .buttonStyle(.borderedProminent)
+                default:
+                    ProgressView()
+                        .controlSize(.large)
                         .tint(accent)
-                    Text(counter)
-                        .font(.subheadline.monospacedDigit())
-                        .foregroundStyle(EditorTheme.secondaryText)
-                }
 
-                Button("Cancel", role: .destructive) {
-                    isCancelConfirmationPresented = true
+                    Text(title)
+                        .font(.headline)
+                        .foregroundStyle(.white)
+
+                    if let downloadState, downloadState.downloadCount > 0 {
+                        // Before any photo is processed, the originals come
+                        // down (FS-02.06 §9): the line, and its own bar.
+                        OriginalDownloadLine(state: downloadState, textColor: EditorTheme.secondaryText)
+                            .tint(accent)
+                        if download?.isStalled == true {
+                            Text(OriginalPreparationState.stallMessage)
+                                .font(.footnote)
+                                .foregroundStyle(.orange)
+                                .multilineTextAlignment(.center)
+                        }
+                    } else if !controller.isDeletingOriginals {
+                        ProgressView(value: controller.progressFraction)
+                            .tint(accent)
+                        Text(counter)
+                            .font(.subheadline.monospacedDigit())
+                            .foregroundStyle(EditorTheme.secondaryText)
+                    }
+
+                    Button("Cancel", role: .destructive) {
+                        // Nothing is made while the originals download, so
+                        // there is nothing to confirm removing (AC-10).
+                        if controller.isPreparing {
+                            controller.cancelExport()
+                        } else {
+                            isCancelConfirmationPresented = true
+                        }
+                    }
+                    .disabled(controller.isDeletingOriginals)
+                    .padding(.top, AppTheme.Spacing.xs)
                 }
-                .disabled(controller.isDeletingOriginals)
-                .padding(.top, AppTheme.Spacing.xs)
             }
             .padding(AppTheme.Spacing.xl)
             .frame(maxWidth: 300)
@@ -386,6 +421,43 @@ struct CompressionScreen: View {
             .shadow(color: .black.opacity(0.5), radius: 30, y: 12)
             .padding(AppTheme.Spacing.xl)
         }
+    }
+
+    /// Some originals did not come down (FS-02.06 §5 step 4): nothing has
+    /// been made or deleted yet. Continue with the rest, try again, or stop.
+    @ViewBuilder
+    private func downloadFailure(_ download: OriginalPreparation, state: OriginalPreparationState) -> some View {
+        Image(systemName: "exclamationmark.icloud")
+            .font(.system(size: 28, weight: .medium))
+            .foregroundStyle(.orange)
+            .accessibilityHidden(true)
+        Text(state.failureTitle)
+            .font(.headline)
+            .foregroundStyle(.white)
+            .multilineTextAlignment(.center)
+        Text(state.failureNamesText)
+            .font(.subheadline)
+            .foregroundStyle(EditorTheme.secondaryText)
+            .multilineTextAlignment(.center)
+        VStack(spacing: AppTheme.Spacing.sm) {
+            if state.continueCount > 0 {
+                Button {
+                    download.choose(.continueWithout)
+                } label: {
+                    Text("Continue with \(state.continueCount)").frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.borderedProminent)
+            }
+            Button {
+                download.choose(.retry)
+            } label: {
+                Text("Retry").frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.bordered)
+            Button("Cancel", role: .cancel) { download.choose(.cancel) }
+        }
+        .tint(accent)
+        .padding(.top, AppTheme.Spacing.xs)
     }
 
     private func presetDetail(_ preset: ResizePreset) -> String {

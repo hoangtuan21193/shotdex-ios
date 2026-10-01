@@ -473,20 +473,54 @@ final class PhotoEditingService {
         )
     }
 
+    /// `preparedOriginal`: the photo's original, already downloaded by the
+    /// Resize preparation (FS-02.06 §5). Read from there, so nothing comes
+    /// from iCloud mid-batch; otherwise the session reads Photos as before.
     func compress(
         asset: PHAsset,
         options: PhotoExportOptions,
         album: PHAssetCollection?,
-        cropAnchor: NormalizedPoint? = nil
+        cropAnchor: NormalizedPoint? = nil,
+        preparedOriginal: URL? = nil
     ) async throws -> PhotoSaveResult {
+        if let preparedOriginal {
+            let directory = try makeTemporaryDirectory()
+            defer { try? FileManager.default.removeItem(at: directory) }
+            let type = UTType(filenameExtension: preparedOriginal.pathExtension) ?? .image
+            let info = try await renderer.inspectSource(at: preparedOriginal, typeHint: type)
+            let resources = PHAssetResource.assetResources(for: asset)
+            let name = resources.first { $0.type == .photo }?.originalFilename ?? resources.first?.originalFilename
+            return try await compress(
+                source: info, sourceName: name, sourceAssetIdentifier: asset.localIdentifier,
+                asset: asset, directory: directory, options: options, album: album, cropAnchor: cropAnchor
+            )
+        }
         let session = try await beginSession(for: asset)
         defer { endSession(session) }
         guard let option = session.preferredSource(for: nil) else {
             throw PhotoEditingError.missingSource
         }
         let source = try await loadSource(option, in: session)
+        return try await compress(
+            source: source.info,
+            sourceName: session.sourceOptions.first(where: { $0.id == source.optionID })?.filename,
+            sourceAssetIdentifier: session.recalledRecipe?.sourceAssetIdentifier ?? asset.localIdentifier,
+            asset: asset, directory: session.temporaryDirectory, options: options, album: album, cropAnchor: cropAnchor
+        )
+    }
+
+    private func compress(
+        source: PhotoRenderSourceInfo,
+        sourceName: String?,
+        sourceAssetIdentifier: String,
+        asset: PHAsset,
+        directory: URL,
+        options: PhotoExportOptions,
+        album: PHAssetCollection?,
+        cropAnchor: NormalizedPoint?
+    ) async throws -> PhotoSaveResult {
         let recipe = PhotoEditRecipe.identity
-        let rendered = try await renderer.render(source: source.info, recipe: recipe)
+        let rendered = try await renderer.render(source: source, recipe: recipe)
         let resized = await renderer.resize(
             rendered,
             preset: options.preset,
@@ -494,13 +528,13 @@ final class PhotoEditingService {
         )
         let requestedFormat = await renderer.resolvedOutputFormat(
             requested: options.format,
-            sourceType: source.info.type,
-            sourceIsRAW: source.info.isRAW
+            sourceType: source.type,
+            sourceIsRAW: source.isRAW
         )
         let format = requestedFormat == .heic && !Self.supportsHEICEncoding
             ? .jpeg
             : requestedFormat
-        let outputURL = session.temporaryDirectory.appendingPathComponent(
+        let outputURL = directory.appendingPathComponent(
             "compressed.\(format.fileExtension)"
         )
         try await renderer.write(
@@ -510,9 +544,6 @@ final class PhotoEditingService {
             quality: options.quality,
             metadata: options.metadata
         )
-        let sourceName = session.sourceOptions.first(where: { $0.id == source.optionID })?.filename
-        let sourceAssetIdentifier =
-            session.recalledRecipe?.sourceAssetIdentifier ?? asset.localIdentifier
         let filenameReservation = filenameIndexes.reserve(
             sourceAssetIdentifier: sourceAssetIdentifier,
             suffix: "SHOTDEX_COMPRESSED"
