@@ -21,19 +21,21 @@ enum ServerPhotoCommand: Equatable {
 /// Share and Copy of server originals (FS-17.06 §3): what is handed to the
 /// system, made from the copies on disk.
 enum ServerPhotoHandoff {
-    /// Every file of every photo — both halves of a RAW+JPEG pair — with GPS
-    /// removed when Share leaves location out (Settings), written beside the
-    /// copies so the share carries the real file names.
-    static func shareFiles(for photos: [FetchedServerPhoto], includesLocation: Bool, in directory: URL) -> [URL] {
-        let folder = directory.appendingPathComponent("Share-\(UUID().uuidString)", isDirectory: true)
-        try? FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
-        return photos.flatMap(\.files).map { fetched in
-            guard !includesLocation else { return fetched.url }
-            let url = folder.appendingPathComponent(fetched.file.name)
-            // Still hands over the original when the rewrite fails (a RAF):
-            // the RAW alert that replaces this is FS-08.06 plan task 18.
-            return (try? MetadataRewriter.rewrite(fetched.url, to: url, level: .noLocation)) != nil ? url : fetched.url
+    /// Every file of every photo — both halves of a RAW+JPEG pair — as share
+    /// items, each read from the copy on disk under its own name. They go
+    /// through the same pipeline as a library share (FS-08.06): a JPEG is
+    /// rewritten at the level, a RAW waits for the RAW question.
+    static func shareSources(for photos: [FetchedServerPhoto]) -> (sources: [ShareSource], reader: LocalFileShareReader) {
+        var files: [String: URL] = [:]
+        let sources = photos.flatMap(\.files).map { fetched in
+            files[fetched.url.path] = fetched.url
+            return ShareSource(
+                id: fetched.url.path,
+                kind: ServerFolderListing.isRAW(fetched.file.name) ? .raw : .photo,
+                filename: fetched.file.name
+            )
         }
+        return (sources, LocalFileShareReader(files: files))
     }
 
     /// Paste Edits: the clipboard's look on each photo, starting from
@@ -166,12 +168,13 @@ struct ServerPhotoCommandHost: ViewModifier {
         case .edit:
             editing = finished
         case .share:
-            let includesLocation = !MetadataLevel.sharingDefault().removesLocation
-            let files = ServerPhotoHandoff.shareFiles(
-                for: finished.photos, includesLocation: includesLocation,
-                in: finished.fetch.workDirectory ?? FileManager.default.temporaryDirectory
-            )
-            PhotoShareSheet.present(items: files) { closeTool() }
+            let (sources, reader) = ServerPhotoHandoff.shareSources(for: finished.photos)
+            Task { @MainActor in
+                let share = await PhotoShareSheet.gather(
+                    sources: sources, reader: reader, level: .sharingDefault(), onClose: { self.closeTool() }
+                )
+                PhotoShareSheet.present(share)
+            }
         case .copy:
             if let photo = finished.photos.first, let image = ServerPhotoHandoff.pasteboardImage(for: photo) {
                 UIPasteboard.general.image = UIImage(cgImage: image)

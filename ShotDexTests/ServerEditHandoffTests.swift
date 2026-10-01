@@ -70,25 +70,69 @@ import ShotDexKit
         return (width, height)
     }
 
-    /// AC-74: Share with location off hands over the original's bytes minus
-    /// GPS, under its own name; the copies go when the share closes.
+    /// AC-74 / FS-08.06 AC-13: Share at No Location hands over the
+    /// original's pixels minus GPS, under its own name; at All Metadata the
+    /// bytes as they are. The copies go when the share closes.
     @Test func shareHandsOriginalAndCleansUp() async throws {
         let (run, client) = try await fetch([("a.JPG", Self.jpeg(width: 300, height: 200, gps: true))])
         let directory = try #require(run.fetch.workDirectory)
+        let (sources, reader) = ServerPhotoHandoff.shareSources(for: run.photos)
 
-        let stripped = ServerPhotoHandoff.shareFiles(for: run.photos, includesLocation: false, in: directory)
-        let kept = ServerPhotoHandoff.shareFiles(for: run.photos, includesLocation: true, in: directory)
+        let stripped = await ShareExportPipeline(
+            reader: reader, folder: try ShareExportPipeline.makeFolder(in: directory), level: .noLocation
+        ).export(sources)
+        let kept = await ShareExportPipeline(
+            reader: reader, folder: try ShareExportPipeline.makeFolder(in: directory), level: .all
+        ).export(sources)
 
-        #expect(stripped.map(\.lastPathComponent) == ["a.JPG"])
-        let shared = try #require(stripped.first)
+        #expect(stripped.files.map(\.lastPathComponent) == ["a.JPG"])
+        let shared = try #require(stripped.files.first)
         #expect(gps(of: shared) == nil)
-        #expect(kept == [run.photos[0].primaryURL])
+        #expect(try Data(contentsOf: try #require(kept.files.first)) == Data(contentsOf: run.photos[0].primaryURL))
         #expect(gps(of: run.photos[0].primaryURL) != nil)
         #expect(client.uploadCount == 0)
 
         run.discardCopies()
         #expect(!FileManager.default.fileExists(atPath: directory.path))
         #expect(!FileManager.default.fileExists(atPath: shared.path))
+    }
+
+    /// FS-08.06 AC-13: a RAF + JPG pair at No Location — the RAF is a RAW,
+    /// so the share asks; on Skip the JPG goes without GPS and the RAF does
+    /// not go at all. Never the RAF with its location by default.
+    @Test func rafNeverLeaves() async throws {
+        let raf = RAWFixtures.available(RAWFixtures.fuji).flatMap { try? Data(contentsOf: $0) }
+            ?? Data(repeating: 0x46, count: 4096)
+        let jpg = Self.jpeg(width: 300, height: 200, gps: true)
+        let client = InMemoryRemoteFileClient()
+        client.put("Trip/DSCF1000.JPG", jpg)
+        client.put("Trip/DSCF1000.RAF", raf)
+        let model = ServerEditFetchModel(
+            serverId: "S1", folder: "Trip",
+            photos: [ServerPhoto(files: [entry("DSCF1000.JPG", jpg.count), entry("DSCF1000.RAF", raf.count)])],
+            access: DirectRemoteAccess(client), freeSpace: { nil }, screenHold: ServerEditSessionTests.NoHold()
+        )
+        model.start()
+        for _ in 0..<3000 where model.stage == .downloading { try? await Task.sleep(for: .milliseconds(10)) }
+        #expect(model.stage == .fetched)
+        let server = FileServer(name: "NAS", transferProtocol: .smb, host: "nas.local", username: "u", share: "photos")
+        let run = ServerPhotoCommandRun(command: .share, server: server, access: DirectRemoteAccess(client), fetch: model)
+        let directory = try #require(run.fetch.workDirectory)
+
+        let (sources, reader) = ServerPhotoHandoff.shareSources(for: run.photos)
+        #expect(sources.map(\.kind) == [.photo, .raw])
+        #expect(ShareBatchPlan(sources: sources, level: .noLocation).asksAboutRAW)
+
+        // No answer given is Skip: the pipeline's default.
+        let result = await ShareExportPipeline(
+            reader: reader, folder: try ShareExportPipeline.makeFolder(in: directory), level: .noLocation
+        ).export(sources)
+        #expect(result.files.map(\.lastPathComponent) == ["DSCF1000.JPG"])
+        #expect(result.skipped == ["DSCF1000.RAF"])
+        #expect(gps(of: try #require(result.files.first)) == nil)
+
+        run.discardCopies()
+        #expect(!FileManager.default.fileExists(atPath: directory.path))
     }
 
     /// AC-75: Copy of a 6000-px-wide frame puts at most 4096 px on the

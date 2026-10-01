@@ -38,10 +38,21 @@ enum PhotoShareSheet {
             )
         }
 
+        /// Runs once the share is over for good — not when a row reopens it.
+        /// Where a caller deletes files of its own (FS-17.06 §6).
+        var onClose: (@MainActor () -> Void)?
+
         /// Removes the gathered copies. Videos are the library's own files and
         /// are never inside the folder.
         func removeFiles() {
             if let folder { try? FileManager.default.removeItem(at: folder) }
+        }
+
+        /// The share is over: the copies go, and the caller hears about it.
+        @MainActor
+        func finish() {
+            removeFiles()
+            onClose?()
         }
     }
 
@@ -56,15 +67,26 @@ enum PhotoShareSheet {
         level: MetadataLevel = .sharingDefault(),
         allowsNetworkAccess: Bool = true
     ) async -> Prepared {
-        guard let folder = try? ShareExportPipeline.makeFolder() else {
-            return Prepared(items: [], failed: assets.map { ShareSource(asset: $0).filename }, folder: nil)
-        }
-        let sources = assets.map(ShareSource.init(asset:))
-        var pipeline = ShareExportPipeline(
+        await gather(
+            sources: assets.map(ShareSource.init(asset:)),
             reader: PhotoKitShareReader(allowsNetworkAccess: allowsNetworkAccess),
-            folder: folder,
             level: level
         )
+    }
+
+    /// The same for any items and any reader — the library's photos, or the
+    /// originals fetched from a file server (FS-17.06 §6). Asks the RAW
+    /// question first when the share needs it.
+    static func gather(
+        sources: [ShareSource],
+        reader: any ShareAssetReader,
+        level: MetadataLevel,
+        onClose: (@MainActor () -> Void)? = nil
+    ) async -> Prepared {
+        guard let folder = try? ShareExportPipeline.makeFolder() else {
+            return Prepared(items: [], failed: sources.map(\.filename), folder: nil, onClose: onClose)
+        }
+        var pipeline = ShareExportPipeline(reader: reader, folder: folder, level: level)
         let plan = ShareBatchPlan(sources: sources, level: level)
         if plan.asksAboutRAW {
             pipeline.rawChoice = await askAboutRAW(plan)
@@ -72,8 +94,9 @@ enum PhotoShareSheet {
         let result = await pipeline.export(sources)
         return Prepared(
             items: result.files, failed: result.failed, unread: result.unread, folder: folder, level: level,
-            regather: { await gather(assets: assets, level: $0, allowsNetworkAccess: allowsNetworkAccess) },
-            rawSharedAsIs: result.rawSharedAsIs
+            regather: { await gather(sources: sources, reader: reader, level: $0, onClose: onClose) },
+            rawSharedAsIs: result.rawSharedAsIs,
+            onClose: onClose
         )
     }
 
@@ -115,7 +138,7 @@ enum PhotoShareSheet {
     static func present(_ prepared: Prepared) {
         let share = { presentSheet(for: prepared) }
         guard !prepared.failed.isEmpty else { return share() }
-        guard let presenter = topPresenter() else { return prepared.removeFiles() }
+        guard let presenter = topPresenter() else { return prepared.finish() }
         let names = prepared.failed.joined(separator: ", ")
         let alert = UIAlertController(
             title: String(localized: prepared.items.isEmpty ? "Unable to Share" : "Not Everything Can Be Shared"),
@@ -167,10 +190,11 @@ enum PhotoShareSheet {
         }
         let rows = prepared.regather == nil ? [] : plan.rows.map(ShareLevelRow.init(level:))
         present(items: items, activities: rows) { chosen in
-            prepared.removeFiles()
             guard let chosen, let regather = prepared.regather,
                   let level = MetadataLevel.allCases.first(where: { ShareLevelRow.activityType(for: $0) == chosen })
-            else { return }
+            else { return prepared.finish() }
+            // Reopening: this share's copies go, the caller's files stay.
+            prepared.removeFiles()
             Task { @MainActor in
                 let again = await regather(level)
                 await waitForDismissal()
@@ -196,11 +220,14 @@ enum PhotoShareSheet {
     private static func present(
         items: [Any],
         activities: [UIActivity],
-        onFinished: @escaping (UIActivity.ActivityType?) -> Void
+        onFinished: @escaping @MainActor (UIActivity.ActivityType?) -> Void
     ) {
         guard !items.isEmpty, let presenter = topPresenter() else { onFinished(nil); return }
         let activity = UIActivityViewController(activityItems: items, applicationActivities: activities)
-        activity.completionWithItemsHandler = { type, completed, _, _ in onFinished(completed ? type : nil) }
+        // UIKit calls this on the main thread.
+        activity.completionWithItemsHandler = { type, completed, _, _ in
+            MainActor.assumeIsolated { onFinished(completed ? type : nil) }
+        }
         anchor(activity, in: presenter)
         presenter.present(activity, animated: true)
     }

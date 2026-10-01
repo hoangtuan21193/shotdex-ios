@@ -39,6 +39,24 @@ protocol ShareAssetReader: Sendable {
     func videoURL(for source: ShareSource) async throws -> URL
 }
 
+/// Reads share items from files already on this device — the originals a
+/// file server share fetched (FS-17.06 §6), keyed by the source's id.
+struct LocalFileShareReader: ShareAssetReader {
+    let files: [String: URL]
+
+    struct Missing: Error {}
+
+    func writePhoto(_ source: ShareSource, to url: URL) async throws {
+        guard let file = files[source.id] else { throw Missing() }
+        try FileManager.default.copyItem(at: file, to: url)
+    }
+
+    func videoURL(for source: ShareSource) async throws -> URL {
+        guard let file = files[source.id] else { throw Missing() }
+        return file
+    }
+}
+
 /// What a share run produced: the files for the share sheet, in order, and
 /// the names of the items that could not be prepared.
 struct ShareExportResult: Sendable, Equatable {
