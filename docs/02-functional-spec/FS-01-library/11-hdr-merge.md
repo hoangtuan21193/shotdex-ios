@@ -112,8 +112,8 @@ Loạt thử là khung ảo có đáp án như spike §1: cảnh 14 EV dựng t�
 
 | # | Cho | Khi | Thì | Chứng minh bằng |
 |---|---|---|---|---|
-| AC-1 | loạt 5 khung RAW −4…+4 EV, cảnh 14 EV, đứng yên | ghép, deghost Off | sai số radiance ≤ 0,03 stop RMS; ảnh đã tone map ≥ 48 dB so với tone map của cảnh sạch | ⚠️ chưa có |
-| AC-2 | loạt 3 khung −2/0/+2 EV của cảnh 10 EV | ghép | vùng cháy ở EV 0 khôi phục, sai số ≤ 0,05 stop RMS; không còn điểm nào cháy ở ảnh ra | ⚠️ chưa có |
+| AC-1 | loạt 5 khung RAW −4…+4 EV, cảnh 14 EV, đứng yên | ghép, deghost Off | sai số radiance ≤ 0,03 stop RMS; ảnh đã tone map ≥ 48 dB so với tone map của cảnh sạch | 🟡 radiance 0,016 stop: `HDRMergeTests.fiveFramesOfAFourteenStopSceneMergeWithinThreeHundredthsOfAStop`; tone map: task 6 |
+| AC-2 | loạt 3 khung −2/0/+2 EV của cảnh 10 EV | ghép | vùng cháy ở EV 0 khôi phục, sai số ≤ 0,05 stop RMS; không còn điểm nào cháy ở ảnh ra | 🟡 vùng cháy 0,011 stop, cả ảnh 0,017: `HDRMergeTests.threeFramesRecoverTheReferencesClippedHighlights`; ảnh ra sau tone map: task 6 |
 | AC-3 | loạt 5 khung chọn theo thứ tự xáo | ghép | cùng kết quả như thứ tự đúng; khung tham chiếu là khung EV 0 | 🟡 thứ tự + tham chiếu: `HDRBracketOrderTests.shuffledSelectionComesBackDarkestFirstWithTheMiddleAsReference`; kết quả ghép: task 4 |
 | AC-4 | loạt 5 khung, bước 3 EV, mỗi khung lệch tới ±30 px và xoay tới ±1,5° | căn | sai số căn ≤ 0,5 px ở 1536px cho mọi khung; không khung nào bị loại | ⚠️ chưa có |
 | AC-5 | loạt có 1 khung ảnh khác cảnh chen vào | ghép | khung đó bị loại; panel ghi *1 of 6 frames couldn't be lined up and were left out.* | ⚠️ chưa có |

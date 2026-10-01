@@ -48,7 +48,7 @@ struct KernelGoldenTests {
     /// AC-2 counts forty kernels; every one of them has a case.
     @Test func everyKernelHasACase() {
         let kernels = Set(KernelGoldenCase.all.map(\.kernel))
-        #expect(kernels.count == 53)
+        #expect(kernels.count == 57)
         #expect(Set(KernelGoldenCase.all.map(\.name)).count == KernelGoldenCase.all.count)
     }
 
@@ -70,7 +70,7 @@ struct KernelGoldenTests {
 
 extension KernelGoldenCase {
     static var all: [KernelGoldenCase] {
-        mask + colorOptics + healing + stack + panorama + video
+        mask + colorOptics + healing + stack + hdr + panorama + video
     }
 
     private static let extent = CGRect(x: 0, y: 0, width: KernelGolden.size, height: KernelGolden.size)
@@ -294,6 +294,17 @@ extension KernelGoldenCase {
     private static func peak(_ input: (Int) -> CIImage) -> CIImage {
         input(2).applyingFilter("CIMaximumCompositing", parameters: [kCIInputBackgroundImageKey: input(3)])
     }
+
+    // MARK: Group 3d — HDR (FS-01.11)
+
+    private static let hdrNoise = CIVector(x: 1.0 / 30_000, y: 1e-8, z: 3e-10)
+
+    static let hdr: [KernelGoldenCase] = [
+        color("hdrAccumulate", { HDRMerge.accumulateKernel }) { [$0(0), $0(1), $0(2), Float(0.25)] },
+        color("hdrResolve", { HDRMerge.resolveKernel }) { [$0(0), $0(1)] },
+        color("hdrAnchor", { HDRMerge.anchorKernel }) { [$0(0), $0(1), Float(0.5), hdrNoise, Float(0)] },
+        color("hdrReject", { HDRMerge.rejectKernel }) { [$0(1), $0(0), Float(0.5), hdrNoise, Float(7)] },
+    ]
 
     // MARK: Group 3c — panorama
 

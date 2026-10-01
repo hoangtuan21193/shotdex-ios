@@ -49,6 +49,10 @@ struct KernelLibraryTests {
             ("focusLaplacian", PhotoStackRenderer.laplacianKernel),
             ("focusWeightedAccumulate", PhotoStackRenderer.weightedAccumulateKernel),
             ("focusWeightedAlphaResolve", PhotoStackRenderer.weightedAlphaResolveKernel),
+            ("hdrAccumulate", HDRMerge.accumulateKernel),
+            ("hdrResolve", HDRMerge.resolveKernel),
+            ("hdrAnchor", HDRMerge.anchorKernel),
+            ("hdrReject", HDRMerge.rejectKernel),
             ("panoramaWarp", PanoramaCIBlender.warpKernel),
             ("panoramaRamp", PanoramaCIBlender.rampKernel),
             ("panoramaAccumulateColour", PanoramaCIBlender.accumulateColourKernel),
@@ -66,7 +70,7 @@ struct KernelLibraryTests {
             ("luminanceKey", VideoMaskRenderer.luminanceKeyKernel),
             ("colorKey", VideoMaskRenderer.colorKeyKernel),
         ]
-        #expect(kernels.count == 53)
+        #expect(kernels.count == 57)
         for (name, kernel) in kernels {
             #expect(kernel != nil, "\(name) did not load")
         }
