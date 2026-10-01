@@ -57,4 +57,15 @@ import ShotDexKit
         #expect(failure.message == "The photo couldn't be decoded.")
         #expect(!failure.offersSettings)
     }
+
+    /// FS-02.06 AC-5. An opening that downloads from iCloud and sits at 0%
+    /// for 15 s is stalled; any movement, or a load that is not a download,
+    /// is not. The clock is the caller's.
+    @Test func stallAfterFifteenSecondsAtZero() {
+        #expect(!EditorLoadFailure.isStalled(atZeroFor: .seconds(14.9), fraction: 0, isDownloading: true))
+        #expect(EditorLoadFailure.isStalled(atZeroFor: .seconds(15), fraction: 0, isDownloading: true))
+        #expect(EditorLoadFailure.isStalled(atZeroFor: .seconds(15), fraction: nil, isDownloading: true))
+        #expect(!EditorLoadFailure.isStalled(atZeroFor: .seconds(60), fraction: 0.01, isDownloading: true))
+        #expect(!EditorLoadFailure.isStalled(atZeroFor: .seconds(60), fraction: nil, isDownloading: false))
+    }
 }
