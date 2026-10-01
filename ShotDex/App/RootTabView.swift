@@ -195,7 +195,7 @@ struct RootTabView: View {
                 NavigationStack(path: $albumsPath) { AlbumsScreen(model: albumsModel) }
             }
             Tab(AppTab.statistics.title, systemImage: AppTab.statistics.systemImage, value: .statistics) {
-                NavigationStack { StatisticsScreen() }
+                NavigationStack { StatisticsScreen(isIndexing: libraryModel?.isIndexing ?? false) }
             }
             Tab(value: .search, role: .search) {
                 NavigationStack {
@@ -403,7 +403,7 @@ struct RootTabView: View {
                 tabStack(.albums, path: $albumsPath) { AlbumsScreen(model: albumsModel) }
             }
             if mountedLegacyTabs.contains(.statistics) {
-                tabStack(.statistics) { StatisticsScreen() }
+                tabStack(.statistics) { StatisticsScreen(isIndexing: libraryModel?.isIndexing ?? false) }
             }
         }
     }

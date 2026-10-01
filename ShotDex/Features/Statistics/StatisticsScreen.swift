@@ -8,6 +8,10 @@ struct StatisticsScreen: View {
     @Environment(AppNavigation.self) private var navigation
     @Environment(PhotoLibraryService.self) private var photoLibrary
 
+    /// The library index is still running — the Insights card says its
+    /// sentences describe only what has been read so far.
+    var isIndexing = false
+
     @State private var model: StatisticsModel?
     @State private var editMode: EditMode = .inactive
     @State private var editorTarget: EditorTarget?
@@ -135,11 +139,7 @@ struct StatisticsScreen: View {
                     description: Text("Statistics appear after your library has been indexed.")
                 )
             } else if model.hasLoaded && model.charts.isEmpty {
-                ContentUnavailableView(
-                    "No Charts",
-                    systemImage: "chart.bar.doc.horizontal",
-                    description: Text("Tap + to add a chart to your dashboard.")
-                )
+                noCharts(model)
             } else if usesColumns {
                 columns(model)
             } else {
@@ -149,10 +149,56 @@ struct StatisticsScreen: View {
         .background(Color(.systemGroupedBackground))
     }
 
+    /// Every chart deleted: "No Charts", with the Insights card kept above it
+    /// — the card is not a chart, and deleting charts does not hide it.
+    private func noCharts(_ model: StatisticsModel) -> some View {
+        GeometryReader { proxy in
+            ScrollView {
+                VStack(spacing: Self.cardSpacing) {
+                    if showsInsightsCard(model) {
+                        insightsCard(model, columns: usesColumns ? Self.columnCount(forWidth: proxy.size.width) : 1)
+                            .padding(.horizontal, Self.cardSpacing)
+                            .padding(.top, 8)
+                    }
+                    ContentUnavailableView(
+                        "No Charts",
+                        systemImage: "chart.bar.doc.horizontal",
+                        description: Text("Tap + to add a chart to your dashboard.")
+                    )
+                    .frame(maxHeight: .infinity)
+                }
+                .frame(minHeight: proxy.size.height)
+            }
+            .scrollContentBackground(.hidden)
+        }
+    }
+
+    private func showsInsightsCard(_ model: StatisticsModel) -> Bool {
+        model.insights != .loaded(.hidden)
+    }
+
+    private func insightsCard(_ model: StatisticsModel, columns: Int) -> some View {
+        InsightsCard(
+            state: model.insights,
+            isIndexing: isIndexing,
+            columns: columns,
+            onOpen: { navigation.openLibrary(with: $0) },
+            onHide: {},
+            onRetry: { model.loadInsights() }
+        )
+    }
+
     private func columns(_ model: StatisticsModel) -> some View {
         GeometryReader { proxy in
             let count = Self.columnCount(forWidth: proxy.size.width)
             ScrollView {
+                // Insights spans the content width above the columns — it is
+                // one card, never dealt into a column (FS-07.01 §6).
+                if showsInsightsCard(model) {
+                    insightsCard(model, columns: count)
+                        .padding(.horizontal, Self.cardSpacing)
+                        .padding(.top, 8)
+                }
                 // Independent columns, not a `LazyVGrid`: a grid gives every
                 // row the height of its tallest card, so a KPI next to a bar
                 // chart leaves a hole the height of the bar chart. Charts are
@@ -186,6 +232,14 @@ struct StatisticsScreen: View {
 
     private func rows(_ model: StatisticsModel) -> some View {
         List {
+            // Above the charts and outside their ForEach: it neither drags
+            // nor deletes in edit mode.
+            if showsInsightsCard(model) {
+                insightsCard(model, columns: 1)
+                    .listRowSeparator(.hidden)
+                    .listRowBackground(Color.clear)
+                    .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
+            }
             ForEach(model.charts) { spec in
                 card(spec, model: model)
                     .listRowSeparator(.hidden)

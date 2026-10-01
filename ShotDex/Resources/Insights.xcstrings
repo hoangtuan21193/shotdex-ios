@@ -95,8 +95,24 @@
         }
       }
     },
+    "Couldn't compute insights.": {
+      "comment": "Insights card when its queries fail",
+      "extractionState": "manual"
+    },
+    "Hide Insights": {
+      "comment": "Insights card menu",
+      "extractionState": "manual"
+    },
+    "Insights": {
+      "comment": "Title of the Insights card on Statistics",
+      "extractionState": "manual"
+    },
     "Insights appear once 50 photos have camera info — %lld so far.": {
       "comment": "Insights card under the 50-photo threshold",
+      "extractionState": "manual"
+    },
+    "Insights options": {
+      "comment": "VoiceOver label of the Insights card menu",
       "extractionState": "manual"
     },
     "Portrait": {

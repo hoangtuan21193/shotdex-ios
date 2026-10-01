@@ -1,0 +1,255 @@
+{
+  "steps": [
+    {
+      "action": "launch"
+    },
+    {
+      "action": "wait",
+      "seconds": 8
+    },
+    {
+      "action": "tap",
+      "label": "Statistics"
+    },
+    {
+      "action": "wait",
+      "seconds": 8
+    },
+    {
+      "action": "screenshot",
+      "name": "01-insights"
+    },
+    {
+      "action": "dump",
+      "name": "01-insights"
+    },
+    {
+      "action": "tap",
+      "label": "Settings"
+    },
+    {
+      "action": "wait",
+      "seconds": 2
+    },
+    {
+      "action": "tap",
+      "label": "Re-index Library"
+    },
+    {
+      "action": "wait",
+      "seconds": 0.5
+    },
+    {
+      "action": "tap",
+      "label": "Done"
+    },
+    {
+      "action": "wait",
+      "seconds": 1.5
+    },
+    {
+      "action": "screenshot",
+      "name": "02-indexing"
+    },
+    {
+      "action": "dump",
+      "name": "02-indexing"
+    },
+    {
+      "action": "wait",
+      "seconds": 15
+    },
+    {
+      "action": "launch",
+      "arguments": [
+        "-ShotDexFailInsights"
+      ]
+    },
+    {
+      "action": "wait",
+      "seconds": 6
+    },
+    {
+      "action": "tap",
+      "label": "Statistics"
+    },
+    {
+      "action": "wait",
+      "seconds": 6
+    },
+    {
+      "action": "screenshot",
+      "name": "03-failed"
+    },
+    {
+      "action": "dump",
+      "name": "03-failed"
+    },
+    {
+      "action": "launch"
+    },
+    {
+      "action": "wait",
+      "seconds": 6
+    },
+    {
+      "action": "tap",
+      "label": "Statistics"
+    },
+    {
+      "action": "wait",
+      "seconds": 6
+    },
+    {
+      "action": "scrollTo",
+      "label": "Top Camera options"
+    },
+    {
+      "action": "tap",
+      "label": "Top Camera options"
+    },
+    {
+      "action": "wait",
+      "seconds": 1.5
+    },
+    {
+      "action": "tap",
+      "label": "Delete"
+    },
+    {
+      "action": "wait",
+      "seconds": 2
+    },
+    {
+      "action": "scrollTo",
+      "label": "Total Photos & Videos options"
+    },
+    {
+      "action": "tap",
+      "label": "Total Photos & Videos options"
+    },
+    {
+      "action": "wait",
+      "seconds": 1.5
+    },
+    {
+      "action": "tap",
+      "label": "Delete"
+    },
+    {
+      "action": "wait",
+      "seconds": 2
+    },
+    {
+      "action": "scrollTo",
+      "label": "Equivalent Focal Length options"
+    },
+    {
+      "action": "tap",
+      "label": "Equivalent Focal Length options"
+    },
+    {
+      "action": "wait",
+      "seconds": 1.5
+    },
+    {
+      "action": "tap",
+      "label": "Delete"
+    },
+    {
+      "action": "wait",
+      "seconds": 2
+    },
+    {
+      "action": "scrollTo",
+      "label": "Body + Lens options"
+    },
+    {
+      "action": "tap",
+      "label": "Body + Lens options"
+    },
+    {
+      "action": "wait",
+      "seconds": 1.5
+    },
+    {
+      "action": "tap",
+      "label": "Delete"
+    },
+    {
+      "action": "wait",
+      "seconds": 2
+    },
+    {
+      "action": "scrollTo",
+      "label": "Slow Shutter options"
+    },
+    {
+      "action": "tap",
+      "label": "Slow Shutter options"
+    },
+    {
+      "action": "wait",
+      "seconds": 1.5
+    },
+    {
+      "action": "tap",
+      "label": "Delete"
+    },
+    {
+      "action": "wait",
+      "seconds": 2
+    },
+    {
+      "action": "scrollTo",
+      "label": "Photos per Month options"
+    },
+    {
+      "action": "tap",
+      "label": "Photos per Month options"
+    },
+    {
+      "action": "wait",
+      "seconds": 1.5
+    },
+    {
+      "action": "tap",
+      "label": "Delete"
+    },
+    {
+      "action": "wait",
+      "seconds": 2
+    },
+    {
+      "action": "screenshot",
+      "name": "04-no-charts"
+    },
+    {
+      "action": "dump",
+      "name": "04-no-charts"
+    },
+    {
+      "action": "launch"
+    },
+    {
+      "action": "wait",
+      "seconds": 8
+    },
+    {
+      "action": "tap",
+      "label": "Statistics"
+    },
+    {
+      "action": "wait",
+      "seconds": 8
+    },
+    {
+      "action": "screenshot",
+      "name": "05-reopened"
+    },
+    {
+      "action": "dump",
+      "name": "05-reopened"
+    }
+  ]
+}

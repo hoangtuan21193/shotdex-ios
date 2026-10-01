@@ -272,4 +272,85 @@ struct StatisticsInsightsTests {
         #expect(InsightCopy.belowThreshold(49, locale: english)
             == "Insights appear once 50 photos have camera info — 49 so far.")
     }
+
+    // MARK: SQL inputs and card state (AC-2, AC-1)
+
+    /// One indexed row. `camera: nil` with no focal values is a screenshot;
+    /// `mediaType: 2` a video.
+    private func record(
+        _ id: String,
+        camera: String? = nil,
+        lens: String? = nil,
+        focal: Double? = nil,
+        equivalent: Double? = nil,
+        shutter: Double? = nil,
+        creation: Int? = 1_780_000_000,
+        mediaType: Int = 1
+    ) -> PhotoMetadata {
+        PhotoMetadata(
+            assetId: id, creationDate: creation, modificationDate: creation, mediaType: mediaType,
+            cameraManufacturer: nil, cameraModel: camera, normalizedCameraModel: camera,
+            normalizedCameraManufacturer: nil, lensManufacturer: nil, lensModel: lens, normalizedLensModel: lens,
+            originalFilename: nil, iso: nil, aperture: nil, shutterSpeedSeconds: shutter,
+            shutterSpeedDisplay: shutter.flatMap(MetadataFormatter.shutterSpeed),
+            focalLength: focal, focalLengthIn35mm: nil, calculatedEquivalentFocalLength: equivalent,
+            equivalentFocalLength: equivalent, sensorFormat: nil, cropFactor: nil, width: 4000, height: 3000,
+            fileSize: 1_000_000, latitude: nil, longitude: nil, isFavorite: false, indexedAt: 1_780_000_000,
+            exifStatus: ExifStatus.indexed.rawValue
+        )
+    }
+
+    private func save(_ records: [PhotoMetadata], into database: AppDatabase) throws {
+        try MetadataStore(database: database).saveBatch(records, cursorAssetId: nil)
+    }
+
+    /// AC-2: 49 photos with a camera, 200 EXIF-less screenshots and 30
+    /// videos (which carry a camera name too) — below the threshold at 49.
+    @Test func belowThresholdCountsStillPhotosWithCameraOnly() throws {
+        let database = try AppDatabase.makeEmpty()
+        var rows = (0..<49).map { record("p\($0)", camera: "EOS R6", lens: "RF 50mm", focal: 50, equivalent: 50, shutter: 1.0 / 250) }
+        rows += (0..<200).map { record("s\($0)") }
+        rows += (0..<30).map { record("v\($0)", camera: "iPhone 15 Pro", mediaType: 2) }
+        try save(rows, into: database)
+
+        let queries = StatisticsQueries(database: database)
+        let inputs = try queries.insightInputs()
+        #expect(inputs.photosWithCamera == 49)
+        #expect(InsightSelector.select(inputs).isEmpty)
+        let state = InsightSelector.cardState(indexedRows: try queries.totalPhotos(scope: .allTime), inputs: inputs)
+        #expect(state == .belowThreshold(photosWithCamera: 49))
+        #expect(InsightCopy.belowThreshold(49, locale: english)
+            == "Insights appear once 50 photos have camera info — 49 so far.")
+    }
+
+    /// AC-1: nothing indexed — no card at all.
+    @Test func cardStateForEmptyLibraryIsHidden() throws {
+        let database = try AppDatabase.makeEmpty()
+        let queries = StatisticsQueries(database: database)
+        let inputs = try queries.insightInputs()
+        #expect(inputs.photosWithCamera == 0 && inputs.equivalentFocalTotal == 0 && inputs.monthCounts.isEmpty)
+        #expect(InsightSelector.cardState(indexedRows: try queries.totalPhotos(scope: .allTime), inputs: inputs) == .hidden)
+    }
+
+    /// Every Insights query in one read returns few rows; a video never
+    /// enters a count.
+    @Test func insightInputsGroupInSQL() throws {
+        let database = try AppDatabase.makeEmpty()
+        var rows = (0..<60).map { record("a\($0)", camera: "X-T5", lens: "XF23mmF1.4 R", focal: 23, equivalent: 34.5, shutter: 1.0 / 15) }
+        rows += (0..<40).map { record("b\($0)", camera: "X-T5", lens: "XF33mmF1.4 R", focal: 33, equivalent: 49.5, shutter: 1.0 / 250) }
+        rows += (0..<10).map { record("v\($0)", camera: "X-T5", lens: "XF23mmF1.4 R", focal: 23, equivalent: 34.5, shutter: 1.0 / 15, mediaType: 2) }
+        try save(rows, into: database)
+
+        let inputs = try StatisticsQueries(database: database).insightInputs()
+        #expect(inputs.photosWithCamera == 100)
+        // ROUND(34.5) = 35, ROUND(49.5) = 50 — SQLite rounds halves away from zero.
+        #expect(inputs.equivalentFocalCounts == [35: 60, 50: 40])
+        #expect(inputs.focalAngleCounts[.standard] == 40)
+        #expect(inputs.focalAngleCounts[.wide] == 60)
+        #expect(inputs.topPairs.map(\.count) == [60, 40])
+        #expect(inputs.photosWithCameraAndLens == 100)
+        #expect(inputs.slowShutterCount == 60)
+        #expect(inputs.shutterAndFocalCount == 100)
+        #expect(inputs.monthCounts.reduce(0) { $0 + $1.count } == 100)
+    }
 }

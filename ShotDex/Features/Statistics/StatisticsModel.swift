@@ -1,4 +1,5 @@
 import Foundation
+import os
 
 /// Owns the Statistics dashboard: the user's chart specs, their computed
 /// data (each chart scoped by its own date range), and the edit operations
@@ -22,6 +23,21 @@ final class StatisticsModel {
     /// True once the initial load (charts + data) has finished at least once.
     private(set) var hasLoaded = false
 
+    /// The Insights card (FS-07.02), computed on its own task so the charts
+    /// never wait for it — and it never waits for them.
+    private(set) var insights: InsightsLoad = .loading
+    private var insightsTask: Task<Void, Never>?
+
+    enum InsightsLoad: Equatable {
+        /// Before the first result; a reload keeps the last result on screen.
+        case loading
+        case loaded(InsightsCardState)
+        /// The queries threw: "Couldn't compute insights." + Try Again.
+        case failed
+    }
+
+    nonisolated private static let log = Logger(subsystem: "com.hoangtuan.shotdex", category: "statistics")
+
     init(dependencies: AppDependencies) {
         self.statisticsQueries = dependencies.statisticsQueries
         self.chartStore = dependencies.chartStore
@@ -31,6 +47,42 @@ final class StatisticsModel {
     /// chart's data, each within its own scope.
     func load() {
         reload(reloadCharts: true)
+        loadInsights()
+    }
+
+    /// Recomputes the Insights card, cancelling a run still in flight so a
+    /// slow earlier one can never land after a newer one.
+    func loadInsights() {
+        insightsTask?.cancel()
+        let statisticsQueries = self.statisticsQueries
+        #if DEBUG
+        // UI driver: shows the failure state, which no real library produces on demand.
+        let forcesFailure = ProcessInfo.processInfo.arguments.contains("-ShotDexFailInsights")
+        #else
+        let forcesFailure = false
+        #endif
+        insightsTask = Task.detached(priority: .userInitiated) { [weak self] in
+            let clock = ContinuousClock()
+            let start = clock.now
+            let result: InsightsLoad
+            do {
+                if forcesFailure { throw CancellationError() }
+                let inputs = try statisticsQueries.insightInputs()
+                let indexedRows = try statisticsQueries.totalPhotos(scope: .allTime)
+                result = .loaded(InsightSelector.cardState(indexedRows: indexedRows, inputs: inputs))
+            } catch {
+                result = .failed
+            }
+            let elapsed = clock.now - start
+            let milliseconds = Int(Double(elapsed.components.seconds) * 1000 + Double(elapsed.components.attoseconds) / 1e15)
+            Self.log.log("insights computed in \(milliseconds, privacy: .public)ms")
+            guard !Task.isCancelled else { return }
+            await self?.applyInsights(result)
+        }
+    }
+
+    private func applyInsights(_ result: InsightsLoad) {
+        insights = result
     }
 
     private func reload(reloadCharts: Bool) {
