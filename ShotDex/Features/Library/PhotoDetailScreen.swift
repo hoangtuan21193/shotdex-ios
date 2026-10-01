@@ -1087,7 +1087,8 @@ struct PhotoDetailScreen: View {
         if isDownloadStalled {
             parts.append(String(localized: "iCloud download stalled"))
         } else if isDownloading {
-            parts.append(String(localized: "Downloading from iCloud"))
+            // The ring has no number; VoiceOver reads one (FS-02.06 §8).
+            parts.append(OriginalPreparationState.accessibilityProgress(downloadProgress))
         } else if isOriginalInCloud {
             parts.append(String(localized: "Original in iCloud", comment: "VoiceOver: the photo's original is only in iCloud"))
         }
@@ -1264,42 +1265,6 @@ private struct SafeAreaTopKey: PreferenceKey {
     static var defaultValue: CGFloat = 0
     static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
         value = max(value, nextValue())
-    }
-}
-
-/// iOS-style "downloading from iCloud" indicator: a cloud glyph wrapped by a
-/// circular progress ring. Determinate once the download reports a fraction,
-/// otherwise a continuously rotating arc.
-private struct ICloudDownloadRing: View {
-    /// 0…1; treated as indeterminate while it is 0 (or ≥ 1).
-    let progress: Double
-    @State private var spin = false
-
-    private var isDeterminate: Bool { progress > 0 && progress < 1 }
-
-    var body: some View {
-        ZStack {
-            Circle()
-                .stroke(Color.secondary.opacity(0.25), lineWidth: 2)
-            if isDeterminate {
-                Circle()
-                    .trim(from: 0, to: progress)
-                    .stroke(.tint, style: StrokeStyle(lineWidth: 2, lineCap: .round))
-                    .rotationEffect(.degrees(-90))
-                    .animation(.easeOut(duration: 0.2), value: progress)
-            } else {
-                Circle()
-                    .trim(from: 0, to: 0.3)
-                    .stroke(.tint, style: StrokeStyle(lineWidth: 2, lineCap: .round))
-                    .rotationEffect(.degrees(spin ? 360 : 0))
-                    .animation(.linear(duration: 0.9).repeatForever(autoreverses: false), value: spin)
-            }
-            Image(systemName: "icloud")
-                .font(.system(size: 9, weight: .semibold))
-                .foregroundStyle(.secondary)
-        }
-        .frame(width: 22, height: 22)
-        .onAppear { spin = true }
     }
 }
 

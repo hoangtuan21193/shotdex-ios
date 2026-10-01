@@ -130,6 +130,12 @@ final class UIDriverTests: XCTestCase {
             } else {
                 try element(for: step).tap()
             }
+        case "doubleTap":
+            if let point = coordinate(for: step) {
+                point.doubleTap()
+            } else {
+                try element(for: step).doubleTap()
+            }
         case "longPress":
             if let point = coordinate(for: step) {
                 point.press(forDuration: step.seconds ?? 1.0)
