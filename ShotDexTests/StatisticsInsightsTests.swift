@@ -189,4 +189,87 @@ struct StatisticsInsightsTests {
         inputs.equivalentFocalCounts = [50: 101]
         #expect(InsightSelector.focal(inputs) != nil)
     }
+
+    // MARK: Copy (AC-8)
+
+    private let english = Locale(identifier: "en_US")
+
+    /// Every sentence the card can say, each variant, with photo counts of 1
+    /// and 2 and shares of 99.6% and 100%.
+    private func everySentence() -> [String] {
+        var kinds: [Insight.Kind] = []
+        for (count, total) in [(1, 1), (2, 2), (996, 1000), (1000, 1000)] {
+            for names in [false, true] {
+                kinds.append(.focalValue(millimetres: 26, count: count, denominator: total, namesDenominator: names))
+                kinds.append(.focalGroup(buckets: [.wide], count: count, denominator: total, namesDenominator: names))
+                kinds.append(.focalGroup(buckets: [.ultraWide], count: count, denominator: total, namesDenominator: names))
+                kinds.append(.focalGroup(buckets: [.telephoto, .superTelephoto], count: count, denominator: total, namesDenominator: names))
+                kinds.append(.pair(body: "EOS R6", lens: "RF 85mm F1.2 L USM", count: count, denominator: total, namesDenominator: names))
+                kinds.append(.slowShutter(count: count, denominator: total, namesDenominator: names))
+            }
+            kinds.append(.busiestMonth(year: 2026, month: 8, count: count))
+        }
+        var lines = kinds.map { InsightCopy.sentence(Insight(kind: $0, filter: nil), locale: english) }
+        for count in [1, 2] {
+            lines.append(InsightCopy.belowThreshold(count, locale: english))
+            lines.append(InsightCopy.unknownSensorFooter(count, locale: english))
+        }
+        lines.append(InsightCopy.indexingFooter(locale: english))
+        return lines
+    }
+
+    @Test func copyUsesPluralVariants() {
+        let one = InsightCopy.sentence(Insight(kind: .busiestMonth(year: 2026, month: 8, count: 1), filter: nil), locale: english)
+        let two = InsightCopy.sentence(Insight(kind: .busiestMonth(year: 2026, month: 8, count: 2), filter: nil), locale: english)
+        let many = InsightCopy.sentence(Insight(kind: .busiestMonth(year: 2026, month: 8, count: 1240), filter: nil), locale: english)
+        #expect(one == "August 2026 was your busiest month: 1 photo.")
+        #expect(two == "August 2026 was your busiest month: 2 photos.")
+        #expect(many == "August 2026 was your busiest month: 1,240 photos.")
+        #expect(InsightCopy.unknownSensorFooter(1, locale: english) == "1 photo is from a camera with an unknown sensor size.")
+        #expect(InsightCopy.unknownSensorFooter(2, locale: english) == "2 photos are from cameras with an unknown sensor size.")
+    }
+
+    @Test func percentNeverRoundsUpToHundred() {
+        #expect(InsightCopy.percent(996, of: 1000, locale: english) == "99%")
+        #expect(InsightCopy.percent(995, of: 1000, locale: english) == "99%")
+        #expect(InsightCopy.percent(999_999, of: 1_000_000, locale: english) == "99%")
+        #expect(InsightCopy.percent(1000, of: 1000, locale: english) == "100%")
+        #expect(InsightCopy.percent(850, of: 1000, locale: english) == "85%")
+        let nearlyAll = InsightCopy.sentence(
+            Insight(kind: .slowShutter(count: 996, denominator: 1000, namesDenominator: false), filter: nil), locale: english
+        )
+        #expect(nearlyAll.hasPrefix("99% "))
+    }
+
+    /// §4: no verb that advises or judges, in any template or variant.
+    @Test func noTemplateContainsBannedWords() throws {
+        let banned = ["buy", "sell", "upgrade", "should", "try", "consider", "recommend", "need", "better", "worse"]
+        let regex = try NSRegularExpression(pattern: "\\b(\(banned.joined(separator: "|")))\\b", options: .caseInsensitive)
+        let lines = everySentence()
+        #expect(lines.count > 50)
+        for line in lines {
+            let range = NSRange(line.startIndex..., in: line)
+            #expect(regex.firstMatch(in: line, range: range) == nil, "banned word in: \(line)")
+            // A template that failed to resolve would show its raw specifiers.
+            #expect(!line.contains("%@") && !line.contains("%lld") && !line.contains("#@"), "unformatted: \(line)")
+        }
+    }
+
+    @Test func focalUsesAppFormatter() {
+        let sentence = InsightCopy.sentence(
+            Insight(kind: .focalValue(millimetres: 26, count: 850, denominator: 1000, namesDenominator: false), filter: nil),
+            locale: english
+        )
+        #expect(sentence == "85% of your photos are at 26mm equivalent.")
+        #expect(sentence.contains(MetadataFormatter.focalLength(26) ?? "–"))
+        let group = InsightCopy.sentence(
+            Insight(kind: .focalGroup(buckets: [.wide, .standard], count: 600, denominator: 1000, namesDenominator: false), filter: nil),
+            locale: english
+        )
+        #expect(group == "60% of your photos are at 20–69mm equivalent (Wide and Standard).")
+        #expect(InsightCopy.focalRange([.ultraWide]) == "under 20mm")
+        #expect(InsightCopy.focalRange([.superTelephoto]) == "300mm and longer")
+        #expect(InsightCopy.belowThreshold(49, locale: english)
+            == "Insights appear once 50 photos have camera info — 49 so far.")
+    }
 }

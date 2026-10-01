@@ -1,0 +1,136 @@
+{
+  "sourceLanguage": "en",
+  "strings": {
+    "%@ and longer": {
+      "comment": "Insights: the longest angle-of-view group, e.g. 300mm and longer",
+      "extractionState": "manual"
+    },
+    "%@ of your photos are at %@ equivalent (%@).": {
+      "comment": "Insights: an angle-of-view group, e.g. 60% … 20–34mm … (Wide)",
+      "extractionState": "manual"
+    },
+    "%@ of your photos are at %@ equivalent.": {
+      "comment": "Insights: one focal length, e.g. 85% … 26mm",
+      "extractionState": "manual"
+    },
+    "%@ of your photos were shot slower than 1/focal length.": {
+      "comment": "Insights: share exposed longer than 1/equivalent focal length",
+      "extractionState": "manual"
+    },
+    "%@ of your photos with a known equivalent focal length are at %@ equivalent (%@).": {
+      "comment": "Insights: an angle-of-view group, e.g. 60% … 20–34mm … (Wide)",
+      "extractionState": "manual"
+    },
+    "%@ of your photos with a known equivalent focal length are at %@ equivalent.": {
+      "comment": "Insights: one focal length, e.g. 75% … 35mm",
+      "extractionState": "manual"
+    },
+    "%@ of your photos with a known shutter speed and focal length were shot slower than 1/focal length.": {
+      "comment": "Insights: share exposed longer than 1/equivalent focal length",
+      "extractionState": "manual"
+    },
+    "%@ was your busiest month: %lld photos.": {
+      "comment": "Insights: busiest month and its photo count (plural)",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ was your busiest month: %2$#@photos@."
+          },
+          "substitutions": {
+            "photos": {
+              "argNum": 2,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg photo"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg photos"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "%@ with %@ took %@ of your photos with a known camera and lens.": {
+      "comment": "Insights: body + lens pair, e.g. EOS R6 with RF 85mm … 40%",
+      "extractionState": "manual"
+    },
+    "%@ with %@ took %@ of your photos.": {
+      "comment": "Insights: body + lens pair, e.g. EOS R6 with RF 85mm … 40%",
+      "extractionState": "manual"
+    },
+    "%lld photos are from cameras with an unknown sensor size.": {
+      "comment": "Insights footer; opens Settings → Unknown Cameras (plural)",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld photo is from a camera with an unknown sensor size."
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld photos are from cameras with an unknown sensor size."
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "Insights appear once 50 photos have camera info — %lld so far.": {
+      "comment": "Insights card under the 50-photo threshold",
+      "extractionState": "manual"
+    },
+    "Portrait": {
+      "comment": "Angle-of-view group",
+      "extractionState": "manual"
+    },
+    "Standard": {
+      "comment": "Angle-of-view group",
+      "extractionState": "manual"
+    },
+    "Super telephoto": {
+      "comment": "Angle-of-view group",
+      "extractionState": "manual"
+    },
+    "Telephoto": {
+      "comment": "Angle-of-view group",
+      "extractionState": "manual"
+    },
+    "Ultra-wide": {
+      "comment": "Angle-of-view group",
+      "extractionState": "manual"
+    },
+    "Updating as your library is indexed.": {
+      "comment": "Insights footer while the index is still running",
+      "extractionState": "manual"
+    },
+    "Wide": {
+      "comment": "Angle-of-view group",
+      "extractionState": "manual"
+    },
+    "under %@": {
+      "comment": "Insights: the shortest angle-of-view group, e.g. under 20mm",
+      "extractionState": "manual"
+    }
+  },
+  "version": "1.0"
+}
