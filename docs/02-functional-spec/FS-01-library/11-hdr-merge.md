@@ -93,6 +93,9 @@ xuống:
 - Khung gốc nào tải hỏng lúc lưu thì dừng và báo, không lưu ảnh thiếu khung.
 - **Trần của Save**: loạt 5 khung RAW 24 MP, footprint đỉnh **≤ 700 MB** và **≤ 60 s** trên iPhone 12 (chốt
   2026-10-01). Nới hơn Focus Stack (500 MB) vì nền của bộ giải RAW (~400 MB trên Mac) chưa đo trên iPhone.
+- *Đo 2026-10-01 (simulator iPhone 17, 26.5, `HDRExportTests.rawDecoderFloor`):* riêng bộ giải RAW, 24 MP, theo dải —
+  1 bộ giải +171 MB; 5 bộ giải cùng sống, dải 256 hàng +372 MB (4,8 s); dải 128 hàng +337 MB. Còn ~330 MB cho ghép
+  và tone map trong trần 700 MB. Số trên iPhone thật chưa có.
 
 ## 7. Menu
 
