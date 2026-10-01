@@ -5,7 +5,7 @@
 | Tác giả | hat.tuan@karabiner.tech |
 | Ngày | 2026-09-29 |
 | Trạng thái | accepted — người dùng 2026-09-29: "ok tên file theo đề xuất, accepted" |
-| Tiến độ | **gần xong** (2026-09-30) — đợt 1 22/22 task, đợt 2 9/9 task, 10/10 AC đợt 2 có chứng minh; còn ảnh Duo + iPad ngang (AC-70), ảnh AC-63/AC-65 — plan [2026-09-30-network-folder-edit-phase2](../_plans/2026-09-30-network-folder-edit-phase2.md) |
+| Tiến độ | **gần xong** (2026-10-01, /verify) — 31/31 task; 29/32 AC xanh (45 test FS-17.06 xanh); còn AC-63 (ảnh RAW), AC-70 (Duo, iPad ngang), AC-82 (kéo thả chỉ có code); `Tools/gate` chưa xanh: test host treo dưới tải ở cả hai lượt + test HDR đang làm dở của FS-01.11 |
 | Nguồn | phản hồi người dùng (2026-09-29) |
 | Spec sinh ra từ đây | [FS-17.06](../02-functional-spec/FS-17-import-from-server/06-edit-and-export.md) |
 
