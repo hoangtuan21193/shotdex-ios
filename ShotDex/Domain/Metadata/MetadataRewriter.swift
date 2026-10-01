@@ -17,7 +17,8 @@ import UniformTypeIdentifiers
 /// Every rewritten file is read back and checked before it is returned, so a
 /// change in ImageIO that quietly keeps the GPS shows up as a dropped photo,
 /// not as a leak. Measured on iOS 26.5 and 18.6: PNG keeps its GPS through
-/// the copy, so a PNG with a location does not leave at No Location.
+/// the copy and TIFF its camera tags, so those two lossless formats are
+/// written again instead — pixel for pixel the same.
 enum MetadataRewriter {
     enum Failure: Error, Equatable {
         /// Not an image ImageIO can open.
@@ -43,7 +44,63 @@ enum MetadataRewriter {
         else { throw Failure.unreadable }
         let writable = CGImageDestinationCopyTypeIdentifiers() as? [String] ?? []
         guard writable.contains(type as String) else { throw Failure.unsupportedType(type as String) }
+        if losslessTypes.contains(type as String) {
+            try reencodeLosslessly(image, type: type, to: destination, level: level)
+            return
+        }
         try write(image, type: type, metadata: metadata(of: image, keeping: level), to: destination, level: level)
+    }
+
+    /// Formats whose encoding loses nothing, so writing them again gives back
+    /// every pixel (FS-08.06 §3, decided 2026-10-01). ImageIO's copy keeps a
+    /// PNG's GPS and a TIFF's camera tags (plan task 2); these are written
+    /// again instead, and the tests compare the pixels.
+    static let losslessTypes: Set<String> = [UTType.png.identifier, UTType.tiff.identifier]
+
+    /// PNG and TIFF: No Location writes the image again from the source with
+    /// the place set to null (ImageIO drops a key only when it is null); No
+    /// Metadata decodes and writes it with the keepers only.
+    private static func reencodeLosslessly(
+        _ image: CGImageSource, type: CFString, to destination: URL, level: MetadataLevel
+    ) throws {
+        guard let output = CGImageDestinationCreateWithURL(destination as CFURL, type, 1, nil),
+              let properties = CGImageSourceCopyPropertiesAtIndex(image, 0, nil) as? [CFString: Any]
+        else { throw Failure.cannotWrite }
+        switch level {
+        case .all:
+            return
+        case .noLocation:
+            var updated = properties
+            updated[kCGImagePropertyGPSDictionary] = kCFNull
+            if var exif = updated[kCGImagePropertyExifDictionary] as? [CFString: Any] {
+                exif[kCGImagePropertyExifSubjectLocation] = kCFNull
+                updated[kCGImagePropertyExifDictionary] = exif
+            }
+            if var iptc = updated[kCGImagePropertyIPTCDictionary] as? [CFString: Any] {
+                for key in iptcLocationKeys { iptc[key] = kCFNull }
+                updated[kCGImagePropertyIPTCDictionary] = iptc
+            }
+            CGImageDestinationAddImageFromSource(output, image, 0, updated as CFDictionary)
+        case .noMetadata:
+            guard let decoded = CGImageSourceCreateImageAtIndex(image, 0, nil) else { throw Failure.unreadable }
+            var kept = MetadataLevel.noMetadata.filteredProperties(properties)
+            if let orientation = properties[kCGImagePropertyOrientation] {
+                kept[kCGImagePropertyOrientation] = orientation
+                var tiff = kept[kCGImagePropertyTIFFDictionary] as? [CFString: Any] ?? [:]
+                tiff[kCGImagePropertyTIFFOrientation] = orientation
+                kept[kCGImagePropertyTIFFDictionary] = tiff
+            }
+            CGImageDestinationAddImage(output, decoded, kept as CFDictionary)
+        }
+        guard CGImageDestinationFinalize(output) else {
+            try? FileManager.default.removeItem(at: destination)
+            throw Failure.cannotWrite
+        }
+        let left = leftovers(in: destination, level: level)
+        guard left.isEmpty else {
+            try? FileManager.default.removeItem(at: destination)
+            throw Failure.stillCarries(left)
+        }
     }
 
     /// Writes a rendered image — a JPEG made from a RAW — with the metadata
@@ -120,6 +177,10 @@ enum MetadataRewriter {
     static let structural: Set<String> = [
         "exif:PixelXDimension", "exif:PixelYDimension", "exif:ColorSpace",
         "tiff:XResolution", "tiff:YResolution", "tiff:ResolutionUnit",
+        // How a TIFF's own pixels are stored; ImageIO writes them into every
+        // TIFF it makes.
+        "tiff:Compression", "tiff:PhotometricInterpretation", "tiff:BitsPerSample",
+        "tiff:SamplesPerPixel", "tiff:PlanarConfiguration", "tiff:ImageWidth", "tiff:ImageLength",
     ]
 
     /// Whether `level` removes the tag at `path` (`prefix:Name`).
@@ -196,6 +257,8 @@ enum MetadataRewriter {
                     kCGImagePropertyTIFFOrientation as String, kCGImagePropertyTIFFArtist as String,
                     kCGImagePropertyTIFFCopyright as String, kCGImagePropertyTIFFXResolution as String,
                     kCGImagePropertyTIFFYResolution as String, kCGImagePropertyTIFFResolutionUnit as String,
+                    kCGImagePropertyTIFFCompression as String, kCGImagePropertyTIFFPhotometricInterpretation as String,
+                    kCGImagePropertyTIFFTileWidth as String, kCGImagePropertyTIFFTileLength as String,
                 ]
                 found += tiff.keys.map { $0 as String }.filter { !kept.contains($0) }.map { "TIFF \($0)" }
             }

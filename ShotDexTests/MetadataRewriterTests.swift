@@ -26,7 +26,7 @@ struct MetadataRewriterTests {
 
     /// AC-1: the coordinate goes — from EXIF, from XMP and from the IPTC place
     /// names — and the camera, lens, exposure, date and author stay.
-    @Test(arguments: [UTType.jpeg, .heic, .tiff])
+    @Test(arguments: [UTType.jpeg, .heic, .tiff, .png])
     func noLocationRemovesThePlaceOnly(type: UTType) throws {
         defer { cleanUp() }
         let original = try MetadataFixture.write(type, in: folder)
@@ -55,7 +55,7 @@ struct MetadataRewriterTests {
 
     /// AC-1: the decoded pixels are the original's. The old path re-encoded
     /// every JPEG and HEIC it touched.
-    @Test(arguments: [UTType.jpeg, .heic, .tiff])
+    @Test(arguments: [UTType.jpeg, .heic, .tiff, .png])
     func noLocationKeepsEveryPixel(type: UTType) throws {
         defer { cleanUp() }
         let original = try MetadataFixture.write(type, in: folder)
@@ -81,8 +81,8 @@ struct MetadataRewriterTests {
     }
 
     /// Spec §5: a file that cannot be rewritten throws, and nothing is left at
-    /// the destination for a caller to hand over by mistake. A PNG keeps its
-    /// GPS through ImageIO's copy (plan task 2), so it is the real case.
+    /// the destination for a caller to hand over by mistake: a corrupt file,
+    /// and a RAW, which ImageIO cannot write.
     @Test func failedRewriteNeverReturnsOriginal() throws {
         defer { cleanUp() }
         let garbage = folder.appendingPathComponent("broken.jpg")
@@ -93,12 +93,35 @@ struct MetadataRewriterTests {
         }
         #expect(!FileManager.default.fileExists(atPath: first.path))
 
-        let png = try MetadataFixture.write(.png, in: folder)
-        let second = output().appendingPathExtension("png")
-        #expect(throws: MetadataRewriter.Failure.self) {
-            try MetadataRewriter.rewrite(png, to: second, level: .noLocation)
+        if let dng = RAWFixtures.available(RAWFixtures.dji) {
+            let second = output().appendingPathExtension("dng")
+            #expect(throws: MetadataRewriter.Failure.self) {
+                try MetadataRewriter.rewrite(dng, to: second, level: .noLocation)
+            }
+            #expect(!FileManager.default.fileExists(atPath: second.path))
         }
-        #expect(!FileManager.default.fileExists(atPath: second.path))
+    }
+
+    /// FS-08.06 §3 (decided 2026-10-01): PNG and TIFF are written again —
+    /// ImageIO's copy keeps a PNG's GPS — and come back pixel for pixel at
+    /// No Metadata too, keeping the orientation, the profile and the author.
+    @Test(arguments: [UTType.png, .tiff])
+    func losslessFormatsAreWrittenAgainPixelForPixel(type: UTType) throws {
+        defer { cleanUp() }
+        let original = try MetadataFixture.write(type, in: folder)
+        let shared = output().appendingPathExtension(original.pathExtension)
+        try MetadataRewriter.rewrite(original, to: shared, level: .noMetadata)
+
+        #expect(MetadataFixture.pixels(of: shared) == MetadataFixture.pixels(of: original))
+        #expect(MetadataRewriter.leftovers(in: shared, level: .noMetadata).isEmpty)
+        let props = MetadataFixture.properties(of: shared)
+        #expect(props[kCGImagePropertyGPSDictionary] == nil)
+        let tiff = props[kCGImagePropertyTIFFDictionary] as? [CFString: Any] ?? [:]
+        #expect(tiff[kCGImagePropertyTIFFMake] == nil)
+        #expect(tiff[kCGImagePropertyTIFFArtist] as? String == MetadataFixture.artist)
+        #expect(tiff[kCGImagePropertyTIFFCopyright] as? String == MetadataFixture.copyright)
+        #expect(props[kCGImagePropertyOrientation] as? Int == MetadataFixture.orientation)
+        #expect(MetadataFixture.hasColorProfile(shared))
     }
 
     /// All Metadata copies the file, byte for byte.

@@ -142,12 +142,13 @@ struct ShareExportPipelineTests {
         #expect(try FileManager.default.contentsOfDirectory(atPath: slot.path) == ["IMG_0001.HEIC"])
     }
 
-    /// Spec §5: a photo whose location cannot be removed is left out and
-    /// named; the rest of the share goes ahead.
+    /// Spec §5: a photo whose location cannot be removed — here a corrupt
+    /// file — is left out and named; the rest of the share goes ahead.
     @Test func aPhotoThatCannotBeCleanedIsLeftOut() async throws {
         defer { cleanUp() }
         let jpeg = try MetadataFixture.write(.jpeg, in: fixtures)
-        let png = try MetadataFixture.write(.png, in: fixtures)
+        let png = fixtures.appendingPathComponent("broken.png")
+        try Data([0x89, 0x50, 0x4E, 0x47, 0x00, 0x01]).write(to: png)
         let pipeline = ShareExportPipeline(
             reader: FakeReader(photos: ["jpeg": jpeg, "png": png]),
             folder: try ShareExportPipeline.makeFolder(in: shareRoot),
