@@ -120,7 +120,7 @@ extension RuleFieldKind {
         case .text: [.contains, .doesNotContain, .isExactly, .isNot]
         case .choice: [.isExactly, .isNot]
         case .number: [.equalTo, .greaterThan, .lessThan, .inRange]
-        case .date: [.on, .inLastDays, .before, .after, .inRange]
+        case .date: [.on, .inMonth, .inLastDays, .before, .after, .inRange]
         case .favorite: []
         }
     }
@@ -141,6 +141,9 @@ enum RuleOperator: String, Codable, CaseIterable, Identifiable, Sendable {
     case inRange
     // Date
     case on          // exact capture day
+    /// The calendar month of the capture date. `number` holds
+    /// `CaptureMonth.anchorDate` (the 15th at noon) of that month.
+    case inMonth
     case inLastDays
     case before
     case after
@@ -157,6 +160,7 @@ enum RuleOperator: String, Codable, CaseIterable, Identifiable, Sendable {
         case .lessThan: "less than"
         case .inRange: "is in range"
         case .on: "is on"
+        case .inMonth: "is in"
         case .inLastDays: "is in the last"
         case .before: "is before"
         case .after: "is after"
@@ -258,7 +262,7 @@ struct SmartAlbumRule: Identifiable, Codable, Equatable, Sendable {
             return op.needsUpperBound ? (number != nil && numberUpper != nil) : number != nil
         case .date:
             switch op {
-            case .on: return number != nil
+            case .on, .inMonth: return number != nil
             case .inLastDays: return (number ?? 0) > 0
             case .before, .after: return number != nil
             case .inRange: return number != nil && numberUpper != nil

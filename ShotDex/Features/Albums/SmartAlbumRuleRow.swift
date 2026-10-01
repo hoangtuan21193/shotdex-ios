@@ -193,6 +193,8 @@ struct SmartAlbumRuleRow: View {
         case .on, .before, .after:
             DatePicker("", selection: dateBinding(\.number), displayedComponents: .date)
                 .labelsHidden()
+        case .inMonth:
+            monthEditor
         case .inRange:
             HStack(spacing: 8) {
                 DatePicker("", selection: dateBinding(\.number), displayedComponents: .date)
@@ -204,6 +206,44 @@ struct SmartAlbumRuleRow: View {
         default:
             EmptyView()
         }
+    }
+
+    /// Month and year, each a menu — a day picker would ask for a day the
+    /// condition then ignores.
+    private var monthEditor: some View {
+        let calendar = Calendar.current
+        let currentYear = calendar.component(.year, from: .now)
+        return HStack(spacing: 8) {
+            Picker("Month", selection: monthBinding(\.month)) {
+                ForEach(1...12, id: \.self) { month in
+                    Text(calendar.standaloneMonthSymbols[month - 1]).tag(month)
+                }
+            }
+            Picker("Year", selection: monthBinding(\.year)) {
+                ForEach((currentYear - 60...currentYear).reversed(), id: \.self) { year in
+                    Text(verbatim: String(year)).tag(year)
+                }
+            }
+            Spacer()
+        }
+        .pickerStyle(.menu)
+    }
+
+    /// One part of the rule's month, stored back as that month's anchor.
+    private func monthBinding(_ part: WritableKeyPath<CaptureMonth, Int>) -> Binding<Int> {
+        Binding(
+            get: { selectedMonth[keyPath: part] },
+            set: { value in
+                var month = selectedMonth
+                month[keyPath: part] = value
+                rule.number = month.anchorDate().timeIntervalSince1970
+            }
+        )
+    }
+
+    /// The rule's month, or this month while none is stored yet.
+    private var selectedMonth: CaptureMonth {
+        CaptureMonth(containing: rule.number.map { Date(timeIntervalSince1970: $0) } ?? .now)
     }
 
     private var favoriteEditor: some View {

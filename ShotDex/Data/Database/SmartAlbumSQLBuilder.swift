@@ -111,6 +111,13 @@ enum SmartAlbumSQLBuilder {
                     ?? start.addingTimeInterval(86_400)
                 return ("creationDate >= ? AND creationDate < ?",
                         [Int(start.timeIntervalSince1970), Int(end.timeIntervalSince1970)])
+            case .inMonth:
+                // The whole calendar month around the stored mid-month instant,
+                // [first day 00:00, first day of next month 00:00) local time.
+                guard let epoch = rule.number else { return nil }
+                let month = CaptureMonth(containing: Date(timeIntervalSince1970: epoch))
+                let (sql, bounds) = month.creationDateCondition()
+                return (sql, bounds.map { $0 as DatabaseValueConvertible })
             case .inLastDays:
                 guard let days = rule.number, days > 0 else { return nil }
                 let seconds = Int(days.rounded()) * 86_400

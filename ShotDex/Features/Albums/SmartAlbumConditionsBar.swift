@@ -177,7 +177,7 @@ extension SmartAlbumRule {
 
     private var compactDateSummary: String {
         switch op {
-        case .on:
+        case .on, .inMonth:
             return "date \(displayValue)"
         case .inLastDays:
             return "last \(Int((number ?? 0).rounded()))d"
@@ -248,6 +248,8 @@ extension SmartAlbumRule {
                 return "\(Int((number ?? 0).rounded())) days"
             case .on, .before, .after:
                 return number.map { Self.dateFormatter.string(from: Date(timeIntervalSince1970: $0)) } ?? ""
+            case .inMonth:
+                return number.map { CaptureMonth(containing: Date(timeIntervalSince1970: $0)).abbreviatedName() } ?? ""
             case .inRange:
                 guard let lower = number, let upper = numberUpper else { return "" }
                 let lo = Self.dateFormatter.string(from: Date(timeIntervalSince1970: lower))
