@@ -409,4 +409,45 @@ struct ShareExportPipelineTests {
         }
         print("RAW as JPEG sizes: \(result.files.prefix(2).map { MetadataFixture.properties(of: $0)[kCGImagePropertyPixelWidth] ?? 0 })")
     }
+
+    /// AC-19: a drag offers the type of the file a share would hand over —
+    /// the edited rendering's for an edited photo — and goes through the
+    /// share pipeline at the Settings level.
+    @Test func dragUsesDefault() throws {
+        let edited = ShareSource(id: "A", kind: .photo, filename: "IMG_0001.jpg", uniformType: "public.jpeg")
+        #expect(ShareDragPlan(source: edited, level: .noLocation).type == .jpeg)
+        let heic = ShareSource(id: "B", kind: .photo, filename: "IMG_0002.HEIC", uniformType: "public.heic")
+        #expect(ShareDragPlan(source: heic, level: .all).type == .heic)
+        let movie = ShareSource(id: "V", kind: .video, filename: "IMG_0003.MOV", uniformType: "com.apple.quicktime-movie")
+        #expect(ShareDragPlan(source: movie, level: .noLocation).type == .quickTimeMovie)
+
+        let drag = try AssetMetadataCarryOverTests.codeLines(of: "ShotDex/Features/Shared/PhotoDragItem.swift")
+            .joined(separator: "\n")
+        #expect(drag.contains("let level = MetadataLevel.sharingDefault()"))
+        #expect(drag.contains("ShareExportPipeline(reader: PhotoKitShareReader()"))
+        #expect(!drag.contains("PHAssetResourceManager"))
+    }
+
+    /// AC-19: an edited photo is dragged as its edited version — the
+    /// rendering's bytes, with the photo's name — and without its GPS at No
+    /// Location.
+    @Test func dragSendsEditedVersion() async throws {
+        defer { cleanUp() }
+        let rendering = try MetadataFixture.write(.jpeg, in: fixtures)
+        #expect(ShareSource.sharedResourceType(among: [.photo, .adjustmentData, .fullSizePhoto]) == .fullSizePhoto)
+        #expect(ShareSource.filename(original: "IMG_0001.HEIC", shared: "FullSizeRender.jpg") == "IMG_0001.jpg")
+        let source = ShareSource(id: "A", kind: .photo, filename: "IMG_0001.jpg", uniformType: "public.jpeg")
+        let pipeline = ShareExportPipeline(
+            reader: FakeReader(photos: ["A": rendering]),
+            folder: try ShareExportPipeline.makeFolder(in: shareRoot),
+            level: .noLocation
+        )
+        let result = await pipeline.export([source])
+        let file = try #require(result.files.first)
+        #expect(file.lastPathComponent == "IMG_0001.jpg")
+        #expect(MetadataFixture.dictionary(kCGImagePropertyGPSDictionary, of: file) == nil)
+        #expect(MetadataFixture.pixels(of: file) == MetadataFixture.pixels(of: rendering))
+        let exif = try #require(MetadataFixture.dictionary(kCGImagePropertyExifDictionary, of: file))
+        #expect(exif[kCGImagePropertyExifISOSpeedRatings] as? [Int] == [400])
+    }
 }

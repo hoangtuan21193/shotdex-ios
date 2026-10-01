@@ -1,4 +1,5 @@
 import Photos
+import ShotDexKit
 import UIKit
 import UniformTypeIdentifiers
 
@@ -27,25 +28,28 @@ enum PhotoDragItem {
             return nil
         }
 
-        let type = exportType(for: asset)
-        provider.suggestedName = PHAssetResource.assetResources(for: asset)
-            .first?.originalFilename
+        // The same file a share would hand over, at the Settings level
+        // (FS-08.06 AC-19): the edited version of an edited photo, without
+        // what the level removes. A file that cannot be cleaned fails the
+        // drag; it is never handed over as it was.
+        let level = MetadataLevel.sharingDefault()
+        let source = ShareSource(asset: asset)
+        let plan = ShareDragPlan(source: source, level: level)
+        provider.suggestedName = (source.filename as NSString).deletingPathExtension
         provider.registerFileRepresentation(
-            forTypeIdentifier: type.identifier,
+            forTypeIdentifier: plan.type.identifier,
             fileOptions: [],
             visibility: .all
         ) { completion in
-            // The whole file, not a rendition: a photo dropped into another app
-            // should be the photo, EXIF and all. iCloud-only assets download
-            // first, which is why this is the slow half of the provider and the
-            // identifier payload above exists at all.
+            // iCloud-only assets download first, which is why this is the
+            // slow half of the provider and the identifier payload above
+            // exists at all.
             let progress = Progress(totalUnitCount: 100)
             Task {
-                if let url = await fileURL(for: asset, type: type) {
+                if let url = await fileURL(for: source, level: level, rawChoice: plan.rawChoice) {
                     progress.completedUnitCount = 100
                     // `false` keeps the temporary file alive until UIKit has
-                    // read it; it lives in this process's temp directory and
-                    // goes with the app.
+                    // read it; the launch sweep removes the folder.
                     completion(url, false, nil)
                 } else {
                     completion(nil, false, PhotoDragError.unavailable)
@@ -85,41 +89,12 @@ enum PhotoDragItem {
 
     // MARK: Files
 
-    private static func exportType(for asset: PHAsset) -> UTType {
-        let resources = PHAssetResource.assetResources(for: asset)
-        let preferred: PHAssetResourceType = asset.mediaType == .video ? .video : .photo
-        let resource = resources.first { $0.type == preferred } ?? resources.first
-        if let identifier = resource?.uniformTypeIdentifier,
-           let type = UTType(identifier) {
-            return type
-        }
-        return asset.mediaType == .video ? .quickTimeMovie : .jpeg
-    }
-
-    private static func fileURL(for asset: PHAsset, type: UTType) async -> URL? {
-        let resources = PHAssetResource.assetResources(for: asset)
-        let preferred: PHAssetResourceType = asset.mediaType == .video ? .video : .photo
-        guard let resource = resources.first(where: { $0.type == preferred })
-            ?? resources.first
-        else { return nil }
-
-        let name = resource.originalFilename
-        let directory = FileManager.default.temporaryDirectory
-            .appendingPathComponent("ShotDexDrag-\(UUID().uuidString)", isDirectory: true)
-        guard (try? FileManager.default.createDirectory(
-            at: directory,
-            withIntermediateDirectories: true
-        )) != nil else { return nil }
-        let url = directory.appendingPathComponent(name)
-
-        let options = PHAssetResourceRequestOptions()
-        options.isNetworkAccessAllowed = true
-        do {
-            try await PHAssetResourceManager.default().writeData(for: resource, toFile: url, options: options)
-            return url
-        } catch {
-            return nil
-        }
+    private static func fileURL(for source: ShareSource, level: MetadataLevel, rawChoice: RAWChoice) async -> URL? {
+        guard let folder = try? ShareExportPipeline.makeFolder() else { return nil }
+        var pipeline = ShareExportPipeline(reader: PhotoKitShareReader(), folder: folder, level: level)
+        pipeline.rawChoice = rawChoice
+        let result = await pipeline.export([source])
+        return result.files.first
     }
 }
 

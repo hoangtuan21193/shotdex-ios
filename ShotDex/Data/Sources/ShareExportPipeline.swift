@@ -1,5 +1,6 @@
 import Foundation
 import ShotDexKit
+import UniformTypeIdentifiers
 
 /// One photo or video on its way out of the app (FS-08.06): what the share
 /// pipeline needs to know about it, and nothing PhotoKit-shaped, so the
@@ -26,6 +27,9 @@ struct ShareSource: Sendable, Equatable {
     var hasLocation = true
     /// For a RAW: whether this device can decode it at all (FS-03.04b).
     var isReadable = true
+    /// The type of the file that would be handed over — the edited
+    /// rendering's for an edited photo. `nil` when unknown.
+    var uniformType: String?
 }
 
 /// Where the share pipeline reads the bytes it hands over. `PhotoKitShareReader`
@@ -203,5 +207,21 @@ extension ShareBatchPlan {
             rawCount: raws.count,
             unreadableRAWCount: raws.filter { !$0.isReadable }.count
         )
+    }
+}
+
+/// Dragging a photo into another app (FS-08.06 §5): the same pipeline as a
+/// share at the Settings level — the current version, the edited one if the
+/// photo was edited — with nowhere to ask a question.
+struct ShareDragPlan: Equatable, Sendable {
+    /// The type the drag offers the other app.
+    let type: UTType
+    /// The answer a share would have asked for. Skip until plan task 23: a
+    /// RAW below All Metadata does not leave by drag.
+    let rawChoice: RAWChoice
+
+    init(source: ShareSource, level: MetadataLevel) {
+        type = source.uniformType.flatMap(UTType.init) ?? (source.kind == .video ? .quickTimeMovie : .jpeg)
+        rawChoice = .skip
     }
 }

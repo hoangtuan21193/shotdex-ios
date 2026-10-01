@@ -42,7 +42,13 @@ extension ShareSource {
         if kind != .video, let shared {
             filename = Self.filename(original: original, shared: shared.originalFilename)
         }
-        self.init(id: asset.localIdentifier, kind: kind, filename: filename, hasLocation: asset.location != nil)
+        let sharedType = kind == .video
+            ? resources.first { $0.type == .video }?.uniformTypeIdentifier
+            : shared?.uniformTypeIdentifier
+        self.init(
+            id: asset.localIdentifier, kind: kind, filename: filename,
+            hasLocation: asset.location != nil, uniformType: sharedType
+        )
     }
 }
 
