@@ -11,6 +11,9 @@ struct ShareSource: Sendable, Equatable {
         case photo
         /// Shared as it is at every level (spec §2).
         case video
+        /// A RAW original, which ImageIO cannot rewrite: below All Metadata
+        /// the share asks what to do with it (spec §5).
+        case raw
     }
 
     let id: String
@@ -21,6 +24,8 @@ struct ShareSource: Sendable, Equatable {
     /// in the app may still sit in the file's GPS, and it must not leave with
     /// the file at any level, All Metadata included (spec §3).
     var hasLocation = true
+    /// For a RAW: whether this device can decode it at all (FS-03.04b).
+    var isReadable = true
 }
 
 /// Where the share pipeline reads the bytes it hands over. `PhotoKitShareReader`
@@ -44,6 +49,8 @@ struct ShareExportResult: Sendable, Equatable {
     /// device, or a download that did not finish — as opposed to a photo
     /// whose metadata could not be removed.
     var unread: [String] = []
+    /// RAW files left out because the user chose Skip — not failures.
+    var skipped: [String] = []
 }
 
 /// Gathers a share one item at a time into a scratch folder of its own
@@ -56,6 +63,10 @@ struct ShareExportPipeline: Sendable {
     let folder: URL
     /// What goes with each photo. Videos go as they are at every level.
     let level: MetadataLevel
+    /// What happens to RAW files below All Metadata — the share's one answer
+    /// to the RAW question. Skip unless asked: a RAW never leaves carrying
+    /// what the level removes without the user having said so.
+    var rawChoice: RAWChoice = .skip
 
     static let prefix = "ShotDexShare-"
 
@@ -72,7 +83,15 @@ struct ShareExportPipeline: Sendable {
         switch source.kind {
         case .video:
             return try await reader.videoURL(for: source)
-        case .photo:
+        case .raw where level != .all:
+            switch rawChoice {
+            case .skip:
+                throw Skipped()
+            case .shareRAWWithLocation, .shareAsJPEG:
+                // Plan tasks 16 and 17.
+                throw MetadataRewriter.Failure.unsupportedType(source.filename)
+            }
+        case .photo, .raw:
             let slot = folder.appendingPathComponent(String(index), isDirectory: true)
             try FileManager.default.createDirectory(at: slot, withIntermediateDirectories: true)
             let file = slot.appendingPathComponent(source.filename)
@@ -109,6 +128,8 @@ struct ShareExportPipeline: Sendable {
         for (index, source) in sources.enumerated() {
             do {
                 result.files.append(try await export(source, index: index))
+            } catch is Skipped {
+                result.skipped.append(source.filename)
             } catch is MetadataRewriter.Failure {
                 result.failed.append(source.filename)
             } catch {
@@ -119,8 +140,25 @@ struct ShareExportPipeline: Sendable {
         return result
     }
 
+    /// A RAW left out at the user's word.
+    struct Skipped: Error {}
+
     /// Removes the folder and everything gathered into it.
     func removeFolder() {
         try? FileManager.default.removeItem(at: folder)
+    }
+}
+
+extension ShareBatchPlan {
+    /// The plan for a share of these items at `level`.
+    init(sources: [ShareSource], level: MetadataLevel) {
+        let raws = sources.filter { $0.kind == .raw }
+        self.init(
+            level: level,
+            photoCount: sources.filter { $0.kind == .photo }.count,
+            videoCount: sources.filter { $0.kind == .video }.count,
+            rawCount: raws.count,
+            unreadableRAWCount: raws.filter { !$0.isReadable }.count
+        )
     }
 }

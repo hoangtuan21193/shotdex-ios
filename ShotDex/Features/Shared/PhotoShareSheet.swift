@@ -53,16 +53,52 @@ enum PhotoShareSheet {
         guard let folder = try? ShareExportPipeline.makeFolder() else {
             return Prepared(items: [], failed: assets.map { ShareSource(asset: $0).filename }, folder: nil)
         }
-        let pipeline = ShareExportPipeline(
+        let sources = assets.map(ShareSource.init(asset:))
+        var pipeline = ShareExportPipeline(
             reader: PhotoKitShareReader(allowsNetworkAccess: allowsNetworkAccess),
             folder: folder,
             level: level
         )
-        let result = await pipeline.export(assets.map(ShareSource.init(asset:)))
+        let plan = ShareBatchPlan(sources: sources, level: level)
+        if plan.asksAboutRAW {
+            pipeline.rawChoice = await askAboutRAW(plan)
+        }
+        let result = await pipeline.export(sources)
         return Prepared(
             items: result.files, failed: result.failed, unread: result.unread, folder: folder, level: level,
             regather: { await gather(assets: assets, level: $0, allowsNetworkAccess: allowsNetworkAccess) }
         )
+    }
+
+    /// Asks, once for the whole share, what to do with RAW files whose
+    /// metadata cannot be removed (FS-08.06 §5). Skip leaves them out; a
+    /// share of only RAW files then opens no share sheet at all.
+    @MainActor
+    static func askAboutRAW(_ plan: ShareBatchPlan) async -> RAWChoice {
+        guard let presenter = topPresenter() else { return .skip }
+        let question = plan.rawQuestion
+        let title: String = switch (question.count, question.removes) {
+        case (1, .location): String(localized: "This RAW file can't have its location removed")
+        case (1, .metadata): String(localized: "This RAW file can't have its metadata removed")
+        case (_, .location): String(localized: "\(question.count) RAW files can't have their location removed")
+        case (_, .metadata): String(localized: "\(question.count) RAW files can't have their metadata removed")
+        }
+        let message = plan.offersJPEG ? nil : String(localized: "iOS can't read this RAW yet, so it can't be shared as a JPEG.")
+        return await withCheckedContinuation { continuation in
+            let alert = UIAlertController(title: title, message: message, preferredStyle: .alert)
+            let jpeg = UIAlertAction(title: String(localized: "Share as JPEG"), style: .default) { _ in
+                continuation.resume(returning: .shareAsJPEG)
+            }
+            jpeg.isEnabled = plan.offersJPEG
+            alert.addAction(jpeg)
+            alert.addAction(UIAlertAction(title: String(localized: "Share RAW with Location"), style: .default) { _ in
+                continuation.resume(returning: .shareRAWWithLocation)
+            })
+            alert.addAction(UIAlertAction(title: String(localized: "Skip"), style: .cancel) { _ in
+                continuation.resume(returning: .skip)
+            })
+            presenter.present(alert, animated: true)
+        }
     }
 
     /// Presents the share sheet for a gather, telling the user first which

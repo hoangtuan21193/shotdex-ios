@@ -313,4 +313,28 @@ struct ShareExportPipelineTests {
         #expect(try Self.sha256(result.files[0]) == Self.sha256(movie))
         #expect(MetadataFixture.dictionary(kCGImagePropertyGPSDictionary, of: result.files[1]) == nil)
     }
+
+    /// AC-9: Skip — the share goes ahead with photo A alone, without GPS;
+    /// the RAW files are left out at the user's word, not as failures.
+    @Test func skipDropsRAW() async throws {
+        defer { cleanUp() }
+        let photoA = try MetadataFixture.write(.heic, in: fixtures)
+        let raw = fixtures.appendingPathComponent("DSC00001.ARW")
+        try Data(repeating: 7, count: 512).write(to: raw)
+        var pipeline = ShareExportPipeline(
+            reader: FakeReader(photos: ["A": photoA, "1": raw, "2": raw]),
+            folder: try ShareExportPipeline.makeFolder(in: shareRoot),
+            level: .noLocation
+        )
+        pipeline.rawChoice = .skip
+        let result = await pipeline.export([
+            ShareSource(id: "1", kind: .raw, filename: "DSC00001.ARW"),
+            ShareSource(id: "2", kind: .raw, filename: "DSC00002.ARW"),
+            ShareSource(id: "A", kind: .photo, filename: "IMG_0001.HEIC"),
+        ])
+        #expect(result.files.map(\.lastPathComponent) == ["IMG_0001.HEIC"])
+        #expect(result.skipped == ["DSC00001.ARW", "DSC00002.ARW"])
+        #expect(result.failed.isEmpty)
+        #expect(MetadataFixture.dictionary(kCGImagePropertyGPSDictionary, of: result.files[0]) == nil)
+    }
 }

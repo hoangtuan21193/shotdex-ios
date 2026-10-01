@@ -1,4 +1,5 @@
 import Foundation
+import Photos
 import ShotDexKit
 import Testing
 @testable import ShotDex
@@ -60,5 +61,45 @@ struct ShareBatchPlanTests {
         #expect(ShareBatchPlan(level: .noMetadata, photoCount: 1, videoCount: 2).notesVideosKeepMetadata)
         #expect(!ShareBatchPlan(level: .all, photoCount: 1, videoCount: 1).notesVideosKeepMetadata)
         #expect(!ShareBatchPlan(level: .noLocation, photoCount: 1, videoCount: 0).notesVideosKeepMetadata)
+    }
+
+    /// AC-9: two ARW and photo A at No Location — one question for the
+    /// share, naming two RAW files and the location.
+    @Test func rawAlertOnce() {
+        let sources = [
+            ShareSource(id: "1", kind: .raw, filename: "DSC00001.ARW"),
+            ShareSource(id: "2", kind: .raw, filename: "DSC00002.ARW"),
+            ShareSource(id: "A", kind: .photo, filename: "IMG_0001.HEIC"),
+        ]
+        let plan = ShareBatchPlan(sources: sources, level: .noLocation)
+        #expect(plan.asksAboutRAW)
+        #expect(plan.rawQuestion == .init(count: 2, removes: .location))
+        #expect(plan.offersJPEG)
+        #expect(ShareBatchPlan(sources: sources, level: .noMetadata).rawQuestion.removes == .metadata)
+        // All Metadata hands RAW over as it is: nothing to ask.
+        #expect(!ShareBatchPlan(sources: sources, level: .all).asksAboutRAW)
+        #expect(!ShareBatchPlan(sources: [sources[2]], level: .noLocation).asksAboutRAW)
+    }
+
+    /// FS-03.04b: a RAW this device cannot decode has no JPEG to offer.
+    @Test func unreadableRAWDimsShareAsJPEG() {
+        let sources = [
+            ShareSource(id: "1", kind: .raw, filename: "DSC00001.ARW", isReadable: false),
+            ShareSource(id: "A", kind: .photo, filename: "IMG_0001.HEIC"),
+        ]
+        let plan = ShareBatchPlan(sources: sources, level: .noLocation)
+        #expect(plan.asksAboutRAW)
+        #expect(!plan.offersJPEG)
+    }
+
+    /// A RAW-only photo is told apart from its edited rendering by the type
+    /// of the resource that would be shared.
+    @Test func rawIsRecognisedByTheSharedResource() {
+        #expect(ShareSource.kind(mediaType: .image, sharedType: "com.sony.arw-raw-image") == .raw)
+        #expect(ShareSource.kind(mediaType: .image, sharedType: "com.fuji.raw-image") == .raw)
+        #expect(ShareSource.kind(mediaType: .image, sharedType: "com.adobe.raw-image") == .raw)
+        #expect(ShareSource.kind(mediaType: .image, sharedType: "public.heic") == .photo)
+        #expect(ShareSource.kind(mediaType: .image, sharedType: "public.jpeg") == .photo)
+        #expect(ShareSource.kind(mediaType: .video, sharedType: nil) == .video)
     }
 }

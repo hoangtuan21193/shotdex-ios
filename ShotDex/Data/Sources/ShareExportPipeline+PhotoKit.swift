@@ -1,11 +1,14 @@
 import AVFoundation
 import Photos
+import UniformTypeIdentifiers
 
 extension ShareSource {
     /// What kind of share item a library asset is. A Live Photo is an
     /// `.image` asset and shares as a photo: only its still leaves (spec §5).
-    static func kind(mediaType: PHAssetMediaType) -> Kind {
-        mediaType == .video ? .video : .photo
+    static func kind(mediaType: PHAssetMediaType, sharedType: String? = nil) -> Kind {
+        if mediaType == .video { return .video }
+        if let sharedType, UTType(sharedType)?.conforms(to: .rawImage) == true { return .raw }
+        return .photo
     }
 
     /// The resource whose bytes a photo shares: the edited rendering when the
@@ -29,12 +32,14 @@ extension ShareSource {
 
     init(asset: PHAsset) {
         let resources = PHAssetResource.assetResources(for: asset)
-        let kind = Self.kind(mediaType: asset.mediaType)
+        let shared = Self.sharedResourceType(among: resources.map(\.type))
+            .flatMap { type in resources.first { $0.type == type } }
+        // An edited RAW shares its rendering, a JPEG or HEIC: only an
+        // untouched RAW-only photo shares the RAW itself.
+        let kind = Self.kind(mediaType: asset.mediaType, sharedType: shared?.uniformTypeIdentifier)
         let original = resources.first { $0.type == .photo || $0.type == .video }?.originalFilename ?? "Photo"
         var filename = original
-        if kind == .photo,
-           let type = Self.sharedResourceType(among: resources.map(\.type)),
-           let shared = resources.first(where: { $0.type == type }) {
+        if kind != .video, let shared {
             filename = Self.filename(original: original, shared: shared.originalFilename)
         }
         self.init(id: asset.localIdentifier, kind: kind, filename: filename, hasLocation: asset.location != nil)
