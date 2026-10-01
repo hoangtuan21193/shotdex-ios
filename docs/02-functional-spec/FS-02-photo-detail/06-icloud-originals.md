@@ -55,7 +55,7 @@ Bảng AC không có dòng nào cho chúng, nên đợt này không làm.
 
 ## 4. Từng màn
 
-| Màn | Hôm nay (2026-10-01) | Luật |
+| Màn | Trước 2026-10-02 (đã thay bằng cột Luật) | Luật |
 |---|---|---|
 | Viewer | trang đang hiện tải bản cỡ màn qua mạng; vòng 22pt hiện ngay khi byte chạy, không có số | trang đang hiện hỏi hệ thống **một lần với mạng tắt**; bản gốc chưa về thì bảng thông tin có glyph iCloud. Bản **cỡ màn** vẫn được tải qua mạng khi chưa phóng, như Photos ([01](01-pager-and-image-loading.md) §4); **bản gốc** chỉ tải khi phóng. Vòng 22pt đầy dần theo tiến độ khi bản cỡ màn **hoặc** bản gốc đang tải, **không có số** cạnh vòng; VoiceOver đọc phần trăm. Vì số tốn ~28pt dòng tiêu đề trên máy 402pt |
 | Editor một ảnh | spinner không có %; chữ chỉ ghi iCloud khi máy không có cả bản xem trước | thẻ trên stage ghi *"Downloading from iCloud… 41%"* với thanh tiến độ xác định; Save tắt tới khi bản gốc về |
@@ -176,13 +176,22 @@ giữ nguyên chỗ và hành vi, không bị thay.
 | AC-15 | quyền `.limited`; ảnh đang tải trong editor bị gỡ khỏi tập chọn | lượt tải trả lỗi quyền | *Can't Open This Photo* + Open Settings · Cancel; mọi nút đều đóng editor | `EditorLoadFailureTests.noAccessReadsCantOpenThisPhoto` (tiêu đề, Open Settings · Cancel, mọi nút gọi `close()`) · `.permissionErrorsOfferSettings` · `.anUnavailablePhotoUnderLimitedAccessIsTheSelection` · iPhone 17 26.5 (2026-10-02, `icloud-editor-cancel-stall.json` + `icloud-editor-stall-denied.json`, `cloud=all,denied`: lượt tải giả trả lỗi quyền của Photos ở 30%): alert *Can't Open This Photo* + câu Settings + **Cancel** · **Open Settings**; Cancel → về viewer. Open Settings không bấm trên sim (rời app), khoá bằng test nguồn · ⚠️ máy thật: mã lỗi thật khi ảnh bị gỡ khỏi tập chọn giữa chừng |
 | AC-16 | Resize 5 ảnh chỉ trên iCloud, Delete Originals bật; ảnh 5 tải hỏng | alert *1 of 5 photos couldn't be downloaded* hiện | lúc đó chưa có asset mới nào và chưa ảnh nào bị xoá; bản gốc của 4 ảnh đã về nằm sẵn trên đĩa | `CompressionPreparationTests.failureAlertBeforeAnyWrite` (5 ảnh iCloud, ảnh 5 hỏng: *1 of 5 photos couldn't be downloaded from iCloud.*, 0 tạo, 0 xoá, 4 file trong `ShotDexOriginals-`; Cancel → vẫn 0/0, thư mục xoá) · `.copiesReadThePreparedOriginals` (bản nén đọc bản gốc đã tải, không tải lại) · iPhone 17 26.5 (2026-10-02, `icloud-resize.json`, `cloud=all,seconds=10,fail=3`, 3 ảnh): modal xử lý của Resize hiện *1 of 3 photos couldn't be downloaded from iCloud.* + tên + **Continue with 2** · Retry · Cancel; Cancel → về form Resize, không tạo/xoá ảnh nào · ⚠️ máy thật: mạng tắt thật |
 | AC-17 | lưới có ảnh chỉ trên iCloud | cuộn lưới | không ô nào có dấu iCloud; không có lượt hỏi tài nguyên PhotoKit nào theo ô | `GridICloudFreeTests.gridHasNoPerCellResourceQuery` (quét `PhotoGridCollectionView`, `PhotoGridLayout`, `PhotoGridSections`: không `PHAssetResource`, `requestImageData…`, `PHImageResultIsInCloudKey`, `OriginalFetching`, nhãn *Original in iCloud*) |
-| AC-18 | Library đang index ở 40%; menu ô của 1 ảnh chỉ trên iCloud | bấm Share, rồi chọn Save to Files | share sheet mở ngay; sau khi chọn đích, modal giữa màn có tiến độ + Cancel; toolbar Library không có token tải nào, token index vẫn ở chỗ cũ cạnh gear; index tạm dừng trong lúc tải và chạy tiếp khi modal đóng; iOS 26.5 và 18.6 cùng hành vi | `LazyShareItemTests.indexGateHeldDuringShare` (cổng index giữ trong lúc tải, nhả khi xong) · `.everyShareEntryIsLazy` (chọn nhiều, menu ô, album, smart album, On This Day đều qua `PhotoShareSheet.share(assets:)`; không còn `gather`/`isPreparingShare`) · iPhone 17 26.5 (`icloud-share-tile-menu.json`) và iPhone SE 18.6 (`icloud-share-tile-menu-18.json`), 2026-10-02, `cloud=all,seconds=120,mb=24`: giữ ô HEIC → Share → share sheet mở ngay → Save to Files → modal *Downloading from iCloud · 3% · 24 MB* + Cancel ở cả hai; Cancel → về lưới, toolbar chỉ có gear · tiêu đề · Filter · Select (26.5) / gear · ngày · Filter · Select (18.6), không token tải · ⚠️ chưa chụp được token index ở 40%: index của simulator đã chạy xong, không dựng lại được trạng thái đang index |
+| AC-18 | Library đang index ở 40%; menu ô của 1 ảnh chỉ trên iCloud | bấm Share, rồi chọn Save to Files | share sheet mở ngay; sau khi chọn đích, modal giữa màn có tiến độ + Cancel; toolbar Library không có token tải nào, token index vẫn ở chỗ cũ cạnh gear; index tạm dừng trong lúc tải và chạy tiếp khi modal đóng; iOS 26.5 và 18.6 cùng hành vi | `LazyShareItemTests.indexGateHeldDuringShare` (cổng index giữ trong lúc tải, nhả khi xong) · `.everyShareEntryIsLazy` (chọn nhiều, menu ô, album, smart album, On This Day đều qua `PhotoShareSheet.share(assets:)`; không còn `gather`/`isPreparingShare`) · iPhone 17 26.5 (`icloud-share-tile-menu.json`) và iPhone SE 18.6 (`icloud-share-tile-menu-18.json`), 2026-10-02, `cloud=all,seconds=120,mb=24`: giữ ô HEIC → Share → share sheet mở ngay → Save to Files → modal *Downloading from iCloud · 3% · 24 MB* + Cancel ở cả hai (và iPad 13 26.5, `icloud-share-ipad.json`: modal giữa màn đè lên popover share); Cancel → về lưới, toolbar chỉ có gear · tiêu đề · Filter · Select (26.5) / gear · ngày · Filter · Select (18.6), không token tải · ⚠️ chưa chụp được token index ở 40%: index của simulator đã chạy xong, không dựng lại được trạng thái đang index |
 
 AC có ảnh chụp phải chụp trên iPhone 402×874, iPad 1376×1032, Duo trong 951×669 và Duo ngoài 466×678 (dùng
 `Tools/sim-shot`), trên cả iOS 26.5 và 18.6.
 
-**Chưa chứng minh được:** AC-1…18. Simulator không có thư viện iCloud Photos, nên các AC này phải chụp trên máy
-thật bật Optimize Storage. AC-11 là test thuần, viết được ngay.
+**Chưa chứng minh được (2026-10-02):**
+- **AC-2 chưa đạt:** khi phóng, viewer ẩn chrome (FS-02.01 §3), nên vòng 22pt trong bảng thông tin không thấy được
+  trong lúc bản gốc tải. Cần người dùng chốt cách hiện vòng khi đang phóng.
+- **Chỉ máy thật mới chứng minh được** (simulator không có thư viện iCloud; mọi ảnh chụp ở trên đi qua bản giả
+  `-ShotDexFakeICloud`): PhotoKit thật trả bản xem trước "bản cuối" (AC-1, AC-11), nguồn/đích đúng 6000×4000 (AC-3,
+  AC-8), huỷ lượt tải PhotoKit thật ≤ 1 s (AC-4, AC-10), Airplane Mode thật (AC-5), tắt mạng giữa mẻ (AC-7, AC-9,
+  AC-16), mã lỗi khi ảnh bị gỡ khỏi tập chọn (AC-15), đích thật Messages/AirDrop qua nguồn lười (§11).
+- **Thiết bị:** đã chụp iPhone 17 26.5, iPhone SE 18.6 (AC-18) và iPad 13 26.5 (modal Share, `icloud-share-ipad.json`).
+  Chưa chụp Duo trong/ngoài (máy còn ~5 GB trống) và chưa chụp 18.6 cho Resize/Collage/editor.
+- AC-18: chưa dựng được trạng thái index đang chạy 40% trên simulator (index đã xong), nên token index chỉ
+  chứng minh bằng code (không đổi) và ảnh chụp toolbar không có token tải.
 
 ## 11. Rủi ro đã biết
 

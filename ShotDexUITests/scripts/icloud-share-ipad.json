@@ -1,0 +1,87 @@
+{
+ "steps": [
+  {
+   "action": "launch",
+   "arguments": [
+    "-ShotDexFakeICloud",
+    "cloud=all,seconds=120,mb=24"
+   ]
+  },
+  {
+   "action": "wait",
+   "seconds": 7
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "longPress",
+   "label": "Photo, file type HEIC",
+   "type": "cell",
+   "seconds": 1.2
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "tap",
+   "label": "Share",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "screenshot",
+   "name": "01-sheet"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "tap",
+   "label": "View More"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "tap",
+   "label": "Save to Files"
+  },
+  {
+   "action": "wait",
+   "seconds": 2.5
+  },
+  {
+   "action": "screenshot",
+   "name": "02-modal"
+  },
+  {
+   "action": "wait",
+   "seconds": 5
+  },
+  {
+   "action": "tap",
+   "label": "Cancel",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "screenshot",
+   "name": "03-after-cancel"
+  },
+  {
+   "action": "wait",
+   "seconds": 5
+  }
+ ]
+}
