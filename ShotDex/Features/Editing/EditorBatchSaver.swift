@@ -306,7 +306,8 @@ struct PasteEditsSheet: View {
 
     @State private var saver = EditorBatchSaver()
     @State private var format: PhotoOutputFormat = .jpeg
-    @State private var includeMetadata = true
+    /// What each copy keeps; starts at the Settings default (FS-08.06 §4).
+    @State private var copyMetadata = MetadataLevel.sharingDefault()
     @State private var savesCopy = true
 
     var body: some View {
@@ -318,8 +319,16 @@ struct PasteEditsSheet: View {
                         Text("HEIC").tag(PhotoOutputFormat.heic)
                     }
                     .pickerStyle(.segmented)
-                    Toggle("Include Metadata", isOn: $includeMetadata)
                     Toggle("Save as Copies", isOn: $savesCopy)
+                    // Pasting in place keeps everything, like Save Changes:
+                    // only a copy has metadata to choose.
+                    if savesCopy {
+                        Picker("Metadata", selection: $copyMetadata) {
+                            ForEach(MetadataLevel.allCases, id: \.self) { level in
+                                Text(level.title).tag(level)
+                            }
+                        }
+                    }
                 } footer: {
                     Text("Applies the copied look — tone, colour, curve and film look. The crop, masks and markup of each photo are left alone.")
                 }
@@ -360,7 +369,7 @@ struct PasteEditsSheet: View {
             service: dependencies.photoEditing,
             libraryQueries: dependencies.libraryQueries,
             format: format,
-            metadata: includeMetadata ? .all : .noMetadata,
+            metadata: savesCopy ? copyMetadata : .all,
             savesCopy: savesCopy,
             album: nil,
             onSaved: { _ in },

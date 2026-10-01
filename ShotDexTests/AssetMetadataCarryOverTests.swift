@@ -58,4 +58,19 @@ struct AssetMetadataCarryOverTests {
         #expect(sheet.contains("controller.saveCopy(format: format, metadata: copyMetadata)"))
         #expect(sheet.contains("MetadataLevel.sharingDefault()"))
     }
+
+    /// AC-18: Resize and Paste Edits open at the Settings level, and what
+    /// they choose reaches the flat asset (file and creation request).
+    @Test func flatAssetFollowsTheLevel() throws {
+        let resize = try Self.codeLines(of: "ShotDex/Features/Editing/CompressionController.swift").joined(separator: "\n")
+        #expect(resize.contains("var metadata = MetadataLevel.sharingDefault()"))
+        #expect(resize.contains("metadata: metadata,"))
+        let paste = try Self.codeLines(of: "ShotDex/Features/Editing/EditorBatchSaver.swift").joined(separator: "\n")
+        #expect(paste.contains("private var copyMetadata = MetadataLevel.sharingDefault()"))
+        #expect(paste.contains("metadata: savesCopy ? copyMetadata : .all,"))
+        let service = try Self.codeLines(of: "ShotDex/Data/Sources/PhotoEditingService.swift").joined(separator: "\n")
+        let flat = try #require(service.range(of: "private func createFlatAsset("))
+        #expect(service[flat.lowerBound...].prefix(900).contains("AssetMetadataCarryOver(level: metadata)"))
+        #expect(PhotoExportOptions.compressDefault.metadata == .all)
+    }
 }

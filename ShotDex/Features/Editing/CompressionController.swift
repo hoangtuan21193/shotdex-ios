@@ -23,7 +23,9 @@ final class CompressionController {
     var selectedPresetID = ResizePreset.original.id
     var quality = 0.8
     var format: PhotoOutputFormat = .preserve
-    var includeMetadata = true
+    /// What the resized copy keeps; starts at the Settings default
+    /// (FS-08.06 §4).
+    var metadata = MetadataLevel.sharingDefault()
     /// Delete each source photo once its compressed copy is saved. On by default
     /// — compressing is normally a replace, not a duplicate.
     var deleteOriginals = true
@@ -76,7 +78,7 @@ final class CompressionController {
             format: format,
             quality: quality,
             preset: preset,
-            metadata: includeMetadata ? .all : .noMetadata,
+            metadata: metadata,
             cropAnchor: assets.count > 1 ? .center : cropAnchor
         )
     }

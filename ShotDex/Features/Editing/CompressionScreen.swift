@@ -294,26 +294,28 @@ struct CompressionScreen: View {
         }
     }
 
+    /// The three levels, in the same segmented style as Format above it
+    /// (FS-08.06 §4). The copy is a new photo, so it can leave without its
+    /// location or without its metadata at all.
     private func metadataSection(_ controller: CompressionController) -> some View {
-        Toggle(
-            isOn: Binding(
-                get: { controller.includeMetadata },
-                set: {
-                    controller.includeMetadata = $0
-                    controller.scheduleEstimate()
+        VStack(alignment: .leading, spacing: AppTheme.Spacing.sm) {
+            CompressionGroupLabel(text: "Metadata")
+            Picker(
+                "Metadata",
+                selection: Binding(
+                    get: { controller.metadata },
+                    set: {
+                        controller.metadata = $0
+                        controller.scheduleEstimate()
+                    }
+                )
+            ) {
+                ForEach(MetadataLevel.allCases, id: \.self) { level in
+                    Text(level.title).tag(level)
                 }
-            )
-        ) {
-            VStack(alignment: .leading, spacing: AppTheme.Spacing.xs) {
-                Text("Include Metadata")
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(.white)
-                Text("Camera EXIF, date, location and orientation")
-                    .font(.caption)
-                    .foregroundStyle(EditorTheme.secondaryText)
             }
+            .pickerStyle(.segmented)
         }
-        .tint(accent)
     }
 
     private func deleteOriginalsSection(_ controller: CompressionController) -> some View {
