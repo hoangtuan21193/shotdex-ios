@@ -38,7 +38,6 @@ struct SmartAlbumDetailScreen: View {
     @State private var addToCollectionPresentation: AddToCollectionPresentation?
     @State private var swipeBaseline: [String] = []
     @State private var isDeleting = false
-    @State private var isPreparingShare = false
     @State private var isDuplicating = false
     @State private var deleteErrorMessage: String?
     /// Errors from the ⋯ actions (Export EXIF, Duplicate).
@@ -455,14 +454,12 @@ struct SmartAlbumDetailScreen: View {
     }
 
     private func shareSelected(_ model: SmartAlbumDetailModel) {
-        guard !selectedIds.isEmpty, !isPreparingShare else { return }
+        guard !selectedIds.isEmpty else { return }
         let assets = selectedIds.compactMap { model.asset(for: $0) }
-        isPreparingShare = true
-        Task {
-            let share = await PhotoShareSheet.gather(assets: assets)
-            isPreparingShare = false
-            PhotoShareSheet.present(share)
-        }
+        let downloads = dependencies.originalDownloads
+        // The share sheet opens at once; the iCloud download waits for a
+        // destination, in the Share modal (FS-02.06 §9).
+        Task { await PhotoShareSheet.share(assets: assets, downloads: downloads) }
     }
 
     private func deleteSelected(_ model: SmartAlbumDetailModel) {
@@ -488,14 +485,12 @@ struct SmartAlbumDetailScreen: View {
         var isSelecting: Bool
         var ids: [String]
         var isDeleting: Bool
-        var isPreparingShare: Bool
     }
     private var selectionSnapshot: SelectionSnapshot {
         SelectionSnapshot(
             isSelecting: isSelecting,
             ids: selectedIds,
-            isDeleting: isDeleting,
-            isPreparingShare: isPreparingShare
+            isDeleting: isDeleting
         )
     }
 
@@ -510,7 +505,6 @@ struct SmartAlbumDetailScreen: View {
             photoLibrary: photoLibrary,
             libraryQueries: dependencies.libraryQueries,
             isDeleting: isDeleting,
-            isPreparingShare: isPreparingShare,
             onShare: { shareSelected(model) },
             onClose: { withAnimation { stopSelecting() } },
             onDeselect: { toggleSelection(of: $0) },

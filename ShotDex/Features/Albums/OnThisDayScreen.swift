@@ -32,7 +32,6 @@ struct OnThisDayScreen: View {
     @State private var selectedIds: [String] = []
     @State private var swipeBaseline: [String] = []
     @State private var isDeleting = false
-    @State private var isPreparingShare = false
     @State private var deleteErrorMessage: String?
 
     /// Persisted density (column count), shared with the Library grid.
@@ -297,14 +296,12 @@ struct OnThisDayScreen: View {
         var isSelecting: Bool
         var ids: [String]
         var isDeleting: Bool
-        var isPreparingShare: Bool
     }
     private var selectionSnapshot: SelectionSnapshot {
         SelectionSnapshot(
             isSelecting: isSelecting,
             ids: selectedIds,
-            isDeleting: isDeleting,
-            isPreparingShare: isPreparingShare
+            isDeleting: isDeleting
         )
     }
 
@@ -320,7 +317,6 @@ struct OnThisDayScreen: View {
             photoLibrary: photoLibrary,
             libraryQueries: dependencies.libraryQueries,
             isDeleting: isDeleting,
-            isPreparingShare: isPreparingShare,
             onShare: shareSelected,
             onClose: { withAnimation { stopSelecting() } },
             onDeselect: { toggleSelection(of: $0) },
@@ -347,14 +343,12 @@ struct OnThisDayScreen: View {
     }
 
     private func shareSelected() {
-        guard let model, !selectedIds.isEmpty, !isPreparingShare else { return }
+        guard let model, !selectedIds.isEmpty else { return }
         let assets = selectedIds.compactMap { model.assetsById[$0] }
-        isPreparingShare = true
-        Task {
-            let share = await PhotoShareSheet.gather(assets: assets)
-            isPreparingShare = false
-            PhotoShareSheet.present(share)
-        }
+        let downloads = dependencies.originalDownloads
+        // The share sheet opens at once; the iCloud download waits for a
+        // destination, in the Share modal (FS-02.06 §9).
+        Task { await PhotoShareSheet.share(assets: assets, downloads: downloads) }
     }
 
     private func deleteSelected() {

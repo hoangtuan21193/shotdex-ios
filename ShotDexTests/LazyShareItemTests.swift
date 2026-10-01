@@ -159,4 +159,47 @@ import UIKit
         #expect(items.allSatisfy { !($0 is URL) })
         #expect(closed)
     }
+
+    /// AC-18. Indexing pauses while a share downloads, and runs again once
+    /// the modal is gone.
+    @Test func indexGateHeldDuringShare() async throws {
+        defer { cleanUp() }
+        let gate = IndexInteractionGate()
+        let ids = ["01", "02"]
+        let sources = ids.map { ShareSource(id: $0, kind: .photo, filename: "IMG_\($0).JPG", uniformType: "public.jpeg") }
+        let fake = FakeOriginalFetcher(script: .init("cloud=all,seconds=0.6"), base: FixtureOriginalFetcher())
+        let batch = LazyShareBatch(
+            sources: sources, originals: Dictionary(uniqueKeysWithValues: ids.map { ($0, OriginalItem.test($0)) }),
+            level: .all, fetcher: fake, gate: gate, availableBytes: { nil },
+            reader: ShareExportPipelineTests.FakeReader(photos: ["01": photo, "02": photo]), directory: directory
+        )
+        #expect(!gate.shouldPauseIndexing)
+        let asking = Task { await Self.ask(batch.providers(header: nil)) }
+        try await until { batch.stage == .preparing && fake.downloadCount > 0 }
+        #expect(gate.shouldPauseIndexing)
+        _ = await asking.value
+        #expect(batch.stage == .finished)
+        #expect(!gate.shouldPauseIndexing)
+        batch.removeFiles()
+    }
+
+    /// AC-18 / §9. Every way into Share from the library — selection, tile
+    /// menu, album, smart album, On This Day, viewer — opens the lazy share;
+    /// none gathers before the sheet, and no toolbar grows a download token.
+    @Test func everyShareEntryIsLazy() throws {
+        let files = [
+            "ShotDex/Features/Library/LibraryScreen.swift",
+            "ShotDex/App/AssetActionsCoordinator.swift",
+            "ShotDex/Features/Albums/AlbumDetailScreen.swift",
+            "ShotDex/Features/Albums/SmartAlbumDetailScreen.swift",
+            "ShotDex/Features/Albums/OnThisDayScreen.swift",
+        ]
+        for path in files {
+            let code = try AssetMetadataCarryOverTests.codeLines(of: path).joined(separator: "\n")
+            #expect(code.contains("PhotoShareSheet.share(assets:"), "\(path)")
+            #expect(!code.contains("PhotoShareSheet.gather(assets:"), "\(path)")
+            #expect(!code.contains("isPreparingShare"), "\(path)")
+            #expect(!code.contains("OriginalDownloadLine"), "\(path)")
+        }
+    }
 }

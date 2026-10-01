@@ -30,9 +30,6 @@ struct SelectionBarModel {
     /// Reads indexed byte totals for the selection size caption.
     let libraryQueries: LibraryQueries
     var isDeleting: Bool = false
-    /// While gathering originals for the share sheet — the Share glyph swaps to
-    /// a spinner.
-    var isPreparingShare: Bool = false
 
     // Top row (always present).
     /// Gathers the selection and raises the system share sheet.

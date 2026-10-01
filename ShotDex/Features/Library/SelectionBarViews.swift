@@ -65,8 +65,7 @@ private struct SelectionBottomBar: View {
             SelectionCircleButton(
                 systemImage: "square.and.arrow.up",
                 iconSize: 21,
-                isEnabled: model.selectionCount > 0 && !model.isPreparingShare,
-                showsSpinner: model.isPreparingShare,
+                isEnabled: model.selectionCount > 0,
                 action: model.onShare
             )
             .accessibilityLabel("Share")
@@ -379,23 +378,16 @@ private struct SelectionCircleButton: View {
     let systemImage: String
     var iconSize: CGFloat = 20
     var isEnabled: Bool = true
-    var showsSpinner: Bool = false
     let action: () -> Void
 
     var body: some View {
         Button(action: action) {
-            Group {
-                if showsSpinner {
-                    ProgressView().tint(.primary)
-                } else {
-                    Image(systemName: systemImage)
-                        .font(.system(size: iconSize, weight: .medium))
-                        .foregroundStyle(isEnabled ? Color.primary : Color.primary.opacity(0.3))
-                }
-            }
-            .frame(width: 48, height: 48)
-            .contentShape(Circle())
-            .selectionGlass(Circle())
+            Image(systemName: systemImage)
+                .font(.system(size: iconSize, weight: .medium))
+                .foregroundStyle(isEnabled ? Color.primary : Color.primary.opacity(0.3))
+                .frame(width: 48, height: 48)
+                .contentShape(Circle())
+                .selectionGlass(Circle())
         }
         .buttonStyle(.plain)
         .disabled(!isEnabled)
@@ -429,7 +421,6 @@ struct BottomScrim: View {
             photoLibrary: dependencies.photoLibrary,
             libraryQueries: dependencies.libraryQueries,
             isDeleting: false,
-            isPreparingShare: false,
             onShare: {},
             onClose: {},
             onDeselect: { _ in },

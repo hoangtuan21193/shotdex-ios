@@ -219,17 +219,15 @@ final class AssetActionsCoordinator {
 
     // MARK: Share / delete / duplicate
 
-    /// Gathers originals and raises the system share sheet. Shared with the
-    /// selection bar's Share button so a tile menu and a multi-select share
-    /// behave identically, including the iCloud download.
+    /// Raises the system share sheet at once, the same way the selection
+    /// bar's Share does: nothing is downloaded until a destination asks,
+    /// then the Share modal shows the iCloud download (FS-02.06 §9).
     func share(ids: [String]) {
         let assets = PhotoLibraryService.fetchAssets(ids: ids)
         guard !assets.isEmpty else { return }
         recentActivity?.recordShared(ids)
-        perform {
-            let share = await PhotoShareSheet.gather(assets: assets)
-            PhotoShareSheet.present(share)
-        }
+        let downloads = originalDownloads
+        Task { await PhotoShareSheet.share(assets: assets, downloads: downloads) }
     }
 
     /// Moves assets to Recently Deleted. PhotoKit raises its own confirmation,
