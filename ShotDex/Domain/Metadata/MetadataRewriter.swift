@@ -43,15 +43,36 @@ enum MetadataRewriter {
         else { throw Failure.unreadable }
         let writable = CGImageDestinationCopyTypeIdentifiers() as? [String] ?? []
         guard writable.contains(type as String) else { throw Failure.unsupportedType(type as String) }
+        try write(image, type: type, metadata: metadata(of: image, keeping: level), to: destination, level: level)
+    }
+
+    /// Writes a rendered image — a JPEG made from a RAW — with the metadata
+    /// of the file it was made from, filtered by `level`. The render is
+    /// upright, so the orientation says so, whatever the RAW's said.
+    static func rewrite(_ rendered: URL, metadataFrom original: URL, to destination: URL, level: MetadataLevel) throws {
+        guard let image = CGImageSourceCreateWithURL(rendered as CFURL, nil),
+              let type = CGImageSourceGetType(image),
+              let source = CGImageSourceCreateWithURL(original as CFURL, nil)
+        else { throw Failure.unreadable }
+        let filtered = try metadata(of: source, keeping: level)
+        guard let metadata = CGImageMetadataCreateMutableCopy(filtered) else { throw Failure.cannotWrite }
+        CGImageMetadataSetValueWithPath(metadata, nil, "tiff:Orientation" as CFString, "1" as CFString)
+        try write(image, type: type, metadata: metadata, to: destination, level: level)
+    }
+
+    /// Copies the image data into `destination` with `metadata` in place of
+    /// its own, then reads the file back: anything left that `level` removes
+    /// and the file is deleted, never returned.
+    private static func write(
+        _ image: CGImageSource, type: CFString, metadata: CGImageMetadata, to destination: URL, level: MetadataLevel
+    ) throws {
         guard let output = CGImageDestinationCreateWithURL(destination as CFURL, type, 1, nil)
         else { throw Failure.cannotWrite }
-
-        let metadata = try metadata(of: image, keeping: level)
-        let options: [CFString: Any] = [
+        var options: [CFString: Any] = [
             kCGImageDestinationMetadata: metadata,
             kCGImageDestinationMergeMetadata: false,
-            kCGImageMetadataShouldExcludeGPS: true,
         ]
+        if level.removesLocation { options[kCGImageMetadataShouldExcludeGPS] = true }
         guard CGImageDestinationCopyImageSource(output, image, options as CFDictionary, nil) else {
             try? FileManager.default.removeItem(at: destination)
             throw Failure.cannotWrite

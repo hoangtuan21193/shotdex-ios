@@ -95,8 +95,16 @@ struct ShareExportPipeline: Sendable {
                 try await reader.writePhoto(source, to: file)
                 return file
             case .shareAsJPEG:
-                // Plan task 16.
-                throw MetadataRewriter.Failure.unsupportedType(source.filename)
+                // A full-size JPEG of the RAW at the share's level, under the
+                // RAW's own name; the RAW itself is gone once it is made.
+                let slot = try slotFile(for: source, index: index).deletingLastPathComponent()
+                let original = slot.appendingPathComponent("original-" + source.filename)
+                defer { try? FileManager.default.removeItem(at: original) }
+                try await reader.writePhoto(source, to: original)
+                let name = (source.filename as NSString).deletingPathExtension + ".jpg"
+                let file = slot.appendingPathComponent(name)
+                try ShareRAWRenderer.renderJPEG(from: original, to: file, level: level)
+                return file
             }
         case .photo, .raw:
             let file = try slotFile(for: source, index: index)
@@ -147,7 +155,7 @@ struct ShareExportPipeline: Sendable {
                 }
             } catch is Skipped {
                 result.skipped.append(source.filename)
-            } catch is MetadataRewriter.Failure {
+            } catch is MetadataRewriter.Failure, is ShareRAWRenderer.Failure {
                 result.failed.append(source.filename)
             } catch {
                 result.failed.append(source.filename)

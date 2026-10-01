@@ -1,3 +1,4 @@
+import CoreImage
 import CryptoKit
 import Foundation
 import ImageIO
@@ -364,5 +365,48 @@ struct ShareExportPipelineTests {
         #expect(try Self.sha256(result.files[0]) == Self.sha256(raw))
         #expect(try Self.sha256(result.files[1]) == Self.sha256(raw))
         #expect(MetadataFixture.dictionary(kCGImagePropertyGPSDictionary, of: result.files[2]) == nil)
+    }
+
+    /// AC-15: Share as JPEG — each RAW becomes a full-size JPEG at the
+    /// share's level: no GPS (the DNG has a real one), the camera kept,
+    /// upright; photo A beside them without GPS. Needs the RAW samples.
+    @Test(.enabled(if: RAWFixtures.has(RAWFixtures.sony) && RAWFixtures.has(RAWFixtures.dji),
+                   "needs the RAW samples in ~/Library/Caches/ShotDexFixtures/raw/"))
+    func rawAsJPEG() async throws {
+        defer { cleanUp() }
+        let arw = try #require(RAWFixtures.available(RAWFixtures.sony))
+        let dng = try #require(RAWFixtures.available(RAWFixtures.dji))
+        #expect(MetadataFixture.dictionary(kCGImagePropertyGPSDictionary, of: dng) != nil)
+        let photoA = try MetadataFixture.write(.heic, in: fixtures)
+        var pipeline = ShareExportPipeline(
+            reader: FakeReader(photos: ["arw": arw, "dng": dng, "A": photoA]),
+            folder: try ShareExportPipeline.makeFolder(in: shareRoot),
+            level: .noLocation
+        )
+        pipeline.rawChoice = .shareAsJPEG
+        let result = await pipeline.export([
+            ShareSource(id: "arw", kind: .raw, filename: "DSC00001.ARW"),
+            ShareSource(id: "dng", kind: .raw, filename: "DJI_0001.DNG"),
+            ShareSource(id: "A", kind: .photo, filename: "IMG_0001.HEIC"),
+        ])
+        #expect(result.failed.isEmpty, "\(result.failed)")
+        #expect(result.files.map(\.lastPathComponent) == ["DSC00001.jpg", "DJI_0001.jpg", "IMG_0001.HEIC"])
+        for file in result.files {
+            #expect(MetadataFixture.dictionary(kCGImagePropertyGPSDictionary, of: file) == nil, "\(file.lastPathComponent)")
+            #expect(!MetadataRewriter.carriesLocation(file))
+        }
+        let makes = result.files.map {
+            MetadataFixture.dictionary(kCGImagePropertyTIFFDictionary, of: $0)?[kCGImagePropertyTIFFMake] as? String
+        }
+        #expect(makes == ["SONY", "DJI", "SONY"])
+        for (raw, jpeg) in zip([arw, dng], result.files) {
+            let native = try #require(CIRAWFilter(imageURL: raw)?.outputImage?.extent.size)
+            let props = MetadataFixture.properties(of: jpeg)
+            #expect(props[kCGImagePropertyPixelWidth] as? Int == Int(native.width))
+            #expect(props[kCGImagePropertyPixelHeight] as? Int == Int(native.height))
+            #expect((props[kCGImagePropertyOrientation] as? Int ?? 1) == 1)
+            #expect(UTType(filenameExtension: jpeg.pathExtension) == .jpeg)
+        }
+        print("RAW as JPEG sizes: \(result.files.prefix(2).map { MetadataFixture.properties(of: $0)[kCGImagePropertyPixelWidth] ?? 0 })")
     }
 }
