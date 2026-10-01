@@ -1,0 +1,22 @@
+{
+  "steps": [
+    { "action": "launch" },
+    { "action": "wait", "seconds": 6 },
+    { "action": "tap", "label": "Settings" },
+    { "action": "wait", "seconds": 2 },
+    { "action": "tap", "label": "Re-index Library" },
+    { "action": "wait", "seconds": 12 },
+    { "action": "tap", "label": "Done" },
+    { "action": "wait", "seconds": 2 },
+    { "action": "tap", "label": "Statistics" },
+    { "action": "wait", "seconds": 6 },
+    { "action": "screenshot", "name": "01-below-threshold" },
+    { "action": "dump", "name": "01-below-threshold" },
+    { "action": "launch", "arguments": ["-ShotDexFailInsights"] },
+    { "action": "wait", "seconds": 6 },
+    { "action": "tap", "label": "Statistics" },
+    { "action": "wait", "seconds": 6 },
+    { "action": "screenshot", "name": "02-failed" },
+    { "action": "dump", "name": "02-failed" }
+  ]
+}
