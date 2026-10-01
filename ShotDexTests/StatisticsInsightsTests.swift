@@ -461,4 +461,32 @@ struct StatisticsInsightsTests {
         #expect(navigation.consumePendingSettingsRow() == nil)
         #expect(SettingsSearchIndex.entry(for: .unknownCameras).section == .cameraDatabase)
     }
+
+    /// AC-5: 380 iPhone 15 Pro main-module photos, 220 on its 9mm module, 400
+    /// EOS R6 + RF 85mm. Each module is its own pair, so the EOS R6 leads at
+    /// 40% — merged, the iPhone would have read 60%.
+    @Test func pairSentenceKeepsPhoneModulesApart() throws {
+        let database = try AppDatabase.makeEmpty()
+        var rows = (0..<380).map {
+            record("m\($0)", camera: "iPhone 15 Pro", lens: "iPhone 15 Pro back triple camera 6.765mm f/1.78", focal: 6.765, equivalent: 24)
+        }
+        rows += (0..<220).map {
+            record("t\($0)", camera: "iPhone 15 Pro", lens: "iPhone 15 Pro back triple camera 9mm f/2.8", focal: 9, equivalent: 77)
+        }
+        rows += (0..<400).map {
+            record("r\($0)", camera: "EOS R6", lens: "RF 85mm F1.2 L USM", focal: 85, equivalent: 85)
+        }
+        try save(rows, into: database)
+
+        let inputs = try StatisticsQueries(database: database).insightInputs()
+        let pair = try #require(InsightSelector.pair(inputs))
+        #expect(InsightCopy.sentence(pair, locale: english) == "EOS R6 with RF 85mm F1.2 L USM took 40% of your photos.")
+        let filter = try #require(pair.filter)
+        #expect(filter.cameraBodies == ["EOS R6"])
+        #expect(filter.lenses == ["RF 85mm F1.2 L USM"])
+        #expect(try LibraryQueries(database: database).count(matching: filter) == 400)
+        // In the card it is the second sentence, after focal length.
+        let sentences = InsightSelector.select(inputs)
+        #expect(sentences.map(\.kind).contains(pair.kind))
+    }
 }
