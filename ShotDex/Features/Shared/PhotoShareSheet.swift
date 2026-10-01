@@ -28,8 +28,14 @@ enum PhotoShareSheet {
             return items.compactMap { $0 as? URL }.filter { $0.path.hasPrefix(folder.path) }.count
         }
 
+        /// RAW files in `items` that went as they are, at the user's word.
+        var rawSharedAsIs = 0
+
         var plan: ShareBatchPlan {
-            ShareBatchPlan(level: level, photoCount: photoCount, videoCount: items.count - photoCount)
+            ShareBatchPlan(
+                level: level, photoCount: photoCount, videoCount: items.count - photoCount,
+                rawSharedAsIsCount: rawSharedAsIs
+            )
         }
 
         /// Removes the gathered copies. Videos are the library's own files and
@@ -66,7 +72,8 @@ enum PhotoShareSheet {
         let result = await pipeline.export(sources)
         return Prepared(
             items: result.files, failed: result.failed, unread: result.unread, folder: folder, level: level,
-            regather: { await gather(assets: assets, level: $0, allowsNetworkAccess: allowsNetworkAccess) }
+            regather: { await gather(assets: assets, level: $0, allowsNetworkAccess: allowsNetworkAccess) },
+            rawSharedAsIs: result.rawSharedAsIs
         )
     }
 
@@ -147,7 +154,14 @@ enum PhotoShareSheet {
             let title = items.count == 1 ? "\(name) · \(plan.subtitle.text)" : plan.subtitle.text
             // One line each: the level on the title, the video note on the
             // line below it, where the file name would be.
-            let note = plan.notesVideosKeepMetadata ? String(localized: "Videos keep their metadata") : nil
+            let note: String? = switch plan.keepsNote {
+            case .videos: String(localized: "Videos keep their metadata")
+            case .raw: plan.level == .noLocation
+                ? String(localized: "RAW files keep their location")
+                : String(localized: "RAW files keep their metadata")
+            case .videosAndRAW: String(localized: "Videos and RAW files keep their metadata")
+            case nil: nil
+            }
             let isPhoto = prepared.folder.map { first.path.hasPrefix($0.path) } ?? false
             items[0] = ShareHeaderItem(file: first, title: title, note: note, showsImage: isPhoto)
         }

@@ -18,6 +18,8 @@ struct ShareBatchPlan: Equatable, Sendable {
     /// Of those, the ones iOS on this device cannot decode at all
     /// (FS-03.04b): there is no JPEG to make of them.
     var unreadableRAWCount = 0
+    /// RAW files the user chose to share as they are, location and all.
+    var rawSharedAsIsCount = 0
 
     /// The one-shot rows, in order: the two levels that are not in force.
     /// Choosing one changes this share only, never Settings.
@@ -38,6 +40,22 @@ struct ShareBatchPlan: Equatable, Sendable {
     /// Whether the header also says videos keep their metadata: only when
     /// the share has a video and the level removes something (spec §5).
     var notesVideosKeepMetadata: Bool { videoCount > 0 && level != .all }
+
+    /// The header's second line, when something in the share keeps what
+    /// the level names as removed: videos always do, RAW files do when the
+    /// user chose Share RAW with Location. Without it the header would say
+    /// "Location removed" over a RAW that still carries one.
+    var keepsNote: KeepsNote? {
+        guard level != .all else { return nil }
+        switch (videoCount > 0, rawSharedAsIsCount > 0) {
+        case (true, true): return .videosAndRAW
+        case (true, false): return .videos
+        case (false, true): return .raw
+        case (false, false): return nil
+        }
+    }
+
+    enum KeepsNote: Equatable, Sendable { case videos, raw, videosAndRAW }
 
     /// Whether the share stops once, before anything is gathered, to ask
     /// what to do with its RAW files: only below All Metadata, where a RAW

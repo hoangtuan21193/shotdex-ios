@@ -337,4 +337,32 @@ struct ShareExportPipelineTests {
         #expect(result.failed.isEmpty)
         #expect(MetadataFixture.dictionary(kCGImagePropertyGPSDictionary, of: result.files[0]) == nil)
     }
+
+    /// AC-16: Share RAW with Location — the RAW files byte for byte, and
+    /// photo A without its GPS.
+    @Test func rawKeepsBytes() async throws {
+        defer { cleanUp() }
+        let photoA = try MetadataFixture.write(.heic, in: fixtures)
+        let raw = RAWFixtures.available(RAWFixtures.sony) ?? fixtures.appendingPathComponent("DSC00001.ARW")
+        if !FileManager.default.fileExists(atPath: raw.path) {
+            try Data((0..<2048).map { UInt8(truncatingIfNeeded: $0) }).write(to: raw)
+        }
+        print("RAW fixture for rawKeepsBytes: \(raw.path)")
+        var pipeline = ShareExportPipeline(
+            reader: FakeReader(photos: ["A": photoA, "1": raw, "2": raw]),
+            folder: try ShareExportPipeline.makeFolder(in: shareRoot),
+            level: .noLocation
+        )
+        pipeline.rawChoice = .shareRAWWithLocation
+        let result = await pipeline.export([
+            ShareSource(id: "1", kind: .raw, filename: "DSC00001.ARW"),
+            ShareSource(id: "2", kind: .raw, filename: "DSC00002.ARW"),
+            ShareSource(id: "A", kind: .photo, filename: "IMG_0001.HEIC"),
+        ])
+        #expect(result.files.count == 3)
+        #expect(result.rawSharedAsIs == 2)
+        #expect(try Self.sha256(result.files[0]) == Self.sha256(raw))
+        #expect(try Self.sha256(result.files[1]) == Self.sha256(raw))
+        #expect(MetadataFixture.dictionary(kCGImagePropertyGPSDictionary, of: result.files[2]) == nil)
+    }
 }

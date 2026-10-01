@@ -102,4 +102,16 @@ struct ShareBatchPlanTests {
         #expect(ShareSource.kind(mediaType: .image, sharedType: "public.jpeg") == .photo)
         #expect(ShareSource.kind(mediaType: .video, sharedType: nil) == .video)
     }
+
+    /// AC-16: after Share RAW with Location the header must not claim the
+    /// location is gone without saying the RAW files keep it.
+    @Test func headerOwnsUpToWhatKeepsItsMetadata() {
+        var plan = ShareBatchPlan(level: .noLocation, photoCount: 3, videoCount: 0, rawSharedAsIsCount: 2)
+        #expect(plan.keepsNote == .raw)
+        plan = ShareBatchPlan(level: .noLocation, photoCount: 1, videoCount: 1, rawSharedAsIsCount: 1)
+        #expect(plan.keepsNote == .videosAndRAW)
+        #expect(ShareBatchPlan(level: .noMetadata, photoCount: 1, videoCount: 1).keepsNote == .videos)
+        #expect(ShareBatchPlan(level: .noLocation, photoCount: 1, videoCount: 0).keepsNote == nil)
+        #expect(ShareBatchPlan(level: .all, photoCount: 1, videoCount: 1, rawSharedAsIsCount: 1).keepsNote == nil)
+    }
 }

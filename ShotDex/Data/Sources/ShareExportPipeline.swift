@@ -51,6 +51,8 @@ struct ShareExportResult: Sendable, Equatable {
     var unread: [String] = []
     /// RAW files left out because the user chose Skip — not failures.
     var skipped: [String] = []
+    /// RAW files handed over as they are because the user said so.
+    var rawSharedAsIs = 0
 }
 
 /// Gathers a share one item at a time into a scratch folder of its own
@@ -87,14 +89,18 @@ struct ShareExportPipeline: Sendable {
             switch rawChoice {
             case .skip:
                 throw Skipped()
-            case .shareRAWWithLocation, .shareAsJPEG:
-                // Plan tasks 16 and 17.
+            case .shareRAWWithLocation:
+                // The user's answer: the RAW as it is, byte for byte.
+                let file = try slotFile(for: source, index: index)
+                try await reader.writePhoto(source, to: file)
+                return file
+            case .shareAsJPEG:
+                // Plan task 16.
                 throw MetadataRewriter.Failure.unsupportedType(source.filename)
             }
         case .photo, .raw:
-            let slot = folder.appendingPathComponent(String(index), isDirectory: true)
-            try FileManager.default.createDirectory(at: slot, withIntermediateDirectories: true)
-            let file = slot.appendingPathComponent(source.filename)
+            let file = try slotFile(for: source, index: index)
+            let slot = file.deletingLastPathComponent()
             if level == .all && source.hasLocation {
                 try await reader.writePhoto(source, to: file)
                 return file
@@ -108,6 +114,14 @@ struct ShareExportPipeline: Sendable {
             try MetadataRewriter.rewrite(original, to: file, level: effectiveLevel(for: source, file: original))
             return file
         }
+    }
+
+    /// Where item `index` lands: a numbered subfolder of its own, so two
+    /// photos with one name both arrive.
+    private func slotFile(for source: ShareSource, index: Int) throws -> URL {
+        let slot = folder.appendingPathComponent(String(index), isDirectory: true)
+        try FileManager.default.createDirectory(at: slot, withIntermediateDirectories: true)
+        return slot.appendingPathComponent(source.filename)
     }
 
     /// The level a photo is actually written at. All Metadata is the file as
@@ -128,6 +142,9 @@ struct ShareExportPipeline: Sendable {
         for (index, source) in sources.enumerated() {
             do {
                 result.files.append(try await export(source, index: index))
+                if source.kind == .raw, level != .all, rawChoice == .shareRAWWithLocation {
+                    result.rawSharedAsIs += 1
+                }
             } catch is Skipped {
                 result.skipped.append(source.filename)
             } catch is MetadataRewriter.Failure {
