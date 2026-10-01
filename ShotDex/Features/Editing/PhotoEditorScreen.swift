@@ -1378,7 +1378,8 @@ struct PhotoEditorScreen: View {
         EditorImageStage(
             controller: controller,
             chrome: chrome,
-            drawSession: drawSession
+            drawSession: drawSession,
+            onClose: { dismiss() }
         )
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .overlay {

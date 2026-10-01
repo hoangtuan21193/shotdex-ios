@@ -1,6 +1,7 @@
 import CoreImage
 import Foundation
 import ImageIO
+import os
 import Photos
 import UniformTypeIdentifiers
 import UIKit
@@ -92,6 +93,10 @@ final class PhotoEditingService {
     private let indexNewAsset: (@Sendable (String) async -> Void)?
     private let publishCreatedAsset: (@MainActor @Sendable (String) -> Void)?
     private let filenameIndexes: PhotoOutputFilenameIndexStore
+    /// Plays a scripted iCloud download before PhotoKit's own request, so
+    /// the simulator shows the editor's download card (FS-02.06). PhotoKit's
+    /// fetcher returns at once; nil does the same.
+    var originalFetcher: (any OriginalFetching)?
 
     init(
         renderer: PhotoRenderService = PhotoRenderService(),
@@ -129,12 +134,24 @@ final class PhotoEditingService {
         try await beginSession(for: .asset(asset), isOnCanvas: isOnCanvas)
     }
 
-    func beginSession(for origin: PhotoEditOrigin, isOnCanvas: Bool = false) async throws -> PhotoEditingSession {
+    /// `progress` gets the iCloud download's 0…1 on the main actor, when the
+    /// original has to come down (FS-02.06 AC-3).
+    func beginSession(
+        for origin: PhotoEditOrigin,
+        isOnCanvas: Bool = false,
+        progress: (@MainActor (Double) -> Void)? = nil
+    ) async throws -> PhotoEditingSession {
         if isOnCanvas { sessions.activeID = origin.id }
         if let cached = sessions.cached(origin.id) {
             return cached
         }
-        let session = try await makeSession(for: origin)
+        let session = try await makeSession(for: origin, progress: progress)
+        // Cancelled while it was waiting on iCloud — the editor closed: the
+        // session goes now, not at the next launch's sweep (AC-4).
+        guard !Task.isCancelled else {
+            discard(session)
+            throw CancellationError()
+        }
         remember(session, for: origin.id)
         return session
     }
@@ -177,9 +194,12 @@ final class PhotoEditingService {
         for session in sessions.releaseAll() { discard(session) }
     }
 
-    private func makeSession(for origin: PhotoEditOrigin) async throws -> PhotoEditingSession {
+    private func makeSession(
+        for origin: PhotoEditOrigin,
+        progress: (@MainActor (Double) -> Void)? = nil
+    ) async throws -> PhotoEditingSession {
         switch origin {
-        case .asset(let asset): try await makeSession(for: asset)
+        case .asset(let asset): try await makeSession(for: asset, progress: progress)
         case .serverFile(let photo): try makeSession(for: photo)
         }
     }
@@ -216,9 +236,17 @@ final class PhotoEditingService {
         )
     }
 
-    private func makeSession(for asset: PHAsset) async throws -> PhotoEditingSession {
+    private func makeSession(
+        for asset: PHAsset,
+        progress: (@MainActor (Double) -> Void)? = nil
+    ) async throws -> PhotoEditingSession {
         guard asset.mediaType == .image else { throw PhotoEditingError.unavailable }
-        let input = try await requestContentEditingInput(for: asset)
+        let report: @Sendable (Double) -> Void = { value in
+            Task { @MainActor in progress?(value) }
+        }
+        try await originalFetcher?.scriptedTransfer(for: asset.localIdentifier, progress: report)
+        let input = try await requestContentEditingInput(for: asset, progress: report)
+        try Self.checkComplete(input, of: asset)
         let temporaryDirectory = try makeTemporaryDirectory()
         let recalledRecipe = decodeRecipe(input.adjustmentData)
         var sourceAsset = asset
@@ -655,25 +683,57 @@ final class PhotoEditingService {
 
     // MARK: PhotoKit
 
-    private func requestContentEditingInput(for asset: PHAsset) async throws
-        -> PHContentEditingInput {
-        try await withCheckedThrowingContinuation { continuation in
-            let options = PHContentEditingInputRequestOptions()
-            options.isNetworkAccessAllowed = true
-            options.canHandleAdjustmentData = { adjustmentData in
-                adjustmentData.formatIdentifier == PhotoEditRecipe.formatIdentifier
-                    && adjustmentData.formatVersion == PhotoEditRecipe.formatVersion
-            }
-            asset.requestContentEditingInput(with: options) { input, info in
-                if let input {
-                    continuation.resume(returning: input)
-                } else if let error = info[PHContentEditingInputErrorKey] as? Error {
-                    continuation.resume(throwing: error)
-                } else {
-                    continuation.resume(throwing: PhotoEditingError.unavailable)
+    /// The photo's editing input, downloading the original from iCloud when
+    /// it is not here. Cancelling the task cancels PhotoKit's request at once
+    /// (FS-02.06 AC-4) — and resumes here whether or not PhotoKit calls back.
+    private func requestContentEditingInput(
+        for asset: PHAsset,
+        progress: (@Sendable (Double) -> Void)? = nil
+    ) async throws -> PHContentEditingInput {
+        let request = ContentEditingRequest()
+        return try await withTaskCancellationHandler {
+            try await withCheckedThrowingContinuation { continuation in
+                request.continuation = continuation
+                let options = PHContentEditingInputRequestOptions()
+                options.isNetworkAccessAllowed = true
+                options.canHandleAdjustmentData = { adjustmentData in
+                    adjustmentData.formatIdentifier == PhotoEditRecipe.formatIdentifier
+                        && adjustmentData.formatVersion == PhotoEditRecipe.formatVersion
+                }
+                if let progress {
+                    options.progressHandler = { value, _ in progress(value) }
+                }
+                let id = asset.requestContentEditingInput(with: options) { input, info in
+                    if let input {
+                        request.finish(.success(input))
+                    } else if let error = info[PHContentEditingInputErrorKey] as? Error {
+                        request.finish(.failure(error))
+                    } else {
+                        request.finish(.failure(PhotoEditingError.unavailable))
+                    }
+                }
+                if request.start(id: id) {
+                    asset.cancelContentEditingInputRequest(id)
                 }
             }
+        } onCancel: {
+            if let id = request.cancel() {
+                Task { @MainActor in asset.cancelContentEditingInputRequest(id) }
+            }
         }
+    }
+
+    /// The input's file must be the whole photo (FS-02.06 §3): for a photo
+    /// with no edit of anyone's the file is the original, and its size is
+    /// the photo's. An edited photo's input is the unedited original, whose
+    /// size the crop has since changed, so it is not judged here.
+    private static func checkComplete(_ input: PHContentEditingInput, of asset: PHAsset) throws {
+        guard input.adjustmentData == nil, let url = input.fullSizeImageURL,
+              let measured = OriginalCompleteness.measure(url) else { return }
+        let photo = PixelSize(width: asset.pixelWidth, height: asset.pixelHeight)
+        guard OriginalCompleteness.isSufficient(
+            received: measured.size.oriented(measured.orientation), requestedLongEdge: photo.longEdge, photo: photo
+        ) else { throw OriginalFetchError.incomplete }
     }
 
     private func sourceOptions(
@@ -1091,5 +1151,59 @@ final class LivePhotoFrameRenderer: @unchecked Sendable {
             x: extent.minX + extent.width * point.x,
             y: extent.minY + extent.height * (1 - point.y)
         )
+    }
+}
+
+/// One `requestContentEditingInput` call: resumes its continuation exactly
+/// once, whether PhotoKit answers, the task is cancelled first, or both.
+private final class ContentEditingRequest: @unchecked Sendable {
+    private let lock = OSAllocatedUnfairLock()
+    private var id: PHContentEditingInputRequestID?
+    private var isCancelled = false
+    private var isDone = false
+    private var pending: Result<PHContentEditingInput, Error>?
+    private var stored: CheckedContinuation<PHContentEditingInput, Error>?
+
+    /// The continuation to resume. A result that came first — the task was
+    /// cancelled before the request began — resumes it at once.
+    var continuation: CheckedContinuation<PHContentEditingInput, Error>? {
+        get { lock.withLock { stored } }
+        set {
+            let early: Result<PHContentEditingInput, Error>? = lock.withLock {
+                stored = newValue
+                defer { pending = nil }
+                return pending
+            }
+            if let early { newValue?.resume(with: early) }
+        }
+    }
+
+    /// Records PhotoKit's id; true when the task was cancelled before it
+    /// existed, so the caller cancels the request at once.
+    func start(id: PHContentEditingInputRequestID) -> Bool {
+        lock.withLock {
+            self.id = id
+            return isCancelled
+        }
+    }
+
+    /// The id to cancel, once; the continuation resumes with cancellation.
+    func cancel() -> PHContentEditingInputRequestID? {
+        let id: PHContentEditingInputRequestID? = lock.withLock {
+            isCancelled = true
+            return self.id
+        }
+        finish(.failure(CancellationError()))
+        return id
+    }
+
+    func finish(_ result: Result<PHContentEditingInput, Error>) {
+        let continuation: CheckedContinuation<PHContentEditingInput, Error>? = lock.withLock {
+            guard !isDone else { return nil }
+            isDone = true
+            if stored == nil { pending = result }
+            return stored
+        }
+        continuation?.resume(with: result)
     }
 }

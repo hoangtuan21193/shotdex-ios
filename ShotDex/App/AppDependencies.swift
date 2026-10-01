@@ -173,6 +173,7 @@ final class AppDependencies {
                 photoLibrary.publishAppCreatedAsset()
             }
         )
+        photoEditing.originalFetcher = originalFetcher
         let placeStore = PlaceStore(database: database)
         let placeGeocoding = PlaceGeocodingService(store: placeStore)
         self.placeStore = placeStore

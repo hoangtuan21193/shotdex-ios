@@ -29,6 +29,10 @@ enum EditorLoadFailure: Equatable {
         if nsError.domain == NSURLErrorDomain || nsError.domain == "CloudPhotoLibraryErrorDomain" {
             return .iCloudDownload
         }
+        // What came down was not the whole photo (FS-02.06 §3).
+        if (error as? OriginalFetchError) == .incomplete {
+            return .iCloudDownload
+        }
         // Under a limited selection an asset outside it comes back with no
         // input and no error at all; that is the selection, not the file.
         if accessIsLimited, (error as? PhotoEditingError) == .unavailable {
@@ -58,4 +62,12 @@ enum EditorLoadFailure: Equatable {
 
     /// Only a permission problem is fixed in Settings.
     var offersSettings: Bool { self == .noAccess }
+
+    /// Whether an opening that is downloading from iCloud has sat at 0% for
+    /// the stall window (FS-02.06 AC-5): then the stage says iCloud is not
+    /// answering, with Close, instead of spinning for ever. Not a failure —
+    /// the download is not cancelled and may still finish.
+    static func isStalled(atZeroFor: Duration, fraction: Double?, isDownloading: Bool) -> Bool {
+        isDownloading && (fraction ?? 0) == 0 && atZeroFor >= OriginalPreparationState.stallWindow
+    }
 }

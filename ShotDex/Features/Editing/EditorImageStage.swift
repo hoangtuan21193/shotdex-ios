@@ -9,6 +9,8 @@ struct EditorImageStage: View {
     @Bindable var controller: PhotoEditorController
     @Bindable var chrome: EditorChromeModel
     @Bindable var drawSession: EditorDrawSession
+    /// Closes the editor — the stall card's Close (FS-02.06 AC-5).
+    var onClose: (() -> Void)?
     @Environment(\.displayScale) private var displayScale
 
     @State private var isDrawing = false
@@ -611,15 +613,7 @@ struct EditorImageStage: View {
                         .transition(.opacity)
                 }
                 if !isFullQuality {
-                    ProgressView(
-                        controller.isDownloadingFromCloud
-                            ? "Downloading from iCloud…"
-                            : "Loading full-quality preview…"
-                    )
-                    .tint(.white)
-                    .foregroundStyle(.white)
-                    .padding(AppTheme.Spacing.lg)
-                    .background(EditorTheme.glass, in: RoundedRectangle.app(AppTheme.Radius.lg))
+                    loadingCard
                 }
             }
             .frame(width: container.width, height: container.height)
@@ -633,6 +627,50 @@ struct EditorImageStage: View {
             }
             .animation(EditorTheme.animation, value: controller.placeholderImage == nil)
         }
+    }
+
+    /// What the stage says while the photo opens. A download from iCloud gets
+    /// its percent and a determinate bar (FS-02.06 AC-3); one stuck at 0%
+    /// for 15 s says iCloud is not answering, with Close (AC-5).
+    @ViewBuilder private var loadingCard: some View {
+        Group {
+            if controller.isDownloadStalled {
+                VStack(spacing: AppTheme.Spacing.md) {
+                    Label(OriginalPreparationState.stallMessage, systemImage: "exclamationmark.icloud")
+                        .font(.subheadline)
+                        .foregroundStyle(.orange)
+                        .multilineTextAlignment(.center)
+                    if let onClose {
+                        Button("Close", action: onClose)
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(.white)
+                    }
+                }
+                .frame(maxWidth: 280)
+            } else if let fraction = controller.downloadFraction {
+                let percent = Int((min(1, max(0, fraction)) * 100).rounded(.down))
+                VStack(spacing: AppTheme.Spacing.sm) {
+                    Text("Downloading from iCloud… \(percent)%")
+                        .font(.subheadline.monospacedDigit())
+                        .foregroundStyle(.white)
+                    ProgressView(value: min(1, max(0, fraction)))
+                        .tint(EditorTheme.accent)
+                        .frame(width: 200)
+                }
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel(OriginalPreparationState.accessibilityProgress(fraction))
+            } else {
+                ProgressView(
+                    controller.isDownloadingFromCloud
+                        ? "Downloading from iCloud…"
+                        : "Loading full-quality preview…"
+                )
+                .tint(.white)
+                .foregroundStyle(.white)
+            }
+        }
+        .padding(AppTheme.Spacing.lg)
+        .background(EditorTheme.glass, in: RoundedRectangle.app(AppTheme.Radius.lg))
     }
 
     /// The tools are still opening under a finished picture. A pill in the

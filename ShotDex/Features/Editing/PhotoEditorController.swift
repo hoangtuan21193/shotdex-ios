@@ -603,6 +603,14 @@ final class PhotoEditorController {
     /// The fast request came back empty because the original is in iCloud, so
     /// the wait is a download and the screen should say so.
     private(set) var isDownloadingFromCloud = false
+    /// The original's download, 0…1, once PhotoKit (or the scripted iCloud)
+    /// reports one: the stage card's percent and bar (FS-02.06 AC-3).
+    private(set) var downloadFraction: Double?
+    /// 15 s at 0%: iCloud is not answering (AC-5). The download goes on.
+    private(set) var isDownloadStalled = false
+    @ObservationIgnored private var loadingTask: Task<PhotoEditingSession, Error>?
+    @ObservationIgnored private var stallTask: Task<Void, Never>?
+    @ObservationIgnored private var zeroSince: ContinuousClock.Instant?
 
     // MARK: Multi-photo preview cache (FS-03.09b §2)
 
@@ -644,8 +652,26 @@ final class PhotoEditorController {
         errorMessage = nil
         showCachedPreview(draft: draft)
         requestPlaceholder()
+        startStallWatch()
         do {
-            let session = try await service.beginSession(for: origin, isOnCanvas: true)
+            // Its own task, so Close cancels the download at once (AC-4)
+            // however the load was started.
+            let service = service, origin = origin
+            let loading = Task { [weak self] in
+                try await service.beginSession(for: origin, isOnCanvas: true) { value in
+                    self?.reportDownload(value)
+                }
+            }
+            loadingTask = loading
+            let session = try await withTaskCancellationHandler {
+                try await loading.value
+            } onCancel: {
+                loading.cancel()
+            }
+            loadingTask = nil
+            stallTask?.cancel()
+            downloadFraction = nil
+            isDownloadStalled = false
             self.session = session
             let option = session.preferredSource(for: session.recalledRecipe)
             guard let option else { throw PhotoEditingError.missingSource }
@@ -674,12 +700,19 @@ final class PhotoEditorController {
             if !adoptedCache {
                 await renderNow()
             }
+        } catch is CancellationError {
+            // Closed while it opened: nothing to say.
         } catch {
             loadFailure = EditorLoadFailure.classify(
                 error,
                 accessIsLimited: PHPhotoLibrary.authorizationStatus(for: .readWrite) == .limited
             )
         }
+        loadingTask = nil
+        stallTask?.cancel()
+        stallTask = nil
+        downloadFraction = nil
+        isDownloadStalled = false
         cachedPreviewTask?.cancel()
         cachedPreviewTask = nil
         cachedEditedPreview = nil
@@ -823,7 +856,44 @@ final class PhotoEditorController {
         }
     }
 
+    /// A tick of the original's download (AC-3). Any movement ends a stall.
+    private func reportDownload(_ value: Double) {
+        guard isLoading else { return }
+        isDownloadingFromCloud = true
+        downloadFraction = value
+        if value > 0 {
+            zeroSince = nil
+            isDownloadStalled = false
+        } else if zeroSince == nil {
+            zeroSince = .now
+        }
+    }
+
+    /// Watches the opening for 15 s at 0% — a download that never moves —
+    /// and says so instead of spinning for ever (AC-5). Nothing is cancelled.
+    private func startStallWatch() {
+        stallTask?.cancel()
+        zeroSince = .now
+        stallTask = Task { [weak self] in
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .milliseconds(500))
+                guard let self, self.isLoading, !self.isPlaceholderFullQuality else { continue }
+                let atZero = self.zeroSince.map { ContinuousClock.now - $0 } ?? .zero
+                let stalled = EditorLoadFailure.isStalled(
+                    atZeroFor: atZero,
+                    fraction: self.downloadFraction,
+                    isDownloading: self.isDownloadingFromCloud
+                )
+                if stalled != self.isDownloadStalled { self.isDownloadStalled = stalled }
+            }
+        }
+    }
+
     func close() {
+        // A download still running for this photo stops now (AC-4).
+        loadingTask?.cancel()
+        loadingTask = nil
+        stallTask?.cancel()
         cachedPreviewTask?.cancel()
         renderTask?.cancel()
         interactiveRenderTask?.cancel()
