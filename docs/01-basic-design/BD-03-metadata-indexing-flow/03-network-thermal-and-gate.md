@@ -1,14 +1,17 @@
 # BD-03.03 — Mạng, iCloud, nhiệt và quyền ưu tiên
 
 `BD-03.03` · `Data/Sources/ExifReader.swift` · `IndexTrafficMonitor` · `Domain/Indexing/IndexInteractionGate.swift`
-· test `IndexNetworkStatusTests` · `IndexThermalPolicyTests` · `IndexInteractionGateTests` · cập nhật 2026-09-22
+· test `IndexNetworkStatusTests` · `IndexThermalPolicyTests` · `IndexInteractionGateTests` · cập nhật 2026-10-01
 
 **Một câu:** index sống chung với iCloud chập chờn, máy nóng, pin yếu và **một người đang xem ảnh**.
 
 ## 1. Quy tắc
 
-- **Tối đa 4 lượt tải iCloud cùng lúc trên toàn app** (kể cả lượt đọc một ảnh của viewer). Đọc trên máy
-  không giới hạn.
+- **Tối đa 4 lượt tải iCloud cùng lúc cho index.** Đọc trên máy không giới hạn.
+- **Lượt do người dùng bấm không xin suất của index** (viewer, editor, Share, Resize, Collage — người dùng chốt
+  2026-10-01, [FS-02.06 §3](../../02-functional-spec/FS-02-photo-detail/06-icloud-originals.md)). Pha chuẩn bị
+  bản gốc tự giới hạn ≤ 4 lượt song song, và index **tạm dừng** qua cổng tương tác (§6) trong lúc đó. Vì một
+  lượt index đang bay có thể giữ suất tới 120 giây, và người dùng không được phải chờ nó.
 - **Đồng hồ canh đo tiến độ TẢI, không đo tiến độ nhận khối dữ liệu.**
 - Thời hạn là **cửa sổ không-có-tiến-triển**, không phải một hạn chót cứng.
 - **Cầu dao mở thì dừng cả lượt và chờ**, không đi tiếp để dán nhãn "chờ iCloud" cho cả thư viện.
@@ -43,7 +46,7 @@
 | Cửa sổ đứng im — đọc trên máy | 10 giây |
 | Cửa sổ đứng im — tải mạng | 8 giây |
 | Trần tuyệt đối cho một lượt tải | 120 giây |
-| Số lượt tải iCloud cùng lúc | **4**, xếp hàng vào trước ra trước |
+| Số lượt tải iCloud cùng lúc của index | **4**, xếp hàng vào trước ra trước |
 
 - **Vì sao đo tiến độ tải**: hệ thống giao dữ liệu iCloud theo **khối 1 MB**, nên trước khi trọn 1 MB về thì
   lượt đọc **không nhận được byte nào** và trông như đứng im. Đo trên máy ở đoạn mạng chậm (~28 KB/s): 1 MB

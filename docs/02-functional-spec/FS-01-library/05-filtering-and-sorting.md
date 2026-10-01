@@ -45,7 +45,9 @@ trên toolbar.
   ([FS-14 §7](../FS-14-panorama/01-screen-and-flow.md)).
 - **Unsupported RAW** là mục thứ hai không do hệ thống định nghĩa: ảnh RAW-only của máy mà iOS trên máy "chưa
   đọc được", tra trong bảng phán quyết ([FS-03.04b §2, §5](../FS-03-photo-editor/04b-unsupported-raw.md)). Máy
-  "chưa biết" không khớp. Mọi kiểu chụp khác vẫn do hệ thống định nghĩa.
+  "chưa biết" không khớp. Mục này cũng có trong menu lọc của màn album: ở đó lọc bằng danh sách id ảnh từ index,
+  giới hạn trong tập id của album, như Panoramas do ShotDex ghép (người dùng chốt 2026-10-01). Mọi kiểu chụp khác
+  vẫn do hệ thống định nghĩa.
 - **Kiểu chụp** là một menu con trong menu lọc: Screenshots · Live Photos · Portrait · Panoramas · HDR ·
   Time-lapse · Slo-mo · Cinematic · Unsupported RAW. Là **menu con** chứ không phải chín hàng phẳng, vì chín
   hàng sẽ chôn mất mục "Advanced Filter…".

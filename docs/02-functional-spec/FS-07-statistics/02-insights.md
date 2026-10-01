@@ -22,7 +22,7 @@ Ngưỡng chung: **≥ 50 ảnh có tên máy**. Dưới ngưỡng thì không t
 
 | Loại | Câu (nguồn `en`) | Hiện khi | Chạm |
 |---|---|---|---|
-| Tiêu cự | "85% of your photos are at 26 mm equivalent." | xem §5 | Library lọc tiêu cự tương đương |
+| Tiêu cự | "85% of your photos are at 26mm equivalent." | xem §5 | Library lọc tiêu cự tương đương |
 | Cặp body + lens | "EOS R6 with RF 85mm F1.2 L USM took 40% of your photos." | ≥ 50 ảnh có cả máy lẫn ống · ≥ 2 cặp · cặp đầu ≥ 20% | Library lọc máy **và** ống |
 | Chụp chậm | "18% of your photos were shot slower than 1/focal length." | ≥ 50 ảnh có tốc độ + tiêu cự tương đương · tỉ lệ ≥ 5% | không chạm được — câu không có mũi tên |
 | Tháng bận nhất | "August 2026 was your busiest month: 1,240 photos." | ≥ 3 tháng có ảnh · tháng đầu ≥ 50 ảnh và ≥ 2 × trung vị các tháng | Library lọc **trong tháng** đó |
@@ -47,7 +47,8 @@ chậm đã có.
 - Số nhiều dùng biến thể plural của catalog, không dùng markup inflect ([NF-06](../../04-non-functional-design/NF-06-accessibility-and-localization.md)).
 - Phần trăm là số nguyên theo định dạng phần trăm của hệ thống. Từ 99,5% tới dưới 100% ghi **99%**;
   "100%" chỉ khi đúng là tất cả.
-- Tiêu cự qua bộ định dạng thông số của app ("26 mm"); tháng ghi tháng + năm theo locale.
+- Tiêu cự qua bộ định dạng thông số của app ("26mm", không dấu cách — giống chip, overlay và Info; người dùng
+  chốt 2026-10-01); tháng ghi tháng + năm theo locale, gom theo giờ địa phương ([01](01-dashboard.md) §5).
 - Không động từ khuyên hay phán: *buy, sell, upgrade, should, try, consider, recommend, need, better,
   worse*. Có test quét mọi mẫu.
 - Mẫu số không phủ ≥ 90% ảnh có tên máy → câu dùng biến thể nêu rõ mẫu số
@@ -55,11 +56,14 @@ chậm đã có.
 
 ## 5. Tiêu cự: tương đương, dải, điện thoại
 
-- Luôn dùng **tiêu cự tương đương full-frame**, không bao giờ tiêu cự thật: XF 23mm trên X-T5 là "35 mm".
+- Luôn dùng **tiêu cự tương đương full-frame**, không bao giờ tiêu cự thật: XF 23mm trên X-T5 là "35mm".
 - Tiêu cự tương đương làm tròn tới mm. Hiện câu khi:
   1. một giá trị chiếm ≥ 50% → câu nêu giá trị đó;
-  2. không thì dải của bộ lọc Library đông nhất ≥ 50% → câu nêu dải ("20–27 mm");
-  3. không thì gộp dải đó với dải kề đông hơn, ≥ 50% → câu nêu hai dải gộp; vẫn thiếu → không có câu.
+  2. không thì **nhóm góc nhìn** của bộ lọc Library ([FS-01.05 §4](../FS-01-library/05-filtering-and-sorting.md):
+     Ultra-wide < 20 · Wide 20–34 · Standard 35–69 · Portrait 70–134 · Telephoto 135–299 · Super telephoto ≥ 300)
+     đông nhất ≥ 50% → câu nêu nhóm đó ("Wide, 20–34mm"). Chạm câu thì Library lọc **đúng nhóm đó**, nên số trong
+     câu bằng số ảnh trên lưới (người dùng chốt 2026-10-01);
+  3. không thì gộp nhóm đó với nhóm kề đông hơn, ≥ 50% → câu nêu hai nhóm gộp; vẫn thiếu → không có câu.
 - Ảnh có tiêu cự thật mà ≥ 50% không quy đổi được (máy chưa biết cảm biến) → không có câu tiêu cự; chân thẻ
   hiện "N photos are from cameras with an unknown sensor size." mở Settings → Unknown Cameras.
 - **Mỗi mô-đun camera của điện thoại là một ống**: iPhone 15 Pro chính và tele đếm riêng, vì EXIF ghi tên ống
@@ -75,8 +79,9 @@ chậm đã có.
 | Rộng (iPad, Duo trong) | một thẻ trải hết bề rộng nội dung; câu chia vào **cùng số cột** như dashboard (2…3) |
 
 - Lần đầu mở: thẻ Insights ở trên cùng, bên dưới là 6 biểu đồ gieo ([FS-07.01 §3](01-dashboard.md)).
-- **Ẩn được**: menu của thẻ có **Hide Insights**. Lựa chọn nhớ trong Settings — Settings → Display có công tắc
-  **Show Insights** để bật lại. Không ẩn từng câu.
+- **Ẩn được**: menu của thẻ có **Hide Insights**. Lựa chọn nhớ trong Settings — Settings → **Display**, nhóm
+  **Statistics**, có công tắc **Show Insights** để bật lại. Mục Settings tên "Thumbnail Metadata" đổi thành
+  **Display**, gồm hai nhóm: Thumbnail Metadata và Statistics (người dùng chốt 2026-10-01). Không ẩn từng câu.
 
 - Thẻ dùng đúng kiểu thẻ biểu đồ ([DESIGN.md](../../../DESIGN.md) — bo 16, nền, lề 16); không token mới.
 - Mỗi câu: biểu tượng hệ thống của loại + câu + mũi tên nếu chạm được. Chữ xuống dòng, không cắt ở cỡ accessibility.

@@ -57,8 +57,8 @@ exiftool. Lần đầu mở Statistics phải trả lời ngay, bằng lời, t�
 
 | Rủi ro | Xử lý |
 |---|---|
-| Dải tiêu cự của Insights (chia trong SQL) lệch mốc với biểu đồ phân bố (chia trong Swift) | test đặt ảnh đúng ở mốc 20, 27,99, 28 mm và so hai đường |
-| Máy dev đã có cờ "đã gieo" → không thấy bộ gieo 6 biểu đồ | app chưa release; xoá app hoặc xoá bảng biểu đồ trên máy dev |
-| Chuyển từ full sang `.limited`: bảng metadata còn giữ dòng của ảnh ngoài tập được cấp không | ❓ chưa đọc tới — kiểm ở `/plan` với BD-03 |
+| Nhóm tiêu cự của Insights (chia trong SQL) lệch mốc với nhóm góc nhìn của bộ lọc Library | dùng chung mốc của bộ lọc; test đặt ảnh đúng ở mốc 19,999 / 20 / 34,999 / 35 mm và so số câu với số lưới sau khi chạm |
+| Máy đã có cờ "đã gieo" → không thấy bộ gieo 6 biểu đồ | cờ lên phiên bản 2; máy cũ được thêm 4 biểu đồ còn thiếu vào cuối, một lần ([01](01-dashboard.md) §3) |
+| Chuyển từ full sang `.limited`: bảng metadata còn giữ dòng của ảnh ngoài tập được cấp không | đo trên máy thật trong task của AC-14, trước khi viết code của nó |
 | Sim không cấp được `.limited` bằng lệnh | AC-14 cần máy thật |
 | Ngân sách 500 ms không có test khoá | đo tay ở `/verify` (AC-13); vượt thì mở intent mới |

@@ -1,7 +1,7 @@
 # FS-03.04b — RAW iOS chưa đọc được
 
 `FS-03.04b` · `ShotDexKit/Render/PhotoRenderService.swift` · `Domain/Editing/EditorLoadFailure.swift`
-· `Features/Shared/PhotoGridCollectionView.swift` · cập nhật 2026-10-01
+· `Features/Shared/PhotoGridCollectionView.swift` · cập nhật 2026-10-01 (quyết định của `/plan` đã duyệt)
 
 **Một câu:** ảnh RAW mà iOS trên máy chưa giải được thì có dấu ngay trong thư viện, và mọi lối mở nó nói máy nào,
 bản iOS nào, làm gì tiếp — chuyển DNG, chờ iOS, hay sửa JPEG đi kèm.
@@ -27,12 +27,16 @@ RAW; chọn RAW trong menu Source thì lỗi bị nuốt. Mục này thay cả b
 - **Nguồn phán quyết** đi theo ba bậc, dừng ở bậc đầu tiên cho ra kết quả:
   1. tên máy **khớp** danh sách của bộ giải hệ thống ⇒ "đọc được";
   2. không khớp ⇒ thử giải **một file có sẵn trên máy** của máy đó (chép ra thư mục tạm, không decode ảnh);
-     giải được ⇒ "đọc được", hỏng ⇒ "chưa đọc được";
+     giải được ⇒ "đọc được". Hỏng ⇒ thử thêm **một file có sẵn khác** của cùng máy; cũng hỏng mới ghi "chưa đọc
+     được" (người dùng chốt 2026-10-01 — một file hỏng riêng không được kéo cả máy). Máy chỉ có đúng một file trên
+     máy thì một lần hỏng là đủ;
   3. mọi file của máy đó chỉ có trên iCloud ⇒ "chưa biết" tới khi editor mở một file. Không tải gì chỉ để xét.
 - Kết quả thật của mỗi lần editor mở file **đè** phán quyết "chưa biết". Máy đã "đọc được" mà một file vẫn hỏng
   (chế độ nén lạ) thì chỉ file đó báo lỗi; máy không bị đổi phán quyết.
 - Phán quyết gắn với **bản build iOS**: lên bản build mới thì xét lại ở lần mở app kế tiếp.
 - "Ảnh này là RAW-only" lấy từ đuôi tên file đã index, qua **cùng bảng đuôi** của nhãn định dạng trên tile.
+  App có **một** bảng đuôi RAW duy nhất — bảng của nhãn định dạng tile, thêm `FFF` — dùng chung cho nhãn định dạng
+  trong viewer, smart album kiểu RAW và luật RAW-only này (người dùng chốt 2026-10-01).
   Cặp RAW+JPEG không được đánh dấu ở lưới: lưới, viewer và mọi màn khác vẫn hiện JPEG bình thường.
 
 ## 3. Hiển thị
@@ -47,6 +51,8 @@ RAW; chọn RAW trong menu Source thì lỗi bị nuốt. Mục này thay cả b
 - **Mục lọc "Unsupported RAW"** nằm trong menu con kiểu chụp ([FS-01.05 §3](../FS-01-library/05-filtering-and-sorting.md)),
   gom mọi ảnh RAW-only của máy "chưa đọc được" để chuyển DNG một lượt. Máy "chưa biết" không vào mục này.
   - Là mục thứ hai sau Panoramas không do hệ thống định nghĩa: nó hỏi bảng phán quyết (§5), không hỏi bitmask.
+  - Có cả trong menu lọc của màn album ([FS-06.09](../FS-06-collections/09-album-filter-menu.md)): ở đó lọc bằng
+    danh sách id ảnh lấy từ index, giới hạn trong tập id của album, như Panoramas do ShotDex ghép.
 - **Thông báo**, một câu nói máy, một câu nói việc cần làm (tiếng Anh, qua String Catalog):
   - biết máy: *"iOS 27.0 doesn't support RAW files from the Nikon Z5II yet. Convert the file to DNG with Adobe DNG
     Converter, or wait for an iOS update that adds this camera."*;
@@ -54,6 +60,9 @@ RAW; chọn RAW trong menu Source thì lỗi bị nuốt. Mục này thay cả b
   - file DNG vẫn hỏng và không có JPEG đi kèm: *"iOS 27.0 can't read this DNG file. Convert the original again
     with the latest Adobe DNG Converter, or share it to edit on a computer."*, hai nút **Share Original** · **OK**.
     Share Original gửi nguyên byte file gốc qua share sheet. Vì NF-04 bắt mọi lỗi có lối ra.
+    Settings → Metadata When Sharing không phải All Metadata thì Share Original đi qua alert RAW của
+    [FS-08.06 §5](../FS-08-settings/06-share-metadata-privacy.md): **Share as JPEG** mờ kèm lý do *"iOS can't read
+    this RAW yet"* (không render được RAW này); còn **Share RAW with Location** · **Skip**.
 - Tên máy lấy từ index đã chuẩn hoá ([BD-05](../../01-basic-design/BD-05-imaging-business-rules.md)); chưa index thì
   đọc Make/Model trong đầu file lúc mở. Phiên bản iOS lấy từ hệ thống, không viết cứng.
 - Phán quyết đã có thì **Edit không tải gì**: thông báo hiện ngay, editor không mở, không có spinner iCloud.
@@ -61,6 +70,9 @@ RAW; chọn RAW trong menu Source thì lỗi bị nuốt. Mục này thay cả b
   **Edit RAW** · **Edit JPEG** · **Cancel**.
   - Máy "chưa đọc được": Edit RAW mờ, kèm dòng lý do *"iOS can't read this RAW yet"*.
   - Không nhớ lựa chọn: lần Edit sau lại hỏi.
+  - Cặp đã có bản sửa ShotDex trên RAW mà người dùng chọn **Edit JPEG**: bản sửa mang sang JPEG, bỏ năm thông
+    số chỉ có ở nhóm RAW (Temperature, Tint, Sharpness, Luminance Noise, Color Noise của nhóm RAW) — người dùng
+    chốt 2026-10-01.
   - Menu Source trong editor vẫn có; với máy "chưa đọc được", RAW trong menu đó mờ kèm cùng lý do. Bốn mục RAW
     của Adjust ẩn như mọi nguồn không phải RAW.
 - Lỗi của bộ giải luôn ra **đúng thông báo RAW** kể cả khi ImageIO không đọc nổi thuộc tính file — nguồn là RAW
@@ -70,13 +82,15 @@ RAW; chọn RAW trong menu Source thì lỗi bị nuốt. Mục này thay cả b
 
 | Lối | Hành vi |
 |---|---|
-| Resize | ảnh đó vào danh sách lỗi của lượt chạy, kèm đúng câu thông báo; ảnh khác vẫn chạy ([FS-03.07](07-resize-and-compression.md)) |
-| Collage · Video Studio · Combine (HDR, Focus Stack, Panorama) | hỏi trước khi thêm ảnh (dưới bảng) |
+| Resize | RAW-only: ảnh đó vào danh sách lỗi của lượt chạy, kèm đúng câu thông báo; ảnh khác vẫn chạy ([FS-03.07](07-resize-and-compression.md)). **Cặp** RAW+JPEG mà RAW không đọc được: Resize dùng JPEG của cặp |
+| Editor nhiều ảnh (chọn nhiều → Edit) | tới lượt ảnh RAW không đọc được thì hiện đúng thông báo, kèm **Skip** sang ảnh kế; các ảnh khác sửa bình thường |
+| Collage · Video Studio | hỏi trước khi thêm ảnh (dưới bảng) |
+| Combine (HDR, Focus Stack, Panorama) | **đợt sau** — dòng ở `REVIEW_QUEUE.md` (người dùng chốt 2026-10-01) |
 | Duplicates | không đổi — so bằng thumbnail của PhotoKit |
 | Share | gửi nguyên file gốc, không cần giải |
-| Edit in ShotDex, ảnh trên file server | cùng thông báo, cùng luật cặp RAW+JPEG ([EX-05](../../03-extensions-and-integrations/EX-05-edit-action-extension.md), [FS-17](../FS-17-import-from-server/README.md)) |
+| Edit in ShotDex, ảnh trên file server | **đợt sau** — dòng ở `REVIEW_QUEUE.md`. Hướng khi làm: cùng thông báo, cùng luật cặp RAW+JPEG ([EX-05](../../03-extensions-and-integrations/EX-05-edit-action-extension.md), [FS-17](../FS-17-import-from-server/README.md)) |
 
-- **Thêm RAW "chưa đọc được" vào Collage, Video Studio hay Combine thì hỏi trước**, một lần cho cả lượt thêm.
+- **Thêm RAW "chưa đọc được" vào Collage hay Video Studio thì hỏi trước**, một lần cho cả lượt thêm.
   Vì luật intent: không bao giờ âm thầm xuất ra bản xem trước.
   - *"2 RAW photos can't be read on this iOS"* — *"Convert them to JPEG first? ShotDex uses the JPEG preview
     inside the RAW (1616 × 1080)."* Các ảnh khác cỡ thì nêu cỡ nhỏ nhất.
@@ -99,20 +113,20 @@ iOS 27.0 trong bảng là ví dụ; câu thật lấy phiên bản từ hệ th�
 |---|---|---|---|---|
 | AC-1 | 12 NEF RAW-only, EXIF `NIKON Z 6_2`, danh sách hệ thống có "Nikon Z 6 2" | lượt xét phán quyết chạy | máy ghi "đọc được"; 0 trong 12 tile có dấu | ⚠️ chưa có |
 | AC-2 | 8 ARW RAW-only (có sẵn trên máy) của máy không khớp danh sách, bộ giải trả rỗng, và 5 HEIC | lượt xét chạy xong | đúng 8 tile có glyph tam giác ở hàng glyph trạng thái, VoiceOver đọc "RAW not supported by iOS"; 5 HEIC không có; chạm tile mở viewer | ⚠️ chưa có |
-| AC-3 | 1 ảnh của AC-2, máy tên "Sony ILCE-7M5" trong index | bấm Edit ở Photo Detail | thông báo đủ hai câu, có "Sony ILCE-7M5" và "iOS 27.0"; editor không mở | ⚠️ chưa có |
+| AC-3 | 1 ảnh của AC-2, máy tên "Sony ILCE-7M5" trong index | bấm Edit ở Photo Detail; rồi chọn ảnh đó cùng 2 JPEG và Edit (nhiều ảnh) | lần 1: thông báo đủ hai câu, có "Sony ILCE-7M5" và "iOS 27.0"; editor không mở. Lần 2: tới ảnh đó thì hiện cùng thông báo kèm Skip; Skip sang ảnh kế, 2 JPEG sửa và lưu được | ⚠️ chưa có |
 | AC-4 | ảnh của AC-2 chỉ có trên iCloud, phán quyết đã có | bấm Edit | thông báo hiện trong ≤ 1 s, 0 byte tải về, không có spinner "Downloading from iCloud…" | ⚠️ chưa có |
 | AC-5 | cặp RAW+JPEG của máy "chưa đọc được" | bấm Edit, chọn Edit JPEG | action sheet *Edit which version?* có Edit RAW mờ kèm *iOS can't read this RAW yet*; editor mở JPEG; menu Source có RAW mờ; không có mục White Balance | ⚠️ chưa có |
 | AC-6 | ARW RAW-only, Make/Model trong EXIF rỗng, bộ giải trả rỗng | bấm Edit | thông báo nói ".ARW", không có tên máy; trước đó tile **không** có dấu (không biết ≠ chưa hỗ trợ) | ⚠️ chưa có |
 | AC-7 | file DNG RAW-only mà bộ giải trả rỗng | bấm Edit | thông báo "can't read this DNG file" kèm câu nhắc "latest Adobe DNG Converter"; hai nút Share Original · OK | ⚠️ chưa có |
-| AC-8 | như AC-7 | bấm Share Original | share sheet mở với đúng file DNG gốc, cùng số byte với tài nguyên gốc trong Photos | ⚠️ chưa có |
+| AC-8 | như AC-7; Settings → Metadata When Sharing = All Metadata | bấm Share Original | share sheet mở với đúng file DNG gốc, cùng số byte với tài nguyên gốc trong Photos; đổi Settings sang No Location rồi bấm lại → alert RAW của FS-08.06 có Share as JPEG mờ kèm *iOS can't read this RAW yet*, chọn Share RAW with Location → cùng file DNG nguyên byte | ⚠️ chưa có |
 | AC-9 | file RAW mà ImageIO không đọc nổi cả thuộc tính | bấm Edit | vẫn là thông báo RAW (dạng có tên máy hoặc đuôi file), không phải "The photo couldn't be decoded." | ⚠️ chưa có |
 | AC-10 | máy "chưa biết" (mọi file chỉ trên iCloud), 6 ảnh; editor mở 1 ảnh và bộ giải hỏng | đóng thông báo, về lưới | 6 tile của máy đó có dấu, không cần mở lại app | ⚠️ chưa có |
 | AC-11 | phán quyết "chưa đọc được" ghi ở iOS 27.0; máy lên 27.1 và bộ giải đọc được | mở app | máy được xét lại, 0 tile còn dấu, Edit mở editor bình thường | ⚠️ chưa có |
 | AC-12 | 3 ARW RAW-only của máy không khớp danh sách, cả 3 chỉ trên iCloud | lượt xét chạy xong | máy ghi "chưa biết"; 0 byte tải về; 0 tile có dấu | ⚠️ chưa có |
-| AC-13 | 8 ảnh của AC-2, 3 ảnh của AC-12, 5 HEIC | chọn **Unsupported RAW** trong menu con kiểu chụp | lưới còn đúng 8 ảnh của AC-2 | ⚠️ chưa có |
-| AC-14 | Resize 3 ảnh: 2 JPEG + 1 ảnh của AC-2 | chạy Resize | 2 bản mới trong Photos; danh sách lỗi có 1 dòng mang câu của AC-3; không tạo file từ bản xem trước | ⚠️ chưa có |
+| AC-13 | 8 ảnh của AC-2, 3 ảnh của AC-12, 5 HEIC; một album chứa 4 ảnh của AC-2 + 2 HEIC | chọn **Unsupported RAW** trong menu con kiểu chụp, ở Library rồi ở album đó | Library còn đúng 8 ảnh của AC-2; album còn đúng 4 | ⚠️ chưa có |
+| AC-14 | Resize 4 ảnh: 2 JPEG + 1 ảnh của AC-2 + 1 cặp RAW+JPEG của máy "chưa đọc được" | chạy Resize | 3 bản mới trong Photos (bản của cặp làm từ JPEG của cặp); danh sách lỗi có 1 dòng mang câu của AC-3; không tạo file từ bản xem trước | ⚠️ chưa có |
 | AC-15 | Collage, chọn 4 ảnh trong đó 1 ảnh của AC-2 | thêm vào collage | hỏi *1 RAW photo can't be read on this iOS* với Convert to JPEG · Skip These 1 · Cancel; Convert → ô đó dùng bản xem trước đúng cỡ nhúng, 0 asset mới trước khi Save; Skip → collage 3 ảnh; Cancel → không thêm ảnh nào | ⚠️ chưa có |
-| AC-16 | cặp RAW+JPEG của máy đọc được | bấm Edit hai lần, lần 1 chọn Edit RAW rồi đóng editor | lần 1 action sheet có cả hai mục sáng, editor mở RAW; lần 2 action sheet hiện lại | ⚠️ chưa có |
+| AC-16 | cặp RAW+JPEG của máy đọc được | bấm Edit hai lần: lần 1 chọn Edit RAW, chỉnh Exposure +1 và Temperature của nhóm RAW, Save Changes; lần 2 chọn Edit JPEG | lần 1 action sheet có cả hai mục sáng, editor mở RAW; lần 2 action sheet hiện lại, editor mở JPEG có Exposure +1, không có Temperature của nhóm RAW | ⚠️ chưa có |
 | AC-17 | ảnh của AC-2 mở trong viewer | chạm glyph tam giác ở bảng thông tin | thẻ có tên máy, "iOS 27.0" và câu "You can still view the preview, but you can't edit the RAW."; vùng chạm ≥ 44pt | ⚠️ chưa có |
 | AC-18 | Video Studio, thêm 5 ảnh, 2 ảnh của AC-2 | chọn Skip These 2 | timeline có đúng 3 clip ảnh; không có clip nào từ bản xem trước | ⚠️ chưa có |
 
@@ -126,4 +140,4 @@ một cách giả bộ giải trả rỗng trong test.
 | Danh sách máy trên iOS có thể khác bản macOS đã đo | đo lại trên sim 26.5 và 27.0 ở task đầu của `/plan` |
 | Thứ tự file của cặp RAW+JPEG: index có thể ghi tên file RAW, làm cặp trông như RAW-only | đo trên cặp thật trước khi dựa vào đuôi file |
 | Bản xem trước nhúng có độ phân giải khác nhau theo máy; PhotoKit có thể không trả gì | đo trên 3 hãng; tile trống thì vẫn có dấu |
-| Share tắt vị trí: ImageIO không ghi được kiểu RAW nào (đo macOS 27.0: 22 kiểu, không có RAW/DNG), nên file RAW đi **còn nguyên GPS** | thuộc mục 3 của intent (riêng tư khi chia sẻ), báo sang spec đó |
+| Share tắt vị trí: ImageIO không ghi được kiểu RAW nào (đo macOS 27.0: 22 kiểu, không có RAW/DNG), nên file RAW đi **còn nguyên GPS** | alert RAW của FS-08.06 §5; Share Original của RAW không đọc được đi qua alert đó với Share as JPEG mờ (§3) |

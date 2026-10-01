@@ -572,3 +572,14 @@ agents raised was fixed in the follow-up commit.
   `Set` to prune a handful of picks; bounded (only on content replacement while selecting). Nit _(perf-profiler)_
 - [ ] Measure `AlbumDetailModel.resolveAdvancedAssets` on a device with a 20k-photo album against the FS-06.09 §6
   300 ms first-page budget (now chunked at 2,000 ids; simulator only measured) _(perf-profiler)_
+
+# user-wishes wave 1 follow-ups (2026-10-01)
+
+Deferred by the user when approving the wave-1 plans (intent `docs/_intents/2026-09-30-user-wishes-research.md`).
+No acceptance criteria yet — each needs `/spec` before it gets a task.
+
+- [ ] iCloud originals: **Save All** in the multi-photo editor runs no preparation phase — originals download silently inside `EditorBatchSaver.run` (`ShotDex/Features/Editing/EditorBatchSaver.swift:43-90`); give it FS-02.06 §5 in its existing modal _(FS-02.06 §2)_
+- [ ] iCloud originals: **Paste Edits from the grid** downloads silently in its loop (`LibraryScreen.swift:298`, `pasteEditsToSelection`); give it FS-02.06 §5 in its existing modal _(FS-02.06 §2)_
+- [ ] iCloud originals: **Combine Photos** (Focus Stack, HDR, Panorama) shows "N photos couldn't be downloaded" + Retry but no percent while downloading (`PhotoStackScreen.swift:409`, `PanoramaMergeScreen.swift:229`) _(FS-02.06 §2)_
+- [ ] iCloud originals: **Copy and drag** do not apply the full-pixel rule — a 1536px Optimize Storage proxy can leave as the original (`AssetActionsCoordinator.swift:195-211`, `PhotoDragItem.swift`) _(FS-02.06 §3)_
+- [ ] Unsupported RAW: **Combine (HDR, Focus Stack, Panorama), Edit in ShotDex (EX-05) and server photos (FS-17)** have no unsupported-RAW handling — same message and RAW+JPEG pair rule as the editor, plus Combine asking before it uses an embedded preview _(FS-03.04b §4)_

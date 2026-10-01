@@ -5,7 +5,7 @@
 | Tác giả | hat.tuan@karabiner.tech |
 | Ngày | 2026-09-30 |
 | Trạng thái | accepted — người dùng 2026-10-01: "spec đi" |
-| Tiến độ | **chưa làm** (2026-10-01) — đợt 1 có spec, 91 AC (87 ở năm spec + 4 của tab Bursts trong FS-06.06); cả 32 điểm CẦN QUYẾT đã chốt 2026-10-01, chờ `/plan` (burst cần đo §9 trên máy thật trước); đợt 2–3 chưa có spec |
+| Tiến độ | **đang làm** (2026-10-01) — 4 plan đã duyệt (icloud 18 · raw 21 · privacy 24 · stats 17 task), task 1/24 privacy xong, 1/91 AC xanh (FS-08.06 AC-17); burst chờ đo máy thật |
 | Nguồn | phản hồi người dùng — nghiên cứu diễn đàn 2026-09-30 (Apple Community, Adobe Community, Lightroom Queen, DPReview, MacRumors, Hacker News, review App Store; Reddit chặn truy cập nên không có) + đối chiếu code cùng ngày |
 | Spec sinh ra từ đây | đợt 1: [FS-02.06](../02-functional-spec/FS-02-photo-detail/06-icloud-originals.md) (mục 1, 15 AC) · [FS-03.04b](../02-functional-spec/FS-03-photo-editor/04b-unsupported-raw.md) (mục 2, 12 AC) · [FS-08.06](../02-functional-spec/FS-08-settings/06-share-metadata-privacy.md) (mục 3, 14 AC) · [FS-07](../02-functional-spec/FS-07-statistics/README.md) (mục 5, 15 AC) · [FS-02.05](../02-functional-spec/FS-02-photo-detail/05-burst-selection.md) (mục 12, 12 AC) |
 

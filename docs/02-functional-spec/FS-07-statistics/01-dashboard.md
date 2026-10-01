@@ -52,6 +52,9 @@ Lần cài đầu gieo **sáu** biểu đồ, theo thứ tự:
 
 - **Không biểu đồ nào cố định**: cả sáu sửa và xoá được như biểu đồ người dùng tự dựng.
 - Việc gieo chỉ chạy **một lần duy nhất** — bảng người dùng cố ý xoá sạch không được tự mọc lại.
+- **Máy đã gieo bộ cũ** (2 biểu đồ: Top Camera, Total Photos & Videos): lần mở Statistics đầu tiên sau khi cập nhật
+  thêm **một lần** 4 biểu đồ còn thiếu (#3–#6) vào **cuối** bảng, theo đúng thứ tự trên; không đụng biểu đồ đang
+  có. Cờ "đã gieo" lên phiên bản 2 để việc này chỉ chạy một lần (người dùng chốt 2026-10-01).
 
 ## 4. Thẻ và ô soạn
 
@@ -76,6 +79,9 @@ ngày**.
 - Có sẵn All Time / This Year / This Month + **Custom Range…** mở một bảng chọn khoảng dạng lịch (các tháng
   xếp dọc, chạy từ ảnh cũ nhất tới nay).
 - Ảnh **không có ngày chụp** không lọt vào bất kỳ khoảng nào → chỉ xuất hiện ở biểu đồ để All Time.
+- **Mọi phép gom theo thời gian** (ngày, tháng, năm — biểu đồ đường, "Photos per Month", câu tháng bận nhất của
+  Insights, điều kiện *trong tháng*) dùng **giờ địa phương** của máy, không dùng UTC (người dùng chốt 2026-10-01).
+  Vì ảnh chụp tối 31/8 ở UTC+7 phải nằm ở tháng 8 trên biểu đồ, giống bộ lọc.
 
 ## 6. Bố cục
 

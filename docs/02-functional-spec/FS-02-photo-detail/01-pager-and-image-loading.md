@@ -1,14 +1,16 @@
 # FS-02.01 — Pager và tải ảnh
 
-`FS-02.01` · `Features/Library/PhotoDetailScreen.swift` · `ZoomableImageView` · cập nhật 2026-09-22
+`FS-02.01` · `Features/Library/PhotoDetailScreen.swift` · `ZoomableImageView` · cập nhật 2026-10-01
 
-**Một câu:** lật trang dựng lười, và thang chất lượng ảnh đi từ bản local rẻ nhất lên bản gốc — chỉ khi
-người dùng chủ động phóng.
+**Một câu:** lật trang dựng lười, và thang chất lượng ảnh đi từ bản local rẻ nhất lên bản cỡ màn, rồi lên bản
+gốc — chỉ khi người dùng chủ động phóng.
 
 ## 1. Quy tắc
 
 - Pager là của UIKit, không phải pager của SwiftUI.
-- **Local trước, mạng sau.** Không trang nào tải iCloud nếu người dùng chưa chủ động phóng.
+- **Local trước, mạng sau.** Trang dựng trước không bao giờ tải iCloud. Trang **đang hiện** được tải bản cỡ màn
+  qua mạng, như Photos; **bản gốc** chỉ tải khi người dùng chủ động phóng (người dùng chốt 2026-10-01,
+  [06](06-icloud-originals.md) AC-1).
 - **Bản tốt hơn được thay âm thầm; bản kém không bao giờ ghi đè ảnh đã nét.**
 - Rời trang là **huỷ** mọi yêu cầu của trang đó.
 
@@ -39,12 +41,14 @@ thumbnail → bản local → bản local gốc → bản cỡ màn → **bản 
 | Bước | Làm gì |
 |---|---|
 | Mọi trang dựng trước | một thumbnail nhanh + một bản local tốt nhất, **không mạng** |
-| Trang đang hiện | thêm bản hiện tại đọc từ file local rồi thu nhỏ; ảnh gốc chỉ ở iCloud thì đường này rỗng và **không tải** |
+| Trang đang hiện | thêm bản hiện tại đọc từ file local rồi thu nhỏ; ảnh gốc chỉ ở iCloud thì đường này rỗng, và trang xin **bản cỡ màn** với mạng cho phép. Không tải bản gốc |
 | Người dùng phóng | bản gốc qua mạng, có vòng tiến độ |
 
 - **Offline vẫn giống Photos**: bản local đầu tiên được vẽ ngay dù chỉ là thumbnail mờ, thay vì giữ màn đen.
   Bản cuối vẫn phải đạt ≥ 90% kích thước mục tiêu; bản thiếu pixel thì xin lại ở mức gấp đôi.
 - Vòng quay chỉ xuất hiện **sau 350ms** và chỉ khi hệ thống không trả được bất kỳ bản local nào.
+- Vòng tiến độ iCloud 22pt hiện khi bản cỡ màn **hoặc** bản gốc đang tải qua mạng, không có số
+  ([06](06-icloud-originals.md) §4).
 - **Lưới chỉ hâm nóng đúng một ô — ô đang bị chạm**: xin bản cỡ màn cho ảnh dưới ngón tay, giữ qua lúc nhả,
   ô khác bị chạm thì thay. Bản cũ hâm 18 ô đang hiện: 18 lần giải mã ảnh full-screen (~12MB mỗi ảnh) xếp
   cùng hàng đợi với thumbnail nên **lưới mờ vài giây sau mỗi lần cuộn**.

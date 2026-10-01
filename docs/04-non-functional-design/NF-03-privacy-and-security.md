@@ -52,14 +52,20 @@ Danh tính là **khoá chứng thực của bản cài** — gỡ app là mất.
   khách thường muốn có nó).
 - **Một mặc định cho mọi lối ra**: Share, Save Copy, Paste Edits, Resize và kéo sang app khác.
 - **No Metadata giữ Copyright và Artist** — quyền tác giả của người chụp, không phải dấu vết về họ.
-- **Save Changes không bao giờ đổi ngày hay vị trí của asset** — ảnh không rời máy, nên không có lựa chọn nào.
+- **Save Changes không bao giờ đổi ngày hay vị trí của asset** — ảnh không rời máy, nên nó bỏ qua lựa chọn
+  metadata (lựa chọn chỉ nằm ở phần Save Copy của sheet Save).
+- **Vị trí người dùng đã xoá không rời máy**: asset không còn vị trí mà file vẫn mang GPS thì mọi mức, kể cả All
+  Metadata, đều bỏ GPS của file.
 - Ghi lại file bằng cách **chép ảnh sang file mới kèm bộ thuộc tính đã sửa**, **không** giải mã rồi mã hoá
   lại: bỏ toạ độ mà **không đụng một pixel hay một trường EXIF nào khác**.
 - **Muốn xoá một trường thì phải ghi một giá trị rỗng tường minh** — bỏ trống trường đó nghĩa là "giữ nguyên
   của ảnh gốc". Xoá cả nhóm GPS, trường vị trí chủ thể, và mấy trường địa danh của chuẩn báo chí.
 - **Không ghi lại được thì không âm thầm giao đi nguyên bản.** ImageIO không ghi được RAW, nên mẻ có RAW hỏi
-  một lần: Share as JPEG · Share RAW with Location · Skip. Kéo thả không hỏi được, nên RAW kéo ra đi dưới
-  dạng JPEG render ở mức mặc định.
+  một lần: Share as JPEG · Share RAW with Location · Skip (RAW iOS không đọc được: Share as JPEG mờ). Ảnh khác ghi
+  lại lỗi thì bị bỏ khỏi mẻ và nêu tên. Kéo thả không hỏi được, nên RAW kéo ra đi dưới dạng JPEG render ở mức mặc
+  định; ảnh đã chỉnh kéo ra bản đã chỉnh, như Share.
+- **Gom sau khi chọn đích**: share sheet mở ngay, tải iCloud và ghi lại metadata chạy sau khi người dùng chọn
+  đích, trong một modal có Cancel ([FS-02.06 §9](../02-functional-spec/FS-02-photo-detail/06-icloud-originals.md)).
 - Đổi mức cho một lần share bằng hai dòng hành động của app trong share sheet; chạm Share thường dùng mặc định.
 - **Video đi nguyên bản ở mọi mức**: vị trí nằm trong phần mô tả của container, gỡ nó là chép cả clip ra đĩa.
   Mẻ có video mà mức không phải All Metadata thì app nói *"Videos keep their metadata"* trước khi share.
