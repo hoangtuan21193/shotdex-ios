@@ -1,0 +1,17 @@
+{
+  "steps": [
+    { "action": "launch", "arguments": ["-ShotDexFakeICloud", "cloud=all,seconds=20"] },
+    { "action": "wait", "seconds": 6 },
+    { "action": "tap", "x": 0.165, "y": 0.30 },
+    { "action": "wait", "seconds": 1.5 },
+    { "action": "tap", "label": "Edit", "type": "button" },
+    { "action": "wait", "seconds": 5.5 },
+    { "action": "screenshot", "name": "01-card-about-30" },
+    { "action": "tap", "label": "Back", "type": "button" },
+    { "action": "wait", "seconds": 1 },
+    { "action": "screenshot", "name": "02-closed" },
+    { "action": "dump", "name": "02-closed" },
+    { "action": "wait", "seconds": 4 },
+    { "action": "screenshot", "name": "03-later" }
+  ]
+}

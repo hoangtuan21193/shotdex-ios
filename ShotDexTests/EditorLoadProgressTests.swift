@@ -25,6 +25,38 @@ import Testing
         #expect(stage.contains("ProgressView(value: min(1, max(0, fraction)))"))
     }
 
+    /// AC-4. A session that finishes opening after the editor closed is
+    /// thrown away at once — no `ShotDexPhoto-` folder waits for the next
+    /// launch's sweep.
+    @Test func aSessionMadeAfterCloseLeavesNoFolder() async throws {
+        let run = ServerComposeToolTests.Run()
+        defer { try? FileManager.default.removeItem(at: run.directory) }
+        let photo = try run.photos(["A.jpg"])[0]
+        let service = PhotoEditingService()
+        let before = Self.sessionFolders()
+        let task = Task { @MainActor in
+            withUnsafeCurrentTask { $0?.cancel() }
+            return try await service.beginSession(for: .serverFile(photo), isOnCanvas: true)
+        }
+        await #expect(throws: CancellationError.self) { try await task.value }
+        #expect(Self.sessionFolders() == before)
+    }
+
+    /// AC-4. The scripted download stops at the next tick once cancelled —
+    /// at 30%, well within a second.
+    @Test func cancelAtThirtyPercentStopsTheDownload() async throws {
+        let fake = FakeOriginalFetcher(script: .init("cloud=all,seconds=10"), base: FixtureOriginalFetcher())
+        let ticks = Ticks()
+        let download = Task { try await fake.scriptedTransfer(for: "A") { ticks.add($0) } }
+        for _ in 0..<100 where (ticks.values.last ?? 0) < 0.3 { try await Task.sleep(for: .milliseconds(50)) }
+        let pressed = ContinuousClock.now
+        download.cancel()
+        await #expect(throws: CancellationError.self) { try await download.value }
+        #expect(ContinuousClock.now - pressed < .seconds(1))
+        #expect(fake.cancelledCount == 1)
+        #expect(await fake.probe(.test("A")) == .inCloud)
+    }
+
     static func sessionFolders() -> Set<String> {
         let names = (try? FileManager.default.contentsOfDirectory(atPath: FileManager.default.temporaryDirectory.path)) ?? []
         return Set(names.filter { $0.hasPrefix("ShotDexPhoto-") })
