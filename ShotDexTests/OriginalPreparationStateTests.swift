@@ -15,4 +15,13 @@ import Testing
             .joined(separator: "\n")
         #expect(viewer?.contains("OriginalPreparationState.accessibilityProgress(downloadProgress)") == true)
     }
+
+    /// AC-14. The message the room check shows.
+    @Test func notEnoughSpaceWording() {
+        #expect(OriginalPreparationState.notEnoughSpaceMessage(needed: 1_400_000_000, free: 380_000_000)
+            == "Not enough space to download these originals — needs 1.4 GB, 380 MB free.")
+        #expect(!OriginalPreparationState.fits(needed: 1_400_000_000, free: 380_000_000))
+        #expect(OriginalPreparationState.fits(needed: 300_000_000, free: 380_000_000))
+        #expect(OriginalPreparationState.fits(needed: 1_400_000_000, free: nil))
+    }
 }

@@ -1,4 +1,5 @@
 import Foundation
+import os
 import Testing
 @testable import ShotDex
 
@@ -154,5 +155,82 @@ import Testing
         #expect(files.count == 3)
         #expect(skipped.isEmpty)
         preparation.removeFiles()
+    }
+
+    /// AC-14. Ten photos only in iCloud, 1.4 GB together, 380 MB free: the
+    /// message comes before the first byte, nothing is downloaded, and OK
+    /// ends the batch with nothing.
+    @Test func notEnoughSpace() async throws {
+        defer { cleanUp() }
+        let fake = FakeOriginalFetcher(script: .init("cloud=all,mb=140"), base: FixtureOriginalFetcher())
+        let preparation = OriginalPreparation(
+            items: items(10), fetcher: fake, availableBytes: { 380_000_000 }, in: directory
+        )
+        let run = Task { await preparation.run() }
+        for _ in 0..<100 where !preparation.isShown { try await Task.sleep(for: .milliseconds(20)) }
+        #expect(preparation.state.phase == .notEnoughSpace(needed: 1_400_000_000, free: 380_000_000))
+        #expect(preparation.isShown)
+        #expect(fake.downloadCount == 0)
+        #expect(fake.fetchCount == 0)
+        preparation.choose(.cancel)
+        #expect(await run.value == .cancelled)
+        #expect(fake.fetchCount == 0)
+    }
+
+    /// AC-14 / spec §5 step 2. A photo the index has no size for asks
+    /// PhotoKit; one PhotoKit cannot size either is left out of the sum and
+    /// the batch goes on.
+    @Test func unknownSizeAsksResourceThenProceeds() async throws {
+        defer { cleanUp() }
+        let base = SizedFetcher(sizes: ["01": 100_000_000])
+        let preparation = OriginalPreparation(
+            items: items(2), fetcher: base, availableBytes: { 150_000_000 }, in: directory
+        )
+        guard case .ready(let files, _) = await preparation.run() else { Issue.record("not ready"); return }
+        #expect(files.count == 2)
+        #expect(base.askedSizes.sorted() == ["01", "02"])
+        #expect(preparation.state.totalBytes == 100_000_000)
+        preparation.removeFiles()
+    }
+
+    /// Spec §5. The disk filling up mid-download is a space problem, never
+    /// an iCloud one.
+    @Test func fullDiskMidwayIsASpaceError() async throws {
+        defer { cleanUp() }
+        let base = SizedFetcher(sizes: ["01": 10, "02": 10], fullDisk: ["02"])
+        let preparation = OriginalPreparation(
+            items: items(2), fetcher: base, availableBytes: { 1_000 }, in: directory
+        )
+        let run = Task { await preparation.run() }
+        for _ in 0..<100 where !preparation.isShown { try await Task.sleep(for: .milliseconds(20)) }
+        guard case .notEnoughSpace = preparation.state.phase else {
+            Issue.record("\(preparation.state.phase)"); return
+        }
+        #expect(preparation.state.failedNames.isEmpty)
+        preparation.choose(.cancel)
+        #expect(await run.value == .cancelled)
+    }
+}
+
+/// Everything in iCloud; sizes from a table, as PhotoKit would answer.
+final class SizedFetcher: OriginalFetching, @unchecked Sendable {
+    let sizes: [String: Int64]
+    let fullDisk: Set<String>
+    private let asked = OSAllocatedUnfairLock(initialState: [String]())
+    var askedSizes: [String] { asked.withLock { $0 } }
+
+    init(sizes: [String: Int64], fullDisk: Set<String> = []) {
+        self.sizes = sizes
+        self.fullDisk = fullDisk
+    }
+
+    func probe(_ item: OriginalItem) async -> OriginalAvailability { .inCloud }
+    func byteCount(of item: OriginalItem) async -> Int64? {
+        asked.withLock { $0.append(item.id) }
+        return sizes[item.id]
+    }
+    func fetch(_ item: OriginalItem, to url: URL, progress: @escaping @Sendable (Double) -> Void) async throws {
+        if fullDisk.contains(item.id) { throw OriginalFetchError.outOfSpace }
+        try await FixtureOriginalFetcher().fetch(item, to: url, progress: progress)
     }
 }

@@ -1,0 +1,22 @@
+{
+  "steps": [
+    { "action": "launch", "arguments": ["-ShotDexFakeICloud", "cloud=all,mb=467,free=380"] },
+    { "action": "wait", "seconds": 6 },
+    { "action": "tap", "label": "Select photos", "type": "button" },
+    { "action": "wait", "seconds": 1 },
+    { "action": "tap", "x": 0.165, "y": 0.30 },
+    { "action": "tap", "x": 0.83, "y": 0.30 },
+    { "action": "tap", "x": 0.165, "y": 0.46 },
+    { "action": "tap", "label": "Share", "type": "button" },
+    { "action": "wait", "seconds": 2 },
+    { "action": "tap", "label": "View More" },
+    { "action": "wait", "seconds": 1.5 },
+    { "action": "tap", "label": "Save to Files" },
+    { "action": "wait", "seconds": 2 },
+    { "action": "screenshot", "name": "01-not-enough-space" },
+    { "action": "tap", "label": "OK", "type": "button" },
+    { "action": "wait", "seconds": 2.5 },
+    { "action": "screenshot", "name": "02-after-ok" },
+    { "action": "dump", "name": "02-after-ok" }
+  ]
+}

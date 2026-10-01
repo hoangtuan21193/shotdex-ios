@@ -39,11 +39,8 @@ struct OriginalDownloadModal: View {
             case (.preparing, .failed?):
                 if let state = batch.preparation?.state { failure(state) }
             case (.preparing, .notEnoughSpace(let needed, let free)?):
-                Text("Not Enough Space")
-                    .font(.headline)
                 Text(OriginalPreparationState.notEnoughSpaceMessage(needed: needed, free: free))
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
+                    .font(.headline)
                     .multilineTextAlignment(.center)
                 Button("OK") { batch.cancel() }
                     .buttonStyle(.borderedProminent)
