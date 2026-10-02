@@ -1,4 +1,5 @@
 import Foundation
+import ShotDexKit
 
 /// Which file of a photo Edit opens (FS-03.04b §3). Every RAW+JPEG pair asks
 /// first — *Edit which version?* — whether or not the decoder reads the RAW;
@@ -25,6 +26,32 @@ struct EditSourceChoice: Equatable, Sendable {
     /// The line under the dimmed Edit RAW.
     var rawReason: String? {
         rawIsReadable ? nil : String(localized: "iOS can't read this RAW yet", comment: "Why Edit RAW is dimmed for a RAW + JPEG pair")
+    }
+
+    /// The edit the editor starts from when it opens `source` of a pair
+    /// whose saved ShotDex edit was made on the other file (AC-16):
+    /// - RAW → JPEG: the edit comes along, less the five settings only the
+    ///   RAW decoder has (and an imported look's absolute white balance) — Q1;
+    /// - JPEG → RAW: nothing comes along; the RAW opens as shot — Q9;
+    /// - the same file: the saved edit as it is.
+    static func startingRecipe(saved: PhotoEditRecipe?, opening source: PhotoEditSource) -> PhotoEditRecipe? {
+        guard let saved else { return nil }
+        let savedOnRAW = saved.source == .raw
+            || (saved.source == .automatic && FileTypeBadge.isRAW(filename: saved.sourceFilename ?? ""))
+        switch (savedOnRAW, source) {
+        case (true, .rendered):
+            var carried = saved
+            for kind in PhotoAdjustmentKind.allCases where kind.isRAWOnly {
+                carried.adjustments[kind] = 0
+            }
+            carried.adjustments.rawWhiteBalanceKelvin = nil
+            carried.adjustments.rawWhiteBalanceTint = nil
+            return carried
+        case (false, .raw):
+            return nil
+        default:
+            return saved
+        }
     }
 
     var title: String {

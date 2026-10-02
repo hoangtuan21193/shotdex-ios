@@ -690,7 +690,11 @@ final class PhotoEditorController {
             // data when `canHandleAdjustmentData` succeeds. Start from that
             // recipe so reopening an edited asset shows its latest crop and
             // adjustments instead of silently returning to the source image.
-            var initialRecipe = session.recalledRecipe ?? .identity
+            // A pair's saved edit moves between its files by FS-03.04b AC-16:
+            // onto the JPEG less the RAW-only settings, never onto the RAW.
+            var initialRecipe = EditSourceChoice.startingRecipe(
+                saved: session.recalledRecipe, opening: option.source
+            ) ?? .identity
             initialRecipe.source = option.source
             initialRecipe.sourceFilename = option.filename
             recipe = initialRecipe
