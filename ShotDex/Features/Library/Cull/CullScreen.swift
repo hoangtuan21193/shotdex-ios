@@ -27,9 +27,39 @@ struct CullScreen: View {
             }
         }
         .background(EditorTheme.background.ignoresSafeArea())
+        .background { keyButtons }
         .preferredColorScheme(.dark)
         .statusBarHidden(false)
         .onDisappear { model.stop() }
+    }
+
+    // MARK: Keys
+
+    /// `P X U 0–5 Z` and ←/→ on hidden buttons — the menu-less screen's
+    /// keys still go through the same calls the buttons make.
+    private var keyButtons: some View {
+        ZStack {
+            ForEach(CullKey.characterBindings, id: \.0) { key, action in
+                Button(Self.keyTitle(action)) { Task { await model.handle(action) } }
+                    .keyboardShortcut(KeyEquivalent(key), modifiers: [])
+            }
+            Button(MarkCopy.previousPhoto) { Task { await model.handle(.previous) } }
+                .keyboardShortcut(.leftArrow, modifiers: [])
+            Button(MarkCopy.nextPhoto) { Task { await model.handle(.next) } }
+                .keyboardShortcut(.rightArrow, modifiers: [])
+        }
+        .opacity(0)
+        .frame(width: 0, height: 0)
+        .accessibilityHidden(true)
+    }
+
+    private static func keyTitle(_ key: CullKey) -> String {
+        switch key {
+        case .mark(let action): action.shortcutTitle
+        case .zoom: MarkCopy.zoom
+        case .previous: MarkCopy.previousPhoto
+        case .next: MarkCopy.nextPhoto
+        }
     }
 
     // MARK: Top bar
@@ -49,10 +79,12 @@ struct CullScreen: View {
             .accessibilityElement(children: .combine)
             HStack {
                 roundButton(systemImage: "xmark", glyph: 18, label: MarkCopy.close) { dismiss() }
+                    .keyboardShortcut(.cancelAction)
                 Spacer()
                 roundButton(systemImage: "arrow.uturn.backward", glyph: 19, label: MarkCopy.undo) {
                     Task { await model.undo() }
                 }
+                .keyboardShortcut("z", modifiers: .command)
                 .disabled(!model.canUndo)
                 .opacity(model.canUndo ? 1 : 0.28)
             }
@@ -80,8 +112,11 @@ struct CullScreen: View {
     private var photo: some View {
         ZStack {
             if let image = model.image {
-                ZoomableImageView(image: image, onZoomChange: { model.zoomScale = $0 })
-                    .id(model.currentId)
+                ZoomableImageView(
+                    image: image, onZoomChange: { model.zoomScale = $0 },
+                    zoomToggleToken: model.zoomToggleToken
+                )
+                .id(model.currentId)
             } else {
                 ProgressView().tint(EditorTheme.secondaryText)
             }
@@ -265,10 +300,23 @@ struct CullThumbnail: View {
     private func load() {
         guard image == nil, let asset else { return }
         let scale = ActiveDisplay.scale
-        request = photoLibrary.requestThumbnail(
-            for: asset, targetSize: CGSize(width: side * scale, height: side * scale)
-        ) { image in
-            if let image { self.image = image }
+        // A plain request, not the grid's thumbnail ladder (which holds its
+        // network pass back while others run — a strip cell stayed blank)
+        // and not the detail path (whose 12-image cache the strip would
+        // empty of the photo on screen).
+        let options = PHImageRequestOptions()
+        options.deliveryMode = .opportunistic
+        options.resizeMode = .fast
+        options.isNetworkAccessAllowed = true
+        request = photoLibrary.imageManager.requestImage(
+            for: asset,
+            targetSize: CGSize(width: side * scale, height: side * scale),
+            contentMode: .aspectFill,
+            options: options
+        ) { image, _ in
+            Task { @MainActor in
+                if let image { self.image = image }
+            }
         }
     }
 }

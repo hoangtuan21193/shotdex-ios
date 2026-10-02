@@ -237,6 +237,10 @@
         }
       }
     },
+    "Next Photo": {
+      "comment": "Keyboard shortcut in the culling pass",
+      "extractionState": "manual"
+    },
     "None": {
       "comment": "Rating menu: clear the stars",
       "extractionState": "manual"
@@ -255,6 +259,10 @@
     },
     "Picks": {
       "comment": "Filter menu row and chip: only Picked photos",
+      "extractionState": "manual"
+    },
+    "Previous Photo": {
+      "comment": "Keyboard shortcut in the culling pass",
       "extractionState": "manual"
     },
     "Rating": {
@@ -307,6 +315,10 @@
     },
     "Video %lld of %lld": {
       "comment": "VoiceOver: the culling pass's current video",
+      "extractionState": "manual"
+    },
+    "Zoom": {
+      "comment": "Keyboard shortcut in the culling pass: 100% / fit",
       "extractionState": "manual"
     },
     "no stars": {

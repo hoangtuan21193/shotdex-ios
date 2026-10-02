@@ -51,6 +51,9 @@ struct ZoomableImageView: UIViewRepresentable {
     /// every card at once: they are the comparison's view state, not one
     /// photo's, and the second finger is already down from the pinch.
     var panRequiresTwoFingers: Bool = false
+    /// Bumped by a host to zoom the way a double tap does — in, centred, or
+    /// back to fit. The culling pass's `Z` key (FS-01.12b §2).
+    var zoomToggleToken: Int = 0
 
     func makeUIView(context: Context) -> UIScrollView {
         let scrollView = UIScrollView()
@@ -138,6 +141,14 @@ struct ZoomableImageView: UIViewRepresentable {
         scrollView.panGestureRecognizer.minimumNumberOfTouches =
             panRequiresTwoFingers ? 2 : 1
         context.coordinator.singleTapRecognizer?.isEnabled = onSingleTap != nil
+        if zoomToggleToken != context.coordinator.zoomToggleToken {
+            context.coordinator.zoomToggleToken = zoomToggleToken
+            let center = CGPoint(
+                x: (context.coordinator.imageView?.bounds.midX ?? 0),
+                y: (context.coordinator.imageView?.bounds.midY ?? 0)
+            )
+            context.coordinator.toggleZoom(scrollView, at: center)
+        }
         // Live Text owns press-and-hold while it is on: that is how a subject
         // is lifted out of the picture.
         context.coordinator.holdRecognizer?.isEnabled =
@@ -153,6 +164,7 @@ struct ZoomableImageView: UIViewRepresentable {
         weak var holdRecognizer: UILongPressGestureRecognizer?
         var onSingleTap: (() -> Void)?
         weak var singleTapRecognizer: UITapGestureRecognizer?
+        var zoomToggleToken = 0
 
         @objc func handleSingleTap() {
             onSingleTap?()
@@ -256,10 +268,14 @@ struct ZoomableImageView: UIViewRepresentable {
 
         @objc func handleDoubleTap(_ gesture: UITapGestureRecognizer) {
             guard let scrollView = gesture.view as? UIScrollView else { return }
+            toggleZoom(scrollView, at: gesture.location(in: imageView))
+        }
+
+        /// In to 2.5× around `point`, or back to fit when already zoomed.
+        func toggleZoom(_ scrollView: UIScrollView, at point: CGPoint) {
             if scrollView.zoomScale > scrollView.minimumZoomScale * 1.01 {
                 scrollView.setZoomScale(scrollView.minimumZoomScale, animated: true)
             } else {
-                let point = gesture.location(in: imageView)
                 let targetScale = scrollView.minimumZoomScale * 2.5
                 let size = CGSize(
                     width: scrollView.bounds.width / targetScale,

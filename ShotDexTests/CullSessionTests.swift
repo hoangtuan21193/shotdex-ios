@@ -54,4 +54,45 @@ struct CullSessionTests {
         #expect(!CullLayout.forSize(CGSize(width: 951, height: 653)).showsEXIFLine)
         #expect(!CullLayout.forSize(CGSize(width: 382, height: 666)).showsEXIFLine)
     }
+
+    /// b-AC-1: at 37 of 240, unflagged: `P` → 37 Picked, on to "38 / 240";
+    /// `3` → 38 has 3 stars, still on 38; ⌘Z → 38 back to no stars; ⌘Z →
+    /// 37 unflagged and the pass back on 37.
+    @MainActor
+    @Test func pickAdvancesStarStaysUndoReturns() async throws {
+        let marks = PhotoMarks(store: PhotoMarksStore(database: try AppDatabase.makeEmpty()))
+        var session = CullSession.start(items: Self.items(), flagged: { _ in false }, startId: "p036")
+        #expect(session.counter == "37 / 240")
+
+        let pick = await marks.setFlag(.pick, ids: [session.currentId!])
+        #expect(session.didSetFlag(pick) == .next)
+        #expect(marks.flag(for: "p036") == .pick)
+        #expect(session.counter == "38 / 240")
+
+        let three = await marks.setRating(3, ids: [session.currentId!])
+        #expect(session.didSetRating(three) == .stay)
+        #expect(marks.rating(for: "p037") == 3)
+        #expect(session.counter == "38 / 240")
+
+        await marks.undo(try #require(session.undo()))
+        #expect(marks.rating(for: "p037") == 0)
+        #expect(session.counter == "38 / 240")
+
+        await marks.undo(try #require(session.undo()))
+        #expect(marks.flag(for: "p036") == nil)
+        #expect(session.counter == "37 / 240")
+        #expect(!session.canUndo)
+    }
+
+    @Test func flagOnTheLastPhotoOpensTheSummary() {
+        var session = CullSession.start(items: Self.items(3), flagged: { _ in false }, startId: "p002")
+        #expect(session.didSetFlag(MarkChange(kind: .flag(previous: ["p002": nil]))) == .summary)
+        #expect(session.counter == "3 / 3")
+    }
+
+    @Test func keysCoverMarksAndZoomWithoutClashing() {
+        let keys = CullKey.characterBindings.map(\.0)
+        #expect(Set(keys).count == keys.count)
+        #expect(keys.contains("z") && keys.contains("p") && keys.contains("0"))
+    }
 }

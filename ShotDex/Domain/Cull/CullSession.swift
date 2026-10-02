@@ -101,3 +101,16 @@ struct CullSession: Equatable, Sendable {
 
     var canUndo: Bool { !history.isEmpty }
 }
+
+/// The keys of the pass beyond the marks (FS-01.12b §2).
+enum CullKey: Equatable, Sendable {
+    case mark(MarkKeyAction)
+    case previous
+    case next
+    case zoom
+
+    /// Every key the pass answers with a character — ⌘Z and Esc ride on
+    /// the Undo and ✕ buttons themselves.
+    static let characterBindings: [(Character, CullKey)] =
+        MarkKeyCommand.bindings.map { ($0.key, .mark($0.action)) } + [("z", .zoom)]
+}

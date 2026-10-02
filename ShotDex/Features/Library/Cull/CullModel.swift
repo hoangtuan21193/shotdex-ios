@@ -53,6 +53,21 @@ final class CullModel {
     var isSummaryPresented = false
     /// The pass's own zoom: vertical swipes flag only at 1× (AC-2).
     var zoomScale: CGFloat = 1
+    /// Bumped by `Z`: fit ↔ zoomed, as a double tap does.
+    private(set) var zoomToggleToken = 0
+
+    func toggleZoom() { zoomToggleToken += 1 }
+
+    /// One key in the pass (FS-01.12b §2): the mark keys of FS-01.12 §6,
+    /// plus ←/→ and Z. ⌘Z and Esc are the Undo and ✕ buttons' own.
+    func handle(_ key: CullKey) async {
+        switch key {
+        case .mark(let action): await apply(action)
+        case .previous: previous()
+        case .next: next()
+        case .zoom: toggleZoom()
+        }
+    }
 
     @ObservationIgnored let marks: PhotoMarks
     @ObservationIgnored private let loader: CullImageLoading
@@ -118,6 +133,9 @@ final class CullModel {
     /// or the summary after the last (FS-01.12b §5).
     func setFlag(_ flag: PhotoFlag?) async {
         guard let id = currentId else { return }
+        // A light tap per flag: the hand should feel the photo go by
+        // without looking (FS-01.12b §2).
+        UIImpactFeedbackGenerator(style: .light).impactOccurred()
         let change = await marks.setFlag(flag, ids: [id])
         switch session.didSetFlag(change) {
         case .summary: isSummaryPresented = true

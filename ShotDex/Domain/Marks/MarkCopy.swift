@@ -168,4 +168,8 @@ enum MarkCopy {
         let flag = marks.flag.map { flagWord($0, locale: locale) } ?? String(localized: "not flagged", table: table, locale: locale, comment: "VoiceOver: a photo with neither Pick nor Reject")
         return [position, stars, flag].joined(separator: ", ")
     }
+
+    static var previousPhoto: String { String(localized: "Previous Photo", table: table, comment: "Keyboard shortcut in the culling pass") }
+    static var nextPhoto: String { String(localized: "Next Photo", table: table, comment: "Keyboard shortcut in the culling pass") }
+    static var zoom: String { String(localized: "Zoom", table: table, comment: "Keyboard shortcut in the culling pass: 100% / fit") }
 }
