@@ -167,6 +167,26 @@ final class CullModel {
 
     var canUndo: Bool { session.canUndo }
 
+    // MARK: The end of the pass (FS-01.12b §2)
+
+    /// Review Unflagged: the same pass over the photos still without a
+    /// flag. A new pass — its undo starts empty.
+    func reviewUnflagged() {
+        let ids = CullSummary.unflaggedIds(session.ids, flag: marks.flag(for:))
+        guard !ids.isEmpty else { return }
+        let items = ids.compactMap { id in assets[id].map { CullSession.Item(id: id, captureDate: $0.creationDate) } }
+        session = CullSession.start(items: items, flagged: { _ in false })
+        isSummaryPresented = false
+        loadCurrent()
+    }
+
+    /// The pass's Rejected photos, in pass order — what Delete N Rejected…
+    /// sends to the system's deletion (FS-01.12b §3).
+    var rejectedIds: [String] {
+        _ = marks.version
+        return CullSummary.rejectedIds(session.ids, flag: marks.flag(for:))
+    }
+
     // MARK: Images
 
     /// The current page at screen size, network allowed; ±2 pages warm.

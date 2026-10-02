@@ -9,6 +9,15 @@ struct CullScreen: View {
     @State var model: CullModel
     let photoLibrary: PhotoLibraryService
     @Environment(\.dismiss) private var dismiss
+    /// Delete N Rejected…: the system's deletion, its dialog the only
+    /// confirmation (FS-01.12b §3).
+    var deleteRejectedPhotos: (([String]) async -> Void)?
+
+    private func deleteRejected() {
+        let ids = model.rejectedIds
+        guard !ids.isEmpty, let deleteRejectedPhotos else { return }
+        Task { await deleteRejectedPhotos(ids) }
+    }
 
     var body: some View {
         GeometryReader { proxy in
@@ -20,6 +29,18 @@ struct CullScreen: View {
                 controlRow
                 CullFilmstrip(model: model, photoLibrary: photoLibrary, layout: layout)
             }
+            .overlay {
+                if model.isSummaryPresented {
+                    CullSummaryCard(
+                        summary: model.summary,
+                        onDeleteRejected: deleteRejectedPhotos == nil ? nil : deleteRejected,
+                        onReviewUnflagged: { model.reviewUnflagged() },
+                        onDone: { dismiss() }
+                    )
+                    .transition(.opacity)
+                }
+            }
+            .animation(EditorTheme.animation, value: model.isSummaryPresented)
             .onAppear {
                 let scale = ActiveDisplay.scale
                 model.targetSize = CGSize(width: proxy.size.width * scale, height: proxy.size.height * scale)
