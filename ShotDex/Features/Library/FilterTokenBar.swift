@@ -305,6 +305,24 @@ struct FilterTokenBar: View {
                 ) { $0.favoritesOnly = false }
             )
         }
+        if let rating = criteria.ratingFilter {
+            result.append(
+                FilterToken(
+                    id: "rating",
+                    label: MarkCopy.ratingChip(rating),
+                    removalAccessibilityLabel: MarkCopy.ratingChipAccessibility(rating)
+                ) { $0.ratingFilter = nil }
+            )
+        }
+        for flag in PhotoFlagFilter.allCases where criteria.flags.contains(flag) {
+            result.append(
+                FilterToken(
+                    id: "flag-\(flag.rawValue)",
+                    label: MarkCopy.flagFilterName(flag),
+                    removalAccessibilityLabel: MarkCopy.flagChipAccessibility(flag)
+                ) { $0.flags.remove(flag) }
+            )
+        }
         if let text = criteria.searchText, !text.isEmpty {
             for (index, term) in SearchParser.editableTokens(in: text).enumerated() {
                 result.append(

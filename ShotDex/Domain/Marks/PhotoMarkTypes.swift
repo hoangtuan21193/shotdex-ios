@@ -63,3 +63,14 @@ struct PhotoMarkSummary: Equatable, Sendable {
 
     var isEmpty: Bool { rating == 0 && flag == nil }
 }
+
+/// What a Photos fetch needs to answer the rating and flag filters inside an
+/// album (FS-06.09): the app's own marks by id, and whether Photos holds
+/// ratings of its own (iOS 27).
+struct MarkFilterSnapshot: Sendable {
+    var flags: [String: PhotoFlag] = [:]
+    var pendingRatings: [String: Int] = [:]
+    var photosHoldsRatings = false
+
+    static let empty = MarkFilterSnapshot()
+}

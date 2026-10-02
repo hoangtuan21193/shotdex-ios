@@ -31,7 +31,8 @@ struct AlbumFilter: Equatable, Sendable {
 }
 
 /// The part of the quick filters Photos can answer itself, as a fetch predicate
-/// for an album's assets: favorite, photo/video, and capture kind.
+/// for an album's assets: favorite, photo/video, capture kind — and stars and
+/// flags, by identifier from the app's own marks (FS-01.12 §7).
 ///
 /// Photos is asked rather than the index so a photo the indexer has not reached
 /// yet still filters correctly. The one exception is a panorama ShotDex
@@ -42,7 +43,8 @@ enum AlbumFilterPredicate {
     static func predicate(
         for criteria: FilterCriteria,
         stitchedPanoramaIds: [String] = [],
-        unsupportedRAWIds: [String] = []
+        unsupportedRAWIds: [String] = [],
+        marks: MarkFilterSnapshot = .empty
     ) -> NSPredicate? {
         var parts: [NSPredicate] = []
 
@@ -71,11 +73,54 @@ enum AlbumFilterPredicate {
             parts.append(NSCompoundPredicate(orPredicateWithSubpredicates: kinds))
         }
 
+        if let rating = criteria.ratingFilter {
+            parts.append(ratingPredicate(rating, marks: marks))
+        }
+        if let flags = flagPredicate(criteria.flags, marks: marks) {
+            parts.append(flags)
+        }
+
         switch parts.count {
         case 0: return nil
         case 1: return parts[0]
         default: return NSCompoundPredicate(andPredicateWithSubpredicates: parts)
         }
+    }
+
+    /// The current rating — the pending row when there is one, else what
+    /// Photos holds — as a fetch predicate: the same rule as
+    /// `PhotoMarksStore.ratingCondition`, with the pending ids carried by
+    /// identifier. Below iOS 27 Photos holds no rating, so outside the
+    /// pending rows every photo is unrated.
+    static func ratingPredicate(_ filter: RatingFilter, marks: MarkFilterSnapshot) -> NSPredicate {
+        let matchingPending = marks.pendingRatings.filter { filter.matches($0.value) }.map(\.key).sorted()
+        let photosTest: NSPredicate = switch (filter, marks.photosHoldsRatings) {
+        case (.atLeast(let stars), true): NSPredicate(format: "rating >= %d", StarRating.clamped(stars))
+        case (.unrated, true): NSPredicate(format: "rating == 0")
+        case (.atLeast, false): NSPredicate(value: false)
+        case (.unrated, false): NSPredicate(value: true)
+        }
+        let fromPhotos: NSPredicate = identifierPredicate(marks.pendingRatings.keys.sorted()).map {
+            NSCompoundPredicate(andPredicateWithSubpredicates: [NSCompoundPredicate(notPredicateWithSubpredicate: $0), photosTest])
+        } ?? photosTest
+        guard let fromPending = identifierPredicate(matchingPending) else { return fromPhotos }
+        return NSCompoundPredicate(orPredicateWithSubpredicates: [fromPending, fromPhotos])
+    }
+
+    /// Picks / Rejected / Unflagged by identifier. Nil when nothing or
+    /// everything is asked for.
+    static func flagPredicate(_ filters: Set<PhotoFlagFilter>, marks: MarkFilterSnapshot) -> NSPredicate? {
+        guard !filters.isEmpty, filters.count < PhotoFlagFilter.allCases.count else { return nil }
+        let ids = { (flag: PhotoFlag) in marks.flags.filter { $0.value == flag }.map(\.key).sorted() }
+        let parts: [NSPredicate] = PhotoFlagFilter.allCases.filter(filters.contains).map { filter in
+            switch filter {
+            case .picks: identifierPredicate(ids(.pick)) ?? NSPredicate(value: false)
+            case .rejected: identifierPredicate(ids(.reject)) ?? NSPredicate(value: false)
+            case .unflagged: identifierPredicate(marks.flags.keys.sorted())
+                .map { NSCompoundPredicate(notPredicateWithSubpredicate: $0) } ?? NSPredicate(value: true)
+            }
+        }
+        return parts.count == 1 ? parts[0] : NSCompoundPredicate(orPredicateWithSubpredicates: parts)
     }
 
     /// Largest id list one `IN` clause carries. Photos documents no ceiling,
@@ -105,6 +150,9 @@ enum AlbumFilterPredicate {
         photosOnly.favoritesOnly = criteria.favoritesOnly
         photosOnly.mediaKinds = criteria.mediaKinds
         photosOnly.mediaSubtypes = criteria.mediaSubtypes
+        // Stars and flags are answered by identifier from `PhotoMarks`.
+        photosOnly.ratingFilter = criteria.ratingFilter
+        photosOnly.flags = criteria.flags
         return photosOnly != criteria
     }
 

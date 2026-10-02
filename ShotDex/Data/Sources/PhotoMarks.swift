@@ -64,6 +64,13 @@ final class PhotoMarks {
         Set(flags.lazy.filter { $0.value == flag }.map(\.key))
     }
 
+    /// The marks an album's Photos fetch filters by.
+    var filterSnapshot: MarkFilterSnapshot {
+        var photosHoldsRatings = false
+        if #available(iOS 27, *) { photosHoldsRatings = true }
+        return MarkFilterSnapshot(flags: flags, pendingRatings: pendingRatings, photosHoldsRatings: photosHoldsRatings)
+    }
+
     // MARK: Loading
 
     func loadIfNeeded() async {

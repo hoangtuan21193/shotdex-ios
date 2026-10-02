@@ -146,6 +146,11 @@ struct FilterCriteria: Equatable, Codable, Sendable {
     /// what Photos holds.
     var ratingFilter: RatingFilter?
 
+    /// Picks / Rejected rows of the filter menu, Unflagged from a chip or
+    /// Advanced Filter. Several on means any of them; all three constrain
+    /// nothing.
+    var flags: Set<PhotoFlagFilter> = []
+
     /// "In month": the capture date falls in this calendar month, local time
     /// (FS-01.05 §4). Set by Insights' busiest-month sentence.
     var captureMonth: CaptureMonth?
@@ -169,6 +174,7 @@ struct FilterCriteria: Equatable, Codable, Sendable {
             && mediaSubtypes.isEmpty
             && !favoritesOnly
             && ratingFilter == nil
+            && flags.isEmpty
             && captureMonth == nil
             && (searchText?.isEmpty ?? true)
     }
@@ -190,6 +196,7 @@ struct FilterCriteria: Equatable, Codable, Sendable {
         if !mediaKinds.isEmpty { count += 1 }
         if favoritesOnly { count += 1 }
         if ratingFilter != nil { count += 1 }
+        if !flags.isEmpty { count += 1 }
         if captureMonth != nil { count += 1 }
         if let searchText, !searchText.isEmpty { count += 1 }
         return count
@@ -208,6 +215,7 @@ struct FilterCriteria: Equatable, Codable, Sendable {
         case mediaKinds, favoritesOnly, searchText
         case captureMonth
         case ratingFilter
+        case flags
     }
 
     /// Tolerant decode: every key is optional-with-default so stored albums
@@ -230,6 +238,9 @@ struct FilterCriteria: Equatable, Codable, Sendable {
         favoritesOnly = try c.decodeIfPresent(Bool.self, forKey: .favoritesOnly) ?? false
         captureMonth = try? c.decodeIfPresent(CaptureMonth.self, forKey: .captureMonth)
         ratingFilter = try? c.decodeIfPresent(RatingFilter.self, forKey: .ratingFilter)
+        // One flag value this build does not know drops that value, not the
+        // whole stored criteria.
+        flags = Set((try? c.decodeIfPresent([String].self, forKey: .flags))?.compactMap(PhotoFlagFilter.init(rawValue:)) ?? [])
         searchText = try c.decodeIfPresent(String.self, forKey: .searchText)
     }
 }

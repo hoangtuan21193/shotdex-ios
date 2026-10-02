@@ -1,6 +1,10 @@
 {
   "sourceLanguage": "en",
   "strings": {
+    "%@ & Up": {
+      "comment": "Rating filter row, e.g. ★★★ & Up",
+      "extractionState": "manual"
+    },
     "%lld stars": {
       "comment": "VoiceOver: a photo's star rating (plural)",
       "extractionState": "manual",
@@ -25,6 +29,10 @@
         }
       }
     },
+    "Any": {
+      "comment": "Rating filter: no constraint on stars",
+      "extractionState": "manual"
+    },
     "Clear Flag": {
       "comment": "Flag menu: remove Pick or Reject",
       "extractionState": "manual"
@@ -45,6 +53,10 @@
       "comment": "A photo's flag: kept in a culling pass",
       "extractionState": "manual"
     },
+    "Picks": {
+      "comment": "Filter menu row and chip: only Picked photos",
+      "extractionState": "manual"
+    },
     "Rating": {
       "comment": "Menu: the star-rating submenu",
       "extractionState": "manual"
@@ -55,6 +67,26 @@
     },
     "Rejected": {
       "comment": "A photo's flag: dropped in a culling pass",
+      "extractionState": "manual"
+    },
+    "Remove flag filter %@": {
+      "comment": "VoiceOver: remove a Picks/Rejected/Unflagged chip",
+      "extractionState": "manual"
+    },
+    "Remove rating filter, %lld stars and up": {
+      "comment": "VoiceOver: remove the rating chip",
+      "extractionState": "manual"
+    },
+    "Remove rating filter, unrated": {
+      "comment": "VoiceOver: remove the rating chip",
+      "extractionState": "manual"
+    },
+    "Unflagged": {
+      "comment": "Filter chip: photos with neither Pick nor Reject",
+      "extractionState": "manual"
+    },
+    "Unrated": {
+      "comment": "Rating filter: photos with no stars",
       "extractionState": "manual"
     }
   },

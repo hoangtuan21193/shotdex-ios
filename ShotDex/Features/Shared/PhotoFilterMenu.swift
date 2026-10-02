@@ -61,6 +61,23 @@ struct PhotoFilterMenu<SortContent: View>: View {
             Toggle(isOn: criteria.favoritesOnly) {
                 Label("Favorites", systemImage: "heart")
             }
+            // Two flat rows right after Favorites — one tap, like Favorites —
+            // and the stars as a submenu (FS-01.12 §7).
+            Toggle(isOn: flagBinding(criteria, .picks)) {
+                Label(MarkCopy.picksFilter, systemImage: "flag.fill")
+            }
+            Toggle(isOn: flagBinding(criteria, .rejected)) {
+                Label(MarkCopy.rejectedFilter, systemImage: "xmark")
+            }
+            Picker(selection: criteria.ratingFilter) {
+                Text(MarkCopy.anyRating).tag(RatingFilter?.none)
+                ForEach(RatingFilter.menuChoices, id: \.self) { choice in
+                    Text(MarkCopy.ratingMenuRow(choice)).tag(RatingFilter?.some(choice))
+                }
+            } label: {
+                Label(MarkCopy.rating, systemImage: "star")
+            }
+            .pickerStyle(.menu)
             // One row per kind rather than a submenu: the whole filter list
             // reads as one column, the way Photos lays it out.
             Toggle(isOn: mediaKindBinding(criteria, kind: .photo)) {
@@ -95,6 +112,20 @@ struct PhotoFilterMenu<SortContent: View>: View {
         Binding(
             get: { criteria.wrappedValue.mediaKinds == [kind] },
             set: { isOn in criteria.wrappedValue.mediaKinds = isOn ? [kind] : [] }
+        )
+    }
+
+    /// Picks / Rejected on or off. Both on means either flag.
+    private func flagBinding(_ criteria: Binding<FilterCriteria>, _ flag: PhotoFlagFilter) -> Binding<Bool> {
+        Binding(
+            get: { criteria.wrappedValue.flags.contains(flag) },
+            set: { isOn in
+                if isOn {
+                    criteria.wrappedValue.flags.insert(flag)
+                } else {
+                    criteria.wrappedValue.flags.remove(flag)
+                }
+            }
         )
     }
 

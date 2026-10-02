@@ -409,6 +409,10 @@ struct LibraryQueries: Sendable {
             conditions.append(PhotoMarksStore.ratingCondition(rating))
         }
 
+        if let flags = PhotoMarksStore.flagCondition(criteria.flags) {
+            conditions.append(flags)
+        }
+
         if let month = criteria.captureMonth {
             let (sql, bounds) = month.creationDateCondition()
             conditions.append(sql)

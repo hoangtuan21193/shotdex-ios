@@ -57,4 +57,54 @@ enum MarkCopy {
     static func starsAccessibility(_ rating: Int, locale: Locale = .current) -> String {
         String(localized: "\(rating) stars", table: table, locale: locale, comment: "VoiceOver: a photo's star rating (plural)")
     }
+
+    // MARK: Filters (FS-01.12 §7)
+
+    static var picksFilter: String { String(localized: "Picks", table: table, comment: "Filter menu row and chip: only Picked photos") }
+    static var rejectedFilter: String { String(localized: "Rejected", table: table, comment: "A photo's flag: dropped in a culling pass") }
+    static var unflaggedFilter: String { String(localized: "Unflagged", table: table, comment: "Filter chip: photos with neither Pick nor Reject") }
+    static var unrated: String { String(localized: "Unrated", table: table, comment: "Rating filter: photos with no stars") }
+    static var anyRating: String { String(localized: "Any", table: table, comment: "Rating filter: no constraint on stars") }
+
+    static func flagFilterName(_ filter: PhotoFlagFilter) -> String {
+        switch filter {
+        case .picks: picksFilter
+        case .rejected: rejectedFilter
+        case .unflagged: unflaggedFilter
+        }
+    }
+
+    /// Rating ▸ rows: `★ & Up` … `★★★★★`, `Unrated`.
+    static func ratingMenuRow(_ filter: RatingFilter) -> String {
+        switch filter {
+        case .atLeast(let stars):
+            let glyphs = String(repeating: "★", count: StarRating.clamped(stars))
+            return stars >= StarRating.range.upperBound
+                ? glyphs
+                : String(localized: "\(glyphs) & Up", table: table, comment: "Rating filter row, e.g. ★★★ & Up")
+        case .unrated:
+            return unrated
+        }
+    }
+
+    /// The chip on the conditions bar: `★ ≥ 3`, `Unrated`.
+    static func ratingChip(_ filter: RatingFilter) -> String {
+        switch filter {
+        case .atLeast(let stars): "★ ≥ \(StarRating.clamped(stars))"
+        case .unrated: unrated
+        }
+    }
+
+    static func ratingChipAccessibility(_ filter: RatingFilter) -> String {
+        switch filter {
+        case .atLeast(let stars):
+            String(localized: "Remove rating filter, \(stars) stars and up", table: table, comment: "VoiceOver: remove the rating chip")
+        case .unrated:
+            String(localized: "Remove rating filter, unrated", table: table, comment: "VoiceOver: remove the rating chip")
+        }
+    }
+
+    static func flagChipAccessibility(_ filter: PhotoFlagFilter) -> String {
+        String(localized: "Remove flag filter \(flagFilterName(filter))", table: table, comment: "VoiceOver: remove a Picks/Rejected/Unflagged chip")
+    }
 }
