@@ -73,6 +73,24 @@ final class UnsupportedRAWIndex {
         }
     }
 
+    /// What the editor's own attempt at a photo's RAW says about its camera
+    /// (FS-03.04b §2): it settles an unknown camera either way, and marks
+    /// its tiles at once when refused (AC-10). A readable camera stays
+    /// readable when one odd file fails — only that file reports it.
+    func recordEditorResult(assetId: String, decoded: Bool) async {
+        let store = store, probe = probe, build = release.build
+        let changed = await Task.detached(priority: .utility) { () -> Bool in
+            guard let camera = (try? store.cameraAndFilename(of: assetId))?.camera else { return false }
+            let stored = (try? store.verdict(for: camera, build: build)) ?? nil
+            guard let verdict = RAWVerdictRules.afterEditor(stored, decoded: decoded) else { return false }
+            if verdict == .unreadable, let candidates = try? store.rawAssetIds(of: camera) {
+                _ = try? store.addPairs(await probe.renderedTwinIds(among: candidates))
+            }
+            return (try? store.record(verdict, source: .editor, for: camera, build: build)) != nil
+        }.value
+        if changed { await reload() }
+    }
+
     /// Waits for the pass in flight — the tests' way to know it ended.
     func waitForPass() async {
         while let task = passTask { await task.value }

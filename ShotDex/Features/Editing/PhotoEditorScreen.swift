@@ -457,6 +457,15 @@ struct PhotoEditorScreen: View {
             return
         }
         await newController.load(draft: session.draft(for: target))
+        // The decoder's answer on a real file settles a camera nobody could
+        // judge yet, and a refusal marks its tiles now (FS-03.04b AC-10).
+        if let assetId = target.asset?.localIdentifier {
+            if newController.loadFailure?.isUnsupportedRAW == true {
+                await dependencies.unsupportedRAWIndex.recordEditorResult(assetId: assetId, decoded: false)
+            } else if newController.loadedSource?.info.isRAW == true {
+                await dependencies.unsupportedRAWIndex.recordEditorResult(assetId: assetId, decoded: true)
+            }
+        }
         // It opened, so its original is here now (FS-02.06 AC-13).
         if newController.loadFailure == nil, newController.loadedSource != nil {
             session.markOriginalLocal(target.id)
