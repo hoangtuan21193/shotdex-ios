@@ -1,0 +1,172 @@
+{
+  "steps": [
+    {
+      "action": "launch"
+    },
+    {
+      "action": "wait",
+      "seconds": 6
+    },
+    {
+      "action": "tap",
+      "label": "Select photos"
+    },
+    {
+      "action": "wait",
+      "seconds": 1.5
+    },
+    {
+      "action": "tap",
+      "x": 0.165,
+      "y": 0.3
+    },
+    {
+      "action": "tap",
+      "x": 0.5,
+      "y": 0.3
+    },
+    {
+      "action": "tap",
+      "x": 0.835,
+      "y": 0.3
+    },
+    {
+      "action": "tap",
+      "x": 0.165,
+      "y": 0.45
+    },
+    {
+      "action": "tap",
+      "x": 0.5,
+      "y": 0.45
+    },
+    {
+      "action": "tap",
+      "label": "More selection actions"
+    },
+    {
+      "action": "wait",
+      "seconds": 1.5
+    },
+    {
+      "action": "tap",
+      "label": "Cull 5 Photos"
+    },
+    {
+      "action": "wait",
+      "seconds": 3
+    },
+    {
+      "action": "key",
+      "text": "u"
+    },
+    {
+      "action": "wait",
+      "seconds": 0.8
+    },
+    {
+      "action": "key",
+      "text": "u"
+    },
+    {
+      "action": "wait",
+      "seconds": 0.8
+    },
+    {
+      "action": "key",
+      "text": "u"
+    },
+    {
+      "action": "wait",
+      "seconds": 0.8
+    },
+    {
+      "action": "key",
+      "text": "u"
+    },
+    {
+      "action": "wait",
+      "seconds": 0.8
+    },
+    {
+      "action": "tap",
+      "label": "Photo 1 of 5",
+      "type": "button"
+    },
+    {
+      "action": "wait",
+      "seconds": 1.5
+    },
+    {
+      "action": "dump",
+      "name": "00-at-1",
+      "type": "button"
+    },
+    {
+      "action": "swipe",
+      "x": 0.5,
+      "y": 0.55,
+      "direction": "up",
+      "distance": 0.2
+    },
+    {
+      "action": "wait",
+      "seconds": 1.5
+    },
+    {
+      "action": "dump",
+      "name": "01-after-swipe-up",
+      "type": "button"
+    },
+    {
+      "action": "doubleTap",
+      "x": 0.5,
+      "y": 0.48
+    },
+    {
+      "action": "wait",
+      "seconds": 1.5
+    },
+    {
+      "action": "swipe",
+      "x": 0.5,
+      "y": 0.4,
+      "direction": "down",
+      "distance": 0.2
+    },
+    {
+      "action": "wait",
+      "seconds": 1.5
+    },
+    {
+      "action": "screenshot",
+      "name": "02-zoomed-after-swipe-down"
+    },
+    {
+      "action": "dump",
+      "name": "02-zoomed-after-swipe-down",
+      "type": "button"
+    },
+    {
+      "action": "key",
+      "text": "z",
+      "direction": "cmd"
+    },
+    {
+      "action": "wait",
+      "seconds": 1
+    },
+    {
+      "action": "key",
+      "text": "escape"
+    },
+    {
+      "action": "wait",
+      "seconds": 1.5
+    },
+    {
+      "action": "tap",
+      "label": "Done selecting"
+    }
+  ]
+}

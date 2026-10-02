@@ -167,6 +167,16 @@ final class CullModel {
 
     var canUndo: Bool { session.canUndo }
 
+    /// A swipe on the photo (FS-01.12b §5), through `CullGesturePolicy`.
+    func handle(_ swipe: CullGesturePolicy.Swipe) async {
+        switch CullGesturePolicy.action(for: swipe, zoomScale: zoomScale) {
+        case .flag(let flag): await setFlag(flag)
+        case .next: next()
+        case .previous: previous()
+        case nil: break
+        }
+    }
+
     // MARK: The end of the pass (FS-01.12b §2)
 
     /// Review Unflagged: the same pass over the photos still without a

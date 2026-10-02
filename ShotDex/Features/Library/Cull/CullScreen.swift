@@ -135,7 +135,8 @@ struct CullScreen: View {
             if let image = model.image {
                 ZoomableImageView(
                     image: image, onZoomChange: { model.zoomScale = $0 },
-                    zoomToggleToken: model.zoomToggleToken
+                    zoomToggleToken: model.zoomToggleToken,
+                    onSwipe: { swipe in Task { await model.handle(swipe) } }
                 )
                 .id(model.currentId)
             } else {

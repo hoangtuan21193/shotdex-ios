@@ -54,6 +54,10 @@ struct ZoomableImageView: UIViewRepresentable {
     /// Bumped by a host to zoom the way a double tap does — in, centred, or
     /// back to fit. The culling pass's `Z` key (FS-01.12b §2).
     var zoomToggleToken: Int = 0
+    /// Swipes on the photo at fit, as UIKit recognizers for the reason the
+    /// hold is one. Off while zoomed, where a drag pans. The culling pass
+    /// flags and pages with them (FS-01.12b §5).
+    var onSwipe: ((CullGesturePolicy.Swipe) -> Void)?
 
     func makeUIView(context: Context) -> UIScrollView {
         let scrollView = UIScrollView()
@@ -126,6 +130,17 @@ struct ZoomableImageView: UIViewRepresentable {
         scrollView.addGestureRecognizer(hold)
         context.coordinator.holdRecognizer = hold
 
+        for direction in [UISwipeGestureRecognizer.Direction.up, .down, .left, .right] {
+            let swipe = UISwipeGestureRecognizer(
+                target: context.coordinator,
+                action: #selector(Coordinator.handleSwipe(_:))
+            )
+            swipe.direction = direction
+            swipe.isEnabled = onSwipe != nil
+            scrollView.addGestureRecognizer(swipe)
+            context.coordinator.swipeRecognizers.append(swipe)
+        }
+
         return scrollView
     }
 
@@ -138,6 +153,8 @@ struct ZoomableImageView: UIViewRepresentable {
         context.coordinator.setLiveTextActive(isLiveTextActive, for: image)
         context.coordinator.onHoldChange = onHoldChange
         context.coordinator.onSingleTap = onSingleTap
+        context.coordinator.onSwipe = onSwipe
+        context.coordinator.updateSwipeRecognizers(scrollView)
         scrollView.panGestureRecognizer.minimumNumberOfTouches =
             panRequiresTwoFingers ? 2 : 1
         context.coordinator.singleTapRecognizer?.isEnabled = onSingleTap != nil
@@ -165,6 +182,26 @@ struct ZoomableImageView: UIViewRepresentable {
         var onSingleTap: (() -> Void)?
         weak var singleTapRecognizer: UITapGestureRecognizer?
         var zoomToggleToken = 0
+        var onSwipe: ((CullGesturePolicy.Swipe) -> Void)?
+        var swipeRecognizers: [UISwipeGestureRecognizer] = []
+
+        @objc func handleSwipe(_ recognizer: UISwipeGestureRecognizer) {
+            let swipe: CullGesturePolicy.Swipe = switch recognizer.direction {
+            case .up: .up
+            case .down: .down
+            case .left: .left
+            default: .right
+            }
+            onSwipe?(swipe)
+        }
+
+        /// Swipes only at fit: zoomed in, the pan owns every drag.
+        func updateSwipeRecognizers(_ scrollView: UIScrollView) {
+            let atFit = scrollView.zoomScale / max(scrollView.minimumZoomScale, 0.001) <= CullGesturePolicy.fitTolerance
+            for recognizer in swipeRecognizers {
+                recognizer.isEnabled = onSwipe != nil && atFit
+            }
+        }
 
         @objc func handleSingleTap() {
             onSingleTap?()
@@ -297,6 +334,7 @@ struct ZoomableImageView: UIViewRepresentable {
             // Once the user zooms further, enable this inner pan so they can
             // inspect the image.
             scrollView.panGestureRecognizer.isEnabled = normalized > 1.01
+            updateSwipeRecognizers(scrollView)
             onZoomChange?(normalized)
         }
     }
