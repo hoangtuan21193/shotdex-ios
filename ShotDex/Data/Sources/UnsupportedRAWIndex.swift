@@ -27,6 +27,15 @@ final class UnsupportedRAWIndex {
 
     func contains(_ assetId: String) -> Bool { assetIds.contains(assetId) }
 
+    /// What to tell the user about this photo when it is one the decoder
+    /// can't read — from the index alone, so Edit answers at once and
+    /// downloads nothing (AC-3, AC-4). Nil for every other photo.
+    func message(for assetId: String) -> UnsupportedRAWMessage? {
+        guard assetIds.contains(assetId) else { return nil }
+        let indexed = (try? store.cameraAndFilename(of: assetId)) ?? (camera: nil, filename: nil)
+        return .make(cameraName: indexed.camera?.displayName, filename: indexed.filename, iOSVersion: release.version)
+    }
+
     func loadIfNeeded() {
         guard !hasLoaded else { return }
         hasLoaded = true

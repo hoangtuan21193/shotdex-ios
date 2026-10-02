@@ -18,10 +18,8 @@ enum ReadableSource {
     ) async throws -> Loaded {
         do {
             return try await load(preferred)
-        } catch PhotoEditingError.unsupportedRAW where isRAW(preferred) {
-            guard let twin = options.first(where: { !isRAW($0) }) else {
-                throw PhotoEditingError.unsupportedRAW
-            }
+        } catch where UnsupportedRAWError.matches(error) && isRAW(preferred) {
+            guard let twin = options.first(where: { !isRAW($0) }) else { throw error }
             return try await load(twin)
         }
     }

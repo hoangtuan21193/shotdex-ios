@@ -12,9 +12,18 @@ enum EditorLoadFailure: Equatable {
     case noAccess
     /// The original is only in iCloud and could not be downloaded.
     case iCloudDownload
+    /// The system RAW decoder can't read this file on this iOS build
+    /// (FS-03.04b §3): the camera, the version, what to do.
+    case unsupportedRAW(UnsupportedRAWMessage)
     case other(String)
 
     static func classify(_ error: Error, accessIsLimited: Bool) -> EditorLoadFailure {
+        if let raw = error as? UnsupportedRAWError {
+            return .unsupportedRAW(raw.message)
+        }
+        if (error as? PhotoEditingError) == .unsupportedRAW {
+            return .unsupportedRAW(.make(cameraName: nil, filename: nil, iOSVersion: OSRelease.current.version))
+        }
         let nsError = error as NSError
         if nsError.domain == PHPhotosErrorDomain {
             switch PHPhotosError.Code(rawValue: nsError.code) {
@@ -45,6 +54,7 @@ enum EditorLoadFailure: Equatable {
         switch self {
         case .noAccess: String(localized: "Can't Open This Photo", comment: "Editor load error title: no access to the photo")
         case .iCloudDownload: String(localized: "Couldn't Download from iCloud", comment: "Editor load error title")
+        case .unsupportedRAW(let raw): raw.title
         case .other: String(localized: "Couldn't Open Photo", comment: "Editor load error title")
         }
     }
@@ -55,9 +65,18 @@ enum EditorLoadFailure: Equatable {
             String(localized: "ShotDex can only open photos you've allowed it to see. Allow access to this photo, or to all photos, in Settings.", comment: "Editor load error: photo outside the limited selection")
         case .iCloudDownload:
             String(localized: "This photo's original is in iCloud and couldn't be downloaded. Check your connection and try again.", comment: "Editor load error: iCloud download failed")
+        case .unsupportedRAW(let raw):
+            raw.text
         case .other(let message):
             message
         }
+    }
+
+    /// Whether this is the decoder refusing the file: the editor then offers
+    /// Skip in a multi-photo run (Q7) and records the verdict (AC-10).
+    var isUnsupportedRAW: Bool {
+        if case .unsupportedRAW = self { return true }
+        return false
     }
 
     /// Only a permission problem is fixed in Settings.

@@ -104,6 +104,10 @@ struct PhotoDetailScreen: View {
     /// own guidance reserves an alert for.
     @State private var hideConfirmationAssetId: String?
     @State private var editorTarget: PhotoDetailActionTarget?
+    /// Edit on a RAW this iOS build can't read says so instead of opening
+    /// the editor (FS-03.04b §3).
+    @State private var unsupportedRAWMessage: UnsupportedRAWMessage?
+    @Environment(UnsupportedRAWIndex.self) private var unsupportedRAWIndex: UnsupportedRAWIndex?
     @State private var compressionTarget: PhotoDetailActionTarget?
     @State private var videoStudioTarget: PhotoDetailActionTarget?
     /// Asset saved by the editor, waiting for its cover to finish dismissing —
@@ -342,11 +346,7 @@ struct PhotoDetailScreen: View {
             // editor, not the viewer. Consumed once, so paging to the next photo
             // is a plain view again.
             if navigation.consumePendingEditorRequest(), let currentAsset {
-                editorTarget = PhotoDetailActionTarget(
-                    id: currentAsset.localIdentifier,
-                    asset: currentAsset,
-                    sourceAlbum: model.sourceAlbum
-                )
+                openEditor(for: currentAsset)
             }
         }
         .sheet(isPresented: $isMetadataPresented) {
@@ -357,6 +357,7 @@ struct PhotoDetailScreen: View {
                 .presentationDetents([.medium, .large])
                 .presentationDragIndicator(.visible)
         }
+        .unsupportedRAWAlert($unsupportedRAWMessage)
         .fullScreenCover(item: $editorTarget) { target in
             PhotoEditorScreen(
                 asset: target.asset,
@@ -695,11 +696,7 @@ struct PhotoDetailScreen: View {
                             systemImage: "slider.horizontal.3",
                             accessibilityLabel: "Edit"
                         ) {
-                            editorTarget = PhotoDetailActionTarget(
-                                id: currentAsset.localIdentifier,
-                                asset: currentAsset,
-                                sourceAlbum: model.sourceAlbum
-                            )
+                            openEditor(for: currentAsset)
                         }
                     }
                     if isCurrentVideo, let currentAsset {
@@ -1137,6 +1134,21 @@ struct PhotoDetailScreen: View {
     private static func width(of text: String, style: UIFont.TextStyle) -> Double {
         let font = UIFont.preferredFont(forTextStyle: style)
         return (text as NSString).size(withAttributes: [.font: font]).width
+    }
+
+    /// Edit: the editor, unless the photo is a RAW the index already knows
+    /// this iOS build can't read — then the message, at once, with nothing
+    /// loaded or downloaded (FS-03.04b AC-3, AC-4).
+    private func openEditor(for asset: PHAsset) {
+        if let message = unsupportedRAWIndex?.message(for: asset.localIdentifier) {
+            unsupportedRAWMessage = message
+            return
+        }
+        editorTarget = PhotoDetailActionTarget(
+            id: asset.localIdentifier,
+            asset: asset,
+            sourceAlbum: model.sourceAlbum
+        )
     }
 
     /// The tile's badge, from the same extension table (FS-03.04b §2).

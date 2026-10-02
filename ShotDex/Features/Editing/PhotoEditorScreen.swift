@@ -283,7 +283,7 @@ struct PhotoEditorScreen: View {
         }
         // A photo that would not open: nothing to edit, so every way out of
         // the alert also leaves the editor (FS-03.09 AC-15).
-        .modifier(EditorLoadFailureAlert(controller: controller, close: { dismiss() }))
+        .modifier(EditorLoadFailureAlert(controller: controller, close: { dismiss() }, skip: skipUnreadablePhoto))
         .alert("Saved as JPEG", isPresented: $isFallbackNoticePresented) {
             Button("OK") { dismiss() }
         } message: {
@@ -448,6 +448,12 @@ struct PhotoEditorScreen: View {
         // The session's draft is newer than the asset's own saved edit, and
         // goes on inside `load` so the saved one is never drawn first.
         startPreloading(session, canvas: newController)
+        // A RAW the index knows this iOS build can't read is said at once,
+        // with nothing downloaded (FS-03.04b AC-3, AC-4).
+        if let message = dependencies.unsupportedRAWIndex.message(for: target.id) {
+            newController.failWithoutLoading(.unsupportedRAW(message))
+            return
+        }
         await newController.load(draft: session.draft(for: target))
         // It opened, so its original is here now (FS-02.06 AC-13).
         if newController.loadFailure == nil, newController.loadedSource != nil {
@@ -470,6 +476,16 @@ struct PhotoEditorScreen: View {
         // here is always the one on screen.
         preloader.follow(session: session) { [weak canvas] in
             canvas?.isBusy ?? true
+        }
+    }
+
+    /// Skip on a photo of the run the editor can't open (FS-03.04b Q7): on to
+    /// the next one; nil — no Skip — when the editor holds one photo.
+    private var skipUnreadablePhoto: (() -> Void)? {
+        guard let session, session.isMultiPhoto else { return nil }
+        return {
+            controller?.clearLoadFailure()
+            if let target = session.skipTarget { selectPhoto(at: target) }
         }
     }
 
@@ -3719,6 +3735,9 @@ private struct PhotoEditorSaveSheet: View {
 private struct EditorLoadFailureAlert: ViewModifier {
     let controller: PhotoEditorController?
     let close: () -> Void
+    /// Set in a multi-photo run: a RAW the decoder refuses offers Skip, and
+    /// closing would throw away the other photos' edits (FS-03.04b Q7).
+    var skip: (() -> Void)?
 
     func body(content: Content) -> some View {
         content.alert(
@@ -3729,7 +3748,9 @@ private struct EditorLoadFailureAlert: ViewModifier {
             ),
             presenting: controller?.loadFailure
         ) { failure in
-            if failure.offersSettings {
+            if failure.isUnsupportedRAW, let skip {
+                Button("Skip") { skip() }
+            } else if failure.offersSettings {
                 Button("Open Settings") {
                     if let url = URL(string: UIApplication.openSettingsURLString) {
                         UIApplication.shared.open(url)

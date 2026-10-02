@@ -3361,6 +3361,13 @@ final class PhotoEditorController {
         loadFailure = nil
     }
 
+    /// A photo the index already knows can't be opened — a RAW this iOS
+    /// build can't read (FS-03.04b): said at once, nothing requested.
+    func failWithoutLoading(_ failure: EditorLoadFailure) {
+        isLoading = false
+        loadFailure = failure
+    }
+
     private func scheduleInteractiveRender() {
         renderTask?.cancel()
         renderTask = nil

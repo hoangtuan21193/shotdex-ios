@@ -313,11 +313,21 @@ final class PhotoEditingService {
                 throw PhotoEditingError.missingSource
             }
         }
-        var info = try await renderer.inspectSource(at: fileURL, typeHint: option.type)
+        var info = try await inspect(fileURL, typeHint: option.type, filename: option.filename)
         // Names the photo across launches, so its mattes are read back from
         // disk instead of worked out again (FS-03.15d §5).
         info.persistentIdentity = "\(session.origin.id)|\(option.id)|\(session.origin.stamp)"
         return LoadedPhotoEditSource(optionID: option.id, info: info)
+    }
+
+    /// The kit's inspection, with the decoder's refusal turned into the
+    /// message that names the camera and the iOS version (FS-03.04b §3).
+    private func inspect(_ url: URL, typeHint: UTType, filename: String?) async throws -> PhotoRenderSourceInfo {
+        do {
+            return try await renderer.inspectSource(at: url, typeHint: typeHint)
+        } catch PhotoEditingError.unsupportedRAW {
+            throw RAWFileCamera.error(for: url, filename: filename)
+        }
     }
 
     /// `recipe` is what gets attached to the photo; `renderRecipe` is what gets
@@ -524,9 +534,9 @@ final class PhotoEditingService {
             let directory = try makeTemporaryDirectory()
             defer { try? FileManager.default.removeItem(at: directory) }
             let type = UTType(filenameExtension: preparedOriginal.pathExtension) ?? .image
-            let info = try await renderer.inspectSource(at: preparedOriginal, typeHint: type)
             let resources = PHAssetResource.assetResources(for: asset)
             let name = resources.first { $0.type == .photo }?.originalFilename ?? resources.first?.originalFilename
+            let info = try await inspect(preparedOriginal, typeHint: type, filename: name)
             return try await compress(
                 source: info, sourceName: name, sourceAssetIdentifier: asset.localIdentifier,
                 asset: asset, directory: directory, options: options, album: album, cropAnchor: cropAnchor

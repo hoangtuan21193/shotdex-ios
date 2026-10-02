@@ -219,6 +219,14 @@ final class EditorSession {
         self.index = index
     }
 
+    /// Where Skip goes from a photo the editor can't open (FS-03.04b Q7):
+    /// the next photo, or the one before when it is the last.
+    var skipTarget: Int? {
+        if photos.indices.contains(index + 1) { return index + 1 }
+        if photos.indices.contains(index - 1) { return index - 1 }
+        return nil
+    }
+
     /// The edit on the photo the user just came from, if it has one.
     var previousRecipe: PhotoEditRecipe? {
         guard let previousIndex, photos.indices.contains(previousIndex) else { return nil }

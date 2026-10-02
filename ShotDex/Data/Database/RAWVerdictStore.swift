@@ -95,6 +95,18 @@ struct RAWVerdictStore: Sendable {
         }
     }
 
+    /// The indexed camera and file name of one photo — what the message
+    /// names before anything is downloaded (AC-3, AC-4).
+    func cameraAndFilename(of assetId: String) throws -> (camera: RAWCamera?, filename: String?) {
+        try database.reader.read { db in
+            guard let row = try Row.fetchOne(db, sql: """
+                SELECT normalizedCameraManufacturer AS make, normalizedCameraModel AS model, originalFilename
+                FROM photo_metadata WHERE assetId = ?
+                """, arguments: [assetId]) else { return (nil, nil) }
+            return (RAWCamera(manufacturer: row["make"], model: row["model"]), row["originalFilename"])
+        }
+    }
+
     /// Records RAW-named photos found to carry a rendered twin. Returns how
     /// many were new.
     @discardableResult
