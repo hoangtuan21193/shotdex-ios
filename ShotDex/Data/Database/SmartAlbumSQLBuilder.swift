@@ -81,8 +81,30 @@ enum SmartAlbumSQLBuilder {
                     return ("(" + ands.joined(separator: " AND ") + ")", values)
                 default: return nil
                 }
+            case .flag:
+                guard let value = SmartAlbumFlagValue(rawValue: rule.text) else { return nil }
+                let matching = switch value {
+                case .pick: PhotoMarksStore.flagCondition([.picks])
+                case .reject: PhotoMarksStore.flagCondition([.rejected])
+                case .unflagged: PhotoMarksStore.flagCondition([.unflagged])
+                }
+                guard let matching else { return nil }
+                switch rule.op {
+                case .isExactly: return (matching, [])
+                case .isNot: return ("NOT \(matching)", [])
+                default: return nil
+                }
             default:
                 return nil
+            }
+
+        case .rating:
+            guard let stars = rule.number.map({ Int($0.rounded()) }) else { return nil }
+            switch rule.op {
+            case .equalTo: return (PhotoMarksStore.ratingSQL(comparison: "=", stars: stars), [])
+            case .atLeast: return (PhotoMarksStore.ratingSQL(comparison: ">=", stars: stars), [])
+            case .atMost: return (PhotoMarksStore.ratingSQL(comparison: "<=", stars: stars), [])
+            default: return nil
             }
 
         case .number:

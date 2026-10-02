@@ -103,6 +103,10 @@ enum SearchIntentMapper {
                 generated.comparison.lowercased()
             )
             return SmartAlbumRule(field: field, boolValue: !negated)
+
+        case .rating:
+            // Search does not read stars in v1 (FS-01.12 §3): filters do.
+            return nil
         }
     }
 

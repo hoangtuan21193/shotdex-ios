@@ -91,6 +91,8 @@ struct SmartAlbumRuleRow: View {
         // "is on" is the default date operator; seed today so the DatePicker's
         // shown date is the committed value (rule valid, Save enabled) instead
         // of a displayed-but-nil date the user must tap to activate.
+        // A rating condition is complete from the start, like a date one.
+        if field.kind == .rating { rule.number = 4 }
         if field.kind == .date, rule.op == .on {
             rule.number = Calendar.current.startOfDay(for: Date()).timeIntervalSince1970
         }
@@ -106,7 +108,23 @@ struct SmartAlbumRuleRow: View {
         case .number: numberEditor
         case .date: dateEditor
         case .favorite: favoriteEditor
+        case .rating: ratingEditor
         }
+    }
+
+    /// 0–5 as one segmented row: five stars and zero fit a 402pt phone.
+    private var ratingEditor: some View {
+        Picker(MarkCopy.rating, selection: Binding(
+            get: { Int((rule.number ?? 0).rounded()) },
+            set: { rule.number = Double($0) }
+        )) {
+            ForEach(StarRating.range, id: \.self) { stars in
+                Text(stars == 0 ? "0" : "\(stars)★")
+                    .accessibilityLabel(MarkCopy.starsAccessibility(stars))
+                    .tag(stars)
+            }
+        }
+        .pickerStyle(.segmented)
     }
 
     /// Free-typed value with inline autocomplete: matching indexed values show

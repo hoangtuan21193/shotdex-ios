@@ -24,6 +24,7 @@ enum RuleFieldKind: Equatable, Sendable {
     case number     // numeric metadata (ISO, aperture, shutter, focal length)
     case date       // capture date
     case favorite   // boolean favorite
+    case rating     // the current star rating, 0–5 (FS-01.12)
 }
 
 /// A photo attribute a smart-album condition can test.
@@ -45,6 +46,12 @@ enum RuleField: String, Codable, CaseIterable, Identifiable, Sendable {
     case focalLength
     case dateTaken
     case favorite
+    /// The current star rating — the pending row, else Photos' (FS-01.12 §4).
+    /// The raw value `rating` was a field once before (`v16` removed it and
+    /// rewrote every album that held it), so reusing it reads nothing stale.
+    case rating
+    /// Pick / Reject / no flag. Same story as `rating`, with `v15`.
+    case flag
 
     var id: String { rawValue }
 
@@ -64,23 +71,26 @@ enum RuleField: String, Codable, CaseIterable, Identifiable, Sendable {
         case .focalLength: "Focal Length"
         case .dateTaken: "Date Taken"
         case .favorite: "Favorite"
+        case .rating: MarkCopy.rating
+        case .flag: MarkCopy.flag
         }
     }
 
     var kind: RuleFieldKind {
         switch self {
         case .cameraBrand, .cameraBody, .lens, .filename, .place: .text
-        case .sensorFormat, .fileType, .mediaType: .choice
+        case .sensorFormat, .fileType, .mediaType, .flag: .choice
         case .iso, .aperture, .shutter, .focalLength: .number
         case .dateTaken: .date
         case .favorite: .favorite
+        case .rating: .rating
         }
     }
 
     /// Parse/format kind for numeric fields (ignored for other kinds).
     var numericKind: NumericFieldKind {
         switch self {
-        case .iso: .int
+        case .iso, .rating: .int
         case .shutter: .shutter
         default: .double
         }
@@ -95,6 +105,8 @@ enum RuleField: String, Codable, CaseIterable, Identifiable, Sendable {
             PhotoFileType.allCases.map { ($0.rawValue, $0.displayName) }
         case .mediaType:
             MediaKind.allCases.map { ($0.rawValue, $0.displayName) }
+        case .flag:
+            SmartAlbumFlagValue.allCases.map { ($0.rawValue, $0.label) }
         default:
             []
         }
@@ -122,6 +134,24 @@ extension RuleFieldKind {
         case .number: [.equalTo, .greaterThan, .lessThan, .inRange]
         case .date: [.on, .inMonth, .inLastDays, .before, .after, .inRange]
         case .favorite: []
+        case .rating: [.atLeast, .equalTo, .atMost]
+        }
+    }
+}
+
+/// The values a flag condition can test. `pick`/`reject` are the same words
+/// `photo_flag.flag` stores; an album JSON holding anything else compiles to
+/// no condition for that rule alone (FS-01.12 AC-8).
+enum SmartAlbumFlagValue: String, CaseIterable, Sendable {
+    case pick
+    case reject
+    case unflagged
+
+    var label: String {
+        switch self {
+        case .pick: MarkCopy.flagWord(.pick)
+        case .reject: MarkCopy.flagWord(.reject)
+        case .unflagged: MarkCopy.unflaggedFilter
         }
     }
 }
@@ -147,6 +177,9 @@ enum RuleOperator: String, Codable, CaseIterable, Identifiable, Sendable {
     case inLastDays
     case before
     case after
+    // Rating
+    case atLeast
+    case atMost
 
     var id: String { rawValue }
 
@@ -164,6 +197,8 @@ enum RuleOperator: String, Codable, CaseIterable, Identifiable, Sendable {
         case .inLastDays: "is in the last"
         case .before: "is before"
         case .after: "is after"
+        case .atLeast: "is at least"
+        case .atMost: "is at most"
         }
     }
 
@@ -269,6 +304,8 @@ struct SmartAlbumRule: Identifiable, Codable, Equatable, Sendable {
             }
         case .favorite:
             return true
+        case .rating:
+            return number != nil
         }
     }
 }

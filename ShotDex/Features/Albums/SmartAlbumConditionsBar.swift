@@ -129,6 +129,20 @@ extension SmartAlbumRule {
             return compactDateSummary
         case .favorite:
             return boolValue ? "Favorite" : "Not favorite"
+        case .rating:
+            return compactRatingSummary
+        }
+    }
+
+    /// `★ ≥ 4`, `★ ≤ 2`, `★ = 3` — the same glyph language as the quick
+    /// filter's chip.
+    private var compactRatingSummary: String {
+        guard let number else { return MarkCopy.rating }
+        let stars = Int(number.rounded())
+        switch op {
+        case .atLeast: return "★ ≥ \(stars)"
+        case .atMost: return "★ ≤ \(stars)"
+        default: return "★ = \(stars)"
         }
     }
 
@@ -207,6 +221,8 @@ extension SmartAlbumRule {
         case .focalLength: focalMode == .equivalent ? "focal eq" : "focal"
         case .dateTaken: "date"
         case .favorite: "favorite"
+        case .rating: "★"
+        case .flag: MarkCopy.flag.lowercased()
         }
     }
 
@@ -236,6 +252,9 @@ extension SmartAlbumRule {
             if field == .mediaType {
                 return MediaKind(rawValue: text)?.displayName ?? text
             }
+            if field == .flag {
+                return SmartAlbumFlagValue(rawValue: text)?.label ?? text
+            }
             return text // sensor-format rawValue is already its display name
         case .number:
             if op.needsUpperBound, let lower = number, let upper = numberUpper {
@@ -260,6 +279,8 @@ extension SmartAlbumRule {
             }
         case .favorite:
             return ""
+        case .rating:
+            return number.map { MarkCopy.starsAccessibility(Int($0.rounded())) } ?? ""
         }
     }
 
