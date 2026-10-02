@@ -16,10 +16,22 @@ import UniformTypeIdentifiers
         .appendingPathComponent("build/fixtures/IMG_6310.CR3")
     static var hasRawFixture: Bool { FileManager.default.fileExists(atPath: rawFixture.path) }
 
+    /// The footprint measurements decode five 24 MP RAWs at once and read the
+    /// whole process's memory, so they mean something only alone — and in the
+    /// full suite they hold the GPU while other render tests wait on it (the
+    /// gate hung on 2026-10-02 with `rawDecoderFloor` among the stuck). Run
+    /// on demand: `touch build/measure-memory`, then
+    /// `-only-testing:ShotDexTests/HDRExportTests`.
+    static var measuresMemory: Bool {
+        hasRawFixture && FileManager.default.fileExists(
+            atPath: rawFixture.deletingLastPathComponent().deletingLastPathComponent()
+                .appendingPathComponent("measure-memory").path)
+    }
+
     /// Task 1 of the plan: the floor the RAW decoder itself costs, before any
     /// merging — one decoder and five alive together, read band by band the
     /// way a merge reads them. The numbers gate the rest of the save path.
-    @Test(.enabled(if: HDRExportTests.hasRawFixture)) func rawDecoderFloor() async throws {
+    @Test(.enabled(if: HDRExportTests.measuresMemory)) func rawDecoderFloor() async throws {
         _ = await FootprintSampler.waitForQuietProcess(quietSeconds: 3, timeout: .seconds(60))
         let context = CIContext(options: [.workingFormat: CIFormat.RGBAh, .cacheIntermediates: false])
         let linear = CGColorSpace(name: CGColorSpace.linearSRGB)!
@@ -131,7 +143,7 @@ import UniformTypeIdentifiers
     /// peak footprint over the quiet process, and the time. The ceiling is
     /// the iPhone 12's; the simulator's number is the one this machine can
     /// give.
-    @Test(.enabled(if: HDRExportTests.hasRawFixture), arguments: [(5, UTType.jpeg), (3, .jpeg), (5, .heic)])
+    @Test(.enabled(if: HDRExportTests.measuresMemory), arguments: [(5, UTType.jpeg), (3, .jpeg), (5, .heic)])
     func aFullSizeRAWSaveStaysUnderTheCeiling(frames count: Int, type: UTType) async throws {
         let stops: [Double] = count == 5 ? [-4, -2, 0, 2, 4] : [-2, 0, 2]
         let prepared = PreparedHDR(
