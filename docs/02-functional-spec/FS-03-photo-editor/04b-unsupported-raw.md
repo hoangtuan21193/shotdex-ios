@@ -23,6 +23,16 @@ RAW; chọn RAW trong menu Source thì lỗi bị nuốt. Mục này thay cả b
 - Danh sách máy mà bộ giải của hệ thống công bố **lệch tên với EXIF** (đo 2026-10-01, macOS 27.0, 928 mục):
   - "Nikon Z 6 2" với EXIF `NIKON Z 6_2`; "Sony Alpha ILCE-7M4" với Make `SONY`, Model `ILCE-7M4`;
   - cùng một máy có hai tên ("Sony Alpha ILCE-7M IV" và "ILCE-7M4"); danh sách không nói tới chế độ nén của file.
+  - **Đo trên sim 2026-10-02 (M1)**: 930 mục trên iOS 26.5, 932 trên 27.0 (thêm Leica M10-R, Leica S3, Leica V-Lux 3,
+    Sony RX10V; bỏ Mamiya Leaf Credo 40MP, Phase One P40+; "Fujifilm FinePix HS20" đổi thành "… HS20 EXR"), 825–934
+    trên các sim 18.6 (bộ giải là MobileAsset `RawCamera.bundle`, mỗi sim một bản). Có "Nikon Z 6 2", "Sony Alpha
+    ILCE-7M4", "Fujifilm X-T4"; iPhone ghi bằng mã máy ("iPhone16,1 …"); **không có máy DNG nào** (DJI, ProRAW) —
+    DNG luôn đi bậc 2.
+  - **`CIRAWFilter(imageURL:)` không bao giờ trả nil** (26.5, 27.0, 18.6): file rác đuôi `.ARW` cho object có
+    `outputImage` rỗng 0 × 0; RAF của máy lạ (X-T4 đổi tên thành `X-Q9`) và ARW/DNG cắt cụt cho `outputImage` nil.
+    "Giải được" là `outputImage` khác nil và khác rỗng. Make/Model vẫn đọc được qua ImageIO ở file máy lạ và file cắt
+    cụt; file rác và 2 KB đầu của ARW thì ImageIO không đọc nổi thuộc tính (AC-9). Đổi tên máy trong ARW (Sony) hay
+    DNG (DJI) thì bộ giải vẫn đọc — chỉ RAF bị bộ giải chặn theo tên máy.
 - Vì thế **không khớp tên không được coi là "chưa hỗ trợ"** — đánh dấu nhầm máy đọc được tệ hơn không đánh dấu.
 - **Nguồn phán quyết** đi theo ba bậc, dừng ở bậc đầu tiên cho ra kết quả:
   1. tên máy **khớp** danh sách của bộ giải hệ thống ⇒ "đọc được";
@@ -139,7 +149,7 @@ một cách giả bộ giải trả rỗng trong test.
 
 | Rủi ro | Xử lý |
 |---|---|
-| Danh sách máy trên iOS có thể khác bản macOS đã đo | đo lại trên sim 26.5 và 27.0 ở task đầu của `/plan` |
-| Thứ tự file của cặp RAW+JPEG: index có thể ghi tên file RAW, làm cặp trông như RAW-only | đo trên cặp thật trước khi dựa vào đuôi file |
-| Bản xem trước nhúng có độ phân giải khác nhau theo máy; PhotoKit có thể không trả gì | đo trên 3 hãng; tile trống thì vẫn có dấu |
+| Danh sách máy trên iOS có thể khác bản macOS đã đo | đã đo (M1, §2): 930 / 932 mục, khác nhau 9 dòng; bậc 1 chỉ ghi "đọc được", nên lệch tên chỉ đẩy máy xuống bậc 2 |
+| Thứ tự file của cặp RAW+JPEG: index có thể ghi tên file RAW, làm cặp trông như RAW-only | **đo M3 (sim 26.5, 2026-10-02)**: cặp theo thứ tự Photos và ShotDex tự tạo (JPEG `.photo` + RAW `.alternatePhoto`) → index ghi tên JPEG, không trông như RAW-only. Thứ tự ngược (RAW `.photo` + JPEG `.alternatePhoto`, khi người dùng chọn RAW làm bản gốc) → index ghi tên RAW. Vì vậy lượt xét hỏi `assetResources` của từng ảnh mang đuôi RAW thuộc máy không khớp (không tải gì) và ghi riêng những ảnh có kèm bản JPEG/HEIC; ảnh đó không bao giờ có dấu |
+| Bản xem trước nhúng có độ phân giải khác nhau theo máy; PhotoKit có thể không trả gì | **đo M3**: Photos nhận RAW-only hỏng (ARW/DNG cắt cụt, RAF máy lạ), chỉ từ chối file rác (`PHPhotosError` 3302). `requestImage` cỡ tối đa: RAF máy lạ → **nil** (lỗi -1, tile trống) dù ImageIO đọc được bản nhúng 4416 × 2944; ARW/DNG cắt cụt → 160 × 120; ARW đọc được → 1616 × 1080. Convert to JPEG (Collage, Video Studio) vì thế lấy bản nhúng bằng ImageIO từ file gốc có sẵn, không qua `requestImage`. Tile trống vẫn có dấu |
 | Share tắt vị trí: ImageIO không ghi được kiểu RAW nào (đo macOS 27.0: 22 kiểu, không có RAW/DNG), nên file RAW đi **còn nguyên GPS** | alert RAW của FS-08.06 §5; Share Original của RAW không đọc được đi qua alert đó với Share as JPEG mờ (§3) |
