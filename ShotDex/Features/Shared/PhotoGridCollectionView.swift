@@ -28,6 +28,9 @@ struct PhotoGridCollectionView<Item: PhotoGridDisplayable>: UIViewRepresentable 
     @Environment(ServerUploadIndex.self) private var uploadIndex: ServerUploadIndex?
     /// RAWs this iOS build can't read get a warning glyph (FS-03.04b §3).
     @Environment(UnsupportedRAWIndex.self) private var unsupportedRAWIndex: UnsupportedRAWIndex?
+    /// Stars and Pick/Reject (FS-01.12 §7): glyphs in the status row, the
+    /// Rejected tile dimmed. Read per cell from memory, never the database.
+    @Environment(PhotoMarks.self) private var photoMarks: PhotoMarks?
     let photos: [Item]
     let assetProvider: (_ flatIndex: Int, _ item: Item) -> PHAsset?
     /// Sectioning + header contract: grid-grouped by date, one flat headerless
@@ -199,8 +202,9 @@ struct PhotoGridCollectionView<Item: PhotoGridDisplayable>: UIViewRepresentable 
         let unsupportedChanged = context.coordinator.updateUnsupportedRAW(
             unsupportedRAWIndex?.assetIds ?? [], version: unsupportedRAWIndex?.version ?? 0
         )
+        let marksChanged = context.coordinator.updateMarks(photoMarks, version: photoMarks?.version ?? 0)
         context.coordinator.apply(self, isInitial: false)
-        if uploadsChanged || unsupportedChanged { context.coordinator.refreshVisibleCells() }
+        if uploadsChanged || unsupportedChanged || marksChanged { context.coordinator.refreshVisibleCells() }
     }
 
     static func dismantleUIView(_ uiView: UICollectionView, coordinator: Coordinator) {
@@ -614,6 +618,19 @@ struct PhotoGridCollectionView<Item: PhotoGridDisplayable>: UIViewRepresentable 
             return !(isFirst && ids.isEmpty)
         }
 
+        /// Marks are read per cell from `PhotoMarks`; only the version is kept
+        /// here, by the same rule as the two sets above.
+        private(set) var photoMarks: PhotoMarks?
+        private var marksVersion = -1
+
+        func updateMarks(_ marks: PhotoMarks?, version: Int) -> Bool {
+            photoMarks = marks
+            guard version != marksVersion else { return false }
+            let isFirst = marksVersion == -1
+            marksVersion = version
+            return !isFirst
+        }
+
         func refreshVisibleCells() {
             guard let collectionView else { return }
             reconfigureVisibleCells(collectionView)
@@ -1024,7 +1041,8 @@ struct PhotoGridCollectionView<Item: PhotoGridDisplayable>: UIViewRepresentable 
                 displayOptions: displayOptions,
                 lazyMetadataProvider: parent.lazyMetadataProvider,
                 isUploaded: uploadedAssetIds.contains(item.assetId),
-                isUnsupportedRAW: unsupportedRAWAssetIds.contains(item.assetId)
+                isUnsupportedRAW: unsupportedRAWAssetIds.contains(item.assetId),
+                marks: photoMarks?.summary(for: item.assetId, photosRating: asset?.photosStarRating)
             )
         }
 
@@ -2019,6 +2037,11 @@ final class PhotoGridCell: UICollectionViewCell {
     private var accessibilityMediaLabel = "Photo"
     private var accessibilityUploaded = false
     private var accessibilityUnsupportedRAW = false
+    private var accessibilityMarks: String?
+    /// A Rejected tile shows its photo at 45 % (FS-01.12 §7).
+    private var isRejected = false
+    private var isSelectedForDim = false
+    private static let rejectedImageAlpha: CGFloat = 0.45
     private var accessibilityMetadataLine: String?
     private var accessibilityFileType: String?
 
@@ -2147,6 +2170,9 @@ final class PhotoGridCell: UICollectionViewCell {
         cancelRequest()
         imageView.image = nil
         imageView.alpha = 1
+        isRejected = false
+        isSelectedForDim = false
+        accessibilityMarks = nil
         requestedAssetId = nil
         requestedAsset = nil
         requestedTargetSize = .zero
@@ -2172,7 +2198,8 @@ final class PhotoGridCell: UICollectionViewCell {
         displayOptions: GridMetadataDisplayOptions,
         lazyMetadataProvider: ((String) async -> (any PhotoGridDisplayable)?)? = nil,
         isUploaded: Bool = false,
-        isUnsupportedRAW: Bool = false
+        isUnsupportedRAW: Bool = false,
+        marks: PhotoMarkSummary? = nil
     ) {
         self.photoLibrary = photoLibrary
         configuredAssetId = item.assetId
@@ -2206,7 +2233,8 @@ final class PhotoGridCell: UICollectionViewCell {
             }
         }
 
-        applyStatusBadges(for: asset, isUploaded: isUploaded, isUnsupportedRAW: isUnsupportedRAW)
+        applyStatusBadges(for: asset, isUploaded: isUploaded, isUnsupportedRAW: isUnsupportedRAW, marks: marks)
+        isRejected = marks?.flag == .reject
 
         if let asset, asset.mediaType == .video {
             videoBadge.text = asset.duration > 0
@@ -2229,7 +2257,8 @@ final class PhotoGridCell: UICollectionViewCell {
         selectionBadge.isHidden = !isSelecting
         // Selected thumbnail dims slightly, iOS Photos style, so the accent
         // border and check read clearly over it.
-        imageView.alpha = (isSelecting && isSelected) ? 0.82 : 1
+        isSelectedForDim = isSelecting && isSelected
+        applyImageAlpha()
         let base = UIImage.SymbolConfiguration(pointSize: 18, weight: .semibold)
         if isSelected {
             // White check on an accent-filled disc, iOS Photos style. Palette:
@@ -2245,6 +2274,11 @@ final class PhotoGridCell: UICollectionViewCell {
             selectionBadge.preferredSymbolConfiguration = base
             selectionBadge.tintColor = .white
         }
+    }
+
+    /// Rejected dims harder than a selection, and wins over it.
+    private func applyImageAlpha() {
+        imageView.alpha = isRejected ? Self.rejectedImageAlpha : (isSelectedForDim ? 0.82 : 1)
     }
 
     /// Single write point for the metadata overlay (sync configure and the
@@ -2264,13 +2298,16 @@ final class PhotoGridCell: UICollectionViewCell {
     /// No "edited" glyph: PhotoKit exposes no adjustment flag on `PHAsset`, and
     /// the only way to tell is to enumerate `PHAssetResource`s per asset, which
     /// is far too expensive per cell.
-    private func applyStatusBadges(for asset: PHAsset?, isUploaded: Bool, isUnsupportedRAW: Bool) {
+    private func applyStatusBadges(
+        for asset: PHAsset?, isUploaded: Bool, isUnsupportedRAW: Bool, marks: PhotoMarkSummary? = nil
+    ) {
         for view in statusBadges.arrangedSubviews {
             statusBadges.removeArrangedSubview(view)
             view.removeFromSuperview()
         }
         accessibilityUploaded = isUploaded && asset != nil
         accessibilityUnsupportedRAW = isUnsupportedRAW && asset != nil
+        accessibilityMarks = marks.flatMap { MarkCopy.accessibility($0) }
         updateAccessibilityLabel()
         guard let asset else {
             statusBadges.isHidden = statusBadges.arrangedSubviews.isEmpty
@@ -2280,7 +2317,11 @@ final class PhotoGridCell: UICollectionViewCell {
         // First: the one glyph that says something is wrong (FS-03.04b §3).
         // A mark only — the tile still opens the viewer.
         if isUnsupportedRAW { symbols.append("exclamationmark.triangle.fill") }
+        // Then the user's own marks (FS-01.12 §7): flag, heart, ★N.
+        if let flag = marks?.flag { symbols.append(flag == .pick ? "flag.fill" : "xmark") }
         if asset.isFavorite { symbols.append("heart.fill") }
+        let starIndex = symbols.count
+        let stars = marks?.rating ?? 0
         let subtypes = asset.mediaSubtypes
         if subtypes.contains(.photoLive) { symbols.append("livephoto") }
         if subtypes.contains(.photoDepthEffect) { symbols.append("camera.aperture") }
@@ -2291,13 +2332,14 @@ final class PhotoGridCell: UICollectionViewCell {
         // Last, after what the photo *is*: this is where a copy of it lives.
         if isUploaded { symbols.append("externaldrive.fill.badge.checkmark") }
 
-        guard !symbols.isEmpty else {
+        guard !symbols.isEmpty || stars > 0 else {
             statusBadges.isHidden = statusBadges.arrangedSubviews.isEmpty
             setNeedsLayout()
             return
         }
         let configuration = UIImage.SymbolConfiguration(pointSize: 10, weight: .semibold)
-        for symbol in symbols {
+        for (index, symbol) in symbols.enumerated() {
+            if index == starIndex, stars > 0 { statusBadges.addArrangedSubview(Self.starBadge(stars, configuration)) }
             let view = UIImageView(image: UIImage(systemName: symbol, withConfiguration: configuration))
             view.tintColor = .white
             view.contentMode = .center
@@ -2309,8 +2351,29 @@ final class PhotoGridCell: UICollectionViewCell {
             view.layer.shadowOffset = .zero
             statusBadges.addArrangedSubview(view)
         }
+        if starIndex == symbols.count, stars > 0 {
+            statusBadges.addArrangedSubview(Self.starBadge(stars, configuration))
+        }
         statusBadges.isHidden = false
         setNeedsLayout()
+    }
+
+    /// `★4`: a 10pt star and the count in caption2 semibold, white with the
+    /// same hairline shadow as every status glyph.
+    private static func starBadge(_ stars: Int, _ configuration: UIImage.SymbolConfiguration) -> UIView {
+        let star = UIImageView(image: UIImage(systemName: "star.fill", withConfiguration: configuration))
+        star.tintColor = .white
+        star.contentMode = .center
+        let count = UILabel()
+        count.text = "\(stars)"
+        count.font = UIFont.systemFont(ofSize: UIFont.preferredFont(forTextStyle: .caption2).pointSize, weight: .semibold)
+        count.textColor = .white
+        let badge = UIStackView(arrangedSubviews: [star, count])
+        badge.axis = .horizontal
+        badge.spacing = 1
+        badge.alignment = .center
+        for view in [star, count] { applyGlyphShadow(to: view) }
+        return badge
     }
 
     /// A hairline shadow keeps a light glyph readable on a pale photo — the
@@ -2338,6 +2401,7 @@ final class PhotoGridCell: UICollectionViewCell {
             accessibilityMetadataLine,
             accessibilityUnsupportedRAW ? String(localized: "RAW not supported by iOS", comment: "VoiceOver: grid tile of a RAW photo this iOS version can't decode") : nil,
             accessibilityUploaded ? String(localized: "Uploaded to server", comment: "VoiceOver: grid tile of a photo with a copy on a file server") : nil,
+            accessibilityMarks,
         ]
         accessibilityLabel = components.compactMap { $0 }.joined(separator: ", ")
     }

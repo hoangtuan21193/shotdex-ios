@@ -130,14 +130,14 @@ Chốt 2026-10-02.
 | AC-3 | lần mở app đầu trên iOS 27: bảng sao chờ có 1.240 dòng, trong đó 5 ảnh đã bị xoá và 3 ảnh Photos đã có sao khác | app mở xong first paint | đúng 1 khối thay đổi mang 1.232 yêu cầu; 3 ảnh giữ sao của Photos; bảng chờ còn 0 dòng; banner "Moved 1,232 star ratings to Photos." hiện đúng một lần | ⚠️ chưa có — test với lớp giả PhotoKit |
 | AC-4 | như AC-3, khối thay đổi trả lỗi (giả lập) | app mở | bảng chờ vẫn 1.240 dòng; lọc ★ ≥ 1 vẫn ra đủ ảnh còn tồn tại; không banner; lần mở app sau thử lại đúng 1 lần | ⚠️ chưa có |
 | AC-5 | iOS 27, quyền `.limited` thấy 200 trong 1.240 ảnh có dòng chờ | app mở | khối thay đổi mang đúng 200 yêu cầu; 1.040 dòng ở lại; không dòng nào bị gỡ vì "ảnh không thấy" | ⚠️ chưa có |
-| AC-6 | ảnh A là favorite, không cờ | bấm `P`, rồi `X` | sau `P`: A Picked, vẫn favorite; sau `X`: A Rejected, không còn Picked, vẫn favorite; favorite của Photos không đổi ở cả hai bước | ⚠️ chưa có |
+| AC-6 | ảnh A là favorite, không cờ | bấm `P`, rồi `X` | sau `P`: A Picked, vẫn favorite; sau `X`: A Rejected, không còn Picked, vẫn favorite; favorite của Photos không đổi ở cả hai bước | ✅ `PhotoMarksTests.pickThenRejectReplaces`, `.flagNeverTouchesFavorite` (đường cờ không có writer favorite; dòng metadata giữ nguyên); phím thật qua `ShotDexUITests/scripts/rating-grid-glyphs.json` (iPhone 17 26.5: `P` `5` / `X` `1` / `P` / `3` trên 4 ảnh liền → ô lưới `⚑ ★5`, `× ★1` mờ, `⚑`, `★3`; VoiceOver "5 stars, Picked", "1 star, Rejected") |
 | AC-7 | thư viện 10 ảnh: sao 0,0,1,2,3,3,4,5,5,5; Picked là ảnh 5★ thứ nhất và ảnh 3★ thứ nhất | bật Rating ★★★ & Up + Picks | lưới còn đúng 2 ảnh (5★ Picked, 3★ Picked); thanh có chip "★ ≥ 3" và "Picks"; bấm x chip Picks → 6 ảnh | ⚠️ chưa có — test truy vấn + `ShotDexUITests/scripts/` mới |
 | AC-8 | smart album "Best" = cờ **là** Pick VÀ sao **ít nhất** 4, khớp 12 ảnh | Reject 1 ảnh trong đó rồi mở lại album | album còn 11; JSON album chứa một điều kiện cờ lạ thì chỉ điều kiện đó rơi ra, album không thành "mọi ảnh" | ⚠️ chưa có — test giải mã smart album |
 | AC-9 | ảnh B Rejected, quyền đầy đủ; ảnh C Rejected, quyền `.limited` và C vừa bị bỏ khỏi phần chia sẻ | xoá B trong app Photos; đổi phần chia sẻ để bỏ C | sau thay đổi thư viện: dòng cờ của B bị gỡ, số Rejected giảm 1; dòng cờ của C còn nguyên | ⚠️ chưa có |
 | AC-10 | iOS 27, ảnh A 2★, ghi sao trả lỗi (giả lập) | bấm `5` | ô và viewer quay về 2★ trong ≤ 1 s; có "Couldn't save rating." + Try Again; bảng sao chờ không có dòng | ⚠️ chưa có |
 | AC-11 | iOS 27, sao của ảnh A đổi trong app Photos (hoặc máy khác), ngày sửa của A không đổi | lượt index tăng dần kế tiếp chạy xong | lọc ★ ≥ N (N = sao mới) có A; 0 lần đọc file của A | ✅ `AssetFactsRefresherTests.ratingChangedInPhotosReachesFilter` (refresher không có reader; mọi cột trừ `rating` giữ nguyên), `IndexRunChangesTests.skippedUpdatedIdsAreDelivered`, `IndexDiffTests.factsDriftWithoutEdit` (walk đầy), `.ratingBackfillOnlyNulls` (thêm 2026-10-03) |
 
-**Chưa chứng minh được:** AC-2 → AC-10 (đang làm theo plan [rating-flags-cull](../../_plans/2026-10-02-rating-flags-cull.md)).
+**Chưa chứng minh được:** AC-2 → AC-5, AC-7 → AC-10 (đang làm theo plan [rating-flags-cull](../../_plans/2026-10-02-rating-flags-cull.md)).
 
 ## 10. Rủi ro
 
