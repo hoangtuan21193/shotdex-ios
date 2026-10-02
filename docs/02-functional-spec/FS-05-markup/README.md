@@ -13,6 +13,7 @@ này** chứ không phải một app markup bất kỳ.
 | 01 | [Bốn loại lớp và Draw](01-layers-and-draw.md) | chữ · ảnh · hình · kính lúp · lớp vẽ tay |
 | 02 | [Chữ, token và kiểu](02-text-tokens-and-styling.md) | token EXIF, gõ trên ảnh, font, màu, toán đặt chữ |
 | 03 | [Cử chỉ, render và preset](03-canvas-gestures-and-render.md) | bản vẽ sống trên ảnh, một/hai ngón, thứ tự render, lưu preset |
+| 04 | [Watermark lúc xuất](04-watermark-on-export.md) | đóng preset chữ ký lên Resize/Share/Export/sheet xuất server, màn Watermark, dòng share sheet, nhớ lựa chọn |
 
 ## Quy tắc
 

@@ -18,6 +18,7 @@ nhạc, chữ, và một tầng màu đủ để grade.
 | 05 | [Cắt, marker, fade](05-cutting-markers-and-fades.md) | độ dài transition, trim to playhead, snapping |
 | 06 | [Tầng màu](06-color-layer.md) | de-log, primaries, power window, node chain |
 | 06b | [Scope, LUT, tracker](06b-scopes-luts-and-tracking.md) | bốn máy đo, LUT nhập từ Files, bám window theo khung |
+| 06c | [Look ảnh cho video](06c-photo-looks.md) | film look, My Looks, LUT trong một ô look cả video + ô tuỳ chọn mỗi clip, Amount, phần nào chạy được trên video |
 | 07 | [Bố cục điện thoại](07-phone-layout.md) | lane động, overlay trên preview, transport hẹp |
 | 08 | [Model và giới hạn v1](08-model-and-v1-limits.md) | project giữ gì, nhạc từ đâu, cố ý chưa làm gì |
 

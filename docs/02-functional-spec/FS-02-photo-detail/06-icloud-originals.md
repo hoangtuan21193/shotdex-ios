@@ -71,6 +71,9 @@ Pha này **tải hết cả mẻ rồi mới làm**: chưa ghi, chưa xoá gì c
 ở bước 4. Vì ảnh hỏng phải lộ ra trước khi Resize tạo bản nén hay xoá bản gốc. Cái giá là chỗ trống bằng tổng
 dung lượng gốc cả mẻ, nên bước 2 kiểm trước.
 
+- **Ngoại lệ — Export ra folder** ([FS-03.07c](../FS-03-photo-editor/07c-export-acceptance-criteria.md) §1 mục 5):
+  tải cuốn chiếu, tối đa 20 ảnh hoặc 2 GB trước; ảnh hỏng nêu ở tổng kết + Retry Failed. Vì Export không xoá gì.
+
 1. **Hỏi với mạng tắt** từng ảnh, xem ảnh nào đã có bản gốc trên máy. Ảnh đã có đi qua ngay, không tính vào bộ đếm.
 2. **Kiểm chỗ trống cho cả mẻ** trước khi tải byte đầu tiên: tổng dung lượng gốc của các ảnh cần tải phải nhỏ
    hơn chỗ trống dành cho việc người dùng yêu cầu. Thiếu thì báo *"Not enough space to download these

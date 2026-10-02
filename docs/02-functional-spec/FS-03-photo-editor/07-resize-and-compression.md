@@ -10,6 +10,7 @@
   trạng thái, và cả **Settings → Export → Resize Presets**. Lối vào ở hai menu đã tên là Resize; một màn
   tự đổi tên trên đường vào đọc như công cụ khác.
 - **Màn không nhớ lựa chọn phiên trước.**
+  Ngoại lệ: watermark (cấu hình và bật/tắt) được nhớ, chung với mọi lối xuất ([FS-05.04 §5](../FS-05-markup/04-watermark-on-export.md)).
 - **Không có ô nhập dung lượng đích** — chỉ chất lượng và kích thước pixel.
 - Crop mode chỉ **Fill** hoặc **Fit**, **không có Stretch**.
 - Xoá bản gốc thất bại là **non-fatal**: bản nén đã lưu rồi.

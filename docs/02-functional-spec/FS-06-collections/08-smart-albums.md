@@ -1,7 +1,7 @@
 # FS-06.08 — Smart Album
 
 `FS-06.08` · `Core/Models/SmartAlbumQuery.swift` · `Data/Database/SmartAlbumStore.swift`
-· `Features/Albums/SmartAlbumEditorSheet.swift` · bảng `smart_albums` · cập nhật 2026-10-01
+· `Features/Albums/SmartAlbumEditorSheet.swift` · bảng `smart_albums` · cập nhật 2026-10-02
 
 **Một câu:** một bộ lọc có tên, lưu lại được — **không phải** smart album của hệ thống, vì hệ thống không
 cho app tạo smart album có điều kiện riêng.
@@ -26,10 +26,14 @@ trường, phép so sánh và giá trị. Loại trường quyết định phép
 | Loại | Trường | Phép so sánh | Ghi chú |
 |---|---|---|---|
 | **chữ** | hãng máy, thân máy, ống kính, tên file | chứa · không chứa · đúng bằng · khác | so trên **cả bản đã chuẩn hoá lẫn bản gốc**; phép phủ định vẫn khớp cả dòng rỗng → gõ "R6" bắt được "Canon EOS R6" |
-| **chọn** | khổ cảm biến · loại media · định dạng file | là · không là | định dạng gồm JPEG/HEIC/PNG/TIFF/GIF/DNG/RAW, mỗi cái ứng với một tập đuôi file; RAW gộp nhiều đuôi — **cùng bảng đuôi** của nhãn định dạng trên tile ([FS-03.04b §2](../FS-03-photo-editor/04b-unsupported-raw.md)) |
+| **chọn** | khổ cảm biến · loại media · định dạng file · **cờ** | là · không là | cờ gồm Pick · Reject · Unflagged, đọc từ bảng cờ riêng; định dạng gồm JPEG/HEIC/PNG/TIFF/GIF/DNG/RAW, mỗi cái ứng với một tập đuôi file; RAW gộp nhiều đuôi — **cùng bảng đuôi** của nhãn định dạng trên tile ([FS-03.04b §2](../FS-03-photo-editor/04b-unsupported-raw.md)) |
 | **số** | ISO · khẩu · tốc độ · tiêu cự | bằng · lớn hơn · nhỏ hơn · trong khoảng | tốc độ nhận cả `1/500` lẫn số thập phân; tiêu cự có công tắc **thật / tương đương Full Frame** |
 | **ngày** | ngày chụp | **đúng ngày** (mặc định) · **trong tháng** · trong N ngày qua · trước · sau · trong khoảng | "đúng ngày" khớp **trọn ngày theo lịch địa phương** nên đúng cả ngày đổi giờ; "trong tháng" khớp trọn một tháng + năm theo lịch địa phương, ô nhập chọn tháng và năm; "N ngày qua" so với thời điểm hiện tại nên luôn sống |
 | **favorite** | favorite | — | một dải chọn Favorite / Not favorite |
+| **sao** | sao | là · ít nhất · nhiều nhất | ô chọn 0–5, 0 = *Unrated*; "ít nhất" chỉ nhận 1–5 (ít nhất 0 là cả thư viện). Sao hiện hành theo [FS-01.12 §4](../FS-01-library/12-rating-and-flags.md) |
+
+Hai trường **sao** và **cờ** mang lại tên trường của bản đã gỡ ở `v15`/`v16`. Không vướng: hai migration đó
+đã chạy xong trước khi có album nào dùng tên mới ([BD-02 §4](../../01-basic-design/BD-02-database-design.md)).
 
 **Loại media** chỉ đặt được qua dải All / Photo / Video, **không** có trong menu chọn trường
 ([FS-01.05](../FS-01-library/05-filtering-and-sorting.md)).
@@ -78,4 +82,4 @@ chuyển sang điều kiện (chế độ khớp tất cả), để album lưu t
 ## 7. Tiêu chí nghiệm thu
 
 **Chưa viết** cho phần cũ — xem [README — Việc còn nợ](../../README.md#6-việc-còn-nợ). Điều kiện *trong tháng*
-có AC ở [FS-07.03](../FS-07-statistics/03-acceptance-criteria.md) AC-18.
+có AC ở [FS-07.03](../FS-07-statistics/03-acceptance-criteria.md) AC-18. Điều kiện *sao* và *cờ*: [FS-01.12](../FS-01-library/12-rating-and-flags.md) AC-8.

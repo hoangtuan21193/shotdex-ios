@@ -47,11 +47,14 @@ không chuẩn hoá thì cháy trắng hết), bỏ qua comment/dòng trống/ta
 - **Từ chối dứt khoát** khi: thiếu kích thước · số dòng không khớp · kích thước quá lớn · một dòng không
   phải số.
 - Bảng dựng đúng thứ tự mà GPU cần nên đi thẳng từ file lên GPU.
-- **Đặt cuối chuỗi**: look pack được viết để là **lời cuối** trên một ảnh đã hiệu chỉnh — đúng chỗ
-  colourist đặt nó. Chạy trong sRGB, cùng lý do với film cube và de-log.
-- **Strength 0…1** = trộn bản đã LUT lên bản gốc: 60% là cách người ta thực sự dùng một print emulation.
-- Recipe chỉ giữ **tham chiếu** (id + tên + strength), bảng nằm trên đĩa: project nhỏ, và LUT đã xoá thì
-  thoái hoá về *không có LUT* chứ không thành grade hỏng.
+- **LUT là một trong ba loại look** (preset · My Look · LUT) của ô look ([FS-12.06c](06c-photo-looks.md)):
+  một ô cho cả video, một ô tuỳ chọn mỗi clip. Chọn ở Look → Filter → LUTs, nhập qua Import Look…; chọn LUT là
+  bỏ look khác trong cùng ô. Chip Color không còn mục LUT.
+- **Ô look đứng cuối chuỗi màu**, sau de-log và node chain: look pack được viết để là **lời cuối** trên một ảnh
+  đã hiệu chỉnh — đúng chỗ colourist đặt nó. Chạy trong sRGB, cùng lý do với film cube và de-log.
+- **Amount 0…100** của ô = trộn bản đã LUT lên bản trước look: 60% là cách người ta thực sự dùng một print emulation.
+- Recipe chỉ giữ **tham chiếu** (id + tên + Amount), bảng nằm trên đĩa: project nhỏ, và LUT đã xoá thì
+  thoái hoá về *không có LUT* chứ không thành grade hỏng ([06c §6](06c-photo-looks.md)).
 - Cache **4 bảng** để 30 khung/giây không đọc lại file text.
 
 ## 4. Tracker cho power window

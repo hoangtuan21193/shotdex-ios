@@ -1,6 +1,6 @@
 # BD-02 — Thiết kế database
 
-`BD-02` · `ShotDex/Data/Database/` · `ShotDexTests/DatabaseTests.swift` · cập nhật 2026-09-23
+`BD-02` · `ShotDex/Data/Database/` · `ShotDexTests/DatabaseTests.swift` · cập nhật 2026-10-02
 
 **Một câu:** bảng nào giữ gì, và luật giữ cho dữ liệu người dùng không bị lượt index xoá mất.
 
@@ -9,8 +9,9 @@
 - **Lượt index ghi đè nguyên một dòng metadata.** Cột nào nó không biết sẽ bị xoá trắng ở mỗi lần index lại
   → **mọi dữ liệu người dùng tự nhập, và mọi kết quả quét đắt tiền, phải nằm ở bảng riêng.**
 - **Tổng hợp (gom nhóm, chia dải, phân vị) làm trong truy vấn**, không gom trong Swift.
-- Favorite: **thư viện ảnh là nguồn thật**; cột trong database chỉ để lọc nhanh và được đồng bộ lại khi thư
-  viện báo thay đổi.
+- Favorite, và sao trên iOS 27: **thư viện ảnh là nguồn thật**; cột trong database chỉ để lọc nhanh và được
+  đồng bộ lại khi thư viện báo thay đổi. Dưới iOS 27 Photos không có sao, nên sao người dùng chấm nằm ở bảng
+  riêng (§3) — nó là dữ liệu tự nhập, không đọc lại được từ ảnh.
 - **Số megapixel không lưu** — nó tính ra từ chiều rộng và chiều cao.
 - Cột **suy ra được từ ảnh** thì ở lại bảng chính, dù lượt index có ghi đè: ghi lại nó chỉ tốn công
   đọc, không mất gì. `isPanorama` là ca mẫu — nó là "cờ panorama của hệ thống **hoặc** thẻ XMP ShotDex
@@ -40,6 +41,7 @@ placeCountry, placeCountryCode, placeAddress TEXT
 placeSearchText TEXT             -- viết thường + bỏ dấu; cột DUY NHẤT tìm theo địa điểm
 placeCellKey TEXT, placeResolvedAt INTEGER   -- ô lưới ~110m, ghi bằng đường riêng
 isFavorite INTEGER
+rating INTEGER                   -- sao 0–5 của Photos (iOS 27+), đọc lại từ ảnh như favorite; dưới 27 luôn 0
 mediaSubtypes INTEGER            -- mặt nạ bit kiểu chụp, lấy thẳng từ thư viện hệ thống
 isPanorama INTEGER               -- cờ hệ thống HOẶC thẻ XMP của ShotDex; xem quy tắc dưới
 indexedAt INTEGER
@@ -68,6 +70,8 @@ Có chỉ mục trên: tên máy và tên ống kính đã chuẩn hoá · ISO �
 | Lịch sử upload | id ảnh · file nào của ảnh · server (id + **tên lúc đẩy**) · đường dẫn · số byte · SHA-256 · lúc nào |
 | Phán quyết bộ giải RAW | máy (hãng\|model đã chuẩn hoá) · bản build iOS · đọc được / chưa đọc được / chưa biết · nguồn (danh sách / thử file / editor) · lúc nào ([FS-03.04b §5](../02-functional-spec/FS-03-photo-editor/04b-unsupported-raw.md)) |
 | Cặp RAW giữ RAW làm bản gốc | id ảnh mang tên file RAW mà có kèm JPEG/HEIC — không bao giờ có dấu RAW chưa đọc được |
+| Sao chờ lên Photos | id ảnh · sao 1–5 · lúc đặt — sao chấm trên iOS 17–26, hoặc chưa ghi lên Photos được ([FS-01.12 §4–5](../02-functional-spec/FS-01-library/12-rating-and-flags.md)) |
+| Cờ | id ảnh · Pick hoặc Reject · lúc đặt — không dòng là không cờ; chỉ ShotDex có, không đồng bộ |
 
 - Dấu vân tay có **ngày sửa lúc tính**: lệch với ngày sửa hiện tại thì tính lại (ảnh vừa được chỉnh). Video
   không có dòng.
@@ -77,6 +81,12 @@ Có chỉ mục trên: tên máy và tên ống kính đã chuẩn hoá · ISO �
   ở lại. Nó là bằng chứng một file an toàn ở nơi khác — đúng lúc xoá thứ nó mô tả là lúc cần nó nhất.
 - Phán quyết bộ giải là **kết quả quét**: xoá bảng thì mất một lượt xét, dựng lại ở lần mở app kế tiếp. Lên bản
   build iOS mới thì có dòng mới; dòng của build cũ không còn ai đọc.
+- **Sao hiện hành = sao chờ nếu có dòng, không thì cột sao của Photos.** Một luật cho cả hai đời iOS. Lên iOS 27,
+  bảng chờ được ghi lên Photos bằng **một** khối thay đổi rồi rỗng dần; bảng cờ thì sống mãi. Vì vậy hai bảng
+  tách nhau.
+- Ngoài lúc người dùng bỏ sao/cờ và lúc ghi lên Photos, hai bảng này chỉ mất dòng khi ảnh **bị xoá thật** (cùng
+  lúc gỡ dòng metadata). Quyền `.limited` không bao giờ gỡ — ảnh không thấy chưa chắc đã mất. Clear local
+  metadata index không đụng hai bảng này.
 - Mở màn ảnh trùng **chỉ đọc hai bảng cache** rồi ghép với dữ kiện hiện tại — **không** tính lại dấu vân
   tay, **không** gom lại nhóm.
 
@@ -91,7 +101,10 @@ về **một truy vấn rỗng** — và **truy vấn rỗng không có điều 
 Ngoài ra, danh sách điều kiện được giải mã **khoan dung**: một điều kiện không hiểu được thì **rơi ra**,
 không giết cả album — để đỡ những album do một bản build chạy trước lần đổi lược đồ ghi ra. Có test riêng.
 
-Tiền lệ: bảng chấm sao được thêm, rồi bỏ cờ, rồi **xoá hẳn**.
+Tiền lệ: bảng chấm sao cũ được thêm (`v14`), rồi bỏ cờ (`v15`), rồi xoá hẳn (`v16`). Cả hai lần đều viết lại smart
+album. Sao và cờ quay lại ở một migration mới với hai bảng mới, và mang lại tên trường cũ trong smart album.
+Không vướng: `v15`/`v16` chạy xong trước khi có album nào dùng tên mới, cả ở máy cài mới lẫn máy đã có dữ liệu.
+Migration cũ giữ nguyên — không sửa migration đã chạy.
 
 ## 5. Đánh đổi đã chọn
 

@@ -15,6 +15,7 @@
 | 04 | [Hành động và phụ trợ](04-actions-and-extras.md) | menu ⋯, slideshow, Live Photo, Live Text, panorama, cắt video |
 | 05 | [Chọn khung trong burst](05-burst-selection.md) | chọn khung giữ, xoá phần còn lại, gợi ý khung, PhotoKit cho phép gì |
 | 06 | [Bản gốc trên iCloud](06-icloud-originals.md) | bản gốc có trên máy chưa, tải có %, chuẩn bị bản gốc trước khi sửa hàng loạt/xuất/Resize/Share, không xuất bản xem trước |
+| 07 | [Caption và keyword](07-caption-and-keywords.md) | iOS 27: sửa caption/keyword ở đầu Info và hàng loạt từ chế độ chọn, lọc/tìm/smart album theo keyword Photos, không theo Share |
 
 ## Quy tắc
 

@@ -49,6 +49,9 @@ Mật độ lưới **không phải công tắc** — chỉ có một dòng chú
 **Metadata When Sharing** — All Metadata · No Location · No Metadata, mặc định All Metadata; thay công tắc
 Include Location. Đặc tả và tiêu chí: [FS-08.06](06-share-metadata-privacy.md).
 
+**Watermark When Sharing** — `Off` hoặc tên một preset chữ ký, mặc định Off. Đặc tả và tiêu chí:
+[FS-05.04](../FS-05-markup/04-watermark-on-export.md).
+
 ## 5. Export
 
 **Resize Presets**: luôn hiện bốn preset dựng sẵn, và cho tạo, sửa, xoá preset riêng (tên, Fill/Fit, rộng,

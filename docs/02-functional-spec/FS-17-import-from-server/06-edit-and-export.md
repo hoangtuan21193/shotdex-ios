@@ -80,7 +80,7 @@ lệnh đó (AC-67, AC-76…84). Trong đợt 1 ba lệnh này không có trong 
   bước undo nào, Combine khi đã có nét retouch. Chưa làm gì thì không hỏi. Cả hai đường đều xoá bản tạm.
 - Video Studio đọc ảnh server ở cỡ render, không giải mã full-res cho mỗi khung (NF-02).
 - Paste Edits và Resize không mở editor: tải xong là vào thẳng sheet xuất. Resize thêm mục **Size** (các cỡ dựng sẵn
-  của Resize: 4K, 2048 px, 1080 px).
+  của Resize: 4K, 2048 px, 1080 px). Sắp đổi ([FS-03.07b](../FS-03-photo-editor/07b-export-to-files.md) §8, chưa làm): Size ở mọi lần xuất không gộp.
 
 ## 6. Sheet xuất
 
@@ -88,10 +88,11 @@ lệnh đó (AC-67, AC-76…84). Trong đợt 1 ba lệnh này không có trong 
 |---|---|
 | **Original Folder** | tên connection + đường dẫn; mờ kèm lý do ở gốc SMB, hoặc khi folder cloud báo không ghi được |
 | **Photos Library** | asset mới **chỉ gồm bản render** JPEG/HEIC, như kết quả Resize — bản gốc không vào library; ngày chụp, vị trí lấy từ EXIF gốc; `.limited` vẫn tạo được |
-| **Other Folder…** | chọn connection đã lưu rồi duyệt tới folder, dùng bộ chọn folder của sheet upload (FS-15.02 §2) |
+| **Other Folder…** | chọn connection đã lưu rồi duyệt tới folder, dùng bộ chọn folder của sheet upload (FS-15.02 §2). Sắp thêm dòng đầu **Folder in Files…** (FS-03.07b §8, chưa làm) |
 | **Share…** | share sheet, mở sau khi các đích khác đã xong |
 | Khi trùng bản gốc | chỉ hiện khi chọn Original Folder: **Save as New File** (mặc định) · **Replace Original** |
 | Định dạng | JPEG / HEIC; Replace Original luôn giữ định dạng của bản gốc |
+| Size *(FS-03.07b §8, chưa làm)* | mọi lần xuất không gộp: preset của Resize **kể cả preset tự tạo**, mặc định Original (Resize: 2048 px) |
 | Tóm tắt | `3 photos · JPEG` — cỡ file chỉ biết sau khi render nên không ước |
 
 - Chọn được một hay nhiều đích (dấu ✓). Nút **Export** mờ khi chưa chọn đích nào.

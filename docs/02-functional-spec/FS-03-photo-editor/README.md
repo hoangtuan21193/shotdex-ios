@@ -20,6 +20,8 @@ render với extension sửa ảnh và các màn khác.
 | 05b | [Vẽ mask và zoom](05b-mask-painting-and-zoom.md) | cỡ cọ theo màn hình, trọng tài chạm, zoom 10× |
 | 06 | [Lưu và Live Photo](06-saving-recipe-and-live-photo.md) | recipe gắn vào ảnh, Save Copy vs Save Changes |
 | 07 | [Resize](07-resize-and-compression.md) | preset, preview, chạy cả mẻ |
+| 07b | [Xuất ra folder](07b-export-to-files.md) | Export… ra Files/ổ ngoài/server đã lưu, một Form, màn File Name, trùng tên, preset dùng chung với sheet xuất server |
+| 07c | [Xuất ra folder: chạy mẻ và AC](07c-export-acceptance-criteria.md) | sáu chỗ đã chốt, tiến độ, iCloud cuốn chiếu, đường hỏng, 15 AC |
 | 09 | [Màn rộng](09-wide-screen-and-batch-editing.md) | rail + panel + canvas, cột ngắn, History trong panel |
 | 09b | [Sửa nhiều ảnh](09b-batch-editing-and-reference.md) | nháp theo ảnh, Sync, Save All, Reference View |
 | 10 | [Copy / Paste edits](10-copy-paste-edits.md) | chép "cái nhìn", không chép crop và mask |

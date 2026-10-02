@@ -17,8 +17,8 @@ cố ý chưa làm được ghi ra.
 
 | Kiểu | Giữ gì |
 |---|---|
-| **Project** | clip · chuyển cảnh · nhiều bản nhạc · âm lượng video · filter + cường độ · adjustments · overlay · số lần xoay · preset xuất · tỉ lệ khung · master volume · màu nền · tầng màu (de-log, node chain, mask, LUT) |
-| **Clip** | id · asset · loại (ảnh / video / freeze) · thời lượng ảnh · trim hai đầu · mute · hiệu ứng · tốc độ · mốc freeze · thời lượng nguồn |
+| **Project** | clip · chuyển cảnh · nhiều bản nhạc · âm lượng video · **một ô look** cả video (preset · My Look · LUT, kèm Amount — [06c](06c-photo-looks.md)) · adjustments · overlay · số lần xoay · preset xuất · tỉ lệ khung · master volume · màu nền · tầng màu (de-log, node chain, mask) |
+| **Clip** | id · asset · loại (ảnh / video / freeze) · thời lượng ảnh · trim hai đầu · mute · hiệu ứng · tốc độ · mốc freeze · thời lượng nguồn · ô look tuỳ chọn (thay look cả video) |
 | **Overlay theo thời gian** | overlay (chữ hoặc ảnh) · mốc bắt đầu · thời lượng · animation vào/ra + thời lượng từng chiều |
 | **Bản nhạc** | id · nguồn · mốc bắt đầu · trim hai đầu · thời lượng nguồn · âm lượng · fade in/out |
 

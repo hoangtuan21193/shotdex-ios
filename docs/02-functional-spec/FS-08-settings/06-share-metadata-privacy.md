@@ -23,6 +23,8 @@ khác (iPad, Split View).
 **Cố ý không có:**
 - Upload lên file server (FS-15) — vì đó là bản lưu trữ của chính người dùng, gỡ toạ độ là hỏng bản gốc
   ([NF-03 §2b](../../04-non-functional-design/NF-03-privacy-and-security.md)).
+- Export ra folder **Unmodified Original** ([FS-03.07b](../FS-03-photo-editor/07b-export-to-files.md) §3) — bản lưu trữ,
+  chép nguyên byte như Upload. Export **Current Version** thì theo ba mức ở đây.
 - Export EXIF (CSV) — vì CSV chính là metadata người dùng chủ động xuất, kể cả cột toạ độ.
 - Copy lên clipboard — clipboard chỉ nhận ảnh bitmap, vốn không mang metadata.
 - File do Collage, Video Studio, Panorama tạo ra — các công cụ này không chép vị trí của ảnh nguồn (đọc code 2026-10-01).

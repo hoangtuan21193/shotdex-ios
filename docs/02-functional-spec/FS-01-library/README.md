@@ -2,7 +2,7 @@
 
 `FS-01` · tier A/B · `ShotDex/Features/Library/` · `Features/Shared/PhotoGridCollectionView.swift`
 · test `GridDensityTests` · `JustifiedGridRowsTests` · `SearchParserTests` · `SearchIntentParserTests`
-· `CompareLayoutTests` · cập nhật 2026-09-22
+· `CompareLayoutTests` · cập nhật 2026-10-02
 
 **Một câu:** tab chính của app — cả thư viện trong một lưới, tìm bằng câu tiếng Việt hoặc tiếng Anh, lọc
 bằng rule, chọn hàng loạt rồi làm gì đó với chúng.
@@ -23,6 +23,8 @@ bằng rule, chọn hàng loạt rồi làm gì đó với chúng.
 | 09 | [Ghép nhiều ảnh](09-photo-stacking.md) | menu Combine Photos: Focus Stack · Panorama · Stack Exposures (Average/Lighten/Darken) |
 | 10 | [Focus Stack](10-focus-stack.md) | căn có co giãn, hai cách ghép, Radius/Smoothing, tô sửa từ một khung |
 | 11 | [HDR](11-hdr-merge.md) | loạt bù trừ sáng → một ảnh: radiance từ RAW, căn khung, khử bóng ma bốn mức, Strength |
+| 12 | [Sao và cờ](12-rating-and-flags.md) | sao 0–5 (Photos từ iOS 27, bảng riêng trước đó), cờ Pick/Reject, glyph ô, phím, lọc, smart album |
+| 12b | [Lượt lọc (Cull)](12b-culling-pass.md) | đi từng tấm bằng chạm/phím/vuốt, undo, thẻ tóm tắt, Delete Rejected |
 
 ## Quy tắc chung
 
@@ -35,13 +37,16 @@ bằng rule, chọn hàng loạt rồi làm gì đó với chúng.
 - Chức năng trên iPhone và iPad **giống hệt nhau**; màn rộng cho **nhiều nội dung hơn**, không phải nội
   dung to hơn ([NF-05](../../04-non-functional-design/NF-05-device-and-os-compatibility.md)).
 
-## Đã gỡ
+## Sao, cờ và favorite — ba câu hỏi khác nhau
 
-**Cull** (rating 0–5, cờ pick/reject) đã gỡ hoàn toàn: bảng `photo_cull` bị drop ở `v16`. Ảnh đã mang
-**favorite của PhotoKit** — một bit, đồng bộ sang Photos, người dùng đã có sẵn; cờ pick/reject là trục thứ
-hai trả lời cùng câu hỏi và sao 0–5 là trục thứ ba. ShotDex giữ đúng cái Photos giữ, còn việc *chọn* thì
-Compare làm. Luật migration rút ra: [BD-02 §4](../../01-basic-design/BD-02-database-design.md).
+- **Favorite** = "tấm tôi thích". Một bit của Photos, đồng bộ iCloud.
+- **Cờ Pick/Reject** = quyết định giữ hay bỏ của một lượt lọc sau buổi chụp. Chỉ ShotDex có, nằm trên máy.
+- **Sao 0–5** = thứ hạng giữa các tấm giữ. Từ iOS 27 nó là sao của chính Photos, nên đi theo ảnh sang Mac.
+- Ba trục không tự kéo nhau: Pick không bật favorite, Reject không xoá. Luật lưu ở [12](12-rating-and-flags.md) §4.
+- Vì sao đưa lại sau khi đã gỡ ở `v16`: người dùng chốt 2026-09-30 rằng người chụp cần lọc nhanh sau buổi chụp,
+  và iOS 27 cho sao một chỗ ở trong Photos, nên sao không còn là trục riêng của app.
 
 ## Tiêu chí nghiệm thu
 
-**Chưa viết.** Xem [README — Việc còn nợ](../../README.md#6-việc-còn-nợ).
+**Chưa viết.** Xem [README — Việc còn nợ](../../README.md#6-việc-còn-nợ). Sao, cờ và lượt lọc có AC riêng ở
+[12](12-rating-and-flags.md) §9 và [12b](12b-culling-pass.md) §6.

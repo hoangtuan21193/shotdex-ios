@@ -1,7 +1,7 @@
 # FS-01.05 — Lọc và sắp xếp
 
 `FS-01.05` · `Features/Shared/RuleBuilderSections.swift` · `AdvancedSearchSheet`
-· `Core/Models/FilterCriteria.swift` · `SortOption` · cập nhật 2026-10-01
+· `Core/Models/FilterCriteria.swift` · `SortOption` · cập nhật 2026-10-02
 
 **Một câu:** một bộ dựng điều kiện dùng chung cho Advanced Search và Smart Album, cộng một menu lọc nhanh
 trên toolbar.
@@ -69,6 +69,8 @@ trên toolbar.
 | Tiêu cự | thật + tương đương Full Frame; chính xác · khoảng · nhóm theo góc nhìn |
 | Khổ cảm biến | Full Frame · APS-H · APS-C · Micro Four Thirds · 1-inch · Compact · Medium Format · Smartphone · Unknown |
 | Tháng chụp | **trong tháng**: một tháng + năm, khớp trọn tháng theo lịch địa phương; chip `Aug 2026`. Bộ lọc đơn giản nhận nó từ câu "tháng bận nhất" của Statistics ([FS-07.02 §2](../FS-07-statistics/02-insights.md)); bộ dựng điều kiện có nó ở trường ngày chụp |
+| Sao | **ít nhất N sao** (1–5) hoặc **chưa chấm**, chọn một. Sao hiện hành = sao chờ của ShotDex nếu có, không thì sao của Photos ([FS-01.12 §4](12-rating-and-flags.md)); chip `★ ≥ 3` / `Unrated` |
+| Cờ | **Picks · Rejected · Unflagged**, chọn nhiều (OR trong trục). Đọc từ bảng cờ riêng; chip `Picks` / `Rejected` / `Unflagged` |
 
 Nhóm góc nhìn (theo tiêu cự tương đương): < 20mm Ultra-wide · 20–34 Wide · 35–69 Standard ·
 70–134 Portrait / Short telephoto · 135–299 Telephoto · ≥ 300 Super telephoto.
@@ -80,6 +82,8 @@ Album Detail và Smart Album ([FS-06.09](../FS-06-collections/09-album-filter-me
 
 - Phần `Filter:` — All Items · Favorites · Photos Only / Videos Only (hai công tắc **loại trừ nhau**) ·
   **Advanced Filter…**
+- Ngay sau Favorites: hai hàng phẳng **Picks**, **Rejected** và menu con **Rating ▸** ([FS-01.12 §7](12-rating-and-flags.md)).
+  Bộ lọc Rejected đang bật thì thanh điều kiện có viên đỏ **Delete N** ([FS-01.12b §5](12b-culling-pass.md)).
 - Menu con **`Sort By`**: Date Taken (Newest/Oldest) + **Date Modified** (Newest/Oldest). Hệ thống **không
   có** ngày-thêm-vào-thư-viện, chỉ có ngày chụp và ngày sửa — nên nhãn phải ghi đúng là *Modified*.
   Migration thêm chỉ mục cho ngày sửa.
@@ -98,4 +102,4 @@ Album Detail và Smart Album ([FS-06.09](../FS-06-collections/09-album-filter-me
 
 **Chưa viết** cho phần cũ — xem [README — Việc còn nợ](../../README.md#6-việc-còn-nợ). Hai mục mới có AC ở spec
 sinh ra chúng: *trong tháng* ở [FS-07.03](../FS-07-statistics/03-acceptance-criteria.md) AC-17, AC-18;
-*Unsupported RAW* ở [FS-03.04b](../FS-03-photo-editor/04b-unsupported-raw.md) AC-13.
+*Unsupported RAW* ở [FS-03.04b](../FS-03-photo-editor/04b-unsupported-raw.md) AC-13. Trục *sao* và *cờ*: [FS-01.12](12-rating-and-flags.md) AC-7.
