@@ -23,6 +23,20 @@ struct RAWVerdictStore: Sendable {
     /// The index's camera as the verdict table's key (`RAWCamera.key`).
     static let cameraKeySQL = "COALESCE(normalizedCameraManufacturer, '') || '|' || normalizedCameraModel"
 
+    /// The Unsupported RAW filter's test (AC-13): the same rows as
+    /// `unreadableAssetIds`, as a condition on `photo_metadata`. The build
+    /// is the system's ("23F77"), kept to letters and digits before it goes
+    /// in.
+    static func unreadableSQL(build: String) -> String {
+        let safe = String(build.filter { $0.isLetter || $0.isNumber || $0 == "." })
+        return """
+            (normalizedCameraModel IS NOT NULL AND \(rawFilenameSQL) \
+            AND \(cameraKeySQL) IN (SELECT camera FROM raw_decoder_verdicts \
+            WHERE osBuild = '\(safe)' AND verdict = 'unreadable') \
+            AND assetId NOT IN (SELECT assetId FROM raw_pair_assets))
+            """
+    }
+
     func verdict(for camera: RAWCamera, build: String) throws -> RAWDecoderVerdict? {
         try database.reader.read { db in
             try String.fetchOne(
@@ -86,12 +100,8 @@ struct RAWVerdictStore: Sendable {
     func unreadableAssetIds(build: String) throws -> Set<String> {
         try database.reader.read { db in
             Set(try String.fetchAll(db, sql: """
-                SELECT assetId FROM photo_metadata
-                WHERE normalizedCameraModel IS NOT NULL AND \(Self.rawFilenameSQL)
-                  AND \(Self.cameraKeySQL) IN (
-                      SELECT camera FROM raw_decoder_verdicts WHERE osBuild = ? AND verdict = 'unreadable')
-                  AND assetId NOT IN (SELECT assetId FROM raw_pair_assets)
-                """, arguments: [build]))
+                SELECT assetId FROM photo_metadata WHERE \(Self.unreadableSQL(build: build))
+                """))
         }
     }
 

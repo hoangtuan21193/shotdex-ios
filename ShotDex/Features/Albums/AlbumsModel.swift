@@ -597,6 +597,8 @@ final class AlbumDetailModel: PhotoBrowsingSource {
     /// Photos ShotDex stitched into a panorama, read from the index once per
     /// model (off the main actor) for the Panoramas capture-kind filter.
     private var stitchedPanoramaIds: [String] = []
+    /// The Unsupported RAW filter's ids, from the index (FS-03.04b AC-13).
+    private let unsupportedRAWIndex: UnsupportedRAWIndex
     let sourceAlbum: PHAssetCollection?
     /// The album this model is paging, kept so a sort change can re-fetch.
     private let albumKind: AlbumItem.Kind
@@ -638,6 +640,7 @@ final class AlbumDetailModel: PhotoBrowsingSource {
         self.photoLibrary = dependencies.photoLibrary
         self.indexPipeline = dependencies.indexPipeline
         self.libraryQueries = dependencies.libraryQueries
+        self.unsupportedRAWIndex = dependencies.unsupportedRAWIndex
         self.albumKind = album.kind
         self.albumId = album.id
         let order = AlbumSortStore.order(for: album.id, isSmartAlbum: album.isSmart)
@@ -769,7 +772,8 @@ final class AlbumDetailModel: PhotoBrowsingSource {
         if filter.advancedQuery != nil { return .ordered([]) }
         let predicate = AlbumFilterPredicate.predicate(
             for: filter.criteria,
-            stitchedPanoramaIds: stitchedPanoramaIds
+            stitchedPanoramaIds: stitchedPanoramaIds,
+            unsupportedRAWIds: Array(unsupportedRAWIndex.assetIds)
         )
         return Self.fetch(key: fetchKey, order: sortOrder, filter: predicate)
     }
@@ -796,7 +800,8 @@ final class AlbumDetailModel: PhotoBrowsingSource {
         case .fetch:
             let narrowing = AlbumFilterPredicate.predicate(
                 for: filter.criteria,
-                stitchedPanoramaIds: stitchedPanoramaIds
+                stitchedPanoramaIds: stitchedPanoramaIds,
+                unsupportedRAWIds: Array(unsupportedRAWIndex.assetIds)
             )
             var result = Set<String>()
             // In chunks: a Select All over a big album is thousands of ids.

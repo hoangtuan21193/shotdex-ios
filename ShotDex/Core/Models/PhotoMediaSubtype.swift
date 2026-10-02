@@ -15,6 +15,10 @@ enum PhotoMediaSubtype: String, CaseIterable, Codable, Identifiable, Sendable {
     case timelapse
     case slowMotion
     case cinematic
+    /// RAW-only photos of a camera this iOS build can't read (FS-03.04b §3):
+    /// the second kind after Panoramas the system does not define — it asks
+    /// the verdict table, not the mask.
+    case unsupportedRAW
 
     var id: String { rawValue }
 
@@ -28,8 +32,13 @@ enum PhotoMediaSubtype: String, CaseIterable, Codable, Identifiable, Sendable {
         case .slowMotion: Int(PHAssetMediaSubtype.videoHighFrameRate.rawValue)
         case .timelapse: Int(PHAssetMediaSubtype.videoTimelapse.rawValue)
         case .cinematic: Int(PHAssetMediaSubtype.videoCinematic.rawValue)
+        // No system bit: `sqlTest` and the album's id list answer it.
+        case .unsupportedRAW: 0
         }
     }
+
+    /// Whether PhotoKit's mask defines this kind.
+    var hasSystemBit: Bool { bit != 0 }
 
     /// The SQL that decides whether a row is this kind.
     ///
@@ -39,6 +48,7 @@ enum PhotoMediaSubtype: String, CaseIterable, Codable, Identifiable, Sendable {
     var sqlTest: String {
         switch self {
         case .panorama: "((mediaSubtypes & \(bit)) != 0 OR isPanorama = 1)"
+        case .unsupportedRAW: RAWVerdictStore.unreadableSQL(build: OSRelease.current.build)
         default: "(mediaSubtypes & \(bit)) != 0"
         }
     }
@@ -53,6 +63,7 @@ enum PhotoMediaSubtype: String, CaseIterable, Codable, Identifiable, Sendable {
         case .timelapse: String(localized: "Time-lapse")
         case .slowMotion: String(localized: "Slo-mo")
         case .cinematic: String(localized: "Cinematic")
+        case .unsupportedRAW: String(localized: "Unsupported RAW", comment: "Filter: RAW photos this iOS version can't decode")
         }
     }
 
@@ -66,6 +77,7 @@ enum PhotoMediaSubtype: String, CaseIterable, Codable, Identifiable, Sendable {
         case .timelapse: "timelapse"
         case .slowMotion: "slowmo"
         case .cinematic: "video.badge.waveform"
+        case .unsupportedRAW: "exclamationmark.triangle"
         }
     }
 }

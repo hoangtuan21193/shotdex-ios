@@ -41,7 +41,8 @@ enum AlbumFilterPredicate {
     /// Nil when the criteria ask Photos for nothing.
     static func predicate(
         for criteria: FilterCriteria,
-        stitchedPanoramaIds: [String] = []
+        stitchedPanoramaIds: [String] = [],
+        unsupportedRAWIds: [String] = []
     ) -> NSPredicate? {
         var parts: [NSPredicate] = []
 
@@ -56,10 +57,16 @@ enum AlbumFilterPredicate {
 
         if !criteria.mediaSubtypes.isEmpty {
             var kinds: [NSPredicate] = criteria.mediaSubtypes
+                .filter(\.hasSystemBit)
                 .sorted { $0.bit < $1.bit }
                 .map { NSPredicate(format: "(mediaSubtypes & %d) != 0", $0.bit) }
             if criteria.mediaSubtypes.contains(.panorama), let byId = identifierPredicate(stitchedPanoramaIds) {
                 kinds.append(byId)
+            }
+            // Unsupported RAW has no system flag: the index's ids, cut to the
+            // album by the fetch itself (FS-03.04b AC-13). None → matches none.
+            if criteria.mediaSubtypes.contains(.unsupportedRAW) {
+                kinds.append(identifierPredicate(unsupportedRAWIds) ?? NSPredicate(value: false))
             }
             parts.append(NSCompoundPredicate(orPredicateWithSubpredicates: kinds))
         }
