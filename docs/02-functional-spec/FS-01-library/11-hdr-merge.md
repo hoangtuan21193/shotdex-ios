@@ -7,7 +7,8 @@
 **Một câu:** Combine Photos ▸ **HDR** ghép một loạt chụp bù trừ sáng (từ 2 khung) thành một ảnh giữ được cả vùng
 sáng của khung tối lẫn vùng tối của khung sáng. Căn khung khi chụp cầm tay, khử bóng ma bốn mức, một thanh độ mạnh.
 
-> Trạng thái: **đã build, `/verify` 2026-10-01: 19/22 AC xanh** — còn AC-14 (iPhone 12), AC-19 (18.6, Duo màn trong), AC-20 (máy thật). Mọi `⚠️ CẦN QUYẾT` đã chốt với người dùng ngày 2026-10-01.
+> Trạng thái: **đã build, `/verify` 2026-10-01: 19/22 AC xanh** — còn AC-14 (iPhone 12), AC-19 (Duo màn trong), AC-20 (máy thật).
+> Design: board `PH19_HDR`, `PH20_HDRSaveAs`, `IPP13_HDR`, `DC13_HDR` trên [canvas editor](https://claude.ai/artifact/T4tEUQrJtxBbi48HokiL9F), dựng từ số đo app 2026-10-02. Chưa có board Duo màn trong và iPad ngang. Mọi `⚠️ CẦN QUYẾT` đã chốt với người dùng ngày 2026-10-01.
 
 ## 1. Người dùng cần gì
 
@@ -147,7 +148,7 @@ Loạt thử là khung ảo có đáp án như spike §1: cảnh 14 EV dựng t�
 | AC-16 | 2 khung chỉ có trên iCloud, máy mất mạng | mở màn | *2 photos couldn't be downloaded* + Retry; không ghép thiếu khung mà không báo | `HDRStackModelTests.aMissingFrameIsCountedNotDropped` (đường iCloud: `PhotoStackModel` chung với Focus Stack, FS-01.10 AC-12) |
 | AC-17 | đang lưu | Cancel | không asset nào được tạo; thư mục tạm của phiên rỗng | `HDRExportTests.cancellingLeavesNoFile`, `HDRStackModelTests.cancellingTheSaveWritesNothing` |
 | AC-18 | chọn 2 ảnh | mở ⋯ ▸ Combine Photos | bốn dòng Focus Stack · Panorama · HDR · Stack Exposures; chọn 1 ảnh thì dòng HDR mờ | `CombinePurposeTests.theSubmenuIsFourRowsInOrder`; ảnh menu bốn dòng: iPhone 26.5 `01-combine-menu`, iPad và Duo màn ngoài (mờ khi chưa chọn ảnh nào) |
-| AC-19 | iPhone 26.5 + 18.6, iPad 13", Duo trong và ngoài | mở màn HDR với loạt 3 khung, đổi từng control, Save | ảnh từng trạng thái; không control bị cắt hay che; viewer mở ảnh vừa lưu | 🟡 iPhone 17 26.5: `hdr-panel.json` (menu, panel, Off, High, Save As, viewer sau lưu); iPad Pro 13" (M5): `hdr-panel-ipad.json` (panel, Save As); Duo màn ngoài: `hdr-panel-duo-cover.json` + `sim-shot` (panel, Save As, menu). Không cắt, không che. **Chưa có:** iOS 18.6 (màn không rẽ nhánh `#available`, sim 18.6 đang là của phiên khác), Duo màn trong (simulator không mở gập được) |
+| AC-19 | iPhone 26.5 + 18.6, iPad 13", Duo trong và ngoài | mở màn HDR với loạt 3 khung, đổi từng control, Save | ảnh từng trạng thái; không control bị cắt hay che; viewer mở ảnh vừa lưu | 🟡 iPhone 17 26.5: `hdr-panel.json` (menu, panel, Save As; viewer sau lưu đã chụp 2026-10-01); iPhone 16 **18.6**: `hdr-panel-18.json` (menu, panel, Save As); iPad Pro 13" dọc: `hdr-panel-ipad.json`; Duo màn ngoài: `hdr-panel-duo-cover.json` + `sim-shot`. Không cắt, không che. Board `PH19_HDR`, `PH20_HDRSaveAs`, `IPP13_HDR`, `DC13_HDR` trên canvas editor khớp dump trong 2 pt (`Tools/design-board compare`). **Chưa có:** Duo màn trong (simulator không mở gập được) |
 | AC-20 | quyền ảnh `.limited`, cả loạt nằm trong tập được chọn | Save | ảnh mới hiện trong lưới Library | ⚠️ chưa có |
 | AC-21 | loạt 3 CR3 + 2 JPEG | mở màn | ghép từ bản đã render của cả 5; dòng báo *Some of these photos aren't RAW…* | `HDRBracketOrderTests.aMixedSeriesIsFlaggedAndDoesNotMergeFromRAW`, `HDRFrameSourceTests.aRAWReadsLinearOrProcessed`, `HDRStackModelTests.aMixedSeriesSaysItUsesTheProcessedVersions` |
 | AC-22 | Save, chọn HEIC | lưu | ảnh ra là HEIC; máy không ghi được HEIC thì báo trước và lưu JPEG | `HDRExportTests.writesTheFormatAskedFor`, `HDRStackModelTests.saveWritesTheFormatAndTheReferencesMetadata`; `hdr-panel.json` ảnh `05-save-format`: alert Save As JPEG · HEIC · Cancel (máy không ghi được HEIC: chỉ JPEG + câu báo — chỉ đọc code, simulator ghi được HEIC) |
