@@ -148,6 +148,10 @@ final class VideoStudioModel {
 
     var isServerRun: Bool { serverWorkDirectory != nil }
 
+    /// Files dropped from another app are imported into Photos first, so a
+    /// project of server photos refuses them (FS-17.06 §5b).
+    var acceptsFilesFromOtherApps: Bool { !isServerRun }
+
     /// The copy on disk behind a clip, for a server photo; nil for a
     /// library asset. Thumbnails read it instead of PhotoKit.
     func serverFileURL(for assetID: String) -> URL? { serverFiles[assetID] }

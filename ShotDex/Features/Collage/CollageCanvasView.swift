@@ -432,7 +432,7 @@ struct CollageCanvasView: View {
         }
         // A collage of server photos keeps the library out of it: a file from
         // another app would be imported into Photos first (FS-17.06 §5b).
-        guard !model.isServerRun, PhotoDropImport.canImport(providers) else { return false }
+        guard model.acceptsFilesFromOtherApps, PhotoDropImport.canImport(providers) else { return false }
         model.dropImportTask = Task { @MainActor in
             model.isImportingDrop = true
             let result = await PhotoDropImport.importAssets(from: providers, into: photoLibrary)

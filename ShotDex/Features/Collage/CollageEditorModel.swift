@@ -192,6 +192,10 @@ final class CollageEditorModel {
     /// True when the collage started from server photos (FS-17.06 §5b).
     var isServerRun: Bool { serverWorkDirectory != nil }
 
+    /// Files dropped from another app are imported into Photos first, so a
+    /// project of server photos refuses them (FS-17.06 §5b).
+    var acceptsFilesFromOtherApps: Bool { !isServerRun }
+
     // MARK: - Loading
 
     /// Screen-quality previews for every selected asset. One request per asset,

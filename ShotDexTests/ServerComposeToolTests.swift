@@ -196,4 +196,30 @@ import Testing
         #expect(model.savedAssetID == nil)
         #expect(try FileManager.default.attributesOfItem(atPath: file.path)[.size] as? Int ?? 0 > 0)
     }
+
+    /// AC-82: a collage or video of server photos refuses files dropped from
+    /// another app; a library one still takes them.
+    @MainActor
+    @Test func serverRunsRefuseFilesFromOtherApps() throws {
+        let run = Run()
+        defer { try? FileManager.default.removeItem(at: run.directory) }
+        let photos = try run.photos(["a.JPG", "b.JPG"], width: 64, height: 48)
+        #expect(!collage(photos, run: run).acceptsFilesFromOtherApps)
+
+        let dependencies = AppDependencies.preview()
+        let library = CollageEditorModel(
+            photos: [], photoLibrary: dependencies.photoLibrary, indexPipeline: dependencies.indexPipeline,
+            overlayFontRecents: dependencies.overlayFontRecents, presetStore: dependencies.collagePresets
+        )
+        #expect(library.acceptsFilesFromOtherApps)
+
+        let video = VideoStudioModel(
+            photos: photos.map(PhotoEditOrigin.serverFile), mode: .multiClip,
+            service: dependencies.videoStudio, photoLibrary: dependencies.photoLibrary,
+            overlayFontRecents: dependencies.overlayFontRecents, overlayImages: dependencies.overlayImages,
+            serverWorkDirectory: run.directory
+        )
+        defer { video.close() }
+        #expect(!video.acceptsFilesFromOtherApps)
+    }
 }

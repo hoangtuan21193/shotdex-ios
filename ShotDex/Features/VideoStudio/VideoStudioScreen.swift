@@ -584,7 +584,7 @@ struct VideoStudioScreen: View {
         }
         // A project of server photos keeps files from other apps out: they
         // would be imported into Photos first (FS-17.06 §5b).
-        guard !model.isServerRun, PhotoDropImport.canImport(providers) else { return false }
+        guard model.acceptsFilesFromOtherApps, PhotoDropImport.canImport(providers) else { return false }
         model.dropImportTask = Task { @MainActor in
             let result = await PhotoDropImport.importAssets(
                 from: providers,
