@@ -31,6 +31,7 @@ struct ShotDexApp: App {
                 .environment(dependencies.photoLibrary)
                 .environment(dependencies.serverUploadIndex)
                 .environment(dependencies.unsupportedRAWIndex)
+                .environment(dependencies.photoMarks)
                 .environment(dependencies.fileServerCatalog)
                 .onChange(of: scenePhase) { _, phase in
                     if phase == .background {
@@ -91,6 +92,8 @@ struct ShotDexApp: App {
                     }
                 }
                 .task {
+                    // Flags and pending stars, for the grid's glyphs (FS-01.12 §4).
+                    await dependencies.photoMarks.loadIfNeeded()
                     // A look still waiting from a launch that ended mid-import.
                     await dependencies.lookInbox.drain()
                     // Cheap: a few SELECT DISTINCTs and one Spotlight write.

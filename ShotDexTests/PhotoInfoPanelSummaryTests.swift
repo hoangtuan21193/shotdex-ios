@@ -63,7 +63,8 @@ struct PhotoInfoPanelSummaryTests {
     private static func make(
         _ metadata: PhotoMetadata,
         width: Double,
-        now: Date = Self.shotDate
+        now: Date = Self.shotDate,
+        marks: PhotoMarkSummary? = nil
     ) -> PhotoInfoPanelSummary {
         PhotoInfoPanelSummary(
             metadata: metadata,
@@ -73,8 +74,39 @@ struct PhotoInfoPanelSummaryTests {
             now: now,
             locale: Locale(identifier: "en_GB"),
             availableWidth: width,
+            marks: marks,
             measureDetail: measure
         )
+    }
+
+    // MARK: Stars and flags (FS-01.12 §7)
+
+    @Test func appendsStars() {
+        let summary = Self.make(Self.metadata(), width: 900, marks: PhotoMarkSummary(rating: 4, flag: nil))
+
+        #expect(summary.detailLine == "Canon EOS R6 · 400mm f/7.1 1/1000 ISO 3200 · 28.4 MB · ★★★★☆")
+        #expect(summary.accessibilityText.hasSuffix("4 stars"))
+    }
+
+    @Test func appendsFlag() {
+        let summary = Self.make(Self.metadata(), width: 900, marks: PhotoMarkSummary(rating: 4, flag: .pick))
+
+        #expect(summary.detailLine?.hasSuffix("★★★★☆ · Picked") == true)
+        #expect(summary.accessibilityText.hasSuffix("4 stars, Picked"))
+    }
+
+    @Test func noMarksAddsNothing() {
+        let plain = Self.make(Self.metadata(), width: 900)
+        let unmarked = Self.make(Self.metadata(), width: 900, marks: PhotoMarkSummary(rating: 0, flag: nil))
+
+        #expect(unmarked == plain)
+    }
+
+    @Test func marksOutrankExposureWhenTight() {
+        // Width for "28.4 MB · ★★★★☆ · Rejected" but not the exposure group.
+        let summary = Self.make(Self.metadata(), width: 170, marks: PhotoMarkSummary(rating: 4, flag: .reject))
+
+        #expect(summary.detailLine == "28.4 MB · ★★★★☆ · Rejected")
     }
 
     @Test func widePanelKeepsCameraAndExposure() {

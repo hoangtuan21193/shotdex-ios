@@ -125,7 +125,7 @@ Chốt 2026-10-02.
 
 | # | Cho | Khi | Thì | Chứng minh bằng |
 |---|---|---|---|---|
-| AC-1 | iOS 26.5, ảnh A chưa có sao, viewer đang mở A | bấm phím `4` | bảng sao chờ có đúng 1 dòng A = 4; bảng metadata chính không đổi; sau **Clear local metadata index** và index lại, lọc ★ ≥ 4 vẫn ra A | ⚠️ chưa có — test DB |
+| AC-1 | iOS 26.5, ảnh A chưa có sao, viewer đang mở A | bấm phím `4` | bảng sao chờ có đúng 1 dòng A = 4; bảng metadata chính không đổi; sau **Clear local metadata index** và index lại, lọc ★ ≥ 4 vẫn ra A | ✅ `PhotoMarksStoreTests.pendingRowOnly`, `.clearIndexKeepsMarks`, `.currentRatingIsPendingElsePhotos`; phím thật qua `ShotDexUITests/scripts/rating-viewer-key.json` (iPhone 17 26.5: phím `4` → dòng 2 `116.3 MB · ★★★★☆`, Rating ▸ đánh dấu ★★★★, None xoá) |
 | AC-2 | iOS 27, chọn 300 ảnh chưa có sao | ⋯ → Rating ▸ ★★★ | đúng 1 khối thay đổi PhotoKit mang 300 yêu cầu; đọc lại 300 ảnh có sao = 3; bảng sao chờ có 0 dòng; lưới không nạp lại | ⚠️ chưa có — test với lớp giả PhotoKit |
 | AC-3 | lần mở app đầu trên iOS 27: bảng sao chờ có 1.240 dòng, trong đó 5 ảnh đã bị xoá và 3 ảnh Photos đã có sao khác | app mở xong first paint | đúng 1 khối thay đổi mang 1.232 yêu cầu; 3 ảnh giữ sao của Photos; bảng chờ còn 0 dòng; banner "Moved 1,232 star ratings to Photos." hiện đúng một lần | ⚠️ chưa có — test với lớp giả PhotoKit |
 | AC-4 | như AC-3, khối thay đổi trả lỗi (giả lập) | app mở | bảng chờ vẫn 1.240 dòng; lọc ★ ≥ 1 vẫn ra đủ ảnh còn tồn tại; không banner; lần mở app sau thử lại đúng 1 lần | ⚠️ chưa có |
@@ -137,7 +137,7 @@ Chốt 2026-10-02.
 | AC-10 | iOS 27, ảnh A 2★, ghi sao trả lỗi (giả lập) | bấm `5` | ô và viewer quay về 2★ trong ≤ 1 s; có "Couldn't save rating." + Try Again; bảng sao chờ không có dòng | ⚠️ chưa có |
 | AC-11 | iOS 27, sao của ảnh A đổi trong app Photos (hoặc máy khác), ngày sửa của A không đổi | lượt index tăng dần kế tiếp chạy xong | lọc ★ ≥ N (N = sao mới) có A; 0 lần đọc file của A | ⚠️ chưa có — test `IndexRunChanges` với nguồn giả (thêm 2026-10-03) |
 
-**Chưa chứng minh được:** AC-1 → AC-11 (tính năng chưa có code).
+**Chưa chứng minh được:** AC-2 → AC-11 (đang làm theo plan [rating-flags-cull](../../_plans/2026-10-02-rating-flags-cull.md)).
 
 ## 10. Rủi ro
 

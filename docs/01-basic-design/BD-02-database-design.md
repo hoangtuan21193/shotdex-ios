@@ -41,7 +41,7 @@ placeCountry, placeCountryCode, placeAddress TEXT
 placeSearchText TEXT             -- viết thường + bỏ dấu; cột DUY NHẤT tìm theo địa điểm
 placeCellKey TEXT, placeResolvedAt INTEGER   -- ô lưới ~110m, ghi bằng đường riêng
 isFavorite INTEGER
-rating INTEGER                   -- sao 0–5 của Photos (iOS 27+), đọc lại từ ảnh như favorite; dưới 27 luôn 0
+rating INTEGER                   -- sao 0–5 của Photos (iOS 27+), đọc lại từ ảnh như favorite; NULL = chưa đọc (dưới 27, dòng cũ), truy vấn coi là 0
 mediaSubtypes INTEGER            -- mặt nạ bit kiểu chụp, lấy thẳng từ thư viện hệ thống
 isPanorama INTEGER               -- cờ hệ thống HOẶC thẻ XMP của ShotDex; xem quy tắc dưới
 indexedAt INTEGER

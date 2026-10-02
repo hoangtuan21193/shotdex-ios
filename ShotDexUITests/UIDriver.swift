@@ -7,7 +7,8 @@ import Foundation
 /// only the two or three it needs.
 struct UIDriverStep: Decodable {
     /// `launch`, `activate`, `tap`, `tapIndex`, `longPress`, `typeText`,
-    /// `swipe`, `drag`, `scrollTo`, `wait`, `screenshot`, `dump`, `back`, `home`.
+    /// `key`, `swipe`, `drag`, `scrollTo`, `wait`, `screenshot`, `dump`,
+    /// `back`, `home`.
     let action: String
     /// Accessibility label or identifier of the element to act on.
     let label: String?
@@ -32,7 +33,9 @@ struct UIDriverStep: Decodable {
     /// an axis levels nothing.
     let toX: Double?
     let toY: Double?
-    /// Text for `typeText`.
+    /// Text for `typeText`; for `key`, the one key to press — a character,
+    /// or `left` / `right` / `escape` — with `cmd`, `shift`, `option` in
+    /// `direction` (comma-separated) as modifiers.
     let text: String?
     /// Seconds for `wait`, and the timeout an element wait may take.
     let seconds: Double?

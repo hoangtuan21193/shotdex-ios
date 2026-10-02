@@ -151,6 +151,27 @@ final class UIDriverTests: XCTestCase {
             } else {
                 app.typeText(text)
             }
+        case "key":
+            // A hardware-keyboard key (FS-01.12 §6): what a shortcut on a
+            // hidden button answers. Sent to the app, not to an element, so
+            // whatever has focus gets it the way a real keyboard would.
+            guard let text = step.text else { throw DriverError.missing("text") }
+            let key: String = switch text {
+            case "left": XCUIKeyboardKey.leftArrow.rawValue
+            case "right": XCUIKeyboardKey.rightArrow.rawValue
+            case "escape": XCUIKeyboardKey.escape.rawValue
+            default: text
+            }
+            var flags: XCUIElement.KeyModifierFlags = []
+            for modifier in (step.direction ?? "").split(separator: ",") {
+                switch modifier.trimmingCharacters(in: .whitespaces) {
+                case "cmd": flags.insert(.command)
+                case "shift": flags.insert(.shift)
+                case "option": flags.insert(.option)
+                default: break
+                }
+            }
+            app.typeKey(key, modifierFlags: flags)
         case "drag":
             guard let start = coordinate(for: step), let toX = step.toX, let toY = step.toY else {
                 throw DriverError.missing("drag needs x, y, toX and toY")

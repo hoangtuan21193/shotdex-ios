@@ -141,6 +141,11 @@ struct FilterCriteria: Equatable, Codable, Sendable {
 
     var favoritesOnly = false
 
+    /// Rating ▸ in the filter menu (FS-01.12 §7). `nil` is Any. Tested
+    /// against the *current* rating — the pending row when there is one, else
+    /// what Photos holds.
+    var ratingFilter: RatingFilter?
+
     /// "In month": the capture date falls in this calendar month, local time
     /// (FS-01.05 §4). Set by Insights' busiest-month sentence.
     var captureMonth: CaptureMonth?
@@ -163,6 +168,7 @@ struct FilterCriteria: Equatable, Codable, Sendable {
             && mediaKinds.isEmpty
             && mediaSubtypes.isEmpty
             && !favoritesOnly
+            && ratingFilter == nil
             && captureMonth == nil
             && (searchText?.isEmpty ?? true)
     }
@@ -183,6 +189,7 @@ struct FilterCriteria: Equatable, Codable, Sendable {
         if !focalRange.isEmpty { count += 1 }
         if !mediaKinds.isEmpty { count += 1 }
         if favoritesOnly { count += 1 }
+        if ratingFilter != nil { count += 1 }
         if captureMonth != nil { count += 1 }
         if let searchText, !searchText.isEmpty { count += 1 }
         return count
@@ -200,6 +207,7 @@ struct FilterCriteria: Equatable, Codable, Sendable {
         case isoRange, shutterRange, apertureRange, focalRange, focalLengthMode
         case mediaKinds, favoritesOnly, searchText
         case captureMonth
+        case ratingFilter
     }
 
     /// Tolerant decode: every key is optional-with-default so stored albums
@@ -221,6 +229,7 @@ struct FilterCriteria: Equatable, Codable, Sendable {
         mediaKinds = try c.decodeIfPresent(Set<MediaKind>.self, forKey: .mediaKinds) ?? []
         favoritesOnly = try c.decodeIfPresent(Bool.self, forKey: .favoritesOnly) ?? false
         captureMonth = try? c.decodeIfPresent(CaptureMonth.self, forKey: .captureMonth)
+        ratingFilter = try? c.decodeIfPresent(RatingFilter.self, forKey: .ratingFilter)
         searchText = try c.decodeIfPresent(String.self, forKey: .searchText)
     }
 }

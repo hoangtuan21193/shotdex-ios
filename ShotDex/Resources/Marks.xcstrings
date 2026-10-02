@@ -1,0 +1,62 @@
+{
+  "sourceLanguage": "en",
+  "strings": {
+    "%lld stars": {
+      "comment": "VoiceOver: a photo's star rating (plural)",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld star"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld stars"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "Clear Flag": {
+      "comment": "Flag menu: remove Pick or Reject",
+      "extractionState": "manual"
+    },
+    "Flag": {
+      "comment": "Menu: the Pick/Reject submenu",
+      "extractionState": "manual"
+    },
+    "None": {
+      "comment": "Rating menu: clear the stars",
+      "extractionState": "manual"
+    },
+    "Pick": {
+      "comment": "Flag menu: keep this photo",
+      "extractionState": "manual"
+    },
+    "Picked": {
+      "comment": "A photo's flag: kept in a culling pass",
+      "extractionState": "manual"
+    },
+    "Rating": {
+      "comment": "Menu: the star-rating submenu",
+      "extractionState": "manual"
+    },
+    "Reject": {
+      "comment": "Flag menu: drop this photo",
+      "extractionState": "manual"
+    },
+    "Rejected": {
+      "comment": "A photo's flag: dropped in a culling pass",
+      "extractionState": "manual"
+    }
+  },
+  "version": "1.0"
+}

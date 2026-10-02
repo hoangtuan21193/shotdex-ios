@@ -582,6 +582,41 @@ final class AppDatabase: Sendable {
             }
         }
 
+        // FS-01.12: stars and Pick/Reject come back — the decision `v15`/`v16`
+        // took out, reversed by the user on 2026-09-30.
+        //
+        // Flags and not-yet-in-Photos stars are typed by the user and cannot
+        // be read back from anywhere, so each gets a table the indexer never
+        // rewrites (BD-02 §1). Two tables, not one: the star table empties
+        // itself once iOS 27 holds the ratings in Photos, the flag table
+        // lives for ever, and a shared row would make "empty" mean two
+        // things.
+        //
+        // `photo_metadata.rating` is the exception that proves the rule: the
+        // rating Photos holds on iOS 27, which can be read back off the asset
+        // like `isFavorite`. NULL means "not read yet" — below iOS 27, and
+        // for rows written before this column — and every query takes it as
+        // 0. The current rating is the pending row when there is one, else
+        // this column (FS-01.12 §4).
+        migrator.registerMigration("v27-ratingsAndFlags") { db in
+            try db.create(table: "photo_flag") { t in
+                t.primaryKey("assetId", .text)
+                t.column("flag", .text).notNull()
+                t.column("flaggedAt", .integer).notNull()
+            }
+            // "Show me the picks" is a filter over the whole library.
+            try db.create(index: "photo_flag_flag", on: "photo_flag", columns: ["flag"])
+            try db.create(table: "pending_photo_rating") { t in
+                t.primaryKey("assetId", .text)
+                t.column("rating", .integer).notNull()
+                t.column("ratedAt", .integer).notNull()
+            }
+            try db.alter(table: "photo_metadata") { t in
+                t.add(column: "rating", .integer)
+            }
+            try db.create(index: "photo_metadata_rating", on: "photo_metadata", columns: ["rating"])
+        }
+
         return migrator
     }
 }

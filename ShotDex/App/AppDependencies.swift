@@ -122,6 +122,10 @@ final class AppDependencies {
     /// The photos whose RAW this iOS build can't read (FS-03.04b §3), kept
     /// in memory for the grid's glyph.
     let unsupportedRAWIndex: UnsupportedRAWIndex
+    /// Pick/Reject flags and the star ratings not yet in Photos (FS-01.12).
+    let photoMarksStore: PhotoMarksStore
+    /// The same marks in memory, and the one place they are written.
+    let photoMarks: PhotoMarks
     /// The connections the selection ⋯ menu lists by name.
     let fileServerCatalog: FileServerCatalog
     /// Files brought down from a server (FS-17 §4).
@@ -254,6 +258,9 @@ final class AppDependencies {
         self.originalDownloads = originalDownloads
         let unsupportedRAWIndex = UnsupportedRAWIndex(store: RAWVerdictStore(database: database))
         self.unsupportedRAWIndex = unsupportedRAWIndex
+        let photoMarksStore = PhotoMarksStore(database: database)
+        self.photoMarksStore = photoMarksStore
+        self.photoMarks = PhotoMarks(store: photoMarksStore)
         videoStudio.unreadableRAWIds = { unsupportedRAWIndex.assetIds }
         let recentActivity = RecentActivityStore()
         self.recentActivity = recentActivity

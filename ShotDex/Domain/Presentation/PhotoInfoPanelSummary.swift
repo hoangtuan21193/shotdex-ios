@@ -16,6 +16,10 @@ import Foundation
 /// - exposure (focal / aperture / shutter / ISO) and file size never drop
 /// - the camera model drops when line 2 runs out of width
 /// - the lens name is not shown at all; it lives in the Photo Info sheet
+/// - the photo's stars and flag (`★★★★☆ · Picked`, FS-01.12 §7) close the
+///   line and outrank the exposure group: when even exposure + size + marks
+///   do not fit, exposure goes and the marks stay — they are the one thing on
+///   the line the user set
 struct PhotoInfoPanelSummary: Equatable {
     /// Line 1 — capture date/time only: `Today 14:32`, `Yesterday 14:32`,
     /// `20 Jul 14:32`, `20 Jul 2024 14:32`.
@@ -44,6 +48,7 @@ struct PhotoInfoPanelSummary: Equatable {
         now: Date = Date(),
         locale: Locale = .current,
         availableWidth: Double,
+        marks: PhotoMarkSummary? = nil,
         measureDetail: (String) -> Double
     ) {
         let camera = metadata.normalizedCameraModel
@@ -66,10 +71,15 @@ struct PhotoInfoPanelSummary: Equatable {
             locale: locale
         ) ?? fallbackTitle ?? String(localized: "Photo")
 
-        // Line 2: camera + exposure + size, else exposure + size (never dropped).
-        let detailFallback = MetadataFormatter.metadataLine([exposure, size])
+        // Line 2: camera + exposure + size, else exposure + size (never
+        // dropped) — each with the marks at the end when the photo has any,
+        // and size + marks as the last resort.
+        let markText = marks.flatMap { MarkCopy.viewerSegment($0, locale: locale) }
+        let detailFallback = MetadataFormatter.metadataLine([exposure, size, markText])
+        var candidates = [MetadataFormatter.metadataLine([camera, exposure, size, markText]), detailFallback]
+        if markText != nil { candidates.append(MetadataFormatter.metadataLine([size, markText])) }
         let detailLine = Self.firstThatFits(
-            [MetadataFormatter.metadataLine([camera, exposure, size]), detailFallback],
+            candidates,
             budget: availableWidth / Self.scaleTolerance,
             measure: measureDetail
         ) ?? detailFallback
@@ -80,6 +90,7 @@ struct PhotoInfoPanelSummary: Equatable {
             lensFull,
             exposure,
             size,
+            marks.flatMap { MarkCopy.accessibility($0, locale: locale) },
         ]) ?? titleLine
 
         self.titleLine = titleLine

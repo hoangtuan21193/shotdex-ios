@@ -112,6 +112,8 @@ struct PhotoDetailScreen: View {
     @State private var unsupportedRAWMessage: UnsupportedRAWMessage?
     @State private var isUnsupportedRAWCardPresented = false
     @Environment(UnsupportedRAWIndex.self) private var unsupportedRAWIndex: UnsupportedRAWIndex?
+    /// Stars and flags (FS-01.12): read for line 2, written by ⋯ and the keys.
+    @Environment(PhotoMarks.self) private var photoMarks: PhotoMarks?
     @State private var compressionTarget: PhotoDetailActionTarget?
     @State private var videoStudioTarget: PhotoDetailActionTarget?
     /// Asset saved by the editor, waiting for its cover to finish dismissing —
@@ -731,6 +733,7 @@ struct PhotoDetailScreen: View {
             }
             .keyboardShortcut(.delete, modifiers: [])
         }
+        .background { markKeyButtons(metadata) }
         .frame(maxWidth: .infinity)
         .padding(.horizontal, AppTheme.Size.floatingChromeMargin)
         .padding(.bottom, AppTheme.Spacing.md)
@@ -745,6 +748,11 @@ struct PhotoDetailScreen: View {
         let actions = dependencies.viewerAssetActions
         let id = metadata.assetId
         Menu {
+            // Marks first: the viewer's chrome stays as it is, so the menu
+            // is where they are set by touch (FS-01.12 §7).
+            Section {
+                ratingPicker(metadata)
+            }
             Section {
                 Button {
                     actions.presentAddToCollection(ids: [id])
@@ -1158,8 +1166,74 @@ struct PhotoDetailScreen: View {
             fileSize: currentFileSize ?? metadata.fileSize,
             fallbackTitle: currentFilename,
             availableWidth: Double(max(0, panelContentWidth - Self.panelTextInsets)),
+            marks: currentMarks(metadata),
             measureDetail: { Self.width(of: $0, style: .caption2) }
         )
+    }
+
+    // MARK: Stars and flags (FS-01.12)
+
+    /// The current photo's marks. Reads `version` so a change from a key, the
+    /// menu or another surface redraws line 2.
+    private func currentMarks(_ metadata: PhotoMetadata) -> PhotoMarkSummary? {
+        guard let photoMarks else { return nil }
+        _ = photoMarks.version
+        return photoMarks.summary(for: metadata.assetId, photosRating: currentAsset?.photosStarRating)
+    }
+
+    /// Rating ▸ — None, ★ … ★★★★★, the current one checked.
+    private func ratingPicker(_ metadata: PhotoMetadata) -> some View {
+        let current = currentMarks(metadata)?.rating ?? 0
+        return Picker(selection: Binding(
+            get: { current },
+            set: { applyRating($0, to: metadata.assetId) }
+        )) {
+            ForEach(StarRating.range, id: \.self) { stars in
+                Text(stars == 0 ? MarkCopy.noRating : String(repeating: "★", count: stars))
+                    .accessibilityLabel(stars == 0 ? MarkCopy.noRating : MarkCopy.starsAccessibility(stars))
+                    .tag(stars)
+            }
+        } label: {
+            Label(MarkCopy.rating, systemImage: "star")
+        }
+        .pickerStyle(.menu)
+    }
+
+    private func applyRating(_ rating: Int, to assetId: String) {
+        guard let photoMarks else { return }
+        let photosRating = currentAsset?.photosStarRating
+        Task {
+            await photoMarks.setRating(
+                rating, ids: [assetId],
+                photosRatings: photosRating.map { [assetId: $0] } ?? [:]
+            )
+        }
+    }
+
+    private func applyMarkKey(_ action: MarkKeyAction, _ metadata: PhotoMetadata) {
+        switch action {
+        case .rate(let stars): applyRating(stars, to: metadata.assetId)
+        case .flag: break
+        }
+    }
+
+    /// `0`–`5` (FS-01.12 §6) on hidden buttons: a shortcut inside a closed
+    /// `Menu` never fires, so the keys hang here and call what the menu row
+    /// calls. Still listed in the ⌘ shortcut overlay on iPad.
+    private func markKeyButtons(_ metadata: PhotoMetadata) -> some View {
+        ZStack {
+            ForEach(MarkKeyCommand.bindings.filter { if case .rate = $0.action { true } else { false } }, id: \.key) { binding in
+                Button {
+                    applyMarkKey(binding.action, metadata)
+                } label: {
+                    Text(binding.action.shortcutTitle)
+                }
+                .keyboardShortcut(KeyEquivalent(binding.key), modifiers: [])
+            }
+        }
+        .opacity(0)
+        .frame(width: 0, height: 0)
+        .accessibilityHidden(true)
     }
 
     /// Announces every field even when the visible lines dropped some, plus

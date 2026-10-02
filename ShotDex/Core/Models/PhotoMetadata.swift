@@ -77,6 +77,13 @@ struct PhotoMetadata: Codable, Equatable, Identifiable, Sendable {
     /// the counter). See migration `v5-readAttempts`.
     var readAttempts: Int = 0
 
+    /// The star rating Photos holds for the asset — iOS 27 and later only,
+    /// read off `PHAsset.rating` like `isFavorite`. Nil = not read (below
+    /// iOS 27, or a row from before the column); queries take it as 0. Not
+    /// the rating the app shows: a pending row in `pending_photo_rating`
+    /// wins over it (FS-01.12 §4).
+    var rating: Int? = nil
+
     var id: String { assetId }
 
     /// Bump whenever a new build extracts data that older rows lack (a new
