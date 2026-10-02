@@ -136,6 +136,44 @@ struct PhotoMarksTests {
         #expect(writer.ratings == ["A": 2, "B": 0])
         #expect(marks.rating(for: "A") == 2)
     }
+
+    // MARK: Write failure (FS-01.12 AC-10)
+
+    /// AC-10: A shows 2★, Photos refuses the write of 5 → A shows 2★ again as
+    /// soon as the write returns, the failure is announced once, and no
+    /// pending row is left behind.
+    @Test func photosWriteFailureReverts() async throws {
+        let store = PhotoMarksStore(database: try AppDatabase.makeEmpty())
+        let writer = FakePropertyWriter(modificationDate: 100)
+        writer.failure = CocoaError(.fileWriteUnknown)
+        let marks = PhotoMarks(store: store, ratingWriter: writer, readPhotosRatings: { _ in ["A": 2] })
+        var announced = 0
+        marks.onRatingWriteFailed = { announced += 1 }
+        let before = marks.version
+
+        await marks.setRating(5, ids: ["A"], photosRatings: ["A": 2])
+
+        #expect(marks.rating(for: "A", photosRating: 2) == 2)
+        #expect(marks.version == before + 2)
+        #expect(announced == 1)
+        #expect(marks.failedRatingWrite == FailedRatingWrite(ratings: ["A": 5]))
+        #expect(try store.pendingRatingCount() == 0)
+    }
+
+    @Test func tryAgainRetriesSameIds() async throws {
+        let writer = FakePropertyWriter(modificationDate: 100)
+        writer.failure = CocoaError(.fileWriteUnknown)
+        let marks = PhotoMarks(store: PhotoMarksStore(database: try AppDatabase.makeEmpty()), ratingWriter: writer)
+        await marks.setRating(4, ids: ["A", "B"], photosRatings: [:])
+
+        writer.failure = nil
+        await marks.retryFailedRatingWrite()
+
+        #expect(writer.blocks == [2])
+        #expect(writer.ratings == ["A": 4, "B": 4])
+        #expect(marks.failedRatingWrite == nil)
+        #expect(marks.rating(for: "B") == 4)
+    }
 }
 
 /// Counts blocks and requests the way PhotoKit would see them; moves each
@@ -144,7 +182,11 @@ final class FakePropertyWriter: PhotoPropertyWriting, @unchecked Sendable {
     private let lock = NSLock()
     private var _blocks: [Int] = []
     private var _ratings: [String: Int] = [:]
-    var failure: Error?
+    private var _failure: Error?
+    var failure: Error? {
+        get { lock.withLock { _failure } }
+        set { lock.withLock { _failure = newValue } }
+    }
     let modificationDate: Int
 
     init(modificationDate: Int) { self.modificationDate = modificationDate }
@@ -154,7 +196,7 @@ final class FakePropertyWriter: PhotoPropertyWriting, @unchecked Sendable {
 
     func setRatings(_ ratings: [String: Int]) async throws -> PropertyWriteResult {
         try lock.withLock {
-            if let failure { throw failure }
+            if let failure = _failure { throw failure }
             _blocks.append(ratings.count)
             _ratings.merge(ratings) { $1 }
         }

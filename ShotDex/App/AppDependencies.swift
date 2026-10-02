@@ -271,6 +271,11 @@ final class AppDependencies {
         // `pending_photo_rating` (FS-01.12 §4). Decided here, once.
         var ratingWriter: (any PhotoPropertyWriting)?
         if #available(iOS 27, *) { ratingWriter = PhotoKitPropertyWriter() }
+        #if DEBUG
+        if ratingWriter != nil, ProcessInfo.processInfo.arguments.contains(FailingPropertyWriter.launchArgument) {
+            ratingWriter = FailingPropertyWriter()
+        }
+        #endif
         let photoMarks = PhotoMarks(
             store: photoMarksStore,
             metadataStore: metadataStore,
@@ -331,7 +336,15 @@ final class AppDependencies {
         self.lookPresets = LookPresetStore()
         self.importedLUTs = ImportedLUTStore()
         self.lookExchange = LookExchangeModel(looks: lookPresets, luts: importedLUTs)
-        self.banner = AppBannerModel()
+        let banner = AppBannerModel()
+        self.banner = banner
+        // A star Photos refused goes back on the tile and says so, with the
+        // same command one tap away (FS-01.12 AC-10, NF-04).
+        photoMarks.onRatingWriteFailed = { [weak photoMarks] in
+            banner.show(MarkCopy.ratingWriteFailed, actionTitle: MarkCopy.tryAgain) {
+                Task { await photoMarks?.retryFailedRatingWrite() }
+            }
+        }
         self.lookInbox = LookInbox(looks: lookPresets, luts: importedLUTs, banner: banner)
         self.collectionsLayout = CollectionsLayoutStore()
         self.spotlight = SpotlightIndexer(

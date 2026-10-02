@@ -37,6 +37,10 @@
       "comment": "Flag menu: remove Pick or Reject",
       "extractionState": "manual"
     },
+    "Couldn't save rating.": {
+      "comment": "Banner: writing a star rating to Photos failed",
+      "extractionState": "manual"
+    },
     "Flag": {
       "comment": "Menu: the Pick/Reject submenu",
       "extractionState": "manual"
@@ -79,6 +83,10 @@
     },
     "Remove rating filter, unrated": {
       "comment": "VoiceOver: remove the rating chip",
+      "extractionState": "manual"
+    },
+    "Try Again": {
+      "comment": "Banner action: repeat the failed write",
       "extractionState": "manual"
     },
     "Unflagged": {

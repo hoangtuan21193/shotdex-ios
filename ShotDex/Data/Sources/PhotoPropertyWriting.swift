@@ -64,3 +64,16 @@ struct PhotoKitPropertyWriter: PhotoPropertyWriting {
         })
     }
 }
+
+#if DEBUG
+/// `-ShotDexFailRatingWrites`: every write is refused, so the "Couldn't save
+/// rating." path can be seen on a simulator (FS-01.12 AC-10).
+struct FailingPropertyWriter: PhotoPropertyWriting {
+    static let launchArgument = "-ShotDexFailRatingWrites"
+
+    func setRatings(_ ratings: [String: Int]) async throws -> PropertyWriteResult {
+        try await Task.sleep(for: .milliseconds(300))
+        throw CocoaError(.fileWriteUnknown)
+    }
+}
+#endif

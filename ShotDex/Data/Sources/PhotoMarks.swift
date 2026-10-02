@@ -55,6 +55,8 @@ final class PhotoMarks {
     /// Set when a write to Photos failed; the host shows "Couldn't save
     /// rating." with Try Again (FS-01.12 AC-10).
     private(set) var failedRatingWrite: FailedRatingWrite?
+    /// Told when a write to Photos failed — the host raises the banner.
+    @ObservationIgnored var onRatingWriteFailed: (@MainActor () -> Void)?
 
     init(
         store: PhotoMarksStore,
@@ -190,6 +192,7 @@ final class PhotoMarks {
             for (id, rating) in removedPending { pendingRatings[id] = rating }
             failedRatingWrite = FailedRatingWrite(ratings: ratings)
             version += 1
+            onRatingWriteFailed?()
         }
     }
 

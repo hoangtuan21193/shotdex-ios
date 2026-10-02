@@ -1,0 +1,14 @@
+{
+  "steps": [
+    { "action": "launch", "arguments": ["-ShotDexFailRatingWrites"] },
+    { "action": "wait", "seconds": 8 },
+    { "action": "tap", "x": 0.165, "y": 0.55 },
+    { "action": "wait", "seconds": 2 },
+    { "action": "key", "text": "5" },
+    { "action": "wait", "seconds": 0.1 },
+    { "action": "screenshot", "name": "01-optimistic" },
+    { "action": "wait", "seconds": 1 },
+    { "action": "screenshot", "name": "02-reverted-banner" },
+    { "action": "dump", "name": "02-reverted-banner" }
+  ]
+}

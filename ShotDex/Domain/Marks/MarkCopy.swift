@@ -107,4 +107,13 @@ enum MarkCopy {
     static func flagChipAccessibility(_ filter: PhotoFlagFilter) -> String {
         String(localized: "Remove flag filter \(flagFilterName(filter))", table: table, comment: "VoiceOver: remove a Picks/Rejected/Unflagged chip")
     }
+
+    // MARK: Errors (NF-04)
+
+    static var ratingWriteFailed: String {
+        String(localized: "Couldn't save rating.", table: table, comment: "Banner: writing a star rating to Photos failed")
+    }
+    static var tryAgain: String {
+        String(localized: "Try Again", table: table, comment: "Banner action: repeat the failed write")
+    }
 }
