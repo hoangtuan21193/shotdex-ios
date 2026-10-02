@@ -157,6 +157,37 @@ struct MetadataStore: Sendable {
         }
     }
 
+    /// After the app wrote star ratings into Photos (iOS 27): the filter
+    /// column takes the new values and each row's modification date follows
+    /// the asset's, in one transaction (FS-01.12 §5).
+    func recordRatingWrite(_ ratings: [String: Int], result: PropertyWriteResult) throws {
+        guard !ratings.isEmpty else { return }
+        try database.writer.write { db in
+            for (assetId, rating) in ratings where result.dates[assetId] != nil {
+                try db.execute(
+                    sql: "UPDATE photo_metadata SET rating = ? WHERE assetId = ?",
+                    arguments: [StarRating.clamped(rating), assetId]
+                )
+            }
+            try Self.restampModificationDates(db, after: result)
+        }
+    }
+
+    /// Moves `modificationDate` to the date Photos gave the asset when the
+    /// app wrote one of its properties — but only on rows that still hold
+    /// the date from before that write. A row with another date has an edit
+    /// the index has not read yet, and must keep looking stale so the next
+    /// run reads it. Shared by every property write (stars here, caption and
+    /// keywords in FS-02.07).
+    static func restampModificationDates(_ db: Database, after result: PropertyWriteResult) throws {
+        for (assetId, dates) in result.dates where dates.before != dates.after {
+            try db.execute(
+                sql: "UPDATE photo_metadata SET modificationDate = ? WHERE assetId = ? AND modificationDate IS ?",
+                arguments: [dates.after, assetId, dates.before]
+            )
+        }
+    }
+
     /// Rows whose Photos rating has never been read — iOS 27's first launch
     /// fills them from memory (`AppDependencies.backfillRatings`).
     func assetIdsMissingRating(limit: Int) throws -> [String] {

@@ -42,6 +42,10 @@ struct PhotoTileContextMenu {
                 actions.setFavorite(!isFavorite, ids: [assetId])
             }
         )
+        // Rating ▸ and Flag ▸ right after Favorite (FS-01.12 §6).
+        if let marks = actions.photoMarks {
+            primary.append(contentsOf: PhotoMarkMenus.uiMenus(ids: [assetId], marks: marks))
+        }
         if let onEdit {
             primary.append(
                 UIAction(title: PhotoCommand.edit.title, image: UIImage(systemName: PhotoCommand.edit.systemImage)) { _ in

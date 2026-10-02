@@ -28,7 +28,9 @@ struct MarkChange: Equatable, Sendable {
 ///
 /// The current rating of a photo is the pending row when there is one, else
 /// what Photos holds (`photosRating`, read off the asset by the caller),
-/// else 0.
+/// else 0. Where stars are stored is decided once, by whether a
+/// `ratingWriter` is given: none below iOS 27 (pending rows), the PhotoKit
+/// writer from iOS 27 (FS-01.12 §4–5). Tests inject either.
 @MainActor
 @Observable
 final class PhotoMarks {
@@ -38,12 +40,36 @@ final class PhotoMarks {
 
     @ObservationIgnored private var flags: [String: PhotoFlag] = [:]
     @ObservationIgnored private var pendingRatings: [String: Int] = [:]
+    /// Ratings this session wrote to Photos. The grid's `PHAsset`s are not
+    /// refetched after a content-only change, so their `rating` is stale
+    /// until the chunk reloads; this map is what the cells read meanwhile.
+    @ObservationIgnored private var writtenRatings: [String: Int] = [:]
     @ObservationIgnored private let store: PhotoMarksStore
+    @ObservationIgnored private let metadataStore: MetadataStore?
+    @ObservationIgnored private let ratingWriter: (any PhotoPropertyWriting)?
+    /// `PHAsset.rating` by id, for the "before" of an undo when the caller
+    /// did not pass it. Empty below iOS 27.
+    @ObservationIgnored private let readPhotosRatings: @Sendable ([String]) -> [String: Int]
     @ObservationIgnored private var hasLoaded = false
 
-    init(store: PhotoMarksStore) {
+    /// Set when a write to Photos failed; the host shows "Couldn't save
+    /// rating." with Try Again (FS-01.12 AC-10).
+    private(set) var failedRatingWrite: FailedRatingWrite?
+
+    init(
+        store: PhotoMarksStore,
+        metadataStore: MetadataStore? = nil,
+        ratingWriter: (any PhotoPropertyWriting)? = nil,
+        readPhotosRatings: @escaping @Sendable ([String]) -> [String: Int] = { _ in [:] }
+    ) {
         self.store = store
+        self.metadataStore = metadataStore
+        self.ratingWriter = ratingWriter
+        self.readPhotosRatings = readPhotosRatings
     }
+
+    /// Whether stars go to Photos rather than to pending rows.
+    var writesRatingsToPhotos: Bool { ratingWriter != nil }
 
     // MARK: Reads
 
@@ -52,7 +78,7 @@ final class PhotoMarks {
     /// The rating the app shows. `photosRating` is `PHAsset.rating` on
     /// iOS 27 (nil below it, or when the caller has no asset).
     func rating(for assetId: String, photosRating: Int? = nil) -> Int {
-        pendingRatings[assetId] ?? photosRating ?? 0
+        pendingRatings[assetId] ?? writtenRatings[assetId] ?? photosRating ?? 0
     }
 
     func summary(for assetId: String, photosRating: Int? = nil) -> PhotoMarkSummary {
@@ -97,11 +123,16 @@ final class PhotoMarks {
     /// when the stars are cleared, since there is nothing in Photos for a
     /// row of 0 to win over.
     @discardableResult
-    func setRating(_ rating: Int, ids: [String], photosRatings: [String: Int] = [:]) async -> MarkChange {
+    func setRating(_ rating: Int, ids: [String], photosRatings: [String: Int]? = nil) async -> MarkChange {
         let rating = StarRating.clamped(rating)
+        let known = photosRatings ?? (ratingWriter == nil ? [:] : readPhotosRatings(ids))
         var previous: [String: Int] = [:]
-        for id in ids { previous[id] = self.rating(for: id, photosRating: photosRatings[id]) }
+        for id in ids { previous[id] = self.rating(for: id, photosRating: known[id]) }
         let change = MarkChange(kind: .rating(previous: previous))
+        if ratingWriter != nil {
+            await writeToPhotos(ids.reduce(into: [:]) { $0[$1] = rating }, previous: previous)
+            return change
+        }
         for id in ids { pendingRatings[id] = rating == 0 ? nil : rating }
         version += 1
         let store = store
@@ -132,10 +163,54 @@ final class PhotoMarks {
         return change
     }
 
+    /// iOS 27: one block for the whole command. The cells show the new value
+    /// at once; on success the filter column, the modification date and any
+    /// pending rows of these photos follow; on failure every photo goes back
+    /// to what it showed and the failure is kept for Try Again.
+    private func writeToPhotos(_ ratings: [String: Int], previous: [String: Int]) async {
+        guard let ratingWriter, !ratings.isEmpty else { return }
+        let removedPending = pendingRatings.filter { ratings[$0.key] != nil }
+        for (id, rating) in ratings {
+            writtenRatings[id] = rating
+            pendingRatings[id] = nil
+        }
+        failedRatingWrite = nil
+        version += 1
+        do {
+            let result = try await ratingWriter.setRatings(ratings)
+            let store = store
+            let metadataStore = metadataStore
+            let ids = Array(ratings.keys)
+            await Task.detached(priority: .userInitiated) {
+                try? metadataStore?.recordRatingWrite(ratings, result: result)
+                try? store.deletePendingRatings(ids: ids)
+            }.value
+        } catch {
+            for (id, rating) in previous { writtenRatings[id] = rating }
+            for (id, rating) in removedPending { pendingRatings[id] = rating }
+            failedRatingWrite = FailedRatingWrite(ratings: ratings)
+            version += 1
+        }
+    }
+
+    /// Try Again on a failed write: the same photos, the same stars.
+    func retryFailedRatingWrite() async {
+        guard let failed = failedRatingWrite else { return }
+        var previous: [String: Int] = [:]
+        for id in failed.ratings.keys { previous[id] = rating(for: id) }
+        await writeToPhotos(failed.ratings, previous: previous)
+    }
+
+    func dismissFailedRatingWrite() { failedRatingWrite = nil }
+
     /// Puts back what `change` replaced.
     func undo(_ change: MarkChange) async {
         let store = store
         switch change.kind {
+        case .rating(let previous) where ratingWriter != nil:
+            var current: [String: Int] = [:]
+            for id in previous.keys { current[id] = rating(for: id) }
+            await writeToPhotos(previous, previous: current)
         case .rating(let previous):
             var restore: [String: Int?] = [:]
             for (id, rating) in previous {
@@ -155,6 +230,16 @@ final class PhotoMarks {
         }
     }
 
+    /// One key or menu row on `ids` — the viewer, the selection and the
+    /// culling pass all come through here.
+    @discardableResult
+    func apply(_ action: MarkKeyAction, to ids: [String]) async -> MarkChange {
+        switch action {
+        case .rate(let stars): await setRating(stars, ids: ids)
+        case .flag(let flag): await setFlag(flag, ids: ids)
+        }
+    }
+
     /// Removes every mark of photos that are gone — the rows and the memory.
     /// Callers decide *whether* they are gone (`UserMarkRemovalPolicy`).
     func removeMarks(ids: [String]) async {
@@ -170,9 +255,15 @@ final class PhotoMarks {
     func forget(_ ids: some Sequence<String>) {
         var changed = false
         for id in ids {
+            writtenRatings.removeValue(forKey: id)
             if flags.removeValue(forKey: id) != nil { changed = true }
             if pendingRatings.removeValue(forKey: id) != nil { changed = true }
         }
         if changed { version += 1 }
     }
+}
+
+/// A rating write Photos refused, kept so Try Again sends the same command.
+struct FailedRatingWrite: Equatable, Sendable {
+    let ratings: [String: Int]
 }

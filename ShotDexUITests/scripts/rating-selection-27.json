@@ -1,0 +1,32 @@
+{
+  "steps": [
+    { "action": "launch" },
+    { "action": "wait", "seconds": 8 },
+    { "action": "tap", "label": "Select photos" },
+    { "action": "wait", "seconds": 1.5 },
+    { "action": "tap", "x": 0.165, "y": 0.55 },
+    { "action": "tap", "x": 0.5, "y": 0.55 },
+    { "action": "tap", "x": 0.835, "y": 0.55 },
+    { "action": "wait", "seconds": 1 },
+    { "action": "tap", "label": "More selection actions" },
+    { "action": "wait", "seconds": 1.5 },
+    { "action": "screenshot", "name": "01-selection-menu" },
+    { "action": "dump", "name": "01-selection-menu" },
+    { "action": "tap", "label": "Rating" },
+    { "action": "wait", "seconds": 1.5 },
+    { "action": "screenshot", "name": "02-rating-submenu" },
+    { "action": "tap", "x": 0.35, "y": 0.485 },
+    { "action": "wait", "seconds": 3 },
+    { "action": "screenshot", "name": "03-rated" },
+    { "action": "dump", "name": "03-rated", "type": "cell" },
+    { "action": "tap", "label": "More selection actions" },
+    { "action": "wait", "seconds": 1.5 },
+    { "action": "tap", "label": "Rating" },
+    { "action": "wait", "seconds": 1.5 },
+    { "action": "tap", "x": 0.33, "y": 0.63 },
+    { "action": "wait", "seconds": 3 },
+    { "action": "dump", "name": "04-cleared", "type": "cell" },
+    { "action": "tap", "label": "Done selecting" },
+    { "action": "wait", "seconds": 1 }
+  ]
+}

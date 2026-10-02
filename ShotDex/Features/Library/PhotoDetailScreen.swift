@@ -733,7 +733,7 @@ struct PhotoDetailScreen: View {
             }
             .keyboardShortcut(.delete, modifiers: [])
         }
-        .background { markKeyButtons }
+        .background { PhotoMarkKeyButtons(ids: { currentMetadata.map { [$0.assetId] } ?? [] }) }
         .frame(maxWidth: .infinity)
         .padding(.horizontal, AppTheme.Size.floatingChromeMargin)
         .padding(.bottom, AppTheme.Spacing.md)
@@ -751,8 +751,7 @@ struct PhotoDetailScreen: View {
             // Marks first: the viewer's chrome stays as it is, so the menu
             // is where they are set by touch (FS-01.12 §7).
             Section {
-                ratingPicker(metadata)
-                flagMenu(metadata)
+                PhotoMarkMenus(ids: [id])
             }
             Section {
                 Button {
@@ -1180,98 +1179,6 @@ struct PhotoDetailScreen: View {
         guard let photoMarks else { return nil }
         _ = photoMarks.version
         return photoMarks.summary(for: metadata.assetId, photosRating: currentAsset?.photosStarRating)
-    }
-
-    /// Rating ▸ — None, ★ … ★★★★★, the current one checked.
-    private func ratingPicker(_ metadata: PhotoMetadata) -> some View {
-        let current = currentMarks(metadata)?.rating ?? 0
-        return Picker(selection: Binding(
-            get: { current },
-            set: { applyRating($0, to: metadata.assetId) }
-        )) {
-            ForEach(StarRating.range, id: \.self) { stars in
-                Text(stars == 0 ? MarkCopy.noRating : String(repeating: "★", count: stars))
-                    .accessibilityLabel(stars == 0 ? MarkCopy.noRating : MarkCopy.starsAccessibility(stars))
-                    .tag(stars)
-            }
-        } label: {
-            Label(MarkCopy.rating, systemImage: "star")
-        }
-        .pickerStyle(.menu)
-    }
-
-    /// Flag ▸ — Pick, Reject, Clear Flag. Pick and Reject read as toggles so
-    /// the current one carries the check; turning it off clears the flag.
-    private func flagMenu(_ metadata: PhotoMetadata) -> some View {
-        let current = currentMarks(metadata)?.flag
-        return Menu {
-            Toggle(isOn: Binding(
-                get: { current == .pick },
-                set: { applyFlag($0 ? .pick : nil, to: metadata.assetId) }
-            )) {
-                Label(MarkCopy.pick, systemImage: "flag.fill")
-            }
-            Toggle(isOn: Binding(
-                get: { current == .reject },
-                set: { applyFlag($0 ? .reject : nil, to: metadata.assetId) }
-            )) {
-                Label(MarkCopy.reject, systemImage: "xmark")
-            }
-            Button(MarkCopy.clearFlag) {
-                applyFlag(nil, to: metadata.assetId)
-            }
-            .disabled(current == nil)
-        } label: {
-            Label(MarkCopy.flag, systemImage: "flag.fill")
-            if let current { Text(MarkCopy.flagWord(current)) }
-        }
-    }
-
-    private func applyFlag(_ flag: PhotoFlag?, to assetId: String) {
-        guard let photoMarks else { return }
-        Task { await photoMarks.setFlag(flag, ids: [assetId]) }
-    }
-
-    private func applyRating(_ rating: Int, to assetId: String) {
-        guard let photoMarks else { return }
-        let photosRating = currentAsset?.photosStarRating
-        Task {
-            await photoMarks.setRating(
-                rating, ids: [assetId],
-                photosRatings: photosRating.map { [assetId: $0] } ?? [:]
-            )
-        }
-    }
-
-    /// Resolves the photo when the key fires, not when the button was
-    /// built: SwiftUI keeps the first closure a key command was registered
-    /// with, so a captured id kept rating the page the viewer opened on.
-    /// `currentMetadata` is state, read through its storage at call time.
-    private func applyMarkKey(_ action: MarkKeyAction) {
-        guard let assetId = currentMetadata?.assetId else { return }
-        switch action {
-        case .rate(let stars): applyRating(stars, to: assetId)
-        case .flag(let flag): applyFlag(flag, to: assetId)
-        }
-    }
-
-    /// `0`–`5`, `P`, `X`, `U` (FS-01.12 §6) on hidden buttons: a shortcut inside a closed
-    /// `Menu` never fires, so the keys hang here and call what the menu row
-    /// calls. Still listed in the ⌘ shortcut overlay on iPad.
-    private var markKeyButtons: some View {
-        ZStack {
-            ForEach(MarkKeyCommand.bindings, id: \.key) { binding in
-                Button {
-                    applyMarkKey(binding.action)
-                } label: {
-                    Text(binding.action.shortcutTitle)
-                }
-                .keyboardShortcut(KeyEquivalent(binding.key), modifiers: [])
-            }
-        }
-        .opacity(0)
-        .frame(width: 0, height: 0)
-        .accessibilityHidden(true)
     }
 
     /// Announces every field even when the visible lines dropped some, plus

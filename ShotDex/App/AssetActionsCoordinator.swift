@@ -57,6 +57,10 @@ final class AssetActionsCoordinator {
     /// RAWs this iOS build can't read: their share offers no JPEG.
     private let unsupportedRAW: UnsupportedRAWIndex?
 
+    /// Stars and flags for the tile menu's Rating ▸ / Flag ▸ and the
+    /// selection's ⋯ (FS-01.12). Set by the composition root.
+    @ObservationIgnored var photoMarks: PhotoMarks?
+
     var dateRequest: DateRequest?
     var locationRequest: LocationRequest?
     /// Album picker raised from a tile's context menu. The selection bar keeps

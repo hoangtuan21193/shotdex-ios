@@ -23,6 +23,9 @@ private extension View {
 struct SelectionOverlay: View {
     let model: SelectionBarModel
     @State private var isSelectedItemsPresented = false
+    /// Read when a mark key fires: `model` is a value republished on every
+    /// change, and a key command keeps the closure it was registered with.
+    @Environment(AppNavigation.self) private var navigation
 
     var body: some View {
         VStack(spacing: 0) {
@@ -47,6 +50,8 @@ struct SelectionOverlay: View {
                 .opacity(0)
                 .frame(width: 0, height: 0)
                 .accessibilityHidden(true)
+            // 0–5 / P / X / U on every selected photo (FS-01.12 §6).
+            PhotoMarkKeyButtons(ids: { [navigation] in navigation.selectionBar?.selectedIds ?? [] })
         }
     }
 }
@@ -317,6 +322,11 @@ private extension SelectionToolbarItems {
                     )
                 }
                 .disabled(model.selectionCount < 1)
+
+                // Stars and flags sit with Favorite: the three marks a
+                // photographer puts on photos (FS-01.12 §6).
+                PhotoMarkMenus(ids: ids)
+                    .disabled(model.selectionCount < 1)
 
                 Button {
                     actions.presentAdjustDate(ids: ids)

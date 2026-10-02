@@ -70,12 +70,14 @@ final class AppDependencies {
     let viewerAssetActions: AssetActionsCoordinator
     /// A coordinator of its own for one window's root. See `assetActions`.
     func makeAssetActions() -> AssetActionsCoordinator {
-        AssetActionsCoordinator(
+        let actions = AssetActionsCoordinator(
             photoLibrary: photoLibrary,
             metadataStore: metadataStore,
             recentActivity: recentActivity,
             originalDownloads: originalDownloads
         )
+        actions.photoMarks = photoMarks
+        return actions
     }
 
     /// Publishes the library's collections (smart albums, cameras, lenses) to
@@ -265,7 +267,20 @@ final class AppDependencies {
         self.unsupportedRAWIndex = unsupportedRAWIndex
         let photoMarksStore = PhotoMarksStore(database: database)
         self.photoMarksStore = photoMarksStore
-        let photoMarks = PhotoMarks(store: photoMarksStore)
+        // iOS 27 keeps stars in Photos itself; below it they wait in
+        // `pending_photo_rating` (FS-01.12 §4). Decided here, once.
+        var ratingWriter: (any PhotoPropertyWriting)?
+        if #available(iOS 27, *) { ratingWriter = PhotoKitPropertyWriter() }
+        let photoMarks = PhotoMarks(
+            store: photoMarksStore,
+            metadataStore: metadataStore,
+            ratingWriter: ratingWriter,
+            readPhotosRatings: { @Sendable ids in
+                PhotoLibraryService.fetchAssets(ids: ids).reduce(into: [:]) { result, asset in
+                    if let rating = asset.photosStarRating { result[asset.localIdentifier] = rating }
+                }
+            }
+        )
         self.photoMarks = photoMarks
         // Stars and flags leave with the photo (FS-01.12 AC-9): always when
         // the app deleted it, only with full access when an index run found
@@ -282,20 +297,24 @@ final class AppDependencies {
         videoStudio.unreadableRAWIds = { unsupportedRAWIndex.assetIds }
         let recentActivity = RecentActivityStore()
         self.recentActivity = recentActivity
-        self.assetActions = AssetActionsCoordinator(
+        let assetActions = AssetActionsCoordinator(
             photoLibrary: photoLibrary,
             metadataStore: metadataStore,
             recentActivity: recentActivity,
             originalDownloads: originalDownloads,
             unsupportedRAW: unsupportedRAWIndex
         )
-        self.viewerAssetActions = AssetActionsCoordinator(
+        assetActions.photoMarks = photoMarks
+        self.assetActions = assetActions
+        let viewerAssetActions = AssetActionsCoordinator(
             photoLibrary: photoLibrary,
             metadataStore: metadataStore,
             recentActivity: recentActivity,
             originalDownloads: originalDownloads,
             unsupportedRAW: unsupportedRAWIndex
         )
+        viewerAssetActions.photoMarks = photoMarks
+        self.viewerAssetActions = viewerAssetActions
         self.subjectScan = SubjectScanModel(
             pipeline: SubjectScanPipeline(
                 store: metadataStore,
