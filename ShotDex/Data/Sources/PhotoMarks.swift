@@ -148,6 +148,17 @@ final class PhotoMarks {
         }
     }
 
+    /// Removes every mark of photos that are gone — the rows and the memory.
+    /// Callers decide *whether* they are gone (`UserMarkRemovalPolicy`).
+    func removeMarks(ids: [String]) async {
+        guard !ids.isEmpty else { return }
+        let store = store
+        await Task.detached(priority: .utility) {
+            try? store.deleteMarks(ids: ids)
+        }.value
+        forget(ids)
+    }
+
     /// Forgets the marks of photos that are gone — after the store rows went.
     func forget(_ ids: some Sequence<String>) {
         var changed = false

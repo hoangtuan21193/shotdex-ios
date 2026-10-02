@@ -265,7 +265,20 @@ final class AppDependencies {
         self.unsupportedRAWIndex = unsupportedRAWIndex
         let photoMarksStore = PhotoMarksStore(database: database)
         self.photoMarksStore = photoMarksStore
-        self.photoMarks = PhotoMarks(store: photoMarksStore)
+        let photoMarks = PhotoMarks(store: photoMarksStore)
+        self.photoMarks = photoMarks
+        // Stars and flags leave with the photo (FS-01.12 AC-9): always when
+        // the app deleted it, only with full access when an index run found
+        // it gone (`UserMarkRemovalPolicy`).
+        photoLibrary.onAssetsDeleted = { ids in
+            guard UserMarkRemovalPolicy.removesMarks(on: .deletedInApp) else { return }
+            await photoMarks.removeMarks(ids: ids)
+        }
+        indexPipeline.runObservers.add { changes in
+            let ids = UserMarkRemovalPolicy.idsToRemove(after: changes)
+            guard !ids.isEmpty else { return }
+            await photoMarks.removeMarks(ids: Array(ids))
+        }
         videoStudio.unreadableRAWIds = { unsupportedRAWIndex.assetIds }
         let recentActivity = RecentActivityStore()
         self.recentActivity = recentActivity

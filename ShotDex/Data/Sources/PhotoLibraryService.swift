@@ -963,7 +963,15 @@ final class PhotoLibraryService: NSObject {
         try await PHPhotoLibrary.shared().performChanges {
             PHAssetChangeRequest.deleteAssets(assets as NSArray)
         }
+        // Every deletion the app makes passes here, so this is where the
+        // photos' stars and flags go with them (FS-01.12 §4).
+        await onAssetsDeleted?(assets.map(\.localIdentifier))
     }
+
+    /// Told the ids of assets PhotoKit has just deleted at the app's request.
+    /// Set once by the composition root.
+    @ObservationIgnored
+    var onAssetsDeleted: (@MainActor ([String]) async -> Void)?
 
     // MARK: Import
 
