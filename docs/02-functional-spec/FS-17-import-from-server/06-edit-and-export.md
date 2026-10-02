@@ -149,7 +149,7 @@ lệnh đó (AC-67, AC-76…84). Trong đợt 1 ba lệnh này không có trong 
 | AC-60 | sửa `a.JPG`, chọn Original Folder + Save as New File | Export | có `a_edited.jpg` cạnh `a.JPG`, SHA khớp, `a.JPG` còn nguyên byte; bản tạm bị xoá | `ServerEditExportTests.newFileBesideOriginal` |
 | AC-61 | `a_edited.jpg` đã có | xuất lần hai | ghi `a_edited (2).jpg` | `ServerEditExportTests.nameCollisionNumbers` |
 | AC-62 | sửa `a.JPG` | Replace Original → xác nhận | `a.JPG` mang nội dung mới; bấm Cancel ở hộp xác nhận thì không ghi gì | `ServerEditExportTests.replaceNeedsConfirm` + `replaceKeepsOriginalWhenTheCheckFails` + ảnh `…-ios26-50-replace-confirm.png`; Cancel và Replace chạy thật trên SMB (impacket) 2026-09-30 |
-| AC-63 | nguồn `b.CR3` | mở sheet | không có Replace Original, có câu RAW | `ServerEditExportTests.rawCannotBeReplaced`; ảnh ⚠️ chưa có (không có file RAW mẫu không mặt người) |
+| AC-63 | nguồn `b.CR3` | mở sheet | không có Replace Original, có câu RAW | `ServerEditExportTests.rawCannotBeReplaced` + ảnh `2026-10-02-fs1706-ios26-63-raw-no-replace.png` (Sony ARW mẫu CC0, cây, trên SMB) |
 | AC-64 | chọn Photos Library + Other Folder (SFTP `/sel`) + Share | Export | 1 asset mới trong Photos; `/sel/a_edited.jpg`; share sheet mở sau cùng | `ServerEditExportTests.multipleDestinations` + ảnh `…-ios26-14-export-sheet.png`, `…-ios18-14-export-sheet.png`, `…-ios26-17-grid-after-export.png` |
 | AC-65 | folder server từ chối ghi | Export tới Original Folder | đích đó báo "You can't write to this folder." + Choose Another Folder; bản tạm còn; không file `.shotdex-part` nào sót | `ServerEditExportTests.permissionDeniedOffersAnotherFolder` + `ServerComposedExportTests.composedRefusalShowsOnItsRow` + ảnh `2026-10-01-fs1706-ios18-65-permission-denied.png` (folder SMB chỉ đọc, 0 file `.shotdex-part`, bản tạm còn) |
 | AC-66 | loạt 5 ảnh, sửa 3 | Export… | hỏi nơi lưu 1 lần, xuất 3 file, 2 ảnh chưa sửa không xuất | `ServerEditSessionTests.batchExportsEditedOnly` + `singleUntouchedPhotoStillExports` |
@@ -171,7 +171,7 @@ lệnh đó (AC-67, AC-76…84). Trong đợt 1 ba lệnh này không có trong 
 | AC-83 | (đợt 2) collage đã đổi layout | Close | hỏi Discard; Discard thì thư mục tạm mất. Chưa làm gì thì Close không hỏi | `ServerComposeToolTests.collageAsksBeforeDiscardingOnlyAfterAChange` + ảnh `…-ios18-61-collage-discard.png`; chạy thật: Discard, Cancel không sửa và Close đều để lại 0 thư mục `ShotDexServerEdit-*` (iPhone 17 Pro, iPhone 16 Pro, iPad) |
 | AC-84 | (đợt 2) video 20 ảnh server 6000×4000 | dựng preview và xuất | mỗi khung đọc từ file ở cạnh dài ≤ cỡ render, không giải mã full-res | `ServerComposeSourceTests.decodesAtTheSizeAsked` + `ServerComposeToolTests.videoStillsDecodeAtTheRenderSize` |
 
-**Chưa chứng minh được:** ảnh AC-63; AC-70 trên Duo và iPad ngang.
+**Chưa chứng minh được:** AC-70 trên Duo và iPad ngang.
 (AC-71 thuộc FS-17.03.)
 
 ## 9. Rủi ro đã biết
