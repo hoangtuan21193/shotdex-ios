@@ -156,7 +156,7 @@ lệnh đó (AC-67, AC-76…84). Trong đợt 1 ba lệnh này không có trong 
 | AC-67 | (đợt 2) chọn 4 ảnh | Create Collage → Export… | sheet xuất §6b mở; Photos không có asset mới, không có dòng Creations | `ServerComposeToolTests.collageExportsToAFileNotToPhotos` + ảnh `…-ios26-61-collage.png`, `…-ios26-62-collage-export.png`, `…-ios26-63-composed-sheet.png`; chạy thật trên SMB 2026-09-30: `DSCF1000_collage.jpg` 2048×2048 lên share, Photos vẫn 71 ảnh |
 | AC-68 | chọn 2 ảnh | Export EXIF (CSV) | CSV 2 dòng; mỗi file chỉ đọc phần đầu (≤ 1 MB) | `ServerEditHandoffTests.readsHeadOnly` |
 | AC-69 | server tắt giữa lúc xuất (Original Folder), Photos đã xong | Export | Photos xong; Original Folder lỗi + Retry Failed; bản tạm + recipe còn | `ServerEditExportTests.failedDestinationKeepsDraft` |
-| AC-70 | iOS 26.5, 18.6, iPad, Duo trong | menu + sheet | không bị cắt, cùng lệnh ở hai nhánh | iPhone 17 Pro 26.5 + iPhone 16 Pro 18.6: ảnh ở các AC trên; iPad Pro 13 (26.5, dọc): ảnh `…-ipad-20-selecting.png`, `…-ipad-21-selection-menu.png`, `…-ipad-63-composed-sheet.png`; Duo ⚠️ chưa có |
+| AC-70 | iOS 26.5, 18.6, iPad, Duo trong | menu + sheet | không bị cắt, cùng lệnh ở hai nhánh | iPhone 17 Pro 26.5 + iPhone 16 Pro 18.6: ảnh ở các AC trên; iPad Pro 13 (26.5, dọc): ảnh `…-ipad-20-selecting.png`, `…-ipad-21-selection-menu.png`, `…-ipad-63-composed-sheet.png`; iPad Pro 13 ngang (2026-10-02, `ui-drive` `server-edit-ipad-landscape.json` + `Tools/sim-shot`): ảnh `2026-10-02-fs1706-ipad-land-21-selection-menu.png`, `…-ipad-land-63-composed-sheet.png`; Duo màn ngoài 466×678 (`server-edit-duo.json`, element dump): sheet gộp nằm trong x 24…382 trước rail 84pt, Export x 301…378, Cancel x 28; Duo màn trong ⚠️ chưa có (sim gập sau khi boot lại, simctl không mở được) |
 | AC-72 | clipboard có look (Exposure +1), chọn 2 ảnh | Paste Edits | tải 2 bản tạm, sheet xuất mở với `2 photos`; không ghi gì trước khi bấm Export | `ServerEditHandoffTests.pasteEditsGoesToExportSheet` |
 | AC-73 | 1 ảnh 600×400 | Resize, cạnh dài 300 → Export tới Original Folder | `a_edited.jpg` 300×200; `a.JPG` giữ nguyên | `ServerEditHandoffTests.resizeExportsThroughSheet` |
 | AC-74 | `a.JPG` có GPS, Share bỏ vị trí đang bật | Share | share sheet nhận file bản gốc đã bỏ GPS; đóng share sheet thì bản tạm bị xoá | `ServerEditHandoffTests.shareHandsOriginalAndCleansUp` |
@@ -171,7 +171,7 @@ lệnh đó (AC-67, AC-76…84). Trong đợt 1 ba lệnh này không có trong 
 | AC-83 | (đợt 2) collage đã đổi layout | Close | hỏi Discard; Discard thì thư mục tạm mất. Chưa làm gì thì Close không hỏi | `ServerComposeToolTests.collageAsksBeforeDiscardingOnlyAfterAChange` + ảnh `…-ios18-61-collage-discard.png`; chạy thật: Discard, Cancel không sửa và Close đều để lại 0 thư mục `ShotDexServerEdit-*` (iPhone 17 Pro, iPhone 16 Pro, iPad) |
 | AC-84 | (đợt 2) video 20 ảnh server 6000×4000 | dựng preview và xuất | mỗi khung đọc từ file ở cạnh dài ≤ cỡ render, không giải mã full-res | `ServerComposeSourceTests.decodesAtTheSizeAsked` + `ServerComposeToolTests.videoStillsDecodeAtTheRenderSize` |
 
-**Chưa chứng minh được:** AC-70 trên Duo và iPad ngang.
+**Chưa chứng minh được:** AC-70 trên màn trong của Duo.
 (AC-71 thuộc FS-17.03.)
 
 ## 9. Rủi ro đã biết

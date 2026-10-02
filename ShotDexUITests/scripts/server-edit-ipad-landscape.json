@@ -1,0 +1,130 @@
+{
+ "steps": [
+  {
+   "action": "launch"
+  },
+  {
+   "action": "wait",
+   "seconds": 15
+  },
+  {
+   "action": "orientation",
+   "text": "landscape"
+  },
+  {
+   "action": "wait",
+   "seconds": 4
+  },
+  {
+   "action": "tap",
+   "label": "Collections",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "scrollTo",
+   "label": "Local Network"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "tap",
+   "label": "Local Network"
+  },
+  {
+   "action": "wait",
+   "seconds": 4
+  },
+  {
+   "action": "tap",
+   "label": "Studio NAS"
+  },
+  {
+   "action": "wait",
+   "seconds": 15
+  },
+  {
+   "action": "tap",
+   "label": "More"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "tap",
+   "label": "Select"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "tap",
+   "label": "DSCF1000"
+  },
+  {
+   "action": "tap",
+   "label": "DSCF1001"
+  },
+  {
+   "action": "tap",
+   "label": "DSCF1002"
+  },
+  {
+   "action": "tap",
+   "label": "DSCF1003"
+  },
+  {
+   "action": "wait",
+   "seconds": 15
+  },
+  {
+   "action": "tap",
+   "label": "More selection actions"
+  },
+  {
+   "action": "wait",
+   "seconds": 15
+  },
+  {
+   "action": "tap",
+   "label": "Create Collage"
+  },
+  {
+   "action": "wait",
+   "seconds": 15
+  },
+  {
+   "action": "tap",
+   "label": "Export",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 8
+  },
+  {
+   "action": "tap",
+   "label": "Export\u2026",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 15
+  },
+  {
+   "action": "dump",
+   "name": "duo-composed-sheet"
+  },
+  {
+   "action": "wait",
+   "seconds": 20
+  }
+ ]
+}
