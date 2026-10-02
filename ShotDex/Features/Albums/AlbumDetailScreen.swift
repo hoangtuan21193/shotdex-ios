@@ -470,7 +470,9 @@ struct AlbumDetailScreen: View {
         let downloads = dependencies.originalDownloads
         // The share sheet opens at once; the iCloud download waits for a
         // destination, in the Share modal (FS-02.06 §9).
-        Task { await PhotoShareSheet.share(assets: assets, downloads: downloads) }
+        Task { await PhotoShareSheet.share(
+                assets: assets, downloads: downloads, unreadableRAW: dependencies.unsupportedRAWIndex.assetIds
+            ) }
     }
 
     /// Removes the selection from this album without deleting the photos.

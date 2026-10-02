@@ -79,6 +79,12 @@ enum EditorLoadFailure: Equatable {
         return false
     }
 
+    /// A DNG the decoder refuses offers Share Original (FS-03.04b AC-7).
+    var offersShareOriginal: Bool {
+        if case .unsupportedRAW(let raw) = self { return raw.offersShareOriginal }
+        return false
+    }
+
     /// Only a permission problem is fixed in Settings.
     var offersSettings: Bool { self == .noAccess }
 

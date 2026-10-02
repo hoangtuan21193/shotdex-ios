@@ -10,6 +10,9 @@ struct UnsupportedRAWMessage: Equatable, Sendable {
         case camera(String)
         /// No camera in EXIF: the file's extension, "ARW".
         case fileExtension(String)
+        /// A DNG: the decoder reads every DNG it can, so the file itself is
+        /// at fault — convert it again, or edit it elsewhere (AC-7).
+        case dng
     }
 
     let subject: Subject
@@ -19,10 +22,13 @@ struct UnsupportedRAWMessage: Equatable, Sendable {
     /// The camera's name when there is one, else the extension of
     /// `filename`. A RAW with neither is still called a RAW.
     static func make(cameraName: String?, filename: String?, iOSVersion: String) -> UnsupportedRAWMessage {
+        let ext = ((filename ?? "") as NSString).pathExtension.uppercased()
+        if ext == "DNG" {
+            return UnsupportedRAWMessage(subject: .dng, iOSVersion: iOSVersion)
+        }
         if let cameraName = cameraName?.trimmingCharacters(in: .whitespaces), !cameraName.isEmpty {
             return UnsupportedRAWMessage(subject: .camera(cameraName), iOSVersion: iOSVersion)
         }
-        let ext = ((filename ?? "") as NSString).pathExtension.uppercased()
         return UnsupportedRAWMessage(subject: .fileExtension(ext.isEmpty ? "RAW" : ext), iOSVersion: iOSVersion)
     }
 
@@ -43,8 +49,17 @@ struct UnsupportedRAWMessage: Equatable, Sendable {
                 localized: "iOS \(iOSVersion) doesn't support RAW files like this .\(ext) yet. Convert the file to DNG with Adobe DNG Converter, or wait for an iOS update that adds this camera.",
                 comment: "Unsupported RAW with no camera name in the file: first the iOS version, then the file extension such as ARW"
             )
+        case .dng:
+            String(
+                localized: "iOS \(iOSVersion) can't read this DNG file. Convert the original again with the latest Adobe DNG Converter, or share it to edit on a computer.",
+                comment: "A DNG file iOS can't decode: the iOS version"
+            )
         }
     }
+
+    /// A DNG offers Share Original next to OK, so the file has somewhere to
+    /// go (NF-04: every error has a way out).
+    var offersShareOriginal: Bool { subject == .dng }
 }
 
 /// A RAW the decoder refused, carrying what to tell the user — so Resize's

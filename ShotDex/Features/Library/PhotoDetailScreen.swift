@@ -357,7 +357,7 @@ struct PhotoDetailScreen: View {
                 .presentationDetents([.medium, .large])
                 .presentationDragIndicator(.visible)
         }
-        .unsupportedRAWAlert($unsupportedRAWMessage)
+        .unsupportedRAWAlert($unsupportedRAWMessage, shareOriginal: shareCurrentOriginal)
         .fullScreenCover(item: $editorTarget) { target in
             PhotoEditorScreen(
                 asset: target.asset,
@@ -1151,6 +1151,17 @@ struct PhotoDetailScreen: View {
         )
     }
 
+    /// Share Original from the unreadable-DNG alert (FS-03.04b AC-7): the
+    /// viewer's own share, which hands an untouched RAW over byte for byte
+    /// and asks the RAW question below All Metadata (AC-8).
+    private func shareCurrentOriginal() {
+        guard let asset = currentAsset else { return }
+        let downloads = dependencies.originalDownloads
+        // The alert is the decoder's word for this file, index or not.
+        let unreadable: Set<String> = [asset.localIdentifier]
+        Task { await PhotoShareSheet.share(assets: [asset], downloads: downloads, unreadableRAW: unreadable) }
+    }
+
     /// The tile's badge, from the same extension table (FS-03.04b §2).
     private var formatBadge: String? {
         guard let filename = currentFilename else { return nil }
@@ -1211,7 +1222,8 @@ struct PhotoDetailScreen: View {
     private func share(_ metadata: PhotoMetadata) {
         guard let asset = model.asset(for: metadata.assetId) else { return }
         let downloads = dependencies.originalDownloads
-        Task { await PhotoShareSheet.share(assets: [asset], downloads: downloads) }
+        let unreadable = unsupportedRAWIndex?.assetIds ?? []
+        Task { await PhotoShareSheet.share(assets: [asset], downloads: downloads, unreadableRAW: unreadable) }
     }
 
     private func updateFilename(assetId: String) {

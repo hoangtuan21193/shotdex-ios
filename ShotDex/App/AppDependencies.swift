@@ -252,19 +252,23 @@ final class AppDependencies {
             fetcher: originalFetcher, gate: indexInteractionGate, availableBytes: availableBytes
         )
         self.originalDownloads = originalDownloads
+        let unsupportedRAWIndex = UnsupportedRAWIndex(store: RAWVerdictStore(database: database))
+        self.unsupportedRAWIndex = unsupportedRAWIndex
         let recentActivity = RecentActivityStore()
         self.recentActivity = recentActivity
         self.assetActions = AssetActionsCoordinator(
             photoLibrary: photoLibrary,
             metadataStore: metadataStore,
             recentActivity: recentActivity,
-            originalDownloads: originalDownloads
+            originalDownloads: originalDownloads,
+            unsupportedRAW: unsupportedRAWIndex
         )
         self.viewerAssetActions = AssetActionsCoordinator(
             photoLibrary: photoLibrary,
             metadataStore: metadataStore,
             recentActivity: recentActivity,
-            originalDownloads: originalDownloads
+            originalDownloads: originalDownloads,
+            unsupportedRAW: unsupportedRAWIndex
         )
         self.subjectScan = SubjectScanModel(
             pipeline: SubjectScanPipeline(
@@ -299,7 +303,6 @@ final class AppDependencies {
         let serverUploads = ServerUploadStore(database: database)
         self.serverUploads = serverUploads
         self.serverUploadIndex = ServerUploadIndex(store: serverUploads)
-        self.unsupportedRAWIndex = UnsupportedRAWIndex(store: RAWVerdictStore(database: database))
         self.serverDownloads = ServerDownloadStore(database: database)
         self.serverFileHistory = ServerFileHistory(database: database)
         self.serverShortcuts = ServerShortcutCatalog(store: ServerShortcutStore(database: database))

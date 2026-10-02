@@ -402,7 +402,9 @@ struct LibraryScreen: View {
         let downloads = dependencies.originalDownloads
         Task {
             let assets = PhotoLibraryService.fetchAssets(ids: ids)
-            await PhotoShareSheet.share(assets: assets, downloads: downloads)
+            await PhotoShareSheet.share(
+                assets: assets, downloads: downloads, unreadableRAW: dependencies.unsupportedRAWIndex.assetIds
+            )
         }
     }
 

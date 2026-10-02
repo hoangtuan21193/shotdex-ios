@@ -100,9 +100,15 @@ enum PhotoShareSheet {
     static func share(
         assets: [PHAsset],
         downloads: OriginalDownloadModel?,
-        level: MetadataLevel = .sharingDefault()
+        level: MetadataLevel = .sharingDefault(),
+        unreadableRAW: Set<String> = []
     ) async {
-        var sources = assets.map(ShareSource.init(asset:))
+        // A RAW iOS can't decode has no JPEG to offer (FS-03.04b AC-8).
+        var sources = assets.map { asset in
+            var source = ShareSource(asset: asset)
+            if source.kind == .raw, unreadableRAW.contains(source.id) { source.isReadable = false }
+            return source
+        }
         let full = ShareBatchPlan(sources: sources, level: level)
         var rawChoice = RAWChoice.skip
         if full.asksAboutRAW {
@@ -155,7 +161,7 @@ enum PhotoShareSheet {
             // A level row: the same share again at that level, still lazy.
             Task { @MainActor in
                 await waitForDismissal()
-                await share(assets: assets, downloads: downloads, level: again)
+                await share(assets: assets, downloads: downloads, level: again, unreadableRAW: unreadableRAW)
             }
         }
         batch.onCancel = { [weak activity] in activity?.dismiss(animated: true) }

@@ -283,7 +283,9 @@ struct PhotoEditorScreen: View {
         }
         // A photo that would not open: nothing to edit, so every way out of
         // the alert also leaves the editor (FS-03.09 AC-15).
-        .modifier(EditorLoadFailureAlert(controller: controller, close: { dismiss() }, skip: skipUnreadablePhoto))
+        .modifier(EditorLoadFailureAlert(
+            controller: controller, close: { dismiss() }, skip: skipUnreadablePhoto, shareOriginal: shareUnreadableOriginal
+        ))
         .alert("Saved as JPEG", isPresented: $isFallbackNoticePresented) {
             Button("OK") { dismiss() }
         } message: {
@@ -486,6 +488,25 @@ struct PhotoEditorScreen: View {
         return {
             controller?.clearLoadFailure()
             if let target = session.skipTarget { selectPhoto(at: target) }
+        }
+    }
+
+    /// Share Original on a DNG the decoder refuses (FS-03.04b AC-7). Alone
+    /// in the editor it closes first — there is nothing left to edit — and
+    /// shares once the editor is gone; in a run the share sheet opens over
+    /// the editor and the run stays. Nil for a server file.
+    private var shareUnreadableOriginal: (() -> Void)? {
+        guard let asset = controller?.origin.asset else { return nil }
+        let downloads = dependencies.originalDownloads
+        let staysOpen = session?.isMultiPhoto == true
+        return {
+            if !staysOpen { dismiss() }
+            Task { @MainActor in
+                if !staysOpen { try? await Task.sleep(for: .milliseconds(600)) }
+                await PhotoShareSheet.share(
+                    assets: [asset], downloads: downloads, unreadableRAW: [asset.localIdentifier]
+                )
+            }
         }
     }
 
@@ -3738,6 +3759,9 @@ private struct EditorLoadFailureAlert: ViewModifier {
     /// Set in a multi-photo run: a RAW the decoder refuses offers Skip, and
     /// closing would throw away the other photos' edits (FS-03.04b Q7).
     var skip: (() -> Void)?
+    /// Set for a library photo: a DNG the decoder refuses offers Share
+    /// Original (FS-03.04b AC-7).
+    var shareOriginal: (() -> Void)?
 
     func body(content: Content) -> some View {
         content.alert(
@@ -3748,6 +3772,11 @@ private struct EditorLoadFailureAlert: ViewModifier {
             ),
             presenting: controller?.loadFailure
         ) { failure in
+            if failure.offersShareOriginal, let shareOriginal {
+                Button(String(localized: "Share Original", comment: "Alert button: share the original file of a RAW iOS can't read")) {
+                    shareOriginal()
+                }
+            }
             if failure.isUnsupportedRAW, let skip {
                 Button("Skip") { skip() }
             } else if failure.offersSettings {

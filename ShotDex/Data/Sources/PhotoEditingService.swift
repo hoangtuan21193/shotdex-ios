@@ -756,7 +756,16 @@ final class PhotoEditingService {
         let photo = PixelSize(width: asset.pixelWidth, height: asset.pixelHeight)
         guard OriginalCompleteness.isSufficient(
             received: measured.size.oriented(measured.orientation), requestedLongEdge: photo.longEdge, photo: photo
-        ) else { throw OriginalFetchError.incomplete }
+        ) else {
+            // A RAW Photos holds whole but the decoder refuses (a cut-off or
+            // unknown file) reads as "only a preview here": it is the RAW
+            // message, not an iCloud one (FS-03.04b §3).
+            if UTType(filenameExtension: url.pathExtension)?.conforms(to: .rawImage) == true,
+               !PhotoRenderService.canDecodeRAW(at: url) {
+                throw RAWFileCamera.error(for: url, filename: url.lastPathComponent)
+            }
+            throw OriginalFetchError.incomplete
+        }
     }
 
     private func sourceOptions(

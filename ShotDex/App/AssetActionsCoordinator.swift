@@ -54,6 +54,8 @@ final class AssetActionsCoordinator {
     /// The Share modal (FS-02.06 §9); nil in previews, which then share
     /// the way a lazy share would with no modal to show.
     private let originalDownloads: OriginalDownloadModel?
+    /// RAWs this iOS build can't read: their share offers no JPEG.
+    private let unsupportedRAW: UnsupportedRAWIndex?
 
     var dateRequest: DateRequest?
     var locationRequest: LocationRequest?
@@ -70,12 +72,14 @@ final class AssetActionsCoordinator {
         photoLibrary: PhotoLibraryService,
         metadataStore: MetadataStore,
         recentActivity: RecentActivityStore? = nil,
-        originalDownloads: OriginalDownloadModel? = nil
+        originalDownloads: OriginalDownloadModel? = nil,
+        unsupportedRAW: UnsupportedRAWIndex? = nil
     ) {
         self.photoLibrary = photoLibrary
         self.metadataStore = metadataStore
         self.recentActivity = recentActivity
         self.originalDownloads = originalDownloads
+        self.unsupportedRAW = unsupportedRAW
     }
 
     // MARK: Favorite
@@ -227,7 +231,8 @@ final class AssetActionsCoordinator {
         guard !assets.isEmpty else { return }
         recentActivity?.recordShared(ids)
         let downloads = originalDownloads
-        Task { await PhotoShareSheet.share(assets: assets, downloads: downloads) }
+        let unreadable = unsupportedRAW?.assetIds ?? []
+        Task { await PhotoShareSheet.share(assets: assets, downloads: downloads, unreadableRAW: unreadable) }
     }
 
     /// Moves assets to Recently Deleted. PhotoKit raises its own confirmation,

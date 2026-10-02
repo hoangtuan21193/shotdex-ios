@@ -5,13 +5,21 @@ import SwiftUI
 /// A modifier so the viewer's long body stays within the type checker.
 struct UnsupportedRAWAlert: ViewModifier {
     @Binding var message: UnsupportedRAWMessage?
+    /// Shares the photo's original file — offered for a DNG (AC-7).
+    var shareOriginal: (() -> Void)?
 
     func body(content: Content) -> some View {
         content.alert(
             message?.title ?? "",
             isPresented: Binding(get: { message != nil }, set: { if !$0 { message = nil } }),
             presenting: message
-        ) { _ in
+        ) { shown in
+            if shown.offersShareOriginal, let shareOriginal {
+                Button(String(localized: "Share Original", comment: "Alert button: share the original file of a RAW iOS can't read")) {
+                    message = nil
+                    shareOriginal()
+                }
+            }
             Button("OK", role: .cancel) { message = nil }
         } message: { message in
             Text(message.text)
@@ -20,7 +28,10 @@ struct UnsupportedRAWAlert: ViewModifier {
 }
 
 extension View {
-    func unsupportedRAWAlert(_ message: Binding<UnsupportedRAWMessage?>) -> some View {
-        modifier(UnsupportedRAWAlert(message: message))
+    func unsupportedRAWAlert(
+        _ message: Binding<UnsupportedRAWMessage?>,
+        shareOriginal: (() -> Void)? = nil
+    ) -> some View {
+        modifier(UnsupportedRAWAlert(message: message, shareOriginal: shareOriginal))
     }
 }
