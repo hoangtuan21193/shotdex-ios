@@ -98,7 +98,7 @@ Chốt 2026-10-02.
 | AC-5 | mở màn Cull trên iPhone 17, iPad 13", Duo trong, Duo ngoài | chụp ảnh màn và dump phần tử | 5 sao, Pick, Reject, Undo, X, bộ đếm đều có trên 4 máy, mỗi cái ≥ 44×44, nằm trong vùng an toàn; trên Duo ngoài không cái nào có x > 382pt | ⚠️ chưa có — `Tools/ui-drive` + `Tools/sim-shot` |
 | AC-6 | album X có 240 ảnh, 120 Rejected; ngoài X còn 30 ảnh Rejected | bật lọc Rejected trong X, bấm viên **Delete 120** trên thanh điều kiện, xác nhận ở hộp thoại hệ thống | lệnh xoá mang đúng 120 id của X; 30 ảnh kia vẫn Rejected; 120 dòng cờ bị gỡ; banner nói Recently Deleted 30 ngày, không có Undo | ⚠️ chưa có |
 | AC-7 | như AC-6 | bấm Cancel ở hộp thoại hệ thống | 0 ảnh mất, 120 ảnh vẫn Rejected | ⚠️ chưa có |
-| AC-8 | màn Cull 50 ảnh chỉ có trên iCloud, máy mất mạng | đi qua cả 50, đặt cờ mỗi ảnh | mỗi ảnh hiện bản có trên máy kèm glyph mây; 50 cờ được ghi; 0 yêu cầu bản gốc | ⚠️ chưa có |
+| AC-8 | màn Cull 50 ảnh chỉ có trên iCloud, máy mất mạng | đi qua cả 50, đặt cờ mỗi ảnh | mỗi ảnh hiện bản có trên máy kèm glyph mây; 50 cờ được ghi; 0 yêu cầu bản gốc | ✅ phần sim: `CullImagePolicyTests.neverRequestsOriginal` (cỡ màn, trần 2.800 px, không bao giờ `PHImageManagerMaximumSize`), `.warmsTwoPagesEachSide`; màn không có đường tải bản gốc (chỉ `probe`, không `fetch`); `ShotDexUITests/scripts/cull-icloud.json` với `-ShotDexFakeICloud cloud=all,stall`: bản có trên máy + glyph mây, `X` ghi cờ, ⌘Z gỡ. ⚠️ 50 ảnh chỉ iCloud + mất mạng thật → máy thật |
 
 **Chưa chứng minh được:** AC-1 → AC-8 (màn chưa có code).
 

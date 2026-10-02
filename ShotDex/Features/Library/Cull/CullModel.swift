@@ -75,13 +75,21 @@ final class CullModel {
     @ObservationIgnored private var request: PHImageRequestID = PHInvalidImageRequestID
     @ObservationIgnored private var preheated: [PHAsset] = []
     @ObservationIgnored var targetSize: CGSize = CGSize(width: 1_200, height: 1_200)
+    /// Asked whether the photo on screen has its original only in iCloud —
+    /// a probe, never a download (AC-8).
+    @ObservationIgnored private let originalFetcher: (any OriginalFetching)?
+    @ObservationIgnored private var probeTask: Task<Void, Never>?
+    /// The original of the photo on screen is only in iCloud: what shows is
+    /// the device's copy, and the glyph says so.
+    private(set) var isOriginalInCloud = false
 
-    /// Pages kept warm on each side of the current one (FS-01.12b §2).
-    static let preheatRadius = 2
-
-    init(request: CullRequest, marks: PhotoMarks, loader: CullImageLoading, assets: [PHAsset]) {
+    init(
+        request: CullRequest, marks: PhotoMarks, loader: CullImageLoading, assets: [PHAsset],
+        originalFetcher: (any OriginalFetching)? = nil
+    ) {
         self.marks = marks
         self.loader = loader
+        self.originalFetcher = originalFetcher
         self.assets = Dictionary(assets.map { ($0.localIdentifier, $0) }, uniquingKeysWith: { first, _ in first })
         let items = assets.map { CullSession.Item(id: $0.localIdentifier, captureDate: $0.creationDate) }
         self.session = CullSession.start(items: items, flagged: { marks.flag(for: $0) != nil }, startId: request.startId)
@@ -212,16 +220,30 @@ final class CullModel {
             guard let self, self.currentId == id, let image else { return }
             self.image = image
         }
-        let lower = max(0, session.index - Self.preheatRadius)
-        let upper = min(session.ids.count - 1, session.index + Self.preheatRadius)
-        let warm = (lower...upper).compactMap { assets[session.ids[$0]] }
+        probeOriginal(asset)
+        let warm = CullImagePolicy.warmRange(index: session.index, count: session.ids.count)
+            .map { range in range.compactMap { assets[session.ids[$0]] } } ?? []
         let stale = preheated.filter { old in !warm.contains { $0.localIdentifier == old.localIdentifier } }
         loader.stopPreheating(stale, targetSize: targetSize)
         loader.preheat(warm, targetSize: targetSize)
         preheated = warm
     }
 
+    private func probeOriginal(_ asset: PHAsset) {
+        probeTask?.cancel()
+        isOriginalInCloud = false
+        guard let originalFetcher, asset.mediaType == .image else { return }
+        let id = asset.localIdentifier
+        let item = OriginalItem(id: id, filename: "", photo: PixelSize(width: asset.pixelWidth, height: asset.pixelHeight))
+        probeTask = Task { [weak self] in
+            let availability = await originalFetcher.probe(item)
+            guard !Task.isCancelled, let self, self.currentId == id else { return }
+            self.isOriginalInCloud = availability == .inCloud
+        }
+    }
+
     func stop() {
+        probeTask?.cancel()
         loader.cancel(request)
         loader.stopPreheating(preheated, targetSize: targetSize)
         preheated = []

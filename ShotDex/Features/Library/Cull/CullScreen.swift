@@ -1,3 +1,4 @@
+import AVKit
 import Photos
 import SwiftUI
 
@@ -42,8 +43,7 @@ struct CullScreen: View {
             }
             .animation(EditorTheme.animation, value: model.isSummaryPresented)
             .onAppear {
-                let scale = ActiveDisplay.scale
-                model.targetSize = CGSize(width: proxy.size.width * scale, height: proxy.size.height * scale)
+                model.targetSize = CullImagePolicy.targetSize(screen: proxy.size, scale: ActiveDisplay.scale)
                 model.loadCurrent()
             }
         }
@@ -142,11 +142,20 @@ struct CullScreen: View {
             } else {
                 ProgressView().tint(EditorTheme.secondaryText)
             }
-            if model.isCurrentVideo {
-                Image(systemName: "play.circle.fill")
-                    .font(.system(size: 54))
-                    .foregroundStyle(.white.opacity(0.9))
-                    .allowsHitTesting(false)
+            if model.isCurrentVideo, let asset = model.currentAsset {
+                CullVideoPlayer(asset: asset, photoLibrary: photoLibrary)
+                    .id(asset.localIdentifier)
+            }
+        }
+        .overlay(alignment: .topTrailing) {
+            if model.isOriginalInCloud {
+                // The device's copy is what shows; the original is in iCloud
+                // and is never fetched here (FS-01.12b AC-8).
+                Image(systemName: "icloud")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(EditorTheme.secondaryText)
+                    .padding(CullLayout.edgeInset)
+                    .accessibilityLabel(String(localized: "Original in iCloud", comment: "VoiceOver: the photo's original is only in iCloud"))
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -367,7 +376,8 @@ struct CullHost: View {
             }.value
             model = CullModel(
                 request: request, marks: dependencies.photoMarks,
-                loader: dependencies.photoLibrary, assets: assets
+                loader: dependencies.photoLibrary, assets: assets,
+                originalFetcher: dependencies.originalFetcher
             )
         }
     }
@@ -395,5 +405,47 @@ struct CullSelectionRow: View {
             Label(MarkCopy.cullPhotos(ids.count), systemImage: PhotoCommand.cull.systemImage)
         }
         .disabled(ids.isEmpty)
+    }
+}
+
+/// A video in the pass (FS-01.12b §2): its frame with a play button, and
+/// once played, muted — as in Compare.
+struct CullVideoPlayer: View {
+    let asset: PHAsset
+    let photoLibrary: PhotoLibraryService
+    @State private var player: AVPlayer?
+
+    var body: some View {
+        ZStack {
+            if let player {
+                VideoPlayer(player: player)
+                    .onDisappear { player.pause() }
+            } else {
+                Button(action: play) {
+                    Image(systemName: "play.circle.fill")
+                        .font(.system(size: 54))
+                        .foregroundStyle(.white.opacity(0.9))
+                        .frame(width: 88, height: 88)
+                        .contentShape(Circle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(String(localized: "Play", comment: "Play a video"))
+            }
+        }
+    }
+
+    private func play() {
+        let options = PHVideoRequestOptions()
+        options.isNetworkAccessAllowed = true
+        options.deliveryMode = .mediumQualityFormat
+        photoLibrary.imageManager.requestPlayerItem(forVideo: asset, options: options) { item, _ in
+            guard let item else { return }
+            Task { @MainActor in
+                let player = AVPlayer(playerItem: item)
+                player.isMuted = true
+                self.player = player
+                player.play()
+            }
+        }
     }
 }
