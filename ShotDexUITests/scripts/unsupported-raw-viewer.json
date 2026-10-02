@@ -1,0 +1,20 @@
+{"steps": [
+ {"action": "launch"},
+ {"action": "wait", "seconds": 6},
+ {"action": "swipe", "direction": "down", "x": 0.5, "y": 0.25, "distance": 0.6},
+ {"action": "swipe", "direction": "down", "x": 0.5, "y": 0.25, "distance": 0.6},
+ {"action": "swipe", "direction": "down", "x": 0.5, "y": 0.25, "distance": 0.6},
+ {"action": "swipe", "direction": "down", "x": 0.5, "y": 0.25, "distance": 0.6},
+ {"action": "swipe", "direction": "down", "x": 0.5, "y": 0.25, "distance": 0.6},
+ {"action": "swipe", "direction": "down", "x": 0.5, "y": 0.25, "distance": 0.6},
+ {"action": "swipe", "direction": "down", "x": 0.5, "y": 0.25, "distance": 0.6},
+ {"action": "swipe", "direction": "down", "x": 0.5, "y": 0.25, "distance": 0.6},
+ {"action": "wait", "seconds": 2},
+ {"action": "tap", "label": "Photo, file type RAW, ISO 160 · 16mm · f/3.6, RAW not supported by iOS"},
+ {"action": "wait", "seconds": 3},
+ {"action": "dump", "name": "ac17-viewer"},
+ {"action": "tap", "label": "RAW not supported by iOS", "type": "button"},
+ {"action": "wait", "seconds": 2},
+ {"action": "screenshot", "name": "ac17-card"},
+ {"action": "wait", "seconds": 3}
+]}

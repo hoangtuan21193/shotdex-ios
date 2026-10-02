@@ -57,6 +57,28 @@ struct UnsupportedRAWMessage: Equatable, Sendable {
         }
     }
 
+    /// The card behind the viewer's glyph (AC-17): what the user can still
+    /// do — look — and what not — edit.
+    var viewerCard: String {
+        switch subject {
+        case .camera(let name):
+            String(
+                localized: "\(name) — iOS \(iOSVersion) can't read RAW files from this camera yet. You can still view the preview, but you can't edit the RAW.",
+                comment: "Viewer card for a RAW iOS can't read: the camera's name, then the iOS version"
+            )
+        case .fileExtension(let ext):
+            String(
+                localized: "iOS \(iOSVersion) can't read RAW files like this .\(ext) yet. You can still view the preview, but you can't edit the RAW.",
+                comment: "Viewer card for a RAW iOS can't read, with no camera name: the iOS version, then the extension"
+            )
+        case .dng:
+            String(
+                localized: "iOS \(iOSVersion) can't read this DNG file. You can still view the preview, but you can't edit the RAW.",
+                comment: "Viewer card for a DNG iOS can't read: the iOS version"
+            )
+        }
+    }
+
     /// A DNG offers Share Original next to OK, so the file has somewhere to
     /// go (NF-04: every error has a way out).
     var offersShareOriginal: Bool { subject == .dng }

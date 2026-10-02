@@ -110,6 +110,7 @@ struct PhotoDetailScreen: View {
     /// Edit on a RAW this iOS build can't read says so instead of opening
     /// the editor (FS-03.04b §3).
     @State private var unsupportedRAWMessage: UnsupportedRAWMessage?
+    @State private var isUnsupportedRAWCardPresented = false
     @Environment(UnsupportedRAWIndex.self) private var unsupportedRAWIndex: UnsupportedRAWIndex?
     @State private var compressionTarget: PhotoDetailActionTarget?
     @State private var videoStudioTarget: PhotoDetailActionTarget?
@@ -1033,6 +1034,49 @@ struct PhotoDetailScreen: View {
     /// doc comment for why the old single `metadataLine` truncated the exposure
     /// values away.
     private func infoPanel(_ metadata: PhotoMetadata) -> some View {
+        let raw = currentAsset.flatMap { unsupportedRAWIndex?.message(for: $0.localIdentifier) }
+        // The RAW glyph is a button of its own beside the panel's, so its
+        // 44pt target and its card don't open the Info sheet (FS-03.04b AC-17).
+        return ZStack(alignment: .topTrailing) {
+            infoPanelButton(metadata, reservesRAWGlyph: raw != nil)
+            if let raw {
+                unsupportedRAWGlyph(raw)
+                    // Centred on the slot the title row keeps for it: 12pt
+                    // panel inset, then the iCloud glyph when there is one.
+                    .padding(.trailing, (hasCloudGlyph ? 12 + 22 + 8 : 12) - 14)
+                    .offset(y: -5)
+            }
+        }
+    }
+
+    private var hasCloudGlyph: Bool { isDownloadStalled || isDownloading || isOriginalInCloud }
+
+    /// The warning glyph and its card: the camera, the iOS version, and that
+    /// the preview stays viewable while the RAW can't be edited.
+    private func unsupportedRAWGlyph(_ raw: UnsupportedRAWMessage) -> some View {
+        Button {
+            isUnsupportedRAWCardPresented = true
+        } label: {
+            Image(systemName: "exclamationmark.triangle.fill")
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundStyle(.secondary)
+                .frame(width: 44, height: 44)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(String(localized: "RAW not supported by iOS"))
+        .accessibilityHint(String(localized: "Shows why this RAW can't be edited", comment: "VoiceOver hint: the viewer's unsupported-RAW glyph"))
+        .popover(isPresented: $isUnsupportedRAWCardPresented) {
+            Text(raw.viewerCard)
+                .font(.subheadline)
+                .fixedSize(horizontal: false, vertical: true)
+                .padding()
+                .frame(width: 300, alignment: .leading)
+                .presentationCompactAdaptation(.popover)
+        }
+    }
+
+    private func infoPanelButton(_ metadata: PhotoMetadata, reservesRAWGlyph: Bool) -> some View {
         let summary = panelSummary(metadata)
         // A Button, not `onTapGesture`: the panel is the second way into the
         // Photo Info sheet and has to be reachable by VoiceOver/Switch Control.
@@ -1055,6 +1099,11 @@ struct PhotoDetailScreen: View {
                                 .background(Color(.systemFill), in: RoundedRectangle(cornerRadius: AppTheme.Radius.sm, style: .continuous))
                         }
                         Spacer()
+                        if reservesRAWGlyph {
+                            // The RAW glyph's slot; the glyph itself is the
+                            // button laid over it (`unsupportedRAWGlyph`).
+                            Color.clear.frame(width: 16, height: 14)
+                        }
                         if isDownloadStalled {
                             Image(systemName: "exclamationmark.icloud")
                                 .font(.system(size: 14, weight: .semibold))
