@@ -64,4 +64,37 @@ struct RAWVerdictPassTests {
         #expect(try store.verdict(for: camera, build: F.release.build) == .readable)
         #expect(probe.asked.isEmpty)
     }
+
+    /// AC-12: three ARWs of a camera the list doesn't name, all only in
+    /// iCloud — every one is asked about, none is read, the camera is
+    /// unknown and nothing is marked.
+    @Test func iCloudOnlyCameraIsUnknown() async throws {
+        let database = try F.database(F.rows("s", 3, ext: "ARW", make: "SONY", model: "ILCE-7M5"))
+        let store = RAWVerdictStore(database: database)
+        let probe = FakeRAWProbe(models: ["Sony Alpha ILCE-7M4"], local: [])
+        try await RAWVerdictPass(store: store, probe: probe, release: F.release).run()
+        let camera = try #require(RAWCamera(manufacturer: "Sony", model: "ILCE-7M5"))
+        #expect(try store.verdict(for: camera, build: F.release.build) == .unknown)
+        #expect(Set(probe.asked) == ["s1", "s2", "s3"])
+    }
+
+    /// Unknown is asked again at the next launch: once a file has come down,
+    /// the camera is settled without anyone opening the editor.
+    @Test func unknownIsRejudgedWhenAFileArrives() async throws {
+        let database = try F.database(F.rows("s", 3, ext: "ARW", make: "SONY", model: "ILCE-7M5"))
+        let store = RAWVerdictStore(database: database)
+        try await RAWVerdictPass(store: store, probe: FakeRAWProbe(), release: F.release).run()
+        let changed = try await RAWVerdictPass(
+            store: store, probe: FakeRAWProbe(local: ["s2"], decodes: { _ in true }), release: F.release
+        ).run()
+        #expect(changed)
+        let camera = try #require(RAWCamera(manufacturer: "Sony", model: "ILCE-7M5"))
+        #expect(try store.verdict(for: camera, build: F.release.build) == .readable)
+    }
+
+    /// The device's probe never lets PhotoKit download (AC-12's 0 bytes).
+    @Test func systemProbeNeverUsesTheNetwork() {
+        #expect(SystemRAWDecoderProbe.resourceRequestOptions().isNetworkAccessAllowed == false)
+    }
 }
+
