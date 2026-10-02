@@ -42,4 +42,38 @@ import UniformTypeIdentifiers
     @Test func junkIsNotDecodable() throws {
         #expect(!PhotoRenderService.canDecodeRAW(at: try RAWFixtures.junk(extension: "ARW", in: folder)))
     }
+
+    /// AC-9: ImageIO can't read even the header — still a RAW refusal,
+    /// by the file's extension or the resource's type.
+    @Test func unreadableHeaderOfARAWIsUnsupported() async throws {
+        let junk = try RAWFixtures.junk(extension: "ARW", in: folder)
+        await #expect(throws: PhotoEditingError.unsupportedRAW) {
+            try await PhotoRenderService().inspectSource(at: junk)
+        }
+        let renamed = folder.appendingPathComponent("source-1.image")
+        try FileManager.default.copyItem(at: junk, to: renamed)
+        await #expect(throws: PhotoEditingError.unsupportedRAW) {
+            try await PhotoRenderService().inspectSource(at: renamed, typeHint: UTType("com.sony.arw-raw-image"))
+        }
+    }
+
+    @Test(.enabled(if: RAWFixtures.has(RAWFixtures.sony), "needs the RAW samples in ~/Library/Caches/ShotDexFixtures/raw/"))
+    func firstTwoKilobytesOfAnARWAreUnsupported() async throws {
+        let url = try #require(try RAWFixtures.truncated(RAWFixtures.sony, bytes: 2_000, in: folder))
+        await #expect(throws: PhotoEditingError.unsupportedRAW) {
+            try await PhotoRenderService().inspectSource(at: url)
+        }
+        // And the message names the extension, since there is no camera.
+        let error = RAWFileCamera.error(for: url, filename: "DSC00001.ARW", release: RAWVerdictFixtures.release)
+        #expect(error.localizedDescription.hasPrefix("iOS 27.0 doesn't support RAW files like this .ARW yet."))
+        #expect(!error.localizedDescription.contains("couldn't be decoded"))
+    }
+
+    /// A broken JPEG is not a RAW: the generic sentence stays.
+    @Test func junkJPEGIsStillCannotDecode() async throws {
+        let junk = try RAWFixtures.junk(extension: "jpg", in: folder)
+        await #expect(throws: PhotoEditingError.cannotDecode) {
+            try await PhotoRenderService().inspectSource(at: junk)
+        }
+    }
 }

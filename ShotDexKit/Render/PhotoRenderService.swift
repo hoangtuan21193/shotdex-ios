@@ -147,6 +147,13 @@ public actor PhotoRenderService {
               let rawProperties = CGImageSourceCopyPropertiesAtIndex(source, 0, nil)
                   as? [CFString: Any]
         else {
+            // A RAW by its type or its name is still the decoder's refusal
+            // when ImageIO can't read even its header (FS-03.04b AC-9), never
+            // the generic "couldn't be decoded".
+            let namedType = UTType(filenameExtension: url.pathExtension)
+            if typeHint?.conforms(to: .rawImage) == true || namedType?.conforms(to: .rawImage) == true {
+                throw PhotoEditingError.unsupportedRAW
+            }
             throw PhotoEditingError.cannotDecode
         }
 
