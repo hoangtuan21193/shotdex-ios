@@ -5,7 +5,7 @@
 | Tác giả | hat.tuan@karabiner.tech |
 | Ngày | 2026-09-29 |
 | Trạng thái | accepted — người dùng 2026-09-29: "ok tên file theo đề xuất, accepted" |
-| Tiến độ | **gần xong** (2026-10-01, /verify) — 31/31 task; 29/32 AC xanh (45 test FS-17.06 xanh); còn AC-63 (ảnh RAW), AC-70 (Duo, iPad ngang), AC-82 (kéo thả chỉ có code); `Tools/gate` chưa xanh: test host treo dưới tải ở cả hai lượt + test HDR đang làm dở của FS-01.11 |
+| Tiến độ | **gần xong** (2026-10-02, /verify) — 31/31 task; 31/32 AC xanh (47 test FS-17.06 xanh); còn AC-70 trên màn trong Duo (sim gập, không mở được); full suite chưa xanh: test host treo dưới tải GPU/VideoToolbox, mẫu stack ở `build/gate-hang-sample-2026-10-02.txt` |
 | Nguồn | phản hồi người dùng (2026-09-29) |
 | Spec sinh ra từ đây | [FS-17.06](../02-functional-spec/FS-17-import-from-server/06-edit-and-export.md) |
 
