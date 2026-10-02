@@ -583,6 +583,12 @@ No acceptance criteria yet — each needs `/spec` before it gets a task.
 - [ ] iCloud originals: **Combine Photos** (Focus Stack, HDR, Panorama) shows "N photos couldn't be downloaded" + Retry but no percent while downloading (`PhotoStackScreen.swift:409`, `PanoramaMergeScreen.swift:229`) _(FS-02.06 §2)_
 - [ ] iCloud originals: **Copy and drag** do not apply the full-pixel rule — a 1536px Optimize Storage proxy can leave as the original (`AssetActionsCoordinator.swift:195-211`, `PhotoDragItem.swift`) _(FS-02.06 §3)_
 - [ ] Unsupported RAW: **Combine (HDR, Focus Stack, Panorama), Edit in ShotDex (EX-05) and server photos (FS-17)** have no unsupported-RAW handling — same message and RAW+JPEG pair rule as the editor, plus Combine asking before it uses an embedded preview _(FS-03.04b §4)_
+- [ ] Unsupported RAW: the **viewer spins forever** on a RAW Photos can't render (a RAF the decoder refuses: `requestImage` returns nil, measured M3) while the AC-17 card says "you can still view the preview" — draw `EmbeddedRAWPreview` there (the RAF's is 4416 × 2944) _(FS-03.04b §3, FS-02.01)_
+- [ ] Unsupported RAW: the **grid tile is blank** for the same RAW (glyph only) — the tile could take its embedded preview too _(FS-03.04b §3, FS-01.01b)_
+- [ ] FS-02.06 AC-1: the viewer's **iCloud glyph shows on local RAW-only photos** on the simulator (`DJI-FC4382.DNG`, `OM_System_OM-5_2_regular.ORF`, no iCloud at all) — the probe reads Photos' embedded-preview-sized answer for a RAW as "only a preview here"; seen 2026-10-02, iPhone 17 26.5 _(FS-02.06 §3)_
+- [ ] Editor, iPhone: on a RAW the **RAW group** (WB Temp, Tint, Sharpening, NR — appended after Calibration) could not be scrolled to in the group list on iPhone 17 26.5; check it is reachable at all _(FS-03.04, EditorAdjustmentCatalog)_
+- [ ] Library: with a filter leaving one 2020 photo, the header read **"Yesterday"** — check the floating date header when the content is shorter than the screen _(FS-01.01b)_
+- [ ] Indexing: on iPhone 17 26.5 (`4D96F254`) **no automatic index run started at launch** (no `run start` health line over four launches; three photos added from the test host stayed unindexed until Settings → Re-index) _(FS-01.02)_
 
 # FS-02.06 iCloud originals — seen in passing (2026-10-02)
 
