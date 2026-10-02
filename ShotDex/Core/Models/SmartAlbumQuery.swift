@@ -205,9 +205,8 @@ enum PhotoFileType: String, CaseIterable, Identifiable, Sendable {
         case .tiff: ["tif", "tiff"]
         case .gif: ["gif"]
         case .dng: ["dng"]
-        case .raw: ["cr2", "cr3", "nef", "nrw", "arw", "sr2", "srf", "raf",
-                    "rw2", "orf", "pef", "dng", "3fr", "fff", "iiq", "erf",
-                    "mos", "mrw", "x3f"]
+        // The app's one RAW list (FS-03.04b §2).
+        case .raw: FileTypeBadge.rawExtensions.map { $0.lowercased() }.sorted()
         }
     }
 }

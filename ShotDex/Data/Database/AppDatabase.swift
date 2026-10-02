@@ -562,6 +562,26 @@ final class AppDatabase: Sendable {
             }
         }
 
+        // FS-03.04b §5: whether the system RAW decoder reads a camera, per
+        // iOS build — a scan result, not user data, so a satellite table
+        // the indexer never rewrites, and dropping it costs one pass at the
+        // next launch. `raw_pair_assets` holds the RAW-named photos that
+        // also carry a JPEG or HEIC (a pair kept with the RAW as its
+        // original): never marked, never in the Unsupported RAW filter.
+        migrator.registerMigration("v26-rawDecoderVerdicts") { db in
+            try db.create(table: "raw_decoder_verdicts") { t in
+                t.column("camera", .text).notNull()
+                t.column("osBuild", .text).notNull()
+                t.column("verdict", .text).notNull()
+                t.column("source", .text)
+                t.column("judgedAt", .integer).notNull()
+                t.primaryKey(["camera", "osBuild"])
+            }
+            try db.create(table: "raw_pair_assets") { t in
+                t.primaryKey("assetId", .text)
+            }
+        }
+
         return migrator
     }
 }

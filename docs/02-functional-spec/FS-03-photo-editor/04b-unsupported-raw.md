@@ -123,7 +123,7 @@ iOS 27.0 trong bảng là ví dụ; câu thật lấy phiên bản từ hệ th�
 
 | # | Cho | Khi | Thì | Chứng minh bằng |
 |---|---|---|---|---|
-| AC-1 | 12 NEF RAW-only, EXIF `NIKON Z 6_2`, danh sách hệ thống có "Nikon Z 6 2" | lượt xét phán quyết chạy | máy ghi "đọc được"; 0 trong 12 tile có dấu | ⚠️ chưa có |
+| AC-1 | 12 NEF RAW-only, EXIF `NIKON Z 6_2`, danh sách hệ thống có "Nikon Z 6 2" | lượt xét phán quyết chạy | máy ghi "đọc được"; 0 trong 12 tile có dấu | ✅ `RAWVerdictPassTests.listedCameraIsReadableWithoutAProbe`, `RAWDecoderVerdictTests` (tên đo trên 26.5 + danh sách thật của sim), `RAWVerdictStoreTests`, `FileTypeBadgeTests.oneListEverywhere`; "0 dấu" theo lưới: task 4 |
 | AC-2 | 8 ARW RAW-only (có sẵn trên máy) của máy không khớp danh sách, bộ giải trả rỗng, và 5 HEIC | lượt xét chạy xong | đúng 8 tile có glyph tam giác ở hàng glyph trạng thái, VoiceOver đọc "RAW not supported by iOS"; 5 HEIC không có; chạm tile mở viewer | ⚠️ chưa có |
 | AC-3 | 1 ảnh của AC-2, máy tên "Sony ILCE-7M5" trong index | bấm Edit ở Photo Detail; rồi chọn ảnh đó cùng 2 JPEG và Edit (nhiều ảnh) | lần 1: thông báo đủ hai câu, có "Sony ILCE-7M5" và "iOS 27.0"; editor không mở. Lần 2: tới ảnh đó thì hiện cùng thông báo kèm Skip; Skip sang ảnh kế, 2 JPEG sửa và lưu được | ⚠️ chưa có |
 | AC-4 | ảnh của AC-2 chỉ có trên iCloud, phán quyết đã có | bấm Edit | thông báo hiện trong ≤ 1 s, 0 byte tải về, không có spinner "Downloading from iCloud…" | ⚠️ chưa có |

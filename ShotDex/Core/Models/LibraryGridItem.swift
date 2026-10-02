@@ -31,16 +31,30 @@ protocol PhotoGridDisplayable {
 /// badge and the Info panel's per-file sections — one dictionary, so RAW does
 /// not group one way on a tile and another way in a report.
 enum FileTypeBadge {
+    /// The app's one list of RAW extensions, uppercased (FS-03.04b §2): the
+    /// tile's badge, the viewer's, the RAW smart album and the RAW-only rule
+    /// all read it.
+    static let rawExtensions: Set<String> = [
+        "3FR", "ARW", "CR2", "CR3", "CRW", "DCR", "DNG", "ERF", "FFF",
+        "IIQ", "KDC", "MEF", "MOS", "MRW", "NEF", "NRW", "ORF",
+        "PEF", "RAF", "RAW", "RW2", "RWL", "SR2", "SRF", "SRW", "X3F",
+    ]
+
+    static func isRAW(extension fileExtension: String) -> Bool {
+        rawExtensions.contains(fileExtension.uppercased())
+    }
+
+    static func isRAW(filename: String) -> Bool {
+        isRAW(extension: (filename as NSString).pathExtension)
+    }
+
     /// RAW container extensions are deliberately grouped as "RAW"; common
     /// rendered formats keep their familiar short name.
     static func text(forExtension fileExtension: String) -> String? {
         let normalized = fileExtension.uppercased()
         guard !normalized.isEmpty else { return nil }
+        if rawExtensions.contains(normalized) { return "RAW" }
         switch normalized {
-        case "3FR", "ARW", "CR2", "CR3", "CRW", "DCR", "DNG", "ERF",
-             "IIQ", "KDC", "MEF", "MOS", "MRW", "NEF", "NRW", "ORF",
-             "PEF", "RAF", "RAW", "RW2", "RWL", "SR2", "SRF", "SRW", "X3F":
-            return "RAW"
         case "JPEG", "JPE":
             return "JPG"
         case "HEIF", "HIF":

@@ -1139,15 +1139,10 @@ struct PhotoDetailScreen: View {
         return (text as NSString).size(withAttributes: [.font: font]).width
     }
 
+    /// The tile's badge, from the same extension table (FS-03.04b §2).
     private var formatBadge: String? {
-        guard let filename = currentFilename?.uppercased() else { return nil }
-        for suffix in ["RAF", "CR2", "CR3", "NEF", "ARW", "ORF", "RW2", "DNG"] where filename.hasSuffix(suffix) {
-            return "RAW"
-        }
-        if filename.hasSuffix("HEIC") || filename.hasSuffix("HEIF") { return "HEIC" }
-        if filename.hasSuffix("JPG") || filename.hasSuffix("JPEG") { return "JPG" }
-        if filename.hasSuffix("PNG") { return "PNG" }
-        return nil
+        guard let filename = currentFilename else { return nil }
+        return FileTypeBadge.text(forExtension: (filename as NSString).pathExtension)
     }
 
     // MARK: Dismiss gesture

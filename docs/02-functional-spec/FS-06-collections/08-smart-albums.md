@@ -26,7 +26,7 @@ trường, phép so sánh và giá trị. Loại trường quyết định phép
 | Loại | Trường | Phép so sánh | Ghi chú |
 |---|---|---|---|
 | **chữ** | hãng máy, thân máy, ống kính, tên file | chứa · không chứa · đúng bằng · khác | so trên **cả bản đã chuẩn hoá lẫn bản gốc**; phép phủ định vẫn khớp cả dòng rỗng → gõ "R6" bắt được "Canon EOS R6" |
-| **chọn** | khổ cảm biến · loại media · định dạng file | là · không là | định dạng gồm JPEG/HEIC/PNG/TIFF/GIF/DNG/RAW, mỗi cái ứng với một tập đuôi file; RAW gộp nhiều đuôi |
+| **chọn** | khổ cảm biến · loại media · định dạng file | là · không là | định dạng gồm JPEG/HEIC/PNG/TIFF/GIF/DNG/RAW, mỗi cái ứng với một tập đuôi file; RAW gộp nhiều đuôi — **cùng bảng đuôi** của nhãn định dạng trên tile ([FS-03.04b §2](../FS-03-photo-editor/04b-unsupported-raw.md)) |
 | **số** | ISO · khẩu · tốc độ · tiêu cự | bằng · lớn hơn · nhỏ hơn · trong khoảng | tốc độ nhận cả `1/500` lẫn số thập phân; tiêu cự có công tắc **thật / tương đương Full Frame** |
 | **ngày** | ngày chụp | **đúng ngày** (mặc định) · **trong tháng** · trong N ngày qua · trước · sau · trong khoảng | "đúng ngày" khớp **trọn ngày theo lịch địa phương** nên đúng cả ngày đổi giờ; "trong tháng" khớp trọn một tháng + năm theo lịch địa phương, ô nhập chọn tháng và năm; "N ngày qua" so với thời điểm hiện tại nên luôn sống |
 | **favorite** | favorite | — | một dải chọn Favorite / Not favorite |
