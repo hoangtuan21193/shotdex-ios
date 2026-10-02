@@ -360,7 +360,7 @@ enum PhotoShareSheet {
     /// The view controller on top of the foreground window, which is where a
     /// sheet or an alert has to be presented from.
     @MainActor
-    private static func topPresenter() -> UIViewController? {
+    static func topPresenter() -> UIViewController? {
         guard let scene = UIApplication.shared.connectedScenes
             .compactMap({ $0 as? UIWindowScene })
             .first(where: { $0.activationState == .foregroundActive }),

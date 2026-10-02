@@ -36,6 +36,14 @@ final class UnsupportedRAWIndex {
         return .make(cameraName: indexed.camera?.displayName, filename: indexed.filename, iOSVersion: release.version)
     }
 
+    /// Whether this photo's camera is one this build can't read — for a
+    /// RAW + JPEG pair, which is never in `assetIds`: its Edit RAW is dimmed
+    /// (AC-5).
+    func isCameraUnreadable(assetId: String) -> Bool {
+        guard let camera = (try? store.cameraAndFilename(of: assetId))?.camera else { return false }
+        return (try? store.verdict(for: camera, build: release.build)) == .unreadable
+    }
+
     func loadIfNeeded() {
         guard !hasLoaded else { return }
         hasLoaded = true

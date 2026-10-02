@@ -34,14 +34,19 @@ struct PhotoEditorScreen: View {
     /// a successful save — Save Changes hands back this asset's own id, Save
     /// Copy the new copy's. The presenter uses it to put that photo on screen.
     var onSaved: ((String) -> Void)?
+    /// The file of a RAW + JPEG pair *Edit which version?* chose (FS-03.04b
+    /// §3); nil when there was no question.
+    var editSource: PhotoEditSource?
 
     init(
         asset: PHAsset,
         siblings: [PHAsset] = [],
         sourceAlbum: PHAssetCollection?,
         metadata: PhotoMetadata? = nil,
+        editSource: PhotoEditSource? = nil,
         onSaved: ((String) -> Void)? = nil
     ) {
+        self.editSource = editSource
         self.origin = .asset(asset)
         self.siblings = siblings.map(PhotoEditOrigin.asset)
         self.sourceAlbum = sourceAlbum
@@ -443,6 +448,11 @@ struct PhotoEditorScreen: View {
         // Every session opens on Adjust: the tab the user left last time is
         // rarely the one they want on a different photo.
         newController.selectedTool = .adjust
+        // What *Edit which version?* chose is for the photo it was asked on.
+        if target.id == origin.id { newController.requestedSource = editSource }
+        if let assetId = target.asset?.localIdentifier {
+            newController.isRAWSourceUnreadable = dependencies.unsupportedRAWIndex.isCameraUnreadable(assetId: assetId)
+        }
         controller = newController
         // Swapped out, so its original can go. After the assignment, not before:
         // closing first is what left the screen with no controller to render.
@@ -2606,20 +2616,30 @@ struct PhotoEditorScreen: View {
         if controller.sourceOptions.count > 1 {
             Menu("Source") {
                 ForEach(controller.sourceOptions) { option in
-                    Button {
-                        Task {
-                            try? await controller.selectSource(option)
-                        }
-                    } label: {
-                        if option.id == controller.selectedSourceOption?.id {
-                            Label(option.displayName, systemImage: "checkmark")
-                        } else {
-                            Text(option.displayName)
-                        }
-                    }
+                    sourceMenuItem(option, controller: controller)
                 }
             }
         }
+    }
+
+    /// One row of the Source menu. A RAW iOS can't read is dimmed with the
+    /// reason, like Edit RAW in *Edit which version?* (FS-03.04b AC-5).
+    @ViewBuilder
+    private func sourceMenuItem(_ option: PhotoEditSourceOption, controller: PhotoEditorController) -> some View {
+        let isDimmed = option.isRAW && controller.isRAWSourceUnreadable
+        Button {
+            Task { await controller.switchSource(option) }
+        } label: {
+            if option.id == controller.selectedSourceOption?.id {
+                Label(option.displayName, systemImage: "checkmark")
+            } else if isDimmed {
+                Text(option.displayName)
+                Text("iOS can't read this RAW yet", comment: "Why RAW is dimmed in the editor's Source menu")
+            } else {
+                Text(option.displayName)
+            }
+        }
+        .disabled(isDimmed)
     }
 
     /// The sidebar's ⋯: everything the wide layout has no other place for.
@@ -2852,17 +2872,7 @@ struct PhotoEditorScreen: View {
         if controller.sourceOptions.count > 1 {
             Menu("Source") {
                 ForEach(controller.sourceOptions) { option in
-                    Button {
-                        Task {
-                            try? await controller.selectSource(option)
-                        }
-                    } label: {
-                        if option.id == controller.selectedSourceOption?.id {
-                            Label(option.displayName, systemImage: "checkmark")
-                        } else {
-                            Text(option.displayName)
-                        }
-                    }
+                    sourceMenuItem(option, controller: controller)
                 }
             }
         }

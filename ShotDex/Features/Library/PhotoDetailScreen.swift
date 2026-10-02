@@ -2,6 +2,7 @@ import AVKit
 import CoreLocation
 import MapKit
 import Photos
+import ShotDexKit
 import SwiftUI
 import UIKit
 
@@ -62,6 +63,8 @@ private struct PhotoDetailActionTarget: Identifiable {
     let id: String
     let asset: PHAsset
     let sourceAlbum: PHAssetCollection?
+    /// For the editor: the file *Edit which version?* chose.
+    var editSource: PhotoEditSource? = nil
 }
 
 /// Fullscreen photo viewer: horizontal paging between photos, pinch/double-tap
@@ -365,6 +368,7 @@ struct PhotoDetailScreen: View {
                 // Only so a text overlay can say "Shot on …" — the row is already
                 // in hand for the info panel.
                 metadata: currentMetadata,
+                editSource: target.editSource,
                 onSaved: { pendingSavedAssetID = $0 }
             )
         }
@@ -1144,11 +1148,22 @@ struct PhotoDetailScreen: View {
             unsupportedRAWMessage = message
             return
         }
-        editorTarget = PhotoDetailActionTarget(
-            id: asset.localIdentifier,
-            asset: asset,
-            sourceAlbum: model.sourceAlbum
+        let album = model.sourceAlbum
+        let choice = EditSourceChoice(
+            resources: EditSourcePrompt.resources(of: asset),
+            rawIsReadable: !(unsupportedRAWIndex?.isCameraUnreadable(assetId: asset.localIdentifier) ?? false)
         )
+        guard choice.isPair else {
+            editorTarget = PhotoDetailActionTarget(id: asset.localIdentifier, asset: asset, sourceAlbum: album)
+            return
+        }
+        // Every pair asks, every time (AC-5, AC-16).
+        Task { @MainActor in
+            guard let source = await EditSourcePrompt.ask(choice) else { return }
+            editorTarget = PhotoDetailActionTarget(
+                id: asset.localIdentifier, asset: asset, sourceAlbum: album, editSource: source
+            )
+        }
     }
 
     /// Share Original from the unreadable-DNG alert (FS-03.04b AC-7): the

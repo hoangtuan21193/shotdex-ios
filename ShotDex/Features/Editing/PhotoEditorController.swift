@@ -180,6 +180,12 @@ final class PhotoEditorController {
     private(set) var session: PhotoEditingSession?
     private(set) var loadedSource: LoadedPhotoEditSource?
     private(set) var selectedSourceOption: PhotoEditSourceOption?
+    /// The file *Edit which version?* chose (FS-03.04b §3); nil opens the
+    /// file the photo's saved edit was made on, or the RAW.
+    var requestedSource: PhotoEditSource?
+    /// This camera's RAW is one iOS can't read: the Source menu shows RAW
+    /// dimmed, with the reason (AC-5).
+    var isRAWSourceUnreadable = false
 
     var recipe = PhotoEditRecipe.identity
     private(set) var editedPreviewImage: UIImage?
@@ -673,7 +679,10 @@ final class PhotoEditorController {
             downloadFraction = nil
             isDownloadStalled = false
             self.session = session
-            let option = session.preferredSource(for: session.recalledRecipe)
+            let chosen = requestedSource.flatMap { source in
+                session.sourceOptions.first { $0.source == source }
+            }
+            let option = chosen ?? session.preferredSource(for: session.recalledRecipe)
             guard let option else { throw PhotoEditingError.missingSource }
             try await selectSource(option, renders: false)
 
@@ -3359,6 +3368,16 @@ final class PhotoEditorController {
 
     func clearLoadFailure() {
         loadFailure = nil
+    }
+
+    /// The Source menu's switch: a file that won't open says why and leaves
+    /// the editor on the one it had (FS-03.04b §3) — never swallowed.
+    func switchSource(_ option: PhotoEditSourceOption) async {
+        do {
+            try await selectSource(option)
+        } catch {
+            errorMessage = error.localizedDescription
+        }
     }
 
     /// A photo the index already knows can't be opened — a RAW this iOS
