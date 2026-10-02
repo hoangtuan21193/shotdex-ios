@@ -540,7 +540,8 @@ struct LibraryScreen: View {
                     criteria: Binding(
                         get: { model.criteria },
                         set: { model.criteria = $0 }
-                    )
+                    ),
+                    rejectedScope: { model.items.map(\.assetId) }
                 )
             }
         }

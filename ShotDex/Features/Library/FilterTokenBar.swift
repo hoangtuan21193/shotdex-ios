@@ -94,6 +94,13 @@ struct FilterTokenBar: View {
     /// Read-only header (smart-album detail): show conditions but hide Clear
     /// and disable removal.
     var readOnly = false
+    /// The ids the grid shows, for Delete Rejected (FS-01.12b §5): with the
+    /// Rejected filter on, a red **Delete N** pill sits by Clear and sends
+    /// exactly these photos' Rejected ones to the system's deletion. Nil on
+    /// a bar with no grid behind it.
+    var rejectedScope: (() -> [String])?
+    @Environment(PhotoMarks.self) private var photoMarks: PhotoMarks?
+    @Environment(AppDependencies.self) private var dependencies: AppDependencies?
 
     var body: some View {
         HStack(spacing: 0) {
@@ -126,9 +133,15 @@ struct FilterTokenBar: View {
                 .padding(.horizontal, 14)
                 .frame(minHeight: 34)
                 .glassBackground(Capsule())
-                .padding(.trailing, AppTheme.Size.floatingChromeMargin)
+                .padding(.trailing, deletePillCount == nil ? AppTheme.Size.floatingChromeMargin : 8)
                 .fixedSize(horizontal: true, vertical: false)
                 .layoutPriority(1)
+            }
+            if let count = deletePillCount {
+                deletePill(count)
+                    .padding(.trailing, AppTheme.Size.floatingChromeMargin)
+                    .fixedSize(horizontal: true, vertical: false)
+                    .layoutPriority(1)
             }
         }
         // No background. The bar is floating chrome over the grid, like the
@@ -139,6 +152,44 @@ struct FilterTokenBar: View {
         // content inset instead (see `LibraryScreen.photoGrid`), and Clear
         // carries its own glass capsule so it stays legible once photos do
         // scroll behind it.
+    }
+
+    // MARK: Delete Rejected (FS-01.12b §5)
+
+    private var rejectedIds: [String] {
+        guard !readOnly, RejectedDeletion.showsPill(for: criteria), let rejectedScope, let photoMarks else { return [] }
+        _ = photoMarks.version
+        return RejectedDeletion.ids(visible: rejectedScope(), flag: photoMarks.flag(for:))
+    }
+
+    private var deletePillCount: Int? {
+        let count = rejectedIds.count
+        return count > 0 ? count : nil
+    }
+
+    /// 32pt red pill in a 44pt target, pinned beside Clear.
+    private func deletePill(_ count: Int) -> some View {
+        Button {
+            let ids = rejectedIds
+            guard let dependencies, !ids.isEmpty else { return }
+            Task { _ = await RejectedDeleter.live(photoLibrary: dependencies.photoLibrary, banner: dependencies.banner).delete(ids) }
+        } label: {
+            HStack(spacing: 6) {
+                Image(systemName: "trash")
+                    .font(.system(size: 12, weight: .semibold))
+                Text(MarkCopy.deletePill(count))
+                    .font(.footnote.weight(.semibold))
+                    .monospacedDigit()
+            }
+            .foregroundStyle(.white)
+            .padding(.horizontal, 14)
+            .frame(height: 32)
+            .background(Color.red, in: Capsule())
+            .frame(minHeight: 44)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(MarkCopy.deletePillAccessibility(count))
     }
 
     /// One active condition as a removable chip. Shared with the smart

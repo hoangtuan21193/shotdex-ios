@@ -362,7 +362,13 @@ struct CullHost: View {
     var body: some View {
         Group {
             if let model {
-                CullScreen(model: model, photoLibrary: dependencies.photoLibrary)
+                CullScreen(
+                    model: model, photoLibrary: dependencies.photoLibrary,
+                    deleteRejectedPhotos: { ids in
+                        let deleter = RejectedDeleter.live(photoLibrary: dependencies.photoLibrary, banner: dependencies.banner)
+                        if case .deleted = await deleter.delete(ids) { model.removeDeleted(ids) }
+                    }
+                )
             } else {
                 EditorTheme.background.ignoresSafeArea()
             }

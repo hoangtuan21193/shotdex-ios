@@ -1,0 +1,68 @@
+{
+  "steps": [
+    {
+      "action": "launch"
+    },
+    {
+      "action": "wait",
+      "seconds": 6
+    },
+    {
+      "action": "tap",
+      "label": "Filter and sort"
+    },
+    {
+      "action": "wait",
+      "seconds": 1.5
+    },
+    {
+      "action": "tap",
+      "label": "Rejected"
+    },
+    {
+      "action": "wait",
+      "seconds": 2.5
+    },
+    {
+      "action": "screenshot",
+      "name": "01-rejected-pill"
+    },
+    {
+      "action": "dump",
+      "name": "01-rejected-pill"
+    },
+    {
+      "action": "tap",
+      "label": "Delete 1 Rejected photo"
+    },
+    {
+      "action": "wait",
+      "seconds": 2.5
+    },
+    {
+      "action": "screenshot",
+      "name": "02-system-dialog"
+    },
+    {
+      "action": "dump",
+      "name": "02-system-dialog"
+    },
+    {
+      "action": "systemTap",
+      "label": "Don’t Allow",
+      "seconds": 6
+    },
+    {
+      "action": "wait",
+      "seconds": 2
+    },
+    {
+      "action": "screenshot",
+      "name": "03-after-cancel"
+    },
+    {
+      "action": "dump",
+      "name": "03-after-cancel"
+    }
+  ]
+}

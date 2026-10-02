@@ -254,10 +254,13 @@ struct SmartAlbumDetailScreen: View {
                     }
                 )
             } else if !filter.criteria.isEmpty {
-                FilterTokenBar(criteria: Binding(
-                    get: { filter.criteria },
-                    set: { filter.setCriteria($0) }
-                ))
+                FilterTokenBar(
+                    criteria: Binding(
+                        get: { filter.criteria },
+                        set: { filter.setCriteria($0) }
+                    ),
+                    rejectedScope: { model?.allPhotoIds() ?? [] }
+                )
             }
         }
     }

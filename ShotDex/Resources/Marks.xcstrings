@@ -29,6 +29,30 @@
         }
       }
     },
+    "%lld photos moved to Recently Deleted. Recover them in Photos within 30 days.": {
+      "comment": "Banner after Delete Rejected (plural)",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld photo moved to Recently Deleted. Recover it in Photos within 30 days."
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld photos moved to Recently Deleted. Recover them in Photos within 30 days."
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "%lld picks": {
       "comment": "Culling pass count of Picked photos (plural)",
       "extractionState": "manual",
@@ -137,6 +161,10 @@
       "comment": "Culling pass: leave the pass",
       "extractionState": "manual"
     },
+    "Couldn't delete the Rejected photos.": {
+      "comment": "Banner: the system deletion failed; nothing was deleted",
+      "extractionState": "manual"
+    },
     "Couldn't save rating.": {
       "comment": "Banner: writing a star rating to Photos failed",
       "extractionState": "manual"
@@ -172,6 +200,34 @@
     "Cull Photos": {
       "comment": "Command name: the culling pass",
       "extractionState": "manual"
+    },
+    "Delete %lld": {
+      "comment": "Conditions bar: delete the Rejected photos shown (count)",
+      "extractionState": "manual"
+    },
+    "Delete %lld Rejected photos": {
+      "comment": "VoiceOver: the conditions bar's Delete Rejected pill (plural)",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Delete %lld Rejected photo"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Delete %lld Rejected photos"
+                }
+              }
+            }
+          }
+        }
+      }
     },
     "Delete %lld Rejected…": {
       "comment": "Culling summary: delete the Rejected photos of the pass (plural)",

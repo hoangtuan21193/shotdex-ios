@@ -172,4 +172,20 @@ enum MarkCopy {
     static var previousPhoto: String { String(localized: "Previous Photo", table: table, comment: "Keyboard shortcut in the culling pass") }
     static var nextPhoto: String { String(localized: "Next Photo", table: table, comment: "Keyboard shortcut in the culling pass") }
     static var zoom: String { String(localized: "Zoom", table: table, comment: "Keyboard shortcut in the culling pass: 100% / fit") }
+
+    // MARK: Delete Rejected (FS-01.12b §3)
+
+    /// The pill on the conditions bar: `Delete 120`.
+    static func deletePill(_ count: Int, locale: Locale = .current) -> String {
+        String(localized: "Delete \(count)", table: table, locale: locale, comment: "Conditions bar: delete the Rejected photos shown (count)")
+    }
+    static func deletePillAccessibility(_ count: Int, locale: Locale = .current) -> String {
+        String(localized: "Delete \(count) Rejected photos", table: table, locale: locale, comment: "VoiceOver: the conditions bar's Delete Rejected pill (plural)")
+    }
+    static func movedToRecentlyDeleted(_ count: Int, locale: Locale = .current) -> String {
+        String(localized: "\(count) photos moved to Recently Deleted. Recover them in Photos within 30 days.", table: table, locale: locale, comment: "Banner after Delete Rejected (plural)")
+    }
+    static var deleteFailed: String {
+        String(localized: "Couldn't delete the Rejected photos.", table: table, comment: "Banner: the system deletion failed; nothing was deleted")
+    }
 }

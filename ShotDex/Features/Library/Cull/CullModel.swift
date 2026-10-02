@@ -198,6 +198,19 @@ final class CullModel {
         loadCurrent()
     }
 
+    /// Photos the system deleted from the pass (Delete N Rejected…): out of
+    /// the set and its undo; the summary stays, now with nothing rejected.
+    func removeDeleted(_ ids: [String]) {
+        let gone = Set(ids)
+        let items = session.ids.filter { !gone.contains($0) }.compactMap { id in
+            assets[id].map { CullSession.Item(id: id, captureDate: $0.creationDate) }
+        }
+        let current = session.currentId.flatMap { gone.contains($0) ? nil : $0 }
+        session = CullSession.start(items: items, flagged: { _ in true }, startId: current)
+        for id in gone { assets[id] = nil }
+        if session.ids.isEmpty { image = nil } else if !isSummaryPresented { loadCurrent() }
+    }
+
     /// The pass's Rejected photos, in pass order — what Delete N Rejected…
     /// sends to the system's deletion (FS-01.12b §3).
     var rejectedIds: [String] {
