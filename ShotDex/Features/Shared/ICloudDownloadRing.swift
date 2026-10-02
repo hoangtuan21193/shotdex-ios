@@ -30,6 +30,9 @@ struct ICloudDownloadRing: View {
             Image(systemName: "icloud")
                 .font(.system(size: 9, weight: .semibold))
                 .foregroundStyle(.secondary)
+                // The glyph is the element VoiceOver lands on (the stack's
+                // own label is not what it reads): it carries the percent.
+                .accessibilityLabel(OriginalPreparationState.accessibilityProgress(progress))
         }
         .frame(width: 22, height: 22)
         .onAppear { spin = true }

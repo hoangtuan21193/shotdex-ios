@@ -1,22 +1,86 @@
 {
   "steps": [
-    { "action": "launch", "arguments": ["-ShotDexFakeICloud", "cloud=all,seconds=8"] },
-    { "action": "wait", "seconds": 6 },
-    { "action": "tap", "x": 0.165, "y": 0.30 },
-    { "action": "wait", "seconds": 1.5 },
-    { "action": "screenshot", "name": "01-glyph-before-zoom" },
-    { "action": "doubleTap", "x": 0.5, "y": 0.5 },
-    { "action": "wait", "seconds": 1 },
-    { "action": "screenshot", "name": "02-zoomed-1s" },
-    { "action": "dump", "name": "02-zoomed-1s" },
-    { "action": "wait", "seconds": 2 },
-    { "action": "screenshot", "name": "03-zoomed-3s" },
-    { "action": "wait", "seconds": 2 },
-    { "action": "screenshot", "name": "04-zoomed-5s" },
-    { "action": "wait", "seconds": 5 },
-    { "action": "doubleTap", "x": 0.5, "y": 0.5 },
-    { "action": "wait", "seconds": 2 },
-    { "action": "screenshot", "name": "05-original-here" },
-    { "action": "dump", "name": "05-original-here" }
+    {
+      "action": "launch",
+      "arguments": [
+        "-ShotDexFakeICloud",
+        "cloud=all,seconds=60"
+      ]
+    },
+    {
+      "action": "wait",
+      "seconds": 6
+    },
+    {
+      "action": "tap",
+      "x": 0.165,
+      "y": 0.15
+    },
+    {
+      "action": "wait",
+      "seconds": 1.5
+    },
+    {
+      "action": "screenshot",
+      "name": "01-glyph-before-zoom"
+    },
+    {
+      "action": "doubleTap",
+      "x": 0.5,
+      "y": 0.5
+    },
+    {
+      "action": "wait",
+      "seconds": 2
+    },
+    {
+      "action": "screenshot",
+      "name": "02-zoomed-ring-a"
+    },
+    {
+      "action": "wait",
+      "seconds": 2
+    },
+    {
+      "action": "screenshot",
+      "name": "03-zoomed-ring-b"
+    },
+    {
+      "action": "wait",
+      "seconds": 2
+    },
+    {
+      "action": "screenshot",
+      "name": "04-zoomed-ring-c"
+    },
+    {
+      "action": "dump",
+      "name": "04-zoomed-ring-c"
+    },
+    {
+      "action": "wait",
+      "seconds": 30
+    },
+    {
+      "action": "screenshot",
+      "name": "05-zoomed-original-here"
+    },
+    {
+      "action": "doubleTap",
+      "x": 0.5,
+      "y": 0.5
+    },
+    {
+      "action": "wait",
+      "seconds": 2
+    },
+    {
+      "action": "screenshot",
+      "name": "06-unzoomed-no-glyph"
+    },
+    {
+      "action": "wait",
+      "seconds": 4
+    }
   ]
 }

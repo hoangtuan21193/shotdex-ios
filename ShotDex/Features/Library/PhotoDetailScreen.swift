@@ -271,6 +271,10 @@ struct PhotoDetailScreen: View {
                 .transition(.opacity)
             }
         }
+        // Zoomed in, the chrome is gone but the zoom is what downloads the
+        // original: the ring alone, top-right, until it arrives (FS-02.06
+        // AC-2). No number; VoiceOver reads the percent.
+        .overlay(alignment: .topTrailing) { zoomedDownloadCorner }
         .background(
             // A GeometryReader that ignores the safe area reports the inset it
             // covers — how we read the home-indicator gap without disturbing the
@@ -600,6 +604,37 @@ struct PhotoDetailScreen: View {
 
     private var isCurrentVideo: Bool {
         currentAsset?.mediaType == .video
+    }
+
+    private var zoomedDownloadIndicator: ViewerDownloadIndicator {
+        .placement(
+            isChromeVisible: showsViewerChrome,
+            isZoomed: isZoomed,
+            isDownloading: isDownloading,
+            isStalled: isDownloadStalled
+        )
+    }
+
+    /// The top-right corner of the photo area, inside the safe area and the
+    /// chrome's 20 pt margin, so the display's rounded corner never cuts it.
+    @ViewBuilder private var zoomedDownloadCorner: some View {
+        Group {
+            switch zoomedDownloadIndicator {
+            case .cornerRing:
+                ICloudDownloadRing(progress: downloadProgress)
+            case .cornerStall:
+                Image(systemName: "exclamationmark.icloud")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(.orange)
+                    .frame(width: 22, height: 22)
+                    .accessibilityLabel(String(localized: "iCloud download stalled"))
+            default:
+                EmptyView()
+            }
+        }
+        .padding(.top, 8)
+        .padding(.trailing, 20)
+        .allowsHitTesting(false)
     }
 
     private var showsViewerChrome: Bool {

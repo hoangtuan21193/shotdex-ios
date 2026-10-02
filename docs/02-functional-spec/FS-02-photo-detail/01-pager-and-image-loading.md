@@ -30,6 +30,9 @@ gốc — chỉ khi người dùng chủ động phóng.
 - Mở ở **vừa khung, mức nhỏ nhất là 1×**; không tự phóng, không tự cắt.
 - Ở 1× thì kéo ngang thuộc về pager; vượt 1,01 lần mới bật kéo bên trong ảnh.
 - Phóng thì tắt vuốt-xuống-để-đóng và ẩn tạm chrome; đổi trang thì đặt lại mức phóng.
+  - **Ngoại lệ** (người dùng chốt 2026-10-02, [06](06-icloud-originals.md) AC-2): đang phóng mà bản gốc đang tải từ
+    iCloud thì vòng 22pt hiện **một mình** ở góc trên-phải vùng ảnh (trong vùng an toàn, lề 20pt, tránh góc bo), không
+    số, VoiceOver đọc phần trăm; bản gốc về thì vòng mất. Phần còn lại của chrome vẫn ẩn.
 - **Phóng là lúc nâng lên bản gốc** (cho phép mạng): tín hiệu bắt đầu pinch được bắt ngay đầu cử chỉ, còn
   ngưỡng 1,01 lần là đường dự phòng cho chạm đôi; một cờ chống xin lặp. Yêu cầu bản cỡ màn **bị huỷ trước**
   để không tranh băng thông và để không có kết quả nhỏ tới muộn ghi đè bản gốc.

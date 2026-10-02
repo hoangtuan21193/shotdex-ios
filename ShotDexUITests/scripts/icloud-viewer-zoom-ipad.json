@@ -1,0 +1,82 @@
+{
+  "steps": [
+    {
+      "action": "launch",
+      "arguments": [
+        "-ShotDexFakeICloud",
+        "cloud=all,seconds=40"
+      ]
+    },
+    {
+      "action": "wait",
+      "seconds": 6
+    },
+    {
+      "action": "tap",
+      "x": 0.2,
+      "y": 0.135
+    },
+    {
+      "action": "wait",
+      "seconds": 1.5
+    },
+    {
+      "action": "screenshot",
+      "name": "01-glyph-before-zoom"
+    },
+    {
+      "action": "doubleTap",
+      "x": 0.5,
+      "y": 0.5
+    },
+    {
+      "action": "wait",
+      "seconds": 2
+    },
+    {
+      "action": "screenshot",
+      "name": "02-zoomed-ring-a"
+    },
+    {
+      "action": "wait",
+      "seconds": 2
+    },
+    {
+      "action": "screenshot",
+      "name": "03-zoomed-ring-b"
+    },
+    {
+      "action": "wait",
+      "seconds": 2
+    },
+    {
+      "action": "screenshot",
+      "name": "04-zoomed-ring-c"
+    },
+    {
+      "action": "wait",
+      "seconds": 40
+    },
+    {
+      "action": "screenshot",
+      "name": "05-zoomed-original-here"
+    },
+    {
+      "action": "doubleTap",
+      "x": 0.5,
+      "y": 0.5
+    },
+    {
+      "action": "wait",
+      "seconds": 2
+    },
+    {
+      "action": "screenshot",
+      "name": "06-unzoomed-no-glyph"
+    },
+    {
+      "action": "wait",
+      "seconds": 4
+    }
+  ]
+}
