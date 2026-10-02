@@ -183,7 +183,21 @@ struct VideoStudioScreen: View {
             VideoMediaPicker(selectionLimit: pickerMode == .replace ? 1 : 0) { picks in
                 guard let model, !picks.isEmpty else { return }
                 switch pickerMode {
-                case .add: model.appendMedia(picks)
+                case .add:
+                    // Picked RAWs iOS can't read: the same question as at the
+                    // door (FS-03.04b AC-18).
+                    let unreadable = dependencies.unsupportedRAWIndex.assetIds
+                    guard picks.contains(where: { unreadable.contains($0.assetID) }) else {
+                        model.appendMedia(picks)
+                        return
+                    }
+                    Task { @MainActor in
+                        let assets = PhotoLibraryService.fetchAssets(ids: picks.map(\.assetID))
+                        guard let kept = await UnsupportedRAWBatchPrompt.resolve(assets, unreadable: unreadable)
+                        else { return }
+                        let keptIDs = Set(kept.map(\.localIdentifier))
+                        model.appendMedia(picks.filter { keptIDs.contains($0.assetID) })
+                    }
                 case .replace: if let first = picks.first { model.replaceSelectedClip(with: first) }
                 }
             }

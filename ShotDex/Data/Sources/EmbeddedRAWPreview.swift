@@ -15,6 +15,31 @@ enum EmbeddedRAWPreview {
         return image(at: url, maxPixelSize: maxPixelSize)
     }
 
+    /// For the video compositor, whose frame queue loads stills
+    /// synchronously and is never the main thread: the RAW is copied out of
+    /// Photos with a wait, then its preview read as above.
+    static func imageSynchronously(assetID: String, maxPixelSize: Int?) -> CGImage? {
+        guard let asset = PHAsset.fetchAssets(withLocalIdentifiers: [assetID], options: nil).firstObject,
+              let resource = PHAssetResource.assetResources(for: asset).first(where: {
+                  [.photo, .alternatePhoto].contains($0.type) && SystemRAWDecoderProbe.isRAW($0)
+              })
+        else { return nil }
+        let folder = FileManager.default.temporaryDirectory.appendingPathComponent("RAWPreview-\(UUID().uuidString)", isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: folder) }
+        let url = folder.appendingPathComponent(resource.originalFilename)
+        guard (try? FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)) != nil else { return nil }
+        let options = PHAssetResourceRequestOptions()
+        options.isNetworkAccessAllowed = true
+        let done = DispatchSemaphore(value: 0)
+        var succeeded = false
+        PHAssetResourceManager.default().writeData(for: resource, toFile: url, options: options) { error in
+            succeeded = error == nil
+            done.signal()
+        }
+        done.wait()
+        return succeeded ? image(at: url, maxPixelSize: maxPixelSize) : nil
+    }
+
     static func image(at url: URL, maxPixelSize: Int? = nil) -> CGImage? {
         guard let source = CGImageSourceCreateWithURL(url as CFURL, [kCGImageSourceShouldCache: false] as CFDictionary)
         else { return nil }

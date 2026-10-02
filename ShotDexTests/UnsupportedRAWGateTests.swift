@@ -63,4 +63,26 @@ struct UnsupportedRAWGateTests {
         let preview = try AssetMetadataCarryOverTests.codeLines(of: "ShotDex/Data/Sources/EmbeddedRAWPreview.swift").joined(separator: "\n")
         #expect(!preview.contains("PHAssetCreationRequest"))
     }
+
+    /// AC-18: five photos, two RAWs iOS can't read, Skip These 2 → three
+    /// clips, none from a preview.
+    @Test func videoStudioSkipLeavesThree() {
+        let gate = UnsupportedRAWGate(ids: ["p1", "raw1", "p2", "raw2", "p3"], unreadableSet: ["raw1", "raw2"])
+        #expect(gate.skipTitle == "Skip These 2")
+        #expect(gate.ids(after: .skip) == ["p1", "p2", "p3"])
+    }
+
+    @Test func videoStudioAsksAtEveryDoor() throws {
+        for path in [
+            "ShotDex/Features/Library/LibraryScreen.swift", "ShotDex/Features/Albums/AlbumDetailScreen.swift",
+            "ShotDex/Features/Albums/SmartAlbumDetailScreen.swift", "ShotDex/Features/Shared/PhotoListScreen.swift",
+            "ShotDex/Features/VideoStudio/VideoStudioScreen.swift",
+        ] {
+            let code = try AssetMetadataCarryOverTests.codeLines(of: path).joined(separator: "\n")
+            #expect(code.contains("UnsupportedRAWBatchPrompt.resolve("), "\(path) opens Video Studio without asking")
+        }
+        let store = try AssetMetadataCarryOverTests.codeLines(of: "ShotDex/Data/Sources/VideoFrameCompositor.swift").joined(separator: "\n")
+        #expect(store.contains("if isEmbeddedPreview {"))
+    }
 }
+

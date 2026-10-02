@@ -153,10 +153,20 @@ final class StillFrameStore: @unchecked Sendable {
     /// Server copies on this device by clip id (FS-17.06 §5b): decoded from
     /// the file at the render size instead of asked of PhotoKit.
     private var files: [String: URL]
+    /// RAWs this iOS build can't read, taken in with Convert to JPEG
+    /// (FS-03.04b §4): drawn from their embedded preview.
+    private var embeddedPreviewIds: Set<String>
 
-    init(targetLongEdge: CGFloat, files: [String: URL] = [:]) {
+    init(targetLongEdge: CGFloat, files: [String: URL] = [:], embeddedPreviewIds: Set<String> = []) {
         self.targetLongEdge = targetLongEdge
         self.files = files
+        self.embeddedPreviewIds = embeddedPreviewIds
+    }
+
+    func setEmbeddedPreviewIds(_ ids: Set<String>) {
+        lock.lock()
+        defer { lock.unlock() }
+        embeddedPreviewIds = ids
     }
 
     func setFiles(_ files: [String: URL]) {
@@ -191,7 +201,12 @@ final class StillFrameStore: @unchecked Sendable {
     private func load(_ assetID: String) -> CIImage? {
         lock.lock()
         let file = files[assetID]
+        let isEmbeddedPreview = embeddedPreviewIds.contains(assetID)
         lock.unlock()
+        if isEmbeddedPreview {
+            return EmbeddedRAWPreview.imageSynchronously(assetID: assetID, maxPixelSize: Int(targetLongEdge.rounded(.up)))
+                .map { CIImage(cgImage: $0) }
+        }
         if let file {
             return PhotoOriginFile.image(at: file, maxPixelSize: Int(targetLongEdge.rounded(.up))).map { CIImage(cgImage: $0) }
         }

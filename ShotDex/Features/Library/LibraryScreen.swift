@@ -379,7 +379,13 @@ struct LibraryScreen: View {
     private func presentVideoStudio(_ model: LibraryModel) {
         let assets = PhotoLibraryService.fetchAssets(ids: selectedIds)
         guard !assets.isEmpty else { return }
-        videoStudioPresentation = VideoStudioPresentation(assets: assets, mode: .multiClip)
+        // RAWs iOS can't read: asked once, before the studio opens (FS-03.04b AC-18).
+        let unreadable = dependencies.unsupportedRAWIndex.assetIds
+        Task { @MainActor in
+            guard let kept = await UnsupportedRAWBatchPrompt.resolve(assets, unreadable: unreadable),
+                  !kept.isEmpty else { return }
+            videoStudioPresentation = VideoStudioPresentation(assets: kept, mode: .multiClip)
+        }
     }
 
     private func deleteSelected(_ model: LibraryModel) {

@@ -24,6 +24,10 @@ final class VideoStudioService {
     /// server photos (FS-17.06 §5b). Empty otherwise.
     private(set) var serverFiles: [String: URL] = [:]
 
+    /// RAWs this iOS build can't read (FS-03.04b §4): one in the project was
+    /// taken in with Convert to JPEG, so its still is the embedded preview.
+    var unreadableRAWIds: @MainActor () -> Set<String> = { [] }
+
     /// Points the stills of this session at server copies on disk; an empty
     /// map when the session ends.
     func setServerFiles(_ files: [String: URL]) {
@@ -63,6 +67,7 @@ final class VideoStudioService {
         maximumStillSize: CGSize? = nil
     ) async -> LoadedSources {
         var loaded = LoadedSources()
+        previewStillStore.setEmbeddedPreviewIds(unreadableRAWIds())
         // One fetch for every clip, not one per clip: a twenty-clip project
         // was twenty PHAsset fetches before it awaited anything.
         let assets = Dictionary(
@@ -416,7 +421,10 @@ final class VideoStudioService {
                 renderSize: renderSize
             )
         }
-        let exportStillStore = StillFrameStore(targetLongEdge: max(renderSize.width, renderSize.height), files: serverFiles)
+        let exportStillStore = StillFrameStore(
+            targetLongEdge: max(renderSize.width, renderSize.height), files: serverFiles,
+            embeddedPreviewIds: unreadableRAWIds()
+        )
         let videoComposition = VideoCompositionBuilder.videoComposition(
             recipe: recipe,
             layout: layout,

@@ -254,6 +254,7 @@ final class AppDependencies {
         self.originalDownloads = originalDownloads
         let unsupportedRAWIndex = UnsupportedRAWIndex(store: RAWVerdictStore(database: database))
         self.unsupportedRAWIndex = unsupportedRAWIndex
+        videoStudio.unreadableRAWIds = { unsupportedRAWIndex.assetIds }
         let recentActivity = RecentActivityStore()
         self.recentActivity = recentActivity
         self.assetActions = AssetActionsCoordinator(
