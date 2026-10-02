@@ -171,6 +171,17 @@ Mọi con số thay đổi theo thời gian thực (%, MB, đếm tiến trình,
 | Ô Network trong Collections (dấu "đây là folder trên server") | `externaldrive.connected.to.line.below` trong đĩa tối góc trên-phải bìa |
 | Máy tìm thấy trong mạng: laptop / Mac để bàn / NAS / PC (quét cổng 445) | `laptopcomputer` / `desktopcomputer` / `externaldrive.connected.to.line.below` / `pc` |
 | Rescan / làm lại | `arrow.clockwise` |
+| Bản gốc chỉ có trên iCloud (panel info của viewer, ô filmstrip editor) | `icloud` — viewer: 14 semibold `.secondary` ở mép phải hàng tiêu đề panel info; filmstrip: 9 semibold trắng trong đĩa 16pt đen 55% góc trên-phải ô |
+| iCloud không phản hồi / tải thất bại | `exclamationmark.icloud` `.orange` (viewer 14 semibold; thẻ `OriginalDownloadModal` 28 medium) |
+| Đang tải bản gốc từ iCloud | `ICloudDownloadRing` (vòng quanh `icloud` 9 semibold) — viewer **22pt** (đứng riêng góc trên-phải khi zoom), filmstrip **16pt** tint `EditorTheme.accent`; không ghi số, VoiceOver đọc % |
+| RAW mà iOS không đọc được | `exclamationmark.triangle.fill` — ô lưới: trắng 10 semibold, **đứng đầu** hàng glyph trạng thái; viewer: 14 semibold `.secondary` trong hàng tiêu đề panel info, bên trái glyph iCloud, nút 44pt mở card |
+| Mục lọc Unsupported RAW | `exclamationmark.triangle` |
+| Sao rating (đã duyệt 2/10, chưa có code) | `star` / `star.fill` |
+| Pick (đã duyệt 2/10, chưa có code) | `flag.fill` |
+| Reject (đã duyệt 2/10, chưa có code) | `xmark` |
+| Cull (đã duyệt 2/10, chưa có code) | `flag.2.crossed` |
+| Caption & Keywords (đã duyệt 2/10, chưa có code) | `tag` |
+| Export (đã duyệt 2/10, chưa có code) | `square.and.arrow.up.on.square` |
 
 Adjustment icon lấy từ `PhotoAdjustmentKind.systemImage`; mask icon từ `PhotoMaskComponentKind.systemImage`. Không tự chọn lại.
 
@@ -194,6 +205,10 @@ Adjustment icon lấy từ `PhotoAdjustmentKind.systemImage`; mask icon từ `Ph
 | Ô nhập khoảng số | `NumericRangeField` | `Shared/NumericRangeField.swift` |
 | Ô nhập token gợi ý | `AutocompleteTokenField` | `Shared/AutocompleteTokenField.swift` |
 | Section rule builder | `RuleBuilderSections`, `SmartAlbumRuleRow` | `Shared/`, `Albums/` |
+| Modal tải bản gốc iCloud trước khi Share | `OriginalDownloadModal` — thẻ giữa safe area của scene (cover Duo không nằm dưới rail 84pt), `.secondarySystemBackground`, `r-lg`, viền 0.5 `.separator`, scrim đen 35% nuốt mọi chạm, rộng tối đa 320, đệm 20; dòng `.headline` mono-digit "Downloading from iCloud · 63% · 24 MB" + `ProgressView(value:)` + Cancel; kết cục (Share N · Retry · Cancel; hết chỗ + OK; danh sách bị bỏ) hiện **trong cùng thẻ**. Không kính, hai nhánh iOS như nhau | `Shared/OriginalDownloadModal.swift` |
+| Dòng tải bản gốc trong màn xử lý của tác vụ (Resize, Collage) | `OriginalDownloadLine` — `ProgressView(value:)` + dòng `.subheadline` mono-digit "Downloading from iCloud · k of n · N%", đặt **trong** màn/modal xử lý sẵn có; không bao giờ mở modal mới | `Shared/OriginalDownloadModal.swift` |
+| Card Insights đầu Statistics (tầng A) | `InsightsCard` — dáng `ChartCard`, không token riêng: `.secondarySystemGroupedBackground`, `r-lg`, đệm 16; header `Insights` `.headline` + menu `ellipsis.circle` (Hide Insights); tối đa 3 câu, mỗi câu = symbol `.secondary` + câu + chevron `.tertiary` khi mở Library đã lọc, **cả hàng** là vùng chạm; màn rộng chia 2–3 cột như dashboard, `Divider` giữa câu/cột | `Statistics/InsightsCard.swift` |
+| Đầu share sheet có cấp metadata (FS-08.06) | `ShareHeaderItem` — cấp nằm trong tiêu đề ("Name · Location removed"; nhiều ảnh thì chỉ cấp), ghi chú ở dòng hai ("Videos keep their metadata", "RAW files keep their location", "HEIC sent as JPEG", nối bằng ` · `); thêm hai hàng app `ShareLevelRow` cho hai cấp còn lại | `Shared/ShareLevelRow.swift`, `Shared/PhotoShareSheet.swift` |
 
 **Kính: chỉ ba đường vào** — `GlassPanel`, `GlassIconButton`, `.glassBackground` / `.editorGlass`. Không viết `.background(.ultraThinMaterial, in:)` trực tiếp trong file feature mới.
 
