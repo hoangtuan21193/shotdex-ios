@@ -135,9 +135,9 @@ Chốt 2026-10-02.
 | AC-8 | smart album "Best" = cờ **là** Pick VÀ sao **ít nhất** 4, khớp 12 ảnh | Reject 1 ảnh trong đó rồi mở lại album | album còn 11; JSON album chứa một điều kiện cờ lạ thì chỉ điều kiện đó rơi ra, album không thành "mọi ảnh" | ⚠️ chưa có — test giải mã smart album |
 | AC-9 | ảnh B Rejected, quyền đầy đủ; ảnh C Rejected, quyền `.limited` và C vừa bị bỏ khỏi phần chia sẻ | xoá B trong app Photos; đổi phần chia sẻ để bỏ C | sau thay đổi thư viện: dòng cờ của B bị gỡ, số Rejected giảm 1; dòng cờ của C còn nguyên | ⚠️ chưa có |
 | AC-10 | iOS 27, ảnh A 2★, ghi sao trả lỗi (giả lập) | bấm `5` | ô và viewer quay về 2★ trong ≤ 1 s; có "Couldn't save rating." + Try Again; bảng sao chờ không có dòng | ⚠️ chưa có |
-| AC-11 | iOS 27, sao của ảnh A đổi trong app Photos (hoặc máy khác), ngày sửa của A không đổi | lượt index tăng dần kế tiếp chạy xong | lọc ★ ≥ N (N = sao mới) có A; 0 lần đọc file của A | ⚠️ chưa có — test `IndexRunChanges` với nguồn giả (thêm 2026-10-03) |
+| AC-11 | iOS 27, sao của ảnh A đổi trong app Photos (hoặc máy khác), ngày sửa của A không đổi | lượt index tăng dần kế tiếp chạy xong | lọc ★ ≥ N (N = sao mới) có A; 0 lần đọc file của A | ✅ `AssetFactsRefresherTests.ratingChangedInPhotosReachesFilter` (refresher không có reader; mọi cột trừ `rating` giữ nguyên), `IndexRunChangesTests.skippedUpdatedIdsAreDelivered`, `IndexDiffTests.factsDriftWithoutEdit` (walk đầy), `.ratingBackfillOnlyNulls` (thêm 2026-10-03) |
 
-**Chưa chứng minh được:** AC-2 → AC-11 (đang làm theo plan [rating-flags-cull](../../_plans/2026-10-02-rating-flags-cull.md)).
+**Chưa chứng minh được:** AC-2 → AC-10 (đang làm theo plan [rating-flags-cull](../../_plans/2026-10-02-rating-flags-cull.md)).
 
 ## 10. Rủi ro
 

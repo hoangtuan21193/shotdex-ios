@@ -10,6 +10,11 @@ struct IndexedAssetState: Equatable, Sendable {
     /// the row stale so it is re-read even when unchanged. Defaults to current
     /// so tests and callers that don't care about staleness stay terse.
     var indexerVersion: Int = PhotoMetadata.currentIndexerVersion
+    /// The favorite and Photos rating the row holds — what the full walk
+    /// compares against the asset to catch a change that moved no date
+    /// (FS-01.12 AC-11). Nil where the query did not load them.
+    var isFavorite: Bool? = nil
+    var rating: Int? = nil
 }
 
 /// Writes indexed metadata and manages the index cursor.
@@ -75,7 +80,8 @@ struct MetadataStore: Sendable {
                     isPanorama = MAX(?, COALESCE(isPanorama, 0)),
                     width = ?, height = ?, fileSize = ?,
                     originalFilename = COALESCE(?, originalFilename),
-                    latitude = ?, longitude = ?, isFavorite = ?
+                    latitude = ?, longitude = ?, isFavorite = ?,
+                    rating = COALESCE(?, rating)
                 WHERE assetId = ?
                 """,
             arguments: [
@@ -85,6 +91,7 @@ struct MetadataStore: Sendable {
                 record.width, record.height, record.fileSize,
                 record.originalFilename,
                 record.latitude, record.longitude, record.isFavorite,
+                record.rating,
                 record.assetId,
             ]
         )
@@ -131,6 +138,46 @@ struct MetadataStore: Sendable {
                 sql: "UPDATE photo_metadata SET isFavorite = ? WHERE assetId = ?",
                 arguments: [isFavorite, assetId]
             )
+        }
+    }
+
+    /// Writes favorite and Photos rating read straight off the assets — the
+    /// facts a change can move without moving the modification date, so the
+    /// incremental diff never re-reads them (FS-01.12 AC-11). A nil rating
+    /// (below iOS 27) leaves the column as it is. One transaction.
+    func updateAssetFacts(_ facts: [String: AssetFacts]) throws {
+        guard !facts.isEmpty else { return }
+        try database.writer.write { db in
+            for (assetId, fact) in facts {
+                try db.execute(
+                    sql: "UPDATE photo_metadata SET isFavorite = ?, rating = COALESCE(?, rating) WHERE assetId = ?",
+                    arguments: [fact.isFavorite, fact.rating, assetId]
+                )
+            }
+        }
+    }
+
+    /// Rows whose Photos rating has never been read — iOS 27's first launch
+    /// fills them from memory (`AppDependencies.backfillRatings`).
+    func assetIdsMissingRating(limit: Int) throws -> [String] {
+        try database.reader.read { db in
+            try String.fetchAll(
+                db, sql: "SELECT assetId FROM photo_metadata WHERE rating IS NULL LIMIT ?", arguments: [limit]
+            )
+        }
+    }
+
+    /// Fills the Photos rating of rows that never had it — never touches
+    /// favorite, so an id PhotoKit no longer knows can be closed off with 0.
+    func fillRatings(_ ratings: [String: Int]) throws {
+        guard !ratings.isEmpty else { return }
+        try database.writer.write { db in
+            for (assetId, rating) in ratings {
+                try db.execute(
+                    sql: "UPDATE photo_metadata SET rating = ? WHERE assetId = ? AND rating IS NULL",
+                    arguments: [rating, assetId]
+                )
+            }
         }
     }
 
@@ -483,7 +530,7 @@ struct MetadataStore: Sendable {
         try database.reader.read { db in
             let rows = try Row.fetchAll(
                 db,
-                sql: "SELECT assetId, modificationDate, exifStatus, indexerVersion FROM photo_metadata"
+                sql: "SELECT assetId, modificationDate, exifStatus, indexerVersion, isFavorite, rating FROM photo_metadata"
             )
             var result: [String: IndexedAssetState] = [:]
             result.reserveCapacity(rows.count)
@@ -491,7 +538,9 @@ struct MetadataStore: Sendable {
                 result[row["assetId"]] = IndexedAssetState(
                     modificationDate: row["modificationDate"],
                     exifStatus: row["exifStatus"],
-                    indexerVersion: row["indexerVersion"]
+                    indexerVersion: row["indexerVersion"],
+                    isFavorite: row["isFavorite"],
+                    rating: row["rating"]
                 )
             }
             return result

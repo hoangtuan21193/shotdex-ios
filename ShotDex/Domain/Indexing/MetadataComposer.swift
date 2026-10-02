@@ -74,6 +74,9 @@ struct AssetInfo: Equatable, Sendable {
     /// Original filename from `PHAssetResource`. Only populated in the EXIF
     /// pass (fast pass avoids the per-asset resource fetch); nil otherwise.
     var originalFilename: String? = nil
+    /// Photos' star rating (`PHAsset.rating`), iOS 27 and later; nil below
+    /// (FS-01.12 §4).
+    var rating: Int? = nil
 }
 
 /// Combines PhotoKit asset info + raw EXIF + domain logic into one
@@ -133,7 +136,8 @@ struct MetadataComposer: Sendable {
             longitude: asset.longitude,
             isFavorite: asset.isFavorite,
             indexedAt: Int(now.timeIntervalSince1970),
-            exifStatus: (exifStatus == .indexed && exif.isEmpty ? ExifStatus.noExif : exifStatus).rawValue
+            exifStatus: (exifStatus == .indexed && exif.isEmpty ? ExifStatus.noExif : exifStatus).rawValue,
+            rating: asset.rating
         )
     }
 }

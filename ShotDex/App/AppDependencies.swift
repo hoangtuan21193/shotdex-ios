@@ -146,6 +146,11 @@ final class AppDependencies {
         )
         self.database = database
         self.metadataStore = metadataStore
+        // First observer of a finished index run: favorite and Photos rating
+        // for every id Photos reported changed, read off the assets, no file
+        // read (FS-01.12 AC-11).
+        let factsRefresher = AssetFactsRefresher(metadataStore: metadataStore, readFacts: { @Sendable ids in AppDependencies.liveAssetFacts(ids) })
+        indexPipeline.runObservers.add { changes in factsRefresher.refresh(changes) }
         let libraryQueries = LibraryQueries(database: database)
         self.libraryQueries = libraryQueries
         let filterSuggestions = FilterSuggestionCache(libraryQueries: libraryQueries)
@@ -374,6 +379,40 @@ final class AppDependencies {
                 }
                 try? store.fillMediaSubtypes(subtypes)
                 if ids.count < 2_000 { return }
+            }
+        }.value
+    }
+
+    /// Favorite and Photos rating straight off the assets, for the ids that
+    /// still exist.
+    nonisolated static func liveAssetFacts(_ ids: [String]) -> [String: AssetFacts] {
+        var facts: [String: AssetFacts] = [:]
+        for asset in PhotoLibraryService.fetchAssets(ids: ids) {
+            facts[asset.localIdentifier] = AssetFacts(isFavorite: asset.isFavorite, rating: asset.photosStarRating)
+        }
+        return facts
+    }
+
+    /// iOS 27's first launch: fills `photo_metadata.rating` for rows that
+    /// have never read it, from the assets in memory — same shape and batch
+    /// as `backfillMediaSubtypes`, so the star filter is right before the
+    /// next index run reaches each photo. A no-op below iOS 27.
+    func backfillRatings() async {
+        guard #available(iOS 27, *) else { return }
+        let store = metadataStore
+        await Task.detached(priority: .utility) {
+            while true {
+                guard let ids = try? store.assetIdsMissingRating(limit: AssetFactsRefresher.batchSize),
+                      !ids.isEmpty
+                else { return }
+                var facts = Self.liveAssetFacts(ids)
+                // Ids PhotoKit no longer knows would be selected for ever;
+                // 0 ends the loop and the next run deletes their rows.
+                for id in ids where facts[id] == nil {
+                    facts[id] = AssetFacts(isFavorite: false, rating: 0)
+                }
+                try? store.fillRatings(facts.mapValues { $0.rating ?? 0 })
+                if ids.count < AssetFactsRefresher.batchSize { return }
             }
         }.value
     }

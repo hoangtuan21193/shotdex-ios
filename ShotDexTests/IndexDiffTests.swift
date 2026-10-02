@@ -79,4 +79,24 @@ struct IndexDiffTests {
         // A plain photo is still read.
         #expect(!IndexPipeline.shouldSkipExifRead(mediaType: PHAssetMediaType.image.rawValue, mediaSubtypes: []))
     }
+
+    /// FS-01.12 AC-11 on the full walk: a skipped row whose favorite or
+    /// Photos rating no longer matches the asset is a drift, written without
+    /// a read; a row the query loaded no facts for never drifts.
+    @Test func factsDriftWithoutEdit() {
+        var stored = state(.indexed)
+        stored.isFavorite = false
+        stored.rating = 2
+
+        #expect(!AssetFacts.drifted(stored: stored, current: AssetFacts(isFavorite: false, rating: 2)))
+        #expect(AssetFacts.drifted(stored: stored, current: AssetFacts(isFavorite: true, rating: 2)))
+        #expect(AssetFacts.drifted(stored: stored, current: AssetFacts(isFavorite: false, rating: 4)))
+        // Below iOS 27 the asset has no rating to disagree with.
+        #expect(!AssetFacts.drifted(stored: stored, current: AssetFacts(isFavorite: false, rating: nil)))
+        // A NULL column on iOS 27 is filled.
+        stored.rating = nil
+        #expect(AssetFacts.drifted(stored: stored, current: AssetFacts(isFavorite: false, rating: 0)))
+        #expect(!AssetFacts.drifted(stored: nil, current: AssetFacts(isFavorite: true, rating: 5)))
+        #expect(!AssetFacts.drifted(stored: state(.indexed), current: AssetFacts(isFavorite: true, rating: nil)))
+    }
 }

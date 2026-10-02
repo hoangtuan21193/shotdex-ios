@@ -144,6 +144,15 @@ actor IndexPipeline {
     private var isCancelled = false
     private var isRunning = false
 
+    /// Told what each finished run learned (`IndexRunChanges`). Registered
+    /// from the composition root; nonisolated so registering never waits on
+    /// a run.
+    nonisolated let runObservers = IndexRunObservers()
+
+    private static var accessIsFull: Bool {
+        PHPhotoLibrary.authorizationStatus(for: .readWrite) == .authorized
+    }
+
     init(metadataStore: MetadataStore, exifReader: ExifReader = ExifReader(),
          sensorDatabaseLoader: SensorDatabaseLoader = SensorDatabaseLoader(),
          interactionGate: IndexInteractionGate? = nil,
@@ -457,9 +466,16 @@ actor IndexPipeline {
         var batchTime = Duration.zero
         var needsRead = 0
 
+        // What this walk will report to `runObservers`: every asset it read
+        // again, and every skipped one whose favorite or rating no longer
+        // matches the row (FS-01.12 AC-11) — written here, no file read.
+        var readIds = Set<String>()
+        var driftedFacts: [String: AssetFacts] = [:]
+
         var firstBatch = true
         func runBatch(_ assets: [PHAsset]) async throws {
             signalWork()
+            readIds.formUnion(assets.map(\.localIdentifier))
             let batchMark = clock.now
             defer { batchTime += clock.now - batchMark }
             // No breather before the first batch: a cool device starts
@@ -492,6 +508,10 @@ actor IndexPipeline {
                     currentModificationDate: currentModified,
                     allowNetworkRetry: allowNetwork()
                 ) {
+                    let facts = AssetFacts(isFavorite: asset.isFavorite, rating: asset.photosStarRating)
+                    if AssetFacts.drifted(stored: existingState, current: facts) {
+                        driftedFacts[asset.localIdentifier] = facts
+                    }
                     summary.skipped += 1
                     continue
                 }
@@ -521,16 +541,29 @@ actor IndexPipeline {
             "diff scan: \(needsRead) of \(total) need a read — scan \(Self.milliseconds((clock.now - loopMark) - batchTime))ms, batches \(Self.milliseconds(batchTime))ms"
         )
 
+        let drifted = driftedFacts
+        for chunk in stride(from: 0, to: drifted.count, by: AssetFactsRefresher.batchSize) {
+            let slice = drifted.dropFirst(chunk).prefix(AssetFactsRefresher.batchSize)
+            try metadataStore.updateAssetFacts(Dictionary(uniqueKeysWithValues: slice.map { ($0.key, $0.value) }))
+        }
+
         // Remove rows for assets that vanished from the library
         // (only safe to compute after a full, uncancelled walk).
+        var deletedIds: [String] = []
         if !isCancelled && !fullReindex {
-            let deletedIds = existing.keys.filter { !seenAssetIds.contains($0) }
+            deletedIds = existing.keys.filter { !seenAssetIds.contains($0) }
             if !deletedIds.isEmpty {
                 signalWork()
                 try metadataStore.deleteAssets(ids: deletedIds)
                 summary.deleted = deletedIds.count
             }
         }
+        await runObservers.deliver(IndexRunChanges(
+            changed: readIds.union(drifted.keys),
+            deleted: Set(deletedIds),
+            isFullWalk: true,
+            accessIsFull: Self.accessIsFull
+        ))
 
         summary.wasCancelled = isCancelled
 
@@ -684,6 +717,13 @@ actor IndexPipeline {
         )
 
         var summary = IndexRunSummary(indexed: 0, skipped: 0, pendingICloud: 0, failed: 0, deleted: 0, wasCancelled: false)
+        // Delivered to `runObservers` whatever the work list turns out to be:
+        // the ids the diff below skips are exactly the ones whose favorite,
+        // rating or caption changed without a new modification date.
+        let historyChanges = IndexRunChanges.incremental(
+            inserted: changes.inserted, updated: changes.updated, deleted: changes.deleted,
+            accessIsFull: Self.accessIsFull
+        )
 
         // Rows whose read never finished carry over regardless of what changed:
         // `pendingRead` placeholders, `error` retries, and `pendingICloud` once
@@ -770,6 +810,7 @@ actor IndexPipeline {
             // already claimed it — a set of 200+ candidates that all skip, which
             // needs the honest "it was working" more than it needs silence.
             try persistCompletion(token: tokenAtStart)
+            await runObservers.deliver(historyChanges)
             IndexTrafficMonitor.health(
                 "persistent changes: no work — \(changes.inserted.count) inserted, \(changes.updated.count) updated, \(changes.deleted.count) deleted, \(unfinished.count) unfinished, \(summary.skipped) skipped in \(Self.milliseconds(clock.now - start))ms"
             )
@@ -824,6 +865,7 @@ actor IndexPipeline {
 
         summary.wasCancelled = isCancelled
         if !isCancelled { try persistCompletion(token: tokenAtStart) }
+        await runObservers.deliver(historyChanges)
         onProgress(IndexProgress(processed: baseline + newlyDone, total: total))
         Self.logSummary(
             "persistentChanges", summary: summary, elapsed: clock.now - start,
@@ -1242,7 +1284,8 @@ actor IndexPipeline {
             latitude: asset.location?.coordinate.latitude,
             longitude: asset.location?.coordinate.longitude,
             isFavorite: asset.isFavorite,
-            originalFilename: originalFilename
+            originalFilename: originalFilename,
+            rating: asset.photosStarRating
         )
     }
 

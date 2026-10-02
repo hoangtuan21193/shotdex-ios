@@ -411,7 +411,9 @@ struct DatabaseTests {
         #expect(states.count == 4)
         #expect(states["a2"] == IndexedAssetState(
             modificationDate: 1_700_000_000,
-            exifStatus: ExifStatus.pendingICloud.rawValue
+            exifStatus: ExifStatus.pendingICloud.rawValue,
+            isFavorite: false,
+            rating: nil
         ))
         #expect(Set(try store.retryableAssetIds()) == ["a2", "a3"])
     }

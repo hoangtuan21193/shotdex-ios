@@ -98,6 +98,8 @@ struct ShotDexApp: App {
                     await dependencies.lookInbox.drain()
                     // Cheap: a few SELECT DISTINCTs and one Spotlight write.
                     await dependencies.backfillMediaSubtypes()
+                    // iOS 27: Photos' star ratings into the filter column.
+                    await dependencies.backfillRatings()
                     // Cameras this iOS build has not judged yet (FS-03.04b §2).
                     dependencies.unsupportedRAWIndex.runPass()
                     await dependencies.spotlight.reindex()
