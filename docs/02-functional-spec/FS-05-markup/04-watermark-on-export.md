@@ -39,6 +39,8 @@ Files (đợt 2 mục 4) · upload lên server **khi** lượt đó gửi bản 
 - Lớp kính lúp bị bỏ khỏi dấu, vì nó phóng một chỗ của một tấm ảnh cụ thể. Chữ, ảnh, hình và nét vẽ tay giữ nguyên.
 - Token (`{camera}`, `{lens}`…) thay **theo từng ảnh** của mẻ, cùng nguồn giá trị mà editor dùng cho ảnh đó, và cùng
   luật bỏ cụm rỗng của [FS-05.02 §2](02-text-tokens-and-styling.md#2-token-exif).
+  - `{camera}` là model đã chuẩn hoá, **không có tên hãng**, như editor: `ILCE-7M4`, `X-T5`, `iPhone 17 Pro`
+    (người dùng chốt 2026-10-03). Muốn có hãng thì là một token `{make}` riêng của FS-05.02, không đổi `{camera}`.
 - Dấu ghép **cuối cùng, ở kích thước xuất**, sau mọi chỉnh sửa và mọi lớp markup có sẵn của ảnh (FS-05.03 §7).
 - Chỉ raster **khung bao của dấu**, không raster cả khung ảnh. Mẻ không có token thì raster một lần cho mỗi cỡ xuất.
 
@@ -72,8 +74,14 @@ phải:
 | Resize, xuất ra Files, sheet xuất ảnh server, upload bản render | lựa chọn lần trước (§5) | hàng Watermark |
 | Share, kéo thả | Settings → Sharing and Export → **Watermark When Sharing** (`Off` / tên preset; mặc định `Off`) | một dòng của app trong share sheet, như FS-08.06 §4 |
 
+- **Share đặt dấu ở đâu:** preset lấy từ Settings; Position, Margin, Size, Opacity là **cấu hình đã nhớ của các form**
+  (một cấu hình chung, xem trước được ở màn Watermark). Chưa dùng form lần nào thì là mặc định (dưới-phải).
+- **Đích Share… của sheet xuất ảnh server** dùng bản render đã theo hàng Watermark **của chính sheet**: không đóng
+  thêm theo Settings, không có dòng *Share With/Without Watermark*. Một sheet, một quyết định, không bao giờ hai dấu.
+
 **Share** có thêm **một dòng hành động** của app, sau hai dòng mức metadata:
 - *Share With Watermark* khi Watermark When Sharing là Off; *Share Without Watermark* khi nó là tên một preset.
+  *Share With Watermark* dùng preset dùng lần cuối ở một form; chưa form nào dùng thì preset mới nhất.
 - Đầu sheet giữ tiêu đề *"PhotoA · Location removed"*; dòng thứ hai thêm *"Watermark: Credit"*, nối các ghi chú
   khác bằng " · ". Chưa có preset nào thì không có dòng hành động lẫn ghi chú này.
 - Chọn dòng nào thì share sheet đóng rồi mở lại, như dòng mức metadata. Lựa chọn một lần không ghi đè Settings.
@@ -126,8 +134,9 @@ phải:
 | Truy cập | lưới Position đọc *"Position, bottom right"*; Size đọc giá trị px; chip preset đọc tên và *"Missing file"* |
 | Chữ | String Catalog; một tên **Watermark** ở form, Settings và share sheet |
 
-Design canvas: chưa có board Resize, Share hay sheet xuất. Cần thêm vào canvas editor, nối vào hàng của từng thiết
-bị: màn Watermark và Resize có hàng Watermark ở hàng `PH*`, `IP*`, `DI*`, `DC*`. Canvas Video Studio không đổi.
+Design canvas: đã vẽ trên canvas [ShotDex Photo Editor](https://claude.ai/artifact/T4tEUQrJtxBbi48HokiL9F), nối vào
+hàng của từng thiết bị: màn Watermark `PH31`/`IP22`/`IPP18`/`DI17`/`DIP17`/`DC18` `_Watermark`, Resize có hàng
+Watermark `PH32_ResizeWatermark`, share sheet có dòng watermark `PH37_ShareWatermark`. Canvas Video Studio không đổi.
 
 ## 7. Tiêu chí nghiệm thu
 
@@ -137,9 +146,9 @@ Size 4%, Opacity 100%.
 
 | # | Cho | Khi | Thì | Chứng minh bằng |
 |---|---|---|---|---|
-| AC-1 | ảnh A, Resize 2048px, cấu hình W | Save to Photos | ảnh mới 2048×1365; khung bao của dấu có cạnh phải x = 2007 ±1, cạnh dưới y = 1324 ±1, cao 55 ±1 px; mọi pixel ngoài khung bao trùng bản Resize không dấu | ⚠️ chưa có |
+| AC-1 | ảnh A, Resize 2048px, cấu hình W | Save to Photos | ảnh mới 2048×1365; khung bao của dấu có cạnh phải x = 2007 ±1, cạnh dưới y = 1324 ±1, cao 55 ±1 px; trên bản render trước khi mã hoá, mọi pixel ngoài khung bao trùng bản Resize không dấu; trong file, mọi pixel ngoài khung bao nới ra lưới khối 16 px trùng bản Resize không dấu (JPEG đổi pixel tới 11 px quanh khung — đo 2026-10-02) | ⚠️ chưa có |
 | AC-2 | như AC-1 | mở Resize | xem trước 320pt có dấu ở dưới-phải; tâm khung bao lệch ≤ 1pt so với vị trí tính từ AC-1. Ảnh trên iPhone, iPad, Duo trong, Duo ngoài | ⚠️ chưa có |
-| AC-3 | 3 ảnh của Sony ILCE-7M4, Fujifilm X-T5, iPhone 17 Pro; cấu hình W | Resize 3 ảnh | chữ trong dấu của từng file lần lượt là `© Nguyen An · Sony ILCE-7M4`, `… Fujifilm X-T5`, `… iPhone 17 Pro` | ⚠️ chưa có (luật token: `OverlayTokenResolverTests`) |
+| AC-3 | 3 ảnh của Sony ILCE-7M4, Fujifilm X-T5, iPhone 17 Pro; cấu hình W | Resize 3 ảnh | chữ trong dấu của từng file lần lượt là `© Nguyen An · ILCE-7M4`, `… X-T5`, `… iPhone 17 Pro` (`{camera}` không có tên hãng, §3) | ⚠️ chưa có (luật token: `OverlayTokenResolverTests`) |
 | AC-4 | Settings: Watermark When Sharing = Credit, Metadata = No Location; ảnh A | Share → Save to Files | file JPEG có dấu ở dưới-phải; không có nhóm GPS; còn Make `SONY`, Model `ILCE-7M4` | ⚠️ chưa có |
 | AC-5 | Settings: Watermark When Sharing = Off; ảnh A | Share, chạm *Share With Watermark* | sheet đóng rồi mở lại, dòng thứ hai có *Watermark: Credit*; file nhận được có dấu; Settings vẫn Off | ⚠️ chưa có |
 | AC-6 | ARW Sony 6000×4000 iOS đọc được + RAF máy mới iOS chưa đọc + ảnh A; Settings: Watermark When Sharing = Credit | Share → Save to Files | không có alert RAW; Files nhận 2 file: JPEG 6000×4000 có dấu từ ARW, và A có dấu; RAF bị bỏ và nêu tên trong modal; đầu sheet có *RAW sent as JPEG* | ⚠️ chưa có |

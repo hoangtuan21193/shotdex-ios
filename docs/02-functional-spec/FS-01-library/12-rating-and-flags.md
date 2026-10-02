@@ -97,7 +97,8 @@ việc này bằng P/X và 1–5. Trên ShotDex hôm nay phải mở Compare the
 Chốt 2026-10-02.
 
 - **Ô lưới:** sao và cờ nằm trong hàng glyph trạng thái ở **góc dưới-trái** (glyph 10pt, cách mép 5pt).
-  - Thứ tự: cờ trước favorite, rồi "★4" (sao 10pt + số caption2 semibold), chỉ khi ảnh có ≥ 1 sao.
+  - Thứ tự: glyph RAW không đọc được ([FS-03.04b §3](../FS-03-photo-editor/04b-unsupported-raw.md)) đứng đầu, rồi
+    cờ, favorite, "★4" (sao 10pt + số caption2 semibold, chỉ khi ảnh có ≥ 1 sao), các glyph kiểu chụp, server cuối.
   - Ô Rejected mờ ảnh còn 45%. Hàng glyph không ẩn theo bề rộng ô ([FS-01.01b §6](01b-grid-engine-and-gestures.md)).
 - **Viewer:** chỉ đọc. Dòng 2 của bảng thông tin **trên-trái** (cạnh X) nối thêm `★★★★☆ · Picked`.
   - Đặt qua ⋯ (hai menu con Rating ▸ và Flag ▸ ở nhóm đầu) và phím. Chrome của viewer giữ nguyên.
@@ -116,9 +117,9 @@ Chốt 2026-10-02.
 - Menu giữ-lâu, ⋯ của chế độ chọn và menu lọc giống nhau ở nhánh iOS 26 và nhánh trước 26.
 - **VoiceOver:** ô lưới đọc thêm "3 stars, Picked" sau các trạng thái có sẵn.
 
-**Design canvas:** không board nào đang có bị đổi — lưới và viewer chưa có board. Ô lưới, dòng 2 của viewer
-và menu lọc (§7) vẽ trên canvas [ShotDex Photo Editor](https://claude.ai/artifact/T4tEUQrJtxBbi48HokiL9F),
-nối vào hàng thiết bị, trước `/plan`.
+**Design canvas:** không board nào đang có bị đổi. Ô lưới, dòng 2 của viewer, menu lọc (§7) và màn Cull
+([FS-01.12b](12b-culling-pass.md)) đã vẽ trên canvas [ShotDex Photo Editor](https://claude.ai/artifact/T4tEUQrJtxBbi48HokiL9F)
+(Version 60), nối vào hàng thiết bị: `PH23`–`PH28`, `IP15`–`IP19`, `IPP15`, `DI14`, `DIP14`, `DC15`.
 
 ## 9. Tiêu chí nghiệm thu
 
@@ -134,8 +135,9 @@ nối vào hàng thiết bị, trước `/plan`.
 | AC-8 | smart album "Best" = cờ **là** Pick VÀ sao **ít nhất** 4, khớp 12 ảnh | Reject 1 ảnh trong đó rồi mở lại album | album còn 11; JSON album chứa một điều kiện cờ lạ thì chỉ điều kiện đó rơi ra, album không thành "mọi ảnh" | ⚠️ chưa có — test giải mã smart album |
 | AC-9 | ảnh B Rejected, quyền đầy đủ; ảnh C Rejected, quyền `.limited` và C vừa bị bỏ khỏi phần chia sẻ | xoá B trong app Photos; đổi phần chia sẻ để bỏ C | sau thay đổi thư viện: dòng cờ của B bị gỡ, số Rejected giảm 1; dòng cờ của C còn nguyên | ⚠️ chưa có |
 | AC-10 | iOS 27, ảnh A 2★, ghi sao trả lỗi (giả lập) | bấm `5` | ô và viewer quay về 2★ trong ≤ 1 s; có "Couldn't save rating." + Try Again; bảng sao chờ không có dòng | ⚠️ chưa có |
+| AC-11 | iOS 27, sao của ảnh A đổi trong app Photos (hoặc máy khác), ngày sửa của A không đổi | lượt index tăng dần kế tiếp chạy xong | lọc ★ ≥ N (N = sao mới) có A; 0 lần đọc file của A | ⚠️ chưa có — test `IndexRunChanges` với nguồn giả (thêm 2026-10-03) |
 
-**Chưa chứng minh được:** AC-1 → AC-10 (tính năng chưa có code).
+**Chưa chứng minh được:** AC-1 → AC-11 (tính năng chưa có code).
 
 ## 10. Rủi ro
 

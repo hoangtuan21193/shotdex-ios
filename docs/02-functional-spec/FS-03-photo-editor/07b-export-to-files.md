@@ -121,6 +121,8 @@ thêm các connection đã lưu (SMB, SFTP, WebDAV, folder cloud) — chọn m�
 
 - Hàng **Size** hiện ở **mọi** lần xuất không gộp (Edit, Paste Edits, Resize), không chỉ Resize; danh sách là preset
   của Resize **kể cả preset tự tạo**, đầu danh sách là preset Original (mặc định, trừ Resize mặc định 2048 px).
+  Code hôm nay chỉ có Size ở Resize, chỉ cỡ dựng sẵn, mặc định 4K — **sửa code theo dòng này** (người dùng chốt
+  2026-10-03).
 - **Other Folder…** thêm dòng đầu **Folder in Files…**: trình chọn của hệ thống, cùng bookmark và danh sách gần đây của §4.
 - Tên `<tên gốc>_edited` của FS-17.06 §6 giữ nguyên (người dùng chốt 2026-09-29); mẫu tên chỉ có ở sheet Export.
 
@@ -137,7 +139,7 @@ thêm các connection đã lưu (SMB, SFTP, WebDAV, folder cloud) — chọn m�
 | Truy cập | chip token có nhãn *"Insert Date"*…; VoiceOver đọc dòng ví dụ và phần trăm tiến độ |
 | Chữ | nhãn trong String Catalog; tên preset trùng tên ở Resize và Settings → Resize Presets |
 
-**Design canvas:** canvas editor (PH/IP/DI/DC) và Video Studio không có board nào vẽ menu chọn, Resize hay sheet xuất
-(kiểm danh sách board 2026-10-02), nên không board cũ nào đổi. Cần vẽ **board mới** ở hàng từng thiết bị trước khi code:
-sheet Export (cả hai chế độ), màn File Name, sheet đang chạy + tổng kết có lỗi, hàng Size của
-sheet xuất server.
+**Design canvas:** không board cũ nào đổi. Board mới đã vẽ trên canvas
+[ShotDex Photo Editor](https://claude.ai/artifact/T4tEUQrJtxBbi48HokiL9F), nối vào hàng từng thiết bị: sheet Export
+`PH33`/`IP23`/`IPP19`/`DI18`/`DIP18`/`DC19` `_Export`, màn File Name `PH34`/`IP24`/`IPP20`/`DI19`/`DIP19`/`DC20`
+`_FileName`, sheet đang chạy `PH35_ExportRunning`, tổng kết `PH36_ExportSummary` (hai board sau chỉ ở hàng iPhone).

@@ -18,8 +18,9 @@ ngay, theo luật lưu của [FS-01.12 §4–5](12-rating-and-flags.md).
 
 - **Tập ảnh** xếp theo ngày chụp, cũ trước, vì buổi chụp được xem theo đúng thứ tự nó diễn ra. Mở ra ở **ảnh đầu
   tiên chưa có cờ**; mọi ảnh đã có cờ thì mở ở ảnh đầu.
-- Lối vào: §5. Không giới hạn số ảnh. Ảnh tải theo trang, như pager của viewer (trang hiện tại + 2 trang mỗi
-  bên, cỡ màn, cho phép mạng) ([FS-02.01](../FS-02-photo-detail/01-pager-and-image-loading.md)).
+- Lối vào: §5. Không giới hạn số ảnh. Ảnh tải theo trang: trang hiện tại + 2 trang mỗi bên, cỡ màn, cho phép
+  mạng — khác pager của viewer (±1, không mạng, [FS-02.01](../FS-02-photo-detail/01-pager-and-image-loading.md)),
+  vì lượt lọc cần tấm sau sẵn ngay.
   **Không tải bản gốc.**
 - Video có trong tập: hiện khung đại diện + nút play, tắt tiếng mặc định như Compare ([FS-01.08 §6](08-compare.md)).
 - Ảnh chỉ có trên iCloud mà máy mất mạng: hiện bản có trên máy kèm glyph mây. Sao và cờ vẫn ghi được.

@@ -606,3 +606,11 @@ Outside the plan's acceptance criteria; noticed while screenshotting the plan's 
 - [ ] `ShotDex/Features/Editing/CompressionScreen.swift` (size estimate row) — the estimate reads `~~9 KB`: a tilde in the label and another in the formatted value _(seen on the Resize screen)_
 - [ ] `ShotDex/Features/Editing/EditorBatchSaver.swift` (`PasteEditsSheet`) — "Paste onto 1 Photos": the count is interpolated into a plural noun with no singular _(seen on the Paste Edits sheet)_
 - [ ] `ShotDexShare/ShareViewController.swift:113-116` — the extension's temporary copy of each received file is never removed (plan FS-08.06 §2, AC-14 row) _(plan)_
+
+# user-wishes wave 2 follow-ups (2026-10-03)
+
+Split out by the user when approving the wave-2 plans (intent `docs/_intents/2026-09-30-user-wishes-research.md`).
+Outside those plans' acceptance criteria — each needs `/spec` (or a line in its owning spec) before it gets a task.
+
+- [ ] Resize: **drops ShotDex edits for local photos** — `PhotoEditingService.compress` renders the on-device original with `PhotoEditRecipe.identity` (`ShotDex/Data/Sources/PhotoEditingService.swift:544-560`, `:572`), so a photo edited in ShotDex loses its edit; the path for a just-downloaded iCloud original (`:532-543`) uses the current version instead. Export to Files renders the current version (plan `docs/_plans/2026-10-02-export-to-files.md` §7 ⚠️-2) — Resize should match _(FS-03.07)_
+- [ ] Editor: the imported-look marker is the word **"Imported"** under the name (`ShotDex/Features/Editing/EditorToolPanels.swift:326-331`); the canvas draws an **XMP** badge at the tile's top-right, which Video Studio's Look panel adopts (FS-12.06c §3, plan `docs/_plans/2026-10-02-video-photo-looks.md` §6 Q6b) — switch the editor to the badge _(FS-03.14)_

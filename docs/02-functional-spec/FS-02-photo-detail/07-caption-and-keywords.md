@@ -37,7 +37,8 @@ Photos đã làm được việc này, còn một app quản lý thư viện th�
 **Có (iOS 27):**
 - Info của một ảnh hoặc clip: sửa caption, thêm/bớt keyword, gợi ý từ keyword đã có trong thư viện.
 - Chế độ chọn → ⋯ → **Caption & Keywords…**: thêm, bớt keyword và đặt hay xoá caption cho cả mẻ, có Undo.
-- Lọc: trường **Keyword** và **Caption** trong bộ dựng điều kiện (Advanced Search và Smart Album).
+- Lọc: trường **Keyword** và **Caption** trong bộ dựng điều kiện (Advanced Search, Smart Album và điều kiện của
+  biểu đồ Statistics).
 - Tìm: `keyword:` trong ô tìm kiếm, từ trùng tên một keyword thành chip keyword, chữ tự do khớp cả caption.
 
 **Cố ý không có:**
@@ -110,7 +111,9 @@ Luật:
 
 ## 7. Lọc và tìm
 
-- **Bộ dựng điều kiện** thêm hai trường (cả Advanced Search và Smart Album, [FS-06.08 §2](../FS-06-collections/08-smart-albums.md)):
+- **Bộ dựng điều kiện** thêm hai trường ở mọi chỗ dùng nó: Advanced Search, Smart Album
+  ([FS-06.08 §2](../FS-06-collections/08-smart-albums.md)) và điều kiện của biểu đồ Statistics
+  ([FS-07.01b](../FS-07-statistics/01b-cards-editor-and-states.md) — cùng bộ dựng, cùng SQL; người dùng chốt 2026-10-03):
   - **Keyword**: *has* · *doesn't have* (ô nhập có gợi ý như hãng máy) · *has any keyword* · *has no keywords*
     (hai cái sau không cần giá trị — tìm ảnh chưa gắn gì sau buổi chụp);
   - **Caption**: *contains* · *doesn't contain*, theo luật loại chữ hiện có.
@@ -118,7 +121,10 @@ Luật:
 - **Ô tìm kiếm** ([FS-01.03](../FS-01-library/03-search.md)):
   - `keyword:sunset`, `keyword:"golden hour"`, và tiếng Việt `từ khoá:` quy về cùng ký hiệu;
   - một từ trùng **đúng** tên một keyword có trong thư viện thành chip keyword, như địa điểm — vì database nói vậy;
-  - chữ tự do khớp thêm caption và keyword (chứa), sau máy, ống kính, tên file.
+  - chữ tự do khớp thêm caption và keyword (chứa), sau máy, ống kính, tên file;
+  - khi parser hiểu **một phần** câu tìm, phần chữ thừa khớp **cùng tập cột** với chữ tự do (máy, ống, tên file,
+    caption, keyword), không chỉ tên file: `fukuoka wedding` ra chip địa điểm và vẫn khớp caption *wedding*
+    (chốt 2026-10-03).
 - Chip: `keyword: Sunset`, `no keywords`, `caption contains "wedding"`.
 
 ## 8. Dữ liệu và đồng bộ
@@ -156,9 +162,10 @@ Luật:
   unchanged* / *will be removed*; ô caption đọc *Caption*.
 - DESIGN.md §8 thêm một dòng từ điển icon: Caption & Keywords = `tag`.
 
-**Design canvas:** hai canvas hiện có (editor, Video Studio) không vẽ Info sheet hay chế độ chọn, nên không board
-nào bị đổi. Section Info (§4) và sheet hàng loạt (§5) cần board mới (hàng iPhone, iPad, Duo trong, Duo ngoài)
-trước khi code.
+**Design canvas:** không board cũ nào bị đổi. Section Info (§4) và sheet hàng loạt (§5) đã vẽ trên canvas
+[ShotDex Photo Editor](https://claude.ai/artifact/T4tEUQrJtxBbi48HokiL9F), nối vào hàng thiết bị:
+`PH29`/`IP20`/`IPP16`/`DI15`/`DIP15`/`DC16` `_InfoKeywords` và `PH30`/`IP21`/`IPP17`/`DI16`/`DIP16`/`DC17`
+`_BulkKeywords`.
 
 ## 10. Phải đo trước `/plan`
 

@@ -55,7 +55,8 @@ không chuẩn hoá thì cháy trắng hết), bỏ qua comment/dòng trống/ta
 - **Amount 0…100** của ô = trộn bản đã LUT lên bản trước look: 60% là cách người ta thực sự dùng một print emulation.
 - Recipe chỉ giữ **tham chiếu** (id + tên + Amount), bảng nằm trên đĩa: project nhỏ, và LUT đã xoá thì
   thoái hoá về *không có LUT* chứ không thành grade hỏng ([06c §6](06c-photo-looks.md)).
-- Cache **4 bảng** để 30 khung/giây không đọc lại file text.
+- Mọi look, kể cả LUT chọn thẳng, đi qua **bảng 33³ đã nướng** trong cache 24 bảng của [06c §5](06c-photo-looks.md):
+  30 khung/giây không đọc lại file text. Cache **4 bảng** của LUT chỉ còn nuôi lượt nướng (chốt 2026-10-03).
 
 ## 4. Tracker cho power window
 

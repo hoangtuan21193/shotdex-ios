@@ -1,6 +1,6 @@
 # FS-12.04 — Bộ công cụ và inspector
 
-`FS-12.04` · `Features/VideoStudio/` (media pool, top band, inspector) · cập nhật 2026-09-22
+`FS-12.04` · `Features/VideoStudio/` (media pool, top band, inspector) · cập nhật 2026-10-03
 
 **Một câu:** thứ **chèn vào** lấy từ thư viện, thứ **chỉnh** nằm trong inspector — và ranh giới đó là lý do
 cột công cụ dọc bị bỏ.
@@ -22,7 +22,7 @@ cột công cụ dọc bị bỏ.
 | **Sticker** | tab **Stickers** — cùng thư viện, lọc còn ảnh tĩnh, chèn ra **overlay** chứ không phải clip | rasterize giới hạn **1024px**: overlay vẽ đè ở một phần bề rộng, giữ PNG 48MP là bộ nhớ đổ vào pixel không ai thấy |
 | **Music** | tab **Music** — nhạc đã nhập (sống qua phiên) + "Import from Files…" | catalog nhạc bundled rỗng có chủ đích |
 | **Text** | tab **Text** — hàng "Add Text" rồi các font người dùng **thật sự đã dùng** | không có gallery title template để liệt kê, nên font gần đây là thứ có thật |
-| **Filter** | tab **Effects** | cường độ vẫn là slider, và slider thuộc về inspector |
+| **Filter** | công cụ **Look** ([FS-12.06c §3](06c-photo-looks.md)); pool **không còn tab Effects** (bỏ 2026-10-03) | một look một chỗ chọn: tab thứ hai ghi vào cùng ô look là một khái niệm hai cách làm; Amount nằm trong panel Look |
 | **Ratio · Adjust · Volume · Background** | menu **Project Tools** ở top band | format và những thứ cùng loại thuộc về chrome, không thuộc cột công cụ |
 
 **Không chép**: trang Color với node graph và scope của một NLE desktop — đó là đầu desktop-parity của nó,

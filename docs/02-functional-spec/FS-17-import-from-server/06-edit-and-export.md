@@ -80,7 +80,8 @@ lệnh đó (AC-67, AC-76…84). Trong đợt 1 ba lệnh này không có trong 
   bước undo nào, Combine khi đã có nét retouch. Chưa làm gì thì không hỏi. Cả hai đường đều xoá bản tạm.
 - Video Studio đọc ảnh server ở cỡ render, không giải mã full-res cho mỗi khung (NF-02).
 - Paste Edits và Resize không mở editor: tải xong là vào thẳng sheet xuất. Resize thêm mục **Size** (các cỡ dựng sẵn
-  của Resize: 4K, 2048 px, 1080 px). Sắp đổi ([FS-03.07b](../FS-03-photo-editor/07b-export-to-files.md) §8, chưa làm): Size ở mọi lần xuất không gộp.
+  của Resize: 4K, 2048 px, 1080 px). Sắp đổi ([FS-03.07b](../FS-03-photo-editor/07b-export-to-files.md) §8, chốt
+  2026-10-03, chưa làm): Size ở mọi lần xuất không gộp, kể cả preset tự tạo, Original mặc định, Resize mặc định 2048 px.
 
 ## 6. Sheet xuất
 
