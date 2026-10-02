@@ -1,4 +1,5 @@
 import Foundation
+import Photos
 import SwiftUI
 import ShotDexKit
 
@@ -128,6 +129,8 @@ final class AppDependencies {
     let photoMarksStore: PhotoMarksStore
     /// The same marks in memory, and the one place they are written.
     let photoMarks: PhotoMarks
+    /// iOS 27's first launch: pending stars into Photos, once (FS-01.12 §5).
+    let ratingMigration: RatingMigrationPass
     /// The connections the selection ⋯ menu lists by name.
     let fileServerCatalog: FileServerCatalog
     /// Files brought down from a server (FS-17 §4).
@@ -340,6 +343,21 @@ final class AppDependencies {
         self.banner = banner
         // A star Photos refused goes back on the tile and says so, with the
         // same command one tap away (FS-01.12 AC-10, NF-04).
+        let readPhotosRatings: @Sendable ([String]) -> [String: Int] = { ids in
+            PhotoLibraryService.fetchAssets(ids: ids).reduce(into: [:]) { result, asset in
+                if let rating = asset.photosStarRating { result[asset.localIdentifier] = rating }
+            }
+        }
+        let ratingMigration = RatingMigrationPass(
+            store: photoMarksStore,
+            metadataStore: metadataStore,
+            writer: ratingWriter,
+            readPhotosRatings: readPhotosRatings,
+            accessIsFull: { PHPhotoLibrary.authorizationStatus(for: .readWrite) == .authorized }
+        )
+        ratingMigration.onMoved = { count in banner.show(MarkCopy.movedRatings(count)) }
+        ratingMigration.onPendingChanged = { [weak photoMarks] in await photoMarks?.reload() }
+        self.ratingMigration = ratingMigration
         photoMarks.onRatingWriteFailed = { [weak photoMarks] in
             banner.show(MarkCopy.ratingWriteFailed, actionTitle: MarkCopy.tryAgain) {
                 Task { await photoMarks?.retryFailedRatingWrite() }

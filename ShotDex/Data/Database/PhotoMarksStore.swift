@@ -190,6 +190,22 @@ struct PhotoMarksStore: Sendable {
         }
     }
 
+    /// Drops the pending rows the star migration handled — only those not
+    /// set again since it read them (`ratedAt` at or before `readAt`), so a
+    /// star the user set while the write was in flight survives.
+    func deletePendingRatings(ids: [String], ratedAtOrBefore readAt: Int) throws {
+        guard !ids.isEmpty else { return }
+        try database.writer.write { db in
+            for chunk in stride(from: 0, to: ids.count, by: 500) {
+                let slice = Array(ids[chunk..<min(chunk + 500, ids.count)])
+                try db.execute(
+                    sql: "DELETE FROM pending_photo_rating WHERE ratedAt <= ? AND assetId IN (\(databaseQuestionMarks(count: slice.count)))",
+                    arguments: StatementArguments([readAt]) + StatementArguments(slice)
+                )
+            }
+        }
+    }
+
     /// Drops every mark of photos that no longer exist.
     func deleteMarks(ids: [String]) throws {
         guard !ids.isEmpty else { return }

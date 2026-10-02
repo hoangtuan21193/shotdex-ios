@@ -197,4 +197,17 @@ struct PhotoPropertyProbeTests {
 
         try await Self.reset(Self.allPhotosFetch())
     }
+
+    /// M2 on the simulator, as far as it goes: one block of 10,000 — the size
+    /// the plan asks the real 55k device about. A ceiling found here would
+    /// already decide the chunking; none found leaves the device to answer.
+    @Test func tenThousandInOneBlock() async throws {
+        guard Self.canRun, #available(iOS 27, *) else {
+            Self.log("skipped: needs iOS 27 and full photo access")
+            return
+        }
+        try await Self.reset(Self.allPhotosFetch())
+        try await Self.measure(count: 10_000, from: Self.allPhotosFetch(), rating: .two)
+        try await Self.reset(Self.allPhotosFetch())
+    }
 }

@@ -127,7 +127,7 @@ Chốt 2026-10-02.
 |---|---|---|---|---|
 | AC-1 | iOS 26.5, ảnh A chưa có sao, viewer đang mở A | bấm phím `4` | bảng sao chờ có đúng 1 dòng A = 4; bảng metadata chính không đổi; sau **Clear local metadata index** và index lại, lọc ★ ≥ 4 vẫn ra A | ✅ `PhotoMarksStoreTests.pendingRowOnly`, `.clearIndexKeepsMarks`, `.currentRatingIsPendingElsePhotos`; phím thật qua `ShotDexUITests/scripts/rating-viewer-key.json` (iPhone 17 26.5: phím `4` → dòng 2 `116.3 MB · ★★★★☆`, Rating ▸ đánh dấu ★★★★, None xoá) |
 | AC-2 | iOS 27, chọn 300 ảnh chưa có sao | ⋯ → Rating ▸ ★★★ | đúng 1 khối thay đổi PhotoKit mang 300 yêu cầu; đọc lại 300 ảnh có sao = 3; bảng sao chờ có 0 dòng; lưới không nạp lại | ✅ `PhotoMarksTests.photosModeOneBlock300` (writer giả: 1 khối / 300 yêu cầu, đọc lại = 3, 0 dòng chờ, cột `rating` = 3, ngày sửa đóng dấu lại), `.restampLeavesUnreadEditsAlone`, `.photosModeUndoIsOneBlock`; sim iPhone 17 **iOS 27.0** `ShotDexUITests/scripts/rating-selection-27.json` (chọn 3 → ⋯ Rating ▸ ★★★ → ô `★3`, chế độ chọn và vị trí cuộn giữ nguyên — lưới không nạp lại; None xoá). Thay đổi chỉ nội dung, không cấu trúc: số đo M1 §10. 300 ảnh qua UI chưa chạy (chọn từng ô) |
-| AC-3 | lần mở app đầu trên iOS 27: bảng sao chờ có 1.240 dòng, trong đó 5 ảnh đã bị xoá và 3 ảnh Photos đã có sao khác | app mở xong first paint | đúng 1 khối thay đổi mang 1.232 yêu cầu; 3 ảnh giữ sao của Photos; bảng chờ còn 0 dòng; banner "Moved 1,232 star ratings to Photos." hiện đúng một lần | ⚠️ chưa có — test với lớp giả PhotoKit |
+| AC-3 | lần mở app đầu trên iOS 27: bảng sao chờ có 1.240 dòng, trong đó 5 ảnh đã bị xoá và 3 ảnh Photos đã có sao khác | app mở xong first paint | đúng 1 khối thay đổi mang 1.232 yêu cầu; 3 ảnh giữ sao của Photos; bảng chờ còn 0 dòng; banner "Moved 1,232 star ratings to Photos." hiện đúng một lần | ✅ `RatingMigrationPlanTests.twelveFortyCase` (1.240 / 5 / 3 → 1.232), `RatingMigrationPassTests.bannerOnce` (writer giả: 1 khối, 2 lần mở → 1 banner, chuỗi số nhiều "Moved 1,232 star ratings to Photos."), `.starSetDuringTheMoveSurvives`; sim iPhone 17 iOS 27.0: 42 dòng chờ (40 ảnh thật + 2 id đã mất) → mở app → 0 dòng chờ, 40 ô `★3` đọc từ Photos (`ShotDexUITests/scripts/rating-migration-27.json`). ⚠️ banner trên sim chưa bắt được khung (đã tắt trước ảnh chụp); máy thật: trần khối (M2) |
 | AC-4 | như AC-3, khối thay đổi trả lỗi (giả lập) | app mở | bảng chờ vẫn 1.240 dòng; lọc ★ ≥ 1 vẫn ra đủ ảnh còn tồn tại; không banner; lần mở app sau thử lại đúng 1 lần | ⚠️ chưa có |
 | AC-5 | iOS 27, quyền `.limited` thấy 200 trong 1.240 ảnh có dòng chờ | app mở | khối thay đổi mang đúng 200 yêu cầu; 1.040 dòng ở lại; không dòng nào bị gỡ vì "ảnh không thấy" | ⚠️ chưa có |
 | AC-6 | ảnh A là favorite, không cờ | bấm `P`, rồi `X` | sau `P`: A Picked, vẫn favorite; sau `X`: A Rejected, không còn Picked, vẫn favorite; favorite của Photos không đổi ở cả hai bước | ✅ `PhotoMarksTests.pickThenRejectReplaces`, `.flagNeverTouchesFavorite` (đường cờ không có writer favorite; dòng metadata giữ nguyên); phím thật qua `ShotDexUITests/scripts/rating-grid-glyphs.json` (iPhone 17 26.5: `P` `5` / `X` `1` / `P` / `3` trên 4 ảnh liền → ô lưới `⚑ ★5`, `× ★1` mờ, `⚑`, `★3`; VoiceOver "5 stars, Picked", "1 star, Rejected") |
@@ -137,7 +137,7 @@ Chốt 2026-10-02.
 | AC-10 | iOS 27, ảnh A 2★, ghi sao trả lỗi (giả lập) | bấm `5` | ô và viewer quay về 2★ trong ≤ 1 s; có "Couldn't save rating." + Try Again; bảng sao chờ không có dòng | ✅ `PhotoMarksTests.photosWriteFailureReverts` (về 2★ ngay khi lệnh ghi trả về, báo một lần, 0 dòng chờ), `.tryAgainRetriesSameIds`; sim iPhone 17 iOS 27.0 `ShotDexUITests/scripts/rating-write-failure-27.json` với `-ShotDexFailRatingWrites` (DEBUG): phím `5` → sau 1,1 s dòng 2 không còn sao, banner "Couldn't save rating." + Try Again. ⚠️ ảnh iPad chưa chụp |
 | AC-11 | iOS 27, sao của ảnh A đổi trong app Photos (hoặc máy khác), ngày sửa của A không đổi | lượt index tăng dần kế tiếp chạy xong | lọc ★ ≥ N (N = sao mới) có A; 0 lần đọc file của A | ✅ `AssetFactsRefresherTests.ratingChangedInPhotosReachesFilter` (refresher không có reader; mọi cột trừ `rating` giữ nguyên), `IndexRunChangesTests.skippedUpdatedIdsAreDelivered`, `IndexDiffTests.factsDriftWithoutEdit` (walk đầy), `.ratingBackfillOnlyNulls` (thêm 2026-10-03) |
 
-**Chưa chứng minh được:** AC-3 → AC-5; AC-9 trên sim (đang làm theo plan [rating-flags-cull](../../_plans/2026-10-02-rating-flags-cull.md)).
+**Chưa chứng minh được:** AC-4, AC-5; AC-9 trên sim (đang làm theo plan [rating-flags-cull](../../_plans/2026-10-02-rating-flags-cull.md)).
 
 ## 10. Rủi ro
 
@@ -158,7 +158,8 @@ Chốt 2026-10-02.
 | `PHChange` của fetch all-photos | 1 thông báo cho cả khối; chỉ `changedIndexes`, `isStructural` = không → lưới không nạp lại |
 | `PHFetchOptions.predicate` `rating >= 3` | nhận, đếm đúng |
 | Video | nhận sao, đọc lại đúng |
-| Trần mỗi khối, nhiệt, pin, ảnh chỉ iCloud | chưa đo — M2 trên máy thật |
+| Một khối **10.000** (M2 phần làm được trên sim, `.tenThousandInOneBlock`) | 7,7 s, không lỗi, đọc lại 10.000/10.000, 1 thông báo, không cấu trúc — sim không có trần tới 10.000 |
+| Trần trên máy 55k, nhiệt, pin, ảnh chỉ iCloud | chưa đo — M2 trên máy thật; AC-3 làm theo "đúng 1 khối" như viết, trần trên máy (nếu có) sẽ đổi AC-3 (plan ❓-1) |
 
 Hệ quả cho AC-11: trong thực tế sao đổi ở Photos hay máy khác **luôn** đổi ngày sửa, nên lượt index tăng dần đọc
 lại ảnh đó một lần (chấp nhận, như sửa ảnh — plan §7). AC-11 khoá trường hợp ngày sửa đứng yên: id có trong

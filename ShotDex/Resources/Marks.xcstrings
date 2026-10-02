@@ -45,6 +45,30 @@
       "comment": "Menu: the Pick/Reject submenu",
       "extractionState": "manual"
     },
+    "Moved %lld star ratings to Photos.": {
+      "comment": "Banner after the one-time move of stars into Photos on iOS 27 (plural)",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Moved %lld star rating to Photos."
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Moved %lld star ratings to Photos."
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "None": {
       "comment": "Rating menu: clear the stars",
       "extractionState": "manual"

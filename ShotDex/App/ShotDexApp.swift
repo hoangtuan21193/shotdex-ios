@@ -100,6 +100,8 @@ struct ShotDexApp: App {
                     await dependencies.backfillMediaSubtypes()
                     // iOS 27: Photos' star ratings into the filter column.
                     await dependencies.backfillRatings()
+                    // …and the stars set below iOS 27 move into Photos, once.
+                    await dependencies.ratingMigration.runIfNeeded()
                     // Cameras this iOS build has not judged yet (FS-03.04b §2).
                     dependencies.unsupportedRAWIndex.runPass()
                     await dependencies.spotlight.reindex()

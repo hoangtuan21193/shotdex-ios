@@ -116,4 +116,9 @@ enum MarkCopy {
     static var tryAgain: String {
         String(localized: "Try Again", table: table, comment: "Banner action: repeat the failed write")
     }
+
+    /// "Moved 1,232 star ratings to Photos." (plural in the catalog).
+    static func movedRatings(_ count: Int, locale: Locale = .current) -> String {
+        String(localized: "Moved \(count) star ratings to Photos.", table: table, locale: locale, comment: "Banner after the one-time move of stars into Photos on iOS 27 (plural)")
+    }
 }
