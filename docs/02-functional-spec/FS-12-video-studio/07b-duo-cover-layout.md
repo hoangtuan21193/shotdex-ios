@@ -22,7 +22,7 @@ iPhone: [07](07-phone-layout.md). Mô hình chọn: [04](04-tools-and-inspector.
 
 | Vùng | y (pt) | Nội dung |
 |---|---|---|
-| Hàng trên | 6–42 | Back · Undo · Redo · Show original — đĩa 34 nền trắng 10%, cách 6, từ x 10; **không có ⋯** (chốt 2026-10-03) |
+| Hàng trên | 6–42 | Back · Undo · Redo — đĩa 34 nền trắng 10%, cách 6, từ x 10; **không có ⋯ và không có Show original** — so sánh nằm ở header của Look ([FS-12.15](15-before-after.md)) (chốt 2026-10-03) |
 | Khung | 45–260 | 382×215 (16:9); tỉ lệ khác fit trong 382×215 (9:16 → 121×215 căn giữa); Play 50 ở tâm |
 | Transport | 260–300 | Go to Start · Back a Frame · timecode · Forward a Frame · Go to End · ⋯ (nút 40), menu ⋯ như iPhone |
 | Timeline | 300–644 = **344** | thước 33 · cột glyph 30 không nhận chạm · lane chữ 34 / video 66 / nhạc 40 · thumbnail 54 · ô chuyển cảnh 22 |
@@ -79,7 +79,7 @@ Mọi thứ đã có chỗ: Video Settings và Export ở dải 84, việc timel
 | AC-8 | clip 2 đang chọn, Speed đổi sang 2× | mở máy | màn trong: góc phải hàng đáy là ✕ · Clip 2 · ✓; bấm ✕ trả Speed về 1× | ⚠️ chưa có — mở máy bằng tay trong Simulator.app |
 | AC-9 | DC1, DC2 | `Tools/sim-shot <udid> out.png cover` (có mask) | Back và ✓ không bị góc bo cắt | ⚠️ chưa có |
 | AC-10 | các board DC1–DC4, DC2_Collapsed | `Tools/design-board compare` với dump app cùng trạng thái | mọi phần tử chrome lệch ≤ 2pt | ⚠️ chưa có — agent `design-parity` |
-| AC-11 | như AC-1 | dump hàng trên y 6–42 | đúng 4 đĩa Back · Undo · Redo · Show original; không có ⋯ | ⚠️ chưa có |
+| AC-11 | như AC-1 | dump hàng trên y 6–42 | đúng 3 đĩa Back · Undo · Redo; không có ⋯, không có Show original | ⚠️ chưa có |
 | AC-12 | clip 2 đang chọn | vuốt grabber xuống | panel 78 ở y 566–644; timeline 300–566 có tay nắm mép clip 2; ✕ y 504, ✓ y 556 vẫn còn; khung không đổi | ⚠️ chưa có — `Tools/ui-drive` (swipe theo điểm) |
 
 **Chưa chứng minh được:** AC-1 … AC-12.
