@@ -89,6 +89,7 @@ struct CollageScreen: View {
             )
             newModel.originalFetcher = dependencies.originalFetcher
             newModel.indexGate = dependencies.indexInteractionGate
+            newModel.embeddedPreviewIds = dependencies.unsupportedRAWIndex.assetIds
             model = newModel
             newModel.loadPreviews()
         }
@@ -140,7 +141,15 @@ struct CollageScreen: View {
                     photoLibrary: dependencies.photoLibrary,
                     slotCapacity: max(1, model.emptySlotCount)
                 ) { assetIDs in
-                    model.fillSlots(startingAt: target.index, with: assetIDs)
+                    // Picked RAWs iOS can't read: the same question as at the
+                    // door (FS-03.04b AC-15).
+                    let picked = PhotoLibraryService.fetchAssets(ids: assetIDs)
+                    let unreadable = model.embeddedPreviewIds
+                    Task { @MainActor in
+                        guard let kept = await UnsupportedRAWBatchPrompt.resolve(picked, unreadable: unreadable),
+                              !kept.isEmpty else { return }
+                        model.fillSlots(startingAt: target.index, with: kept.map(\.localIdentifier))
+                    }
                 }
                 .presentationDetents([.large])
                 .presentationCornerRadius(AppTheme.Radius.xxl)

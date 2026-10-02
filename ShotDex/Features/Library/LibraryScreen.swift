@@ -351,7 +351,13 @@ struct LibraryScreen: View {
     private func presentCollage(_ model: LibraryModel) {
         let assets = PhotoLibraryService.fetchAssets(ids: selectedImageIDs(model))
         guard CollageTemplateCatalog.supportedCounts.contains(assets.count) else { return }
-        collagePresentation = CollagePresentation(assets: assets)
+        // RAWs iOS can't read: asked once, before the collage opens (FS-03.04b AC-15).
+        let unreadable = dependencies.unsupportedRAWIndex.assetIds
+        Task { @MainActor in
+            guard let kept = await UnsupportedRAWBatchPrompt.resolve(assets, unreadable: unreadable),
+                  CollageTemplateCatalog.supportedCounts.contains(kept.count) else { return }
+            collagePresentation = CollagePresentation(assets: kept)
+        }
     }
 
     /// Opens the freshly-saved collage's detail once the grid reload (triggered

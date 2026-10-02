@@ -189,6 +189,11 @@ final class CollageEditorModel {
     /// The library asset behind a pool id; nil for a server photo.
     func asset(id: String) -> PHAsset? { photo(id: id)?.asset }
 
+    /// RAWs this iOS build can't read (FS-03.04b §4). One in the collage
+    /// was taken in with Convert to JPEG, so it is drawn from its embedded
+    /// preview, on the canvas and in the export.
+    var embeddedPreviewIds: Set<String> = []
+
     /// True when the collage started from server photos (FS-17.06 §5b).
     var isServerRun: Bool { serverWorkDirectory != nil }
 
@@ -208,6 +213,16 @@ final class CollageEditorModel {
         let targetSize = CGSize(width: 1200, height: 1200)
         for photo in subset {
             let id = photo.id
+            if let asset = photo.asset, embeddedPreviewIds.contains(id) {
+                // A RAW iOS can't read, taken in with Convert to JPEG: its
+                // own embedded preview — Photos gives nothing for it.
+                Task { [weak self] in
+                    if let image = await EmbeddedRAWPreview.image(for: asset, maxPixelSize: Int(targetSize.width)) {
+                        self?.imagesByAsset[id] = UIImage(cgImage: image)
+                    }
+                }
+                continue
+            }
             if let file = photo.serverFile {
                 // A server original on disk: decoded at the preview's size.
                 Task { [weak self] in
@@ -684,6 +699,12 @@ final class CollageEditorModel {
                 let image = await PhotoOriginFile.loadImage(at: file.primaryURL, maxPixelSize: Int(side.rounded(.up)))
                 if let cgImage = image?.cgImage {
                     images[index] = cgImage
+                }
+            case .asset(let asset) where embeddedPreviewIds.contains(asset.localIdentifier):
+                // Converted to JPEG: the embedded preview at its own size,
+                // capped at the cell's — nothing written to the library.
+                if let image = await EmbeddedRAWPreview.image(for: asset, maxPixelSize: Int(side.rounded(.up))) {
+                    images[index] = image
                 }
             case .asset(let asset):
                 cloudCells.append(.init(index: index, item: OriginalItem(asset: asset), side: Int(side.rounded(.up))))

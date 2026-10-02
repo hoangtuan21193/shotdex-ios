@@ -416,7 +416,13 @@ struct SmartAlbumDetailScreen: View {
     private func presentCollage(_ model: SmartAlbumDetailModel) {
         let assets = selectedImageIDs(model).compactMap { model.asset(for: $0) }
         guard CollageTemplateCatalog.supportedCounts.contains(assets.count) else { return }
-        collagePresentation = CollagePresentation(assets: assets)
+        // RAWs iOS can't read: asked once, before the collage opens (FS-03.04b AC-15).
+        let unreadable = dependencies.unsupportedRAWIndex.assetIds
+        Task { @MainActor in
+            guard let kept = await UnsupportedRAWBatchPrompt.resolve(assets, unreadable: unreadable),
+                  CollageTemplateCatalog.supportedCounts.contains(kept.count) else { return }
+            collagePresentation = CollagePresentation(assets: kept)
+        }
     }
 
     /// Opens the Combine Photos row the user picked on the selection's photos.
