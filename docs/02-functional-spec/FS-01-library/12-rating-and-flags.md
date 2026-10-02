@@ -147,3 +147,19 @@ Chốt 2026-10-02.
 | Đổi sao trên iOS 27 có làm đổi ngày sửa của ảnh, kéo theo index lại cả lô không | đo trên máy với AC-2. Nếu có thì lượt index bỏ qua ảnh chỉ đổi sao, như favorite |
 | Cờ không đồng bộ: người dùng lọc trên iPad thì iPhone không thấy | ghi rõ ở §3. Đồng bộ cờ cần server hoặc iCloud của app, nằm ngoài intent |
 | Lên iOS 27 bằng cách khôi phục backup sang máy mới | bảng cờ và bảng chờ đi theo backup của app; luật §5 chạy như thường |
+
+**Số đo M1 (2026-10-03, sim iPhone 17 iOS 27.0, thư viện 10.092 asset, `ShotDexTests/PhotoPropertyProbeTests`):**
+
+| Đo | Kết quả |
+|---|---|
+| Ghi `rating` trong **một** `performChanges` | 1 ảnh 0,01–0,03 s · 300 ảnh 0,17–0,25 s · 2.000 ảnh 1,1–1,35 s; không lỗi, không hộp thoại; đọc lại đủ 100 % |
+| `modificationDate` | **đổi** với mọi ảnh mà sao thật sự đổi giá trị (ghi lại cùng giá trị thì không đổi gì). Đổi favorite cũng đổi ngày sửa. → app ghi sao xong phải đóng dấu ngày sửa mới vào `photo_metadata`, không thì lượt index kế đọc lại cả lô (plan task 7) |
+| `fetchPersistentChanges` | id đổi sao nằm trong `updatedLocalIdentifiers` (299/299, 1.700/1.700, 300/300); 0 inserted, 0 deleted |
+| `PHChange` của fetch all-photos | 1 thông báo cho cả khối; chỉ `changedIndexes`, `isStructural` = không → lưới không nạp lại |
+| `PHFetchOptions.predicate` `rating >= 3` | nhận, đếm đúng |
+| Video | nhận sao, đọc lại đúng |
+| Trần mỗi khối, nhiệt, pin, ảnh chỉ iCloud | chưa đo — M2 trên máy thật |
+
+Hệ quả cho AC-11: trong thực tế sao đổi ở Photos hay máy khác **luôn** đổi ngày sửa, nên lượt index tăng dần đọc
+lại ảnh đó một lần (chấp nhận, như sửa ảnh — plan §7). AC-11 khoá trường hợp ngày sửa đứng yên: id có trong
+`updated` mà `needsReindex` bỏ qua vẫn được làm tươi favorite và sao, không đọc file.
