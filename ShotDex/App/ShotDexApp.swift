@@ -20,6 +20,7 @@ struct ShotDexApp: App {
         dependencies.onThisDayNotifications.registerDelegate()
         dependencies.resolveNewlyKnownCameras()
         dependencies.serverUploadIndex.loadIfNeeded()
+        dependencies.unsupportedRAWIndex.loadIfNeeded()
         dependencies.fileServerCatalog.reload()
     }
 
@@ -29,6 +30,7 @@ struct ShotDexApp: App {
                 .environment(dependencies)
                 .environment(dependencies.photoLibrary)
                 .environment(dependencies.serverUploadIndex)
+                .environment(dependencies.unsupportedRAWIndex)
                 .environment(dependencies.fileServerCatalog)
                 .onChange(of: scenePhase) { _, phase in
                     if phase == .background {
@@ -93,6 +95,8 @@ struct ShotDexApp: App {
                     await dependencies.lookInbox.drain()
                     // Cheap: a few SELECT DISTINCTs and one Spotlight write.
                     await dependencies.backfillMediaSubtypes()
+                    // Cameras this iOS build has not judged yet (FS-03.04b §2).
+                    dependencies.unsupportedRAWIndex.runPass()
                     await dependencies.spotlight.reindex()
                     await dependencies.refreshWidgetSnapshot()
                 }

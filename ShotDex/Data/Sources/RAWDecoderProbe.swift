@@ -13,6 +13,9 @@ protocol RAWDecoderProbing: Sendable {
     /// `false` refused, `nil` when the file is only in iCloud. Never
     /// downloads (AC-12).
     func localFileDecodes(assetId: String) async -> Bool?
+    /// Which of these RAW-named photos also carry a JPEG or HEIC — a pair
+    /// kept with its RAW as the original (M3), never marked.
+    func renderedTwinIds(among assetIds: [String]) async -> Set<String>
 }
 
 /// The iOS build a verdict belongs to, and the version the messages name.
@@ -72,6 +75,21 @@ struct SystemRAWDecoderProbe: RAWDecoderProbing {
             return PhotoRenderService.canDecodeRAW(at: url)
         } catch {
             return nil
+        }
+    }
+
+    func renderedTwinIds(among assetIds: [String]) async -> Set<String> {
+        guard !assetIds.isEmpty else { return [] }
+        return await MainActor.run {
+            var twins = Set<String>()
+            let assets = PHAsset.fetchAssets(withLocalIdentifiers: assetIds, options: nil)
+            assets.enumerateObjects { asset, _, _ in
+                let images = PHAssetResource.assetResources(for: asset).filter {
+                    [.photo, .alternatePhoto, .fullSizePhoto].contains($0.type)
+                }
+                if images.contains(where: { !Self.isRAW($0) }) { twins.insert(asset.localIdentifier) }
+            }
+            return twins
         }
     }
 

@@ -119,6 +119,9 @@ final class AppDependencies {
     let serverUploads: ServerUploadStore
     /// The set of uploaded asset ids the grid badge reads, kept in memory.
     let serverUploadIndex: ServerUploadIndex
+    /// The photos whose RAW this iOS build can't read (FS-03.04b §3), kept
+    /// in memory for the grid's glyph.
+    let unsupportedRAWIndex: UnsupportedRAWIndex
     /// The connections the selection ⋯ menu lists by name.
     let fileServerCatalog: FileServerCatalog
     /// Files brought down from a server (FS-17 §4).
@@ -296,6 +299,7 @@ final class AppDependencies {
         let serverUploads = ServerUploadStore(database: database)
         self.serverUploads = serverUploads
         self.serverUploadIndex = ServerUploadIndex(store: serverUploads)
+        self.unsupportedRAWIndex = UnsupportedRAWIndex(store: RAWVerdictStore(database: database))
         self.serverDownloads = ServerDownloadStore(database: database)
         self.serverFileHistory = ServerFileHistory(database: database)
         self.serverShortcuts = ServerShortcutCatalog(store: ServerShortcutStore(database: database))

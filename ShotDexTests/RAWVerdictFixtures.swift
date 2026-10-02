@@ -79,4 +79,6 @@ final class FakeRAWProbe: RAWDecoderProbing, @unchecked Sendable {
         guard local.contains(assetId) else { return nil }
         return decodes(assetId)
     }
+
+    func renderedTwinIds(among assetIds: [String]) async -> Set<String> { [] }
 }

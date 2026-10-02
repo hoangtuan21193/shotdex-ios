@@ -1,0 +1,71 @@
+import Foundation
+import Observation
+
+/// The photos whose RAW this iOS build can't read (FS-03.04b §3), as a set
+/// the grid asks per cell without touching the database (NF-01): read once,
+/// then again whenever a verdict changes — after the launch pass, after an
+/// index run, after the editor is refused.
+@MainActor
+@Observable
+final class UnsupportedRAWIndex {
+    private(set) var assetIds: Set<String> = []
+    /// Bumped on every change, so the grid can tell "new set" without
+    /// comparing two large sets.
+    private(set) var version = 0
+    let store: RAWVerdictStore
+    let release: OSRelease
+    private let probe: any RAWDecoderProbing
+    @ObservationIgnored private var hasLoaded = false
+    @ObservationIgnored private var passTask: Task<Void, Never>?
+    @ObservationIgnored private var passAgain = false
+
+    init(store: RAWVerdictStore, probe: any RAWDecoderProbing = SystemRAWDecoderProbe(), release: OSRelease = .current) {
+        self.store = store
+        self.probe = probe
+        self.release = release
+    }
+
+    func contains(_ assetId: String) -> Bool { assetIds.contains(assetId) }
+
+    func loadIfNeeded() {
+        guard !hasLoaded else { return }
+        hasLoaded = true
+        Task { await reload() }
+    }
+
+    func reload() async {
+        let store = store, build = release.build
+        let ids = await Task.detached(priority: .utility) { (try? store.unreadableAssetIds(build: build)) ?? [] }.value
+        guard ids != assetIds else { return }
+        assetIds = ids
+        version += 1
+    }
+
+    /// Judges the cameras with no settled verdict for this build, then
+    /// re-reads the set. One pass at a time; a request while one runs
+    /// starts another when it ends (an index run may have added cameras).
+    func runPass() {
+        guard passTask == nil else {
+            passAgain = true
+            return
+        }
+        let pass = RAWVerdictPass(store: store, probe: probe, release: release)
+        passTask = Task { [weak self] in
+            repeat {
+                self?.passAgain = false
+                let changed = await Task.detached(priority: .utility) { (try? await pass.run()) ?? false }.value
+                guard let self else { return }
+                if changed || !self.hasLoaded {
+                    self.hasLoaded = true
+                    await self.reload()
+                }
+            } while self?.passAgain == true
+            self?.passTask = nil
+        }
+    }
+
+    /// Waits for the pass in flight — the tests' way to know it ended.
+    func waitForPass() async {
+        while let task = passTask { await task.value }
+    }
+}

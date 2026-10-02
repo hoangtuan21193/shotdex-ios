@@ -8,7 +8,8 @@ struct RAWVerdictPass: Sendable {
     let probe: any RAWDecoderProbing
     let release: OSRelease
 
-    /// Returns whether any verdict changed.
+    /// Returns whether anything the grid shows changed: a verdict, or a pair
+    /// newly found among a camera that is not readable.
     @discardableResult
     func run() async throws -> Bool {
         let matcher = RAWCameraMatcher(supportedModels: probe.supportedCameraModels())
@@ -17,28 +18,37 @@ struct RAWVerdictPass: Sendable {
         for indexed in try store.indexedRAWCameras() {
             if Task.isCancelled { break }
             let previous = stored[indexed.camera.key]
+            if previous == .readable { continue }
             let listed = matcher.isListed(make: indexed.exifMake, model: indexed.exifModel)
                 || matcher.isListed(make: indexed.camera.manufacturer, model: indexed.camera.model)
-            switch previous {
-            case .readable:
-                continue
-            case .unreadable:
-                // Settled by files, but the decoder's list can grow without
-                // a new build (it ships as a downloadable asset).
-                guard listed else { continue }
-            case .unknown, nil:
-                break
-            }
-            var ids = try (listed ? [] : store.rawAssetIds(of: indexed.camera))[...]
-            let (verdict, source) = await RAWVerdictRules.judge(listed: listed) {
-                while let id = ids.popFirst() {
-                    if let decodes = await probe.localFileDecodes(assetId: id) { return decodes }
+            var verdict = previous
+            var source: RAWVerdictSource?
+            if listed {
+                // Also re-reads a camera settled as unreadable: the decoder's
+                // list grows without a new build (it ships as a downloadable
+                // asset).
+                (verdict, source) = (.readable, .list)
+            } else if previous != .unreadable {
+                var ids = try store.rawAssetIds(of: indexed.camera)[...]
+                let judged = await RAWVerdictRules.judge(listed: false) {
+                    while let id = ids.popFirst() {
+                        if let decodes = await probe.localFileDecodes(assetId: id) { return decodes }
+                    }
+                    return nil
                 }
-                return nil
+                (verdict, source) = (judged.verdict, judged.source)
             }
-            guard verdict != previous else { continue }
-            try store.record(verdict, source: source, for: indexed.camera, build: release.build)
-            changed = true
+            if verdict != .readable {
+                // A pair kept with the RAW as its original looks RAW-only to
+                // the index; it is never marked.
+                let candidates = try store.rawAssetIds(of: indexed.camera)
+                let twins = await probe.renderedTwinIds(among: candidates)
+                if try store.addPairs(twins) > 0 { changed = true }
+            }
+            if let verdict, verdict != previous {
+                try store.record(verdict, source: source, for: indexed.camera, build: release.build)
+                changed = true
+            }
         }
         return changed
     }

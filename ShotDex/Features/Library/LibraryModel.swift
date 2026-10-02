@@ -60,6 +60,7 @@ final class LibraryModel {
     private let metadataStore: MetadataStore
     private let pipeline: IndexPipeline
     private let placeIndexPass: PlaceIndexPass
+    private let unsupportedRAWIndex: UnsupportedRAWIndex
     private let backgroundIndex: BackgroundIndexService
     private let photoLibrary: PhotoLibraryService
     private let networkStatus: NetworkMonitor
@@ -235,6 +236,7 @@ final class LibraryModel {
         self.metadataStore = dependencies.metadataStore
         self.pipeline = dependencies.indexPipeline
         self.placeIndexPass = dependencies.placeIndexPass
+        self.unsupportedRAWIndex = dependencies.unsupportedRAWIndex
         self.backgroundIndex = dependencies.backgroundIndex
         self.photoLibrary = dependencies.photoLibrary
         self.networkStatus = dependencies.networkStatus
@@ -865,6 +867,8 @@ final class LibraryModel {
             self.reload()
             self.refreshFilterOptions(force: true)
             self.startPlaceLookup()
+            // New RAW cameras in the index are judged now, not at next launch.
+            self.unsupportedRAWIndex.runPass()
             // A local-only run leaves iCloud-only photos pending; surface a
             // persistent "waiting for Wi-Fi" state when they can't stream now.
             self.refreshPausedState()

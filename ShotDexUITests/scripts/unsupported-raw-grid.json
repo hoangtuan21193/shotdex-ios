@@ -1,0 +1,16 @@
+{"steps": [
+ {"action": "launch"},
+ {"action": "wait", "seconds": 6},
+ {"action": "swipe", "direction": "down", "x": 0.5, "y": 0.25, "distance": 0.6},
+ {"action": "swipe", "direction": "down", "x": 0.5, "y": 0.25, "distance": 0.6},
+ {"action": "swipe", "direction": "down", "x": 0.5, "y": 0.25, "distance": 0.6},
+ {"action": "swipe", "direction": "down", "x": 0.5, "y": 0.25, "distance": 0.6},
+ {"action": "swipe", "direction": "down", "x": 0.5, "y": 0.25, "distance": 0.6},
+ {"action": "swipe", "direction": "down", "x": 0.5, "y": 0.25, "distance": 0.6},
+ {"action": "swipe", "direction": "down", "x": 0.5, "y": 0.25, "distance": 0.6},
+ {"action": "swipe", "direction": "down", "x": 0.5, "y": 0.25, "distance": 0.6},
+ {"action": "wait", "seconds": 2},
+ {"action": "screenshot", "name": "ac2-grid"},
+ {"action": "dump", "name": "ac2-grid"},
+ {"action": "wait", "seconds": 3}
+]}

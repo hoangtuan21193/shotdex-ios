@@ -80,6 +80,36 @@ struct RAWVerdictStore: Sendable {
         }
     }
 
+    /// RAW-named photos of cameras this build can't read, less pairs: the
+    /// tiles that carry the glyph and what Unsupported RAW shows (AC-2,
+    /// AC-13). Unknown cameras are not in it.
+    func unreadableAssetIds(build: String) throws -> Set<String> {
+        try database.reader.read { db in
+            Set(try String.fetchAll(db, sql: """
+                SELECT assetId FROM photo_metadata
+                WHERE normalizedCameraModel IS NOT NULL AND \(Self.rawFilenameSQL)
+                  AND \(Self.cameraKeySQL) IN (
+                      SELECT camera FROM raw_decoder_verdicts WHERE osBuild = ? AND verdict = 'unreadable')
+                  AND assetId NOT IN (SELECT assetId FROM raw_pair_assets)
+                """, arguments: [build]))
+        }
+    }
+
+    /// Records RAW-named photos found to carry a rendered twin. Returns how
+    /// many were new.
+    @discardableResult
+    func addPairs(_ assetIds: Set<String>) throws -> Int {
+        guard !assetIds.isEmpty else { return 0 }
+        return try database.writer.write { db in
+            var added = 0
+            for id in assetIds {
+                try db.execute(sql: "INSERT OR IGNORE INTO raw_pair_assets (assetId) VALUES (?)", arguments: [id])
+                added += db.changesCount
+            }
+            return added
+        }
+    }
+
     /// Cameras with photos whose indexed file is a RAW; a row with no model
     /// has no camera to judge (AC-6).
     func indexedRAWCameras() throws -> [IndexedCamera] {

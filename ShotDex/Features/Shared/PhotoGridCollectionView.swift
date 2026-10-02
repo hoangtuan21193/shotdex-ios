@@ -26,6 +26,8 @@ struct PhotoGridCollectionView<Item: PhotoGridDisplayable>: UIViewRepresentable 
     /// §8). Read from the environment so no screen has to thread it through;
     /// absent in previews, where nothing is uploaded.
     @Environment(ServerUploadIndex.self) private var uploadIndex: ServerUploadIndex?
+    /// RAWs this iOS build can't read get a warning glyph (FS-03.04b §3).
+    @Environment(UnsupportedRAWIndex.self) private var unsupportedRAWIndex: UnsupportedRAWIndex?
     let photos: [Item]
     let assetProvider: (_ flatIndex: Int, _ item: Item) -> PHAsset?
     /// Sectioning + header contract: grid-grouped by date, one flat headerless
@@ -194,8 +196,11 @@ struct PhotoGridCollectionView<Item: PhotoGridDisplayable>: UIViewRepresentable 
         let uploadsChanged = context.coordinator.updateUploaded(
             uploadIndex?.assetIds ?? [], version: uploadIndex?.version ?? 0
         )
+        let unsupportedChanged = context.coordinator.updateUnsupportedRAW(
+            unsupportedRAWIndex?.assetIds ?? [], version: unsupportedRAWIndex?.version ?? 0
+        )
         context.coordinator.apply(self, isInitial: false)
-        if uploadsChanged { context.coordinator.refreshVisibleCells() }
+        if uploadsChanged || unsupportedChanged { context.coordinator.refreshVisibleCells() }
     }
 
     static func dismantleUIView(_ uiView: UICollectionView, coordinator: Coordinator) {
@@ -594,6 +599,18 @@ struct PhotoGridCollectionView<Item: PhotoGridDisplayable>: UIViewRepresentable 
             uploadedAssetIds = ids
             // The first read can already hold ids if the index loaded before
             // this grid appeared; the cells configured in makeUIView lack them.
+            return !(isFirst && ids.isEmpty)
+        }
+
+        /// RAWs the decoder can't read, by the same version rule.
+        private(set) var unsupportedRAWAssetIds: Set<String> = []
+        private var unsupportedRAWVersion = -1
+
+        func updateUnsupportedRAW(_ ids: Set<String>, version: Int) -> Bool {
+            guard version != unsupportedRAWVersion else { return false }
+            let isFirst = unsupportedRAWVersion == -1
+            unsupportedRAWVersion = version
+            unsupportedRAWAssetIds = ids
             return !(isFirst && ids.isEmpty)
         }
 
@@ -1006,7 +1023,8 @@ struct PhotoGridCollectionView<Item: PhotoGridDisplayable>: UIViewRepresentable 
                 photoLibrary: parent.photoLibrary,
                 displayOptions: displayOptions,
                 lazyMetadataProvider: parent.lazyMetadataProvider,
-                isUploaded: uploadedAssetIds.contains(item.assetId)
+                isUploaded: uploadedAssetIds.contains(item.assetId),
+                isUnsupportedRAW: unsupportedRAWAssetIds.contains(item.assetId)
             )
         }
 
@@ -2000,6 +2018,7 @@ final class PhotoGridCell: UICollectionViewCell {
     private var badgeFetchTask: Task<Void, Never>?
     private var accessibilityMediaLabel = "Photo"
     private var accessibilityUploaded = false
+    private var accessibilityUnsupportedRAW = false
     private var accessibilityMetadataLine: String?
     private var accessibilityFileType: String?
 
@@ -2152,7 +2171,8 @@ final class PhotoGridCell: UICollectionViewCell {
         photoLibrary: PhotoLibraryService,
         displayOptions: GridMetadataDisplayOptions,
         lazyMetadataProvider: ((String) async -> (any PhotoGridDisplayable)?)? = nil,
-        isUploaded: Bool = false
+        isUploaded: Bool = false,
+        isUnsupportedRAW: Bool = false
     ) {
         self.photoLibrary = photoLibrary
         configuredAssetId = item.assetId
@@ -2186,7 +2206,7 @@ final class PhotoGridCell: UICollectionViewCell {
             }
         }
 
-        applyStatusBadges(for: asset, isUploaded: isUploaded)
+        applyStatusBadges(for: asset, isUploaded: isUploaded, isUnsupportedRAW: isUnsupportedRAW)
 
         if let asset, asset.mediaType == .video {
             videoBadge.text = asset.duration > 0
@@ -2244,18 +2264,22 @@ final class PhotoGridCell: UICollectionViewCell {
     /// No "edited" glyph: PhotoKit exposes no adjustment flag on `PHAsset`, and
     /// the only way to tell is to enumerate `PHAssetResource`s per asset, which
     /// is far too expensive per cell.
-    private func applyStatusBadges(for asset: PHAsset?, isUploaded: Bool) {
+    private func applyStatusBadges(for asset: PHAsset?, isUploaded: Bool, isUnsupportedRAW: Bool) {
         for view in statusBadges.arrangedSubviews {
             statusBadges.removeArrangedSubview(view)
             view.removeFromSuperview()
         }
         accessibilityUploaded = isUploaded && asset != nil
+        accessibilityUnsupportedRAW = isUnsupportedRAW && asset != nil
         updateAccessibilityLabel()
         guard let asset else {
             statusBadges.isHidden = statusBadges.arrangedSubviews.isEmpty
             return
         }
         var symbols: [String] = []
+        // First: the one glyph that says something is wrong (FS-03.04b §3).
+        // A mark only — the tile still opens the viewer.
+        if isUnsupportedRAW { symbols.append("exclamationmark.triangle.fill") }
         if asset.isFavorite { symbols.append("heart.fill") }
         let subtypes = asset.mediaSubtypes
         if subtypes.contains(.photoLive) { symbols.append("livephoto") }
@@ -2312,6 +2336,7 @@ final class PhotoGridCell: UICollectionViewCell {
             accessibilityMediaLabel,
             accessibilityFileType.map { "file type \($0)" },
             accessibilityMetadataLine,
+            accessibilityUnsupportedRAW ? String(localized: "RAW not supported by iOS", comment: "VoiceOver: grid tile of a RAW photo this iOS version can't decode") : nil,
             accessibilityUploaded ? String(localized: "Uploaded to server", comment: "VoiceOver: grid tile of a photo with a copy on a file server") : nil,
         ]
         accessibilityLabel = components.compactMap { $0 }.joined(separator: ", ")
