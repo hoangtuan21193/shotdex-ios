@@ -9,6 +9,7 @@ enum PhotoCommand: String, CaseIterable, Identifiable {
     case copy
     case pasteEdits
     case combine
+    case cull
     case collage
     case video
     case resize
@@ -26,6 +27,7 @@ enum PhotoCommand: String, CaseIterable, Identifiable {
         case .copy: String(localized: "Copy", comment: "Photo command")
         case .pasteEdits: String(localized: "Paste Edits", comment: "Photo command")
         case .combine: String(localized: "Combine Photos", comment: "Photo command")
+        case .cull: MarkCopy.cull
         case .collage: String(localized: "Create Collage", comment: "Photo command")
         case .video: String(localized: "Create Video", comment: "Photo command")
         case .resize: String(localized: "Resize", comment: "Photo command")
@@ -43,6 +45,7 @@ enum PhotoCommand: String, CaseIterable, Identifiable {
         case .copy: "doc.on.doc"
         case .pasteEdits: "doc.on.clipboard"
         case .combine: "square.3.layers.3d"
+        case .cull: "flag.2.crossed"
         case .collage: "rectangle.split.2x2"
         case .video: "film"
         case .resize: "arrow.down.right.and.arrow.up.left"
@@ -57,7 +60,7 @@ enum PhotoCommand: String, CaseIterable, Identifiable {
 
     /// The selection ⋯ of an album, in order (FS-01.09 §2).
     static let albumSelectionMenu: [PhotoCommand] = [
-        .pasteEdits, .combine, .collage, .video, .resize, .addToCollection, .exportEXIF, .duplicate,
+        .pasteEdits, .combine, .cull, .collage, .video, .resize, .addToCollection, .exportEXIF, .duplicate,
     ]
 
     /// What works on a file: the album's rows minus the Photos-only ones,

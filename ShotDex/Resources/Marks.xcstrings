@@ -5,6 +5,78 @@
       "comment": "Rating filter row, e.g. ★★★ & Up",
       "extractionState": "manual"
     },
+    "%lld photos": {
+      "comment": "Culling summary: photos in the pass (plural)",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld photo"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld photos"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "%lld picks": {
+      "comment": "Culling pass count of Picked photos (plural)",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld pick"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld picks"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "%lld rejected": {
+      "comment": "Culling pass count of Rejected photos (plural)",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld rejected"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld rejected"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "%lld stars": {
       "comment": "VoiceOver: a photo's star rating (plural)",
       "extractionState": "manual",
@@ -29,6 +101,30 @@
         }
       }
     },
+    "%lld unflagged": {
+      "comment": "Culling summary: photos left without a flag (plural)",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld unflagged"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld unflagged"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "Any": {
       "comment": "Rating filter: no constraint on stars",
       "extractionState": "manual"
@@ -37,8 +133,80 @@
       "comment": "Flag menu: remove Pick or Reject",
       "extractionState": "manual"
     },
+    "Close": {
+      "comment": "Culling pass: leave the pass",
+      "extractionState": "manual"
+    },
     "Couldn't save rating.": {
       "comment": "Banner: writing a star rating to Photos failed",
+      "extractionState": "manual"
+    },
+    "Cull %lld Photos": {
+      "comment": "Selection menu: start a culling pass over the selected photos (plural)",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Cull %lld Photo"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Cull %lld Photos"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "Cull From Here": {
+      "comment": "Viewer menu: start a culling pass at this photo",
+      "extractionState": "manual"
+    },
+    "Cull Photos": {
+      "comment": "Command name: the culling pass",
+      "extractionState": "manual"
+    },
+    "Delete %lld Rejected…": {
+      "comment": "Culling summary: delete the Rejected photos of the pass (plural)",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Delete %lld Rejected…"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Delete %lld Rejected…"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "Done": {
+      "comment": "Culling summary: close the pass",
+      "extractionState": "manual"
+    },
+    "End of Set": {
+      "comment": "Culling summary card title",
+      "extractionState": "manual"
+    },
+    "Filmstrip": {
+      "comment": "VoiceOver: the culling pass's strip of thumbnails",
       "extractionState": "manual"
     },
     "Flag": {
@@ -73,6 +241,10 @@
       "comment": "Rating menu: clear the stars",
       "extractionState": "manual"
     },
+    "Photo %lld of %lld": {
+      "comment": "VoiceOver: the culling pass's current photo",
+      "extractionState": "manual"
+    },
     "Pick": {
       "comment": "Flag menu: keep this photo",
       "extractionState": "manual"
@@ -87,6 +259,10 @@
     },
     "Rating": {
       "comment": "Menu: the star-rating submenu",
+      "extractionState": "manual"
+    },
+    "Rating and flag": {
+      "comment": "VoiceOver: the culling pass's row of stars, Pick and Reject",
       "extractionState": "manual"
     },
     "Reject": {
@@ -109,8 +285,16 @@
       "comment": "VoiceOver: remove the rating chip",
       "extractionState": "manual"
     },
+    "Review Unflagged": {
+      "comment": "Culling summary: run the pass again over the unflagged photos",
+      "extractionState": "manual"
+    },
     "Try Again": {
       "comment": "Banner action: repeat the failed write",
+      "extractionState": "manual"
+    },
+    "Undo": {
+      "comment": "Culling pass: take back the last mark",
       "extractionState": "manual"
     },
     "Unflagged": {
@@ -119,6 +303,18 @@
     },
     "Unrated": {
       "comment": "Rating filter: photos with no stars",
+      "extractionState": "manual"
+    },
+    "Video %lld of %lld": {
+      "comment": "VoiceOver: the culling pass's current video",
+      "extractionState": "manual"
+    },
+    "no stars": {
+      "comment": "VoiceOver: a photo without a star rating",
+      "extractionState": "manual"
+    },
+    "not flagged": {
+      "comment": "VoiceOver: a photo with neither Pick nor Reject",
       "extractionState": "manual"
     }
   },

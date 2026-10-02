@@ -24,6 +24,10 @@ final class AppNavigation {
     /// two different containers. `nil` when nothing is selecting.
     var selectionBar: SelectionBarModel?
 
+    /// A culling pass asked for from a selection's ⋯ (FS-01.12b §5); the
+    /// root presents it.
+    var cullRequest: CullRequest?
+
     /// Bottom inset a grid adds to its content while selecting. The selection
     /// chrome is now a floating `SelectionOverlay` on both tiers (not system safe
     /// area), so the grid gets no automatic clearance — this reserves room for the

@@ -41,6 +41,14 @@ protocol PhotoBrowsingSource: AnyObject {
 
 extension PhotoBrowsingSource {
     var sourceAlbum: PHAssetCollection? { nil }
+
+    /// Every photo the viewer is paging through, for Cull From Here
+    /// (FS-01.12b §5). The default walks the indices — the whole list for a
+    /// source that loads everything; a paging source (Albums) covers what
+    /// it has loaded so far.
+    func allPhotoIds() -> [String] {
+        (0..<photoCount).compactMap(photoId(at:))
+    }
 }
 
 /// Presentation target for the fullscreen viewer, captured at tap time. Holds
@@ -114,6 +122,8 @@ struct PhotoDetailScreen: View {
     @Environment(UnsupportedRAWIndex.self) private var unsupportedRAWIndex: UnsupportedRAWIndex?
     /// Stars and flags (FS-01.12): read for line 2, written by ⋯ and the keys.
     @Environment(PhotoMarks.self) private var photoMarks: PhotoMarks?
+    /// Cull From Here (FS-01.12b §5): the viewer's list, from this photo.
+    @State private var cullRequest: CullRequest?
     @State private var compressionTarget: PhotoDetailActionTarget?
     @State private var videoStudioTarget: PhotoDetailActionTarget?
     /// Asset saved by the editor, waiting for its cover to finish dismissing —
@@ -308,6 +318,7 @@ struct PhotoDetailScreen: View {
         // Its own coordinator, not the root's: see `viewerAssetActions`.
         .assetActionHost(dependencies.viewerAssetActions)
         .appBannerHost(dependencies.banner, bottomInset: 120)
+        .cullPresenter($cullRequest)
         .sheet(item: $burstList) { presentation in
             // Neither the root nor this viewer can present over this sheet,
             // so its tile menu gets a coordinator and host of its own.
@@ -752,6 +763,11 @@ struct PhotoDetailScreen: View {
             // is where they are set by touch (FS-01.12 §7).
             Section {
                 PhotoMarkMenus(ids: [id])
+                Button {
+                    cullRequest = CullRequest(assetIds: model.allPhotoIds(), startId: id)
+                } label: {
+                    Label(MarkCopy.cullFromHere, systemImage: PhotoCommand.cull.systemImage)
+                }
             }
             Section {
                 Button {

@@ -231,6 +231,9 @@ struct SelectionToolbarItems: ToolbarContent {
                             PhotoCommand.combine.label
                         }
                     }
+                    // Right after Combine (FS-01.12b §5): a pass over what is
+                    // selected, in capture order.
+                    CullSelectionRow(ids: model.selectedIds)
                     if let onCollage = model.onCollage {
                         Button(action: onCollage) {
                             PhotoCommand.collage.label

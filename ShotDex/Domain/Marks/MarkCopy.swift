@@ -121,4 +121,51 @@ enum MarkCopy {
     static func movedRatings(_ count: Int, locale: Locale = .current) -> String {
         String(localized: "Moved \(count) star ratings to Photos.", table: table, locale: locale, comment: "Banner after the one-time move of stars into Photos on iOS 27 (plural)")
     }
+
+    // MARK: Culling pass (FS-01.12b)
+
+    /// `Cull 240 Photos` — the selection ⋯ row (plural).
+    static func cullPhotos(_ count: Int, locale: Locale = .current) -> String {
+        String(localized: "Cull \(count) Photos", table: table, locale: locale, comment: "Selection menu: start a culling pass over the selected photos (plural)")
+    }
+    static var cullFromHere: String { String(localized: "Cull From Here", table: table, comment: "Viewer menu: start a culling pass at this photo") }
+    static var cull: String { String(localized: "Cull Photos", table: table, comment: "Command name: the culling pass") }
+
+    /// `52 picks · 120 rejected` — the pass's top bar.
+    static func cullProgress(picks: Int, rejected: Int, locale: Locale = .current) -> String {
+        [
+            String(localized: "\(picks) picks", table: table, locale: locale, comment: "Culling pass count of Picked photos (plural)"),
+            String(localized: "\(rejected) rejected", table: table, locale: locale, comment: "Culling pass count of Rejected photos (plural)"),
+        ].joined(separator: " · ")
+    }
+
+    /// `240 photos · 52 picks · 120 rejected · 68 unflagged`.
+    static func cullSummary(_ summary: CullSummary, locale: Locale = .current) -> String {
+        [
+            String(localized: "\(summary.total) photos", table: table, locale: locale, comment: "Culling summary: photos in the pass (plural)"),
+            cullProgress(picks: summary.picks, rejected: summary.rejected, locale: locale),
+            String(localized: "\(summary.unflagged) unflagged", table: table, locale: locale, comment: "Culling summary: photos left without a flag (plural)"),
+        ].joined(separator: " · ")
+    }
+
+    static var endOfSet: String { String(localized: "End of Set", table: table, comment: "Culling summary card title") }
+    static func deleteRejected(_ count: Int, locale: Locale = .current) -> String {
+        String(localized: "Delete \(count) Rejected…", table: table, locale: locale, comment: "Culling summary: delete the Rejected photos of the pass (plural)")
+    }
+    static var reviewUnflagged: String { String(localized: "Review Unflagged", table: table, comment: "Culling summary: run the pass again over the unflagged photos") }
+    static var done: String { String(localized: "Done", table: table, comment: "Culling summary: close the pass") }
+    static var close: String { String(localized: "Close", table: table, comment: "Culling pass: leave the pass") }
+    static var undo: String { String(localized: "Undo", table: table, comment: "Culling pass: take back the last mark") }
+    static var ratingAndFlag: String { String(localized: "Rating and flag", table: table, comment: "VoiceOver: the culling pass's row of stars, Pick and Reject") }
+    static var filmstrip: String { String(localized: "Filmstrip", table: table, comment: "VoiceOver: the culling pass's strip of thumbnails") }
+
+    /// `Photo 37 of 240, 3 stars, Picked` / `…, not flagged`.
+    static func cullPhoto(index: Int, total: Int, marks: PhotoMarkSummary, isVideo: Bool, locale: Locale = .current) -> String {
+        let position = isVideo
+            ? String(localized: "Video \(index) of \(total)", table: table, locale: locale, comment: "VoiceOver: the culling pass's current video")
+            : String(localized: "Photo \(index) of \(total)", table: table, locale: locale, comment: "VoiceOver: the culling pass's current photo")
+        let stars = marks.rating > 0 ? starsAccessibility(marks.rating, locale: locale) : String(localized: "no stars", table: table, locale: locale, comment: "VoiceOver: a photo without a star rating")
+        let flag = marks.flag.map { flagWord($0, locale: locale) } ?? String(localized: "not flagged", table: table, locale: locale, comment: "VoiceOver: a photo with neither Pick nor Reject")
+        return [position, stars, flag].joined(separator: ", ")
+    }
 }

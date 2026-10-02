@@ -634,7 +634,8 @@ struct ServerBrowserScreen: View {
         case .collage: run(.collage, on: photos)
         case .video: run(.video, on: photos)
         // Combine needs its purpose, which the submenu passes to `run`.
-        case .combine, .addToCollection, .duplicate: break
+        // Cull works on library photos only (marks are kept by asset id).
+        case .combine, .cull, .addToCollection, .duplicate: break
         }
     }
 
