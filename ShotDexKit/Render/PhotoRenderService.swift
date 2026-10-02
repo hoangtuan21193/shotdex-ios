@@ -161,7 +161,7 @@ public actor PhotoRenderService {
         let orientation = CGImagePropertyOrientation(rawValue: orientationRaw) ?? .up
         let isRAW = detectedType.conforms(to: .rawImage)
 
-        if isRAW, CIRAWFilter(imageURL: url) == nil {
+        if isRAW, !Self.canDecodeRAW(at: url) {
             throw PhotoEditingError.unsupportedRAW
         }
 
@@ -1290,6 +1290,17 @@ public actor PhotoRenderService {
             DepthImageReader.disparity(at: source.url),
             DepthImageReader.matte(at: source.url)
         )
+    }
+
+    /// Whether the system RAW decoder reads this file (FS-03.04b §2).
+    /// `CIRAWFilter(imageURL:)` never returns nil — measured on iOS 18.6,
+    /// 26.5 and 27.0, it hands back an object even for a junk file — so the
+    /// answer is its output: nil for a camera the decoder does not know or a
+    /// cut-off file, an empty 0 × 0 image for a file that is not RAW at all.
+    /// Reads the header only; no pixels are decoded.
+    public static func canDecodeRAW(at url: URL) -> Bool {
+        guard let image = CIRAWFilter(imageURL: url)?.outputImage else { return false }
+        return !image.extent.isEmpty && !image.extent.isInfinite
     }
 
     /// A RAW's As Shot white balance — what the RAW White Balance slider

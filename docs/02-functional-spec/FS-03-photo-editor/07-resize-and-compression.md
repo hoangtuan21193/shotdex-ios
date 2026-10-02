@@ -55,6 +55,9 @@ Settings → Export cho thêm/sửa preset `{tên, width, height, Fill/Fit, qual
 - Lối vào: tile **Resize & Compress** trong chế độ chọn của Library, album, smart album và On This Day.
   Hoạt động từ **1 ảnh**, **không giới hạn trên**. Chỉ ảnh được đưa vào mẻ.
 - Xử lý **tuần tự** để kiểm soát bộ nhớ; lỗi một ảnh thì tiếp tục ảnh khác.
+- **RAW iOS chưa đọc được** ([FS-03.04b §4](04b-unsupported-raw.md)): RAW-only vào danh sách lỗi của lượt chạy,
+  không tạo file từ bản xem trước; **cặp** RAW+JPEG mà RAW không đọc được thì làm từ JPEG của cặp. Preview của màn
+  lấy ảnh **đọc được đầu tiên** trong mẻ, không báo lỗi cả màn vì ảnh đầu là RAW hỏng.
 - Trong lúc chạy: **modal giữa màn hình** (scrim đen phủ kín, nuốt chạm) với spinner + thanh tiến độ +
   `Processing N of M`, mọi control dưới bị tắt. Bật Delete Originals thì modal đổi chữ thành
   *"Deleting originals…"* rồi mới đóng.

@@ -181,7 +181,7 @@ final class CompressionController {
     }
 
     func load() async {
-        guard let service, let first = assets.first else {
+        guard let service, !assets.isEmpty else {
             errorMessage = "No photos were selected."
             isLoading = false
             return
@@ -189,12 +189,25 @@ final class CompressionController {
         isLoading = true
         defer { isLoading = false }
         do {
-            let session = try await service.beginSession(for: first)
+            // The preview is the first photo the decoder can read: a RAW it
+            // can't open fails in the run's list, not the whole sheet
+            // (FS-03.04b AC-14).
+            let (session, source) = try await ReadableSource.firstLoadable(assets) { asset in
+                let session = try await service.beginSession(for: asset)
+                do {
+                    guard let option = session.preferredSource(for: nil) else {
+                        throw PhotoEditingError.missingSource
+                    }
+                    let source = try await ReadableSource.load(
+                        preferred: option, among: session.sourceOptions, isRAW: \.isRAW
+                    ) { try await service.loadSource($0, in: session) }
+                    return (session, source)
+                } catch {
+                    service.endSession(session)
+                    throw error
+                }
+            }.loaded
             previewSession = session
-            guard let option = session.preferredSource(for: nil) else {
-                throw PhotoEditingError.missingSource
-            }
-            let source = try await service.loadSource(option, in: session)
             previewSource = source
             format = source.info.isRAW ? .jpeg : .preserve
             await updatePreviewAndEstimate()

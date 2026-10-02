@@ -537,7 +537,11 @@ final class PhotoEditingService {
         guard let option = session.preferredSource(for: nil) else {
             throw PhotoEditingError.missingSource
         }
-        let source = try await loadSource(option, in: session)
+        // A pair whose RAW the decoder can't read is resized from its JPEG
+        // (FS-03.04b §4).
+        let source = try await ReadableSource.load(
+            preferred: option, among: session.sourceOptions, isRAW: \.isRAW
+        ) { try await loadSource($0, in: session) }
         return try await compress(
             source: source.info,
             sourceName: session.sourceOptions.first(where: { $0.id == source.optionID })?.filename,
