@@ -1,117 +1,113 @@
-# FS-12.03 — Timeline và bố cục bàn dựng
+# FS-12.03 — Bố cục cửa sổ rộng: iPad ngang, iPad dọc, Duo màn trong
 
-`FS-12.03` · `Features/VideoStudio/` · `Domain/Video/VideoStudioMetrics.swift`
-· test `VideoStudioLayoutTests` · `VideoStudioDeskLayoutTests` · cập nhật 2026-09-22
+`FS-12.03` · `Features/VideoStudio/` (`VideoStudioScreen`, `VideoMediaPoolColumn`, `VideoViewerChrome`)
+· `VideoStudioMetrics.swift` · test `VideoStudioLayoutTests` · `VideoStudioDeskLayoutTests` · cập nhật 2026-10-03
+· nguồn intent [video-studio-canvas-chrome](../../_intents/2026-10-03-video-studio-canvas-chrome.md)
 
-**Một câu:** trên cửa sổ rộng, màn này thành một bàn dựng — thư viện bên trái, khung hình và đồng hồ đo ở
-giữa, inspector bên phải.
+**Một câu:** cửa sổ rộng có ba hình dạng — iPad ngang là bàn dựng ba cột, iPad dọc dồn điều khiển xuống một dock
+dưới timeline, Duo màn trong đặt cột 264 cạnh khung vì chiều cao mới là thứ thiếu.
 
-Bố cục điện thoại: [FS-12.07](07-phone-layout.md).
+Bên trong các băng (pool, meter, transport, track header, lane): [03b](03b-desk-bands-and-lanes.md). iPhone:
+[07](07-phone-layout.md). Mô hình chọn: [04](04-tools-and-inspector.md).
 
 ## 1. Quy tắc
 
-- **Phần dư của màn thuộc về quanh khung hình**, không thuộc về dưới các track — đen quanh preview là thứ
-  mọi NLE đều có.
-- **Timeline chỉ lấy đúng phần lane cần**; phần dư trả về băng preview.
-- Bố cục bàn dựng gate theo **bề rộng cửa sổ ≥ 600**, thấp hơn ngưỡng 700 của các quyết định khác — mấy
-  băng này tiêu **chiều cao mà cửa sổ cao đang thừa**.
-- **Khung hình phải tự nói nó đang chiếu gì** khi có hai tấm ảnh trên màn cùng lúc.
+- **Phần dư của màn thuộc về quanh khung hình**; panel phụ tiêu **chiều đang dư** — cửa sổ ngang thì cột dọc,
+  cửa sổ dọc thì dock ngang ([DESIGN §10](../../../DESIGN.md)).
+- **Bố cục chọn theo cửa sổ, không theo tên máy:**
 
-## 2. Chia preview và timeline
+| Cửa sổ | Bố cục | Board |
+|---|---|---|
+| compact, inset phải < 84 | iPhone ([07](07-phone-layout.md)); trên iPad không khoá hướng | Main, P* |
+| compact, inset phải ≥ 84 | Duo ngoài ([07b](07b-duo-cover-layout.md)) | DC* |
+| rộng ≥ 600, **cửa sổ thấp** (< 720, [NF-05 §4](../../04-non-functional-design/NF-05-device-and-os-compatibility.md)) | Duo trong (§4) | DI* |
+| rộng ≥ 600, không thấp, rộng > cao | iPad ngang (§2) | IL* |
+| rộng ≥ 600, không thấp, cao ≥ rộng | iPad dọc (§3) | IP* |
 
-- Preview lấy đúng chiều cao fit của khung (tối thiểu **150**); timeline lấy phần còn lại nhưng không dưới
-  **248**.
-- Project ngang được timeline cao (~390 trên máy 17 Pro) thay vì một dải đen; project dọc thì preview bị
-  kẹp để timeline giữ 248.
-- **Trần theo nội dung áp cho mọi bề rộng**: trước đây chỉ áp từ 700pt nên **điện thoại cũng dính** — ba
-  lane nằm trên đỉnh một vùng đen ~330pt có playhead kẻ dọc giữa chỗ trống, còn preview thì ép lên sát băng
-  trên.
-- **Bề rộng đưa vào phép chia phải trừ mọi cột chrome**: preview vẽ trong cột cạnh chúng, tính chiều cao
-  fit từ bề rộng cả cửa sổ là tính cho một cột không tồn tại.
-- Panel ngữ cảnh 264pt trượt lên, **và chồng bên trên nhấc lên đúng phần chênh** để **toàn bộ timeline vẫn
-  thấy** — clip đang chọn không còn bị panel che. Phần nhấc lấy từ chỗ dư của timeline trước, hết mới co
-  preview.
-- **Panel neo trong chồng khi cửa sổ còn dư chiều cao**: nếu bỏ panel ra khỏi băng preview mà khung vẫn giữ
-  đúng cỡ fit tự nhiên thì panel xuống nằm **dưới** timeline — không che gì, timeline không nhúc nhích, và
-  chỗ đen vốn chỉ để đệm quanh khung nay thành điều khiển của thứ đang chọn. iPad dọc 16:9 dư ~470pt nên
-  neo được; iPhone và iPad ngang không dư nên panel vẫn trượt đè.
-- **Không khoá hướng cho Video Studio**: màn dọc phải dùng được, nên phần dư của màn dọc phải có việc để
-  làm chứ không phải khoá hướng để né.
-- **Cửa sổ quá thấp thì timeline lui hẳn** (chỉ khi cao ≤ **660** — thấp hơn mọi iPhone đang bán, tức là
-  màn cover hướng ra ngoài) và preview giữ nguyên: đo trên màn cover Duo, mở panel là ba vùng cùng vỡ
-  (preview 150, timeline 140, khung 266×150); lui timeline thì khung vẫn 344×194. Trong ba vùng đó timeline
-  là cái **lấy lại được bằng một thao tác**, còn một cái khung không nhìn thấy thì không.
-- Đóng panel: vuốt tay nắm xuống, chạm timeline trống, **hoặc chạm vùng đen ngoài khung khi đang dừng**.
+- Đổi cỡ cửa sổ (xoay iPad, Stage Manager, gập/mở Duo) đổi bố cục **giữ nguyên** item đang chọn và phiên ✕/✓.
+- iPad và Duo **không khoá hướng**.
+- Khi không chọn gì, cột/dock điều khiển hiện **Look cả video** — chỗ trống được dùng cho việc cả video hay làm
+  nhất. Chọn item thì cột/dock thành lệnh + thông số của item, chân có ✕ · tên · ✓.
 
-## 3. Năm băng của bàn dựng
+## 2. iPad ngang 1376×1032 (IL1–IL4)
 
-| Băng | Nội dung |
+| Vùng | Khung (pt) | Nội dung |
+|---|---|---|
+| Băng trên | y 12–52 | trái x 20: Back · Undo · Redo · Show original (đĩa 40, cách 10); giữa: tên project 14 + "5 clips · 16:9 · 0:24" 12; phải: "0:24 · ~30 MB" 11 · nút **16:9 · 1080p · 30 fps** (cao 32, bo 8 — mở Video Settings, [10](10-video-settings-and-export.md)) · pill **Export** accent cao 40 |
+| Pool | x 0–236, y 64–604 | tab Media · Text · Stickers · Music ([03b §1](03b-desk-bands-and-lanes.md)) |
+| Viewer header | x 236–1096, y 64–96 | Media Pool · tên thứ dưới playhead · Quick Adjust · Inspector (nút 36×28 bo 7) |
+| Khung | sân x 236–1046, y 96–604 | 16:9 → **810×456** ở y 122 |
+| Meter | x 1046–1096, y 96–604 | cột 50 có thang dB |
+| Inspector | x 1096–1376, y 64–604, **280** | bo trên trái 16; chân 58 ở y 546: ✕ 40 · tên · ✓ 40 khi đang chọn |
+| Transport | y 604–648, hết bề ngang | 15 nút 40 + timecode ([03b §2](03b-desk-bands-and-lanes.md)) |
+| Dải tổng quan | x 104–1360, y 652–674 | cao 22 |
+| Timeline | y 678–1032 = **354** | track header 104 · lane 44 / 104 / 52 · 70pt/giây |
+
+- Pool **236** và inspector **280** cố định ở 13": cả hai chỉ đứng cạnh khung, timeline chạy hết 1376 (1272 cho
+  lane ≈ 18 giây). Transport đủ 15 nút nên không bao giờ rơi về hàng hẹp.
+- Export và nút cài đặt **vẫn hiện** khi đang chọn: chân inspector đã có ✕ · ✓, băng trên không phải nhường chỗ.
+
+## 3. iPad dọc 1032×1376 (IP1–IP3)
+
+| Vùng | Khung (pt) | Nội dung |
+|---|---|---|
+| Băng trên | y 12–52 | như iPad ngang; tên project căn ở x 356; nút cài đặt cao 40 bo 10, hai dòng "16:9 · 1080p" / "30 fps · ~30 MB" |
+| Viewer header | y 64–96, hết bề ngang | như iPad ngang; Media Pool tắt mặc định (rộng < 1100) |
+| Khung + meter | y 96–648 | khung 982×552 · meter 50 ở x 982 |
+| Transport | y 648–692 | như iPad ngang |
+| Dải tổng quan | x 104–1016, y 696–718 | |
+| Timeline | y 722–1052 = **330** | track header 104 · lane 44 / 104 / 52 · 60pt/giây |
+| **Dock** | y 1052–1376 = **324** | bo trên 16, kẻ trên 1pt trắng 7%; 3 cột 344 thấy hết một lượt, không một panel cuộn |
+
+- **Không chọn gì**: tiêu đề dock 46 "Look · Whole video" và bên phải 4 nút thêm **Media · Text · Sticker ·
+  Music** (cao 32, bo 8); 3 cột là Look ([06c](06c-photo-looks.md)).
+- **Đang chọn**: hàng lệnh ở dock + 6; 3 cột thông số 344×190 ở dock + 72 (clip: Duration · Speed · Volume |
+  FADE | MOTION); chân 60 ở dock + 264 (y 1316): ✕ · tên · ✓. **Timeline không bị che.**
+
+## 4. Duo màn trong 951×669 (DI1–DI4)
+
+Chiều cao là thứ thiếu: **385 (khung) + 40 (transport) + 188 (timeline) + 56 (hàng đáy) = 669**. Khung bị giới hạn
+theo chiều cao nên 264pt bên phải là miễn phí — inspector nằm ở đó.
+
+| Vùng | Khung (pt) | Nội dung |
+|---|---|---|
+| Khung | x 1,5–685,5, y 0–385 | 684×385 (9:16 → 217×385); Back · Undo · Redo · Show original nổi trên khung ở (16, 12), đĩa 36 nền đen 55%, cách 8 |
+| Cột phải | x 687–951, y 0–385, **264** | nền `panelSolid`; Look khi không chọn, lệnh + thông số khi chọn (dòng 36) |
+| Transport | y 385–425 | 15 nút 36 + timecode, kẻ trên 1pt |
+| Timeline | y 425–613 = **188** | cột badge 64 (T1 · V1 · A1, không Lock/Mute) · lane 34 / 66 / 40 (bậc compact) · 55pt/giây |
+| Hàng đáy | y 613–669 = **56** | trái từ x 40: 5 công cụ 72×50 cách 4; phải tới x 907: nút cài đặt 2 dòng cao 40 · pill Export cao 40 |
+
+- **Đang chọn**: 5 công cụ trắng 30% không nhận chạm; nhóm phải thay bằng ✕ 40 · tên 14 + dòng phụ 11 · ✓ 40 ở
+  x 620–907. Hàng lệnh là hàng đầu cột phải, cách góc bo 40.
+- Không có pool, meter, viewer header: mỗi thứ tốn 32–300pt của chiều đang thiếu. Media mở trong cột phải
+  ([09](09-media-panel.md)).
+
+## 5. Cột/dock khi ẩn
+
+- Nút Inspector tắt cột (iPad); chọn một item khi cột đang tắt thì **cột tự mở** — ✕ · ✓ nằm ở đó, ẩn là mất
+  đường kết thúc phiên. Bỏ chọn không tự đóng lại.
+
+## 6. Tiêu chí nghiệm thu
+
+| # | Cho | Khi | Thì | Chứng minh bằng |
+|---|---|---|---|---|
+| AC-1 | iPad 1376×1032, project 16:9, không chọn | dump | pool rộng 236; inspector 280 ở x 1096 hiện "Look · Whole video"; khung 810×456 ở (236, 122); timeline y 678 cao 354 | ⚠️ chưa có |
+| AC-2 | như AC-1 | chọn clip 2 | chân inspector y 546 có ✕ · "Clip 2 · Coast" · ✓; khung không đổi (±0pt); Export vẫn hiện | ⚠️ chưa có |
+| AC-3 | iPad 1032×1376, không chọn | dump | dock y 1052 cao 324, tiêu đề có Media · Text · Sticker · Music; pool đóng | ⚠️ chưa có |
+| AC-4 | như AC-3 | chọn clip 2 | hàng lệnh trong dock; chân ✕ · tên · ✓ ở y 1316; timeline 722–1052 không bị phủ | ⚠️ chưa có |
+| AC-5 | Duo mở 951×669, không chọn | dump | khung 684×385 ở y 0; cột 264 ở x 687; transport y 385; timeline 188; hàng đáy y 613 có 5 công cụ từ x 40 và Export | ⚠️ chưa có — `duo-video-studio-desk.json` cần viết lại |
+| AC-6 | như AC-5 | chọn clip 2 | ✕ · Clip 2 · ✓ ở x 620–907; Export ẩn; 5 công cụ trắng 30% | ⚠️ chưa có |
+| AC-7 | iPad Stage Manager, cửa sổ 1000×800, clip 2 đang chọn | kéo cửa sổ xuống cao 700 | bố cục đổi sang Duo trong; clip 2 vẫn chọn; ✕ trả đúng trạng thái lúc chọn | ⚠️ chưa có |
+| AC-8 | iPad ngang, Inspector tắt | chọn clip 2 | cột inspector mở, chân có ✕ · ✓ | ⚠️ chưa có |
+| AC-9 | iPad, Video Studio mở ngang | xoay sang dọc | bố cục dọc, không khoá hướng; item đang chọn giữ nguyên | ⚠️ chưa có — `ipad-video-studio.json` + `Tools/sim-shot` |
+| AC-10 | các board IL1–IL4, IP1–IP3, DI1–DI4 | `Tools/design-board compare` với dump app cùng trạng thái | mọi phần tử chrome lệch ≤ 2pt | ⚠️ chưa có — agent `design-parity` |
+| AC-11 | Duo trong, DI1 và DI2 | `Tools/sim-shot` có mask | Back và ✓ không bị góc bo cắt | ⚠️ chưa có |
+
+**Chưa chứng minh được:** AC-1 … AC-11.
+
+## 7. Rủi ro đã biết
+
+| Rủi ro | Xử lý |
 |---|---|
-| **Media pool** (trái, rộng 300 / 236 dưới 900pt) | thư viện mở sẵn cạnh project — đúng chỗ các NLE để browser |
-| **Đồng hồ đo mức** (cạnh khung, rộng 50 có thang dB / 32 chỉ có bar dưới 820pt) | nằm **trong cột khung hình**, không phải một cột chạy suốt màn |
-| **Viewer header** (cao 32) | nút Media Pool · **tên thứ đang nằm dưới playhead** · tổng timecode · nút Inspector |
-| **Transport** (cao 44) | trái: Split · Freeze · Delete tại playhead. Giữa: đầu · lùi 1 khung · play/pause · tiến 1 khung · cuối · **Loop**. Phải: Fit to Window + timecode |
-| **Project overview** (cao 22) | cả project trong một dải trên thước, mỗi clip một khối, playhead đỏ, khung trắng đánh dấu phần timeline đang phóng to; kéo để seek |
-
-- **Media pool đọc thẳng thư viện ảnh** (giới hạn **400** item), không qua index: pool cần thứ thư viện
-  đang có **ngay lúc này**, và duyệt cả 55k asset trên main trước khi xin thumbnail đầu tiên là cái giá
-  không ai trả. Chạm = nối vào lane Video; kéo = thả xuống timeline (hoặc ra ngoài app).
-- Pool mặc định **mở khi rộng ≥ 1100**, còn lại đóng và bật bằng nút trong viewer header. Chỉ mở được khi
-  khung hình còn **≥ 330pt** sau khi trừ pool và meter.
-- **Viewer header tồn tại vì khung hình là vùng duy nhất trên màn không tự nói nó đang chiếu gì** — và khi
-  pool mở thì trên màn có **hai** tấm ảnh cùng lúc.
-- **Loop là trạng thái của phiên**, không phải một phần của project: nó nói cách người ta đang *xem*.
-- Timecode đếm ở đúng nhịp render, nếu không bước một khung sẽ nhảy hai số ở trường cuối.
-- **Project overview là tấm bản đồ**: timeline đậu ở playhead giữa cố định nên ở mức phóng làm việc chỉ
-  thấy vài giây của một project dài mấy phút.
-
-## 4. Đồng hồ đo mức lấy tín hiệu từ đâu
-
-Player **không cấp số đo**, nên meter đọc **chính bản mix của recipe tại playhead**:
-
-- Đường bao đỉnh stereo từng clip (ép 2 kênh, **không normalize** vì meter đọc mức tuyệt đối) nhân âm lượng
-  và mute, cộng năng lượng với đường bao **riêng của bản nhạc** (cache theo file nên hai track cùng bài chỉ
-  decode một lần), nhân đường fade — **đúng đường fade mà export ghi ra** — rồi đổi sang dBFS.
-- **Không dùng waveform của lane nhạc**: cái đó normalize để lấp đầy lane 52pt nên bản to và bản nhỏ vẽ
-  giống hệt nhau.
-- Đó là mức file xuất ra sẽ có, và **đọc được cả khi dừng lẫn khi scrub** — thứ một bộ nghe lén lúc phát
-  không làm được.
-- Thang **tuyến tính theo decibel** (sàn −54, vàng từ −18, đỏ từ −6); gradient được **mask** chứ không co,
-  nếu không màu đỏ rơi xuống −40 mỗi khi mix nhỏ tiếng.
-
-## 5. Track header và lane ở màn rộng
-
-- Cột glyph thành **track header rộng 104**: badge `V1`/`T1`/`A1` + tên lane + **Lock** và **Mute**.
-- **Lock là trạng thái phiên** (không vào project, không vào undo): nó chặn chọn và chặn mọi thao tác mà
-  một cú kéo trên timeline có thể gọi, và khoá xong thì bỏ chọn luôn thứ đang chọn trong lane đó.
-- **Mute lane Video** đi qua âm lượng (nhớ giá trị cũ để trả lại — 0 là một mức người dùng chỉnh được nên
-  không đọc trạng thái mute từ âm lượng được). **Mute lane nhạc** đặt âm lượng 0 cho mọi track trong lane
-  trong **một** bước undo.
-- **Lane text không có nút mute** — ở đó không có gì để nghe.
-- Lane nở ở màn rộng: cao **44 / 104 / 52** (so với 34 / 66 / 40), thước 30, ô clip 88 (so với 54). Track
-  66pt trên màn 1032pt là track điện thoại đặt lên tablet, mà **thumbnail chính là thứ để quyết định một cú
-  cắt**.
-- Ô clip xin thumbnail theo **chiều cao ô × scale màn** (sàn 240px) thay vì một hằng số — ô 88pt ở 3× cần
-  264px, phóng 240px lên là đúng cái filmstrip mờ mà lane cao hơn lẽ ra phải sửa.
-- **Nửa trái ở mốc 0 không được để trống**: thước kẻ **đường nền chạy hết bề rộng** kể cả nơi chưa có mốc
-  thời gian, và phía sau có **rail rỗng cho từng lane** — nửa trái phải đọc ra là "timeline chưa bắt đầu",
-  không phải "màn hình hỏng".
-- **Tay cầm kéo chia preview / timeline** (chỉ ở màn rộng, 0…400pt cộng thêm cho timeline, mặc định 0):
-  luật "phần dư thuộc về quanh khung" vẫn là câu trả lời **khi không ai hỏi**; tay cầm là cách người dùng
-  hỏi. Có hành động accessibility bước 40pt vì kéo bằng cử chỉ thì VoiceOver không dùng được.
-
-## 6. Phím tắt
-
-Space play/pause · ←/→ ±1s · ⇧←/⇧→ ±1 khung · Home/End · ⌘Z / ⇧⌘Z · ⌘B split · **⌘E mở sheet Export**
-(không xuất luôn — phím tắt đưa người dùng tới đúng chỗ cái nút đưa tới, không tự ghi vào thư viện) ·
-Esc bỏ chọn.
-
-## 7. Vẽ viền khung canvas
-
-Compositor letterbox lên màu nền (mặc định đen) còn stage cũng đen, nên ảnh 3:2 trong project 16:9 trông
-**đúng như một project 3:2** — người dùng không nhìn thấy cái khung mình sắp xuất. Một nét 1pt vẽ đúng
-vùng nội dung. Đây là lý do thật của "470pt đen không hiểu vì sao" trên iPad dọc.
-
-## 8. Tiêu chí nghiệm thu
-
-Xem [README](README.md).
+| luật cũ "pool 300 khi ≥ 900" và "inspector 320" còn trong code và test | đổi số theo bảng §2, sửa test bố cục bàn dựng cùng commit |
+| cửa sổ Stage Manager vừa dưới 720 vừa rất rộng thì cột 264 thừa chỗ | chấp nhận ở v1; bố cục chọn theo chiều thiếu |

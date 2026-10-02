@@ -1,12 +1,16 @@
 # FS-12.06 — Tầng màu
 
 `FS-12.06` · `Domain/Video/VideoInputTransform.swift` · `VideoMaskRenderer` · `ColorNode`
-· cập nhật 2026-09-22
+· cập nhật 2026-10-03
 
 **Một câu:** grade video dùng lại đúng model, đúng phép render và đúng test đã có cho ảnh — chỉ nối thêm
 vào compositor.
 
 Scope, LUT nhập ngoài và tracker: [FS-12.06b](06b-scopes-luts-and-tracking.md).
+
+**Đường vào:** Filter, Adjust và Color không còn là ba công cụ riêng ở hàng đáy — cả ba là ba chip **Filter · Adjust ·
+Color** trong công cụ **Look** (cả video, hoặc ô Look của một clip). Look và chỗ đặt các chip thuộc
+[FS-12.06c](06c-photo-looks.md); tài liệu này chỉ nói tầng màu bên trong chip **Color**.
 
 ## 1. Quy tắc
 

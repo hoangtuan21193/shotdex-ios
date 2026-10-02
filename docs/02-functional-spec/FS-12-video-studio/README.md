@@ -2,7 +2,7 @@
 
 `FS-12` · tier D · `ShotDex/Features/VideoStudio/` · `Data/Sources/Video*.swift` · `Domain/Video/`
 · test `Video{Timeline,Geometry,Effect,Split,Trim,Transport,Scope,LUTRenderer}Tests`
-· `VideoStudio{Layout,DeskLayout}Tests` · cập nhật 2026-09-22
+· `VideoStudio{Layout,DeskLayout}Tests` · cập nhật 2026-10-03
 
 **Một câu:** dựng một cuốn phim ngắn từ ảnh và video của chính mình — timeline nhiều lane, chuyển cảnh,
 nhạc, chữ, và một tầng màu đủ để grade.
@@ -13,14 +13,28 @@ nhạc, chữ, và một tầng màu đủ để grade.
 |---|---|---|
 | 01 | [Render và export](01-render-and-export-pipeline.md) | một đường dựng cho cả preview lẫn export, compositor tự viết, xương sống cho ảnh |
 | 02 | [Năng lực biên tập](02-editing-capabilities.md) | speed, freeze, split, tỉ lệ khung, nền, nhạc nhiều bản, sticker |
-| 03 | [Timeline và bàn dựng](03-timeline-and-desk-layout.md) | chia preview/timeline, năm băng của màn rộng, meter, track header |
-| 04 | [Công cụ và inspector](04-tools-and-inspector.md) | bỏ cột công cụ, lệnh chèn về thư viện, Quick Adjust |
-| 05 | [Cắt, marker, fade](05-cutting-markers-and-fades.md) | độ dài transition, trim to playhead, snapping |
+| 03 | [Bố cục cửa sổ rộng](03-timeline-and-desk-layout.md) | iPad ngang bàn dựng ba cột, iPad dọc dock 324, Duo trong cột 264 |
+| 03b | [Băng bàn dựng và lane màn rộng](03b-desk-bands-and-lanes.md) | pool, viewer header, Quick Adjust, transport, dải tổng quan, meter, track header |
+| 04 | [Thanh công cụ và mô hình chọn](04-tools-and-inspector.md) | 5 công cụ để thêm, Look và Video Settings cho cả video, ✕ · tên · ✓, Video sound là mức âm duy nhất |
+| 04b | [Hàng lệnh của item](04b-command-rows.md) | ô 64×56 cuộn ngang theo tần suất, Delete cuối, panel không đổi cao, video không có Duration |
+| 05 | [Cắt, marker, fade](05-cutting-markers-and-fades.md) | tay nắm mép và Trim to Playhead, độ dài transition, snapping, fade |
 | 06 | [Tầng màu](06-color-layer.md) | de-log, primaries, power window, node chain |
 | 06b | [Scope, LUT, tracker](06b-scopes-luts-and-tracking.md) | bốn máy đo, LUT nhập từ Files, bám window theo khung |
-| 06c | [Look ảnh cho video](06c-photo-looks.md) | film look, My Looks, LUT trong một ô look cả video + ô tuỳ chọn mỗi clip, Amount, phần nào chạy được trên video |
-| 07 | [Bố cục điện thoại](07-phone-layout.md) | lane động, overlay trên preview, transport hẹp |
+| 06c | [Look ảnh cho video](06c-photo-looks.md) | F5 — film look, My Looks, LUT trong một ô look cả video + ô tuỳ chọn mỗi clip, Amount |
+| 07 | [Bố cục iPhone](07-phone-layout.md) | chỉ dọc, khung cố định theo sáu tỉ lệ, panel cao theo tỉ lệ, thu panel còn 78 |
+| 07b | [Bố cục Duo màn ngoài](07b-duo-cover-layout.md) | công cụ trong dải 84 bên phải, khung 382×215, ✕ / ✓ dưới ngón cái |
 | 08 | [Model và giới hạn v1](08-model-and-v1-limits.md) | project giữ gì, nhạc từ đâu, cố ý chưa làm gì |
+| 09 | [Media trong panel](09-media-panel.md) | thư viện ngay trong panel: chạm chèn, giữ kéo, In Video, dấu ✓ / ×2, Select · 🔍, Manage Access… |
+| 10 | [Video Settings](10-video-settings-and-export.md) | tỉ lệ, Fit/Fill và nền, độ phân giải, fps, codec, dung lượng ước tính ở ~10 Mbps |
+| 10b | [Export](10b-export.md) | Export Video không hỏi chất lượng: tóm tắt, xuất, huỷ, đường hỏng |
+| 11 | [Chọn nhiều và đổi thứ tự](11-multi-select-and-reorder.md) | F1 — giữ yên rồi thả để chọn, giữ rồi kéo để dời, bảy lệnh nhóm |
+| 12 | [Nhịp nhạc](12-beats.md) | F2 — tìm nhịp trên máy, Snap to beats, Cut to Beat; token `timelineBeat` |
+| 13 | [Tự hạ nhạc](13-audio-ducking.md) | F3 — ducking dưới tiếng người; token `timelineSpeech` |
+| 14 | [Phụ đề tự động](14-captions.md) | F4 — nhận dạng trên máy, lane C1, Burn into video hoặc track phụ đề mềm |
+| 15 | [Trước / sau](15-before-after.md) | F7 — Side by Side, Split, Hold to Compare |
+| 16 | [Preset xuất](16-export-presets.md) | F8 — năm preset + Custom, chỉ là đích của lần xuất |
+| 17 | [Cắt từng khung](17-precise-trim-and-input.md) | F6 — kính lúp, ±1 khung, Frame zoom, Apple Pencil |
+| 17b | [Bàn phím và con trỏ](17b-keyboard-and-pointer.md) | F6 — 28 phím, danh sách khi giữ ⌘, In–Out chỉ để xem, skim bằng con trỏ |
 
 ## Quy tắc chung
 

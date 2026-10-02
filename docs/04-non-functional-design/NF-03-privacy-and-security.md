@@ -1,6 +1,6 @@
 # NF-03 — Quyền riêng tư và bảo mật
 
-`NF-03` · `ShotDex/Features/Support/` · `PrivacyInfo.xcprivacy` · cập nhật 2026-10-01
+`NF-03` · `ShotDex/Features/Support/` · `PrivacyInfo.xcprivacy` · cập nhật 2026-10-03
 
 **Một câu:** cam kết xử lý cục bộ, hai ngoại lệ, và luật metadata khi chia sẻ hay xuất.
 
@@ -83,6 +83,8 @@ Danh tính là **khoá chứng thực của bản cài** — gỡ app là mất.
 
 - Mọi target đều khai **không theo dõi người dùng** và **không thu thập dữ liệu**: trong mã không có lời gọi
   mạng nào, không có thư viện phân tích hay báo lỗi nào, và việc nhận diện người/thú chạy **hoàn toàn trên máy**.
+- **Nhận dạng giọng nói chỉ chạy trên máy** (phụ đề Video Studio, [FS-12.14](../02-functional-spec/FS-12-video-studio/14-captions.md)):
+  không có model trên máy thì không chạy, không bao giờ rơi sang máy chủ.
 - Trình build tự đưa bản khai vào phần tài nguyên — đã kiểm bản build ra: **cả 5 bản khai nằm đúng chỗ**
   trong app, các extension và framework.
 

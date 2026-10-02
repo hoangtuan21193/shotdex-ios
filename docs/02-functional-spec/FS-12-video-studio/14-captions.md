@@ -1,0 +1,153 @@
+# FS-12.14 — Phụ đề tự động
+
+`FS-12.14` · tier D · `Features/VideoStudio/` (mới) · `Domain/Video/VideoProjectModels.swift` · `Data/Sources/VideoFrameCompositor.swift`
+· nguồn intent [video-studio-canvas-chrome](../../_intents/2026-10-03-video-studio-canvas-chrome.md) (canvas hàng F4) · cập nhật 2026-10-03
+
+**Một câu:** lời nói trong clip thành phụ đề sửa được, nhận dạng **hoàn toàn trên máy**, có kiểu chữ, ngôn ngữ, và
+nướng vào video lúc xuất.
+
+Code hôm nay: chưa target nào dùng Speech; chữ trên video là overlay chữ theo thời gian ([FS-12.08 §2](08-model-and-v1-limits.md)).
+Canvas: hàng F4 của <https://claude.ai/artifact/B8NqQqRHcHoFknxQ9gHZPJ>. Riêng tư: [NF-03](../../04-non-functional-design/NF-03-privacy-and-security.md).
+
+## 1. Người dùng cần gì
+
+Reel người chụp quay có người nói (hướng dẫn viên, cô dâu chú rể, chính mình), và đa số người xem lướt
+không bật tiếng. Gõ tay từng câu là nửa giờ cho một phút phim. Âm thanh riêng tư thì không được rời máy.
+
+## 2. Phạm vi
+
+**Có:** Auto Captions cho mọi clip video có tiếng; một lane phụ đề **C1**; sáu lệnh **Edit · Style · Split · Merge ·
+Language · Delete**; bốn kiểu, cỡ, ba vị trí; công tắc **Burn into video**.
+
+**Cố ý không có:**
+- Nhận dạng qua máy chủ — kể cả khi máy không có model ngôn ngữ đó. *Vì* NF-03: âm thanh không rời máy.
+- Hai ngôn ngữ trong một project, dịch phụ đề — một lane, một ngôn ngữ.
+- Kiểu riêng cho từng khối — kiểu là của cả lane. *Vì* phụ đề lệch kiểu giữa câu trông như lỗi; chữ tự do đã có overlay chữ.
+- Nhập/xuất `.srt` — chưa ai hỏi; thêm sau không đổi model.
+
+## 3. Màn hình (canvas hàng F4)
+
+| Máy · board | Bố cục khi đang sửa phụ đề |
+|---|---|
+| iPhone 402×874 · `F4_P_Captions` | panel 340 tại y 450; hàng lệnh 6 ô 64×56 tại y 460, cuộn ngang, mép phải mờ 32; thẻ tiến độ; hàng **Language** 42 "English (US) ›"; tiêu đề **CAPTIONS · N**; danh sách khối; đáy 84: ✕ 44 · "Caption 2" / "0:06.0 → 0:07.4" · ✓ 44 |
+| Duo ngoài 466×678 · `F4_DC_Captions` | panel 382×344 tại y 334, hàng lệnh tại y 340, thẻ tiến độ rồi danh sách; dải 84: 5 công cụ mờ, khối tên 76×56 "Caption 2" / "6.0 → 7.4s", ✕ 44 tại y 504, ✓ 44 tại y 556, Export ẩn |
+| Duo trong 951×669 · `F4_DI_Captions` | cột phải 264 (cao 385): hàng lệnh tại y 12, mục đang mở (board: Style); lane C1 khối cao 28; hàng đáy: 5 công cụ mờ, góc phải ✕ 40 · tên · ✓ 40 |
+| iPad ngang 1376×1032 · `F4_IL_Captions` | tab **Text** của pool: **Add Text** và **Auto Captions** 220×44 + chú thích; inspector 280: hàng lệnh tại y 72, thẻ tiến độ, **CAPTION 2** ô chữ + giờ, rồi STYLE; chân ✕ 40 · tên · ✓ 40; lane C1 cao 44 (khối 34) trên cùng, trên T1 |
+
+- **Lối vào trên mọi máy:** hàng **Auto Captions** ngay dưới Add Text — tab Text của pool (iPad) và panel công cụ
+  Text (iPhone, Duo). *Vì* một hành động một chỗ (DESIGN §1.3). Đã có lane C1 thì hàng đổi thành "Edit Captions".
+- **Thẻ tiến độ** (lề 16, `r-md`, nền trắng 6%): "Transcribing on this iPhone…" (iPad: "on this iPad…") + phần trăm
+  mono; thanh 5pt; dòng phụ "3 of 5 clips · nothing leaves the device". Xong thì thẻ biến mất.
+- **Lane C1:** khối nền trắng 10%, `r-track`, chữ 12 semibold; khối đang chọn nền `timelineSelection` 22% + viền trong
+  1,5pt; đoạn chưa nhận dạng là khối sọc "Transcribing…". iPhone không còn chỗ cho C1 trong lát 96: clip có lời
+  mang chip **Voice** cao 16 ở đáy clip, và Project Overview có vạch 3pt ở vị trí từng khối.
+- Khối đang chọn có viền đứt quanh phụ đề trên khung hình (iPad, Duo trong).
+- **Màu "có lời" là token `timelineSpeech` #5E9CFF**, chữ trên nó #06142E — chip Voice **và** vạch khối trên Project
+  Overview; cùng token với đoạn có giọng của ducking ([13](13-audio-ducking.md)), chỉ Video Studio (chốt 2026-10-03).
+  Cyan `timelineSelection` chỉ còn ở khối đang chọn; board sửa vạch overview từ #57BFD1 sang #5E9CFF. Đề xuất token
+  cho DESIGN.md §3.3: [12 §3](12-beats.md).
+
+## 4. Nhận dạng
+
+- **Chỉ trên máy:** mỗi yêu cầu bắt buộc nhận dạng on-device; không có model thì không chạy, không bao giờ rơi
+  sang máy chủ. Một engine cho cả iOS 17–26 (bộ nhận dạng giọng nói của hệ thống).
+- **Đọc gì:** tiếng gốc của từng clip video trong khoảng trim, đọc thẳng từ asset, **không ghi file tạm**. Ảnh,
+  freeze và clip đã tắt tiếng bị bỏ qua. *Vì* thứ người dùng đã tắt tiếng thì không phải lời muốn hiện. Nhạc không đọc.
+- **Quyền:** lần đầu chạm Auto Captions mới xin quyền nhận dạng giọng nói (một câu xin quyền mới trong Info.plist:
+  "ShotDex turns speech in your clips into captions. It runs on this device; audio never leaves it.").
+- **Ngôn ngữ:** danh sách = ngôn ngữ hệ thống nhận dạng được; ngôn ngữ chưa có model trên máy hiện mờ, dòng phụ
+  "Not on this iPhone". Mặc định: ngôn ngữ của máy nếu có model, không thì English (US). App không tự tải model.
+- **Chia khối:** một dòng, ≤ 32 ký tự, ≤ 3,0 s; ngắt ở khoảng lặng ≥ 0,4 s hoặc dấu câu. Đặt tên theo thứ tự thời
+  gian: "Caption 1", "Caption 2"…
+- **Neo vào clip:** mỗi khối nhớ clip và giờ **trong nguồn**. Trim, dời, đổi tốc độ, đổi thứ tự clip thì phụ đề
+  đi theo; khối rơi ra ngoài khoảng trim bị ẩn (không xoá), trả trim là hiện lại. Xoá clip là xoá khối của nó.
+  *Vì* phụ đề neo theo giờ project sẽ lệch tiếng ngay lần trim đầu tiên.
+- **Chạy nền trong studio:** sửa khối, phát, cắt vẫn làm được trong lúc nhận dạng; khối hiện dần theo clip.
+
+## 5. Sáu lệnh
+
+| Lệnh | Làm gì | Undo |
+|---|---|---|
+| **Edit** | thẻ tiến độ, Language, danh sách khối; chạm giờ của một hàng = chọn khối và dời playhead tới đầu khối; khối đang chọn là ô sửa chữ, ↗ mở trình sửa chữ toàn màn của overlay chữ | một lần sửa chữ = một bước |
+| **Style** | **Clean · Box · Outline · Word by Word** (chip 28); **Size** 3–12%, mặc định 6%; **Bottom · Middle · Top**; **Burn into video**; dòng "✓ 12 captions · English (US)" | mỗi lần chạm/kéo một bước |
+| **Split** | tách khối đang chọn tại playhead, ở ranh giới từ gần nhất; playhead ngoài khối thì mờ | một bước |
+| **Merge** | gộp khối đang chọn với khối liền sau: chữ nối bằng một dấu cách, thời gian là hợp hai khoảng; khối cuối thì mờ | một bước |
+| **Language** | danh sách ngôn ngữ; chọn ngôn ngữ khác = nhận dạng lại cả lane | cả lần thay là một bước |
+| **Delete** | xoá khối đang chọn (`timelineDestructive`); chọn lane (chạm nhãn C1) rồi Delete = xoá cả lane | một bước |
+
+- **Kiểu:** Clean = chữ trắng có bóng; Box = chữ trắng trên nền đen 62% bo 8 (như board); Outline = chữ trắng viền
+  đen; Word by Word = như Box, từng từ hiện đúng lúc được nói. Khối đã sửa tay mất mốc từng từ → các từ chia đều.
+- **Cỡ và vị trí:** Size là chiều cao chữ theo % cạnh ngắn **khung xuất**; tâm dòng ở 85% · 50% · 15% chiều cao.
+  Đo theo khung xuất nên phụ đề luôn trọn trong khung, kể cả khi preset xuất cắt Fill ([FS-12.16](16-export-presets.md)).
+- **Đổi ngôn ngữ khi đã có khối sửa tay:** hỏi "Transcribe again in Tiếng Việt? Your 3 edited captions will be
+  replaced." · Transcribe · Cancel. Không có khối sửa tay thì làm luôn.
+- Kéo khối trên C1 như thanh chữ trên T1: kéo thân để dời, kéo mép để đổi khoảng, không chồng khối kề; lane khoá thì không kéo được.
+
+## 6. Burn into video và xuất
+
+- **Bật (mặc định):** phụ đề vẽ lên mọi khung xuất, **trên cùng**, trên mọi overlay. Preview vẽ bằng lớp sống như
+  overlay chữ; một hàm bố cục dùng chung cho preview và export, nên hai bên không trôi khỏi nhau.
+- **Tắt** (chốt 2026-10-03): khung hình sạch; phụ đề đi thành **một track phụ đề mềm** trong file (văn bản theo thời
+  gian, mang mã ngôn ngữ của lane), trình phát có nút CC bật được. Dòng phụ dưới công tắc khi tắt: "Saved as a
+  subtitle track — Photos, Instagram and TikTok don't show it." *Vì nói trước rằng ba nơi đăng phổ biến bỏ qua nó.*
+- Cùng một hàm chia và định giờ khối cho cả hai đường; track mềm không mang kiểu, cỡ, vị trí.
+
+## 7. Dữ liệu
+
+| | |
+|---|---|
+| Project giữ | một lane phụ đề tuỳ chọn: ngôn ngữ, kiểu, cỡ, vị trí, Burn into video, trạng thái nhận dạng (tới clip nào); mỗi khối: id, clip, giờ đầu/cuối trong nguồn, chữ, mốc từng từ, cờ "đã sửa tay" |
+| Lưu ở | công thức project trong bảng Video Projects ([FS-06.01b](../FS-06-collections/01b-album-management-and-creations.md)); chữ người dùng sửa **không** vào `photo_metadata` ([BD-02](../../01-basic-design/BD-02-database-design.md)) |
+| Đọc khoan dung | một khối hỏng chỉ mất khối đó; ngôn ngữ không còn trên máy thì lane vẫn mở và vẫn sửa được. App chưa release: không migration |
+
+## 8. Đường hỏng
+
+| Tình huống | Hành vi |
+|---|---|
+| Quyền bị từ chối / bị hạn chế | thẻ "Speech recognition is off for ShotDex." + **Open Settings** (bị hạn chế: không có nút); không tạo lane, không thêm bước undo |
+| Máy không có model ngôn ngữ nào | hàng Auto Captions mờ, dòng phụ "On-device speech recognition isn't available on this iPhone." |
+| Không mạng | chạy y hệt — không có lời gọi mạng nào |
+| Clip chỉ có trên iCloud, máy không mạng | clip đó bị bỏ qua; dòng phụ "1 clip couldn't be read — it's in iCloud." + **Retry**; clip khác vẫn chạy |
+| Không có lời nào | "No speech found in these clips."; không tạo lane |
+| ✕ trong lần nhận dạng đầu | dừng nhận dạng, xoá lane, trả số bước undo như lúc mở panel (luật ✕ của 06c §7) |
+| ✓ khi đang nhận dạng | chạy tiếp; lane đầy dần |
+| Rời studio khi đang 58% | dừng; khối đã có được lưu; mở lại thấy thẻ "Captions stopped at 58%" + **Continue** chạy tiếp từ clip chưa xong |
+| `.limited`, hết bộ nhớ | clip mất quyền đọc bị bỏ qua như iCloud; không ghi file tạm nên không cần chỗ trống |
+
+## 9. Tiêu chí nghiệm thu
+
+Project mẫu: 3.0s ảnh · 6.2s video · 5.0s video · 3.0s ảnh · 6.8s video (24,0 s, như [FS-12.11 §9](11-multi-select-and-reorder.md)); ba
+video có lời tiếng Anh dựng sẵn từ giọng đọc tổng hợp (không mặt người), mốc từng từ đã biết.
+
+| # | Cho | Khi | Thì | Chứng minh bằng |
+|---|---|---|---|---|
+| AC-1 | project mẫu, quyền chưa hỏi | chạm Auto Captions, rồi Allow | hệ thống hỏi đúng một lần; thẻ "Transcribing on this iPhone…" chạy từ 0%; lane C1 xuất hiện; dòng phụ "… of 3 clips" | ⚠️ chưa có |
+| AC-2 | quyền đã bị từ chối | chạm Auto Captions | thẻ "Speech recognition is off for ShotDex." + Open Settings; không lane; số bước undo không đổi | ⚠️ chưa có |
+| AC-3 | bất kỳ project; bộ nhận dạng giả trong test | bắt đầu nhận dạng | mọi yêu cầu gửi đi đều bắt buộc on-device; máy bật chế độ máy bay vẫn ra cùng số khối | ⚠️ chưa có — test + máy thật |
+| AC-4 | máy có model en-US, không có vi-VN | mở Language | English (US) chọn được; Tiếng Việt mờ, dòng phụ "Not on this iPhone", chạm không đổi gì | ⚠️ chưa có |
+| AC-5 | clip 2 có câu 12 từ, mốc từ đã biết | nhận dạng xong | mọi khối ≤ 32 ký tự và ≤ 3,0 s; đầu khối lệch ≤ 0,3 s so với mốc từ đầu tiên; khối xếp theo thời gian | ⚠️ chưa có — test Domain chia khối |
+| AC-6 | khối "starts right here." 6,0–7,4 s nằm trong clip 2 | trim đầu clip 2 thêm 1,0 s | khối dời về 5,0–6,4 s trên timeline, chữ không đổi; khối có nguồn nằm hẳn trong 1,0 s bị cắt thì ẩn; một Undo trả lại cả hai | ⚠️ chưa có |
+| AC-7 | Caption 2 = "starts right here." 6,0–7,4 s, playhead 6,7 s giữa "right" và "here" | Split | hai khối "starts right" 6,0–6,7 và "here." 6,7–7,4; một Undo về một khối | ⚠️ chưa có |
+| AC-8 | Caption 3 "Listen to" 10,8–11,6, Caption 4 "that water." 12,0–13,1 | chọn Caption 3, Merge | một khối "Listen to that water." 10,8–13,1; Merge mờ khi chọn khối cuối | ⚠️ chưa có |
+| AC-9 | Style Box, Size 6%, Bottom, Burn into video bật; xuất 1080×1920 | đọc khung ở 6,5 s | có hộp phụ đề, chữ cao 65 ±3 px (6% của 1080), tâm dòng ở y 1632 ±19 (85%); khung ở 9,0 s (không khối) không có hộp | ⚠️ chưa có — smoke test export |
+| AC-10 | như AC-9 nhưng Burn into video tắt | xuất | khung 6,5 s không có pixel phụ đề; file có đúng một track phụ đề, ngôn ngữ en-US, số mẫu bằng số khối, mẫu tại 6,5 s là "starts right here." | ⚠️ chưa có — smoke test export |
+| AC-11 | lần nhận dạng đầu đang 40% | bấm ✕ | nhận dạng dừng trong ≤ 1 s; không lane, không khối; số bước undo bằng lúc mở panel | ⚠️ chưa có |
+| AC-12 | nhận dạng 58%, đã xong clip 2 | bấm Back, mở lại project | khối của clip 2 còn nguyên; thẻ "Captions stopped at 58%" + Continue; Continue chỉ nhận dạng clip 3 và 5 | ⚠️ chưa có |
+| AC-13 | clip 3 chỉ có trên iCloud, máy không mạng | Auto Captions | clip 2 và 5 có khối; dòng phụ "1 clip couldn't be read — it's in iCloud." + Retry; không spinner treo | ⚠️ chưa có |
+| AC-14 | 3 clip video chỉ có gió, không lời | Auto Captions | "No speech found in these clips."; không lane C1; undo không đổi | ⚠️ chưa có |
+| AC-15 | iPhone 402×874 · iPad 1376×1032 · Duo trong 951×669 · Duo ngoài 466×678; Caption 2 đang chọn, 58% | dựng đúng trạng thái từng board | khớp `F4_P_Captions`, `F4_IL_Captions`, `F4_DI_Captions`, `F4_DC_Captions` lệch ≤ 2pt; không control nào dưới góc bo hay dải 84 | ⚠️ chưa có — agent `design-parity` + `Tools/sim-shot` |
+
+| AC-16 | panel Style, Burn into video bật | tắt công tắc | dòng phụ "Saved as a subtitle track — Photos, Instagram and TikTok don't show it."; một bước undo | ⚠️ chưa có |
+| AC-17 | lane C1 có khối, iPhone | chụp dải tổng quan; `design-reviewer` đọc màu | vạch khối và chip Voice là `timelineSpeech` #5E9CFF; chỉ khối đang chọn mang #57BFD1 | ⚠️ chưa có — agent `design-reviewer` |
+
+**Chưa chứng minh được:** AC-1 tới AC-17. AC-3 cần máy thật (simulator không có model on-device đáng tin).
+
+## 10. Rủi ro đã biết
+
+| Rủi ro | Xử lý |
+|---|---|
+| Tốc độ nhận dạng on-device chưa đo; project 10 phút có thể mất vài phút | đo trên iPhone 17 trước `/plan`: mục tiêu ≤ 1× thời lượng tiếng; chạy nền nên không chặn sửa |
+| Simulator thường không có model on-device | AC chạy bằng bộ nhận dạng giả ở test; AC-3 và đo tốc độ trên máy thật |
+| iPad dọc chưa có board F4 | dock 324 dùng nội dung inspector của IL; vẽ `F4_IP_Captions` trước khi code |
+| Info.plist chưa có câu xin quyền nhận dạng giọng nói (NF-03 §4 đã ghi luật "chỉ trên máy") | việc của code: thêm khoá xin quyền nhận dạng giọng nói với câu ở §4 (và bản dịch trong String Catalog) cùng commit đầu tiên của Auto Captions |
+| Track phụ đề mềm chưa thử qua đường ghi file và qua Photos | đo ở `/plan` trên máy thật; Photos nhập file mà bỏ track là chấp nhận được — dòng phụ §6 đã nói trước |

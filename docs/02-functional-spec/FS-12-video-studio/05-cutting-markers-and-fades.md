@@ -1,6 +1,6 @@
 # FS-12.05 — Cắt, marker, snapping và fade
 
-`FS-12.05` · `Domain/Video/VideoTimelineMath.swift` · `VideoTransitionSheet` · cập nhật 2026-09-22
+`FS-12.05` · `Domain/Video/VideoTimelineMath.swift` · `VideoTransitionSheet` · cập nhật 2026-10-03 (§3)
 
 **Một câu:** những thao tác của một trang cắt thật — và chỗ nào cần nam châm thì mới đặt nam châm.
 
@@ -22,14 +22,40 @@ Là **sheet**, không phải dialog: chip các kiểu + slider Duration + **Appl
 - Độ chồng lấn bị chặn ở **nửa clip ngắn hơn**, nên slider hứa 2s trên clip 0,6s là slider nói dối — dòng
   thông tin kia nói con số thật.
 
-## 3. Trim to Playhead
+## 3. Cắt hai đầu clip
 
-**Trim Start / End to Playhead**, đặt bên trái hàng transport.
+Chỉ **hai** cách: **tay nắm mép** trên timeline và lệnh **Trim** ở hàng lệnh clip ([04b](04b-command-rows.md)).
+**Clip video không có dòng Duration** (chốt 2026-10-03): thời lượng hiện ở dòng phụ tên "6.2s · video"; ảnh và khung
+freeze giữ slider Duration 0,5–10 s.
 
-Thao tác cắt hay dùng nhất không phải "đặt hai đầu" mà là **"bỏ đoạn lấy đà"** hoặc **"bỏ đuôi"**.
+**Tay nắm mép** (mọi thiết bị, khi clip đang chọn):
 
-Ảnh tĩnh thì dời thời lượng; video thì dời cửa sổ trim, **quy đổi qua tốc độ clip** — thời gian cục bộ chạy
-theo tốc độ còn cửa sổ trim thì không.
+- Hai tab rộng **12pt**, cao bằng clip, màu `#57BFD1`, glyph tối, nằm **ngoài** hai mép clip; vùng chạm 44pt
+  (lấn 16 ra mỗi phía). Khác hai núm fade 10pt trắng ở góc trên (§6).
+- Kéo trái dời điểm vào, kéo phải dời điểm ra. Video: dời cửa sổ trim trong nguồn, **quy đổi qua tốc độ clip**;
+  ảnh và khung freeze: đổi thời lượng. Clip giữ chỗ bắt đầu, clip sau dời theo — lane video không có khoảng trống.
+- Giới hạn: video trong nguồn, ngắn nhất **0,1 s**; ảnh **0,5–10 s**. Chạm giới hạn: tay nắm dừng, một haptic nhẹ.
+- Trong lúc kéo: khung hiện đúng khung hình ở mép đang kéo, nhãn nổi ghi thời lượng mới; thả tay thì khung về
+  playhead cũ (kẹp vào project).
+- Nam châm như §5: mép dính playhead, marker, mép clip khác trong 8pt ngón, kèm haptic.
+- Một lần kéo = một bước undo, thuộc phiên chọn — ✕ gỡ ([04 §5](04-tools-and-inspector.md)). Cử chỉ bị hệ thống
+  huỷ giữa chừng: clip về như trước, không bước undo nào.
+- Chuyển cảnh kề mép co theo luật nửa clip ngắn hơn (§2). Lane bị Lock: không có tay nắm.
+- Clip iCloud chưa biết thời lượng nguồn: chỉ kéo **vào** được, không kéo ra quá điểm ra hiện tại.
+- Giữ yên tay nắm 0,5 s là vào chế độ cắt từng khung có kính lúp ([17](17-precise-trim-and-input.md)); kéo ngay là
+  trim thường ở đây.
+
+**Lệnh Trim** — thao tác cắt hay dùng nhất không phải "đặt hai đầu" mà là **bỏ đoạn lấy đà** hoặc **bỏ đuôi**:
+
+- Ô Trim bật khối hai chip **Start to Playhead** · **End to Playhead** + dòng "Or drag the clip's edges on the
+  timeline." Chip bỏ phần trước / sau playhead của **clip đang chọn**.
+- Playhead ngoài clip đang chọn hoặc trùng mép: hai chip mờ 28%, dòng chú thích thành "Move the playhead into this
+  clip." Phần còn lại dưới mức tối thiểu: không làm gì, haptic lỗi.
+- Ảnh dời thời lượng; video dời cửa sổ trim quy đổi qua tốc độ — thời gian cục bộ chạy theo tốc độ, cửa sổ trim
+  thì không.
+- Transport màn rộng và menu ⋯ của iPhone có cặp **Trim Start / End to Playhead** cùng phép tính, tác động **clip
+  dưới playhead** ([03b §2](03b-desk-bands-and-lanes.md)).
+- *Vì sao video không có Duration:* slider thời lượng của video là lối cắt thứ ba, không biết dời đầu hay đuôi.
 
 ## 4. Marker
 
@@ -58,9 +84,27 @@ chỗ cần nam châm.
 
 ## 7. Preview look thật
 
-Tab Effects từng hiện 49 look bằng **49 glyph giống hệt nhau**. Nay render đúng khung dưới playhead qua
-từng filter, cỡ ô, ở mức ưu tiên nền, cache tới khi playhead sang clip khác.
+Ô look trong panel Look ([06c](06c-photo-looks.md)) vẽ đúng khung dưới playhead qua từng look, cỡ ô, ở mức ưu tiên
+nền, cache tới khi playhead sang clip khác.
 
-## 8. Tiêu chí nghiệm thu
+## 8. Tiêu chí nghiệm thu — cắt hai đầu (§3)
 
-Xem [README](README.md).
+Các phần khác: xem [README](README.md).
+
+| # | Cho | Khi | Thì | Chứng minh bằng |
+|---|---|---|---|---|
+| AC-1 | clip 2 video, nguồn 10,0 s, trim 0–10, tốc độ 1×, bắt đầu ở 3,0 s; clip 3 sau nó | kéo tay nắm trái vào 2,0 s | trim 2–10; clip 2 vẫn bắt đầu 3,0 s, dài 8,0 s; clip 3 sớm 2,0 s; đúng một bước undo | ⚠️ chưa có |
+| AC-2 | như AC-1 nhưng tốc độ 2× (clip dài 5,0 s) | kéo tay nắm phải vào 1,0 s | điểm ra nguồn 10 → 8; clip dài 4,0 s | ⚠️ chưa có |
+| AC-3 | như AC-1 | kéo tay nắm phải ra thêm 3,0 s | dừng ở 10,0 s nguồn, có một haptic | `VideoTimelineMathTests.trimClampsIntoTheSourceWithAMinimumLength` (phần kẹp) |
+| AC-4 | clip ảnh 3,0 s | kéo tay nắm phải vào 2,8 s | dừng ở 0,5 s | ⚠️ chưa có |
+| AC-5 | clip 2 video 0–10, 1×, playhead ở 4,0 s trong clip | chạm Trim → Start to Playhead | clip 2 dùng nguồn 4–10, dài 6,0 s; Undo một lần về 0–10 | ⚠️ chưa có |
+| AC-6 | clip 2 tốc độ 2×, playhead cách đầu clip 1,5 s | Start to Playhead | điểm vào nguồn = 3,0 s | ⚠️ chưa có |
+| AC-7 | clip 2 đang chọn, playhead nằm trong clip 3 | chạm Trim | hai chip mờ 28%, dòng "Move the playhead into this clip." | ⚠️ chưa có |
+| AC-8 | marker ở 6,0 s, mép phải clip 2 ở 6,1 s (cách 5pt ở zoom hiện tại) | kéo tay nắm phải 4pt về phía marker rồi thả | mép = 6,0 s đúng marker, một haptic | ⚠️ chưa có |
+| AC-9 | AC-1 đã làm, clip 2 vẫn đang chọn | bấm ✕ | trim về 0–10; Redo tắt | ⚠️ chưa có |
+| AC-10 | đang kéo tay nắm, hệ thống huỷ cử chỉ (cuộc gọi tới) | huỷ | clip như trước lúc kéo; số bước undo không đổi | ⚠️ chưa có |
+| AC-11 | clip 1 video chỉ có trên iCloud, máy không mạng, chưa biết thời lượng nguồn | kéo tay nắm phải ra ngoài | không dài thêm; kéo vào thì ngắn lại bình thường | ⚠️ chưa có |
+| AC-12 | các board IL2, IP2 | `Tools/design-board compare` tay nắm mép clip 2 | hai tab 12pt cao bằng clip, lệch ≤ 2pt | ⚠️ chưa có — agent `design-parity` |
+| AC-13 | clip 2 video đang chọn trên iPhone, iPad, Duo trong, Duo ngoài | dump panel / inspector | không có dòng Duration nào; clip 1 ảnh đang chọn thì có | ⚠️ chưa có |
+
+**Chưa chứng minh được:** AC-1, AC-2, AC-4 … AC-13; AC-3 mới có phép kẹp, chưa có cử chỉ.

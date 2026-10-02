@@ -2,14 +2,14 @@
 
 `FS-12.01` · `Data/Sources/VideoCompositionBuilder.swift` · `VideoFrameCompositor.swift`
 · `VideoExportWriter.swift` · `Domain/Video/VideoGeometry.swift` · `VideoEffectMath.swift`
-· cập nhật 2026-09-22
+· cập nhật 2026-10-03
 
 **Một câu:** một đường dựng duy nhất cho cả preview lẫn export, với một compositor tự viết — vì crossfade
 cần thấy hai clip cùng lúc.
 
 ## 1. Quy tắc
 
-- **Preview và export dùng chung một đường dựng.** Khác nhau đúng ở kích thước khung và ở đầu ra.
+- **Preview và export dùng chung một đường dựng.** Khác nhau đúng ở kích thước khung, nhịp khung và đầu ra.
 - **Không tin kích thước tự nhiên của track**: mọi phép biến hình đi qua một lớp hình học thuần, có test
   đủ bốn hướng xoay. Đây là nguồn bug số một của mã composition.
 - Mốc thời gian dựng bằng **số nguyên ở biên giới builder** — hệ thống từ chối mọi khe hở hay chồng lấn,
@@ -78,20 +78,31 @@ tắt dần trong 0,2s đầu và cuối) · blurIn/blurOut (12→0 trong tối 
 
 - Áp **trước khi trộn, độc lập từng bên**: crossfade thấy blurOut của clip ra đấu với blurIn của clip vào,
   mỗi bên chạy trên đồng hồ đặt clip riêng — clip bị cắt qua nhiều đoạn vẫn chạy liên tục.
-- Shake tất định nên **preview và export khớp từng khung** (cùng nhịp 1/30).
+- Shake tất định nên **preview và export khớp từng khung**: hiệu ứng tính trên **đồng hồ 1/30 giây bất kể fps xuất**
+  — 60 fps giữ mỗi độ lệch hai khung, 24 fps lấy mẫu từ cùng đồng hồ.
 - **Hiệu ứng không bị đóng băng vào bản dựng**: nó được tra từ recipe tươi theo id clip, nên đổi hiệu ứng
   đi đường rẻ (thay bản dựng khung hình, không dựng lại cả composition).
+
+## 7b. Đặt khung và nền
+
+- **Fit**: khung nguồn nằm trọn trong khung xuất, phần thừa là nền. **Fill**: phủ kín, cắt giữa, không có nền.
+- Nền khi Fit có ba loại, vẽ **trước khi trộn, độc lập từng bên** như hiệu ứng (§7):
+  - **Colour** — một màu; slide và zoom lộ nền cũng là màu này; fadeBlack vẫn đen.
+  - **Blur** — chính khung đó phủ kín rồi làm mờ, tính ở **1/8 cạnh dài khung** và phóng lên; bán kính theo tỉ lệ khung
+    nên preview 1280 và export 4K ra cùng một ảnh. Crossfade trộn cặp (nền + khung) của mỗi bên.
+  - **Image** — một ảnh thư viện phủ kín, nạp một lần qua kho khung tĩnh (§5, LRU 4); mất ảnh → nền đen.
 
 ## 8. Ba tầng dựng lại preview
 
 | Đổi cái gì | Làm gì |
 |---|---|
 | Âm lượng · mute · fade | chỉ gán lại bản trộn âm thanh |
-| Filter · overlay · hiệu ứng · chữ theo thời gian · xoay | chỉ dựng lại bản dựng khung hình |
+| Filter · overlay · hiệu ứng · chữ theo thời gian · xoay · tỉ lệ · Fit/Fill · nền | chỉ dựng lại bản dựng khung hình |
+| Độ phân giải · fps · codec | **không** dựng lại preview — chỉ export đọc |
 | Cấu trúc (đổi thứ tự, trim, thời lượng, kiểu/độ dài chuyển cảnh, đổi nhạc, xoá clip, undo/redo) | dựng lại toàn bộ, **debounce 300ms**, giữ playhead |
 
-- Preview giới hạn cạnh dài **1280** (chi phí compositor tỉ lệ số pixel); export dựng lại ở kích thước
-  preset. Nhịp khung 1/30.
+- Preview giới hạn cạnh dài **1280** (chi phí compositor tỉ lệ số pixel) và **luôn 1/30**; export dựng lại ở
+  kích thước khung và fps (24 / 30 / 60) của Video Settings ([10](10-video-settings-and-export.md)).
 - **Hai bẫy khi thêm nhạc**: (1) asset nguồn của nhạc phải được **giữ sống qua cả lần dựng** — tham chiếu
   từ track về asset là yếu, asset chết thì chèn thất bại; (2) preview cũng phải **bỏ track âm thanh rỗng**
   như export — project ảnh-không-nhạc chạy im lặng được, nhưng thêm nhạc là bản trộn vào cuộc rồi đọc phải
@@ -106,9 +117,12 @@ với **mọi** preset, và đó là lỗi thật đằng sau triệu chứng ng
 - Đọc: một đầu ra video mang bản dựng khung hình (nên chạy đúng compositor) + một đầu ra âm thanh mang bản
   trộn. **Chỉ đưa vào track âm thanh có nội dung thật** — track A/B rỗng của project ảnh-không-nhạc làm
   bản trộn hỏng.
-- Ghi: H.264 tại kích thước khung (bitrate ≈ số pixel × 4,8 → ~10 Mbps ở 1080p, ~40 Mbps ở 4K) + AAC 128k.
+- Ghi: **H.264 hoặc HEVC** theo Video Settings, tại kích thước khung; bitrate = rộng × cao × fps × 0,16 bit (HEVC
+  × 0,6) → ~10 Mbps ở 1080p30 H.264 (chốt 2026-10-03, [10 §5](10-video-settings-and-export.md)) + AAC 128k.
   Tiến độ = mốc thời gian / tổng. Cancel dừng đầu đọc.
-- **Kích thước khung do bản dựng quyết định, không do preset.**
+- **Kích thước khung** = tỉ lệ × lớp độ phân giải (cạnh ngắn 720 / 1080 / 2160, cạnh dài trần 3840 — bảng ở
+  [10 §5](10-video-settings-and-export.md)) của **đích xuất**: preset đang chọn ([16](16-export-presets.md)) hoặc
+  Custom = Video Settings của project. Bản dựng mang kích thước đó; preset không ghi gì vào project.
 - Ra file tạm rồi nhập vào thư viện, index ngay, và phát tín hiệu để lưới thấy — video mới vào Library như
   asset thường (không có EXIF).
 
