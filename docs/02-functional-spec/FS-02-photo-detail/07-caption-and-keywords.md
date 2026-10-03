@@ -202,6 +202,9 @@ Luật:
   keyword trên cùng một ảnh, `removeKeyword` phân biệt hoa thường; `Đà Lạt` ≠ `Da Lat`. Hệ quả: ô caption chặn ở
   2.000 (đếm UTF-16, không có đường lỗi); tách phẩy, trim, bỏ rỗng và chọn cách viết đã có là việc của app —
   Photos không làm hộ.
+- **4.** Trên sim (không có iCloud Shared Library): 500/500 ảnh của chính người dùng có `canPerform(.properties)`
+  = true và ghi được. Phần "từ chối" **chưa đo** — cần máy có Shared Library (plan ❓-2); AC-13 chứng minh bằng
+  writer giả.
 
 ## 11. Tiêu chí nghiệm thu
 
