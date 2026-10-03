@@ -180,4 +180,33 @@ struct CaptionKeywordSheetModelTests {
         #expect(harness.writer.blocks == [["p1": CaptionKeywordChange(caption: .clear), "p2": CaptionKeywordChange(caption: .clear)]])
         #expect(harness.library.read(ids: ["p1", "p2"]).values.allSatisfy { $0.caption == nil })
     }
+
+    /// AC-12: 50 photos, 20 of them only in iCloud, no network — `trip` goes
+    /// to all 50. The write path has no original fetcher to call: it touches
+    /// only `PHAssetChangeRequest` properties, never a resource. And because
+    /// Photos moves each photo's modification date (§10 q1), the index rows
+    /// are re-stamped with the new date in the same step, so the next index
+    /// run sees nothing to read — no original download through the back door.
+    @Test func neverFetchesOriginals() async throws {
+        let photos = Dictionary(uniqueKeysWithValues: (0..<50).map { ("c\($0)", CaptionKeywords.empty) })
+        let harness = try CaptionKeywordHarness(photos)
+        let model = CaptionKeywordSheetModel(ids: Self.ids(photos), service: harness.service)
+        await model.load()
+        model.keywordText = "trip"
+        model.commitKeywordText()
+        _ = await model.apply()
+
+        #expect(harness.library.read(ids: Self.ids(photos)).values.filter { $0.keywords == ["trip"] }.count == 50)
+        #expect(harness.writer.resourceRequests == 0)
+        let metadata = MetadataStore(database: harness.database)
+        for id in Self.ids(photos) {
+            let state = try metadata.assetState(assetId: id)
+            #expect(state?.modificationDate == harness.writer.modificationDate + 1)
+            #expect(!IndexPipeline.needsReindex(
+                existing: state,
+                currentModificationDate: harness.writer.modificationDate + 1,
+                allowNetworkRetry: true
+            ))
+        }
+    }
 }
