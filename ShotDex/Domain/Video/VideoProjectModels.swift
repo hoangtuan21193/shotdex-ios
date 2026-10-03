@@ -570,6 +570,28 @@ extension VideoProjectRecipe {
 // costs that field, not the clip. Arrays go through `LossyArray`, so a broken
 // element costs that element, not the project. Encoding stays synthesized.
 
+extension VideoBoundaryTransition {
+    /// Boundaries are positional: one that cannot be read must not be
+    /// dropped (every later one would slide a boundary earlier), so a field
+    /// that will not read falls back to its default and the element stays.
+    init(from decoder: any Decoder) throws {
+        self.init()
+        guard let container = try? decoder.container(keyedBy: CodingKeys.self) else { return }
+        kind = ((try? container.decodeIfPresent(VideoTransitionKind.self, forKey: .kind)) ?? nil) ?? .none
+        duration = ((try? container.decodeIfPresent(Double.self, forKey: .duration)) ?? nil) ?? 0.5
+    }
+}
+
+extension TimedMarker {
+    init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.init(time: try container.decode(Double.self, forKey: .time))
+        id = ((try? container.decodeIfPresent(UUID.self, forKey: .id)) ?? nil) ?? UUID()
+        colorIndex = ((try? container.decodeIfPresent(Int.self, forKey: .colorIndex)) ?? nil) ?? 0
+        note = ((try? container.decodeIfPresent(String.self, forKey: .note)) ?? nil) ?? ""
+    }
+}
+
 extension VideoClip {
     init(from decoder: any Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)

@@ -56,8 +56,13 @@ final class VideoStudioModel {
             // draft write itself a second later (FS-12.18 §2). Not while the
             // sources load: that only fills in what the media turned out to
             // be, and an opened project is not an edited one.
-            guard !isLoadingSources, recipe != oldValue else { return }
-            drafts?.schedule { [weak self] in self?.draftSnapshot() }
+            // Not from `init` either: with @Observable, `didSet` fires there
+            // too, and opening a project is not editing it.
+            guard !isInitializing, !isLoadingSources, recipe != oldValue else { return }
+            drafts?.schedule { [weak self] in
+                guard let self, self.canWriteDraft else { return nil }
+                return try self.draftSnapshot()
+            }
         }
     }
     /// Loaded media by clip id. A source outlives its clip's removal from
@@ -227,6 +232,7 @@ final class VideoStudioModel {
             beginSession(.clip(first))
         }
         observeBackgrounding()
+        isInitializing = false
     }
 
     /// Where a finished video is recorded so it can be reopened, and the id
@@ -243,14 +249,36 @@ final class VideoStudioModel {
     /// True while `load()` resolves the sources, when recipe changes are the
     /// media being measured rather than the user editing.
     private var isLoadingSources = false
+    /// True until `init` returns: its own recipe writes are not edits.
+    private var isInitializing = true
+    /// Set by `close()`: work still in flight — a load, a rebuild, a music
+    /// length — stops instead of reviving a player nobody is watching.
+    private var isClosed = false
+
+    /// Whether a draft write may happen now: not while the sources load,
+    /// not after they failed to.
+    private var canWriteDraft: Bool { !isLoadingSources && !isFailedLoad }
 
     /// The row a draft write stores: this project's recipe, under its id.
     /// The store keeps what the row already knew (created, exported).
-    func draftSnapshot() -> Creation? {
+    ///
+    /// Clips `load()` left out because their asset could not be found go
+    /// back in, at their places: a source missing for one session — limited
+    /// access, a library not ready — must not shrink the stored project.
+    /// Throws when the recipe will not encode (a non-finite number), which
+    /// is a failed save, not an empty one.
+    func draftSnapshot() throws -> Creation {
         var stored = recipe
-        stored.playhead = currentTime
-        return try? Creation.video(recipe: stored, assetId: nil, id: creationID)
+        for (index, clip) in clipsLeftOutAtLoad.sorted(by: { $0.index < $1.index }) {
+            stored.clips.insert(clip, at: min(index, stored.clips.count))
+        }
+        if !clipsLeftOutAtLoad.isEmpty { stored.syncTransitionsWithClips() }
+        stored.playhead = currentTime.isFinite ? currentTime : 0
+        return try Creation.video(recipe: stored, assetId: nil, id: creationID)
     }
+
+    /// Clips the last `load()` could not find, with where they were.
+    var clipsLeftOutAtLoad: [(index: Int, clip: VideoClip)] = []
 
     /// Writes the draft now, edited or not: a project the user opened and
     /// left at once is still kept (FS-12.18 §2) — "nothing is lost" is a
@@ -261,11 +289,11 @@ final class VideoStudioModel {
     @discardableResult
     func saveDraftNow() async -> Bool {
         guard let drafts else { return true }
-        guard !isLoadingSources, !isFailedLoad else {
+        guard canWriteDraft else {
             drafts.cancel()
             return true
         }
-        return await drafts.saveNow(draftSnapshot())
+        return await drafts.saveNow { try self.draftSnapshot() }
     }
 
     /// The last draft write failed (FS-12.18 §6): the banner is up, the
@@ -309,10 +337,30 @@ final class VideoStudioModel {
     /// Writes the draft under a background-task assertion, so the write
     /// finishes even though the app is on its way out.
     func saveDraftInBackground() {
-        let assertion = UIApplication.shared.beginBackgroundTask(withName: "video-draft")
+        let assertion = DraftBackgroundAssertion()
+        assertion.identifier = UIApplication.shared.beginBackgroundTask(withName: "video-draft") { [weak self] in
+            // Out of time: stop waiting and give the time back, rather than
+            // be ended by the system with the assertion still held.
+            MainActor.assumeIsolated {
+                self?.drafts?.cancel()
+                assertion.end()
+            }
+        }
         Task {
             await saveDraftNow()
-            if assertion != .invalid { UIApplication.shared.endBackgroundTask(assertion) }
+            assertion.end()
+        }
+    }
+
+    /// A background-task assertion ended exactly once, by whichever comes
+    /// first: the write finishing or the time running out.
+    @MainActor
+    private final class DraftBackgroundAssertion {
+        var identifier: UIBackgroundTaskIdentifier = .invalid
+        func end() {
+            guard identifier != .invalid else { return }
+            UIApplication.shared.endBackgroundTask(identifier)
+            identifier = .invalid
         }
     }
 
@@ -742,6 +790,7 @@ final class VideoStudioModel {
         isLoadingSources = true
         defer { isLoadingSources = false }
         let loaded = await service.loadSources(for: recipe.clips, maximumStillSize: recipe.canvasSize())
+        guard !isClosed, !Task.isCancelled else { return }
         guard !loaded.sources.isEmpty else {
             phase = .failed(String(localized: "Couldn't load the selected items."))
             return
@@ -763,6 +812,9 @@ final class VideoStudioModel {
         // length (FS-12.04 §7); the banner says so. Only a clip whose asset
         // is gone from the library is left out — and said.
         let droppedCount = recipe.clips.count(where: { sources[$0.id] == nil })
+        clipsLeftOutAtLoad = recipe.clips.enumerated()
+            .filter { sources[$0.element.id] == nil }
+            .map { (index: $0.offset, clip: $0.element) }
         recipe.clips.removeAll { sources[$0.id] == nil }
         if droppedCount > 0 {
             errorMessage = droppedCount == 1
@@ -771,11 +823,21 @@ final class VideoStudioModel {
         }
         recipe.syncTransitionsWithClips()
         reloadWaveforms()
+        // A session opened before the media was measured (a single video
+        // opens with its clip selected) starts from the measured project, so
+        // ✕ with nothing changed changes nothing.
+        if let open = session {
+            var refreshed = VideoEditSession(target: open.target, startRecipe: recipe, checkpoint: open.checkpoint)
+            refreshed.isCollapsed = open.isCollapsed
+            session = refreshed
+        }
         await rebuildPreview()
         phase = .ready
     }
 
     func close() {
+        isClosed = true
+        trackingTask?.cancel()
         // A studio closed some other way than Back (its presenter went
         // away) still writes the change it was waiting to write. The task
         // keeps the model alive until it has.
@@ -873,26 +935,37 @@ final class VideoStudioModel {
     /// Puts the playhead back after a drag that moved it for a preview,
     /// holding off the time observer until the seek has landed — otherwise
     /// a frame reported from the preview's last position overwrites it.
-    private func settlePlayhead(at seconds: Double) {
+    private func settlePlayhead(at seconds: Double, rebuildFollows: Bool) {
         pendingScrubTime = nil
         currentTime = min(max(seconds, 0), totalDuration)
-        // The edit that ends the drag rebuilds the preview, and the new item
+        // When the edit that ends the drag rebuilds the preview, the new item
         // must start here — not wherever the preview's last frame left the
-        // old one (measured: 0.5 s after a 0.46 s edge drag from 0).
-        resumeTimeAfterRebuild = currentTime
+        // old one (measured: 0.5 s after a 0.46 s edge drag from 0). With no
+        // rebuild coming the request is cleared, so a later unrelated
+        // rebuild does not jump back here.
+        resumeTimeAfterRebuild = rebuildFollows ? currentTime : nil
         guard let player else {
             isScrubbing = false
             return
         }
         isScrubbing = true
+        settleToken += 1
+        let token = settleToken
         player.seek(
             to: VideoCompositionBuilder.time(currentTime),
             toleranceBefore: .zero,
             toleranceAfter: .zero
-        ) { [weak self] _ in
-            Task { @MainActor [weak self] in self?.isScrubbing = false }
+        ) { [weak self] finished in
+            // Only the newest settle, and only once it has landed: a seek
+            // superseded by a newer one must not release the observer early.
+            Task { @MainActor [weak self] in
+                guard let self, finished, token == self.settleToken else { return }
+                self.isScrubbing = false
+            }
         }
     }
+
+    private var settleToken = 0
 
     func endScrub(at seconds: Double) {
         pendingScrubTime = nil
@@ -957,6 +1030,7 @@ final class VideoStudioModel {
             restored.musicTracks[index].sourceDuration = duration
             if restored.musicTracks[index].trimEnd == nil { restored.musicTracks[index].trimEnd = duration }
         }
+        let changed = restored != recipe
         recipe = restored
         if let selectedClipID, !recipe.clips.contains(where: { $0.id == selectedClipID }) {
             self.selectedClipID = nil
@@ -973,6 +1047,7 @@ final class VideoStudioModel {
         if let index = editingTransitionIndex, !recipe.transitions.indices.contains(index) {
             editingTransitionIndex = nil
         }
+        guard changed else { return }
         markEdited()
         reloadWaveforms()
         // Always the structural tier: a snapshot can differ in any dimension,
@@ -1168,6 +1243,8 @@ final class VideoStudioModel {
         Task { [weak self] in
             guard let self else { return }
             guard let duration = await service.loadAudioDuration(for: source) else { return }
+            // A newer Replace may have changed the song since this started.
+            guard !isClosed, recipe.musicTracks.first(where: { $0.id == id })?.source == source else { return }
             measuredSourceDurations[id] = duration
             guard let index = recipe.musicTracks.firstIndex(where: { $0.id == id }) else { return }
             recipe.musicTracks[index].sourceDuration = duration
@@ -1445,7 +1522,7 @@ final class VideoStudioModel {
         switch phase {
         case .cancelled:
             edgeTrimPreview = nil
-            if let playhead = playheadBeforeEdgeTrim { settlePlayhead(at: playhead) }
+            if let playhead = playheadBeforeEdgeTrim { settlePlayhead(at: playhead, rebuildFollows: false) }
             playheadBeforeEdgeTrim = nil
             return EdgeTrimFeedback()
         case .changed(let raw), .ended(let raw):
@@ -1492,7 +1569,7 @@ final class VideoStudioModel {
                 markEdited()
                 schedulePreviewRebuild()
             }
-            if let playhead { settlePlayhead(at: playhead) }
+            if let playhead { settlePlayhead(at: playhead, rebuildFollows: changed) }
             return feedback
         }
     }
@@ -1636,11 +1713,13 @@ final class VideoStudioModel {
     private func loadAndMerge(_ clips: [VideoClip]) async {
         let loaded = await service.loadSources(for: clips, maximumStillSize: recipe.canvasSize())
         for (id, source) in loaded.sources { sources[id] = source }
+        guard !isClosed else { return }
         for clip in clips where clip.kind == .video {
-            guard let duration = loaded.durations[clip.id],
-                  let index = recipe.clips.firstIndex(where: { $0.id == clip.id })
-            else { continue }
+            guard let duration = loaded.durations[clip.id] else { continue }
+            // Recorded even when the clip has been undone away meanwhile:
+            // Redo brings it back, and it must still be trimmable.
             measuredSourceDurations[clip.id] = duration
+            guard let index = recipe.clips.firstIndex(where: { $0.id == clip.id }) else { continue }
             recipe.clips[index].sourceDuration = duration
             if recipe.clips[index].trimEnd == nil {
                 recipe.clips[index].trimEnd = duration
@@ -2453,7 +2532,7 @@ final class VideoStudioModel {
     /// the first time or again after more edits — updates it, never adds a
     /// second. Never fails the export — the video is already in the library.
     func recordExport(assetID: String, now: Int = Int(Date.now.timeIntervalSince1970)) {
-        guard let creationStore, var row = draftSnapshot() else { return }
+        guard let creationStore, var row = try? draftSnapshot() else { return }
         drafts?.cancel()
         row.assetId = assetID
         row.exportedAt = now
@@ -2554,14 +2633,25 @@ final class VideoStudioModel {
     /// place rather than "wherever the playhead is".
     private var resumeTimeAfterRebuild: Double?
 
+    /// Bumped by every rebuild; a build that finishes after a newer one
+    /// started is thrown away rather than laid over it.
+    private var rebuildGeneration = 0
+
     private func rebuildPreview() async {
-        guard !sources.isEmpty else { return }
+        guard !sources.isEmpty, !isClosed else { return }
+        rebuildGeneration += 1
+        let mine = rebuildGeneration
         let requested = resumeTimeAfterRebuild
         resumeTimeAfterRebuild = nil
-        let resumeTime = requested ?? currentTime
-        let wasPlaying = isPlaying
         do {
             let build = try await service.makePreviewItem(recipe: recipe, sources: sources)
+            guard !isClosed, mine == rebuildGeneration else {
+                if mine != rebuildGeneration, resumeTimeAfterRebuild == nil { resumeTimeAfterRebuild = requested }
+                return
+            }
+            // Read after the build: the old item kept playing meanwhile.
+            let resumeTime = requested ?? currentTime
+            let wasPlaying = isPlaying
             layout = build.layout
             totalDuration = build.layout.totalDuration
             playerItem = build.playerItem
@@ -2586,6 +2676,8 @@ final class VideoStudioModel {
                 )
             }
             if wasPlaying { player?.play() }
+        } catch is CancellationError {
+            return
         } catch {
             errorMessage = error.localizedDescription
         }
@@ -2605,9 +2697,10 @@ final class VideoStudioModel {
             forName: AVPlayerItem.didPlayToEndTimeNotification,
             object: nil,
             queue: .main
-        ) { [weak self] _ in
+        ) { [weak self] note in
             MainActor.assumeIsolated {
-                guard let self else { return }
+                // Every player item in the process posts this; only ours counts.
+                guard let self, (note.object as? AVPlayerItem) === self.playerItem else { return }
                 guard self.loopsPlayback else {
                     self.isPlaying = false
                     return

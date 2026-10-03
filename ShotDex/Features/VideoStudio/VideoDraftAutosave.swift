@@ -39,24 +39,26 @@ final class VideoDraftAutosave {
     /// Writes `snapshot()` once the project has been still for `delay`.
     /// The snapshot is taken when the write happens, not now, so it is the
     /// project as it stands after the burst.
-    func schedule(_ snapshot: @escaping @MainActor () -> Creation?) {
+    /// A snapshot that throws — the recipe would not encode — is a failed
+    /// save, not "nothing to write": the banner has to come up.
+    func schedule(_ snapshot: @escaping @MainActor () throws -> Creation?) {
         pending?.cancel()
         let sleep = self.sleep
         pending = Task { [weak self] in
             do { try await sleep(Self.delay) } catch { return }
             guard !Task.isCancelled, let self else { return }
             self.pending = nil
-            _ = await self.write(snapshot())
+            _ = await self.write(snapshot)
         }
     }
 
     /// Writes now, dropping any write that was waiting. Returns whether the
     /// project is on disk.
     @discardableResult
-    func saveNow(_ creation: Creation?) async -> Bool {
+    func saveNow(_ snapshot: @MainActor () throws -> Creation?) async -> Bool {
         pending?.cancel()
         pending = nil
-        return await write(creation)
+        return await write(snapshot)
     }
 
     /// Drops a waiting write without making it.
@@ -65,17 +67,35 @@ final class VideoDraftAutosave {
         pending = nil
     }
 
-    private func write(_ creation: Creation?) async -> Bool {
-        guard let creation else { return true }
+    private func write(_ snapshot: @MainActor () throws -> Creation?) async -> Bool {
         generation += 1
+        let mine = generation
+        let creation: Creation
         do {
-            try await writer.write(creation, generation: generation)
-            hasFailedSave = false
-            return true
+            guard let made = try snapshot() else { return true }
+            creation = made
         } catch {
-            hasFailedSave = true
+            settle(failed: true, generation: mine)
             return false
         }
+        do {
+            try await writer.write(creation, generation: mine)
+            settle(failed: false, generation: mine)
+            return true
+        } catch {
+            settle(failed: true, generation: mine)
+            return false
+        }
+    }
+
+    /// The newest write to finish decides the banner: an older write that
+    /// lands late cannot clear a failure the newer one reported.
+    private var settledGeneration = 0
+
+    private func settle(failed: Bool, generation: Int) {
+        guard generation >= settledGeneration else { return }
+        settledGeneration = generation
+        hasFailedSave = failed
     }
 }
 

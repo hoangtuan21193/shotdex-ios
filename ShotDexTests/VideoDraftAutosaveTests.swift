@@ -345,3 +345,68 @@ struct VideoDraftBackFailureTests {
         #expect(log.writes.last?.videoRecipe?.clips[1].speed == 3)
     }
 }
+
+/// Review findings on the draft path (data-migration, 2026-10-04).
+@MainActor
+struct VideoDraftRobustnessTests {
+    /// A clip `load()` could not find this session goes back into the
+    /// stored draft at its place — the stored project never shrinks.
+    @Test func clipsLeftOutAtLoadStayInTheDraft() throws {
+        let clips = VideoStudioModelFixture.photoClips(3)
+        let model = VideoStudioModelFixture.model(clips: [clips[0], clips[2]])
+        model.clipsLeftOutAtLoad = [(index: 1, clip: clips[1])]
+        let row = try model.draftSnapshot()
+        #expect(row.videoRecipe?.clips.map(\.id) == clips.map(\.id))
+        #expect(row.videoRecipe?.transitions.count == 2)
+    }
+
+    /// A recipe that will not encode is a failed save: the banner comes up
+    /// and Back does not close on nothing.
+    @Test func aRecipeThatWillNotEncodeFailsTheSave() async {
+        let model = VideoStudioModelFixture.model()
+        let log = DraftWriteLog()
+        model.drafts = VideoDraftAutosave(write: { try log.write($0) })
+        model.recipe.videoVolume = .nan
+        #expect(await model.saveDraftNow() == false)
+        #expect(model.hasFailedDraftSave)
+        #expect(log.writes.isEmpty)
+    }
+
+    /// A boundary that cannot be read keeps its place with defaults; the
+    /// ones after it do not slide.
+    @Test func aBrokenTransitionKeepsItsPlace() throws {
+        let ids = (1...4).map { "0000000\($0)-0000-0000-0000-000000000000" }
+        let clips = ids.map { "{\"id\":\"\($0)\",\"assetID\":\"a\",\"kind\":\"photo\"}" }.joined(separator: ",")
+        let json = """
+        {"clips":[\(clips)],
+         "transitions":[{"kind":"crossfade","duration":0.5},{"kind":"teleport"},{"kind":"wipe","duration":1}],
+         "markers":[{"time":3}]}
+        """
+        let recipe = try JSONDecoder().decode(VideoProjectRecipe.self, from: Data(json.utf8))
+        #expect(recipe.transitions.map(\.kind) == [.crossfade, .none, .wipe])
+        #expect(recipe.transitions[2].duration == 1)
+        #expect(recipe.markers.map(\.time) == [3])
+    }
+}
+
+extension VideoDraftRobustnessTests {
+    /// Opening a draft is not editing it: the init's own recipe writes —
+    /// taking the stored playhead out — schedule no write, so the row's
+    /// edit date does not move.
+    @Test func openingADraftWritesNothing() async throws {
+        let store = CreationStore(database: try AppDatabase.makeEmpty())
+        var recipe = VideoProjectRecipe(clips: VideoStudioModelFixture.photoClips(2))
+        recipe.playhead = 2
+        try store.saveDraft(try Creation.video(recipe: recipe, assetId: nil, id: "draft", createdAt: 1, now: 100))
+        let row: Creation = try #require(try store.fetch(id: "draft"))
+        let dependencies = AppDependencies.preview()
+        let model = VideoStudioModel(
+            photos: [], mode: .multiClip, service: dependencies.videoStudio,
+            photoLibrary: dependencies.photoLibrary, overlayFontRecents: dependencies.overlayFontRecents,
+            overlayImages: dependencies.overlayImages, creationStore: store, restoring: row
+        )
+        defer { model.close() }
+        #expect(model.drafts?.isSavePending == false)
+        #expect(model.currentTime == 2)
+    }
+}
