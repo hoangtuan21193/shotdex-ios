@@ -42,6 +42,26 @@ enum KeywordCopy {
         String(localized: "Updating \(photos) photos…", table: table, locale: locale, comment: "Modal while a large Caption & Keywords write runs (plural)")
     }
 
+    /// The chip of a Keyword or Caption condition (FS-02.07 §7):
+    /// `keyword: Sunset`, `no keywords`, `caption contains "wedding"`.
+    static func chip(for rule: SmartAlbumRule, locale: Locale = .current) -> String {
+        let value = rule.text.trimmingCharacters(in: .whitespacesAndNewlines)
+        switch (rule.field, rule.op) {
+        case (.keyword, .hasKeyword):
+            return String(localized: "keyword: \(value)", table: table, locale: locale, comment: "Chip: photos with this keyword")
+        case (.keyword, .lacksKeyword):
+            return String(localized: "keyword ≠ \(value)", table: table, locale: locale, comment: "Chip: photos without this keyword")
+        case (.keyword, .hasAnyKeyword):
+            return String(localized: "any keyword", table: table, locale: locale, comment: "Chip: photos with at least one keyword")
+        case (.keyword, .hasNoKeywords):
+            return String(localized: "no keywords", table: table, locale: locale, comment: "Chip: photos with no keyword")
+        case (.caption, .doesNotContain):
+            return String(localized: "caption excludes \"\(value)\"", table: table, locale: locale, comment: "Chip: caption does not contain the text")
+        default:
+            return String(localized: "caption contains \"\(value)\"", table: table, locale: locale, comment: "Chip: caption contains the text")
+        }
+    }
+
     static var undo: String {
         String(localized: "Undo", table: table, comment: "Banner action: write back what Caption & Keywords just changed")
     }

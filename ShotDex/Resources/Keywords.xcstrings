@@ -296,6 +296,46 @@
           }
         }
       }
+    },
+    "any keyword": {
+      "comment": "Chip: photos with at least one keyword",
+      "extractionState": "manual"
+    },
+    "caption contains \"%@\"": {
+      "comment": "Chip: caption contains the text",
+      "extractionState": "manual"
+    },
+    "caption excludes \"%@\"": {
+      "comment": "Chip: caption does not contain the text",
+      "extractionState": "manual"
+    },
+    "doesn't have": {
+      "comment": "Keyword rule operator: the photo does not have this keyword",
+      "extractionState": "manual"
+    },
+    "has": {
+      "comment": "Keyword rule operator: the photo has this keyword",
+      "extractionState": "manual"
+    },
+    "has any keyword": {
+      "comment": "Keyword rule operator: the photo has at least one keyword",
+      "extractionState": "manual"
+    },
+    "has no keywords": {
+      "comment": "Keyword rule operator: the photo has no keyword",
+      "extractionState": "manual"
+    },
+    "keyword ≠ %@": {
+      "comment": "Chip: photos without this keyword",
+      "extractionState": "manual"
+    },
+    "keyword: %@": {
+      "comment": "Chip: photos with this keyword",
+      "extractionState": "manual"
+    },
+    "no keywords": {
+      "comment": "Chip: photos with no keyword",
+      "extractionState": "manual"
     }
   },
   "version": "1.0"

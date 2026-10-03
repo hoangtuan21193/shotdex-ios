@@ -25,6 +25,8 @@ enum RuleFieldKind: Equatable, Sendable {
     case date       // capture date
     case favorite   // boolean favorite
     case rating     // the current star rating, 0–5 (FS-01.12)
+    case keyword    // a Photos keyword (iOS 27, FS-02.07 §7)
+    case caption    // the Photos caption (iOS 27, FS-02.07 §7)
 }
 
 /// A photo attribute a smart-album condition can test.
@@ -52,6 +54,11 @@ enum RuleField: String, Codable, CaseIterable, Identifiable, Sendable {
     case rating
     /// Pick / Reject / no flag. Same story as `rating`, with `v15`.
     case flag
+    /// A Photos keyword, matched on the mirror without regard to case or
+    /// diacritics (FS-02.07 §7). iOS 27 only.
+    case keyword
+    /// The Photos caption, matched the same way. iOS 27 only.
+    case caption
 
     var id: String { rawValue }
 
@@ -73,6 +80,8 @@ enum RuleField: String, Codable, CaseIterable, Identifiable, Sendable {
         case .favorite: "Favorite"
         case .rating: MarkCopy.rating
         case .flag: MarkCopy.flag
+        case .keyword: String(localized: "Keyword", table: KeywordCopy.table, comment: "Rule field: a Photos keyword")
+        case .caption: String(localized: "Caption", table: KeywordCopy.table, comment: "Rule field: the Photos caption")
         }
     }
 
@@ -84,6 +93,8 @@ enum RuleField: String, Codable, CaseIterable, Identifiable, Sendable {
         case .dateTaken: .date
         case .favorite: .favorite
         case .rating: .rating
+        case .keyword: .keyword
+        case .caption: .caption
         }
     }
 
@@ -121,7 +132,13 @@ enum RuleField: String, Codable, CaseIterable, Identifiable, Sendable {
     /// still a rule underneath, so offering it in the field menu too would show
     /// the same condition twice.
     static var selectableCases: [RuleField] {
-        allCases.filter { $0 != .mediaType }
+        selectableCases(extendedMetadata: ExtendedMetadataSupport.isAvailable)
+    }
+
+    /// Keyword and Caption only where Photos can be read for them — iOS 27;
+    /// below it they are hidden, not dimmed (FS-02.07 §6, AC-14).
+    static func selectableCases(extendedMetadata: Bool) -> [RuleField] {
+        allCases.filter { $0 != .mediaType && (extendedMetadata || ($0 != .keyword && $0 != .caption)) }
     }
 }
 
@@ -135,6 +152,8 @@ extension RuleFieldKind {
         case .date: [.on, .inMonth, .inLastDays, .before, .after, .inRange]
         case .favorite: []
         case .rating: [.atLeast, .equalTo, .atMost]
+        case .keyword: [.hasKeyword, .lacksKeyword, .hasAnyKeyword, .hasNoKeywords]
+        case .caption: [.contains, .doesNotContain]
         }
     }
 }
@@ -180,6 +199,13 @@ enum RuleOperator: String, Codable, CaseIterable, Identifiable, Sendable {
     // Rating
     case atLeast
     case atMost
+    // Keyword (FS-02.07 §7)
+    case hasKeyword
+    case lacksKeyword
+    /// No value: photos that carry any keyword at all.
+    case hasAnyKeyword
+    /// No value: photos with no keyword — what is left to tag after a shoot.
+    case hasNoKeywords
 
     var id: String { rawValue }
 
@@ -199,8 +225,15 @@ enum RuleOperator: String, Codable, CaseIterable, Identifiable, Sendable {
         case .after: "is after"
         case .atLeast: "is at least"
         case .atMost: "is at most"
+        case .hasKeyword: String(localized: "has", table: KeywordCopy.table, comment: "Keyword rule operator: the photo has this keyword")
+        case .lacksKeyword: String(localized: "doesn't have", table: KeywordCopy.table, comment: "Keyword rule operator: the photo does not have this keyword")
+        case .hasAnyKeyword: String(localized: "has any keyword", table: KeywordCopy.table, comment: "Keyword rule operator: the photo has at least one keyword")
+        case .hasNoKeywords: String(localized: "has no keywords", table: KeywordCopy.table, comment: "Keyword rule operator: the photo has no keyword")
         }
     }
+
+    /// False for the operators that test nothing typed — the row shows no field.
+    var needsValue: Bool { self != .hasAnyKeyword && self != .hasNoKeywords }
 
     /// True when the operator needs a second numeric/date bound.
     var needsUpperBound: Bool { self == .inRange }
@@ -306,6 +339,10 @@ struct SmartAlbumRule: Identifiable, Codable, Equatable, Sendable {
             return true
         case .rating:
             return number != nil
+        case .keyword:
+            return !op.needsValue || !text.trimmingCharacters(in: .whitespaces).isEmpty
+        case .caption:
+            return !text.trimmingCharacters(in: .whitespaces).isEmpty
         }
     }
 }

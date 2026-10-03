@@ -160,6 +160,32 @@ enum SmartAlbumSQLBuilder {
 
         case .favorite:
             return ("isFavorite = ?", [rule.boolValue ? 1 : 0])
+
+        case .keyword:
+            // The mirror of Photos' keywords (FS-02.07 §8), on its folded key:
+            // `sunset` finds Sunset, `da lat` finds Đà Lạt.
+            let key = KeywordInput.foldKey(rule.text)
+            switch rule.op {
+            case .hasKeyword where !key.isEmpty:
+                return ("assetId IN (SELECT assetId FROM photo_keyword WHERE foldKey = ?)", [key])
+            case .lacksKeyword where !key.isEmpty:
+                return ("assetId NOT IN (SELECT assetId FROM photo_keyword WHERE foldKey = ?)", [key])
+            case .hasAnyKeyword: return (PhotoKeywordStore.hasAnyKeywordSQL, [])
+            case .hasNoKeywords: return (PhotoKeywordStore.hasNoKeywordsSQL, [])
+            default: return nil
+            }
+
+        case .caption:
+            let term = KeywordInput.foldKey(rule.text)
+            guard !term.isEmpty else { return nil }
+            switch rule.op {
+            case .contains:
+                return ("assetId IN (SELECT assetId FROM photo_caption WHERE foldKey LIKE ?)", ["%\(term)%"])
+            case .doesNotContain:
+                return ("assetId NOT IN (SELECT assetId FROM photo_caption WHERE foldKey LIKE ?)", ["%\(term)%"])
+            default:
+                return nil
+            }
         }
     }
 

@@ -107,6 +107,11 @@ enum SearchIntentMapper {
         case .rating:
             // Search does not read stars in v1 (FS-01.12 §3): filters do.
             return nil
+
+        case .keyword, .caption:
+            // The on-device model is not given keyword or caption fields; the
+            // parser reads `keyword:` itself (FS-02.07 §7).
+            return nil
         }
     }
 

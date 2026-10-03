@@ -13,6 +13,9 @@ struct RuleBuilderSections: View {
     var places: [String] = []
     /// Live count of matching photos; nil hides the footer.
     var matchCount: Int?
+    /// Absent in previews and tests; then the Keyword field suggests nothing.
+    @Environment(AppDependencies.self) private var dependencies: AppDependencies?
+    @State private var keywords: [String] = []
 
     /// Photo-vs-video as a scope control instead of a condition row. Backed by a
     /// single `.mediaType` rule so it compiles through the same SQL builder as
@@ -81,6 +84,7 @@ struct RuleBuilderSections: View {
                     bodies: bodies,
                     lenses: lenses,
                     places: places,
+                    keywords: keywords,
                     onDelete: { query.rules.removeAll { $0.id == rule.id } }
                 )
             }
@@ -100,6 +104,12 @@ struct RuleBuilderSections: View {
             if let matchCount {
                 Text("Matches \(matchCount) photo.")
             }
+        }
+        .task {
+            // The Keyword field's suggestions, from the same catalog as the
+            // Add Keyword field (FS-02.07 §7).
+            guard ExtendedMetadataSupport.isAvailable, let cache = dependencies?.filterSuggestions else { return }
+            keywords = await cache.load().keywords.map(\.keyword)
         }
     }
 }

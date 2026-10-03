@@ -10,6 +10,9 @@ struct SmartAlbumRuleRow: View {
     let bodies: [String]
     let lenses: [String]
     var places: [String] = []
+    /// Photos keywords, most photos first (iOS 27) — the Keyword field's
+    /// suggestions (FS-02.07 §7).
+    var keywords: [String] = []
     /// Removes this condition from the parent list.
     var onDelete: () -> Void
 
@@ -109,6 +112,9 @@ struct SmartAlbumRuleRow: View {
         case .date: dateEditor
         case .favorite: favoriteEditor
         case .rating: ratingEditor
+        // `has any keyword` / `has no keywords` test nothing typed: no field.
+        case .keyword: if rule.op.needsValue { textEditor }
+        case .caption: textEditor
         }
     }
 
@@ -351,6 +357,7 @@ struct SmartAlbumRuleRow: View {
         case .place: places
         case .cameraBody: bodies
         case .lens: lenses
+        case .keyword: keywords
         default: []
         }
     }

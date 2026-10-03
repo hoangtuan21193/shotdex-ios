@@ -131,6 +131,8 @@ extension SmartAlbumRule {
             return boolValue ? "Favorite" : "Not favorite"
         case .rating:
             return compactRatingSummary
+        case .keyword, .caption:
+            return KeywordCopy.chip(for: self)
         }
     }
 
@@ -223,6 +225,8 @@ extension SmartAlbumRule {
         case .favorite: "favorite"
         case .rating: "★"
         case .flag: MarkCopy.flag.lowercased()
+        case .keyword: "keyword"
+        case .caption: "caption"
         }
     }
 
@@ -281,6 +285,10 @@ extension SmartAlbumRule {
             return ""
         case .rating:
             return number.map { MarkCopy.starsAccessibility(Int($0.rounded())) } ?? ""
+        case .keyword:
+            return op.needsValue ? text : ""
+        case .caption:
+            return text
         }
     }
 
