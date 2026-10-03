@@ -914,13 +914,18 @@ final class VideoStudioModel {
         schedulePreviewRebuild()
     }
 
+    /// Deletes a clip as one undo step, whoever asks — the panel's Delete,
+    /// the transport's ⋯ menu, a key. The clips after it close up (the track
+    /// holds no gaps), and deleting the selected clip ends its session the
+    /// way ✓ does (FS-12.04 §5): the delete is a step Undo can take back.
     func deleteClip(_ clipID: UUID) {
         guard recipe.clips.count > 1,
               let index = recipe.clips.firstIndex(where: { $0.id == clipID })
         else { return }
+        pushUndo()
         recipe.clips.remove(at: index)
         recipe.syncTransitionsWithClips()
-        if selectedClipID == clipID { selectedClipID = nil }
+        if selectedClipID == clipID { clearSelection() }
         if let boundary = editingTransitionIndex,
            !recipe.transitions.indices.contains(boundary) {
             editingTransitionIndex = nil
@@ -947,7 +952,7 @@ final class VideoStudioModel {
         guard let index = recipe.musicTracks.firstIndex(where: { $0.id == id }) else { return }
         pushUndo()
         recipe.musicTracks.remove(at: index)
-        if selectedMusicID == id { selectedMusicID = nil }
+        if selectedMusicID == id { clearSelection() }
         waveformTasks[id]?.cancel()
         waveformTasks[id] = nil
         musicWaveforms[id] = nil
@@ -1954,10 +1959,14 @@ final class VideoStudioModel {
         updateSelectedOverlay { $0.rotationDegrees = degrees }
     }
 
-    func deleteSelectedOverlay() {
+    /// Deletes the selected caption or sticker as one undo step and ends
+    /// its session as ✓ does. `recordingUndo: false` is for taking back a
+    /// caption that was never written — there is nothing to undo to.
+    func deleteSelectedOverlay(recordingUndo: Bool = true) {
         guard let selectedOverlayID else { return }
+        if recordingUndo { pushUndo() }
         recipe.overlays.removeAll { $0.id == selectedOverlayID }
-        self.selectedOverlayID = nil
+        clearSelection()
         markEdited()
     }
 

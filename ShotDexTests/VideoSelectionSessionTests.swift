@@ -1,4 +1,5 @@
 import Foundation
+import ShotDexKit
 import Testing
 @testable import ShotDex
 
@@ -88,5 +89,64 @@ struct VideoSessionCommitTests {
         model.selectClip(model.recipe.clips[2].id)
         model.cancelSession()
         #expect(model.recipe.clips[1].speed == 2)
+    }
+}
+
+/// Delete (FS-12.04 §5): one undo step, whoever asks, and the session ends
+/// as ✓ ends it.
+@MainActor
+struct VideoDeleteTests {
+    /// FS-12.04 AC-7: three clips, clip 2 selected, Delete — two clips end
+    /// to end, nothing selected; one Undo puts clip 2 back where it was.
+    @Test func deleteKeepsClipsContiguousAndUndoesOnce() {
+        let model = VideoStudioModelFixture.model()
+        let ids = model.recipe.clips.map(\.id)
+        model.selectClip(ids[1])
+        model.deleteClip(ids[1])
+
+        #expect(model.recipe.clips.map(\.id) == [ids[0], ids[2]])
+        let placements = model.clipPlacements
+        #expect(placements[1].start == placements[0].end)
+        #expect(model.selectedClipID == nil)
+        #expect(model.session == nil)
+        #expect(model.inspectorTarget == .none)
+
+        model.undo()
+        #expect(model.recipe.clips.map(\.id) == ids)
+        #expect(!model.canUndo)
+    }
+
+    /// The transport's ⋯ menu deletes through the same command, so it is
+    /// undoable too — it used to drop the clip with no way back.
+    @Test func deleteFromTheTransportMenuIsUndoable() {
+        let model = VideoStudioModelFixture.model()
+        let ids = model.recipe.clips.map(\.id)
+        model.selectClip(ids[2])
+        // What the menu's Delete Clip calls.
+        if let id = model.selectedClipID { model.deleteClip(id) }
+        #expect(model.recipe.clips.count == 2)
+        #expect(model.canUndo)
+        model.undo()
+        #expect(model.recipe.clips.map(\.id) == ids)
+    }
+
+    /// A caption and a music bed delete the same way.
+    @Test func captionAndMusicDeletesAreOneStepEach() {
+        let model = VideoStudioModelFixture.model { recipe in
+            recipe.overlays = [TimedOverlay(overlay: PhotoOverlay.text())]
+            recipe.musicTracks = [MusicTrack(source: .bundled(id: "calm"))]
+        }
+        model.selectOverlay(model.recipe.overlays[0].id)
+        model.deleteSelectedOverlay()
+        #expect(model.recipe.overlays.isEmpty)
+        #expect(model.session == nil)
+        model.selectMusic(model.recipe.musicTracks[0].id)
+        model.removeMusicTrack(model.recipe.musicTracks[0].id)
+        #expect(model.recipe.musicTracks.isEmpty)
+        #expect(model.session == nil)
+        model.undo()
+        #expect(model.recipe.musicTracks.count == 1)
+        model.undo()
+        #expect(model.recipe.overlays.count == 1)
     }
 }

@@ -293,10 +293,12 @@ struct VideoStudioScreen: View {
         if let text {
             model.updateSelectedOverlay { $0.text = text }
             if text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                model.deleteSelectedOverlay()
+                // Emptying a caption that was there is a delete to undo;
+                // emptying the one just added takes back an add.
+                model.deleteSelectedOverlay(recordingUndo: newOverlayID != overlay.id)
             }
         } else if newOverlayID == overlay.id {
-            model.deleteSelectedOverlay()
+            model.deleteSelectedOverlay(recordingUndo: false)
         }
     }
 

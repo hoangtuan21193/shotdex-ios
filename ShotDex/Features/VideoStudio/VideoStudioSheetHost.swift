@@ -209,12 +209,12 @@ struct VideoStudioSheetHost: View {
         case .clip:
             if model.mode == .multiClip, model.recipe.clips.count > 1 {
                 titleButton("trash", destructive: true) {
-                    if let id = model.selectedClipID { model.pushUndo(); model.deleteClip(id) }
+                    if let id = model.selectedClipID { model.deleteClip(id) }
                 }
             }
         case .text:
             titleButton("trash", destructive: true) {
-                model.pushUndo(); model.deleteSelectedOverlay()
+                model.deleteSelectedOverlay()
             }
         case .music:
             titleButton("trash", destructive: true) {
