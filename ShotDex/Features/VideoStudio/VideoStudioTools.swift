@@ -32,6 +32,32 @@ enum VideoAddTool: String, CaseIterable, Identifiable {
         }
     }
 
+    /// Where each tool lives on a window of `windowClass` (FS-12.04 §3). Every
+    /// layout offers all five; what changes is the shape: a bottom row on the
+    /// phone and the Duo's inner display, the rail on the cover, pool tabs
+    /// and Look as the default inspector on an iPad.
+    enum Placement: Equatable {
+        case bottomRow, coverRail, poolTab, dockButton, defaultPanel
+    }
+
+    static func placement(of tool: VideoAddTool, in windowClass: VideoStudioWindowClass) -> Placement {
+        switch windowClass {
+        case .phone, .duoInner: .bottomRow
+        case .duoCover: .coverRail
+        case .iPadLandscape: tool == .look ? .defaultPanel : .poolTab
+        case .iPadPortrait: tool == .look ? .defaultPanel : .dockButton
+        }
+    }
+
+    /// The tools a window of `windowClass` offers — always all five.
+    static func addTools(for windowClass: VideoStudioWindowClass) -> [VideoAddTool] {
+        allCases.filter { tool in
+            switch placement(of: tool, in: windowClass) {
+            case .bottomRow, .coverRail, .poolTab, .dockButton, .defaultPanel: true
+            }
+        }
+    }
+
     /// The row of a window with no media pool: all five, in order.
     static var bottomRow: [VideoAddTool] { allCases }
 
