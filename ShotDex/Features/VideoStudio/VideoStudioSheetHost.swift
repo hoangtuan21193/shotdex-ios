@@ -196,8 +196,8 @@ struct VideoStudioSheetHost: View {
     private var subtitleText: String? {
         switch model.inspectorTarget {
         case .clip:
-            guard let clip = model.selectedClip else { return nil }
-            return String(format: "%.1fs", clip.effectiveDuration)
+            // "6.2s · video": the length, and what kind of clip it is.
+            return model.selectionTitle?.detail
         case .text: return nil
         case .music:
             guard let music = model.selectedMusicTrack else { return nil }
@@ -328,65 +328,108 @@ struct VideoStudioSheetHost: View {
         }
     }
 
+    /// The clip's controls, section by section (`VideoClipPanelSections`):
+    /// a video gets Speed · Volume · Fade · Motion, a still Duration · Fade ·
+    /// Motion.
     @ViewBuilder
     private var clipParams: some View {
         if let clip = model.selectedClip {
-            VStack(spacing: 0) {
-                switch clip.kind {
-                case .video:
-                    durationSlider(clip)
-                    InspectorSlider(
-                        label: "Speed", value: clip.speed, range: VideoClip.speedRange,
-                        valueText: String(format: "%.2g×", clip.speed), model: model,
-                        set: { model.setSpeed($0, for: clip.id) },
-                        reset: { model.pushUndo(); model.setSpeed(1, for: clip.id) }
-                    )
-                    // This clip's level, not the project's: Video sound is
-                    // the Music panel's (FS-12.08 §2).
-                    InspectorSlider(
-                        label: "Volume", value: clip.volume, range: 0...1,
-                        valueText: "\(Int(clip.volume * 100))", model: model,
-                        set: { model.setClipVolume($0, for: clip.id) },
-                        reset: { model.pushUndo(); model.setClipVolume(1, for: clip.id) }
-                    )
-                case .photo, .freeze:
-                    durationSlider(clip)
-                    ClipEffectRow(selected: clip.effect) { effect in
-                        guard effect != clip.effect else { return }
-                        model.pushUndo()
-                        model.setEffect(effect, for: clip.id)
+            ScrollView(showsIndicators: false) {
+                VStack(alignment: .leading, spacing: 4) {
+                    ForEach(VideoClipPanelSections.sections(for: clip.kind), id: \.self) { section in
+                        clipSection(section, clip)
                     }
-                    .padding(.top, 6)
                 }
-                Spacer(minLength: 0)
+                .padding(.bottom, 8)
             }
         }
     }
 
-    private func durationSlider(_ clip: VideoClip) -> some View {
-        let source = clip.sourceDuration ?? VideoClip.photoDurationRange.upperBound
-        let range: ClosedRange<Double> = clip.kind == .video
-            ? 0.5...max(0.6, (source - clip.trimStart) / max(clip.speed, VideoClip.speedRange.lowerBound))
-            : VideoClip.photoDurationRange
-        return InspectorSlider(
-            label: "Duration", value: clip.effectiveDuration, range: range,
-            valueText: String(format: "%.1fs", clip.effectiveDuration), model: model,
-            set: { newValue in
-                if clip.kind == .video {
-                    let end = clip.trimStart + newValue * max(clip.speed, VideoClip.speedRange.lowerBound)
-                    model.setTrim(start: clip.trimStart, end: end, for: clip.id)
-                } else {
-                    model.setPhotoDuration(newValue, for: clip.id)
-                }
-            },
-            reset: {
-                model.pushUndo()
-                if clip.kind == .video {
-                    model.setTrim(start: clip.trimStart, end: source, for: clip.id)
-                } else {
-                    model.setPhotoDuration(VideoClip.defaultPhotoDuration, for: clip.id)
-                }
+    @ViewBuilder
+    private func clipSection(_ section: VideoClipPanelSection, _ clip: VideoClip) -> some View {
+        switch section {
+        case .speed:
+            speedChips(clip)
+        case .volume:
+            // This clip's level, not the project's: Video sound is the
+            // Music panel's (FS-12.08 §2).
+            InspectorSlider(
+                label: "Volume", value: clip.volume, range: 0...1,
+                valueText: "\(Int(clip.volume * 100))", model: model,
+                set: { model.setClipVolume($0, for: clip.id) },
+                reset: { model.pushUndo(); model.setClipVolume(1, for: clip.id) }
+            )
+        case .duration:
+            durationSlider(clip)
+        case .fade:
+            sectionHeader(Text("Fade", tableName: VideoStudioCopy.table, comment: "Video Studio clip panel: header over the clip's fade in and fade out"))
+            InspectorSlider(
+                label: "In", value: clip.fadeIn, range: 0...max(0.1, clip.maximumFade()),
+                valueText: String(format: "%.1fs", clip.fadeIn), model: model,
+                set: { model.setFade($0, at: .start, for: clip.id) },
+                reset: { model.pushUndo(); model.setFade(0, at: .start, for: clip.id) }
+            )
+            InspectorSlider(
+                label: "Out", value: clip.fadeOut, range: 0...max(0.1, clip.maximumFade()),
+                valueText: String(format: "%.1fs", clip.fadeOut), model: model,
+                set: { model.setFade($0, at: .end, for: clip.id) },
+                reset: { model.pushUndo(); model.setFade(0, at: .end, for: clip.id) }
+            )
+        case .motion:
+            ClipEffectRow(selected: clip.effect) { effect in
+                guard effect != clip.effect else { return }
+                model.setEffect(effect, for: clip.id)
             }
+            .padding(.top, 4)
+        }
+    }
+
+    private func sectionHeader(_ text: Text) -> some View {
+        text
+            .font(.system(size: 11, weight: .semibold))
+            .foregroundStyle(EditorTheme.dimText)
+            .textCase(.uppercase)
+            .padding(.horizontal, 14)
+            .padding(.top, 6)
+    }
+
+    /// 0.5× · 1× · 2× · 4× — the speeds a cut is usually after, one tap each.
+    private func speedChips(_ clip: VideoClip) -> some View {
+        HStack(spacing: 6) {
+            Text("Speed", tableName: VideoStudioCopy.table, comment: "Video Studio clip panel: label of the playback-rate chips")
+                .font(.system(size: 12))
+                .foregroundStyle(EditorTheme.dimText)
+                .frame(width: 64, alignment: .leading)
+            ForEach(VideoClipPanelSections.speedPresets, id: \.self) { speed in
+                let isOn = abs(clip.speed - speed) < 0.001
+                Button {
+                    guard !isOn else { return }
+                    model.pushUndo()
+                    model.setSpeed(speed, for: clip.id)
+                } label: {
+                    Text(speed.formatted(.number.precision(.significantDigits(1...2))) + "×")
+                        .font(.system(size: 12, weight: .semibold).monospacedDigit())
+                        .foregroundStyle(isOn ? Color.black : Color.white)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 30)
+                        .background(Capsule().fill(isOn ? Color.white : Color.white.opacity(0.06)))
+                }
+                .buttonStyle(.plain)
+                .accessibilityAddTraits(isOn ? .isSelected : [])
+            }
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 4)
+    }
+
+    /// How long a still stays on screen, 0.5–10 s. Stills only: a video's
+    /// length is cut at its edges.
+    private func durationSlider(_ clip: VideoClip) -> some View {
+        InspectorSlider(
+            label: "Duration", value: clip.photoDuration, range: VideoClip.photoDurationRange,
+            valueText: String(format: "%.1fs", clip.photoDuration), model: model,
+            set: { model.setPhotoDuration($0, for: clip.id) },
+            reset: { model.pushUndo(); model.setPhotoDuration(VideoClip.defaultPhotoDuration, for: clip.id) }
         )
     }
 

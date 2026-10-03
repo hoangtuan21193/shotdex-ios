@@ -105,6 +105,6 @@ Các phần khác: xem [README](README.md).
 | AC-10 | đang kéo tay nắm, hệ thống huỷ cử chỉ (cuộc gọi tới) | huỷ | clip như trước lúc kéo; số bước undo không đổi | ⚠️ chưa có |
 | AC-11 | clip 1 video chỉ có trên iCloud, máy không mạng, chưa biết thời lượng nguồn | kéo tay nắm phải ra ngoài | không dài thêm; kéo vào thì ngắn lại bình thường | ⚠️ chưa có |
 | AC-12 | các board IL2, IP2 | `Tools/design-board compare` tay nắm mép clip 2 | hai tab 12pt cao bằng clip, lệch ≤ 2pt | ⚠️ chưa có — agent `design-parity` |
-| AC-13 | clip 2 video đang chọn trên iPhone, iPad, Duo trong, Duo ngoài | dump panel / inspector | không có dòng Duration nào; clip 1 ảnh đang chọn thì có | ⚠️ chưa có |
+| AC-13 | clip 2 video đang chọn trên iPhone, iPad, Duo trong, Duo ngoài | dump panel / inspector | không có dòng Duration nào; clip 1 ảnh đang chọn thì có | ⚠️ một phần — như FS-12.04b AC-11: `VideoClipPanelSectionsTests` + sim-shot phone (ảnh); 4 máy chờ plan màn rộng |
 
-**Chưa chứng minh được:** AC-1, AC-2, AC-4 … AC-13; AC-3 mới có phép kẹp, chưa có cử chỉ.
+**Chưa chứng minh được:** AC-1, AC-2, AC-4, AC-5, AC-6, AC-7, AC-8, AC-9, AC-10, AC-11, AC-12, AC-13.

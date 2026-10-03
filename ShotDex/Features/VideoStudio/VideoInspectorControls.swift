@@ -209,7 +209,7 @@ struct ClipEffectRow: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
-            Text("Animate")
+            Text("Motion", tableName: VideoStudioCopy.table, comment: "Video Studio clip panel: header over the clip's motion effects — zoom, pan, shake")
                 .font(.system(size: 11, weight: .semibold))
                 .foregroundStyle(EditorTheme.dimText)
                 .padding(.leading, 14)

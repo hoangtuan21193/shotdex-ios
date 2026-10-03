@@ -57,6 +57,10 @@
       "comment": "Video Projects: when a draft was last changed; the argument is a relative time such as '5 min. ago'",
       "extractionState": "manual"
     },
+    "Fade": {
+      "comment": "Video Studio clip panel: header over the clip's fade in and fade out",
+      "extractionState": "manual"
+    },
     "Keep Changes": {
       "comment": "Video Studio: the ✓ that ends a selection keeping what it changed",
       "extractionState": "manual"
@@ -77,6 +81,10 @@
       "comment": "Video Studio: the bottom-row tool that adds photos and videos to the timeline",
       "extractionState": "manual"
     },
+    "Motion": {
+      "comment": "Video Studio clip panel: header over the clip's motion effects — zoom, pan, shake",
+      "extractionState": "manual"
+    },
     "Music": {
       "comment": "Video Studio: a music bed on the timeline",
       "extractionState": "manual"
@@ -91,6 +99,10 @@
     },
     "Playhead at %@ of %@": {
       "comment": "Video Studio transport: VoiceOver label for the phone read-out — playhead, then the project's length",
+      "extractionState": "manual"
+    },
+    "Speed": {
+      "comment": "Video Studio clip panel: label of the playback-rate chips",
       "extractionState": "manual"
     },
     "Sticker": {

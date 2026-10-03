@@ -98,9 +98,9 @@ của lệnh ([07 §3](07-phone-layout.md)).
 | AC-8 | băng chữ GOLDEN HOUR đang chọn | chạm Duplicate rồi ✕ | còn đúng 1 khối GOLDEN HOUR, không chọn gì | ⚠️ chưa có |
 | AC-9 | Duo trong 951×669, clip 2 đang chọn | vuốt hàng lệnh sang trái | ô Delete hiện đủ trong cột 264, không gập thành lưới | ⚠️ chưa có |
 | AC-10 | các board P2, P3, P5, P9, P10, IL2–IL4, IP2, IP3, DI2, DI3, DC2, DC3 | `Tools/design-board compare` hàng lệnh với dump app | mọi ô lệnh lệch ≤ 2pt | ⚠️ chưa có — agent `design-parity` |
-| AC-11 | clip 1 ảnh 3,0 s, clip 2 video 6,2 s | chọn từng clip, dump phần nội dung | clip 1: dòng Duration có slider 0,5–10 s; clip 2: không phần tử nào tên "Duration", dòng phụ ở tên ghi "6.2s · video" | ⚠️ chưa có |
+| AC-11 | clip 1 ảnh 3,0 s, clip 2 video 6,2 s | chọn từng clip, dump phần nội dung | clip 1: dòng Duration có slider 0,5–10 s; clip 2: không phần tử nào tên "Duration", dòng phụ ở tên ghi "6.2s · video" | ⚠️ một phần — `VideoClipPanelSectionsTests.videoClipHasNoDurationSection`, `photoClipKeepsDuration`; sim-shot iPhone 17: clip ảnh Duration · Fade · Motion, dòng phụ "3.0s · photo" (2026-10-04). Thư viện sim chỉ có 1 video khó tìm nên clip video chưa chụp; Duo/iPad chờ plan màn rộng |
 
-**Chưa chứng minh được:** AC-1 … AC-11.
+**Chưa chứng minh được:** AC-1, AC-2, AC-3, AC-4, AC-5, AC-6, AC-7, AC-8, AC-9, AC-10, AC-11.
 
 ## 8. Rủi ro đã biết
 
