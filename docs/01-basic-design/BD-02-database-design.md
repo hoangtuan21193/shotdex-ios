@@ -65,7 +65,7 @@ Có chỉ mục trên: tên máy và tên ống kính đã chuẩn hoá · ISO �
 | Trạng thái index | điểm chạy tiếp · lần index cuối · mốc thay đổi của thư viện |
 | Smart album | truy vấn đã lưu |
 | Biểu đồ thống kê | id · đặc tả dạng JSON · vị trí |
-| Sản phẩm đã tạo | collage và project video mở lại được ([FS-06.01b](../02-functional-spec/FS-06-collections/01b-album-management-and-creations.md)) |
+| Sản phẩm đã tạo | collage và project video mở lại được ([FS-06.01b](../02-functional-spec/FS-06-collections/01b-album-management-and-creations.md)); project video lưu thành **nháp** từ lần sửa đầu — cột "ngày xuất" rỗng = nháp, mọi dòng có trước `v29-creationDrafts` lấy ngày sửa làm ngày xuất ([FS-12.18 §5](../02-functional-spec/FS-12-video-studio/18-drafts.md)) |
 | File server | server người dùng khai: giao thức · host · cổng · user · share · thư mục · host key đã tin ([FS-15](../02-functional-spec/FS-15-server-upload/README.md)); mật khẩu ở Keychain |
 | Lịch sử upload | id ảnh · file nào của ảnh · server (id + **tên lúc đẩy**) · đường dẫn · số byte · SHA-256 · lúc nào |
 | Phán quyết bộ giải RAW | máy (hãng\|model đã chuẩn hoá) · bản build iOS · đọc được / chưa đọc được / chưa biết · nguồn (danh sách / thử file / editor) · lúc nào ([FS-03.04b §5](../02-functional-spec/FS-03-photo-editor/04b-unsupported-raw.md)) |

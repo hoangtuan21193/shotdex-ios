@@ -31,6 +31,11 @@ struct Creation: Codable, Identifiable, Equatable, Sendable {
     var updatedAt: Int
     /// The encoded `CollageRecipe` or `VideoProjectRecipe`.
     var recipeJSON: String
+    /// Epoch seconds of the last export; nil while the row is a **draft**
+    /// (FS-12.18 §5). Not `assetId`: that one also goes nil when the user
+    /// deletes the exported video, and a project exported once is never a
+    /// draft again.
+    var exportedAt: Int?
 
     init(
         id: String = UUID().uuidString,
@@ -38,7 +43,8 @@ struct Creation: Codable, Identifiable, Equatable, Sendable {
         assetId: String?,
         createdAt: Int,
         updatedAt: Int,
-        recipeJSON: String
+        recipeJSON: String,
+        exportedAt: Int? = nil
     ) {
         self.id = id
         self.kind = kind
@@ -46,7 +52,11 @@ struct Creation: Codable, Identifiable, Equatable, Sendable {
         self.createdAt = createdAt
         self.updatedAt = updatedAt
         self.recipeJSON = recipeJSON
+        self.exportedAt = exportedAt
     }
+
+    /// A video project that has never been exported (FS-12.18 §4).
+    var isDraft: Bool { exportedAt == nil }
 }
 
 extension Creation: FetchableRecord, PersistableRecord {
@@ -56,7 +66,8 @@ extension Creation: FetchableRecord, PersistableRecord {
 // MARK: - Recipe coding
 
 extension Creation {
-    /// A creation for a collage that has just been exported.
+    /// A creation for a collage that has just been exported. Collages are
+    /// only ever saved by an export, so the row is never a draft.
     static func collage(
         recipe: CollageRecipe,
         assetId: String?,
@@ -70,16 +81,19 @@ extension Creation {
             assetId: assetId,
             createdAt: createdAt,
             updatedAt: now,
-            recipeJSON: try encode(recipe)
+            recipeJSON: try encode(recipe),
+            exportedAt: now
         )
     }
 
+    /// A video project: exported when `exportedAt` is given, a draft when not.
     static func video(
         recipe: VideoProjectRecipe,
         assetId: String?,
         id: String = UUID().uuidString,
         createdAt: Int = Int(Date.now.timeIntervalSince1970),
-        now: Int = Int(Date.now.timeIntervalSince1970)
+        now: Int = Int(Date.now.timeIntervalSince1970),
+        exportedAt: Int? = nil
     ) throws -> Creation {
         Creation(
             id: id,
@@ -87,7 +101,8 @@ extension Creation {
             assetId: assetId,
             createdAt: createdAt,
             updatedAt: now,
-            recipeJSON: try encode(recipe)
+            recipeJSON: try encode(recipe),
+            exportedAt: exportedAt
         )
     }
 

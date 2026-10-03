@@ -648,6 +648,18 @@ final class AppDatabase: Sendable {
             }
         }
 
+        // FS-12.18 §5: a video project is saved as a draft from its first
+        // edit, so a `creations` row no longer means "exported". The export
+        // date says it; NULL is a draft. Every row a build before this wrote
+        // came from an export, so each gets its edit date — the database on
+        // a device keeps working, nothing else is migrated (unreleased app).
+        migrator.registerMigration("v29-creationDrafts") { db in
+            try db.alter(table: "creations") { t in
+                t.add(column: "exportedAt", .integer)
+            }
+            try db.execute(sql: "UPDATE creations SET exportedAt = updatedAt")
+        }
+
         return migrator
     }
 }

@@ -51,6 +51,28 @@ struct CreationStore: Sendable {
         }
     }
 
+    func fetch(id: String) throws -> Creation? {
+        try database.reader.read { db in
+            try Creation.fetchOne(db, key: id)
+        }
+    }
+
+    /// Writes a video draft (FS-12.18): the recipe and the edit date are
+    /// this save's, everything the row already knew — when it was created,
+    /// that it was exported and as which video — is kept. Autosave never
+    /// turns an exported project back into a draft.
+    func saveDraft(_ creation: Creation) throws {
+        try database.writer.write { db in
+            var row = creation
+            if let existing = try Creation.fetchOne(db, key: creation.id) {
+                row.createdAt = existing.createdAt
+                row.assetId = existing.assetId
+                row.exportedAt = existing.exportedAt
+            }
+            try row.upsert(db)
+        }
+    }
+
     func delete(id: String) throws {
         _ = try database.writer.write { db in
             try Creation.deleteOne(db, key: id)

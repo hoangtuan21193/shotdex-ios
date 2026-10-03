@@ -85,11 +85,11 @@ Project mẫu: 5 clip 24,0 s từ 5 ảnh/video của thư viện, không ảnh 
 | AC-7 | dòng nháp 5 clip | giữ → Delete Draft → Delete | dòng mất; số ảnh/video trong Library không đổi; Cancel thì dòng còn | ⚠️ chưa có |
 | AC-8 | lần ghi ném lỗi hết chỗ (tiêm trong test) | sửa một thay đổi | banner "Couldn't save your video draft" + Try Again; sửa tiếp được; Try Again sau khi hết lỗi → banner tắt, dòng có mọi thay đổi | ⚠️ chưa có |
 | AC-9 | lần ghi vẫn hỏng | bấm Back | Video Studio còn mở; alert Try Again · Leave Without Saving; Leave Without Saving thì đóng, dòng giữ bản ghi được gần nhất | ⚠️ chưa có |
-| AC-10 | nháp JSON thiếu mọi khoá mới và có một clip hỏng | mở từ Video Projects | project mở với các clip còn lại; không báo lỗi cả project | ⚠️ chưa có — test đọc recipe |
+| AC-10 | nháp JSON thiếu mọi khoá mới và có một clip hỏng | mở từ Video Projects | project mở với các clip còn lại; không báo lỗi cả project | ✅ `VideoDraftStoreTests.oldDraftMissingNewKeysOpens`, `oneBrokenClipKeepsTheDraft` (+ `VideoRecipeDecodingTests`); dòng có sẵn thành đã xuất: `existingRowsBecomeExported` |
 | AC-11 | New Video Project, chọn 3 ảnh | Video Studio mở, bấm Back ngay | Video Projects có một dòng Draft 3 clip | ⚠️ chưa có |
 | AC-12 | project đã xuất một lần | mở lại, đổi Speed, Back; rồi Export | dòng đó mang Speed mới, không có dòng thứ hai, không nhãn Draft; Export cập nhật đúng dòng ấy | ⚠️ chưa có |
 
-**Chưa chứng minh được:** AC-1 → AC-12.
+**Chưa chứng minh được:** AC-1, AC-2, AC-3, AC-4, AC-5, AC-6, AC-7, AC-8, AC-9, AC-11, AC-12.
 
 ## 8. Rủi ro đã biết
 
