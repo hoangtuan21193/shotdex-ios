@@ -176,10 +176,10 @@ Mọi con số thay đổi theo thời gian thực (%, MB, đếm tiến trình,
 | Đang tải bản gốc từ iCloud | `ICloudDownloadRing` (vòng quanh `icloud` 9 semibold) — viewer **22pt** (đứng riêng góc trên-phải khi zoom), filmstrip **16pt** tint `EditorTheme.accent`; không ghi số, VoiceOver đọc % |
 | RAW mà iOS không đọc được | `exclamationmark.triangle.fill` — ô lưới: trắng 10 semibold, **đứng đầu** hàng glyph trạng thái; viewer: 14 semibold `.secondary` trong hàng tiêu đề panel info, bên trái glyph iCloud, nút 44pt mở card |
 | Mục lọc Unsupported RAW | `exclamationmark.triangle` |
-| Sao rating (đã duyệt 2/10, chưa có code) | `star` / `star.fill` |
-| Pick (đã duyệt 2/10, chưa có code) | `flag.fill` |
-| Reject (đã duyệt 2/10, chưa có code) | `xmark` |
-| Cull (đã duyệt 2/10, chưa có code) | `flag.2.crossed` |
+| Sao rating | `star` / `star.fill` |
+| Pick | `flag.fill` |
+| Reject | `xmark` |
+| Cull | `flag.2.crossed` |
 | Caption & Keywords (đã duyệt 2/10, chưa có code) | `tag` |
 | Export (đã duyệt 2/10, chưa có code) | `square.and.arrow.up.on.square` |
 
@@ -343,7 +343,7 @@ Tiến trình dài chạy: `safeAreaInset(edge: .bottom)` với `ProgressView` +
 
 ### 10.3b Ghép ảnh (2026-09-19)
 
-- **Không còn cull** (gỡ 2026-09-20). Cờ pick/reject rồi sao 0–5 đều đã bỏ, bảng `photo_cull` drop ở `v16-dropCull`. Ảnh chỉ mang **favorite của PhotoKit** — một bit, đồng bộ sang Photos. Ba trục trả lời cùng một câu hỏi "tấm này có được không" là hai trục thừa. Việc *chọn* thuộc về màn Compare (`Keep Only This`), không phải một thang điểm rải khắp app.
+- **Sao, cờ và lượt lọc Cull** (đưa lại 2026-10-03, FS-01.12 / FS-01.12b — đảo quyết định gỡ 2026-09-20). Ba trục độc lập: favorite (Photos), cờ Pick / Reject (chỉ ShotDex, bảng `photo_flag`), sao 0–5 (iOS 27 trong Photos, dưới 27 bảng `pending_photo_rating`). Đặt ở Rating ▸ / Flag ▸ (`PhotoMarkMenus` — một định nghĩa cho ⋯ viewer, ⋯ chọn, menu giữ-lâu) và phím `0–5 P X U`; ô lưới: glyph RAW → cờ → tim → `★N` → kiểu chụp → server, ô Rejected mờ 45 %. Màn **Cull** tầng D: thanh trên 52 (✕ · `37 / 240` · Undo), hàng `[Reject] [★×5] [Pick]` 340pt ô 44, filmstrip 56 (iPad 72 + dòng EXIF); Pick bật = đĩa accent + glyph đen, Reject bật = đĩa đỏ + glyph trắng, sao chưa chấm trắng 28 %. Viên **Delete N** đỏ cao 32 (vùng chạm 44) cạnh Clear khi lọc Rejected. Compare vẫn là chỗ so cạnh nhau; Cull là chỗ đi tuần tự từng tấm.
 - **Combine Photos** là một menu con trong ⋯ (FS-01.09): **Focus Stack · Panorama · HDR · Stack Exposures**. Tên dòng là việc người chụp làm, không tên phép toán nào nằm trong menu. Focus Stack, HDR và Stack Exposures dùng `PhotoStackScreen`, Panorama dùng màn riêng của FS-14; cả bốn theo đúng khung tầng D §10.3: Cancel/tiêu đề/Save · stage đen · một panel. Panel HDR (FS-01.11): câu giải thích · segmented `Off · Low · Medium · High` + một câu cho mức đang chọn · slider Strength 0–100 · dòng báo; Save hỏi JPEG/HEIC bằng `.alert` (§10.5), không confirmationDialog. Chỉ **Stack Exposures** có bộ chọn (`Average · Lighten · Darken`); mỗi mode kèm **một câu nói mode đó dùng để làm gì**, không mô tả phép toán — phép toán đã nằm ngay trong preview. Cancel giữ lựa chọn; Save mở ảnh vừa lưu.
 
 ### 10.4 Sheet
