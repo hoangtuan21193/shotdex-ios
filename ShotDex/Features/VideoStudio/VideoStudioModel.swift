@@ -266,6 +266,27 @@ final class VideoStudioModel {
         try? Creation.video(recipe: recipe, assetId: nil, id: creationID)
     }
 
+    /// Writes the draft now, edited or not: a project the user opened and
+    /// left at once is still kept (FS-12.18 §2) — "nothing is lost" is a
+    /// simpler promise than guessing whether they wanted it. Nothing is
+    /// written while the sources load or after they failed to, so a project
+    /// that never opened cannot overwrite the draft it came from. Returns
+    /// whether the project is on disk.
+    @discardableResult
+    func saveDraftNow() async -> Bool {
+        guard let drafts else { return true }
+        guard !isLoadingSources, !isFailedLoad else {
+            drafts.cancel()
+            return true
+        }
+        return await drafts.saveNow(draftSnapshot())
+    }
+
+    private var isFailedLoad: Bool {
+        if case .failed = phase { return true }
+        return false
+    }
+
     var selectedClip: VideoClip? {
         guard let selectedClipID else { return nil }
         return recipe.clips.first { $0.id == selectedClipID }

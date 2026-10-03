@@ -90,3 +90,24 @@ struct VideoDraftAutosaveTests {
         #expect(log.writes.isEmpty)
     }
 }
+
+/// FS-12.18 §2: what is written at once, without waiting for the project to
+/// sit still.
+@MainActor
+struct VideoDraftSaveNowTests {
+    /// FS-12.18 AC-11: three photos, the studio opens, Back at once — Video
+    /// Projects has a draft of those three clips, though nothing was edited.
+    @Test func aNewProjectWithNoEditsIsKept() async throws {
+        let store = CreationStore(database: try AppDatabase.makeEmpty())
+        let model = VideoStudioModelFixture.model(clips: VideoStudioModelFixture.photoClips(3), creationStore: store)
+        #expect(try store.count(kind: .video) == 0)
+
+        #expect(await model.saveDraftNow())
+
+        let rows = try store.fetchOrdered(kind: .video)
+        #expect(rows.count == 1)
+        #expect(rows.first?.isDraft == true)
+        #expect(rows.first?.videoRecipe?.clips.count == 3)
+        #expect(rows.first?.id == model.creationID)
+    }
+}
