@@ -7,6 +7,8 @@ import SwiftUI
 struct VideoMediaPick: Identifiable, Equatable, Sendable {
     let assetID: String
     let kind: VideoClipKind
+    /// A video's length as the library knows it, before its media loads.
+    var duration: Double?
     var id: String { assetID }
 }
 

@@ -1620,48 +1620,14 @@ final class VideoStudioModel {
         Task { await loadAndMerge([freeze]) }
     }
 
-    /// Where media the user adds lands on the Video track.
-    ///
-    /// Resolve names three (Smart Insert, Append at End, Place on Top); the
-    /// third needs a second video track, and this composition builder runs
-    /// one video lane on alternating A/B tracks so two clips can share a
-    /// transition window (spec §7.9). So there are two here, and they are the
-    /// two that a single track can honestly offer.
-    enum MediaInsertMode: String, CaseIterable, Identifiable, Sendable {
-        /// After everything, the way Add has always worked.
-        case appendAtEnd
-        /// Cut the clip under the playhead and drop the new media into the
-        /// seam — Resolve's Smart Insert, on one track.
-        case insertAtPlayhead
-
-        var id: String { rawValue }
-
-        var title: String {
-            switch self {
-            case .appendAtEnd:
-                String(localized: "Append at End", comment: "Video Studio media pool: new media goes after the last clip")
-            case .insertAtPlayhead:
-                String(localized: "Insert at Playhead", comment: "Video Studio media pool: new media is cut into the track where the playhead is")
-            }
-        }
-
-        var systemImage: String {
-            switch self {
-            case .appendAtEnd: "arrow.right.to.line"
-            case .insertAtPlayhead: "arrow.down.to.line"
-            }
-        }
-    }
-
-    /// Session state: how the user is working right now, not part of the
-    /// project.
-    var mediaInsertMode: MediaInsertMode = .appendAtEnd
-
+    /// Media dropped on the timeline from another app (or from inside
+    /// ShotDex): it goes after the last clip, where a drop with no position
+    /// has always gone.
     func appendMedia(_ picks: [VideoMediaPick]) {
         guard !picks.isEmpty else { return }
         // Inserting is ✓ for whatever item is selected (FS-12.04 §5).
         if session?.target.isItem == true { clearSelection() }
-        let newClips = picks.map { VideoClip(assetID: $0.assetID, kind: $0.kind) }
+        let newClips = picks.map(Self.clip(for:))
         pushUndo()
         recipe.clips.append(contentsOf: newClips)
         recipe.syncTransitionsWithClips()
@@ -1669,44 +1635,44 @@ final class VideoStudioModel {
         Task { await loadAndMerge(newClips) }
     }
 
-    /// Adds media the way `mediaInsertMode` says to.
-    ///
-    /// Insert-at-playhead splits the clip the playhead is inside first, so the
-    /// new media lands on a real boundary rather than on top of a frame the
-    /// user was looking at; landing exactly on a boundary (or past the end)
-    /// needs no split and just inserts at that index.
+    /// The Media panel's tap and Add (FS-12.09 §5): in at the playhead — the
+    /// clip under it is cut and the media goes into the cut; on an edge
+    /// nothing is cut — in the order given, one undo step, and the playhead
+    /// moves to the end of the last new clip, so the next tap lands after it.
     func insertMedia(_ picks: [VideoMediaPick]) {
         guard !picks.isEmpty else { return }
         if session?.target.isItem == true { clearSelection() }
-        guard mediaInsertMode == .insertAtPlayhead, !recipe.clips.isEmpty else {
-            appendMedia(picks)
-            return
-        }
-        let placements = clipPlacements
-        let newClips = picks.map { VideoClip(assetID: $0.assetID, kind: $0.kind) }
+        let newClips = picks.map(Self.clip(for:))
         pushUndo()
-
-        var insertAt = recipe.clips.count
-        if let index = VideoTimelineMath.clipIndex(at: currentTime, placements: placements),
-           index < placements.count {
-            let localTime = currentTime - placements[index].start
-            if let (first, second) = VideoSplitMath.split(recipe.clips[index], atLocalTime: localTime) {
-                if let source = sources[recipe.clips[index].id] {
-                    sources[first.id] = source
-                    sources[second.id] = source
-                }
-                recipe.clips.replaceSubrange(index...index, with: [first, second])
-                insertAt = index + 1
-            } else {
-                // The playhead sits on this clip's own edge: nothing to cut,
-                // and the seam is already where the user is pointing.
-                insertAt = localTime <= 0 ? index : index + 1
-            }
+        let result = MediaInsertMath.insert(newClips, into: recipe, at: currentTime)
+        if let split = result.split, let source = sources[split.original] {
+            sources[split.first] = source
+            sources[split.second] = source
         }
-        recipe.clips.insert(contentsOf: newClips, at: min(insertAt, recipe.clips.count))
-        recipe.syncTransitionsWithClips()
+        recipe = result.recipe
+        movePlayheadAfterInsert(to: result.playhead)
         markEdited()
         Task { await loadAndMerge(newClips) }
+    }
+
+    /// A clip for a library pick. A video's length is known from the
+    /// library before its media loads, so the timeline, the playhead and
+    /// the next insert see its real length at once.
+    private static func clip(for pick: VideoMediaPick) -> VideoClip {
+        var clip = VideoClip(assetID: pick.assetID, kind: pick.kind)
+        if pick.kind == .video, let duration = pick.duration, duration > 0 {
+            clip.sourceDuration = duration
+            clip.trimEnd = duration
+        }
+        return clip
+    }
+
+    /// The timeline's new length is known from the recipe; the preview
+    /// catches up on its rebuild and starts at the same place.
+    private func movePlayheadAfterInsert(to time: Double) {
+        totalDuration = clipPlacements.last?.end ?? totalDuration
+        currentTime = min(max(0, time), totalDuration)
+        resumeTimeAfterRebuild = currentTime
     }
 
     func replaceSelectedClip(with pick: VideoMediaPick) {
@@ -1739,7 +1705,9 @@ final class VideoStudioModel {
             measuredSourceDurations[clip.id] = duration
             guard let index = recipe.clips.firstIndex(where: { $0.id == clip.id }) else { continue }
             recipe.clips[index].sourceDuration = duration
-            if recipe.clips[index].trimEnd == nil {
+            // The library's length came in with the pick; the file's own
+            // can differ by a frame, and the trim must stay inside it.
+            if recipe.clips[index].trimEnd.map({ $0 > duration }) ?? true {
                 recipe.clips[index].trimEnd = duration
             }
         }

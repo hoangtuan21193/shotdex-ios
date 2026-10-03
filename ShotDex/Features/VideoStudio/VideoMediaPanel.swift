@@ -199,7 +199,7 @@ struct VideoMediaPanel: View {
     /// A tap: in at the playhead. A RAW this iOS cannot read asks the
     /// question it asks at the door first (FS-03.04b AC-18).
     private func insert(_ asset: PHAsset) {
-        let pick = VideoMediaPick(assetID: asset.localIdentifier, kind: asset.mediaType == .video ? .video : .photo)
+        let pick = VideoMediaPick(asset)
         let unreadable = dependencies.unsupportedRAWIndex.assetIds
         guard unreadable.contains(pick.assetID) else {
             model.insertMedia([pick])
@@ -282,5 +282,13 @@ extension EnvironmentValues {
     var videoMediaGrid: VideoMediaGridMetrics {
         get { self[VideoMediaGridKey.self] }
         set { self[VideoMediaGridKey.self] = newValue }
+    }
+}
+
+extension VideoMediaPick {
+    /// A library item as the Media panel adds it.
+    init(_ asset: PHAsset) {
+        let isVideo = asset.mediaType == .video
+        self.init(assetID: asset.localIdentifier, kind: isVideo ? .video : .photo, duration: isVideo ? asset.duration : nil)
     }
 }
