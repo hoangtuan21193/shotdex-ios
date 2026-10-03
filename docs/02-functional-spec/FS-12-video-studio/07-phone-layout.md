@@ -106,7 +106,7 @@ của iPad ([03b §3](03b-desk-bands-and-lanes.md)), đọc cả bản mix tại
 | AC-4 | luật §3 | test thuần với cao khung 226, 342, 362, 384, 302, 172 | ra lát 96/0/0/0/0/150 và panel 340/320/300/278/360/340 | ⚠️ chưa có |
 | AC-5 | project 16:9, chọn băng nhạc ở lane thứ 4 | chụp màn | cửa sổ 62 của lát timeline hiện đúng lane nhạc đó | ⚠️ chưa có |
 | AC-6 | không chọn | dump băng trên | Back, Undo, Redo, Video Settings, Export — không có Show original, không có chữ "Export"; không phần tử nào trong x 138–264 | ⚠️ chưa có |
-| AC-7 | iPhone nhỏ nhất còn chạy iOS 17 (375 rộng) | mở project 16:9 | timecode không bị cắt; đủ 6 nút transport | `VideoStudioDeskLayoutTests.theCompactTransportFitsTheNarrowestPhone` (cần cập nhật số) |
+| AC-7 | iPhone nhỏ nhất còn chạy iOS 17 (375 rộng) | mở project 16:9 | timecode không bị cắt; đủ 6 nút transport | ✅ `VideoStudioDeskLayoutTests.theCompactTransportFitsTheNarrowestPhone` (375/402/440: 5 nút 40 ở 6/46/276/316/356 trên 402, read-out dài nhất vừa khe), `compactTimecodeShowsPlayheadAndLength`; sim-shot iPhone 17 (26.5) 2026-10-04 |
 | AC-8 | project 16:9, đang chọn clip, panel mở | pinch trên lát timeline | zoom đổi, panel và khung không đổi vị trí | ⚠️ chưa có |
 | AC-9 | các board Main, P2–P5, P8–P10, P11_Ratio43, P12_Ratio219, P9_Collapsed | `Tools/design-board compare` với dump app cùng trạng thái | mọi phần tử chrome lệch ≤ 2pt | ⚠️ chưa có — agent `design-parity` |
 | AC-10 | iOS 26.5 và iOS 18.6 | dump Main và P2 hai bên | cùng tập nút | ⚠️ chưa có — agent `ios26-parity` |

@@ -175,10 +175,7 @@ struct VideoStudioTopBand: View {
     }
 
     private func timecode(_ seconds: Double) -> String {
-        let clamped = max(0, seconds)
-        let whole = Int(clamped)
-        let tenths = Int((clamped - Double(whole)) * 10)
-        return String(format: "%d:%02d.%d", whole / 60, whole % 60, tenths)
+        VideoStudioMetrics.compactTimecode(seconds)
     }
 
     /// Press and hold, like the photo editor's before/after: the preview

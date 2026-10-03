@@ -155,6 +155,36 @@ enum VideoStudioMetrics {
         )
     }
 
+    /// `m:ss.t` — the short read-out a thumb reads while scrubbing: the
+    /// phone's transport and the command band's pill.
+    static func compactTimecode(_ seconds: Double) -> String {
+        let clamped = max(0, seconds)
+        let whole = Int(clamped)
+        let tenths = min(9, Int((clamped - Double(whole)) * 10))
+        return String(format: "%d:%02d.%d", whole / 60, whole % 60, tenths)
+    }
+
+    /// The phone transport's read-out (FS-12.07 §2): `0:08.4 / 0:24.0`, the
+    /// playhead and the project's length.
+    static func compactTransportReadout(playhead: Double, length: Double) -> (playhead: String, length: String) {
+        (compactTimecode(playhead), " / " + compactTimecode(length))
+    }
+
+    /// The phone transport's buttons: 40pt squares, as the board draws them.
+    static let compactTransportButton: CGFloat = 40
+    /// Inset of the first and last button from the row's edges.
+    static let compactTransportInset: CGFloat = 6
+
+    /// Leading x of each button of the phone transport, in order: Go to
+    /// Start, Back a Frame, Forward a Frame, Go to End, More (FS-12.07 §2 —
+    /// on 402pt: 6, 46, 276, 316, 356). The read-out takes what is between.
+    static func compactTransportButtonXs(width: CGFloat) -> [CGFloat] {
+        let button = compactTransportButton
+        let inset = compactTransportInset
+        return [inset, inset + button,
+                width - inset - button * 3, width - inset - button * 2, width - inset - button]
+    }
+
     // MARK: Media pool
 
     /// The library column beside the stage. 300 holds three 92pt thumbnails

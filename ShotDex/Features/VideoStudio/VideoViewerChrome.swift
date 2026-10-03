@@ -434,45 +434,50 @@ struct VideoCompactTransportBar: View {
 
     var body: some View {
         HStack(spacing: 0) {
+            // Two steps either side of the read-out (FS-12.07 §2): the frame
+            // steps are what a thumb taps over and over, so each sits next
+            // to the number it moves.
             glyph("backward.end.fill", label: Text("Go to Start", comment: "Video Studio transport")) {
                 model.seek(to: 0)
             }
             glyph("backward.frame.fill", label: Text("Back a Frame", comment: "Video Studio transport")) {
                 model.seek(to: model.currentTime - frame)
             }
+
+            Spacer(minLength: 0)
+            readout
+            Spacer(minLength: 0)
+
             glyph("forward.frame.fill", label: Text("Forward a Frame", comment: "Video Studio transport")) {
                 model.seek(to: model.currentTime + frame)
             }
             glyph("forward.end.fill", label: Text("Go to End", comment: "Video Studio transport")) {
                 model.seek(to: model.totalDuration)
             }
-
-            Spacer(minLength: 0)
-
-            Text(VideoStudioMetrics.timecode(model.currentTime))
-                .font(.system(size: 11, weight: .semibold).monospacedDigit())
-                .foregroundStyle(.white)
-                // Never shrink: a truncated timecode is worse than none.
-                .fixedSize()
-                .padding(.horizontal, 6)
-                .frame(height: 24)
-                .background(
-                    RoundedRectangle(cornerRadius: VideoStudioMetrics.trackRadius, style: .continuous)
-                        .fill(EditorTheme.trackChip)
-                )
-                .accessibilityLabel(Text("Playhead at \(VideoStudioMetrics.timecode(model.currentTime))", comment: "Video Studio transport: VoiceOver label for the timecode read-out"))
-
-            Spacer(minLength: 0)
-
             overflow
         }
-        .padding(.horizontal, 6)
+        .padding(.horizontal, VideoStudioMetrics.compactTransportInset)
         .frame(height: VideoStudioMetrics.compactTransportHeight)
         .frame(maxWidth: .infinity)
         .background(EditorTheme.panelSolid)
         .overlay(alignment: .top) {
             Rectangle().fill(EditorTheme.panelDivider).frame(height: 1)
         }
+    }
+
+    /// `0:08.4 / 0:24.0` — the playhead, then the length dimmed. Never
+    /// shrinks: a truncated timecode is worse than none.
+    private var readout: some View {
+        let text = VideoStudioMetrics.compactTransportReadout(playhead: model.currentTime, length: model.totalDuration)
+        return (Text(text.playhead).foregroundStyle(.white)
+            + Text(text.length).foregroundStyle(.white.opacity(0.4)))
+            .font(.system(size: 12, weight: .semibold, design: .monospaced))
+            .fixedSize()
+            .accessibilityLabel(Text(
+                "Playhead at \(text.playhead) of \(VideoStudioMetrics.compactTimecode(model.totalDuration))",
+                tableName: VideoStudioCopy.table,
+                comment: "Video Studio transport: VoiceOver label for the phone read-out — playhead, then the project's length"
+            ))
     }
 
     /// Everything the desk row shows as its own button. Grouped the way the
@@ -601,8 +606,8 @@ struct VideoCompactTransportBar: View {
             Image(systemName: "ellipsis")
                 .font(.system(size: 14, weight: .medium))
                 .foregroundStyle(.white)
-                .frame(width: AppTheme.Size.minTouch, height: 28)
-                .videoHitTarget(drawnHeight: 28)
+                .frame(width: VideoStudioMetrics.compactTransportButton, height: VideoStudioMetrics.compactTransportButton)
+                .contentShape(Rectangle())
         }
         .accessibilityLabel(Text("More Playhead Tools", comment: "Video Studio transport: the overflow menu on a phone"))
         .accessibilityIdentifier("transport.more")
@@ -697,8 +702,8 @@ struct VideoCompactTransportBar: View {
             Image(systemName: systemImage)
                 .font(.system(size: 14, weight: .medium))
                 .foregroundStyle(.white)
-                .frame(width: AppTheme.Size.minTouch, height: 28)
-                .videoHitTarget(drawnHeight: 28)
+                .frame(width: VideoStudioMetrics.compactTransportButton, height: VideoStudioMetrics.compactTransportButton)
+                .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .accessibilityLabel(label)

@@ -279,19 +279,32 @@ struct VideoStudioDeskLayoutTests {
         )
     }
 
-    /// The compact row's inline glyphs plus its timecode and overflow button
-    /// have to fit the narrowest phone ShotDex ships to without the timecode
-    /// being squeezed — it is the one thing in the row that never shrinks,
-    /// because a truncated timecode is worse than none.
-    ///
-    /// 375pt is the floor: an iPhone SE, the smallest screen iOS 17 runs on.
+    /// FS-12.07 AC-7: the phone transport is Go to Start · Back a Frame ·
+    /// the read-out · Forward a Frame · Go to End · More — five 40pt
+    /// buttons at 6/46/276/316/356 on 402pt — and on the narrowest phone
+    /// (375pt, an iPhone SE, the smallest screen iOS 17 runs on) the
+    /// read-out still fits between them uncut, at its longest.
     @Test func theCompactTransportFitsTheNarrowestPhone() {
-        // Four stepping glyphs and the overflow button, each a full touch
-        // target, plus the row's own 6pt margins.
-        let controls = 5 * AppTheme.Size.minTouch + 12
-        // "00:00:00:00" at 11pt semibold monospaced, plus its chip padding.
-        let timecode: CGFloat = 92
-        #expect(controls + timecode <= 375)
+        #expect(VideoStudioMetrics.compactTransportButtonXs(width: 402) == [6, 46, 276, 316, 356])
+        for width in [CGFloat(375), 402, 440] {
+            let xs = VideoStudioMetrics.compactTransportButtonXs(width: width)
+            #expect(xs.count == 5)
+            let gap = xs[2] - (xs[1] + VideoStudioMetrics.compactTransportButton)
+            // "59:59.9 / 59:59.9" at 12pt semibold monospaced: 17 glyphs of
+            // 0.6em each, plus breathing room either side.
+            let readout = 17 * 12 * 0.6 + 16
+            #expect(gap >= readout)
+            #expect(xs[4] + VideoStudioMetrics.compactTransportButton + VideoStudioMetrics.compactTransportInset == width)
+        }
+    }
+
+    /// FS-12.07 AC-7: the read-out is the playhead and the length, `m:ss.t`.
+    @Test func compactTimecodeShowsPlayheadAndLength() {
+        let text = VideoStudioMetrics.compactTransportReadout(playhead: 8.42, length: 24)
+        #expect(text.playhead == "0:08.4")
+        #expect(text.length == " / 0:24.0")
+        #expect(VideoStudioMetrics.compactTimecode(75.99) == "1:15.9")
+        #expect(VideoStudioMetrics.compactTimecode(-1) == "0:00.0")
     }
 
     /// The desk transport row does not fit every desk window.

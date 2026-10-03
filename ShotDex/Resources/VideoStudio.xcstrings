@@ -57,6 +57,10 @@
       "comment": "Video Studio level meter: silences the clips' own audio for the whole project",
       "extractionState": "manual"
     },
+    "Playhead at %@ of %@": {
+      "comment": "Video Studio transport: VoiceOver label for the phone read-out — playhead, then the project's length",
+      "extractionState": "manual"
+    },
     "The photos and videos stay in your library.": {
       "comment": "Video Projects: message of the Delete Draft confirmation — deleting a draft never touches the library",
       "extractionState": "manual"
