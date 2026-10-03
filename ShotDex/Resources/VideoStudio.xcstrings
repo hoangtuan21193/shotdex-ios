@@ -69,6 +69,10 @@
       "comment": "Video Projects: when a draft was last changed; the argument is a relative time such as '5 min. ago'",
       "extractionState": "manual"
     },
+    "End to Playhead": {
+      "comment": "Video Studio Trim: cuts the selected clip's end to the playhead",
+      "extractionState": "manual"
+    },
     "Fade": {
       "comment": "Video Studio clip panel: header over the clip's fade in and fade out",
       "extractionState": "manual"
@@ -105,6 +109,10 @@
       "comment": "Video Studio level meter: silences the clips' own audio for the whole project",
       "extractionState": "manual"
     },
+    "Or drag the clip's edges on the timeline.": {
+      "comment": "Video Studio Trim: the other way to cut a clip",
+      "extractionState": "manual"
+    },
     "Original clip audio, whole project": {
       "comment": "Video Studio Music panel: caption under the Video sound slider",
       "extractionState": "manual"
@@ -115,6 +123,10 @@
     },
     "Speed": {
       "comment": "Video Studio clip panel: label of the playback-rate chips",
+      "extractionState": "manual"
+    },
+    "Start to Playhead": {
+      "comment": "Video Studio Trim: cuts the selected clip's start to the playhead",
       "extractionState": "manual"
     },
     "Sticker": {

@@ -1227,6 +1227,12 @@ final class VideoStudioModel {
     /// Which end of a clip a command acts on.
     enum ClipEnd { case start, end }
 
+    /// Trim → Start/End to Playhead on the **selected** clip (FS-12.05 §3).
+    /// The transport's ⋯ keeps acting on the clip under the playhead.
+    func trimSelectedClipToPlayhead(_ end: ClipEnd) {
+        trimToPlayhead(end)
+    }
+
     // MARK: - Markers
 
     /// A note at the playhead. Tapping the same spot twice does not stack two

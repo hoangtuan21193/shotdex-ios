@@ -390,6 +390,7 @@ struct VideoStudioSheetHost: View {
         if let clip = model.selectedClip {
             ScrollView(showsIndicators: false) {
                 VStack(alignment: .leading, spacing: 4) {
+                    if model.activeItemCommand == .trim { trimBlock(clip) }
                     ForEach(
                         VideoClipPanelSections.sections(for: clip.kind, leading: model.activeItemCommand),
                         id: \.self
@@ -439,6 +440,43 @@ struct VideoStudioSheetHost: View {
             }
             .padding(.top, 4)
         }
+    }
+
+    /// Trim's block (FS-12.04b §4, FS-12.05 §3): Start to Playhead · End to
+    /// Playhead, and how else a clip is cut.
+    private func trimBlock(_ clip: VideoClip) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 8) {
+                trimChip(VideoStudioCopy.startToPlayhead, systemImage: "arrow.left.to.line") {
+                    model.trimSelectedClipToPlayhead(.start)
+                }
+                trimChip(VideoStudioCopy.endToPlayhead, systemImage: "arrow.right.to.line") {
+                    model.trimSelectedClipToPlayhead(.end)
+                }
+            }
+            Text(VideoStudioCopy.dragEdgesHint)
+                .font(.system(size: 11))
+                .foregroundStyle(.white.opacity(0.35))
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 6)
+    }
+
+    private func trimChip(_ title: String, systemImage: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            HStack(spacing: 6) {
+                Image(systemName: systemImage).font(.system(size: 12, weight: .semibold))
+                Text(title).font(.system(size: 12, weight: .semibold)).lineLimit(1)
+            }
+            .foregroundStyle(.white)
+            .frame(maxWidth: .infinity)
+            .frame(height: VideoStudioMetrics.trimChipHeight)
+            .background(
+                RoundedRectangle(cornerRadius: VideoStudioMetrics.trimChipRadius, style: .continuous)
+                    .fill(Color.white.opacity(0.08))
+            )
+        }
+        .buttonStyle(.plain)
     }
 
     private func sectionHeader(_ text: Text) -> some View {

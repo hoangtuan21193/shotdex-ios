@@ -66,3 +66,20 @@ extension VideoItemCommandsTests {
         }
     }
 }
+
+/// Section commands light and unlight (FS-12.04b §4).
+@MainActor
+struct VideoItemSectionTests {
+    /// FS-12.04b AC-4: Trim lights its cell and puts its block on top.
+    @Test func trimTogglesItsBlock() {
+        let model = VideoStudioModelFixture.model()
+        model.selectClip(model.recipe.clips[1].id)
+        model.toggleItemSection(.trim)
+        #expect(model.activeItemCommand == .trim)
+        #expect(model.isItemCommandOn(.trim))
+        #expect(!model.isItemCommandOn(.split))
+        // A new selection starts with nothing lit.
+        model.selectClip(model.recipe.clips[2].id)
+        #expect(model.activeItemCommand == nil)
+    }
+}

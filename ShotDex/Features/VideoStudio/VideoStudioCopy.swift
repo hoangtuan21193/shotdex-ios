@@ -72,4 +72,16 @@ enum VideoStudioCopy {
     static var ducking: String {
         String(localized: "Ducking", table: table, comment: "Video Studio: the music command that lowers music under speech")
     }
+
+    static var startToPlayhead: String {
+        String(localized: "Start to Playhead", table: table, comment: "Video Studio Trim: cuts the selected clip's start to the playhead")
+    }
+
+    static var endToPlayhead: String {
+        String(localized: "End to Playhead", table: table, comment: "Video Studio Trim: cuts the selected clip's end to the playhead")
+    }
+
+    static var dragEdgesHint: String {
+        String(localized: "Or drag the clip's edges on the timeline.", table: table, comment: "Video Studio Trim: the other way to cut a clip")
+    }
 }
