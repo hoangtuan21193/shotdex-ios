@@ -128,6 +128,13 @@ Hai cái giá đã biết và chấp nhận:
 - Trên màn kết quả, truy vấn tách thành chip có nút `x` để xoá từng phần (`Canon R6 portrait` → `Canon`,
   `R6`, `portrait`); cụm có nghĩa như `ISO 100` và `full frame` **giữ chung một chip**.
 - Gợi ý lấy từ danh sách máy và ống kính thật sự có trong database.
+- **Keyword (iOS 27)**: `keyword:sunset`, `keyword:"golden hour"` (ngoặc thẳng hoặc cong), và `từ khoá:` (cả
+  `từ khóa:`, `tu khoa:`) là cùng một cú pháp → chip `keyword: Sunset`, viết theo cách thư viện đang dùng. Một từ
+  trùng **đúng** tên một keyword thành chip keyword — sau mọi tên địa điểm/máy/ống/hãng đúng tên, trước mọi khớp
+  một phần, nên `85mm` vẫn là tiêu cự. Dưới iOS 27 `keyword:x` là chữ thường.
+- Chữ tự do khớp thêm **caption và keyword** (chứa, không phân biệt hoa thường và dấu). Khi bộ phân tích hiểu
+  **một phần** câu, phần chữ thừa thành chip `"wedding"` khớp **cùng tập cột** với chữ tự do — máy, ống, tên file,
+  caption, keyword — không chỉ tên file: `fukuoka wedding` → chip địa điểm + chip `"wedding"`.
 - **Tên file chỉ được ghi ở lượt đọc EXIF**, nên ảnh mới chỉ có row giữ chỗ và chưa tìm được theo tên cho
   tới khi lượt đó chạy xong.
 

@@ -132,7 +132,7 @@ Luật:
 | | |
 |---|---|
 | Nguồn thật | thư viện Photos. App không giữ bản nào Photos không có |
-| Ghi vào | Photos trước; xong mới ghi **hai bảng vệ tinh mới**: một dòng mỗi (ảnh, keyword) kèm khoá đã gấp hoa thường + dấu; một dòng mỗi ảnh có caption kèm bản gấp để tìm |
+| Ghi vào | Photos trước; xong mới ghi **hai bảng vệ tinh mới**: một dòng mỗi (ảnh, keyword) kèm **hai khoá** — gấp hoa-thường (chọn cách viết, gom dòng §5, gom gợi ý: `Sunset` = `sunset`, `Đà Lạt` ≠ `Da Lat`) và gấp hoa-thường + dấu (khớp gợi ý, lọc, tìm); một dòng mỗi ảnh có caption kèm bản gấp để tìm |
 | Người dùng tự nhập? | có, nhưng bản gốc nằm ở Photos; hai bảng chỉ là **gương** để lọc. Không cột nào trong bảng metadata chính ([BD-02 §1](../../01-basic-design/BD-02-database-design.md)) |
 
 - **Lượt index ghi đè dòng metadata không bao giờ đụng hai bảng này** — chúng có lượt đọc riêng. Mất bảng thì
@@ -142,7 +142,8 @@ Luật:
   - tiếp tục được, nhường như mọi lượt chậm ([NF-01](../../04-non-functional-design/NF-01-performance.md) luật 5).
 - **Giữ tươi**: tập id **"updated"** của lịch sử thay đổi được đọc lại metadata mở rộng **dù ngày sửa không
   đổi** — lượt index bỏ qua các id đó vì nó so ngày sửa. Asset bị xoá thì dòng đi theo.
-- Gợi ý lấy từ bảng keyword: đếm theo khoá đã gấp, lấy cách viết nhiều ảnh nhất, có chỉ mục trên khoá.
+- Gợi ý lấy từ bảng keyword: đếm số ảnh theo khoá hoa-thường, lấy cách viết nhiều ảnh nhất, khớp chữ gõ theo khoá
+  hoa-thường + dấu; có chỉ mục trên hai khoá.
 
 - **Keyword trong file** (IPTC/XMP, ảnh xuất từ Lightroom) **không** lọc được. Lọc, tìm và smart album chỉ
   theo keyword Photos; keyword trong file vẫn hiện chỉ đọc ở Info (§4). *Vì đọc chúng vào gương phải đọc lại
@@ -232,7 +233,9 @@ Mọi AC chạy trên iOS 27 trừ AC-14.
 | AC-15 | thư viện 55.000 ảnh trên iOS 27, bảng gương rỗng | mở app, lượt đọc đầy chạy hết | ≤ 55 lần fetch PhotoKit cho lượt này, 0 lần hỏi lười từng asset; thời gian và bộ nhớ đỉnh ghi vào log, nằm trong ngân sách §10 câu 6 | ⚠️ một nửa. `ExtendedMetadataMirrorPassTests.fetchCountIsPages` (55.000 id → đúng 55 lần fetch, mỗi fetch tải sẵn metadata mở rộng nên 0 lần hỏi lười; footprint đỉnh được ghi), `.pagesOf1000`, `.resumesFromCursor`, `.yieldsWhilePaused`; sim 10.094 asset = 5,1 s (§10 câu 6). **Thời gian và bộ nhớ đỉnh trên 55k: cần máy thật** |
 | AC-16 | quyền `.limited`, chia sẻ 10 ảnh; `Private` chỉ nằm trên ảnh không chia sẻ | gõ `Pri` vào ô Add Keyword | không gợi ý `Private`; bảng gương chỉ có dòng của 10 ảnh đã chia sẻ | `ExtendedMetadataMirrorPassTests.limitedSeesOnlyShared` (10 ảnh chia sẻ được đọc và soi gương, `Private` chỉ trên ảnh không chia sẻ không được gợi ý kể cả khi còn dòng gương cũ), `PhotoKeywordStoreTests.suggestionsIgnoreOrphans` (đếm gợi ý JOIN `photo_metadata`). Ảnh gợi ý dưới `.limited` trên sim: chưa chụp — cấp lại quyền limited trên sim 27 cần reset + chạm tay (memory `sim-photo-permission-ios26`) |
 
-**Chưa chứng minh được:** AC-1 → AC-16. Chưa có code.
+**Chưa chứng minh được:** AC-10 vế "0 lần đọc file" (mâu thuẫn §10 câu 1 — chờ quyết định); AC-15 thời gian và bộ
+nhớ trên máy thật 55k; AC-12 đầu-cuối với ảnh chỉ iCloud + mất mạng (máy thật); AC-13 từ chối thật của thư viện
+chia sẻ (máy có Shared Library); AC-1/AC-3 trên Duo trong (sim không mở gập được).
 
 ## 12. Rủi ro
 

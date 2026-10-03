@@ -72,6 +72,9 @@ Có chỉ mục trên: tên máy và tên ống kính đã chuẩn hoá · ISO �
 | Cặp RAW giữ RAW làm bản gốc | id ảnh mang tên file RAW mà có kèm JPEG/HEIC — không bao giờ có dấu RAW chưa đọc được |
 | Sao chờ lên Photos | id ảnh · sao 1–5 · lúc đặt — sao chấm trên iOS 17–26, hoặc chưa ghi lên Photos được ([FS-01.12 §4–5](../02-functional-spec/FS-01-library/12-rating-and-flags.md)) |
 | Cờ | id ảnh · Pick hoặc Reject · lúc đặt — không dòng là không cờ; chỉ ShotDex có, không đồng bộ |
+| Keyword Photos (gương) | id ảnh · keyword đúng cách viết · khoá gấp hoa-thường · khoá gấp hoa-thường + dấu — một dòng mỗi (ảnh, keyword); chỉ mục trên hai khoá ([FS-02.07 §8](../02-functional-spec/FS-02-photo-detail/07-caption-and-keywords.md)) |
+| Caption Photos (gương) | id ảnh · caption · bản gấp hoa-thường + dấu để tìm |
+| Trạng thái lượt đọc gương | id ảnh cuối của lượt đọc đầy · lúc đọc xong (rỗng = cần đọc đầy) |
 
 - Dấu vân tay có **ngày sửa lúc tính**: lệch với ngày sửa hiện tại thì tính lại (ảnh vừa được chỉnh). Video
   không có dòng.
@@ -87,6 +90,12 @@ Có chỉ mục trên: tên máy và tên ống kính đã chuẩn hoá · ISO �
 - Ngoài lúc người dùng bỏ sao/cờ và lúc ghi lên Photos, hai bảng này chỉ mất dòng khi ảnh **bị xoá thật** (cùng
   lúc gỡ dòng metadata). Quyền `.limited` không bao giờ gỡ — ảnh không thấy chưa chắc đã mất. Clear local
   metadata index không đụng hai bảng này.
+- **Gương caption/keyword là bản sao của Photos, không phải dữ liệu người dùng** (iOS 27, `v28-captionKeywordMirror`):
+  Photos giữ bản thật, hai bảng chỉ để lọc và tìm. Vì vậy chúng **đi theo dòng metadata** — xoá ảnh thì xoá cùng
+  transaction, Clear local metadata index xoá cả gương lẫn trạng thái rồi đọc lại từ Photos — khác bảng sao/cờ. Lượt
+  index **không bao giờ** ghi chúng (upsert dòng metadata không đụng), nên index lại toàn bộ giữ nguyên gương. Không
+  khoá ngoại: một `REPLACE` của lượt index sẽ kéo cả gương đi. Mọi truy vấn tới người dùng đều JOIN dòng metadata,
+  nên dòng gương của ảnh không còn index (hay không chia sẻ dưới `.limited`) không bao giờ lộ ra.
 - Mở màn ảnh trùng **chỉ đọc hai bảng cache** rồi ghép với dữ kiện hiện tại — **không** tính lại dấu vân
   tay, **không** gom lại nhóm.
 

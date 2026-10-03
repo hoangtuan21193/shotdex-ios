@@ -31,9 +31,14 @@ trường, phép so sánh và giá trị. Loại trường quyết định phép
 | **ngày** | ngày chụp | **đúng ngày** (mặc định) · **trong tháng** · trong N ngày qua · trước · sau · trong khoảng | "đúng ngày" khớp **trọn ngày theo lịch địa phương** nên đúng cả ngày đổi giờ; "trong tháng" khớp trọn một tháng + năm theo lịch địa phương, ô nhập chọn tháng và năm; "N ngày qua" so với thời điểm hiện tại nên luôn sống |
 | **favorite** | favorite | — | một dải chọn Favorite / Not favorite |
 | **sao** | sao | là · ít nhất · nhiều nhất | ô chọn 0–5, 0 = *Unrated*; "ít nhất" chỉ nhận 1–5 (ít nhất 0 là cả thư viện). Sao hiện hành theo [FS-01.12 §4](../FS-01-library/12-rating-and-flags.md) |
+| **keyword** (iOS 27) | keyword | có · không có · có keyword bất kỳ · không có keyword nào | hai phép sau không cần giá trị; ô nhập gợi ý keyword của thư viện, nhiều ảnh nhất trước; khớp không phân biệt hoa thường và dấu, trên gương keyword ([FS-02.07 §7](../FS-02-photo-detail/07-caption-and-keywords.md)) |
+| **caption** (iOS 27) | caption | chứa · không chứa | trên gương caption, gấp hoa thường + dấu như cột địa điểm |
 
 Hai trường **sao** và **cờ** mang lại tên trường của bản đã gỡ ở `v15`/`v16`. Không vướng: hai migration đó
 đã chạy xong trước khi có album nào dùng tên mới ([BD-02 §4](../../01-basic-design/BD-02-database-design.md)).
+
+Dưới iOS 27 menu chọn trường **không** có keyword và caption (ẩn, không mờ). Hai trường cũng có trong điều kiện của
+biểu đồ Statistics — cùng bộ dựng, cùng SQL.
 
 **Loại media** chỉ đặt được qua dải All / Photo / Video, **không** có trong menu chọn trường
 ([FS-01.05](../FS-01-library/05-filtering-and-sorting.md)).
