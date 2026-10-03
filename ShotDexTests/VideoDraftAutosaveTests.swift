@@ -111,3 +111,36 @@ struct VideoDraftSaveNowTests {
         #expect(rows.first?.id == model.creationID)
     }
 }
+
+/// FS-12.18 §2: Back never asks; it saves and closes.
+@MainActor
+struct VideoDraftBackTests {
+    /// FS-12.18 AC-2: an edited project that was never exported — Back
+    /// closes with no question, and the draft carries the edit.
+    @Test func backSavesWithoutAsking() async throws {
+        let store = CreationStore(database: try AppDatabase.makeEmpty())
+        let model = VideoStudioModelFixture.model(creationStore: store)
+        let clip2 = model.recipe.clips[1].id
+        model.selectClip(clip2)
+        model.setSpeed(2, for: clip2)
+
+        #expect(await model.back() == .close)
+
+        #expect(model.selectedClipID == nil)
+        let row = try #require(try store.fetch(id: model.creationID))
+        #expect(row.isDraft)
+        #expect(row.videoRecipe?.clips[1].speed == 2)
+        #expect(model.drafts?.isSavePending == false)
+    }
+
+    /// FS-12.18 §2: a project of server photos has no draft — Back with
+    /// edits still asks, as FS-17.06 says, and nothing is written.
+    @Test func serverProjectHasNoDraft() async throws {
+        let model = VideoStudioModelFixture.model(serverWorkDirectory: FileManager.default.temporaryDirectory)
+        #expect(model.isServerRun)
+        #expect(model.drafts == nil)
+        #expect(await model.back() == .close)
+        model.setSpeed(2, for: model.recipe.clips[1].id)
+        #expect(await model.back() == .confirmDiscard)
+    }
+}

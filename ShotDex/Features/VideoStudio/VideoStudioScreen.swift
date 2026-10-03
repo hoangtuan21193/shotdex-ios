@@ -121,6 +121,8 @@ struct VideoStudioScreen: View {
             levelMeter.cancelDecoding()
         }
         .interactiveDismissDisabled(model?.hasEdits == true || isExporting)
+        // Only a project of server photos asks (FS-17.06 §5): it has no
+        // draft. Every other project saved itself on the way out.
         .alert("Discard this video?", isPresented: $isDiscardConfirmationPresented) {
             Button("Discard", role: .destructive) { dismiss() }
             Button("Keep Editing", role: .cancel) {}
@@ -263,6 +265,18 @@ struct VideoStudioScreen: View {
             }
         } else if newOverlayID == overlay.id {
             model.deleteSelectedOverlay()
+        }
+    }
+
+    /// Back: the model keeps the selection, writes the draft and says
+    /// whether the studio may close.
+    private func leave(_ model: VideoStudioModel) {
+        Task { @MainActor in
+            switch await model.back() {
+            case .close: dismiss()
+            case .confirmDiscard: isDiscardConfirmationPresented = true
+            case .saveFailed: break
+            }
         }
     }
 
@@ -777,7 +791,7 @@ struct VideoStudioScreen: View {
     private func actions(_ model: VideoStudioModel) -> VideoInspectorActions {
         VideoInspectorActions(
             onExport: { isExportSheetPresented = true },
-            onBack: { if model.hasEdits { isDiscardConfirmationPresented = true } else { dismiss() } },
+            onBack: { leave(model) },
             onAddMedia: { mediaPickerMode = .add },
             onReplaceClip: { mediaPickerMode = .replace },
             onAddText: { addTextOverlay(model) },

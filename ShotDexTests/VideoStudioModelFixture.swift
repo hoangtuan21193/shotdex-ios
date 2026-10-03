@@ -32,7 +32,8 @@ enum VideoStudioModelFixture {
         clips: [VideoClip] = videoClips(3),
         configure: (inout VideoProjectRecipe) -> Void = { _ in },
         creationStore: CreationStore? = nil,
-        mode: VideoStudioMode = .multiClip
+        mode: VideoStudioMode = .multiClip,
+        serverWorkDirectory: URL? = nil
     ) -> VideoStudioModel {
         var recipe = VideoProjectRecipe(clips: clips)
         recipe.syncTransitionsWithClips()
@@ -47,7 +48,8 @@ enum VideoStudioModelFixture {
             overlayFontRecents: dependencies.overlayFontRecents,
             overlayImages: dependencies.overlayImages,
             creationStore: creationStore,
-            restoring: row
+            restoring: row,
+            serverWorkDirectory: serverWorkDirectory
         )
     }
 }

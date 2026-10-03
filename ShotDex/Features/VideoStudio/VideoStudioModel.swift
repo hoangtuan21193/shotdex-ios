@@ -287,6 +287,26 @@ final class VideoStudioModel {
         return false
     }
 
+    /// What Back leads to.
+    enum BackOutcome: Equatable {
+        /// The project is on disk (or has nowhere to go): close the studio.
+        case close
+        /// A project of server photos with edits: those have no draft, so
+        /// Back still asks before throwing the work away (FS-17.06 §5).
+        case confirmDiscard
+        /// The draft could not be written; the studio stays open.
+        case saveFailed
+    }
+
+    /// Back (FS-12.18 §2, FS-12.04 §5): keeps what the open selection did —
+    /// Back is ✓, never ✕ — writes the draft at once and lets the studio
+    /// close. No "Discard this video?": nothing is discarded.
+    func back() async -> BackOutcome {
+        clearSelection()
+        if isServerRun { return hasEdits ? .confirmDiscard : .close }
+        return await saveDraftNow() ? .close : .saveFailed
+    }
+
     var selectedClip: VideoClip? {
         guard let selectedClipID else { return nil }
         return recipe.clips.first { $0.id == selectedClipID }
@@ -554,6 +574,12 @@ final class VideoStudioModel {
     }
 
     func close() {
+        // A studio closed some other way than Back (its presenter went
+        // away) still writes the change it was waiting to write. The task
+        // keeps the model alive until it has.
+        if drafts?.isSavePending == true {
+            Task { await self.saveDraftNow() }
+        }
         rebuildTask?.cancel()
         exportTask?.cancel()
         dropImportTask?.cancel()
