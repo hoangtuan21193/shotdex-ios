@@ -26,6 +26,8 @@ struct ServerVideoStudioLaunch {
 /// contextual bottom sheet that reskins for whatever is selected.
 struct VideoStudioScreen: View {
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.scenePhase) private var scenePhase
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @Environment(AppDependencies.self) private var dependencies
 
     let assets: [PHAsset]
@@ -119,6 +121,15 @@ struct VideoStudioScreen: View {
         .onDisappear {
             model?.close()
             levelMeter.cancelDecoding()
+        }
+        // The scene leaving the foreground, or the window changing class —
+        // the Duo folding from its inner display to the cover, or opening
+        // — writes the draft at once (FS-12.18 §2).
+        .onChange(of: scenePhase) { _, phase in
+            if phase != .active { model?.sceneDidChange() }
+        }
+        .onChange(of: horizontalSizeClass) { _, _ in
+            model?.sceneDidChange()
         }
         .interactiveDismissDisabled(model?.hasEdits == true || isExporting)
         // Only a project of server photos asks (FS-17.06 §5): it has no

@@ -165,3 +165,23 @@ struct VideoDraftBackgroundTests {
         #expect(model.drafts?.isSavePending == false)
     }
 }
+
+/// FS-12.18 §2: the scene changing writes at once.
+@MainActor
+struct VideoDraftSceneTests {
+    /// FS-12.18 AC-4 (model half): Speed changed, then the scene changes —
+    /// the Duo folding, a window closing — and the draft has the change
+    /// before the one-second autosave. The fold itself is measured by hand.
+    @Test func sceneChangeSavesImmediately() async throws {
+        let store = CreationStore(database: try AppDatabase.makeEmpty())
+        let model = VideoStudioModelFixture.model(creationStore: store)
+        defer { model.close() }
+        model.setSpeed(2, for: model.recipe.clips[1].id)
+
+        model.sceneDidChange()
+
+        #expect(await VideoDraftAutosaveTests.eventually(0.4) {
+            (try? store.fetch(id: model.creationID))??.videoRecipe?.clips[1].speed == 2
+        })
+    }
+}

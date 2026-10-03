@@ -304,6 +304,14 @@ final class VideoStudioModel {
         }
     }
 
+    /// The scene changed under the studio — the Duo folded or opened, a
+    /// Stage Manager window closed or left the foreground (FS-12.18 §2).
+    /// Written at once: the layout that comes next is a different screen,
+    /// and the window may not come back.
+    func sceneDidChange() {
+        saveDraftInBackground()
+    }
+
     /// Writes the draft under a background-task assertion, so the write
     /// finishes even though the app is on its way out.
     func saveDraftInBackground() {
