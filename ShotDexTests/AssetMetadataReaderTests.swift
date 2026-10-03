@@ -1,3 +1,4 @@
+import ImageIO
 import Testing
 @testable import ShotDex
 
@@ -35,5 +36,27 @@ import Testing
         // `FileTypeBadge.text` never returns nil for a non-empty extension —
         // an unrecognized one still yields its own (truncated) uppercase name.
         #expect(AssetMetadataReader.resourceHeadingText(kind: "Photo", fileExtension: "xyz") == "XYZ")
+    }
+}
+
+/// FS-02.07 AC-14: the file's own IPTC keywords and caption stay a read-only
+/// row of *Rights & Description*, on every iOS — a Lightroom export reads
+/// `Lightroom, test` exactly as before Photos keywords existed.
+@Suite struct AssetMetadataReaderRightsTests {
+    @Test func iptcKeywordsJoin() {
+        let section = AssetMetadataReader.rightsSection(
+            tiff: [:],
+            iptc: [
+                kCGImagePropertyIPTCKeywords as String: ["Lightroom", "test"],
+                kCGImagePropertyIPTCCaptionAbstract as String: "Probe IPTC caption",
+            ]
+        )
+        #expect(section.title == "Rights & Description")
+        #expect(section.rows.first { $0.key == "Keywords" }?.value == "Lightroom, test")
+        #expect(section.rows.first { $0.key == "Caption" }?.value == "Probe IPTC caption")
+    }
+
+    @Test func noRightsMeansNoRows() {
+        #expect(AssetMetadataReader.rightsSection(tiff: [:], iptc: [:]).rows.isEmpty)
     }
 }

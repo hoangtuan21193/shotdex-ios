@@ -472,6 +472,25 @@ enum AssetMetadataReader {
             (String(localized: "Modified", comment: "Info panel row label"), asset.modificationDate.map(dateString)),
         ]
 
+        return [
+            locationSection(location),
+            section(String(localized: "Camera & Lens", comment: "Info panel section title"), from: camera),
+            section(String(localized: "Exposure", comment: "Info panel section title"), from: exposure),
+            section(String(localized: "Capture Settings", comment: "Info panel section title"), from: capture),
+            section(String(localized: "Date", comment: "Info panel section title"), from: date),
+            section(String(localized: "File", comment: "Info panel section title"), from: file),
+            rightsSection(tiff: tiff, iptc: iptc),
+        ]
+    }
+
+    /// *Rights & Description*: what the **file** says — its IPTC keywords and
+    /// caption stay here, read-only, on every iOS (FS-02.07 §4). Photos'
+    /// own caption and keywords (iOS 27) are a separate, editable section.
+    /// Pure, so `AssetMetadataReaderRightsTests` runs without an asset.
+    static func rightsSection(tiff: [String: Any], iptc: [String: Any]) -> MetadataReportSection {
+        func string(_ dict: [String: Any], _ key: CFString) -> String? {
+            dict[key as String].flatMap(stringify)
+        }
         let rights: [(String, String?)] = [
             (String(localized: "Artist", comment: "Info panel row label"), string(tiff, kCGImagePropertyTIFFArtist)),
             (String(localized: "Copyright", comment: "Info panel row label"), string(tiff, kCGImagePropertyTIFFCopyright)
@@ -481,16 +500,7 @@ enum AssetMetadataReader {
             (String(localized: "Keywords", comment: "Info panel row label"), string(iptc, kCGImagePropertyIPTCKeywords)),
             (String(localized: "Credit", comment: "Info panel row label"), string(iptc, kCGImagePropertyIPTCCredit)),
         ]
-
-        return [
-            locationSection(location),
-            section(String(localized: "Camera & Lens", comment: "Info panel section title"), from: camera),
-            section(String(localized: "Exposure", comment: "Info panel section title"), from: exposure),
-            section(String(localized: "Capture Settings", comment: "Info panel section title"), from: capture),
-            section(String(localized: "Date", comment: "Info panel section title"), from: date),
-            section(String(localized: "File", comment: "Info panel section title"), from: file),
-            section(String(localized: "Rights & Description", comment: "Info panel section title"), from: rights),
-        ]
+        return section(String(localized: "Rights & Description", comment: "Info panel section title"), from: rights)
     }
 
     // MARK: ImageIO raw tree
