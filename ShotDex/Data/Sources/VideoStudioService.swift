@@ -114,6 +114,17 @@ final class VideoStudioService {
                 if let duration { loaded.durations[id] = duration }
             }
         }
+        // Media that would not come down — an iCloud original with no
+        // network — stays on the track as an unavailable clip, with the
+        // length the library already knows, instead of disappearing
+        // (FS-12.04 §7). A clip whose asset is gone from the library has no
+        // entry and is still left out.
+        for (clip, asset) in pending where loaded.sources[clip.id] == nil {
+            loaded.sources[clip.id] = .unavailable(assetID: clip.assetID)
+            if clip.kind == .video, loaded.durations[clip.id] == nil, asset.duration > 0 {
+                loaded.durations[clip.id] = asset.duration
+            }
+        }
         return loaded
     }
 

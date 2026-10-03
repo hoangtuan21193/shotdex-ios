@@ -96,4 +96,13 @@ enum VideoStudioCopy {
     static var unmute: String {
         String(localized: "Unmute", table: table, comment: "Video Studio: the speaker at the head of a Volume row — brings back the clip's or the song's level")
     }
+
+    /// FS-12.04 §7: a clip whose original is still in iCloud.
+    static var waitingForICloud: String {
+        String(localized: "Waiting for iCloud", table: table, comment: "Video Studio: why Freeze and Split are dimmed on a clip whose original has not downloaded")
+    }
+
+    static func clipsWaitingForICloud(_ count: Int) -> String {
+        String(localized: "\(count) clips are waiting for iCloud", table: table, comment: "Video Studio banner: clips whose originals have not downloaded yet stay in place as gaps (plural)")
+    }
 }

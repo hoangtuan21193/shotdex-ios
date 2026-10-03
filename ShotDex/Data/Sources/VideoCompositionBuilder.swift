@@ -17,6 +17,11 @@ enum VideoClipSource: @unchecked Sendable {
     /// A frame lifted out of a source video at load time — drawn as a still
     /// (no track samples), so it reuses the photo backbone path.
     case freeze(image: CIImage, pixelSize: CGSize)
+    /// The clip's media cannot be read yet — an iCloud original with no
+    /// network (FS-12.04 §7). The clip keeps its place and its length on the
+    /// track and renders as the project background: a well-formed gap, not
+    /// a missing clip that shifts everything after it.
+    case unavailable(assetID: String)
 
     var duration: Double? {
         if case .video(_, _, _, let duration, _, _) = self { return duration }
@@ -27,7 +32,7 @@ enum VideoClipSource: @unchecked Sendable {
     var isStill: Bool {
         switch self {
         case .video: false
-        case .photo, .freeze: true
+        case .photo, .freeze, .unavailable: true
         }
     }
 }
@@ -154,6 +159,11 @@ enum VideoCompositionBuilder {
                     assetID: assetID,
                     fitRect: VideoGeometry.stillFitRect(imageSize: pixelSize, renderSize: renderSize)
                 ))
+            case .unavailable:
+                // The backbone keeps the window real; a source that draws
+                // nothing leaves the project background in it.
+                try insertStillBackbone(into: videoTrack, at: at, clipRange: clipRange, blankVideo: blankVideo)
+                frontSources.append(.stillImage(image: CIImage.empty(), fitRect: .zero))
             case .freeze(let image, let pixelSize):
                 // Same backbone as a photo, but the still is already loaded.
                 try insertStillBackbone(into: videoTrack, at: at, clipRange: clipRange, blankVideo: blankVideo)

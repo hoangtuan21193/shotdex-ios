@@ -376,6 +376,38 @@ final class VideoStudioModel {
         activeItemCommand = nil
     }
 
+    /// Clips whose media cannot be read yet (FS-12.04 §7): screen state,
+    /// never stored — the next open tries again.
+    var unavailableClipIDs: Set<UUID> {
+        Set(sources.compactMap { id, source in
+            if case .unavailable = source { return id }
+            return nil
+        })
+    }
+
+    func isClipUnavailable(_ id: UUID) -> Bool { unavailableClipIDs.contains(id) }
+
+    /// Whether a command in the selected item's row can act now. Freeze and
+    /// Split need a video's frames, which an unavailable clip does not have;
+    /// a project keeps at least one clip.
+    func isItemCommandEnabled(_ command: VideoItemCommand) -> Bool {
+        if let clip = selectedClip {
+            switch command {
+            case .delete: return recipe.clips.count > 1
+            case .freeze, .split:
+                return !(clip.kind == .video && isClipUnavailable(clip.id))
+            default: return true
+            }
+        }
+        return true
+    }
+
+    /// The line under the command row saying why a command is dimmed.
+    var itemCommandNote: String? {
+        guard let clip = selectedClip, clip.kind == .video, isClipUnavailable(clip.id) else { return nil }
+        return VideoStudioCopy.waitingForICloud
+    }
+
     /// The lit *section* command of a clip's or a bed's row — Trim, Speed,
     /// Volume (FS-12.04b §4). Session state: a new selection starts with
     /// none. Captions and stickers use `inspectorTextTool`.
@@ -726,11 +758,10 @@ final class VideoStudioModel {
                 }
             }
         }
-        // Drop clips whose media never resolved so the timeline matches what
-        // the builder will actually use — and say so. A clip that vanishes
-        // from the timeline with no word looks identical to a clip the app
-        // forgot to add, and the usual cause is an iCloud original that has
-        // not come down yet, which the user can do something about.
+        // A clip whose media has not come down (an iCloud original with no
+        // network) stays, as an unavailable clip that keeps its place and its
+        // length (FS-12.04 §7); the banner says so. Only a clip whose asset
+        // is gone from the library is left out — and said.
         let droppedCount = recipe.clips.count(where: { sources[$0.id] == nil })
         recipe.clips.removeAll { sources[$0.id] == nil }
         if droppedCount > 0 {

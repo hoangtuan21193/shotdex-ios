@@ -29,6 +29,30 @@
         }
       }
     },
+    "%lld clips are waiting for iCloud": {
+      "comment": "Video Studio banner: clips whose originals have not downloaded yet stay in place as gaps (plural)",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld clip is waiting for iCloud"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld clips are waiting for iCloud"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "Add Music": {
       "comment": "Video Studio: title of the Music tool's panel",
       "extractionState": "manual"
@@ -175,6 +199,10 @@
     },
     "Video sound": {
       "comment": "Video Studio: the clips' own audio level for the whole project",
+      "extractionState": "manual"
+    },
+    "Waiting for iCloud": {
+      "comment": "Video Studio: why Freeze and Split are dimmed on a clip whose original has not downloaded",
       "extractionState": "manual"
     },
     "freeze": {

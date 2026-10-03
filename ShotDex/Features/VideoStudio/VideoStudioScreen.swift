@@ -110,6 +110,15 @@ struct VideoStudioScreen: View {
             }
         }
         .animation(AppTheme.Motion.standard, value: model?.hasFailedDraftSave == true)
+        // FS-12.04 §7: clips still in iCloud stay as gaps; a quiet line
+        // says why they are dark instead of the clips vanishing.
+        .overlay(alignment: .top) {
+            if let model, model.phase == .ready, !model.hasFailedDraftSave, !model.unavailableClipIDs.isEmpty {
+                ActionToast(text: VideoStudioCopy.clipsWaitingForICloud(model.unavailableClipIDs.count), dark: true)
+                    .padding(.top, AppTheme.Spacing.sm)
+                    .allowsHitTesting(false)
+            }
+        }
         .animation(EditorTheme.animation, value: editingOverlay == nil)
         .preferredColorScheme(.dark)
         .statusBarHidden()

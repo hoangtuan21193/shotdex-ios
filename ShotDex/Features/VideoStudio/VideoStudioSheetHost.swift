@@ -147,10 +147,18 @@ struct VideoStudioSheetHost: View {
             VideoItemCommandRow(
                 commands: model.selectedItemCommands,
                 isOn: { model.isItemCommandOn($0) },
-                isEnabled: isItemCommandEnabled,
+                isEnabled: { model.isItemCommandEnabled($0) },
                 perform: perform
             )
             .padding(.top, VideoStudioMetrics.itemCommandRowTop)
+            if let note = model.itemCommandNote {
+                Text(note)
+                    .font(.system(size: 11))
+                    .foregroundStyle(.white.opacity(0.35))
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal, VideoStudioMetrics.itemCommandRowInset)
+                    .padding(.top, 2)
+            }
             Rectangle()
                 .fill(Color.white.opacity(0.07))
                 .frame(height: 1)
@@ -158,14 +166,6 @@ struct VideoStudioSheetHost: View {
                 .padding(.bottom, 4)
             paramZone
                 .frame(maxHeight: .infinity, alignment: .top)
-        }
-    }
-
-    private func isItemCommandEnabled(_ command: VideoItemCommand) -> Bool {
-        switch command {
-        // A project always keeps at least one clip.
-        case .delete where model.inspectorTarget == .clip: model.recipe.clips.count > 1
-        default: true
         }
     }
 
