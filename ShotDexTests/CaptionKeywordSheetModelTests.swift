@@ -98,4 +98,27 @@ struct CaptionKeywordSheetModelTests {
         #expect(blocks.count == 13)
         #expect(blocks.allSatisfy { $0.count <= 1_000 })
     }
+
+    /// AC-5: Undo right after AC-4 — one more write; `Hoi An` comes off the
+    /// 18 that did not have it and stays on the 12 that did; `2026 trip`
+    /// comes off all 30.
+    @Test func undoWritesBackOnlyChanges() async throws {
+        let photos = Self.thirty()
+        let harness = try CaptionKeywordHarness(photos)
+        let model = CaptionKeywordSheetModel(ids: Self.ids(photos), service: harness.service)
+        await model.load()
+        model.keywordText = "Hoi An, 2026 trip"
+        model.commitKeywordText()
+        _ = await model.apply()
+
+        try await model.undo()
+
+        #expect(harness.writer.blocks.count == 2)
+        #expect(harness.writer.blocks.last?.count == 30)
+        let after = harness.library.read(ids: Self.ids(photos))
+        #expect(after.values.filter { $0.keywords.contains("Hoi An") }.count == 12)
+        #expect(after.values.filter { $0.keywords.contains("2026 trip") }.isEmpty)
+        #expect(after == photos)
+        #expect(try harness.store.keywordCounts().first { $0.keyword == "Hoi An" }?.count == 12)
+    }
 }
