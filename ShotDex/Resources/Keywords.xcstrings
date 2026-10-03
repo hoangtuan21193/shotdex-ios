@@ -1,0 +1,302 @@
+{
+  "sourceLanguage": "en",
+  "strings": {
+    "%@, %lld photos": {
+      "comment": "VoiceOver: a keyword suggestion and how many photos carry it",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@, %#@photos@"
+          },
+          "substitutions": {
+            "photos": {
+              "argNum": 2,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg photo"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg photos"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "%@, keyword": {
+      "comment": "VoiceOver: a Photos keyword capsule",
+      "extractionState": "manual"
+    },
+    "%@, on %lld of %lld photos, unchanged": {
+      "comment": "VoiceOver: keyword row left as it is",
+      "extractionState": "manual"
+    },
+    "%@, on %lld of %lld photos, will be removed": {
+      "comment": "VoiceOver: keyword row set to be removed",
+      "extractionState": "manual"
+    },
+    "%lld Photos": {
+      "comment": "Caption & Keywords sheet subtitle: number of selected photos (plural, title case)",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld Photo"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld Photos"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "%lld of %lld": {
+      "comment": "Caption & Keywords: a keyword is on 12 of the 30 selected photos",
+      "extractionState": "manual"
+    },
+    "%lld photos can't be changed.": {
+      "comment": "Banner when Photos refused to change some of the selected photos (plural)",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld photo can't be changed."
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld photos can't be changed."
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "Add Keyword": {
+      "comment": "Capsule that opens the keyword field",
+      "extractionState": "manual"
+    },
+    "Add Keywords": {
+      "comment": "Bulk sheet section: keywords to add",
+      "extractionState": "manual"
+    },
+    "Add a Caption": {
+      "comment": "Placeholder of the caption field",
+      "extractionState": "manual"
+    },
+    "Added %lld keywords to %lld photos": {
+      "comment": "Banner after Caption & Keywords added keywords; first number keywords (2 or more), second photos (plural)",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Added %1$lld keywords to %#@photos@"
+          },
+          "substitutions": {
+            "photos": {
+              "argNum": 2,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg photo"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg photos"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "Added 1 keyword to %lld photos": {
+      "comment": "Banner after Caption & Keywords added one keyword to the selection (plural on photos)",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Added 1 keyword to %lld photo"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Added 1 keyword to %lld photos"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "Apply": {
+      "comment": "Write the bulk caption and keyword changes",
+      "extractionState": "manual"
+    },
+    "Cancel": {
+      "comment": "Close without writing",
+      "extractionState": "manual"
+    },
+    "Caption": {
+      "comment": "Accessibility label of the caption field",
+      "extractionState": "manual"
+    },
+    "Caption & Keywords": {
+      "comment": "Title of the bulk caption and keyword sheet",
+      "extractionState": "manual"
+    },
+    "Caption & Keywords…": {
+      "comment": "Photo command: edit Photos caption and keywords of the selection (iOS 27)",
+      "extractionState": "manual"
+    },
+    "Clear Captions": {
+      "comment": "Bulk sheet: clear the caption of every selected photo",
+      "extractionState": "manual"
+    },
+    "Couldn't Save to Photos": {
+      "comment": "Alert title when a caption or keyword write failed",
+      "extractionState": "manual"
+    },
+    "Couldn't Update Photos": {
+      "comment": "Alert title when the bulk write failed",
+      "extractionState": "manual"
+    },
+    "Couldn't undo the change.": {
+      "comment": "Banner when undoing a Caption & Keywords write failed",
+      "extractionState": "manual"
+    },
+    "Keyword": {
+      "comment": "Placeholder of the Add Keyword field",
+      "extractionState": "manual"
+    },
+    "Multiple Captions": {
+      "comment": "Placeholder when the selected photos have different captions",
+      "extractionState": "manual"
+    },
+    "Nothing was changed.": {
+      "comment": "Alert message when the bulk write failed",
+      "extractionState": "manual"
+    },
+    "On These Photos": {
+      "comment": "Bulk sheet section: keywords the selection already carries",
+      "extractionState": "manual"
+    },
+    "Photos doesn't allow changes to these photos — they may be in a shared library or a shared album.": {
+      "comment": "Alert message when every selected photo refuses property edits",
+      "extractionState": "manual"
+    },
+    "Remove": {
+      "comment": "VoiceOver action: remove this keyword from the photo",
+      "extractionState": "manual"
+    },
+    "Remove %@": {
+      "comment": "VoiceOver: drop a keyword waiting to be added",
+      "extractionState": "manual"
+    },
+    "Saved to Photos as you type. Keywords stay with the photo on every device.": {
+      "comment": "Footer under the caption and keywords section of Photo Info",
+      "extractionState": "manual"
+    },
+    "The caption and keywords are unchanged.": {
+      "comment": "Alert message when a caption or keyword write failed",
+      "extractionState": "manual"
+    },
+    "Try Again": {
+      "comment": "Retry a caption or keyword write",
+      "extractionState": "manual"
+    },
+    "Undo": {
+      "comment": "Banner action: write back what Caption & Keywords just changed",
+      "extractionState": "manual"
+    },
+    "Updated %lld photos": {
+      "comment": "Banner after Caption & Keywords changed captions or removed keywords (plural)",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Updated %lld photo"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Updated %lld photos"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "Updating %lld photos…": {
+      "comment": "Modal while a large Caption & Keywords write runs (plural)",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Updating %lld photo…"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Updating %lld photos…"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "version": "1.0"
+}

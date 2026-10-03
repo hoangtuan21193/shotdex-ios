@@ -258,6 +258,9 @@ struct SelectionToolbarItems: ToolbarContent {
                         }
                         .disabled(model.selectionCount < 1)
                     }
+                    if CaptionKeywordsSelectionRow.isOffered(screenOffers: model.offersCaptionKeywords) {
+                        CaptionKeywordsSelectionRow(ids: model.selectedIds)
+                    }
                     if let onExportEXIF = model.onExportEXIF {
                         Button(action: onExportEXIF) {
                             PhotoCommand.exportEXIF.label

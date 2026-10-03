@@ -26,11 +26,34 @@ struct CaptionKeywordService: Sendable {
     func apply(_ changes: [String: CaptionKeywordChange]) async throws -> PropertyWriteResult {
         let wanted = changes.filter { !$0.value.isEmpty }
         guard !wanted.isEmpty else { return .empty }
-        let result = try await writer.applyCaptionKeywords(wanted)
+        let result = try await write(wanted)
         try? metadataStore.recordPropertyWrite(result)
         await mirror.refresh(ids: wanted.keys.filter { !result.refused.contains($0) })
         _ = await keywordCatalog(true)
         return result
+    }
+
+    /// Up to this many photos go in one block. Measured on iOS 27.0: about
+    /// 0.9 ms a photo, so 10,000 is under the 10 s the spec allows one block
+    /// (FS-02.07 §10 q3); above it, blocks of `chunkSize`, one after another.
+    static let singleBlockLimit = 10_000
+    static let chunkSize = 1_000
+
+    static func blocks(_ ids: [String]) -> [[String]] {
+        guard ids.count > singleBlockLimit else { return [ids] }
+        return stride(from: 0, to: ids.count, by: chunkSize).map { Array(ids[$0..<min($0 + chunkSize, ids.count)]) }
+    }
+
+    private func write(_ changes: [String: CaptionKeywordChange]) async throws -> PropertyWriteResult {
+        var merged = PropertyWriteResult.empty
+        for block in Self.blocks(changes.keys.sorted()) {
+            let part = try await writer.applyCaptionKeywords(
+                Dictionary(uniqueKeysWithValues: block.compactMap { id in changes[id].map { (id, $0) } })
+            )
+            merged.dates.merge(part.dates) { $1 }
+            merged.refused.formUnion(part.refused)
+        }
+        return merged
     }
 
     /// Info's live read is the safety net for a change Photos' history did

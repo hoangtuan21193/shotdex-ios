@@ -14,6 +14,7 @@ enum PhotoCommand: String, CaseIterable, Identifiable {
     case video
     case resize
     case addToCollection
+    case captionKeywords
     case exportEXIF
     case duplicate
     case importToLibrary
@@ -32,6 +33,7 @@ enum PhotoCommand: String, CaseIterable, Identifiable {
         case .video: String(localized: "Create Video", comment: "Photo command")
         case .resize: String(localized: "Resize", comment: "Photo command")
         case .addToCollection: String(localized: "Add to Collection", comment: "Photo command")
+        case .captionKeywords: String(localized: "Caption & Keywords…", table: KeywordCopy.table, comment: "Photo command: edit Photos caption and keywords of the selection (iOS 27)")
         case .exportEXIF: String(localized: "Export EXIF (CSV)", comment: "Photo command")
         case .duplicate: String(localized: "Duplicate", comment: "Photo command")
         case .importToLibrary: String(localized: "Import to Library", comment: "Photo command: copy server photos into the library")
@@ -50,6 +52,7 @@ enum PhotoCommand: String, CaseIterable, Identifiable {
         case .video: "film"
         case .resize: "arrow.down.right.and.arrow.up.left"
         case .addToCollection: "rectangle.stack.badge.plus"
+        case .captionKeywords: "tag"
         case .exportEXIF: "doc.badge.arrow.up"
         case .duplicate: "plus.square.on.square"
         case .importToLibrary: "arrow.down.circle"
@@ -60,7 +63,7 @@ enum PhotoCommand: String, CaseIterable, Identifiable {
 
     /// The selection ⋯ of an album, in order (FS-01.09 §2).
     static let albumSelectionMenu: [PhotoCommand] = [
-        .pasteEdits, .combine, .cull, .collage, .video, .resize, .addToCollection, .exportEXIF, .duplicate,
+        .pasteEdits, .combine, .cull, .collage, .video, .resize, .addToCollection, .captionKeywords, .exportEXIF, .duplicate,
     ]
 
     /// What works on a file: the album's rows minus the Photos-only ones,

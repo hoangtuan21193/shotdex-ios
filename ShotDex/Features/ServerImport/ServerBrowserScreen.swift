@@ -634,8 +634,9 @@ struct ServerBrowserScreen: View {
         case .collage: run(.collage, on: photos)
         case .video: run(.video, on: photos)
         // Combine needs its purpose, which the submenu passes to `run`.
-        // Cull works on library photos only (marks are kept by asset id).
-        case .combine, .cull, .addToCollection, .duplicate: break
+        // Cull works on library photos only (marks are kept by asset id);
+        // caption and keywords live in Photos (FS-02.07).
+        case .combine, .cull, .addToCollection, .captionKeywords, .duplicate: break
         }
     }
 

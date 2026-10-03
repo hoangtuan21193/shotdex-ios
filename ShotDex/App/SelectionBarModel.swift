@@ -69,6 +69,9 @@ struct SelectionBarModel {
     /// Sends the originals to a file server (FS-15.02), starting on the
     /// connection picked in the menu or on the Add form.
     var onUploadToServer: ((ServerUploadTarget) -> Void)? = nil
+    /// Offers *Caption & Keywords…* after Add to Collection — Library, album
+    /// and smart album; never On This Day (FS-02.07 §5), never below iOS 27.
+    var offersCaptionKeywords = false
 
     /// Favorite / Hide / Adjust Date & Time / Adjust Location / Copy. One
     /// object instead of five closures: every screen offers the identical set

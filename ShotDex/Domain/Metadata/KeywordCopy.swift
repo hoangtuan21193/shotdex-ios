@@ -42,6 +42,14 @@ enum KeywordCopy {
         String(localized: "Updating \(photos) photos…", table: table, locale: locale, comment: "Modal while a large Caption & Keywords write runs (plural)")
     }
 
+    static var undo: String {
+        String(localized: "Undo", table: table, comment: "Banner action: write back what Caption & Keywords just changed")
+    }
+
+    static var undoFailed: String {
+        String(localized: "Couldn't undo the change.", table: table, comment: "Banner when undoing a Caption & Keywords write failed")
+    }
+
     /// `30 Photos` under the sheet's title.
     static func photoCount(_ photos: Int, locale: Locale = .current) -> String {
         String(localized: "\(photos) Photos", table: table, locale: locale, comment: "Caption & Keywords sheet subtitle: number of selected photos (plural, title case)")
