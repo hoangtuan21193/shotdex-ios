@@ -313,7 +313,6 @@ enum VideoCompositionBuilder {
         let mix = AVMutableAudioMix()
         var parameters: [AVMutableAudioMixInputParameters] = []
 
-        let master = max(0, recipe.masterVolume)
         let mutedClipIDs = Set(recipe.clips.filter(\.isMuted).map(\.id))
         var byTrack: [CMPersistentTrackID: [Layout.ClipAudio]] = [:]
         for clipAudio in layout.clipAudio {
@@ -325,7 +324,7 @@ enum VideoCompositionBuilder {
             for clipAudio in clipRanges {
                 let volume = mutedClipIDs.contains(clipAudio.clipID)
                     ? 0
-                    : Float(recipe.videoVolume * master)
+                    : Float(recipe.videoVolume)
                 params.setVolumeRamp(
                     fromStartVolume: volume,
                     toEndVolume: volume,
@@ -353,8 +352,8 @@ enum VideoCompositionBuilder {
             )
             for ramp in ramps {
                 params.setVolumeRamp(
-                    fromStartVolume: Float(ramp.fromVolume * master),
-                    toEndVolume: Float(ramp.toVolume * master),
+                    fromStartVolume: Float(ramp.fromVolume),
+                    toEndVolume: Float(ramp.toVolume),
                     timeRange: CMTimeRange(
                         start: time(entry.insertAt + ramp.start),
                         end: time(entry.insertAt + ramp.start + ramp.duration)

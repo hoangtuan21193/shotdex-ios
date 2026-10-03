@@ -547,13 +547,7 @@ struct VideoStudioSheetHost: View {
                 // with nothing to read against it is a guess.
                 VideoLevelMeterBar(model: model)
                 InspectorSlider(
-                    label: "Master", value: model.recipe.masterVolume, range: 0...1,
-                    valueText: "\(Int(model.recipe.masterVolume * 100))", model: model,
-                    set: { model.setMasterVolume($0) },
-                    reset: { model.pushUndo(); model.setMasterVolume(1) }
-                )
-                InspectorSlider(
-                    label: "Clips", value: model.recipe.videoVolume, range: 0...1,
+                    label: VideoStudioCopy.videoSound, value: model.recipe.videoVolume, range: 0...1,
                     valueText: "\(Int(model.recipe.videoVolume * 100))", model: model,
                     set: { model.setVideoVolume($0) },
                     reset: { model.pushUndo(); model.setVideoVolume(1) }

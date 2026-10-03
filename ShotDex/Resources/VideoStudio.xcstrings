@@ -1,0 +1,18 @@
+{
+  "sourceLanguage": "en",
+  "strings": {
+    "Mute Video Sound": {
+      "comment": "Video Studio level meter: silences the clips' own audio for the whole project",
+      "extractionState": "manual"
+    },
+    "Unmute Video Sound": {
+      "comment": "Video Studio level meter: restores the clips' own audio for the whole project",
+      "extractionState": "manual"
+    },
+    "Video sound": {
+      "comment": "Video Studio: the clips' own audio level for the whole project",
+      "extractionState": "manual"
+    }
+  },
+  "version": "1.0"
+}

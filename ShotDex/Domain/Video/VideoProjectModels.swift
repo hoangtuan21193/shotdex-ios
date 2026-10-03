@@ -2,9 +2,13 @@ import CoreGraphics
 import Foundation
 import ShotDexKit
 
-/// Video Studio project state. In-memory only for now — a project lives one
-/// editing session and its output is a flat new video asset, so nothing here
-/// carries the Codable compatibility burden of the photo recipes.
+/// Video Studio project state. Stored as JSON in the `creations` table — as a
+/// draft while it is being edited and beside the exported video afterwards —
+/// and read back **leniently** (see the decoders at the end of this file): a
+/// key an older build wrote is ignored, a key a newer build added is
+/// defaulted, and one unreadable clip, caption or music bed costs that
+/// element only. The app is unreleased, so nothing here migrates old values;
+/// lenient reading is robustness, not compatibility.
 
 enum VideoClipKind: String, Codable, Sendable {
     case photo, video
@@ -466,16 +470,15 @@ struct VideoProjectRecipe: Equatable, Codable, Sendable {
     /// Music beds, each independently placed and trimmed. Overlapping tracks
     /// stack into lanes on the timeline and mix together at export.
     var musicTracks: [MusicTrack] = []
-    /// Global volume for the clips' own audio (music has its own).
+    /// "Video sound": the clips' own audio, for the whole project — the one
+    /// project-wide level there is (FS-12.08 §2). Music beds have their own.
     var videoVolume: Double = 1
-    /// One look for the whole video (deliberately not per-clip).
-    /// Notes on the ruler. Optional in the decoder so a project saved before
-    /// markers existed still opens.
+    /// Notes on the ruler.
     var markers: [TimedMarker] = []
     /// Undoing the camera's encoding, before anything else touches the
-    /// picture. Optional in the decoder: projects saved before this existed
-    /// decode as `.none`, which is what they were.
+    /// picture.
     var inputTransform: VideoInputTransform = .none
+    /// One look for the whole video (deliberately not per-clip).
     var filter: PhotoFilter = .original
     var filterIntensity: Double = 1
     /// The grade, as a chain of corrections rather than one flat set.
@@ -499,8 +502,6 @@ struct VideoProjectRecipe: Equatable, Codable, Sendable {
     var renderPreset: VideoRenderPreset = .hd1080
     /// Output canvas shape. renderSize = preset long edge fitted to this.
     var aspect: VideoAspect = .r16x9
-    /// Overall output gain applied on top of clip-audio and music volumes.
-    var masterVolume: Double = 1
     /// Letterbox / pillarbox fill behind aspect-fitted frames.
     var background = OverlayColor.black
 
@@ -549,5 +550,105 @@ extension VideoProjectRecipe {
                 count: target - transitions.count
             ))
         }
+    }
+}
+
+// MARK: - Lenient decoding
+
+// Every field but an element's identity reads with `try?` and a default, so a
+// value this build cannot read (an effect added later, an aspect removed)
+// costs that field, not the clip. Arrays go through `LossyArray`, so a broken
+// element costs that element, not the project. Encoding stays synthesized.
+
+extension VideoClip {
+    init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.init(
+            assetID: try container.decode(String.self, forKey: .assetID),
+            kind: try container.decode(VideoClipKind.self, forKey: .kind),
+            id: try container.decode(UUID.self, forKey: .id)
+        )
+        func value<T: Decodable>(_ key: CodingKeys, _ fallback: T) -> T {
+            ((try? container.decodeIfPresent(T.self, forKey: key)) ?? nil) ?? fallback
+        }
+        photoDuration = value(.photoDuration, VideoClip.defaultPhotoDuration)
+        trimStart = value(.trimStart, 0)
+        trimEnd = value(.trimEnd, Double?.none)
+        isMuted = value(.isMuted, false)
+        fadeIn = value(.fadeIn, 0)
+        fadeOut = value(.fadeOut, 0)
+        effect = value(.effect, VideoClipEffect.none)
+        speed = value(.speed, 1)
+        freezeSourceTime = value(.freezeSourceTime, Double?.none)
+        sourceDuration = value(.sourceDuration, Double?.none)
+    }
+}
+
+extension TimedOverlay {
+    init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        func value<T: Decodable>(_ key: CodingKeys, _ fallback: T) -> T {
+            ((try? container.decodeIfPresent(T.self, forKey: key)) ?? nil) ?? fallback
+        }
+        self.init(
+            overlay: try container.decode(PhotoOverlay.self, forKey: .overlay),
+            start: value(.start, 0),
+            duration: value(.duration, Double?.none),
+            animateIn: value(.animateIn, OverlayAnimation.none),
+            animateOut: value(.animateOut, OverlayAnimation.none),
+            inDuration: value(.inDuration, 0.4),
+            outDuration: value(.outDuration, 0.4)
+        )
+    }
+}
+
+extension MusicTrack {
+    init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.init(
+            source: try container.decode(MusicSource.self, forKey: .source),
+            id: try container.decode(UUID.self, forKey: .id)
+        )
+        func value<T: Decodable>(_ key: CodingKeys, _ fallback: T) -> T {
+            ((try? container.decodeIfPresent(T.self, forKey: key)) ?? nil) ?? fallback
+        }
+        start = value(.start, 0)
+        trimStart = value(.trimStart, 0)
+        trimEnd = value(.trimEnd, Double?.none)
+        sourceDuration = value(.sourceDuration, Double?.none)
+        volume = value(.volume, 1)
+        fadeIn = value(.fadeIn, 2)
+        fadeOut = value(.fadeOut, 2)
+    }
+}
+
+extension VideoProjectRecipe {
+    init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        func value<T: Decodable>(_ key: CodingKeys, _ fallback: T) -> T {
+            ((try? container.decodeIfPresent(T.self, forKey: key)) ?? nil) ?? fallback
+        }
+        func list<T: Decodable>(_ key: CodingKeys) -> [T] {
+            ((try? container.decodeLossyArrayIfPresent(T.self, forKey: key)) ?? nil) ?? []
+        }
+        self.init(clips: list(.clips))
+        transitions = list(.transitions)
+        musicTracks = list(.musicTracks)
+        videoVolume = value(.videoVolume, 1)
+        markers = list(.markers)
+        inputTransform = value(.inputTransform, VideoInputTransform.none)
+        filter = value(.filter, PhotoFilter.original)
+        filterIntensity = value(.filterIntensity, 1)
+        let decodedNodes: [ColorNode] = list(.nodes)
+        nodes = decodedNodes.isEmpty ? [ColorNode()] : decodedNodes
+        lut = value(.lut, VideoLUTReference?.none)
+        overlays = list(.overlays)
+        quarterTurns = value(.quarterTurns, 0)
+        renderPreset = value(.renderPreset, VideoRenderPreset.hd1080)
+        aspect = value(.aspect, VideoAspect.r16x9)
+        background = value(.background, OverlayColor.black)
+        // A dropped clip leaves one boundary too many; boundaries are
+        // positional, so trimming the tail is the honest repair.
+        syncTransitionsWithClips()
     }
 }

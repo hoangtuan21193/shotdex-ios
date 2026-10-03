@@ -94,8 +94,6 @@ final class VideoLevelMeterModel {
         placements: [VideoTimelineMath.Placement]
     ) -> (left: Double, right: Double) {
         let recipe = model.recipe
-        let master = max(0, recipe.masterVolume)
-        guard master > 0 else { return (0, 0) }
         var powerLeft = 0.0
         var powerRight = 0.0
 
@@ -108,7 +106,7 @@ final class VideoLevelMeterModel {
             else { continue }
             let sourceTime = clip.trimStart + (seconds - placement.start) * max(clip.speed, 0.01)
             let peak = envelope.peak(atSourceSeconds: sourceTime)
-            let gain = recipe.videoVolume * master
+            let gain = recipe.videoVolume
             powerLeft += pow(Double(peak.left) * gain, 2)
             powerRight += pow(Double(peak.right) * gain, 2)
         }
@@ -136,7 +134,7 @@ final class VideoLevelMeterModel {
                 volume: music.volume,
                 fadeIn: music.fadeIn,
                 fadeOut: music.fadeOut
-            ) * master
+            )
             powerLeft += pow(Double(peak.left) * gain, 2)
             powerRight += pow(Double(peak.right) * gain, 2)
         }
@@ -231,30 +229,24 @@ final class VideoLevelMeterModel {
     }
 }
 
-/// The meter itself: a dB scale and two channel bars, with the master mute at
-/// the top — the one audio control that belongs beside the level rather than
-/// three taps into an inspector.
+/// The meter itself: a dB scale and two channel bars, with the Video sound
+/// mute at the top — the one audio control that belongs beside the level
+/// rather than three taps into an inspector.
 struct VideoAudioMeterColumn: View {
     @Bindable var model: VideoStudioModel
     let meter: VideoLevelMeterModel
     let width: CGFloat
 
-    /// The volume the mute button restores. Zero is a real setting the user
-    /// can dial, so "was it muted" cannot be read off the volume alone.
-    @State private var volumeBeforeMute: Double = 1
-
-    private var isMuted: Bool { model.recipe.masterVolume <= 0 }
+    /// The mute silences Video sound — the clips' own audio for the whole
+    /// project, the one project-wide level there is (FS-12.04 §2). The model
+    /// remembers the level it restores, as the Video lane's header does.
+    private var isMuted: Bool { model.isVideoTrackMuted }
     private var showsScale: Bool { width >= 48 }
 
     var body: some View {
         VStack(spacing: 6) {
             Button {
-                if isMuted {
-                    model.setMasterVolume(volumeBeforeMute > 0 ? volumeBeforeMute : 1)
-                } else {
-                    volumeBeforeMute = model.recipe.masterVolume
-                    model.setMasterVolume(0)
-                }
+                model.toggleVideoTrackMuted()
             } label: {
                 Image(systemName: isMuted ? "speaker.slash.fill" : "speaker.wave.2.fill")
                     .font(.system(size: 13, weight: .medium))
@@ -265,8 +257,8 @@ struct VideoAudioMeterColumn: View {
             .buttonStyle(.plain)
             .accessibilityLabel(
                 isMuted
-                    ? Text("Unmute Project", comment: "Video Studio level meter: restores the master volume")
-                    : Text("Mute Project", comment: "Video Studio level meter: silences the whole mix")
+                    ? Text("Unmute Video Sound", tableName: VideoStudioCopy.table, comment: "Video Studio level meter: restores the clips' own audio for the whole project")
+                    : Text("Mute Video Sound", tableName: VideoStudioCopy.table, comment: "Video Studio level meter: silences the clips' own audio for the whole project")
             )
 
             HStack(spacing: 3) {

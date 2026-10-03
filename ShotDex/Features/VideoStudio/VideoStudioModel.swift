@@ -1224,13 +1224,6 @@ final class VideoStudioModel {
         applyAudioTier()
     }
 
-    /// Overall output gain over clip audio + music.
-    func setMasterVolume(_ volume: Double) {
-        recipe.masterVolume = min(max(volume, 0), 1)
-        markEdited()
-        applyAudioTier()
-    }
-
     /// Hold-for-original: while true the look (filter, the whole grading
     /// chain, the imported LUT and the overlays) is stripped from the preview
     /// via the cheap video-composition tier. Never touches the recipe, so

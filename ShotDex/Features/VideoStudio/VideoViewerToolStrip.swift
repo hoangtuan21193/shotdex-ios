@@ -88,15 +88,17 @@ struct VideoViewerToolStrip: View {
                 ))
             }
         }
+        // Video sound, not a Master: the clips' own audio for the whole
+        // project is the one project-wide level (FS-12.04 §2).
         items.append(Item(
             tool: .volume,
-            title: String(localized: "Master", comment: "Video Studio quick strip: the whole mix's level"),
+            title: VideoStudioCopy.videoSound,
             systemImage: "speaker.wave.2",
-            value: model.recipe.masterVolume,
+            value: model.recipe.videoVolume,
             range: 0...1,
-            readout: "\(Int(model.recipe.masterVolume * 100))",
-            set: { model.setMasterVolume($0) },
-            reset: { model.pushUndo(); model.setMasterVolume(1) }
+            readout: "\(Int(model.recipe.videoVolume * 100))",
+            set: { model.setVideoVolume($0) },
+            reset: { model.pushUndo(); model.setVideoVolume(1) }
         ))
         return items
     }
