@@ -191,6 +191,11 @@ Luật:
 - **2.** Có. `xcrun simctl addmedia` một JPEG có IPTC Keywords `Lightroom, test` + Caption-Abstract, và
   `PHAssetCreationRequest` cùng loại file: cả hai thành keyword và caption **của Photos**. Ảnh xuất từ Lightroom lọc
   được ngay khi gương đã đọc; dòng *Keywords* của file vẫn ở Rights & Description (§4), chỉ đọc.
+- **3.** Không có hộp thoại hệ thống (chụp màn trong lúc ghi). Một `performChanges` thêm 1 keyword: 1.000 asset
+  1,1 s, 5.000 asset 4,5 s (≈ 0,9 ms/asset); đặt caption 1.000 = 0,8 s, 5.000 = 3,5 s. Ngưỡng modal 1 s của §5
+  giữ nguyên (mẻ 1.000 đã chạm). Mốc 10 s tới ở khoảng 11.000 ảnh: mẻ **trên 10.000 ảnh** chia lô 1.000, dưới đó
+  một khối. Đọc (plan M7): 1.000 asset fetch theo id có tải sẵn = 0,57 s, lười = 1,49 s, theo `fetchLimit` =
+  0,54 s — tải sẵn có áp cho fetch theo id, nên lượt đọc đầy chia trang theo id lấy từ database.
 
 ## 11. Tiêu chí nghiệm thu
 
