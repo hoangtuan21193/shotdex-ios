@@ -201,6 +201,21 @@ struct VideoStudioDeskGeometryTests {
         #expect(Geometry.duoDiscFrames().last?.minX == 148)
     }
 
+    /// FS-12.03 AC-6: selected, the right group is ✕ · name · ✓ from x 620
+    /// to 907 — ✕ at 620, ✓ ending at 907 — and the five tools go inert.
+    @Test func duoInnerSelectedFooterSpans620To907() {
+        let row = CGRect(x: 0, y: 613, width: 951, height: 56)
+        let end = row.maxX - Geometry.duoRowTrailingInset
+        #expect(end == 907)
+        #expect(end - Geometry.duoSessionGroupWidth == 620)
+        #expect(Geometry.footerButton == 40)
+        // The tools end at 416, well short of the group.
+        let toolsEnd = Geometry.duoToolLeading + 5 * Geometry.duoToolCell.width + 4 * Geometry.duoToolGap
+        #expect(toolsEnd < end - Geometry.duoSessionGroupWidth)
+        #expect(VideoAddTool.toolsAreInert(in: .duoInner, isSelecting: true))
+        #expect(!VideoAddTool.toolsAreInert(in: .duoInner, isSelecting: false))
+    }
+
     /// The Duo inner layout has no pool, no meter and no viewer header:
     /// each would cost height this window does not have.
     @Test func duoInnerHasNoPoolMeterOrHeader() {

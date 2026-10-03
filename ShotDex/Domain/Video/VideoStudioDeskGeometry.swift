@@ -130,6 +130,8 @@ enum VideoStudioDeskGeometry {
     /// The row's right-hand group ends at x 907 on a 951pt window — 44 in,
     /// clear of the rounded corner.
     static let duoRowTrailingInset: CGFloat = 44
+    /// While an item is selected the right group is ✕ · name · ✓, x 620–907.
+    static let duoSessionGroupWidth: CGFloat = 287
 
     // MARK: Duo cover display (FS-12.07b)
 

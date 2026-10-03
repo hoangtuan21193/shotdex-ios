@@ -12,18 +12,29 @@ struct VideoStudioDuoBottomRow: View {
     private typealias Geometry = VideoStudioDeskGeometry
 
     var body: some View {
+        let title = model.selectionTitle
+        let toolsInert = VideoAddTool.toolsAreInert(in: .duoInner, isSelecting: title != nil)
         HStack(spacing: Geometry.duoToolGap) {
+            // While an item is selected the tools stay where they are, at
+            // white 30 % and taking no touches (FS-12.03 §4): the row does
+            // not jump, and nothing is added behind an open session.
             ForEach(VideoAddTool.bottomRow) { tool in
                 VideoToolbarCell(
                     command: command(for: tool),
                     size: Geometry.duoToolCell,
                     labelSize: 10
                 )
+                .opacity(toolsInert ? 0.3 : 1)
+                .allowsHitTesting(!toolsInert)
             }
             Spacer(minLength: 0)
-            HStack(spacing: 10) {
-                VideoSettingsButton(model: model, isTwoLine: true)
-                exportPill
+            if let title {
+                sessionGroup(title)
+            } else {
+                HStack(spacing: 10) {
+                    VideoSettingsButton(model: model, isTwoLine: true)
+                    exportPill
+                }
             }
         }
         .padding(.leading, Geometry.duoToolLeading)
@@ -48,6 +59,47 @@ struct VideoStudioDuoBottomRow: View {
                 }
             }
         )
+    }
+
+    /// ✕ · name · ✓ in place of Video Settings and Export, x 620–907: the
+    /// session ends where the thumb of the right hand already is. Export is
+    /// hidden — exporting half way through an open session would export
+    /// something the user has not decided on.
+    private func sessionGroup(_ title: VideoItemTitle.Lines) -> some View {
+        HStack(spacing: 0) {
+            Button { model.cancelSession() } label: {
+                Image(systemName: "xmark")
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(.white)
+                    .frame(width: Geometry.footerButton, height: Geometry.footerButton)
+                    .background(Circle().fill(Color.white.opacity(0.12)))
+                    .contentShape(Circle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(VideoStudioCopy.discardChanges)
+            VStack(spacing: 1) {
+                Text(title.name)
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(.white)
+                Text(title.detail)
+                    .font(.system(size: 11, design: .monospaced))
+                    .foregroundStyle(.white.opacity(0.35))
+            }
+            .lineLimit(1)
+            .frame(maxWidth: .infinity)
+            .accessibilityElement(children: .combine)
+            Button { model.commitSession() } label: {
+                Image(systemName: "checkmark")
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundStyle(.black)
+                    .frame(width: Geometry.footerButton, height: Geometry.footerButton)
+                    .background(Circle().fill(Color.white))
+                    .contentShape(Circle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(VideoStudioCopy.keepChanges)
+        }
+        .frame(width: Geometry.duoSessionGroupWidth)
     }
 
     private var exportPill: some View {
