@@ -118,6 +118,7 @@ struct ExtendedMetadataMirrorPassTests {
         #expect(summary.completed)
         #expect(reader.fetches == 55)
         #expect(reader.idsRead == 55_000)
+        #expect(summary.peakFootprint > 0)
     }
 
     /// AC-10: Photos reports B updated, its modification date unchanged — the

@@ -3,6 +3,7 @@ import ImageIO
 import Photos
 import Testing
 import UniformTypeIdentifiers
+@testable import ShotDex
 
 /// FS-02.07 plan M1–M5, M7 — measurements, not feature tests. On iOS 27 each
 /// test writes captions and keywords onto library assets through
@@ -422,5 +423,55 @@ struct CaptionKeywordProbeTests {
             if asset.extendedMetadata.caption != nil || !asset.extendedMetadata.keywords.isEmpty { left += 1 }
         }
         Self.log("cleanup: cleared \(dirty.count), still tagged \(left)")
+    }
+
+    /// Support for the UI proofs, not a measurement: `Sunset` on 40 photos,
+    /// `Sunrise` on 12, `Sun Valley` on 3 — the library AC-3 assumes — on
+    /// the oldest images, so the newest stay bare for typing into. Run on
+    /// purpose with `-only-testing:…/seedSunsetLibrary()`; `zzCleanup` takes
+    /// them off again.
+    @Test func seedSunsetLibrary() async throws {
+        guard Self.canRun, #available(iOS 27, *),
+              ProcessInfo.processInfo.environment["SHOTDEX_SEED_KEYWORDS"] != nil
+                || FileManager.default.fileExists(atPath: FileManager.default.temporaryDirectory.appendingPathComponent("seed-keywords").path)
+        else { return }
+        let options = PHFetchOptions()
+        options.sortDescriptors = [NSSortDescriptor(key: "creationDate", ascending: true)]
+        options.predicate = NSPredicate(format: "mediaType = %d", PHAssetMediaType.image.rawValue)
+        let fetch = PHAsset.fetchAssets(with: options)
+        var assets: [PHAsset] = []
+        fetch.enumerateObjects { asset, index, stop in
+            assets.append(asset)
+            if assets.count == 40 { stop.pointee = true }
+        }
+        try await PHPhotoLibrary.shared().performChanges {
+            for (index, asset) in assets.enumerated() {
+                let request = PHAssetChangeRequest(for: asset)
+                request.addKeyword("Sunset")
+                if index < 12 { request.addKeyword("Sunrise") }
+                if index < 3 { request.addKeyword("Sun Valley") }
+            }
+        }
+        Self.log("seeded Sunset on \(assets.count), Sunrise on \(min(12, assets.count)), Sun Valley on \(min(3, assets.count))")
+    }
+
+    /// M6 on the simulator, as far as it goes (the 55k answer needs the
+    /// device): the app's own reader over every asset in pages of 1,000 —
+    /// time and fetches; the footprint the pass logs is the app's.
+    @Test func m6SimulatorFullRead() async throws {
+        guard Self.canRun, #available(iOS 27, *) else { return }
+        let all = PHAsset.fetchAssets(with: nil)
+        var ids: [String] = []
+        all.enumerateObjects { asset, _, _ in ids.append(asset.localIdentifier) }
+        let reader = PhotoKitExtendedMetadataReader()
+        let start = ContinuousClock.now
+        var pages = 0
+        var tagged = 0
+        for offset in stride(from: 0, to: ids.count, by: 1_000) {
+            let page = Array(ids[offset..<min(offset + 1_000, ids.count)])
+            tagged += reader.read(ids: page).values.filter { !$0.isEmpty }.count
+            pages += 1
+        }
+        Self.log("M6 sim: assets=\(ids.count) pages=\(pages) total=\(ContinuousClock.now - start) tagged=\(tagged)")
     }
 }
