@@ -263,3 +263,24 @@ struct VideoSessionCancelTests {
         #expect(model.selectedClipID == nil)
     }
 }
+
+/// A tool panel is a session of its own (FS-12.04 §4).
+@MainActor
+struct VideoToolSessionTests {
+    /// FS-12.04 AC-9: Music open, Video sound 100 → 40, ✕ in the panel's
+    /// title — Video sound is 100 again and no undo step is left of it.
+    @Test func toolCancelRestoresVideoSoundAndLeavesNoUndo() {
+        let model = VideoStudioModelFixture.model()
+        model.toggleToolPanel(.music)
+        #expect(model.session?.target == .tool(VideoToolPanel.music.rawValue))
+        model.beginUndoGroup()
+        model.setVideoVolume(0.4)
+        model.endUndoGroup()
+
+        model.cancelSession()
+        #expect(model.recipe.videoVolume == 1)
+        #expect(!model.canUndo)
+        #expect(!model.canRedo)
+        #expect(model.activeToolPanel == nil)
+    }
+}

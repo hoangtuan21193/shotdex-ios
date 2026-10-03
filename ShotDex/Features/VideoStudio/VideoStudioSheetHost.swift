@@ -77,8 +77,11 @@ struct VideoStudioSheetHost: View {
                     .foregroundStyle(.white)
                     .lineLimit(1)
                 Spacer(minLength: 0)
+                // ✕ throws away everything changed since the panel opened —
+                // Video sound included — and leaves no undo step behind
+                // (FS-12.04 §4). Closing any other way keeps.
                 Button {
-                    model.showToolPanel(nil)
+                    model.cancelSession()
                 } label: {
                     Image(systemName: "xmark")
                         .font(.system(size: 14, weight: .semibold))
@@ -222,7 +225,13 @@ struct VideoStudioSheetHost: View {
             }
         case .none:
             switch model.activeToolPanel {
-            case .look: beforeAfterButton
+            case .look:
+                // Hold-to-compare, then ✕ (discard since opening) and ✓.
+                HStack(spacing: 8) {
+                    beforeAfterButton
+                    cancelButton
+                    titleButton("checkmark", label: Text(VideoStudioCopy.keepChanges)) { model.commitSession() }
+                }
             case .music: EmptyView()
             case .videoSettings:
                 // Done only: every change applies as it is made, so there
@@ -262,6 +271,21 @@ struct VideoStudioSheetHost: View {
             .accessibilityLabel(Text("Show original", comment: "Video Studio: press-and-hold control that previews the clips without edits"))
             .accessibilityHint(Text("Press and hold to see the clips without edits", comment: "Hint for the Video Studio before/after control"))
             .accessibilityAddTraits(model.showsOriginal ? .isSelected : [])
+    }
+
+    /// ✕ in a tool panel's title: a dark disc, as in the session footer.
+    private var cancelButton: some View {
+        Button {
+            model.cancelSession()
+        } label: {
+            Image(systemName: "xmark")
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(.white)
+                .frame(width: VideoStudioMetrics.inspectorTitleButton, height: VideoStudioMetrics.inspectorTitleButton)
+                .background(Circle().fill(Color.white.opacity(0.10)))
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(VideoStudioCopy.discardChanges)
     }
 
     private func titleButton(
