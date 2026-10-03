@@ -45,6 +45,48 @@ struct VideoStudioWindowClassTests {
         #expect(VideoStudioWindowClass.resolve(window: window, knownTrailingInset: 84) == .duoCover)
     }
 
+    /// FS-12.03 AC-7 (class half): a Stage Manager window dragged from 800
+    /// to 700 tall changes class — iPad landscape to the Duo inner layout —
+    /// and nothing else about the window does.
+    @Test func shrinkingAStageManagerWindowChangesClassOnly() {
+        #expect(VideoStudioWindowClass.resolve(window: CGSize(width: 1000, height: 800), trailingInset: 0) == .iPadLandscape)
+        #expect(VideoStudioWindowClass.resolve(window: CGSize(width: 1000, height: 720), trailingInset: 0) == .iPadLandscape)
+        #expect(VideoStudioWindowClass.resolve(window: CGSize(width: 1000, height: 719), trailingInset: 0) == .duoInner)
+        #expect(VideoStudioWindowClass.resolve(window: CGSize(width: 1000, height: 700), trailingInset: 0) == .duoInner)
+    }
+
+    /// FS-12.03 AC-7, FS-12.07b AC-8: the selection and its ✕ snapshot
+    /// live in the model, not in a layout. Clip 2 selected, Speed 2×, the
+    /// window changes class (what the screen does then is write the draft);
+    /// clip 2 is still selected with its session, and ✕ takes Speed back
+    /// to 1×.
+    @MainActor
+    @Test func aClassChangeKeepsTheSelectionAndItsCancel() {
+        let model = VideoStudioModelFixture.model()
+        let clip2 = model.recipe.clips[1].id
+        model.selectClip(clip2)
+        model.pushUndo()
+        model.setSpeed(2, for: clip2)
+        let session = model.session
+        var columns = VideoDeskColumns(isPoolOpen: true, isInspectorOpen: true)
+        _ = VideoStudioDeskGeometry.iPadLandscape(.init(
+            window: CGSize(width: 1000, height: 800), canvas: CGSize(width: 16, height: 9),
+            isPoolOpen: columns.isPoolOpen ?? false, isInspectorOpen: columns.isInspectorOpen
+        ))
+        model.sceneDidChange()
+        _ = VideoStudioDeskGeometry.duoInner(.init(
+            window: CGSize(width: 1000, height: 700), canvas: CGSize(width: 16, height: 9),
+            isPoolOpen: false, isInspectorOpen: true
+        ))
+        columns.presentsSheetChanged(from: true, to: true)
+        #expect(model.selectedClipID == clip2)
+        #expect(model.session == session)
+        #expect(columns == VideoDeskColumns(isPoolOpen: true, isInspectorOpen: true))
+        model.cancelSession()
+        #expect(model.recipe.clips[1].speed == 1)
+        #expect(model.selectedClipID == nil)
+    }
+
     @Test func shortWindowsAreUnder720() {
         for height in [CGFloat(669), 678, 719.5] {
             #expect(VideoStudioWindowClass.isShortWindow(height: height))
