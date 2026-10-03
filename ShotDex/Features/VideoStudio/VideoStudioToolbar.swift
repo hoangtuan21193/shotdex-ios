@@ -38,9 +38,18 @@ struct VideoStudioToolbar: View {
             VideoCommand(
                 title: tool.title,
                 systemImage: tool.systemImage,
-                isOpen: tool == .look && model.activeToolPanel == .look,
+                isOpen: Self.panel(for: tool).map { model.activeToolPanel == $0 } ?? false,
                 action: action(for: tool)
             )
+        }
+    }
+
+    /// The panel a tool's cell opens, when it opens one.
+    static func panel(for tool: VideoAddTool) -> VideoToolPanel? {
+        switch tool {
+        case .look: .look
+        case .music: .music
+        case .media, .text, .sticker: nil
         }
     }
 

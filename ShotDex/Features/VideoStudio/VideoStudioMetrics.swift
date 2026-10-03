@@ -25,6 +25,8 @@ enum VideoStudioMetrics {
     /// Gap between the preview and the timeline.
     static let previewTimelineGap: CGFloat = 8
     static let toolbarHeight: CGFloat = 62
+    /// The Music panel's title row (board P4).
+    static let musicPanelTitleHeight: CGFloat = 46
     /// A cell of the phone's tool row (FS-12.04 §3): five of them, 72×52,
     /// spread over the width from a 6pt inset — on 402pt at x 9, 87, 165…
     static let toolCellSize = CGSize(width: 72, height: 52)

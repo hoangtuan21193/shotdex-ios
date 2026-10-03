@@ -547,7 +547,7 @@ struct VideoStudioScreen: View {
                             model: model,
                             height: layout.timeline,
                             onAddOverlay: { addTextOverlay(model) },
-                            onAddMusic: { musicChooserIntent = .add },
+                            onAddMusic: { model.toggleToolPanel(.music) },
                             onAddMedia: { mediaPickerMode = .add },
                             onEditText: { editingOverlay = $0 },
                             onTransition: { model.editingTransitionIndex = $0 },
@@ -581,7 +581,7 @@ struct VideoStudioScreen: View {
                     .frame(width: stageColumnWidth)
 
                     if usesInspectorColumn {
-                        VideoStudioSheetHost(model: model, actions: actions(model), layout: .column)
+                        VideoStudioSheetHost(model: model, actions: actions(model), layout: .column, importedMusic: importedMusic)
                             .frame(width: VideoStudioMetrics.inspectorColumnWidth)
                             .padding(.top, bandHeight)
                             .padding(.bottom, proxy.safeAreaInsets.bottom)
@@ -804,7 +804,7 @@ struct VideoStudioScreen: View {
                     DragGesture(minimumDistance: 8)
                         .onEnded { if $0.translation.height > 40 { model.clearSelection() } }
                 )
-            VideoStudioSheetHost(model: model, actions: actions(model))
+            VideoStudioSheetHost(model: model, actions: actions(model), importedMusic: importedMusic)
         }
         .frame(height: height, alignment: .top)
         .background(EditorTheme.panelSolid)
@@ -831,10 +831,11 @@ struct VideoStudioScreen: View {
             onReplaceClip: { mediaPickerMode = .replace },
             onAddText: { addTextOverlay(model) },
             onAddSticker: { isStickerPickerPresented = true },
-            onAddMusic: { musicChooserIntent = .add },
+            onAddMusic: { model.toggleToolPanel(.music) },
             onReplaceMusic: { musicChooserIntent = .replace($0) },
             onEditText: { editingOverlay = $0 },
-            onPickFont: { isFontPickerPresented = true }
+            onPickFont: { isFontPickerPresented = true },
+            onImportMusic: { isMusicImporterPresented = true }
         )
     }
 
@@ -1158,21 +1159,33 @@ struct VideoMusicChooserSheet: View {
 @MainActor
 final class MusicWaveformCache: ObservableObject {
     @Published private var cache: [String: [Float]] = [:]
+    @Published private var durations: [String: Double] = [:]
     private var inFlight: Set<String> = []
 
     func samples(for id: String) -> [Float] { cache[id] ?? [] }
+
+    /// "3:24 · m4a" — the song's length once it is known, and its kind.
+    func detail(for id: String, url: URL) -> String {
+        let kind = url.pathExtension.lowercased()
+        guard let seconds = durations[id] else { return kind }
+        let whole = Int(seconds.rounded())
+        return String(format: "%d:%02d · %@", whole / 60, whole % 60, kind)
+    }
 
     func load(id: String, url: URL) async {
         if cache[id] != nil || inFlight.contains(id) { return }
         inFlight.insert(id)
         let samples = await VideoWaveform.samples(from: url, buckets: 56)
         cache[id] = samples
+        if let duration = try? await AVURLAsset(url: url).load(.duration) {
+            durations[id] = duration.seconds
+        }
         inFlight.remove(id)
     }
 }
 
 /// A compact mirrored-bar waveform for a chooser row.
-private struct MusicRowWaveform: View {
+struct MusicRowWaveform: View {
     let samples: [Float]
     let active: Bool
 

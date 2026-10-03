@@ -14,6 +14,8 @@ struct VideoInspectorActions {
     var onReplaceMusic: (UUID) -> Void
     var onEditText: (PhotoOverlay) -> Void
     var onPickFont: () -> Void
+    /// Add Music from Files… in the Music panel.
+    var onImportMusic: () -> Void = {}
 }
 
 /// The contextual bottom sheet: a title row naming what is selected, the params
@@ -36,18 +38,63 @@ struct VideoStudioSheetHost: View {
     @Bindable var model: VideoStudioModel
     let actions: VideoInspectorActions
     var layout: Layout = .band
+    /// The user's songs, for the Music panel.
+    var importedMusic: ImportedMusicStore?
 
     var body: some View {
         Group {
-            switch layout {
-            case .band: bandBody
-            case .column: columnBody
+            if model.inspectorTarget == .none, model.activeToolPanel == .music, let importedMusic {
+                musicPanel(importedMusic)
+            } else {
+                switch layout {
+                case .band: bandBody
+                case .column: columnBody
+                }
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .background(EditorTheme.panelSolid)
         .animation(EditorTheme.animation, value: model.inspectorTarget)
         .animation(EditorTheme.animation, value: model.activeToolPanel)
+    }
+
+    /// The Music panel (board P4): a 46pt title — glyph, "Add Music", ✕ —
+    /// over Video sound, Add Music from Files… and My Music. The bottom row
+    /// keeps its five tools while it is open.
+    private func musicPanel(_ importedMusic: ImportedMusicStore) -> some View {
+        VStack(spacing: 0) {
+            HStack(spacing: 8) {
+                RoundedRectangle(cornerRadius: 7, style: .continuous)
+                    .fill(Color.white.opacity(0.08))
+                    .frame(width: 24, height: 24)
+                    .overlay {
+                        Image(systemName: "music.note")
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundStyle(.white.opacity(0.8))
+                    }
+                Text(VideoStudioCopy.addMusic)
+                    .font(.system(size: 14.5, weight: .semibold))
+                    .foregroundStyle(.white)
+                    .lineLimit(1)
+                Spacer(minLength: 0)
+                Button {
+                    model.showToolPanel(nil)
+                } label: {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(.white)
+                        .frame(width: 32, height: 32)
+                        .background(Circle().fill(Color.white.opacity(0.10)))
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(VideoStudioCopy.discardChanges)
+            }
+            .padding(.leading, 14)
+            .padding(.trailing, 10)
+            .frame(height: VideoStudioMetrics.musicPanelTitleHeight)
+            .overlay(alignment: .bottom) { Rectangle().fill(Color.white.opacity(0.07)).frame(height: 1) }
+            VideoMusicPanelContent(model: model, importedMusic: importedMusic, onImport: actions.onImportMusic)
+        }
     }
 
     private var bandBody: some View {
@@ -176,6 +223,7 @@ struct VideoStudioSheetHost: View {
         case .none:
             switch model.activeToolPanel {
             case .look: beforeAfterButton
+            case .music: EmptyView()
             case .videoSettings:
                 // Done only: every change applies as it is made, so there
                 // is nothing to cancel (FS-12.04 §4).
@@ -588,6 +636,9 @@ struct VideoStudioSheetHost: View {
             EmptyView()
         case .look:
             lookParams
+        case .music:
+            // Drawn by `musicPanel` in place of the whole band.
+            EmptyView()
         case .videoSettings:
             // Ratio and the fill behind a fitted frame, until the Video
             // Settings plan gives this panel its resolution, fps and codec.

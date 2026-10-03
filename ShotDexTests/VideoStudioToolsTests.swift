@@ -1,4 +1,5 @@
 import CoreGraphics
+import Foundation
 import Testing
 @testable import ShotDex
 
@@ -68,5 +69,25 @@ struct VideoStudioPhoneBandTests {
                 #expect(frame.maxX <= island.lowerBound || frame.minX >= island.upperBound, "\(item) on \(width)")
             }
         }
+    }
+}
+
+/// FS-12.04 §3: which cells open a panel.
+@MainActor
+struct VideoStudioToolPanelTests {
+    /// FS-12.04 AC-14 (model half): Music opens the in-frame Music panel —
+    /// Video sound is its level, and no Master exists to show beside it.
+    @Test func theMusicCellOpensTheMusicPanel() {
+        #expect(VideoStudioToolbar.panel(for: .music) == .music)
+        #expect(VideoStudioToolbar.panel(for: .look) == .look)
+        #expect(VideoStudioToolbar.panel(for: .media) == nil)
+        let model = VideoStudioModelFixture.model()
+        model.toggleToolPanel(.music)
+        #expect(model.activeToolPanel == .music)
+        model.setVideoVolume(0.4)
+        #expect(model.recipe.videoVolume == 0.4)
+        // The recipe has no project-wide level other than Video sound.
+        let written = String(decoding: (try? JSONEncoder().encode(model.recipe)) ?? Data(), as: UTF8.self)
+        #expect(!written.contains("master"))
     }
 }

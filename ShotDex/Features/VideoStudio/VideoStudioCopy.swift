@@ -36,4 +36,20 @@ enum VideoStudioCopy {
     static var videoSettings: String {
         String(localized: "Video Settings", table: table, comment: "Video Studio: the panel for the project's ratio, background, resolution and frame rate")
     }
+
+    static var videoSoundCaption: String {
+        String(localized: "Original clip audio, whole project", table: table, comment: "Video Studio Music panel: caption under the Video sound slider")
+    }
+
+    static var myMusic: String {
+        String(localized: "MY MUSIC", table: table, comment: "Video Studio Music panel: header over the user's imported songs")
+    }
+
+    static var addMusic: String {
+        String(localized: "Add Music", table: table, comment: "Video Studio: title of the Music tool's panel")
+    }
+
+    static var discardChanges: String {
+        String(localized: "Discard Changes", table: table, comment: "Video Studio: the ✕ that closes a tool panel and throws away what it changed")
+    }
 }

@@ -74,6 +74,8 @@ enum VideoToolPanel: String, Equatable, Identifiable, CaseIterable {
     case look
     /// Ratio and Background for now; the Video Settings plan fills it.
     case videoSettings
+    /// Video sound, Add Music from Files…, My Music (FS-12.04 §3).
+    case music
 
     var id: String { rawValue }
 
@@ -81,6 +83,7 @@ enum VideoToolPanel: String, Equatable, Identifiable, CaseIterable {
         switch self {
         case .look: VideoStudioCopy.look
         case .videoSettings: VideoStudioCopy.videoSettings
+        case .music: VideoStudioCopy.addMusic
         }
     }
 
@@ -88,6 +91,7 @@ enum VideoToolPanel: String, Equatable, Identifiable, CaseIterable {
         switch self {
         case .look: "camera.filters"
         case .videoSettings: "aspectratio"
+        case .music: "music.note"
         }
     }
 }

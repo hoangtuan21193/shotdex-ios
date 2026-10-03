@@ -29,6 +29,10 @@
         }
       }
     },
+    "Add Music": {
+      "comment": "Video Studio: title of the Music tool's panel",
+      "extractionState": "manual"
+    },
     "Couldn't save your video draft": {
       "comment": "Video Studio: banner and alert when the draft could not be written (disk full, database error)",
       "extractionState": "manual"
@@ -39,6 +43,10 @@
     },
     "Delete Draft?": {
       "comment": "Video Projects: title of the confirmation before a draft is deleted",
+      "extractionState": "manual"
+    },
+    "Discard Changes": {
+      "comment": "Video Studio: the ✕ that closes a tool panel and throws away what it changed",
       "extractionState": "manual"
     },
     "Draft": {
@@ -57,12 +65,20 @@
       "comment": "Video Studio: the bottom-row tool that changes the whole video's look — filter, adjustments, colour",
       "extractionState": "manual"
     },
+    "MY MUSIC": {
+      "comment": "Video Studio Music panel: header over the user's imported songs",
+      "extractionState": "manual"
+    },
     "Media": {
       "comment": "Video Studio: the bottom-row tool that adds photos and videos to the timeline",
       "extractionState": "manual"
     },
     "Mute Video Sound": {
       "comment": "Video Studio level meter: silences the clips' own audio for the whole project",
+      "extractionState": "manual"
+    },
+    "Original clip audio, whole project": {
+      "comment": "Video Studio Music panel: caption under the Video sound slider",
       "extractionState": "manual"
     },
     "Playhead at %@ of %@": {

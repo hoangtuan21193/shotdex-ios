@@ -192,7 +192,7 @@ struct VideoStudioTopBand: View {
     /// the same panel, not the panel.
     private var projectToolsMenu: some View {
         Menu {
-            ForEach(VideoToolPanel.allCases) { panel in
+            ForEach([VideoToolPanel.look, .videoSettings]) { panel in
                 Button {
                     model.toggleToolPanel(panel)
                 } label: {
