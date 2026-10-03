@@ -89,7 +89,10 @@ enum VideoEffectMath {
         let local = time - clipStart
         let window = min(1, max(0, min(local, clipDuration - local) / shakeEdgeWindow))
         guard window > 0 else { return .zero }
-        let frame = UInt64(max(0, (time * 30).rounded(.down)))
+        // A hair of slack before rounding down: composition times are
+        // multiples of 1/600 s, and one like 2460/600 multiplies out to
+        // 122.99999…, which would step the shake a frame early at 60 fps.
+        let frame = UInt64(max(0, (time * 30 + 1e-6).rounded(.down)))
         let seed = frame &* 0x9E3779B97F4A7C15 ^ (UInt64(bitPattern: Int64(clipIndex)) &<< 32)
         let amplitude = shakeAmplitude * min(renderSize.width, renderSize.height) * window
         let dx = (unitRandom(splitMix64(seed)) * 2 - 1) * amplitude

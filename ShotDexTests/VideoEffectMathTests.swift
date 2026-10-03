@@ -1,5 +1,6 @@
 import CoreGraphics
 import Foundation
+import CoreMedia
 import Testing
 @testable import ShotDex
 
@@ -116,6 +117,26 @@ struct VideoEffectMathTests {
         // Bounded by the amplitude.
         let bound = VideoEffectMath.shakeAmplitude * Double(min(canvas.width, canvas.height))
         #expect(abs(a.dx) <= bound && abs(a.dy) <= bound)
+    }
+
+    /// FS-12.01 §7: the shake runs on a 1/30 s clock whatever the export's
+    /// frame rate, so a 60 fps export holds each offset for two frames and
+    /// moves on the third — the same jitter the 30 fps preview shows.
+    /// Times are the composition's own (`CMTime` at timescale 600), which
+    /// is where a 2k/60 that lands a hair under k/30 would round down a
+    /// frame early.
+    @Test func shakeHoldsEachOffsetForTwoFramesAt60fps() {
+        func offset(frame: Int) -> CGVector {
+            VideoEffectMath.shakeOffset(
+                time: CMTime(value: CMTimeValue(frame * 10), timescale: 600).seconds,
+                clipStart: 0, clipDuration: 10, clipIndex: 0, renderSize: canvas
+            )
+        }
+        // The middle of a 10 s clip, clear of the edge windows.
+        for pair in stride(from: 120, to: 480, by: 2) {
+            #expect(offset(frame: pair) == offset(frame: pair + 1), "60 fps frames \(pair) and \(pair + 1)")
+            #expect(offset(frame: pair) != offset(frame: pair + 2), "60 fps frames \(pair) and \(pair + 2)")
+        }
     }
 
     @Test func shakeAmplitudeWindowsToZeroAtClipEdges() {
