@@ -220,3 +220,58 @@ struct VideoDraftReopenTests {
         #expect(reopened.recipe.playhead == nil)
     }
 }
+
+/// FS-12.18 §2: the draft and the export are one row.
+@MainActor
+struct VideoDraftExportTests {
+    /// Export marks the draft row exported — the same row, not a new one.
+    @Test func exportMarksTheDraftRowExported() async throws {
+        let store = CreationStore(database: try AppDatabase.makeEmpty())
+        let model = VideoStudioModelFixture.model(creationStore: store)
+        defer { model.close() }
+        #expect(await model.saveDraftNow())
+        #expect(try store.fetch(id: model.creationID)?.isDraft == true)
+
+        model.recordExport(assetID: "exported-video", now: 500)
+
+        let rows = try store.fetchOrdered(kind: .video)
+        #expect(rows.count == 1)
+        #expect(rows.first?.id == model.creationID)
+        #expect(rows.first?.exportedAt == 500)
+        #expect(rows.first?.assetId == "exported-video")
+        #expect(rows.first?.isDraft == false)
+    }
+
+    /// FS-12.18 AC-12: exported once, opened, Speed changed, Back — the row
+    /// carries the new Speed, is still exported (no Draft label) and is
+    /// still the only row; exporting again updates that row.
+    @Test func editAfterExportKeepsOneRow() async throws {
+        let store = CreationStore(database: try AppDatabase.makeEmpty())
+        let first = VideoStudioModelFixture.model(creationStore: store)
+        first.recordExport(assetID: "v1", now: 500)
+        first.close()
+
+        let row: Creation = try #require(try store.fetch(id: first.creationID))
+        let dependencies = AppDependencies.preview()
+        let reopened = VideoStudioModel(
+            photos: [], mode: .multiClip, service: dependencies.videoStudio,
+            photoLibrary: dependencies.photoLibrary, overlayFontRecents: dependencies.overlayFontRecents,
+            overlayImages: dependencies.overlayImages, creationStore: store, restoring: row
+        )
+        defer { reopened.close() }
+        reopened.setSpeed(2, for: reopened.recipe.clips[1].id)
+        #expect(await reopened.back() == .close)
+
+        var rows = try store.fetchOrdered(kind: .video)
+        #expect(rows.count == 1)
+        #expect(rows.first?.videoRecipe?.clips[1].speed == 2)
+        #expect(rows.first?.isDraft == false)
+        #expect(rows.first?.assetId == "v1")
+
+        reopened.recordExport(assetID: "v2", now: 900)
+        rows = try store.fetchOrdered(kind: .video)
+        #expect(rows.count == 1)
+        #expect(rows.first?.assetId == "v2")
+        #expect(rows.first?.exportedAt == 900)
+    }
+}

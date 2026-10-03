@@ -87,9 +87,9 @@ Project mẫu: 5 clip 24,0 s từ 5 ảnh/video của thư viện, không ảnh 
 | AC-9 | lần ghi vẫn hỏng | bấm Back | Video Studio còn mở; alert Try Again · Leave Without Saving; Leave Without Saving thì đóng, dòng giữ bản ghi được gần nhất | ⚠️ chưa có |
 | AC-10 | nháp JSON thiếu mọi khoá mới và có một clip hỏng | mở từ Video Projects | project mở với các clip còn lại; không báo lỗi cả project | ✅ `VideoDraftStoreTests.oldDraftMissingNewKeysOpens`, `oneBrokenClipKeepsTheDraft` (+ `VideoRecipeDecodingTests`); dòng có sẵn thành đã xuất: `existingRowsBecomeExported` |
 | AC-11 | New Video Project, chọn 3 ảnh | Video Studio mở, bấm Back ngay | Video Projects có một dòng Draft 3 clip | ✅ `VideoDraftSaveNowTests.aNewProjectWithNoEditsIsKept` (3 ảnh, không sửa → một dòng Draft 3 clip); Back gọi đúng lệnh ghi này: FS-12.18 AC-2 |
-| AC-12 | project đã xuất một lần | mở lại, đổi Speed, Back; rồi Export | dòng đó mang Speed mới, không có dòng thứ hai, không nhãn Draft; Export cập nhật đúng dòng ấy | ⚠️ chưa có |
+| AC-12 | project đã xuất một lần | mở lại, đổi Speed, Back; rồi Export | dòng đó mang Speed mới, không có dòng thứ hai, không nhãn Draft; Export cập nhật đúng dòng ấy | ✅ `VideoDraftExportTests.editAfterExportKeepsOneRow` (một dòng, Speed mới, không Draft; Export lại cập nhật dòng ấy), `exportMarksTheDraftRowExported` |
 
-**Chưa chứng minh được:** AC-4, AC-6, AC-7, AC-8, AC-9, AC-12.
+**Chưa chứng minh được:** AC-4, AC-6, AC-7, AC-8, AC-9.
 
 ## 8. Rủi ro đã biết
 

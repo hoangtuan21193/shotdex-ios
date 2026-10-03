@@ -1970,7 +1970,7 @@ final class VideoStudioModel {
                 }
                 exportState = .saving
                 let assetID = try await service.saveToPhotos(url: url)
-                recordCreation(assetID: assetID)
+                recordExport(assetID: assetID)
                 savedAssetID = assetID
                 exportState = .idle
                 onSaved?(assetID)
@@ -1986,14 +1986,18 @@ final class VideoStudioModel {
         exportTask?.cancel()
     }
 
-    /// Files the finished video under Creations with the recipe that made it.
-    /// Never fails the export — the video is already in the library.
-    private func recordCreation(assetID: String) {
-        guard let creationStore else { return }
+    /// Marks this project's row exported, as the video just saved
+    /// (FS-12.18 §2): the draft and the export are one row, so exporting —
+    /// the first time or again after more edits — updates it, never adds a
+    /// second. Never fails the export — the video is already in the library.
+    func recordExport(assetID: String, now: Int = Int(Date.now.timeIntervalSince1970)) {
+        guard let creationStore, var row = draftSnapshot() else { return }
+        drafts?.cancel()
+        row.assetId = assetID
+        row.exportedAt = now
+        row.updatedAt = now
         do {
-            try creationStore.upsert(
-                Creation.video(recipe: recipe, assetId: assetID, id: creationID)
-            )
+            try creationStore.upsert(row)
         } catch {
             // Non-fatal: the video saved; only the record of how failed.
         }
