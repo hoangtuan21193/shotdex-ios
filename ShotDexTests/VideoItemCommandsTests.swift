@@ -131,3 +131,28 @@ struct VideoMuteSpeakerTests {
         #expect(!VideoItemCommand.commands(for: .music).map(\.rawValue).contains("mute"))
     }
 }
+
+/// Split and Duplicate open sessions of their own (FS-12.04b §4).
+@MainActor
+struct VideoSplitDuplicateTests {
+    /// FS-12.04b AC-7: a 10 s clip selected, playhead at 4 s, Split, then ✕
+    /// — still two clips, 0–4 and 4–10, nothing selected. ✕ belongs to the
+    /// right half's session; the cut belonged to the clip's, which Split
+    /// ended as ✓.
+    @Test func splitThenCancelKeepsTheCut() {
+        let model = VideoStudioModelFixture.model(clips: VideoStudioModelFixture.videoClips(1))
+        model.selectClip(model.recipe.clips[0].id)
+        model.seek(to: 4)
+        model.splitClipUnderPlayhead()
+        #expect(model.recipe.clips.count == 2)
+        #expect(model.selectedClipID == model.recipe.clips[1].id)
+
+        model.cancelSession()
+        #expect(model.recipe.clips.count == 2)
+        #expect(model.recipe.clips[0].trimStart == 0)
+        #expect(model.recipe.clips[0].trimEnd == 4)
+        #expect(model.recipe.clips[1].trimStart == 4)
+        #expect(model.recipe.clips[1].trimEnd == 10)
+        #expect(model.selectedClipID == nil)
+    }
+}

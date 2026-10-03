@@ -1163,6 +1163,10 @@ final class VideoStudioModel {
         guard let (first, second) = VideoSplitMath.split(
             recipe.clips[index], atLocalTime: localTime
         ) else { return }
+        // Split is a structural edit, like Delete: ✓ for the selected clip
+        // first, then the cut, then a new session on the right half — whose
+        // ✕ cannot take the cut back (FS-12.04b §4).
+        if session?.target.isItem == true { endSession() }
         pushUndo()
         if let source = sources[recipe.clips[index].id] {
             sources[first.id] = source
