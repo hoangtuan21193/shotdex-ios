@@ -100,7 +100,7 @@ của iPad ([03b §3](03b-desk-bands-and-lanes.md)), đọc cả bản mix tại
 
 | # | Cho | Khi | Thì | Chứng minh bằng |
 |---|---|---|---|---|
-| AC-1 | iPhone 402×874, Video Studio mở dọc | xoay máy sang ngang | giao diện vẫn dọc, khung vẫn 402×226 ở y 60 | ⚠️ chưa có — sửa `video-studio-orientation.json` |
+| AC-1 | iPhone 402×874, Video Studio mở dọc | xoay máy sang ngang | giao diện vẫn dọc, khung vẫn 402×226 ở y 60 | ✅ `VideoStudioOrientationTests.anIPhoneRunsPortraitOnly`; route `video-studio-orientation.json` + `Tools/sim-shot` (dọc trước/sau xoay, 2026-10-03). Phần "khung 402×226 ở y 60" chứng minh lại ở FS-12.07 AC-2 |
 | AC-2 | project 16:9, không chọn | dump | khung 402×226 y 60; transport y 286 cao 40; timeline 326–790; 5 ô 72×52 ở y 795 | ⚠️ chưa có |
 | AC-3 | 6 project 16:9 / 1:1 / 4:5 / 9:16 / 4:3 / 21:9 | chọn một clip ở mỗi project | khung không đổi so với lúc không chọn (±0pt); panel 340 / 320 / 300 / 278 / 360 / 340 với đáy 790; 4:3 khung 402×302, 21:9 khung 402×172 + lát 272–422 | ⚠️ chưa có |
 | AC-4 | luật §3 | test thuần với cao khung 226, 342, 362, 384, 302, 172 | ra lát 96/0/0/0/0/150 và panel 340/320/300/278/360/340 | ⚠️ chưa có |
@@ -114,7 +114,7 @@ của iPad ([03b §3](03b-desk-bands-and-lanes.md)), đọc cả bản mix tại
 | AC-12 | như AC-11 | kéo tay nắm phải clip 2 vào 1,0 s, rồi vuốt grabber lên | trim áp, đúng một bước undo, clip 2 vẫn chọn; panel về 278 | ⚠️ chưa có |
 | AC-13 | như AC-11 | bấm ✓, rồi chọn lại clip 2 | panel mở đủ 278, không thu | ⚠️ chưa có |
 
-**Chưa chứng minh được:** AC-1 … AC-6, AC-8 … AC-13.
+**Chưa chứng minh được:** AC-2, AC-3, AC-4, AC-5, AC-6, AC-8, AC-9, AC-10, AC-11, AC-12, AC-13.
 
 ## 9. Rủi ro đã biết
 
