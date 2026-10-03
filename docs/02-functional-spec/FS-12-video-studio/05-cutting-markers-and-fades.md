@@ -101,10 +101,10 @@ Các phần khác: xem [README](README.md).
 | AC-6 | clip 2 tốc độ 2×, playhead cách đầu clip 1,5 s | Start to Playhead | điểm vào nguồn = 3,0 s | ✅ `VideoClipTrimMathTests.startToPlayheadConvertsThroughSpeed` (2×, cách đầu 1,5 s → điểm vào 3,0 s) |
 | AC-7 | clip 2 đang chọn, playhead nằm trong clip 3 | chạm Trim | hai chip mờ 28%, dòng "Move the playhead into this clip." | ✅ `VideoClipTrimMathTests.chipsAreUnavailableOutsideTheClip` (ngoài clip hoặc trùng mép → không làm gì, không bước undo; dưới tối thiểu → không đổi + haptic lỗi); sim-shot iPhone 17: chip mờ 28% + "Move the playhead into this clip." khi playhead ở mép clip (2026-10-04) |
 | AC-8 | marker ở 6,0 s, mép phải clip 2 ở 6,1 s (cách 5pt ở zoom hiện tại) | kéo tay nắm phải 4pt về phía marker rồi thả | mép = 6,0 s đúng marker, một haptic | ✅ `VideoEdgeTrimModelTests.edgeSnapsToAMarkerWithinEightPoints` (trong 8pt dính marker 13,0 s; không dính lại mép xuất phát); haptic một lần khi dính — cảm giác đo trên **máy thật** |
-| AC-9 | AC-1 đã làm, clip 2 vẫn đang chọn | bấm ✕ | trim về 0–10; Redo tắt | ⚠️ chưa có |
+| AC-9 | AC-1 đã làm, clip 2 vẫn đang chọn | bấm ✕ | trim về 0–10; Redo tắt | ✅ `VideoEdgeTrimModelTests.cancelUndoesAnEdgeTrim` (✕ sau cắt mép: về 0–10, Redo tắt) |
 | AC-10 | đang kéo tay nắm, hệ thống huỷ cử chỉ (cuộc gọi tới) | huỷ | clip như trước lúc kéo; số bước undo không đổi | ⚠️ chưa có |
 | AC-11 | clip 1 video chỉ có trên iCloud, máy không mạng, chưa biết thời lượng nguồn | kéo tay nắm phải ra ngoài | không dài thêm; kéo vào thì ngắn lại bình thường | ⚠️ chưa có |
 | AC-12 | các board IL2, IP2 | `Tools/design-board compare` tay nắm mép clip 2 | hai tab 12pt cao bằng clip, lệch ≤ 2pt | ⚠️ chưa có — agent `design-parity` |
 | AC-13 | clip 2 video đang chọn trên iPhone, iPad, Duo trong, Duo ngoài | dump panel / inspector | không có dòng Duration nào; clip 1 ảnh đang chọn thì có | ⚠️ một phần — như FS-12.04b AC-11: `VideoClipPanelSectionsTests` + sim-shot phone (video không Duration, ảnh có); 3 máy còn lại chờ plan màn rộng |
 
-**Chưa chứng minh được:** AC-9, AC-10, AC-11, AC-12, AC-13.
+**Chưa chứng minh được:** AC-10, AC-11, AC-12, AC-13.

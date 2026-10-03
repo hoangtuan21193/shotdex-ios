@@ -112,3 +112,22 @@ extension VideoEdgeTrimModelTests {
         model.edgeTrim(clip2, edge: .trailing, phase: .cancelled)
     }
 }
+
+extension VideoEdgeTrimModelTests {
+    /// FS-12.05 AC-9: an edge cut, then ✕ — the clip is 0–10 again and
+    /// Redo has nothing.
+    @Test func cancelUndoesAnEdgeTrim() {
+        let model = VideoStudioModelFixture.model()
+        let clip2 = model.recipe.clips[1].id
+        model.selectClip(clip2)
+        model.edgeTrim(clip2, edge: .leading, phase: .changed(2))
+        model.edgeTrim(clip2, edge: .leading, phase: .ended(2))
+        #expect(model.recipe.clips[1].trimStart == 2)
+
+        model.cancelSession()
+        #expect(model.recipe.clips[1].trimStart == 0)
+        #expect(model.recipe.clips[1].trimEnd == 10)
+        #expect(!model.canRedo)
+        #expect(!model.canUndo)
+    }
+}
