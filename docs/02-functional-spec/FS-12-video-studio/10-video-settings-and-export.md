@@ -109,7 +109,7 @@ Project mẫu: 5 clip 24,0s — 2 ảnh 4032×3024, 3 video 1920×1080; 16:9 · 
 |---|---|---|---|---|
 | AC-1 | iPhone, project mẫu, Video Settings mở | chạm 9:16 | khung 402×226 → 216×384 ở y 60; panel 340 → 278; Output "1080×1920 · 0:24 · ~30 MB"; một Undo về 16:9 | ⚠️ chưa có |
 | AC-2 | project mẫu đang 9:16 · Fit | chạm Fill (Crop) | mục BACKGROUND biến mất; nhãn "9:16 · Fill"; khung xuất của clip ngang 1920×1080 không còn pixel nền | ⚠️ chưa có |
-| AC-3 | 9:16 · Fit · Colour xám | Export | hàng pixel trên cùng của khung xuất là #808080 ± 2 | một phần: `VideoGeometryTests.portraitSourcePillarboxesOnALandscapeCanvas` |
+| AC-3 | 9:16 · Fit · Colour xám | Export | hàng pixel trên cùng của khung xuất là #808080 ± 2 | `VideoExportSmokeTests.fitGreyBackgroundFillsTheBars` (clip 16:9 trong 9:16 · nền xám → hàng y 0 của file 1080×1920 = 128 ± 2 ở cả ba kênh, đọc giá trị mã qua ma trận YCbCr của track) + `VideoGeometryTests.portraitSourcePillarboxesOnALandscapeCanvas` |
 | AC-4 | mọi tỉ lệ × mọi độ phân giải | tính kích thước khung | đúng 18 ô của bảng §5, mọi cạnh chẵn | ⚠️ chưa có |
 | AC-5 | project mẫu | mở RESOLUTION | 4K mờ + "4K needs 4K clips — 3 of your 5 clips are 1080p."; thay 3 video bằng bản 3840×2160 → 4K bấm được | ⚠️ chưa có |
 | AC-6 | project toàn 4K, đang 4K | thêm 1 video 1920×1080 | độ phân giải thành 1080p, dòng lý do hiện; một Undo → clip mất và lại 4K | ⚠️ chưa có |
@@ -123,7 +123,7 @@ Project mẫu: 5 clip 24,0s — 2 ảnh 4032×3024, 3 video 1920×1080; 16:9 · 
 | AC-14 | 9:16 · Fit · Image, ảnh nền đã chọn | xoá ảnh nền khỏi thư viện (hoặc thu quyền), mở lại Video Settings, Export | nền đen; BACKGROUND hiện "Image unavailable — choose another."; xuất vẫn chạy, dải là đen | ⚠️ chưa có |
 | AC-15 | New Video Project, clip đầu là video dọc 1080×1920 (lần khác: ảnh 4032×3024; ảnh vuông) | Video Studio mở | tỉ lệ mặc định 9:16 (lần khác: 4:3; 1:1); Fit · Colour đen · 1080p · 30 · H.264 | ⚠️ chưa có — test Domain tỉ lệ gần nhất |
 
-**Chưa chứng minh được:** AC-1, AC-2, AC-4 → AC-15; AC-3 một phần.
+**Chưa chứng minh được:** AC-1, AC-2, AC-4 → AC-15.
 
 ## 9. Đã chốt (2026-10-03) và rủi ro
 

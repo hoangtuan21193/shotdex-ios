@@ -3,6 +3,7 @@ import CoreGraphics
 import Foundation
 import Testing
 @testable import ShotDex
+import ShotDexKit
 
 /// The export path end to end, without PhotoKit: recipe → composition →
 /// custom compositor → reader → writer → a file AVFoundation can open
@@ -86,5 +87,37 @@ struct VideoExportSmokeTests {
         #expect(abs(output.videoTrackDuration - 2) < frame)
         #expect(abs(output.videoSampleCount - 60) <= 1)
         #expect(output.audioTrackCount == 0)
+    }
+
+    /// FS-12.10 AC-3: a landscape clip fitted into 9:16 over grey — the top
+    /// row of the exported frame is #808080 ± 2, not a colour-managed shade
+    /// near it.
+    @Test func fitGreyBackgroundFillsTheBars() async throws {
+        let directory = try VideoExportFixtures.makeDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let file = directory.appendingPathComponent("a.mp4")
+        try await VideoExportFixtures.writeVideo(width: 640, height: 360, seconds: 1, to: file)
+
+        var recipe = VideoProjectRecipe(clips: [VideoExportFixtures.videoClip("a", seconds: 1)])
+        recipe.aspect = .r9x16
+        recipe.background = OverlayColor(white: 0.5)
+
+        let service = VideoExportFixtures.service()
+        defer { service.cleanupSession() }
+        let url = try await service.export(
+            recipe: recipe,
+            sources: [recipe.clips[0].id: try await VideoExportFixtures.videoSource(file)],
+            progress: { _ in }
+        )
+        let frame = try await VideoExportFixtures.frame(of: url, at: 0.5)
+        #expect(frame.width == 1080 && frame.height == 1920)
+        // Row 0, every 60th pixel, all three channels.
+        var worst = 0
+        for column in stride(from: 0, to: frame.width, by: 60) {
+            for channel in 0..<3 {
+                worst = max(worst, abs(Int(frame.bytes[column * 4 + channel]) - 128))
+            }
+        }
+        #expect(worst <= 2, "top row is off #808080 by \(worst): \(Array(frame.bytes[0..<4]))")
     }
 }

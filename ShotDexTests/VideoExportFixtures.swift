@@ -239,19 +239,40 @@ enum VideoExportFixtures {
         )
     }
 
-    /// One decoded frame of the file, as sRGB bytes (RGBA, row 0 at the top).
+    /// One decoded frame of the file as the code values in it — RGBA bytes,
+    /// row 0 at the top — read through the track's own YCbCr matrix with no
+    /// display colour management on top, which is what "#808080 in the
+    /// file" means.
     static func frame(of url: URL, at seconds: Double) async throws -> (width: Int, height: Int, bytes: [UInt8]) {
-        let generator = AVAssetImageGenerator(asset: AVURLAsset(url: url))
-        generator.requestedTimeToleranceBefore = .zero
-        generator.requestedTimeToleranceAfter = .zero
-        let image = try await generator.image(at: CMTime(seconds: seconds, preferredTimescale: 600)).image
-        let width = image.width, height = image.height
+        let asset = AVURLAsset(url: url)
+        let track = try await requireTrack(asset.loadTracks(withMediaType: .video).first)
+        let reader = try AVAssetReader(asset: asset)
+        reader.timeRange = CMTimeRange(start: CMTime(seconds: seconds, preferredTimescale: 600),
+                                       duration: CMTime(seconds: 1, preferredTimescale: 600))
+        let output = AVAssetReaderTrackOutput(track: track, outputSettings: [
+            kCVPixelBufferPixelFormatTypeKey as String: kCVPixelFormatType_32BGRA,
+        ])
+        reader.add(output)
+        reader.startReading()
+        guard let sample = output.copyNextSampleBuffer(),
+              let buffer = CMSampleBufferGetImageBuffer(sample) else { throw MissingTrack() }
+        CVPixelBufferLockBaseAddress(buffer, .readOnly)
+        defer { CVPixelBufferUnlockBaseAddress(buffer, .readOnly) }
+        let width = CVPixelBufferGetWidth(buffer), height = CVPixelBufferGetHeight(buffer)
+        let rowBytes = CVPixelBufferGetBytesPerRow(buffer)
+        let base = CVPixelBufferGetBaseAddress(buffer)!.assumingMemoryBound(to: UInt8.self)
         var bytes = [UInt8](repeating: 0, count: width * height * 4)
-        let context = CGContext(
-            data: &bytes, width: width, height: height, bitsPerComponent: 8, bytesPerRow: width * 4,
-            space: CGColorSpace(name: CGColorSpace.sRGB)!, bitmapInfo: CGImageAlphaInfo.noneSkipLast.rawValue
-        )
-        context?.draw(image, in: CGRect(x: 0, y: 0, width: width, height: height))
+        for row in 0..<height {
+            for column in 0..<width {
+                let source = base + row * rowBytes + column * 4
+                let target = (row * width + column) * 4
+                bytes[target] = source[2]
+                bytes[target + 1] = source[1]
+                bytes[target + 2] = source[0]
+                bytes[target + 3] = 255
+            }
+        }
+        reader.cancelReading()
         return (width, height, bytes)
     }
 
