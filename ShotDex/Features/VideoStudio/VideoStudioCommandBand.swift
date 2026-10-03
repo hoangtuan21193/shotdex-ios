@@ -70,11 +70,10 @@ struct VideoStudioTopBand: View {
                 .accessibilityLabel("Undo")
             circle("arrow.uturn.forward", isEnabled: model.canRedo) { model.redo() }
                 .accessibilityLabel("Redo")
-            // Hold to see the clips as they came out of the library. The
-            // model has done this since the studio shipped (spec §7.9); the
-            // control went missing in a layout turn, which left the whole
-            // before/after capability unreachable.
-            beforeAfterCircle(isEnabled: model.hasEdits)
+            // Hold-to-compare moved to the Look panel's title (FS-12.04 §4):
+            // it compares the look, so it lives where the look is changed.
+            // Its place here is Video Settings, until the band is redrawn.
+            if !carriesProjectTools { videoSettingsCircle }
 
             Spacer(minLength: 8)
 
@@ -110,31 +109,54 @@ struct VideoStudioTopBand: View {
     /// the same panel, not the panel.
     private var projectToolsMenu: some View {
         Menu {
-            ForEach(VideoStudioModel.GlobalTool.allCases) { tool in
+            ForEach(VideoToolPanel.allCases) { panel in
                 Button {
-                    model.showGlobalTool(model.activeGlobalTool == tool ? nil : tool)
+                    model.toggleToolPanel(panel)
                 } label: {
-                    Label(tool.title, systemImage: tool.systemImage)
+                    Label(panel.title, systemImage: panel.systemImage)
                 }
-                // A stable handle for the UI driver: "Color" and "Volume"
-                // also name things elsewhere on this screen.
-                .accessibilityIdentifier("projectTool.\(tool.id)")
+                // A stable handle for the UI driver.
+                .accessibilityIdentifier("projectTool.\(panel.id)")
             }
         } label: {
             Image(systemName: "slider.horizontal.3")
                 .font(.system(size: 15, weight: .medium))
-                .foregroundStyle(model.activeGlobalTool == nil ? .white : EditorTheme.accent)
+                .foregroundStyle(.white)
                 .frame(width: size, height: size)
                 .background {
-                    if model.activeGlobalTool == nil {
+                    if model.activeToolPanel == nil {
                         Color.clear.editorGlass(Circle())
                     } else {
-                        Circle().fill(EditorTheme.accent.opacity(0.18))
+                        Circle().fill(VideoStudioMetrics.openCellFill)
                     }
                 }
                 .contentShape(Circle())
         }
         .accessibilityLabel(Text("Project Tools", comment: "Video Studio: opens ratio, look, adjustments, volume and background"))
+    }
+
+    /// Video Settings: the project's shape and what is behind it. Lit while
+    /// its panel is open, white not accent.
+    private var videoSettingsCircle: some View {
+        Button {
+            model.toggleToolPanel(.videoSettings)
+        } label: {
+            Image(systemName: VideoToolPanel.videoSettings.systemImage)
+                .font(.system(size: 15, weight: .medium))
+                .foregroundStyle(.white)
+                .frame(width: size, height: size)
+                .background {
+                    if model.activeToolPanel == .videoSettings {
+                        Circle().fill(VideoStudioMetrics.openCellFill)
+                    } else {
+                        Color.clear.editorGlass(Circle())
+                    }
+                }
+                .contentShape(Circle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(VideoStudioCopy.videoSettings)
+        .accessibilityAddTraits(model.activeToolPanel == .videoSettings ? .isSelected : [])
     }
 
     /// Duration, preset and the size estimate — the same two lines the bottom
@@ -178,33 +200,6 @@ struct VideoStudioTopBand: View {
         VideoStudioMetrics.compactTimecode(seconds)
     }
 
-    /// Press and hold, like the photo editor's before/after: the preview
-    /// drops every filter, adjustment and overlay while the finger is down.
-    private func beforeAfterCircle(isEnabled: Bool) -> some View {
-        Image(systemName: "rectangle.on.rectangle")
-            .font(.system(size: 15, weight: .medium))
-            .foregroundStyle(
-                model.showsOriginal
-                    ? EditorTheme.accent
-                    : (isEnabled ? Color.white.opacity(0.9) : Color.white.opacity(0.28))
-            )
-            .frame(width: size, height: size)
-            .background { Color.clear.editorGlass(Circle()) }
-            .contentShape(Circle())
-            .gesture(
-                DragGesture(minimumDistance: 0)
-                    .onChanged { _ in
-                        guard isEnabled, !model.showsOriginal else { return }
-                        model.setShowsOriginal(true)
-                    }
-                    .onEnded { _ in model.setShowsOriginal(false) }
-            )
-            .allowsHitTesting(isEnabled)
-            .accessibilityLabel(Text("Show original", comment: "Video Studio: press-and-hold control that previews the clips without edits"))
-            .accessibilityHint(Text("Press and hold to see the clips without edits", comment: "Hint for the Video Studio before/after control"))
-            .accessibilityAddTraits(model.showsOriginal ? .isSelected : [])
-    }
-
     private func circle(_ systemName: String, isEnabled: Bool, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             Image(systemName: systemName)
@@ -230,6 +225,9 @@ struct VideoCommand: Identifiable {
     let systemImage: String
     var tint: Tint = .normal
     var isEnabled = true
+    /// The cell whose panel is open: drawn on white 14 %, never accent —
+    /// accent is Export's alone (FS-12.04 §3, DESIGN §3.1).
+    var isOpen = false
     let action: () -> Void
 }
 

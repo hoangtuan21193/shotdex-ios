@@ -25,6 +25,19 @@ enum VideoStudioMetrics {
     /// Gap between the preview and the timeline.
     static let previewTimelineGap: CGFloat = 8
     static let toolbarHeight: CGFloat = 62
+    /// A cell of the phone's tool row (FS-12.04 §3): five of them, 72×52,
+    /// spread over the width from a 6pt inset — on 402pt at x 9, 87, 165…
+    static let toolCellSize = CGSize(width: 72, height: 52)
+    static let toolRowInset: CGFloat = 6
+
+    /// Leading x of each cell of the phone's tool row on a window `width`
+    /// wide: equal columns over the width less the insets, each cell centred.
+    static func toolCellXs(width: CGFloat, count: Int = VideoAddTool.bottomRow.count) -> [CGFloat] {
+        let column = (width - toolRowInset * 2) / CGFloat(count)
+        return (0..<count).map { index in
+            toolRowInset + column * CGFloat(index) + (column - toolCellSize.width) / 2
+        }
+    }
     /// The inspector, when it stands beside the stage instead of under the
     /// timeline. Final Cut puts it left, Resolve right, LumaFusion left; it
     /// goes right here because the tool rail already owns the leading edge

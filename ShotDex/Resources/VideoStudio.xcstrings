@@ -53,6 +53,14 @@
       "comment": "Video Studio: closes the studio although the latest draft could not be written",
       "extractionState": "manual"
     },
+    "Look": {
+      "comment": "Video Studio: the bottom-row tool that changes the whole video's look — filter, adjustments, colour",
+      "extractionState": "manual"
+    },
+    "Media": {
+      "comment": "Video Studio: the bottom-row tool that adds photos and videos to the timeline",
+      "extractionState": "manual"
+    },
     "Mute Video Sound": {
       "comment": "Video Studio level meter: silences the clips' own audio for the whole project",
       "extractionState": "manual"
@@ -75,6 +83,10 @@
     },
     "Video Project, Draft, %@, %@": {
       "comment": "VoiceOver: a draft row in Video Projects — date, then the subtitle",
+      "extractionState": "manual"
+    },
+    "Video Settings": {
+      "comment": "Video Studio: the panel for the project's ratio, background, resolution and frame rate",
       "extractionState": "manual"
     },
     "Video sound": {

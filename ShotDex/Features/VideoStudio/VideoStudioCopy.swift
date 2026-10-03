@@ -24,4 +24,16 @@ enum VideoStudioCopy {
     static var leaveWithoutSaving: String {
         String(localized: "Leave Without Saving", table: table, comment: "Video Studio: closes the studio although the latest draft could not be written")
     }
+
+    static var media: String {
+        String(localized: "Media", table: table, comment: "Video Studio: the bottom-row tool that adds photos and videos to the timeline")
+    }
+
+    static var look: String {
+        String(localized: "Look", table: table, comment: "Video Studio: the bottom-row tool that changes the whole video's look — filter, adjustments, colour")
+    }
+
+    static var videoSettings: String {
+        String(localized: "Video Settings", table: table, comment: "Video Studio: the panel for the project's ratio, background, resolution and frame rate")
+    }
 }

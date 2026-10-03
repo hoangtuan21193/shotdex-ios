@@ -47,7 +47,7 @@ struct VideoStudioSheetHost: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .background(EditorTheme.panelSolid)
         .animation(EditorTheme.animation, value: model.inspectorTarget)
-        .animation(EditorTheme.animation, value: model.activeGlobalTool)
+        .animation(EditorTheme.animation, value: model.activeToolPanel)
     }
 
     private var bandBody: some View {
@@ -123,7 +123,7 @@ struct VideoStudioSheetHost: View {
             }
         case .text: (model.selectedOverlay?.kind == .image ? "photo" : "textformat", true)
         case .music: ("music.note", true)
-        case .none: (model.activeGlobalTool?.systemImage ?? "slider.horizontal.3", false)
+        case .none: (model.activeToolPanel?.systemImage ?? "slider.horizontal.3", false)
         }
     }
 
@@ -139,7 +139,7 @@ struct VideoStudioSheetHost: View {
             ? String(localized: "Sticker")
             : (model.selectedOverlay?.text.isEmpty == false ? model.selectedOverlay!.text : String(localized: "Text"))
         case .music: model.selectedMusicTrack?.displayName ?? String(localized: "Music")
-        case .none: model.activeGlobalTool?.title ?? String(localized: "Project")
+        case .none: model.activeToolPanel?.title ?? String(localized: "Project")
         }
     }
 
@@ -174,8 +174,62 @@ struct VideoStudioSheetHost: View {
                 if let id = model.selectedMusicID { model.removeMusicTrack(id) }
             }
         case .none:
-            EmptyView()
+            switch model.activeToolPanel {
+            case .look: beforeAfterButton
+            case .videoSettings:
+                // Done only: every change applies as it is made, so there
+                // is nothing to cancel (FS-12.04 §4).
+                titleButton("checkmark", label: Text("Done", comment: "Video Studio: closes the Video Settings panel")) {
+                    model.showToolPanel(nil)
+                }
+            case nil: EmptyView()
+            }
         }
+    }
+
+    /// Press and hold, like the photo editor's before/after: the preview
+    /// drops the look — filter, adjustments, grade — and every overlay while
+    /// the finger is down. In the Look panel's title, beside what it
+    /// compares (FS-12.04 §4).
+    private var beforeAfterButton: some View {
+        let isEnabled = model.hasEdits
+        return Image(systemName: "rectangle.on.rectangle")
+            .font(.system(size: 14, weight: .medium))
+            .foregroundStyle(
+                model.showsOriginal ? Color.black : (isEnabled ? Color.white : Color.white.opacity(0.28))
+            )
+            .frame(width: VideoStudioMetrics.inspectorTitleButton, height: VideoStudioMetrics.inspectorTitleButton)
+            .background(Circle().fill(model.showsOriginal ? Color.white : Color.white.opacity(0.06)))
+            .contentShape(Circle())
+            .gesture(
+                DragGesture(minimumDistance: 0)
+                    .onChanged { _ in
+                        guard isEnabled, !model.showsOriginal else { return }
+                        model.setShowsOriginal(true)
+                    }
+                    .onEnded { _ in model.setShowsOriginal(false) }
+            )
+            .allowsHitTesting(isEnabled)
+            .accessibilityElement()
+            .accessibilityLabel(Text("Show original", comment: "Video Studio: press-and-hold control that previews the clips without edits"))
+            .accessibilityHint(Text("Press and hold to see the clips without edits", comment: "Hint for the Video Studio before/after control"))
+            .accessibilityAddTraits(model.showsOriginal ? .isSelected : [])
+    }
+
+    private func titleButton(
+        _ symbol: String,
+        label: Text,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            Image(systemName: symbol)
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundStyle(.black)
+                .frame(width: VideoStudioMetrics.inspectorTitleButton, height: VideoStudioMetrics.inspectorTitleButton)
+                .background(Circle().fill(Color.white))
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(label)
     }
 
     private func titleButton(_ symbol: String, destructive: Bool = false, action: @escaping () -> Void) -> some View {
@@ -527,63 +581,83 @@ struct VideoStudioSheetHost: View {
 
     @ViewBuilder
     private var globalParams: some View {
-        switch model.activeGlobalTool {
-        // No tool open and nothing selected: the inspector has nothing to
-        // say, and the screen does not draw it at all. It used to fall
-        // through to the ratio strip, which made a 320pt column out of one
-        // control that the tool rail already opens by name.
+        switch model.activeToolPanel {
+        // No panel open and nothing selected: the inspector has nothing to
+        // say, and the screen does not draw it at all.
         case .none:
             EmptyView()
-        case .ratio:
-            VStack(spacing: 0) {
+        case .look:
+            lookParams
+        case .videoSettings:
+            // Ratio and the fill behind a fitted frame, until the Video
+            // Settings plan gives this panel its resolution, fps and codec.
+            VStack(spacing: 8) {
                 RatioStrip(model: model).frame(height: 34)
-                Spacer(minLength: 0)
-            }
-        case .color:
-            VideoColorPanel(model: model, usesTallScopes: layout == .column)
-        case .masterVolume:
-            VStack(spacing: 0) {
-                // The meter the desk window keeps beside the frame. A fader
-                // with nothing to read against it is a guess.
-                VideoLevelMeterBar(model: model)
-                InspectorSlider(
-                    label: VideoStudioCopy.videoSound, value: model.recipe.videoVolume, range: 0...1,
-                    valueText: "\(Int(model.recipe.videoVolume * 100))", model: model,
-                    set: { model.setVideoVolume($0) },
-                    reset: { model.pushUndo(); model.setVideoVolume(1) }
-                )
-                Spacer(minLength: 0)
-            }
-        case .background:
-            VStack(spacing: 0) {
                 BackgroundStrip(model: model).frame(height: 34)
                 Spacer(minLength: 0)
             }
-        case .filters:
-            VStack(spacing: 0) {
-                FilterStrip(model: model).frame(height: VideoStudioMetrics.filterStripHeight)
-                if model.recipe.filter != .original {
-                    InspectorSlider(
-                        label: "Intensity", value: model.recipe.filterIntensity, range: 0...1,
-                        valueText: "\(Int(model.recipe.filterIntensity * 100))", detent: 1, model: model,
-                        set: { model.setFilterIntensity($0) },
-                        reset: { model.pushUndo(); model.setFilterIntensity(1) }
-                    )
+            .padding(.top, 8)
+        }
+    }
+
+    /// The Look panel's shell (FS-12.06 entry): Filter · Adjust · Color as
+    /// chips over the controls each one has always had. The Look plan
+    /// replaces the insides; the entry point is this one.
+    private var lookParams: some View {
+        VStack(spacing: 0) {
+            HStack(spacing: 6) {
+                ForEach(VideoLookTab.allCases) { tab in
+                    Button {
+                        model.lookTab = tab
+                    } label: {
+                        Text(tab.title)
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundStyle(model.lookTab == tab ? Color.black : Color.white)
+                            .padding(.horizontal, 12)
+                            .frame(height: 28)
+                            .background(Capsule().fill(model.lookTab == tab ? Color.white : Color.white.opacity(0.06)))
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityAddTraits(model.lookTab == tab ? .isSelected : [])
                 }
                 Spacer(minLength: 0)
             }
-        case .adjustments:
-            ScrollView(showsIndicators: false) {
-                VStack(spacing: 0) {
-                    ForEach([PhotoAdjustmentKind.exposure, .contrast, .saturation, .warmth, .brightness, .vignette], id: \.self) { kind in
-                        let value = model.activeNode.adjustments[kind]
-                        InspectorSlider(
-                            label: kind.displayName, value: value, range: -1...1,
-                            valueText: String(format: "%+.0f", value * 100), anchor: 0, notch: true, detent: 0, model: model,
-                            set: { model.setAdjustment(kind, value: $0) },
-                            reset: { model.pushUndo(); model.setAdjustment(kind, value: 0) }
-                        )
-                    }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 6)
+            switch model.lookTab {
+            case .filter: filterParams
+            case .adjust: adjustParams
+            case .color: VideoColorPanel(model: model, usesTallScopes: layout == .column)
+            }
+        }
+    }
+
+    private var filterParams: some View {
+        VStack(spacing: 0) {
+            FilterStrip(model: model).frame(height: VideoStudioMetrics.filterStripHeight)
+            if model.recipe.filter != .original {
+                InspectorSlider(
+                    label: "Intensity", value: model.recipe.filterIntensity, range: 0...1,
+                    valueText: "\(Int(model.recipe.filterIntensity * 100))", detent: 1, model: model,
+                    set: { model.setFilterIntensity($0) },
+                    reset: { model.pushUndo(); model.setFilterIntensity(1) }
+                )
+            }
+            Spacer(minLength: 0)
+        }
+    }
+
+    private var adjustParams: some View {
+        ScrollView(showsIndicators: false) {
+            VStack(spacing: 0) {
+                ForEach([PhotoAdjustmentKind.exposure, .contrast, .saturation, .warmth, .brightness, .vignette], id: \.self) { kind in
+                    let value = model.activeNode.adjustments[kind]
+                    InspectorSlider(
+                        label: kind.displayName, value: value, range: -1...1,
+                        valueText: String(format: "%+.0f", value * 100), anchor: 0, notch: true, detent: 0, model: model,
+                        set: { model.setAdjustment(kind, value: $0) },
+                        reset: { model.pushUndo(); model.setAdjustment(kind, value: 0) }
+                    )
                 }
             }
         }

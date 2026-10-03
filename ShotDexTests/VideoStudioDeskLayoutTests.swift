@@ -216,45 +216,24 @@ struct VideoStudioDeskLayoutTests {
     }
 
     /// A phone has no pool to move the insert commands onto, so it keeps all
-    /// four of them in its horizontal row.
+    /// five tools in its row.
     @Test func aPhoneKeepsEveryInsertCommand() {
-        let kinds = VideoStudioToolbar.commandKinds(poolCarriesInserts: false)
-        #expect(kinds.contains(.addMedia))
-        #expect(kinds.contains(.addText))
-        #expect(kinds.contains(.addSticker))
-        #expect(kinds.contains(.addMusic))
+        #expect(VideoStudioToolbar.tools(poolCarriesInserts: false) == VideoAddTool.allCases)
     }
 
-    /// **Every** project-wide tool is on the phone's row, not just the ones
-    /// that happened to be listed. The row was written out by hand and the
-    /// desk window's project menu from `allCases`, so adding `Color` put the
-    /// whole grading stage on the iPad and nowhere else.
-    @Test func thePhoneRowCarriesEveryGlobalTool() {
-        let kinds = VideoStudioToolbar.commandKinds(poolCarriesInserts: false)
-        for tool in VideoStudioModel.GlobalTool.allCases {
-            #expect(kinds.contains(.global(tool)))
+    /// The pool taking the inserts must not cost the window Look.
+    @Test func thePoolRowStillCarriesLook() {
+        let tools = VideoStudioToolbar.tools(poolCarriesInserts: true)
+        #expect(tools.contains(.look))
+        #expect(!tools.contains(.media))
+    }
+
+    /// Both tool panels are in the desk window's project menu, read from
+    /// the same list — iterated, not counted.
+    @Test func everyToolPanelIsInTheProjectMenu() {
+        for panel in [VideoToolPanel.look, .videoSettings] {
+            #expect(VideoToolPanel.allCases.contains(panel))
         }
-    }
-
-    /// And the pool taking the inserts must not cost the window a tool.
-    @Test func thePoolRowStillCarriesEveryGlobalTool() {
-        let kinds = VideoStudioToolbar.commandKinds(poolCarriesInserts: true)
-        for tool in VideoStudioModel.GlobalTool.allCases {
-            #expect(kinds.contains(.global(tool)))
-        }
-        #expect(!kinds.contains(.addMedia))
-    }
-
-    /// Every project-wide tool the rail used to open is still reachable —
-    /// they moved into one menu in the top band, so the set must be complete.
-    @Test func everyGlobalToolIsInTheProjectMenu() {
-        #expect(VideoStudioModel.GlobalTool.allCases.count == 6)
-        #expect(VideoStudioModel.GlobalTool.allCases.contains(.ratio))
-        #expect(VideoStudioModel.GlobalTool.allCases.contains(.filters))
-        #expect(VideoStudioModel.GlobalTool.allCases.contains(.adjustments))
-        #expect(VideoStudioModel.GlobalTool.allCases.contains(.color))
-        #expect(VideoStudioModel.GlobalTool.allCases.contains(.masterVolume))
-        #expect(VideoStudioModel.GlobalTool.allCases.contains(.background))
     }
 
     /// A phone is not "no chrome": it pays for one transport row, so the

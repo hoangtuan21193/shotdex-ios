@@ -1,19 +1,21 @@
 import SwiftUI
 
-/// The always-present tool row under the timeline. It carries what applies to
-/// the whole project — the add buttons and the project-wide tools — so nothing
-/// is selected the sheet stays down and the preview keeps the height.
+/// The always-present tool row under the timeline: the five tools that add
+/// to the timeline, plus Look (FS-12.04 §2–3). Five 72×52 cells across the
+/// width, no scrolling — five is all there is. The cell whose panel is open
+/// sits on white 14 %; tapping it again closes the panel and keeps it.
 struct VideoStudioToolbar: View {
     @Bindable var model: VideoStudioModel
     let actions: VideoInspectorActions
 
     var body: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 4) {
-                ForEach(commands) { VideoToolbarCell(command: $0) }
+        HStack(spacing: 0) {
+            ForEach(commands) { command in
+                VideoToolbarCell(command: command)
+                    .frame(maxWidth: .infinity)
             }
-            .padding(.horizontal, 10)
         }
+        .padding(.horizontal, VideoStudioMetrics.toolRowInset)
         .frame(height: VideoStudioMetrics.toolbarHeight)
         .frame(maxWidth: .infinity)
         .background(EditorTheme.panelSolid)
@@ -26,63 +28,29 @@ struct VideoStudioToolbar: View {
     /// the same kind of thing and should not look alike.
     var poolCarriesInserts = false
 
-    /// One cell's identity, apart from its action — so what the row holds is
-    /// decided by a pure function and can be asserted on.
-    enum CommandKind: Equatable {
-        case addMedia, addText, addSticker, addMusic
-        case global(VideoStudioModel.GlobalTool)
-    }
-
-    /// What the row holds, in order.
-    ///
-    /// With a media pool beside the stage the *insert* cells go onto the
-    /// pool, where Resolve keeps them: its Media and Titles tabs are the
-    /// place you take things from, and its Inspector is the place you change
-    /// things in. Text is the exception and stays — Resolve can put titles on
-    /// its library column because it has a title-template library to drag
-    /// from, and ShotDex has none; a pool tab holding one "Add text" button
-    /// is worse than the cell it replaced.
-    static func commandKinds(poolCarriesInserts: Bool) -> [CommandKind] {
-        var kinds: [CommandKind] = []
-        if !poolCarriesInserts { kinds.append(.addMedia) }
-        kinds.append(.addText)
-        if !poolCarriesInserts { kinds += [.addSticker, .addMusic] }
-        // Every project-wide tool, in the order a shot is worked: shape it,
-        // pick a look, set exposure, grade it, then sound and the bars
-        // behind it. The phone gets the same set as the desk window's
-        // project menu — `Color` was missing here while the menu had it,
-        // which put the whole grading stage, scopes and all, out of reach
-        // on a phone.
-        kinds += VideoStudioModel.GlobalTool.allCases.map { .global($0) }
-        return kinds
+    /// What the row holds, in order: `VideoAddTool`'s one list.
+    static func tools(poolCarriesInserts: Bool) -> [VideoAddTool] {
+        poolCarriesInserts ? VideoAddTool.poolRow : VideoAddTool.bottomRow
     }
 
     var commands: [VideoCommand] {
-        Self.commandKinds(poolCarriesInserts: poolCarriesInserts).map { kind in
-            switch kind {
-            // Plain like Text / Sticker / Music: accent marks the *open* global
-            // tool, and Add is an action, not a mode.
-            case .addMedia:
-                VideoCommand(title: "Add", systemImage: "plus", action: actions.onAddMedia)
-            case .addText:
-                VideoCommand(title: "Text", systemImage: "textformat", action: actions.onAddText)
-            case .addSticker:
-                VideoCommand(title: "Sticker", systemImage: "photo.badge.plus", action: actions.onAddSticker)
-            case .addMusic:
-                VideoCommand(title: "Music", systemImage: "music.note", action: actions.onAddMusic)
-            case .global(let tool):
-                globalCommand(tool)
-            }
+        Self.tools(poolCarriesInserts: poolCarriesInserts).map { tool in
+            VideoCommand(
+                title: tool.title,
+                systemImage: tool.systemImage,
+                isOpen: tool == .look && model.activeToolPanel == .look,
+                action: action(for: tool)
+            )
         }
     }
 
-    private func globalCommand(_ tool: VideoStudioModel.GlobalTool) -> VideoCommand {
-        VideoCommand(
-            title: tool.titleKey,
-            systemImage: tool.systemImage,
-            tint: model.activeGlobalTool == tool ? .accent : .normal
-        ) {
-            model.showGlobalTool(model.activeGlobalTool == tool ? nil : tool)
+    private func action(for tool: VideoAddTool) -> () -> Void {
+        switch tool {
+        case .media: actions.onAddMedia
+        case .text: actions.onAddText
+        case .sticker: actions.onAddSticker
+        case .music: actions.onAddMusic
+        case .look: { model.toggleToolPanel(.look) }
         }
     }
 }
@@ -217,10 +185,10 @@ private struct VideoToolbarCell: View {
                 // Fixed glyph box: a tall symbol (photo.badge.plus) otherwise pushes
                 // its label lower than its neighbours'.
                 Image(systemName: command.systemImage)
-                    .font(.system(size: isRegularWidth ? 20 : 17, weight: .regular))
+                    .font(.system(size: isRegularWidth ? 20 : 19, weight: .regular))
                     .frame(height: isRegularWidth ? 26 : 22)
                 Text(command.title)
-                    .font(.system(size: isRegularWidth ? 11 : 9.5, weight: .medium))
+                    .font(.system(size: isRegularWidth ? 11 : 10, weight: .medium))
                     .lineLimit(1)
                     // Not `fixedSize()`: that turns off SwiftUI's own
                     // compression, so a label longer than the 52pt cell —
@@ -230,16 +198,17 @@ private struct VideoToolbarCell: View {
             }
             .foregroundStyle(tintColor)
             .frame(
-                width: isRegularWidth ? VideoStudioMetrics.railWidth - 12 : VideoStudioMetrics.commandCellWidth,
-                height: isRegularWidth ? VideoStudioMetrics.railCellHeight : 52
+                width: isRegularWidth ? VideoStudioMetrics.railWidth - 12 : VideoStudioMetrics.toolCellSize.width,
+                height: isRegularWidth ? VideoStudioMetrics.railCellHeight : VideoStudioMetrics.toolCellSize.height
             )
             .background(
                 RoundedRectangle(cornerRadius: VideoStudioMetrics.commandCellRadius, style: .continuous)
-                    .fill(command.tint == .accent ? EditorTheme.accent.opacity(0.16) : Color.clear)
+                    .fill(command.isOpen ? VideoStudioMetrics.openCellFill : Color.clear)
             )
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        .accessibilityAddTraits(command.isOpen ? .isSelected : [])
     }
 
     private var tintColor: Color {

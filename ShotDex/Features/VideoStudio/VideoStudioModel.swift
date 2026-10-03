@@ -31,48 +31,6 @@ final class VideoStudioModel {
         case none, clip, text, music
     }
 
-    /// A project-wide tool, opened from the toolbar when nothing is selected.
-    /// Each reskins the same bottom sheet.
-    enum GlobalTool: String, Equatable, Identifiable, CaseIterable {
-        case ratio, filters, adjustments, color, masterVolume, background
-
-        var id: String { rawValue }
-
-        var title: String {
-            switch self {
-            case .ratio: String(localized: "Ratio")
-            case .filters: String(localized: "Filter")
-            case .adjustments: String(localized: "Adjust")
-            case .color: String(localized: "Color", comment: "Video Studio: the grading tool — de-log, primaries, curves")
-            case .masterVolume: String(localized: "Volume")
-            case .background: String(localized: "Background")
-            }
-        }
-
-        /// The same label as a key, for the toolbar cells (which take one).
-        var titleKey: LocalizedStringKey {
-            switch self {
-            case .ratio: "Ratio"
-            case .filters: "Filter"
-            case .adjustments: "Adjust"
-            case .color: "Color"
-            case .masterVolume: "Volume"
-            case .background: "Background"
-            }
-        }
-
-        var systemImage: String {
-            switch self {
-            case .ratio: "aspectratio"
-            case .filters: "camera.filters"
-            case .adjustments: "slider.horizontal.3"
-            case .color: "circle.lefthalf.filled"
-            case .masterVolume: "speaker.wave.2"
-            case .background: "square.fill"
-            }
-        }
-    }
-
     /// The selected-text sheet's sub-panel: transform (content/size/opacity/
     /// timing), font (family + bold/italic), colour, alignment, style
     /// (outline/shadow), or animation. Reskins the sheet's param zone rather
@@ -110,9 +68,11 @@ final class VideoStudioModel {
     private(set) var selectedMusicID: UUID?
     /// Set when the user taps a transition chip; drives the transition picker.
     var editingTransitionIndex: Int?
-    /// The project-wide tool the bottom sheet is showing, when nothing is
-    /// selected. Mutually exclusive with the selection.
-    var activeGlobalTool: GlobalTool?
+    /// The tool panel open when nothing is selected — Look or Video
+    /// Settings (FS-12.04 §4). Mutually exclusive with the selection.
+    var activeToolPanel: VideoToolPanel?
+    /// Which of Filter · Adjust · Color the Look panel shows.
+    var lookTab: VideoLookTab = .filter
     /// The selected-text sheet's sub-panel.
     var inspectorTextTool: TextTool = .transform
     private(set) var hasEdits = false
@@ -401,7 +361,7 @@ final class VideoStudioModel {
 
     func selectClip(_ id: UUID?) {
         selectedClipID = id
-        if id != nil { selectedOverlayID = nil; selectedMusicID = nil; activeGlobalTool = nil }
+        if id != nil { selectedOverlayID = nil; selectedMusicID = nil; activeToolPanel = nil }
     }
 
     func toggleClip(_ id: UUID) {
@@ -414,7 +374,7 @@ final class VideoStudioModel {
         if id != nil {
             selectedClipID = nil
             selectedMusicID = nil
-            activeGlobalTool = nil
+            activeToolPanel = nil
             inspectorTextTool = .transform
         }
     }
@@ -430,7 +390,7 @@ final class VideoStudioModel {
         if id != nil {
             selectedClipID = nil
             selectedOverlayID = nil
-            activeGlobalTool = nil
+            activeToolPanel = nil
         }
     }
 
@@ -526,22 +486,28 @@ final class VideoStudioModel {
         selectedClipID = nil
         selectedOverlayID = nil
         selectedMusicID = nil
-        activeGlobalTool = nil
+        activeToolPanel = nil
     }
 
-    /// Deselect everything and open a project-wide tool sheet (Ratio, Filters,
-    /// Adjustments, Volume, Background).
-    func showGlobalTool(_ tool: GlobalTool?) {
+    /// Deselects everything and opens a tool panel, or closes the open one
+    /// with `nil`. Closing keeps what the panel changed (FS-12.04 §4).
+    func showToolPanel(_ panel: VideoToolPanel?) {
         selectedClipID = nil
         selectedOverlayID = nil
         selectedMusicID = nil
-        activeGlobalTool = tool
+        activeToolPanel = panel
+    }
+
+    /// A tool cell tapped: opens its panel, or closes it if it is the one
+    /// open — "tap the open cell again" is close and keep.
+    func toggleToolPanel(_ panel: VideoToolPanel) {
+        showToolPanel(activeToolPanel == panel ? nil : panel)
     }
 
     /// True whenever the contextual bottom sheet should be up: something is
     /// selected, or a project-wide tool is open.
     var presentsSheet: Bool {
-        inspectorTarget != .none || activeGlobalTool != nil
+        inspectorTarget != .none || activeToolPanel != nil
     }
 
     /// The clip currently under the playhead — the target for playhead-relative
