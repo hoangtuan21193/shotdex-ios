@@ -102,7 +102,8 @@ struct VideoMediaPoolColumn: View {
     /// tab decides **what a tap inserts**, not just what is listed. Media
     /// adds a clip, Stickers adds an overlay, Music adds a bed.
     private var tabStrip: some View {
-        HStack(spacing: 2) {
+        // Four equal tabs across the whole 236pt (board IL1: 59 each).
+        HStack(spacing: 0) {
             ForEach(Tab.allCases) { candidate in
                 Button {
                     withAnimation(EditorTheme.animation) { tab = candidate }
@@ -117,7 +118,7 @@ struct VideoMediaPoolColumn: View {
                     }
                     .foregroundStyle(candidate == tab ? EditorTheme.accent : EditorTheme.secondaryText)
                     .frame(maxWidth: .infinity)
-                    .frame(height: 34)
+                    .frame(height: VideoStudioMetrics.mediaPoolTabStripHeight)
                     .background(
                         RoundedRectangle(cornerRadius: 5, style: .continuous)
                             .fill(candidate == tab ? EditorTheme.accent.opacity(0.14) : .clear)
@@ -133,7 +134,6 @@ struct VideoMediaPoolColumn: View {
                 .accessibilityAddTraits(candidate == tab ? .isSelected : [])
             }
         }
-        .padding(.horizontal, 6)
         .frame(height: VideoStudioMetrics.mediaPoolTabStripHeight)
     }
 

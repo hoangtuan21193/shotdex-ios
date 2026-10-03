@@ -253,7 +253,7 @@ struct VideoSettingsButton: View {
         Button {
             model.toggleToolPanel(.videoSettings)
         } label: {
-            HStack(spacing: 7) {
+            HStack(spacing: 6) {
                 ratioGlyph
                 if isTwoLine {
                     VStack(alignment: .leading, spacing: 1) {
@@ -273,7 +273,7 @@ struct VideoSettingsButton: View {
             }
             .foregroundStyle(.white)
             .lineLimit(1)
-            .padding(.horizontal, 10)
+            .padding(.horizontal, 9)
             .frame(height: isTwoLine ? 40 : VideoStudioDeskGeometry.settingsButtonHeight)
             .background(
                 RoundedRectangle(
