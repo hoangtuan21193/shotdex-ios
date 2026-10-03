@@ -138,6 +138,29 @@ struct ExtendedMetadataMirrorPassTests {
         #expect(try store.value(assetId: "A") == .empty)
     }
 
+    /// AC-10 end to end in the database: after the observer ran, the filter
+    /// *Keyword has Sunset* finds B, and B's `photo_metadata` row — date,
+    /// EXIF status, every EXIF column — is exactly what it was: nothing read
+    /// B's file. (The mirror pass has no file reader at all.)
+    @Test func updatedKeywordReachesFilter() async throws {
+        let (database, store) = try Self.indexed(["A", "B"])
+        let before = try PhotoMarksStoreTests.metadataRow("B", in: database)
+        let reader = FakeExtendedMetadataReader(["A": .empty, "B": .empty])
+        let pass = ExtendedMetadataMirrorPass(store: store, reader: reader)
+        await pass.runFullRead()
+        reader.set("B", CaptionKeywords(keywords: ["Sunset"]))
+        await pass.handle(.incremental(inserted: [], updated: ["B"], deleted: [], accessIsFull: true))
+
+        let sunset = SmartAlbumQuery(matchMode: .all, rules: [SmartAlbumRule(field: .keyword, op: .hasKeyword, text: "sunset")])
+        let ids = try await LibraryQueries(database: database).gridItems(matching: sunset, sort: .dateTakenNewest).map(\.assetId)
+        #expect(ids == ["B"])
+        let after = try #require(try PhotoMarksStoreTests.metadataRow("B", in: database))
+        let original = try #require(before)
+        for column in original.columnNames {
+            #expect(after[column] as DatabaseValue == original[column] as DatabaseValue, "\(column)")
+        }
+    }
+
     /// A full walk (history expired) asks for a new full read instead of
     /// reading the walk's ids twice.
     @Test func fullWalkRestartsFullRead() async throws {
