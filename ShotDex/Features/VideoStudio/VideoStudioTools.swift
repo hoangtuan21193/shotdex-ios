@@ -58,6 +58,34 @@ enum VideoAddTool: String, CaseIterable, Identifiable {
         }
     }
 
+    /// What the five tools do while an item is selected (FS-12.04 §5).
+    enum SelectionBehaviour: Equatable {
+        /// The phone: the row is replaced outright by ✕ · name · ✓.
+        case replacedBySessionFooter
+        /// The Duo, inner and cover: drawn at white 30 %, take no touches.
+        case inert
+        /// iPad landscape: the pool stays usable; inserting from it is ✓ for
+        /// the selected item first.
+        case usableCommittingFirst
+        /// iPad portrait: the dock's four add buttons make way for the item's
+        /// command row.
+        case yieldsToCommands
+    }
+
+    static func selectionBehaviour(in windowClass: VideoStudioWindowClass) -> SelectionBehaviour {
+        switch windowClass {
+        case .phone: .replacedBySessionFooter
+        case .duoInner, .duoCover: .inert
+        case .iPadLandscape: .usableCommittingFirst
+        case .iPadPortrait: .yieldsToCommands
+        }
+    }
+
+    /// Whether the tools refuse touches right now.
+    static func toolsAreInert(in windowClass: VideoStudioWindowClass, isSelecting: Bool) -> Bool {
+        isSelecting && selectionBehaviour(in: windowClass) == .inert
+    }
+
     /// The row of a window with no media pool: all five, in order.
     static var bottomRow: [VideoAddTool] { allCases }
 

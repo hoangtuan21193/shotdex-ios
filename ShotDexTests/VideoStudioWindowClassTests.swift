@@ -49,3 +49,35 @@ struct VideoStudioWindowClassTests {
         }
     }
 }
+
+/// The five tools while an item is selected (FS-12.04 §5).
+@MainActor
+struct VideoToolsWhileSelectingTests {
+    /// FS-12.04 AC-8 (rule half): on the Duo, inner and cover, the tools go
+    /// inert while an item is selected; on the phone the row is replaced; on
+    /// an iPad they stay or make way. Iterated over every window class.
+    @Test func toolsAreInertWhileSelectingOnTheDuo() {
+        for windowClass in VideoStudioWindowClass.allCases {
+            let inert = VideoAddTool.toolsAreInert(in: windowClass, isSelecting: true)
+            #expect(inert == (windowClass == .duoInner || windowClass == .duoCover), "\(windowClass)")
+            #expect(!VideoAddTool.toolsAreInert(in: windowClass, isSelecting: false))
+        }
+        #expect(VideoAddTool.selectionBehaviour(in: .phone) == .replacedBySessionFooter)
+        #expect(VideoAddTool.selectionBehaviour(in: .iPadLandscape) == .usableCommittingFirst)
+        #expect(VideoAddTool.selectionBehaviour(in: .iPadPortrait) == .yieldsToCommands)
+    }
+
+    /// iPad landscape: inserting from the pool while clip 2 is selected is
+    /// ✓ for clip 2 first — its change stays, its session is over.
+    @Test func insertingFromThePoolCommitsTheSelection() {
+        let model = VideoStudioModelFixture.model()
+        let clip2 = model.recipe.clips[1].id
+        model.selectClip(clip2)
+        model.setSpeed(2, for: clip2)
+        model.appendMedia([VideoMediaPick(assetID: "pool-pick", kind: .photo)])
+        #expect(model.session == nil)
+        #expect(model.selectedClipID == nil)
+        #expect(model.recipe.clips[1].speed == 2)
+        #expect(model.recipe.clips.last?.assetID == "pool-pick")
+    }
+}

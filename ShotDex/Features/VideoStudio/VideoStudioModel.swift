@@ -1323,6 +1323,8 @@ final class VideoStudioModel {
 
     func appendMedia(_ picks: [VideoMediaPick]) {
         guard !picks.isEmpty else { return }
+        // Inserting is ✓ for whatever item is selected (FS-12.04 §5).
+        if session?.target.isItem == true { clearSelection() }
         let newClips = picks.map { VideoClip(assetID: $0.assetID, kind: $0.kind) }
         pushUndo()
         recipe.clips.append(contentsOf: newClips)
@@ -1339,6 +1341,7 @@ final class VideoStudioModel {
     /// needs no split and just inserts at that index.
     func insertMedia(_ picks: [VideoMediaPick]) {
         guard !picks.isEmpty else { return }
+        if session?.target.isItem == true { clearSelection() }
         guard mediaInsertMode == .insertAtPlayhead, !recipe.clips.isEmpty else {
             appendMedia(picks)
             return
