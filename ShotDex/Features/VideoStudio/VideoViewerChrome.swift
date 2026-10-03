@@ -81,16 +81,8 @@ struct VideoViewerHeader: View {
         else {
             return String(localized: "No Clip", comment: "Video Studio viewer header: the playhead is past the end of the project")
         }
-        let clip = model.recipe.clips[index]
-        let position = index + 1
-        switch clip.kind {
-        case .video:
-            return String(localized: "Clip \(position)", comment: "Video Studio viewer header: the video clip under the playhead, by its position on the track")
-        case .photo:
-            return String(localized: "Photo \(position)", comment: "Video Studio viewer header: the still under the playhead, by its position on the track")
-        case .freeze:
-            return String(localized: "Freeze \(position)", comment: "Video Studio viewer header: the held frame under the playhead, by its position on the track")
-        }
+        // The same name the session footer gives a selected clip.
+        return VideoItemTitle.clipName(model.recipe.clips[index].kind, index: index)
     }
 
     private func toggle(

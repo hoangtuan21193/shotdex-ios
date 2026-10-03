@@ -119,7 +119,7 @@ Chọn nhiều clip một lúc dùng cùng ✕ · "N Clips" · ✓ ([11](11-mult
 | AC-3 | clip 2 đang chọn, Speed đổi 1× → 2× rồi Volume 100 → 60 | bấm ✕ | clip 2 về 1× và 100; số bước undo bằng lúc trước khi chọn; Redo tắt | ✅ `VideoSessionCancelTests.cancelRestoresTheClipAndTheUndoDepth` (1×/100, độ sâu undo như trước, Redo tắt), `cancelAfterReplaceKeepsTheOldSource`, `cancelWithNoChangeOnlyDeselects` |
 | AC-4 | như AC-3 | bấm ✓ rồi Undo hai lần | lần 1: Volume về 100, Speed vẫn 2×; lần 2: Speed về 1× | ✅ `VideoSessionCommitTests.commitKeepsEachStep` (2× + Volume 60, ✓, Undo → Volume 100 Speed 2×, Undo → 1×), `undoPastTheSessionStartDeselects`, `VideoEditHistoryTests`; sim-shot iPhone 17: chân ✕ · Photo 2 · ✓ (2026-10-04) |
 | AC-5 | không chọn gì | bấm Text rồi ✕ | project không có khối chữ mới; ngăn undo như trước khi bấm Text | ✅ `VideoAddSessionTests.textThenCancelLeavesNoBlockAndNoUndo` (+ `stickerThenCancelRemovesIt`, `musicThenCancelRemovesTheTrack`); sim-shot iPhone 17: Text → khối "Text" ở playhead, Edit sáng, bàn phím lên (2026-10-04) |
-| AC-6 | clip 2 đang chọn, Speed đã đổi sang 2× | chạm băng chữ GOLDEN HOUR | clip 2 giữ 2×; đáy là ✕ · GOLDEN HOUR · ✓; panel cùng chiều cao như trước (±0pt) | ⚠️ chưa có |
+| AC-6 | clip 2 đang chọn, Speed đã đổi sang 2× | chạm băng chữ GOLDEN HOUR | clip 2 giữ 2×; đáy là ✕ · GOLDEN HOUR · ✓; panel cùng chiều cao như trước (±0pt) | ✅ `VideoItemTitleTests.switchingItemsKeepsTheFirstItemsEdits` (clip 2 giữ 2×, chân tên khối chữ, panel một chiều cao cho mọi item), `captionsAndMusicSayWhatAndWhen`, `clipsAreNamedByTheirPlaceOnTheTrack`; sim-shot iPhone 17: chân ✕ · Text GOLDEN HOUR / "Text · 0.0 → 9.0s" · ✓ (2026-10-04) |
 | AC-7 | project 3 clip, clip 2 đang chọn | bấm Delete | còn 2 clip liền nhau, đáy về 5 công cụ; Undo một lần trả clip 2 về đúng chỗ | ✅ `VideoDeleteTests.deleteKeepsClipsContiguousAndUndoesOnce`, `deleteFromTheTransportMenuIsUndoable`, `captionAndMusicDeletesAreOneStepEach` |
 | AC-8 | Duo trong 951×669, clip 2 đang chọn | chạm ô Media | không có gì mở; 5 ô công cụ vẽ trắng 30% | ⚠️ chưa có |
 | AC-9 | panel Music mở, Video sound 100 → 40 | bấm ✕ ở tiêu đề panel | Video sound về 100, không còn bước undo nào của lần mở này | ⚠️ chưa có |
@@ -130,7 +130,7 @@ Chọn nhiều clip một lúc dùng cùng ✕ · "N Clips" · ✓ ([11](11-mult
 | AC-14 | iPad ngang, Quick Adjust bật, clip 2 (video) dưới playhead; iPhone, panel Music mở | dump cả hai | Quick Adjust: Speed · Video sound, không có Master; panel Music: Video sound là dòng âm lượng duy nhất trên "Add Music from Files…" | ✅ iPad Pro 13 (dọc) dump nút 2026-10-04: Quick Adjust = Duration · Video sound (clip ảnh; clip video thay Duration bằng Speed), không "Master", meter "Mute Video Sound"; iPhone 17 sim-shot panel Music: Video sound là dòng âm duy nhất trên "Add Music from Files…"; `VideoStudioToolPanelTests.theMusicCellOpensTheMusicPanel` |
 | AC-15 | project JSON còn khoá Master = 0,5; Video sound 100, clip 2 Volume 100 | mở project, Export | project mở bình thường; mức âm clip 2 trong file xuất = mức nguồn (không nhân 0,5) | ✅ `VideoRecipeDecodingTests.aMasterKeyIsIgnored` (JSON có Master 0,5 mở ra, ghi lại không còn khoá) + `VideoAudioMixTests.clipGainIsVideoSoundOnly` (tham số audio mix của clip tại 1 s = 1,0); smoke export file dùng chung test của plan Export |
 
-**Chưa chứng minh được:** AC-6, AC-8, AC-9, AC-10, AC-11, AC-13.
+**Chưa chứng minh được:** AC-8, AC-9, AC-10, AC-11, AC-13.
 
 ## 9. Rủi ro đã biết
 
