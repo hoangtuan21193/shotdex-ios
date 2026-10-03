@@ -34,6 +34,27 @@ struct InfoCaptionKeywordModelTests {
         #expect(reopened.captionText == "Sunrise at Ba Na")
     }
 
+    /// AC-2: every character deleted, field left — Photos' caption is
+    /// cleared, the mirror loses A's caption row, the field is empty again
+    /// (its placeholder *Add a Caption* shows).
+    @Test func emptyClears() async throws {
+        let harness = try CaptionKeywordHarness(["A": CaptionKeywords(caption: "Sunrise at Ba Na")])
+        let model = InfoCaptionKeywordModel(assetId: "A", service: harness.service)
+        await model.load()
+        try harness.store.replace(["A": CaptionKeywords(caption: "Sunrise at Ba Na")])
+
+        model.captionText = "   "
+        await model.commitCaption()
+
+        #expect(harness.writer.blocks == [["A": CaptionKeywordChange(caption: .clear)]])
+        #expect(harness.library.read(ids: ["A"])["A"]?.caption == nil)
+        let rows = try await harness.database.reader.read { db in
+            try Int.fetchOne(db, sql: "SELECT COUNT(*) FROM photo_caption WHERE assetId = 'A'")
+        }
+        #expect(rows == 0)
+        #expect(model.captionText.isEmpty)
+    }
+
     /// Leaving the field without a change writes nothing.
     @Test func unchangedCaptionWritesNothing() async throws {
         let harness = try CaptionKeywordHarness(["A": CaptionKeywords(caption: "same")])
