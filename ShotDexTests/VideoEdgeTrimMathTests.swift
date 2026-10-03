@@ -75,3 +75,17 @@ extension VideoEdgeTrimMathTests {
         #expect(!VideoEdgeTrimMath.drag(clip, edge: .trailing, by: 1).hitLimit)
     }
 }
+
+extension VideoEdgeTrimMathTests {
+    /// FS-12.05 AC-4: a 3 s photo dragged 2.8 s in stops at 0.5 s; out, at 10.
+    @Test func photoEdgeClampsAtHalfASecond() {
+        let still = VideoStudioModelFixture.photoClips(1, seconds: 3)[0]
+        let shorter = VideoEdgeTrimMath.drag(still, edge: .leading, by: 2.8)
+        #expect(shorter.photoDuration == 0.5)
+        #expect(shorter.duration == 0.5)
+        #expect(shorter.hitLimit)
+        let longer = VideoEdgeTrimMath.drag(still, edge: .trailing, by: 9)
+        #expect(longer.photoDuration == 10)
+        #expect(longer.hitLimit)
+    }
+}
