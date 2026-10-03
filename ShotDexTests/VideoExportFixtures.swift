@@ -33,9 +33,11 @@ enum VideoExportFixtures {
     enum Fill {
         /// One flat colour, 0…1 sRGB.
         case flat(red: Double, green: Double, blue: Double)
-        /// Fresh random pixels every frame — the worst case for an encoder,
-        /// so its rate control has to sit at the target bitrate.
-        case noise
+        /// Mid-grey with ±`amplitude` of fresh noise per channel per frame:
+        /// busy like film grain, not like static. Full-range static is no
+        /// use for rate tests — the simulator's encoder (the Mac's
+        /// VideoToolbox) ignores the average bitrate on it and writes ~5×.
+        case grain(amplitude: Int)
     }
 
     /// A video file, H.264 at `fps`, `seconds` long.
@@ -61,6 +63,7 @@ enum VideoExportFixtures {
         writer.startSession(atSourceTime: .zero)
 
         var state: UInt64 = 0x9E37_79B9_7F4A_7C15
+        var grainPool: [UInt8] = []
         let frames = Int((seconds * Double(fps)).rounded())
         for frame in 0..<frames {
             while !input.isReadyForMoreMediaData { try await Task.sleep(for: .milliseconds(2)) }
@@ -80,14 +83,27 @@ enum VideoExportFixtures {
                     let line = (base + row * bytesPerRow).assumingMemoryBound(to: UInt32.self)
                     for column in 0..<width { line[column] = pixel }
                 }
-            case .noise:
-                let words = bytesPerRow * height / 8
-                let pointer = base.assumingMemoryBound(to: UInt64.self)
-                for index in 0..<words {
-                    state ^= state << 13
-                    state ^= state >> 7
-                    state ^= state << 17
-                    pointer[index] = state | 0xFF00_0000_FF00_0000
+            case let .grain(amplitude):
+                // One pool of grain, two frames deep, copied from a fresh
+                // random offset each frame: every frame is new to the
+                // encoder (the shift is far past any motion search), and
+                // filling 2M pixels per frame stays a memcpy.
+                if grainPool.isEmpty {
+                    let span = UInt64(2 * amplitude + 1)
+                    grainPool = [UInt8](repeating: 255, count: bytesPerRow * height * 2)
+                    for index in grainPool.indices where index % 4 != 3 {
+                        state ^= state << 13
+                        state ^= state >> 7
+                        state ^= state << 17
+                        grainPool[index] = UInt8(128 - amplitude + Int(state % span))
+                    }
+                }
+                state ^= state << 13
+                state ^= state >> 7
+                state ^= state << 17
+                let offset = Int(state % UInt64(bytesPerRow * height / 4)) * 4
+                grainPool.withUnsafeBytes { pool in
+                    base.copyMemory(from: pool.baseAddress! + offset, byteCount: bytesPerRow * height)
                 }
             }
             CVPixelBufferUnlockBaseAddress(buffer, [])

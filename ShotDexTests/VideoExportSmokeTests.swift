@@ -120,4 +120,34 @@ struct VideoExportSmokeTests {
         }
         #expect(worst <= 2, "top row is off #808080 by \(worst): \(Array(frame.bytes[0..<4]))")
     }
+
+    /// FS-12.10 AC-12: 16:9 · 1080p · 30 fps · H.264 is ~10 Mbps — width ×
+    /// height × fps × 0.16 bit — and the file is that rate times its length,
+    /// both within 15 %. The source is fresh grain every frame, so the
+    /// encoder's rate control has to hold the target rather than undershoot
+    /// it on easy content.
+    @Test func bitrateIsTenMbpsAt1080p30() async throws {
+        let directory = try VideoExportFixtures.makeDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let file = directory.appendingPathComponent("grain.mp4")
+        let seconds = 4.0
+        try await VideoExportFixtures.writeVideo(width: 1920, height: 1080, seconds: seconds, fill: .grain(amplitude: 12), to: file)
+
+        let recipe = VideoProjectRecipe(clips: [VideoExportFixtures.videoClip("grain", seconds: seconds)])
+        let service = VideoExportFixtures.service()
+        defer { service.cleanupSession() }
+        let url = try await service.export(
+            recipe: recipe,
+            sources: [recipe.clips[0].id: try await VideoExportFixtures.videoSource(file)],
+            progress: { _ in }
+        )
+        let output = try await VideoExportFixtures.inspect(url)
+        let target = 1920.0 * 1080 * 30 * 0.16
+        #expect(output.naturalSize == CGSize(width: 1920, height: 1080))
+        #expect(abs(Double(output.estimatedDataRate) / target - 1) <= 0.15,
+                "video rate \(output.estimatedDataRate) vs \(target)")
+        let expectedBytes = target * seconds / 8
+        #expect(abs(Double(output.fileBytes) / expectedBytes - 1) <= 0.15,
+                "file \(output.fileBytes) B vs \(expectedBytes)")
+    }
 }
