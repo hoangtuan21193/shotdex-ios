@@ -143,4 +143,41 @@ struct CaptionKeywordSheetModelTests {
         #expect(harness.writer.blocks.count == 1)
         #expect(outcome == .written(banner: KeywordCopy.updatedBanner(photos: 7), refused: 0))
     }
+
+    /// AC-7: three different captions; the field shows *Multiple Captions*;
+    /// a keyword is added without touching it — every caption stays exactly
+    /// as it was, and no caption is written.
+    @Test func untouchedCaptionKeepsAll() async throws {
+        var photos = Self.thirty(hoiAn: 0)
+        let captions = ["Sunrise at Ba Na", "Đà Lạt, sương sớm", "  spaced  "]
+        for (index, id) in Self.ids(photos).enumerated() { photos[id]?.caption = captions[index % 3] }
+        let harness = try CaptionKeywordHarness(photos)
+        let model = CaptionKeywordSheetModel(ids: Self.ids(photos), service: harness.service)
+        await model.load()
+        #expect(model.hasMultipleCaptions)
+        #expect(model.captionText.isEmpty)
+        model.keywordText = "x"
+        model.commitKeywordText()
+        _ = await model.apply()
+
+        #expect(harness.writer.blocks.first?.values.allSatisfy { $0.caption == .untouched } == true)
+        let after = harness.library.read(ids: Self.ids(photos))
+        for (id, value) in photos {
+            #expect(after[id]?.caption == value.caption)
+        }
+    }
+
+    /// Clear Captions writes a clear to every captioned photo — one write.
+    @Test func clearCaptionsClearsAll() async throws {
+        var photos = Self.thirty(hoiAn: 0)
+        photos["p1"]?.caption = "a"
+        photos["p2"]?.caption = "b"
+        let harness = try CaptionKeywordHarness(photos)
+        let model = CaptionKeywordSheetModel(ids: Self.ids(photos), service: harness.service)
+        await model.load()
+        model.clearCaptions()
+        _ = await model.apply()
+        #expect(harness.writer.blocks == [["p1": CaptionKeywordChange(caption: .clear), "p2": CaptionKeywordChange(caption: .clear)]])
+        #expect(harness.library.read(ids: ["p1", "p2"]).values.allSatisfy { $0.caption == nil })
+    }
 }
