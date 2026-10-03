@@ -282,6 +282,7 @@ private struct CreationCard: View {
     let creation: Creation
 
     @Environment(PhotoLibraryService.self) private var photoLibrary
+    @Environment(\.colorScheme) private var colorScheme
 
     @State private var thumbnail: UIImage?
 
@@ -306,14 +307,25 @@ private struct CreationCard: View {
             .formatted(date: .abbreviated, time: .shortened)
     }
 
+    /// "Edited 5 min. ago · 5 clips" on a draft, "12 clips" on an exported
+    /// video project, "4 photos" on a collage (FS-12.18 §4).
     private var subtitle: String {
-        photoCountLabel(creation.sourceAssetIds.count)
+        CreationCardCopy.subtitle(for: creation)
     }
 
-    private func photoCountLabel(_ count: Int) -> String {
-        String(
-            localized: "\(count) photos",
-            comment: "How many photos a saved collage or video was made from"
+    private var isDraft: Bool { creation.kind == .video && creation.isDraft }
+
+    /// The asset the cover shows: a draft has no export yet, so its first
+    /// clip stands in for it (FS-12.18 §4).
+    private var coverAssetId: String? {
+        isDraft ? creation.sourceAssetIds.first : creation.assetId
+    }
+
+    private var accessibilityText: String {
+        guard isDraft else { return "\(kindLabel), \(dateLabel), \(subtitle)" }
+        return String(
+            localized: "Video Project, Draft, \(dateLabel), \(subtitle)", table: VideoStudioCopy.table,
+            comment: "VoiceOver: a draft row in Video Projects — date, then the subtitle"
         )
     }
 
@@ -322,10 +334,13 @@ private struct CreationCard: View {
             cover
 
             VStack(alignment: .leading, spacing: 2) {
-                Text(dateLabel)
-                    .font(.headline)
-                    .foregroundStyle(Color(.label))
-                    .lineLimit(1)
+                HStack(spacing: 6) {
+                    if isDraft { draftPill }
+                    Text(dateLabel)
+                        .font(.headline)
+                        .foregroundStyle(Color(.label))
+                        .lineLimit(1)
+                }
                 Text(subtitle)
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
@@ -343,11 +358,25 @@ private struct CreationCard: View {
             Color(.secondarySystemBackground),
             in: RoundedRectangle(cornerRadius: AppTheme.Radius.lg, style: .continuous)
         )
-        .task(id: creation.assetId) { await loadThumbnail() }
+        .task(id: coverAssetId) { await loadThumbnail() }
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel("\(kindLabel), \(dateLabel), \(subtitle)")
+        .accessibilityLabel(accessibilityText)
         .accessibilityHint(Text("Opens in the editor", comment: "VoiceOver hint on a row in the Creations list"))
         .accessibilityAddTraits(.isButton)
+    }
+
+    /// "Draft", on a quiet capsule in the label colour — white 14 % in
+    /// dark, black 8 % in light, as the Video Projects boards draw it.
+    private var draftPill: some View {
+        Text(CreationCardMetrics.draftLabel)
+            .font(.system(size: 11, weight: .semibold))
+            .foregroundStyle(Color(.label))
+            .padding(.horizontal, 7)
+            .frame(height: CreationCardMetrics.draftPillHeight)
+            .background(
+                Capsule().fill(colorScheme == .dark ? Color.white.opacity(0.14) : Color.black.opacity(0.08))
+            )
+            .fixedSize()
     }
 
     private var cover: some View {
@@ -372,7 +401,7 @@ private struct CreationCard: View {
     }
 
     private func loadThumbnail() async {
-        guard let assetId = creation.assetId,
+        guard let assetId = coverAssetId,
               let asset = PhotoLibraryService.fetchAssets(ids: [assetId]).first
         else {
             thumbnail = nil
@@ -404,4 +433,7 @@ enum CreationCardMetrics {
     /// gets its own column" (`DESIGN.md` §10.1c). One number for one
     /// question, rather than a second one that reads like a typo later.
     static let minimumWidth: CGFloat = 320
+    /// The Draft label's capsule (FS-12.18 §4).
+    static let draftPillHeight: CGFloat = 18
+    static var draftLabel: String { CreationCardCopy.draftLabel() }
 }

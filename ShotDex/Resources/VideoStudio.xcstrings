@@ -1,12 +1,52 @@
 {
   "sourceLanguage": "en",
   "strings": {
+    "%@ · %@": {
+      "comment": "Video Projects: a draft's subtitle — when it was edited, then how many clips",
+      "extractionState": "manual"
+    },
+    "%lld clips": {
+      "comment": "Video Projects: how many clips a video project has (plural)",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld clip"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld clips"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "Draft": {
+      "comment": "Video Projects: label on a video project that has never been exported",
+      "extractionState": "manual"
+    },
+    "Edited %@": {
+      "comment": "Video Projects: when a draft was last changed; the argument is a relative time such as '5 min. ago'",
+      "extractionState": "manual"
+    },
     "Mute Video Sound": {
       "comment": "Video Studio level meter: silences the clips' own audio for the whole project",
       "extractionState": "manual"
     },
     "Unmute Video Sound": {
       "comment": "Video Studio level meter: restores the clips' own audio for the whole project",
+      "extractionState": "manual"
+    },
+    "Video Project, Draft, %@, %@": {
+      "comment": "VoiceOver: a draft row in Video Projects — date, then the subtitle",
       "extractionState": "manual"
     },
     "Video sound": {

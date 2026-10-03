@@ -174,3 +174,44 @@ import Testing
         #expect(all.first(where: { $0.id == gone.id })?.collageRecipe == sampleCollage())
     }
 }
+
+/// FS-12.18 §4: Video Projects is one list of drafts and exported projects.
+@Suite @MainActor struct VideoProjectsListTests {
+    private func row(_ id: String, updatedAt: Int, exportedAt: Int?, clips: Int = 2) throws -> Creation {
+        try Creation.video(
+            recipe: VideoProjectRecipe(clips: VideoStudioModelFixture.photoClips(clips)),
+            assetId: exportedAt == nil ? nil : "video-\(id)",
+            id: id, createdAt: 1, now: updatedAt, exportedAt: exportedAt
+        )
+    }
+
+    /// FS-12.18 AC-6: drafts and exports in one list, most recently edited
+    /// first, each telling which it is.
+    @Test func videoProjectsListsDraftsAndExportsNewestFirst() throws {
+        let store = CreationStore(database: try AppDatabase.makeEmpty())
+        try store.upsert(row("exported-old", updatedAt: 100, exportedAt: 100))
+        try store.saveDraft(row("draft", updatedAt: 300, exportedAt: nil, clips: 5))
+        try store.upsert(row("exported-new", updatedAt: 200, exportedAt: 150))
+
+        let rows = try store.fetchOrdered(kind: .video)
+        #expect(rows.map(\.id) == ["draft", "exported-new", "exported-old"])
+        #expect(rows.map(\.isDraft) == [true, false, false])
+        #expect(try store.count(kind: .video) == 3)
+    }
+
+    /// FS-12.18 AC-6: a draft edited five minutes ago reads "Edited 5 min.
+    /// ago · 5 clips"; an exported project only its clip count; a video
+    /// project counts clips, not photos.
+    @Test func rowsSayDraftAgeAndClipCount() throws {
+        let locale = Locale(identifier: "en_US")
+        let now = Date(timeIntervalSince1970: 10_000)
+        let draft = try row("d", updatedAt: 10_000 - 300, exportedAt: nil, clips: 5)
+        let exported = try row("e", updatedAt: 2_000, exportedAt: 2_000, clips: 12)
+        let one = try row("o", updatedAt: 2_000, exportedAt: 2_000, clips: 1)
+        #expect(CreationCardCopy.subtitle(for: draft, now: now, locale: locale) == "Edited 5 min. ago · 5 clips")
+        #expect(CreationCardCopy.subtitle(for: exported, now: now, locale: locale) == "12 clips")
+        #expect(CreationCardCopy.subtitle(for: one, now: now, locale: locale) == "1 clip")
+        #expect(CreationCardCopy.draftLabel(locale: locale) == "Draft")
+    }
+}
+
