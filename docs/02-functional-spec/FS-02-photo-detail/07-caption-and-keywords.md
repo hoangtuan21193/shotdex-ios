@@ -196,6 +196,12 @@ Luật:
   giữ nguyên (mẻ 1.000 đã chạm). Mốc 10 s tới ở khoảng 11.000 ảnh: mẻ **trên 10.000 ảnh** chia lô 1.000, dưới đó
   một khối. Đọc (plan M7): 1.000 asset fetch theo id có tải sẵn = 0,57 s, lười = 1,49 s, theo `fetchLimit` =
   0,54 s — tải sẵn có áp cho fetch theo id, nên lượt đọc đầy chia trang theo id lấy từ database.
+- **5.** Caption có trần **2.000 ký tự**: 2.000 ghi và đọc lại đúng từng ký tự, 2.001 trở lên thì **cả khối** lỗi
+  `PHPhotosErrorDomain 3307`, không đổi gì. Keyword không thấy trần tới 20.000 ký tự. Photos nhận nguyên văn
+  keyword rỗng, chỉ khoảng trắng, có khoảng trắng hai đầu, có dấu phẩy; giữ `Sunset` và `sunset` là **hai**
+  keyword trên cùng một ảnh, `removeKeyword` phân biệt hoa thường; `Đà Lạt` ≠ `Da Lat`. Hệ quả: ô caption chặn ở
+  2.000 (đếm UTF-16, không có đường lỗi); tách phẩy, trim, bỏ rỗng và chọn cách viết đã có là việc của app —
+  Photos không làm hộ.
 
 ## 11. Tiêu chí nghiệm thu
 
