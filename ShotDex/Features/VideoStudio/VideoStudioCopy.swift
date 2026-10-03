@@ -39,6 +39,32 @@ enum VideoStudioCopy {
         String(localized: "in this video", table: table, comment: "Video Studio Media panel: VoiceOver, after an item that is already in the video — Video, 0:06, in this video")
     }
 
+    /// The Media panel's tabs (FS-12.09 §3).
+    static var recents: String {
+        String(localized: "Recents", table: table, comment: "Video Studio Media panel tab: every photo and video, newest first")
+    }
+
+    static var albums: String {
+        String(localized: "Albums", table: table, comment: "Video Studio Media panel tab: the user's albums; also the back button from an album's grid")
+    }
+
+    /// "In Video · 6": every use of a library item in this video.
+    static func inVideo(_ count: Int) -> String {
+        String(localized: "In Video · \(count)", table: table, comment: "Video Studio Media panel tab: what of the library is in this video, and how many uses")
+    }
+
+    static var noAlbums: String {
+        String(localized: "No albums yet.", table: table, comment: "Video Studio Media panel: the Albums tab when the library has no albums of the user's own")
+    }
+
+    static var select: String {
+        String(localized: "Select", table: table, comment: "Video Studio Media panel: starts picking several items to add at once")
+    }
+
+    static var searchLibrary: String {
+        String(localized: "Search Library", table: table, comment: "Video Studio Media panel: the search button, by camera, lens, settings or words")
+    }
+
     static var look: String {
         String(localized: "Look", table: table, comment: "Video Studio: the bottom-row tool that changes the whole video's look — filter, adjustments, colour")
     }

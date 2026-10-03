@@ -61,6 +61,10 @@
       "comment": "Video Studio: title of the Music tool's panel",
       "extractionState": "manual"
     },
+    "Albums": {
+      "comment": "Video Studio Media panel tab: the user's albums; also the back button from an album's grid",
+      "extractionState": "manual"
+    },
     "Beats": {
       "comment": "Video Studio: the music command that marks a song's beats",
       "extractionState": "manual"
@@ -107,6 +111,10 @@
     },
     "Fade": {
       "comment": "Video Studio clip panel: header over the clip's fade in and fade out",
+      "extractionState": "manual"
+    },
+    "In Video · %lld": {
+      "comment": "Video Studio Media panel tab: what of the library is in this video, and how many uses",
       "extractionState": "manual"
     },
     "Keep Changes": {
@@ -161,6 +169,10 @@
       "comment": "Video Studio level meter: silences the clips' own audio for the whole project",
       "extractionState": "manual"
     },
+    "No albums yet.": {
+      "comment": "Video Studio Media panel: the Albums tab when the library has no albums of the user's own",
+      "extractionState": "manual"
+    },
     "Or drag the clip's edges on the timeline.": {
       "comment": "Video Studio Trim: the other way to cut a clip",
       "extractionState": "manual"
@@ -171,6 +183,18 @@
     },
     "Playhead at %@ of %@": {
       "comment": "Video Studio transport: VoiceOver label for the phone read-out — playhead, then the project's length",
+      "extractionState": "manual"
+    },
+    "Recents": {
+      "comment": "Video Studio Media panel tab: every photo and video, newest first",
+      "extractionState": "manual"
+    },
+    "Search Library": {
+      "comment": "Video Studio Media panel: the search button, by camera, lens, settings or words",
+      "extractionState": "manual"
+    },
+    "Select": {
+      "comment": "Video Studio Media panel: starts picking several items to add at once",
       "extractionState": "manual"
     },
     "Speed": {

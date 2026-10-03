@@ -83,6 +83,30 @@ final class VideoMediaLibrary {
         revision &+= 1
     }
 
+    /// One row of the Albums tab: cover · name · how many items.
+    struct Album: Identifiable, Equatable {
+        let id: String
+        let title: String
+        let count: Int
+        /// The newest item, drawn as the cover.
+        let cover: PHAsset?
+    }
+
+    /// The user's own albums, in the order PhotoKit keeps them, each counted
+    /// the way its grid will list it (photos and videos only).
+    func albums() -> [Album] {
+        guard canRead else { return [] }
+        return PhotoLibraryService.fetchUserAlbums().map { collection in
+            let items = PHAsset.fetchAssets(in: collection, options: Self.albumOptions())
+            return Album(
+                id: collection.localIdentifier,
+                title: collection.localizedTitle ?? "",
+                count: items.count,
+                cover: items.firstObject
+            )
+        }
+    }
+
     // MARK: Fetch options (pure, so they are tested)
 
     /// Recents: photos and videos, newest first, and **no fetch limit** — the

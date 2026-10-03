@@ -58,3 +58,16 @@ struct VideoMediaLibraryTests {
         #expect(phone.cellSide(width: 375) == 92)
     }
 }
+
+extension VideoMediaLibraryTests {
+    /// AC-19 (fetch half): an album's grid is that album's own items,
+    /// photos and videos, newest first and uncapped — the same fetch shape
+    /// as Recents, so it carries the same used-marks.
+    @Test func albumGridIsTheAlbumFetch() {
+        let album = VideoMediaLibrary.albumOptions()
+        let recents = VideoMediaLibrary.recentsOptions()
+        #expect(album.fetchLimit == 0)
+        #expect(album.predicate == recents.predicate)
+        #expect(album.sortDescriptors == recents.sortDescriptors)
+    }
+}
