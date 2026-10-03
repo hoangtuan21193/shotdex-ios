@@ -410,10 +410,10 @@ struct VideoStudioSheetHost: View {
             speedChips(clip)
         case .volume:
             // This clip's level, not the project's: Video sound is the
-            // Music panel's (FS-12.08 §2).
-            InspectorSlider(
-                label: "Volume", value: clip.volume, range: 0...1,
-                valueText: "\(Int(clip.volume * 100))", model: model,
+            // Music panel's (FS-12.08 §2). Its speaker mutes it.
+            MutableVolumeRow(
+                isMuted: clip.isMuted, volume: clip.volume, model: model,
+                toggleMute: { model.toggleClipMuted(clip.id) },
                 set: { model.setClipVolume($0, for: clip.id) },
                 reset: { model.pushUndo(); model.setClipVolume(1, for: clip.id) }
             )
@@ -787,9 +787,9 @@ struct VideoStudioSheetHost: View {
     private var musicParams: some View {
         if let music = model.selectedMusicTrack {
             VStack(spacing: 0) {
-                InspectorSlider(
-                    label: "Volume", value: music.volume, range: 0...1,
-                    valueText: "\(Int(music.volume * 100))", model: model,
+                MutableVolumeRow(
+                    isMuted: music.isMuted, volume: music.volume, model: model,
+                    toggleMute: { model.toggleMusicMuted(music.id) },
                     set: { model.setMusicVolume($0, for: music.id) },
                     reset: { model.pushUndo(); model.setMusicVolume(1, for: music.id) }
                 )

@@ -96,3 +96,38 @@ struct VideoItemSectionTests {
         #expect(VideoClipPanelSections.sections(for: .video, leading: model.activeItemCommand).first == .volume)
     }
 }
+
+/// The speaker at the head of a Volume row (FS-12.04b §5).
+@MainActor
+struct VideoMuteSpeakerTests {
+    /// FS-12.04b AC-6: clip 2 at Volume 80 — the speaker once: silent, the
+    /// level still 80; again: 80 audible; two undo steps.
+    @Test func muteKeepsTheLevelAndUndoesStepwise() {
+        let model = VideoStudioModelFixture.model()
+        let clip2 = model.recipe.clips[1].id
+        model.setClipVolume(0.8, for: clip2)
+        model.selectClip(clip2)
+
+        model.toggleClipMuted(clip2)
+        #expect(model.recipe.clips[1].isMuted)
+        #expect(model.recipe.clips[1].volume == 0.8)
+        model.toggleClipMuted(clip2)
+        #expect(!model.recipe.clips[1].isMuted)
+        #expect(model.recipe.clips[1].volume == 0.8)
+        #expect(model.history.undoEntries.count == 2)
+        model.undo()
+        #expect(model.recipe.clips[1].isMuted)
+        model.undo()
+        #expect(!model.recipe.clips[1].isMuted)
+
+        // A music bed's speaker keeps its level the same way.
+        model.addMusicTrack(source: .bundled(id: "calm"))
+        let bed = model.recipe.musicTracks[0].id
+        model.setMusicVolume(0.6, for: bed)
+        model.toggleMusicMuted(bed)
+        #expect(model.recipe.musicTracks[0].isMuted)
+        #expect(model.recipe.musicTracks[0].volume == 0.6)
+        // No Mute cell in the row: the speaker is the one way.
+        #expect(!VideoItemCommand.commands(for: .music).map(\.rawValue).contains("mute"))
+    }
+}

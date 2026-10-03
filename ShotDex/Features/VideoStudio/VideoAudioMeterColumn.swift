@@ -131,7 +131,7 @@ final class VideoLevelMeterModel {
             let gain = Self.rampedVolume(
                 at: intoTrack,
                 total: placement.duration,
-                volume: music.volume,
+                volume: music.isMuted ? 0 : music.volume,
                 fadeIn: music.fadeIn,
                 fadeOut: music.fadeOut
             )

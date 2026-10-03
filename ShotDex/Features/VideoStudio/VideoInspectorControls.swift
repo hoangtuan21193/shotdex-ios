@@ -31,6 +31,41 @@ struct InspectorSlider: View {
     }
 }
 
+/// A Volume row with its speaker (FS-12.04b §5): a 26pt disc on white 10 %
+/// at the head of the row mutes and unmutes; muted, the slider dims to 30 %
+/// and keeps its number, so unmuting returns the level it had.
+struct MutableVolumeRow: View {
+    let isMuted: Bool
+    let volume: Double
+    let model: VideoStudioModel
+    let toggleMute: () -> Void
+    let set: (Double) -> Void
+    let reset: () -> Void
+
+    var body: some View {
+        HStack(spacing: 0) {
+            Button(action: toggleMute) {
+                Image(systemName: isMuted ? "speaker.slash.fill" : "speaker.wave.2.fill")
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(.white)
+                    .frame(width: VideoStudioMetrics.muteDisc, height: VideoStudioMetrics.muteDisc)
+                    .background(Circle().fill(Color.white.opacity(0.10)))
+                    .frame(width: 44, height: 44)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .padding(.leading, 4)
+            .accessibilityLabel(isMuted ? VideoStudioCopy.unmute : VideoStudioCopy.mute)
+            InspectorSlider(
+                label: "Volume", value: volume, range: 0...1,
+                valueText: "\(Int(volume * 100))", model: model,
+                set: set, reset: reset
+            )
+            .opacity(isMuted ? 0.3 : 1)
+        }
+    }
+}
+
 /// The caption's own words, first row of the text panel. Single-line inline
 /// editing covers most captions; the expand button hands off to the full-screen
 /// editor for multi-line ones.

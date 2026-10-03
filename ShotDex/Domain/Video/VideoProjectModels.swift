@@ -309,6 +309,9 @@ struct MusicTrack: Identifiable, Equatable, Codable, Sendable {
     /// Resolved at load, not user state.
     var sourceDuration: Double?
     var volume: Double = 1
+    /// Silenced from the speaker at the head of its Volume row (FS-12.04b
+    /// §5). Apart from `volume`, so unmuting returns exactly the old level.
+    var isMuted = false
     var fadeIn: Double = 2
     var fadeOut: Double = 2
 
@@ -625,6 +628,7 @@ extension MusicTrack {
         trimEnd = value(.trimEnd, Double?.none)
         sourceDuration = value(.sourceDuration, Double?.none)
         volume = value(.volume, 1)
+        isMuted = value(.isMuted, false)
         fadeIn = value(.fadeIn, 2)
         fadeOut = value(.fadeOut, 2)
     }

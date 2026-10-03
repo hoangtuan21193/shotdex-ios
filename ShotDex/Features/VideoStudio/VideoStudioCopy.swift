@@ -88,4 +88,12 @@ enum VideoStudioCopy {
     static var movePlayheadIntoClip: String {
         String(localized: "Move the playhead into this clip.", table: table, comment: "Video Studio Trim: why the Start/End to Playhead chips are dimmed")
     }
+
+    static var mute: String {
+        String(localized: "Mute", table: table, comment: "Video Studio: the speaker at the head of a Volume row — silences the clip or the song, keeping its level")
+    }
+
+    static var unmute: String {
+        String(localized: "Unmute", table: table, comment: "Video Studio: the speaker at the head of a Volume row — brings back the clip's or the song's level")
+    }
 }

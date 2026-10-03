@@ -36,6 +36,8 @@ enum VideoStudioMetrics {
     /// Trim's Start/End to Playhead chips (FS-12.04b §4).
     static let trimChipHeight: CGFloat = 30
     static let trimChipRadius: CGFloat = 8
+    /// The speaker at the head of a Volume row (FS-12.04b §5).
+    static let muteDisc: CGFloat = 26
     /// ✕ and ✓ of the session footer (board P2).
     static let sessionButton: CGFloat = 44
     /// The Music panel's title row (board P4).

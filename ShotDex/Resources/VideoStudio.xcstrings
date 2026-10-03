@@ -109,6 +109,10 @@
       "comment": "Video Studio: a music bed on the timeline",
       "extractionState": "manual"
     },
+    "Mute": {
+      "comment": "Video Studio: the speaker at the head of a Volume row — silences the clip or the song, keeping its level",
+      "extractionState": "manual"
+    },
     "Mute Video Sound": {
       "comment": "Video Studio level meter: silences the clips' own audio for the whole project",
       "extractionState": "manual"
@@ -151,6 +155,10 @@
     },
     "Try Again": {
       "comment": "Video Studio: retries writing the video draft",
+      "extractionState": "manual"
+    },
+    "Unmute": {
+      "comment": "Video Studio: the speaker at the head of a Volume row — brings back the clip's or the song's level",
       "extractionState": "manual"
     },
     "Unmute Video Sound": {

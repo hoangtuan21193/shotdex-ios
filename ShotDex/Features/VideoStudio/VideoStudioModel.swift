@@ -1516,6 +1516,23 @@ final class VideoStudioModel {
         applyAudioTier()
     }
 
+    /// The speaker at the head of a clip's Volume row (FS-12.04b §5): one
+    /// undo step per tap; the level underneath is kept.
+    func toggleClipMuted(_ clipID: UUID) {
+        guard let clip = recipe.clips.first(where: { $0.id == clipID }) else { return }
+        pushUndo()
+        setMuted(!clip.isMuted, for: clipID)
+    }
+
+    /// The same speaker on a music bed's Volume row.
+    func toggleMusicMuted(_ id: UUID) {
+        guard let index = recipe.musicTracks.firstIndex(where: { $0.id == id }) else { return }
+        pushUndo()
+        recipe.musicTracks[index].isMuted.toggle()
+        markEdited()
+        applyAudioTier()
+    }
+
     func setMusicVolume(_ volume: Double, for id: UUID) {
         guard let index = recipe.musicTracks.firstIndex(where: { $0.id == id }) else { return }
         recipe.musicTracks[index].volume = min(max(volume, 0), 1)

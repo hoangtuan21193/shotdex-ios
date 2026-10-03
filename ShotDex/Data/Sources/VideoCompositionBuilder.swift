@@ -347,7 +347,7 @@ enum VideoCompositionBuilder {
             // onto the timeline by where the track was inserted.
             let ramps = VideoTimelineMath.musicRamps(
                 total: entry.duration,
-                volume: music.volume,
+                volume: music.isMuted ? 0 : music.volume,
                 fadeIn: music.fadeIn,
                 fadeOut: music.fadeOut
             )
