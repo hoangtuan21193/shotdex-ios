@@ -17,7 +17,6 @@ struct VideoMediaPanel: View {
     /// The album whose grid is open from the Albums tab.
     @State private var openAlbum: VideoMediaLibrary.Album?
     @State private var albums: [VideoMediaLibrary.Album] = []
-    @State private var isSelecting = false
 
     enum Tab: Hashable { case recents, albums, inVideo }
 
@@ -73,30 +72,59 @@ struct VideoMediaPanel: View {
                 tabButton(.inVideo, title: VideoStudioCopy.inVideo(MediaUsage.useCount(in: model.recipe)))
                 Spacer(minLength: 0)
                 Button {
-                    isSelecting.toggle()
+                    model.toggleMediaSelecting()
                 } label: {
                     Text(VideoStudioCopy.select)
-                        .font(.system(size: 12.5, weight: isSelecting ? .semibold : .medium))
+                        .font(.system(size: 12.5, weight: model.isSelectingMedia ? .semibold : .medium))
                         .foregroundStyle(.white)
+                        .lineLimit(1)
+                        .fixedSize()
                         .padding(.horizontal, 10)
                         .frame(height: VideoMediaPanelMetrics.tabHeight)
-                        .background(tabFill(isOn: isSelecting))
+                        .background(tabFill(isOn: model.isSelectingMedia))
                 }
                 .buttonStyle(.plain)
-                .accessibilityAddTraits(isSelecting ? .isSelected : [])
-                Button {
-                } label: {
-                    Image(systemName: "magnifyingglass")
-                        .font(.system(size: 13, weight: .semibold))
-                        .foregroundStyle(.white)
-                        .frame(width: VideoMediaPanelMetrics.tabHeight, height: VideoMediaPanelMetrics.tabHeight)
-                        .background(Circle().fill(Color.white.opacity(0.06)))
+                .accessibilityAddTraits(model.isSelectingMedia ? .isSelected : [])
+                if let picks = model.mediaSelection {
+                    addButton(count: picks.count)
+                } else {
+                    searchButton
                 }
-                .buttonStyle(.plain)
-                .accessibilityLabel(VideoStudioCopy.searchLibrary)
             }
             .padding(.horizontal, VideoMediaPanelMetrics.rowInset)
         }
+    }
+
+    /// Add (N): white, black type, in the search button's place while
+    /// selecting; dimmed at zero (FS-12.09 §4).
+    private func addButton(count: Int) -> some View {
+        Button {
+            model.addSelectedMedia()
+        } label: {
+            Text(VideoStudioCopy.addCount(count))
+                .font(.system(size: 13, weight: .bold))
+                .foregroundStyle(.black)
+                .padding(.horizontal, 12)
+                .frame(height: VideoMediaPanelMetrics.tabHeight)
+                .background(RoundedRectangle(cornerRadius: AppTheme.Radius.sm, style: .continuous).fill(Color.white))
+                .fixedSize()
+        }
+        .buttonStyle(.plain)
+        .opacity(count == 0 ? 0.35 : 1)
+        .disabled(count == 0)
+    }
+
+    private var searchButton: some View {
+        Button {
+        } label: {
+            Image(systemName: "magnifyingglass")
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(.white)
+                .frame(width: VideoMediaPanelMetrics.tabHeight, height: VideoMediaPanelMetrics.tabHeight)
+                .background(Circle().fill(Color.white.opacity(0.06)))
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(VideoStudioCopy.searchLibrary)
     }
 
     private func tabButton(_ value: Tab, title: String) -> some View {
@@ -145,7 +173,14 @@ struct VideoMediaPanel: View {
                 revision: library.revision,
                 metrics: metrics,
                 uses: MediaUsage.uses(in: model.recipe),
-                onTap: { insert($0) }
+                pickNumbers: pickNumbers,
+                onTap: { asset in
+                    if model.isSelectingMedia {
+                        model.toggleMediaPick(VideoMediaPick(asset))
+                    } else {
+                        insert(asset)
+                    }
+                }
             )
         } else {
             Color.clear
@@ -180,6 +215,14 @@ struct VideoMediaPanel: View {
                 }
             }
         }
+    }
+
+    /// The picked items' numbers by library id.
+    private var pickNumbers: [String: Int] {
+        Dictionary(
+            (model.mediaSelection ?? []).enumerated().map { ($1.assetID, $0 + 1) },
+            uniquingKeysWith: { first, _ in first }
+        )
     }
 
     private func select(_ value: Tab) {

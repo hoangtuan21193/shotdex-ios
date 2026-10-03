@@ -57,6 +57,14 @@
       "comment": "Video Studio settings button: the project's frame rate, e.g. 30 fps",
       "extractionState": "manual"
     },
+    "%lld selected · Add puts them at %@": {
+      "comment": "Video Studio Media panel: under its name while selecting — how many are picked and the playhead time Add inserts them at",
+      "extractionState": "manual"
+    },
+    "Add (%lld)": {
+      "comment": "Video Studio Media panel: adds the picked items at the playhead, with how many",
+      "extractionState": "manual"
+    },
     "Add Music": {
       "comment": "Video Studio: title of the Music tool's panel",
       "extractionState": "manual"

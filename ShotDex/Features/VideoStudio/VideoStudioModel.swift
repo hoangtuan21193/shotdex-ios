@@ -527,6 +527,7 @@ final class VideoStudioModel {
     }
 
     private func deselectAll() {
+        mediaSelection = nil
         selectedClipID = nil
         selectedOverlayID = nil
         selectedMusicID = nil
@@ -557,15 +558,61 @@ final class VideoStudioModel {
     var sessionFooterTitle: VideoItemTitle.Lines? {
         if let selectionTitle { return selectionTitle }
         guard inspectorTarget == .none, activeToolPanel == .media else { return nil }
+        let time = VideoStudioMetrics.compactTimecode(currentTime)
         return VideoItemTitle.Lines(
             name: VideoStudioCopy.media,
-            detail: VideoStudioCopy.mediaTapHint(at: VideoStudioMetrics.compactTimecode(currentTime))
+            detail: mediaSelection.map { VideoStudioCopy.mediaSelectedHint(count: $0.count, at: time) }
+                ?? VideoStudioCopy.mediaTapHint(at: time)
         )
     }
 
-    /// ✓: keep, deselect, and the bottom row is the tools again.
+    /// ✓: keep, deselect, and the bottom row is the tools again. With
+    /// items picked in Media's Select and not yet added, ✓ adds them first:
+    /// losing three picks to the button that means "keep" would be a silent
+    /// loss (FS-12.09 §5).
     func commitSession() {
+        if activeToolPanel == .media, let picks = mediaSelection, !picks.isEmpty {
+            insertMedia(picks)
+        }
         clearSelection()
+    }
+
+    // MARK: - Media Select (FS-12.09 §5)
+
+    /// The items picked in Media's Select, in the order they were picked;
+    /// nil when Select is off. Session state: closing Media forgets it.
+    private(set) var mediaSelection: [VideoMediaPick]?
+
+    var isSelectingMedia: Bool { mediaSelection != nil }
+
+    /// Select: on with nothing picked, or off dropping every pick.
+    func toggleMediaSelecting() {
+        mediaSelection = mediaSelection == nil ? [] : nil
+    }
+
+    /// A cell tapped while selecting: picked at the end, or unpicked — the
+    /// rest renumber.
+    func toggleMediaPick(_ pick: VideoMediaPick) {
+        guard var picks = mediaSelection else { return }
+        if let index = picks.firstIndex(where: { $0.assetID == pick.assetID }) {
+            picks.remove(at: index)
+        } else {
+            picks.append(pick)
+        }
+        mediaSelection = picks
+    }
+
+    /// The 1-based number a picked item shows, nil if it is not picked.
+    func mediaPickNumber(_ assetID: String) -> Int? {
+        mediaSelection?.firstIndex { $0.assetID == assetID }.map { $0 + 1 }
+    }
+
+    /// Add (N): every pick in at the playhead in the order picked, as one
+    /// step, and Select ends.
+    func addSelectedMedia() {
+        guard let picks = mediaSelection, !picks.isEmpty else { return }
+        insertMedia(picks)
+        mediaSelection = nil
     }
 
     /// Esc (FS-12.03b §5): ✓, never ✕ — an editor's Esc deselects, it

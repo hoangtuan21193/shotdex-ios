@@ -134,7 +134,7 @@ Project mẫu: 16:9, 5 clip 24,0s (Falls ảnh 0–3,0 · Coast video 3,0–9,2 
 | # | Cho | Khi | Thì | Chứng minh bằng |
 |---|---|---|---|---|
 | AC-1 | project mẫu, Media mở, một ảnh chưa dùng | chạm ô đó | Coast tách tại 8,4; ảnh vào giữa; 7 clip, 27,0 s; ô có ✓; tab thành "In Video · 8" (7 clip + sticker); playhead 11,4 | `MediaInsertMathTests.tapSplitsCoastAt8_4` (Coast tách ở 8,4, 7 clip, kết 27,0 s, playhead 11,4, `useCount` 8), `.edgeInsertsWithoutSplit`, `.threeTapsKeepOrder`, `.severalGoInInTheOrderGiven`; sim 26.5: hai lần chạm cùng ô ở playhead 0 → 0:06.0 / 0:15.0, ô "×2", tab "In Video · 5" (`vs3/out/m4/04-tap2.png`) |
-| AC-2 | project mẫu, Select, chọn 3 ô | bấm Add (3) | 3 clip mới theo thứ tự 1-2-3 sau vết cắt 8,4; một Undo về đúng 5 clip | ⚠️ chưa có |
+| AC-2 | project mẫu, Select, chọn 3 ô | bấm Add (3) | 3 clip mới theo thứ tự 1-2-3 sau vết cắt 8,4; một Undo về đúng 5 clip | `VideoStudioMediaSessionTests.addThreeInSelectionOrderOneUndo` (chọn C·X·A·B, bỏ X → số 1-2-3 đánh lại; Add → C, A, B sau vết cắt 8,4; một Undo về 5 clip), `.confirmAddsPendingSelection` (✓ còn ô chọn → Add rồi đóng; ✕ không thêm); sim 26.5: ô chọn viền trắng + số 1·2·3, nút trắng "Add (3)", dòng phụ "3 selected · Add puts them at 0:00.0", Add → 3 clip mới, In Video · 6 (`vs3/out/m6`) |
 | AC-3 | project mẫu, video 14,0s trong lưới | giữ 0,3s, kéo tới giữa Lake và Night | vạch trắng ở 14,2 + viên nang "+ 0:14.2"; thả → video là clip 4 bắt đầu 14,2, Lake không bị tách, tổng 38,0s | ⚠️ chưa có — driver cần bước giữ-rồi-kéo |
 | AC-4 | đang kéo như AC-3 | thả lại trên lưới | project vẫn 5 clip 24,0s; nút Undo không đổi trạng thái | ⚠️ chưa có |
 | AC-5 | lưới Recents đứng yên | vuốt dọc 30pt trong 0,2s đầu | lưới cuộn, không bóng nào nhấc lên | ⚠️ chưa có |

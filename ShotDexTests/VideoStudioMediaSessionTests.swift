@@ -53,3 +53,54 @@ struct VideoStudioMediaSessionTests {
         #expect(model.recipe.clips.count == 6)
     }
 }
+
+extension VideoStudioMediaSessionTests {
+    /// AC-2: Select, pick three, Add (3) → three clips after the cut at
+    /// 8.4 in the order picked (1-2-3), one undo back to the five clips.
+    /// Unpicking renumbers; Select again drops every pick.
+    @Test func addThreeInSelectionOrderOneUndo() {
+        let model = sample()
+        defer { model.close() }
+        model.showToolPanel(.media)
+        model.seek(to: 8.4)
+        model.toggleMediaSelecting()
+        for id in ["C", "X", "A", "B"] { model.toggleMediaPick(VideoMediaPick(assetID: id, kind: .photo)) }
+        model.toggleMediaPick(VideoMediaPick(assetID: "X", kind: .photo))
+        #expect(model.mediaPickNumber("C") == 1)
+        #expect(model.mediaPickNumber("A") == 2)
+        #expect(model.mediaPickNumber("B") == 3)
+        #expect(model.mediaPickNumber("X") == nil)
+        #expect(model.sessionFooterTitle?.detail.hasPrefix("3 selected") == true)
+
+        model.addSelectedMedia()
+        #expect(model.recipe.clips.map(\.assetID) == ["Falls", "Coast", "C", "A", "B", "Coast", "Lake", "Night", "Forest"])
+        #expect(!model.isSelectingMedia)
+        model.undo()
+        #expect(model.recipe.clips.map(\.assetID) == ["Falls", "Coast", "Lake", "Night", "Forest"])
+
+        model.toggleMediaSelecting()
+        model.toggleMediaPick(VideoMediaPick(assetID: "A", kind: .photo))
+        model.toggleMediaSelecting()
+        #expect(model.mediaSelection == nil)
+    }
+
+    /// ✓ with picks not yet added adds them first, then closes Media.
+    @Test func confirmAddsPendingSelection() {
+        let model = sample()
+        defer { model.close() }
+        model.showToolPanel(.media)
+        model.toggleMediaSelecting()
+        model.toggleMediaPick(VideoMediaPick(assetID: "A", kind: .photo))
+        model.toggleMediaPick(VideoMediaPick(assetID: "B", kind: .photo))
+        model.commitSession()
+        #expect(model.recipe.clips.count == 7)
+        #expect(model.activeToolPanel == nil)
+        #expect(model.mediaSelection == nil)
+        // ✕ with picks adds nothing.
+        model.showToolPanel(.media)
+        model.toggleMediaSelecting()
+        model.toggleMediaPick(VideoMediaPick(assetID: "C", kind: .photo))
+        model.cancelSession()
+        #expect(model.recipe.clips.count == 7)
+    }
+}

@@ -19,6 +19,8 @@ struct VideoMediaGridView: UIViewRepresentable {
     let metrics: VideoMediaGridMetrics
     /// How many times each library item is in the video (FS-12.09 §4).
     var uses: [String: Int] = [:]
+    /// Select's picks: their 1-based numbers by library id.
+    var pickNumbers: [String: Int] = [:]
     var bottomInset: CGFloat = 0
     let onTap: (PHAsset) -> Void
 
@@ -43,7 +45,7 @@ struct VideoMediaGridView: UIViewRepresentable {
     func updateUIView(_ view: UICollectionView, context: Context) {
         let coordinator = context.coordinator
         let metricsChanged = coordinator.parent.metrics != metrics
-        let usesChanged = coordinator.parent.uses != uses
+        let usesChanged = coordinator.parent.uses != uses || coordinator.parent.pickNumbers != pickNumbers
         coordinator.parent = self
         view.contentInset.bottom = bottomInset
         view.verticalScrollIndicatorInsets.bottom = bottomInset
@@ -59,6 +61,7 @@ struct VideoMediaGridView: UIViewRepresentable {
             // reloads and no thumbnail is asked for again.
             for case let cell as VideoMediaGridCell in view.visibleCells {
                 cell.mark(uses: cell.assetID.flatMap { uses[$0] } ?? 0)
+                cell.markPick(cell.assetID.flatMap { pickNumbers[$0] })
             }
         }
     }
@@ -109,6 +112,7 @@ struct VideoMediaGridView: UIViewRepresentable {
             }
             cell.show(asset, index: indexPath.item)
             cell.mark(uses: parent.uses[asset.localIdentifier] ?? 0)
+            cell.markPick(parent.pickNumbers[asset.localIdentifier])
             let id = asset.localIdentifier
             let library = library.photoLibrary
             let target = thumbnailSize(collectionView)
@@ -233,6 +237,8 @@ final class VideoMediaGridCell: UICollectionViewCell {
     /// ✓ on a white 19pt disc, or "×2" on a white capsule.
     private let badge = UILabel()
     private var baseAccessibilityLabel: String?
+    /// Select's number, top leading, on a white disc.
+    private let pickNumber = UILabel()
     var assetID: String?
     var requestID: PHImageRequestID?
 
@@ -264,7 +270,22 @@ final class VideoMediaGridCell: UICollectionViewCell {
         badge.translatesAutoresizingMaskIntoConstraints = false
         contentView.addSubview(badge)
 
+        pickNumber.font = .systemFont(ofSize: 12, weight: .bold)
+        pickNumber.textColor = .black
+        pickNumber.backgroundColor = .white
+        pickNumber.textAlignment = .center
+        pickNumber.layer.cornerRadius = Self.pickSide / 2
+        pickNumber.layer.masksToBounds = true
+        pickNumber.isHidden = true
+        pickNumber.translatesAutoresizingMaskIntoConstraints = false
+        contentView.addSubview(pickNumber)
+        contentView.layer.borderColor = UIColor.white.cgColor
+
         NSLayoutConstraint.activate([
+            pickNumber.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 5),
+            pickNumber.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 5),
+            pickNumber.heightAnchor.constraint(equalToConstant: Self.pickSide),
+            pickNumber.widthAnchor.constraint(equalToConstant: Self.pickSide),
             badge.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 5),
             badge.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -5),
             badge.heightAnchor.constraint(equalToConstant: Self.badgeSide),
@@ -289,9 +310,11 @@ final class VideoMediaGridCell: UICollectionViewCell {
     }
 
     static let badgeSide: CGFloat = 19
+    static let pickSide: CGFloat = 21
 
     func clear() {
         badge.isHidden = true
+        markPick(nil)
         imageView.image = nil
         durationLabel.text = nil
         assetID = nil
@@ -304,6 +327,14 @@ final class VideoMediaGridCell: UICollectionViewCell {
         baseAccessibilityLabel = VideoMediaPoolFormat.accessibilityLabel(for: asset)
         accessibilityLabel = baseAccessibilityLabel
         accessibilityIdentifier = "videoMediaItem.\(index)"
+    }
+
+    /// Picked in Select: a 2pt white border and its number (FS-12.09 §4).
+    func markPick(_ number: Int?) {
+        pickNumber.isHidden = number == nil
+        pickNumber.text = number.map(String.init)
+        contentView.layer.borderWidth = number == nil ? 0 : 2
+        if number != nil { accessibilityTraits.insert(.selected) } else { accessibilityTraits.remove(.selected) }
     }
 
     /// The used-mark (FS-12.09 §4): nothing, ✓, or ×n.

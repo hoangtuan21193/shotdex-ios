@@ -57,6 +57,16 @@ enum VideoStudioCopy {
         String(localized: "No albums yet.", table: table, comment: "Video Studio Media panel: the Albums tab when the library has no albums of the user's own")
     }
 
+    /// "3 selected · Add puts them at 0:08.4" (FS-12.09 §4).
+    static func mediaSelectedHint(count: Int, at time: String) -> String {
+        String(localized: "\(count) selected · Add puts them at \(time)", table: table, comment: "Video Studio Media panel: under its name while selecting — how many are picked and the playhead time Add inserts them at")
+    }
+
+    /// "Add (3)": inserts the picked items.
+    static func addCount(_ count: Int) -> String {
+        String(localized: "Add (\(count))", table: table, comment: "Video Studio Media panel: adds the picked items at the playhead, with how many")
+    }
+
     static var select: String {
         String(localized: "Select", table: table, comment: "Video Studio Media panel: starts picking several items to add at once")
     }
