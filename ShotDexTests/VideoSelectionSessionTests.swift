@@ -284,3 +284,33 @@ struct VideoToolSessionTests {
         #expect(model.activeToolPanel == nil)
     }
 }
+
+extension VideoToolSessionTests {
+    /// FS-12.04 AC-10: Music open, Video sound to 40, the Music cell again —
+    /// the panel closes, 40 stays, and one Undo brings back 100. Any other
+    /// way of closing keeps the same way.
+    @Test func reopeningTheCellKeepsAndUndoesOnce() {
+        let model = VideoStudioModelFixture.model()
+        model.toggleToolPanel(.music)
+        model.beginUndoGroup()
+        model.setVideoVolume(0.4)
+        model.endUndoGroup()
+
+        model.toggleToolPanel(.music)
+        #expect(model.activeToolPanel == nil)
+        #expect(model.session == nil)
+        #expect(model.recipe.videoVolume == 0.4)
+        model.undo()
+        #expect(model.recipe.videoVolume == 1)
+        #expect(!model.canUndo)
+
+        // Opening another tool, and the grabber, keep too.
+        model.toggleToolPanel(.music)
+        model.setFilterIntensity(0.5)
+        model.toggleToolPanel(.look)
+        #expect(model.recipe.filterIntensity == 0.5)
+        model.clearSelection()
+        #expect(model.activeToolPanel == nil)
+        #expect(model.recipe.filterIntensity == 0.5)
+    }
+}

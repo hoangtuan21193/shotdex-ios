@@ -123,14 +123,14 @@ Chọn nhiều clip một lúc dùng cùng ✕ · "N Clips" · ✓ ([11](11-mult
 | AC-7 | project 3 clip, clip 2 đang chọn | bấm Delete | còn 2 clip liền nhau, đáy về 5 công cụ; Undo một lần trả clip 2 về đúng chỗ | ✅ `VideoDeleteTests.deleteKeepsClipsContiguousAndUndoesOnce`, `deleteFromTheTransportMenuIsUndoable`, `captionAndMusicDeletesAreOneStepEach` |
 | AC-8 | Duo trong 951×669, clip 2 đang chọn | chạm ô Media | không có gì mở; 5 ô công cụ vẽ trắng 30% | ⚠️ chưa có |
 | AC-9 | panel Music mở, Video sound 100 → 40 | bấm ✕ ở tiêu đề panel | Video sound về 100, không còn bước undo nào của lần mở này | ✅ `VideoToolSessionTests.toolCancelRestoresVideoSoundAndLeavesNoUndo`; ✕ ở tiêu đề panel Music/Look gọi cùng `cancelSession` (sim-shot tiêu đề Look ✕ · ✓, 2026-10-04) |
-| AC-10 | như AC-9 | chạm lại ô Music | panel đóng, Video sound giữ 40; Undo một lần về 100 | ⚠️ chưa có |
+| AC-10 | như AC-9 | chạm lại ô Music | panel đóng, Video sound giữ 40; Undo một lần về 100 | ✅ `VideoToolSessionTests.reopeningTheCellKeepsAndUndoesOnce` (chạm lại ô Music: đóng, giữ 40, một Undo về 100; mở công cụ khác / grabber cũng giữ) |
 | AC-11 | clip 1 là video chỉ có trên iCloud, máy không mạng | chọn clip 1 | panel mở; Freeze mờ, có chữ "Waiting for iCloud"; không spinner quay mãi | ⚠️ chưa có |
 | AC-12 | lane V1 bị Lock | chạm clip 2 | không chọn; đáy vẫn 5 công cụ | ✅ `VideoSelectionSessionTests.aLockedLaneRefusesSelection` |
 | AC-13 | iOS 26.5 và iOS 18.6, cùng project, clip 2 đang chọn | dump hai bên | cùng tập nút: ✕, ✓, mọi lệnh hàng đầu panel | ⚠️ chưa có — agent `ios26-parity` |
 | AC-14 | iPad ngang, Quick Adjust bật, clip 2 (video) dưới playhead; iPhone, panel Music mở | dump cả hai | Quick Adjust: Speed · Video sound, không có Master; panel Music: Video sound là dòng âm lượng duy nhất trên "Add Music from Files…" | ✅ iPad Pro 13 (dọc) dump nút 2026-10-04: Quick Adjust = Duration · Video sound (clip ảnh; clip video thay Duration bằng Speed), không "Master", meter "Mute Video Sound"; iPhone 17 sim-shot panel Music: Video sound là dòng âm duy nhất trên "Add Music from Files…"; `VideoStudioToolPanelTests.theMusicCellOpensTheMusicPanel` |
 | AC-15 | project JSON còn khoá Master = 0,5; Video sound 100, clip 2 Volume 100 | mở project, Export | project mở bình thường; mức âm clip 2 trong file xuất = mức nguồn (không nhân 0,5) | ✅ `VideoRecipeDecodingTests.aMasterKeyIsIgnored` (JSON có Master 0,5 mở ra, ghi lại không còn khoá) + `VideoAudioMixTests.clipGainIsVideoSoundOnly` (tham số audio mix của clip tại 1 s = 1,0); smoke export file dùng chung test của plan Export |
 
-**Chưa chứng minh được:** AC-8, AC-10, AC-11, AC-13.
+**Chưa chứng minh được:** AC-8, AC-11, AC-13.
 
 ## 9. Rủi ro đã biết
 
