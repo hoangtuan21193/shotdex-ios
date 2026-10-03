@@ -111,7 +111,7 @@ Language · Delete**; bốn kiểu, cỡ, ba vị trí; công tắc **Burn into 
 | Không có lời nào | "No speech found in these clips."; không tạo lane |
 | ✕ trong lần nhận dạng đầu | dừng nhận dạng, xoá lane, trả số bước undo như lúc mở panel (luật ✕ của 06c §7) |
 | ✓ khi đang nhận dạng | chạy tiếp; lane đầy dần |
-| Rời studio khi đang 58% | dừng; khối đã có được lưu; mở lại thấy thẻ "Captions stopped at 58%" + **Continue** chạy tiếp từ clip chưa xong |
+| Rời studio khi đang 58% | dừng; khối đã có được lưu cùng nháp ([18](18-drafts.md)); mở lại thấy thẻ "Captions stopped at 58%" + **Continue** chạy tiếp từ clip chưa xong |
 | `.limited`, hết bộ nhớ | clip mất quyền đọc bị bỏ qua như iCloud; không ghi file tạm nên không cần chỗ trống |
 
 ## 9. Tiêu chí nghiệm thu
@@ -135,8 +135,7 @@ video có lời tiếng Anh dựng sẵn từ giọng đọc tổng hợp (khôn
 | AC-12 | nhận dạng 58%, đã xong clip 2 | bấm Back, mở lại project | khối của clip 2 còn nguyên; thẻ "Captions stopped at 58%" + Continue; Continue chỉ nhận dạng clip 3 và 5 | ⚠️ chưa có |
 | AC-13 | clip 3 chỉ có trên iCloud, máy không mạng | Auto Captions | clip 2 và 5 có khối; dòng phụ "1 clip couldn't be read — it's in iCloud." + Retry; không spinner treo | ⚠️ chưa có |
 | AC-14 | 3 clip video chỉ có gió, không lời | Auto Captions | "No speech found in these clips."; không lane C1; undo không đổi | ⚠️ chưa có |
-| AC-15 | iPhone 402×874 · iPad 1376×1032 · Duo trong 951×669 · Duo ngoài 466×678; Caption 2 đang chọn, 58% | dựng đúng trạng thái từng board | khớp `F4_P_Captions`, `F4_IL_Captions`, `F4_DI_Captions`, `F4_DC_Captions` lệch ≤ 2pt; không control nào dưới góc bo hay dải 84 | ⚠️ chưa có — agent `design-parity` + `Tools/sim-shot` |
-
+| AC-15 | iPhone 402×874 · iPad 1376×1032 · Duo trong 951×669 · Duo ngoài 466×678; Caption 2 đang chọn, 58% | dựng đúng trạng thái từng board | khớp `F4_P_Captions`, `F4_IL_Captions`, `F4_IP_Captions` (iPad dọc 1032×1376), `F4_DI_Captions`, `F4_DC_Captions` lệch ≤ 2pt; không control nào dưới góc bo hay dải 84 | ⚠️ chưa có — agent `design-parity` + `Tools/sim-shot` |
 | AC-16 | panel Style, Burn into video bật | tắt công tắc | dòng phụ "Saved as a subtitle track — Photos, Instagram and TikTok don't show it."; một bước undo | ⚠️ chưa có |
 | AC-17 | lane C1 có khối, iPhone | chụp dải tổng quan; `design-reviewer` đọc màu | vạch khối và chip Voice là `timelineSpeech` #5E9CFF; chỉ khối đang chọn mang #57BFD1 | ⚠️ chưa có — agent `design-reviewer` |
 
@@ -148,6 +147,5 @@ video có lời tiếng Anh dựng sẵn từ giọng đọc tổng hợp (khôn
 |---|---|
 | Tốc độ nhận dạng on-device chưa đo; project 10 phút có thể mất vài phút | đo trên iPhone 17 trước `/plan`: mục tiêu ≤ 1× thời lượng tiếng; chạy nền nên không chặn sửa |
 | Simulator thường không có model on-device | AC chạy bằng bộ nhận dạng giả ở test; AC-3 và đo tốc độ trên máy thật |
-| iPad dọc chưa có board F4 | dock 324 dùng nội dung inspector của IL; vẽ `F4_IP_Captions` trước khi code |
 | Info.plist chưa có câu xin quyền nhận dạng giọng nói (NF-03 §4 đã ghi luật "chỉ trên máy") | việc của code: thêm khoá xin quyền nhận dạng giọng nói với câu ở §4 (và bản dịch trong String Catalog) cùng commit đầu tiên của Auto Captions |
 | Track phụ đề mềm chưa thử qua đường ghi file và qua Photos | đo ở `/plan` trên máy thật; Photos nhập file mà bỏ track là chấp nhận được — dòng phụ §6 đã nói trước |

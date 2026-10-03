@@ -42,7 +42,7 @@ sticker, phụ đề [FS-12.14](14-captions.md)). **Before giữ:** cắt, trim,
 | iPad ngang 1376×1032 · `F7_IL_BeforeAfter` | viewer header: nút 36×28 `r-sm` tại x 918, trái Quick Adjust | pool tự gập; hai khung **499×281** tại y 197,5, cách nhau 16; **Side by Side · Split** giữa viewer header (cao 22); dòng "Both sides play and scrub together · 0:08.4" dưới khung; Show original ẩn khỏi băng trên |
 | iPad dọc 1032×1376 · `F7_IP_BeforeAfter` | như iPad ngang | hai khung **473×266** đặt ngang tại y 226 (xếp dọc chỉ được 459×258); dock 324 tiêu đề "Before and After · Clip 2", ba cột **LOOK · COMPARE · ADJUST**; COMPARE: Side by Side · Split 151,5×28, **Swap sides ›**, dòng "Before shows · Original clip", chú thích |
 | Duo trong 951×669 · `F7_DI_BeforeAfter` | nút tròn 36 tại (148, 12) **thay** Show original | hai khung **330×186** tại y 96 trong vùng khung 684×385, cách nhau 8; cột Look 264 giữ nguyên, thêm Side by Side · Split 112×28 dưới Amount; dòng "Both sides play together · 0:08.4" |
-| Duo ngoài 466×678 · *chưa có board* | header panel Look, như iPhone | như iPhone, khung 382×215 |
+| Duo ngoài 466×678 · `F7_DC_BeforeAfter` | header panel Look, như iPhone | như iPhone, khung 382×215 |
 
 - **Nhãn:** pill "Before" 64×22 nền đen 60% chữ trắng ở góc trên trái, pill "After" 56×22 nền trắng chữ đen ở góc
   trên phải, cách mép khung 10pt, chữ 11,5 bold. Board F7_P vẽ hai pill ở y 10 **của màn hình**, đè lên Back và
@@ -111,16 +111,14 @@ có sticker và một chữ "GOLDEN HOUR", clip 2 hiệu ứng zoomIn.
 | AC-11 | so sánh đang bật (Split 30%) | Export | file xuất không có đường chia, không pill; khung 8,4 s khớp After | ⚠️ chưa có — smoke test export |
 | AC-12 | Duo trong, panel Look mở | chạm nút tại (148, 12); rồi giữ nó 1 s | chạm: hai khung 330×186 tại y 96; giữ: cả hai khung hiện Before tới khi nhả | ⚠️ chưa có — `Tools/ui-drive` + `Tools/sim-shot` |
 | AC-13 | footage log, de-log S-Log3 bật | bật so sánh | nửa Before phẳng như nguồn chưa de-log (≤ 1/255 so với khung nguồn) | ⚠️ chưa có |
-| AC-14 | iPhone 402×874 · iPad 1376×1032 · 1032×1376 · Duo trong 951×669 | dựng đúng trạng thái từng board | khớp `F7_P_BeforeAfter`, `F7_IL_BeforeAfter`, `F7_IP_BeforeAfter`, `F7_DI_BeforeAfter` lệch ≤ 2pt (sau khi sửa pill F7_P); không control dưới góc bo | ⚠️ chưa có — agent `design-parity` |
-
+| AC-14 | iPhone 402×874 · iPad 1376×1032 · 1032×1376 · Duo trong 951×669 · Duo ngoài 466×678 | dựng đúng trạng thái từng board | khớp `F7_P_BeforeAfter`, `F7_IL_BeforeAfter`, `F7_IP_BeforeAfter`, `F7_DI_BeforeAfter`, `F7_DC_BeforeAfter` lệch ≤ 2pt (sau khi sửa pill F7_P); không control dưới góc bo | ⚠️ chưa có — agent `design-parity` |
 | AC-15 | iPhone và Duo trong, rồi iPad ngang | bật rồi tắt so sánh, đọc màu nút | iPhone/Duo bật: nền trắng, glyph đen; tắt: nền trắng 10%, glyph trắng; iPad bật: nền trắng 14%; nút không bao giờ mang #EB9526 | ⚠️ chưa có — agent `design-reviewer` |
 
-**Chưa chứng minh được:** AC-1 tới AC-15. AC-7 cần máy thật; Duo ngoài chưa có board nên chưa có AC parity.
+**Chưa chứng minh được:** AC-1 tới AC-15. AC-7 cần máy thật.
 
 ## 10. Rủi ro đã biết
 
 | Rủi ro | Xử lý |
 |---|---|
 | Hai lượt grade mỗi khung (cộng chuyển cảnh, cộng Clarity…Dehaze của 06c) vượt 33,3 ms | đo AC-7 trước `/plan`; không đạt thì Before render ở nửa độ phân giải khi đang phát, đủ khi dừng |
-| Duo ngoài chưa có board F7 | vẽ `F7_DC_BeforeAfter` (panel Look 382 với COMPARE) trước khi code — luật design đi cùng code |
 | Bỏ de-log khỏi Before là đổi hành vi hôm nay | ghi ở đây; giữ-để-xem-bản-gốc dùng cùng định nghĩa nên hai lối vào không lệch nhau |

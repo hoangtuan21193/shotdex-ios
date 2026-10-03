@@ -136,12 +136,13 @@ mọi ranh giới cắt thẳng (None) trừ khi AC ghi khác.
 | AC-13 | vào chế độ chọn, chạm 2× rồi Duplicate | bấm ✕ | recipe bằng đúng lúc trước khi giữ clip; Undo không còn hai bước vừa làm | ⚠️ chưa có |
 | AC-14 | Duo ngoài, timeline 55 pt/s | vào chế độ chọn rồi bấm ✓ | lúc chọn: timeline 240 cao, 18 pt/s (clip 6.2s rộng 112 ±2pt); sau ✓: về 55 pt/s | ⚠️ chưa có — `Tools/ui-drive` + `Tools/sim-shot` |
 | AC-15 | iPhone 402×874 · iPad 1376×1032 · Duo trong 951×669 · Duo ngoài 466×678, project mẫu | dựng đúng trạng thái từng board | khớp `F1_P_MultiSelect`, `F1_IL_MultiSelect`, `F1_DI_Reorder`, `F1_DC_MultiSelect` lệch ≤ 2pt; không control nào dưới góc bo hay dải 84 | ⚠️ chưa có — agent `design-parity` |
-
 | AC-16 | project mẫu, không chọn gì | giữ clip 2 trong 0,4 s, lệch < 10pt, rồi thả | không chế độ chọn, không pill; đáy vẫn 5 công cụ; thứ tự và số bước undo không đổi | ⚠️ chưa có |
-| AC-17 | project mẫu, không chọn gì | giữ clip 4 trong 0,35 s rồi kéo 40pt tới ranh giới 0:03.0, thả | thứ tự 1·4·2·3·5; chỉ clip 4 dời; không vào chế độ chọn; một bước undo | ⚠️ chưa có |
+| AC-17 | project mẫu, không chọn gì | giữ clip 4 trong 0,35 s rồi kéo (> 10pt) tới ranh giới 0:03.0, thả | thứ tự 1·4·2·3·5; chỉ clip 4 dời; không vào chế độ chọn; một bước undo | ⚠️ chưa có |
 | AC-18 | luật ba cử chỉ §4 | test thuần với (giữ 0,2 s, lệch 15pt) · (0,4 s, 2pt) · (0,6 s, 2pt) · (0,6 s, 20pt) | cuộn · không gì · vào chế độ chọn · dời | ⚠️ chưa có — test Domain |
+| AC-19 | clip 2 (video 6,2 s) và clip 4 (ảnh 3,0 s) đang chọn, chưa fade | đặt Fade in 2,0 s ở section FADE | clip 2 fade in 2,0 s; clip 4 fade in 1,5 s (kẹp ở nửa 3,0 s); một Undo trả cả hai về 0 | ⚠️ chưa có |
+| AC-20 | clip 1 và 4 (đều ảnh) đang chọn, Motion None | chạm chip Zoom In | cả hai clip Zoom In; một Undo trả cả hai về None | ⚠️ chưa có |
 
-**Chưa chứng minh được:** AC-1 tới AC-18 (AC-9 một phần).
+**Chưa chứng minh được:** AC-1 tới AC-20 (AC-9 một phần).
 
 ## 10. Rủi ro đã biết
 

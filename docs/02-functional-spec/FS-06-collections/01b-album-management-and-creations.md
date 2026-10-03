@@ -1,7 +1,7 @@
 # FS-06.01b — Album Detail, quản lý album và Creations
 
 `FS-06.01b` · `Features/Albums/AlbumDetailScreen.swift` · `CreationsScreen` · `Features/Shared/PhotoDragItem.swift`
-· bảng `creations` · cập nhật 2026-09-22
+· bảng `creations` · cập nhật 2026-10-03
 
 **Một câu:** mở một album ra thì làm được gì, và ShotDex **mở lại được thứ chính nó đã làm ra**.
 
@@ -61,11 +61,17 @@ rỗng** — chúng cũng là chỗ *bắt đầu* một cái mới.
 - Mỗi dòng: ảnh bìa của bản đã xuất · **ngày sửa gần nhất làm tiêu đề** (không lặp chữ "Collage" ở mọi dòng
   của một danh sách vốn đã chỉ một loại) · số ảnh nguồn ở dòng phụ. Chạm mở lại **đúng công cụ đã làm ra
   nó**; giữ để gỡ khỏi danh sách.
+- **Video Projects có cả nháp** ([FS-12.18](../FS-12-video-studio/18-drafts.md), chốt 2026-10-03): Video Studio tự
+  lưu project thành nháp, nên danh sách là **một** danh sách nháp lẫn bản đã xuất, mới sửa nhất ở trên. Dòng nháp:
+  bìa là thumbnail clip đầu · nhãn **Draft** · dòng phụ **"Edited 5 min ago"**; giữ → **Delete Draft** có xác nhận
+  ("The photos and videos stay in your library."). Bản đã xuất mở ra vẫn sửa được. Xoá dòng không bao giờ đụng ảnh
+  hay video trong thư viện. Collages vẫn chỉ có bản đã xuất.
 
 ## 6. Bảng riêng cho Creations
 
-Mỗi dòng giữ: id · loại · id ảnh đã xuất (rỗng khi người dùng xoá ảnh đó) · ngày tạo · ngày sửa · **công
-thức dạng JSON**; có chỉ mục theo ngày sửa.
+Mỗi dòng giữ: id · loại · id ảnh đã xuất (rỗng khi người dùng xoá ảnh đó) · ngày tạo · ngày sửa · **ngày xuất**
+(rỗng = nháp video chưa xuất lần nào — [FS-12.18 §5](../FS-12-video-studio/18-drafts.md)) · **công thức dạng
+JSON**; có chỉ mục theo ngày sửa. Id ảnh đã xuất rỗng không có nghĩa là nháp.
 
 Bảng riêng vì hai lý do:
 
@@ -79,7 +85,7 @@ Bảng riêng vì hai lý do:
   dính đúng bẫy này.
 - **Mở lại**: màn collage và Video Studio nhận một sản phẩm đã lưu và dùng **công thức đó** thay cho công
   thức dựng từ danh sách ảnh. Với video, việc nạp vốn đã đi theo công thức nên cắt, tốc độ, chữ và nhạc về
-  đúng như lúc xuất.
+  đúng như lần lưu cuối (nháp tự lưu hoặc lúc xuất).
 - Ảnh nguồn **lấy lại theo id** chứ không lưu (ảnh của hệ thống không lưu được). Thiếu một ảnh thì báo thẳng
   *"Some of the photos this was made from are no longer in your library."* chứ không mở ra một collage
   thiếu ô.

@@ -15,7 +15,7 @@ tổng quan, meter, track header — mỗi băng có một việc và lấy chi�
   appear here, ready to reuse." Tab **Music**: dòng Video sound, "Add Music from Files…", MY MUSIC — cùng nội
   dung panel Music của iPhone ([04 §3](04-tools-and-inspector.md)).
 - Pool mở mặc định khi rộng ≥ 1100; dưới đó đóng, bật bằng nút Media Pool. Chỉ mở được khi khung còn ≥ 330pt.
-- **Viewer header** 32: Media Pool · **tên thứ dưới playhead** ("Clip 2 · Coast") · Quick Adjust · Inspector.
+- **Viewer header** 32: Media Pool · **tên thứ dưới playhead** ("Clip 2" — [04 §5](04-tools-and-inspector.md)) · Quick Adjust · Inspector.
   Tồn tại vì khung hình là vùng duy nhất không tự nói nó đang chiếu gì — và pool mở là có hai tấm ảnh trên màn.
 - **Quick Adjust**: dải 44 dưới khung: Speed (clip) · Duration (ảnh) · Video sound (âm gốc mọi clip; không có
   Master — [04 §2](04-tools-and-inspector.md)), mỗi cái bung slider tại chỗ. **Mặc định tắt**: bật sẵn là ăn 44pt của
@@ -49,11 +49,14 @@ tổng quan, meter, track header — mỗi băng có một việc và lấy chi�
 
 | | iPad (ngang, dọc) | Duo trong |
 |---|---|---|
-| Cột trái | **track header 104**: thẻ 92 — badge `T1`/`V1`/`A1` + tên + **Lock** + **Mute** | cột badge 64, không nút |
+| Cột trái | **track header 104**: thẻ 92 — badge `T1`/`V1`/`A1` + tên + **Lock** + **Mute** | **cột badge 100**: lề 6 · badge 26 · khe 4 · **Lock** 28 · khe 4 · **Mute** 28 · lề 4; không tên |
 | Lane chữ / video / nhạc | **44 / 104 / 52** | 34 / 66 / 40 |
 | Thumbnail clip | 88 rộng | 54 rộng |
 | Thước | 39 | 33 |
 
+- **Duo trong có Lock và Mute** (chốt 2026-10-03): đĩa 28 nền trắng 10%, glyph 13, vùng chạm 32 rộng × cao lane
+  (lane chữ 34 vẫn đủ); lane chữ chỉ có Lock. *Vì hàng transport Duo không có ⋯ — bỏ hai nút là Lock/Mute không tới
+  được trên Duo trong, trái luật đủ mọi chức năng.* Cột rộng thêm 36pt so với board cũ: board DI* vẽ lại.
 - **Lock là trạng thái phiên**: chặn chọn và mọi thao tác kéo trong lane; khoá lane chứa item đang chọn = ✓.
 - **Mute lane Video** đi qua âm lượng và nhớ mức cũ (0 là mức chỉnh được nên không suy mute từ âm lượng).
   **Mute lane nhạc** đặt 0 cho mọi track trong lane trong **một** bước undo. Lane chữ không có Mute.
@@ -81,7 +84,7 @@ tổng quan, meter, track header — mỗi băng có một việc và lấy chi�
 | AC-5 | iPad, 2 track nhạc trong A1 | bấm Mute A1 rồi Undo một lần | cả hai về mức cũ | ⚠️ chưa có |
 | AC-6 | clip 2 đang chọn, Speed đổi 2×, bàn phím cắm | bấm Esc rồi ⌘Z | sau Esc: bỏ chọn, Speed vẫn 2×; sau ⌘Z: 1× | ⚠️ chưa có |
 | AC-7 | iPad ngang, pool tab Music | dump | dòng "Video sound" ở đầu, nút "Add Music from Files…" (không phải "Import from Files…") | ⚠️ chưa có |
-| AC-8 | Duo trong 951×669 | dump timeline | cột badge 64 không có Lock/Mute; lane 34 / 66 / 40 | `VideoStudioLayoutTests.aShortRegularWindowKeepsThePhonesLanes` (phần lane; thêm bậc lane riêng cho iPhone 40/80/46) |
+| AC-8 | Duo trong 951×669 | dump timeline | cột badge 100 có nút Lock ở T1 · V1 · A1 và Mute ở V1 · A1; lane 34 / 66 / 40 | `VideoStudioLayoutTests.aShortRegularWindowKeepsThePhonesLanes` (phần lane; thêm bậc lane riêng cho iPhone 40/80/46) |
 | AC-9 | các board IL1, IP1, DI1 | `Tools/design-board compare` transport, dải tổng quan, track header | lệch ≤ 2pt | ⚠️ chưa có — agent `design-parity` |
 
 **Chưa chứng minh được:** AC-3 … AC-7, AC-9.

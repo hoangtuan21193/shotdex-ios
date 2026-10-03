@@ -18,11 +18,14 @@ cố ý chưa làm được ghi ra.
 | Kiểu | Giữ gì |
 |---|---|
 | **Project** | clip · chuyển cảnh · nhiều bản nhạc · **Video sound** (âm gốc mọi clip — mức âm duy nhất của project, **không có Master**, [04 §2](04-tools-and-inspector.md)) · **một ô look** cả video (preset · My Look · LUT, kèm Amount — [06c](06c-photo-looks.md)) · adjustments · overlay · lane phụ đề C1 tuỳ chọn ([14 §7](14-captions.md)) · số lần xoay · **Video Settings** (tỉ lệ · Fit/Fill · nền: loại, màu, độ mờ, id ảnh · độ phân giải · fps · codec — [10 §6](10-video-settings-and-export.md)) · **đích xuất** (id preset hoặc Custom + Fit/Fill khi chênh tỉ lệ — [16 §6](16-export-presets.md)) · In–Out tuỳ chọn ([17b §5](17b-keyboard-and-pointer.md)) · tầng màu (de-log, node chain, mask) |
-| **Clip** | id · asset · loại (ảnh / video / freeze) · thời lượng ảnh · trim hai đầu · mute · hiệu ứng · tốc độ · mốc freeze · thời lượng nguồn · ô look tuỳ chọn (thay look cả video) |
+| **Clip** | id · asset · loại (ảnh / video / freeze) · thời lượng ảnh · trim hai đầu · mute · **âm lượng clip** (0–1, mặc định 1) · hiệu ứng · tốc độ · mốc freeze · thời lượng nguồn · ô look tuỳ chọn (thay look cả video) |
 | **Overlay theo thời gian** | overlay (chữ hoặc ảnh; sticker giữ id asset nguồn — [09 §6](09-media-panel.md)) · mốc bắt đầu · thời lượng · animation vào/ra + thời lượng từng chiều |
 | **Bản nhạc** | id · nguồn · mốc bắt đầu · trim hai đầu · thời lượng nguồn · âm lượng · fade in/out · bắt nhịp (bật · Every Beat/Bar · Offset — [12 §7](12-beats.md)) · ducking (bật · Amount · Duck in · Recover · nguồn — [13 §5](13-audio-ducking.md)) |
 | **Lane phụ đề** | ngôn ngữ · kiểu · cỡ · vị trí · Burn into video · tiến độ nhận dạng; mỗi khối: id · clip · giờ đầu/cuối **trong nguồn** · chữ · mốc từng từ · cờ đã sửa tay ([14 §7](14-captions.md)) |
 
+- **Âm lượng clip × Video sound** là mức âm gốc của một clip video trong bản mix: dòng Volume trong panel của *một* clip
+  chỉ đổi clip đó, Video sound đổi mọi clip ([04 §2](04-tools-and-inspector.md), chốt 2026-10-03). Thiếu khoá → 1.
+- **Vị trí playhead** lúc rời Video Studio được lưu cùng nháp để mở lại đúng chỗ; không vào undo ([18 §3](18-drafts.md)).
 - **Không lưu trong project:** BPM và vị trí nhịp, đoạn có giọng — dữ liệu suy ra, cache theo file trong Caches;
   tập clip đang chọn, chế độ so sánh, trạng thái thu panel — trạng thái màn hình. Cài đặt PRECISION / PENCIL theo máy.
 - Khoá cũ (Master, preset 1080p/4K) bị bỏ qua hoặc chuyển khi đọc; app chưa phát hành nên không migration.
@@ -50,8 +53,10 @@ Nút thêm trên lane và toolbar tới **cùng** hành động. Undo/redo giữ
 
 ## 5. Project mở lại được
 
-Recipe lưu vào bảng riêng và hiện ở **Video Projects** trong tab Collections — mở lại là sửa tiếp
-([FS-06.01b](../FS-06-collections/01b-album-management-and-creations.md)).
+Recipe **tự lưu thành nháp** liên tục — ~1 s sau mỗi thay đổi và ngay khi Back, xuống nền, đổi scene — vào bảng riêng
+và hiện ở **Video Projects** trong tab Collections cùng các project đã xuất; mở lại là sửa tiếp. Không có nút Save,
+Back không hỏi Discard ([18](18-drafts.md), chốt 2026-10-03;
+[FS-06.01b](../FS-06-collections/01b-album-management-and-creations.md)).
 
 ## 6. Giới hạn v1 (cố ý)
 

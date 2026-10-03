@@ -35,6 +35,7 @@ nhạc, chữ, và một tầng màu đủ để grade.
 | 16 | [Preset xuất](16-export-presets.md) | F8 — năm preset + Custom, chỉ là đích của lần xuất |
 | 17 | [Cắt từng khung](17-precise-trim-and-input.md) | F6 — kính lúp, ±1 khung, Frame zoom, Apple Pencil |
 | 17b | [Bàn phím và con trỏ](17b-keyboard-and-pointer.md) | F6 — 28 phím, danh sách khi giữ ⌘, In–Out chỉ để xem, skim bằng con trỏ |
+| 18 | [Lưu nháp video](18-drafts.md) | tự lưu ~1 s sau mỗi thay đổi và ngay khi Back/xuống nền; Back không hỏi Discard; nháp và bản đã xuất chung một danh sách |
 
 ## Quy tắc chung
 

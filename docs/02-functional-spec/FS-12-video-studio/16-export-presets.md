@@ -7,7 +7,8 @@
 lần xuất đó, kèm dung lượng ước tính — không phải chỉnh từng thông số.
 
 Video Settings (tỉ lệ, nền khi Fit, độ phân giải, fps, codec, kích thước ước tính) và luồng sau khi xuất:
-[FS-12.10](10-video-settings-and-export.md) — tài liệu này **chỉ** nói preset. Đường render: [FS-12.01](01-render-and-export-pipeline.md).
+[FS-12.10](10-video-settings-and-export.md) — tài liệu này **chỉ** nói preset. Trạng thái **Sẵn sàng** của panel Export
+Video là của tài liệu này (chốt 2026-10-03); khung panel, Đang xuất, huỷ và đường hỏng ở [10b](10b-export.md). Đường render: [FS-12.01](01-render-and-export-pipeline.md).
 Canvas: hàng F8 của <https://claude.ai/artifact/B8NqQqRHcHoFknxQ9gHZPJ>.
 
 ## 1. Người dùng cần gì
@@ -81,7 +82,7 @@ Một buổi chụp ra một bản dựng 16:9 cho YouTube và một bản 9:16 
   trong dải là đóng panel và mở công cụ đó. *Vì* board DC không có ✕ và không có nút lớn.
 - Nhãn nút xuất: "Export for <tên preset>"; Custom thì "Export". Duo trong vẽ chữ "Export" nhưng VoiceOver đọc đủ
   "Export for Reels / TikTok".
-- iPad dọc chưa có board: sheet 660 như iPad ngang.
+- iPad dọc · `F8_IP_ExportPresets`: sheet 660 như iPad ngang.
 - Dòng thông tin dưới Fit/Fill (iPad): "<thời lượng> · <codec> · saved to Photos, then Share"; project ảnh server
   ([FS-17.06](../FS-17-import-from-server/06-edit-and-export.md)): "… · then choose where it goes".
 
@@ -121,8 +122,7 @@ Project mẫu 16:9, 24,0 s ([FS-12.14 §9](14-captions.md)), nền đen, clip 10
 | AC-11 | máy còn 40 MB, Reels ước tính ~30 MB | bấm Export for … | thông báo "Not enough space to export — about 60 MB needed…"; không file tạm, trạng thái xuất vẫn rảnh | ⚠️ chưa có |
 | AC-12 | project lưu với id preset "vimeo" (không tồn tại) | mở project, chạm Export | YouTube được chọn (trùng 16:9), không thông báo lỗi | ⚠️ chưa có |
 | AC-13 | VoiceOver bật, Reels đang chọn | focus dòng Reels | đọc "Reels / TikTok, 1080 by 1920, 30 frames per second, about 30 megabytes, selected" | ⚠️ chưa có |
-| AC-14 | iPhone 402×874 · iPad 1376×1032 · Duo trong 951×669 · Duo ngoài 466×678 | mở panel, chọn Reels | khớp `F8_P_ExportPresets`, `F8_IL_ExportPresets`, `F8_DI_ExportPresets`, `F8_DC_ExportPresets` lệch ≤ 2pt; dung lượng một dòng; không control dưới góc bo hay dải 84 | ⚠️ chưa có — agent `design-parity` |
-
+| AC-14 | iPhone 402×874 · iPad 1376×1032 · 1032×1376 · Duo trong 951×669 · Duo ngoài 466×678 | mở panel, chọn Reels | khớp `F8_P_ExportPresets`, `F8_IL_ExportPresets`, `F8_IP_ExportPresets`, `F8_DI_ExportPresets`, `F8_DC_ExportPresets` lệch ≤ 2pt; dung lượng một dòng; không control dưới góc bo hay dải 84 | ⚠️ chưa có — agent `design-parity` |
 | AC-15 | iPad ngang, project 16:9, panel xuất mở | chọn Reels / TikTok | nút cài đặt "9:16 · 1080p · 30 fps"; dòng phụ tiêu đề vẫn "5 clips · 16:9 · 0:24"; đóng panel → nút cài đặt về "16:9 · 1080p · 30 fps", Video Settings không đổi | ⚠️ chưa có |
 | AC-16 | iPhone, panel xuất mở | đọc dung lượng năm dòng preset | ~30 · ~72 · ~30 · ~21 · ~17 MB đúng thứ tự §3, khớp công thức [10 §5](10-video-settings-and-export.md) | ⚠️ chưa có |
 | AC-17 | mọi bố cục, Video Settings và panel xuất | dump | không phần tử "Save as Preset…"; danh sách chỉ có năm preset dựng sẵn (+ Custom trên iPhone, iPad) | ⚠️ chưa có |
@@ -135,4 +135,3 @@ Project mẫu 16:9, 24,0 s ([FS-12.14 §9](14-captions.md)), nền đen, clip 10
 |---|---|
 | FS-12.10 viết song song; công thức dung lượng, luật 4K, nền Fit nằm ở đó | preset chỉ tham chiếu; `/plan` đối chiếu hai tài liệu trước khi code |
 | Writer hôm nay chỉ H.264 và 30 fps cố định | HEVC và fps khác là việc của FS-12.10; preset chỉ truyền thông số |
-| iPad dọc chưa có board F8 | vẽ `F8_IP_ExportPresets` (sheet 660) trước khi code |

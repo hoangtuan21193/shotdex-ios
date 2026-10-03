@@ -79,13 +79,14 @@ Chọn nhiều clip một lúc dùng cùng ✕ · "N Clips" · ✓ ([11](11-mult
 | chạm timeline trống / vùng đen ngoài khung khi đang dừng | = ✓ |
 | lệnh **Delete** | xoá item, kết thúc phiên như ✓; một bước undo khôi phục |
 | Undo / Redo trong phiên | đi từng bước như thường; Undo qua mốc đầu phiên thì phiên kết thúc, bỏ chọn |
-| Back khi đang chọn | = ✓ rồi theo luồng Back thường (hỏi Discard nếu project có thay đổi chưa xuất) |
+| Back khi đang chọn | = ✓, lưu nháp ngay rồi đóng — **không hỏi Discard** ([18](18-drafts.md)) |
 | Esc (bàn phím) | = ✓ ([03b §5](03b-desk-bands-and-lanes.md)); Return = ✓ |
 | lane bị Lock | không chọn được item trong lane; khoá lane đang chứa item chọn = ✓ |
 | 5 công cụ khi đang chọn | iPhone: thanh thay hẳn bằng ✕ · tên · ✓; Duo trong và Duo ngoài: mờ 30%, không nhận chạm; iPad ngang: pool vẫn dùng được, chèn từ pool = ✓ cho item cũ trước; iPad dọc: 4 nút thêm nhường chỗ cho hàng lệnh |
 
-- **Tên** ở giữa: dòng 1 là tên item cỡ 14 đậm (clip: "Clip 2 · Coast" — cùng tên viewer header dùng; chữ: nội
-  dung chữ; nhạc: tên bài), dòng 2 mono 11 trắng 35%: "6.2s · video", "Text · 1.0 → 5.0s", "Music · 0.0 → 18.4s".
+- **Tên** ở giữa: dòng 1 là tên item cỡ 14 đậm (clip: "Clip 2" / "Photo 2" / "Freeze 2" — số thứ tự
+  trên timeline, cùng tên viewer header dùng; app không có tên địa điểm nên không có phần "· Coast" của board; chữ:
+  nội dung chữ; nhạc: tên bài), dòng 2 mono 11 trắng 35%: "6.2s · video", "Text · 1.0 → 5.0s", "Music · 0.0 → 18.4s".
 - ✕ là đĩa tối `rgba(24,24,26,.82)` viền trong 1pt trắng 14%; ✓ là đĩa **trắng, glyph đen** — accent chỉ dành cho
   Export ([DESIGN §3.1](../../../DESIGN.md)).
 - Chỗ đặt ✕ · tên · ✓: iPhone thay hàng đáy; Duo trong góc phải hàng đáy (x 620–907); Duo ngoài chân rail; iPad
@@ -105,7 +106,8 @@ Chọn nhiều clip một lúc dùng cùng ✕ · "N Clips" · ✓ ([11](11-mult
   thích "Waiting for iCloud" thay vì im lặng không làm gì.
 - Huỷ trình chọn Sticker / Replace / Files: không thêm gì, phiên chọn (nếu có) giữ nguyên.
 - `.limited`: Replace và Media chỉ hiện ảnh đã cho phép kèm "Manage Access…" ([09](09-media-panel.md)).
-- Hết bộ nhớ khi ghi project: thay đổi vẫn ở trong phiên, báo lỗi lưu bằng banner; ✕/✓ vẫn chạy.
+- Hết bộ nhớ khi ghi project: thay đổi vẫn ở trong phiên, banner "Couldn't save your video draft" + Try Again
+  ([18 §6](18-drafts.md)); ✕/✓ vẫn chạy.
 - Project lưu từ bản cũ còn khoá Master: bỏ qua khi đọc (đọc khoan dung, app chưa phát hành nên không migration).
 
 ## 8. Tiêu chí nghiệm thu

@@ -43,6 +43,8 @@ iPad dọc dock + 6 (1032pt đủ cho cả hàng, không cuộn).
 | **Nhạc** | Beats · Ducking · Replace · Add Track · Duplicate · Delete |
 
 - *Sticker không có board:* dời, phóng, xoay đã làm trực tiếp trên khung; ba lệnh là đúng những gì còn lại.
+- **Rotate** chỉ có ở chế độ **một video** (Photo Detail → Edit, [01](01-render-and-export-pipeline.md) bảng lối vào):
+  ô Rotate đứng ngay trước Delete của clip video; project nhiều clip không có ô này (chốt 2026-10-03).
 - Beats thuộc [12](12-beats.md), Ducking thuộc [13](13-audio-ducking.md); chưa làm thì ẩn, thứ tự còn lại giữ.
 - Chế độ Trim từng khung đổi đầu hàng thành −1 Frame · +1 Frame · Frame Zoom · Trim ([17](17-precise-trim-and-input.md)).
 - Look của clip mở khối **LOOK FOR THIS CLIP** ([06c §3](06c-photo-looks.md)).
@@ -56,6 +58,9 @@ iPad dọc dock + 6 (1032pt đủ cho cả hàng, không cuộn).
 
 - Trim có khối riêng: hai chip **Start to Playhead** · **End to Playhead** (cao 30, bo 8) + dòng "Or drag the
   clip's edges on the timeline." 11pt — [05 §3](05-cutting-markers-and-fades.md). Các dòng chung theo sau.
+- **Ngoại lệ Duo trong** (chốt 2026-10-03): ô Trim **vào thẳng chế độ Trim từng khung** ([17 §4](17-precise-trim-and-input.md),
+  board `F6_DI_TouchTrim`), cột phải **không** có hai chip Start/End to Playhead — transport bàn dựng Duo đã có
+  Trim Start/End to Playhead và 669pt không dư một hàng.
 - Speed, Volume, Edit, Font, Color, Style, Align, Animate cuộn dòng/nhóm của mình lên đầu; không có khối riêng.
 - Phần nội dung mặc định của clip video: Speed (chip 0.5× 1× 2× 4×) · Volume · FADE (Fade in, Fade out) · MOTION
   (chip hiệu ứng) — **không có dòng Duration** (chốt 2026-10-03, [05 §3](05-cutting-markers-and-fades.md)).

@@ -117,11 +117,13 @@ Project mẫu: 5 clip 24,0s — 2 ảnh 4032×3024, 3 video 1920×1080; 16:9 · 
 | AC-8 | clip 2 dùng LUT "Kodak 2383" đã xoá | mở Video Settings | dòng đầu "1 look is missing its LUT and exports without it."; bỏ LUT khỏi clip 2 → dòng biến mất | ⚠️ chưa có |
 | AC-9 | iPad, Duo trong, Duo ngoài | mở Video Settings | iPad: popover 340 dưới nút; Duo trong: cột 264 + ⌃; Duo ngoài: panel từ y 334, nút tỉ lệ sáng | ⚠️ chưa có |
 | AC-10 | từng board `P6_RatioBackground` · `ES_P_ExportSettings` · `DI5_RatioBackground` · `ES_DI_ExportSettings` · `ES_IL_ExportSettings` · `ES_DC_ExportSettings` | `design-parity` | mọi phần tử đặt tên lệch ≤ 2pt (sau khi board sửa tên và số MB theo §9) | ⚠️ chưa có |
-
 | AC-11 | iPhone, iPad ngang, iPad dọc, Duo trong, Duo ngoài | mở Video Settings, dump | tiêu đề và nút đều "Video Settings"; không phần tử nào chứa "Export Settings" | ⚠️ chưa có |
 | AC-12 | project mẫu (16:9 · 1080p · 30 · H.264, 24,0s) | Export | bitrate video của file 10 Mbps ±15%; file 30 MB ±15%; Output trước đó ghi "~30 MB" | ⚠️ chưa có — smoke test export |
+| AC-13 | project mẫu 9:16 · Fit · Blur 50; clip 1 ảnh ngang, crossfade 1,0 s sang clip 2 | đọc khung preview (cạnh dài 1280) và khung xuất (1080×1920 thu về cùng cỡ) ở 1,0 s và giữa crossfade | dải trên/dưới là chính khung đó phủ kín rồi làm mờ; preview và xuất lệch ≤ 3/255; giữa crossfade mỗi bên mang nền của chính nó trước khi trộn | ⚠️ chưa có — test render nền |
+| AC-14 | 9:16 · Fit · Image, ảnh nền đã chọn | xoá ảnh nền khỏi thư viện (hoặc thu quyền), mở lại Video Settings, Export | nền đen; BACKGROUND hiện "Image unavailable — choose another."; xuất vẫn chạy, dải là đen | ⚠️ chưa có |
+| AC-15 | New Video Project, clip đầu là video dọc 1080×1920 (lần khác: ảnh 4032×3024; ảnh vuông) | Video Studio mở | tỉ lệ mặc định 9:16 (lần khác: 4:3; 1:1); Fit · Colour đen · 1080p · 30 · H.264 | ⚠️ chưa có — test Domain tỉ lệ gần nhất |
 
-**Chưa chứng minh được:** AC-1, AC-2, AC-4 → AC-12; AC-3 một phần.
+**Chưa chứng minh được:** AC-1, AC-2, AC-4 → AC-15; AC-3 một phần.
 
 ## 9. Đã chốt (2026-10-03) và rủi ro
 

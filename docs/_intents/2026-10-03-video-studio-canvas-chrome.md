@@ -5,9 +5,9 @@
 | Tác giả | hat.tuan@karabiner.tech |
 | Ngày | 2026-10-03 |
 | Trạng thái | accepted — người dùng 2026-10-03: "Accepted, sang /spec" |
-| Tiến độ | **chưa làm** (2026-10-03) — spec FS-12 (261 AC), mọi lựa chọn đã chốt, chờ sửa canvas + /plan |
+| Tiến độ | **chưa làm** (2026-10-03) — 6 plan đã duyệt (265 task: 253 + 12 task lưu nháp FS-12.18 thêm lúc duyệt), thứ tự: công cụ/chọn (+ lưu nháp) → bố cục rộng/Duo → Media/Settings/Export → Look → kích thước → F1–F8 ([plan](../_plans/2026-10-03-vs-tools-selection-phone.md) §Duyệt) |
 | Nguồn | phản hồi người dùng — các comment trên canvas Video Studio 29/9–30/9, và quyết định 2026-10-03 "làm khung mới trước" (trước plan look ảnh cho video, [FS-12.06c](../02-functional-spec/FS-12-video-studio/06c-photo-looks.md)) |
-| Spec sinh ra từ đây | [FS-12](../02-functional-spec/FS-12-video-studio/README.md) .03 (11 AC) · .03b (9) · .04 (15) · .04b (11) · .05 (13) · .07 (13) · .07b (12) · .09 (18) · .10 (12) · .10b (13) · .11 F1 (18) · .12 F2 (16) · .13 F3 (16) · .14 F4 (17) · .15 F7 (15) · .16 F8 (17) · .17 F6 (17) · .17b F6 (18) — **261 AC**; F5 là FS-12.06c (intent khác, không tính); sửa kèm FS-12.01, .02, .06, .08, NF-03 |
+| Spec sinh ra từ đây | [FS-12](../02-functional-spec/FS-12-video-studio/README.md) .03 (11 AC) · .03b (9) · .04 (15) · .04b (11) · .05 (13) · .07 (13) · .07b (12) · .09 (19) · .10 (15) · .10b (14) · .11 F1 (20) · .12 F2 (16) · .13 F3 (16) · .14 F4 (17) · .15 F7 (15) · .16 F8 (17) · .17 F6 (17) · .17b F6 (18) · .18 lưu nháp (12) — **280 AC** (261 + 18 thêm lúc duyệt plan 2026-10-03); F5 là FS-12.06c (intent khác, không tính); sửa kèm FS-12.01, .02, .06, .08, NF-03 |
 
 ## Problem — vấn đề
 
@@ -100,6 +100,9 @@ Video Studio trên iPhone, iPad (ngang và dọc), Duo mở ra và Duo màn ngo�
    lệnh Trim (Start/End to Playhead) trong panel.
 3. **Thứ tự:** theo mảng, mọi thiết bị cùng lúc: thanh dưới → chọn item → Media → Video Settings → Look → kích thước
    → từng tính năng F1–F8.
+4. **Lưu nháp** (2026-10-03, lúc duyệt plan): project video tự lưu thành nháp như CapCut/iMovie — ~1 s sau mỗi thay
+   đổi, ngay khi Back / xuống nền / đổi scene; Back không hỏi Discard; Video Projects hiện nháp lẫn bản đã xuất
+   ([FS-12.18](../02-functional-spec/FS-12-video-studio/18-drafts.md)). *Vì sửa video mất thời gian, không được mất.*
 
 ---
 

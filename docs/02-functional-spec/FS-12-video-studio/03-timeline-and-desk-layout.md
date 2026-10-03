@@ -33,7 +33,7 @@ Bên trong các băng (pool, meter, transport, track header, lane): [03b](03b-de
 
 | Vùng | Khung (pt) | Nội dung |
 |---|---|---|
-| Băng trên | y 12–52 | trái x 20: Back · Undo · Redo · Show original (đĩa 40, cách 10); giữa: tên project 14 + "5 clips · 16:9 · 0:24" 12; phải: "0:24 · ~30 MB" 11 · nút **16:9 · 1080p · 30 fps** (cao 32, bo 8 — mở Video Settings, [10](10-video-settings-and-export.md)) · pill **Export** accent cao 40 |
+| Băng trên | y 12–52 | trái x 20: Back · Undo · Redo · Show original (đĩa 40, cách 10); giữa: **không có tên project** (project không có tên — chốt 2026-10-03; board IL*/IP* bỏ "Iceland Road Trip"), chỉ "5 clips · 16:9 · 0:24" 12; phải: "0:24 · ~30 MB" 11 · nút **16:9 · 1080p · 30 fps** (cao 32, bo 8 — mở Video Settings, [10](10-video-settings-and-export.md)) · pill **Export** accent cao 40 |
 | Pool | x 0–236, y 64–604 | tab Media · Text · Stickers · Music ([03b §1](03b-desk-bands-and-lanes.md)) |
 | Viewer header | x 236–1096, y 64–96 | Media Pool · tên thứ dưới playhead · Quick Adjust · Inspector (nút 36×28 bo 7) |
 | Khung | sân x 236–1046, y 96–604 | 16:9 → **810×456** ở y 122 |
@@ -51,7 +51,7 @@ Bên trong các băng (pool, meter, transport, track header, lane): [03b](03b-de
 
 | Vùng | Khung (pt) | Nội dung |
 |---|---|---|
-| Băng trên | y 12–52 | như iPad ngang; tên project căn ở x 356; nút cài đặt cao 40 bo 10, hai dòng "16:9 · 1080p" / "30 fps · ~30 MB" |
+| Băng trên | y 12–52 | như iPad ngang (không tên project); dòng "5 clips · 16:9 · 0:24" căn ở x 356; nút cài đặt cao 40 bo 10, hai dòng "16:9 · 1080p" / "30 fps · ~30 MB" |
 | Viewer header | y 64–96, hết bề ngang | như iPad ngang; Media Pool tắt mặc định (rộng < 1100) |
 | Khung + meter | y 96–648 | khung 982×552 · meter 50 ở x 982 |
 | Transport | y 648–692 | như iPad ngang |
@@ -74,7 +74,7 @@ theo chiều cao nên 264pt bên phải là miễn phí — inspector nằm ở 
 | Khung | x 1,5–685,5, y 0–385 | 684×385 (9:16 → 217×385); Back · Undo · Redo · Show original nổi trên khung ở (16, 12), đĩa 36 nền đen 55%, cách 8 |
 | Cột phải | x 687–951, y 0–385, **264** | nền `panelSolid`; Look khi không chọn, lệnh + thông số khi chọn (dòng 36) |
 | Transport | y 385–425 | 15 nút 36 + timecode, kẻ trên 1pt |
-| Timeline | y 425–613 = **188** | cột badge 64 (T1 · V1 · A1, không Lock/Mute) · lane 34 / 66 / 40 (bậc compact) · 55pt/giây |
+| Timeline | y 425–613 = **188** | cột badge **100** (T1 · V1 · A1 + nút Lock · Mute nhỏ — [03b §4](03b-desk-bands-and-lanes.md)) · lane 34 / 66 / 40 (bậc compact) · 55pt/giây |
 | Hàng đáy | y 613–669 = **56** | trái từ x 40: 5 công cụ 72×50 cách 4; phải tới x 907: nút cài đặt 2 dòng cao 40 · pill Export cao 40 |
 
 - **Đang chọn**: 5 công cụ trắng 30% không nhận chạm; nhóm phải thay bằng ✕ 40 · tên 14 + dòng phụ 11 · ✓ 40 ở
@@ -92,7 +92,7 @@ theo chiều cao nên 264pt bên phải là miễn phí — inspector nằm ở 
 | # | Cho | Khi | Thì | Chứng minh bằng |
 |---|---|---|---|---|
 | AC-1 | iPad 1376×1032, project 16:9, không chọn | dump | pool rộng 236; inspector 280 ở x 1096 hiện "Look · Whole video"; khung 810×456 ở (236, 122); timeline y 678 cao 354 | ⚠️ chưa có |
-| AC-2 | như AC-1 | chọn clip 2 | chân inspector y 546 có ✕ · "Clip 2 · Coast" · ✓; khung không đổi (±0pt); Export vẫn hiện | ⚠️ chưa có |
+| AC-2 | như AC-1 | chọn clip 2 | chân inspector y 546 có ✕ · "Clip 2" · ✓; khung không đổi (±0pt); Export vẫn hiện | ⚠️ chưa có |
 | AC-3 | iPad 1032×1376, không chọn | dump | dock y 1052 cao 324, tiêu đề có Media · Text · Sticker · Music; pool đóng | ⚠️ chưa có |
 | AC-4 | như AC-3 | chọn clip 2 | hàng lệnh trong dock; chân ✕ · tên · ✓ ở y 1316; timeline 722–1052 không bị phủ | ⚠️ chưa có |
 | AC-5 | Duo mở 951×669, không chọn | dump | khung 684×385 ở y 0; cột 264 ở x 687; transport y 385; timeline 188; hàng đáy y 613 có 5 công cụ từ x 40 và Export | ⚠️ chưa có — `duo-video-studio-desk.json` cần viết lại |

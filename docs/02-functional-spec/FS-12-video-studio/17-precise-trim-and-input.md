@@ -87,8 +87,9 @@ không thể lệch: một chạm là một khung.
 | Frame steps with haptics | bật | không có haptic mỗi khung; bước vẫn đúng khung |
 | Frame zoom on pinch | bật | trần zoom giữ 160 pt/giây; ô Frame Zoom vẫn dùng được |
 
-- Lưu theo máy, không theo project. Duo trong: khối PRECISION trong cột phải. iPhone, Duo ngoài, iPad: mục
-  **Precision** trong menu ⋯ của transport. *Vì panel iPhone ẩn khi đang cắt, và điện thoại có đủ mọi thứ iPad có.*
+- Lưu theo máy, không theo project. Duo trong: khối PRECISION trong cột phải. **iPad: hai công tắc nằm cạnh khối
+  PENCIL** của chế độ Trim (board `F6_IP_PencilTrim` vẽ thêm) — transport bàn dựng iPad không có ⋯ (chốt 2026-10-03).
+  iPhone, Duo ngoài: mục **Precision** trong menu ⋯ của transport. *Vì panel iPhone ẩn khi đang cắt, và điện thoại có đủ mọi thứ iPad có.*
 
 ## 8. Apple Pencil (iPad)
 
@@ -124,6 +125,7 @@ không thể lệch: một chạm là một khung.
 - **Hai chỗ chữ trên board:** F6_P_FineScrub sửa "pinch out to return" → "pinch in to return"; chân F6_IP_PencilTrim
   sửa theo iPhone ("Trim · Clip 2" / "0:09.07 · −4 frames").
 - F6_DI_TouchTrim và F6_IP_PencilTrim bỏ dòng Duration của clip video.
+- F6_IP_PencilTrim thêm hai công tắc PRECISION cạnh khối PENCIL (§7).
 
 ## 12. Tiêu chí nghiệm thu
 
@@ -143,7 +145,7 @@ Project mẫu 30 fps: Clip 1 ảnh 3,0 s · **Clip 2** video nguồn 12,0 s, c�
 | AC-10 | Duo trong, Clip 2 chọn | giữ mép cuối 0,5 s | 4 ô đầu cột phải: −1 Frame · +1 Frame · Frame Zoom · Trim (bật); không có Split; 5 công cụ hàng đáy không nhận chạm | ⚠️ chưa có |
 | AC-11 | iPad dọc, ô Trim bật | Pencil kéo mép cuối, đứng yên 0,3 s, rồi đi tiếp 24pt sang trái | mép sớm hơn đúng 2 khung; một ngón tay kéo timeline cùng lúc thì cuộn, không cắt | ⚠️ chưa có |
 | AC-12 | iPad dọc, ô Trim bật | chạm đúp Pencil rồi kéo Pencil trên Clip 2 | playhead chạy theo Pencil; cửa sổ cắt Clip 2 không đổi | ⚠️ chưa có |
-| AC-13 | Clip 2 chỉ có trên iCloud, tắt mạng | vào chế độ, bấm −1 Frame 2 lần, bấm ✓ | kính vẽ dải xám + "Offline"; không có request mạng; Clip 2 ngắn đi 2 khung | ⚠️ chưa có |
+| AC-13 | project **mở khi có mạng**, Clip 2 là luồng iCloud (không phải file trên máy), rồi mất mạng | vào chế độ, bấm −1 Frame 2 lần, bấm ✓ | kính vẽ dải xám + "Offline"; không có request mạng; Clip 2 ngắn đi 2 khung | ⚠️ chưa có |
 | AC-14 | VoiceOver bật, Clip 2 chọn | focus tay nắm mép cuối, vuốt xuống một lần | đọc "Clip 2 end, 0:09.20"; sau vuốt mép sớm hơn 1 khung, đọc "0:09.17" | ⚠️ chưa có |
 | AC-15 | board F6_P_PreciseTrim, F6_P_FineScrub, F6_DI_TouchTrim, F6_IP_PencilTrim, F6_DC_PreciseTrim | `design-parity` chạy trên từng board | mọi phần tử lệch ≤ 2pt, không thiếu, không thừa | ⚠️ chưa có |
 | AC-16 | Duo ngoài 466×678, Clip 2 chọn | giữ yên mép cuối Clip 2 0,5 s | panel ẩn, timeline 334–644; pill 248×48 tại (67, 582); ✕ ở y 504, ✓ ở y 556; Export ẩn; không control nào trong dải 84 ở y < 72 hay > 600 | ⚠️ chưa có — `Tools/ui-drive` + `Tools/sim-shot` |
@@ -156,5 +158,5 @@ Project mẫu 30 fps: Clip 1 ảnh 3,0 s · **Clip 2** video nguồn 12,0 s, c�
 | Rủi ro | Xử lý |
 |---|---|
 | Giải mã 10 khung chính xác mỗi lần bấm ±1 trễ quá 100 ms với HEVC 4K | giải mã ở cỡ kính, chỉ thêm 1 khung mới mỗi bước; đo trên máy thật trước khi chốt |
-| Timeline ở 360 pt/giây với project 10 phút rộng 216 000pt | thumbnail vẽ theo ô trong vùng nhìn (đã thế); kiểm 60 fps cuộn theo NF-01 |
+| Timeline ở 360 pt/giây với project 10 phút rộng 216 000pt | thumbnail phải chỉ dựng ô giao vùng nhìn — **code hôm nay dựng mọi ô** của clip (sửa ở task 13 của plan precise-trim-input); kiểm 60 fps cuộn theo NF-01 |
 | Long-press 0,32 s trên timeline hôm nay là đổi thứ tự clip, và FS-12.11 dùng giữ 0,5 s trên clip để vào chế độ chọn — cả hai tới trước hoặc cùng lúc với tay nắm | vùng chạm của tay nắm không thuộc hai cử chỉ đó; giữ trên **thân** clip vẫn theo [FS-12.11](11-multi-select-and-reorder.md) |

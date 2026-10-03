@@ -46,7 +46,7 @@ docs/
 ├── 02-functional-spec/       FS-01 Library (14) · FS-02 Photo Detail (7) · FS-03 Editor (19)
 │                             FS-04 Màu (3) · FS-05 Markup (4) · FS-06 Collections (10)
 │                             FS-07 Statistics (3) · FS-08 Settings (6) · FS-09 Onboarding
-│                             FS-10 Import (đã bỏ) · FS-11 Collage · FS-12 Video Studio (24) · FS-13 Support
+│                             FS-10 Import (đã bỏ) · FS-11 Collage · FS-12 Video Studio (25) · FS-13 Support
 │                             FS-14 Panorama (2) · FS-15 Upload lên file server (5)
 │                             FS-16 Kernel render bằng Metal · FS-17 Tải, sửa ảnh từ file server (6)
 ├── 03-extensions-and-integrations/  EX-01 Kit · EX-02 Widget · EX-03 Share · EX-04 Shortcuts · EX-05 Edit action

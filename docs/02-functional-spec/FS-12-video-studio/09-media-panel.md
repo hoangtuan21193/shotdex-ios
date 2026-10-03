@@ -66,6 +66,9 @@ giữ-kéo vào timeline · danh sách In Video · hàng quyền giới hạn. P
 - Ô video: thời lượng góc phải dưới ("0:06", 10.5 đậm). **Dấu đã dùng:** tròn trắng 19, ✓ đen, góc phải trên cách 5;
   dùng từ 2 chỗ trở lên thì ✓ thành viên nang trắng chữ đen "×2", "×3"… (chốt 2026-10-03, đúng chữ này) — *vì dùng lại
   một cảnh làm mở và kết là có chủ ý.*
+- **Số đếm = số hàng = số lần dùng** (chốt 2026-10-03): mỗi clip và mỗi sticker là một hàng của In Video, kể cả khi
+  hai hàng cùng một mục thư viện; clip bị tách đôi là hai hàng. Số trên tab ("In Video · 6") luôn bằng số hàng.
+  *Vì một luật thì tab và danh sách không bao giờ lệch nhau.*
 - In Video, mỗi hàng: thumbnail · tên như trên timeline · "Photo · clip 1" / "Video · clip 2" / "Photo · sticker"
   · khoảng giờ "0:03–0:09" chữ đơn cách · chevron. Hàng của thứ đang dưới playhead có nền sáng.
 
@@ -130,7 +133,7 @@ Project mẫu: 16:9, 5 clip 24,0s (Falls ảnh 0–3,0 · Coast video 3,0–9,2 
 
 | # | Cho | Khi | Thì | Chứng minh bằng |
 |---|---|---|---|---|
-| AC-1 | project mẫu, Media mở, một ảnh chưa dùng | chạm ô đó | Coast tách tại 8,4; ảnh vào giữa; 6 clip, 27,0s; ô có ✓; tab thành "In Video · 7"; playhead 11,4 | ⚠️ chưa có |
+| AC-1 | project mẫu, Media mở, một ảnh chưa dùng | chạm ô đó | Coast tách tại 8,4; ảnh vào giữa; 7 clip, 27,0 s; ô có ✓; tab thành "In Video · 8" (7 clip + sticker); playhead 11,4 | ⚠️ chưa có |
 | AC-2 | project mẫu, Select, chọn 3 ô | bấm Add (3) | 3 clip mới theo thứ tự 1-2-3 sau vết cắt 8,4; một Undo về đúng 5 clip | ⚠️ chưa có |
 | AC-3 | project mẫu, video 14,0s trong lưới | giữ 0,3s, kéo tới giữa Lake và Night | vạch trắng ở 14,2 + viên nang "+ 0:14.2"; thả → video là clip 4 bắt đầu 14,2, Lake không bị tách, tổng 38,0s | ⚠️ chưa có — driver cần bước giữ-rồi-kéo |
 | AC-4 | đang kéo như AC-3 | thả lại trên lưới | project vẫn 5 clip 24,0s; nút Undo không đổi trạng thái | ⚠️ chưa có |
@@ -145,12 +148,12 @@ Project mẫu: 16:9, 5 clip 24,0s (Falls ảnh 0–3,0 · Coast video 3,0–9,2 
 | AC-13 | iPad 1376×1032 | mở Video Studio | pool có đúng 4 tab Media · Text · Stickers · Music; hàng Recents · Albums · In Video · 6 vừa trong 236; hàng tiêu đề có Library · Select · 🔍 · Hide Media | ⚠️ chưa có — `ipad-video-studio-desk.json` cần dump mới |
 | AC-14 | VoiceOver bật, ô video 0:06 đang dùng | đọc ô | "Video, 0:06, in this video" + action Insert at Playhead, Select | ⚠️ chưa có |
 | AC-15 | từng board `MP_P_MediaPicker` · `MP_P_Drag` · `MP_P_InVideo` · `MP_P_Limited` · `MP_IL_MediaPicker` · `MP_IL_InVideo` · `MP_IP_Media` · `MP_DI_Media` · `MP_DC_Media` · `MP_P_Drag916` | `design-parity` | mọi phần tử board đặt tên lệch ≤ 2pt (sau khi board sửa theo §9) | ⚠️ chưa có |
-
 | AC-16 | iPhone, project mẫu, Media mở | dump hàng tab | thứ tự Recents · Albums · In Video · 6 · Select · 🔍, Select và 🔍 nằm hết trong x ≤ 390 | ⚠️ chưa có |
 | AC-17 | Duo trong 951×669, Media mở | vuốt hàng tab sang trái | Select và 🔍 hiện ở cuối; trước khi vuốt mép phải hàng có dải mờ 24pt | ⚠️ chưa có — `Tools/ui-drive` |
 | AC-18 | Falls dùng ở clip 1, clip 6 và một sticker | mở Recents | ô Falls hiện viên nang "×3", không còn ✓ tròn | ⚠️ chưa có |
+| AC-19 | thư viện có album "Hikes" 42 mục; iPhone, Media mở | chạm Albums, chạm "Hikes", rồi ‹ Albums | danh sách album có bìa · tên · số mục ("42"); lưới album đúng 42 ô, có dấu đã dùng như Recents; nút ‹ Albums ở chỗ hàng tab; chạm nó về danh sách album | ⚠️ chưa có |
 
-**Chưa chứng minh được:** AC-1 → AC-18.
+**Chưa chứng minh được:** AC-1 → AC-19.
 
 ## 9. Đã chốt (2026-10-03) và rủi ro
 
