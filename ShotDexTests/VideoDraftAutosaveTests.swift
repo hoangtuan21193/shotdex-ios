@@ -317,3 +317,31 @@ struct VideoDraftFailureTests {
         #expect(stored.clips[1].effect == .zoomIn)
     }
 }
+
+/// FS-12.18 §6: Back when the write fails.
+@MainActor
+struct VideoDraftBackFailureTests {
+    /// FS-12.18 AC-9: the write still fails — Back keeps the studio open
+    /// (the screen asks Try Again · Leave Without Saving), and the stored
+    /// row is the last write that worked.
+    @Test func backWithAFailedSaveStaysOpen() async throws {
+        let model = VideoStudioModelFixture.model()
+        let log = DraftWriteLog()
+        model.drafts = VideoDraftAutosave(write: { try log.write($0) })
+        let clip2 = model.recipe.clips[1].id
+        model.setSpeed(2, for: clip2)
+        #expect(await model.saveDraftNow())
+
+        log.failure = DraftWriteLog.DiskFull()
+        model.setSpeed(3, for: clip2)
+        #expect(await model.back() == .saveFailed)
+        #expect(model.hasFailedDraftSave)
+        #expect(log.writes.count == 1)
+        #expect(log.writes.last?.videoRecipe?.clips[1].speed == 2)
+
+        // Try Again once there is room: Back goes through.
+        log.failure = nil
+        #expect(await model.back() == .close)
+        #expect(log.writes.last?.videoRecipe?.clips[1].speed == 3)
+    }
+}

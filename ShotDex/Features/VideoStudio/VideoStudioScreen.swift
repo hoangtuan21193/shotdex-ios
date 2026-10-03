@@ -41,6 +41,9 @@ struct VideoStudioScreen: View {
 
     @State private var model: VideoStudioModel?
     @State private var isDiscardConfirmationPresented = false
+    /// Back found the draft would not write (FS-12.18 §6): the one time
+    /// Back asks anything, because closing quietly would lose the session.
+    @State private var isDraftSaveFailurePresented = false
     @State private var isExportSheetPresented = false
     @State private var isMusicImporterPresented = false
     @State private var isFontPickerPresented = false
@@ -146,6 +149,12 @@ struct VideoStudioScreen: View {
         .interactiveDismissDisabled(model?.hasEdits == true || isExporting)
         // Only a project of server photos asks (FS-17.06 §5): it has no
         // draft. Every other project saved itself on the way out.
+        .alert(VideoStudioCopy.draftSaveFailed, isPresented: $isDraftSaveFailurePresented) {
+            // The cancel role, so the system adds no third "Cancel": the
+            // two answers are the whole question (FS-12.18 §6).
+            Button(VideoStudioCopy.tryAgain, role: .cancel) { if let model { leave(model) } }
+            Button(VideoStudioCopy.leaveWithoutSaving, role: .destructive) { dismiss() }
+        }
         .alert("Discard this video?", isPresented: $isDiscardConfirmationPresented) {
             Button("Discard", role: .destructive) { dismiss() }
             Button("Keep Editing", role: .cancel) {}
@@ -298,7 +307,7 @@ struct VideoStudioScreen: View {
             switch await model.back() {
             case .close: dismiss()
             case .confirmDiscard: isDiscardConfirmationPresented = true
-            case .saveFailed: break
+            case .saveFailed: isDraftSaveFailurePresented = true
             }
         }
     }

@@ -1,0 +1,92 @@
+{
+ "steps": [
+  {
+   "action": "launch",
+   "arguments": [
+    "-ShotDexFailDraftWrites"
+   ]
+  },
+  {
+   "action": "wait",
+   "seconds": 4
+  },
+  {
+   "action": "tap",
+   "label": "Select",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "tap",
+   "x": 0.07,
+   "y": 0.2
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "tap",
+   "label": "More selection actions",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "tap",
+   "label": "Create Video"
+  },
+  {
+   "action": "wait",
+   "seconds": 8
+  },
+  {
+   "action": "tap",
+   "x": 0.08,
+   "y": 0.928
+  },
+  {
+   "action": "wait",
+   "seconds": 5
+  },
+  {
+   "action": "screenshot",
+   "name": "01-back-failed-alert"
+  },
+  {
+   "action": "tap",
+   "label": "Try Again",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "screenshot",
+   "name": "02-try-again-still-failing"
+  },
+  {
+   "action": "tap",
+   "label": "Leave Without Saving",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "screenshot",
+   "name": "03-left"
+  },
+  {
+   "action": "wait",
+   "seconds": 6
+  }
+ ]
+}

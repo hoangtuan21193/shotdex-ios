@@ -227,6 +227,14 @@ final class VideoStudioModel {
         self.drafts = creationStore.map { store in
             VideoDraftAutosave(write: { try store.saveDraft($0) })
         }
+        #if DEBUG
+        // `-ShotDexFailDraftWrites`: a UI route photographs the failed-save
+        // banner and Back's alert (FS-12.18 §6), which a working disk never
+        // shows.
+        if creationStore != nil, ProcessInfo.processInfo.arguments.contains("-ShotDexFailDraftWrites") {
+            self.drafts = VideoDraftAutosave(write: { _ in throw CocoaError(.fileWriteOutOfSpace) })
+        }
+        #endif
         if let stored = restoring?.videoRecipe {
             self.recipe = stored
         } else {
