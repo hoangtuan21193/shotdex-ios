@@ -1711,7 +1711,10 @@ final class VideoStudioModel {
                 recipe.clips[index].trimEnd = duration
             }
         }
-        let failed = clips.filter { sources[$0.id] == nil }.map(\.id)
+        // Only clips still in the project: one ✕ or Undo took away is not a
+        // failure to report.
+        let present = Set(recipe.clips.map(\.id))
+        let failed = clips.filter { sources[$0.id] == nil && present.contains($0.id) }.map(\.id)
         if !failed.isEmpty {
             recipe.clips.removeAll { failed.contains($0.id) }
             recipe.syncTransitionsWithClips()

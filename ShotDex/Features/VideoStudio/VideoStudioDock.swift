@@ -23,7 +23,7 @@ struct VideoStudioDock: View {
             // Selected: the command row, three columns of controls, then
             // ✕ · name · ✓ at dock + 264 (FS-12.03 §3). The add buttons
             // make way for the commands.
-            if let title = model.selectionTitle {
+            if let title = model.sessionFooterTitle {
                 VideoSessionFooter(
                     title: title,
                     onCancel: { model.cancelSession() },

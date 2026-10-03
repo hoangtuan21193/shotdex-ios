@@ -12,8 +12,11 @@ struct VideoStudioDuoBottomRow: View {
     private typealias Geometry = VideoStudioDeskGeometry
 
     var body: some View {
-        let title = model.selectionTitle
-        let toolsInert = VideoAddTool.toolsAreInert(in: .duoInner, isSelecting: title != nil)
+        // An item's session or the Media panel's (FS-12.09 §3): ✕ · name ·
+        // ✓ takes Video Settings' and Export's place. Only an item makes
+        // the tools inert.
+        let title = model.sessionFooterTitle
+        let toolsInert = VideoAddTool.toolsAreInert(in: .duoInner, isSelecting: model.selectionTitle != nil)
         HStack(spacing: Geometry.duoToolGap) {
             // While an item is selected the tools stay where they are, at
             // white 30 % and taking no touches (FS-12.03 §4): the row does
