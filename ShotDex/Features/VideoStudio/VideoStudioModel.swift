@@ -528,6 +528,7 @@ final class VideoStudioModel {
 
     private func deselectAll() {
         mediaSelection = nil
+        mediaShowsInVideo = false
         selectedClipID = nil
         selectedOverlayID = nil
         selectedMusicID = nil
@@ -559,11 +560,14 @@ final class VideoStudioModel {
         if let selectionTitle { return selectionTitle }
         guard inspectorTarget == .none, activeToolPanel == .media else { return nil }
         let time = VideoStudioMetrics.compactTimecode(currentTime)
-        return VideoItemTitle.Lines(
-            name: VideoStudioCopy.media,
-            detail: mediaSelection.map { VideoStudioCopy.mediaSelectedHint(count: $0.count, at: time) }
-                ?? VideoStudioCopy.mediaTapHint(at: time)
-        )
+        let detail: String = if let picks = mediaSelection {
+            VideoStudioCopy.mediaSelectedHint(count: picks.count, at: time)
+        } else if mediaShowsInVideo {
+            VideoStudioCopy.itemsInThisVideo(MediaUsage.useCount(in: recipe))
+        } else {
+            VideoStudioCopy.mediaTapHint(at: time)
+        }
+        return VideoItemTitle.Lines(name: VideoStudioCopy.media, detail: detail)
     }
 
     /// ✓: keep, deselect, and the bottom row is the tools again. With
@@ -577,6 +581,25 @@ final class VideoStudioModel {
         clearSelection()
     }
 
+    // MARK: - In Video (FS-12.09 §5)
+
+    /// What of the library is in the video, in timeline order.
+    var inVideoRows: [MediaUsage.Row] {
+        MediaUsage.rows(in: recipe, totalDuration: totalDuration)
+    }
+
+    /// A row of In Video tapped: the playhead goes to the item's start and
+    /// the item is selected. Where Media is a session, that is ✓ for Media
+    /// first — the panel turns into the item's (FS-12.09 §5).
+    func goToInVideoRow(_ row: MediaUsage.Row) {
+        if activeToolPanel == .media { commitSession() }
+        seek(to: row.start)
+        switch row.kind {
+        case .clip: selectClip(row.id)
+        case .sticker: selectOverlay(row.id)
+        }
+    }
+
     // MARK: - Media Select (FS-12.09 §5)
 
     /// The items picked in Media's Select, in the order they were picked;
@@ -584,6 +607,10 @@ final class VideoStudioModel {
     private(set) var mediaSelection: [VideoMediaPick]?
 
     var isSelectingMedia: Bool { mediaSelection != nil }
+
+    /// The Media panel is on its In Video tab — the footer then counts the
+    /// uses instead of saying where a tap lands.
+    var mediaShowsInVideo = false
 
     /// Select: on with nothing picked, or off dropping every pick.
     func toggleMediaSelecting() {

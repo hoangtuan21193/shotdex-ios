@@ -45,4 +45,56 @@ enum MediaUsage {
     static func useCount(in recipe: VideoProjectRecipe) -> Int {
         uses(in: recipe).values.reduce(0, +)
     }
+
+    // MARK: In Video (FS-12.09 §4)
+
+    /// One row of In Video: one use, where it sits.
+    struct Row: Equatable, Identifiable {
+        enum Kind: Equatable {
+            /// A clip, by its 1-based place on the track.
+            case clip(VideoClipKind, number: Int)
+            case sticker
+        }
+
+        /// The clip's or the overlay's id — what a tap selects.
+        let id: UUID
+        let assetID: String
+        let kind: Kind
+        let start: Double
+        let end: Double
+
+        /// "0:03–0:09", whole seconds.
+        var span: String { "\(MediaUsage.clock(start))–\(MediaUsage.clock(end))" }
+
+        func contains(_ time: Double) -> Bool { time >= start && time < end }
+    }
+
+    /// Every use in timeline order — by where it starts; a clip before a
+    /// sticker that starts with it.
+    static func rows(in recipe: VideoProjectRecipe, totalDuration: Double) -> [Row] {
+        let placements = MediaInsertMath.placements(of: recipe)
+        var rows: [Row] = []
+        for (index, clip) in recipe.clips.enumerated() where placements.indices.contains(index) {
+            rows.append(Row(
+                id: clip.id, assetID: clip.assetID, kind: .clip(clip.kind, number: index + 1),
+                start: placements[index].start, end: placements[index].end
+            ))
+        }
+        let total = max(totalDuration, placements.last?.end ?? 0)
+        for timed in recipe.overlays where timed.overlay.kind == .image {
+            guard let id = timed.overlay.imageAssetIdentifier else { continue }
+            let end = timed.duration.map { timed.start + $0 } ?? total
+            rows.append(Row(id: timed.id, assetID: id, kind: .sticker, start: timed.start, end: end))
+        }
+        return rows.enumerated().sorted { lhs, rhs in
+            if lhs.element.start != rhs.element.start { return lhs.element.start < rhs.element.start }
+            return lhs.offset < rhs.offset
+        }.map(\.element)
+    }
+
+    /// "m:ss" of whole seconds, rounded.
+    static func clock(_ seconds: Double) -> String {
+        let whole = Int(max(0, seconds).rounded())
+        return String(format: "%d:%02d", whole / 60, whole % 60)
+    }
 }

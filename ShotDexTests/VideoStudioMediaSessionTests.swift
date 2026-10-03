@@ -104,3 +104,22 @@ extension VideoStudioMediaSessionTests {
         #expect(model.recipe.clips.count == 7)
     }
 }
+
+extension VideoStudioMediaSessionTests {
+    /// AC-7 (model): tapping Coast in In Video puts the playhead at 3.0 and
+    /// selects clip 2; Media closes as ✓.
+    @Test func inVideoTapJumpsAndSelects() throws {
+        let model = sample()
+        defer { model.close() }
+        model.showToolPanel(.media)
+        let coast = try #require(model.inVideoRows.first { $0.assetID == "Coast" })
+        model.goToInVideoRow(coast)
+        #expect(model.currentTime == 3.0)
+        #expect(model.selectedClipID == model.recipe.clips[1].id)
+        #expect(model.activeToolPanel == nil)
+        let road = try #require(model.inVideoRows.first { $0.assetID == "Road" })
+        model.goToInVideoRow(road)
+        #expect(model.currentTime == 6.0)
+        #expect(model.selectedOverlayID == model.recipe.overlays[0].id)
+    }
+}

@@ -67,6 +67,29 @@ enum VideoStudioCopy {
         String(localized: "Add (\(count))", table: table, comment: "Video Studio Media panel: adds the picked items at the playhead, with how many")
     }
 
+    /// "6 items in this video": the footer while In Video is open.
+    static func itemsInThisVideo(_ count: Int) -> String {
+        String(localized: "\(count) items in this video", table: table, comment: "Video Studio Media panel: under its name on the In Video tab — how many uses of library items the video has")
+    }
+
+    static var nothingInVideo: String {
+        String(localized: "Nothing from your library is in this video yet.", table: table, comment: "Video Studio Media panel: the In Video tab when no clip or sticker comes from the library")
+    }
+
+    /// "Photo · clip 1", "Video · clip 2", "Photo · sticker".
+    static func inVideoKind(_ kind: MediaUsage.Row.Kind) -> String {
+        switch kind {
+        case .clip(.video, let number):
+            String(localized: "Video · clip \(number)", table: table, comment: "Video Studio In Video row: a video clip and its place on the track")
+        case .clip(.photo, let number):
+            String(localized: "Photo · clip \(number)", table: table, comment: "Video Studio In Video row: a photo clip and its place on the track")
+        case .clip(.freeze, let number):
+            String(localized: "Freeze · clip \(number)", table: table, comment: "Video Studio In Video row: a held frame and its place on the track")
+        case .sticker:
+            String(localized: "Photo · sticker", table: table, comment: "Video Studio In Video row: a library photo laid over the video as a sticker")
+        }
+    }
+
     static var select: String {
         String(localized: "Select", table: table, comment: "Video Studio Media panel: starts picking several items to add at once")
     }

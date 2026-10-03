@@ -57,6 +57,10 @@
       "comment": "Video Studio settings button: the project's frame rate, e.g. 30 fps",
       "extractionState": "manual"
     },
+    "%lld items in this video": {
+      "comment": "Video Studio Media panel: under its name on the In Video tab — how many uses of library items the video has",
+      "extractionState": "manual"
+    },
     "%lld selected · Add puts them at %@": {
       "comment": "Video Studio Media panel: under its name while selecting — how many are picked and the playhead time Add inserts them at",
       "extractionState": "manual"
@@ -121,6 +125,10 @@
       "comment": "Video Studio clip panel: header over the clip's fade in and fade out",
       "extractionState": "manual"
     },
+    "Freeze · clip %lld": {
+      "comment": "Video Studio In Video row: a held frame and its place on the track",
+      "extractionState": "manual"
+    },
     "In Video · %lld": {
       "comment": "Video Studio Media panel tab: what of the library is in this video, and how many uses",
       "extractionState": "manual"
@@ -181,12 +189,24 @@
       "comment": "Video Studio Media panel: the Albums tab when the library has no albums of the user's own",
       "extractionState": "manual"
     },
+    "Nothing from your library is in this video yet.": {
+      "comment": "Video Studio Media panel: the In Video tab when no clip or sticker comes from the library",
+      "extractionState": "manual"
+    },
     "Or drag the clip's edges on the timeline.": {
       "comment": "Video Studio Trim: the other way to cut a clip",
       "extractionState": "manual"
     },
     "Original clip audio, whole project": {
       "comment": "Video Studio Music panel: caption under the Video sound slider",
+      "extractionState": "manual"
+    },
+    "Photo · clip %lld": {
+      "comment": "Video Studio In Video row: a photo clip and its place on the track",
+      "extractionState": "manual"
+    },
+    "Photo · sticker": {
+      "comment": "Video Studio In Video row: a library photo laid over the video as a sticker",
       "extractionState": "manual"
     },
     "Playhead at %@ of %@": {
@@ -255,6 +275,10 @@
     },
     "Video sound": {
       "comment": "Video Studio: the clips' own audio level for the whole project",
+      "extractionState": "manual"
+    },
+    "Video · clip %lld": {
+      "comment": "Video Studio In Video row: a video clip and its place on the track",
       "extractionState": "manual"
     },
     "Waiting for iCloud": {

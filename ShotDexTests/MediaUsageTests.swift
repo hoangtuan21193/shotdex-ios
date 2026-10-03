@@ -62,3 +62,18 @@ extension VideoClip {
         return copy
     }
 }
+
+extension MediaUsageTests {
+    /// AC-7 (rows): the sample's six uses in timeline order — the sticker
+    /// Road (6.0–8.0) after Coast, which starts at 3.0 — each with its span.
+    @Test func inVideoRowsInTimelineOrder() {
+        let recipe = VideoStudioModelFixture.mediaSampleRecipe()
+        let rows = MediaUsage.rows(in: recipe, totalDuration: 24)
+        #expect(rows.map(\.assetID) == ["Falls", "Coast", "Road", "Lake", "Night", "Forest"])
+        #expect(rows.map(\.span) == ["0:00–0:03", "0:03–0:09", "0:06–0:08", "0:09–0:14", "0:14–0:17", "0:17–0:24"])
+        #expect(rows[1].kind == .clip(.video, number: 2))
+        #expect(rows[2].kind == .sticker)
+        #expect(rows.count == MediaUsage.useCount(in: recipe))
+        #expect(rows[1].contains(8.4) && !rows[3].contains(8.4))
+    }
+}

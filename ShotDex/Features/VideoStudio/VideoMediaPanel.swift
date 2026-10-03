@@ -161,7 +161,7 @@ struct VideoMediaPanel: View {
         case .albums:
             if openAlbum != nil { grid } else { albumList }
         case .inVideo:
-            Color.clear
+            VideoInVideoList(model: model, rowHeight: metrics == .pool ? 52 : 56)
         }
     }
 
@@ -227,6 +227,7 @@ struct VideoMediaPanel: View {
 
     private func select(_ value: Tab) {
         tab = value
+        model.mediaShowsInVideo = value == .inVideo
         openAlbum = nil
         library?.show(.recents)
         if value == .albums { albums = library?.albums() ?? [] }
@@ -254,6 +255,121 @@ struct VideoMediaPanel: View {
             else { return }
             model.insertMedia([pick])
         }
+    }
+}
+
+/// In Video (FS-12.09 §4): every use of a library item, in timeline
+/// order — thumbnail · when it was taken · "Video · clip 2" · "0:03–0:09"
+/// · chevron — the row under the playhead lit. A tap jumps there and
+/// selects the item.
+private struct VideoInVideoList: View {
+    @Bindable var model: VideoStudioModel
+    let rowHeight: CGFloat
+    @State private var assets: [String: PHAsset] = [:]
+
+    var body: some View {
+        let rows = model.inVideoRows
+        Group {
+            if rows.isEmpty {
+                Text(VideoStudioCopy.nothingInVideo)
+                    .font(.system(size: 12.5))
+                    .foregroundStyle(.white.opacity(0.45))
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 24)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else {
+                ScrollView {
+                    LazyVStack(spacing: 0) {
+                        ForEach(rows) { row in
+                            Button { model.goToInVideoRow(row) } label: {
+                                rowView(row, isCurrent: row.contains(model.currentTime))
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+                }
+            }
+        }
+        .task(id: rows.map(\.assetID)) {
+            let missing = Set(rows.map(\.assetID)).subtracting(assets.keys)
+            guard !missing.isEmpty else { return }
+            for asset in PhotoLibraryService.fetchAssets(ids: Array(missing)) {
+                assets[asset.localIdentifier] = asset
+            }
+        }
+    }
+
+    private func rowView(_ row: MediaUsage.Row, isCurrent: Bool) -> some View {
+        let asset = assets[row.assetID]
+        return HStack(spacing: 12) {
+            VideoInVideoThumbnail(asset: asset, photoLibrary: model.photoLibrary, serverFile: model.serverFileURL(for: row.assetID))
+                .frame(width: 44, height: 44)
+                .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
+            VStack(alignment: .leading, spacing: 2) {
+                Text(asset.map(VideoMediaPoolFormat.name(for:)) ?? row.assetID.components(separatedBy: "/").last ?? "")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(.white)
+                    .lineLimit(1)
+                Text(VideoStudioCopy.inVideoKind(row.kind))
+                    .font(.system(size: 11))
+                    .foregroundStyle(.white.opacity(0.4))
+                    .lineLimit(1)
+            }
+            Spacer(minLength: 0)
+            Text(verbatim: row.span)
+                .font(.system(size: 12, weight: .medium, design: .monospaced))
+                .foregroundStyle(.white.opacity(0.7))
+            Image(systemName: "chevron.right")
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundStyle(.white.opacity(0.35))
+        }
+        .padding(.horizontal, VideoMediaPanelMetrics.rowInset)
+        .frame(height: rowHeight)
+        .background {
+            if isCurrent {
+                RoundedRectangle(cornerRadius: AppTheme.Radius.sm, style: .continuous)
+                    .fill(Color.white.opacity(0.08))
+                    .padding(.horizontal, 6)
+            }
+        }
+        .contentShape(Rectangle())
+        .accessibilityElement(children: .combine)
+        .accessibilityAddTraits(isCurrent ? .isSelected : [])
+    }
+}
+
+/// A row's thumbnail: the library item, or a server photo's copy on disk.
+private struct VideoInVideoThumbnail: View {
+    let asset: PHAsset?
+    let photoLibrary: PhotoLibraryService
+    let serverFile: URL?
+    @Environment(\.displayScale) private var displayScale
+    @State private var image: UIImage?
+
+    var body: some View {
+        Rectangle()
+            .fill(Color.white.opacity(0.06))
+            .overlay {
+                if let image { Image(uiImage: image).resizable().scaledToFill() }
+            }
+            .clipped()
+            .task(id: asset?.localIdentifier ?? serverFile?.path) {
+                if let asset {
+                    _ = photoLibrary.requestThumbnail(
+                        for: asset,
+                        targetSize: CGSize(width: 44 * displayScale, height: 44 * displayScale),
+                        resizeMode: .fast,
+                        allowNetwork: false
+                    ) { result, _ in
+                        if let result { image = result }
+                    }
+                } else if let serverFile {
+                    let side = 44 * displayScale
+                    image = await Task.detached(priority: .userInitiated) {
+                        UIImage(contentsOfFile: serverFile.path)?.preparingThumbnail(of: CGSize(width: side, height: side))
+                    }.value
+                }
+            }
     }
 }
 
