@@ -1,4 +1,5 @@
 import Foundation
+import ShotDexKit
 @testable import ShotDex
 
 /// A Video Studio model over a stored recipe, for the tests that drive the
@@ -51,5 +52,28 @@ enum VideoStudioModelFixture {
             restoring: row,
             serverWorkDirectory: serverWorkDirectory
         )
+    }
+
+    /// FS-12.09 §8's project: Falls photo 0–3.0 · Coast video 3.0–9.2 ·
+    /// Lake video 9.2–14.2 · Night photo 14.2–17.2 · Forest video
+    /// 17.2–24.0, and the sticker "Road" 6.0–8.0 cut from a library photo.
+    static func mediaSampleRecipe() -> VideoProjectRecipe {
+        func photo(_ id: String) -> VideoClip {
+            var clip = VideoClip(assetID: id, kind: .photo)
+            clip.photoDuration = 3
+            return clip
+        }
+        func video(_ id: String, _ seconds: Double) -> VideoClip {
+            var clip = VideoClip(assetID: id, kind: .video)
+            clip.sourceDuration = seconds
+            clip.trimEnd = seconds
+            return clip
+        }
+        var recipe = VideoProjectRecipe(clips: [
+            photo("Falls"), video("Coast", 6.2), video("Lake", 5), photo("Night"), video("Forest", 6.8),
+        ])
+        recipe.syncTransitionsWithClips()
+        recipe.overlays = [TimedOverlay(overlay: .image(id: UUID(), assetIdentifier: "Road"), start: 6, duration: 2)]
+        return recipe
     }
 }

@@ -138,7 +138,7 @@ Project mẫu: 16:9, 5 clip 24,0s (Falls ảnh 0–3,0 · Coast video 3,0–9,2 
 | AC-3 | project mẫu, video 14,0s trong lưới | giữ 0,3s, kéo tới giữa Lake và Night | vạch trắng ở 14,2 + viên nang "+ 0:14.2"; thả → video là clip 4 bắt đầu 14,2, Lake không bị tách, tổng 38,0s | ⚠️ chưa có — driver cần bước giữ-rồi-kéo |
 | AC-4 | đang kéo như AC-3 | thả lại trên lưới | project vẫn 5 clip 24,0s; nút Undo không đổi trạng thái | ⚠️ chưa có |
 | AC-5 | lưới Recents đứng yên | vuốt dọc 30pt trong 0,2s đầu | lưới cuộn, không bóng nào nhấc lên | ⚠️ chưa có |
-| AC-6 | Falls dùng ở clip 1 và clip 6 | mở Recents | ô Falls hiện "×2"; xoá clip 6 → về ✓; xoá cả clip 1 → không còn dấu | ⚠️ chưa có |
+| AC-6 | Falls dùng ở clip 1 và clip 6 | mở Recents | ô Falls hiện "×2"; xoá clip 6 → về ✓; xoá cả clip 1 → không còn dấu | `MediaUsageTests.twoUsesShowTimesTwo` (Falls ở clip 1 + clip 6 → ×2), `.deletingBackToOneShowsCheck` (xoá clip 6 → ✓, xoá clip 1 → không dấu), `.tabCountIsEveryUse`; ô lưới vẽ ✓ tròn 19 / viên nang ×n từ `MediaUsage.badge` (sim 26.5: 3 ô đã dùng mang ✓, ảnh `vs3/out/m3/02-media.png`) |
 | AC-7 | project mẫu | mở In Video, chạm "Coast" | 6 hàng đúng thứ tự timeline có khoảng giờ; playhead 3,0, clip 2 được chọn; iPhone mở panel clip | ⚠️ chưa có |
 | AC-8 | Media mở, đã chạm chèn 2 ô | bấm ✕ | về 5 clip 24,0s; số bước undo bằng lúc mở Media | ⚠️ chưa có |
 | AC-9 | quyền `.limited`, 12 mục được cấp | mở Recents | đúng 12 ô + hàng "ShotDex can see the 12 items you chose." + Manage Access…; cấp thêm 3 → 15 ô, panel không đóng | ⚠️ chưa có |
@@ -150,7 +150,7 @@ Project mẫu: 16:9, 5 clip 24,0s (Falls ảnh 0–3,0 · Coast video 3,0–9,2 
 | AC-15 | từng board `MP_P_MediaPicker` · `MP_P_Drag` · `MP_P_InVideo` · `MP_P_Limited` · `MP_IL_MediaPicker` · `MP_IL_InVideo` · `MP_IP_Media` · `MP_DI_Media` · `MP_DC_Media` · `MP_P_Drag916` | `design-parity` | mọi phần tử board đặt tên lệch ≤ 2pt (sau khi board sửa theo §9) | ⚠️ chưa có |
 | AC-16 | iPhone, project mẫu, Media mở | dump hàng tab | thứ tự Recents · Albums · In Video · 6 · Select · 🔍, Select và 🔍 nằm hết trong x ≤ 390 | ⚠️ chưa có |
 | AC-17 | Duo trong 951×669, Media mở | vuốt hàng tab sang trái | Select và 🔍 hiện ở cuối; trước khi vuốt mép phải hàng có dải mờ 24pt | ⚠️ chưa có — `Tools/ui-drive` |
-| AC-18 | Falls dùng ở clip 1, clip 6 và một sticker | mở Recents | ô Falls hiện viên nang "×3", không còn ✓ tròn | ⚠️ chưa có |
+| AC-18 | Falls dùng ở clip 1, clip 6 và một sticker | mở Recents | ô Falls hiện viên nang "×3", không còn ✓ tròn | `MediaUsageTests.stickerCountsAsAUse` (2 clip + 1 sticker → ×3; sticker không id, chữ: không tính) |
 | AC-19 | thư viện có album "Hikes" 42 mục; iPhone, Media mở | chạm Albums, chạm "Hikes", rồi ‹ Albums | danh sách album có bìa · tên · số mục ("42"); lưới album đúng 42 ô, có dấu đã dùng như Recents; nút ‹ Albums ở chỗ hàng tab; chạm nó về danh sách album | ⚠️ chưa có |
 
 **Chưa chứng minh được:** AC-1 → AC-19.

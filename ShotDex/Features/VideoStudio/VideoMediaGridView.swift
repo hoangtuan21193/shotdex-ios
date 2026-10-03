@@ -17,6 +17,8 @@ struct VideoMediaGridView: UIViewRepresentable {
     /// Changes whenever the fetch does, so the grid reloads.
     let revision: Int
     let metrics: VideoMediaGridMetrics
+    /// How many times each library item is in the video (FS-12.09 §4).
+    var uses: [String: Int] = [:]
     var bottomInset: CGFloat = 0
     let onTap: (PHAsset) -> Void
 
@@ -41,6 +43,7 @@ struct VideoMediaGridView: UIViewRepresentable {
     func updateUIView(_ view: UICollectionView, context: Context) {
         let coordinator = context.coordinator
         let metricsChanged = coordinator.parent.metrics != metrics
+        let usesChanged = coordinator.parent.uses != uses
         coordinator.parent = self
         view.contentInset.bottom = bottomInset
         view.verticalScrollIndicatorInsets.bottom = bottomInset
@@ -50,6 +53,13 @@ struct VideoMediaGridView: UIViewRepresentable {
             view.reloadData()
         } else if metricsChanged {
             view.collectionViewLayout.invalidateLayout()
+        }
+        if usesChanged {
+            // Marks only: the visible cells are re-marked in place, nothing
+            // reloads and no thumbnail is asked for again.
+            for case let cell as VideoMediaGridCell in view.visibleCells {
+                cell.mark(uses: cell.assetID.flatMap { uses[$0] } ?? 0)
+            }
         }
     }
 
@@ -98,6 +108,7 @@ struct VideoMediaGridView: UIViewRepresentable {
                 return cell
             }
             cell.show(asset, index: indexPath.item)
+            cell.mark(uses: parent.uses[asset.localIdentifier] ?? 0)
             let id = asset.localIdentifier
             let library = library.photoLibrary
             let target = thumbnailSize(collectionView)
@@ -219,6 +230,9 @@ final class VideoMediaGridCell: UICollectionViewCell {
 
     let imageView = UIImageView()
     private let durationLabel = UILabel()
+    /// ✓ on a white 19pt disc, or "×2" on a white capsule.
+    private let badge = UILabel()
+    private var baseAccessibilityLabel: String?
     var assetID: String?
     var requestID: PHImageRequestID?
 
@@ -240,7 +254,21 @@ final class VideoMediaGridCell: UICollectionViewCell {
         durationLabel.translatesAutoresizingMaskIntoConstraints = false
         contentView.addSubview(durationLabel)
 
+        badge.font = .systemFont(ofSize: 11, weight: .bold)
+        badge.textColor = .black
+        badge.backgroundColor = .white
+        badge.textAlignment = .center
+        badge.layer.cornerRadius = Self.badgeSide / 2
+        badge.layer.masksToBounds = true
+        badge.isHidden = true
+        badge.translatesAutoresizingMaskIntoConstraints = false
+        contentView.addSubview(badge)
+
         NSLayoutConstraint.activate([
+            badge.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 5),
+            badge.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -5),
+            badge.heightAnchor.constraint(equalToConstant: Self.badgeSide),
+            badge.widthAnchor.constraint(greaterThanOrEqualToConstant: Self.badgeSide),
             imageView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
             imageView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
             imageView.topAnchor.constraint(equalTo: contentView.topAnchor),
@@ -260,7 +288,10 @@ final class VideoMediaGridCell: UICollectionViewCell {
         clear()
     }
 
+    static let badgeSide: CGFloat = 19
+
     func clear() {
+        badge.isHidden = true
         imageView.image = nil
         durationLabel.text = nil
         assetID = nil
@@ -270,7 +301,29 @@ final class VideoMediaGridCell: UICollectionViewCell {
     func show(_ asset: PHAsset, index: Int) {
         assetID = asset.localIdentifier
         durationLabel.text = asset.mediaType == .video ? VideoMediaPoolFormat.duration(asset.duration) : nil
-        accessibilityLabel = VideoMediaPoolFormat.accessibilityLabel(for: asset)
+        baseAccessibilityLabel = VideoMediaPoolFormat.accessibilityLabel(for: asset)
+        accessibilityLabel = baseAccessibilityLabel
         accessibilityIdentifier = "videoMediaItem.\(index)"
+    }
+
+    /// The used-mark (FS-12.09 §4): nothing, ✓, or ×n.
+    func mark(uses: Int) {
+        switch MediaUsage.badge(forUses: uses) {
+        case .none:
+            badge.isHidden = true
+        case .check:
+            badge.isHidden = false
+            badge.attributedText = NSAttributedString(attachment: NSTextAttachment(
+                image: UIImage(systemName: "checkmark", withConfiguration: UIImage.SymbolConfiguration(pointSize: 9, weight: .heavy))!
+                    .withTintColor(.black, renderingMode: .alwaysOriginal)
+            ))
+        case .times(let count):
+            badge.isHidden = false
+            badge.attributedText = nil
+            badge.text = "  ×\(count)  "
+        }
+        accessibilityLabel = uses > 0
+            ? [baseAccessibilityLabel, VideoStudioCopy.inThisVideo].compactMap { $0 }.joined(separator: ", ")
+            : baseAccessibilityLabel
     }
 }

@@ -237,6 +237,10 @@
       "comment": "Video Studio session footer: the kind of a selected held frame, after its length — 2.0s · freeze",
       "extractionState": "manual"
     },
+    "in this video": {
+      "comment": "Video Studio Media panel: VoiceOver, after an item that is already in the video — Video, 0:06, in this video",
+      "extractionState": "manual"
+    },
     "photo": {
       "comment": "Video Studio session footer: the kind of a selected still, after its length — 3.0s · photo",
       "extractionState": "manual"

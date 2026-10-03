@@ -34,6 +34,11 @@ enum VideoStudioCopy {
         String(localized: "Tap adds at \(time) · hold to drag", table: table, comment: "Video Studio Media panel: under its name — a tap inserts at the playhead time shown; holding drags onto the timeline")
     }
 
+    /// Said after a Media cell's description when the item is already used.
+    static var inThisVideo: String {
+        String(localized: "in this video", table: table, comment: "Video Studio Media panel: VoiceOver, after an item that is already in the video — Video, 0:06, in this video")
+    }
+
     static var look: String {
         String(localized: "Look", table: table, comment: "Video Studio: the bottom-row tool that changes the whole video's look — filter, adjustments, colour")
     }

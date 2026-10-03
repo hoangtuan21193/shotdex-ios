@@ -18,6 +18,7 @@ struct VideoMediaPanel: View {
                     library: library,
                     revision: library.revision,
                     metrics: metrics,
+                    uses: MediaUsage.uses(in: model.recipe),
                     onTap: { insert($0) }
                 )
             } else {
