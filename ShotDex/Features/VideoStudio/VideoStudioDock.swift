@@ -11,14 +11,28 @@ struct VideoStudioDock: View {
     let importedMusic: ImportedMusicStore
 
     var body: some View {
-        VideoStudioSheetHost(
-            model: model,
-            actions: actions,
-            layout: .column,
-            importedMusic: importedMusic,
-            showsIdleLook: true,
-            idleTools: [.media, .text, .sticker, .music]
-        )
+        VStack(spacing: 0) {
+            VideoStudioSheetHost(
+                model: model,
+                actions: actions,
+                layout: .dock,
+                importedMusic: importedMusic,
+                showsIdleLook: true,
+                idleTools: [.media, .text, .sticker, .music]
+            )
+            // Selected: the command row, three columns of controls, then
+            // ✕ · name · ✓ at dock + 264 (FS-12.03 §3). The add buttons
+            // make way for the commands.
+            if let title = model.selectionTitle {
+                VideoSessionFooter(
+                    title: title,
+                    onCancel: { model.cancelSession() },
+                    onCommit: { model.commitSession() },
+                    height: VideoStudioDeskGeometry.dockFooterHeight,
+                    buttonSize: VideoStudioDeskGeometry.footerButton
+                )
+            }
+        }
         .background(EditorTheme.panelSolid)
         .clipShape(UnevenRoundedRectangle(
             cornerRadii: .init(

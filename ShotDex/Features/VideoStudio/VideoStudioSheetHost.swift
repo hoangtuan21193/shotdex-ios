@@ -33,6 +33,10 @@ struct VideoStudioSheetHost: View {
         /// Resolve all put their inspector on a wide screen. Nothing is a
         /// fixed height here — a column is read top to bottom and scrolls.
         case column
+        /// The iPad portrait dock: as wide as the window and 324 tall, so a
+        /// clip's controls stand in three columns that are all seen at once
+        /// rather than one panel that scrolls (FS-12.03 §3).
+        case dock
     }
 
     @Bindable var model: VideoStudioModel
@@ -57,7 +61,7 @@ struct VideoStudioSheetHost: View {
             } else {
                 switch layout {
                 case .band: bandBody
-                case .column: columnBody
+                case .column, .dock: columnBody
                 }
             }
         }
@@ -238,9 +242,51 @@ struct VideoStudioSheetHost: View {
                 .frame(height: 1)
                 .padding(.top, 6)
                 .padding(.bottom, 4)
-            paramZone
-                .frame(maxHeight: .infinity, alignment: .top)
+            if layout == .dock, model.inspectorTarget == .clip, let clip = model.selectedClip {
+                dockClipColumns(clip)
+            } else {
+                paramZone
+                    .frame(maxHeight: .infinity, alignment: .top)
+            }
         }
+    }
+
+    /// A clip's controls in the dock's three columns: Duration · Speed ·
+    /// Volume | FADE | MOTION (FS-12.03 §3). Each column is a third of the
+    /// dock — 344 on a 1032 window — and 190 tall.
+    private func dockClipColumns(_ clip: VideoClip) -> some View {
+        let sections = VideoClipPanelSections.sections(for: clip.kind, leading: model.activeItemCommand)
+        let columns: [[VideoClipPanelSection]] = [
+            sections.filter { $0 != .fade && $0 != .motion },
+            sections.filter { $0 == .fade },
+            sections.filter { $0 == .motion },
+        ]
+        return GeometryReader { geo in
+            let width = VideoStudioDeskGeometry.dockColumnWidth(width: geo.size.width)
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(alignment: .top, spacing: 0) {
+                    ForEach(Array(columns.enumerated()), id: \.offset) { index, column in
+                        ScrollView(showsIndicators: false) {
+                            VStack(alignment: .leading, spacing: 4) {
+                                if index == 0, model.activeItemCommand == .trim { trimBlock(clip) }
+                                ForEach(column, id: \.self) { section in
+                                    clipSection(section, clip)
+                                }
+                            }
+                            .padding(.bottom, 8)
+                        }
+                        .frame(width: width, height: VideoStudioDeskGeometry.dockParamHeight, alignment: .top)
+                        .overlay(alignment: .trailing) {
+                            if index < columns.count - 1 {
+                                Rectangle().fill(Color.white.opacity(0.07)).frame(width: 1)
+                            }
+                        }
+                    }
+                }
+            }
+            .scrollDisabled(width * 3 <= geo.size.width + 0.5)
+        }
+        .frame(height: VideoStudioDeskGeometry.dockParamHeight)
     }
 
     private func perform(_ command: VideoItemCommand) {
@@ -934,7 +980,7 @@ struct VideoStudioSheetHost: View {
             switch model.lookTab {
             case .filter: filterParams
             case .adjust: adjustParams
-            case .color: VideoColorPanel(model: model, usesTallScopes: layout == .column)
+            case .color: VideoColorPanel(model: model, usesTallScopes: layout != .band)
             }
         }
     }

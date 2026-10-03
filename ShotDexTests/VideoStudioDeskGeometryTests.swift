@@ -97,6 +97,24 @@ struct VideoStudioDeskGeometryTests {
         #expect(Geometry.canOpenPool(windowWidth: 800, isInspectorOpen: false))
     }
 
+    /// FS-12.03 AC-2: selecting clip 2 does not move the frame — the
+    /// inspector is there either way — and its foot is 58 at y 546.
+    @Test func iPadLandscapeSelectedKeepsTheFrame() throws {
+        let input = Geometry.Input(
+            window: CGSize(width: 1376, height: 1032), canvas: sixteenNine,
+            isPoolOpen: true, isInspectorOpen: true
+        )
+        var columns = VideoDeskColumns()
+        let idle = Geometry.iPadLandscape(input)
+        columns.presentsSheetChanged(from: false, to: true)
+        var selected = input
+        selected.isInspectorOpen = columns.isInspectorOpen
+        let chosen = Geometry.iPadLandscape(selected)
+        #expect(chosen.frame == idle.frame)
+        let footer = Geometry.inspectorFooter(in: try #require(chosen.inspector))
+        #expect(footer == CGRect(x: 1096, y: 546, width: 280, height: 58))
+    }
+
     // MARK: iPad portrait
 
     /// FS-12.03 AC-3 (board IP1): header the whole width at 64; frame
@@ -117,6 +135,20 @@ struct VideoStudioDeskGeometryTests {
         #expect(near(frames.overview?.minY ?? 0, 696))
         #expect(near(frames.timeline.minY, 722) && near(frames.timeline.maxY, 1052))
         #expect(frames.dock == CGRect(x: 0, y: 1052, width: 1032, height: 324))
+    }
+
+    /// FS-12.03 AC-4: selected in portrait, the foot is 60 at y 1316 and
+    /// the timeline (722–1052) is above the dock, never under it.
+    @Test func iPadPortraitSelectedFooterAt1316() throws {
+        let frames = Geometry.iPadPortrait(.init(
+            window: CGSize(width: 1032, height: 1376), canvas: sixteenNine,
+            isPoolOpen: false, isInspectorOpen: true,
+            laneNeed: VideoStudioMetrics.Lanes.desk.timelineContentHeight(overlayLanes: 1, musicLanes: 2)
+        ))
+        let dock = try #require(frames.dock)
+        #expect(Geometry.dockFooter(in: dock) == CGRect(x: 0, y: 1316, width: 1032, height: 60))
+        #expect(frames.timeline.maxY <= dock.minY)
+        #expect(Geometry.dockParamTop + Geometry.dockParamHeight <= Geometry.dockFooterTop)
     }
 
     /// A 9:16 project would take the whole height by the width; the frame is

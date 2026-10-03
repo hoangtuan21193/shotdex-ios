@@ -8,6 +8,10 @@ struct VideoSessionFooter: View {
     let title: VideoItemTitle.Lines
     let onCancel: () -> Void
     let onCommit: () -> Void
+    /// The phone's row is 62 with 44pt discs; the iPad inspector's foot is
+    /// 58 (60 in the portrait dock) with 40pt discs (FS-12.03 §2–3).
+    var height: CGFloat = VideoStudioMetrics.toolbarHeight
+    var buttonSize: CGFloat = VideoStudioMetrics.sessionButton
 
     var body: some View {
         HStack(spacing: 12) {
@@ -15,7 +19,7 @@ struct VideoSessionFooter: View {
                 Image(systemName: "xmark")
                     .font(.system(size: 16, weight: .semibold))
                     .foregroundStyle(.white)
-                    .frame(width: VideoStudioMetrics.sessionButton, height: VideoStudioMetrics.sessionButton)
+                    .frame(width: buttonSize, height: buttonSize)
                     .background(Circle().fill(Color(red: 24 / 255, green: 24 / 255, blue: 26 / 255).opacity(0.82)))
                     .overlay(Circle().strokeBorder(Color.white.opacity(0.14), lineWidth: 1))
                     .contentShape(Circle())
@@ -40,7 +44,7 @@ struct VideoSessionFooter: View {
                 Image(systemName: "checkmark")
                     .font(.system(size: 17, weight: .semibold))
                     .foregroundStyle(.black)
-                    .frame(width: VideoStudioMetrics.sessionButton, height: VideoStudioMetrics.sessionButton)
+                    .frame(width: buttonSize, height: buttonSize)
                     .background(Circle().fill(Color.white))
                     .contentShape(Circle())
             }
@@ -48,7 +52,7 @@ struct VideoSessionFooter: View {
             .accessibilityLabel(VideoStudioCopy.keepChanges)
         }
         .padding(.horizontal, 14)
-        .frame(height: VideoStudioMetrics.toolbarHeight)
+        .frame(height: height)
         .frame(maxWidth: .infinity)
         .background(EditorTheme.panelSolid)
         .overlay(alignment: .top) { Rectangle().fill(EditorTheme.panelTopHairline).frame(height: 1) }

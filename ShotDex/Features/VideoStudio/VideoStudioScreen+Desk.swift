@@ -308,13 +308,27 @@ extension VideoStudioScreen {
     /// item's commands and controls otherwise, a tool's panel when one is
     /// open. Rounded at its top leading corner.
     func inspectorColumn(_ model: VideoStudioModel) -> some View {
-        VideoStudioSheetHost(
-            model: model,
-            actions: actions(model),
-            layout: .column,
-            importedMusic: importedMusic,
-            showsIdleLook: true
-        )
+        VStack(spacing: 0) {
+            VideoStudioSheetHost(
+                model: model,
+                actions: actions(model),
+                layout: .column,
+                importedMusic: importedMusic,
+                showsIdleLook: true
+            )
+            // The selected item's ✕ · name · ✓, at the column's foot
+            // (FS-12.03 §2). Export stays in the band: nothing has to make
+            // way for it.
+            if let title = model.selectionTitle {
+                VideoSessionFooter(
+                    title: title,
+                    onCancel: { model.cancelSession() },
+                    onCommit: { model.commitSession() },
+                    height: VideoStudioDeskGeometry.inspectorFooterHeight,
+                    buttonSize: VideoStudioDeskGeometry.footerButton
+                )
+            }
+        }
         .background(EditorTheme.panelSolid)
         .clipShape(UnevenRoundedRectangle(
             cornerRadii: .init(topLeading: VideoStudioDeskGeometry.inspectorCornerRadius),

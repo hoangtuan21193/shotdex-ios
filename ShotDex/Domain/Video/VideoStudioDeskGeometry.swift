@@ -73,6 +73,29 @@ enum VideoStudioDeskGeometry {
     static let dockColumnWidth: CGFloat = 344
     /// Under three of these a column is too narrow to read: two, scrolling.
     static let dockColumnMinimum: CGFloat = 200
+    /// A selected item in the dock: the command row 6 below its top, three
+    /// columns of controls 190 tall from 72, the ✕ · name · ✓ foot (60) at
+    /// 264 (FS-12.03 §3).
+    static let dockCommandRowTop: CGFloat = 6
+    static let dockParamTop: CGFloat = 72
+    static let dockParamHeight: CGFloat = 190
+    static let dockFooterTop: CGFloat = 264
+    static let dockFooterHeight: CGFloat = 60
+    /// The landscape inspector's foot: 58, at the column's bottom.
+    static let inspectorFooterHeight: CGFloat = 58
+    /// ✕ and ✓ in a wide window's foot.
+    static let footerButton: CGFloat = 40
+
+    /// Where the selected item's foot sits in the landscape inspector and in
+    /// the portrait dock.
+    static func inspectorFooter(in inspector: CGRect) -> CGRect {
+        CGRect(x: inspector.minX, y: inspector.maxY - inspectorFooterHeight, width: inspector.width, height: inspectorFooterHeight)
+    }
+
+    static func dockFooter(in dock: CGRect) -> CGRect {
+        CGRect(x: dock.minX, y: dock.minY + dockFooterTop, width: dock.width, height: dockFooterHeight)
+    }
+
     /// The least the portrait timeline keeps, whatever the frame wants.
     static let portraitTimelineFloor: CGFloat = 200
 
