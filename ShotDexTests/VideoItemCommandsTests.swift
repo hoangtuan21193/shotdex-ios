@@ -37,3 +37,17 @@ struct VideoItemCommandsTests {
         for command in [VideoItemCommand.split, .replace, .freeze, .duplicate, .addTrack, .delete] { #expect(!command.isSection) }
     }
 }
+
+extension VideoItemCommandsTests {
+    /// FS-12.04b AC-2: a photo clip — Split · Trim · Replace · Duplicate ·
+    /// Look · Delete; no Speed, Volume or Freeze cell.
+    @Test func photoRowHasNoSpeedVolumeFreeze() {
+        let row = VideoItemCommand.commands(for: .photoClip)
+        let spec: [VideoItemCommand] = [.split, .trim, .replace, .duplicate, .look, .delete]
+        #expect(row == spec.filter { !VideoItemCommand.notYetBuilt.contains($0) })
+        for absent in [VideoItemCommand.speed, .volume, .freeze] {
+            #expect(!row.contains(absent))
+        }
+        #expect(VideoItemCommand.commands(for: .freezeClip) == [.split, .trim, .duplicate, .delete])
+    }
+}
