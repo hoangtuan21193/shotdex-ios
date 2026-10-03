@@ -55,6 +55,32 @@ struct InfoCaptionKeywordModelTests {
         #expect(model.captionText.isEmpty)
     }
 
+    /// AC-3: the library has `Sunset` on 40 photos; `sun` suggests it first
+    /// with its count; `sunset, beach` + Return writes exactly `Sunset` and
+    /// `beach` — one write — and no lower-case `sunset`.
+    @Test func commaAddsTwoInLibrarySpelling() async throws {
+        var photos: [String: CaptionKeywords] = ["A": .empty]
+        for index in 0..<40 { photos["s\(index)"] = CaptionKeywords(keywords: ["Sunset"]) }
+        for index in 0..<12 { photos["s\(index)"]?.keywords.append("Sunrise") }
+        let harness = try CaptionKeywordHarness(photos)
+        try harness.store.replace(photos)
+        let model = InfoCaptionKeywordModel(assetId: "A", service: harness.service)
+        await model.load()
+
+        model.keywordText = "sun"
+        #expect(model.suggestions.first == KeywordCount(keyword: "Sunset", count: 40))
+        model.keywordText = "sunset, beach"
+        await model.commitKeywords()
+
+        #expect(harness.library.read(ids: ["A"])["A"]?.keywords == ["Sunset", "beach"])
+        #expect(model.keywords == ["Sunset", "beach"])
+        #expect(harness.writer.blocks.count == 1)
+        #expect(model.keywordText.isEmpty)
+        // × on a capsule takes exactly that keyword off.
+        await model.remove("beach")
+        #expect(harness.library.read(ids: ["A"])["A"]?.keywords == ["Sunset"])
+    }
+
     /// Leaving the field without a change writes nothing.
     @Test func unchangedCaptionWritesNothing() async throws {
         let harness = try CaptionKeywordHarness(["A": CaptionKeywords(caption: "same")])
