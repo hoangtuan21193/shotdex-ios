@@ -7,7 +7,7 @@
 hay nút ±1 khung, và scrub timeline từng khung một.
 
 Tay nắm mép clip và lệnh Trim (Start/End to Playhead): [FS-12.05](05-cutting-markers-and-fades.md). Chọn nhiều: [FS-12.11](11-multi-select-and-reorder.md). Bàn phím và
-con trỏ: [FS-12.17b](17b-keyboard-and-pointer.md). Canvas: hàng F6 của <https://claude.ai/artifact/B8NqQqRHcHoFknxQ9gHZPJ>.
+con trỏ: [FS-12.17b](17b-keyboard-and-pointer.md). Canvas: hàng F6 của [docs/design](../../design/README.md).
 
 ## 1. Người dùng cần gì
 

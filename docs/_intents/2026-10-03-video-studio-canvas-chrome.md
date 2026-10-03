@@ -11,7 +11,7 @@
 
 ## Problem — vấn đề
 
-Canvas Video Studio (<https://claude.ai/artifact/B8NqQqRHcHoFknxQ9gHZPJ>, Version 23, 82 board) đã vẽ lại khung
+Canvas Video Studio ([docs/design](../design/README.md), Version 23, 82 board) đã vẽ lại khung
 theo các comment của người dùng. Code vẫn là khung cũ. Luật chung của người dùng: design và code phải khớp nhau,
 nên hôm nay hai bên lệch nhau ở gần như mọi màn.
 

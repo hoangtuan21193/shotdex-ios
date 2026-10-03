@@ -8,7 +8,7 @@
 sáng của khung tối lẫn vùng tối của khung sáng. Căn khung khi chụp cầm tay, khử bóng ma bốn mức, một thanh độ mạnh.
 
 > Trạng thái: **đã build, `/verify` 2026-10-01: 19/22 AC xanh** — còn AC-14 (iPhone 12), AC-19 (Duo màn trong), AC-20 (máy thật).
-> Design: board `PH19_HDR`, `PH20_HDRSaveAs`, `IPP13_HDR`, `DC13_HDR` trên [canvas editor](https://claude.ai/artifact/T4tEUQrJtxBbi48HokiL9F), dựng từ số đo app 2026-10-02. Chưa có board Duo màn trong và iPad ngang. Mọi `⚠️ CẦN QUYẾT` đã chốt với người dùng ngày 2026-10-01.
+> Design: board `PH19_HDR`, `PH20_HDRSaveAs`, `IPP13_HDR`, `DC13_HDR` trên [canvas editor](../../design/README.md), dựng từ số đo app 2026-10-02. Chưa có board Duo màn trong và iPad ngang. Mọi `⚠️ CẦN QUYẾT` đã chốt với người dùng ngày 2026-10-01.
 
 ## 1. Người dùng cần gì
 

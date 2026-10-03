@@ -1,0 +1,260 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Mac · Context Menu</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0}
+button{font-family:inherit;padding:0;margin:0;cursor:default}
+input{font-family:inherit}
+</style>
+</helmet>
+<div style="width: 1440px; height: 900px; position: relative; overflow: hidden; border-radius: 16px; background: {{t.content}}; color: {{t.label}}; font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', system-ui, sans-serif; font-size: 13px">
+<!-- CONTENT: photo grid, scrolls under the toolbar -->
+<div style="position:absolute;left:244px;right:0px;top:0;bottom:0;overflow:hidden">
+<div style="position:absolute;left:16px;right:16px;top:64px;display:flex;flex-direction:column;gap:8px">
+<sc-for list="{{sections}}" as="s" hint-placeholder-count="2">
+<div style="display:flex;flex-direction:column;gap:8px">
+<div style="height:36px;display:flex;align-items:flex-end;justify-content:space-between;padding:0 4px">
+<div style="display:flex;align-items:baseline;gap:8px"><span style="font-size:15px;font-weight:600">{{s.title}}</span><span style="font-size:13px;color:{{t.label2}}">{{s.place}}</span></div>
+<span style="font-size:12px;color:{{t.label2}};font-variant-numeric:tabular-nums">{{s.count}}</span>
+</div>
+<div style="display:grid;grid-template-columns:repeat(7, minmax(0, 1fr));gap:2px">
+<sc-for list="{{s.tiles}}" as="p" hint-placeholder-count="14"><div aria-label="{{p.label}}" style="position:relative;aspect-ratio:1/1;overflow:hidden;background:{{t.fill2}}">
+<sc-if value="{{p.loaded}}" hint-placeholder-val="{{true}}">
+<div style="position:absolute;inset:0;background:{{p.bg}};opacity:{{p.op}}"></div>
+<div style="position:absolute;left:6px;top:6px;height:16px;padding:0 5px;border-radius:4px;background:rgba(0,0,0,0.58);color:#FFFFFF;font-size:10px;font-weight:600;line-height:16px">{{p.ft}}</div>
+<sc-if value="{{p.isVideo}}" hint-placeholder-val="{{false}}"><div style="position:absolute;right:6px;top:6px;height:16px;padding:0 6px;border-radius:8px;background:rgba(0,0,0,0.45);color:#FFFFFF;font-size:10px;font-weight:600;line-height:16px;font-variant-numeric:tabular-nums">{{p.dur}}</div></sc-if>
+<sc-if value="{{p.offline}}" hint-placeholder-val="{{false}}"><div role="img" aria-label="Offline" style="position:absolute;right:6px;top:6px;width:18px;height:18px;border-radius:9px;background:rgba(0,0,0,0.55);display:flex;align-items:center;justify-content:center"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 14h18v5H3z M3 14l3-9h12l3 9"></path></svg></div></sc-if>
+<div style="position:absolute;left:0;right:0;bottom:0;height:30px;background:linear-gradient(180deg,rgba(0,0,0,0) 0%,rgba(0,0,0,0.55) 100%)"></div>
+<div style="position:absolute;left:5px;right:6px;bottom:5px;height:14px;display:flex;align-items:center;gap:4px;color:#FFFFFF;font-size:10px;font-weight:600;line-height:14px;font-variant-numeric:tabular-nums;filter:drop-shadow(0 1px 1px rgba(0,0,0,0.45))">
+<sc-if value="{{p.pick}}" hint-placeholder-val="{{false}}"><svg role="img" aria-label="Picked" width="10" height="10" viewBox="0 0 24 24" fill="#FFFFFF" stroke="#FFFFFF" stroke-width="2" stroke-linejoin="round" style="flex:none"><path d="M6 3v18 M6 4h12l-3 4.5 3 4.5H6z"></path></svg></sc-if>
+<sc-if value="{{p.rej}}" hint-placeholder-val="{{false}}"><svg role="img" aria-label="Rejected" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="3.4" stroke-linecap="round" style="flex:none"><path d="M6 6l12 12 M18 6L6 18"></path></svg></sc-if>
+<sc-if value="{{p.fav}}" hint-placeholder-val="{{false}}"><svg role="img" aria-label="Favorite" width="10" height="10" viewBox="0 0 24 24" fill="#FFFFFF" stroke="#FFFFFF" stroke-width="1.5" style="flex:none"><path d="M12 20s-7.5-4.6-7.5-10A4.3 4.3 0 0 1 12 7.2 4.3 4.3 0 0 1 19.5 10C19.5 15.4 12 20 12 20z"></path></svg></sc-if>
+<sc-if value="{{p.rated}}" hint-placeholder-val="{{false}}"><span style="display:flex;align-items:center;gap:1px;flex:none"><svg width="10" height="10" viewBox="0 0 24 24" fill="#FFFFFF" style="flex:none"><path d="M12 3.5l2.6 5.3 5.9.9-4.25 4.1 1 5.8L12 16.9l-5.25 2.7 1-5.8L3.5 9.7l5.9-.9z"></path></svg>{{p.stars}}</span></sc-if>
+<span style="flex:1;min-width:0;text-align:right;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{p.meta}}</span>
+</div>
+</sc-if>
+<sc-if value="{{p.pending}}" hint-placeholder-val="{{false}}"><div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:{{t.label3}}"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16v14H4z M4 15l4.5-4 3.5 3 2.5-2 5.5 4.5 M15.5 8.5h.01"></path></svg></div></sc-if>
+<sc-if value="{{p.hover}}" hint-placeholder-val="{{false}}"><div style="position:absolute;inset:0;box-shadow:inset 0 0 0 1px {{t.label3}}"></div></sc-if>
+<sc-if value="{{p.sel}}" hint-placeholder-val="{{false}}"><div style="position:absolute;inset:0;border:3px solid {{t.accent}}"></div></sc-if>
+</div></sc-for>
+</div>
+</div>
+</sc-for>
+</div>
+</div>
+<!-- Scroll-edge fade under the toolbar -->
+<div style="position:absolute;left:244px;right:0px;top:0;height:64px;background:linear-gradient(180deg,{{edge}} 0%,{{edgeClear}} 100%);pointer-events:none"></div>
+<!-- TOOLBAR: [Back|Forward] title · [Grid|List | Filter and Sort] · [Share|Inspector] · search (3 groups + search) -->
+<div style="position:absolute;left:256px;right:16px;top:8px;height:44px;display:flex;align-items:center;gap:12px">
+<div style="height:36px;border-radius:18px;background:{{t.glass}};border:1px solid {{t.glassStroke}};box-shadow:{{t.glassShadow}};backdrop-filter:blur(24px) saturate(1.6);-webkit-backdrop-filter:blur(24px) saturate(1.6);display:flex;align-items:center;padding:0 2px"><button aria-label="Back" style="width:36px;height:32px;border:none;background:none;display:flex;align-items:center;justify-content:center;color:{{t.label}}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"></path></svg></button><button aria-label="Forward" disabled style="width:34px;height:32px;border:none;background:none;display:flex;align-items:center;justify-content:center;color:{{t.label3}}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"></path></svg></button></div>
+<div style="display:flex;flex-direction:column;gap:1px;min-width:0"><div style="font-size:15px;font-weight:600;line-height:18px;white-space:nowrap">All Photos</div><div style="font-size:11px;color:{{t.label2}};line-height:13px;white-space:nowrap;font-variant-numeric:tabular-nums">3 selected · 79.4 MB</div></div>
+<div style="flex:1"></div>
+<div style="height:36px;border-radius:18px;background:{{t.glass}};border:1px solid {{t.glassStroke}};box-shadow:{{t.glassShadow}};backdrop-filter:blur(24px) saturate(1.6);-webkit-backdrop-filter:blur(24px) saturate(1.6);display:flex;align-items:center;padding:0 2px"><button aria-label="Grid" aria-pressed="true" style="width:36px;height:30px;border-radius:15px;border:none;background:{{t.pressed}};display:flex;align-items:center;justify-content:center;color:{{t.label}}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h7v7H4z M13 4h7v7h-7z M4 13h7v7H4z M13 13h7v7h-7z"></path></svg></button><button aria-label="List" style="width:36px;height:32px;border:none;background:none;display:flex;align-items:center;justify-content:center;color:{{t.label}}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6h11 M9 12h11 M9 18h11 M4.5 6h.01 M4.5 12h.01 M4.5 18h.01"></path></svg></button><span aria-hidden="true" style="width:1px;height:18px;background:{{t.sep}};margin:0 4px;flex:none"></span><button aria-label="Filter and Sort" style="width:36px;height:32px;border:none;background:none;display:flex;align-items:center;justify-content:center;color:{{t.label}}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16 M7 12h10 M10 17h4"></path></svg></button></div>
+<div style="height:36px;border-radius:18px;background:{{t.glass}};border:1px solid {{t.glassStroke}};box-shadow:{{t.glassShadow}};backdrop-filter:blur(24px) saturate(1.6);-webkit-backdrop-filter:blur(24px) saturate(1.6);display:flex;align-items:center;padding:0 2px"><button aria-label="Share" style="width:36px;height:32px;border:none;background:none;display:flex;align-items:center;justify-content:center;color:{{t.label}}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12 M8 7l4-4 4 4 M5 12v8h14v-8"></path></svg></button><button aria-label="Show Inspector" style="width:36px;height:32px;border:none;background:none;display:flex;align-items:center;justify-content:center;color:{{t.label}}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16v14H4z M15 5v14"></path></svg></button></div>
+<label style="width:220px;height:36px;border-radius:18px;background:{{t.glass}};border:1px solid {{t.glassStroke}};box-shadow:{{t.glassShadow}};backdrop-filter:blur(24px) saturate(1.6);-webkit-backdrop-filter:blur(24px) saturate(1.6);display:flex;align-items:center;gap:8px;padding:0 12px;box-sizing:border-box;color:{{t.label2}};flex:none"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.5 4a6.5 6.5 0 1 0 0 13a6.5 6.5 0 1 0 0-13z M15.5 15.5L20.5 20.5"></path></svg><span style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)">Search</span><input placeholder="Canon R6 85mm ISO 3200" style="flex:1;min-width:0;border:none;background:none;outline:none;font-size:13px;color:{{t.label}}"></label>
+</div>
+<!-- SIDEBAR: canonical (Library · Sources · Collections · Utilities), floating glass panel -->
+<nav aria-label="Sidebar" style="position:absolute;left:8px;top:8px;bottom:8px;width:228px;border-radius:18px;background:{{t.sidebar}};border:1px solid {{t.glassStroke}};box-shadow:{{t.sidebarShadow}};backdrop-filter:blur(30px) saturate(1.8);-webkit-backdrop-filter:blur(30px) saturate(1.8);box-sizing:border-box;overflow:hidden">
+<div style="position:absolute;left:14px;top:16px;display:flex;gap:8px">
+<div style="width:12px;height:12px;border-radius:6px;background:#FF5F57;box-shadow:inset 0 0 0 0.5px rgba(0,0,0,0.2)"></div>
+<div style="width:12px;height:12px;border-radius:6px;background:#FEBC2E;box-shadow:inset 0 0 0 0.5px rgba(0,0,0,0.2)"></div>
+<div style="width:12px;height:12px;border-radius:6px;background:#28C840;box-shadow:inset 0 0 0 0.5px rgba(0,0,0,0.2)"></div>
+</div>
+<button aria-label="Hide Sidebar" style="position:absolute;right:10px;top:9px;width:28px;height:28px;border-radius:8px;border:none;background:none;display:flex;align-items:center;justify-content:center;color:{{t.label2}}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16v14H4z M9 5v14"></path></svg></button>
+<div style="position:absolute;left:8px;right:8px;top:48px;bottom:60px;display:flex;flex-direction:column;gap:12px;overflow:hidden">
+<sc-for list="{{groups}}" as="g" hint-placeholder-count="4">
+<div style="display:flex;flex-direction:column;gap:0">
+<sc-if value="{{g.hasTitle}}" hint-placeholder-val="{{true}}"><div style="height:24px;display:flex;align-items:center;justify-content:space-between;padding:0 8px;font-size:11px;font-weight:600;color:{{t.label2}}"><span>{{g.title}}</span><sc-if value="{{g.addable}}" hint-placeholder-val="{{false}}"><button aria-label="{{g.addLabel}}" style="width:20px;height:20px;border:none;background:none;color:{{t.label2}};display:flex;align-items:center;justify-content:center"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14 M5 12h14"></path></svg></button></sc-if></div></sc-if>
+<sc-for list="{{g.rows}}" as="r" hint-placeholder-count="4">
+<div role="treeitem" aria-selected="{{r.selA}}" style="height:28px;border-radius:8px;background:{{r.bg}};display:flex;align-items:center;gap:8px;padding:0 8px">
+<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex:none;color:{{r.iconColor}}"><path d="{{r.d}}"></path></svg>
+<span style="flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:13px;color:{{r.textColor}}">{{r.name}}</span>
+<sc-if value="{{r.chev}}" hint-placeholder-val="{{false}}"><button aria-label="Show Albums" aria-expanded="false" style="width:16px;height:16px;border:none;background:none;color:{{t.label2}};display:flex;align-items:center;justify-content:center"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"></path></svg></button></sc-if>
+<sc-if value="{{r.offline}}" hint-placeholder-val="{{false}}"><span style="height:16px;padding:0 6px;border-radius:8px;background:{{t.fill}};font-size:10px;font-weight:600;line-height:16px;color:{{t.label2}}">Offline</span></sc-if>
+<sc-if value="{{r.progress}}" hint-placeholder-val="{{false}}"><svg role="img" aria-label="{{r.progLabel}}" width="14" height="14" viewBox="0 0 24 24" style="flex:none"><circle cx="12" cy="12" r="9" fill="none" stroke="{{t.track}}" stroke-width="3"></circle><circle cx="12" cy="12" r="9" fill="none" stroke="{{t.accent}}" stroke-width="3" stroke-dasharray="{{r.dash}}" stroke-linecap="round" transform="rotate(-90 12 12)"></circle></svg></sc-if>
+<sc-if value="{{r.access}}" hint-placeholder-val="{{false}}"><svg role="img" aria-label="Needs access" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="{{t.orange}}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="M12 4l9 16H3z M12 10v4 M12 17h.01"></path></svg></sc-if>
+<sc-if value="{{r.eject}}" hint-placeholder-val="{{false}}"><button aria-label="Eject {{r.name}}" style="width:18px;height:18px;border:none;background:none;color:{{t.label2}};display:flex;align-items:center;justify-content:center"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 6l6 7H6z M6 17h12"></path></svg></button></sc-if>
+<span style="font-size:11px;color:{{t.label2}};font-variant-numeric:tabular-nums">{{r.count}}</span>
+</div>
+</sc-for>
+</div>
+</sc-for>
+</div>
+<!-- Sidebar foot: idle status; progress only on boards about a running task -->
+<sc-if value="{{foot.idle}}" hint-placeholder-val="{{true}}"><div role="status" style="position:absolute;left:16px;right:16px;bottom:16px;height:28px;display:flex;align-items:center;gap:6px;font-size:11px;color:{{t.label2}}"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg><span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{foot.label}}</span></div></sc-if>
+<sc-if value="{{foot.busy}}" hint-placeholder-val="{{false}}"><div role="status" style="position:absolute;left:8px;right:8px;bottom:8px;height:44px;border-radius:10px;background:{{t.fill}};display:flex;flex-direction:column;justify-content:center;gap:6px;padding:0 10px;box-sizing:border-box">
+<div style="display:flex;justify-content:space-between;font-size:11px"><span style="color:{{t.label}};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{foot.label}}</span><span style="color:{{t.label2}};font-variant-numeric:tabular-nums">{{foot.pct}}</span></div>
+<div style="height:4px;border-radius:2px;background:{{t.track}}"><div style="width:{{foot.pct}};height:4px;border-radius:2px;background:{{t.accent}}"></div></div>
+</div></sc-if>
+</nav>
+<!-- CONTEXT MENU: 12 rows, no shortcut column (shortcuts live in the menu bar), unavailable items hidden -->
+<div role="menu" aria-label="Photo actions" style="position:absolute;left:840px;top:192px;width:220px;padding:5px;border-radius:10px;background:{{t.menu}};border:0.5px solid {{t.glassStroke}};box-shadow:{{t.menuShadow}};box-sizing:border-box;font-size:13px">
+<sc-for list="{{ctx}}" as="m" hint-placeholder-count="12">
+<sc-if value="{{m.sep}}" hint-placeholder-val="{{false}}"><div style="height:1px;background:{{t.sep}};margin:4px 10px"></div></sc-if>
+<sc-if value="{{m.head}}" hint-placeholder-val="{{false}}"><div style="height:22px;padding:0 10px 0 24px;font-size:11px;font-weight:600;color:{{t.label2}};display:flex;align-items:center">{{m.l}}</div></sc-if>
+<sc-if value="{{m.item}}" hint-placeholder-val="{{true}}"><div role="menuitem" aria-disabled="{{m.dis}}" style="height:22px;border-radius:5px;display:flex;align-items:center;padding:0 10px 0 6px;background:{{m.bg}};color:{{m.fg}}">
+<span style="width:18px;flex:none;font-size:11px;font-weight:600;text-align:center">{{m.check}}</span>
+<span style="flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{m.l}}</span>
+<span style="flex:none;padding-left:{{m.kp}};color:{{m.kc}};white-space:nowrap;letter-spacing:0.5px">{{m.k}}</span>
+<sc-if value="{{m.sub}}" hint-placeholder-val="{{false}}"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="flex:none;margin-left:4px"><path d="M9 6l6 6-6 6"></path></svg></sc-if>
+</div></sc-if>
+</sc-for>
+</div>
+<div role="menu" aria-label="Add to Album" style="position:absolute;left:1056px;top:375px;width:220px;padding:5px;border-radius:10px;background:{{t.menu}};border:0.5px solid {{t.glassStroke}};box-shadow:{{t.menuShadow}};box-sizing:border-box;font-size:13px">
+<sc-for list="{{albums}}" as="m" hint-placeholder-count="12">
+<sc-if value="{{m.sep}}" hint-placeholder-val="{{false}}"><div style="height:1px;background:{{t.sep}};margin:4px 10px"></div></sc-if>
+<sc-if value="{{m.head}}" hint-placeholder-val="{{false}}"><div style="height:22px;padding:0 10px 0 24px;font-size:11px;font-weight:600;color:{{t.label2}};display:flex;align-items:center">{{m.l}}</div></sc-if>
+<sc-if value="{{m.item}}" hint-placeholder-val="{{true}}"><div role="menuitem" aria-disabled="{{m.dis}}" style="height:22px;border-radius:5px;display:flex;align-items:center;padding:0 10px 0 6px;background:{{m.bg}};color:{{m.fg}}">
+<span style="width:18px;flex:none;font-size:11px;font-weight:600;text-align:center">{{m.check}}</span>
+<span style="flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{m.l}}</span>
+<span style="flex:none;padding-left:{{m.kp}};color:{{m.kc}};white-space:nowrap;letter-spacing:0.5px">{{m.k}}</span>
+<sc-if value="{{m.sub}}" hint-placeholder-val="{{false}}"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="flex:none;margin-left:4px"><path d="M9 6l6 6-6 6"></path></svg></sc-if>
+</div></sc-if>
+</sc-for>
+</div>
+<svg aria-hidden="true" width="18" height="24" viewBox="0 0 18 24" style="position:absolute;left:836px;top:186px"><path d="M1.5 1.5 L1.5 19 L6 14.8 L9.2 21.8 L12.2 20.5 L9 13.6 L15 13.6 Z" fill="#000000" stroke="#FFFFFF" stroke-width="1.4" stroke-linejoin="round"></path></svg>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"dark":{"editor":"boolean","default":false},"$preview":{"width":1440,"height":900}}'>
+// v2 tokens (MAC_STYLE v2 rules): accentFill/onAccentFill for every filled control with text, opaque menu,
+// one sheet grey, scrim drawn above sidebar and toolbar, rowAlt zebra, field = content + 1px sep.
+const LIGHT = { content:'#FFFFFF', label:'rgba(0,0,0,0.88)', label2:'rgba(0,0,0,0.56)', label3:'rgba(0,0,0,0.28)',
+  sep:'rgba(0,0,0,0.10)', fill:'rgba(0,0,0,0.05)', fill2:'#F2F2F4', pressed:'rgba(0,0,0,0.09)', track:'rgba(0,0,0,0.10)',
+  glass:'rgba(255,255,255,0.72)', glassStroke:'rgba(0,0,0,0.08)', glassShadow:'0 2px 10px rgba(0,0,0,0.10)',
+  sidebar:'rgba(244,244,247,0.86)', sidebarShadow:'0 8px 28px rgba(0,0,0,0.12)', rowSel:'rgba(0,0,0,0.08)',
+  accent:'#C6730E', onAccent:'#FFFFFF', red:'#FF3B30', green:'#34C759', orange:'#FF9500',
+  accentFill:'#A35E0A', onAccentFill:'#FFFFFF', accentText:'#A35E0A', accentSoft:'rgba(198,115,14,0.14)', focusRing:'rgba(198,115,14,0.45)',
+  menu:'rgba(246,246,248,0.97)', menuShadow:'0 10px 30px rgba(0,0,0,0.22)',
+  sheet:'#F6F6F8', sheetShadow:'0 24px 60px rgba(0,0,0,0.28)', scrim:'rgba(0,0,0,0.18)', rowAlt:'rgba(0,0,0,0.03)',
+  field:'#FFFFFF', redText:'#C4001A', greenText:'#1F7A35', orangeText:'#9A5200',
+  segOn:'#FFFFFF', segShadow:'0 1px 2px rgba(0,0,0,0.18)', checkboxStroke:'rgba(0,0,0,0.25)' };
+const DARK = { content:'#1C1C1E', label:'rgba(255,255,255,0.90)', label2:'rgba(255,255,255,0.58)', label3:'rgba(255,255,255,0.28)',
+  sep:'rgba(255,255,255,0.10)', fill:'rgba(255,255,255,0.07)', fill2:'#2C2C2E', pressed:'rgba(255,255,255,0.12)', track:'rgba(255,255,255,0.14)',
+  glass:'rgba(50,50,54,0.72)', glassStroke:'rgba(255,255,255,0.10)', glassShadow:'0 2px 12px rgba(0,0,0,0.45)',
+  sidebar:'rgba(38,38,42,0.86)', sidebarShadow:'0 8px 28px rgba(0,0,0,0.5)', rowSel:'rgba(255,255,255,0.10)',
+  accent:'#EB9526', onAccent:'#000000', red:'#FF453A', green:'#30D158', orange:'#FF9F0A',
+  accentFill:'#EB9526', onAccentFill:'#000000', accentText:'#EB9526', accentSoft:'rgba(235,149,38,0.18)', focusRing:'rgba(235,149,38,0.50)',
+  menu:'rgba(40,40,44,0.97)', menuShadow:'0 10px 30px rgba(0,0,0,0.22)',
+  sheet:'#2A2A2D', sheetShadow:'0 24px 60px rgba(0,0,0,0.60)', scrim:'rgba(0,0,0,0.35)', rowAlt:'rgba(255,255,255,0.04)',
+  field:'#1C1C1E', redText:'#FF6961', greenText:'#30D158', orangeText:'#FFB340',
+  segOn:'rgba(255,255,255,0.20)', segShadow:'0 1px 2px rgba(0,0,0,0.30)', checkboxStroke:'rgba(255,255,255,0.30)' };
+const SKIES=[['#5B7FA6','#E8C39E'],['#2E4A6B','#9FB8C9'],['#7A5C8E','#F2A774'],['#3D6B5A','#C9D6A3'],['#8AA9C1','#F4E1C1'],
+ ['#1F3A4D','#D98C5F'],['#4F6D7A','#DDE2C6'],['#6B4E3D','#E2B07A'],['#355C7D','#C06C84'],['#2B5876','#4E4376'],['#A3B18A','#344E41'],['#D4A373','#606C38']];
+const tile=(i)=>{const s=SKIES[i%SKIES.length];return 'linear-gradient(180deg,'+s[0]+' 0%,'+s[1]+' 58%,#2F3B2F 58%,#1E271E 100%)';};
+const META=['ISO 400 · 85mm · f/1.8','ISO 100 · 24mm · f/8','ISO 3200 · 35mm · f/1.4','ISO 200 · 70mm · f/2.8',
+ 'ISO 800 · 50mm · f/2','ISO 125 · 16mm · f/11','ISO 640 · 135mm · f/1.8','ISO 1600 · 23mm · f/2','ISO 250 · 56mm · f/1.2'];
+const FT=['HEIC','RAW','JPG','RAW','HEIC','RAW','JPG','HEIC','RAW'];
+const DUR=['0:42','1:08','0:17','2:31'];
+const I = {
+  all:'M4 5h16v14H4z M4 15l4.5-4 3.5 3 2.5-2 5.5 4.5',
+  fav:'M12 20s-7.5-4.6-7.5-10A4.3 4.3 0 0 1 12 7.2 4.3 4.3 0 0 1 19.5 10C19.5 15.4 12 20 12 20z',
+  video:'M3 7h12v10H3z M15 10.5l6-3v9l-6-3',
+  raw:'M12 3a9 9 0 1 0 0.01 0z M9.5 3.4l2.5 8.6 M20.6 9.6L12 12 M14.5 20.6L12 12 M3.4 14.4L12 12',
+  recent:'M12 3a9 9 0 1 0 0.01 0z M12 7v5l3.5 2',
+  library:'M7 7h13v12H7z M4 16V4h13',
+  folder:'M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z',
+  drive:'M3 14h18v5H3z M3 14l3-9h12l3 9 M17 16.5h.01',
+  server:'M4 4h16v6H4z M4 14h16v6H4z M8 7h.01 M8 17h.01',
+  onthisday:'M4 6h16v14H4z M4 10h16 M8 3v5 M16 3v5 M9 15l2 2 4-4',
+  album:'M4 9h16v11H4z M6.5 6h11 M9 3h6',
+  smart:'M4 9h16v11H4z M6.5 6h11 M9 3h6 M12 12v5 M9.5 14.5h5',
+  stats:'M3 20h18 M6.5 16.5v-5 M11.5 16.5V6 M16.5 16.5v-8',
+  places:'M9 4L3 6v14l6-2 6 2 6-2V4l-6 2z M9 4v14 M15 6v14',
+  trips:'M12 21s-6-5.5-6-11a6 6 0 0 1 12 0c0 5.5-6 11-6 11z M12 8.5v.01',
+  dup:'M8 8h12v12H8z M4 16V4h12',
+  collage:'M4 4h16v16H4z M12 4v16 M12 12h8',
+  film:'M4 4h16v16H4z M8 4v16 M16 4v16 M4 9h4 M4 15h4 M16 9h4 M16 15h4',
+  onserver:'M7 18h10a4 4 0 0 0 .6-7.95A6 6 0 0 0 6.2 9.2 4.5 4.5 0 0 0 7 18z M12 16v-5 M9.5 13.5L12 11l2.5 2.5',
+  camera:'M4 8h3l2-3h6l2 3h3v11H4z M12 10.5a3.5 3.5 0 1 0 0.01 0z',
+  lens:'M12 3a9 9 0 1 0 0.01 0z M12 7.5a4.5 4.5 0 1 0 0.01 0z',
+  clock:'M12 3a9 9 0 1 0 0.01 0z M12 7v5l3.5 2',
+  search:'M10.5 4a6.5 6.5 0 1 0 0 13a6.5 6.5 0 1 0 0-13z M15.5 15.5L20.5 20.5',
+  sliders:'M4 7h10 M18 7h2 M4 17h4 M12 17h8 M14 5v4 M8 15v4',
+  photo:'M4 5h16v14H4z M4 15l4.5-4 3.5 3 2.5-2 5.5 4.5 M15.5 8.5h.01'
+};
+// Rating / flag / favorite per photo (FS-01.12 §7). Deterministic from the tile seed; o.marks overrides by index.
+const RATES=[0,0,3,0,0,4,0,2,0,0,5,0,1,0,3,0,0];
+function markFor(k, isVideo){
+  return { r: RATES[k%RATES.length], f: isVideo?'':((k%7)===3?'p':((k%11)===8?'x':'')), fav: (k%9)===5 };
+}
+function tiles(n, seed, o){
+  o=o||{}; const out=[];
+  for(let i=0;i<n;i++){
+    const k=i+seed; const isVideo=!o.noVideo && (k%11)===4;
+    const pending=(o.pendingFrom!=null && i>=o.pendingFrom); const off=!!o.offline;
+    const meta=o.meta?o.meta[k%o.meta.length]:META[k%META.length];
+    const mk=(o.marks && o.marks[i])?o.marks[i]:markFor(k,isVideo);
+    const words=[]; if(mk.r) words.push(mk.r+(mk.r===1?' star':' stars')); if(mk.f==='p') words.push('Picked'); if(mk.f==='x') words.push('Rejected'); if(mk.fav) words.push('Favorite');
+    out.push({ bg: tile(k*5+3), ft: isVideo?'MOV':(o.ft?o.ft[k%o.ft.length]:FT[k%FT.length]), isVideo, dur: DUR[k%DUR.length],
+      meta: isVideo?'4K · 24 fps':meta, sel:(o.sel||[]).indexOf(i)>=0, hover:(o.hover===i), offline: off,
+      op: mk.f==='x'?'0.45':'1', pick: mk.f==='p', rej: mk.f==='x', fav: !!mk.fav, rated: mk.r>0, stars: String(mk.r),
+      loaded: !pending, pending,
+      label: pending?'Photo, loading':((isVideo?'Video':'Photo')+', '+(isVideo?'4K':meta)+(words.length?', '+words.join(', '):'')+(off?', offline':'')) });
+  }
+  return out;
+}
+// Canonical sidebar (consistency §1). o.sel = selected row name; o.offline unplugs T7; o.newFolder adds Client Shoots 2026 indexing.
+function sidebar(t, o){
+  o=o||{};
+  const row=(name,d,count,x)=>{x=x||{};const s=(o.sel===name);const dim=!!(x.off||x.access);
+    return {name,d,count:(x.off||x.prog||x.access)?'':(count||''),eject:!!x.eject,chev:!!x.chev,selA:s?'true':'false',
+      bg:s?t.rowSel:'transparent', iconColor:dim?t.label2:t.accent, textColor:dim?t.label2:t.label,
+      offline:!!x.off, progress:!!x.prog, progLabel:x.progLabel||'', dash:x.dash||'0 100', access:!!x.access};};
+  const t7 = o.offline ? row('T7 RAW Archive',I.drive,'',{off:true}) : row('T7 RAW Archive',I.drive,'26,107',{eject:true});
+  const sources=[row('Photos Library',I.library,'23,904'),row('2026 Japan',I.folder,'4,118'),t7,row('NAS Home',I.server,'1,102')];
+  if(o.newFolder) sources.push(row('Client Shoots 2026',I.folder,'',{prog:true,dash:'18.7 100',progLabel:'Adding, 33 percent'}));
+  return [
+    {hasTitle:false, rows:[row('All Photos',I.all,o.allCount||'55,231'),row('Favorites',I.fav,'1,862'),row('Videos',I.video,'1,204'),row('RAW',I.raw,'31,540'),row('Recently Added',I.recent)]},
+    {hasTitle:true, title:'Sources', addable:true, addLabel:'Add Source', rows:sources},
+    {hasTitle:true, title:'Collections', addable:true, addLabel:'New Album', rows:[row('On This Day',I.onthisday),row('Albums',I.album,'38',{chev:true}),row('Night ISO 3200+',I.smart,'2,411'),row('85mm Portraits',I.smart,'986')]},
+    {hasTitle:true, title:'Utilities', addable:false, rows:[row('Statistics',I.stats),row('Places',I.places),row('Trips',I.trips,'12'),row('Duplicates',I.dup,'53'),row('Collages',I.collage,'12'),row('Video Projects',I.film,'7'),row('On Server',I.onserver,'712')]}
+  ];
+}
+const IDLE_FOOT = {idle:true, busy:false, label:'Up to date · indexed 2 min ago', pct:'0%'};
+// Menu rows: '-' separator, {h:'Header'}, or [label, shortcut, flags]; flags: h highlighted, s submenu, c checked, d disabled.
+// keys:false drops the shortcut column (context menus). Highlight = accentFill + onAccentFill.
+function menu(t, arr, keys){
+  const showKeys = keys!==false;
+  return arr.map(x=>{
+    if(x==='-') return {sep:true};
+    if(x && x.h) return {head:true, l:x.h};
+    const f=x[2]||''; const hi=f.indexOf('h')>=0, dis=f.indexOf('d')>=0; const k=showKeys?(x[1]||''):'';
+    return {item:true, l:x[0], k, kp:k?'12px':'0', sub:f.indexOf('s')>=0, check:f.indexOf('c')>=0?'✓':'', dis:dis?'true':'false',
+      bg:hi?t.accentFill:'transparent', fg:hi?t.onAccentFill:(dis?t.label3:t.label), kc:hi?t.onAccentFill:(dis?t.label3:t.label2)};
+  });
+}
+function edges(dark){ return { edge: dark?'rgba(28,28,30,0.85)':'rgba(255,255,255,0.85)', edgeClear: dark?'rgba(28,28,30,0)':'rgba(255,255,255,0)' }; }
+class Component extends DCLogic {
+  renderVals() {
+    const dark=!!this.props.dark; const t = dark ? DARK : LIGHT;
+    const groups=sidebar(t,{sel:'All Photos'});
+    const sections=[
+      {title:'Monday, September 28', place:'Kyoto · T7 RAW Archive', count:'48 photos', tiles:tiles(14,0,{sel:[1,2,3]})},
+      {title:'Sunday, September 27', place:'Nara · T7 RAW Archive', count:'112 photos', tiles:tiles(21,14,{})}
+    ];
+    const ctx=menu(t,[
+      ['Open 3 Photos'],['Quick Look'],'-',
+      ['Edit'],['Get Info'],'-',
+      ['Rating','','s'],['Flag','','s'],['Favorite'],'-',
+      ['Add to Album','','sh'],['Share','','s'],['Export 3 Photos…'],'-',
+      ['Show in Finder'],'-',
+      ['Move to Trash']
+    ], false);
+    const albums=menu(t,[
+      ['New Album with Selection'],['New Album…'],'-',{h:'Albums'},
+      ['Kyoto Autumn','','h'],['Iceland 2026'],['Portfolio'],['Dolomites'],['Street 2025'],['Client Proofs']
+    ], false);
+    const e=edges(dark);
+    return { t, groups, sections, ctx, albums, edge:e.edge, edgeClear:e.edgeClear, foot:IDLE_FOOT };
+  }
+}
+</script>
+</body>
+</html>

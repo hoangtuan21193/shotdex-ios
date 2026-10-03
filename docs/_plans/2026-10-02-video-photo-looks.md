@@ -4,7 +4,7 @@
 |---|---|
 | Đặc tả | [`FS-12.06c`](../02-functional-spec/FS-12-video-studio/06c-photo-looks.md) (16 AC — AC-16 thêm lúc duyệt) · [FS-12.06b §3](../02-functional-spec/FS-12-video-studio/06b-scopes-luts-and-tracking.md) (LUT là một loại look) · [FS-12.08 §2](../02-functional-spec/FS-12-video-studio/08-model-and-v1-limits.md) (project/clip giữ ô look) |
 | Intent | [2026-09-30-user-wishes-research](../_intents/2026-09-30-user-wishes-research.md), mục 8 |
-| Design | canvas Video Studio <https://claude.ai/artifact/B8NqQqRHcHoFknxQ9gHZPJ> (Version 23), hàng F5: `F5_P_Looks` · `F5_P_ClipLook` · `F5_DC_Looks` · `F5_DC_ClipLook` · `F5_DI_Looks` · `F5_DI_ClipLook` · `F5_IL_Looks` · `F5_IP_Looks`; dòng LUT mất trên `ES_P/DC/DI/IL_ExportSettings` — **4 board ES_* phải đổi chữ** theo spec (Q2, việc của canvas) |
+| Design | canvas Video Studio [docs/design](../design/README.md) (Version 23), hàng F5: `F5_P_Looks` · `F5_P_ClipLook` · `F5_DC_Looks` · `F5_DC_ClipLook` · `F5_DI_Looks` · `F5_DI_ClipLook` · `F5_IL_Looks` · `F5_IP_Looks`; dòng LUT mất trên `ES_P/DC/DI/IL_ExportSettings` — **4 board ES_* phải đổi chữ** theo spec (Q2, việc của canvas) |
 | Phụ thuộc | intent [video-studio-canvas-chrome](../_intents/2026-10-03-video-studio-canvas-chrome.md) — khung Video Studio dựng lại theo canvas **trước** mọi task của plan này (người dùng chốt 2026-10-03) |
 | Ngày | 2026-10-02 |
 | Trạng thái | **approved 2026-10-03 — chờ intent video-studio-canvas-chrome (khung mới) xong mới code**. 16 task = 16 commit (task 16 là phép đo máy thật; chỉ commit nếu phải lật công tắc §5 của spec). Quyết định ở §6 |

@@ -4,7 +4,7 @@
 |---|---|
 | Đặc tả | [FS-12.04](../02-functional-spec/FS-12-video-studio/04-tools-and-inspector.md) (15 AC) · [FS-12.04b](../02-functional-spec/FS-12-video-studio/04b-command-rows.md) (11) · [FS-12.05 §3](../02-functional-spec/FS-12-video-studio/05-cutting-markers-and-fades.md) (13) · [FS-12.07](../02-functional-spec/FS-12-video-studio/07-phone-layout.md) (13) · [FS-12.06](../02-functional-spec/FS-12-video-studio/06-color-layer.md) "Đường vào" (không có AC riêng) — **52 AC** |
 | Intent | [2026-10-03-video-studio-canvas-chrome](../_intents/2026-10-03-video-studio-canvas-chrome.md) — mảng **đầu tiên** của thứ tự xây |
-| Design | canvas Video Studio <https://claude.ai/artifact/B8NqQqRHcHoFknxQ9gHZPJ> (Version 26). Board của plan này: `Main`, `P2_ClipSelected`, `P3_TextOverlay`, `P4_MusicChooser`, `P5_MusicTrack`, `P8_Main916`, `P9_ClipSelected916`, `P9_Collapsed`, `P10_TextOverlay916`, `P11_Ratio43(_Selected)`, `P12_Ratio219(_Selected)`; hàng lệnh còn đo trên `IL2–IL4`, `IP2`, `IP3`, `DI2`, `DI3`, `DC2`, `DC3` (bố cục của chúng thuộc plan màn rộng). `build/design/video/project/` hiện chỉ có board F4/F7 + `canvas.json` — **export lại `project/` của Version 26** trước task đầu tiên có `design-parity` |
+| Design | canvas Video Studio [docs/design](../design/README.md) (Version 26). Board của plan này: `Main`, `P2_ClipSelected`, `P3_TextOverlay`, `P4_MusicChooser`, `P5_MusicTrack`, `P8_Main916`, `P9_ClipSelected916`, `P9_Collapsed`, `P10_TextOverlay916`, `P11_Ratio43(_Selected)`, `P12_Ratio219(_Selected)`; hàng lệnh còn đo trên `IL2–IL4`, `IP2`, `IP3`, `DI2`, `DI3`, `DC2`, `DC3` (bố cục của chúng thuộc plan màn rộng). `build/design/video/project/` hiện chỉ có board F4/F7 + `canvas.json` — **export lại `project/` của Version 26** trước task đầu tiên có `design-parity` |
 | Plan liên quan | **vs-wide-and-duo-layout** (FS-12.03/03b/07b — iPad, Duo trong, Duo ngoài) · [2026-10-02-video-photo-looks](2026-10-02-video-photo-looks.md) (FS-12.06c, đã duyệt, chờ khung) · plan Media (FS-12.09) · plan Video Settings/Export (FS-12.10/10b) · plan F1 chọn nhiều (FS-12.11), F2 nhịp (12), F3 ducking (13), F6 cắt từng khung (17/17b) |
 | Ngày | 2026-10-03 |
 | Trạng thái | **approved 2026-10-03** — bước **1** (khối 0, A–D, N) và bước **5** (khối E) của thứ tự xây. 63 task = 63 commit, chia 7 khối (§3). Khối E chạy **sau** plan Media, plan Video Settings và plan look |
@@ -38,14 +38,14 @@
   bảng test của task 4 đó); `VideoStudioLayoutMode` không ra đời. Task 4 của plan màn rộng khi tới lượt chỉ còn nối
   màn hình đọc kích thước cửa sổ + inset và ghi `REVIEW_QUEUE` ngưỡng 60/84.
 - **Số task:** 51 + 12 (khối N) = **63 task = 63 commit**.
-- **Board canvas phải sửa** (canvas Video Studio <https://claude.ai/artifact/B8NqQqRHcHoFknxQ9gHZPJ>, trước task
+- **Board canvas phải sửa** (canvas Video Studio [docs/design](../design/README.md), trước task
   `design-parity` đầu tiên của board đó):
   - `P3_TextOverlay`: thêm ô **Duplicate** (Q-11).
   - `IL2_ClipSelected`, `IP2_ClipSelected`: thêm ô **Look** vào hàng lệnh clip (FS-12.04b §8).
   - Mọi board có tên item "Clip 2 · Coast" (chân ✕ · tên · ✓, viewer header) → **"Clip 2"**: đã thấy ở `IL1`, `IL2`,
     `IP1`, `DI2`, `F4_IL`, `F4_IP`, `F7_IL`, `F8_IL`, `F8_IP` — grep lại sau khi export đủ `project/`.
   - Mọi board Video Studio còn vẽ alert **"Discard this video?"** → bỏ (FS-12.18).
-  - Canvas **App Screens** <https://claude.ai/artifact/53VivNtnC7jPrMQZx41ra8>, màn **Video Projects** (hàng iPhone
+  - Canvas **App Screens** [docs/design](../design/README.md), màn **Video Projects** (hàng iPhone
     `PH_*`, iPad `IP_*`, Duo `DI_*`/`DC_*`): thêm dòng nháp (bìa clip đầu · nhãn **Draft** · "Edited 5 min ago") và
     hộp xác nhận **Delete Draft** (khối N, task N9–N10).
 

@@ -7,7 +7,7 @@
 sách preset của [16](16-export-presets.md), còn tài liệu này giữ khung panel, lúc đang xuất, huỷ và đường hỏng.
 
 Nguồn intent: [2026-10-03-video-studio-canvas-chrome](../../_intents/2026-10-03-video-studio-canvas-chrome.md).
-Canvas: [Video Studio](https://claude.ai/artifact/B8NqQqRHcHoFknxQ9gHZPJ) — `P7_Export` (đang xuất); trạng thái
+Canvas: [Video Studio](../../design/README.md) — `P7_Export` (đang xuất); trạng thái
 Sẵn sàng là `F8_*` của [16](16-export-presets.md). Nút Export ở chrome và mọi thông số xuất:
 [10](10-video-settings-and-export.md). Đường ghi file: [01 §9](01-render-and-export-pipeline.md).
 

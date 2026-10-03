@@ -4,7 +4,7 @@
 |---|---|
 | Đặc tả | [`FS-12.03`](../02-functional-spec/FS-12-video-studio/03-timeline-and-desk-layout.md) (11 AC) · [`FS-12.03b`](../02-functional-spec/FS-12-video-studio/03b-desk-bands-and-lanes.md) (9 AC) · [`FS-12.07b`](../02-functional-spec/FS-12-video-studio/07b-duo-cover-layout.md) (12 AC) — **32 AC** |
 | Intent | [2026-10-03-video-studio-canvas-chrome](../_intents/2026-10-03-video-studio-canvas-chrome.md) — thứ tự theo mảng, mọi thiết bị cùng lúc: thanh dưới → chọn item → Media → Video Settings/Export → Look → kích thước → F1–F8 |
-| Design | canvas Video Studio <https://claude.ai/artifact/B8NqQqRHcHoFknxQ9gHZPJ> (Version 26). Board của plan này: `IL1`–`IL5`, `IP1`–`IP3`, `DI1`–`DI6`, `DC1`–`DC4`, `DC2_Collapsed`. Đã export `IL1`, `IL2`, `IP1`, `DI1`, `DI2`, `DC1` + `canvas.json` vào `build/design/video/project/`; export đủ bộ trước task 18 |
+| Design | canvas Video Studio [docs/design](../design/README.md) (Version 26). Board của plan này: `IL1`–`IL5`, `IP1`–`IP3`, `DI1`–`DI6`, `DC1`–`DC4`, `DC2_Collapsed`. Đã export `IL1`, `IL2`, `IP1`, `DI1`, `DI2`, `DC1` + `canvas.json` vào `build/design/video/project/`; export đủ bộ trước task 18 |
 | Plan anh em | **`vs-tools-selection-phone`** (FS-12.04 · 04b · 07: 5 công cụ, mô hình chọn ✕ · tên · ✓, iPhone) · plan Media (FS-12.09) · plan Video Settings + Export (FS-12.10 · 10b) · [Look ảnh cho video](2026-10-02-video-photo-looks.md) (FS-12.06c, **đã duyệt**, chờ khung) · plan F1–F8 |
 | Ngày | 2026-10-03 |
 | Trạng thái | **approved 2026-10-03** — bước **2** (task 4–15) và bước **5** (task 16–18) của thứ tự xây. 18 task = 18 commit |
@@ -39,7 +39,7 @@
   chỉ còn nối màn hình đọc kích thước cửa sổ + inset phải và ghi `REVIEW_QUEUE` ngưỡng 60/84. Task 1–3 (test khoá)
   chạy được bất cứ lúc nào; test Esc của task 2 viết theo luật Esc = ✓ của tools plan.
 - **Phạm vi bước:** task 4–15 là bước 2; task 16–18 là bước 5 (cùng khối E của tools plan).
-- **Board canvas phải sửa** (canvas Video Studio <https://claude.ai/artifact/B8NqQqRHcHoFknxQ9gHZPJ>, trước task
+- **Board canvas phải sửa** (canvas Video Studio [docs/design](../design/README.md), trước task
   `design-parity` đầu tiên của board đó):
   - **Bỏ tên project** "Iceland Road Trip" ở giữa băng trên mọi board iPad: `IL1`–`IL5`, `IP1`–`IP3`, `IP_Export`,
     `F4_IL`/`F4_IP_Captions`, `F7_IL`/`F7_IP_BeforeAfter`, `F8_IL`/`F8_IP_ExportPresets` (và mọi board `IL*`/`IP*`/`F*_IL`/`F*_IP`

@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>iPhone · Support thread</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0}
+button{font-family:inherit}
+.dcell{position:relative;height:36px;border:none;background:transparent;padding:0;font-size:16px;font-variant-numeric:tabular-nums}
+.dspan{position:relative}
+</style>
+</helmet>
+<div style="width: 402px; height: 874px; position: relative; overflow: hidden; background: {{t.grouped}}; color: {{t.label}}; font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', system-ui, sans-serif">
+<div style="position:absolute;left:0;top:114px;width:402px;padding:0 16px;box-sizing:border-box"><div style="margin-bottom:22px"><div style="font-size:13px;text-transform:uppercase;letter-spacing:0.2px;color:{{t.label2}};padding:0 16px 7px">Bug</div><div style="background:{{t.card}};border-radius:26px;overflow:hidden"><div style="padding-left:16px"><div style="padding:11px 16px 11px 0;min-height:22px;display:flex;align-items:center;gap:12px;font-size:17px;line-height:22px"><span>Uploading a batch of 40 HEIC files to my Synology over SMB gets to 99% and stays there. Smaller batches finish fine. iPhone 16 Pro on Wi-Fi.</span></div></div><div style="padding-left:16px"><div style="border-top:0.5px solid {{t.sep}};padding:11px 16px 11px 0;min-height:22px;display:flex;align-items:center;gap:12px;font-size:17px;line-height:22px"><span style="flex:1">Status</span><span style="color:{{t.accent}}">In Progress</span></div></div><div style="padding-left:16px"><div style="border-top:0.5px solid {{t.sep}};padding:11px 16px 11px 0;min-height:22px;display:flex;align-items:center;gap:12px;font-size:17px;line-height:22px"><span style="flex:1">Sent</span><span style="color:{{t.label2}};font-variant-numeric: tabular-nums">Sep 21, 2026</span></div></div></div></div><div style="margin-bottom:22px"><div style="font-size:13px;text-transform:uppercase;letter-spacing:0.2px;color:{{t.label2}};padding:0 16px 7px">Conversation</div><div style="background:{{t.card}};border-radius:26px;overflow:hidden"><div style="padding-left:16px"><div style="padding:11px 16px 11px 0;min-height:22px;display:flex;align-items:center;gap:12px;font-size:17px;line-height:22px"><span style="display:flex;flex-direction:column;gap:4px;padding:2px 0"><span style="font-size:12px;font-weight:600;color:{{t.accent}}">ShotDex</span><span>Thanks, we can reproduce it with files over 25 MB. A fix is going into the next build.</span><span style="font-size:11px;color:{{t.label2}};font-variant-numeric: tabular-nums">Sep 22, 10:14 AM</span></span></div></div><div style="padding-left:16px"><div style="border-top:0.5px solid {{t.sep}};padding:11px 16px 11px 0;min-height:22px;display:flex;align-items:center;gap:12px;font-size:17px;line-height:22px"><span style="display:flex;flex-direction:column;gap:4px;padding:2px 0"><span style="font-size:12px;font-weight:600;color:{{t.label2}}">You</span><span>Great, happy to test it. It happens with ProRAW DNGs too.</span><span style="font-size:11px;color:{{t.label2}};font-variant-numeric: tabular-nums">Sep 22, 6:40 PM</span></span></div></div><div style="padding-left:16px"><div style="border-top:0.5px solid {{t.sep}};padding:11px 16px 11px 0;min-height:22px;display:flex;align-items:center;gap:12px;font-size:17px;line-height:22px"><span style="display:flex;flex-direction:column;gap:4px;padding:2px 0"><span style="font-size:12px;font-weight:600;color:{{t.accent}}">ShotDex</span><span>Noted, the same fix covers DNGs. We will reply here when it ships.</span><span style="font-size:11px;color:{{t.label2}};font-variant-numeric: tabular-nums">Sep 30, 9:02 AM</span></span></div></div></div></div><div style="margin-bottom:22px"><div style="background:{{t.card}};border-radius:26px;overflow:hidden"><div style="padding-left:16px"><div style="padding:11px 16px 11px 0;min-height:22px;display:flex;align-items:center;gap:12px;font-size:17px;line-height:22px"><span style="color:{{t.label3}};min-height:44px;display:block;flex:1">Add to this message</span></div></div><div style="padding-left:16px"><div style="border-top:0.5px solid {{t.sep}};padding:11px 16px 11px 0;min-height:22px;display:flex;align-items:center;gap:12px;font-size:17px;line-height:22px"><span style="color:{{t.label3}}">Send Reply</span></div></div></div></div></div><button aria-label="Back" style="position:absolute;left:16px;top:62px;width:44px;height:44px;border-radius:22px;background:{{t.glass}};border:1px solid {{t.glassStroke}};box-shadow:{{t.glassShadow}};color:{{t.label}};display:flex;align-items:center;justify-content:center;padding:0"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" style="flex:none;display:block"><path d="M15 5l-7 7 7 7"></path></svg></button><div style="position:absolute;left:72px;width:258px;top:62px;height:44px;display:flex;align-items:center;justify-content:center;font-size:17px;font-weight:600;white-space:nowrap;overflow:hidden"><span style="overflow:hidden;text-overflow:ellipsis;max-width:100%">Export to SMB server stops at 99% on large HEIC files</span></div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"dark":{"editor":"boolean","default":false},"$preview":{"width":402,"height":874}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const LIGHT = { bg:'#FFFFFF', grouped:'#F2F2F7', card:'#FFFFFF', label:'#000000', label2:'#6C6C70', label3:'#8E8E93',
+  sep:'#C6C6C8', fill:'#E9E9EB', fill2:'#F2F2F7', glass:'rgba(255,255,255,0.78)', glassStroke:'rgba(0,0,0,0.08)',
+  glassShadow:'0 4px 18px rgba(0,0,0,0.12)', tint:'#007AFF', red:'#FF3B30', green:'#34C759', orange:'#FF9500',
+  accent:'#C6730E', dim:'rgba(0,0,0,0.35)', sheet:'#FFFFFF', onAccent:'#FFFFFF' };
+    const DARK = { bg:'#000000', grouped:'#000000', card:'#1C1C1E', label:'#FFFFFF', label2:'#98989F', label3:'#6C6C70',
+  sep:'#38383A', fill:'#2C2C2E', fill2:'#1C1C1E', glass:'rgba(44,44,46,0.78)', glassStroke:'rgba(255,255,255,0.10)',
+  glassShadow:'0 4px 18px rgba(0,0,0,0.5)', tint:'#0A84FF', red:'#FF453A', green:'#30D158', orange:'#FF9F0A',
+  accent:'#EB9526', dim:'rgba(0,0,0,0.55)', sheet:'#1C1C1E', onAccent:'#000000' };
+    // ChartPalette.colors (system indigo, teal, orange ...) and sheet list surfaces
+    const CL = { indigo:'#5856D6', teal:'#30B0C7', orange:'#FF9500', pink:'#FF2D55', grid:'rgba(0,0,0,0.10)',
+      bar:'linear-gradient(180deg,#5856D6 0%,rgba(88,86,214,0.65) 100%)', band:'rgba(198,115,14,0.2)' };
+    const CD = { indigo:'#5E5CE6', teal:'#40C8E0', orange:'#FF9F0A', pink:'#FF375F', grid:'rgba(255,255,255,0.16)',
+      bar:'linear-gradient(180deg,#5E5CE6 0%,rgba(94,92,230,0.65) 100%)', band:'rgba(235,149,38,0.2)' };
+    const XL = { sheetBg:'#F2F2F7', sheetCell:'#FFFFFF' };
+    const XD = { sheetBg:'#1C1C1E', sheetCell:'#2C2C2E' };
+    const d = !!this.props.dark;
+    return { t: d ? DARK : LIGHT, c: d ? CD : CL, x: d ? XD : XL };
+  }
+}
+</script>
+</body>
+</html>

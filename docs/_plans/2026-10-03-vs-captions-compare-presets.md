@@ -4,7 +4,7 @@
 |---|---|
 | Đặc tả | [`FS-12.14`](../02-functional-spec/FS-12-video-studio/14-captions.md) (17 AC) · [`FS-12.15`](../02-functional-spec/FS-12-video-studio/15-before-after.md) (15 AC) · [`FS-12.16`](../02-functional-spec/FS-12-video-studio/16-export-presets.md) (17 AC) — **49 AC** |
 | Intent | [2026-10-03-video-studio-canvas-chrome](../_intents/2026-10-03-video-studio-canvas-chrome.md) — thứ tự build: chrome/thanh dưới → chọn item → Media → Video Settings/Export → Look (06c) → kích thước → **F1–F8**. Plan này là ba khúc F4, F7, F8 của bước cuối |
-| Design | canvas Video Studio <https://claude.ai/artifact/B8NqQqRHcHoFknxQ9gHZPJ> (bản đang chạy `1790981542-377a`, khớp spec theo người giữ canvas). Hàng F4: `F4_P/IL/IP/DI/DC_Captions` · F7: `F7_P/IL/IP/DI/DC_BeforeAfter` · F8: `F8_P/IL/IP/DI/DC_ExportPresets`. Đã xuất 15 board + `canvas.json` về `build/design/video/project/` (2026-10-03). **Ba board spec ghi "chưa có" nay đã có:** `F4_IP_Captions`, `F7_DC_BeforeAfter`, `F8_IP_ExportPresets` (xem Q4). Pill Before/After của `F7_P` đã ở y 70 như spec |
+| Design | canvas Video Studio [docs/design](../design/README.md) (bản đang chạy `1790981542-377a`, khớp spec theo người giữ canvas). Hàng F4: `F4_P/IL/IP/DI/DC_Captions` · F7: `F7_P/IL/IP/DI/DC_BeforeAfter` · F8: `F8_P/IL/IP/DI/DC_ExportPresets`. Đã xuất 15 board + `canvas.json` về `build/design/video/project/` (2026-10-03). **Ba board spec ghi "chưa có" nay đã có:** `F4_IP_Captions`, `F7_DC_BeforeAfter`, `F8_IP_ExportPresets` (xem Q4). Pill Before/After của `F7_P` đã ở y 70 như spec |
 | Phụ thuộc | xem §7 — plan chrome (FS-12.03/03b/07/07b), plan tools/chọn item (FS-12.04/04b), plan **vs-media-settings-export** (FS-12.09/10/10b), plan look [2026-10-02-video-photo-looks](2026-10-02-video-photo-looks.md) (FS-12.06c), plan F3 ducking (FS-12.13) |
 | Ngày | 2026-10-03 |
 | Trạng thái | **approved 2026-10-03** — bước **7** của thứ tự xây. 49 task = 49 commit (task 32 là phép đo máy thật, chỉ commit nếu phải bật đường lùi nửa độ phân giải) |
@@ -40,7 +40,7 @@
   - Q3 kỹ thuật, tự quyết ở task 11 như ghi. **Q4 duyệt:** `F4_IP_Captions`, `F7_DC_BeforeAfter`, `F8_IP_ExportPresets`
     đã vào FS-12.14 AC-15, FS-12.15 AC-14, FS-12.16 AC-14; dòng rủi ro "chưa có board" đã gỡ.
 - Trường mới (`captions`, `exportTarget`, `exportFraming`) chỉ thêm khoá vào bộ giải mã khoan dung của tools plan task 4.
-- **Board canvas phải sửa** (canvas Video Studio <https://claude.ai/artifact/B8NqQqRHcHoFknxQ9gHZPJ>, trước task
+- **Board canvas phải sửa** (canvas Video Studio [docs/design](../design/README.md), trước task
   `design-parity` đầu tiên của board đó):
   - `F8_P_ExportPresets`, `F8_IL`, `F8_IP`, `F8_DI`, `F8_DC_ExportPresets` nay là trạng thái Sẵn sàng **duy nhất** của
     Export Video: thêm chỗ dòng LUT mất ngay trên nút xuất (FS-12.10b §3) nếu board chưa có; dòng thông số một dòng

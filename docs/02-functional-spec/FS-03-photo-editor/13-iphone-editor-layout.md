@@ -6,7 +6,7 @@
 **Một câu:** editor ở layout compact (iPhone dọc, Duo màn ngoài) có đủ mọi chức năng của iPad, sáu công cụ nằm
 cố định dưới ngón cái, không vuốt ngang ở đáy màn, ảnh to nhất phần đen cho phép.
 
-Canvas đã chốt (private, chủ sở hữu mở được): <https://claude.ai/artifact/T4tEUQrJtxBbi48HokiL9F> — số đo
+Canvas đã chốt (private, chủ sở hữu mở được): [docs/design](../../design/README.md) — số đo
 trong spec này đọc từ các bảng "Chốt" / "ĐÃ CHỌN" của canvas. Quyết định đã chốt 2026-09-28 (§5); còn D3 chờ số đo.
 
 ## Các phần

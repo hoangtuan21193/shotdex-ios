@@ -9,7 +9,7 @@ lần xuất đó, kèm dung lượng ước tính — không phải chỉnh t�
 Video Settings (tỉ lệ, nền khi Fit, độ phân giải, fps, codec, kích thước ước tính) và luồng sau khi xuất:
 [FS-12.10](10-video-settings-and-export.md) — tài liệu này **chỉ** nói preset. Trạng thái **Sẵn sàng** của panel Export
 Video là của tài liệu này (chốt 2026-10-03); khung panel, Đang xuất, huỷ và đường hỏng ở [10b](10b-export.md). Đường render: [FS-12.01](01-render-and-export-pipeline.md).
-Canvas: hàng F8 của <https://claude.ai/artifact/B8NqQqRHcHoFknxQ9gHZPJ>.
+Canvas: hàng F8 của [docs/design](../../design/README.md).
 
 ## 1. Người dùng cần gì
 

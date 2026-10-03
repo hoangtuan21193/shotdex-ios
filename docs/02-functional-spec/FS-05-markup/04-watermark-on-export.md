@@ -134,7 +134,7 @@ phải:
 | Truy cập | lưới Position đọc *"Position, bottom right"*; Size đọc giá trị px; chip preset đọc tên và *"Missing file"* |
 | Chữ | String Catalog; một tên **Watermark** ở form, Settings và share sheet |
 
-Design canvas: đã vẽ trên canvas [ShotDex Photo Editor](https://claude.ai/artifact/T4tEUQrJtxBbi48HokiL9F), nối vào
+Design canvas: đã vẽ trên canvas [ShotDex Photo Editor](../../design/README.md), nối vào
 hàng của từng thiết bị: màn Watermark `PH31`/`IP22`/`IPP18`/`DI17`/`DIP17`/`DC18` `_Watermark`, Resize có hàng
 Watermark `PH32_ResizeWatermark`, share sheet có dòng watermark `PH37_ShareWatermark`. Canvas Video Studio không đổi.
 

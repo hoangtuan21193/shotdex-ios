@@ -9,7 +9,7 @@
 | Nguồn | phản hồi người dùng (chủ sở hữu sản phẩm) — phiên thiết kế 2026-09-27 |
 | Spec sinh ra từ đây | [FS-03.14](../02-functional-spec/FS-03-photo-editor/14-lightroom-preset-exchange.md) (+ 14a, 14b, 14c) |
 
-Canvas, hàng "Presets" (màn PR1–PR9): <https://claude.ai/artifact/T4tEUQrJtxBbi48HokiL9F>.
+Canvas, hàng "Presets" (màn PR1–PR9): [docs/design](../design/README.md).
 Liên quan: [editor-iphone-layout](2026-09-27-editor-iphone-layout.md) (chỗ đặt các nút) ·
 [lightroom-parameter-parity](2026-09-27-lightroom-parameter-parity.md) (thông số để preset nhập vào có chỗ
 đặt) · trả lời câu treo số 2 của [editor-lightroom-feature-parity](2026-09-22-editor-lightroom-feature-parity.md).

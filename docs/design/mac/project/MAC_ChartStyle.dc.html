@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Mac · Chart style options</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0}
+button{font-family:inherit;padding:0;margin:0;cursor:default}
+</style>
+</helmet>
+<div style="width: 1440px; height: 900px; box-sizing: border-box; padding: 32px; background: {{t.bg}}; color: {{t.label}}; font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', system-ui, sans-serif; font-size: 13px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px">
+<sc-for list="{{opts}}" as="o" hint-placeholder-count="3">
+<div style="display:flex;flex-direction:column;gap:16px;min-width:0">
+<div style="display:flex;flex-direction:column;gap:4px">
+<div style="font-size:22px;font-weight:700">{{o.name}}</div>
+<div style="font-size:12px;color:{{t.label2}};line-height:16px;min-height:32px">{{o.note}}</div>
+</div>
+
+<div style="background:{{t.card}};border-radius:16px;padding:12px 16px 16px;display:flex;flex-direction:column;gap:8px">
+<div><div style="font-size:13px;font-weight:600">Equivalent Focal Length</div><div style="font-size:11px;color:{{t.label2}}">All Time</div></div>
+<div style="position:relative;height:150px;display:flex;align-items:flex-end;gap:{{o.gap}};padding:0 4px;border-bottom:1px solid {{t.axis}}">
+<sc-for list="{{o.focal}}" as="b" hint-placeholder-count="8">
+<div aria-label="{{b.label}}" style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;gap:4px">
+<sc-if value="{{b.showValue}}" hint-placeholder-val="{{false}}"><div style="font-size:11px;font-weight:600;color:{{t.label}};font-variant-numeric:tabular-nums">{{b.v}}</div></sc-if>
+<div style="width:{{o.barW}};height:{{b.h}};background:{{b.fill}};border-radius:4px 4px 0 0"></div>
+</div>
+</sc-for>
+</div>
+<div style="display:flex;gap:{{o.gap}};padding:0 4px">
+<sc-for list="{{o.focal}}" as="b" hint-placeholder-count="8"><div style="flex:1;text-align:center;font-size:10px;color:{{t.label2}};font-variant-numeric:tabular-nums">{{b.k}}</div></sc-for>
+</div>
+</div>
+
+<div style="background:{{t.card}};border-radius:16px;padding:12px 16px 16px;display:flex;flex-direction:column;gap:8px">
+<div><div style="font-size:13px;font-weight:600">Top Lens</div><div style="font-size:11px;color:{{t.label2}}">All Time</div></div>
+<sc-for list="{{o.lenses}}" as="l" hint-placeholder-count="4">
+<div aria-label="{{l.name}}, {{l.v}} photos" style="display:flex;flex-direction:column;gap:4px">
+<div style="display:flex;justify-content:space-between;gap:8px"><span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{l.name}}</span><span style="font-weight:600;font-variant-numeric:tabular-nums">{{l.v}}<span style="font-weight:400;color:{{t.label2}};font-size:11px;margin-left:6px">{{l.pct}}</span></span></div>
+<div style="height:{{o.trackH}};border-radius:4px;background:{{o.track}}"><div style="width:{{l.w}};height:{{o.trackH}};border-radius:4px;background:{{l.fill}}"></div></div>
+</div>
+</sc-for>
+</div>
+
+<div style="background:{{t.card}};border-radius:16px;padding:12px 16px 16px;display:flex;flex-direction:column;gap:8px">
+<div><div style="font-size:13px;font-weight:600">Photos per Year</div><div style="font-size:11px;color:{{t.label2}}">All Time</div></div>
+<svg width="100%" height="120" viewBox="0 0 400 120" preserveAspectRatio="none" style="display:block">
+<path d="M0 119.5H400 M0 80.5H400 M0 40.5H400" stroke="{{t.grid}}" stroke-width="1" fill="none"></path>
+<path d="{{area}}" fill="{{o.area}}" stroke="none"></path>
+<path d="{{line}}" fill="none" stroke="{{o.line}}" stroke-width="2" stroke-linejoin="round" vector-effect="non-scaling-stroke"></path>
+</svg>
+<div style="display:flex;justify-content:space-between;font-size:10px;color:{{t.label2}}"><span>2010</span><span>2014</span><span>2018</span><span>2022</span><span>2026</span></div>
+</div>
+</div>
+</sc-for>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"dark":{"editor":"boolean","default":false},"$preview":{"width":1440,"height":900}}'>
+const LIGHT={bg:'#ECECEF',card:'#FFFFFF',label:'rgba(0,0,0,0.88)',label2:'rgba(0,0,0,0.56)',axis:'rgba(0,0,0,0.18)',grid:'rgba(0,0,0,0.07)',
+  indigo:'#5856D6',accent:'#C6730E',accentFill:'#A35E0A',quiet:'#C9C9CF',track:'rgba(0,0,0,0.06)'};
+const DARK={bg:'#141416',card:'#1C1C1E',label:'rgba(255,255,255,0.90)',label2:'rgba(255,255,255,0.58)',axis:'rgba(255,255,255,0.22)',grid:'rgba(255,255,255,0.08)',
+  indigo:'#5E5CE6',accent:'#EB9526',accentFill:'#EB9526',quiet:'#4A4A50',track:'rgba(255,255,255,0.08)'};
+const FOCAL=[['12',310],['20',1480],['28',2900],['35',4120],['50',3010],['70',2380],['85',5240],['135',820]];
+const LENS=[['RF 24-70mm F2.8 L IS USM',11180,'61%'],['FE 24-70mm F2.8 GM II',7310,'40%'],['XF33mmF1.4 R LM WR',5060,'28%'],['RF 85mm F1.2 L USM',4310,'24%']];
+const YEARS=[120,340,610,980,1420,1850,2300,2900,3600,4800,3900,5200,6100,7400,6900,7900,5230];
+class Component extends DCLogic {
+  renderVals(){
+    const t=this.props.dark?DARK:LIGHT;
+    const maxF=Math.max(...FOCAL.map(f=>f[1]));
+    const mk=(style)=>{
+      const focal=FOCAL.map(([k,v])=>{
+        const top=v===maxF;
+        let fill;
+        if(style==='A') fill='linear-gradient(180deg,'+t.indigo+' 0%,'+t.indigo+'A6 100%)';
+        else if(style==='B') fill=top?t.accent:t.quiet;
+        else fill=top?t.accent:(this.props.dark?'rgba(235,149,38,0.45)':'rgba(198,115,14,0.38)');
+        return {k,v:v.toLocaleString('en-US'),h:Math.round(v/maxF*118)+'px',fill,showValue: style==='A'?top:top,label:k+' mm, '+v+' photos'};
+      });
+      const lenses=LENS.map(([name,v,pct],i)=>({name,v:v.toLocaleString('en-US'),pct,w:Math.round(v/LENS[0][1]*100)+'%',
+        fill: style==='A'?t.indigo:(style==='B'?(i===0?t.accent:t.quiet):(i===0?t.accent:(this.props.dark?'rgba(235,149,38,0.45)':'rgba(198,115,14,0.38)')))}));
+      return {focal,lenses,
+        barW: style==='A'?'100%':'20px', gap: style==='A'?'4px':'8px', trackH: style==='A'?'6px':'4px',
+        track: style==='A'?t.track:'transparent',
+        line: style==='A'?t.indigo:t.accent,
+        area: style==='A'?(this.props.dark?'rgba(94,92,230,0.22)':'rgba(88,86,214,0.16)'):(style==='B'?'transparent':(this.props.dark?'rgba(235,149,38,0.14)':'rgba(198,115,14,0.10)'))};
+    };
+    const opts=[
+      Object.assign({name:'A · Hiện tại', note:'Indigo của ChartPalette, gradient, cột lấp đầy ô, rãnh xám dưới mọi thanh. Mọi biểu đồ cùng một khối tím, lạc với accent amber.'},mk('A')),
+      Object.assign({name:'B · Xám + nhấn amber', note:'Dữ liệu nền xám trung tính, chỉ giá trị đáng chú ý (lớn nhất, đang hover, đang chọn) dùng amber. Cột mảnh 20px, không gradient, không rãnh.'},mk('B')),
+      Object.assign({name:'C · Amber nhạt + đậm — đã chọn', note:'Một sắc amber: cột thường ở 38%, cột lớn nhất đậm. Cùng màu thương hiệu, nhẹ hơn A, ít tương phản hơn B.'},mk('C'))
+    ];
+    const pts=YEARS.map((v,i)=>[(i/(YEARS.length-1))*400, 118-(v/8000)*110]);
+    const line='M'+pts.map(p=>p[0].toFixed(1)+' '+p[1].toFixed(1)).join(' L');
+    const area=line+' L400 119 L0 119 Z';
+    return {t,opts,line,area};
+  }
+}
+</script>
+</body>
+</html>

@@ -7,7 +7,7 @@
 dung lượng ước tính — còn Export chỉ là nút xuất ([10b](10b-export.md)).
 
 Nguồn intent: [2026-10-03-video-studio-canvas-chrome](../../_intents/2026-10-03-video-studio-canvas-chrome.md).
-Canvas: [Video Studio](https://claude.ai/artifact/B8NqQqRHcHoFknxQ9gHZPJ) v23 — `P6` · `DI5` · `ES_*`.
+Canvas: [Video Studio](../../design/README.md) v23 — `P6` · `DI5` · `ES_*`.
 Preset theo nơi đăng (F8) là [FS-12.16](16-export-presets.md): preset dùng **cùng** bảng kích thước, cổng 4K và công
 thức ước tính ở đây, và **không ghi đè** các trường này — preset chỉ là đích của một lần xuất (chốt 2026-10-03).
 

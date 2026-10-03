@@ -140,6 +140,6 @@ thêm các connection đã lưu (SMB, SFTP, WebDAV, folder cloud) — chọn m�
 | Chữ | nhãn trong String Catalog; tên preset trùng tên ở Resize và Settings → Resize Presets |
 
 **Design canvas:** không board cũ nào đổi. Board mới đã vẽ trên canvas
-[ShotDex Photo Editor](https://claude.ai/artifact/T4tEUQrJtxBbi48HokiL9F), nối vào hàng từng thiết bị: sheet Export
+[ShotDex Photo Editor](../../design/README.md), nối vào hàng từng thiết bị: sheet Export
 `PH33`/`IP23`/`IPP19`/`DI18`/`DIP18`/`DC19` `_Export`, màn File Name `PH34`/`IP24`/`IPP20`/`DI19`/`DIP19`/`DC20`
 `_FileName`, sheet đang chạy `PH35_ExportRunning`, tổng kết `PH36_ExportSummary` (hai board sau chỉ ở hàng iPhone).

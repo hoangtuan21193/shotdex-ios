@@ -4,7 +4,7 @@
 |---|---|
 | Đặc tả | [FS-12.11](../02-functional-spec/FS-12-video-studio/11-multi-select-and-reorder.md) F1 (18 AC) · [FS-12.12](../02-functional-spec/FS-12-video-studio/12-beats.md) F2 (16 AC) · [FS-12.13](../02-functional-spec/FS-12-video-studio/13-audio-ducking.md) F3 (16 AC) — **50 AC** |
 | Intent | [2026-10-03-video-studio-canvas-chrome](../_intents/2026-10-03-video-studio-canvas-chrome.md) — F1, F2, F3 (mảng cuối của thứ tự: chrome → chọn → Media → Video Settings/Export → Look → kích thước → **F1–F8**) |
-| Design | canvas Video Studio <https://claude.ai/artifact/B8NqQqRHcHoFknxQ9gHZPJ> (Version 26), hàng F1: `F1_P_MultiSelect` · `F1_IL_MultiSelect` · `F1_DI_Reorder` · `F1_DC_MultiSelect`; F2: `F2_P_BeatDetect` · `F2_P_BeatDuration` · `F2_IL_BeatSnap` · `F2_DI_CutToBeat` · `F2_DC_Beats`; F3: `F3_P_Ducking` · `F3_IL_Ducking` · `F3_DI_Ducking` · `F3_DC_Ducking`. **Bản local `build/design/video/project/` chỉ có 16/97 board (F4, F7, F8) — không có board F1–F3: phải export lại `project/` của Version 26 trước task 19, 34, 50** |
+| Design | canvas Video Studio [docs/design](../design/README.md) (Version 26), hàng F1: `F1_P_MultiSelect` · `F1_IL_MultiSelect` · `F1_DI_Reorder` · `F1_DC_MultiSelect`; F2: `F2_P_BeatDetect` · `F2_P_BeatDuration` · `F2_IL_BeatSnap` · `F2_DI_CutToBeat` · `F2_DC_Beats`; F3: `F3_P_Ducking` · `F3_IL_Ducking` · `F3_DI_Ducking` · `F3_DC_Ducking`. **Bản local `build/design/video/project/` chỉ có 16/97 board (F4, F7, F8) — không có board F1–F3: phải export lại `project/` của Version 26 trước task 19, 34, 50** |
 | Phụ thuộc | plan **vs-tools-selection-phone** (FS-12.04 / 04b / 07) và các plan khác của Video Studio — §8 |
 | Ngày | 2026-10-03 |
 | Trạng thái | **approved 2026-10-03** — bước **6** của thứ tự xây. 51 task = 50 commit + 1 phép đo (task 33, chỉ commit nếu phải sửa code) |
@@ -36,7 +36,7 @@
   phép đo đầu task 40.
 - `MusicTrack` dùng bộ giải mã khoan dung của tools plan task 4 (§7 rủi ro JSON, §8 dòng FS-12.08): task 24 và 43
   chỉ thêm khoá.
-- **Board canvas phải sửa** (canvas Video Studio <https://claude.ai/artifact/B8NqQqRHcHoFknxQ9gHZPJ>, trước task
+- **Board canvas phải sửa** (canvas Video Studio [docs/design](../design/README.md), trước task
   `design-parity` đầu tiên của board đó):
   - Không board nào phải sửa vì các quyết định duyệt của plan này. `F1_DI_Reorder`, `F2_DI_CutToBeat`,
     `F3_DI_Ducking` nhận cột badge 100 (Lock · Mute) của plan màn rộng trước task 19, 34, 50.

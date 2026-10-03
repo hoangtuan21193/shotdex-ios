@@ -7,7 +7,7 @@
 vẫn phát, scrub và chỉnh look.
 
 Look: [FS-12.06c](06c-photo-looks.md). Tầng màu: [FS-12.06](06-color-layer.md). Phím `\`: [FS-12.17b](17b-keyboard-and-pointer.md).
-Canvas: hàng F7 của <https://claude.ai/artifact/B8NqQqRHcHoFknxQ9gHZPJ>.
+Canvas: hàng F7 của [docs/design](../../design/README.md).
 
 ## 1. Người dùng cần gì
 

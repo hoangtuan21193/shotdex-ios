@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Mac · Get Info</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0}
+button{font-family:inherit;padding:0;margin:0;cursor:default}
+input{font-family:inherit}
+</style>
+</helmet>
+<div style="width: 420px; height: 640px; position: relative; overflow: hidden; border-radius: 16px; background: {{t.content}}; color: {{t.label}}; font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', system-ui, sans-serif; font-size: 13px; box-shadow: inset 0 0 0 1px {{t.sep}}">
+
+<!-- Title bar (Info panel: follows the selection, minimize and zoom disabled) -->
+<div style="position:absolute;left:14px;top:14px;display:flex;gap:8px">
+<div style="width:12px;height:12px;border-radius:6px;background:#FF5F57;box-shadow:inset 0 0 0 0.5px rgba(0,0,0,0.2)"></div>
+<div aria-label="Minimize (unavailable)" style="width:12px;height:12px;border-radius:6px;background:{{t.lightOff}};box-shadow:inset 0 0 0 0.5px rgba(0,0,0,0.12)"></div>
+<div aria-label="Zoom (unavailable)" style="width:12px;height:12px;border-radius:6px;background:{{t.lightOff}};box-shadow:inset 0 0 0 0.5px rgba(0,0,0,0.12)"></div>
+</div>
+<div style="position:absolute;left:0;right:0;top:11px;text-align:center;font-size:13px;font-weight:600">Info</div>
+
+<!-- Photo header -->
+<div style="position:absolute;left:16px;right:16px;top:48px;height:56px;display:flex;gap:12px;align-items:center">
+<div aria-label="Photo, DSC04512.ARW" style="position:relative;width:56px;height:56px;flex:none;border-radius:6px;overflow:hidden">
+<div style="position:absolute;inset:0;background:linear-gradient(180deg,#355C7D 0%,#8C7A93 38%,#E2A37A 62%,#2F3A36 62%,#1C2420 100%)"></div>
+</div>
+<div style="display:flex;flex-direction:column;gap:2px;min-width:0">
+<div style="display:flex;align-items:center;gap:6px"><span style="font-size:13px;font-weight:600">DSC04512.ARW</span><span style="height:15px;padding:0 4px;border-radius:4px;background:{{t.fill}};color:{{t.label2}};font-size:10px;font-weight:600;line-height:15px">RAW</span></div>
+<div style="font-size:11px;color:{{t.label2}};white-space:nowrap">Sony A7 IV · FE 24-70mm F2.8 GM II</div>
+<div style="font-size:11px;color:{{t.label2}};white-space:nowrap;font-variant-numeric:tabular-nums">35 mm · f/2.8 · 1/250 s · ISO 400 · 48.2 MB</div>
+</div>
+</div>
+<div style="position:absolute;left:16px;right:16px;top:114px;height:1px;background:{{t.sep}}"></div>
+
+<!-- FORM: labels right-aligned in an 80pt column -->
+<div style="position:absolute;left:16px;top:126px;width:80px;height:28px;display:flex;align-items:center;justify-content:flex-end">Title</div>
+<label style="position:absolute;left:108px;right:16px;top:126px"><span style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)">Title</span><input value="Last light over Wakakusa" style="width:100%;height:28px;box-sizing:border-box;border-radius:8px;border:1px solid {{t.sep}};background:{{t.field}};color:{{t.label}};font-size:13px;padding:0 8px;outline:none"></label>
+
+<div style="position:absolute;left:16px;top:162px;width:80px;height:28px;display:flex;align-items:center;justify-content:flex-end">Caption</div>
+<label style="position:absolute;left:108px;right:16px;top:162px"><span style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)">Caption</span><textarea style="font-family:inherit;width:100%;height:44px;box-sizing:border-box;border-radius:8px;border:2px solid {{t.focusRing}};background:{{t.field}};color:{{t.label}};font-size:13px;line-height:17px;padding:4px 7px;outline:none;resize:none">Deer crossing the lawn below Mount Wakakusa, ten minutes after sunset.</textarea></label>
+
+<div style="position:absolute;left:16px;top:214px;width:80px;height:28px;display:flex;align-items:center;justify-content:flex-end">Keywords</div>
+<div aria-label="Keywords" style="position:absolute;left:108px;right:16px;top:214px;min-height:28px;box-sizing:border-box;border-radius:8px;border:1px solid {{t.sep}};padding:3px;display:flex;flex-wrap:wrap;gap:4px">
+<sc-for list="{{keywords}}" as="k" hint-placeholder-count="4">
+<div style="height:20px;border-radius:10px;background:{{t.accentSoft}};color:{{t.label}};display:flex;align-items:center;gap:3px;padding:0 3px 0 7px;font-size:12px">{{k}}<button aria-label="Remove Keyword {{k}}" style="width:14px;height:14px;border:none;background:none;color:{{t.label2}};display:flex;align-items:center;justify-content:center"><svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M6 6l12 12 M18 6L6 18"></path></svg></button></div>
+</sc-for>
+<input aria-label="Add Keyword" placeholder="Add Keyword" style="flex:1;min-width:80px;height:20px;border:none;background:none;outline:none;font-size:12px;color:{{t.label}};padding:0 4px">
+</div>
+
+<div style="position:absolute;left:16px;top:276px;width:80px;height:28px;display:flex;align-items:center;justify-content:flex-end">Rating</div>
+<div style="position:absolute;left:104px;right:16px;top:276px;height:28px;display:flex;align-items:center">
+<sc-for list="{{stars}}" as="s" hint-placeholder-count="5">
+<button aria-label="{{s.label}}" title="{{s.tip}}" style="width:22px;height:28px;border:none;background:none;display:flex;align-items:center;justify-content:center;color:{{s.color}}"><svg width="15" height="15" viewBox="0 0 24 24" fill="{{s.fill}}" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 3.5l2.6 5.4 5.9.8-4.3 4.1 1 5.8L12 16.8l-5.2 2.8 1-5.8-4.3-4.1 5.9-.8z"></path></svg></button>
+</sc-for>
+<div style="flex:1"></div>
+<label style="display:flex;align-items:center;gap:6px;font-size:13px"><span style="width:14px;height:14px;border-radius:4px;background:{{t.fill}};box-shadow:inset 0 0 0 1px {{t.sep}};display:inline-block"></span>Favorite</label>
+</div>
+
+<div style="position:absolute;left:16px;top:312px;width:80px;height:28px;display:flex;align-items:center;justify-content:flex-end">Flag</div>
+<div role="radiogroup" aria-label="Flag" style="position:absolute;left:108px;top:312px;height:28px;border-radius:8px;background:{{t.fill}};padding:2px;box-sizing:border-box;display:flex">
+<sc-for list="{{flags}}" as="f" hint-placeholder-count="3">
+<button role="radio" aria-checked="{{f.on}}" title="{{f.tip}}" style="height:24px;padding:0 12px;border-radius:6px;border:none;background:{{f.bg}};box-shadow:{{f.shadow}};color:{{t.label}};font-size:12px;display:flex;align-items:center;gap:5px">{{f.name}}</button>
+</sc-for>
+</div>
+
+<div style="position:absolute;left:16px;top:348px;width:80px;height:28px;display:flex;align-items:center;justify-content:flex-end">Date</div>
+<div style="position:absolute;left:108px;right:16px;top:348px;height:28px;display:flex;align-items:center;justify-content:space-between;gap:8px">
+<span style="font-variant-numeric:tabular-nums;white-space:nowrap">Sep 27, 2026 at 5:42:08 PM <span style="color:{{t.label2}}">GMT+9</span></span>
+<button style="height:28px;padding:0 10px;border-radius:8px;border:none;background:{{t.fill}};color:{{t.label}};font-size:13px">Adjust…</button>
+</div>
+
+<div style="position:absolute;left:16px;top:384px;width:80px;height:28px;display:flex;align-items:center;justify-content:flex-end">Location</div>
+<div style="position:absolute;left:108px;right:16px;top:384px;display:flex;align-items:flex-start;justify-content:space-between;gap:8px">
+<div style="display:flex;flex-direction:column;gap:1px;padding-top:5px"><span>Nara Park, Nara, Japan</span><span style="font-size:11px;color:{{t.label2}};font-variant-numeric:tabular-nums">34.6851° N, 135.8430° E</span></div>
+<button style="height:28px;padding:0 10px;border-radius:8px;border:none;background:{{t.fill}};color:{{t.label}};font-size:13px">Adjust…</button>
+</div>
+
+<div style="position:absolute;left:16px;top:428px;width:80px;height:28px;display:flex;align-items:center;justify-content:flex-end">Creator</div>
+<label style="position:absolute;left:108px;right:16px;top:428px"><span style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)">Creator</span><input value="Linh Pham" style="width:100%;height:28px;box-sizing:border-box;border-radius:8px;border:1px solid {{t.sep}};background:{{t.field}};color:{{t.label}};font-size:13px;padding:0 8px;outline:none"></label>
+
+<div style="position:absolute;left:16px;top:464px;width:80px;height:28px;display:flex;align-items:center;justify-content:flex-end">Copyright</div>
+<label style="position:absolute;left:108px;right:16px;top:464px"><span style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)">Copyright</span><input value="© 2026 Linh Pham Photography" style="width:100%;height:28px;box-sizing:border-box;border-radius:8px;border:1px solid {{t.sep}};background:{{t.field}};color:{{t.label}};font-size:13px;padding:0 8px;outline:none"></label>
+<div style="position:absolute;left:108px;right:16px;top:497px;font-size:11px;line-height:14px;color:{{t.label2}}">Saved as you type to DSC04512.xmp next to the file. The image file itself is never edited.</div>
+
+<div style="position:absolute;left:16px;right:16px;top:530px;height:1px;background:{{t.sep}}"></div>
+
+<!-- EXIF (read-only) -->
+<div style="position:absolute;left:16px;right:16px;top:534px;height:22px;display:flex;align-items:center;justify-content:space-between">
+<button aria-label="EXIF" aria-expanded="true" style="border:none;background:none;color:{{t.label2}};font-size:11px;font-weight:600;display:flex;align-items:center;gap:4px"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"></path></svg>EXIF</button>
+<button style="height:22px;padding:0 8px;border-radius:6px;border:none;background:{{t.fill}};color:{{t.label}};font-size:11px">Show All Raw Metadata</button>
+</div>
+<div style="position:absolute;left:16px;right:16px;top:558px;display:grid;grid-template-columns:1fr 1fr;column-gap:16px">
+<sc-for list="{{exif}}" as="e" hint-placeholder-count="8">
+<div style="height:20px;display:flex;align-items:center;gap:8px;min-width:0"><span style="width:76px;flex:none;font-size:11px;color:{{t.label2}};white-space:nowrap">{{e.k}}</span><span style="flex:1;min-width:0;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-variant-numeric:tabular-nums;user-select:text">{{e.v}}</span></div>
+</sc-for>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"dark":{"editor":"boolean","default":false},"$preview":{"width":420,"height":640}}'>
+const LIGHT = { content:'#FFFFFF', label:'rgba(0,0,0,0.88)', label2:'rgba(0,0,0,0.56)', label3:'rgba(0,0,0,0.28)',
+  sep:'rgba(0,0,0,0.10)', fill:'rgba(0,0,0,0.05)', fill2:'#F2F2F4', pressed:'rgba(0,0,0,0.09)', track:'rgba(0,0,0,0.10)',
+  glass:'rgba(255,255,255,0.72)', glassStroke:'rgba(0,0,0,0.08)', glassShadow:'0 2px 10px rgba(0,0,0,0.10)',
+  sidebar:'rgba(244,244,247,0.86)', sidebarShadow:'0 8px 28px rgba(0,0,0,0.12)', rowSel:'rgba(0,0,0,0.08)',
+  accent:'#C6730E', onAccent:'#FFFFFF', red:'#FF3B30', green:'#34C759',
+  accentFill:'#A35E0A', onAccentFill:'#FFFFFF', accentText:'#A35E0A', accentSoft:'rgba(198,115,14,0.14)', focusRing:'rgba(198,115,14,0.45)',
+  menu:'rgba(246,246,248,0.97)', menuShadow:'0 10px 30px rgba(0,0,0,0.22)', sheet:'#F6F6F8', scrim:'rgba(0,0,0,0.18)',
+  rowAlt:'rgba(0,0,0,0.03)', field:'#FFFFFF', redText:'#C4001A', greenText:'#1F7A35', segOn:'#FFFFFF', segShadow:'0 1px 2px rgba(0,0,0,0.18)',
+  lightOff:'#D0D0D3' };
+const DARK = { content:'#1C1C1E', label:'rgba(255,255,255,0.90)', label2:'rgba(255,255,255,0.58)', label3:'rgba(255,255,255,0.28)',
+  sep:'rgba(255,255,255,0.10)', fill:'rgba(255,255,255,0.07)', fill2:'#2C2C2E', pressed:'rgba(255,255,255,0.12)', track:'rgba(255,255,255,0.14)',
+  glass:'rgba(50,50,54,0.72)', glassStroke:'rgba(255,255,255,0.10)', glassShadow:'0 2px 12px rgba(0,0,0,0.45)',
+  sidebar:'rgba(38,38,42,0.86)', sidebarShadow:'0 8px 28px rgba(0,0,0,0.5)', rowSel:'rgba(255,255,255,0.10)',
+  accent:'#EB9526', onAccent:'#000000', red:'#FF453A', green:'#30D158',
+  accentFill:'#EB9526', onAccentFill:'#000000', accentText:'#EB9526', accentSoft:'rgba(235,149,38,0.18)', focusRing:'rgba(235,149,38,0.50)',
+  menu:'rgba(40,40,44,0.97)', menuShadow:'0 10px 30px rgba(0,0,0,0.22)', sheet:'#2A2A2D', scrim:'rgba(0,0,0,0.35)',
+  rowAlt:'rgba(255,255,255,0.04)', field:'#1C1C1E', redText:'#FF6961', greenText:'#30D158', segOn:'rgba(255,255,255,0.20)', segShadow:'none',
+  lightOff:'#4A4A4E' };
+class Component extends DCLogic {
+  renderVals() {
+    const dark=!!this.props.dark; const t = dark ? DARK : LIGHT;
+    const stars=[1,2,3,4,5].map(n=>({ label: n===1?'Rate 1 Star':'Rate '+n+' Stars', tip: (n===1?'1 Star':n+' Stars')+' ('+n+')',
+      fill: n<=4?'currentColor':'none', color: n<=4?t.label:t.label2 }));
+    const flag=(name,tip,on)=>({name,tip,on:on?'true':'false',bg:on?t.segOn:'transparent',shadow:on?t.segShadow:'none'});
+    return { t, stars,
+      keywords:['Nara','sunset','deer park','portfolio','Japan 2026'],
+      flags:[flag('None','Clear Flag (U)',false),flag('Pick','Pick (P)',true),flag('Reject','Reject (X)',false)],
+      exif:[{k:'Make',v:'SONY'},{k:'Model',v:'ILCE-7M4'},{k:'Exposure',v:'1/250 s'},{k:'Aperture',v:'f/2.8'},
+            {k:'ISO',v:'400'},{k:'Focal Length',v:'35 mm (35 mm)'},{k:'Metering',v:'Multi-segment'},{k:'White Balance',v:'Auto'}] };
+  }
+}
+</script>
+</body>
+</html>

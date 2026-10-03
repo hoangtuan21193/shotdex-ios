@@ -4,7 +4,7 @@
 |---|---|
 | Đặc tả | [`FS-12.17`](../02-functional-spec/FS-12-video-studio/17-precise-trim-and-input.md) (17 AC) · [`FS-12.17b`](../02-functional-spec/FS-12-video-studio/17b-keyboard-and-pointer.md) (18 AC) — **35 AC**, cả hai là F6 |
 | Intent | [video-studio-canvas-chrome](../_intents/2026-10-03-video-studio-canvas-chrome.md) — F6, thứ tự theo mảng: chrome → chọn item → Media → Video Settings → Look → kích thước → F1–F8 |
-| Design | canvas Video Studio <https://claude.ai/artifact/B8NqQqRHcHoFknxQ9gHZPJ> (Version 26), hàng F6: `F6_P_PreciseTrim` · `F6_P_FineScrub` · `F6_DI_TouchTrim` · `F6_IP_PencilTrim` · `F6_DC_PreciseTrim` · `F6_P_Keyboard` · `F6_DI_Keyboard` · `F6_DC_Keyboard` · `F6_IL_HoverScrub` · `F6_IL_Shortcuts` — **đủ 10 board trên canvas** (đã liệt kê file 2026-10-03, kể cả hai board `F6_DC_*` spec §11 yêu cầu vẽ thêm). Bản cục bộ `build/design/video/project/` **chưa có board F6 nào** → mỗi task UI xuất lại `project/` trước khi chạy `design-parity` |
+| Design | canvas Video Studio [docs/design](../design/README.md) (Version 26), hàng F6: `F6_P_PreciseTrim` · `F6_P_FineScrub` · `F6_DI_TouchTrim` · `F6_IP_PencilTrim` · `F6_DC_PreciseTrim` · `F6_P_Keyboard` · `F6_DI_Keyboard` · `F6_DC_Keyboard` · `F6_IL_HoverScrub` · `F6_IL_Shortcuts` — **đủ 10 board trên canvas** (đã liệt kê file 2026-10-03, kể cả hai board `F6_DC_*` spec §11 yêu cầu vẽ thêm). Bản cục bộ `build/design/video/project/` **chưa có board F6 nào** → mỗi task UI xuất lại `project/` trước khi chạy `design-parity` |
 | Phụ thuộc | xem §7 — chặn nhất là plan **chrome / chọn item / hàng lệnh / tay nắm mép** (FS-12.04 · 04b · 05 §3) |
 | Ngày | 2026-10-03 |
 | Trạng thái | **approved 2026-10-03** — bước **8** (cuối) của thứ tự xây. 38 task = 38 commit. Task 1–2 (driver) làm được ngay, trước cả bước 1; task 3 trở đi chờ các plan ở §7 |
@@ -39,7 +39,7 @@
   như mọi trường; Back không còn hỏi Discard nên không còn chuyện "bật `hasEdits`". Test task 27 đổi
   `inOutDoesNotDirtyProject` → `inOutIsSavedWithTheDraft`.
 - `inPoint`/`outPoint` chỉ thêm khoá vào bộ giải mã khoan dung của tools plan task 4.
-- **Board canvas phải sửa** (canvas Video Studio <https://claude.ai/artifact/B8NqQqRHcHoFknxQ9gHZPJ>, trước task
+- **Board canvas phải sửa** (canvas Video Studio [docs/design](../design/README.md), trước task
   `design-parity` đầu tiên của board đó):
   - `F6_IP_PencilTrim`: thêm hai công tắc PRECISION cạnh khối PENCIL (❓-2); chân "Trim · Clip 2" / "0:09.07 · −4
     frames"; bỏ dòng Duration của clip video (FS-12.17 §11).

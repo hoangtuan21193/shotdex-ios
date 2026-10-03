@@ -8,7 +8,7 @@ và gửi / nhận từng look của mình qua AirDrop, Files, Messages như g�
 
 Nguồn: intent [lightroom-preset-exchange](../../_intents/2026-09-27-lightroom-preset-exchange.md) (accepted) ·
 trả lời câu treo số 2 của [editor-lightroom-feature-parity](../../_intents/2026-09-22-editor-lightroom-feature-parity.md).
-Canvas hàng "Presets" PR1–PR9: <https://claude.ai/artifact/T4tEUQrJtxBbi48HokiL9F>.
+Canvas hàng "Presets" PR1–PR9: [docs/design](../../design/README.md).
 
 ## Các phần
 

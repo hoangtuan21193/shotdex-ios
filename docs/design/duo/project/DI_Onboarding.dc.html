@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Duo inner · Onboarding</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0}
+button{font-family:inherit;padding:0;margin:0;cursor:default}
+input{font-family:inherit}
+</style>
+</helmet>
+<div style="width: 951px; height: 669px; position: relative; overflow: hidden; background: {{t.bg}}; color: {{t.label}}; font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', system-ui, sans-serif">
+<div style="position:absolute;left:0;top:24px;width:951px;height:531px;overflow:hidden">
+<div style="display:flex;flex-direction:column;align-items:center;padding-top:24px">
+<div style="margin-bottom:16px"><svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="display:block;color:{{t.accent}}"><rect x="2.5" y="2.5" width="19" height="19" rx="5"></rect><circle cx="12" cy="12" r="3.3"></circle><path d="M7 7h.01M12 6.5h.01M17 7h.01M6.5 12h.01M17.5 12h.01M7 17h.01M12 17.5h.01M17 17h.01"></path></svg></div>
+<div style="font-size:34px;font-weight:700;line-height:41px;margin-bottom:32px">ShotDex</div>
+<div style="display:flex;flex-direction:column;align-items:flex-start;gap:22px;padding:0 28px;">
+<div style="display:flex;align-items:flex-start;gap:12px"><div style="width:30px;flex:none;display:flex;justify-content:center;padding-top:1px"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="display:block;color:{{t.accent}}"><circle cx="10.5" cy="10.5" r="6.5"></circle><path d="M15.5 15.5L20.5 20.5"></path></svg></div><div style="display:flex;flex-direction:column;gap:2px;white-space:nowrap;"><div style="font-size:15px;font-weight:600;line-height:20px">Find photos by camera and lens</div><div style="font-size:13px;line-height:18px;color:{{t.label2}}">Search and filter your library by gear and exposure settings.</div></div></div>
+<div style="display:flex;align-items:flex-start;gap:12px"><div style="width:30px;flex:none;display:flex;justify-content:center;padding-top:1px"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="display:block;color:{{t.accent}}"><path d="M3 20h18M6.5 16.5v-5M11.5 16.5V6M16.5 16.5v-8"></path></svg></div><div style="display:flex;flex-direction:column;gap:2px;white-space:nowrap;"><div style="font-size:15px;font-weight:600;line-height:20px">Explore your most-used gear</div><div style="font-size:13px;line-height:18px;color:{{t.label2}}">See which bodies, lenses and focal lengths you really use.</div></div></div>
+<div style="display:flex;align-items:flex-start;gap:12px"><div style="width:30px;flex:none;display:flex;justify-content:center;padding-top:1px"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="display:block;color:{{t.accent}}"><path d="M4 8h15M15 4l4 4-4 4M20 16H5M9 12l-4 4 4 4"></path></svg></div><div style="display:flex;flex-direction:column;gap:2px;white-space:nowrap;"><div style="font-size:15px;font-weight:600;line-height:20px">Compare focal lengths across sensor sizes</div><div style="font-size:13px;line-height:18px;color:{{t.label2}}">Full-frame equivalent views across all your cameras.</div></div></div>
+<div style="display:flex;align-items:flex-start;gap:12px"><div style="width:30px;flex:none;display:flex;justify-content:center;padding-top:1px"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="display:block;color:{{t.accent}}"><path d="M12 2.8l7.5 3v5.7c0 4.6-3.2 8.3-7.5 9.7-4.3-1.4-7.5-5.1-7.5-9.7V5.8z"></path><rect x="9" y="11" width="6" height="5" rx="1"></rect><path d="M10.2 11V9.5a1.8 1.8 0 0 1 3.6 0V11"></path></svg></div><div style="display:flex;flex-direction:column;gap:2px;white-space:nowrap;"><div style="font-size:15px;font-weight:600;line-height:20px">Your photos stay on your device</div><div style="font-size:13px;line-height:18px;color:{{t.label2}}">Your photos and metadata stay on this device. They leave it only when you upload them to a server you set up.</div></div></div>
+</div>
+</div>
+</div>
+<button style="position:absolute;left:28px;top:555px;width:895px;height:50px;border-radius:25px;border:none;background:{{t.tint}};color:#FFFFFF;font-size:17px;font-weight:600">Continue</button>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"dark":{"editor":"boolean","default":false},"$preview":{"width":951,"height":669}}'>
+
+const LIGHT = { bg:'#FFFFFF', grouped:'#F2F2F7', card:'#FFFFFF', label:'#000000', label2:'#6C6C70', label3:'#8E8E93',
+  sep:'#C6C6C8', fill:'#E9E9EB', fill2:'#F2F2F7', glass:'rgba(255,255,255,0.78)', glassStroke:'rgba(0,0,0,0.08)',
+  glassShadow:'0 4px 18px rgba(0,0,0,0.12)', tint:'#007AFF', red:'#FF3B30', green:'#34C759', orange:'#FF9500',
+  accent:'#C6730E', dim:'rgba(0,0,0,0.35)', sheet:'#FFFFFF', onAccent:'#FFFFFF' };
+const DARK = { bg:'#000000', grouped:'#000000', card:'#1C1C1E', label:'#FFFFFF', label2:'#98989F', label3:'#6C6C70',
+  sep:'#38383A', fill:'#2C2C2E', fill2:'#1C1C1E', glass:'rgba(44,44,46,0.78)', glassStroke:'rgba(255,255,255,0.10)',
+  glassShadow:'0 4px 18px rgba(0,0,0,0.5)', tint:'#0A84FF', red:'#FF453A', green:'#30D158', orange:'#FF9F0A',
+  accent:'#EB9526', dim:'rgba(0,0,0,0.55)', sheet:'#1C1C1E', onAccent:'#000000' };
+const SKIES=[['#5B7FA6','#E8C39E'],['#2E4A6B','#9FB8C9'],['#7A5C8E','#F2A774'],['#3D6B5A','#C9D6A3'],['#8AA9C1','#F4E1C1'],
+ ['#1F3A4D','#D98C5F'],['#4F6D7A','#DDE2C6'],['#6B4E3D','#E2B07A'],['#355C7D','#C06C84'],['#2B5876','#4E4376'],['#A3B18A','#344E41'],['#D4A373','#606C38']];
+const tile=(i)=>{const s=SKIES[i%SKIES.length];return 'linear-gradient(180deg,'+s[0]+' 0%,'+s[1]+' 58%,#2F3B2F 58%,#1E271E 100%)';};
+const META=['ISO 400 · 85mm · f/1.8','ISO 100 · 24mm · f/8','ISO 3200 · 35mm · f/1.4','ISO 200 · 70mm · f/2.8',
+ 'ISO 800 · 50mm · f/2','ISO 125 · 16mm · f/11','ISO 640 · 135mm · f/1.8','ISO 1600 · 23mm · f/2','ISO 250 · 56mm · f/1.2'];
+const FT=['HEIC','RAW','JPG','RAW','HEIC','RAW','JPG','HEIC','RAW'];
+const DUR=['0:42','1:08','0:17','2:31'];
+function makeTiles(n, o){
+  const out=[]; const sel=o.selected||[];
+  for(let i=0;i<n;i++){
+    const isVideo = (i%11)===4;
+    const s = sel.indexOf(i)>=0;
+    const fav = !isVideo && (i%7)===2;
+    const live = !isVideo && (i%9)===5;
+    const hasMeta = !!o.meta && !isVideo;
+    out.push({ bg: tile(i*5+3), op: s?0.82:1, ft: isVideo?'MOV':FT[i%FT.length], isVideo, dur: '▶ '+DUR[i%DUR.length],
+      hasMeta, meta: META[i%META.length], fav, live, hasStatus: fav||live,
+      statusBottom: hasMeta?'20px':'4px', selecting: !!o.selecting, sel: s, unsel: !!o.selecting && !s, acc: o.t.accent });
+  }
+  return out;
+}
+const KEYROWS=[['q','w','e','r','t','y','u','i','o','p'],['a','s','d','f','g','h','j','k','l'],['z','x','c','v','b','n','m']];
+const keyRows=()=>KEYROWS.map(r=>({keys:r.map(k=>({k}))}));
+class Component extends DCLogic {
+  renderVals() {
+    const t = this.props.dark ? DARK : LIGHT;
+    return { t };
+  }
+}
+</script>
+</body>
+</html>

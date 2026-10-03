@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Inner · Smart Album Editor</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0}
+button{font-family:inherit}
+.a{position:absolute}
+.g{position:absolute;display:flex;align-items:center;justify-content:center;padding:0;border-radius:999px;box-sizing:border-box;cursor:default}
+button.a{background:none;border:0;padding:0}
+.col{display:flex;flex-direction:column;align-items:center;justify-content:center}
+.tnum{font-variant-numeric:tabular-nums}
+.hd{font-size:22px;font-weight:700;letter-spacing:0.2px}
+.cl{overflow:hidden;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2}
+</style>
+</helmet>
+<div style="width: 951px; height: 669px; position: relative; overflow: hidden; background: {{t.bg}}; color: {{t.label}}; font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', system-ui, sans-serif">
+<div class="a" style="left:0px;top:0px;width:951px;height:669px;border-radius:16px 16px 0 0;overflow:hidden;background:{{s.sheetBg}};box-shadow:0 10px 40px rgba(0,0,0,0.25)"><button class="g" style="left:20px;top:28px;width:86px;height:44px;background:{{t.glass}};border:1px solid {{t.glassStroke}};box-shadow:{{t.glassShadow}};backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);color:{{t.label}};font-size:17px">Cancel</button><button class="g" style="left:857px;top:28px;width:74px;height:44px;background:{{t.tint}};border:0;color:#FFFFFF;font-size:17px;font-weight:600">Save</button><div class="a" style="left:0;width:951px;top:28px;height:44px;display:flex;align-items:center;justify-content:center;font-size:17px;font-weight:600;pointer-events:none">Edit Smart Album</div><div class="a" style="left:36px;top:90px;font-size:13px;color:{{t.label2}};letter-spacing:0.2px;text-transform:uppercase">Name</div><div class="a" style="left:20px;top:114px;width:911px;height:44px;border-radius:22px;background:{{s.cell}}"></div><div class="a" style="left:36px;top:114px;line-height:44px;font-size:17px">Telephoto Sony</div><div class="a" style="left:36px;top:180px;font-size:13px;color:{{t.label2}};letter-spacing:0.2px;text-transform:uppercase">Media Type</div><div class="a" style="left:20px;top:204px;width:911px;height:48px;border-radius:22px;background:{{s.cell}}"></div><div class="a" style="left:36px;top:212px;width:879px;height:32px;border-radius:16px;background:{{s.chip}}"></div><div class="a" style="left:38.0px;top:214px;width:291.7px;height:28px;border-radius:14px;background:{{s.segSel}};box-shadow:0 1px 3px rgba(0,0,0,0.12)"></div><button class="a" style="left:38.0px;top:214px;width:291.7px;height:28px;font-size:13px;font-weight:600;color:{{t.label}}">All</button><button class="a" style="left:329.7px;top:214px;width:291.7px;height:28px;font-size:13px;font-weight:500;color:{{t.label}}">Photo</button><button class="a" style="left:621.3px;top:214px;width:291.7px;height:28px;font-size:13px;font-weight:500;color:{{t.label}}">Video</button><div class="a" style="left:20px;top:274px;width:911px;height:92px;border-radius:22px;background:{{s.cell}}"></div><div class="a" style="left:36px;top:322px;width:895px;height:1px;background:{{t.sep}};opacity:0.7"></div><div class="a" style="left:36px;top:282px;width:879px;height:32px;border-radius:16px;background:{{s.chip}}"></div><div class="a" style="left:38.0px;top:284px;width:437.5px;height:28px;border-radius:14px;background:{{s.segSel}};box-shadow:0 1px 3px rgba(0,0,0,0.12)"></div><button class="a" style="left:38.0px;top:284px;width:437.5px;height:28px;font-size:13px;font-weight:600;color:{{t.label}}">All</button><button class="a" style="left:475.5px;top:284px;width:437.5px;height:28px;font-size:13px;font-weight:500;color:{{t.label}}">Any</button><div class="a" style="left:36px;top:322px;line-height:44px;font-size:13px;color:{{t.label2}}">Photos must match every condition below.</div><div class="a" style="left:36px;top:388px;font-size:13px;color:{{t.label2}};letter-spacing:0.2px;text-transform:uppercase">Conditions</div><div class="a" style="left:20px;top:412px;width:911px;height:390px;border-radius:22px;background:{{s.cell}}"></div><div class="a" style="left:36px;top:514px;width:895px;height:1px;background:{{t.sep}};opacity:0.7"></div><div class="a" style="left:36px;top:656px;width:895px;height:1px;background:{{t.sep}};opacity:0.7"></div><div class="a" style="left:36px;top:758px;width:895px;height:1px;background:{{t.sep}};opacity:0.7"></div><div class="a" style="left:36px;top:427px;display:flex;gap:8px"><span style="display:inline-flex;align-items:center;gap:4px;height:30px;padding:0 10px;border-radius:15px;background:{{s.chip}};font-size:15px;font-weight:600;white-space:nowrap">Camera Model<span style="color:{{t.label2}};display:flex"><svg viewBox="0 0 24 24" style="width:11px;height:11px;flex:none" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 9.5l4-4 4 4 M8 14.5l4 4 4-4"></path></svg></span></span><span style="display:inline-flex;align-items:center;gap:4px;height:30px;padding:0 10px;border-radius:15px;background:{{s.chip}};font-size:15px;font-weight:400;white-space:nowrap">is<span style="color:{{t.label2}};display:flex"><svg viewBox="0 0 24 24" style="width:11px;height:11px;flex:none" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 9.5l4-4 4 4 M8 14.5l4 4 4-4"></path></svg></span></span></div><button aria-label="Delete condition" class="a" style="left:889px;top:430px;width:24px;height:24px"><svg viewBox="0 0 24 24" style="width:24px;height:24px"><circle cx="12" cy="12" r="10" fill="{{t.red}}"></circle><path d="M7.5 12h9" stroke="#FFFFFF" stroke-width="2.2" stroke-linecap="round"></path></svg></button><div class="a tnum" style="left:36px;top:465px;width:879px;height:34px;box-sizing:border-box;border:1px solid {{t.sep}};border-radius:6px;background:{{t.card}};padding:0 8px;line-height:32px;font-size:17px;color:{{t.label}}">Sony α7 IV</div><div class="a" style="left:36px;top:529px;display:flex;gap:8px"><span style="display:inline-flex;align-items:center;gap:4px;height:30px;padding:0 10px;border-radius:15px;background:{{s.chip}};font-size:15px;font-weight:600;white-space:nowrap">Focal Length<span style="color:{{t.label2}};display:flex"><svg viewBox="0 0 24 24" style="width:11px;height:11px;flex:none" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 9.5l4-4 4 4 M8 14.5l4 4 4-4"></path></svg></span></span><span style="display:inline-flex;align-items:center;gap:4px;height:30px;padding:0 10px;border-radius:15px;background:{{s.chip}};font-size:15px;font-weight:400;white-space:nowrap">is in range<span style="color:{{t.label2}};display:flex"><svg viewBox="0 0 24 24" style="width:11px;height:11px;flex:none" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 9.5l4-4 4 4 M8 14.5l4 4 4-4"></path></svg></span></span></div><button aria-label="Delete condition" class="a" style="left:889px;top:532px;width:24px;height:24px"><svg viewBox="0 0 24 24" style="width:24px;height:24px"><circle cx="12" cy="12" r="10" fill="{{t.red}}"></circle><path d="M7.5 12h9" stroke="#FFFFFF" stroke-width="2.2" stroke-linecap="round"></path></svg></button><div class="a" style="left:36px;top:567px;width:879px;height:32px;border-radius:16px;background:{{s.chip}}"></div><div class="a" style="left:38.0px;top:569px;width:437.5px;height:28px;border-radius:14px;background:{{s.segSel}};box-shadow:0 1px 3px rgba(0,0,0,0.12)"></div><button class="a" style="left:38.0px;top:569px;width:437.5px;height:28px;font-size:13px;font-weight:600;color:{{t.label}}">Actual</button><button class="a" style="left:475.5px;top:569px;width:437.5px;height:28px;font-size:13px;font-weight:500;color:{{t.label}}">FF Equivalent</button><div class="a tnum" style="left:36px;top:607px;width:424px;height:34px;box-sizing:border-box;border:1px solid {{t.sep}};border-radius:6px;background:{{t.card}};padding:0 8px;line-height:32px;font-size:17px;color:{{t.label}}">70<span style="position:absolute;right:10px;top:0;line-height:34px;color:{{t.label2}}">mm</span></div><div class="a" style="left:460px;top:607px;width:32px;line-height:34px;text-align:center;color:{{t.label2}};font-size:17px">to</div><div class="a tnum" style="left:492px;top:607px;width:424px;height:34px;box-sizing:border-box;border:1px solid {{t.sep}};border-radius:6px;background:{{t.card}};padding:0 8px;line-height:32px;font-size:17px;color:{{t.label}}">200<span style="position:absolute;right:10px;top:0;line-height:34px;color:{{t.label2}}">mm</span></div><div class="a" style="left:36px;top:671px;display:flex;gap:8px"><span style="display:inline-flex;align-items:center;gap:4px;height:30px;padding:0 10px;border-radius:15px;background:{{s.chip}};font-size:15px;font-weight:600;white-space:nowrap">ISO<span style="color:{{t.label2}};display:flex"><svg viewBox="0 0 24 24" style="width:11px;height:11px;flex:none" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 9.5l4-4 4 4 M8 14.5l4 4 4-4"></path></svg></span></span><span style="display:inline-flex;align-items:center;gap:4px;height:30px;padding:0 10px;border-radius:15px;background:{{s.chip}};font-size:15px;font-weight:400;white-space:nowrap">less than<span style="color:{{t.label2}};display:flex"><svg viewBox="0 0 24 24" style="width:11px;height:11px;flex:none" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 9.5l4-4 4 4 M8 14.5l4 4 4-4"></path></svg></span></span></div><button aria-label="Delete condition" class="a" style="left:889px;top:674px;width:24px;height:24px"><svg viewBox="0 0 24 24" style="width:24px;height:24px"><circle cx="12" cy="12" r="10" fill="{{t.red}}"></circle><path d="M7.5 12h9" stroke="#FFFFFF" stroke-width="2.2" stroke-linecap="round"></path></svg></button><div class="a tnum" style="left:36px;top:709px;width:879px;height:34px;box-sizing:border-box;border:1px solid {{t.sep}};border-radius:6px;background:{{t.card}};padding:0 8px;line-height:32px;font-size:17px;color:{{t.label}}">800</div><button class="a" style="left:36px;top:758px;height:44px;display:flex;align-items:center;gap:8px;font-size:17px;color:{{t.tint}}"><svg viewBox="0 0 24 24" style="width:22px;height:22px"><circle cx="12" cy="12" r="10" fill="{{t.tint}}"></circle><path d="M12 7.5v9 M7.5 12h9" stroke="#FFFFFF" stroke-width="2.2" stroke-linecap="round"></path></svg>Add Condition</button><div class="a tnum" style="left:36px;top:810px;font-size:13px;color:{{t.label2}}">Matches 1,284 photos.</div></div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"dark":{"editor":"boolean","default":false},"$preview":{"width":951,"height":669}}'>
+
+const LIGHT = { bg:'#FFFFFF', grouped:'#F2F2F7', card:'#FFFFFF', label:'#000000', label2:'#6C6C70', label3:'#8E8E93',
+  sep:'#C6C6C8', fill:'#E9E9EB', fill2:'#F2F2F7', glass:'rgba(255,255,255,0.78)', glassStroke:'rgba(0,0,0,0.08)',
+  glassShadow:'0 4px 18px rgba(0,0,0,0.12)', tint:'#007AFF', red:'#FF3B30', green:'#34C759', orange:'#FF9500',
+  accent:'#C6730E', dim:'rgba(0,0,0,0.35)', sheet:'#FFFFFF', onAccent:'#FFFFFF' };
+const DARK = { bg:'#000000', grouped:'#000000', card:'#1C1C1E', label:'#FFFFFF', label2:'#98989F', label3:'#6C6C70',
+  sep:'#38383A', fill:'#2C2C2E', fill2:'#1C1C1E', glass:'rgba(44,44,46,0.78)', glassStroke:'rgba(255,255,255,0.10)',
+  glassShadow:'0 4px 18px rgba(0,0,0,0.5)', tint:'#0A84FF', red:'#FF453A', green:'#30D158', orange:'#FF9F0A',
+  accent:'#EB9526', dim:'rgba(0,0,0,0.55)', sheet:'#1C1C1E', onAccent:'#000000' };
+const SKIES=[['#5B7FA6','#E8C39E'],['#2E4A6B','#9FB8C9'],['#7A5C8E','#F2A774'],['#3D6B5A','#C9D6A3'],['#8AA9C1','#F4E1C1'],
+ ['#1F3A4D','#D98C5F'],['#4F6D7A','#DDE2C6'],['#6B4E3D','#E2B07A'],['#355C7D','#C06C84'],['#2B5876','#4E4376'],['#A3B18A','#344E41'],['#D4A373','#606C38']];
+const DUR=['0:42','1:08','0:17','2:31','0:09'];
+function tile(i){ const s=SKIES[i%SKIES.length]; const h=46+((i*7)%22);
+  return 'linear-gradient(180deg,'+s[0]+' 0%,'+s[1]+' '+h+'%,#2F3B2F '+h+'%,#1E271E 100%)'; }
+function cover(i){ const s=SKIES[i%SKIES.length]; return 'linear-gradient(170deg,'+s[0]+' 0%,'+s[1]+' 100%)'; }
+function px(v){ return v.toFixed(2)+'px'; }
+function gridTiles(cols,width,top,bottom,seed,vids){
+  const g=2, w=(width-g*(cols-1))/cols, out=[]; let i=0;
+  for(let y=top; y<bottom; y+=w+g){ for(let c=0;c<cols;c++){ const v=vids.indexOf(i)>=0;
+    out.push({left:px(c*(w+g)), top:px(y), size:px(w), bg:tile(seed+i), durDisplay:v?'block':'none', dur:DUR[i%DUR.length]}); i++; } }
+  return out; }
+function dayGrid(cols,width,bottom,navBottom,secs,vids){
+  const g=2, w=(width-g*(cols-1))/cols, HH=34, tiles=[], heads=[]; let y=bottom, k=0;
+  for(let s=secs.length-1;s>=0;s--){ const n=secs[s].n, rows=Math.ceil(n/cols), secBottom=y;
+    y-=rows*w+(rows-1)*g; const t0=y;
+    for(let i=0;i<n;i++){ const r=Math.floor(i/cols), c=i%cols, ty=t0+r*(w+g); k++;
+      if(ty+w>0){ const v=vids.indexOf(k)>=0; tiles.push({left:px(c*(w+g)), top:px(ty), size:px(w), bg:tile(k*5+s), durDisplay:v?'block':'none', dur:DUR[k%DUR.length]}); } }
+    y-=HH; let ht=y;
+    if(ht<navBottom && secBottom>navBottom){ ht=Math.min(navBottom, secBottom-HH); }
+    if(ht>=navBottom-2) heads.push({top:px(ht+4), title:secs[s].title});
+    y-=g; if(y<-200) break; }
+  return {tiles, heads}; }
+
+
+class Component extends DCLogic {
+  renderVals() {
+    const dk = !!this.props.dark;
+    const t = dk ? DARK : LIGHT;
+    const s = { sheetBg: dk ? t.card : t.grouped, cell: dk ? t.fill : t.card, chip: dk ? t.sep : t.fill, segSel: dk ? t.label3 : t.card, cell2: dk ? t.card : t.fill2 };
+    return { t, s, x: 0 };
+  }
+}
+</script>
+</body>
+</html>

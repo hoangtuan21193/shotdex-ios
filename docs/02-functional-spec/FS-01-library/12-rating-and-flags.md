@@ -118,7 +118,7 @@ Chốt 2026-10-02.
 - **VoiceOver:** ô lưới đọc thêm "3 stars, Picked" sau các trạng thái có sẵn.
 
 **Design canvas:** không board nào đang có bị đổi. Ô lưới, dòng 2 của viewer, menu lọc (§7) và màn Cull
-([FS-01.12b](12b-culling-pass.md)) đã vẽ trên canvas [ShotDex Photo Editor](https://claude.ai/artifact/T4tEUQrJtxBbi48HokiL9F)
+([FS-01.12b](12b-culling-pass.md)) đã vẽ trên canvas [ShotDex Photo Editor](../../design/README.md)
 (Version 60), nối vào hàng thiết bị: `PH23`–`PH28`, `IP15`–`IP19`, `IPP15`, `DI14`, `DIP14`, `DC15`.
 
 ## 9. Tiêu chí nghiệm thu

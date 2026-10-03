@@ -7,7 +7,7 @@
 nướng vào video lúc xuất.
 
 Code hôm nay: chưa target nào dùng Speech; chữ trên video là overlay chữ theo thời gian ([FS-12.08 §2](08-model-and-v1-limits.md)).
-Canvas: hàng F4 của <https://claude.ai/artifact/B8NqQqRHcHoFknxQ9gHZPJ>. Riêng tư: [NF-03](../../04-non-functional-design/NF-03-privacy-and-security.md).
+Canvas: hàng F4 của [docs/design](../../design/README.md). Riêng tư: [NF-03](../../04-non-functional-design/NF-03-privacy-and-security.md).
 
 ## 1. Người dùng cần gì
 

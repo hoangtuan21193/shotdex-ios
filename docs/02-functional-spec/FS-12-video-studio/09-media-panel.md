@@ -7,7 +7,7 @@
 timeline, và luôn thấy thứ gì đã có trong phim.
 
 Nguồn intent: [2026-10-03-video-studio-canvas-chrome](../../_intents/2026-10-03-video-studio-canvas-chrome.md).
-Canvas: [Video Studio](https://claude.ai/artifact/B8NqQqRHcHoFknxQ9gHZPJ) v23, board `MP_*`.
+Canvas: [Video Studio](../../design/README.md) v23, board `MP_*`.
 
 ## 1. Người dùng cần gì
 

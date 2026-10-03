@@ -55,7 +55,7 @@ ngay, theo luật lưu của [FS-01.12 §4–5](12-rating-and-flags.md).
 - Tier D nên không rẽ nhánh theo iOS 26. Lối vào (menu) giống nhau ở cả hai nhánh.
 
 **Design canvas:** màn **mới**, chưa có board. Phải thêm board iPhone · iPad · Duo trong · Duo ngoài vào hàng
-thiết bị tương ứng của canvas [ShotDex Photo Editor](https://claude.ai/artifact/T4tEUQrJtxBbi48HokiL9F)
+thiết bị tương ứng của canvas [ShotDex Photo Editor](../../design/README.md)
 **trước** khi code, theo bố cục §5; viên Delete trên thanh điều kiện vẽ cùng hàng đó.
 
 ## 5. Bố cục, lối vào và thao tác

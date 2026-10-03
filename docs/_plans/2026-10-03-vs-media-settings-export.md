@@ -4,7 +4,7 @@
 |---|---|
 | Đặc tả | [FS-12.09](../02-functional-spec/FS-12-video-studio/09-media-panel.md) (18 AC) · [FS-12.10](../02-functional-spec/FS-12-video-studio/10-video-settings-and-export.md) (12 AC) · [FS-12.10b](../02-functional-spec/FS-12-video-studio/10b-export.md) (13 AC) · [FS-12.01](../02-functional-spec/FS-12-video-studio/01-render-and-export-pipeline.md) §7b–§9 (không có bảng AC riêng; đi kèm [README](../02-functional-spec/FS-12-video-studio/README.md) AC-6/7/8) |
 | Intent | [2026-10-03-video-studio-canvas-chrome](../_intents/2026-10-03-video-studio-canvas-chrome.md) — mảng 3 (Media) và 4 (Video Settings/Export) của thứ tự "thanh dưới → chọn item → **Media** → **Video Settings/Export** → Look → kích thước → F1–F8" |
-| Canvas | [Video Studio](https://claude.ai/artifact/B8NqQqRHcHoFknxQ9gHZPJ) — đọc lại 2026-10-03 (bản `1790981542-377a`, 112 file): đã có `MP_P_Drag916`, `P7_ExportReady`, `IP_Export`, `DC_Export`; `ES_*`/`P6` ghi "Video Settings", "~30 MB", không còn hàng Quality |
+| Canvas | [Video Studio](../design/README.md) — đọc lại 2026-10-03 (bản `1790981542-377a`, 112 file): đã có `MP_P_Drag916`, `P7_ExportReady`, `IP_Export`, `DC_Export`; `ES_*`/`P6` ghi "Video Settings", "~30 MB", không còn hàng Quality |
 | Ngày | 2026-10-03 |
 | Trạng thái | **approved 2026-10-03** — bước **3** của thứ tự xây. 46 task = 46 commit |
 | Slug | `vs-media-settings-export` |
@@ -42,7 +42,7 @@
   E2, E10, E12 đã sửa phạm vi theo đó.
 - **Bộ giải mã khoan dung (T-4):** do task 4 của tools plan viết (bước 1, trước plan này); S1 chỉ thêm khoá mới.
 - Plan bắt đầu sau `vs-tools-selection-phone` khối 0, A–D (+ N) và `vs-wide-and-duo-layout` task 4–15 — đúng như §5 đã ghi.
-- **Board canvas phải sửa** (canvas Video Studio <https://claude.ai/artifact/B8NqQqRHcHoFknxQ9gHZPJ>, trước task
+- **Board canvas phải sửa** (canvas Video Studio [docs/design](../design/README.md), trước task
   `design-parity` đầu tiên của board đó):
   - `P7_ExportReady`: **bỏ** — Sẵn sàng iPhone là `F8_P_ExportPresets`.
   - `IL5_Export`, `DI6_Export`, `IP_Export`, `DC_Export`: vẽ lại thành trạng thái **Đang xuất** của máy đó (Sẵn sàng
