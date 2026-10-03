@@ -89,7 +89,16 @@ final class VideoStudioModel {
     private let overlayFontRecents: OverlayFontRecentsStore
     let overlayImages: OverlayImageStore
 
-    var recipe: VideoProjectRecipe
+    var recipe: VideoProjectRecipe {
+        didSet {
+            // Every change of the project — undoable or not — makes the
+            // draft write itself a second later (FS-12.18 §2). Not while the
+            // sources load: that only fills in what the media turned out to
+            // be, and an opened project is not an edited one.
+            guard !isLoadingSources, recipe != oldValue else { return }
+            drafts?.schedule { [weak self] in self?.draftSnapshot() }
+        }
+    }
     private(set) var sources: [UUID: VideoClipSource] = [:]
     private(set) var phase: Phase = .loading
     private(set) var player: AVPlayer?
@@ -215,6 +224,9 @@ final class VideoStudioModel {
         self.overlayImages = overlayImages
         self.creationStore = creationStore
         self.creationID = restoring?.id ?? UUID().uuidString
+        self.drafts = creationStore.map { store in
+            VideoDraftAutosave(write: { try store.saveDraft($0) })
+        }
         if let stored = restoring?.videoRecipe {
             self.recipe = stored
         } else {
@@ -237,7 +249,22 @@ final class VideoStudioModel {
     /// of this project's row. Exporting a reopened video updates that row
     /// rather than making a second one.
     private let creationStore: CreationStore?
-    private let creationID: String
+    let creationID: String
+
+    // MARK: - Draft (FS-12.18)
+
+    /// Writes the project as a draft as it is edited. Nil for a project of
+    /// server photos, which has no draft (FS-12.18 §2), and in previews.
+    var drafts: VideoDraftAutosave?
+    /// True while `load()` resolves the sources, when recipe changes are the
+    /// media being measured rather than the user editing.
+    private var isLoadingSources = false
+
+    /// The row a draft write stores: this project's recipe, under its id.
+    /// The store keeps what the row already knew (created, exported).
+    func draftSnapshot() -> Creation? {
+        try? Creation.video(recipe: recipe, assetId: nil, id: creationID)
+    }
 
     var selectedClip: VideoClip? {
         guard let selectedClipID else { return nil }
@@ -469,6 +496,8 @@ final class VideoStudioModel {
 
     func load() async {
         phase = .loading
+        isLoadingSources = true
+        defer { isLoadingSources = false }
         let loaded = await service.loadSources(for: recipe.clips, maximumStillSize: recipe.canvasSize())
         guard !loaded.sources.isEmpty else {
             phase = .failed(String(localized: "Couldn't load the selected items."))

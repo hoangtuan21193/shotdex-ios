@@ -76,7 +76,7 @@ Project mẫu: 5 clip 24,0 s từ 5 ảnh/video của thư viện, không ảnh 
 
 | # | Cho | Khi | Thì | Chứng minh bằng |
 |---|---|---|---|---|
-| AC-1 | project mẫu đang mở | đổi Speed clip 2 sang 2×, rồi chờ | dòng `creations` có Speed 2× sau 1,0 s ±0,3 s; ba thay đổi trong 0,5 s chỉ ra **một** lần ghi | ⚠️ chưa có |
+| AC-1 | project mẫu đang mở | đổi Speed clip 2 sang 2×, rồi chờ | dòng `creations` có Speed 2× sau 1,0 s ±0,3 s; ba thay đổi trong 0,5 s chỉ ra **một** lần ghi | ✅ `VideoDraftAutosaveTests.savesOneSecondAfterTheLastChange` (đồng hồ thật, 0,7–1,3 s), `threeQuickChangesWriteOnce` |
 | AC-2 | project mẫu, đã sửa, chưa xuất lần nào | bấm Back | Video Studio đóng ngay, **không** có alert nào; Video Projects có dòng Draft mang thay đổi đó | ⚠️ chưa có |
 | AC-3 | đổi Speed rồi trong 0,3 s về Home; tắt hẳn app | mở lại app → Video Projects → chạm dòng | thay đổi còn (đã ghi lúc xuống nền, trước hẹn 1 s) | ⚠️ chưa có |
 | AC-4 | Duo, project đang mở ở màn trong | đổi Speed rồi gập máy trong 0,3 s | dòng đã có thay đổi trước khi bố cục màn ngoài dựng xong | ⚠️ chưa có — đo tay trong Simulator.app |
@@ -89,7 +89,7 @@ Project mẫu: 5 clip 24,0 s từ 5 ảnh/video của thư viện, không ảnh 
 | AC-11 | New Video Project, chọn 3 ảnh | Video Studio mở, bấm Back ngay | Video Projects có một dòng Draft 3 clip | ⚠️ chưa có |
 | AC-12 | project đã xuất một lần | mở lại, đổi Speed, Back; rồi Export | dòng đó mang Speed mới, không có dòng thứ hai, không nhãn Draft; Export cập nhật đúng dòng ấy | ⚠️ chưa có |
 
-**Chưa chứng minh được:** AC-1, AC-2, AC-3, AC-4, AC-5, AC-6, AC-7, AC-8, AC-9, AC-11, AC-12.
+**Chưa chứng minh được:** AC-2, AC-3, AC-4, AC-5, AC-6, AC-7, AC-8, AC-9, AC-11, AC-12.
 
 ## 8. Rủi ro đã biết
 
