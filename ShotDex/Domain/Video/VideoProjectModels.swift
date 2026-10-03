@@ -504,6 +504,10 @@ struct VideoProjectRecipe: Equatable, Codable, Sendable {
     var aspect: VideoAspect = .r16x9
     /// Letterbox / pillarbox fill behind aspect-fitted frames.
     var background = OverlayColor.black
+    /// Where the playhead was when the draft was written (FS-12.18 §3).
+    /// Only in what is stored: the model takes it out on open and puts the
+    /// current one in on each save, so it is never part of an edit or undo.
+    var playhead: Double?
 
     /// The render canvas: the preset's pixel budget fitted to the aspect.
     func canvasSize() -> CGSize {
@@ -647,6 +651,7 @@ extension VideoProjectRecipe {
         renderPreset = value(.renderPreset, VideoRenderPreset.hd1080)
         aspect = value(.aspect, VideoAspect.r16x9)
         background = value(.background, OverlayColor.black)
+        playhead = value(.playhead, Double?.none)
         // A dropped clip leaves one boundary too many; boundaries are
         // positional, so trimming the tail is the honest repair.
         syncTransitionsWithClips()

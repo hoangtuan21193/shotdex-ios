@@ -240,7 +240,16 @@ final class VideoStudioModel {
             )
         }
         recipe.syncTransitionsWithClips()
-        if mode == .singleVideo {
+        // The timeline's length is known from the clips before any preview
+        // is built; the playhead can stand somewhere from the start.
+        totalDuration = clipPlacements.last?.end ?? 0
+        if restoring != nil {
+            // Reopened (FS-12.18 §3): back where the playhead was, nothing
+            // selected, no panel — even for a single video, which a fresh
+            // edit opens with its clip selected.
+            currentTime = min(max(0, recipe.playhead ?? 0), totalDuration)
+            recipe.playhead = nil
+        } else if mode == .singleVideo {
             selectedClipID = recipe.clips.first?.id
         }
         observeBackgrounding()
@@ -264,7 +273,9 @@ final class VideoStudioModel {
     /// The row a draft write stores: this project's recipe, under its id.
     /// The store keeps what the row already knew (created, exported).
     func draftSnapshot() -> Creation? {
-        try? Creation.video(recipe: recipe, assetId: nil, id: creationID)
+        var stored = recipe
+        stored.playhead = currentTime
+        return try? Creation.video(recipe: stored, assetId: nil, id: creationID)
     }
 
     /// Writes the draft now, edited or not: a project the user opened and

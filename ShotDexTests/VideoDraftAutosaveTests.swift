@@ -185,3 +185,38 @@ struct VideoDraftSceneTests {
         })
     }
 }
+
+/// FS-12.18 §3: what comes back when a draft is opened again.
+@MainActor
+struct VideoDraftReopenTests {
+    /// FS-12.18 AC-5: playhead 8.4 s, clip 2 selected, Back; opened again
+    /// from Video Projects — the playhead is at 8.4 s, nothing is selected,
+    /// no panel is open, and there is nothing to undo or redo.
+    @Test func reopenRestoresPlayheadOnly() async throws {
+        let store = CreationStore(database: try AppDatabase.makeEmpty())
+        let first = VideoStudioModelFixture.model(creationStore: store)
+        first.seek(to: 8.4)
+        first.selectClip(first.recipe.clips[1].id)
+        first.pushUndo()
+        first.setSpeed(2, for: first.recipe.clips[1].id)
+        #expect(await first.back() == .close)
+        first.close()
+
+        let row = try #require(try store.fetch(id: first.creationID))
+        let dependencies = AppDependencies.preview()
+        let reopened = VideoStudioModel(
+            photos: [], mode: .multiClip, service: dependencies.videoStudio,
+            photoLibrary: dependencies.photoLibrary, overlayFontRecents: dependencies.overlayFontRecents,
+            overlayImages: dependencies.overlayImages, creationStore: store, restoring: row
+        )
+        defer { reopened.close() }
+        #expect(abs(reopened.currentTime - 8.4) < 0.0001)
+        #expect(reopened.inspectorTarget == .none)
+        #expect(!reopened.presentsSheet)
+        #expect(!reopened.canUndo)
+        #expect(!reopened.canRedo)
+        #expect(reopened.recipe.clips[1].speed == 2)
+        // The stored playhead is not part of the project being edited.
+        #expect(reopened.recipe.playhead == nil)
+    }
+}
