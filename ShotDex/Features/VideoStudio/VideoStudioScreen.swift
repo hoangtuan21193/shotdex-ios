@@ -48,7 +48,13 @@ struct VideoStudioScreen: View {
     @State private var isFontPickerPresented = false
     @State private var musicChooserIntent: MusicChooserIntent?
     @State var isStickerPickerPresented = false
-    @State var mediaPickerMode: MediaPickerMode?
+    /// Replace on a selected clip still goes through the system picker:
+    /// the Media panel is a session of its own and would end the clip's.
+    @State var isReplacePickerPresented = false
+    /// The layout drawn last, for the commands that differ by window — Add
+    /// Media opens the pool on an iPad in landscape and the Media panel
+    /// everywhere else.
+    @State var currentWindowClass: VideoStudioWindowClass?
     @State var editingOverlay: PhotoOverlay?
     @State private var stickerImages: [UUID: CGImage] = [:]
     /// How much taller than its lanes the user has dragged the timeline.
@@ -77,11 +83,6 @@ struct VideoStudioScreen: View {
     /// a screen that runs past the top and bottom insets. Nil until the
     /// first report (FS-12.07b §1).
     @State var windowTrailingInset: CGFloat?
-
-    enum MediaPickerMode: Identifiable {
-        case add, replace
-        var id: Int { self == .add ? 0 : 1 }
-    }
 
     var body: some View {
         ZStack {
@@ -215,27 +216,9 @@ struct VideoStudioScreen: View {
                 }
             }
         }
-        .sheet(item: $mediaPickerMode) { pickerMode in
-            VideoMediaPicker(selectionLimit: pickerMode == .replace ? 1 : 0) { picks in
-                guard let model, !picks.isEmpty else { return }
-                switch pickerMode {
-                case .add:
-                    // Picked RAWs iOS can't read: the same question as at the
-                    // door (FS-03.04b AC-18).
-                    let unreadable = dependencies.unsupportedRAWIndex.assetIds
-                    guard picks.contains(where: { unreadable.contains($0.assetID) }) else {
-                        model.appendMedia(picks)
-                        return
-                    }
-                    Task { @MainActor in
-                        let assets = PhotoLibraryService.fetchAssets(ids: picks.map(\.assetID))
-                        guard let kept = await UnsupportedRAWBatchPrompt.resolve(assets, unreadable: unreadable)
-                        else { return }
-                        let keptIDs = Set(kept.map(\.localIdentifier))
-                        model.appendMedia(picks.filter { keptIDs.contains($0.assetID) })
-                    }
-                case .replace: if let first = picks.first { model.replaceSelectedClip(with: first) }
-                }
+        .sheet(isPresented: $isReplacePickerPresented) {
+            VideoMediaPicker(selectionLimit: 1) { picks in
+                if let model, let first = picks.first { model.replaceSelectedClip(with: first) }
             }
         }
         .sheet(isPresented: $isStickerPickerPresented) {
@@ -391,6 +374,7 @@ struct VideoStudioScreen: View {
         window: CGSize,
         windowClass: VideoStudioWindowClass
     ) -> some View {
+        Group {
         switch windowClass {
         case .iPadLandscape:
             deskLandscape(model, window: window)
@@ -402,6 +386,21 @@ struct VideoStudioScreen: View {
             duoCover(model, window: window)
         case .phone:
             phoneBody(model, proxy: proxy)
+        }
+        }
+        .environment(\.videoMediaGrid, VideoMediaGridMetrics.for(windowClass))
+        .onAppear { currentWindowClass = windowClass }
+        .onChange(of: windowClass) { _, new in currentWindowClass = new }
+    }
+
+    /// Add Media: the pool's Media tab on an iPad in landscape, where the
+    /// library stands beside the stage; the Media panel everywhere else
+    /// (FS-12.09 §3).
+    func addMedia(_ model: VideoStudioModel) {
+        if currentWindowClass == .iPadLandscape {
+            columns.isPoolOpen = true
+        } else {
+            model.toggleToolPanel(.media)
         }
     }
 
@@ -420,7 +419,7 @@ struct VideoStudioScreen: View {
         // A selected item swaps the tool row for ✕ · name · ✓ (FS-12.04
         // §5). The panel carries it at its foot, in the row's place, so it
         // stands a row taller.
-        let showsSessionFooter = model.inspectorTarget != .none
+        let showsSessionFooter = model.sessionFooterTitle != nil
         let panelHeight = VideoStudioMetrics.sheetHeight + proxy.safeAreaInsets.bottom
             + (showsSessionFooter ? VideoStudioMetrics.toolbarHeight : 0)
         let lanes = VideoStudioMetrics.Lanes.for(.phone)
@@ -463,7 +462,7 @@ struct VideoStudioScreen: View {
                         height: layout.timeline,
                         onAddOverlay: { addTextOverlay(model) },
                         onAddMusic: { model.toggleToolPanel(.music) },
-                        onAddMedia: { mediaPickerMode = .add },
+                        onAddMedia: { addMedia(model) },
                         onEditText: { editingOverlay = $0 },
                         onTransition: { model.editingTransitionIndex = $0 },
                         onVisibleDuration: { timelineVisibleDuration = $0 }
@@ -686,7 +685,7 @@ struct VideoStudioScreen: View {
                         .onEnded { if $0.translation.height > 40 { model.clearSelection() } }
                 )
             VideoStudioSheetHost(model: model, actions: actions(model), importedMusic: importedMusic)
-            if showsFooter, let title = model.selectionTitle {
+            if showsFooter, let title = model.sessionFooterTitle {
                 VideoSessionFooter(
                     title: title,
                     onCancel: { model.cancelSession() },
@@ -716,8 +715,8 @@ struct VideoStudioScreen: View {
         VideoInspectorActions(
             onExport: { isExportSheetPresented = true },
             onBack: { leave(model) },
-            onAddMedia: { mediaPickerMode = .add },
-            onReplaceClip: { mediaPickerMode = .replace },
+            onAddMedia: { addMedia(model) },
+            onReplaceClip: { isReplacePickerPresented = true },
             onAddText: { addTextOverlay(model) },
             onAddSticker: { isStickerPickerPresented = true },
             onAddMusic: { model.toggleToolPanel(.music) },

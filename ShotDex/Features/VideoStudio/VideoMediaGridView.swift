@@ -1,0 +1,276 @@
+import Photos
+import SwiftUI
+import UIKit
+
+/// The Media panel's grid (FS-12.09 §3–§5): a `UICollectionView` over the
+/// library's lazy fetch result rather than a SwiftUI grid over an array —
+/// 55,000 items are an index into PhotoKit here, never a list of objects —
+/// and a UIKit view because the hold-to-drag that will live on it has to be
+/// a recognizer on the scroll view itself (SwiftUI gestures die inside a
+/// `UIScrollView`'s hosted content).
+///
+/// Thumbnails go through `PhotoLibraryService` like every other grid in the
+/// app: the cell's own size times the screen scale, the fast local rendition
+/// while scrolling, and a prefetch window of a screen either side.
+struct VideoMediaGridView: UIViewRepresentable {
+    let library: VideoMediaLibrary
+    /// Changes whenever the fetch does, so the grid reloads.
+    let revision: Int
+    let metrics: VideoMediaGridMetrics
+    var bottomInset: CGFloat = 0
+    let onTap: (PHAsset) -> Void
+
+    func makeCoordinator() -> Coordinator { Coordinator(self) }
+
+    func makeUIView(context: Context) -> UICollectionView {
+        let layout = UICollectionViewFlowLayout()
+        layout.scrollDirection = .vertical
+        let view = UICollectionView(frame: .zero, collectionViewLayout: layout)
+        view.backgroundColor = .clear
+        view.alwaysBounceVertical = true
+        view.showsHorizontalScrollIndicator = false
+        view.contentInsetAdjustmentBehavior = .never
+        view.register(VideoMediaGridCell.self, forCellWithReuseIdentifier: VideoMediaGridCell.reuseIdentifier)
+        view.dataSource = context.coordinator
+        view.delegate = context.coordinator
+        view.accessibilityIdentifier = "videoMediaGrid"
+        context.coordinator.collectionView = view
+        return view
+    }
+
+    func updateUIView(_ view: UICollectionView, context: Context) {
+        let coordinator = context.coordinator
+        let metricsChanged = coordinator.parent.metrics != metrics
+        coordinator.parent = self
+        view.contentInset.bottom = bottomInset
+        view.verticalScrollIndicatorInsets.bottom = bottomInset
+        if coordinator.shownRevision != revision {
+            coordinator.shownRevision = revision
+            coordinator.resetCaching()
+            view.reloadData()
+        } else if metricsChanged {
+            view.collectionViewLayout.invalidateLayout()
+        }
+    }
+
+    static func dismantleUIView(_ view: UICollectionView, coordinator: Coordinator) {
+        coordinator.resetCaching()
+    }
+
+    @MainActor
+    final class Coordinator: NSObject, UICollectionViewDataSource, UICollectionViewDelegateFlowLayout {
+        var parent: VideoMediaGridView
+        weak var collectionView: UICollectionView?
+        var shownRevision = -1
+        /// The assets PhotoKit is keeping warm, and at what size.
+        private var cachedRange: Range<Int> = 0..<0
+        private var cachedSize: CGSize = .zero
+
+        init(_ parent: VideoMediaGridView) {
+            self.parent = parent
+        }
+
+        private var library: VideoMediaLibrary { parent.library }
+
+        private func cellSide(_ collectionView: UICollectionView) -> CGFloat {
+            parent.metrics.cellSide(width: collectionView.bounds.width)
+        }
+
+        private func thumbnailSize(_ collectionView: UICollectionView) -> CGSize {
+            let scale = collectionView.traitCollection.displayScale
+            let side = cellSide(collectionView) * max(1, scale)
+            return CGSize(width: side, height: side)
+        }
+
+        // MARK: Data source
+
+        func collectionView(_ collectionView: UICollectionView, numberOfItemsInSection _: Int) -> Int {
+            library.count
+        }
+
+        func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
+            let cell = collectionView.dequeueReusableCell(
+                withReuseIdentifier: VideoMediaGridCell.reuseIdentifier,
+                for: indexPath
+            ) as! VideoMediaGridCell
+            guard let asset = library.asset(at: indexPath.item) else {
+                cell.clear()
+                return cell
+            }
+            cell.show(asset, index: indexPath.item)
+            let id = asset.localIdentifier
+            let library = library.photoLibrary
+            let target = thumbnailSize(collectionView)
+            if let cached = library.cachedThumbnail(for: id, width: target.width) {
+                cell.imageView.image = cached
+            } else {
+                cell.requestID = library.requestThumbnail(
+                    for: asset,
+                    targetSize: target,
+                    resizeMode: .fast,
+                    allowNetwork: false
+                ) { [weak cell] image, _ in
+                    guard let cell, cell.assetID == id, let image else { return }
+                    cell.imageView.image = image
+                }
+            }
+            return cell
+        }
+
+        // MARK: Layout
+
+        func collectionView(
+            _ collectionView: UICollectionView,
+            layout _: UICollectionViewLayout,
+            sizeForItemAt _: IndexPath
+        ) -> CGSize {
+            let side = cellSide(collectionView)
+            return CGSize(width: side, height: side)
+        }
+
+        func collectionView(
+            _ collectionView: UICollectionView,
+            layout _: UICollectionViewLayout,
+            minimumInteritemSpacingForSectionAt _: Int
+        ) -> CGFloat {
+            parent.metrics.gap
+        }
+
+        func collectionView(
+            _ collectionView: UICollectionView,
+            layout _: UICollectionViewLayout,
+            minimumLineSpacingForSectionAt _: Int
+        ) -> CGFloat {
+            parent.metrics.gap
+        }
+
+        func collectionView(
+            _ collectionView: UICollectionView,
+            layout _: UICollectionViewLayout,
+            insetForSectionAt _: Int
+        ) -> UIEdgeInsets {
+            UIEdgeInsets(top: 0, left: parent.metrics.inset, bottom: 0, right: parent.metrics.inset)
+        }
+
+        // MARK: Taps and prefetch
+
+        func collectionView(_ collectionView: UICollectionView, didSelectItemAt indexPath: IndexPath) {
+            collectionView.deselectItem(at: indexPath, animated: false)
+            guard let asset = library.asset(at: indexPath.item) else { return }
+            parent.onTap(asset)
+        }
+
+        func collectionView(
+            _ collectionView: UICollectionView,
+            didEndDisplaying cell: UICollectionViewCell,
+            forItemAt _: IndexPath
+        ) {
+            guard let cell = cell as? VideoMediaGridCell, let request = cell.requestID else { return }
+            library.photoLibrary.cancelThumbnailRequest(request)
+            cell.requestID = nil
+        }
+
+        func scrollViewDidScroll(_ scrollView: UIScrollView) {
+            guard let collectionView else { return }
+            updateCaching(collectionView)
+        }
+
+        /// Keeps a screen either side of the visible cells warm in
+        /// PhotoKit's cache, and lets go of what scrolled out of that window.
+        private func updateCaching(_ collectionView: UICollectionView) {
+            let visible = collectionView.indexPathsForVisibleItems.map(\.item)
+            guard let first = visible.min(), let last = visible.max() else { return }
+            let perScreen = VideoMediaPrefetch.itemsPerScreen(
+                columns: parent.metrics.columns,
+                cellHeight: cellSide(collectionView) + parent.metrics.gap,
+                viewportHeight: collectionView.bounds.height
+            )
+            let window = VideoMediaPrefetch.window(visible: first..<(last + 1), itemsPerScreen: perScreen, count: library.count)
+            let size = thumbnailSize(collectionView)
+            guard window != cachedRange || size != cachedSize else { return }
+            let photoLibrary = library.photoLibrary
+            if size != cachedSize {
+                photoLibrary.stopCachingThumbnails(for: library.assets(in: cachedRange), targetSize: cachedSize)
+                photoLibrary.startCachingThumbnails(for: library.assets(in: window), targetSize: size)
+            } else {
+                for gone in VideoMediaPrefetch.subtract(window, from: cachedRange) {
+                    photoLibrary.stopCachingThumbnails(for: library.assets(in: gone), targetSize: size)
+                }
+                for fresh in VideoMediaPrefetch.subtract(cachedRange, from: window) {
+                    photoLibrary.startCachingThumbnails(for: library.assets(in: fresh), targetSize: size)
+                }
+            }
+            cachedRange = window
+            cachedSize = size
+        }
+
+        func resetCaching() {
+            guard !cachedRange.isEmpty else { return }
+            library.photoLibrary.stopCachingThumbnails(for: library.assets(in: cachedRange), targetSize: cachedSize)
+            cachedRange = 0..<0
+        }
+    }
+}
+
+/// One square of the Media grid: the thumbnail edge to edge, no corner
+/// radius (DESIGN §5), and a video's length at the bottom trailing corner.
+final class VideoMediaGridCell: UICollectionViewCell {
+    static let reuseIdentifier = "VideoMediaGridCell"
+
+    let imageView = UIImageView()
+    private let durationLabel = UILabel()
+    var assetID: String?
+    var requestID: PHImageRequestID?
+
+    override init(frame: CGRect) {
+        super.init(frame: frame)
+        contentView.backgroundColor = UIColor(white: 1, alpha: 0.06)
+        contentView.clipsToBounds = true
+        imageView.contentMode = .scaleAspectFill
+        imageView.clipsToBounds = true
+        imageView.translatesAutoresizingMaskIntoConstraints = false
+        contentView.addSubview(imageView)
+
+        durationLabel.font = .systemFont(ofSize: 10.5, weight: .bold)
+        durationLabel.textColor = .white
+        durationLabel.layer.shadowColor = UIColor.black.cgColor
+        durationLabel.layer.shadowOpacity = 0.6
+        durationLabel.layer.shadowRadius = 2
+        durationLabel.layer.shadowOffset = .zero
+        durationLabel.translatesAutoresizingMaskIntoConstraints = false
+        contentView.addSubview(durationLabel)
+
+        NSLayoutConstraint.activate([
+            imageView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
+            imageView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
+            imageView.topAnchor.constraint(equalTo: contentView.topAnchor),
+            imageView.bottomAnchor.constraint(equalTo: contentView.bottomAnchor),
+            durationLabel.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -5),
+            durationLabel.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -4),
+        ])
+        isAccessibilityElement = true
+        accessibilityTraits = .button
+    }
+
+    @available(*, unavailable)
+    required init?(coder _: NSCoder) { fatalError("init(coder:) is not used") }
+
+    override func prepareForReuse() {
+        super.prepareForReuse()
+        clear()
+    }
+
+    func clear() {
+        imageView.image = nil
+        durationLabel.text = nil
+        assetID = nil
+        requestID = nil
+    }
+
+    func show(_ asset: PHAsset, index: Int) {
+        assetID = asset.localIdentifier
+        durationLabel.text = asset.mediaType == .video ? VideoMediaPoolFormat.duration(asset.duration) : nil
+        accessibilityLabel = VideoMediaPoolFormat.accessibilityLabel(for: asset)
+        accessibilityIdentifier = "videoMediaItem.\(index)"
+    }
+}

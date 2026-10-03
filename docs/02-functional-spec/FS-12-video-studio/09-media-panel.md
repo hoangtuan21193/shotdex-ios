@@ -143,7 +143,7 @@ Project mẫu: 16:9, 5 clip 24,0s (Falls ảnh 0–3,0 · Coast video 3,0–9,2 
 | AC-8 | Media mở, đã chạm chèn 2 ô | bấm ✕ | về 5 clip 24,0s; số bước undo bằng lúc mở Media | ⚠️ chưa có |
 | AC-9 | quyền `.limited`, 12 mục được cấp | mở Recents | đúng 12 ô + hàng "ShotDex can see the 12 items you chose." + Manage Access…; cấp thêm 3 → 15 ô, panel không đóng | ⚠️ chưa có |
 | AC-10 | video chỉ có trên iCloud, máy không mạng | chạm ô đó | sau khi tải hỏng: vẫn 5 clip, hiện câu "One clip couldn't be loaded…" | ⚠️ chưa có |
-| AC-11 | thư viện 55 000 mục | cuộn Recents tới cuối | thấy mục cũ nhất; không có hàng "Browse All Photos…"; bộ nhớ app tăng < 60MB so với lúc mở | ⚠️ chưa có |
+| AC-11 | thư viện 55 000 mục | cuộn Recents tới cuối | thấy mục cũ nhất; không có hàng "Browse All Photos…"; bộ nhớ app tăng < 60MB so với lúc mở | ⚠️ một phần — `VideoMediaLibraryTests.recentsIsTheWholeFetchNoCap` (fetch không `fetchLimit`, mới nhất trước), `.prefetchWindowIsTwoScreens`, `.prefetchMovesByTheDifferenceOnly`; lưới `UICollectionView` trên `PHFetchResult` lười, hàng "Browse All Photos…" và trần 400 đã gỡ khỏi Media (sim 26.5: 102 mục cuộn được, ảnh `vs3/out/m1`); **máy thật 55 000 mục, bộ nhớ < 60 MB: chưa đo** (cần thư viện thật + Instruments) |
 | AC-12 | thư viện có 20 ảnh chụp ở 85mm | gõ "85mm" vào tìm | lưới đúng 20 ô | ⚠️ chưa có |
 | AC-13 | iPad 1376×1032 | mở Video Studio | pool có đúng 4 tab Media · Text · Stickers · Music; hàng Recents · Albums · In Video · 6 vừa trong 236; hàng tiêu đề có Library · Select · 🔍 · Hide Media | ⚠️ chưa có — `ipad-video-studio-desk.json` cần dump mới |
 | AC-14 | VoiceOver bật, ô video 0:06 đang dùng | đọc ô | "Video, 0:06, in this video" + action Insert at Playhead, Select | ⚠️ chưa có |

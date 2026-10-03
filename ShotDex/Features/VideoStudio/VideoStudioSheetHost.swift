@@ -58,6 +58,8 @@ struct VideoStudioSheetHost: View {
                 idleLook
             } else if model.inspectorTarget == .none, model.activeToolPanel == .music, let importedMusic {
                 musicPanel(importedMusic)
+            } else if model.inspectorTarget == .none, model.activeToolPanel == .media {
+                VideoMediaPanel(model: model)
             } else {
                 switch layout {
                 case .band: bandBody
@@ -418,7 +420,7 @@ struct VideoStudioSheetHost: View {
                     cancelButton
                     titleButton("checkmark", label: Text(VideoStudioCopy.keepChanges)) { model.commitSession() }
                 }
-            case .music: EmptyView()
+            case .music, .media: EmptyView()
             case .videoSettings:
                 // Done only: every change applies as it is made, so there
                 // is nothing to cancel (FS-12.04 §4).
@@ -938,8 +940,9 @@ struct VideoStudioSheetHost: View {
             EmptyView()
         case .look:
             lookParams
-        case .music:
-            // Drawn by `musicPanel` in place of the whole band.
+        case .music, .media:
+            // Drawn by `musicPanel` / `VideoMediaPanel` in place of the
+            // whole band.
             EmptyView()
         case .videoSettings:
             // Ratio and the fill behind a fitted frame, until the Video

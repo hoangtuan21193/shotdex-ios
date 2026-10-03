@@ -25,9 +25,6 @@ struct VideoMediaPoolColumn: View {
     var bottomInset: CGFloat = 0
     /// Closes the column. The same control that opened it in the top band.
     let onClose: () -> Void
-    /// Opens the full system picker — the pool holds only the most recent
-    /// `capacity` items, so this is the way to anything older.
-    let onBrowseAll: () -> Void
     /// Opens the sticker picker, for a sticker that is not in the grid.
     let onChooseSticker: () -> Void
     /// Imports a music file from Files.
@@ -38,24 +35,18 @@ struct VideoMediaPoolColumn: View {
     let onAddText: (OverlayFontChoice?) -> Void
 
     @State private var tab: Tab = .media
-    @State private var source: Source = .all
-    @State private var order: Order = .newest
-    @State private var presentation: Presentation = .grid
     @State private var assets: [PHAsset] = []
 
-    /// How many assets the pool holds at once. A 55,000-photo library fetched
-    /// whole is a `PHFetchResult` walk on the main actor before the first
-    /// thumbnail is asked for; the pool is a place to reach for the last few
-    /// hundred things you shot, not a second library browser.
+    /// How many photos the Stickers tab holds at once. The Media tab has no
+    /// cap: it is the Media panel, over a lazy fetch (FS-12.09 §2).
     private static let capacity = 400
 
     var body: some View {
         VStack(spacing: 0) {
             header
             tabStrip
-            if tab == .media { toolRow }
             Divider().overlay(EditorTheme.panelDivider)
-            if tab.isLibrary { binLabel }
+            if tab == .stickers { binLabel }
             content
         }
         .padding(.top, topInset)
@@ -67,8 +58,6 @@ struct VideoMediaPoolColumn: View {
             Rectangle().fill(EditorTheme.panelDivider).frame(width: 1)
         }
         .task(id: photoLibrary.libraryChangeToken) { reload() }
-        .onChange(of: source) { reload() }
-        .onChange(of: order) { reload() }
         .onChange(of: tab) { reload() }
     }
 
@@ -137,66 +126,18 @@ struct VideoMediaPoolColumn: View {
         .frame(height: VideoStudioMetrics.mediaPoolTabStripHeight)
     }
 
-    private var toolRow: some View {
-        HStack(spacing: 4) {
-            Menu {
-                Picker("Show", selection: $source) {
-                    ForEach(Source.allCases) { Text($0.title).tag($0) }
-                }
-            } label: {
-                poolGlyph("line.3.horizontal.decrease.circle", isActive: source != .all)
-            }
-            .accessibilityLabel(Text("Filter Media", comment: "Video Studio media pool: picks which media the column lists"))
-
-            Menu {
-                Picker("Sort", selection: $order) {
-                    ForEach(Order.allCases) { Text($0.title).tag($0) }
-                }
-            } label: {
-                poolGlyph("arrow.up.arrow.down.circle", isActive: order != .newest)
-            }
-            .accessibilityLabel(Text("Sort Media", comment: "Video Studio media pool: picks the order the column lists media in"))
-
-            Spacer(minLength: 0)
-
-            ForEach(Presentation.allCases) { mode in
-                Button { presentation = mode } label: {
-                    poolGlyph(mode.systemImage, isActive: presentation == mode)
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel(Text(mode.title))
-            }
-        }
-        .padding(.horizontal, 8)
-        .frame(height: VideoStudioMetrics.mediaPoolToolRowHeight)
-    }
-
-    private func poolGlyph(_ name: String, isActive: Bool) -> some View {
-        Image(systemName: name)
-            .font(.system(size: 15, weight: .regular))
-            .foregroundStyle(isActive ? EditorTheme.accent : EditorTheme.secondaryText)
-            .frame(width: AppTheme.Size.minTouch, height: 28)
-            .background(
-                RoundedRectangle(cornerRadius: 5, style: .continuous)
-                    .fill(isActive ? EditorTheme.accent.opacity(0.14) : .clear)
-                    .padding(.horizontal, 7)
-            )
-            .videoHitTarget(drawnHeight: 28)
-    }
-
     /// Resolve labels the open bin above its grid; here the bin is whichever
     /// slice of the library the filter is showing, and the count is the thing
     /// a photographer actually checks before scrolling.
     private var binLabel: some View {
         HStack(spacing: 6) {
-            Text(tab == .media ? source.title : tab.binTitle)
+            Text(tab.binTitle)
                 .font(.system(size: 11, weight: .semibold))
                 .foregroundStyle(.white)
             Text(binCount)
                 .font(.system(size: 11).monospacedDigit())
                 .foregroundStyle(EditorTheme.dimText)
             Spacer(minLength: 0)
-            if tab == .media { insertModeMenu }
         }
         .padding(.horizontal, 12)
         .frame(height: 24)
@@ -205,45 +146,11 @@ struct VideoMediaPoolColumn: View {
 
     private var binCount: String {
         switch tab {
-        case .media, .stickers: countText
+        case .media: ""
+        case .stickers: countText
         case .text: "\(model.fontRecents.count)"
         case .music: "\(importedMusic.tracks.count)"
         }
-    }
-
-    /// Where a tap lands the clip. Resolve names this on the buttons
-    /// themselves (Smart Insert / Append at End / Place on Top); with one
-    /// video track there are two honest choices, so they live in a menu on
-    /// the bin row rather than eating two more controls.
-    private var insertModeMenu: some View {
-        Menu {
-            Picker("Insert", selection: Binding(
-                get: { model.mediaInsertMode },
-                set: { model.mediaInsertMode = $0 }
-            )) {
-                ForEach(VideoStudioModel.MediaInsertMode.allCases) { mode in
-                    Label(mode.title, systemImage: mode.systemImage).tag(mode)
-                }
-            }
-        } label: {
-            HStack(spacing: 3) {
-                Image(systemName: model.mediaInsertMode.systemImage)
-                    .font(.system(size: 10, weight: .medium))
-                Text(model.mediaInsertMode == .appendAtEnd
-                     ? String(localized: "End", comment: "Video Studio media pool: short label for Append at End")
-                     : String(localized: "Playhead", comment: "Video Studio media pool: short label for Insert at Playhead"))
-                    .font(.system(size: 10, weight: .medium))
-            }
-            .foregroundStyle(EditorTheme.accent)
-            .padding(.horizontal, 6)
-            .frame(height: 20)
-            .background(
-                RoundedRectangle(cornerRadius: 4, style: .continuous)
-                    .fill(EditorTheme.accent.opacity(0.14))
-            )
-        }
-        .accessibilityLabel(Text("Where new media lands", comment: "Video Studio media pool: picks append-at-end or insert-at-playhead"))
-        .accessibilityValue(model.mediaInsertMode.title)
     }
 
     private var countText: String {
@@ -255,7 +162,8 @@ struct VideoMediaPoolColumn: View {
     @ViewBuilder
     private var content: some View {
         switch tab {
-        case .media, .stickers: libraryContent
+        case .media: VideoMediaPanel(model: model)
+        case .stickers: libraryContent
         case .text: textContent
         case .music: musicContent
         }
@@ -380,20 +288,14 @@ struct VideoMediaPoolColumn: View {
         } else {
             ScrollView(.vertical) {
                 LazyVStack(spacing: 0) {
-                    // The pool holds the most recent `capacity` items; this is
-                    // the only way to anything older, and the only route to
-                    // the system picker now that the rail's Add cell is gone.
+                    // A sticker that is not among the most recent `capacity`
+                    // items comes through the sticker picker.
                     actionRow(
-                        systemImage: tab == .stickers ? "photo.badge.plus" : "rectangle.stack.badge.plus",
-                        title: tab == .stickers
-                            ? String(localized: "Choose a Sticker…", comment: "Video Studio media pool: opens the picker for a sticker image")
-                            : String(localized: "Browse All Photos…", comment: "Video Studio media pool: opens the system picker for anything older than the pool holds"),
-                        action: tab == .stickers ? onChooseSticker : onBrowseAll
+                        systemImage: "photo.badge.plus",
+                        title: String(localized: "Choose a Sticker…", comment: "Video Studio media pool: opens the picker for a sticker image"),
+                        action: onChooseSticker
                     )
-                    switch presentation {
-                    case .grid: gridBody
-                    case .list: listBody
-                    }
+                    gridBody
                 }
             }
             .scrollIndicators(.automatic)
@@ -422,51 +324,23 @@ struct VideoMediaPoolColumn: View {
         .padding(.vertical, 8)
     }
 
-    private var listBody: some View {
-        LazyVStack(spacing: 2) {
-            ForEach(assets, id: \.localIdentifier) { asset in
-                VideoMediaPoolRow(
-                    asset: asset,
-                    photoLibrary: photoLibrary,
-                    onAdd: { append(asset) }
-                )
-            }
-        }
-        .padding(.horizontal, 6)
-        .padding(.vertical, 6)
-    }
-
     // MARK: Actions
 
-    /// What a tap inserts, which is what the tab means.
+    /// A tap on the Stickers tab's grid lays the photo over the frame.
     private func append(_ asset: PHAsset) {
-        switch tab {
-        case .media:
-            model.insertMedia([
-                VideoMediaPick(
-                    assetID: asset.localIdentifier,
-                    kind: asset.mediaType == .video ? .video : .photo
-                )
-            ])
-        case .stickers:
-            onAddSticker(asset)
-        case .text, .music:
-            // These tabs do not list the photo library, so no asset can
-            // arrive from them.
-            break
-        }
+        onAddSticker(asset)
     }
 
     private func reload() {
-        guard tab.isLibrary else { return }
+        guard tab == .stickers else { return }
         guard photoLibrary.authorizationState.canReadLibrary else {
             assets = []
             return
         }
         let options = PHFetchOptions()
         // A sticker is drawn over the frame, so a clip cannot be one.
-        options.predicate = tab == .stickers ? Source.photos.predicate : source.predicate
-        options.sortDescriptors = order.sortDescriptors
+        options.predicate = NSPredicate(format: "mediaType = %d", PHAssetMediaType.image.rawValue)
+        options.sortDescriptors = [NSSortDescriptor(key: "creationDate", ascending: false)]
         options.fetchLimit = Self.capacity
         let result = PHAsset.fetchAssets(with: options)
         var collected: [PHAsset] = []
@@ -486,9 +360,6 @@ struct VideoMediaPoolColumn: View {
         /// (FS-12.03b §1). The look is the inspector's, not a tab's.
         case media, text, stickers, music
         var id: String { rawValue }
-
-        /// Whether this tab lists the photo library.
-        var isLibrary: Bool { self == .media || self == .stickers }
 
         var systemImage: String {
             switch self {
@@ -514,74 +385,6 @@ struct VideoMediaPoolColumn: View {
             case .stickers: String(localized: "Photos", comment: "Video Studio media pool bin label for the sticker tab")
             case .text: String(localized: "Recent Fonts", comment: "Video Studio media pool bin label for the text tab")
             case .music: String(localized: "Imported", comment: "Video Studio media pool bin label for the music tab")
-            }
-        }
-    }
-
-    enum Source: String, CaseIterable, Identifiable {
-        case all, videos, photos, favorites
-        var id: String { rawValue }
-
-        var title: String {
-            switch self {
-            case .all: String(localized: "All Media", comment: "Video Studio media pool filter: everything in the library")
-            case .videos: String(localized: "Videos", comment: "Video Studio media pool filter: video clips only")
-            case .photos: String(localized: "Photos", comment: "Video Studio media pool filter: still photos only")
-            case .favorites: String(localized: "Favorites", comment: "Video Studio media pool filter: items favorited in Photos")
-            }
-        }
-
-        var predicate: NSPredicate {
-            switch self {
-            case .all:
-                PhotoLibraryService.browsableMediaPredicate
-            case .videos:
-                NSPredicate(format: "mediaType = %d", PHAssetMediaType.video.rawValue)
-            case .photos:
-                NSPredicate(format: "mediaType = %d", PHAssetMediaType.image.rawValue)
-            case .favorites:
-                NSCompoundPredicate(andPredicateWithSubpredicates: [
-                    PhotoLibraryService.browsableMediaPredicate,
-                    NSPredicate(format: "favorite = YES"),
-                ])
-            }
-        }
-    }
-
-    enum Order: String, CaseIterable, Identifiable {
-        case newest, oldest, longest
-        var id: String { rawValue }
-
-        var title: String {
-            switch self {
-            case .newest: String(localized: "Newest First", comment: "Video Studio media pool sort order")
-            case .oldest: String(localized: "Oldest First", comment: "Video Studio media pool sort order")
-            case .longest: String(localized: "Longest First", comment: "Video Studio media pool sort order: longest video duration first")
-            }
-        }
-
-        var sortDescriptors: [NSSortDescriptor] {
-            switch self {
-            case .newest: [NSSortDescriptor(key: "creationDate", ascending: false)]
-            case .oldest: [NSSortDescriptor(key: "creationDate", ascending: true)]
-            // A still has a zero duration, so this sorts clips to the top and
-            // leaves the photos in date order underneath them.
-            case .longest: [
-                NSSortDescriptor(key: "duration", ascending: false),
-                NSSortDescriptor(key: "creationDate", ascending: false),
-            ]
-            }
-        }
-    }
-
-    enum Presentation: String, CaseIterable, Identifiable {
-        case grid, list
-        var id: String { rawValue }
-        var systemImage: String { self == .grid ? "square.grid.2x2" : "list.bullet" }
-        var title: String {
-            switch self {
-            case .grid: String(localized: "Grid", comment: "Video Studio media pool: thumbnail grid layout")
-            case .list: String(localized: "List", comment: "Video Studio media pool: one row per item layout")
             }
         }
     }
@@ -660,65 +463,6 @@ private struct VideoMediaPoolCell: View {
         _ = photoLibrary.requestThumbnail(
             for: asset,
             targetSize: target,
-            resizeMode: .fast,
-            allowNetwork: false
-        ) { result, _ in
-            if let result { image = result }
-        }
-    }
-}
-
-/// The list presentation's row: a 16:9 chip, the name, and what it is.
-private struct VideoMediaPoolRow: View {
-    let asset: PHAsset
-    let photoLibrary: PhotoLibraryService
-    let onAdd: () -> Void
-
-    @Environment(\.displayScale) private var displayScale
-    @State private var image: UIImage?
-
-    var body: some View {
-        Button(action: onAdd) {
-            HStack(spacing: 8) {
-                RoundedRectangle(cornerRadius: 3, style: .continuous)
-                    .fill(EditorTheme.control)
-                    .overlay {
-                        if let image {
-                            Image(uiImage: image).resizable().scaledToFill()
-                        }
-                    }
-                    .frame(width: 48, height: 27)
-                    .clipShape(RoundedRectangle(cornerRadius: 3, style: .continuous))
-
-                VStack(alignment: .leading, spacing: 1) {
-                    Text(VideoMediaPoolFormat.name(for: asset))
-                        .font(.system(size: 11))
-                        .foregroundStyle(.white)
-                        .lineLimit(1)
-                        .truncationMode(.middle)
-                    Text(VideoMediaPoolFormat.subtitle(for: asset))
-                        .font(.system(size: 9.5).monospacedDigit())
-                        .foregroundStyle(EditorTheme.dimText)
-                        .lineLimit(1)
-                }
-                Spacer(minLength: 0)
-            }
-            .padding(.horizontal, 6)
-            .padding(.vertical, 4)
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel(VideoMediaPoolFormat.accessibilityLabel(for: asset))
-        .accessibilityHint(Text("Adds this to the end of the video track", comment: "Video Studio media pool: what tapping an item does"))
-        .onDrag { PhotoDragItem.provider(for: asset) }
-        .onAppear { load() }
-    }
-
-    private func load() {
-        guard image == nil else { return }
-        _ = photoLibrary.requestThumbnail(
-            for: asset,
-            targetSize: CGSize(width: 48 * displayScale, height: 27 * displayScale),
             resizeMode: .fast,
             allowNetwork: false
         ) { result, _ in

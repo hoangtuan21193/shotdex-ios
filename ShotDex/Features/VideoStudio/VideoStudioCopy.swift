@@ -29,6 +29,11 @@ enum VideoStudioCopy {
         String(localized: "Media", table: table, comment: "Video Studio: the bottom-row tool that adds photos and videos to the timeline")
     }
 
+    /// The Media panel's second line while nothing is selected (FS-12.09 §4).
+    static func mediaTapHint(at time: String) -> String {
+        String(localized: "Tap adds at \(time) · hold to drag", table: table, comment: "Video Studio Media panel: under its name — a tap inserts at the playhead time shown; holding drags onto the timeline")
+    }
+
     static var look: String {
         String(localized: "Look", table: table, comment: "Video Studio: the bottom-row tool that changes the whole video's look — filter, adjustments, colour")
     }

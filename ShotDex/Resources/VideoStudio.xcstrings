@@ -185,6 +185,10 @@
       "comment": "Video Studio: a picture laid over the video",
       "extractionState": "manual"
     },
+    "Tap adds at %@ · hold to drag": {
+      "comment": "Video Studio Media panel: under its name — a tap inserts at the playhead time shown; holding drags onto the timeline",
+      "extractionState": "manual"
+    },
     "Text": {
       "comment": "Video Studio: a caption laid over the video",
       "extractionState": "manual"

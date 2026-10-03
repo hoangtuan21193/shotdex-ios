@@ -49,7 +49,8 @@ struct VideoStudioToolbar: View {
         switch tool {
         case .look: .look
         case .music: .music
-        case .media, .text, .sticker: nil
+        case .media: .media
+        case .text, .sticker: nil
         }
     }
 

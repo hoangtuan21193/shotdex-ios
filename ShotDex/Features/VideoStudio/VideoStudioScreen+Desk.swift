@@ -367,7 +367,6 @@ extension VideoStudioScreen {
             width: width,
             importedMusic: importedMusic,
             onClose: { columns.isPoolOpen = false },
-            onBrowseAll: { mediaPickerMode = .add },
             onChooseSticker: { isStickerPickerPresented = true },
             onImportMusic: { isMusicImporterPresented = true },
             onAddSticker: { addSticker($0, to: model) },
@@ -384,7 +383,7 @@ extension VideoStudioScreen {
             height: height,
             onAddOverlay: { addTextOverlay(model) },
             onAddMusic: { model.toggleToolPanel(.music) },
-            onAddMedia: { mediaPickerMode = .add },
+            onAddMedia: { addMedia(model) },
             onEditText: { editingOverlay = $0 },
             onTransition: { model.editingTransitionIndex = $0 },
             onVisibleDuration: { timelineVisibleDuration = $0 }

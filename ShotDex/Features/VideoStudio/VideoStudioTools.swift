@@ -104,6 +104,8 @@ enum VideoToolPanel: String, Equatable, Identifiable, CaseIterable {
     case videoSettings
     /// Video sound, Add Music from Files…, My Music (FS-12.04 §3).
     case music
+    /// The photo library inside the panel (FS-12.09).
+    case media
 
     var id: String { rawValue }
 
@@ -112,6 +114,7 @@ enum VideoToolPanel: String, Equatable, Identifiable, CaseIterable {
         case .look: VideoStudioCopy.look
         case .videoSettings: VideoStudioCopy.videoSettings
         case .music: VideoStudioCopy.addMusic
+        case .media: VideoStudioCopy.media
         }
     }
 
@@ -120,6 +123,7 @@ enum VideoToolPanel: String, Equatable, Identifiable, CaseIterable {
         case .look: "camera.filters"
         case .videoSettings: "aspectratio"
         case .music: "music.note"
+        case .media: VideoAddTool.media.systemImage
         }
     }
 }

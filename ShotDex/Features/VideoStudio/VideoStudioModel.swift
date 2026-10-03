@@ -551,6 +551,18 @@ final class VideoStudioModel {
         return nil
     }
 
+    /// What the ✕ · name · ✓ row names: the selected item, or the Media
+    /// panel — a session of its own on every layout but the iPad's pool
+    /// (FS-12.09 §5). Nil when there is no row to show.
+    var sessionFooterTitle: VideoItemTitle.Lines? {
+        if let selectionTitle { return selectionTitle }
+        guard inspectorTarget == .none, activeToolPanel == .media else { return nil }
+        return VideoItemTitle.Lines(
+            name: VideoStudioCopy.media,
+            detail: VideoStudioCopy.mediaTapHint(at: VideoStudioMetrics.compactTimecode(currentTime))
+        )
+    }
+
     /// ✓: keep, deselect, and the bottom row is the tools again.
     func commitSession() {
         clearSelection()

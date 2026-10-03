@@ -105,7 +105,6 @@ struct VideoStudioDeskLayoutTests {
     /// Music, in that order — the look is the inspector's, not a tab's.
     @Test func thePoolHasFourTabsInOrder() {
         #expect(VideoMediaPoolColumn.Tab.allCases == [.media, .text, .stickers, .music])
-        #expect(VideoMediaPoolColumn.Tab.allCases.filter(\.isLibrary) == [.media, .stickers])
     }
 
     /// A phone has no pool to move the insert commands onto, so it keeps all
