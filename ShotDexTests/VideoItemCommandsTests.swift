@@ -82,4 +82,17 @@ struct VideoItemSectionTests {
         model.selectClip(model.recipe.clips[2].id)
         #expect(model.activeItemCommand == nil)
     }
+
+    /// FS-12.04b AC-5: Trim again turns it off; the content starts with
+    /// Speed again.
+    @Test func tappingTrimAgainReturnsToSpeed() {
+        let model = VideoStudioModelFixture.model()
+        model.selectClip(model.recipe.clips[1].id)
+        model.toggleItemSection(.trim)
+        model.toggleItemSection(.trim)
+        #expect(model.activeItemCommand == nil)
+        #expect(VideoClipPanelSections.sections(for: .video, leading: model.activeItemCommand).first == .speed)
+        model.toggleItemSection(.volume)
+        #expect(VideoClipPanelSections.sections(for: .video, leading: model.activeItemCommand).first == .volume)
+    }
 }

@@ -92,7 +92,7 @@ của lệnh ([07 §3](07-phone-layout.md)).
 | AC-2 | clip 1 là ảnh | chọn clip 1 | Split · Trim · Replace · Duplicate · Look · Delete; không có ô Speed/Volume/Freeze | ⚠️ một phần — `VideoItemCommandsTests.photoRowHasNoSpeedVolumeFreeze`; sim-shot iPhone 17: Split · Trim · Replace · Duplicate · Delete (2026-10-04); ô Look của clip ẩn tới plan look (FS-12.06c) |
 | AC-3 | danh sách lệnh của cả 6 loại item | lặp qua iPhone, Duo ngoài, Duo trong, iPad ngang, iPad dọc | mỗi bố cục ra đúng cùng danh sách (so phần tử, không đếm) | ✅ `VideoItemCommandsTests.everyLayoutGetsTheSameCommands` (lặp `VideoStudioWindowClass.allCases` × 6 loại item, so phần tử với phone; một hàng cuộn mọi bề rộng — `VideoCommandBand` dạng lưới đã bỏ) |
 | AC-4 | iPhone, clip 2 đang chọn, panel 340 | chạm Trim | ô Trim nền trắng 14%; hai chip Start/End to Playhead ở đầu nội dung; panel vẫn 340 (±0pt) | ✅ `VideoItemSectionTests.trimTogglesItsBlock`; sim-shot iPhone 17: ô Trim nền trắng 14%, hai chip Start/End to Playhead + "Or drag the clip's edges on the timeline." đầu nội dung, panel giữ cao (chiều cao panel là hằng của cửa sổ) (2026-10-04) |
-| AC-5 | như AC-4 | chạm Trim lần nữa | hai chip biến mất; nội dung bắt đầu bằng Speed | ⚠️ chưa có |
+| AC-5 | như AC-4 | chạm Trim lần nữa | hai chip biến mất; nội dung bắt đầu bằng Speed | ✅ `VideoItemSectionTests.tappingTrimAgainReturnsToSpeed` (chạm lại Trim: tắt, nội dung về Speed; Volume sáng thì dòng Volume lên đầu) |
 | AC-6 | clip 2 Volume 80 | chạm loa rồi chạm lại | lần 1: không tiếng, slider vẫn 80, mờ; lần 2: về 80; hai bước undo | ⚠️ chưa có |
 | AC-7 | clip 10,0 s đang chọn, playhead 4,0 s | chạm Split rồi ✕ | còn 2 clip `[0,0–4,0]` `[4,0–10,0]`, không chọn gì | ⚠️ chưa có |
 | AC-8 | băng chữ GOLDEN HOUR đang chọn | chạm Duplicate rồi ✕ | còn đúng 1 khối GOLDEN HOUR, không chọn gì | ⚠️ chưa có |
@@ -100,7 +100,7 @@ của lệnh ([07 §3](07-phone-layout.md)).
 | AC-10 | các board P2, P3, P5, P9, P10, IL2–IL4, IP2, IP3, DI2, DI3, DC2, DC3 | `Tools/design-board compare` hàng lệnh với dump app | mọi ô lệnh lệch ≤ 2pt | ⚠️ chưa có — agent `design-parity` |
 | AC-11 | clip 1 ảnh 3,0 s, clip 2 video 6,2 s | chọn từng clip, dump phần nội dung | clip 1: dòng Duration có slider 0,5–10 s; clip 2: không phần tử nào tên "Duration", dòng phụ ở tên ghi "6.2s · video" | ⚠️ một phần — `VideoClipPanelSectionsTests.videoClipHasNoDurationSection`, `photoClipKeepsDuration`; sim-shot iPhone 17: clip ảnh Duration · Fade · Motion, dòng phụ "3.0s · photo" (2026-10-04). Thư viện sim chỉ có 1 video khó tìm nên clip video chưa chụp; Duo/iPad chờ plan màn rộng |
 
-**Chưa chứng minh được:** AC-1, AC-2, AC-5, AC-6, AC-7, AC-8, AC-9, AC-10, AC-11.
+**Chưa chứng minh được:** AC-1, AC-2, AC-6, AC-7, AC-8, AC-9, AC-10, AC-11.
 
 ## 8. Rủi ro đã biết
 
