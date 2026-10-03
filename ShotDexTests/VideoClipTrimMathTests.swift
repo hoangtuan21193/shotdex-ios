@@ -45,3 +45,27 @@ extension VideoClipTrimMathTests {
         #expect(outcome == .trim(start: 3, end: 10))
     }
 }
+
+extension VideoClipTrimMathTests {
+    /// FS-12.05 AC-7: clip 2 selected, playhead inside clip 3 — the chips
+    /// are unavailable and say why; on clip 2's edge too; inside, they act.
+    /// Under the minimum, nothing changes.
+    @MainActor
+    @Test func chipsAreUnavailableOutsideTheClip() {
+        #expect(VideoClipTrimMath.availability(clipStart: 10, clipDuration: 10, playhead: 25) == .playheadOutsideClip)
+        #expect(VideoClipTrimMath.availability(clipStart: 10, clipDuration: 10, playhead: 10) == .playheadOutsideClip)
+        #expect(VideoClipTrimMath.availability(clipStart: 10, clipDuration: 10, playhead: 20) == .playheadOutsideClip)
+        #expect(VideoClipTrimMath.availability(clipStart: 10, clipDuration: 10, playhead: 12) == nil)
+
+        let model = VideoStudioModelFixture.model()
+        model.selectClip(model.recipe.clips[1].id)
+        model.seek(to: 25)
+        #expect(model.trimChipsUnavailable == .playheadOutsideClip)
+        #expect(model.trimSelectedClipToPlayhead(.start) == .playheadOutsideClip)
+        #expect(!model.canUndo)
+
+        var still = VideoStudioModelFixture.photoClips(1, seconds: 3)[0]
+        still.photoDuration = 3
+        #expect(VideoClipTrimMath.trimToPlayhead(still, end: .end, localTime: 0.3) == .unavailable(.tooShort))
+    }
+}

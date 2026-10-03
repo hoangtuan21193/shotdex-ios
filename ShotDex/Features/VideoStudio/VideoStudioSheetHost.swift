@@ -445,16 +445,20 @@ struct VideoStudioSheetHost: View {
     /// Trim's block (FS-12.04b §4, FS-12.05 §3): Start to Playhead · End to
     /// Playhead, and how else a clip is cut.
     private func trimBlock(_ clip: VideoClip) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
+        // With the playhead outside the clip, or on its edge, there is
+        // nothing to cut: the chips dim and say where the playhead must go
+        // (FS-12.05 AC-7) rather than doing nothing on a tap.
+        let isAvailable = model.trimChipsUnavailable == nil
+        return VStack(alignment: .leading, spacing: 6) {
             HStack(spacing: 8) {
-                trimChip(VideoStudioCopy.startToPlayhead, systemImage: "arrow.left.to.line") {
-                    model.trimSelectedClipToPlayhead(.start)
+                trimChip(VideoStudioCopy.startToPlayhead, systemImage: "arrow.left.to.line", isEnabled: isAvailable) {
+                    trim(.start)
                 }
-                trimChip(VideoStudioCopy.endToPlayhead, systemImage: "arrow.right.to.line") {
-                    model.trimSelectedClipToPlayhead(.end)
+                trimChip(VideoStudioCopy.endToPlayhead, systemImage: "arrow.right.to.line", isEnabled: isAvailable) {
+                    trim(.end)
                 }
             }
-            Text(VideoStudioCopy.dragEdgesHint)
+            Text(isAvailable ? VideoStudioCopy.dragEdgesHint : VideoStudioCopy.movePlayheadIntoClip)
                 .font(.system(size: 11))
                 .foregroundStyle(.white.opacity(0.35))
         }
@@ -462,13 +466,21 @@ struct VideoStudioSheetHost: View {
         .padding(.vertical, 6)
     }
 
-    private func trimChip(_ title: String, systemImage: String, action: @escaping () -> Void) -> some View {
+    /// One chip's cut. What would be left under a clip's minimum does
+    /// nothing, and says so with the error haptic.
+    private func trim(_ end: VideoStudioModel.ClipEnd) {
+        if model.trimSelectedClipToPlayhead(end) == .tooShort {
+            UINotificationFeedbackGenerator().notificationOccurred(.error)
+        }
+    }
+
+    private func trimChip(_ title: String, systemImage: String, isEnabled: Bool, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             HStack(spacing: 6) {
                 Image(systemName: systemImage).font(.system(size: 12, weight: .semibold))
                 Text(title).font(.system(size: 12, weight: .semibold)).lineLimit(1)
             }
-            .foregroundStyle(.white)
+            .foregroundStyle(isEnabled ? Color.white : Color.white.opacity(0.28))
             .frame(maxWidth: .infinity)
             .frame(height: VideoStudioMetrics.trimChipHeight)
             .background(
@@ -477,6 +489,7 @@ struct VideoStudioSheetHost: View {
             )
         }
         .buttonStyle(.plain)
+        .disabled(!isEnabled)
     }
 
     private func sectionHeader(_ text: Text) -> some View {

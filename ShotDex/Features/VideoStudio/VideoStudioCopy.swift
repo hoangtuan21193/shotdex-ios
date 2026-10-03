@@ -84,4 +84,8 @@ enum VideoStudioCopy {
     static var dragEdgesHint: String {
         String(localized: "Or drag the clip's edges on the timeline.", table: table, comment: "Video Studio Trim: the other way to cut a clip")
     }
+
+    static var movePlayheadIntoClip: String {
+        String(localized: "Move the playhead into this clip.", table: table, comment: "Video Studio Trim: why the Start/End to Playhead chips are dimmed")
+    }
 }

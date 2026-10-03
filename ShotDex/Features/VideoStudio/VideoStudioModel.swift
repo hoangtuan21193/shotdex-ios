@@ -1225,6 +1225,19 @@ final class VideoStudioModel {
     /// Which end of a clip a command acts on.
     enum ClipEnd { case start, end }
 
+    /// Why the Trim chips cannot act on the selected clip right now — the
+    /// playhead is outside it or on its edge (FS-12.05 AC-7) — or nil.
+    var trimChipsUnavailable: VideoClipTrimMath.Unavailable? {
+        guard let id = selectedClipID,
+              let index = recipe.clips.firstIndex(where: { $0.id == id }),
+              index < clipPlacements.count
+        else { return .playheadOutsideClip }
+        let placement = clipPlacements[index]
+        return VideoClipTrimMath.availability(
+            clipStart: placement.start, clipDuration: placement.duration, playhead: currentTime
+        )
+    }
+
     /// Trim → Start/End to Playhead on the **selected** clip (FS-12.05 §3).
     /// The transport's ⋯ keeps acting on the clip under the playhead.
     @discardableResult

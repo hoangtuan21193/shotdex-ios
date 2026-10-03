@@ -99,7 +99,7 @@ Các phần khác: xem [README](README.md).
 | AC-4 | clip ảnh 3,0 s | kéo tay nắm phải vào 2,8 s | dừng ở 0,5 s | ⚠️ chưa có |
 | AC-5 | clip 2 video 0–10, 1×, playhead ở 4,0 s trong clip | chạm Trim → Start to Playhead | clip 2 dùng nguồn 4–10, dài 6,0 s; Undo một lần về 0–10 | ✅ `VideoClipTrimMathTests.startToPlayheadKeepsTheTail` (0–10, playhead 4 → 4–10, 6,0 s), `startToPlayheadOnTheSelectedClipUndoesOnce` (chip tác động clip đang chọn, một Undo về 0–10) |
 | AC-6 | clip 2 tốc độ 2×, playhead cách đầu clip 1,5 s | Start to Playhead | điểm vào nguồn = 3,0 s | ✅ `VideoClipTrimMathTests.startToPlayheadConvertsThroughSpeed` (2×, cách đầu 1,5 s → điểm vào 3,0 s) |
-| AC-7 | clip 2 đang chọn, playhead nằm trong clip 3 | chạm Trim | hai chip mờ 28%, dòng "Move the playhead into this clip." | ⚠️ chưa có |
+| AC-7 | clip 2 đang chọn, playhead nằm trong clip 3 | chạm Trim | hai chip mờ 28%, dòng "Move the playhead into this clip." | ✅ `VideoClipTrimMathTests.chipsAreUnavailableOutsideTheClip` (ngoài clip hoặc trùng mép → không làm gì, không bước undo; dưới tối thiểu → không đổi + haptic lỗi); sim-shot iPhone 17: chip mờ 28% + "Move the playhead into this clip." khi playhead ở mép clip (2026-10-04) |
 | AC-8 | marker ở 6,0 s, mép phải clip 2 ở 6,1 s (cách 5pt ở zoom hiện tại) | kéo tay nắm phải 4pt về phía marker rồi thả | mép = 6,0 s đúng marker, một haptic | ⚠️ chưa có |
 | AC-9 | AC-1 đã làm, clip 2 vẫn đang chọn | bấm ✕ | trim về 0–10; Redo tắt | ⚠️ chưa có |
 | AC-10 | đang kéo tay nắm, hệ thống huỷ cử chỉ (cuộc gọi tới) | huỷ | clip như trước lúc kéo; số bước undo không đổi | ⚠️ chưa có |
@@ -107,4 +107,4 @@ Các phần khác: xem [README](README.md).
 | AC-12 | các board IL2, IP2 | `Tools/design-board compare` tay nắm mép clip 2 | hai tab 12pt cao bằng clip, lệch ≤ 2pt | ⚠️ chưa có — agent `design-parity` |
 | AC-13 | clip 2 video đang chọn trên iPhone, iPad, Duo trong, Duo ngoài | dump panel / inspector | không có dòng Duration nào; clip 1 ảnh đang chọn thì có | ⚠️ một phần — như FS-12.04b AC-11: `VideoClipPanelSectionsTests` + sim-shot phone (ảnh); 4 máy chờ plan màn rộng |
 
-**Chưa chứng minh được:** AC-1, AC-2, AC-4, AC-7, AC-8, AC-9, AC-10, AC-11, AC-12, AC-13.
+**Chưa chứng minh được:** AC-1, AC-2, AC-4, AC-8, AC-9, AC-10, AC-11, AC-12, AC-13.

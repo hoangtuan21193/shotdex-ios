@@ -101,6 +101,10 @@
       "comment": "Video Studio clip panel: header over the clip's motion effects — zoom, pan, shake",
       "extractionState": "manual"
     },
+    "Move the playhead into this clip.": {
+      "comment": "Video Studio Trim: why the Start/End to Playhead chips are dimmed",
+      "extractionState": "manual"
+    },
     "Music": {
       "comment": "Video Studio: a music bed on the timeline",
       "extractionState": "manual"
