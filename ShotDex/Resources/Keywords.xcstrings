@@ -237,6 +237,10 @@
       "comment": "Footer under the caption and keywords section of Photo Info",
       "extractionState": "manual"
     },
+    "Text": {
+      "comment": "Rule field: words searched across camera, lens, filename, caption and keywords",
+      "extractionState": "manual"
+    },
     "The caption and keywords are unchanged.": {
       "comment": "Alert message when a caption or keyword write failed",
       "extractionState": "manual"

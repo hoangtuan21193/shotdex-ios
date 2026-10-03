@@ -310,6 +310,31 @@ struct DatabaseTests {
         #expect(try libraryQueries.count(matching: criteria) == 1)
     }
 
+    /// FS-02.07 §7: plain text also matches the Photos caption and keywords
+    /// (contains, without regard to case or diacritics).
+    @Test func searchTextMatchesCaption() throws {
+        let database = try AppDatabase.makeEmpty()
+        let metadataStore = MetadataStore(database: database)
+        let libraryQueries = LibraryQueries(database: database)
+        try metadataStore.saveBatch([
+            makeRecord(assetId: "a1", camera: "EOS R6"),
+            makeRecord(assetId: "a2", camera: "A6700"),
+            makeRecord(assetId: "a3", camera: "X-T5"),
+        ], cursorAssetId: nil)
+        try PhotoKeywordStore(database: database).replace([
+            "a1": CaptionKeywords(caption: "Đám cưới — Wedding at Hội An"),
+            "a2": CaptionKeywords(keywords: ["Hoi An", "golden hour"]),
+        ])
+
+        var criteria = FilterCriteria()
+        criteria.searchText = "wedding"
+        #expect(try libraryQueries.count(matching: criteria) == 1)
+        criteria.searchText = "hoi"
+        #expect(try libraryQueries.count(matching: criteria) == 2)
+        criteria.searchText = "golden"
+        #expect(try libraryQueries.count(matching: criteria) == 1)
+    }
+
     @Test func searchTextMatchesFilename() throws {
         let database = try AppDatabase.makeEmpty()
         let metadataStore = MetadataStore(database: database)

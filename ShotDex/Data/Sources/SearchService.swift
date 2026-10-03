@@ -95,10 +95,19 @@ final class SearchService {
         let parsed = SearchIntentParser.parse(trimmed, vocabulary: vocabulary, now: now)
         guard parsed.isConfident else { return Resolution(searchText: trimmed) }
         var query = parsed.query
-        if let leftover = parsed.leftoverText {
-            query.rules.append(SmartAlbumRule(field: .filename, op: .contains, text: leftover))
-        }
+        query.rules.append(contentsOf: Self.leftoverRules(parsed.leftoverText))
         return Resolution(query: query, searchText: nil)
+    }
+
+    /// The words a partly understood search left over, one `anyText` rule
+    /// each: they match what plain text search matches — camera, lens,
+    /// filename, caption, keyword — not the filename alone (FS-02.07 §7,
+    /// decided 2026-10-03), and each stays a chip the user can delete.
+    static func leftoverRules(_ leftover: String?) -> [SmartAlbumRule] {
+        guard let leftover else { return [] }
+        return leftover.split(separator: " ").map {
+            SmartAlbumRule(field: .anyText, op: .contains, text: String($0))
+        }
     }
 
     /// Resolves a query. Never throws and never returns nothing: the worst case is
@@ -126,21 +135,18 @@ final class SearchService {
             )
         }
 
-        // A partial parse still beats plain text: "fukuoka IMG_1234" keeps the
-        // place condition and looks for the rest in the filename.
+        // A partial parse still beats plain text: "fukuoka wedding" keeps the
+        // place condition and looks for the rest wherever free text looks —
+        // camera, lens, filename, caption, keyword.
         //
         // The leftover becomes a rule rather than staying free text because the
         // grid takes one or the other — `LibraryModel.criteria` and
-        // `advancedQuery` clear each other — and a filename chip the user can see
-        // and delete beats a word that silently narrowed the results or was
+        // `advancedQuery` clear each other — and a chip the user can see and
+        // delete beats a word that silently narrowed the results or was
         // silently dropped.
         if parsed.isConfident {
             var query = parsed.query
-            if let leftover = parsed.leftoverText {
-                query.rules.append(
-                    SmartAlbumRule(field: .filename, op: .contains, text: leftover)
-                )
-            }
+            query.rules.append(contentsOf: Self.leftoverRules(parsed.leftoverText))
             return Resolution(query: query, searchText: nil)
         }
         return Resolution(searchText: trimmed)

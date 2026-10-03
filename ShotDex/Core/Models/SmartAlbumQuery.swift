@@ -59,6 +59,11 @@ enum RuleField: String, Codable, CaseIterable, Identifiable, Sendable {
     case keyword
     /// The Photos caption, matched the same way. iOS 27 only.
     case caption
+    /// The words of a search the parser did not turn into a condition, matched
+    /// against everything plain text search reads — camera, lens, filename,
+    /// and (iOS 27) caption and keyword (FS-02.07 §7). Not offered in the
+    /// builder; it only comes from the search field.
+    case anyText
 
     var id: String { rawValue }
 
@@ -82,12 +87,13 @@ enum RuleField: String, Codable, CaseIterable, Identifiable, Sendable {
         case .flag: MarkCopy.flag
         case .keyword: String(localized: "Keyword", table: KeywordCopy.table, comment: "Rule field: a Photos keyword")
         case .caption: String(localized: "Caption", table: KeywordCopy.table, comment: "Rule field: the Photos caption")
+        case .anyText: String(localized: "Text", table: KeywordCopy.table, comment: "Rule field: words searched across camera, lens, filename, caption and keywords")
         }
     }
 
     var kind: RuleFieldKind {
         switch self {
-        case .cameraBrand, .cameraBody, .lens, .filename, .place: .text
+        case .cameraBrand, .cameraBody, .lens, .filename, .place, .anyText: .text
         case .sensorFormat, .fileType, .mediaType, .flag: .choice
         case .iso, .aperture, .shutter, .focalLength: .number
         case .dateTaken: .date
@@ -138,7 +144,9 @@ enum RuleField: String, Codable, CaseIterable, Identifiable, Sendable {
     /// Keyword and Caption only where Photos can be read for them — iOS 27;
     /// below it they are hidden, not dimmed (FS-02.07 §6, AC-14).
     static func selectableCases(extendedMetadata: Bool) -> [RuleField] {
-        allCases.filter { $0 != .mediaType && (extendedMetadata || ($0 != .keyword && $0 != .caption)) }
+        allCases.filter {
+            $0 != .mediaType && $0 != .anyText && (extendedMetadata || ($0 != .keyword && $0 != .caption))
+        }
     }
 }
 

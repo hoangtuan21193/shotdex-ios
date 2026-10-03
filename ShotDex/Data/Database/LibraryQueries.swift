@@ -442,17 +442,12 @@ struct LibraryQueries: Sendable {
                 conditions.append("sensorFormat = ?")
                 values.append(format.rawValue)
             }
+            // Camera, lens, filename — and the Photos caption and keywords
+            // (FS-02.07 §7), one shared definition with a search's leftovers.
             for term in parsed.freeTextTerms {
-                conditions.append("""
-                    (cameraModel LIKE ? COLLATE NOCASE
-                     OR lensModel LIKE ? COLLATE NOCASE
-                     OR normalizedCameraModel LIKE ? COLLATE NOCASE
-                     OR normalizedLensModel LIKE ? COLLATE NOCASE
-                     OR normalizedCameraManufacturer LIKE ? COLLATE NOCASE
-                     OR originalFilename LIKE ? COLLATE NOCASE)
-                    """)
-                let pattern = "%\(term)%"
-                values.append(contentsOf: [pattern, pattern, pattern, pattern, pattern, pattern])
+                let condition = SmartAlbumSQLBuilder.anyTextCondition(term: term)
+                conditions.append(condition.sql)
+                values.append(contentsOf: condition.values)
             }
             // Bare numbers OR into ISO / focal length / device names.
             for number in parsed.bareNumbers {

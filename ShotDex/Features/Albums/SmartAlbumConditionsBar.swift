@@ -156,6 +156,10 @@ extension SmartAlbumRule {
         if field == .place, op == .contains || op == .isExactly {
             return value
         }
+        // Leftover search words read as what was typed, quoted.
+        if field == .anyText {
+            return op == .doesNotContain ? "excludes \"\(value)\"" : "\"\(value)\""
+        }
         switch op {
         case .contains:
             return "\(compactFieldName) \(value)"
@@ -227,6 +231,7 @@ extension SmartAlbumRule {
         case .flag: MarkCopy.flag.lowercased()
         case .keyword: "keyword"
         case .caption: "caption"
+        case .anyText: "text"
         }
     }
 

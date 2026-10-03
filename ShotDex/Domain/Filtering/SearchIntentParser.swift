@@ -36,19 +36,32 @@ enum SearchIntentParser {
     ///     never has to guess from the shape of a word.
     ///   - now: reference date for "yesterday", "last month". Passed in, never
     ///     read from the clock, so tests are deterministic.
+    ///   - readsKeywords: whether Photos keywords exist on this system (iOS 27).
+    ///     Below it `keyword:x` is plain text (FS-02.07 §6).
     static func parse(
         _ rawQuery: String,
         vocabulary: FilterSuggestionCatalog = .empty,
         now: Date = Date(),
-        calendar: Calendar = .current
+        calendar: Calendar = .current,
+        readsKeywords: Bool = ExtendedMetadataSupport.isAvailable
     ) -> SearchIntent {
         let trimmed = rawQuery.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return .empty }
 
-        let tokens = canonicalTokens(trimmed)
-        guard !tokens.isEmpty else { return .empty }
+        // `keyword:sunset`, `keyword:"golden hour"`, `từ khoá:…` — read before
+        // the words are split, so a quoted name stays one keyword (FS-02.07 §7).
+        let (keywordRules, rest) = readsKeywords
+            ? keywordPrefixRules(trimmed, vocabulary: vocabulary)
+            : ([], trimmed)
+        var rules: [SmartAlbumRule] = keywordRules
 
-        var rules: [SmartAlbumRule] = []
+        let tokens = canonicalTokens(rest)
+        guard !tokens.isEmpty else {
+            var intent = SearchIntent()
+            intent.query = SmartAlbumQuery(matchMode: .all, rules: rules)
+            return intent
+        }
+
         var leftovers: [String] = []
         var index = 0
 

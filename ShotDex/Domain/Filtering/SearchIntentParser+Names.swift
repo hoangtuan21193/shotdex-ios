@@ -39,6 +39,7 @@ extension SearchIntentParser {
         let bodies = index(vocabulary.bodies)
         let lenses = index(vocabulary.lenses)
         let brands = index(vocabulary.brands)
+        let keywords = index(vocabulary.keywords.map(\.keyword))
 
         var rules: [SmartAlbumRule] = []
         var unmatched: [String] = []
@@ -55,10 +56,11 @@ extension SearchIntentParser {
                     places: places,
                     bodies: bodies,
                     lenses: lenses,
-                    brands: brands
+                    brands: brands,
+                    keywords: keywords
                 ) else { continue }
                 rules.append(
-                    SmartAlbumRule(field: hit.field, op: .contains, text: hit.value)
+                    SmartAlbumRule(field: hit.field, op: hit.field == .keyword ? .hasKeyword : .contains, text: hit.value)
                 )
                 start += length
                 matched = true
@@ -84,22 +86,26 @@ extension SearchIntentParser {
         return result
     }
 
-    /// Place before camera before lens before brand.
+    /// Place before camera before lens before brand before keyword.
     ///
     /// Place wins ties because a place name is the specific thing the user typed;
     /// camera and lens names are already reachable through their own vocabulary
-    /// and rarely collide with a city.
+    /// and rarely collide with a city. A keyword matches only by its **exact**
+    /// name (FS-02.07 §7) — after every exact name, before any partial one — so
+    /// a keyword never shadows a camera and never turns `85mm` into a chip.
     private static func lookup(
         _ folded: String,
         places: [String: String],
         bodies: [String: String],
         lenses: [String: String],
-        brands: [String: String]
+        brands: [String: String],
+        keywords: [String: String] = [:]
     ) -> (field: RuleField, value: String)? {
         if let value = places[folded] { return (.place, value) }
         if let value = bodies[folded] { return (.cameraBody, value) }
         if let value = lenses[folded] { return (.lens, value) }
         if let value = brands[folded] { return (.cameraBrand, value) }
+        if let value = keywords[folded] { return (.keyword, value) }
         // Not an exact name, but it may be part of one: "R6" for "Canon EOS R6",
         // "fukuoka" for "Fukuoka-shi". A `contains` rule on the term itself then
         // covers the whole family it names.
@@ -111,6 +117,36 @@ extension SearchIntentParser {
             }
         }
         return nil
+    }
+
+    /// `keyword:` / `từ khoá:` conditions taken out of a query, and what is
+    /// left of it. The value runs to the next space, or is quoted (straight or
+    /// curly quotes) to hold several words. Written in the library's spelling
+    /// when the library has the keyword (`keyword:sunset` → `Sunset`).
+    static func keywordPrefixRules(
+        _ query: String,
+        vocabulary: FilterSuggestionCatalog
+    ) -> (rules: [SmartAlbumRule], rest: String) {
+        let pattern = #"(?i)(?:keyword|t[uừ]\s+kh(?:oá|óa|oa))\s*:\s*(?:"([^"]*)"|“([^”]*)”|(\S+))"#
+        guard let regex = try? NSRegularExpression(pattern: pattern) else { return ([], query) }
+        let spellings = KeywordInput.spellings(vocabulary.keywords)
+        let source = query as NSString
+        let rest = NSMutableString(string: query)
+        var rules: [SmartAlbumRule] = []
+        // Back to front, so each replaced range leaves the earlier ones valid.
+        for match in regex.matches(in: query, range: NSRange(location: 0, length: source.length)).reversed() {
+            let value = (1...3)
+                .map { match.range(at: $0) }
+                .first { $0.location != NSNotFound }
+                .map { source.substring(with: $0).trimmingCharacters(in: .whitespaces) } ?? ""
+            rest.replaceCharacters(in: match.range, with: " ")
+            guard !value.isEmpty else { continue }
+            rules.insert(
+                SmartAlbumRule(field: .keyword, op: .hasKeyword, text: KeywordInput.spelling(for: value, existing: spellings)),
+                at: 0
+            )
+        }
+        return (rules, (rest as String).trimmingCharacters(in: .whitespaces))
     }
 
     /// Whether `term` names part of `name` — a whole word of it, or the start of

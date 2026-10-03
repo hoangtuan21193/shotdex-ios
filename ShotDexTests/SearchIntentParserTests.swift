@@ -235,4 +235,58 @@ struct SearchIntentParserTests {
         #expect(rules("f 3200").isEmpty)
         #expect(intent("").isConfident == false)
     }
+
+    // MARK: Keywords (FS-02.07 §7)
+
+    private var keywordVocabulary: FilterSuggestionCatalog {
+        var catalog = vocabulary
+        catalog.keywords = [
+            KeywordCount(keyword: "golden hour", count: 9),
+            KeywordCount(keyword: "Sunset", count: 40),
+        ]
+        return catalog
+    }
+
+    private func keywordRules(_ query: String, readsKeywords: Bool = true) -> SearchIntent {
+        SearchIntentParser.parse(query, vocabulary: keywordVocabulary, now: now, calendar: calendar, readsKeywords: readsKeywords)
+    }
+
+    /// AC-9: `keyword:"golden hour"` is one keyword condition, quotes and all;
+    /// `từ khoá:` is the same syntax; a bare value runs to the next space.
+    @Test func keywordPrefixQuoted() {
+        for query in [#"keyword:"golden hour""#, "keyword: “golden hour”", #"từ khoá:"golden hour""#, #"tu khoa:"golden hour""#] {
+            let intent = keywordRules(query)
+            #expect(intent.query.rules.map(RuleMeaning.init) == [
+                meaning(SmartAlbumRule(field: .keyword, op: .hasKeyword, text: "golden hour")),
+            ], "\(query)")
+            #expect(intent.leftoverText == nil, "\(query)")
+        }
+        let mixed = keywordRules("keyword:sunset 85mm")
+        #expect(mixed.query.rules.map(RuleMeaning.init) == [
+            meaning(SmartAlbumRule(field: .keyword, op: .hasKeyword, text: "Sunset")),
+            meaning(SmartAlbumRule(field: .focalLength, op: .equalTo, number: 85)),
+        ])
+        // Below iOS 27 there are no Photos keywords: the words stay text.
+        #expect(keywordRules("keyword:sunset", readsKeywords: false).query.rules.allSatisfy { $0.field != .keyword })
+    }
+
+    /// A word that is exactly a keyword's name becomes a keyword chip, as a
+    /// place name becomes a place chip.
+    @Test func exactKeywordBecomesChip() {
+        let intent = keywordRules("sunset")
+        #expect(intent.query.rules.map(RuleMeaning.init) == [
+            meaning(SmartAlbumRule(field: .keyword, op: .hasKeyword, text: "Sunset")),
+        ])
+        // A place still wins over a keyword of the same name; a part of a
+        // keyword is not a keyword.
+        #expect(keywordRules("sun").query.rules.allSatisfy { $0.field != .keyword })
+    }
+
+    /// AC-9, second half: with keywords in the vocabulary `85mm` is still a
+    /// focal-length chip.
+    @Test func eightyFiveMillimetresStaysFocal() {
+        #expect(keywordRules("85mm").query.rules.map(RuleMeaning.init) == [
+            meaning(SmartAlbumRule(field: .focalLength, op: .equalTo, number: 85)),
+        ])
+    }
 }

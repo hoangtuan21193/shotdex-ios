@@ -48,6 +48,9 @@ enum SmartAlbumSQLBuilder {
         case .text where rule.field == .place:
             return placeClause(rule.op, term: rule.text)
 
+        case .text where rule.field == .anyText:
+            return anyTextClause(rule.op, term: rule.text)
+
         case .text:
             return textClause(rule.op, term: rule.text, columns: textColumns(rule.field))
 
@@ -244,6 +247,40 @@ enum SmartAlbumSQLBuilder {
             return ("(' ' || COALESCE(placeSearchText, '') || ' ') NOT LIKE ?", ["% \(term) %"])
         default:
             return nil
+        }
+    }
+
+    /// What plain text search reads, as one condition: camera, lens and
+    /// filename by `LIKE`, plus the Photos caption and keyword mirror on the
+    /// folded key (FS-02.07 §7). The leftover words of a partly understood
+    /// search come through here, so "fukuoka wedding" still finds the caption.
+    static let anyTextColumns = [
+        "cameraModel", "lensModel", "normalizedCameraModel", "normalizedLensModel",
+        "normalizedCameraManufacturer", "originalFilename",
+    ]
+
+    static func anyTextCondition(term: String) -> (sql: String, values: [DatabaseValueConvertible]) {
+        let like = "%\(term)%"
+        let folded = "%\(KeywordInput.foldKey(term))%"
+        let columns = anyTextColumns.map { "\($0) LIKE ? COLLATE NOCASE" }
+        let sql = "(" + (columns + [
+            "assetId IN (SELECT assetId FROM photo_caption WHERE foldKey LIKE ?)",
+            "assetId IN (SELECT assetId FROM photo_keyword WHERE foldKey LIKE ?)",
+        ]).joined(separator: " OR ") + ")"
+        return (sql, anyTextColumns.map { _ in like as DatabaseValueConvertible } + [folded, folded])
+    }
+
+    private static func anyTextClause(
+        _ op: RuleOperator,
+        term rawTerm: String
+    ) -> (sql: String, values: [DatabaseValueConvertible])? {
+        let term = rawTerm.trimmingCharacters(in: .whitespaces)
+        guard !term.isEmpty else { return nil }
+        let (sql, values) = anyTextCondition(term: term)
+        switch op {
+        case .contains: return (sql, values)
+        case .doesNotContain: return ("NOT \(sql)", values)
+        default: return nil
         }
     }
 
