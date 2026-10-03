@@ -215,3 +215,27 @@ import Testing
     }
 }
 
+/// FS-12.18 §4: deleting a draft removes the row and nothing else.
+@Suite @MainActor struct VideoDraftDeleteTests {
+    /// FS-12.18 AC-7: Delete Draft takes the draft's row away; the exported
+    /// project next to it stays, and the store has no way to reach the
+    /// library — the row is all there is to delete.
+    @Test func deleteDraftRemovesOnlyTheRow() throws {
+        let store = CreationStore(database: try AppDatabase.makeEmpty())
+        let clips = VideoStudioModelFixture.photoClips(5)
+        try store.saveDraft(try Creation.video(recipe: VideoProjectRecipe(clips: clips), assetId: nil, id: "draft"))
+        try store.upsert(try Creation.video(
+            recipe: VideoProjectRecipe(clips: clips), assetId: "video", id: "exported", exportedAt: 10
+        ))
+
+        try store.delete(id: "draft")
+
+        #expect(try store.fetchOrdered(kind: .video).map(\.id) == ["exported"])
+        #expect(CreationCardCopy.deleteDraftLabel(locale: Locale(identifier: "en_US")) == "Delete Draft")
+        #expect(CreationCardCopy.deleteDraftTitle(locale: Locale(identifier: "en_US")) == "Delete Draft?")
+        #expect(
+            CreationCardCopy.deleteDraftMessage(locale: Locale(identifier: "en_US"))
+                == "The photos and videos stay in your library."
+        )
+    }
+}

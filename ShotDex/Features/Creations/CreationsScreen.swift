@@ -32,6 +32,10 @@ struct CreationsScreen: View {
     /// A creation whose recipe no longer decodes, or whose source photos are
     /// all gone — named in an alert rather than failing silently on tap.
     @State private var unopenableMessage: String?
+    /// The draft waiting on "Delete Draft?" (FS-12.18 §4). An `.alert`, not a
+    /// confirmation dialog: on iOS 26 a dialog anchored to a row hides its
+    /// Cancel, and this question needs both answers on screen.
+    @State private var draftPendingDelete: Creation?
 
     /// The photos a new project starts from, wrapped so `fullScreenCover`
     /// has something identifiable to present on.
@@ -87,6 +91,19 @@ struct CreationsScreen: View {
             .ignoresSafeArea()
         }
         .alert(
+            CreationCardCopy.deleteDraftTitle(),
+            isPresented: Binding(
+                get: { draftPendingDelete != nil },
+                set: { if !$0 { draftPendingDelete = nil } }
+            ),
+            presenting: draftPendingDelete
+        ) { draft in
+            Button("Delete", role: .destructive) { delete(draft) }
+            Button("Cancel", role: .cancel) {}
+        } message: { _ in
+            Text(CreationCardCopy.deleteDraftMessage())
+        }
+        .alert(
             "Can't Reopen This",
             isPresented: Binding(
                 get: { unopenableMessage != nil },
@@ -134,10 +151,18 @@ struct CreationsScreen: View {
                     }
                     .buttonStyle(.plain)
                     .contextMenu {
-                        Button(role: .destructive) {
-                            delete(creation)
-                        } label: {
-                            Label(removeLabel, systemImage: "trash")
+                        if creation.kind == .video, creation.isDraft {
+                            Button(role: .destructive) {
+                                draftPendingDelete = creation
+                            } label: {
+                                Label(CreationCardCopy.deleteDraftLabel(), systemImage: "trash")
+                            }
+                        } else {
+                            Button(role: .destructive) {
+                                delete(creation)
+                            } label: {
+                                Label(removeLabel, systemImage: "trash")
+                            }
                         }
                     }
                 }
@@ -270,6 +295,8 @@ struct CreationsScreen: View {
         )
     }
 
+    /// Removes the row only. A draft's photos and videos, and an exported
+    /// project's video, stay in the library: this list holds recipes.
     private func delete(_ creation: Creation) {
         try? dependencies.creations.delete(id: creation.id)
         load()

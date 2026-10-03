@@ -29,6 +29,14 @@
         }
       }
     },
+    "Delete Draft": {
+      "comment": "Video Projects: menu action that deletes a video draft — never the photos or videos it uses",
+      "extractionState": "manual"
+    },
+    "Delete Draft?": {
+      "comment": "Video Projects: title of the confirmation before a draft is deleted",
+      "extractionState": "manual"
+    },
     "Draft": {
       "comment": "Video Projects: label on a video project that has never been exported",
       "extractionState": "manual"
@@ -39,6 +47,10 @@
     },
     "Mute Video Sound": {
       "comment": "Video Studio level meter: silences the clips' own audio for the whole project",
+      "extractionState": "manual"
+    },
+    "The photos and videos stay in your library.": {
+      "comment": "Video Projects: message of the Delete Draft confirmation — deleting a draft never touches the library",
       "extractionState": "manual"
     },
     "Unmute Video Sound": {

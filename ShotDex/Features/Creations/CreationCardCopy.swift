@@ -40,6 +40,28 @@ enum CreationCardCopy {
         )
     }
 
+    /// The menu action on a draft row (FS-12.18 §4).
+    static func deleteDraftLabel(locale: Locale = .current) -> String {
+        String(
+            localized: "Delete Draft", table: VideoStudioCopy.table, locale: locale,
+            comment: "Video Projects: menu action that deletes a video draft — never the photos or videos it uses"
+        )
+    }
+
+    static func deleteDraftTitle(locale: Locale = .current) -> String {
+        String(
+            localized: "Delete Draft?", table: VideoStudioCopy.table, locale: locale,
+            comment: "Video Projects: title of the confirmation before a draft is deleted"
+        )
+    }
+
+    static func deleteDraftMessage(locale: Locale = .current) -> String {
+        String(
+            localized: "The photos and videos stay in your library.", table: VideoStudioCopy.table, locale: locale,
+            comment: "Video Projects: message of the Delete Draft confirmation — deleting a draft never touches the library"
+        )
+    }
+
     static func relativeTime(of creation: Creation, now: Date, locale: Locale) -> String {
         let formatter = RelativeDateTimeFormatter()
         formatter.unitsStyle = .short
