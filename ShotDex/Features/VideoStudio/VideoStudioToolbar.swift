@@ -55,64 +55,6 @@ struct VideoStudioToolbar: View {
     }
 }
 
-/// The bottom bar: Back on the leading edge, the export estimate in the middle,
-/// the Export pill on the trailing edge. Always visible — the contextual panel
-/// slides over it rather than replacing it.
-struct VideoStudioBottomBar: View {
-    @Bindable var model: VideoStudioModel
-    let actions: VideoInspectorActions
-
-    var body: some View {
-        HStack(spacing: 12) {
-            // The same Back the top band draws at rail width, drawn the same
-            // way: glass, not a flat disc. Widening an iPad window past the
-            // rail threshold moves this button into the top band, and it
-            // used to change material on the way.
-            Button(action: actions.onBack) {
-                Image(systemName: "chevron.left")
-                    .font(.system(size: 15, weight: .semibold))
-                    .foregroundStyle(.white)
-                    .frame(width: 38, height: 38)
-                    .background { Color.clear.editorGlass(Circle()) }
-                    .contentShape(Circle())
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel(Text("Back", comment: "Video Studio: leaves the editor"))
-
-            VStack(alignment: .leading, spacing: 1) {
-                Text(VideoStudioMetrics.exportReadout(
-                duration: model.totalDuration,
-                presetName: model.recipe.renderPreset.displayName
-            ))
-                    .font(.system(size: 11).monospacedDigit())
-                Text("~\(sizeText)")
-                    .font(.system(size: 11).monospacedDigit())
-            }
-            .foregroundStyle(EditorTheme.dimText)
-
-            Spacer(minLength: 0)
-
-            Button(action: actions.onExport) {
-                Text("Export")
-                    .font(.system(size: 14, weight: .bold))
-                    .foregroundStyle(.black)
-                    .padding(.horizontal, 20)
-                    .frame(height: 38)
-                    .background(Capsule().fill(EditorTheme.accent))
-            }
-            .buttonStyle(.plain)
-        }
-        .padding(.horizontal, 14)
-        .frame(height: VideoStudioMetrics.bottomBarHeight)
-        .frame(maxWidth: .infinity)
-        .background(EditorTheme.panelSolid)
-    }
-
-    private var sizeText: String {
-        ByteCountFormatter.string(fromByteCount: model.estimatedExportBytes, countStyle: .file)
-    }
-}
-
 /// The same tools as a **vertical rail**, for a regular-width window.
 ///
 /// A row of nine cells across 1032pt is a row with 560pt of nothing in it, and

@@ -415,9 +415,9 @@ struct VideoStudioScreen: View {
                 // The column never covers anything, so there is nothing for
                 // the stack to dock or lift out of the way of.
                 panelMayDock: usesDeskChrome && !usesInspectorColumn,
-                // Back, the read-out and Export move into the top band there,
-                // so the bottom band is not drawn and costs no height.
-                showsBottomBar: !usesDeskChrome,
+                // No bottom band anywhere: Back and Export are in the top band
+                // on every window (FS-12.07 §2), so it costs no height.
+                showsBottomBar: false,
                 // Only where the divider exists to drag.
                 timelineExtraHeight: resizableTimeline ? CGFloat(timelineExtraHeight) + timelineDragOffset : 0,
                 deskChromeHeight: deskChromeHeight
@@ -468,7 +468,10 @@ struct VideoStudioScreen: View {
                     VStack(spacing: 0) {
                         VideoStudioTopBand(
                             model: model,
-                            projectActions: usesRail ? actions(model) : nil,
+                            // Back and Export are in the top band on every
+                            // window: the desk row on a desk-shaped window,
+                            // the phone row on a phone (FS-12.07 §2).
+                            projectActions: usesDeskChrome ? actions(model) : nil,
                             // The meter sits inside this column, beside the
                             // frame, so the band does not get its width.
                             stageWidth: stageColumnWidth - meterWidth,
@@ -479,7 +482,8 @@ struct VideoStudioScreen: View {
                             trailingCornerClearance: usesDeskChrome && !usesInspectorColumn
                                 ? VideoStudioMetrics.displayCornerClearance
                                 : 0,
-                            carriesProjectTools: usesDeskChrome
+                            carriesProjectTools: usesDeskChrome,
+                            phoneActions: usesDeskChrome ? nil : actions(model)
                         )
                         .frame(height: bandHeight, alignment: .top)
                         if usesDeskChrome {
@@ -571,7 +575,6 @@ struct VideoStudioScreen: View {
                         }
                         if !usesDeskChrome {
                             VideoStudioToolbar(model: model, actions: actions(model))
-                            VideoStudioBottomBar(model: model, actions: actions(model))
                         }
                         Color.clear.frame(height: proxy.safeAreaInsets.bottom)
                     }

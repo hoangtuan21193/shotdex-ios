@@ -42,3 +42,31 @@ struct VideoStudioToolsTests {
         #expect(model.recipe.filterIntensity == 0.5)
     }
 }
+
+/// FS-12.07 §2: the phone's top band.
+struct VideoStudioPhoneBandTests {
+    /// FS-12.07 AC-6: Back, Undo, Redo at x 16/56/96 and Video Settings,
+    /// Export at 306/350 on 402pt, all 36pt — and none of them over the
+    /// Dynamic Island's 138–264, on any phone width. (The board draws 10/350;
+    /// 16 keeps the outer discs clear of the screen's rounded corner.)
+    @Test func phoneTopBandLeavesTheIslandClear() {
+        let expected: [VideoStudioMetrics.PhoneBandItem: CGFloat] = [
+            .back: 16, .undo: 56, .redo: 96, .videoSettings: 306, .export: 350,
+        ]
+        for item in VideoStudioMetrics.PhoneBandItem.allCases {
+            let frame = VideoStudioMetrics.phoneBandFrame(item, width: 402)
+            #expect(frame.minX == expected[item])
+            #expect(frame.size == CGSize(width: 36, height: 36))
+        }
+        #expect(VideoStudioMetrics.dynamicIslandSpan(width: 402) == 138...264)
+        // Every phone with a Dynamic Island (the 375pt SE has none, and the
+        // row there runs under nothing).
+        for width in [CGFloat(393), 402, 440] {
+            let island = VideoStudioMetrics.dynamicIslandSpan(width: width)
+            for item in VideoStudioMetrics.PhoneBandItem.allCases {
+                let frame = VideoStudioMetrics.phoneBandFrame(item, width: width)
+                #expect(frame.maxX <= island.lowerBound || frame.minX >= island.upperBound, "\(item) on \(width)")
+            }
+        }
+    }
+}

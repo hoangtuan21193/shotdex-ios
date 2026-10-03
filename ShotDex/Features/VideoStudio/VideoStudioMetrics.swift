@@ -198,6 +198,48 @@ enum VideoStudioMetrics {
                 width - inset - button * 3, width - inset - button * 2, width - inset - button]
     }
 
+    // MARK: Phone top band (FS-12.07 §2)
+
+    /// The phone's top band: 36pt discs level with the Dynamic Island —
+    /// Back, Undo, Redo from the leading edge, Video Settings and Export at
+    /// the trailing one, and nothing over the island between them.
+    enum PhoneBandItem: CaseIterable {
+        case back, undo, redo, videoSettings, export
+    }
+
+    static let phoneBandButton: CGFloat = 36
+    static let phoneBandTop: CGFloat = 11.5
+    /// 16, not the board's 10: at the island's height a disc 10pt in is cut
+    /// by the screen's own rounded corner — measured on a masked sim-shot of
+    /// iPhone 17, where Back and Export each lost their outer top quarter.
+    /// The same clearance the desk band takes (`displayCornerClearance`).
+    static let phoneBandInset: CGFloat = displayCornerClearance
+    /// Gap between Back, Undo and Redo, and between Video Settings and Export.
+    static let phoneBandLeadingGap: CGFloat = 4
+    static let phoneBandTrailingGap: CGFloat = 8
+    /// The island the row keeps clear: 126pt centred, at the band's height.
+    static let dynamicIslandWidth: CGFloat = 126
+
+    /// Where each disc sits on a window `width` wide (402pt: x 16, 56, 96 ·
+    /// 306, 350).
+    static func phoneBandFrame(_ item: PhoneBandItem, width: CGFloat) -> CGRect {
+        let size = phoneBandButton
+        let x: CGFloat = switch item {
+        case .back: phoneBandInset
+        case .undo: phoneBandInset + size + phoneBandLeadingGap
+        case .redo: phoneBandInset + (size + phoneBandLeadingGap) * 2
+        case .videoSettings: width - phoneBandInset - size * 2 - phoneBandTrailingGap
+        case .export: width - phoneBandInset - size
+        }
+        return CGRect(x: x, y: phoneBandTop, width: size, height: size)
+    }
+
+    /// The island's span on a window `width` wide (402pt: 138–264).
+    static func dynamicIslandSpan(width: CGFloat) -> ClosedRange<CGFloat> {
+        let start = (width - dynamicIslandWidth) / 2
+        return start...(start + dynamicIslandWidth)
+    }
+
     // MARK: Media pool
 
     /// The library column beside the stage. 300 holds three 92pt thumbnails

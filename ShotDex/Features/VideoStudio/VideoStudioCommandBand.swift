@@ -27,6 +27,9 @@ struct VideoStudioTopBand: View {
     /// home in this band — Resolve keeps format and its like behind a
     /// settings control in the chrome, not on a tool column.
     var carriesProjectTools = false
+    /// On a phone the band carries the whole chrome (FS-12.07 §2): Back,
+    /// Undo, Redo · Video Settings, Export. There is no bottom band.
+    var phoneActions: VideoInspectorActions?
 
     @Environment(\.usesRegularToolChrome) private var usesRegularToolChrome
 
@@ -52,6 +55,87 @@ struct VideoStudioTopBand: View {
     private let inset = EditorLayoutMetrics.editorFloatingCommandSideInset
 
     var body: some View {
+        if let phoneActions {
+            phoneRow(phoneActions)
+        } else {
+            deskRow
+        }
+    }
+
+    /// Back · Undo · Redo on the leading edge, Video Settings · Export on the
+    /// trailing one, 36pt discs at the island's height and nothing over the
+    /// island itself (FS-12.07 §2, board Main).
+    private func phoneRow(_ actions: VideoInspectorActions) -> some View {
+        HStack(spacing: 0) {
+            HStack(spacing: VideoStudioMetrics.phoneBandLeadingGap) {
+                disc(systemName: "chevron.left", isEnabled: true, action: actions.onBack)
+                    .accessibilityLabel(Text("Back", comment: "Video Studio: leaves the editor"))
+                disc(systemName: "arrow.uturn.backward", isEnabled: model.canUndo) { model.undo() }
+                    .accessibilityLabel("Undo")
+                disc(systemName: "arrow.uturn.forward", isEnabled: model.canRedo) { model.redo() }
+                    .accessibilityLabel("Redo")
+            }
+            Spacer(minLength: 0)
+            HStack(spacing: VideoStudioMetrics.phoneBandTrailingGap) {
+                videoSettingsDisc
+                Button(action: actions.onExport) {
+                    Image(systemName: "square.and.arrow.down")
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundStyle(.black)
+                        .frame(width: VideoStudioMetrics.phoneBandButton, height: VideoStudioMetrics.phoneBandButton)
+                        .background(Circle().fill(EditorTheme.accent))
+                        .contentShape(Circle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(Text("Export", comment: "Video Studio: renders the video and saves it"))
+            }
+        }
+        .padding(.horizontal, VideoStudioMetrics.phoneBandInset)
+        .padding(.top, VideoStudioMetrics.phoneBandTop)
+        .frame(height: VideoStudioMetrics.phoneBandTop + VideoStudioMetrics.phoneBandButton, alignment: .top)
+    }
+
+    /// A 36pt disc on white 10 %, glyph white — dim when it cannot act.
+    private func disc(systemName: String, isEnabled: Bool, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Image(systemName: systemName)
+                .font(.system(size: 15, weight: .semibold))
+                .foregroundStyle(isEnabled ? Color.white : Color.white.opacity(0.28))
+                .frame(width: VideoStudioMetrics.phoneBandButton, height: VideoStudioMetrics.phoneBandButton)
+                .background(Circle().fill(Color.white.opacity(0.10)))
+                .contentShape(Circle())
+        }
+        .buttonStyle(.plain)
+        .disabled(!isEnabled)
+    }
+
+    /// Video Settings, drawn as the project's own shape: the glyph is a frame
+    /// in the project's ratio, so the button says what it changes.
+    private var videoSettingsDisc: some View {
+        let ratio = model.recipe.aspect.ratio
+        let side: CGFloat = 18
+        let glyph = CGSize(
+            width: ratio >= 1 ? side : side * ratio,
+            height: ratio >= 1 ? side / ratio : side
+        )
+        let isOpen = model.activeToolPanel == .videoSettings
+        return Button {
+            model.toggleToolPanel(.videoSettings)
+        } label: {
+            RoundedRectangle(cornerRadius: 3, style: .continuous)
+                .strokeBorder(isOpen ? Color.black : Color.white, lineWidth: 1.8)
+                .frame(width: glyph.width, height: glyph.height)
+                .frame(width: VideoStudioMetrics.phoneBandButton, height: VideoStudioMetrics.phoneBandButton)
+                .background(Circle().fill(isOpen ? Color.white : Color.white.opacity(0.10)))
+                .contentShape(Circle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(VideoStudioCopy.videoSettings)
+        .accessibilityValue(model.recipe.aspect.displayName)
+        .accessibilityAddTraits(isOpen ? .isSelected : [])
+    }
+
+    private var deskRow: some View {
         HStack(spacing: AppTheme.Spacing.xs) {
             if let projectActions {
                 Button(action: projectActions.onBack) {
@@ -72,7 +156,6 @@ struct VideoStudioTopBand: View {
                 .accessibilityLabel("Redo")
             // Hold-to-compare moved to the Look panel's title (FS-12.04 §4):
             // it compares the look, so it lives where the look is changed.
-            // Its place here is Video Settings, until the band is redrawn.
             if !carriesProjectTools { videoSettingsCircle }
 
             Spacer(minLength: 8)

@@ -1,38 +1,150 @@
 {
-  "steps": [
-    { "action": "launch" },
-    { "action": "wait", "seconds": 4 },
-    { "action": "tap", "label": "Select", "type": "button" },
-    { "action": "wait", "seconds": 1 },
-    { "action": "tap", "x": 0.07, "y": 0.2 },
-    { "action": "tap", "x": 0.32, "y": 0.2 },
-    { "action": "tap", "x": 0.57, "y": 0.2 },
-    { "action": "wait", "seconds": 1 },
-    { "action": "tap", "label": "More selection actions", "type": "button" },
-    { "action": "wait", "seconds": 1 },
-    { "action": "tap", "label": "Create Video" },
-    { "action": "wait", "seconds": 8 },
-    { "action": "tap", "x": 0.08, "y": 0.928 },
-    { "action": "wait", "seconds": 3 },
-    { "action": "screenshot", "name": "02-after-back" },
-    { "action": "tap", "label": "Done selecting", "type": "button" },
-    { "action": "wait", "seconds": 1 },
-    { "action": "tap", "label": "Collections", "type": "button" },
-    { "action": "wait", "seconds": 2 },
-    { "action": "scrollTo", "label": "Video Projects" },
-    { "action": "tap", "label": "Video Projects" },
-    { "action": "wait", "seconds": 3 },
-    { "action": "screenshot", "name": "03-video-projects" },
-    { "action": "dump", "name": "03-video-projects", "type": "button" },
-    { "action": "longPress", "label": "Video Project, Draft", "seconds": 1.2 },
-    { "action": "wait", "seconds": 2 },
-    { "action": "screenshot", "name": "04-menu" },
-    { "action": "tap", "label": "Delete Draft" },
-    { "action": "wait", "seconds": 2 },
-    { "action": "screenshot", "name": "05-confirm" },
-    { "action": "tap", "label": "Cancel", "type": "button" },
-    { "action": "wait", "seconds": 2 },
-    { "action": "screenshot", "name": "06-after-cancel" },
-    { "action": "wait", "seconds": 6 }
-  ]
+ "steps": [
+  {
+   "action": "launch"
+  },
+  {
+   "action": "wait",
+   "seconds": 4
+  },
+  {
+   "action": "tap",
+   "label": "Select",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "tap",
+   "x": 0.07,
+   "y": 0.2
+  },
+  {
+   "action": "tap",
+   "x": 0.32,
+   "y": 0.2
+  },
+  {
+   "action": "tap",
+   "x": 0.57,
+   "y": 0.2
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "tap",
+   "label": "More selection actions",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "tap",
+   "label": "Create Video"
+  },
+  {
+   "action": "wait",
+   "seconds": 8
+  },
+  {
+   "action": "tap",
+   "x": 0.085,
+   "y": 0.034
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "screenshot",
+   "name": "02-after-back"
+  },
+  {
+   "action": "tap",
+   "label": "Done selecting",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "tap",
+   "label": "Collections",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "scrollTo",
+   "label": "Video Projects"
+  },
+  {
+   "action": "tap",
+   "label": "Video Projects"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "screenshot",
+   "name": "03-video-projects"
+  },
+  {
+   "action": "dump",
+   "name": "03-video-projects",
+   "type": "button"
+  },
+  {
+   "action": "longPress",
+   "label": "Video Project, Draft",
+   "seconds": 1.2
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "screenshot",
+   "name": "04-menu"
+  },
+  {
+   "action": "tap",
+   "label": "Delete Draft"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "screenshot",
+   "name": "05-confirm"
+  },
+  {
+   "action": "tap",
+   "label": "Cancel",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "screenshot",
+   "name": "06-after-cancel"
+  },
+  {
+   "action": "wait",
+   "seconds": 6
+  }
+ ]
 }
