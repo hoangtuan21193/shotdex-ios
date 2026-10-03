@@ -209,4 +209,63 @@ struct CaptionKeywordSheetModelTests {
             ))
         }
     }
+
+    /// AC-13: 30 selected, Photos refuses 4 (a shared library, simulated) —
+    /// the other 26 get `trip`, the 4 stay as they were, and the banner says
+    /// *4 photos can't be changed.*
+    @Test func partialRefusal() async throws {
+        let photos = Self.thirty(hoiAn: 0)
+        let harness = try CaptionKeywordHarness(photos)
+        let refused = Set(Self.ids(photos).prefix(4))
+        harness.writer.refused = refused
+        let model = CaptionKeywordSheetModel(ids: Self.ids(photos), service: harness.service)
+        await model.load()
+        model.keywordText = "trip"
+        model.commitKeywordText()
+        let outcome = await model.apply()
+
+        let after = harness.library.read(ids: Self.ids(photos))
+        #expect(after.filter { $0.value.keywords == ["trip"] }.count == 26)
+        #expect(refused.allSatisfy { after[$0] == photos[$0] })
+        #expect(outcome == .written(banner: KeywordCopy.refusedBanner(photos: 4), refused: 4))
+        #expect(KeywordCopy.refusedBanner(photos: 4, locale: Locale(identifier: "en")) == "4 photos can't be changed.")
+        #expect(harness.writer.blocks.count == 1)
+        // Undo covers only the 26.
+        try await model.undo()
+        #expect(harness.writer.blocks.last?.count == 26)
+    }
+
+    /// Photos refuses every photo: nothing is written, the sheet alerts.
+    @Test func allRefusedAlerts() async throws {
+        let photos = Self.thirty(hoiAn: 0)
+        let harness = try CaptionKeywordHarness(photos)
+        harness.writer.refused = Set(photos.keys)
+        let model = CaptionKeywordSheetModel(ids: Self.ids(photos), service: harness.service)
+        await model.load()
+        model.keywordText = "trip"
+        model.commitKeywordText()
+        #expect(await model.apply() == .allRefused)
+        #expect(harness.library.read(ids: Self.ids(photos)) == photos)
+    }
+
+    /// The write fails: Photos changed nothing, the mirror changed nothing,
+    /// the sheet stays open with Try Again — which writes the same plan.
+    @Test func failureLeavesMirror() async throws {
+        let photos = Self.thirty(hoiAn: 12)
+        let harness = try CaptionKeywordHarness(photos)
+        try harness.store.replace(photos)
+        let before = try harness.store.keywordCounts()
+        harness.writer.failure = CocoaError(.fileWriteUnknown)
+        let model = CaptionKeywordSheetModel(ids: Self.ids(photos), service: harness.service)
+        await model.load()
+        model.keywordText = "trip"
+        model.commitKeywordText()
+        #expect(await model.apply() == .failed)
+        #expect(try harness.store.keywordCounts() == before)
+        #expect(harness.library.read(ids: Self.ids(photos)) == photos)
+
+        harness.writer.failure = nil
+        if case .written = await model.apply() {} else { Issue.record("Try Again did not write") }
+        #expect(harness.library.read(ids: Self.ids(photos)).values.allSatisfy { $0.keywords.contains("trip") })
+    }
 }

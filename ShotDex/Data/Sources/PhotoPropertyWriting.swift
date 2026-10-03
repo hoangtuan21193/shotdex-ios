@@ -114,6 +114,32 @@ struct PhotoKitPropertyWriter: PhotoPropertyWriting {
 }
 
 #if DEBUG
+/// `-ShotDexRefuseProperties <n>`: Photos "refuses" the first n photos of
+/// every caption/keyword write (sorted by id) the way a shared-library asset
+/// would, so the "4 photos can't be changed." banner can be seen on a
+/// simulator, which has no shared library (FS-02.07 AC-13).
+struct RefusingPropertyWriter: PhotoPropertyWriting {
+    static let launchArgument = "-ShotDexRefuseProperties"
+    let base: any PhotoPropertyWriting
+    let count: Int
+
+    static func count(in arguments: [String]) -> Int? {
+        guard let index = arguments.firstIndex(of: launchArgument), index + 1 < arguments.count else { return nil }
+        return Int(arguments[index + 1])
+    }
+
+    func setRatings(_ ratings: [String: Int]) async throws -> PropertyWriteResult {
+        try await base.setRatings(ratings)
+    }
+
+    func applyCaptionKeywords(_ changes: [String: CaptionKeywordChange]) async throws -> PropertyWriteResult {
+        let refused = Set(changes.keys.sorted().prefix(count))
+        var result = try await base.applyCaptionKeywords(changes.filter { !refused.contains($0.key) })
+        result.refused.formUnion(refused)
+        return result
+    }
+}
+
 /// `-ShotDexFailRatingWrites`: every write is refused, so the "Couldn't save
 /// rating." path can be seen on a simulator (FS-01.12 AC-10).
 struct FailingPropertyWriter: PhotoPropertyWriting {

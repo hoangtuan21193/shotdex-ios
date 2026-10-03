@@ -290,6 +290,9 @@ final class AppDependencies {
         if ratingWriter != nil, ProcessInfo.processInfo.arguments.contains(FailingPropertyWriter.launchArgument) {
             ratingWriter = FailingPropertyWriter()
         }
+        if let base = ratingWriter, let refuse = RefusingPropertyWriter.count(in: ProcessInfo.processInfo.arguments) {
+            ratingWriter = RefusingPropertyWriter(base: base, count: refuse)
+        }
         #endif
         let photoMarks = PhotoMarks(
             store: photoMarksStore,
