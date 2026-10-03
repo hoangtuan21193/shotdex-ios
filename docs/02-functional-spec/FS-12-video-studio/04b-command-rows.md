@@ -95,12 +95,12 @@ của lệnh ([07 §3](07-phone-layout.md)).
 | AC-5 | như AC-4 | chạm Trim lần nữa | hai chip biến mất; nội dung bắt đầu bằng Speed | ✅ `VideoItemSectionTests.tappingTrimAgainReturnsToSpeed` (chạm lại Trim: tắt, nội dung về Speed; Volume sáng thì dòng Volume lên đầu) |
 | AC-6 | clip 2 Volume 80 | chạm loa rồi chạm lại | lần 1: không tiếng, slider vẫn 80, mờ; lần 2: về 80; hai bước undo | ✅ `VideoMuteSpeakerTests.muteKeepsTheLevelAndUndoesStepwise` (lần 1 im, giữ 80; lần 2 về 80; hai bước undo; nhạc như vậy); sim-shot iPhone 17: đĩa loa đầu dòng Volume của clip video (route `video-studio-video-clip.json`, 2026-10-04) |
 | AC-7 | clip 10,0 s đang chọn, playhead 4,0 s | chạm Split rồi ✕ | còn 2 clip `[0,0–4,0]` `[4,0–10,0]`, không chọn gì | ✅ `VideoSplitDuplicateTests.splitThenCancelKeepsTheCut` (còn [0–4] [4–10], không chọn gì) |
-| AC-8 | băng chữ GOLDEN HOUR đang chọn | chạm Duplicate rồi ✕ | còn đúng 1 khối GOLDEN HOUR, không chọn gì | ⚠️ chưa có |
+| AC-8 | băng chữ GOLDEN HOUR đang chọn | chạm Duplicate rồi ✕ | còn đúng 1 khối GOLDEN HOUR, không chọn gì | ✅ `VideoSplitDuplicateTests.duplicateThenCancelLeavesOneBlock` (còn 1 khối GOLDEN HOUR, không chọn, không bước undo), `duplicateClipInsertsAfterAndSharesTheSource` (clip chèn ngay sau, chung nguồn; nhạc bắt đầu ở cuối bản gốc) |
 | AC-9 | Duo trong 951×669, clip 2 đang chọn | vuốt hàng lệnh sang trái | ô Delete hiện đủ trong cột 264, không gập thành lưới | ⚠️ chưa có |
 | AC-10 | các board P2, P3, P5, P9, P10, IL2–IL4, IP2, IP3, DI2, DI3, DC2, DC3 | `Tools/design-board compare` hàng lệnh với dump app | mọi ô lệnh lệch ≤ 2pt | ⚠️ chưa có — agent `design-parity` |
 | AC-11 | clip 1 ảnh 3,0 s, clip 2 video 6,2 s | chọn từng clip, dump phần nội dung | clip 1: dòng Duration có slider 0,5–10 s; clip 2: không phần tử nào tên "Duration", dòng phụ ở tên ghi "6.2s · video" | ⚠️ một phần — `VideoClipPanelSectionsTests.videoClipHasNoDurationSection`, `photoClipKeepsDuration`; sim-shot iPhone 17: clip video Speed (0.5× 1× 2× 4×) · Volume · Fade, không Duration, dòng phụ "2.0s · video"; clip ảnh Duration · Fade · Motion (2026-10-04). Duo/iPad chờ plan màn rộng |
 
-**Chưa chứng minh được:** AC-1, AC-2, AC-8, AC-9, AC-10, AC-11.
+**Chưa chứng minh được:** AC-1, AC-2, AC-9, AC-10, AC-11.
 
 ## 8. Rủi ro đã biết
 

@@ -1,3 +1,5 @@
+import CoreGraphics
+import ShotDexKit
 import Testing
 @testable import ShotDex
 
@@ -154,5 +156,53 @@ struct VideoSplitDuplicateTests {
         #expect(model.recipe.clips[1].trimStart == 4)
         #expect(model.recipe.clips[1].trimEnd == 10)
         #expect(model.selectedClipID == nil)
+    }
+}
+
+extension VideoSplitDuplicateTests {
+    /// FS-12.04b AC-8: GOLDEN HOUR selected, Duplicate, ✕ — exactly one
+    /// GOLDEN HOUR block, nothing selected, no step left of the copy.
+    @Test func duplicateThenCancelLeavesOneBlock() {
+        var overlay = PhotoOverlay.text()
+        overlay.text = "GOLDEN HOUR"
+        let model = VideoStudioModelFixture.model { $0.overlays = [TimedOverlay(overlay: overlay, start: 1, duration: 4)] }
+        model.selectOverlay(overlay.id)
+        model.duplicateSelectedOverlay()
+        #expect(model.recipe.overlays.count == 2)
+        #expect(model.selectedOverlayID != overlay.id)
+
+        model.cancelSession()
+        #expect(model.recipe.overlays.map(\.id) == [overlay.id])
+        #expect(model.selectedOverlayID == nil)
+        #expect(!model.canUndo)
+    }
+
+    /// A duplicated clip lands right after the original, shares its source,
+    /// and is selected; a duplicated bed starts where the original ends.
+    @Test func duplicateClipInsertsAfterAndSharesTheSource() {
+        let model = VideoStudioModelFixture.model(clips: VideoStudioModelFixture.photoClips(3))
+        let original = model.recipe.clips[1]
+        model.sources[original.id] = .photo(assetID: original.assetID, pixelSize: CGSize(width: 10, height: 10))
+        model.selectClip(original.id)
+        model.duplicateSelectedClip()
+
+        #expect(model.recipe.clips.count == 4)
+        let copy = model.recipe.clips[2]
+        #expect(copy.assetID == original.assetID)
+        #expect(copy.id != original.id)
+        #expect(copy.photoDuration == original.photoDuration)
+        #expect(model.selectedClipID == copy.id)
+        #expect(model.sources[copy.id] != nil)
+        model.cancelSession()
+        #expect(model.recipe.clips.count == 3)
+
+        var bed = MusicTrack(source: .bundled(id: "calm"))
+        bed.sourceDuration = 5
+        bed.trimEnd = 5
+        let withMusic = VideoStudioModelFixture.model { $0.musicTracks = [bed] }
+        withMusic.selectMusic(bed.id)
+        withMusic.duplicateSelectedMusic()
+        #expect(withMusic.recipe.musicTracks.count == 2)
+        #expect(withMusic.recipe.musicTracks[1].start == 5)
     }
 }
