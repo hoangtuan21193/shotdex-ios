@@ -131,6 +131,12 @@ final class AppDependencies {
     let photoMarks: PhotoMarks
     /// iOS 27's first launch: pending stars into Photos, once (FS-01.12 §5).
     let ratingMigration: RatingMigrationPass
+    /// The mirror of Photos' caption and keywords (FS-02.07 §8).
+    let photoKeywordStore: PhotoKeywordStore
+    /// Reads Photos' caption and keywords; nil below iOS 27.
+    let extendedMetadataReader: (any ExtendedMetadataReading)?
+    /// The one writer of the mirror; nil below iOS 27.
+    let keywordMirror: ExtendedMetadataMirrorPass?
     /// The connections the selection ⋯ menu lists by name.
     let fileServerCatalog: FileServerCatalog
     /// Files brought down from a server (FS-17 §4).
@@ -290,6 +296,25 @@ final class AppDependencies {
             }
         )
         self.photoMarks = photoMarks
+        // Caption and keywords (FS-02.07): Photos holds them on iOS 27; the
+        // mirror follows every index run's changed ids — Photos' "updated"
+        // set, even when the modification date did not move (AC-10).
+        let photoKeywordStore = PhotoKeywordStore(database: database)
+        self.photoKeywordStore = photoKeywordStore
+        var extendedMetadataReader: (any ExtendedMetadataReading)?
+        if #available(iOS 27, *) { extendedMetadataReader = PhotoKitExtendedMetadataReader() }
+        self.extendedMetadataReader = extendedMetadataReader
+        if let extendedMetadataReader {
+            let mirror = ExtendedMetadataMirrorPass(
+                store: photoKeywordStore,
+                reader: extendedMetadataReader,
+                shouldPause: { indexInteractionGate.shouldPauseIndexing }
+            )
+            indexPipeline.runObservers.add { changes in await mirror.handle(changes) }
+            self.keywordMirror = mirror
+        } else {
+            self.keywordMirror = nil
+        }
         // Stars and flags leave with the photo (FS-01.12 AC-9): always when
         // the app deleted it, only with full access when an index run found
         // it gone (`UserMarkRemovalPolicy`).

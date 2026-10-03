@@ -60,6 +60,7 @@ final class LibraryModel {
     private let metadataStore: MetadataStore
     private let pipeline: IndexPipeline
     private let placeIndexPass: PlaceIndexPass
+    private let keywordMirror: ExtendedMetadataMirrorPass?
     private let unsupportedRAWIndex: UnsupportedRAWIndex
     private let backgroundIndex: BackgroundIndexService
     private let photoLibrary: PhotoLibraryService
@@ -229,6 +230,8 @@ final class LibraryModel {
     /// Reverse-geocoded place names in the library — autosuggest, the Place rule
     /// row, and the vocabulary the search parser matches a bare term against.
     private(set) var availablePlaces: [String] = []
+    /// Photos keywords in the library with their photo counts (iOS 27).
+    private(set) var availableKeywords: [KeywordCount] = []
 
     init(dependencies: AppDependencies) {
         self.libraryQueries = dependencies.libraryQueries
@@ -236,6 +239,7 @@ final class LibraryModel {
         self.metadataStore = dependencies.metadataStore
         self.pipeline = dependencies.indexPipeline
         self.placeIndexPass = dependencies.placeIndexPass
+        self.keywordMirror = dependencies.keywordMirror
         self.unsupportedRAWIndex = dependencies.unsupportedRAWIndex
         self.backgroundIndex = dependencies.backgroundIndex
         self.photoLibrary = dependencies.photoLibrary
@@ -548,6 +552,20 @@ final class LibraryModel {
             self.availableBodies = catalog.bodies
             self.availableLenses = catalog.lenses
             self.availablePlaces = catalog.places
+            self.availableKeywords = catalog.keywords
+        }
+    }
+
+    /// Fills the caption/keyword mirror from Photos when it still needs a
+    /// full read (iOS 27: first launch, after Clear index, after a full walk),
+    /// then refreshes the keyword vocabulary (FS-02.07 §8).
+    func startKeywordMirror() {
+        guard let mirror = keywordMirror else { return }
+        Task(priority: .utility) { [weak self] in
+            guard await mirror.needsFullRead() else { return }
+            let summary = await mirror.runFullRead()
+            guard summary.assets > 0 else { return }
+            self?.refreshFilterOptions(force: true)
         }
     }
 
@@ -867,6 +885,7 @@ final class LibraryModel {
             self.reload()
             self.refreshFilterOptions(force: true)
             self.startPlaceLookup()
+            self.startKeywordMirror()
             // New RAW cameras in the index are judged now, not at next launch.
             self.unsupportedRAWIndex.runPass()
             // A local-only run leaves iCloud-only photos pending; surface a
