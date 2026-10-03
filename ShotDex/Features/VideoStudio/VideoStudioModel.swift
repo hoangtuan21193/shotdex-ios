@@ -1189,39 +1189,37 @@ final class VideoStudioModel {
     /// of the project shifts to follow, which is what `clipPlacements`
     /// already does for every other length change.
     func trimToPlayhead(_ end: ClipEnd) {
-        let placements = clipPlacements
-        guard let index = VideoTimelineMath.clipIndex(at: currentTime, placements: placements),
-              index < placements.count,
-              !isLaneLocked(.video)
-        else { return }
-        let clip = recipe.clips[index]
-        let localTime = currentTime - placements[index].start
-        guard localTime > 0, localTime < placements[index].duration else { return }
+        guard let index = VideoTimelineMath.clipIndex(at: currentTime, placements: clipPlacements) else { return }
+        applyTrimToPlayhead(end, clipAt: index)
+    }
 
-        switch clip.kind {
-        case .photo, .freeze:
-            let kept = end == .start ? placements[index].duration - localTime : localTime
-            guard kept >= VideoClip.photoDurationRange.lowerBound else { return }
+    /// Applies `VideoClipTrimMath` to the clip at `index` as one undo step.
+    /// Returns why nothing happened, when nothing did.
+    @discardableResult
+    private func applyTrimToPlayhead(_ end: ClipEnd, clipAt index: Int) -> VideoClipTrimMath.Unavailable? {
+        let placements = clipPlacements
+        guard index < placements.count, index < recipe.clips.count, !isLaneLocked(.video) else {
+            return .playheadOutsideClip
+        }
+        let outcome = VideoClipTrimMath.trimToPlayhead(
+            recipe.clips[index],
+            end: end == .start ? .start : .end,
+            localTime: currentTime - placements[index].start
+        )
+        switch outcome {
+        case .unavailable(let reason):
+            return reason
+        case .duration(let kept):
             pushUndo()
             recipe.clips[index].photoDuration = kept
-        case .video:
-            guard let sourceDuration = clip.sourceDuration else { return }
-            // Local time runs at the clip's speed; the trim window does not.
-            let sourceTime = clip.trimStart + localTime * max(clip.speed, 0.01)
-            let start = end == .start ? sourceTime : clip.trimStart
-            let finish = end == .start ? (clip.trimEnd ?? sourceDuration) : sourceTime
-            guard finish - start >= VideoClip.minimumClipDuration else { return }
-            let clamped = VideoTimelineMath.clampedTrim(
-                start: start,
-                end: finish,
-                sourceDuration: sourceDuration
-            )
+        case .trim(let start, let finish):
             pushUndo()
-            recipe.clips[index].trimStart = clamped.start
-            recipe.clips[index].trimEnd = clamped.end
+            recipe.clips[index].trimStart = start
+            recipe.clips[index].trimEnd = finish
         }
         markEdited()
         schedulePreviewRebuild()
+        return nil
     }
 
     /// Which end of a clip a command acts on.
@@ -1229,8 +1227,12 @@ final class VideoStudioModel {
 
     /// Trim → Start/End to Playhead on the **selected** clip (FS-12.05 §3).
     /// The transport's ⋯ keeps acting on the clip under the playhead.
-    func trimSelectedClipToPlayhead(_ end: ClipEnd) {
-        trimToPlayhead(end)
+    @discardableResult
+    func trimSelectedClipToPlayhead(_ end: ClipEnd) -> VideoClipTrimMath.Unavailable? {
+        guard let id = selectedClipID, let index = recipe.clips.firstIndex(where: { $0.id == id }) else {
+            return .playheadOutsideClip
+        }
+        return applyTrimToPlayhead(end, clipAt: index)
     }
 
     // MARK: - Markers
