@@ -13,6 +13,10 @@ struct PropertyWriteResult: Equatable, Sendable {
     }
 
     var dates: [String: Dates]
+    /// Ids Photos would not let the app change (`canPerform(.properties)`
+    /// is false — a shared library or shared album asset). Left out of the
+    /// write; the caller says so (FS-02.07 §6).
+    var refused: Set<String> = []
 
     static let empty = PropertyWriteResult(dates: [:])
 }
@@ -29,11 +33,24 @@ protocol PhotoPropertyWriting: Sendable {
     /// Sets each id to its own rating, still in one block — the star
     /// migration and undo write mixed values.
     func setRatings(_ ratings: [String: Int]) async throws -> PropertyWriteResult
+
+    /// Applies each asset's caption and keyword change in **one**
+    /// `performChanges` (FS-02.07 §5) — keywords added and removed one by
+    /// one, the caption set or cleared only when the change says so. An asset
+    /// that refuses property edits is skipped and reported in `refused`; one
+    /// that no longer exists is skipped silently. Never touches a resource,
+    /// so nothing is downloaded (AC-12).
+    func applyCaptionKeywords(_ changes: [String: CaptionKeywordChange]) async throws -> PropertyWriteResult
 }
 
 extension PhotoPropertyWriting {
     func setRating(_ rating: Int, ids: [String]) async throws -> PropertyWriteResult {
         try await setRatings(Dictionary(uniqueKeysWithValues: ids.map { ($0, rating) }))
+    }
+
+    /// Writers that predate caption and keywords (the rating fakes) refuse.
+    func applyCaptionKeywords(_ changes: [String: CaptionKeywordChange]) async throws -> PropertyWriteResult {
+        throw CocoaError(.featureUnsupported)
     }
 }
 
@@ -56,6 +73,37 @@ struct PhotoKitPropertyWriter: PhotoPropertyWriting {
             dates[id] = PropertyWriteResult.Dates(before: date, after: after[id] ?? date)
         }
         return PropertyWriteResult(dates: dates)
+    }
+
+    func applyCaptionKeywords(_ changes: [String: CaptionKeywordChange]) async throws -> PropertyWriteResult {
+        let wanted = changes.filter { !$0.value.isEmpty }
+        guard !wanted.isEmpty else { return .empty }
+        let found = PhotoLibraryService.fetchAssets(ids: Array(wanted.keys))
+        let assets = found.filter { $0.canPerform(.properties) }
+        let refused = Set(found.map(\.localIdentifier)).subtracting(assets.map(\.localIdentifier))
+        guard !assets.isEmpty else { return PropertyWriteResult(dates: [:], refused: refused) }
+        let before = Self.modificationDates(assets)
+        try await PHPhotoLibrary.shared().performChanges {
+            for asset in assets {
+                guard let change = wanted[asset.localIdentifier] else { continue }
+                let request = PHAssetChangeRequest(for: asset)
+                for keyword in change.remove { request.removeKeyword(keyword) }
+                for keyword in change.add { request.addKeyword(keyword) }
+                switch change.caption {
+                case .untouched: break
+                case .set(let text): request.caption = text
+                // Measured on iOS 27.0 (FS-02.07 §10 q5): `nil` leaves the
+                // caption in place, only the empty string clears it.
+                case .clear: request.caption = ""
+                }
+            }
+        }
+        let after = Self.modificationDates(PhotoLibraryService.fetchAssets(ids: assets.map(\.localIdentifier)))
+        var dates: [String: PropertyWriteResult.Dates] = [:]
+        for (id, date) in before {
+            dates[id] = PropertyWriteResult.Dates(before: date, after: after[id] ?? date)
+        }
+        return PropertyWriteResult(dates: dates, refused: refused)
     }
 
     private static func modificationDates(_ assets: [PHAsset]) -> [String: Int?] {

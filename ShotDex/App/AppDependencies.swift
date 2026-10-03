@@ -131,12 +131,18 @@ final class AppDependencies {
     let photoMarks: PhotoMarks
     /// iOS 27's first launch: pending stars into Photos, once (FS-01.12 §5).
     let ratingMigration: RatingMigrationPass
+    /// Writes ShotDex's properties into Photos (iOS 27): stars, caption,
+    /// keywords. Nil below iOS 27.
+    let propertyWriter: (any PhotoPropertyWriting)?
     /// The mirror of Photos' caption and keywords (FS-02.07 §8).
     let photoKeywordStore: PhotoKeywordStore
     /// Reads Photos' caption and keywords; nil below iOS 27.
     let extendedMetadataReader: (any ExtendedMetadataReading)?
     /// The one writer of the mirror; nil below iOS 27.
     let keywordMirror: ExtendedMetadataMirrorPass?
+    /// Caption and keyword writes from Info and the bulk sheet; nil below
+    /// iOS 27, where the controls are hidden.
+    let captionKeywords: CaptionKeywordService?
     /// The connections the selection ⋯ menu lists by name.
     let fileServerCatalog: FileServerCatalog
     /// Files brought down from a server (FS-17 §4).
@@ -296,6 +302,7 @@ final class AppDependencies {
             }
         )
         self.photoMarks = photoMarks
+        self.propertyWriter = ratingWriter
         // Caption and keywords (FS-02.07): Photos holds them on iOS 27; the
         // mirror follows every index run's changed ids — Photos' "updated"
         // set, even when the modification date did not move (AC-10).
@@ -312,8 +319,23 @@ final class AppDependencies {
             )
             indexPipeline.runObservers.add { changes in await mirror.handle(changes) }
             self.keywordMirror = mirror
+            if let ratingWriter {
+                self.captionKeywords = CaptionKeywordService(
+                    writer: ratingWriter,
+                    reader: extendedMetadataReader,
+                    mirror: mirror,
+                    store: photoKeywordStore,
+                    metadataStore: metadataStore,
+                    keywordCatalog: { recount in
+                        recount ? await filterSuggestions.refreshKeywords() : await filterSuggestions.load().keywords
+                    }
+                )
+            } else {
+                self.captionKeywords = nil
+            }
         } else {
             self.keywordMirror = nil
+            self.captionKeywords = nil
         }
         // Stars and flags leave with the photo (FS-01.12 AC-9): always when
         // the app deleted it, only with full access when an index run found

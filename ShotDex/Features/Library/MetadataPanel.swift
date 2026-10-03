@@ -12,6 +12,7 @@ struct MetadataPanel: View {
     /// Absent in previews; there the section simply never shows.
     @Environment(ServerUploadIndex.self) private var uploadIndex: ServerUploadIndex?
     @Environment(FileServerCatalog.self) private var catalog: FileServerCatalog?
+    @Environment(AppDependencies.self) private var dependencies: AppDependencies?
 
     @State private var report: AssetMetadataReport?
     @State private var isLoading = true
@@ -52,6 +53,15 @@ struct MetadataPanel: View {
 
     private func usefulMetadataList(_ report: AssetMetadataReport) -> some View {
         List {
+            // iOS 27: Photos' own caption and keywords, first, editable
+            // (FS-02.07 §4). Below 27 there is nothing to read or write, and
+            // the file's keywords stay in Rights & Description.
+            if ExtendedMetadataSupport.isAvailable, let service = dependencies?.captionKeywords,
+               let assetId = asset?.localIdentifier {
+                CaptionKeywordSection(assetId: assetId, service: service)
+                    .id(assetId)
+            }
+
             if let location = report.location {
                 PhotoLocationSection(location: location, assetId: asset?.localIdentifier)
             } else {
