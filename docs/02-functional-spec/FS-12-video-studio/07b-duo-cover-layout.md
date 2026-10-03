@@ -72,17 +72,17 @@ Mọi thứ đã có chỗ: Video Settings và Export ở dải 84, việc timel
 | AC-1 | Duo gập, màn ngoài 466×678, project 16:9, không chọn | dump | khung 382×215 y 45; transport y 260; timeline 300–644; 5 ô 64×56 ở x 392 y 80–360; Video Settings y 504; Export y 556 | ✅ `VideoStudioDeskGeometryTests.duoCoverIdle` + route `duo-vs-cover.json` 2026-10-04, Duo (27.1) màn ngoài: dump — Media/Text/Sticker/Music/Look 64×56 ở x 392 y 80·136·192·248·304, Video Settings (402,504) 44, Export (402,556) 44, transport y 260 (Go to Start x 6 … More x 336), Play giữa khung y 152; `sim-shot cover` |
 | AC-2 | như AC-1 | chạm ô Music (x 424, y 276) | panel Music mở 300–644; ô Music nền trắng 14% | ✅ route `duo-vs-cover.json` (chạm điểm 0,91 · 0,407 = (424, 276)): `sim-shot cover` — panel Add Music từ y 300 phủ timeline, khung + transport không đổi, ô Music sáng |
 | AC-3 | như AC-1 | dump vùng x 382–466, y 0–72 và y > 600 | không có phần tử nhận chạm nào | ✅ `VideoStudioDeskGeometryTests.nothingTappableInTheCapOrBelow600` + dump `duo-vs-cover.json`: phần tử thấp nhất của dải là Export 556–600, cao nhất là Media từ y 80 |
-| AC-4 | như AC-1 | chọn clip 2 | ✕ ở y 504, ✓ ở y 556; tên "Clip 2" ở y 440; Video Settings và Export không còn; 5 ô trắng 30% | ⚠️ chưa có |
-| AC-5 | clip 2 đang chọn | chạm ô Media | không có gì mở | ⚠️ chưa có |
-| AC-6 | clip 2 đang chọn | dump | dải tổng quan y 306; panel bắt đầu y 334; khung vẫn 382×215 ở y 45 | ⚠️ chưa có |
+| AC-4 | như AC-1 | chọn clip 2 | ✕ ở y 504, ✓ ở y 556; tên "Clip 2" ở y 440; Video Settings và Export không còn; 5 ô trắng 30% | ✅ `VideoStudioDeskGeometryTests.duoCoverSelected` + route `duo-vs-cover-select.json` 2026-10-04, Duo màn ngoài (chọn clip 1 — clip 2 nằm dưới dải ở bề rộng này): `sim-shot cover` — tên "Photo 1 / 3.0s · photo" ở y ~470, ✕ ở 504, ✓ trắng glyph đen ở 556, không còn Video Settings/Export, 5 ô mờ 30% |
+| AC-5 | clip 2 đang chọn | chạm ô Media | không có gì mở | ✅ `duo-vs-cover-select.json`: chạm (424, 108) — ô Media — khi đang chọn: ảnh sau giống hệt ảnh trước (ô không nhận chạm, `toolsAreInert`) |
+| AC-6 | clip 2 đang chọn | dump | dải tổng quan y 306; panel bắt đầu y 334; khung vẫn 382×215 ở y 45 | ✅ `duoCoverSelected` (tổng quan 12/306/358×22, panel 334–644) + `sim-shot cover` của `duo-vs-cover-select.json`: dải tổng quan dưới transport, hàng lệnh Split…Delete ở đầu panel, khung không đổi |
 | AC-7 | project 9:16 | mở Video Studio | khung 121×215 căn giữa trong x 0–382 | ✅ `VideoStudioDeskGeometryTests.aPortraitProjectFitsCentred` (121×215 ở x 130,5 — cùng hàm fit khung xem trước dùng); chưa chụp project 9:16 thật |
 | AC-8 | clip 2 đang chọn, Speed đổi sang 2× | mở máy | màn trong: góc phải hàng đáy là ✕ · Clip 2 · ✓; bấm ✕ trả Speed về 1× | ⚠️ chưa có — mở máy bằng tay trong Simulator.app |
-| AC-9 | DC1, DC2 | `Tools/sim-shot <udid> out.png cover` (có mask) | Back và ✓ không bị góc bo cắt | ⚠️ chưa có |
+| AC-9 | DC1, DC2 | `Tools/sim-shot <udid> out.png cover` (có mask) | Back và ✓ không bị góc bo cắt | ✅ `Tools/sim-shot … cover` (có mask) 2026-10-04: DC1 (`duo-vs-cover.json`) — Back ở (10,7) nguyên đĩa; DC2 (`duo-vs-cover-select.json`) — ✓ ở (402,556) nguyên đĩa, cách góc bo dưới |
 | AC-10 | các board DC1–DC4, DC2_Collapsed | `Tools/design-board compare` với dump app cùng trạng thái | mọi phần tử chrome lệch ≤ 2pt | ⚠️ chưa có — agent `design-parity` |
 | AC-11 | như AC-1 | dump hàng trên y 6–42 | đúng 3 đĩa Back · Undo · Redo; không có ⋯, không có Show original | ✅ `duoCoverIdle` (3 đĩa ở x 10/50/90, y 7–41) + dump `duo-vs-cover.json`: Back (10,7) · Undo (50,7) · Redo (90,7) 34pt, không nút nào khác trong y 6–42 của nội dung |
-| AC-12 | clip 2 đang chọn | vuốt grabber xuống | panel 78 ở y 566–644; timeline 300–566 có tay nắm mép clip 2; ✕ y 504, ✓ y 556 vẫn còn; khung không đổi | ⚠️ chưa có — `Tools/ui-drive` (swipe theo điểm) |
+| AC-12 | clip 2 đang chọn | vuốt grabber xuống | panel 78 ở y 566–644; timeline 300–566 có tay nắm mép clip 2; ✕ y 504, ✓ y 556 vẫn còn; khung không đổi | ⚠️ một phần — số: `VideoStudioDeskGeometryTests.duoCoverCollapsedPanelIs78At566` (panel 566–644, timeline 300–566, không dải tổng quan); bố cục đọc `session.isCollapsed`; **cử chỉ vuốt grabber + đặt cờ là của plan `vs-tools-selection-phone` (khối E), chưa có** nên chưa chụp được |
 
-**Chưa chứng minh được:** AC-4, AC-5, AC-6, AC-8, AC-9, AC-10, AC-12.
+**Chưa chứng minh được:** AC-8, AC-10, AC-12.
 
 ## 8. Rủi ro đã biết
 

@@ -244,14 +244,38 @@ extension VideoStudioScreen {
                 .placed(frames.stage)
             VideoCompactTransportBar(model: model)
                 .placed(frames.transport)
-            deskTimeline(model, height: frames.timeline.height)
-                .placed(frames.timeline)
-            if model.presentsSheet, let panel = frames.toolPanel {
-                // The panel's background runs on under the home indicator.
-                contextPanel(model, height: window.height - panel.minY)
-                    .frame(width: panel.width)
-                    .offset(x: panel.minX, y: panel.minY)
+            if model.inspectorTarget != .none {
+                // A selected item (FS-12.07b §4): the overview under the
+                // transport and the panel from 334 — or, pulled down, the
+                // timeline back down to 566 over a 78pt panel. ✕ and ✓ are
+                // in the rail.
+                let selection = VideoStudioDeskGeometry.coverSelection(
+                    frames,
+                    isCollapsed: model.session?.isCollapsed == true
+                )
+                if let timeline = selection.timeline {
+                    deskTimeline(model, height: timeline.height)
+                        .placed(timeline)
+                }
+                if let overview = selection.overview {
+                    VideoTimelineOverview(model: model, visibleDuration: timelineVisibleDuration)
+                        .placed(overview)
+                }
+                contextPanel(model, height: window.height - selection.panel.minY)
+                    .frame(width: selection.panel.width)
+                    .offset(x: selection.panel.minX, y: selection.panel.minY)
                     .transition(.move(edge: .bottom))
+            } else {
+                deskTimeline(model, height: frames.timeline.height)
+                    .placed(frames.timeline)
+                if model.presentsSheet, let panel = frames.toolPanel {
+                    // A tool's panel covers the timeline; its background
+                    // runs on under the home indicator.
+                    contextPanel(model, height: window.height - panel.minY)
+                        .frame(width: panel.width)
+                        .offset(x: panel.minX, y: panel.minY)
+                        .transition(.move(edge: .bottom))
+                }
             }
             if let rail = frames.rail {
                 VideoStudioDuoCoverRail(model: model, actions: actions(model), windowWidth: window.width)

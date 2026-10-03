@@ -168,6 +168,13 @@ enum VideoStudioDeskGeometry {
     static let coverLowerActionTop: CGFloat = 556
     /// The panel's grabber: 36×5, 6 below its top.
     static let coverGrabber = CGSize(width: 36, height: 5)
+    /// A selected item (FS-12.07b §4): the overview strip at 306 (12 in,
+    /// 22 tall), the panel from 334; pulled down, the panel is 78 —
+    /// grabber and command row — at the bottom, 566–644.
+    static let coverOverviewTop: CGFloat = 306
+    static let coverOverviewInset: CGFloat = 12
+    static let coverItemPanelTop: CGFloat = 334
+    static let coverCollapsedPanelHeight: CGFloat = 78
 
     /// The rect of every band. Nil where the window class has no such band.
     struct Frames: Equatable {
@@ -413,6 +420,31 @@ enum VideoStudioDeskGeometry {
             bottomRow: nil,
             rail: CGRect(x: contentWidth, y: 0, width: coverRailWidth, height: height),
             toolPanel: timeline
+        )
+    }
+
+    /// The cover with an item selected: the overview, and the panel full or
+    /// pulled down to 78. The frame and the transport do not move.
+    struct CoverSelection: Equatable {
+        /// Nil while the panel is pulled down: the timeline shows instead.
+        var overview: CGRect?
+        var panel: CGRect
+        /// What is left of the timeline above a pulled-down panel.
+        var timeline: CGRect?
+    }
+
+    static func coverSelection(_ frames: Frames, isCollapsed: Bool) -> CoverSelection {
+        let width = frames.timeline.width
+        let bottom = frames.timeline.maxY
+        if isCollapsed {
+            let panel = CGRect(x: 0, y: bottom - coverCollapsedPanelHeight, width: width, height: coverCollapsedPanelHeight)
+            let timeline = CGRect(x: 0, y: frames.timeline.minY, width: width, height: panel.minY - frames.timeline.minY)
+            return CoverSelection(overview: nil, panel: panel, timeline: timeline)
+        }
+        return CoverSelection(
+            overview: CGRect(x: coverOverviewInset, y: coverOverviewTop, width: width - coverOverviewInset * 2, height: overviewHeight),
+            panel: CGRect(x: 0, y: coverItemPanelTop, width: width, height: bottom - coverItemPanelTop),
+            timeline: nil
         )
     }
 

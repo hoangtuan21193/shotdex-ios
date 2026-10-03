@@ -1,0 +1,95 @@
+{
+  "steps": [
+    {
+      "action": "launch",
+      "arguments": [
+        "-video.timelineExtraHeight",
+        "0"
+      ]
+    },
+    {
+      "action": "wait",
+      "seconds": 6
+    },
+    {
+      "action": "tap",
+      "label": "Select",
+      "type": "button"
+    },
+    {
+      "action": "wait",
+      "seconds": 2
+    },
+    {
+      "action": "tap",
+      "x": 0.14,
+      "y": 0.45
+    },
+    {
+      "action": "tap",
+      "x": 0.42,
+      "y": 0.45
+    },
+    {
+      "action": "tap",
+      "x": 0.7,
+      "y": 0.45
+    },
+    {
+      "action": "wait",
+      "seconds": 1
+    },
+    {
+      "action": "tap",
+      "label": "More selection actions",
+      "type": "button"
+    },
+    {
+      "action": "wait",
+      "seconds": 1
+    },
+    {
+      "action": "tap",
+      "label": "Create Video"
+    },
+    {
+      "action": "wait",
+      "seconds": 12
+    },
+    {
+      "action": "tap",
+      "label": "Photo clip",
+      "index": 0
+    },
+    {
+      "action": "wait",
+      "seconds": 3
+    },
+    {
+      "action": "screenshot",
+      "name": "10-cover-clip-selected"
+    },
+    {
+      "action": "tap",
+      "x": 0.91,
+      "y": 0.159
+    },
+    {
+      "action": "wait",
+      "seconds": 3
+    },
+    {
+      "action": "screenshot",
+      "name": "20-cover-media-while-selected"
+    },
+    {
+      "action": "dump",
+      "name": "30-cover-selected-buttons",
+      "type": "button"
+    },
+    {
+      "action": "wait",
+      "seconds": 2
+    }
+  ]
+}

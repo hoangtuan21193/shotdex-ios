@@ -293,4 +293,31 @@ struct VideoStudioDeskGeometryTests {
         #expect(near(frames.frame.width, 121) && frames.frame.height == 215)
         #expect(near(frames.frame.minX, 130.5) && frames.frame.minY == 45)
     }
+
+    /// FS-12.07b AC-4, AC-6: selected, the overview is at 306 (x 12, 358
+    /// wide) and the panel starts at 334; the frame is still 382×215 at 45;
+    /// ✕ at 504 and ✓ at 556 are the rail's two discs, the name at 440.
+    @Test func duoCoverSelected() {
+        let frames = cover(sixteenNine)
+        let selection = Geometry.coverSelection(frames, isCollapsed: false)
+        #expect(selection.overview == CGRect(x: 12, y: 306, width: 358, height: 22))
+        #expect(selection.panel == CGRect(x: 0, y: 334, width: 382, height: 310))
+        #expect(selection.timeline == nil)
+        #expect(frames.stage == CGRect(x: 0, y: 45, width: 382, height: 215))
+        let rail = Geometry.coverRail(windowWidth: 466)
+        #expect(rail.name.minY == 440)
+        #expect(rail.upperAction.minY == 504 && rail.lowerAction.minY == 556)
+        #expect(VideoAddTool.toolsAreInert(in: .duoCover, isSelecting: true))
+    }
+
+    /// FS-12.07b AC-12: pulled down, the panel is 78 at 566–644 and the
+    /// timeline is back from 300 to 566; the frame does not move.
+    @Test func duoCoverCollapsedPanelIs78At566() {
+        let frames = cover(sixteenNine)
+        let selection = Geometry.coverSelection(frames, isCollapsed: true)
+        #expect(selection.panel == CGRect(x: 0, y: 566, width: 382, height: 78))
+        #expect(selection.timeline == CGRect(x: 0, y: 300, width: 382, height: 266))
+        #expect(selection.overview == nil)
+        #expect(frames.stage.minY == 45)
+    }
 }
