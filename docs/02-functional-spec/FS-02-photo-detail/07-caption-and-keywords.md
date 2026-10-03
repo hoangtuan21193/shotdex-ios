@@ -180,6 +180,15 @@ Luật:
 | 5. Photos có giới hạn độ dài caption, keyword không | cắt hay báo lỗi |
 | 6. Lượt đọc đầy 55k với tải sẵn: tổng thời gian, bộ nhớ đỉnh | ngân sách AC-15; vượt 60 s thì dời ra sau lượt EXIF |
 
+**Đo được** — simulator iPhone 17 iOS 27.0, 2026-10-03, `CaptionKeywordProbeTests` (tự bỏ qua dưới 27 và khi chưa có quyền):
+- **1.** Có. Ghi từ app — caption, keyword hay cả hai, trên ảnh và video — đổi `modificationDate` và id vào
+  `updatedLocalIdentifiers`, y như sao/yêu thích (FS-01.12 M1). Ghi không đổi gì (thêm keyword đã có, caption như
+  cũ, gỡ keyword không có) không đổi ngày, không vào "updated". **Sửa trong app Photos** (Info → Add Keywords, chạy
+  qua `Tools/ui-drive`): cũng vào "updated" và cũng đổi ngày. Hệ quả: sau mỗi lần app ghi, ngày sửa trong index
+  được đóng dấu lại (`MetadataStore.restampModificationDates`) nên lượt index sau không đọc lại file; sửa trong app
+  Photos thì lượt tăng dần đọc lại file của ảnh đó **một lần**, như sửa ảnh (AC-10). Thêm: trên 27.0
+  `caption = nil` **không xoá** caption, chỉ chuỗi rỗng xoá — writer ghi `""`.
+
 ## 11. Tiêu chí nghiệm thu
 
 Mọi AC chạy trên iOS 27 trừ AC-14.
