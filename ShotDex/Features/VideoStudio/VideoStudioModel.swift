@@ -870,6 +870,30 @@ final class VideoStudioModel {
         }
     }
 
+    /// Puts the playhead back after a drag that moved it for a preview,
+    /// holding off the time observer until the seek has landed — otherwise
+    /// a frame reported from the preview's last position overwrites it.
+    private func settlePlayhead(at seconds: Double) {
+        pendingScrubTime = nil
+        currentTime = min(max(seconds, 0), totalDuration)
+        // The edit that ends the drag rebuilds the preview, and the new item
+        // must start here — not wherever the preview's last frame left the
+        // old one (measured: 0.5 s after a 0.46 s edge drag from 0).
+        resumeTimeAfterRebuild = currentTime
+        guard let player else {
+            isScrubbing = false
+            return
+        }
+        isScrubbing = true
+        player.seek(
+            to: VideoCompositionBuilder.time(currentTime),
+            toleranceBefore: .zero,
+            toleranceAfter: .zero
+        ) { [weak self] _ in
+            Task { @MainActor [weak self] in self?.isScrubbing = false }
+        }
+    }
+
     func endScrub(at seconds: Double) {
         pendingScrubTime = nil
         isScrubbing = false
@@ -1351,18 +1375,126 @@ final class VideoStudioModel {
 
     /// The nearest edit point to `time`, or nil when nothing is close enough.
     /// Candidates are every clip boundary, every marker, and the playhead.
-    func snappedTime(_ time: Double, within tolerance: Double) -> Double {
+    func snappedTime(_ time: Double, within tolerance: Double, excluding excluded: Double? = nil) -> Double {
         guard snapsToEdits else { return time }
-        var candidates: [Double] = [0, totalDuration, currentTime]
+        // The playhead the drag started from, not the one the preview is
+        // scrubbing along with the finger.
+        var candidates: [Double] = [0, totalDuration, playheadBeforeEdgeTrim ?? currentTime]
         for placement in clipPlacements {
             candidates.append(placement.start)
             candidates.append(placement.end)
         }
         candidates.append(contentsOf: recipe.markers.map(\.time))
+        // A dragged edge never sticks to where it started.
+        if let excluded { candidates.removeAll { abs($0 - excluded) < 0.000_1 } }
         guard let nearest = candidates.min(by: { abs($0 - time) < abs($1 - time) }),
               abs(nearest - time) <= tolerance
         else { return time }
         return nearest
+    }
+
+    // MARK: - Edge trim (FS-12.05 §3)
+
+    /// A drag of a clip's edge in flight: the clip as it would be, for the
+    /// live length label and the dragged tab.
+    struct EdgeTrimPreview: Equatable {
+        let clipID: UUID
+        let edge: VideoEdgeTrimMath.Edge
+        let result: VideoEdgeTrimMath.Result
+        /// Timeline seconds the edge has moved, after clamping and snapping.
+        let appliedDelta: Double
+    }
+
+    enum EdgeTrimPhase: Equatable {
+        case changed(Double)
+        case ended(Double)
+        case cancelled
+    }
+
+    /// What the drag ran into this time — the view turns each into a tick.
+    struct EdgeTrimFeedback: Equatable {
+        var hitLimit = false
+        var snapped = false
+    }
+
+    private(set) var edgeTrimPreview: EdgeTrimPreview?
+    /// Where the playhead was when the drag began; it goes back there.
+    private var playheadBeforeEdgeTrim: Double?
+
+    /// One phase of an edge drag, `delta` in timeline seconds. While the
+    /// finger moves the preview shows the frame at the dragged edge and the
+    /// clip's new length; on release the cut is one undo step inside the
+    /// clip's session and the playhead goes back; a cancelled drag — a call,
+    /// the system taking the touch — changes nothing (FS-12.05 AC-10).
+    /// The edge sticks within `snapTolerance` seconds to the playhead, a
+    /// marker or another clip's edge — never to where it started.
+    @discardableResult
+    func edgeTrim(
+        _ clipID: UUID,
+        edge: VideoEdgeTrimMath.Edge,
+        phase: EdgeTrimPhase,
+        snapTolerance: Double = 0
+    ) -> EdgeTrimFeedback {
+        guard !isLaneLocked(.video),
+              let index = recipe.clips.firstIndex(where: { $0.id == clipID }),
+              index < clipPlacements.count
+        else { return EdgeTrimFeedback() }
+        let placement = clipPlacements[index]
+        let clip = recipe.clips[index]
+
+        switch phase {
+        case .cancelled:
+            edgeTrimPreview = nil
+            if let playhead = playheadBeforeEdgeTrim { settlePlayhead(at: playhead) }
+            playheadBeforeEdgeTrim = nil
+            return EdgeTrimFeedback()
+        case .changed(let raw), .ended(let raw):
+            var feedback = EdgeTrimFeedback()
+            let origin = edge == .leading ? placement.start : placement.end
+            var delta = raw
+            if snapTolerance > 0 {
+                let wanted = origin + raw
+                let snapped = snappedTime(wanted, within: snapTolerance, excluding: origin)
+                if snapped != wanted {
+                    delta = snapped - origin
+                    feedback.snapped = true
+                }
+            }
+            let result = VideoEdgeTrimMath.drag(clip, edge: edge, by: delta)
+            feedback.hitLimit = result.hitLimit
+            // How far the edge really moved, after the clamp.
+            let applied = edge == .leading
+                ? placement.duration - result.duration
+                : result.duration - placement.duration
+
+            if case .changed = phase {
+                if playheadBeforeEdgeTrim == nil {
+                    playheadBeforeEdgeTrim = currentTime
+                    beginScrub()
+                }
+                edgeTrimPreview = EdgeTrimPreview(clipID: clipID, edge: edge, result: result, appliedDelta: applied)
+                // The frame that will sit at the edge after the cut.
+                scrub(to: edge == .leading ? placement.start + applied : placement.end - 0.001 + applied)
+                return feedback
+            }
+
+            edgeTrimPreview = nil
+            let playhead = playheadBeforeEdgeTrim
+            playheadBeforeEdgeTrim = nil
+            let changed = clip.kind == .video
+                ? (result.trimStart != clip.trimStart || result.trimEnd != clip.trimEnd)
+                : result.photoDuration != clip.photoDuration
+            if changed {
+                pushUndo()
+                recipe.clips[index].trimStart = result.trimStart
+                recipe.clips[index].trimEnd = result.trimEnd
+                recipe.clips[index].photoDuration = result.photoDuration
+                markEdited()
+                schedulePreviewRebuild()
+            }
+            if let playhead { settlePlayhead(at: playhead) }
+            return feedback
+        }
     }
 
     /// Freeze the frame under the playhead: insert a held still right after the
@@ -2418,9 +2550,15 @@ final class VideoStudioModel {
         }
     }
 
+    /// Where the next rebuilt preview starts, when an edit asked for a
+    /// place rather than "wherever the playhead is".
+    private var resumeTimeAfterRebuild: Double?
+
     private func rebuildPreview() async {
         guard !sources.isEmpty else { return }
-        let resumeTime = currentTime
+        let requested = resumeTimeAfterRebuild
+        resumeTimeAfterRebuild = nil
+        let resumeTime = requested ?? currentTime
         let wasPlaying = isPlaying
         do {
             let build = try await service.makePreviewItem(recipe: recipe, sources: sources)
@@ -2436,7 +2574,8 @@ final class VideoStudioModel {
                 attachObservers(to: player)
             }
             let target = min(resumeTime, max(0, totalDuration - 0.05))
-            if target > 0 {
+            if requested != nil { currentTime = target }
+            if target > 0 || requested != nil {
                 // Explicit completion-handler variant: in an async context the
                 // await-ing overload would otherwise win and serialize the seek.
                 player?.seek(

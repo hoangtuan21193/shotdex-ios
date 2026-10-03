@@ -289,6 +289,7 @@ private struct ClipBand: View {
         .contentShape(Rectangle())
         .onTapGesture { model.toggleClip(clip.id) }
         .background(reorderZone)
+        .overlay(edgeHandles)
         .overlay(fadeZones)
         .accessibilityElement()
         .accessibilityLabel(accessibilityLabel)
@@ -388,6 +389,76 @@ private struct ClipBand: View {
                     ]
                 )
             }
+        }
+    }
+
+    private var edgePreview: VideoStudioModel.EdgeTrimPreview? {
+        guard let preview = model.edgeTrimPreview, preview.clipID == clip.id else { return nil }
+        return preview
+    }
+
+    /// The edge handles (FS-12.05 §3): a 12pt tab in the selection colour
+    /// outside each edge of the selected clip, the clip's height; each
+    /// answers a 44pt-wide drag (16 of it outside the clip). The top 20pt is
+    /// the fade grips', so a drag that starts on a grip sets the fade.
+    @ViewBuilder
+    private var edgeHandles: some View {
+        if isSelected {
+            GeometryReader { proxy in
+                let width = proxy.size.width
+                let height = proxy.size.height
+                let frame = proxy.frame(in: .named("timelineContent"))
+                let preview = edgePreview
+                let lead = preview?.edge == .leading ? CGFloat(preview?.appliedDelta ?? 0) * pps : 0
+                let trail = preview?.edge == .trailing ? CGFloat(preview?.appliedDelta ?? 0) * pps : 0
+                let band = VideoStudioMetrics.edgeHandleTouchWidth
+                let outside = VideoStudioMetrics.edgeHandleTouchOutside
+                let fadeBand = VideoStudioMetrics.fadeGripBand
+                ZStack(alignment: .topLeading) {
+                    edgeTab(leading: true)
+                        .offset(x: -VideoStudioMetrics.edgeHandleWidth + lead)
+                    edgeTab(leading: false)
+                        .offset(x: width + trail)
+                    if let preview {
+                        Text("\(preview.result.duration.formatted(.number.precision(.fractionLength(1))))s")
+                            .font(.system(size: 10, weight: .semibold).monospacedDigit())
+                            .foregroundStyle(.black)
+                            .padding(.horizontal, 5)
+                            .frame(height: 16)
+                            .background(Capsule().fill(EditorTheme.timelineSelection))
+                            .offset(x: preview.edge == .leading ? lead + 4 : width + trail - 40, y: -18)
+                    }
+                }
+                .frame(width: width, height: height, alignment: .topLeading)
+                .allowsHitTesting(false)
+                .preference(
+                    key: TimelineDragZonesKey.self,
+                    value: [
+                        TimelineDragZone(
+                            kind: .clipLeadingHandle(clip.id),
+                            rect: CGRect(x: frame.minX - outside, y: frame.minY + fadeBand, width: band, height: max(0, height - fadeBand))
+                        ),
+                        TimelineDragZone(
+                            kind: .clipTrailingHandle(clip.id),
+                            rect: CGRect(x: frame.maxX + outside - band, y: frame.minY + fadeBand, width: band, height: max(0, height - fadeBand))
+                        ),
+                    ]
+                )
+            }
+        }
+    }
+
+    private func edgeTab(leading: Bool) -> some View {
+        UnevenRoundedRectangle(
+            cornerRadii: leading
+                ? .init(topLeading: 4, bottomLeading: 4)
+                : .init(bottomTrailing: 4, topTrailing: 4),
+            style: .continuous
+        )
+        .fill(EditorTheme.timelineSelection)
+        .frame(width: VideoStudioMetrics.edgeHandleWidth, height: lanes.clipCell)
+        .overlay {
+            Capsule().fill(Color.black.opacity(0.5)).frame(width: 2, height: 14)
         }
     }
 

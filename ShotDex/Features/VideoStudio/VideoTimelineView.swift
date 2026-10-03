@@ -30,6 +30,10 @@ struct VideoTimelineView: View {
     @State private var activeDrag: TimelineActiveDrag?
     @State private var viewportWidth: CGFloat = 393
     @State private var lastHapticSecond = 0
+    /// Whether the edge being dragged sat at a limit, or on a snap, on the
+    /// last frame — so each gives one tick on arrival.
+    @State private var edgeAtLimit = false
+    @State private var edgeSnapped = false
     /// Mirrors the lane stack's vertical scroll so the gutter icons stay on
     /// their rows.
     @State private var laneOffsetY: CGFloat = 0
@@ -262,6 +266,32 @@ struct VideoTimelineView: View {
     // MARK: Zone drag commit
 
     private func handleZoneDrag(_ kind: TimelineDragZone.Kind, _ phase: TimelineZoneDragPhase) {
+        // An edge drag goes to the model at every phase: it previews the
+        // frame at the edge while the finger moves, and a cancelled drag
+        // has to reach it to put the playhead back.
+        switch kind {
+        case .clipLeadingHandle(let id), .clipTrailingHandle(let id):
+            let edge: VideoEdgeTrimMath.Edge = if case .clipLeadingHandle = kind { .leading } else { .trailing }
+            let snap = Double(8 / pps)
+            let feedback: VideoStudioModel.EdgeTrimFeedback = switch phase {
+            case .changed(let tx):
+                model.edgeTrim(id, edge: edge, phase: .changed(Double(tx) / Double(pps)), snapTolerance: snap)
+            case .ended(let tx):
+                model.edgeTrim(id, edge: edge, phase: .ended(Double(tx) / Double(pps)), snapTolerance: snap)
+            case .cancelled:
+                model.edgeTrim(id, edge: edge, phase: .cancelled)
+            }
+            // One tick when the edge reaches the source's end or a clip's
+            // minimum, one when it sticks to a mark — not one per frame.
+            if feedback.hitLimit, !edgeAtLimit { UIImpactFeedbackGenerator(style: .light).impactOccurred() }
+            if feedback.snapped, !edgeSnapped { UISelectionFeedbackGenerator().selectionChanged() }
+            edgeAtLimit = feedback.hitLimit
+            edgeSnapped = feedback.snapped
+            if case .changed = phase {} else { edgeAtLimit = false; edgeSnapped = false }
+            return
+        default:
+            break
+        }
         switch phase {
         case .changed(let tx):
             activeDrag = TimelineActiveDrag(kind: kind, translationX: tx)
@@ -340,7 +370,7 @@ struct VideoTimelineView: View {
                 model.moveClip(from: sourceIndex, to: target)
             }
         case .clipLeadingHandle, .clipTrailingHandle:
-            break  // clips trim via the inspector Duration slider
+            break  // handled in `handleZoneDrag`, phase by phase
         }
     }
 }

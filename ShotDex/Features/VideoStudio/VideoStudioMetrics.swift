@@ -38,6 +38,13 @@ enum VideoStudioMetrics {
     static let trimChipRadius: CGFloat = 8
     /// The speaker at the head of a Volume row (FS-12.04b §5).
     static let muteDisc: CGFloat = 26
+    /// A selected clip's edge handles (FS-12.05 §3): 12pt tabs outside the
+    /// edges, answering a 44pt-wide drag of which 16 lies outside the clip;
+    /// the top 20pt belong to the fade grips.
+    static let edgeHandleWidth: CGFloat = 12
+    static let edgeHandleTouchWidth: CGFloat = 44
+    static let edgeHandleTouchOutside: CGFloat = 16
+    static let fadeGripBand: CGFloat = 20
     /// ✕ and ✓ of the session footer (board P2).
     static let sessionButton: CGFloat = 44
     /// The Music panel's title row (board P4).
