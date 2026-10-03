@@ -125,12 +125,12 @@ Chọn nhiều clip một lúc dùng cùng ✕ · "N Clips" · ✓ ([11](11-mult
 | AC-9 | panel Music mở, Video sound 100 → 40 | bấm ✕ ở tiêu đề panel | Video sound về 100, không còn bước undo nào của lần mở này | ⚠️ chưa có |
 | AC-10 | như AC-9 | chạm lại ô Music | panel đóng, Video sound giữ 40; Undo một lần về 100 | ⚠️ chưa có |
 | AC-11 | clip 1 là video chỉ có trên iCloud, máy không mạng | chọn clip 1 | panel mở; Freeze mờ, có chữ "Waiting for iCloud"; không spinner quay mãi | ⚠️ chưa có |
-| AC-12 | lane V1 bị Lock | chạm clip 2 | không chọn; đáy vẫn 5 công cụ | ⚠️ chưa có |
+| AC-12 | lane V1 bị Lock | chạm clip 2 | không chọn; đáy vẫn 5 công cụ | ✅ `VideoSelectionSessionTests.aLockedLaneRefusesSelection` |
 | AC-13 | iOS 26.5 và iOS 18.6, cùng project, clip 2 đang chọn | dump hai bên | cùng tập nút: ✕, ✓, mọi lệnh hàng đầu panel | ⚠️ chưa có — agent `ios26-parity` |
 | AC-14 | iPad ngang, Quick Adjust bật, clip 2 (video) dưới playhead; iPhone, panel Music mở | dump cả hai | Quick Adjust: Speed · Video sound, không có Master; panel Music: Video sound là dòng âm lượng duy nhất trên "Add Music from Files…" | ⚠️ chưa có |
 | AC-15 | project JSON còn khoá Master = 0,5; Video sound 100, clip 2 Volume 100 | mở project, Export | project mở bình thường; mức âm clip 2 trong file xuất = mức nguồn (không nhân 0,5) | ⚠️ chưa có — test đọc recipe + smoke test export |
 
-**Chưa chứng minh được:** AC-1 … AC-15.
+**Chưa chứng minh được:** AC-1, AC-2, AC-3, AC-4, AC-5, AC-6, AC-7, AC-8, AC-9, AC-10, AC-11, AC-13, AC-14, AC-15.
 
 ## 9. Rủi ro đã biết
 
