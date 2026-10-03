@@ -65,14 +65,9 @@ struct VideoStudioScreen: View {
     /// The drag in progress, added to the stored value while a finger is down.
     @State var timelineDragOffset: CGFloat = 0
     @StateObject var importedMusic = ImportedMusicStore()
-    /// The desk layout's two side columns. Both are user state, both start
-    /// where the window can afford them, and both are reachable from the
-    /// viewer header — the same place Resolve and Final Cut put them.
-    @State var isMediaPoolOpen: Bool?
-    @State var isInspectorOpen = true
-    /// The quick-adjust strip under the frame. Off until asked for: on a
-    /// short window it is 44pt taken straight off the frame.
-    @State var isToolStripOpen = false
+    /// The wide layouts' side columns and Quick Adjust strip: session
+    /// state the window class does not own, so rotating or folding keeps it.
+    @State var columns = VideoDeskColumns()
     /// Seconds the timeline viewport is showing, reported up by the timeline
     /// so the project-overview strip can draw the window it stands for.
     @State var timelineVisibleDuration: Double = 0
@@ -367,6 +362,11 @@ struct VideoStudioScreen: View {
             EditorWindowInsetsReader { insets in
                 if windowTrailingInset != insets.right { windowTrailingInset = insets.right }
             }
+        }
+        // A selection on a wide window opens a shut inspector: its foot
+        // carries ✕ · ✓ (FS-12.03 §5).
+        .onChange(of: model.presentsSheet) { old, new in
+            columns.presentsSheetChanged(from: old, to: new)
         }
     }
 

@@ -11,15 +11,15 @@ extension VideoStudioScreen {
         let lanes = VideoStudioMetrics.Lanes.for(.iPadLandscape)
         let canOpenPool = VideoStudioDeskGeometry.canOpenPool(
             windowWidth: window.width,
-            isInspectorOpen: isInspectorOpen
+            isInspectorOpen: columns.isInspectorOpen
         )
         let showsPool = canOpenPool
-            && (isMediaPoolOpen ?? VideoStudioDeskGeometry.poolOpensByDefault(windowWidth: window.width))
+            && (columns.isPoolOpen ?? VideoStudioDeskGeometry.poolOpensByDefault(windowWidth: window.width))
         let frames = VideoStudioDeskGeometry.iPadLandscape(.init(
             window: window,
             canvas: model.recipe.canvasSize(),
             isPoolOpen: showsPool,
-            isInspectorOpen: isInspectorOpen,
+            isInspectorOpen: columns.isInspectorOpen,
             laneNeed: laneNeed(model, lanes: lanes),
             timelineExtra: CGFloat(timelineExtraHeight) + timelineDragOffset
         ))
@@ -35,16 +35,20 @@ extension VideoStudioScreen {
                 VideoViewerHeader(
                     model: model,
                     isMediaPoolOpen: canOpenPool || showsPool ? showsPool : nil,
-                    isInspectorOpen: isInspectorOpen,
-                    isToolStripOpen: isToolStripOpen,
-                    onToggleMediaPool: { isMediaPoolOpen = !showsPool },
-                    onToggleInspector: { isInspectorOpen.toggle() },
-                    onToggleToolStrip: { isToolStripOpen.toggle() }
+                    isInspectorOpen: columns.isInspectorOpen,
+                    isToolStripOpen: columns.isQuickAdjustOpen,
+                    onToggleMediaPool: { columns.isPoolOpen = !showsPool },
+                    onToggleInspector: { columns.isInspectorOpen.toggle() },
+                    onToggleToolStrip: { columns.isQuickAdjustOpen.toggle() }
                 )
                 .placed(header)
             }
             preview(model)
-                .placed(frames.stage)
+                .placed(quickAdjustTrimmed(frames.stage))
+            if columns.isQuickAdjustOpen {
+                VideoViewerToolStrip(model: model)
+                    .placed(quickAdjustStrip(frames.stage))
+            }
             if let meter = frames.meter {
                 VideoAudioMeterColumn(model: model, meter: levelMeter, width: meter.width)
                     .placed(meter)
@@ -64,15 +68,6 @@ extension VideoStudioScreen {
             timelineDivider
                 .frame(width: 120)
                 .position(x: frames.timeline.midX, y: frames.timeline.minY + 4)
-            // With the column shut, a selection still needs its controls:
-            // the panel slides over the timeline (until the column learns
-            // to open itself — FS-12.03 §5).
-            if frames.inspector == nil, model.presentsSheet {
-                contextPanel(model, height: VideoStudioMetrics.sheetHeight)
-                    .frame(width: window.width)
-                    .offset(y: window.height - VideoStudioMetrics.sheetHeight)
-                    .transition(.move(edge: .bottom))
-            }
         }
         .frame(width: window.width, height: window.height, alignment: .topLeading)
         .deskChrome(model, lanes: lanes, meter: levelMeter, hasMeter: frames.meter != nil, shortcuts: keyboardShortcuts(model))
@@ -84,12 +79,12 @@ extension VideoStudioScreen {
         let lanes = VideoStudioMetrics.Lanes.for(.iPadPortrait)
         let canOpenPool = VideoStudioDeskGeometry.canOpenPool(windowWidth: window.width, isInspectorOpen: false)
         let showsPool = canOpenPool
-            && (isMediaPoolOpen ?? VideoStudioDeskGeometry.poolOpensByDefault(windowWidth: window.width))
+            && (columns.isPoolOpen ?? VideoStudioDeskGeometry.poolOpensByDefault(windowWidth: window.width))
         let frames = VideoStudioDeskGeometry.iPadPortrait(.init(
             window: window,
             canvas: model.recipe.canvasSize(),
             isPoolOpen: showsPool,
-            isInspectorOpen: isInspectorOpen,
+            isInspectorOpen: columns.isInspectorOpen,
             laneNeed: laneNeed(model, lanes: lanes),
             timelineExtra: CGFloat(timelineExtraHeight) + timelineDragOffset
         ))
@@ -105,16 +100,20 @@ extension VideoStudioScreen {
                 VideoViewerHeader(
                     model: model,
                     isMediaPoolOpen: canOpenPool || showsPool ? showsPool : nil,
-                    isInspectorOpen: isInspectorOpen,
-                    isToolStripOpen: isToolStripOpen,
-                    onToggleMediaPool: { isMediaPoolOpen = !showsPool },
-                    onToggleInspector: { isInspectorOpen.toggle() },
-                    onToggleToolStrip: { isToolStripOpen.toggle() }
+                    isInspectorOpen: columns.isInspectorOpen,
+                    isToolStripOpen: columns.isQuickAdjustOpen,
+                    onToggleMediaPool: { columns.isPoolOpen = !showsPool },
+                    onToggleInspector: { columns.isInspectorOpen.toggle() },
+                    onToggleToolStrip: { columns.isQuickAdjustOpen.toggle() }
                 )
                 .placed(header)
             }
             preview(model)
-                .placed(frames.stage)
+                .placed(quickAdjustTrimmed(frames.stage))
+            if columns.isQuickAdjustOpen {
+                VideoViewerToolStrip(model: model)
+                    .placed(quickAdjustStrip(frames.stage))
+            }
             if let meter = frames.meter {
                 VideoAudioMeterColumn(model: model, meter: levelMeter, width: meter.width)
                     .placed(meter)
@@ -130,14 +129,11 @@ extension VideoStudioScreen {
             timelineDivider
                 .frame(width: 120)
                 .position(x: frames.timeline.midX, y: frames.timeline.minY + 4)
+            // Shut, the dock opens again on the next selection (FS-12.03 §5)
+            // — there is no second, sliding panel for the same job.
             if let dock = frames.dock {
                 VideoStudioDock(model: model, actions: actions(model), importedMusic: importedMusic)
                     .placed(dock)
-            } else if model.presentsSheet {
-                contextPanel(model, height: VideoStudioMetrics.sheetHeight)
-                    .frame(width: window.width)
-                    .offset(y: window.height - VideoStudioMetrics.sheetHeight)
-                    .transition(.move(edge: .bottom))
             }
         }
         .frame(width: window.width, height: window.height, alignment: .topLeading)
@@ -282,6 +278,24 @@ extension VideoStudioScreen {
 
     // MARK: Shared pieces
 
+    /// The stage less the Quick Adjust strip when it is open: the strip
+    /// is 44pt taken off the bottom of the frame's box (FS-12.03b §1).
+    func quickAdjustTrimmed(_ stage: CGRect) -> CGRect {
+        guard columns.isQuickAdjustOpen else { return stage }
+        var rect = stage
+        rect.size.height -= VideoStudioMetrics.viewerToolStripHeight
+        return rect
+    }
+
+    func quickAdjustStrip(_ stage: CGRect) -> CGRect {
+        CGRect(
+            x: stage.minX,
+            y: stage.maxY - VideoStudioMetrics.viewerToolStripHeight,
+            width: stage.width,
+            height: VideoStudioMetrics.viewerToolStripHeight
+        )
+    }
+
     /// What the lanes of this project need to show without scrolling.
     func laneNeed(_ model: VideoStudioModel, lanes: VideoStudioMetrics.Lanes) -> CGFloat {
         lanes.timelineContentHeight(
@@ -314,7 +328,7 @@ extension VideoStudioScreen {
             photoLibrary: dependencies.photoLibrary,
             width: width,
             importedMusic: importedMusic,
-            onClose: { isMediaPoolOpen = false },
+            onClose: { columns.isPoolOpen = false },
             onBrowseAll: { mediaPickerMode = .add },
             onChooseSticker: { isStickerPickerPresented = true },
             onImportMusic: { isMusicImporterPresented = true },
