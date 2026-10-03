@@ -38,6 +38,8 @@ struct OverlayTextField: View {
     @Bindable var model: VideoStudioModel
     let overlay: PhotoOverlay
     let onExpand: () -> Void
+    /// Edit: the field takes focus as it appears, so the keyboard is up.
+    var focusesOnAppear = false
 
     @FocusState private var isFocused: Bool
     /// Local mirror: routing every keystroke through the recipe and back makes
@@ -54,7 +56,10 @@ struct OverlayTextField: View {
                 .tint(EditorTheme.accent)
                 .submitLabel(.done)
                 .focused($isFocused)
-                .task(id: overlay.id) { draft = overlay.text }
+                .task(id: overlay.id) {
+                    draft = overlay.text
+                    if focusesOnAppear { isFocused = true }
+                }
                 // The full-screen editor and undo change the caption behind this
                 // field's back; without this the row kept showing the placeholder
                 // while the title row showed the words.

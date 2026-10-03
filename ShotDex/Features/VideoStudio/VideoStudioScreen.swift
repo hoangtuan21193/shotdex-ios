@@ -51,9 +51,6 @@ struct VideoStudioScreen: View {
     @State private var isStickerPickerPresented = false
     @State private var mediaPickerMode: MediaPickerMode?
     @State private var editingOverlay: PhotoOverlay?
-    /// The caption just created by Add Text — cancelling its first edit removes
-    /// it again instead of leaving an empty layer behind.
-    @State private var newOverlayID: UUID?
     @State private var stickerImages: [UUID: CGImage] = [:]
     /// How much taller than its lanes the user has dragged the timeline.
     ///
@@ -270,35 +267,22 @@ struct VideoStudioScreen: View {
         .transition(.opacity)
     }
 
-    /// Adds a caption and drops straight into the keyboard — an overlay reading
-    /// "Text" is never the goal.
+    /// Text (FS-12.04 §3): a "Text" block at the playhead, selected, with
+    /// Edit open — the keyboard is up in the panel. The full-screen editor
+    /// is the field's expand button.
     private func addTextOverlay(_ model: VideoStudioModel, font: OverlayFontChoice? = nil) {
-        let overlay = model.addTextOverlay("", at: model.currentTime)
-        if let font {
-            model.selectOverlay(overlay.id)
-            model.updateSelectedOverlay { layer in
-                layer.fontPostScriptName = font.postScriptName
-                layer.fontFamilyName = font.familyName
-            }
-        }
-        newOverlayID = overlay.id
-        editingOverlay = model.selectedOverlay ?? overlay
+        model.addTextBlock(font: font)
     }
 
-    /// Commits (or abandons) the inline editor. A caption that never got any
-    /// text is removed rather than left as an invisible empty layer.
+    /// Commits (or abandons) the full-screen editor. A caption emptied
+    /// there is deleted — one undo step — rather than left as an invisible
+    /// empty layer.
     private func finishTextEditing(_ overlay: PhotoOverlay, text: String?) {
-        defer { editingOverlay = nil; newOverlayID = nil }
-        guard let model else { return }
-        if let text {
-            model.updateSelectedOverlay { $0.text = text }
-            if text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                // Emptying a caption that was there is a delete to undo;
-                // emptying the one just added takes back an add.
-                model.deleteSelectedOverlay(recordingUndo: newOverlayID != overlay.id)
-            }
-        } else if newOverlayID == overlay.id {
-            model.deleteSelectedOverlay(recordingUndo: false)
+        defer { editingOverlay = nil }
+        guard let model, let text else { return }
+        model.updateSelectedOverlay { $0.text = text }
+        if text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            model.deleteSelectedOverlay()
         }
     }
 

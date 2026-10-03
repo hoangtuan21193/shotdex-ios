@@ -36,6 +36,9 @@ final class VideoStudioModel {
     /// (outline/shadow), or animation. Reskins the sheet's param zone rather
     /// than stacking another sheet on top.
     enum TextTool: Equatable {
+        /// The words: the text field at the top of the panel, focused, with
+        /// the keyboard up — what Text opens a new block on (FS-12.04 §3).
+        case edit
         case transform, font, color, align, style, animate
     }
 
@@ -937,11 +940,12 @@ final class VideoStudioModel {
     /// Adds a bed starting at the playhead and selects it. The source's length
     /// resolves asynchronously and seeds the trim window.
     func addMusicTrack(source: MusicSource) {
-        pushUndo()
         var music = MusicTrack(source: source)
         music.start = max(0, min(currentTime, max(0, totalDuration - MusicTrack.minimumDuration)))
+        beginAddSession(.music(music.id))
+        pushUndo()
         recipe.musicTracks.append(music)
-        selectMusic(music.id)
+        selectedMusicID = music.id
         markEdited()
         resolveMusicDuration(for: music.id)
         loadWaveform(for: music.id)
@@ -1885,6 +1889,33 @@ final class VideoStudioModel {
         applyVideoTier()
     }
 
+    /// Opens a session for an item about to be added, *before* adding it,
+    /// so ✕ takes the add back with everything else (FS-12.04 §5).
+    private func beginAddSession(_ target: VideoEditSession.Target) {
+        endSession()
+        deselectAll()
+        beginSession(target)
+    }
+
+    /// Text (FS-12.04 §3): a block reading "Text" from the playhead to the
+    /// end of the video, selected, with Edit open on its words. The session
+    /// starts before the block exists, so ✕ leaves no block and no step.
+    @discardableResult
+    func addTextBlock(font: OverlayFontChoice? = nil) -> UUID {
+        var overlay = PhotoOverlay.text()
+        overlay.text = String(localized: "Text", table: VideoItemTitle.table, comment: "Video Studio: a caption laid over the video")
+        let choice = font ?? lastFont
+        overlay.fontPostScriptName = choice.postScriptName
+        overlay.fontFamilyName = choice.familyName
+        beginAddSession(.overlay(overlay.id))
+        pushUndo()
+        recipe.overlays.append(TimedOverlay(overlay: overlay, start: max(0, min(currentTime, totalDuration))))
+        selectedOverlayID = overlay.id
+        inspectorTextTool = .edit
+        markEdited()
+        return overlay.id
+    }
+
     /// Returns the new overlay so the caller can open the text editor on it
     /// straight away — an empty caption is never what the user wanted.
     @discardableResult
@@ -1960,11 +1991,10 @@ final class VideoStudioModel {
     }
 
     /// Deletes the selected caption or sticker as one undo step and ends
-    /// its session as ✓ does. `recordingUndo: false` is for taking back a
-    /// caption that was never written — there is nothing to undo to.
-    func deleteSelectedOverlay(recordingUndo: Bool = true) {
+    /// its session as ✓ does.
+    func deleteSelectedOverlay() {
         guard let selectedOverlayID else { return }
-        if recordingUndo { pushUndo() }
+        pushUndo()
         recipe.overlays.removeAll { $0.id == selectedOverlayID }
         clearSelection()
         markEdited()
@@ -2007,9 +2037,11 @@ final class VideoStudioModel {
             return
         }
         let overlay = PhotoOverlay.image(id: id, assetIdentifier: assetIdentifier)
+        beginAddSession(.overlay(overlay.id))
         pushUndo()
         recipe.overlays.append(TimedOverlay(overlay: overlay, start: max(0, currentTime)))
-        selectOverlay(overlay.id)
+        selectedOverlayID = overlay.id
+        inspectorTextTool = .transform
         markEdited()
     }
 

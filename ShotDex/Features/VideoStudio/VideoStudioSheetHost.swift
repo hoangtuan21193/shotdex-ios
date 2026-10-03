@@ -370,6 +370,7 @@ struct VideoStudioSheetHost: View {
     private var textParams: some View {
         if let overlay = model.selectedOverlay {
             switch model.inspectorTextTool {
+            case .edit: transformParams(overlay, editsText: true)
             case .transform: transformParams(overlay)
             case .font: fontParams(overlay)
             case .color: colorParams(overlay)
@@ -381,13 +382,17 @@ struct VideoStudioSheetHost: View {
     }
 
     @ViewBuilder
-    private func transformParams(_ overlay: PhotoOverlay) -> some View {
+    private func transformParams(_ overlay: PhotoOverlay, editsText: Bool = false) -> some View {
         ScrollView(showsIndicators: false) {
             VStack(spacing: 0) {
                 // Content first: editing the words is the commonest reason to
                 // open a caption, so it never hides behind a command.
                 if overlay.kind == .text {
-                    OverlayTextField(model: model, overlay: overlay, onExpand: { actions.onEditText(overlay) })
+                    OverlayTextField(
+                        model: model, overlay: overlay,
+                        onExpand: { actions.onEditText(overlay) },
+                        focusesOnAppear: editsText
+                    )
                 }
                 InspectorSlider(
                     label: "Size", value: overlay.size, range: 0.02...0.4,
@@ -775,8 +780,9 @@ struct VideoStudioSheetHost: View {
             ]
         }
         return [
-            // No Edit command: the text field is the first row of the Transform
-            // panel, and Bold/Italic live inside Font where they belong.
+            // Edit: the words, with the keyboard up. Bold/Italic live inside
+            // Font where they belong.
+            textToolCommand("Edit", "character.cursor.ibeam", .edit),
             textToolCommand("Font", "textformat.alt", .font),
             textToolCommand("Color", "paintpalette", .color),
             textToolCommand("Align", "text.aligncenter", .align),

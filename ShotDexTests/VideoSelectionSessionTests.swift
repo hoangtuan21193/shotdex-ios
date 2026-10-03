@@ -150,3 +150,51 @@ struct VideoDeleteTests {
         #expect(model.recipe.overlays.count == 1)
     }
 }
+
+/// Adding opens the session first (FS-12.04 §5): ✕ takes the add back.
+@MainActor
+struct VideoAddSessionTests {
+    /// FS-12.04 AC-5: Text, then ✕ — no new block, the undo stack as it was.
+    @Test func textThenCancelLeavesNoBlockAndNoUndo() {
+        let model = VideoStudioModelFixture.model()
+        model.pushUndo()
+        model.setSpeed(2, for: model.recipe.clips[0].id)
+        let depth = model.history.undoEntries.count
+        model.seek(to: 4)
+
+        let id = model.addTextBlock()
+        #expect(model.selectedOverlayID == id)
+        #expect(model.inspectorTextTool == .edit)
+        let block = model.recipe.overlays.first { $0.id == id }
+        #expect(block?.start == 4)
+        #expect(block?.duration == nil)
+        #expect(block?.overlay.text == "Text")
+
+        model.cancelSession()
+        #expect(model.recipe.overlays.isEmpty)
+        #expect(model.history.undoEntries.count == depth)
+        #expect(!model.canRedo)
+        #expect(model.recipe.clips[0].speed == 2)
+    }
+
+    @Test func stickerThenCancelRemovesIt() throws {
+        let model = VideoStudioModelFixture.model()
+        let png = try #require(Data(base64Encoded: "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=="))
+        model.addImageOverlay(pngData: png, assetIdentifier: nil)
+        #expect(model.recipe.overlays.count == 1)
+        #expect(model.session != nil)
+        model.cancelSession()
+        #expect(model.recipe.overlays.isEmpty)
+        #expect(!model.canUndo)
+    }
+
+    @Test func musicThenCancelRemovesTheTrack() {
+        let model = VideoStudioModelFixture.model()
+        model.addMusicTrack(source: .bundled(id: "calm"))
+        #expect(model.recipe.musicTracks.count == 1)
+        #expect(model.selectedMusicID == model.recipe.musicTracks.first?.id)
+        model.cancelSession()
+        #expect(model.recipe.musicTracks.isEmpty)
+        #expect(!model.canUndo)
+    }
+}
