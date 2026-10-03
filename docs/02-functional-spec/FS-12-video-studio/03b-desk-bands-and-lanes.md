@@ -79,7 +79,7 @@ tổng quan, meter, track header — mỗi băng có một việc và lấy chi�
 |---|---|---|---|---|
 | AC-1 | project 10 s, âm lượng 1, fade in 2 s, fade out 2 s | đọc hệ số meter tại 0 · 1 · 5 · 9 s | 0 · 0,5 · 1 · 0,5 — đúng đường fade export dùng | `VideoStudioDeskLayoutTests.theMeterReadsTheSameFadeEnvelopeTheExportWrites` |
 | AC-2 | thang meter | test thuần 0 dB, sàn, nửa sàn, −120, +6 | 1 · 0 · 0,5 · kẹp 0 · kẹp 1 | `VideoStudioDeskLayoutTests.theMeterScaleIsLinearInDecibels` |
-| AC-3 | iPad ngang 1376×1032 | dump transport | đủ 15 nút theo 4 nhóm §2 trong một hàng 44, không nút nào ngoài mép | ⚠️ chưa có |
+| AC-3 | iPad ngang 1376×1032 | dump transport | đủ 15 nút theo 4 nhóm §2 trong một hàng 44, không nút nào ngoài mép | ⚠️ một phần — vị trí: `VideoStudioDeskGeometryTests.theTransportAlwaysGetsTheFullRowOnA13InchIPad` (hàng chạy hết 1376 dù pool/inspector mở hay đóng), dump `ipad-vs-landscape.json`: 15 nút trong một hàng, nút cuối Fit ở x 1231, không frame `inf`; nội dung (nút 40, Play trắng 12%, Delete theo playhead, timecode `0:08.4`) chờ task 16 |
 | AC-4 | iPad, lane V1 Volume 60 | bấm Mute lane rồi bấm lại | lần 1 không tiếng; lần 2 về 60 | `VideoStudioTrackSwitchTests.mutingTheVideoLaneRestoresItsLevel` |
 | AC-5 | iPad, 2 track nhạc trong A1 | bấm Mute A1 rồi Undo một lần | cả hai về mức cũ | `VideoStudioTrackSwitchTests.mutingAMusicLaneUndoesInOneStep` |
 | AC-6 | clip 2 đang chọn, Speed đổi 2×, bàn phím cắm | bấm Esc rồi ⌘Z | sau Esc: bỏ chọn, Speed vẫn 2×; sau ⌘Z: 1× | `VideoStudioTrackSwitchTests.escapeKeepsTheChangeAndUndoRevertsIt` (gọi `pressEscape()`, hành động duy nhất của phím Esc) |

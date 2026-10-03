@@ -40,10 +40,16 @@ struct VideoStudioSheetHost: View {
     var layout: Layout = .band
     /// The user's songs, for the Music panel.
     var importedMusic: ImportedMusicStore?
+    /// A column that is always there (iPad, Duo inner) shows the whole
+    /// video's Look when nothing is selected and no tool is open (FS-12.03
+    /// §1): the space is spent on what the whole video most often needs.
+    var showsIdleLook = false
 
     var body: some View {
         Group {
-            if model.inspectorTarget == .none, model.activeToolPanel == .music, let importedMusic {
+            if showsIdleLook, model.inspectorTarget == .none, model.activeToolPanel == nil {
+                idleLook
+            } else if model.inspectorTarget == .none, model.activeToolPanel == .music, let importedMusic {
                 musicPanel(importedMusic)
             } else {
                 switch layout {
@@ -98,6 +104,41 @@ struct VideoStudioSheetHost: View {
             .overlay(alignment: .bottom) { Rectangle().fill(Color.white.opacity(0.07)).frame(height: 1) }
             VideoMusicPanelContent(model: model, importedMusic: importedMusic, onImport: actions.onImportMusic)
         }
+    }
+
+    /// "Look · Whole video" over the Look controls, with no ✕ or ✓: nothing
+    /// was opened, so there is no session to end — each change is its own
+    /// undo step.
+    private var idleLook: some View {
+        ScrollView(showsIndicators: false) {
+            VStack(spacing: 0) {
+                HStack(spacing: 8) {
+                    RoundedRectangle(cornerRadius: 7, style: .continuous)
+                        .fill(Color.white.opacity(0.08))
+                        .frame(width: 24, height: 24)
+                        .overlay {
+                            Image(systemName: VideoToolPanel.look.systemImage)
+                                .font(.system(size: 12, weight: .medium))
+                                .foregroundStyle(.white.opacity(0.8))
+                        }
+                    Text(VideoStudioCopy.look)
+                        .font(.system(size: 14.5, weight: .semibold))
+                        .foregroundStyle(.white)
+                    Text(VideoStudioCopy.wholeVideo)
+                        .font(.system(size: 11, design: .monospaced))
+                        .foregroundStyle(.white.opacity(0.35))
+                    Spacer(minLength: 0)
+                }
+                .lineLimit(1)
+                .padding(.horizontal, 14)
+                .frame(height: VideoStudioMetrics.musicPanelTitleHeight)
+                .accessibilityElement(children: .combine)
+                .accessibilityAddTraits(.isHeader)
+                lookParams
+            }
+            .padding(.bottom, 16)
+        }
+        .scrollBounceBehavior(.basedOnSize)
     }
 
     private var bandBody: some View {

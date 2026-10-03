@@ -27,7 +27,7 @@ struct ServerVideoStudioLaunch {
 struct VideoStudioScreen: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.scenePhase) private var scenePhase
-    @Environment(AppDependencies.self) private var dependencies
+    @Environment(AppDependencies.self) var dependencies
 
     let assets: [PHAsset]
     let mode: VideoStudioMode
@@ -44,12 +44,12 @@ struct VideoStudioScreen: View {
     /// Back asks anything, because closing quietly would lose the session.
     @State private var isDraftSaveFailurePresented = false
     @State private var isExportSheetPresented = false
-    @State private var isMusicImporterPresented = false
+    @State var isMusicImporterPresented = false
     @State private var isFontPickerPresented = false
     @State private var musicChooserIntent: MusicChooserIntent?
-    @State private var isStickerPickerPresented = false
-    @State private var mediaPickerMode: MediaPickerMode?
-    @State private var editingOverlay: PhotoOverlay?
+    @State var isStickerPickerPresented = false
+    @State var mediaPickerMode: MediaPickerMode?
+    @State var editingOverlay: PhotoOverlay?
     @State private var stickerImages: [UUID: CGImage] = [:]
     /// How much taller than its lanes the user has dragged the timeline.
     ///
@@ -59,31 +59,31 @@ struct VideoStudioScreen: View {
     /// resized the other window's timeline under a user who was not touching
     /// it. It is written back when the drag ends, so the next window to open
     /// still starts where the last one left it.
-    @State private var timelineExtraHeight = UserDefaults.standard.double(
+    @State var timelineExtraHeight = UserDefaults.standard.double(
         forKey: SettingsKeys.videoTimelineExtraHeight
     )
     /// The drag in progress, added to the stored value while a finger is down.
-    @State private var timelineDragOffset: CGFloat = 0
-    @StateObject private var importedMusic = ImportedMusicStore()
+    @State var timelineDragOffset: CGFloat = 0
+    @StateObject var importedMusic = ImportedMusicStore()
     /// The desk layout's two side columns. Both are user state, both start
     /// where the window can afford them, and both are reachable from the
     /// viewer header — the same place Resolve and Final Cut put them.
-    @State private var isMediaPoolOpen: Bool?
-    @State private var isInspectorOpen = true
+    @State var isMediaPoolOpen: Bool?
+    @State var isInspectorOpen = true
     /// The quick-adjust strip under the frame. Off until asked for: on a
     /// short window it is 44pt taken straight off the frame.
-    @State private var isToolStripOpen = false
+    @State var isToolStripOpen = false
     /// Seconds the timeline viewport is showing, reported up by the timeline
     /// so the project-overview strip can draw the window it stands for.
-    @State private var timelineVisibleDuration: Double = 0
-    @State private var levelMeter = VideoLevelMeterModel()
+    @State var timelineVisibleDuration: Double = 0
+    @State var levelMeter = VideoLevelMeterModel()
     /// The window's trailing inset as the window reports it — the Duo
     /// cover's 84pt rail, which a reader inside the safe area cannot see on
     /// a screen that runs past the top and bottom insets. Nil until the
     /// first report (FS-12.07b §1).
-    @State private var windowTrailingInset: CGFloat?
+    @State var windowTrailingInset: CGFloat?
 
-    private enum MediaPickerMode: Identifiable {
+    enum MediaPickerMode: Identifiable {
         case add, replace
         var id: Int { self == .add ? 0 : 1 }
     }
@@ -280,7 +280,7 @@ struct VideoStudioScreen: View {
     /// Text (FS-12.04 §3): a "Text" block at the playhead, selected, with
     /// Edit open — the keyboard is up in the panel. The full-screen editor
     /// is the field's expand button.
-    private func addTextOverlay(_ model: VideoStudioModel, font: OverlayFontChoice? = nil) {
+    func addTextOverlay(_ model: VideoStudioModel, font: OverlayFontChoice? = nil) {
         model.addTextBlock(font: font)
     }
 
@@ -335,7 +335,7 @@ struct VideoStudioScreen: View {
             let knownInset = windowTrailingInset.map { max($0, insets.trailing) }
                 ?? (insets.trailing > 0 ? insets.trailing : nil)
             if let windowClass = VideoStudioWindowClass.resolve(window: window, knownTrailingInset: knownInset) {
-                layout(model, proxy: proxy, windowClass: windowClass)
+                layout(model, proxy: proxy, window: window, windowClass: windowClass)
                     // A new class is a new scene shape — the Duo folding or
                     // opening, a Stage Manager window crossing a line: the
                     // draft is written at once (FS-12.18 §2).
@@ -351,7 +351,25 @@ struct VideoStudioScreen: View {
         }
     }
 
+    /// One body per window class (FS-12.03 §1). The phone's stack stays
+    /// with the phone plan; every other class places its bands from
+    /// `VideoStudioDeskGeometry`.
+    @ViewBuilder
     private func layout(
+        _ model: VideoStudioModel,
+        proxy: GeometryProxy,
+        window: CGSize,
+        windowClass: VideoStudioWindowClass
+    ) -> some View {
+        switch windowClass {
+        case .iPadLandscape:
+            deskLandscape(model, window: window)
+        case .phone, .duoCover, .duoInner, .iPadPortrait:
+            stackBody(model, proxy: proxy, windowClass: windowClass)
+        }
+    }
+
+    private func stackBody(
         _ model: VideoStudioModel,
         proxy: GeometryProxy,
         windowClass: VideoStudioWindowClass
@@ -662,7 +680,7 @@ struct VideoStudioScreen: View {
     /// identifier and appends at once; from another app it is a file, and a
     /// clip can only reference a `PHAsset`, so it is imported into the
     /// library first and appended when it lands.
-    private func appendDroppedMedia(_ providers: [NSItemProvider], to model: VideoStudioModel) -> Bool {
+    func appendDroppedMedia(_ providers: [NSItemProvider], to model: VideoStudioModel) -> Bool {
         let inApp = providers.filter {
             $0.hasItemConformingToTypeIdentifier(PhotoDragItem.assetIdentifierType)
         }
@@ -703,7 +721,7 @@ struct VideoStudioScreen: View {
     /// fraction of its width, and a 48-megapixel PNG held in an overlay store
     /// is memory spent on pixels nobody sees.
     @MainActor
-    private func addSticker(_ asset: PHAsset, to model: VideoStudioModel) {
+    func addSticker(_ asset: PHAsset, to model: VideoStudioModel) {
         _ = dependencies.photoLibrary.requestThumbnail(
             for: asset,
             targetSize: CGSize(width: 1024, height: 1024),
@@ -719,7 +737,7 @@ struct VideoStudioScreen: View {
     }
 
     @MainActor
-    private func appendMedia(ids: [String], to model: VideoStudioModel, imported: Int, failed: Int) {
+    func appendMedia(ids: [String], to model: VideoStudioModel, imported: Int, failed: Int) {
         let assets = PhotoLibraryService.fetchAssets(ids: ids)
         let picks = assets.map {
             VideoMediaPick(assetID: $0.localIdentifier, kind: $0.mediaType == .video ? .video : .photo)
@@ -744,7 +762,7 @@ struct VideoStudioScreen: View {
     /// Zero-size buttons in a background, the same shape the photo editor
     /// uses: a shortcut on a visible control only fires while that control is
     /// in the hierarchy, and half of these have no visible control at all.
-    private func keyboardShortcuts(_ model: VideoStudioModel) -> some View {
+    func keyboardShortcuts(_ model: VideoStudioModel) -> some View {
         ZStack {
             Button("Play or Pause") { model.togglePlayback() }
                 .keyboardShortcut(.space, modifiers: [])
@@ -786,7 +804,7 @@ struct VideoStudioScreen: View {
     /// is that the surplus belongs around the frame (spec §7.9); this is how
     /// the user says otherwise, and Final Cut for iPad publishes the same
     /// handle at the top of its timeline.
-    private var timelineDivider: some View {
+    var timelineDivider: some View {
         Capsule()
             .fill(EditorTheme.panelDivider)
             .frame(width: 44, height: 4)
@@ -829,7 +847,7 @@ struct VideoStudioScreen: View {
     /// system sheets fired from here, and UIKit cannot present a sheet from a view
     /// that is already presenting one. It slides *over* the tool row and the
     /// bottom bar; nothing underneath is displaced.
-    private func contextPanel(
+    func contextPanel(
         _ model: VideoStudioModel,
         height: CGFloat,
         showsFooter: Bool = false,
@@ -873,7 +891,7 @@ struct VideoStudioScreen: View {
         .shadow(color: .black.opacity(0.45), radius: 14, y: -2)
     }
 
-    private func actions(_ model: VideoStudioModel) -> VideoInspectorActions {
+    func actions(_ model: VideoStudioModel) -> VideoInspectorActions {
         VideoInspectorActions(
             onExport: { isExportSheetPresented = true },
             onBack: { leave(model) },
@@ -889,7 +907,7 @@ struct VideoStudioScreen: View {
         )
     }
 
-    private func preview(_ model: VideoStudioModel) -> some View {
+    func preview(_ model: VideoStudioModel) -> some View {
         ZStack {
             Color.black
             if let player = model.player {

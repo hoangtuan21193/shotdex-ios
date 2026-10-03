@@ -115,4 +115,22 @@ enum VideoStudioCopy {
     static func muteLane(_ lane: String) -> String {
         String(localized: "Mute \(lane)", table: table, comment: "Video Studio track switch: silences the named lane; the trait says whether it is on")
     }
+
+    /// What the iPad's top band says about the project, which has no name
+    /// (FS-12.03 §2): "5 clips · 16:9 · 0:24".
+    static func projectSummary(clips: Int, ratio: String, length: String) -> String {
+        let count = String(localized: "\(clips) clips", table: table, comment: "Video Projects: how many clips a video project has (plural)")
+        return "\(count) · \(ratio) · \(length)"
+    }
+
+    /// "30 fps" — the project's frame rate, as the settings button prints it.
+    static func framesPerSecond(_ rate: Int) -> String {
+        String(localized: "\(rate) fps", table: table, comment: "Video Studio settings button: the project's frame rate, e.g. 30 fps")
+    }
+
+    /// The idle column's subtitle: the Look it shows is the whole video's,
+    /// not a clip's (FS-12.03 §1).
+    static var wholeVideo: String {
+        String(localized: "Whole video", table: table, comment: "Video Studio: subtitle beside Look when the column shows the look of the whole video")
+    }
 }

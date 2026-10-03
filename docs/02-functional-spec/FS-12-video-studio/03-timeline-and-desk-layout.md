@@ -91,7 +91,7 @@ theo chiều cao nên 264pt bên phải là miễn phí — inspector nằm ở 
 
 | # | Cho | Khi | Thì | Chứng minh bằng |
 |---|---|---|---|---|
-| AC-1 | iPad 1376×1032, project 16:9, không chọn | dump | pool rộng 236; inspector 280 ở x 1096 hiện "Look · Whole video"; khung 810×456 ở (236, 122); timeline y 678 cao 354 | ⚠️ chưa có |
+| AC-1 | iPad 1376×1032, project 16:9, không chọn | dump | pool rộng 236; inspector 280 ở x 1096 hiện "Look · Whole video"; khung 810×456 ở (236, 122); timeline y 678 cao 354 | ✅ `VideoStudioDeskGeometryTests.iPadLandscapeIdle` (mọi rect của IL1) + route `ipad-vs-landscape.json` 2026-10-04, iPad Pro 13": dump — "Browse All Photos…" rộng 236 (pool), "Look, Whole video" ở x 1110 trong cột từ 1096, Play giữa khung ở x 641; sim này còn lưu divider +111 nên transport/timeline cùng lùi đúng 111 (493/567) — route giờ khởi chạy với `-video.timelineExtraHeight 0` |
 | AC-2 | như AC-1 | chọn clip 2 | chân inspector y 546 có ✕ · "Clip 2" · ✓; khung không đổi (±0pt); Export vẫn hiện | ⚠️ chưa có |
 | AC-3 | iPad 1032×1376, không chọn | dump | dock y 1052 cao 324, tiêu đề có Media · Text · Sticker · Music; pool đóng | ⚠️ chưa có |
 | AC-4 | như AC-3 | chọn clip 2 | hàng lệnh trong dock; chân ✕ · tên · ✓ ở y 1316; timeline 722–1052 không bị phủ | ⚠️ chưa có |
@@ -103,7 +103,7 @@ theo chiều cao nên 264pt bên phải là miễn phí — inspector nằm ở 
 | AC-10 | các board IL1–IL4, IP1–IP3, DI1–DI4 | `Tools/design-board compare` với dump app cùng trạng thái | mọi phần tử chrome lệch ≤ 2pt | ⚠️ chưa có — agent `design-parity` |
 | AC-11 | Duo trong, DI1 và DI2 | `Tools/sim-shot` có mask | Back và ✓ không bị góc bo cắt | ⚠️ chưa có |
 
-**Chưa chứng minh được:** AC-1 … AC-8, AC-10, AC-11.
+**Chưa chứng minh được:** AC-2 … AC-8, AC-10, AC-11.
 
 ## 7. Rủi ro đã biết
 

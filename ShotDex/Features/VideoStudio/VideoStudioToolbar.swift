@@ -64,71 +64,13 @@ struct VideoStudioToolbar: View {
     }
 }
 
-/// The same tools as a **vertical rail**, for a regular-width window.
-///
-/// A row of nine cells across 1032pt is a row with 560pt of nothing in it, and
-/// the horizontal band steals height from the thing the screen is for. Final
-/// Cut and CapCut both put the tools down the side on iPad for the same
-/// reason: vertical space is what a timeline editor is short of, and a rail
-/// costs none of it.
-struct VideoStudioToolRail: View {
-    @Bindable var model: VideoStudioModel
-    let actions: VideoInspectorActions
-    /// See `VideoStudioToolbar.poolCarriesInserts`.
-    var poolCarriesInserts = false
-    /// Clears the status bar and the command band, so the first cell starts
-    /// level with the preview rather than under the clock.
-    var topInset: CGFloat = 0
-    var bottomInset: CGFloat = 0
-    /// The rail's own height, so a short window can stop paying for the
-    /// alignment inset.
-    var availableHeight: CGFloat = .greatestFiniteMagnitude
-
-    /// Nine cells plus their gaps.
-    private var contentHeight: CGFloat {
-        CGFloat(commands.count) * VideoStudioMetrics.railCellHeight
-            + CGFloat(max(0, commands.count - 1)) * 6
-    }
-
-    /// Lining the first cell up with the preview costs the band's height, and
-    /// on a short window that is what pushes the last tool off the bottom —
-    /// measured on the iPhone Duo's inner display (669pt), where Background
-    /// was drawn half-cut. Alignment is worth less than a tool you can see,
-    /// so the inset gives way first; the rail still scrolls either way.
-    private var effectiveTopInset: CGFloat {
-        let needed = contentHeight + 24 + bottomInset
-        let spare = availableHeight - needed
-        return max(0, min(topInset, spare))
-    }
-
-    var body: some View {
-        ScrollView(.vertical, showsIndicators: false) {
-            VStack(spacing: 6) {
-                ForEach(commands) { VideoToolbarCell(command: $0, isRegularWidth: true) }
-            }
-            .padding(.top, effectiveTopInset + 12)
-            .padding(.bottom, bottomInset + 12)
-            .frame(maxWidth: .infinity)
-        }
-        .frame(width: VideoStudioMetrics.railWidth)
-        .frame(maxHeight: .infinity)
-        .background(EditorTheme.panelSolid)
-        .overlay(alignment: .trailing) {
-            Rectangle().fill(EditorTheme.panelTopHairline).frame(width: 1)
-        }
-    }
-
-    private var commands: [VideoCommand] {
-        VideoStudioToolbar(model: model, actions: actions, poolCarriesInserts: poolCarriesInserts).commands
-    }
-}
-
-/// One toolbar cell — the command band's cell shape, sized for a scrolling row.
-private struct VideoToolbarCell: View {
+/// One tool cell: a glyph over its label, white 14 % while its panel is
+/// open. The phone's row draws 72×52; the Duo's bottom row and cover rail
+/// pass their own sizes.
+struct VideoToolbarCell: View {
     let command: VideoCommand
-    /// On a big screen the cell keeps its shape but reads at desk distance:
-    /// a 20pt glyph and an 11pt label instead of 17 and 9.5.
-    var isRegularWidth = false
+    var size: CGSize = VideoStudioMetrics.toolCellSize
+    var labelSize: CGFloat = 10
 
     var body: some View {
         Button(action: command.action) {
@@ -136,10 +78,10 @@ private struct VideoToolbarCell: View {
                 // Fixed glyph box: a tall symbol (photo.badge.plus) otherwise pushes
                 // its label lower than its neighbours'.
                 Image(systemName: command.systemImage)
-                    .font(.system(size: isRegularWidth ? 20 : 19, weight: .regular))
-                    .frame(height: isRegularWidth ? 26 : 22)
+                    .font(.system(size: 19, weight: .regular))
+                    .frame(height: 22)
                 Text(command.title)
-                    .font(.system(size: isRegularWidth ? 11 : 10, weight: .medium))
+                    .font(.system(size: labelSize, weight: .medium))
                     .lineLimit(1)
                     // Not `fixedSize()`: that turns off SwiftUI's own
                     // compression, so a label longer than the 52pt cell —
@@ -148,10 +90,7 @@ private struct VideoToolbarCell: View {
                     .minimumScaleFactor(0.7)
             }
             .foregroundStyle(tintColor)
-            .frame(
-                width: isRegularWidth ? VideoStudioMetrics.railWidth - 12 : VideoStudioMetrics.toolCellSize.width,
-                height: isRegularWidth ? VideoStudioMetrics.railCellHeight : VideoStudioMetrics.toolCellSize.height
-            )
+            .frame(width: size.width, height: size.height)
             .background(
                 RoundedRectangle(cornerRadius: VideoStudioMetrics.commandCellRadius, style: .continuous)
                     .fill(command.isOpen ? VideoStudioMetrics.openCellFill : Color.clear)

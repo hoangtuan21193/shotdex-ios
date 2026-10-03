@@ -201,6 +201,18 @@ enum VideoStudioMetrics {
         return String(format: "%d:%02d.%d", whole / 60, whole % 60, tenths)
     }
 
+    /// `m:ss`, rounded to the second — a length read at a glance, as the
+    /// iPad's band prints the project's ("0:24").
+    static func shortDuration(_ seconds: Double) -> String {
+        let whole = Int(max(0, seconds).rounded())
+        return String(format: "%d:%02d", whole / 60, whole % 60)
+    }
+
+    /// "0:24 · ~30 MB": the project's length and what it will weigh.
+    static func lengthAndSize(duration: Double, bytes: Int64) -> String {
+        "\(shortDuration(duration)) · ~\(ByteCountFormatter.string(fromByteCount: bytes, countStyle: .file))"
+    }
+
     /// The phone transport's read-out (FS-12.07 §2): `0:08.4 / 0:24.0`, the
     /// playhead and the project's length.
     static func compactTransportReadout(playhead: Double, length: Double) -> (playhead: String, length: String) {
@@ -388,9 +400,6 @@ enum VideoStudioMetrics {
     /// label wrapping ("Background" is the longest), which is what Final Cut
     /// and CapCut both settle on for an iPad rail.
     static let railWidth: CGFloat = 92
-    /// One rail cell: the same shape as a toolbar cell, stacked instead of
-    /// spread.
-    static let railCellHeight: CGFloat = 62
     /// Back · export estimate · Export pill. On a phone this is a band of its
     /// own at the bottom; on a regular-width window those three move into the
     /// top band and this band is not drawn at all.
@@ -647,7 +656,7 @@ enum VideoStudioMetrics {
 
         /// The iPad's track header column: a 92pt card — badge, name, Lock,
         /// Mute — and the gap after it.
-        static let trackHeaderWidth: CGFloat = 104
+        static let trackHeaderWidth: CGFloat = VideoStudioDeskGeometry.trackHeaderWidth
 
         /// The Duo inner display's badge column: margin 6 · badge 26 · gap 4
         /// · Lock 28 · gap 4 · Mute 28 · margin 4 (FS-12.03b §4).
