@@ -738,7 +738,7 @@ struct VideoStudioScreen: View {
             Button("Export") { isExportSheetPresented = true }
                 .keyboardShortcut("e", modifiers: .command)
                 .disabled(model.exportState != .idle)
-            Button("Deselect") { model.clearSelection() }
+            Button("Deselect") { model.pressEscape() }
                 .keyboardShortcut(.escape, modifiers: [])
                 .disabled(!model.presentsSheet)
         }

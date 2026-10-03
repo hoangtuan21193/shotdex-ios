@@ -556,6 +556,12 @@ final class VideoStudioModel {
         clearSelection()
     }
 
+    /// Esc (FS-12.03b §5): ✓, never ✕ — an editor's Esc deselects, it
+    /// does not undo. The keyboard shortcut calls this and nothing else.
+    func pressEscape() {
+        commitSession()
+    }
+
     /// ✕: the project goes back to exactly what it was when the session
     /// began, every undo step the session made is forgotten — Redo cannot
     /// bring them back — and nothing is selected. With nothing changed it is

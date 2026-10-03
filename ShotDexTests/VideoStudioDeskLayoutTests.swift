@@ -527,4 +527,20 @@ struct VideoStudioTrackSwitchTests {
         #expect(volumes == [0.8, 0.4])
         #expect(!model.canUndo)
     }
+
+    /// FS-12.03b AC-6: Esc ends the session keeping its change (= ✓), and
+    /// ⌘Z then takes the change back. Calls the key's own action.
+    @Test func escapeKeepsTheChangeAndUndoRevertsIt() {
+        let model = VideoStudioModelFixture.model()
+        let clip2 = model.recipe.clips[1].id
+        model.selectClip(clip2)
+        model.pushUndo()
+        model.setSpeed(2, for: clip2)
+        model.pressEscape()
+        #expect(model.selectedClipID == nil)
+        #expect(model.session == nil)
+        #expect(model.recipe.clips[1].speed == 2)
+        model.undo()
+        #expect(model.recipe.clips[1].speed == 1)
+    }
 }
