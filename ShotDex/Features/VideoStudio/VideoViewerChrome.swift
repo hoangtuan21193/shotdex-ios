@@ -120,6 +120,8 @@ struct VideoViewerHeader: View {
 /// and the thing that moves it.
 struct VideoTransportBar: View {
     @Bindable var model: VideoStudioModel
+    /// 44 on an iPad, 40 on the Duo's inner display (FS-12.03 §4).
+    var height: CGFloat = VideoStudioMetrics.transportBarHeight
 
     /// One frame at the rate the timecode is counted in.
     private var frame: Double { 1.0 / VideoStudioMetrics.timecodeFrameRate }
@@ -242,7 +244,7 @@ struct VideoTransportBar: View {
                 .accessibilityLabel(Text("Playhead at \(VideoStudioMetrics.timecode(model.currentTime))", comment: "Video Studio transport: VoiceOver label for the timecode read-out"))
         }
         .padding(.horizontal, 8)
-        .frame(height: VideoStudioMetrics.transportBarHeight)
+        .frame(height: height)
         .frame(maxWidth: .infinity)
         .background(EditorTheme.panelSolid)
         .overlay(alignment: .top) {

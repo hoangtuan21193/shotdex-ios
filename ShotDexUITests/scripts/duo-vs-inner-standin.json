@@ -1,0 +1,89 @@
+{
+  "steps": [
+    {
+      "action": "launch",
+      "arguments": [
+        "-VideoStudioStandIn",
+        "duoInner"
+      ]
+    },
+    {
+      "action": "wait",
+      "seconds": 5
+    },
+    {
+      "action": "tap",
+      "label": "Select",
+      "type": "button"
+    },
+    {
+      "action": "wait",
+      "seconds": 1
+    },
+    {
+      "action": "tap",
+      "x": 0.06,
+      "y": 0.09
+    },
+    {
+      "action": "tap",
+      "x": 0.18,
+      "y": 0.09
+    },
+    {
+      "action": "tap",
+      "x": 0.3,
+      "y": 0.09
+    },
+    {
+      "action": "wait",
+      "seconds": 1
+    },
+    {
+      "action": "tap",
+      "label": "More selection actions",
+      "type": "button"
+    },
+    {
+      "action": "wait",
+      "seconds": 1
+    },
+    {
+      "action": "tap",
+      "label": "Create Video"
+    },
+    {
+      "action": "wait",
+      "seconds": 10
+    },
+    {
+      "action": "orientation",
+      "text": "landscape"
+    },
+    {
+      "action": "wait",
+      "seconds": 10
+    },
+    {
+      "action": "screenshot",
+      "name": "10-duo-inner-idle"
+    },
+    {
+      "action": "dump",
+      "name": "10-duo-inner-idle-buttons",
+      "type": "button"
+    },
+    {
+      "action": "wait",
+      "seconds": 2
+    },
+    {
+      "action": "orientation",
+      "text": "portrait"
+    },
+    {
+      "action": "wait",
+      "seconds": 4
+    }
+  ]
+}

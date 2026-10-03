@@ -87,6 +87,27 @@ enum VideoStudioDeskGeometry {
         return count == 3 ? width / 3 : max(dockColumnMinimum, width / 2)
     }
 
+    // MARK: Duo inner display (FS-12.03 §4)
+
+    /// The column beside the frame: the frame is limited by the height, so
+    /// these 264pt cost it nothing.
+    static let duoColumnWidth: CGFloat = 264
+    static let duoTransportHeight: CGFloat = 40
+    static let duoTimelineHeight: CGFloat = 188
+    static let duoBottomRowHeight: CGFloat = 56
+    /// Back · Undo · Redo · Show original over the frame: 36pt discs on
+    /// black 55 %, 8 apart, from (16, 12).
+    static let duoDisc: CGFloat = 36
+    static let duoDiscGap: CGFloat = 8
+    static let duoDiscOrigin = CGPoint(x: 16, y: 12)
+    /// The bottom row's five tools: 72×50, 4 apart, from x 40.
+    static let duoToolCell = CGSize(width: 72, height: 50)
+    static let duoToolGap: CGFloat = 4
+    static let duoToolLeading: CGFloat = 40
+    /// The row's right-hand group ends at x 907 on a 951pt window — 44 in,
+    /// clear of the rounded corner.
+    static let duoRowTrailingInset: CGFloat = 44
+
     /// The rect of every band. Nil where the window class has no such band.
     struct Frames: Equatable {
         var band: CGRect
@@ -102,6 +123,7 @@ enum VideoStudioDeskGeometry {
         var overview: CGRect?
         var timeline: CGRect
         var dock: CGRect?
+        var bottomRow: CGRect? = nil
     }
 
     /// What a layout needs to know beyond the window.
@@ -240,6 +262,49 @@ enum VideoStudioDeskGeometry {
             timeline: timeline,
             dock: input.isInspectorOpen ? CGRect(x: 0, y: dockTop, width: width, height: dockHeight) : nil
         )
+    }
+
+    // MARK: Duo inner (FS-12.03 §4, board DI1)
+
+    /// Frame and the 264 column side by side from the top; then transport
+    /// 40, timeline 188 and the bottom row 56 across the width. Height is
+    /// what this window lacks, so the frame is the band that flexes:
+    /// 385 + 40 + 188 + 56 = 669.
+    static func duoInner(_ input: Input) -> Frames {
+        let width = input.window.width
+        let height = input.window.height
+        let bottomRow = CGRect(x: 0, y: height - duoBottomRowHeight, width: width, height: duoBottomRowHeight)
+        let timeline = CGRect(x: 0, y: bottomRow.minY - duoTimelineHeight, width: width, height: duoTimelineHeight)
+        let transport = CGRect(x: 0, y: timeline.minY - duoTransportHeight, width: width, height: duoTransportHeight)
+        let column = CGRect(x: width - duoColumnWidth, y: 0, width: duoColumnWidth, height: transport.minY)
+        let stage = CGRect(x: 0, y: 0, width: column.minX, height: transport.minY)
+        return Frames(
+            band: .zero,
+            pool: nil,
+            header: nil,
+            stage: stage,
+            frame: fit(input.canvas, in: stage),
+            meter: nil,
+            inspector: column,
+            transport: transport,
+            overview: nil,
+            timeline: timeline,
+            dock: nil,
+            bottomRow: bottomRow
+        )
+    }
+
+    /// Where the four discs over the Duo's frame sit: Back, Undo, Redo,
+    /// Show original.
+    static func duoDiscFrames() -> [CGRect] {
+        (0..<4).map { index in
+            CGRect(
+                x: duoDiscOrigin.x + CGFloat(index) * (duoDisc + duoDiscGap),
+                y: duoDiscOrigin.y,
+                width: duoDisc,
+                height: duoDisc
+            )
+        }
     }
 
     // MARK: Shared

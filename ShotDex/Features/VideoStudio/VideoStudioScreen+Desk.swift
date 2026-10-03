@@ -144,6 +144,80 @@ extension VideoStudioScreen {
         .deskChrome(model, lanes: lanes, meter: levelMeter, hasMeter: frames.meter != nil, shortcuts: keyboardShortcuts(model))
     }
 
+    // MARK: Duo inner display (FS-12.03 §4, board DI1)
+
+    /// The frame and the 264pt column side by side from the top — the frame
+    /// is limited by the height, so the column is free — then the 40pt
+    /// transport, the 188pt timeline and the 56pt bottom row. No pool, no
+    /// meter, no viewer header: each would cost the height this window
+    /// lacks. Back · Undo · Redo · Show original float over the frame.
+    func duoInner(_ model: VideoStudioModel, window: CGSize) -> some View {
+        let lanes = VideoStudioMetrics.Lanes.for(.duoInner)
+        let frames = VideoStudioDeskGeometry.duoInner(.init(
+            window: window,
+            canvas: model.recipe.canvasSize(),
+            isPoolOpen: false,
+            isInspectorOpen: true
+        ))
+        let discs = VideoStudioDeskGeometry.duoDiscFrames()
+        return ZStack(alignment: .topLeading) {
+            EditorTheme.background
+            preview(model)
+                .placed(frames.stage)
+            duoDisc("chevron.left", isEnabled: true, action: { leave(model) })
+                .accessibilityLabel(Text("Back", comment: "Video Studio: leaves the editor"))
+                .placed(discs[0])
+            duoDisc("arrow.uturn.backward", isEnabled: model.canUndo, action: { model.undo() })
+                .accessibilityLabel("Undo")
+                .placed(discs[1])
+            duoDisc("arrow.uturn.forward", isEnabled: model.canRedo, action: { model.redo() })
+                .accessibilityLabel("Redo")
+                .placed(discs[2])
+            VideoShowOriginalButton(
+                model: model,
+                diameter: VideoStudioDeskGeometry.duoDisc,
+                glyphSize: 14,
+                restingFill: Color.black.opacity(0.55)
+            )
+            .placed(discs[3])
+            if let column = frames.inspector {
+                VideoStudioSheetHost(
+                    model: model,
+                    actions: actions(model),
+                    layout: .column,
+                    importedMusic: importedMusic,
+                    showsIdleLook: true
+                )
+                .background(EditorTheme.panelSolid)
+                .placed(column)
+            }
+            VideoTransportBar(model: model, height: frames.transport.height)
+                .placed(frames.transport)
+            deskTimeline(model, height: frames.timeline.height)
+                .placed(frames.timeline)
+            if let row = frames.bottomRow {
+                VideoStudioDuoBottomRow(model: model, actions: actions(model))
+                    .placed(row)
+            }
+        }
+        .frame(width: window.width, height: window.height, alignment: .topLeading)
+        .deskChrome(model, lanes: lanes, meter: levelMeter, hasMeter: false, shortcuts: keyboardShortcuts(model))
+    }
+
+    /// A 36pt disc on black 55 %, floating over the Duo's frame.
+    private func duoDisc(_ systemName: String, isEnabled: Bool, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Image(systemName: systemName)
+                .font(.system(size: 15, weight: .semibold))
+                .foregroundStyle(isEnabled ? Color.white : Color.white.opacity(0.3))
+                .frame(width: VideoStudioDeskGeometry.duoDisc, height: VideoStudioDeskGeometry.duoDisc)
+                .background(Circle().fill(Color.black.opacity(0.55)))
+                .contentShape(Circle())
+        }
+        .buttonStyle(.plain)
+        .disabled(!isEnabled)
+    }
+
     // MARK: Shared pieces
 
     /// What the lanes of this project need to show without scrolling.

@@ -140,4 +140,56 @@ struct VideoStudioDeskGeometryTests {
         #expect(Geometry.dockColumnCount(width: 507) == 2)
         #expect(Geometry.dockColumnWidth(width: 507) >= Geometry.dockColumnMinimum)
     }
+
+    // MARK: Duo inner
+
+    /// FS-12.03 AC-5 (board DI1): 385 + 40 + 188 + 56 = 669 — no slack, so
+    /// the sum is pinned. Frame 684×385 at y 0, column 264 at x 687,
+    /// transport at 385, timeline 188, bottom row at 613.
+    @Test func duoInnerBandsSumToTheWindow() throws {
+        let frames = Geometry.duoInner(.init(
+            window: CGSize(width: 951, height: 669), canvas: sixteenNine,
+            isPoolOpen: false, isInspectorOpen: true
+        ))
+        let column = try #require(frames.inspector)
+        let row = try #require(frames.bottomRow)
+        #expect(frames.stage.height + frames.transport.height + frames.timeline.height + row.height == 669)
+        #expect(column == CGRect(x: 687, y: 0, width: 264, height: 385))
+        #expect(near(frames.frame.width, 684) && near(frames.frame.height, 385))
+        #expect(near(frames.frame.minY, 0) && near(frames.frame.minX, 1.5))
+        #expect(frames.transport == CGRect(x: 0, y: 385, width: 951, height: 40))
+        #expect(frames.timeline == CGRect(x: 0, y: 425, width: 951, height: 188))
+        #expect(row == CGRect(x: 0, y: 613, width: 951, height: 56))
+        // The five tools from x 40, 72×50 apart by 4; the right group ends
+        // at x 907.
+        let lastTool = Geometry.duoToolLeading + 4 * (Geometry.duoToolCell.width + Geometry.duoToolGap)
+        #expect(lastTool == 344)
+        #expect(951 - Geometry.duoRowTrailingInset == 907)
+        #expect(Geometry.duoDiscFrames().first == CGRect(x: 16, y: 12, width: 36, height: 36))
+        #expect(Geometry.duoDiscFrames().last?.minX == 148)
+    }
+
+    /// The Duo inner layout has no pool, no meter and no viewer header:
+    /// each would cost height this window does not have.
+    @Test func duoInnerHasNoPoolMeterOrHeader() {
+        let frames = Geometry.duoInner(.init(
+            window: CGSize(width: 951, height: 669), canvas: sixteenNine,
+            isPoolOpen: true, isInspectorOpen: true
+        ))
+        #expect(frames.pool == nil)
+        #expect(frames.meter == nil)
+        #expect(frames.header == nil)
+        #expect(frames.overview == nil)
+    }
+
+    /// A Stage Manager window 1000×700 is short, so it gets this layout;
+    /// the frame takes what the fixed bands leave.
+    @Test func aShortStageManagerWindowFlexesTheFrame() {
+        let frames = Geometry.duoInner(.init(
+            window: CGSize(width: 1000, height: 700), canvas: sixteenNine,
+            isPoolOpen: false, isInspectorOpen: true
+        ))
+        #expect(frames.stage == CGRect(x: 0, y: 0, width: 736, height: 416))
+        #expect(frames.timeline.height == 188)
+    }
 }

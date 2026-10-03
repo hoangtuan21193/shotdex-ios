@@ -5,7 +5,7 @@
 | Tác giả | hat.tuan@karabiner.tech |
 | Ngày | 2026-10-03 |
 | Trạng thái | accepted — người dùng 2026-10-03: "Accepted, sang /spec" |
-| Tiến độ | **đang làm** (2026-10-04) — task 59/265, 50/280 AC xanh; plan [vs-tools-selection-phone](../_plans/2026-10-03-vs-tools-selection-phone.md) tới task 17, plan [vs-wide-and-duo-layout](../_plans/2026-10-03-vs-wide-and-duo-layout.md) tới task 8 (thứ tự: công cụ/chọn + lưu nháp → bố cục rộng/Duo → Media/Settings/Export → Look → kích thước → F1–F8) |
+| Tiến độ | **đang làm** (2026-10-04) — task 60/265, 50/280 AC xanh; plan [vs-tools-selection-phone](../_plans/2026-10-03-vs-tools-selection-phone.md) tới task 17, plan [vs-wide-and-duo-layout](../_plans/2026-10-03-vs-wide-and-duo-layout.md) tới task 9 (thứ tự: công cụ/chọn + lưu nháp → bố cục rộng/Duo → Media/Settings/Export → Look → kích thước → F1–F8) |
 | Nguồn | phản hồi người dùng — các comment trên canvas Video Studio 29/9–30/9, và quyết định 2026-10-03 "làm khung mới trước" (trước plan look ảnh cho video, [FS-12.06c](../02-functional-spec/FS-12-video-studio/06c-photo-looks.md)) |
 | Spec sinh ra từ đây | [FS-12](../02-functional-spec/FS-12-video-studio/README.md) .03 (11 AC) · .03b (9) · .04 (15) · .04b (11) · .05 (13) · .07 (13) · .07b (12) · .09 (19) · .10 (15) · .10b (14) · .11 F1 (20) · .12 F2 (16) · .13 F3 (16) · .14 F4 (17) · .15 F7 (15) · .16 F8 (17) · .17 F6 (17) · .17b F6 (18) · .18 lưu nháp (12) — **280 AC** (261 + 18 thêm lúc duyệt plan 2026-10-03); F5 là FS-12.06c (intent khác, không tính); sửa kèm FS-12.01, .02, .06, .08, NF-03 |
 

@@ -298,7 +298,7 @@ struct VideoStudioScreen: View {
 
     /// Back: the model keeps the selection, writes the draft and says
     /// whether the studio may close.
-    private func leave(_ model: VideoStudioModel) {
+    func leave(_ model: VideoStudioModel) {
         Task { @MainActor in
             switch await model.back() {
             case .close: dismiss()
@@ -334,6 +334,24 @@ struct VideoStudioScreen: View {
             )
             let knownInset = windowTrailingInset.map { max($0, insets.trailing) }
                 ?? (insets.trailing > 0 ? insets.trailing : nil)
+            #if DEBUG
+            // A window class drawn at its own size in the corner of a bigger
+            // one — the Duo's inner display, which the simulator boots
+            // folded and cannot open from the command line. Debug builds
+            // only; the proof is still the device's.
+            if let stand = Self.debugStandInWindow {
+                layout(model, proxy: proxy, window: stand.size, windowClass: stand.windowClass)
+                    .frame(width: stand.size.width, height: stand.size.height, alignment: .topLeading)
+                    .clipped()
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                    .ignoresSafeArea()
+            } else if let windowClass = VideoStudioWindowClass.resolve(window: window, knownTrailingInset: knownInset) {
+                layout(model, proxy: proxy, window: window, windowClass: windowClass)
+                    .onChange(of: windowClass) { _, _ in model.sceneDidChange() }
+            } else {
+                Color.clear
+            }
+            #else
             if let windowClass = VideoStudioWindowClass.resolve(window: window, knownTrailingInset: knownInset) {
                 layout(model, proxy: proxy, window: window, windowClass: windowClass)
                     // A new class is a new scene shape — the Duo folding or
@@ -343,6 +361,7 @@ struct VideoStudioScreen: View {
             } else {
                 Color.clear
             }
+            #endif
         }
         .background {
             EditorWindowInsetsReader { insets in
@@ -350,6 +369,17 @@ struct VideoStudioScreen: View {
             }
         }
     }
+
+    #if DEBUG
+    /// `-VideoStudioStandIn duoInner` draws the Duo inner layout at 951×669
+    /// in the top-left corner of whatever window the studio is in.
+    static var debugStandInWindow: (windowClass: VideoStudioWindowClass, size: CGSize)? {
+        switch UserDefaults.standard.string(forKey: "VideoStudioStandIn") {
+        case "duoInner": (.duoInner, CGSize(width: 951, height: 669))
+        default: nil
+        }
+    }
+    #endif
 
     /// One body per window class (FS-12.03 §1). The phone's stack stays
     /// with the phone plan; every other class places its bands from
@@ -366,7 +396,9 @@ struct VideoStudioScreen: View {
             deskLandscape(model, window: window)
         case .iPadPortrait:
             deskPortrait(model, window: window)
-        case .phone, .duoCover, .duoInner:
+        case .duoInner:
+            duoInner(model, window: window)
+        case .phone, .duoCover:
             stackBody(model, proxy: proxy, windowClass: windowClass)
         }
     }
