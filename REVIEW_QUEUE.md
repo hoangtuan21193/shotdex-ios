@@ -624,3 +624,9 @@ Outside the acceptance criteria of plan `docs/_plans/2026-10-03-vs-tools-selecti
 - [ ] Canvas boards still naming "Clip 2 · Coast": `F1_DI_Reorder`, `F1_IL_MultiSelect`, `F2_IL_BeatSnap`, `F2_P_BeatDuration`, `F3_IL_Ducking`, `F4_IL_Captions`, `F4_IP_Captions`, `F5_DC_Looks`, `F5_DI_Looks`, `ES_IL_ExportSettings` (Q-8: the app says "Clip 2") _(plan §Duyệt)_
 - [ ] `Tools/ui-drive` / test-without-building leave every reinstalled app bundle under the simulator's `Library/Caches/com.apple.containermanagerd/Dead/` — 26 GB on iPhone 17 by 2026-10-04 and the disk filled twice (codesign "internal error" = disk full). Clear `Dead/temp.*` after driver runs, or have the runner do it
 - [ ] The Debug build does not launch on iOS 18.6: `ShotDex.debug.dylib` links `@rpath/libswiftCompatibilitySpan.dylib`, which 18.6 does not ship and the app does not embed — dyld aborts at launch (found by `ios26-parity` 2026-10-04; worked around by copying the dylib into a scratch build). Check the Release build and embed the library, or the iOS 17/18 floor is broken _(NF-05)_
+
+# Video Studio wide/Duo layout — seen in passing (2026-10-04)
+
+Outside the acceptance criteria of plan `docs/_plans/2026-10-03-vs-wide-and-duo-layout.md`; noticed while building its tasks 1–15.
+
+- [ ] Muting the **Video** lane leaves no undo step (`VideoStudioModel.toggleVideoTrackMuted` calls `setVideoVolume` with no `pushUndo`), while muting a **music** lane is one undo step (`toggleMusicLaneMuted` wraps `beginUndoGroup`/`endUndoGroup`). Same button, two undo behaviours — pick one (FS-12.03b §4 says nothing either way) _(plan task 1)_

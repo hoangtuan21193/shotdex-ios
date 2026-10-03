@@ -486,3 +486,45 @@ struct VideoStudioDeskLayoutTests {
         }
     }
 }
+
+/// The track header's switches and the keyboard's Esc, held at the model —
+/// the rules FS-12.03b §4–5 give them, whatever window draws the buttons.
+@MainActor
+struct VideoStudioTrackSwitchTests {
+    /// FS-12.03b AC-4: the V1 Mute button goes through Video sound and
+    /// remembers the level — 0 is a level a user can dial, so muting cannot
+    /// be read back off the volume alone.
+    @Test func mutingTheVideoLaneRestoresItsLevel() {
+        let model = VideoStudioModelFixture.model()
+        model.setVideoVolume(0.6)
+        model.toggleVideoTrackMuted()
+        #expect(model.recipe.videoVolume == 0)
+        #expect(model.isVideoTrackMuted)
+        model.toggleVideoTrackMuted()
+        #expect(abs(model.recipe.videoVolume - 0.6) < 0.0001)
+        #expect(!model.isVideoTrackMuted)
+    }
+
+    /// FS-12.03b AC-5: muting A1 with two beds in it is one undo step —
+    /// a single Undo brings both back to their own levels.
+    @Test func mutingAMusicLaneUndoesInOneStep() throws {
+        let model = VideoStudioModelFixture.model { recipe in
+            var first = MusicTrack(source: .bundled(id: "calm"))
+            first.sourceDuration = 5
+            first.volume = 0.8
+            var second = MusicTrack(source: .bundled(id: "drive"))
+            second.sourceDuration = 5
+            second.start = 12
+            second.volume = 0.4
+            recipe.musicTracks = [first, second]
+        }
+        #expect(model.musicTracks(inLane: 0).count == 2)
+        model.toggleMusicLaneMuted(0)
+        #expect(model.recipe.musicTracks.allSatisfy { $0.volume == 0 })
+        #expect(model.isMusicLaneMuted(0))
+        model.undo()
+        let volumes = model.recipe.musicTracks.map(\.volume)
+        #expect(volumes == [0.8, 0.4])
+        #expect(!model.canUndo)
+    }
+}

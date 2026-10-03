@@ -80,14 +80,14 @@ tổng quan, meter, track header — mỗi băng có một việc và lấy chi�
 | AC-1 | project 10 s, âm lượng 1, fade in 2 s, fade out 2 s | đọc hệ số meter tại 0 · 1 · 5 · 9 s | 0 · 0,5 · 1 · 0,5 — đúng đường fade export dùng | `VideoStudioDeskLayoutTests.theMeterReadsTheSameFadeEnvelopeTheExportWrites` |
 | AC-2 | thang meter | test thuần 0 dB, sàn, nửa sàn, −120, +6 | 1 · 0 · 0,5 · kẹp 0 · kẹp 1 | `VideoStudioDeskLayoutTests.theMeterScaleIsLinearInDecibels` |
 | AC-3 | iPad ngang 1376×1032 | dump transport | đủ 15 nút theo 4 nhóm §2 trong một hàng 44, không nút nào ngoài mép | ⚠️ chưa có |
-| AC-4 | iPad, lane V1 Volume 60 | bấm Mute lane rồi bấm lại | lần 1 không tiếng; lần 2 về 60 | ⚠️ chưa có |
-| AC-5 | iPad, 2 track nhạc trong A1 | bấm Mute A1 rồi Undo một lần | cả hai về mức cũ | ⚠️ chưa có |
+| AC-4 | iPad, lane V1 Volume 60 | bấm Mute lane rồi bấm lại | lần 1 không tiếng; lần 2 về 60 | `VideoStudioTrackSwitchTests.mutingTheVideoLaneRestoresItsLevel` |
+| AC-5 | iPad, 2 track nhạc trong A1 | bấm Mute A1 rồi Undo một lần | cả hai về mức cũ | `VideoStudioTrackSwitchTests.mutingAMusicLaneUndoesInOneStep` |
 | AC-6 | clip 2 đang chọn, Speed đổi 2×, bàn phím cắm | bấm Esc rồi ⌘Z | sau Esc: bỏ chọn, Speed vẫn 2×; sau ⌘Z: 1× | ⚠️ chưa có |
 | AC-7 | iPad ngang, pool tab Music | dump | dòng "Video sound" ở đầu, nút "Add Music from Files…" (không phải "Import from Files…") | ⚠️ chưa có |
 | AC-8 | Duo trong 951×669 | dump timeline | cột badge 100 có nút Lock ở T1 · V1 · A1 và Mute ở V1 · A1; lane 34 / 66 / 40 | `VideoStudioLayoutTests.aShortRegularWindowKeepsThePhonesLanes` (phần lane; thêm bậc lane riêng cho iPhone 40/80/46) |
 | AC-9 | các board IL1, IP1, DI1 | `Tools/design-board compare` transport, dải tổng quan, track header | lệch ≤ 2pt | ⚠️ chưa có — agent `design-parity` |
 
-**Chưa chứng minh được:** AC-3 … AC-7, AC-9.
+**Chưa chứng minh được:** AC-3, AC-6, AC-7, AC-9.
 
 ## 7. Rủi ro đã biết
 
