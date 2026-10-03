@@ -121,4 +121,26 @@ struct CaptionKeywordSheetModelTests {
         #expect(after == photos)
         #expect(try harness.store.keywordCounts().first { $0.keyword == "Hoi An" }?.count == 12)
     }
+
+    /// AC-6: `Sunset` on 5 and `sunset` on 2 read as one row `Sunset · 7 of
+    /// 30`; ⊖ and Apply take every spelling off, nothing else.
+    @Test func removalFoldsCase() async throws {
+        var photos = Self.thirty(hoiAn: 0)
+        for index in 0..<5 { photos[String(format: "p%d", index)] = CaptionKeywords(keywords: ["Sunset", "beach"]) }
+        for index in 5..<7 { photos[String(format: "p%d", index)] = CaptionKeywords(keywords: ["sunset"]) }
+        let harness = try CaptionKeywordHarness(photos)
+        let model = CaptionKeywordSheetModel(ids: Self.ids(photos), service: harness.service)
+        await model.load()
+        let row = try #require(model.rows.first { $0.caseKey == "sunset" })
+        #expect(row.keyword == "Sunset" && row.count == 7)
+        model.toggleRemoval(row)
+        #expect(model.isRemoving(row))
+        let outcome = await model.apply()
+
+        let after = harness.library.read(ids: Self.ids(photos))
+        #expect(after.values.allSatisfy { !$0.keywords.contains { KeywordInput.caseKey($0) == "sunset" } })
+        #expect(after.values.filter { $0.keywords == ["beach"] }.count == 5)
+        #expect(harness.writer.blocks.count == 1)
+        #expect(outcome == .written(banner: KeywordCopy.updatedBanner(photos: 7), refused: 0))
+    }
 }

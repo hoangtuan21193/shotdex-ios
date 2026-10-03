@@ -176,28 +176,27 @@ struct CaptionKeywordSheet: View {
         Section {
             ForEach(model.rows) { row in
                 let removing = model.isRemoving(row)
-                HStack {
-                    Text(row.keyword)
-                        .strikethrough(removing)
-                        .foregroundStyle(removing ? Color.red : Color.primary)
-                    Spacer()
-                    Text(KeywordCopy.share(row.count, of: model.photoCount))
-                        .font(.subheadline.monospacedDigit())
-                        .foregroundStyle(.secondary)
-                    Button {
-                        model.toggleRemoval(row)
-                    } label: {
+                // The whole row is the toggle, not only the ⊖: a 44pt circle
+                // at the far edge is the hardest target in the sheet.
+                Button {
+                    model.toggleRemoval(row)
+                } label: {
+                    HStack {
+                        Text(row.keyword)
+                            .strikethrough(removing)
+                            .foregroundStyle(removing ? Color.red : Color.primary)
+                        Spacer()
+                        Text(KeywordCopy.share(row.count, of: model.photoCount))
+                            .font(.subheadline.monospacedDigit())
+                            .foregroundStyle(.secondary)
                         Image(systemName: removing ? "arrow.uturn.backward.circle" : "minus.circle")
                             .foregroundStyle(removing ? Color.secondary : Color.red)
                             .frame(width: AppTheme.Size.minTouch, height: AppTheme.Size.minTouch)
-                            .contentShape(Rectangle())
                     }
-                    .buttonStyle(.plain)
+                    .contentShape(Rectangle())
                 }
-                .accessibilityElement(children: .ignore)
+                .buttonStyle(.plain)
                 .accessibilityLabel(rowAccessibility(row, removing: removing))
-                .accessibilityAddTraits(.isButton)
-                .accessibilityAction { model.toggleRemoval(row) }
             }
         } header: {
             Text("On These Photos", tableName: KeywordCopy.table, comment: "Bulk sheet section: keywords the selection already carries")
