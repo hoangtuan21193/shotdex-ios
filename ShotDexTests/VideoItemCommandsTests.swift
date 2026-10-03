@@ -51,3 +51,18 @@ extension VideoItemCommandsTests {
         #expect(VideoItemCommand.commands(for: .freezeClip) == [.split, .trim, .duplicate, .delete])
     }
 }
+
+extension VideoItemCommandsTests {
+    /// FS-12.04b AC-3: every layout reads the same list for every kind of
+    /// item — compared element by element against the phone's — and lays
+    /// it out as one scrolling row.
+    @Test func everyLayoutGetsTheSameCommands() {
+        for kind in VideoItemKind.allCases {
+            let phone = VideoItemCommand.commands(for: kind, in: .phone)
+            for windowClass in VideoStudioWindowClass.allCases {
+                #expect(VideoItemCommand.commands(for: kind, in: windowClass) == phone, "\(kind) on \(windowClass)")
+                #expect(VideoItemCommand.rowShape(in: windowClass) == .scrollingRow)
+            }
+        }
+    }
+}

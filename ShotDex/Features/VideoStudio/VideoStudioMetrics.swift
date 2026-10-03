@@ -744,8 +744,6 @@ enum VideoStudioMetrics {
     static let fontButtonHitInset: CGFloat = -2
     static let fontToggleHitInset: CGFloat = -4
 
-    static let commandCellWidth: CGFloat = 52
-    static let commandCellHeight: CGFloat = 54
     static let inspectorTitleButton: CGFloat = 30
     static let addMediaButtonWidth: CGFloat = 40
     static let transitionChipSize: CGFloat = 22

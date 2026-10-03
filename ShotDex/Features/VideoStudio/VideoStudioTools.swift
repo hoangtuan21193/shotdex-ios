@@ -244,6 +244,25 @@ enum VideoItemCommand: String, CaseIterable, Identifiable {
     }
 }
 
+extension VideoItemCommand {
+    /// How a window lays the row out: one scrolling row everywhere — the
+    /// Duo's 264pt column included — never folded into a grid
+    /// (FS-12.04b §1).
+    enum RowShape: Equatable { case scrollingRow }
+
+    static func rowShape(in _: VideoStudioWindowClass) -> RowShape { .scrollingRow }
+
+    /// The row a window of `windowClass` shows for `kind`: the same list on
+    /// every layout — the iPad has no command the phone lacks.
+    static func commands(
+        for kind: VideoItemKind,
+        in _: VideoStudioWindowClass,
+        singleVideo: Bool = false
+    ) -> [VideoItemCommand] {
+        commands(for: kind, singleVideo: singleVideo)
+    }
+}
+
 extension VideoItemKind {
     init(_ clip: VideoClip) {
         switch clip.kind {
