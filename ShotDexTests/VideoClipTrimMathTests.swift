@@ -36,3 +36,12 @@ struct VideoClipTrimMathTests {
         #expect(model.recipe.clips[1].trimEnd == 10)
     }
 }
+
+extension VideoClipTrimMathTests {
+    /// FS-12.05 AC-6: a 2× clip, playhead 1.5 s past its start — the new
+    /// in-point is 3.0 s into the source.
+    @Test func startToPlayheadConvertsThroughSpeed() {
+        let outcome = VideoClipTrimMath.trimToPlayhead(video(speed: 2), end: .start, localTime: 1.5)
+        #expect(outcome == .trim(start: 3, end: 10))
+    }
+}
