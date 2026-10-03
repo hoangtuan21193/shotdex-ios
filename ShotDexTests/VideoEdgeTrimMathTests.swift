@@ -130,4 +130,21 @@ extension VideoEdgeTrimModelTests {
         #expect(!model.canRedo)
         #expect(!model.canUndo)
     }
+
+    /// FS-12.05 AC-10: the system takes the touch mid-drag (a call) —
+    /// nothing changes, no undo step, the playhead is where it was.
+    @Test func cancelledDragChangesNothing() {
+        let model = VideoStudioModelFixture.model()
+        let clip2 = model.recipe.clips[1].id
+        model.selectClip(clip2)
+        model.seek(to: 6)
+        let before = model.recipe
+        model.edgeTrim(clip2, edge: .trailing, phase: .changed(-3))
+        #expect(model.edgeTrimPreview != nil)
+        model.edgeTrim(clip2, edge: .trailing, phase: .cancelled)
+        #expect(model.recipe == before)
+        #expect(model.edgeTrimPreview == nil)
+        #expect(!model.canUndo)
+        #expect(model.currentTime == 6)
+    }
 }
