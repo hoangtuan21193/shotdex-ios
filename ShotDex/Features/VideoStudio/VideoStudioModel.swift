@@ -60,7 +60,12 @@ final class VideoStudioModel {
             drafts?.schedule { [weak self] in self?.draftSnapshot() }
         }
     }
-    private(set) var sources: [UUID: VideoClipSource] = [:]
+    /// Loaded media by clip id. A source outlives its clip's removal from
+    /// the recipe — Replace, Delete — because ✕ and Undo can bring the clip
+    /// back, and a clip whose source is gone is skipped by the builder: it
+    /// would vanish from the preview with no word. Sources are asset
+    /// references, not pixels, so keeping them costs next to nothing.
+    var sources: [UUID: VideoClipSource] = [:]
     private(set) var phase: Phase = .loading
     private(set) var player: AVPlayer?
     private var playerItem: AVPlayerItem?
@@ -368,6 +373,18 @@ final class VideoStudioModel {
     /// Opens a session on `target`, remembering the project as it is now.
     private func beginSession(_ target: VideoEditSession.Target) {
         session = VideoEditSession(target: target, startRecipe: recipe, checkpoint: history.checkpoint)
+    }
+
+    /// Points the open session at an item that took the selected one's
+    /// place (Replace), keeping its start and its steps.
+    private func retargetSession(_ target: VideoEditSession.Target) {
+        guard let current = session else {
+            beginSession(target)
+            return
+        }
+        var moved = VideoEditSession(target: target, startRecipe: current.startRecipe, checkpoint: current.checkpoint)
+        moved.isCollapsed = current.isCollapsed
+        session = moved
     }
 
     /// Ends the session keeping every step it made — the ✓ half of the
@@ -1359,10 +1376,14 @@ final class VideoStudioModel {
         else { return }
         pushUndo()
         let new = VideoClip(assetID: pick.assetID, kind: pick.kind)
-        sources.removeValue(forKey: recipe.clips[index].id)
+        // The old clip's source stays: ✕ or Undo puts the old clip back.
         recipe.clips[index] = new
         recipe.syncTransitionsWithClips()
-        selectClip(new.id)
+        // Replace is a step inside the clip's session, not the end of it:
+        // the session follows the clip into its new id, so ✕ takes the
+        // replacement back with the rest.
+        self.selectedClipID = new.id
+        retargetSession(.clip(new.id))
         markEdited()
         Task { await loadAndMerge([new]) }
     }

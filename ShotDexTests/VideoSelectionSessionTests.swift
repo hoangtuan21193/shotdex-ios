@@ -1,3 +1,4 @@
+import CoreGraphics
 import Foundation
 import ShotDexKit
 import Testing
@@ -196,5 +197,69 @@ struct VideoAddSessionTests {
         model.cancelSession()
         #expect(model.recipe.musicTracks.isEmpty)
         #expect(!model.canUndo)
+    }
+}
+
+/// ✕ (FS-12.04 §5).
+@MainActor
+struct VideoSessionCancelTests {
+    private func drag(_ model: VideoStudioModel, _ change: () -> Void) {
+        model.beginUndoGroup()
+        change()
+        model.endUndoGroup()
+    }
+
+    /// FS-12.04 AC-3: clip 2 to 2× and Volume 60, ✕ — 1× and 100 again, the
+    /// undo stack as deep as before clip 2 was selected, Redo off.
+    @Test func cancelRestoresTheClipAndTheUndoDepth() {
+        let model = VideoStudioModelFixture.model()
+        let clip2 = model.recipe.clips[1].id
+        model.pushUndo()
+        model.setSpeed(3, for: model.recipe.clips[0].id)
+        let depth = model.history.undoEntries.count
+
+        model.selectClip(clip2)
+        drag(model) { model.setSpeed(2, for: clip2) }
+        drag(model) { model.setClipVolume(0.6, for: clip2) }
+        model.undo()   // a redo to be forgotten
+        model.cancelSession()
+
+        #expect(model.recipe.clips[1].speed == 1)
+        #expect(model.recipe.clips[1].volume == 1)
+        #expect(model.recipe.clips[0].speed == 3)
+        #expect(model.history.undoEntries.count == depth)
+        #expect(!model.canRedo)
+        #expect(model.selectedClipID == nil)
+        #expect(model.session == nil)
+    }
+
+    /// Replace inside a session, then ✕: the old clip is back and so is its
+    /// source, so it still plays.
+    @Test func cancelAfterReplaceKeepsTheOldSource() {
+        let model = VideoStudioModelFixture.model(clips: VideoStudioModelFixture.photoClips(3))
+        let clip2 = model.recipe.clips[1]
+        model.sources[clip2.id] = .photo(assetID: clip2.assetID, pixelSize: CGSize(width: 10, height: 10))
+        model.selectClip(clip2.id)
+        model.replaceSelectedClip(with: VideoMediaPick(assetID: "replacement", kind: .photo))
+        #expect(model.recipe.clips[1].assetID == "replacement")
+        #expect(model.session?.target == .clip(model.recipe.clips[1].id))
+
+        model.cancelSession()
+        #expect(model.recipe.clips[1] == clip2)
+        #expect(model.sources[clip2.id] != nil)
+        #expect(!model.canUndo)
+    }
+
+    /// ✕ with nothing changed only deselects; the stack is untouched.
+    @Test func cancelWithNoChangeOnlyDeselects() {
+        let model = VideoStudioModelFixture.model()
+        model.pushUndo()
+        model.setSpeed(2, for: model.recipe.clips[0].id)
+        let before = model.recipe
+        model.selectClip(model.recipe.clips[1].id)
+        model.cancelSession()
+        #expect(model.recipe == before)
+        #expect(model.history.undoEntries.count == 1)
+        #expect(model.selectedClipID == nil)
     }
 }
