@@ -243,6 +243,7 @@ final class VideoStudioModel {
         if mode == .singleVideo {
             selectedClipID = recipe.clips.first?.id
         }
+        observeBackgrounding()
     }
 
     /// Where a finished video is recorded so it can be reopened, and the id
@@ -285,6 +286,32 @@ final class VideoStudioModel {
     private var isFailedLoad: Bool {
         if case .failed = phase { return true }
         return false
+    }
+
+    /// The app going to the background writes the draft at once
+    /// (FS-12.18 §2): the system may end the process from there without
+    /// another word, and a second of edits is all a crash should cost.
+    private var backgroundObserver: NSObjectProtocol?
+
+    private func observeBackgrounding() {
+        guard drafts != nil else { return }
+        backgroundObserver = NotificationCenter.default.addObserver(
+            forName: UIApplication.didEnterBackgroundNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            MainActor.assumeIsolated { self?.saveDraftInBackground() }
+        }
+    }
+
+    /// Writes the draft under a background-task assertion, so the write
+    /// finishes even though the app is on its way out.
+    func saveDraftInBackground() {
+        let assertion = UIApplication.shared.beginBackgroundTask(withName: "video-draft")
+        Task {
+            await saveDraftNow()
+            if assertion != .invalid { UIApplication.shared.endBackgroundTask(assertion) }
+        }
     }
 
     /// What Back leads to.
@@ -579,6 +606,10 @@ final class VideoStudioModel {
         // keeps the model alive until it has.
         if drafts?.isSavePending == true {
             Task { await self.saveDraftNow() }
+        }
+        if let backgroundObserver {
+            NotificationCenter.default.removeObserver(backgroundObserver)
+            self.backgroundObserver = nil
         }
         rebuildTask?.cancel()
         exportTask?.cancel()

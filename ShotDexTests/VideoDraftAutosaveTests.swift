@@ -1,4 +1,5 @@
 import Foundation
+import UIKit
 import Testing
 @testable import ShotDex
 
@@ -142,5 +143,25 @@ struct VideoDraftBackTests {
         #expect(await model.back() == .close)
         model.setSpeed(2, for: model.recipe.clips[1].id)
         #expect(await model.back() == .confirmDiscard)
+    }
+}
+
+/// FS-12.18 §2: leaving the app writes at once.
+@MainActor
+struct VideoDraftBackgroundTests {
+    /// FS-12.18 AC-3: Speed changed, then Home within 0.3 s — the draft has
+    /// the change long before the one-second autosave would have run.
+    @Test func backgroundingSavesImmediately() async throws {
+        let store = CreationStore(database: try AppDatabase.makeEmpty())
+        let model = VideoStudioModelFixture.model(creationStore: store)
+        defer { model.close() }
+        model.setSpeed(2, for: model.recipe.clips[1].id)
+
+        NotificationCenter.default.post(name: UIApplication.didEnterBackgroundNotification, object: nil)
+
+        #expect(await VideoDraftAutosaveTests.eventually(0.4) {
+            (try? store.fetch(id: model.creationID))??.videoRecipe?.clips[1].speed == 2
+        })
+        #expect(model.drafts?.isSavePending == false)
     }
 }

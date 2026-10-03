@@ -78,7 +78,7 @@ Project mẫu: 5 clip 24,0 s từ 5 ảnh/video của thư viện, không ảnh 
 |---|---|---|---|---|
 | AC-1 | project mẫu đang mở | đổi Speed clip 2 sang 2×, rồi chờ | dòng `creations` có Speed 2× sau 1,0 s ±0,3 s; ba thay đổi trong 0,5 s chỉ ra **một** lần ghi | ✅ `VideoDraftAutosaveTests.savesOneSecondAfterTheLastChange` (đồng hồ thật, 0,7–1,3 s), `threeQuickChangesWriteOnce` |
 | AC-2 | project mẫu, đã sửa, chưa xuất lần nào | bấm Back | Video Studio đóng ngay, **không** có alert nào; Video Projects có dòng Draft mang thay đổi đó | ✅ `VideoDraftBackTests.backSavesWithoutAsking`, `serverProjectHasNoDraft` (ảnh server vẫn hỏi theo FS-17.06); route sim: xem AC-6 |
-| AC-3 | đổi Speed rồi trong 0,3 s về Home; tắt hẳn app | mở lại app → Video Projects → chạm dòng | thay đổi còn (đã ghi lúc xuống nền, trước hẹn 1 s) | ⚠️ chưa có |
+| AC-3 | đổi Speed rồi trong 0,3 s về Home; tắt hẳn app | mở lại app → Video Projects → chạm dòng | thay đổi còn (đã ghi lúc xuống nền, trước hẹn 1 s) | ✅ `VideoDraftBackgroundTests.backgroundingSavesImmediately` (thông báo xuống nền → dòng có Speed 2× trong 0,4 s, trước hẹn 1 s) |
 | AC-4 | Duo, project đang mở ở màn trong | đổi Speed rồi gập máy trong 0,3 s | dòng đã có thay đổi trước khi bố cục màn ngoài dựng xong | ⚠️ chưa có — đo tay trong Simulator.app |
 | AC-5 | playhead 8,4 s, clip 2 đang chọn, panel Music mở | Back, rồi mở lại từ Video Projects | playhead 8,4 s; không item nào chọn; không panel nào mở; Undo và Redo tắt | ⚠️ chưa có |
 | AC-6 | một nháp sửa 5 phút trước và một project đã xuất | mở Video Projects | một danh sách, nháp ở trên; dòng nháp có nhãn "Draft", "Edited 5 min ago", bìa là clip đầu; dòng đã xuất không có nhãn | ⚠️ chưa có |
@@ -89,7 +89,7 @@ Project mẫu: 5 clip 24,0 s từ 5 ảnh/video của thư viện, không ảnh 
 | AC-11 | New Video Project, chọn 3 ảnh | Video Studio mở, bấm Back ngay | Video Projects có một dòng Draft 3 clip | ✅ `VideoDraftSaveNowTests.aNewProjectWithNoEditsIsKept` (3 ảnh, không sửa → một dòng Draft 3 clip); Back gọi đúng lệnh ghi này: FS-12.18 AC-2 |
 | AC-12 | project đã xuất một lần | mở lại, đổi Speed, Back; rồi Export | dòng đó mang Speed mới, không có dòng thứ hai, không nhãn Draft; Export cập nhật đúng dòng ấy | ⚠️ chưa có |
 
-**Chưa chứng minh được:** AC-3, AC-4, AC-5, AC-6, AC-7, AC-8, AC-9, AC-12.
+**Chưa chứng minh được:** AC-4, AC-5, AC-6, AC-7, AC-8, AC-9, AC-12.
 
 ## 8. Rủi ro đã biết
 
