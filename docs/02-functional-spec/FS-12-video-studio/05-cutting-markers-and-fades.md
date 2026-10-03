@@ -94,7 +94,7 @@ Các phần khác: xem [README](README.md).
 | # | Cho | Khi | Thì | Chứng minh bằng |
 |---|---|---|---|---|
 | AC-1 | clip 2 video, nguồn 10,0 s, trim 0–10, tốc độ 1×, bắt đầu ở 3,0 s; clip 3 sau nó | kéo tay nắm trái vào 2,0 s | trim 2–10; clip 2 vẫn bắt đầu 3,0 s, dài 8,0 s; clip 3 sớm 2,0 s; đúng một bước undo | ✅ `VideoEdgeTrimMathTests.leadingDragMovesTheSourceInPoint` (2–10), `VideoEdgeTrimModelTests.leadingDragTrimsAndPullsTheNextClipIn` (clip 3 sớm 2,0 s, một bước undo, playhead về chỗ cũ); sim iPhone 17: kéo tay nắm trái clip video 2,0 → 1,5 s, tab #57BFD1 hai mép, playhead về 0 (route `video-studio-edge-trim.json`, 2026-10-04) |
-| AC-2 | như AC-1 nhưng tốc độ 2× (clip dài 5,0 s) | kéo tay nắm phải vào 1,0 s | điểm ra nguồn 10 → 8; clip dài 4,0 s | ⚠️ chưa có |
+| AC-2 | như AC-1 nhưng tốc độ 2× (clip dài 5,0 s) | kéo tay nắm phải vào 1,0 s | điểm ra nguồn 10 → 8; clip dài 4,0 s | ✅ `VideoEdgeTrimMathTests.trailingDragConvertsThroughSpeed` (2×, tay nắm phải vào 1 s: nguồn ra 10 → 8, dài 4 s) |
 | AC-3 | như AC-1 | kéo tay nắm phải ra thêm 3,0 s | dừng ở 10,0 s nguồn, có một haptic | `VideoTimelineMathTests.trimClampsIntoTheSourceWithAMinimumLength` (phần kẹp) |
 | AC-4 | clip ảnh 3,0 s | kéo tay nắm phải vào 2,8 s | dừng ở 0,5 s | ⚠️ chưa có |
 | AC-5 | clip 2 video 0–10, 1×, playhead ở 4,0 s trong clip | chạm Trim → Start to Playhead | clip 2 dùng nguồn 4–10, dài 6,0 s; Undo một lần về 0–10 | ✅ `VideoClipTrimMathTests.startToPlayheadKeepsTheTail` (0–10, playhead 4 → 4–10, 6,0 s), `startToPlayheadOnTheSelectedClipUndoesOnce` (chip tác động clip đang chọn, một Undo về 0–10) |
@@ -107,4 +107,4 @@ Các phần khác: xem [README](README.md).
 | AC-12 | các board IL2, IP2 | `Tools/design-board compare` tay nắm mép clip 2 | hai tab 12pt cao bằng clip, lệch ≤ 2pt | ⚠️ chưa có — agent `design-parity` |
 | AC-13 | clip 2 video đang chọn trên iPhone, iPad, Duo trong, Duo ngoài | dump panel / inspector | không có dòng Duration nào; clip 1 ảnh đang chọn thì có | ⚠️ một phần — như FS-12.04b AC-11: `VideoClipPanelSectionsTests` + sim-shot phone (video không Duration, ảnh có); 3 máy còn lại chờ plan màn rộng |
 
-**Chưa chứng minh được:** AC-2, AC-4, AC-8, AC-9, AC-10, AC-11, AC-12, AC-13.
+**Chưa chứng minh được:** AC-4, AC-8, AC-9, AC-10, AC-11, AC-12, AC-13.

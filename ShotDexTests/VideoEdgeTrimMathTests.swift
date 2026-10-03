@@ -47,3 +47,15 @@ struct VideoEdgeTrimModelTests {
         #expect(model.recipe.clips[1].trimStart == 0)
     }
 }
+
+extension VideoEdgeTrimMathTests {
+    /// FS-12.05 AC-2: a 2× clip's trailing handle dragged 1 s in — the
+    /// source out-point goes 10 → 8 and the clip lasts 4 s.
+    @Test func trailingDragConvertsThroughSpeed() {
+        let result = VideoEdgeTrimMath.drag(video(speed: 2), edge: .trailing, by: -1)
+        #expect(result.trimStart == 0)
+        #expect(result.trimEnd == 8)
+        #expect(result.duration == 4)
+        #expect(!result.hitLimit)
+    }
+}
