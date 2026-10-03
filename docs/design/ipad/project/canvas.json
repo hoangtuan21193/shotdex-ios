@@ -12,588 +12,588 @@
  "boards": {
   "IP_Onboarding.dc.html": {
    "h": 1032,
-   "title": "iPad ngang · Onboarding: bốn lời hứa mỗi dòng một hàng, Continue rộng hết màn",
+   "title": "iPad · Lần đầu mở: cửa sổ rỗng, thẻ chào, Continue",
    "w": 1376,
    "x": 0,
    "y": 560
   },
   "IP_LibrarySelect.dc.html": {
    "h": 1032,
-   "title": "iPad ngang · Chọn ảnh: Compare/Edit, menu ⋯ đủ các hàng, tab bar ẩn",
+   "title": "iPad · Chọn ảnh: inspector 360 cho 5 ảnh, Compare/Edit trên toolbar, menu ⋯ mở, Done thay Select",
    "w": 1376,
    "x": 2912,
    "y": 560
   },
   "IP_Search.dc.html": {
    "h": 1032,
-   "title": "iPad ngang · Search: ô tìm ở trên, capsule dưới tiêu đề, thẻ Recents 3 cột",
-   "w": 1376,
-   "x": 4368,
-   "y": 560
-  },
-  "IP_AdvancedSearch.dc.html": {
-   "h": 1032,
-   "title": "iPad ngang · Advanced Search: form sheet 704pt giữa màn, Library mờ phía sau",
-   "w": 1376,
-   "x": 5824,
-   "y": 560
-  },
-  "IP_Viewer.dc.html": {
-   "h": 1032,
-   "title": "iPad ngang · Viewer tối: panel thông tin kéo hết chiều ngang, ảnh 3:2 tràn rộng, thanh hành động",
+   "title": "iPad · Search: token Brand Sony · Focal 85mm, popover gợi ý, thanh phạm vi nguồn",
    "w": 1376,
    "x": 7280,
    "y": 560
   },
-  "IP_Metadata.dc.html": {
+  "IP_AdvancedSearch.dc.html": {
    "h": 1032,
-   "title": "iPad ngang · Photo Info dạng form sheet 700pt giữa màn, lưới 2 cột trường EXIF",
+   "title": "iPad · Advanced Search: form sheet 700 trên Library mờ",
    "w": 1376,
    "x": 8736,
    "y": 560
   },
-  "IP_Compare.dc.html": {
+  "IP_Viewer.dc.html": {
    "h": 1032,
-   "title": "iPad ngang · Compare 3 cột, 4 ảnh (1 dọc), menu giữ lâu Keep Only This",
+   "title": "iPad · Xem ảnh trong cửa sổ: Single · 2-Up · Survey, inspector phải, filmstrip",
    "w": 1376,
    "x": 10192,
    "y": 560
   },
-  "IP_VideoTrim.dc.html": {
+  "IP_Metadata.dc.html": {
    "h": 1032,
-   "title": "iPad ngang · Cắt video: Save cùng hàng với Collage",
+   "title": "iPad · Get Info: form sheet 700×640, bảng EXIF hai cột",
    "w": 1376,
    "x": 11648,
    "y": 560
   },
-  "IP_Share.dc.html": {
+  "IP_Compare.dc.html": {
    "h": 1032,
-   "title": "iPad ngang · Share dạng popover giữa màn, không mũi tên, hàng Share With/Without Location",
+   "title": "iPad · Viewer chế độ 2-Up (tầng D): Select/Candidate, ảnh đánh dấu xoá",
    "w": 1376,
    "x": 13104,
    "y": 560
   },
-  "IP_Collections.dc.html": {
+  "IP_VideoTrim.dc.html": {
    "h": 1032,
-   "title": "iPad ngang · Collections cuộn tới đáy: cover 192, Media Types 3 hàng, Utilities 2 hàng thẻ 270",
+   "title": "iPad · Cắt video (tầng D): Cancel · Reset · Save trên toolbar",
    "w": 1376,
    "x": 14560,
    "y": 560
   },
-  "IP_AlbumDetail.dc.html": {
+  "IP_Share.dc.html": {
    "h": 1032,
-   "title": "iPad ngang · Album: lưới 13 cột, tiêu đề + ngày cạnh Back, Filter + Select",
+   "title": "iPad · Share: popover từ nút Share, Share With/Without Location",
    "w": 1376,
    "x": 16016,
    "y": 560
   },
-  "IP_SmartAlbum.dc.html": {
+  "IP_Collections.dc.html": {
    "h": 1032,
-   "title": "iPad ngang · Smart album: thanh điều kiện 3 chip + lưới 13 cột",
+   "title": "iPad · Album: On This Day, Smart/My Albums, Media Types, Utilities",
    "w": 1376,
    "x": 17472,
    "y": 560
   },
-  "IP_SmartAlbumEditor.dc.html": {
+  "IP_AlbumDetail.dc.html": {
    "h": 1032,
-   "title": "iPad ngang · Form sheet Edit Smart Album 700pt giữa màn, Collections mờ phía sau",
+   "title": "iPad · Chi tiết album Iceland 2026: header, lưới 7 cột",
    "w": 1376,
    "x": 18928,
    "y": 560
   },
-  "IP_OnThisDay.dc.html": {
+  "IP_SmartAlbum.dc.html": {
    "h": 1032,
-   "title": "iPad ngang · On This Day: lưới 13 cột chia theo năm, nút lịch + Select",
+   "title": "iPad · Smart album: header điều kiện, Edit Smart Album, lưới",
    "w": 1376,
    "x": 20384,
    "y": 560
   },
-  "IP_Places.dc.html": {
+  "IP_SmartAlbumEditor.dc.html": {
    "h": 1032,
-   "title": "iPad ngang · Places: bản đồ tràn màn, 11 cụm ảnh có cover + số, tab bar kính trên cùng",
+   "title": "iPad · Sheet sửa smart album 700×640",
    "w": 1376,
    "x": 21840,
    "y": 560
   },
-  "IP_Trips.dc.html": {
+  "IP_OnThisDay.dc.html": {
    "h": 1032,
-   "title": "iPad ngang · Trips: thẻ cover full-width 1344×160 như code (không chia cột)",
+   "title": "iPad · On This Day: Kyoto theo năm, Show Trip",
    "w": 1376,
    "x": 23296,
    "y": 560
   },
-  "IP_Duplicates.dc.html": {
+  "IP_Places.dc.html": {
    "h": 1032,
-   "title": "iPad ngang · Duplicates: 3 cột thẻ quyết định, một nhóm đã duyệt mở ra (2 bản đánh dấu, nút Unmark)",
+   "title": "iPad · Địa điểm: bản đồ Kansai, inspector 360 của cụm",
    "w": 1376,
    "x": 24752,
    "y": 560
   },
-  "IP_Creations.dc.html": {
+  "IP_Trips.dc.html": {
    "h": 1032,
-   "title": "iPad ngang · Collages: lưới adaptive 4 cột (min 320), 14 collage, nút + New Collage",
+   "title": "iPad · Trips: thẻ cover 3 cột",
    "w": 1376,
    "x": 26208,
    "y": 560
   },
-  "IP_Collage.dc.html": {
+  "IP_Duplicates.dc.html": {
    "h": 1032,
-   "title": "iPad ngang · Collage: bỏ nhãn đếm, Export trên cột inspector",
+   "title": "iPad · Ảnh trùng: danh sách nhóm 360 + chi tiết nhóm",
    "w": 1376,
    "x": 27664,
    "y": 560
   },
-  "IP_CollageExport.dc.html": {
+  "IP_Creations.dc.html": {
    "h": 1032,
-   "title": "iPad ngang · Xuất collage: Save cùng hàng với Collage",
+   "title": "iPad · Collages: 12 collage theo tháng, menu giữ lâu",
    "w": 1376,
    "x": 29120,
    "y": 560
   },
-  "IP_Compress.dc.html": {
+  "IP_Collage.dc.html": {
    "h": 1032,
-   "title": "iPad ngang · Resize: Resize cùng hàng với Collage",
+   "title": "iPad · Collage (tầng D): inspector 360 Layout · Style · Text",
    "w": 1376,
    "x": 30576,
    "y": 560
   },
-  "IP_Statistics.dc.html": {
+  "IP_CollageExport.dc.html": {
    "h": 1032,
-   "title": "iPad ngang · Thống kê: Photos per Year ở dạng Đường (vùng nhạt, điểm rỗng), các thẻ khác giữ nguyên",
+   "title": "iPad · Xuất collage: xem trước + inspector, Share… / Save to Photos",
    "w": 1376,
    "x": 32032,
    "y": 560
   },
-  "IP_ChartEditor.dc.html": {
+  "IP_Compress.dc.html": {
    "h": 1032,
-   "title": "iPad ngang · Edit Chart: X = Camera, chọn Donut; Columns/Line bị tắt, xem trước donut",
+   "title": "iPad · Resize (tầng D): xem trước, inspector, Resize 8 Photos",
    "w": 1376,
    "x": 33488,
    "y": 560
   },
-  "IP_DateRange.dc.html": {
+  "IP_Statistics.dc.html": {
    "h": 1032,
-   "title": "iPad ngang · form sheet Date Range: 4 tháng, dải chọn amber, thanh tóm tắt ở đáy",
+   "title": "iPad · Thống kê (biểu đồ kiểu C): Insights, KPI, chart cột amber",
    "w": 1376,
    "x": 34944,
    "y": 560
   },
-  "IP_Settings.dc.html": {
+  "IP_ChartEditor.dc.html": {
    "h": 1032,
-   "title": "iPad ngang · Cài đặt split view: sidebar ô icon 28 chọn Photo Library, pane có thẻ Your library",
+   "title": "iPad · Sheet sửa biểu đồ 700×640, xem trước sống",
    "w": 1376,
    "x": 36400,
    "y": 560
   },
-  "IP_WidgetSettings.dc.html": {
+  "IP_DateRange.dc.html": {
    "h": 1032,
-   "title": "iPad ngang · Sửa widget trong pane chi tiết, sidebar mới (ô icon) chọn Widgets",
+   "title": "iPad · Date Range: sheet chồng trên Edit Chart, hai tháng một hàng",
    "w": 1376,
    "x": 37856,
    "y": 560
   },
-  "IP_CompressionPresets.dc.html": {
+  "IP_Settings.dc.html": {
    "h": 1032,
-   "title": "iPad ngang · Resize Presets trong pane, sidebar mới chọn Sharing and Export",
+   "title": "iPad · Cài đặt: sidebar kính 320, pane Photo Library",
    "w": 1376,
    "x": 39312,
    "y": 560
   },
-  "IP_CameraDatabase.dc.html": {
+  "IP_WidgetSettings.dc.html": {
    "h": 1032,
-   "title": "iPad ngang · Unknown Cameras trong pane, sidebar mới chọn Camera Database",
+   "title": "iPad · Sửa widget: xem trước trái, tuỳ chọn hai cột",
    "w": 1376,
    "x": 40768,
    "y": 560
   },
-  "IP_Support.dc.html": {
+  "IP_CompressionPresets.dc.html": {
    "h": 1032,
-   "title": "iPad ngang · Settings split view: sidebar mới chọn Support, pane chi tiết Support",
+   "title": "iPad · Resize Presets: Built-In / Custom",
    "w": 1376,
    "x": 42224,
    "y": 560
   },
-  "IP_SupportThread.dc.html": {
+  "IP_CameraDatabase.dc.html": {
    "h": 1032,
-   "title": "iPad ngang · Support thread đẩy trong pane chi tiết, sidebar mới chọn Support",
+   "title": "iPad · Settings › Camera Database: bảng máy, 6 máy chưa rõ ở trên",
    "w": 1376,
    "x": 43680,
    "y": 560
   },
-  "IP_ServerList.dc.html": {
+  "IP_Support.dc.html": {
    "h": 1032,
-   "title": "iPad ngang · File Servers trong pane chi tiết, sidebar mới chọn Sharing and Export",
+   "title": "iPad · Support: báo lỗi, yêu cầu tính năng, bình chọn",
    "w": 1376,
    "x": 45136,
    "y": 560
   },
-  "IP_ServerForm.dc.html": {
+  "IP_SupportThread.dc.html": {
    "h": 1032,
-   "title": "iPad ngang · Form sheet Add Connection giữa màn, trên Cài đặt bị làm mờ",
+   "title": "iPad · Support thread: hội thoại, Send Reply",
    "w": 1376,
    "x": 46592,
    "y": 560
   },
-  "IP_ServerBrowser.dc.html": {
+  "IP_ServerList.dc.html": {
    "h": 1032,
-   "title": "iPad ngang · Duyệt thư mục server lưới 13 cột, tab bar trên cùng, chân trang dung lượng",
+   "title": "iPad · File Servers: bảng kết nối, Add Connection",
    "w": 1376,
    "x": 48048,
    "y": 560
   },
-  "IP_ServerUpload.dc.html": {
+  "IP_ServerForm.dc.html": {
    "h": 1032,
-   "title": "iPad ngang · Form sheet Upload to Server trên lưới Library đang chọn ảnh",
+   "title": "iPad · Sheet Add Connection 700×640",
    "w": 1376,
    "x": 49504,
    "y": 560
   },
-  "IP_UploadedToServer.dc.html": {
+  "IP_ServerBrowser.dc.html": {
    "h": 1032,
-   "title": "iPad ngang · Uploaded to Server: danh sách nơi lưu bản sao, menu ⋯ xoá khỏi máy",
+   "title": "iPad · Duyệt NAS Home: lưới 7 cột, folder trước ảnh, In Library",
    "w": 1376,
    "x": 50960,
    "y": 560
   },
-  "IP_FocusStack.dc.html": {
+  "IP_ServerUpload.dc.html": {
+   "h": 1032,
+   "title": "iPad · Sheet Upload to Server cho 12 ảnh",
+   "w": 1376,
    "x": 52416,
-   "y": 560,
-   "w": 1376,
-   "h": 1032,
-   "title": "iPad ngang · Focus Stack: Save cùng hàng với Collage"
+   "y": 560
   },
-  "IP_StackExposures.dc.html": {
+  "IP_UploadedToServer.dc.html": {
+   "h": 1032,
+   "title": "iPad · On Server: Free Up Space, Where They Are",
+   "w": 1376,
    "x": 53872,
-   "y": 560,
-   "w": 1376,
-   "h": 1032,
-   "title": "iPad ngang · Stack Exposures: Save cùng hàng với Collage"
+   "y": 560
   },
-  "IP_Panorama.dc.html": {
+  "IP_FocusStack.dc.html": {
    "x": 55328,
    "y": 560,
    "w": 1376,
    "h": 1032,
-   "title": "iPad ngang · Panorama: Save cùng hàng với Collage"
+   "title": "iPad · Combine Photos › Focus Stack"
+  },
+  "IP_StackExposures.dc.html": {
+   "x": 56784,
+   "y": 560,
+   "w": 1376,
+   "h": 1032,
+   "title": "iPad · Combine Photos › Stack Exposures"
+  },
+  "IP_Panorama.dc.html": {
+   "x": 58240,
+   "y": 560,
+   "w": 1376,
+   "h": 1032,
+   "title": "iPad · Combine Photos › Panorama"
   },
   "IP_VideoProjects.dc.html": {
    "h": 1032,
-   "title": "iPad ngang · Video Projects lưới 4 cột: nháp (Draft, Edited 5 min ago, bìa clip đầu) lẫn bản đã xuất — theo spec 3/10",
+   "title": "iPad · Video Projects: 7 dự án, New Video Project",
    "w": 1376,
-   "x": 56784,
+   "x": 59696,
    "y": 560
   },
   "IP_VideoProjectsDelete.dc.html": {
    "h": 1032,
-   "title": "iPad ngang · Delete Draft?: alert 2 nút giữa màn trên Video Projects mờ — theo spec 3/10",
+   "title": "iPad · Video Projects: hộp xác nhận Delete Draft",
    "w": 1376,
-   "x": 58240,
+   "x": 61152,
    "y": 560
   },
   "IP1_Edit.dc.html": {
    "h": 1032,
-   "title": "iPad ngang · Edit — histogram 256×120 ở góc trên cột 280; History · Reset · Revert · Recall, Compare, Save ở băng trên",
+   "title": "iPad ngang · Sửa ảnh: Adjust, inspector 360, filmstrip",
    "w": 1376,
    "x": 460,
    "y": 2692
   },
   "IP2_Presets.dc.html": {
    "h": 1032,
-   "title": "iPad ngang · Presets — lưới 2 cột ô lớn, cuộn dọc hết chiều cao",
+   "title": "iPad ngang · Preset: sidebar trái",
    "w": 1376,
    "x": 1916,
    "y": 2692
   },
   "IP3_Transform.dc.html": {
    "h": 1032,
-   "title": "iPad ngang · Transform — thước trên ảnh = góc xoay (đang +2.4°, lưới mịn 8×8); phối cảnh ở Upright / Geometry trong cột",
+   "title": "iPad ngang · Crop & nắn",
    "w": 1376,
    "x": 3372,
    "y": 2692
   },
   "IP4_Mask.dc.html": {
    "h": 1032,
-   "title": "iPad ngang · Mask — thanh cọ nổi dọc mép trái ảnh (Vẽ/Xoá · Size kéo dọc · Feather · Flow · Overlay) cho ngón cái trái;",
+   "title": "iPad ngang · Mask: danh sách, cọ",
    "w": 1376,
    "x": 4828,
    "y": 2692
   },
   "IP5_Heal.dc.html": {
    "h": 1032,
-   "title": "iPad ngang · Heal — thanh nổi bên trái: Heal · Clone · Red Eye · Size · Feather · Opacity · Visualize; cột phải: danh sá",
+   "title": "iPad ngang · Heal/Clone/Red Eye",
    "w": 1376,
    "x": 6284,
    "y": 2692
   },
   "IP6_Markup.dc.html": {
    "h": 1032,
-   "title": "iPad ngang · Markup — lớp chữ đang nghiêng −8°: khung trắng, 4 chấm góc và núm xoay xoay theo, chip “−8°”",
+   "title": "iPad ngang · Markup: lớp chữ",
    "w": 1376,
    "x": 7740,
    "y": 2692
   },
   "IP7_Batch.dc.html": {
    "h": 1032,
-   "title": "iPad ngang · Nhiều ảnh — filmstrip 96 dưới ảnh, Sync mở menu tại chỗ",
+   "title": "iPad ngang · Sync nhiều ảnh",
    "w": 1376,
    "x": 9196,
    "y": 2692
   },
   "IP8_Curve.dc.html": {
    "h": 1032,
-   "title": "iPad ngang · Curve — cột cuộn tới CURVE: Point | Region, đồ thị rộng 248 hết cột, kênh 2×2 — không phải công cụ riêng",
+   "title": "iPad ngang · Tone Curve + Color",
    "w": 1376,
    "x": 10652,
    "y": 2692
   },
   "IP9_MyLooks.dc.html": {
    "h": 1032,
-   "title": "iPad ngang · Presets › My Looks — Save Current và Import XMP Preset là 2 ô đầu, look nhập ghi “Imported”",
+   "title": "iPad ngang · My Looks, menu Export As",
    "w": 1376,
    "x": 12108,
    "y": 2692
   },
   "IP10_NewMask.dc.html": {
    "h": 1032,
-   "title": "iPad ngang · Mask chưa có gì — cột bày sẵn 14 loại vùng (lưới 3 cột), khuôn mặt mờ khi ảnh không có mặt",
+   "title": "iPad ngang · New Mask: 14 loại",
    "w": 1376,
    "x": 13564,
    "y": 2692
   },
   "IP11_NewLayer.dc.html": {
    "h": 1032,
-   "title": "iPad ngang · Markup chưa có lớp — Add a layer: 11 loại lớp lưới 3 cột trong cột 280",
+   "title": "iPad ngang · Add Layer",
    "w": 1376,
    "x": 15020,
    "y": 2692
   },
   "IP12_Save.dc.html": {
    "h": 1032,
-   "title": "iPad ngang · Save — Save Edit theo code 1/10: Format; SAVE COPY có menu Metadata 3 mức; Save Changes giữ hết",
+   "title": "iPad ngang · Sheet Save Edit",
    "w": 1376,
    "x": 16476,
    "y": 2692
   },
   "IPP1_Edit.dc.html": {
    "h": 1376,
-   "title": "iPad dọc · Edit — cột phải 280, histogram 256×120 ở góc; băng trên: History · Reset · Revert · Recall, Compare, Save",
+   "title": "iPad dọc · Sửa ảnh dọc",
    "w": 1032,
    "x": 460,
    "y": 4144
   },
   "IPP2_Mask.dc.html": {
    "h": 1376,
-   "title": "iPad dọc · Mask — thanh cọ nổi mép trái, cột phải như bản ngang",
+   "title": "iPad dọc · Mask",
    "w": 1032,
    "x": 1572,
    "y": 4144
   },
   "IPP3_Batch.dc.html": {
    "h": 1376,
-   "title": "iPad dọc · Nhiều ảnh — filmstrip dưới ảnh",
+   "title": "iPad dọc · Nhiều ảnh",
    "w": 1032,
    "x": 2684,
    "y": 4144
   },
   "IPP4_Presets.dc.html": {
    "h": 1376,
-   "title": "iPad dọc · Presets — lưới 2 cột trong cột 280, ảnh dọc giữ 752 rộng",
+   "title": "iPad dọc · Preset (sidebar phủ)",
    "w": 1032,
    "x": 3796,
    "y": 4144
   },
   "IPP5_Transform.dc.html": {
    "h": 1376,
-   "title": "iPad dọc · Transform — khung cắt + thước góc xoay trên ảnh; cột giữ Aspect, Upright, Geometry (phối cảnh)",
+   "title": "iPad dọc · Crop & nắn",
    "w": 1032,
    "x": 4908,
    "y": 4144
   },
   "IPP6_Heal.dc.html": {
    "h": 1376,
-   "title": "iPad dọc · Heal — thanh nổi mép trái (Heal · Clone · Size · Feather · Opacity), danh sách điểm ở cột",
+   "title": "iPad dọc · Heal",
    "w": 1032,
    "x": 6020,
    "y": 4144
   },
   "IPP7_Markup.dc.html": {
    "h": 1376,
-   "title": "iPad dọc · Markup — lớp · thuộc tính · Add a layer trong cột 280",
+   "title": "iPad dọc · Markup",
    "w": 1032,
    "x": 7132,
    "y": 4144
   },
   "IPP8_Curve.dc.html": {
    "h": 1376,
-   "title": "iPad dọc · Curve — như bản ngang: đồ thị rộng hết cột 280, Point | Region, kênh 2×2",
+   "title": "iPad dọc · Tone Curve",
    "w": 1032,
    "x": 8244,
    "y": 4144
   },
   "IPP9_MyLooks.dc.html": {
    "h": 1376,
-   "title": "iPad dọc · Presets › My Looks — Save Current · Import XMP Preset đứng đầu lưới",
+   "title": "iPad dọc · My Looks",
    "w": 1032,
    "x": 9356,
    "y": 4144
   },
   "IPP10_NewMask.dc.html": {
    "h": 1376,
-   "title": "iPad dọc · Mask chưa có gì — 14 loại vùng lưới 3 cột",
+   "title": "iPad dọc · New Mask",
    "w": 1032,
    "x": 10468,
    "y": 4144
   },
   "IPP11_NewLayer.dc.html": {
    "h": 1376,
-   "title": "iPad dọc · Markup chưa có lớp — 11 loại lớp lưới 3 cột",
+   "title": "iPad dọc · Add Layer",
    "w": 1032,
    "x": 11580,
    "y": 4144
   },
   "IPP12_Save.dc.html": {
    "h": 1376,
-   "title": "iPad dọc · Save — Save Edit theo code 1/10: Format; SAVE COPY có menu Metadata 3 mức; Save Changes giữ hết",
+   "title": "iPad dọc · Save Edit",
    "w": 1032,
    "x": 12692,
    "y": 4144
   },
   "IPP13_HDR.dc.html": {
    "h": 1376,
-   "title": "iPad dọc · HDR — cùng panel, trải hết bề ngang như Focus Stack. Đo từ app 2026-10-02",
+   "title": "iPad dọc · HDR merge",
    "w": 1032,
    "x": 13804,
    "y": 4144
   },
   "IP13_EditWhich.dc.html": {
    "h": 1032,
-   "title": "iPad ngang · RAW + JPEG — popover “Edit which version?” trên thanh tác vụ, Edit RAW mờ, không Cancel; theo code 1/10",
+   "title": "iPad ngang · Edit which version?",
    "w": 1376,
    "x": 17932,
    "y": 2692
   },
   "IPP14_EditWhich.dc.html": {
    "h": 1376,
-   "title": "iPad dọc · RAW + JPEG — popover “Edit which version?” trên thanh tác vụ, Edit RAW mờ, không Cancel; theo code 1/10",
+   "title": "iPad dọc · Edit which version?",
    "w": 1032,
    "x": 14916,
    "y": 4144
   },
   "IP14_RawSkip.dc.html": {
    "h": 1032,
-   "title": "iPad ngang · Nhiều ảnh gặp RAW iOS chưa đọc được — alert “Can't Edit This RAW” chỉ có Skip, theo code 1/10",
+   "title": "iPad ngang · RAW không sửa được: Skip",
    "w": 1376,
    "x": 19388,
    "y": 2692
   },
   "IP15_Cull.dc.html": {
    "h": 1032,
-   "title": "iPad ngang · Cull — thêm dòng EXIF, filmstrip 72 (ô 60), hàng 340 — khớp code 3/10",
+   "title": "iPad ngang · Lọc ảnh",
    "w": 1376,
    "x": 20844,
    "y": 2692
   },
   "IPP15_Cull.dc.html": {
    "h": 1376,
-   "title": "iPad dọc · Cull — dòng EXIF, filmstrip 72 (ô 60), ảnh 3:2 giữa màn dọc — khớp code 3/10",
+   "title": "iPad dọc · Lọc ảnh",
    "w": 1032,
    "x": 16028,
    "y": 4144
   },
   "IP16_GridRatings.dc.html": {
    "h": 1032,
-   "title": "iPad ngang · Lưới — glyph dưới-trái: cờ · favorite · ★N (10pt); ô Rejected mờ 45% — khớp code 3/10",
+   "title": "iPad ngang · Lưới có sao/cờ",
    "w": 1376,
    "x": 22300,
    "y": 2692
   },
   "IP17_GridRejected.dc.html": {
    "h": 1032,
-   "title": "iPad ngang · Lọc Rejected — viên đỏ Delete 120 (32pt) ghim phải, cạnh Clear — khớp code 3/10",
+   "title": "iPad ngang · Lọc Rejected, Delete 120…",
    "w": 1376,
    "x": 23756,
    "y": 2692
   },
   "IP18_ViewerRating.dc.html": {
    "h": 1032,
-   "title": "iPad ngang · Viewer — chrome như code; dòng 2 bảng thông tin nối thêm ★★★★☆ · Picked — khớp code 3/10",
+   "title": "iPad ngang · Viewer: sao, Pick/Reject",
    "w": 1376,
    "x": 25212,
    "y": 2692
   },
   "IP19_ViewerMenu.dc.html": {
    "h": 1032,
-   "title": "iPad ngang · Viewer ⋯ (giữa thanh dưới) — nhóm đầu Rating ▸ · Flag ▸ · Cull From Here; Rating mở — khớp code 3/10",
+   "title": "iPad ngang · Viewer menu ⋯ Rating",
    "w": 1376,
    "x": 26668,
    "y": 2692
   },
   "IP20_InfoKeywords.dc.html": {
    "h": 1032,
-   "title": "iPad ngang · Photo Info — gõ sun: tối đa 8 gợi ý kèm số ảnh — đề xuất 2/10, code chưa có",
+   "title": "iPad ngang · Keyword gợi ý",
    "w": 1376,
    "x": 28124,
    "y": 2692
   },
   "IPP16_InfoKeywords.dc.html": {
    "h": 1376,
-   "title": "iPad dọc · Photo Info — gõ sun: tối đa 8 gợi ý kèm số ảnh — đề xuất 2/10, code chưa có",
+   "title": "iPad dọc · Photo Info (sheet dưới)",
    "w": 1032,
    "x": 17140,
    "y": 4144
   },
   "IP21_BulkKeywords.dc.html": {
    "h": 1032,
-   "title": "iPad ngang · Caption & Keywords — Add · On These Photos (12 of 30, ⊖) · Caption — đề xuất 2/10, code chưa có",
+   "title": "iPad ngang · Caption & Keywords nhiều ảnh",
    "w": 1376,
    "x": 29580,
    "y": 2692
   },
   "IPP17_BulkKeywords.dc.html": {
    "h": 1376,
-   "title": "iPad dọc · Caption & Keywords — Add · On These Photos (12 of 30, ⊖) · Caption — đề xuất 2/10, code chưa có",
+   "title": "iPad dọc · Caption & Keywords nhiều ảnh",
    "w": 1032,
    "x": 18252,
    "y": 4144
   },
   "IP22_Watermark.dc.html": {
    "h": 1032,
-   "title": "iPad ngang · Watermark — xem trước bên trái, cột điều khiển 320 bên phải — đề xuất 2/10, code chưa có",
+   "title": "iPad ngang · Watermark",
    "w": 1376,
    "x": 31036,
    "y": 2692
   },
   "IPP18_Watermark.dc.html": {
    "h": 1376,
-   "title": "iPad dọc · Watermark — xem trước bên trái, cột điều khiển 320 bên phải — đề xuất 2/10, code chưa có",
+   "title": "iPad dọc · Watermark",
    "w": 1032,
    "x": 19364,
    "y": 4144
   },
   "IP23_Export.dc.html": {
    "h": 1032,
-   "title": "iPad ngang · Export… — Destination · Export · Watermark · File Names + footer — đề xuất 2/10, code chưa có",
+   "title": "iPad ngang · Sheet Export 700×640",
    "w": 1376,
    "x": 32492,
    "y": 2692
   },
   "IP24_FileName.dc.html": {
    "h": 1032,
-   "title": "iPad ngang · File Name — 3 mẫu sẵn, Custom: ô 44, chip token 32, ví dụ — đề xuất 2/10, code chưa có",
+   "title": "iPad ngang · File Name trong Export",
    "w": 1376,
    "x": 33948,
    "y": 2692
   },
   "IPP19_Export.dc.html": {
    "h": 1376,
-   "title": "iPad dọc · Export… — Destination · Export · Watermark · File Names + footer — đề xuất 2/10, code chưa có",
+   "title": "iPad dọc · Sheet Export",
    "w": 1032,
    "x": 20476,
    "y": 4144
   },
   "IPP20_FileName.dc.html": {
    "h": 1376,
-   "title": "iPad dọc · File Name — 3 mẫu sẵn, Custom: ô 44, chip token 32, ví dụ — đề xuất 2/10, code chưa có",
+   "title": "iPad dọc · File Name",
    "w": 1032,
    "x": 21588,
    "y": 4144
@@ -601,7 +601,7 @@
   "IL1_Main.dc.html": {
    "h": 1032,
    "radius": 36,
-   "title": "iPad ngang · Màn chính — băng trên không tên project; pool Media · Text · Stickers · Music — theo plan 3/10",
+   "title": "iPad ngang · Video Studio kiểu Mac: pool kính 320, toolbar kính, inspector 360",
    "w": 1376,
    "x": 0,
    "y": 6620
@@ -609,7 +609,7 @@
   "IL2_ClipSelected.dc.html": {
    "h": 1032,
    "radius": 36,
-   "title": "iPad ngang · Chọn clip — hàng lệnh có Look trước Delete; video không Duration; chân ✕ · Clip 2 · ✓ — theo plan 3/10",
+   "title": "iPad ngang · Video: chọn clip, hàng lệnh 9 ô",
    "w": 1376,
    "x": 1456,
    "y": 6620
@@ -617,7 +617,7 @@
   "IL3_TextOverlay.dc.html": {
    "h": 1032,
    "radius": 36,
-   "title": "iPad ngang · Sửa chữ — hàng lệnh chữ đầu inspector, thuộc tính cuộn dưới; chân inspector ✕ — theo plan 3/10",
+   "title": "iPad ngang · Video: sửa chữ",
    "w": 1376,
    "x": 2912,
    "y": 6620
@@ -625,7 +625,7 @@
   "IL4_Music.dc.html": {
    "h": 1032,
    "radius": 36,
-   "title": "iPad ngang · Nhạc — pool Music: “Video sound” + Add Music from Files…; chân ✕ · Morning Drive · ✓ — theo plan 3/10",
+   "title": "iPad ngang · Video: nhạc",
    "w": 1376,
    "x": 4368,
    "y": 6620
@@ -633,7 +633,7 @@
   "IL5_Export.dc.html": {
    "h": 1032,
    "radius": 36,
-   "title": "iPad ngang · Đang xuất — sheet 660, preset mờ, “Exporting… 62%”, Cancel Export ở chỗ nút xuất; ✕ ẩn — theo plan 3/10",
+   "title": "iPad ngang · Video: đang xuất 62%",
    "w": 1376,
    "x": 5824,
    "y": 6620
@@ -641,7 +641,7 @@
   "IP1_Main.dc.html": {
    "h": 1376,
    "radius": 36,
-   "title": "iPad dọc · Màn chính — băng trên không tên project; dock Look + Media · Text · Sticker · Music — theo plan 3/10",
+   "title": "iPad dọc · Video Studio: dock Look cả video",
    "w": 1032,
    "x": 0,
    "y": 8072
@@ -649,7 +649,7 @@
   "IP2_ClipSelected.dc.html": {
    "h": 1376,
    "radius": 36,
-   "title": "iPad dọc · Chọn clip — 9 lệnh (có Look), tay nắm mép clip, video không Duration; chân ✕ · Clip 2 · ✓ — theo plan 3/10",
+   "title": "iPad dọc · Video: chọn clip",
    "w": 1032,
    "x": 1112,
    "y": 8072
@@ -657,7 +657,7 @@
   "IP3_TextOverlay.dc.html": {
    "h": 1376,
    "radius": 36,
-   "title": "iPad dọc · Sửa chữ — dock: lệnh chữ hàng đầu, 3 cột thuộc tính, chân dock ✕ · GOLDEN HOUR · ✓ — theo plan 3/10",
+   "title": "iPad dọc · Video: sửa chữ",
    "w": 1032,
    "x": 2224,
    "y": 8072
@@ -665,7 +665,7 @@
   "F1_IL_MultiSelect.dc.html": {
    "h": 1032,
    "radius": 36,
-   "title": "Chọn nhiều clip — hàng lệnh lô đầu inspector, Speed (2 video, ảnh giữ 3.0s) · Volume (loa = Mute) — theo plan 3/10",
+   "title": "iPad ngang · Video: chọn nhiều clip",
    "w": 1376,
    "x": 7280,
    "y": 6620
@@ -673,7 +673,7 @@
   "F2_IL_BeatSnap.dc.html": {
    "h": 1032,
    "radius": 36,
-   "title": "Bắt nhịp khi trim — mép clip 2 dính Beat 14 · 0:08.75; video không Duration; chân “5.75s · on beat 14” — theo plan 3/10",
+   "title": "iPad ngang · Video: bắt nhịp",
    "w": 1376,
    "x": 8736,
    "y": 6620
@@ -681,7 +681,7 @@
   "F3_IL_Ducking.dc.html": {
    "h": 1032,
    "radius": 36,
-   "title": "Tự hạ nhạc — Voice trên V1, A1 lõm −12 dB; Ducking bật ở hàng lệnh đầu inspector; chân ✕ — theo plan 3/10",
+   "title": "iPad ngang · Video: ducking",
    "w": 1376,
    "x": 10192,
    "y": 6620
@@ -689,7 +689,7 @@
   "F4_IL_Captions.dc.html": {
    "h": 1032,
    "radius": 36,
-   "title": "Phụ đề tự động — lane C1, 58% · 3/5 clip; lệnh phụ đề đầu inspector; vạch tổng quan #5E9CFF — theo plan 3/10",
+   "title": "iPad ngang · Video: phụ đề",
    "w": 1376,
    "x": 11648,
    "y": 6620
@@ -697,7 +697,7 @@
   "F5_IL_Looks.dc.html": {
    "h": 1032,
    "radius": 36,
-   "title": "Look riêng cho clip — inspector: Presets / My Looks / LUTs, lưới 3×2 ô 72, XMP từ Lightroom — theo plan 3/10",
+   "title": "iPad ngang · Video: Look riêng clip",
    "w": 1376,
    "x": 13104,
    "y": 6620
@@ -705,7 +705,7 @@
   "F6_IL_Shortcuts.dc.html": {
    "h": 1032,
    "radius": 36,
-   "title": "Giữ ⌘ — tham chiếu tên + nhóm (iPad dùng danh sách hệ thống): 28 phím Playback · Edit · View — theo plan 3/10",
+   "title": "iPad ngang · Video: thanh menu phím tắt",
    "w": 1376,
    "x": 14560,
    "y": 6620
@@ -713,7 +713,7 @@
   "F6_IL_HoverScrub.dc.html": {
    "h": 1032,
    "radius": 36,
-   "title": "Rê con trỏ trên thumbnail — skim ở 46% ô (0:02.3), khung lớn phát theo “Skimming · Lake” — theo plan 3/10",
+   "title": "iPad ngang · Video: skim bằng con trỏ",
    "w": 1376,
    "x": 16016,
    "y": 6620
@@ -721,7 +721,7 @@
   "F6_IP_PencilTrim.dc.html": {
    "h": 1376,
    "radius": 36,
-   "title": "Pencil trim — Ø208; dock Speed · Volume │ PENCIL + PRECISION │ TRIM; chân ✕ · Trim · Clip 2 · ✓ — theo plan 3/10",
+   "title": "iPad dọc · Video: cắt bằng Pencil",
    "w": 1032,
    "x": 3336,
    "y": 8072
@@ -729,7 +729,7 @@
   "F7_IL_BeforeAfter.dc.html": {
    "h": 1032,
    "radius": 36,
-   "title": "Trước / sau cạnh nhau — nút trong viewer header, pool tự gập — theo plan 3/10",
+   "title": "iPad ngang · Video: trước/sau",
    "w": 1376,
    "x": 17472,
    "y": 6620
@@ -737,7 +737,7 @@
   "F7_IP_BeforeAfter.dc.html": {
    "h": 1376,
    "radius": 36,
-   "title": "Trước / sau cạnh nhau — 2 khung 473×266 (xếp dọc chỉ 459×258 nên giữ ngang); dock Look · Compare — theo plan 3/10",
+   "title": "iPad dọc · Video: trước/sau",
    "w": 1032,
    "x": 4448,
    "y": 8072
@@ -745,7 +745,7 @@
   "F8_IL_ExportPresets.dc.html": {
    "h": 1032,
    "radius": 36,
-   "title": "Preset xuất (Sẵn sàng) — sheet 660, thông số một dòng; dòng LUT trên nút; phụ đề giữ 16:9 — theo plan 3/10",
+   "title": "iPad ngang · Video: preset xuất",
    "w": 1376,
    "x": 18928,
    "y": 6620
@@ -753,7 +753,7 @@
   "ES_IL_ExportSettings.dc.html": {
    "h": 1032,
    "radius": 36,
-   "title": "Video Settings — popover 340: Ratio 9:16 · Fit, Background Blur; 4K mờ kèm lý do; Output ~30 MB — theo plan 3/10",
+   "title": "iPad ngang · Video Settings popover",
    "w": 1376,
    "x": 20384,
    "y": 6620
@@ -763,7 +763,7 @@
    "y": 6620,
    "w": 1376,
    "h": 1032,
-   "title": "Media · đang kéo — header Library · Select · 🔍 · Hide Media; tab đệm 8; ô vuông, “×2” — theo plan 3/10",
+   "title": "iPad ngang · Video: kéo media vào timeline",
    "radius": 36
   },
   "MP_IL_InVideo.dc.html": {
@@ -771,7 +771,7 @@
    "y": 6620,
    "w": 1376,
    "h": 1032,
-   "title": "Media · In Video — header Library · Select · 🔍 · Hide Media; chạm Coast: nhảy 0:03, chọn clip 2 — theo plan 3/10",
+   "title": "iPad ngang · Video: In Video",
    "radius": 36
   },
   "MP_IP_Media.dc.html": {
@@ -779,7 +779,7 @@
    "y": 8072,
    "w": 1032,
    "h": 1376,
-   "title": "Media — dock là thư viện 8 cột ô vuông, ✓ / “×2” cho mục đang dùng; chân ✕ · Media · ✓ — theo plan 3/10",
+   "title": "iPad dọc · Video: media trong dock",
    "radius": 36
   },
   "F5_IP_Looks.dc.html": {
@@ -787,7 +787,7 @@
    "y": 8072,
    "w": 1032,
    "h": 1376,
-   "title": "Look riêng cho clip (iPad dọc) — dock 3 cột: lưới look · Amount + This Clip · Import; Use Video Look — theo plan 3/10",
+   "title": "iPad dọc · Video: Look riêng clip",
    "radius": 36
   },
   "IP_Export.dc.html": {
@@ -795,7 +795,7 @@
    "y": 8072,
    "w": 1032,
    "h": 1376,
-   "title": "iPad dọc · Đang xuất — sheet 660, preset mờ, “Exporting… 62%” + Cancel Export ở chỗ nút xuất — theo plan 3/10",
+   "title": "iPad dọc · Video: đang xuất",
    "radius": 36
   },
   "F4_IP_Captions.dc.html": {
@@ -803,7 +803,7 @@
    "y": 8072,
    "w": 1032,
    "h": 1376,
-   "title": "Phụ đề (iPad dọc) — lane C1; dock: lệnh phụ đề, 3 cột tiến độ + Caption 2 │ STYLE │ POSITION — theo plan 3/10",
+   "title": "iPad dọc · Video: phụ đề",
    "radius": 36
   },
   "F8_IP_ExportPresets.dc.html": {
@@ -811,21 +811,37 @@
    "y": 8072,
    "w": 1032,
    "h": 1376,
-   "title": "Preset xuất (iPad dọc, Sẵn sàng) — sheet 660; dòng LUT trên nút; nút cài đặt ghi 9:16 · 1080p — theo plan 3/10",
+   "title": "iPad dọc · Video: preset xuất",
    "radius": 36
   },
   "Main.dc.html": {
    "h": 1032,
-   "title": "iPad ngang · Library: lưới 15 cột (density 3), tab bar ở trên, ô không có dòng EXIF",
+   "title": "iPad · Library: sidebar kính 320, toolbar kính 44, lưới 7 cột có dòng EXIF, Select là nút chữ",
    "w": 1376,
    "x": 1456,
    "y": 560
+  },
+  "IP_LibraryList.dc.html": {
+   "x": 4368,
+   "y": 560,
+   "w": 1376,
+   "h": 1032,
+   "title": "iPad · Danh sách: bảng hàng 44, sắp theo Date, cột tick khi chọn"
+  },
+  "IP_MenuBar.dc.html": {
+   "x": 5824,
+   "y": 560,
+   "w": 1376,
+   "h": 1032,
+   "title": "iPad · Thanh menu iPadOS 26 (có bàn phím): menu ShotDex kèm phím tắt"
   }
  },
  "order": [
   "IP_Onboarding.dc.html",
   "Main.dc.html",
   "IP_LibrarySelect.dc.html",
+  "IP_LibraryList.dc.html",
+  "IP_MenuBar.dc.html",
   "IP_Search.dc.html",
   "IP_AdvancedSearch.dc.html",
   "IP_Viewer.dc.html",

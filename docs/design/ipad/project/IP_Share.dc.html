@@ -10,37 +10,223 @@
 <helmet>
 <style>
 body{margin:0}
-button{font-family:inherit;border:0;padding:0;margin:0;background:none;color:inherit;cursor:pointer}
-.a{position:absolute}
-.r{display:flex;align-items:center}
-.c{display:flex;align-items:center;justify-content:center}
-.n{font-variant-numeric:tabular-nums}
-.e{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+button{font-family:inherit;padding:0;margin:0;cursor:default}
+input{font-family:inherit}
 </style>
 </helmet>
-<div style="width: 1376px; height: 1032px; position: relative; overflow: hidden; background: {{t.bg}}; color: {{t.label}}; font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', system-ui, sans-serif">
-<div class="a" style="left:0px;top:0;width:1376px;display:grid;grid-template-columns:repeat(13,minmax(0,1fr));gap:2px"><sc-for list="{{tiles}}" as="p" hint-placeholder-count="12"><div style="aspect-ratio:1/1;background:{{p.bg}}"></div></sc-for></div><div class="a r" style="left:478px;top:30px;width:420px;height:44px;border-radius:22px;padding:0 4px;box-sizing:border-box;justify-content:space-between;background:{{t.glass}};border:1px solid {{t.glassStroke}};box-shadow:{{t.glassShadow}}"><span style="padding:0 16px;height:36px;line-height:36px;border-radius:18px;font-size:15px;font-weight:600;background:{{t.fill}};color:{{t.tint}};">Library</span><span style="padding:0 16px;height:36px;line-height:36px;border-radius:18px;font-size:15px;font-weight:600;color:{{t.label}};">Collections</span><span style="padding:0 16px;height:36px;line-height:36px;border-radius:18px;font-size:15px;font-weight:600;color:{{t.label}};">Statistics</span><span style="padding:0 12px;color:{{t.label}}"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="display:block" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.3"/><path d="M15.3 15.3l5 5"/></svg></span></div><button class="a c" aria-label="Settings" style="left:20px;top:30px;width:44px;height:44px;border-radius:22px;background:{{t.glass}};border:1px solid {{t.glassStroke}};box-sizing:border-box;box-shadow:{{t.glassShadow}};color:{{t.label}};gap:14px;font-size:17px;font-weight:500"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="display:block" aria-hidden="true"><circle cx="12" cy="12" r="3.2"/><path d="M12 2.8v3M12 18.2v3M2.8 12h3M18.2 12h3M5.5 5.5l2.1 2.1M16.4 16.4l2.1 2.1M5.5 18.5l2.1-2.1M16.4 7.6l2.1-2.1"/></svg></button><button class="a c" style="left:1232px;top:30px;width:124px;height:44px;border-radius:22px;background:{{t.glass}};border:1px solid {{t.glassStroke}};box-sizing:border-box;box-shadow:{{t.glassShadow}};color:{{t.label}};gap:14px;font-size:17px;font-weight:500"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="display:block" aria-hidden="true"><path d="M4 7h16M7 12h10M10 17h4"/></svg><span>Select</span></button><div class="a" style="left:488px;top:216px;width:400px;height:600px;border-radius:28px;overflow:hidden;background:{{s.sheetBg}};color:{{t.label}};box-shadow:0 20px 60px rgba(0,0,0,0.35)"><div class="r" style="gap:12px;padding:20px 16px 0"><div style="width:56px;height:56px;border-radius:10px;overflow:hidden;position:relative;flex:none;background:linear-gradient(180deg,#2E4A6B 0%,#9FB8C9 56%,#34433A 56%,#1A231C 100%)"><svg viewBox="0 0 300 100" preserveAspectRatio="none" aria-hidden="true" style="position:absolute;left:0;bottom:44%;width:100%;height:30%;display:block"><path d="M0 100 L0 70 L38 42 L62 58 L104 18 L128 36 L150 28 L196 66 L232 44 L268 60 L300 46 L300 100 Z" fill="#24332A" opacity="0.9"/><path d="M96 26 L104 18 L113 27 L108 25 L103 29 Z" fill="#E9EEF2" opacity="0.85"/></svg><div style="position:absolute;left:0;right:0;top:56%;height:6%;background:linear-gradient(180deg,rgba(255,220,170,0.28),rgba(255,220,170,0))"></div></div><div style="flex:1;min-width:0"><div class="e" style="font-size:15px;font-weight:600">DSC04218 · Metadata removed</div><div class="e" style="font-size:13px;color:{{t.label2}};margin-top:2px">HEIC sent as JPEG</div></div><button class="c" aria-label="Close" style="width:30px;height:30px;border-radius:15px;flex:none;background:{{t.fill}};color:{{t.label2}}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" style="display:block" aria-hidden="true"><path d="M6.5 6.5l11 11M17.5 6.5l-11 11"/></svg></button></div><div style="height:0.5px;background:{{t.sep}};margin:16px 16px 0"></div><div class="r" style="justify-content:space-between;padding:16px 12px 0"><button style="width:68px;flex:none;color:{{t.label}}"><div class="c" style="width:60px;height:60px;margin:0 auto;border-radius:14px;background:linear-gradient(180deg,#4FC3F7,#1E88E5);color:#FFFFFF;box-shadow:0 0 0 0.5px rgba(0,0,0,0.12) inset"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:block" aria-hidden="true"><circle cx="12" cy="13" r="1.6" fill="currentColor" stroke="none"/><path d="M8.6 16.4a4.8 4.8 0 1 1 6.8 0M6 19a8.5 8.5 0 1 1 12 0"/></svg></div><div style="font-size:11px;margin-top:6px;text-align:center">AirDrop</div></button><button style="width:68px;flex:none;color:{{t.label}}"><div class="c" style="width:60px;height:60px;margin:0 auto;border-radius:14px;background:linear-gradient(180deg,#5BF675,#16C13A);color:#FFFFFF;box-shadow:0 0 0 0.5px rgba(0,0,0,0.12) inset"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:block" aria-hidden="true"><path d="M12 4.5c4.7 0 8.5 3 8.5 6.8s-3.8 6.8-8.5 6.8c-1 0-2-.1-2.9-.4L5 19.5l1.2-3.4C4.7 14.9 3.5 13.2 3.5 11.3 3.5 7.5 7.3 4.5 12 4.5z" fill="currentColor" stroke="none"/></svg></div><div style="font-size:11px;margin-top:6px;text-align:center">Messages</div></button><button style="width:68px;flex:none;color:{{t.label}}"><div class="c" style="width:60px;height:60px;margin:0 auto;border-radius:14px;background:linear-gradient(180deg,#5AB8FF,#1572F0);color:#FFFFFF;box-shadow:0 0 0 0.5px rgba(0,0,0,0.12) inset"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:block" aria-hidden="true"><rect x="3.5" y="6" width="17" height="12.5" rx="2"/><path d="M4 7l8 6.2L20 7"/></svg></div><div style="font-size:11px;margin-top:6px;text-align:center">Mail</div></button><button style="width:68px;flex:none;color:{{t.label}}"><div class="c" style="width:60px;height:60px;margin:0 auto;border-radius:14px;background:linear-gradient(180deg,#FFE066 0%,#FFE066 28%,#FFFFFF 28%);color:#B08A2E;box-shadow:0 0 0 0.5px rgba(0,0,0,0.12) inset"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:block" aria-hidden="true"><path d="M6 8h12M6 12h12M6 16h8"/></svg></div><div style="font-size:11px;margin-top:6px;text-align:center">Notes</div></button><button aria-label="More" style="width:68px;flex:none;color:{{t.label}}"><div class="c" style="width:60px;height:60px;margin:0 auto;border-radius:30px;background:{{t.fill}};color:{{t.label2}}"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="display:block" aria-hidden="true"><circle cx="5.5" cy="12" r="1.7" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.7" fill="currentColor" stroke="none"/><circle cx="18.5" cy="12" r="1.7" fill="currentColor" stroke="none"/></svg></div><div style="font-size:11px;margin-top:6px;text-align:center">More</div></button></div><div style="padding:20px 16px 0"><div style="background:{{s.cell}};border-radius:22px;overflow:hidden"><button class="r" style="width:100%;height:52px;padding:0 16px;box-sizing:border-box;font-size:17px;color:{{t.label}}"><span style="flex:1;text-align:left">Copy</span><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="display:block" aria-hidden="true"><rect x="8.5" y="8" width="11" height="13" rx="2"/><path d="M15.5 8V5a2 2 0 0 0-2-2h-7a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h2"/></svg></button><div style="height:0.5px;background:{{t.sep}};margin-left:16px"></div><button class="r" style="width:100%;height:52px;padding:0 16px;box-sizing:border-box;font-size:17px;color:{{t.label}}"><span style="flex:1;text-align:left">Share With Location</span><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="display:block" aria-hidden="true"><path d="M19.5 4.5L4.5 11l6.6 1.9 1.9 6.6z"/></svg></button><div style="height:0.5px;background:{{t.sep}};margin-left:16px"></div><button class="r" style="width:100%;height:52px;padding:0 16px;box-sizing:border-box;font-size:17px;color:{{t.label}}"><span style="flex:1;text-align:left">Share Without Location</span><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="display:block" aria-hidden="true"><path d="M19.5 4.5L4.5 11l6.6 1.9 1.9 6.6z"/><path d="M3.5 3.5l17 17"/></svg></button><div style="height:0.5px;background:{{t.sep}};margin-left:16px"></div><button class="r" style="width:100%;height:52px;padding:0 16px;box-sizing:border-box;font-size:17px;color:{{t.label}}"><span style="flex:1;text-align:left">Save to Files</span><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="display:block" aria-hidden="true"><path d="M3.5 7.5A2 2 0 0 1 5.5 5.5h3.8l2 2h7.2a2 2 0 0 1 2 2v7.5a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2z"/></svg></button></div><button style="display:block;margin:14px auto 0;font-size:17px;color:{{t.tint}}">Edit Actions…</button></div></div>
+<div style="width: 1376px; height: 1032px; position: relative; overflow: hidden; border-radius: 18px; background: {{t.content}}; color: {{t.label}}; font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', system-ui, sans-serif; font-size: 17px">
+<!-- CONTENT: photo grid, scrolls under the toolbar (7 columns) -->
+<div style="position:absolute;left:328px;right:0px;top:0;bottom:0;overflow:hidden">
+<div style="position:absolute;left:16px;right:16px;top:76px;display:flex;flex-direction:column;gap:12px">
+<sc-for list="{{sections}}" as="s" hint-placeholder-count="2">
+<div style="display:flex;flex-direction:column;gap:8px">
+<div style="height:36px;display:flex;align-items:flex-end;justify-content:space-between;padding:0 4px">
+<div style="display:flex;align-items:baseline;gap:10px"><span style="font-size:20px;font-weight:600">{{s.title}}</span><span style="font-size:15px;color:{{t.label2}}">{{s.place}}</span></div>
+<span style="font-size:15px;color:{{t.label2}};font-variant-numeric:tabular-nums">{{s.count}}</span>
+</div>
+<div style="display:grid;grid-template-columns:repeat(7, minmax(0, 1fr));gap:2px">
+<sc-for list="{{s.tiles}}" as="p" hint-placeholder-count="14"><div aria-label="{{p.label}}" style="position:relative;aspect-ratio:1/1;overflow:hidden;background:{{t.fill2}}">
+<sc-if value="{{p.loaded}}" hint-placeholder-val="{{true}}">
+<div style="position:absolute;inset:0;background:{{p.bg}};opacity:{{p.op}}"></div>
+<div style="position:absolute;left:6px;top:6px;height:18px;padding:0 6px;border-radius:5px;background:rgba(0,0,0,0.58);color:#FFFFFF;font-size:11px;font-weight:700;line-height:18px">{{p.ft}}</div>
+<sc-if value="{{p.isVideo}}" hint-placeholder-val="{{false}}"><div style="position:absolute;right:6px;top:6px;height:18px;padding:0 7px;border-radius:9px;background:rgba(0,0,0,0.45);color:#FFFFFF;font-size:11px;font-weight:600;line-height:18px;font-variant-numeric:tabular-nums">{{p.dur}}</div></sc-if>
+<sc-if value="{{p.offline}}" hint-placeholder-val="{{false}}"><div role="img" aria-label="Offline" style="position:absolute;right:6px;top:6px;width:22px;height:22px;border-radius:11px;background:rgba(0,0,0,0.55);display:flex;align-items:center;justify-content:center"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16v6H4z M4 14h16v6H4z M3 3l18 18"></path></svg></div></sc-if>
+<div style="position:absolute;left:0;right:0;bottom:0;height:36px;background:linear-gradient(180deg,rgba(0,0,0,0) 0%,rgba(0,0,0,0.55) 100%)"></div>
+<div style="position:absolute;left:6px;right:{{p.metaRight}};bottom:6px;height:16px;display:flex;align-items:center;gap:4px;color:#FFFFFF;font-size:12px;font-weight:600;line-height:16px;font-variant-numeric:tabular-nums;filter:drop-shadow(0 1px 1px rgba(0,0,0,0.45))">
+<sc-if value="{{p.pick}}" hint-placeholder-val="{{false}}"><svg role="img" aria-label="Picked" width="12" height="12" viewBox="0 0 24 24" fill="#FFFFFF" stroke="#FFFFFF" stroke-width="2" stroke-linejoin="round" style="flex:none"><path d="M6 3v18 M6 4h12l-3 4.5 3 4.5H6z"></path></svg></sc-if>
+<sc-if value="{{p.rej}}" hint-placeholder-val="{{false}}"><svg role="img" aria-label="Rejected" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="3.4" stroke-linecap="round" style="flex:none"><path d="M6 6l12 12 M18 6L6 18"></path></svg></sc-if>
+<sc-if value="{{p.fav}}" hint-placeholder-val="{{false}}"><svg role="img" aria-label="Favorite" width="12" height="12" viewBox="0 0 24 24" fill="#FFFFFF" stroke="#FFFFFF" stroke-width="1.5" style="flex:none"><path d="M12 20s-7.5-4.6-7.5-10A4.3 4.3 0 0 1 12 7.2 4.3 4.3 0 0 1 19.5 10C19.5 15.4 12 20 12 20z"></path></svg></sc-if>
+<sc-if value="{{p.rated}}" hint-placeholder-val="{{false}}"><span style="display:flex;align-items:center;gap:1px;flex:none"><svg width="12" height="12" viewBox="0 0 24 24" fill="#FFFFFF" style="flex:none"><path d="M12 3.5l2.6 5.3 5.9.9-4.25 4.1 1 5.8L12 16.9l-5.25 2.7 1-5.8L3.5 9.7l5.9-.9z"></path></svg>{{p.stars}}</span></sc-if>
+<sc-if value="{{p.live}}" hint-placeholder-val="{{false}}"><svg role="img" aria-label="Live Photo" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2" style="flex:none"><circle cx="12" cy="12" r="3"></circle><circle cx="12" cy="12" r="6.5" stroke-dasharray="2 2"></circle><circle cx="12" cy="12" r="10"></circle></svg></sc-if>
+<span style="flex:1;min-width:0;text-align:right;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{p.meta}}</span>
+</div>
+</sc-if>
+<sc-if value="{{p.pending}}" hint-placeholder-val="{{false}}"><div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:{{t.label3}}"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16v14H4z M4 15l4.5-4 3.5 3 2.5-2 5.5 4.5 M15.5 8.5h.01"></path></svg></div></sc-if>
+<sc-if value="{{p.sel}}" hint-placeholder-val="{{false}}"><div style="position:absolute;inset:0;border:3px solid {{t.accent}}"></div></sc-if>
+<sc-if value="{{p.checked}}" hint-placeholder-val="{{false}}"><svg role="img" aria-label="Selected" width="24" height="24" viewBox="0 0 24 24" style="position:absolute;right:6px;bottom:5px;display:block"><circle cx="12" cy="12" r="11" fill="{{t.accentFill}}" stroke="#FFFFFF" stroke-width="1.5"></circle><path d="M7 12.4l3.3 3.3L17 9" fill="none" stroke="{{t.onAccentFill}}" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"></path></svg></sc-if>
+<sc-if value="{{p.unchecked}}" hint-placeholder-val="{{false}}"><svg role="img" aria-label="Not selected" width="24" height="24" viewBox="0 0 24 24" style="position:absolute;right:6px;bottom:5px;display:block"><circle cx="12" cy="12" r="10" fill="rgba(0,0,0,0.15)" stroke="#FFFFFF" stroke-width="1.8"></circle></svg></sc-if>
+</div></sc-for>
+</div>
+</div>
+</sc-for>
+</div>
+</div>
+<!-- Scroll-edge fade under the toolbar -->
+<div style="position:absolute;left:328px;right:0px;top:0;height:84px;background:linear-gradient(180deg,{{edge}} 0%,{{edgeClear}} 100%);pointer-events:none"></div>
+<!-- TOOLBAR (Select mode): title · [Grid|List | Filter] · Compare · Edit · [Share|More|Delete] · [Inspector] · Done in the place of Select -->
+<div style="position:absolute;left:344px;right:16px;top:24px;height:44px;display:flex;align-items:center;gap:12px">
+<div style="display:flex;flex-direction:column;gap:1px;min-width:0;flex:none"><div style="display:flex;align-items:center;gap:8px"><span style="font-size:20px;font-weight:600;line-height:24px;white-space:nowrap">All Photos</span></div><div style="font-size:13px;color:{{t.label2}};line-height:16px;white-space:nowrap;font-variant-numeric:tabular-nums">1 selected · 2.9 MB</div></div>
+<div style="flex:1"></div>
+<div style="height:44px;border-radius:22px;background:{{t.glass}};border:1px solid {{t.glassStroke}};box-shadow:{{t.glassShadow}};backdrop-filter:blur(24px) saturate(1.6);-webkit-backdrop-filter:blur(24px) saturate(1.6);display:flex;align-items:center;padding:0 2px;box-sizing:border-box;flex:none;color:{{t.label}}"><button aria-label="Grid" aria-pressed="true" style="width:44px;height:40px;border-radius:20px;border:none;background:{{t.pressed}};display:flex;align-items:center;justify-content:center;color:{{t.label}}"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h7v7H4z M13 4h7v7h-7z M4 13h7v7H4z M13 13h7v7h-7z"></path></svg></button><button aria-label="List" aria-pressed="false" style="width:44px;height:40px;border-radius:20px;border:none;background:none;display:flex;align-items:center;justify-content:center;color:{{t.label}}"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6h11 M9 12h11 M9 18h11 M4.5 6h.01 M4.5 12h.01 M4.5 18h.01"></path></svg></button><span aria-hidden="true" style="width:1px;height:22px;background:{{t.sep}};margin:0 4px;flex:none"></span><button aria-label="Filter and Sort" style="width:44px;height:40px;border-radius:20px;border:none;background:none;display:flex;align-items:center;justify-content:center;color:{{t.label}}"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16 M7 12h10 M10 17h4"></path></svg></button></div>
+<button style="height:44px;border-radius:22px;background:{{t.glass}};border:1px solid {{t.glassStroke}};box-shadow:{{t.glassShadow}};backdrop-filter:blur(24px) saturate(1.6);-webkit-backdrop-filter:blur(24px) saturate(1.6);color:{{t.label}};display:flex;align-items:center;gap:8px;padding:0 18px;font-size:17px;font-weight:600;flex:none;white-space:nowrap">Compare</button>
+<button style="height:44px;border-radius:22px;background:{{t.glass}};border:1px solid {{t.glassStroke}};box-shadow:{{t.glassShadow}};backdrop-filter:blur(24px) saturate(1.6);-webkit-backdrop-filter:blur(24px) saturate(1.6);color:{{t.label}};display:flex;align-items:center;gap:8px;padding:0 18px;font-size:17px;font-weight:600;flex:none;white-space:nowrap"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h10 M18 7h2 M4 17h4 M12 17h8 M16 4v6 M10 14v6"></path></svg>Edit</button>
+<div style="height:44px;border-radius:22px;background:{{t.glass}};border:1px solid {{t.glassStroke}};box-shadow:{{t.glassShadow}};backdrop-filter:blur(24px) saturate(1.6);-webkit-backdrop-filter:blur(24px) saturate(1.6);display:flex;align-items:center;padding:0 2px;box-sizing:border-box;flex:none;color:{{t.label}}"><button aria-label="Share" style="width:44px;height:40px;border-radius:20px;border:none;background:none;display:flex;align-items:center;justify-content:center;color:{{t.label}}"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12 M8 7l4-4 4 4 M5 12v8h14v-8"></path></svg></button><button aria-label="More Selection Actions" style="width:44px;height:40px;border-radius:20px;border:none;background:none;display:flex;align-items:center;justify-content:center;color:{{t.label}}"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M5.5 12h.01 M12 12h.01 M18.5 12h.01"></path></svg></button><button aria-label="Delete" style="width:44px;height:40px;border-radius:20px;border:none;background:none;display:flex;align-items:center;justify-content:center;color:{{t.redText}}"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16 M9 7V4h6v3 M6 7l1 13h10l1-13 M10 11v6 M14 11v6"></path></svg></button></div>
+<div style="height:44px;border-radius:22px;background:{{t.glass}};border:1px solid {{t.glassStroke}};box-shadow:{{t.glassShadow}};backdrop-filter:blur(24px) saturate(1.6);-webkit-backdrop-filter:blur(24px) saturate(1.6);display:flex;align-items:center;padding:0 2px;box-sizing:border-box;flex:none;color:{{t.label}}"><button aria-label="Show Inspector" aria-pressed="false" style="width:44px;height:40px;border-radius:20px;border:none;background:none;display:flex;align-items:center;justify-content:center;color:{{t.label}}"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16v14H4z M15 5v14"></path></svg></button></div>
+<button aria-label="Done Selecting" style="height:44px;border-radius:22px;background:{{t.glass}};border:1px solid {{t.glassStroke}};box-shadow:{{t.glassShadow}};backdrop-filter:blur(24px) saturate(1.6);-webkit-backdrop-filter:blur(24px) saturate(1.6);color:{{t.label}};display:flex;align-items:center;gap:8px;padding:0 18px;font-size:17px;font-weight:600;flex:none;white-space:nowrap">Done</button>
+</div>
+<!-- SIDEBAR: canonical groups (Library · Sources · Collections · Utilities), floating glass, inset 8, 320 wide.
+     Rows 44 / 17px label / 22px icon / 15px count. Header row sits beside the toolbar row (y 24). -->
+<nav aria-label="Sidebar" style="position:absolute;left:8px;top:8px;bottom:8px;width:320px;border-radius:22px;background:{{t.sidebar}};border:1px solid {{t.glassStroke}};box-shadow:{{t.sidebarShadow}};backdrop-filter:blur(30px) saturate(1.8);-webkit-backdrop-filter:blur(30px) saturate(1.8);box-sizing:border-box;overflow:hidden">
+<button aria-label="Hide Sidebar" style="position:absolute;left:8px;top:16px;width:44px;height:44px;border-radius:22px;border:none;background:none;display:flex;align-items:center;justify-content:center;color:{{t.label}}"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16v14H4z M9 5v14"></path></svg></button>
+<button aria-label="Settings" style="position:absolute;right:8px;top:16px;width:44px;height:44px;border-radius:22px;border:none;background:none;display:flex;align-items:center;justify-content:center;color:{{t.label}}"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9a3 3 0 1 0 0.01 0z M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg></button>
+<div style="position:absolute;left:8px;right:8px;top:64px;bottom:52px;display:flex;flex-direction:column;gap:4px;overflow:hidden">
+<sc-for list="{{groups}}" as="g" hint-placeholder-count="4">
+<div style="display:flex;flex-direction:column">
+<sc-if value="{{g.hasTitle}}" hint-placeholder-val="{{true}}"><div style="height:32px;display:flex;align-items:center;justify-content:space-between;padding:0 0 0 12px;font-size:15px;font-weight:600;color:{{t.label2}}"><span>{{g.title}}</span><sc-if value="{{g.addable}}" hint-placeholder-val="{{false}}"><button aria-label="{{g.addLabel}}" style="width:44px;height:32px;border:none;background:none;color:{{t.label2}};display:flex;align-items:center;justify-content:center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14 M5 12h14"></path></svg></button></sc-if></div></sc-if>
+<sc-if value="{{g.note}}" hint-placeholder-val="{{false}}"><div style="height:44px;display:flex;align-items:center;padding:0 12px;font-size:15px;color:{{t.label2}}">{{g.note}}</div></sc-if>
+<sc-for list="{{g.rows}}" as="r" hint-placeholder-count="4">
+<div role="treeitem" aria-selected="{{r.selA}}" style="height:44px;border-radius:12px;background:{{r.bg}};display:flex;align-items:center;gap:12px;padding:0 12px;box-sizing:border-box">
+<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="flex:none;color:{{r.iconColor}}"><path d="{{r.d}}"></path></svg>
+<span style="flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:17px;color:{{r.textColor}}">{{r.name}}</span>
+<sc-if value="{{r.chev}}" hint-placeholder-val="{{false}}"><button aria-label="Show Albums" aria-expanded="false" style="width:28px;height:28px;border:none;background:none;color:{{t.label2}};display:flex;align-items:center;justify-content:center"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"></path></svg></button></sc-if>
+<sc-if value="{{r.offline}}" hint-placeholder-val="{{false}}"><span style="height:22px;padding:0 8px;border-radius:11px;background:{{t.fill}};font-size:13px;font-weight:600;line-height:22px;color:{{t.label2}}">Offline</span></sc-if>
+<sc-if value="{{r.progress}}" hint-placeholder-val="{{false}}"><svg role="img" aria-label="{{r.progLabel}}" width="18" height="18" viewBox="0 0 24 24" style="flex:none"><circle cx="12" cy="12" r="9" fill="none" stroke="{{t.track}}" stroke-width="3"></circle><circle cx="12" cy="12" r="9" fill="none" stroke="{{t.accent}}" stroke-width="3" stroke-dasharray="{{r.dash}}" stroke-linecap="round" transform="rotate(-90 12 12)"></circle></svg></sc-if>
+<sc-if value="{{r.access}}" hint-placeholder-val="{{false}}"><svg role="img" aria-label="Needs access" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="{{t.orange}}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="M12 4l9 16H3z M12 10v4 M12 17h.01"></path></svg></sc-if>
+<span style="font-size:15px;color:{{t.label2}};font-variant-numeric:tabular-nums">{{r.count}}</span>
+</div>
+</sc-for>
+</div>
+</sc-for>
+</div>
+<!-- Sidebar foot: idle status; progress only on boards about a running task -->
+<sc-if value="{{foot.idle}}" hint-placeholder-val="{{true}}"><div role="status" style="position:absolute;left:20px;right:20px;bottom:12px;height:32px;display:flex;align-items:center;gap:8px;font-size:13px;color:{{t.label2}}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg><span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{foot.label}}</span></div></sc-if>
+<sc-if value="{{foot.busy}}" hint-placeholder-val="{{false}}"><div role="status" style="position:absolute;left:8px;right:8px;bottom:8px;height:44px;border-radius:12px;background:{{t.fill}};display:flex;flex-direction:column;justify-content:center;gap:6px;padding:0 12px;box-sizing:border-box">
+<div style="display:flex;justify-content:space-between;font-size:13px"><span style="color:{{t.label}};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{foot.label}}</span><span style="color:{{t.label2}};font-variant-numeric:tabular-nums">{{foot.pct}}</span></div>
+<div style="height:4px;border-radius:2px;background:{{t.track}}"><div style="width:{{foot.pct}};height:4px;border-radius:2px;background:{{t.accent}}"></div></div>
+</div></sc-if>
+</nav>
+<!-- POPOVER (400 wide, arrow to Share): the share sheet. Header names the file as it will be sent -->
+<div style="position:absolute;left:1089px;top:72px;width:20px;height:12px;overflow:hidden"><div style="width:16px;height:16px;margin:5px 0 0 2px;transform:rotate(45deg);background:{{t.sheet}};box-shadow:0 0 0 0.5px {{t.glassStroke}}"></div></div><div role="dialog" aria-label="Share" style="position:absolute;left:899px;top:84px;width:400px;padding:16px;border-radius:18px;background:{{t.sheet}};box-shadow:{{t.menuShadow}};border:0.5px solid {{t.glassStroke}};box-sizing:border-box;display:flex;flex-direction:column;gap:14px"><div style="height:56px;display:flex;align-items:center;gap:12px"><div aria-hidden="true" style="position:relative;width:56px;height:56px;border-radius:10px;overflow:hidden;flex:none"><div style="position:absolute;inset:0;background:linear-gradient(180deg,#2E4A6B 0%,#9FB8C9 60%)"></div><div style="position:absolute;inset:0;background:#4A4E5E;clip-path:polygon(0% 58%,14% 50%,26% 55%,47.5% 22.5%,62% 46%,76% 42%,90% 50%,100% 47%,100% 62%,0% 62%)"></div><div style="position:absolute;inset:0;background:#2E3A36;clip-path:polygon(0% 62%,18% 57%,34% 61%,52% 56%,70% 60%,86% 55%,100% 59%,100% 64%,0% 64%)"></div><div style="position:absolute;left:0;right:0;top:64%;bottom:0;background:linear-gradient(180deg,#2F3B2F 0%,#1E271E 100%)"></div><div style="position:absolute;left:0;right:0;top:64%;height:1px;background:rgba(255,220,170,0.55)"></div></div><div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px"><span style="font-size:17px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">DSC04218 · Metadata removed</span><span style="font-size:15px;color:{{t.label2}}">HEIC sent as JPEG</span></div><button aria-label="Close" style="width:44px;height:44px;border:none;background:none;display:flex;align-items:center;justify-content:center;flex:none"><span style="width:30px;height:30px;border-radius:15px;background:{{t.fill}};color:{{t.label2}};display:flex;align-items:center;justify-content:center"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12 M18 6L6 18"></path></svg></span></button></div><div style="height:1px;background:{{t.sep}}"></div><div style="display:flex;justify-content:space-between"><button aria-label="AirDrop" style="width:60px;border:none;background:none;display:flex;flex-direction:column;align-items:center;gap:6px;color:{{t.label}};font-size:12px"><span style="width:56px;height:56px;border-radius:14px;background:linear-gradient(180deg,#5AC8FA 0%,#007AFF 100%);display:flex;align-items:center;justify-content:center;box-shadow:inset 0 0 0 0.5px {{t.sep}}"><svg width="30" height="30" viewBox="0 0 24 24"><circle cx="12" cy="12" r="2" fill="#FFFFFF"></circle><path d="M7.8 16.2a6 6 0 1 1 8.4 0 M5 19a10 10 0 1 1 14 0" stroke="#FFFFFF" stroke-width="2" fill="none" stroke-linecap="round"></path></svg></span>AirDrop</button><button aria-label="Messages" style="width:60px;border:none;background:none;display:flex;flex-direction:column;align-items:center;gap:6px;color:{{t.label}};font-size:12px"><span style="width:56px;height:56px;border-radius:14px;background:linear-gradient(180deg,#65E072 0%,#28C840 100%);display:flex;align-items:center;justify-content:center;box-shadow:inset 0 0 0 0.5px {{t.sep}}"><svg width="30" height="30" viewBox="0 0 24 24"><path d="M12 5c-4.4 0-8 2.9-8 6.5 0 2 1.1 3.8 2.9 5L6 19.5l3.4-1.7c.8.2 1.7.3 2.6.3 4.4 0 8-2.9 8-6.5S16.4 5 12 5z" fill="#FFFFFF"></path></svg></span>Messages</button><button aria-label="Mail" style="width:60px;border:none;background:none;display:flex;flex-direction:column;align-items:center;gap:6px;color:{{t.label}};font-size:12px"><span style="width:56px;height:56px;border-radius:14px;background:linear-gradient(180deg,#4FA8FF 0%,#1A73E8 100%);display:flex;align-items:center;justify-content:center;box-shadow:inset 0 0 0 0.5px {{t.sep}}"><svg width="30" height="30" viewBox="0 0 24 24"><path d="M4 7h16v11H4z M4 7l8 6 8-6" stroke="#FFFFFF" stroke-width="1.8" fill="none" stroke-linejoin="round"></path></svg></span>Mail</button><button aria-label="Notes" style="width:60px;border:none;background:none;display:flex;flex-direction:column;align-items:center;gap:6px;color:{{t.label}};font-size:12px"><span style="width:56px;height:56px;border-radius:14px;background:linear-gradient(180deg,#FFD94A 0%,#FFD94A 26%,#FFFFFF 26%);display:flex;align-items:center;justify-content:center;box-shadow:inset 0 0 0 0.5px {{t.sep}}"><svg width="30" height="30" viewBox="0 0 24 24"><path d="M7 12h10 M7 15h10 M7 18h6" stroke="#C59A00" stroke-width="1.8" stroke-linecap="round"></path></svg></span>Notes</button><button aria-label="More" style="width:60px;border:none;background:none;display:flex;flex-direction:column;align-items:center;gap:6px;color:{{t.label}};font-size:12px"><span style="width:56px;height:56px;border-radius:14px;background:{{t.fill}};display:flex;align-items:center;justify-content:center;box-shadow:inset 0 0 0 0.5px {{t.sep}}"><svg width="30" height="30" viewBox="0 0 24 24"><path d="M6.5 12h.01 M12 12h.01 M17.5 12h.01" stroke="{{t.label2}}" stroke-width="3" stroke-linecap="round"></path></svg></span>More</button></div><div style="border-radius:12px;background:{{t.content}};overflow:hidden"><button style="width:100%;height:48px;border:none;background:none;display:flex;align-items:center;justify-content:space-between;padding:0 14px;box-sizing:border-box;font-size:17px;color:{{t.label}}">Copy<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 8h12v12H8z M4 16V4h12"></path></svg></button><button style="width:100%;height:48px;border:none;background:none;border-top:1px solid {{t.sep}};display:flex;align-items:center;justify-content:space-between;padding:0 14px;box-sizing:border-box;font-size:17px;color:{{t.label}}">Save to Files<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path></svg></button></div><div style="border-radius:12px;background:{{t.content}};overflow:hidden"><button style="width:100%;height:48px;border:none;background:none;display:flex;align-items:center;justify-content:space-between;padding:0 14px;box-sizing:border-box;font-size:17px;color:{{t.label}}">Share With Location<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l18-8-8 18-2-8z"></path></svg></button><button style="width:100%;height:48px;border:none;background:none;border-top:1px solid {{t.sep}};display:flex;align-items:center;justify-content:space-between;padding:0 14px;box-sizing:border-box;font-size:17px;color:{{t.label}}">Share Without Location<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l18-8-8 18-2-8z M3 3l18 18"></path></svg></button></div><button style="height:44px;border:none;background:none;color:{{t.accentText}};font-size:17px">Edit Actions…</button></div>
 </div>
 </x-dc>
 <script type="text/x-dc" data-dc-script data-props='{"dark":{"editor":"boolean","default":false},"$preview":{"width":1376,"height":1032}}'>
+// iPad · Mac style (docs/design/ipad/IPAD_STYLE.md). Tokens are the Mac v2 tokens verbatim (MAC_STYLE.md):
+// accentFill/onAccentFill for filled controls with text, opaque menu, one sheet grey, scrim above sidebar and
+// toolbar, rowAlt zebra, field = content + 1px sep.
+const LIGHT = { content:'#FFFFFF', label:'rgba(0,0,0,0.88)', label2:'rgba(0,0,0,0.56)', label3:'rgba(0,0,0,0.28)',
+  sep:'rgba(0,0,0,0.10)', fill:'rgba(0,0,0,0.05)', fill2:'#F2F2F4', pressed:'rgba(0,0,0,0.09)', track:'rgba(0,0,0,0.10)',
+  glass:'rgba(255,255,255,0.72)', glassStroke:'rgba(0,0,0,0.08)', glassShadow:'0 2px 10px rgba(0,0,0,0.10)',
+  sidebar:'rgba(244,244,247,0.86)', sidebarShadow:'0 8px 28px rgba(0,0,0,0.12)', rowSel:'rgba(0,0,0,0.08)',
+  accent:'#C6730E', onAccent:'#FFFFFF', red:'#FF3B30', green:'#34C759', orange:'#FF9500',
+  accentFill:'#A35E0A', onAccentFill:'#FFFFFF', accentText:'#A35E0A', accentSoft:'rgba(198,115,14,0.14)', focusRing:'rgba(198,115,14,0.45)',
+  menu:'rgba(246,246,248,0.97)', menuShadow:'0 10px 30px rgba(0,0,0,0.22)',
+  sheet:'#F6F6F8', sheetShadow:'0 24px 60px rgba(0,0,0,0.28)', scrim:'rgba(0,0,0,0.18)', rowAlt:'rgba(0,0,0,0.03)',
+  field:'#FFFFFF', redText:'#C4001A', greenText:'#1F7A35', orangeText:'#9A5200',
+  segOn:'#FFFFFF', segShadow:'0 1px 2px rgba(0,0,0,0.18)', checkboxStroke:'rgba(0,0,0,0.25)' };
+const DARK = { content:'#1C1C1E', label:'rgba(255,255,255,0.90)', label2:'rgba(255,255,255,0.58)', label3:'rgba(255,255,255,0.28)',
+  sep:'rgba(255,255,255,0.10)', fill:'rgba(255,255,255,0.07)', fill2:'#2C2C2E', pressed:'rgba(255,255,255,0.12)', track:'rgba(255,255,255,0.14)',
+  glass:'rgba(50,50,54,0.72)', glassStroke:'rgba(255,255,255,0.10)', glassShadow:'0 2px 12px rgba(0,0,0,0.45)',
+  sidebar:'rgba(38,38,42,0.86)', sidebarShadow:'0 8px 28px rgba(0,0,0,0.5)', rowSel:'rgba(255,255,255,0.10)',
+  accent:'#EB9526', onAccent:'#000000', red:'#FF453A', green:'#30D158', orange:'#FF9F0A',
+  accentFill:'#EB9526', onAccentFill:'#000000', accentText:'#EB9526', accentSoft:'rgba(235,149,38,0.18)', focusRing:'rgba(235,149,38,0.50)',
+  menu:'rgba(40,40,44,0.97)', menuShadow:'0 10px 30px rgba(0,0,0,0.22)',
+  sheet:'#2A2A2D', sheetShadow:'0 24px 60px rgba(0,0,0,0.60)', scrim:'rgba(0,0,0,0.35)', rowAlt:'rgba(255,255,255,0.04)',
+  field:'#1C1C1E', redText:'#FF6961', greenText:'#30D158', orangeText:'#FFB340',
+  segOn:'rgba(255,255,255,0.20)', segShadow:'0 1px 2px rgba(0,0,0,0.30)', checkboxStroke:'rgba(255,255,255,0.30)' };
+const SKIES=[['#5B7FA6','#E8C39E'],['#2E4A6B','#9FB8C9'],['#7A5C8E','#F2A774'],['#3D6B5A','#C9D6A3'],['#8AA9C1','#F4E1C1'],
+ ['#1F3A4D','#D98C5F'],['#4F6D7A','#DDE2C6'],['#6B4E3D','#E2B07A'],['#355C7D','#C06C84'],['#2B5876','#4E4376'],['#A3B18A','#344E41'],['#D4A373','#606C38']];
+const tile=(i)=>{const s=SKIES[i%SKIES.length];return 'linear-gradient(180deg,'+s[0]+' 0%,'+s[1]+' 58%,#2F3B2F 58%,#1E271E 100%)';};
+const META=['ISO 400 · 85mm · f/1.8','ISO 100 · 24mm · f/8','ISO 3200 · 35mm · f/1.4','ISO 200 · 70mm · f/2.8',
+ 'ISO 800 · 50mm · f/2','ISO 125 · 16mm · f/11','ISO 640 · 135mm · f/1.8','ISO 1600 · 23mm · f/2','ISO 250 · 56mm · f/1.2'];
+const FT=['HEIC','RAW','JPG','RAW','HEIC','RAW','JPG','HEIC','RAW'];
+const DUR=['0:42','1:08','0:17','2:31'];
+const I = {
+  all:'M4 5h16v14H4z M4 15l4.5-4 3.5 3 2.5-2 5.5 4.5',
+  fav:'M12 20s-7.5-4.6-7.5-10A4.3 4.3 0 0 1 12 7.2 4.3 4.3 0 0 1 19.5 10C19.5 15.4 12 20 12 20z',
+  video:'M3 7h12v10H3z M15 10.5l6-3v9l-6-3',
+  raw:'M12 3a9 9 0 1 0 0.01 0z M9.5 3.4l2.5 8.6 M20.6 9.6L12 12 M14.5 20.6L12 12 M3.4 14.4L12 12',
+  recent:'M12 3a9 9 0 1 0 0.01 0z M12 7v5l3.5 2',
+  library:'M7 7h13v12H7z M4 16V4h13',
+  server:'M4 4h16v6H4z M4 14h16v6H4z M8 7h.01 M8 17h.01',
+  onthisday:'M4 6h16v14H4z M4 10h16 M8 3v5 M16 3v5 M9 15l2 2 4-4',
+  album:'M4 9h16v11H4z M6.5 6h11 M9 3h6',
+  smart:'M4 9h16v11H4z M6.5 6h11 M9 3h6 M12 12v5 M9.5 14.5h5',
+  stats:'M3 20h18 M6.5 16.5v-5 M11.5 16.5V6 M16.5 16.5v-8',
+  places:'M9 4L3 6v14l6-2 6 2 6-2V4l-6 2z M9 4v14 M15 6v14',
+  trips:'M12 21s-6-5.5-6-11a6 6 0 0 1 12 0c0 5.5-6 11-6 11z M12 8.5v.01',
+  dup:'M8 8h12v12H8z M4 16V4h12',
+  collage:'M4 4h16v16H4z M12 4v16 M12 12h8',
+  film:'M4 4h16v16H4z M8 4v16 M16 4v16 M4 9h4 M4 15h4 M16 9h4 M16 15h4',
+  onserver:'M7 18h10a4 4 0 0 0 .6-7.95A6 6 0 0 0 6.2 9.2 4.5 4.5 0 0 0 7 18z M12 16v-5 M9.5 13.5L12 11l2.5 2.5',
+  camera:'M4 8h3l2-3h6l2 3h3v11H4z M12 10.5a3.5 3.5 0 1 0 0.01 0z',
+  lens:'M12 3a9 9 0 1 0 0.01 0z M12 7.5a4.5 4.5 0 1 0 0.01 0z',
+  search:'M10.5 4a6.5 6.5 0 1 0 0 13a6.5 6.5 0 1 0 0-13z M15.5 15.5L20.5 20.5',
+  clock:'M12 3a9 9 0 1 0 0.01 0z M12 7v5l3.5 2',
+  photo:'M4 5h16v14H4z M4 15l4.5-4 3.5 3 2.5-2 5.5 4.5 M15.5 8.5h.01'
+};
+// Rating / flag / favorite per photo (FS-01.12 §7). Deterministic from the tile seed; o.marks overrides by index.
+const RATES=[0,0,3,0,0,4,0,2,0,0,5,0,1,0,3,0,0];
+function markFor(k, isVideo){
+  return { r: RATES[k%RATES.length], f: isVideo?'':((k%7)===3?'p':((k%11)===8?'x':'')), fav: (k%9)===5 };
+}
+// o.sel = ring indices; o.selecting = Select mode (check circles); o.live marks Live Photos (iPad has them, the Mac grid does not draw them)
+function tiles(n, seed, o){
+  o=o||{}; const out=[];
+  for(let i=0;i<n;i++){
+    const k=i+seed; const isVideo=!o.noVideo && (k%11)===4;
+    const pending=(o.pendingFrom!=null && i>=o.pendingFrom); const off=!!o.offline;
+    const meta=o.meta?o.meta[k%o.meta.length]:META[k%META.length];
+    const mk=(o.marks && o.marks[i])?o.marks[i]:markFor(k,isVideo);
+    const ft=isVideo?'MOV':(o.ft?o.ft[k%o.ft.length]:FT[k%FT.length]);
+    const live=!isVideo && ft==='HEIC' && (k%3)===0;
+    const sel=(o.sel||[]).indexOf(i)>=0; const selecting=!!o.selecting;
+    const words=[]; if(mk.r) words.push(mk.r+(mk.r===1?' star':' stars')); if(mk.f==='p') words.push('Picked'); if(mk.f==='x') words.push('Rejected'); if(mk.fav) words.push('Favorite'); if(live) words.push('Live Photo');
+    out.push({ bg: tile(k*5+3), ft, isVideo, dur: DUR[k%DUR.length],
+      meta: isVideo?'4K · 24 fps':meta, sel, checked: selecting&&sel, unchecked: selecting&&!sel, metaRight: selecting?'36px':'6px', offline: off,
+      op: mk.f==='x'?'0.45':'1', pick: mk.f==='p', rej: mk.f==='x', fav: !!mk.fav, rated: mk.r>0, stars: String(mk.r), live,
+      loaded: !pending, pending,
+      label: pending?'Photo, loading':((isVideo?'Video':'Photo')+', '+(isVideo?'4K':meta)+(words.length?', '+words.join(', '):'')+(off?', offline':'')+(sel?', selected':'')) });
+  }
+  return out;
+}
+// Canonical sidebar, iPad source set (Photos Library + servers; intent 2026-10-04 default: no folders on iPad).
+// o.sel = selected row name; o.offline = NAS Home unreachable; o.adding adds a server that is still indexing; o.empty = first run.
+function sidebar(t, o){
+  o=o||{};
+  const row=(name,d,count,x)=>{x=x||{};const s=(o.sel===name);const dim=!!(x.off||x.access);
+    return {name,d,count:(x.off||x.prog||x.access||o.empty)?'':(count||''),chev:!!x.chev,selA:s?'true':'false',
+      bg:s?t.rowSel:'transparent', iconColor:dim?t.label2:t.accent, textColor:dim?t.label2:t.label,
+      offline:!!x.off, progress:!!x.prog, progLabel:x.progLabel||'', dash:x.dash||'0 100', access:!!x.access};};
+  if(o.empty) return [
+    {hasTitle:false, note:'', rows:[row('All Photos',I.all),row('Favorites',I.fav),row('Videos',I.video),row('RAW',I.raw),row('Recently Added',I.recent)]},
+    {hasTitle:true, title:'Sources', addable:true, addLabel:'Add Source', note:'No sources yet', rows:[]},
+    {hasTitle:true, title:'Collections', addable:true, addLabel:'New Album', note:'', rows:[row('On This Day',I.onthisday),row('Albums',I.album,'',{chev:true})]},
+    {hasTitle:true, title:'Utilities', addable:false, note:'', rows:[row('Statistics',I.stats),row('Places',I.places),row('Trips',I.trips),row('Duplicates',I.dup),row('Collages',I.collage),row('Video Projects',I.film),row('On Server',I.onserver)]}
+  ];
+  const nas = o.offline ? row('NAS Home',I.server,'',{off:true}) : row('NAS Home',I.server,'1,102');
+  const sources=[row('Photos Library',I.library,'54,129'), nas];
+  if(o.adding) sources.push(row('Client Shoots 2026',I.server,'',{prog:true,dash:'18.7 100',progLabel:'Adding, 33 percent'}));
+  return [
+    {hasTitle:false, note:'', rows:[row('All Photos',I.all,o.allCount||'55,231'),row('Favorites',I.fav,'1,862'),row('Videos',I.video,'1,204'),row('RAW',I.raw,'31,540'),row('Recently Added',I.recent)]},
+    {hasTitle:true, title:'Sources', addable:true, addLabel:'Add Source', note:'', rows:sources},
+    {hasTitle:true, title:'Collections', addable:true, addLabel:'New Album', note:'', rows:[row('On This Day',I.onthisday),row('Albums',I.album,'38',{chev:true}),row('Night ISO 3200+',I.smart,'2,411'),row('85mm Portraits',I.smart,'986')]},
+    {hasTitle:true, title:'Utilities', addable:false, note:'', rows:[row('Statistics',I.stats),row('Places',I.places),row('Trips',I.trips,'12'),row('Duplicates',I.dup,'53'),row('Collages',I.collage,'12'),row('Video Projects',I.film,'7'),row('On Server',I.onserver,'712')]}
+  ];
+}
+const IDLE_FOOT = {idle:true, busy:false, label:'Up to date · indexed 2 min ago', pct:'0%'};
+// Menu rows: '-' separator, {h:'Header'}, or [label, shortcut, flags]; flags: h highlighted, s submenu, c checked, d disabled, r destructive.
+// keys:false drops the shortcut column (long-press menus never show one). Highlight = accentFill + onAccentFill.
+function menu(t, arr, keys){
+  const showKeys = keys!==false;
+  return arr.map(x=>{
+    if(x==='-') return {sep:true};
+    if(x && x.h) return {head:true, l:x.h};
+    const f=x[2]||''; const hi=f.indexOf('h')>=0, dis=f.indexOf('d')>=0, red=f.indexOf('r')>=0; const k=showKeys?(x[1]||''):'';
+    return {item:true, l:x[0], k, kp:k?'10px':'0', sub:f.indexOf('s')>=0, check:f.indexOf('c')>=0?'✓':'', dis:dis?'true':'false',
+      bg:hi?t.accentFill:'transparent', fg:hi?t.onAccentFill:(dis?t.label3:(red?t.redText:t.label)), kc:hi?t.onAccentFill:(dis?t.label3:t.label2)};
+  });
+}
+function edges(dark){ return { edge: dark?'rgba(28,28,30,0.85)':'rgba(255,255,255,0.85)', edgeClear: dark?'rgba(28,28,30,0)':'rgba(255,255,255,0)' }; }
 class Component extends DCLogic {
   renderVals() {
-    const LIGHT = { bg:'#FFFFFF', grouped:'#F2F2F7', card:'#FFFFFF', label:'#000000', label2:'#6C6C70', label3:'#8E8E93',
-  sep:'#C6C6C8', fill:'#E9E9EB', fill2:'#F2F2F7', glass:'rgba(255,255,255,0.78)', glassStroke:'rgba(0,0,0,0.08)',
-  glassShadow:'0 4px 18px rgba(0,0,0,0.12)', tint:'#007AFF', red:'#FF3B30', green:'#34C759', orange:'#FF9500',
-  accent:'#C6730E', dim:'rgba(0,0,0,0.35)', sheet:'#FFFFFF', onAccent:'#FFFFFF' };
-    const DARK = { bg:'#000000', grouped:'#000000', card:'#1C1C1E', label:'#FFFFFF', label2:'#98989F', label3:'#6C6C70',
-  sep:'#38383A', fill:'#2C2C2E', fill2:'#1C1C1E', glass:'rgba(44,44,46,0.78)', glassStroke:'rgba(255,255,255,0.10)',
-  glassShadow:'0 4px 18px rgba(0,0,0,0.5)', tint:'#0A84FF', red:'#FF453A', green:'#30D158', orange:'#FF9F0A',
-  accent:'#EB9526', dim:'rgba(0,0,0,0.55)', sheet:'#1C1C1E', onAccent:'#000000' };
-    const SKIES=[['#5B7FA6','#E8C39E'],['#2E4A6B','#9FB8C9'],['#7A5C8E','#F2A774'],['#3D6B5A','#C9D6A3'],['#8AA9C1','#F4E1C1'],
- ['#1F3A4D','#D98C5F'],['#4F6D7A','#DDE2C6'],['#6B4E3D','#E2B07A'],['#355C7D','#C06C84'],['#2B5876','#4E4376'],['#A3B18A','#344E41'],['#D4A373','#606C38']];
-    const tile=(i)=>{const s=SKIES[(i*7+3)%SKIES.length];return 'linear-gradient(180deg,'+s[0]+' 0%,'+s[1]+' 58%,#2F3B2F 58%,#1E271E 100%)';};
-    const t = this.props.dark ? DARK : LIGHT;
-    const n = 156;
-    const tiles = Array.from({length:n}, (_, i) => ({ bg: tile(i) }));
-    const s = this.props.dark ? { sheetBg:'#1C1C1E', cell:'#2C2C2E', grabber:'#6C6C70' } : { sheetBg:'#F2F2F7', cell:'#FFFFFF', grabber:'#C6C6C8' };
-    return { t, tiles, s };
+    const dark=!!this.props.dark; const t = dark ? DARK : LIGHT;
+    const groups=sidebar(t,{sel:'All Photos'});
+    const e=edges(dark);
+    const sections=[
+      {title:'Monday, September 28', place:'Kyoto', count:'48 photos', tiles:tiles(14,0,{selecting:true,sel:[5]})},
+      {title:'Sunday, September 27', place:'Nara', count:'112 photos', tiles:tiles(28,14,{selecting:true})}
+    ];
+    return { t, groups, sections, edge:e.edge, edgeClear:e.edgeClear, foot:IDLE_FOOT };
   }
 }
 </script>
