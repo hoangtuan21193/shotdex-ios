@@ -22,6 +22,29 @@ struct VideoStudioWindowClassTests {
         #expect(VideoStudioWindowClass.resolve(window: window, trailingInset: trailingInset) == expected)
     }
 
+    /// The Duo's cover reports its 84pt rail a beat after the first layout.
+    /// Until it does, a compact window has no class — the screen draws
+    /// nothing rather than a phone frame that then jumps to the rail. A
+    /// wide window does not wait.
+    @Test func aCompactWindowWaitsForItsTrailingInset() {
+        let cover = CGSize(width: 466, height: 678)
+        #expect(VideoStudioWindowClass.resolve(window: cover, knownTrailingInset: nil) == nil)
+        #expect(VideoStudioWindowClass.resolve(window: cover, knownTrailingInset: 84) == .duoCover)
+        #expect(VideoStudioWindowClass.resolve(window: cover, knownTrailingInset: 0) == .phone)
+        let duoInner = CGSize(width: 951, height: 669)
+        #expect(VideoStudioWindowClass.resolve(window: duoInner, knownTrailingInset: nil) == .duoInner)
+    }
+
+    /// The reader sits inside the safe area; the window is that plus the
+    /// insets — the cover's 382pt of content is a 466pt window.
+    @Test func theWindowIsTheContentPlusItsInsets() {
+        let window = VideoStudioWindowClass.windowSize(
+            content: CGSize(width: 382, height: 644), top: 0, bottom: 34, leading: 0, trailing: 84
+        )
+        #expect(window == CGSize(width: 466, height: 678))
+        #expect(VideoStudioWindowClass.resolve(window: window, knownTrailingInset: 84) == .duoCover)
+    }
+
     @Test func shortWindowsAreUnder720() {
         for height in [CGFloat(669), 678, 719.5] {
             #expect(VideoStudioWindowClass.isShortWindow(height: height))

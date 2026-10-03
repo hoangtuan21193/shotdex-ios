@@ -97,7 +97,7 @@ theo chiều cao nên 264pt bên phải là miễn phí — inspector nằm ở 
 | AC-4 | như AC-3 | chọn clip 2 | hàng lệnh trong dock; chân ✕ · tên · ✓ ở y 1316; timeline 722–1052 không bị phủ | ⚠️ chưa có |
 | AC-5 | Duo mở 951×669, không chọn | dump | khung 684×385 ở y 0; cột 264 ở x 687; transport y 385; timeline 188; hàng đáy y 613 có 5 công cụ từ x 40 và Export | ⚠️ chưa có — `duo-video-studio-desk.json` cần viết lại |
 | AC-6 | như AC-5 | chọn clip 2 | ✕ · Clip 2 · ✓ ở x 620–907; Export ẩn; 5 công cụ trắng 30% | ⚠️ chưa có |
-| AC-7 | iPad Stage Manager, cửa sổ 1000×800, clip 2 đang chọn | kéo cửa sổ xuống cao 700 | bố cục đổi sang Duo trong; clip 2 vẫn chọn; ✕ trả đúng trạng thái lúc chọn | ⚠️ chưa có |
+| AC-7 | iPad Stage Manager, cửa sổ 1000×800, clip 2 đang chọn | kéo cửa sổ xuống cao 700 | bố cục đổi sang Duo trong; clip 2 vẫn chọn; ✕ trả đúng trạng thái lúc chọn | ⚠️ một phần — lớp cửa sổ: `VideoStudioWindowClassTests.windowsResolveToTheirLayout` (1000×800 → iPad ngang, 1000×700 → Duo trong); giữ chọn + ✕: chưa có |
 | AC-8 | iPad ngang, Inspector tắt | chọn clip 2 | cột inspector mở, chân có ✕ · ✓ | ⚠️ chưa có |
 | AC-9 | iPad, Video Studio mở ngang | xoay sang dọc | bố cục dọc, không khoá hướng; item đang chọn giữ nguyên | ✅ route `ipad-vs-rotate.json` 2026-10-04, iPad Pro 13" (26.5/27): mở dọc, chọn clip 2 (ảnh driver dọc: clip 2 viền xanh, khối 2 của dải tổng quan sáng), xoay ngang, chờ 12 s, `Tools/sim-shot` ngang: clip 2 vẫn chọn, inspector vẫn là lệnh của clip — trên bố cục **cũ**; chạy lại ở task 18 khi bố cục mới vào |
 | AC-10 | các board IL1–IL4, IP1–IP3, DI1–DI4 | `Tools/design-board compare` với dump app cùng trạng thái | mọi phần tử chrome lệch ≤ 2pt | ⚠️ chưa có — agent `design-parity` |

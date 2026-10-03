@@ -27,7 +27,6 @@ struct ServerVideoStudioLaunch {
 struct VideoStudioScreen: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.scenePhase) private var scenePhase
-    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @Environment(AppDependencies.self) private var dependencies
 
     let assets: [PHAsset]
@@ -78,6 +77,11 @@ struct VideoStudioScreen: View {
     /// so the project-overview strip can draw the window it stands for.
     @State private var timelineVisibleDuration: Double = 0
     @State private var levelMeter = VideoLevelMeterModel()
+    /// The window's trailing inset as the window reports it — the Duo
+    /// cover's 84pt rail, which a reader inside the safe area cannot see on
+    /// a screen that runs past the top and bottom insets. Nil until the
+    /// first report (FS-12.07b §1).
+    @State private var windowTrailingInset: CGFloat?
 
     private enum MediaPickerMode: Identifiable {
         case add, replace
@@ -148,9 +152,6 @@ struct VideoStudioScreen: View {
         // — writes the draft at once (FS-12.18 §2).
         .onChange(of: scenePhase) { _, phase in
             if phase != .active { model?.sceneDidChange() }
-        }
-        .onChange(of: horizontalSizeClass) { _, _ in
-            model?.sceneDidChange()
         }
         .interactiveDismissDisabled(model?.hasEdits == true || isExporting)
         // Only a project of server photos asks (FS-17.06 §5): it has no
@@ -317,8 +318,45 @@ struct VideoStudioScreen: View {
 
     // MARK: - Layout
 
+    /// Picks the layout by the window (FS-12.03 §1): its size and its
+    /// trailing inset, never the device's name. A compact window waits for
+    /// its inset before it draws anything, so the Duo's cover never flashes
+    /// the phone layout on its way to the rail.
     private func content(_ model: VideoStudioModel) -> some View {
         GeometryReader { proxy in
+            let insets = proxy.safeAreaInsets
+            let window = VideoStudioWindowClass.windowSize(
+                content: proxy.size,
+                top: insets.top,
+                bottom: insets.bottom,
+                leading: insets.leading,
+                trailing: insets.trailing
+            )
+            let knownInset = windowTrailingInset.map { max($0, insets.trailing) }
+                ?? (insets.trailing > 0 ? insets.trailing : nil)
+            if let windowClass = VideoStudioWindowClass.resolve(window: window, knownTrailingInset: knownInset) {
+                layout(model, proxy: proxy, windowClass: windowClass)
+                    // A new class is a new scene shape — the Duo folding or
+                    // opening, a Stage Manager window crossing a line: the
+                    // draft is written at once (FS-12.18 §2).
+                    .onChange(of: windowClass) { _, _ in model.sceneDidChange() }
+            } else {
+                Color.clear
+            }
+        }
+        .background {
+            EditorWindowInsetsReader { insets in
+                if windowTrailingInset != insets.right { windowTrailingInset = insets.right }
+            }
+        }
+    }
+
+    private func layout(
+        _ model: VideoStudioModel,
+        proxy: GeometryProxy,
+        windowClass: VideoStudioWindowClass
+    ) -> some View {
+        Group {
             // The band spans the Dynamic Island: grow it to the device's top safe
             // inset (≈59 on Face-ID iPhones) so its 11pt-inset row lands level with
             // the island and the preview starts below it — mirrors the photo editor.
@@ -338,8 +376,7 @@ struct VideoStudioScreen: View {
             // On a phone a selected item swaps the tool row for ✕ · name · ✓
             // (FS-12.04 §5). The panel carries it at its foot, in the row's
             // place, so it stands a row taller.
-            let showsSessionFooter = !VideoStudioMetrics.usesDeskChrome(size: proxy.size)
-                && model.inspectorTarget != .none
+            let showsSessionFooter = windowClass.isCompact && model.inspectorTarget != .none
             let panelHeight = VideoStudioMetrics.sheetHeight + proxy.safeAreaInsets.bottom
                 + (showsSessionFooter ? VideoStudioMetrics.toolbarHeight : 0)
             // The preview takes its aspect-fit height and the timeline the rest, so
@@ -351,7 +388,7 @@ struct VideoStudioScreen: View {
             // The bands a desk-shaped window can afford and a phone cannot:
             // the viewer header, the transport row, the project overview and
             // track headers on the lanes.
-            let usesDeskChrome = VideoStudioMetrics.usesDeskChrome(size: proxy.size)
+            let usesDeskChrome = !windowClass.isCompact
             let canShowMediaPool = VideoStudioMetrics.canShowMediaPool(size: proxy.size)
             let showsMediaPool = canShowMediaPool
                 && (isMediaPoolOpen ?? VideoStudioMetrics.mediaPoolOpensByDefault(size: proxy.size))
