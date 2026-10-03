@@ -231,6 +231,8 @@ Lý do đo được trên **iPhone Duo** (iOS 27.1): màn ngoài rộng 466pt nh
 
 Viewer là ngoại lệ có lý: **chỉ pager ảnh** tràn viền, còn chrome (nút đóng, action bar) nằm ngoài lớp đó và vẫn tôn trọng safe area.
 
+**Ngoại lệ có tên — dải 84 của Video Studio trên màn ngoài Duo** (2026-10-04, FS-12.07b): Video Studio ẩn status bar suốt màn, nên dải 84pt bên phải (x 382–466) không còn gì của hệ thống và **chỉ lớp dải công cụ** (`VideoStudioDuoCoverRail`) được đặt vào đó — 5 công cụ 64×56, Video Settings/Export hoặc ✕/✓. Nội dung (khung, transport, timeline, panel) vẫn nằm trong 382pt của safe area. Hai vùng trong dải vẫn cấm control: nắp y 0–72 (lỗ camera, góc bo trên — vẽ sọc chéo) và mọi thứ dưới y 600 (góc bo dưới, vạch home). Status bar hiện lại (alert hệ thống) là dải hết nhận chạm — rủi ro ghi ở FS-12.07b §8. Editor ảnh đặt cột công cụ **cạnh** dải chứ không trong dải; hai ngưỡng nhận diện màn ngoài (60 vs 84) đang chờ gộp (`REVIEW_QUEUE.md`).
+
 ### 10.1c Màn rộng: nhiều cột, đừng phóng to (2026-09-19)
 
 Nguyên tắc chung cho regular width (iPad, màn trong iPhone Duo 867pt): **màn rộng hơn = nhiều nội dung hơn, không phải nội dung to hơn.**

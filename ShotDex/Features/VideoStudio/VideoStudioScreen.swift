@@ -398,316 +398,103 @@ struct VideoStudioScreen: View {
             deskPortrait(model, window: window)
         case .duoInner:
             duoInner(model, window: window)
-        case .phone, .duoCover:
-            stackBody(model, proxy: proxy, windowClass: windowClass)
+        case .duoCover:
+            duoCover(model, window: window)
+        case .phone:
+            phoneBody(model, proxy: proxy)
         }
     }
 
-    private func stackBody(
-        _ model: VideoStudioModel,
-        proxy: GeometryProxy,
-        windowClass: VideoStudioWindowClass
-    ) -> some View {
-        Group {
-            // The band spans the Dynamic Island: grow it to the device's top safe
-            // inset (≈59 on Face-ID iPhones) so its 11pt-inset row lands level with
-            // the island and the preview starts below it — mirrors the photo editor.
-            // Wide, tall, and wider than it is tall — see `usesToolRail`. A
-            // Stage Manager window can be 900×450, where a permanent rail and
-            // a top band carrying Back and Export take height the stage has
-            // none of; a portrait tablet is the mirror image and cannot spare
-            // the width.
-            let usesRail = VideoStudioMetrics.usesToolRail(size: proxy.size)
-            // The drag follows the window being a tablet, not the rail: a
-            // portrait tablet has no rail and the most slack to spend.
-            let resizableTimeline = VideoStudioMetrics.usesResizableTimeline(size: proxy.size)
-            let bandHeight = VideoStudioMetrics.topBandHeight(
-                usesToolRail: usesRail,
-                safeAreaTop: proxy.safeAreaInsets.top
-            )
-            // On a phone a selected item swaps the tool row for ✕ · name · ✓
-            // (FS-12.04 §5). The panel carries it at its foot, in the row's
-            // place, so it stands a row taller.
-            let showsSessionFooter = windowClass.isCompact && model.inspectorTarget != .none
-            let panelHeight = VideoStudioMetrics.sheetHeight + proxy.safeAreaInsets.bottom
-                + (showsSessionFooter ? VideoStudioMetrics.toolbarHeight : 0)
-            // The preview takes its aspect-fit height and the timeline the rest, so
-            // a landscape project gets a tall timeline instead of black bars. While
-            // the panel is up the stack lifts by the panel's overlap, so the lanes
-            // stay visible above it.
-            // The reader sits inside the safe area while the stack below ignores it,
-            // so the stack's real height is the reader's plus both insets.
-            // The bands a desk-shaped window can afford and a phone cannot:
-            // the viewer header, the transport row, the project overview and
-            // track headers on the lanes.
-            let usesDeskChrome = !windowClass.isCompact
-            let canShowMediaPool = VideoStudioMetrics.canShowMediaPool(size: proxy.size)
-            let showsMediaPool = canShowMediaPool
-                && (isMediaPoolOpen ?? VideoStudioMetrics.mediaPoolOpensByDefault(size: proxy.size))
-            let mediaPoolWidth = showsMediaPool ? VideoStudioMetrics.mediaPoolWidth(size: proxy.size) : 0
-            let meterWidth = usesDeskChrome ? VideoStudioMetrics.audioMeterWidth(size: proxy.size) : 0
-            // Beside the stage on a wide window, under the timeline on a tall
-            // one. Both spend the dimension the stage has to spare. The pool
-            // and the meter are counted first: the inspector is the column
-            // that gives way when the window runs out of width.
-            let fitsInspectorColumn = VideoStudioMetrics.usesInspectorColumn(
-                size: proxy.size,
-                otherColumns: mediaPoolWidth + meterWidth
-            )
-            // The column is drawn only when it has something to inspect. An
-            // idle inspector was 320pt of "Project · 48 clips · 16:9" over a
-            // ratio strip — width taken from the frame to repeat a tool the
-            // rail already opens by name.
-            let hasInspectorContent = model.presentsSheet
-            let usesInspectorColumn = fitsInspectorColumn && isInspectorOpen && hasInspectorContent
-            // The middle column's width, spent once and honoured. Without a
-            // hard frame the stage is the greedy one — the transport row and
-            // the timeline both want more than their share — and an HStack
-            // resolves that by letting the *last* view overflow: the
-            // inspector was laid out 320 wide starting 54pt from the right
-            // edge, with its trailing controls off the screen.
-            let stageColumnWidth = max(
-                0,
-                proxy.size.width
-                    - (usesInspectorColumn ? VideoStudioMetrics.inspectorColumnWidth : 0)
-                    - mediaPoolWidth
-            )
-            let deskChromeHeight = VideoStudioMetrics.deskChromeHeight(usesDeskChrome: usesDeskChrome)
-            let lanes = VideoStudioMetrics.Lanes.for(windowClass)
-            let layout = VideoStudioMetrics.stackLayout(
-                screen: CGSize(
-                    // The preview is drawn in the column beside the rail, not
-                    // across the window, so the aspect-fit height has to be
-                    // computed from the width it actually gets.
-                    width: stageColumnWidth - meterWidth,
-                    height: proxy.size.height + proxy.safeAreaInsets.top + proxy.safeAreaInsets.bottom
-                ),
-                bandHeight: bandHeight,
-                bottomInset: proxy.safeAreaInsets.bottom,
-                canvas: model.recipe.canvasSize(),
-                // With the inspector in a column the stack never has to move
-                // for it, whatever is selected.
-                presentsSheet: model.presentsSheet && !usesInspectorColumn,
-                // The timeline takes what its lanes need and no more, on every
-                // width. Handing it the whole leftover drew three lanes at the
-                // top of a 330pt black field on the phone too — the surplus
-                // belongs around the frame being edited, which is what black
-                // around a preview is for, not under the tracks.
-                timelineContentHeight: lanes.timelineContentHeight(
-                    overlayLanes: max(1, model.overlayLaneCount),
-                    musicLanes: max(1, model.musicLaneCount)
-                ),
-                // The row is drawn only on compact width now; on a desk
-                // window the rail is gone and there is no row either.
-                usesToolRail: usesDeskChrome,
-                // The column never covers anything, so there is nothing for
-                // the stack to dock or lift out of the way of.
-                panelMayDock: usesDeskChrome && !usesInspectorColumn,
-                // No bottom band anywhere: Back and Export are in the top band
-                // on every window (FS-12.07 §2), so it costs no height.
-                showsBottomBar: false,
-                // Only where the divider exists to drag.
-                timelineExtraHeight: resizableTimeline ? CGFloat(timelineExtraHeight) + timelineDragOffset : 0,
-                deskChromeHeight: deskChromeHeight
-                    + (usesDeskChrome && isToolStripOpen ? VideoStudioMetrics.viewerToolStripHeight : 0),
-                presentsSessionFooter: showsSessionFooter
-            )
-            // `usesRail` is measured on the window, not on the size class. An
-            // iPad Split View half reports `.regular` at ~500pt, where a
-            // permanent 92pt rail costs a fifth of the width to save 62pt of
-            // height — the wrong trade, and the exact mistake the editor's
-            // sidebar avoids by using a 700pt threshold instead.
-            ZStack(alignment: .bottom) {
-                HStack(spacing: 0) {
-                    // Regular width puts the tools down the leading edge: the
-                    // row across the bottom spends 62pt of height — the thing
-                    // a timeline editor is short of — to show nine cells in a
-                    // bar that is 1032pt wide.
-                    // No tool rail on a desk window. Resolve for iPad has no
-                    // vertical rail at all: what you *insert* comes off the
-                    // library column (its Media / Titles / Effects tabs),
-                    // and what you *change* lives in the inspector, reached
-                    // from the chrome. ShotDex now matches — the pool grew
-                    // those tabs and the top band grew the project-tools
-                    // menu, so the column that used to hold both kinds of
-                    // thing has nothing left to hold. The phone keeps its
-                    // horizontal toolbar: it has no pool to move them onto.
-                    // The library, open beside the project the way it is in
-                    // every desk-shaped editor: a clip is one tap or one drag
-                    // from the timeline instead of a modal picker away.
-                    if showsMediaPool {
-                        VideoMediaPoolColumn(
-                            model: model,
-                            photoLibrary: dependencies.photoLibrary,
-                            width: mediaPoolWidth,
-                            importedMusic: importedMusic,
-                            topInset: bandHeight,
-                            bottomInset: proxy.safeAreaInsets.bottom,
-                            onClose: { isMediaPoolOpen = false },
-                            onBrowseAll: { mediaPickerMode = .add },
-                            onChooseSticker: { isStickerPickerPresented = true },
-                            onImportMusic: { isMusicImporterPresented = true },
-                            onAddSticker: { addSticker($0, to: model) },
-                            onAddText: { font in
-                                if let font { model.rememberFont(font) }
-                                addTextOverlay(model, font: font)
-                            }
-                        )
-                    }
-                    VStack(spacing: 0) {
-                        VideoStudioTopBand(
-                            model: model,
-                            // Back and Export are in the top band on every
-                            // window: the desk row on a desk-shaped window,
-                            // the phone row on a phone (FS-12.07 §2).
-                            projectActions: usesDeskChrome ? actions(model) : nil,
-                            // The meter sits inside this column, beside the
-                            // frame, so the band does not get its width.
-                            stageWidth: stageColumnWidth - meterWidth,
-                            // Only on a desk window, and only when nothing
-                            // stands between the band and the screen's
-                            // rounded corner. The phone's band is left
-                            // exactly as it shipped.
-                            trailingCornerClearance: usesDeskChrome && !usesInspectorColumn
-                                ? VideoStudioMetrics.displayCornerClearance
-                                : 0,
-                            carriesProjectTools: usesDeskChrome,
-                            phoneActions: usesDeskChrome ? nil : actions(model)
-                        )
-                        .frame(height: bandHeight, alignment: .top)
-                        if usesDeskChrome {
-                            VideoViewerHeader(
-                                model: model,
-                                isMediaPoolOpen: canShowMediaPool ? showsMediaPool : nil,
-                                isInspectorOpen: fitsInspectorColumn && hasInspectorContent
-                                    ? isInspectorOpen
-                                    : nil,
-                                isToolStripOpen: isToolStripOpen,
-                                onToggleMediaPool: { isMediaPoolOpen = !showsMediaPool },
-                                onToggleInspector: { isInspectorOpen.toggle() },
-                                onToggleToolStrip: { isToolStripOpen.toggle() }
-                            )
-                        }
-                        // The meter stands beside the frame, not beside the
-                        // whole stack: it measures what the viewer is playing,
-                        // and a column of dB running past the timeline to the
-                        // bottom bar measures nothing that is down there.
-                        HStack(spacing: 0) {
-                            preview(model)
-                            if usesDeskChrome, meterWidth > 0 {
-                                VideoAudioMeterColumn(
-                                    model: model,
-                                    meter: levelMeter,
-                                    width: meterWidth
-                                )
-                            }
-                        }
-                        .frame(height: layout.preview)
-                        if usesDeskChrome {
-                            if isToolStripOpen { VideoViewerToolStrip(model: model) }
-                            // Wide enough for all sixteen controls, or the
-                            // narrow shape: opening the inspector column
-                            // takes 320pt off the stage, and the full row
-                            // does not fit what is left on a 13" iPad.
-                            if VideoStudioMetrics.usesFullTransportRow(stageWidth: stageColumnWidth) {
-                                VideoTransportBar(model: model)
-                            } else {
-                                VideoCompactTransportBar(model: model)
-                            }
-                        } else {
-                            // Not "no transport" — the same commands in the
-                            // shape a phone has room for. See
-                            // `VideoCompactTransportBar`.
-                            VideoCompactTransportBar(model: model)
-                        }
-                        if resizableTimeline {
-                            timelineDivider
-                        } else {
-                            Color.clear.frame(height: VideoStudioMetrics.previewTimelineGap)
-                        }
-                        if !layout.hidesTimeline {
-                            if usesDeskChrome {
-                                VideoTimelineOverview(
-                                    model: model,
-                                    visibleDuration: timelineVisibleDuration
-                                )
-                            }
-                            VideoTimelineView(
-                            model: model,
-                            height: layout.timeline,
-                            onAddOverlay: { addTextOverlay(model) },
-                            onAddMusic: { model.toggleToolPanel(.music) },
-                            onAddMedia: { mediaPickerMode = .add },
-                            onEditText: { editingOverlay = $0 },
-                            onTransition: { model.editingTransitionIndex = $0 },
-                            onVisibleDuration: { timelineVisibleDuration = $0 }
-                            )
-                            // Drop photos or clips straight onto the timeline
-                            // from Photos or Files beside us in Split View.
-                            .onDrop(
-                                of: [PhotoDragItem.assetIdentifierType] + PhotoDropImport.acceptedTypes,
-                                isTargeted: nil
-                            ) { providers in
-                                appendDroppedMedia(providers, to: model)
-                            }
-                        }
-                        // Sits under the panel; keeps the timeline above it.
-                        Color.clear.frame(height: layout.lift)
-                        // Where the window has height to spare the panel takes
-                        // a place in the stack instead of sliding over the
-                        // bars: it covers nothing, the timeline does not move,
-                        // and the black that was padding the frame is spent on
-                        // the controls for the thing that is selected.
-                        if layout.dockedPanel > 0 {
-                            contextPanel(model, height: layout.dockedPanel)
-                                .transition(.move(edge: .bottom).combined(with: .opacity))
-                        }
-                        if !usesDeskChrome {
-                            VideoStudioToolbar(model: model, actions: actions(model))
-                        }
-                        Color.clear.frame(height: proxy.safeAreaInsets.bottom)
-                    }
-                    .frame(width: stageColumnWidth)
-
-                    if usesInspectorColumn {
-                        VideoStudioSheetHost(model: model, actions: actions(model), layout: .column, importedMusic: importedMusic)
-                            .frame(width: VideoStudioMetrics.inspectorColumnWidth)
-                            .padding(.top, bandHeight)
-                            .padding(.bottom, proxy.safeAreaInsets.bottom)
-                            .overlay(alignment: .leading) {
-                                Rectangle().fill(EditorTheme.panelDivider).frame(width: 1)
-                            }
+    /// The phone (FS-12.07): the top band over the Dynamic Island, the
+    /// frame, the compact transport, the timeline and the tool row, as one
+    /// stack whose heights `VideoStudioMetrics.stackLayout` decides. The
+    /// panel slides over the bars. This body belongs to the phone plan;
+    /// every other window class has its own in `VideoStudioScreen+Desk`.
+    private func phoneBody(_ model: VideoStudioModel, proxy: GeometryProxy) -> some View {
+        // The band spans the Dynamic Island: it grows to the device's top
+        // safe inset so its row lands level with the island.
+        let bandHeight = VideoStudioMetrics.topBandHeight(
+            usesToolRail: false,
+            safeAreaTop: proxy.safeAreaInsets.top
+        )
+        // A selected item swaps the tool row for ✕ · name · ✓ (FS-12.04
+        // §5). The panel carries it at its foot, in the row's place, so it
+        // stands a row taller.
+        let showsSessionFooter = model.inspectorTarget != .none
+        let panelHeight = VideoStudioMetrics.sheetHeight + proxy.safeAreaInsets.bottom
+            + (showsSessionFooter ? VideoStudioMetrics.toolbarHeight : 0)
+        let lanes = VideoStudioMetrics.Lanes.for(.phone)
+        // The reader sits inside the safe area while the stack below ignores
+        // it, so the stack's real height is the reader's plus both insets.
+        let layout = VideoStudioMetrics.stackLayout(
+            screen: CGSize(
+                width: proxy.size.width,
+                height: proxy.size.height + proxy.safeAreaInsets.top + proxy.safeAreaInsets.bottom
+            ),
+            bandHeight: bandHeight,
+            bottomInset: proxy.safeAreaInsets.bottom,
+            canvas: model.recipe.canvasSize(),
+            presentsSheet: model.presentsSheet,
+            // The timeline takes what its lanes need and no more: the
+            // surplus belongs around the frame being edited.
+            timelineContentHeight: lanes.timelineContentHeight(
+                overlayLanes: max(1, model.overlayLaneCount),
+                musicLanes: max(1, model.musicLaneCount)
+            ),
+            // Back and Export are in the top band (FS-12.07 §2), so there
+            // is no bottom band to pay for.
+            showsBottomBar: false,
+            deskChromeHeight: VideoStudioMetrics.compactTransportHeight,
+            presentsSessionFooter: showsSessionFooter
+        )
+        return ZStack(alignment: .bottom) {
+            VStack(spacing: 0) {
+                VideoStudioTopBand(model: model, phoneActions: actions(model))
+                    .frame(height: bandHeight, alignment: .top)
+                preview(model)
+                    .frame(height: layout.preview)
+                // Not "no transport" — the same commands in the shape a
+                // phone has room for. See `VideoCompactTransportBar`.
+                VideoCompactTransportBar(model: model)
+                Color.clear.frame(height: VideoStudioMetrics.previewTimelineGap)
+                if !layout.hidesTimeline {
+                    VideoTimelineView(
+                        model: model,
+                        height: layout.timeline,
+                        onAddOverlay: { addTextOverlay(model) },
+                        onAddMusic: { model.toggleToolPanel(.music) },
+                        onAddMedia: { mediaPickerMode = .add },
+                        onEditText: { editingOverlay = $0 },
+                        onTransition: { model.editingTransitionIndex = $0 },
+                        onVisibleDuration: { timelineVisibleDuration = $0 }
+                    )
+                    // Drop photos or clips straight onto the timeline.
+                    .onDrop(
+                        of: [PhotoDragItem.assetIdentifierType] + PhotoDropImport.acceptedTypes,
+                        isTargeted: nil
+                    ) { providers in
+                        appendDroppedMedia(providers, to: model)
                     }
                 }
-
-                // The panel slides over the bars; the layout underneath never
-                // moves, so the timeline stays exactly where the user left it.
-                if model.presentsSheet, layout.dockedPanel == 0, !usesInspectorColumn {
-                    contextPanel(model, height: panelHeight, showsFooter: showsSessionFooter, bottomInset: proxy.safeAreaInsets.bottom)
-                        .transition(.move(edge: .bottom))
-                        // The rail is the one piece of chrome that must stay
-                        // reachable while the panel is up — a tool row you
-                        // cannot reach without dismissing the panel is a tool
-                        // row that costs a tap for nothing. The panel starts
-                        // where the rail ends.
-                        .padding(.leading, mediaPoolWidth)
-                }
+                // Sits under the panel; keeps the timeline above it.
+                Color.clear.frame(height: layout.lift)
+                VideoStudioToolbar(model: model, actions: actions(model))
+                Color.clear.frame(height: proxy.safeAreaInsets.bottom)
             }
-            .background { keyboardShortcuts(model) }
-            // The meter reads the recipe at the playhead, so it is recomputed
-            // on the two things that change what is there: the time, and the
-            // mix itself.
-            .onChange(of: model.currentTime) { if usesDeskChrome { levelMeter.refresh(model) } }
-            .onChange(of: model.recipe) { if usesDeskChrome { levelMeter.refresh(model) } }
-            .onAppear { if usesDeskChrome { levelMeter.refresh(model) } }
-            .environment(\.videoLaneMetrics, lanes)
-            // The command cells and the band size off the same measured
-            // window the rail and the inspector do, not off the size class.
-            .environment(\.usesRegularToolChrome, usesRail)
-            .animation(EditorTheme.animation, value: model.presentsSheet)
-            .ignoresSafeArea(.container, edges: [.top, .bottom])
-            .ignoresSafeArea(.keyboard, edges: .bottom)
+
+            // The panel slides over the bars; the layout underneath never
+            // moves, so the timeline stays exactly where the user left it.
+            if model.presentsSheet {
+                contextPanel(model, height: panelHeight, showsFooter: showsSessionFooter, bottomInset: proxy.safeAreaInsets.bottom)
+                    .transition(.move(edge: .bottom))
+            }
         }
+        .background { keyboardShortcuts(model) }
+        .environment(\.videoLaneMetrics, lanes)
+        .environment(\.usesRegularToolChrome, false)
+        .animation(EditorTheme.animation, value: model.presentsSheet)
+        .ignoresSafeArea(.container, edges: [.top, .bottom])
+        .ignoresSafeArea(.keyboard, edges: .bottom)
     }
 
     /// Media dropped on the timeline. From inside ShotDex it is an asset

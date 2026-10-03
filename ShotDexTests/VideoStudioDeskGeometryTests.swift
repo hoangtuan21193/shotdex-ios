@@ -192,4 +192,58 @@ struct VideoStudioDeskGeometryTests {
         #expect(frames.stage == CGRect(x: 0, y: 0, width: 736, height: 416))
         #expect(frames.timeline.height == 188)
     }
+
+    // MARK: Duo cover
+
+    private func cover(_ canvas: CGSize) -> Geometry.Frames {
+        Geometry.duoCover(.init(
+            window: CGSize(width: 466, height: 678), canvas: canvas,
+            isPoolOpen: false, isInspectorOpen: false
+        ))
+    }
+
+    /// FS-12.07b AC-1 (board DC1): frame 382×215 at y 45; transport at 260;
+    /// timeline 300–644; five cells 64×56 at x 392 from y 80 to 360; Video
+    /// Settings at 504 and Export at 556 — and AC-11: three discs in the top
+    /// row, nothing else.
+    @Test func duoCoverIdle() throws {
+        let frames = cover(sixteenNine)
+        #expect(frames.stage == CGRect(x: 0, y: 45, width: 382, height: 215))
+        #expect(near(frames.frame.width, 382) && near(frames.frame.height, 215))
+        #expect(frames.transport == CGRect(x: 0, y: 260, width: 382, height: 40))
+        #expect(frames.timeline == CGRect(x: 0, y: 300, width: 382, height: 344))
+        #expect(frames.rail == CGRect(x: 382, y: 0, width: 84, height: 678))
+        #expect(frames.toolPanel == frames.timeline)
+        let rail = Geometry.coverRail(windowWidth: 466)
+        #expect(rail.tools.count == 5)
+        #expect(rail.tools.first == CGRect(x: 392, y: 80, width: 64, height: 56))
+        #expect(rail.tools.last?.maxY == 360)
+        #expect(rail.tools[3].contains(CGPoint(x: 424, y: 276)), "the Music cell answers at (424, 276)")
+        #expect(rail.upperAction == CGRect(x: 402, y: 504, width: 44, height: 44))
+        #expect(rail.lowerAction == CGRect(x: 402, y: 556, width: 44, height: 44))
+        #expect(rail.name == CGRect(x: 386, y: 440, width: 76, height: 56))
+        let discs = Geometry.coverDiscFrames()
+        #expect(discs.count == 3)
+        #expect(discs.map(\.minX) == [10, 50, 90])
+        #expect(discs.allSatisfy { $0.minY >= 6 && $0.maxY <= 42 })
+    }
+
+    /// FS-12.07b AC-3: nothing that takes a touch in the cap (x 382–466,
+    /// y 0–72) or below y 600 — the camera, the corners, the home bar.
+    @Test func nothingTappableInTheCapOrBelow600() {
+        let rail = Geometry.coverRail(windowWidth: 466)
+        let tappable = rail.tools + [rail.upperAction, rail.lowerAction]
+        for rect in tappable {
+            #expect(rect.minY >= Geometry.coverCapHeight, "\(rect)")
+            #expect(rect.maxY <= Geometry.coverTouchFloor, "\(rect)")
+        }
+    }
+
+    /// FS-12.07b AC-7: a 9:16 project fits the same box — 121×215, centred
+    /// in x 0–382.
+    @Test func aPortraitProjectFitsCentred() {
+        let frames = cover(CGSize(width: 1080, height: 1920))
+        #expect(near(frames.frame.width, 121) && frames.frame.height == 215)
+        #expect(near(frames.frame.minX, 130.5) && frames.frame.minY == 45)
+    }
 }

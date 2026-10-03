@@ -2,64 +2,16 @@ import SwiftUI
 
 // MARK: - Floating top command band (spec §2)
 
-/// The band over the Dynamic Island, mirroring the photo editor's: Undo · Redo
-/// on the leading edge; a running playback timecode on the trailing edge.
-/// Every control is a 34pt dark-glass circle. Back and Export live on the
-/// bottom bar, where they have always been.
+/// The phone's top band over the Dynamic Island (FS-12.07 §2): Back · Undo
+/// · Redo on the leading edge, Video Settings · Export on the trailing one,
+/// 36pt discs, nothing over the island. Wide windows have their own bands
+/// (`VideoStudioDeskBand`, the Duo's discs and rail).
 struct VideoStudioTopBand: View {
     @Bindable var model: VideoStudioModel
-    /// On a regular-width window the band also carries the project's own
-    /// controls — Back, the read-out and Export — because the bottom band
-    /// they used to live in is not drawn there. Every tablet editor
-    /// surveyed keeps the primary output action in the top bar; having it at
-    /// the bottom is what let the contextual panel cover it.
-    var projectActions: VideoInspectorActions?
-    /// Points the stage column actually has. The band shares that column with
-    /// the frame, so on a window carrying a rail, a media pool, a meter and
-    /// an inspector it can be half the window wide — measured 489pt on the
-    /// iPhone Duo's inner display, where the full row wrapped its timecode
-    /// onto two lines.
-    var stageWidth: CGFloat = .greatestFiniteMagnitude
-    /// Extra room on the trailing edge when this band runs to the screen's
-    /// own rounded corner — see `VideoStudioMetrics.displayCornerClearance`.
-    var trailingCornerClearance: CGFloat = 0
-    /// `true` where the tool rail is gone and the project-wide tools need a
-    /// home in this band — Resolve keeps format and its like behind a
-    /// settings control in the chrome, not on a tool column.
-    var carriesProjectTools = false
-    /// On a phone the band carries the whole chrome (FS-12.07 §2): Back,
-    /// Undo, Redo · Video Settings, Export. There is no bottom band.
-    var phoneActions: VideoInspectorActions?
-
-    @Environment(\.usesRegularToolChrome) private var usesRegularToolChrome
-
-    /// What the row drops first when the column is too narrow for all of it.
-    ///
-    /// The timecode goes first: the viewer header prints the project's length
-    /// and the transport prints the playhead, both in full `hh:mm:ss:ff`, so
-    /// the pill is the one read-out on screen that is said twice. The export
-    /// estimate goes second. Back and Export never go — they are the way out
-    /// of the screen and the point of it.
-    ///
-    /// The project-tools menu is a sixth control in a row that was already
-    /// budgeted, so when it is there both thresholds move up by more than its
-    /// own width: the row has to stay comfortable, not merely fit.
-    private var toolsBudget: CGFloat { carriesProjectTools ? 80 : 0 }
-    private var showsTimecode: Bool { projectActions == nil || stageWidth >= 540 + toolsBudget }
-    private var showsReadout: Bool { projectActions == nil || stageWidth >= 430 + toolsBudget }
-    private var size: CGFloat {
-        EditorLayoutMetrics.editorFloatingCommandButtonSize(
-            isRegularWidth: usesRegularToolChrome
-        )
-    }
-    private let inset = EditorLayoutMetrics.editorFloatingCommandSideInset
+    let phoneActions: VideoInspectorActions
 
     var body: some View {
-        if let phoneActions {
-            phoneRow(phoneActions)
-        } else {
-            deskRow
-        }
+        phoneRow(phoneActions)
     }
 
     /// Back · Undo · Redo on the leading edge, Video Settings · Export on the
@@ -133,167 +85,6 @@ struct VideoStudioTopBand: View {
         .accessibilityLabel(VideoStudioCopy.videoSettings)
         .accessibilityValue(model.recipe.aspect.displayName)
         .accessibilityAddTraits(isOpen ? .isSelected : [])
-    }
-
-    private var deskRow: some View {
-        HStack(spacing: AppTheme.Spacing.xs) {
-            if let projectActions {
-                Button(action: projectActions.onBack) {
-                    Image(systemName: "chevron.left")
-                        .font(.system(size: 15, weight: .semibold))
-                        .foregroundStyle(.white)
-                        .frame(width: size, height: size)
-                        .background { Color.clear.editorGlass(Circle()) }
-                        .contentShape(Circle())
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel("Back")
-                Spacer(minLength: 8)
-            }
-            circle("arrow.uturn.backward", isEnabled: model.canUndo) { model.undo() }
-                .accessibilityLabel("Undo")
-            circle("arrow.uturn.forward", isEnabled: model.canRedo) { model.redo() }
-                .accessibilityLabel("Redo")
-            // Hold-to-compare moved to the Look panel's title (FS-12.04 §4):
-            // it compares the look, so it lives where the look is changed.
-            if !carriesProjectTools { videoSettingsCircle }
-
-            Spacer(minLength: 8)
-
-            if showsTimecode { timecodePill }
-
-            if carriesProjectTools { projectToolsMenu }
-
-            if let projectActions {
-                if showsReadout { readout }
-                Button(action: projectActions.onExport) {
-                    Text("Export")
-                        .font(.system(size: 14, weight: .bold))
-                        .foregroundStyle(.black)
-                        .padding(.horizontal, 20)
-                        .frame(height: size)
-                        .background(Capsule().fill(EditorTheme.accent))
-                }
-                .buttonStyle(.plain)
-            }
-        }
-        .frame(height: size)
-        .padding(.horizontal, inset)
-        .padding(.trailing, trailingCornerClearance)
-        // Inset the row from the band's top so it sits level with the Dynamic
-        // Island, exactly like the photo editor's floating command row.
-        .padding(.top, EditorLayoutMetrics.editorFloatingCommandRowTopInset)
-    }
-
-    /// The project-wide tools, where Resolve keeps the equivalent: behind a
-    /// settings control in the chrome rather than on a column of their own.
-    /// Each one opens the inspector on that tool, which is where its controls
-    /// have always lived — this menu replaces the rail cell that used to open
-    /// the same panel, not the panel.
-    private var projectToolsMenu: some View {
-        Menu {
-            ForEach([VideoToolPanel.look, .videoSettings]) { panel in
-                Button {
-                    model.toggleToolPanel(panel)
-                } label: {
-                    Label(panel.title, systemImage: panel.systemImage)
-                }
-                // A stable handle for the UI driver.
-                .accessibilityIdentifier("projectTool.\(panel.id)")
-            }
-        } label: {
-            Image(systemName: "slider.horizontal.3")
-                .font(.system(size: 15, weight: .medium))
-                .foregroundStyle(.white)
-                .frame(width: size, height: size)
-                .background {
-                    if model.activeToolPanel == nil {
-                        Color.clear.editorGlass(Circle())
-                    } else {
-                        Circle().fill(VideoStudioMetrics.openCellFill)
-                    }
-                }
-                .contentShape(Circle())
-        }
-        .accessibilityLabel(Text("Project Tools", comment: "Video Studio: opens ratio, look, adjustments, volume and background"))
-    }
-
-    /// Video Settings: the project's shape and what is behind it. Lit while
-    /// its panel is open, white not accent.
-    private var videoSettingsCircle: some View {
-        Button {
-            model.toggleToolPanel(.videoSettings)
-        } label: {
-            Image(systemName: VideoToolPanel.videoSettings.systemImage)
-                .font(.system(size: 15, weight: .medium))
-                .foregroundStyle(.white)
-                .frame(width: size, height: size)
-                .background {
-                    if model.activeToolPanel == .videoSettings {
-                        Circle().fill(VideoStudioMetrics.openCellFill)
-                    } else {
-                        Color.clear.editorGlass(Circle())
-                    }
-                }
-                .contentShape(Circle())
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel(VideoStudioCopy.videoSettings)
-        .accessibilityAddTraits(model.activeToolPanel == .videoSettings ? .isSelected : [])
-    }
-
-    /// Duration, preset and the size estimate — the same two lines the bottom
-    /// band showed, beside Export rather than away from it.
-    private var readout: some View {
-        VStack(alignment: .trailing, spacing: 1) {
-            Text(VideoStudioMetrics.exportReadout(
-                duration: model.totalDuration,
-                presetName: model.recipe.renderPreset.displayName
-            ))
-            Text("~\(ByteCountFormatter.string(fromByteCount: model.estimatedExportBytes, countStyle: .file))")
-        }
-        .font(EditorTheme.rowValue)
-        .foregroundStyle(EditorTheme.dimText)
-        // Never wrap: a read-out broken across three lines in a 48pt band is
-        // worse than no read-out, and the thresholds above are what decide
-        // whether it is shown at all.
-        .lineLimit(1)
-        .fixedSize()
-        .padding(.leading, 8)
-        .accessibilityElement(children: .combine)
-    }
-
-    private var timecodePill: some View {
-        HStack(spacing: 0) {
-            Text(timecode(model.currentTime))
-            Text(" / \(timecode(model.totalDuration))").foregroundStyle(.white.opacity(0.4))
-        }
-        .font(.system(size: 12, weight: .semibold).monospacedDigit())
-        .foregroundStyle(.white)
-        .padding(.horizontal, 12)
-        .frame(height: 29)
-        .background(
-            RoundedRectangle(cornerRadius: VideoStudioMetrics.trackRadius, style: .continuous)
-                .fill(EditorTheme.trackChip)
-        )
-        .accessibilityLabel("\(timecode(model.currentTime)) of \(timecode(model.totalDuration))")
-    }
-
-    private func timecode(_ seconds: Double) -> String {
-        VideoStudioMetrics.compactTimecode(seconds)
-    }
-
-    private func circle(_ systemName: String, isEnabled: Bool, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            Image(systemName: systemName)
-                .font(.system(size: 15, weight: .medium))
-                .foregroundStyle(isEnabled ? Color.white.opacity(0.9) : Color.white.opacity(0.28))
-                .frame(width: size, height: size)
-                .background { Color.clear.editorGlass(Circle()) }
-                .contentShape(Circle())
-        }
-        .buttonStyle(.plain)
-        .disabled(!isEnabled)
     }
 }
 

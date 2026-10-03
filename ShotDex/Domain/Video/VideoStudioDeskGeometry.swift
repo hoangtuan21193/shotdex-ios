@@ -108,6 +108,42 @@ enum VideoStudioDeskGeometry {
     /// clear of the rounded corner.
     static let duoRowTrailingInset: CGFloat = 44
 
+    // MARK: Duo cover display (FS-12.07b)
+
+    /// The trailing strip iOS keeps for its vertical status bar — the
+    /// studio hides the status bar, so the strip is the tools'.
+    static let coverRailWidth: CGFloat = 84
+    /// The rail's top: the camera hole and the corner. Nothing to touch.
+    static let coverCapHeight: CGFloat = 72
+    /// Nothing that takes a touch below this: the bottom corner begins
+    /// ~612 and the last 34pt are the home indicator.
+    static let coverTouchFloor: CGFloat = 600
+    /// The home indicator strip under the timeline.
+    static let coverHomeIndicator: CGFloat = 34
+    /// Back · Undo · Redo: 34pt discs on white 10 %, 6 apart, from (10, 7).
+    static let coverDisc: CGFloat = 34
+    static let coverDiscGap: CGFloat = 6
+    static let coverDiscOrigin = CGPoint(x: 10, y: 7)
+    /// The frame's box: the content width at 16:9 (382×215), from y 45.
+    static let coverStageTop: CGFloat = 45
+    static let coverTransportHeight: CGFloat = 40
+    /// The five tools: 64×56, stacked from y 80, 10 in from the rail's edge.
+    static let coverToolCell = CGSize(width: 64, height: 56)
+    static let coverToolTop: CGFloat = 80
+    static let coverToolInset: CGFloat = 10
+    /// A selected item's name: 76×56 at y 440, 4 in.
+    static let coverNameTop: CGFloat = 440
+    static let coverNameSize = CGSize(width: 76, height: 56)
+    static let coverNameInset: CGFloat = 4
+    /// Video Settings / ✕ at y 504 and Export / ✓ at y 556: 44pt discs,
+    /// 20 in — where the thumb of the hand holding the phone lands.
+    static let coverActionDisc: CGFloat = 44
+    static let coverActionInset: CGFloat = 20
+    static let coverUpperActionTop: CGFloat = 504
+    static let coverLowerActionTop: CGFloat = 556
+    /// The panel's grabber: 36×5, 6 below its top.
+    static let coverGrabber = CGSize(width: 36, height: 5)
+
     /// The rect of every band. Nil where the window class has no such band.
     struct Frames: Equatable {
         var band: CGRect
@@ -124,6 +160,19 @@ enum VideoStudioDeskGeometry {
         var timeline: CGRect
         var dock: CGRect?
         var bottomRow: CGRect? = nil
+        /// The Duo cover's trailing rail.
+        var rail: CGRect? = nil
+        /// A tool's panel (Music, Look, Media) where it covers the timeline.
+        var toolPanel: CGRect? = nil
+    }
+
+    /// The rail's own rects, in window coordinates (FS-12.07b §3).
+    struct CoverRail: Equatable {
+        var cap: CGRect
+        var tools: [CGRect]
+        var name: CGRect
+        var upperAction: CGRect
+        var lowerAction: CGRect
     }
 
     /// What a layout needs to know beyond the window.
@@ -305,6 +354,72 @@ enum VideoStudioDeskGeometry {
                 height: duoDisc
             )
         }
+    }
+
+    // MARK: Duo cover (FS-12.07b, board DC1)
+
+    /// Content in the safe 382pt: three discs at the top, the frame's
+    /// 382×215 box from y 45, the compact transport, and the timeline down
+    /// to the home indicator — the band that flexes. The rail is the 84pt
+    /// beside it. A tool's panel covers the timeline, frame and transport
+    /// untouched.
+    static func duoCover(_ input: Input) -> Frames {
+        let width = input.window.width
+        let height = input.window.height
+        let contentWidth = width - coverRailWidth
+        let stage = CGRect(x: 0, y: coverStageTop, width: contentWidth, height: (contentWidth * 9 / 16).rounded())
+        let transport = CGRect(x: 0, y: stage.maxY, width: contentWidth, height: coverTransportHeight)
+        let timeline = CGRect(
+            x: 0, y: transport.maxY,
+            width: contentWidth, height: height - coverHomeIndicator - transport.maxY
+        )
+        return Frames(
+            band: CGRect(x: 0, y: 0, width: contentWidth, height: coverStageTop),
+            pool: nil,
+            header: nil,
+            stage: stage,
+            frame: fit(input.canvas, in: stage),
+            meter: nil,
+            inspector: nil,
+            transport: transport,
+            overview: nil,
+            timeline: timeline,
+            dock: nil,
+            bottomRow: nil,
+            rail: CGRect(x: contentWidth, y: 0, width: coverRailWidth, height: height),
+            toolPanel: timeline
+        )
+    }
+
+    /// Back, Undo, Redo over the cover's content.
+    static func coverDiscFrames() -> [CGRect] {
+        (0..<3).map { index in
+            CGRect(
+                x: coverDiscOrigin.x + CGFloat(index) * (coverDisc + coverDiscGap),
+                y: coverDiscOrigin.y,
+                width: coverDisc,
+                height: coverDisc
+            )
+        }
+    }
+
+    /// The rail's parts for a window `width` wide.
+    static func coverRail(windowWidth width: CGFloat, toolCount: Int = 5) -> CoverRail {
+        let railX = width - coverRailWidth
+        return CoverRail(
+            cap: CGRect(x: railX, y: 0, width: coverRailWidth, height: coverCapHeight),
+            tools: (0..<toolCount).map { index in
+                CGRect(
+                    x: railX + coverToolInset,
+                    y: coverToolTop + CGFloat(index) * coverToolCell.height,
+                    width: coverToolCell.width,
+                    height: coverToolCell.height
+                )
+            },
+            name: CGRect(origin: CGPoint(x: railX + coverNameInset, y: coverNameTop), size: coverNameSize),
+            upperAction: CGRect(x: railX + coverActionInset, y: coverUpperActionTop, width: coverActionDisc, height: coverActionDisc),
+            lowerAction: CGRect(x: railX + coverActionInset, y: coverLowerActionTop, width: coverActionDisc, height: coverActionDisc)
+        )
     }
 
     // MARK: Shared

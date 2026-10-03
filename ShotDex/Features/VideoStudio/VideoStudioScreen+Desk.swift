@@ -218,6 +218,68 @@ extension VideoStudioScreen {
         .disabled(!isEnabled)
     }
 
+    // MARK: Duo cover display (FS-12.07b, board DC1)
+
+    /// The content in the safe 382pt — Back · Undo · Redo, the frame's
+    /// 382×215 box, the phone's compact transport, the timeline to the home
+    /// indicator — and the tools in the 84pt rail beside it. A tool's panel
+    /// covers the timeline; the frame and the transport never move.
+    func duoCover(_ model: VideoStudioModel, window: CGSize) -> some View {
+        let lanes = VideoStudioMetrics.Lanes.for(.duoCover)
+        let frames = VideoStudioDeskGeometry.duoCover(.init(
+            window: window,
+            canvas: model.recipe.canvasSize(),
+            isPoolOpen: false,
+            isInspectorOpen: false
+        ))
+        let discs = VideoStudioDeskGeometry.coverDiscFrames()
+        return ZStack(alignment: .topLeading) {
+            EditorTheme.background
+            coverDisc("chevron.left", isEnabled: true, action: { leave(model) })
+                .accessibilityLabel(Text("Back", comment: "Video Studio: leaves the editor"))
+                .placed(discs[0])
+            coverDisc("arrow.uturn.backward", isEnabled: model.canUndo, action: { model.undo() })
+                .accessibilityLabel("Undo")
+                .placed(discs[1])
+            coverDisc("arrow.uturn.forward", isEnabled: model.canRedo, action: { model.redo() })
+                .accessibilityLabel("Redo")
+                .placed(discs[2])
+            preview(model)
+                .placed(frames.stage)
+            VideoCompactTransportBar(model: model)
+                .placed(frames.transport)
+            deskTimeline(model, height: frames.timeline.height)
+                .placed(frames.timeline)
+            if model.presentsSheet, let panel = frames.toolPanel {
+                // The panel's background runs on under the home indicator.
+                contextPanel(model, height: window.height - panel.minY)
+                    .frame(width: panel.width)
+                    .offset(x: panel.minX, y: panel.minY)
+                    .transition(.move(edge: .bottom))
+            }
+            if let rail = frames.rail {
+                VideoStudioDuoCoverRail(model: model, actions: actions(model), windowWidth: window.width)
+                    .placed(rail)
+            }
+        }
+        .frame(width: window.width, height: window.height, alignment: .topLeading)
+        .deskChrome(model, lanes: lanes, meter: levelMeter, hasMeter: false, shortcuts: keyboardShortcuts(model))
+    }
+
+    /// A 34pt disc on white 10 % — the cover's top row.
+    private func coverDisc(_ systemName: String, isEnabled: Bool, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Image(systemName: systemName)
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundStyle(isEnabled ? Color.white : Color.white.opacity(0.28))
+                .frame(width: VideoStudioDeskGeometry.coverDisc, height: VideoStudioDeskGeometry.coverDisc)
+                .background(Circle().fill(Color.white.opacity(0.10)))
+                .contentShape(Circle())
+        }
+        .buttonStyle(.plain)
+        .disabled(!isEnabled)
+    }
+
     // MARK: Shared pieces
 
     /// What the lanes of this project need to show without scrolling.

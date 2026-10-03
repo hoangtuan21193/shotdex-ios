@@ -2,135 +2,10 @@ import CoreGraphics
 import Testing
 @testable import ShotDex
 
-/// The desk layout — the media pool, the level meter, and the three bands the
-/// stage gains on a window wide enough for them. The rules these cover are the
-/// ones that decide whether a column is worth its width on a given device, so
-/// they are asserted on the real sizes ShotDex ships to rather than on round
-/// numbers.
+/// The wide layouts' bands — track headers and badges, the meter, the
+/// transport, the pool's tabs — and the rules inside them (FS-12.03b). Where
+/// each band sits is `VideoStudioDeskGeometryTests`.
 struct VideoStudioDeskLayoutTests {
-    // The four windows every one of these rules has to hold on.
-    private let phone = CGSize(width: 402, height: 874)
-    /// The iPhone Duo's inner display, **measured** 2026-09-20 from a host
-    /// screenshot of the open device: 951×669 landscape (2853×2007px at 3x).
-    /// `XCUIScreen` reports 669×951 there — the display in its own native
-    /// portrait, not the scene the app is handed — and an earlier reading of
-    /// this device came from that number.
-    private let duoInner = CGSize(width: 951, height: 669)
-    /// An iPad Split View half: 639pt on a portrait 12.9" iPad. This is the
-    /// window the 600pt desk threshold exists for — wide enough to want a
-    /// transport row and track headers, too narrow to spend 92pt on a rail.
-    private let splitHalf = CGSize(width: 639, height: 1376)
-    private let iPadPortrait = CGSize(width: 1032, height: 1376)
-    private let iPadLandscape = CGSize(width: 1376, height: 1032)
-
-    // MARK: Which windows get the desk bands
-
-    @Test func aPhoneGetsNoDeskChrome() {
-        #expect(!VideoStudioMetrics.usesDeskChrome(size: phone))
-        // Not zero any more: a phone gets no *desk* bands, but it does get
-        // its own transport row — see `aPhoneBudgetsForItsOwnTransportRow`.
-        #expect(
-            VideoStudioMetrics.deskChromeHeight(usesDeskChrome: false)
-                < VideoStudioMetrics.deskChromeHeight(usesDeskChrome: true)
-        )
-    }
-
-    /// The point of the 600pt threshold: a Split View half is wide enough to
-    /// want the desk bands — they cost height it has in abundance — and too
-    /// narrow to spend 92pt of its width on a tool rail.
-    @Test func aSplitViewHalfGetsDeskChromeWithoutTheToolRail() {
-        #expect(VideoStudioMetrics.usesDeskChrome(size: splitHalf))
-        #expect(!VideoStudioMetrics.usesToolRail(size: splitHalf))
-    }
-
-    /// The Duo's inner display is a landscape window wider than a phone and
-    /// shorter than a tablet: it earns the rail *and* the desk bands, and its
-    /// lanes stay at phone height because 669pt is under the 750 that tablet
-    /// lanes need.
-    @Test func theDuoInnerDisplayGetsTheRailAndTheDeskBands() {
-        #expect(VideoStudioMetrics.usesDeskChrome(size: duoInner))
-        #expect(VideoStudioMetrics.usesToolRail(size: duoInner))
-    }
-
-    @Test func bothTabletOrientationsGetDeskChrome() {
-        #expect(VideoStudioMetrics.usesDeskChrome(size: splitHalf))
-        #expect(VideoStudioMetrics.usesDeskChrome(size: iPadPortrait))
-        #expect(VideoStudioMetrics.usesDeskChrome(size: iPadLandscape))
-    }
-
-    // MARK: The media pool's width budget
-
-    @Test func aPhoneCannotShowTheMediaPool() {
-        #expect(!VideoStudioMetrics.canShowMediaPool(size: phone))
-    }
-
-    /// The Duo can hold the pool — but at 951pt it is not the 1100 that opens
-    /// one unasked, so it stays shut until the user taps for it.
-    @Test func theDuoCanOpenTheMediaPoolButDoesNotByDefault() {
-        #expect(VideoStudioMetrics.canShowMediaPool(size: duoInner))
-        #expect(!VideoStudioMetrics.mediaPoolOpensByDefault(size: duoInner))
-    }
-
-    /// A Split View half is the window where the narrow pool earns its name:
-    /// 300pt of a 639pt window would leave the frame under its floor.
-    @Test func aNarrowWindowGetsTheNarrowPool() {
-        #expect(VideoStudioMetrics.mediaPoolWidth(size: splitHalf) == VideoStudioMetrics.mediaPoolNarrowWidth)
-        #expect(VideoStudioMetrics.mediaPoolWidth(size: duoInner) == VideoStudioMetrics.mediaPoolWideWidth)
-    }
-
-    @Test func aLandscapeTabletOpensTheWideMediaPoolFromTheStart() {
-        #expect(VideoStudioMetrics.mediaPoolOpensByDefault(size: iPadLandscape))
-        #expect(VideoStudioMetrics.mediaPoolWidth(size: iPadLandscape) == VideoStudioMetrics.mediaPoolWideWidth)
-    }
-
-    /// Whatever the window, opening every column the window allows must leave
-    /// the frame at least the floor the pool rule promises.
-    @Test func theStageKeepsItsFloorWithEveryColumnOpen() {
-        for size in [duoInner, splitHalf, iPadPortrait, iPadLandscape] {
-            guard VideoStudioMetrics.canShowMediaPool(size: size) else { continue }
-            let columns = VideoStudioMetrics.mediaPoolWidth(size: size)
-                + VideoStudioMetrics.audioMeterWidth(size: size)
-                + (VideoStudioMetrics.usesToolRail(size: size) ? VideoStudioMetrics.railWidth : 0)
-            #expect(size.width - columns >= VideoStudioMetrics.mediaPoolMinimumStageWidth)
-        }
-    }
-
-    /// The inspector is the column that gives way. On a landscape tablet all
-    /// four fit; take enough width away and the inspector goes back to being
-    /// a panel rather than squeezing the frame.
-    @Test func theInspectorYieldsToTheOtherColumns() {
-        let others = VideoStudioMetrics.mediaPoolWideWidth + VideoStudioMetrics.audioMeterWideWidth
-        #expect(VideoStudioMetrics.usesInspectorColumn(size: iPadLandscape, otherColumns: others))
-        let narrow = CGSize(width: 1024, height: 768)
-        #expect(VideoStudioMetrics.usesInspectorColumn(size: narrow, otherColumns: 0))
-        #expect(!VideoStudioMetrics.usesInspectorColumn(size: narrow, otherColumns: others))
-    }
-
-    // MARK: The bands' cost in height
-
-    /// The desk bands are fixed, like the toolbar: they come out of the pot
-    /// the preview and the timeline divide, and the timeline — which takes
-    /// only what its lanes need — is not the one that pays.
-    @Test func theDeskBandsCostThePreviewTheirHeight() {
-        let canvas = CGSize(width: 16, height: 9)
-        let content = VideoStudioMetrics.Lanes.desk
-            .timelineContentHeight(overlayLanes: 1, musicLanes: 1)
-        func layout(desk: Bool) -> VideoStudioMetrics.StackLayout {
-            VideoStudioMetrics.stackLayout(
-                screen: iPadLandscape, bandHeight: 48, bottomInset: 0, canvas: canvas,
-                presentsSheet: false, timelineContentHeight: content,
-                usesToolRail: true, showsBottomBar: false,
-                deskChromeHeight: desk
-                    ? VideoStudioMetrics.deskChromeHeight(usesDeskChrome: true)
-                    : 0
-            )
-        }
-        let bare = layout(desk: false)
-        let desk = layout(desk: true)
-        #expect(desk.timeline == bare.timeline)
-        #expect(bare.preview - desk.preview == VideoStudioMetrics.deskChromeHeight(usesDeskChrome: true))
-    }
-
     // MARK: Track headers
 
     @Test func trackHeadersReplaceTheGlyphColumnOnlyOnDeskWindows() {
@@ -226,20 +101,6 @@ struct VideoStudioDeskLayoutTests {
 
     // MARK: No tool rail on a desk window
 
-    /// Resolve for iPad has no vertical tool rail: what you insert comes off
-    /// the library column, what you change lives in the inspector. ShotDex
-    /// matches, so the rail's own width must stop being charged to the stage
-    /// on every window that has a pool to carry the inserts.
-    @Test func theStageKeepsTheRailsWidthOnEveryDeskWindow() {
-        for size in [duoInner, splitHalf, iPadPortrait, iPadLandscape] {
-            let columns = (VideoStudioMetrics.mediaPoolOpensByDefault(size: size)
-                           ? VideoStudioMetrics.mediaPoolWidth(size: size) : 0)
-                + VideoStudioMetrics.audioMeterWidth(size: size)
-            // The rail is no longer one of the columns that can be charged.
-            #expect(size.width - columns >= VideoStudioMetrics.mediaPoolMinimumStageWidth)
-        }
-    }
-
     /// FS-12.03b AC-7 (tabs): the pool's tabs are Media · Text · Stickers ·
     /// Music, in that order — the look is the inspector's, not a tab's.
     @Test func thePoolHasFourTabsInOrder() {
@@ -268,28 +129,6 @@ struct VideoStudioDeskLayoutTests {
         }
     }
 
-    /// A phone is not "no chrome": it pays for one transport row, so the
-    /// playhead commands have somewhere to live. A stack that budgets zero
-    /// for it draws the row over the timeline.
-    @Test func aPhoneBudgetsForItsOwnTransportRow() {
-        #expect(!VideoStudioMetrics.usesDeskChrome(size: phone))
-        #expect(
-            VideoStudioMetrics.deskChromeHeight(usesDeskChrome: false)
-                == VideoStudioMetrics.compactTransportHeight
-        )
-        #expect(VideoStudioMetrics.compactTransportHeight > 0)
-    }
-
-    /// And the desk window still pays for all three of its bands.
-    @Test func aDeskWindowBudgetsForAllThreeBands() {
-        #expect(
-            VideoStudioMetrics.deskChromeHeight(usesDeskChrome: true)
-                == VideoStudioMetrics.viewerHeaderHeight
-                    + VideoStudioMetrics.transportBarHeight
-                    + VideoStudioMetrics.timelineOverviewBandHeight
-        )
-    }
-
     /// FS-12.07 AC-7: the phone transport is Go to Start · Back a Frame ·
     /// the read-out · Forward a Frame · Go to End · More — five 40pt
     /// buttons at 6/46/276/316/356 on 402pt — and on the narrowest phone
@@ -316,39 +155,6 @@ struct VideoStudioDeskLayoutTests {
         #expect(text.length == " / 0:24.0")
         #expect(VideoStudioMetrics.compactTimecode(75.99) == "1:15.9")
         #expect(VideoStudioMetrics.compactTimecode(-1) == "0:00.0")
-    }
-
-    /// The desk transport row does not fit every desk window.
-    ///
-    /// On a 13" iPad with the media pool **and** the inspector column open
-    /// the stage is 756pt and the full row wants 780, so `Back a Frame` was
-    /// laid out past the end of it — XCUITest found the button at
-    /// `{inf, inf}` while it looked fine on a screenshot of the left half of
-    /// the row.
-    @Test func aStageSqueezedByBothColumnsGetsTheNarrowTransportRow() {
-        let stage = iPadLandscape.width
-            - VideoStudioMetrics.mediaPoolWidth(size: iPadLandscape)
-            - VideoStudioMetrics.inspectorColumnWidth
-        #expect(stage < VideoStudioMetrics.transportBarFullWidth)
-        #expect(!VideoStudioMetrics.usesFullTransportRow(stageWidth: stage))
-    }
-
-    /// And with the inspector shut it still gets the full row — the narrow
-    /// shape is for the squeeze, not for every desk window.
-    @Test func aStageWithOnlyThePoolKeepsTheFullTransportRow() {
-        let stage = iPadLandscape.width
-            - VideoStudioMetrics.mediaPoolWidth(size: iPadLandscape)
-        #expect(VideoStudioMetrics.usesFullTransportRow(stageWidth: stage))
-    }
-
-    /// The Duo's inner display is desk-shaped but narrow: 951pt is over the
-    /// threshold on its own, and the media pool alone takes it under. The
-    /// rule is about the **stage**, not the window.
-    @Test func theDuoInnerScreenTakesTheNarrowTransportRow() {
-        #expect(VideoStudioMetrics.usesDeskChrome(size: duoInner))
-        #expect(VideoStudioMetrics.usesFullTransportRow(stageWidth: duoInner.width))
-        let stage = duoInner.width - VideoStudioMetrics.mediaPoolWidth(size: duoInner)
-        #expect(!VideoStudioMetrics.usesFullTransportRow(stageWidth: stage))
     }
 
     // MARK: Transitions
@@ -504,13 +310,13 @@ struct VideoStudioDeskLayoutTests {
 
     @Test func theMediaPoolFitsThreeColumnsWideAndTwoNarrow() {
         #expect(VideoStudioMetrics.mediaPoolColumnCount(columnWidth: VideoStudioMetrics.mediaPoolWideWidth) == 3)
-        #expect(VideoStudioMetrics.mediaPoolColumnCount(columnWidth: VideoStudioMetrics.mediaPoolNarrowWidth) == 2)
+        #expect(VideoStudioMetrics.mediaPoolColumnCount(columnWidth: VideoStudioDeskGeometry.poolWidth) == 2)
     }
 
     /// The cells and their gaps must not add up to more than the column, or
     /// the last one in every row is clipped by the divider.
     @Test func theMediaPoolCellsFitInsideTheirColumn() {
-        for width in [VideoStudioMetrics.mediaPoolWideWidth, VideoStudioMetrics.mediaPoolNarrowWidth] {
+        for width in [VideoStudioMetrics.mediaPoolWideWidth, VideoStudioDeskGeometry.poolWidth] {
             let count = CGFloat(VideoStudioMetrics.mediaPoolColumnCount(columnWidth: width))
             let cell = VideoStudioMetrics.mediaPoolCellWidth(columnWidth: width)
             #expect(cell > 0)
