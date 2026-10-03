@@ -76,7 +76,10 @@ struct VideoMusicPanelContent: View {
         } label: {
             HStack(spacing: 10) {
                 Image(systemName: "folder.badge.plus").font(.system(size: 17))
+                // One line in the 236pt pool too: it shrinks before it wraps.
                 Text("Add Music from Files…").font(.system(size: 14, weight: .semibold))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
                 Spacer(minLength: 0)
             }
             .foregroundStyle(.white)

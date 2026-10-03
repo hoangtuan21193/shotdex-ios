@@ -1,0 +1,128 @@
+{
+  "steps": [
+    {
+      "action": "launch",
+      "arguments": [
+        "-video.timelineExtraHeight",
+        "0"
+      ]
+    },
+    {
+      "action": "wait",
+      "seconds": 5
+    },
+    {
+      "action": "tap",
+      "label": "Select",
+      "type": "button"
+    },
+    {
+      "action": "wait",
+      "seconds": 1
+    },
+    {
+      "action": "tap",
+      "x": 0.06,
+      "y": 0.09
+    },
+    {
+      "action": "tap",
+      "x": 0.18,
+      "y": 0.09
+    },
+    {
+      "action": "tap",
+      "x": 0.3,
+      "y": 0.09
+    },
+    {
+      "action": "wait",
+      "seconds": 1
+    },
+    {
+      "action": "tap",
+      "label": "More selection actions",
+      "type": "button"
+    },
+    {
+      "action": "wait",
+      "seconds": 1
+    },
+    {
+      "action": "tap",
+      "label": "Create Video"
+    },
+    {
+      "action": "wait",
+      "seconds": 10
+    },
+    {
+      "action": "orientation",
+      "text": "landscape"
+    },
+    {
+      "action": "wait",
+      "seconds": 10
+    },
+    {
+      "action": "screenshot",
+      "name": "10-landscape-idle"
+    },
+    {
+      "action": "dump",
+      "name": "10-landscape-idle-buttons",
+      "type": "button"
+    },
+    {
+      "action": "dump",
+      "name": "10-landscape-idle-text",
+      "type": "staticText"
+    },
+    {
+      "action": "tap",
+      "label": "poolTab.music"
+    },
+    {
+      "action": "wait",
+      "seconds": 3
+    },
+    {
+      "action": "screenshot",
+      "name": "20-pool-music"
+    },
+    {
+      "action": "dump",
+      "name": "20-pool-music-text",
+      "type": "staticText"
+    },
+    {
+      "action": "dump",
+      "name": "20-pool-music-buttons",
+      "type": "button"
+    },
+    {
+      "action": "tap",
+      "label": "poolTab.text"
+    },
+    {
+      "action": "wait",
+      "seconds": 3
+    },
+    {
+      "action": "screenshot",
+      "name": "30-pool-text"
+    },
+    {
+      "action": "wait",
+      "seconds": 3
+    },
+    {
+      "action": "orientation",
+      "text": "portrait"
+    },
+    {
+      "action": "wait",
+      "seconds": 4
+    }
+  ]
+}

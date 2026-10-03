@@ -38,7 +38,6 @@ struct VideoMediaPoolColumn: View {
     let onAddText: (OverlayFontChoice?) -> Void
 
     @State private var tab: Tab = .media
-    @State private var lookThumbnails = VideoFilterThumbnails()
     @State private var source: Source = .all
     @State private var order: Order = .newest
     @State private var presentation: Presentation = .grid
@@ -56,7 +55,7 @@ struct VideoMediaPoolColumn: View {
             tabStrip
             if tab == .media { toolRow }
             Divider().overlay(EditorTheme.panelDivider)
-            binLabel
+            if tab.isLibrary { binLabel }
             content
         }
         .padding(.top, topInset)
@@ -75,26 +74,26 @@ struct VideoMediaPoolColumn: View {
 
     // MARK: Bands
 
+    /// "Library", and the control that hides the column (FS-12.03b §1).
     private var header: some View {
         HStack(spacing: 8) {
-            Image(systemName: "photo.stack")
-                .font(.system(size: 13, weight: .medium))
-                .foregroundStyle(EditorTheme.accent)
-            Text(tab.title)
-                .font(.system(size: 13, weight: .semibold))
+            Text(VideoStudioCopy.library)
+                .font(.system(size: 14, weight: .semibold))
                 .foregroundStyle(.white)
+                .accessibilityAddTraits(.isHeader)
             Spacer(minLength: 0)
             Button(action: onClose) {
                 Image(systemName: "sidebar.leading")
                     .font(.system(size: 13, weight: .medium))
                     .foregroundStyle(EditorTheme.secondaryText)
-                    .frame(width: AppTheme.Size.minTouch, height: 28)
-                    .videoHitTarget(drawnHeight: 28)
+                    .frame(width: 30, height: 30)
+                    .videoHitTarget(drawnHeight: 30)
             }
             .buttonStyle(.plain)
             .accessibilityLabel(Text("Hide Media", comment: "Video Studio: closes the library column"))
         }
-        .padding(.horizontal, 12)
+        .padding(.leading, 14)
+        .padding(.trailing, 8)
         .frame(height: VideoStudioMetrics.mediaPoolHeaderHeight)
     }
 
@@ -112,7 +111,7 @@ struct VideoMediaPoolColumn: View {
                         Image(systemName: candidate.systemImage)
                             .font(.system(size: 13, weight: .medium))
                         Text(candidate.title)
-                            .font(.system(size: 9.5, weight: .medium))
+                            .font(.system(size: 10.5, weight: .medium))
                             .lineLimit(1)
                             .minimumScaleFactor(0.8)
                     }
@@ -209,7 +208,6 @@ struct VideoMediaPoolColumn: View {
         case .media, .stickers: countText
         case .text: "\(model.fontRecents.count)"
         case .music: "\(importedMusic.tracks.count)"
-        case .effects: "\(PhotoFilter.allCases.count)"
         }
     }
 
@@ -260,190 +258,83 @@ struct VideoMediaPoolColumn: View {
         case .media, .stickers: libraryContent
         case .text: textContent
         case .music: musicContent
-        case .effects: effectsContent
         }
     }
 
-    /// The Text tab. Resolve's Titles tab is a template gallery you drag
-    /// from; ShotDex has no title templates, but it does keep the fonts the
-    /// user has reached for — so the list is those, and picking one adds a
-    /// caption already wearing it. The plain "Add Text" row is first, for
-    /// when the font is not the point.
+    /// The Text tab (FS-12.03b §1): Add Text, then the fonts the user has
+    /// reached for — picking one adds a caption already wearing it.
     private var textContent: some View {
         ScrollView(.vertical) {
-            LazyVStack(spacing: 2) {
-                actionRow(
-                    systemImage: "textformat",
-                    title: String(localized: "Add Text", comment: "Video Studio media pool: adds a caption in the last-used font"),
-                    action: { onAddText(nil) }
-                )
+            LazyVStack(alignment: .leading, spacing: 0) {
+                Button { onAddText(nil) } label: {
+                    HStack(spacing: 8) {
+                        Image(systemName: "textformat")
+                            .font(.system(size: 15, weight: .semibold))
+                        Text("Add Text", comment: "Video Studio media pool: adds a caption in the last-used font")
+                            .font(.system(size: 14, weight: .semibold))
+                    }
+                    .foregroundStyle(.white)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 44)
+                    .background(
+                        RoundedRectangle(cornerRadius: AppTheme.Radius.md, style: .continuous)
+                            .fill(Color.white.opacity(0.10))
+                    )
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .padding(.horizontal, 10)
+                .padding(.top, 10)
+                Text(VideoStudioCopy.fontsYouUsed)
+                    .font(.system(size: 11, weight: .bold)).tracking(0.6)
+                    .foregroundStyle(.white.opacity(0.7))
+                    .padding(.horizontal, 14)
+                    .padding(.top, 18)
+                    .padding(.bottom, 4)
                 if model.fontRecents.isEmpty {
                     Text("Fonts you use appear here, ready to reuse.", comment: "Video Studio media pool: empty state for the text tab")
-                        .font(.system(size: 11))
+                        .font(.system(size: 12))
                         .foregroundStyle(EditorTheme.dimText)
-                        .multilineTextAlignment(.center)
-                        .padding(.horizontal, 16)
-                        .padding(.top, 12)
+                        .padding(.horizontal, 14)
+                        .padding(.top, 6)
                 }
                 ForEach(model.fontRecents) { font in
                     Button { onAddText(font) } label: {
-                        HStack(spacing: 8) {
-                            Text("Aa")
-                                .font(Self.preview(for: font))
+                        HStack(spacing: 10) {
+                            Text(verbatim: "Aa")
+                                .font(Self.preview(for: font, size: 22))
                                 .foregroundStyle(.white)
-                                .frame(width: 34, height: 30)
-                                .background(
-                                    RoundedRectangle(cornerRadius: 4, style: .continuous)
-                                        .fill(EditorTheme.control)
-                                )
+                                .frame(width: 40)
                             Text(font.displayName)
-                                .font(.system(size: 11))
-                                .foregroundStyle(EditorTheme.secondaryText)
+                                .font(.system(size: 13))
+                                .foregroundStyle(.white)
                                 .lineLimit(1)
                             Spacer(minLength: 0)
                         }
-                        .padding(.horizontal, 6)
-                        .padding(.vertical, 4)
+                        .padding(.horizontal, 14)
+                        .frame(height: 50)
                         .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
                     .accessibilityHint(Text("Adds a caption in this font", comment: "Video Studio media pool: what tapping a font row does"))
                 }
             }
-            .padding(.horizontal, 6)
-            .padding(.vertical, 6)
+            .padding(.bottom, 10)
         }
     }
 
-    /// The Effects tab — Resolve's own name for the library you pick a look
-    /// out of. Tapping applies it to the project; how strongly is a slider,
-    /// and a slider belongs in the inspector, not in a library.
-    private var effectsContent: some View {
-        let cell = VideoStudioMetrics.mediaPoolCellWidth(columnWidth: width)
-        return ScrollView(.vertical) {
-            LazyVGrid(
-                columns: Array(
-                    repeating: GridItem(.fixed(cell), spacing: VideoStudioMetrics.mediaPoolCellSpacing),
-                    count: VideoStudioMetrics.mediaPoolColumnCount(columnWidth: width)
-                ),
-                spacing: VideoStudioMetrics.mediaPoolCellSpacing
-            ) {
-                ForEach(PhotoFilter.allCases) { filter in
-                    Button { model.setFilter(filter) } label: {
-                        VStack(spacing: 3) {
-                            RoundedRectangle(cornerRadius: 4, style: .continuous)
-                                .fill(EditorTheme.control)
-                                .overlay {
-                                    // The frame the user is looking at, under
-                                    // this look — not a glyph that is the
-                                    // same for all forty-nine.
-                                    if let preview = lookThumbnails.images[filter] {
-                                        Image(uiImage: preview)
-                                            .resizable()
-                                            .scaledToFill()
-                                    } else {
-                                        Image(systemName: "camera.filters")
-                                            .font(.system(size: 15))
-                                            .foregroundStyle(EditorTheme.dimText)
-                                    }
-                                }
-                                .frame(width: cell, height: (cell * 9 / 16).rounded())
-                                .clipShape(RoundedRectangle(cornerRadius: 4, style: .continuous))
-                                .overlay {
-                                    RoundedRectangle(cornerRadius: 4, style: .continuous)
-                                        .stroke(
-                                            model.recipe.filter == filter
-                                                ? EditorTheme.accent
-                                                : EditorTheme.trackBorder,
-                                            lineWidth: model.recipe.filter == filter ? 1.5 : 0.5
-                                        )
-                                }
-                            Text(filter.displayName)
-                                .font(.system(size: 9.5))
-                                .foregroundStyle(
-                                    model.recipe.filter == filter ? .white : EditorTheme.secondaryText
-                                )
-                                .lineLimit(1)
-                                .minimumScaleFactor(0.8)
-                                .frame(width: cell)
-                        }
-                        .contentShape(Rectangle())
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityAddTraits(model.recipe.filter == filter ? .isSelected : [])
-                }
-            }
-            .padding(.horizontal, VideoStudioMetrics.mediaPoolCellSpacing)
-            .padding(.vertical, 8)
-        }
-        .task(id: model.clipIndexUnderPlayhead) {
-            lookThumbnails.refresh(
-                for: model,
-                photoLibrary: photoLibrary,
-                cell: VideoStudioMetrics.mediaPoolCellWidth(columnWidth: width)
-            )
-        }
-        .onDisappear { lookThumbnails.cancel() }
-    }
-
-    /// The imported-music library. Bundled tracks are gone (the catalogue is
-    /// empty by design — see the music licensing note in spec §7.9), so this
-    /// is what the user brought in from Files, plus the way to bring more.
-    @ViewBuilder
+    /// The Music tab is the Music panel itself (FS-12.03b §1): Video sound,
+    /// Add Music from Files…, My Music — one place, one set of names.
     private var musicContent: some View {
-        ScrollView(.vertical) {
-            LazyVStack(spacing: 2) {
-                actionRow(
-                    systemImage: "square.and.arrow.down",
-                    title: String(localized: "Import from Files…", comment: "Video Studio media pool: brings an audio file in from the Files app"),
-                    action: onImportMusic
-                )
-                ForEach(importedMusic.tracks) { track in
-                    Button {
-                        model.addMusicTrack(source: .imported(url: track.url, displayName: track.displayName))
-                    } label: {
-                        HStack(spacing: 8) {
-                            Image(systemName: "music.note")
-                                .font(.system(size: 13))
-                                .foregroundStyle(EditorTheme.accent)
-                                .frame(width: 30, height: 30)
-                                .background(
-                                    RoundedRectangle(cornerRadius: 4, style: .continuous)
-                                        .fill(EditorTheme.control)
-                                )
-                            Text(track.displayName)
-                                .font(.system(size: 11))
-                                .foregroundStyle(.white)
-                                .lineLimit(2)
-                            Spacer(minLength: 0)
-                        }
-                        .padding(.horizontal, 6)
-                        .padding(.vertical, 4)
-                        .contentShape(Rectangle())
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityHint(Text("Adds this to the music track", comment: "Video Studio media pool: what tapping a music row does"))
-                }
-                if importedMusic.tracks.isEmpty {
-                    Text("Music you import is kept here for next time.", comment: "Video Studio media pool: empty state for the music tab")
-                        .font(.system(size: 11))
-                        .foregroundStyle(EditorTheme.dimText)
-                        .multilineTextAlignment(.center)
-                        .padding(.horizontal, 16)
-                        .padding(.top, 12)
-                }
-            }
-            .padding(.horizontal, 6)
-            .padding(.vertical, 6)
-        }
+        VideoMusicPanelContent(model: model, importedMusic: importedMusic, onImport: onImportMusic)
     }
 
     /// A font's own face at list size, the way the editor's font picker
     /// draws it.
-    private static func preview(for choice: OverlayFontChoice) -> Font {
+    private static func preview(for choice: OverlayFontChoice, size: CGFloat) -> Font {
         guard !choice.postScriptName.isEmpty,
-              let font = UIFont(name: choice.postScriptName, size: 15)
-        else { return .system(size: 15) }
+              let font = UIFont(name: choice.postScriptName, size: size)
+        else { return .system(size: size) }
         return Font(font)
     }
 
@@ -559,7 +450,7 @@ struct VideoMediaPoolColumn: View {
             ])
         case .stickers:
             onAddSticker(asset)
-        case .text, .music, .effects:
+        case .text, .music:
             // These tabs do not list the photo library, so no asset can
             // arrive from them.
             break
@@ -591,7 +482,9 @@ struct VideoMediaPoolColumn: View {
 
     /// What the column is listing, and what a tap on it inserts.
     enum Tab: String, CaseIterable, Identifiable {
-        case media, stickers, text, music, effects
+        /// In the board's order: Media · Text · Stickers · Music
+        /// (FS-12.03b §1). The look is the inspector's, not a tab's.
+        case media, text, stickers, music
         var id: String { rawValue }
 
         /// Whether this tab lists the photo library.
@@ -603,7 +496,6 @@ struct VideoMediaPoolColumn: View {
             case .stickers: "photo.badge.plus"
             case .text: "textformat"
             case .music: "music.note"
-            case .effects: "camera.filters"
             }
         }
 
@@ -613,7 +505,6 @@ struct VideoMediaPoolColumn: View {
             case .stickers: String(localized: "Stickers", comment: "Video Studio media pool tab: photos to add as an overlay")
             case .text: String(localized: "Text", comment: "Video Studio media pool tab: captions to add over the frame")
             case .music: String(localized: "Music", comment: "Video Studio media pool tab: audio to add as a music bed")
-            case .effects: String(localized: "Effects", comment: "Video Studio media pool tab: looks to apply to the project")
             }
         }
 
@@ -623,7 +514,6 @@ struct VideoMediaPoolColumn: View {
             case .stickers: String(localized: "Photos", comment: "Video Studio media pool bin label for the sticker tab")
             case .text: String(localized: "Recent Fonts", comment: "Video Studio media pool bin label for the text tab")
             case .music: String(localized: "Imported", comment: "Video Studio media pool bin label for the music tab")
-            case .effects: String(localized: "Looks", comment: "Video Studio media pool bin label for the effects tab")
             }
         }
     }

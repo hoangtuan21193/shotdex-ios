@@ -21,8 +21,6 @@
     { "action": "wait", "seconds": 16 },
     { "action": "tap", "label": "poolTab.music" },
     { "action": "wait", "seconds": 16 },
-    { "action": "tap", "label": "poolTab.effects" },
-    { "action": "wait", "seconds": 20 },
     { "action": "tap", "label": "Quick Adjust" },
     { "action": "wait", "seconds": 16 },
     { "action": "orientation", "text": "portrait" }

@@ -101,6 +101,10 @@
       "comment": "Video Studio Trim: cuts the selected clip's end to the playhead",
       "extractionState": "manual"
     },
+    "FONTS YOU USED": {
+      "comment": "Video Studio media pool Text tab: header over the fonts the user has used before",
+      "extractionState": "manual"
+    },
     "Fade": {
       "comment": "Video Studio clip panel: header over the clip's fade in and fade out",
       "extractionState": "manual"
@@ -111,6 +115,10 @@
     },
     "Leave Without Saving": {
       "comment": "Video Studio: closes the studio although the latest draft could not be written",
+      "extractionState": "manual"
+    },
+    "Library": {
+      "comment": "Video Studio: title of the iPad's media pool column",
       "extractionState": "manual"
     },
     "Lock %@": {

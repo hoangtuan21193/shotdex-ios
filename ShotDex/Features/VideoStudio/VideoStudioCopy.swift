@@ -133,4 +133,14 @@ enum VideoStudioCopy {
     static var wholeVideo: String {
         String(localized: "Whole video", table: table, comment: "Video Studio: subtitle beside Look when the column shows the look of the whole video")
     }
+
+    /// The iPad media pool's title (FS-12.03b §1).
+    static var library: String {
+        String(localized: "Library", table: table, comment: "Video Studio: title of the iPad's media pool column")
+    }
+
+    /// Header over the fonts the user has added captions in.
+    static var fontsYouUsed: String {
+        String(localized: "FONTS YOU USED", table: table, comment: "Video Studio media pool Text tab: header over the fonts the user has used before")
+    }
 }
