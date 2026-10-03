@@ -28,11 +28,28 @@ final class VideoStudioService {
     /// taken in with Convert to JPEG, so its still is the embedded preview.
     var unreadableRAWIds: @MainActor () -> Set<String> = { [] }
 
+    /// Where originals that are only in iCloud come down from (FS-12.09 §5):
+    /// a clip goes on the timeline at once and its file follows. Nil keeps
+    /// every source on PhotoKit's own request.
+    var originalFetcher: (any OriginalFetching)?
+    /// What the library knows about each item, and its local video. PhotoKit
+    /// in the app; a fixture in tests.
+    var sourceLoader: any VideoSourceLoading = PhotoKitVideoSourceLoader()
+    /// Originals brought down from iCloud this session, by library id.
+    private(set) var downloadedFiles: [String: URL] = [:]
+    /// At most this many originals download at once, as in Prepare Originals.
+    static let maximumConcurrentDownloads = 4
+
+    /// Every still read from a file: server copies and downloaded originals.
+    private var stillFiles: [String: URL] {
+        serverFiles.merging(downloadedFiles) { server, _ in server }
+    }
+
     /// Points the stills of this session at server copies on disk; an empty
     /// map when the session ends.
     func setServerFiles(_ files: [String: URL]) {
         serverFiles = files
-        previewStillStore.setFiles(files)
+        previewStillStore.setFiles(stillFiles)
     }
 
     init(
@@ -53,9 +70,15 @@ final class VideoStudioService {
         var durations: [UUID: Double] = [:]
     }
 
-    /// Resolves every clip's media. Videos may hit iCloud — the model shows
-    /// its loading phase for the whole pass. A clip whose media can't load is
-    /// simply absent from the result (the builder skips it).
+    /// Resolves every clip's media. A clip whose media can't load is simply
+    /// absent from the result (the builder skips it), or — media the
+    /// library has but cannot hand over — `.unavailable`.
+    ///
+    /// Originals only in iCloud come down through `originalFetcher` first,
+    /// at most four at once, into the session's folder: a photo is then
+    /// read from that file, a video opened from it. A download that fails
+    /// leaves the clip unavailable. (FS-12.09 §5, plan T-3.)
+    ///
     /// `maximumStillSize` caps a freeze frame's decode. The composition
     /// renders into the project's canvas, so a 4K frame lifted out of a 4K
     /// video is downscaled the moment it is drawn — but held at native size
@@ -68,18 +91,15 @@ final class VideoStudioService {
     ) async -> LoadedSources {
         var loaded = LoadedSources()
         previewStillStore.setEmbeddedPreviewIds(unreadableRAWIds())
-        // One fetch for every clip, not one per clip: a twenty-clip project
-        // was twenty PHAsset fetches before it awaited anything.
-        let assets = Dictionary(
-            PhotoLibraryService.fetchAssets(ids: clips.map(\.assetID))
-                .map { ($0.localIdentifier, $0) },
-            uniquingKeysWith: { first, _ in first }
-        )
+        // One lookup for every clip, not one per clip.
+        let libraryIDs = Array(Set(clips.map(\.assetID).filter { serverFiles[$0] == nil }))
+        let items = await sourceLoader.items(for: libraryIDs)
+        let failedDownloads = await downloadOriginals(of: libraryIDs.compactMap { items[$0] })
 
         // Photos resolve with no await at all, so they are taken first and in
         // one pass — a project of stills is now ready without waiting behind
         // anything.
-        var pending: [(clip: VideoClip, asset: PHAsset)] = []
+        var pending: [(clip: VideoClip, item: VideoSourceItem)] = []
         for clip in clips {
             if clip.kind == .photo, let file = serverFiles[clip.assetID] {
                 // A server copy: its oriented size straight from the file.
@@ -90,24 +110,27 @@ final class VideoStudioService {
                 )
                 continue
             }
-            guard let asset = assets[clip.assetID] else { continue }
+            guard let item = items[clip.assetID] else { continue }
             if clip.kind == .photo {
-                loaded.sources[clip.id] = .photo(
-                    assetID: clip.assetID,
-                    pixelSize: CGSize(width: asset.pixelWidth, height: asset.pixelHeight)
-                )
+                loaded.sources[clip.id] = failedDownloads.contains(clip.assetID)
+                    ? .unavailable(assetID: clip.assetID)
+                    : .photo(assetID: clip.assetID, pixelSize: item.pixelSize)
             } else {
-                pending.append((clip, asset))
+                pending.append((clip, item))
             }
         }
 
-        // The rest are AVFoundation loads, and the slow ones may be iCloud
-        // round trips. In parallel: the old serial loop paid for every clip's
-        // latency one after another, which is the wait the user sees on
-        // opening a project.
+        // The rest are AVFoundation loads. In parallel: the old serial loop
+        // paid for every clip's latency one after another.
+        let loader = sourceLoader
+        let files = downloadedFiles
         await withTaskGroup(of: (UUID, VideoClipSource?, Double?).self) { group in
-            for (clip, asset) in pending {
-                group.addTask { await Self.resolve(clip: clip, asset: asset, maximumStillSize: maximumStillSize) }
+            for (clip, item) in pending where !failedDownloads.contains(clip.assetID) {
+                let file = files[clip.assetID]
+                group.addTask {
+                    let avAsset: AVAsset? = if let file { AVURLAsset(url: file) } else { await loader.localAVAsset(for: item.original.id) }
+                    return await Self.resolve(clip: clip, avAsset: avAsset, maximumStillSize: maximumStillSize)
+                }
             }
             for await (id, source, duration) in group {
                 if let source { loaded.sources[id] = source }
@@ -119,40 +142,83 @@ final class VideoStudioService {
         // length the library already knows, instead of disappearing
         // (FS-12.04 §7). A clip whose asset is gone from the library has no
         // entry and is still left out.
-        for (clip, asset) in pending where loaded.sources[clip.id] == nil {
+        for (clip, item) in pending where loaded.sources[clip.id] == nil {
             loaded.sources[clip.id] = .unavailable(assetID: clip.assetID)
-            if clip.kind == .video, loaded.durations[clip.id] == nil, asset.duration > 0 {
-                loaded.durations[clip.id] = asset.duration
+            if clip.kind == .video, loaded.durations[clip.id] == nil, item.duration > 0 {
+                loaded.durations[clip.id] = item.duration
             }
         }
         return loaded
     }
 
-    /// One non-photo clip's media. Returns the clip's id so the caller can
-    /// put the results back in the right place whatever order they finish in.
+    /// Probes each item with the network off and downloads the ones only in
+    /// iCloud, four at a time. Returns the ids whose download failed.
+    private func downloadOriginals(of items: [VideoSourceItem]) async -> Set<String> {
+        guard let fetcher = originalFetcher else { return [] }
+        let candidates = items.filter { downloadedFiles[$0.original.id] == nil }
+        guard !candidates.isEmpty, let directory = try? makeSessionDirectory() else { return [] }
+        var inCloud: [VideoSourceItem] = []
+        await withTaskGroup(of: (VideoSourceItem, OriginalAvailability).self) { group in
+            for item in candidates {
+                group.addTask { (item, await fetcher.probe(item.original)) }
+            }
+            for await (item, availability) in group where availability == .inCloud {
+                inCloud.append(item)
+            }
+        }
+        guard !inCloud.isEmpty else { return [] }
+        var failed: Set<String> = []
+        var fetched: [String: URL] = [:]
+        await withTaskGroup(of: (String, URL?).self) { group in
+            var queue = inCloud[...]
+            func startNext() {
+                guard let item = queue.popFirst() else { return }
+                let ext = (item.original.filename as NSString).pathExtension
+                let url = directory.appendingPathComponent("original-\(UUID().uuidString)")
+                    .appendingPathExtension(ext.isEmpty ? (item.isVideo ? "mov" : "jpg") : ext)
+                group.addTask {
+                    do {
+                        try await fetcher.fetch(item.original, to: url, progress: { _ in })
+                        return (item.original.id, url)
+                    } catch {
+                        try? FileManager.default.removeItem(at: url)
+                        return (item.original.id, nil)
+                    }
+                }
+            }
+            for _ in 0..<Self.maximumConcurrentDownloads { startNext() }
+            for await (id, url) in group {
+                if let url { fetched[id] = url } else { failed.insert(id) }
+                startNext()
+            }
+        }
+        downloadedFiles.merge(fetched) { _, new in new }
+        previewStillStore.setFiles(stillFiles)
+        return failed
+    }
+
+    /// One non-photo clip's media from its `AVAsset`. Returns the clip's id
+    /// so the caller can put the results back in the right place whatever
+    /// order they finish in.
     private static func resolve(
         clip: VideoClip,
-        asset: PHAsset,
+        avAsset: AVAsset?,
         maximumStillSize: CGSize?
     ) async -> (UUID, VideoClipSource?, Double?) {
+        guard let avAsset else { return (clip.id, nil, nil) }
         do {
             switch clip.kind {
             case .photo:
                 break
             case .freeze:
                 // A frame lifted out of the source video at load time.
-                guard let avAsset = await PhotoLibraryService.requestAVAsset(for: asset),
-                      let image = await Self.extractFrame(
-                          from: avAsset,
-                          at: clip.freezeSourceTime ?? 0,
-                          maximumSize: maximumStillSize
-                      )
-                else { return (clip.id, nil, nil) }
+                guard let image = await Self.extractFrame(
+                    from: avAsset,
+                    at: clip.freezeSourceTime ?? 0,
+                    maximumSize: maximumStillSize
+                ) else { return (clip.id, nil, nil) }
                 return (clip.id, .freeze(image: image, pixelSize: image.extent.size), nil)
             case .video:
-                guard let avAsset = await PhotoLibraryService.requestAVAsset(for: asset) else {
-                    return (clip.id, nil, nil)
-                }
                 let videoTracks = try await avAsset.loadTracks(withMediaType: .video)
                 guard let videoTrack = videoTracks.first else { return (clip.id, nil, nil) }
                 let audioTrack = try await avAsset.loadTracks(withMediaType: .audio).first
@@ -433,7 +499,7 @@ final class VideoStudioService {
             )
         }
         let exportStillStore = StillFrameStore(
-            targetLongEdge: max(renderSize.width, renderSize.height), files: serverFiles,
+            targetLongEdge: max(renderSize.width, renderSize.height), files: stillFiles,
             embeddedPreviewIds: unreadableRAWIds()
         )
         let videoComposition = VideoCompositionBuilder.videoComposition(
@@ -482,6 +548,7 @@ final class VideoStudioService {
     }
 
     func cleanupSession() {
+        downloadedFiles = [:]
         if let sessionDirectory {
             try? FileManager.default.removeItem(at: sessionDirectory)
         }
@@ -506,5 +573,43 @@ final class VideoStudioService {
         try FileManager.default.createDirectory(at: url, withIntermediateDirectories: false)
         sessionDirectory = url
         return url
+    }
+}
+
+/// One library item as the Video Studio's loader sees it: what the original
+/// is called and how big, whether it is a video, and how long.
+struct VideoSourceItem: Sendable {
+    let original: OriginalItem
+    let isVideo: Bool
+    let pixelSize: CGSize
+    let duration: Double
+}
+
+/// The library side of loading clips — a seam, so loading, iCloud originals
+/// and failures run in a unit test without PhotoKit.
+protocol VideoSourceLoading: Sendable {
+    /// What the library knows of each id; an id it no longer has is absent.
+    func items(for ids: [String]) async -> [String: VideoSourceItem]
+    /// The video as PhotoKit hands it over (which may itself reach iCloud).
+    func localAVAsset(for id: String) async -> AVAsset?
+}
+
+struct PhotoKitVideoSourceLoader: VideoSourceLoading {
+    func items(for ids: [String]) async -> [String: VideoSourceItem] {
+        var items: [String: VideoSourceItem] = [:]
+        for asset in PhotoLibraryService.fetchAssets(ids: ids) {
+            items[asset.localIdentifier] = VideoSourceItem(
+                original: OriginalItem(asset: asset),
+                isVideo: asset.mediaType == .video,
+                pixelSize: CGSize(width: asset.pixelWidth, height: asset.pixelHeight),
+                duration: asset.duration
+            )
+        }
+        return items
+    }
+
+    func localAVAsset(for id: String) async -> AVAsset? {
+        guard let asset = PhotoLibraryService.fetchAssets(ids: [id]).first else { return nil }
+        return await PhotoLibraryService.requestAVAsset(for: asset)
     }
 }

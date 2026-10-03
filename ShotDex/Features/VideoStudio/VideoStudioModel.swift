@@ -427,8 +427,11 @@ final class VideoStudioModel {
     /// Clips whose media cannot be read yet (FS-12.04 §7): screen state,
     /// never stored — the next open tries again.
     var unavailableClipIDs: Set<UUID> {
-        Set(sources.compactMap { id, source in
-            if case .unavailable = source { return id }
+        // Sources outlive their clips (for ✕ and Undo); only clips still on
+        // the track are waiting for anything.
+        let present = Set(recipe.clips.map(\.id))
+        return Set(sources.compactMap { id, source in
+            if case .unavailable = source, present.contains(id) { return id }
             return nil
         })
     }
@@ -1717,6 +1720,7 @@ final class VideoStudioModel {
         guard !picks.isEmpty else { return }
         if session?.target.isItem == true { clearSelection() }
         let newClips = picks.map(Self.clip(for:))
+        let step = (sequence: history.checkpoint, playhead: currentTime)
         pushUndo()
         let result = MediaInsertMath.insert(newClips, into: recipe, at: currentTime)
         if let split = result.split, let source = sources[split.original] {
@@ -1726,7 +1730,7 @@ final class VideoStudioModel {
         recipe = result.recipe
         movePlayheadAfterInsert(to: result.playhead)
         markEdited()
-        Task { await loadAndMerge(newClips) }
+        Task { await loadAndMerge(newClips, step: step) }
     }
 
     /// A clip for a library pick. A video's length is known from the
@@ -1768,7 +1772,10 @@ final class VideoStudioModel {
     }
 
     /// Loads sources for freshly-added clips and merges them in, then rebuilds.
-    private func loadAndMerge(_ clips: [VideoClip]) async {
+    /// `step` is the undo step that added them, when an add made one: if
+    /// none of them arrives and nothing was done since, the add is taken
+    /// back whole — the cut it made included — and leaves no step.
+    private func loadAndMerge(_ clips: [VideoClip], step: (sequence: Int, playhead: Double)? = nil) async {
         let loaded = await service.loadSources(for: clips, maximumStillSize: recipe.canvasSize())
         for (id, source) in loaded.sources { sources[id] = source }
         guard !isClosed else { return }
@@ -1786,12 +1793,28 @@ final class VideoStudioModel {
             }
         }
         // Only clips still in the project: one ✕ or Undo took away is not a
-        // failure to report.
+        // failure to report. A clip just added whose media will not come
+        // down — an iCloud original with no network — is a failure too: it
+        // leaves rather than sit as a gap (FS-12.09 §5; a gap is for a
+        // project reopened offline, FS-12.04 §7).
         let present = Set(recipe.clips.map(\.id))
-        let failed = clips.filter { sources[$0.id] == nil && present.contains($0.id) }.map(\.id)
+        let failed = clips.filter { clip in
+            guard present.contains(clip.id) else { return false }
+            switch sources[clip.id] {
+            case nil, .unavailable: return true
+            default: return false
+            }
+        }.map(\.id)
         if !failed.isEmpty {
-            recipe.clips.removeAll { failed.contains($0.id) }
-            recipe.syncTransitionsWithClips()
+            if let step, failed.count == clips.count, let before = history.takeBack(step.sequence) {
+                recipe = before
+                totalDuration = clipPlacements.last?.end ?? 0
+                currentTime = min(step.playhead, totalDuration)
+                resumeTimeAfterRebuild = currentTime
+            } else {
+                recipe.clips.removeAll { failed.contains($0.id) }
+                recipe.syncTransitionsWithClips()
+            }
             // Same as the initial load: adding a clip that quietly does not
             // arrive is indistinguishable from the app ignoring the tap.
             errorMessage = failed.count == 1

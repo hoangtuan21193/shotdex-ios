@@ -34,12 +34,14 @@ enum VideoStudioModelFixture {
         configure: (inout VideoProjectRecipe) -> Void = { _ in },
         creationStore: CreationStore? = nil,
         mode: VideoStudioMode = .multiClip,
-        serverWorkDirectory: URL? = nil
+        serverWorkDirectory: URL? = nil,
+        configureService: (VideoStudioService) -> Void = { _ in }
     ) -> VideoStudioModel {
         var recipe = VideoProjectRecipe(clips: clips)
         recipe.syncTransitionsWithClips()
         configure(&recipe)
         let dependencies = AppDependencies.preview()
+        configureService(dependencies.videoStudio)
         let row = try! Creation.video(recipe: recipe, assetId: nil)
         return VideoStudioModel(
             photos: [],

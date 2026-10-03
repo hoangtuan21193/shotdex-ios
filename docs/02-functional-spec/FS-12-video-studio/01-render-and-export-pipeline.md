@@ -130,6 +130,14 @@ với **mọi** preset, và đó là lỗi thật đằng sau triệu chứng ng
 
 Xem [README](README.md) — FS-12 là tài liệu duy nhất đã có bảng AC đầy đủ.
 
+## Bản gốc chỉ có trên iCloud (FS-12.09 §5)
+
+Nạp nguồn hỏi từng mục thư viện bằng trình tải bản gốc của app (`OriginalFetching`) với mạng tắt; mục chỉ có trên
+iCloud được tải về thư mục phiên (tối đa 4 cùng lúc), ảnh đọc từ file đó qua kho khung tĩnh (như ảnh server), video
+mở `AVURLAsset` từ file. Tải hỏng: mở project → clip thành khoảng trống chờ iCloud (FS-12.04 §7); vừa thêm từ Media →
+lần thêm được trả lại nguyên vẹn (cả vết cắt), không để bước undo, kèm câu sẵn có. Lớp nạp có seam
+`VideoSourceLoading` để test không cần PhotoKit.
+
 ## Ảnh server (FS-17.06 §5b)
 
 Dự án làm từ ảnh server giữ `assetID` dạng chuỗi (`serverId|path`) và một bảng id → bản tạm trên máy.

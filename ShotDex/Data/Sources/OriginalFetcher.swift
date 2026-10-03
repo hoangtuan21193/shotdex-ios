@@ -76,6 +76,12 @@ struct PhotoKitOriginalFetcher: OriginalFetching {
     private static func resource(for id: String) -> (PHAsset, PHAssetResource)? {
         guard let asset = PHAsset.fetchAssets(withLocalIdentifiers: [id], options: nil).firstObject else { return nil }
         let resources = PHAssetResource.assetResources(for: asset)
+        // A video's original is its movie — the edited one if it was edited
+        // (FS-12.09 §5). Photos keep the share pipeline's choice.
+        if asset.mediaType == .video {
+            let movie = resources.first { $0.type == .fullSizeVideo } ?? resources.first { $0.type == .video }
+            return movie.map { (asset, $0) }
+        }
         guard let type = ShareSource.sharedResourceType(among: resources.map(\.type)),
               let resource = resources.first(where: { $0.type == type })
         else { return nil }
@@ -83,7 +89,8 @@ struct PhotoKitOriginalFetcher: OriginalFetching {
     }
 
     func probe(_ item: OriginalItem) async -> OriginalAvailability {
-        guard let (_, resource) = Self.resource(for: item.id) else { return .unknown }
+        guard let (asset, resource) = Self.resource(for: item.id) else { return .unknown }
+        if asset.mediaType == .video { return await Self.probeVideo(resource) }
         let options = PHAssetResourceRequestOptions()
         options.isNetworkAccessAllowed = false
         let header = HeaderProbe()
@@ -112,13 +119,42 @@ struct PhotoKitOriginalFetcher: OriginalFetching {
         }
     }
 
+    /// A movie has no header size to judge: any byte that comes back with
+    /// the network off means the file is here; "network access required"
+    /// means it is in iCloud. Stops at the first chunk.
+    private static func probeVideo(_ resource: PHAssetResource) async -> OriginalAvailability {
+        let options = PHAssetResourceRequestOptions()
+        options.isNetworkAccessAllowed = false
+        let manager = PHAssetResourceManager.default()
+        let state = OSAllocatedUnfairLock<(resumed: Bool, request: PHAssetResourceDataRequestID?)>(initialState: (false, nil))
+        return await withCheckedContinuation { continuation in
+            func finish(_ value: OriginalAvailability) {
+                let first = state.withLock { state -> Bool in
+                    defer { state.resumed = true }
+                    return !state.resumed
+                }
+                if first { continuation.resume(returning: value) }
+            }
+            let id = manager.requestData(for: resource, options: options) { chunk in
+                guard !chunk.isEmpty else { return }
+                finish(.local)
+                if let request = state.withLock({ $0.request }) { manager.cancelDataRequest(request) }
+            } completionHandler: { error in
+                guard let error = error as NSError? else { return finish(.local) }
+                let codes = [PHPhotosError.Code.networkAccessRequired.rawValue, PHPhotosError.Code.networkError.rawValue]
+                finish(error.domain == PHPhotosErrorDomain && codes.contains(error.code) ? .inCloud : .unknown)
+            }
+            state.withLock { $0.request = id }
+        }
+    }
+
     func byteCount(of item: OriginalItem) async -> Int64? {
         guard let (_, resource) = Self.resource(for: item.id) else { return nil }
         return (resource.value(forKey: "fileSize") as? NSNumber)?.int64Value
     }
 
     func fetch(_ item: OriginalItem, to url: URL, progress: @escaping @Sendable (Double) -> Void) async throws {
-        guard let (_, resource) = Self.resource(for: item.id) else { throw OriginalFetchError.missing }
+        guard let (asset, resource) = Self.resource(for: item.id) else { throw OriginalFetchError.missing }
         FileManager.default.createFile(atPath: url.path, contents: nil)
         let handle = try FileHandle(forWritingTo: url)
         let writer = StreamWriter(handle: handle)
@@ -144,6 +180,14 @@ struct PhotoKitOriginalFetcher: OriginalFetching {
             if let id = request.withLock({ $0 }) { manager.cancelDataRequest(id) }
         }
         try Task.checkCancellation()
+        if asset.mediaType == .video {
+            // A movie is complete when it is as long as PhotoKit says the
+            // resource is; there is no pixel header to measure.
+            let written = (try? FileManager.default.attributesOfItem(atPath: url.path)[.size] as? Int64) ?? 0
+            let expected = (resource.value(forKey: "fileSize") as? NSNumber)?.int64Value
+            guard written > 0, expected.map({ written >= $0 }) ?? true else { throw OriginalFetchError.incomplete }
+            return
+        }
         // A resource's bytes are the file itself, never a preview; the check
         // is against a truncated write. 90%, not exact: a RAW's header can
         // count its sensor margins, which PhotoKit's size leaves out.

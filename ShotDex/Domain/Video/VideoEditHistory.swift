@@ -76,6 +76,16 @@ struct VideoEditHistory: Sendable {
         return entry.snapshot
     }
 
+    /// Takes the step numbered `sequence` back out of the history — only
+    /// when it is still the newest undoable step — and returns the project
+    /// as it was before it, for the caller to restore. An add whose media
+    /// never arrived is not a step to undo (FS-12.09 §5).
+    mutating func takeBack(_ sequence: Int) -> VideoProjectRecipe? {
+        guard let newest = undoEntries.last, newest.sequence == sequence else { return nil }
+        undoEntries.removeLast()
+        return newest.snapshot
+    }
+
     /// ✕: forgets every step made since `checkpoint` — undoable or undone —
     /// so neither Undo nor Redo can bring any of them back. Steps from before
     /// the checkpoint stay exactly as they were.

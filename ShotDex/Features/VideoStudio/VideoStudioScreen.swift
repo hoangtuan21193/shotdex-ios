@@ -124,6 +124,9 @@ struct VideoStudioScreen: View {
         .statusBarHidden()
         .task {
             guard model == nil else { return }
+            // Originals only in iCloud come down through the app's fetcher
+            // (the scripted one under -ShotDexFakeICloud).
+            dependencies.videoStudio.originalFetcher = dependencies.originalFetcher
             let newModel = VideoStudioModel(
                 photos: server.map { $0.photos.map(PhotoEditOrigin.serverFile) } ?? assets.map(PhotoEditOrigin.asset),
                 mode: mode,
