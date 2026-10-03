@@ -493,7 +493,7 @@ enum VideoStudioMetrics {
         let wanted = max(timelineMinimumHeight, timelineContentHeight) + extra
 
         // What the timeline must keep when the preview is clamped. It is the
-        // lanes' own height, not the phone's 248: at `Lanes.regular` one
+        // lanes' own height, not the phone's 248: at `Lanes.desk` one
         // overlay and one music lane want 255, so reserving 248 handed the
         // preview 7pt the lanes needed and left them scrolling on every
         // regular-width window. A caller that passes no content height is
@@ -576,7 +576,7 @@ enum VideoStudioMetrics {
     /// The phone's lane geometry, kept as a free function for the layout
     /// tests and for callers that have no width to hand.
     static func timelineContentHeight(overlayLanes: Int, musicLanes: Int) -> CGFloat {
-        Lanes.compact.timelineContentHeight(overlayLanes: overlayLanes, musicLanes: musicLanes)
+        Lanes.duo.timelineContentHeight(overlayLanes: overlayLanes, musicLanes: musicLanes)
     }
 
     // MARK: Sheet tiers
@@ -598,79 +598,97 @@ enum VideoStudioMetrics {
     /// Where the lane stack starts, below the pinned ruler.
     static let laneAreaTop: CGFloat = 0
 
-    /// Lane geometry for one screen width.
+    /// Lane geometry for one window class (FS-12.03b §4, FS-12.07 §4).
     ///
     /// Overlay lanes (text and stickers) stack above the video lane; music
-    /// lanes stack below it. Both grow with the number of lanes in use — and
-    /// with the screen. A 66pt video lane is right on a 393pt phone and is a
-    /// phone track sitting on a tablet at 1032pt: the thumbnail is what a cut
-    /// is judged from, and the height a tall window has spare is what
-    /// LumaFusion and Final Cut spend on taller tracks rather than on more
-    /// black around the preview.
+    /// lanes stack below it. Three tiers, one per kind of window: the
+    /// phone's, the Duo's (both of its displays — the inner one is wide but
+    /// 669pt short, and lanes are paid for in height), and the desk's.
     struct Lanes: Equatable, Sendable {
         var overlay: CGFloat
         var video: CGFloat
         var music: CGFloat
         var ruler: CGFloat
         var clipCell: CGFloat
-        /// The fixed column at the leading edge of the lane stack. A phone
-        /// has room for a glyph; a tablet has room for the lane's name, and
-        /// a track nobody can name is a track you count rather than read.
+        /// The fixed column at the leading edge of the lane stack.
         var gutter: CGFloat
+        /// What that column holds.
+        var gutterStyle: GutterStyle
+        /// The zoom a timeline opens at on this window (FS-12.03 §2–4).
+        var pointsPerSecond: CGFloat
 
-        static let compact = Lanes(overlay: 34, video: 66, music: 40, ruler: 26, clipCell: 54, gutter: 30)
-        static let regular = Lanes(overlay: 44, video: 104, music: 52, ruler: 30, clipCell: 88, gutter: 64)
+        /// The leading column of the lane stack.
+        enum GutterStyle: Equatable, Sendable {
+            /// A glyph per lane and nothing to touch: the phone and the
+            /// Duo's cover (30pt).
+            case glyphs
+            /// The Duo's inner display: `T1`/`V1`/`A1` with Lock and Mute
+            /// beside them, no names (100pt — FS-12.03b §4).
+            case badges
+            /// The iPad: a track header card per lane — badge, name, Lock,
+            /// Mute (104pt).
+            case headers
+        }
 
-        /// The gutter widened into a track header column, the way every
-        /// desk-shaped editor draws one: the lane's number and name, and the
-        /// two switches that belong to a track rather than to a clip — lock
-        /// and mute. 104 is what a 3-glyph row plus a "A1" badge needs before
-        /// the glyphs fall under Apple's 44pt target on a stacked layout.
+        /// FS-12.07 §4 — taken up by the phone layout when its stack is
+        /// rebuilt (tools plan, task 43); until then the phone draws `duo`.
+        static let phone = Lanes(
+            overlay: 40, video: 80, music: 46, ruler: 33, clipCell: 60,
+            gutter: 30, gutterStyle: .glyphs, pointsPerSecond: 55
+        )
+        static let duo = Lanes(
+            overlay: 34, video: 66, music: 40, ruler: 33, clipCell: 54,
+            gutter: 30, gutterStyle: .glyphs, pointsPerSecond: 55
+        )
+        static let desk = Lanes(
+            overlay: 44, video: 104, music: 52, ruler: 39, clipCell: 88,
+            gutter: trackHeaderWidth, gutterStyle: .headers, pointsPerSecond: 70
+        )
+
+        /// The iPad's track header column: a 92pt card — badge, name, Lock,
+        /// Mute — and the gap after it.
         static let trackHeaderWidth: CGFloat = 104
 
-        /// Whether the gutter is wide enough to carry controls instead of a
-        /// glyph. Same test either way, so the ruler inset, the playhead and
-        /// the header all agree on one number.
-        var showsTrackControls: Bool { gutter >= Lanes.trackHeaderWidth }
+        /// The Duo inner display's badge column: margin 6 · badge 26 · gap 4
+        /// · Lock 28 · gap 4 · Mute 28 · margin 4 (FS-12.03b §4).
+        static let badgeColumnWidth: CGFloat = 100
+        static let badgeColumnMargin: CGFloat = 6
+        static let badgeWidth: CGFloat = 26
+        static let badgeGap: CGFloat = 4
+        static let badgeDisc: CGFloat = 28
+        static let badgeGlyph: CGFloat = 13
+        /// Each switch answers 32pt wide by the lane's height.
+        static let badgeTouchWidth: CGFloat = 32
 
-        /// The same lane heights with a track header column in front of them.
-        func withTrackHeaders(_ enabled: Bool) -> Lanes {
-            guard enabled else { return self }
-            var copy = self
-            copy.gutter = Lanes.trackHeaderWidth
-            return copy
+        /// Leading x of the Lock and Mute discs in the badge column.
+        static var badgeLockX: CGFloat { badgeColumnMargin + badgeWidth + badgeGap }
+        static var badgeMuteX: CGFloat { badgeLockX + badgeDisc + badgeGap }
+
+        /// The tier a window of `windowClass` draws its lanes at.
+        static func `for`(_ windowClass: VideoStudioWindowClass) -> Lanes {
+            switch windowClass {
+            case .phone, .duoCover:
+                return .duo
+            case .duoInner:
+                var lanes = Lanes.duo
+                lanes.gutter = badgeColumnWidth
+                lanes.gutterStyle = .badges
+                return lanes
+            case .iPadLandscape:
+                return .desk
+            case .iPadPortrait:
+                var lanes = Lanes.desk
+                lanes.pointsPerSecond = 60
+                return lanes
+            }
         }
 
-        /// The glyph box in the gutter, and the symbol drawn in it. A 13pt
-        /// symbol on a phone held at reading distance is the same angular
-        /// size as a 16pt one on a 13" tablet at arm's length — and the wide
-        /// gutter has the room, so there is nothing to trade for it.
-        var gutterIcon: CGFloat { gutter >= 56 ? 26 : 20 }
-        var gutterGlyph: CGFloat { gutter >= 56 ? 16 : 13 }
-        /// Whether the lane's name fits under its glyph. The phone's 30pt
-        /// column does not hold a word without clipping it.
-        var showsLaneNames: Bool { gutter >= 56 }
-        var gutterNameFont: CGFloat { 11 }
-        /// Height of the whole glyph-plus-name stack, so the gutter can centre
-        /// it on the lane rather than centring the glyph and letting the name
-        /// hang below the lane's middle.
-        var gutterStackHeight: CGFloat {
-            showsLaneNames ? gutterIcon + 2 + gutterNameFont + 3 : gutterIcon
-        }
+        /// Whether the leading column carries switches instead of a glyph.
+        var showsTrackControls: Bool { gutterStyle != .glyphs }
 
-        /// A window has to be wide **and tall** for tablet tracks. Width alone
-        /// is not enough: the iPhone Duo's inner display is 867pt wide and
-        /// 669pt tall, and 255pt of regular lanes on a 669pt window pushes the
-        /// preview down to its floor. The editor's sidebar already keys on a
-        /// height for the same reason.
-        static let minimumHeightForRegularLanes: CGFloat = 750
-
-        static func `for`(size: CGSize) -> Lanes {
-            size.width >= EditorLayoutMetrics.sidebarMinCanvasWidth
-                && size.height >= minimumHeightForRegularLanes
-                ? .regular
-                : .compact
-        }
+        /// The glyph box in the gutter, and the symbol drawn in it.
+        var gutterIcon: CGFloat { 20 }
+        var gutterGlyph: CGFloat { 13 }
 
         func overlayLaneTop(_ lane: Int) -> CGFloat {
             laneAreaTop + CGFloat(lane) * (overlay + laneSpacing)
@@ -722,7 +740,7 @@ enum VideoStudioMetrics {
     }
 
     /// The phone's gutter, for anything that has no lane tier to hand.
-    static let gutterWidth: CGFloat = Lanes.compact.gutter
+    static let gutterWidth: CGFloat = Lanes.duo.gutter
 
     /// x of the fixed playhead for a given screen width: centre of the row area.
     static func playheadX(screenWidth: CGFloat, gutter: CGFloat = gutterWidth) -> CGFloat {
@@ -737,7 +755,6 @@ enum VideoStudioMetrics {
 
     // MARK: Scale
 
-    static let defaultPointsPerSecond: CGFloat = 55
     static let pointsPerSecondRange: ClosedRange<CGFloat> = 20...160
 
     // MARK: Bands & controls (timeline-only radius exception r-track = 6)

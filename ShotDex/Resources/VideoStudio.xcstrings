@@ -109,6 +109,10 @@
       "comment": "Video Studio: closes the studio although the latest draft could not be written",
       "extractionState": "manual"
     },
+    "Lock %@": {
+      "comment": "Video Studio track switch: stops the named lane (e.g. Video, Music 2) being selected or dragged; the trait says whether it is on",
+      "extractionState": "manual"
+    },
     "Look": {
       "comment": "Video Studio: the bottom-row tool that changes the whole video's look — filter, adjustments, colour",
       "extractionState": "manual"
@@ -135,6 +139,10 @@
     },
     "Mute": {
       "comment": "Video Studio: the speaker at the head of a Volume row — silences the clip or the song, keeping its level",
+      "extractionState": "manual"
+    },
+    "Mute %@": {
+      "comment": "Video Studio track switch: silences the named lane (e.g. Video, Music 2); the trait says whether it is on",
       "extractionState": "manual"
     },
     "Mute Video Sound": {

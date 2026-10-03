@@ -24,8 +24,11 @@ struct VideoTimelineView: View {
     /// here.
     var onVisibleDuration: ((Double) -> Void)?
 
-    @State private var pps: CGFloat = VideoStudioMetrics.defaultPointsPerSecond
-    @State private var pinchStartPPS: CGFloat = VideoStudioMetrics.defaultPointsPerSecond
+    /// Opens at the window's own zoom (`Lanes.pointsPerSecond`) — set once,
+    /// on appear, so a pinch the user made is never taken back.
+    @State private var pps: CGFloat = VideoStudioMetrics.Lanes.duo.pointsPerSecond
+    @State private var pinchStartPPS: CGFloat = VideoStudioMetrics.Lanes.duo.pointsPerSecond
+    @State private var hasAppliedWindowZoom = false
     @State private var dragZones: [TimelineDragZone] = []
     @State private var activeDrag: TimelineActiveDrag?
     @State private var viewportWidth: CGFloat = 393
@@ -112,6 +115,11 @@ struct VideoTimelineView: View {
                 playhead.offset(x: VideoStudioMetrics.playheadX(screenWidth: screenWidth, gutter: lanes.gutter) - 1)
             }
             .onAppear {
+                if !hasAppliedWindowZoom {
+                    hasAppliedWindowZoom = true
+                    pps = lanes.pointsPerSecond
+                    pinchStartPPS = pps
+                }
                 viewportWidth = screenWidth
                 reportVisibleDuration(screenWidth: screenWidth)
             }

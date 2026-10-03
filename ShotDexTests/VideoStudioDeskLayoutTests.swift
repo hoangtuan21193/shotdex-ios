@@ -50,7 +50,6 @@ struct VideoStudioDeskLayoutTests {
     @Test func theDuoInnerDisplayGetsTheRailAndTheDeskBands() {
         #expect(VideoStudioMetrics.usesDeskChrome(size: duoInner))
         #expect(VideoStudioMetrics.usesToolRail(size: duoInner))
-        #expect(VideoStudioMetrics.Lanes.for(size: duoInner) == .compact)
     }
 
     @Test func bothTabletOrientationsGetDeskChrome() {
@@ -114,7 +113,7 @@ struct VideoStudioDeskLayoutTests {
     /// only what its lanes need — is not the one that pays.
     @Test func theDeskBandsCostThePreviewTheirHeight() {
         let canvas = CGSize(width: 16, height: 9)
-        let content = VideoStudioMetrics.Lanes.regular
+        let content = VideoStudioMetrics.Lanes.desk
             .timelineContentHeight(overlayLanes: 1, musicLanes: 1)
         func layout(desk: Bool) -> VideoStudioMetrics.StackLayout {
             VideoStudioMetrics.stackLayout(
@@ -135,17 +134,43 @@ struct VideoStudioDeskLayoutTests {
     // MARK: Track headers
 
     @Test func trackHeadersReplaceTheGlyphColumnOnlyOnDeskWindows() {
-        #expect(!VideoStudioMetrics.Lanes.compact.withTrackHeaders(false).showsTrackControls)
-        #expect(VideoStudioMetrics.Lanes.compact.withTrackHeaders(true).showsTrackControls)
-        #expect(VideoStudioMetrics.Lanes.regular.withTrackHeaders(true).gutter
-            == VideoStudioMetrics.Lanes.trackHeaderWidth)
+        #expect(!VideoStudioMetrics.Lanes.for(.phone).showsTrackControls)
+        #expect(!VideoStudioMetrics.Lanes.for(.duoCover).showsTrackControls)
+        #expect(VideoStudioMetrics.Lanes.for(.duoInner).showsTrackControls)
+        #expect(VideoStudioMetrics.Lanes.desk.gutter == VideoStudioMetrics.Lanes.trackHeaderWidth)
+    }
+
+    /// FS-12.03b AC-8: the Duo's inner display has a 100pt badge column —
+    /// margin 6 · badge 26 · gap 4 · Lock 28 · gap 4 · Mute 28 · margin 4 —
+    /// so Lock and Mute are reachable there too (the transport has no ⋯).
+    /// Each switch answers 32pt wide; the two never overlap.
+    @Test func duoInnerGutterIsA100ptBadgeColumnWithLockAndMute() {
+        typealias Lanes = VideoStudioMetrics.Lanes
+        let parts = Lanes.badgeColumnMargin + Lanes.badgeWidth + Lanes.badgeGap
+            + Lanes.badgeDisc + Lanes.badgeGap + Lanes.badgeDisc + 4
+        #expect(parts == Lanes.badgeColumnWidth)
+        #expect(Lanes.badgeLockX == 36)
+        #expect(Lanes.badgeMuteX == 68)
+        let lockTouch = Lanes.badgeLockX - (Lanes.badgeTouchWidth - Lanes.badgeDisc) / 2
+        let muteTouch = Lanes.badgeMuteX - (Lanes.badgeTouchWidth - Lanes.badgeDisc) / 2
+        #expect(lockTouch == 34)
+        #expect(muteTouch == 66)
+        #expect(lockTouch + Lanes.badgeTouchWidth <= muteTouch)
+        #expect(muteTouch + Lanes.badgeTouchWidth <= Lanes.badgeColumnWidth)
+        // Lock on every lane, Mute where there is sound — read off the
+        // lanes, not counted.
+        #expect(VideoTimelineLane.overlay(0).lockLabel == "Lock Text")
+        #expect(VideoTimelineLane.video.muteLabel == "Mute Video")
+        #expect(VideoTimelineLane.music(1).lockLabel == "Lock Music 2")
+        #expect(VideoTimelineLane.video.badge == "V1")
+        #expect(VideoTimelineLane.music(0).badge == "A1")
     }
 
     /// Widening the gutter must not change the lanes themselves — the header
     /// is a column in front of the rows, not a new row geometry.
     @Test func trackHeadersLeaveTheLaneHeightsAlone() {
-        let plain = VideoStudioMetrics.Lanes.regular
-        let headed = plain.withTrackHeaders(true)
+        let plain = VideoStudioMetrics.Lanes.duo
+        let headed = VideoStudioMetrics.Lanes.for(.duoInner)
         #expect(headed.video == plain.video)
         #expect(headed.overlay == plain.overlay)
         #expect(headed.music == plain.music)

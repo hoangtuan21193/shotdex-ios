@@ -105,4 +105,14 @@ enum VideoStudioCopy {
     static func clipsWaitingForICloud(_ count: Int) -> String {
         String(localized: "\(count) clips are waiting for iCloud", table: table, comment: "Video Studio banner: clips whose originals have not downloaded yet stay in place as gaps (plural)")
     }
+
+    /// A lane's Lock switch, named by its lane: "Lock Video", "Lock Music 2".
+    static func lockLane(_ lane: String) -> String {
+        String(localized: "Lock \(lane)", table: table, comment: "Video Studio track switch: stops the named lane being selected or dragged; the trait says whether it is on")
+    }
+
+    /// A lane's Mute switch: "Mute Video", "Mute Music 2".
+    static func muteLane(_ lane: String) -> String {
+        String(localized: "Mute \(lane)", table: table, comment: "Video Studio track switch: silences the named lane; the trait says whether it is on")
+    }
 }

@@ -84,7 +84,7 @@ tổng quan, meter, track header — mỗi băng có một việc và lấy chi�
 | AC-5 | iPad, 2 track nhạc trong A1 | bấm Mute A1 rồi Undo một lần | cả hai về mức cũ | `VideoStudioTrackSwitchTests.mutingAMusicLaneUndoesInOneStep` |
 | AC-6 | clip 2 đang chọn, Speed đổi 2×, bàn phím cắm | bấm Esc rồi ⌘Z | sau Esc: bỏ chọn, Speed vẫn 2×; sau ⌘Z: 1× | `VideoStudioTrackSwitchTests.escapeKeepsTheChangeAndUndoRevertsIt` (gọi `pressEscape()`, hành động duy nhất của phím Esc) |
 | AC-7 | iPad ngang, pool tab Music | dump | dòng "Video sound" ở đầu, nút "Add Music from Files…" (không phải "Import from Files…") | ⚠️ chưa có |
-| AC-8 | Duo trong 951×669 | dump timeline | cột badge 100 có nút Lock ở T1 · V1 · A1 và Mute ở V1 · A1; lane 34 / 66 / 40 | `VideoStudioLayoutTests.aShortRegularWindowKeepsThePhonesLanes` (phần lane; thêm bậc lane riêng cho iPhone 40/80/46) |
+| AC-8 | Duo trong 951×669 | dump timeline | cột badge 100 có nút Lock ở T1 · V1 · A1 và Mute ở V1 · A1; lane 34 / 66 / 40 | ⚠️ một phần — số: `VideoStudioLayoutTests.eachWindowClassGetsItsLaneTier` (bậc lane theo lớp cửa sổ, iPhone 40/80/46 là `Lanes.phone`), `VideoStudioDeskLayoutTests.duoInnerGutterIsA100ptBadgeColumnWithLockAndMute` (6·26·4·28·4·28·4, vùng chạm 34–66 / 66–98, nhãn Lock Text/Video/Music 2, Mute Video); **dump chưa có**: sim Duo boot ở trạng thái gập, màn trong không mở được từ dòng lệnh |
 | AC-9 | các board IL1, IP1, DI1 | `Tools/design-board compare` transport, dải tổng quan, track header | lệch ≤ 2pt | ⚠️ chưa có — agent `design-parity` |
 
 **Chưa chứng minh được:** AC-3, AC-7, AC-9.

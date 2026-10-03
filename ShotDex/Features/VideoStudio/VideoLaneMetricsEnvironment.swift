@@ -8,7 +8,7 @@ import SwiftUI
 /// initialisers to reach a chip is how the phone sizes got hard-coded in the
 /// first place.
 private struct VideoLaneMetricsKey: EnvironmentKey {
-    static let defaultValue = VideoStudioMetrics.Lanes.compact
+    static let defaultValue = VideoStudioMetrics.Lanes.duo
 }
 
 extension EnvironmentValues {

@@ -421,9 +421,7 @@ struct VideoStudioScreen: View {
                     - mediaPoolWidth
             )
             let deskChromeHeight = VideoStudioMetrics.deskChromeHeight(usesDeskChrome: usesDeskChrome)
-            let lanes = VideoStudioMetrics.Lanes
-                .for(size: proxy.size)
-                .withTrackHeaders(usesDeskChrome)
+            let lanes = VideoStudioMetrics.Lanes.for(windowClass)
             let layout = VideoStudioMetrics.stackLayout(
                 screen: CGSize(
                     // The preview is drawn in the column beside the rail, not

@@ -93,7 +93,7 @@ struct VideoStudioLayoutTests {
     /// timeline keeps the height and the position it had.
     @Test func aWindowWithSlackDocksThePanelInsteadOfLiftingTheStack() {
         let iPad = CGSize(width: 1032 - VideoStudioMetrics.railWidth, height: 1376)
-        let lanes = VideoStudioMetrics.Lanes.regular
+        let lanes = VideoStudioMetrics.Lanes.desk
         let content = lanes.timelineContentHeight(overlayLanes: 1, musicLanes: 1)
         let closed = VideoStudioMetrics.stackLayout(
             screen: iPad, bandHeight: 48, bottomInset: 20,
@@ -126,12 +126,12 @@ struct VideoStudioLayoutTests {
     }
 
     /// The preview's clamp has to reserve what the *lanes* need, not the
-    /// phone's floor. At `Lanes.regular` one overlay and one music lane want
+    /// phone's floor. At `Lanes.desk` one overlay and one music lane want
     /// 255pt; reserving 248 handed the preview the other 7 and left the lanes
     /// scrolling on every regular-width window.
     @Test func theClampReservesWhatTheLanesActuallyNeed() {
         let landscape = CGSize(width: 1376 - VideoStudioMetrics.railWidth, height: 1032)
-        let content = VideoStudioMetrics.Lanes.regular.timelineContentHeight(overlayLanes: 1, musicLanes: 1)
+        let content = VideoStudioMetrics.Lanes.desk.timelineContentHeight(overlayLanes: 1, musicLanes: 1)
         #expect(content > VideoStudioMetrics.timelineMinimumHeight, "the case this test is about")
         let layout = VideoStudioMetrics.stackLayout(
             screen: landscape, bandHeight: 48, bottomInset: 20,
@@ -141,14 +141,38 @@ struct VideoStudioLayoutTests {
         #expect(layout.timeline >= content, "the lanes fit without scrolling")
     }
 
-    /// Tablet tracks need a window that is tall as well as wide. The iPhone
-    /// Duo's inner display is 867×669: wide enough by the rail's threshold,
-    /// and far too short for 255pt of lanes.
-    @Test func aShortRegularWindowKeepsThePhonesLanes() {
-        #expect(VideoStudioMetrics.Lanes.for(size: CGSize(width: 867, height: 669)) == .compact)
-        #expect(VideoStudioMetrics.Lanes.for(size: CGSize(width: 1032, height: 1376)) == .regular)
-        #expect(VideoStudioMetrics.Lanes.for(size: CGSize(width: 1376, height: 1032)) == .regular)
-        #expect(VideoStudioMetrics.Lanes.for(size: CGSize(width: 402, height: 874)) == .compact)
+    /// FS-12.03b §4, AC-8 (lanes): one lane tier per window class. The
+    /// Duo's inner display is wide but 669pt short, so it keeps the Duo's
+    /// 34/66/40 under a 100pt badge column; the iPad gets 44/104/52 under
+    /// its 104pt headers and opens at 70pt a second in landscape, 60 in
+    /// portrait. The phone keeps the Duo's tier until its own stack lands
+    /// (tools plan task 43), when it moves to `Lanes.phone`.
+    @Test func eachWindowClassGetsItsLaneTier() {
+        typealias Lanes = VideoStudioMetrics.Lanes
+        for windowClass in VideoStudioWindowClass.allCases {
+            let lanes = Lanes.for(windowClass)
+            switch windowClass {
+            case .phone, .duoCover:
+                #expect(lanes == .duo, "\(windowClass)")
+                #expect(lanes.gutterStyle == .glyphs)
+            case .duoInner:
+                #expect([lanes.overlay, lanes.video, lanes.music] == [34, 66, 40])
+                #expect(lanes.gutterStyle == .badges)
+                #expect(lanes.gutter == 100)
+                #expect(lanes.pointsPerSecond == 55)
+            case .iPadLandscape:
+                #expect(lanes == .desk)
+                #expect(lanes.pointsPerSecond == 70)
+            case .iPadPortrait:
+                #expect([lanes.overlay, lanes.video, lanes.music] == [44, 104, 52])
+                #expect(lanes.gutterStyle == .headers)
+                #expect(lanes.pointsPerSecond == 60)
+            }
+        }
+        #expect([Lanes.phone.overlay, Lanes.phone.video, Lanes.phone.music] == [40, 80, 46])
+        #expect(Lanes.phone.ruler == 33 && Lanes.phone.clipCell == 60)
+        #expect(Lanes.duo.ruler == 33 && Lanes.duo.clipCell == 54)
+        #expect(Lanes.desk.ruler == 39 && Lanes.desk.clipCell == 88)
     }
 
     /// The lift is the panel's height less the bands it lands on. Take the
@@ -239,7 +263,7 @@ struct VideoStudioLayoutTests {
     /// a landscape tablet the frame is height-limited, so the column is the
     /// one that leaves a bigger picture — the whole reason to build it.
     @Test func theColumnLeavesABiggerFrameThanTheDrawerInLandscape() {
-        let lanes = VideoStudioMetrics.Lanes.regular
+        let lanes = VideoStudioMetrics.Lanes.desk
         let content = lanes.timelineContentHeight(overlayLanes: 1, musicLanes: 1)
         func frameArea(width: CGFloat, presentsSheet: Bool) -> CGFloat {
             let layout = VideoStudioMetrics.stackLayout(
@@ -264,7 +288,7 @@ struct VideoStudioLayoutTests {
     /// timeline stands down instead and the frame keeps the size it had.
     @Test func aWindowTooShortForEverythingStandsTheTimelineDown() {
         let cover = CGSize(width: 382, height: 644)
-        let content = VideoStudioMetrics.Lanes.compact.timelineContentHeight(overlayLanes: 1, musicLanes: 1)
+        let content = VideoStudioMetrics.Lanes.duo.timelineContentHeight(overlayLanes: 1, musicLanes: 1)
         func layout(open: Bool) -> VideoStudioMetrics.StackLayout {
             VideoStudioMetrics.stackLayout(
                 screen: cover, bandHeight: 48, bottomInset: 34,
@@ -283,7 +307,7 @@ struct VideoStudioLayoutTests {
     /// A phone has the room, so its panel still slides over a timeline that
     /// stays where it was.
     @Test func aPhoneKeepsItsTimelineWhenThePanelOpens() {
-        let content = VideoStudioMetrics.Lanes.compact.timelineContentHeight(overlayLanes: 1, musicLanes: 1)
+        let content = VideoStudioMetrics.Lanes.duo.timelineContentHeight(overlayLanes: 1, musicLanes: 1)
         let open = VideoStudioMetrics.stackLayout(
             screen: CGSize(width: 402, height: 874), bandHeight: 59, bottomInset: 34,
             canvas: CGSize(width: 16, height: 9), presentsSheet: true,
