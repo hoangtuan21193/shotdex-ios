@@ -364,7 +364,9 @@ struct VideoStudioScreen: View {
         switch windowClass {
         case .iPadLandscape:
             deskLandscape(model, window: window)
-        case .phone, .duoCover, .duoInner, .iPadPortrait:
+        case .iPadPortrait:
+            deskPortrait(model, window: window)
+        case .phone, .duoCover, .duoInner:
             stackBody(model, proxy: proxy, windowClass: windowClass)
         }
     }

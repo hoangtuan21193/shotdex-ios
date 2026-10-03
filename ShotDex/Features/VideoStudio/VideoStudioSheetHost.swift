@@ -44,6 +44,9 @@ struct VideoStudioSheetHost: View {
     /// video's Look when nothing is selected and no tool is open (FS-12.03
     /// §1): the space is spent on what the whole video most often needs.
     var showsIdleLook = false
+    /// Tools offered in the idle Look's title — the iPad portrait dock's
+    /// Media · Text · Sticker · Music (FS-12.03 §3).
+    var idleTools: [VideoAddTool] = []
 
     var body: some View {
         Group {
@@ -128,17 +131,47 @@ struct VideoStudioSheetHost: View {
                         .font(.system(size: 11, design: .monospaced))
                         .foregroundStyle(.white.opacity(0.35))
                     Spacer(minLength: 0)
+                    ForEach(idleTools) { tool in
+                        idleToolButton(tool)
+                    }
                 }
                 .lineLimit(1)
                 .padding(.horizontal, 14)
                 .frame(height: VideoStudioMetrics.musicPanelTitleHeight)
-                .accessibilityElement(children: .combine)
-                .accessibilityAddTraits(.isHeader)
                 lookParams
             }
             .padding(.bottom, 16)
         }
         .scrollBounceBehavior(.basedOnSize)
+    }
+
+    /// One of the dock's add buttons: glyph and name, 32 tall, radius 8.
+    private func idleToolButton(_ tool: VideoAddTool) -> some View {
+        Button {
+            switch tool {
+            case .media: actions.onAddMedia()
+            case .text: actions.onAddText()
+            case .sticker: actions.onAddSticker()
+            case .music: actions.onAddMusic()
+            case .look: break
+            }
+        } label: {
+            HStack(spacing: 6) {
+                Image(systemName: tool.systemImage)
+                    .font(.system(size: 13, weight: .medium))
+                Text(tool.title)
+                    .font(.system(size: 13, weight: .semibold))
+            }
+            .foregroundStyle(.white)
+            .padding(.horizontal, 12)
+            .frame(height: VideoStudioDeskGeometry.dockButtonHeight)
+            .background(
+                RoundedRectangle(cornerRadius: VideoStudioDeskGeometry.dockButtonRadius, style: .continuous)
+                    .fill(Color.white.opacity(0.08))
+            )
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
     }
 
     private var bandBody: some View {

@@ -78,6 +78,72 @@ extension VideoStudioScreen {
         .deskChrome(model, lanes: lanes, meter: levelMeter, hasMeter: frames.meter != nil, shortcuts: keyboardShortcuts(model))
     }
 
+    // MARK: iPad portrait (FS-12.03 §3, board IP1)
+
+    func deskPortrait(_ model: VideoStudioModel, window: CGSize) -> some View {
+        let lanes = VideoStudioMetrics.Lanes.for(.iPadPortrait)
+        let canOpenPool = VideoStudioDeskGeometry.canOpenPool(windowWidth: window.width, isInspectorOpen: false)
+        let showsPool = canOpenPool
+            && (isMediaPoolOpen ?? VideoStudioDeskGeometry.poolOpensByDefault(windowWidth: window.width))
+        let frames = VideoStudioDeskGeometry.iPadPortrait(.init(
+            window: window,
+            canvas: model.recipe.canvasSize(),
+            isPoolOpen: showsPool,
+            isInspectorOpen: isInspectorOpen,
+            laneNeed: laneNeed(model, lanes: lanes),
+            timelineExtra: CGFloat(timelineExtraHeight) + timelineDragOffset
+        ))
+        return ZStack(alignment: .topLeading) {
+            EditorTheme.background
+            VideoStudioDeskBand(model: model, actions: actions(model), isPortrait: true)
+                .placed(frames.band)
+            if let pool = frames.pool {
+                mediaPool(model, width: pool.width)
+                    .placed(pool)
+            }
+            if let header = frames.header {
+                VideoViewerHeader(
+                    model: model,
+                    isMediaPoolOpen: canOpenPool || showsPool ? showsPool : nil,
+                    isInspectorOpen: isInspectorOpen,
+                    isToolStripOpen: isToolStripOpen,
+                    onToggleMediaPool: { isMediaPoolOpen = !showsPool },
+                    onToggleInspector: { isInspectorOpen.toggle() },
+                    onToggleToolStrip: { isToolStripOpen.toggle() }
+                )
+                .placed(header)
+            }
+            preview(model)
+                .placed(frames.stage)
+            if let meter = frames.meter {
+                VideoAudioMeterColumn(model: model, meter: levelMeter, width: meter.width)
+                    .placed(meter)
+            }
+            VideoTransportBar(model: model)
+                .placed(frames.transport)
+            if let overview = frames.overview {
+                VideoTimelineOverview(model: model, visibleDuration: timelineVisibleDuration)
+                    .placed(overview)
+            }
+            deskTimeline(model, height: frames.timeline.height)
+                .placed(frames.timeline)
+            timelineDivider
+                .frame(width: 120)
+                .position(x: frames.timeline.midX, y: frames.timeline.minY + 4)
+            if let dock = frames.dock {
+                VideoStudioDock(model: model, actions: actions(model), importedMusic: importedMusic)
+                    .placed(dock)
+            } else if model.presentsSheet {
+                contextPanel(model, height: VideoStudioMetrics.sheetHeight)
+                    .frame(width: window.width)
+                    .offset(y: window.height - VideoStudioMetrics.sheetHeight)
+                    .transition(.move(edge: .bottom))
+            }
+        }
+        .frame(width: window.width, height: window.height, alignment: .topLeading)
+        .deskChrome(model, lanes: lanes, meter: levelMeter, hasMeter: frames.meter != nil, shortcuts: keyboardShortcuts(model))
+    }
+
     // MARK: Shared pieces
 
     /// What the lanes of this project need to show without scrolling.

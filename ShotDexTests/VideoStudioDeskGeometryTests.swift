@@ -96,4 +96,48 @@ struct VideoStudioDeskGeometryTests {
         #expect(!Geometry.canOpenPool(windowWidth: 800, isInspectorOpen: true))
         #expect(Geometry.canOpenPool(windowWidth: 800, isInspectorOpen: false))
     }
+
+    // MARK: iPad portrait
+
+    /// FS-12.03 AC-3 (board IP1): header the whole width at 64; frame
+    /// 982×552 with the meter at x 982; transport 648; overview 696; the
+    /// timeline 722–1052 (330); the dock 1052–1376 (324).
+    @Test func iPadPortraitIdle() throws {
+        let frames = Geometry.iPadPortrait(.init(
+            window: CGSize(width: 1032, height: 1376), canvas: sixteenNine,
+            isPoolOpen: false, isInspectorOpen: true,
+            laneNeed: VideoStudioMetrics.Lanes.desk.timelineContentHeight(overlayLanes: 1, musicLanes: 2)
+        ))
+        #expect(frames.pool == nil)
+        #expect(frames.header == CGRect(x: 0, y: 64, width: 1032, height: 32))
+        #expect(near(frames.frame.width, 982) && near(frames.frame.height, 552))
+        #expect(frames.frame.minX == 0 && frames.frame.minY == 96)
+        #expect(frames.meter?.minX == 982)
+        #expect(near(frames.transport.minY, 648))
+        #expect(near(frames.overview?.minY ?? 0, 696))
+        #expect(near(frames.timeline.minY, 722) && near(frames.timeline.maxY, 1052))
+        #expect(frames.dock == CGRect(x: 0, y: 1052, width: 1032, height: 324))
+    }
+
+    /// A 9:16 project would take the whole height by the width; the frame is
+    /// capped so the timeline keeps its floor above the dock.
+    @Test func aPortraitProjectLeavesTheTimelineItsFloor() {
+        let frames = Geometry.iPadPortrait(.init(
+            window: CGSize(width: 1032, height: 1376), canvas: CGSize(width: 1080, height: 1920),
+            isPoolOpen: false, isInspectorOpen: true
+        ))
+        #expect(frames.timeline.height >= Geometry.portraitTimelineFloor)
+        #expect(near(frames.frame.width / frames.frame.height, 9.0 / 16.0, 0.01))
+    }
+
+    /// Split View's 639pt portrait half: the dock's three columns split the
+    /// width equally; under 600 there are two, and the dock scrolls.
+    @Test func aNarrowPortraitDockSplitsItsWidthInThree() {
+        #expect(Geometry.dockColumnCount(width: 1032) == 3)
+        #expect(near(Geometry.dockColumnWidth(width: 1032), 344))
+        #expect(Geometry.dockColumnCount(width: 639) == 3)
+        #expect(near(Geometry.dockColumnWidth(width: 639), 213))
+        #expect(Geometry.dockColumnCount(width: 507) == 2)
+        #expect(Geometry.dockColumnWidth(width: 507) >= Geometry.dockColumnMinimum)
+    }
 }

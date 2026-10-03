@@ -93,7 +93,7 @@ theo chiều cao nên 264pt bên phải là miễn phí — inspector nằm ở 
 |---|---|---|---|---|
 | AC-1 | iPad 1376×1032, project 16:9, không chọn | dump | pool rộng 236; inspector 280 ở x 1096 hiện "Look · Whole video"; khung 810×456 ở (236, 122); timeline y 678 cao 354 | ✅ `VideoStudioDeskGeometryTests.iPadLandscapeIdle` (mọi rect của IL1) + route `ipad-vs-landscape.json` 2026-10-04, iPad Pro 13": dump — "Browse All Photos…" rộng 236 (pool), "Look, Whole video" ở x 1110 trong cột từ 1096, Play giữa khung ở x 641; sim này còn lưu divider +111 nên transport/timeline cùng lùi đúng 111 (493/567) — route giờ khởi chạy với `-video.timelineExtraHeight 0` |
 | AC-2 | như AC-1 | chọn clip 2 | chân inspector y 546 có ✕ · "Clip 2" · ✓; khung không đổi (±0pt); Export vẫn hiện | ⚠️ chưa có |
-| AC-3 | iPad 1032×1376, không chọn | dump | dock y 1052 cao 324, tiêu đề có Media · Text · Sticker · Music; pool đóng | ⚠️ chưa có |
+| AC-3 | iPad 1032×1376, không chọn | dump | dock y 1052 cao 324, tiêu đề có Media · Text · Sticker · Music; pool đóng | ✅ `VideoStudioDeskGeometryTests.iPadPortraitIdle` (header 64, khung 982×552, meter x 982, transport 648, overview 696, timeline 722–1052, dock 1052/324), `aNarrowPortraitDockSplitsItsWidthInThree` + route `ipad-vs-portrait.json` 2026-10-04, iPad Pro 13" dọc: dump — Media · Text · Sticker · Music cao 32 ở y 1059 (x 662–1018), transport y 648,5, không có pool; chạm Music → panel Music trong dock |
 | AC-4 | như AC-3 | chọn clip 2 | hàng lệnh trong dock; chân ✕ · tên · ✓ ở y 1316; timeline 722–1052 không bị phủ | ⚠️ chưa có |
 | AC-5 | Duo mở 951×669, không chọn | dump | khung 684×385 ở y 0; cột 264 ở x 687; transport y 385; timeline 188; hàng đáy y 613 có 5 công cụ từ x 40 và Export | ⚠️ chưa có — `duo-video-studio-desk.json` cần viết lại |
 | AC-6 | như AC-5 | chọn clip 2 | ✕ · Clip 2 · ✓ ở x 620–907; Export ẩn; 5 công cụ trắng 30% | ⚠️ chưa có |
@@ -103,7 +103,7 @@ theo chiều cao nên 264pt bên phải là miễn phí — inspector nằm ở 
 | AC-10 | các board IL1–IL4, IP1–IP3, DI1–DI4 | `Tools/design-board compare` với dump app cùng trạng thái | mọi phần tử chrome lệch ≤ 2pt | ⚠️ chưa có — agent `design-parity` |
 | AC-11 | Duo trong, DI1 và DI2 | `Tools/sim-shot` có mask | Back và ✓ không bị góc bo cắt | ⚠️ chưa có |
 
-**Chưa chứng minh được:** AC-2 … AC-8, AC-10, AC-11.
+**Chưa chứng minh được:** AC-2, AC-4 … AC-8, AC-10, AC-11.
 
 ## 7. Rủi ro đã biết
 

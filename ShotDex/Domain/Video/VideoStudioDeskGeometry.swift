@@ -61,6 +61,32 @@ enum VideoStudioDeskGeometry {
     /// How far the divider may give the timeline more than it needs.
     static let timelineExtraRange: ClosedRange<CGFloat> = 0...400
 
+    // MARK: iPad portrait dock (FS-12.03 §3)
+
+    /// The controls under the timeline: fixed, 324 tall, the whole width.
+    static let dockHeight: CGFloat = 324
+    static let dockTitleHeight: CGFloat = 46
+    /// Media · Text · Sticker · Music in the dock's title: 32 tall, radius 8.
+    static let dockButtonHeight: CGFloat = 32
+    static let dockButtonRadius: CGFloat = 8
+    /// The dock's three columns, at their board width on a 1032 window.
+    static let dockColumnWidth: CGFloat = 344
+    /// Under three of these a column is too narrow to read: two, scrolling.
+    static let dockColumnMinimum: CGFloat = 200
+    /// The least the portrait timeline keeps, whatever the frame wants.
+    static let portraitTimelineFloor: CGFloat = 200
+
+    /// How the dock's width splits into columns: three equal ones, or two
+    /// and a horizontal scroll where three would each fall under 200.
+    static func dockColumnCount(width: CGFloat) -> Int {
+        width >= dockColumnMinimum * 3 ? 3 : 2
+    }
+
+    static func dockColumnWidth(width: CGFloat) -> CGFloat {
+        let count = dockColumnCount(width: width)
+        return count == 3 ? width / 3 : max(dockColumnMinimum, width / 2)
+    }
+
     /// The rect of every band. Nil where the window class has no such band.
     struct Frames: Equatable {
         var band: CGRect
@@ -75,6 +101,7 @@ enum VideoStudioDeskGeometry {
         var transport: CGRect
         var overview: CGRect?
         var timeline: CGRect
+        var dock: CGRect?
     }
 
     /// What a layout needs to know beyond the window.
@@ -159,7 +186,59 @@ enum VideoStudioDeskGeometry {
             inspector: inspector,
             transport: transport,
             overview: overview,
-            timeline: timeline
+            timeline: timeline,
+            dock: nil
+        )
+    }
+
+    // MARK: iPad portrait (FS-12.03 §3, board IP1)
+
+    /// The header runs the width; the frame takes the width less the meter
+    /// and its aspect-fit height; then the transport, the overview, the
+    /// timeline — the band that flexes — and the 324pt dock. The pool, when
+    /// open, stands beside the header and the frame.
+    static func iPadPortrait(_ input: Input) -> Frames {
+        let width = input.window.width
+        let height = input.window.height
+        let dockHeight = input.isInspectorOpen ? Self.dockHeight : 0
+        let pool = input.isPoolOpen
+        let centreX: CGFloat = pool ? poolWidth : 0
+        let centreWidth = width - centreX
+        let meterW = meterWidth(centreWidth: centreWidth)
+        let stageWidth = centreWidth - meterW
+        let header = CGRect(x: centreX, y: bandHeight, width: centreWidth, height: viewerHeaderHeight)
+        // The frame is limited by the width; whatever the timeline needs
+        // below it caps the height, and the divider takes from the frame.
+        let below = transportHeight + overviewGap * 2 + overviewHeight
+        let timelineMinimum = max(portraitTimelineFloor, input.laneNeed)
+        let stageCap = height - header.maxY - below - timelineMinimum - dockHeight
+        let natural = input.canvas.width > 0 ? stageWidth * input.canvas.height / input.canvas.width : stageCap
+        let extra = min(max(0, input.timelineExtra), timelineExtraRange.upperBound)
+        let stageHeight = max(stageFloor, min(natural, stageCap) - extra)
+        let stage = CGRect(x: centreX, y: header.maxY, width: stageWidth, height: stageHeight)
+        let meter = CGRect(x: stage.maxX, y: stage.minY, width: meterW, height: stage.height)
+        let transport = CGRect(x: 0, y: stage.maxY, width: width, height: transportHeight)
+        let overview = CGRect(
+            x: trackHeaderWidth,
+            y: transport.maxY + overviewGap,
+            width: width - trackHeaderWidth - overviewTrailingInset,
+            height: overviewHeight
+        )
+        let timelineTop = overview.maxY + overviewGap
+        let dockTop = height - dockHeight
+        let timeline = CGRect(x: 0, y: timelineTop, width: width, height: max(0, dockTop - timelineTop))
+        return Frames(
+            band: CGRect(x: 0, y: 0, width: width, height: bandHeight),
+            pool: pool ? CGRect(x: 0, y: bandHeight, width: poolWidth, height: stage.maxY - bandHeight) : nil,
+            header: header,
+            stage: stage,
+            frame: fit(input.canvas, in: stage),
+            meter: meter,
+            inspector: nil,
+            transport: transport,
+            overview: overview,
+            timeline: timeline,
+            dock: input.isInspectorOpen ? CGRect(x: 0, y: dockTop, width: width, height: dockHeight) : nil
         )
     }
 
