@@ -617,6 +617,37 @@ final class AppDatabase: Sendable {
             try db.create(index: "photo_metadata_rating", on: "photo_metadata", columns: ["rating"])
         }
 
+        // FS-02.07 §8: a mirror of Photos' own caption and keywords (iOS 27),
+        // for filters and search. Photos holds the truth; these rows follow
+        // `photo_metadata` (deleted with it, cleared with it) but are never
+        // written by the indexer, so a full reindex leaves them alone. No
+        // foreign key: the indexer upserts rows, and a cascade would be one
+        // `REPLACE` away from emptying the mirror.
+        migrator.registerMigration("v28-captionKeywordMirror") { db in
+            try db.create(table: "photo_keyword") { t in
+                t.column("assetId", .text).notNull()
+                t.column("keyword", .text).notNull()
+                // Case folded only: `Sunset` = `sunset`, `Đà Lạt` ≠ `Da Lat`.
+                t.column("caseKey", .text).notNull()
+                // Case and diacritics folded, as place search: what matches.
+                t.column("foldKey", .text).notNull()
+                t.primaryKey(["assetId", "keyword"])
+            }
+            try db.create(index: "photo_keyword_caseKey", on: "photo_keyword", columns: ["caseKey"])
+            try db.create(index: "photo_keyword_foldKey", on: "photo_keyword", columns: ["foldKey"])
+            try db.create(table: "photo_caption") { t in
+                t.primaryKey("assetId", .text)
+                t.column("caption", .text).notNull()
+                t.column("foldKey", .text).notNull()
+            }
+            // Where the full read of the mirror stands (FS-02.07 §8).
+            try db.create(table: "extended_metadata_state") { t in
+                t.primaryKey("id", .integer)
+                t.column("cursorAssetId", .text)
+                t.column("completedAt", .integer)
+            }
+        }
+
         return migrator
     }
 }

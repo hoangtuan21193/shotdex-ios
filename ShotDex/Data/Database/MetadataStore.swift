@@ -123,11 +123,13 @@ struct MetadataStore: Sendable {
         }
     }
 
-    /// Removes rows whose assets no longer exist in the photo library.
+    /// Removes rows whose assets no longer exist in the photo library, and
+    /// their caption/keyword mirror with them (FS-02.07 §8).
     func deleteAssets(ids: [String]) throws {
         guard !ids.isEmpty else { return }
         _ = try database.writer.write { db in
             try PhotoMetadata.deleteAll(db, keys: ids)
+            try PhotoKeywordStore.delete(db, ids: ids)
         }
     }
 
@@ -169,6 +171,15 @@ struct MetadataStore: Sendable {
                     arguments: [StarRating.clamped(rating), assetId]
                 )
             }
+            try Self.restampModificationDates(db, after: result)
+        }
+    }
+
+    /// After the app wrote a caption or keywords into Photos (iOS 27): only
+    /// the dates move — the mirror is written by its own pass (FS-02.07 §8).
+    func recordPropertyWrite(_ result: PropertyWriteResult) throws {
+        guard !result.dates.isEmpty else { return }
+        try database.writer.write { db in
             try Self.restampModificationDates(db, after: result)
         }
     }
@@ -362,6 +373,9 @@ struct MetadataStore: Sendable {
     func deleteAll() throws {
         try database.writer.write { db in
             _ = try PhotoMetadata.deleteAll(db)
+            // The caption/keyword mirror is a copy of Photos and is read again;
+            // stars and flags (user data) stay.
+            try PhotoKeywordStore.deleteAll(db)
             var state = try IndexState.fetchOne(db, key: IndexState.singletonId) ?? .initial
             state.cursorAssetId = nil
             state.lastIndexedAt = nil
