@@ -89,3 +89,26 @@ extension VideoEdgeTrimMathTests {
         #expect(longer.hitLimit)
     }
 }
+
+extension VideoEdgeTrimModelTests {
+    /// FS-12.05 AC-8: within 8pt of a marker the dragged edge sticks to it
+    /// (one tick); it never sticks to where it started.
+    @Test func edgeSnapsToAMarkerWithinEightPoints() {
+        let model = VideoStudioModelFixture.model { $0.markers = [TimedMarker(time: 13)] }
+        let clip2 = model.recipe.clips[1].id
+        model.selectClip(clip2)
+        let tolerance = 8.0 / 40.0   // 8pt at 40 points per second
+
+        let near = model.edgeTrim(clip2, edge: .leading, phase: .changed(2.9), snapTolerance: tolerance)
+        #expect(near.snapped)
+        #expect(model.edgeTrimPreview?.result.trimStart == 3)
+        model.edgeTrim(clip2, edge: .leading, phase: .ended(2.9), snapTolerance: tolerance)
+        #expect(model.recipe.clips[1].trimStart == 3)
+
+        // A small drag next to the clip's own starting edge does not stick
+        // back to it.
+        let own = model.edgeTrim(clip2, edge: .trailing, phase: .changed(-0.05), snapTolerance: tolerance)
+        #expect(!own.snapped)
+        model.edgeTrim(clip2, edge: .trailing, phase: .cancelled)
+    }
+}
