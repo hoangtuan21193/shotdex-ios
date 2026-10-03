@@ -19,6 +19,19 @@ enum VideoClipPanelSections {
         }
     }
 
+    /// The sections with the one a lit command names brought to the top —
+    /// Speed and Volume "scroll their row to the top" (FS-12.04b §4).
+    static func sections(for kind: VideoClipKind, leading command: VideoItemCommand?) -> [VideoClipPanelSection] {
+        let all = sections(for: kind)
+        let lead: VideoClipPanelSection? = switch command {
+        case .speed: .speed
+        case .volume: .volume
+        default: nil
+        }
+        guard let lead, all.contains(lead) else { return all }
+        return [lead] + all.filter { $0 != lead }
+    }
+
     /// The Speed chips (FS-12.04b §6).
     static let speedPresets: [Double] = [0.5, 1, 2, 4]
 }

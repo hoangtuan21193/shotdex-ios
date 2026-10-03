@@ -33,6 +33,10 @@
       "comment": "Video Studio: title of the Music tool's panel",
       "extractionState": "manual"
     },
+    "Beats": {
+      "comment": "Video Studio: the music command that marks a song's beats",
+      "extractionState": "manual"
+    },
     "Couldn't save your video draft": {
       "comment": "Video Studio: banner and alert when the draft could not be written (disk full, database error)",
       "extractionState": "manual"
@@ -51,6 +55,14 @@
     },
     "Draft": {
       "comment": "Video Projects: label on a video project that has never been exported",
+      "extractionState": "manual"
+    },
+    "Ducking": {
+      "comment": "Video Studio: the music command that lowers music under speech",
+      "extractionState": "manual"
+    },
+    "Duplicate": {
+      "comment": "Video Studio: the command that copies the selected item right after it",
       "extractionState": "manual"
     },
     "Edited %@": {
@@ -115,6 +127,10 @@
     },
     "The photos and videos stay in your library.": {
       "comment": "Video Projects: message of the Delete Draft confirmation — deleting a draft never touches the library",
+      "extractionState": "manual"
+    },
+    "Trim": {
+      "comment": "Video Studio: the command that cuts a clip's start or end",
       "extractionState": "manual"
     },
     "Try Again": {

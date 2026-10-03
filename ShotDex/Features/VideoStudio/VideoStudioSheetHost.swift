@@ -101,36 +101,112 @@ struct VideoStudioSheetHost: View {
     }
 
     private var bandBody: some View {
-        VStack(spacing: 0) {
-            titleRow
-                .frame(height: VideoStudioMetrics.sheetTitleHeight)
-                .overlay(alignment: .bottom) { Rectangle().fill(EditorTheme.panelDivider).frame(height: 1) }
-            paramZone
-                .frame(height: VideoStudioMetrics.sheetParamHeight)
-            if !commands.isEmpty {
-                VideoCommandBand(commands: commands)
+        Group {
+            if model.inspectorTarget != .none {
+                itemBody
+            } else {
+                VStack(spacing: 0) {
+                    titleRow
+                        .frame(height: VideoStudioMetrics.sheetTitleHeight)
+                        .overlay(alignment: .bottom) { Rectangle().fill(EditorTheme.panelDivider).frame(height: 1) }
+                    paramZone
+                        .frame(height: VideoStudioMetrics.sheetParamHeight)
+                    Spacer(minLength: 0)
+                }
             }
-            Spacer(minLength: 0)
         }
     }
 
     private var columnBody: some View {
-        ScrollView {
-            VStack(spacing: 0) {
-                titleRow
-                    .frame(minHeight: VideoStudioMetrics.sheetTitleHeight)
-                    .padding(.top, 10)
-                    .overlay(alignment: .bottom) { Rectangle().fill(EditorTheme.panelDivider).frame(height: 1) }
-                paramZone
-                    .padding(.top, 10)
-                if !commands.isEmpty {
-                    VideoCommandBand(commands: commands, wraps: true)
-                        .padding(.top, 10)
+        Group {
+            if model.inspectorTarget != .none {
+                itemBody
+            } else {
+                ScrollView {
+                    VStack(spacing: 0) {
+                        titleRow
+                            .frame(minHeight: VideoStudioMetrics.sheetTitleHeight)
+                            .padding(.top, 10)
+                            .overlay(alignment: .bottom) { Rectangle().fill(EditorTheme.panelDivider).frame(height: 1) }
+                        paramZone
+                            .padding(.top, 10)
+                    }
+                    .padding(.bottom, 16)
                 }
+                .scrollBounceBehavior(.basedOnSize)
             }
-            .padding(.bottom, 16)
         }
-        .scrollBounceBehavior(.basedOnSize)
+    }
+
+    /// A selected item's panel (FS-12.04b): its command row first — the
+    /// same row on every layout, never a grid — a 1pt rule, then its
+    /// controls. No title row and no trash: the name is in ✕ · name · ✓
+    /// and Delete is the row's last cell.
+    private var itemBody: some View {
+        VStack(spacing: 0) {
+            VideoItemCommandRow(
+                commands: model.selectedItemCommands,
+                isOn: { model.isItemCommandOn($0) },
+                isEnabled: isItemCommandEnabled,
+                perform: perform
+            )
+            .padding(.top, VideoStudioMetrics.itemCommandRowTop)
+            Rectangle()
+                .fill(Color.white.opacity(0.07))
+                .frame(height: 1)
+                .padding(.top, 6)
+                .padding(.bottom, 4)
+            paramZone
+                .frame(maxHeight: .infinity, alignment: .top)
+        }
+    }
+
+    private func isItemCommandEnabled(_ command: VideoItemCommand) -> Bool {
+        switch command {
+        // A project always keeps at least one clip.
+        case .delete where model.inspectorTarget == .clip: model.recipe.clips.count > 1
+        default: true
+        }
+    }
+
+    private func perform(_ command: VideoItemCommand) {
+        if command.isSection {
+            model.toggleItemSection(command)
+            return
+        }
+        switch command {
+        case .split:
+            model.splitClipUnderPlayhead()
+        case .replace:
+            if let id = model.selectedMusicID {
+                actions.onReplaceMusic(id)
+            } else {
+                actions.onReplaceClip()
+            }
+        case .freeze:
+            model.freezeUnderPlayhead()
+        case .duplicate:
+            switch model.inspectorTarget {
+            case .clip: model.duplicateSelectedClip()
+            case .text: model.duplicateSelectedOverlay()
+            case .music: model.duplicateSelectedMusic()
+            case .none: break
+            }
+        case .rotate:
+            model.pushUndo()
+            model.rotateClockwise()
+        case .addTrack:
+            actions.onAddMusic()
+        case .delete:
+            switch model.inspectorTarget {
+            case .clip: if let id = model.selectedClipID { model.deleteClip(id) }
+            case .text: model.deleteSelectedOverlay()
+            case .music: if let id = model.selectedMusicID { model.removeMusicTrack(id) }
+            case .none: break
+            }
+        default:
+            break
+        }
     }
 
     // MARK: Title row
@@ -206,23 +282,13 @@ struct VideoStudioSheetHost: View {
         }
     }
 
+    /// Buttons on a tool panel's title row. An item's panel has no title
+    /// row: Delete is the last cell of its command row.
     @ViewBuilder
     private var titleButtons: some View {
         switch model.inspectorTarget {
-        case .clip:
-            if model.mode == .multiClip, model.recipe.clips.count > 1 {
-                titleButton("trash", destructive: true) {
-                    if let id = model.selectedClipID { model.deleteClip(id) }
-                }
-            }
-        case .text:
-            titleButton("trash", destructive: true) {
-                model.deleteSelectedOverlay()
-            }
-        case .music:
-            titleButton("trash", destructive: true) {
-                if let id = model.selectedMusicID { model.removeMusicTrack(id) }
-            }
+        case .clip, .text, .music:
+            EmptyView()
         case .none:
             switch model.activeToolPanel {
             case .look:
@@ -304,18 +370,6 @@ struct VideoStudioSheetHost: View {
         .accessibilityLabel(label)
     }
 
-    private func titleButton(_ symbol: String, destructive: Bool = false, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            Image(systemName: symbol)
-                .font(.system(size: 14, weight: .medium))
-                .foregroundStyle(destructive ? EditorTheme.timelineDestructive : .white)
-                .frame(width: VideoStudioMetrics.inspectorTitleButton, height: VideoStudioMetrics.inspectorTitleButton)
-                .background(Circle().fill(Color.white.opacity(0.06)))
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel(destructive ? "Delete" : symbol)
-    }
-
     // MARK: Param zone
 
     @ViewBuilder
@@ -336,7 +390,10 @@ struct VideoStudioSheetHost: View {
         if let clip = model.selectedClip {
             ScrollView(showsIndicators: false) {
                 VStack(alignment: .leading, spacing: 4) {
-                    ForEach(VideoClipPanelSections.sections(for: clip.kind), id: \.self) { section in
+                    ForEach(
+                        VideoClipPanelSections.sections(for: clip.kind, leading: model.activeItemCommand),
+                        id: \.self
+                    ) { section in
                         clipSection(section, clip)
                     }
                 }
@@ -786,100 +843,5 @@ struct VideoStudioSheetHost: View {
                 }
             }
         }
-    }
-
-    // MARK: Commands
-
-    private var commands: [VideoCommand] {
-        switch model.inspectorTarget {
-        case .clip: clipCommands
-        case .text: textCommands
-        case .music: musicCommands
-        case .none: []
-        }
-    }
-
-    private var clipCommands: [VideoCommand] {
-        guard let clip = model.selectedClip else { return [] }
-        var list: [VideoCommand] = [
-            VideoCommand(title: "Split", systemImage: "scissors") { model.splitClipUnderPlayhead() },
-        ]
-        if clip.kind == .video {
-            list.append(VideoCommand(
-                title: clip.isMuted ? "Unmute" : "Mute",
-                systemImage: clip.isMuted ? "speaker.slash.fill" : "speaker.wave.2"
-            ) { model.pushUndo(); model.setMuted(!clip.isMuted, for: clip.id) })
-        }
-        if clip.kind == .video {
-            // Stills pick their effect from the chip row in the param zone; a video
-            // clip's zone is full (Duration / Speed / Volume), so it keeps the cycle.
-            list.append(VideoCommand(title: "Animate", systemImage: "wand.and.stars") { cycleEffect(clip) })
-        }
-        list.append(VideoCommand(title: "Replace", systemImage: "arrow.triangle.2.circlepath", action: actions.onReplaceClip))
-        if clip.kind != .photo {
-            list.append(VideoCommand(title: "Freeze", systemImage: "snowflake") { model.freezeUnderPlayhead() })
-        }
-        if model.mode == .singleVideo {
-            list.append(VideoCommand(title: "Rotate", systemImage: "rotate.right") { model.pushUndo(); model.rotateClockwise() })
-        }
-        // No Delete here: the title row's trash is the one delete for every target.
-        return list
-    }
-
-    /// Cycle the clip's motion effect (Animate → next VideoClipEffect). A menu
-    /// would need another sheet on top of this one; cycling keeps it inline.
-    private func cycleEffect(_ clip: VideoClip) {
-        let all = VideoClipEffect.allCases
-        let current = all.firstIndex(of: clip.effect) ?? 0
-        let next = all[(current + 1) % all.count]
-        model.pushUndo()
-        model.setEffect(next, for: clip.id)
-    }
-
-    private var textCommands: [VideoCommand] {
-        guard let overlay = model.selectedOverlay else { return [] }
-        if overlay.kind == .image {
-            return [
-                VideoCommand(title: "Animate", systemImage: "wand.and.stars", tint: model.inspectorTextTool == .animate ? .accent : .normal) {
-                    model.inspectorTextTool = model.inspectorTextTool == .animate ? .transform : .animate
-                },
-                VideoCommand(title: "Copy", systemImage: "plus.square.on.square") { model.duplicateSelectedOverlay() },
-            ]
-        }
-        return [
-            // Edit: the words, with the keyboard up. Bold/Italic live inside
-            // Font where they belong.
-            textToolCommand("Edit", "character.cursor.ibeam", .edit),
-            textToolCommand("Font", "textformat.alt", .font),
-            textToolCommand("Color", "paintpalette", .color),
-            textToolCommand("Align", "text.aligncenter", .align),
-            textToolCommand("Style", "a.square", .style),
-            textToolCommand("Animate", "wand.and.stars", .animate),
-            VideoCommand(title: "Copy", systemImage: "plus.square.on.square") { model.duplicateSelectedOverlay() },
-        ]
-    }
-
-    /// A text sub-tool switch: tint accent while its panel is showing, and tapping
-    /// it again returns to the transform panel.
-    private func textToolCommand(
-        _ title: LocalizedStringKey,
-        _ systemImage: String,
-        _ tool: VideoStudioModel.TextTool
-    ) -> VideoCommand {
-        VideoCommand(
-            title: title,
-            systemImage: systemImage,
-            tint: model.inspectorTextTool == tool ? .accent : .normal
-        ) {
-            model.inspectorTextTool = model.inspectorTextTool == tool ? .transform : tool
-        }
-    }
-
-    private var musicCommands: [VideoCommand] {
-        guard let music = model.selectedMusicTrack else { return [] }
-        return [
-            VideoCommand(title: "Replace", systemImage: "arrow.triangle.2.circlepath") { actions.onReplaceMusic(music.id) },
-            VideoCommand(title: "Add Track", systemImage: "plus", action: actions.onAddMusic),
-        ]
     }
 }

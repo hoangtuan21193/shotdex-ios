@@ -373,6 +373,59 @@ final class VideoStudioModel {
     /// Opens a session on `target`, remembering the project as it is now.
     private func beginSession(_ target: VideoEditSession.Target) {
         session = VideoEditSession(target: target, startRecipe: recipe, checkpoint: history.checkpoint)
+        activeItemCommand = nil
+    }
+
+    /// The lit *section* command of a clip's or a bed's row — Trim, Speed,
+    /// Volume (FS-12.04b §4). Session state: a new selection starts with
+    /// none. Captions and stickers use `inspectorTextTool`.
+    var activeItemCommand: VideoItemCommand?
+
+    /// What is selected, for its command row.
+    var selectedItemKind: VideoItemKind? {
+        if let clip = selectedClip { return VideoItemKind(clip) }
+        if let overlay = selectedOverlay { return overlay.kind == .image ? .sticker : .text }
+        if selectedMusicTrack != nil { return .music }
+        return nil
+    }
+
+    /// The command row of the selected item.
+    var selectedItemCommands: [VideoItemCommand] {
+        guard let kind = selectedItemKind else { return [] }
+        return VideoItemCommand.commands(for: kind, singleVideo: mode == .singleVideo)
+    }
+
+    /// Whether a section command's cell is lit.
+    func isItemCommandOn(_ command: VideoItemCommand) -> Bool {
+        guard command.isSection else { return false }
+        switch selectedItemKind {
+        case .text, .sticker: return textTool(for: command) == inspectorTextTool
+        default: return activeItemCommand == command
+        }
+    }
+
+    /// A section command tapped: lights it, or turns it off if it was lit.
+    func toggleItemSection(_ command: VideoItemCommand) {
+        guard command.isSection else { return }
+        switch selectedItemKind {
+        case .text, .sticker:
+            guard let tool = textTool(for: command) else { return }
+            inspectorTextTool = inspectorTextTool == tool ? .transform : tool
+        default:
+            activeItemCommand = activeItemCommand == command ? nil : command
+        }
+    }
+
+    private func textTool(for command: VideoItemCommand) -> TextTool? {
+        switch command {
+        case .edit: .edit
+        case .font: .font
+        case .color: .color
+        case .style: .style
+        case .align: .align
+        case .animate: .animate
+        default: nil
+        }
     }
 
     /// Points the open session at an item that took the selected one's
@@ -2035,11 +2088,14 @@ final class VideoStudioModel {
 
     /// Duplicate the selected overlay (text or sticker), nudged so the copy is
     /// visible, and select the copy.
+    ///
+    /// Duplicate is ✓ for the original and a new session for the copy that
+    /// starts *before* the copy exists, so ✕ takes the copy away and leaves
+    /// the original as it was (FS-12.04b §4).
     func duplicateSelectedOverlay() {
         guard let selectedOverlayID,
               let timed = recipe.overlays.first(where: { $0.id == selectedOverlayID })
         else { return }
-        pushUndo()
         var overlay = timed.overlay
         overlay.id = UUID()
         overlay.center = NormalizedPoint(
@@ -2048,9 +2104,65 @@ final class VideoStudioModel {
         )
         var copy = timed
         copy.overlay = overlay
+        let kind = inspectorTextTool
+        beginAddSession(.overlay(overlay.id))
+        pushUndo()
         recipe.overlays.append(copy)
-        selectOverlay(overlay.id)
+        self.selectedOverlayID = overlay.id
+        inspectorTextTool = kind == .edit ? .transform : kind
         markEdited()
+    }
+
+    /// Duplicate for a clip: a copy right after it, sharing its source,
+    /// selected in a session that began before it was inserted.
+    func duplicateSelectedClip() {
+        guard let id = selectedClipID,
+              let index = recipe.clips.firstIndex(where: { $0.id == id })
+        else { return }
+        let original = recipe.clips[index]
+        var copy = VideoClip(assetID: original.assetID, kind: original.kind)
+        copy.photoDuration = original.photoDuration
+        copy.trimStart = original.trimStart
+        copy.trimEnd = original.trimEnd
+        copy.volume = original.volume
+        copy.isMuted = original.isMuted
+        copy.fadeIn = original.fadeIn
+        copy.fadeOut = original.fadeOut
+        copy.effect = original.effect
+        copy.speed = original.speed
+        copy.freezeSourceTime = original.freezeSourceTime
+        copy.sourceDuration = original.sourceDuration
+        if let source = sources[original.id] { sources[copy.id] = source }
+        if let duration = measuredSourceDurations[original.id] { measuredSourceDurations[copy.id] = duration }
+        beginAddSession(.clip(copy.id))
+        pushUndo()
+        recipe.clips.insert(copy, at: index + 1)
+        recipe.syncTransitionsWithClips()
+        selectedClipID = copy.id
+        markEdited()
+        schedulePreviewRebuild()
+    }
+
+    /// Duplicate for a music bed: the same song, starting where the original
+    /// ends, selected in a session that began before it was added.
+    func duplicateSelectedMusic() {
+        guard let original = selectedMusicTrack else { return }
+        var copy = MusicTrack(source: original.source)
+        copy.trimStart = original.trimStart
+        copy.trimEnd = original.trimEnd
+        copy.sourceDuration = original.sourceDuration
+        copy.volume = original.volume
+        copy.fadeIn = original.fadeIn
+        copy.fadeOut = original.fadeOut
+        copy.start = min(original.end, max(0, totalDuration - MusicTrack.minimumDuration))
+        if let duration = measuredSourceDurations[original.id] { measuredSourceDurations[copy.id] = duration }
+        beginAddSession(.music(copy.id))
+        pushUndo()
+        recipe.musicTracks.append(copy)
+        selectedMusicID = copy.id
+        markEdited()
+        loadWaveform(for: copy.id)
+        schedulePreviewRebuild()
     }
 
     /// Add an image sticker: the PNG is copied into the overlay-image cache and

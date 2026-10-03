@@ -56,4 +56,20 @@ enum VideoStudioCopy {
     static var keepChanges: String {
         String(localized: "Keep Changes", table: table, comment: "Video Studio: the ✓ that ends a selection keeping what it changed")
     }
+
+    static var trim: String {
+        String(localized: "Trim", table: table, comment: "Video Studio: the command that cuts a clip's start or end")
+    }
+
+    static var duplicate: String {
+        String(localized: "Duplicate", table: table, comment: "Video Studio: the command that copies the selected item right after it")
+    }
+
+    static var beats: String {
+        String(localized: "Beats", table: table, comment: "Video Studio: the music command that marks a song's beats")
+    }
+
+    static var ducking: String {
+        String(localized: "Ducking", table: table, comment: "Video Studio: the music command that lowers music under speech")
+    }
 }

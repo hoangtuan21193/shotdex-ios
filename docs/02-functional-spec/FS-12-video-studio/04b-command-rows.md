@@ -88,7 +88,7 @@ của lệnh ([07 §3](07-phone-layout.md)).
 
 | # | Cho | Khi | Thì | Chứng minh bằng |
 |---|---|---|---|---|
-| AC-1 | clip 2 là video | chọn clip 2, dump hàng lệnh | đúng 9 ô theo thứ tự §3, Delete cuối, chữ `#FF6B5E` | ⚠️ chưa có |
+| AC-1 | clip 2 là video | chọn clip 2, dump hàng lệnh | đúng 9 ô theo thứ tự §3, Delete cuối, chữ `#FF6B5E` | ⚠️ một phần — `VideoItemCommandsTests.videoClipRowIsTheSpecOrder` (thứ tự §3, Delete cuối đỏ, Rotate chỉ ở chế độ một video); hàng ra 8/9 ô: **Look** của clip (khối LOOK FOR THIS CLIP, FS-12.06c) ẩn như Beats/Ducking tới khi plan look làm; sim-shot hàng lệnh clip ảnh iPhone 17 (2026-10-04) |
 | AC-2 | clip 1 là ảnh | chọn clip 1 | Split · Trim · Replace · Duplicate · Look · Delete; không có ô Speed/Volume/Freeze | ⚠️ chưa có |
 | AC-3 | danh sách lệnh của cả 6 loại item | lặp qua iPhone, Duo ngoài, Duo trong, iPad ngang, iPad dọc | mỗi bố cục ra đúng cùng danh sách (so phần tử, không đếm) | ⚠️ chưa có |
 | AC-4 | iPhone, clip 2 đang chọn, panel 340 | chạm Trim | ô Trim nền trắng 14%; hai chip Start/End to Playhead ở đầu nội dung; panel vẫn 340 (±0pt) | ⚠️ chưa có |

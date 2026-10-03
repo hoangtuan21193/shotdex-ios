@@ -25,6 +25,14 @@ enum VideoStudioMetrics {
     /// Gap between the preview and the timeline.
     static let previewTimelineGap: CGFloat = 8
     static let toolbarHeight: CGFloat = 62
+    /// A selected item's command row (FS-12.04b §2): 64×56 cells, 4 apart,
+    /// 10 in from the panel's edges, a 32pt fade at the trailing edge; the
+    /// row sits 10 below the panel's top, a 1pt rule 6 under it.
+    static let itemCommandCell = CGSize(width: 64, height: 56)
+    static let itemCommandGap: CGFloat = 4
+    static let itemCommandRowInset: CGFloat = 10
+    static let itemCommandFade: CGFloat = 32
+    static let itemCommandRowTop: CGFloat = 10
     /// ✕ and ✓ of the session footer (board P2).
     static let sessionButton: CGFloat = 44
     /// The Music panel's title row (board P4).

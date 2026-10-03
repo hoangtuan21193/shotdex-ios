@@ -144,3 +144,112 @@ extension VideoStudioMetrics {
     /// command: white 14 %, not accent — accent is Export's alone.
     static let openCellFill = Color.white.opacity(0.14)
 }
+
+// MARK: - Item commands (FS-12.04b)
+
+/// What is selected, as far as its command row is concerned.
+enum VideoItemKind: CaseIterable, Equatable {
+    case videoClip, photoClip, freezeClip, text, sticker, music
+}
+
+/// One cell of a selected item's command row (FS-12.04b §3–4).
+enum VideoItemCommand: String, CaseIterable, Identifiable {
+    case split, trim, speed, volume, replace, freeze, duplicate, look, rotate
+    case edit, font, color, style, align, animate
+    case beats, ducking, addTrack
+    case delete
+
+    var id: String { rawValue }
+
+    /// A *section* command lights its cell and brings its block or row to
+    /// the top of the panel; tapping it again turns it off. An *action*
+    /// command does its thing once and never lights.
+    var isSection: Bool {
+        switch self {
+        case .trim, .speed, .volume, .look, .edit, .font, .color, .style, .align, .animate, .beats, .ducking: true
+        case .split, .replace, .freeze, .duplicate, .rotate, .addTrack, .delete: false
+        }
+    }
+
+    var isDestructive: Bool { self == .delete }
+
+    var title: LocalizedStringKey {
+        switch self {
+        case .split: "Split"
+        case .trim: LocalizedStringKey(VideoStudioCopy.trim)
+        case .speed: "Speed"
+        case .volume: "Volume"
+        case .replace: "Replace"
+        case .freeze: "Freeze"
+        case .duplicate: LocalizedStringKey(VideoStudioCopy.duplicate)
+        case .look: LocalizedStringKey(VideoStudioCopy.look)
+        case .rotate: "Rotate"
+        case .edit: "Edit"
+        case .font: "Font"
+        case .color: "Color"
+        case .style: "Style"
+        case .align: "Align"
+        case .animate: "Animate"
+        case .beats: LocalizedStringKey(VideoStudioCopy.beats)
+        case .ducking: LocalizedStringKey(VideoStudioCopy.ducking)
+        case .addTrack: "Add Track"
+        case .delete: "Delete"
+        }
+    }
+
+    var systemImage: String {
+        switch self {
+        case .split: "scissors"
+        case .trim: "arrow.left.and.line.vertical.and.arrow.right"
+        case .speed: "speedometer"
+        case .volume: "speaker.wave.2"
+        case .replace: "arrow.triangle.2.circlepath"
+        case .freeze: "snowflake"
+        case .duplicate: "plus.square.on.square"
+        case .look: "camera.filters"
+        case .rotate: "rotate.right"
+        case .edit: "character.cursor.ibeam"
+        case .font: "textformat.alt"
+        case .color: "paintpalette"
+        case .style: "a.square"
+        case .align: "text.aligncenter"
+        case .animate: "wand.and.stars"
+        case .beats: "metronome"
+        case .ducking: "waveform.badge.minus"
+        case .addTrack: "plus"
+        case .delete: "trash"
+        }
+    }
+
+    /// Commands whose feature is not built yet: hidden, not dimmed, and the
+    /// rest keep their order (FS-12.04b §3). Beats is FS-12.12, Ducking
+    /// FS-12.13, a clip's own Look is FS-12.06c — each plan takes its
+    /// command out of this list when it lands.
+    static let notYetBuilt: Set<VideoItemCommand> = [.beats, .ducking, .look]
+
+    /// The row for `kind`, in the spec's order — most used first, Delete
+    /// last — on every layout. `singleVideo` adds Rotate before Delete on a
+    /// video clip (Photo Detail → Edit).
+    static func commands(for kind: VideoItemKind, singleVideo: Bool = false) -> [VideoItemCommand] {
+        let row: [VideoItemCommand] = switch kind {
+        case .videoClip: [.split, .trim, .speed, .volume, .replace, .freeze, .duplicate, .look]
+            + (singleVideo ? [.rotate] : []) + [.delete]
+        case .photoClip: [.split, .trim, .replace, .duplicate, .look, .delete]
+        case .freezeClip: [.split, .trim, .duplicate, .look, .delete]
+        case .text: [.edit, .font, .color, .style, .align, .animate, .duplicate, .delete]
+        case .sticker: [.animate, .duplicate, .delete]
+        case .music: [.beats, .ducking, .replace, .addTrack, .duplicate, .delete]
+        }
+        return row.filter { !notYetBuilt.contains($0) }
+    }
+}
+
+extension VideoItemKind {
+    init(_ clip: VideoClip) {
+        switch clip.kind {
+        case .video: self = .videoClip
+        case .photo: self = .photoClip
+        case .freeze: self = .freezeClip
+        }
+    }
+}
