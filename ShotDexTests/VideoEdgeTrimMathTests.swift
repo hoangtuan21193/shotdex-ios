@@ -59,3 +59,19 @@ extension VideoEdgeTrimMathTests {
         #expect(!result.hitLimit)
     }
 }
+
+extension VideoEdgeTrimMathTests {
+    /// FS-12.05 AC-3: dragged out past the source — it stops at the
+    /// source's 10 s and reports the limit (the view's one light tick).
+    @Test func dragPastTheSourceStopsAndReportsTheLimit() {
+        var clip = video()
+        clip.trimEnd = 8
+        let result = VideoEdgeTrimMath.drag(clip, edge: .trailing, by: 5)
+        #expect(result.trimEnd == 10)
+        #expect(result.hitLimit)
+        let before = VideoEdgeTrimMath.drag(clip, edge: .leading, by: -3)
+        #expect(before.trimStart == 0)
+        #expect(before.hitLimit)
+        #expect(!VideoEdgeTrimMath.drag(clip, edge: .trailing, by: 1).hitLimit)
+    }
+}
