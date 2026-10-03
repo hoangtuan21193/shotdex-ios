@@ -294,6 +294,15 @@ final class VideoStudioModel {
         return await drafts.saveNow(draftSnapshot())
     }
 
+    /// The last draft write failed (FS-12.18 §6): the banner is up, the
+    /// project in memory is untouched and editing goes on.
+    var hasFailedDraftSave: Bool { drafts?.hasFailedSave == true }
+
+    /// The banner's Try Again: the same write, now.
+    func retryDraftSave() {
+        Task { await saveDraftNow() }
+    }
+
     private var isFailedLoad: Bool {
         if case .failed = phase { return true }
         return false

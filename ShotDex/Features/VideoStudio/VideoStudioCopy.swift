@@ -11,4 +11,17 @@ enum VideoStudioCopy {
     static var videoSound: String {
         String(localized: "Video sound", table: table, comment: "Video Studio: the clips' own audio level for the whole project")
     }
+
+    /// FS-12.18 §6: the draft could not be written.
+    static var draftSaveFailed: String {
+        String(localized: "Couldn't save your video draft", table: table, comment: "Video Studio: banner and alert when the draft could not be written (disk full, database error)")
+    }
+
+    static var tryAgain: String {
+        String(localized: "Try Again", table: table, comment: "Video Studio: retries writing the video draft")
+    }
+
+    static var leaveWithoutSaving: String {
+        String(localized: "Leave Without Saving", table: table, comment: "Video Studio: closes the studio although the latest draft could not be written")
+    }
 }

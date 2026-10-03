@@ -29,6 +29,10 @@
         }
       }
     },
+    "Couldn't save your video draft": {
+      "comment": "Video Studio: banner and alert when the draft could not be written (disk full, database error)",
+      "extractionState": "manual"
+    },
     "Delete Draft": {
       "comment": "Video Projects: menu action that deletes a video draft — never the photos or videos it uses",
       "extractionState": "manual"
@@ -45,12 +49,20 @@
       "comment": "Video Projects: when a draft was last changed; the argument is a relative time such as '5 min. ago'",
       "extractionState": "manual"
     },
+    "Leave Without Saving": {
+      "comment": "Video Studio: closes the studio although the latest draft could not be written",
+      "extractionState": "manual"
+    },
     "Mute Video Sound": {
       "comment": "Video Studio level meter: silences the clips' own audio for the whole project",
       "extractionState": "manual"
     },
     "The photos and videos stay in your library.": {
       "comment": "Video Projects: message of the Delete Draft confirmation — deleting a draft never touches the library",
+      "extractionState": "manual"
+    },
+    "Try Again": {
+      "comment": "Video Studio: retries writing the video draft",
       "extractionState": "manual"
     },
     "Unmute Video Sound": {

@@ -98,6 +98,18 @@ struct VideoStudioScreen: View {
                 inlineTextEditor(editingOverlay)
             }
         }
+        // FS-12.18 §6: a draft that would not write says so and offers the
+        // write again; nothing blocks, the project in memory is all there.
+        .overlay(alignment: .top) {
+            if let model, model.hasFailedDraftSave {
+                ActionToast(text: VideoStudioCopy.draftSaveFailed, actionTitle: VideoStudioCopy.tryAgain, dark: true) {
+                    model.retryDraftSave()
+                }
+                .padding(.top, AppTheme.Spacing.sm)
+                .transition(.move(edge: .top).combined(with: .opacity))
+            }
+        }
+        .animation(AppTheme.Motion.standard, value: model?.hasFailedDraftSave == true)
         .animation(EditorTheme.animation, value: editingOverlay == nil)
         .preferredColorScheme(.dark)
         .statusBarHidden()

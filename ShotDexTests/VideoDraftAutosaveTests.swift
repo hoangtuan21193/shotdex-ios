@@ -275,3 +275,45 @@ struct VideoDraftExportTests {
         #expect(rows.first?.exportedAt == 900)
     }
 }
+
+/// FS-12.18 §6: a write that fails.
+@MainActor
+struct VideoDraftFailureTests {
+    private func failingModel() -> (VideoStudioModel, DraftWriteLog) {
+        let model = VideoStudioModelFixture.model()
+        let log = DraftWriteLog()
+        log.failure = DraftWriteLog.DiskFull()
+        model.drafts = VideoDraftAutosave(write: { try log.write($0) }, sleep: { try await Task.sleep(for: $0 / 20) })
+        return (model, log)
+    }
+
+    /// FS-12.18 AC-8: the disk is full — the banner comes up, and the
+    /// project in memory keeps the edit and takes the next one.
+    @Test func failedSaveShowsBannerAndKeepsEditing() async throws {
+        let (model, _) = failingModel()
+        let clip2 = model.recipe.clips[1].id
+        model.setSpeed(2, for: clip2)
+        #expect(await VideoDraftAutosaveTests.eventually { model.hasFailedDraftSave })
+        #expect(model.recipe.clips[1].speed == 2)
+        model.setSpeed(3, for: clip2)
+        #expect(model.recipe.clips[1].speed == 3)
+    }
+
+    /// FS-12.18 AC-8: once the disk has room, Try Again writes every
+    /// change and the banner goes.
+    @Test func tryAgainClearsTheBanner() async throws {
+        let (model, log) = failingModel()
+        let clip2 = model.recipe.clips[1].id
+        model.setSpeed(2, for: clip2)
+        #expect(await VideoDraftAutosaveTests.eventually { model.hasFailedDraftSave })
+        model.setEffect(.zoomIn, for: clip2)
+
+        log.failure = nil
+        model.retryDraftSave()
+
+        #expect(await VideoDraftAutosaveTests.eventually { !model.hasFailedDraftSave })
+        let stored = try #require(log.writes.last?.videoRecipe)
+        #expect(stored.clips[1].speed == 2)
+        #expect(stored.clips[1].effect == .zoomIn)
+    }
+}
