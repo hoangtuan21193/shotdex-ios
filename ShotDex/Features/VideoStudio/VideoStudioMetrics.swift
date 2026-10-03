@@ -25,6 +25,8 @@ enum VideoStudioMetrics {
     /// Gap between the preview and the timeline.
     static let previewTimelineGap: CGFloat = 8
     static let toolbarHeight: CGFloat = 62
+    /// ✕ and ✓ of the session footer (board P2).
+    static let sessionButton: CGFloat = 44
     /// The Music panel's title row (board P4).
     static let musicPanelTitleHeight: CGFloat = 46
     /// A cell of the phone's tool row (FS-12.04 §3): five of them, 72×52,
@@ -456,8 +458,13 @@ enum VideoStudioMetrics {
         /// Viewer header + transport + overview, on a window wide enough for
         /// them. They are fixed bands like the toolbar, so they come out of
         /// the same pot the preview and the timeline divide.
-        deskChromeHeight: CGFloat = 0
+        deskChromeHeight: CGFloat = 0,
+        /// The panel carries the ✕ · name · ✓ footer in the tool row's place,
+        /// so it reaches the row's height higher and the stack lifts that
+        /// much more.
+        presentsSessionFooter: Bool = false
     ) -> StackLayout {
+        let footerLift = presentsSessionFooter && !usesToolRail ? toolbarHeight : 0
         // The rail takes the tools out of the vertical stack entirely, so the
         // 62pt the row used to cost goes back to the preview and the timeline.
         let toolRow = usesToolRail ? 0 : toolbarHeight
@@ -502,7 +509,7 @@ enum VideoStudioMetrics {
         // broken, to edit one clip. The timeline stands down instead; it is
         // the one of the three the user can get back by deselecting, and a
         // frame they cannot see is worth less than lanes they cannot reach.
-        let openable = split(lift: sheetLift(usesToolRail: usesToolRail, showsBottomBar: showsBottomBar), dock: 0)
+        let openable = split(lift: sheetLift(usesToolRail: usesToolRail, showsBottomBar: showsBottomBar) + footerLift, dock: 0)
         if !panelMayDock,
            screen.height <= shortWindowHeight,
            openable.preview <= previewMinimumHeight,
@@ -528,7 +535,7 @@ enum VideoStudioMetrics {
             }
         }
         return split(
-            lift: sheetLift(usesToolRail: usesToolRail, showsBottomBar: showsBottomBar),
+            lift: sheetLift(usesToolRail: usesToolRail, showsBottomBar: showsBottomBar) + footerLift,
             dock: 0
         )
     }

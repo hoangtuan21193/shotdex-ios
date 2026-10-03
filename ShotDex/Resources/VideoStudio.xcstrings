@@ -57,6 +57,10 @@
       "comment": "Video Projects: when a draft was last changed; the argument is a relative time such as '5 min. ago'",
       "extractionState": "manual"
     },
+    "Keep Changes": {
+      "comment": "Video Studio: the ✓ that ends a selection keeping what it changed",
+      "extractionState": "manual"
+    },
     "Leave Without Saving": {
       "comment": "Video Studio: closes the studio although the latest draft could not be written",
       "extractionState": "manual"
@@ -73,6 +77,10 @@
       "comment": "Video Studio: the bottom-row tool that adds photos and videos to the timeline",
       "extractionState": "manual"
     },
+    "Music": {
+      "comment": "Video Studio: a music bed on the timeline",
+      "extractionState": "manual"
+    },
     "Mute Video Sound": {
       "comment": "Video Studio level meter: silences the clips' own audio for the whole project",
       "extractionState": "manual"
@@ -83,6 +91,14 @@
     },
     "Playhead at %@ of %@": {
       "comment": "Video Studio transport: VoiceOver label for the phone read-out — playhead, then the project's length",
+      "extractionState": "manual"
+    },
+    "Sticker": {
+      "comment": "Video Studio: a picture laid over the video",
+      "extractionState": "manual"
+    },
+    "Text": {
+      "comment": "Video Studio: a caption laid over the video",
       "extractionState": "manual"
     },
     "The photos and videos stay in your library.": {
@@ -107,6 +123,18 @@
     },
     "Video sound": {
       "comment": "Video Studio: the clips' own audio level for the whole project",
+      "extractionState": "manual"
+    },
+    "freeze": {
+      "comment": "Video Studio session footer: the kind of a selected held frame, after its length — 2.0s · freeze",
+      "extractionState": "manual"
+    },
+    "photo": {
+      "comment": "Video Studio session footer: the kind of a selected still, after its length — 3.0s · photo",
+      "extractionState": "manual"
+    },
+    "video": {
+      "comment": "Video Studio session footer: the kind of a selected clip, after its length — 6.2s · video",
       "extractionState": "manual"
     }
   },

@@ -317,11 +317,13 @@ struct VideoStudioSheetHost: View {
                         set: { model.setSpeed($0, for: clip.id) },
                         reset: { model.pushUndo(); model.setSpeed(1, for: clip.id) }
                     )
+                    // This clip's level, not the project's: Video sound is
+                    // the Music panel's (FS-12.08 §2).
                     InspectorSlider(
-                        label: "Volume", value: model.recipe.videoVolume, range: 0...1,
-                        valueText: "\(Int(model.recipe.videoVolume * 100))", model: model,
-                        set: { model.setVideoVolume($0) },
-                        reset: { model.pushUndo(); model.setVideoVolume(1) }
+                        label: "Volume", value: clip.volume, range: 0...1,
+                        valueText: "\(Int(clip.volume * 100))", model: model,
+                        set: { model.setClipVolume($0, for: clip.id) },
+                        reset: { model.pushUndo(); model.setClipVolume(1, for: clip.id) }
                     )
                 case .photo, .freeze:
                     durationSlider(clip)

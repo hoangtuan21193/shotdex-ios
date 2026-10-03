@@ -55,3 +55,24 @@ struct VideoAudioMixTests {
         #expect(abs(level - 0.4) < 0.0001)
     }
 }
+
+extension VideoAudioMixTests {
+    /// FS-12.08 §2: a clip's own Volume multiplies Video sound — 60 × 50
+    /// plays at 0.3; the clip next to it stays at Video sound.
+    @Test func clipVolumeMultipliesVideoSound() throws {
+        var recipe = VideoProjectRecipe(clips: VideoStudioModelFixture.videoClips(2))
+        recipe.videoVolume = 0.5
+        recipe.clips[0].volume = 0.6
+        var layout = VideoCompositionBuilder.Layout()
+        layout.clipAudio = recipe.clips.enumerated().map { index, clip in
+            VideoCompositionBuilder.Layout.ClipAudio(
+                clipID: clip.id,
+                trackID: CMPersistentTrackID(index + 1),
+                range: CMTimeRange(start: .zero, duration: CMTime(seconds: 10, preferredTimescale: 600))
+            )
+        }
+        let mix = VideoCompositionBuilder.audioMix(recipe: recipe, layout: layout)
+        #expect(abs(try #require(volume(of: mix, track: 1, at: 1)) - 0.3) < 0.0001)
+        #expect(abs(try #require(volume(of: mix, track: 2, at: 1)) - 0.5) < 0.0001)
+    }
+}

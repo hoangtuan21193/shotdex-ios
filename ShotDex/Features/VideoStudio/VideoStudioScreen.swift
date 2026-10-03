@@ -340,7 +340,13 @@ struct VideoStudioScreen: View {
                 usesToolRail: usesRail,
                 safeAreaTop: proxy.safeAreaInsets.top
             )
+            // On a phone a selected item swaps the tool row for ✕ · name · ✓
+            // (FS-12.04 §5). The panel carries it at its foot, in the row's
+            // place, so it stands a row taller.
+            let showsSessionFooter = !VideoStudioMetrics.usesDeskChrome(size: proxy.size)
+                && model.inspectorTarget != .none
             let panelHeight = VideoStudioMetrics.sheetHeight + proxy.safeAreaInsets.bottom
+                + (showsSessionFooter ? VideoStudioMetrics.toolbarHeight : 0)
             // The preview takes its aspect-fit height and the timeline the rest, so
             // a landscape project gets a tall timeline instead of black bars. While
             // the panel is up the stack lifts by the panel's overlap, so the lanes
@@ -421,7 +427,8 @@ struct VideoStudioScreen: View {
                 // Only where the divider exists to drag.
                 timelineExtraHeight: resizableTimeline ? CGFloat(timelineExtraHeight) + timelineDragOffset : 0,
                 deskChromeHeight: deskChromeHeight
-                    + (usesDeskChrome && isToolStripOpen ? VideoStudioMetrics.viewerToolStripHeight : 0)
+                    + (usesDeskChrome && isToolStripOpen ? VideoStudioMetrics.viewerToolStripHeight : 0),
+                presentsSessionFooter: showsSessionFooter
             )
             // `usesRail` is measured on the window, not on the size class. An
             // iPad Split View half reports `.regular` at ~500pt, where a
@@ -594,7 +601,7 @@ struct VideoStudioScreen: View {
                 // The panel slides over the bars; the layout underneath never
                 // moves, so the timeline stays exactly where the user left it.
                 if model.presentsSheet, layout.dockedPanel == 0, !usesInspectorColumn {
-                    contextPanel(model, height: panelHeight)
+                    contextPanel(model, height: panelHeight, showsFooter: showsSessionFooter, bottomInset: proxy.safeAreaInsets.bottom)
                         .transition(.move(edge: .bottom))
                         // The rail is the one piece of chrome that must stay
                         // reachable while the panel is up — a tool row you
@@ -792,7 +799,12 @@ struct VideoStudioScreen: View {
     /// system sheets fired from here, and UIKit cannot present a sheet from a view
     /// that is already presenting one. It slides *over* the tool row and the
     /// bottom bar; nothing underneath is displaced.
-    private func contextPanel(_ model: VideoStudioModel, height: CGFloat) -> some View {
+    private func contextPanel(
+        _ model: VideoStudioModel,
+        height: CGFloat,
+        showsFooter: Bool = false,
+        bottomInset: CGFloat = 0
+    ) -> some View {
         VStack(spacing: 0) {
             Capsule()
                 .fill(Color.white.opacity(0.22))
@@ -805,6 +817,14 @@ struct VideoStudioScreen: View {
                         .onEnded { if $0.translation.height > 40 { model.clearSelection() } }
                 )
             VideoStudioSheetHost(model: model, actions: actions(model), importedMusic: importedMusic)
+            if showsFooter, let title = model.selectionTitle {
+                VideoSessionFooter(
+                    title: title,
+                    onCancel: { model.cancelSession() },
+                    onCommit: { model.commitSession() }
+                )
+                Color.clear.frame(height: bottomInset)
+            }
         }
         .frame(height: height, alignment: .top)
         .background(EditorTheme.panelSolid)

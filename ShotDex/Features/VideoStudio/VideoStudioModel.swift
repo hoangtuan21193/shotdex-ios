@@ -101,9 +101,6 @@ final class VideoStudioModel {
     private var isSeekInFlight = false
     private var pendingScrubTime: Double?
 
-    private(set) var undoStack: [VideoProjectRecipe] = []
-    private(set) var redoStack: [VideoProjectRecipe] = []
-    private var isUndoGrouping = false
 
     var exportState: ExportState = .idle
     private(set) var savedAssetID: String?
@@ -217,8 +214,9 @@ final class VideoStudioModel {
             // edit opens with its clip selected.
             currentTime = min(max(0, recipe.playhead ?? 0), totalDuration)
             recipe.playhead = nil
-        } else if mode == .singleVideo {
-            selectedClipID = recipe.clips.first?.id
+        } else if mode == .singleVideo, let first = recipe.clips.first?.id {
+            selectedClipID = first
+            beginSession(.clip(first))
         }
         observeBackgrounding()
     }
@@ -357,11 +355,78 @@ final class VideoStudioModel {
         return .none
     }
 
-    // MARK: - Selection (single-target)
+    // MARK: - Selection and sessions (FS-12.04 §5)
+
+    /// The open selection session: what is being edited, the project as it
+    /// was when editing began, and where its undo steps start. Nil when
+    /// nothing is selected and no tool panel is open.
+    private(set) var session: VideoEditSession?
+
+    /// Opens a session on `target`, remembering the project as it is now.
+    private func beginSession(_ target: VideoEditSession.Target) {
+        session = VideoEditSession(target: target, startRecipe: recipe, checkpoint: history.checkpoint)
+    }
+
+    /// Ends the session keeping every step it made — the ✓ half of the
+    /// rule. Each step stays its own undo step.
+    private func endSession() {
+        session = nil
+    }
+
+    private func deselectAll() {
+        selectedClipID = nil
+        selectedOverlayID = nil
+        selectedMusicID = nil
+        activeToolPanel = nil
+    }
+
+    /// The name the footer shows for the selected item (FS-12.04 §5).
+    var selectionTitle: VideoItemTitle.Lines? {
+        if let id = selectedClipID, let index = recipe.clips.firstIndex(where: { $0.id == id }) {
+            return VideoItemTitle.clip(recipe.clips[index], index: index)
+        }
+        if let timed = selectedTimedOverlay {
+            return VideoItemTitle.overlay(timed, totalDuration: totalDuration)
+        }
+        if let music = selectedMusicTrack {
+            let end = VideoTimelineMath.musicPlacement(
+                start: music.start, trimStart: music.trimStart, trimEnd: music.trimEnd,
+                sourceDuration: music.sourceDuration, totalDuration: totalDuration
+            ).map(\.end) ?? music.end
+            return VideoItemTitle.music(music, end: end)
+        }
+        return nil
+    }
+
+    /// ✓: keep, deselect, and the bottom row is the tools again.
+    func commitSession() {
+        clearSelection()
+    }
+
+    /// ✕: the project goes back to exactly what it was when the session
+    /// began, every undo step the session made is forgotten — Redo cannot
+    /// bring them back — and nothing is selected. With nothing changed it is
+    /// only a deselect.
+    func cancelSession() {
+        guard let session else {
+            deselectAll()
+            return
+        }
+        self.session = nil
+        history.rollback(to: session.checkpoint)
+        deselectAll()
+        if recipe != session.startRecipe {
+            restore(session.startRecipe)
+        }
+    }
 
     func selectClip(_ id: UUID?) {
+        guard let id else { clearSelection(); return }
+        guard session?.target != .clip(id) else { return }
+        endSession()
+        deselectAll()
         selectedClipID = id
-        if id != nil { selectedOverlayID = nil; selectedMusicID = nil; activeToolPanel = nil }
+        beginSession(.clip(id))
     }
 
     func toggleClip(_ id: UUID) {
@@ -370,13 +435,13 @@ final class VideoStudioModel {
     }
 
     func selectOverlay(_ id: UUID?) {
+        guard let id else { clearSelection(); return }
+        guard session?.target != .overlay(id) else { return }
+        endSession()
+        deselectAll()
         selectedOverlayID = id
-        if id != nil {
-            selectedClipID = nil
-            selectedMusicID = nil
-            activeToolPanel = nil
-            inspectorTextTool = .transform
-        }
+        inspectorTextTool = .transform
+        beginSession(.overlay(id))
     }
 
     func toggleOverlay(_ id: UUID) {
@@ -385,13 +450,13 @@ final class VideoStudioModel {
     }
 
     func selectMusic(_ id: UUID?) {
-        guard id == nil || recipe.musicTracks.contains(where: { $0.id == id }) else { return }
+        guard let id else { clearSelection(); return }
+        guard recipe.musicTracks.contains(where: { $0.id == id }) else { return }
+        guard session?.target != .music(id) else { return }
+        endSession()
+        deselectAll()
         selectedMusicID = id
-        if id != nil {
-            selectedClipID = nil
-            selectedOverlayID = nil
-            activeToolPanel = nil
-        }
+        beginSession(.music(id))
     }
 
     func toggleMusic(_ id: UUID) {
@@ -482,20 +547,23 @@ final class VideoStudioModel {
     /// user is watching the project, not part of the project.
     var loopsPlayback = false
 
+    /// Ends whatever is open keeping it (= ✓) and deselects: an empty
+    /// stretch of timeline, the frame while paused, the grabber, Esc,
+    /// Return, Back (FS-12.04 §5).
     func clearSelection() {
-        selectedClipID = nil
-        selectedOverlayID = nil
-        selectedMusicID = nil
-        activeToolPanel = nil
+        endSession()
+        deselectAll()
     }
 
-    /// Deselects everything and opens a tool panel, or closes the open one
-    /// with `nil`. Closing keeps what the panel changed (FS-12.04 §4).
+    /// Deselects everything (keeping what it changed) and opens a tool
+    /// panel as a session of its own, or closes the open one with `nil`.
+    /// Closing keeps what the panel changed (FS-12.04 §4).
     func showToolPanel(_ panel: VideoToolPanel?) {
-        selectedClipID = nil
-        selectedOverlayID = nil
-        selectedMusicID = nil
+        endSession()
+        deselectAll()
+        guard let panel else { return }
         activeToolPanel = panel
+        beginSession(.tool(panel.rawValue))
     }
 
     /// A tool cell tapped: opens its panel, or closes it if it is the one
@@ -578,6 +646,7 @@ final class VideoStudioModel {
         for index in recipe.clips.indices {
             let clip = recipe.clips[index]
             if clip.kind == .video, let duration = loaded.durations[clip.id] {
+                measuredSourceDurations[clip.id] = duration
                 recipe.clips[index].sourceDuration = duration
                 if recipe.clips[index].trimEnd == nil {
                     recipe.clips[index].trimEnd = duration
@@ -705,47 +774,62 @@ final class VideoStudioModel {
 
     // MARK: - Undo / redo
 
-    private static let undoDepth = 40
+    /// Whole-recipe snapshots with numbered steps (`VideoEditHistory`).
+    private(set) var history = VideoEditHistory()
 
     /// Snapshot the recipe before a discrete mutation. Slider drags snapshot
     /// once per gesture via `beginUndoGroup`/`endUndoGroup`.
     func pushUndo() {
-        guard !isUndoGrouping else { return }
-        undoStack.append(recipe)
-        if undoStack.count > Self.undoDepth {
-            undoStack.removeFirst(undoStack.count - Self.undoDepth)
-        }
-        redoStack.removeAll()
+        history.push(recipe)
     }
 
     func beginUndoGroup() {
-        guard !isUndoGrouping else { return }
-        pushUndo()
-        isUndoGrouping = true
+        history.beginGroup(recipe)
     }
 
     func endUndoGroup() {
-        isUndoGrouping = false
+        history.endGroup()
     }
 
-    var canUndo: Bool { !undoStack.isEmpty }
-    var canRedo: Bool { !redoStack.isEmpty }
+    var canUndo: Bool { history.canUndo }
+    var canRedo: Bool { history.canRedo }
 
+    /// One step back. Stepping past the start of the open session ends it
+    /// — kept, as ✓ keeps — and deselects (FS-12.04 §5).
     func undo() {
-        guard let previous = undoStack.popLast() else { return }
-        redoStack.append(recipe)
+        if let session, let newest = history.newestSequence, newest < session.checkpoint {
+            endSession()
+            deselectAll()
+        }
+        guard let previous = history.undo(from: recipe) else { return }
         restore(previous)
     }
 
     func redo() {
-        guard let next = redoStack.popLast() else { return }
-        undoStack.append(recipe)
+        guard let next = history.redo(from: recipe) else { return }
         restore(next)
     }
 
+    /// Source lengths the media turned out to have, by clip or track id.
+    /// They are measured once, at load, and written into the recipe; a
+    /// snapshot taken before that write lacks them, so every restore puts
+    /// them back rather than leaving a clip that cannot be trimmed.
+    private var measuredSourceDurations: [UUID: Double] = [:]
+
     private func restore(_ snapshot: VideoProjectRecipe) {
-        isUndoGrouping = false
-        recipe = snapshot
+        history.endGroup()
+        var restored = snapshot
+        for index in restored.clips.indices where restored.clips[index].sourceDuration == nil {
+            guard let duration = measuredSourceDurations[restored.clips[index].id] else { continue }
+            restored.clips[index].sourceDuration = duration
+            if restored.clips[index].trimEnd == nil { restored.clips[index].trimEnd = duration }
+        }
+        for index in restored.musicTracks.indices where restored.musicTracks[index].sourceDuration == nil {
+            guard let duration = measuredSourceDurations[restored.musicTracks[index].id] else { continue }
+            restored.musicTracks[index].sourceDuration = duration
+            if restored.musicTracks[index].trimEnd == nil { restored.musicTracks[index].trimEnd = duration }
+        }
+        recipe = restored
         if let selectedClipID, !recipe.clips.contains(where: { $0.id == selectedClipID }) {
             self.selectedClipID = nil
         }
@@ -754,6 +838,9 @@ final class VideoStudioModel {
         }
         if let selectedMusicID, !recipe.musicTracks.contains(where: { $0.id == selectedMusicID }) {
             self.selectedMusicID = nil
+        }
+        if inspectorTarget == .none, activeToolPanel == nil, session?.target.isItem == true {
+            endSession()
         }
         if let index = editingTransitionIndex, !recipe.transitions.indices.contains(index) {
             editingTransitionIndex = nil
@@ -947,6 +1034,7 @@ final class VideoStudioModel {
         Task { [weak self] in
             guard let self else { return }
             guard let duration = await service.loadAudioDuration(for: source) else { return }
+            measuredSourceDurations[id] = duration
             guard let index = recipe.musicTracks.firstIndex(where: { $0.id == id }) else { return }
             recipe.musicTracks[index].sourceDuration = duration
             if recipe.musicTracks[index].trimEnd == nil {
@@ -1278,6 +1366,7 @@ final class VideoStudioModel {
             guard let duration = loaded.durations[clip.id],
                   let index = recipe.clips.firstIndex(where: { $0.id == clip.id })
             else { continue }
+            measuredSourceDurations[clip.id] = duration
             recipe.clips[index].sourceDuration = duration
             if recipe.clips[index].trimEnd == nil {
                 recipe.clips[index].trimEnd = duration
@@ -1301,6 +1390,14 @@ final class VideoStudioModel {
 
     func setVideoVolume(_ volume: Double) {
         recipe.videoVolume = min(max(volume, 0), 1)
+        markEdited()
+        applyAudioTier()
+    }
+
+    /// One clip's own level, under Video sound (FS-12.08 §2).
+    func setClipVolume(_ volume: Double, for clipID: UUID) {
+        guard let index = recipe.clips.firstIndex(where: { $0.id == clipID }) else { return }
+        recipe.clips[index].volume = min(max(volume, 0), 1)
         markEdited()
         applyAudioTier()
     }

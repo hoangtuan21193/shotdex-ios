@@ -117,6 +117,9 @@ struct VideoClip: Identifiable, Equatable, Codable, Sendable {
     /// source's duration resolves at load.
     var trimStart: Double = 0
     var trimEnd: Double?
+    /// The clip's own level, 0…1, times the project's Video sound
+    /// (FS-12.08 §2): a Volume slider in one clip's panel changes that clip.
+    var volume: Double = 1
     var isMuted = false
     /// Seconds of fade from the project background at the clip's head, and
     /// back to it at its tail. Zero means a hard cut, which is the default
@@ -578,6 +581,7 @@ extension VideoClip {
         photoDuration = value(.photoDuration, VideoClip.defaultPhotoDuration)
         trimStart = value(.trimStart, 0)
         trimEnd = value(.trimEnd, Double?.none)
+        volume = value(.volume, 1)
         isMuted = value(.isMuted, false)
         fadeIn = value(.fadeIn, 0)
         fadeOut = value(.fadeOut, 0)

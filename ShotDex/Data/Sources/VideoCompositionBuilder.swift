@@ -314,6 +314,7 @@ enum VideoCompositionBuilder {
         var parameters: [AVMutableAudioMixInputParameters] = []
 
         let mutedClipIDs = Set(recipe.clips.filter(\.isMuted).map(\.id))
+        let clipVolumes = Dictionary(recipe.clips.map { ($0.id, $0.volume) }, uniquingKeysWith: { first, _ in first })
         var byTrack: [CMPersistentTrackID: [Layout.ClipAudio]] = [:]
         for clipAudio in layout.clipAudio {
             byTrack[clipAudio.trackID, default: []].append(clipAudio)
@@ -324,7 +325,7 @@ enum VideoCompositionBuilder {
             for clipAudio in clipRanges {
                 let volume = mutedClipIDs.contains(clipAudio.clipID)
                     ? 0
-                    : Float(recipe.videoVolume)
+                    : Float(recipe.videoVolume * (clipVolumes[clipAudio.clipID] ?? 1))
                 params.setVolumeRamp(
                     fromStartVolume: volume,
                     toEndVolume: volume,

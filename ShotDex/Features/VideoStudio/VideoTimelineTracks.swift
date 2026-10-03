@@ -281,10 +281,11 @@ private struct ClipBand: View {
                 )
         }
         .frame(width: width, height: lanes.clipCell)
-        .offset(x: CGFloat(placement.start) * pps + reorderShift)
-        .scaleEffect(reorderShift != 0 ? 1.05 : 1)
-        .zIndex(reorderShift != 0 ? 3 : 0)
-        .shadow(color: reorderShift != 0 ? .black.opacity(0.5) : .clear, radius: 8)
+        // Everything that is hit-tested goes on the clip's own frame,
+        // *before* it is moved into place: a modifier added after `.offset`
+        // sits on the unmoved frame at the lane's origin, where every clip's
+        // frame is — so a tap on the first clip went to the topmost one, and
+        // the selected clip's fade knobs drew over clip 1.
         .contentShape(Rectangle())
         .onTapGesture { model.toggleClip(clip.id) }
         .background(reorderZone)
@@ -292,6 +293,10 @@ private struct ClipBand: View {
         .accessibilityElement()
         .accessibilityLabel(accessibilityLabel)
         .accessibilityAddTraits(isSelected ? [.isSelected, .isButton] : .isButton)
+        .offset(x: CGFloat(placement.start) * pps + reorderShift)
+        .scaleEffect(reorderShift != 0 ? 1.05 : 1)
+        .zIndex(reorderShift != 0 ? 3 : 0)
+        .shadow(color: reorderShift != 0 ? .black.opacity(0.5) : .clear, radius: 8)
     }
 
     private var durationBadge: some View {

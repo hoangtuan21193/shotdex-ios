@@ -52,4 +52,8 @@ enum VideoStudioCopy {
     static var discardChanges: String {
         String(localized: "Discard Changes", table: table, comment: "Video Studio: the ✕ that closes a tool panel and throws away what it changed")
     }
+
+    static var keepChanges: String {
+        String(localized: "Keep Changes", table: table, comment: "Video Studio: the ✓ that ends a selection keeping what it changed")
+    }
 }

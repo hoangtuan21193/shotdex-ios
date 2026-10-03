@@ -106,7 +106,7 @@ final class VideoLevelMeterModel {
             else { continue }
             let sourceTime = clip.trimStart + (seconds - placement.start) * max(clip.speed, 0.01)
             let peak = envelope.peak(atSourceSeconds: sourceTime)
-            let gain = recipe.videoVolume
+            let gain = recipe.videoVolume * clip.volume
             powerLeft += pow(Double(peak.left) * gain, 2)
             powerRight += pow(Double(peak.right) * gain, 2)
         }
