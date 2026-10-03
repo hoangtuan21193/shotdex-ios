@@ -78,6 +78,8 @@ final class CullModel {
     /// Asked whether the photo on screen has its original only in iCloud —
     /// a probe, never a download (AC-8).
     @ObservationIgnored private let originalFetcher: (any OriginalFetching)?
+    /// The indexed row, for the iPad's EXIF line.
+    @ObservationIgnored var metadataProvider: ((String) -> PhotoMetadata?)?
     @ObservationIgnored private var probeTask: Task<Void, Never>?
     /// The original of the photo on screen is only in iCloud: what shows is
     /// the device's copy, and the glyph says so.
@@ -107,6 +109,23 @@ final class CullModel {
     func marks(for id: String) -> PhotoMarkSummary {
         _ = marks.version
         return marks.summary(for: id, photosRating: assets[id]?.photosStarRating)
+    }
+
+    /// `Sony ILCE-7M5 · FE 24-70mm F2.8 GM II · 50 mm · f/2.8 · 1/500 s ·
+    /// ISO 200 · Sep 28, 20:32:14` — iPad's line under the top bar.
+    var exifLine: String {
+        guard let id = currentId else { return "" }
+        let metadata = metadataProvider?(id)
+        let date = currentAsset?.creationDate.map { $0.formatted(date: .abbreviated, time: .standard) }
+        return MetadataFormatter.metadataLine([
+            metadata?.cameraModel ?? metadata?.normalizedCameraModel,
+            metadata?.lensModel ?? metadata?.normalizedLensModel,
+            metadata?.focalLength.flatMap(MetadataFormatter.focalLength),
+            metadata?.aperture.flatMap(MetadataFormatter.aperture),
+            metadata?.shutterSpeedDisplay,
+            metadata?.iso.flatMap(MetadataFormatter.iso),
+            date,
+        ]) ?? ""
     }
 
     var currentMarks: PhotoMarkSummary { currentId.map(marks(for:)) ?? PhotoMarkSummary(rating: 0, flag: nil) }

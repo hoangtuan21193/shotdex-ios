@@ -97,6 +97,9 @@ struct CullScreen: View {
                     .foregroundStyle(EditorTheme.secondaryText)
                     .lineLimit(1)
             }
+            // One element at least 44pt square, as every control of the
+            // pass is measured to be (FS-01.12b AC-5).
+            .frame(minWidth: CullLayout.control, minHeight: CullLayout.control)
             .accessibilityElement(children: .combine)
             HStack {
                 roundButton(systemImage: "xmark", glyph: 18, label: MarkCopy.close) { dismiss() }
@@ -115,17 +118,12 @@ struct CullScreen: View {
     }
 
     private var exifLine: some View {
-        Text(exifText)
+        Text(model.exifLine)
             .font(.system(size: 12))
             .foregroundStyle(EditorTheme.secondaryText)
             .lineLimit(1)
             .frame(height: CullLayout.exifLineHeight)
             .frame(maxWidth: .infinity)
-    }
-
-    private var exifText: String {
-        guard let asset = model.currentAsset else { return "" }
-        return asset.creationDate.map { $0.formatted(date: .abbreviated, time: .standard) } ?? ""
     }
 
     // MARK: Photo
@@ -258,6 +256,9 @@ struct CullFilmstrip: View {
                 withAnimation(EditorTheme.animation) { proxy.scrollTo(new, anchor: .center) }
             }
         }
+        // Cells stop at the safe area: on the Duo's cover they ran on under
+        // the 84pt rail, where nothing can be tapped.
+        .clipped()
         .frame(height: layout.filmstripHeight)
         // Stops at the strip: below it is the home indicator's black, as on
         // the board, not a slab running to the screen's edge.
@@ -385,6 +386,8 @@ struct CullHost: View {
                 loader: dependencies.photoLibrary, assets: assets,
                 originalFetcher: dependencies.originalFetcher
             )
+            let queries = dependencies.libraryQueries
+            model?.metadataProvider = { try? queries.metadata(assetId: $0) }
         }
     }
 }

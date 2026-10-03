@@ -1,0 +1,21 @@
+{
+  "steps": [
+    { "action": "launch" },
+    { "action": "wait", "seconds": 8 },
+    { "action": "tap", "label": "Select photos" },
+    { "action": "wait", "seconds": 1.5 },
+    { "action": "tap", "label": "More selection actions" },
+    { "action": "wait", "seconds": 1.5 },
+    { "action": "tap", "label": "Select All" },
+    { "action": "wait", "seconds": 1.5 },
+    { "action": "tap", "label": "More selection actions" },
+    { "action": "wait", "seconds": 1.5 },
+    { "action": "tap", "label": "Cull" },
+    { "action": "wait", "seconds": 4 },
+    { "action": "screenshot", "name": "01-cull" },
+    { "action": "dump", "name": "01-cull", "type": "button" },
+    { "action": "tap", "label": "Close" },
+    { "action": "wait", "seconds": 1.5 },
+    { "action": "tap", "label": "Done selecting" }
+  ]
+}
