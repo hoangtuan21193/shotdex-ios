@@ -148,3 +148,22 @@ extension VideoEdgeTrimModelTests {
         #expect(model.currentTime == 6)
     }
 }
+
+extension VideoEdgeTrimMathTests {
+    /// FS-12.05 AC-11: a clip whose source length is not known (an iCloud
+    /// original not downloaded) can be cut inwards only.
+    @Test func unknownSourceOnlyTrimsInwards() {
+        var clip = VideoClip(assetID: "icloud", kind: .video)
+        clip.trimStart = 1
+        clip.trimEnd = 6
+        let outLeft = VideoEdgeTrimMath.drag(clip, edge: .leading, by: -1)
+        #expect(outLeft.trimStart == 1)
+        #expect(outLeft.hitLimit)
+        let outRight = VideoEdgeTrimMath.drag(clip, edge: .trailing, by: 2)
+        #expect(outRight.trimEnd == 6)
+        #expect(outRight.hitLimit)
+        let inward = VideoEdgeTrimMath.drag(clip, edge: .leading, by: 2)
+        #expect(inward.trimStart == 3)
+        #expect(!inward.hitLimit)
+    }
+}
