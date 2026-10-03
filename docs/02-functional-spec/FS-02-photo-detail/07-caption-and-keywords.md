@@ -188,6 +188,9 @@ Luật:
   được đóng dấu lại (`MetadataStore.restampModificationDates`) nên lượt index sau không đọc lại file; sửa trong app
   Photos thì lượt tăng dần đọc lại file của ảnh đó **một lần**, như sửa ảnh (AC-10). Thêm: trên 27.0
   `caption = nil` **không xoá** caption, chỉ chuỗi rỗng xoá — writer ghi `""`.
+- **2.** Có. `xcrun simctl addmedia` một JPEG có IPTC Keywords `Lightroom, test` + Caption-Abstract, và
+  `PHAssetCreationRequest` cùng loại file: cả hai thành keyword và caption **của Photos**. Ảnh xuất từ Lightroom lọc
+  được ngay khi gương đã đọc; dòng *Keywords* của file vẫn ở Rights & Description (§4), chỉ đọc.
 
 ## 11. Tiêu chí nghiệm thu
 
