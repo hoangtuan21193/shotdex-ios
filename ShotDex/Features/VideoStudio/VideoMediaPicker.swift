@@ -2,8 +2,8 @@ import Photos
 import PhotosUI
 import SwiftUI
 
-/// One media item picked to add or replace a clip: the library identifier plus
-/// the clip kind the model needs to build a `VideoClip`.
+/// One media item picked to start a project or add a clip: the library
+/// identifier plus the clip kind the model needs to build a `VideoClip`.
 struct VideoMediaPick: Identifiable, Equatable, Sendable {
     let assetID: String
     let kind: VideoClipKind
@@ -12,12 +12,13 @@ struct VideoMediaPick: Identifiable, Equatable, Sendable {
     var id: String { assetID }
 }
 
-/// Picks photos and/or videos out of the library to append to the Video track
-/// or replace the selected clip. `PHPickerViewController` with
+/// Picks the photos and/or videos a new video or collage starts from
+/// (Creations). Inside Video Studio, adding, replacing and choosing a
+/// background go through the Media panel instead. `PHPickerViewController` with
 /// `photoLibrary: .shared()` so each result carries an `assetIdentifier` — the
 /// same identity the rest of the studio keys on.
 struct VideoMediaPicker: UIViewControllerRepresentable {
-    /// 0 = unlimited (Add media); 1 = single (Replace).
+    /// 0 = unlimited (a new video); the collage's slot count for a new collage.
     var selectionLimit = 0
     /// What may be picked. Photos and videos by default; the collage side of
     /// Creations narrows it to images. Kept as one picker rather than a
