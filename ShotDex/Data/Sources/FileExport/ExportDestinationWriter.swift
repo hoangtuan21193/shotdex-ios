@@ -36,6 +36,16 @@ protocol ExportDestinationWriter: Sendable {
 /// coordination, so a provider like Dropbox sees the new file.
 struct LocalFolderWriter: ExportDestinationWriter {
     let root: URL
+    /// How long a coordinated rename may take before an unreachable folder
+    /// is called disconnected (FS-03.07c §3: the batch stops within 2 s,
+    /// never hangs on a drive that was pulled out).
+    var watchdog: Duration = .seconds(2)
+    /// The rename itself; a test hands in one that hangs.
+    var rename: (@Sendable (_ part: URL, _ directory: URL, _ name: String, _ replacing: Bool) throws -> String)?
+
+    init(root: URL) {
+        self.root = root
+    }
 
     private var fileManager: FileManager { .default }
 
@@ -107,7 +117,7 @@ struct LocalFolderWriter: ExportDestinationWriter {
         do {
             try Self.checkComplete(part)
             let bytes = (try? fileManager.attributesOfItem(atPath: part.path)[.size] as? Int64) ?? 0
-            let final = try coordinatedRename(part, to: directory, name: name, replacing: replacing)
+            let final = try await guardedRename(part, to: directory, name: name, replacing: replacing)
             return ExportWrittenFile(path: ServerUploadPath.join(folder, final), bytes: bytes)
         } catch {
             try? fileManager.removeItem(at: part)
@@ -132,10 +142,31 @@ struct LocalFolderWriter: ExportDestinationWriter {
         try? handle.close()
     }
 
+    /// The rename on a thread of its own, watched: past the watchdog with the
+    /// folder unreachable, the drive is gone and the write is abandoned —
+    /// the stuck coordination is left to the system. A slow provider with the
+    /// folder still there is waited for.
+    private func guardedRename(_ part: URL, to directory: URL, name: String, replacing: Bool) async throws -> String {
+        let rename = rename ?? { try Self.coordinatedRename($0, to: $1, name: $2, replacing: $3) }
+        let result = RenameResult()
+        DispatchQueue.global(qos: .userInitiated).async {
+            result.finish(Result { try rename(part, directory, name, replacing) })
+        }
+        let started = ContinuousClock.now
+        while true {
+            if let done = result.value { return try done.get() }
+            if ContinuousClock.now - started >= watchdog, !FileManager.default.fileExists(atPath: root.path) {
+                throw FileExportFailure.disconnected
+            }
+            try? await Task.sleep(for: .milliseconds(20))
+        }
+    }
+
     /// Part → real name. Replace swaps the older file out only now, after the
     /// new one is whole; Keep Both takes the next free name if someone wrote
     /// the planned one since the folder was read.
-    private func coordinatedRename(_ part: URL, to directory: URL, name: String, replacing: Bool) throws -> String {
+    static func coordinatedRename(_ part: URL, to directory: URL, name: String, replacing: Bool) throws -> String {
+        let fileManager = FileManager.default
         var finalName = name
         var target = directory.appendingPathComponent(name)
         if !replacing, fileManager.fileExists(atPath: target.path) {
@@ -163,4 +194,13 @@ struct LocalFolderWriter: ExportDestinationWriter {
         if let error = coordinationError ?? moveError { throw error }
         return finalName
     }
+}
+
+/// The rename's outcome, handed from its thread to the waiting task.
+private final class RenameResult: @unchecked Sendable {
+    private let lock = NSLock()
+    private var result: Result<String, Error>?
+
+    func finish(_ result: Result<String, Error>) { lock.withLock { self.result = result } }
+    var value: Result<String, Error>? { lock.withLock { result } }
 }
