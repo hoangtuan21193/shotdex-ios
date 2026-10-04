@@ -138,6 +138,13 @@ struct VideoExportPanel: View {
                 .fixedSize(horizontal: false, vertical: true)
                 .padding(.top, 12)
                 .accessibilityIdentifier("exportError")
+            if model.exportFailureOffersSettings {
+                Button(VideoStudioCopy.openSettings) {
+                    if let url = URL(string: UIApplication.openSettingsURLString) { UIApplication.shared.open(url) }
+                }
+                .font(.system(size: 12.5, weight: .semibold))
+                .padding(.top, 6)
+            }
         }
         Spacer(minLength: 12)
         Button {

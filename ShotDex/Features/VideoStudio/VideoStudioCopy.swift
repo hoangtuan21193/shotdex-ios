@@ -301,6 +301,10 @@ enum VideoStudioCopy {
         String(localized: "Saving to Photos…", table: table, comment: "Video Studio Export: the file is written and is going into the library")
     }
 
+    static var cantSaveToPhotos: String {
+        String(localized: "ShotDex can't save to Photos. Allow access in Settings.", table: table, comment: "Video Studio Export: Photos refused the finished video because access is denied")
+    }
+
     static var exportStoppedWhenLeft: String {
         String(localized: "Export stopped when you left ShotDex. Export again to finish.", table: table, comment: "Video Studio Export: the export was cancelled because the app went to the background")
     }

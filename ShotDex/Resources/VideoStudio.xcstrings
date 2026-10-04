@@ -477,6 +477,10 @@
         }
       }
     },
+    "ShotDex can't save to Photos. Allow access in Settings.": {
+      "comment": "Video Studio Export: Photos refused the finished video because access is denied",
+      "extractionState": "manual"
+    },
     "Speed": {
       "comment": "Video Studio clip panel: label of the playback-rate chips",
       "extractionState": "manual"

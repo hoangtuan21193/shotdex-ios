@@ -560,11 +560,26 @@ final class VideoStudioService {
     /// Photos ingest + direct index + grid refresh — the same closure trio
     /// `PhotoEditingService` uses, so the new video appears before dismissal.
     func saveToPhotos(url: URL) async throws -> String {
-        let assetID = try await importFile(url, true)
+        let assetID: String
+        do {
+            assetID = try await importFile(url, true)
+        } catch {
+            // Photos would not take it: the file goes too (FS-12.10b §5).
+            try? FileManager.default.removeItem(at: url)
+            throw Self.isPhotosAccessError(error) ? VideoSaveError.photosAccessDenied : error
+        }
         await indexNewAsset(assetID)
         publishCreatedAsset()
         try? FileManager.default.removeItem(at: url)
         return assetID
+    }
+
+    /// Photos refused because the app may not write to the library.
+    static func isPhotosAccessError(_ error: Error) -> Bool {
+        let nsError = error as NSError
+        guard nsError.domain == PHPhotosErrorDomain else { return false }
+        return [PHPhotosError.Code.accessUserDenied.rawValue, PHPhotosError.Code.accessRestricted.rawValue]
+            .contains(nsError.code)
     }
 
     /// Copies a security-scoped Files pick into the session's temp directory.
@@ -648,4 +663,10 @@ struct PhotoKitVideoSourceLoader: VideoSourceLoading {
         guard let asset = PhotoLibraryService.fetchAssets(ids: [id]).first else { return nil }
         return await PhotoLibraryService.requestAVAsset(for: asset)
     }
+}
+
+/// Why a finished export did not reach Photos.
+enum VideoSaveError: Error, Equatable {
+    /// Photos access is denied or restricted: Settings is the way out.
+    case photosAccessDenied
 }

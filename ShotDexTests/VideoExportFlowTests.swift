@@ -1,5 +1,6 @@
 import Foundation
 import UIKit
+import Photos
 import Testing
 @testable import ShotDex
 
@@ -79,5 +80,30 @@ extension VideoExportFlowTests {
         }
         #expect(model.exportState == .failed("Export stopped when you left ShotDex. Export again to finish."))
         #expect(model.savedAssetID == nil)
+    }
+}
+
+extension VideoExportFlowTests {
+    /// AC-9: Photos refuses the finished video for access — the file is
+    /// deleted, the error says what to do, and Settings is offered.
+    @Test func photosDeniedSaysWhatToDo() async throws {
+        let service = VideoStudioService(
+            importFile: { _, _ in throw NSError(domain: PHPhotosErrorDomain, code: PHPhotosError.Code.accessUserDenied.rawValue) },
+            indexNewAsset: { _ in }, publishCreatedAsset: {}
+        )
+        let directory = try VideoExportFixtures.makeDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let file = directory.appendingPathComponent("ShotDex-Video-test.mp4")
+        try Data([0, 1, 2]).write(to: file)
+        await #expect(throws: VideoSaveError.photosAccessDenied) {
+            _ = try await service.saveToPhotos(url: file)
+        }
+        #expect(!FileManager.default.fileExists(atPath: file.path))
+        #expect(VideoStudioCopy.cantSaveToPhotos == "ShotDex can't save to Photos. Allow access in Settings.")
+
+        let model = self.model()
+        defer { model.close() }
+        model.exportState = .failed(VideoStudioCopy.cantSaveToPhotos)
+        #expect(model.exportFailureOffersSettings)
     }
 }

@@ -2906,6 +2906,8 @@ final class VideoStudioModel {
                 onSaved?(assetID)
             } catch is CancellationError {
                 exportState = exportStoppedByLeaving ? .failed(VideoStudioCopy.exportStoppedWhenLeft) : .idle
+            } catch VideoSaveError.photosAccessDenied {
+                exportState = .failed(VideoStudioCopy.cantSaveToPhotos)
             } catch {
                 exportState = .failed(error.localizedDescription)
             }
@@ -2923,6 +2925,12 @@ final class VideoStudioModel {
     /// The running export was stopped because the app went to the
     /// background, not by Cancel: Export Video says so on return.
     @ObservationIgnored private var exportStoppedByLeaving = false
+
+    /// The failure is Photos refusing the video: Export Video offers Open
+    /// Settings under it (FS-12.10b §5).
+    var exportFailureOffersSettings: Bool {
+        exportState == .failed(VideoStudioCopy.cantSaveToPhotos)
+    }
 
     /// The app left the foreground mid-export.
     func stopExportForLeaving() {
