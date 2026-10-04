@@ -26,6 +26,35 @@ import Testing
         #expect(FileManager.default.fileExists(atPath: servers.directory.path))
     }
 
+    /// AC-37: a 5 GB cache at 4.995 GB — thumbnails of folders and the NAS,
+    /// and 300 full-size previews — takes 200 more 40 KB NAS thumbnails. It
+    /// ends at or under 5 GB by dropping the longest-unopened preview; not
+    /// one thumbnail goes.
+    @Test func evictsPreviewsBeforeThumbnails() {
+        let start = Date(timeIntervalSince1970: 1_790_000_000)
+        func item(_ name: String, _ kind: PreviewCacheEviction.Kind, _ size: Int64, _ minutes: Int) -> PreviewCacheEviction.Item {
+            PreviewCacheEviction.Item(url: URL(fileURLWithPath: "/cache/\(name)"), kind: kind, size: size,
+                                      lastUsed: start.addingTimeInterval(Double(minutes) * 60))
+        }
+        // Thumbnails are older than every preview: age alone would take them.
+        let thumbnails = (0..<64_875).map { item("t\($0).jpg", .thumbnail, 40_000, $0 % 1_000) }
+        let previews = (0..<300).map { item("p\($0).heic", .preview, 8_000_000, 2_000 + $0) }
+        let added = (0..<200).map { item("nas\($0).jpg", .thumbnail, 40_000, 5_000 + $0) }
+        let items = (thumbnails + previews + added).shuffled()
+        let limit = PreviewCachePolicy.bytes(gigabytes: 5)
+
+        let victims = PreviewCacheEviction.victims(items, limit: limit)
+        #expect(victims.map(\.url.lastPathComponent) == ["p0.heic"])
+        #expect(victims.allSatisfy { $0.kind == .preview })
+        let left = items.reduce(Int64(0)) { $0 + $1.size } - victims.reduce(Int64(0)) { $0 + $1.size }
+        #expect(left <= limit)
+
+        // With no previews left, thumbnails go oldest first.
+        let onlyThumbnails = [item("old.jpg", .thumbnail, 600, 1), item("new.jpg", .thumbnail, 600, 9)]
+        #expect(PreviewCacheEviction.victims(onlyThumbnails, limit: 1_000).map(\.url.lastPathComponent) == ["old.jpg"])
+        #expect(PreviewCacheEviction.victims(onlyThumbnails, limit: 1_200).isEmpty)
+    }
+
     /// A fresh folder handed to `prepare` comes back created and flagged.
     @Test func prepareCreatesAndExcludes() throws {
         let folder = FileManager.default.temporaryDirectory.appendingPathComponent("PreviewCache-\(UUID().uuidString)", isDirectory: true)

@@ -106,22 +106,20 @@ final class RemoteThumbnailCache: @unchecked Sendable {
         }
     }
 
-    /// Drops least recently used files until the folder is under `limit`.
+    /// Drops files until the folder is under `limit`, in the shared cache's
+    /// order (`PreviewCacheEviction`). Everything here is a thumbnail or its
+    /// capture date, so this is least recently used first.
     func trim() {
         lock.withLock {
             let keys: [URLResourceKey] = [.fileSizeKey, .contentModificationDateKey]
             guard let files = try? FileManager.default.contentsOfDirectory(at: directory, includingPropertiesForKeys: keys) else { return }
-            var entries = files.compactMap { url -> (URL, Int64, Date)? in
+            let items = files.compactMap { url -> PreviewCacheEviction.Item? in
                 guard let values = try? url.resourceValues(forKeys: Set(keys)) else { return nil }
-                return (url, Int64(values.fileSize ?? 0), values.contentModificationDate ?? .distantPast)
+                return PreviewCacheEviction.Item(url: url, kind: .thumbnail, size: Int64(values.fileSize ?? 0),
+                                                 lastUsed: values.contentModificationDate ?? .distantPast)
             }
-            var total = entries.reduce(0) { $0 + $1.1 }
-            guard total > limit else { return }
-            entries.sort { $0.2 < $1.2 }
-            for (url, size, _) in entries {
-                try? FileManager.default.removeItem(at: url)
-                total -= size
-                if total <= limit { break }
+            for victim in PreviewCacheEviction.victims(items, limit: limit) {
+                try? FileManager.default.removeItem(at: victim.url)
             }
         }
     }
