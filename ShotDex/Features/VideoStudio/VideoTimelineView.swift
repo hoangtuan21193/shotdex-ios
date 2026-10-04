@@ -143,6 +143,8 @@ struct VideoTimelineView: View {
         .frame(height: height)
         .background(EditorTheme.background)
         .clipped()
+        // Still while an export runs (FS-12.10b §4).
+        .allowsHitTesting(!model.isExportBusy)
         .onChange(of: model.fitToWindowToken) { fitToWindow() }
     }
 

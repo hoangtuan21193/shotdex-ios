@@ -106,6 +106,8 @@ enum VideoToolPanel: String, Equatable, Identifiable, CaseIterable {
     case music
     /// The photo library inside the panel (FS-12.09).
     case media
+    /// Export Video (FS-12.10b): opening it never starts an export.
+    case export
 
     var id: String { rawValue }
 
@@ -115,6 +117,7 @@ enum VideoToolPanel: String, Equatable, Identifiable, CaseIterable {
         case .videoSettings: VideoStudioCopy.videoSettings
         case .music: VideoStudioCopy.addMusic
         case .media: VideoStudioCopy.media
+        case .export: VideoStudioCopy.exportVideo
         }
     }
 
@@ -124,6 +127,7 @@ enum VideoToolPanel: String, Equatable, Identifiable, CaseIterable {
         case .videoSettings: "aspectratio"
         case .music: "music.note"
         case .media: VideoAddTool.media.systemImage
+        case .export: "square.and.arrow.down"
         }
     }
 }

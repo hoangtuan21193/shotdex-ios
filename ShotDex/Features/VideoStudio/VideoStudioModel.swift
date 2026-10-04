@@ -625,6 +625,31 @@ final class VideoStudioModel {
         }
     }
 
+    /// "1080×1920 · 30 fps · H.264": what an export at the project's own
+    /// settings writes — the Custom row of Export Video.
+    var exportSpecSummary: String {
+        let size = recipe.canvasSize()
+        return "\(Int(size.width))×\(Int(size.height)) · \(VideoStudioCopy.framesPerSecond(recipe.frameRate.rawValue)) · \(recipe.codec.displayName)"
+    }
+
+    /// The export is running or saving: Back, Undo, Redo, the timeline and
+    /// the frame take no touches, and ✕ gives way to Cancel Export
+    /// (FS-12.10b §4).
+    var isExportBusy: Bool {
+        switch exportState {
+        case .exporting, .saving: true
+        case .idle, .failed: false
+        }
+    }
+
+    /// Export's Custom row: Export Video closes and Video Settings opens —
+    /// the one way from Export to the settings (FS-12.10b AC-2).
+    func openVideoSettingsFromExport() {
+        guard !isExportBusy else { return }
+        if exportState != .idle { exportState = .idle }
+        showToolPanel(.videoSettings)
+    }
+
     /// What a fitted clip sits on: one undo step, the video tier.
     func setBackgroundKind(_ kind: VideoBackground.Kind) {
         guard recipe.background.kind != kind else { return }

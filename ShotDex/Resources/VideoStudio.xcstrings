@@ -149,12 +149,24 @@
       "comment": "Video Studio: leaves search",
       "extractionState": "manual"
     },
+    "Cancel Export": {
+      "comment": "Video Studio Export: stops the export in progress",
+      "extractionState": "manual"
+    },
     "Changes apply right away — Export uses them.": {
       "comment": "Video Studio Video Settings: under the Output row",
       "extractionState": "manual"
     },
+    "Choose where it goes next": {
+      "comment": "Video Studio Export, server photos: the file goes to the export sheet after rendering",
+      "extractionState": "manual"
+    },
     "Choose…": {
       "comment": "Video Studio Video Settings: picks the library photo behind fitted clips",
+      "extractionState": "manual"
+    },
+    "Close": {
+      "comment": "Video Studio: closes a panel",
       "extractionState": "manual"
     },
     "Color": {
@@ -163,6 +175,10 @@
     },
     "Couldn't save your video draft": {
       "comment": "Video Studio: banner and alert when the draft could not be written (disk full, database error)",
+      "extractionState": "manual"
+    },
+    "Custom": {
+      "comment": "Video Studio Export: the row that exports at the project's own Video Settings; a tap opens them",
       "extractionState": "manual"
     },
     "Custom Color": {
@@ -207,6 +223,26 @@
     },
     "End to Playhead": {
       "comment": "Video Studio Trim: cuts the selected clip's end to the playhead",
+      "extractionState": "manual"
+    },
+    "Export": {
+      "comment": "Video Studio Export: starts the export",
+      "extractionState": "manual"
+    },
+    "Export Video": {
+      "comment": "Video Studio: title of the export panel",
+      "extractionState": "manual"
+    },
+    "Exporting, %lld percent": {
+      "comment": "Video Studio Export: VoiceOver reading of the progress bar",
+      "extractionState": "manual"
+    },
+    "Exporting… %lld%%": {
+      "comment": "Video Studio Export: progress while the video is rendered",
+      "extractionState": "manual"
+    },
+    "Export…": {
+      "comment": "Video Studio Export, server photos: renders, then asks where the file goes",
       "extractionState": "manual"
     },
     "FONTS YOU USED": {
@@ -391,6 +427,14 @@
     },
     "Recents": {
       "comment": "Video Studio Media panel tab: every photo and video, newest first",
+      "extractionState": "manual"
+    },
+    "Saved to Photos as a new video": {
+      "comment": "Video Studio Export: where the exported video goes",
+      "extractionState": "manual"
+    },
+    "Saving to Photos…": {
+      "comment": "Video Studio Export: the file is written and is going into the library",
       "extractionState": "manual"
     },
     "Search Library": {

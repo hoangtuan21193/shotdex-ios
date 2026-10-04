@@ -190,14 +190,17 @@ struct VideoStudioScreen: View {
         } message: {
             Text(model?.errorMessage ?? "")
         }
+        // iPad: Export Video is a sheet (FS-12.16 §5); everywhere else it
+        // is the studio's own panel.
         .sheet(isPresented: $isExportSheetPresented) {
             if let model {
-                VideoExportSheet(model: model, server: server) {
-                    server?.export.onExported()
-                    isExportSheetPresented = false
-                    dismiss()
-                }
-                .presentationDetents([.height(300)])
+                VideoExportPanel(
+                    model: model, server: server, onServerExported: serverExported,
+                    onClose: { isExportSheetPresented = false }
+                )
+                .environment(\.videoMediaGrid, .pool)
+                .interactiveDismissDisabled(model.isExportBusy)
+                .preferredColorScheme(.dark)
             }
         }
         .sheet(item: $musicChooserIntent) { intent in
@@ -399,6 +402,24 @@ struct VideoStudioScreen: View {
         .onChange(of: windowClass) { _, new in currentWindowClass = new }
     }
 
+    /// Export: Export Video opens and nothing is exported yet (FS-12.10b
+    /// §2) — a sheet on an iPad, the studio's panel everywhere else.
+    func openExport(_ model: VideoStudioModel) {
+        switch currentWindowClass {
+        case .iPadLandscape, .iPadPortrait:
+            isExportSheetPresented = true
+        default:
+            if model.activeToolPanel != .export { model.showToolPanel(.export) }
+        }
+    }
+
+    /// A server run's file has reached every destination: the studio closes.
+    func serverExported() {
+        server?.export.onExported()
+        isExportSheetPresented = false
+        dismiss()
+    }
+
     /// Add Media: the pool's Media tab on an iPad in landscape, where the
     /// library stands beside the stage; the Media panel everywhere else
     /// (FS-12.09 §3).
@@ -456,6 +477,7 @@ struct VideoStudioScreen: View {
             VStack(spacing: 0) {
                 VideoStudioTopBand(model: model, phoneActions: actions(model))
                     .frame(height: bandHeight, alignment: .top)
+                    .disabled(model.isExportBusy)
                 preview(model)
                     .frame(height: layout.preview)
                 // Not "no transport" — the same commands in the shape a
@@ -614,7 +636,7 @@ struct VideoStudioScreen: View {
                 .keyboardShortcut("b", modifiers: .command)
             // The sheet, not the export: ⌘E should put the user where the
             // Export button does, not start writing to their library.
-            Button("Export") { isExportSheetPresented = true }
+            Button("Export") { openExport(model) }
                 .keyboardShortcut("e", modifiers: .command)
                 .disabled(model.exportState != .idle)
             Button("Deselect") { model.pressEscape() }
@@ -690,7 +712,10 @@ struct VideoStudioScreen: View {
                     DragGesture(minimumDistance: 8)
                         .onEnded { if $0.translation.height > 40 { model.clearSelection() } }
                 )
-            VideoStudioSheetHost(model: model, actions: actions(model), importedMusic: importedMusic)
+            VideoStudioSheetHost(
+                model: model, actions: actions(model), importedMusic: importedMusic,
+                server: server, onServerExported: serverExported
+            )
             if showsFooter, let title = model.sessionFooterTitle {
                 VideoSessionFooter(
                     title: title,
@@ -719,7 +744,7 @@ struct VideoStudioScreen: View {
 
     func actions(_ model: VideoStudioModel) -> VideoInspectorActions {
         VideoInspectorActions(
-            onExport: { isExportSheetPresented = true },
+            onExport: { openExport(model) },
             onBack: { leave(model) },
             onAddMedia: { addMedia(model) },
             onReplaceClip: { isReplacePickerPresented = true },
@@ -734,6 +759,12 @@ struct VideoStudioScreen: View {
     }
 
     func preview(_ model: VideoStudioModel) -> some View {
+        previewContent(model)
+            // The frame takes no touches while an export runs (FS-12.10b §4).
+            .allowsHitTesting(!model.isExportBusy)
+    }
+
+    private func previewContent(_ model: VideoStudioModel) -> some View {
         ZStack {
             Color.black
             if let player = model.player {

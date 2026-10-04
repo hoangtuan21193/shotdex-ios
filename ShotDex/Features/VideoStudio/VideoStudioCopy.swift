@@ -265,6 +265,52 @@ enum VideoStudioCopy {
         "\(videoSettings), \(recipe.aspect.displayName), \(recipe.resolution.displayName), \(framesPerSecond(recipe.frameRate.rawValue))"
     }
 
+    static var exportVideo: String {
+        String(localized: "Export Video", table: table, comment: "Video Studio: title of the export panel")
+    }
+
+    static var close: String {
+        String(localized: "Close", table: table, comment: "Video Studio: closes a panel")
+    }
+
+    static var custom: String {
+        String(localized: "Custom", table: table, comment: "Video Studio Export: the row that exports at the project's own Video Settings; a tap opens them")
+    }
+
+    static var savedToPhotos: String {
+        String(localized: "Saved to Photos as a new video", table: table, comment: "Video Studio Export: where the exported video goes")
+    }
+
+    static var chooseWhereItGoes: String {
+        String(localized: "Choose where it goes next", table: table, comment: "Video Studio Export, server photos: the file goes to the export sheet after rendering")
+    }
+
+    static var export: String {
+        String(localized: "Export", table: table, comment: "Video Studio Export: starts the export")
+    }
+
+    static var exportEllipsis: String {
+        String(localized: "Export…", table: table, comment: "Video Studio Export, server photos: renders, then asks where the file goes")
+    }
+
+    static var cancelExport: String {
+        String(localized: "Cancel Export", table: table, comment: "Video Studio Export: stops the export in progress")
+    }
+
+    static var savingToPhotos: String {
+        String(localized: "Saving to Photos…", table: table, comment: "Video Studio Export: the file is written and is going into the library")
+    }
+
+    /// "Exporting… 62%".
+    static func exportingPercent(_ percent: Int) -> String {
+        String(localized: "Exporting… \(percent)%", table: table, comment: "Video Studio Export: progress while the video is rendered")
+    }
+
+    /// "Exporting, 62 percent" for VoiceOver (FS-12.10b §6).
+    static func exportingAccessibility(_ percent: Int) -> String {
+        String(localized: "Exporting, \(percent) percent", table: table, comment: "Video Studio Export: VoiceOver reading of the progress bar")
+    }
+
     static var select: String {
         String(localized: "Select", table: table, comment: "Video Studio Media panel: starts picking several items to add at once")
     }

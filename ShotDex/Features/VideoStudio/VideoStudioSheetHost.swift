@@ -51,6 +51,9 @@ struct VideoStudioSheetHost: View {
     /// Tools offered in the idle Look's title — the iPad portrait dock's
     /// Media · Text · Sticker · Music (FS-12.03 §3).
     var idleTools: [VideoAddTool] = []
+    /// A project of server photos, for Export Video's destination.
+    var server: ServerVideoStudioLaunch?
+    var onServerExported: () -> Void = {}
 
     var body: some View {
         Group {
@@ -62,6 +65,8 @@ struct VideoStudioSheetHost: View {
                 VideoMediaPanel(model: model)
             } else if model.inspectorTarget == .none, model.activeToolPanel == .videoSettings {
                 VideoSettingsPanel(model: model)
+            } else if model.inspectorTarget == .none, model.activeToolPanel == .export {
+                VideoExportPanel(model: model, server: server, onServerExported: onServerExported)
             } else {
                 switch layout {
                 case .band: bandBody
@@ -422,7 +427,7 @@ struct VideoStudioSheetHost: View {
                     cancelButton
                     titleButton("checkmark", label: Text(VideoStudioCopy.keepChanges)) { model.commitSession() }
                 }
-            case .music, .media, .videoSettings, nil: EmptyView()
+            case .music, .media, .videoSettings, .export, nil: EmptyView()
             }
         }
     }
@@ -935,7 +940,7 @@ struct VideoStudioSheetHost: View {
             EmptyView()
         case .look:
             lookParams
-        case .music, .media, .videoSettings:
+        case .music, .media, .videoSettings, .export:
             // Drawn by their own panels in place of the whole band.
             EmptyView()
         }

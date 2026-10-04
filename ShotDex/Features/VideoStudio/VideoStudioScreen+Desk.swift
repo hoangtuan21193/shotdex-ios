@@ -26,6 +26,7 @@ extension VideoStudioScreen {
         return ZStack(alignment: .topLeading) {
             EditorTheme.background
             VideoStudioDeskBand(model: model, actions: actions(model))
+                .disabled(model.isExportBusy)
                 .placed(frames.band)
             if let pool = frames.pool {
                 mediaPool(model, width: pool.width)
@@ -91,6 +92,7 @@ extension VideoStudioScreen {
         return ZStack(alignment: .topLeading) {
             EditorTheme.background
             VideoStudioDeskBand(model: model, actions: actions(model), isPortrait: true)
+                .disabled(model.isExportBusy)
                 .placed(frames.band)
             if let pool = frames.pool {
                 mediaPool(model, width: pool.width)
@@ -182,7 +184,9 @@ extension VideoStudioScreen {
                     actions: actions(model),
                     layout: .column,
                     importedMusic: importedMusic,
-                    showsIdleLook: true
+                    showsIdleLook: true,
+                    server: server,
+                    onServerExported: serverExported
                 )
                 .background(EditorTheme.panelSolid)
                 .placed(column)
@@ -338,7 +342,9 @@ extension VideoStudioScreen {
                 actions: actions(model),
                 layout: .column,
                 importedMusic: importedMusic,
-                showsIdleLook: true
+                showsIdleLook: true,
+                server: server,
+                onServerExported: serverExported
             )
             // The selected item's ✕ · name · ✓, at the column's foot
             // (FS-12.03 §2). Export stays in the band: nothing has to make
