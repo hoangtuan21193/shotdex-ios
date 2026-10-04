@@ -161,7 +161,7 @@ Ba thứ **bỏ khỏi panel** (chốt 2026-09-22):
 - **Vùng bắt chạm của núm nới lên 44pt, hình dạng giữ nguyên là vạch.** Người dùng nêu đúng vấn đề: bấm dễ
   trượt, và Pencil hoặc trỏ chuột nhắm vào một vạch 2pt là nhắm vào cái không có bề ngang. Nhưng
   `EditorSliderRow.swift:12` đã chốt từ trước *"There is no round knob and no system Slider"*, và **cả
-  editor** — mixer, grading, point colour, straighten — đi qua đúng slider đó, kể cả bản điện thoại với
+  editor** — mixer, grading, point color, straighten — đi qua đúng slider đó, kể cả bản điện thoại với
   hàng 34pt không chứa nổi núm 28pt. Nên chỉ đổi **vùng chạm**, không đổi diện mạo.
 
 ### 5b. Hàng lệnh dồn về phía panel

@@ -87,7 +87,7 @@ tắt dần trong 0,2s đầu và cuối) · blurIn/blurOut (12→0 trong tối 
 
 - **Fit**: khung nguồn nằm trọn trong khung xuất, phần thừa là nền. **Fill**: phủ kín, cắt giữa, không có nền.
 - Nền khi Fit có ba loại, vẽ **trước khi trộn, độc lập từng bên** như hiệu ứng (§7):
-  - **Colour** — một màu; slide và zoom lộ nền cũng là màu này; fadeBlack vẫn đen.
+  - **Color** — một màu; slide và zoom lộ nền cũng là màu này; fadeBlack vẫn đen.
   - **Blur** — chính khung đó phủ kín rồi làm mờ, tính ở **1/8 cạnh dài khung** và phóng lên; bán kính theo tỉ lệ khung
     nên preview 1280 và export 4K ra cùng một ảnh. Crossfade trộn cặp (nền + khung) của mỗi bên.
   - **Image** — một ảnh thư viện phủ kín, nạp một lần qua kho khung tĩnh (§5, LRU 4); mất ảnh → nền đen.

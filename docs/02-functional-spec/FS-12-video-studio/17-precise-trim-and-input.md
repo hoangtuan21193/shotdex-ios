@@ -157,7 +157,7 @@ Project mẫu 30 fps: Clip 1 ảnh 3,0 s · **Clip 2** video nguồn 12,0 s, c�
 
 | Rủi ro | Xử lý |
 |---|---|
-| Board iPad kiểu Mac `F6_IP_PencilTrim` ghi nhãn đáy kính "0:09.07 · −4f"; §5 ghi iPad "· −4 frames" | spec giữ "−4 frames" (cùng chữ với chân); sửa board ở lượt `design-parity` của khối M |
+| Board iPad kiểu Mac `F6_IP_PencilTrim` ghi nhãn đáy kính "0:09.07 · −4f"; §5 ghi iPad "· −4 frames" | spec giữ "−4 frames" (cùng chữ với chân); **board đã sửa 2026-10-04** |
 | Giải mã 10 khung chính xác mỗi lần bấm ±1 trễ quá 100 ms với HEVC 4K | giải mã ở cỡ kính, chỉ thêm 1 khung mới mỗi bước; đo trên máy thật trước khi chốt |
 | Timeline ở 360 pt/giây với project 10 phút rộng 216 000pt | thumbnail phải chỉ dựng ô giao vùng nhìn — **code hôm nay dựng mọi ô** của clip (sửa ở task 13 của plan precise-trim-input); kiểm 60 fps cuộn theo NF-01 |
 | Long-press 0,32 s trên timeline hôm nay là đổi thứ tự clip, và FS-12.11 dùng giữ 0,5 s trên clip để vào chế độ chọn — cả hai tới trước hoặc cùng lúc với tay nắm | vùng chạm của tay nắm không thuộc hai cử chỉ đó; giữ trên **thân** clip vẫn theo [FS-12.11](11-multi-select-and-reorder.md) |

@@ -81,10 +81,10 @@ DCP nào. Amount của profile (nếu có) → Amount của look.
 
 - **Creative profile có bảng trong file** (`Look/Parameters/LookTable`): **không giải mã** — kết quả câu treo 2
   (2026-09-29): bảng là mã hoá riêng của Adobe, không có mô tả công khai; đọc được thì phải đi theo mã của phần mềm
-  GPL, trái luật repo. Dòng ✕ "Creative profile 'Tên' — its colour table can't be read, so it's left out"; phần còn
+  GPL, trái luật repo. Dòng ✕ "Creative profile 'Tên' — its color table can't be read, so it's left out"; phần còn
   lại của preset vẫn áp. Có tài liệu công khai thì mở lại (LUT mang tên profile, Amount của profile).
 - Profile **dựng sẵn trong Lightroom** (chỉ có tên/UUID, không có bảng trong file) →
-  ✕ "The profile's colour table isn't in the file"; phần còn lại của preset vẫn áp.
+  ✕ "The profile's color table isn't in the file"; phần còn lại của preset vẫn áp.
 
 | Nhóm luôn bỏ | Dòng lý do |
 |---|---|
@@ -113,7 +113,7 @@ Mọi dòng "✕ tới FS-03.15/16" ở §2 là thông số ShotDex **chưa có*
 | AC-b3 | `Exposure2012`=+3.00 | nhập | Exposure +2.00 EV; dòng ≈ "beyond ±2 EV — set to +2.00" | ✅ `LightroomMappingTests.exposureBeyondRangeIsClampedAndReported` |
 | AC-b4 | preset có `HasCrop`=True, crop 4:5 và `Exposure2012`=+0.30 | nhập | look không có crop, Exposure +0.30; dòng ✕ "Crop stays with each photo"; hàng ≈ | ✅ `LightroomMappingTests.cropIsNeverImported` |
 | AC-b5 | `WhiteBalance`="Custom", `Temperature`=5500, `Tint`=+10 | nhập rồi áp lên một RAW và một JPEG | look mang WB tuyệt đối 5500 K / Tint +10 (không phải độ lệch so với As Shot); RAW: nhiệt độ trung tính của decoder = 5500 K, tint +10, slider WB đọc 5500 K; JPEG không đổi màu (sai lệch 0/255); hàng ✓ (chốt E7) | ✅ `LightroomMappingTests.absoluteWhiteBalanceIsRAWOnly` + `RawWhiteBalanceTests.absoluteKelvinOverridesTheAsShotOffset` · `.jpegIgnoresAbsoluteWhiteBalance` · slider đọc Kelvin: `iphone-raw-wb-kelvin.json` |
-| AC-b6 | preset có creative profile "Vintage 07" kèm `Look/Parameters/LookTable`, Amount 60, và `Vibrance`=+10 (sửa 2026-09-29 theo kết quả câu treo 2) | nhập | look có Vibrance +10, không LUT; dòng ✕ "Creative profile 'Vintage 07' — its colour table can't be read, so it's left out"; profile dựng sẵn không bảng → ✕ "The profile's colour table isn't in the file" | ✅ `CreativeProfileTests.aCreativeProfileTableIsReportedNotGuessed` |
+| AC-b6 | preset có creative profile "Vintage 07" kèm `Look/Parameters/LookTable`, Amount 60, và `Vibrance`=+10 (sửa 2026-09-29 theo kết quả câu treo 2) | nhập | look có Vibrance +10, không LUT; dòng ✕ "Creative profile 'Vintage 07' — its color table can't be read, so it's left out"; profile dựng sẵn không bảng → ✕ "The profile's color table isn't in the file" | ✅ `CreativeProfileTests.aCreativeProfileTableIsReportedNotGuessed` |
 | AC-b7 | preset có `PointColors` và `Clarity2012`=+15 (sửa 2026-09-29: FS-03.15 ship trước nên `ParametricShadows` đã có đích — curve vùng) | nhập | Clarity +15; dòng ✕ "Point Color from Lightroom isn't in ShotDex yet" | ✅ `LightroomMappingTests.missingTargetsAreSkippedWithAReason` (+ `everyGroupLandsOnItsSlider`) |
 | AC-b8 | preset "adaptive" có mask Sky (Exposure −0.70 trong mask) và `Vibrance`=+20 toàn ảnh | nhập | look có Vibrance +20, không mask, không có Exposure trong tập thông số đã đặt; dòng ✕ "Masks stay with each photo"; hàng ≈ | ✅ `LightroomMappingTests.masksAreNeverImported` |
 

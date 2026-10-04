@@ -36,7 +36,7 @@ xem trước nằm trong đó.
 | Hàng chip thành phần | **Photo** · Time · Date · Weather · Calendar — viên nang cao 32pt nhưng **nút cao 44pt**; quá năm chip hoặc cỡ chữ lớn thì hàng **cuộn ngang** chứ không bị cắt |
 | Bàn phím mũi tên | bốn mũi tên bước 5% khoảng trống + nút đưa về giữa |
 | Thanh cỡ | **mọi dòng đều đổi cỡ được** (bản cũ chỉ có hai thanh, với tới giờ và dòng phụ, còn khối thời tiết và lịch không có cỡ riêng) |
-| Các mục | Background · Time and Date · Calendar · Weather · Typeface · Colour · **Arrangement** |
+| Các mục | Background · Time and Date · Calendar · Weather · Typeface · Color · **Arrangement** |
 
 - **Chip "Photo" chính là "không chọn dòng nào" được đặt tên ra**: luật "không chọn gì thì kéo và phóng ăn
   vào ảnh" đúng nhưng vô hình, và đây cũng là đường quay về ảnh mà không phải mò khe hở giữa hai dòng chữ.

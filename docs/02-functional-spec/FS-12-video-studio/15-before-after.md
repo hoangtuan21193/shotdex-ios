@@ -30,7 +30,7 @@ ngay khi chỉnh; **Swap sides** trên iPad dọc.
 sticker, phụ đề [FS-12.14](14-captions.md)). **Before giữ:** cắt, trim, tốc độ, thứ tự, chuyển cảnh, hiệu ứng chuyển
 động, xoay, tỉ lệ và nền, âm thanh.
 
-- Đúng dòng chú thích của board: "Before drops the look, adjustments, colour and overlays." Cùng nghĩa với giữ-để-xem-bản-gốc.
+- Đúng dòng chú thích của board: "Before drops the look, adjustments, color and overlays." Cùng nghĩa với giữ-để-xem-bản-gốc.
 - **De-log cũng bị bỏ** (code hôm nay giữ nó). *Vì* nhãn là "Original clip": footage log phải hiện phẳng như máy quay ghi.
 - Chỉ có **một** âm thanh — của After.
 

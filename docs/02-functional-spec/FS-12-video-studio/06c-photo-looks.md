@@ -72,7 +72,7 @@ Ngân sách preview: **30 khung/giây = 33,3 ms/khung** ở cạnh dài 1280. Ex
 
 | Phần của look | Trên video | Vì |
 |---|---|---|
-| Light, WB, presence, Brilliance, B&W, mixer, point colour, grading, calibration, curve, film look, LUT | **nướng** vào một bảng 33³ lúc chọn, mỗi khung một lượt tra | từng pixel độc lập; sai số trung bình ≤ 1/255 (đã đo cho Mono, FS-03.14) |
+| Light, WB, presence, Brilliance, B&W, mixer, point color, grading, calibration, curve, film look, LUT | **nướng** vào một bảng 33³ lúc chọn, mỗi khung một lượt tra | từng pixel độc lập; sai số trung bình ≤ 1/255 (đã đo cho Mono, FS-03.14) |
 | Clarity, Texture, Sharpening, Dehaze | chạy **từng khung**; bán kính co giãn theo cạnh dài khung, chuẩn 1920 | cần điểm lân cận; giữ bán kính theo pixel thì preview 1280 và export 4K ra hai ảnh khác |
 | Vignette | từng khung, theo khung hình của clip, không theo canvas có viền | — |
 | Grain | từng khung, **mẫu hạt đổi mỗi khung** | hạt đứng yên trên video trông như bụi trên ống kính |
@@ -148,4 +148,4 @@ Look mẫu **Moody Coast**: Exposure +0,3 · Contrast +20 · Velvia 100% · Grai
 | Thời gian nướng một bảng 33³ qua chuỗi ảnh chưa đo; My Looks 50 look = 50 lần nướng cho ô | mục tiêu ≤ 50 ms/look trên iPhone 17; ô điền dần, gradient thay thế trong lúc chờ |
 | Bảng 33³ cắt giá trị ngoài 0…1 (HLG chưa de-log) | đã đúng với film look hiện có; de-log đứng đầu chuỗi |
 | Export `.cube` liệt Brilliance là "mất" dù pass của nó là từng pixel (bán kính 0) | xem lại ở `/plan`; video nướng Brilliance vào bảng |
-| Board iPad kiểu Mac `F5_IL_Looks` vẽ **Use Video Look** màu accent (`t.accent`), trái Q6 (chữ trắng) | spec giữ chữ trắng — accent chỉ cho Export; sửa board ở lượt `design-parity` của khối M ([plan wide-duo](../../_plans/2026-10-03-vs-wide-and-duo-layout.md)) |
+| Board iPad kiểu Mac `F5_IL_Looks` vẽ **Use Video Look** màu accent (`t.accent`), trái Q6 (chữ trắng) | spec giữ chữ trắng — accent chỉ cho Export; **board đã sửa 2026-10-04** (`t.label`) |

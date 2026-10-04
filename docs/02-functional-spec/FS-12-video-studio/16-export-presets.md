@@ -75,7 +75,8 @@ Một buổi chụp ra một bản dựng 16:9 cho YouTube và một bản 9:16 
 | Duo ngoài 466×678 · `F8_DC_ExportPresets` | Export tròn 44 trong dải 84 | panel 382 tại y 334: 5 dòng cao 43, Fit/Fill 173×28, chú thích "Export in the rail uses the chosen preset."; dải: Video Settings 44 tại y 504, Export 44 accent tại y 556 |
 
 - **Dòng đang chọn:** viền trong 1,5pt trắng + nền trắng 8%, `r-md`, dấu ✓ trắng; chạm dòng khác là chọn nó.
-- **Một accent:** khi panel mở, nút Export ở băng trên (iPhone) / toolbar (iPad) về nền trắng 10%; accent chuyển sang nút
+- **Một accent:** khi panel mở, nút Export ở băng trên (iPhone) về nền trắng 10%, pill Export ở toolbar (iPad) về capsule
+  kính trung tính như các capsule khác của toolbar; accent chuyển sang nút
   "Export for …". Duo trong và Duo ngoài không có nút lớn: nút Export sẵn có là nút xuất.
 - **Mở và đóng:** chạm Export lần đầu mở panel, **không** xuất. Đóng bằng ✕/Close, chạm lại nút Export ở băng trên
   (iPhone, iPad), hoặc vuốt panel xuống. Duo ngoài: khi panel mở, chạm Export trong dải là xuất; chạm một công cụ
@@ -136,4 +137,4 @@ Project mẫu 16:9, 24,0 s ([FS-12.14 §9](14-captions.md)), nền đen, clip 10
 |---|---|
 | FS-12.10 viết song song; công thức dung lượng, luật 4K, nền Fit nằm ở đó | preset chỉ tham chiếu; `/plan` đối chiếu hai tài liệu trước khi code |
 | Writer hôm nay chỉ H.264 và 30 fps cố định | HEVC và fps khác là việc của FS-12.10; preset chỉ truyền thông số |
-| Board iPad kiểu Mac `F8_IL`/`F8_IP` vẽ pill Export ở toolbar **vẫn accent** (dưới scrim) khi sheet mở; `IL5_Export` vẽ nó nền `fill` | luật "Một accent" (§5) giữ: pill toolbar về nền trắng 10% khi sheet mở; sửa hai board F8 ở lượt `design-parity` |
+| Board iPad kiểu Mac `F8_IL`/`F8_IP` vẽ pill Export ở toolbar **vẫn accent** (dưới scrim) khi sheet mở; `IL5_Export` vẽ nó nền `fill` | luật "Một accent" (§5) giữ: pill toolbar hết accent khi sheet mở; **hai board F8 đã sửa 2026-10-04** — pill vẽ kiểu capsule kính trung tính như các capsule khác của toolbar (`t.glass`, chữ `t.label`), accent chỉ còn ở nút xuất trong sheet |
