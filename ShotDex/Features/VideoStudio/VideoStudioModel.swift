@@ -2000,6 +2000,12 @@ final class VideoStudioModel {
                 ? String(localized: "One clip couldn't be loaded and was left out. It may still be in iCloud — check your connection and add it again.")
                 : String(localized: "\(failed.count) clips couldn't be loaded and were left out. They may still be in iCloud — check your connection and add them again.")
         }
+        // A clip under 4K added to a 4K project brings it down to 1080p, in
+        // the same undo step as the add (FS-12.10 §5): Undo takes the clip
+        // back and 4K with it. The panel says why.
+        if recipe.resolution == .uhd4K, fourKVerdict != .allowed {
+            recipe.resolution = .p1080
+        }
         markEdited()
         await rebuildPreview()
     }

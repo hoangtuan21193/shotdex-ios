@@ -98,6 +98,7 @@ extension VideoOutputSpecTests {
         #expect(verdict == .blocked(short: 2, total: 3, sharedClass: nil))
         #expect(VideoStudioCopy.fourKReason(verdict) == "4K needs 4K clips — 2 of your 3 clips are smaller than 4K.")
         #expect(VideoResolutionGate.verdict(shortEdges: [480]) == .blocked(short: 1, total: 1, sharedClass: nil))
+        #expect(VideoStudioCopy.fourKReason(.blocked(short: 1, total: 4, sharedClass: nil)) == "4K needs 4K clips — 1 of your 4 clips is smaller than 4K.")
     }
 
     /// AC-5 (unlock): the three videos replaced by 3840×2160 ones opens 4K;

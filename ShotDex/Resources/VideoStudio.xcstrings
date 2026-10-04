@@ -93,6 +93,14 @@
       "comment": "Video Studio Video Settings: why 4K is dimmed — how many clips fall short, at mixed resolutions",
       "extractionState": "manual"
     },
+    "4K needs 4K clips — 1 of your %lld clips is %@.": {
+      "comment": "Video Studio Video Settings: why 4K is dimmed — one clip falls short, and its resolution",
+      "extractionState": "manual"
+    },
+    "4K needs 4K clips — 1 of your %lld clips is smaller than 4K.": {
+      "comment": "Video Studio Video Settings: why 4K is dimmed — one clip falls short",
+      "extractionState": "manual"
+    },
     "Add (%lld)": {
       "comment": "Video Studio Media panel: adds the picked items at the playhead, with how many",
       "extractionState": "manual"

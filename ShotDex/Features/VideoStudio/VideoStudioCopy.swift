@@ -144,6 +144,11 @@ enum VideoStudioCopy {
     /// are 1080p." or "… are smaller than 4K."
     static func fourKReason(_ verdict: VideoResolutionGate.Verdict) -> String? {
         guard case let .blocked(short, total, shared) = verdict else { return nil }
+        if short == 1 {
+            return shared.map {
+                String(localized: "4K needs 4K clips — 1 of your \(total) clips is \($0.displayName).", table: table, comment: "Video Studio Video Settings: why 4K is dimmed — one clip falls short, and its resolution")
+            } ?? String(localized: "4K needs 4K clips — 1 of your \(total) clips is smaller than 4K.", table: table, comment: "Video Studio Video Settings: why 4K is dimmed — one clip falls short")
+        }
         if let shared {
             return String(localized: "4K needs 4K clips — \(short) of your \(total) clips are \(shared.displayName).", table: table, comment: "Video Studio Video Settings: why 4K is dimmed — how many clips fall short, and the resolution they all are")
         }
