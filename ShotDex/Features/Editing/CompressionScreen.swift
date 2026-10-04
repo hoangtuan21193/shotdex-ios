@@ -654,6 +654,12 @@ private struct CompressionSummary: View {
                     )
                     .foregroundStyle(.orange)
                 }
+                if !controller.watermarkTally.nothingToStamp.isEmpty {
+                    Label(
+                        WatermarkCopy.savedWithoutWatermark(controller.watermarkTally.nothingToStamp.count),
+                        systemImage: "info.circle"
+                    )
+                }
                 if controller.fallbackToJPEGCount > 0 {
                     Label(
                         "\(controller.fallbackToJPEGCount) saved as JPEG because HEIC wasn't supported",
@@ -694,6 +700,21 @@ private struct CompressionSummary: View {
                 Section("Delete Originals") {
                     Text(deleteOriginalsErrorMessage)
                         .foregroundStyle(.secondary)
+                }
+            }
+
+            if !controller.watermarkTally.nothingToStamp.isEmpty {
+                // Named, never silent (FS-05.04 §5): nothing in the preset
+                // had a value for these photos.
+                Section(WatermarkCopy.withoutWatermarkSection()) {
+                    ForEach(Array(controller.watermarkTally.nothingToStamp.enumerated()), id: \.offset) { _, name in
+                        VStack(alignment: .leading, spacing: AppTheme.Spacing.xs) {
+                            Text(name)
+                            Text(WatermarkCopy.nothingToStamp(preset: controller.watermarkTally.presetName))
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
                 }
             }
 

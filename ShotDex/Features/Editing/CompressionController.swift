@@ -14,8 +14,9 @@ struct CompressionFailure: Identifiable {
 /// and deleted.
 struct ResizeOperations {
     /// Makes the resized copy of a photo; `prepared` is its original when
-    /// the preparation downloaded it (FS-02.06 §5).
-    var compress: @MainActor (OriginalItem, _ prepared: URL?) async throws -> PhotoSaveResult
+    /// the preparation downloaded it (FS-02.06 §5); `watermark` is that
+    /// photo's stamp, tokens filled (FS-05.04).
+    var compress: @MainActor (OriginalItem, _ prepared: URL?, _ watermark: WatermarkStamp?) async throws -> PhotoSaveResult
     var deleteOriginals: @MainActor ([String]) async throws -> Void
     var removeCreated: @MainActor ([String]) async throws -> Void
 }
@@ -71,6 +72,8 @@ final class CompressionController {
     private(set) var compressedOriginalIDs: [String] = []
     private(set) var deletedOriginalCount = 0
     private(set) var fallbackToJPEGCount = 0
+    /// What the watermark did across the run (FS-05.04 §5).
+    private(set) var watermarkTally = WatermarkTally()
     private(set) var failures: [CompressionFailure] = []
     private(set) var didFinish = false
     private(set) var wasCancelled = false
@@ -106,10 +109,10 @@ final class CompressionController {
         self.tokenValues = tokenValues
         let byID = Dictionary(assets.map { ($0.localIdentifier, $0) }, uniquingKeysWith: { first, _ in first })
         self.operations = ResizeOperations(
-            compress: { [weak self] photo, prepared in
+            compress: { [weak self] photo, prepared, watermark in
                 guard let self, let asset = byID[photo.id] else { throw PhotoEditingError.unavailable }
                 var options = self.exportOptions
-                options.watermark = self.watermarkStamp(for: photo.id)
+                options.watermark = watermark
                 return try await service.compress(
                     asset: asset,
                     options: options,
@@ -163,6 +166,11 @@ final class CompressionController {
         watermarkTemplate?.resolved(with: tokenValues(photoID))
     }
 
+    /// What the watermark does to one photo; nil when it is off.
+    func watermarkDecision(for photoID: String) -> WatermarkDecision? {
+        watermarkTemplate.map { WatermarkPlan.decide($0, values: tokenValues(photoID)) }
+    }
+
     var presets: [ResizePreset] { presetStore?.allPresets ?? [] }
 
     var selectedPreset: ResizePreset {
@@ -189,6 +197,7 @@ final class CompressionController {
             && !wasCancelled
             && failures.isEmpty
             && fallbackToJPEGCount == 0
+            && !watermarkTally.isWorthReporting
             && rollbackErrorMessage == nil
             && deleteOriginalsErrorMessage == nil
     }
@@ -300,6 +309,7 @@ final class CompressionController {
         compressedOriginalIDs = []
         deletedOriginalCount = 0
         fallbackToJPEGCount = 0
+        watermarkTally = WatermarkTally(presetName: watermarkTemplate?.name ?? "")
         failures = []
         rollbackErrorMessage = nil
         deleteOriginalsErrorMessage = nil
@@ -333,7 +343,10 @@ final class CompressionController {
             for photo in self.photos where !skipped.contains(photo.id) {
                 if Task.isCancelled { break }
                 do {
-                    let result = try await self.operations.compress(photo, prepared[photo.id])
+                    let decision = self.watermarkDecision(for: photo.id)
+                    let stamp: WatermarkStamp? = if case .stamp(let stamp) = decision { stamp } else { nil }
+                    let result = try await self.operations.compress(photo, prepared[photo.id], stamp)
+                    if let decision { self.watermarkTally.record(decision, filename: photo.filename) }
                     self.createdAssetIDs.append(result.assetID)
                     self.compressedOriginalIDs.append(photo.id)
                     if result.fellBackToJPEG {

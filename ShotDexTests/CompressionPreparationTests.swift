@@ -20,7 +20,7 @@ import Testing
         let photos = (1...count).map { OriginalItem.test(String(format: "%02d", $0)) }
         let fake = FakeOriginalFetcher(script: .init(script), base: FixtureOriginalFetcher())
         let operations = ResizeOperations(
-            compress: { photo, prepared in
+            compress: { photo, prepared, _ in
                 library.created.append("copy-\(photo.id)")
                 library.compressedFrom[photo.id] = prepared
                 return PhotoSaveResult(assetID: "copy-\(photo.id)", format: .jpeg, fellBackToJPEG: false)

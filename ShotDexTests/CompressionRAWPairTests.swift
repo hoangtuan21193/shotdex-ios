@@ -91,7 +91,7 @@ import Testing
             OriginalItem(id: "04", filename: "DSC_0004.JPG", photo: PixelSize(width: 60, height: 40)),
         ]
         let operations = ResizeOperations(
-            compress: { photo, _ in
+            compress: { photo, _, _ in
                 if photo.id == "02" { throw PhotoEditingError.unsupportedRAW }
                 created.append("copy-\(photo.id)")
                 return PhotoSaveResult(assetID: "copy-\(photo.id)", format: .jpeg, fellBackToJPEG: false)
