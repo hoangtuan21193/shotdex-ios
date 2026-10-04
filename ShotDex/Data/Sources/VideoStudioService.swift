@@ -598,6 +598,10 @@ final class VideoStudioService {
         )
     }
 
+    /// The session's folder, where exports are written before Photos takes
+    /// them — nil until something has been written.
+    var sessionFolder: URL? { sessionDirectory }
+
     private func makeSessionDirectory() throws -> URL {
         if let sessionDirectory { return sessionDirectory }
         let url = FileManager.default.temporaryDirectory

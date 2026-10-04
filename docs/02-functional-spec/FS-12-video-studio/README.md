@@ -67,7 +67,7 @@ nhạc, chữ, và một tầng màu đủ để grade.
 |---|---|---|---|---|
 | AC-6 | project 2 clip + 1 transition + 1 track nhạc, tỉ lệ 9:16 | Export | ra file đọc được bằng `AVAsset`; `naturalSize` đúng tỉ lệ 9:16; thời lượng lệch < 1 frame so với timeline | `VideoExportSmokeTests.nineBySixteenWithTransitionAndMusic` (2 video + crossfade 0,5 s + nhạc, 9:16 → 1080×1920, 3,5 s lệch < 1/30 s, 1 track âm) |
 | AC-7 | project có clip ảnh tĩnh (blank backbone) | Export | track video hợp lệ, không có segment rỗng; không lọt audio track rỗng | `VideoExportSmokeTests.photoOnlyProjectHasRealVideoAndNoEmptyAudio` (2 ảnh × 1 s → 60 mẫu khung, 2,0 s, 0 track âm) |
-| AC-8 | đang export, người dùng bấm Cancel | Cancel | dừng trong ≤ 1 s, không để lại file dở trong thư viện | ⚠️ **chưa có** |
+| AC-8 | đang export, người dùng bấm Cancel | Cancel | dừng trong ≤ 1 s, không để lại file dở trong thư viện | `VideoExportSmokeTests.cancelStopsWithinASecondAndLeavesNoFile` (huỷ ở 50 %: dừng < 1 s, không còn file tạm; không gì vào Photos) |
 
 ### Giao diện, từng kích thước
 
@@ -85,5 +85,5 @@ nhạc, chữ, và một tầng màu đủ để grade.
 | AC-13 | clip là video chỉ có trên iCloud, máy không mạng | mở project | hiện trạng thái `failed` có chữ, không phải khung đen kèm spinner quay mãi | ⚠️ **chưa có** |
 | AC-14 | project 20 clip 4K trong extension sửa ảnh | export | không vượt trần bộ nhớ extension | ⚠️ **chưa có** |
 
-**Tổng: 14 AC, 10 chưa chứng minh được.** Đây chính là lỗ hổng đã báo — xem
+**Tổng: 14 AC, 9 chưa chứng minh được.** Đây chính là lỗ hổng đã báo — xem
 [README — Việc còn nợ](../../README.md#6-việc-còn-nợ).

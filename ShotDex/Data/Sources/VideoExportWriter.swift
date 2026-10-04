@@ -62,6 +62,28 @@ enum VideoExportWriter {
         progress: @escaping @MainActor (Double) -> Void
     ) async throws {
         try? FileManager.default.removeItem(at: outputURL)
+        do {
+            try await pump(
+                composition: composition, videoComposition: videoComposition, audioMix: audioMix,
+                encoding: encoding, totalDuration: totalDuration, to: outputURL, progress: progress
+            )
+        } catch {
+            // Cancelled or failed: no half-written file is left behind
+            // (FS-12.10b §5).
+            try? FileManager.default.removeItem(at: outputURL)
+            throw error
+        }
+    }
+
+    private static func pump(
+        composition: AVComposition,
+        videoComposition: AVVideoComposition,
+        audioMix: AVAudioMix,
+        encoding: VideoEncodingSettings,
+        totalDuration: Double,
+        to outputURL: URL,
+        progress: @escaping @MainActor (Double) -> Void
+    ) async throws {
 
         // MARK: Reader
         let reader = try AVAssetReader(asset: composition)

@@ -274,3 +274,38 @@ extension VideoExportSmokeTests {
         #expect(preview.playerItem.videoComposition?.renderSize == CGSize(width: 720, height: 1280))
     }
 }
+
+extension VideoExportSmokeTests {
+    /// FS-12.10b AC-6, README AC-8: Cancel at half way stops the export
+    /// within a second and leaves no .mp4 in the session folder.
+    @Test func cancelStopsWithinASecondAndLeavesNoFile() async throws {
+        let directory = try VideoExportFixtures.makeDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let file = directory.appendingPathComponent("long.mp4")
+        try await VideoExportFixtures.writeVideo(width: 1280, height: 720, seconds: 20, fill: .grain(amplitude: 12), to: file)
+        let recipe = VideoProjectRecipe(clips: [VideoExportFixtures.videoClip("long", seconds: 20)])
+        let service = VideoExportFixtures.service()
+        defer { service.cleanupSession() }
+        let source = try await VideoExportFixtures.videoSource(file)
+        let reached = Reached()
+        let export = Task { @MainActor in
+            try await service.export(recipe: recipe, sources: [recipe.clips[0].id: source]) { reached.value = $0 }
+        }
+        for _ in 0..<12_000 where reached.value < 0.5 {
+            try await Task.sleep(for: .milliseconds(10))
+        }
+        #expect(reached.value >= 0.5)
+        let cancelledAt = ContinuousClock.now
+        export.cancel()
+        var threwCancellation = false
+        do { _ = try await export.value } catch is CancellationError { threwCancellation = true }
+        let elapsed = ContinuousClock.now - cancelledAt
+        #expect(threwCancellation)
+        #expect(elapsed < .seconds(1), "stopped after \(elapsed)")
+        let folder = try #require(service.sessionFolder)
+        let left = try FileManager.default.contentsOfDirectory(atPath: folder.path).filter { $0.hasPrefix("ShotDex-Video-") }
+        #expect(left.isEmpty, "left behind: \(left)")
+    }
+
+    @MainActor final class Reached { var value = 0.0 }
+}
