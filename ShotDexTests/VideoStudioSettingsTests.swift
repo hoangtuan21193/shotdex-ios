@@ -92,3 +92,15 @@ extension VideoStudioSettingsTests {
         #expect(!model.canUndo)
     }
 }
+
+extension VideoStudioSettingsTests {
+    /// AC-11 (words): the button reads "Video Settings, 16:9, 1080p,
+    /// 30 fps" and a dimmed 4K "4K, unavailable"; nothing is called Export
+    /// Settings.
+    @Test func videoSettingsIsTheOneName() {
+        let recipe = VideoProjectRecipe(clips: [])
+        #expect(VideoStudioCopy.videoSettingsAccessibility(recipe) == "Video Settings, 16:9, 1080p, 30 fps")
+        #expect(VideoStudioCopy.unavailable("4K") == "4K, unavailable")
+        #expect(VideoToolPanel.videoSettings.title == "Video Settings")
+    }
+}

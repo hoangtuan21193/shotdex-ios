@@ -259,6 +259,12 @@ enum VideoStudioCopy {
         }
     }
 
+    /// "Video Settings, 16:9, 1080p, 30 fps" — the button's VoiceOver
+    /// name on every layout (FS-12.10 §7).
+    static func videoSettingsAccessibility(_ recipe: VideoProjectRecipe) -> String {
+        "\(videoSettings), \(recipe.aspect.displayName), \(recipe.resolution.displayName), \(framesPerSecond(recipe.frameRate.rawValue))"
+    }
+
     static var select: String {
         String(localized: "Select", table: table, comment: "Video Studio Media panel: starts picking several items to add at once")
     }

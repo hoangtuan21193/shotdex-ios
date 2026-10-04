@@ -82,8 +82,7 @@ struct VideoStudioTopBand: View {
                 .contentShape(Circle())
         }
         .buttonStyle(.plain)
-        .accessibilityLabel(VideoStudioCopy.videoSettings)
-        .accessibilityValue(model.recipe.aspect.displayName)
+        .accessibilityLabel(VideoStudioCopy.videoSettingsAccessibility(model.recipe))
         .accessibilityAddTraits(isOpen ? .isSelected : [])
     }
 }
@@ -286,7 +285,7 @@ struct VideoSettingsButton: View {
         }
         .buttonStyle(.plain)
         .fixedSize()
-        .accessibilityLabel(Text(verbatim: "\(VideoStudioCopy.videoSettings): \(ratio), \(preset), \(fps)"))
+        .accessibilityLabel(Text(verbatim: VideoStudioCopy.videoSettingsAccessibility(model.recipe)))
         .accessibilityAddTraits(isOpen ? .isSelected : [])
     }
 

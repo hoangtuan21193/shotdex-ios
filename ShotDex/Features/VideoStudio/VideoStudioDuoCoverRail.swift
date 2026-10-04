@@ -137,8 +137,7 @@ struct VideoStudioDuoCoverRail: View {
                 .contentShape(Circle())
         }
         .buttonStyle(.plain)
-        .accessibilityLabel(VideoStudioCopy.videoSettings)
-        .accessibilityValue(model.recipe.aspect.displayName)
+        .accessibilityLabel(VideoStudioCopy.videoSettingsAccessibility(model.recipe))
         .accessibilityAddTraits(isOpen ? .isSelected : [])
     }
 
