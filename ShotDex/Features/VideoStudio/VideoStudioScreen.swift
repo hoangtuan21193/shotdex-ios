@@ -48,9 +48,6 @@ struct VideoStudioScreen: View {
     @State private var isFontPickerPresented = false
     @State private var musicChooserIntent: MusicChooserIntent?
     @State var isStickerPickerPresented = false
-    /// Replace on a selected clip still goes through the system picker:
-    /// the Media panel is a session of its own and would end the clip's.
-    @State var isReplacePickerPresented = false
     /// The layout drawn last, for the commands that differ by window — Add
     /// Media opens the pool on an iPad in landscape and the Media panel
     /// everywhere else.
@@ -223,11 +220,6 @@ struct VideoStudioScreen: View {
                         overlay.fontFamilyName = choice.familyName
                     }
                 }
-            }
-        }
-        .sheet(isPresented: $isReplacePickerPresented) {
-            VideoMediaPicker(selectionLimit: 1) { picks in
-                if let model, let first = picks.first { model.replaceSelectedClip(with: first) }
             }
         }
         .sheet(isPresented: $isStickerPickerPresented) {
@@ -749,7 +741,7 @@ struct VideoStudioScreen: View {
             onExport: { openExport(model) },
             onBack: { leave(model) },
             onAddMedia: { addMedia(model) },
-            onReplaceClip: { isReplacePickerPresented = true },
+            onReplaceClip: { model.beginReplacePick() },
             onAddText: { addTextOverlay(model) },
             onAddSticker: { isStickerPickerPresented = true },
             onAddMusic: { model.toggleToolPanel(.music) },

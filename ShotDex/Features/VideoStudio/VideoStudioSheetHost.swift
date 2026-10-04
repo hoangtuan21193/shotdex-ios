@@ -57,7 +57,11 @@ struct VideoStudioSheetHost: View {
 
     var body: some View {
         Group {
-            if showsIdleLook, model.inspectorTarget == .none, model.activeToolPanel == nil {
+            if model.mediaPickPurpose == .replaceClip {
+                // Replace (FS-12.04b §4): Media in single-pick mode, in the
+                // clip's own place — the clip's ✕ / ✓ stays.
+                VideoMediaPanel(model: model)
+            } else if showsIdleLook, model.inspectorTarget == .none, model.activeToolPanel == nil {
                 idleLook
             } else if model.inspectorTarget == .none, model.activeToolPanel == .music, let importedMusic {
                 musicPanel(importedMusic)

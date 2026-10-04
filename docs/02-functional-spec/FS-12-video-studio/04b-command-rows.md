@@ -79,7 +79,7 @@ Vị trí hàng: iPhone y panel + 10; Duo ngoài panel + 6; Duo trong cột ph�
 - **Split** = ✓ cho clip đang chọn, cắt tại playhead, mở phiên mới trên nửa phải — ✕ của nửa phải không gỡ vết
   cắt. *Vì Split là sửa cấu trúc như Delete, không thuộc phiên của một item.*
 - **Duplicate** = ✓ cho item gốc, chèn bản sao ngay sau nó, chọn bản sao; ✕ gỡ bản sao.
-- **Replace** mở thư viện Media ([09](09-media-panel.md)) chọn một mục; huỷ thì không đổi gì.
+- **Replace** mở Media ở chế độ chọn một ([09 §5](09-media-panel.md), chốt 2026-10-04) ngay trong panel của clip: một chạm thay clip và đóng Media; Cancel không đổi gì; việc thay là một bước trong phiên ✕ / ✓ của clip — ✕ trả clip và nguồn cũ. Không dùng trình chọn ảnh của hệ thống.
 - **Delete** của clip mờ khi project chỉ còn 1 clip (project luôn còn ít nhất một clip).
 
 ## 5. Nút loa ở dòng Volume
@@ -111,6 +111,7 @@ của lệnh ([07 §3](07-phone-layout.md)).
 | AC-9 | Duo trong 951×669, clip 2 đang chọn | vuốt hàng lệnh sang trái | ô Delete hiện đủ trong cột 264, không gập thành lưới | ⚠️ chưa có |
 | AC-10 | các board P2, P3, P5, P9, P10, IL2–IL4, IP2, IP3, DI2, DI3, DC2, DC3 | `Tools/design-board compare` hàng lệnh với dump app | mọi ô lệnh lệch ≤ 2pt | ⚠️ một phần — phone: so mắt render `P2_ClipSelected` (Tools/design-board) với sim-shot iPhone 17 2026-10-04: ô 64×56, nhãn 10/500, khe 4, đệm 10, Delete đỏ cuối, hàng là đầu panel — khớp; **không có số đo**: XCUITest không liệt kê cây Video Studio trên phone nên không dump được để `design-board compare`. P9/P10 (9:16) chờ khối E; IL2–IL4, IP2, IP3 (vẽ lại kiểu Mac 2026-10-04: hàng ở inspector y 80 / dock + 9), DI2, DI3, DC2, DC3 chờ plan màn rộng |
 | AC-11 | clip 1 ảnh 3,0 s, clip 2 video 6,2 s | chọn từng clip, dump phần nội dung | clip 1: dòng Duration có slider 0,5–10 s; clip 2: không phần tử nào tên "Duration", dòng phụ ở tên ghi "6.2s · video" | ⚠️ một phần — `VideoClipPanelSectionsTests.videoClipHasNoDurationSection`, `photoClipKeepsDuration`; sim-shot iPhone 17: clip video Speed (0.5× 1× 2× 4×) · Volume · Fade, không Duration, dòng phụ "2.0s · video"; clip ảnh Duration · Fade · Motion (2026-10-04). Duo/iPad chờ plan màn rộng |
+| AC-12 | clip 2 đang chọn | Replace → chạm một ô → ✕ | Media chọn một mở trong panel clip; một chạm thay clip 2, Media đóng, clip 2 vẫn chọn; ✕ trả clip cũ | `VideoStudioMediaSessionTests.replaceViaSinglePickStaysInTheClipSession` + ảnh sim `vs3/out/rp` |
 
 **Chưa chứng minh được:** AC-1, AC-2, AC-9, AC-10, AC-11.
 

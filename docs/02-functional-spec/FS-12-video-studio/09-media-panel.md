@@ -102,6 +102,12 @@ chuyển sang item. Máy khác: Media đóng như ✓, panel / dock / cột ph�
 - ✕ trả project về đúng lúc mở Media và không để lại bước undo nào.
 - ✓ giữ từng bước đã làm; còn ô đang chọn chưa Add thì ✓ Add luôn — *mất ba ô đã chọn khi bấm ✓ là lỗi im lặng.*
 
+**Chế độ chọn một** (chốt 2026-10-04): Replace của một clip ([04b](04b-command-rows.md)) và Image → Choose… của
+Video Settings ([10 §5](10-video-settings-and-export.md)) mở Media ở chế độ chọn một — cùng lưới, tab, dấu ✓ / ×n, tìm;
+Select nhường chỗ cho **Cancel**, không giữ-kéo; **một chạm là chọn và đóng**. Không phải phiên riêng: Replace nằm trong
+✕ / ✓ của clip (✕ trả clip và nguồn cũ), nền nằm trong Video Settings; nền chỉ liệt kê ảnh. Video Studio không còn
+đường nào mở trình chọn ảnh của hệ thống để thêm, thay hay chọn nền.
+
 **Tìm:** cùng ngôn ngữ truy vấn của Library ([FS-01.03](../FS-01-library/03-search.md)) — "85mm", "ISO 3200",
 tên máy — trên index của app. *Đây là thứ trình chọn hệ thống không làm được.*
 
@@ -154,6 +160,7 @@ Project mẫu: 16:9, 5 clip 24,0s (Falls ảnh 0–3,0 · Coast video 3,0–9,2 
 | AC-17 | Duo trong 951×669, Media mở | vuốt hàng tab sang trái | Select và 🔍 hiện ở cuối; trước khi vuốt mép phải hàng có dải mờ 24pt | ⚠️ một phần — cột Duo trong (lưới `.duoColumn`): hàng tab là `ScrollView` ngang, lề 9, y 14, Recents · Albums · In Video · 3 · Select · 🔍 (Select ở x 924,5, 🔍 ở 988,5 — ngoài mép 951 trước khi vuốt), mép phải mờ 24 pt; ảnh stand-in iPad Pro 13 `-VideoStudioStandIn duoInner` (`vs3/out/m16/host-20-duo-media.png`), ✕ · Media · ✓ ở góc phải hàng đáy; **vuốt hàng tab: chưa chứng minh** — trong stand-in trên iPad xoay ngang, kéo của `ui-drive` không cuộn được cả lưới lẫn hàng (chạm thì được), cần máy Duo thật |
 | AC-18 | Falls dùng ở clip 1, clip 6 và một sticker | mở Recents | ô Falls hiện viên nang "×3", không còn ✓ tròn | `MediaUsageTests.stickerCountsAsAUse` (2 clip + 1 sticker → ×3; sticker không id, chữ: không tính) |
 | AC-19 | thư viện có album "Hikes" 42 mục; iPhone, Media mở | chạm Albums, chạm "Hikes", rồi ‹ Albums | danh sách album có bìa · tên · số mục ("42"); lưới album đúng 42 ô, có dấu đã dùng như Recents; nút ‹ Albums ở chỗ hàng tab; chạm nó về danh sách album | ⚠️ một phần — `VideoMediaLibraryTests.albumGridIsTheAlbumFetch` (lưới album = fetch của album, không trần, cùng dấu đã dùng như Recents); danh sách album bìa · tên · số mục, "‹ Albums" thay hàng tab; sim 26.5 không có album nào → chỉ chụp được trạng thái rỗng "No albums yet." (`vs3/out/m2/03-albums.png`); **album 42 mục: chưa chụp** (cần tạo album trên sim) |
+| AC-20 | clip 2 (Coast) đang chọn | chạm Replace, chạm một ô; lần khác: chạm Replace rồi Cancel | Media mở chế độ chọn một (tab, dấu, Cancel thay Select); một chạm thay clip 2 và đóng Media, clip 2 vẫn chọn trong cùng phiên; ✕ trả Coast; Cancel không đổi gì | `VideoStudioMediaSessionTests.replaceViaSinglePickStaysInTheClipSession`, `.cancellingASinglePickChangesNothing`; sim 26.5: Replace → lưới chọn một với Cancel, chạm ô → Photo 2 thay ảnh, panel clip trở lại (`vs3/out/rp`) |
 
 **Chưa chứng minh được:** AC-1 → AC-19.
 

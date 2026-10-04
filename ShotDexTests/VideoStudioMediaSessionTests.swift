@@ -191,3 +191,56 @@ extension VideoStudioMediaSessionTests {
         model.cancelMediaDrag()
     }
 }
+
+extension VideoStudioMediaSessionTests {
+    /// FS-12.04b AC-12, FS-12.09 AC-20: Replace on clip 2 opens Media in
+    /// single-pick mode inside the clip's session; one tap replaces the
+    /// clip and closes Media, the clip stays selected; ✕ puts the old
+    /// clip back.
+    @Test func replaceViaSinglePickStaysInTheClipSession() {
+        let model = sample()
+        defer { model.close() }
+        let before = model.recipe
+        model.selectClip(model.recipe.clips[1].id)
+        model.beginReplacePick()
+        #expect(model.mediaPickPurpose == .replaceClip)
+        model.pickSingleMedia(VideoMediaPick(assetID: "Ocean", kind: .video, duration: 4))
+        #expect(model.mediaPickPurpose == nil)
+        #expect(model.recipe.clips[1].assetID == "Ocean")
+        #expect(model.selectedClipID == model.recipe.clips[1].id)
+        model.cancelSession()
+        #expect(model.recipe == before)
+    }
+
+    /// Cancel in single-pick mode leaves everything as it was.
+    @Test func cancellingASinglePickChangesNothing() {
+        let model = sample()
+        defer { model.close() }
+        model.selectClip(model.recipe.clips[0].id)
+        let before = model.recipe
+        model.beginReplacePick()
+        model.cancelMediaPick()
+        #expect(model.mediaPickPurpose == nil)
+        #expect(model.recipe == before)
+        #expect(model.selectedClipID == model.recipe.clips[0].id)
+    }
+
+    /// FS-12.10 AC-17: Image → Choose… picks the background from Media,
+    /// photos only, in one undo step; Video Settings stays open.
+    @Test func backgroundImageIsASinglePick() {
+        let model = sample()
+        defer { model.close() }
+        model.showToolPanel(.videoSettings)
+        model.beginBackgroundImagePick()
+        model.pickSingleMedia(VideoMediaPick(assetID: "Clip", kind: .video, duration: 3))
+        #expect(model.recipe.background.imageAssetID == nil)
+        model.beginBackgroundImagePick()
+        model.pickSingleMedia(VideoMediaPick(assetID: "Sky", kind: .photo))
+        #expect(model.recipe.background.kind == .image && model.recipe.background.imageAssetID == "Sky")
+        #expect(model.activeToolPanel == .videoSettings)
+        #expect(VideoMediaLibrary.restricted(VideoMediaLibrary.recentsOptions(), photosOnly: true).predicate
+            == NSPredicate(format: "mediaType = %d", 1))
+        model.undo()
+        #expect(model.recipe.background.imageAssetID == nil)
+    }
+}

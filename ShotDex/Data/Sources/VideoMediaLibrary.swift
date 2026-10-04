@@ -24,6 +24,10 @@ final class VideoMediaLibrary {
 
     let photoLibrary: PhotoLibraryService
     private(set) var source: Source = .recents
+    /// Photos only — the Image background's pick (FS-12.10 §5).
+    var photosOnly = false {
+        didSet { if photosOnly != oldValue { reload() } }
+    }
     @ObservationIgnored private var result: PHFetchResult<PHAsset> = PHFetchResult()
     /// Bumped on every refetch, so a view holding the grid knows to reload it.
     private(set) var revision = 0
@@ -64,17 +68,17 @@ final class VideoMediaLibrary {
         if canRead {
             switch source {
             case .recents:
-                result = PHAsset.fetchAssets(with: Self.recentsOptions())
+                result = PHAsset.fetchAssets(with: Self.restricted(Self.recentsOptions(), photosOnly: photosOnly))
             case .album(let id):
                 if let album = PHAssetCollection.fetchAssetCollections(withLocalIdentifiers: [id], options: nil).firstObject {
-                    result = PHAsset.fetchAssets(in: album, options: Self.albumOptions())
+                    result = PHAsset.fetchAssets(in: album, options: Self.restricted(Self.albumOptions(), photosOnly: photosOnly))
                 } else {
                     result = PHFetchResult()
                 }
             case .search(let ids):
                 result = ids.isEmpty
                     ? PHFetchResult()
-                    : PHAsset.fetchAssets(withLocalIdentifiers: ids, options: Self.searchOptions())
+                    : PHAsset.fetchAssets(withLocalIdentifiers: ids, options: Self.restricted(Self.searchOptions(), photosOnly: photosOnly))
             }
         } else {
             result = PHFetchResult()
@@ -138,6 +142,13 @@ final class VideoMediaLibrary {
         let options = PHFetchOptions()
         options.predicate = PhotoLibraryService.browsableMediaPredicate
         options.sortDescriptors = [NSSortDescriptor(key: "creationDate", ascending: false)]
+        return options
+    }
+
+    /// `options` narrowed to stills when only a photo will do.
+    nonisolated static func restricted(_ options: PHFetchOptions, photosOnly: Bool) -> PHFetchOptions {
+        guard photosOnly else { return options }
+        options.predicate = NSPredicate(format: "mediaType = %d", PHAssetMediaType.image.rawValue)
         return options
     }
 

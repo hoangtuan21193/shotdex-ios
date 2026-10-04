@@ -19,11 +19,20 @@ struct VideoSettingsPanel: View {
     /// Done when the panel is not the open tool — the iPad's popover.
     var onDone: (() -> Void)?
     @Environment(\.openURL) private var openURL
-    @State private var isImagePickerPresented = false
     /// Whether the Image background's photo can still be read.
     @State private var isBackgroundImageMissing = false
 
     var body: some View {
+        if model.mediaPickPurpose == .backgroundImage {
+            // Image → Choose…: Media in single-pick mode, photos only, in
+            // the panel's place (FS-12.10 §5).
+            VideoMediaPanel(model: model)
+        } else {
+            settings
+        }
+    }
+
+    private var settings: some View {
         VStack(spacing: 0) {
             header
             Rectangle().fill(Color.white.opacity(0.07)).frame(height: 1)
@@ -43,11 +52,6 @@ struct VideoSettingsPanel: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .background(EditorTheme.panelSolid)
-        .sheet(isPresented: $isImagePickerPresented) {
-            VideoMediaPicker(selectionLimit: 1) { picks in
-                if let first = picks.first { model.setBackgroundImage(first.assetID) }
-            }
-        }
         .task(id: model.recipe.background.imageAssetID) { checkBackgroundImage() }
     }
 
@@ -216,7 +220,7 @@ struct VideoSettingsPanel: View {
                 VideoBackgroundThumbnail(assetID: model.recipe.background.imageAssetID, photoLibrary: model.photoLibrary)
                     .frame(width: 28, height: 28)
                     .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
-                Button { isImagePickerPresented = true } label: {
+                Button { model.beginBackgroundImagePick() } label: {
                     Text(VideoStudioCopy.chooseImage)
                         .font(.system(size: 12.5, weight: .semibold))
                         .foregroundStyle(.white)

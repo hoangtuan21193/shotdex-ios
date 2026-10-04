@@ -47,6 +47,9 @@ struct VideoMediaPanel: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .onChange(of: searchRequest) { startSearch() }
+        .onChange(of: model.mediaPickPurpose, initial: true) {
+            library?.photosOnly = model.mediaPickPurpose == .backgroundImage
+        }
         .onChange(of: tab) { model.mediaShowsInVideo = tab == .inVideo }
         .task(id: model.photoLibrary.assetChangeToken) { reload() }
         .task(id: model.photoLibrary.collectionChangeToken) {
@@ -111,7 +114,11 @@ struct VideoMediaPanel: View {
                 tabButton(.albums, title: VideoStudioCopy.albums)
                 tabButton(.inVideo, title: VideoStudioCopy.inVideo(MediaUsage.useCount(in: model.recipe)))
                 Spacer(minLength: 0)
-                if !isPoolColumn { VideoMediaHeaderControls(model: model, onSearch: startSearch) }
+                if model.mediaPickPurpose != nil {
+                    singlePickControls
+                } else if !isPoolColumn {
+                    VideoMediaHeaderControls(model: model, onSearch: startSearch)
+                }
             }
             .padding(.horizontal, rowInset)
         }
@@ -264,18 +271,22 @@ struct VideoMediaPanel: View {
                 uses: MediaUsage.uses(in: model.recipe),
                 pickNumbers: pickNumbers,
                 onTap: { asset in
-                    if model.isSelectingMedia {
+                    if model.mediaPickPurpose != nil {
+                        model.pickSingleMedia(VideoMediaPick(asset))
+                    } else if model.isSelectingMedia {
                         model.toggleMediaPick(VideoMediaPick(asset))
                     } else {
                         insert(asset)
                     }
                 },
-                onInsert: { insert($0) },
+                onInsert: { asset in
+                    if model.mediaPickPurpose != nil { model.pickSingleMedia(VideoMediaPick(asset)) } else { insert(asset) }
+                },
                 onSelect: { asset in
                     if !model.isSelectingMedia { model.toggleMediaSelecting() }
                     model.toggleMediaPick(VideoMediaPick(asset))
                 },
-                onDragBegan: { asset, location, origin, image in
+                onDragBegan: model.mediaPickPurpose != nil ? nil : { asset, location, origin, image in
                     model.beginMediaDrag(VideoMediaPick(asset), at: location, from: origin, image: image)
                 },
                 onDragMoved: { model.moveMediaDrag(to: $0) },
@@ -349,6 +360,34 @@ struct VideoMediaPanel: View {
         .padding(.horizontal, VideoMediaPanelMetrics.rowInset)
     }
 
+    /// Single-pick mode (FS-12.09 §5): search, then Cancel where Select
+    /// was — nothing to select, one tap picks.
+    private var singlePickControls: some View {
+        HStack(spacing: 6) {
+            Button(action: startSearch) {
+                Image(systemName: "magnifyingglass")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(.white)
+                    .frame(width: VideoMediaPanelMetrics.tabHeight, height: VideoMediaPanelMetrics.tabHeight)
+                    .background(Circle().fill(Color.white.opacity(0.06)))
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(VideoStudioCopy.searchLibrary)
+            Button { model.cancelMediaPick() } label: {
+                Text(VideoStudioCopy.cancel)
+                    .font(.system(size: 12.5, weight: .semibold))
+                    .foregroundStyle(.white)
+                    .lineLimit(1)
+                    .padding(.horizontal, 10)
+                    .frame(height: VideoMediaPanelMetrics.tabHeight)
+                    .background(tabFill(isOn: false))
+                    .fixedSize()
+            }
+            .buttonStyle(.plain)
+            .accessibilityIdentifier("mediaPickCancel")
+        }
+    }
+
     private func startSearch() {
         model.mediaShowsInVideo = false
         isSearching = true
@@ -403,6 +442,7 @@ struct VideoMediaPanel: View {
 
     private func reload() {
         let library = library ?? VideoMediaLibrary(photoLibrary: model.photoLibrary)
+        library.photosOnly = model.mediaPickPurpose == .backgroundImage
         library.reload()
         self.library = library
         if tab == .albums { albums = library.albums() }

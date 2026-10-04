@@ -548,6 +548,7 @@ final class VideoStudioModel {
 
     private func deselectAll() {
         mediaSelection = nil
+        mediaPickPurpose = nil
         mediaShowsInVideo = false
         selectedClipID = nil
         selectedOverlayID = nil
@@ -872,6 +873,50 @@ final class VideoStudioModel {
         switch row.kind {
         case .clip: selectClip(row.id)
         case .sticker: selectOverlay(row.id)
+        }
+    }
+
+    // MARK: - Media single pick (FS-12.09 §5)
+
+    /// What a single-pick Media panel is choosing for: a clip's
+    /// replacement, or the photo behind fitted clips.
+    enum MediaPickPurpose: Equatable {
+        case replaceClip
+        case backgroundImage
+    }
+
+    /// Media open in single-pick mode — the same grid, tabs and marks; one
+    /// tap picks and closes. Nil otherwise. Never a session of its own:
+    /// Replace stays inside the clip's ✕ / ✓, the background inside Video
+    /// Settings.
+    private(set) var mediaPickPurpose: MediaPickPurpose?
+
+    /// Replace on a selected clip: pick its new media from Media.
+    func beginReplacePick() {
+        guard selectedClipID != nil else { return }
+        mediaPickPurpose = .replaceClip
+    }
+
+    /// Video Settings' Image → Choose…: pick the background photo.
+    func beginBackgroundImagePick() {
+        mediaPickPurpose = .backgroundImage
+    }
+
+    /// Back without picking: nothing changes.
+    func cancelMediaPick() {
+        mediaPickPurpose = nil
+    }
+
+    /// The one tap of single-pick mode: the pick is used and Media closes.
+    func pickSingleMedia(_ pick: VideoMediaPick) {
+        guard let purpose = mediaPickPurpose else { return }
+        mediaPickPurpose = nil
+        switch purpose {
+        case .replaceClip:
+            replaceSelectedClip(with: pick)
+        case .backgroundImage:
+            guard pick.kind == .photo else { return }
+            setBackgroundImage(pick.assetID)
         }
     }
 
@@ -2041,7 +2086,7 @@ final class VideoStudioModel {
               let index = recipe.clips.firstIndex(where: { $0.id == selectedClipID })
         else { return }
         pushUndo()
-        let new = VideoClip(assetID: pick.assetID, kind: pick.kind)
+        let new = Self.clip(for: pick)
         // The old clip's source stays: ✕ or Undo puts the old clip back.
         recipe.clips[index] = new
         recipe.syncTransitionsWithClips()
