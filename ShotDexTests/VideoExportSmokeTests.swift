@@ -206,3 +206,23 @@ extension VideoExportSmokeTests {
         #expect(exportComposition.frameDuration == CMTime(value: 1, timescale: 60))
     }
 }
+
+extension VideoExportSmokeTests {
+    /// FS-12.10b AC-4: 60 fps · HEVC writes a 1920×1080 HEVC track at 60
+    /// frames a second, as long as the timeline to within one frame.
+    @Test func hevcAt60fps() async throws {
+        let directory = try VideoExportFixtures.makeDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        var (recipe, sources) = try await twoClips(in: directory)
+        recipe.frameRate = .fps60
+        recipe.codec = .hevc
+        let service = VideoExportFixtures.service()
+        defer { service.cleanupSession() }
+        let url = try await service.export(recipe: recipe, sources: sources, progress: { _ in })
+        let output = try await VideoExportFixtures.inspect(url)
+        #expect(output.naturalSize == CGSize(width: 1920, height: 1080))
+        #expect(abs(output.nominalFrameRate - 60) < 0.5)
+        #expect(output.codec == kCMVideoCodecType_HEVC)
+        #expect(abs(output.videoTrackDuration - 3) < 1.0 / 60)
+    }
+}
