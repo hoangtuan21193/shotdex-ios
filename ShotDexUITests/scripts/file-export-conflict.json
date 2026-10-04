@@ -1,0 +1,267 @@
+{
+ "steps": [
+  {
+   "action": "launch",
+   "arguments": [
+    "-ShotDexExportFolder",
+    "Exports",
+    "-ShotDexFakeICloud",
+    "cloud=all,seconds=8"
+   ]
+  },
+  {
+   "action": "wait",
+   "seconds": 6
+  },
+  {
+   "action": "tap",
+   "label": "Library",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "tap",
+   "label": "Select photos",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "tap",
+   "x": 0.165,
+   "y": 0.3
+  },
+  {
+   "action": "tap",
+   "x": 0.83,
+   "y": 0.3
+  },
+  {
+   "action": "tap",
+   "label": "More selection actions"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "tap",
+   "label": "Export…"
+  },
+  {
+   "action": "wait",
+   "seconds": 2.5
+  },
+  {
+   "action": "tap",
+   "label": "Unmodified Original"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "tap",
+   "label": "If a File Exists"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "tap",
+   "label": "Replace"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "screenshot",
+   "name": "01-sheet-replace"
+  },
+  {
+   "action": "dump",
+   "name": "01-sheet-replace",
+   "type": "button"
+  },
+  {
+   "action": "tap",
+   "label": "Export",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 4
+  },
+  {
+   "action": "screenshot",
+   "name": "02-running"
+  },
+  {
+   "action": "dump",
+   "name": "02-running",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 20
+  },
+  {
+   "action": "screenshot",
+   "name": "03-summary-first"
+  },
+  {
+   "action": "dump",
+   "name": "03-summary-first",
+   "type": "button"
+  },
+  {
+   "action": "tap",
+   "label": "Done",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "tap",
+   "label": "More selection actions"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "tap",
+   "label": "Export…"
+  },
+  {
+   "action": "wait",
+   "seconds": 2.5
+  },
+  {
+   "action": "tap",
+   "label": "Export",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "screenshot",
+   "name": "04-replace-alert"
+  },
+  {
+   "action": "dump",
+   "name": "04-replace-alert",
+   "type": "button"
+  },
+  {
+   "action": "tap",
+   "label": "Cancel",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "screenshot",
+   "name": "05-after-cancel"
+  },
+  {
+   "action": "tap",
+   "label": "Export",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "tap",
+   "label": "Replace",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 25
+  },
+  {
+   "action": "screenshot",
+   "name": "06-summary-replaced"
+  },
+  {
+   "action": "dump",
+   "name": "06-summary-replaced",
+   "type": "button"
+  },
+  {
+   "action": "tap",
+   "label": "Done",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "tap",
+   "label": "More selection actions"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "tap",
+   "label": "Export…"
+  },
+  {
+   "action": "wait",
+   "seconds": 2.5
+  },
+  {
+   "action": "tap",
+   "label": "If a File Exists"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "tap",
+   "label": "Skip"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "tap",
+   "label": "Export",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 5
+  },
+  {
+   "action": "screenshot",
+   "name": "07-summary-skipped"
+  },
+  {
+   "action": "dump",
+   "name": "07-summary-skipped",
+   "type": "button"
+  }
+ ]
+}
