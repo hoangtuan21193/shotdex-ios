@@ -1,13 +1,13 @@
 # FS-12.15 — So sánh trước / sau
 
 `FS-12.15` · tier D · `Features/VideoStudio/VideoStudioModel.swift` (giữ-để-xem-bản-gốc) · `VideoStudioCommandBand.swift` · `VideoViewerChrome.swift`
-· nguồn intent [video-studio-canvas-chrome](../../_intents/2026-10-03-video-studio-canvas-chrome.md) (canvas hàng F7) · cập nhật 2026-10-03
+· nguồn intent [video-studio-canvas-chrome](../../_intents/2026-10-03-video-studio-canvas-chrome.md) (canvas hàng F7) · cập nhật 2026-10-04 (iPad kiểu Mac)
 
 **Một câu:** đặt khung gốc cạnh khung đã grade — hai khung cạnh nhau hoặc một đường chia kéo được — trong lúc
 vẫn phát, scrub và chỉnh look.
 
 Look: [FS-12.06c](06c-photo-looks.md). Tầng màu: [FS-12.06](06-color-layer.md). Phím `\`: [FS-12.17b](17b-keyboard-and-pointer.md).
-Canvas: hàng F7 của [docs/design](../../design/README.md).
+Board hàng F7: `F7_P_BeforeAfter` ([`docs/design/iphone/project/`](../../design/iphone/project/)) · `F7_IL_BeforeAfter`, `F7_IP_BeforeAfter` ([`docs/design/ipad/project/`](../../design/ipad/project/), kiểu Mac 2026-10-04) · `F7_DI_BeforeAfter`, `F7_DC_BeforeAfter` ([`docs/design/duo/project/`](../../design/duo/project/)).
 
 ## 1. Người dùng cần gì
 
@@ -39,8 +39,8 @@ sticker, phụ đề [FS-12.14](14-captions.md)). **Before giữ:** cắt, trim,
 | Máy · board | Lối vào | Khi đang so sánh |
 |---|---|---|
 | iPhone 402×874 · `F7_P_BeforeAfter` | header panel Look: nút tròn 32 tại x 280, trái ✕ và ✓ | khung 402×226 giữ nguyên; đường chia trắng 2pt + tay nắm tròn 34 "Drag to compare" giữa chiều cao khung; mục **COMPARE** ngay dưới Amount: **Split · Hold to Compare** 181×30; dòng chú thích |
-| iPad ngang 1376×1032 · `F7_IL_BeforeAfter` | viewer header: nút 36×28 `r-sm` tại x 918, trái Quick Adjust | pool tự gập; hai khung **499×281** tại y 197,5, cách nhau 16; **Side by Side · Split** giữa viewer header (cao 22); dòng "Both sides play and scrub together · 0:08.4" dưới khung; Show original ẩn khỏi băng trên |
-| iPad dọc 1032×1376 · `F7_IP_BeforeAfter` | như iPad ngang | hai khung **473×266** đặt ngang tại y 226 (xếp dọc chỉ được 459×258); dock 324 tiêu đề "Before and After · Clip 2", ba cột **LOOK · COMPARE · ADJUST**; COMPARE: Side by Side · Split 151,5×28, **Swap sides ›**, dòng "Before shows · Original clip", chú thích |
+| iPad ngang 1376×1032 · `F7_IL_BeforeAfter` (kiểu Mac 2026-10-04) | nút tròn **44** cuối hàng phát dưới khung (x 956; khi pool gập x 945) — không còn viewer header | pool tự gập (capsule Media Pool hiện ở x 16); hai khung **448×252** tại y 160, x 33 và 497, cách nhau 16; segmented **Side by Side · Split** 280×36 tại (349, 84) trên hai khung; dòng "Both sides play and scrub together · 0:08.4" dưới khung (y 424); Show original ẩn khỏi capsule Undo · Redo |
+| iPad dọc 1032×1376 · `F7_IP_BeforeAfter` | như iPad ngang (nút 44 ở x 960) | hai khung **458×258** đặt ngang tại y 223, x 28 và 502; segmented Side by Side · Split 280×36 tại (354, 84); dock 324 tiêu đề "Before and After · Clip 2", ba cột 312 **Look · Compare · Adjust**; Compare: segmented Side by Side · Split 312×36, **Swap sides ›** 312×44, dòng "Before shows · Original clip", chú thích |
 | Duo trong 951×669 · `F7_DI_BeforeAfter` | nút tròn 36 tại (148, 12) **thay** Show original | hai khung **330×186** tại y 96 trong vùng khung 684×385, cách nhau 8; cột Look 264 giữ nguyên, thêm Side by Side · Split 112×28 dưới Amount; dòng "Both sides play together · 0:08.4" |
 | Duo ngoài 466×678 · `F7_DC_BeforeAfter` | header panel Look, như iPhone | như iPhone, khung 382×215 |
 
@@ -48,7 +48,7 @@ sticker, phụ đề [FS-12.14](14-captions.md)). **Before giữ:** cắt, trim,
   trên phải, cách mép khung 10pt, chữ 11,5 bold. Board F7_P vẽ hai pill ở y 10 **của màn hình**, đè lên Back và
   Export — lấy y 70 (10pt trong khung), như ba board iPad/Duo; sửa board.
 - **Màu nút** (chốt 2026-10-03): iPhone, Duo — bật = **nền trắng, glyph đen** (như ✓ Done cạnh nó); tắt = nền trắng
-  10%, glyph trắng. iPad giữ kiểu của viewer header: nền trắng 14% khi bật. Accent chỉ ở Export (luật intent).
+  10%, glyph trắng. iPad: nút tròn 44 trong hàng phát, nền trắng 14% (`pressed`) khi bật, trong suốt khi tắt. Accent chỉ ở Export (luật intent).
   Board F7_P và F7_DI đang vẽ glyph trắng trên nền trắng — sửa glyph sang đen; tiêu đề board DI bỏ chữ "(cam)".
 - **iPhone:** không còn nút Show original ở băng trên (canvas). Giữ-để-xem là chế độ **Hold to Compare** trong
   COMPARE. *Vì* trên điện thoại mọi chỉnh màu đều nằm trong panel Look, nên so sánh nằm cùng chỗ.
@@ -58,7 +58,7 @@ sticker, phụ đề [FS-12.14](14-captions.md)). **Before giữ:** cắt, trim,
 ## 5. Hành vi
 
 - **Bật/tắt** không phải một bước undo và không lưu vào project. iPhone, Duo ngoài: đóng panel Look (✓ hay ✕) là
-  tắt. iPad: nút ở viewer header bật/tắt bất kỳ lúc nào; tắt thì pool trở lại đúng trạng thái trước khi gập.
+  tắt. iPad: nút ở hàng phát dưới khung bật/tắt bất kỳ lúc nào; tắt thì pool trở lại đúng trạng thái trước khi gập.
 - **Một đồng hồ:** hai bên luôn cùng một khung — dừng thì lệch 0 khung, đang phát lệch ≤ 1 khung. Scrub, nhảy
   khung, kéo playhead đi cả hai.
 - **After sống:** chạm ô look, kéo Amount, chỉnh Adjust/Color thì After đổi ở khung kế tiếp; Before không đổi.
@@ -103,10 +103,10 @@ có sticker và một chữ "GOLDEN HOUR", clip 2 hiệu ứng zoomIn.
 | AC-3 | Split đang bật | kéo tay nắm tới x 100 | đường chia ở x 100 ±1; VoiceOver đọc "Before, 25 percent" | ⚠️ chưa có |
 | AC-4 | COMPARE = Hold to Compare | giữ khung 1 s rồi nhả | lúc giữ: cả khung là Before; sau nhả: After; recipe và số bước undo không đổi | ⚠️ chưa có |
 | AC-5 | so sánh đang bật trên iPhone | bấm ✓ của panel Look | so sánh tắt; mở lại Look thì nút ở trạng thái tắt | ⚠️ chưa có |
-| AC-6 | iPad ngang, pool đang mở | chạm Before and After | pool gập; hai khung 499×281 tại y 197,5, x 16 và 531; Side by Side được chọn; Show original vắng khỏi băng trên; chạm lần nữa: pool mở lại | ⚠️ chưa có |
+| AC-6 | iPad ngang, pool đang mở | chạm Before and After | pool gập; hai khung 448×252 tại y 160, x 33 và 497; Side by Side được chọn; Show original vắng khỏi capsule Undo · Redo; chạm lần nữa: pool mở lại | ⚠️ chưa có |
 | AC-7 | iPad ngang, Side by Side | phát 10 s trên máy thật | mọi lần lấy mẫu hai bên cùng số khung (dừng: lệch 0; phát: ≤ 1); ≤ 3 khung rơi trong 10 s | ⚠️ chưa có — máy thật |
 | AC-8 | Side by Side, Amount 80 | kéo Amount về 40 trong một lần kéo | After đổi, Before giữ nguyên từng pixel; undo +1 (chỉ cho Amount) | ⚠️ chưa có |
-| AC-9 | iPad dọc, Side by Side | chạm Swap sides | After ở x 11, Before ở x 497; nhãn đổi theo | ⚠️ chưa có |
+| AC-9 | iPad dọc, Side by Side | chạm Swap sides | After ở x 28, Before ở x 502; nhãn đổi theo | ⚠️ chưa có |
 | AC-10 | project không look, Adjust, Color hay overlay | bật so sánh | hai bên giống từng pixel; dòng dưới khung "No edits to compare yet." | ⚠️ chưa có |
 | AC-11 | so sánh đang bật (Split 30%) | Export | file xuất không có đường chia, không pill; khung 8,4 s khớp After | ⚠️ chưa có — smoke test export |
 | AC-12 | Duo trong, panel Look mở | chạm nút tại (148, 12); rồi giữ nó 1 s | chạm: hai khung 330×186 tại y 96; giữ: cả hai khung hiện Before tới khi nhả | ⚠️ chưa có — `Tools/ui-drive` + `Tools/sim-shot` |

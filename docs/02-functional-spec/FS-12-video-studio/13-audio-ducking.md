@@ -2,7 +2,7 @@
 
 `FS-12.13` · tier D · `Data/Sources/VideoCompositionBuilder.swift` (audio mix) · `Domain/Video/VideoTimelineMath.swift`
 (đường âm lượng nhạc) · `Features/VideoStudio/VideoAudioEnvelope.swift` (đọc âm thanh clip) · nguồn intent
-[video-studio-canvas-chrome](../../_intents/2026-10-03-video-studio-canvas-chrome.md) F3 · cập nhật 2026-10-03
+[video-studio-canvas-chrome](../../_intents/2026-10-03-video-studio-canvas-chrome.md) F3 · cập nhật 2026-10-04 (iPad kiểu Mac)
 
 **Một câu:** một băng nhạc tự hạ xuống một lượng dB trong lúc clip có tiếng người (hoặc có tiếng bất kỳ), rồi tự
 lên lại — không phải vẽ tay đường âm lượng.
@@ -34,7 +34,7 @@ Lối vào: chọn băng nhạc → ô **Ducking** trong hàng lệnh nhạc (Be
 | Máy · board | Bố cục tab Ducking |
 |---|---|
 | iPhone · `F3_P_Ducking` | panel 340 tại y 450: **đồ thị 370×78**, chú giải (ô xanh 10×8 "Voices" · vạch trắng 12×2 "Music level"), UNDER VOICES 38 + công tắc, Amount 40 "−12 dB", Duck in 36 "0.3s", Recover 36 "0.8s", chip **Voices · Any Clip Sound** 28, dòng "Voices in 3 clips · 8.6s" 36, Volume 40 "80" (cuộn tới); đáy ✕ · "Morning Drive" / "Music · 0.0 → 18.4s" · ✓ |
-| iPad ngang · `F3_IL_Ducking` | inspector 280: **LEVEL** "−9 dB" + thanh 248×8, Volume "80", UNDER VOICES, Amount, Duck in, Recover, chip, dòng tóm tắt, chú thích "Only the music moves. Each clip keeps its own level.", FADE (Fade in 1.5s · Fade out 2.0s); chân "Morning Drive" / "Music · 18.4s"; pool bên trái mở tab Music |
+| iPad ngang · `F3_IL_Ducking` (kiểu Mac 2026-10-04) | inspector 360: hàng lệnh y 80 (Beats · Ducking · Replace · Add Track · Duplicate …), **Level** "−9 dB" + thanh 328, Volume "80" (đĩa loa 40), **Under Voices** công tắc 51×31, Amount · Duck in · Recover (slider 44), **Duck Under** segmented Voices · Any Clip Sound 328×36, dòng tóm tắt "Voices in 3 clips · 8.6s", chú thích "Only the music moves. Each clip keeps its own level.", Fade (Fade in 1.5s · Fade out 2.0s) cuộn tới; chân 64 "Morning Drive" / "Music · 18.4s"; pool bên trái mở tab Music |
 | Duo trong · `F3_DI_Ducking` | cột 264: Volume 36, UNDER VOICES 38, Amount 40, Duck in 36, Recover 36, chip, dòng tóm tắt; đáy phải ✕ · "Morning Drive" · ✓ |
 | Duo ngoài · `F3_DC_Ducking` | không timeline; panel 382×344 tại y 334: đồ thị **354×78**, UNDER VOICES, Amount, Duck in, Recover; chip và tóm tắt cuộn tới; dải 84: "Morning Drive" / "Music" |
 

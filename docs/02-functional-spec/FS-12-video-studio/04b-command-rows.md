@@ -1,7 +1,7 @@
 # FS-12.04b — Hàng lệnh của item đang chọn
 
 `FS-12.04b` · `Features/VideoStudio/VideoStudioCommandBand.swift` · `VideoStudioSheetHost.swift`
-· cập nhật 2026-10-03 · nguồn intent [video-studio-canvas-chrome](../../_intents/2026-10-03-video-studio-canvas-chrome.md)
+· cập nhật 2026-10-04 (iPad kiểu Mac) · nguồn intent [video-studio-canvas-chrome](../../_intents/2026-10-03-video-studio-canvas-chrome.md)
 
 **Một câu:** chọn một item thì lệnh của nó là **hàng đầu tiên của panel** — ô 64×56, cuộn ngang, xếp theo tần
 suất dùng, **Delete đỏ đứng cuối** — và phần dưới là thông số của item.
@@ -28,8 +28,9 @@ Mô hình chọn (✕ · tên · ✓): [04 §5](04-tools-and-inspector.md).
 | Không làm được lúc này | glyph trắng 28%, có chú thích ở dòng dưới hàng (vd. "Waiting for iCloud") |
 | Ngăn dưới hàng | đường kẻ 1pt trắng 7%, cách hàng 6, cách nội dung 4 |
 
-Vị trí hàng: iPhone y panel + 10; Duo ngoài panel + 6; Duo trong cột phải + 12; iPad ngang inspector + 8;
-iPad dọc dock + 6 (1032pt đủ cho cả hàng, không cuộn).
+Vị trí hàng: iPhone y panel + 10; Duo ngoài panel + 6; Duo trong cột phải + 12; iPad ngang inspector x + 13, y 80
+(ngay dưới hàng capsule toolbar, rộng 336 — thấy 5 ô, cuộn); iPad dọc dock + 9 (rộng 1000, đủ cả hàng, không cuộn)
+— số iPad theo canvas kiểu Mac 2026-10-04 ([03 §2–§3](03-timeline-and-desk-layout.md)).
 
 ## 3. Lệnh từng loại item
 
@@ -65,6 +66,16 @@ iPad dọc dock + 6 (1032pt đủ cho cả hàng, không cuộn).
 - Phần nội dung mặc định của clip video: Speed (chip 0.5× 1× 2× 4×) · Volume · FADE (Fade in, Fade out) · MOTION
   (chip hiệu ứng) — **không có dòng Duration** (chốt 2026-10-03, [05 §3](05-cutting-markers-and-fades.md)).
 - Ảnh và khung freeze: Duration (slider 0,5–10 s) · FADE · MOTION.
+- **iPad (kiểu Mac, 2026-10-04): chọn một trong nhiều là nút pop-up**, không phải lưới chip — cùng lựa chọn, cùng
+  thứ tự với iPhone/Duo (chúng giữ chip):
+  - **MOTION**: "Motion: Zoom In ⌃⌄" cao 44, hết bề rộng cột (328 ngang · 312 dọc), mở menu 10 hiệu ứng (None · Zoom In ·
+    Zoom Out · Pan Left · Pan Right · Shake · Blur In · Blur Out · Soft Glow · Vignette Pulse).
+  - Chữ: **Font** "Font: SF Pro" 328×44 (dọc 212×44, cạnh B · I 44); **Animate** hai pop-up "Animate In: Fade" ·
+    "Animate Out: None" 160×44 (dọc 152×44). Ô chữ 328×44 + nút Expand Text Field 44; Align là segmented 180×36;
+    ô màu 44; Size · Opacity · Outline · Shadow là dòng slider 44.
+  - Tiêu đề mục viết Title Case ("Fade", "Motion", "Style") thay chữ hoa; slider 44 với núm 28; segmented 36.
+- Khối Trim trên iPad: hai nút **Start to Playhead** · **End to Playhead** 238×44 (dọc, cột đầu của dock — board
+  `F6_IP_PencilTrim`) thay chip 30.
 - **Split** = ✓ cho clip đang chọn, cắt tại playhead, mở phiên mới trên nửa phải — ✕ của nửa phải không gỡ vết
   cắt. *Vì Split là sửa cấu trúc như Delete, không thuộc phiên của một item.*
 - **Duplicate** = ✓ cho item gốc, chèn bản sao ngay sau nó, chọn bản sao; ✕ gỡ bản sao.
@@ -73,14 +84,15 @@ iPad dọc dock + 6 (1032pt đủ cho cả hàng, không cuộn).
 
 ## 5. Nút loa ở dòng Volume
 
-- Đĩa 26pt nền trắng 10% ở đầu dòng Volume của clip video và của nhạc; nhãn trợ năng "Mute" / "Unmute".
+- Đĩa 26pt nền trắng 10% (iPad kiểu Mac: **40**) ở đầu dòng Volume của clip video và của nhạc; nhãn trợ năng "Mute" / "Unmute".
 - Bật Mute: glyph loa gạch, slider mờ 30% nhưng **giữ số** — tắt Mute trả đúng mức cũ. Mỗi lần chạm một bước undo.
 
 ## 6. Panel không đổi chiều cao
 
 Chiều cao panel đặt theo thiết bị (và tỉ lệ project trên iPhone), không theo item hay lệnh đang bật:
 iPhone 340 / 320 / 300 / 278 / 360 / 340 cho 16:9 / 1:1 / 4:5 / 9:16 / 4:3 / 21:9 ([07](07-phone-layout.md)) · Duo ngoài
-334–644 · Duo trong cột 385 · iPad ngang inspector 540 · iPad dọc dock 324. Nội dung dài hơn thì cuộn, có dải mờ
+334–644 · Duo trong cột 385 · iPad ngang inspector 440 (y 80–520, trên chân 64 — cột 360 cao 584) · iPad dọc dock 324 (nội
+dung 1052–1312, trên chân 64). Nội dung dài hơn thì cuộn, có dải mờ
 30pt ở đáy và thanh cuộn 3×70. Thu còn 78 bằng grabber (iPhone không lát, Duo ngoài) là việc của người dùng, không
 của lệnh ([07 §3](07-phone-layout.md)).
 
@@ -97,7 +109,7 @@ của lệnh ([07 §3](07-phone-layout.md)).
 | AC-7 | clip 10,0 s đang chọn, playhead 4,0 s | chạm Split rồi ✕ | còn 2 clip `[0,0–4,0]` `[4,0–10,0]`, không chọn gì | ✅ `VideoSplitDuplicateTests.splitThenCancelKeepsTheCut` (còn [0–4] [4–10], không chọn gì) |
 | AC-8 | băng chữ GOLDEN HOUR đang chọn | chạm Duplicate rồi ✕ | còn đúng 1 khối GOLDEN HOUR, không chọn gì | ✅ `VideoSplitDuplicateTests.duplicateThenCancelLeavesOneBlock` (còn 1 khối GOLDEN HOUR, không chọn, không bước undo), `duplicateClipInsertsAfterAndSharesTheSource` (clip chèn ngay sau, chung nguồn; nhạc bắt đầu ở cuối bản gốc) |
 | AC-9 | Duo trong 951×669, clip 2 đang chọn | vuốt hàng lệnh sang trái | ô Delete hiện đủ trong cột 264, không gập thành lưới | ⚠️ chưa có |
-| AC-10 | các board P2, P3, P5, P9, P10, IL2–IL4, IP2, IP3, DI2, DI3, DC2, DC3 | `Tools/design-board compare` hàng lệnh với dump app | mọi ô lệnh lệch ≤ 2pt | ⚠️ một phần — phone: so mắt render `P2_ClipSelected` (Tools/design-board) với sim-shot iPhone 17 2026-10-04: ô 64×56, nhãn 10/500, khe 4, đệm 10, Delete đỏ cuối, hàng là đầu panel — khớp; **không có số đo**: XCUITest không liệt kê cây Video Studio trên phone nên không dump được để `design-board compare`. P9/P10 (9:16) chờ khối E; IL2–IL4, IP2, IP3, DI2, DI3, DC2, DC3 chờ plan màn rộng |
+| AC-10 | các board P2, P3, P5, P9, P10, IL2–IL4, IP2, IP3, DI2, DI3, DC2, DC3 | `Tools/design-board compare` hàng lệnh với dump app | mọi ô lệnh lệch ≤ 2pt | ⚠️ một phần — phone: so mắt render `P2_ClipSelected` (Tools/design-board) với sim-shot iPhone 17 2026-10-04: ô 64×56, nhãn 10/500, khe 4, đệm 10, Delete đỏ cuối, hàng là đầu panel — khớp; **không có số đo**: XCUITest không liệt kê cây Video Studio trên phone nên không dump được để `design-board compare`. P9/P10 (9:16) chờ khối E; IL2–IL4, IP2, IP3 (vẽ lại kiểu Mac 2026-10-04: hàng ở inspector y 80 / dock + 9), DI2, DI3, DC2, DC3 chờ plan màn rộng |
 | AC-11 | clip 1 ảnh 3,0 s, clip 2 video 6,2 s | chọn từng clip, dump phần nội dung | clip 1: dòng Duration có slider 0,5–10 s; clip 2: không phần tử nào tên "Duration", dòng phụ ở tên ghi "6.2s · video" | ⚠️ một phần — `VideoClipPanelSectionsTests.videoClipHasNoDurationSection`, `photoClipKeepsDuration`; sim-shot iPhone 17: clip video Speed (0.5× 1× 2× 4×) · Volume · Fade, không Duration, dòng phụ "2.0s · video"; clip ảnh Duration · Fade · Motion (2026-10-04). Duo/iPad chờ plan màn rộng |
 
 **Chưa chứng minh được:** AC-1, AC-2, AC-9, AC-10, AC-11.
@@ -106,5 +118,5 @@ của lệnh ([07 §3](07-phone-layout.md)).
 
 | Rủi ro | Xử lý |
 |---|---|
-| board IL2 và IP2 thiếu ô Look trong hàng clip, P2/DI2/DC2 có | luật §1 thắng: một danh sách; sửa IL2/IP2 trên canvas |
+| board IL2 và IP2 thiếu ô Look trong hàng clip, P2/DI2/DC2 có | luật §1 thắng: một danh sách — bản kiểu Mac 2026-10-04 đã vẽ ô Look ("Look for this clip") trước Delete |
 | board P3 vẽ ô Edit, code hiện nói "không có Edit" | theo board: Edit cuộn ô nhập chữ lên đầu và mở bàn phím |

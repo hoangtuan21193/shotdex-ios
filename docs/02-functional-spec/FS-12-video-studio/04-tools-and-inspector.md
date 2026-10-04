@@ -85,7 +85,7 @@ Chọn nhiều clip một lúc dùng cùng ✕ · "N Clips" · ✓ ([11](11-mult
 | 5 công cụ khi đang chọn | iPhone: thanh thay hẳn bằng ✕ · tên · ✓; Duo trong và Duo ngoài: mờ 30%, không nhận chạm; iPad ngang: pool vẫn dùng được, chèn từ pool = ✓ cho item cũ trước; iPad dọc: 4 nút thêm nhường chỗ cho hàng lệnh |
 
 - **Tên** ở giữa: dòng 1 là tên item cỡ 14 đậm (clip: "Clip 2" / "Photo 2" / "Freeze 2" — số thứ tự
-  trên timeline, cùng tên viewer header dùng; app không có tên địa điểm nên không có phần "· Coast" của board; chữ:
+  trên timeline, cùng tên dòng "under playhead" dưới khung iPad dùng; app không có tên địa điểm nên không có phần "· Coast" của board; chữ:
   nội dung chữ; nhạc: tên bài), dòng 2 mono 11 trắng 35%: "6.2s · video", "Text · 1.0 → 5.0s", "Music · 0.0 → 18.4s".
 - ✕ là đĩa tối `rgba(24,24,26,.82)` viền trong 1pt trắng 14%; ✓ là đĩa **trắng, glyph đen** — accent chỉ dành cho
   Export ([DESIGN §3.1](../../../DESIGN.md)).

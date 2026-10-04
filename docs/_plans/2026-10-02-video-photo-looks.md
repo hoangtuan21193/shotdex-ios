@@ -4,7 +4,7 @@
 |---|---|
 | Đặc tả | [`FS-12.06c`](../02-functional-spec/FS-12-video-studio/06c-photo-looks.md) (16 AC — AC-16 thêm lúc duyệt) · [FS-12.06b §3](../02-functional-spec/FS-12-video-studio/06b-scopes-luts-and-tracking.md) (LUT là một loại look) · [FS-12.08 §2](../02-functional-spec/FS-12-video-studio/08-model-and-v1-limits.md) (project/clip giữ ô look) |
 | Intent | [2026-09-30-user-wishes-research](../_intents/2026-09-30-user-wishes-research.md), mục 8 |
-| Design | canvas Video Studio [docs/design](../design/README.md) (Version 23), hàng F5: `F5_P_Looks` · `F5_P_ClipLook` · `F5_DC_Looks` · `F5_DC_ClipLook` · `F5_DI_Looks` · `F5_DI_ClipLook` · `F5_IL_Looks` · `F5_IP_Looks`; dòng LUT mất trên `ES_P/DC/DI/IL_ExportSettings` — **4 board ES_* phải đổi chữ** theo spec (Q2, việc của canvas) |
+| Design | board trong repo — `F5_P_*` ở [`docs/design/iphone/project/`](../design/iphone/project/) · `F5_IL_Looks`, `F5_IP_Looks` ở [`docs/design/ipad/project/`](../design/ipad/project/) · `F5_DI_*`, `F5_DC_*` ở [`docs/design/duo/project/`](../design/duo/project/); board iPad vẽ lại kiểu Mac 2026-10-04 (commit `76df46d5`, xem khối M của [vs-wide-and-duo-layout](2026-10-03-vs-wide-and-duo-layout.md)). Hàng F5: `F5_P_Looks` · `F5_P_ClipLook` · `F5_DC_Looks` · `F5_DC_ClipLook` · `F5_DI_Looks` · `F5_DI_ClipLook` · `F5_IL_Looks` · `F5_IP_Looks`; dòng LUT mất trên `ES_P/DC/DI/IL_ExportSettings` — **4 board ES_* phải đổi chữ** theo spec (Q2, việc của canvas) |
 | Phụ thuộc | intent [video-studio-canvas-chrome](../_intents/2026-10-03-video-studio-canvas-chrome.md) — khung Video Studio dựng lại theo canvas **trước** mọi task của plan này (người dùng chốt 2026-10-03) |
 | Ngày | 2026-10-02 |
 | Trạng thái | **approved 2026-10-03 — chờ intent video-studio-canvas-chrome (khung mới) xong mới code**. 16 task = 16 commit (task 16 là phép đo máy thật; chỉ commit nếu phải lật công tắc §5 của spec). Quyết định ở §6 |
@@ -184,8 +184,8 @@ Người dùng chấp nhận mọi đề nghị, **trừ Q1**: khung Video Studi
   cho Duo và iPad). Trạng thái: Look cả video (Presets / My Looks có XMP / LUTs), Amount ẩn ở Original, This Clip với dòng
   phụ, LOOK FOR THIS CLIP + Use Video Look, pill trên lane, pill "· Missing" + chú thích, sheet Export có dòng LUT mất,
   gradient khi chưa có ảnh, báo cáo Import Look….
-- **design-parity**: 8 board F5 **cả board** (+ dòng LUT mất trên 4 board ES_* sau khi canvas sửa chữ, Q2) ≤ 2pt; export canvas vào
-  `build/design/video-studio/project/` trước khi chạy.
+- **design-parity**: 8 board F5 **cả board** (+ dòng LUT mất trên 4 board ES_* sau khi canvas sửa chữ, Q2) ≤ 2pt; render board từ
+  `docs/design/<thiết bị>/project/` trước khi chạy.
 - **Đo**: thời gian nướng/look (sim, task 2; iPhone 17, task 16); khung rơi 10 s (iPhone 17 + iPad thật, task 16).
 - **Tài liệu** cùng commit task: cột "Chứng minh bằng" của FS-12.06c từng AC; FS-12.07 §5 dòng "Preview filter thật
   ô 62pt" (tab Effects đã bỏ — task 6); FS-12.01 (thứ tự grade trước chuyển cảnh — task 1). **Đã sửa lúc duyệt

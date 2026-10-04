@@ -1,13 +1,13 @@
 # FS-12.14 — Phụ đề tự động
 
 `FS-12.14` · tier D · `Features/VideoStudio/` (mới) · `Domain/Video/VideoProjectModels.swift` · `Data/Sources/VideoFrameCompositor.swift`
-· nguồn intent [video-studio-canvas-chrome](../../_intents/2026-10-03-video-studio-canvas-chrome.md) (canvas hàng F4) · cập nhật 2026-10-03
+· nguồn intent [video-studio-canvas-chrome](../../_intents/2026-10-03-video-studio-canvas-chrome.md) (canvas hàng F4) · cập nhật 2026-10-04 (iPad kiểu Mac)
 
 **Một câu:** lời nói trong clip thành phụ đề sửa được, nhận dạng **hoàn toàn trên máy**, có kiểu chữ, ngôn ngữ, và
 nướng vào video lúc xuất.
 
 Code hôm nay: chưa target nào dùng Speech; chữ trên video là overlay chữ theo thời gian ([FS-12.08 §2](08-model-and-v1-limits.md)).
-Canvas: hàng F4 của [docs/design](../../design/README.md). Riêng tư: [NF-03](../../04-non-functional-design/NF-03-privacy-and-security.md).
+Board hàng F4: `F4_P_Captions` ([`docs/design/iphone/project/`](../../design/iphone/project/)) · `F4_IL_Captions`, `F4_IP_Captions` ([`docs/design/ipad/project/`](../../design/ipad/project/), kiểu Mac 2026-10-04) · `F4_DI_Captions`, `F4_DC_Captions` ([`docs/design/duo/project/`](../../design/duo/project/)). Riêng tư: [NF-03](../../04-non-functional-design/NF-03-privacy-and-security.md).
 
 ## 1. Người dùng cần gì
 
@@ -32,7 +32,8 @@ Language · Delete**; bốn kiểu, cỡ, ba vị trí; công tắc **Burn into 
 | iPhone 402×874 · `F4_P_Captions` | panel 340 tại y 450; hàng lệnh 6 ô 64×56 tại y 460, cuộn ngang, mép phải mờ 32; thẻ tiến độ; hàng **Language** 42 "English (US) ›"; tiêu đề **CAPTIONS · N**; danh sách khối; đáy 84: ✕ 44 · "Caption 2" / "0:06.0 → 0:07.4" · ✓ 44 |
 | Duo ngoài 466×678 · `F4_DC_Captions` | panel 382×344 tại y 334, hàng lệnh tại y 340, thẻ tiến độ rồi danh sách; dải 84: 5 công cụ mờ, khối tên 76×56 "Caption 2" / "6.0 → 7.4s", ✕ 44 tại y 504, ✓ 44 tại y 556, Export ẩn |
 | Duo trong 951×669 · `F4_DI_Captions` | cột phải 264 (cao 385): hàng lệnh tại y 12, mục đang mở (board: Style); lane C1 khối cao 28; hàng đáy: 5 công cụ mờ, góc phải ✕ 40 · tên · ✓ 40 |
-| iPad ngang 1376×1032 · `F4_IL_Captions` | tab **Text** của pool: **Add Text** và **Auto Captions** 220×44 + chú thích; inspector 280: hàng lệnh tại y 72, thẻ tiến độ, **CAPTION 2** ô chữ + giờ, rồi STYLE; chân ✕ 40 · tên · ✓ 40; lane C1 cao 44 (khối 34) trên cùng, trên T1 |
+| iPad ngang 1376×1032 · `F4_IL_Captions` (kiểu Mac 2026-10-04) | tab **Text** của pool: **Add Text** và **Auto Captions** 294×44 + chú thích; inspector 360: hàng lệnh tại y 80 (Edit · Style · Split · Merge · Language …), thẻ tiến độ, **Caption 2** ô chữ 328×44 + Expand Text Field 44 + giờ, rồi **Style** segmented Clean · Box · Outline · Word by Word (4 × 80×32, một hàng), Size slider 44, **Position** segmented Bottom · Middle · Top, Burn into video công tắc; chân 64: ✕ 44 · tên · ✓ 44; lane C1 cao 44 (**khối cao bằng lane**) trên cùng, trên T1, header "C1 Captions" + Lock |
+| iPad dọc 1032×1376 · `F4_IP_Captions` | như iPad ngang, nội dung trong dock 324: hàng lệnh y 1061; 3 cột 312 — Caption 2 (ô chữ + Expand) │ Caption Style segmented 312×36 + Size │ Position segmented 312×36 + Burn into video; chân 64 ở y 1312 |
 
 - **Lối vào trên mọi máy:** hàng **Auto Captions** ngay dưới Add Text — tab Text của pool (iPad) và panel công cụ
   Text (iPhone, Duo). *Vì* một hành động một chỗ (DESIGN §1.3). Đã có lane C1 thì hàng đổi thành "Edit Captions".

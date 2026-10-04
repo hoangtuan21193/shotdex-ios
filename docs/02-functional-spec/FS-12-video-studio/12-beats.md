@@ -2,7 +2,7 @@
 
 `FS-12.12` · tier D · `Domain/Video/` (lưới nhịp, toán dời cut — mới) · `Data/Sources/` (phân tích nhịp — mới, giải mã như
 `Features/VideoStudio/VideoWaveform.swift`) · `Data/Sources/ImportedMusicStore.swift` · nguồn intent
-[video-studio-canvas-chrome](../../_intents/2026-10-03-video-studio-canvas-chrome.md) F2 · cập nhật 2026-10-03
+[video-studio-canvas-chrome](../../_intents/2026-10-03-video-studio-canvas-chrome.md) F2 · cập nhật 2026-10-04 (iPad kiểu Mac)
 
 **Một câu:** app tự tìm nhịp của bản nhạc ngay trên máy, vẽ vạch nhịp lên timeline, cho mép clip và thời lượng
 dính vào nhịp, và dời mọi cut về ô nhịp gần nhất trong một bước undo.
@@ -34,7 +34,7 @@ nhạc và dải tổng quan; **Snap to beats** theo **Every Beat · Every Bar**
 |---|---|
 | iPhone · `F2_P_BeatDetect` | chọn băng nhạc: lát timeline 96 + dải tổng quan 28 tại y 422, panel 340 tại y 450; hàng lệnh nhạc **Beats · Ducking · Replace · Add Track · Duplicate · Delete**, Beats sáng; thẻ nhịp (đĩa 34 vàng mờ, "96 BPM · 4/4", "30 beats marked on A1 · found on this iPhone"); **Snap clips to beats** 42 + công tắc 42×26; **SNAP TO** Every Beat · Every Bar 30; **Offset** 40 "0 ms"; nút **Cut Clips to Beat** 44 bo `r-md`; chú thích "Moves every cut to the nearest bar. Photos stretch, videos trim. One undo."; **LEVEL** 370×8; đáy ✕ · "Morning Drive" / "Music · 96 BPM" · ✓ |
 | iPhone · `F2_P_BeatDuration` | chọn **clip ảnh** (clip 4 · Night): slider **Duration** 46 có vạch nhịp 1×18 vàng 0,45 trên rãnh, vạch đang dính 0,95; núm vàng 18 viền quầng 3pt; giá trị vàng "3.30s"; dòng "Ends on beat 28 · 0:17.50 · hold to move freely"; đáy "Clip 4 · Night" / "3.30s · on beat 28". Clip video không có Duration ([05 §3](05-cutting-markers-and-fades.md)) — board vẽ lại cho clip ảnh |
-| iPad ngang · `F2_IL_BeatSnap` | kéo tay nắm mép phải clip 2: đường dọc vàng 1,5pt cao hết vùng lane, pill vàng 196×20 "Beat 14 · 0:08.75 · −0.45s" chữ tối 11pt; inspector: ô **Trim** sáng, **không** có dòng Duration (clip video), chân inspector dòng phụ "5.75s · on beat 14", section **BEATS · A1 MORNING DRIVE** ("96 BPM · 4/4 detected", Snap to beats, Every Beat · Every Bar, Offset) |
+| iPad ngang · `F2_IL_BeatSnap` (kiểu Mac 2026-10-04) | kéo tay nắm mép phải clip 2: đường dọc vàng 1,5pt cao hết vùng lane, pill vàng **206×26** "Beat 14 · 0:08.75 · −0.45s" chữ tối trên thước; inspector 360: ô **Trim** sáng, **không** có dòng Duration (clip video), Speed · Volume, rồi mục **Beats · A1 Morning Drive** ("96 BPM · 4/4 detected", Snap to beats công tắc 51×31, **Snap To** segmented Every Beat · Every Bar 328×36, Offset slider 44); chân 64 dòng phụ "5.75s · on beat 14" |
 | Duo trong · `F2_DI_CutToBeat` | cột 264 ở trạng thái xem trước: **CUT TO BEAT**, chip Every Bar · 2 Bars · 4 Bars, "4 cuts move · largest +0.8s", "Photos stretch, videos trim", Snap to beats, Offset, nút trắng **Apply to 5 Clips** 40; lane V1 có mũi tên vàng từ mỗi cut tới ô nhịp đích + pill 40×16 "−0.5s" / "+0.8s"; đáy phải ✕ · "Morning Drive" / "96 BPM" · ✓ |
 | Duo ngoài · `F2_DC_Beats` | không có timeline: dải tổng quan 358×22 tại y 306 mang vạch nhịp; panel 382×344 tại y 334: thẻ nhịp "Morning Drive · 96 BPM" / "30 beats marked on A1", Snap 40, chip, **Cut Clips to Beat** 40, chú thích ngắn "Every cut moves to the nearest bar. One undo."; Offset và LEVEL nằm dưới, cuộn panel tới |
 

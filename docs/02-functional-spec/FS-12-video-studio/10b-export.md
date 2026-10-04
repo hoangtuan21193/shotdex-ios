@@ -1,13 +1,15 @@
 # FS-12.10b — Export
 
 `FS-12.10b` · tier D · `Features/VideoStudio/VideoExportSheet.swift` · `Data/Sources/VideoExportWriter.swift`
-· cập nhật 2026-10-03
+· cập nhật 2026-10-04 (iPad kiểu Mac)
 
 **Một câu:** Export không còn hỏi chất lượng — panel **Export Video** mở mà chưa xuất, trạng thái Sẵn sàng là danh
 sách preset của [16](16-export-presets.md), còn tài liệu này giữ khung panel, lúc đang xuất, huỷ và đường hỏng.
 
 Nguồn intent: [2026-10-03-video-studio-canvas-chrome](../../_intents/2026-10-03-video-studio-canvas-chrome.md).
-Canvas: [Video Studio](../../design/README.md) — `P7_Export` (đang xuất); trạng thái
+Board: `P7_Export` ([`docs/design/iphone/project/`](../../design/iphone/project/), đang xuất) · `IL5_Export`, `IP_Export`
+([`docs/design/ipad/project/`](../../design/ipad/project/), kiểu Mac 2026-10-04) · `DI6_Export`, `DC_Export`
+([`docs/design/duo/project/`](../../design/duo/project/)); trạng thái
 Sẵn sàng là `F8_*` của [16](16-export-presets.md). Nút Export ở chrome và mọi thông số xuất:
 [10](10-video-settings-and-export.md). Đường ghi file: [01 §9](01-render-and-export-pipeline.md).
 
@@ -25,7 +27,7 @@ Bấm nút Export ở chrome → **Export Video** mở, **chưa xuất**. *Vì n
 chạm nhầm không được tốn vài phút encode.*
 
 - Vùng, tiêu đề, cỡ nút xuất và vị trí từng máy: [16 §5](16-export-presets.md) (iPhone panel 340 + nút "Export for …"
-  382×50 ở đáy; iPad sheet 660; Duo trong cột 264; Duo ngoài panel 382 từ y 334). Đóng: [16 §5](16-export-presets.md).
+  382×50 ở đáy; iPad sheet **700** (kiểu Mac 2026-10-04); Duo trong cột 264; Duo ngoài panel 382 từ y 334). Đóng: [16 §5](16-export-presets.md).
 - Duo (cả hai màn): **không có nút xuất thứ hai** — chạm lần hai vào nút Export sẵn có (Duo trong 78×40 ở (829, 622),
   Duo ngoài tròn 44 ở y 556) là xuất. *Vì nút đã nằm dưới ngón cái.*
 - iPhone: hàng công cụ nhường chỗ cho nút xuất suốt lúc Export Video mở; Duo ngoài: năm ô công cụ mờ.
@@ -44,7 +46,7 @@ chạm nhầm không được tốn vài phút encode.*
 | Trạng thái | Hiển thị |
 |---|---|
 | Sẵn sàng | danh sách preset của [16 §5](16-export-presets.md) + dòng LUT mất (§3) + nút xuất |
-| Đang xuất | "Exporting… 62%" + thanh tiến độ theo bề rộng nút xuất + **Cancel Export** chữ đỏ trên nền đỏ tối, cao 48, ở chỗ nút xuất; ✕ ẩn; Back · Undo · Redo, timeline, khung không nhận chạm |
+| Đang xuất | "Exporting… 62%" + thanh tiến độ theo bề rộng nút xuất + **Cancel Export** chữ đỏ trên nền đỏ tối, cao 48, ở chỗ nút xuất; ✕ ẩn; Back · Undo · Redo, timeline, khung không nhận chạm. **iPad** (`IL5_Export`, `IP_Export`): sheet 700×572, chân sheet chia đôi — trái "Exporting… 62%" + thanh 360×6, phải **Cancel Export** 180×44; pill Export ở toolbar về nền `fill` |
 | Đang lưu | "Saving to Photos…", không Cancel |
 | Xong | Video Studio đóng, viewer hiện video mới ([01 §2](01-render-and-export-pipeline.md)) |
 | Lỗi | chữ đỏ nói lỗi + nút xuất trở lại |

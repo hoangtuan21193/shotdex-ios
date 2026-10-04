@@ -2,7 +2,7 @@
 
 `FS-12.11` · tier D · `Features/VideoStudio/VideoStudioModel.swift` (chọn, dời, xoá clip) · `VideoTimelineScroller.swift`
 (giữ-rồi-kéo) · `Domain/Video/VideoTimelineMath.swift` (điểm thả) · nguồn intent
-[video-studio-canvas-chrome](../../_intents/2026-10-03-video-studio-canvas-chrome.md) F1 · cập nhật 2026-10-03
+[video-studio-canvas-chrome](../../_intents/2026-10-03-video-studio-canvas-chrome.md) F1 · cập nhật 2026-10-04 (iPad kiểu Mac)
 
 **Một câu:** chọn vài clip một lúc rồi đổi tốc độ, âm lượng, look, motion, nhân đôi, xoá hoặc dời cả nhóm
 trong một thao tác và một bước undo.
@@ -31,14 +31,14 @@ Delete**; kéo cả nhóm tới một ranh giới clip; lệnh Move không cần
 | Máy · board | Bố cục khi đang chọn nhiều |
 |---|---|
 | iPhone 402×874 · `F1_P_MultiSelect` | timeline giữ đủ 464 (y 326); panel lô **260** tại y 530 trượt đè phần dưới timeline, còn 204pt timeline để chạm thêm clip; đáy 62: ✕ 44 · "3 Clips" / "14.2s · 2 videos + 1 photo" · ✓ 44 |
-| iPad ngang 1376×1032 · `F1_IL_MultiSelect` | inspector 280: hàng lệnh 7 ô, rồi các section **SPEED · AUDIO · FADE · LOOK** xếp chồng; chân 58: ✕ 40 · "3 Clips" / phụ đề như iPhone · ✓ 40; header viewer ghi "3 clips selected" |
+| iPad ngang 1376×1032 · `F1_IL_MultiSelect` (kiểu Mac 2026-10-04) | inspector 360: hàng lệnh 7 ô ở y 80 (thấy 5, cuộn), rồi các mục **Speed · Audio · Fade · Look** (Title Case) xếp chồng, dòng "Applies to the 2 videos · the photo keeps its 3.0s" dưới Speed; chân 64: ✕ 44 · "3 Clips" / phụ đề như iPhone · ✓ 44; dòng tên dưới khung (đầu hàng phát) ghi "3 clips selected" |
 | Duo trong 951×669 · `F1_DI_Reorder` | cột phải 264: hàng lệnh, Speed, Volume, LOOK ô 46; hàng đáy: 5 công cụ mờ 0,3, góc phải ✕ 40 · "2 Clips" / "8.0s" · ✓ 40 |
 | Duo ngoài 466×678 · `F1_DC_MultiSelect` | timeline cao **240** và thu về **18 pt/s** để thấy gần hết phim; panel lô 104 (hàng lệnh + một hàng điều khiển); dải 84: 5 công cụ mờ, khối tên 76×56 tại y 440 "3 Clips" / "14.2s", ✕ 44 tại y 504, ✓ 44 tại y 556 |
 
 - **Clip đang chọn:** viền trong 2pt `timelineSelection` (#57BFD1) + huy hiệu tròn 19pt cùng màu, dấu ✓ tối, cách
   mép phải và mép trên 5pt.
 - **Pill trạng thái** ở mép trên vùng lane: nền #57BFD1, chữ tối 11pt, "3 selected" rồi "14.2s" mờ 0,8; 190×22
-  (iPad 190×24). Pill ẩn trong lúc kéo dời.
+  (iPad kiểu Mac 154×26, ở x 212 đầu thước). Pill ẩn trong lúc kéo dời.
 - **Hàng lệnh** ô 64×56 bo `r-cell`, cuộn ngang, mép phải mờ 32pt; Delete chữ `timelineDestructive`.
 - Phụ đề đáy đếm loại: "2 videos + 1 photo"; chỉ một loại thì bỏ phần đếm. Số nhiều đi qua String Catalog.
 

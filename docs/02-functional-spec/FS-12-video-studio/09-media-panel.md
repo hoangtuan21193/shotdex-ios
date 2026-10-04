@@ -1,7 +1,7 @@
 # FS-12.09 — Media: thư viện ngay trong panel
 
 `FS-12.09` · tier D · thay `Features/VideoStudio/VideoMediaPicker.swift` và tab của `VideoMediaPoolColumn.swift`
-· `Data/Sources/PhotoLibraryService.swift` · cập nhật 2026-10-03
+· `Data/Sources/PhotoLibraryService.swift` · cập nhật 2026-10-04 (iPad kiểu Mac)
 
 **Một câu:** thêm ảnh và video vào phim mà không rời Video Studio — chạm là chèn ở playhead, giữ là kéo vào
 timeline, và luôn thấy thứ gì đã có trong phim.
@@ -58,7 +58,7 @@ giữ-kéo vào timeline · danh sách In Video · hàng quyền giới hạn. P
 | Thường (Recents) | tab · nút **Select** · nút tìm tròn 30 (`Search Library`), chỗ đặt theo §3; dòng phụ iPhone "Tap adds at 0:08.4 · hold to drag" |
 | Chọn nhiều | Select sáng; nút trắng **Add (3)** thay nút tìm; ô được chọn viền trắng 2 + số thứ tự góc trái trên; dòng phụ "3 selected · Add puts them at 0:08.4" |
 | Đang kéo | ô gốc thành ô gạch đứt; bóng ảnh 70×70 phóng 1.1×, nghiêng −3°, viền trắng 2; dòng phụ "Drop between clips · back on the grid cancels" |
-| In Video | danh sách theo thứ tự timeline, hàng 56 (iPhone và pool iPad 302×56); dòng phụ "6 items in this video" (pool iPad vẽ "In timeline order. Tap one to jump there and select it." — một luật một câu: dùng câu đếm như iPhone, sửa board) |
+| In Video | danh sách theo thứ tự timeline, hàng 56 (iPhone và pool iPad 302×56); dòng phụ "6 items in this video"; pool iPad (không có dòng phụ) có chú thích cuối danh sách "In timeline order. Tap one to jump there and select it." (board `MP_IL_InVideo` kiểu Mac) |
 | Albums | danh sách album (bìa · tên · số mục); chạm mở lưới của album, nút ‹ Albums ở chỗ hàng tab |
 | Tìm | ô tìm thay hàng tab, Cancel bên phải; lưới là kết quả |
 | Quyền `.limited` | hàng đầu Recents: khoá · "ShotDex can see the 12 items you chose." · nút **Manage Access…**; dòng phụ "Limited Photos access" |

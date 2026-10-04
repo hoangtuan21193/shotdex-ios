@@ -3,7 +3,7 @@
 `FS-12.06c` · tier D · `Domain/Video/VideoProjectModels.swift` · `Data/Sources/VideoFrameCompositor.swift`
 · `Domain/Editing/LookPresetStore.swift` · `Domain/Editing/LookExchange/LookCubeBaker.swift`
 · `Features/VideoStudio/VideoColorPanel.swift` · nguồn intent [user-wishes-research](../../_intents/2026-09-30-user-wishes-research.md)
-mục 8 · cập nhật 2026-10-03 (duyệt plan [video-photo-looks](../../_plans/2026-10-02-video-photo-looks.md))
+mục 8 · cập nhật 2026-10-04 (iPad kiểu Mac; duyệt plan 2026-10-03 [video-photo-looks](../../_plans/2026-10-02-video-photo-looks.md))
 
 **Một câu:** film look, My Looks (kể cả look nhập từ XMP Lightroom) và LUT của editor ảnh chọn được thẳng trong
 Video Studio, cho cả video hoặc từng clip, không phải xuất `.cube` rồi nhập lại.
@@ -33,7 +33,8 @@ Import Look… dùng chung kho với editor ảnh.
 | iPhone 402×874 | công cụ **Look** ở hàng đáy 5 ô (cả video); ô **Look** trong hàng lệnh clip (từng clip) | panel 340 tại y 450: tiêu đề "Look · Whole video" ✕ ✓; chip **Filter · Adjust · Color** 28; Filter → **Presets · My Looks · LUTs** 30; một hàng ô 70×70 cuộn ngang; Amount 40; **APPLY TO** All Clips · This Clip; dòng chú thích; **Import Look…** 42 |
 | Duo ngoài 466×678 | ô Look trong rail 84 | panel 382×344 tại y 334: cùng thứ tự, ô 60, Amount 36 |
 | Duo trong 951×669 | ô Look ở hàng đáy | cột phải 264: lưới 3×2 ô 66, Amount 34; cột cuộn xuống Apply To, chú thích, Import Look… |
-| iPad 1376×1032 | Look ở hàng đáy (cả video); inspector clip (từng clip) | inspector 280: **LOOK FOR THIS CLIP**, lưới 3×2 ô 72, Amount, **This Clip · Selected · All Clips**; chân tên clip ("Clip 2") / "Look · Moody Coast" |
+| iPad ngang 1376×1032 · `F5_IL_Looks` (kiểu Mac 2026-10-04) | inspector khi không chọn (cả video); ô **Look for this clip** trong hàng lệnh clip (từng clip) | inspector 360: hàng lệnh y 80; "Look for This Clip" + **Use Video Look** 150×44 bên phải; segmented Presets · My Looks · LUTs 276×36 + Import Look… 44 (icon); lưới 3×2 ô **103×72**; Amount 44; **This Clip · Selected · All Clips** segmented 328×36; chú thích; chân 64 tên clip ("Clip 2") / "Look · Moody Coast". Cả video: Filter · Adjust · Color segmented 328×36, lưới 3 cột ô 103×86, Intensity 44 |
+| iPad dọc 1032×1376 · `F5_IP_Looks` | như iPad ngang, trong dock 324 | dock: hàng lệnh y 1061; 3 cột 312: Look for This Clip (Use Video Look 140×44 · Presets/My Looks/LUTs 312×36 · ô 97×72 hàng 1) │ ô hàng 2 + Amount + chú thích │ Apply To 312×36 + Import Look… 312×44 + chú thích; chân 64 ở y 1312 |
 
 - Ô My Looks nhập từ preset mang nhãn **XMP** góc trên phải, như canvas. (Editor ảnh hôm nay ghi "Imported" dưới
   tên; đổi editor theo canvas là việc riêng ở `REVIEW_QUEUE.md`, không thuộc spec này.)
@@ -130,10 +131,10 @@ Look mẫu **Moody Coast**: Exposure +0,3 · Contrast +20 · Velvia 100% · Grai
 | AC-8 | clip 2 dùng LUT "Kodak 2383", file đã xoá khỏi LUTs | mở project, rồi mở Export | clip 2 render như không look; pill "Kodak 2383 · Missing"; Export chạy được, sheet có dòng "1 look is missing its LUT…" | một phần: `VideoLUTRendererTests.aMissingFileLeavesTheFrameAlone` |
 | AC-9 | project không look | mở Look, chạm Velvia, chạm Moody Coast, kéo Amount 70, bấm ✕ | project về không look; số bước undo bằng lúc trước khi mở panel | ⚠️ chưa có |
 | AC-10 | như AC-9 nhưng bấm ✓ | Undo 3 lần, từng lần một | lần 1: Moody Coast 100; lần 2: Velvia; lần 3: không look | ⚠️ chưa có |
-| AC-11 | playhead 7,0 s nằm trong clip 2; Look (cả video), This Clip | chạm Warm Fjord | chỉ clip 2 có look; dòng phụ tiêu đề là "Clip 2" (tên clip của header viewer); look cả video không đổi | ⚠️ chưa có |
+| AC-11 | playhead 7,0 s nằm trong clip 2; Look (cả video), This Clip | chạm Warm Fjord | chỉ clip 2 có look; dòng phụ tiêu đề là "Clip 2" (tên clip dưới playhead); look cả video không đổi | ⚠️ chưa có |
 | AC-12 | clip 2 Night Teal; Look (cả video), All Clips | chạm Velvia | cả 3 clip Velvia, pill clip 2 biến mất; một Undo trả Night Teal cho clip 2 | ⚠️ chưa có |
 | AC-13 | Look → Filter → My Looks | Import Look… chọn một `.xmp` hợp lệ; lần sau chọn một `.cube`; lần ba huỷ picker | xmp: đứng đầu My Looks, nhãn XMP, đã được chọn, editor ảnh cũng thấy; cube: vào LUTs và được chọn; huỷ: không đổi gì | ⚠️ chưa có |
-| AC-14 | iPhone 402×874 · Duo ngoài 466×678 · Duo trong 951×669 · iPad 1376×1032 | mở Look (iPad: chọn clip) | khớp **cả board** F5_P/F5_DC/F5_DI/F5_IL lệch ≤ 2pt, chrome lẫn panel (ô 70/60/66/72); Apply To tới được; không control nào dưới góc bo hay rail 84 | ⚠️ chưa có — agent `design-parity` + `Tools/sim-shot`; đo sau khi khung mới của intent [video-studio-canvas-chrome](../../_intents/2026-10-03-video-studio-canvas-chrome.md) xong |
+| AC-14 | iPhone 402×874 · Duo ngoài 466×678 · Duo trong 951×669 · iPad 1376×1032 | mở Look (iPad: chọn clip) | khớp **cả board** F5_P/F5_DC/F5_DI/F5_IL (iPad kiểu Mac) lệch ≤ 2pt, chrome lẫn panel (ô 70/60/66/103×72); Apply To tới được; không control nào dưới góc bo hay rail 84 | ⚠️ chưa có — agent `design-parity` + `Tools/sim-shot`; đo sau khi khung mới của intent [video-studio-canvas-chrome](../../_intents/2026-10-03-video-studio-canvas-chrome.md) xong |
 | AC-15 | clip HEVC 4K 30 fps, Moody Coast + Clarity 30 + Texture 20 + Dehaze 15, preview 1280; máy thật iPhone 17 và iPad | play 10 s, có một dissolve giữa hai look | ≤ 3 khung rơi trong 10 s, kể cả trong dissolve | ⚠️ chưa có — máy thật |
 | AC-16 | cả video Velvia; clip 2 có look riêng Night Teal | chọn clip 2 → LOOK FOR THIS CLIP → **Use Video Look** | clip 2 render Velvia như clip 1 và 3; pill trên lane của clip 2 mất; undo +1 | ⚠️ chưa có (thêm 2026-10-03) |
 
@@ -147,3 +148,4 @@ Look mẫu **Moody Coast**: Exposure +0,3 · Contrast +20 · Velvia 100% · Grai
 | Thời gian nướng một bảng 33³ qua chuỗi ảnh chưa đo; My Looks 50 look = 50 lần nướng cho ô | mục tiêu ≤ 50 ms/look trên iPhone 17; ô điền dần, gradient thay thế trong lúc chờ |
 | Bảng 33³ cắt giá trị ngoài 0…1 (HLG chưa de-log) | đã đúng với film look hiện có; de-log đứng đầu chuỗi |
 | Export `.cube` liệt Brilliance là "mất" dù pass của nó là từng pixel (bán kính 0) | xem lại ở `/plan`; video nướng Brilliance vào bảng |
+| Board iPad kiểu Mac `F5_IL_Looks` vẽ **Use Video Look** màu accent (`t.accent`), trái Q6 (chữ trắng) | spec giữ chữ trắng — accent chỉ cho Export; sửa board ở lượt `design-parity` của khối M ([plan wide-duo](../../_plans/2026-10-03-vs-wide-and-duo-layout.md)) |

@@ -1,13 +1,13 @@
 # FS-12.17 — Cắt từng khung và scrub chính xác
 
 `FS-12.17` · tier D · `Features/VideoStudio/` (timeline, viewer, inspector) · `Domain/Video/VideoTimelineMath.swift`
-· nguồn intent [video-studio-canvas-chrome](../../_intents/2026-10-03-video-studio-canvas-chrome.md) (F6) · cập nhật 2026-10-03
+· nguồn intent [video-studio-canvas-chrome](../../_intents/2026-10-03-video-studio-canvas-chrome.md) (F6) · cập nhật 2026-10-04 (iPad kiểu Mac)
 
 **Một câu:** dời mép một clip đúng từng khung hình, nhìn thấy khung mình đang cắt, bằng ngón tay, Apple Pencil
 hay nút ±1 khung, và scrub timeline từng khung một.
 
 Tay nắm mép clip và lệnh Trim (Start/End to Playhead): [FS-12.05](05-cutting-markers-and-fades.md). Chọn nhiều: [FS-12.11](11-multi-select-and-reorder.md). Bàn phím và
-con trỏ: [FS-12.17b](17b-keyboard-and-pointer.md). Canvas: hàng F6 của [docs/design](../../design/README.md).
+con trỏ: [FS-12.17b](17b-keyboard-and-pointer.md). Board hàng F6: `F6_P_*` ([`docs/design/iphone/project/`](../../design/iphone/project/)) · `F6_IP_PencilTrim`, `F6_IL_*` ([`docs/design/ipad/project/`](../../design/ipad/project/), kiểu Mac 2026-10-04) · `F6_DI_*`, `F6_DC_*` ([`docs/design/duo/project/`](../../design/duo/project/)).
 
 ## 1. Người dùng cần gì
 
@@ -43,8 +43,8 @@ không thể lệch: một chạm là một khung.
 |---|---|---|
 | iPhone 402×874 | F6_P_PreciseTrim | Panel ẩn, timeline cao 464 (như lúc không chọn). Pill nổi 248×48 bo 24 tại (77, 728): **‹ −1 Frame** · thời điểm 15pt + "−4 frames" 10.5pt · **+1 Frame ›** (nút 76×40 bo 12). Đáy 62: ✕ 44 · "Trim · Clip 2" / "0:09.07 · −4 frames" · ✓ 44 trắng |
 | Duo trong 951×669 | F6_DI_TouchTrim | Cột phải 264: hàng lệnh (ô 64×56) bắt đầu **−1 Frame · +1 Frame · Frame Zoom · Trim** (Trim nền trắng 14%); Split ẩn; sau đó Speed … Delete. Dưới: Speed · Volume (clip video không có Duration — [05 §3](05-cutting-markers-and-fades.md)), khối **PRECISION** (2 công tắc, §7), chú thích. Hàng đáy: 5 công cụ mờ, không nhận chạm; bên phải ✕ 40 · "Trim · Clip 2" / "0:09.07 · −4 f" · ✓ 40 |
-| iPad dọc 1032×1376 | F6_IP_PencilTrim | Dock 324: hàng lệnh có **Trim** bật; ba cột: Speed · Volume │ **PENCIL** (2 công tắc, §8) │ **TRIM**: Start to Playhead · End to Playhead + 2 dòng chú thích. Chân: ✕ 44 · "Trim · Clip 2" / "0:09.07 · −4 frames" · ✓ 44 — cùng chữ với iPhone |
-| iPad ngang 1376×1032 | không có board | như iPad dọc, khối PENCIL và TRIM xếp dọc trong inspector 280 dưới hàng lệnh |
+| iPad dọc 1032×1376 | F6_IP_PencilTrim (kiểu Mac 2026-10-04) | Dock 324: hàng lệnh có **Trim** bật (y 1061); **bốn** cột 238 cách 16 (dock thường là 3 × 312): **Trim** (Start to Playhead · End to Playhead 238×44 + "Or drag the clip's edges on the timeline.") │ Speed · Volume │ **Pencil** (2 công tắc 51×31, §8, + "Double-tap the Pencil to switch between trim and scrub.") │ **Precision** (2 công tắc, §7). Chân 64 ở y 1312: ✕ 44 · "Trim · Clip 2" / "0:09.07 · −4 frames" · ✓ 44 — cùng chữ với iPhone |
+| iPad ngang 1376×1032 | không có board | như iPad dọc, các khối Trim · Speed/Volume · Pencil · Precision xếp dọc trong inspector 360 dưới hàng lệnh (y 80), cuộn |
 | Duo ngoài 466×678 | F6_DC_PreciseTrim (vẽ thêm) | Vùng nội dung 382 rộng; panel ẩn, timeline 334–644; tên "Trim · Clip 2" / "0:09.07 · −4 frames" ở dòng đầu vùng timeline; pill 248×48 giữa vùng 382 (x 67), đáy pill cách 644 là 14pt (y 582–630); kính Ø124; dải 84: 5 công cụ mờ, ✕ 44 ở y 504, ✓ 44 ở y 556, Export ẩn — như khi chọn item |
 
 - Viewer: nhãn góc trên trái "**Last frame** · 0:09.07" (mép cuối) hoặc "**First frame** · …" (mép đầu), cao 22
@@ -54,8 +54,8 @@ không thể lệch: một chạm là một khung.
 
 ## 5. Kính lúp và bước từng khung
 
-- **Kính lúp** hiện khi ngón (hoặc Pencil) đang giữ mép: tròn Ø124 (iPhone), Ø140 (Duo trong), Ø208 (iPad); viền
-  trắng 3pt; tâm ngang đúng mép. Đáy kính cách mép trên clip 2pt (iPhone), 25pt (Duo trong), 8pt (iPad); chạm mép màn thì
+- **Kính lúp** hiện khi ngón (hoặc Pencil) đang giữ mép: tròn Ø124 (iPhone), Ø140 (Duo trong), **Ø152** (iPad kiểu Mac; trước 208); viền
+  trắng 3pt; tâm ngang đúng mép. Đáy kính cách mép trên clip 2pt (iPhone), 25pt (Duo trong), 20pt (iPad); chạm mép màn thì
   trượt vào trong, cách mép 8pt. Nhấc tay thì kính ẩn; pill, nhãn viewer và chế độ vẫn còn.
 - Trong kính: **10 khung liền nhau** (dải 13pt, bước 14pt trên iPhone), 5 khung trước và 5 khung sau đường cắt.
   Đường cắt dày 3pt màu `timelineSelection`. Nhãn đáy kính "0:09.07 · −4 f" (iPhone), "· −4 frames" (Duo trong, iPad).
@@ -87,8 +87,8 @@ không thể lệch: một chạm là một khung.
 | Frame steps with haptics | bật | không có haptic mỗi khung; bước vẫn đúng khung |
 | Frame zoom on pinch | bật | trần zoom giữ 160 pt/giây; ô Frame Zoom vẫn dùng được |
 
-- Lưu theo máy, không theo project. Duo trong: khối PRECISION trong cột phải. **iPad: hai công tắc nằm cạnh khối
-  PENCIL** của chế độ Trim (board `F6_IP_PencilTrim` vẽ thêm) — transport bàn dựng iPad không có ⋯ (chốt 2026-10-03).
+- Lưu theo máy, không theo project. Duo trong: khối PRECISION trong cột phải. **iPad: hai công tắc là cột Precision cạnh cột
+  Pencil** của chế độ Trim (board `F6_IP_PencilTrim` kiểu Mac đã vẽ) — transport bàn dựng iPad không có ⋯ (chốt 2026-10-03).
   iPhone, Duo ngoài: mục **Precision** trong menu ⋯ của transport. *Vì panel iPhone ẩn khi đang cắt, và điện thoại có đủ mọi thứ iPad có.*
 
 ## 8. Apple Pencil (iPad)
@@ -157,6 +157,7 @@ Project mẫu 30 fps: Clip 1 ảnh 3,0 s · **Clip 2** video nguồn 12,0 s, c�
 
 | Rủi ro | Xử lý |
 |---|---|
+| Board iPad kiểu Mac `F6_IP_PencilTrim` ghi nhãn đáy kính "0:09.07 · −4f"; §5 ghi iPad "· −4 frames" | spec giữ "−4 frames" (cùng chữ với chân); sửa board ở lượt `design-parity` của khối M |
 | Giải mã 10 khung chính xác mỗi lần bấm ±1 trễ quá 100 ms với HEVC 4K | giải mã ở cỡ kính, chỉ thêm 1 khung mới mỗi bước; đo trên máy thật trước khi chốt |
 | Timeline ở 360 pt/giây với project 10 phút rộng 216 000pt | thumbnail phải chỉ dựng ô giao vùng nhìn — **code hôm nay dựng mọi ô** của clip (sửa ở task 13 của plan precise-trim-input); kiểm 60 fps cuộn theo NF-01 |
 | Long-press 0,32 s trên timeline hôm nay là đổi thứ tự clip, và FS-12.11 dùng giữ 0,5 s trên clip để vào chế độ chọn — cả hai tới trước hoặc cùng lúc với tay nắm | vùng chạm của tay nắm không thuộc hai cử chỉ đó; giữ trên **thân** clip vẫn theo [FS-12.11](11-multi-select-and-reorder.md) |

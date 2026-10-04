@@ -13,8 +13,8 @@ nhạc, chữ, và một tầng màu đủ để grade.
 |---|---|---|
 | 01 | [Render và export](01-render-and-export-pipeline.md) | một đường dựng cho cả preview lẫn export, compositor tự viết, xương sống cho ảnh |
 | 02 | [Năng lực biên tập](02-editing-capabilities.md) | speed, freeze, split, tỉ lệ khung, nền, nhạc nhiều bản, sticker |
-| 03 | [Bố cục cửa sổ rộng](03-timeline-and-desk-layout.md) | iPad ngang bàn dựng ba cột, iPad dọc dock 324, Duo trong cột 264 |
-| 03b | [Băng bàn dựng và lane màn rộng](03b-desk-bands-and-lanes.md) | pool, viewer header, Quick Adjust, transport, dải tổng quan, meter, track header |
+| 03 | [Bố cục cửa sổ rộng](03-timeline-and-desk-layout.md) | iPad kiểu Mac (2026-10-04): ngang pool kính 320 · khung · inspector 360 + toolbar capsule, dọc dock 324; Duo trong cột 264 |
+| 03b | [Băng bàn dựng và lane màn rộng](03b-desk-bands-and-lanes.md) | pool, hàng phát dưới khung, hàng công cụ timeline, Quick Adjust, dải tổng quan, meter, track header 200 |
 | 04 | [Thanh công cụ và mô hình chọn](04-tools-and-inspector.md) | 5 công cụ để thêm, Look và Video Settings cho cả video, ✕ · tên · ✓, Video sound là mức âm duy nhất |
 | 04b | [Hàng lệnh của item](04b-command-rows.md) | ô 64×56 cuộn ngang theo tần suất, Delete cuối, panel không đổi cao, video không có Duration |
 | 05 | [Cắt, marker, fade](05-cutting-markers-and-fades.md) | tay nắm mép và Trim to Playhead, độ dài transition, snapping, fade |

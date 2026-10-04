@@ -1,7 +1,7 @@
 # FS-12.17b — Bàn phím, danh sách phím tắt và skim bằng con trỏ
 
 `FS-12.17b` · tier D · `Features/VideoStudio/VideoStudioScreen.swift` (lớp phím ẩn) · `VideoMediaPoolColumn.swift`
-· `VideoViewerChrome.swift` · nguồn intent [video-studio-canvas-chrome](../../_intents/2026-10-03-video-studio-canvas-chrome.md) (F6) · cập nhật 2026-10-03
+· `VideoViewerChrome.swift` · nguồn intent [video-studio-canvas-chrome](../../_intents/2026-10-03-video-studio-canvas-chrome.md) (F6) · cập nhật 2026-10-04 (iPad kiểu Mac)
 
 **Một câu:** cắm bàn phím là dựng được bằng phím như ở NLE trên máy tính, giữ ⌘ là thấy mọi phím; trên iPad, rê con
 trỏ qua một video trong thư viện là xem lướt nó mà không chạm vào timeline.
@@ -86,17 +86,17 @@ Mọi phím chạy trên mọi máy; danh sách trên iPhone và Duo gộp còn 
 
 - Con trỏ trên một **ô video** của thư viện Media (Recents, Albums, In Video): vị trí ngang trong ô → thời điểm trong nguồn
   (46% của 0:05 → 0:02.3). Viewer chiếu khung nguồn đó, chưa áp look. *Vì clip chưa ở trong project.*
-- Header viewer đổi thành "**Skimming** · Lake · 0:02.3 / 0:05"; ô có vạch dọc 1pt tại con trỏ; nhãn 76×20 bo 10 trên ô ghi
+- Dòng tên dưới khung (đầu hàng phát, thay viewer header đã bỏ ở bố cục kiểu Mac 2026-10-04 — [03b §1](03b-desk-bands-and-lanes.md)) đổi thành "**Skimming** · Lake · 0:02.3 / 0:05"; ô có vạch dọc 1pt tại con trỏ; nhãn 76×20 bo 10 trên ô ghi
   thời điểm; dưới hàng ô dòng "Click adds · drag to place" 10.5pt, 55% trắng, căn phải.
 - Playhead, thời gian transport và timeline **không đổi**. Con trỏ rời ô: viewer trở lại khung tại playhead ngay khung kế.
-- Ô ảnh: viewer chiếu ảnh, header "Skimming · <tên>", không có vạch, không nhãn thời điểm.
+- Ô ảnh: viewer chiếu ảnh, dòng tên "Skimming · <tên>", không có vạch, không nhãn thời điểm.
 - Đang phát thì không skim. *Vì hai thứ tranh nhau một viewer.*
 - Click = chèn ở playhead; kéo = đặt vào timeline ([FS-12.09](09-media-panel.md)). Con trỏ trên tay nắm mép clip có hình mũi tên hai chiều ngang.
 - Giải mã: một yêu cầu đang chạy, yêu cầu mới thay cũ, tối đa 30 lần/giây, cỡ viewer (cạnh dài ≤ 1280).
 
 ## 7. Đường hỏng
 
-- **Video chỉ có trên iCloud** (có mạng hay không): skim **không** tải; viewer phóng to thumbnail của ô, header thêm
+- **Video chỉ có trên iCloud** (có mạng hay không): skim **không** tải; viewer phóng to thumbnail của ô, dòng tên thêm
   "· Not downloaded". Nhãn thời điểm vẫn chạy.
 - **`.limited`:** thư viện chỉ có ảnh được phép; skim chỉ chạm tới những ô đó.
 - **Phát lùi không được** (item không hỗ trợ): J lùi bằng chuỗi tìm khung 15 lần/giây, tắt tiếng; nhãn vẫn "1×/2×/4×".
@@ -120,9 +120,9 @@ Project mẫu 30 fps của [FS-12.17 §12](17-precise-trim-and-input.md), playhe
 | AC-9 | Duo trong, danh sách đã tự hiện một lần | giữ ⌘ 0,6 s rồi thả | thẻ 640×300 hiện khi giữ, biến mất khi thả; mở lại app không tự hiện nữa | ⚠️ chưa có |
 | AC-10 | iPad, bàn phím cứng | giữ ⌘ | danh sách phím của hệ thống có đủ 28 lệnh, chia Playback · Edit · View, tên đúng board F6_IL_Shortcuts; không có thẻ do app vẽ | ⚠️ chưa có — máy thật hoặc simulator có bàn phím |
 | AC-11 | chế độ Trim từng khung mở, đã −4 frames | bấm Esc | như ✕: recipe như trước khi vào chế độ | ⚠️ chưa có |
-| AC-12 | iPad, video Lake 5,0 s trong thư viện, playhead 8,40 s | con trỏ tới 46% bề ngang ô | header "Skimming · Lake · 0:02.3 / 0:05"; viewer chiếu khung nguồn 2,3 s; transport vẫn "0:08.4" | ⚠️ chưa có |
-| AC-13 | AC-12 | con trỏ rời ô | header trở lại tên clip dưới playhead; viewer chiếu khung 8,40 s | ⚠️ chưa có |
-| AC-14 | video chỉ có trên iCloud, tắt mạng | rê con trỏ qua ô | không có request mạng; viewer chiếu thumbnail; header có "· Not downloaded" | ⚠️ chưa có |
+| AC-12 | iPad, video Lake 5,0 s trong thư viện, playhead 8,40 s | con trỏ tới 46% bề ngang ô | dòng tên dưới khung "Skimming · Lake · 0:02.3 / 0:05"; viewer chiếu khung nguồn 2,3 s; transport vẫn "0:08.4" | ⚠️ chưa có |
+| AC-13 | AC-12 | con trỏ rời ô | dòng tên trở lại tên clip dưới playhead; viewer chiếu khung 8,40 s | ⚠️ chưa có |
+| AC-14 | video chỉ có trên iCloud, tắt mạng | rê con trỏ qua ô | không có request mạng; viewer chiếu thumbnail; dòng tên có "· Not downloaded" | ⚠️ chưa có |
 | AC-15 | board F6_P_Keyboard, F6_DI_Keyboard, F6_DC_Keyboard, F6_IL_HoverScrub | `design-parity` trên từng board | mọi phần tử lệch ≤ 2pt, không thiếu, không thừa | ⚠️ chưa có |
 | AC-16 | In 5,0 s, Out 12,0 s, playhead 8,4 s | bấm Home, rồi End | playhead 5,0 s, rồi 12,0 s; ⌥X rồi Home → 0,0 s | ⚠️ chưa có |
 | AC-17 | In 5,0 s, Out 12,0 s | Export | file dài đủ 24,0 s (In–Out không cắt bản xuất); recipe clip không đổi | ⚠️ chưa có |

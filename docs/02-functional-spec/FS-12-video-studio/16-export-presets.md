@@ -1,7 +1,7 @@
 # FS-12.16 — Preset xuất theo nơi đăng
 
 `FS-12.16` · tier D · `Features/VideoStudio/VideoExportSheet.swift` · `Domain/Video/VideoProjectModels.swift` (preset xuất, tỉ lệ)
-· `Data/Sources/VideoExportWriter.swift` · nguồn intent [video-studio-canvas-chrome](../../_intents/2026-10-03-video-studio-canvas-chrome.md) (canvas hàng F8) · cập nhật 2026-10-03
+· `Data/Sources/VideoExportWriter.swift` · nguồn intent [video-studio-canvas-chrome](../../_intents/2026-10-03-video-studio-canvas-chrome.md) (canvas hàng F8) · cập nhật 2026-10-04 (iPad kiểu Mac)
 
 **Một câu:** chọn nơi sẽ đăng (Reels/TikTok, YouTube, Instagram…) là đủ tỉ lệ, độ phân giải, fps và codec cho
 lần xuất đó, kèm dung lượng ước tính — không phải chỉnh từng thông số.
@@ -9,7 +9,7 @@ lần xuất đó, kèm dung lượng ước tính — không phải chỉnh t�
 Video Settings (tỉ lệ, nền khi Fit, độ phân giải, fps, codec, kích thước ước tính) và luồng sau khi xuất:
 [FS-12.10](10-video-settings-and-export.md) — tài liệu này **chỉ** nói preset. Trạng thái **Sẵn sàng** của panel Export
 Video là của tài liệu này (chốt 2026-10-03); khung panel, Đang xuất, huỷ và đường hỏng ở [10b](10b-export.md). Đường render: [FS-12.01](01-render-and-export-pipeline.md).
-Canvas: hàng F8 của [docs/design](../../design/README.md).
+Board hàng F8: `F8_P_ExportPresets` ([`docs/design/iphone/project/`](../../design/iphone/project/)) · `F8_IL_ExportPresets`, `F8_IP_ExportPresets` ([`docs/design/ipad/project/`](../../design/ipad/project/), kiểu Mac 2026-10-04) · `F8_DI_ExportPresets`, `F8_DC_ExportPresets` ([`docs/design/duo/project/`](../../design/duo/project/)).
 
 ## 1. Người dùng cần gì
 
@@ -70,19 +70,20 @@ Một buổi chụp ra một bản dựng 16:9 cho YouTube và một bản 9:16 
 | Máy · board | Mở bằng | Bố cục |
 |---|---|---|
 | iPhone 402×874 · `F8_P_ExportPresets` | nút Export tròn 36 ở băng trên | panel 340 tại y 450: "Export Video" 14,5 semibold + "0:24" mono + ✕ 32; 6 dòng cao 54 (icon 34 vẽ hình tỉ lệ, tên 13,5, thông số mono 10,5, dung lượng mono 11,5, ✓); hàng Fit/Fill 181×30; đáy 84 tại y 790: **Export for Reels / TikTok ~30 MB** 382×50 `r-md` accent thay hàng 5 công cụ |
-| iPad ngang 1376×1032 · `F8_IL_ExportPresets` | pill Export ở băng trên | sheet giữa màn rộng **660** (x 358): "Export Video" + Close 32; **WHERE IS IT GOING**; lưới 2 cột thẻ 300×78 cách 12; Fit/Fill 302×32; dòng "0:24 · H.264 · saved to Photos, then Share"; nút 612×50 |
+| iPad ngang 1376×1032 · `F8_IL_ExportPresets` (kiểu Mac 2026-10-04) | pill Export 124×44 ở toolbar | form sheet giữa màn **700×620** (x 338, y 206) bo 22, nền `sheet`, scrim `scrim` phủ màn; lề 24: "Export Video" 20 semibold + "5 clips · 16:9 · 0:24" + Close 44; **Where Is It Going** (Title Case); lưới 2 cột thẻ **320×72** cách 12; **Your Project Is 16:9** + Fit/Fill segmented 652×36 (nút 323×32); dòng "0:24 · H.264 · saved to Photos, then Share"; dòng LUT mất; chân sheet kẻ trên: trái "1080×1920 · 0:24 · ~30 MB" mono, phải nút accent **Export for Reels / TikTok** 270×44 |
 | Duo trong 951×669 · `F8_DI_ExportPresets` | nút Export ở góc phải dưới | cột phải 264: "Export Video" + Close 28; 5 dòng cao 45; Fit/Fill 114×28; khung cắt 217×385 trên vùng khung 684×385; góc phải dưới giữ nút cài đặt 153,7×40 + **Export** 77,7×40 accent |
 | Duo ngoài 466×678 · `F8_DC_ExportPresets` | Export tròn 44 trong dải 84 | panel 382 tại y 334: 5 dòng cao 43, Fit/Fill 173×28, chú thích "Export in the rail uses the chosen preset."; dải: Video Settings 44 tại y 504, Export 44 accent tại y 556 |
 
 - **Dòng đang chọn:** viền trong 1,5pt trắng + nền trắng 8%, `r-md`, dấu ✓ trắng; chạm dòng khác là chọn nó.
-- **Một accent:** khi panel mở, nút Export ở băng trên (iPhone, iPad) về nền trắng 10%; accent chuyển sang nút
+- **Một accent:** khi panel mở, nút Export ở băng trên (iPhone) / toolbar (iPad) về nền trắng 10%; accent chuyển sang nút
   "Export for …". Duo trong và Duo ngoài không có nút lớn: nút Export sẵn có là nút xuất.
 - **Mở và đóng:** chạm Export lần đầu mở panel, **không** xuất. Đóng bằng ✕/Close, chạm lại nút Export ở băng trên
   (iPhone, iPad), hoặc vuốt panel xuống. Duo ngoài: khi panel mở, chạm Export trong dải là xuất; chạm một công cụ
   trong dải là đóng panel và mở công cụ đó. *Vì* board DC không có ✕ và không có nút lớn.
 - Nhãn nút xuất: "Export for <tên preset>"; Custom thì "Export". Duo trong vẽ chữ "Export" nhưng VoiceOver đọc đủ
   "Export for Reels / TikTok".
-- iPad dọc · `F8_IP_ExportPresets`: sheet 660 như iPad ngang.
+- iPad dọc · `F8_IP_ExportPresets`: sheet 700×620 như iPad ngang, ở (166, 378). Bề rộng 700 theo board (bản trước
+  ghi 660 — người dùng chọn board 2026-10-04); 700 là trần form sheet iPad của [IPAD_STYLE](../../design/ipad/IPAD_STYLE.md).
 - Dòng thông tin dưới Fit/Fill (iPad): "<thời lượng> · <codec> · saved to Photos, then Share"; project ảnh server
   ([FS-17.06](../FS-17-import-from-server/06-edit-and-export.md)): "… · then choose where it goes".
 
@@ -135,3 +136,4 @@ Project mẫu 16:9, 24,0 s ([FS-12.14 §9](14-captions.md)), nền đen, clip 10
 |---|---|
 | FS-12.10 viết song song; công thức dung lượng, luật 4K, nền Fit nằm ở đó | preset chỉ tham chiếu; `/plan` đối chiếu hai tài liệu trước khi code |
 | Writer hôm nay chỉ H.264 và 30 fps cố định | HEVC và fps khác là việc của FS-12.10; preset chỉ truyền thông số |
+| Board iPad kiểu Mac `F8_IL`/`F8_IP` vẽ pill Export ở toolbar **vẫn accent** (dưới scrim) khi sheet mở; `IL5_Export` vẽ nó nền `fill` | luật "Một accent" (§5) giữ: pill toolbar về nền trắng 10% khi sheet mở; sửa hai board F8 ở lượt `design-parity` |
