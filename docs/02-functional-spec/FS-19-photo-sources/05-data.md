@@ -48,7 +48,8 @@ nằm ở sidecar và ở bảng riêng khoá theo id đó, **không bao giờ**
 
 - **Bản sao** có id bền, duy nhất theo (nguồn, đường dẫn tương đối chuẩn NFC + gấp hoa-thường). Lượt index **cập nhật
   tại chỗ** theo khoá đó, không xoá-rồi-chèn; không khoá ngoại xoá dây chuyền. Đổi tên/chuyển chỗ giữ id bản sao.
-- **Hash** riêng bảng: một hash đầy đủ chỉ thuộc một nội dung theo mỗi thuật toán; hash nhanh có chỉ mục thường (được trùng).
+- **Hash** riêng bảng, một dòng mỗi bản sao: hash đầy đủ và hash nhanh đều có chỉ mục **thường** — hai bản sao cùng
+  nội dung mang cùng hash đầy đủ; luật gộp (§4) giữ **một id ảnh cho mỗi hash đầy đủ**.
 - **Duplicates** khoá theo (độ chặt, nguồn, id ảnh); trạng thái lượt quét trùng cũng tách theo nguồn.
 - **Ẩn** là cột của bản sao. Ảnh **ẩn khi và chỉ khi mọi bản sao của nó ẩn**.
 - Chỉ mục: bản sao theo (nguồn, id ảnh) · bản sao theo (id ảnh, online) · ảnh theo lúc mồ côi (chỉ dòng có giá trị).

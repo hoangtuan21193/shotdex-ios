@@ -158,33 +158,39 @@ struct PerceptualHashStore: Sendable {
 
     /// Replaces the cached groups of `strictness` with `groups` and stamps the
     /// scan state. One transaction, so a reader never sees a half-written cache.
-    func replaceGroups(_ groups: [DuplicateGroup], strictness: DuplicateStrictness, scannedAt: Date) throws {
+    /// Groups are per source (FS-19.04 §4); the Photos library is the only
+    /// source that scans today.
+    func replaceGroups(
+        _ groups: [DuplicateGroup], strictness: DuplicateStrictness, scannedAt: Date,
+        sourceId: String = PhotoLibrarySource.id
+    ) throws {
         try database.writer.write { db in
-            try db.execute(sql: "DELETE FROM duplicate_groups WHERE strictness = ?", arguments: [strictness.rawValue])
+            try db.execute(sql: "DELETE FROM duplicate_groups WHERE strictness = ? AND sourceId = ?",
+                           arguments: [strictness.rawValue, sourceId])
             for group in groups {
                 for member in group.members {
                     try db.execute(
-                        sql: "INSERT INTO duplicate_groups (strictness, groupId, assetId) VALUES (?, ?, ?)",
-                        arguments: [strictness.rawValue, group.id, member.assetId]
+                        sql: "INSERT INTO duplicate_groups (strictness, sourceId, groupId, assetId) VALUES (?, ?, ?, ?)",
+                        arguments: [strictness.rawValue, sourceId, group.id, member.assetId]
                     )
                 }
             }
             try db.execute(
                 sql: """
-                    INSERT INTO duplicate_scan_state (strictness, scannedAt, groupCount) VALUES (?, ?, ?)
-                    ON CONFLICT(strictness) DO UPDATE SET scannedAt = excluded.scannedAt, groupCount = excluded.groupCount
+                    INSERT INTO duplicate_scan_state (strictness, sourceId, scannedAt, groupCount) VALUES (?, ?, ?, ?)
+                    ON CONFLICT(strictness, sourceId) DO UPDATE SET scannedAt = excluded.scannedAt, groupCount = excluded.groupCount
                     """,
-                arguments: [strictness.rawValue, Int(scannedAt.timeIntervalSince1970), groups.count]
+                arguments: [strictness.rawValue, sourceId, Int(scannedAt.timeIntervalSince1970), groups.count]
             )
         }
     }
 
-    func scanState(strictness: DuplicateStrictness) throws -> DuplicateScanState? {
+    func scanState(strictness: DuplicateStrictness, sourceId: String = PhotoLibrarySource.id) throws -> DuplicateScanState? {
         try database.reader.read { db in
             try Row.fetchOne(
                 db,
-                sql: "SELECT scannedAt, groupCount FROM duplicate_scan_state WHERE strictness = ?",
-                arguments: [strictness.rawValue]
+                sql: "SELECT scannedAt, groupCount FROM duplicate_scan_state WHERE strictness = ? AND sourceId = ?",
+                arguments: [strictness.rawValue, sourceId]
             ).map { row in
                 let scannedAt: Int = row["scannedAt"]
                 return DuplicateScanState(
@@ -200,12 +206,12 @@ struct PerceptualHashStore: Sendable {
     /// `photo_metadata`. Members whose photo or hash row is gone drop out, and a
     /// group left with one member is not returned. `nil` when this strictness
     /// has never been grouped.
-    func cachedGroups(strictness: DuplicateStrictness) throws -> [DuplicateGroup]? {
+    func cachedGroups(strictness: DuplicateStrictness, sourceId: String = PhotoLibrarySource.id) throws -> [DuplicateGroup]? {
         try database.reader.read { db in
             let hasState = try Bool.fetchOne(
                 db,
-                sql: "SELECT EXISTS(SELECT 1 FROM duplicate_scan_state WHERE strictness = ?)",
-                arguments: [strictness.rawValue]
+                sql: "SELECT EXISTS(SELECT 1 FROM duplicate_scan_state WHERE strictness = ? AND sourceId = ?)",
+                arguments: [strictness.rawValue, sourceId]
             ) ?? false
             guard hasState else { return nil }
             let rows = try Row.fetchAll(
@@ -215,9 +221,9 @@ struct PerceptualHashStore: Sendable {
                     FROM duplicate_groups g
                     JOIN photo_metadata p ON p.assetId = g.assetId
                     JOIN perceptual_hash h ON h.assetId = g.assetId
-                    WHERE g.strictness = ? AND h.hash IS NOT NULL
+                    WHERE g.strictness = ? AND g.sourceId = ? AND h.hash IS NOT NULL
                     """,
-                arguments: [strictness.rawValue]
+                arguments: [strictness.rawValue, sourceId]
             )
             var membersByGroup: [String: [HashedPhoto]] = [:]
             for row in rows {

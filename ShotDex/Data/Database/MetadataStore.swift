@@ -40,6 +40,7 @@ struct MetadataStore: Sendable {
         cursorAssetId: String?
     ) throws {
         try database.writer.write { db in
+            let now = Int(Date().timeIntervalSince1970)
             for record in records {
                 if unreadAssetIds.contains(record.assetId),
                    try Self.rowExists(db, assetId: record.assetId) {
@@ -47,12 +48,31 @@ struct MetadataStore: Sendable {
                 } else {
                     try record.upsert(db)
                 }
+                try Self.keepPhotoLibraryCopy(db, assetId: record.assetId, now: now)
             }
             var state = try IndexState.fetchOne(db, key: IndexState.singletonId) ?? .initial
             state.cursorAssetId = cursorAssetId
             state.lastIndexedAt = Int(Date().timeIntervalSince1970)
             try state.upsert(db)
         }
+    }
+
+    /// Every indexed asset is a photo with one Photos copy (FS-19.05 §1):
+    /// the photo keeps the asset's id. Written alongside the metadata row, and
+    /// never rewritten — `INSERT OR IGNORE`, so a re-index leaves a copy's
+    /// hash, hidden mark and first-seen date alone, and only refreshes
+    /// `lastSeenAt` and clears an orphan mark.
+    static func keepPhotoLibraryCopy(_ db: Database, assetId: String, now: Int) throws {
+        try db.execute(sql: "INSERT OR IGNORE INTO photos (id, createdAt) VALUES (?, ?)", arguments: [assetId, now])
+        try db.execute(sql: "UPDATE photos SET orphanedAt = NULL WHERE id = ? AND orphanedAt IS NOT NULL", arguments: [assetId])
+        try db.execute(
+            sql: """
+                INSERT INTO photo_copies (id, photoId, sourceId, kind, photoKitId, lastSeenAt)
+                VALUES ('photos:' || ?, ?, ?, 'photos', ?, ?)
+                ON CONFLICT(id) DO UPDATE SET lastSeenAt = excluded.lastSeenAt
+                """,
+            arguments: [assetId, assetId, PhotoLibrarySource.id, assetId, now]
+        )
     }
 
     private static func rowExists(_ db: Database, assetId: String) throws -> Bool {
@@ -130,6 +150,12 @@ struct MetadataStore: Sendable {
         _ = try database.writer.write { db in
             try PhotoMetadata.deleteAll(db, keys: ids)
             try PhotoKeywordStore.delete(db, ids: ids)
+            // The copy goes; the photo row stays, so its user data is still
+            // anchored (the 30-day orphan rule, FS-19.05 §5).
+            try db.execute(
+                sql: "DELETE FROM photo_copies WHERE kind = 'photos' AND photoKitId IN (\(databaseQuestionMarks(count: ids.count)))",
+                arguments: StatementArguments(ids)
+            )
         }
     }
 

@@ -58,8 +58,8 @@ Có chỉ mục trên: tên máy và tên ống kính đã chuẩn hoá · ISO �
 | Bảng | Giữ gì |
 |---|---|
 | Dấu vân tay ảnh | id ảnh · dấu vân tay 64 bit (rỗng = chưa lấy được ảnh) · ngày sửa lúc tính · thời điểm tính |
-| Nhóm ảnh trùng | một dòng cho mỗi ảnh trong mỗi nhóm, theo từng mức so trùng |
-| Trạng thái quét trùng | mức so trùng · lần quét cuối · số nhóm |
+| Nhóm ảnh trùng | một dòng cho mỗi ảnh trong mỗi nhóm, theo từng mức so trùng **và từng nguồn** (`v30-photoSources`, FS-19.04 §4) |
+| Trạng thái quét trùng | mức so trùng · nguồn · lần quét cuối · số nhóm |
 | Kết quả quét chủ thể | id ảnh · số khuôn mặt · số chó mèo · thời điểm quét |
 | Gán cảm biến thủ công | những máy người dùng tự chỉ định |
 | Trạng thái index | điểm chạy tiếp · lần index cuối · mốc thay đổi của thư viện |
@@ -98,6 +98,33 @@ Có chỉ mục trên: tên máy và tên ống kính đã chuẩn hoá · ISO �
   nên dòng gương của ảnh không còn index (hay không chia sẻ dưới `.limited`) không bao giờ lộ ra.
 - Mở màn ảnh trùng **chỉ đọc hai bảng cache** rồi ghép với dữ kiện hiện tại — **không** tính lại dấu vân
   tay, **không** gom lại nhóm.
+
+## 3b. Ảnh, bản sao, nguồn (`v30-photoSources`, [FS-19.05](../02-functional-spec/FS-19-photo-sources/05-data.md))
+
+Một ảnh là một **id** với các **bản sao** ở các **nguồn** (thư viện Photos, thư mục, ổ ngoài, server). Ảnh Photos
+**giữ id thư viện cấp** làm id ảnh, nên mọi bảng ở §3 vẫn khoá theo id cũ — không dòng nào bị viết lại.
+
+| Bảng | Giữ gì | Loại |
+|---|---|---|
+| Nguồn | loại · tên · bookmark · id ổ · connection · thư mục con · ghép RAW+JPEG · khi ổ rút · trạng thái · điểm chạy tiếp; thư viện Photos là dòng `photos-library` | người dùng tạo |
+| Ảnh | id · lúc tạo · lúc thành mồ côi (rỗng khi còn bản sao) | danh tính; mọi lượt dọn neo vào đây |
+| Bản sao | id bền · id ảnh · nguồn · loại · id PhotoKit **hoặc** đường dẫn tương đối + khoá chuẩn NFC gấp hoa-thường · kích thước · ngày sửa · file ghép cặp · dấu sidecar · online · ẩn · lần thấy cuối | kết quả quét |
+| Hash | một dòng mỗi bản sao: thuật toán + phiên bản · hash nhanh · hash đầy đủ · lúc băm | kết quả quét đắt tiền |
+| Bí danh | id thua → id thắng · lúc gộp | sau mỗi lần gộp |
+| Recipe | id ảnh · recipe · lúc đổi | người dùng |
+| Dấu ảnh file | id ảnh · sao, favorite, title, caption, mỗi trường kèm lúc đổi; keyword một dòng mỗi (ảnh, keyword) | người dùng |
+| Dấu chờ sidecar | bản sao · id ảnh · lý do · lúc đặt | người dùng |
+| Album ShotDex · thành viên | id · tên · vị trí · lúc tạo · (album, id ảnh) | người dùng |
+
+- **Không khoá ngoại**: lượt quét cập nhật bản sao tại chỗ; một `REPLACE` kéo theo cascade là mất dữ liệu người dùng.
+- Duy nhất: bản sao theo (nguồn, khoá đường dẫn) khi có đường dẫn; theo id PhotoKit khi có. Hash đầy đủ **có chỉ
+  mục, không duy nhất** — hai bản sao cùng nội dung mang cùng hash; luật gộp giữ một id ảnh cho mỗi hash đầy đủ.
+- Chỉ mục: bản sao theo (nguồn, id ảnh) và (id ảnh, online); ảnh theo lúc mồ côi (chỉ dòng có giá trị); hash
+  theo (thuật toán, phiên bản, hash nhanh) và (…, hash đầy đủ).
+- Migration điền Ảnh + Bản sao (loại Photos, id bản sao `photos:<id>`) từ **hợp mọi id ảnh** của mọi bảng ở §3 —
+  kể cả ảnh chỉ có cờ dưới quyền `.limited`. Hai bảng cache ảnh trùng được dựng lại (rỗng) theo khoá mới.
+- Lượt index ghi Ảnh + Bản sao Photos cùng dòng metadata (`INSERT OR IGNORE`, chỉ làm mới lần thấy cuối); ảnh bị
+  xoá khỏi Photos mất **bản sao**, dòng Ảnh ở lại giữ dữ liệu người dùng (luật mồ côi 30 ngày, FS-19.05 §5).
 
 ## 4. Gỡ một tính năng thì phải dọn cả truy vấn đã lưu
 

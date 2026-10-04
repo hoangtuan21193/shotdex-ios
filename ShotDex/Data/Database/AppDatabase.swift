@@ -660,6 +660,8 @@ final class AppDatabase: Sendable {
             try db.execute(sql: "UPDATE creations SET exportedAt = updatedAt")
         }
 
+        registerPhotoSources(&migrator)
+
         return migrator
     }
 }
