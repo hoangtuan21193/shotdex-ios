@@ -259,7 +259,7 @@ struct VideoSettingsButton: View {
                     VStack(alignment: .leading, spacing: 1) {
                         Text(verbatim: "\(ratio) · \(preset)")
                             .font(.system(size: 13, weight: .semibold))
-                        Text(verbatim: "\(fps) · ~\(ByteCountFormatter.string(fromByteCount: model.estimatedExportBytes, countStyle: .file))")
+                        Text(verbatim: "\(fps) · \(VideoExportEstimate.label(model.estimatedExportBytes))")
                             .font(.system(size: 10.5, weight: .medium).monospacedDigit())
                             .foregroundStyle(.white.opacity(0.5))
                     }

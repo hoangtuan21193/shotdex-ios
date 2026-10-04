@@ -2774,15 +2774,10 @@ final class VideoStudioModel {
         }
     }
 
-    /// Rough output size for the export row (`~24 MB`). A bits-per-pixel model
-    /// over the render canvas plus a fixed audio allowance — an estimate, hence
-    /// the `~` prefix at the call site.
+    /// The export's size before it is written (FS-12.10 §5): the same
+    /// numbers the writer encodes at.
     var estimatedExportBytes: Int64 {
-        let size = recipe.canvasSize()
-        let area = Double(size.width * size.height)
-        let bitsPerSecond = area * 30 * 0.15 + 128_000
-        let bytes = bitsPerSecond / 8 * max(0, totalDuration)
-        return Int64(bytes)
+        VideoExportEstimate.bytes(for: recipe, duration: totalDuration)
     }
 
     // MARK: - Waveform

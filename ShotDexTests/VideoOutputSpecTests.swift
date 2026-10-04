@@ -1,3 +1,4 @@
+import AVFoundation
 import CoreGraphics
 import Foundation
 import Testing
@@ -39,5 +40,44 @@ struct VideoOutputSpecTests {
         let fresh = VideoProjectRecipe(clips: [])
         #expect(fresh.framing == .fit && fresh.background.kind == .colour && fresh.background.colour == .black)
         #expect(fresh.resolution == .p1080 && fresh.frameRate == .fps30 && fresh.codec == .h264)
+    }
+}
+
+extension VideoOutputSpecTests {
+    /// AC-7: 9:16 · 1080p · 30 · H.264 over 24.0 s is "~30 MB"; HEVC makes
+    /// it "~18 MB".
+    @Test func hevcDropsThirtyToEighteen() {
+        var recipe = VideoProjectRecipe(clips: [])
+        recipe.aspect = .r9x16
+        #expect(VideoExportEstimate.label(VideoExportEstimate.bytes(for: recipe, duration: 24)) == "~30 MB")
+        recipe.codec = .hevc
+        #expect(VideoExportEstimate.label(VideoExportEstimate.bytes(for: recipe, duration: 24)) == "~18 MB")
+    }
+
+    /// From 1000 MB the label is in gigabytes, one decimal.
+    @Test func gigabyteFormatting() {
+        #expect(VideoExportEstimate.label(999_400_000) == "~999 MB")
+        #expect(VideoExportEstimate.label(1_200_000_000) == "~1.2 GB")
+        var recipe = VideoProjectRecipe(clips: [])
+        recipe.resolution = .uhd4K
+        recipe.frameRate = .fps60
+        // 3840×2160×60×0.16 ≈ 79.6 Mbps: two minutes is about 1.2 GB.
+        #expect(VideoExportEstimate.label(VideoExportEstimate.bytes(for: recipe, duration: 120)) == "~1.2 GB")
+    }
+
+    /// FS-12.01 §9, plan T-5: the writer asks the encoder for the bitrate
+    /// the estimate counted — one number, so the Output line and the file
+    /// cannot drift apart. 1080p30 H.264 is 9 953 280 bps.
+    @Test func writerAndEstimateShareOneBitrate() throws {
+        var recipe = VideoProjectRecipe(clips: [])
+        recipe.codec = .hevc
+        recipe.frameRate = .fps60
+        let encoding = VideoEncodingSettings.make(for: recipe)
+        #expect(encoding.bitrate == VideoExportEstimate.videoBitrate(frame: recipe.canvasSize(), frameRate: .fps60, codec: .hevc))
+        let settings = VideoExportWriter.videoSettings(encoding)
+        let compression = try #require(settings[AVVideoCompressionPropertiesKey] as? [String: Any])
+        #expect(compression[AVVideoAverageBitRateKey] as? Int == encoding.bitrate)
+        #expect(settings[AVVideoCodecKey] as? AVVideoCodecType == .hevc)
+        #expect(VideoExportEstimate.videoBitrate(frame: CGSize(width: 1920, height: 1080), frameRate: .fps30, codec: .h264) == 9_953_280)
     }
 }

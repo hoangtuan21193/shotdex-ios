@@ -176,7 +176,7 @@ enum VideoStudioMetrics {
 
     /// "0:24 · ~30 MB": the project's length and what it will weigh.
     static func lengthAndSize(duration: Double, bytes: Int64) -> String {
-        "\(shortDuration(duration)) · ~\(ByteCountFormatter.string(fromByteCount: bytes, countStyle: .file))"
+        "\(shortDuration(duration)) · \(VideoExportEstimate.label(bytes))"
     }
 
     /// The phone transport's read-out (FS-12.07 §2): `0:08.4 / 0:24.0`, the

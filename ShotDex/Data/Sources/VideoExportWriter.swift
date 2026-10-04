@@ -1,5 +1,6 @@
 import AVFoundation
 import Foundation
+import VideoToolbox
 
 /// Writes the composited video to a file with an `AVAssetReader` →
 /// `AVAssetWriter` pipeline. The reader's video output carries our
@@ -33,11 +34,29 @@ enum VideoExportWriter {
         let input: AVAssetWriterInput
     }
 
+    /// The writer's video settings for an encoding: codec, size, average
+    /// bitrate, profile, and the frame rate it should expect.
+    static func videoSettings(_ encoding: VideoEncodingSettings) -> [String: Any] {
+        let profile: String = encoding.codec == .hevc
+            ? kVTProfileLevel_HEVC_Main_AutoLevel as String
+            : AVVideoProfileLevelH264HighAutoLevel
+        return [
+            AVVideoCodecKey: encoding.codec == .hevc ? AVVideoCodecType.hevc : AVVideoCodecType.h264,
+            AVVideoWidthKey: Int(encoding.size.width),
+            AVVideoHeightKey: Int(encoding.size.height),
+            AVVideoCompressionPropertiesKey: [
+                AVVideoAverageBitRateKey: encoding.bitrate,
+                AVVideoProfileLevelKey: profile,
+                AVVideoExpectedSourceFrameRateKey: encoding.frameRate.rawValue,
+            ] as [String: Any],
+        ]
+    }
+
     static func write(
         composition: AVComposition,
         videoComposition: AVVideoComposition,
         audioMix: AVAudioMix,
-        renderSize: CGSize,
+        encoding: VideoEncodingSettings,
         totalDuration: Double,
         to outputURL: URL,
         progress: @escaping @MainActor (Double) -> Void
@@ -92,19 +111,11 @@ enum VideoExportWriter {
 
         // MARK: Writer
         let writer = try AVAssetWriter(outputURL: outputURL, fileType: .mp4)
-        // ~10 Mbps at 1080p, scaling with pixel count (≈40 Mbps at 4K).
-        let bitrate = Int(renderSize.width * renderSize.height * 4.8)
+        // The rate the Output line promised (VideoExportEstimate): ~10 Mbps
+        // at 1080p30 H.264, HEVC at 0.6 of that.
         let videoInput = AVAssetWriterInput(
             mediaType: .video,
-            outputSettings: [
-                AVVideoCodecKey: AVVideoCodecType.h264,
-                AVVideoWidthKey: Int(renderSize.width),
-                AVVideoHeightKey: Int(renderSize.height),
-                AVVideoCompressionPropertiesKey: [
-                    AVVideoAverageBitRateKey: bitrate,
-                    AVVideoProfileLevelKey: AVVideoProfileLevelH264HighAutoLevel,
-                ],
-            ]
+            outputSettings: Self.videoSettings(encoding)
         )
         videoInput.expectsMediaDataInRealTime = false
         guard writer.canAdd(videoInput) else {

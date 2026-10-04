@@ -547,7 +547,7 @@ final class VideoStudioService {
             composition: composition,
             videoComposition: videoComposition,
             audioMix: audioMix,
-            renderSize: renderSize,
+            encoding: VideoEncodingSettings.make(for: recipe),
             totalDuration: layout.totalDuration,
             to: outputURL,
             progress: progress
