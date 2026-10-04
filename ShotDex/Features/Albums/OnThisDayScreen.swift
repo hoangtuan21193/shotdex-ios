@@ -326,6 +326,7 @@ struct OnThisDayScreen: View {
             onEdit: presentMultiEdit,
             onCombine: presentCombine,
             onDelete: deleteSelected,
+            offersFileExport: true,
             assetActions: assetActions,
             onSelectAll: { selectedIds = (model?.photos ?? []).map(\.assetId) }
         )

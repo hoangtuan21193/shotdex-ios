@@ -124,6 +124,8 @@ struct PhotoDetailScreen: View {
     @Environment(PhotoMarks.self) private var photoMarks: PhotoMarks?
     /// Cull From Here (FS-01.12b §5): the viewer's list, from this photo.
     @State private var cullRequest: CullRequest?
+    /// Export… of the photo on screen (FS-03.07b §3).
+    @State private var fileExportRequest: FileExportRequest?
     @State private var compressionTarget: PhotoDetailActionTarget?
     @State private var videoStudioTarget: PhotoDetailActionTarget?
     /// Asset saved by the editor, waiting for its cover to finish dismissing —
@@ -319,6 +321,7 @@ struct PhotoDetailScreen: View {
         .assetActionHost(dependencies.viewerAssetActions)
         .appBannerHost(dependencies.banner, bottomInset: 120)
         .cullPresenter($cullRequest)
+        .fileExportPresenter($fileExportRequest)
         .sheet(item: $burstList) { presentation in
             // Neither the root nor this viewer can present over this sheet,
             // so its tile menu gets a coordinator and host of its own.
@@ -828,6 +831,13 @@ struct PhotoDetailScreen: View {
                     } label: {
                         Label("Resize", systemImage: "arrow.down.right.and.arrow.up.left")
                     }
+                }
+                // Right under Resize, for photos and videos alike
+                // (FS-03.07c §1 item 1).
+                Button {
+                    fileExportRequest = FileExportRequest(model: .make(assetIds: [id], dependencies: dependencies))
+                } label: {
+                    PhotoCommand.export.label
                 }
                 Button {
                     actions.presentAdjustDate(ids: [id])

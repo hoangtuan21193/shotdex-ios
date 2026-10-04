@@ -163,6 +163,7 @@ Mọi con số thay đổi theo thời gian thực (%, MB, đếm tiến trình,
 | Thêm vào album | `rectangle.stack.badge.plus` |
 | Nhân bản | `plus.square.on.square` |
 | Export EXIF | `doc.badge.arrow.up` |
+| Export… (ra folder trong Files, ổ ngoài, server đã lưu — FS-03.07b) | `square.and.arrow.up.on.square` |
 | Thêm hành động | `ellipsis` (menu) |
 | Lưu về Photos | `arrow.down.circle.fill` |
 | Crop | `crop` |

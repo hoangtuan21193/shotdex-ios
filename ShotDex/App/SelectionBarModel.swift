@@ -72,6 +72,9 @@ struct SelectionBarModel {
     /// Offers *Caption & Keywords…* after Add to Collection — Library, album
     /// and smart album; never On This Day (FS-02.07 §5), never below iOS 27.
     var offersCaptionKeywords = false
+    /// Offers *Export…* right under Resize — Library, album, smart album and
+    /// On This Day (FS-03.07b §3).
+    var offersFileExport = false
 
     /// Favorite / Hide / Adjust Date & Time / Adjust Location / Copy. One
     /// object instead of five closures: every screen offers the identical set

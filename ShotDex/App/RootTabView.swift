@@ -238,6 +238,7 @@ struct RootTabView: View {
         .sheet(item: $uploadRequest) { ServerUploadHost(request: $0) }
         .cullPresenter($navigation.cullRequest)
         .captionKeywordsPresenter($navigation.captionKeywordsRequest)
+        .fileExportPresenter($navigation.fileExportRequest)
         .environment(\.presentServerUpload, PresentServerUploadAction { uploadRequest = ServerUploadRequest(assetIds: $0, target: $1) })
         .environment(navigation)
         .task {
@@ -336,6 +337,7 @@ struct RootTabView: View {
             .sheet(item: $uploadRequest) { ServerUploadHost(request: $0) }
             .cullPresenter($navigation.cullRequest)
             .captionKeywordsPresenter($navigation.captionKeywordsRequest)
+            .fileExportPresenter($navigation.fileExportRequest)
             .environment(\.presentServerUpload, PresentServerUploadAction { uploadRequest = ServerUploadRequest(assetIds: $0, target: $1) })
             .environment(navigation)
             .task {

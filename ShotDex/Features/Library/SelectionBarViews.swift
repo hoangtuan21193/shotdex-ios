@@ -176,6 +176,7 @@ struct SelectionToolbarItems: ToolbarContent {
         model.onCollage != nil || model.onVideo != nil || model.onCompress != nil || model.onCombine != nil
             || model.onAddToCollection != nil || model.onExportEXIF != nil
             || model.onDuplicate != nil || model.onUploadToServer != nil || model.assetActions != nil
+            || model.offersFileExport
             || model.onSelectAll != nil || model.onRemoveFromAlbum != nil
     }
 
@@ -251,6 +252,9 @@ struct SelectionToolbarItems: ToolbarContent {
                             PhotoCommand.resize.label
                         }
                         .disabled(model.imageSelectionCount < 1)
+                    }
+                    if model.offersFileExport {
+                        FileExportSelectionRow(ids: model.selectedIds)
                     }
                     if let onAddToCollection = model.onAddToCollection {
                         Button(action: onAddToCollection) {

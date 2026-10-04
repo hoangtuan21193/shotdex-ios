@@ -635,8 +635,9 @@ struct ServerBrowserScreen: View {
         case .video: run(.video, on: photos)
         // Combine needs its purpose, which the submenu passes to `run`.
         // Cull works on library photos only (marks are kept by asset id);
-        // caption and keywords live in Photos (FS-02.07).
-        case .combine, .cull, .addToCollection, .captionKeywords, .duplicate: break
+        // caption and keywords live in Photos (FS-02.07); Export… writes
+        // library assets — a server photo is already a file (FS-03.07b §2).
+        case .combine, .cull, .addToCollection, .captionKeywords, .duplicate, .export: break
         }
     }
 

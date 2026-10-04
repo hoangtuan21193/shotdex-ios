@@ -86,6 +86,13 @@ enum SettingsKeys {
     /// 4K, 2048 px and 1080 px presets are code-defined and never stored here.
     static let compressionPresets = "export.compressionPresets"
 
+    /// JSON-encoded `FileExportSettings`: what Export… remembers (FS-03.07b §3).
+    static let fileExportSettings = "export.files.settings"
+
+    /// JSON-encoded folders Export… wrote to: bookmarks and the recents list
+    /// (FS-03.07b §4).
+    static let fileExportFolders = "export.files.folders"
+
     /// Per-source counters used by `_SHOTDEX_EDITED_N` and
     /// `_SHOTDEX_COMPRESSED_N` output filenames.
     static let outputFilenameIndexes = "export.outputFilenameIndexes"

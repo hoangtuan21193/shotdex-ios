@@ -54,7 +54,7 @@ Exports* thay SSD; phần cần ổ thật ghi rõ.
 
 | # | Cho | Khi | Thì | Chứng minh bằng |
 |---|---|---|---|---|
-| AC-1 | chọn 3 ảnh trong Library | mở ⋯ | có **Export…** ngay dưới Resize, glyph `square.and.arrow.up.on.square`, mờ khi 0 ảnh; ⋯ của Photo Detail cũng có; iOS 26.5 và 18.6 cùng chỗ | ⚠️ chưa có |
+| AC-1 | chọn 3 ảnh trong Library | mở ⋯ | có **Export…** ngay dưới Resize, glyph `square.and.arrow.up.on.square`, mờ khi 0 ảnh; ⋯ của Photo Detail cũng có; iOS 26.5 và 18.6 cùng chỗ | một phần: ✅ ⋯ chọn nhiều — `FileExportSettingsTests.menuRowSitsUnderResize` + dump `file-export-menu.json`: Export… ngay dưới Resize (y 282 trên 26.5, 311 trên 18.6, cùng thứ tự), mờ khi 0 ảnh, sáng khi 3 ảnh; ⋯ Photo Detail: ảnh chờ T4 |
 | AC-2 | chưa export lần nào | Export… → Choose Folder… → *Exports* → Export 2 ảnh; đóng app; mở lại, Export… | lần hai hàng Folder đã là *Exports*, ghi thêm 2 file mà không mở trình chọn | ⚠️ chưa có |
 | AC-3 | mẫu `{date}_{camera}_{seq}`; ảnh A, một ảnh X-T5 chụp 17:06, một ảnh chụp màn hình 2026-09-21 | nhìn dòng ví dụ, rồi Export (Current Version, JPEG) | ví dụ ghi `2026-09-20_X-T5_001.jpg`; folder có `2026-09-20_X-T5_001.jpg`, `2026-09-20_X-T5_002.jpg`, `2026-09-21_003.jpg` | ⚠️ chưa có |
 | AC-4 | folder đã có `img_0001.jpg`; mẻ có hai ảnh tên gốc `IMG_0001` (hai máy); mẫu `{original}`, Keep Both | Export | có `IMG_0001 (2).jpg` và `IMG_0001 (3).jpg`; SHA-256 của `img_0001.jpg` không đổi | một phần: `ServerUploadPathTests.keepBothPicksNextFreeName` (đánh số, không phân biệt hoa thường); mẻ trùng chính nó ⚠️ chưa có |

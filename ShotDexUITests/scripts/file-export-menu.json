@@ -1,0 +1,137 @@
+{
+ "steps": [
+  {
+   "action": "launch"
+  },
+  {
+   "action": "wait",
+   "seconds": 6
+  },
+  {
+   "action": "tap",
+   "label": "Library",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "tap",
+   "label": "Select photos",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "tap",
+   "label": "More selection actions"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "screenshot",
+   "name": "01-menu-none-picked"
+  },
+  {
+   "action": "dump",
+   "name": "01-menu-none-picked"
+  },
+  {
+   "action": "tap",
+   "x": 0.5,
+   "y": 0.08
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "tap",
+   "x": 0.165,
+   "y": 0.3
+  },
+  {
+   "action": "tap",
+   "x": 0.5,
+   "y": 0.3
+  },
+  {
+   "action": "tap",
+   "x": 0.83,
+   "y": 0.3
+  },
+  {
+   "action": "tap",
+   "label": "More selection actions"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "screenshot",
+   "name": "02-menu-three"
+  },
+  {
+   "action": "dump",
+   "name": "02-menu-three"
+  },
+  {
+   "action": "tap",
+   "label": "Export\u2026"
+  },
+  {
+   "action": "wait",
+   "seconds": 2.5
+  },
+  {
+   "action": "screenshot",
+   "name": "03-sheet"
+  },
+  {
+   "action": "dump",
+   "name": "03-sheet"
+  },
+  {
+   "action": "tap",
+   "label": "Unmodified Original"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "screenshot",
+   "name": "04-sheet-unmodified"
+  },
+  {
+   "action": "dump",
+   "name": "04-sheet-unmodified"
+  },
+  {
+   "action": "tap",
+   "label": "Current Version"
+  },
+  {
+   "action": "tap",
+   "label": "Name"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "screenshot",
+   "name": "05-file-name"
+  },
+  {
+   "action": "dump",
+   "name": "05-file-name"
+  }
+ ]
+}

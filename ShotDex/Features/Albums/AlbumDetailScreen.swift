@@ -563,6 +563,7 @@ struct AlbumDetailScreen: View {
             onDuplicate: { duplicateSelected(model) },
             onUploadToServer: presentServerUpload.map { present in { present(selectedIds, $0) } },
             offersCaptionKeywords: true,
+            offersFileExport: true,
             assetActions: assetActions,
             onSelectAll: { selectedIds = model.photos.map(\.assetId) },
             // Only a real, mutable user album offers this; "All Photos" and

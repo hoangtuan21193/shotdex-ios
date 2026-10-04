@@ -31,6 +31,9 @@ final class AppNavigation {
     /// The selection's *Caption & Keywords…* (FS-02.07 §5); the root presents it.
     var captionKeywordsRequest: CaptionKeywordsRequest?
 
+    /// The selection's *Export…* (FS-03.07b §3); the root presents it.
+    var fileExportRequest: FileExportRequest?
+
     /// Bottom inset a grid adds to its content while selecting. The selection
     /// chrome is now a floating `SelectionOverlay` on both tiers (not system safe
     /// area), so the grid gets no automatic clearance — this reserves room for the

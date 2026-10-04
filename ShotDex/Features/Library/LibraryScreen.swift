@@ -593,6 +593,7 @@ struct LibraryScreen: View {
             onDuplicate: { duplicateSelected() },
             onUploadToServer: presentServerUpload.map { present in { present(selectedIds, $0) } },
             offersCaptionKeywords: true,
+            offersFileExport: true,
             assetActions: assetActions,
             onSelectAll: { selectedIds = model.items.map(\.assetId) }
         )
