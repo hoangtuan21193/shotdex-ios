@@ -27,8 +27,8 @@
 - [x] **L1 — auth bị từ chối dừng lô, không hộp mật khẩu** (AC-36, phần ✅)
   - Xong khi: test xanh trên code hôm nay, không sửa code
   - Kiểm tra: `/test ServerSourceIndexTests/passwordRejectedNoPrompts`
-- [ ] **L2 — Cancel hộp hệ thống → phần Photos không đổi** (AC-41, phần ✅; luật huỷ theo A7)
-  - Kiểm tra: `/test MixedDeletionTests/photosCancelKeepsPhotosPart`
+- [x] **L2 — Cancel hộp hệ thống → phần Photos không đổi** (AC-41, phần ✅; luật huỷ theo A7)
+  - Kiểm tra: `/test RejectedDeletionCancelTests` (test có sẵn khoá phần này; `MixedDeletionTests` ra đời ở E3)
 - [ ] **L3 — asset Photos không đọc sao trong file** (AC-52, phần ✅)
   - Kiểm tra: `/test SidecarReaderTests/cameraRatingFilesOnly`
 - [ ] **L4 — Clear Local Metadata Index giữ sao/cờ** (AC-31, phần ✅)

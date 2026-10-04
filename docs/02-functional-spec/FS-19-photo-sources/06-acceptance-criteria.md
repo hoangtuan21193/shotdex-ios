@@ -83,7 +83,7 @@
 | # | Cho | Khi | Thì | Chứng minh |
 |---|---|---|---|---|
 | AC-40 | Cull, 120 Rejected: 84 ở thư mục/ổ, 30 ở Photos, 6 ở NAS Home (mỗi ảnh một bản sao) | bấm Move 120 Rejected… | hộp "Move 120 rejected photos?" · "84 go to the Trash, 30 to Recently Deleted. 6 on NAS Home can't be deleted from ShotDex and will be hidden." · "ShotDex never edits file contents." · Cancel · Move; không phần chọn bản sao | ⚠️ chưa có — `MixedDeletionPlanTests.messageCountsByDestination` |
-| AC-41 | hộp của AC-40 | Move → Cancel ở hộp hệ thống của Photos | 0 file vào Thùng rác, 0 ảnh ẩn, 120 ảnh vẫn Rejected | ⚠️ chưa có — `MixedDeletionTests.photosCancelMovesNothing` |
+| AC-41 | hộp của AC-40 | Move → Cancel ở hộp hệ thống của Photos | 0 file vào Thùng rác, 0 ảnh ẩn, 120 ảnh vẫn Rejected | `RejectedDeletionCancelTests.cancelChangesNothing` (nửa Photos: Cancel không đổi gì); ⚠️ hộp trộn nguồn — `MixedDeletionTests.photosCancelMovesNothing` chưa có |
 | AC-42 | hộp của AC-40 | Move → đồng ý ở hộp hệ thống | 84 ảnh + JPEG ghép cặp + `.xmp` của chúng trong Thùng rác; 30 trong Recently Deleted; 6 ẩn, file trên NAS còn nguyên SHA-256; Put Back 1 file → ảnh quay lại với ★ cũ | ⚠️ chưa có — `MixedDeletionTests.trashCarriesPairAndSidecar` |
 | AC-43 | chọn 6 ảnh chỉ ở NAS Home | ⌘⌫ | hộp "Hide 6 photos?", nút Hide, không chữ "delete"; Hide → 6 rời lưới và Statistics | ⚠️ chưa có — `MixedDeletionPlanTests.allServerIsHide` |
 | AC-57 | ảnh A có bản sao ở Photos (bản gốc trên máy), T7, NAS Home | xoá A trong nguồn T7; rồi xoá A từ All Photos | lần 1: chỉ bản T7 vào Thùng rác, A còn "2 copies"; lần 2: hộp liệt kê "Photos Library" (bật) và "NAS Home (hide)" (tắt); Move → chỉ bản Photos đi, A còn 1 bản NAS | ⚠️ chưa có — `MultiCopyDeletionTests.onlyViewedSourceThenChecklist` |

@@ -102,7 +102,7 @@ viết trước, đỏ, rồi code (task sửa lỗi bật `SHOTDEX_FREEZE_TESTS
 | # | Task | AC | Test |
 |---|---|---|---|
 | L1 | auth bị từ chối dừng lô, không hộp mật khẩu | AC-36 (phần ✅) | `ServerSourceIndexTests.passwordRejectedNoPrompts` (nửa client) |
-| L2 | Cancel hộp hệ thống → phần Photos không đổi | AC-41 (phần ✅) | `MixedDeletionTests.photosCancelKeepsPhotosPart` (nửa Photos) |
+| L2 | Cancel hộp hệ thống → phần Photos không đổi | AC-41 (phần ✅) | ✅ đã có: `RejectedDeletionCancelTests.cancelChangesNothing` — không viết test trùng; `MixedDeletionTests` ra đời ở E3 |
 | L3 | asset Photos không đọc sao trong file | AC-52 (phần ✅) | `SidecarReaderTests.cameraRatingFilesOnly` (nửa Photos) |
 | L4 | Clear Local Metadata Index giữ sao/cờ | AC-31 (phần ✅) | `SidecarSettingTests.offKeepsMarksInDatabaseOnly` (nửa Clear) |
 
