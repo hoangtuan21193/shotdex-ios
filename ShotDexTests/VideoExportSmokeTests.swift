@@ -226,3 +226,51 @@ extension VideoExportSmokeTests {
         #expect(abs(output.videoTrackDuration - 3) < 1.0 / 60)
     }
 }
+
+extension VideoExportSmokeTests {
+    /// FS-12.10 AC-2: a 16:9 clip in a 9:16 project, Fill — the exported
+    /// frame's top and bottom rows are the clip's colour, not the
+    /// background's.
+    @Test func fillLeavesNoBackgroundPixel() async throws {
+        let directory = try VideoExportFixtures.makeDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let file = directory.appendingPathComponent("a.mp4")
+        try await VideoExportFixtures.writeVideo(width: 1280, height: 720, seconds: 1,
+                                                 fill: .flat(red: 0.9, green: 0.4, blue: 0.1), to: file)
+        var recipe = VideoProjectRecipe(clips: [VideoExportFixtures.videoClip("a", seconds: 1)])
+        recipe.aspect = .r9x16
+        recipe.framing = .fill
+        recipe.background = VideoBackground(colour: OverlayColor(white: 0.5))
+        let service = VideoExportFixtures.service()
+        defer { service.cleanupSession() }
+        let url = try await service.export(
+            recipe: recipe, sources: [recipe.clips[0].id: try await VideoExportFixtures.videoSource(file)], progress: { _ in }
+        )
+        let frame = try await VideoExportFixtures.frame(of: url, at: 0.5)
+        for row in [0, frame.height / 2, frame.height - 1] {
+            for column in stride(from: 0, to: frame.width, by: 90) {
+                let index = (row * frame.width + column) * 4
+                #expect(frame.bytes[index] > 200 && frame.bytes[index + 2] < 60, "row \(row) column \(column)")
+            }
+        }
+    }
+
+    /// FS-12.01 §8, plan T-2: ratio and Fit/Fill are video-composition
+    /// edits — the player item keeps its composition and only its video
+    /// composition (and canvas) changes.
+    @Test func aspectAndFramingKeepTheComposition() async throws {
+        let directory = try VideoExportFixtures.makeDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        var (recipe, sources) = try await twoClips(in: directory)
+        let service = VideoExportFixtures.service()
+        defer { service.cleanupSession() }
+        let preview = try await service.makePreviewItem(recipe: recipe, sources: sources)
+        let asset = preview.playerItem.asset
+        #expect(preview.playerItem.videoComposition?.renderSize == CGSize(width: 1280, height: 720))
+        recipe.aspect = .r9x16
+        recipe.framing = .fill
+        service.applyVideoComposition(recipe: recipe, layout: preview.layout, to: preview.playerItem)
+        #expect(preview.playerItem.asset === asset)
+        #expect(preview.playerItem.videoComposition?.renderSize == CGSize(width: 720, height: 1280))
+    }
+}

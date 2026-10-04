@@ -119,3 +119,29 @@ struct VideoGeometryTests {
         #expect(isClose(wide.midY, 540))
     }
 }
+
+extension VideoGeometryTests {
+    /// FS-12.10 AC-2: Fill covers the whole canvas for every orientation a
+    /// phone writes — landscape into 9:16, portrait into 16:9, and the two
+    /// other quarter turns — so no background pixel is left at any edge.
+    @Test func fillCoversTheCanvas() {
+        let portrait270 = CGAffineTransform(rotationAngle: -.pi / 2).translatedBy(x: -1920, y: 0)
+        let upsideDown = CGAffineTransform(rotationAngle: .pi).translatedBy(x: -1920, y: -1080)
+        for transform in [CGAffineTransform.identity, portrait90, portrait270, upsideDown] {
+            for canvas in [CGSize(width: 1080, height: 1920), CGSize(width: 1920, height: 1080), CGSize(width: 1080, height: 1080)] {
+                let placed = VideoGeometry.fitTransform(
+                    naturalSize: landscape, preferredTransform: transform,
+                    quarterTurns: 0, renderSize: canvas, framing: .fill
+                )
+                let rect = CGRect(origin: .zero, size: landscape).applying(placed)
+                #expect(rect.minX <= 0.001 && rect.minY <= 0.001, "\(transform) on \(canvas)")
+                #expect(rect.maxX >= canvas.width - 0.001 && rect.maxY >= canvas.height - 0.001, "\(transform) on \(canvas)")
+                // Centred: the overflow is cut evenly from both sides.
+                #expect(isClose(rect.midX, canvas.width / 2, tolerance: 0.01) && isClose(rect.midY, canvas.height / 2, tolerance: 0.01))
+            }
+        }
+        let still = VideoGeometry.stillFitRect(imageSize: CGSize(width: 4032, height: 3024),
+                                               renderSize: CGSize(width: 1080, height: 1920), framing: .fill)
+        #expect(still.minX <= 0 && still.maxX >= 1080 && isClose(still.height, 1920))
+    }
+}

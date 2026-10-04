@@ -1502,12 +1502,23 @@ final class VideoStudioModel {
     // MARK: - Structural edits (Turn 2)
 
     /// Output canvas shape — changes `renderSize`, so a full rebuild.
+    /// The frame's ratio (FS-12.10): a video-composition edit — the frame
+    /// changes on the next frame, no rebuild (FS-12.01 §8, plan T-2).
     func setAspect(_ aspect: VideoAspect) {
         guard recipe.aspect != aspect else { return }
         pushUndo()
         recipe.aspect = aspect
         markEdited()
-        schedulePreviewRebuild()
+        applyVideoTier()
+    }
+
+    /// Fit on the background, or Fill (Crop): one undo step, the video tier.
+    func setFraming(_ framing: VideoFraming) {
+        guard recipe.framing != framing else { return }
+        pushUndo()
+        recipe.framing = framing
+        markEdited()
+        applyVideoTier()
     }
 
     func setSpeed(_ speed: Double, for clipID: UUID) {

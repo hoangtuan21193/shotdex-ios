@@ -488,7 +488,8 @@ final class VideoStudioService {
             recipe: recipe,
             layout: layout,
             stillStore: previewStillStore,
-            bakesOverlays: false
+            bakesOverlays: false,
+            renderSize: previewRenderSize(for: recipe)
         )
     }
 

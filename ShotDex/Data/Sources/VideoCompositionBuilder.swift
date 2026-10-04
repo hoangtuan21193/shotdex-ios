@@ -65,11 +65,38 @@ enum VideoCompositionBuilder {
             let start: Double
             let duration: Double
         }
+        /// A clip's media as the build found it — sizes and orientation,
+        /// not where it lands. The placement is worked out per video
+        /// composition from the fresh recipe, so ratio, Fit/Fill and
+        /// rotation are video-composition edits, not rebuilds (plan T-2).
+        enum Media {
+            case track(id: CMPersistentTrackID, naturalSize: CGSize, preferredTransform: CGAffineTransform)
+            case still(assetID: String, imageSize: CGSize)
+            case stillImage(image: CIImage, imageSize: CGSize)
+
+            func placed(in renderSize: CGSize, framing: VideoFraming, quarterTurns: Int) -> VideoCompositionInstruction.Source {
+                switch self {
+                case let .track(id, naturalSize, preferredTransform):
+                    .track(id: id, transform: VideoGeometry.fitTransform(
+                        naturalSize: naturalSize, preferredTransform: preferredTransform,
+                        quarterTurns: quarterTurns, renderSize: renderSize, framing: framing
+                    ))
+                case let .still(assetID, imageSize):
+                    .still(assetID: assetID, fitRect: VideoGeometry.stillFitRect(
+                        imageSize: imageSize, renderSize: renderSize, framing: framing
+                    ))
+                case let .stillImage(image, imageSize):
+                    .stillImage(image: image, fitRect: imageSize == .zero ? .zero : VideoGeometry.stillFitRect(
+                        imageSize: imageSize, renderSize: renderSize, framing: framing
+                    ))
+                }
+            }
+        }
         struct Segment {
             let timeRange: CMTimeRange
-            let front: VideoCompositionInstruction.Source
+            let front: Media
             let frontClip: SegmentClip
-            let back: VideoCompositionInstruction.Source?
+            let back: Media?
             let backClip: SegmentClip?
             let fadeStart: Double
             let fadeDuration: Double
@@ -139,7 +166,7 @@ enum VideoCompositionBuilder {
         layout.renderSize = renderSize
 
         // Per clip: front source for the instructions + media into A/B tracks.
-        var frontSources: [VideoCompositionInstruction.Source] = []
+        var frontSources: [Layout.Media] = []
         for (index, clip) in clips.enumerated() {
             guard let source = sources[clip.id] else { continue }
             let videoTrack = index.isMultiple(of: 2) ? videoTrackA : videoTrackB
@@ -158,22 +185,16 @@ enum VideoCompositionBuilder {
                 // stretched to the photo's window; the compositor draws the
                 // still and never reads these pixels.
                 try insertStillBackbone(into: videoTrack, at: at, clipRange: clipRange, blankVideo: blankVideo)
-                frontSources.append(.still(
-                    assetID: assetID,
-                    fitRect: VideoGeometry.stillFitRect(imageSize: pixelSize, renderSize: renderSize)
-                ))
+                frontSources.append(.still(assetID: assetID, imageSize: pixelSize))
             case .unavailable:
                 // The backbone keeps the window real; a source that draws
                 // nothing leaves the project background in it.
                 try insertStillBackbone(into: videoTrack, at: at, clipRange: clipRange, blankVideo: blankVideo)
-                frontSources.append(.stillImage(image: CIImage.empty(), fitRect: .zero))
+                frontSources.append(.stillImage(image: CIImage.empty(), imageSize: .zero))
             case .freeze(let image, let pixelSize, _, _, _):
                 // Same backbone as a photo, but the still is already loaded.
                 try insertStillBackbone(into: videoTrack, at: at, clipRange: clipRange, blankVideo: blankVideo)
-                frontSources.append(.stillImage(
-                    image: image,
-                    fitRect: VideoGeometry.stillFitRect(imageSize: pixelSize, renderSize: renderSize)
-                ))
+                frontSources.append(.stillImage(image: image, imageSize: pixelSize))
             case .video(_, let sourceVideo, let sourceAudio, let duration, let naturalSize, let preferredTransform):
                 let trimmed = VideoTimelineMath.clampedTrim(
                     start: clip.trimStart,
@@ -211,12 +232,8 @@ enum VideoCompositionBuilder {
                 }
                 frontSources.append(.track(
                     id: videoTrack.trackID,
-                    transform: VideoGeometry.fitTransform(
-                        naturalSize: naturalSize,
-                        preferredTransform: preferredTransform,
-                        quarterTurns: recipe.quarterTurns,
-                        renderSize: renderSize
-                    )
+                    naturalSize: naturalSize,
+                    preferredTransform: preferredTransform
                 ))
             }
         }
@@ -272,11 +289,15 @@ enum VideoCompositionBuilder {
         /// The export's rate from Video Settings; the preview always runs at
         /// 30 (FS-12.01 §8) — a 60 fps project must not double the
         /// compositor's work while the user scrubs.
-        frameRate: VideoFrameRate = .fps30
+        frameRate: VideoFrameRate = .fps30,
+        /// The canvas to draw on, from the fresh recipe — a new ratio swaps
+        /// the composition, not the build. Defaults to the build's.
+        renderSize: CGSize? = nil
     ) -> AVMutableVideoComposition {
+        let renderSize = renderSize ?? layout.renderSize
         let renderRecipe = VideoRenderRecipe(
             recipe: recipe,
-            renderSize: layout.renderSize,
+            renderSize: renderSize,
             totalDuration: layout.totalDuration,
             bakesOverlays: bakesOverlays
         )
@@ -305,14 +326,17 @@ enum VideoCompositionBuilder {
         }
         let videoComposition = AVMutableVideoComposition()
         videoComposition.customVideoCompositorClass = VideoFrameCompositor.self
-        videoComposition.renderSize = layout.renderSize
+        videoComposition.renderSize = renderSize
+        let place = { (media: Layout.Media) in
+            media.placed(in: renderSize, framing: recipe.framing, quarterTurns: recipe.quarterTurns)
+        }
         videoComposition.frameDuration = CMTime(value: 1, timescale: CMTimeScale(frameRate.rawValue))
         videoComposition.instructions = layout.segments.map { segment in
             VideoCompositionInstruction(
                 timeRange: segment.timeRange,
-                front: segment.front,
+                front: place(segment.front),
                 frontClip: timing(segment.frontClip),
-                back: segment.back,
+                back: segment.back.map(place),
                 backClip: segment.backClip.map(timing),
                 fadeStart: segment.fadeStart,
                 fadeDuration: segment.fadeDuration,
@@ -419,7 +443,7 @@ enum VideoCompositionBuilder {
         overlaps: [Double],
         transitions: [VideoBoundaryTransition],
         clips: [VideoClip],
-        frontSources: [VideoCompositionInstruction.Source],
+        frontSources: [Layout.Media],
         total: Double
     ) -> [Layout.Segment] {
         guard !placements.isEmpty, frontSources.count == placements.count else { return [] }

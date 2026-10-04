@@ -26,7 +26,8 @@ enum VideoGeometry {
         naturalSize: CGSize,
         preferredTransform: CGAffineTransform,
         quarterTurns: Int,
-        renderSize: CGSize
+        renderSize: CGSize,
+        framing: VideoFraming = .fit
     ) -> CGAffineTransform {
         guard naturalSize.width > 0, naturalSize.height > 0,
               renderSize.width > 0, renderSize.height > 0
@@ -56,8 +57,11 @@ enum VideoGeometry {
             displayed = CGSize(width: abs(rotatedBounds.width), height: abs(rotatedBounds.height))
         }
 
-        // 3. Aspect-fit into the render canvas, centred.
-        let scale = min(renderSize.width / displayed.width, renderSize.height / displayed.height)
+        // 3. Aspect-fit (or, for Fill, cover) the render canvas, centred —
+        // Fill's overflow is cut off by the canvas (FS-12.10 §5).
+        let fitScale = min(renderSize.width / displayed.width, renderSize.height / displayed.height)
+        let fillScale = max(renderSize.width / displayed.width, renderSize.height / displayed.height)
+        let scale = framing == .fill ? fillScale : fitScale
         let fitted = CGSize(width: displayed.width * scale, height: displayed.height * scale)
         return transform
             .concatenating(CGAffineTransform(scaleX: scale, y: scale))
@@ -67,15 +71,15 @@ enum VideoGeometry {
             ))
     }
 
-    /// Where a still photo sits on the render canvas: aspect-fit, centred.
-    static func stillFitRect(imageSize: CGSize, renderSize: CGSize) -> CGRect {
+    /// Where a still photo sits on the render canvas: aspect-fit, centred —
+    /// or, for Fill, covering the canvas with the overflow centred outside.
+    static func stillFitRect(imageSize: CGSize, renderSize: CGSize, framing: VideoFraming = .fit) -> CGRect {
         guard imageSize.width > 0, imageSize.height > 0,
               renderSize.width > 0, renderSize.height > 0
         else { return CGRect(origin: .zero, size: renderSize) }
-        let scale = min(
-            renderSize.width / imageSize.width,
-            renderSize.height / imageSize.height
-        )
+        let widthScale = renderSize.width / imageSize.width
+        let heightScale = renderSize.height / imageSize.height
+        let scale = framing == .fill ? max(widthScale, heightScale) : min(widthScale, heightScale)
         let fitted = CGSize(width: imageSize.width * scale, height: imageSize.height * scale)
         return CGRect(
             x: (renderSize.width - fitted.width) / 2,
