@@ -23,6 +23,12 @@ struct VideoRenderRecipe: Sendable {
     let totalDuration: Double
     /// Letterbox / pillarbox fill behind aspect-fitted frames.
     let background: CIColor
+    /// What each fitted clip sits on (FS-12.01 §7b), and how blurred.
+    let backgroundKind: VideoBackground.Kind
+    let blurAmount: Double
+    /// The library photo of an Image background.
+    let backgroundImageID: String?
+    let framing: VideoFraming
     /// Preview draws overlays with a live SwiftUI proxy on top of the player, so
     /// the preview composition skips baking them (no per-edit rebuild, no ghosting
     /// while a caption is dragged). Export has no proxy — it bakes them into pixels.
@@ -55,6 +61,10 @@ struct VideoRenderRecipe: Sendable {
             green: recipe.background.colour.green,
             blue: recipe.background.colour.blue
         )
+        self.backgroundKind = recipe.background.kind
+        self.blurAmount = recipe.background.blurAmount
+        self.backgroundImageID = recipe.background.imageAssetID
+        self.framing = recipe.framing
     }
 
     var hasWork: Bool {
@@ -150,6 +160,9 @@ final class StillFrameStore: @unchecked Sendable {
     private var cache: [String: CIImage] = [:]
     private var order: [String] = []
     private let capacity = 4
+    /// The Image background's photo: held apart from the LRU so four clips
+    /// in a row cannot push it out and reload it every frame.
+    private var pinned: (id: String, image: CIImage?)?
     /// Server copies on this device by clip id (FS-17.06 §5b): decoded from
     /// the file at the render size instead of asked of PhotoKit.
     private var files: [String: URL]
@@ -173,6 +186,22 @@ final class StillFrameStore: @unchecked Sendable {
         lock.lock()
         defer { lock.unlock() }
         self.files = files
+    }
+
+    /// The Image background's photo, loaded once and pinned; nil when it
+    /// cannot be read (deleted, or access withdrawn).
+    func backgroundImage(for assetID: String) -> CIImage? {
+        lock.lock()
+        if let pinned, pinned.id == assetID {
+            lock.unlock()
+            return pinned.image
+        }
+        lock.unlock()
+        let loaded = load(assetID)
+        lock.lock()
+        defer { lock.unlock() }
+        pinned = (assetID, loaded)
+        return loaded
     }
 
     func image(for assetID: String) -> CIImage? {
@@ -380,14 +409,20 @@ final class VideoFrameCompositor: NSObject, AVVideoCompositing {
 
         // Per-clip effects run on each side independently, before the blend:
         // during a transition the outgoing clip's blur-out plays against the
-        // incoming clip's blur-in, each on its own placement clock.
+        // incoming clip's blur-in, each on its own placement clock. Each side
+        // sits on its own backdrop too (FS-12.01 §7b): a blurred background
+        // is *that* clip's frame, so the crossfade mixes two pairs.
+        let frontBackdrop = backdrop(behind: image, recipe: instruction.recipe, canvas: canvas, stills: instruction.stillStore)
         image = applyClipEffect(image, timing: instruction.frontClip, at: seconds, canvas: canvas)
+        image = image.composited(over: frontBackdrop).cropped(to: canvas)
 
         if let back = instruction.back,
            var outgoing = resolvedImage(back, request: request, renderSize: renderSize) {
+            let backBackdrop = backdrop(behind: outgoing, recipe: instruction.recipe, canvas: canvas, stills: instruction.stillStore)
             if let backClip = instruction.backClip {
                 outgoing = applyClipEffect(outgoing, timing: backClip, at: seconds, canvas: canvas)
             }
+            outgoing = outgoing.composited(over: backBackdrop).cropped(to: canvas)
             let progress = VideoTimelineMath.fadeProgress(
                 at: seconds,
                 fadeStart: instruction.fadeStart,
@@ -428,6 +463,28 @@ final class VideoFrameCompositor: NSObject, AVVideoCompositing {
         }
 
         render(image, to: output, request: request)
+    }
+
+    /// The backdrop of one side. Fill covers the canvas, so only the plain
+    /// colour is drawn under it — no blur is spent on pixels never seen.
+    private func backdrop(
+        behind placed: CIImage,
+        recipe: VideoRenderRecipe,
+        canvas: CGRect,
+        stills: StillFrameStore
+    ) -> CIImage {
+        guard recipe.framing == .fit else {
+            return CIImage(color: recipe.background).cropped(to: canvas)
+        }
+        let photo: CIImage? = if recipe.backgroundKind == .image, let id = recipe.backgroundImageID {
+            stills.backgroundImage(for: id)
+        } else {
+            nil
+        }
+        return VideoBackgroundRenderer.backdrop(
+            behind: placed, canvas: canvas, kind: recipe.backgroundKind,
+            colour: recipe.background, blurAmount: recipe.blurAmount, image: photo
+        )
     }
 
     // MARK: - Per-clip effects
