@@ -24,7 +24,7 @@
 
 ## Bắt đầu với (FS-19, khoá phần đã đúng trước)
 
-- [ ] **L1 — auth bị từ chối dừng lô, không hộp mật khẩu** (AC-36, phần ✅)
+- [x] **L1 — auth bị từ chối dừng lô, không hộp mật khẩu** (AC-36, phần ✅)
   - Xong khi: test xanh trên code hôm nay, không sửa code
   - Kiểm tra: `/test ServerSourceIndexTests/passwordRejectedNoPrompts`
 - [ ] **L2 — Cancel hộp hệ thống → phần Photos không đổi** (AC-41, phần ✅; luật huỷ theo A7)

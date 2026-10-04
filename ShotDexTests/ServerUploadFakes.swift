@@ -117,6 +117,9 @@ final class InMemoryRemoteFileClient: RemoteFileClient, @unchecked Sendable {
     var truncateDownload: Set<String> = []
     /// Download number (1-based) that loses the connection.
     var dropConnectionOnDownload: Int?
+    /// Download number (1-based) that the server refuses, and how — a
+    /// password changed on the NAS while a batch runs.
+    var refuseDownload: (number: Int, error: RemoteFileError)?
     private(set) var downloadCount = 0
 
     /// What `storageSpace(at:)` answers, by path; nil — no answer.
@@ -156,6 +159,7 @@ final class InMemoryRemoteFileClient: RemoteFileClient, @unchecked Sendable {
         let number = lock.withLock { downloadCount += 1; return downloadCount }
         try Task.checkCancellation()
         if dropConnectionOnDownload == number { throw RemoteFileError.connectionLost }
+        if let refuseDownload, refuseDownload.number == number { throw refuseDownload.error }
         guard var data = lock.withLock({ storage[path] }) else { throw RemoteFileError.other("missing") }
         if truncateDownload.contains(path) { data = data.dropLast() }
         lock.withLock { bytesRead += data.count }
