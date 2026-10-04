@@ -20,7 +20,7 @@ import Testing
         for processed in stride(from: 160, through: 200, by: 10) {
             estimate.record(processed: processed, at: start.addingTimeInterval(Double(processed) / 20))
         }
-        let seconds = try? #require(estimate.secondsLeft(remaining: total - 200))
+        let seconds = estimate.secondsLeft(remaining: total - 200)
         #expect(seconds.map { abs($0 - 180.6) < 0.01 } == true)
         #expect(IndexThroughput(photosPerMinute: 1_200, remaining: seconds.map { .seconds($0) }).remainingText
             == "About 3 min left")
