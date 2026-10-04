@@ -26,12 +26,21 @@ struct VideoLUTRendererTests {
         return lines.joined(separator: "\n")
     }
 
+    /// Writes the cube where imported LUTs live, so the look bakes it the
+    /// way the app does — by id, through `ImportedLUTFiles`.
     private func write(_ text: String, id: String) throws -> URL {
-        let url = FileManager.default.temporaryDirectory
-            .appendingPathComponent(id)
-            .appendingPathExtension("cube")
+        let directory = ImportedLUTFiles.directory()
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        let url = ImportedLUTFiles.fileURL(for: id)
         try text.write(to: url, atomically: true, encoding: .utf8)
         return url
+    }
+
+    /// A LUT look rendered the way the compositor renders one: baked into a
+    /// table, looked up per frame.
+    private func render(_ look: VideoLook, exists: Bool = true, on image: CIImage) -> CIImage {
+        guard let plan = VideoLookPlan(look, lutExists: { _ in exists }) else { return image }
+        return VideoLookRenderer.apply(plan, to: image, cache: VideoLookTableCache(capacity: 4))
     }
 
     /// Reads the single pixel a 1×1 image renders to, in sRGB bytes.
@@ -62,11 +71,7 @@ struct VideoLUTRendererTests {
         let url = try write(swapRedAndBlue, id: id)
         defer { try? FileManager.default.removeItem(at: url) }
 
-        let out = VideoLUTRenderer.apply(
-            VideoLUTReference(id: id, name: "Swap"),
-            url: url,
-            to: solid(red: 1, green: 0, blue: 0)
-        )
+        let out = render(VideoLook(.lut(id: id, name: "Swap")), on: solid(red: 1, green: 0, blue: 0))
         let result = pixel(out)
         // Red in, blue out. If the axes were transposed this would come
         // back red, or green.
@@ -74,59 +79,17 @@ struct VideoLUTRendererTests {
         #expect(result.b > 235)
     }
 
-    @Test func strengthMixesTowardsTheOriginal() throws {
-        let id = "swap-\(UUID().uuidString)"
-        let url = try write(swapRedAndBlue, id: id)
-        defer { try? FileManager.default.removeItem(at: url) }
-
-        let half = VideoLUTRenderer.apply(
-            VideoLUTReference(id: id, name: "Swap", intensity: 0.5),
-            url: url,
-            to: solid(red: 1, green: 0, blue: 0)
-        )
-        let result = pixel(half)
-        // Not 128: Core Image mixes in its **linear** working space, so half
-        // of sRGB 255 comes back at sRGB ~188, not at the midpoint of the
-        // encoded codes. What the test is for is that the mix happened and
-        // that it is even — red down off full, blue up off zero, and the two
-        // meeting at the same value.
-        #expect(result.r > 140 && result.r < 220)
-        #expect(result.b > 140 && result.b < 220)
-        #expect(abs(result.r - result.b) < 12)
-    }
-
-    @Test func zeroStrengthLeavesTheFrameAlone() throws {
-        let id = "swap-\(UUID().uuidString)"
-        let url = try write(swapRedAndBlue, id: id)
-        defer { try? FileManager.default.removeItem(at: url) }
-
-        let out = VideoLUTRenderer.apply(
-            VideoLUTReference(id: id, name: "Swap", intensity: 0),
-            url: url,
-            to: solid(red: 1, green: 0, blue: 0)
-        )
-        let result = pixel(out)
-        #expect(result.r > 235)
-        #expect(result.b < 20)
-    }
-
     /// A LUT the user deleted must degrade to no LUT, not to a black frame
-    /// and not to a crash.
+    /// and not to a crash (FS-12.06c §6).
     @Test func aMissingFileLeavesTheFrameAlone() {
-        let out = VideoLUTRenderer.apply(
-            VideoLUTReference(id: "gone", name: "Gone"),
-            url: FileManager.default.temporaryDirectory
-                .appendingPathComponent("gone").appendingPathExtension("cube"),
-            to: solid(red: 1, green: 0, blue: 0)
-        )
+        let out = render(VideoLook(.lut(id: "gone", name: "Gone")), exists: false, on: solid(red: 1, green: 0, blue: 0))
         let result = pixel(out)
         #expect(result.r > 235)
         #expect(result.b < 20)
+        #expect(VideoLookPlan(VideoLook(.lut(id: "gone", name: "Gone")), lutExists: { _ in false }) == nil)
     }
 
-    @Test func noReferenceIsNoWork() {
-        let source = solid(red: 0.25, green: 0.5, blue: 0.75)
-        let out = VideoLUTRenderer.apply(nil, url: nil, to: source)
-        #expect(out === source)
+    @Test func originalIsNoWork() {
+        #expect(VideoLookPlan(.original, lutExists: { _ in true }) == nil)
     }
 }

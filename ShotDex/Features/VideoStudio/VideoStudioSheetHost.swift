@@ -985,12 +985,12 @@ struct VideoStudioSheetHost: View {
     private var filterParams: some View {
         VStack(spacing: 0) {
             FilterStrip(model: model).frame(height: VideoStudioMetrics.filterStripHeight)
-            if model.recipe.filter != .original {
+            if let look = model.recipe.look {
                 InspectorSlider(
-                    label: "Intensity", value: model.recipe.filterIntensity, range: 0...1,
-                    valueText: "\(Int(model.recipe.filterIntensity * 100))", detent: 1, model: model,
-                    set: { model.setFilterIntensity($0) },
-                    reset: { model.pushUndo(); model.setFilterIntensity(1) }
+                    label: "Intensity", value: look.amount, range: 0...1,
+                    valueText: "\(Int(look.amount * 100))", detent: 1, model: model,
+                    set: { model.setVideoLookAmount($0) },
+                    reset: { model.pushUndo(); model.setVideoLookAmount(1) }
                 )
             }
             Spacer(minLength: 0)

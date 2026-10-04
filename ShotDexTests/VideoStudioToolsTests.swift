@@ -37,10 +37,11 @@ struct VideoStudioToolsTests {
         let model = VideoStudioModelFixture.model()
         model.toggleToolPanel(.look)
         #expect(model.activeToolPanel == .look)
-        model.setFilterIntensity(0.5)
+        model.setVideoLook(VideoLook(.preset(.velvia)))
+        model.setVideoLookAmount(0.5)
         model.toggleToolPanel(.look)
         #expect(model.activeToolPanel == nil)
-        #expect(model.recipe.filterIntensity == 0.5)
+        #expect(model.recipe.look?.amount == 0.5)
     }
 }
 

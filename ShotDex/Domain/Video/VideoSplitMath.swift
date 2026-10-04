@@ -8,7 +8,7 @@ import Foundation
 enum VideoSplitMath {
     /// `localTime` is seconds from the clip's own start on the timeline (its
     /// effective, speed-scaled length). The two children keep the parent's
-    /// effect / mute / speed; each gets a fresh id.
+    /// effect / mute / speed / look; each gets a fresh id.
     static func split(_ clip: VideoClip, atLocalTime localTime: Double) -> (VideoClip, VideoClip)? {
         let total = clip.effectiveDuration
         guard localTime > 0, localTime < total else { return nil }
@@ -58,6 +58,8 @@ enum VideoSplitMath {
         new.speed = clip.speed
         new.freezeSourceTime = clip.freezeSourceTime
         new.sourceDuration = clip.sourceDuration
+        // Both halves keep the clip's own look (FS-12.06c).
+        new.look = clip.look
         return new
     }
 }

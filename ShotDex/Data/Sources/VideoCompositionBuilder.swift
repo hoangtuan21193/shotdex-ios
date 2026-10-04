@@ -317,6 +317,7 @@ enum VideoCompositionBuilder {
             let fade = fadesByClipID[clip.clipID] ?? (inSeconds: 0, outSeconds: 0)
             return VideoCompositionInstruction.ClipRenderTiming(
                 clipIndex: clip.clipIndex,
+                clipID: clip.clipID,
                 start: clip.start,
                 duration: clip.duration,
                 effect: effectByClipID[clip.clipID] ?? .none,

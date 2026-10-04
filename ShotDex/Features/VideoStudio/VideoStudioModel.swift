@@ -2017,6 +2017,8 @@ final class VideoStudioModel {
         }
         pushUndo()
         var freeze = VideoClip(assetID: clip.assetID, kind: .freeze)
+        // A frame of the clip keeps the clip's look (FS-12.06c).
+        freeze.look = clip.look
         freeze.freezeSourceTime = sourceTime
         freeze.photoDuration = 2
         recipe.clips.insert(freeze, at: index + 1)
@@ -2229,32 +2231,78 @@ final class VideoStudioModel {
         guard let playerItem, let layout else { return }
         var preview = recipe
         if value {
-            preview.filter = .original
-            preview.filterIntensity = 1
             // The whole chain, not one stage: "show me the original" means
-            // the picture before the grade, and the grade is every node.
+            // the picture before the grade — every node and every look, the
+            // clips' own included (FS-12.06c).
+            preview.look = nil
+            for index in preview.clips.indices { preview.clips[index].look = nil }
             preview.nodes = [ColorNode()]
-            preview.lut = nil
             preview.overlays = []
         }
         service.applyVideoComposition(recipe: preview, layout: layout, to: playerItem)
     }
 
-    // MARK: - Look edits (videoComposition tier)
+    // MARK: - Look (FS-12.06c, videoComposition tier)
 
-    func setFilter(_ filter: PhotoFilter) {
-        // A tap, not a drag: one snapshot, so picking a look and disliking it
-        // is undoable like every other edit in the studio.
+    /// The whole video's look. A tap, not a drag: one snapshot, so picking a
+    /// look and disliking it is undoable like every other edit.
+    func setVideoLook(_ look: VideoLook?) {
+        guard recipe.look != look else { return }
         pushUndo()
-        recipe.filter = filter
+        recipe.look = look
         markEdited()
-        applyVideoTier()
+        applyLookTier()
     }
 
-    func setFilterIntensity(_ intensity: Double) {
-        recipe.filterIntensity = min(max(intensity, 0), 1)
+    /// What a built-in film look is called: the photo editor's store knows
+    /// the names the user gave them. Set by the screen.
+    var presetName: @MainActor (PhotoFilter) -> String = { $0.displayName }
+
+    /// The pill on a clip's band, when the clip has a look of its own.
+    func lookPillText(for clip: VideoClip) -> String? {
+        VideoLookEditing.pillText(for: clip, presetName: presetName)
+    }
+
+    /// The film look the whole video wears, `.original` when it has none or
+    /// its look is not a preset.
+    var videoLookPreset: PhotoFilter {
+        if case let .preset(filter) = recipe.look?.source { return filter }
+        return .original
+    }
+
+    /// The LUT the whole video is graded through when its look is one.
+    var videoLookLUTID: String? {
+        if case let .lut(id, _) = recipe.look?.source { return id }
+        return nil
+    }
+
+    /// Amount of the whole video's look. No undo push per tick — the slider
+    /// is one gesture and one step (`InspectorSlider` groups it).
+    func setVideoLookAmount(_ amount: Double) {
+        guard recipe.look != nil else { return }
+        recipe.look?.amount = min(max(amount, 0), 1)
         markEdited()
-        applyVideoTier()
+        applyLookTier()
+    }
+
+    /// The look tables a composition needs, baked off the main actor
+    /// before it goes live (§5: bake when chosen); a newer edit cancels the
+    /// wait, not the bake.
+    private var lookWarmTask: Task<Void, Never>?
+
+    private func applyLookTier() {
+        let looks = ([recipe.look] + recipe.clips.map(\.look))
+            .compactMap { $0.flatMap { VideoLookPlan($0, lutExists: VideoLookPlan.lutFileExists) }?.recipe }
+        lookWarmTask?.cancel()
+        guard !looks.isEmpty else {
+            applyVideoTier()
+            return
+        }
+        lookWarmTask = Task { [weak self] in
+            await VideoLookTableCache.shared.prepare(looks)
+            guard let self, !Task.isCancelled else { return }
+            applyVideoTier()
+        }
     }
 
     // MARK: - Colour (look tier)
@@ -2422,26 +2470,6 @@ final class VideoStudioModel {
     func resetCurve(_ channel: ToneCurveChannel) {
         pushUndo()
         activeNode.curve[channel] = ToneCurveAdjustments.linear
-        markEdited()
-        applyVideoTier()
-    }
-
-    // MARK: Imported LUT
-
-    /// Grades through an imported `.cube`, or clears it when `nil`.
-    func setLUT(_ reference: VideoLUTReference?) {
-        guard recipe.lut != reference else { return }
-        pushUndo()
-        recipe.lut = reference
-        markEdited()
-        applyVideoTier()
-    }
-
-    /// How much of the LUT to mix in. No undo push per tick — the slider is
-    /// one continuous gesture and one step of undo, like the grading wheels.
-    func setLUTIntensity(_ value: Double) {
-        guard recipe.lut != nil else { return }
-        recipe.lut?.intensity = min(1, max(0, value))
         markEdited()
         applyVideoTier()
     }
@@ -2837,6 +2865,7 @@ final class VideoStudioModel {
         copy.speed = original.speed
         copy.freezeSourceTime = original.freezeSourceTime
         copy.sourceDuration = original.sourceDuration
+        copy.look = original.look
         if let source = sources[original.id] { sources[copy.id] = source }
         if let duration = measuredSourceDurations[original.id] { measuredSourceDurations[copy.id] = duration }
         beginAddSession(.clip(copy.id))

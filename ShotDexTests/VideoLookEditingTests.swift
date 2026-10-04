@@ -1,0 +1,126 @@
+import Foundation
+import Testing
+@testable import ShotDex
+import ShotDexKit
+
+/// The looks the FS-12.06c tests use.
+enum VideoLookSamples {
+    /// A My Look as the tests use it: Night Teal is cool and teal, Moody
+    /// Coast the spec's sample (Exposure +0.3 · Contrast +20 · Velvia ·
+    /// Grain 25 · Vignette −20).
+    static var nightTeal: VideoLook {
+        var recipe = PhotoEditRecipe.identity
+        recipe.adjustments.warmth = -0.35
+        recipe.adjustments.tint = -0.2
+        recipe.adjustments.contrast = 0.15
+        recipe.color.mixer.aqua.saturation = 0.4
+        return VideoLook(.myLook(sourceID: nightTealID, name: "Night Teal", isImported: false, recipe: recipe))
+    }
+
+    static var moodyCoast: PhotoEditRecipe {
+        var recipe = PhotoEditRecipe.identity
+        recipe.adjustments.exposure = 0.3
+        recipe.adjustments.contrast = 0.2
+        recipe.filter = .velvia
+        recipe.filterIntensity = 1
+        recipe.adjustments.grain = 0.25
+        recipe.adjustments.vignette = -0.2
+        return recipe
+    }
+
+    static var velvia: VideoLook { VideoLook(.preset(.velvia)) }
+
+    static let nightTealID = UUID(uuidString: "00000000-0000-0000-0000-00000000BEEF")!
+}
+
+/// FS-12.06c §4, §6: the look slots' rules, apart from any pixel.
+@MainActor
+struct VideoLookEditingTests {
+    static var nightTeal: VideoLook { VideoLookSamples.nightTeal }
+    static var moodyCoast: PhotoEditRecipe { VideoLookSamples.moodyCoast }
+    static var velvia: VideoLook { VideoLookSamples.velvia }
+
+    /// AC-3: the clip's own look replaces the video's — never both.
+    @Test func clipLookReplacesVideoLook() {
+        var recipe = VideoProjectRecipe(clips: VideoStudioModelFixture.videoClips(3))
+        recipe.look = Self.velvia
+        recipe.clips[1].look = Self.nightTeal
+        #expect(VideoLookEditing.effectiveLook(for: recipe.clips[0], in: recipe) == Self.velvia)
+        #expect(VideoLookEditing.effectiveLook(for: recipe.clips[1], in: recipe) == Self.nightTeal)
+        #expect(VideoLookEditing.effectiveLook(for: recipe.clips[2], in: recipe) == Self.velvia)
+    }
+
+    /// Original on a clip is a look of its own: that clip has none, the
+    /// rest keep the video's.
+    @Test func originalOnClipBeatsVideoLook() {
+        var recipe = VideoProjectRecipe(clips: VideoStudioModelFixture.videoClips(2))
+        recipe.look = Self.velvia
+        recipe.clips[0].look = .original
+        #expect(VideoLookEditing.effectiveLook(for: recipe.clips[0], in: recipe) == nil)
+        #expect(VideoLookEditing.effectiveLook(for: recipe.clips[1], in: recipe) == Self.velvia)
+        // And the compositor reads it the same way.
+        let render = VideoRenderRecipe(recipe: recipe, renderSize: CGSize(width: 64, height: 36), totalDuration: 1, bakesOverlays: false)
+        #expect(render.lookPlan(for: recipe.clips[0].id) == nil)
+        #expect(render.lookPlan(for: recipe.clips[1].id) != nil)
+        #expect(render.lookPlan(for: nil) != nil)
+    }
+
+    /// AC-3: only the clip with a look of its own wears a pill.
+    @Test func pillOnlyOnClipsWithOwnLook() {
+        let model = VideoStudioModelFixture.model(configure: { recipe in
+            recipe.look = Self.velvia
+            recipe.clips[1].look = Self.nightTeal
+        })
+        let pills = model.recipe.clips.map { model.lookPillText(for: $0) }
+        #expect(pills == [nil, "Night Teal", nil])
+    }
+
+    /// A renamed preset's pill reads the name the editor shows for it.
+    @Test func presetPillUsesTheEditorsName() {
+        var clip = VideoClip(assetID: "a", kind: .photo)
+        clip.look = Self.velvia
+        #expect(VideoLookEditing.pillText(for: clip) == PhotoFilter.velvia.displayName)
+        #expect(VideoLookEditing.pillText(for: clip, presetName: { _ in "My Velvia" }) == "My Velvia")
+    }
+
+    /// A project with looks survives the trip through its stored JSON, and
+    /// a look this build cannot read costs that look, not the clip.
+    @Test func looksSurviveTheRecipeRoundTrip() throws {
+        var recipe = VideoProjectRecipe(clips: VideoStudioModelFixture.videoClips(2))
+        recipe.look = VideoLook(.lut(id: "kodak", name: "Kodak 2383"), amount: 0.4)
+        recipe.clips[1].look = Self.nightTeal
+        let decoded = try JSONDecoder().decode(VideoProjectRecipe.self, from: JSONEncoder().encode(recipe))
+        #expect(decoded.look == recipe.look)
+        #expect(decoded.clips[1].look == recipe.clips[1].look)
+
+        var json = try #require(String(data: JSONEncoder().encode(recipe), encoding: .utf8))
+        json = json.replacingOccurrences(of: "\"lut\"", with: "\"hologram\"")
+        let lenient = try JSONDecoder().decode(VideoProjectRecipe.self, from: Data(json.utf8))
+        #expect(lenient.look == nil)
+        #expect(lenient.clips.count == 2)
+    }
+
+    /// The cache holds 24 tables and lets the least recently used one go.
+    @Test func cacheEvictsBeyond24Tables() {
+        let cache = VideoLookTableCache()
+        #expect(cache.capacity == 24)
+        let looks: [PhotoEditRecipe] = (0..<25).map { index in
+            var look = PhotoEditRecipe.identity
+            look.adjustments.exposure = Double(index + 1) * 0.04
+            return look
+        }
+        for look in looks { _ = cache.table(.whole, of: look) }
+        #expect(cache.count == 24)
+        #expect(!cache.contains(.init(.whole, of: looks[0])))
+        #expect(cache.contains(.init(.whole, of: looks[24])))
+        // A look with Clarity costs two tables.
+        var clarity = PhotoEditRecipe.identity
+        clarity.adjustments.exposure = 1.5
+        clarity.filter = .velvia
+        clarity.adjustments.clarity = 0.2
+        for part in VideoLookBaker.parts(of: clarity) { _ = cache.table(part, of: clarity) }
+        #expect(cache.count == 24)
+        #expect(!cache.contains(.init(.whole, of: looks[1])))
+        #expect(!cache.contains(.init(.whole, of: looks[2])))
+    }
+}

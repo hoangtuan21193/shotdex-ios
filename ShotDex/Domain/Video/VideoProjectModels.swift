@@ -235,6 +235,9 @@ struct VideoClip: Identifiable, Equatable, Codable, Sendable {
     var freezeSourceTime: Double?
     /// Resolved at load, not user state.
     var sourceDuration: Double?
+    /// The clip's own look (FS-12.06c): nil follows the whole video's;
+    /// anything else — Original included — replaces it for this clip.
+    var look: VideoLook?
 
     init(assetID: String, kind: VideoClipKind, id: UUID = UUID()) {
         self.id = id
@@ -528,18 +531,69 @@ struct ColorNode: Identifiable, Equatable, Codable, Sendable {
     }
 }
 
-/// The LUT a project is graded through, as stored in the recipe.
-struct VideoLUTReference: Equatable, Codable, Sendable {
-    /// `ImportedLUTStore` id — the on-disk filename stem.
-    var id: String
-    /// What to call it on screen. Held here as well as in the store so a
-    /// project opened after the file was deleted can still say which LUT is
-    /// missing.
-    var name: String
-    /// 0…1. A LUT at less than full strength is how a colourist uses a look
-    /// pack: the film print emulation goes on at 60 % and the grade does
-    /// the rest.
-    var intensity: Double = 1
+/// One look slot (FS-12.06c §6): the whole video has one, each clip may
+/// have its own. A look is one of three things the photo editor already
+/// has — a film look, one of My Looks, an imported LUT — plus how much of
+/// it to mix in.
+struct VideoLook: Equatable, Codable, Sendable {
+    enum Source: Equatable, Codable, Sendable {
+        /// A built-in film look, by its preset. `.original` is "no look" —
+        /// on a clip it still replaces the whole video's look.
+        case preset(PhotoFilter)
+        /// One of My Looks, **copied** when chosen (§6): the look part of
+        /// its recipe, the id of the look it came from — so the tile of
+        /// that look is drawn chosen, and a tap takes the newer version —
+        /// its name, and whether it was imported from a preset file.
+        case myLook(sourceID: UUID, name: String, isImported: Bool, recipe: PhotoEditRecipe)
+        /// An imported LUT, by `ImportedLUTStore` id. The name is kept here
+        /// too, so a project whose file has gone can still say which LUT is
+        /// missing.
+        case lut(id: String, name: String)
+    }
+
+    var source: Source
+    /// 0…1: how much of the **whole** look is mixed over the frame before
+    /// it (§4) — tone, colour, film, LUT, grain, vignette alike.
+    var amount: Double = 1
+
+    init(_ source: Source, amount: Double = 1) {
+        self.source = source
+        self.amount = amount
+    }
+
+    static let original = VideoLook(.preset(.original))
+
+    /// Original: nothing to render.
+    var isOriginal: Bool { source == .preset(.original) }
+
+    /// The editor recipe this look renders as: the film look or the LUT at
+    /// full strength, or the copied My Look as it was saved.
+    var recipe: PhotoEditRecipe {
+        switch source {
+        case let .preset(filter):
+            var recipe = PhotoEditRecipe.identity
+            recipe.filter = filter
+            recipe.filterIntensity = 1
+            return recipe
+        case let .myLook(_, _, _, recipe):
+            return recipe
+        case let .lut(id, _):
+            var recipe = PhotoEditRecipe.identity
+            recipe.lutID = id
+            recipe.filterIntensity = 1
+            return recipe
+        }
+    }
+
+    /// The LUT the look reads from disk — chosen directly, or inside a My
+    /// Look — whose file can go missing (§6).
+    var lutID: String? {
+        switch source {
+        case .preset: nil
+        case let .myLook(_, _, _, recipe): recipe.lutID
+        case let .lut(id, _): id
+        }
+    }
 }
 
 struct VideoProjectRecipe: Equatable, Codable, Sendable {
@@ -559,9 +613,10 @@ struct VideoProjectRecipe: Equatable, Codable, Sendable {
     /// Undoing the camera's encoding, before anything else touches the
     /// picture.
     var inputTransform: VideoInputTransform = .none
-    /// One look for the whole video (deliberately not per-clip).
-    var filter: PhotoFilter = .original
-    var filterIntensity: Double = 1
+    /// The whole video's look (FS-12.06c): film look, My Look or LUT, and
+    /// its Amount. Nil is none. A clip with a look of its own uses that
+    /// instead (`VideoClip.look`).
+    var look: VideoLook?
     /// The grade, as a chain of corrections rather than one flat set.
     ///
     /// Every stage the photo editor has — exposure and the rest of the
@@ -571,12 +626,6 @@ struct VideoProjectRecipe: Equatable, Codable, Sendable {
     /// puts a fresh empty node back, because a grade with no node is a state
     /// with no controls.
     var nodes: [ColorNode] = [ColorNode()]
-    /// A creative LUT the user imported, by store id, plus how much of it
-    /// to mix in. Only the reference is stored — the table itself lives on
-    /// disk and is loaded by the renderer — so a project stays small and a
-    /// LUT that has since been deleted degrades to no LUT instead of to a
-    /// corrupt grade.
-    var lut: VideoLUTReference?
     var overlays: [TimedOverlay] = []
     /// Single-video mode: user rotation in quarter turns (0–3).
     var quarterTurns = 0
@@ -690,6 +739,7 @@ extension VideoClip {
         speed = value(.speed, 1)
         freezeSourceTime = value(.freezeSourceTime, Double?.none)
         sourceDuration = value(.sourceDuration, Double?.none)
+        look = value(.look, VideoLook?.none)
     }
 }
 
@@ -747,11 +797,9 @@ extension VideoProjectRecipe {
         videoVolume = value(.videoVolume, 1)
         markers = list(.markers)
         inputTransform = value(.inputTransform, VideoInputTransform.none)
-        filter = value(.filter, PhotoFilter.original)
-        filterIntensity = value(.filterIntensity, 1)
+        look = value(.look, VideoLook?.none)
         let decodedNodes: [ColorNode] = list(.nodes)
         nodes = decodedNodes.isEmpty ? [ColorNode()] : decodedNodes
-        lut = value(.lut, VideoLUTReference?.none)
         overlays = list(.overlays)
         quarterTurns = value(.quarterTurns, 0)
         aspect = value(.aspect, VideoAspect.r16x9)

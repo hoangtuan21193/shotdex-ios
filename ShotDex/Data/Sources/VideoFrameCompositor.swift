@@ -9,15 +9,14 @@ import ShotDexKit
 /// `AVVideoComposition`, never mutates a live instruction.
 struct VideoRenderRecipe: Sendable {
     let inputTransform: VideoInputTransform
-    let filter: PhotoFilter
-    let filterIntensity: Double
     /// The grading chain, already stripped of the nodes that are switched
     /// off or empty — the compositor should not re-decide that per frame.
     let nodes: [ColorNode]
-    let lut: VideoLUTReference?
-    /// Resolved at build time from the LUT's id, because the compositor
-    /// cannot ask a main-actor store for it.
-    let lutURL: URL?
+    /// The whole video's look, ready to render; nil for none.
+    let videoLook: VideoLookPlan?
+    /// Clips with a look of their own, by id — nil for one whose own look
+    /// is Original. A clip missing here follows `videoLook` (FS-12.06c §4).
+    let clipLooks: [UUID: VideoLookPlan?]
     let overlays: [TimedOverlay]
     let renderSize: CGSize
     let totalDuration: Double
@@ -38,11 +37,20 @@ struct VideoRenderRecipe: Sendable {
         recipe: VideoProjectRecipe,
         renderSize: CGSize,
         totalDuration: Double,
-        bakesOverlays: Bool
+        bakesOverlays: Bool,
+        /// Whether a LUT's file is on disk. Asked here, once per build, so
+        /// the compositor never touches the file system per frame and a LUT
+        /// deleted since renders as no LUT (§6).
+        lutExists: (String) -> Bool = VideoLookPlan.lutFileExists
     ) {
         self.inputTransform = recipe.inputTransform
-        self.filter = recipe.filter
-        self.filterIntensity = recipe.filterIntensity
+        self.videoLook = recipe.look.flatMap { VideoLookPlan($0, lutExists: lutExists) }
+        var clipLooks: [UUID: VideoLookPlan?] = [:]
+        for clip in recipe.clips {
+            guard let look = clip.look else { continue }
+            clipLooks[clip.id] = .some(VideoLookPlan(look, lutExists: lutExists))
+        }
+        self.clipLooks = clipLooks
         self.nodes = recipe.nodes
             .filter { $0.isEnabled && !$0.isIdentity }
             .map { node in
@@ -50,8 +58,6 @@ struct VideoRenderRecipe: Sendable {
                 live.masks = node.masks.filter(\.isVisible)
                 return live
             }
-        self.lut = recipe.lut
-        self.lutURL = recipe.lut.map { ImportedLUTStore.fileURL(for: $0.id) }
         self.overlays = recipe.overlays
         self.renderSize = renderSize
         self.totalDuration = totalDuration
@@ -68,11 +74,17 @@ struct VideoRenderRecipe: Sendable {
     }
 
     var hasWork: Bool {
-        filter != .original
+        videoLook != nil
+            || clipLooks.values.contains { $0 != nil }
             || !overlays.isEmpty
             || !inputTransform.isIdentity
             || !nodes.isEmpty
-            || lut != nil
+    }
+
+    /// The look `clipID` renders with: its own, else the whole video's.
+    func lookPlan(for clipID: UUID?) -> VideoLookPlan? {
+        guard let clipID, let own = clipLooks[clipID] else { return videoLook }
+        return own
     }
 
     /// The input transform as one `CIColorCurves` pass.
@@ -110,8 +122,8 @@ struct VideoRenderRecipe: Sendable {
     /// first, because every stage after it is dialled against a picture that
     /// is supposed to have contrast in it; then exposure and the rest of the
     /// primaries; then the point curve; then the local grades — and that
-    /// middle part once per node, in chain order. Then the look, and last
-    /// the imported LUT.
+    /// middle part once per node, in chain order. Then the look — the
+    /// clip's own, or the whole video's (FS-12.06c §4).
     ///
     /// The compositor runs it per frame. The scopes run it on one still, so
     /// that what the waveform measures is the graded picture and not the
@@ -122,7 +134,7 @@ struct VideoRenderRecipe: Sendable {
     /// that covers only part of it (FS-12.06c §4): the chain runs on each
     /// clip before the transition and the letterbox, so a window must still
     /// be measured against the viewer the user drew it on.
-    func graded(_ input: CIImage, at seconds: Double, canvas: CGRect? = nil) -> CIImage {
+    func graded(_ input: CIImage, at seconds: Double, canvas: CGRect? = nil, clipID: UUID? = nil) -> CIImage {
         var image = VideoRenderRecipe.applyInputTransform(inputTransform, to: input)
         // Then the chain, in order. Each node is the photo editor's own
         // colour stage over whatever the node before it produced — which is
@@ -140,11 +152,11 @@ struct VideoRenderRecipe: Sendable {
                 image = VideoMaskRenderer.apply(node.trackedMasks(at: seconds), to: image, extent: canvas)
             }
         }
-        image = PhotoRenderService.applyFilter(filter, intensity: filterIntensity, to: image)
-        // The imported LUT goes last: a look pack is authored to be the
-        // final word over a corrected picture, which is where a colourist
-        // puts it on a node tree too.
-        return VideoLUTRenderer.apply(lut, url: lutURL, to: image)
+        // The look goes last: a look is authored to be the final word over a
+        // corrected picture, which is where a colourist puts it on a node
+        // tree too.
+        guard let look = lookPlan(for: clipID) else { return image }
+        return VideoLookRenderer.apply(look, to: image)
     }
 
     /// The overlays visible at `time`, in recipe (z) order — with their timing, so
@@ -287,11 +299,32 @@ final class VideoCompositionInstruction: NSObject, AVVideoCompositionInstruction
     /// effect needs to compute its clip-local progress at a frame time.
     struct ClipRenderTiming: Sendable {
         let clipIndex: Int
+        /// Whose look the side renders with (FS-12.06c); nil follows the
+        /// whole video's.
+        var clipID: UUID?
         let start: Double
         let duration: Double
         let effect: VideoClipEffect
         var fadeIn: Double = 0
         var fadeOut: Double = 0
+
+        init(
+            clipIndex: Int,
+            clipID: UUID? = nil,
+            start: Double,
+            duration: Double,
+            effect: VideoClipEffect,
+            fadeIn: Double = 0,
+            fadeOut: Double = 0
+        ) {
+            self.clipIndex = clipIndex
+            self.clipID = clipID
+            self.start = start
+            self.duration = duration
+            self.effect = effect
+            self.fadeIn = fadeIn
+            self.fadeOut = fadeOut
+        }
 
         /// Opacity from this clip's own fades at one timeline second.
         func fadeOpacity(at time: Double) -> Double {
@@ -419,7 +452,12 @@ final class VideoFrameCompositor: NSObject, AVVideoCompositing {
             recipe: recipe,
             canvas: canvas,
             at: seconds,
-            backgroundPhoto: backgroundPhoto
+            backgroundPhoto: backgroundPhoto,
+            materialize: { [context] image in
+                guard let buffer = request.renderContext.newPixelBuffer() else { return image }
+                context.render(image, to: buffer)
+                return CIImage(cvPixelBuffer: buffer).cropped(to: image.extent)
+            }
         )
 
         // Overlays last, over the finished frame: a caption is not part of
@@ -457,7 +495,10 @@ final class VideoFrameCompositor: NSObject, AVVideoCompositing {
         recipe: VideoRenderRecipe,
         canvas: CGRect,
         at seconds: Double,
-        backgroundPhoto: CIImage? = nil
+        backgroundPhoto: CIImage? = nil,
+        /// Draws an image on its own and hands back the pixels — the
+        /// compositor renders into one of its buffers.
+        materialize: (CIImage) -> CIImage = { $0 }
     ) -> CIImage {
         let backgroundImage = CIImage(color: recipe.background).cropped(to: canvas)
         // A missing still or dropped frame renders the background rather
@@ -470,7 +511,7 @@ final class VideoFrameCompositor: NSObject, AVVideoCompositing {
             // look then follows the picture, not the bars (§5).
             var image = placed.cropped(to: canvas)
             if recipe.hasWork {
-                image = recipe.graded(image, at: seconds, canvas: canvas)
+                image = recipe.graded(image, at: seconds, canvas: canvas, clipID: timing.clipID)
             }
             // Each side sits on its own backdrop (FS-12.01 §7b): a blurred
             // background is *that* clip's graded frame, so a crossfade mixes
@@ -484,7 +525,16 @@ final class VideoFrameCompositor: NSObject, AVVideoCompositing {
 
         var image = side(front.image, front.timing)
         if let back, let transition {
-            let outgoing = side(back.image, back.timing)
+            var outgoing = side(back.image, back.timing)
+            // A look's tables are cubes, and Core Image must not see two
+            // sides' cubes in one graph: after a frame where both sides wore
+            // the same look it reused that frame's program for a dissolve
+            // between two looks and graded both with the first one's table
+            // (`VideoLookRenderTests.aContextThatSawOneLookStillRendersTwo`).
+            // The outgoing side is drawn on its own first.
+            if recipe.lookPlan(for: back.timing.clipID) != nil {
+                outgoing = materialize(outgoing)
+            }
             let progress = VideoTimelineMath.fadeProgress(
                 at: seconds,
                 fadeStart: transition.start,

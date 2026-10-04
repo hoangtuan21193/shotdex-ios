@@ -108,7 +108,7 @@ struct VideoColorPanel: View {
             guard case .success(let url) = result else { return }
             do {
                 let imported = try luts.add(from: url)
-                model.setLUT(VideoLUTReference(id: imported.id, name: imported.displayName))
+                model.setVideoLook(VideoLook(.lut(id: imported.id, name: imported.displayName)))
             } catch {
                 model.errorMessage = String(
                     localized: "Couldn't read that LUT. ShotDex reads .cube files.",
@@ -138,8 +138,8 @@ struct VideoColorPanel: View {
                     .font(EditorTheme.groupLabel)
                     .foregroundStyle(EditorTheme.secondaryText)
                 Spacer(minLength: 0)
-                if model.recipe.lut != nil {
-                    Button { model.setLUT(nil) } label: {
+                if model.videoLookLUTID != nil {
+                    Button { model.setVideoLook(nil) } label: {
                         Text("None", comment: "Video Studio colour: grades without a LUT")
                             .font(EditorTheme.pillLabel)
                             .foregroundStyle(EditorTheme.accent)
@@ -176,26 +176,24 @@ struct VideoColorPanel: View {
             }
             .buttonStyle(.plain)
 
-            if let reference = model.recipe.lut {
+            if model.videoLookLUTID != nil, let look = model.recipe.look {
                 InspectorSlider(
                     label: String(localized: "Strength", comment: "Video Studio colour: how much of the LUT to mix in"),
-                    value: reference.intensity,
+                    value: look.amount,
                     range: 0...1,
-                    valueText: "\(Int((reference.intensity * 100).rounded()))%",
+                    valueText: "\(Int((look.amount * 100).rounded()))%",
                     model: model,
-                    set: { model.setLUTIntensity($0) },
-                    reset: { model.pushUndo(); model.setLUTIntensity(1) }
+                    set: { model.setVideoLookAmount($0) },
+                    reset: { model.pushUndo(); model.setVideoLookAmount(1) }
                 )
             }
         }
     }
 
     private func lutChip(_ lut: ImportedLUT) -> some View {
-        let isSelected = model.recipe.lut?.id == lut.id
+        let isSelected = model.videoLookLUTID == lut.id
         return Button {
-            model.setLUT(
-                isSelected ? nil : VideoLUTReference(id: lut.id, name: lut.displayName)
-            )
+            model.setVideoLook(isSelected ? nil : VideoLook(.lut(id: lut.id, name: lut.displayName)))
         } label: {
             Text(lut.displayName)
                 .lineLimit(1)
@@ -203,7 +201,7 @@ struct VideoColorPanel: View {
         .buttonStyle(EditorChipButtonStyle(isSelected: isSelected))
         .contextMenu {
             Button(role: .destructive) {
-                if isSelected { model.setLUT(nil) }
+                if isSelected { model.setVideoLook(nil) }
                 luts.delete(lut)
             } label: {
                 Label {

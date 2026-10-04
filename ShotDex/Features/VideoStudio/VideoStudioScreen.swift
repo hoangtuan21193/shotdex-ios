@@ -139,6 +139,7 @@ struct VideoStudioScreen: View {
                 serverWorkDirectory: server?.export.workDirectory
             )
             newModel.onSaved = { assetID in onSaved(assetID); dismiss() }
+            newModel.presetName = { [looks = dependencies.lookPresets] in looks.displayName(of: $0) }
             model = newModel
             await newModel.load()
         }

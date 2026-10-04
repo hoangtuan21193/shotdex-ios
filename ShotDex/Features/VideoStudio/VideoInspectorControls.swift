@@ -354,8 +354,10 @@ struct FilterStrip: View {
     }
 
     private func tile(_ filter: PhotoFilter) -> some View {
-        let selected = model.recipe.filter == filter
-        return Button { model.setFilter(filter) } label: {
+        let selected = model.videoLookPreset == filter
+        return Button {
+            model.setVideoLook(filter == .original ? nil : VideoLook(.preset(filter)))
+        } label: {
             VStack(spacing: 4) {
                 ZStack {
                     RoundedRectangle(cornerRadius: AppTheme.Radius.sm, style: .continuous)

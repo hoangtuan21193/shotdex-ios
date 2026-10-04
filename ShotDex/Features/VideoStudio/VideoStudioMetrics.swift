@@ -117,6 +117,8 @@ enum VideoStudioMetrics {
     /// The look picker in the Filter panel: a 62pt tile, its name, and the
     /// gap between them.
     static let filterStripHeight: CGFloat = 82
+    /// The look-name pill on a clip with a look of its own (FS-12.06c §3).
+    static let lookPillHeight: CGFloat = 19
 
     /// The lying-down level meter at the top of the Volume panel: a label
     /// row and two 7pt bars.

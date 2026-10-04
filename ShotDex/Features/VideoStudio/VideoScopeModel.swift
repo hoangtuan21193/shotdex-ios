@@ -27,6 +27,9 @@ final class VideoScopeModel {
     private var renderedGrade: GradeKey?
     private var base: CIImage?
     private var pendingRecipe: VideoProjectRecipe?
+    /// The clip under the playhead: its look is the one measured
+    /// (FS-12.06c §4).
+    private var pendingClipID: UUID?
     private var playheadTime: Double = 0
     private var renderTask: Task<Void, Never>?
 
@@ -45,6 +48,7 @@ final class VideoScopeModel {
         else { return }
         let assetID = model.recipe.clips[index].assetID
         pendingRecipe = model.recipe
+        pendingClipID = model.recipe.clips[index].id
         playheadTime = model.currentTime
         guard assetID != baseAssetID else {
             rerenderIfGradeChanged()
@@ -78,15 +82,16 @@ final class VideoScopeModel {
 
     private func rerenderIfGradeChanged() {
         guard let recipe = pendingRecipe else { return }
-        guard GradeKey(recipe) != renderedGrade else { return }
+        guard GradeKey(recipe, clipID: pendingClipID) != renderedGrade else { return }
         rerender()
     }
 
     private func rerender() {
         guard let base, let recipe = pendingRecipe else { return }
-        renderedGrade = GradeKey(recipe)
+        renderedGrade = GradeKey(recipe, clipID: pendingClipID)
         renderTask?.cancel()
         let kind = kind
+        let clipID = pendingClipID
         // Read off the main actor before the task starts: the counting runs
         // on a background priority and cannot reach back for it.
         let time = playheadTime
@@ -99,7 +104,7 @@ final class VideoScopeModel {
             )
             // At the playhead, so a tracked window is measured where it
             // actually is in this frame.
-            let graded = render.hasWork ? render.graded(base, at: time) : base
+            let graded = render.hasWork ? render.graded(base, at: time, clipID: clipID) : base
             guard !Task.isCancelled,
                   let sample = VideoScopeRenderer.sample(graded, context: Self.context),
                   !Task.isCancelled,
@@ -123,17 +128,16 @@ final class VideoScopeModel {
     /// `Equatable`, so this compares rather than hashes.
     private struct GradeKey: Equatable {
         let inputTransform: VideoInputTransform
-        let filter: PhotoFilter
-        let filterIntensity: Double
         let nodes: [ColorNode]
-        let lut: VideoLUTReference?
+        /// The look of the clip under the playhead — its own or the video's.
+        let look: VideoLook?
 
-        init(_ recipe: VideoProjectRecipe) {
+        init(_ recipe: VideoProjectRecipe, clipID: UUID?) {
             inputTransform = recipe.inputTransform
-            filter = recipe.filter
-            filterIntensity = recipe.filterIntensity
             nodes = recipe.nodes
-            lut = recipe.lut
+            look = recipe.clips.first { $0.id == clipID }.flatMap {
+                VideoLookEditing.effectiveLook(for: $0, in: recipe)
+            } ?? recipe.look
         }
     }
 }

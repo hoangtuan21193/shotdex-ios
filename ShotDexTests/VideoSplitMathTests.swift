@@ -30,6 +30,16 @@ struct VideoSplitMathTests {
         #expect(VideoSplitMath.split(clip, atLocalTime: 0.01) == nil)
     }
 
+    /// FS-12.06c: both halves keep the clip's own look.
+    @Test func splitKeepsLook() {
+        var clip = VideoClip(assetID: "p", kind: .photo)
+        clip.photoDuration = 4
+        clip.look = VideoLook(.preset(.velvia), amount: 0.6)
+        let result = VideoSplitMath.split(clip, atLocalTime: 1.5)
+        #expect(result?.0.look == clip.look)
+        #expect(result?.1.look == clip.look)
+    }
+
     // MARK: - Video splits
 
     @Test func videoSplitMapsThroughTrimAndSpeed() {

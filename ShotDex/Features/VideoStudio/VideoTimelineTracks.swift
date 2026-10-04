@@ -272,6 +272,7 @@ private struct ClipBand: View {
         )
         .overlay(alignment: .bottomTrailing) { durationBadge }
         .overlay(alignment: .bottomLeading) { corners }
+        .overlay(alignment: .topLeading) { lookPill }
         .clipShape(RoundedRectangle(cornerRadius: VideoStudioMetrics.trackRadius, style: .continuous))
         .overlay {
             RoundedRectangle(cornerRadius: VideoStudioMetrics.trackRadius, style: .continuous)
@@ -310,6 +311,28 @@ private struct ClipBand: View {
             .padding(3)
     }
 
+    /// The clip's own look, by name (FS-12.06c §3): only a clip with a
+    /// look of its own wears one; a clip following the whole video's look
+    /// has nothing to say here.
+    @ViewBuilder
+    private var lookPill: some View {
+        if let name = model.lookPillText(for: clip) {
+            HStack(spacing: 4) {
+                Image(systemName: VideoItemCommand.look.systemImage)
+                    .font(.system(size: 8.5, weight: .semibold))
+                Text(verbatim: name)
+                    .font(.system(size: 10.5, weight: .semibold))
+                    .lineLimit(1)
+            }
+            .foregroundStyle(.white)
+            .padding(.horizontal, 7)
+            .frame(height: VideoStudioMetrics.lookPillHeight)
+            .background(Capsule().fill(Color.black.opacity(0.66)))
+            .padding(3)
+            .accessibilityHidden(true)
+        }
+    }
+
     private var corners: some View {
         HStack(spacing: 3) {
             if clip.kind == .video, clip.isMuted {
@@ -335,10 +358,12 @@ private struct ClipBand: View {
         case .freeze: String(localized: "Freeze", comment: "Kind of timeline clip — a frozen frame — read by VoiceOver")
         default: String(localized: "Photo", comment: "Kind of timeline clip, read by VoiceOver")
         }
-        return String(
+        let label = String(
             localized: "\(kind) clip, from second \(Int(placement.start)) to \(Int(placement.end))",
             comment: "VoiceOver label for one clip on the Video Studio timeline: its kind and the seconds it spans"
         )
+        guard let look = model.lookPillText(for: clip) else { return label }
+        return label + ", " + VideoStudioCopy.lookNamed(look)
     }
 
     /// The fade grips, and the wedge that shows how long the fade is.

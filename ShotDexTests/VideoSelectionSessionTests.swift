@@ -306,11 +306,11 @@ extension VideoToolSessionTests {
 
         // Opening another tool, and the grabber, keep too.
         model.toggleToolPanel(.music)
-        model.setFilterIntensity(0.5)
+        model.setVideoLook(VideoLook(.preset(.velvia), amount: 0.5))
         model.toggleToolPanel(.look)
-        #expect(model.recipe.filterIntensity == 0.5)
+        #expect(model.recipe.look?.amount == 0.5)
         model.clearSelection()
         #expect(model.activeToolPanel == nil)
-        #expect(model.recipe.filterIntensity == 0.5)
+        #expect(model.recipe.look?.amount == 0.5)
     }
 }
