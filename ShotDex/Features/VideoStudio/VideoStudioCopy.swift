@@ -90,6 +90,36 @@ enum VideoStudioCopy {
         }
     }
 
+    /// The limited-access row (FS-12.09 §4).
+    static func limitedAccess(_ count: Int) -> String {
+        String(localized: "ShotDex can see the \(count) items you chose.", table: table, comment: "Video Studio Media panel: with limited Photos access, how many items the user granted")
+    }
+
+    /// The one label for limited access everywhere (FS-12.09 §9).
+    static var manageAccess: String {
+        String(localized: "Manage Access…", table: table, comment: "Video Studio Media panel: opens the system picker to grant more photos under limited access")
+    }
+
+    static var limitedPhotosAccess: String {
+        String(localized: "Limited Photos access", table: table, comment: "Video Studio Media panel: under its name when Photos access is limited")
+    }
+
+    static var noAccessToPhotos: String {
+        String(localized: "No Access to Photos", table: table, comment: "Video Studio Media panel: title when Photos access is denied")
+    }
+
+    static var noAccessMessage: String {
+        String(localized: "Allow access to your photo library in Settings to add photos and videos here.", table: table, comment: "Video Studio Media panel: body when Photos access is denied")
+    }
+
+    static var openSettings: String {
+        String(localized: "Open Settings", table: table, comment: "Video Studio: opens the app's page in Settings")
+    }
+
+    static var noPhotosYet: String {
+        String(localized: "No photos or videos yet.", table: table, comment: "Video Studio Media panel: Recents when the library is empty")
+    }
+
     static var select: String {
         String(localized: "Select", table: table, comment: "Video Studio Media panel: starts picking several items to add at once")
     }

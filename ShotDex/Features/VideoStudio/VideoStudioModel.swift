@@ -567,6 +567,8 @@ final class VideoStudioModel {
             VideoStudioCopy.mediaSelectedHint(count: picks.count, at: time)
         } else if mediaShowsInVideo {
             VideoStudioCopy.itemsInThisVideo(MediaUsage.useCount(in: recipe))
+        } else if photoLibrary.authorizationState == .limited {
+            VideoStudioCopy.limitedPhotosAccess
         } else {
             VideoStudioCopy.mediaTapHint(at: time)
         }

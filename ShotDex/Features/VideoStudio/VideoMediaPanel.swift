@@ -12,6 +12,7 @@ struct VideoMediaPanel: View {
     @Bindable var model: VideoStudioModel
     @Environment(\.videoMediaGrid) private var metrics
     @Environment(AppDependencies.self) private var dependencies
+    @Environment(\.openURL) private var openURL
     @State private var library: VideoMediaLibrary?
     @State private var tab: Tab = .recents
     /// The album whose grid is open from the Albums tab.
@@ -78,7 +79,7 @@ struct VideoMediaPanel: View {
                         .font(.system(size: 12.5, weight: model.isSelectingMedia ? .semibold : .medium))
                         .foregroundStyle(.white)
                         .lineLimit(1)
-                        .fixedSize()
+                        .minimumScaleFactor(0.8)
                         .padding(.horizontal, 10)
                         .frame(height: VideoMediaPanelMetrics.tabHeight)
                         .background(tabFill(isOn: model.isSelectingMedia))
@@ -136,7 +137,7 @@ struct VideoMediaPanel: View {
                 .font(.system(size: 12.5, weight: isOn ? .semibold : .medium))
                 .foregroundStyle(.white)
                 .lineLimit(1)
-                .fixedSize()
+                .minimumScaleFactor(0.8)
                 .padding(.horizontal, VideoMediaPanelMetrics.tabPadding)
                 .frame(height: VideoMediaPanelMetrics.tabHeight)
                 .background(tabFill(isOn: isOn))
@@ -156,13 +157,104 @@ struct VideoMediaPanel: View {
     @ViewBuilder
     private var content: some View {
         switch tab {
-        case .recents:
-            grid
-        case .albums:
-            if openAlbum != nil { grid } else { albumList }
+        case .recents, .albums:
+            libraryContent
         case .inVideo:
             VideoInVideoList(model: model, rowHeight: metrics == .pool ? 52 : 56)
         }
+    }
+
+    /// Recents and Albums, by what the app may read (FS-12.09 §4): denied
+    /// says so and points at Settings; limited lists what was granted under
+    /// a row that can grant more; an empty library says it is empty.
+    @ViewBuilder
+    private var libraryContent: some View {
+        switch model.photoLibrary.authorizationState {
+        case .denied, .restricted, .notDetermined:
+            noAccess
+        case .limited, .authorized:
+            VStack(spacing: 0) {
+                if model.photoLibrary.authorizationState == .limited, tab == .recents, let library {
+                    limitedRow(count: library.count)
+                }
+                if tab == .albums, openAlbum == nil {
+                    albumList
+                } else if tab == .recents, let library, library.count == 0, library.revision > 0 {
+                    message(VideoStudioCopy.noPhotosYet)
+                } else {
+                    grid
+                }
+            }
+        }
+    }
+
+    /// Lock · "ShotDex can see the 12 items you chose." · Manage Access…
+    private func limitedRow(count: Int) -> some View {
+        HStack(spacing: 10) {
+            Image(systemName: "lock")
+                .font(.system(size: 13, weight: .medium))
+                .foregroundStyle(.white.opacity(0.6))
+            Text(VideoStudioCopy.limitedAccess(count))
+                .font(.system(size: 12.5))
+                .foregroundStyle(.white.opacity(0.85))
+                .lineLimit(2)
+                .fixedSize(horizontal: false, vertical: true)
+            Spacer(minLength: 0)
+            Button {
+                model.photoLibrary.presentLimitedLibraryPicker()
+            } label: {
+                Text(VideoStudioCopy.manageAccess)
+                    .font(.system(size: 12.5, weight: .semibold))
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 10)
+                    .frame(height: VideoMediaPanelMetrics.tabHeight)
+                    .background(tabFill(isOn: true))
+                    .fixedSize()
+            }
+            .buttonStyle(.plain)
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        .background(RoundedRectangle(cornerRadius: AppTheme.Radius.md, style: .continuous).fill(Color.white.opacity(0.06)))
+        .padding(.horizontal, VideoMediaPanelMetrics.rowInset)
+        .padding(.top, 8)
+        .padding(.bottom, 10)
+    }
+
+    /// NF-04's denied state, in the panel: the grid is gone, In Video stays.
+    private var noAccess: some View {
+        VStack(spacing: 8) {
+            Text(VideoStudioCopy.noAccessToPhotos)
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundStyle(.white)
+            Text(VideoStudioCopy.noAccessMessage)
+                .font(.system(size: 12))
+                .foregroundStyle(.white.opacity(0.5))
+                .multilineTextAlignment(.center)
+            Button {
+                if let url = URL(string: UIApplication.openSettingsURLString) { openURL(url) }
+            } label: {
+                Text(VideoStudioCopy.openSettings)
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 14)
+                    .frame(height: VideoMediaPanelMetrics.tabHeight)
+                    .background(tabFill(isOn: true))
+            }
+            .buttonStyle(.plain)
+            .padding(.top, 4)
+        }
+        .padding(.horizontal, 24)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    private func message(_ text: String) -> some View {
+        Text(text)
+            .font(.system(size: 12.5))
+            .foregroundStyle(.white.opacity(0.45))
+            .multilineTextAlignment(.center)
+            .padding(.horizontal, 24)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
     @ViewBuilder
@@ -377,8 +469,10 @@ private struct VideoInVideoThumbnail: View {
 enum VideoMediaPanelMetrics {
     /// Tabs, Select and the search disc are 30 tall.
     static let tabHeight: CGFloat = 30
-    /// Horizontal padding inside a tab: 10 on the phone's board.
-    static let tabPadding: CGFloat = 10
+    /// Horizontal padding inside a tab: 8, not the boards' 10 — with
+    /// Select and Add (3) beside them the phone's row only fits inside its
+    /// 12pt insets at 8, and the pool's 236pt row needs 8 too (FS-12.09 §3).
+    static let tabPadding: CGFloat = 8
     /// The row's inset from the panel's edges.
     static let rowInset: CGFloat = 12
     /// One album row.

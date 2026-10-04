@@ -59,7 +59,27 @@
     },
     "%lld items in this video": {
       "comment": "Video Studio Media panel: under its name on the In Video tab — how many uses of library items the video has",
-      "extractionState": "manual"
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld item in this video"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld items in this video"
+                }
+              }
+            }
+          }
+        }
+      }
     },
     "%lld selected · Add puts them at %@": {
       "comment": "Video Studio Media panel: under its name while selecting — how many are picked and the playhead time Add inserts them at",
@@ -75,6 +95,10 @@
     },
     "Albums": {
       "comment": "Video Studio Media panel tab: the user's albums; also the back button from an album's grid",
+      "extractionState": "manual"
+    },
+    "Allow access to your photo library in Settings to add photos and videos here.": {
+      "comment": "Video Studio Media panel: body when Photos access is denied",
       "extractionState": "manual"
     },
     "Beats": {
@@ -145,6 +169,10 @@
       "comment": "Video Studio: title of the iPad's media pool column",
       "extractionState": "manual"
     },
+    "Limited Photos access": {
+      "comment": "Video Studio Media panel: under its name when Photos access is limited",
+      "extractionState": "manual"
+    },
     "Lock %@": {
       "comment": "Video Studio track switch: stops the named lane (e.g. Video, Music 2) being selected or dragged; the trait says whether it is on",
       "extractionState": "manual"
@@ -155,6 +183,10 @@
     },
     "MY MUSIC": {
       "comment": "Video Studio Music panel: header over the user's imported songs",
+      "extractionState": "manual"
+    },
+    "Manage Access…": {
+      "comment": "Video Studio Media panel: opens the system picker to grant more photos under limited access",
       "extractionState": "manual"
     },
     "Media": {
@@ -185,12 +217,24 @@
       "comment": "Video Studio level meter: silences the clips' own audio for the whole project",
       "extractionState": "manual"
     },
+    "No Access to Photos": {
+      "comment": "Video Studio Media panel: title when Photos access is denied",
+      "extractionState": "manual"
+    },
     "No albums yet.": {
       "comment": "Video Studio Media panel: the Albums tab when the library has no albums of the user's own",
       "extractionState": "manual"
     },
+    "No photos or videos yet.": {
+      "comment": "Video Studio Media panel: Recents when the library is empty",
+      "extractionState": "manual"
+    },
     "Nothing from your library is in this video yet.": {
       "comment": "Video Studio Media panel: the In Video tab when no clip or sticker comes from the library",
+      "extractionState": "manual"
+    },
+    "Open Settings": {
+      "comment": "Video Studio: opens the app's page in Settings",
       "extractionState": "manual"
     },
     "Or drag the clip's edges on the timeline.": {
@@ -224,6 +268,30 @@
     "Select": {
       "comment": "Video Studio Media panel: starts picking several items to add at once",
       "extractionState": "manual"
+    },
+    "ShotDex can see the %lld items you chose.": {
+      "comment": "Video Studio Media panel: with limited Photos access, how many items the user granted",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "ShotDex can see the %lld item you chose."
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "ShotDex can see the %lld items you chose."
+                }
+              }
+            }
+          }
+        }
+      }
     },
     "Speed": {
       "comment": "Video Studio clip panel: label of the playback-rate chips",

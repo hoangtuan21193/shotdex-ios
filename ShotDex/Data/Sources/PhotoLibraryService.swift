@@ -197,9 +197,15 @@ final class PhotoLibraryService: NSObject {
         guard let scene = UIApplication.shared.connectedScenes
             .compactMap({ $0 as? UIWindowScene })
             .first(where: { $0.activationState == .foregroundActive }),
-            let rootViewController = scene.keyWindow?.rootViewController
+            var presenter = scene.keyWindow?.rootViewController
         else { return }
-        PHPhotoLibrary.shared().presentLimitedLibraryPicker(from: rootViewController)
+        // From whatever is on top: a full-screen editor (the Video Studio's
+        // Media panel) is itself presented, and the root cannot present a
+        // second controller over it.
+        while let presented = presenter.presentedViewController, !presented.isBeingDismissed {
+            presenter = presented
+        }
+        PHPhotoLibrary.shared().presentLimitedLibraryPicker(from: presenter)
     }
 
     // MARK: Fetching

@@ -71,3 +71,14 @@ extension VideoMediaLibraryTests {
         #expect(album.sortDescriptors == recents.sortDescriptors)
     }
 }
+
+extension VideoMediaLibraryTests {
+    /// AC-9 (words): the limited row counts what was granted, in the
+    /// Library's one label for it, singular for one.
+    @Test func limitedRowCountsGrantedItems() {
+        #expect(VideoStudioCopy.limitedAccess(12) == "ShotDex can see the 12 items you chose.")
+        #expect(VideoStudioCopy.limitedAccess(1) == "ShotDex can see the 1 item you chose.")
+        #expect(VideoStudioCopy.manageAccess == "Manage Access…")
+        #expect(VideoStudioCopy.itemsInThisVideo(1) == "1 item in this video")
+    }
+}
