@@ -187,7 +187,6 @@ Mọi con số thay đổi theo thời gian thực (%, MB, đếm tiến trình,
 | Reject | `xmark` |
 | Cull | `flag.2.crossed` |
 | Caption & Keywords (selection ⋯, FS-02.07) | `tag` |
-| Export (đã duyệt 2/10, chưa có code) | `square.and.arrow.up.on.square` |
 
 Adjustment icon lấy từ `PhotoAdjustmentKind.systemImage`; mask icon từ `PhotoMaskComponentKind.systemImage`. Không tự chọn lại.
 

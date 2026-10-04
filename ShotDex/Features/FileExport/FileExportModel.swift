@@ -170,7 +170,9 @@ final class FileExportModel: Identifiable {
     /// The footer of the File Name screen: what a photo with no camera — a
     /// screenshot — would be called, third in the batch.
     var missingTokenExample: String? {
-        guard var values = selection.first else { return nil }
+        // Only a template with a token that can be missing has a case to show.
+        guard settings.nameTemplate.contains("{camera}") || settings.nameTemplate.contains("{lens}"),
+              var values = selection.first else { return nil }
         values.camera = nil
         values.lens = nil
         let base = template.baseName(

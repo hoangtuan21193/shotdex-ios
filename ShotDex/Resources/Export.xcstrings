@@ -1,6 +1,14 @@
 {
   "sourceLanguage": "en",
   "strings": {
+    "%@ free on %@.": {
+      "comment": "Export summary footer: free space on the destination",
+      "extractionState": "manual"
+    },
+    "%@ of %@": {
+      "comment": "Export progress: bytes written of the total",
+      "extractionState": "manual"
+    },
     "%lld Photos": {
       "comment": "Export sheet subtitle: photo count (plural)",
       "extractionState": "manual",
@@ -73,6 +81,34 @@
         }
       }
     },
+    "%lld photos weren't exported.": {
+      "comment": "Export summary: how many failed (plural)",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld photo wasn't exported."
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld photos weren't exported."
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "%lld skipped — already in the folder": {
+      "comment": "Export summary: Skip left these out",
+      "extractionState": "manual"
+    },
     "%lld videos": {
       "comment": "Export summary: video count (plural)",
       "extractionState": "manual",
@@ -96,6 +132,102 @@
           }
         }
       }
+    },
+    "A token with no value is left out with its separator. RAW + JPEG pairs share one name.": {
+      "comment": "File Name screen footer",
+      "extractionState": "manual"
+    },
+    "A token with no value is left out with its separator: a screenshot becomes %@. RAW + JPEG pairs share one name.": {
+      "comment": "File Name screen footer, with an example",
+      "extractionState": "manual"
+    },
+    "Camera": {
+      "comment": "File name token chip",
+      "extractionState": "manual"
+    },
+    "Cancel": {
+      "comment": "Export: do not replace",
+      "extractionState": "manual"
+    },
+    "Choose Another Folder": {
+      "comment": "Export: pick another folder after a refusal",
+      "extractionState": "manual"
+    },
+    "Choose Folder…": {
+      "comment": "Export sheet: open the system folder picker",
+      "extractionState": "manual"
+    },
+    "Connect “%@” or choose another folder.": {
+      "comment": "Export footer: the folder's drive is unplugged",
+      "extractionState": "manual"
+    },
+    "Converting": {
+      "comment": "Export step: rendering at the preset",
+      "extractionState": "manual"
+    },
+    "Couldn't add the watermark.": {
+      "comment": "Export summary: the stamp step failed",
+      "extractionState": "manual"
+    },
+    "Couldn't download from iCloud.": {
+      "comment": "Export summary: iCloud download failed",
+      "extractionState": "manual"
+    },
+    "Current Version": {
+      "comment": "Export As: rendered at a preset",
+      "extractionState": "manual"
+    },
+    "Custom": {
+      "comment": "File Name screen: section for a typed template",
+      "extractionState": "manual"
+    },
+    "Date": {
+      "comment": "File name token chip",
+      "extractionState": "manual"
+    },
+    "Date + Camera + Number": {
+      "comment": "File name template",
+      "extractionState": "manual"
+    },
+    "Date + Original Name": {
+      "comment": "File name template",
+      "extractionState": "manual"
+    },
+    "Date Folders": {
+      "comment": "Export sheet switch: year/day subfolders",
+      "extractionState": "manual"
+    },
+    "Destination": {
+      "comment": "Export sheet section",
+      "extractionState": "manual"
+    },
+    "Done": {
+      "comment": "Export: close the summary",
+      "extractionState": "manual"
+    },
+    "Edited": {
+      "comment": "Export Version: with the edit made in Photos",
+      "extractionState": "manual"
+    },
+    "Example": {
+      "comment": "File Name screen: the first photo's name",
+      "extractionState": "manual"
+    },
+    "Example: %@": {
+      "comment": "Export sheet: the first photo's file name under the template",
+      "extractionState": "manual"
+    },
+    "Export": {
+      "comment": "Export sheet title",
+      "extractionState": "manual"
+    },
+    "Export As": {
+      "comment": "Export sheet row: Current Version or Unmodified Original",
+      "extractionState": "manual"
+    },
+    "Export Remaining": {
+      "comment": "Export: write what is not written yet",
+      "extractionState": "manual"
     },
     "Exported %lld photos to “%@”.": {
       "comment": "Export summary headline (plural)",
@@ -121,29 +253,125 @@
         }
       }
     },
-    "%lld photos weren't exported.": {
-      "comment": "Export summary: how many failed (plural)",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "variations": {
-            "plural": {
-              "one": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "%lld photo wasn't exported."
-                }
-              },
-              "other": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "%lld photos weren't exported."
-                }
-              }
-            }
-          }
-        }
-      }
+    "Exporting %lld of %lld": {
+      "comment": "Export progress headline",
+      "extractionState": "manual"
+    },
+    "Export…": {
+      "comment": "Photo command: write the selection to a folder in Files or a saved server",
+      "extractionState": "manual"
+    },
+    "File Name": {
+      "comment": "File Name screen title",
+      "extractionState": "manual"
+    },
+    "File Names": {
+      "comment": "Export sheet section",
+      "extractionState": "manual"
+    },
+    "Files already exported stay in the folder.": {
+      "comment": "Export: confirm Cancel during a run, message",
+      "extractionState": "manual"
+    },
+    "Folder": {
+      "comment": "Export sheet row: where the files go",
+      "extractionState": "manual"
+    },
+    "Folder in Files…": {
+      "comment": "Server export Other Folder: a folder in Files, from the system picker",
+      "extractionState": "manual"
+    },
+    "Format": {
+      "comment": "Export sheet row: output format",
+      "extractionState": "manual"
+    },
+    "If a File Exists": {
+      "comment": "Export sheet row: what to do on a name clash",
+      "extractionState": "manual"
+    },
+    "Insert %@": {
+      "comment": "File name token chip, VoiceOver label",
+      "extractionState": "manual"
+    },
+    "Keep Both": {
+      "comment": "If a File Exists: number the new file",
+      "extractionState": "manual"
+    },
+    "Keep Exporting": {
+      "comment": "Export: do not stop the run",
+      "extractionState": "manual"
+    },
+    "Keep ShotDex open. Files already exported stay in “%@” if you stop.": {
+      "comment": "Export progress footer",
+      "extractionState": "manual"
+    },
+    "Lens": {
+      "comment": "File name token chip",
+      "extractionState": "manual"
+    },
+    "Live Photo Video": {
+      "comment": "Export sheet switch: include the movie of a Live Photo",
+      "extractionState": "manual"
+    },
+    "Metadata": {
+      "comment": "Export sheet row: metadata level",
+      "extractionState": "manual"
+    },
+    "Name": {
+      "comment": "Export sheet row: file name template",
+      "extractionState": "manual"
+    },
+    "None": {
+      "comment": "Export sheet: no folder chosen yet",
+      "extractionState": "manual"
+    },
+    "Not Exported": {
+      "comment": "Export summary: list of photos that failed",
+      "extractionState": "manual"
+    },
+    "Not connected": {
+      "comment": "Export folder row: its drive is unplugged",
+      "extractionState": "manual"
+    },
+    "Not enough space in “%@” — needs %@, %@ free.": {
+      "comment": "Export: not enough room before the first byte",
+      "extractionState": "manual"
+    },
+    "Now": {
+      "comment": "Export progress section: the file being made",
+      "extractionState": "manual"
+    },
+    "Number": {
+      "comment": "File name token chip",
+      "extractionState": "manual"
+    },
+    "OK": {
+      "comment": "Export: dismiss an alert",
+      "extractionState": "manual"
+    },
+    "Original": {
+      "comment": "Export Version: as shot",
+      "extractionState": "manual"
+    },
+    "Original Name": {
+      "comment": "File name token chip",
+      "extractionState": "manual"
+    },
+    "Original files are copied as they are, with all their metadata. Edits aren't included.": {
+      "comment": "Export summary footer, Unmodified Original",
+      "extractionState": "manual"
+    },
+    "Preparing": {
+      "comment": "Export step: downloading the original from iCloud",
+      "extractionState": "manual"
+    },
+    "Quality": {
+      "comment": "Export sheet row: compression quality",
+      "extractionState": "manual"
+    },
+    "Replace": {
+      "comment": "If a File Exists: overwrite the old file",
+      "extractionState": "manual"
     },
     "Replace %lld files in “%@”?": {
       "comment": "Export: Replace confirmation before the first byte (plural)",
@@ -168,6 +396,102 @@
           }
         }
       }
+    },
+    "Retry Failed": {
+      "comment": "Export: try the failed photos again",
+      "extractionState": "manual"
+    },
+    "Same as Original": {
+      "comment": "Export Format: HEIC stays HEIC, JPEG stays JPEG, the rest JPEG",
+      "extractionState": "manual"
+    },
+    "ShotDex can't open this folder anymore. Choose it again.": {
+      "comment": "Export: a remembered folder no longer opens",
+      "extractionState": "manual"
+    },
+    "ShotDex can't read this photo anymore.": {
+      "comment": "Export summary: photo removed from the limited selection",
+      "extractionState": "manual"
+    },
+    "ShotDex couldn't read this photo.": {
+      "comment": "Export summary: unreadable photo",
+      "extractionState": "manual"
+    },
+    "Size": {
+      "comment": "Export sheet row: Resize preset",
+      "extractionState": "manual"
+    },
+    "Skip": {
+      "comment": "If a File Exists: leave the photo out",
+      "extractionState": "manual"
+    },
+    "Stop": {
+      "comment": "Export: stop the run",
+      "extractionState": "manual"
+    },
+    "Stop exporting?": {
+      "comment": "Export: confirm Cancel during a run",
+      "extractionState": "manual"
+    },
+    "That folder is gone.": {
+      "comment": "Server export: the Files folder is not available",
+      "extractionState": "manual"
+    },
+    "Time": {
+      "comment": "File name token chip",
+      "extractionState": "manual"
+    },
+    "Too large for this drive's format.": {
+      "comment": "Export summary: over 4 GB to FAT32",
+      "extractionState": "manual"
+    },
+    "Unmodified Original": {
+      "comment": "Export As: original files byte for byte",
+      "extractionState": "manual"
+    },
+    "Version": {
+      "comment": "Export sheet row: Edited or Original",
+      "extractionState": "manual"
+    },
+    "Videos are exported as they are.": {
+      "comment": "Export summary footer, Current Version with videos",
+      "extractionState": "manual"
+    },
+    "Writing": {
+      "comment": "Export step: writing the file to the folder",
+      "extractionState": "manual"
+    },
+    "You can't write to this folder.": {
+      "comment": "Export stopped: no permission",
+      "extractionState": "manual"
+    },
+    "about %lld min left": {
+      "comment": "Export progress: time left in minutes",
+      "extractionState": "manual"
+    },
+    "downloading from iCloud · %lld%%": {
+      "comment": "Export step detail: iCloud download progress",
+      "extractionState": "manual"
+    },
+    "iOS can't read this RAW yet": {
+      "comment": "Export summary: a RAW the decoder can't read",
+      "extractionState": "manual"
+    },
+    "less than a minute left": {
+      "comment": "Export progress: time left under a minute",
+      "extractionState": "manual"
+    },
+    "to %@": {
+      "comment": "Export step detail: the file being written",
+      "extractionState": "manual"
+    },
+    "“%@” is full — %lld of %lld exported.": {
+      "comment": "Export stopped: the destination is full",
+      "extractionState": "manual"
+    },
+    "“%@” was disconnected. %lld of %lld exported.": {
+      "comment": "Export stopped: the drive was unplugged",
+      "extractionState": "manual"
     }
   },
   "version": "1.0"
