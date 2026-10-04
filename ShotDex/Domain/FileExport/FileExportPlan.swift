@@ -155,7 +155,13 @@ struct FileExportPlan: Sendable, Equatable {
             let folder = folder(for: item, dateFolders: dateFolders, timeZone: timeZone)
             let base = template.baseName(for: item.nameValues, sequence: sequence, sequenceWidth: width, timeZone: timeZone)
             let sources = sources(of: item, mode: mode, includesLivePhotoVideo: includesLivePhotoVideo)
-            let extensions = sources.map { $0?.fileExtension ?? renderExtension(item) }
+            // A video keeps the extension of its original, whichever version
+            // of the movie goes; a render takes `jpg` or `heic`.
+            let videoExtension = item.files.first { $0.role == .video }?.fileExtension
+            let extensions = sources.map { source in
+                guard let source else { return renderExtension(item) }
+                return mode == .currentVersion ? (videoExtension ?? source.fileExtension) : source.fileExtension
+            }
             let there = inFolder[folder, default: []]
             let mine = assigned[folder, default: []]
             func names(_ number: Int?) -> [String] {

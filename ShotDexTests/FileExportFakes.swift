@@ -1,6 +1,9 @@
+import CoreGraphics
 import CryptoKit
 import Foundation
+import ImageIO
 import os
+import UniformTypeIdentifiers
 @testable import ShotDex
 import ShotDexKit
 
@@ -125,5 +128,45 @@ struct ExportFixture {
 
     static func sha(_ url: URL) throws -> String {
         SHA256.hash(data: try Data(contentsOf: url)).map { String(format: "%02x", $0) }.joined()
+    }
+
+    /// A flat grey JPEG (or HEIC) with Fujifilm EXIF and, optionally, GPS.
+    static func image(width: Int, height: Int, gray: CGFloat, gps: Bool = true, type: UTType = .jpeg) -> Data {
+        let context = CGContext(data: nil, width: width, height: height, bitsPerComponent: 8, bytesPerRow: 0,
+                                space: CGColorSpace(name: CGColorSpace.sRGB)!, bitmapInfo: CGImageAlphaInfo.noneSkipLast.rawValue)!
+        context.setFillColor(red: gray, green: gray, blue: gray, alpha: 1)
+        context.fill(CGRect(x: 0, y: 0, width: width, height: height))
+        let data = NSMutableData()
+        let destination = CGImageDestinationCreateWithData(data, type.identifier as CFString, 1, nil)!
+        var properties: [CFString: Any] = [
+            kCGImageDestinationLossyCompressionQuality: 0.9,
+            kCGImagePropertyExifDictionary: [kCGImagePropertyExifDateTimeOriginal: "2026:09:20 17:05:12"],
+            kCGImagePropertyTIFFDictionary: [kCGImagePropertyTIFFMake: "FUJIFILM", kCGImagePropertyTIFFModel: "X-T5"],
+        ]
+        if gps {
+            properties[kCGImagePropertyGPSDictionary] = [
+                kCGImagePropertyGPSLatitude: 15.88, kCGImagePropertyGPSLatitudeRef: "N",
+                kCGImagePropertyGPSLongitude: 108.33, kCGImagePropertyGPSLongitudeRef: "E",
+            ]
+        }
+        CGImageDestinationAddImage(destination, context.makeImage()!, properties as CFDictionary)
+        CGImageDestinationFinalize(destination)
+        return data as Data
+    }
+
+    /// Size, mean brightness 0…1, and the property dictionaries of a file.
+    static func read(_ url: URL) -> (width: Int, height: Int, brightness: Double, properties: [CFString: Any])? {
+        guard let source = CGImageSourceCreateWithURL(url as CFURL, nil),
+              let properties = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [CFString: Any],
+              let image = CGImageSourceCreateThumbnailAtIndex(source, 0, [
+                  kCGImageSourceCreateThumbnailFromImageAlways: true, kCGImageSourceThumbnailMaxPixelSize: 16,
+              ] as CFDictionary)
+        else { return nil }
+        var pixels = [UInt8](repeating: 0, count: 16 * 16 * 4)
+        let context = CGContext(data: &pixels, width: 16, height: 16, bitsPerComponent: 8, bytesPerRow: 64,
+                                space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.noneSkipLast.rawValue)!
+        context.draw(image, in: CGRect(x: 0, y: 0, width: 16, height: 16))
+        let mean = Double(pixels.enumerated().filter { $0.offset % 4 != 3 }.map { Int($0.element) }.reduce(0, +)) / Double(16 * 16 * 3 * 255)
+        return ((properties[kCGImagePropertyPixelWidth] as? Int) ?? 0, (properties[kCGImagePropertyPixelHeight] as? Int) ?? 0, mean, properties)
     }
 }
