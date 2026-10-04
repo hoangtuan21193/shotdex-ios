@@ -52,3 +52,30 @@ import UniformTypeIdentifiers
         #expect(try ContentHasher.hash(a, full: true) != (try ContentHasher.hash(b, full: true)))
     }
 }
+
+extension PhotoIdentityTests {
+    /// AC-48: two RAWs of the same size whose first, middle and last 64 KB
+    /// match but which differ in one byte between them share a fast hash and
+    /// stay two photos; two identical RAWs become one only once both full
+    /// hashes are in. Fast-colliding copies are full-hashed first.
+    @Test func fastHashNeverMergesAlone() throws {
+        var bytes = Data((0..<400_000).map { UInt8(truncatingIfNeeded: $0 &* 31) })
+        let first = bytes
+        bytes[100_000] ^= 0xFF
+        let nearTwin = bytes
+
+        let a = try ContentHasher.hash(DataBytes(data: first), full: false)
+        let b = try ContentHasher.hash(DataBytes(data: nearTwin), full: false)
+        #expect(a.fast == b.fast)
+        #expect(!a.isSameContent(as: b), "fast hashes alone never merge")
+
+        let fullA = try ContentHasher.hash(DataBytes(data: first), full: true)
+        let fullB = try ContentHasher.hash(DataBytes(data: nearTwin), full: true)
+        #expect(!fullA.isSameContent(as: fullB))
+        let twin = try ContentHasher.hash(DataBytes(data: first), full: true)
+        #expect(fullA.isSameContent(as: twin))
+
+        let order = ContentHash.fullHashOrder([(id: "x", fast: "f1"), (id: "a", fast: a.fast), (id: "y", fast: "f2"), (id: "b", fast: b.fast)])
+        #expect(order == ["a", "b", "x", "y"])
+    }
+}

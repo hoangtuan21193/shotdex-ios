@@ -370,3 +370,24 @@ enum ImageDataLayout {
         return out
     }
 }
+
+extension ContentHash {
+    /// Two copies are one photo only when both full hashes exist, were made
+    /// the same way, and match (FS-19.02 §1). A fast-hash match alone never
+    /// merges: it only puts the pair first in line for full hashing.
+    func isSameContent(as other: ContentHash) -> Bool {
+        guard algorithm == other.algorithm, version == other.version,
+              let full, let otherFull = other.full else { return false }
+        return full == otherFull
+    }
+
+    /// Order for the background full-hash pass: copies whose fast hash
+    /// collides with another's first, then the rest, each in the given order.
+    static func fullHashOrder<ID: Hashable>(_ copies: [(id: ID, fast: String)]) -> [ID] {
+        var counts: [String: Int] = [:]
+        for copy in copies { counts[copy.fast, default: 0] += 1 }
+        let colliding = copies.filter { counts[$0.fast, default: 0] > 1 }.map(\.id)
+        let alone = copies.filter { counts[$0.fast, default: 0] == 1 }.map(\.id)
+        return colliding + alone
+    }
+}
