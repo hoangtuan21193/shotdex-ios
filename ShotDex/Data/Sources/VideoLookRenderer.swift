@@ -41,12 +41,29 @@ enum VideoLookRenderer {
         to input: CIImage,
         cache: VideoLookTableCache = .shared
     ) -> CIImage {
+        // Amount 0 is no look at all — not a look mixed in at nothing.
+        guard plan.amount > 0.001 else { return input }
         var image = input
         for (part, key) in zip(plan.parts, plan.keys) {
             guard let table = cache.table(part, of: plan.recipe, key: key) else { continue }
             image = lookUp(table, image)
         }
-        return image.cropped(to: input.extent)
+        image = image.cropped(to: input.extent)
+        return mixed(image, over: input, amount: plan.amount)
+    }
+
+    /// Amount (§4): the **whole** look — tables, neighbourhood stages,
+    /// vignette, grain — laid over the frame as it was before the look, at
+    /// that strength. Unlike the photo editor's, which mixes only the film
+    /// look or LUT: on video a look is one closed block with no slider for
+    /// the rest of it.
+    static func mixed(_ look: CIImage, over before: CIImage, amount: Double) -> CIImage {
+        guard amount < 0.999 else { return look }
+        return PhotoRenderService.filtered(
+            "CIMix",
+            image: look,
+            values: [kCIInputBackgroundImageKey: before, "inputAmount": amount]
+        ).cropped(to: before.extent)
     }
 
     /// One `CIColorCubeWithColorSpace` pass in sRGB — the space the table

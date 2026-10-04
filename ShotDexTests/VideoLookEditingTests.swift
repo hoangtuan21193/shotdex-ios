@@ -100,6 +100,30 @@ struct VideoLookEditingTests {
         #expect(lenient.clips.count == 2)
     }
 
+    /// AC-5 (model half): one drag of Amount is one undo step, and a new
+    /// look starts at 100 while the chosen one keeps its Amount.
+    @Test func amountDragIsOneUndoStep() {
+        let model = VideoStudioModelFixture.model()
+        model.setVideoLook(VideoLookEditing.chosen(VideoLookSamples.nightTeal.source, replacing: nil))
+        #expect(model.recipe.look?.amount == 1)
+        let before = model.history.undoEntries.count
+        model.beginUndoGroup()
+        for value in [0.9, 0.8, 0.7, 0.6, 0.5, 0.4] { model.setVideoLookAmount(value) }
+        model.endUndoGroup()
+        #expect(model.history.undoEntries.count == before + 1)
+        #expect(abs((model.recipe.look?.amount ?? 0) - 0.4) < 0.001)
+        model.undo()
+        #expect(model.recipe.look?.amount == 1)
+
+        let kept = VideoLookEditing.chosen(VideoLookSamples.nightTeal.source, replacing: VideoLook(VideoLookSamples.nightTeal.source, amount: 0.4))
+        #expect(kept.amount == 0.4)
+        let fresh = VideoLookEditing.chosen(VideoLookSamples.velvia.source, replacing: VideoLook(VideoLookSamples.nightTeal.source, amount: 0.4))
+        #expect(fresh.amount == 1)
+        #expect(!VideoLookEditing.showsAmount(nil))
+        #expect(!VideoLookEditing.showsAmount(.original))
+        #expect(VideoLookEditing.showsAmount(fresh))
+    }
+
     /// The cache holds 24 tables and lets the least recently used one go.
     @Test func cacheEvictsBeyond24Tables() {
         let cache = VideoLookTableCache()

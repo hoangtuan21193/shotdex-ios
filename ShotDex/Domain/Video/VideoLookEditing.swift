@@ -16,6 +16,30 @@ enum VideoLookEditing {
         return look
     }
 
+    /// Whether two looks are the same choice — the same preset, the same
+    /// LUT, or copies of the same My Look (whatever version).
+    static func isSameChoice(_ a: VideoLook.Source, _ b: VideoLook.Source) -> Bool {
+        switch (a, b) {
+        case let (.preset(x), .preset(y)): x == y
+        case let (.lut(x, _), .lut(y, _)): x == y
+        case let (.myLook(x, _, _, _), .myLook(y, _, _, _)): x == y
+        default: false
+        }
+    }
+
+    /// The look a tile tap puts in a slot (§3, FS-03.02): a new look starts
+    /// at Amount 100; the tile already chosen keeps the Amount it had.
+    static func chosen(_ source: VideoLook.Source, replacing current: VideoLook?) -> VideoLook {
+        guard let current, isSameChoice(current.source, source) else { return VideoLook(source) }
+        return VideoLook(source, amount: current.amount)
+    }
+
+    /// Amount shows only while there is a look to mix (FS-03.02's rule).
+    static func showsAmount(_ look: VideoLook?) -> Bool {
+        guard let look else { return false }
+        return !look.isOriginal
+    }
+
     /// What a look is called on screen: a preset by the name the editor
     /// shows for it (the user may have renamed it), a My Look or LUT by the
     /// name it had when it was chosen.

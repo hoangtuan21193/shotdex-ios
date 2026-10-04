@@ -97,6 +97,34 @@ struct VideoLookRenderTests {
         #expect(Self.meanDifference(Self.bytes(stacked, in: canvas), Self.bytes(alone, in: canvas)) > 2)
     }
 
+    // MARK: AC-5
+
+    /// AC-5: Amount 40 is 40 % of the whole look over 60 % of the frame as
+    /// it was before the look (≤ 1/255); Amount 0 is no look at all.
+    @Test func amountMixesWholeLook() throws {
+        let frame = VideoLookBakerTests.testFrame()
+        let canvas = frame.extent
+        var look = VideoLookSamples.moodyCoast
+        look.adjustments.grain = 0
+        look.adjustments.vignette = 0
+        let full = VideoLookBakerTests.editorChain(look, on: frame)
+        let source = VideoLook.Source.myLook(sourceID: UUID(), name: "Moody Coast", isImported: false, recipe: look)
+        let cache = VideoLookTableCache(capacity: 4)
+
+        let forty = try #require(VideoLookPlan(VideoLook(source, amount: 0.4), lutExists: { _ in true }))
+        let rendered = VideoLookRenderer.apply(forty, to: frame, cache: cache)
+        let expected = PhotoRenderService.filtered(
+            "CIMix", image: full, values: [kCIInputBackgroundImageKey: frame, "inputAmount": 0.4]
+        )
+        let difference = Self.meanDifference(Self.bytes(rendered, in: canvas), Self.bytes(expected, in: canvas))
+        #expect(difference <= 1, "mean \(difference)/255")
+        // Not the full look, and not the frame.
+        #expect(Self.meanDifference(Self.bytes(rendered, in: canvas), Self.bytes(full, in: canvas)) > 2)
+
+        let zero = try #require(VideoLookPlan(VideoLook(source, amount: 0), lutExists: { _ in true }))
+        #expect(VideoLookRenderer.apply(zero, to: frame, cache: cache) === frame)
+    }
+
     // MARK: AC-4
 
     /// AC-4: half way through a dissolve the frame is the two clips, each
