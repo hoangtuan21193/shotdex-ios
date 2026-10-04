@@ -7,7 +7,9 @@
 timeline, và luôn thấy thứ gì đã có trong phim.
 
 Nguồn intent: [2026-10-03-video-studio-canvas-chrome](../../_intents/2026-10-03-video-studio-canvas-chrome.md).
-Canvas: [Video Studio](../../design/README.md) v23, board `MP_*`.
+Board: `MP_P_*` ở [`docs/design/iphone/project/`](../../design/iphone/project/) · `MP_IL_*`, `MP_IP_Media` ở
+[`docs/design/ipad/project/`](../../design/ipad/project/) (vẽ lại kiểu Mac 2026-10-04) · `MP_DI_Media`, `MP_DC_Media` ở
+[`docs/design/duo/project/`](../../design/duo/project/).
 
 ## 1. Người dùng cần gì
 
@@ -31,20 +33,20 @@ giữ-kéo vào timeline · danh sách In Video · hàng quyền giới hạn. P
 | | iPhone 402×874 | iPad ngang 1376×1032 | iPad dọc 1032×1376 | Duo trong 951×669 | Duo ngoài 466×678 |
 |---|---|---|---|---|---|
 | Mở từ | ô Media hàng đáy | tab Media của pool | nút Media của dock | ô Media hàng đáy | ô Media trong dải 84 |
-| Vùng | panel cao theo tỉ lệ project: 16:9 340 · 1:1 320 · 4:5 300 · 9:16 278 · 4:3 360 · 21:9 340 | pool trái 236 | dock 324 dưới timeline | cột phải 264, cao 385 | panel 232 dưới lát timeline 146 |
-| Hàng tab | cách đỉnh panel 10, cao 30, lề 12 | dưới 4 tab pool 59×38 | lề 16, cao 30 | y 14, lề 9 | y 456, lề 12 |
-| Lưới | 4 cột ô 99, khe 2, sát mép | 3 cột ô 69, khe 6, lề 8 | 8 cột ô 124, khe 2, lề 12 | 3 cột ô 80, khe 4 | 4 cột ô 94, khe 2 |
-| ✕ · tên · ✓ | hàng đáy 62: ✕ 44 ở x 14, ✓ 44 ở x 344 | không có | chân dock: ✕ 44 ở x 20, ✓ 44 ở x 968 | góc phải hàng đáy: ✕ 40 ở x 620, ✓ 40 ở x 867 | dải 84: ✕ 44 ở y 504, ✓ 44 ở y 556 |
+| Vùng | panel cao theo tỉ lệ project: 16:9 340 · 1:1 320 · 4:5 300 · 9:16 278 · 4:3 360 · 21:9 340 | pool kính nổi 320×568 ở (8, 8) | dock 324 dưới timeline | cột phải 264, cao 385 | panel 232 dưới lát timeline 146 |
+| Hàng tab | cách đỉnh panel 10, cao 30, lề 12 | segmented 294×36 (nút 95×32) ở y 121, dưới segmented 4 tab pool | segmented 420×36 (nút 137×32) ở dock + 13, lề 16; 🔍 44 ở x 972 | y 14, lề 9 | y 456, lề 12 |
+| Lưới | 4 cột ô 99, khe 2, sát mép | 3 cột ô **96**, khe 4, lề 13 (x 21–317) | 8 cột ô **122**, khe 4, lề 16 | 3 cột ô 80, khe 4 | 4 cột ô 94, khe 2 |
+| ✕ · tên · ✓ | hàng đáy 62: ✕ 44 ở x 14, ✓ 44 ở x 344 | không có | chân dock 64 ở y 1312: ✕ 44 ở x 16, ✓ 44 ở x 972 | góc phải hàng đáy: ✕ 40 ở x 620, ✓ 40 ở x 867 | dải 84: ✕ 44 ở y 504, ✓ 44 ở y 556 |
 | Dòng phụ dưới "Media" | theo trạng thái (§4) | — | "Drag up onto the timeline" | "Drag onto the timeline" | "drag up" |
 
 - Tab: cao 30, bo `r-sm`, chữ 12.5; nền trắng 20% khi mở, 6% khi không. Ô lưới vuông, không bo (DESIGN §5).
 - **Select và Tìm** (chốt 2026-10-03), mọi máy đều có cả hai:
   - iPhone, Duo ngoài: cuối hàng tab, đẩy về mép phải — `Recents · Albums · In Video · 6 · Select · 🔍`; Select là
     chữ cao 30, 🔍 tròn 30.
-  - Pool iPad: Select chữ cao 30 cạnh 🔍 ở hàng tiêu đề "Library" (Library · Select · 🔍 · Hide Media).
+  - Pool iPad: Select chữ 68×44 cạnh 🔍 44 ở hàng tiêu đề "Library" (Library · Select · 🔍 · Hide Media), y 25.
   - Duo trong: hàng tab cuộn ngang, Select và 🔍 ở cuối, mép phải mờ 24pt báo còn nữa.
   - *Vì giữ trên ô đã là kéo, nên chọn nhiều không vào bằng menu giữ.*
-  Pool 236: hàng tab phải vừa 220 — đệm mỗi tab 8 thay vì 10 của board (board tràn 6pt).
+  Pool 320 (kiểu Mac 2026-10-04): hai hàng tab là segmented 294 — vừa, không còn luật thu đệm của pool 236.
 - iPad ngang không có ✕/✓ cho Media: pool là cột thường trực, mỗi lần chèn là một bước undo thường.
 - Lát timeline trên panel iPhone chỉ có ở 16:9 (96) và 21:9 (150), kèm dải tổng quan 28; 1:1, 4:5, 9:16, 4:3 chỉ còn
   dải tổng quan ([07 §3](07-phone-layout.md)).
@@ -56,7 +58,7 @@ giữ-kéo vào timeline · danh sách In Video · hàng quyền giới hạn. P
 | Thường (Recents) | tab · nút **Select** · nút tìm tròn 30 (`Search Library`), chỗ đặt theo §3; dòng phụ iPhone "Tap adds at 0:08.4 · hold to drag" |
 | Chọn nhiều | Select sáng; nút trắng **Add (3)** thay nút tìm; ô được chọn viền trắng 2 + số thứ tự góc trái trên; dòng phụ "3 selected · Add puts them at 0:08.4" |
 | Đang kéo | ô gốc thành ô gạch đứt; bóng ảnh 70×70 phóng 1.1×, nghiêng −3°, viền trắng 2; dòng phụ "Drop between clips · back on the grid cancels" |
-| In Video | danh sách theo thứ tự timeline, hàng 56 (iPhone) / 52 (pool); dòng phụ "6 items in this video" |
+| In Video | danh sách theo thứ tự timeline, hàng 56 (iPhone và pool iPad 302×56); dòng phụ "6 items in this video" (pool iPad vẽ "In timeline order. Tap one to jump there and select it." — một luật một câu: dùng câu đếm như iPhone, sửa board) |
 | Albums | danh sách album (bìa · tên · số mục); chạm mở lưới của album, nút ‹ Albums ở chỗ hàng tab |
 | Tìm | ô tìm thay hàng tab, Cancel bên phải; lưới là kết quả |
 | Quyền `.limited` | hàng đầu Recents: khoá · "ShotDex can see the 12 items you chose." · nút **Manage Access…**; dòng phụ "Limited Photos access" |
@@ -122,7 +124,7 @@ tên máy — trên index của app. *Đây là thứ trình chọn hệ thống
 | Mặt | Ràng buộc |
 |---|---|
 | Hiệu năng | xin thumbnail đúng cỡ ô × scale màn, cache có trần, nạp trước tối đa 2 màn lưới (NF-01, NF-02) |
-| Thiết bị | năm cột của §3; Duo ngoài không đặt gì vào dải 84 ngoài ô công cụ và ✕/✓ |
+| Thiết bị | năm cột của §3; Duo ngoài không đặt gì vào dải 84 ngoài ô công cụ và ✕/✓; iPad mọi nút ≥ 44 (kiểu Mac) |
 | iOS 26 vs trước | cùng một bộ hành động trên hai nhánh |
 | Truy cập | ô: "Video, 0:06, in this video"; action **Insert at Playhead** và **Select** thay cho kéo |
 
@@ -145,11 +147,11 @@ Project mẫu: 16:9, 5 clip 24,0s (Falls ảnh 0–3,0 · Coast video 3,0–9,2 
 | AC-10 | video chỉ có trên iCloud, máy không mạng | chạm ô đó | sau khi tải hỏng: vẫn 5 clip, hiện câu "One clip couldn't be loaded…" | `VideoMediaOriginalsTests.offlineVideoIsLeftOutWithMessage` (project mẫu, chạm video chỉ có trên iCloud ở 8,4, tải hỏng → đúng 5 clip như trước — vết cắt cũng được trả —, câu "One clip couldn't be loaded…", Undo không có bước rỗng, playhead về 8,4), `.inCloudPhotoReadsFromTheDownloadedFile` (ảnh tải về thư mục phiên, bản xuất là đỏ của file), `.inCloudVideoOpensFromTheDownloadedFile`; sim 26.5 `-ShotDexFakeICloud cloud=all,fail=4,seconds=1`: chạm ô → câu iCloud, vẫn 3 clip 0:09, Undo tắt (`vs3/out/m8/04-failed.png`); **máy thật chế độ máy bay: chưa làm** |
 | AC-11 | thư viện 55 000 mục | cuộn Recents tới cuối | thấy mục cũ nhất; không có hàng "Browse All Photos…"; bộ nhớ app tăng < 60MB so với lúc mở | ⚠️ một phần — `VideoMediaLibraryTests.recentsIsTheWholeFetchNoCap` (fetch không `fetchLimit`, mới nhất trước), `.prefetchWindowIsTwoScreens`, `.prefetchMovesByTheDifferenceOnly`; lưới `UICollectionView` trên `PHFetchResult` lười, hàng "Browse All Photos…" và trần 400 đã gỡ khỏi Media (sim 26.5: 102 mục cuộn được, ảnh `vs3/out/m1`); **máy thật 55 000 mục, bộ nhớ < 60 MB: chưa đo** (cần thư viện thật + Instruments) |
 | AC-12 | thư viện có 20 ảnh chụp ở 85mm | gõ "85mm" vào tìm | lưới đúng 20 ô | `VideoMediaLibraryTests.searchUsesTheLibraryQueryLanguage` (index trong bộ nhớ: 20 dòng 85 mm + 12 dòng 35 mm → "85mm" ra đúng 20 id, qua `SearchService.resolve` + `LibraryQueries`); sim 26.5: 🔍 thay hàng tab bằng ô tìm + Cancel, gõ chạy tìm sau 0,35 s, lưới là kết quả (`vs3/out/m10/03-search.png`) |
-| AC-13 | iPad 1376×1032 | mở Video Studio | pool có đúng 4 tab Media · Text · Stickers · Music; hàng Recents · Albums · In Video · 6 vừa trong 236; hàng tiêu đề có Library · Select · 🔍 · Hide Media | `VideoStudioDeskLayoutTests.poolMediaGridIsThreeColumnsOf69` (pool 3 × 69 khe 6 lề 8; dock 8 × 124, cột Duo 3 × 80, Duo ngoài 4 × 94); iPad Pro 13 26.5 `ui-drive` dump (`vs3/out/m15`): 4 tab Media · Text · Stickers · Music 59×38, tiêu đề Library · Select (114, 54×30) · 🔍 (168, 30) · Hide Media (198) đúng board `MP_IL_MediaPicker`, hàng Recents (8, 65,5) · Albums (79,5, 61,5) · In Video · 3 (147, 74,5) trong 8…228 — "In Video" thu chữ ≤ 80 % vì board tràn 1,8 pt; lưới 3 cột có dấu ✓ |
+| AC-13 | iPad 1376×1032 | mở Video Studio | pool kính nổi 320×568 ở (8, 8) có đúng 4 tab Media · Text · Stickers · Music (segmented 294×36); hàng Recents · Albums · In Video · 6 (segmented 294×36) vừa trong pool; hàng tiêu đề có Library · Select (68×44) · 🔍 44 · Hide Media 44; lưới 3 × 96 khe 4 | ⚠️ cần làm lại theo bố cục kiểu Mac 2026-10-04 — bằng chứng cũ (`VideoStudioDeskLayoutTests.poolMediaGridIsThreeColumnsOf69`, dump `vs3/out/m15` trên iPad Pro 13 26.5: tab 59×38, Select 54×30, lưới 3 × 69 trong pool 236; commit `0fbde9bf`) đo pool 236; thứ tự tab và tiêu đề vẫn đúng, mọi khổ đổi — **chờ bố cục iPad kiểu Mac** (2026-10-04: pool 236 → 320 kính nổi, board iPad mới ở `docs/design/ipad`); lưới lấy bề rộng từ chỗ chứa, không cứng 236 |
 | AC-14 | VoiceOver bật, ô video 0:06 đang dùng | đọc ô | "Video, 0:06, in this video" + action Insert at Playhead, Select | ⚠️ một phần — `MediaUsageTests.accessibilityLabelSaysInThisVideo` ("Video, 0:06, in this video"; ảnh chưa dùng: "Photo, <ngày>"); ô có hai custom action **Insert at Playhead** (= chạm) và **Select** (bật Select và chọn ô); **VoiceOver thật trên máy / Accessibility Inspector: chưa chạy** |
 | AC-15 | từng board `MP_P_MediaPicker` · `MP_P_Drag` · `MP_P_InVideo` · `MP_P_Limited` · `MP_IL_MediaPicker` · `MP_IL_InVideo` · `MP_IP_Media` · `MP_DI_Media` · `MP_DC_Media` · `MP_P_Drag916` | `design-parity` | mọi phần tử board đặt tên lệch ≤ 2pt (sau khi board sửa theo §9) | ⚠️ chưa có |
 | AC-16 | iPhone, project mẫu, Media mở | dump hàng tab | thứ tự Recents · Albums · In Video · 6 · Select · 🔍, Select và 🔍 nằm hết trong x ≤ 390 | ảnh sim 26.5 (`vs3/out/m2/03-albums.png`, khung 402 pt): hàng tab Recents · Albums · In Video · 3 · Select · 🔍, nút tìm tròn 30 kết thúc ở x 390, lề 12; **dump: không có** — XCUITest không liệt kê Video Studio trên iPhone |
-| AC-17 | Duo trong 951×669, Media mở | vuốt hàng tab sang trái | Select và 🔍 hiện ở cuối; trước khi vuốt mép phải hàng có dải mờ 24pt | ⚠️ chưa có — `Tools/ui-drive` |
+| AC-17 | Duo trong 951×669, Media mở | vuốt hàng tab sang trái | Select và 🔍 hiện ở cuối; trước khi vuốt mép phải hàng có dải mờ 24pt | ⚠️ một phần — cột Duo trong (lưới `.duoColumn`): hàng tab là `ScrollView` ngang, lề 9, y 14, Recents · Albums · In Video · 3 · Select · 🔍 (Select ở x 924,5, 🔍 ở 988,5 — ngoài mép 951 trước khi vuốt), mép phải mờ 24 pt; ảnh stand-in iPad Pro 13 `-VideoStudioStandIn duoInner` (`vs3/out/m16/host-20-duo-media.png`), ✕ · Media · ✓ ở góc phải hàng đáy; **vuốt hàng tab: chưa chứng minh** — trong stand-in trên iPad xoay ngang, kéo của `ui-drive` không cuộn được cả lưới lẫn hàng (chạm thì được), cần máy Duo thật |
 | AC-18 | Falls dùng ở clip 1, clip 6 và một sticker | mở Recents | ô Falls hiện viên nang "×3", không còn ✓ tròn | `MediaUsageTests.stickerCountsAsAUse` (2 clip + 1 sticker → ×3; sticker không id, chữ: không tính) |
 | AC-19 | thư viện có album "Hikes" 42 mục; iPhone, Media mở | chạm Albums, chạm "Hikes", rồi ‹ Albums | danh sách album có bìa · tên · số mục ("42"); lưới album đúng 42 ô, có dấu đã dùng như Recents; nút ‹ Albums ở chỗ hàng tab; chạm nó về danh sách album | ⚠️ một phần — `VideoMediaLibraryTests.albumGridIsTheAlbumFetch` (lưới album = fetch của album, không trần, cùng dấu đã dùng như Recents); danh sách album bìa · tên · số mục, "‹ Albums" thay hàng tab; sim 26.5 không có album nào → chỉ chụp được trạng thái rỗng "No albums yet." (`vs3/out/m2/03-albums.png`); **album 42 mục: chưa chụp** (cần tạo album trên sim) |
 

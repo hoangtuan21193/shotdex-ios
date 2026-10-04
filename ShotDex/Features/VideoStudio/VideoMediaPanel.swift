@@ -35,7 +35,7 @@ struct VideoMediaPanel: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            Color.clear.frame(height: isPoolColumn ? 4 : 10)
+            Color.clear.frame(height: isPoolColumn ? 4 : (metrics == .duoColumn ? 14 : 10))
             header
                 .frame(height: VideoMediaPanelMetrics.tabHeight)
             Color.clear.frame(height: 6)
@@ -84,6 +84,27 @@ struct VideoMediaPanel: View {
                 Spacer(minLength: 0)
             }
             .padding(.horizontal, VideoMediaPanelMetrics.rowInset)
+        } else if scrollsTabRow {
+            // The Duo's 264pt column (FS-12.09 §3): the row scrolls, Select
+            // and search at its end, the right edge fading over 24pt to say
+            // there is more.
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 6) {
+                    tabButton(.recents, title: VideoStudioCopy.recents).fixedSize()
+                    tabButton(.albums, title: VideoStudioCopy.albums).fixedSize()
+                    tabButton(.inVideo, title: VideoStudioCopy.inVideo(MediaUsage.useCount(in: model.recipe))).fixedSize()
+                    VideoMediaHeaderControls(model: model, onSearch: startSearch).fixedSize()
+                }
+                .padding(.horizontal, rowInset)
+            }
+            .mask {
+                HStack(spacing: 0) {
+                    Color.black
+                    LinearGradient(colors: [.black, .clear], startPoint: .leading, endPoint: .trailing)
+                        .frame(width: VideoMediaPanelMetrics.tabRowFade)
+                }
+            }
+            .accessibilityIdentifier("mediaTabRow")
         } else {
             HStack(spacing: 6) {
                 tabButton(.recents, title: VideoStudioCopy.recents)
@@ -96,7 +117,13 @@ struct VideoMediaPanel: View {
         }
     }
 
-    private var rowInset: CGFloat { isPoolColumn ? 8 : VideoMediaPanelMetrics.rowInset }
+    /// Only the Duo's inner column is too narrow for the row.
+    private var scrollsTabRow: Bool { metrics == .duoColumn }
+
+    private var rowInset: CGFloat {
+        if isPoolColumn { return 8 }
+        return metrics == .duoColumn ? 9 : VideoMediaPanelMetrics.rowInset
+    }
 
     private func tabButton(_ value: Tab, title: String) -> some View {
         let isOn = tab == value
@@ -586,6 +613,8 @@ enum VideoMediaPanelMetrics {
     static let tabPadding: CGFloat = 8
     /// The row's inset from the panel's edges.
     static let rowInset: CGFloat = 12
+    /// The fade at the end of a row that scrolls (the Duo's column).
+    static let tabRowFade: CGFloat = 24
     /// One album row.
     static let albumRowHeight: CGFloat = 56
 }
