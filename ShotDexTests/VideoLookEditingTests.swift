@@ -124,6 +124,32 @@ struct VideoLookEditingTests {
         #expect(VideoLookEditing.showsAmount(fresh))
     }
 
+    /// AC-12: clip 2 in Night Teal; Look with All Clips, tap Velvia — all
+    /// three clips are Velvia and clip 2's pill is gone, in one step.
+    @Test func allClipsClearsClipLooksInOneStep() {
+        let model = VideoStudioModelFixture.model(configure: { $0.clips[1].look = VideoLookSamples.nightTeal })
+        model.toggleToolPanel(.look)
+        model.lookTarget = .allClips
+        let steps = model.history.undoEntries.count
+        model.chooseLook(VideoLookSamples.velvia.source)
+        #expect(model.history.undoEntries.count == steps + 1)
+        #expect(model.recipe.look == VideoLookSamples.velvia)
+        #expect(model.recipe.clips.allSatisfy { $0.look == nil })
+        #expect(model.recipe.clips.allSatisfy { VideoLookEditing.effectiveLook(for: $0, in: model.recipe) == VideoLookSamples.velvia })
+        #expect(model.recipe.clips.allSatisfy { model.lookPillText(for: $0) == nil })
+    }
+
+    /// AC-12: one Undo gives clip 2 its Night Teal back (and the video no look).
+    @Test func undoBringsBackNightTeal() {
+        let model = VideoStudioModelFixture.model(configure: { $0.clips[1].look = VideoLookSamples.nightTeal })
+        model.toggleToolPanel(.look)
+        model.chooseLook(VideoLookSamples.velvia.source)
+        model.undo()
+        #expect(model.recipe.clips[1].look == VideoLookSamples.nightTeal)
+        #expect(model.recipe.look == nil)
+        #expect(model.lookPillText(for: model.recipe.clips[1]) == "Night Teal")
+    }
+
     /// The cache holds 24 tables and lets the least recently used one go.
     @Test func cacheEvictsBeyond24Tables() {
         let cache = VideoLookTableCache()

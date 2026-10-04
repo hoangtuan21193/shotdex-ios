@@ -53,6 +53,26 @@ enum VideoLookEditing {
         return VideoLook(source, amount: current.amount)
     }
 
+    /// A tile tap, applied to `recipe` (§4). **All Clips** sets the whole
+    /// video's look and clears every clip's own — what "all clips" says, so
+    /// afterwards every clip wears the tapped look.
+    static func applying(
+        _ source: VideoLook.Source,
+        target: VideoLookTarget,
+        to recipe: VideoProjectRecipe
+    ) -> VideoProjectRecipe {
+        var result = recipe
+        switch target {
+        case .allClips:
+            let look = chosen(source, replacing: recipe.look)
+            result.look = look.isOriginal ? nil : look
+            for index in result.clips.indices { result.clips[index].look = nil }
+        case .thisClip, .selected:
+            break
+        }
+        return result
+    }
+
     /// Amount shows only while there is a look to mix (FS-03.02's rule).
     static func showsAmount(_ look: VideoLook?) -> Bool {
         guard let look else { return false }

@@ -2262,8 +2262,14 @@ final class VideoStudioModel {
     /// A tile tapped in the Look panel: the look goes where Apply To says.
     /// A new look starts at Amount 100; Original is no look.
     func chooseLook(_ source: VideoLook.Source) {
-        let look = VideoLookEditing.chosen(source, replacing: recipe.look)
-        setVideoLook(look.isOriginal ? nil : look)
+        let changed = VideoLookEditing.applying(source, target: lookTarget, to: recipe)
+        guard changed != recipe else { return }
+        // One tap, one step — All Clips clearing every clip's own look
+        // included, so one Undo brings them all back (§7).
+        pushUndo()
+        recipe = changed
+        markEdited()
+        applyLookTier()
     }
 
     /// What a built-in film look is called: the photo editor's store knows
