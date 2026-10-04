@@ -31,8 +31,8 @@
   - Kiểm tra: `/test RejectedDeletionCancelTests` (test có sẵn khoá phần này; `MixedDeletionTests` ra đời ở E3)
 - [x] **L3 — asset Photos không đọc sao trong file** (AC-52, phần ✅)
   - Kiểm tra: `/test SidecarReaderTests/cameraRatingFilesOnly`
-- [ ] **L4 — Clear Local Metadata Index giữ sao/cờ** (AC-31, phần ✅)
-  - Kiểm tra: `/test SidecarSettingTests/offKeepsMarksInDatabaseOnly`
+- [x] **L4 — Clear Local Metadata Index giữ sao/cờ** (AC-31, phần ✅)
+  - Kiểm tra: `/test PhotoMarksStoreTests` (test có sẵn khoá phần Clear)
 - [ ] **W1 — `PreviewCache` ở Application Support, loại khỏi backup, trần 5 GB iOS; gộp `RemoteThumbnailCache`** (AC-47; A6)
   - Xong khi: test xanh, NF-02 + FS-08 sửa cùng commit, `/build` sạch
   - Kiểm tra: `/test PreviewCacheTests/locationAndDefaults`
