@@ -86,6 +86,43 @@ struct WatermarkRenderTests {
         #expect(raster.image.width * raster.image.height < 6000 * 4000 / 20)
     }
 
+    /// AC-10 through the renderer: a long credit on a 1080×1920 portrait
+    /// shrinks evenly — one line still, the same proportions, every glyph
+    /// inside the photo less two margins, ink from end to end of the box.
+    @Test func noLayerIsClipped() throws {
+        var preset = WatermarkFixture.credit(logo: nil)
+        preset.layers[0].text = "© Nguyen An Photography Studio · Saigon, Vietnam · All rights reserved · {camera}"
+        preset.layers[0].size = 0.025
+        let stamp = WatermarkStamp(preset: preset, placement: WatermarkFixture.placementW)
+            .resolved(with: OverlayTokenValues(camera: "ILCE-7M4"))
+        let natural = try #require(PhotoRenderService.watermarkNaturalSize(stamp))
+        let size = CGSize(width: 1080, height: 1920)
+        let frame = try #require(PhotoRenderService.watermarkFrame(stamp, imageSize: size))
+        let margin = 0.03 * 1080.0
+        #expect(frame.box.minX >= margin - 1 && frame.box.maxX <= 1080 - margin + 1)
+        #expect(abs(frame.box.width - (1080 - 2 * margin)) <= 1, "it had to shrink: \(frame.box) natural \(natural)")
+        #expect(frame.box.height < 0.04 * 1080, "shrunk below Size")
+
+        // Same block shape as at its natural size: nothing re-wrapped.
+        let reference = WatermarkLayout.frameSize(aspect: 1.5, shortEdge: 1000)
+        let naturalBox = try #require(PhotoRenderService.watermarkBlockBounds(stamp.layers, frame: reference))
+        #expect(abs(naturalBox.height / 1000 - natural) < 0.0001)
+        let evenHeight = naturalBox.height * frame.box.width / naturalBox.width
+        #expect(abs(frame.box.height - evenHeight) <= 1.5, "\(frame.box) vs \(naturalBox)")
+
+        let raster = try #require(PhotoRenderService.watermarkRaster(stamp, imageSize: size))
+        let pixels = WatermarkFixture.pixels(of: raster.image)
+        func inked(columns: Range<Int>) -> Bool {
+            for y in 0..<pixels.height {
+                for x in columns where pixels.data[(y * pixels.width + x) * 4 + 3] > 0 { return true }
+            }
+            return false
+        }
+        let tenth = pixels.width / 10
+        #expect(inked(columns: 0..<tenth))
+        #expect(inked(columns: (pixels.width - tenth)..<pixels.width))
+    }
+
     /// A logo whose file is gone takes no room, and a stamp with nothing left
     /// to draw leaves the photo as it was.
     @Test func nothingToDrawLeavesThePhoto() async throws {

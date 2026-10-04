@@ -74,7 +74,8 @@ public enum WatermarkLayout {
         let shortEdge = min(imageSize.width, imageSize.height)
         let margin = CGFloat(placement.margin) * shortEdge
         let size = placement.size ?? naturalSize(blockBounds: natural, frameSize: reference)
-        var scale = CGFloat(size) * shortEdge / natural.height
+        let targetHeight = CGFloat(size) * shortEdge
+        var scale = targetHeight / natural.height
         let available = CGSize(
             width: max(1, imageSize.width - 2 * margin),
             height: max(1, imageSize.height - 2 * margin)
@@ -82,16 +83,23 @@ public enum WatermarkLayout {
         scale = min(scale, available.width / natural.width, available.height / natural.height)
         guard scale > 0, scale.isFinite else { return nil }
 
-        // Measured again at the drawn size: text measurement rounds up to whole
-        // pixels, so the scaled reference box can be a pixel off the real one.
-        let drawnFrame = frameSize(aspect: sourceAspect, shortEdge: referenceShortEdge * scale)
-        let scaledNatural = CGRect(
-            x: natural.minX * scale,
-            y: natural.minY * scale,
-            width: natural.width * scale,
-            height: natural.height * scale
-        )
-        let bounds = measure(drawnFrame) ?? scaledNatural
+        // Measured again at the drawn size, and nudged: text does not scale
+        // exactly — the system font changes optical size and tracking with
+        // its point size, and measurement rounds up to whole pixels — so the
+        // scaled reference box can be a pixel or two off the real one.
+        var drawnFrame = frameSize(aspect: sourceAspect, shortEdge: referenceShortEdge * scale)
+        var bounds = measure(drawnFrame) ?? natural.scaled(by: scale)
+        for _ in 0..<3 {
+            let ratio = min(
+                targetHeight / bounds.height,
+                available.width / bounds.width,
+                available.height / bounds.height
+            )
+            guard abs(ratio - 1) > 0.0005, ratio.isFinite, ratio > 0 else { break }
+            scale *= ratio
+            drawnFrame = frameSize(aspect: sourceAspect, shortEdge: referenceShortEdge * scale)
+            bounds = measure(drawnFrame) ?? natural.scaled(by: scale)
+        }
 
         let x: CGFloat = switch placement.anchor.column {
         case 0: margin
@@ -121,5 +129,11 @@ public enum WatermarkLayout {
         guard shortEdge > 0 else { return WatermarkPlacement.sizeRange.lowerBound }
         let fraction = Double(CGFloat(pixels) / shortEdge)
         return min(max(fraction, WatermarkPlacement.sizeRange.lowerBound), WatermarkPlacement.sizeRange.upperBound)
+    }
+}
+
+private extension CGRect {
+    func scaled(by factor: CGFloat) -> CGRect {
+        CGRect(x: minX * factor, y: minY * factor, width: width * factor, height: height * factor)
     }
 }
