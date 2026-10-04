@@ -151,3 +151,58 @@ struct VideoExportSmokeTests {
                 "file \(output.fileBytes) B vs \(expectedBytes)")
     }
 }
+
+extension VideoExportSmokeTests {
+    /// Two one-second clips of 1280×720 for the frame-rate tests.
+    private func twoClips(in directory: URL) async throws -> (VideoProjectRecipe, [UUID: VideoClipSource]) {
+        let a = directory.appendingPathComponent("a.mp4")
+        let b = directory.appendingPathComponent("b.mp4")
+        try await VideoExportFixtures.writeVideo(width: 1280, height: 720, seconds: 1.5, to: a)
+        try await VideoExportFixtures.writeVideo(width: 1280, height: 720, seconds: 1.5,
+                                                 fill: .flat(red: 0.9, green: 0.4, blue: 0.1), to: b)
+        let recipe = VideoProjectRecipe(clips: [
+            VideoExportFixtures.videoClip("a", seconds: 1.5), VideoExportFixtures.videoClip("b", seconds: 1.5),
+        ])
+        return (recipe, [
+            recipe.clips[0].id: try await VideoExportFixtures.videoSource(a),
+            recipe.clips[1].id: try await VideoExportFixtures.videoSource(b),
+        ])
+    }
+
+    /// FS-12.10b AC-3: 9:16 at 24 fps writes a 1080×1920 H.264 file at 24
+    /// frames a second, as long as the timeline to within one frame.
+    @Test func nineBySixteenAt24fps() async throws {
+        let directory = try VideoExportFixtures.makeDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        var (recipe, sources) = try await twoClips(in: directory)
+        recipe.aspect = .r9x16
+        recipe.frameRate = .fps24
+        let service = VideoExportFixtures.service()
+        defer { service.cleanupSession() }
+        let url = try await service.export(recipe: recipe, sources: sources, progress: { _ in })
+        let output = try await VideoExportFixtures.inspect(url)
+        #expect(output.naturalSize == CGSize(width: 1080, height: 1920))
+        #expect(abs(output.nominalFrameRate - 24) < 0.5)
+        #expect(output.codec == kCMVideoCodecType_H264)
+        #expect(abs(output.videoTrackDuration - 3) < 1.0 / 24)
+        #expect(abs(output.videoSampleCount - 72) <= 1)
+    }
+
+    /// FS-12.01 §8: the preview's composition runs at 30 whatever the
+    /// export's rate; the export's at the project's.
+    @Test func previewStaysAt30() async throws {
+        let directory = try VideoExportFixtures.makeDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        var (recipe, sources) = try await twoClips(in: directory)
+        recipe.frameRate = .fps60
+        let service = VideoExportFixtures.service()
+        defer { service.cleanupSession() }
+        let preview = try await service.makePreviewItem(recipe: recipe, sources: sources)
+        #expect(preview.playerItem.videoComposition?.frameDuration == CMTime(value: 1, timescale: 30))
+        let exportComposition = VideoCompositionBuilder.videoComposition(
+            recipe: recipe, layout: preview.layout, stillStore: StillFrameStore(targetLongEdge: 1920),
+            bakesOverlays: true, frameRate: recipe.frameRate
+        )
+        #expect(exportComposition.frameDuration == CMTime(value: 1, timescale: 60))
+    }
+}

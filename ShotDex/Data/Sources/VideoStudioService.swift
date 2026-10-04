@@ -536,7 +536,8 @@ final class VideoStudioService {
             recipe: recipe,
             layout: layout,
             stillStore: exportStillStore,
-            bakesOverlays: true
+            bakesOverlays: true,
+            frameRate: recipe.frameRate
         )
         let audioMix = VideoCompositionBuilder.audioMix(recipe: recipe, layout: layout)
 

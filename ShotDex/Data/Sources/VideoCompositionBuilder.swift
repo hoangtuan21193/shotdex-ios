@@ -268,7 +268,11 @@ enum VideoCompositionBuilder {
         recipe: VideoProjectRecipe,
         layout: Layout,
         stillStore: StillFrameStore,
-        bakesOverlays: Bool
+        bakesOverlays: Bool,
+        /// The export's rate from Video Settings; the preview always runs at
+        /// 30 (FS-12.01 §8) — a 60 fps project must not double the
+        /// compositor's work while the user scrubs.
+        frameRate: VideoFrameRate = .fps30
     ) -> AVMutableVideoComposition {
         let renderRecipe = VideoRenderRecipe(
             recipe: recipe,
@@ -302,7 +306,7 @@ enum VideoCompositionBuilder {
         let videoComposition = AVMutableVideoComposition()
         videoComposition.customVideoCompositorClass = VideoFrameCompositor.self
         videoComposition.renderSize = layout.renderSize
-        videoComposition.frameDuration = CMTime(value: 1, timescale: 30)
+        videoComposition.frameDuration = CMTime(value: 1, timescale: CMTimeScale(frameRate.rawValue))
         videoComposition.instructions = layout.segments.map { segment in
             VideoCompositionInstruction(
                 timeRange: segment.timeRange,

@@ -82,7 +82,7 @@ Project mẫu: 5 clip 24,0s (2 ảnh, 3 video 1920×1080) · 16:9 · Fit · 1080
 |---|---|---|---|---|
 | AC-1 | iPhone, project mẫu | bấm Export ở băng trên | panel "Export Video" mở ở vùng panel, có ✕; **không** có hàng Quality; chưa có tiến độ, chưa export nào chạy; nội dung Sẵn sàng như [16](16-export-presets.md) AC-1 | ⚠️ chưa có |
 | AC-2 | iPhone, Export Video đang mở | chạm dòng Custom | Export Video đóng, Video Settings mở (đường duy nhất từ Export sang Video Settings — không còn hàng tóm tắt) | ⚠️ chưa có |
-| AC-3 | project mẫu đổi sang 9:16 · 24 fps | xuất xong | file 1080×1920, 24 khung/giây, track H.264, thời lượng lệch < 1 khung so với 24,0s | ⚠️ chưa có |
+| AC-3 | project mẫu đổi sang 9:16 · 24 fps | xuất xong | file 1080×1920, 24 khung/giây, track H.264, thời lượng lệch < 1 khung so với 24,0s | `VideoExportSmokeTests.nineBySixteenAt24fps` (9:16 · 24 fps → file 1080×1920, `nominalFrameRate` 24, H.264, 3,0 s lệch < 1/24 s, 72 mẫu khung), `.previewStaysAt30` (project 60 fps: preview vẫn 1/30, bản dựng xuất 1/60) |
 | AC-4 | project mẫu đổi sang 60 fps · HEVC | xuất xong | file 1920×1080, 60 khung/giây, track HEVC, thời lượng lệch < 1 khung | ⚠️ chưa có |
 | AC-5 | clip 2 dùng LUT "Kodak 2383" đã xoá | mở Export Video, bấm Export | dòng "1 look is missing its LUT and exports without it." ngay trên nút; xuất chạy tới 100% | một phần: `VideoLUTRendererTests.aMissingFileLeavesTheFrameAlone` |
 | AC-6 | đang xuất 62% | bấm Cancel Export | dừng ≤ 1s; thư mục tạm không còn file; Photos không thêm asset; nút Export trở lại | ⚠️ chưa có |
