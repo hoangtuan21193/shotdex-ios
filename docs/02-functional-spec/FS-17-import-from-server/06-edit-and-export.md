@@ -90,7 +90,7 @@ lệnh đó (AC-67, AC-76…84). Trong đợt 1 ba lệnh này không có trong 
 |---|---|
 | **Original Folder** | tên connection + đường dẫn; mờ kèm lý do ở gốc SMB, hoặc khi folder cloud báo không ghi được |
 | **Photos Library** | asset mới **chỉ gồm bản render** JPEG/HEIC, như kết quả Resize — bản gốc không vào library; ngày chụp, vị trí lấy từ EXIF gốc; `.limited` vẫn tạo được |
-| **Other Folder…** | chọn connection đã lưu rồi duyệt tới folder, dùng bộ chọn folder của sheet upload (FS-15.02 §2). Sắp thêm dòng đầu **Folder in Files…** (FS-03.07b §8, chưa làm) |
+| **Other Folder…** | chọn connection đã lưu rồi duyệt tới folder, dùng bộ chọn folder của sheet upload (FS-15.02 §2). Dòng đầu **Folder in Files…**: trình chọn folder của hệ thống, cùng bookmark và danh sách gần đây của sheet Export… (FS-03.07b §8); bản render ghi qua tên tạm rồi đổi tên, tên `<gốc>_edited` |
 | **Share…** | share sheet, mở sau khi các đích khác đã xong |
 | Khi trùng bản gốc | chỉ hiện khi chọn Original Folder: **Save as New File** (mặc định) · **Replace Original** |
 | Định dạng | JPEG / HEIC; Replace Original luôn giữ định dạng của bản gốc |

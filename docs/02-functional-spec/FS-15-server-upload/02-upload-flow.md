@@ -34,7 +34,7 @@ connection (một **connection** = một dòng đã khai trong Settings → File
 
 - Nút **Upload** mờ khi 0 file sẽ đẩy. Loại file **không** lưu sang lần sau — mỗi lần đều chọn.
 - Sheet này chỉ đẩy file gốc. Bản đã đổi cỡ theo preset Resize lên server đi qua sheet **Export…**, không ghi lịch sử
-  upload ([FS-03.07b](../FS-03-photo-editor/07b-export-to-files.md) §7, chốt 2026-10-02, chưa làm).
+  upload ([FS-03.07b](../FS-03-photo-editor/07b-export-to-files.md) §7, chốt 2026-10-02, làm 2026-10-04 — `RemoteFolderWriter`).
 - **Folder** và **Date Folders** nhớ **theo từng connection**, ghi lại lúc bấm Upload. Connection mới: Date
   Folders **tắt**. Sửa ô Folder trong form connection thì quên folder đã nhớ — form thắng.
 - **All Originals** = mọi file gốc của asset (RAW, JPEG kèm, đoạn video Live Photo, video). **Originals +

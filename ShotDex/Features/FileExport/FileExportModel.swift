@@ -207,9 +207,30 @@ final class FileExportModel: Identifiable {
         template.isUsable && hasDestination
     }
 
-    /// A folder that opens (FS-03.07b §4).
+    /// A folder that opens (FS-03.07b §4), or a folder on a connection (§7).
     var hasDestination: Bool {
-        if case .available = folderState { true } else { false }
+        if connection != nil { return true }
+        if case .available = folderState { return true }
+        return false
+    }
+
+    /// The writer for where the batch goes, and the security-scoped URL to
+    /// open around it (a folder in Files only).
+    private func destination() -> (writer: any ExportDestinationWriter, scope: URL?)? {
+        guard let environment else { return nil }
+        if let connection, let makeRemoteWriter = environment.makeRemoteWriter {
+            return (makeRemoteWriter(connection.server, connection.path), nil)
+        }
+        if case .available(let url) = folderState { return (environment.makeWriter(url), url) }
+        return nil
+    }
+
+    /// A folder on a saved connection, picked in the Folder menu (§7). Not
+    /// remembered: the recents are folders in Files.
+    private(set) var connection: ExportConnection?
+
+    func useConnection(_ server: FileServer, path: String) {
+        connection = ExportConnection(server: server, path: path)
     }
 
     // MARK: Folder
@@ -239,17 +260,27 @@ final class FileExportModel: Identifiable {
     func pickFolder(_ url: URL?) {
         isPickingFolder = false
         guard let url else { return }
+        connection = nil
         _ = try? folders.remember(url)
         refreshFolder()
     }
 
     func useFolder(_ folder: ExportFolder) {
+        connection = nil
         folders.use(folder)
         refreshFolder()
     }
 
     /// `T7 › Exports`, or None.
-    var folderTitle: String { folders.current?.title ?? ExportCopy.noFolder }
+    var folderTitle: String { connection?.title ?? folders.current?.title ?? ExportCopy.noFolder }
+    /// The destination as the summary names it.
+    var summaryFolder: ExportFolder? {
+        guard let connection else { return folders.current }
+        return ExportFolder(bookmark: Data(), name: connection.name, place: connection.server.name, path: connection.path)
+    }
+
+    /// The folder's own name, for "Exported 3 photos to “Exports”."
+    var folderName: String { connection?.name ?? folders.current?.name ?? "" }
     var isFolderNotConnected: Bool { folderState == .notConnected }
 
     // MARK: Run
@@ -262,16 +293,15 @@ final class FileExportModel: Identifiable {
     /// Export: reads the folder once, names the whole batch, asks about
     /// Replace if it must, then runs (FS-03.07c §2).
     func start() {
-        guard canExport, stage == .choosing, case .available(let url) = folderState, let environment else { return }
+        guard canExport, stage == .choosing, let environment, let (writer, scope) = destination() else { return }
         stage = .planning
         preflightFailure = nil
         let assetIds = assetIds
         let settings = settings
         let template = template
         task = Task { [weak self] in
-            let isAccessing = url.startAccessingSecurityScopedResource()
-            defer { if isAccessing { url.stopAccessingSecurityScopedResource() } }
-            let writer = environment.makeWriter(url)
+            let isAccessing = scope?.startAccessingSecurityScopedResource() ?? false
+            defer { if isAccessing { scope?.stopAccessingSecurityScopedResource() } }
             let items = await environment.items(assetIds)
             var existing: [String: Set<String>] = [:]
             do {
@@ -342,7 +372,7 @@ final class FileExportModel: Identifiable {
     }
 
     private func run(_ ids: Set<String>?) {
-        guard let plan, let environment, case .available(let url) = folderState else { return }
+        guard let plan, let environment, let (writer, scope) = destination() else { return }
         stage = .running
         let total = ids.map { $0.count } ?? plan.writtenEntries.count
         progress = FileExportProgress(total: total, totalBytes: Self.estimatedBytes(plan, ids: ids))
@@ -354,15 +384,15 @@ final class FileExportModel: Identifiable {
         )
         self.job = job
         let runner = runner ?? FileExportRunner(
-            source: environment.source, writer: environment.makeWriter(url), rendering: environment.rendering,
+            source: environment.source, writer: writer, rendering: environment.rendering,
             onEvent: { [weak self] event in Task { @MainActor in self?.progress.apply(event) } }
         )
         self.runner = runner
         environment.holdScreen(true)
         task = Task { [weak self] in
-            let isAccessing = url.startAccessingSecurityScopedResource()
+            let isAccessing = scope?.startAccessingSecurityScopedResource() ?? false
             let report = await runner.run(job, only: ids)
-            if isAccessing { url.stopAccessingSecurityScopedResource() }
+            if isAccessing { scope?.stopAccessingSecurityScopedResource() }
             guard let self else { return }
             environment.holdScreen(false)
             self.report = report
@@ -392,6 +422,18 @@ struct FileExportEnvironment {
     /// The writer for a folder in Files; a test hands in one that reports
     /// little free space or a drive that goes away.
     var makeWriter: @Sendable (URL) -> any ExportDestinationWriter = { LocalFolderWriter(root: $0) }
+    /// The writer for a folder on a saved connection; nil where there are none.
+    var makeRemoteWriter: (@Sendable (FileServer, String) -> any ExportDestinationWriter)?
+}
+
+/// A folder on a saved connection as the destination (FS-03.07b §7).
+struct ExportConnection: Equatable {
+    let server: FileServer
+    let path: String
+
+    var name: String { path.isEmpty ? server.name : ServerUploadPath.lastComponent(of: path) }
+    /// `NAS › Trip/Exports`.
+    var title: String { path.isEmpty ? server.name : "\(server.name) › \(path)" }
 }
 
 extension FileExportModel {
@@ -417,9 +459,26 @@ extension FileExportModel {
                 },
                 holdScreen: { holds in
                     if holds { ScreenAwakeCoordinator.shared.beginHold() } else { ScreenAwakeCoordinator.shared.endHold() }
-                }
+                },
+                makeRemoteWriter: remoteWriter(dependencies: dependencies)
             )
         )
+    }
+
+    /// A folder on a saved connection: one login for the run, each file sent
+    /// through `ServerEditWriter` (FS-03.07b §7).
+    private static func remoteWriter(dependencies: AppDependencies) -> @Sendable (FileServer, String) -> any ExportDestinationWriter {
+        let store = dependencies.fileServers
+        return { server, path in
+            let session = ServerBrowseSession(server: server, client: RemoteFileClientFactory.make(
+                for: server, password: store.password(for: server.id) ?? ""
+            ))
+            return RemoteFolderWriter(
+                access: session, folder: path,
+                scratch: FileManager.default.temporaryDirectory
+                    .appendingPathComponent("\(FileExportRunner.prefix)Remote-\(UUID().uuidString)", isDirectory: true)
+            )
+        }
     }
 
     /// PhotoKit behind the rolling iCloud window (FS-03.07c §1 item 5): a

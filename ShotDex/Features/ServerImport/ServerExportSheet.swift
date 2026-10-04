@@ -18,6 +18,8 @@ struct ServerExportSheet: View {
     @State private var folderPath: [FolderPickerRoute] = []
     /// Choose Another Folder after a refusal, rather than the first pick.
     @State private var picksAfterRefusal = false
+    /// Folder in Files…: the system picker, Export…'s recents (FS-03.07b §8).
+    @State private var isPickingFilesFolder = false
 
     var body: some View {
         NavigationStack(path: $folderPath) {
@@ -75,9 +77,21 @@ struct ServerExportSheet: View {
             String(localized: "Choose a Connection", comment: "Server export: pick the connection for Other Folder"),
             isPresented: $isPickingFolder
         ) {
+            if !picksAfterRefusal {
+                Button(String(localized: "Folder in Files…", table: ExportCopy.table, comment: "Server export Other Folder: a folder in Files, from the system picker")) {
+                    isPickingFilesFolder = true
+                }
+            }
             ForEach(dependencies.fileServerCatalog.servers) { server in
                 Button(server.name) { openPicker(on: server) }
             }
+        }
+        .sheet(isPresented: $isPickingFilesFolder) {
+            FolderPicker { url in
+                isPickingFilesFolder = false
+                if let url { model.chooseFilesFolder(url, in: ExportFolderStore()) }
+            }
+            .ignoresSafeArea()
         }
         .task { dependencies.fileServerCatalog.reload() }
     }
@@ -257,7 +271,7 @@ struct ServerExportSheet: View {
     private var otherFolderRow: some View {
         Button {
             picksAfterRefusal = false
-            if model.otherFolder == nil || !model.destinations.contains(.otherFolder) {
+            if (model.otherFolder == nil && model.filesFolder == nil) || !model.destinations.contains(.otherFolder) {
                 isPickingFolder = true
             } else {
                 model.toggle(.otherFolder)
@@ -266,7 +280,8 @@ struct ServerExportSheet: View {
             HStack {
                 VStack(alignment: .leading, spacing: 2) {
                     Text("Other Folder…", comment: "Server export destination").foregroundStyle(.primary)
-                    Text(model.otherFolder.map { "\($0.server.name) · \($0.path.isEmpty ? "/" : $0.path)" }
+                    Text(model.filesFolder?.title
+                         ?? model.otherFolder.map { "\($0.server.name) · \($0.path.isEmpty ? "/" : $0.path)" }
                          ?? String(localized: "A folder on any saved connection.", comment: "Server export: Other Folder row detail"))
                         .font(.footnote).foregroundStyle(.secondary)
                 }
@@ -305,6 +320,7 @@ struct ServerExportSheet: View {
             model.chooseAnotherFolder(chosen)
         } else {
             model.otherFolder = chosen
+            model.filesFolder = nil
             model.destinations.insert(.otherFolder)
         }
         Task { await route.model.session.close() }

@@ -1,0 +1,269 @@
+{
+ "steps": [
+  {
+   "action": "launch"
+  },
+  {
+   "action": "wait",
+   "seconds": 6
+  },
+  {
+   "action": "tap",
+   "label": "Library",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "tap",
+   "label": "Select photos",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "tap",
+   "x": 0.165,
+   "y": 0.3
+  },
+  {
+   "action": "tap",
+   "x": 0.5,
+   "y": 0.3
+  },
+  {
+   "action": "tap",
+   "x": 0.83,
+   "y": 0.3
+  },
+  {
+   "action": "tap",
+   "label": "More selection actions"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "tap",
+   "label": "Export…"
+  },
+  {
+   "action": "wait",
+   "seconds": 2.5
+  },
+  {
+   "action": "tap",
+   "label": "If a File Exists"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "tap",
+   "label": "Keep Both"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "tap",
+   "label": "Folder"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "screenshot",
+   "name": "01-folder-menu"
+  },
+  {
+   "action": "tap",
+   "label": "Studio NAS"
+  },
+  {
+   "action": "wait",
+   "seconds": 6
+  },
+  {
+   "action": "screenshot",
+   "name": "02-browse"
+  },
+  {
+   "action": "dump",
+   "name": "02-browse",
+   "type": "button"
+  },
+  {
+   "action": "tap",
+   "label": "Choose"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "screenshot",
+   "name": "03-sheet-connection"
+  },
+  {
+   "action": "dump",
+   "name": "03-sheet-connection",
+   "type": "button"
+  },
+  {
+   "action": "tap",
+   "label": "Export",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 90
+  },
+  {
+   "action": "screenshot",
+   "name": "04-summary"
+  },
+  {
+   "action": "dump",
+   "name": "04-summary",
+   "type": "button"
+  },
+  {
+   "action": "tap",
+   "label": "Done",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "tap",
+   "label": "Done selecting"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "tap",
+   "label": "Collections",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "tap",
+   "label": "Local Network"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "screenshot",
+   "name": "05-connections"
+  },
+  {
+   "action": "tap",
+   "label": "Studio NAS"
+  },
+  {
+   "action": "wait",
+   "seconds": 6
+  },
+  {
+   "action": "screenshot",
+   "name": "06-folder"
+  },
+  {
+   "action": "longPress",
+   "label": "a.JPG",
+   "seconds": 1.2
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "tap",
+   "label": "Edit",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 12
+  },
+  {
+   "action": "tap",
+   "label": "Export",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "screenshot",
+   "name": "07-server-export-sheet"
+  },
+  {
+   "action": "dump",
+   "name": "07-server-export-sheet",
+   "type": "button"
+  },
+  {
+   "action": "tap",
+   "label": "Size"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "screenshot",
+   "name": "08-size-menu"
+  },
+  {
+   "action": "dump",
+   "name": "08-size-menu",
+   "type": "button"
+  },
+  {
+   "action": "tap",
+   "label": "Original",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "tap",
+   "label": "Other Folder…"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "screenshot",
+   "name": "09-other-folder"
+  },
+  {
+   "action": "dump",
+   "name": "09-other-folder",
+   "type": "button"
+  }
+ ]
+}

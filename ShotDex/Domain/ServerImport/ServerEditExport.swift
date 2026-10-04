@@ -10,6 +10,9 @@ enum ServerExportDestination: Hashable, Sendable, Identifiable {
     case photosLibrary
     /// A folder on any saved connection.
     case otherFolder(serverId: String, serverName: String, path: String)
+    /// A folder in Files — On My iPhone, iCloud Drive, a drive — by its
+    /// bookmark in Export…'s recents (FS-03.07b §8).
+    case filesFolder(id: UUID, title: String)
     case share
 
     var id: String {
@@ -17,6 +20,7 @@ enum ServerExportDestination: Hashable, Sendable, Identifiable {
         case .originalFolder: "original"
         case .photosLibrary: "photos"
         case .otherFolder(let serverId, _, let path): "other|\(serverId)|\(path)"
+        case .filesFolder(let id, _): "files|\(id.uuidString)"
         case .share: "share"
         }
     }
@@ -26,7 +30,7 @@ enum ServerExportDestination: Hashable, Sendable, Identifiable {
     var order: Int {
         switch self {
         case .originalFolder: 0
-        case .otherFolder: 1
+        case .otherFolder, .filesFolder: 1
         case .photosLibrary: 2
         case .share: 3
         }
@@ -118,6 +122,11 @@ struct ServerExportServices: Sendable {
     var access: @Sendable (String) async throws -> any RemoteFileAccess
     /// A new asset from a rendered file; returns its id.
     var saveToPhotos: @Sendable (URL, String) async throws -> String
+    /// A file into a folder in Files, by its bookmark's id, under a name;
+    /// returns where it landed.
+    var writeToFiles: @Sendable (URL, String, UUID) async throws -> String = { _, _, _ in
+        throw RemoteFileError.other(String(localized: "That folder is gone.", table: "Export", comment: "Server export: the Files folder is not available"))
+    }
 }
 
 /// One file a tool made from several photos — a collage, a combined photo,
@@ -277,6 +286,8 @@ actor ServerEditExporter {
                                                  placement: .asNamed, client: client)
             }
             return .done(path)
+        case .filesFolder(let id, _):
+            return .done(try await services.writeToFiles(file, filename, id))
         case .photosLibrary:
             return .done(try await services.saveToPhotos(file, filename))
         case .share:
@@ -318,6 +329,10 @@ actor ServerEditExporter {
                                                  placement: .newFile, client: client)
             }
             return .done(path)
+        case .filesFolder(let id, _):
+            // `<name>_edited.jpg`, as beside the original (FS-17.06 §6).
+            let name = ServerUploadPath.editedFilename(original: photo.photo.primary.name, rendered: file.lastPathComponent)
+            return .done(try await services.writeToFiles(file, name, id))
         case .photosLibrary:
             let name = ServerUploadPath.editedFilename(original: photo.photo.primary.name, rendered: file.lastPathComponent)
             return .done(try await services.saveToPhotos(file, name))

@@ -14,7 +14,13 @@ struct FileExportSheet: View {
     @Environment(\.scenePhase) private var scenePhase
     @State private var path: [Route] = []
 
-    enum Route: Hashable { case fileName }
+    enum Route: Hashable {
+        case fileName
+        /// Browsing a saved connection for the folder (FS-03.07b §7).
+        case serverFolder(FolderPickerRoute)
+    }
+
+    @Environment(AppDependencies.self) private var dependencies
 
     var body: some View {
         NavigationStack(path: $path) {
@@ -36,6 +42,12 @@ struct FileExportSheet: View {
             .navigationDestination(for: Route.self) { route in
                 switch route {
                 case .fileName: FileNameScreen(model: model)
+                case .serverFolder(let route):
+                    ServerBrowserScreen(model: route.model) { path in
+                        self.path = []
+                        model.useConnection(route.model.server, path: path)
+                        Task { await route.model.session.close() }
+                    }
                 }
             }
         }
@@ -68,19 +80,20 @@ struct FileExportSheet: View {
             FolderPicker { model.pickFolder($0) }
                 .ignoresSafeArea()
         }
+        .task { dependencies.fileServerCatalog.reload() }
     }
 
     /// *Not enough space in “Exports” — needs 1.2 GB, 300 MB free.*
     private var spaceTitle: String {
         if case .notEnoughSpace(let needed, let free)? = model.preflightFailure {
-            return ExportCopy.notEnoughSpace(model.folders.current?.name ?? "", needed: needed, free: free)
+            return ExportCopy.notEnoughSpace(model.folderName, needed: needed, free: free)
         }
         return ""
     }
 
     private var replaceTitle: String {
         if case .confirmingReplace(let count) = model.stage {
-            return ExportCopy.replaceTitle(count, folder: model.folders.current?.name ?? "")
+            return ExportCopy.replaceTitle(count, folder: model.folderName)
         }
         return ""
     }
@@ -203,10 +216,25 @@ struct FileExportSheet: View {
                     Button {
                         model.useFolder(folder)
                     } label: {
-                        if folder.id == model.folders.current?.id {
+                        if model.connection == nil, folder.id == model.folders.current?.id {
                             Label(folder.title, systemImage: "checkmark")
                         } else {
                             Text(folder.title)
+                        }
+                    }
+                }
+            }
+            if !dependencies.fileServerCatalog.servers.isEmpty {
+                Section {
+                    ForEach(dependencies.fileServerCatalog.servers) { server in
+                        Button {
+                            browse(server)
+                        } label: {
+                            if model.connection?.server.id == server.id {
+                                Label(model.connection?.title ?? server.name, systemImage: "checkmark")
+                            } else {
+                                Text(server.name)
+                            }
                         }
                     }
                 }
@@ -229,9 +257,26 @@ struct FileExportSheet: View {
         .accessibilityValue(folderValue)
     }
 
+    /// A saved connection's folder browser, as the upload's (FS-15.02 §2a).
+    private func browse(_ server: FileServer) {
+        let session = ServerBrowseSession(server: server, client: RemoteFileClientFactory.make(
+            for: server, password: dependencies.fileServers.password(for: server.id) ?? ""
+        ))
+        let dependencies = dependencies
+        let picker = ServerBrowserModel(session: session, start: server.folder, mode: .chooseFolder) { path in
+            ServerFolderModel(
+                session: session, folder: path, cache: dependencies.serverThumbnails,
+                downloads: dependencies.serverDownloads,
+                existingAssetIds: { PhotoKitAssetCreator.existingAssetIds($0) }
+            )
+        }
+        path.append(.serverFolder(FolderPickerRoute(model: picker)))
+    }
+
     /// `T7 › Exports`, `T7 › Exports — Not connected`, or None.
     private var folderValue: String {
-        model.isFolderNotConnected ? "\(model.folderTitle) — \(ExportCopy.notConnected)" : model.folderTitle
+        model.connection == nil && model.isFolderNotConnected
+            ? "\(model.folderTitle) — \(ExportCopy.notConnected)" : model.folderTitle
     }
 
     private var dateFoldersRow: some View {

@@ -50,6 +50,9 @@ final class ServerExportModel {
     var placement: ServerEditPlacement = .newFile
     var format: ServerExportFormat = .jpeg
     var otherFolder: OtherFolder?
+    /// Other Folder → Folder in Files…: a folder from the system picker, in
+    /// Export…'s recents (FS-03.07b §8). Wins over `otherFolder` once set.
+    var filesFolder: ExportFolder?
     /// The sizes every per-photo export offers — the Resize presets, the
     /// user's own included, Original first (FS-03.07b §8). Empty for one
     /// file a tool made, which goes out as it is.
@@ -111,6 +114,15 @@ final class ServerExportModel {
         composed.flatMap { ServerComposedName.filename(typed: name, fileExtension: $0.fileExtension) }
     }
 
+    /// Folder in Files…: the picked folder joins Export…'s recents and is
+    /// where Other Folder writes.
+    func chooseFilesFolder(_ url: URL, in store: ExportFolderStore) {
+        guard let folder = try? store.remember(url) else { return }
+        filesFolder = folder
+        otherFolder = nil
+        destinations.insert(.otherFolder)
+    }
+
     /// Picks a size. A preset that names its own format sets Format to it;
     /// Same as Original leaves Format as it is.
     func chooseSize(_ preset: ResizePreset) {
@@ -136,7 +148,9 @@ final class ServerExportModel {
             case .originalFolder: .originalFolder
             case .photosLibrary: .photosLibrary
             case .share: .share
-            case .otherFolder: otherFolder.map { .otherFolder(serverId: $0.server.id, serverName: $0.server.name, path: $0.path) }
+            case .otherFolder:
+                filesFolder.map { .filesFolder(id: $0.id, title: $0.title) }
+                    ?? otherFolder.map { .otherFolder(serverId: $0.server.id, serverName: $0.server.name, path: $0.path) }
             }
         })
     }
@@ -182,6 +196,7 @@ final class ServerExportModel {
     func chooseAnotherFolder(_ folder: OtherFolder) {
         guard let job = lastJob, let exporter else { return }
         otherFolder = folder
+        filesFolder = nil
         destinations.insert(.otherFolder)
         let refused = report.failedDestinations
         var next = job.destinations.subtracting(refused.filter { destination in
@@ -238,6 +253,7 @@ final class ServerExportModel {
         case .originalFolder: String(localized: "Original Folder", comment: "Server export destination")
         case .photosLibrary: String(localized: "Photos Library", comment: "Server export destination")
         case .otherFolder(_, let name, let path): path.isEmpty ? name : "\(name) · \(path)"
+        case .filesFolder(_, let title): title
         case .share: String(localized: "Share", comment: "Server export destination")
         }
     }
@@ -354,6 +370,9 @@ extension ServerExportModel {
                     .appendingPathComponent("photos-\(UUID().uuidString)-\(url.lastPathComponent)")
                 try FileManager.default.copyItem(at: url, to: copy)
                 return try await library.saveImageFile(at: copy, filename: name)
+            },
+            writeToFiles: { file, name, id in
+                try await writeToFiles(file, name: name, folderId: id, store: await MainActor.run { ExportFolderStore() })
             }
         )
     }
@@ -365,5 +384,27 @@ enum ServerExportSizes {
     static func offered(_ presets: [ResizePreset]) -> [ResizePreset] {
         var seen: Set<UUID> = [ResizePreset.original.id]
         return [.original] + presets.filter { seen.insert($0.id).inserted }
+    }
+}
+
+extension ServerExportModel {
+    /// A render into a folder in Files the way Export… writes (FS-03.07b §6):
+    /// under its part name, checked, renamed through file coordination, the
+    /// next free name if one is taken. No upload history: the copy on disk
+    /// is not a backup of the server's original (§7).
+    nonisolated static func writeToFiles(_ file: URL, name: String, folderId: UUID, store: ExportFolderStore) async throws -> String {
+        let url: URL? = await MainActor.run {
+            guard let folder = store.recents.first(where: { $0.id == folderId }),
+                  case .available(let url) = store.resolve(folder) else { return nil }
+            return url
+        }
+        guard let url else { throw RemoteFileError.other(ExportCopy.folderGone) }
+        let isAccessing = url.startAccessingSecurityScopedResource()
+        defer { if isAccessing { url.stopAccessingSecurityScopedResource() } }
+        let writer = LocalFolderWriter(root: url)
+        let target = ServerUploadPath.nextFreeName(for: name, existing: try await writer.existingNames(in: ""))
+        return try await writer.write(name: target, in: "", replacing: false) { part in
+            try RollingOriginalPrefetcher.copyInBlocks(from: file, to: part)
+        }.path
     }
 }
