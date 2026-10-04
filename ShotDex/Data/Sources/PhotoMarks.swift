@@ -244,7 +244,8 @@ final class PhotoMarks {
     }
 
     /// Removes every mark of photos that are gone — the rows and the memory.
-    /// Callers decide *whether* they are gone (`UserMarkRemovalPolicy`).
+    /// Used when the user clears marks; a photo leaving the library only
+    /// leaves memory (`forget`), its rows wait out `OrphanRetention`.
     func removeMarks(ids: [String]) async {
         guard !ids.isEmpty else { return }
         let store = store

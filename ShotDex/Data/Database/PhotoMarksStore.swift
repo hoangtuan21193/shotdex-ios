@@ -6,7 +6,7 @@ import GRDB
 ///
 /// Both are user data: nothing here is ever rewritten by the indexer, and
 /// Clear local metadata index does not touch them. Rows go only when the
-/// user clears the mark, or the photo is deleted (`UserMarkRemovalPolicy`).
+/// user clears the mark, or the photo is purged 30 days after it left (`OrphanRetention`).
 struct PhotoMarksStore: Sendable {
     let database: AppDatabase
 
@@ -63,11 +63,15 @@ struct PhotoMarksStore: Sendable {
 
     // MARK: Reads
 
+    /// Photos that left the library keep their rows for 30 days, but no
+    /// count, filter or write to Photos sees them (`OrphanRetention`).
+    private static let notOrphaned = "assetId NOT IN (SELECT id FROM photos WHERE orphanedAt IS NOT NULL)"
+
     /// Every flag, for the in-memory index the grid reads.
     func allFlags() throws -> [String: PhotoFlag] {
         try database.reader.read { db in
             var result: [String: PhotoFlag] = [:]
-            let rows = try Row.fetchCursor(db, sql: "SELECT assetId, flag FROM photo_flag")
+            let rows = try Row.fetchCursor(db, sql: "SELECT assetId, flag FROM photo_flag WHERE \(Self.notOrphaned)")
             while let row = try rows.next() {
                 if let flag = PhotoFlag(rawValue: row["flag"]) { result[row["assetId"]] = flag }
             }
@@ -79,7 +83,7 @@ struct PhotoMarksStore: Sendable {
     func allPendingRatings() throws -> [String: Int] {
         try database.reader.read { db in
             var result: [String: Int] = [:]
-            let rows = try Row.fetchCursor(db, sql: "SELECT assetId, rating FROM pending_photo_rating")
+            let rows = try Row.fetchCursor(db, sql: "SELECT assetId, rating FROM pending_photo_rating WHERE \(Self.notOrphaned)")
             while let row = try rows.next() {
                 result[row["assetId"]] = row["rating"]
             }
@@ -91,7 +95,7 @@ struct PhotoMarksStore: Sendable {
     /// these so it only deletes rows it actually wrote (FS-01.12 §5).
     func pendingRatingRows() throws -> [PendingRating] {
         try database.reader.read { db in
-            try Row.fetchAll(db, sql: "SELECT assetId, rating, ratedAt FROM pending_photo_rating").map {
+            try Row.fetchAll(db, sql: "SELECT assetId, rating, ratedAt FROM pending_photo_rating WHERE \(Self.notOrphaned)").map {
                 PendingRating(assetId: $0["assetId"], rating: $0["rating"], ratedAt: $0["ratedAt"])
             }
         }

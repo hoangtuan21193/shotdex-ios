@@ -282,6 +282,10 @@ final class AppDependencies {
         self.unsupportedRAWIndex = unsupportedRAWIndex
         let photoMarksStore = PhotoMarksStore(database: database)
         self.photoMarksStore = photoMarksStore
+        // Photos gone more than 30 days take their user data with them —
+        // before anything loads marks (FS-19.05 §5).
+        let orphans = PhotoOrphanStore(database: database)
+        try? orphans.purge(orphanedBefore: OrphanRetention.purgeCutoff(now: Date()))
         // iOS 27 keeps stars in Photos itself; below it they wait in
         // `pending_photo_rating` (FS-01.12 §4). Decided here, once.
         var ratingWriter: (any PhotoPropertyWriting)?
@@ -340,17 +344,20 @@ final class AppDependencies {
             self.keywordMirror = nil
             self.captionKeywords = nil
         }
-        // Stars and flags leave with the photo (FS-01.12 AC-9): always when
-        // the app deleted it, only with full access when an index run found
-        // it gone (`UserMarkRemovalPolicy`).
+        // A photo that leaves the library becomes an orphan: its stars and
+        // flags leave memory at once and the database 30 days later
+        // (FS-01.12 AC-9, `OrphanRetention`) — always when the app deleted it,
+        // only with full access when an index run found it gone.
         photoLibrary.onAssetsDeleted = { ids in
-            guard UserMarkRemovalPolicy.removesMarks(on: .deletedInApp) else { return }
-            await photoMarks.removeMarks(ids: ids)
+            guard OrphanRetention.makesOrphans(on: .deletedInApp) else { return }
+            await Task.detached(priority: .utility) { try? orphans.markGoneFromLibrary(ids: ids) }.value
+            photoMarks.forget(ids)
         }
         indexPipeline.runObservers.add { changes in
-            let ids = UserMarkRemovalPolicy.idsToRemove(after: changes)
+            let ids = OrphanRetention.orphanIds(after: changes)
             guard !ids.isEmpty else { return }
-            await photoMarks.removeMarks(ids: Array(ids))
+            try? orphans.markGoneFromLibrary(ids: Array(ids))
+            await photoMarks.forget(ids)
         }
         videoStudio.unreadableRAWIds = { unsupportedRAWIndex.assetIds }
         let recentActivity = RecentActivityStore()

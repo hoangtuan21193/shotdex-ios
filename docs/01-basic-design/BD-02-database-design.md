@@ -87,9 +87,11 @@ Có chỉ mục trên: tên máy và tên ống kính đã chuẩn hoá · ISO �
 - **Sao hiện hành = sao chờ nếu có dòng, không thì cột sao của Photos.** Một luật cho cả hai đời iOS. Lên iOS 27,
   bảng chờ được ghi lên Photos bằng **một** khối thay đổi rồi rỗng dần; bảng cờ thì sống mãi. Vì vậy hai bảng
   tách nhau.
-- Ngoài lúc người dùng bỏ sao/cờ và lúc ghi lên Photos, hai bảng này chỉ mất dòng khi ảnh **bị xoá thật** (cùng
-  lúc gỡ dòng metadata). Quyền `.limited` không bao giờ gỡ — ảnh không thấy chưa chắc đã mất. Clear local
-  metadata index không đụng hai bảng này.
+- Ngoài lúc người dùng bỏ sao/cờ và lúc ghi lên Photos, hai bảng này chỉ mất dòng khi ảnh **bị xoá thật** — và
+  không ngay: ảnh thành **mồ côi** (bảng Ảnh, §3b), sao/cờ rời số đếm và bộ lọc ngay, dòng ở lại **30 ngày** rồi bị
+  dọn lúc mở app cùng mọi dữ liệu người dùng khác của ảnh, **trừ** lịch sử upload, tải về, nhập thẻ (FS-19.05 §5).
+  Quyền `.limited` không bao giờ làm mồ côi — ảnh không thấy chưa chắc đã mất. Clear local metadata index không đụng
+  hai bảng này.
 - **Gương caption/keyword là bản sao của Photos, không phải dữ liệu người dùng** (iOS 27, `v28-captionKeywordMirror`):
   Photos giữ bản thật, hai bảng chỉ để lọc và tìm. Vì vậy chúng **đi theo dòng metadata** — xoá ảnh thì xoá cùng
   transaction, Clear local metadata index xoá cả gương lẫn trạng thái rồi đọc lại từ Photos — khác bảng sao/cờ. Lượt
