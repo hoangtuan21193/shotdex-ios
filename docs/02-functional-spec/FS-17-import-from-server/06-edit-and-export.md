@@ -79,9 +79,10 @@ lệnh đó (AC-67, AC-76…84). Trong đợt 1 ba lệnh này không có trong 
 - Rời công cụ khi đã làm gì đó thì hỏi "Discard?", như công cụ đó vẫn hỏi với ảnh library: Collage và Video khi có
   bước undo nào, Combine khi đã có nét retouch. Chưa làm gì thì không hỏi. Cả hai đường đều xoá bản tạm.
 - Video Studio đọc ảnh server ở cỡ render, không giải mã full-res cho mỗi khung (NF-02).
-- Paste Edits và Resize không mở editor: tải xong là vào thẳng sheet xuất. Resize thêm mục **Size** (các cỡ dựng sẵn
-  của Resize: 4K, 2048 px, 1080 px). Sắp đổi ([FS-03.07b](../FS-03-photo-editor/07b-export-to-files.md) §8, chốt
-  2026-10-03, chưa làm): Size ở mọi lần xuất không gộp, kể cả preset tự tạo, Original mặc định, Resize mặc định 2048 px.
+- Paste Edits và Resize không mở editor: tải xong là vào thẳng sheet xuất. Mọi lần xuất không gộp (Edit, Paste Edits,
+  Resize) có mục **Size**: preset của Resize **kể cả preset tự tạo**, Original đầu và mặc định, Resize mặc định
+  2048 px; preset có Format riêng thì đặt Format theo nó ([FS-03.07b](../FS-03-photo-editor/07b-export-to-files.md) §8,
+  chốt 2026-10-03, làm 2026-10-04 — `ServerExportSizes`, `ServerExportSizeTests`).
 
 ## 6. Sheet xuất
 
@@ -93,7 +94,7 @@ lệnh đó (AC-67, AC-76…84). Trong đợt 1 ba lệnh này không có trong 
 | **Share…** | share sheet, mở sau khi các đích khác đã xong |
 | Khi trùng bản gốc | chỉ hiện khi chọn Original Folder: **Save as New File** (mặc định) · **Replace Original** |
 | Định dạng | JPEG / HEIC; Replace Original luôn giữ định dạng của bản gốc |
-| Size *(FS-03.07b §8, chưa làm)* | mọi lần xuất không gộp: preset của Resize **kể cả preset tự tạo**, mặc định Original (Resize: 2048 px) |
+| Size | mọi lần xuất không gộp: preset của Resize **kể cả preset tự tạo**, mặc định Original (Resize: 2048 px); preset có Format riêng đặt Format theo nó (FS-03.07b §8) |
 | Tóm tắt | `3 photos · JPEG` — cỡ file chỉ biết sau khi render nên không ước |
 
 - Chọn được một hay nhiều đích (dấu ✓). Nút **Export** mờ khi chưa chọn đích nào.

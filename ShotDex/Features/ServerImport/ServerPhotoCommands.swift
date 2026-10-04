@@ -203,7 +203,7 @@ struct ServerPhotoCommandHost: ViewModifier {
             guard let context = finished.exportContext else { return closeTool() }
             exporting = ExportPresentation(model: .make(
                 photos: finished.photos, recipes: [:], context: context, dependencies: dependencies,
-                resizePresets: ResizePreset.builtIns.filter { $0.kind != .original }
+                isResize: true
             ))
         }
     }

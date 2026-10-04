@@ -186,19 +186,19 @@ struct ServerExportSheet: View {
 
     @ViewBuilder
     private var perPhotoSections: some View {
-            if let presets = model.resizePresets {
-                Section {
-                    Picker(String(localized: "Size", comment: "Server export: Resize preset"), selection: Binding(
-                        get: { model.resizePreset?.id },
-                        set: { id in model.resizePreset = presets.first { $0.id == id } }
-                    )) {
-                        ForEach(presets) { preset in
-                            Text(preset.name).tag(Optional(preset.id))
-                        }
+            Section {
+                Picker(String(localized: "Size", comment: "Server export: Resize preset"), selection: Binding(
+                    get: { model.sizePreset.id },
+                    set: { id in
+                        if let preset = model.sizePresets.first(where: { $0.id == id }) { model.chooseSize(preset) }
                     }
-                } footer: {
-                    Text("The long side of each exported photo. The originals keep their size.", comment: "Server export: Resize footer")
+                )) {
+                    ForEach(model.sizePresets) { preset in
+                        Text(preset.name).tag(preset.id)
+                    }
                 }
+            } footer: {
+                Text("The long side of each exported photo. The originals keep their size.", comment: "Server export: Resize footer")
             }
 
             if model.destinations.contains(.originalFolder) {

@@ -50,9 +50,12 @@ final class ServerExportModel {
     var placement: ServerEditPlacement = .newFile
     var format: ServerExportFormat = .jpeg
     var otherFolder: OtherFolder?
-    /// Set for Resize (FS-17.06 §3): the sizes offered, and the one picked.
-    let resizePresets: [ResizePreset]?
-    var resizePreset: ResizePreset?
+    /// The sizes every per-photo export offers — the Resize presets, the
+    /// user's own included, Original first (FS-03.07b §8). Empty for one
+    /// file a tool made, which goes out as it is.
+    let sizePresets: [ResizePreset]
+    /// The size picked. Original, except Resize, which starts at 2048 px.
+    private(set) var sizePreset: ResizePreset
     /// Set when a tool made one file from all the photos.
     let composed: ComposedSource?
     /// The name typed in the sheet, without the extension.
@@ -79,14 +82,15 @@ final class ServerExportModel {
         originServer: FileServer,
         renderDirectory: URL,
         services: ServerExportServices,
-        resizePresets: [ResizePreset]? = nil,
+        sizePresets: [ResizePreset] = ResizePreset.builtIns,
+        startingSize: ResizePreset = .original,
         composed: ComposedSource? = nil
     ) {
         self.photos = photos
         self.composed = composed
         self.name = composed.map { ServerComposedName.defaultBase(firstFilename: $0.firstFilename, tool: $0.tool) } ?? ""
-        self.resizePresets = resizePresets
-        self.resizePreset = resizePresets?.first
+        self.sizePresets = composed == nil ? ServerExportSizes.offered(sizePresets) : []
+        self.sizePreset = ServerExportSizes.offered(sizePresets).first { $0.id == startingSize.id } ?? .original
         self.originServer = originServer
         self.originFolder = photos.first?.folder ?? ""
         self.renderDirectory = renderDirectory
@@ -105,6 +109,23 @@ final class ServerExportModel {
     /// typed name leaves nothing (FS-17.06 §6b).
     var composedFilename: String? {
         composed.flatMap { ServerComposedName.filename(typed: name, fileExtension: $0.fileExtension) }
+    }
+
+    /// Picks a size. A preset that names its own format sets Format to it;
+    /// Same as Original leaves Format as it is.
+    func chooseSize(_ preset: ResizePreset) {
+        sizePreset = preset
+        switch preset.format {
+        case .jpeg: format = .jpeg
+        case .heic: format = .heic
+        case .preserve: break
+        }
+    }
+
+    /// What the render resizes to: nothing for the built-in Original, so an
+    /// edit at full size keeps the full quality it always had.
+    var resize: ResizePreset? {
+        sizePreset.id == ResizePreset.original.id ? nil : sizePreset
     }
 
     var hasRAWOriginal: Bool { photos.contains { $0.photo.raw != nil } }
@@ -140,7 +161,7 @@ final class ServerExportModel {
         let effectivePlacement: ServerEditPlacement = destinations.contains(.originalFolder) && canReplaceOriginals ? placement : .newFile
         let job = ServerEditExporter.Job(
             photos: photos, destinations: resolvedDestinations, placement: effectivePlacement, format: format,
-            resize: resizePreset,
+            resize: composed == nil ? resize : nil,
             composed: composed.map { source in
                 ComposedOutput(file: source.file, filename: composedFilename ?? source.file.lastPathComponent, folder: originFolder)
             }
@@ -257,7 +278,7 @@ extension ServerExportModel {
         recipes: [String: PhotoEditRecipe],
         context: ServerExportContext,
         dependencies: AppDependencies,
-        resizePresets: [ResizePreset]? = nil
+        isResize: Bool = false
     ) -> ServerExportModel {
         let service = dependencies.photoEditing
         return ServerExportModel(
@@ -277,7 +298,8 @@ extension ServerExportModel {
                     into: folder
                 )
             },
-            resizePresets: resizePresets
+            sizePresets: dependencies.compressionPresets.allPresets,
+            startingSize: isResize ? .twoK : .original
         )
     }
 
@@ -334,5 +356,14 @@ extension ServerExportModel {
                 return try await library.saveImageFile(at: copy, filename: name)
             }
         )
+    }
+}
+
+/// The Size row of the server export sheet (FS-03.07b §8).
+enum ServerExportSizes {
+    /// The presets as Resize lists them, Original first, each once.
+    static func offered(_ presets: [ResizePreset]) -> [ResizePreset] {
+        var seen: Set<UUID> = [ResizePreset.original.id]
+        return [.original] + presets.filter { seen.insert($0.id).inserted }
     }
 }
