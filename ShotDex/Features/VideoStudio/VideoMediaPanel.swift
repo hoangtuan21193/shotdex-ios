@@ -10,6 +10,12 @@ import SwiftUI
 /// (§6): closing the panel forgets them.
 struct VideoMediaPanel: View {
     @Bindable var model: VideoStudioModel
+    /// The iPad pool's Media tab (FS-12.09 §3): Select and search live in
+    /// the pool's "Library" header, the row is inset 8, and there is no
+    /// rule under it.
+    var isPoolColumn = false
+    /// Bumped by the pool header's search button to open the field here.
+    var searchRequest = 0
     @Environment(\.videoMediaGrid) private var metrics
     @Environment(AppDependencies.self) private var dependencies
     @Environment(\.openURL) private var openURL
@@ -29,15 +35,19 @@ struct VideoMediaPanel: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            Color.clear.frame(height: 10)
+            Color.clear.frame(height: isPoolColumn ? 4 : 10)
             header
                 .frame(height: VideoMediaPanelMetrics.tabHeight)
             Color.clear.frame(height: 6)
-            Rectangle().fill(Color.white.opacity(0.07)).frame(height: 1)
-            Color.clear.frame(height: 2)
+            if !isPoolColumn {
+                Rectangle().fill(Color.white.opacity(0.07)).frame(height: 1)
+                Color.clear.frame(height: 2)
+            }
             content
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        .onChange(of: searchRequest) { startSearch() }
+        .onChange(of: tab) { model.mediaShowsInVideo = tab == .inVideo }
         .task(id: model.photoLibrary.assetChangeToken) { reload() }
         .task(id: model.photoLibrary.collectionChangeToken) {
             if tab == .albums { albums = library?.albums() ?? [] }
@@ -80,62 +90,13 @@ struct VideoMediaPanel: View {
                 tabButton(.albums, title: VideoStudioCopy.albums)
                 tabButton(.inVideo, title: VideoStudioCopy.inVideo(MediaUsage.useCount(in: model.recipe)))
                 Spacer(minLength: 0)
-                Button {
-                    model.toggleMediaSelecting()
-                } label: {
-                    Text(VideoStudioCopy.select)
-                        .font(.system(size: 12.5, weight: model.isSelectingMedia ? .semibold : .medium))
-                        .foregroundStyle(.white)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.8)
-                        .padding(.horizontal, 10)
-                        .frame(height: VideoMediaPanelMetrics.tabHeight)
-                        .background(tabFill(isOn: model.isSelectingMedia))
-                }
-                .buttonStyle(.plain)
-                .accessibilityAddTraits(model.isSelectingMedia ? .isSelected : [])
-                if let picks = model.mediaSelection {
-                    addButton(count: picks.count)
-                } else {
-                    searchButton
-                }
+                if !isPoolColumn { VideoMediaHeaderControls(model: model, onSearch: startSearch) }
             }
-            .padding(.horizontal, VideoMediaPanelMetrics.rowInset)
+            .padding(.horizontal, rowInset)
         }
     }
 
-    /// Add (N): white, black type, in the search button's place while
-    /// selecting; dimmed at zero (FS-12.09 §4).
-    private func addButton(count: Int) -> some View {
-        Button {
-            model.addSelectedMedia()
-        } label: {
-            Text(VideoStudioCopy.addCount(count))
-                .font(.system(size: 13, weight: .bold))
-                .foregroundStyle(.black)
-                .padding(.horizontal, 12)
-                .frame(height: VideoMediaPanelMetrics.tabHeight)
-                .background(RoundedRectangle(cornerRadius: AppTheme.Radius.sm, style: .continuous).fill(Color.white))
-                .fixedSize()
-        }
-        .buttonStyle(.plain)
-        .opacity(count == 0 ? 0.35 : 1)
-        .disabled(count == 0)
-    }
-
-    private var searchButton: some View {
-        Button {
-            startSearch()
-        } label: {
-            Image(systemName: "magnifyingglass")
-                .font(.system(size: 13, weight: .semibold))
-                .foregroundStyle(.white)
-                .frame(width: VideoMediaPanelMetrics.tabHeight, height: VideoMediaPanelMetrics.tabHeight)
-                .background(Circle().fill(Color.white.opacity(0.06)))
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel(VideoStudioCopy.searchLibrary)
-    }
+    private var rowInset: CGFloat { isPoolColumn ? 8 : VideoMediaPanelMetrics.rowInset }
 
     private func tabButton(_ value: Tab, title: String) -> some View {
         let isOn = tab == value
@@ -155,10 +116,8 @@ struct VideoMediaPanel: View {
         .accessibilityAddTraits(isOn ? .isSelected : [])
     }
 
-    /// White 20 % when on, 6 % when not, `r-sm` (FS-12.09 §3).
     private func tabFill(isOn: Bool) -> some View {
-        RoundedRectangle(cornerRadius: AppTheme.Radius.sm, style: .continuous)
-            .fill(Color.white.opacity(isOn ? 0.20 : 0.06))
+        VideoMediaPanelMetrics.tabFill(isOn: isOn)
     }
 
     // MARK: Content
@@ -555,8 +514,70 @@ private struct VideoInVideoThumbnail: View {
     }
 }
 
+/// Select, then Add (N) while picking or the search disc otherwise — the
+/// end of the phone's tab row, and the pool's "Library" header on an iPad
+/// (FS-12.09 §3).
+struct VideoMediaHeaderControls: View {
+    @Bindable var model: VideoStudioModel
+    /// 6 in the phone's row; 0 in the pool's header, which packs Select,
+    /// search and Hide Media together (board MP_IL_MediaPicker).
+    var spacing: CGFloat = 6
+    let onSearch: () -> Void
+
+    var body: some View {
+        HStack(spacing: spacing) {
+            Button {
+                model.toggleMediaSelecting()
+            } label: {
+                Text(VideoStudioCopy.select)
+                    .font(.system(size: 12.5, weight: model.isSelectingMedia ? .semibold : .medium))
+                    .foregroundStyle(.white)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+                    .padding(.horizontal, spacing == 0 ? 8 : 10)
+                    .frame(height: VideoMediaPanelMetrics.tabHeight)
+                    .background(VideoMediaPanelMetrics.tabFill(isOn: model.isSelectingMedia))
+            }
+            .buttonStyle(.plain)
+            .accessibilityAddTraits(model.isSelectingMedia ? .isSelected : [])
+            if let picks = model.mediaSelection {
+                Button {
+                    model.addSelectedMedia()
+                } label: {
+                    Text(VideoStudioCopy.addCount(picks.count))
+                        .font(.system(size: 13, weight: .bold))
+                        .foregroundStyle(.black)
+                        .padding(.horizontal, 12)
+                        .frame(height: VideoMediaPanelMetrics.tabHeight)
+                        .background(RoundedRectangle(cornerRadius: AppTheme.Radius.sm, style: .continuous).fill(Color.white))
+                        .fixedSize()
+                }
+                .buttonStyle(.plain)
+                .opacity(picks.isEmpty ? 0.35 : 1)
+                .disabled(picks.isEmpty)
+            } else {
+                Button(action: onSearch) {
+                    Image(systemName: "magnifyingglass")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(.white)
+                        .frame(width: VideoMediaPanelMetrics.tabHeight, height: VideoMediaPanelMetrics.tabHeight)
+                        .background(Circle().fill(Color.white.opacity(0.06)))
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(VideoStudioCopy.searchLibrary)
+            }
+        }
+    }
+}
+
 /// The Media panel's fixed sizes (FS-12.09 §3).
 enum VideoMediaPanelMetrics {
+    /// White 20 % when on, 6 % when not, `r-sm` (FS-12.09 §3).
+    static func tabFill(isOn: Bool) -> some View {
+        RoundedRectangle(cornerRadius: AppTheme.Radius.sm, style: .continuous)
+            .fill(Color.white.opacity(isOn ? 0.20 : 0.06))
+    }
+
     /// Tabs, Select and the search disc are 30 tall.
     static let tabHeight: CGFloat = 30
     /// Horizontal padding inside a tab: 8, not the boards' 10 — with

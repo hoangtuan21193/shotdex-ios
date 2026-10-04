@@ -35,6 +35,8 @@ struct VideoMediaPoolColumn: View {
     let onAddText: (OverlayFontChoice?) -> Void
 
     @State private var tab: Tab = .media
+    /// Bumped by the header's search button; the Media panel opens its field.
+    @State private var searchRequest = 0
     @State private var assets: [PHAsset] = []
 
     /// How many photos the Stickers tab holds at once. The Media tab has no
@@ -71,6 +73,12 @@ struct VideoMediaPoolColumn: View {
                 .foregroundStyle(.white)
                 .accessibilityAddTraits(.isHeader)
             Spacer(minLength: 0)
+            // Library · Select · 🔍 · Hide Media (FS-12.09 §3): the Media
+            // tab's Select and search live up here, not in its tab row.
+            HStack(spacing: 0) {
+            if tab == .media {
+                VideoMediaHeaderControls(model: model, spacing: 0, onSearch: { searchRequest += 1 })
+            }
             Button(action: onClose) {
                 Image(systemName: "sidebar.leading")
                     .font(.system(size: 13, weight: .medium))
@@ -80,6 +88,8 @@ struct VideoMediaPoolColumn: View {
             }
             .buttonStyle(.plain)
             .accessibilityLabel(Text("Hide Media", comment: "Video Studio: closes the library column"))
+            }
+            .layoutPriority(1)
         }
         .padding(.leading, 14)
         .padding(.trailing, 8)
@@ -162,7 +172,7 @@ struct VideoMediaPoolColumn: View {
     @ViewBuilder
     private var content: some View {
         switch tab {
-        case .media: VideoMediaPanel(model: model)
+        case .media: VideoMediaPanel(model: model, isPoolColumn: true, searchRequest: searchRequest)
         case .stickers: libraryContent
         case .text: textContent
         case .music: musicContent

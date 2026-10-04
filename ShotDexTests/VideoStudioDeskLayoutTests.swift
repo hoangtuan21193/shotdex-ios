@@ -107,6 +107,19 @@ struct VideoStudioDeskLayoutTests {
         #expect(VideoMediaPoolColumn.Tab.allCases == [.media, .text, .stickers, .music])
     }
 
+    /// FS-12.09 AC-13 (grid): the pool's Media grid is three columns of 69
+    /// with 6pt gaps and 8 at the edges across its 236pt; the dock's eight
+    /// of 124, the Duo column's three of 80 and the cover's four of 94.
+    @Test func poolMediaGridIsThreeColumnsOf69() {
+        let pool = VideoMediaGridMetrics.for(.iPadLandscape)
+        #expect(pool.columns == 3)
+        #expect(pool.cellSide(width: VideoStudioDeskGeometry.poolWidth) == 69)
+        #expect(pool.cellSide(width: 236) * 3 + pool.gap * 2 + pool.inset * 2 <= 236)
+        #expect(VideoMediaGridMetrics.for(.iPadPortrait).cellSide(width: 1032) == 124)
+        #expect(VideoMediaGridMetrics.for(.duoInner).cellSide(width: 264) == 80)
+        #expect(VideoMediaGridMetrics.for(.duoCover).cellSide(width: 382) == 94)
+    }
+
     /// A phone has no pool to move the insert commands onto, so it keeps all
     /// five tools in its row.
     @Test func aPhoneKeepsEveryInsertCommand() {
