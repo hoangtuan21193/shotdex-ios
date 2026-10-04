@@ -137,6 +137,15 @@ actor FileExportRunner {
             report.written[entry.id] == nil && (ids?.contains(entry.id) ?? true)
         }
         for folder in Set(entries.map(\.folder)) { await writer.sweepLeftoverParts(in: folder) }
+        let prefetcher = source as? any ExportPrefetching
+        if let prefetcher {
+            await prefetcher.prepare(entries.flatMap { entry in
+                entry.outputs.compactMap { output in
+                    (output.source ?? Self.renderSources(of: entry.item, version: job.version).first).map { (entry.item, $0) }
+                }
+            })
+        }
+        defer { if let prefetcher { Task { await prefetcher.cancelAll() } } }
         for (index, entry) in entries.enumerated() {
             if Task.isCancelled {
                 report.wasCancelled = true

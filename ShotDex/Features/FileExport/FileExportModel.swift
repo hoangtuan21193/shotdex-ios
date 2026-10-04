@@ -409,7 +409,7 @@ extension FileExportModel {
             presets: dependencies.compressionPresets.allPresets,
             folders: folders,
             environment: FileExportEnvironment(
-                source: PhotoKitExportSource(fetcher: dependencies.originalFetcher),
+                source: prefetcher(fetcher: dependencies.originalFetcher),
                 rendering: KitExportRenderer(renderer: dependencies.photoRenderer),
                 items: { ids in
                     let metadata = (try? queries.metadata(assetIds: ids)) ?? [:]
@@ -420,6 +420,20 @@ extension FileExportModel {
                 }
             )
         )
+    }
+
+    /// PhotoKit behind the rolling iCloud window (FS-03.07c §1 item 5): a
+    /// photo the offline probe calls "in iCloud" downloads ahead of its turn.
+    private static func prefetcher(fetcher: any OriginalFetching) -> RollingOriginalPrefetcher {
+        RollingOriginalPrefetcher(
+            base: PhotoKitExportSource(fetcher: fetcher),
+            directory: FileManager.default.temporaryDirectory
+                .appendingPathComponent("\(FileExportRunner.prefix)iCloud-\(UUID().uuidString)", isDirectory: true)
+        ) { item in
+            let original = OriginalItem(id: item.id, filename: item.filename,
+                                        photo: PixelSize(width: item.pixelWidth, height: item.pixelHeight))
+            return await fetcher.probe(original) == .inCloud
+        }
     }
 
     #if DEBUG
