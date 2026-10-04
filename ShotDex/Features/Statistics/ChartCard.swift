@@ -81,13 +81,14 @@ struct ChartContentView: View {
     // MARK: Bar
 
     private var barBody: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        let largest = known.map(\.value).max()
+        return VStack(alignment: .leading, spacing: 8) {
             Chart(known) { datum in
                 BarMark(
                     x: .value("Value", datum.value),
                     y: .value("Category", datum.label)
                 )
-                .foregroundStyle(ChartPalette.bar)
+                .foregroundStyle(datum.value == largest ? ChartPalette.emphasis : ChartPalette.quiet)
                 .cornerRadius(4)
             }
             .chartYAxis(.hidden)
@@ -112,7 +113,7 @@ struct ChartContentView: View {
                 .foregroundStyle(by: .value("Category", datum.label))
                 .cornerRadius(3)
             }
-            .chartForegroundStyleScale(range: ChartPalette.colors)
+            .chartForegroundStyleScale(range: ChartPalette.range(count: known.count))
             .chartLegend(.hidden)
             .frame(height: 220)
             .padding(.vertical, 4)
@@ -132,7 +133,7 @@ struct ChartContentView: View {
             )
             .foregroundStyle(by: .value("Series", datum.series ?? spec.title))
         }
-        .chartForegroundStyleScale(range: ChartPalette.colors)
+        .chartForegroundStyleScale(range: ChartPalette.range(count: Set(known.compactMap(\.series)).count))
         .chartLegend(known.contains { $0.series != nil } ? .visible : .hidden)
         // Every period labelled overlaps past four or five; label a spread
         // of them, so ten months read "2025-12 … 2026-09" and not "202…".
@@ -171,7 +172,7 @@ struct ChartContentView: View {
                 HStack {
                     if spec.kind == .donut {
                         Circle()
-                            .fill(ChartPalette.colors[index % ChartPalette.colors.count])
+                            .fill(ChartPalette.color(at: index))
                             .frame(width: 10, height: 10)
                     }
                     // A body + lens pair often starts with the same body twice

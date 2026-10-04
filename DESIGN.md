@@ -17,7 +17,9 @@ Mỗi màn hình phải khai báo rõ mình thuộc tầng nào. Không trộn h
 | **A. System** | Danh sách, form, cài đặt, thống kê, rule builder | `Color(.systemGroupedBackground)` + `List`/`Form` | SwiftUI chuẩn |
 | **B. Content** | Lưới ảnh, album, kết quả tìm kiếm | `Color(.systemBackground)`, ảnh tràn viền | `PhotoGridCollectionView` |
 | **C. Glass chrome** | Thanh nổi trên ảnh: tab bar, selection bar, nút tròn, panel trạng thái | Kính mờ trong suốt | `GlassPanel`, `GlassIconButton`, `LiquidGlassTabBar`, `.glassBackground(_:)` |
-| **D. Tool (dark)** | Toàn màn hình chỉnh sửa: Photo Editor, Compare, Compress, Collage, Video Studio | `EditorTheme.background` (đen) / `panelSolid` `#0F1012` | `EditorTheme`, `.editorGlass()`, `EditorPillLabel` |
+| **D. Tool (dark)** | Toàn màn hình chỉnh sửa: Photo Editor, Compress, Collage, Video Studio | `EditorTheme.background` (đen) / `panelSolid` `#0F1012` | `EditorTheme`, `.editorGlass()`, `EditorPillLabel` |
+
+**Compare là một chế độ của Viewer, không phải tầng D** (người dùng chốt 2026-10-04, mọi thiết bị): Single · 2-Up · Survey trong Viewer, theo sáng/tối như Viewer, cờ Pick/Reject từng ảnh (Reject = đánh dấu xoá). Board: `PH_Compare`, `IP_Compare`/`IP_CompareSurvey`, `DI_Compare`, `DC_Compare`, `MAC_Compare`/`MAC_CompareSurvey`. Code hiện vẫn vẽ Compare ở tầng D — design đi trước code tới khi FS-01.08 được sửa.
 
 **Collage và Video Studio thuộc tầng D**, không có ngoại lệ: cả hai thao tác trực tiếp lên pixel/khung hình nên cần nền trung tính để đánh giá màu. Kéo theo đó, bước chọn layout collage và **timeline video** phải nằm **trong màn hình** tầng D — không được tách ra thành sheet hệ thống, vì như vậy màn hình lại lai hai tầng.
 
@@ -79,7 +81,10 @@ Thiếu token thì **thêm vào `EditorTheme`**, không viết `Color(white: 0.1
 
 ### 3.4 Biểu đồ
 
-`ChartPalette.colors` theo thứ tự đã định. Không tự chọn màu series.
+Chỉ dùng token trong `ChartPalette`; không tự chọn màu series. Hai trường hợp (chốt 2026-10-04, kiểu "C"):
+
+- **Một chuỗi** (cột, histogram, danh sách thanh, một đường): chỉ một sắc accent. Mark thường dùng `ChartPalette.quiet` (accent 38% sáng / 45% tối); mark đáng chú ý (lớn nhất, đang chọn) dùng `ChartPalette.emphasis` (accent đầy) và có nhãn giá trị. Tô phẳng, không gradient, không rãnh xám dưới thanh. *Vì* biểu đồ phải trả lời "cái nào?" trong một cái liếc, và không được tranh màu với ảnh.
+- **Nhiều chuỗi / donut**: `ChartPalette.colors` theo thứ tự, accent đứng đầu, không quay vòng — chuỗi thứ 7 trở đi gộp vào "Other". Bảng màu đã qua bộ kiểm mù màu và độ tách trên nền sáng lẫn tối; ≥ 2 chuỗi luôn có legend, chữ không bao giờ mang màu series.
 
 ---
 
@@ -214,7 +219,7 @@ Adjustment icon lấy từ `PhotoAdjustmentKind.systemImage`; mask icon từ `Ph
 
 Mọi helper glass phải giữ nhánh `if #available(iOS 26.0, *) { glassEffect(...) } else { ultraThinMaterial + stroke + shadow }`.
 
-**Nút tròn/pill trong tầng D** (Compare, Video Studio, editor) dùng `.editorGlass(_ shape:)` — kính **tối**, không dùng `.glassBackground` (kính sáng tầng C, chữ trắng khó đọc trên nền tối). Màu glyph theo một quy tắc: **inactive** = trắng (`.white` / `.white.opacity(0.9)`), **active** = nền accent + glyph **đen**, **disabled** = `.white.opacity(0.28)`. **Trong photo editor, active = nền trắng + glyph đen** (FS-03.12): accent chỉ còn trên Save. Không trộn glyph accent với glyph trắng cho cùng một vai trò. Trạng thái **đánh dấu phá hủy** (card Compare mở từ Duplicates: viền đỏ 3pt quanh card, nút chữ đổi `Delete` → `Keep`) = đĩa `.red` + glyph trắng — bản phá hủy của "active", không dùng accent cho nó.
+**Nút tròn/pill trong tầng D** (Video Studio, editor) dùng `.editorGlass(_ shape:)` — kính **tối**, không dùng `.glassBackground` (kính sáng tầng C, chữ trắng khó đọc trên nền tối). Màu glyph theo một quy tắc: **inactive** = trắng (`.white` / `.white.opacity(0.9)`), **active** = nền accent + glyph **đen**, **disabled** = `.white.opacity(0.28)`. **Trong photo editor, active = nền trắng + glyph đen** (FS-03.12): accent chỉ còn trên Save. Không trộn glyph accent với glyph trắng cho cùng một vai trò. Trạng thái **đánh dấu phá hủy** (card Compare mở từ Duplicates: viền đỏ 3pt quanh card, nút chữ đổi `Delete` → `Keep`) = đĩa `.red` + glyph trắng — bản phá hủy của "active", không dùng accent cho nó.
 
 ---
 

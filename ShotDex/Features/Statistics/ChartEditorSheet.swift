@@ -217,7 +217,7 @@ struct ChartEditorSheet: View {
                 }
             }
             if seriesSplit != nil {
-                Stepper("Top \(topN) series", value: $topN, in: 2...8)
+                Stepper("Top \(topN) series", value: $topN, in: 2...6)
             }
         } header: {
             Text("Series")
