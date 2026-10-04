@@ -117,7 +117,12 @@ struct VideoRenderRecipe: Sendable {
     /// that what the waveform measures is the graded picture and not the
     /// source — a scope reading the ungraded frame would be worse than no
     /// scope at all.
-    func graded(_ input: CIImage, at seconds: Double) -> CIImage {
+    ///
+    /// `canvas` is the frame windows were drawn on, when `input` is one clip
+    /// that covers only part of it (FS-12.06c §4): the chain runs on each
+    /// clip before the transition and the letterbox, so a window must still
+    /// be measured against the viewer the user drew it on.
+    func graded(_ input: CIImage, at seconds: Double, canvas: CGRect? = nil) -> CIImage {
         var image = VideoRenderRecipe.applyInputTransform(inputTransform, to: input)
         // Then the chain, in order. Each node is the photo editor's own
         // colour stage over whatever the node before it produced — which is
@@ -132,7 +137,7 @@ struct VideoRenderRecipe: Sendable {
                 // Tracked windows move per frame, which is why the chain
                 // needs the clock: a window that ignores its track is a
                 // window parked where the subject used to be.
-                image = VideoMaskRenderer.apply(node.trackedMasks(at: seconds), to: image)
+                image = VideoMaskRenderer.apply(node.trackedMasks(at: seconds), to: image, extent: canvas)
             }
         }
         image = PhotoRenderService.applyFilter(filter, intensity: filterIntensity, to: image)
@@ -394,70 +399,41 @@ final class VideoFrameCompositor: NSObject, AVVideoCompositing {
         let renderSize = request.renderContext.size
         let canvas = CGRect(origin: .zero, size: renderSize)
         let seconds = request.compositionTime.seconds
-        let backgroundImage = CIImage(color: instruction.recipe.background).cropped(to: canvas)
-
-        guard var image = resolvedImage(
-            instruction.front,
-            request: request,
-            renderSize: renderSize
-        ) else {
-            // A missing still or dropped frame renders the background rather
-            // than failing the whole export.
-            render(backgroundImage, to: output, request: request)
-            return
-        }
-
-        // Per-clip effects run on each side independently, before the blend:
-        // during a transition the outgoing clip's blur-out plays against the
-        // incoming clip's blur-in, each on its own placement clock. Each side
-        // sits on its own backdrop too (FS-12.01 §7b): a blurred background
-        // is *that* clip's frame, so the crossfade mixes two pairs.
-        let frontBackdrop = backdrop(behind: image, recipe: instruction.recipe, canvas: canvas, stills: instruction.stillStore)
-        image = applyClipEffect(image, timing: instruction.frontClip, at: seconds, canvas: canvas)
-        image = image.composited(over: frontBackdrop).cropped(to: canvas)
-
-        if let back = instruction.back,
-           var outgoing = resolvedImage(back, request: request, renderSize: renderSize) {
-            let backBackdrop = backdrop(behind: outgoing, recipe: instruction.recipe, canvas: canvas, stills: instruction.stillStore)
-            if let backClip = instruction.backClip {
-                outgoing = applyClipEffect(outgoing, timing: backClip, at: seconds, canvas: canvas)
-            }
-            outgoing = outgoing.composited(over: backBackdrop).cropped(to: canvas)
-            let progress = VideoTimelineMath.fadeProgress(
-                at: seconds,
-                fadeStart: instruction.fadeStart,
-                duration: instruction.fadeDuration
-            )
-            image = blend(
-                front: image.cropped(to: canvas),
-                back: outgoing.cropped(to: canvas),
-                kind: instruction.transitionKind,
-                progress: progress,
-                canvas: canvas,
-                background: backgroundImage
-            )
-        }
-
-        // Letterbox bars: undefined pixels outside the fitted frame take the
-        // recipe background, and the canvas extent is pinned before the filter
-        // chain.
-        image = image.composited(over: backgroundImage)
-            .cropped(to: canvas)
-
         let recipe = instruction.recipe
-        if recipe.hasWork {
-            image = recipe.graded(image, at: seconds)
-            if recipe.bakesOverlays {
-                for timed in recipe.activeTimedOverlays(at: seconds) where timed.overlay.hasVisibleEffect {
-                    let anim = timed.animationTransform(at: seconds, total: recipe.totalDuration)
-                    guard anim.opacity > 0.001, anim.scale > 0.0001,
-                          let base = cachedSingleOverlayLayer(timed.overlay, extent: canvas)
-                    else { continue }
-                    let layer = animatedOverlay(
-                        base, transform: anim, center: timed.overlay.center, extent: canvas
-                    )
-                    image = layer.composited(over: image)
-                }
+        let backgroundPhoto: CIImage? = if recipe.framing == .fit, recipe.backgroundKind == .image,
+                                            let id = recipe.backgroundImageID {
+            instruction.stillStore.backgroundImage(for: id)
+        } else {
+            nil
+        }
+        let front = resolvedImage(instruction.front, request: request, renderSize: renderSize)
+        let back = instruction.back.flatMap { resolvedImage($0, request: request, renderSize: renderSize) }
+        var image = Self.composeFrame(
+            front: front.map { ($0, instruction.frontClip) },
+            back: back.flatMap { image in instruction.backClip.map { (image, $0) } },
+            transition: instruction.back == nil ? nil : (
+                kind: instruction.transitionKind,
+                start: instruction.fadeStart,
+                duration: instruction.fadeDuration
+            ),
+            recipe: recipe,
+            canvas: canvas,
+            at: seconds,
+            backgroundPhoto: backgroundPhoto
+        )
+
+        // Overlays last, over the finished frame: a caption is not part of
+        // either clip, so it is neither graded nor dissolved.
+        if recipe.bakesOverlays, front != nil {
+            for timed in recipe.activeTimedOverlays(at: seconds) where timed.overlay.hasVisibleEffect {
+                let anim = timed.animationTransform(at: seconds, total: recipe.totalDuration)
+                guard anim.opacity > 0.001, anim.scale > 0.0001,
+                      let base = cachedSingleOverlayLayer(timed.overlay, extent: canvas)
+                else { continue }
+                let layer = animatedOverlay(
+                    base, transform: anim, center: timed.overlay.center, extent: canvas
+                )
+                image = layer.composited(over: image)
             }
             image = image.cropped(to: canvas)
         }
@@ -465,21 +441,80 @@ final class VideoFrameCompositor: NSObject, AVVideoCompositing {
         render(image, to: output, request: request)
     }
 
+    /// One frame, start to finish but for the overlays, in the order of
+    /// FS-12.06c §4: each clip is graded on its own — de-log, the node
+    /// chain, the look — then gets its effect and its fade, and sits on its
+    /// own backdrop; only then do the two sides of a transition meet, and
+    /// what a slide uncovers is the project background, never graded.
+    ///
+    /// Static and free of AVFoundation so a test can hand it two
+    /// `CIImage`s and read the pixels: the compositor's own request path
+    /// goes through here too.
+    static func composeFrame(
+        front: (image: CIImage, timing: VideoCompositionInstruction.ClipRenderTiming)?,
+        back: (image: CIImage, timing: VideoCompositionInstruction.ClipRenderTiming)?,
+        transition: (kind: VideoTransitionKind, start: Double, duration: Double)?,
+        recipe: VideoRenderRecipe,
+        canvas: CGRect,
+        at seconds: Double,
+        backgroundPhoto: CIImage? = nil
+    ) -> CIImage {
+        let backgroundImage = CIImage(color: recipe.background).cropped(to: canvas)
+        // A missing still or dropped frame renders the background rather
+        // than failing the whole export.
+        guard let front else { return backgroundImage }
+
+        func side(_ placed: CIImage, _ timing: VideoCompositionInstruction.ClipRenderTiming) -> CIImage {
+            // The clip's own pixels on the canvas — a Fill frame's overhang
+            // is never seen, so it is never graded either; a vignette in the
+            // look then follows the picture, not the bars (§5).
+            var image = placed.cropped(to: canvas)
+            if recipe.hasWork {
+                image = recipe.graded(image, at: seconds, canvas: canvas)
+            }
+            // Each side sits on its own backdrop (FS-12.01 §7b): a blurred
+            // background is *that* clip's graded frame, so a crossfade mixes
+            // two pairs. Effects run per side too, before the blend: the
+            // outgoing clip's blur-out plays against the incoming clip's
+            // blur-in, each on its own placement clock.
+            let backdrop = backdrop(behind: image, recipe: recipe, canvas: canvas, photo: backgroundPhoto)
+            image = applyClipEffect(image, timing: timing, at: seconds, canvas: canvas)
+            return image.composited(over: backdrop).cropped(to: canvas)
+        }
+
+        var image = side(front.image, front.timing)
+        if let back, let transition {
+            let outgoing = side(back.image, back.timing)
+            let progress = VideoTimelineMath.fadeProgress(
+                at: seconds,
+                fadeStart: transition.start,
+                duration: transition.duration
+            )
+            image = blend(
+                front: image,
+                back: outgoing,
+                kind: transition.kind,
+                progress: progress,
+                canvas: canvas,
+                background: backgroundImage
+            )
+        }
+        // Letterbox bars: undefined pixels outside the fitted frame take the
+        // recipe background — after the grade, so the bars are the colour
+        // that was chosen.
+        return image.composited(over: backgroundImage).cropped(to: canvas)
+    }
+
     /// The backdrop of one side. Fill covers the canvas, so only the plain
     /// colour is drawn under it — no blur is spent on pixels never seen.
-    private func backdrop(
+    private static func backdrop(
         behind placed: CIImage,
         recipe: VideoRenderRecipe,
         canvas: CGRect,
-        stills: StillFrameStore
+        photo: CIImage?
     ) -> CIImage {
         guard recipe.framing == .fit else {
             return CIImage(color: recipe.background).cropped(to: canvas)
-        }
-        let photo: CIImage? = if recipe.backgroundKind == .image, let id = recipe.backgroundImageID {
-            stills.backgroundImage(for: id)
-        } else {
-            nil
         }
         return VideoBackgroundRenderer.backdrop(
             behind: placed, canvas: canvas, kind: recipe.backgroundKind,
@@ -492,7 +527,7 @@ final class VideoFrameCompositor: NSObject, AVVideoCompositing {
     /// The clip effect at this frame, evaluated on the fitted image in canvas
     /// coordinates. Geometric effects are one affine; optics reuse the
     /// photo pipeline's extent-safe primitives.
-    private func applyClipEffect(
+    private static func applyClipEffect(
         _ image: CIImage,
         timing: VideoCompositionInstruction.ClipRenderTiming,
         at time: Double,
@@ -512,7 +547,7 @@ final class VideoFrameCompositor: NSObject, AVVideoCompositing {
         )
     }
 
-    private func applyEffectOnly(
+    private static func applyEffectOnly(
         _ image: CIImage,
         timing: VideoCompositionInstruction.ClipRenderTiming,
         at time: Double,
@@ -579,7 +614,7 @@ final class VideoFrameCompositor: NSObject, AVVideoCompositing {
 
     /// Blend the incoming (`front`) over the outgoing (`back`) frame. Both
     /// arrive cropped to the canvas.
-    private func blend(
+    private static func blend(
         front: CIImage,
         back: CIImage,
         kind: VideoTransitionKind,
@@ -650,7 +685,7 @@ final class VideoFrameCompositor: NSObject, AVVideoCompositing {
         }
     }
 
-    private func dissolve(from: CIImage, to: CIImage, progress: Double) -> CIImage {
+    private static func dissolve(from: CIImage, to: CIImage, progress: Double) -> CIImage {
         PhotoRenderService.filtered(
             "CIDissolveTransition",
             image: from,

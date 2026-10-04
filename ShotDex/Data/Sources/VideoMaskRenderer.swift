@@ -32,10 +32,20 @@ enum VideoMaskRenderer {
         var colorKey: CIColorKernel? = VideoMaskRenderer.colorKeyKernel
     }
 
-    static func apply(_ masks: [PhotoMask], to image: CIImage, kernels: Kernels = Kernels()) -> CIImage {
+    /// `extent` is the frame the windows were drawn on — the canvas — when
+    /// `image` covers only part of it: a letterboxed clip is graded on its
+    /// own, before it lands on the canvas (FS-12.06c §4), and a window must
+    /// stay where the user drew it on the viewer, not slide into the clip.
+    static func apply(
+        _ masks: [PhotoMask],
+        to image: CIImage,
+        extent: CGRect? = nil,
+        kernels: Kernels = Kernels()
+    ) -> CIImage {
         var output = image
+        let frame = extent ?? image.extent
         for mask in masks where mask.isVisible {
-            guard let matte = matte(for: mask, extent: image.extent, source: output, kernels: kernels) else { continue }
+            guard let matte = matte(for: mask, extent: frame, source: output, kernels: kernels) else { continue }
             let adjusted = PhotoRenderService.applyAdjustments(
                 mask.adjustments,
                 to: output,

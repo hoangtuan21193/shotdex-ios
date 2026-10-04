@@ -83,12 +83,22 @@ tắt dần trong 0,2s đầu và cuối) · blurIn/blurOut (12→0 trong tối 
 - **Hiệu ứng không bị đóng băng vào bản dựng**: nó được tra từ recipe tươi theo id clip, nên đổi hiệu ứng
   đi đường rẻ (thay bản dựng khung hình, không dựng lại cả composition).
 
+## 7a. Thứ tự mỗi khung ([FS-12.06c §4](06c-photo-looks.md))
+
+- **Grade chạy trên từng clip, trước khi trộn**: de-log → node chain → look → hiệu ứng clip → nền của bên đó →
+  chuyển cảnh → nền viền → overlay. Dissolve là trộn hai khung đã grade riêng; viền letterbox ra đúng màu nền đã
+  chọn, không bị grade theo.
+- Ảnh vào chuỗi grade chỉ còn khung của clip trên canvas (phần thừa của Fill bị cắt trước), nên window của node
+  được đo theo **toạ độ canvas** (`VideoMaskRenderer.apply(extent:)`) — nó nằm đúng chỗ người dùng vẽ trên viewer.
+- Một đường cho preview và export: `VideoFrameCompositor.composeFrame`, tĩnh và không đụng AVFoundation, nên
+  test đưa thẳng hai `CIImage` vào.
+
 ## 7b. Đặt khung và nền
 
 - **Fit**: khung nguồn nằm trọn trong khung xuất, phần thừa là nền. **Fill**: phủ kín, cắt giữa, không có nền.
 - Nền khi Fit có ba loại, vẽ **trước khi trộn, độc lập từng bên** như hiệu ứng (§7):
   - **Color** — một màu; slide và zoom lộ nền cũng là màu này; fadeBlack vẫn đen.
-  - **Blur** — chính khung đó phủ kín rồi làm mờ, tính ở **1/8 cạnh dài khung** và phóng lên; bán kính theo tỉ lệ khung
+  - **Blur** — chính khung đó (đã grade, §7a) phủ kín rồi làm mờ, tính ở **1/8 cạnh dài khung** và phóng lên; bán kính theo tỉ lệ khung
     nên preview 1280 và export 4K ra cùng một ảnh. Crossfade trộn cặp (nền + khung) của mỗi bên.
   - **Image** — một ảnh thư viện phủ kín, nạp một lần qua kho khung tĩnh (§5, LRU 4); mất ảnh → nền đen.
 
