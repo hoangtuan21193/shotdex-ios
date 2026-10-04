@@ -18,12 +18,13 @@ enum VideoClipKind: String, Codable, Sendable {
     case freeze
 }
 
-/// The output canvas shape. renderSize derives from the render preset's pixel
-/// budget fitted to this aspect, so portrait/square exports are true canvases
-/// (the compositor letterboxes/pillarboxes over the recipe background), not a
+/// The output canvas shape (FS-12.10 §4): six ratios, in the order Video
+/// Settings lists them. The frame size comes from the ratio and the
+/// resolution (`VideoOutputSpec.frameSize`), so portrait and square exports
+/// are true canvases — the compositor fits or fills each clip on it — not a
 /// 16:9 frame with bars baked in.
 enum VideoAspect: String, CaseIterable, Identifiable, Codable, Sendable {
-    case r16x9, r9x16, r1x1, r4x5
+    case r16x9, r9x16, r1x1, r4x5, r4x3, r21x9
 
     var id: String { rawValue }
 
@@ -34,6 +35,8 @@ enum VideoAspect: String, CaseIterable, Identifiable, Codable, Sendable {
         case .r9x16: 9.0 / 16.0
         case .r1x1: 1
         case .r4x5: 4.0 / 5.0
+        case .r4x3: 4.0 / 3.0
+        case .r21x9: 21.0 / 9.0
         }
     }
 
@@ -43,25 +46,119 @@ enum VideoAspect: String, CaseIterable, Identifiable, Codable, Sendable {
         case .r9x16: "9:16"
         case .r1x1: "1:1"
         case .r4x5: "4:5"
+        case .r4x3: "4:3"
+        case .r21x9: "21:9"
         }
     }
 
-    /// The canvas for a given long edge (the preset's larger dimension), rounded
-    /// to even pixels so H.264 never chokes on an odd dimension.
-    func canvasSize(longEdge: CGFloat) -> CGSize {
-        let width: CGFloat
-        let height: CGFloat
-        if ratio >= 1 {
-            width = longEdge
-            height = longEdge / ratio
-        } else {
-            height = longEdge
-            width = longEdge * ratio
+    /// The ratio nearest a clip's shape, on a log scale so 2:1 and 1:2 are
+    /// equally far from square; a tie goes to 16:9 (FS-12.10 §5: a new
+    /// project takes the shape of its first clip).
+    static func nearest(to ratio: CGFloat) -> VideoAspect {
+        guard ratio.isFinite, ratio > 0 else { return .r16x9 }
+        let target = log(Double(ratio))
+        var best = VideoAspect.r16x9
+        var bestDistance = abs(log(Double(best.ratio)) - target)
+        for candidate in allCases where candidate != .r16x9 {
+            let distance = abs(log(Double(candidate.ratio)) - target)
+            if distance < bestDistance - 1e-9 {
+                best = candidate
+                bestDistance = distance
+            }
         }
-        return CGSize(
-            width: (width / 2).rounded() * 2,
-            height: (height / 2).rounded() * 2
-        )
+        return best
+    }
+}
+
+/// The export's resolution class, by the frame's **short** edge (FS-12.10 §5).
+enum VideoResolution: String, CaseIterable, Identifiable, Codable, Sendable {
+    case p720, p1080, uhd4K
+
+    var id: String { rawValue }
+
+    var shortEdge: CGFloat {
+        switch self {
+        case .p720: 720
+        case .p1080: 1080
+        case .uhd4K: 2160
+        }
+    }
+
+    var displayName: String {
+        switch self {
+        case .p720: "720p"
+        case .p1080: "1080p"
+        case .uhd4K: "4K"
+        }
+    }
+}
+
+/// Frames a second of the export. The preview always runs at 30 (FS-12.01 §8).
+enum VideoFrameRate: Int, CaseIterable, Identifiable, Codable, Sendable {
+    case fps24 = 24
+    case fps30 = 30
+    case fps60 = 60
+
+    var id: Int { rawValue }
+}
+
+enum VideoCodec: String, CaseIterable, Identifiable, Codable, Sendable {
+    case h264, hevc
+
+    var id: String { rawValue }
+
+    var displayName: String {
+        switch self {
+        case .h264: "H.264"
+        case .hevc: "HEVC"
+        }
+    }
+}
+
+/// How a clip sits in the frame (FS-12.10 §4): all of it on a background,
+/// or the frame filled and the rest cropped from the middle.
+enum VideoFraming: String, CaseIterable, Identifiable, Codable, Sendable {
+    case fit, fill
+
+    var id: String { rawValue }
+}
+
+/// What shows around a fitted clip (FS-12.10 §5, FS-12.01 §7b).
+struct VideoBackground: Equatable, Codable, Sendable {
+    enum Kind: String, CaseIterable, Identifiable, Codable, Sendable {
+        /// The clip's own frame, filled and blurred.
+        case blur
+        /// One colour.
+        case colour
+        /// A library photo, filled, not blurred.
+        case image
+
+        var id: String { rawValue }
+    }
+
+    var kind: Kind = .colour
+    var colour: OverlayColor = .black
+    /// 0…100.
+    var blurAmount: Double = 50
+    /// The library photo behind an Image background.
+    var imageAssetID: String?
+
+    static let blurRange: ClosedRange<Double> = 0...100
+
+    init(kind: Kind = .colour, colour: OverlayColor = .black, blurAmount: Double = 50, imageAssetID: String? = nil) {
+        self.kind = kind
+        self.colour = colour
+        self.blurAmount = blurAmount
+        self.imageAssetID = imageAssetID
+    }
+
+    init(from decoder: any Decoder) throws {
+        self.init()
+        guard let container = try? decoder.container(keyedBy: CodingKeys.self) else { return }
+        kind = ((try? container.decodeIfPresent(Kind.self, forKey: .kind)) ?? nil) ?? .colour
+        colour = ((try? container.decodeIfPresent(OverlayColor.self, forKey: .colour)) ?? nil) ?? .black
+        blurAmount = ((try? container.decodeIfPresent(Double.self, forKey: .blurAmount)) ?? nil) ?? 50
+        imageAssetID = (try? container.decodeIfPresent(String.self, forKey: .imageAssetID)) ?? nil
     }
 }
 
@@ -339,28 +436,6 @@ struct MusicTrack: Identifiable, Equatable, Codable, Sendable {
     static let fadeRange: ClosedRange<Double> = 0...10
 }
 
-enum VideoRenderPreset: String, CaseIterable, Identifiable, Codable, Sendable {
-    case hd1080
-    case uhd4K
-
-    var id: String { rawValue }
-
-    /// Landscape canvas; portrait sources letterbox into it (v1).
-    var renderSize: CGSize {
-        switch self {
-        case .hd1080: CGSize(width: 1920, height: 1080)
-        case .uhd4K: CGSize(width: 3840, height: 2160)
-        }
-    }
-
-    var displayName: String {
-        switch self {
-        case .hd1080: "1080p"
-        case .uhd4K: "4K"
-        }
-    }
-}
-
 enum VideoStudioMode: Sendable {
     /// Selection → Create → Video: any mix of photos and videos.
     case multiClip
@@ -505,21 +580,22 @@ struct VideoProjectRecipe: Equatable, Codable, Sendable {
     var overlays: [TimedOverlay] = []
     /// Single-video mode: user rotation in quarter turns (0–3).
     var quarterTurns = 0
-    var renderPreset: VideoRenderPreset = .hd1080
-    /// Output canvas shape. renderSize = preset long edge fitted to this.
+    /// Video Settings (FS-12.10): the frame's shape, how clips sit in it,
+    /// what shows around them, and what the export writes.
     var aspect: VideoAspect = .r16x9
-    /// Letterbox / pillarbox fill behind aspect-fitted frames.
-    var background = OverlayColor.black
+    var framing: VideoFraming = .fit
+    var background = VideoBackground()
+    var resolution: VideoResolution = .p1080
+    var frameRate: VideoFrameRate = .fps30
+    var codec: VideoCodec = .h264
     /// Where the playhead was when the draft was written (FS-12.18 §3).
     /// Only in what is stored: the model takes it out on open and puts the
     /// current one in on each save, so it is never part of an edit or undo.
     var playhead: Double?
 
-    /// The render canvas: the preset's pixel budget fitted to the aspect.
+    /// The export's frame: the ratio at the resolution (FS-12.10 §5).
     func canvasSize() -> CGSize {
-        let preset = renderPreset.renderSize
-        let longEdge = max(preset.width, preset.height)
-        return aspect.canvasSize(longEdge: longEdge)
+        VideoOutputSpec.frameSize(aspect: aspect, resolution: resolution)
     }
 }
 
@@ -678,9 +754,12 @@ extension VideoProjectRecipe {
         lut = value(.lut, VideoLUTReference?.none)
         overlays = list(.overlays)
         quarterTurns = value(.quarterTurns, 0)
-        renderPreset = value(.renderPreset, VideoRenderPreset.hd1080)
         aspect = value(.aspect, VideoAspect.r16x9)
-        background = value(.background, OverlayColor.black)
+        framing = value(.framing, VideoFraming.fit)
+        background = value(.background, VideoBackground())
+        resolution = value(.resolution, VideoResolution.p1080)
+        frameRate = value(.frameRate, VideoFrameRate.fps30)
+        codec = value(.codec, VideoCodec.h264)
         playhead = value(.playhead, Double?.none)
         // A dropped clip leaves one boundary too many; boundaries are
         // positional, so trimming the tail is the honest repair.

@@ -248,8 +248,8 @@ struct VideoSettingsButton: View {
     var body: some View {
         let isOpen = model.activeToolPanel == .videoSettings
         let ratio = model.recipe.aspect.displayName
-        let preset = model.recipe.renderPreset.displayName
-        let fps = VideoStudioCopy.framesPerSecond(30)
+        let preset = model.recipe.resolution.displayName
+        let fps = VideoStudioCopy.framesPerSecond(model.recipe.frameRate.rawValue)
         Button {
             model.toggleToolPanel(.videoSettings)
         } label: {

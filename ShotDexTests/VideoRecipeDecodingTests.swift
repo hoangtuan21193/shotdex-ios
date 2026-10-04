@@ -99,3 +99,48 @@ struct VideoRecipeDecodingTests {
         #expect(try JSONDecoder().decode(VideoProjectRecipe.self, from: data) == recipe)
     }
 }
+
+extension VideoRecipeDecodingTests {
+    /// FS-12.10 §6: the old 1080p/4K preset key and the old colour-only
+    /// background are ignored; the project opens at the defaults.
+    @Test func oldRenderPresetKeyIsIgnored() throws {
+        let recipe = try JSONDecoder().decode(VideoProjectRecipe.self, from: Data("""
+        {"clips":[{"id":"11111111-1111-1111-1111-111111111111","assetID":"a","kind":"photo"}],
+         "renderPreset":"uhd4K","background":{"red":0.5,"green":0.5,"blue":0.5},"aspect":"r9x16"}
+        """.utf8))
+        #expect(recipe.clips.count == 1)
+        #expect(recipe.aspect == .r9x16)
+        #expect(recipe.resolution == .p1080)
+        #expect(recipe.background == VideoBackground())
+        let written = String(decoding: try JSONEncoder().encode(recipe), as: UTF8.self)
+        #expect(!written.contains("renderPreset"))
+    }
+
+    /// A codec, a rate, a ratio or a framing this build cannot read falls
+    /// back to its default; the rest of Video Settings is kept.
+    @Test func unknownCodecFallsBackToH264() throws {
+        let recipe = try JSONDecoder().decode(VideoProjectRecipe.self, from: Data("""
+        {"clips":[{"id":"11111111-1111-1111-1111-111111111111","assetID":"a","kind":"photo"}],
+         "codec":"av1","frameRate":48,"resolution":"uhd4K","framing":"fill",
+         "background":{"kind":"blur","blurAmount":70}}
+        """.utf8))
+        #expect(recipe.codec == .h264)
+        #expect(recipe.frameRate == .fps30)
+        #expect(recipe.resolution == .uhd4K)
+        #expect(recipe.framing == .fill)
+        #expect(recipe.background.kind == .blur && recipe.background.blurAmount == 70)
+    }
+
+    /// Video Settings round-trip whole.
+    @Test func videoSettingsRoundTrip() throws {
+        var recipe = VideoProjectRecipe(clips: [VideoClip(assetID: "a", kind: .photo)])
+        recipe.aspect = .r21x9
+        recipe.framing = .fill
+        recipe.background = VideoBackground(kind: .image, colour: .white, blurAmount: 20, imageAssetID: "bg")
+        recipe.resolution = .p720
+        recipe.frameRate = .fps60
+        recipe.codec = .hevc
+        let back = try JSONDecoder().decode(VideoProjectRecipe.self, from: JSONEncoder().encode(recipe))
+        #expect(back == recipe)
+    }
+}

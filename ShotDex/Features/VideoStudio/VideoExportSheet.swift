@@ -22,10 +22,10 @@ struct VideoExportSheet: View {
                 .padding(.top, 22)
 
             Picker("Quality", selection: Binding(
-                get: { model.recipe.renderPreset },
-                set: { model.recipe.renderPreset = $0 }
+                get: { model.recipe.resolution },
+                set: { model.recipe.resolution = $0 }
             )) {
-                ForEach(VideoRenderPreset.allCases) { preset in
+                ForEach(VideoResolution.allCases) { preset in
                     Text(preset.displayName).tag(preset)
                 }
             }

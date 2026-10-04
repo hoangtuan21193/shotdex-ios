@@ -15,8 +15,11 @@ enum VideoClipSource: @unchecked Sendable {
     )
     case photo(assetID: String, pixelSize: CGSize)
     /// A frame lifted out of a source video at load time — drawn as a still
-    /// (no track samples), so it reuses the photo backbone path.
-    case freeze(image: CIImage, pixelSize: CGSize)
+    /// (no track samples), so it reuses the photo backbone path. Lifted at
+    /// the preview canvas's size; `asset` and `time` let the export lift it
+    /// again at its own size, and `videoSize` is the source video's — what
+    /// the 4K gate reads (FS-12.10 §5, plan T-6).
+    case freeze(image: CIImage, pixelSize: CGSize, asset: AVAsset? = nil, time: Double = 0, videoSize: CGSize = .zero)
     /// The clip's media cannot be read yet — an iCloud original with no
     /// network (FS-12.04 §7). The clip keeps its place and its length on the
     /// track and renders as the project background: a well-formed gap, not
@@ -164,7 +167,7 @@ enum VideoCompositionBuilder {
                 // nothing leaves the project background in it.
                 try insertStillBackbone(into: videoTrack, at: at, clipRange: clipRange, blankVideo: blankVideo)
                 frontSources.append(.stillImage(image: CIImage.empty(), fitRect: .zero))
-            case .freeze(let image, let pixelSize):
+            case .freeze(let image, let pixelSize, _, _, _):
                 // Same backbone as a photo, but the still is already loaded.
                 try insertStillBackbone(into: videoTrack, at: at, clipRange: clipRange, blankVideo: blankVideo)
                 frontSources.append(.stillImage(

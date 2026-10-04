@@ -89,36 +89,19 @@ struct VideoClipSpeedTests {
 }
 
 struct VideoAspectTests {
-    @Test func landscapeKeepsLongEdgeAsWidth() {
-        let size = VideoAspect.r16x9.canvasSize(longEdge: 1920)
-        #expect(size.width == 1920)
-        #expect(size.height == 1080)
+    @Test func landscapeKeepsTheLongEdgeAsWidth() {
+        #expect(VideoOutputSpec.frameSize(aspect: .r16x9, resolution: .p1080) == CGSize(width: 1920, height: 1080))
     }
 
-    @Test func portraitPutsLongEdgeOnHeight() {
-        let size = VideoAspect.r9x16.canvasSize(longEdge: 1920)
-        #expect(size.width == 1080)
-        #expect(size.height == 1920)
+    @Test func portraitPutsTheLongEdgeOnHeight() {
+        #expect(VideoOutputSpec.frameSize(aspect: .r9x16, resolution: .p1080) == CGSize(width: 1080, height: 1920))
     }
 
-    @Test func squareIsEqualSided() {
-        let size = VideoAspect.r1x1.canvasSize(longEdge: 1080)
-        #expect(size.width == 1080)
-        #expect(size.height == 1080)
-    }
-
-    @Test func fourFifthsIsPortrait() {
-        let size = VideoAspect.r4x5.canvasSize(longEdge: 1080)
-        #expect(size.width == 864)   // 1080 * 4/5, even
-        #expect(size.height == 1080)
-    }
-
-    @Test func recipeCanvasUsesPresetLongEdge() {
+    @Test func recipeCanvasIsTheRatioAtTheResolution() {
         var recipe = VideoProjectRecipe(clips: [])
-        recipe.renderPreset = .uhd4K
+        recipe.resolution = .uhd4K
         recipe.aspect = .r1x1
-        let size = recipe.canvasSize()
-        #expect(size.width == 3840 && size.height == 3840)
+        #expect(recipe.canvasSize() == CGSize(width: 2160, height: 2160))
     }
 }
 

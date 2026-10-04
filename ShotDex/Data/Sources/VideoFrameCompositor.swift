@@ -51,9 +51,9 @@ struct VideoRenderRecipe: Sendable {
         self.totalDuration = totalDuration
         self.bakesOverlays = bakesOverlays
         self.background = CIColor(
-            red: recipe.background.red,
-            green: recipe.background.green,
-            blue: recipe.background.blue
+            red: recipe.background.colour.red,
+            green: recipe.background.colour.green,
+            blue: recipe.background.colour.blue
         )
     }
 

@@ -217,7 +217,11 @@ final class VideoStudioService {
                     at: clip.freezeSourceTime ?? 0,
                     maximumSize: maximumStillSize
                 ) else { return (clip.id, nil, nil) }
-                return (clip.id, .freeze(image: image, pixelSize: image.extent.size), nil)
+                let videoSize = await Self.orientedVideoSize(avAsset)
+                return (clip.id, .freeze(
+                    image: image, pixelSize: image.extent.size,
+                    asset: avAsset, time: clip.freezeSourceTime ?? 0, videoSize: videoSize
+                ), nil)
             case .video:
                 let videoTracks = try await avAsset.loadTracks(withMediaType: .video)
                 guard let videoTrack = videoTracks.first else { return (clip.id, nil, nil) }
@@ -243,6 +247,31 @@ final class VideoStudioService {
             return (clip.id, nil, nil)
         }
         return (clip.id, nil, nil)
+    }
+
+    /// A video's display size: its track's natural size through its
+    /// preferred transform.
+    static func orientedVideoSize(_ asset: AVAsset) async -> CGSize {
+        guard let track = try? await asset.loadTracks(withMediaType: .video).first,
+              let (size, transform) = try? await track.load(.naturalSize, .preferredTransform)
+        else { return .zero }
+        let rect = CGRect(origin: .zero, size: size).applying(transform)
+        return CGSize(width: abs(rect.width), height: abs(rect.height))
+    }
+
+    /// Freeze frames lifted again at the export's frame size: the session
+    /// lifted them at the canvas size of the day, and a project switched to
+    /// 4K afterwards would otherwise upscale them (plan T-6).
+    static func freezesLifted(at size: CGSize, in sources: [UUID: VideoClipSource]) async -> [UUID: VideoClipSource] {
+        var lifted = sources
+        for (id, source) in sources {
+            guard case let .freeze(image, _, asset?, time, videoSize) = source,
+                  max(image.extent.width, image.extent.height) < max(size.width, size.height) - 1,
+                  let fresh = await extractFrame(from: asset, at: time, maximumSize: size)
+            else { continue }
+            lifted[id] = .freeze(image: fresh, pixelSize: fresh.extent.size, asset: asset, time: time, videoSize: videoSize)
+        }
+        return lifted
     }
 
     /// A single frame out of a source video, oriented, for a freeze clip.
@@ -484,9 +513,10 @@ final class VideoStudioService {
         sources: [UUID: VideoClipSource],
         progress: @escaping @MainActor (Double) -> Void
     ) async throws -> URL {
+        let renderSize = recipe.canvasSize()
+        let sources = await Self.freezesLifted(at: renderSize, in: sources)
         let music = await loadMusicSources(recipe.musicTracks)
         let blank = try await blankClipIfNeeded(recipe: recipe, sources: sources)
-        let renderSize = recipe.canvasSize()
         // Keep the music assets alive across `build` (see `makePreviewItem`):
         // otherwise a source asset is released and `insertTimeRange` fails -11800.
         let (composition, layout) = try withExtendedLifetime(music.assets) {

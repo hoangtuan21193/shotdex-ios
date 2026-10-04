@@ -100,7 +100,7 @@ struct VideoExportSmokeTests {
 
         var recipe = VideoProjectRecipe(clips: [VideoExportFixtures.videoClip("a", seconds: 1)])
         recipe.aspect = .r9x16
-        recipe.background = OverlayColor(white: 0.5)
+        recipe.background = VideoBackground(colour: OverlayColor(white: 0.5))
 
         let service = VideoExportFixtures.service()
         defer { service.cleanupSession() }

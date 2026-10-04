@@ -110,7 +110,7 @@ Project mẫu: 5 clip 24,0s — 2 ảnh 4032×3024, 3 video 1920×1080; 16:9 · 
 | AC-1 | iPhone, project mẫu, Video Settings mở | chạm 9:16 | khung 402×226 → 216×384 ở y 60; panel 340 → 278; Output "1080×1920 · 0:24 · ~30 MB"; một Undo về 16:9 | ⚠️ chưa có |
 | AC-2 | project mẫu đang 9:16 · Fit | chạm Fill (Crop) | mục BACKGROUND biến mất; nhãn "9:16 · Fill"; khung xuất của clip ngang 1920×1080 không còn pixel nền | ⚠️ chưa có |
 | AC-3 | 9:16 · Fit · Colour xám | Export | hàng pixel trên cùng của khung xuất là #808080 ± 2 | `VideoExportSmokeTests.fitGreyBackgroundFillsTheBars` (clip 16:9 trong 9:16 · nền xám → hàng y 0 của file 1080×1920 = 128 ± 2 ở cả ba kênh, đọc giá trị mã qua ma trận YCbCr của track) + `VideoGeometryTests.portraitSourcePillarboxesOnALandscapeCanvas` |
-| AC-4 | mọi tỉ lệ × mọi độ phân giải | tính kích thước khung | đúng 18 ô của bảng §5, mọi cạnh chẵn | ⚠️ chưa có |
+| AC-4 | mọi tỉ lệ × mọi độ phân giải | tính kích thước khung | đúng 18 ô của bảng §5, mọi cạnh chẵn | `VideoOutputSpecTests.everyRatioAndResolution` (đúng 18 ô của bảng §5, 21:9 4K = 3840×1646, mọi cạnh chẵn); `VideoAspectTests` |
 | AC-5 | project mẫu | mở RESOLUTION | 4K mờ + "4K needs 4K clips — 3 of your 5 clips are 1080p."; thay 3 video bằng bản 3840×2160 → 4K bấm được | ⚠️ chưa có |
 | AC-6 | project toàn 4K, đang 4K | thêm 1 video 1920×1080 | độ phân giải thành 1080p, dòng lý do hiện; một Undo → clip mất và lại 4K | ⚠️ chưa có |
 | AC-7 | 9:16 · 1080p · 30 · H.264 · 24,0s | chạm HEVC | Output từ "~30 MB" thành "~18 MB" | ⚠️ chưa có |
@@ -121,7 +121,7 @@ Project mẫu: 5 clip 24,0s — 2 ảnh 4032×3024, 3 video 1920×1080; 16:9 · 
 | AC-12 | project mẫu (16:9 · 1080p · 30 · H.264, 24,0s) | Export | bitrate video của file 10 Mbps ±15%; file 30 MB ±15%; Output trước đó ghi "~30 MB" | `VideoExportSmokeTests.bitrateIsTenMbpsAt1080p30` (nguồn hạt nhiễu 1920×1080 4 s → `estimatedDataRate` và cỡ file trong ±15 % của 1920×1080×30×0,16; sim) — dòng Output "~30 MB": S2; **máy thật chưa đo** (bộ mã của sim là VideoToolbox của Mac) |
 | AC-13 | project mẫu 9:16 · Fit · Blur 50; clip 1 ảnh ngang, crossfade 1,0 s sang clip 2 | đọc khung preview (cạnh dài 1280) và khung xuất (1080×1920 thu về cùng cỡ) ở 1,0 s và giữa crossfade | dải trên/dưới là chính khung đó phủ kín rồi làm mờ; preview và xuất lệch ≤ 3/255; giữa crossfade mỗi bên mang nền của chính nó trước khi trộn | ⚠️ chưa có — test render nền |
 | AC-14 | 9:16 · Fit · Image, ảnh nền đã chọn | xoá ảnh nền khỏi thư viện (hoặc thu quyền), mở lại Video Settings, Export | nền đen; BACKGROUND hiện "Image unavailable — choose another."; xuất vẫn chạy, dải là đen | ⚠️ chưa có |
-| AC-15 | New Video Project, clip đầu là video dọc 1080×1920 (lần khác: ảnh 4032×3024; ảnh vuông) | Video Studio mở | tỉ lệ mặc định 9:16 (lần khác: 4:3; 1:1); Fit · Colour đen · 1080p · 30 · H.264 | ⚠️ chưa có — test Domain tỉ lệ gần nhất |
+| AC-15 | New Video Project, clip đầu là video dọc 1080×1920 (lần khác: ảnh 4032×3024; ảnh vuông) | Video Studio mở | tỉ lệ mặc định 9:16 (lần khác: 4:3; 1:1); Fit · Colour đen · 1080p · 30 · H.264 | `VideoOutputSpecTests.defaultAspectIsNearestToFirstClip` (video dọc 1080×1920 → 9:16, ảnh 4032×3024 → 4:3, vuông → 1:1; so theo log tỉ lệ, hoà → 16:9; mặc định Fit · Colour đen · 1080p · 30 · H.264); model mới lấy tỉ lệ theo clip đầu (`VideoStudioModel.init`) |
 
 **Chưa chứng minh được:** AC-1, AC-2, AC-4 → AC-11, AC-13 → AC-15; AC-12 một phần (dòng Output, máy thật).
 

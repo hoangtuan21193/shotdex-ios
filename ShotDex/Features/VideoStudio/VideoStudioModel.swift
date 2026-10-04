@@ -216,6 +216,12 @@ final class VideoStudioModel {
                     )
                 }
             )
+            // A new project takes the shape nearest its first clip
+            // (FS-12.10 §5): a vertical video starts a 9:16 project, not
+            // a 16:9 frame that is two thirds black.
+            if let first = photos.first, let size = Self.displaySize(of: first), size.height > 0 {
+                recipe.aspect = .nearest(to: size.width / size.height)
+            }
         }
         recipe.syncTransitionsWithClips()
         // The timeline's length is known from the clips before any preview
@@ -233,6 +239,17 @@ final class VideoStudioModel {
         }
         observeBackgrounding()
         isInitializing = false
+    }
+
+    /// A clip's shape as shown, before its media loads.
+    private static func displaySize(of photo: PhotoEditOrigin) -> CGSize? {
+        if let asset = photo.asset, asset.pixelWidth > 0, asset.pixelHeight > 0 {
+            return CGSize(width: asset.pixelWidth, height: asset.pixelHeight)
+        }
+        if let file = photo.serverFile, let size = PhotoEditOrigin.orientedPixelSize(of: file.primaryURL) {
+            return CGSize(width: size.width, height: size.height)
+        }
+        return nil
     }
 
     /// Where a finished video is recorded so it can be reopened, and the id
@@ -2577,7 +2594,8 @@ final class VideoStudioModel {
     /// video-composition tier (only the instructions' render recipe changes).
     func setBackground(_ color: OverlayColor) {
         pushUndo()
-        recipe.background = color
+        recipe.background.kind = .colour
+        recipe.background.colour = color
         markEdited()
         applyVideoTier()
     }

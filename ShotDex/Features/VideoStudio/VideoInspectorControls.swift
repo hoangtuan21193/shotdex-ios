@@ -352,7 +352,7 @@ struct BackgroundStrip: View {
             Text("BACKGROUND").font(.system(size: 10.5, weight: .semibold)).tracking(0.5)
                 .foregroundStyle(EditorTheme.secondaryText).frame(width: 88, alignment: .leading)
             ForEach(Array(Self.swatches.enumerated()), id: \.offset) { _, swatch in
-                let selected = model.recipe.background == swatch
+                let selected = model.recipe.background.colour == swatch
                 Button { model.pushUndo(); model.setBackground(swatch) } label: {
                     Circle()
                         .fill(Color(red: swatch.red, green: swatch.green, blue: swatch.blue))
@@ -363,7 +363,7 @@ struct BackgroundStrip: View {
             }
             ColorPicker("", selection: Binding(
                 get: {
-                    let c = model.recipe.background
+                    let c = model.recipe.background.colour
                     return Color(red: c.red, green: c.green, blue: c.blue)
                 },
                 set: { newColor in
