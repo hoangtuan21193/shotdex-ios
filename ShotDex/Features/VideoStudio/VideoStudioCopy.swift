@@ -1,4 +1,5 @@
 import Foundation
+import ShotDexKit
 
 /// Words the Video Studio composes in Swift. New strings of the canvas
 /// rework live in their own table (`Resources/VideoStudio.xcstrings`) rather
@@ -153,6 +154,109 @@ enum VideoStudioCopy {
             return String(localized: "4K needs 4K clips — \(short) of your \(total) clips are \(shared.displayName).", table: table, comment: "Video Studio Video Settings: why 4K is dimmed — how many clips fall short, and the resolution they all are")
         }
         return String(localized: "4K needs 4K clips — \(short) of your \(total) clips are smaller than 4K.", table: table, comment: "Video Studio Video Settings: why 4K is dimmed — how many clips fall short, at mixed resolutions")
+    }
+
+    static var done: String {
+        String(localized: "Done", table: table, comment: "Video Studio Video Settings: closes the panel; every change is already applied")
+    }
+
+    static var ratioHeader: String {
+        String(localized: "RATIO", table: table, comment: "Video Studio Video Settings: section header over the six frame ratios")
+    }
+
+    static var fitOnBackground: String {
+        String(localized: "Fit on Background", table: table, comment: "Video Studio Video Settings: the whole clip shows, on the background")
+    }
+
+    static var fillCrop: String {
+        String(localized: "Fill (Crop)", table: table, comment: "Video Studio Video Settings: the clip fills the frame, cropped from the middle")
+    }
+
+    static var backgroundHeader: String {
+        String(localized: "BACKGROUND", table: table, comment: "Video Studio Video Settings: section header over what shows around a fitted clip")
+    }
+
+    static var blur: String {
+        String(localized: "Blur", table: table, comment: "Video Studio Video Settings: the background is the clip itself, blurred; also the slider's name")
+    }
+
+    static var colour: String {
+        String(localized: "Colour", table: table, comment: "Video Studio Video Settings: the background is one colour")
+    }
+
+    static var image: String {
+        String(localized: "Image", table: table, comment: "Video Studio Video Settings: the background is a library photo")
+    }
+
+    static var customColour: String {
+        String(localized: "Custom Colour", table: table, comment: "Video Studio Video Settings: picks a background colour of one's own")
+    }
+
+    static var chooseImage: String {
+        String(localized: "Choose…", table: table, comment: "Video Studio Video Settings: picks the library photo behind fitted clips")
+    }
+
+    static var imageUnavailable: String {
+        String(localized: "Image unavailable — choose another.", table: table, comment: "Video Studio Video Settings: the background photo was deleted or can no longer be read")
+    }
+
+    static var resolutionHeader: String {
+        String(localized: "RESOLUTION", table: table, comment: "Video Studio Video Settings: section header over 720p / 1080p / 4K")
+    }
+
+    static var frameRateHeader: String {
+        String(localized: "FRAME RATE", table: table, comment: "Video Studio Video Settings: section header over 24 / 30 / 60")
+    }
+
+    static var codecHeader: String {
+        String(localized: "CODEC", table: table, comment: "Video Studio Video Settings: section header over H.264 / HEVC")
+    }
+
+    static var hevcNote: String {
+        String(localized: "HEVC is about 40% smaller; some older devices can’t play it.", table: table, comment: "Video Studio Video Settings: under the codec choice")
+    }
+
+    static var output: String {
+        String(localized: "Output", table: table, comment: "Video Studio Video Settings: the row that states the frame size, length and estimated file size")
+    }
+
+    static var changesApplyRightAway: String {
+        String(localized: "Changes apply right away — Export uses them.", table: table, comment: "Video Studio Video Settings: under the Output row")
+    }
+
+    /// "Ratio 9:16" for VoiceOver.
+    static func ratioLabel(_ ratio: String) -> String {
+        String(localized: "Ratio \(ratio)", table: table, comment: "Video Studio Video Settings: VoiceOver name of a ratio button")
+    }
+
+    /// "4K, unavailable" for VoiceOver (FS-12.10 §7).
+    static func unavailable(_ name: String) -> String {
+        String(localized: "\(name), unavailable", table: table, comment: "Video Studio Video Settings: VoiceOver name of a dimmed choice, e.g. 4K, unavailable")
+    }
+
+    /// "9:16 · Fill": the frame's ratio and framing, over the frame.
+    static func frameLabel(_ recipe: VideoProjectRecipe) -> String {
+        let framing = recipe.framing == .fill
+            ? String(localized: "Fill", table: table, comment: "Video Studio: the frame label's framing word — clips fill the frame")
+            : String(localized: "Fit", table: table, comment: "Video Studio: the frame label's framing word — clips fit on the background")
+        return "\(recipe.aspect.displayName) · \(framing)"
+    }
+
+    static func backgroundKind(_ kind: VideoBackground.Kind) -> String {
+        switch kind {
+        case .blur: blur
+        case .colour: colour
+        case .image: image
+        }
+    }
+
+    /// A swatch's VoiceOver name.
+    static func colourSwatch(_ colour: OverlayColor) -> String {
+        switch colour {
+        case .black: String(localized: "Black", table: table, comment: "Video Studio Video Settings: the black background swatch")
+        case .white: String(localized: "White", table: table, comment: "Video Studio Video Settings: the white background swatch")
+        default: String(localized: "Grey", table: table, comment: "Video Studio Video Settings: the grey background swatch")
+        }
     }
 
     static var select: String {

@@ -314,71 +314,7 @@ struct OverlayAlignmentRow: View {
     }
 }
 
-// MARK: - Ratio / background / filter strips
-
-struct RatioStrip: View {
-    @Bindable var model: VideoStudioModel
-
-    var body: some View {
-        HStack(spacing: 8) {
-            Text("RATIO").font(.system(size: 10.5, weight: .semibold)).tracking(0.5)
-                .foregroundStyle(EditorTheme.secondaryText).frame(width: 88, alignment: .leading)
-            ForEach(VideoAspect.allCases) { aspect in
-                let selected = model.recipe.aspect == aspect
-                Button { model.setAspect(aspect) } label: {
-                    Text(aspect.displayName)
-                        .font(.system(size: 11, weight: .semibold))
-                        .foregroundStyle(selected ? .black : .white)
-                        .padding(.horizontal, 10)
-                        .frame(height: 28)
-                        .background(Capsule().fill(selected ? EditorTheme.accent : EditorTheme.trackChip))
-                }
-                .buttonStyle(.plain)
-                .accessibilityAddTraits(selected ? .isSelected : [])
-            }
-            Spacer(minLength: 0)
-        }
-        .padding(.horizontal, 14)
-    }
-}
-
-struct BackgroundStrip: View {
-    @Bindable var model: VideoStudioModel
-
-    private static let swatches: [OverlayColor] = [.black, OverlayColor(white: 0.5), .white]
-
-    var body: some View {
-        HStack(spacing: 8) {
-            Text("BACKGROUND").font(.system(size: 10.5, weight: .semibold)).tracking(0.5)
-                .foregroundStyle(EditorTheme.secondaryText).frame(width: 88, alignment: .leading)
-            ForEach(Array(Self.swatches.enumerated()), id: \.offset) { _, swatch in
-                let selected = model.recipe.background.colour == swatch
-                Button { model.pushUndo(); model.setBackground(swatch) } label: {
-                    Circle()
-                        .fill(Color(red: swatch.red, green: swatch.green, blue: swatch.blue))
-                        .frame(width: 24, height: 24)
-                        .overlay { Circle().strokeBorder(selected ? EditorTheme.accent : Color.white.opacity(0.2), lineWidth: selected ? 2 : 1) }
-                }
-                .buttonStyle(.plain)
-            }
-            ColorPicker("", selection: Binding(
-                get: {
-                    let c = model.recipe.background.colour
-                    return Color(red: c.red, green: c.green, blue: c.blue)
-                },
-                set: { newColor in
-                    let resolved = UIColor(newColor)
-                    var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
-                    resolved.getRed(&r, green: &g, blue: &b, alpha: &a)
-                    model.setBackground(OverlayColor(red: Double(r), green: Double(g), blue: Double(b)))
-                }
-            ), supportsOpacity: false)
-            .labelsHidden()
-            Spacer(minLength: 0)
-        }
-        .padding(.horizontal, 14)
-    }
-}
+// MARK: - Filter strip
 
 /// The looks, as the project's own frame under each one.
 ///

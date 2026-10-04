@@ -5,6 +5,10 @@
       "comment": "Video Projects: a draft's subtitle — when it was edited, then how many clips",
       "extractionState": "manual"
     },
+    "%@, unavailable": {
+      "comment": "Video Studio Video Settings: VoiceOver name of a dimmed choice, e.g. 4K, unavailable",
+      "extractionState": "manual"
+    },
     "%lld clips": {
       "comment": "Video Projects: how many clips a video project has (plural)",
       "extractionState": "manual",
@@ -117,8 +121,24 @@
       "comment": "Video Studio Media panel: body when Photos access is denied",
       "extractionState": "manual"
     },
+    "BACKGROUND": {
+      "comment": "Video Studio Video Settings: section header over what shows around a fitted clip",
+      "extractionState": "manual"
+    },
     "Beats": {
       "comment": "Video Studio: the music command that marks a song's beats",
+      "extractionState": "manual"
+    },
+    "Black": {
+      "comment": "Video Studio Video Settings: the black background swatch",
+      "extractionState": "manual"
+    },
+    "Blur": {
+      "comment": "Video Studio Video Settings: the background is the clip itself, blurred; also the slider's name",
+      "extractionState": "manual"
+    },
+    "CODEC": {
+      "comment": "Video Studio Video Settings: section header over H.264 / HEVC",
       "extractionState": "manual"
     },
     "Camera, lens, 85mm, ISO 3200…": {
@@ -129,8 +149,24 @@
       "comment": "Video Studio: leaves search",
       "extractionState": "manual"
     },
+    "Changes apply right away — Export uses them.": {
+      "comment": "Video Studio Video Settings: under the Output row",
+      "extractionState": "manual"
+    },
+    "Choose…": {
+      "comment": "Video Studio Video Settings: picks the library photo behind fitted clips",
+      "extractionState": "manual"
+    },
+    "Colour": {
+      "comment": "Video Studio Video Settings: the background is one colour",
+      "extractionState": "manual"
+    },
     "Couldn't save your video draft": {
       "comment": "Video Studio: banner and alert when the draft could not be written (disk full, database error)",
+      "extractionState": "manual"
+    },
+    "Custom Colour": {
+      "comment": "Video Studio Video Settings: picks a background colour of one's own",
       "extractionState": "manual"
     },
     "Delete Draft": {
@@ -143,6 +179,10 @@
     },
     "Discard Changes": {
       "comment": "Video Studio: the ✕ that closes a tool panel and throws away what it changed",
+      "extractionState": "manual"
+    },
+    "Done": {
+      "comment": "Video Studio Video Settings: closes the panel; every change is already applied",
       "extractionState": "manual"
     },
     "Draft": {
@@ -173,12 +213,48 @@
       "comment": "Video Studio media pool Text tab: header over the fonts the user has used before",
       "extractionState": "manual"
     },
+    "FRAME RATE": {
+      "comment": "Video Studio Video Settings: section header over 24 / 30 / 60",
+      "extractionState": "manual"
+    },
     "Fade": {
       "comment": "Video Studio clip panel: header over the clip's fade in and fade out",
       "extractionState": "manual"
     },
+    "Fill": {
+      "comment": "Video Studio: the frame label's framing word — clips fill the frame",
+      "extractionState": "manual"
+    },
+    "Fill (Crop)": {
+      "comment": "Video Studio Video Settings: the clip fills the frame, cropped from the middle",
+      "extractionState": "manual"
+    },
+    "Fit": {
+      "comment": "Video Studio: the frame label's framing word — clips fit on the background",
+      "extractionState": "manual"
+    },
+    "Fit on Background": {
+      "comment": "Video Studio Video Settings: the whole clip shows, on the background",
+      "extractionState": "manual"
+    },
     "Freeze · clip %lld": {
       "comment": "Video Studio In Video row: a held frame and its place on the track",
+      "extractionState": "manual"
+    },
+    "Grey": {
+      "comment": "Video Studio Video Settings: the grey background swatch",
+      "extractionState": "manual"
+    },
+    "HEVC is about 40% smaller; some older devices can’t play it.": {
+      "comment": "Video Studio Video Settings: under the codec choice",
+      "extractionState": "manual"
+    },
+    "Image": {
+      "comment": "Video Studio Video Settings: the background is a library photo",
+      "extractionState": "manual"
+    },
+    "Image unavailable — choose another.": {
+      "comment": "Video Studio Video Settings: the background photo was deleted or can no longer be read",
       "extractionState": "manual"
     },
     "In Video · %lld": {
@@ -281,6 +357,10 @@
       "comment": "Video Studio Music panel: caption under the Video sound slider",
       "extractionState": "manual"
     },
+    "Output": {
+      "comment": "Video Studio Video Settings: the row that states the frame size, length and estimated file size",
+      "extractionState": "manual"
+    },
     "Photo · clip %lld": {
       "comment": "Video Studio In Video row: a photo clip and its place on the track",
       "extractionState": "manual"
@@ -295,6 +375,18 @@
     },
     "Playhead at %@ of %@": {
       "comment": "Video Studio transport: VoiceOver label for the phone read-out — playhead, then the project's length",
+      "extractionState": "manual"
+    },
+    "RATIO": {
+      "comment": "Video Studio Video Settings: section header over the six frame ratios",
+      "extractionState": "manual"
+    },
+    "RESOLUTION": {
+      "comment": "Video Studio Video Settings: section header over 720p / 1080p / 4K",
+      "extractionState": "manual"
+    },
+    "Ratio %@": {
+      "comment": "Video Studio Video Settings: VoiceOver name of a ratio button",
       "extractionState": "manual"
     },
     "Recents": {
@@ -395,6 +487,10 @@
     },
     "Waiting for iCloud": {
       "comment": "Video Studio: why Freeze and Split are dimmed on a clip whose original has not downloaded",
+      "extractionState": "manual"
+    },
+    "White": {
+      "comment": "Video Studio Video Settings: the white background swatch",
       "extractionState": "manual"
     },
     "Whole video": {

@@ -49,3 +49,46 @@ struct VideoStudioSettingsTests {
         #expect(model.recipe.resolution == .uhd4K)
     }
 }
+
+extension VideoStudioSettingsTests {
+    /// FS-12.10 §5: every tap in Video Settings is one undo step, and
+    /// resolution, rate and codec leave the preview alone; a Blur drag is
+    /// one step however far it goes.
+    @Test func eachTapIsOneUndo() {
+        let model = VideoStudioModelFixture.model(clips: VideoStudioModelFixture.photoClips(2))
+        defer { model.close() }
+        let start = model.recipe
+        model.showToolPanel(.videoSettings)
+        model.setAspect(.r9x16)
+        model.setFraming(.fill)
+        model.setFraming(.fit)
+        model.setBackgroundKind(.blur)
+        model.beginUndoGroup()
+        for amount in stride(from: 50.0, through: 80, by: 5) { model.setBlurAmount(amount) }
+        model.endUndoGroup()
+        model.setBackground(.white)
+        model.setResolution(.p720)
+        model.setFrameRate(.fps60)
+        model.setCodec(.hevc)
+        #expect(model.recipe.aspect == .r9x16 && model.recipe.background.kind == .colour && model.recipe.codec == .hevc)
+        #expect(model.outputSummary() == "720×1280 · 0:06 · ~4 MB")
+        var steps = 0
+        while model.canUndo {
+            model.undo()
+            steps += 1
+        }
+        #expect(steps == 9)
+        #expect(model.recipe == start)
+    }
+
+    /// 4K is refused while the gate is shut — no step, nothing changes.
+    @Test func lockedFourKIsNotAStep() {
+        let clips = VideoStudioModelFixture.photoClips(1)
+        let model = VideoStudioModelFixture.model(clips: clips)
+        defer { model.close() }
+        model.sources[clips[0].id] = .photo(assetID: clips[0].assetID, pixelSize: CGSize(width: 1920, height: 1080))
+        model.setResolution(.uhd4K)
+        #expect(model.recipe.resolution == .p1080)
+        #expect(!model.canUndo)
+    }
+}

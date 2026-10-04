@@ -60,6 +60,8 @@ struct VideoStudioSheetHost: View {
                 musicPanel(importedMusic)
             } else if model.inspectorTarget == .none, model.activeToolPanel == .media {
                 VideoMediaPanel(model: model)
+            } else if model.inspectorTarget == .none, model.activeToolPanel == .videoSettings {
+                VideoSettingsPanel(model: model)
             } else {
                 switch layout {
                 case .band: bandBody
@@ -420,14 +422,7 @@ struct VideoStudioSheetHost: View {
                     cancelButton
                     titleButton("checkmark", label: Text(VideoStudioCopy.keepChanges)) { model.commitSession() }
                 }
-            case .music, .media: EmptyView()
-            case .videoSettings:
-                // Done only: every change applies as it is made, so there
-                // is nothing to cancel (FS-12.04 §4).
-                titleButton("checkmark", label: Text("Done", comment: "Video Studio: closes the Video Settings panel")) {
-                    model.showToolPanel(nil)
-                }
-            case nil: EmptyView()
+            case .music, .media, .videoSettings, nil: EmptyView()
             }
         }
     }
@@ -940,19 +935,9 @@ struct VideoStudioSheetHost: View {
             EmptyView()
         case .look:
             lookParams
-        case .music, .media:
-            // Drawn by `musicPanel` / `VideoMediaPanel` in place of the
-            // whole band.
+        case .music, .media, .videoSettings:
+            // Drawn by their own panels in place of the whole band.
             EmptyView()
-        case .videoSettings:
-            // Ratio and the fill behind a fitted frame, until the Video
-            // Settings plan gives this panel its resolution, fps and codec.
-            VStack(spacing: 8) {
-                RatioStrip(model: model).frame(height: 34)
-                BackgroundStrip(model: model).frame(height: 34)
-                Spacer(minLength: 0)
-            }
-            .padding(.top, 8)
         }
     }
 

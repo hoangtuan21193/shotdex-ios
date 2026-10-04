@@ -625,6 +625,85 @@ final class VideoStudioModel {
         }
     }
 
+    /// What a fitted clip sits on: one undo step, the video tier.
+    func setBackgroundKind(_ kind: VideoBackground.Kind) {
+        guard recipe.background.kind != kind else { return }
+        pushUndo()
+        recipe.background.kind = kind
+        markEdited()
+        applyVideoTier()
+    }
+
+    /// The Blur slider: the caller brackets a drag with
+    /// `beginUndoGroup`/`endUndoGroup`, so one drag is one step.
+    func setBlurAmount(_ amount: Double) {
+        recipe.background.blurAmount = min(max(amount, VideoBackground.blurRange.lowerBound), VideoBackground.blurRange.upperBound)
+        markEdited()
+        applyVideoTier()
+    }
+
+    /// The library photo behind an Image background.
+    func setBackgroundImage(_ assetID: String) {
+        pushUndo()
+        recipe.background.kind = .image
+        recipe.background.imageAssetID = assetID
+        markEdited()
+        applyVideoTier()
+    }
+
+    /// A colour from the system colour picker, which reports every move:
+    /// the moves of one pick share a step, closed 0.8 s after the last.
+    func pickBackgroundColour(_ colour: OverlayColor) {
+        if colourPickTask == nil { beginUndoGroup() }
+        recipe.background.kind = .colour
+        recipe.background.colour = colour
+        markEdited()
+        applyVideoTier()
+        colourPickTask?.cancel()
+        colourPickTask = Task { [weak self] in
+            try? await Task.sleep(for: .milliseconds(800))
+            guard !Task.isCancelled else { return }
+            self?.endUndoGroup()
+            self?.colourPickTask = nil
+        }
+    }
+    @ObservationIgnored private var colourPickTask: Task<Void, Never>?
+
+    /// Resolution, frame rate and codec change only what the export
+    /// writes: one step each, the preview untouched (FS-12.01 §8).
+    func setResolution(_ resolution: VideoResolution) {
+        guard recipe.resolution != resolution else { return }
+        guard resolution != .uhd4K || fourKVerdict == .allowed else { return }
+        pushUndo()
+        recipe.resolution = resolution
+        markEdited()
+    }
+
+    func setFrameRate(_ rate: VideoFrameRate) {
+        guard recipe.frameRate != rate else { return }
+        pushUndo()
+        recipe.frameRate = rate
+        markEdited()
+    }
+
+    func setCodec(_ codec: VideoCodec) {
+        guard recipe.codec != codec else { return }
+        pushUndo()
+        recipe.codec = codec
+        markEdited()
+    }
+
+    /// "1080×1920 · 0:24 · ~30 MB" — the Output line and the panel's
+    /// second line (FS-12.10 §4); the Duo drops the length.
+    func outputSummary(includesLength: Bool = true) -> String {
+        let size = recipe.canvasSize()
+        let frame = "\(Int(size.width))×\(Int(size.height))"
+        let estimate = VideoExportEstimate.label(estimatedExportBytes)
+        return includesLength
+            ? "\(frame) · \(VideoStudioMetrics.shortDuration(totalDuration)) · \(estimate)"
+            : "\(frame) · \(estimate)"
+    }
+
     /// Whether 4K is open now, and why not.
     var fourKVerdict: VideoResolutionGate.Verdict {
         VideoResolutionGate.verdict(shortEdges: clipSourceShortEdges)

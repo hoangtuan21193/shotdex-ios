@@ -759,6 +759,19 @@ struct VideoStudioScreen: View {
                     .position(x: contentRect.midX, y: contentRect.midY)
                     .allowsHitTesting(false)
                     .accessibilityHidden(true)
+                // "9:16 · Fill" at the frame's top-left while Video
+                // Settings is open (FS-12.10 §4): what the frame is now.
+                if model.activeToolPanel == .videoSettings {
+                    Text(verbatim: VideoStudioCopy.frameLabel(model.recipe))
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 8)
+                        .frame(height: 20)
+                        .background(Capsule().fill(Color.black.opacity(0.55)))
+                        .position(x: contentRect.minX + 8 + 37, y: contentRect.minY + 8 + 10)
+                        .allowsHitTesting(false)
+                        .accessibilityIdentifier("videoFrameLabel")
+                }
                 VideoOverlayCanvas(
                     model: model,
                     contentRect: contentRect,
