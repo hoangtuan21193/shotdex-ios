@@ -58,6 +58,9 @@ struct FileExportSheet: View {
             Button(ExportCopy.replace, role: .destructive) { model.confirmReplace() }
             Button(String(localized: "Cancel", table: ExportCopy.table, comment: "Export: do not replace"), role: .cancel) { model.cancelReplace() }
         }
+        .alert(spaceTitle, isPresented: $model.spaceAlert) {
+            Button(ExportCopy.ok, role: .cancel) {}
+        }
         .alert(ExportCopy.folderGone, isPresented: $model.goneFolderAlert) {
             Button(ExportCopy.ok, role: .cancel) {}
         }
@@ -65,6 +68,14 @@ struct FileExportSheet: View {
             FolderPicker { model.pickFolder($0) }
                 .ignoresSafeArea()
         }
+    }
+
+    /// *Not enough space in “Exports” — needs 1.2 GB, 300 MB free.*
+    private var spaceTitle: String {
+        if case .notEnoughSpace(let needed, let free)? = model.preflightFailure {
+            return ExportCopy.notEnoughSpace(model.folders.current?.name ?? "", needed: needed, free: free)
+        }
+        return ""
     }
 
     private var replaceTitle: String {

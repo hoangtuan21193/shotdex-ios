@@ -60,6 +60,10 @@ final class FileExportModel: Identifiable {
     /// Shown once when a remembered folder will not open anymore.
     var goneFolderAlert = false
     var isPickingFolder = false
+    /// Not enough room: said before the first byte, nothing written.
+    var spaceAlert = false
+    /// Free bytes where the folder is, for the footer; nil when unknown.
+    private(set) var freeBytes: Int64?
     private(set) var progress = FileExportProgress()
     private(set) var report: FileExportReport?
     /// A problem that stopped the batch before the first byte.
@@ -128,6 +132,9 @@ final class FileExportModel: Identifiable {
             photos: selection.photoCount, videos: selection.videoCount,
             bytes: selection.byteCount, isEstimate: selection.isByteEstimate
         )]
+        if let freeBytes, let place = folders.current?.place, hasDestination {
+            lines.append(ExportCopy.freeOn(freeBytes, place: place))
+        }
         switch mode {
         case .currentVersion where selection.videoCount > 0: lines.append(ExportCopy.videosAsTheyAre)
         case .unmodifiedOriginal: lines.append(ExportCopy.originalsAsTheyAre)
@@ -217,6 +224,15 @@ final class FileExportModel: Identifiable {
         let state = folders.resolve(current)
         if state == .gone { goneFolderAlert = true }
         folderState = state == .gone ? folders.current.map(folders.resolve) : state
+        freeBytes = nil
+        if case .available(let url) = folderState, let environment {
+            Task { [weak self] in
+                let isAccessing = url.startAccessingSecurityScopedResource()
+                let free = await environment.makeWriter(url).freeBytes()
+                if isAccessing { url.stopAccessingSecurityScopedResource() }
+                self?.freeBytes = free
+            }
+        }
     }
 
     /// A folder from the system picker becomes the one in use.
@@ -255,7 +271,7 @@ final class FileExportModel: Identifiable {
         task = Task { [weak self] in
             let isAccessing = url.startAccessingSecurityScopedResource()
             defer { if isAccessing { url.stopAccessingSecurityScopedResource() } }
-            let writer = LocalFolderWriter(root: url)
+            let writer = environment.makeWriter(url)
             let items = await environment.items(assetIds)
             var existing: [String: Set<String>] = [:]
             do {
@@ -275,6 +291,15 @@ final class FileExportModel: Identifiable {
                 dateFolders: settings.dateFolders, includesLivePhotoVideo: settings.includesLivePhotoVideo,
                 renderExtension: self.renderExtension, existing: existing
             )
+            // Room for the whole batch, before the first byte (07c §3).
+            let needed = FileExportSpaceEstimate.neededBytes(plan, preset: self.preset)
+            if let failure = FileExportSpaceEstimate.check(needed: needed, free: await writer.freeBytes()) {
+                self.preflightFailure = failure
+                self.spaceAlert = true
+                self.stage = .choosing
+                self.task = nil
+                return
+            }
             self.plan = plan
             self.task = nil
             if settings.conflictPolicy == .replace, plan.replaceCount > 0 {
@@ -329,7 +354,7 @@ final class FileExportModel: Identifiable {
         )
         self.job = job
         let runner = runner ?? FileExportRunner(
-            source: environment.source, writer: LocalFolderWriter(root: url), rendering: environment.rendering,
+            source: environment.source, writer: environment.makeWriter(url), rendering: environment.rendering,
             onEvent: { [weak self] event in Task { @MainActor in self?.progress.apply(event) } }
         )
         self.runner = runner
@@ -364,6 +389,9 @@ struct FileExportEnvironment {
     var rendering: any ExportRendering
     var items: @Sendable ([String]) async -> [FileExportItem]
     var holdScreen: @MainActor (Bool) -> Void = { _ in }
+    /// The writer for a folder in Files; a test hands in one that reports
+    /// little free space or a drive that goes away.
+    var makeWriter: @Sendable (URL) -> any ExportDestinationWriter = { LocalFolderWriter(root: $0) }
 }
 
 extension FileExportModel {
@@ -397,14 +425,15 @@ extension FileExportModel {
     #if DEBUG
     /// `-ShotDexExportFolder <name>`: a UI script cannot drive the system
     /// folder picker, so it starts with `<Documents>/<name>` remembered — the
-    /// first pick, as a stand-in. Only when nothing is remembered yet.
+    /// first pick, as a stand-in. Remembered once; after that the store's own
+    /// order stands, as after a real pick.
     private static func rememberFixtureFolder(in folders: ExportFolderStore) {
-        guard folders.recents.isEmpty,
-              let name = UserDefaults.standard.string(forKey: "ShotDexExportFolder"), !name.isEmpty,
+        guard let name = UserDefaults.standard.string(forKey: "ShotDexExportFolder"), !name.isEmpty,
               let documents = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first
         else { return }
         let url = documents.appendingPathComponent(name, isDirectory: true)
         try? FileManager.default.createDirectory(at: url, withIntermediateDirectories: true)
+        guard !folders.recents.contains(where: { $0.path == url.standardizedFileURL.path }) else { return }
         _ = try? folders.remember(url)
     }
     #endif
