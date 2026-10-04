@@ -373,6 +373,10 @@
       "comment": "Video Studio Media panel: Recents when the library is empty",
       "extractionState": "manual"
     },
+    "Not enough space to export — about %@ needed. Free up space, then try again.": {
+      "comment": "Video Studio Export: the device lacks room for the file and its copy in Photos; the size is about twice the estimate",
+      "extractionState": "manual"
+    },
     "Nothing from your library is in this video yet.": {
       "comment": "Video Studio Media panel: the In Video tab when no clip or sticker comes from the library",
       "extractionState": "manual"

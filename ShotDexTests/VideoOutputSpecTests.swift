@@ -122,3 +122,14 @@ extension VideoOutputSpecTests {
         #expect(model.fourKVerdict == .allowed)
     }
 }
+
+extension VideoOutputSpecTests {
+    /// FS-12.10b AC-7: 40 MB free and ~30 MB to write — not enough for
+    /// the file and its copy in Photos; "about 60 MB needed".
+    @Test func spaceCheckNeedsTwiceTheEstimate() {
+        #expect(ExportSpaceCheck.shortfall(estimate: 30_000_000, available: 40_000_000) == 60_000_000)
+        #expect(ExportSpaceCheck.shortfall(estimate: 30_000_000, available: 60_000_000) == nil)
+        #expect(ExportSpaceCheck.shortfall(estimate: 30_000_000, available: nil) == nil)
+        #expect(VideoStudioCopy.notEnoughSpace("60 MB") == "Not enough space to export — about 60 MB needed. Free up space, then try again.")
+    }
+}

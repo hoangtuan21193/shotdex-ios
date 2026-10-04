@@ -34,3 +34,18 @@ struct VideoExportFlowTests {
         #expect(model.activeToolPanel == .videoSettings)
     }
 }
+
+extension VideoExportFlowTests {
+    /// AC-7 (model): with 40 MB free and a ~30 MB export the button does
+    /// not start an export; it says how much is needed.
+    @Test func notEnoughSpaceDoesNotStart() {
+        var clip = VideoClip(assetID: "a", kind: .photo)
+        clip.photoDuration = 24
+        let model = VideoStudioModelFixture.model(clips: [clip]) { $0.aspect = .r9x16 }
+        defer { model.close() }
+        model.availableBytes = { 40_000_000 }
+        model.export()
+        #expect(model.exportState == .failed("Not enough space to export — about 60 MB needed. Free up space, then try again."))
+        #expect(!model.isExportBusy)
+    }
+}

@@ -2850,8 +2850,17 @@ final class VideoStudioModel {
 
     // MARK: - Export
 
+    /// Free space for user work, read before an export starts; tests set it.
+    @ObservationIgnored var availableBytes: () -> Int64? = { DiskSpace.availableBytes() }
+
     func export() {
         guard exportState == .idle || isFailedExport else { return }
+        // Not enough room for the file and its copy in Photos: say so and do
+        // not start (FS-12.10b §5).
+        if let needed = ExportSpaceCheck.shortfall(estimate: estimatedExportBytes, available: availableBytes()) {
+            exportState = .failed(VideoStudioCopy.notEnoughSpace(VideoExportEstimate.label(needed).replacingOccurrences(of: "~", with: "")))
+            return
+        }
         player?.pause()
         isPlaying = false
         exportState = .exporting(0)

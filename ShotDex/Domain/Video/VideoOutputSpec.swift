@@ -98,6 +98,19 @@ enum VideoExportEstimate {
     }
 }
 
+/// Room for an export (FS-12.10b §5): the temporary file and the copy in
+/// Photos are both on the device for a moment, so twice the estimate.
+enum ExportSpaceCheck {
+    /// The bytes needed when `available` is short of them; nil when there is
+    /// room, or when the free space cannot be read (no warning beats a
+    /// wrong one).
+    static func shortfall(estimate: Int64, available: Int64?) -> Int64? {
+        guard let available else { return nil }
+        let needed = estimate * 2
+        return available < needed ? needed : nil
+    }
+}
+
 /// How the writer encodes — one value built from the same numbers as the
 /// estimate (plan T-5).
 struct VideoEncodingSettings: Equatable {

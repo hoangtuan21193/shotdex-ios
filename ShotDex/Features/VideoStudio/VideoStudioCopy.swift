@@ -301,6 +301,11 @@ enum VideoStudioCopy {
         String(localized: "Saving to Photos…", table: table, comment: "Video Studio Export: the file is written and is going into the library")
     }
 
+    /// FS-12.10b §5: the device is short of twice the estimate.
+    static func notEnoughSpace(_ needed: String) -> String {
+        String(localized: "Not enough space to export — about \(needed) needed. Free up space, then try again.", table: table, comment: "Video Studio Export: the device lacks room for the file and its copy in Photos; the size is about twice the estimate")
+    }
+
     /// "Exporting… 62%".
     static func exportingPercent(_ percent: Int) -> String {
         String(localized: "Exporting… \(percent)%", table: table, comment: "Video Studio Export: progress while the video is rendered")
