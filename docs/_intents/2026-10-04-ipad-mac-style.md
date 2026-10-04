@@ -58,6 +58,9 @@
 - FS-12.03/03b/16: số Video Studio iPad mới (pool 320, inspector 360, đầu track 200, sheet xuất 700) — phiên Video Studio nhận làm.
 - FS-08: Settings iPad là split view mới; công tắc **không** amber (giữ AC-9).
 - Thêm nguồn thư mục/ổ ngoài + nhập thẻ cho iPad (dùng chung FS của intent Mac).
+- Server trên iPad là **nguồn được index** như Mac (chốt 2026-10-04) — FS-15/FS-17 phần iPad đổi theo; iPhone giữ duyệt rồi nhập.
+- Settings iPad: nút chữ dùng **tint hệ thống**, không amber (giữ AC-9); công tắc xanh hệ thống.
+- Lần mở đầu trên iPad: **Onboarding rồi tới thư viện trống** có 3 cách thêm nguồn (FS-09 phần iPad).
 
 ---
 
