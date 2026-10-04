@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>iPhone · Delete a Photo with Copies</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0}
+button{font-family:inherit;padding:0;margin:0;cursor:default}
+</style>
+</helmet>
+<div style="width: 402px; height: 874px; position: relative; overflow: hidden; background: {{t.bg}}; color: {{t.label}}; font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', system-ui, sans-serif">
+<!-- DELETE A PHOTO THAT HAS SEVERAL COPIES (FS-19.04 §1, §2; AC-57). Delete from All Photos (or an album, smart album,
+     Cull without a source filter) on a photo whose identical copies live in several sources. One row per copy, with
+     where it goes. Only the copy the photo is opened from is checked (order: internal storage → Photos with a local
+     original → external drive → server); the rest are backups and stay unchecked. Deleting inside one source never asks:
+     it touches only that source's copy. The title and button follow the checked destinations: a file going to Recently
+     Deleted in Files → Move; Photos only → the system prompt alone; NAS only → Hide. A checked no-Trash copy (T7) adds the
+     red second alert (PH_DeletePermanent) before anything runs. Not drawn: the many-photo variant, one row per source with
+     a count. -->
+<div style="position:absolute;left:0;top:0;width:402px;height:874px">
+<div style="position:absolute;left:0px;top:200px;width:402px;height:268px;background:linear-gradient(180deg,#4A6E96 0%,#F0C48E 56%,#2B3A2C 56%,#141C15 100%);overflow:hidden"><svg viewBox="0 0 300 100" preserveAspectRatio="none" aria-hidden="true" style="position:absolute;left:0;bottom:44%;width:100%;height:30%;display:block"><path d="M0 100 L0 70 L38 42 L62 58 L104 18 L128 36 L150 28 L196 66 L232 44 L268 60 L300 46 L300 100 Z" fill="#24332A" opacity="0.9"></path></svg></div>
+<div style="position:absolute;left:16px;top:70px;width:52px;height:52px;border-radius:26px;background:{{t.glass}};border:1px solid {{t.glassStroke}};box-shadow:{{t.glassShadow}};box-sizing:border-box"></div>
+<div style="position:absolute;left:76px;top:70px;width:310px;height:52px;border-radius:16px;background:{{t.glass}};border:1px solid {{t.glassStroke}};box-shadow:{{t.glassShadow}};box-sizing:border-box;padding:7px 12px 0;font-size:12px;font-weight:600">Oct 4 17:42 · DSC04512.ARW</div>
+</div>
+<div aria-hidden="true" style="position:absolute;left:0;top:0;width:402px;height:874px;background:{{t.dim}}"></div>
+<div role="dialog" aria-label="Move 1 Photo?" style="position:absolute;left:0;top:{{sheetTop}};width:402px;height:600px;background:{{t.grouped}};border-radius:28px 28px 0 0;box-shadow:0 -2px 20px rgba(0,0,0,0.18);overflow:hidden">
+<div style="position:absolute;left:183px;top:6px;width:36px;height:5px;border-radius:3px;background:{{t.label3}}"></div>
+<button style="position:absolute;left:16px;top:16px;height:44px;width:88px;border-radius:22px;background:{{t.glass}};border:1px solid {{t.glassStroke}};box-shadow:{{t.glassShadow}};backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);box-sizing:border-box;color:{{t.label}};font-size:17px;font-weight:500">Cancel</button>
+<div style="position:absolute;left:101px;top:27px;width:200px;height:22px;text-align:center;font-size:17px;font-weight:600;line-height:22px">Move 1 Photo?</div>
+<div style="position:absolute;left:20px;top:70px;width:362px;font-size:15px;line-height:20px;color:{{t.label2}}">DSC04512.ARW has 4 copies. Only the checked copy is removed; the others stay, so the photo stays in ShotDex.</div>
+<div style="position:absolute;left:16px;top:138px;width:370px;background:{{t.card}};border-radius:22px;overflow:hidden">
+<sc-for list="{{copies}}" as="c" hint-placeholder-count="4"><button role="checkbox" aria-checked="{{c.checked}}" aria-label="{{c.aria}}" style="width:100%;min-height:60px;display:flex;align-items:center;gap:12px;padding:9px 16px;box-sizing:border-box;border:0;border-top:{{c.border}};background:transparent;color:{{t.label}};text-align:left"><sc-if value="{{c.on}}" hint-placeholder-val="{{true}}"><span style="flex:none;width:24px;height:24px;border-radius:12px;background:{{t.tint}};display:flex;align-items:center;justify-content:center"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="display:block"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg></span></sc-if><sc-if value="{{c.off}}" hint-placeholder-val="{{false}}"><span style="flex:none;width:24px;height:24px;border-radius:12px;border:1.5px solid {{t.label3}};box-sizing:border-box"></span></sc-if><span style="width:22px;flex:none;color:{{t.label2}}"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="display:block"><path d="{{c.d}}"></path></svg></span><span style="flex:1;min-width:0;display:flex;flex-direction:column"><span style="font-size:17px;line-height:22px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{c.name}}</span><sc-if value="{{c.path}}" hint-placeholder-val="{{true}}"><span style="font-size:13px;line-height:18px;color:{{t.label2}};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{c.path}}</span></sc-if><span style="font-size:13px;line-height:18px;color:{{c.subColor}};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{c.sub}}</span></span></button></sc-for>
+</div>
+<div style="position:absolute;left:20px;top:{{noteTop}};width:362px;text-align:center;font-size:13px;line-height:18px;color:{{t.label2}}">ShotDex never edits file contents.</div>
+<button style="position:absolute;left:16px;top:{{btnTop}};width:370px;height:50px;border-radius:25px;border:none;background:{{t.fill}};color:{{t.redText}};font-size:17px;font-weight:600">Move</button>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"dark":{"editor":"boolean","default":false},"$preview":{"width":402,"height":874}}'>
+// iPhone · Viewer (light) → Delete on a photo with 4 identical copies (matched by content hash). Sheet: PH_ServerUpload
+// language; checkboxes are system tint; the destructive button is fill + red text, never a red fill (DESIGN.md).
+const LIGHT = { bg:'#FFFFFF', grouped:'#F2F2F7', card:'#FFFFFF', label:'#000000', label2:'#6C6C70', label3:'#8E8E93',
+  sep:'#C6C6C8', fill:'#E9E9EB', fill2:'#F2F2F7', glass:'rgba(255,255,255,0.78)', glassStroke:'rgba(0,0,0,0.08)',
+  glassShadow:'0 4px 18px rgba(0,0,0,0.12)', tint:'#007AFF', red:'#FF3B30', green:'#34C759', orange:'#FF9500',
+  accent:'#C6730E', dim:'rgba(0,0,0,0.35)', sheet:'#FFFFFF', onAccent:'#FFFFFF', redText:'#C4001A', warnText:'#B35C00' };
+const DARK = { bg:'#000000', grouped:'#000000', card:'#1C1C1E', label:'#FFFFFF', label2:'#98989F', label3:'#6C6C70',
+  sep:'#38383A', fill:'#2C2C2E', fill2:'#1C1C1E', glass:'rgba(44,44,46,0.78)', glassStroke:'rgba(255,255,255,0.10)',
+  glassShadow:'0 4px 18px rgba(0,0,0,0.5)', tint:'#0A84FF', red:'#FF453A', green:'#30D158', orange:'#FF9F0A',
+  accent:'#EB9526', dim:'rgba(0,0,0,0.55)', sheet:'#1C1C1E', onAccent:'#000000', redText:'#FF6961', warnText:'#FF9F0A' };
+const I = {
+  library:'M7.5 6.5h13v11h-13z M4 9.5v11h13 M9.5 15l3-3 2.5 2.5 1.5-1.5 2.5 2.5',
+  folder:'M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z',
+  drive:'M3 14h18v5H3z M3 14l3-9h12l3 9 M17 16.5h.01',
+  server:'M4 4h16v6H4z M4 14h16v6H4z M8 7h.01 M8 17h.01'
+};
+class Component extends DCLogic {
+  renderVals() {
+    const t = this.props.dark ? DARK : LIGHT;
+    const copy=(name,path,sub,d,on,i,warn)=>({ name, path, sub, d, on, off:!on, checked:on?'true':'false', border:i?'0.5px solid '+t.sep:'0',
+      subColor: warn ? t.warnText : t.label2, aria: name+(path?', '+path:'')+', '+sub+(on?', will be removed':', kept') });
+    const copies=[
+      copy('2026 Japan','Day 3 · opened from here','To Recently Deleted in Files',I.folder,true,0),
+      copy('Photos Library','','To Recently Deleted in Photos',I.library,false,1),
+      copy('T7 RAW Archive','RAW/2026/2026-10-04','No Trash: deleted immediately',I.drive,false,2,true),
+      copy('NAS Home (hide)','Photos/2026/Kyoto','Hidden in ShotDex; the file stays',I.server,false,3)
+    ];
+    return { t, copies, sheetTop:'300px', noteTop:'440px', btnTop:'466px' };
+  }
+}
+</script>
+</body>
+</html>

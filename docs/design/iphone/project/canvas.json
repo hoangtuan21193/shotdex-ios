@@ -12,7 +12,7 @@
  "boards": {
   "PH_Onboarding.dc.html": {
    "h": 874,
-   "title": "iPhone · Onboarding: biểu tượng, ShotDex, bốn lời hứa, nút Continue ghim ở đáy",
+   "title": "iPhone · Onboarding: bốn lời hứa (Your photos stay where they are), Next: thêm nguồn, Continue ghim đáy",
    "w": 402,
    "x": 0,
    "y": 560
@@ -26,7 +26,7 @@
   },
   "PH_LibrarySelect.dc.html": {
    "h": 874,
-   "title": "iPhone · Chọn ảnh: 5 ảnh có badge amber, menu ⋯ đang mở, thanh Share/pill/Delete",
+   "title": "iPhone · Chọn ảnh: 5 ảnh badge amber, menu ⋯ mở (có Print…), thanh Share/pill/Delete",
    "w": 402,
    "x": 964,
    "y": 560
@@ -47,7 +47,7 @@
   },
   "PH_Viewer.dc.html": {
    "h": 874,
-   "title": "iPhone · Viewer tối: nút đóng, panel ngày/EXIF có RAW, ảnh ngang, thanh Share·♡ⓘ Edit ⋯·Delete",
+   "title": "iPhone · Viewer theo sáng/tối (mặc định sáng): nút đóng, panel ngày/EXIF, thanh Share·♡ⓘ Edit ⋯·Delete",
    "w": 402,
    "x": 2410,
    "y": 560
@@ -61,7 +61,7 @@
   },
   "PH_Compare.dc.html": {
    "h": 874,
-   "title": "iPhone · Viewer chế độ Compare: 2 ảnh xếp chồng, zoom đồng bộ, Reject · ★ · Pick, Delete 1 Photo",
+   "title": "iPhone · Viewer Compare: 2 ảnh xếp chồng, luôn đồng bộ zoom, Reject · ★ · Pick, Move 1 Photo… (tweak NAS: Hide 1 Photo)",
    "w": 402,
    "x": 3374,
    "y": 560
@@ -82,7 +82,7 @@
   },
   "PH_Collections.dc.html": {
    "h": 874,
-   "title": "iPhone · Collections: hero On This Day 180, hàng cover Smart Albums/My Albums 132, Media Types",
+   "title": "iPhone · Collections: nhóm Sources đầu tab, hero On This Day 180, cover Smart Albums/My Albums 132, Utilities có Hidden",
    "w": 402,
    "x": 4820,
    "y": 560
@@ -187,7 +187,7 @@
   },
   "PH_Settings.dc.html": {
    "h": 874,
-   "title": "iPhone · Cài đặt kiểu Mochi: tiêu đề lớn + phụ đề, Search, thẻ Your library, 4 nhóm hàng có ô icon",
+   "title": "iPhone · Cài đặt kiểu Mochi: thẻ Your library, mục Sources \"4 sources · T7 RAW Archive offline\", 4 nhóm hàng",
    "w": 402,
    "x": 12050,
    "y": 560
@@ -243,7 +243,7 @@
   },
   "PH_ServerBrowser.dc.html": {
    "h": 874,
-   "title": "iPhone · Duyệt thư mục server “Hanoi trip”: ô folder + ảnh có badge RAW/JPG, ‹ › và ⋯",
+   "title": "iPhone · NAS Home › Kyoto là nguồn được index: không còn In Library/Import, ⋯ có Save to Photos, Hide thay Delete",
    "w": 402,
    "x": 15906,
    "y": 560
@@ -355,7 +355,7 @@
   "PH07_Transform.dc.html": {
    "h": 874,
    "radius": 44,
-   "title": "iPhone · Transform — đề xuất: thước trên ảnh = góc xoay (đang −3.2°); panel bỏ slider Angle, Upright thêm một hàng",
+   "title": "iPhone · Crop — đề xuất: thước trên ảnh = góc xoay (đang −3.2°); panel bỏ slider Angle, Upright thêm một hàng",
    "w": 402,
    "x": 3352,
    "y": 2534
@@ -363,7 +363,7 @@
   "PH08_TransformIndex.dc.html": {
    "h": 874,
    "radius": 44,
-   "title": "iPhone · Transform — chạm “CROP ⌃” mở mục lục 4 nhóm, ✓ cam đánh dấu nhóm đang ở, chạm là nhảy",
+   "title": "iPhone · Crop — chạm “CROP ⌃” mở mục lục 4 nhóm, ✓ cam đánh dấu nhóm đang ở, chạm là nhảy",
    "w": 402,
    "x": 3834,
    "y": 2534
@@ -861,6 +861,83 @@
    "h": 874,
    "title": "Media · kéo vào project 9:16 — đích là dải tổng quan: vạch giữa clip 2 và 3 + “+ 0:09.2” — khớp code 4/10",
    "radius": 44
+  },
+  "PH_Sources.dc.html": {
+   "x": 20244,
+   "y": 560,
+   "w": 402,
+   "h": 874,
+   "title": "iPhone · Nguồn: nhóm Sources đầu tab Collections (Photos, 2026 Japan, T7 offline, NAS Home, thẻ EOS_DIGITAL), + Add Source"
+  },
+  "PH_AddSource.dc.html": {
+   "x": 20726,
+   "y": 560,
+   "w": 402,
+   "h": 874,
+   "title": "iPhone · Sheet Add a Source: Photos Library · Folder or Drive · Server, dòng thẻ nhớ, Choose Folder…"
+  },
+  "PH_SettingsSources.dc.html": {
+   "x": 21208,
+   "y": 560,
+   "w": 402,
+   "h": 874,
+   "title": "iPhone · Cài đặt › Sources: 5 nguồn, Add Folder or Drive… / Connect to Server…, Cache Size Limit mặc định 5 GB"
+  },
+  "PH_Ingest.dc.html": {
+   "x": 21690,
+   "y": 560,
+   "w": 402,
+   "h": 874,
+   "title": "iPhone · Nhập từ thẻ: New 812, lưới 4 cột có tick, sheet đích/tên/metadata, Import 811 Photos"
+  },
+  "PH_IngestProgress.dc.html": {
+   "x": 22172,
+   "y": 560,
+   "w": 402,
+   "h": 874,
+   "title": "iPhone · Đang nhập: Copy · Verify · Backup, Pause, Stop Import…"
+  },
+  "PH_Hidden.dc.html": {
+   "x": 22654,
+   "y": 560,
+   "w": 402,
+   "h": 874,
+   "title": "iPhone · Collections › Hidden: 6 Hidden Photos, chọn 2 → Unhide 2 Photos"
+  },
+  "PH_DeletePermanent.dc.html": {
+   "x": 23136,
+   "y": 560,
+   "w": 402,
+   "h": 874,
+   "title": "iPhone · Hộp đỏ thứ hai: Delete 3 Photos Permanently? (T7 không có Thùng rác)"
+  },
+  "PH_DeleteCopies.dc.html": {
+   "x": 23618,
+   "y": 560,
+   "w": 402,
+   "h": 874,
+   "title": "iPhone · Sheet Move 1 Photo?: 4 bản sao có ô đánh dấu, chỉ bật bản đang mở"
+  },
+  "PH_EmptyLibrary.dc.html": {
+   "x": 24100,
+   "y": 560,
+   "w": 402,
+   "h": 874,
+   "title": "iPhone · Thư viện trống: 3 thẻ Photos Library / Folder or Drive / Server, dòng thẻ nhớ"
+  },
+  "PH_LibraryMore.dc.html": {
+   "x": 24582,
+   "y": 560,
+   "w": 402,
+   "h": 874,
+   "title": "iPhone · Menu Filter and sort thêm nhóm View: Grid / List, Go to Date…"
+  },
+  "PH_ViewerMore.dc.html": {
+   "x": 25064,
+   "y": 560,
+   "w": 402,
+   "h": 874,
+   "title": "iPhone · Menu ⋯ Viewer thêm Rotate Counterclockwise / Clockwise, Print…"
   }
  },
  "order": [
@@ -975,7 +1052,18 @@
   "P12_Ratio219.dc.html",
   "P12_Ratio219_Selected.dc.html",
   "P9_Collapsed.dc.html",
-  "MP_P_Drag916.dc.html"
+  "MP_P_Drag916.dc.html",
+  "PH_Sources.dc.html",
+  "PH_AddSource.dc.html",
+  "PH_SettingsSources.dc.html",
+  "PH_Ingest.dc.html",
+  "PH_IngestProgress.dc.html",
+  "PH_Hidden.dc.html",
+  "PH_DeletePermanent.dc.html",
+  "PH_DeleteCopies.dc.html",
+  "PH_EmptyLibrary.dc.html",
+  "PH_LibraryMore.dc.html",
+  "PH_ViewerMore.dc.html"
  ],
  "notes": {
   "sec_app": {

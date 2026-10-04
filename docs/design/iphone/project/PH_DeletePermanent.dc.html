@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>iPhone · Delete Permanently</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0}
+button{font-family:inherit;padding:0;margin:0;cursor:default}
+</style>
+</helmet>
+<div style="width: 402px; height: 874px; position: relative; overflow: hidden; background: {{t.bg}}; color: {{t.label}}; font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', system-ui, sans-serif">
+<!-- DELETE FROM A PLACE WITH NO TRASH — the second, red dialog (FS-19.04 §1, §2; FS-01.08c §6; AC-58).
+     A USB-C drive on iPhone has no Trash. After the ordinary confirmation (Delete 3 Photos?), this second alert comes
+     BEFORE any Photos system prompt; Cancel here → nothing runs, no file is touched. The destructive button is red text,
+     never a filled button; Cancel stays the bold, preferred action. Wording: FS-01.08c §6 (FS-19.04 aligned to it 2026-10-04). -->
+
+<div style="position:absolute;left:0;top:114px;width:402px;display:grid;grid-template-columns:repeat(3, minmax(0, 1fr));gap:2px">
+<sc-for list="{{tiles}}" as="p" hint-placeholder-count="6"><div role="checkbox" aria-checked="{{p.checked}}" aria-label="{{p.label}}" style="position:relative;aspect-ratio:1/1;overflow:hidden;background:{{t.fill2}}">
+<div style="position:absolute;inset:0;background:{{p.bg}};opacity:{{p.op}}"></div>
+<div style="position:absolute;left:4px;top:4px;height:16px;padding:0 5px;border-radius:4px;background:rgba(0,0,0,0.58);color:#FFFFFF;font-size:9px;font-weight:700;line-height:16px">{{p.ft}}</div>
+<div style="position:absolute;left:0;right:0;bottom:0;height:24px;background:linear-gradient(180deg,rgba(0,0,0,0) 0%,rgba(0,0,0,0.55) 100%)"></div><div style="position:absolute;left:6px;right:28px;bottom:4px;color:#FFFFFF;font-size:10px;font-weight:500;line-height:13px;white-space:nowrap;overflow:hidden;font-variant-numeric:tabular-nums">{{p.meta}}</div>
+<sc-if value="{{p.sel}}" hint-placeholder-val="{{false}}"><div style="position:absolute;inset:0;border:3px solid {{t.accent}}"></div><svg width="22" height="22" viewBox="0 0 24 24" style="position:absolute;right:4px;bottom:4px;display:block"><circle cx="12" cy="12" r="11" fill="{{t.accent}}"></circle><path d="M7 12.4l3.3 3.3L17 9" fill="none" stroke="#FFFFFF" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"></path></svg></sc-if>
+<sc-if value="{{p.unsel}}" hint-placeholder-val="{{false}}"><svg width="22" height="22" viewBox="0 0 24 24" style="position:absolute;right:4px;bottom:4px;display:block"><circle cx="12" cy="12" r="10" fill="rgba(0,0,0,0.12)" stroke="#FFFFFF" stroke-width="1.8"></circle></svg></sc-if>
+</div></sc-for>
+</div>
+
+<div style="position:absolute;left:16px;top:62px;width:250px;height:44px;display:flex;flex-direction:column;justify-content:center"><span style="font-size:17px;font-weight:600;line-height:22px">T7 RAW Archive</span><span style="font-size:12px;line-height:16px;color:{{t.label2}}">3 selected · USB-C drive</span></div>
+<button aria-label="Done selecting" style="position:absolute;left:342px;top:62px;width:44px;height:44px;border-radius:22px;background:{{t.glass}};border:1px solid {{t.glassStroke}};box-shadow:{{t.glassShadow}};backdrop-filter:blur(24px) saturate(1.6);-webkit-backdrop-filter:blur(24px) saturate(1.6);box-sizing:border-box;display:flex;align-items:center;justify-content:center;color:{{t.label}}"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" style="display:block"><path d="M6 6l12 12M18 6L6 18"></path></svg></button>
+<button aria-label="Share" style="position:absolute;left:16px;top:782px;width:48px;height:48px;border-radius:24px;background:{{t.glass}};border:1px solid {{t.glassStroke}};box-shadow:{{t.glassShadow}};backdrop-filter:blur(24px) saturate(1.6);-webkit-backdrop-filter:blur(24px) saturate(1.6);display:flex;align-items:center;justify-content:center;color:{{t.label}}"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="display:block"><path d="M12 3v12M8 7l4-4 4 4"></path><path d="M7 10H6a1 1 0 0 0-1 1v9a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-9a1 1 0 0 0-1-1h-1"></path></svg></button>
+<button aria-label="Show Selected (3・77.9MB)" style="position:absolute;left:76px;top:782px;height:48px;padding:0 18px;border-radius:24px;background:{{t.glass}};border:1px solid {{t.glassStroke}};box-shadow:{{t.glassShadow}};backdrop-filter:blur(24px) saturate(1.6);-webkit-backdrop-filter:blur(24px) saturate(1.6);font-size:15px;font-weight:500;color:{{t.label}};white-space:nowrap;font-variant-numeric:tabular-nums">Show Selected (3・77.9MB)</button>
+<button aria-label="Delete" style="position:absolute;left:338px;top:782px;width:48px;height:48px;border-radius:24px;background:{{t.glass}};border:1px solid {{t.glassStroke}};box-shadow:{{t.glassShadow}};backdrop-filter:blur(24px) saturate(1.6);-webkit-backdrop-filter:blur(24px) saturate(1.6);display:flex;align-items:center;justify-content:center;color:{{t.label}}"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="display:block"><path d="M4 7h16M9.5 7V4.5h5V7M6.5 7l1 13h9l1-13M10 11v5.5M14 11v5.5"></path></svg></button>
+<div aria-hidden="true" style="position:absolute;left:0;top:0;width:402px;height:874px;background:{{t.scrim}}"></div>
+<div role="alertdialog" aria-label="Delete 3 Photos Permanently?" style="position:absolute;left:56px;top:300px;width:290px;background:{{t.alert}};border-radius:22px;overflow:hidden;box-shadow:0 16px 50px rgba(0,0,0,0.35);backdrop-filter:blur(30px);-webkit-backdrop-filter:blur(30px)">
+<div style="padding:20px 18px 16px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:6px"><svg width="30" height="30" viewBox="0 0 24 24" aria-hidden="true" style="display:block;margin-bottom:2px"><path d="M10.3 3.9a2 2 0 0 1 3.4 0l8 13.6A2 2 0 0 1 20 20.5H4a2 2 0 0 1-1.7-3z" fill="{{t.red}}"></path><path d="M12 9v5" stroke="#FFFFFF" stroke-width="2.2" stroke-linecap="round"></path><circle cx="12" cy="17" r="1.2" fill="#FFFFFF"></circle></svg><span style="font-size:17px;font-weight:600;line-height:22px">Delete 3 Photos Permanently?</span><span style="font-size:13px;line-height:18px;color:{{t.alertText}}">“T7 RAW Archive” has no Trash. These files and their .xmp sidecars can’t be recovered.</span></div>
+<button style="width:100%;height:48px;border:none;border-top:0.5px solid {{t.alertSep}};background:transparent;color:{{t.redText}};font-size:17px;font-weight:400">Delete Permanently</button>
+<button style="width:100%;height:48px;border:none;border-top:0.5px solid {{t.alertSep}};background:transparent;color:{{t.tint}};font-size:17px;font-weight:600">Cancel</button>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"dark":{"editor":"boolean","default":false},"$preview":{"width":402,"height":874}}'>
+// iPhone · source T7 RAW Archive (USB-C, no Trash), 3 selected, Delete tapped, first confirmation accepted. Tokens + cell: PH_LibrarySelect.dc.html verbatim. 6 NAS Home photos that were
+// Alert: PH22_RawAlert geometry (290 wide, r 22, 48pt buttons), with its light appearance added.
+const LIGHT = { bg:'#FFFFFF', grouped:'#F2F2F7', card:'#FFFFFF', label:'#000000', label2:'#6C6C70', label3:'#8E8E93',
+  sep:'#C6C6C8', fill:'#E9E9EB', fill2:'#F2F2F7', glass:'rgba(255,255,255,0.78)', glassStroke:'rgba(0,0,0,0.08)',
+  glassShadow:'0 4px 18px rgba(0,0,0,0.12)', tint:'#007AFF', red:'#FF3B30', green:'#34C759', orange:'#FF9500',
+  accent:'#C6730E', dim:'rgba(0,0,0,0.35)', sheet:'#FFFFFF', onAccent:'#FFFFFF' };
+const DARK = { bg:'#000000', grouped:'#000000', card:'#1C1C1E', label:'#FFFFFF', label2:'#98989F', label3:'#6C6C70',
+  sep:'#38383A', fill:'#2C2C2E', fill2:'#1C1C1E', glass:'rgba(44,44,46,0.78)', glassStroke:'rgba(255,255,255,0.10)',
+  glassShadow:'0 4px 18px rgba(0,0,0,0.5)', tint:'#0A84FF', red:'#FF453A', green:'#30D158', orange:'#FF9F0A',
+  accent:'#EB9526', dim:'rgba(0,0,0,0.55)', sheet:'#1C1C1E', onAccent:'#000000' };
+const SKIES=[['#5B7FA6','#E8C39E'],['#2E4A6B','#9FB8C9'],['#7A5C8E','#F2A774'],['#3D6B5A','#C9D6A3'],['#8AA9C1','#F4E1C1'],
+ ['#1F3A4D','#D98C5F'],['#4F6D7A','#DDE2C6'],['#6B4E3D','#E2B07A'],['#355C7D','#C06C84'],['#2B5876','#4E4376'],['#A3B18A','#344E41'],['#D4A373','#606C38']];
+const tile=(i)=>{const s=SKIES[i%SKIES.length];return 'linear-gradient(180deg,'+s[0]+' 0%,'+s[1]+' 58%,#2F3B2F 58%,#1E271E 100%)';};
+const META=['ISO 400 · 85mm · f/1.8','ISO 100 · 24mm · f/8','ISO 3200 · 35mm · f/1.4','ISO 200 · 70mm · f/2.8','ISO 800 · 50mm · f/2','ISO 125 · 16mm · f/11'];
+const FT=['RAW','RAW+JPG','RAW','RAW','RAW+JPG','RAW'];
+class Component extends DCLogic {
+  renderVals() {
+    const dark=!!this.props.dark; const t = Object.assign({}, dark ? DARK : LIGHT, dark ?
+      { scrim:'rgba(0,0,0,0.5)', alert:'rgba(44,44,46,0.97)', alertText:'rgba(235,235,245,0.85)', alertSep:'rgba(255,255,255,0.14)', redText:'#FF6961' } :
+      { scrim:'rgba(0,0,0,0.30)', alert:'rgba(242,242,247,0.97)', alertText:'#3C3C43', alertSep:'rgba(60,60,67,0.29)', redText:'#D70015' });
+    const sel=[0,4,7];
+    const tiles=[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17].map(i=>{ const s=sel.indexOf(i)>=0;
+      return { bg:tile(i*7+2), op:s?0.82:1, ft:FT[i%6], meta:META[i%6], sel:s, unsel:!s, checked:s?'true':'false',
+        label:'Photo, '+FT[i%6]+', '+META[i%6]+', on T7 RAW Archive'+(s?', selected':'') }; });
+    return { t, tiles, s:{ cell2: dark ? t.card : t.fill2 } };
+  }
+}
+</script>
+</body>
+</html>

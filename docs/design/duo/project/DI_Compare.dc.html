@@ -107,14 +107,14 @@ class Component extends DCLogic {
     const dark=!!this.props.dark; const t=Object.assign({}, dark?DARK:LIGHT, dark?EXTRA_DARK:EXTRA_LIGHT);
     const panes=[
       photo(t, Object.assign(scene(451,2.5,270,100), { x:'16px', sky:sky(0), role:'Select', roleBg:t.accentFill, roleFg:t.onAccentFill, focus:true,
-        name:'DSC04512.ARW', exif:'Sony A7 IV · 35 mm · f/2.8 · 1/250 s · ISO 400 · 48.2 MB', r:4, f:'p' })),
+        name:'IMG_5884.CR3', exif:'R6 Mark II · 35 mm · f/1.8 · 1/250 s · ISO 400 · 32.1 MB', r:4, f:'p' })),
       photo(t, Object.assign(scene(451,2.5,264,96), { x:'484px', sky:sky(1), role:'Candidate 1 of 3', roleBg:'rgba(0,0,0,0.58)', roleFg:'#FFFFFF', loading:true,
-        name:'DSC04513.ARW', exif:'Sony A7 IV · 35 mm · f/2.8 · 1/200 s · ISO 400 · 49.0 MB', r:0, f:'x' }))
+        name:'IMG_5885.CR3', exif:'R6 Mark II · 35 mm · f/1.8 · 1/200 s · ISO 400 · 31.8 MB', r:0, f:'x' }))
     ];
     const mode=(name,on)=>({ name, on:on?'true':'false', bg:on?t.pressed:'transparent', fg:on?t.label:t.label2, fw:on?'600':'500' });
     const cmenu=menu(t,[['Make Select',ICON.makeSelect],['Share',ICON.share],['Remove from Comparison',ICON.remove],'-',['Keep Only This',ICON.keep,true]]);
     return { t, panes, cmenu, modes:[mode('Single',false), mode('2-Up',true), mode('Survey',false)],
-      title:'4 Photos', subtitle:'Sunday, September 27, 2026 · Nara · 1 picked · 1 rejected', deleteLabel:'Delete 1 Photo' };
+      title:'4 Photos', subtitle:'Sunday, October 4, 2026 · Kyoto · Photos Library · 1 picked · 1 rejected', deleteLabel:'Delete 1 Photo' };
   }
 }
 </script>

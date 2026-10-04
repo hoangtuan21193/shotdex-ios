@@ -85,11 +85,11 @@ class Component extends DCLogic {
   renderVals() {
     const dark=!!this.props.dark; const t=Object.assign({}, dark?DARK:LIGHT, dark?EXTRA_DARK:EXTRA_LIGHT);
     const c=(i,name,ss,r,f,focus)=>photo(t,{ sky:sky(i), name, short:name.slice(0,8), exif:ss, r, f, focus, op:f==='x'?'0.45':'1', role:'Survey' });
-    const cells=[ c(2,'DSC04510.ARW','1/320 s',3,''), c(3,'DSC04511.ARW','1/320 s',0,'x'), c(0,'DSC04512.ARW','1/250 s',4,'p',true),
-      c(1,'DSC04513.ARW','1/200 s',0,'x'), c(4,'DSC04514.ARW','1/250 s',3,'p'), c(5,'DSC04516.ARW','1/160 s',2,'') ];
+    const cells=[ c(2,'IMG_5880.CR3','1/320 s',3,''), c(3,'IMG_5881.CR3','1/320 s',0,'x'), c(0,'IMG_5882.CR3','1/250 s',4,'p',true),
+      c(1,'IMG_5883.CR3','1/200 s',0,'x'), c(4,'IMG_5884.CR3','1/250 s',3,'p'), c(5,'IMG_5886.CR3','1/160 s',2,'') ];
     const mode=(name,on)=>({ name, on:on?'true':'false', bg:on?t.pressed:'transparent', fg:on?t.label:t.label2, fw:on?'600':'500' });
     return { t, cells, modes:[mode('Single',false), mode('2-Up',false), mode('Survey',true)],
-      title:'6 Photos', subtitle:'Sunday, September 27, 2026 · Nara · 2 picked · 2 rejected', deleteLabel:'Delete 2 Photos' };
+      title:'6 Photos', subtitle:'Sunday, October 4, 2026 · Kyoto · 2026 Japan · 2 picked · 2 rejected', deleteLabel:'Move 2 Photos…' };
   }
 }
 </script>

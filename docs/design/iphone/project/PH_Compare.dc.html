@@ -18,7 +18,10 @@ button{font-family:inherit;padding:0;margin:0;cursor:default}
      Select on top, Candidate below, both on screen at once at the same zoom (pinch either, both follow; always synced).
      Swipe the Candidate pane sideways for the next candidate; the Select pane stays put. Each pane: photo, one EXIF line,
      the Cull row [Reject] [5 stars] [Pick]. Reject marks for deletion; Delete N (bottom right, where the Viewer keeps Delete)
-     removes the rejected ones through the system confirmation. Touch and hold a pane: Make Select, Share, Remove from
+     removes the rejected ones. Its label follows where the rejected copies go (08c §5, FS-19.04 §2):
+     Photos only, or a drive with no Trash only → Delete N Photos; any file that goes to Recently Deleted in Files (even mixed)
+     → Move N Photos…; NAS only → Hide N Photos (eye glyph, never the word delete). Here the candidate is a file in the
+     "2026 Japan" folder (On My iPhone), so the button reads Move 1 Photo…; tweak candidateOnNAS shows the Hide case. Touch and hold a pane: Make Select, Share, Remove from
      Comparison, Keep Only This. No Survey on phone: Single and Compare only. -->
 <sc-for list="{{panes}}" as="p" hint-placeholder-count="2">
 <section aria-label="{{p.label}}" style="position:absolute;left:16px;top:{{p.y}};width:370px;height:294px">
@@ -45,10 +48,10 @@ button{font-family:inherit;padding:0;margin:0;cursor:default}
 <!-- BOTTOM, the Viewer's bar: Share · [Make Select | More] · Delete N (glass, red text: destructive but not prominent) -->
 <button aria-label="Share" style="position:absolute;left:20px;top:776px;width:52px;height:52px;border-radius:26px;background:{{t.glass}};border:1px solid {{t.glassStroke}};box-shadow:{{t.glassShadow}};backdrop-filter:blur(24px) saturate(1.6);-webkit-backdrop-filter:blur(24px) saturate(1.6);box-sizing:border-box;color:{{t.label}};display:flex;align-items:center;justify-content:center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="display:block"><path d="M12 3.5v11M8.2 7.2L12 3.5l3.8 3.7"></path><path d="M8.5 10H6.8A1.8 1.8 0 0 0 5 11.8v7.4A1.8 1.8 0 0 0 6.8 21h10.4a1.8 1.8 0 0 0 1.8-1.8v-7.4A1.8 1.8 0 0 0 17.2 10h-1.7"></path></svg></button>
 <div style="position:absolute;left:88px;top:778px;height:48px;border-radius:24px;background:{{t.glass}};border:1px solid {{t.glassStroke}};box-shadow:{{t.glassShadow}};backdrop-filter:blur(24px) saturate(1.6);-webkit-backdrop-filter:blur(24px) saturate(1.6);box-sizing:border-box;padding:0 4px;display:flex;align-items:center;gap:4px"><button aria-label="Make Select" style="width:64px;height:44px;border:none;background:none;color:{{t.label}};display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="display:block"><path d="M7 7h12 M16 4l3 3-3 3 M17 17H5 M8 14l-3 3 3 3"></path></svg><span style="font-size:10px;font-weight:600;line-height:12px;white-space:nowrap">Make Select</span></button><button aria-label="More actions" style="width:44px;height:40px;border:none;background:none;color:{{t.label}};display:flex;align-items:center;justify-content:center"><svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true" style="display:block"><circle cx="5.5" cy="12" r="1.7" fill="currentColor"></circle><circle cx="12" cy="12" r="1.7" fill="currentColor"></circle><circle cx="18.5" cy="12" r="1.7" fill="currentColor"></circle></svg></button></div>
-<button style="position:absolute;right:20px;top:776px;height:52px;border-radius:26px;background:{{t.glass}};border:1px solid {{t.glassStroke}};box-shadow:{{t.glassShadow}};backdrop-filter:blur(24px) saturate(1.6);-webkit-backdrop-filter:blur(24px) saturate(1.6);box-sizing:border-box;padding:0 14px;color:{{t.redText}};display:flex;align-items:center;gap:6px;font-size:15px;font-weight:600;white-space:nowrap;font-variant-numeric:tabular-nums"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="display:block"><path d="M4.5 6.8h15M9.6 6.8V4.4h4.8v2.4M6.6 6.8l.9 13.2h9l.9-13.2M10.2 10.6v6M13.8 10.6v6"></path></svg>{{deleteLabel}}</button>
+<button aria-label="{{deleteLabel}}" style="position:absolute;right:20px;top:776px;height:52px;border-radius:26px;background:{{t.glass}};border:1px solid {{t.glassStroke}};box-shadow:{{t.glassShadow}};backdrop-filter:blur(24px) saturate(1.6);-webkit-backdrop-filter:blur(24px) saturate(1.6);box-sizing:border-box;padding:0 14px;color:{{t.redText}};display:flex;align-items:center;gap:6px;font-size:15px;font-weight:600;white-space:nowrap;font-variant-numeric:tabular-nums"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="display:block"><path d="{{deleteGlyph}}"></path></svg>{{deleteLabel}}</button>
 </div>
 </x-dc>
-<script type="text/x-dc" data-dc-script data-props='{"dark":{"editor":"boolean","default":false},"$preview":{"width":402,"height":874}}'>
+<script type="text/x-dc" data-dc-script data-props='{"dark":{"editor":"boolean","default":false},"candidateOnNAS":{"editor":"boolean","default":false},"$preview":{"width":402,"height":874}}'>
 // iPhone · Viewer in Compare mode. Compare is a mode of the Viewer (Single · Compare on phone), not tier D:
 // it follows light/dark like the Viewer (user decision 2026-10-04). Tokens: iPhone Library board (Main.dc.html) verbatim.
 // Reference: docs/design/ipad/project/IP_Compare.dc.html (2-Up side by side). Phone keeps its own language:
@@ -85,18 +88,20 @@ function photo(t, o){
     zoom:'100%', zoomLabel:'Zoom 100 percent, synced',
     imgLabel:'Photo, '+o.name+', '+words.join(', ')+(o.focus?', focused':''), label:o.role+', '+o.name }, o);
 }
+const TRASH='M4.5 6.8h15M9.6 6.8V4.4h4.8v2.4M6.6 6.8l.9 13.2h9l.9-13.2M10.2 10.6v6M13.8 10.6v6';
+const EYE_SLASH='M2.5 12S6 6 12 6s9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6z M12 9.2a2.8 2.8 0 1 0 0.01 0 M4 20L20 4';
 class Component extends DCLogic {
   renderVals() {
-    const dark=!!this.props.dark; const t=Object.assign({}, dark?DARK:LIGHT, dark?EXTRA_DARK:EXTRA_LIGHT);
+    const dark=!!this.props.dark; const nas=!!this.props.candidateOnNAS; const t=Object.assign({}, dark?DARK:LIGHT, dark?EXTRA_DARK:EXTRA_LIGHT);
     const panes=[
       photo(t, Object.assign(scene(370,2.5,222,50), { y:'134px', sky:sky(0), role:'Select', roleBg:t.accentFill, roleFg:t.onAccentFill, focus:true,
-        name:'DSC04512.ARW', exif:'35 mm · f/2.8 · 1/250 s · ISO 400 · 48.2 MB', r:4, f:'p' })),
+        name:'DSC04512.ARW', exif:'2026 Japan · f/2.8 · 1/250 s · ISO 400', r:4, f:'p' })),
       photo(t, Object.assign(scene(370,2.5,217,47), { y:'440px', sky:sky(1), role:'Candidate 1 of 3', roleBg:'rgba(0,0,0,0.58)', roleFg:'#FFFFFF', loading:true,
-        name:'DSC04513.ARW', exif:'35 mm · f/2.8 · 1/200 s · ISO 400 · 49.0 MB', r:0, f:'x' }))
+        name:'DSC04513.ARW', exif:(nas?'NAS Home':'2026 Japan')+' · f/2.8 · 1/200 s · ISO 400', r:0, f:'x' }))
     ];
     const mode=(name,on)=>({ name, on:on?'true':'false', bg:on?t.pressed:'transparent', fg:on?t.label:t.label2, fw:on?'600':'500' });
     return { t, panes, modes:[mode('Single',false), mode('Compare',true)],
-      title:'4 Photos', subtitle:'1 picked · 1 rejected', deleteLabel:'Delete 1 Photo' };
+      title:'4 Photos', subtitle:'1 picked · 1 rejected', deleteLabel: nas?'Hide 1 Photo':'Move 1 Photo…', deleteGlyph: nas?EYE_SLASH:TRASH };
   }
 }
 </script>

@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>iPhone · Empty Library</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0}
+button{font-family:inherit;padding:0;margin:0;cursor:default}
+</style>
+</helmet>
+<div style="width: 402px; height: 874px; position: relative; overflow: hidden; background: {{t.bg}}; color: {{t.label}}; font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', system-ui, sans-serif">
+<!-- FIRST RUN, AFTER ONBOARDING (FS-09 per FS-21.03 §4, FS-21.02b §3, FS-19.01 §1): Continue lands here, in the real
+     Library tab with no sources yet — not on the Photos permission prompt. Three ways to add a source; the Photos prompt
+     opens only from Add Photos Library…, and its card carries the FS-09 F1 pre-warning. Folder or Drive → Files picker
+     (USB-C drives under Locations); Server → connection form with Add as Source on. No drag-and-drop line on iPhone
+     (no second app on screen, FS-19.01 §1). Memory-card line: FS-20 (the card shows under Collections › Sources).
+     Filter and Select are dimmed, not hidden, while there is nothing to filter or select. -->
+<div style="position:absolute;left:16px;top:124px;font-size:28px;font-weight:700;line-height:34px">Welcome to ShotDex</div>
+<div style="position:absolute;left:16px;top:164px;width:370px;font-size:15px;line-height:20px;color:{{t.label2}}">ShotDex indexes the photos you already have, in Photos, in folders and drives, and on your NAS, so you can find any shot by camera, lens and exposure.</div>
+<div style="position:absolute;left:16px;top:240px;width:370px;display:flex;flex-direction:column;gap:10px">
+<sc-for list="{{cards}}" as="c" hint-placeholder-count="3"><div style="border-radius:16px;background:{{s.cell2}};padding:14px 16px 12px;box-sizing:border-box;display:flex;gap:12px"><span style="width:28px;flex:none;color:{{t.accent}};padding-top:1px"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="display:block"><path d="{{c.d}}"></path></svg></span><div style="flex:1;min-width:0"><div style="font-size:17px;font-weight:600;line-height:22px">{{c.title}}</div><div style="font-size:13px;line-height:18px;color:{{t.label2}};margin-top:2px">{{c.desc}}</div><button style="height:36px;border:0;background:none;color:{{t.tint}};font-size:15px;font-weight:600;margin-top:2px">{{c.action}}</button></div></div></sc-for>
+</div>
+<div style="position:absolute;left:16px;top:{{cardLineTop}};width:370px;display:flex;gap:12px;padding:0 16px;box-sizing:border-box;font-size:13px;line-height:18px;color:{{t.label2}}"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="display:block;flex:none;margin-left:3px;margin-right:5px"><path d="M8 3h7l4 4v13a1 1 0 0 1-1 1H8a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z M10.5 3v4 M13.5 3v4 M16.5 5v2"></path></svg><span>Have a memory card? Connect a card reader or the camera over USB-C to import from it.</span></div>
+<div style="position:absolute;left:16px;top:{{footTop}};width:370px;text-align:center;font-size:13px;line-height:18px;color:{{t.label3}}">Photos stay where they are. ShotDex never edits file contents.</div>
+<!-- Library chrome (Main.dc.html) -->
+<button aria-label="Settings" style="position:absolute;left:16px;top:62px;width:44px;height:44px;border-radius:22px;background:{{t.glass}};border:1px solid {{t.glassStroke}};box-shadow:{{t.glassShadow}};backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);box-sizing:border-box;display:flex;align-items:center;justify-content:center;color:{{t.label}}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="display:block"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg></button>
+<div style="position:absolute;left:72px;top:62px;width:170px;height:44px;display:flex;align-items:center;justify-content:center;font-size:17px;font-weight:600;white-space:nowrap">No photos yet</div>
+<button aria-label="Filter and sort" aria-disabled="true" style="position:absolute;left:252px;top:62px;width:44px;height:44px;border-radius:22px;background:{{t.glass}};border:1px solid {{t.glassStroke}};box-shadow:{{t.glassShadow}};box-sizing:border-box;display:flex;align-items:center;justify-content:center;color:{{t.label}};opacity:0.35"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="display:block"><path d="M4 7h16M7 12h10M10 17h4"></path></svg></button>
+<button aria-disabled="true" style="position:absolute;left:308px;top:62px;width:78px;height:44px;border-radius:22px;background:{{t.glass}};border:1px solid {{t.glassStroke}};box-shadow:{{t.glassShadow}};box-sizing:border-box;color:{{t.label}};font-size:17px;font-weight:500;opacity:0.35">Select</button>
+<div style="position:absolute;left:20px;top:778px;width:290px;height:62px;border-radius:31px;background:{{t.glass}};border:1px solid {{t.glassStroke}};box-shadow:{{t.glassShadow}};backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px)"></div>
+<div style="position:absolute;left:24px;top:782px;width:88.7px;height:54px;border-radius:27px;background:{{t.fill}}"></div>
+<button style="position:absolute;left:20px;top:778px;width:96.7px;height:62px;border:0;background:none;display:flex;flex-direction:column;align-items:center;justify-content:center;color:{{t.tint}}"><svg viewBox="0 0 24 24" style="width:22px;height:22px;flex:none" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M7.5 6.5h13v11h-13z M4 9.5v11h13 M9.5 15l3-3 2.5 2.5 1.5-1.5 2.5 2.5"></path></svg><span style="font-size:10px;font-weight:500;margin-top:3px">Library</span></button>
+<button style="position:absolute;left:116.7px;top:778px;width:96.7px;height:62px;border:0;background:none;display:flex;flex-direction:column;align-items:center;justify-content:center;color:{{t.label}}"><svg viewBox="0 0 24 24" style="width:22px;height:22px;flex:none" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M5 9.5h14v10.5H5z M7 6.5h10 M9 3.5h6"></path></svg><span style="font-size:10px;font-weight:500;margin-top:3px">Collections</span></button>
+<button style="position:absolute;left:213.3px;top:778px;width:96.7px;height:62px;border:0;background:none;display:flex;flex-direction:column;align-items:center;justify-content:center;color:{{t.label}}"><svg viewBox="0 0 24 24" style="width:22px;height:22px;flex:none" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h16 M7 17v-5 M12 17V7 M17 17v-8"></path></svg><span style="font-size:10px;font-weight:500;margin-top:3px">Statistics</span></button>
+<button aria-label="Search" style="position:absolute;left:320px;top:778px;width:62px;height:62px;border-radius:31px;background:{{t.glass}};border:1px solid {{t.glassStroke}};box-shadow:{{t.glassShadow}};backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);box-sizing:border-box;display:flex;align-items:center;justify-content:center;color:{{t.label}}"><svg viewBox="0 0 24 24" style="width:22px;height:22px;flex:none" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M10.5 4a6.5 6.5 0 1 0 0 13a6.5 6.5 0 1 0 0-13z M15.5 15.5L20 20"></path></svg></button>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"dark":{"editor":"boolean","default":false},"$preview":{"width":402,"height":874}}'>
+// iPhone · Library, first run, no sources. Copy: IP_EmptyLibrary with "iPadOS" → "iOS" and no drop zone. Tokens: Main.dc.html.
+// Card glyphs are accent like PH_Onboarding (ShotDex-drawn welcome content); actions are system tint text buttons.
+const LIGHT = { bg:'#FFFFFF', grouped:'#F2F2F7', card:'#FFFFFF', label:'#000000', label2:'#6C6C70', label3:'#8E8E93',
+  sep:'#C6C6C8', fill:'#E9E9EB', fill2:'#F2F2F7', glass:'rgba(255,255,255,0.78)', glassStroke:'rgba(0,0,0,0.08)',
+  glassShadow:'0 4px 18px rgba(0,0,0,0.12)', tint:'#007AFF', red:'#FF3B30', green:'#34C759', orange:'#FF9500',
+  accent:'#C6730E', dim:'rgba(0,0,0,0.35)', sheet:'#FFFFFF', onAccent:'#FFFFFF' };
+const DARK = { bg:'#000000', grouped:'#000000', card:'#1C1C1E', label:'#FFFFFF', label2:'#98989F', label3:'#6C6C70',
+  sep:'#38383A', fill:'#2C2C2E', fill2:'#1C1C1E', glass:'rgba(44,44,46,0.78)', glassStroke:'rgba(255,255,255,0.10)',
+  glassShadow:'0 4px 18px rgba(0,0,0,0.5)', tint:'#0A84FF', red:'#FF453A', green:'#30D158', orange:'#FF9F0A',
+  accent:'#EB9526', dim:'rgba(0,0,0,0.55)', sheet:'#1C1C1E', onAccent:'#000000' };
+class Component extends DCLogic {
+  renderVals() {
+    const dark=!!this.props.dark; const t = dark ? DARK : LIGHT;
+    const cards=[
+      { title:'Photos Library', action:'Add Photos Library…', d:'M7.5 6.5h13v11h-13z M4 9.5v11h13 M9.5 15l3-3 2.5 2.5 1.5-1.5 2.5 2.5',
+        desc:'Your Photos library, iCloud Photos included. iOS asks for access next — choose Allow Full Access.' },
+      { title:'Folder or Drive', action:'Add Folder or Drive…', d:'M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z',
+        desc:'A folder in Files, or an external drive or SSD over USB-C, read in place.' },
+      { title:'Server', action:'Connect to Server…', d:'M4 4h16v6H4z M4 14h16v6H4z M8 7h.01 M8 17h.01',
+        desc:'An SMB, SFTP or WebDAV share on a NAS, indexed like a folder.' }
+    ];
+    return { t, cards, s:{ cell2: dark ? t.card : t.fill2 }, cardLineTop:'658px', footTop:'712px' };
+  }
+}
+</script>
+</body>
+</html>

@@ -40,7 +40,7 @@
   },
   "DI_Viewer.dc.html": {
    "h": 669,
-   "title": "Duo mở · Viewer tối toàn màn hình (không có rail), panel EXIF trên, thanh hành động dưới",
+   "title": "Duo mở · Viewer theo sáng/tối (vẽ sáng, tối qua tweak), panel EXIF trên, thanh hành động",
    "w": 951,
    "x": 5155,
    "y": 560
@@ -54,7 +54,7 @@
   },
   "DI_Compare.dc.html": {
    "h": 669,
-   "title": "Duo mở · Viewer 2-Up: Select | Candidate, zoom đồng bộ, Reject · ★ · Pick",
+   "title": "Duo mở · Viewer 2-Up: luôn đồng bộ zoom, Reject · ★ · Pick, Delete 1 Photo",
    "w": 951,
    "x": 7217,
    "y": 560
@@ -180,7 +180,7 @@
   },
   "DI_Settings.dc.html": {
    "h": 669,
-   "title": "Duo mở · Cài đặt split view: sidebar ô icon 28 + pane Photo Library kiểu hàng mới trên màn 669",
+   "title": "Duo mở · Cài đặt split view: sidebar ô icon 28 + pane Sources (5 nguồn, Add Folder or Drive…, Connect to Server…)",
    "w": 951,
    "x": 26806,
    "y": 560
@@ -236,7 +236,7 @@
   },
   "DI_ServerBrowser.dc.html": {
    "h": 669,
-   "title": "Duo mở · Duyệt thư mục server lưới 7 cột, rail tab bên phải",
+   "title": "Duo mở · NAS Home là nguồn được index: lưới 7 cột, Rescan, Upload, không còn In Library",
    "w": 951,
    "x": 35054,
    "y": 560
@@ -292,7 +292,7 @@
   },
   "DC_Viewer.dc.html": {
    "h": 678,
-   "title": "Duo màn ngoài · Viewer: chrome trong 382pt, ảnh tràn dưới dải hệ thống 84pt",
+   "title": "Duo màn ngoài · Viewer theo sáng/tối: chrome trong 382pt",
    "w": 466,
    "x": 2730,
    "y": 1609
@@ -306,7 +306,7 @@
   },
   "DC_Compare.dc.html": {
    "h": 678,
-   "title": "Duo màn ngoài · Viewer Compare xếp chồng trong 382pt",
+   "title": "Duo màn ngoài · Viewer Compare xếp chồng trong 382pt, Hide 1 Photo (NAS)",
    "w": 466,
    "x": 3822,
    "y": 1609
@@ -432,7 +432,7 @@
   },
   "DC_Settings.dc.html": {
    "h": 678,
-   "title": "Duo màn ngoài · Cài đặt kiểu Mochi trong 382pt: thẻ Your library, hàng ô icon 36, dải phải trống",
+   "title": "Duo màn ngoài · Cài đặt kiểu Mochi trong 382pt: thẻ Your library, hàng Sources \"Photos, 3 folders, 1 server\"",
    "w": 466,
    "x": 13650,
    "y": 1609
@@ -488,7 +488,7 @@
   },
   "DC_ServerBrowser.dc.html": {
    "h": 678,
-   "title": "Duo màn ngoài · Duyệt thư mục server 3 cột, badge định dạng và dấu In Library",
+   "title": "Duo màn ngoài · NAS Home là nguồn được index: 3 cột, Rescan",
    "w": 466,
    "x": 18018,
    "y": 1609
@@ -1283,7 +1283,147 @@
    "y": 560,
    "w": 951,
    "h": 669,
-   "title": "Duo mở · Viewer Survey: 6 ảnh 3×2, Rejected mờ, Delete 2 Photos"
+   "title": "Duo mở · Viewer Survey: 6 ảnh 3×2, Rejected mờ, Move 2 Photos… (2026 Japan)"
+  },
+  "DI_Sources.dc.html": {
+   "x": 43302,
+   "y": 560,
+   "w": 951,
+   "h": 669,
+   "title": "Duo mở · Nguồn: nhóm Sources đầu tab Collections, 6 thẻ (Photos, thư mục, T7 offline, NAS, cần quyền, thẻ EOS_DIGITAL), + Add Source"
+  },
+  "DC_Sources.dc.html": {
+   "x": 22386,
+   "y": 1609,
+   "w": 466,
+   "h": 678,
+   "title": "Duo màn ngoài · Nguồn: danh sách 6 hàng trong 350pt"
+  },
+  "DI_AddSource.dc.html": {
+   "x": 44333,
+   "y": 560,
+   "w": 951,
+   "h": 669,
+   "title": "Duo mở · Add a Source: Photos Library · Folder or Drive · Server, Choose Folder…"
+  },
+  "DC_AddSource.dc.html": {
+   "x": 22932,
+   "y": 1609,
+   "w": 466,
+   "h": 678,
+   "title": "Duo màn ngoài · Add a Source: 3 lựa chọn, Choose Folder…"
+  },
+  "DI_SettingsSources.dc.html": {
+   "x": 45364,
+   "y": 560,
+   "w": 951,
+   "h": 669,
+   "title": "Duo mở · Cài đặt › Sources cuộn: Drives and Indexing, Previews (Cache Size Limit 5 GB)"
+  },
+  "DC_SettingsSources.dc.html": {
+   "x": 23478,
+   "y": 1609,
+   "w": 466,
+   "h": 678,
+   "title": "Duo màn ngoài · Cài đặt › Sources cuộn: Previews, Cache Size Limit 5 GB"
+  },
+  "DI_Ingest.dc.html": {
+   "x": 46395,
+   "y": 560,
+   "w": 951,
+   "h": 669,
+   "title": "Duo mở · Nhập từ thẻ: All/New, nhóm theo ngày, ô tick/Imported, Options, Import 811 Photos"
+  },
+  "DC_Ingest.dc.html": {
+   "x": 24024,
+   "y": 1609,
+   "w": 466,
+   "h": 678,
+   "title": "Duo màn ngoài · Nhập từ thẻ: lưới tick, thanh tóm tắt, Import 811 Photos"
+  },
+  "DI_IngestProgress.dc.html": {
+   "x": 47426,
+   "y": 560,
+   "w": 951,
+   "h": 669,
+   "title": "Duo mở · Đang nhập 51%: Copy/Verify/Backup, Pause, Stop Import…"
+  },
+  "DI_Hidden.dc.html": {
+   "x": 48457,
+   "y": 560,
+   "w": 951,
+   "h": 669,
+   "title": "Duo mở · Collections › Hidden: 6 Hidden Photos"
+  },
+  "DC_Hidden.dc.html": {
+   "x": 24570,
+   "y": 1609,
+   "w": 466,
+   "h": 678,
+   "title": "Duo màn ngoài · Collections › Hidden: 6 Hidden Photos"
+  },
+  "DI_DeletePermanent.dc.html": {
+   "x": 49488,
+   "y": 560,
+   "w": 951,
+   "h": 669,
+   "title": "Duo mở · Hộp đỏ thứ hai: Delete 12 Photos Permanently? (T7 không có Thùng rác)"
+  },
+  "DC_DeletePermanent.dc.html": {
+   "x": 25116,
+   "y": 1609,
+   "w": 466,
+   "h": 678,
+   "title": "Duo màn ngoài · Hộp đỏ thứ hai: Delete 12 Photos Permanently?"
+  },
+  "DI_DeleteCopies.dc.html": {
+   "x": 50519,
+   "y": 560,
+   "w": 951,
+   "h": 669,
+   "title": "Duo mở · Xoá từ All Photos: Move 1 Photo?, 3 bản sao có ô tick, chỉ tick bản đang mở"
+  },
+  "DI_EmptyLibrary.dc.html": {
+   "x": 51550,
+   "y": 560,
+   "w": 951,
+   "h": 669,
+   "title": "Duo mở · Thư viện trống: 3 cách thêm nguồn, vùng kéo thả, dòng thẻ nhớ"
+  },
+  "DC_EmptyLibrary.dc.html": {
+   "x": 25662,
+   "y": 1609,
+   "w": 466,
+   "h": 678,
+   "title": "Duo màn ngoài · Thư viện trống: 3 cách thêm nguồn"
+  },
+  "DI_MoreMenus.dc.html": {
+   "x": 52581,
+   "y": 560,
+   "w": 951,
+   "h": 669,
+   "title": "Duo mở · Menu ⋯ mới: Library (Grid/List, Go to Date…) và Viewer (Rotate, Print…)"
+  },
+  "DI_MoreMenus2.dc.html": {
+   "x": 53612,
+   "y": 560,
+   "w": 951,
+   "h": 669,
+   "title": "Duo mở · Menu ⋯ mới: Duplicates (Keep All 5 Photos) và thẻ Statistics (Donut/Bars)"
+  },
+  "DC_MoreMenus.dc.html": {
+   "x": 26208,
+   "y": 1609,
+   "w": 466,
+   "h": 678,
+   "title": "Duo màn ngoài · Menu ⋯ Viewer đầy đủ, trong x ≤ 366"
+  },
+  "DC_MoreMenus2.dc.html": {
+   "x": 26754,
+   "y": 1609,
+   "w": 466,
+   "h": 678,
+   "title": "Duo màn ngoài · Menu ⋯ mới: Library, Duplicates, Statistics"
   }
  },
  "order": [
@@ -1463,7 +1603,27 @@
   "DC_Export.dc.html",
   "F7_DC_BeforeAfter.dc.html",
   "F6_DC_PreciseTrim.dc.html",
-  "F6_DC_Keyboard.dc.html"
+  "F6_DC_Keyboard.dc.html",
+  "DI_Sources.dc.html",
+  "DC_Sources.dc.html",
+  "DI_AddSource.dc.html",
+  "DC_AddSource.dc.html",
+  "DI_SettingsSources.dc.html",
+  "DC_SettingsSources.dc.html",
+  "DI_Ingest.dc.html",
+  "DC_Ingest.dc.html",
+  "DI_IngestProgress.dc.html",
+  "DI_Hidden.dc.html",
+  "DC_Hidden.dc.html",
+  "DI_DeletePermanent.dc.html",
+  "DC_DeletePermanent.dc.html",
+  "DI_DeleteCopies.dc.html",
+  "DI_EmptyLibrary.dc.html",
+  "DC_EmptyLibrary.dc.html",
+  "DI_MoreMenus.dc.html",
+  "DI_MoreMenus2.dc.html",
+  "DC_MoreMenus.dc.html",
+  "DC_MoreMenus2.dc.html"
  ],
  "notes": {
   "sec_app": {
