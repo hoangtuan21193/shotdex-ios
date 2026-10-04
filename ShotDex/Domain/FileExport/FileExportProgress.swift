@@ -40,8 +40,12 @@ struct FileExportProgress: Sendable, Equatable {
 
     /// `1.4 of 3.2 GB · about 4 min left`.
     var detail: String {
-        let written = ByteCountFormatter.string(fromByteCount: bytesWritten, countStyle: .file)
-        let all = ByteCountFormatter.string(fromByteCount: max(totalBytes, bytesWritten), countStyle: .file)
+        let formatter = ByteCountFormatter()
+        formatter.countStyle = .file
+        // "0 KB", never "Zero KB".
+        formatter.allowsNonnumericFormatting = false
+        let written = formatter.string(fromByteCount: bytesWritten)
+        let all = formatter.string(fromByteCount: max(totalBytes, bytesWritten))
         var line = ExportCopy.bytesOf(written, all)
         if let seconds = rate.secondsLeft(total: max(totalBytes, bytesWritten)) {
             line += " · " + ExportCopy.timeLeft(seconds)
