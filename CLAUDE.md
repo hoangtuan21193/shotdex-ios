@@ -75,6 +75,25 @@ number instead of an adjective. A run takes three to six minutes, so script
 the whole route to a screen in one go. Artifacts come back through the result
 bundle because the test itself runs inside the simulator.
 
+```bash
+# Render Design-canvas artboards to 1x PNG + element frames, and diff a board against a ui-drive dump
+Tools/design-board render docs/design/ipad/project/IP1_Edit.dc.html -o build/design/render   # --dark for the dark tweak
+Tools/design-board compare build/design/render/IP1_Edit.json <ui-drive-out>/IP1_Edit.json
+```
+
+**Design canvases — one per device, kept in git** (the design artifact code must match — CLAUDE global rule).
+`docs/design/<iphone|ipad|duo|mac>/project/` holds every board (`.dc.html`) and the canvas index; it is the
+source of truth, the artifact is the view people comment on. Index, links and working rules:
+[`docs/design/README.md`](docs/design/README.md). iPhone <https://claude.ai/artifact/QUTRUQGqpZLLWe4VNg2REY>
+(app `PH_*`, entry `Main` = Library · editor `PH01…PH37` · Video Studio `P*`/`*_P_*`) · iPad
+<https://claude.ai/artifact/WSuCW14jrZWQFiJKJtwx6j> (app `IP_*`, `Main` = Library · editor `IP*`/`IPP*` · Video
+Studio `IL*`/`IP1…`/`*_IL_*`/`*_IP_*`) · Duo <https://claude.ai/artifact/N91F3p5AZWgSQiMWVtZYrL> (inner `DI*`/`DIP*`,
+cover `DC*`, `Main` = Library inner) · Mac <https://claude.ai/artifact/HEj8sG21jAEWd7Mgvuyxgj> (`Main` = Library
+window, `MAC_*`; brief `docs/design/mac/MAC_STYLE.md`; intent `docs/_intents/2026-10-04-macos-app.md`). Light/dark
+via each board's `dark` tweak. Edit boards in the repo, publish to the matching canvas, commit; before editing,
+read the files back from the canvas — the user may have edited or commented there. The three older canvases
+(App Screens, Photo Editor, Video Studio) were merged into these on 2026-10-04.
+
 ## Architecture
 
 Layered, composition root at `ShotDex/App/AppDependencies.swift` — built once in `ShotDexApp`, injected via SwiftUI environment (`@Observable` + `.environment`). No singletons except `AppDatabase.makeShared()`.
@@ -123,6 +142,7 @@ Layered, composition root at `ShotDex/App/AppDependencies.swift` — built once 
   - `/new-screen <Name> [tier]` — scaffold `Features/<Name>/` the way the codebase expects.
 - **Review agents live in `.claude/agents/`** — run the one that matches the work and act on its findings rather than re-deriving them:
   - `hig-components` — standard-iOS surfaces against Apple's HIG *Components* pages (fetches the page, never quotes from memory). Toolbars, menus, sheets, alerts, pickers, lists. Tier D is exempt except for target sizes, clipped text, accessibility labels, unconfirmed destructive actions and controls that misstate their state.
+  - `design-parity` — **the app against its Design canvas, board by board**: drives the sim to the state a board draws, `Tools/design-board compare` on the dump (missing / extra / off > 2pt), then eyes on both PNGs. Reports only; the caller fixes and re-runs it until every board passes. Run after any UI change that has an artboard.
   - `device-layout` — **looks at the screen on each device it ships to** (iPhone, iPad, Duo inner and cover): builds, installs, screenshots, measures the controls it thinks are wrong. The one that catches chrome left at phone size on a 13" display. (Absorbed the old `ipad-expert`, which reviewed the same ground from source only.)
   - `component-consistency` — one concept, two implementations: an Add button that is a `+` here and a word there, two spinners, four corner radii. Sweeps every call site rather than sampling.
   - `copy-consistency` — user-visible strings: one action under two names, errors with no next step, jargon (`asset`, `recipe`) leaking on screen, title vs sentence case.

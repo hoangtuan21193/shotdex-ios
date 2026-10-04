@@ -1,0 +1,195 @@
+#!/usr/bin/env python3
+"""Turn a Design-canvas artboard into something a screenshot can be held against.
+
+    Tools/design-board render <board.dc.html>... [-o out-dir]
+    Tools/design-board compare <design.json> <app-dump.json> [--tolerance 2] [--offset-y N]
+
+`render` writes, per artboard, `<name>.png` at 1x (one CSS px = one pt, the
+canvas draws in points) and `<name>.json`: every labelled element and every
+text leaf with its frame, in the same shape as a `Tools/ui-drive` dump
+(`type`, `label`, `x`, `y`, `width`, `height`). Width and height come from the
+board's entry in the `canvas.json` beside it.
+
+`compare` matches the two dumps by label (case-insensitive, exact first, then
+prefix) and prints, for every element the design names, whether the app has
+it and how far its frame is off. Anything beyond the tolerance is a finding;
+the exit code is the number of findings (capped at 100), so 0 means the
+chrome matches. It compares chrome, not content: the board's sample photo and
+slider values are not the app's, so text leaves without an aria-label are
+reported as missing only when `--text` is passed.
+
+The boards live in the repo, one canvas per device:
+`docs/design/<iphone|ipad|duo|mac>/project/*.dc.html` plus its `canvas.json`
+(see docs/design/README.md). Render them in place; `--dark` turns on a board's
+dark tweak.
+
+Rendering uses WebKit through Tools/lib/design-board-render.swift, compiled
+once into build/tools/ (rebuilt when the source is newer).
+"""
+import argparse, json, pathlib, re, shutil, subprocess, sys, tempfile
+
+ROOT = pathlib.Path(__file__).resolve().parent.parent
+RENDER_SRC = ROOT / "Tools/lib/design-board-render.swift"
+RENDER_BIN = ROOT / "build/tools/design-board-render"
+# The canvas runtime (`./support.js`) only exists on claude.ai; this stand-in
+# runs renderVals() and expands <sc-for>/<sc-if>/{{holes}} so a board renders
+# from the repo as it does on the canvas.
+SUPPORT_SHIM = ROOT / "Tools/lib/design-board-support.js"
+
+# Evaluated in the board after layout: every element a person or VoiceOver can
+# name, plus every leaf that carries text, with its frame relative to the
+# board's root (the first element child of <x-dc> that is not <helmet>).
+PROBE = r"""
+(() => {
+  const host = document.querySelector('x-dc') || document.body;
+  const root = [...host.children].find(e => e.tagName !== 'HELMET') || host;
+  const o = root.getBoundingClientRect();
+  const out = [];
+  const typeOf = e => {
+    const t = e.tagName.toLowerCase();
+    if (t === 'button' || e.getAttribute('role') === 'button') return 'button';
+    if (t === 'input') return e.type === 'range' ? 'slider' : 'textField';
+    if (t === 'svg' || t === 'img') return 'image';
+    if (t === 'nav') return 'group';
+    return 'other';
+  };
+  for (const e of root.querySelectorAll('*')) {
+    if (e.closest('[aria-hidden="true"]')) continue;
+    const r = e.getBoundingClientRect();
+    if (r.width <= 0 || r.height <= 0) continue;
+    const aria = e.getAttribute('aria-label');
+    const isControl = ['BUTTON', 'INPUT', 'A'].includes(e.tagName);
+    const leafText = !e.children.length ? (e.textContent || '').trim() : '';
+    let label = aria || '';
+    if (!label && isControl) label = (e.innerText || '').trim().replace(/\s+/g, ' ');
+    if (!label && !leafText) continue;
+    if (!aria && !isControl && e.closest('button,a')) continue;
+    out.push({ type: label ? typeOf(e) : 'staticText', label: label || leafText,
+      identifier: '', x: +(r.left - o.left).toFixed(1), y: +(r.top - o.top).toFixed(1),
+      width: +r.width.toFixed(1), height: +r.height.toFixed(1), fromAria: !!aria });
+  }
+  return JSON.stringify(out);
+})()
+"""
+
+
+def renderer() -> pathlib.Path:
+    if not RENDER_BIN.exists() or RENDER_BIN.stat().st_mtime < RENDER_SRC.stat().st_mtime:
+        RENDER_BIN.parent.mkdir(parents=True, exist_ok=True)
+        subprocess.run(["swiftc", "-O", str(RENDER_SRC), "-o", str(RENDER_BIN)], check=True)
+    return RENDER_BIN
+
+
+def board_size(board: pathlib.Path) -> tuple[int, int]:
+    index = board.parent / "canvas.json"
+    if index.exists():
+        entry = json.loads(index.read_text()).get("boards", {}).get(board.name)
+        if entry:
+            return int(entry["w"]), int(entry["h"])
+    m = re.search(r'"\$preview"\s*:\s*\{\s*"width"\s*:\s*(\d+)\s*,\s*"height"\s*:\s*(\d+)', board.read_text())
+    if m:
+        return int(m.group(1)), int(m.group(2))
+    sys.exit(f"{board.name}: no size in canvas.json or $preview")
+
+
+def render(boards: list[pathlib.Path], out: pathlib.Path, dark: bool = False) -> int:
+    out.mkdir(parents=True, exist_ok=True)
+    binary = renderer()
+    failures = 0
+    with tempfile.NamedTemporaryFile("w", suffix=".js", delete=False) as js:
+        js.write(PROBE)
+    stage = pathlib.Path(tempfile.mkdtemp(prefix="design-board-"))
+    shutil.copy(SUPPORT_SHIM, stage / "support.js")
+    for board in boards:
+        name = board.name.removesuffix(".dc.html")
+        w, h = board_size(board)
+        html = board.read_text()
+        if dark:
+            html = html.replace('<script src="./support.js"></script>',
+                                '<script>window.__DC_PROPS={dark:true}</script>\n<script src="./support.js"></script>', 1)
+        staged = stage / board.name
+        staged.write_text(html)
+        png, frames_path = out / f"{name}.png", out / f"{name}.json"
+        try:
+            run = subprocess.run([str(binary), str(staged), str(w), str(h), str(png), str(frames_path), js.name],
+                                 capture_output=True, text=True, timeout=60)
+            err = run.stderr.strip()
+        except subprocess.TimeoutExpired:
+            err = "timed out"
+        if png.exists():
+            # A Retina Mac snapshots at 2x; the comparison wants points.
+            subprocess.run(["sips", "--resampleHeightWidth", str(h), str(w), str(png)], capture_output=True)
+        frames = json.loads(frames_path.read_text()) if frames_path.exists() else None
+        ok = png.exists() and frames is not None
+        failures += not ok
+        print(f"{'ok  ' if ok else 'FAIL'} {name}  {w}x{h}  {len(frames or [])} elements{'  ' + err if err and not ok else ''}")
+    shutil.rmtree(stage, ignore_errors=True)
+    return 1 if failures else 0
+
+
+def norm(s: str) -> str:
+    return re.sub(r"\s+", " ", (s or "").strip().lower())
+
+
+def compare(design_path: str, app_path: str, tol: float, dy: float, text: bool) -> int:
+    design = json.loads(pathlib.Path(design_path).read_text())
+    app = json.loads(pathlib.Path(app_path).read_text())
+    for e in app:
+        e["y"] = e["y"] + dy
+    by_label: dict[str, list[dict]] = {}
+    for e in app:
+        for key in {norm(e.get("label", "")), norm(e.get("identifier", ""))} - {""}:
+            by_label.setdefault(key, []).append(e)
+    used: set[int] = set()
+    findings = []
+    checked = 0
+    for d in design:
+        if not d.get("fromAria") and d["type"] == "staticText" and not text:
+            continue
+        key = norm(d["label"])
+        pool = by_label.get(key) or [e for k, v in by_label.items() if k.startswith(key) or key.startswith(k) for e in v]
+        pool = [e for e in pool if id(e) not in used]
+        checked += 1
+        if not pool:
+            findings.append(f"MISSING  {d['type']:<10} {d['label']!r} at {d['x']:.0f},{d['y']:.0f} {d['width']:.0f}x{d['height']:.0f}")
+            continue
+        best = min(pool, key=lambda e: abs(e["x"] - d["x"]) + abs(e["y"] - d["y"]))
+        used.add(id(best))
+        deltas = {k: best[k] - d[k] for k in ("x", "y", "width", "height")}
+        off = {k: v for k, v in deltas.items() if abs(v) > tol}
+        if off:
+            parts = " ".join(f"{k[0] if k in 'xy' else k[0]}{v:+.0f}" for k, v in off.items())
+            findings.append(f"OFF      {d['type']:<10} {d['label']!r}: design {d['x']:.0f},{d['y']:.0f} {d['width']:.0f}x{d['height']:.0f}"
+                            f"  app {best['x']:.0f},{best['y']:.0f} {best['width']:.0f}x{best['height']:.0f}  ({parts})")
+    extras = [e for e in app if id(e) not in used and e.get("type") == "button" and e.get("label")
+              and not any(norm(e["label"]) == norm(d["label"]) for d in design)]
+    for e in extras:
+        findings.append(f"EXTRA    button     {e['label']!r} at {e['x']:.0f},{e['y']:.0f} {e['width']:.0f}x{e['height']:.0f} (not on the board)")
+    for f in findings:
+        print(f)
+    print(f"\n{checked} design elements checked, {len(findings)} findings (tolerance {tol}pt)")
+    return min(len(findings), 100)
+
+
+def main() -> int:
+    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    sub = ap.add_subparsers(dest="cmd", required=True)
+    r = sub.add_parser("render")
+    r.add_argument("boards", nargs="+", type=pathlib.Path)
+    r.add_argument("-o", "--out", type=pathlib.Path, default=pathlib.Path("build/design/render"))
+    r.add_argument("--dark", action="store_true", help="render with the board's dark tweak on")
+    c = sub.add_parser("compare")
+    c.add_argument("design")
+    c.add_argument("app")
+    c.add_argument("--tolerance", type=float, default=2.0)
+    c.add_argument("--offset-y", type=float, default=0.0,
+                   help="added to every app y, for a dump whose origin is not the board's")
+    c.add_argument("--text", action="store_true", help="also require the board's plain text leaves")
+    a = ap.parse_args()
+    if a.cmd == "render":
+        return render(a.boards, a.out, a.dark)
+    return compare(a.design, a.app, a.tolerance, a.offset_y, a.text)
+
+
+if __name__ == "__main__":
+    sys.exit(main())
