@@ -63,6 +63,8 @@ struct VideoStudioSheetHost: View {
                 VideoMediaPanel(model: model)
             } else if showsIdleLook, model.inspectorTarget == .none, model.activeToolPanel == nil {
                 idleLook
+            } else if model.inspectorTarget == .none, model.activeToolPanel == .look {
+                lookToolPanel
             } else if model.inspectorTarget == .none, model.activeToolPanel == .music, let importedMusic {
                 musicPanel(importedMusic)
             } else if model.inspectorTarget == .none, model.activeToolPanel == .media {
@@ -130,36 +132,72 @@ struct VideoStudioSheetHost: View {
     /// was opened, so there is no session to end — each change is its own
     /// undo step.
     private var idleLook: some View {
-        ScrollView(showsIndicators: false) {
-            VStack(spacing: 0) {
-                HStack(spacing: 8) {
-                    RoundedRectangle(cornerRadius: 7, style: .continuous)
-                        .fill(Color.white.opacity(0.08))
-                        .frame(width: 24, height: 24)
-                        .overlay {
-                            Image(systemName: VideoToolPanel.look.systemImage)
-                                .font(.system(size: 12, weight: .medium))
-                                .foregroundStyle(.white.opacity(0.8))
-                        }
-                    Text(VideoStudioCopy.look)
-                        .font(.system(size: 14.5, weight: .semibold))
-                        .foregroundStyle(.white)
-                    Text(VideoStudioCopy.wholeVideo)
-                        .font(.system(size: 11, design: .monospaced))
-                        .foregroundStyle(.white.opacity(0.35))
-                    Spacer(minLength: 0)
-                    ForEach(idleTools) { tool in
-                        idleToolButton(tool)
-                    }
-                }
-                .lineLimit(1)
-                .padding(.horizontal, 14)
-                .frame(height: VideoStudioMetrics.musicPanelTitleHeight)
-                lookParams
-            }
-            .padding(.bottom, 16)
+        VStack(spacing: 0) {
+            lookTitle(showsSessionButtons: false)
+            VideoLookPanel(model: model, usesTallScopes: layout != .band)
         }
-        .scrollBounceBehavior(.basedOnSize)
+    }
+
+    /// The Look tool's panel (FS-12.06c §3, board F5_P_Looks): a 46pt title
+    /// — glyph, "Look", "Whole video", hold-to-compare, ✕, ✓ — over the
+    /// panel.
+    private var lookToolPanel: some View {
+        VStack(spacing: 0) {
+            lookTitle(showsSessionButtons: true)
+            VideoLookPanel(model: model, usesTallScopes: layout != .band)
+        }
+    }
+
+    private func lookTitle(showsSessionButtons: Bool) -> some View {
+        HStack(spacing: 8) {
+            RoundedRectangle(cornerRadius: 7, style: .continuous)
+                .fill(Color.white.opacity(0.20))
+                .frame(width: 24, height: 24)
+                .overlay {
+                    Image(systemName: VideoToolPanel.look.systemImage)
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundStyle(.white)
+                }
+            Text(VideoStudioCopy.look)
+                .font(.system(size: 14.5, weight: .semibold))
+                .foregroundStyle(.white)
+            Text(VideoStudioCopy.wholeVideo)
+                .font(.system(size: 11.5))
+                .foregroundStyle(.white.opacity(0.35))
+            Spacer(minLength: 0)
+            ForEach(idleTools) { tool in
+                idleToolButton(tool)
+            }
+            if showsSessionButtons {
+                beforeAfterButton
+                Button {
+                    model.cancelSession()
+                } label: {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(.white)
+                        .frame(width: 32, height: 32)
+                        .background(Circle().fill(Color.white.opacity(0.10)))
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(VideoStudioCopy.discardChanges)
+                Button {
+                    model.commitSession()
+                } label: {
+                    Image(systemName: "checkmark")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(.black)
+                        .frame(width: 32, height: 32)
+                        .background(Circle().fill(Color.white))
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(Text(VideoStudioCopy.keepChanges))
+            }
+        }
+        .lineLimit(1)
+        .padding(.leading, 14)
+        .padding(.trailing, 10)
+        .frame(height: VideoStudioMetrics.musicPanelTitleHeight)
     }
 
     /// One of the dock's add buttons: glyph and name, 32 tall, radius 8.
@@ -424,14 +462,7 @@ struct VideoStudioSheetHost: View {
             EmptyView()
         case .none:
             switch model.activeToolPanel {
-            case .look:
-                // Hold-to-compare, then ✕ (discard since opening) and ✓.
-                HStack(spacing: 8) {
-                    beforeAfterButton
-                    cancelButton
-                    titleButton("checkmark", label: Text(VideoStudioCopy.keepChanges)) { model.commitSession() }
-                }
-            case .music, .media, .videoSettings, .export, nil: EmptyView()
+            case .look, .music, .media, .videoSettings, .export, nil: EmptyView()
             }
         }
     }
@@ -463,37 +494,6 @@ struct VideoStudioSheetHost: View {
             .accessibilityLabel(Text("Show original", comment: "Video Studio: press-and-hold control that previews the clips without edits"))
             .accessibilityHint(Text("Press and hold to see the clips without edits", comment: "Hint for the Video Studio before/after control"))
             .accessibilityAddTraits(model.showsOriginal ? .isSelected : [])
-    }
-
-    /// ✕ in a tool panel's title: a dark disc, as in the session footer.
-    private var cancelButton: some View {
-        Button {
-            model.cancelSession()
-        } label: {
-            Image(systemName: "xmark")
-                .font(.system(size: 13, weight: .semibold))
-                .foregroundStyle(.white)
-                .frame(width: VideoStudioMetrics.inspectorTitleButton, height: VideoStudioMetrics.inspectorTitleButton)
-                .background(Circle().fill(Color.white.opacity(0.10)))
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel(VideoStudioCopy.discardChanges)
-    }
-
-    private func titleButton(
-        _ symbol: String,
-        label: Text,
-        action: @escaping () -> Void
-    ) -> some View {
-        Button(action: action) {
-            Image(systemName: symbol)
-                .font(.system(size: 14, weight: .semibold))
-                .foregroundStyle(.black)
-                .frame(width: VideoStudioMetrics.inspectorTitleButton, height: VideoStudioMetrics.inspectorTitleButton)
-                .background(Circle().fill(Color.white))
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel(label)
     }
 
     // MARK: Param zone
@@ -942,74 +942,10 @@ struct VideoStudioSheetHost: View {
         // say, and the screen does not draw it at all.
         case .none:
             EmptyView()
-        case .look:
-            lookParams
-        case .music, .media, .videoSettings, .export:
+        case .look, .music, .media, .videoSettings, .export:
             // Drawn by their own panels in place of the whole band.
             EmptyView()
         }
     }
 
-    /// The Look panel's shell (FS-12.06 entry): Filter · Adjust · Color as
-    /// chips over the controls each one has always had. The Look plan
-    /// replaces the insides; the entry point is this one.
-    private var lookParams: some View {
-        VStack(spacing: 0) {
-            HStack(spacing: 6) {
-                ForEach(VideoLookTab.allCases) { tab in
-                    Button {
-                        model.lookTab = tab
-                    } label: {
-                        Text(tab.title)
-                            .font(.system(size: 12, weight: .semibold))
-                            .foregroundStyle(model.lookTab == tab ? Color.black : Color.white)
-                            .padding(.horizontal, 12)
-                            .frame(height: 28)
-                            .background(Capsule().fill(model.lookTab == tab ? Color.white : Color.white.opacity(0.06)))
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityAddTraits(model.lookTab == tab ? .isSelected : [])
-                }
-                Spacer(minLength: 0)
-            }
-            .padding(.horizontal, 14)
-            .padding(.vertical, 6)
-            switch model.lookTab {
-            case .filter: filterParams
-            case .adjust: adjustParams
-            case .color: VideoColorPanel(model: model, usesTallScopes: layout != .band)
-            }
-        }
-    }
-
-    private var filterParams: some View {
-        VStack(spacing: 0) {
-            FilterStrip(model: model).frame(height: VideoStudioMetrics.filterStripHeight)
-            if let look = model.recipe.look {
-                InspectorSlider(
-                    label: "Intensity", value: look.amount, range: 0...1,
-                    valueText: "\(Int(look.amount * 100))", detent: 1, model: model,
-                    set: { model.setVideoLookAmount($0) },
-                    reset: { model.pushUndo(); model.setVideoLookAmount(1) }
-                )
-            }
-            Spacer(minLength: 0)
-        }
-    }
-
-    private var adjustParams: some View {
-        ScrollView(showsIndicators: false) {
-            VStack(spacing: 0) {
-                ForEach([PhotoAdjustmentKind.exposure, .contrast, .saturation, .warmth, .brightness, .vignette], id: \.self) { kind in
-                    let value = model.activeNode.adjustments[kind]
-                    InspectorSlider(
-                        label: kind.displayName, value: value, range: -1...1,
-                        valueText: String(format: "%+.0f", value * 100), anchor: 0, notch: true, detent: 0, model: model,
-                        set: { model.setAdjustment(kind, value: $0) },
-                        reset: { model.pushUndo(); model.setAdjustment(kind, value: 0) }
-                    )
-                }
-            }
-        }
-    }
 }

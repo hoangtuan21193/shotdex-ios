@@ -1,5 +1,4 @@
 import SwiftUI
-import UniformTypeIdentifiers
 import ShotDexKit
 
 /// The grading stage, as one scrolling panel rather than a second page.
@@ -7,7 +6,8 @@ import ShotDexKit
 /// Resolve puts this behind a whole Color page. What is here is that page's
 /// working order, top to bottom: read the frame on a scope, undo the log,
 /// set the three primaries, bend the curve, fix one colour on the mixer,
-/// lay a look pack over the top, then window off whatever is still wrong.
+/// then window off whatever is still wrong. A look pack (LUT) is a look, so
+/// it is chosen under Filter → LUTs (FS-12.06c §3), not here.
 /// The render maths behind most of it is the photo editor's —
 /// `PhotoRenderService.applyColor`, `.applyCurve`, `.applyFilter`, already
 /// shipping and already unit-tested.
@@ -27,9 +27,6 @@ struct VideoColorPanel: View {
     @Environment(PhotoLibraryService.self) private var photoLibrary
 
     @State private var scopes = VideoScopeModel()
-    @Environment(AppDependencies.self) private var dependencies
-    private var luts: ImportedLUTStore { dependencies.importedLUTs }
-    @State private var isLUTImporterPresented = false
     @State private var region: ColorGradingRegion = .midtones
     @State private var curveChannel: ToneCurveChannel = .rgb
     @State private var band: ColorMixerBand = .red
@@ -50,8 +47,6 @@ struct VideoColorPanel: View {
                 curvesSection
                 Divider().overlay(EditorTheme.panelDivider)
                 mixerSection
-                Divider().overlay(EditorTheme.panelDivider)
-                lutSection
                 Divider().overlay(EditorTheme.panelDivider)
                 windowsSection
             }
@@ -100,116 +95,6 @@ struct VideoColorPanel: View {
                 "Leave it empty to go back to its number.",
                 comment: "Video Studio colour: what an empty node name does"
             )
-        }
-        .fileImporter(
-            isPresented: $isLUTImporterPresented,
-            allowedContentTypes: [Self.cubeType]
-        ) { result in
-            guard case .success(let url) = result else { return }
-            do {
-                let imported = try luts.add(from: url)
-                model.setVideoLook(VideoLook(.lut(id: imported.id, name: imported.displayName)))
-            } catch {
-                model.errorMessage = String(
-                    localized: "Couldn't read that LUT. ShotDex reads .cube files.",
-                    comment: "Video Studio colour: the imported LUT did not parse"
-                )
-            }
-        }
-    }
-
-    /// `.cube` has no registered system type, so it is matched by extension
-    /// and falls back to plain data rather than to "any file" — which would
-    /// let the user pick a JPEG and be told nothing.
-    private static let cubeType = UTType(filenameExtension: "cube") ?? .data
-
-    // MARK: Imported LUT
-
-    /// A creative LUT from a look pack, at a strength.
-    ///
-    /// Resolve makes this a node in the tree; here it is the last stage of
-    /// the chain, which is the same place — a look pack is authored to be
-    /// the final word over a corrected picture. Bringing one in is a Files
-    /// import for the same reason the music is: the user owns the pack.
-    private var lutSection: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack {
-                Text("LUT", comment: "Video Studio colour: an imported .cube lookup table")
-                    .font(EditorTheme.groupLabel)
-                    .foregroundStyle(EditorTheme.secondaryText)
-                Spacer(minLength: 0)
-                if model.videoLookLUTID != nil {
-                    Button { model.setVideoLook(nil) } label: {
-                        Text("None", comment: "Video Studio colour: grades without a LUT")
-                            .font(EditorTheme.pillLabel)
-                            .foregroundStyle(EditorTheme.accent)
-                    }
-                    .buttonStyle(.plain)
-                }
-            }
-
-            if luts.luts.isEmpty {
-                Text(
-                    "No LUTs yet. Import a .cube file from a look pack you own.",
-                    comment: "Video Studio colour: the LUT list is empty"
-                )
-                .font(.system(size: 10.5))
-                .foregroundStyle(EditorTheme.dimText)
-            } else {
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 6) {
-                        ForEach(luts.luts) { lut in
-                            lutChip(lut)
-                        }
-                    }
-                }
-            }
-
-            Button { isLUTImporterPresented = true } label: {
-                Label {
-                    Text("Import LUT…", comment: "Video Studio colour: brings a .cube in from Files")
-                } icon: {
-                    Image(systemName: "square.and.arrow.down")
-                }
-                .font(EditorTheme.rowLabel)
-                .foregroundStyle(EditorTheme.accent)
-            }
-            .buttonStyle(.plain)
-
-            if model.videoLookLUTID != nil, let look = model.recipe.look {
-                InspectorSlider(
-                    label: String(localized: "Strength", comment: "Video Studio colour: how much of the LUT to mix in"),
-                    value: look.amount,
-                    range: 0...1,
-                    valueText: "\(Int((look.amount * 100).rounded()))%",
-                    model: model,
-                    set: { model.setVideoLookAmount($0) },
-                    reset: { model.pushUndo(); model.setVideoLookAmount(1) }
-                )
-            }
-        }
-    }
-
-    private func lutChip(_ lut: ImportedLUT) -> some View {
-        let isSelected = model.videoLookLUTID == lut.id
-        return Button {
-            model.setVideoLook(isSelected ? nil : VideoLook(.lut(id: lut.id, name: lut.displayName)))
-        } label: {
-            Text(lut.displayName)
-                .lineLimit(1)
-        }
-        .buttonStyle(EditorChipButtonStyle(isSelected: isSelected))
-        .contextMenu {
-            Button(role: .destructive) {
-                if isSelected { model.setVideoLook(nil) }
-                luts.delete(lut)
-            } label: {
-                Label {
-                    Text("Delete LUT", comment: "Video Studio colour: removes an imported .cube")
-                } icon: {
-                    Image(systemName: "trash")
-                }
-            }
         }
     }
 

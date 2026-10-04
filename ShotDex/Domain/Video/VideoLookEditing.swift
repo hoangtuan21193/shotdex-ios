@@ -12,6 +12,14 @@ enum VideoLookNeighbourPolicy: Sendable {
     static let current: VideoLookNeighbourPolicy = .run
 }
 
+/// Where a tile tap lands (FS-12.06c §4): the whole video's slot, the clip
+/// under the playhead's, or every selected clip's.
+enum VideoLookTarget: String, CaseIterable, Identifiable, Sendable {
+    case thisClip, selected, allClips
+
+    var id: String { rawValue }
+}
+
 /// The rules of the Look slots (FS-12.06c §4, §6), apart from any view or
 /// model so each one is tested on its own.
 enum VideoLookEditing {

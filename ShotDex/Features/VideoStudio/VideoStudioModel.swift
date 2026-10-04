@@ -2254,6 +2254,18 @@ final class VideoStudioModel {
         applyLookTier()
     }
 
+    /// Which of Presets · My Looks · LUTs the Look panel shows.
+    var lookShelf: EditorPresetSource = .presets
+    /// Where a tile tap lands (FS-12.06c §4).
+    var lookTarget: VideoLookTarget = .allClips
+
+    /// A tile tapped in the Look panel: the look goes where Apply To says.
+    /// A new look starts at Amount 100; Original is no look.
+    func chooseLook(_ source: VideoLook.Source) {
+        let look = VideoLookEditing.chosen(source, replacing: recipe.look)
+        setVideoLook(look.isOriginal ? nil : look)
+    }
+
     /// What a built-in film look is called: the photo editor's store knows
     /// the names the user gave them. Set by the screen.
     var presetName: @MainActor (PhotoFilter) -> String = { $0.displayName }
@@ -2261,19 +2273,6 @@ final class VideoStudioModel {
     /// The pill on a clip's band, when the clip has a look of its own.
     func lookPillText(for clip: VideoClip) -> String? {
         VideoLookEditing.pillText(for: clip, presetName: presetName)
-    }
-
-    /// The film look the whole video wears, `.original` when it has none or
-    /// its look is not a preset.
-    var videoLookPreset: PhotoFilter {
-        if case let .preset(filter) = recipe.look?.source { return filter }
-        return .original
-    }
-
-    /// The LUT the whole video is graded through when its look is one.
-    var videoLookLUTID: String? {
-        if case let .lut(id, _) = recipe.look?.source { return id }
-        return nil
     }
 
     /// Amount of the whole video's look. No undo push per tick — the slider

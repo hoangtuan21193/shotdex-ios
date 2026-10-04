@@ -295,6 +295,10 @@ enum VideoStudioMetrics {
     /// Height of the contextual panel (selection + global tools), above the
     /// device's bottom safe inset. It slides over the bars, never displaces them.
     static let sheetHeight: CGFloat = 264
+    /// The Look panel on the phone (FS-12.06c §3, board F5_P_Looks): 340
+    /// tall at y 450, standing over the tool row rather than covering it,
+    /// so Look stays lit under it.
+    static let lookSheetHeight: CGFloat = 340
     /// The iPad's Video Settings popover (FS-12.10 §3, Mac-style board
     /// ES_IL_ExportSettings: 400×548).
     static let videoSettingsPopoverSize = CGSize(width: 400, height: 548)
@@ -307,7 +311,7 @@ enum VideoStudioMetrics {
     /// panel's height, less whatever bands it lands on top of. With the tools
     /// in a rail and the project actions in the top band there are none, so
     /// it is the whole panel.
-    static func sheetLift(usesToolRail: Bool, showsBottomBar: Bool = true) -> CGFloat {
+    static func sheetLift(usesToolRail: Bool, showsBottomBar: Bool = true, sheetHeight: CGFloat = sheetHeight) -> CGFloat {
         sheetHeight
             - (usesToolRail ? 0 : toolbarHeight)
             - (showsBottomBar ? bottomBarHeight : 0)
@@ -362,7 +366,10 @@ enum VideoStudioMetrics {
         /// The panel carries the ✕ · name · ✓ footer in the tool row's place,
         /// so it reaches the row's height higher and the stack lifts that
         /// much more.
-        presentsSessionFooter: Bool = false
+        presentsSessionFooter: Bool = false,
+        /// How tall the open panel is. The Look panel stands 340 over the
+        /// tool row (FS-12.06c §3), others 264 over it.
+        sheetHeight: CGFloat = VideoStudioMetrics.sheetHeight
     ) -> StackLayout {
         let footerLift = presentsSessionFooter && !usesToolRail ? toolbarHeight : 0
         // The rail takes the tools out of the vertical stack entirely, so the
@@ -409,7 +416,7 @@ enum VideoStudioMetrics {
         // broken, to edit one clip. The timeline stands down instead; it is
         // the one of the three the user can get back by deselecting, and a
         // frame they cannot see is worth less than lanes they cannot reach.
-        let openable = split(lift: sheetLift(usesToolRail: usesToolRail, showsBottomBar: showsBottomBar) + footerLift, dock: 0)
+        let openable = split(lift: sheetLift(usesToolRail: usesToolRail, showsBottomBar: showsBottomBar, sheetHeight: sheetHeight) + footerLift, dock: 0)
         if !panelMayDock,
            screen.height <= shortWindowHeight,
            openable.preview <= previewMinimumHeight,
@@ -435,7 +442,7 @@ enum VideoStudioMetrics {
             }
         }
         return split(
-            lift: sheetLift(usesToolRail: usesToolRail, showsBottomBar: showsBottomBar) + footerLift,
+            lift: sheetLift(usesToolRail: usesToolRail, showsBottomBar: showsBottomBar, sheetHeight: sheetHeight) + footerLift,
             dock: 0
         )
     }

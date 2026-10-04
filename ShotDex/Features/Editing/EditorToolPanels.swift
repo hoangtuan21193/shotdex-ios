@@ -682,36 +682,10 @@ struct EditorFiltersPanel: View {
         }
     }
 
-    /// Stand-in until the photo's own swatch has rendered: the look applied to a lit
-    /// warm tone and a shadowed cool one. Made of the same maths as the real thing,
-    /// so the placeholder already leans the way the look does.
+    /// Stand-in until the photo's own swatch has rendered (`LookSwatch`,
+    /// shared with the Video Studio's Look panel).
     private func swatchColors(for filter: PhotoFilter) -> [Color] {
-        guard let look = FilmLookLibrary.look(for: filter) else {
-            return legacyColors(for: filter)
-        }
-        let highlight = look.apply(to: SIMD3(0.82, 0.76, 0.66))
-        let shadow = look.apply(to: SIMD3(0.22, 0.25, 0.32))
-        return [
-            Color(red: highlight.x, green: highlight.y, blue: highlight.z),
-            Color(red: shadow.x, green: shadow.y, blue: shadow.z),
-        ]
-    }
-
-    /// The ten original presets are Core Image chains rather than `FilmLook`s, so
-    /// their placeholders stay hand-picked.
-    private func legacyColors(for filter: PhotoFilter) -> [Color] {
-        switch filter {
-        case .vivid: [.pink, .blue]
-        case .vividWarm: [.orange, .pink]
-        case .vividCool: [.cyan, .indigo]
-        case .dramatic: [.black, .orange]
-        case .dramaticWarm: [.brown, .orange]
-        case .dramaticCool: [.black, .blue]
-        case .mono: [.white, .gray]
-        case .silvertone: [.gray.opacity(0.5), .white]
-        case .noir: [.black, .white]
-        default: [.gray, .white.opacity(0.6)]
-        }
+        LookSwatch.colors(for: filter).map { Color(red: $0.red, green: $0.green, blue: $0.blue) }
     }
 }
 

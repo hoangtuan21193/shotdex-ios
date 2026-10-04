@@ -63,6 +63,46 @@ struct VideoLookRenderTests {
         VideoRenderRecipe(recipe: recipe, renderSize: canvas.size, totalDuration: 10, bakesOverlays: false)
     }
 
+    // MARK: AC-2
+
+    /// AC-2: three clips, Look → My Looks → Moody Coast with All Clips — one
+    /// undo step, every clip wears it, and each clip's frame at 1.0 s
+    /// matches the photo editor's Moody Coast on that frame (≤ 2/255), the
+    /// grain read from the same place.
+    @Test @MainActor func myLookMatchesEditorAtOneSecond() throws {
+        let model = VideoStudioModelFixture.model(clips: VideoStudioModelFixture.photoClips(3))
+        let moody = VideoLook.Source.myLook(sourceID: UUID(), name: "Moody Coast", isImported: false, recipe: VideoLookSamples.moodyCoast)
+        model.toggleToolPanel(.look)
+        model.lookShelf = .myLooks
+        #expect(model.lookTarget == .allClips)
+        let steps = model.history.undoEntries.count
+        model.chooseLook(moody)
+        #expect(model.history.undoEntries.count == steps + 1)
+        #expect(model.recipe.clips.allSatisfy { VideoLookEditing.effectiveLook(for: $0, in: model.recipe)?.source == moody })
+
+        let canvas = CGRect(x: 0, y: 0, width: 64, height: 64)
+        let render = Self.renderRecipe(model.recipe, canvas: canvas)
+        let frame = VideoLookBakerTests.testFrame()
+        for (index, clip) in model.recipe.clips.enumerated() {
+            let seconds = Double(index) * 3 + 1
+            let composed = VideoFrameCompositor.composeFrame(
+                front: (frame, .init(clipIndex: index, clipID: clip.id, start: Double(index) * 3, duration: 3, effect: .none)),
+                back: nil, transition: nil, recipe: render, canvas: canvas, at: seconds
+            )
+            // The editor's chain: the pre-mask stages, then its Effects —
+            // vignette, then grain — with the video frame's grain offset.
+            let look = VideoLookSamples.moodyCoast
+            var editor = VideoLookBakerTests.editorChain(look, on: frame)
+            editor = PhotoRenderService.applyVignette(look.adjustments, style: look.vignetteStyle, to: editor)
+            editor = PhotoRenderService.applyGrain(
+                look.adjustments.grain, size: look.adjustments.grainSize, roughness: look.adjustments.grainRoughness,
+                offset: VideoLookFrame(canvas: canvas.size, seconds: seconds).grainOffset, to: editor
+            )
+            let difference = Self.meanDifference(Self.bytes(composed, in: canvas), Self.bytes(editor, in: canvas))
+            #expect(difference <= 2, "clip \(index + 1): mean \(difference)/255")
+        }
+    }
+
     // MARK: AC-3
 
     /// AC-3: the whole video in Velvia, clip 2 in Night Teal — the middle

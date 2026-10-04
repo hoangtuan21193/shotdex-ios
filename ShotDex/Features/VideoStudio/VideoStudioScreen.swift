@@ -357,10 +357,12 @@ struct VideoStudioScreen: View {
 
     #if DEBUG
     /// `-VideoStudioStandIn duoInner` draws the Duo inner layout at 951×669
-    /// in the top-left corner of whatever window the studio is in.
+    /// in the top-left corner of whatever window the studio is in;
+    /// `duoCover` the cover's 466×678.
     static var debugStandInWindow: (windowClass: VideoStudioWindowClass, size: CGSize)? {
         switch UserDefaults.standard.string(forKey: "VideoStudioStandIn") {
         case "duoInner": (.duoInner, CGSize(width: 951, height: 669))
+        case "duoCover": (.duoCover, CGSize(width: 466, height: 678))
         default: nil
         }
     }
@@ -391,6 +393,7 @@ struct VideoStudioScreen: View {
         }
         }
         .environment(\.videoMediaGrid, VideoMediaGridMetrics.for(windowClass))
+        .environment(\.videoLookPanelStyle, VideoLookPanelStyle.for(windowClass))
         .onAppear { currentWindowClass = windowClass }
         .onChange(of: windowClass) { _, new in currentWindowClass = new }
     }
@@ -442,8 +445,12 @@ struct VideoStudioScreen: View {
         // §5). The panel carries it at its foot, in the row's place, so it
         // stands a row taller.
         let showsSessionFooter = model.sessionFooterTitle != nil
-        let panelHeight = VideoStudioMetrics.sheetHeight + proxy.safeAreaInsets.bottom
-            + (showsSessionFooter ? VideoStudioMetrics.toolbarHeight : 0)
+        // The Look tool's panel stands over the tool row (FS-12.06c §3).
+        let showsLookTool = model.inspectorTarget == .none && model.activeToolPanel == .look
+        let panelHeight = showsLookTool
+            ? VideoStudioMetrics.lookSheetHeight
+            : VideoStudioMetrics.sheetHeight + proxy.safeAreaInsets.bottom
+                + (showsSessionFooter ? VideoStudioMetrics.toolbarHeight : 0)
         let lanes = VideoStudioMetrics.Lanes.for(.phone)
         // The reader sits inside the safe area while the stack below ignores
         // it, so the stack's real height is the reader's plus both insets.
@@ -466,7 +473,10 @@ struct VideoStudioScreen: View {
             // is no bottom band to pay for.
             showsBottomBar: false,
             deskChromeHeight: VideoStudioMetrics.compactTransportHeight,
-            presentsSessionFooter: showsSessionFooter
+            presentsSessionFooter: showsSessionFooter,
+            sheetHeight: showsLookTool
+                ? VideoStudioMetrics.lookSheetHeight + VideoStudioMetrics.toolbarHeight
+                : VideoStudioMetrics.sheetHeight
         )
         return ZStack(alignment: .bottom) {
             VStack(spacing: 0) {
@@ -508,6 +518,7 @@ struct VideoStudioScreen: View {
             // moves, so the timeline stays exactly where the user left it.
             if model.presentsSheet {
                 contextPanel(model, height: panelHeight, showsFooter: showsSessionFooter, bottomInset: proxy.safeAreaInsets.bottom)
+                    .padding(.bottom, showsLookTool ? VideoStudioMetrics.toolbarHeight + proxy.safeAreaInsets.bottom : 0)
                     .transition(.move(edge: .bottom))
             }
         }

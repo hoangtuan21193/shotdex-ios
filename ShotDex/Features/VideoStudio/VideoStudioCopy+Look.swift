@@ -32,3 +32,34 @@ extension VideoStudioCopy {
         }
     }
 }
+
+extension VideoStudioCopy {
+    static var amount: String {
+        String(localized: "Amount", table: table, comment: "Video Studio Look panel: how much of the chosen look is mixed in, 0–100")
+    }
+
+    static var applyTo: String {
+        String(localized: "APPLY TO", table: table, comment: "Video Studio Look panel: header over All Clips · This Clip — where a tapped look goes")
+    }
+
+    static var importLook: String {
+        String(localized: "Import Look…", table: table, comment: "Video Studio Look panel: brings Lightroom presets, .shotdexlook files and .cube LUTs in from Files")
+    }
+
+    /// VoiceOver on a tile: "Look Moody Coast, imported from Lightroom".
+    static func lookTileLabel(name: String, isImported: Bool) -> String {
+        isImported
+            ? String(localized: "Look \(name), imported from Lightroom", table: table, comment: "Video Studio Look panel: VoiceOver on a look tile brought in from a Lightroom preset")
+            : String(localized: "Look \(name)", table: table, comment: "Video Studio Look panel: VoiceOver on a look tile")
+    }
+}
+
+extension VideoLookTarget {
+    var title: String {
+        switch self {
+        case .thisClip: String(localized: "This Clip", table: VideoStudioCopy.table, comment: "Video Studio Look panel: a tapped look goes to the clip under the playhead (or the selected clip)")
+        case .selected: String(localized: "Selected", table: VideoStudioCopy.table, comment: "Video Studio Look panel: a tapped look goes to every selected clip")
+        case .allClips: String(localized: "All Clips", table: VideoStudioCopy.table, comment: "Video Studio Look panel: a tapped look becomes the whole video's and clears every clip's own")
+        }
+    }
+}
