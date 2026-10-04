@@ -283,7 +283,12 @@ struct VideoMediaPanel: View {
                     } else {
                         insert(asset)
                     }
-                }
+                },
+                onDragBegan: { asset, location, origin, image in
+                    model.beginMediaDrag(VideoMediaPick(asset), at: location, from: origin, image: image)
+                },
+                onDragMoved: { model.moveMediaDrag(to: $0) },
+                onDragEnded: { model.endMediaDrag() }
             )
         } else {
             Color.clear

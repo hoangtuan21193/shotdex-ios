@@ -36,6 +36,7 @@ struct VideoSessionFooter: View {
                     .font(.system(size: 11, design: .monospaced))
                     .foregroundStyle(.white.opacity(0.35))
                     .lineLimit(1)
+                    .minimumScaleFactor(0.8)
             }
             .frame(maxWidth: .infinity)
             .accessibilityElement(children: .combine)

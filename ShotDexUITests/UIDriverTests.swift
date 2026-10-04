@@ -177,7 +177,7 @@ final class UIDriverTests: XCTestCase {
                 throw DriverError.missing("drag needs x, y, toX and toY")
             }
             let end = app.coordinate(withNormalizedOffset: CGVector(dx: toX, dy: toY))
-            start.press(forDuration: 0.1, thenDragTo: end, withVelocity: .slow, thenHoldForDuration: step.seconds ?? 0.2)
+            start.press(forDuration: step.pressSeconds ?? 0.1, thenDragTo: end, withVelocity: .slow, thenHoldForDuration: step.seconds ?? 0.2)
         case "swipe":
             // A point drag when the step gives coordinates: the element
             // swipes start at the element's centre, and on a panel with a

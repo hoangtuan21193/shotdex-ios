@@ -123,3 +123,71 @@ extension VideoStudioMediaSessionTests {
         #expect(model.selectedOverlayID == model.recipe.overlays[0].id)
     }
 }
+
+extension VideoStudioMediaSessionTests {
+    /// The lanes as the timeline would publish them: 402pt wide, the
+    /// playhead at x 201, 50pt a second, lanes from y 300 to 500.
+    private func lanes() -> VideoDropGeometry {
+        VideoDropGeometry(
+            frame: CGRect(x: 0, y: 300, width: 402, height: 200),
+            lineBand: CGRect(x: 0, y: 380, width: 402, height: 56),
+            mapping: .timeline(playheadX: 201, pointsPerSecond: 50)
+        )
+    }
+
+    /// AC-3 (model): held at 14.5 s over the lanes, the seam is 14.2; let
+    /// go, the video is clip 4 and one Undo takes it back.
+    @Test func dropLandsOnTheNearestSeam() {
+        let model = sample()
+        defer { model.close() }
+        for clip in model.recipe.clips { model.sources[clip.id] = .unavailable(assetID: clip.assetID) }
+        model.timelineDropGeometry = lanes()
+        model.seek(to: 12)
+        let before = model.recipe
+        model.beginMediaDrag(VideoMediaPick(assetID: "Fourteen", kind: .video, duration: 14),
+                             at: CGPoint(x: 200, y: 700), from: CGRect(x: 0, y: 650, width: 99, height: 99), image: nil)
+        #expect(model.mediaDrag?.target == nil)
+        // 14.5 s is 2.5 s right of the playhead at 12: x 201 + 125.
+        #expect(model.moveMediaDrag(to: CGPoint(x: 326, y: 400)))
+        #expect(model.mediaDrag?.target?.boundary.index == 3)
+        #expect(abs((model.mediaDrag?.target?.line.midX ?? 0) - 311) < 0.5)
+        #expect(model.endMediaDrag())
+        #expect(model.mediaDrag == nil)
+        #expect(model.recipe.clips.map(\.assetID) == ["Falls", "Coast", "Lake", "Fourteen", "Night", "Forest"])
+        #expect(model.currentTime == 12)
+        model.undo()
+        #expect(model.recipe == before)
+    }
+
+    /// AC-4: let go anywhere but a drop target — the grid, the frame, off
+    /// the screen — and nothing changes, not even the undo state.
+    @Test func cancelledDropChangesNothing() {
+        let model = sample()
+        defer { model.close() }
+        model.timelineDropGeometry = lanes()
+        let before = model.recipe
+        let couldUndo = model.canUndo
+        model.beginMediaDrag(VideoMediaPick(assetID: "X", kind: .photo),
+                             at: CGPoint(x: 50, y: 700), from: CGRect(x: 0, y: 650, width: 99, height: 99), image: nil)
+        model.moveMediaDrag(to: CGPoint(x: 300, y: 400))
+        #expect(model.mediaDrag?.target != nil)
+        model.moveMediaDrag(to: CGPoint(x: 120, y: 720))
+        #expect(model.mediaDrag?.target == nil)
+        #expect(!model.endMediaDrag())
+        #expect(model.mediaDrag?.isReturning == true)
+        #expect(model.recipe == before)
+        #expect(model.canUndo == couldUndo)
+    }
+
+    /// Dragging a picked cell while selecting carries every pick, in order.
+    @Test func draggingAPickCarriesTheGroup() {
+        let model = sample()
+        defer { model.close() }
+        model.showToolPanel(.media)
+        model.toggleMediaSelecting()
+        for id in ["B", "A"] { model.toggleMediaPick(VideoMediaPick(assetID: id, kind: .photo)) }
+        model.beginMediaDrag(VideoMediaPick(assetID: "A", kind: .photo), at: .zero, from: .zero, image: nil)
+        #expect(model.mediaDrag?.picks.map(\.assetID) == ["B", "A"])
+        model.cancelMediaDrag()
+    }
+}

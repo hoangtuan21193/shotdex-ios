@@ -23,6 +23,12 @@ struct VideoMediaGridView: UIViewRepresentable {
     var pickNumbers: [String: Int] = [:]
     var bottomInset: CGFloat = 0
     let onTap: (PHAsset) -> Void
+    /// The hold-drag (§5), in window coordinates: lifted from a cell…
+    var onDragBegan: ((PHAsset, CGPoint, CGRect, UIImage?) -> Void)?
+    /// …moved — true when the seam under the finger changed…
+    var onDragMoved: ((CGPoint) -> Bool)?
+    /// …and let go.
+    var onDragEnded: (() -> Void)?
 
     func makeCoordinator() -> Coordinator { Coordinator(self) }
 
@@ -39,6 +45,15 @@ struct VideoMediaGridView: UIViewRepresentable {
         view.delegate = context.coordinator
         view.accessibilityIdentifier = "videoMediaGrid"
         context.coordinator.collectionView = view
+        // Hold 0.3 s with the finger still (< 10pt) to lift a cell; moving
+        // first is a scroll. A UIKit recognizer on the scroll view itself:
+        // SwiftUI gestures never fire inside a UIScrollView's hosted
+        // content (FS-12.09 §5).
+        let hold = UILongPressGestureRecognizer(target: context.coordinator, action: #selector(Coordinator.handleHold(_:)))
+        hold.minimumPressDuration = VideoMediaGridView.holdDuration
+        hold.allowableMovement = VideoMediaGridView.holdSlop
+        hold.delegate = context.coordinator
+        view.addGestureRecognizer(hold)
         return view
     }
 
@@ -66,12 +81,17 @@ struct VideoMediaGridView: UIViewRepresentable {
         }
     }
 
+    /// The hold that lifts a cell, and how far the finger may drift first.
+    static let holdDuration: TimeInterval = 0.3
+    static let holdSlop: CGFloat = 10
+
     static func dismantleUIView(_ view: UICollectionView, coordinator: Coordinator) {
         coordinator.resetCaching()
     }
 
     @MainActor
-    final class Coordinator: NSObject, UICollectionViewDataSource, UICollectionViewDelegateFlowLayout {
+    final class Coordinator: NSObject, UICollectionViewDataSource, UICollectionViewDelegateFlowLayout,
+        UIGestureRecognizerDelegate {
         var parent: VideoMediaGridView
         weak var collectionView: UICollectionView?
         var shownRevision = -1
@@ -167,6 +187,58 @@ struct VideoMediaGridView: UIViewRepresentable {
             UIEdgeInsets(top: 0, left: parent.metrics.inset, bottom: 0, right: parent.metrics.inset)
         }
 
+        // MARK: Hold-drag
+
+        private let lift = UIImpactFeedbackGenerator(style: .light)
+        private let tick = UISelectionFeedbackGenerator()
+        private var isDragging = false
+
+        @objc func handleHold(_ recognizer: UILongPressGestureRecognizer) {
+            guard let collectionView else { return }
+            let window = recognizer.location(in: nil)
+            switch recognizer.state {
+            case .began:
+                let point = recognizer.location(in: collectionView)
+                guard parent.onDragBegan != nil,
+                      let indexPath = collectionView.indexPathForItem(at: point),
+                      let asset = library.asset(at: indexPath.item),
+                      let cell = collectionView.cellForItem(at: indexPath) as? VideoMediaGridCell
+                else {
+                    // Not on a cell: let this hold go.
+                    recognizer.isEnabled = false
+                    recognizer.isEnabled = true
+                    return
+                }
+                // The scroll that was tracking the same finger lets go.
+                collectionView.panGestureRecognizer.isEnabled = false
+                collectionView.panGestureRecognizer.isEnabled = true
+                isDragging = true
+                cell.isLiftedSource = true
+                lift.impactOccurred()
+                tick.prepare()
+                parent.onDragBegan?(asset, window, cell.convert(cell.bounds, to: nil), cell.imageView.image)
+            case .changed:
+                guard isDragging else { return }
+                if parent.onDragMoved?(window) == true { tick.selectionChanged() }
+            case .ended, .cancelled, .failed:
+                guard isDragging else { return }
+                isDragging = false
+                for case let cell as VideoMediaGridCell in collectionView.visibleCells { cell.isLiftedSource = false }
+                parent.onDragEnded?()
+            default:
+                break
+            }
+        }
+
+        /// The hold watches alongside the scroll, so a drag that starts
+        /// moving before 0.3 s is the scroll's and a still finger is the hold's.
+        func gestureRecognizer(
+            _ gestureRecognizer: UIGestureRecognizer,
+            shouldRecognizeSimultaneouslyWith other: UIGestureRecognizer
+        ) -> Bool {
+            other === collectionView?.panGestureRecognizer
+        }
+
         // MARK: Taps and prefetch
 
         func collectionView(_ collectionView: UICollectionView, didSelectItemAt indexPath: IndexPath) {
@@ -241,6 +313,14 @@ final class VideoMediaGridCell: UICollectionViewCell {
     private let pickNumber = UILabel()
     var assetID: String?
     var requestID: PHImageRequestID?
+    /// The cell a drag lifted from: a dashed outline where it was.
+    var isLiftedSource = false {
+        didSet {
+            imageView.alpha = isLiftedSource ? 0.25 : 1
+            dash.isHidden = !isLiftedSource
+        }
+    }
+    private let dash = CAShapeLayer()
 
     override init(frame: CGRect) {
         super.init(frame: frame)
@@ -280,6 +360,12 @@ final class VideoMediaGridCell: UICollectionViewCell {
         pickNumber.translatesAutoresizingMaskIntoConstraints = false
         contentView.addSubview(pickNumber)
         contentView.layer.borderColor = UIColor.white.cgColor
+        dash.strokeColor = UIColor.white.withAlphaComponent(0.7).cgColor
+        dash.fillColor = UIColor.clear.cgColor
+        dash.lineWidth = 1.5
+        dash.lineDashPattern = [4, 3]
+        dash.isHidden = true
+        contentView.layer.addSublayer(dash)
 
         NSLayoutConstraint.activate([
             pickNumber.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 5),
@@ -312,7 +398,14 @@ final class VideoMediaGridCell: UICollectionViewCell {
     static let badgeSide: CGFloat = 19
     static let pickSide: CGFloat = 21
 
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        dash.frame = contentView.bounds
+        dash.path = UIBezierPath(rect: contentView.bounds.insetBy(dx: 1, dy: 1)).cgPath
+    }
+
     func clear() {
+        isLiftedSource = false
         badge.isHidden = true
         markPick(nil)
         imageView.image = nil

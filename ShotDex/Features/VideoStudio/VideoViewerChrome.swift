@@ -351,6 +351,12 @@ struct VideoTimelineOverview: View {
                         model.endScrub(at: seconds(at: value.location.x, width: width, total: total))
                     }
             )
+            // Where no timeline is drawn, a drag from Media lands here
+            // (FS-12.09 §5): the whole project across the strip's width.
+            .onAppear { publishDropGeometry(geo.frame(in: .global)) }
+            .onChange(of: geo.frame(in: .global)) { _, frame in publishDropGeometry(frame) }
+            .onChange(of: model.totalDuration) { publishDropGeometry(geo.frame(in: .global)) }
+            .onDisappear { model.overviewDropGeometry = nil }
         }
         .frame(height: VideoStudioMetrics.timelineOverviewHeight)
         .padding(.horizontal, 10)
@@ -363,6 +369,14 @@ struct VideoTimelineOverview: View {
             let step = max(model.totalDuration / 20, 0.5)
             model.seek(to: model.currentTime + (direction == .increment ? step : -step))
         }
+    }
+
+    private func publishDropGeometry(_ frame: CGRect) {
+        model.overviewDropGeometry = VideoDropGeometry(
+            frame: frame.insetBy(dx: 0, dy: -8),
+            lineBand: frame,
+            mapping: .overview(totalDuration: model.totalDuration)
+        )
     }
 
     /// One clip's block. Split out of the body because the whole `ZStack`

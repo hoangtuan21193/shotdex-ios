@@ -133,6 +133,10 @@
       "comment": "Video Projects: label on a video project that has never been exported",
       "extractionState": "manual"
     },
+    "Drop between clips · back on the grid cancels": {
+      "comment": "Video Studio Media panel: under its name while an item is being dragged",
+      "extractionState": "manual"
+    },
     "Ducking": {
       "comment": "Video Studio: the music command that lowers music under speech",
       "extractionState": "manual"

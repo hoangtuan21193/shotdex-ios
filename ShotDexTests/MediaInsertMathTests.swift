@@ -74,3 +74,41 @@ struct MediaInsertMathTests {
         #expect(abs(result.playhead - 17.4) < 0.0001)
     }
 }
+
+extension MediaInsertMathTests {
+    /// AC-3 (target): a finger at 14.5 s is nearest the Lake | Night seam
+    /// at 14.2 — before clip 4 — and one at 0.4 s is the very start.
+    @Test func nearestBoundaryBetweenLakeAndNight() {
+        let placements = MediaInsertMath.placements(of: VideoStudioModelFixture.mediaSampleRecipe())
+        let seam = MediaInsertMath.nearestBoundary(to: 14.5, placements: placements)
+        #expect(seam.index == 3)
+        #expect(abs(seam.time - 14.2) < 0.0001)
+        #expect(MediaInsertMath.nearestBoundary(to: 0.4, placements: placements).index == 0)
+        #expect(MediaInsertMath.nearestBoundary(to: 30, placements: placements) == .init(index: 5, time: 24))
+    }
+
+    /// FS-12.09 §5: no autoscroll outside the 40pt edge, faster the deeper.
+    @Test func autoscrollSpeedGrowsWithDepth() {
+        #expect(MediaInsertMath.autoscrollSpeed(depth: 0) == 0)
+        #expect(MediaInsertMath.autoscrollSpeed(depth: -5) == 0)
+        let shallow = MediaInsertMath.autoscrollSpeed(depth: 10)
+        let deep = MediaInsertMath.autoscrollSpeed(depth: 30)
+        #expect(shallow > 0 && deep > shallow * 4)
+        #expect(MediaInsertMath.autoscrollSpeed(depth: 40) == MediaInsertMath.autoscrollSpeed(depth: 80))
+    }
+
+    /// AC-3 (drop): a 14.0 s video dropped on the Lake | Night seam is clip
+    /// 4 from 14.2, Lake whole, 38.0 s in all.
+    @Test func dropDoesNotSplit() {
+        let sample = VideoStudioModelFixture.mediaSampleRecipe()
+        var video = VideoClip(assetID: "Fourteen", kind: .video)
+        video.sourceDuration = 14
+        video.trimEnd = 14
+        let result = MediaInsertMath.insert([video], into: sample, atIndex: 3)
+        let placements = MediaInsertMath.placements(of: result.recipe)
+        #expect(result.recipe.clips.map(\.assetID) == ["Falls", "Coast", "Lake", "Fourteen", "Night", "Forest"])
+        #expect(abs(placements[3].start - 14.2) < 0.0001)
+        #expect(abs((placements.last?.end ?? 0) - 38) < 0.0001)
+        #expect(result.split == nil)
+    }
+}

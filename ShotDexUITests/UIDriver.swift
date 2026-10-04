@@ -47,6 +47,9 @@ struct UIDriverStep: Decodable {
     /// default — it hit-tests every element, and on a busy screen that is the
     /// difference between a dump and a timeout.
     let hittable: Bool?
+    /// `drag` only: how long the finger rests before it moves. Default 0.1;
+    /// 0.35 lifts a Media cell, whose hold is 0.3 s (FS-12.09 §5).
+    var pressSeconds: Double?
 }
 
 struct UIDriverScript: Decodable {

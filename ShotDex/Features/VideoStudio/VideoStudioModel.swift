@@ -563,7 +563,9 @@ final class VideoStudioModel {
         if let selectionTitle { return selectionTitle }
         guard inspectorTarget == .none, activeToolPanel == .media else { return nil }
         let time = VideoStudioMetrics.compactTimecode(currentTime)
-        let detail: String = if let picks = mediaSelection {
+        let detail: String = if mediaDrag != nil {
+            VideoStudioCopy.mediaDragHint
+        } else if let picks = mediaSelection {
             VideoStudioCopy.mediaSelectedHint(count: picks.count, at: time)
         } else if mediaShowsInVideo {
             VideoStudioCopy.itemsInThisVideo(MediaUsage.useCount(in: recipe))
@@ -584,6 +586,128 @@ final class VideoStudioModel {
             insertMedia(picks)
         }
         clearSelection()
+    }
+
+    // MARK: - Media drag (FS-12.09 §5)
+
+    /// The hold-drag from Media in progress.
+    private(set) var mediaDrag: VideoMediaDrag?
+    /// The timeline's lanes and the overview strip as drop targets, kept up
+    /// to date by those views. Not observed: they change on every scroll.
+    @ObservationIgnored var timelineDropGeometry: VideoDropGeometry?
+    @ObservationIgnored var overviewDropGeometry: VideoDropGeometry?
+    /// The lifted cell's thumbnail, for the ghost under the finger.
+    @ObservationIgnored var mediaDragImage: UIImage?
+    @ObservationIgnored private var mediaDragScroll: Task<Void, Never>?
+
+    /// A cell held 0.3 s: it lifts. A picked cell while selecting carries
+    /// every pick, in pick order.
+    func beginMediaDrag(_ pick: VideoMediaPick, at location: CGPoint, from origin: CGRect, image: UIImage?) {
+        let picks: [VideoMediaPick] = if let selection = mediaSelection, selection.contains(where: { $0.assetID == pick.assetID }) {
+            selection
+        } else {
+            [pick]
+        }
+        mediaDragImage = image
+        mediaDrag = VideoMediaDrag(picks: picks, location: location, origin: origin)
+        _ = moveMediaDrag(to: location)
+        startMediaDragScroll()
+    }
+
+    /// The finger moved. Returns true when the seam under it changed — the
+    /// moment for a selection tick.
+    @discardableResult
+    func moveMediaDrag(to location: CGPoint) -> Bool {
+        guard var drag = mediaDrag, !drag.isReturning else { return false }
+        let old = drag.target?.boundary
+        drag.location = location
+        drag.target = dropTarget(at: location)
+        mediaDrag = drag
+        return drag.target?.boundary != old && drag.target != nil
+    }
+
+    /// Where a drop at `location` lands: the seam nearest the finger on the
+    /// timeline's lanes, or — where no timeline is drawn — on the overview
+    /// strip (FS-12.09 §5).
+    private func dropTarget(at location: CGPoint) -> VideoMediaDrag.Target? {
+        guard let geometry = [timelineDropGeometry, overviewDropGeometry].compactMap({ $0 })
+            .first(where: { $0.frame.contains(location) })
+        else { return nil }
+        let time = geometry.time(atX: location.x, currentTime: currentTime)
+        let boundary = MediaInsertMath.nearestBoundary(to: time, placements: clipPlacements)
+        let x = geometry.x(atTime: boundary.time, currentTime: currentTime)
+        let band = geometry.lineBand
+        return VideoMediaDrag.Target(boundary: boundary, line: CGRect(x: x - 2, y: band.minY, width: 4, height: band.height))
+    }
+
+    /// The finger lifted: on a seam, the media goes in there — no cut, one
+    /// undo step; anywhere else the ghost flies home and nothing changes.
+    /// Returns whether it dropped.
+    @discardableResult
+    func endMediaDrag() -> Bool {
+        mediaDragScroll?.cancel()
+        mediaDragScroll = nil
+        guard let drag = mediaDrag else { return false }
+        guard let target = drag.target else {
+            cancelMediaDrag()
+            return false
+        }
+        mediaDrag = nil
+        mediaDragImage = nil
+        if session?.target.isItem == true { clearSelection() }
+        let newClips = drag.picks.map(Self.clip(for:))
+        let step = (sequence: history.checkpoint, playhead: currentTime)
+        pushUndo()
+        recipe = MediaInsertMath.insert(newClips, into: recipe, atIndex: target.boundary.index).recipe
+        totalDuration = clipPlacements.last?.end ?? totalDuration
+        resumeTimeAfterRebuild = currentTime
+        if drag.picks.count > 1 { mediaSelection = nil }
+        markEdited()
+        Task { await loadAndMerge(newClips, step: step) }
+        return true
+    }
+
+    /// Back to the cell it came from in 0.25 s; the project is untouched.
+    func cancelMediaDrag() {
+        mediaDragScroll?.cancel()
+        mediaDragScroll = nil
+        guard var drag = mediaDrag else { return }
+        drag.isReturning = true
+        drag.target = nil
+        drag.location = CGPoint(x: drag.origin.midX, y: drag.origin.midY)
+        withAnimation(.easeOut(duration: 0.25)) { mediaDrag = drag }
+        Task { [weak self] in
+            try? await Task.sleep(for: .milliseconds(260))
+            guard let self, self.mediaDrag?.isReturning == true else { return }
+            self.mediaDrag = nil
+            self.mediaDragImage = nil
+        }
+    }
+
+    /// While the ghost is held within 40pt of the timeline's left or right
+    /// edge, the timeline runs under it — faster the deeper (FS-12.09 §5).
+    private func startMediaDragScroll() {
+        mediaDragScroll?.cancel()
+        mediaDragScroll = Task { [weak self] in
+            var last = ContinuousClock.now
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .milliseconds(16))
+                guard let self, let drag = self.mediaDrag, !drag.isReturning,
+                      let geometry = self.timelineDropGeometry, geometry.frame.contains(drag.location),
+                      case let .timeline(_, pps) = geometry.mapping, pps > 0
+                else { last = .now; continue }
+                let now = ContinuousClock.now
+                let elapsed = Double((now - last).components.attoseconds) / 1e18 + Double((now - last).components.seconds)
+                last = now
+                let left = Double(geometry.frame.minX + 40 - drag.location.x)
+                let right = Double(drag.location.x - (geometry.frame.maxX - 40))
+                let speed = MediaInsertMath.autoscrollSpeed(depth: max(left, right))
+                guard speed > 0 else { continue }
+                let delta = speed / Double(pps) * elapsed * (left > right ? -1 : 1)
+                self.seek(to: self.currentTime + delta)
+                self.moveMediaDrag(to: drag.location)
+            }
+        }
     }
 
     // MARK: - In Video (FS-12.09 §5)

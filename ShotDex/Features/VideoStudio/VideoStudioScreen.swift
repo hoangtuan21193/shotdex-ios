@@ -97,6 +97,9 @@ struct VideoStudioScreen: View {
             if let editingOverlay {
                 inlineTextEditor(editingOverlay)
             }
+            if let model, model.mediaDrag != nil {
+                VideoMediaDragOverlay(model: model)
+            }
         }
         // FS-12.18 §6: a draft that would not write says so and offers the
         // write again; nothing blocks, the project in memory is all there.

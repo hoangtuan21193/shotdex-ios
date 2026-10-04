@@ -106,6 +106,9 @@ struct VideoTimelineView: View {
                         .onPreferenceChange(TimelineDragZonesKey.self) { dragZones = $0 }
                     }
                     .background(alignment: .topLeading) { laneRails }
+                    // The timeline holds still under a drag from Media: its
+                    // pan is off for as long as a ghost is up.
+                    .allowsHitTesting(model.mediaDrag == nil)
                 }
 
                 scrollbar(screenWidth: screenWidth)
@@ -128,11 +131,37 @@ struct VideoTimelineView: View {
                 reportVisibleDuration(screenWidth: screenWidth)
             }
             .onChange(of: pps) { reportVisibleDuration(screenWidth: screenWidth) }
+            // Where a drag from Media can land (FS-12.09 §5), kept current
+            // as the timeline moves, zooms, or stacks lanes.
+            .onAppear { publishDropGeometry(geo) }
+            .onChange(of: geo.frame(in: .global)) { publishDropGeometry(geo) }
+            .onChange(of: pps) { publishDropGeometry(geo) }
+            .onChange(of: laneOffsetY) { publishDropGeometry(geo) }
+            .onChange(of: model.overlayLaneCount) { publishDropGeometry(geo) }
+            .onDisappear { model.timelineDropGeometry = nil }
         }
         .frame(height: height)
         .background(EditorTheme.background)
         .clipped()
         .onChange(of: model.fitToWindowToken) { fitToWindow() }
+    }
+
+    /// The lanes as a drop target: the whole lane area right of the gutter,
+    /// the playhead's x, the zoom, and the video lane's band for the line.
+    private func publishDropGeometry(_ geo: GeometryProxy) {
+        let frame = geo.frame(in: .global)
+        let lanesTop = VideoStudioMetrics.timelineTopPadding + lanes.ruler + VideoStudioMetrics.rulerToTracks
+        let videoTop = lanesTop
+            + CGFloat(model.overlayLaneCount) * (lanes.overlay + VideoStudioMetrics.laneSpacing)
+            - laneOffsetY
+        model.timelineDropGeometry = VideoDropGeometry(
+            frame: CGRect(x: frame.minX + lanes.gutter, y: frame.minY, width: max(0, frame.width - lanes.gutter), height: frame.height),
+            lineBand: CGRect(x: frame.minX, y: frame.minY + videoTop, width: frame.width, height: lanes.video),
+            mapping: .timeline(
+                playheadX: frame.minX + VideoStudioMetrics.playheadX(screenWidth: frame.width, gutter: lanes.gutter),
+                pointsPerSecond: pps
+            )
+        )
     }
 
     private func reportVisibleDuration(screenWidth: CGFloat) {

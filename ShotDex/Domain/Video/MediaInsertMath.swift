@@ -94,4 +94,33 @@ enum MediaInsertMath {
         )
         return VideoTimelineMath.placements(durations: durations, overlaps: overlaps)
     }
+
+    // MARK: Drop (FS-12.09 §5)
+
+    /// A seam between clips: before clip `index`, or after the last when
+    /// `index` is the clip count.
+    struct Boundary: Equatable {
+        let index: Int
+        let time: Double
+    }
+
+    static func boundaries(_ placements: [VideoTimelineMath.Placement]) -> [Boundary] {
+        guard let last = placements.last else { return [Boundary(index: 0, time: 0)] }
+        return placements.enumerated().map { Boundary(index: $0.offset, time: $0.element.start) }
+            + [Boundary(index: placements.count, time: last.end)]
+    }
+
+    /// The seam nearest a timeline second — where a dragged item would land.
+    static func nearestBoundary(to time: Double, placements: [VideoTimelineMath.Placement]) -> Boundary {
+        boundaries(placements).min { abs($0.time - time) < abs($1.time - time) } ?? Boundary(index: 0, time: 0)
+    }
+
+    /// How fast the timeline runs under a finger held `depth` points inside
+    /// its 40pt edge, in points per second: nothing at the line, faster the
+    /// deeper — squared, so the first few points nudge and the edge flies.
+    static func autoscrollSpeed(depth: Double, edge: Double = 40, maximum: Double = 900) -> Double {
+        guard depth > 0, edge > 0 else { return 0 }
+        let fraction = min(depth, edge) / edge
+        return maximum * fraction * fraction
+    }
 }

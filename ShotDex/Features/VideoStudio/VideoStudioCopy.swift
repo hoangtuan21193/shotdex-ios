@@ -132,6 +132,10 @@ enum VideoStudioCopy {
         String(localized: "Nothing in your library matches.", table: table, comment: "Video Studio Media panel: a search that found nothing")
     }
 
+    static var mediaDragHint: String {
+        String(localized: "Drop between clips · back on the grid cancels", table: table, comment: "Video Studio Media panel: under its name while an item is being dragged")
+    }
+
     static var select: String {
         String(localized: "Select", table: table, comment: "Video Studio Media panel: starts picking several items to add at once")
     }
