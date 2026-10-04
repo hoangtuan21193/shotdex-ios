@@ -53,11 +53,11 @@ enum LookCubeBaker {
         return checks.filter(\.1).map(\.0)
     }
 
-    static func bake(_ preset: LookPreset, context: CIContext = CIContext()) -> Output? {
-        let size = dimension
+    /// The sRGB lattice — one pixel per point, red fastest, the order a
+    /// `.cube` lists them — as a `dimension² × dimension` float image.
+    static func latticeImage(dimension size: Int = dimension) -> CIImage? {
         let count = size * size * size
         guard let sRGB = CGColorSpace(name: CGColorSpace.sRGB) else { return nil }
-        // One pixel per lattice point, red fastest — the order a .cube lists them.
         var lattice = [Float](repeating: 1, count: count * 4)
         let step = Float(size - 1)
         for index in 0..<count {
@@ -65,15 +65,28 @@ enum LookCubeBaker {
             lattice[index * 4 + 1] = Float(index / size % size) / step
             lattice[index * 4 + 2] = Float(index / (size * size)) / step
         }
-        let width = size * size
-        let bytesPerRow = width * 4 * MemoryLayout<Float>.size
-        let input = CIImage(
+        return CIImage(
             bitmapData: lattice.withUnsafeBytes { Data($0) },
-            bytesPerRow: bytesPerRow,
-            size: CGSize(width: width, height: size),
+            bytesPerRow: size * size * 4 * MemoryLayout<Float>.size,
+            size: CGSize(width: size * size, height: size),
             format: .RGBAf,
             colorSpace: sRGB
         )
+    }
+
+    /// `recipe`'s pre-mask stages run over the lattice: a float RGBA table,
+    /// red fastest, sRGB in and out — what a `.cube` file holds and what
+    /// `CIColorCubeWithColorSpace` reads. The `.cube` export and the Video
+    /// Studio's looks (FS-12.06c §5) both bake through here, so one lattice
+    /// and one chain stand behind both.
+    static func renderTable(
+        of recipe: PhotoEditRecipe,
+        dimension size: Int = dimension,
+        context: CIContext = CIContext()
+    ) -> [Float]? {
+        guard let input = latticeImage(dimension: size),
+              let sRGB = CGColorSpace(name: CGColorSpace.sRGB) else { return nil }
+        let width = size * size
         let source = PhotoRenderSourceInfo(
             url: URL(fileURLWithPath: "/dev/null"),
             type: .png,
@@ -84,13 +97,13 @@ enum LookCubeBaker {
             properties: [:]
         )
         let output = PhotoRenderService.applyPreMaskStages(
-            of: colourOnly(preset.recipe),
+            of: recipe,
             source: source,
             appliesExposure: true,
             to: input
         ).cropped(to: input.extent)
-
-        var baked = [Float](repeating: 0, count: count * 4)
+        let bytesPerRow = width * 4 * MemoryLayout<Float>.size
+        var baked = [Float](repeating: 0, count: size * size * size * 4)
         baked.withUnsafeMutableBytes { buffer in
             context.render(
                 output,
@@ -101,6 +114,13 @@ enum LookCubeBaker {
                 colorSpace: sRGB
             )
         }
+        return baked
+    }
+
+    static func bake(_ preset: LookPreset, context: CIContext = CIContext()) -> Output? {
+        let size = dimension
+        let count = size * size * size
+        guard let baked = renderTable(of: colourOnly(preset.recipe), dimension: size, context: context) else { return nil }
         var text = "TITLE \"\(preset.name.replacingOccurrences(of: "\"", with: "'"))\"\n"
         text += "LUT_3D_SIZE \(size)\nDOMAIN_MIN 0 0 0\nDOMAIN_MAX 1 1 1\n"
         text.reserveCapacity(text.count + count * 28)

@@ -121,7 +121,7 @@ Look mẫu **Moody Coast**: Exposure +0,3 · Contrast +20 · Velvia 100% · Grai
 
 | # | Cho | Khi | Thì | Chứng minh bằng |
 |---|---|---|---|---|
-| AC-1 | look tone + HSL + curve + Velvia, khung thử 64×64 | nướng bảng 33³ cho video | khung qua bảng lệch trung bình ≤ 1/255 so với chuỗi của editor ảnh | một phần: `LookExportCubeTests.bakesColourOnly` (chỉ Mono) |
+| AC-1 | look tone + HSL + curve + Velvia, khung thử 64×64 | nướng bảng 33³ cho video | khung qua bảng lệch trung bình ≤ 1/255 so với chuỗi của editor ảnh | ✅ `VideoLookBakerTests.tableMatchesEditorChain` (Exposure, Contrast, Highlights, WB, HSL, curve, Velvia), `brillianceIsBaked`, `neighbourStagesSplitTheTableInTwo`; `LookExportCubeTests` vẫn xanh. Nướng trên sim (Mac): 17–83 ms/look, 10 look mẫu (`bakeTimeIsLogged`); iPhone 17 chưa đo |
 | AC-2 | project 3 clip, không look | Look → My Looks → chạm Moody Coast, All Clips | cả 3 clip có look; khung ở 1,0 s mỗi clip khớp ảnh editor áp Moody Coast lên khung đó, lệch trung bình ≤ 2/255; undo +1 | ⚠️ chưa có |
 | AC-3 | cả video Velvia; clip 2 có look riêng Night Teal | render khung giữa clip 1, 2, 3 | clip 1 và 3 là Velvia; clip 2 khớp Night Teal **một mình**, không Velvia; chỉ clip 2 có pill "Night Teal" | ⚠️ chưa có |
 | AC-4 | clip 1 Velvia, clip 2 Night Teal, dissolve 1,0 s, tỉ lệ 9:16 trên canvas 16:9 | render khung ở giữa dissolve | khung = trộn 50/50 hai khung đã grade riêng (≤ 1/255); viền letterbox đúng màu nền đã chọn | ✅ thứ tự grade (look cả video): `VideoLookRenderTests.dissolveMixesTwoGradedFrames`, `letterboxKeepsTheChosenBackground`, `windowStaysWhereDrawnOnLetterboxedClip`; look riêng clip 1/clip 2 thêm ở AC-3 |
@@ -146,6 +146,6 @@ Look mẫu **Moody Coast**: Exposure +0,3 · Contrast +20 · Velvia 100% · Grai
 |---|---|
 | Chuỗi grade chạy hai lần mỗi khung trong chuyển cảnh, cộng bốn lượt lân cận, vượt 33,3 ms | đo AC-15 trên máy thật trước `/plan`; không đạt thì bỏ Clarity…Dehaze trên video (§5) |
 | Thời gian nướng một bảng 33³ qua chuỗi ảnh chưa đo; My Looks 50 look = 50 lần nướng cho ô | mục tiêu ≤ 50 ms/look trên iPhone 17; ô điền dần, gradient thay thế trong lúc chờ |
-| Bảng 33³ cắt giá trị ngoài 0…1 (HLG chưa de-log) | đã đúng với film look hiện có; de-log đứng đầu chuỗi |
+| Bảng 33³ cắt giá trị ngoài 0…1 (HLG chưa de-log) | đã đúng với film look hiện có; de-log đứng đầu chuỗi. Look có Clarity…Dehaze nướng **hai** bảng, nên khung bị cắt về 0…1 **giữa** Light và Color: highlight mà Exposure đẩy quá trắng không còn để Curve/Highlights kéo về (test `neighbourStagesSplitTheTableInTwo` đo đúng điều đó) |
 | Export `.cube` liệt Brilliance là "mất" dù pass của nó là từng pixel (bán kính 0) | xem lại ở `/plan`; video nướng Brilliance vào bảng |
 | Board iPad kiểu Mac `F5_IL_Looks` vẽ **Use Video Look** màu accent (`t.accent`), trái Q6 (chữ trắng) | spec giữ chữ trắng — accent chỉ cho Export; **board đã sửa 2026-10-04** (`t.label`) |

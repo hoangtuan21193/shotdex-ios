@@ -613,6 +613,7 @@ Split out by the user when approving the wave-2 plans (intent `docs/_intents/202
 Outside those plans' acceptance criteria — each needs `/spec` (or a line in its owning spec) before it gets a task.
 
 - [ ] Resize: **drops ShotDex edits for local photos** — `PhotoEditingService.compress` renders the on-device original with `PhotoEditRecipe.identity` (`ShotDex/Data/Sources/PhotoEditingService.swift:544-560`, `:572`), so a photo edited in ShotDex loses its edit; the path for a just-downloaded iCloud original (`:532-543`) uses the current version instead. Export to Files renders the current version (plan `docs/_plans/2026-10-02-export-to-files.md` §7 ⚠️-2) — Resize should match _(FS-03.07)_
+- [ ] `.cube` export names **Brilliance** as a setting that "doesn't carry" (`ShotDex/Domain/Editing/LookExchange/LookCubeBaker.swift`, `lostSettings`), but Brilliance is per pixel (its `CIHighlightShadowAdjust` runs at `inputRadius` 0) — the Video Studio bakes it into its look tables (`VideoLookBaker`, `VideoLookBakerTests.brillianceIsBaked`). Carry it in `colourOnly` and drop it from the lost list (FS-03.14c §1) _(FS-12.06c plan task 2)_
 - [ ] Editor: the imported-look marker is the word **"Imported"** under the name (`ShotDex/Features/Editing/EditorToolPanels.swift:326-331`); the canvas draws an **XMP** badge at the tile's top-right, which Video Studio's Look panel adopts (FS-12.06c §3, plan `docs/_plans/2026-10-02-video-photo-looks.md` §6 Q6b) — switch the editor to the badge _(FS-03.14)_
 
 # Video Studio tools/selection/phone — seen in passing (2026-10-04)
