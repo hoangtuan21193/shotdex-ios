@@ -80,7 +80,12 @@ struct CompressionScreen: View {
                 presetStore: dependencies.compressionPresets,
                 fetcher: dependencies.originalFetcher,
                 gate: dependencies.indexInteractionGate,
-                availableBytes: dependencies.originalDownloads.availableBytes
+                availableBytes: dependencies.originalDownloads.availableBytes,
+                watermarkSettings: dependencies.watermarkSettings,
+                signaturePresets: dependencies.signaturePresets,
+                tokenValues: { [libraryQueries = dependencies.libraryQueries] id in
+                    OverlayTokenValues(metadata: try? libraryQueries.metadata(assetId: id))
+                }
             )
             controller = newController
             await newController.load()

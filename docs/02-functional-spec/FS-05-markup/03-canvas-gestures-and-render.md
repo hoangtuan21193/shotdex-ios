@@ -104,6 +104,10 @@ thước nên raster **một lần** rồi ghép lại, cache có khoá vì bộ
 Nhãn giao diện là "Presets" / "Save Preset"; lưu dạng JSON trong cài đặt của app.
 
 - Lưu **cả cụm lớp** — watermark thật thường là logo + một dòng credit, hai thứ chỉ có nghĩa khi đi cùng.
+- Lưu kèm **tỉ lệ khung** của ảnh lúc lưu (sau crop); preset lưu trước khi có trường này coi là 3:2. Đóng dấu lúc
+  xuất ([FS-05.04 §3](04-watermark-on-export.md#3-dấu-được-dựng-thế-nào)) dựng các lớp trong một khung ảo tỉ lệ đó.
+- Đọc danh sách preset **từng cái một**: một preset bản build này không đọc được thì chỉ mất preset đó, không
+  mất cả danh sách.
 - Dán thì **thêm vào** và cấp id mới: dán preset không được âm thầm xoá chữ đang có, và dán hai lần thì
   hoàn tác phải phân biệt được.
 - Ảnh của lớp nằm trong thư mục riêng của app, **không nhúng byte vào công thức** — công thức phải vừa trong

@@ -762,7 +762,10 @@ struct PhotoEditorScreen: View {
             SignaturePreset(
                 name: name,
                 createdAt: Date(),
-                layers: controller.recipe.overlays
+                layers: controller.recipe.overlays,
+                // The shape the layers were placed on, so a watermark stamped
+                // on export keeps them together (FS-05.04 §3).
+                sourceAspect: controller.editedPreviewImage.map { Double($0.size.width / max(1, $0.size.height)) }
             )
         )
     }

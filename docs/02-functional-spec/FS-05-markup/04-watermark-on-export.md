@@ -146,7 +146,7 @@ Size 4%, Opacity 100%.
 
 | # | Cho | Khi | Thì | Chứng minh bằng |
 |---|---|---|---|---|
-| AC-1 | ảnh A, Resize 2048px, cấu hình W | Save to Photos | ảnh mới 2048×1365; khung bao của dấu có cạnh phải x = 2007 ±1, cạnh dưới y = 1324 ±1, cao 55 ±1 px; trên bản render trước khi mã hoá, mọi pixel ngoài khung bao trùng bản Resize không dấu; trong file, mọi pixel ngoài khung bao nới ra lưới khối 16 px trùng bản Resize không dấu (JPEG đổi pixel tới 11 px quanh khung — đo 2026-10-02) | ⚠️ chưa có |
+| AC-1 | ảnh A, Resize 2048px, cấu hình W | Save to Photos | ảnh mới 2048×1365; khung bao của dấu có cạnh phải x = 2007 ±1, cạnh dưới y = 1324 ±1, cao 55 ±1 px; trên bản render trước khi mã hoá, mọi pixel ngoài khung bao trùng bản Resize không dấu; trong file, mọi pixel ngoài khung bao nới ra lưới khối 16 px trùng bản Resize không dấu (JPEG đổi pixel tới 11 px quanh khung — đo 2026-10-02) | ✅ `WatermarkLayoutTests.bottomRightAt2048` (thuần) + `WatermarkRenderTests.outsideTheBoxIsUntouched` (6000×4000 → 2048×1365, dấu khung bao cạnh phải/dưới ±1, cao 55 ±1; bản render đưa vào bộ mã hoá: 0 pixel khác ngoài khung bao; file JPEG: 0 pixel khác ngoài khung bao nới lưới 16 px) — `write` ghép dấu chỉ trong khung bao, phần còn lại là đúng bản render không dấu; `.onlyTheBoxIsRasterized` |
 | AC-2 | như AC-1 | mở Resize | xem trước 320pt có dấu ở dưới-phải; tâm khung bao lệch ≤ 1pt so với vị trí tính từ AC-1. Ảnh trên iPhone, iPad, Duo trong, Duo ngoài | ⚠️ chưa có |
 | AC-3 | 3 ảnh của Sony ILCE-7M4, Fujifilm X-T5, iPhone 17 Pro; cấu hình W | Resize 3 ảnh | chữ trong dấu của từng file lần lượt là `© Nguyen An · ILCE-7M4`, `… X-T5`, `… iPhone 17 Pro` (`{camera}` không có tên hãng, §3) | ⚠️ chưa có (luật token: `OverlayTokenResolverTests`) |
 | AC-4 | Settings: Watermark When Sharing = Credit, Metadata = No Location; ảnh A | Share → Save to Files | file JPEG có dấu ở dưới-phải; không có nhóm GPS; còn Make `SONY`, Model `ILCE-7M4` | ⚠️ chưa có |
@@ -162,7 +162,7 @@ Size 4%, Opacity 100%.
 | AC-14 | HEIC 48MP 8064×6048, Resize Original, cấu hình W | Save to Photos | đỉnh RAM cao hơn cùng lượt không dấu ≤ 40 MB, đo trên iPhone 17 26.5 | ⚠️ chưa có |
 | AC-15 | 10 ảnh, 4 ảnh chỉ có trên iCloud; Settings: Watermark When Sharing = Credit | Share → Save to Files | modal FS-02.06 tải 4 bản gốc; Files nhận 10 file có dấu, mỗi file đúng cỡ pixel của bản gốc, không file nào ở cỡ bản xem trước | ⚠️ chưa có (modal tải: `CompressionPreparationTests.copiesReadThePreparedOriginals`) |
 
-**Chưa chứng minh được:** AC-1…AC-15 — chưa có code.
+**Chưa chứng minh được:** AC-2, AC-3, AC-4, AC-5, AC-6, AC-7, AC-8, AC-9, AC-10, AC-11, AC-12, AC-13, AC-14, AC-15.
 
 ## 8. Rủi ro đã biết
 

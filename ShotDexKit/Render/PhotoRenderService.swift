@@ -41,6 +41,12 @@ public struct PhotoRenderResult {
     public let image: CIImage
     public let colorSpace: CGColorSpace
     public let properties: [CFString: Any]
+    /// A watermark still to be composited (FS-05.04): `write` stamps it into
+    /// the encoded pixels inside its box only, so every pixel outside the box
+    /// is the unstamped render to the bit; `previewImage` composites it too.
+    /// Survives `resize` — it is placed by the short edge, so it lands in
+    /// proportion at any size.
+    public var watermark: WatermarkStamp?
 }
 
 public struct ResolvedAutomaticMasks: @unchecked Sendable {
@@ -71,7 +77,8 @@ public struct PhotoRenderPreview: @unchecked Sendable {
 public actor PhotoRenderService {
     public init() {}
 
-    private let context = CIContext(options: [
+    /// Internal so the watermark extension renders through the same context.
+    let context = CIContext(options: [
         .cacheIntermediates: false,
         .name: "ShotDex Photo Renderer",
     ])
@@ -683,7 +690,8 @@ public actor PhotoRenderService {
         return PhotoRenderResult(
             image: normalized,
             colorSpace: result.colorSpace,
-            properties: result.properties
+            properties: result.properties,
+            watermark: result.watermark
         )
     }
 
@@ -695,14 +703,7 @@ public actor PhotoRenderService {
         metadata: MetadataLevel
     ) throws {
         let resolvedFormat = format == .preserve ? .jpeg : format
-        guard let cgImage = context.createCGImage(
-            result.image,
-            from: result.image.extent,
-            format: .RGBA8,
-            colorSpace: result.colorSpace
-        ) else {
-            throw PhotoEditingError.cannotRender
-        }
+        let cgImage = try encodablePixels(result)
 
         let type = resolvedFormat.uniformType.identifier as CFString
         guard let destination = CGImageDestinationCreateWithURL(
@@ -830,7 +831,7 @@ public actor PhotoRenderService {
         _ result: PhotoRenderResult,
         maximumDimension: CGFloat = 1_800
     ) throws -> CGImage {
-        let image = scaleDown(result.image, maximumDimension: maximumDimension)
+        let image = scaleDown(Self.watermarked(result), maximumDimension: maximumDimension)
         guard let cgImage = context.createCGImage(
             image,
             from: image.extent,

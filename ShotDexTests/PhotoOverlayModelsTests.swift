@@ -131,4 +131,39 @@ struct PhotoOverlayModelsTests {
         )
         #expect(decoded == preset)
     }
+
+    /// A preset keeps the shape of the photo it was saved on (FS-05.04 §3);
+    /// one saved before that existed reads as 3:2.
+    @Test func signaturePresetCarriesAspect() throws {
+        let preset = SignaturePreset(
+            name: "Credit", createdAt: Date(timeIntervalSince1970: 1_790_000_000),
+            layers: [fullyConfiguredTextOverlay()], sourceAspect: 0.75
+        )
+        let decoded = try JSONDecoder().decode(SignaturePreset.self, from: JSONEncoder().encode(preset))
+        #expect(decoded.sourceAspect == 0.75)
+        #expect(WatermarkStamp(preset: decoded, placement: WatermarkPlacement()).sourceAspect == 0.75)
+
+        let old = #"{"id":"\#(UUID().uuidString)","name":"Old","createdAt":0,"layers":[]}"#
+        let legacy = try JSONDecoder().decode(SignaturePreset.self, from: Data(old.utf8))
+        #expect(legacy.sourceAspect == nil)
+        #expect(WatermarkStamp(preset: legacy, placement: WatermarkPlacement()).sourceAspect == 1.5)
+    }
+
+    /// One preset this build cannot read is dropped alone — never every
+    /// signature with it.
+    @MainActor
+    @Test func oneBadPresetKeepsTheRest() throws {
+        let suite = "PhotoOverlayModelsTests-\(UUID().uuidString)"
+        let defaults = try #require(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let good = SignaturePreset(name: "Credit", createdAt: Date(), layers: [fullyConfiguredTextOverlay()])
+        let goodJSON = String(decoding: try JSONEncoder().encode(good), as: UTF8.self)
+        let broken = #"{"id":"not-a-uuid","name":7,"layers":[{"kind":"hologram"}]}"#
+        defaults.set(Data("[\(broken),\(goodJSON)]".utf8), forKey: SettingsKeys.overlaySignatures)
+
+        let store = SignaturePresetStore(defaults: defaults, images: OverlayImageStore(
+            directory: FileManager.default.temporaryDirectory.appendingPathComponent(suite)
+        ))
+        #expect(store.presets.map(\.name) == ["Credit"])
+    }
 }

@@ -577,6 +577,8 @@ final class PhotoEditingService {
             preset: options.preset,
             cropAnchor: cropAnchor ?? options.cropAnchor
         )
+        // Last, at the size the file is written at (FS-05.04 §3).
+        let stamped = await renderer.applyingWatermark(options.watermark, to: resized)
         let requestedFormat = await renderer.resolvedOutputFormat(
             requested: options.format,
             sourceType: source.type,
@@ -589,7 +591,7 @@ final class PhotoEditingService {
             "compressed.\(format.fileExtension)"
         )
         try await renderer.write(
-            resized,
+            stamped,
             to: outputURL,
             format: format,
             quality: options.quality,

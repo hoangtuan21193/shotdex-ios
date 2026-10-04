@@ -1611,12 +1611,14 @@ public struct PhotoExportOptions: Codable, Equatable, Sendable {
         preset: ResizePreset,
         metadata: MetadataLevel,
         cropAnchor: NormalizedPoint,
+        watermark: WatermarkStamp? = nil,
     ) {
         self.format = format
         self.quality = quality
         self.preset = preset
         self.metadata = metadata
         self.cropAnchor = cropAnchor
+        self.watermark = watermark
     }
 
     public var format: PhotoOutputFormat
@@ -1625,6 +1627,9 @@ public struct PhotoExportOptions: Codable, Equatable, Sendable {
     /// What the resized copy keeps (FS-08.06 §4).
     public var metadata: MetadataLevel
     public var cropAnchor: NormalizedPoint
+    /// Stamped last, after the resize, at the size the file is written at
+    /// (FS-05.04). Already resolved for the photo it goes on.
+    public var watermark: WatermarkStamp?
 
     public static let compressDefault = PhotoExportOptions(
         format: .preserve,

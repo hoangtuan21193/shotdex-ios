@@ -497,11 +497,26 @@ public struct SignaturePreset: Codable, Identifiable, Equatable, Sendable {
     public var name: String
     public var createdAt: Date
     public var layers: [PhotoOverlay]
+    /// Width ÷ height of the photo the preset was saved on (after crop). The
+    /// layers are laid out in a frame of this shape when stamped on export
+    /// (FS-05.04 §3), so a logo and its credit line stay together on a
+    /// portrait photo. Nil — a preset saved before this existed — is 3:2.
+    public var sourceAspect: Double?
 
-    public init(id: UUID = UUID(), name: String, createdAt: Date, layers: [PhotoOverlay]) {
+    /// The shape a preset without `sourceAspect` is assumed to come from.
+    public static let defaultSourceAspect = 1.5
+
+    public init(
+        id: UUID = UUID(),
+        name: String,
+        createdAt: Date,
+        layers: [PhotoOverlay],
+        sourceAspect: Double? = nil
+    ) {
         self.id = id
         self.name = name
         self.createdAt = createdAt
         self.layers = layers
+        self.sourceAspect = sourceAspect
     }
 }

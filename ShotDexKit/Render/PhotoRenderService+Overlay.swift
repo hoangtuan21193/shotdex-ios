@@ -10,7 +10,7 @@ import ImageIO
 /// the Live Photo frame processor alike, which means it cannot lean on actor
 /// isolation and carries its own lock. Small capacity — a photo has one or two
 /// signatures on it, not twenty.
-private final class OverlayImageCache: @unchecked Sendable {
+final class OverlayImageCache: @unchecked Sendable {
     public static let shared = OverlayImageCache()
 
     private static let capacity = 8
@@ -180,7 +180,17 @@ public extension PhotoRenderService {
         // The bitmap is drawn in its own zero-origin space and the result is moved
         // onto the image's extent afterwards, so the layers never have to know
         // about a cropped image's offset origin.
-        let local = CGRect(x: 0, y: 0, width: CGFloat(width), height: CGFloat(height))
+        drawOverlayLayers(overlays, in: context, frame: CGSize(width: width, height: height))
+        return context.makeImage()
+    }
+
+    /// Draws `overlays` into `context` as if the context were a whole frame of
+    /// `frame` pixels, origin bottom-left — the editor's bake, and the watermark
+    /// block, which moves the context so only its own box is in the bitmap.
+    static func drawOverlayLayers(_ overlays: [PhotoOverlay], in context: CGContext, frame: CGSize) {
+        let local = CGRect(origin: .zero, size: frame)
+        let width = Int(frame.width.rounded())
+        let height = Int(frame.height.rounded())
         let shortEdge = min(local.width, local.height)
         // The one place the y-flip happens, mirroring `imagePoint`: recipe
         // geometry measures y downward from the top, Core Graphics upward from
@@ -240,7 +250,5 @@ public extension PhotoRenderService {
                 )
             }
         }
-        return context.makeImage()
     }
-
 }

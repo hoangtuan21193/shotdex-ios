@@ -22,8 +22,10 @@ final class SignaturePresetStore {
     }
 
     func reload() {
+        // Lossy, one preset at a time: a preset this build cannot read is
+        // dropped on its own instead of taking every signature with it.
         guard let data = defaults.data(forKey: SettingsKeys.overlaySignatures),
-              let decoded = try? JSONDecoder().decode([SignaturePreset].self, from: data)
+              let decoded = try? JSONDecoder().decode(LossyArray<SignaturePreset>.self, from: data).elements
         else {
             presets = []
             return

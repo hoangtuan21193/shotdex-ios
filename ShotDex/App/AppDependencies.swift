@@ -26,6 +26,9 @@ final class AppDependencies {
     let originalDownloads: OriginalDownloadModel
     let compressionPresets: CompressionPresetStore
     let signaturePresets: SignaturePresetStore
+    /// The watermark the export forms remember and Watermark When Sharing
+    /// (FS-05.04).
+    let watermarkSettings: WatermarkSettingsStore
     let overlayFontRecents: OverlayFontRecentsStore
     let collagePresets: CollagePresetStore
     let overlayImages: OverlayImageStore
@@ -218,6 +221,7 @@ final class AppDependencies {
         let overlayImages = OverlayImageStore()
         self.overlayImages = overlayImages
         self.signaturePresets = SignaturePresetStore(images: overlayImages)
+        self.watermarkSettings = WatermarkSettingsStore()
         self.overlayFontRecents = OverlayFontRecentsStore()
         self.collagePresets = CollagePresetStore()
         self.videoStudio = VideoStudioService(

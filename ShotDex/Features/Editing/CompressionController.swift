@@ -33,6 +33,13 @@ final class CompressionController {
     private let fetcher: any OriginalFetching
     private let gate: IndexInteractionGate?
     private let availableBytes: @Sendable () -> Int64?
+    /// The forms' remembered watermark (FS-05.04 §5) and the presets it
+    /// points at. Nil in a test that does not stamp.
+    let watermarkSettings: WatermarkSettingsStore?
+    let signaturePresets: SignaturePresetStore?
+    /// Token values of one photo, from the index — the same source the editor
+    /// resolves `{camera}` from.
+    @ObservationIgnored private let tokenValues: @MainActor (String) -> OverlayTokenValues
     @ObservationIgnored private var operations: ResizeOperations!
     private var previewSession: PhotoEditingSession?
     private var previewSource: LoadedPhotoEditSource?
@@ -81,7 +88,10 @@ final class CompressionController {
         presetStore: CompressionPresetStore,
         fetcher: any OriginalFetching = PhotoKitOriginalFetcher(),
         gate: IndexInteractionGate? = nil,
-        availableBytes: @escaping @Sendable () -> Int64? = { DiskSpace.availableBytes() }
+        availableBytes: @escaping @Sendable () -> Int64? = { DiskSpace.availableBytes() },
+        watermarkSettings: WatermarkSettingsStore? = nil,
+        signaturePresets: SignaturePresetStore? = nil,
+        tokenValues: @escaping @MainActor (String) -> OverlayTokenValues = { _ in .empty }
     ) {
         self.assets = assets
         self.photos = assets.map { OriginalItem(asset: $0) }
@@ -91,13 +101,18 @@ final class CompressionController {
         self.fetcher = fetcher
         self.gate = gate
         self.availableBytes = availableBytes
+        self.watermarkSettings = watermarkSettings
+        self.signaturePresets = signaturePresets
+        self.tokenValues = tokenValues
         let byID = Dictionary(assets.map { ($0.localIdentifier, $0) }, uniquingKeysWith: { first, _ in first })
         self.operations = ResizeOperations(
             compress: { [weak self] photo, prepared in
                 guard let self, let asset = byID[photo.id] else { throw PhotoEditingError.unavailable }
+                var options = self.exportOptions
+                options.watermark = self.watermarkStamp(for: photo.id)
                 return try await service.compress(
                     asset: asset,
-                    options: self.exportOptions,
+                    options: options,
                     album: self.sourceAlbum,
                     cropAnchor: self.photos.count > 1 ? .center : self.cropAnchor,
                     preparedOriginal: prepared
@@ -114,7 +129,10 @@ final class CompressionController {
         operations: ResizeOperations,
         fetcher: any OriginalFetching,
         gate: IndexInteractionGate? = nil,
-        availableBytes: @escaping @Sendable () -> Int64? = { nil }
+        availableBytes: @escaping @Sendable () -> Int64? = { nil },
+        watermarkSettings: WatermarkSettingsStore? = nil,
+        signaturePresets: SignaturePresetStore? = nil,
+        tokenValues: @escaping @MainActor (String) -> OverlayTokenValues = { _ in .empty }
     ) {
         self.assets = []
         self.photos = photos
@@ -124,7 +142,25 @@ final class CompressionController {
         self.fetcher = fetcher
         self.gate = gate
         self.availableBytes = availableBytes
+        self.watermarkSettings = watermarkSettings
+        self.signaturePresets = signaturePresets
+        self.tokenValues = tokenValues
         self.operations = operations
+    }
+
+    // MARK: Watermark (FS-05.04)
+
+    /// The watermark this form stamps, before tokens: nil when it is off or
+    /// its preset is gone.
+    var watermarkTemplate: WatermarkStamp? {
+        guard let watermarkSettings, let signaturePresets else { return nil }
+        return watermarkSettings.formStamp(in: signaturePresets.presets)
+    }
+
+    /// The stamp for one photo of the batch, its tokens filled from that
+    /// photo's own metadata.
+    func watermarkStamp(for photoID: String) -> WatermarkStamp? {
+        watermarkTemplate?.resolved(with: tokenValues(photoID))
     }
 
     var presets: [ResizePreset] { presetStore?.allPresets ?? [] }
@@ -353,7 +389,13 @@ final class CompressionController {
                 preset: exportOptions.preset,
                 cropAnchor: assets.count > 1 ? .center : cropAnchor
             )
-            let cgImage = try await service.renderer.previewImage(resized)
+            // The same raster as the file gets, at the preview's size: the
+            // block is placed by the short edge, so it lands in proportion.
+            let stamped = await service.renderer.applyingWatermark(
+                photos.first.flatMap { watermarkStamp(for: $0.id) },
+                to: resized
+            )
+            let cgImage = try await service.renderer.previewImage(stamped)
             previewImage = UIImage(cgImage: cgImage)
             await updateEstimate()
         } catch {

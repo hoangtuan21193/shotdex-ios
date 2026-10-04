@@ -101,6 +101,15 @@ enum SettingsKeys {
     /// The images they reference live as files under `Application Support`.
     static let overlaySignatures = "editor.overlaySignatures"
 
+    /// JSON-encoded watermark choice of the export forms (FS-05.04 §5): the
+    /// preset, Position, Margin, Size, Opacity and whether it is on — one
+    /// configuration shared by Resize, Export and the server export sheet.
+    static let watermarkExport = "watermark.export"
+
+    /// Watermark When Sharing (FS-05.04 §4): the preset id, or unwritten for
+    /// Off.
+    static let watermarkSharing = "watermark.sharing"
+
     /// JSON-encoded most-recently-used typefaces, so the full installed-font list
     /// has to be searched once rather than once per photo.
     static let overlayRecentFonts = "editor.overlayRecentFonts"
