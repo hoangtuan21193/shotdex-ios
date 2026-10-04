@@ -5,9 +5,9 @@
 | Tác giả | hat.tuan@karabiner.tech |
 | Ngày | 2026-10-04 |
 | Trạng thái | accepted — người dùng 2026-10-04: "Duyệt cả hai, sang /spec" |
-| Tiến độ | **chưa làm** (2026-10-04) — chưa có spec; canvas iPad đã vẽ lại cả bộ theo kiểu Mac (114 board, commit 76df46d5), code chưa đổi — design đang đi trước code |
+| Tiến độ | **chưa làm** (2026-10-04) — spec FS-21, 62 AC (+ FS-19/20/01.08c dùng chung), mọi ⚠️ CẦN QUYẾT đã chốt; chờ duyệt AC |
 | Nguồn | phản hồi người dùng 2026-10-04: "giao diện macos đẹp quá, làm cho ipad kiểu như vậy" (sau khi xem canvas Mac) |
-| Spec sinh ra từ đây | (điền khi sang Design) |
+| Spec sinh ra từ đây | [FS-21](../02-functional-spec/FS-21-ipad-mac-style/README.md) (62 AC) · dùng chung [FS-19](../02-functional-spec/FS-19-photo-sources/README.md), [FS-20](../02-functional-spec/FS-20-card-ingest/README.md), [FS-01.08c](../02-functional-spec/FS-01-library/08c-compare-viewer-mode.md) |
 
 ## Problem — vấn đề
 
@@ -29,7 +29,8 @@
 
 ## Affected users and systems — phạm vi ảnh hưởng
 
-- Thiết bị: iPad (mọi cỡ, ngang và dọc, Split View/Stage Manager). iPhone và Duo không đổi.
+- Thiết bị: iPad (mọi cỡ, ngang và dọc, Split View/Stage Manager). iPhone và Duo nhận phần chung (nguồn, nhập thẻ, Compare,
+  Viewer sáng/tối, lệnh ⋯ thêm) — chốt ở `/spec` 2026-10-04.
 - Features: gần như mọi màn ở `Features/` có nhánh regular width; `RootTabView` (tab bar → sidebar), Editor,
   Video Studio. Không đụng dữ liệu đã lưu.
 - Liên quan: DESIGN.md §10.1c (màn rộng), §10.1f (Settings split view), intent Mac `2026-10-04-macos-app.md`

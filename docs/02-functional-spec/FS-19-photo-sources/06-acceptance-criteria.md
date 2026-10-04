@@ -1,0 +1,102 @@
+# FS-19.06 — Tiêu chí nghiệm thu
+
+`FS-19.06` · cập nhật 2026-10-04
+
+**Một câu:** 63 tiêu chí, mỗi cái một thao tác, có số, nhìn được từ test hoặc ảnh chụp; chưa cái nào có chứng minh.
+
+- Cột "Chứng minh" ghi **tên đề xuất**; mọi dòng là `⚠️ chưa có`. Test đơn vị chạy trên database trong bộ nhớ và một thư
+  mục tạm dựng sẵn file mẫu (RAW mẫu CC0 ở `~/Library/Caches/ShotDexFixtures/raw`, **không ảnh có mặt người**).
+- Mac **chưa có driver UI** (`Tools/ui-drive` chỉ chạy simulator iOS) — AC màn hình trên Mac ghi "ảnh chụp tay" tới khi có.
+- Số AC cố định, không đánh lại; AC thêm sau đáp án 2026-10-04 mang số 45–63 và nằm trong bảng của phần nó.
+
+## Thư mục và ổ ([01](01-folders-and-drives.md), [01b](01b-offline-access-and-cache.md))
+
+| # | Cho | Khi | Thì | Chứng minh |
+|---|---|---|---|---|
+| AC-1 | Mac, thư viện trống; thư mục "2026 Japan" có 2.000 CR3 + 2.000 JPG cùng tên gốc + 118 HEIC, mặc định Include Subfolders và Pair bật | Add Folder or Drive… → Choose Folder… chọn thư mục | sau lượt đọc: 2.118 ảnh, hàng sidebar "2026 Japan · 2,118"; SHA-256 của cả 4.118 file trước = sau; 0 file mới trong thư mục | ⚠️ chưa có — `FolderSourceIndexTests.pairsAndNeverWrites` + ảnh chụp tay |
+| AC-2 | như AC-1 nhưng bỏ đánh dấu Pair RAW + JPEG | thêm nguồn, đặt ★3 cho `DSC0001.JPG` | 4.118 ảnh; không JPG nào mang nhãn `RAW+JPG`; có `DSC0001.JPG.xmp` ★3; `DSC0001.xmp` không đổi byte | ⚠️ chưa có — `FolderSourceIndexTests.pairingOffSeparateSidecar` |
+| AC-3 | thư mục có 100 file ở tầng đầu và 3 thư mục con 50 file mỗi cái | thêm với Include Subfolders tắt | 100 ảnh; bật lại trong Settings → thêm đúng 150 ảnh, 100 ảnh cũ không đọc lại (0 lần đọc file) | ⚠️ chưa có — `FolderSourceIndexTests.subfoldersToggleReadsOnlyDelta` |
+| AC-4 | `~/Pictures` chứa gói Photos Library (500 ảnh), 20 JPG và 3 file bắt đầu bằng `.` | thêm `~/Pictures` | đúng 20 ảnh; 0 file trong gói được mở | ⚠️ chưa có — `FolderEnumerationTests.skipsPackagesAndDotFiles` |
+| AC-5 | 3.812 file, đã đọc 150 | nhìn banner | "Estimating time…"; tới file 200 với tốc độ 20 file/s còn 3.612 file → "about 3 min left" | ⚠️ chưa có — `IndexEstimateTests.waitsFor200ThenRoundsToMinutes` |
+| AC-6 | đang đọc lần đầu, 1.240 / 3.812 | Pause, tắt hẳn app, mở lại, Resume | đọc đúng 2.572 file còn lại; 0 lần đọc lại 1.240 file đầu; tổng 3.812 ảnh | ⚠️ chưa có — `FolderSourceIndexTests.resumeAfterRelaunch` |
+| AC-7 | iPad, đang đọc 1.240 / 3.812 | bấm Stop | banner biến mất trong cùng khung hình; 1.240 ảnh ở lại; hàng nguồn "1,240 of 3,812 read" + Continue | ⚠️ chưa có — `ShotDexUITests/scripts/source-stop-ipad.json` |
+| AC-8 | Mac, ShotDex mở, nguồn "2026 Japan" | chép 12 JPG vào thư mục bằng Finder | 12 ảnh mới trong lưới ≤ 10 s sau khi chép xong; file đang chép dở không thành ảnh hỏng | ⚠️ chưa có — `FolderWatchTests.newFilesAppearAfterSettle` |
+| AC-9 | iPad, ShotDex ở nền; thêm 12 file vào thư mục nguồn bằng Files | đưa ShotDex về trước mặt | 12 ảnh mới mà không bấm Re-index; 0 lần đọc lại file cũ | ⚠️ chưa có — `ShotDexUITests/scripts/source-foreground-diff-ipad.json` |
+| AC-10 | Mac, T7 đang đọc lần đầu 1.240 / 3.812, nguồn "2026 Japan" chờ sau | rút T7 | không hộp lỗi; banner "T7 RAW Archive was disconnected · 1,240 of 3,812 read"; 1.240 ảnh mang dấu offline; "2026 Japan" bắt đầu đọc | ⚠️ chưa có — `SourceAvailabilityTests.unplugMidIndexKeepsRead` |
+| AC-11 | như AC-10 | cắm lại T7 | Connected ≤ 5 s sau khi ổ gắn; đọc tiếp từ file 1.241; tổng 3.812, 0 ảnh trùng | ⚠️ chưa có — `SourceAvailabilityTests.replugResumes` |
+| AC-12 | T7 offline, 26.107 ảnh, Keep Photos, Marked Offline | mở một ảnh chỉ có ở T7 | preview cache hiện; Edit, Export, Share mờ, câu "Connect T7 RAW Archive to edit this photo."; tiêu đề lưới có "26,107 offline" | ⚠️ chưa có — ảnh chụp tay (Mac) |
+| AC-13 | Mac tắt; đổi tên "Client Shoots 2026" thành "Clients 2026" trong Finder; 3.812 ảnh, 40 có ★ | mở ShotDex | hàng nguồn Needs access + Grant Access…; 3.812 ảnh vẫn trong thư viện, offline | ⚠️ chưa có — `SourceBookmarkTests.staleBookmarkKeepsPhotos` |
+| AC-14 | như AC-13 | Grant Access… → chọn "Clients 2026" | 3.812 ảnh, cùng id như trước; 40 ảnh vẫn có ★; 0 ảnh trùng | ⚠️ chưa có — `SourceBookmarkTests.regrantRematchesByHash` |
+| AC-15 | thư mục iCloud Drive 100 file, 40 là chỗ giữ chỗ | thêm làm nguồn | 0 byte tải từ cloud trong lượt đọc; 60 ảnh có EXIF; 40 ô glyph cloud, không vào bộ lọc thông số; Statistics đếm 60; tiêu đề lưới "40 in the cloud" | ⚠️ chưa có — `CloudPlaceholderTests.neverDownloadsNeverCounts` |
+| AC-16 | như AC-15 | mở một chỗ giữ chỗ | tải đúng 1 file, có tiến độ + Cancel; xong thì ô có EXIF, hash, thumbnail; Statistics đếm 61 | ⚠️ chưa có — ảnh chụp tay |
+| AC-17 | ổ chứa cache còn 0 byte trống, nguồn 3.812 file | lượt đọc chạy | 3.812 ảnh có metadata; 0 preview ghi; dòng "Not enough space for previews…"; 0 file người dùng bị xoá | ⚠️ chưa có — `PreviewCacheTests.diskFullStopsPreviewsOnly` |
+| AC-45 | nguồn "2026 Japan" = `~/Pictures/2026 Japan` | thêm `~/Pictures/2026 Japan/Day 1`, rồi thêm `~/Pictures` | lần 1: "Already part of “2026 Japan”."; lần 2: "Contains “2026 Japan”. Remove that source first…"; 0 nguồn mới, 0 file đọc | ⚠️ chưa có — `SourceOverlapTests.refusesNestedAndContaining` |
+| AC-46 | When a Drive Is Disconnected = Hide Its Photos; T7 26.107 ảnh, 50 trong đó có bản sao ở "2026 Japan" | rút T7 | lưới −26.057; 50 ảnh ở lại với bản "2026 Japan"; Statistics −26.057; hàng sidebar "26,107 photos hidden until connected"; cắm lại → đủ, ★ giữ | ⚠️ chưa có — `SourceAvailabilityTests.hideOnDisconnect` |
+| AC-47 | Mac, cache mặc định; iPad cache mặc định | đọc vị trí và thuộc tính thư mục cache | nằm trong Application Support của app, mang cờ loại khỏi sao lưu; Cache Size Limit mặc định 25 GB (Mac) · 5 GB (iPad) | ⚠️ chưa có — `PreviewCacheTests.locationAndDefaults` |
+
+## Danh tính và sidecar ([02](02-identity-and-sidecars.md))
+
+| # | Cho | Khi | Thì | Chứng minh |
+|---|---|---|---|---|
+| AC-18 | 50 file giống hệt nằm ở "2026 Japan" và T7 | đọc xong cả hai nguồn và hash đầy đủ chạy xong | thư viện +50 (không +100); Get Info mỗi ảnh "2 copies"; Statistics +50 | ⚠️ chưa có — `PhotoIdentityTests.identicalCopiesAreOnePhoto` |
+| AC-48 | 2 RAW cùng kích thước, trùng 64 KB đầu/giữa/cuối, khác 1 byte ở giữa hai khối; và 2 RAW giống hệt | lượt đọc đầu xong, rồi hash đầy đủ xong | sau lượt đầu: 4 ảnh (0 gộp); sau hash đầy đủ: cặp khác byte vẫn 2 ảnh, cặp giống hệt 1 ảnh "2 copies" | ⚠️ chưa có — `PhotoIdentityTests.fastHashNeverMergesAlone` |
+| AC-49 | 200 asset Photos, 50 chỉ-iCloud; 1 asset giống hệt `IMG_0420.HEIC` trong "2026 Japan" | băm ảnh Photos ở nền | mỗi asset chỉ-iCloud được yêu cầu tải đúng 1 lần; dung lượng thư mục app (trừ database) trước = sau ± 1 MB; `IMG_0420` là 1 ảnh "2 copies" | ⚠️ chưa có — `PhotosHashTests.streamsWithoutDiskGrowth` |
+| AC-50 | ảnh A có bản sao ở Photos (bản gốc trên máy), T7, NAS Home | mở A; rồi xoá bản Photos và mở lại | lần 1 mở bản Photos, toolbar có Done; lần 2 mở bản T7, toolbar "Edited · Saved", không Done | ⚠️ chưa có — `CopyOrderTests.internalPhotosExternalServerCloud` |
+| AC-19 | như AC-18, sidecar bật, cả hai online | đặt ★4 cho một ảnh | ≤ 2 s: cả hai thư mục có `<tên gốc>.xmp` mang sao 4; SHA-256 của hai file ảnh không đổi | ⚠️ chưa có — `SidecarWriterTests.writesEveryOnlineCopyNeverTheImage` |
+| AC-20 | ảnh A ★4, có sidecar, ShotDex đang mở | đổi tên `DSC04512.ARW` + `.xmp` thành `Nara_001.*` trong Finder | cùng id ảnh; vẫn ★4; 0 ảnh mới; chỉ file đổi tên được đọc lại | ⚠️ chưa có — `PhotoIdentityTests.renameKeepsIdentity` |
+| AC-21 | ảnh A chỉ ở "2026 Japan", ★4, có recipe | chuyển file sang T7 bằng Finder | một ảnh, bản sao ở T7; ★4 và recipe giữ | ⚠️ chưa có — `PhotoIdentityTests.moveAcrossSourcesKeepsData` |
+| AC-22 | JPEG A ★3 trong ShotDex; app khác nhúng XMP vào chính file đó (byte đổi, cùng đường dẫn) | lượt so lệch chạy | hash của bản sao **không đổi**; cùng id ảnh, ★3 giữ, EXIF đọc lại; không ảnh mới | ⚠️ chưa có — `PhotoIdentityTests.embeddedMetadataKeepsHash` |
+| AC-51 | ảnh A ★4 Picked, có recipe, chỉ một bản sao; ảnh B mồ côi từ 31 ngày trước | xoá file A bằng Finder; Put Back sau 29 ngày (giả lập đồng hồ); mở app | A rời lưới rồi quay lại cùng id, ★4, Picked, recipe; B: 0 dòng ở mọi bảng | ⚠️ chưa có — `OrphanRetentionTests.thirtyDays` |
+| AC-23 | 300 RAW có sidecar Lightroom: 120 có ★ ≥ 1, 45 có ★ ≥ 3, 30 sao −1, 80 có keyword "Kyoto" | thêm nguồn | lọc ★ ≥ 3 → 45; Rejected → 30; tìm "Kyoto" → 80 | ⚠️ chưa có — `SidecarReaderTests.lightroomRatingsRejectsKeywords` |
+| AC-24 | JPEG có XMP nhúng ★2, không sidecar; JPEG khác có cả nhúng ★2 và sidecar ★5 | đọc | ảnh thứ nhất ★2, ảnh thứ hai ★5 | ⚠️ chưa có — `SidecarReaderTests.sidecarBeatsEmbedded` |
+| AC-52 | ARW có sao máy ảnh 3 trong file, không sidecar; asset Photos có sao 3 trong file | đọc cả hai | ảnh file ★3; asset Photos ★0 và 0 lần ghi Photos | ⚠️ chưa có — `SidecarReaderTests.cameraRatingFilesOnly` |
+| AC-53 | sidecar RAW có thiết lập Lightroom Exposure +1.00 | thêm nguồn; rồi Import Lightroom Edits | sau index: ảnh không có recipe; sau lệnh: recipe có Exposure +1.00 theo bảng FS-03.14b | ⚠️ chưa có — `LightroomImportTests.onlyOnCommand` |
+| AC-25 | sidecar có 214 thẻ thiết lập Lightroom và trường Photo Mechanic | thêm keyword "deer" trong ShotDex | sidecar có "deer"; mọi thẻ khác giống từng byte | ⚠️ chưa có — `SidecarWriterTests.preservesForeignTags` |
+| AC-26 | ShotDex đọc A ★3; sau đó Lightroom ghi sidecar A thành ★3 + keyword "Nara" | đặt Pick cho A trong ShotDex | sidecar có ★3, "Nara" và Pick trong vùng ShotDex; ShotDex hiện keyword "Nara" | ⚠️ chưa có — `SidecarConflictTests.rereadsBeforeWrite` |
+| AC-54 | ảnh A ★4 trên T7 | X, rồi U; đặt favorite; sửa Exposure +0.5 | sau X: trường sao chuẩn −1, vùng ShotDex sao 4; sau U: trường chuẩn 4; vùng ShotDex có favorite và recipe; iPad cắm T7 đọc ra cùng ★4, favorite, recipe | ⚠️ chưa có — `SidecarWriterTests.rejectPickFavoriteRecipe` |
+| AC-27 | ShotDex đặt A ★4 lúc 10:00:00; Lightroom ghi sidecar A ★2 lúc 10:00:05, trước khi ShotDex ghi | ShotDex ghi | bên đổi sau thắng: sidecar và ShotDex đều ★2 | ⚠️ chưa có — `SidecarConflictTests.sameFieldLastWriterWins` |
+| AC-28 | ảnh A có sidecar ★2 ở "2026 Japan" và ★5 ở T7 (T7 mới hơn) | đọc cả hai nguồn | sidecar mới hơn thắng: A ★5; sidecar ở "2026 Japan" ghi thành ★5 | ⚠️ chưa có — `SidecarConflictTests.copiesDisagreeNewestWins` |
+| AC-29 | A có bản sao ở ổ trong và T7; T7 offline | đặt ★5, rồi ★3 | sidecar ổ trong ★3; 1 dấu chờ cho bản T7; Clear Local Metadata Index → dấu chờ còn | ⚠️ chưa có — `PendingSidecarTests.offlineCopyMarkedSurvivesClear` |
+| AC-30 | như AC-29 | cắm T7 | sidecar T7 ★3 (giá trị hiện hành, không qua ★5) ≤ 10 s sau khi gắn; đúng 1 lần ghi; 0 dấu chờ | ⚠️ chưa có — `PendingSidecarTests.writesCurrentValueOnReconnect` |
+| AC-31 | công tắc Read and Write .xmp Sidecars tắt | đặt ★4 cho 10 ảnh | 0 file `.xmp` mới; lọc ★ ≥ 4 ra 10; Clear Local Metadata Index → vẫn 10 | ⚠️ chưa có — `SidecarSettingTests.offKeepsMarksInDatabaseOnly` |
+| AC-32 | T7 gắn chỉ đọc, 3 ảnh | đặt ★4 cho 3 ảnh | ShotDex hiện ★4; 3 dấu chờ "chỉ đọc"; hàng nguồn "Couldn't save .xmp for 3 photos · T7 RAW Archive is read-only" | ⚠️ chưa có — `PendingSidecarTests.readOnlyVolume` |
+
+## Server ([03](03-servers-as-sources.md))
+
+| # | Cho | Khi | Thì | Chứng minh |
+|---|---|---|---|---|
+| AC-33 | SMB "NAS Home", Folder Photos/2026: 9 thư mục, 1.102 ảnh RAW ~30 MB | bật Add as Source, Save | sau lượt đọc đầu: 1.102 ảnh trong thư viện; byte tải ≤ 1.102 × (256 KB + 3 × 64 KB) — không file nào tải trọn; 1.102 thumbnail trong cache chung | ⚠️ chưa có — `ServerSourceIndexTests.rangeReadsOnly` (máy chủ SMB cục bộ) |
+| AC-34 | NAS Home đã index | mở một ARW 48 MB trong viewer, rồi rời viewer | preview cache hiện ngay; bản gốc tải vào thư mục tạm; rời viewer → thư mục tạm rỗng; 0 ảnh mới trong Photos | ⚠️ chưa có — `ServerOriginalTests.tempDeletedOnClose` |
+| AC-35 | tắt máy chủ NAS | chạm nguồn NAS Home, mở một ảnh | hàng "Not reachable"; 1.102 ô có thumbnail cache; viewer "NAS Home isn't reachable. Showing the saved preview."; Edit mờ | ⚠️ chưa có — ảnh chụp tay + `SourceAvailabilityTests.serverUnreachable` |
+| AC-36 | mật khẩu NAS bị đổi trên server | ShotDex thử 3 lượt so | hàng "Password rejected" + Edit Connection…; 0 hộp hỏi mật khẩu bật lên | ⚠️ chưa có — `ServerSourceIndexTests.passwordRejectedNoPrompts` |
+| AC-37 | Cache Size Limit 5 GB, cache 4,99 GB gồm thumbnail và 300 preview đầy màn (thư mục và NAS lẫn nhau) | thêm 200 thumbnail NAS 40 KB | cache ≤ 5 GB; cái bị bỏ là preview đầy màn mở lâu nhất; 0 thumbnail bị bỏ; Settings không có pane cache server riêng | ⚠️ chưa có — `PreviewCacheTests.evictsPreviewsBeforeThumbnails` |
+| AC-38 | máy khác thêm 5 file vào NAS Home/Photos/2026 | bấm Rescan | +5 ảnh; 0 lần đọc nội dung 1.102 file cũ | ⚠️ chưa có — `ServerSourceIndexTests.rescanReadsOnlyNew` |
+| AC-55 | NAS Home kết nối, app mở 2 giờ, không bấm gì | đếm lệnh liệt kê gửi tới server | 0 lệnh sau lượt so lúc mở app | ⚠️ chưa có — `ServerSourceIndexTests.noTimedRescan` |
+| AC-39 | iPhone 17, iOS 26.5, connection SMB NAS Home | File Servers → bật Add as Source → Save; mở một ảnh NAS → Share | nhóm Sources có "NAS Home · 1,102"; không có Import to Library ở đâu; có Save to Photos → asset mới, số ảnh thư viện không đổi sau khi băm; upload FS-15 vẫn qua | ⚠️ chưa có — `ShotDexUITests/scripts/source-server-iphone.json` |
+| AC-56 | Upload 20 ảnh Photos vào NAS Home/Photos/2026 | upload xong, rồi Free Up Space | số ảnh thư viện không đổi; mỗi ảnh "2 copies"; câu xác nhận có "They stay in ShotDex from NAS Home."; sau xoá khỏi Photos 20 ảnh vẫn trong lưới | ⚠️ chưa có — `UploadIntoSourceTests.uploadedFileIsACopy` |
+
+## Xoá, ẩn, ảnh trùng, album, thống kê ([04](04-deleting-and-duplicates.md), [05](05-data.md))
+
+| # | Cho | Khi | Thì | Chứng minh |
+|---|---|---|---|---|
+| AC-40 | Cull, 120 Rejected: 84 ở thư mục/ổ, 30 ở Photos, 6 ở NAS Home (mỗi ảnh một bản sao) | bấm Move 120 Rejected… | hộp "Move 120 rejected photos?" · "84 go to the Trash, 30 to Recently Deleted. 6 on NAS Home can't be deleted from ShotDex and will be hidden." · "ShotDex never edits file contents." · Cancel · Move; không phần chọn bản sao | ⚠️ chưa có — `MixedDeletionPlanTests.messageCountsByDestination` |
+| AC-41 | hộp của AC-40 | Move → Cancel ở hộp hệ thống của Photos | 0 file vào Thùng rác, 0 ảnh ẩn, 120 ảnh vẫn Rejected | ⚠️ chưa có — `MixedDeletionTests.photosCancelMovesNothing` |
+| AC-42 | hộp của AC-40 | Move → đồng ý ở hộp hệ thống | 84 ảnh + JPEG ghép cặp + `.xmp` của chúng trong Thùng rác; 30 trong Recently Deleted; 6 ẩn, file trên NAS còn nguyên SHA-256; Put Back 1 file → ảnh quay lại với ★ cũ | ⚠️ chưa có — `MixedDeletionTests.trashCarriesPairAndSidecar` |
+| AC-43 | chọn 6 ảnh chỉ ở NAS Home | ⌘⌫ | hộp "Hide 6 photos?", nút Hide, không chữ "delete"; Hide → 6 rời lưới và Statistics | ⚠️ chưa có — `MixedDeletionPlanTests.allServerIsHide` |
+| AC-57 | ảnh A có bản sao ở Photos (bản gốc trên máy), T7, NAS Home | xoá A trong nguồn T7; rồi xoá A từ All Photos | lần 1: chỉ bản T7 vào Thùng rác, A còn "2 copies"; lần 2: hộp liệt kê "Photos Library" (bật) và "NAS Home (hide)" (tắt); Move → chỉ bản Photos đi, A còn 1 bản NAS | ⚠️ chưa có — `MultiCopyDeletionTests.onlyViewedSourceThenChecklist` |
+| AC-58 | iPad, nguồn ổ USB-C "SD_BACKUP" (không Thùng rác), 12 ảnh chọn | Move 12 Photos… → Move | hộp thứ hai "Delete 12 files immediately?" + Delete Immediately (chữ đỏ) · Cancel; Cancel → 12 file còn nguyên; lần sau Delete Immediately → 12 file và `.xmp` mất, 0 trong Recently Deleted | ⚠️ chưa có — `ShotDexUITests/scripts/source-permanent-delete-ipad.json` |
+| AC-59 | 6 ảnh NAS đã Hide | mở Collections; Hidden → chọn 2 → Unhide; Unhide 4 còn lại | mục "Hidden" có "6 Hidden Photos"; sau lần 1: 2 ảnh về lưới và Statistics, mục còn 4; sau lần 2: mục Hidden biến mất | ⚠️ chưa có — `ShotDexUITests/scripts/hidden-section-iphone.json` |
+| AC-44 | `DSC04512.ARW` giống hệt ở T7 RAW/2026-09-27, T7 Backup và NAS Home | mở Duplicates, Exact | đúng 1 nhóm "2 identical copies of DSC04512.ARW · both on T7 RAW Archive"; không dòng khác biệt sao/sửa; không nhóm nào gồm bản NAS; Move 1 bản Backup → ảnh còn, Get Info "2 copies" (T7 RAW, NAS) | ⚠️ chưa có — `DuplicateSourceScopeTests.groupsStayInOneSource` |
+| AC-60 | nhóm Similar 2 ảnh file khác nội dung: giữ B (★0, không GPS), bỏ C (★4, Picked, keyword "Kyoto", có GPS, chụp sớm hơn) | Merge | B ★4, Picked, "Kyoto" trong database và sidecar; GPS và ngày chụp của B không đổi; SHA-256 file B không đổi | ⚠️ chưa có — `FileMergeTests.ratingFlagKeywordOnly` |
+| AC-61 | có nguồn thư mục; 3 ảnh file và 2 ảnh Photos | New Album "Kyoto" → thêm 5 ảnh; Add to Album với album Photos "Trip" cho 1 ảnh chỉ-file | "Kyoto" là album ShotDex có 5 ảnh, 0 album mới trong Photos; hàng "Trip" mờ, câu "Photos albums can only hold Photos Library items." | ⚠️ chưa có — `ShotDexAlbumTests.spansSources` |
+
+## iPhone và Duo ([README §3](README.md))
+
+| # | Cho | Khi | Thì | Chứng minh |
+|---|---|---|---|---|
+| AC-62 | iPhone 17, iOS 26.5; thư mục On My iPhone "Kyoto" 300 JPG | Settings › Sources → Add Folder or Drive… → chọn "Kyoto" | nhóm Sources có "Kyoto · 300"; 300 ảnh trong lưới; đặt ★4 → có `.xmp` cạnh file; 0 file ảnh đổi SHA-256 | ⚠️ chưa có — `ShotDexUITests/scripts/source-folder-iphone.json` |
+| AC-63 | Duo, nguồn "Kyoto" đã thêm trên màn trong | gập máy sang màn ngoài | màn ngoài thấy nguồn "Kyoto · 300" và cùng 300 ảnh; thêm nguồn và Settings › Sources dùng được trên màn ngoài | ⚠️ chưa có — máy thật hoặc ảnh chụp tay (simctl không gập được Duo) |
+
+**Chưa chứng minh được:** cả 63. Statistics đếm một lần nằm trong AC-18; popup Source của Statistics và Duplicates chưa có AC
+riêng — thêm ở `/plan` khi FS-07 được sửa theo. Board iPhone/Duo chưa vẽ, nên AC-39, AC-59, AC-62, AC-63 chưa có chỗ so
+`design-parity`.

@@ -59,12 +59,16 @@ struct FileExportRunningView: View {
                 }
                 .padding(AppTheme.Spacing.lg)
             }
-            Button(String(localized: "Cancel", table: ExportCopy.table, comment: "Export: stop the run (asks first)"), role: .destructive) {
+            Button(role: .destructive) {
                 isConfirmingStop = true
+            } label: {
+                Text(String(localized: "Cancel", table: ExportCopy.table, comment: "Export: stop the run (asks first)"))
+                    .font(.headline)
+                    .frame(maxWidth: .infinity, minHeight: AppTheme.Size.primaryActionHeight)
             }
-            .buttonStyle(SummaryButtonStyle(kind: .destructive))
-            .padding(.horizontal, AppTheme.Spacing.xxl)
-            .padding(.vertical, AppTheme.Spacing.lg)
+            .buttonStyle(.bordered)
+            .tint(.red)
+            .padding(AppTheme.Spacing.lg)
         }
         .background(Color(.systemGroupedBackground))
         .confirmationDialog(ExportCopy.stopTitle, isPresented: $isConfirmingStop, titleVisibility: .visible) {
@@ -141,21 +145,20 @@ struct FileExportSummaryView: View {
             VStack(spacing: AppTheme.Spacing.md) {
                 if summary.offersExportRemaining {
                     Button(ExportCopy.exportRemaining) { model.exportRemaining() }
-                        .buttonStyle(SummaryButtonStyle(kind: .secondary))
+                        .buttonStyle(SummaryButtonStyle(isProminent: false))
                         .disabled(model.isFolderNotConnected)
                 } else if summary.offersRetry {
                     Button(ExportCopy.retryFailed) { model.retryFailed() }
-                        .buttonStyle(SummaryButtonStyle(kind: .secondary))
+                        .buttonStyle(SummaryButtonStyle(isProminent: false))
                 }
                 if summary.offersAnotherFolder {
                     Button(ExportCopy.chooseAnotherFolder) { model.isPickingFolder = true }
-                        .buttonStyle(SummaryButtonStyle(kind: .secondary))
+                        .buttonStyle(SummaryButtonStyle(isProminent: false))
                 }
                 Button(ExportCopy.done, action: onDone)
-                    .buttonStyle(SummaryButtonStyle(kind: .prominent))
+                    .buttonStyle(SummaryButtonStyle(isProminent: true))
             }
-            .padding(.horizontal, AppTheme.Spacing.xxl)
-            .padding(.vertical, AppTheme.Spacing.lg)
+            .padding(AppTheme.Spacing.lg)
         }
         .background(Color(.systemGroupedBackground))
     }
@@ -168,21 +171,20 @@ struct FileExportSummaryView: View {
     }
 }
 
-/// A full-width 50pt button of the run and the summary (`PH35`, `PH36`):
-/// Done filled, the ways on tinted, Cancel red.
+/// A full-width 50pt summary button: the filled one is Done.
 private struct SummaryButtonStyle: ButtonStyle {
-    enum Kind { case prominent, secondary, destructive }
-
-    let kind: Kind
+    let isProminent: Bool
     @Environment(\.isEnabled) private var isEnabled
 
     func makeBody(configuration: Configuration) -> some View {
-        let tint: Color = kind == .destructive ? .red : .accentColor
         configuration.label
             .font(.headline)
-            .foregroundStyle(kind == .prominent ? Color.white : tint)
+            .foregroundStyle(isProminent ? Color.white : Color.accentColor)
             .frame(maxWidth: .infinity, minHeight: AppTheme.Size.primaryActionHeight)
-            .background(kind == .prominent ? tint : tint.opacity(0.15), in: RoundedRectangle.app(AppTheme.Radius.md))
+            .background(
+                isProminent ? Color.accentColor : Color.accentColor.opacity(0.15),
+                in: RoundedRectangle.app(AppTheme.Radius.md)
+            )
             .opacity(isEnabled ? (configuration.isPressed ? 0.7 : 1) : 0.4)
     }
 }
