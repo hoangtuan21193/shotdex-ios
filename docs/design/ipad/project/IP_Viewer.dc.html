@@ -108,6 +108,8 @@ const I = {
   raw:'M12 3a9 9 0 1 0 0.01 0z M9.5 3.4l2.5 8.6 M20.6 9.6L12 12 M14.5 20.6L12 12 M3.4 14.4L12 12',
   recent:'M12 3a9 9 0 1 0 0.01 0z M12 7v5l3.5 2',
   library:'M7 7h13v12H7z M4 16V4h13',
+  folder:'M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z',
+  drive:'M3 14h18v5H3z M3 14l3-9h12l3 9 M17 16.5h.01',
   server:'M4 4h16v6H4z M4 14h16v6H4z M8 7h.01 M8 17h.01',
   onthisday:'M4 6h16v14H4z M4 10h16 M8 3v5 M16 3v5 M9 15l2 2 4-4',
   album:'M4 9h16v11H4z M6.5 6h11 M9 3h6',
@@ -150,12 +152,14 @@ function tiles(n, seed, o){
   }
   return out;
 }
-// Canonical sidebar, iPad source set (Photos Library + servers; intent 2026-10-04 default: no folders on iPad).
-// o.sel = selected row name; o.offline = NAS Home unreachable; o.adding adds a server that is still indexing; o.empty = first run.
+// Canonical sidebar, iPad source set = Mac source set (user decision 2026-10-04: Files folders and USB-C drives on
+// iPad too). Counts sum to All Photos: 23,904 + 4,118 + 26,107 + 1,102 = 55,231 (content-hash identity, one photo once).
+// o.sel = selected row name; o.offline = T7 RAW Archive unplugged; o.newFolder adds a folder still indexing; o.empty = first run.
+// Nine sources-plus-collections rows overflow the 900pt list by 88pt: the sidebar scrolls (Video Projects, On Server below).
 function sidebar(t, o){
   o=o||{};
   const row=(name,d,count,x)=>{x=x||{};const s=(o.sel===name);const dim=!!(x.off||x.access);
-    return {name,d,count:(x.off||x.prog||x.access||o.empty)?'':(count||''),chev:!!x.chev,selA:s?'true':'false',
+    return {name,d,count:(x.off||x.prog||x.access||o.empty)?'':(count||''),eject:!!x.eject,ejectLabel:'Eject '+name,chev:!!x.chev,selA:s?'true':'false',
       bg:s?t.rowSel:'transparent', iconColor:dim?t.label2:t.accent, textColor:dim?t.label2:t.label,
       offline:!!x.off, progress:!!x.prog, progLabel:x.progLabel||'', dash:x.dash||'0 100', access:!!x.access};};
   if(o.empty) return [
@@ -164,9 +168,9 @@ function sidebar(t, o){
     {hasTitle:true, title:'Collections', addable:true, addLabel:'New Album', note:'', rows:[row('On This Day',I.onthisday),row('Albums',I.album,'',{chev:true})]},
     {hasTitle:true, title:'Utilities', addable:false, note:'', rows:[row('Statistics',I.stats),row('Places',I.places),row('Trips',I.trips),row('Duplicates',I.dup),row('Collages',I.collage),row('Video Projects',I.film),row('On Server',I.onserver)]}
   ];
-  const nas = o.offline ? row('NAS Home',I.server,'',{off:true}) : row('NAS Home',I.server,'1,102');
-  const sources=[row('Photos Library',I.library,'54,129'), nas];
-  if(o.adding) sources.push(row('Client Shoots 2026',I.server,'',{prog:true,dash:'18.7 100',progLabel:'Adding, 33 percent'}));
+  const t7 = o.offline ? row('T7 RAW Archive',I.drive,'',{off:true}) : row('T7 RAW Archive',I.drive,'26,107',{eject:true});
+  const sources=[row('Photos Library',I.library,'23,904'),row('2026 Japan',I.folder,'4,118'),t7,row('NAS Home',I.server,'1,102')];
+  if(o.newFolder) sources.push(row('Client Shoots 2026',I.folder,'',{prog:true,dash:'18.7 100',progLabel:'Adding, 33 percent'}));
   return [
     {hasTitle:false, note:'', rows:[row('All Photos',I.all,o.allCount||'55,231'),row('Favorites',I.fav,'1,862'),row('Videos',I.video,'1,204'),row('RAW',I.raw,'31,540'),row('Recently Added',I.recent)]},
     {hasTitle:true, title:'Sources', addable:true, addLabel:'Add Source', note:'', rows:sources},

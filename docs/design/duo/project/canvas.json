@@ -54,7 +54,7 @@
   },
   "DI_Compare.dc.html": {
    "h": 669,
-   "title": "Duo mở · Compare 2 cột, 4 ảnh, ảnh đánh dấu xoá viền đỏ",
+   "title": "Duo mở · Viewer 2-Up: Select | Candidate, zoom đồng bộ, Reject · ★ · Pick",
    "w": 951,
    "x": 7217,
    "y": 560
@@ -63,196 +63,196 @@
    "h": 669,
    "title": "Duo mở · Cắt video: Save cùng hàng với Collage",
    "w": 951,
-   "x": 8248,
+   "x": 9279,
    "y": 560
   },
   "DI_Share.dc.html": {
    "h": 669,
    "title": "Duo mở · Share sheet full màn: header, 8 ứng dụng, danh sách hành động",
    "w": 951,
-   "x": 9279,
+   "x": 10310,
    "y": 560
   },
   "DI_Collections.dc.html": {
    "h": 669,
    "title": "Duo mở · Collections: hero On This Day 260 + hàng cover Smart Albums 192, rail tab bên phải",
    "w": 951,
-   "x": 10310,
+   "x": 11341,
    "y": 560
   },
   "DI_AlbumDetail.dc.html": {
    "h": 669,
    "title": "Duo mở · Album: lưới 7 cột trong 867pt, Filter + Select, rail tab",
    "w": 951,
-   "x": 11341,
+   "x": 12372,
    "y": 560
   },
   "DI_SmartAlbum.dc.html": {
    "h": 669,
    "title": "Duo mở · Smart album: thanh điều kiện + lưới 7 cột, rail tab",
    "w": 951,
-   "x": 12372,
+   "x": 13403,
    "y": 560
   },
   "DI_SmartAlbumEditor.dc.html": {
    "h": 669,
    "title": "Duo mở · Edit Smart Album thành toàn màn (compact height bỏ detent)",
    "w": 951,
-   "x": 13403,
+   "x": 14434,
    "y": 560
   },
   "DI_OnThisDay.dc.html": {
    "h": 669,
    "title": "Duo mở · On This Day: 7 cột, header năm dạng capsule kính, rail tab",
    "w": 951,
-   "x": 14434,
+   "x": 15465,
    "y": 560
   },
   "DI_Places.dc.html": {
    "h": 669,
    "title": "Duo mở · Places: bản đồ 867pt với 11 cụm ảnh, rail tab dọc bên phải",
    "w": 951,
-   "x": 15465,
+   "x": 16496,
    "y": 560
   },
   "DI_Trips.dc.html": {
    "h": 669,
    "title": "Duo mở · Trips: thẻ cover 835×160 xếp dọc, rail tab bên phải",
    "w": 951,
-   "x": 16496,
+   "x": 17527,
    "y": 560
   },
   "DI_Duplicates.dc.html": {
    "h": 669,
    "title": "Duo mở · Duplicates: 2 cột thẻ quyết định 410pt, nhóm đã duyệt thu gọn, thanh Delete nổi",
    "w": 951,
-   "x": 17527,
+   "x": 18558,
    "y": 560
   },
   "DI_Creations.dc.html": {
    "h": 669,
    "title": "Duo mở · Collages: lưới 2 cột thẻ cover + ngày + số ảnh, rail tab bên phải",
    "w": 951,
-   "x": 18558,
+   "x": 19589,
    "y": 560
   },
   "DI_Collage.dc.html": {
    "h": 669,
    "title": "Duo mở · Collage: bỏ nhãn đếm, Export trên cột inspector",
    "w": 951,
-   "x": 19589,
+   "x": 20620,
    "y": 560
   },
   "DI_CollageExport.dc.html": {
    "h": 669,
    "title": "Duo mở · Xuất collage: Save cùng hàng với Collage",
    "w": 951,
-   "x": 20620,
+   "x": 21651,
    "y": 560
   },
   "DI_Compress.dc.html": {
    "h": 669,
    "title": "Duo mở · Resize: Resize cùng hàng với Collage",
    "w": 951,
-   "x": 21651,
+   "x": 22682,
    "y": 560
   },
   "DI_Statistics.dc.html": {
    "h": 669,
    "title": "Duo mở · Thống kê: nút đổi kiểu 28pt trên mọi thẻ biểu đồ, ô số KPI không có",
    "w": 951,
-   "x": 22682,
+   "x": 23713,
    "y": 560
   },
   "DI_ChartEditor.dc.html": {
    "h": 669,
    "title": "Duo mở · Edit Chart: form bên trái, xem trước donut bên phải; X = Camera",
    "w": 951,
-   "x": 23713,
+   "x": 24744,
    "y": 560
   },
   "DI_DateRange.dc.html": {
    "h": 669,
    "title": "Duo mở · Date Range toàn màn: tháng 9 và 10/2026, ngày tương lai mờ",
    "w": 951,
-   "x": 24744,
+   "x": 25775,
    "y": 560
   },
   "DI_Settings.dc.html": {
    "h": 669,
    "title": "Duo mở · Cài đặt split view: sidebar ô icon 28 + pane Photo Library kiểu hàng mới trên màn 669",
    "w": 951,
-   "x": 25775,
+   "x": 26806,
    "y": 560
   },
   "DI_WidgetSettings.dc.html": {
    "h": 669,
    "title": "Duo mở · Sửa widget: preview ghim trên, sidebar mới (ô icon) chọn Widgets",
    "w": 951,
-   "x": 26806,
+   "x": 27837,
    "y": 560
   },
   "DI_CompressionPresets.dc.html": {
    "h": 669,
    "title": "Duo mở · Resize Presets trong pane chi tiết, sidebar mới chọn Sharing and Export",
    "w": 951,
-   "x": 27837,
+   "x": 28868,
    "y": 560
   },
   "DI_CameraDatabase.dc.html": {
    "h": 669,
    "title": "Duo mở · Unknown Cameras trong pane chi tiết, sidebar mới chọn Camera Database",
    "w": 951,
-   "x": 28868,
+   "x": 29899,
    "y": 560
   },
   "DI_Support.dc.html": {
    "h": 669,
    "title": "Duo mở · Settings split view: sidebar mới chọn Support, danh sách Support ở pane 631pt",
    "w": 951,
-   "x": 29899,
+   "x": 30930,
    "y": 560
   },
   "DI_SupportThread.dc.html": {
    "h": 669,
    "title": "Duo mở · Support thread trong split view, sidebar mới chọn Support",
    "w": 951,
-   "x": 30930,
+   "x": 31961,
    "y": 560
   },
   "DI_ServerList.dc.html": {
    "h": 669,
    "title": "Duo mở · File Servers: kết nối đã lưu ở pane, sidebar mới chọn Sharing and Export",
    "w": 951,
-   "x": 31961,
+   "x": 32992,
    "y": 560
   },
   "DI_ServerForm.dc.html": {
    "h": 669,
    "title": "Duo mở · Add Connection toàn màn: Servers Found, Protocol/Host/Port, Folder, Test",
    "w": 951,
-   "x": 32992,
+   "x": 34023,
    "y": 560
   },
   "DI_ServerBrowser.dc.html": {
    "h": 669,
    "title": "Duo mở · Duyệt thư mục server lưới 7 cột, rail tab bên phải",
    "w": 951,
-   "x": 34023,
+   "x": 35054,
    "y": 560
   },
   "DI_ServerUpload.dc.html": {
    "h": 669,
    "title": "Duo mở · Upload to Server toàn màn: Connection, Folder, Date Folders, Files",
    "w": 951,
-   "x": 35054,
+   "x": 36085,
    "y": 560
   },
   "DI_UploadedToServer.dc.html": {
    "h": 669,
    "title": "Duo mở · Uploaded to Server: thư mục server và số ảnh, rail tab bên phải",
    "w": 951,
-   "x": 36085,
+   "x": 37116,
    "y": 560
   },
   "DC_Onboarding.dc.html": {
@@ -306,7 +306,7 @@
   },
   "DC_Compare.dc.html": {
    "h": 678,
-   "title": "Duo màn ngoài · Compare 1 cột trong 382pt, 3 ảnh, nút Delete 1 Photo",
+   "title": "Duo màn ngoài · Viewer Compare xếp chồng trong 382pt",
    "w": 466,
    "x": 3822,
    "y": 1609
@@ -508,7 +508,7 @@
    "y": 1609
   },
   "DI_FocusStack.dc.html": {
-   "x": 37116,
+   "x": 38147,
    "y": 560,
    "w": 951,
    "h": 669,
@@ -522,7 +522,7 @@
    "title": "Duo màn ngoài · Focus Stack: Save cùng hàng với Collage"
   },
   "DI_StackExposures.dc.html": {
-   "x": 38147,
+   "x": 39178,
    "y": 560,
    "w": 951,
    "h": 669,
@@ -536,7 +536,7 @@
    "title": "Duo màn ngoài · Stack Exposures: Save cùng hàng với Collage"
   },
   "DI_Panorama.dc.html": {
-   "x": 39178,
+   "x": 40209,
    "y": 560,
    "w": 951,
    "h": 669,
@@ -553,14 +553,14 @@
    "h": 669,
    "title": "Duo mở · Video Projects 2 cột: nháp có nhãn Draft + Edited 5 min ago lẫn bản đã xuất, rail tab — theo spec 3/10",
    "w": 951,
-   "x": 40209,
+   "x": 41240,
    "y": 560
   },
   "DI_VideoProjectsDelete.dc.html": {
    "h": 669,
    "title": "Duo mở · Delete Draft?: alert 2 nút Cancel / Delete đỏ trên Video Projects mờ — theo spec 3/10",
    "w": 951,
-   "x": 41240,
+   "x": 42271,
    "y": 560
   },
   "DC_VideoProjects.dc.html": {
@@ -1277,6 +1277,13 @@
    "w": 951,
    "x": 1031,
    "y": 560
+  },
+  "DI_CompareSurvey.dc.html": {
+   "x": 8248,
+   "y": 560,
+   "w": 951,
+   "h": 669,
+   "title": "Duo mở · Viewer Survey: 6 ảnh 3×2, Rejected mờ, Delete 2 Photos"
   }
  },
  "order": [
@@ -1288,6 +1295,7 @@
   "DI_Viewer.dc.html",
   "DI_Metadata.dc.html",
   "DI_Compare.dc.html",
+  "DI_CompareSurvey.dc.html",
   "DI_VideoTrim.dc.html",
   "DI_Share.dc.html",
   "DI_Collections.dc.html",

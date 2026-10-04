@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Duo inner · Viewer · Survey</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0}
+button{font-family:inherit;padding:0;margin:0;cursor:default}
+</style>
+</helmet>
+<div style="width: 951px; height: 669px; position: relative; overflow: hidden; background: {{t.bg}}; color: {{t.label}}; font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', system-ui, sans-serif">
+<!-- SURVEY on the Duo inner display: the Viewer in Survey mode (not tier D: follows light/dark like the Viewer), every photo
+     in the comparison at once, fitted (no zoom here). Tap a photo to focus it (amber ring): the bottom bar acts on the
+     focused one, and only it shows Remove from Survey. Each cell: photo with its name and shutter in a pill, the Cull row
+     [Reject] [5 stars] [Pick] at survey size (stars 32). Rejected photos dim; Delete N removes them. 2-Up: DI_Compare.
+     Closing the Duo lands on DC_Compare (the cover has no Survey) with the focused photo as Select. -->
+<div style="position:absolute;left:16px;top:96px;width:919px;height:452px;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));grid-template-rows:repeat(2,220px);column-gap:16px;row-gap:12px">
+<sc-for list="{{cells}}" as="p" hint-placeholder-count="6">
+<section aria-label="{{p.name}}" style="position:relative;height:220px">
+<div style="position:absolute;left:50%;top:0;width:264px;height:176px;margin-left:-132px">
+<div role="img" aria-label="{{p.imgLabel}}" style="position:absolute;inset:0;border-radius:10px;overflow:hidden;background:{{t.fill2}}"><div style="position:absolute;inset:0;opacity:{{p.op}}"><div style="position:absolute;inset:0;background:{{p.sky}}"></div><div style="position:absolute;left:63.65%;top:33.8%;width:14px;height:14px;border-radius:50%;background:#FBE3B8;opacity:0.9"></div><div style="position:absolute;inset:0;background:#4D4A5A;clip-path:polygon(0% 62%,12% 52%,24% 58%,38% 44%,50% 54%,63% 47%,78% 57%,90% 50%,100% 56%,100% 100%,0% 100%)"></div><div style="position:absolute;inset:0;background:#2F3A36;clip-path:polygon(0% 72%,16% 66%,30% 73%,47% 63%,62% 71%,80% 64%,100% 70%,100% 100%,0% 100%)"></div><div style="position:absolute;inset:0;background:#1C2420;clip-path:polygon(0% 84%,20% 80%,42% 86%,64% 79%,84% 84%,100% 80%,100% 100%,0% 100%)"></div></div>
+<sc-if value="{{p.picked}}" hint-placeholder-val="{{false}}"><span style="position:absolute;left:8px;top:8px;height:24px;padding:0 9px 0 7px;border-radius:12px;background:rgba(0,0,0,0.58);color:#FFFFFF;font-size:12px;font-weight:600;display:flex;align-items:center;gap:4px"><svg width="11" height="11" viewBox="0 0 24 24" fill="#FFFFFF" stroke="#FFFFFF" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M5 21V4 M5 4h11l-2 4 2 4H5z"></path></svg>Picked</span></sc-if><sc-if value="{{p.rejected}}" hint-placeholder-val="{{false}}"><span style="position:absolute;left:8px;top:8px;height:24px;padding:0 9px 0 7px;border-radius:12px;background:{{t.redFill}};color:#FFFFFF;font-size:12px;font-weight:600;display:flex;align-items:center;gap:4px"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="3.4" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12 M18 6L6 18"></path></svg>Rejected</span></sc-if>
+<span style="position:absolute;left:8px;bottom:8px;height:22px;padding:0 8px;border-radius:11px;background:rgba(0,0,0,0.58);color:#FFFFFF;font-size:12px;line-height:22px;white-space:nowrap;font-variant-numeric:tabular-nums"><span style="font-weight:600">{{p.short}}</span> · {{p.exif}}</span>
+</div>
+<sc-if value="{{p.focus}}" hint-placeholder-val="{{false}}"><div aria-hidden="true" style="position:absolute;left:-4px;top:-4px;width:272px;height:184px;border:2px solid {{t.accent}};border-radius:13px;box-sizing:border-box"></div><button aria-label="Remove from Survey" style="position:absolute;right:-4px;top:-4px;width:44px;height:44px;border:none;background:none;display:flex;align-items:center;justify-content:center"><span style="width:28px;height:28px;border-radius:14px;background:{{t.glass}};border:1px solid {{t.glassStroke}};box-shadow:{{t.glassShadow}};box-sizing:border-box;color:{{t.label}};display:flex;align-items:center;justify-content:center"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" aria-hidden="true" style="display:block"><path d="M5 12h14"></path></svg></span></button></sc-if>
+</div>
+<div role="toolbar" aria-label="{{p.rowLabel}}" style="position:absolute;left:50%;top:176px;width:264px;height:44px;margin-left:-132px;display:flex;align-items:center;gap:8px">
+<button aria-label="Reject" aria-pressed="{{p.rejOn}}" style="width:44px;height:44px;border:none;background:none;display:flex;align-items:center;justify-content:center;flex:none"><span style="width:34px;height:34px;border-radius:17px;background:{{p.rejBg}};color:{{p.rejFg}};display:flex;align-items:center;justify-content:center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" aria-hidden="true" style="display:block"><path d="M6 6l12 12 M18 6L6 18"></path></svg></span></button>
+<div role="radiogroup" aria-label="{{p.rateLabel}}" style="display:flex;width:160px;flex:none"><sc-for list="{{p.stars}}" as="s" hint-placeholder-count="5"><button role="radio" aria-checked="{{s.on}}" aria-label="{{s.label}}" style="width:32px;height:44px;border:none;background:none;display:flex;align-items:center;justify-content:center"><svg width="19" height="19" viewBox="0 0 24 24" aria-hidden="true" style="display:block"><polygon points="12 3 14.8 9 21 9.6 16.2 13.8 17.6 20 12 16.8 6.4 20 7.8 13.8 3 9.6 9.2 9" fill="{{s.fill}}" stroke="{{s.stroke}}" stroke-width="1.6" stroke-linejoin="round"></polygon></svg></button></sc-for></div>
+<button aria-label="Pick" aria-pressed="{{p.pickOn}}" style="width:44px;height:44px;border:none;background:none;display:flex;align-items:center;justify-content:center;flex:none"><span style="width:34px;height:34px;border-radius:17px;background:{{p.pickBg}};color:{{p.pickFg}};display:flex;align-items:center;justify-content:center"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="display:block"><path d="M5 21V4"></path><path d="M5 4h11l-2 4 2 4H5" fill="currentColor"></path></svg></span></button>
+</div>
+</section>
+</sc-for>
+</div>
+<!-- TOP: Close (as in the Viewer) · what is being compared · Viewer mode [Single · Compare] -->
+<button aria-label="Close" style="position:absolute;left:16px;top:32px;width:52px;height:52px;border-radius:26px;background:{{t.glass}};border:1px solid {{t.glassStroke}};box-shadow:{{t.glassShadow}};backdrop-filter:blur(24px) saturate(1.6);-webkit-backdrop-filter:blur(24px) saturate(1.6);box-sizing:border-box;color:{{t.label}};display:flex;align-items:center;justify-content:center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="display:block"><path d="M6.5 6.5l11 11M17.5 6.5l-11 11"></path></svg></button>
+<div style="position:absolute;left:80px;top:32px;width:520px;height:52px;display:flex;flex-direction:column;justify-content:center;gap:1px"><span style="font-size:17px;font-weight:600;line-height:22px;white-space:nowrap">{{title}}</span><span style="font-size:13px;line-height:16px;color:{{t.label2}};white-space:nowrap;font-variant-numeric:tabular-nums">{{subtitle}}</span></div>
+<div role="radiogroup" aria-label="Viewer Mode" style="position:absolute;right:16px;top:32px;height:52px;border-radius:26px;background:{{t.glass}};border:1px solid {{t.glassStroke}};box-shadow:{{t.glassShadow}};backdrop-filter:blur(24px) saturate(1.6);-webkit-backdrop-filter:blur(24px) saturate(1.6);box-sizing:border-box;padding:0 3px;display:flex;align-items:center;gap:2px"><sc-for list="{{modes}}" as="m" hint-placeholder-count="2"><button role="radio" aria-checked="{{m.on}}" style="height:44px;padding:0 16px;border-radius:22px;border:none;background:{{m.bg}};color:{{m.fg}};font-size:15px;font-weight:{{m.fw}};white-space:nowrap">{{m.name}}</button></sc-for></div>
+<!-- Long-press hint (FS-01.08 K5), in the corner of the Delete button; shown while anything is rejected -->
+<div style="position:absolute;right:20px;top:557px;height:16px;font-size:12px;line-height:16px;color:{{t.label2}};white-space:nowrap">Touch and hold to keep only this one</div>
+<!-- BOTTOM, the Viewer's bar unchanged, acting on the focused photo: Share · [Favorite | Info | Edit | More] · Delete N (glass, red text: destructive but not prominent) -->
+<button aria-label="Share" style="position:absolute;left:20px;top:581px;width:52px;height:52px;border-radius:26px;background:{{t.glass}};border:1px solid {{t.glassStroke}};box-shadow:{{t.glassShadow}};backdrop-filter:blur(24px) saturate(1.6);-webkit-backdrop-filter:blur(24px) saturate(1.6);box-sizing:border-box;color:{{t.label}};display:flex;align-items:center;justify-content:center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="display:block"><path d="M12 3.5v11M8.2 7.2L12 3.5l3.8 3.7"></path><path d="M8.5 10H6.8A1.8 1.8 0 0 0 5 11.8v7.4A1.8 1.8 0 0 0 6.8 21h10.4a1.8 1.8 0 0 0 1.8-1.8v-7.4A1.8 1.8 0 0 0 17.2 10h-1.7"></path></svg></button>
+<div style="position:absolute;left:381px;top:583px;width:188px;height:48px;border-radius:24px;background:{{t.glass}};border:1px solid {{t.glassStroke}};box-shadow:{{t.glassShadow}};backdrop-filter:blur(24px) saturate(1.6);-webkit-backdrop-filter:blur(24px) saturate(1.6);box-sizing:border-box;padding:0 4px;display:flex;align-items:center;gap:4px"><button aria-label="Favorite" style="width:40px;height:40px;border:none;background:none;color:{{t.label}};display:flex;align-items:center;justify-content:center"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="display:block"><path d="M12 19.8s-7.6-4.6-7.6-10.1A4.3 4.3 0 0 1 12 7a4.3 4.3 0 0 1 7.6 2.7c0 5.5-7.6 10.1-7.6 10.1z"></path></svg></button><button aria-label="Info" style="width:40px;height:40px;border:none;background:none;color:{{t.label}};display:flex;align-items:center;justify-content:center"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="display:block"><circle cx="12" cy="12" r="9"></circle><path d="M12 11v5.6"></path><circle cx="12" cy="7.9" r="0.7" fill="currentColor"></circle></svg></button><button aria-label="Edit" style="width:40px;height:40px;border:none;background:none;color:{{t.label}};display:flex;align-items:center;justify-content:center"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="display:block"><path d="M4 6.5h9M17 6.5h3M4 12h3M11 12h9M4 17.5h11M19 17.5h1"></path><circle cx="15" cy="6.5" r="2"></circle><circle cx="9" cy="12" r="2"></circle><circle cx="17" cy="17.5" r="2"></circle></svg></button><button aria-label="More actions" style="width:48px;height:40px;border:none;background:none;color:{{t.label}};display:flex;align-items:center;justify-content:center"><svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true" style="display:block"><circle cx="5.5" cy="12" r="1.7" fill="currentColor"></circle><circle cx="12" cy="12" r="1.7" fill="currentColor"></circle><circle cx="18.5" cy="12" r="1.7" fill="currentColor"></circle></svg></button></div>
+<button style="position:absolute;right:20px;top:581px;height:52px;border-radius:26px;background:{{t.glass}};border:1px solid {{t.glassStroke}};box-shadow:{{t.glassShadow}};backdrop-filter:blur(24px) saturate(1.6);-webkit-backdrop-filter:blur(24px) saturate(1.6);box-sizing:border-box;padding:0 14px;color:{{t.redText}};display:flex;align-items:center;gap:6px;font-size:15px;font-weight:600;white-space:nowrap;font-variant-numeric:tabular-nums"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="display:block"><path d="M4.5 6.8h15M9.6 6.8V4.4h4.8v2.4M6.6 6.8l.9 13.2h9l.9-13.2M10.2 10.6v6M13.8 10.6v6"></path></svg>{{deleteLabel}}</button>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"dark":{"editor":"boolean","default":false},"$preview":{"width":951,"height":669}}'>
+// Duo inner · Viewer in Survey mode. Compare is a mode of the Viewer (Single · 2-Up · Survey), not tier D:
+// it follows light/dark like the Viewer (user decision 2026-10-04). Tokens: Duo Library board (Main.dc.html) verbatim.
+// Reference: docs/design/ipad/project/IP_CompareSurvey.dc.html. The Duo keeps its iOS language (DI_Viewer): 52pt floating glass
+// circles, the bottom bar, the Cull row [Reject] [stars] [Pick]; no filmstrip (669pt has no height to spare).
+const LIGHT = { bg:'#FFFFFF', grouped:'#F2F2F7', card:'#FFFFFF', label:'#000000', label2:'#6C6C70', label3:'#8E8E93',
+  sep:'#C6C6C8', fill:'#E9E9EB', fill2:'#F2F2F7', glass:'rgba(255,255,255,0.78)', glassStroke:'rgba(0,0,0,0.08)',
+  glassShadow:'0 4px 18px rgba(0,0,0,0.12)', tint:'#007AFF', red:'#FF3B30', green:'#34C759', orange:'#FF9500',
+  accent:'#C6730E', dim:'rgba(0,0,0,0.35)', sheet:'#FFFFFF', onAccent:'#FFFFFF' };
+const DARK = { bg:'#000000', grouped:'#000000', card:'#1C1C1E', label:'#FFFFFF', label2:'#98989F', label3:'#6C6C70',
+  sep:'#38383A', fill:'#2C2C2E', fill2:'#1C1C1E', glass:'rgba(44,44,46,0.78)', glassStroke:'rgba(255,255,255,0.10)',
+  glassShadow:'0 4px 18px rgba(0,0,0,0.5)', tint:'#0A84FF', red:'#FF453A', green:'#30D158', orange:'#FF9F0A',
+  accent:'#EB9526', dim:'rgba(0,0,0,0.55)', sheet:'#1C1C1E', onAccent:'#000000' };
+// Board-local, same values as IP_Compare: text on an accent or red fill and red text on glass need 4.5:1 in both appearances.
+const EXTRA_LIGHT = { accentFill:'#A35E0A', onAccentFill:'#FFFFFF', redFill:'#D70015', redText:'#C4001A', pressed:'rgba(0,0,0,0.08)',
+  menu:'rgba(249,249,249,0.96)', menuGap:'rgba(0,0,0,0.08)' };
+const EXTRA_DARK = { accentFill:'#EB9526', onAccentFill:'#000000', redFill:'#D70015', redText:'#FF6961', pressed:'rgba(255,255,255,0.18)',
+  menu:'rgba(37,37,39,0.96)', menuGap:'rgba(0,0,0,0.32)' };
+const SUN=[ ['#355C7D','#8C7A93','#E2A37A','#F2C99A'], ['#3E6688','#978399','#E9AD84','#F5D3A6'], ['#2F5372','#86728E','#DE9A72','#EFC292'],
+  ['#46708F','#9E8A9E','#EDB58C','#F7DAB0'], ['#2A4A66','#7E6C88','#D8916A','#EBB98A'], ['#3A6080','#93809A','#E6A87F','#F3CF9F'] ];
+const sky=(i)=>{const s=SUN[i%SUN.length];return 'linear-gradient(180deg,'+s[0]+' 0%,'+s[1]+' 38%,'+s[2]+' 60%,'+s[3]+' 66%)';};
+// One compared photo. f: '' | 'p' | 'x'; r: stars 0-5.
+function photo(t, o){
+  const stars=[1,2,3,4,5].map(n=>({ on: n===o.r?'true':'false', label: n+(n===1?' Star':' Stars'),
+    fill: n<=o.r?t.label:'none', stroke: n<=o.r?t.label:t.label3 }));
+  const words=[o.r?(o.r+(o.r===1?' star':' stars')):'No rating', o.f==='p'?'Picked':(o.f==='x'?'Rejected, marked for deletion':'Unflagged')];
+  return Object.assign({ stars, rateLabel:'Rating for '+o.name, rowLabel:'Rating and flag for '+o.name,
+    picked:o.f==='p', rejected:o.f==='x', focus:!!o.focus, loading:!!o.loading,
+    pickOn:o.f==='p'?'true':'false', pickBg:o.f==='p'?t.accent:t.fill, pickFg:o.f==='p'?'#000000':t.label,
+    rejOn:o.f==='x'?'true':'false', rejBg:o.f==='x'?t.red:t.fill, rejFg:o.f==='x'?'#FFFFFF':t.label,
+    imgLabel:'Photo, '+o.name+', '+words.join(', ')+(o.focus?', focused':''), label:o.role+', '+o.name }, o);
+}
+class Component extends DCLogic {
+  renderVals() {
+    const dark=!!this.props.dark; const t=Object.assign({}, dark?DARK:LIGHT, dark?EXTRA_DARK:EXTRA_LIGHT);
+    const c=(i,name,ss,r,f,focus)=>photo(t,{ sky:sky(i), name, short:name.slice(0,8), exif:ss, r, f, focus, op:f==='x'?'0.45':'1', role:'Survey' });
+    const cells=[ c(2,'DSC04510.ARW','1/320 s',3,''), c(3,'DSC04511.ARW','1/320 s',0,'x'), c(0,'DSC04512.ARW','1/250 s',4,'p',true),
+      c(1,'DSC04513.ARW','1/200 s',0,'x'), c(4,'DSC04514.ARW','1/250 s',3,'p'), c(5,'DSC04516.ARW','1/160 s',2,'') ];
+    const mode=(name,on)=>({ name, on:on?'true':'false', bg:on?t.pressed:'transparent', fg:on?t.label:t.label2, fw:on?'600':'500' });
+    return { t, cells, modes:[mode('Single',false), mode('2-Up',false), mode('Survey',true)],
+      title:'6 Photos', subtitle:'Sunday, September 27, 2026 · Nara · 2 picked · 2 rejected', deleteLabel:'Delete 2 Photos' };
+  }
+}
+</script>
+</body>
+</html>

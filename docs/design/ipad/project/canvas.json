@@ -28,249 +28,249 @@
    "h": 1032,
    "title": "iPad · Search: token Brand Sony · Focal 85mm, popover gợi ý, thanh phạm vi nguồn",
    "w": 1376,
-   "x": 7280,
+   "x": 13104,
    "y": 560
   },
   "IP_AdvancedSearch.dc.html": {
    "h": 1032,
    "title": "iPad · Advanced Search: form sheet 700 trên Library mờ",
    "w": 1376,
-   "x": 8736,
+   "x": 14560,
    "y": 560
   },
   "IP_Viewer.dc.html": {
    "h": 1032,
    "title": "iPad · Xem ảnh trong cửa sổ: Single · 2-Up · Survey, inspector phải, filmstrip",
    "w": 1376,
-   "x": 10192,
+   "x": 16016,
    "y": 560
   },
   "IP_Metadata.dc.html": {
    "h": 1032,
    "title": "iPad · Get Info: form sheet 700×640, bảng EXIF hai cột",
    "w": 1376,
-   "x": 11648,
+   "x": 17472,
    "y": 560
   },
   "IP_Compare.dc.html": {
    "h": 1032,
-   "title": "iPad · Viewer chế độ 2-Up (tầng D): Select/Candidate, ảnh đánh dấu xoá",
+   "title": "iPad · Viewer 2-Up: Select | Candidate, zoom đồng bộ, Pick/Reject (theo sáng/tối như Viewer)",
    "w": 1376,
-   "x": 13104,
+   "x": 18928,
    "y": 560
   },
   "IP_VideoTrim.dc.html": {
    "h": 1032,
    "title": "iPad · Cắt video (tầng D): Cancel · Reset · Save trên toolbar",
    "w": 1376,
-   "x": 14560,
+   "x": 21840,
    "y": 560
   },
   "IP_Share.dc.html": {
    "h": 1032,
    "title": "iPad · Share: popover từ nút Share, Share With/Without Location",
    "w": 1376,
-   "x": 16016,
+   "x": 23296,
    "y": 560
   },
   "IP_Collections.dc.html": {
    "h": 1032,
    "title": "iPad · Album: On This Day, Smart/My Albums, Media Types, Utilities",
    "w": 1376,
-   "x": 17472,
+   "x": 24752,
    "y": 560
   },
   "IP_AlbumDetail.dc.html": {
    "h": 1032,
    "title": "iPad · Chi tiết album Iceland 2026: header, lưới 7 cột",
    "w": 1376,
-   "x": 18928,
+   "x": 26208,
    "y": 560
   },
   "IP_SmartAlbum.dc.html": {
    "h": 1032,
    "title": "iPad · Smart album: header điều kiện, Edit Smart Album, lưới",
    "w": 1376,
-   "x": 20384,
+   "x": 27664,
    "y": 560
   },
   "IP_SmartAlbumEditor.dc.html": {
    "h": 1032,
    "title": "iPad · Sheet sửa smart album 700×640",
    "w": 1376,
-   "x": 21840,
+   "x": 29120,
    "y": 560
   },
   "IP_OnThisDay.dc.html": {
    "h": 1032,
    "title": "iPad · On This Day: Kyoto theo năm, Show Trip",
    "w": 1376,
-   "x": 23296,
+   "x": 30576,
    "y": 560
   },
   "IP_Places.dc.html": {
    "h": 1032,
    "title": "iPad · Địa điểm: bản đồ Kansai, inspector 360 của cụm",
    "w": 1376,
-   "x": 24752,
+   "x": 32032,
    "y": 560
   },
   "IP_Trips.dc.html": {
    "h": 1032,
    "title": "iPad · Trips: thẻ cover 3 cột",
    "w": 1376,
-   "x": 26208,
+   "x": 33488,
    "y": 560
   },
   "IP_Duplicates.dc.html": {
    "h": 1032,
    "title": "iPad · Ảnh trùng: danh sách nhóm 360 + chi tiết nhóm",
    "w": 1376,
-   "x": 27664,
+   "x": 34944,
    "y": 560
   },
   "IP_Creations.dc.html": {
    "h": 1032,
    "title": "iPad · Collages: 12 collage theo tháng, menu giữ lâu",
    "w": 1376,
-   "x": 29120,
+   "x": 36400,
    "y": 560
   },
   "IP_Collage.dc.html": {
    "h": 1032,
    "title": "iPad · Collage (tầng D): inspector 360 Layout · Style · Text",
    "w": 1376,
-   "x": 30576,
+   "x": 37856,
    "y": 560
   },
   "IP_CollageExport.dc.html": {
    "h": 1032,
    "title": "iPad · Xuất collage: xem trước + inspector, Share… / Save to Photos",
    "w": 1376,
-   "x": 32032,
+   "x": 39312,
    "y": 560
   },
   "IP_Compress.dc.html": {
    "h": 1032,
    "title": "iPad · Resize (tầng D): xem trước, inspector, Resize 8 Photos",
    "w": 1376,
-   "x": 33488,
+   "x": 40768,
    "y": 560
   },
   "IP_Statistics.dc.html": {
    "h": 1032,
    "title": "iPad · Thống kê (biểu đồ kiểu C): Insights, KPI, chart cột amber",
    "w": 1376,
-   "x": 34944,
+   "x": 42224,
    "y": 560
   },
   "IP_ChartEditor.dc.html": {
    "h": 1032,
    "title": "iPad · Sheet sửa biểu đồ 700×640, xem trước sống",
    "w": 1376,
-   "x": 36400,
+   "x": 43680,
    "y": 560
   },
   "IP_DateRange.dc.html": {
    "h": 1032,
    "title": "iPad · Date Range: sheet chồng trên Edit Chart, hai tháng một hàng",
    "w": 1376,
-   "x": 37856,
+   "x": 45136,
    "y": 560
   },
   "IP_Settings.dc.html": {
    "h": 1032,
    "title": "iPad · Cài đặt: sidebar kính 320, pane Photo Library",
    "w": 1376,
-   "x": 39312,
+   "x": 46592,
    "y": 560
   },
   "IP_WidgetSettings.dc.html": {
    "h": 1032,
    "title": "iPad · Sửa widget: xem trước trái, tuỳ chọn hai cột",
    "w": 1376,
-   "x": 40768,
+   "x": 48048,
    "y": 560
   },
   "IP_CompressionPresets.dc.html": {
    "h": 1032,
    "title": "iPad · Resize Presets: Built-In / Custom",
    "w": 1376,
-   "x": 42224,
+   "x": 49504,
    "y": 560
   },
   "IP_CameraDatabase.dc.html": {
    "h": 1032,
    "title": "iPad · Settings › Camera Database: bảng máy, 6 máy chưa rõ ở trên",
    "w": 1376,
-   "x": 43680,
+   "x": 50960,
    "y": 560
   },
   "IP_Support.dc.html": {
    "h": 1032,
    "title": "iPad · Support: báo lỗi, yêu cầu tính năng, bình chọn",
    "w": 1376,
-   "x": 45136,
+   "x": 52416,
    "y": 560
   },
   "IP_SupportThread.dc.html": {
    "h": 1032,
    "title": "iPad · Support thread: hội thoại, Send Reply",
    "w": 1376,
-   "x": 46592,
+   "x": 53872,
    "y": 560
   },
   "IP_ServerList.dc.html": {
    "h": 1032,
    "title": "iPad · File Servers: bảng kết nối, Add Connection",
    "w": 1376,
-   "x": 48048,
+   "x": 55328,
    "y": 560
   },
   "IP_ServerForm.dc.html": {
    "h": 1032,
    "title": "iPad · Sheet Add Connection 700×640",
    "w": 1376,
-   "x": 49504,
+   "x": 56784,
    "y": 560
   },
   "IP_ServerBrowser.dc.html": {
    "h": 1032,
    "title": "iPad · Duyệt NAS Home: lưới 7 cột, folder trước ảnh, In Library",
    "w": 1376,
-   "x": 50960,
+   "x": 58240,
    "y": 560
   },
   "IP_ServerUpload.dc.html": {
    "h": 1032,
    "title": "iPad · Sheet Upload to Server cho 12 ảnh",
    "w": 1376,
-   "x": 52416,
+   "x": 59696,
    "y": 560
   },
   "IP_UploadedToServer.dc.html": {
    "h": 1032,
    "title": "iPad · On Server: Free Up Space, Where They Are",
    "w": 1376,
-   "x": 53872,
+   "x": 61152,
    "y": 560
   },
   "IP_FocusStack.dc.html": {
-   "x": 55328,
+   "x": 62608,
    "y": 560,
    "w": 1376,
    "h": 1032,
    "title": "iPad · Combine Photos › Focus Stack"
   },
   "IP_StackExposures.dc.html": {
-   "x": 56784,
+   "x": 64064,
    "y": 560,
    "w": 1376,
    "h": 1032,
    "title": "iPad · Combine Photos › Stack Exposures"
   },
   "IP_Panorama.dc.html": {
-   "x": 58240,
+   "x": 65520,
    "y": 560,
    "w": 1376,
    "h": 1032,
@@ -280,14 +280,14 @@
    "h": 1032,
    "title": "iPad · Video Projects: 7 dự án, New Video Project",
    "w": 1376,
-   "x": 59696,
+   "x": 66976,
    "y": 560
   },
   "IP_VideoProjectsDelete.dc.html": {
    "h": 1032,
    "title": "iPad · Video Projects: hộp xác nhận Delete Draft",
    "w": 1376,
-   "x": 61152,
+   "x": 68432,
    "y": 560
   },
   "IP1_Edit.dc.html": {
@@ -834,6 +834,41 @@
    "w": 1376,
    "h": 1032,
    "title": "iPad · Thanh menu iPadOS 26 (có bàn phím): menu ShotDex kèm phím tắt"
+  },
+  "IP_CompareSurvey.dc.html": {
+   "x": 20384,
+   "y": 560,
+   "w": 1376,
+   "h": 1032,
+   "title": "iPad · Viewer Survey: 6 ảnh, Rejected mờ"
+  },
+  "IP_AddSource.dc.html": {
+   "x": 7280,
+   "y": 560,
+   "w": 1376,
+   "h": 1032,
+   "title": "iPad · Thêm nguồn: Photos Library · Folder or Drive · Server"
+  },
+  "IP_SourceIndexing.dc.html": {
+   "x": 8736,
+   "y": 560,
+   "w": 1376,
+   "h": 1032,
+   "title": "iPad · Nguồn đang lập chỉ mục + ổ T7 offline"
+  },
+  "IP_Ingest.dc.html": {
+   "x": 10192,
+   "y": 560,
+   "w": 1376,
+   "h": 1032,
+   "title": "iPad · Nhập từ thẻ nhớ: đích + backup, tên file, metadata .xmp"
+  },
+  "IP_EmptyLibrary.dc.html": {
+   "x": 11648,
+   "y": 560,
+   "w": 1376,
+   "h": 1032,
+   "title": "iPad · Thư viện trống: 3 cách thêm nguồn, kéo thư mục từ Files"
   }
  },
  "order": [
@@ -842,11 +877,16 @@
   "IP_LibrarySelect.dc.html",
   "IP_LibraryList.dc.html",
   "IP_MenuBar.dc.html",
+  "IP_AddSource.dc.html",
+  "IP_SourceIndexing.dc.html",
+  "IP_Ingest.dc.html",
+  "IP_EmptyLibrary.dc.html",
   "IP_Search.dc.html",
   "IP_AdvancedSearch.dc.html",
   "IP_Viewer.dc.html",
   "IP_Metadata.dc.html",
   "IP_Compare.dc.html",
+  "IP_CompareSurvey.dc.html",
   "IP_VideoTrim.dc.html",
   "IP_Share.dc.html",
   "IP_Collections.dc.html",
