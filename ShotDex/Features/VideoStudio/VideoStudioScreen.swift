@@ -408,6 +408,8 @@ struct VideoStudioScreen: View {
         switch currentWindowClass {
         case .iPadLandscape, .iPadPortrait:
             isExportSheetPresented = true
+        case .duoInner, .duoCover:
+            model.duoExportTapped()
         default:
             if model.activeToolPanel != .export { model.showToolPanel(.export) }
         }

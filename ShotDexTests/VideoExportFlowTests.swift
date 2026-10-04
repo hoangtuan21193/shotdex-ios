@@ -119,3 +119,23 @@ extension VideoExportFlowTests {
         #expect(VideoExportPanel.destination(isServerRun: false) == "Saved to Photos as a new video")
     }
 }
+
+extension VideoExportFlowTests {
+    /// AC-10: on the Duo the first tap on Export opens Export Video; a
+    /// second tap within half a second is ignored; one after it exports.
+    @Test func secondTapWithinHalfASecondIsIgnored() {
+        let model = model()
+        defer { model.close() }
+        model.availableBytes = { 0 }
+        let start = Date(timeIntervalSince1970: 1000)
+        model.duoExportTapped(now: start)
+        #expect(model.activeToolPanel == .export)
+        #expect(model.exportState == .idle)
+        model.duoExportTapped(now: start.addingTimeInterval(0.3))
+        #expect(model.exportState == .idle)
+        model.duoExportTapped(now: start.addingTimeInterval(0.6))
+        // With no room the export is refused at once — which proves the
+        // second tap asked for it.
+        if case .failed = model.exportState {} else { Issue.record("the late second tap should start the export") }
+    }
+}

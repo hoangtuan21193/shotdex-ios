@@ -2932,6 +2932,26 @@ final class VideoStudioModel {
         exportState == .failed(VideoStudioCopy.cantSaveToPhotos)
     }
 
+    /// When Export Video was last opened from the Duo's Export button.
+    @ObservationIgnored private var exportOpenedAt: Date?
+
+    /// The Duo's Export button (FS-12.10b §2, AC-10): there is no second
+    /// export button — the first tap opens Export Video, a second tap on
+    /// the same button exports, but only once half a second has passed, so
+    /// a double tap cannot start minutes of encoding by accident.
+    func duoExportTapped(now: Date = .now) {
+        guard !isExportBusy else { return }
+        if activeToolPanel != .export {
+            showToolPanel(.export)
+            exportOpenedAt = now
+            return
+        }
+        guard let opened = exportOpenedAt, now.timeIntervalSince(opened) >= Self.duoSecondTapDelay else { return }
+        export()
+    }
+
+    static let duoSecondTapDelay: TimeInterval = 0.5
+
     /// The app left the foreground mid-export.
     func stopExportForLeaving() {
         guard isExportBusy, case .exporting = exportState else { return }

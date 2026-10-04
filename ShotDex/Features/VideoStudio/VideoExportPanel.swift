@@ -120,6 +120,8 @@ struct VideoExportPanel: View {
                     Text(verbatim: model.exportSpecSummary)
                         .font(.system(size: 11, design: .monospaced))
                         .foregroundStyle(.white.opacity(0.45))
+                        .lineLimit(2)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
                 Spacer(minLength: 0)
                 Text(verbatim: VideoExportEstimate.label(model.estimatedExportBytes))
@@ -157,6 +159,9 @@ struct VideoExportPanel: View {
             }
         }
         Spacer(minLength: 12)
+        // The Duo has no second export button: a second tap on the one in
+        // its bottom row or rail exports (FS-12.10b §2).
+        if !isDuo {
         Button {
             model.export()
         } label: {
@@ -178,7 +183,10 @@ struct VideoExportPanel: View {
         .buttonStyle(.plain)
         .padding(.bottom, 12)
         .accessibilityIdentifier("exportStartButton")
+        }
     }
+
+    private var isDuo: Bool { window == .duoColumn || window == .cover }
 
     private func exporting(_ progress: Double) -> some View {
         VStack(alignment: .leading, spacing: 10) {
