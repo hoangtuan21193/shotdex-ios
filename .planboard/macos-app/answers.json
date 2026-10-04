@@ -1,0 +1,66 @@
+{
+  "D2": {
+    "verdict": "ok",
+    "option": "all"
+  },
+  "D1": {
+    "verdict": "ok"
+  },
+  "D3": {
+    "verdict": "ok"
+  },
+  "D4": {
+    "verdict": "ok",
+    "option": "hash"
+  },
+  "D5": {
+    "verdict": "ok"
+  },
+  "D6": {
+    "verdict": "ok",
+    "option": "trash-local"
+  },
+  "D7": {
+    "verdict": "ok"
+  },
+  "D8": {
+    "verdict": "ok",
+    "option": "v1"
+  },
+  "D9": {
+    "verdict": "ok"
+  },
+  "D10": {
+    "verdict": "ok",
+    "option": "asis"
+  },
+  "D11": {
+    "verdict": "ok",
+    "option": "amber"
+  },
+  "D12": {
+    "verdict": "ok"
+  },
+  "D13": {
+    "verdict": "ok"
+  },
+  "D14": {
+    "verdict": "ok"
+  },
+  "D15": {
+    "verdict": "ok"
+  },
+  "D16": {
+    "verdict": "ok",
+    "option": "auto"
+  },
+  "D17": {
+    "verdict": "ok"
+  },
+  "D18": {
+    "verdict": "ok"
+  },
+  "D19": {
+    "verdict": "ok"
+  }
+}

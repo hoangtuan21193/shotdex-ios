@@ -1,0 +1,666 @@
+{
+  "title": "ShotDex Mac — các quyết định sau vòng review canvas",
+  "context": "Canvas ShotDex Mac (52 board) đã vẽ xong và được 4 reviewer soi: HIG macOS, một photographer chuyên nghiệp dùng Lightroom/Capture One, nhất quán giữa các board, và phản biện. Lỗi rõ ràng đang được sửa trên canvas. Các mục dưới đây là quyết định sản phẩm chỉ bạn chốt được.\nCanvas: https://claude.ai/artifact/HEj8sG21jAEWd7Mgvuyxgj · báo cáo: build/design/mac/review/*.md · intent: docs/_intents/2026-10-04-macos-app.md.\nĐã chốt từ trước: native macOS SwiftUI, đủ tính năng như iOS, ba nguồn ảnh (Photos, thư mục/ổ ngoài, server).",
+  "pages": [
+    {
+      "id": "foundation",
+      "title": "Nền tảng",
+      "intro": "Bốn quyết định này quyết định mọi màn nguồn ảnh và lịch làm.",
+      "decisions": [
+        {
+          "id": "D1",
+          "title": "Phân phối: Mac App Store hay ngoài store",
+          "importance": "critical",
+          "why": "Sandbox của App Store quyết định cách giữ quyền truy cập thư mục (bookmark, trạng thái 'Grant Access…'), việc ghi sidecar cạnh file, theo dõi ổ ngoài. Đổi sau thì phải làm lại tầng nguồn ảnh.",
+          "proposal": "Mac App Store, sandbox, giữ quyền thư mục bằng security-scoped bookmark. Canvas đã vẽ đúng hướng này (Settings › Sources có 'Grant Access…').",
+          "options": [
+            {
+              "id": "mas",
+              "label": "Mac App Store (sandbox)",
+              "pros": [
+                "Cùng kênh với iOS, mua một lần dùng chung",
+                "Người dùng tin hơn"
+              ],
+              "cons": [
+                "Phải xin quyền từng thư mục, bookmark có thể hỏng",
+                "Ghi sidecar cần quyền ghi thư mục"
+              ],
+              "effort": "M",
+              "recommended": true
+            },
+            {
+              "id": "devid",
+              "label": "Developer ID, tải từ web",
+              "pros": [
+                "Không sandbox: đọc/ghi thư mục tự do",
+                "Phát hành nhanh, không qua review"
+              ],
+              "cons": [
+                "Tự lo thanh toán, cập nhật (Sparkle là dependency mới)",
+                "Tách khỏi mua hàng iOS"
+              ],
+              "effort": "M"
+            },
+            {
+              "id": "both",
+              "label": "Cả hai",
+              "pros": [
+                "Linh hoạt"
+              ],
+              "cons": [
+                "Hai bản build, hai bộ hành vi quyền",
+                "Gấp đôi kiểm thử"
+              ],
+              "effort": "L"
+            }
+          ],
+          "tasks": [
+            "Ghi quyết định vào intent — docs/_intents/2026-10-04-macos-app.md",
+            "Entitlements sandbox + bookmark cho target Mac (khi /plan)"
+          ]
+        },
+        {
+          "id": "D2",
+          "title": "Phát hành một lần đủ tính năng, hay theo mốc",
+          "importance": "critical",
+          "why": "Bạn đã chốt đủ tính năng như iOS. Reviewer phản biện: khoảng 24/52 board (Video, Server, Collage, Ghép ảnh, Resize, Mask/Heal/Markup/Batch, Support…) ứng với ~29% code tính năng iOS và ít liên quan lý do người ta dùng ShotDex trên Mac. Làm hết một lần thì lâu mới có bản chạy được.",
+          "proposal": "Giữ mục tiêu đủ tính năng, nhưng chia mốc. v1: Library, nguồn Photos + thư mục, xem ảnh, Cull, Statistics, Album/Smart Album, Editor (Adjust, Crop, Color, Preset, Export), Settings. v1.1: Duplicates, Server, Collage, Video Studio. v1.2: Ghép ảnh, Mask, Heal, Markup, Batch, Support. Trước mốc v1, làm spike 1 ngày: build ShotDexKit + Domain + Data cho macOS để có số lỗi thật.",
+          "options": [
+            {
+              "id": "milestones",
+              "label": "Đủ tính năng, chia 3 mốc",
+              "pros": [
+                "Có bản Mac dùng được sớm",
+                "Phần khác biệt của ShotDex (lọc theo gear, thống kê, cull) ra trước"
+              ],
+              "cons": [
+                "Bản đầu chưa có Video/Collage"
+              ],
+              "effort": "L",
+              "recommended": true
+            },
+            {
+              "id": "all",
+              "label": "Đủ tính năng trong một lần phát hành",
+              "pros": [
+                "Đúng lời hứa 'như iOS' ngay ngày đầu"
+              ],
+              "cons": [
+                "Lâu nhất mới có bản chạy",
+                "Rủi ro dồn vào một lần"
+              ],
+              "effort": "XL"
+            }
+          ],
+          "tasks": [
+            "Spike build macOS cho ShotDexKit + Domain + Data, đếm lỗi",
+            "Chia FS Mac theo mốc khi /spec"
+          ]
+        },
+        {
+          "id": "D3",
+          "title": "Rating, cờ, keyword, chỉnh sửa của ảnh trong thư mục lưu ở đâu",
+          "importance": "critical",
+          "why": "Reviewer photographer coi đây là blocker: lưu chỉ trong DB của ShotDex thì culling xong không sang được Lightroom/Capture One/Photo Mechanic, xoá index hay đổi máy là mất hết. Ngược lại, rating/keyword sẵn có trong .xmp của người chuyển từ Lightroom sẽ không hiện.",
+          "proposal": "Đọc .xmp có sẵn khi index (rating, cờ, keyword, tiêu đề, caption). Ghi rating/cờ/keyword/caption ra sidecar .xmp cạnh file — file mới, không đụng file gốc. Recipe chỉnh sửa vẫn ở DB (và kèm trong sidecar dưới namespace ShotDex). Có công tắc trong Settings › Sources, mặc định bật.",
+          "options": [
+            {
+              "id": "xmp-rw",
+              "label": "Đọc + ghi sidecar .xmp (mặc định bật)",
+              "pros": [
+                "Dùng chung với Lightroom/Bridge/Photo Mechanic",
+                "Không mất dữ liệu khi xoá index hay đổi máy",
+                "ImageIO đọc/ghi XMP được, không thêm dependency"
+              ],
+              "cons": [
+                "Có thể giẫm chân app khác cùng ghi .xmp",
+                "Cần quyền ghi thư mục (sandbox)"
+              ],
+              "effort": "M",
+              "recommended": true
+            },
+            {
+              "id": "xmp-read",
+              "label": "Chỉ đọc .xmp, ghi vào DB",
+              "pros": [
+                "Không bao giờ tạo file trong thư mục người dùng"
+              ],
+              "cons": [
+                "Kết quả cull không ra khỏi ShotDex"
+              ],
+              "effort": "S"
+            },
+            {
+              "id": "db",
+              "label": "Chỉ DB (như canvas hiện tại)",
+              "pros": [
+                "Đơn giản nhất"
+              ],
+              "cons": [
+                "Photographer chuyên nghiệp coi là blocker",
+                "Mất khi xoá index"
+              ],
+              "effort": "S"
+            }
+          ],
+          "tasks": [
+            "Sửa chữ trên MAC_AddSource, MAC_GetInfo, MAC_SettingsSources theo quyết định",
+            "Thêm công tắc sidecar vào MAC_SettingsSources",
+            "data-migration review khi /spec"
+          ]
+        },
+        {
+          "id": "D4",
+          "title": "Nhận diện một ảnh trong thư mục khi bị đổi tên/di chuyển",
+          "importance": "critical",
+          "why": "Hiện mọi thứ gắn với assetId của PhotoKit. Ảnh trong thư mục mà nhận diện theo đường dẫn thì đổi tên/di chuyển trong Finder là mất rating, album, chỉnh sửa. App chưa phát hành nên đổi định dạng id không cần migration.",
+          "proposal": "Id có tiền tố: 'ph:<localIdentifier>' cho Photos, 'fs:<volume UUID>/<file resource id>' cho file — sống qua đổi tên và di chuyển trong cùng ổ. Bản sao sang ổ khác là file khác; ghép lại bằng perceptual hash có sẵn khi cần.",
+          "options": [
+            {
+              "id": "resid",
+              "label": "Volume UUID + file resource id",
+              "pros": [
+                "Sống qua đổi tên/di chuyển trong cùng ổ",
+                "Rẻ, không phải đọc nội dung file"
+              ],
+              "cons": [
+                "Mất khi copy sang ổ khác hoặc khôi phục từ backup"
+              ],
+              "effort": "M",
+              "recommended": true
+            },
+            {
+              "id": "path",
+              "label": "Đường dẫn",
+              "pros": [
+                "Đơn giản"
+              ],
+              "cons": [
+                "Đổi tên thư mục là mất hết dữ liệu gắn với ảnh"
+              ],
+              "effort": "S"
+            },
+            {
+              "id": "hash",
+              "label": "Hash nội dung",
+              "pros": [
+                "Sống qua mọi lần copy"
+              ],
+              "cons": [
+                "Phải đọc cả file RAW lúc index (chậm trên NAS/ổ HDD)",
+                "Hai bản sao thật sự thành một"
+              ],
+              "effort": "L"
+            }
+          ],
+          "tasks": [
+            "Board mới: một file mất/di chuyển khi ổ vẫn cắm — MAC_SourceIndexing hoặc board riêng",
+            "Ghi vào BD-02 khi /spec"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "sources",
+      "title": "Nguồn ảnh",
+      "intro": "Server, xoá file, bản sao trùng giữa các nguồn, nhập từ thẻ nhớ.",
+      "decisions": [
+        {
+          "id": "D5",
+          "title": "Server trên Mac là nguồn được index hay chỗ duyệt rồi nhập",
+          "importance": "important",
+          "why": "Canvas đang mâu thuẫn: Add Source nói server được index như thư mục, còn Server Browser và Settings vẫn là mô hình iOS 'tải về rồi nhập vào Photos'. Trên Mac, share SMB/WebDAV mount trong Finder (⌘K) đã là một thư mục.",
+          "proposal": "Server là nguồn được index như thư mục (thumbnail từ preview trong file, tải bản gốc khi mở/sửa/xuất). Share đã mount trong Finder thì thêm như thư mục. Bỏ 'Import to Library' khỏi Mac; giữ Upload.",
+          "options": [
+            {
+              "id": "indexed",
+              "label": "Nguồn được index",
+              "pros": [
+                "Một mô hình cho mọi nguồn",
+                "Lọc/thống kê chạy trên ảnh NAS"
+              ],
+              "cons": [
+                "Index qua mạng chậm, cần cache thumbnail"
+              ],
+              "effort": "L",
+              "recommended": true
+            },
+            {
+              "id": "import",
+              "label": "Duyệt và nhập (như iOS)",
+              "pros": [
+                "Dùng lại code FS-17",
+                "Ít việc nhất"
+              ],
+              "cons": [
+                "Ảnh NAS không có trong thư viện cho tới khi nhập",
+                "Nhập vào Photos là lạ với người dùng thư mục"
+              ],
+              "effort": "M"
+            },
+            {
+              "id": "mount",
+              "label": "Chỉ share đã mount (như thư mục) + SFTP sau",
+              "pros": [
+                "Gần như miễn phí với SMB/WebDAV",
+                "Hệ điều hành lo kết nối"
+              ],
+              "cons": [
+                "SFTP chưa có",
+                "Người dùng phải tự mount trong Finder"
+              ],
+              "effort": "S"
+            }
+          ],
+          "tasks": [
+            "Sửa MAC_ServerBrowser, MAC_SettingsServers, MAC_AddSource cho khớp",
+            "Quyết định ảnh hưởng mốc ở D2"
+          ]
+        },
+        {
+          "id": "D6",
+          "title": "Xoá file của nguồn thư mục và NAS",
+          "importance": "critical",
+          "why": "Bốn board (Cull 'Delete Rejected', Duplicates, Compare, Resize) xoá file, trong khi chữ khác nói 'ShotDex không đụng file'. Trên share SMB, xoá là mất hẳn (không có Thùng rác), và NAS thường chính là bản backup.",
+          "proposal": "Ảnh Photos → Recently Deleted. File trong thư mục/ổ ngoài → Thùng rác macOS, có hộp xác nhận nói rõ số file và nơi đến. File trên NAS: không xoá từ ShotDex ở v1 (chỉ ẩn khỏi thư viện). Chữ chung: 'ShotDex never edits file contents.'",
+          "options": [
+            {
+              "id": "trash-local",
+              "label": "Thùng rác cho file cục bộ, không xoá trên NAS",
+              "pros": [
+                "Cull đi tới cùng được với thư mục",
+                "Không có đường mất dữ liệu vĩnh viễn"
+              ],
+              "cons": [
+                "Rác trên NAS phải dọn bằng Finder"
+              ],
+              "effort": "S",
+              "recommended": true
+            },
+            {
+              "id": "trash-all",
+              "label": "Xoá được mọi nguồn (NAS xoá hẳn, cảnh báo đỏ)",
+              "pros": [
+                "Nhất quán"
+              ],
+              "cons": [
+                "Một cú nhầm là mất bản backup"
+              ],
+              "effort": "S"
+            },
+            {
+              "id": "none",
+              "label": "Không xoá file nào ở v1, chỉ ẩn",
+              "pros": [
+                "An toàn tuyệt đối"
+              ],
+              "cons": [
+                "Cull mất nửa giá trị: reject xong vẫn phải xoá bằng tay"
+              ],
+              "effort": "S"
+            }
+          ],
+          "tasks": [
+            "Sửa chữ và hộp xác nhận trên MAC_Cull, MAC_Duplicates, MAC_Compare, MAC_Compress"
+          ]
+        },
+        {
+          "id": "D7",
+          "title": "Bản sao của cùng một ảnh ở hai nguồn",
+          "importance": "important",
+          "why": "Photographer giữ bản làm việc + bản backup (T7 và ~/Pictures). Hiện Statistics cộng cả hai (Top Camera, tổng ảnh bị đếm đôi) và Duplicates đề xuất xoá một bản — tức là xoá backup.",
+          "proposal": "Statistics đếm mỗi ảnh một lần (cùng hash = một ảnh) theo mặc định. Duplicates không ghép nhóm các bản ở hai nguồn khác nhau; chỉ ghép trong cùng một nguồn.",
+          "options": [
+            {
+              "id": "once",
+              "label": "Đếm một lần, Duplicates trong từng nguồn",
+              "pros": [
+                "Số liệu đúng với thực tế chụp",
+                "Không ai bị gợi ý xoá backup"
+              ],
+              "cons": [
+                "Phải tính hash cho file thư mục"
+              ],
+              "effort": "M",
+              "recommended": true
+            },
+            {
+              "id": "toggle",
+              "label": "Công tắc trong Statistics: đếm theo file / theo ảnh",
+              "pros": [
+                "Người dùng tự chọn"
+              ],
+              "cons": [
+                "Thêm một khái niệm khó giải thích"
+              ],
+              "effort": "M"
+            }
+          ],
+          "tasks": [
+            "Sửa MAC_Duplicates (bỏ nhóm khác nguồn)",
+            "Ghi vào FS-07 và FS Duplicates khi /spec"
+          ]
+        },
+        {
+          "id": "D8",
+          "title": "Nhập từ thẻ nhớ (copy + bản backup + đổi tên)",
+          "importance": "important",
+          "why": "Bước đầu tiên của mọi buổi chụp. Lightroom/Photo Mechanic đều có. FS-10 Import trên iOS đã bị bỏ. Không có thì người dùng copy bằng Finder rồi Add Folder — được, nhưng chậm hơn đối thủ.",
+          "proposal": "Không làm ở v1: copy bằng Finder rồi thư mục được theo dõi tự index. Xem lại ở v1.1 nếu người dùng đòi.",
+          "options": [
+            {
+              "id": "later",
+              "label": "Chưa làm, dùng Finder + thư mục theo dõi",
+              "pros": [
+                "Không thêm màn mới",
+                "Đúng tinh thần FS-10 đã bỏ"
+              ],
+              "cons": [
+                "Thiếu so với Lightroom/Photo Mechanic"
+              ],
+              "effort": "S",
+              "recommended": true
+            },
+            {
+              "id": "v1",
+              "label": "Màn Import ở v1: chọn thẻ, đích chính + backup, mẫu tên, preset metadata",
+              "pros": [
+                "Đủ quy trình chuyên nghiệp"
+              ],
+              "cons": [
+                "Màn mới + logic copy/verify",
+                "Đi ngược quyết định bỏ FS-10"
+              ],
+              "effort": "L"
+            }
+          ],
+          "tasks": [
+            "Nếu chọn v1: board MAC_Ingest + intent riêng"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "windows",
+      "title": "Cửa sổ và cảm giác Mac",
+      "intro": "Cách mở ảnh, màu tối của công cụ, màu nhấn, gợi ý phím tắt, lần mở đầu.",
+      "decisions": [
+        {
+          "id": "D9",
+          "title": "Xem ảnh và Editor mở trong cửa sổ hiện tại hay cửa sổ riêng",
+          "importance": "important",
+          "why": "Hiện Viewer/Editor vẽ như cửa sổ riêng. Photos for Mac mở ngay trong cửa sổ duyệt, Esc quay lại đúng chỗ cuộn và lựa chọn. Cửa sổ riêng cho từng ảnh dễ thành rừng cửa sổ.",
+          "proposal": "Mặc định mở trong cửa sổ hiện tại (Return mở, Esc về lưới đúng vị trí). 'Open in New Window' (⌥⌘O) mở cửa sổ riêng khi cần đặt lên màn hình thứ hai.",
+          "options": [
+            {
+              "id": "inwindow",
+              "label": "Trong cửa sổ, cửa sổ riêng là tuỳ chọn",
+              "pros": [
+                "Như Photos for Mac",
+                "Giữ ngữ cảnh duyệt"
+              ],
+              "cons": [
+                "Phải giữ trạng thái lưới khi đổi chế độ"
+              ],
+              "effort": "M",
+              "recommended": true
+            },
+            {
+              "id": "separate",
+              "label": "Luôn cửa sổ riêng",
+              "pros": [
+                "Như Preview/Photo Mechanic",
+                "Dễ kéo sang màn hình phụ"
+              ],
+              "cons": [
+                "Nhiều cửa sổ, menu phải định tuyến theo cửa sổ đang focus"
+              ],
+              "effort": "M"
+            }
+          ],
+          "tasks": [
+            "Sửa MAC_Viewer, MAC_Edit (nút quay lại thay vì cửa sổ riêng)"
+          ]
+        },
+        {
+          "id": "D10",
+          "title": "Công cụ nào luôn nền tối (tier D)",
+          "importance": "important",
+          "why": "DESIGN.md: mọi màn thao tác pixel là tier D. Trên Mac, cửa sổ Resize/Collage/Ghép ảnh đen kịt cạnh Library trắng là chói và không giúp gì. Ngược lại, Viewer đang nền trắng nên cùng một ảnh trông khác khi sang Compare đen.",
+          "proposal": "Tier D: Editor, Video Studio, Compare, Cull, và vùng ảnh của Viewer (chrome Viewer theo hệ thống). Resize, Collage, Ghép ảnh theo sáng/tối hệ thống.",
+          "options": [
+            {
+              "id": "narrow",
+              "label": "Chỉ nơi đánh giá màu/nét + vùng ảnh Viewer",
+              "pros": [
+                "Đánh giá ảnh trên cùng một nền",
+                "Bớt chói"
+              ],
+              "cons": [
+                "Lệch DESIGN.md §2 (Collage/Compress là D) — cần ghi ngoại lệ Mac"
+              ],
+              "effort": "S",
+              "recommended": true
+            },
+            {
+              "id": "asis",
+              "label": "Giữ như DESIGN.md (mọi công cụ pixel đều tối)",
+              "pros": [
+                "Một luật cho iOS và Mac"
+              ],
+              "cons": [
+                "Viewer vẫn nền trắng",
+                "Resize/Collage tối không cần thiết"
+              ],
+              "effort": "S"
+            }
+          ],
+          "tasks": [
+            "Sửa MAC_Viewer, MAC_Compress, MAC_Collage, MAC_Merge",
+            "Ghi ngoại lệ Mac vào DESIGN.md §2"
+          ]
+        },
+        {
+          "id": "D11",
+          "title": "Màu nhấn: amber ShotDex hay màu nhấn hệ thống",
+          "importance": "important",
+          "why": "HIG macOS: icon sidebar và vùng chọn theo màu nhấn người dùng đặt trong System Settings. Brief đang ép amber mọi nơi. Settings General còn có hàng 'Accent Color' mà DESIGN.md đã bỏ.",
+          "proposal": "Amber là AccentColor của app (người dùng để 'Multicolor' thì thấy amber), dùng cho nút chính và vòng chọn ảnh. Người dùng chọn màu nhấn khác trong System Settings thì sidebar và vùng chọn đi theo. Bỏ hàng Accent Color trong Settings.",
+          "options": [
+            {
+              "id": "system",
+              "label": "Amber là mặc định, tôn trọng màu nhấn hệ thống",
+              "pros": [
+                "Đúng HIG",
+                "Vẫn nhận ra ShotDex với đa số người dùng"
+              ],
+              "cons": [
+                "Có người thấy ShotDex màu xanh"
+              ],
+              "effort": "S",
+              "recommended": true
+            },
+            {
+              "id": "amber",
+              "label": "Luôn amber",
+              "pros": [
+                "Thương hiệu nhất quán với iOS"
+              ],
+              "cons": [
+                "Trái HIG, lạc lõng cạnh app khác"
+              ],
+              "effort": "S"
+            }
+          ],
+          "tasks": [
+            "Sửa MAC_STYLE.md mục Accent",
+            "Bỏ hàng Accent Color — MAC_SettingsGeneral"
+          ]
+        },
+        {
+          "id": "D12",
+          "title": "Dải gợi ý phím tắt trên Cull và Compare",
+          "importance": "minor",
+          "proposal": "Giữ dải phím tắt trên Cull (photographer khen đây là điểm mạnh nhất), có nút ẩn và nhớ lựa chọn; Compare bỏ dải 124pt, phím nằm trong menu và tooltip như HIG."
+        },
+        {
+          "id": "D13",
+          "title": "Cửa sổ chào lần đầu hay trạng thái trống",
+          "importance": "minor",
+          "proposal": "Bỏ cửa sổ Onboarding riêng: lần đầu mở là cửa sổ chính ở trạng thái trống ('Add your Photos Library or drop a folder here' + câu 'photos stay on your Mac'). Ít một scene, đúng thói quen Mac."
+        },
+        {
+          "id": "D14",
+          "title": "Màn hình thứ hai",
+          "importance": "minor",
+          "proposal": "Để v1.1: Window › Secondary Viewer theo lựa chọn trên lưới. v1 đã có 'Open in New Window' để kéo sang màn hình kia."
+        }
+      ]
+    },
+    {
+      "id": "spec",
+      "title": "Chỗ board Mac khác spec iOS",
+      "intro": "Board đang vẽ khác FS hiện hành; chọn theo spec hay giữ cho riêng Mac (khi đó sửa FS).",
+      "decisions": [
+        {
+          "id": "D15",
+          "title": "Compare: một bố cục tự co (spec) hay 2-Up/Survey + Pick/Reject",
+          "importance": "important",
+          "why": "FS-01.08/01.12: Compare một bố cục, bấm chỉ đánh dấu xoá, không có cờ. Board Mac vẽ kiểu Lightroom (Select/Candidate, Survey, P/X). Photographer ủng hộ board; reviewer nhất quán đòi theo spec. Phản biện: Viewer, Compare, Cull, Duplicates đang là 4 màn cùng việc 'xem nhiều ảnh'.",
+          "proposal": "Gộp: Compare là chế độ 2-Up/Survey của Viewer, dùng chung cờ P/X và bộ đếm của Cull; không còn cửa sổ Compare riêng. Sửa FS-01.08/01.12 cho Mac.",
+          "options": [
+            {
+              "id": "merge",
+              "label": "Gộp vào Viewer, có Survey + P/X",
+              "pros": [
+                "Một chỗ cho việc lọc ảnh",
+                "Đúng cách pro làm việc"
+              ],
+              "cons": [
+                "Phải sửa spec, lệch iOS"
+              ],
+              "effort": "M",
+              "recommended": true
+            },
+            {
+              "id": "spec",
+              "label": "Theo spec iOS",
+              "pros": [
+                "Một hành vi trên mọi thiết bị"
+              ],
+              "cons": [
+                "Pro thấy thiếu"
+              ],
+              "effort": "S"
+            },
+            {
+              "id": "board",
+              "label": "Giữ màn Compare riêng như board",
+              "pros": [
+                "Đã vẽ xong"
+              ],
+              "cons": [
+                "Vẫn 4 màn trùng việc"
+              ],
+              "effort": "S"
+            }
+          ],
+          "tasks": [
+            "Vẽ lại MAC_Compare thành chế độ của MAC_Viewer",
+            "Sửa FS-01.08, FS-01.12 (ghi chú Mac)"
+          ]
+        },
+        {
+          "id": "D16",
+          "title": "Lưu chỉnh sửa: nút Done hay tự lưu",
+          "importance": "important",
+          "why": "Ảnh thư mục: recipe trong DB, tự lưu được. Ảnh Photos: ghi vào Photos qua PhotoKit, hệ thống hỏi 'Modify?' — là một lần lưu thật. Board đang vẽ một luồng kiểu iPad (Done/Revert + Save Edit/Save as Copy) cho cả hai.",
+          "proposal": "Một giao diện: nút Done + Revert ở toolbar cho mọi nguồn (Done ghi vào Photos hoặc chốt recipe). Đóng cửa sổ/Esc khi có thay đổi chưa chốt thì hỏi. Save as Copy giữ trong menu.",
+          "options": [
+            {
+              "id": "done",
+              "label": "Done/Revert cho mọi nguồn",
+              "pros": [
+                "Một mô hình, khớp iOS",
+                "Rõ lúc nào ảnh Photos bị ghi"
+              ],
+              "cons": [
+                "Thêm một bước với ảnh thư mục"
+              ],
+              "effort": "S",
+              "recommended": true
+            },
+            {
+              "id": "auto",
+              "label": "Tự lưu với ảnh thư mục, Done chỉ với ảnh Photos",
+              "pros": [
+                "Như Lightroom với file"
+              ],
+              "cons": [
+                "Hai hành vi dưới một giao diện"
+              ],
+              "effort": "M"
+            }
+          ],
+          "tasks": [
+            "Sửa MAC_Edit, MAC_Export cho khớp"
+          ]
+        },
+        {
+          "id": "D17",
+          "title": "Chọn không gian màu khi xuất",
+          "importance": "important",
+          "why": "FS-03.04: không có picker color space, xuất giữ profile gốc. Board Export Mac có popup sRGB; photographer đòi (web cần sRGB, in cần Adobe RGB/P3) và thách thức FS-03.04.",
+          "proposal": "Trên Mac có popup: Original · sRGB · Display P3 · Adobe RGB (mặc định Original). Sửa FS-03.04 cho Mac.",
+          "options": [
+            {
+              "id": "picker",
+              "label": "Có popup trên Mac",
+              "pros": [
+                "Đúng nhu cầu giao khách",
+                "Mac là nơi xuất cho in/web"
+              ],
+              "cons": [
+                "Lệch iOS"
+              ],
+              "effort": "S",
+              "recommended": true
+            },
+            {
+              "id": "spec",
+              "label": "Theo spec, giữ profile gốc",
+              "pros": [
+                "Đơn giản"
+              ],
+              "cons": [
+                "Khách nhận ảnh sai màu trên web"
+              ],
+              "effort": "S"
+            }
+          ],
+          "tasks": [
+            "Sửa MAC_SettingsEditing cho khớp",
+            "Sửa FS-03.04"
+          ]
+        },
+        {
+          "id": "D18",
+          "title": "Statistics: bộ lọc nguồn/ngày chung + biểu đồ giờ trong ngày, thứ trong tuần",
+          "importance": "important",
+          "why": "FS-07.01: mỗi biểu đồ tự có khoảng ngày, không có bộ chọn chung; không có trục giờ/thứ. Board Mac thêm popup nguồn (cần vì Mac có nhiều nguồn) và popup ngày tạm thời, cùng hai biểu đồ mới.",
+          "proposal": "Giữ popup Source (Mac có nhiều nguồn) và hai biểu đồ giờ/thứ — thêm trục vào FS-07.01 cho cả iOS. Bỏ popup ngày chung, giữ khoảng ngày theo từng biểu đồ như spec.",
+          "tasks": [
+            "Sửa MAC_Statistics (bỏ popup ngày chung)",
+            "Sửa FS-07.01: trục giờ/thứ, bộ lọc nguồn"
+          ]
+        },
+        {
+          "id": "D19",
+          "title": "Album: thư mục album và số ảnh dưới cover",
+          "importance": "minor",
+          "proposal": "Theo spec FS-06.01: không thư mục album, không số dưới cover (giữ số ở sidebar). Sửa MAC_Collections, MAC_AlbumDetail."
+        }
+      ]
+    }
+  ]
+}
