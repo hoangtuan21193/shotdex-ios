@@ -140,6 +140,16 @@ enum VideoStudioCopy {
         String(localized: "Insert at Playhead", table: table, comment: "Video Studio Media panel: VoiceOver action — adds the item at the playhead, as a tap does")
     }
 
+    /// Why 4K is shut (FS-12.10 §5): "4K needs 4K clips — 3 of your 5 clips
+    /// are 1080p." or "… are smaller than 4K."
+    static func fourKReason(_ verdict: VideoResolutionGate.Verdict) -> String? {
+        guard case let .blocked(short, total, shared) = verdict else { return nil }
+        if let shared {
+            return String(localized: "4K needs 4K clips — \(short) of your \(total) clips are \(shared.displayName).", table: table, comment: "Video Studio Video Settings: why 4K is dimmed — how many clips fall short, and the resolution they all are")
+        }
+        return String(localized: "4K needs 4K clips — \(short) of your \(total) clips are smaller than 4K.", table: table, comment: "Video Studio Video Settings: why 4K is dimmed — how many clips fall short, at mixed resolutions")
+    }
+
     static var select: String {
         String(localized: "Select", table: table, comment: "Video Studio Media panel: starts picking several items to add at once")
     }

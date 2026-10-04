@@ -1,5 +1,6 @@
 import AVFoundation
 import CoreGraphics
+import CoreImage
 import Foundation
 import Testing
 @testable import ShotDex
@@ -79,5 +80,44 @@ extension VideoOutputSpecTests {
         #expect(compression[AVVideoAverageBitRateKey] as? Int == encoding.bitrate)
         #expect(settings[AVVideoCodecKey] as? AVVideoCodecType == .hevc)
         #expect(VideoExportEstimate.videoBitrate(frame: CGSize(width: 1920, height: 1080), frameRate: .fps30, codec: .h264) == 9_953_280)
+    }
+}
+
+extension VideoOutputSpecTests {
+    /// AC-5: the sample — two 4032×3024 photos, three 1920×1080 videos —
+    /// shuts 4K: "3 of your 5 clips are 1080p."
+    @Test func threeOfFiveAre1080p() {
+        let verdict = VideoResolutionGate.verdict(shortEdges: [3024, 1080, 1080, 3024, 1080])
+        #expect(verdict == .blocked(short: 3, total: 5, sharedClass: .p1080))
+        #expect(VideoStudioCopy.fourKReason(verdict) == "4K needs 4K clips — 3 of your 5 clips are 1080p.")
+    }
+
+    /// Short clips of different classes are "smaller than 4K".
+    @Test func mixedSizesSaySmallerThan4K() {
+        let verdict = VideoResolutionGate.verdict(shortEdges: [3024, 720, 1080])
+        #expect(verdict == .blocked(short: 2, total: 3, sharedClass: nil))
+        #expect(VideoStudioCopy.fourKReason(verdict) == "4K needs 4K clips — 2 of your 3 clips are smaller than 4K.")
+        #expect(VideoResolutionGate.verdict(shortEdges: [480]) == .blocked(short: 1, total: 1, sharedClass: nil))
+    }
+
+    /// AC-5 (unlock): the three videos replaced by 3840×2160 ones opens 4K;
+    /// a clip still loading neither opens nor shuts it.
+    @Test func allUHDUnlocks4K() {
+        #expect(VideoResolutionGate.verdict(shortEdges: [3024, 2160, 2160, 3024, 2160]) == .allowed)
+        #expect(VideoResolutionGate.verdict(shortEdges: [2160, nil]) == .allowed)
+        #expect(VideoStudioCopy.fourKReason(.allowed) == nil)
+    }
+
+    /// A freeze frame counts by the video it came from, not by the frame
+    /// the session lifted at canvas size.
+    @Test @MainActor func freezeUsesSourceVideoSize() {
+        var freeze = VideoClip(assetID: "v", kind: .freeze)
+        freeze.photoDuration = 2
+        let model = VideoStudioModelFixture.model(clips: [freeze])
+        defer { model.close() }
+        model.sources[freeze.id] = .freeze(image: CIImage(color: .black).cropped(to: CGRect(x: 0, y: 0, width: 1920, height: 1080)),
+                                           pixelSize: CGSize(width: 1920, height: 1080), videoSize: CGSize(width: 3840, height: 2160))
+        #expect(model.clipSourceShortEdges == [2160])
+        #expect(model.fourKVerdict == .allowed)
     }
 }

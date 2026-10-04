@@ -29,6 +29,39 @@ enum VideoOutputSpec {
 
 }
 
+/// Whether 4K is open (FS-12.10 §5): only when **every** clip's source has
+/// a short edge of at least 2160 — a photo by its pixels, a freeze frame by
+/// the video it came from. Upscaling adds no detail and quadruples the file.
+enum VideoResolutionGate {
+    enum Verdict: Equatable {
+        case allowed
+        /// `short` of `total` clips fall short; `sharedClass` is the class
+        /// they all are when they agree ("3 of your 5 clips are 1080p"),
+        /// nil when they differ ("… are smaller than 4K").
+        case blocked(short: Int, total: Int, sharedClass: VideoResolution?)
+    }
+
+    /// `shortEdges`: each clip's source short edge, nil where it is not known
+    /// yet (media still loading) — an unknown clip neither opens nor shuts 4K.
+    static func verdict(shortEdges: [CGFloat?]) -> Verdict {
+        let known = shortEdges.compactMap { $0 }
+        let short = known.filter { $0 < VideoResolution.uhd4K.shortEdge }
+        guard !short.isEmpty else { return .allowed }
+        let classes = Set(short.map(resolutionClass))
+        let shared = classes.count == 1 ? classes.first ?? nil : nil
+        return .blocked(short: short.count, total: shortEdges.count, sharedClass: shared)
+    }
+
+    /// The class a source's short edge falls in: 1080p from 1080, 720p from
+    /// 720, nothing below.
+    static func resolutionClass(_ shortEdge: CGFloat) -> VideoResolution? {
+        if shortEdge >= VideoResolution.uhd4K.shortEdge { return .uhd4K }
+        if shortEdge >= VideoResolution.p1080.shortEdge { return .p1080 }
+        if shortEdge >= VideoResolution.p720.shortEdge { return .p720 }
+        return nil
+    }
+}
+
 /// The export's size before it is written (FS-12.10 §5): video at
 /// width × height × fps × 0.16 bit — about 10 Mbps at 1080p30, the rate a
 /// 1080p30 upload wants — HEVC at 0.6 of that, plus 128 kbps of AAC.

@@ -85,6 +85,14 @@
       "comment": "Video Studio Media panel: under its name while selecting — how many are picked and the playhead time Add inserts them at",
       "extractionState": "manual"
     },
+    "4K needs 4K clips — %lld of your %lld clips are %@.": {
+      "comment": "Video Studio Video Settings: why 4K is dimmed — how many clips fall short, and the resolution they all are",
+      "extractionState": "manual"
+    },
+    "4K needs 4K clips — %lld of your %lld clips are smaller than 4K.": {
+      "comment": "Video Studio Video Settings: why 4K is dimmed — how many clips fall short, at mixed resolutions",
+      "extractionState": "manual"
+    },
     "Add (%lld)": {
       "comment": "Video Studio Media panel: adds the picked items at the playhead, with how many",
       "extractionState": "manual"

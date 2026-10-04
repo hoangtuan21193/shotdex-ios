@@ -605,6 +605,31 @@ final class VideoStudioModel {
         clearSelection()
     }
 
+    // MARK: - Video Settings (FS-12.10)
+
+    /// Each clip's source short edge as far as the loaded media knows it:
+    /// a video's displayed size, a photo's pixels, a freeze frame's video.
+    var clipSourceShortEdges: [CGFloat?] {
+        recipe.clips.map { clip in
+            switch sources[clip.id] {
+            case let .video(_, _, _, _, naturalSize, transform):
+                let size = VideoGeometry.displaySize(naturalSize: naturalSize, preferredTransform: transform)
+                return min(size.width, size.height)
+            case let .photo(_, pixelSize):
+                return pixelSize.width > 0 ? min(pixelSize.width, pixelSize.height) : nil
+            case let .freeze(_, _, _, _, videoSize):
+                return videoSize == .zero ? nil : min(videoSize.width, videoSize.height)
+            case .unavailable, nil:
+                return nil
+            }
+        }
+    }
+
+    /// Whether 4K is open now, and why not.
+    var fourKVerdict: VideoResolutionGate.Verdict {
+        VideoResolutionGate.verdict(shortEdges: clipSourceShortEdges)
+    }
+
     // MARK: - Media drag (FS-12.09 §5)
 
     /// The hold-drag from Media in progress.
