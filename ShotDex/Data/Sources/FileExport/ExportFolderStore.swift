@@ -56,11 +56,17 @@ final class ExportFolderStore {
         let isAccessing = url.startAccessingSecurityScopedResource()
         defer { if isAccessing { url.stopAccessingSecurityScopedResource() } }
         let folder = try Self.folder(for: url)
-        recents.removeAll { $0.path == folder.path }
+        remember(folder)
+        return folder
+    }
+
+    /// Puts an already described folder first — a connection's folder, or
+    /// a test's.
+    func remember(_ folder: ExportFolder) {
+        recents.removeAll { $0.id == folder.id || $0.path == folder.path }
         recents.insert(folder, at: 0)
         if recents.count > Self.recentLimit { recents.removeLast(recents.count - Self.recentLimit) }
         persist()
-        return folder
     }
 
     /// Makes `folder` the one in use.
@@ -81,10 +87,13 @@ final class ExportFolderStore {
         let isAccessing = url.startAccessingSecurityScopedResource()
         defer { if isAccessing { url.stopAccessingSecurityScopedResource() } }
         guard (try? url.checkResourceIsReachable()) == true else { return unreachable(folder) }
-        if isStale, let renewed = try? url.bookmarkData(),
+        // Stale, or moved since: the bookmark is made again while it opens.
+        let path = url.standardizedFileURL.path
+        if isStale || path != folder.path, let renewed = try? url.bookmarkData(),
            let index = recents.firstIndex(where: { $0.id == folder.id }) {
             recents[index].bookmark = renewed
-            recents[index].path = url.standardizedFileURL.path
+            recents[index].path = path
+            recents[index].name = url.lastPathComponent
             persist()
         }
         return .available(url)
