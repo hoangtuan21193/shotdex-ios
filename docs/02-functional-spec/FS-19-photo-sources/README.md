@@ -19,8 +19,8 @@ Nguồn: [intent Mac](../../_intents/2026-10-04-macos-app.md) · [intent iPad](.
 | 02 | [Danh tính và sidecar](02-identity-and-sidecars.md) | hash nhanh rồi đầy đủ, ảnh Photos, đổi tên/di chuyển, dữ liệu mồ côi, bản sao, đọc + ghi `.xmp`, xung đột, recipe |
 | 03 | [Server là nguồn](03-servers-as-sources.md) | index như thư mục, thumbnail, tải bản gốc khi mở, upload, Save to Photos thay Import to Library |
 | 04 | [Xoá, ẩn, ảnh trùng, thống kê](04-deleting-and-duplicates.md) | D6 xoá theo nơi chứa, ảnh nhiều bản sao, nơi không Thùng rác, mục Hidden, D7 Duplicates, đếm một lần |
-| 05 | [Dữ liệu](05-data.md) | cái gì lưu ở đâu, id ảnh nội bộ + bảng bản sao, bảng dấu ảnh file, bảng Cờ chung, album ShotDex |
-| 06 | [Tiêu chí nghiệm thu](06-acceptance-criteria.md) | AC-1…AC-63 |
+| 05 | [Dữ liệu](05-data.md) | id ảnh, bảng bản sao/hash/recipe/bí danh, luật gộp và tách, dọn 30 ngày, test phải có |
+| 06 | [Tiêu chí nghiệm thu](06-acceptance-criteria.md) | AC-1…AC-68 |
 
 Board: Mac `MAC_AddSource` · `MAC_SourceIndexing` · `MAC_SettingsSources` · `MAC_SettingsServers` · `MAC_ServerBrowser`
 · `MAC_Duplicates` · `MAC_Cull` · `MAC_EmptyLibrary` · `MAC_GetInfo` (`docs/design/mac/project/`). iPad `IP_AddSource` ·
@@ -40,7 +40,7 @@ và hộp xoá hẳn ([04 §1](04-deleting-and-duplicates.md)) ở mọi thiết
 **Có (mọi thiết bị):** nguồn thư mục và ổ ngoài (Mac: open panel, kéo thả; iPad, iPhone, Duo: app Files, ổ USB-C) ·
 server SMB/SFTP/WebDAV là nguồn được index · thư mục con · ghép RAW+JPEG · theo dõi thay đổi · ảnh của ổ rút ra ở lại,
 mang dấu offline · danh tính bằng hash nội dung · đọc + ghi `.xmp` · xoá theo nơi chứa · Duplicates trong từng nguồn ·
-album của ShotDex chứa ảnh mọi nguồn ([05 §4](05-data.md)).
+album của ShotDex chứa ảnh mọi nguồn ([05 §6](05-data.md)).
 
 **Cố ý không có:**
 - Sửa nội dung file ảnh (kể cả nhúng XMP vào JPEG/DNG) — vì câu cam kết "ShotDex never edits file contents".
@@ -98,6 +98,6 @@ album của ShotDex chứa ảnh mọi nguồn ([05 §4](05-data.md)).
 | Hash cả file RAW trên NAS/HDD mất hàng giờ | hash nhanh lúc index, hash đầy đủ ở nền ([02 §1](02-identity-and-sidecars.md)) |
 | Lightroom không đọc sidecar của JPEG/DNG/HEIC/TIFF (nó dùng XMP nhúng) | câu Settings nói "for RAW files" ([02 §5](02-identity-and-sidecars.md)) |
 | App khác nhúng XMP vào file → hash đổi | nối bằng vị trí cũ ([02 §2](02-identity-and-sidecars.md)) |
-| Album Photos không chứa được ảnh file | album riêng của ShotDex ([05 §4](05-data.md)) |
+| Album Photos không chứa được ảnh file | album riêng của ShotDex ([05 §6](05-data.md)) |
 | Băm ảnh Photos chỉ-iCloud là tải trọn mỗi ảnh một lần | chạy nền theo luật mạng của index, không lưu file ([02 §1b](02-identity-and-sidecars.md)) |
 | Spike build macOS chưa chạy (plan Mac 3.1) | số trong `/plan` lấy từ spike |

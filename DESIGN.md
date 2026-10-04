@@ -294,6 +294,40 @@ Kéo theo:
 - Mục con mở **trong detail pane** và mỗi pane có `NavigationStack` riêng, nên Back trong detail quay về màn trước **của chính mục đó**, không nhảy về sidebar.
 - **`List(selection:)` của sidebar phải là con trực tiếp của cột sidebar** (2026-09-22, đo trên iPad): bọc nó trong một `if`/`@ViewBuilder` — ví dụ để đổi sang danh sách kết quả tìm kiếm — thì **chạm vào một mục không làm gì cả**, vì SwiftUI chỉ trao hành vi chọn-bằng-một-chạm cho chính list của sidebar. Muốn đổi nội dung khi tìm kiếm thì đổi **hàng bên trong** list, đừng thay cả list.
 
+### 10.1g iPad: sidebar · nội dung · inspector (2026-10-04)
+
+Khung app iPad theo kiểu Mac (FS-21.01 §1, FS-21.01b §1, board `Main`/`IP_*` trên canvas iPad, luật vẽ `docs/design/ipad/IPAD_STYLE.md`). Một cửa sổ ba vùng: sidebar trái, nội dung giữa, inspector phải, toolbar trên cùng. **Không còn tab bar** ở khung này — sidebar thay ba tab, Search là ô trên toolbar.
+
+**Khung (ngang 1376×1032):**
+
+| Vùng | Số đo |
+| --- | --- |
+| Lề trên | 24pt trống cho status bar hệ thống; hàng toolbar bắt đầu ở y 24 |
+| Sidebar | nổi, cách mép 8, rộng **320**, bo 22; nội dung bắt đầu ở x 344 |
+| Nội dung | x 344 → 1360 (**1016pt**) khi inspector đóng; cuộn **dưới** toolbar |
+| Inspector | rộng **360**, bám mép phải, cao hết cửa sổ; nội dung còn x 344 → 1000 (**656pt**) |
+| Sheet · popover | form sheet ≤ **700×640** giữa cửa sổ, nền mờ sau · popover ≤ **400×560** có mũi tên về nút mở nó |
+
+- **Sidebar**: hàng **44**, nhãn 17, icon 22 màu accent, số đếm 15 màu phụ bên phải; tiêu đề nhóm 15 đậm vừa; tối đa 2 cấp. Hàng đang chọn nền xám, không accent.
+- **Toolbar**: viên kính cao **44**, nút 44 rộng, glyph 20, khoảng giữa cụm 12; tiêu đề 20 + dòng phụ 13. **≤ 3 cụm** + ô tìm kiếm + **một** hành động nổi bật ở mép phải, không bao giờ là xoá. Không nút nào trên toolbar thấp hơn 44 (kể cả board dọc).
+- **Inspector**: hàng 44, nhãn 17, giá trị 15, slider núm 28; không tiêu đề, không Done — đóng bằng nút toolbar.
+- **Chữ** theo cỡ mặc định của hệ thống: thân 17, phụ 15 / 13, tiêu đề mục 20 đậm vừa, tiêu đề lớn 28 đậm; **sàn 11**. Số thay đổi dùng chữ số đều bề rộng.
+- **Nút và ô nhập** cao 44, bo 12; segmented cao 36.
+- **Lưới** vẫn theo mật độ đã lưu và pinch (§10.1c); board vẽ mật độ mặc định: **7 cột ở 1016pt** (ô 143), **6 cột ở 656pt** (ô 107) khi mở inspector. Mở/đóng inspector chỉ chuyển giữa cặp cột của cùng mật độ, không đổi mật độ.
+- **Vùng chạm ≥ 44×44** ở mọi nút, kể cả khi board vẽ nhỏ hơn.
+
+**Ba mốc bề rộng cửa sổ** — theo bề rộng thật, không theo size class, không theo hướng xoay:
+
+| Bề rộng | Bố cục | Sidebar | Inspector |
+| --- | --- | --- | --- |
+| **< 700** | bố cục iPhone (tab bar, nav bar, sheet) | không có | sheet như iPhone |
+| **700 – 1099** | khung trên | **phủ**: ẩn sẵn, Show Sidebar mở 320 đè lên nội dung, nền mờ sau, chạm ngoài để đóng | sheet dưới có Done (Editor và công cụ tầng D giữ cột) |
+| **≥ 1100** | khung trên | **ghim**: hiện sẵn, Hide Sidebar ẩn | cột 360 |
+
+Ra máy: iPad 13" ngang 1376 · 11" ngang 1210 → ghim; 13" dọc 1032 · 11" dọc 834 → phủ; Split View 1/2 iPad 13" (688) · 1/3 · Slide Over → bố cục iPhone; Stage Manager đổi ngay khi kéo qua mốc. *Vì* sidebar ghim 320 + inspector 360 + nội dung đủ dùng cần ~1100pt, còn dưới 700 sidebar phủ che gần hết nội dung. Đổi bố cục giữ hàng sidebar ↔ tab tương ứng, chỗ cuộn, lựa chọn, ảnh đang xem.
+
+**Trước iPadOS 26** (17/18): sidebar và toolbar là **bản hệ thống của iOS đó** — sidebar đục cao hết cửa sổ sát mép trái, nav bar thường, không viên kính. Cùng hình học (sidebar 320, hàng 44, nút 44), cùng tập lệnh, cùng chỗ. App **không** tự vẽ panel mờ giả kính (§1.5). Trên iPadOS 26 sidebar kính nổi và viên kính toolbar là của hệ thống, nên khung này không thêm lối vào kính nào ngoài ba lối của §9.
+
 ### 10.2 Màn hình lưới ảnh (tầng B + C)
 Lưới tràn viền, không padding. **Không lưới ảnh nào chèn header ngày** (2026-09-19) — Library, Album, Smart Album và `PhotoListScreen` đều chạy `sectionMode: .flat`, ảnh trôi liền mạch. Ngày của ảnh đang ở mép trên viewport hiện ở **title giữa top bar** (Library) hoặc dòng phụ dưới tên album, do `PhotoGridCollectionView.onVisibleDateChange` đẩy lên. Cấp độ ngày/tháng/năm lấy theo density đã lưu, không theo số cột đã vẽ, để màn rộng không tự nhảy sang gom theo năm. `OnThisDayScreen` vẫn có header vì section của nó là "cùng ngày qua các năm", không phải chia ngày. Chrome nổi đè lên lưới bằng `safeAreaInset(edge:)` hoặc overlay, luôn dùng kính tầng C. Khi vào chế độ chọn: lưới mờ đi, selection bar trượt lên từ đáy.
 
@@ -377,6 +411,68 @@ Một mẫu duy nhất cho Library, Album Detail, Smart Album Detail, On This Da
 - Hành động không khả dụng thì **làm mờ** (dòng menu `.disabled`, nút tròn opacity 0.3), không ẩn. Compare yêu cầu ≥ 2 ảnh (không có trần trên).
 - **Accent cố định là amber, KHÔNG còn setting và KHÔNG còn là tint toàn app (2026-09-19)**: `AppAccent.color` / `.uiColor` là hằng số (amber của icon, hai biến thể light/dark), phát qua `\.appAccent`; `ShotDexApp` **không** `.tint(...)`. Mọi control chuẩn của hệ (nav bar, menu, sheet, toggle, tab bar đang chọn) giữ **mặc định iOS**; accent chỉ dùng cho phần ShotDex tự vẽ: badge chọn ảnh trong lưới, trạng thái active của editor (`EditorTheme.accent`), chart. Chrome kính nổi (gear, filter, Select, ×, +, calendar, ⋯) luôn `.tint(.primary)` monochrome; `UIButton` tự dựng (icon Advanced Search trong search field) phải set `tintColor = .label`.
 - **Glass của selection bar là Liquid Glass sáng gốc** (`glassBackground` / `glassEffect`), giống thanh nổi của app Photos — trong suốt, có vibrancy, **không** đè tint tối. Glyph **monochrome** `.primary` (đen/trắng theo hệ, vibrancy lo độ đọc), **không** accent. Accent chỉ dành cho trạng thái active/selected. Icon chrome ở toolbar (Select/Settings/Sort) cũng `.tint(.primary)` monochrome, không ăn theo accent vàng toàn app. **Badge chọn ảnh trong lưới dùng accent, kiểu app Photos** (2026-08-12): ô đã chọn = check trắng trên đĩa **accent** (`checkmark.circle.fill`, palette `[.white, accent]`) + viền accent 3pt + thumbnail mờ nhẹ (`alpha 0.82`); ô chưa chọn = `circle` viền trắng. Đây là ngoại lệ có tên của "accent chỉ cho active" — badge lưới là chỉ báo chọn/chưa chọn nên ăn theo accent như app Photos. Accent lấy qua `UIColor(AppAccentTheme.stored.color)` vì cell là UIKit.
+
+---
+
+## 10b. Mac (macOS) (2026-10-04)
+
+Token của app macOS native (FS-18). Số lấy từ `docs/design/mac/MAC_STYLE.md` (v2/v3) và FS-18.01; MAC_STYLE là luật vẽ board, **mục này là nguồn token**. Tên Swift và file chứa các token Mac: **chưa chốt** (viết khi `/plan` FS-18). Mọi luật khác của file này vẫn áp cho Mac trừ chỗ ghi ở đây.
+
+**Hình học cửa sổ chính** (board 1440×900, góc cửa sổ bo 16):
+
+| Vùng | Số đo |
+| --- | --- |
+| Sidebar | panel kính nổi, cách mép cửa sổ 8, rộng **228**, bo **18**; đèn giao thông ở (14, 16) bên trong nó |
+| Hàng sidebar | cao 28, bo 8, nhãn 13, icon 16 màu accent, số đếm 11 màu phụ bên phải; tiêu đề nhóm cao 24, chữ 11 đậm vừa |
+| Toolbar | không thanh tiêu đề; một hàng 44 ở y 8, từ x 256 tới mép phải trừ 16; viên kính cao **36**, nút icon rộng 34–36, glyph 16, khoảng giữa cụm 12; tiêu đề 15 đậm vừa + dòng phụ 11 |
+| Nội dung | bắt đầu ở x 244, cuộn **dưới** toolbar, vùng mờ mép trên 64 |
+| Inspector | **300** (Library, Viewer), **320** (Editor); cao hết cửa sổ, nét 1 `sep` bên trái; tiêu đề mục 11 đậm vừa, hàng 13 cao 24–28 |
+| Cỡ tối thiểu | cửa sổ chính và Editor **1024×700** (sidebar tự ẩn dưới 1100, dưới 1280 khi inspector mở); Video Studio **1180×760** |
+
+**Bo góc Mac** — thang chung 8/12/16/22/28 của §5 cộng ba giá trị có tên chỉ dùng trên Mac: **18** sidebar · **10** menu và menu ngữ cảnh · **14** popover. Góc cửa sổ 16 (board), sheet 22 (`r-xl`).
+
+**Control:**
+
+- **Push button** cao **28**, bo 8: bordered nền `fill`; mặc định nền `accentFill`, chữ `onAccentFill`. Popup button cùng dáng + glyph `chevron.up.down`. Nút phá hủy = bordered, chữ đỏ; không bao giờ là nút nổi bật.
+- Nút chữ trên toolbar cao **36**. Ô nhập 28, bo 8, nét 1 `sep`, chữ 13. Checkbox 14×14 bo 4 (bật = hộp `accentFill` + dấu check trắng/đen, mọi tầng); mini switch 32×18; segmented 28, container bo 8, đoạn chọn nền `content` nổi lên.
+- Menu: bo 10, đệm 5, hàng 22 chữ 13, phím tắt canh phải màu `label2`, nét ngăn 1. Menu ngữ cảnh không có cột phím tắt, ẩn lệnh không dùng được, ≤ 12 hàng + menu con.
+- Popover: bo 14, mũi tên 12 về nút toolbar, ≤ **360×480**. Sheet: trượt xuống từ dưới toolbar, giữa cửa sổ, bo 22, ≤ **640×560** (thân cuộn). Nội dung lớn hơn → panel hoặc cửa sổ riêng; việc chạy lâu → Activity / chân sidebar, không bao giờ sheet modal.
+- Bảng: hàng 28 (thumbnail 20), hàng xen kẽ `rowAlt`, header 28 có vạch ngăn.
+
+**Nền và màu** (sáng / tối):
+
+| Token | Sáng | Tối | Dùng cho |
+| --- | --- | --- | --- |
+| `accent` | `#C6730E` | `#EB9526` | glyph, vòng chọn, tiến độ |
+| `accentFill` | `#A35E0A` | `#EB9526` | nút mặc định, highlight menu, hàng bảng đang focus, checkbox bật |
+| `onAccentFill` | `#FFFFFF` | `#000000` | chữ trên `accentFill` |
+| `menu` | `rgba(246,246,248,0.97)` | `rgba(40,40,44,0.97)` | menu, menu ngữ cảnh (đục) |
+| `menuShadow` | `0 10px 30px rgba(0,0,0,0.22)` | như sáng | bóng menu |
+| `sheet` | `#F6F6F8` | `#2A2A2D` | nền sheet (một token duy nhất) |
+| `scrim` | `rgba(0,0,0,0.18)` | `rgba(0,0,0,0.35)` | nền mờ sau sheet, vẽ **trên** cả sidebar và toolbar |
+| `rowAlt` | `rgba(0,0,0,0.03)` | `rgba(255,255,255,0.04)` | hàng xen kẽ của bảng |
+| `field` | = `content` + nét 1 `sep` | như sáng | ô nhập |
+| `content` | `#FFFFFF` | `#1C1C1E` | nền vùng nội dung |
+| `label2` | `rgba(0,0,0,0.56)` | `rgba(255,255,255,0.58)` | chữ phụ, phím tắt trong menu |
+| `sep` | `rgba(0,0,0,0.10)` | `rgba(255,255,255,0.10)` | nét ngăn |
+| `fill` | `rgba(0,0,0,0.05)` | `rgba(255,255,255,0.07)` | nền control phẳng |
+| `rowSel` | `rgba(0,0,0,0.08)` | `rgba(255,255,255,0.10)` | hàng chọn không focus (sidebar, bảng) |
+| đèn tắt (cửa sổ phụ) | `#D0D0D3` | `#4A4A4E` | nút thu nhỏ/phóng to vẽ tắt |
+
+- **Accent luôn là amber của ShotDex**, không theo accent hệ thống, không có hàng Accent Color trong Settings. Bản đậm (`accentFill`) cho mảng tô; accent thường cho nét và glyph. Tầng D: highlight menu `#EB9526` chữ đen.
+- **Luật chọn**: vòng amber (ô lưới) · nền `accentFill` (menu, hàng bảng đang focus) · nền xám `rowSel` (sidebar, bảng không focus) · vòng trắng (filmstrip/preset tầng D) · `#57BFD1` chỉ trên timeline Video Studio · đỏ = đánh dấu xoá.
+
+**Tầng D trên Mac**: cùng các công cụ của iOS, **trừ Compare** (chế độ của Viewer, §2) — Editor, Cull, Resize, Collage, Combine Photos, Video Studio. Luôn tối **kể cả chrome cửa sổ** (sidebar, toolbar kính chuyển tối), bảng màu `EditorTheme` của §3.3; accent chỉ trên lệnh chốt (Done, Export). Viewer **không** phải tầng D: vùng ảnh dùng nền cửa sổ, theo sáng/tối.
+
+**Chữ**: thân 13, phụ 11–12, tiêu đề mục 15 đậm vừa, tiêu đề lớn tối đa 22 đậm; **sàn 10** ở mọi chỗ (badge, trục biểu đồ, số khung hình). Monospace chỉ cho timecode; số thay đổi dùng chữ số đều bề rộng.
+
+**Vùng bấm**: chuẩn con trỏ — mọi control bấm được **≥ 20×16** (ngoại lệ Mac của luật 44×44, NF-06 §1, chốt 2026-10-04: không có ngón tay, chỉ con trỏ). Toolbar: viên kính cao **36**, nút icon trong viên rộng 34–36, glyph 16 (theo board, chốt 2026-10-04); nút bấm 28 là push button ngoài toolbar. **60pt đáy cửa sổ không có gì bấm được**, trừ filmstrip và timeline.
+
+**Bố cục**: không tab bar, không chế độ Select, không nút tròn kính nổi trên ảnh; hover có trạng thái riêng. Toolbar ≤ 3 cụm viên kính + search + **một** nút nổi bật ở mép phải. Khoảng cách 4/8/12/16/20/24 như §6. Cửa sổ phụ (Settings, Get Info…) vẽ đúng cỡ thật; Settings rộng cố định **720**, cao ≤ 640.
+
+**Biểu đồ**: kiểu C của §3.4 áp nguyên cho Mac (một chuỗi = một sắc amber, mark thường accent 38% sáng / 45% tối, mark đáng chú ý accent đầy có nhãn; nhiều chuỗi theo `ChartPalette.colors`).
+
+**macOS 15–25 — nhánh trước Liquid Glass**, như iOS trước 26: sidebar, toolbar, popover là **bản hệ thống của macOS đó**, không vẽ giả kính; cùng vùng, cùng số đo, cùng lệnh, cùng phím như macOS 26. Luật "build, chạy, chụp, xem" có bản Mac: chụp cả macOS 26 và một máy macOS 15.
 
 ---
 

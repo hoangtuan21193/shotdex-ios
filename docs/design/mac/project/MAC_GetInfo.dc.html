@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<title>Mac · Get Info</title>
+<title>Mac · Get Info · 3 Photos</title>
 <script src="./support.js"></script>
 </head>
 <body>
@@ -24,30 +24,32 @@ input{font-family:inherit}
 </div>
 <div style="position:absolute;left:0;right:0;top:11px;text-align:center;font-size:13px;font-weight:600">Info</div>
 
-<!-- Photo header -->
+<!-- Header: three photos selected; every field below edits all three -->
 <div style="position:absolute;left:16px;right:16px;top:48px;height:56px;display:flex;gap:12px;align-items:center">
-<div aria-label="Photo, DSC04512.ARW" style="position:relative;width:56px;height:56px;flex:none;border-radius:6px;overflow:hidden">
-<div style="position:absolute;inset:0;background:linear-gradient(180deg,#355C7D 0%,#8C7A93 38%,#E2A37A 62%,#2F3A36 62%,#1C2420 100%)"></div>
+<div aria-label="3 Photos, DSC04512.ARW, DSC04513.ARW, DSC04514.ARW" style="position:relative;width:64px;height:56px;flex:none">
+<div style="position:absolute;left:14px;top:0;width:48px;height:48px;border-radius:6px;overflow:hidden;box-shadow:0 0 0 1.5px {{t.content}};background:linear-gradient(180deg,#2F5372 0%,#86728E 38%,#DE9A72 62%,#2F3A36 62%,#1C2420 100%)"></div>
+<div style="position:absolute;left:7px;top:4px;width:48px;height:48px;border-radius:6px;overflow:hidden;box-shadow:0 0 0 1.5px {{t.content}};background:linear-gradient(180deg,#3E6688 0%,#978399 38%,#E9AD84 62%,#2F3A36 62%,#1C2420 100%)"></div>
+<div style="position:absolute;left:0;top:8px;width:48px;height:48px;border-radius:6px;overflow:hidden;box-shadow:0 0 0 1.5px {{t.content}};background:linear-gradient(180deg,#355C7D 0%,#8C7A93 38%,#E2A37A 62%,#2F3A36 62%,#1C2420 100%)"></div>
 </div>
 <div style="display:flex;flex-direction:column;gap:2px;min-width:0">
-<div style="display:flex;align-items:center;gap:6px"><span style="font-size:13px;font-weight:600">DSC04512.ARW</span><span style="height:15px;padding:0 4px;border-radius:4px;background:{{t.fill}};color:{{t.label2}};font-size:10px;font-weight:600;line-height:15px">RAW</span></div>
+<div style="display:flex;align-items:center;gap:6px"><span style="font-size:13px;font-weight:600">3 Photos</span><span style="height:15px;padding:0 4px;border-radius:4px;background:{{t.fill}};color:{{t.label2}};font-size:10px;font-weight:600;line-height:15px">RAW</span></div>
+<div style="font-size:11px;color:{{t.label2}};white-space:nowrap;font-variant-numeric:tabular-nums">Sep 27, 2026, 5:42 – 5:44 PM · 146.1 MB</div>
 <div style="font-size:11px;color:{{t.label2}};white-space:nowrap">Sony A7 IV · FE 24-70mm F2.8 GM II</div>
-<div style="font-size:11px;color:{{t.label2}};white-space:nowrap;font-variant-numeric:tabular-nums">35 mm · f/2.8 · 1/250 s · ISO 400 · 48.2 MB</div>
 </div>
 </div>
 <div style="position:absolute;left:16px;right:16px;top:114px;height:1px;background:{{t.sep}}"></div>
 
-<!-- FORM: labels right-aligned in an 80pt column -->
+<!-- FORM: labels right-aligned in an 80pt column; "Mixed" = the three photos differ, typing writes all three -->
 <div style="position:absolute;left:16px;top:126px;width:80px;height:28px;display:flex;align-items:center;justify-content:flex-end">Title</div>
-<label style="position:absolute;left:108px;right:16px;top:126px"><span style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)">Title</span><input value="Last light over Wakakusa" style="width:100%;height:28px;box-sizing:border-box;border-radius:8px;border:1px solid {{t.sep}};background:{{t.field}};color:{{t.label}};font-size:13px;padding:0 8px;outline:none"></label>
+<label style="position:absolute;left:108px;right:16px;top:126px"><span style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)">Title</span><input placeholder="Mixed" value="" style="width:100%;height:28px;box-sizing:border-box;border-radius:8px;border:1px solid {{t.sep}};background:{{t.field}};color:{{t.label}};font-size:13px;padding:0 8px;outline:none"></label>
 
 <div style="position:absolute;left:16px;top:162px;width:80px;height:28px;display:flex;align-items:center;justify-content:flex-end">Caption</div>
-<label style="position:absolute;left:108px;right:16px;top:162px"><span style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)">Caption</span><textarea style="font-family:inherit;width:100%;height:44px;box-sizing:border-box;border-radius:8px;border:2px solid {{t.focusRing}};background:{{t.field}};color:{{t.label}};font-size:13px;line-height:17px;padding:4px 7px;outline:none;resize:none">Deer crossing the lawn below Mount Wakakusa, ten minutes after sunset.</textarea></label>
+<label style="position:absolute;left:108px;right:16px;top:162px"><span style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)">Caption</span><textarea placeholder="Mixed" style="font-family:inherit;width:100%;height:44px;box-sizing:border-box;border-radius:8px;border:1px solid {{t.sep}};background:{{t.field}};color:{{t.label}};font-size:13px;line-height:17px;padding:5px 8px;outline:none;resize:none"></textarea></label>
 
 <div style="position:absolute;left:16px;top:214px;width:80px;height:28px;display:flex;align-items:center;justify-content:flex-end">Keywords</div>
 <div aria-label="Keywords" style="position:absolute;left:108px;right:16px;top:214px;min-height:28px;box-sizing:border-box;border-radius:8px;border:1px solid {{t.sep}};padding:3px;display:flex;flex-wrap:wrap;gap:4px">
-<sc-for list="{{keywords}}" as="k" hint-placeholder-count="4">
-<div style="height:20px;border-radius:10px;background:{{t.accentSoft}};color:{{t.label}};display:flex;align-items:center;gap:3px;padding:0 3px 0 7px;font-size:12px">{{k}}<button aria-label="Remove Keyword {{k}}" style="width:14px;height:14px;border:none;background:none;color:{{t.label2}};display:flex;align-items:center;justify-content:center"><svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M6 6l12 12 M18 6L6 18"></path></svg></button></div>
+<sc-for list="{{keywords}}" as="k" hint-placeholder-count="5">
+<div title="{{k.tip}}" aria-label="{{k.label}}" style="height:20px;box-sizing:border-box;border-radius:10px;background:{{k.bg}};border:{{k.border}};color:{{t.label}};display:flex;align-items:center;gap:3px;padding:0 3px 0 7px;font-size:12px">{{k.name}}<sc-if value="{{k.partial}}" hint-placeholder-val="{{false}}"><span style="font-size:10px;color:{{t.label2}};font-variant-numeric:tabular-nums">{{k.count}}</span></sc-if><button aria-label="Remove Keyword {{k.name}}" style="width:14px;height:14px;border:none;background:none;color:{{t.label2}};display:flex;align-items:center;justify-content:center"><svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M6 6l12 12 M18 6L6 18"></path></svg></button></div>
 </sc-for>
 <input aria-label="Add Keyword" placeholder="Add Keyword" style="flex:1;min-width:80px;height:20px;border:none;background:none;outline:none;font-size:12px;color:{{t.label}};padding:0 4px">
 </div>
@@ -57,26 +59,30 @@ input{font-family:inherit}
 <sc-for list="{{stars}}" as="s" hint-placeholder-count="5">
 <button aria-label="{{s.label}}" title="{{s.tip}}" style="width:22px;height:28px;border:none;background:none;display:flex;align-items:center;justify-content:center;color:{{s.color}}"><svg width="15" height="15" viewBox="0 0 24 24" fill="{{s.fill}}" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 3.5l2.6 5.4 5.9.8-4.3 4.1 1 5.8L12 16.8l-5.2 2.8 1-5.8-4.3-4.1 5.9-.8z"></path></svg></button>
 </sc-for>
+<span style="margin-left:6px;font-size:12px;color:{{t.label2}}">Mixed</span>
 <div style="flex:1"></div>
-<label style="display:flex;align-items:center;gap:6px;font-size:13px"><span style="width:14px;height:14px;border-radius:4px;background:{{t.fill}};box-shadow:inset 0 0 0 1px {{t.sep}};display:inline-block"></span>Favorite</label>
+<label role="checkbox" aria-checked="mixed" style="display:flex;align-items:center;gap:6px;font-size:13px"><span style="width:14px;height:14px;border-radius:4px;background:{{t.accentFill}};display:flex;align-items:center;justify-content:center"><span style="width:8px;height:2px;border-radius:1px;background:{{t.onAccentFill}}"></span></span>Favorite</label>
 </div>
 
 <div style="position:absolute;left:16px;top:312px;width:80px;height:28px;display:flex;align-items:center;justify-content:flex-end">Flag</div>
-<div role="radiogroup" aria-label="Flag" style="position:absolute;left:108px;top:312px;height:28px;border-radius:8px;background:{{t.fill}};padding:2px;box-sizing:border-box;display:flex">
+<div style="position:absolute;left:108px;top:312px;height:28px;display:flex;align-items:center;gap:8px">
+<div role="radiogroup" aria-label="Flag, Mixed" style="height:28px;border-radius:8px;background:{{t.fill}};padding:2px;box-sizing:border-box;display:flex">
 <sc-for list="{{flags}}" as="f" hint-placeholder-count="3">
 <button role="radio" aria-checked="{{f.on}}" title="{{f.tip}}" style="height:24px;padding:0 12px;border-radius:6px;border:none;background:{{f.bg}};box-shadow:{{f.shadow}};color:{{t.label}};font-size:12px;display:flex;align-items:center;gap:5px">{{f.name}}</button>
 </sc-for>
 </div>
+<span style="font-size:12px;color:{{t.label2}}">Mixed</span>
+</div>
 
 <div style="position:absolute;left:16px;top:348px;width:80px;height:28px;display:flex;align-items:center;justify-content:flex-end">Date</div>
 <div style="position:absolute;left:108px;right:16px;top:348px;height:28px;display:flex;align-items:center;justify-content:space-between;gap:8px">
-<span style="font-variant-numeric:tabular-nums;white-space:nowrap">Sep 27, 2026 at 5:42:08 PM <span style="color:{{t.label2}}">GMT+9</span></span>
-<button style="height:28px;padding:0 10px;border-radius:8px;border:none;background:{{t.fill}};color:{{t.label}};font-size:13px">Adjust…</button>
+<span style="white-space:nowrap;color:{{t.label2}}">Mixed <span style="font-size:11px;font-variant-numeric:tabular-nums">· 5:42 – 5:44 PM GMT+9</span></span>
+<button title="Shift all 3 photos by the same amount" style="height:28px;padding:0 10px;border-radius:8px;border:none;background:{{t.fill}};color:{{t.label}};font-size:13px">Adjust…</button>
 </div>
 
 <div style="position:absolute;left:16px;top:384px;width:80px;height:28px;display:flex;align-items:center;justify-content:flex-end">Location</div>
 <div style="position:absolute;left:108px;right:16px;top:384px;display:flex;align-items:flex-start;justify-content:space-between;gap:8px">
-<div style="display:flex;flex-direction:column;gap:1px;padding-top:5px"><span>Nara Park, Nara, Japan</span><span style="font-size:11px;color:{{t.label2}};font-variant-numeric:tabular-nums">34.6851° N, 135.8430° E</span></div>
+<div style="display:flex;flex-direction:column;gap:1px;padding-top:5px"><span>Nara Park, Nara, Japan</span><span style="font-size:11px;color:{{t.label2}}">Coordinates: Mixed</span></div>
 <button style="height:28px;padding:0 10px;border-radius:8px;border:none;background:{{t.fill}};color:{{t.label}};font-size:13px">Adjust…</button>
 </div>
 
@@ -85,18 +91,18 @@ input{font-family:inherit}
 
 <div style="position:absolute;left:16px;top:464px;width:80px;height:28px;display:flex;align-items:center;justify-content:flex-end">Copyright</div>
 <label style="position:absolute;left:108px;right:16px;top:464px"><span style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)">Copyright</span><input value="© 2026 Linh Pham Photography" style="width:100%;height:28px;box-sizing:border-box;border-radius:8px;border:1px solid {{t.sep}};background:{{t.field}};color:{{t.label}};font-size:13px;padding:0 8px;outline:none"></label>
-<div style="position:absolute;left:108px;right:16px;top:497px;font-size:11px;line-height:14px;color:{{t.label2}}">Saved as you type to DSC04512.xmp next to the file. The image file itself is never edited.</div>
+<div style="position:absolute;left:108px;right:16px;top:497px;font-size:11px;line-height:14px;color:{{t.label2}}">Changes apply to all 3 photos and save to their .xmp sidecars. Untouched fields keep their own values.</div>
 
 <div style="position:absolute;left:16px;right:16px;top:530px;height:1px;background:{{t.sep}}"></div>
 
 <!-- EXIF (read-only) -->
 <div style="position:absolute;left:16px;right:16px;top:534px;height:22px;display:flex;align-items:center;justify-content:space-between">
 <button aria-label="EXIF" aria-expanded="true" style="border:none;background:none;color:{{t.label2}};font-size:11px;font-weight:600;display:flex;align-items:center;gap:4px"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"></path></svg>EXIF</button>
-<button style="height:22px;padding:0 8px;border-radius:6px;border:none;background:{{t.fill}};color:{{t.label}};font-size:11px">Show All Raw Metadata</button>
+<button disabled title="Select one photo to see all its metadata" style="height:22px;padding:0 8px;border-radius:6px;border:none;background:{{t.fill}};color:{{t.label3}};font-size:11px">Show All Raw Metadata</button>
 </div>
 <div style="position:absolute;left:16px;right:16px;top:558px;display:grid;grid-template-columns:1fr 1fr;column-gap:16px">
 <sc-for list="{{exif}}" as="e" hint-placeholder-count="8">
-<div style="height:20px;display:flex;align-items:center;gap:8px;min-width:0"><span style="width:76px;flex:none;font-size:11px;color:{{t.label2}};white-space:nowrap">{{e.k}}</span><span style="flex:1;min-width:0;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-variant-numeric:tabular-nums;user-select:text">{{e.v}}</span></div>
+<div style="height:20px;display:flex;align-items:center;gap:8px;min-width:0"><span style="width:76px;flex:none;font-size:11px;color:{{t.label2}};white-space:nowrap">{{e.k}}</span><span style="flex:1;min-width:0;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-variant-numeric:tabular-nums;user-select:text;color:{{e.c}}">{{e.v}}</span></div>
 </sc-for>
 </div>
 </div>
@@ -123,14 +129,19 @@ const DARK = { content:'#1C1C1E', label:'rgba(255,255,255,0.90)', label2:'rgba(2
 class Component extends DCLogic {
   renderVals() {
     const dark=!!this.props.dark; const t = dark ? DARK : LIGHT;
-    const stars=[1,2,3,4,5].map(n=>({ label: n===1?'Rate 1 Star':'Rate '+n+' Stars', tip: (n===1?'1 Star':n+' Stars')+' ('+n+')',
-      fill: n<=4?'currentColor':'none', color: n<=4?t.label:t.label2 }));
-    const flag=(name,tip,on)=>({name,tip,on:on?'true':'false',bg:on?t.segOn:'transparent',shadow:on?t.segShadow:'none'});
+    const stars=[1,2,3,4,5].map(n=>({ label: n===1?'Rate 1 Star':'Rate '+n+' Stars', tip: (n===1?'1 Star':n+' Stars')+' ('+n+') for all 3 photos',
+      fill:'none', color:t.label2 }));
+    const flag=(name,tip)=>({name,tip,on:'false',bg:'transparent',shadow:'none'});
+    // On every photo: solid chip. On some: dashed chip with a count; × removes it from all three.
+    const kw=(name,n)=>({ name, partial:n<3, count:n+'/3', bg:n<3?'transparent':t.accentSoft,
+      border:n<3?('1px dashed '+t.label3):'none', tip:n<3?('On '+n+' of 3 photos'):'On all 3 photos',
+      label:name+(n<3?', on '+n+' of 3 photos':', on all 3 photos') });
+    const ex=(k,v)=>({k,v,c:v==='Mixed'?t.label2:t.label});
     return { t, stars,
-      keywords:['Nara','sunset','deer park','portfolio','Japan 2026'],
-      flags:[flag('None','Clear Flag (U)',false),flag('Pick','Pick (P)',true),flag('Reject','Reject (X)',false)],
-      exif:[{k:'Make',v:'SONY'},{k:'Model',v:'ILCE-7M4'},{k:'Exposure',v:'1/250 s'},{k:'Aperture',v:'f/2.8'},
-            {k:'ISO',v:'400'},{k:'Focal Length',v:'35 mm (35 mm)'},{k:'Metering',v:'Multi-segment'},{k:'White Balance',v:'Auto'}] };
+      keywords:[kw('Nara',3),kw('sunset',3),kw('deer park',2),kw('portfolio',1)],
+      flags:[flag('None','Clear Flag (U)'),flag('Pick','Pick (P)'),flag('Reject','Reject (X)')],
+      exif:[ex('Make','SONY'),ex('Model','ILCE-7M4'),ex('Exposure','Mixed'),ex('Aperture','f/2.8'),
+            ex('ISO','Mixed'),ex('Focal Length','35 mm (35 mm)'),ex('Metering','Multi-segment'),ex('White Balance','Auto')] };
   }
 }
 </script>

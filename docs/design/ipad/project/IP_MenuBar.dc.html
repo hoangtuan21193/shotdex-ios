@@ -264,9 +264,10 @@ class Component extends DCLogic {
     const M=(arr)=>menu(t,arr);
     const mApp=M([['About ShotDex'],'-',['Settings…','⌘,']]);
     const mFile=M([['New Album','⌘N'],['New Album with Selection','⇧⌘N'],['New Smart Album…','⌥⌘N'],['New Video Project'],['New Chart…'],'-',
-      ['Connect to Server…','⌘K'],['Import from Server…','⇧⌘I'],'-',['Open','⌘O'],['Open in New Window','⌥⌘O'],'-',
+      ['Connect to Server…','⌘K'],'-',['Open','⌘O'],['Open in New Window','⌥⌘O'],'-',
       ['Export','','s'],['Upload to Server…','⇧⌘U'],['Share','','s'],'-',['Close Window','⌘W'],['Print…','⌘P']]);
-    const sExport=M([['Export 3 Photos…','⇧⌘E'],['Export Unmodified Originals…','⌥⇧⌘E'],['Export EXIF as CSV…']]);
+    // Servers are indexed sources (FS-19): no Import from Server; a copy in Photos is an export, Save to Photos.
+    const sExport=M([['Export 3 Photos…','⇧⌘E'],['Export Unmodified Originals…','⌥⇧⌘E'],['Export EXIF as CSV…'],'-',['Save to Photos']]);
     const mEdit=M([['Undo Rotate','⌘Z'],['Redo','⇧⌘Z'],'-',['Cut','⌘X'],['Copy','⌘C'],['Paste','⌘V'],['Select All','⌘A'],['Deselect All','⇧⌘A'],'-',
       ['Copy Edits','⇧⌘C'],['Paste Edits','⇧⌘V'],['Sync Edits','','s'],['Revert to Original…'],'-',['Search','⌘F'],['Advanced Search…']]);
     const sSync=M([['Sync Look…'],['Sync Everything…'],['Apply Previous'],'-',['Auto Sync','','c']]);

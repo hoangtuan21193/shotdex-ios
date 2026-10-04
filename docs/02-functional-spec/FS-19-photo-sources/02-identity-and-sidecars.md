@@ -8,8 +8,8 @@ keyword, title, caption đi vào sidecar `.xmp` cạnh mọi bản sao file (D3)
 
 ## 1. Hash nội dung
 
-- Mỗi ảnh có **id nội bộ** của ShotDex; mỗi file hay asset Photos mang nội dung đó là một **bản sao** trỏ về id
-  ([05 §3](05-data.md)). Lưới hiện **một ô mỗi ảnh**.
+- Mỗi ảnh có một **id** (ảnh Photos giữ id hệ thống, ảnh mới nhận id mới); mỗi file hay asset Photos mang nội dung đó
+  là một **bản sao** trỏ về id ([05 §1](05-data.md)). Lưới hiện **một ô mỗi ảnh**.
 - Get Info liệt kê bản sao: "2 copies · T7 RAW Archive › RAW/2026-09-27 · NAS Home › Photos/2026".
 - Hash chỉ phủ **phần dữ liệu ảnh** — bỏ khối EXIF/XMP/IPTC. *Vì* app khác nhúng metadata vào JPEG/DNG không được đổi
   danh tính. Bộ băm hiểu cấu trúc từng định dạng; định dạng lạ thì băm cả file.
@@ -32,6 +32,12 @@ keyword, title, caption đi vào sidecar `.xmp` cạnh mọi bản sao file (D3)
   ([BD-03.03 §2](../../01-basic-design/BD-03-metadata-indexing-flow/03-network-thermal-and-gate.md)); không giữ bản tải.
 - Ảnh Photos chưa băm là một ảnh riêng; băm xong mà trùng một file thì hai bản sao gộp về một id.
 
+### 1c. Gộp
+
+- Gộp chạy trong một lần, giữ id cũ hơn. Trường một giá trị (sao, cờ, favorite, title, caption, recipe): **đổi sau
+  cùng thắng**. Keyword, album, bản sao ẩn: **hợp lại**. Chi tiết theo bảng ở [05 §4](05-data.md).
+- Id bị gộp còn tìm được qua **bí danh** — widget hay smart album đang trỏ id đó vẫn ra ảnh.
+
 ## 2. File đổi tên, di chuyển, đổi nội dung
 
 | Việc | Thấy bằng | Kết quả |
@@ -40,12 +46,15 @@ keyword, title, caption đi vào sidecar `.xmp` cạnh mọi bản sao file (D3)
 | Chuyển sang nguồn khác | bản sao mất ở A, xuất hiện ở B | cùng ảnh, đổi nơi chứa |
 | Sidecar đi theo | `.xmp` cùng tên gốc chuyển cùng | đọc lại sidecar ở chỗ mới |
 | App khác nhúng XMP vào file | kích thước/ngày sửa lệch | hash **không đổi** (chỉ phủ phần ảnh) → cùng ảnh; đọc lại EXIF |
-| App khác lưu đè điểm ảnh (cùng đường dẫn) | hash mới | **cùng ảnh** — nối bằng vị trí; đọc lại EXIF |
+| App khác lưu đè điểm ảnh (cùng đường dẫn), ảnh chỉ có bản sao này | hash mới | **cùng ảnh** — nối bằng vị trí; đọc lại EXIF |
+| Như trên nhưng bản sao khác vẫn giữ ảnh cũ | hash của bản này lệch các bản kia | **tách**: bản đổi thành ảnh mới, mang bản chép dữ liệu người dùng |
 | Chuyển ra ngoài mọi nguồn / bị xoá ngoài ShotDex | bản sao biến mất | ảnh hết bản sao → ra khỏi lưới, thành **mồ côi** |
 
-- Nối bằng vị trí chỉ áp khi **cùng nguồn + cùng đường dẫn** đổi byte. Hai file khác vị trí có hash khác nhau thì là hai ảnh.
+- Nối bằng vị trí chỉ áp khi **cùng nguồn + cùng đường dẫn** đổi byte **và** không bản sao nào khác còn nội dung cũ.
+  Hai file khác vị trí có hash khác nhau thì là hai ảnh.
 - **Ảnh mồ côi giữ dữ liệu người dùng 30 ngày** (rating, cờ, keyword, favorite, recipe, ẩn, album). File quay lại trong
-  30 ngày (Put Back, cắm lại thẻ, thêm lại nguồn) → nối bằng hash, dữ liệu về đủ. Quá 30 ngày → xoá dòng ở mọi bảng.
+  30 ngày (Put Back, cắm lại thẻ, thêm lại nguồn) → nối bằng hash, dữ liệu về đủ. Quá 30 ngày → xoá dòng ở mọi bảng,
+  trừ lịch sử upload, tải về, nhập thẻ ([05 §5](05-data.md)).
 - Đếm 30 ngày từ lúc ảnh mất bản sao cuối. Ổ chỉ **offline** thì ảnh không mồ côi — bản sao vẫn còn, chỉ không với tới.
 
 ## 3. Bản sao ở nguồn khác
@@ -94,7 +103,7 @@ keyword, title, caption đi vào sidecar `.xmp` cạnh mọi bản sao file (D3)
 
 - Thay đổi khi một bản sao offline: ghi ngay ra các bản online; ảnh mang **dấu chờ** cho bản offline.
 - Bản sao online lại → ghi **giá trị hiện hành** của ảnh (không phát lại từng thay đổi), so dấu sidecar như §6 trước khi ghi.
-- Dấu chờ là **dữ liệu người dùng** → bảng riêng, sống qua Clear Local Metadata Index ([05 §2](05-data.md)).
+- Dấu chờ là **dữ liệu người dùng** → bảng riêng, sống qua Clear Local Metadata Index ([05 §3](05-data.md)).
 
 ## 8. Recipe nằm ở đâu
 

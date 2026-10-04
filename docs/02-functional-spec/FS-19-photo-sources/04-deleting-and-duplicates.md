@@ -25,8 +25,9 @@ nguồn, Statistics đếm mỗi ảnh một lần (D7).
   dấu — "T7 RAW Archive › RAW/2026-09-27", "Photos Library", "NAS Home (hide)". Mặc định chỉ bật **bản đang dùng để mở**
   (đầu thứ tự ở [02 §3](02-identity-and-sidecars.md)); các bản còn lại là **backup**, mặc định tắt. Nhiều ảnh: một hàng
   mỗi nguồn với số ảnh, cùng luật mặc định. Không ảnh nào có ≥ 2 bản sao → không có phần chọn, hộp như §2.
-- **Nơi không có Thùng rác**: sau hộp thường, hộp thứ hai — tiêu đề "Delete 12 files immediately?", lời "“SD_BACKUP” has
-  no Trash. These files can't be recovered.", nút **Delete Immediately** (chữ đỏ) · **Cancel**. Cancel → không file nào bị xoá.
+- **Nơi không có Thùng rác**: sau hộp thường, hộp đỏ thứ hai — tiêu đề "Delete 12 Photos Permanently?" (như
+  [FS-01.08c §6](../FS-01-library/08c-compare-viewer-mode.md)), lời "“SD_BACKUP” has no Trash. These files can't be
+  recovered.", nút **Delete Permanently** (chữ đỏ) · **Cancel**. Cancel → không file nào bị xoá.
 
 ## 2. Hộp xác nhận
 
@@ -55,15 +56,17 @@ Board `MAC_Cull` (Move 120 Rejected…), `MAC_Duplicates` (Move 2 Photos…). Ti
 
 ## 3. Hide và mục Hidden
 
-- Ảnh ẩn rời lưới, tìm kiếm, smart album, album, Statistics. Dữ liệu ẩn là dữ liệu người dùng → bảng riêng ([05](05-data.md)).
+- Hide đánh dấu **bản sao** NAS. Ảnh **ẩn khi và chỉ khi mọi bản sao của nó ẩn** ([05 §3](05-data.md)); ảnh còn bản sao
+  không ẩn ở nguồn khác thì vẫn ở lưới, chỉ rời màn duyệt của NAS.
+- Ảnh ẩn rời lưới, tìm kiếm, smart album, album, Statistics. Dấu ẩn là dữ liệu người dùng, sống qua index lại.
 - Xem lại ở mục **Hidden** trong Collections (cùng chỗ với Utilities): lưới các ảnh ShotDex đã ẩn, tiêu đề "6 Hidden
-  Photos", chọn → **Unhide**. Mục chỉ hiện khi có ≥ 1 ảnh ẩn.
+  Photos", chọn → **Unhide** (bỏ ẩn mọi bản sao của ảnh). Mục chỉ hiện khi có ≥ 1 ảnh ẩn.
 - Mục này **không** chứa album Hidden của Photos — app bên thứ ba không đọc được nó ([FS-06.01](../FS-06-collections/01-tabs-tokens-and-album-management.md)).
-- File bị xoá ngay trên NAS (bởi máy khác) → lượt so thấy mất → ảnh mồ côi, dòng ẩn theo luật 30 ngày ([02 §2](02-identity-and-sidecars.md)).
+- File bị xoá ngay trên NAS (bởi máy khác) → lượt so thấy mất → bản sao mất; ảnh hết bản sao thì mồ côi theo luật 30 ngày ([02 §2](02-identity-and-sidecars.md)).
 
 ## 4. Duplicates — chỉ trong một nguồn (D7)
 
-- Mọi nhóm (Exact, Similar, Series) **chỉ gồm ảnh của cùng một nguồn**. Một ảnh có bản sao ở A và B có thể nằm trong nhóm
+- Mọi nhóm (Exact, Similar, Series) **chỉ gồm ảnh của cùng một nguồn**; kết quả quét trùng lưu theo từng nguồn. Một ảnh có bản sao ở A và B có thể nằm trong nhóm
   của A **và** nhóm của B; đánh dấu nó trong nhóm của B chỉ xoá **bản sao ở B**.
 - Bản sao giống hệt ở nguồn khác **không bao giờ** được đề nghị xoá. Câu trên board: "Groups stay inside one source. An
   identical copy in another source is the same photo (matched by content hash): it is counted once and never offered for
@@ -78,7 +81,7 @@ Board `MAC_Cull` (Move 120 Rejected…), `MAC_Duplicates` (Move 2 Photos…). Ti
   **đường dẫn**. Board `MAC_Duplicates` sửa theo.
 - **Merge** với ảnh file chỉ thừa hưởng **sao, cờ, keyword** — ghi vào database và sidecar. Favorite, vị trí, ngày chụp
   sớm nhất (FS-06.06b §2) chỉ áp khi ảnh giữ là ảnh Photos.
-- Favorite của ảnh file nằm ở database **và** vùng ShotDex của sidecar ([05 §3](05-data.md)).
+- Favorite của ảnh file nằm ở database **và** vùng ShotDex của sidecar ([05 §2](05-data.md)).
 
 ## 5. Statistics — đếm một lần (D7)
 

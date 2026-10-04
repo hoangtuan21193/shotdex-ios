@@ -101,6 +101,6 @@ sổ riêng là tuỳ chọn.
 
 ## 9. Vùng bấm
 
-- Mac theo chuẩn con trỏ: mọi control bấm được **≥ 20×16**; nút toolbar 28, nút chữ toolbar cao 36.
+- Mac theo chuẩn con trỏ: mọi control bấm được **≥ 20×16**; push button 28; toolbar là viên kính cao 36, nút icon trong viên rộng 34–36, nút chữ cao 36.
 - *Chốt 2026-10-04:* đây là ngoại lệ Mac của luật 44×44 ở
   [NF-06](../../04-non-functional-design/NF-06-accessibility-and-localization.md) §1 — *vì không có ngón tay, chỉ con trỏ.*

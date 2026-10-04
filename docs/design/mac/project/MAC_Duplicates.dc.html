@@ -51,7 +51,7 @@ input{font-family:inherit}
 <div style="height:48px;display:flex;align-items:center;justify-content:space-between;gap:12px">
 <div style="display:flex;flex-direction:column;gap:2px;min-width:0">
 <span style="font-size:15px;font-weight:600">2 identical copies of DSC04512.ARW</span>
-<span style="font-size:12px;color:{{t.label2}};white-space:nowrap">Exact match: same pixels and file size · both on T7 RAW Archive</span>
+<span style="font-size:12px;color:{{t.label2}};white-space:nowrap;font-variant-numeric:tabular-nums">Exact match: same content hash · both on T7 RAW Archive · 48.2 MB · 7008 × 4672</span>
 </div>
 <div style="display:flex;gap:8px;flex:none">
 <button title="Move 2 Photos… (⌘⌫)" style="height:28px;padding:0 12px 0 10px;border-radius:8px;border:none;background:{{t.fill}};color:{{t.redText}};font-size:13px;font-weight:500;display:flex;align-items:center;gap:6px;white-space:nowrap"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16 M9 7V4h6v3 M6 7l1 13h10l1-13"></path></svg>Move 2 Photos…</button>
@@ -61,7 +61,7 @@ input{font-family:inherit}
 <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:12px">
 <sc-for list="{{copies}}" as="c" hint-placeholder-count="2">
 <div aria-label="{{c.label}}" style="border-radius:12px;border:1px solid {{t.sep}};overflow:hidden;background:{{t.content}}">
-<div style="position:relative;height:340px;overflow:hidden">
+<div style="position:relative;height:300px;overflow:hidden">
 <div style="position:absolute;inset:0;background:linear-gradient(180deg,#355C7D 0%,#8C7A93 38%,#E2A37A 60%,#F2C99A 66%);opacity:{{c.op}}"></div>
 <div style="position:absolute;inset:0;background:#4D4A5A;opacity:{{c.op}};clip-path:polygon(0% 62%,12% 52%,24% 58%,38% 44%,50% 54%,63% 47%,78% 57%,90% 50%,100% 56%,100% 100%,0% 100%)"></div>
 <div style="position:absolute;inset:0;background:#2F3A36;opacity:{{c.op}};clip-path:polygon(0% 72%,16% 66%,30% 73%,47% 63%,62% 71%,80% 64%,100% 70%,100% 100%,0% 100%)"></div>
@@ -69,23 +69,20 @@ input{font-family:inherit}
 <div style="position:absolute;left:10px;top:10px;height:22px;padding:0 9px 0 7px;border-radius:11px;background:{{c.badgeBg}};color:{{c.badgeFg}};font-size:12px;font-weight:600;display:flex;align-items:center;gap:5px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="{{c.badgeIcon}}"></path></svg>{{c.badge}}</div>
 <div style="position:absolute;inset:0;box-shadow:inset 0 0 0 {{c.ringW}} {{c.ring}}"></div>
 </div>
-<div style="padding:10px 12px 12px;display:flex;flex-direction:column">
-<div style="height:28px;display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:4px">
-<span style="font-size:12px;color:{{c.whyColor}};white-space:nowrap">{{c.why}}</span>
+<div style="padding:10px 12px 12px;display:flex;flex-direction:column;gap:4px">
+<div style="height:28px;display:flex;align-items:center;justify-content:space-between;gap:8px">
+<span style="display:flex;align-items:center;gap:6px;font-size:13px;font-weight:500;white-space:nowrap"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="{{t.accent}}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="{{c.srcIcon}}"></path></svg>{{c.src}}</span>
 <sc-if value="{{c.hasAction}}" hint-placeholder-val="{{true}}"><button style="height:22px;padding:0 10px;border-radius:6px;border:none;background:{{t.fill}};color:{{t.label}};font-size:12px;white-space:nowrap">{{c.action}}</button></sc-if>
 </div>
-<div style="height:22px;display:flex;align-items:center;gap:8px"><span style="width:76px;flex:none;font-size:12px;color:{{t.label2}}">Source</span><span style="display:flex;align-items:center;gap:5px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="{{t.accent}}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="{{c.srcIcon}}"></path></svg>{{c.src}}</span></div>
-<div title="{{c.path}}" style="height:20px;display:flex;align-items:center;font-size:11px;color:{{t.label2}};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{c.path}}</div>
-<sc-for list="{{c.rows}}" as="r" hint-placeholder-count="4">
-<div style="height:22px;display:flex;align-items:center;gap:8px"><span style="width:76px;flex:none;font-size:12px;color:{{t.label2}}">{{r.k}}</span><span style="flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-variant-numeric:tabular-nums">{{r.v}}</span></div>
-</sc-for>
+<div style="display:flex;gap:8px;align-items:baseline"><span style="width:44px;flex:none;font-size:12px;color:{{t.label2}}">Path</span><span title="{{c.path}}" style="flex:1;min-width:0;font-size:11px;line-height:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{c.pathHead}}<b style="font-weight:600">{{c.pathDiff}}</b>{{c.pathTail}}</span></div>
+<div style="display:flex;gap:8px;align-items:baseline"><span style="width:44px;flex:none;font-size:12px;color:{{t.label2}}">Then</span><span style="flex:1;min-width:0;font-size:12px;color:{{c.whyColor}}">{{c.why}}</span></div>
 </div>
 </div>
 </sc-for>
 </div>
 <div style="margin-top:14px;display:flex;gap:8px;align-items:flex-start;font-size:12px;line-height:17px;color:{{t.label2}}">
 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="flex:none;margin-top:2px"><path d="M12 3a9 9 0 1 0 0.01 0z M12 11v6 M12 7.5v.01"></path></svg>
-<span>The copy in RAW/2026-09-27 is the suggested keeper: it has your edits, rating and flag. Merge 12 Groups… gives each keeper the favorite, location and earliest date of its copies. Nothing moves until you click Move 2 Photos… ShotDex never edits file contents.</span>
+<span>Both files hold the same photo, so they share one rating, flag, keywords and set of edits; only the path differs. The copy outside Backup is the suggested keeper. Nothing moves until you click Move 2 Photos… ShotDex never edits file contents.</span>
 </div>
 <div style="margin-top:10px;display:flex;gap:8px;align-items:flex-start;font-size:12px;line-height:17px;color:{{t.label2}}">
 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:none;margin-top:2px"><path d="M4 7h10v10H4z M10 3h10v10h-3"></path></svg>
@@ -114,6 +111,7 @@ input{font-family:inherit}
 <div style="font-size:11px;color:{{t.label2}};line-height:13px;white-space:nowrap;font-variant-numeric:tabular-nums">Last scan 2 days ago · 148 photos not scanned</div>
 </div>
 <div style="flex:1"></div>
+<button aria-label="Source" title="Show groups from one source" style="height:36px;border-radius:18px;background:{{t.glass}};border:1px solid {{t.glassStroke}};box-shadow:{{t.glassShadow}};backdrop-filter:blur(24px) saturate(1.6);-webkit-backdrop-filter:blur(24px) saturate(1.6);color:{{t.label}};font-size:13px;padding:0 12px 0 14px;display:flex;align-items:center;gap:6px;white-space:nowrap;flex:none">All Sources<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="{{t.label2}}" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M7 9l5-5 5 5 M7 15l5 5 5-5"></path></svg></button>
 <div role="radiogroup" aria-label="Match level" style="height:36px;border-radius:18px;background:{{t.glass}};border:1px solid {{t.glassStroke}};box-shadow:{{t.glassShadow}};backdrop-filter:blur(24px) saturate(1.6);-webkit-backdrop-filter:blur(24px) saturate(1.6);display:flex;align-items:center;padding:0 3px;gap:2px">
 <sc-for list="{{levels}}" as="l" hint-placeholder-count="4">
 <button role="radio" aria-checked="{{l.on}}" style="height:30px;padding:0 12px;border-radius:15px;border:none;background:{{l.bg}};color:{{t.label}};font-size:13px;display:flex;align-items:center;gap:6px">{{l.name}}<span style="font-size:11px;color:{{t.label2}};font-variant-numeric:tabular-nums">{{l.count}}</span></button>
@@ -233,16 +231,16 @@ function vals(base, dark){
     bg1: i===0?'linear-gradient(180deg,#355C7D 0%,#8C7A93 38%,#E2A37A 62%,#2F3A36 62%,#1C2420 100%)':tile(i*5+1),
     bg2: i===0?'linear-gradient(180deg,#355C7D 0%,#8C7A93 38%,#E2A37A 62%,#2F3A36 62%,#1C2420 100%)':tile(i*5+1) }));
   const copies=[
-    { label:'Suggested keeper, DSC04512.ARW on T7 RAW Archive', op:'1', ring:t.accent, ringW:'2px',
+    { label:'Suggested keeper, DSC04512.ARW in RAW/2026-09-27 on T7 RAW Archive', op:'1', ring:t.accent, ringW:'2px',
       badge:'Suggested Keeper', badgeBg:t.accentFill, badgeFg:t.onAccentFill, badgeIcon:'M5 12.5l4.5 4.5L19 7',
-      why:'Edited · Picked · ★★★★', whyColor:t.label, action:'', hasAction:false,
+      why:'Stays · the photo keeps this file', whyColor:t.label2, action:'', hasAction:false,
       src:'T7 RAW Archive', srcIcon:I.drive, path:'/Volumes/T7/RAW/2026-09-27/DSC04512.ARW',
-      rows:[{k:'Size',v:'48.2 MB'},{k:'Dimensions',v:'7008 × 4672'},{k:'Captured',v:'Sep 27, 2026 at 5:42 PM'},{k:'Location',v:'Nara Park, Nara'}] },
-    { label:'Marked for deletion, DSC04512.ARW in the Backup folder on T7 RAW Archive', op:'0.45', ring:t.red, ringW:'3px',
+      pathHead:'/Volumes/T7/RAW/', pathDiff:'2026-09-27', pathTail:'/DSC04512.ARW' },
+    { label:'Marked for deletion, DSC04512.ARW in RAW/Backup/2026-09-27 on T7 RAW Archive', op:'0.45', ring:t.red, ringW:'3px',
       badge:'Marked for Deletion', badgeBg:'#C4001A', badgeFg:'#FFFFFF', badgeIcon:'M4 7h16 M9 7V4h6v3 M6 7l1 13h10l1-13',
-      why:'Not edited · no rating · goes to the Trash', whyColor:t.label2, action:'Unmark', hasAction:true,
+      why:'Goes to the Trash with its .xmp sidecar', whyColor:t.label2, action:'Unmark', hasAction:true,
       src:'T7 RAW Archive', srcIcon:I.drive, path:'/Volumes/T7/RAW/Backup/2026-09-27/DSC04512.ARW',
-      rows:[{k:'Size',v:'48.2 MB'},{k:'Dimensions',v:'7008 × 4672'},{k:'Captured',v:'Sep 27, 2026 at 5:42 PM'},{k:'Location',v:'None'}] }
+      pathHead:'/Volumes/T7/RAW/', pathDiff:'Backup/2026-09-27', pathTail:'/DSC04512.ARW' }
   ];
   const lv=(name,count,on)=>({name,count,on:on?'true':'false',bg:on?t.pressed:'transparent'});
   return { t, dupGroups, copies, levels:[lv('Exact','12',true),lv('Similar','30',false),lv('Series','8',false),lv('Bursts','3',false)] };

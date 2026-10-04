@@ -2,12 +2,12 @@
 
 `FS-19.06` · cập nhật 2026-10-04
 
-**Một câu:** 63 tiêu chí, mỗi cái một thao tác, có số, nhìn được từ test hoặc ảnh chụp; chưa cái nào có chứng minh.
+**Một câu:** 68 tiêu chí, mỗi cái một thao tác, có số, nhìn được từ test hoặc ảnh chụp; chưa cái nào có chứng minh.
 
 - Cột "Chứng minh" ghi **tên đề xuất**; mọi dòng là `⚠️ chưa có`. Test đơn vị chạy trên database trong bộ nhớ và một thư
   mục tạm dựng sẵn file mẫu (RAW mẫu CC0 ở `~/Library/Caches/ShotDexFixtures/raw`, **không ảnh có mặt người**).
 - Mac **chưa có driver UI** (`Tools/ui-drive` chỉ chạy simulator iOS) — AC màn hình trên Mac ghi "ảnh chụp tay" tới khi có.
-- Số AC cố định, không đánh lại; AC thêm sau đáp án 2026-10-04 mang số 45–63 và nằm trong bảng của phần nó.
+- Số AC cố định, không đánh lại; AC thêm sau đáp án 2026-10-04 mang số 45–63, sau review dữ liệu 64–68, và nằm trong bảng của phần nó.
 
 ## Thư mục và ổ ([01](01-folders-and-drives.md), [01b](01b-offline-access-and-cache.md))
 
@@ -47,6 +47,9 @@
 | AC-21 | ảnh A chỉ ở "2026 Japan", ★4, có recipe | chuyển file sang T7 bằng Finder | một ảnh, bản sao ở T7; ★4 và recipe giữ | ⚠️ chưa có — `PhotoIdentityTests.moveAcrossSourcesKeepsData` |
 | AC-22 | JPEG A ★3 trong ShotDex; app khác nhúng XMP vào chính file đó (byte đổi, cùng đường dẫn) | lượt so lệch chạy | hash của bản sao **không đổi**; cùng id ảnh, ★3 giữ, EXIF đọc lại; không ảnh mới | ⚠️ chưa có — `PhotoIdentityTests.embeddedMetadataKeepsHash` |
 | AC-51 | ảnh A ★4 Picked, có recipe, chỉ một bản sao; ảnh B mồ côi từ 31 ngày trước | xoá file A bằng Finder; Put Back sau 29 ngày (giả lập đồng hồ); mở app | A rời lưới rồi quay lại cùng id, ★4, Picked, recipe; B: 0 dòng ở mọi bảng | ⚠️ chưa có — `OrphanRetentionTests.thirtyDays` |
+| AC-64 | ảnh A ★4, keyword "Nara", có bản sao ở "2026 Japan" và T7 | app khác lưu đè `T7/DSC04512.ARW` bằng ảnh khác (cùng đường dẫn) | bản T7 thành ảnh B id mới, ★4 và "Nara" chép sang; A còn 1 bản sao "2026 Japan", vẫn ★4; đổi sao B không đổi A | ⚠️ chưa có — `PhotoIdentityTests.overwrittenCopySplits` |
+| AC-65 | ảnh file F: ★2 lúc 09:00, keyword "Kyoto", album "Trip"; ảnh Photos P: ★5 lúc 10:00, keyword "Temple", Picked; F và P giống hệt | hash đầy đủ xong → gộp | một ảnh, id = id cũ hơn; ★5; Picked; keyword "Kyoto" + "Temple"; trong album "Trip"; dấu chờ sidecar của F trỏ id thắng; mọi bước trong một transaction | ⚠️ chưa có — `PhotoMergeTests.collisionsInEverySatelliteTable` |
+| AC-66 | widget và smart album lưu id của ảnh thua ở AC-65 | widget nạp lại; mở smart album | widget hiện ảnh đã gộp (thumbnail từ cache chung); smart album khớp ảnh đó; 0 ô trống | ⚠️ chưa có — `PhotoAliasTests.loserIdResolves` |
 | AC-23 | 300 RAW có sidecar Lightroom: 120 có ★ ≥ 1, 45 có ★ ≥ 3, 30 sao −1, 80 có keyword "Kyoto" | thêm nguồn | lọc ★ ≥ 3 → 45; Rejected → 30; tìm "Kyoto" → 80 | ⚠️ chưa có — `SidecarReaderTests.lightroomRatingsRejectsKeywords` |
 | AC-24 | JPEG có XMP nhúng ★2, không sidecar; JPEG khác có cả nhúng ★2 và sidecar ★5 | đọc | ảnh thứ nhất ★2, ảnh thứ hai ★5 | ⚠️ chưa có — `SidecarReaderTests.sidecarBeatsEmbedded` |
 | AC-52 | ARW có sao máy ảnh 3 trong file, không sidecar; asset Photos có sao 3 trong file | đọc cả hai | ảnh file ★3; asset Photos ★0 và 0 lần ghi Photos | ⚠️ chưa có — `SidecarReaderTests.cameraRatingFilesOnly` |
@@ -84,8 +87,10 @@
 | AC-42 | hộp của AC-40 | Move → đồng ý ở hộp hệ thống | 84 ảnh + JPEG ghép cặp + `.xmp` của chúng trong Thùng rác; 30 trong Recently Deleted; 6 ẩn, file trên NAS còn nguyên SHA-256; Put Back 1 file → ảnh quay lại với ★ cũ | ⚠️ chưa có — `MixedDeletionTests.trashCarriesPairAndSidecar` |
 | AC-43 | chọn 6 ảnh chỉ ở NAS Home | ⌘⌫ | hộp "Hide 6 photos?", nút Hide, không chữ "delete"; Hide → 6 rời lưới và Statistics | ⚠️ chưa có — `MixedDeletionPlanTests.allServerIsHide` |
 | AC-57 | ảnh A có bản sao ở Photos (bản gốc trên máy), T7, NAS Home | xoá A trong nguồn T7; rồi xoá A từ All Photos | lần 1: chỉ bản T7 vào Thùng rác, A còn "2 copies"; lần 2: hộp liệt kê "Photos Library" (bật) và "NAS Home (hide)" (tắt); Move → chỉ bản Photos đi, A còn 1 bản NAS | ⚠️ chưa có — `MultiCopyDeletionTests.onlyViewedSourceThenChecklist` |
-| AC-58 | iPad, nguồn ổ USB-C "SD_BACKUP" (không Thùng rác), 12 ảnh chọn | Move 12 Photos… → Move | hộp thứ hai "Delete 12 files immediately?" + Delete Immediately (chữ đỏ) · Cancel; Cancel → 12 file còn nguyên; lần sau Delete Immediately → 12 file và `.xmp` mất, 0 trong Recently Deleted | ⚠️ chưa có — `ShotDexUITests/scripts/source-permanent-delete-ipad.json` |
+| AC-58 | iPad, nguồn ổ USB-C "SD_BACKUP" (không Thùng rác), 12 ảnh chọn | Move 12 Photos… → Move | hộp đỏ thứ hai "Delete 12 Photos Permanently?" + Delete Permanently (chữ đỏ) · Cancel; Cancel → 12 file còn nguyên; lần sau Delete Permanently → 12 file và `.xmp` mất, 0 trong Recently Deleted | ⚠️ chưa có — `ShotDexUITests/scripts/source-permanent-delete-ipad.json` |
 | AC-59 | 6 ảnh NAS đã Hide | mở Collections; Hidden → chọn 2 → Unhide; Unhide 4 còn lại | mục "Hidden" có "6 Hidden Photos"; sau lần 1: 2 ảnh về lưới và Statistics, mục còn 4; sau lần 2: mục Hidden biến mất | ⚠️ chưa có — `ShotDexUITests/scripts/hidden-section-iphone.json` |
+| AC-67 | ảnh A mồ côi 31 ngày, có 2 dòng lịch sử upload, 1 dòng tải về, 1 dòng nhập thẻ; ★4, recipe, cờ | mở app | A: 0 dòng ở Ảnh, Dấu ảnh, Recipe, Cờ, album; 4 dòng lịch sử còn nguyên; ảnh mồ côi 29 ngày còn đủ | ⚠️ chưa có — `OrphanRetentionTests.purgeKeepsHistories` |
+| AC-68 | ảnh A có bản sao ở hai nguồn server NAS Home và NAS Office | Hide bản NAS Home; rồi Hide bản NAS Office | sau lần 1: A vẫn trong lưới và Statistics, rời màn duyệt NAS Home; sau lần 2: A rời lưới, có trong mục Hidden; Unhide → cả hai bản bỏ ẩn | ⚠️ chưa có — `HiddenCopyTests.hiddenOnlyWhenEveryCopyHidden` |
 | AC-44 | `DSC04512.ARW` giống hệt ở T7 RAW/2026-09-27, T7 Backup và NAS Home | mở Duplicates, Exact | đúng 1 nhóm "2 identical copies of DSC04512.ARW · both on T7 RAW Archive"; không dòng khác biệt sao/sửa; không nhóm nào gồm bản NAS; Move 1 bản Backup → ảnh còn, Get Info "2 copies" (T7 RAW, NAS) | ⚠️ chưa có — `DuplicateSourceScopeTests.groupsStayInOneSource` |
 | AC-60 | nhóm Similar 2 ảnh file khác nội dung: giữ B (★0, không GPS), bỏ C (★4, Picked, keyword "Kyoto", có GPS, chụp sớm hơn) | Merge | B ★4, Picked, "Kyoto" trong database và sidecar; GPS và ngày chụp của B không đổi; SHA-256 file B không đổi | ⚠️ chưa có — `FileMergeTests.ratingFlagKeywordOnly` |
 | AC-61 | có nguồn thư mục; 3 ảnh file và 2 ảnh Photos | New Album "Kyoto" → thêm 5 ảnh; Add to Album với album Photos "Trip" cho 1 ảnh chỉ-file | "Kyoto" là album ShotDex có 5 ảnh, 0 album mới trong Photos; hàng "Trip" mờ, câu "Photos albums can only hold Photos Library items." | ⚠️ chưa có — `ShotDexAlbumTests.spansSources` |
@@ -97,6 +102,6 @@
 | AC-62 | iPhone 17, iOS 26.5; thư mục On My iPhone "Kyoto" 300 JPG | Settings › Sources → Add Folder or Drive… → chọn "Kyoto" | nhóm Sources có "Kyoto · 300"; 300 ảnh trong lưới; đặt ★4 → có `.xmp` cạnh file; 0 file ảnh đổi SHA-256 | ⚠️ chưa có — `ShotDexUITests/scripts/source-folder-iphone.json` |
 | AC-63 | Duo, nguồn "Kyoto" đã thêm trên màn trong | gập máy sang màn ngoài | màn ngoài thấy nguồn "Kyoto · 300" và cùng 300 ảnh; thêm nguồn và Settings › Sources dùng được trên màn ngoài | ⚠️ chưa có — máy thật hoặc ảnh chụp tay (simctl không gập được Duo) |
 
-**Chưa chứng minh được:** cả 63. Statistics đếm một lần nằm trong AC-18; popup Source của Statistics và Duplicates chưa có AC
+**Chưa chứng minh được:** cả 68. Statistics đếm một lần nằm trong AC-18; popup Source của Statistics và Duplicates chưa có AC
 riêng — thêm ở `/plan` khi FS-07 được sửa theo. Board iPhone/Duo chưa vẽ, nên AC-39, AC-59, AC-62, AC-63 chưa có chỗ so
 `design-parity`.

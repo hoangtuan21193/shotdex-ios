@@ -22,7 +22,15 @@ chờ phiên đó commit.
 
 | Tài liệu | Sửa |
 |---|---|
-| BD-02 | id ảnh nội bộ; bảng bản sao; bảng cờ chung; dấu ảnh file; sidecar chờ ghi; ảnh ẩn; album ShotDex; lịch sử nhập thẻ; mọi bảng vệ tinh đổi khoá sang id nội bộ |
+| BD-02 | id ảnh: ảnh Photos giữ id hệ thống, ảnh file/NAS nhận UUID — bảng vệ tinh **không** đổi khoá; bảng Ảnh, Bản sao (id bền, duy nhất theo nguồn + đường dẫn chuẩn hoá, không xoá dây chuyền), Nguồn; metadata một dòng mỗi ảnh từ bản sao chính ([FS-19.05](../FS-19-photo-sources/05-data.md)) |
+| BD-02 | bảng **Recipe** mới (id ảnh · recipe · lúc đổi) |
+| BD-02 | bảng **Bí danh** id thua → id thắng; luật gộp từng bảng (một giá trị: đổi sau cùng thắng; tập hợp: hợp lại) và luật tách |
+| BD-02 | bảng **Hash** riêng (thuật toán + phiên bản, hash nhanh có chỉ mục thường, hash đầy đủ duy nhất theo thuật toán) |
+| BD-02 | Duplicates khoá lại theo (độ chặt, nguồn, id ảnh); trạng thái lượt quét trùng tách theo nguồn |
+| BD-02 | Dấu ảnh (sao, favorite, title, caption, keyword) · Cờ dùng chung · dấu chờ sidecar · ẩn theo bản sao · album ShotDex · lịch sử nhập thẻ; dọn mồ côi 30 ngày trừ lịch sử upload/tải về/nhập thẻ; lượt dọn neo vào bảng Ảnh |
+| BD-02 §3 | gỡ các khối bảng bị chép đôi (Keyword Photos, Caption Photos, Trạng thái lượt đọc gương; đoạn khoá ngoại với `REPLACE`) |
+| FS-01.12 AC-9 | ảnh bị xoá: dòng sao/cờ theo luật mồ côi 30 ngày của FS-19.05 §5, không gỡ ngay |
+| EX-02 | widget cần bộ nạp ảnh file (thumbnail từ cache chung); id đã gộp đi qua bảng bí danh |
 | BD-03 | đường index cho file, server và ảnh Photos: hash nhanh, hash đầy đủ chạy nền, đọc luồng bản gốc Photos rồi bỏ |
 
 ## 3. Chức năng — mọi thiết bị

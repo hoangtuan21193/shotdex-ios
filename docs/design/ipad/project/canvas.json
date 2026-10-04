@@ -54,7 +54,7 @@
   },
   "IP_Compare.dc.html": {
    "h": 1032,
-   "title": "iPad · Viewer 2-Up: Select | Candidate, zoom đồng bộ, Pick/Reject (theo sáng/tối như Viewer)",
+   "title": "iPad · Viewer 2-Up: Select | Candidate, luôn đồng bộ zoom, cờ 44, Delete 1 Photo",
    "w": 1376,
    "x": 18928,
    "y": 560
@@ -138,7 +138,7 @@
   },
   "IP_Collage.dc.html": {
    "h": 1032,
-   "title": "iPad · Collage (tầng D): inspector 360 Layout · Style · Text",
+   "title": "iPad · Collage (tầng D): khay Set Aside, Before and After, ⋯ Discard, inspector 360",
    "w": 1376,
    "x": 37856,
    "y": 560
@@ -152,7 +152,7 @@
   },
   "IP_Compress.dc.html": {
    "h": 1032,
-   "title": "iPad · Resize (tầng D): xem trước, inspector, Resize 8 Photos",
+   "title": "iPad · Resize (tầng D): xem trước, inspector, Resize 8 Photos and Delete Originals",
    "w": 1376,
    "x": 40768,
    "y": 560
@@ -180,7 +180,7 @@
   },
   "IP_Settings.dc.html": {
    "h": 1032,
-   "title": "iPad · Cài đặt: sidebar kính 320, pane Photo Library",
+   "title": "iPad · Cài đặt: sidebar kính 320, pane Sources",
    "w": 1376,
    "x": 46592,
    "y": 560
@@ -840,7 +840,7 @@
    "y": 560,
    "w": 1376,
    "h": 1032,
-   "title": "iPad · Viewer Survey: 6 ảnh, Rejected mờ"
+   "title": "iPad · Viewer Survey: 6 ảnh, Rejected mờ, Move 2 Photos… (thư mục Files)"
   },
   "IP_AddSource.dc.html": {
    "x": 7280,
@@ -869,6 +869,62 @@
    "w": 1376,
    "h": 1032,
    "title": "iPad · Thư viện trống: 3 cách thêm nguồn, kéo thư mục từ Files"
+  },
+  "IP_Hidden.dc.html": {
+   "x": 69888,
+   "y": 560,
+   "w": 1376,
+   "h": 1032,
+   "title": "iPad · Hidden: 6 Hidden Photos, chọn 2 → Unhide 2 Photos"
+  },
+  "IP_DeleteCopies.dc.html": {
+   "x": 71344,
+   "y": 560,
+   "w": 1376,
+   "h": 1032,
+   "title": "iPad · Xoá từ All Photos: hộp liệt kê bản sao có ô tick, chỉ tick bản đang mở"
+  },
+  "IP_DeletePermanent.dc.html": {
+   "x": 72800,
+   "y": 560,
+   "w": 1376,
+   "h": 1032,
+   "title": "iPad · Hộp đỏ thứ hai: Delete 2 Photos Permanently? (T7 RAW Archive không có Thùng rác)"
+  },
+  "IPP21_Collage.dc.html": {
+   "x": 22700,
+   "y": 4144,
+   "w": 1032,
+   "h": 1376,
+   "title": "iPad dọc · Collage: inspector 360, khay Set Aside dưới khung dựng"
+  },
+  "IPP22_CollageExport.dc.html": {
+   "x": 23812,
+   "y": 4144,
+   "w": 1032,
+   "h": 1376,
+   "title": "iPad dọc · Xuất collage: xem trước + inspector 360, Share… / Save to Photos"
+  },
+  "IPP23_Compress.dc.html": {
+   "x": 24924,
+   "y": 4144,
+   "w": 1032,
+   "h": 1376,
+   "title": "iPad dọc · Resize: inspector 360, Resize 8 Photos and Delete Originals"
+  },
+  "IPP24_FocusStack.dc.html": {
+   "x": 26036,
+   "y": 4144,
+   "w": 1032,
+   "h": 1376,
+   "title": "iPad dọc · Combine Photos › Focus Stack (chung bố cục Stack Exposures, Panorama)"
+  },
+  "IPP_Ingest.dc.html": {
+   "x": 27148,
+   "y": 4144,
+   "w": 1032,
+   "h": 1376,
+   "title": "iPad dọc · Nhập từ thẻ nhớ: Import Settings là sheet dưới có Done"
   }
  },
  "order": [
@@ -990,7 +1046,15 @@
   "F5_IP_Looks.dc.html",
   "IP_Export.dc.html",
   "F4_IP_Captions.dc.html",
-  "F8_IP_ExportPresets.dc.html"
+  "F8_IP_ExportPresets.dc.html",
+  "IP_Hidden.dc.html",
+  "IP_DeleteCopies.dc.html",
+  "IP_DeletePermanent.dc.html",
+  "IPP21_Collage.dc.html",
+  "IPP22_CollageExport.dc.html",
+  "IPP23_Compress.dc.html",
+  "IPP24_FocusStack.dc.html",
+  "IPP_Ingest.dc.html"
  ],
  "notes": {
   "sec_app": {

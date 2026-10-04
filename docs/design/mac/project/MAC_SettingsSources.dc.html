@@ -343,17 +343,17 @@ class Component extends DCLogic {
       { title:'Drives and Indexing', rows:[
         row({ label:'When a Drive Is Disconnected', popup:'Keep Photos, Marked Offline', popupW:'230px' }),
         row({ label:'Index New and Changed Files', popup:'Automatically', popupW:'230px' }),
-        row({ label:'Backup Source', sub:'Its exact copies stay out of the grid, Statistics and Duplicates', popup:'None', popupW:'230px', h:'44px' }),
         row(Object.assign({ label:'Pause Indexing on Battery Power', sub:'Indexing always pauses in Low Power Mode' }, sw(true), { h:'44px' })),
         row(Object.assign({ label:'Prevent Sleep While Indexing' }, sw(false))),
         row(Object.assign({ label:'Look Up Place Names', sub:'Once per place, then remembered · the only step that leaves this Mac' }, sw(true), { h:'44px' })),
         row(Object.assign({ label:'Scan for People and Pets', sub:'41,870 of 55,231 items scanned', bar:'76%' }, sw(true), { h:'52px' }))
       ]},
       { title:'Previews', rows:[
-        row({ label:'Preview Cache', sub:'18.4 GB on Macintosh HD · thumbnails and full-size previews', h:'44px', btns:[btn('Change Location…')] }),
+        row({ label:'Preview Cache', sub:'18.4 GB on Macintosh HD · thumbnails and full-size previews', h:'44px', btns:[btn('Clear Cache…', 'bordered', {aria:'Clear Cache'}), btn('Change Location…')] }),
+        row({ label:'Cache Size Limit', sub:'Over the limit, the oldest full-size previews go first, then thumbnails', popup:'25 GB', popupW:'230px', h:'44px' }),
         row({ label:'Keep Full-Size Previews', popup:'For 30 Days', popupW:'230px' }),
         row(Object.assign({ label:'Keep Previews of Disconnected Drives', sub:'Browse, cull and rate a drive’s photos in full color while it is unplugged' }, sw(true), { h:'44px' }))
-      ]}
+      ], foot:'One cache for every source: folders, drives and servers. It lives in Application Support and is left out of Time Machine backups. Limit: 2, 5, 10, 25 or 50 GB.' }
     ]);
     const library = sections([
       { title:'Index', rows:[

@@ -1,77 +1,105 @@
 # FS-19.05 — Dữ liệu: cái gì lưu ở đâu
 
 `FS-19.05` · `ShotDex/Data/Database/` · ràng buộc [BD-02](../../01-basic-design/BD-02-database-design.md) · cập nhật 2026-10-04
+(sau review `data-migration`)
 
-**Một câu:** một ảnh là một **id nội bộ** của ShotDex với nhiều bản sao ở nhiều nguồn — asset Photos, file, file NAS;
-thứ người dùng nhập nằm ở sidecar và ở bảng riêng khoá theo id đó, **không bao giờ** ở dòng metadata mà lượt index ghi đè.
+**Một câu:** một ảnh là một **id** với nhiều bản sao ở nhiều nguồn — asset Photos, file, file NAS; thứ người dùng nhập
+nằm ở sidecar và ở bảng riêng khoá theo id đó, **không bao giờ** ở dòng metadata mà lượt index ghi đè.
 
-> Mọi quyết định schema dưới đây cần agent **`data-migration`** duyệt trước `/plan`. App chưa phát hành: không viết bước
-> chuyển dữ liệu cũ, không cờ phiên bản (CLAUDE.md). Migration cũ giữ nguyên, chỉ thêm migration mới.
+> App chưa phát hành: không cờ phiên bản (CLAUDE.md). Migration cũ giữ nguyên, chỉ thêm migration mới.
 
-## 1. Nơi chứa
+## 1. Id ảnh
+
+- Ảnh Photos đang có **giữ chuỗi id do thư viện hệ thống cấp** làm id. Ảnh mới từ file/NAS nhận **UUID**.
+- *Vì* giữ id cũ thì không phải viết lại bảng vệ tinh, cài đặt đã lưu hay payload widget.
+- Migration chỉ **tạo** bảng Ảnh, Bản sao, Nguồn, và điền Ảnh + Bản sao từ **hợp mọi id ảnh** có trong mọi bảng — kể cả
+  ảnh chưa index dưới quyền `.limited`.
+- Bảng metadata chính giữ **một dòng mỗi ảnh**, điền từ **bản sao chính** (bản đầu thứ tự mở, [02 §3](02-identity-and-sidecars.md)).
+  Không thêm cột nguồn hay cột ẩn vào nó.
+
+## 2. Nơi chứa
 
 | Dữ liệu | Ở đâu | Đọc lại được? |
 |---|---|---|
 | File ảnh | thư mục / ổ / server của người dùng | — ShotDex **không ghi** |
-| Sao, keyword, title, caption, favorite (ảnh file) | bảng **Dấu ảnh file** **và** sidecar `.xmp` | có, từ sidecar (khi công tắc bật) |
-| Cờ Pick/Reject (mọi ảnh) | bảng **Cờ** dùng chung; ảnh file ghi thêm ra sidecar | ảnh file: có; ảnh Photos: không |
-| Recipe (mọi ảnh) | database theo id ảnh; ảnh file ghi thêm vùng ShotDex của sidecar ([02 §8](02-identity-and-sidecars.md)) | ảnh file: có |
-| Dấu chờ ghi sidecar (offline, chỉ đọc, xung đột, hết chỗ) | bảng riêng | **không** — dữ liệu người dùng |
-| Quyền thư mục (bookmark security-scoped) | bảng nguồn | không — mất là phải Grant Access lại |
+| Sao, favorite, keyword, title, caption của ảnh file (và ảnh có cả bản Photos lẫn file) | bảng **Dấu ảnh** **và** sidecar `.xmp`; sang Photos qua đường chờ ghi | có, từ sidecar khi công tắc bật |
+| Cờ Pick/Reject (mọi ảnh) | bảng **Cờ** dùng chung; ảnh file ghi thêm ra sidecar | ảnh file: có |
+| Recipe (mọi ảnh) | bảng **Recipe** theo id, có lúc đổi; ảnh file ghi thêm vùng ShotDex của sidecar | ảnh file: có |
+| Quyền thư mục (bookmark security-scoped) | bảng Nguồn | không — mất là phải Grant Access lại |
 | Mật khẩu server | Keychain, như FS-15 | — |
-| Thumbnail, preview | cache chung trên đĩa ([01b §5](01b-offline-access-and-cache.md)), không vào database | có, dựng lại từ file |
+| Thumbnail, preview | cache chung trên đĩa ([01b §5](01b-offline-access-and-cache.md)) | có, dựng lại từ file |
 
-## 2. Bảng
+- **Chủ dữ liệu:** ảnh có cả bản Photos lẫn bản file thì bảng ShotDex giữ sao, favorite, keyword; Photos nhận giá trị
+  qua đường chờ ghi như [FS-01.12 §5](../FS-01-library/12-rating-and-flags.md).
+
+## 3. Bảng
 
 | Bảng | Giữ gì | Loại |
 |---|---|---|
-| **Ảnh** | id nội bộ · hash nhanh · hash đầy đủ (có thể trống) · thuật toán hash · lúc tạo · **lúc thành mồ côi** (trống khi còn bản sao) | danh tính — không lượt index nào xoá |
-| **Bản sao** | id ảnh · nguồn · loại (asset Photos / file / file server) · id PhotoKit **hoặc** đường dẫn tương đối · kích thước · ngày sửa · file ghép cặp · sidecar + dấu sidecar (ngày sửa + hash) · online · lần thấy cuối · hash nhanh · hash đầy đủ · lúc băm | kết quả quét; cột hash là kết quả đắt tiền |
-| **Nguồn** | loại (Photos / thư mục / ổ / server) · tên · bookmark · id ổ · connection · thư mục con · ghép cặp · khi ổ rút (giữ / ẩn) · trạng thái · lần đọc cuối · điểm chạy tiếp | người dùng tạo |
-| **Dấu ảnh file** | id ảnh · sao thật (kể cả khi Rejected) · keyword · title · caption · favorite · lúc đổi từng trường | dữ liệu người dùng |
-| **Dấu chờ sidecar** | id ảnh · bản sao · lý do (offline / chỉ đọc / xung đột / hết chỗ) · lúc đặt | dữ liệu người dùng |
-| **Ảnh ẩn** | id ảnh · bản sao NAS · lúc ẩn | dữ liệu người dùng |
-| **Album ShotDex** · **thành viên album** | tên, thứ tự · id ảnh | dữ liệu người dùng |
+| **Ảnh** | id · lúc tạo · **lúc thành mồ côi** (trống khi còn bản sao) | danh tính; mọi lượt dọn neo vào đây |
+| **Bản sao** | id bền · id ảnh · nguồn · loại · id PhotoKit **hoặc** đường dẫn tương đối chuẩn hoá · kích thước · ngày sửa · file ghép cặp · dấu sidecar · online · **ẩn** · lần thấy cuối | kết quả quét |
+| **Hash** | bản sao · thuật toán + phiên bản · hash nhanh · hash đầy đủ (có thể trống) · lúc băm | kết quả quét đắt tiền |
+| **Nguồn** | loại · tên · bookmark · id ổ · connection · thư mục con · ghép cặp · khi ổ rút · trạng thái · điểm chạy tiếp | người dùng tạo |
+| **Dấu ảnh** | id ảnh · sao thật · favorite · title · caption · lúc đổi **từng trường**; keyword một dòng mỗi (ảnh, keyword) | dữ liệu người dùng |
+| **Recipe** | id ảnh · recipe · lúc đổi | dữ liệu người dùng |
+| **Dấu chờ sidecar** | id ảnh · bản sao · lý do · lúc đặt | dữ liệu người dùng |
+| **Album ShotDex** · thành viên | tên, thứ tự · id ảnh | dữ liệu người dùng |
+| **Bí danh** | id thua → id thắng | sau mỗi lần gộp |
 
-- Lượt index chỉ cập nhật cột quét của **Bản sao**; hash của một bản sao chỉ xoá khi kích thước hoặc ngày sửa đổi.
-- Dấu chờ chỉ ghi **bản sao nào** cần ghi, không ghi giá trị: lúc bản sao online lại, giá trị lấy từ Dấu ảnh file, Cờ,
-  recipe hiện hành ([02 §7](02-identity-and-sidecars.md)).
-- Gỡ dòng của ảnh **bị xoá thật** (Move/Hide trong ShotDex hết mọi bản) cùng lúc gỡ dòng metadata.
-- Ảnh **mất bản sao cuối** (file chuyển đi, Remove Source, file bị xoá ngoài ShotDex): đặt **lúc thành mồ côi**, không gỡ
-  gì. Bản sao quay lại có hash trùng → xoá dấu mồ côi. Dọn lúc mở app: mồ côi > **30 ngày** → gỡ dòng ở mọi bảng.
-- Ổ offline không làm ảnh mồ côi — bản sao còn, chỉ online = không. Quyền `.limited` của Photos như BD-02 §3: không gỡ.
+- **Bản sao** có id bền, duy nhất theo (nguồn, đường dẫn tương đối chuẩn NFC + gấp hoa-thường). Lượt index **cập nhật
+  tại chỗ** theo khoá đó, không xoá-rồi-chèn; không khoá ngoại xoá dây chuyền. Đổi tên/chuyển chỗ giữ id bản sao.
+- **Hash** riêng bảng: một hash đầy đủ chỉ thuộc một nội dung theo mỗi thuật toán; hash nhanh có chỉ mục thường (được trùng).
+- **Duplicates** khoá theo (độ chặt, nguồn, id ảnh); trạng thái lượt quét trùng cũng tách theo nguồn.
+- **Ẩn** là cột của bản sao. Ảnh **ẩn khi và chỉ khi mọi bản sao của nó ẩn**.
+- Chỉ mục: bản sao theo (nguồn, id ảnh) · bản sao theo (id ảnh, online) · ảnh theo lúc mồ côi (chỉ dòng có giá trị).
 
-## 3. Id ảnh nội bộ
+## 4. Gộp và tách
 
-Hôm nay mọi bảng khoá theo **id do thư viện hệ thống cấp** (BD-02 §2). Từ FS-19 mọi bảng khoá theo **id nội bộ**; id
-PhotoKit thành một bản sao.
+- **Gộp** (hash đầy đủ trùng): một transaction; giữ id cũ hơn; dời bản sao sang id thắng; ghi bí danh id thua → id thắng.
+- Luật từng bảng khi hai id cùng có dữ liệu:
 
-- Hash đổi (app khác lưu đè điểm ảnh, [02 §2](02-identity-and-sidecars.md)) → id giữ, chỉ hash của bản sao đổi.
-- Gộp hai ảnh khi hash đầy đủ trùng: giữ id cũ hơn, dời bản sao và dòng vệ tinh của id kia sang; hai bên cùng có một
-  trường thì **giá trị đổi sau cùng thắng**.
-- Bảng vệ tinh phải đổi khoá cùng lượt: dấu vân tay, nhóm trùng, Cờ, Sao chờ lên Photos, gương keyword, lịch sử
-  upload/tải về và dấu "In Library" (FS-15, FS-17), payload widget (EX-02), smart album lưu id.
-- Sao chờ lên Photos vẫn chỉ cho bản sao Photos ([FS-01.12 §4](../FS-01-library/12-rating-and-flags.md)). Ảnh có cả bản
-  Photos và bản file: một sao chung; ghi lên Photos theo FS-01.12 và ra sidecar theo [02 §5](02-identity-and-sidecars.md).
-- **Cờ** dùng chung bảng Cờ hiện có cho mọi ảnh. Ảnh file ghi thêm ra sidecar: Reject = sao −1, Pick = vùng ShotDex.
-- Sao, keyword của ảnh file **luôn** ở bảng Dấu ảnh file, bất kể công tắc sidecar. *Vì* sidecar có thể offline, chỉ
-  đọc hay bị tắt — bảng là chỗ duy nhất luôn đúng.
+| Loại | Trường | Luật |
+|---|---|---|
+| Một giá trị | sao, cờ, favorite, title, caption, recipe | **đổi sau cùng thắng**, so lúc đổi của từng trường |
+| Tập hợp | keyword, album, bản sao ẩn | **hợp lại** |
+| Dấu chờ sidecar | — | trỏ sang id thắng |
 
-## 4. Album
+- Mọi chỗ còn giữ id thua (widget, cài đặt đã lưu, smart album lưu id) đi qua bảng bí danh để tìm ảnh.
+- **Tách**: một bản sao bị ghi đè bằng ảnh khác trong khi bản sao khác vẫn giữ ảnh cũ → bản bị đổi nhận **id mới**, mang
+  **bản chép** dữ liệu người dùng của ảnh cũ. Ảnh chỉ có một bản sao thì không tách ([02 §2](02-identity-and-sidecars.md)).
 
-- Album trong Collections có hai loại: **album Photos** (PhotoKit, như hôm nay, chỉ chứa ảnh có bản Photos) và **album
-  ShotDex** (bảng mới) chứa ảnh mọi nguồn.
-- New Album: thư viện chỉ có nguồn Photos → album Photos như hôm nay; có thêm nguồn khác → album ShotDex.
-- Add to Album với album Photos và ảnh không có bản Photos: hàng album đó mờ, câu "Photos albums can only hold Photos
-  Library items." Ảnh có bản Photos thì bản đó vào album Photos.
-- Album ShotDex không đồng bộ iCloud; album Photos vẫn hiện và vẫn đồng bộ như hôm nay.
+## 5. Mồ côi và dọn
 
-## 5. Luật giữ nguyên từ BD-02
+- File biến mất: dòng bản sao **ở lại** (lần thấy cuối cũ) cùng hash của nó, tới khi dọn — hash đó là thứ nối file quay lại.
+- Ảnh mất bản sao cuối → đặt lúc thành mồ côi, không gỡ gì. Bản sao quay lại có hash trùng → xoá dấu mồ côi.
+- Dọn lúc mở app: mồ côi > **30 ngày** → gỡ dòng ở mọi bảng dữ liệu người dùng, **trừ** lịch sử upload, lịch sử tải
+  về và lịch sử nhập thẻ — chúng sống lâu hơn ảnh như BD-02 nói.
+- Ổ offline không làm ảnh mồ côi. Quyền `.limited` như BD-02 §3: không gỡ. Mọi lượt dọn neo vào bảng Ảnh, không vào
+  bảng metadata.
 
-- Lượt index ghi đè **cả dòng** metadata — nên không cột nào ở đó được giữ thứ chỉ người dùng biết.
-- Tổng hợp (theo nguồn, theo máy, đếm một lần) làm **trong truy vấn**. "Đếm một lần" = đếm theo id ảnh, không theo bản sao.
-- Mọi phép sắp kết thúc bằng id ảnh làm tiebreaker (NF-01 luật 7) — id nội bộ so được ổn định.
-- Smart album: thêm trường điều kiện **Source** thì giải mã khoan dung như BD-02 §4; bỏ một nguồn không được biến album
-  thành "mọi ảnh".
-- Clear Local Metadata Index: xoá metadata và cột quét của bản sao rồi đọc lại; **giữ** bảng Ảnh, hash, nguồn,
-  bookmark, Dấu ảnh file, Cờ, dấu chờ, ảnh ẩn, album, recipe. Câu "Your photos and files are not affected" đúng nhờ luật này.
+## 6. Album, lọc, widget
+
+- Album Collections: **album Photos** (như hôm nay, chỉ ảnh có bản Photos) và **album ShotDex** chứa ảnh mọi nguồn.
+  New Album: chỉ có nguồn Photos → album Photos; có nguồn khác → album ShotDex. Ảnh chỉ-file: hàng album Photos mờ,
+  câu "Photos albums can only hold Photos Library items."
+- Lọc keyword đọc **cả hai** bảng: gương keyword Photos và keyword ở Dấu ảnh.
+- Widget cần **bộ nạp ảnh file** (thumbnail từ cache chung); id thua đi qua bí danh.
+
+## 7. Luật giữ nguyên từ BD-02
+
+- Lượt index ghi đè **cả dòng** metadata — không cột nào ở đó giữ thứ chỉ người dùng biết.
+- Tổng hợp làm **trong truy vấn**. "Đếm một lần" = đếm theo id ảnh; chọn một nguồn = ảnh có bản sao ở nguồn đó.
+- Mọi phép sắp kết thúc bằng id ảnh làm tiebreaker (NF-01 luật 7).
+- Smart album thêm điều kiện **Source**: giải mã khoan dung như BD-02 §4; bỏ một nguồn không biến album thành "mọi ảnh".
+- Clear Local Metadata Index: xoá metadata, đọc lại; **giữ** Ảnh, Bản sao (id, cột ẩn), Hash, Nguồn, Dấu ảnh, Cờ, Recipe, dấu
+  chờ, album, bí danh.
+
+## 8. Test phải có
+
+1. Migration ra đúng hình bảng; Ảnh + Bản sao điền đủ từ hợp id của mọi bảng, kể cả ảnh `.limited` chưa index.
+2. Dữ liệu người dùng còn nguyên sau index lại và sau Clear Local Metadata Index.
+3. Gộp có va chạm ở **mọi** bảng vệ tinh: trường một giá trị theo lúc đổi, keyword/album/ẩn hợp lại, dấu chờ trỏ đúng.
+4. Dọn ở 29 và 31 ngày: 29 còn đủ; 31 gỡ hết trừ lịch sử upload, tải về, nhập thẻ.
+5. Đổi tên và chuyển chỗ trong nguồn giữ id bản sao.
+6. Ảnh hai bản sao: một dòng trong lưới, đếm một lần ở All, đếm một lần ở **mỗi** nguồn.
+7. Ảnh có bản sao ở hai nguồn nằm được trong nhóm trùng của **cả hai** nguồn.
