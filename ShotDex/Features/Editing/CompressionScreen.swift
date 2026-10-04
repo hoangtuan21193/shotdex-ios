@@ -654,6 +654,12 @@ private struct CompressionSummary: View {
                     )
                     .foregroundStyle(.orange)
                 }
+                if controller.watermarkTally.alreadyStamped > 0 {
+                    Label(
+                        WatermarkCopy.alreadyHadWatermark(controller.watermarkTally.alreadyStamped),
+                        systemImage: "info.circle"
+                    )
+                }
                 if !controller.watermarkTally.nothingToStamp.isEmpty {
                     Label(
                         WatermarkCopy.savedWithoutWatermark(controller.watermarkTally.nothingToStamp.count),

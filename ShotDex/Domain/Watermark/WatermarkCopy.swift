@@ -16,6 +16,12 @@ enum WatermarkCopy {
         String(localized: "\(count) photos saved without the watermark", table: table, locale: locale, comment: "Resize summary: photos with nothing to stamp (plural)")
     }
 
+    /// Summary and share-sheet note: photos whose edit already carried a layer
+    /// pasted from the preset, so they were not stamped twice.
+    static func alreadyHadWatermark(_ count: Int, locale: Locale = .current) -> String {
+        String(localized: "\(count) photos already had this watermark", table: table, locale: locale, comment: "Export summary: photos whose edit already had this watermark, not stamped twice (plural)")
+    }
+
     /// The reason beside each of those photos.
     static func nothingToStamp(preset: String, locale: Locale = .current) -> String {
         String(localized: "Every part of \(preset) is empty for this photo.", table: table, locale: locale, comment: "Resize summary: why a photo has no watermark — its tokens all came out empty")

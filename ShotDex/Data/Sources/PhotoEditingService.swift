@@ -82,6 +82,9 @@ struct PhotoSaveResult: Sendable {
     let assetID: String
     let format: PhotoOutputFormat
     let fellBackToJPEG: Bool
+    /// The photo's saved edit already had a layer pasted from the watermark's
+    /// preset, so it was not stamped again (FS-05.04 §5).
+    var watermarkWasAlreadyThere = false
 }
 
 /// Coordinates PhotoKit content-editing sessions and the Core Image renderer.
@@ -537,9 +540,13 @@ final class PhotoEditingService {
             let resources = PHAssetResource.assetResources(for: asset)
             let name = resources.first { $0.type == .photo }?.originalFilename ?? resources.first?.originalFilename
             let info = try await inspect(preparedOriginal, typeHint: type, filename: name)
+            // No session on this path: the saved edit comes from the asset's
+            // adjustment resource, a few kilobytes.
+            let saved = options.watermark == nil ? nil : await savedRecipe(of: asset)
             return try await compress(
                 source: info, sourceName: name, sourceAssetIdentifier: asset.localIdentifier,
-                asset: asset, directory: directory, options: options, album: album, cropAnchor: cropAnchor
+                asset: asset, directory: directory, options: options, album: album, cropAnchor: cropAnchor,
+                savedRecipe: saved
             )
         }
         let session = try await beginSession(for: asset)
@@ -556,7 +563,8 @@ final class PhotoEditingService {
             source: source.info,
             sourceName: session.sourceOptions.first(where: { $0.id == source.optionID })?.filename,
             sourceAssetIdentifier: session.recalledRecipe?.sourceAssetIdentifier ?? asset.localIdentifier,
-            asset: asset, directory: session.temporaryDirectory, options: options, album: album, cropAnchor: cropAnchor
+            asset: asset, directory: session.temporaryDirectory, options: options, album: album, cropAnchor: cropAnchor,
+            savedRecipe: session.recalledRecipe
         )
     }
 
@@ -568,9 +576,15 @@ final class PhotoEditingService {
         directory: URL,
         options: PhotoExportOptions,
         album: PHAssetCollection?,
-        cropAnchor: NormalizedPoint?
+        cropAnchor: NormalizedPoint?,
+        savedRecipe: PhotoEditRecipe?
     ) async throws -> PhotoSaveResult {
         let recipe = PhotoEditRecipe.identity
+        // The file already carries the edit — a layer pasted from this very
+        // preset included — so it is not stamped twice (FS-05.04 §5).
+        let wasAlreadyThere = options.watermark.map {
+            WatermarkPlan.alreadyStamped(savedLayers: savedRecipe?.overlays, presetID: $0.presetID)
+        } ?? false
         let rendered = try await renderer.render(source: source, recipe: recipe)
         let resized = await renderer.resize(
             rendered,
@@ -578,7 +592,7 @@ final class PhotoEditingService {
             cropAnchor: cropAnchor ?? options.cropAnchor
         )
         // Last, at the size the file is written at (FS-05.04 §3).
-        let stamped = await renderer.applyingWatermark(options.watermark, to: resized)
+        let stamped = await renderer.applyingWatermark(wasAlreadyThere ? nil : options.watermark, to: resized)
         let requestedFormat = await renderer.resolvedOutputFormat(
             requested: options.format,
             sourceType: source.type,
@@ -624,8 +638,39 @@ final class PhotoEditingService {
         return PhotoSaveResult(
             assetID: id,
             format: format,
-            fellBackToJPEG: format != requestedFormat
+            fellBackToJPEG: format != requestedFormat,
+            watermarkWasAlreadyThere: wasAlreadyThere
         )
+    }
+
+    /// The edit saved with a photo, read from its adjustment resource — for a
+    /// path that has the original but no editing session (an original the
+    /// Resize preparation downloaded). Nil when the photo has no ShotDex edit.
+    func savedRecipe(of asset: PHAsset) async -> PhotoEditRecipe? {
+        guard let resource = PHAssetResource.assetResources(for: asset).first(where: { $0.type == .adjustmentData })
+        else { return nil }
+        let options = PHAssetResourceRequestOptions()
+        options.isNetworkAccessAllowed = true
+        let data: Data? = await withCheckedContinuation { continuation in
+            var collected = Data()
+            PHAssetResourceManager.default().requestData(for: resource, options: options) { chunk in
+                collected.append(chunk)
+            } completionHandler: { error in
+                continuation.resume(returning: error == nil ? collected : nil)
+            }
+        }
+        return data.flatMap(Self.recipe(fromAdjustmentResource:))
+    }
+
+    /// Photos keeps an edit's adjustment data as a property list: the format
+    /// identifier, its version and the app's bytes. Only ShotDex's own format
+    /// decodes; an edit made by another app is no edit of ours.
+    nonisolated static func recipe(fromAdjustmentResource data: Data) -> PhotoEditRecipe? {
+        guard let plist = try? PropertyListSerialization.propertyList(from: data, format: nil) as? [String: Any],
+              plist["adjustmentFormatIdentifier"] as? String == PhotoEditRecipe.formatIdentifier,
+              let bytes = plist["adjustmentData"] as? Data
+        else { return nil }
+        return try? JSONDecoder().decode(PhotoEditRecipe.self, from: bytes)
     }
 
     /// The edit drawn at full size into a file this app owns — a server

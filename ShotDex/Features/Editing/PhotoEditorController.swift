@@ -2824,13 +2824,15 @@ final class PhotoEditorController {
     /// Stamps a saved signature onto this photo. Appended rather than replacing, so
     /// applying a signature never silently discards a caption already in place.
     /// Fresh ids: the same signature can be applied twice, and undo has to be able
-    /// to tell the two apart.
+    /// to tell the two apart. Each layer remembers the preset, so an export with
+    /// that preset as its watermark does not stamp it a second time (FS-05.04 §5).
     func applySignature(_ preset: SignaturePreset) {
         guard !preset.layers.isEmpty else { return }
         recordHistory()
         let stamped = preset.layers.map { layer in
             var copy = layer
             copy.id = UUID()
+            copy.signaturePresetID = preset.id
             return copy
         }
         recipe.overlays.append(contentsOf: stamped)

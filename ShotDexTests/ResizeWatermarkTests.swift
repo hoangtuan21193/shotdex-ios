@@ -120,6 +120,45 @@ import Testing
         #expect(!batch.controller.finishedCleanly, "the summary has to name it")
     }
 
+    /// AC-11: photo A's edit already has the Credit layers pasted in the
+    /// editor — that photo goes out with only the one Credit it has, and the
+    /// summary says so; the other photo is stamped.
+    @Test func alreadyStampedIsCounted() async throws {
+        let photos = [OriginalItem.test("a"), OriginalItem.test("b")]
+        let batch = try resize(photos, metadata: [:])
+        let credit = try #require(batch.presets.presets.first)
+        // What the service sees: the saved edit of each photo.
+        var pasted = credit.layers[0]
+        pasted.id = UUID()
+        pasted.signaturePresetID = credit.id
+        let savedLayers: [String: [PhotoOverlay]] = ["a": [pasted], "b": [PhotoOverlay.text()]]
+        let library = batch.library
+        let controller = CompressionController(
+            photos: photos,
+            operations: ResizeOperations(
+                compress: { photo, _, stamp in
+                    library.stamps[photo.id] = stamp
+                    var result = PhotoSaveResult(assetID: "copy-\(photo.id)", format: .jpeg, fellBackToJPEG: false)
+                    result.watermarkWasAlreadyThere = stamp.map {
+                        WatermarkPlan.alreadyStamped(savedLayers: savedLayers[photo.id], presetID: $0.presetID)
+                    } ?? false
+                    return result
+                },
+                deleteOriginals: { _ in },
+                removeCreated: { _ in }
+            ),
+            fetcher: FakeOriginalFetcher(script: .init("cloud=none"), base: FixtureOriginalFetcher()),
+            watermarkSettings: batch.watermark,
+            signaturePresets: batch.presets
+        )
+        controller.startExport()
+        try await until { controller.didFinish }
+        #expect(controller.watermarkTally.alreadyStamped == 1)
+        #expect(controller.watermarkTally.stamped == 1)
+        #expect(!controller.finishedCleanly)
+        #expect(WatermarkCopy.alreadyHadWatermark(1, locale: Locale(identifier: "en")) == "1 photo already had this watermark")
+    }
+
     /// Off: nothing stamped, nothing to report.
     @Test func offStampsNothing() async throws {
         let batch = try resize([OriginalItem.test("a")], metadata: [:], enabled: false)

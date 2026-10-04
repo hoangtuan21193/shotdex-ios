@@ -200,6 +200,13 @@ public struct PhotoOverlay: Codable, Identifiable, Equatable, Sendable {
     /// to a reinstall can be fetched again rather than silently dropping the layer.
     public var imageAssetIdentifier: String?
 
+    // MARK: Preset
+
+    /// The saved preset this layer was pasted from. A photo whose edit already
+    /// has a layer from a preset is not stamped with that preset again on
+    /// export (FS-05.04 §5). Nil on a layer made by hand.
+    public var signaturePresetID: UUID?
+
     // MARK: Drawing
 
     /// The strokes of a drawing layer: PencilKit's vector data plus the canvas it
@@ -308,6 +315,7 @@ public struct PhotoOverlay: Codable, Identifiable, Equatable, Sendable {
         case shadowOpacity
         case imageID
         case imageAssetIdentifier
+        case signaturePresetID
         case shapeStyle
         case isFilled
         case strokeWidth
@@ -371,6 +379,7 @@ public struct PhotoOverlay: Codable, Identifiable, Equatable, Sendable {
             String.self,
             forKey: .imageAssetIdentifier
         )
+        signaturePresetID = try? container.decodeIfPresent(UUID.self, forKey: .signaturePresetID)
 
         shapeStyle = try container.decodeIfPresent(OverlayShapeStyle.self, forKey: .shapeStyle)
             ?? defaults.shapeStyle
@@ -439,6 +448,7 @@ public struct PhotoOverlay: Codable, Identifiable, Equatable, Sendable {
 
         try container.encodeIfPresent(imageID, forKey: .imageID)
         try container.encodeIfPresent(imageAssetIdentifier, forKey: .imageAssetIdentifier)
+        try container.encodeIfPresent(signaturePresetID, forKey: .signaturePresetID)
 
         if shapeStyle != defaults.shapeStyle {
             try container.encode(shapeStyle, forKey: .shapeStyle)

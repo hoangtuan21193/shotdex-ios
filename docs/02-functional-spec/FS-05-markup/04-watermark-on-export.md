@@ -156,13 +156,13 @@ Size 4%, Opacity 100%.
 | AC-8 | 5 ảnh, Resize, Delete Originals đang bật | bật watermark | Delete Originals tắt và mờ, dòng phụ *Originals are kept when you add a watermark.*; chạy xong thư viện vẫn còn đủ 5 bản gốc | ⚠️ chưa có |
 | AC-9 | 2 JPEG trên NAS đã sửa; sheet xuất, đích Original Folder, cấu hình W | mở hàng Watermark rồi Done | Replace Original mờ, lý do *Watermarked copies are saved as new files.*; Export tạo `<tên>_edited.jpg` có dấu; 2 file gốc trên NAS giữ SHA-256 | ⚠️ chưa có |
 | AC-10 | ảnh dọc, Resize ra 1080×1920; dấu ở Size 4% có bề rộng tự nhiên 1200 px | Save to Photos | khối thu đều còn rộng 1080 − 2×32 = 1016 ±1 px; không lớp nào bị cắt; tỉ lệ khối giữ nguyên | ✅ `WatermarkLayoutTests.shrinksToFitPortrait` (1080×1920, khối tự nhiên 1200 px → 1016 ±1, tỉ lệ giữ, nằm trong hai Margin) + `WatermarkRenderTests.noLayerIsClipped` (qua renderer: chữ dài thu đều còn 1080 − 2×32,4 ±1, một dòng, cao theo đúng tỉ lệ ±1,5 px, mực từ đầu tới cuối khung); `.centreIgnoresMargin`, `.edgeAnchorsCentreTheOtherAxis` |
-| AC-11 | ảnh A đã có lớp dán từ Credit trong editor | Resize với cấu hình W | ảnh ra chỉ có **một** dấu Credit; summary ghi *1 photo already had this watermark* | ⚠️ chưa có |
+| AC-11 | ảnh A đã có lớp dán từ Credit trong editor | Resize với cấu hình W | ảnh ra chỉ có **một** dấu Credit; summary ghi *1 photo already had this watermark* | ✅ `ResizeWatermarkTests.alreadyStampedIsCounted` (mẻ 2 ảnh: ảnh có lớp dán từ Credit không đóng thêm, ảnh kia đóng; summary *1 photo already had this watermark*) + `WatermarkAlreadyStampedTests` (`applySignatureRecordsPreset`, `.samePresetIsNotStampedTwice`, `.otherPresetStillStamps`, `.savedRecipeReadsTheAdjustmentResource` — đường ảnh đã tải từ iCloud đọc resource `.adjustmentData`); `compress` bỏ dấu khi công thức đã lưu có lớp cùng preset. Ảnh dán **trước** khi lớp mang id preset không nhận ra được (plan §6) |
 | AC-12 | Resize: Credit, trên-trái, Margin 5%, Opacity 60% rồi Save | mở Resize cho một ảnh khác, rồi sheet Export ra Files | ở cả hai form hàng Watermark ghi *Credit*; màn Watermark mở ở trên-trái, 5%, 60%, công tắc bật | ⚠️ chưa có |
 | AC-13 | lần trước dùng preset **Logo**; file ảnh logo của nó đã bị xoá khỏi thư mục của app | mở Resize | hàng Watermark ghi `Off`; chip Logo trong màn Watermark ghi *Missing file* và không chọn được | ⚠️ chưa có (lưu preset: `PhotoOverlayModelsTests.signaturePresetRoundTrips`) |
 | AC-14 | HEIC 48MP 8064×6048, Resize Original, cấu hình W | Save to Photos | đỉnh RAM cao hơn cùng lượt không dấu ≤ 40 MB, đo trên iPhone 17 26.5 | ⚠️ chưa có |
 | AC-15 | 10 ảnh, 4 ảnh chỉ có trên iCloud; Settings: Watermark When Sharing = Credit | Share → Save to Files | modal FS-02.06 tải 4 bản gốc; Files nhận 10 file có dấu, mỗi file đúng cỡ pixel của bản gốc, không file nào ở cỡ bản xem trước | ⚠️ chưa có (modal tải: `CompressionPreparationTests.copiesReadThePreparedOriginals`) |
 
-**Chưa chứng minh được:** AC-2, AC-4, AC-5, AC-6, AC-7, AC-8, AC-9, AC-11, AC-12, AC-13, AC-14, AC-15.
+**Chưa chứng minh được:** AC-2, AC-4, AC-5, AC-6, AC-7, AC-8, AC-9, AC-12, AC-13, AC-14, AC-15.
 
 ## 8. Rủi ro đã biết
 

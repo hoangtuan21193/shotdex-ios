@@ -110,6 +110,8 @@ Nhãn giao diện là "Presets" / "Save Preset"; lưu dạng JSON trong cài đ�
   mất cả danh sách.
 - Dán thì **thêm vào** và cấp id mới: dán preset không được âm thầm xoá chữ đang có, và dán hai lần thì
   hoàn tác phải phân biệt được.
+- Mỗi lớp dán **mang id của preset** nguồn, để lúc xuất ảnh đã có lớp từ đúng preset đó thì không bị đóng thêm
+  dấu ([FS-05.04 §5](04-watermark-on-export.md#5-hành-vi)). Lớp tự tạo không mang id nào.
 - Ảnh của lớp nằm trong thư mục riêng của app, **không nhúng byte vào công thức** — công thức phải vừa trong
   phần dữ liệu chỉnh sửa gắn theo ảnh.
 - Chọn ảnh qua ô chọn của hệ thống với ba yêu cầu: **một ảnh**, **bản hiện tại**, và **xin dữ liệu PNG theo

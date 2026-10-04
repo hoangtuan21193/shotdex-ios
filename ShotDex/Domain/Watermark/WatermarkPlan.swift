@@ -13,6 +13,13 @@ enum WatermarkDecision: Equatable, Sendable {
 /// Per-photo decisions of a stamped export, pure so the rules are tested
 /// without a library.
 enum WatermarkPlan {
+    /// Whether a photo's saved edit already has a layer pasted from this
+    /// preset — then it is not stamped again. A layer from another preset, or
+    /// a caption made by hand, does not count (FS-05.04 §5).
+    static func alreadyStamped(savedLayers: [PhotoOverlay]?, presetID: UUID) -> Bool {
+        savedLayers?.contains { $0.signaturePresetID == presetID && $0.isVisible } ?? false
+    }
+
     /// `template` is the form's stamp before tokens; `values` the photo's.
     static func decide(_ template: WatermarkStamp, values: OverlayTokenValues) -> WatermarkDecision {
         let stamp = template.resolved(with: values)
@@ -28,14 +35,17 @@ struct WatermarkTally: Equatable, Sendable {
     var stamped = 0
     /// Photos that went without the stamp, by file name, in order.
     var nothingToStamp: [String] = []
+    /// Photos whose edit already had a layer from the preset.
+    var alreadyStamped = 0
 
-    mutating func record(_ decision: WatermarkDecision, filename: String) {
+    mutating func record(_ decision: WatermarkDecision, filename: String, wasAlreadyThere: Bool = false) {
         switch decision {
+        case .stamp where wasAlreadyThere: alreadyStamped += 1
         case .stamp: stamped += 1
         case .nothingToStamp: nothingToStamp.append(filename)
         }
     }
 
     /// Whether the summary has anything to say about the watermark.
-    var isWorthReporting: Bool { !nothingToStamp.isEmpty }
+    var isWorthReporting: Bool { !nothingToStamp.isEmpty || alreadyStamped > 0 }
 }

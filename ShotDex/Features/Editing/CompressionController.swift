@@ -346,7 +346,11 @@ final class CompressionController {
                     let decision = self.watermarkDecision(for: photo.id)
                     let stamp: WatermarkStamp? = if case .stamp(let stamp) = decision { stamp } else { nil }
                     let result = try await self.operations.compress(photo, prepared[photo.id], stamp)
-                    if let decision { self.watermarkTally.record(decision, filename: photo.filename) }
+                    if let decision {
+                        self.watermarkTally.record(
+                            decision, filename: photo.filename, wasAlreadyThere: result.watermarkWasAlreadyThere
+                        )
+                    }
                     self.createdAssetIDs.append(result.assetID)
                     self.compressedOriginalIDs.append(photo.id)
                     if result.fellBackToJPEG {
