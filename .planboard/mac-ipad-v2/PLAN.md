@@ -33,7 +33,7 @@
   - Kiểm tra: `/test SidecarReaderTests/cameraRatingFilesOnly`
 - [x] **L4 — Clear Local Metadata Index giữ sao/cờ** (AC-31, phần ✅)
   - Kiểm tra: `/test PhotoMarksStoreTests` (test có sẵn khoá phần Clear)
-- [ ] **W1 — `PreviewCache` ở Application Support, loại khỏi backup, trần 5 GB iOS; gộp `RemoteThumbnailCache`** (AC-47; A6)
+- [x] **W1 — `PreviewCache` ở Application Support, loại khỏi backup, trần 5 GB iOS; gộp `RemoteThumbnailCache`** (AC-47; A6)
   - Xong khi: test xanh, NF-02 + FS-08 sửa cùng commit, `/build` sạch
   - Kiểm tra: `/test PreviewCacheTests/locationAndDefaults`
 

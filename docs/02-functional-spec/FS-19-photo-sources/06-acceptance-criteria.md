@@ -32,7 +32,7 @@
 | AC-17 | ổ chứa cache còn 0 byte trống, nguồn 3.812 file | lượt đọc chạy | 3.812 ảnh có metadata; 0 preview ghi; dòng "Not enough space for previews…"; 0 file người dùng bị xoá | ⚠️ chưa có — `PreviewCacheTests.diskFullStopsPreviewsOnly` |
 | AC-45 | nguồn "2026 Japan" = `~/Pictures/2026 Japan` | thêm `~/Pictures/2026 Japan/Day 1`, rồi thêm `~/Pictures` | lần 1: "Already part of “2026 Japan”."; lần 2: "Contains “2026 Japan”. Remove that source first…"; 0 nguồn mới, 0 file đọc | ⚠️ chưa có — `SourceOverlapTests.refusesNestedAndContaining` |
 | AC-46 | When a Drive Is Disconnected = Hide Its Photos; T7 26.107 ảnh, 50 trong đó có bản sao ở "2026 Japan" | rút T7 | lưới −26.057; 50 ảnh ở lại với bản "2026 Japan"; Statistics −26.057; hàng sidebar "26,107 photos hidden until connected"; cắm lại → đủ, ★ giữ | ⚠️ chưa có — `SourceAvailabilityTests.hideOnDisconnect` |
-| AC-47 | Mac, cache mặc định; iPad cache mặc định | đọc vị trí và thuộc tính thư mục cache | nằm trong Application Support của app, mang cờ loại khỏi sao lưu; Cache Size Limit mặc định 25 GB (Mac) · 5 GB (iPad) | ⚠️ chưa có — `PreviewCacheTests.locationAndDefaults` |
+| AC-47 | Mac, cache mặc định; iPad cache mặc định | đọc vị trí và thuộc tính thư mục cache | nằm trong Application Support của app, mang cờ loại khỏi sao lưu; Cache Size Limit mặc định 25 GB (Mac) · 5 GB (iPad) | `PreviewCacheTests.locationAndDefaults` (iPhone/iPad 5 GB; mặc định 25 GB của Mac kiểm ở target Mac) |
 
 ## Danh tính và sidecar ([02](02-identity-and-sidecars.md))
 

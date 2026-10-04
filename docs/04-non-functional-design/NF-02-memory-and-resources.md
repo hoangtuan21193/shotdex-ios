@@ -34,6 +34,12 @@
   RAM giữ **tối đa 3 preview đã giải mã**; thiếu bộ nhớ thì xả hết, file giữ nguyên. Đóng editor là xoá cả
   thư mục; app bị giết giữa chừng thì lần khởi động sau quét đi (cùng tiền tố `ShotDexPhoto-`).
 
+- **Một bộ đệm ảnh xem trước cho mọi nguồn** ([FS-19.01b](../02-functional-spec/FS-19-photo-sources/01b-offline-access-and-cache.md) §3):
+  thumbnail và preview của ảnh thư mục, ổ ngoài, server nằm trong `Application Support/PreviewCache`, **không** trong
+  Caches (hệ thống dọn Caches thì ổ đã rút mất luôn hình), và mang cờ loại khỏi sao lưu (đọc lại được hết). Trần
+  Cache Size Limit 2 / 5 / 10 / 25 / 50 GB, mặc định **5 GB** iPhone/iPad, **25 GB** Mac. Thumbnail server
+  nằm trong đó (thư mục `Servers`); thư mục cũ `Caches/ServerThumbnails` bị xoá lúc khởi động. Có test.
+
 ## 3. Trần theo target
 
 | Target | Trần | Hệ quả |

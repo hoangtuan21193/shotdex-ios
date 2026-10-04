@@ -50,9 +50,12 @@ final class RemoteThumbnailCache: @unchecked Sendable {
         try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
     }
 
+    /// Inside the shared preview cache (FS-19 01b §3), held to its limit.
     static var standard: RemoteThumbnailCache {
-        let caches = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)[0]
-        return RemoteThumbnailCache(directory: caches.appendingPathComponent("ServerThumbnails", isDirectory: true))
+        RemoteThumbnailCache(
+            directory: PreviewCacheLocation.standard.appendingPathComponent(PreviewCachePolicy.serverFolderName, isDirectory: true),
+            limit: PreviewCachePolicy.bytes(gigabytes: PreviewCachePolicy.defaultLimit)
+        )
     }
 
     func entry(for key: Key) -> Entry? {

@@ -432,6 +432,7 @@ final class AppDependencies {
         self.serverDownloads = ServerDownloadStore(database: database)
         self.serverFileHistory = ServerFileHistory(database: database)
         self.serverShortcuts = ServerShortcutCatalog(store: ServerShortcutStore(database: database))
+        PreviewCacheLocation.removeRetiredServerThumbnails()
         self.serverThumbnails = RemoteThumbnailCache.standard
     }
 

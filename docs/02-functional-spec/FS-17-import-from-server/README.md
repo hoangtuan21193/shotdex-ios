@@ -51,7 +51,7 @@ kho riêng. FS-10 ghi thêm dòng ngoại lệ này.
 | Bảng lịch sử tải về (mới) | id asset tạo ra · id connection + tên lúc tải · đường dẫn trên server · số byte · SHA-256 · thời điểm |
 | Vì sao bảng riêng | dữ liệu do người dùng tạo ra → không vào `photo_metadata` ([BD-02](../../01-basic-design/BD-02-database-design.md)) |
 | "In Library" | file (connection, đường dẫn, số byte) có dòng trong lịch sử **upload** (FS-15) hoặc **tải về**, và asset của dòng đó còn trong thư viện |
-| Cache thumbnail | thư mục Caches của app, khoá = connection + đường dẫn + số byte + ngày sửa; trần 500 MB, cũ nhất ra trước |
+| Cache thumbnail | bộ đệm xem trước chung `Application Support/PreviewCache/Servers` (FS-19.01b §3, loại khỏi sao lưu), khoá = connection + đường dẫn + số byte + ngày sửa; trần = Cache Size Limit (mặc định 5 GB iPhone/iPad), cũ nhất ra trước |
 
 ## 5. Ràng buộc
 
