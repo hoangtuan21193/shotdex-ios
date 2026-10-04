@@ -505,6 +505,10 @@
       "comment": "Video Projects: message of the Delete Draft confirmation — deleting a draft never touches the library",
       "extractionState": "manual"
     },
+    "This size can't be encoded as H.264 on this device. Switch Codec to HEVC.": {
+      "comment": "Video Studio Export: the H.264 encoder refused the frame size (e.g. 4K portrait)",
+      "extractionState": "manual"
+    },
     "Trim": {
       "comment": "Video Studio: the command that cuts a clip's start or end",
       "extractionState": "manual"

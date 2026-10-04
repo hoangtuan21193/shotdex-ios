@@ -309,3 +309,37 @@ extension VideoExportSmokeTests {
 
     @MainActor final class Reached { var value = 0.0 }
 }
+
+extension VideoExportSmokeTests {
+    /// FS-12.10b AC-14: a frame the H.264 encoder refuses (16384² — past
+    /// any H.264 level, standing in for a device that refuses 2160×3840)
+    /// ends in the sentence that names the way out, leaves no file, and
+    /// keeps the codec H.264.
+    @Test func refusedH264SizeSaysSwitchToHEVC() async throws {
+        let directory = try VideoExportFixtures.makeDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let file = directory.appendingPathComponent("a.mp4")
+        try await VideoExportFixtures.writeVideo(width: 320, height: 180, seconds: 0.5, to: file)
+        let recipe = VideoProjectRecipe(clips: [VideoExportFixtures.videoClip("a", seconds: 0.5)])
+        let service = VideoExportFixtures.service()
+        defer { service.cleanupSession() }
+        let source = try await VideoExportFixtures.videoSource(file)
+        let built = try await service.makePreviewItem(recipe: recipe, sources: [recipe.clips[0].id: source])
+        let output = directory.appendingPathComponent("out.mp4")
+        let encoding = VideoEncodingSettings(size: CGSize(width: 16384, height: 16384), frameRate: .fps30, codec: .h264, bitrate: 10_000_000)
+        do {
+            try await VideoExportWriter.write(
+                composition: built.playerItem.asset as! AVComposition,
+                videoComposition: built.playerItem.videoComposition!,
+                audioMix: AVMutableAudioMix(), encoding: encoding, totalDuration: 0.5, to: output, progress: { _ in }
+            )
+            Issue.record("a 16384² H.264 frame should be refused")
+        } catch {
+            let ns = error as NSError
+            #expect(error.localizedDescription == "This size can't be encoded as H.264 on this device. Switch Codec to HEVC.",
+                    "\(ns.domain) \(ns.code) \(ns.userInfo)")
+        }
+        #expect(!FileManager.default.fileExists(atPath: output.path))
+        #expect(recipe.codec == .h264)
+    }
+}

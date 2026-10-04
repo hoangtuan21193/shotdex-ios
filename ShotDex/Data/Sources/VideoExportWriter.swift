@@ -1,4 +1,5 @@
 import AVFoundation
+import os
 import Foundation
 import VideoToolbox
 
@@ -26,12 +27,34 @@ enum VideoExportWriter {
         let videoOutput: AVAssetReaderVideoCompositionOutput
         let videoInput: AVAssetWriterInput
         let audio: AudioPump?
+        /// Set by a cancel. The pumps read it and stop; the reader itself is
+        /// cancelled only after both have drained — `cancelReading` while a
+        /// pump is inside `copyNextSampleBuffer` crashes in MediaToolbox.
+        let isCancelled = OSAllocatedUnfairLock(initialState: false)
     }
 
     /// The audio half of `Pipeline`, present only when there is real audio.
     private struct AudioPump: @unchecked Sendable {
         let output: AVAssetReaderAudioMixOutput
         let input: AVAssetWriterInput
+    }
+
+    /// An H.264 encoder that will not take this frame size — a 4K portrait
+    /// frame on some devices — is said plainly, with the way out; the codec
+    /// is not switched behind the user's back (FS-12.10b §5, AC-14).
+    static func refusal(_ encoding: VideoEncodingSettings) -> ExportError? {
+        guard encoding.codec == .h264 else { return nil }
+        return ExportError(errorDescription: VideoStudioCopy.h264SizeRefused)
+    }
+
+    /// A writer that failed while encoding: an H.264 frame larger than
+    /// 1080p's area is the encoder refusing the size; anything else keeps
+    /// its own error.
+    static func encoderFailure(_ error: Error?, _ encoding: VideoEncodingSettings) -> Error {
+        if encoding.size.width * encoding.size.height > 1920 * 1080, let refusal = refusal(encoding) {
+            return refusal
+        }
+        return error ?? ExportError(errorDescription: String(localized: "Writing the video failed."))
     }
 
     /// The writer's video settings for an encoding: codec, size, average
@@ -141,7 +164,7 @@ enum VideoExportWriter {
         )
         videoInput.expectsMediaDataInRealTime = false
         guard writer.canAdd(videoInput) else {
-            throw ExportError(errorDescription: String(localized: "Couldn't prepare the video encoder."))
+            throw refusal(encoding) ?? ExportError(errorDescription: String(localized: "Couldn't prepare the video encoder."))
         }
         writer.add(videoInput)
 
@@ -167,7 +190,8 @@ enum VideoExportWriter {
             throw reader.error ?? ExportError(errorDescription: String(localized: "Couldn't start reading."))
         }
         guard writer.startWriting() else {
-            throw writer.error ?? ExportError(errorDescription: String(localized: "Couldn't start writing."))
+            reader.cancelReading()
+            throw refusal(encoding) ?? writer.error ?? ExportError(errorDescription: String(localized: "Couldn't start writing."))
         }
         writer.startSession(atSourceTime: .zero)
 
@@ -194,7 +218,7 @@ enum VideoExportWriter {
                 var reportedFraction = -1.0
                 pipe.videoInput.requestMediaDataWhenReady(on: videoQueue) {
                     while pipe.videoInput.isReadyForMoreMediaData {
-                        guard pipe.reader.status == .reading,
+                        guard !pipe.isCancelled.withLock({ $0 }), pipe.reader.status == .reading,
                               let sample = pipe.videoOutput.copyNextSampleBuffer() else {
                             pipe.videoInput.markAsFinished()
                             group.leave()
@@ -217,7 +241,7 @@ enum VideoExportWriter {
                     let audioQueue = DispatchQueue(label: "shotdex.export.audio")
                     audio.input.requestMediaDataWhenReady(on: audioQueue) {
                         while audio.input.isReadyForMoreMediaData {
-                            guard pipe.reader.status == .reading,
+                            guard !pipe.isCancelled.withLock({ $0 }), pipe.reader.status == .reading,
                                   let sample = audio.output.copyNextSampleBuffer() else {
                                 audio.input.markAsFinished()
                                 group.leave()
@@ -229,6 +253,19 @@ enum VideoExportWriter {
                 }
 
                 group.notify(queue: .global(qos: .userInitiated)) {
+                    if pipe.isCancelled.withLock({ $0 }) {
+                        pipe.reader.cancelReading()
+                        pipe.writer.cancelWriting()
+                        continuation.resume(throwing: CancellationError())
+                        return
+                    }
+                    // The encoder gave up on the frames: for H.264 at a size
+                    // past what it takes, that is the refusal of §5.
+                    if pipe.writer.status == .failed {
+                        pipe.reader.cancelReading()
+                        continuation.resume(throwing: encoderFailure(pipe.writer.error, encoding))
+                        return
+                    }
                     if pipe.reader.status == .failed {
                         pipe.writer.cancelWriting()
                         continuation.resume(throwing: pipe.reader.error
@@ -247,14 +284,13 @@ enum VideoExportWriter {
                         case .cancelled:
                             continuation.resume(throwing: CancellationError())
                         default:
-                            continuation.resume(throwing: pipe.writer.error
-                                ?? ExportError(errorDescription: String(localized: "Writing the video failed.")))
+                            continuation.resume(throwing: encoderFailure(pipe.writer.error, encoding))
                         }
                     }
                 }
             }
         } onCancel: {
-            pipe.reader.cancelReading()
+            pipe.isCancelled.withLock { $0 = true }
         }
 
         await progress(1)

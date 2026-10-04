@@ -301,6 +301,10 @@ enum VideoStudioCopy {
         String(localized: "Saving to Photos…", table: table, comment: "Video Studio Export: the file is written and is going into the library")
     }
 
+    static var h264SizeRefused: String {
+        String(localized: "This size can't be encoded as H.264 on this device. Switch Codec to HEVC.", table: table, comment: "Video Studio Export: the H.264 encoder refused the frame size (e.g. 4K portrait)")
+    }
+
     static var cantSaveToPhotos: String {
         String(localized: "ShotDex can't save to Photos. Allow access in Settings.", table: table, comment: "Video Studio Export: Photos refused the finished video because access is denied")
     }
