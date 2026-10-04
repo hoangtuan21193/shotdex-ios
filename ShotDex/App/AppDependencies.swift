@@ -285,7 +285,7 @@ final class AppDependencies {
         // Photos gone more than 30 days take their user data with them —
         // before anything loads marks (FS-19.05 §5).
         let orphans = PhotoOrphanStore(database: database)
-        try? orphans.purge(orphanedBefore: OrphanRetention.purgeCutoff(now: Date()))
+        _ = try? orphans.purge(orphanedBefore: OrphanRetention.purgeCutoff(now: Date()))
         // iOS 27 keeps stars in Photos itself; below it they wait in
         // `pending_photo_rating` (FS-01.12 §4). Decided here, once.
         var ratingWriter: (any PhotoPropertyWriting)?
