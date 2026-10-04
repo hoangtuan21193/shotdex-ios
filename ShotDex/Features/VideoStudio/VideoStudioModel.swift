@@ -2864,16 +2864,20 @@ final class VideoStudioModel {
         player?.pause()
         isPlaying = false
         exportState = .exporting(0)
-        // An export runs an AVAssetReader/Writer pump for as long as the
-        // video is; if the user switches away mid-run the task is suspended
-        // with the sheet still reading "Exporting… 42%" and nothing ever
-        // finishes it. Hold an assertion the way the indexer does, and treat
-        // its expiry as a cancel the user can see.
-        let assertion = UIApplication.shared.beginBackgroundTask(withName: "video-export") { [weak self] in
-            Task { @MainActor in self?.cancelExport() }
+        // Leaving the app stops the export as Cancel would (FS-12.10b §5):
+        // the GPU may not draw in the background, and an honest stop beats
+        // a broken file. No background task is held.
+        exportStoppedByLeaving = false
+        exportBackgroundObserver = exportNotifications.addObserver(
+            forName: UIApplication.didEnterBackgroundNotification, object: nil, queue: .main
+        ) { [weak self] _ in
+            MainActor.assumeIsolated { self?.stopExportForLeaving() }
         }
         exportTask = Task { [self] in
-            defer { if assertion != .invalid { UIApplication.shared.endBackgroundTask(assertion) } }
+            defer {
+                if let observer = exportBackgroundObserver { exportNotifications.removeObserver(observer) }
+                exportBackgroundObserver = nil
+            }
             do {
                 let url = try await service.export(
                     recipe: recipe,
@@ -2901,7 +2905,7 @@ final class VideoStudioModel {
                 exportState = .idle
                 onSaved?(assetID)
             } catch is CancellationError {
-                exportState = .idle
+                exportState = exportStoppedByLeaving ? .failed(VideoStudioCopy.exportStoppedWhenLeft) : .idle
             } catch {
                 exportState = .failed(error.localizedDescription)
             }
@@ -2910,6 +2914,21 @@ final class VideoStudioModel {
 
     func cancelExport() {
         exportTask?.cancel()
+    }
+
+    @ObservationIgnored private var exportBackgroundObserver: NSObjectProtocol?
+    /// Where the app's lifecycle is heard during an export; tests give it
+    /// a center of their own.
+    @ObservationIgnored var exportNotifications = NotificationCenter.default
+    /// The running export was stopped because the app went to the
+    /// background, not by Cancel: Export Video says so on return.
+    @ObservationIgnored private var exportStoppedByLeaving = false
+
+    /// The app left the foreground mid-export.
+    func stopExportForLeaving() {
+        guard isExportBusy, case .exporting = exportState else { return }
+        exportStoppedByLeaving = true
+        cancelExport()
     }
 
     /// Marks this project's row exported, as the video just saved

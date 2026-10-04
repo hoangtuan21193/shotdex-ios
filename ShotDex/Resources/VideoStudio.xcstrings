@@ -233,6 +233,10 @@
       "comment": "Video Studio: title of the export panel",
       "extractionState": "manual"
     },
+    "Export stopped when you left ShotDex. Export again to finish.": {
+      "comment": "Video Studio Export: the export was cancelled because the app went to the background",
+      "extractionState": "manual"
+    },
     "Exporting, %lld percent": {
       "comment": "Video Studio Export: VoiceOver reading of the progress bar",
       "extractionState": "manual"

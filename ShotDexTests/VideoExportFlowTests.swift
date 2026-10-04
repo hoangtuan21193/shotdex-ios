@@ -1,4 +1,5 @@
 import Foundation
+import UIKit
 import Testing
 @testable import ShotDex
 
@@ -47,5 +48,36 @@ extension VideoExportFlowTests {
         model.export()
         #expect(model.exportState == .failed("Not enough space to export — about 60 MB needed. Free up space, then try again."))
         #expect(!model.isExportBusy)
+    }
+}
+
+extension VideoExportFlowTests {
+    /// AC-8: leaving the app mid-export stops it like Cancel, leaves no
+    /// file, and Export Video says why on return.
+    @Test func backgroundingCancelsAndExplains() async throws {
+        let directory = try VideoExportFixtures.makeDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let file = directory.appendingPathComponent("long.mp4")
+        try await VideoExportFixtures.writeVideo(width: 640, height: 360, seconds: 12, to: file)
+        let clip = VideoExportFixtures.videoClip("long", seconds: 12)
+        let model = VideoStudioModelFixture.model(clips: [clip])
+        defer { model.close() }
+        model.sources[clip.id] = try await VideoExportFixtures.videoSource(file)
+        model.availableBytes = { nil }
+        // A center of its own: posting the real one would stop every other
+        // export the suites run in parallel.
+        let notifications = NotificationCenter()
+        model.exportNotifications = notifications
+        model.export()
+        for _ in 0..<2000 {
+            if case .exporting(let progress) = model.exportState, progress > 0.05 { break }
+            try await Task.sleep(for: .milliseconds(10))
+        }
+        notifications.post(name: UIApplication.didEnterBackgroundNotification, object: nil)
+        for _ in 0..<300 where model.isExportBusy {
+            try await Task.sleep(for: .milliseconds(10))
+        }
+        #expect(model.exportState == .failed("Export stopped when you left ShotDex. Export again to finish."))
+        #expect(model.savedAssetID == nil)
     }
 }
