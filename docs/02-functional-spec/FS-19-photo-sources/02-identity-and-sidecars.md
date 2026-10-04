@@ -13,7 +13,10 @@ keyword, title, caption đi vào sidecar `.xmp` cạnh mọi bản sao file (D3)
 - Get Info liệt kê bản sao: "2 copies · T7 RAW Archive › RAW/2026-09-27 · NAS Home › Photos/2026".
 - Hash chỉ phủ **phần dữ liệu ảnh** — bỏ khối EXIF/XMP/IPTC. *Vì* app khác nhúng metadata vào JPEG/DNG không được đổi
   danh tính. Bộ băm hiểu cấu trúc từng định dạng; định dạng lạ thì băm cả file.
-- Cặp RAW+JPEG lấy hash của RAW ([01 §3](01-folders-and-drives.md)). Hash ghi kèm **tên thuật toán**.
+- Cặp RAW+JPEG lấy hash của RAW ([01 §3](01-folders-and-drives.md)). Hash ghi kèm **tên thuật toán** và phiên bản
+  (`sdx-image-sha256` v1): JPEG = mọi đoạn trừ APPn/COM, rồi dữ liệu quét tới hết; họ TIFF (DNG, ARW, NEF…) = strip,
+  tile và JPEG nhúng của mọi IFD; HEIF = mọi item trừ Exif/XMP theo thứ tự id; ISOBMFF khác (CR3) = mọi `mdat`; định
+  dạng lạ = cả file. Đổi định nghĩa "phần ảnh" là tăng phiên bản, hash cũ được băm lại chứ không so.
 
 | Bước | Đọc gì | Khi | Dùng cho |
 |---|---|---|---|
