@@ -56,6 +56,16 @@ struct VideoExportPanel: View {
         }
     }
 
+    /// Where the video goes: Photos, or — for server photos — the export
+    /// sheet of FS-17.06, which asks (FS-12.10b §5).
+    static func destination(isServerRun: Bool) -> String {
+        isServerRun ? VideoStudioCopy.chooseWhereItGoes : VideoStudioCopy.savedToPhotos
+    }
+
+    static func exportTitle(isServerRun: Bool) -> String {
+        isServerRun ? VideoStudioCopy.exportEllipsis : VideoStudioCopy.export
+    }
+
     // MARK: Header
 
     private var header: some View {
@@ -126,7 +136,7 @@ struct VideoExportPanel: View {
         }
         .buttonStyle(.plain)
         .accessibilityIdentifier("exportCustomRow")
-        Text(server == nil ? VideoStudioCopy.savedToPhotos : VideoStudioCopy.chooseWhereItGoes)
+        Text(Self.destination(isServerRun: server != nil))
             .font(.system(size: 12))
             .foregroundStyle(.white.opacity(0.45))
             .padding(.top, 10)
@@ -153,7 +163,7 @@ struct VideoExportPanel: View {
             HStack(spacing: 8) {
                 Image(systemName: "square.and.arrow.down")
                     .font(.system(size: 15, weight: .semibold))
-                Text(server == nil ? VideoStudioCopy.export : VideoStudioCopy.exportEllipsis)
+                Text(Self.exportTitle(isServerRun: server != nil))
                     .font(.system(size: 16, weight: .semibold))
                 Text(verbatim: VideoExportEstimate.label(model.estimatedExportBytes))
                     .font(.system(size: 13, weight: .medium, design: .monospaced))

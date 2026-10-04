@@ -107,3 +107,15 @@ extension VideoExportFlowTests {
         #expect(model.exportFailureOffersSettings)
     }
 }
+
+extension VideoExportFlowTests {
+    /// AC-11: a project of server photos exports with "Export…" and the
+    /// destination "Choose where it goes next"; a library project with
+    /// "Export" into Photos.
+    @Test func serverRunDestinationRow() {
+        #expect(VideoExportPanel.exportTitle(isServerRun: true) == "Export…")
+        #expect(VideoExportPanel.destination(isServerRun: true) == "Choose where it goes next")
+        #expect(VideoExportPanel.exportTitle(isServerRun: false) == "Export")
+        #expect(VideoExportPanel.destination(isServerRun: false) == "Saved to Photos as a new video")
+    }
+}
