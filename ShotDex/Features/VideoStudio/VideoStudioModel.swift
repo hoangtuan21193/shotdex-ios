@@ -2292,7 +2292,7 @@ final class VideoStudioModel {
 
     private func applyLookTier() {
         let looks = ([recipe.look] + recipe.clips.map(\.look))
-            .compactMap { $0.flatMap { VideoLookPlan($0, lutExists: VideoLookPlan.lutFileExists) }?.recipe }
+            .compactMap { $0.flatMap { VideoLookPlan($0, lutExists: VideoLookPlan.lutFileExists) } }
         lookWarmTask?.cancel()
         guard !looks.isEmpty else {
             applyVideoTier()

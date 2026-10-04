@@ -88,15 +88,15 @@ final class VideoLookTableCache: @unchecked Sendable {
         return baked
     }
 
-    /// Bakes every table `looks` need, off the main actor, before the
+    /// Bakes every table `plans` need, off the main actor, before the
     /// composition that reads them goes live (§5: bake when chosen).
-    func prepare(_ looks: [PhotoEditRecipe]) async {
-        let pending = looks
+    func prepare(_ plans: [VideoLookPlan]) async {
+        let pending = plans.map { (recipe: $0.recipe, parts: $0.parts, keys: $0.keys) }
         await Task.detached(priority: .userInitiated) { [self] in
-            for look in pending {
-                for part in VideoLookBaker.parts(of: look) {
+            for plan in pending {
+                for (part, key) in zip(plan.parts, plan.keys) {
                     if Task.isCancelled { return }
-                    _ = table(part, of: look)
+                    _ = table(part, of: plan.recipe, key: key)
                 }
             }
         }.value

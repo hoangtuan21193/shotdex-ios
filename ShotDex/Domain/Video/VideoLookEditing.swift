@@ -1,6 +1,17 @@
 import Foundation
 import ShotDexKit
 
+/// Whether a look's Clarity, Texture, Sharpening and Dehaze run on video
+/// (FS-12.06c §5). They run until the device measurement of AC-15 says a
+/// 4K dissolve cannot hold 30 fps with them; then this flips to `.skip`,
+/// the preview and the export drop all four alike, and the caption names
+/// them — never one picture in the preview and another in the file.
+enum VideoLookNeighbourPolicy: Sendable {
+    case run, skip
+
+    static let current: VideoLookNeighbourPolicy = .run
+}
+
 /// The rules of the Look slots (FS-12.06c §4, §6), apart from any view or
 /// model so each one is tested on its own.
 enum VideoLookEditing {
@@ -38,6 +49,32 @@ enum VideoLookEditing {
     static func showsAmount(_ look: VideoLook?) -> Bool {
         guard let look else { return false }
         return !look.isOriginal
+    }
+
+    /// The parts of `look` a video frame does not run, by their panel
+    /// names, in panel order (§5): Noise Reduction (spatial NR flickers;
+    /// video needs temporal NR), Upright and Lens Correction (a photo's
+    /// geometry), and — under `.skip` — the four neighbourhood stages.
+    /// Lens Correction counts only what the look sets by hand; a lens
+    /// profile switched on speaks of the photo's lens, not of the look.
+    static func skippedOnVideo(
+        _ look: PhotoEditRecipe,
+        policy: VideoLookNeighbourPolicy = .current
+    ) -> [String] {
+        let a = look.adjustments
+        var names: [String] = []
+        if policy == .skip {
+            if a.texture != 0 { names.append("Texture") }
+            if a.clarity != 0 { names.append("Clarity") }
+            if a.dehaze != 0 { names.append("Dehaze") }
+            if a.sharpness != 0 || a.definition != 0 { names.append("Sharpening") }
+        }
+        if a.noiseReduction != 0 || a.colorNoiseReduction != 0 { names.append("Noise Reduction") }
+        let geometry = [a.geoVertical, a.geoHorizontal, a.geoRotate, a.geoAspect, a.geoScale, a.geoOffsetX, a.geoOffsetY]
+        if look.upright.mode != .off || geometry.contains(where: { $0 != 0 }) { names.append("Upright") }
+        let lens = [a.lensManualDistortion, a.lensManualVignetting, a.chromaticAberration, a.defringePurpleAmount, a.defringeGreenAmount]
+        if lens.contains(where: { $0 != 0 }) { names.append("Lens Correction") }
+        return names
     }
 
     /// What a look is called on screen: a preset by the name the editor

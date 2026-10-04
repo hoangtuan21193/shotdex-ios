@@ -156,7 +156,10 @@ struct VideoRenderRecipe: Sendable {
         // corrected picture, which is where a colourist puts it on a node
         // tree too.
         guard let look = lookPlan(for: clipID) else { return image }
-        return VideoLookRenderer.apply(look, to: image)
+        return VideoLookRenderer.apply(
+            look, to: image,
+            frame: VideoLookFrame(canvas: (canvas ?? input.extent).size, seconds: seconds)
+        )
     }
 
     /// The overlays visible at `time`, in recipe (z) order — with their timing, so

@@ -1592,17 +1592,30 @@ public actor PhotoRenderService {
     /// Detail and Effects are two-way. Dragging right does the obvious thing;
     /// dragging left does its opposite, which is what a photographer expects
     /// from a slider with a centre tick.
-    static func applyDetail(_ adjustments: PhotoAdjustments, to input: CIImage) -> CIImage {
+    ///
+    /// `radiusScale` multiplies every radius: the Video Studio runs these
+    /// stages on frames from 1280 to 3840 long and scales them to its frame
+    /// (FS-12.06c §5), so the preview and the export are one picture. A
+    /// photo leaves it at 1.
+    public static func applyDetail(
+        _ adjustments: PhotoAdjustments,
+        to input: CIImage,
+        radiusScale: Double = 1
+    ) -> CIImage {
         var image = input
         for pass in detailPassOrder {
-            image = apply(pass, adjustments, to: image)
+            image = apply(pass, adjustments, to: image, radiusScale: radiusScale)
         }
         return image
     }
 
-    static func applyDehazePass(_ adjustments: PhotoAdjustments, to input: CIImage) -> CIImage {
+    public static func applyDehazePass(
+        _ adjustments: PhotoAdjustments,
+        to input: CIImage,
+        radiusScale: Double = 1
+    ) -> CIImage {
         guard abs(adjustments.dehaze) > 0.0001 else { return input }
-        return applyDehaze(adjustments.dehaze, to: input)
+        return applyDehaze(adjustments.dehaze, to: input, radiusScale: radiusScale)
     }
 
     /// Post-crop vignette, then grain — after the masks, so the vignette
@@ -1768,7 +1781,8 @@ public actor PhotoRenderService {
     private static func apply(
         _ pass: DetailPass,
         _ adjustments: PhotoAdjustments,
-        to input: CIImage
+        to input: CIImage,
+        radiusScale k: Double = 1
     ) -> CIImage {
         var image = input
         switch pass {
@@ -1790,14 +1804,14 @@ public actor PhotoRenderService {
                 )
             }
         case .sharpen:
-            image = applySharpen(adjustments, to: image)
+            image = applySharpen(adjustments, to: image, radiusScale: k)
         case .definition:
             if adjustments.definition > 0 {
                 image = filtered(
                     "CIUnsharpMask",
                     image: image,
                     values: [
-                        kCIInputRadiusKey: 2 + adjustments.definition * 4,
+                        kCIInputRadiusKey: (2 + adjustments.definition * 4) * k,
                         kCIInputIntensityKey: adjustments.definition,
                     ]
                 )
@@ -1807,7 +1821,7 @@ public actor PhotoRenderService {
                 let amount = -adjustments.definition
                 image = filtered(
                     "CIMix",
-                    image: blurred(image, radius: 1 + amount * 3),
+                    image: blurred(image, radius: (1 + amount * 3) * k),
                     values: [
                         kCIInputBackgroundImageKey: image,
                         "inputAmount": amount * 0.7,
@@ -1822,7 +1836,7 @@ public actor PhotoRenderService {
                     "CIUnsharpMask",
                     image: image,
                     values: [
-                        kCIInputRadiusKey: 1 + adjustments.texture * 1.5,
+                        kCIInputRadiusKey: (1 + adjustments.texture * 1.5) * k,
                         kCIInputIntensityKey: adjustments.texture * 0.8,
                     ]
                 )
@@ -1830,7 +1844,7 @@ public actor PhotoRenderService {
                 let amount = -adjustments.texture
                 image = filtered(
                     "CIMix",
-                    image: blurred(image, radius: 0.5 + amount * 1.5),
+                    image: blurred(image, radius: (0.5 + amount * 1.5) * k),
                     values: [
                         kCIInputBackgroundImageKey: image,
                         "inputAmount": amount * 0.5,
@@ -1845,7 +1859,7 @@ public actor PhotoRenderService {
                     "CIUnsharpMask",
                     image: image,
                     values: [
-                        kCIInputRadiusKey: 8 + adjustments.clarity * 20,
+                        kCIInputRadiusKey: (8 + adjustments.clarity * 20) * k,
                         kCIInputIntensityKey: adjustments.clarity * 0.7,
                     ]
                 )
@@ -1853,7 +1867,7 @@ public actor PhotoRenderService {
                 let amount = -adjustments.clarity
                 image = filtered(
                     "CIMix",
-                    image: blurred(image, radius: 4 + amount * 10),
+                    image: blurred(image, radius: (4 + amount * 10) * k),
                     values: [
                         kCIInputBackgroundImageKey: image,
                         "inputAmount": amount * 0.6,
@@ -1879,16 +1893,25 @@ public actor PhotoRenderService {
     /// pattern stays put between renders instead of boiling while a slider moves.
     /// The noise is desaturated and soft-light blended so it reads as film grain
     /// rather than colored sensor noise.
+    ///
+    /// `offset` moves the pattern: a still keeps the default and its grain
+    /// never moves; a video frame passes one that changes every frame,
+    /// because grain that stands still on moving pictures reads as dust on
+    /// the lens (FS-12.06c §5).
     public static func applyGrain(
         _ amount: Double,
         size: Double = 0,
         roughness: Double = 0,
+        offset: CGPoint = .zero,
         to input: CIImage
     ) -> CIImage {
         let extent = input.extent
         guard extent.width > 1, extent.height > 1,
-              let noise = CIFilter(name: "CIRandomGenerator")?.outputImage
+              var noise = CIFilter(name: "CIRandomGenerator")?.outputImage
         else { return input }
+        if offset != .zero {
+            noise = noise.transformed(by: CGAffineTransform(translationX: offset.x, y: offset.y))
+        }
         var grayNoise = filtered(
             "CIColorMatrix",
             image: noise,
@@ -1936,7 +1959,7 @@ public actor PhotoRenderService {
     /// one produces. Positive lifts contrast and saturation, deepens the black
     /// point and adds midtone local contrast to cut through flat haze; negative
     /// fades the image and veils it toward a light haze grey.
-    public static func applyDehaze(_ amount: Double, to input: CIImage) -> CIImage {
+    public static func applyDehaze(_ amount: Double, to input: CIImage, radiusScale: Double = 1) -> CIImage {
         var image = filtered(
             "CIColorControls",
             image: input,
@@ -1951,7 +1974,7 @@ public actor PhotoRenderService {
                 "CIUnsharpMask",
                 image: image,
                 values: [
-                    kCIInputRadiusKey: 12 + amount * 18,
+                    kCIInputRadiusKey: (12 + amount * 18) * radiusScale,
                     kCIInputIntensityKey: amount * 0.4,
                 ]
             )
@@ -1979,17 +2002,20 @@ public actor PhotoRenderService {
     /// restricts the whole sharpen to edges through an edge-magnitude mask so flat
     /// areas (skies, skin) stay clean, with the amount narrowing the mask to the
     /// strongest edges. Dragging Amount left of centre softens instead.
-    public static func applySharpen(_ adjustments: PhotoAdjustments, to input: CIImage) -> CIImage {
+    public static func applySharpen(
+        _ adjustments: PhotoAdjustments,
+        to input: CIImage,
+        radiusScale: Double = 1
+    ) -> CIImage {
         guard adjustments.sharpness != 0 else { return input }
         if adjustments.sharpness < 0 {
-            return blurred(input, radius: -adjustments.sharpness * 2.5)
+            return blurred(input, radius: -adjustments.sharpness * 2.5 * radiusScale)
         }
         let base = input
-        var sharp = filtered(
-            "CISharpenLuminance",
-            image: input,
-            values: ["inputSharpness": adjustments.sharpness * 1.2]
-        )
+        var luminance: [String: Any] = ["inputSharpness": adjustments.sharpness * 1.2]
+        // 1.69 is the filter's own default radius; a photo never sets it.
+        if radiusScale != 1 { luminance[kCIInputRadiusKey] = 1.69 * radiusScale }
+        var sharp = filtered("CISharpenLuminance", image: input, values: luminance)
         // Radius adds a coarser edge-emphasis pass so sharpening can work at a
         // wider scale than `CISharpenLuminance`'s fixed one.
         if adjustments.sharpenRadius > 0 {
@@ -1997,7 +2023,7 @@ public actor PhotoRenderService {
                 "CIUnsharpMask",
                 image: sharp,
                 values: [
-                    kCIInputRadiusKey: 0.5 + adjustments.sharpenRadius * 3,
+                    kCIInputRadiusKey: (0.5 + adjustments.sharpenRadius * 3) * radiusScale,
                     kCIInputIntensityKey: adjustments.sharpness * 0.5,
                 ]
             )
@@ -2009,7 +2035,7 @@ public actor PhotoRenderService {
                 "CIUnsharpMask",
                 image: sharp,
                 values: [
-                    kCIInputRadiusKey: 0.6,
+                    kCIInputRadiusKey: 0.6 * radiusScale,
                     kCIInputIntensityKey: adjustments.sharpenDetail * adjustments.sharpness * 0.7,
                 ]
             )

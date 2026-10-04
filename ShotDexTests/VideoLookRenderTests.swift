@@ -125,6 +125,95 @@ struct VideoLookRenderTests {
         #expect(VideoLookRenderer.apply(zero, to: frame, cache: cache) === frame)
     }
 
+    // MARK: AC-6
+
+    /// AC-6: a My Look with Grain 25, Noise Reduction 50 and Upright Auto —
+    /// the caption names what video skips, and nothing else.
+    @Test func skippedLineNamesNoiseReductionAndUpright() {
+        var look = PhotoEditRecipe.identity
+        look.adjustments.grain = 0.25
+        look.adjustments.noiseReduction = 0.5
+        look.upright.mode = .auto
+        #expect(VideoLookEditing.skippedOnVideo(look) == ["Noise Reduction", "Upright"])
+        #expect(VideoStudioCopy.lookSkippedLine(VideoLookEditing.skippedOnVideo(look)) == "Skipped on video: Noise Reduction, Upright.")
+        #expect(VideoStudioCopy.lookSkippedLine(VideoLookEditing.skippedOnVideo(VideoLookSamples.moodyCoast)) == "Everything in this look applies to video.")
+        // A lens profile is the photo's lens, not the look; a hand-set
+        // distortion is the look's.
+        var lens = PhotoEditRecipe.identity
+        lens.adjustments.lensCorrection = 1
+        #expect(VideoLookEditing.skippedOnVideo(lens).isEmpty)
+        lens.adjustments.lensManualDistortion = 0.2
+        #expect(VideoLookEditing.skippedOnVideo(lens) == ["Lens Correction"])
+        // The switch of §5: off, the four neighbourhood stages are named.
+        var clarity = PhotoEditRecipe.identity
+        clarity.adjustments.clarity = 0.3
+        clarity.adjustments.dehaze = 0.15
+        #expect(VideoLookEditing.skippedOnVideo(clarity).isEmpty)
+        #expect(VideoLookEditing.skippedOnVideo(clarity, policy: .skip) == ["Clarity", "Dehaze"])
+        #expect(VideoLookPlan(VideoLook(.myLook(sourceID: UUID(), name: "C", isImported: false, recipe: clarity)), lutExists: { _ in true }, policy: .skip)?.neighbours == nil)
+    }
+
+    /// AC-6: two frames in a row of a still clip carry different grain, at
+    /// the same strength (standard deviation within ±10 %).
+    @Test func grainChangesEveryFrame() throws {
+        let canvas = CGRect(x: 0, y: 0, width: 128, height: 128)
+        var look = PhotoEditRecipe.identity
+        look.adjustments.grain = 0.25
+        var project = VideoProjectRecipe(clips: VideoStudioModelFixture.photoClips(1))
+        project.look = VideoLook(.myLook(sourceID: UUID(), name: "Grain", isImported: false, recipe: look))
+        let render = Self.renderRecipe(project, canvas: canvas)
+        let still = CIImage(color: CIColor(red: 0.5, green: 0.5, blue: 0.5)).cropped(to: canvas)
+        func frame(_ seconds: Double) -> [UInt8] {
+            Self.bytes(VideoFrameCompositor.composeFrame(
+                front: (still, .init(clipIndex: 0, clipID: project.clips[0].id, start: 0, duration: 3, effect: .none)),
+                back: nil, transition: nil, recipe: render, canvas: canvas, at: seconds
+            ), in: canvas)
+        }
+        let first = frame(1.0), second = frame(1.0 + 1.0 / 30)
+        func deviation(_ bytes: [UInt8]) -> Double {
+            let greens = stride(from: 1, to: bytes.count, by: 4).map { Double(bytes[$0]) }
+            let mean = greens.reduce(0, +) / Double(greens.count)
+            return (greens.map { ($0 - mean) * ($0 - mean) }.reduce(0, +) / Double(greens.count)).squareRoot()
+        }
+        let a = deviation(first), b = deviation(second)
+        #expect(a > 1, "grain is visible: σ \(a)")
+        #expect(abs(a - b) / a <= 0.1, "σ \(a) vs \(b)")
+        #expect(Self.meanDifference(first, second) > a * 0.5, "the pattern moved")
+        // The same frame twice is the same grain: preview and export agree.
+        #expect(Self.meanDifference(first, frame(1.0)) == 0)
+    }
+
+    /// Clarity's radius follows the frame: a 1280 preview and a 3840 export
+    /// of one picture, brought to one size, are one picture.
+    @Test func neighbourRadiusScalesWithFrame() throws {
+        var look = PhotoEditRecipe.identity
+        look.adjustments.clarity = 0.6
+        let plan = try #require(VideoLookPlan(
+            VideoLook(.myLook(sourceID: UUID(), name: "Clarity", isImported: false, recipe: look)),
+            lutExists: { _ in true }
+        ))
+        #expect(plan.neighbours?.clarity == 0.6)
+        #expect(plan.parts == [.light, .colour])
+        let small = CGSize(width: 320, height: 180)
+        func picture(long: CGFloat, scaled: Bool) -> [UInt8] {
+            let rect = CGRect(x: 0, y: 0, width: long, height: long * 9 / 16)
+            let frame = Self.gradient(rect, from: CIColor(red: 0.2, green: 0.25, blue: 0.3), to: CIColor(red: 0.8, green: 0.7, blue: 0.6))
+            let bar = CIImage(color: CIColor(red: 0.95, green: 0.95, blue: 0.95)).cropped(to: CGRect(x: rect.width * 0.48, y: 0, width: rect.width * 0.04, height: rect.height))
+            let input = bar.composited(over: frame)
+            let output = VideoLookRenderer.apply(
+                plan, to: input,
+                frame: VideoLookFrame(radiusScale: scaled ? long / VideoLookFrame.referenceLongEdge : 1),
+                cache: VideoLookTableCache(capacity: 4)
+            )
+            let down = output.transformed(by: CGAffineTransform(scaleX: small.width / rect.width, y: small.height / rect.height))
+            return Self.bytes(down, in: CGRect(origin: .zero, size: small))
+        }
+        let scaled = Self.meanDifference(picture(long: 1280, scaled: true), picture(long: 3840, scaled: true))
+        let fixed = Self.meanDifference(picture(long: 1280, scaled: false), picture(long: 3840, scaled: false))
+        #expect(scaled < fixed, "scaled \(scaled) vs fixed \(fixed)")
+        #expect(scaled <= 2, "scaled \(scaled)/255")
+    }
+
     // MARK: AC-4
 
     /// AC-4: half way through a dissolve the frame is the two clips, each
