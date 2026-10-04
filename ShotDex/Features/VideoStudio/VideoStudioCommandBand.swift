@@ -137,7 +137,7 @@ struct VideoStudioDeskBand: View {
                 VideoShowOriginalButton(model: model, diameter: Geometry.bandDisc)
                 Spacer(minLength: 0)
                 if !isPortrait { readout.padding(.trailing, 6) }
-                VideoSettingsButton(model: model, isTwoLine: isPortrait)
+                VideoSettingsButton(model: model, isTwoLine: isPortrait, presentsPopover: true)
                 exportPill
             }
             .padding(.horizontal, Geometry.bandInset)
@@ -243,14 +243,22 @@ struct VideoShowOriginalButton: View {
 struct VideoSettingsButton: View {
     @Bindable var model: VideoStudioModel
     var isTwoLine = false
+    /// The iPad opens Video Settings as a popover under the button
+    /// (FS-12.10 §3) rather than in the inspector column.
+    var presentsPopover = false
+    @State private var isPopoverOpen = false
 
     var body: some View {
-        let isOpen = model.activeToolPanel == .videoSettings
+        let isOpen = presentsPopover ? isPopoverOpen : model.activeToolPanel == .videoSettings
         let ratio = model.recipe.aspect.displayName
         let preset = model.recipe.resolution.displayName
         let fps = VideoStudioCopy.framesPerSecond(model.recipe.frameRate.rawValue)
         Button {
-            model.toggleToolPanel(.videoSettings)
+            if presentsPopover {
+                isPopoverOpen.toggle()
+            } else {
+                model.toggleToolPanel(.videoSettings)
+            }
         } label: {
             HStack(spacing: 6) {
                 ratioGlyph
@@ -266,7 +274,8 @@ struct VideoSettingsButton: View {
                     Text(verbatim: "\(ratio) · \(preset) · \(fps)")
                         .font(.system(size: 13, weight: .semibold))
                 }
-                Image(systemName: "chevron.down")
+                // ⌃ while open, ⌄ while shut (FS-12.10 §3).
+                Image(systemName: isOpen ? "chevron.up" : "chevron.down")
                     .font(.system(size: 10, weight: .semibold))
                     .foregroundStyle(.white.opacity(0.6))
             }
@@ -285,6 +294,13 @@ struct VideoSettingsButton: View {
         }
         .buttonStyle(.plain)
         .fixedSize()
+        .popover(isPresented: $isPopoverOpen, arrowEdge: .top) {
+            VideoSettingsPanel(model: model, onDone: { isPopoverOpen = false })
+                .frame(width: VideoStudioMetrics.videoSettingsPopoverSize.width,
+                       height: VideoStudioMetrics.videoSettingsPopoverSize.height)
+                .presentationCompactAdaptation(.popover)
+                .preferredColorScheme(.dark)
+        }
         .accessibilityLabel(Text(verbatim: VideoStudioCopy.videoSettingsAccessibility(model.recipe)))
         .accessibilityAddTraits(isOpen ? .isSelected : [])
     }

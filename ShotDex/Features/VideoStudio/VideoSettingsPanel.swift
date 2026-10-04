@@ -7,13 +7,17 @@ import ShotDexKit
 /// applied at once and one undo step, so there is a Done and no ✕.
 ///
 /// One content for every place it opens: the phone's panel, the iPad's
-/// popover, the Duo's column and cover panel. `inset` is 16 (14 on the
-/// Duo cover); `showsLength` drops the length from the second line on the
-/// Duo.
+/// popover, the Duo's column and cover panel — inset 16 (14 on the Duo
+/// cover), and the Duo drops the length from the second line.
 struct VideoSettingsPanel: View {
     @Bindable var model: VideoStudioModel
-    var inset: CGFloat = 16
-    var showsLength = true
+    @Environment(\.videoMediaGrid) private var window
+    /// 16 at the edges; 14 on the Duo cover.
+    private var inset: CGFloat { window == .cover ? 14 : 16 }
+    /// The Duo drops the length from the second line (FS-12.10 §4).
+    private var showsLength: Bool { window != .cover && window != .duoColumn }
+    /// Done when the panel is not the open tool — the iPad's popover.
+    var onDone: (() -> Void)?
     @Environment(\.openURL) private var openURL
     @State private var isImagePickerPresented = false
     /// Whether the Image background's photo can still be read.
@@ -62,7 +66,7 @@ struct VideoSettingsPanel: View {
             .lineLimit(1)
             Spacer(minLength: 0)
             Button {
-                model.showToolPanel(nil)
+                if let onDone { onDone() } else { model.showToolPanel(nil) }
             } label: {
                 Image(systemName: "checkmark")
                     .font(.system(size: 13, weight: .semibold))

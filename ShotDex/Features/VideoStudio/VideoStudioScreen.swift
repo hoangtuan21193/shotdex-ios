@@ -768,7 +768,12 @@ struct VideoStudioScreen: View {
                         .padding(.horizontal, 8)
                         .frame(height: 20)
                         .background(Capsule().fill(Color.black.opacity(0.55)))
-                        .position(x: contentRect.minX + 8 + 37, y: contentRect.minY + 8 + 10)
+                        // Below the Duo inner display's floating Back · Undo · Redo,
+                        // which sit over the frame's top-left corner.
+                        .position(
+                            x: contentRect.minX + 8 + 37,
+                            y: contentRect.minY + 18 + (currentWindowClass == .duoInner ? 48 : 0)
+                        )
                         .allowsHitTesting(false)
                         .accessibilityIdentifier("videoFrameLabel")
                 }

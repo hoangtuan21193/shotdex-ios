@@ -293,6 +293,9 @@ enum VideoStudioMetrics {
     /// Height of the contextual panel (selection + global tools), above the
     /// device's bottom safe inset. It slides over the bars, never displaces them.
     static let sheetHeight: CGFloat = 264
+    /// The iPad's Video Settings popover (FS-12.10 §3, Mac-style board
+    /// ES_IL_ExportSettings: 400×548).
+    static let videoSettingsPopoverSize = CGSize(width: 400, height: 548)
     /// How far the contextual panel reaches above the toolbar and bottom bar.
     /// The stack lifts by this much while the panel is up, so the whole timeline
     /// stays visible above it and the selected band never hides under the panel.

@@ -157,16 +157,16 @@
       "comment": "Video Studio Video Settings: picks the library photo behind fitted clips",
       "extractionState": "manual"
     },
-    "Colour": {
-      "comment": "Video Studio Video Settings: the background is one colour",
+    "Color": {
+      "comment": "Video Studio Video Settings: the background is one color",
       "extractionState": "manual"
     },
     "Couldn't save your video draft": {
       "comment": "Video Studio: banner and alert when the draft could not be written (disk full, database error)",
       "extractionState": "manual"
     },
-    "Custom Colour": {
-      "comment": "Video Studio Video Settings: picks a background colour of one's own",
+    "Custom Color": {
+      "comment": "Video Studio Video Settings: picks a background color of one's own",
       "extractionState": "manual"
     },
     "Delete Draft": {

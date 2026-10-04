@@ -181,7 +181,7 @@ enum VideoStudioCopy {
     }
 
     static var colour: String {
-        String(localized: "Colour", table: table, comment: "Video Studio Video Settings: the background is one colour")
+        String(localized: "Color", table: table, comment: "Video Studio Video Settings: the background is one color")
     }
 
     static var image: String {
@@ -189,7 +189,7 @@ enum VideoStudioCopy {
     }
 
     static var customColour: String {
-        String(localized: "Custom Colour", table: table, comment: "Video Studio Video Settings: picks a background colour of one's own")
+        String(localized: "Custom Color", table: table, comment: "Video Studio Video Settings: picks a background color of one's own")
     }
 
     static var chooseImage: String {
