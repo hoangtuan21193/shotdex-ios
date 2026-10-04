@@ -54,10 +54,12 @@
   phút và người dùng tưởng treo.
 - **Pha ghi nhanh và phần quét-bỏ-qua không báo tiến độ** — nếu báo thì thanh tiến độ nhảy lên 100% rồi tụt
   về 0 khi pha đọc EXIF bắt đầu. Lúc đó bảng chỉ ghi "Indexing…" không số.
-- **Tốc độ và thời gian còn lại**: trung bình ảnh mỗi phút tính từ mẫu đầu của lượt (có mốc riêng nên lượt
-  chạy tiếp chỉ đo phần việc thật). Dòng tóm tắt đặt **thời gian còn lại trước, tốc độ sau** — cái người
-  dùng đang đợi là thời gian. Chữ "About" là **trung thực**: ước lượng tính từ trung bình cả lượt nên nó
-  nhảy. Đơn vị viết đủ chữ **"photos and videos per minute"** vì cả hai đều được index.
+- **Tốc độ và thời gian còn lại**: tốc độ là trung bình ảnh mỗi phút tính từ mẫu đầu của lượt (có mốc riêng
+  nên lượt chạy tiếp chỉ đo phần việc thật). **Thời gian còn lại** tính theo tốc độ của **200 mục gần nhất**,
+  làm tròn phút — chung một cách tính với nguồn thư mục, ổ, server ([FS-19.01](../../02-functional-spec/FS-19-photo-sources/01-folders-and-drives.md) §4);
+  trước mục thứ 200 ghi **"Estimating time…"** thay vì đoán. Dòng tóm tắt đặt **thời gian còn lại trước,
+  tốc độ sau** — cái người dùng đang đợi là thời gian. Chữ "About" là **trung thực**: tốc độ đổi theo lô nên
+  nó nhảy. Đơn vị viết đủ chữ **"photos and videos per minute"** vì cả hai đều được index.
 - **Dòng trạng thái mạng**: loại kết nối · tốc độ hiện tại · **tổng đã tải từ iCloud trong lượt này**, và
   mọi con số **luôn có nhãn** — "45 MB" trần đứng cạnh một tốc độ sẽ bị đọc thành dung lượng file hay dung
   lượng máy đã chiếm. Tốc độ **ẩn khi bằng 0**; chưa tải gì thì nói bằng chữ thay vì in "0 KB".

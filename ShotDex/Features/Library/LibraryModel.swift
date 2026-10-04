@@ -24,21 +24,21 @@ struct IndexThroughput: Equatable {
 
     /// Time first, speed second: the wait is what the user is actually
     /// reading for — `About 2 hr 15 min left · 1,548 photos and videos per minute`.
-    /// Drops to the rate alone until an estimate exists.
+    /// Says it is still estimating until the first 200 items are in.
     var summaryLine: String {
-        guard let remainingText else { return rateText }
-        return "\(remainingText) · \(rateText)"
+        "\(remainingText ?? String(localized: "Estimating time…")) · \(rateText)"
     }
 
-    /// e.g. "About 2 hours left", "About 1 hr 20 min left", "About 45 min left".
-    /// "About" is honest — the estimate is a run average, so it moves.
+    /// e.g. "About 2 hours left", "About 1 hr 20 min left", "About 45 min left",
+    /// to the nearest minute. "About" is honest — the speed moves.
     static func format(_ duration: Duration) -> String {
         let total = Int(duration.components.seconds)
         if total < 60 { return String(localized: "Less than a minute left") }
         let about = String(localized: "About")
         let left = String(localized: "left")
-        let hours = total / 3600
-        let minutes = (total % 3600) / 60
+        let rounded = Int((Double(total) / 60).rounded())
+        let hours = rounded / 60
+        let minutes = rounded % 60
         if hours >= 1 {
             if minutes == 0 {
                 return "\(about) \(hours) hour\(hours == 1 ? "" : "s") \(left)"
@@ -178,6 +178,8 @@ final class LibraryModel {
     /// arrived and how many photos were already processed then.
     @ObservationIgnored private var indexRunStart: ContinuousClock.Instant?
     @ObservationIgnored private var indexRunStartProcessed = 0
+    /// Time left over the last 200 items (FS-19 01 §4), shared with sources.
+    @ObservationIgnored private var indexEstimate = IndexEstimate()
 
     var criteria: FilterCriteria = .empty {
         didSet {
@@ -783,6 +785,7 @@ final class LibraryModel {
         indexProgress = nil
         indexThroughput = nil
         indexRunStart = nil
+        indexEstimate = IndexEstimate()
         cancelScheduledAutoRetry()
         startRetryTask?.cancel()
         let pipeline = self.pipeline
@@ -1068,9 +1071,10 @@ final class LibraryModel {
         return true
     }
 
-    /// Averages photos-per-minute over the run and projects the remaining time.
-    /// Baselined on the first sample so a resumed/incremental run measures only
-    /// its own work, not the skipped-scan head start. Called once a second from
+    /// Averages photos-per-minute over the run; the time left comes from
+    /// `IndexEstimate` (the last 200 items, nothing before 200). Baselined on
+    /// the first sample so a resumed/incremental run measures only its own
+    /// work, not the skipped-scan head start. Called once a second from
     /// `startNetworkSampling` (a reliable observed-property tick), not from the
     /// pipeline callback.
     private func updateThroughput() {
@@ -1082,6 +1086,7 @@ final class LibraryModel {
             return
         }
         let doneThisRun = progress.processed - indexRunStartProcessed
+        indexEstimate.record(processed: doneThisRun)
         let elapsed = start.duration(to: now)
         let elapsedSeconds =
             Double(elapsed.components.seconds)
@@ -1089,8 +1094,7 @@ final class LibraryModel {
         guard doneThisRun > 0, elapsedSeconds >= 1 else { return }
         let perSecond = Double(doneThisRun) / elapsedSeconds
         let remainingCount = max(0, progress.total - progress.processed)
-        let remaining: Duration? =
-            perSecond > 0 ? .seconds(Double(remainingCount) / perSecond) : nil
+        let remaining: Duration? = indexEstimate.secondsLeft(remaining: remainingCount).map { .seconds($0) }
         indexThroughput = IndexThroughput(
             photosPerMinute: perSecond * 60,
             remaining: remaining

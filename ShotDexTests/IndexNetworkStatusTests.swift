@@ -338,8 +338,8 @@ struct IndexThroughputTests {
     @Test func summaryLinePutsTimeLeftFirst() {
         let throughput = IndexThroughput(photosPerMinute: 96, remaining: .seconds(600))
         #expect(throughput.summaryLine == "About 10 min left · 96 photos and videos per minute")
-        // No estimate yet — the rate stands alone rather than showing a gap.
+        // No estimate before the first 200 items — say so rather than guess.
         #expect(IndexThroughput(photosPerMinute: 96, remaining: nil).summaryLine
-            == "96 photos and videos per minute")
+            == "Estimating time… · 96 photos and videos per minute")
     }
 }
