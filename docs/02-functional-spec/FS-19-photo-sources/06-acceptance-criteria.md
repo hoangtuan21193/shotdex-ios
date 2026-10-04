@@ -2,12 +2,12 @@
 
 `FS-19.06` · cập nhật 2026-10-04
 
-**Một câu:** 68 tiêu chí, mỗi cái một thao tác, có số, nhìn được từ test hoặc ảnh chụp; chưa cái nào có chứng minh.
+**Một câu:** 69 tiêu chí, mỗi cái một thao tác, có số, nhìn được từ test hoặc ảnh chụp; chưa cái nào có chứng minh.
 
 - Cột "Chứng minh" ghi **tên đề xuất**; mọi dòng là `⚠️ chưa có`. Test đơn vị chạy trên database trong bộ nhớ và một thư
   mục tạm dựng sẵn file mẫu (RAW mẫu CC0 ở `~/Library/Caches/ShotDexFixtures/raw`, **không ảnh có mặt người**).
 - Mac **chưa có driver UI** (`Tools/ui-drive` chỉ chạy simulator iOS) — AC màn hình trên Mac ghi "ảnh chụp tay" tới khi có.
-- Số AC cố định, không đánh lại; AC thêm sau đáp án 2026-10-04 mang số 45–63, sau review dữ liệu 64–68, và nằm trong bảng của phần nó.
+- Số AC cố định, không đánh lại; AC thêm sau đáp án 2026-10-04 mang số 45–63, sau review dữ liệu 64–68, và nằm trong bảng của phần nó; AC-69…72 để dành cho các tiêu chí plan FS-19 đề xuất (thêm cùng task của plan), AC-73 thêm theo planboard mac-ipad-v2 Q1 (Hide in Photos / Hide in ShotDex Only).
 
 ## Thư mục và ổ ([01](01-folders-and-drives.md), [01b](01b-offline-access-and-cache.md))
 
@@ -91,6 +91,7 @@
 | AC-59 | 6 ảnh NAS đã Hide | mở Collections; Hidden → chọn 2 → Unhide; Unhide 4 còn lại | mục "Hidden" có "6 Hidden Photos"; sau lần 1: 2 ảnh về lưới và Statistics, mục còn 4; sau lần 2: mục Hidden biến mất | ⚠️ chưa có — `ShotDexUITests/scripts/hidden-section-iphone.json` |
 | AC-67 | ảnh A mồ côi 31 ngày, có 2 dòng lịch sử upload, 1 dòng tải về, 1 dòng nhập thẻ; ★4, recipe, cờ | mở app | A: 0 dòng ở Ảnh, Dấu ảnh, Recipe, Cờ, album; 4 dòng lịch sử còn nguyên; ảnh mồ côi 29 ngày còn đủ | ⚠️ chưa có — `OrphanRetentionTests.purgeKeepsHistories` |
 | AC-68 | ảnh A có bản sao ở hai nguồn server NAS Home và NAS Office | Hide bản NAS Home; rồi Hide bản NAS Office | sau lần 1: A vẫn trong lưới và Statistics, rời màn duyệt NAS Home; sau lần 2: A rời lưới, có trong mục Hidden; Unhide → cả hai bản bỏ ẩn | ⚠️ chưa có — `HiddenCopyTests.hiddenOnlyWhenEveryCopyHidden` |
+| AC-73 | ảnh A có bản sao ở Photos (bản gốc trên máy) và NAS Home; ảnh B chỉ ở Photos; ảnh C chỉ ở NAS Home | mở ⋯ của A, B, C; với A chọn Hide in ShotDex Only → Unhide trong mục Hidden → Hide in Photos | ⋯ của A có đúng hai dòng **Hide in Photos** · **Hide in ShotDex Only**, B và C mỗi ảnh một dòng **Hide**; sau Hide in ShotDex Only: A rời lưới và Statistics, có trong mục Hidden, asset Photos `isHidden == false`; sau Unhide: A về lưới; sau Hide in Photos: asset `isHidden == true`, bản NAS ẩn, A rời lưới | ⚠️ chưa có — `HideCommandPlanTests.mixedPhotoOffersBothCommands` + `HiddenCopyTests.shotDexOnlyLeavesPhotosUntouched` |
 | AC-44 | `DSC04512.ARW` giống hệt ở T7 RAW/2026-09-27, T7 Backup và NAS Home | mở Duplicates, Exact | đúng 1 nhóm "2 identical copies of DSC04512.ARW · both on T7 RAW Archive"; không dòng khác biệt sao/sửa; không nhóm nào gồm bản NAS; Move 1 bản Backup → ảnh còn, Get Info "2 copies" (T7 RAW, NAS) | ⚠️ chưa có — `DuplicateSourceScopeTests.groupsStayInOneSource` |
 | AC-60 | nhóm Similar 2 ảnh file khác nội dung: giữ B (★0, không GPS), bỏ C (★4, Picked, keyword "Kyoto", có GPS, chụp sớm hơn) | Merge | B ★4, Picked, "Kyoto" trong database và sidecar; GPS và ngày chụp của B không đổi; SHA-256 file B không đổi | ⚠️ chưa có — `FileMergeTests.ratingFlagKeywordOnly` |
 | AC-61 | có nguồn thư mục; 3 ảnh file và 2 ảnh Photos | New Album "Kyoto" → thêm 5 ảnh; Add to Album với album Photos "Trip" cho 1 ảnh chỉ-file | "Kyoto" là album ShotDex có 5 ảnh, 0 album mới trong Photos; hàng "Trip" mờ, câu "Photos albums can only hold Photos Library items." | ⚠️ chưa có — `ShotDexAlbumTests.spansSources` |
@@ -100,8 +101,8 @@
 | # | Cho | Khi | Thì | Chứng minh |
 |---|---|---|---|---|
 | AC-62 | iPhone 17, iOS 26.5; thư mục On My iPhone "Kyoto" 300 JPG | Settings › Sources → Add Folder or Drive… → chọn "Kyoto" | nhóm Sources có "Kyoto · 300"; 300 ảnh trong lưới; đặt ★4 → có `.xmp` cạnh file; 0 file ảnh đổi SHA-256 | ⚠️ chưa có — `ShotDexUITests/scripts/source-folder-iphone.json` |
-| AC-63 | Duo, nguồn "Kyoto" đã thêm trên màn trong | gập máy sang màn ngoài | màn ngoài thấy nguồn "Kyoto · 300" và cùng 300 ảnh; thêm nguồn và Settings › Sources dùng được trên màn ngoài | ⚠️ chưa có — máy thật hoặc ảnh chụp tay (simctl không gập được Duo) |
+| AC-63 | Duo, nguồn "Kyoto" đã thêm trên màn trong | gập máy sang màn ngoài | màn ngoài thấy nguồn "Kyoto · 300" và cùng 300 ảnh; thêm nguồn và Settings › Sources dùng được trên màn ngoài | ⚠️ chưa có — gập tay trong Simulator.app + `Tools/sim-shot … cover` (simctl không gập được Duo); máy thật: bỏ (planboard mac-ipad-v2 Q10) |
 
-**Chưa chứng minh được:** cả 68. Statistics đếm một lần nằm trong AC-18; popup Source của Statistics và Duplicates chưa có AC
+**Chưa chứng minh được:** cả 69. Statistics đếm một lần nằm trong AC-18; popup Source của Statistics và Duplicates chưa có AC
 riêng — thêm ở `/plan` khi FS-07 được sửa theo. Board iPhone/Duo chưa vẽ, nên AC-39, AC-59, AC-62, AC-63 chưa có chỗ so
 `design-parity`.

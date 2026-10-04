@@ -1,0 +1,93 @@
+# Vòng 1 — ShotDex trên iPad, Mac và ảnh ở nhiều nơi
+
+Không còn gì cần sửa: có thể chốt plan.
+
+## Đồng ý, chọn khác mặc định (3)
+
+- **Q1** Một ảnh có bản trong Photos và bản trên NAS: bấm Hide thì sao? — trang nhieu-noi
+  - Lựa chọn: Hai lệnh riêng: Hide in Photos và Hide in ShotDex Only (two-commands) — KHÁC với đề xuất
+- **Q4** Trên iPhone, đang xem một ảnh thì bắt đầu so sánh với ảnh kế bằng cách nào? — trang ipad-iphone
+  - Lựa chọn: Chỉ so sánh khi đã chọn từ 2 ảnh trong lưới (selection-only) — KHÁC với đề xuất
+- **Q10** Vài phép kiểm cần máy thật (Mac chạy macOS 15, iPhone, ổ T7). Ai làm? — trang ban-mac
+  - Lựa chọn: Bỏ qua, ghi là chưa kiểm (skip) — KHÁC với đề xuất
+
+## Đồng ý mặc định (không bấm gì) (39)
+
+- **Q2** iPhone/iPad không phải lúc nào cũng tự nhả được thẻ nhớ. Nhập xong thì báo thế nào? — trang the-nho
+  - Lựa chọn: Báo "You can remove … now", công tắc Eject chỉ hiện khi nhả được (banner)
+- **Q3** Màn đang nhập thẻ có nút Pause: giữ hay bỏ? — trang the-nho
+  - Lựa chọn: Giữ Pause: dừng sau file đang chép, Resume chạy tiếp chỗ cũ (keep)
+- **Q5** Lưới ảnh trên iPad (và Mac) mặc định mấy cột? — trang ipad-iphone
+  - Lựa chọn: 7 cột, 6 khi mở cột thông tin (như bản vẽ) (seven)
+- **Q6** Có kéo được một ảnh (vào album, sang app Files) mà không cần bấm Select trước không? — trang ipad-iphone
+  - Lựa chọn: Có: nhấn giữ rồi kéo luôn (yes)
+- **Q7** Editor trên iPad: cột công cụ có cần kéo rộng hẹp và đổi sang trái/phải nữa không? — trang ipad-iphone
+  - Lựa chọn: Cột cố định bên phải, giữ ghim ảnh tham chiếu (fixed)
+- **Q8** Trên iPad, mở một ảnh thì ảnh nằm trong cửa sổ cùng thanh bên, hay phủ kín màn hình như hôm nay? — trang ipad-iphone
+  - Lựa chọn: Mở trong cửa sổ, thanh bên gọi lại được (in-window)
+- **Q9** App Mac bán chung hay bán riêng với bản iPhone/iPad? — trang ban-mac
+  - Lựa chọn: Mua một lần, dùng cả iPhone, iPad, Mac (universal)
+- **A1** Dữ liệu ảnh · Đọc ảnh trong thư mục, ổ ngoài và NAS — Claude tự quyết
+  - Claude đã chọn: Một bộ đọc mới cho thư mục, ổ và NAS; phần đọc thư viện Photos giữ nguyên.
+- **A2** Dữ liệu ảnh · Nhận ra cùng một ảnh khi chỉ phần thông tin bị sửa — Claude tự quyết
+  - Claude đã chọn: So phần dữ liệu ảnh, bỏ qua phần thông tin chụp, cho JPEG, HEIC, CR3, DNG, ARW, NEF, TIFF; định dạng khác so cả file.
+- **A3** Dữ liệu ảnh · Sao, keyword và chỉnh sửa của ảnh file lưu ở đâu — Claude tự quyết
+  - Claude đã chọn: Bảng riêng cho sao và keyword của ảnh file; một bản chỉnh sửa chung cho mọi bản sao, Done trên bản Photos ghi thêm vào Photos.
+- **A4** Dữ liệu ảnh · Ghi file .xmp cạnh ảnh mà không làm hỏng dữ liệu của Lightroom — Claude tự quyết
+  - Claude đã chọn: Chỉ sửa đúng các mục ShotDex quản (sao, keyword, tiêu đề, chú thích, phần riêng của ShotDex); mọi thứ khác giữ nguyên từng byte.
+- **A5** Dữ liệu ảnh · Ảnh nào hiện trong lưới — Claude tự quyết
+  - Claude đã chọn: Ảnh hiện khi còn ít nhất một bản xem được (không ẩn, không bị xoá); tính lúc hiển thị, đo cuộn 55.000 ảnh trước khi xong.
+- **A6** Dữ liệu ảnh · Bộ nhớ đệm ảnh xem trước — Claude tự quyết
+  - Claude đã chọn: Một thư mục đệm tự quản, dọn ảnh lớn trước ảnh nhỏ; gộp bộ đệm NAS cũ vào; mặc định 5 GB trên iPhone/iPad, 25 GB trên Mac.
+- **A7** Dữ liệu ảnh · Tên các lệnh xoá và hộp xác nhận — Claude tự quyết
+  - Claude đã chọn: Nút xoá ảnh Reject gọi theo nơi ảnh nằm: Move N… (vào Thùng rác), Delete N… (Photos hoặc xoá hẳn), Hide N… (NAS). Xoá bản trên máy sau khi tải lên NAS: "Delete N from This Device". Huỷ hộp của Photos thì chỉ phần Photos không xoá.
+- **A8** Dữ liệu ảnh · Thời gian còn lại khi đọc ảnh — Claude tự quyết
+  - Claude đã chọn: Một cách tính cho cả thư viện Photos và thư mục, làm tròn phút ("about 3 min").
+- **A9** Dữ liệu ảnh · Những điều đã chốt lần trước, chỉ áp vào tài liệu — Claude tự quyết
+  - Claude đã chọn: Sao/cờ của ảnh bị xoá giữ 30 ngày; bỏ Import to Library, thêm Save to Photos; Duplicates tính theo nguồn; gộp ảnh file chỉ lấy sao, cờ, keyword; album ShotDex chứa ảnh mọi nguồn.
+- **A10** Dữ liệu ảnh · Sửa và thêm tiêu chí kiểm — Claude tự quyết
+  - Claude đã chọn: Sửa giới hạn dữ liệu tải khi đọc NAS cho ảnh RAW đạt được; kiểm đúng chỗ thật sự lưu ảnh (Recents, widget); thêm 4 tiêu chí cho chuyển dữ liệu, xoá chỉ mục, Statistics và Duplicates theo nguồn.
+- **A11** Nhập thẻ · Chép và kiểm từng file — Claude tự quyết
+  - Claude đã chọn: Mỗi file chép xong được đọc lại so khớp rồi mới đặt tên cuối; lệch thì bỏ bản chép và báo lỗi. Dùng lại phần xuất file đã có.
+- **A12** Nhập thẻ · Chạy khi app ra nền và sau khi tắt app — Claude tự quyết
+  - Claude đã chọn: iOS 26 xin hệ thống chạy tiếp (dùng chung với tải lên NAS); danh sách ảnh chưa sao lưu được nhớ qua lần mở lại để Back Up Remaining vẫn chạy.
+- **A13** Nhập thẻ · Đọc thẻ và nhận thẻ vừa cắm — Claude tự quyết
+  - Claude đã chọn: Thẻ cắm như ổ đĩa thì đọc kiểu ổ (nhanh hơn); máy ảnh cắm USB thì đọc qua máy ảnh; một hàng mỗi thẻ. Thẻ cắm khi app đang mở hiện ra trong 2 giây.
+- **A14** Nhập thẻ · Nhóm theo ngày khi mở thẻ, và ảnh đã nhập vào ổ đang rút — Claude tự quyết
+  - Claude đã chọn: Hiện nhóm ngày ngay theo ngày file, rồi chỉnh theo giờ chụp thật khi đọc xong. Ảnh đã nhập vào ổ đang rút vẫn tính là Imported.
+- **A15** Nhập thẻ · Tên file khi nhập — Claude tự quyết
+  - Claude đã chọn: Mẫu mặc định "Date and Number" = ngày chụp + số ảnh của máy ảnh (2026-10-02_5892). Ô Text chèn chữ thường để bạn gõ đè.
+- **A16** So sánh ảnh · So sánh là một chế độ của màn xem ảnh — Claude tự quyết
+  - Claude đã chọn: Single, 2-Up, Survey đổi ngay tại chỗ trên màn xem ảnh, không mở màn mới.
+- **A17** So sánh ảnh · Cờ Reject và dấu trong Duplicates là một — Claude tự quyết
+  - Claude đã chọn: So sánh chỉ ghi cờ Reject thật; dấu tạm trong Duplicates được nâng thành Reject khi mở so sánh.
+- **A18** So sánh ảnh · Xoá ảnh Reject và báo lỗi — Claude tự quyết
+  - Claude đã chọn: Một luật xoá theo nơi ảnh nằm dùng chung cho Cull, So sánh, Duplicates; xoá hỏng thì hiện thanh báo có Try Again như Cull.
+- **A19** So sánh ảnh · iPad trước khi có khung mới, và chế độ sáng/tối — Claude tự quyết
+  - Claude đã chọn: Trên iPad dùng thanh nút đang có, dời lên thanh công cụ khi khung iPad mới xong; màn so sánh theo sáng/tối của màn xem ảnh.
+- **A20** iPad · Khung thanh bên, nội dung và cột thông tin — Claude tự quyết
+  - Claude đã chọn: Dùng thanh bên của hệ thống (có trên iPadOS 17 trở lên); cột thông tin 360 điểm khi đủ rộng, thành tấm kéo lên khi hẹp; iPhone và Duo giữ thanh tab.
+- **A21** iPad · Lệnh, phím tắt và thanh menu bàn phím — Claude tự quyết
+  - Claude đã chọn: Một danh sách lệnh chung cho thanh công cụ, menu ⋯, menu nhấn giữ và thanh menu khi giữ ⌘; Mac dùng lại.
+- **A22** iPad · Một khung chung cho công cụ có cột bên phải — Claude tự quyết
+  - Claude đã chọn: Collage, Resize, Combine Photos và Editor dùng chung khung: xem trước bên trái, cột 360 bên phải, nút chính ở mép phải.
+- **A23** iPad · Chữ trên menu — Claude tự quyết
+  - Claude đã chọn: "Adjust Date & Time…" và "Adjust Location…" (giữ & như Photos, thêm … vì mở bảng); "Keep All N Photos" giữ ở nút viên đang có.
+- **A24** iPhone · Chiều cao bảng chỉnh ảnh — Claude tự quyết
+  - Claude đã chọn: Giữ như hiện tại; chỉ sửa tài liệu cho khớp.
+- **A25** iPad · Những màn chưa có tiêu chí kiểm — Claude tự quyết
+  - Claude đã chọn: Viết thêm tiêu chí cho Trips, Places, trang album, Duplicates, Combine, Cull, cắt video, phím . và Space trước, rồi mới làm.
+- **A26** Bản Mac · Chia mã giữa iPhone/iPad và Mac — Claude tự quyết
+  - Claude đã chọn: App Mac riêng dùng chung phần dữ liệu và xử lý ảnh; màn hình viết riêng cho Mac; luật khung và lệnh viết một lần cho cả iPad và Mac.
+- **A27** Bản Mac · Ảnh, màu và cỡ chữ riêng của Mac — Claude tự quyết
+  - Claude đã chọn: Một tên chung cho ảnh trên cả hai nền tảng; màu và cỡ riêng của Mac nằm trong một file chỉ Mac dùng.
+- **A28** Bản Mac · Cuộn lưới 55.000 ảnh, ảnh phóng to, dòng thời gian video — Claude tự quyết
+  - Claude đã chọn: Dùng bộ cuộn gốc của Mac cho ba chỗ này; bảng danh sách dùng bảng có sẵn.
+- **A29** Bản Mac · Hoàn tác — Claude tự quyết
+  - Claude đã chọn: Menu Edit của hệ thống, ⌘Z và ⇧⌘Z hoàn tác chỉnh ảnh, thêm vào album, sao, cờ, xoay; iPad có bàn phím dùng lại.
+- **A30** Bản Mac · Chứng minh 13 màn Mac chưa có tiêu chí riêng — Claude tự quyết
+  - Claude đã chọn: So với bản vẽ Mac và chạy lại tiêu chí của tính năng gốc trên Mac; chỉ viết tiêu chí mới cho Activity và Support.
+- **A31** Bản Mac · Phím khi xem ảnh — Claude tự quyết
+  - Claude đã chọn: Một luật cho mọi thiết bị: phím . là Favorite, ←/→ lùi tiến.
+- **A32** Bản Mac · Sửa số liệu trong tài liệu theo số đo thật — Claude tự quyết
+  - Claude đã chọn: Sửa phần ước lượng công việc Mac trong tài liệu theo số đếm thật trong mã.

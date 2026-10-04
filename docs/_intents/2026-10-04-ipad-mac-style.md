@@ -5,7 +5,7 @@
 | Tác giả | hat.tuan@karabiner.tech |
 | Ngày | 2026-10-04 |
 | Trạng thái | accepted — người dùng 2026-10-04: "Duyệt cả hai, sang /spec" |
-| Tiến độ | **chưa làm** (2026-10-04) — spec FS-21, 62 AC (+ FS-19/20/01.08c dùng chung), mọi ⚠️ CẦN QUYẾT đã chốt; chờ duyệt AC |
+| Tiến độ | **chưa làm** (2026-10-04) — plan đã duyệt (planboard mac-ipad-v2), 59 task ([FS-21](../_plans/2026-10-04-fs21-ipad-mac-style.md)); dùng chung plan FS-19/20/08c |
 | Nguồn | phản hồi người dùng 2026-10-04: "giao diện macos đẹp quá, làm cho ipad kiểu như vậy" (sau khi xem canvas Mac) |
 | Spec sinh ra từ đây | [FS-21](../02-functional-spec/FS-21-ipad-mac-style/README.md) (62 AC) · dùng chung [FS-19](../02-functional-spec/FS-19-photo-sources/README.md), [FS-20](../02-functional-spec/FS-20-card-ingest/README.md), [FS-01.08c](../02-functional-spec/FS-01-library/08c-compare-viewer-mode.md) |
 

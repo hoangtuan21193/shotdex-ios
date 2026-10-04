@@ -56,12 +56,32 @@ Board `MAC_Cull` (Move 120 Rejected…), `MAC_Duplicates` (Move 2 Photos…). Ti
 
 ## 3. Hide và mục Hidden
 
-- Hide đánh dấu **bản sao** NAS. Ảnh **ẩn khi và chỉ khi mọi bản sao của nó ẩn** ([05 §3](05-data.md)); ảnh còn bản sao
+**Lệnh Hide theo nơi ảnh nằm** (planboard mac-ipad-v2 Q1, 2026-10-04) — cùng chữ ở ⋯ của Viewer, menu nhấn giữ /
+chuột phải, ⋯ của chế độ chọn và menu **Photo** trên Mac (một nguồn lệnh, FS-21 K5):
+
+| Ảnh có | Lệnh | Làm gì |
+|---|---|---|
+| chỉ bản Photos | **Hide** | như hôm nay: asset vào album Hidden của Photos (ẩn trên mọi máy qua iCloud) |
+| chỉ bản file / NAS | **Hide** | ShotDex đánh dấu ẩn mọi bản sao; file không bị sửa |
+| bản Photos **và** bản file / NAS | hai dòng, không có "Hide" trơn: **Hide in Photos** · **Hide in ShotDex Only** | xem dưới |
+
+- **Hide in Photos** — bản Photos vào album Hidden của Photos (như Hide hôm nay), ShotDex đánh dấu ẩn mọi bản sao còn
+  lại. Ảnh rời ShotDex **và** app Photos trên mọi máy.
+- **Hide in ShotDex Only** — ShotDex đánh dấu ẩn **mọi** bản sao, kể cả bản Photos; Photos không bị đổi gì, ảnh vẫn hiện
+  trong app Photos.
+- "Hide" trơn chỉ có khi ảnh nằm ở **một** nơi — không có gì để chọn. Nhiều ảnh: hai dòng hiện khi ≥ 1 ảnh trong lựa chọn
+  có cả hai loại bản sao; Hide in Photos áp phần Photos cho ảnh có bản Photos, ảnh chỉ file/NAS thì ShotDex ẩn.
+  `copy-consistency` duyệt bộ chữ.
+- Hide trong màn duyệt một nguồn NAS (và phần NAS của lệnh xoá Reject, §1–§2) chỉ đánh dấu **bản sao ở nguồn đó** — không
+  đổi.
+- Ảnh **ẩn khi và chỉ khi mọi bản sao của nó ẩn** ([05 §3](05-data.md)); ảnh còn bản sao
   không ẩn ở nguồn khác thì vẫn ở lưới, chỉ rời màn duyệt của NAS.
 - Ảnh ẩn rời lưới, tìm kiếm, smart album, album, Statistics. Dấu ẩn là dữ liệu người dùng, sống qua index lại.
 - Xem lại ở mục **Hidden** trong Collections (cùng chỗ với Utilities): lưới các ảnh ShotDex đã ẩn, tiêu đề "6 Hidden
   Photos", chọn → **Unhide** (bỏ ẩn mọi bản sao của ảnh). Mục chỉ hiện khi có ≥ 1 ảnh ẩn.
 - Mục này **không** chứa album Hidden của Photos — app bên thứ ba không đọc được nó ([FS-06.01](../FS-06-collections/01-tabs-tokens-and-album-management.md)).
+  Ảnh ẩn bằng **Hide in Photos** có trong mục nhờ các bản file/NAS ShotDex đã ẩn; Unhide trả các bản đó về lưới, còn bản
+  Photos chỉ bỏ ẩn được trong app Photos.
 - File bị xoá ngay trên NAS (bởi máy khác) → lượt so thấy mất → bản sao mất; ảnh hết bản sao thì mồ côi theo luật 30 ngày ([02 §2](02-identity-and-sidecars.md)).
 
 ## 4. Duplicates — chỉ trong một nguồn (D7)

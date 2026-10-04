@@ -34,6 +34,8 @@ phóng, cắm Pick/Reject từng ảnh; **Reject = đánh dấu xoá**, và mộ
   iPhone/Duo: hàng Cull 340pt `[Reject 44] [★×5] [Pick 44]` như [12b §5](12b-culling-pass.md).
 - Mac/iPad có filmstrip dưới đáy (100pt iPad, 88pt Mac): ảnh trong phép so có viền amber, ảnh Reject mờ.
 - Gập Duo: 2-Up → Compare xếp chồng; Survey → Compare xếp chồng với **khung đang làm việc làm Select**.
+- iPhone và Duo ngoài: segmented **Single · Compare** chỉ có trong Viewer đã mở bằng Compare (§7); Viewer mở từ một ảnh
+  **không** có lối vào Compare — không segmented, không dòng trong ⋯ (planboard mac-ipad-v2 Q4).
 
 ## 3. 2-Up
 
@@ -87,7 +89,11 @@ phóng, cắm Pick/Reject từng ảnh; **Reject = đánh dấu xoá**, và mộ
   (iPhone/Duo ngoài: Compare).
 - Từ Duplicates: như 08 §2, giữ cổng *"Keep at least one photo in this group."* trên nút Reject của ảnh cuối.
 - Reject trong Compare mở từ Duplicates ghi **cờ thật** của FS-01.12 — còn sau khi rời nhóm, lưới và bộ lọc Rejected thấy.
-- Viewer mở từ một ảnh (không chọn) rồi bấm 2-Up: Select = ảnh đang xem, **Candidate = ảnh kế trong lưới**.
+- **Màn rộng** (iPad, Duo trong, Mac): Viewer mở từ một ảnh (không chọn) rồi bấm 2-Up: Select = ảnh đang xem,
+  **Candidate = ảnh kế trong lưới**.
+- **iPhone và Duo ngoài:** so sánh **chỉ** bắt đầu từ chế độ chọn với ≥ 2 ảnh — chọn 1 ảnh thì nút Compare mờ; không có
+  "Compare with Next" trong ⋯, không nút trên Viewer Single (planboard mac-ipad-v2 Q4). Gập Duo giữa phiên so (§2) không
+  phải lối vào — phiên đang mở đi tiếp ở màn ngoài.
 - Close (iPhone/Duo), Back hoặc `Esc` (iPad/Mac) về lưới. Cờ đã đặt **ở lại** — khác 08 §7.
 
 ## 8. Ràng buộc
@@ -129,6 +135,6 @@ phóng, cắm Pick/Reject từng ảnh; **Reject = đánh dấu xoá**, và mộ
 | AC-23 | Mac, Compare: 1 ảnh Photos + 1 ảnh thư mục `2026 Japan`, cả hai Reject | Delete 2 Photos → xác nhận → Delete ở hộp hệ thống | 1 hộp của app liệt kê 2 đích; ảnh Photos vào Recently Deleted, file vào Thùng rác | ⚠️ chưa có |
 | AC-24 | iPad, nguồn thư mục ổ ngoài, 1 Reject | Delete → xác nhận → hộp đỏ thứ hai | **Delete Permanently** → file và `.xmp` mất khỏi ổ; Cancel ở hộp thứ hai → file còn, cờ còn | ⚠️ chưa có |
 | AC-25 | ảnh `DSC04513.ARW` của nguồn thư mục | Reject trong Compare → thoát app → mở lại | `.xmp` cạnh file có sao −1; ảnh vẫn Rejected | ⚠️ chưa có |
-| AC-26 | Viewer mở từ ô 5 của lưới, không chọn | bấm 2-Up | Select = ảnh 5, Candidate = ảnh 6, `Candidate 1 of 1` | ⚠️ chưa có |
+| AC-26 | (a) iPad 1376×1032, Viewer mở từ ô 5 của lưới, không chọn · (b) iPhone 402×874 và Duo ngoài, Viewer mở từ ô 5 · (c) iPhone, chế độ chọn | (a) bấm 2-Up · (b) đọc thanh trên và ⋯ · (c) chọn 1 ảnh, rồi chọn thêm 1 → Compare | (a) Select = ảnh 5, Candidate = ảnh 6, `Candidate 1 of 1` · (b) 0 segmented Single · Compare, 0 dòng Compare trong ⋯ · (c) 1 ảnh: Compare mờ; 2 ảnh: Compare mở xếp chồng, Select = ảnh chọn đầu | ⚠️ chưa có |
 
 **Chưa chứng minh được:** cả 26 AC — code vẫn vẽ Compare ở tầng D (DESIGN.md §2).

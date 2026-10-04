@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 380" width="800" height="380" font-family="-apple-system, 'Helvetica Neue', Arial, sans-serif">
+<defs><marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#555"/></marker></defs>
+<rect width="800" height="380" fill="#FAF9F6"/>
+<text x="400" y="32" font-size="20" text-anchor="middle" fill="#222" font-weight="700">Hôm nay: mở ảnh là phủ kín màn hình</text><rect x="60" y="56" width="680" height="290" rx="12" fill="#111" stroke="#111" stroke-width="1.5"/><linearGradient id="g64" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#6E8FB5"/><stop offset="1" stop-color="#E9B48A"/></linearGradient>
+<g><rect x="180" y="90" width="440" height="220" rx="6" fill="url(#g64)"/><path d="M180 255 L334 189 L444 233 L532 200 L620 244 L620 310 L180 310 Z" fill="#3D4A3A"/></g><text x="90" y="90" font-size="20" text-anchor="start" fill="#fff">✕</text><text x="400" y="336" font-size="15" text-anchor="middle" fill="#ddd">Không có thanh bên, không có nút hiện thanh bên; đóng ảnh mới về lưới</text>
+</svg>

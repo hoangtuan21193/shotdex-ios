@@ -1,0 +1,17 @@
+{
+  "Q1": {
+    "option": "two-commands"
+  },
+  "Q2": {
+    "option": "banner"
+  },
+  "Q3": {
+    "option": "keep"
+  },
+  "Q4": {
+    "option": "selection-only"
+  },
+  "Q10": {
+    "option": "skip"
+  }
+}

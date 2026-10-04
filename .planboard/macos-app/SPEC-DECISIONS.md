@@ -63,3 +63,54 @@
 - Gộp: một transaction, luật từng bảng — trường một giá trị (sao, cờ, tiêu đề, caption, recipe) bên đổi sau cùng thắng (cần timestamp); tập hợp (keyword, album, ẩn) hợp lại; dấu chờ sidecar trỏ sang id thắng; bảng bí danh id thua → id thắng.
 - Chủ dữ liệu: bảng ShotDex giữ sao/favorite/keyword cho ảnh có cả bản Photos lẫn file, đẩy sang Photos qua đường chờ ghi.
 - Đi kèm: bảng recipe mới (có updatedAt); khoá Duplicates (strictness, sourceId, photoId) + duplicate_scan_state có sourceId; hash ở bảng riêng có (algo, version), UNIQUE(algo, fullHash) khi có, index thường cho fastHash; bản sao có id bền, UPSERT trên UNIQUE(sourceId, relPath chuẩn NFC + case-fold), không FK cascade; ẩn ảnh = mọi bản sao ẩn; dọn 30 ngày loại trừ server_uploads, server_downloads, lịch sử nhập thẻ; FS-01.12 AC-9 đổi theo luật 30 ngày; sweep neo vào bảng photos thay photo_metadata; filter keyword đọc cả hai bảng; widget cần bộ nạp ảnh file; index copies(sourceId, photoId), copies(photoId, online), photos(orphanedAt) partial.
+
+## Planboard mac-ipad-v2 (2026-10-04)
+Một vòng, 10 câu + 32 mục Claude tự quyết. Chi tiết: `.planboard/mac-ipad-v2/DECISIONS.md`.
+
+**Chọn khác đề xuất (3):**
+- **Q1** Hide trên ảnh có bản Photos và bản file/NAS → hai lệnh riêng **Hide in Photos** · **Hide in ShotDex Only**; "Hide" trơn chỉ khi ảnh nằm ở một nơi (FS-19.04 §3, AC-73).
+- **Q4** iPhone/Duo ngoài: so sánh **chỉ** từ chế độ chọn ≥ 2 ảnh — không "Compare with Next", không nút trên Viewer Single; màn rộng giữ 2-Up từ Single (FS-01.08c §2, §7, AC-26).
+- **Q10** Kiểm cần máy thật (Mac macOS 15, iPhone, ổ T7, thẻ/đầu đọc/máy ảnh) → bỏ qua, ghi "chưa kiểm (cần máy thật)": FS-18 AC-14/44/62/63/65, FS-20 AC-20 + phần thật của AC-10/27; FS-19 không đo M1–M3; không máy ảo, không script tay.
+
+**Đồng ý mặc định (7 câu):**
+- Q2 Nhập thẻ xong: banner "You can remove … now", công tắc Eject chỉ hiện khi nhả được.
+- Q3 Giữ Pause khi nhập thẻ: dừng sau file đang chép, Resume chạy tiếp (FS-20 thêm AC-28).
+- Q5 Lưới iPad/Mac mặc định 7 cột, 6 khi mở inspector.
+- Q6 Nhấn giữ rồi kéo ảnh, không cần Select (cả iPhone).
+- Q7 Editor iPad: inspector 360 cố định bên phải, giữ ghim ảnh tham chiếu.
+- Q8 iPad: Viewer mở trong cửa sổ, sidebar gọi lại được; Settings giữ cover.
+- Q9 Universal Purchase, cùng bundle id `com.hoangtuan.shotdex`.
+
+**Đồng ý mặc định (32 mục tự quyết):**
+- A1 Pipeline mới `SourceIndexPipeline` cho thư mục + NAS; `IndexPipeline` PhotoKit giữ nguyên.
+- A2 Hash phần dữ liệu ảnh: JPEG, HEIC, CR3, DNG, ARW, NEF, TIFF; định dạng khác băm cả file.
+- A3 Bảng riêng sao/keyword ảnh file; `photo_recipes` cho mọi bản sao, Done trên bản Photos ghi thêm vào Photos.
+- A4 `.xmp`: chỉ vá mục ShotDex quản, còn lại giữ từng byte.
+- A5 Ảnh hiện khi còn ≥ 1 bản sao xem được; tính lúc truy vấn, đo 55k.
+- A6 Cache preview tự chứa, bỏ preview trước; gộp cache NAS cũ; 5 GB iOS, 25 GB Mac.
+- A7 Tên lệnh xoá theo đích (Move/Delete/Hide N…); giữ "Delete N from This Device"; huỷ hộp Photos chỉ giữ phần Photos.
+- A8 Một `IndexEstimate` cho Photos và nguồn, làm tròn phút.
+- A9 Áp chốt cũ vào tài liệu: dấu giữ 30 ngày, Save to Photos thay Import to Library, Duplicates theo nguồn, Merge file chỉ sao/cờ/keyword, album ShotDex mọi nguồn.
+- A10 Sửa AC-33 (trần byte), AC-66 (widget + Recents); thêm AC-69…72.
+- A11 Chép → đọc lại so SHA-256 → đổi tên; dùng lại writer Export.
+- A12 Chạy nền iOS 26 dùng chung với tải NAS; `backupPath` nhớ qua lần mở.
+- A13 Thẻ dạng ổ đọc kiểu ổ, máy ảnh USB qua ImageCaptureCore; thẻ cắm hiện trong 2 s.
+- A14 Nhóm ngày theo ngày file rồi tinh theo EXIF; ảnh nhập vào ổ đang rút vẫn Imported.
+- A15 Mẫu tên mặc định `{date}_{originalNumber}`; chip Text chèn chữ thường.
+- A16 Compare là chế độ của Viewer; `WindowClass` chung.
+- A17 Compare chỉ ghi cờ Reject thật; dấu Duplicates nâng thành Reject.
+- A18 Một bộ định tuyến xoá cho Cull, Compare, Duplicates; lỗi → banner + Try Again.
+- A19 iPad Compare dùng chrome Viewer tới khi có toolbar FS-21; theo sáng/tối của Viewer.
+- A20 Sidebar hệ thống (`NavigationSplitView`); inspector 360 / sheet khi hẹp; iPhone, Duo giữ tab bar.
+- A21 Một `CommandCatalog` cho toolbar, ⋯, menu nhấn giữ, menu bar; Mac dùng lại.
+- A22 `ToolInspectorLayout` chung cho Collage, Resize, Combine, Editor.
+- A23 "Adjust Date & Time…", "Adjust Location…"; giữ pill "Keep All N Photos".
+- A24 Panel chỉnh ảnh iPhone giữ 264, sửa tài liệu.
+- A25 `/spec FS-21` thêm AC cho Trips, Places, trang album, Duplicates, Combine, Cull, cắt video, phím . và Space trước khi làm.
+- A26 Target `ShotDexMac` riêng, chung Domain/Data; kiểu khung/lệnh ở `Domain/Shell/`.
+- A27 `PlatformImage` typealias; `MacTheme` chỉ Mac.
+- A28 AppKit cho lưới, ảnh phóng to, timeline; `Table` cho ⌘2.
+- A29 Undo qua `UndoManager` của cửa sổ (`UndoRegistrar`).
+- A30 13 màn Mac không AC: `design-parity` + AC FS gốc; AC mới chỉ cho Activity và Support.
+- A31 Phím Viewer một luật mọi thiết bị: "." = Favorite, ←/→ lùi tiến.
+- A32 Sửa số liệu FS-18 05 §1 theo số đo thật.

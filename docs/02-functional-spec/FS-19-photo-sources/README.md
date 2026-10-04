@@ -18,15 +18,17 @@ Nguồn: [intent Mac](../../_intents/2026-10-04-macos-app.md) · [intent iPad](.
 | 01b | [Offline, quyền, cloud, cache](01b-offline-access-and-cache.md) | ổ rút ra/cắm lại, bookmark hết hạn, file chỉ có trên cloud, cache preview, hết đĩa |
 | 02 | [Danh tính và sidecar](02-identity-and-sidecars.md) | hash nhanh rồi đầy đủ, ảnh Photos, đổi tên/di chuyển, dữ liệu mồ côi, bản sao, đọc + ghi `.xmp`, xung đột, recipe |
 | 03 | [Server là nguồn](03-servers-as-sources.md) | index như thư mục, thumbnail, tải bản gốc khi mở, upload, Save to Photos thay Import to Library |
-| 04 | [Xoá, ẩn, ảnh trùng, thống kê](04-deleting-and-duplicates.md) | D6 xoá theo nơi chứa, ảnh nhiều bản sao, nơi không Thùng rác, mục Hidden, D7 Duplicates, đếm một lần |
+| 04 | [Xoá, ẩn, ảnh trùng, thống kê](04-deleting-and-duplicates.md) | D6 xoá theo nơi chứa, ảnh nhiều bản sao, nơi không Thùng rác, Hide in Photos · Hide in ShotDex Only, mục Hidden, D7 Duplicates, đếm một lần |
 | 05 | [Dữ liệu](05-data.md) | id ảnh, bảng bản sao/hash/recipe/bí danh, luật gộp và tách, dọn 30 ngày, test phải có |
-| 06 | [Tiêu chí nghiệm thu](06-acceptance-criteria.md) | AC-1…AC-68 |
+| 06 | [Tiêu chí nghiệm thu](06-acceptance-criteria.md) | AC-1…AC-68, AC-73 (AC-69…72 thêm theo plan) |
 
 Board: Mac `MAC_AddSource` · `MAC_SourceIndexing` · `MAC_SettingsSources` · `MAC_SettingsServers` · `MAC_ServerBrowser`
 · `MAC_Duplicates` · `MAC_Cull` · `MAC_EmptyLibrary` · `MAC_GetInfo` (`docs/design/mac/project/`). iPad `IP_AddSource` ·
 `IP_SourceIndexing` · `IP_Settings` · `IP_ServerList` · `IP_ServerForm` · `IP_ServerBrowser` (`docs/design/ipad/project/`).
-**Chưa có board:** iPhone `PH_*`, Duo trong `DI_*`, Duo ngoài `DC_*` cho mọi màn trên; mục **Hidden** ([04 §3](04-deleting-and-duplicates.md))
-và hộp xoá hẳn ([04 §1](04-deleting-and-duplicates.md)) ở mọi thiết bị. Vẽ trước `/plan`, nối vào hàng thiết bị của canvas.
+iPhone `PH_Sources` · `PH_AddSource` · `PH_SettingsSources` · `PH_ServerList` · `PH_ServerForm` · `PH_ServerBrowser` ·
+`PH_Hidden` · `PH_DeleteCopies` · `PH_DeletePermanent` (`docs/design/iphone/project/`); Duo cùng bộ tên `DI_*` (trong) và
+`DC_*` (ngoài) (`docs/design/duo/project/`); iPad thêm `IP_Hidden` · `IP_DeleteCopies` · `IP_DeletePermanent`; Mac
+`MAC_Hidden` · `MAC_DeleteCopies` (vẽ 2026-10-04).
 
 ## 1. Người dùng cần gì
 
