@@ -105,6 +105,14 @@
       "comment": "Video Studio: the music command that marks a song's beats",
       "extractionState": "manual"
     },
+    "Camera, lens, 85mm, ISO 3200…": {
+      "comment": "Video Studio Media panel: placeholder of the search field — the Library's query language",
+      "extractionState": "manual"
+    },
+    "Cancel": {
+      "comment": "Video Studio: leaves search",
+      "extractionState": "manual"
+    },
     "Couldn't save your video draft": {
       "comment": "Video Studio: banner and alert when the draft could not be written (disk full, database error)",
       "extractionState": "manual"
@@ -231,6 +239,10 @@
     },
     "Nothing from your library is in this video yet.": {
       "comment": "Video Studio Media panel: the In Video tab when no clip or sticker comes from the library",
+      "extractionState": "manual"
+    },
+    "Nothing in your library matches.": {
+      "comment": "Video Studio Media panel: a search that found nothing",
       "extractionState": "manual"
     },
     "Open Settings": {

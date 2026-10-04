@@ -18,6 +18,12 @@ struct VideoMediaPanel: View {
     /// The album whose grid is open from the Albums tab.
     @State private var openAlbum: VideoMediaLibrary.Album?
     @State private var albums: [VideoMediaLibrary.Album] = []
+    /// Search (FS-12.09 §5): the field in the tab row's place, and what it
+    /// holds. Session state.
+    @State private var isSearching = false
+    @State private var query = ""
+    @State private var searchTask: Task<Void, Never>?
+    @FocusState private var isQueryFocused: Bool
 
     enum Tab: Hashable { case recents, albums, inVideo }
 
@@ -42,7 +48,9 @@ struct VideoMediaPanel: View {
 
     @ViewBuilder
     private var header: some View {
-        if let openAlbum {
+        if isSearching {
+            searchRow
+        } else if let openAlbum {
             HStack(spacing: 6) {
                 Button {
                     self.openAlbum = nil
@@ -117,6 +125,7 @@ struct VideoMediaPanel: View {
 
     private var searchButton: some View {
         Button {
+            startSearch()
         } label: {
             Image(systemName: "magnifyingglass")
                 .font(.system(size: 13, weight: .semibold))
@@ -174,12 +183,14 @@ struct VideoMediaPanel: View {
             noAccess
         case .limited, .authorized:
             VStack(spacing: 0) {
-                if model.photoLibrary.authorizationState == .limited, tab == .recents, let library {
+                if model.photoLibrary.authorizationState == .limited, tab == .recents, !isSearching, let library {
                     limitedRow(count: library.count)
                 }
                 if tab == .albums, openAlbum == nil {
                     albumList
-                } else if tab == .recents, let library, library.count == 0, library.revision > 0 {
+                } else if isSearching, let library, case .search = library.source, library.count == 0 {
+                    message(VideoStudioCopy.noMatches)
+                } else if tab == .recents, let library, library.count == 0, library.revision > 0, library.source == .recents {
                     message(VideoStudioCopy.noPhotosYet)
                 } else {
                     grid
@@ -306,6 +317,75 @@ struct VideoMediaPanel: View {
                     .buttonStyle(.plain)
                 }
             }
+        }
+    }
+
+    /// The search field, with Cancel at its right — the tab row's place.
+    private var searchRow: some View {
+        HStack(spacing: 8) {
+            HStack(spacing: 6) {
+                Image(systemName: "magnifyingglass")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(.white.opacity(0.5))
+                TextField(VideoStudioCopy.searchPrompt, text: $query)
+                    .font(.system(size: 13))
+                    .foregroundStyle(.white)
+                    .textInputAutocapitalization(.never)
+                    .autocorrectionDisabled()
+                    .submitLabel(.search)
+                    .focused($isQueryFocused)
+                    .onSubmit { runSearch(after: .zero) }
+                    .onChange(of: query) { runSearch(after: .milliseconds(350)) }
+            }
+            .padding(.horizontal, 10)
+            .frame(height: VideoMediaPanelMetrics.tabHeight)
+            .background(tabFill(isOn: false))
+            Button {
+                endSearch()
+            } label: {
+                Text(VideoStudioCopy.cancel)
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundStyle(.white)
+                    .fixedSize()
+            }
+            .buttonStyle(.plain)
+        }
+        .padding(.horizontal, VideoMediaPanelMetrics.rowInset)
+    }
+
+    private func startSearch() {
+        model.mediaShowsInVideo = false
+        isSearching = true
+        tab = .recents
+        openAlbum = nil
+        isQueryFocused = true
+    }
+
+    private func endSearch() {
+        searchTask?.cancel()
+        isSearching = false
+        query = ""
+        isQueryFocused = false
+        library?.show(.recents)
+    }
+
+    /// Runs the query a beat after the last keystroke (or at once on
+    /// Search), on the Library's index; the grid lists what it matched.
+    private func runSearch(after delay: Duration) {
+        searchTask?.cancel()
+        let text = query
+        searchTask = Task {
+            if delay > .zero { try? await Task.sleep(for: delay) }
+            guard !Task.isCancelled else { return }
+            if text.trimmingCharacters(in: .whitespaces).isEmpty {
+                library?.show(.recents)
+                return
+            }
+            let ids = await VideoMediaLibrary.searchIDs(
+                text, service: dependencies.searchService, queries: dependencies.libraryQueries
+            )
+            guard !Task.isCancelled else { return }
+            library?.show(.search(ids))
         }
     }
 

@@ -107,6 +107,28 @@ final class VideoMediaLibrary {
         }
     }
 
+    /// The library items a search matches, newest first (FS-12.09 §5): the
+    /// same query language as the Library — "85mm", "ISO 3200", a camera's
+    /// name — through the same `SearchService`, run on the app's index.
+    static func searchIDs(
+        _ text: String,
+        service: SearchService,
+        queries: LibraryQueries
+    ) async -> [String] {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return [] }
+        let resolution = await service.resolve(trimmed)
+        let items: [LibraryGridItem]?
+        if resolution.hasRules {
+            items = try? await queries.gridItems(matching: resolution.query, sort: .dateTakenNewest)
+        } else {
+            var criteria = FilterCriteria()
+            criteria.searchText = resolution.searchText
+            items = try? await queries.gridItems(matching: criteria, sort: .dateTakenNewest)
+        }
+        return items?.map(\.assetId) ?? []
+    }
+
     // MARK: Fetch options (pure, so they are tested)
 
     /// Recents: photos and videos, newest first, and **no fetch limit** — the

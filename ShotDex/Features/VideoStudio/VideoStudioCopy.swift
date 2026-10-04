@@ -120,6 +120,18 @@ enum VideoStudioCopy {
         String(localized: "No photos or videos yet.", table: table, comment: "Video Studio Media panel: Recents when the library is empty")
     }
 
+    static var searchPrompt: String {
+        String(localized: "Camera, lens, 85mm, ISO 3200…", table: table, comment: "Video Studio Media panel: placeholder of the search field — the Library's query language")
+    }
+
+    static var cancel: String {
+        String(localized: "Cancel", table: table, comment: "Video Studio: leaves search")
+    }
+
+    static var noMatches: String {
+        String(localized: "Nothing in your library matches.", table: table, comment: "Video Studio Media panel: a search that found nothing")
+    }
+
     static var select: String {
         String(localized: "Select", table: table, comment: "Video Studio Media panel: starts picking several items to add at once")
     }

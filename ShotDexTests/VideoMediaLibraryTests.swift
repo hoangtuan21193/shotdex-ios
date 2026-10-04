@@ -82,3 +82,31 @@ extension VideoMediaLibraryTests {
         #expect(VideoStudioCopy.itemsInThisVideo(1) == "1 item in this video")
     }
 }
+
+extension VideoMediaLibraryTests {
+    /// AC-12: twenty photos taken at 85mm among others → "85mm" finds
+    /// exactly those twenty, through the Library's own query language.
+    @Test func searchUsesTheLibraryQueryLanguage() async throws {
+        let dependencies = AppDependencies.preview()
+        func row(_ id: String, focal: Double) -> PhotoMetadata {
+            PhotoMetadata(
+                assetId: id, creationDate: 1_700_000_000, modificationDate: 1_700_000_000, mediaType: 1,
+                cameraManufacturer: "Canon", cameraModel: "EOS R6", normalizedCameraModel: "EOS R6",
+                normalizedCameraManufacturer: "Canon", lensManufacturer: nil, lensModel: nil,
+                normalizedLensModel: nil, originalFilename: "\(id).JPG", iso: 400, aperture: 2,
+                shutterSpeedSeconds: 0.005, shutterSpeedDisplay: "1/200", focalLength: focal,
+                focalLengthIn35mm: nil, calculatedEquivalentFocalLength: nil, equivalentFocalLength: focal,
+                sensorFormat: nil, cropFactor: nil, width: 6000, height: 4000, fileSize: nil,
+                latitude: nil, longitude: nil, isFavorite: false, indexedAt: 1_700_000_000,
+                exifStatus: ExifStatus.indexed.rawValue
+            )
+        }
+        for index in 0..<20 { try dependencies.metadataStore.upsert(row("tele-\(index)", focal: 85)) }
+        for index in 0..<12 { try dependencies.metadataStore.upsert(row("wide-\(index)", focal: 35)) }
+        let ids = await VideoMediaLibrary.searchIDs(
+            "85mm", service: dependencies.searchService, queries: dependencies.libraryQueries
+        )
+        #expect(ids.count == 20)
+        #expect(Set(ids) == Set((0..<20).map { "tele-\($0)" }))
+    }
+}
