@@ -343,3 +343,30 @@ extension VideoExportSmokeTests {
         #expect(recipe.codec == .h264)
     }
 }
+
+extension VideoExportSmokeTests {
+    /// FS-12.01 §9, FS-12.10 AC-16: the export says it is SDR Rec. 709 —
+    /// primaries, transfer function and matrix are in the track's format
+    /// description — so players show #808080 as #808080; the grey bars
+    /// still hold 128 in the file.
+    @Test func exportIsTaggedRec709() async throws {
+        let directory = try VideoExportFixtures.makeDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let file = directory.appendingPathComponent("a.mp4")
+        try await VideoExportFixtures.writeVideo(width: 640, height: 360, seconds: 1, to: file)
+        var recipe = VideoProjectRecipe(clips: [VideoExportFixtures.videoClip("a", seconds: 1)])
+        recipe.aspect = .r9x16
+        recipe.background = VideoBackground(colour: OverlayColor(white: 0.5))
+        let service = VideoExportFixtures.service()
+        defer { service.cleanupSession() }
+        let url = try await service.export(
+            recipe: recipe, sources: [recipe.clips[0].id: try await VideoExportFixtures.videoSource(file)], progress: { _ in }
+        )
+        let output = try await VideoExportFixtures.inspect(url)
+        #expect(output.colorPrimaries == kCMFormatDescriptionColorPrimaries_ITU_R_709_2 as String)
+        #expect(output.transferFunction == kCMFormatDescriptionTransferFunction_ITU_R_709_2 as String)
+        #expect(output.yCbCrMatrix == kCMFormatDescriptionYCbCrMatrix_ITU_R_709_2 as String)
+        let frame = try await VideoExportFixtures.frame(of: url, at: 0.5)
+        #expect(abs(Int(frame.bytes[0]) - 128) <= 2)
+    }
+}

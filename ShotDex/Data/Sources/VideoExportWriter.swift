@@ -67,6 +67,14 @@ enum VideoExportWriter {
             AVVideoCodecKey: encoding.codec == .hevc ? AVVideoCodecType.hevc : AVVideoCodecType.h264,
             AVVideoWidthKey: Int(encoding.size.width),
             AVVideoHeightKey: Int(encoding.size.height),
+            // SDR Rec. 709, said in the file: an untagged track is left to
+            // each player's guess, and Photos and QuickTime guessed #808080
+            // ten levels off (FS-12.01 §9).
+            AVVideoColorPropertiesKey: [
+                AVVideoColorPrimariesKey: AVVideoColorPrimaries_ITU_R_709_2,
+                AVVideoTransferFunctionKey: AVVideoTransferFunction_ITU_R_709_2,
+                AVVideoYCbCrMatrixKey: AVVideoYCbCrMatrix_ITU_R_709_2,
+            ],
             AVVideoCompressionPropertiesKey: [
                 AVVideoAverageBitRateKey: encoding.bitrate,
                 AVVideoProfileLevelKey: profile,

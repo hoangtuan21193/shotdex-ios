@@ -120,6 +120,7 @@ với **mọi** preset, và đó là lỗi thật đằng sau triệu chứng ng
 - Ghi: **H.264 hoặc HEVC** theo Video Settings, tại kích thước khung; bitrate = rộng × cao × fps × 0,16 bit (HEVC
   × 0,6) → ~10 Mbps ở 1080p30 H.264 (chốt 2026-10-03, [10 §5](10-video-settings-and-export.md)) + AAC 128k.
   Tiến độ = mốc thời gian / tổng. Cancel dừng đầu đọc.
+- **Nhãn màu:** track video ghi SDR Rec. 709 (primaries, transfer function, matrix ITU-R BT.709) — file không nhãn để mỗi player tự đoán, và Photos/QuickTime đoán lệch #808080 khoảng 10 mức (chốt 2026-10-04, [10 AC-16](10-video-settings-and-export.md)).
 - **Kích thước khung** = tỉ lệ × lớp độ phân giải (cạnh ngắn 720 / 1080 / 2160, cạnh dài trần 3840 — bảng ở
   [10 §5](10-video-settings-and-export.md)) của **đích xuất**: preset đang chọn ([16](16-export-presets.md)) hoặc
   Custom = Video Settings của project. Bản dựng mang kích thước đó; preset không ghi gì vào project.

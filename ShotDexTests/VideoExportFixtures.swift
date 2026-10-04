@@ -226,6 +226,10 @@ enum VideoExportFixtures {
         let audioTrackCount: Int
         let videoSampleCount: Int
         let fileBytes: Int
+        /// The track's colour tags, from its format description.
+        let colorPrimaries: String?
+        let transferFunction: String?
+        let yCbCrMatrix: String?
     }
 
     static func inspect(_ url: URL) async throws -> Output {
@@ -251,7 +255,10 @@ enum VideoExportFixtures {
             codec: formats.first.map(CMFormatDescriptionGetMediaSubType),
             duration: duration, videoTrackDuration: range.duration.seconds,
             estimatedDataRate: dataRate, audioTrackCount: audio.count,
-            videoSampleCount: samples, fileBytes: bytes
+            videoSampleCount: samples, fileBytes: bytes,
+            colorPrimaries: formats.first.flatMap { CMFormatDescriptionGetExtension($0, extensionKey: kCMFormatDescriptionExtension_ColorPrimaries) as? String },
+            transferFunction: formats.first.flatMap { CMFormatDescriptionGetExtension($0, extensionKey: kCMFormatDescriptionExtension_TransferFunction) as? String },
+            yCbCrMatrix: formats.first.flatMap { CMFormatDescriptionGetExtension($0, extensionKey: kCMFormatDescriptionExtension_YCbCrMatrix) as? String }
         )
     }
 
