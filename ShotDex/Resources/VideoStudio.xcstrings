@@ -169,6 +169,10 @@
       "comment": "Video Studio Media panel tab: what of the library is in this video, and how many uses",
       "extractionState": "manual"
     },
+    "Insert at Playhead": {
+      "comment": "Video Studio Media panel: VoiceOver action — adds the item at the playhead, as a tap does",
+      "extractionState": "manual"
+    },
     "Keep Changes": {
       "comment": "Video Studio: the ✓ that ends a selection keeping what it changed",
       "extractionState": "manual"
@@ -269,6 +273,10 @@
       "comment": "Video Studio In Video row: a library photo laid over the video as a sticker",
       "extractionState": "manual"
     },
+    "Photo, %@": {
+      "comment": "Video Studio Media panel: VoiceOver label of a photo cell — when it was taken",
+      "extractionState": "manual"
+    },
     "Playhead at %@ of %@": {
       "comment": "Video Studio transport: VoiceOver label for the phone read-out — playhead, then the project's length",
       "extractionState": "manual"
@@ -363,6 +371,10 @@
     },
     "Video · clip %lld": {
       "comment": "Video Studio In Video row: a video clip and its place on the track",
+      "extractionState": "manual"
+    },
+    "Video, %@": {
+      "comment": "Video Studio Media panel: VoiceOver label of a video cell — its length",
       "extractionState": "manual"
     },
     "Waiting for iCloud": {

@@ -77,3 +77,15 @@ extension MediaUsageTests {
         #expect(rows[1].contains(8.4) && !rows[3].contains(8.4))
     }
 }
+
+extension MediaUsageTests {
+    /// AC-14 (label): a used 0:06 video reads "Video, 0:06, in this video";
+    /// an unused photo reads its date only.
+    @Test func accessibilityLabelSaysInThisVideo() {
+        #expect(VideoMediaPoolFormat.mediaCellLabel(isVideo: true, duration: 6.2, name: "Oct 1", uses: 1)
+            == "Video, 0:06, in this video")
+        #expect(VideoMediaPoolFormat.mediaCellLabel(isVideo: false, duration: 0, name: "Oct 1 at 18:36", uses: 0)
+            == "Photo, Oct 1 at 18:36")
+        #expect(VideoStudioCopy.insertAtPlayhead == "Insert at Playhead")
+    }
+}

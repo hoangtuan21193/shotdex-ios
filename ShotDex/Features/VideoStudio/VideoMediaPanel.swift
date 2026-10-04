@@ -284,6 +284,11 @@ struct VideoMediaPanel: View {
                         insert(asset)
                     }
                 },
+                onInsert: { insert($0) },
+                onSelect: { asset in
+                    if !model.isSelectingMedia { model.toggleMediaSelecting() }
+                    model.toggleMediaPick(VideoMediaPick(asset))
+                },
                 onDragBegan: { asset, location, origin, image in
                     model.beginMediaDrag(VideoMediaPick(asset), at: location, from: origin, image: image)
                 },

@@ -495,6 +495,16 @@ enum VideoMediaPoolFormat {
         return String(format: "%d:%02d", total / 60, total % 60)
     }
 
+    /// A Media cell, for VoiceOver (FS-12.09 §7): "Video, 0:06, in this
+    /// video" — a video by its length, a photo by when it was taken, and
+    /// whether it is already used.
+    static func mediaCellLabel(isVideo: Bool, duration: Double, name: String, uses: Int) -> String {
+        let base = isVideo
+            ? String(localized: "Video, \(Self.duration(duration))", table: VideoStudioCopy.table, comment: "Video Studio Media panel: VoiceOver label of a video cell — its length")
+            : String(localized: "Photo, \(name)", table: VideoStudioCopy.table, comment: "Video Studio Media panel: VoiceOver label of a photo cell — when it was taken")
+        return uses > 0 ? "\(base), \(VideoStudioCopy.inThisVideo)" : base
+    }
+
     static func accessibilityLabel(for asset: PHAsset) -> String {
         asset.mediaType == .video
             ? String(

@@ -136,6 +136,10 @@ enum VideoStudioCopy {
         String(localized: "Drop between clips · back on the grid cancels", table: table, comment: "Video Studio Media panel: under its name while an item is being dragged")
     }
 
+    static var insertAtPlayhead: String {
+        String(localized: "Insert at Playhead", table: table, comment: "Video Studio Media panel: VoiceOver action — adds the item at the playhead, as a tap does")
+    }
+
     static var select: String {
         String(localized: "Select", table: table, comment: "Video Studio Media panel: starts picking several items to add at once")
     }

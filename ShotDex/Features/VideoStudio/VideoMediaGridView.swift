@@ -23,6 +23,10 @@ struct VideoMediaGridView: UIViewRepresentable {
     var pickNumbers: [String: Int] = [:]
     var bottomInset: CGFloat = 0
     let onTap: (PHAsset) -> Void
+    /// VoiceOver's Insert at Playhead and Select actions (§7) — the
+    /// gestures' stand-ins.
+    var onInsert: ((PHAsset) -> Void)?
+    var onSelect: ((PHAsset) -> Void)?
     /// The hold-drag (§5), in window coordinates: lifted from a cell…
     var onDragBegan: ((PHAsset, CGPoint, CGRect, UIImage?) -> Void)?
     /// …moved — true when the seam under the finger changed…
@@ -131,6 +135,10 @@ struct VideoMediaGridView: UIViewRepresentable {
                 return cell
             }
             cell.show(asset, index: indexPath.item)
+            cell.actions = (
+                insert: { [weak self] in self?.parent.onInsert?(asset) },
+                select: { [weak self] in self?.parent.onSelect?(asset) }
+            )
             cell.mark(uses: parent.uses[asset.localIdentifier] ?? 0)
             cell.markPick(parent.pickNumbers[asset.localIdentifier])
             let id = asset.localIdentifier
@@ -308,7 +316,11 @@ final class VideoMediaGridCell: UICollectionViewCell {
     private let durationLabel = UILabel()
     /// ✓ on a white 19pt disc, or "×2" on a white capsule.
     private let badge = UILabel()
-    private var baseAccessibilityLabel: String?
+    private var isVideo = false
+    private var duration: Double = 0
+    private var name = ""
+    /// What VoiceOver's two actions do for this cell.
+    var actions: (insert: () -> Void, select: () -> Void)?
     /// Select's number, top leading, on a white disc.
     private let pickNumber = UILabel()
     var assetID: String?
@@ -417,9 +429,21 @@ final class VideoMediaGridCell: UICollectionViewCell {
     func show(_ asset: PHAsset, index: Int) {
         assetID = asset.localIdentifier
         durationLabel.text = asset.mediaType == .video ? VideoMediaPoolFormat.duration(asset.duration) : nil
-        baseAccessibilityLabel = VideoMediaPoolFormat.accessibilityLabel(for: asset)
-        accessibilityLabel = baseAccessibilityLabel
+        isVideo = asset.mediaType == .video
+        duration = asset.duration
+        name = VideoMediaPoolFormat.name(for: asset)
+        accessibilityLabel = VideoMediaPoolFormat.mediaCellLabel(isVideo: isVideo, duration: duration, name: name, uses: 0)
         accessibilityIdentifier = "videoMediaItem.\(index)"
+        accessibilityCustomActions = [
+            UIAccessibilityCustomAction(name: VideoStudioCopy.insertAtPlayhead) { [weak self] _ in
+                self?.actions?.insert()
+                return true
+            },
+            UIAccessibilityCustomAction(name: VideoStudioCopy.select) { [weak self] _ in
+                self?.actions?.select()
+                return true
+            },
+        ]
     }
 
     /// Picked in Select: a 2pt white border and its number (FS-12.09 §4).
@@ -446,8 +470,6 @@ final class VideoMediaGridCell: UICollectionViewCell {
             badge.attributedText = nil
             badge.text = "  ×\(count)  "
         }
-        accessibilityLabel = uses > 0
-            ? [baseAccessibilityLabel, VideoStudioCopy.inThisVideo].compactMap { $0 }.joined(separator: ", ")
-            : baseAccessibilityLabel
+        accessibilityLabel = VideoMediaPoolFormat.mediaCellLabel(isVideo: isVideo, duration: duration, name: name, uses: uses)
     }
 }
