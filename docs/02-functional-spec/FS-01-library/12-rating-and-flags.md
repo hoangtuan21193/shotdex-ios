@@ -35,7 +35,9 @@ việc này bằng P/X và 1–5. Trên ShotDex hôm nay phải mở Compare the
 - Nhãn màu kiểu Lightroom — không ai đòi. Thêm vào là trục thứ tư.
 - Cờ trong Compare — chạm ở Compare chỉ có một nghĩa là đánh dấu xoá ([FS-01.08 §1](08-compare.md)).
 - Câu tìm kiếm kiểu "ảnh 5 sao" — v1 dùng bộ lọc. Parser thêm sau, không đổi dữ liệu.
-- Ghi sao vào file (XMP) — app không ghi đè file gốc.
+- Ghi sao vào **file ảnh** (XMP nhúng) — app không ghi đè file gốc. Ảnh file (thư mục, ổ, server) có sao, cờ, keyword ghi
+  ra **sidecar `.xmp`** cạnh mọi bản sao online, trễ 1 giây sau thay đổi cuối ([FS-19.02 §5](../FS-19-photo-sources/02-identity-and-sidecars.md));
+  sao của ảnh chỉ-file nằm ở bảng Dấu ảnh, không qua bảng chờ hay Photos.
 
 ## 4. Dữ liệu
 

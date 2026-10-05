@@ -1,4 +1,5 @@
 import Foundation
+import GRDB
 import ImageIO
 import Testing
 @testable import ShotDex
@@ -107,5 +108,54 @@ import Testing
         five.rating = .set(5)
         let rewritten = XMPPatcher.apply(five, to: elementForm)
         #expect(rewritten == elementForm.replacingOccurrences(of: "<xmp:Rating>2<", with: "<xmp:Rating>5<"))
+    }
+}
+
+extension SidecarWriterTests {
+    /// AC-19: one photo with two identical copies — "2026 Japan" and T7, both
+    /// online, sidecars on. ★4 set in ShotDex reaches a `DSC04500.xmp` beside
+    /// each copy within 2 s; the image files are the same bytes as before,
+    /// and nothing waits to go to Photos (a file photo has no Photos copy).
+    @MainActor
+    @Test func writesEveryOnlineCopyNeverTheImage() async throws {
+        let base = FileManager.default.temporaryDirectory.appendingPathComponent("Write-\(UUID().uuidString)", isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: base) }
+        let japan = base.appendingPathComponent("2026 Japan"), t7 = base.appendingPathComponent("T7")
+        for folder in [japan, t7] { try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true) }
+        var options = MetadataFixture.Options()
+        options.starRating = nil
+        let bytes = try MetadataFixture.encode(.jpeg, options: options)
+        for folder in [japan, t7] { try bytes.write(to: folder.appendingPathComponent("DSC04500.JPG")) }
+        let before = try FolderSourceIndexTests.fingerprint(base)
+
+        let database = try AppDatabase.makeEmpty()
+        let sources = SourceStore(database: database)
+        let roots = [try sources.addFolder(name: "2026 Japan", bookmark: Data(), includesSubfolders: true, pairsRawAndJpeg: true): japan,
+                     try sources.addFolder(name: "T7 RAW Archive", bookmark: Data(), includesSubfolders: true, pairsRawAndJpeg: true, kind: "drive"): t7]
+        let indexer = FolderSourceIndexer(database: database, composer: FolderSourceIndexTests.composer)
+        for (id, root) in roots { _ = try indexer.index(sourceId: id, root: root, includesSubfolders: true, pairsRawAndJpeg: true) }
+        let fileURL: @Sendable (String, String) -> URL? = { sourceId, path in roots[sourceId]?.appendingPathComponent(path) }
+        _ = try IdentityMergePass(database: database, fileURL: fileURL).run()
+        let photoId = try #require(try await database.reader.read { db in try String.fetchOne(db, sql: "SELECT id FROM photos") })
+
+        let queue = SidecarWriteQueue(writer: SidecarWriter(database: database, fileURL: fileURL))
+        let marks = PhotoMarks(store: PhotoMarksStore(database: database), sidecarQueue: queue)
+        let started = Date()
+        await marks.setRating(4, ids: [photoId])
+        let sidecars = [japan, t7].map { $0.appendingPathComponent("DSC04500.xmp") }
+        while sidecars.contains(where: { SidecarReader.read(sidecarAt: $0)?.rating != 4 }), Date().timeIntervalSince(started) < 2 {
+            try await Task.sleep(for: .milliseconds(50))
+        }
+        for sidecar in sidecars {
+            #expect(SidecarReader.read(sidecarAt: sidecar)?.rating == 4, "\(sidecar.path)")
+        }
+        #expect(marks.rating(for: photoId) == 4)
+        let after = try FolderSourceIndexTests.fingerprint(base).filter { !$0.key.hasSuffix(".xmp") }
+        #expect(after == before)
+        let pending = try await database.reader.read { db in try Int.fetchOne(db, sql: "SELECT COUNT(*) FROM pending_photo_rating") }
+        #expect(pending == 0)
+        var criteria = FilterCriteria()
+        criteria.ratingFilter = .atLeast(4)
+        #expect(try LibraryQueries(database: database).count(matching: criteria) == 1)
     }
 }

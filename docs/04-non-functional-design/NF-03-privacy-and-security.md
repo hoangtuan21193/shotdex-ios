@@ -40,6 +40,9 @@ Danh tính là **khoá chứng thực của bản cài** — gỡ app là mất.
 - Tải ảnh **về** từ server ([FS-17](../02-functional-spec/FS-17-import-from-server/README.md)) chỉ nhận dữ liệu; không
   gửi gì ngoài lệnh đăng nhập và đọc file.
 - SFTP xác minh host key lần đầu và **chặn** khi nó đổi; WebDAV HTTPS làm y hệt với chứng chỉ tự ký. SMB không có cơ chế tương đương — ghi rõ ở FS-15.
+- **Sidecar `.xmp`** ([FS-19.02 §5](../02-functional-spec/FS-19-photo-sources/02-identity-and-sidecars.md)): ShotDex ghi
+  sao, cờ, keyword, title, caption, recipe vào file `.xmp` cạnh bản sao ở thư mục, ổ hay server **của người dùng** — không
+  đi đâu khác, không bao giờ ghi vào file ảnh, mọi thẻ của app khác giữ nguyên. Tắt bằng Read and Write .xmp Sidecars.
 - Upload **không** gỡ vị trí (lựa chọn metadata của FS-08.06 là luật của chia sẻ và xuất): đây là bản lưu trữ của chính người
   dùng, gỡ toạ độ là làm hỏng bản gốc.
 

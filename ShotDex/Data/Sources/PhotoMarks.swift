@@ -53,6 +53,9 @@ final class PhotoMarks {
     /// `PHAsset.rating` by id, for the "before" of an undo when the caller
     /// did not pass it. Empty below iOS 27.
     @ObservationIgnored private let readPhotosRatings: @Sendable ([String]) -> [String: Int]
+    /// Where a file photo's stars go after its row (FS-19.02 §5); nil writes
+    /// no sidecars.
+    @ObservationIgnored private let sidecarQueue: SidecarWriteQueue?
     @ObservationIgnored private var hasLoaded = false
 
     /// Set when a write to Photos failed; the host shows "Couldn't save
@@ -65,8 +68,10 @@ final class PhotoMarks {
         store: PhotoMarksStore,
         metadataStore: MetadataStore? = nil,
         ratingWriter: (any PhotoPropertyWriting)? = nil,
-        readPhotosRatings: @escaping @Sendable ([String]) -> [String: Int] = { _ in [:] }
+        readPhotosRatings: @escaping @Sendable ([String]) -> [String: Int] = { _ in [:] },
+        sidecarQueue: SidecarWriteQueue? = nil
     ) {
+        self.sidecarQueue = sidecarQueue
         self.store = store
         self.metadataStore = metadataStore
         self.ratingWriter = ratingWriter
@@ -136,6 +141,8 @@ final class PhotoMarks {
         var previous: [String: Int] = [:]
         for id in ids { previous[id] = self.rating(for: id, photosRating: known[id]) }
         let change = MarkChange(kind: .rating(previous: previous))
+        let ids = await setFileRatings(ids.reduce(into: [:]) { $0[$1] = rating })
+        guard !ids.isEmpty else { return change }
         if ratingWriter != nil {
             await writeToPhotos(ids.reduce(into: [:]) { $0[$1] = rating }, previous: previous)
             return change
@@ -151,6 +158,28 @@ final class PhotoMarks {
             }
         }.value
         return change
+    }
+
+    /// Stars of photos with a file copy go to their own row and on to the
+    /// sidecars beside the files; returns the ids that also go to Photos —
+    /// every id with a Photos copy (FS-19.05 §2). A file-only photo has no
+    /// asset, so it never reaches the pending table or the Photos write.
+    private func setFileRatings(_ ratings: [String: Int]) async -> [String] {
+        let userMarks = PhotoUserMarksStore(database: store.database)
+        let ids = Array(ratings.keys)
+        let kinds = await Task.detached(priority: .userInitiated) {
+            (try? userMarks.copyKinds(ids: ids)) ?? (files: [], photos: [])
+        }.value
+        let files = ratings.filter { kinds.files.contains($0.key) }
+        if !files.isEmpty {
+            for (id, rating) in files { fileRatings[id] = rating }
+            version += 1
+            await Task.detached(priority: .userInitiated) {
+                try? userMarks.setRatings(files)
+            }.value
+            await sidecarQueue?.schedule(Array(files.keys))
+        }
+        return ids.filter { !kinds.files.contains($0) || kinds.photos.contains($0) }
     }
 
     /// Sets (or with `nil` clears) the flag of every id. Pick on a Rejected
@@ -215,20 +244,10 @@ final class PhotoMarks {
     func undo(_ change: MarkChange) async {
         let store = store
         switch change.kind {
-        case .rating(let previous) where ratingWriter != nil:
-            var current: [String: Int] = [:]
-            for id in previous.keys { current[id] = rating(for: id) }
-            await writeToPhotos(previous, previous: current)
-        case .rating(let previous):
-            var restore: [String: Int?] = [:]
-            for (id, rating) in previous {
-                pendingRatings[id] = rating == 0 ? nil : rating
-                restore[id] = rating == 0 ? .some(nil) : .some(rating)
-            }
-            version += 1
-            await Task.detached(priority: .userInitiated) {
-                try? store.restorePendingRatings(restore)
-            }.value
+        case .rating(let all):
+            let photosIds = Set(await setFileRatings(all))
+            let previous = all.filter { photosIds.contains($0.key) }
+            if !previous.isEmpty { await undoRating(previous) }
         case .flag(let previous):
             for (id, flag) in previous { flags[id] = flag }
             version += 1
@@ -236,6 +255,26 @@ final class PhotoMarks {
                 try? store.restoreFlags(previous)
             }.value
         }
+    }
+
+    /// Undo of a rating on photos that have a Photos copy.
+    private func undoRating(_ previous: [String: Int]) async {
+        if ratingWriter != nil {
+            var current: [String: Int] = [:]
+            for id in previous.keys { current[id] = rating(for: id) }
+            await writeToPhotos(previous, previous: current)
+            return
+        }
+        var restore: [String: Int?] = [:]
+        for (id, rating) in previous {
+            pendingRatings[id] = rating == 0 ? nil : rating
+            restore[id] = rating == 0 ? .some(nil) : .some(rating)
+        }
+        version += 1
+        let store = store
+        await Task.detached(priority: .userInitiated) {
+            try? store.restorePendingRatings(restore)
+        }.value
     }
 
     /// One key or menu row on `ids` — the viewer, the selection and the

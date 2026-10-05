@@ -27,6 +27,41 @@ struct PhotoUserMarksStore: Sendable {
         }
     }
 
+    /// Which of `ids` have a file copy and which a Photos copy. A photo with
+    /// a file copy keeps its stars here; one with a Photos copy also sends
+    /// them to Photos (FS-19.05 §2). An id with no copy row at all is a
+    /// Photos asset the copy table has not caught up with.
+    func copyKinds(ids: [String]) throws -> (files: Set<String>, photos: Set<String>) {
+        guard !ids.isEmpty else { return ([], []) }
+        return try database.reader.read { db in
+            var files = Set<String>(), photos = Set<String>()
+            for chunk in stride(from: 0, to: ids.count, by: 500).map({ Array(ids[$0..<min($0 + 500, ids.count)]) }) {
+                let rows = try Row.fetchAll(db, sql: "SELECT DISTINCT photoId, kind FROM photo_copies WHERE photoId IN (\(databaseQuestionMarks(count: chunk.count)))",
+                                            arguments: StatementArguments(chunk))
+                for row in rows {
+                    let kind: String = row["kind"]
+                    if kind == "photos" { photos.insert(row["photoId"]) } else { files.insert(row["photoId"]) }
+                }
+            }
+            return (files, photos)
+        }
+    }
+
+    /// Sets the stars of file photos, each as of `date`. 0 is kept as 0 — a
+    /// sidecar that said ★3 has to be told the stars went.
+    func setRatings(_ ratings: [String: Int], at date: Date = Date()) throws {
+        guard !ratings.isEmpty else { return }
+        let stamp = Int(date.timeIntervalSince1970)
+        try database.writer.write { db in
+            for (id, rating) in ratings {
+                try db.execute(sql: """
+                    INSERT INTO photo_user_marks (photoId, rating, ratingAt) VALUES (?, ?, ?)
+                    ON CONFLICT(photoId) DO UPDATE SET rating = excluded.rating, ratingAt = excluded.ratingAt
+                    """, arguments: [id, StarRating.clamped(rating), stamp])
+            }
+        }
+    }
+
     /// Takes what a sidecar written at `at` says into ShotDex: each field
     /// only when the sidecar changed after ShotDex last did; keywords are a
     /// set, so the sidecar's join the photo's. A Reject in the sidecar is the
