@@ -689,10 +689,9 @@ struct VideoStudioScreen: View {
             .accessibilityLabel(Text(VideoStudioCopy.resizeTimeline))
             .accessibilityHint(Text("Drag up for a taller timeline, down for a bigger preview", comment: "Hint for the Video Studio timeline divider"))
             .accessibilityAdjustableAction { direction in
-                let range = VideoStudioMetrics.timelineExtraRange
-                let step: CGFloat = 40
-                let next = CGFloat(timelineExtraHeight) + (direction == .increment ? step : -step)
-                timelineExtraHeight = Double(min(max(range.lowerBound, next), range.upperBound))
+                timelineExtraHeight = Double(VideoStudioMetrics.steppedTimelineExtra(
+                    CGFloat(timelineExtraHeight), increment: direction == .increment
+                ))
                 UserDefaults.standard.set(
                     timelineExtraHeight,
                     forKey: SettingsKeys.videoTimelineExtraHeight

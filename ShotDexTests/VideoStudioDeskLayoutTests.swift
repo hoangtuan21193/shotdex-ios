@@ -49,8 +49,10 @@ struct VideoStudioDeskLayoutTests {
         #expect(headed.video == plain.video)
         #expect(headed.overlay == plain.overlay)
         #expect(headed.music == plain.music)
-        #expect(headed.timelineContentHeight(overlayLanes: 2, musicLanes: 1)
-            == plain.timelineContentHeight(overlayLanes: 2, musicLanes: 1))
+        // The rows stack the same; only what is above the ruler differs
+        // (the inner display's ruler starts at the timeline's top).
+        #expect(headed.laneContentHeight(overlayLanes: 2, musicLanes: 1)
+            == plain.laneContentHeight(overlayLanes: 2, musicLanes: 1))
     }
 
     // MARK: Timecode
@@ -147,6 +149,30 @@ struct VideoStudioDeskLayoutTests {
         #expect(abs(playStart - 362.5) < 0.5)
         // Every control fits between the insets with the timecode beside.
         #expect(inset + width(5) < playStart && playStart + width(6) < 641.7)
+    }
+
+    /// Task 17 (FS-12.03b §4): the divider gives the timeline 0…400pt more,
+    /// and VoiceOver steps it by 40 without leaving that range.
+    @Test func theDividerStepsBy40WithinItsRange() {
+        #expect(VideoStudioMetrics.steppedTimelineExtra(0, increment: true) == 40)
+        #expect(VideoStudioMetrics.steppedTimelineExtra(40, increment: false) == 0)
+        #expect(VideoStudioMetrics.steppedTimelineExtra(0, increment: false) == 0)
+        #expect(VideoStudioMetrics.steppedTimelineExtra(380, increment: true) == 400)
+        #expect(VideoStudioMetrics.steppedTimelineExtra(400, increment: true) == 400)
+    }
+
+    /// Task 17 (FS-12.03b §4, board DI1_Main): on the Duo's inner display
+    /// the ruler (33) runs from the timeline's top and the lanes start 4
+    /// under it — T1 at 462, V1 at 499, A1 at 568 for a timeline at 425 —
+    /// in the 100pt badge column; the cover keeps its own spacing.
+    @Test func theDuoInnerLanesStart37UnderTheTimelinesTop() {
+        let lanes = VideoStudioMetrics.Lanes.for(.duoInner)
+        let top: CGFloat = 425 + lanes.topPadding + lanes.ruler + lanes.rulerGap
+        #expect(lanes.ruler == 33 && lanes.gutter == 100)
+        #expect(top + lanes.overlayLaneTop(0) == 462)
+        #expect(top + lanes.videoLaneTop(overlayLanes: 1) == 499)
+        #expect(top + lanes.musicLaneTop(0, overlayLanes: 1) == 568)
+        #expect(VideoStudioMetrics.Lanes.for(.duoCover).topPadding == VideoStudioMetrics.timelineTopPadding)
     }
 
     /// FS-12.03b AC-3 (contents): the iPad splits the fifteen transport

@@ -489,6 +489,15 @@ enum VideoStudioMetrics {
     /// them, not to let them lose one.
     static let timelineExtraRange: ClosedRange<CGFloat> = 0...400
 
+    /// VoiceOver's step on the divider (FS-12.03b §4): 40pt a swipe, kept
+    /// inside `timelineExtraRange`.
+    static let timelineExtraStep: CGFloat = 40
+
+    static func steppedTimelineExtra(_ current: CGFloat, increment: Bool) -> CGFloat {
+        let next = current + (increment ? timelineExtraStep : -timelineExtraStep)
+        return min(max(timelineExtraRange.lowerBound, next), timelineExtraRange.upperBound)
+    }
+
     /// The phone's lane geometry, kept as a free function for the layout
     /// tests and for callers that have no width to hand.
     static func timelineContentHeight(overlayLanes: Int, musicLanes: Int) -> CGFloat {
@@ -600,9 +609,13 @@ enum VideoStudioMetrics {
             case .phone, .duoCover:
                 return .duo
             case .duoInner:
+                // The ruler from the timeline's top, lanes 4 under it
+                // (board DI1_Main: T1 at 425 + 37).
                 var lanes = Lanes.duo
                 lanes.gutter = badgeColumnWidth
                 lanes.gutterStyle = .badges
+                lanes.topPadding = 0
+                lanes.rulerGap = 4
                 return lanes
             case .iPadLandscape:
                 return .desk
