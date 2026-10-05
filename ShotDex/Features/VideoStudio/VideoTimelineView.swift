@@ -257,7 +257,7 @@ struct VideoTimelineView: View {
             }
             .allowsHitTesting(false)
             .accessibilityElement(children: .ignore)
-            .accessibilityLabel(Text(VideoStudioCopy.beatSnapPill(beat.number, at: beat.time, moved: beat.time - origin)))
+            .accessibilityLabel(Text(VideoStudioCopy.beatSnapPillSpoken(beat.number, at: beat.time, moved: beat.time - origin)))
             .accessibilityIdentifier("beatSnapPill")
         }
     }

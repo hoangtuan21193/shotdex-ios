@@ -100,7 +100,7 @@
   },
   {
    "action": "tap",
-   "label": "Snap clips to beats"
+   "label": "Snap to beats"
   },
   {
    "action": "wait",
@@ -177,6 +177,23 @@
   {
    "action": "tap",
    "label": "Video clip, from second 3 to 9"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "tap",
+   "label": "itemCommand.trim"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "dump",
+   "name": "25-F2_IL_BeatSnap",
+   "text": "snapshot"
   },
   {
    "action": "wait",

@@ -17,6 +17,10 @@
       "comment": "Video Projects: a draft's subtitle — when it was edited, then how many clips",
       "extractionState": "manual"
     },
+    "%@ · %lld BPM": {
+      "comment": "Video Studio beats card on the Duo cover: the track's name and tempo — Morning Drive · 96 BPM",
+      "extractionState": "manual"
+    },
     "%@%lld ms": {
       "comment": "Video Studio beats: the Offset of the beat grid in milliseconds — +50 ms",
       "extractionState": "manual"
@@ -46,6 +50,30 @@
                 "stringUnit": {
                   "state": "translated",
                   "value": "%lld Clips"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "%lld beats marked on %@": {
+      "comment": "Video Studio beats card on the Duo cover: how many beats are on the bed's lane — 30 beats marked on A1 (plural)",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld beat marked on %@"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld beats marked on %@"
                 }
               }
             }
@@ -485,6 +513,14 @@
       "comment": "Video Studio beats: the pill over the ruler while a clip edge sticks to a beat — Beat 14 · 0:08.75 · −0.45s",
       "extractionState": "manual"
     },
+    "Beat %lld, %@, minus %@ seconds": {
+      "comment": "Video Studio beats: VoiceOver reading of the snap pill — Beat 14, 0:08.75, minus 0.45 seconds",
+      "extractionState": "manual"
+    },
+    "Beat %lld, %@, plus %@ seconds": {
+      "comment": "Video Studio beats: VoiceOver reading of the snap pill — Beat 14, 0:08.75, plus 0.45 seconds",
+      "extractionState": "manual"
+    },
     "Beats": {
       "comment": "Video Studio: the music command that marks a song's beats",
       "extractionState": "manual"
@@ -643,6 +679,10 @@
     },
     "Every Beat": {
       "comment": "Video Studio beats: snap to every beat of the bar",
+      "extractionState": "manual"
+    },
+    "Every cut moves to the nearest bar. One undo.": {
+      "comment": "Video Studio beats on the Duo cover: under Cut Clips to Beat — what it does, short",
       "extractionState": "manual"
     },
     "Everything in this look applies to video.": {
@@ -1089,6 +1129,10 @@
       "comment": "Video Studio beats card: under No steady beat — why Snap and Cut to Beat are dimmed",
       "extractionState": "manual"
     },
+    "Snap to beats": {
+      "comment": "Video Studio iPad: the switch that makes clip edges and lengths stick to the music's beats",
+      "extractionState": "manual"
+    },
     "Speed": {
       "comment": "Video Studio clip panel: label of the playback-rate chips",
       "extractionState": "manual"
@@ -1183,6 +1227,10 @@
     },
     "clips' own looks": {
       "comment": "Video Studio Save as Look: the looks single clips have, which stay in the video",
+      "extractionState": "manual"
+    },
+    "detected": {
+      "comment": "Video Studio iPad clip inspector: after the tempo — 96 BPM · 4/4 detected",
       "extractionState": "manual"
     },
     "freeze": {

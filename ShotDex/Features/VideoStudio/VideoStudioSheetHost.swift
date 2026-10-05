@@ -592,6 +592,12 @@ struct VideoStudioSheetHost: View {
                         id: \.self
                     ) { section in
                         clipSection(section, clip)
+                        // While a bed snaps, the iPad's clip inspector says
+                        // so under the clip's length controls (F2_IL).
+                        if isDesk, section == (clip.kind == .video ? .volume : .duration),
+                           let bed = model.snapSource {
+                            VideoBeatsPanel(model: model, music: bed, isDesk: true, isClipSection: true)
+                        }
                     }
                 }
                 .padding(.bottom, 8)

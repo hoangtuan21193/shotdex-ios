@@ -17,3 +17,16 @@ extension EnvironmentValues {
         set { self[VideoLaneMetricsKey.self] = newValue }
     }
 }
+
+/// The window class the studio is laid out for, for the panels whose rows
+/// differ on one device only — the Duo cover's Beats (FS-12.12 §3).
+private struct VideoStudioWindowClassKey: EnvironmentKey {
+    static let defaultValue: VideoStudioWindowClass? = nil
+}
+
+extension EnvironmentValues {
+    var videoStudioWindowClass: VideoStudioWindowClass? {
+        get { self[VideoStudioWindowClassKey.self] }
+        set { self[VideoStudioWindowClassKey.self] = newValue }
+    }
+}

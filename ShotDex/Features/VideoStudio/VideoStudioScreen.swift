@@ -395,6 +395,7 @@ struct VideoStudioScreen: View {
         }
         .environment(\.videoMediaGrid, VideoMediaGridMetrics.for(windowClass))
         .environment(\.videoLookPanelStyle, VideoLookPanelStyle.for(windowClass))
+        .environment(\.videoStudioWindowClass, windowClass)
         .onAppear { currentWindowClass = windowClass }
         .onChange(of: windowClass) { _, new in currentWindowClass = new }
     }

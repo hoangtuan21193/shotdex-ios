@@ -12,6 +12,16 @@ extension VideoStudioCopy {
         String(localized: "\(count) beats marked on \(lane) · found on this \(device)", table: table, comment: "Video Studio beats card: how many beats are on the bed's lane, and that they were found on this device, not online — 30 beats marked on A1 · found on this iPhone (plural)")
     }
 
+    /// The Duo cover's card (F2_DC_Beats): "Morning Drive · 96 BPM".
+    static func coverBeatsTitle(_ name: String, bpm: Double) -> String {
+        String(localized: "\(name) · \(Int(bpm.rounded())) BPM", table: table, comment: "Video Studio beats card on the Duo cover: the track's name and tempo — Morning Drive · 96 BPM")
+    }
+
+    /// The cover's shorter detail: "30 beats marked on A1".
+    static func beatsMarkedShort(_ count: Int, lane: String) -> String {
+        String(localized: "\(count) beats marked on \(lane)", table: table, comment: "Video Studio beats card on the Duo cover: how many beats are on the bed's lane — 30 beats marked on A1 (plural)")
+    }
+
     static var findingBeats: String {
         String(localized: "Finding beats…", table: table, comment: "Video Studio beats card: the track is being analysed on the device")
     }
@@ -86,6 +96,11 @@ extension VideoStudioCopy {
         String(localized: "Moves every cut to the nearest bar. Photos stretch, videos trim. One undo.", table: table, comment: "Video Studio beats: under Cut Clips to Beat — what it does")
     }
 
+    /// The cover's shorter line under the button (F2_DC_Beats).
+    static var cutToBeatExplainerShort: String {
+        String(localized: "Every cut moves to the nearest bar. One undo.", table: table, comment: "Video Studio beats on the Duo cover: under Cut Clips to Beat — what it does, short")
+    }
+
     static var photosStretchVideosTrim: String {
         String(localized: "Photos stretch, videos trim", table: table, comment: "Video Studio beats: in the Cut to Beat preview — how the clips reach their bars")
     }
@@ -117,5 +132,23 @@ extension VideoStudioCopy {
     static func cutShift(_ seconds: Double) -> String {
         let sign = seconds >= 0 ? "+" : "−"
         return sign + String(format: "%.1fs", abs(seconds))
+    }
+
+    static var detected: String {
+        String(localized: "detected", table: table, comment: "Video Studio iPad clip inspector: after the tempo — 96 BPM · 4/4 detected")
+    }
+
+    /// VoiceOver's reading of the snap pill: "Beat 14, 0:08.75, minus 0.45
+    /// seconds".
+    static func beatSnapPillSpoken(_ number: Int, at time: Double, moved: Double) -> String {
+        let amount = String(format: "%.2f", abs(moved))
+        return moved < 0
+            ? String(localized: "Beat \(number), \(beatTime(time)), minus \(amount) seconds", table: table, comment: "Video Studio beats: VoiceOver reading of the snap pill — Beat 14, 0:08.75, minus 0.45 seconds")
+            : String(localized: "Beat \(number), \(beatTime(time)), plus \(amount) seconds", table: table, comment: "Video Studio beats: VoiceOver reading of the snap pill — Beat 14, 0:08.75, plus 0.45 seconds")
+    }
+
+    /// The iPad's shorter label for the same switch (F2_IL).
+    static var snapToBeats: String {
+        String(localized: "Snap to beats", table: table, comment: "Video Studio iPad: the switch that makes clip edges and lengths stick to the music's beats")
     }
 }
