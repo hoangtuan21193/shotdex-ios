@@ -19,12 +19,13 @@
     "%@ — coming soon" : {
 
     },
-    "%@ · %@" : {
+    "%@ — iOS %@ can't read RAW files from this camera yet. You can still view the preview, but you can't edit the RAW." : {
+      "comment" : "Viewer card for a RAW iOS can't read: the camera's name, then the iOS version",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "%1$@ · %2$@"
+            "value" : "%1$@ — iOS %2$@ can't read RAW files from this camera yet. You can still view the preview, but you can't edit the RAW."
           }
         }
       }
@@ -89,6 +90,20 @@
     "%@ already exists on the server." : {
       "comment" : "WebDAV: move refused because the destination exists"
     },
+    "%@ and %lld more" : {
+      "comment" : "Failed photo names, cut short",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ and %2$lld more"
+          }
+        }
+      }
+    },
+    "%@ and longer" : {
+      "comment" : "Insights: the longest angle-of-view group, e.g. 300mm and longer"
+    },
     "%@ arrived incomplete." : {
       "comment" : "Download from server: size check failed"
     },
@@ -111,6 +126,20 @@
     },
     "%@ donut chart" : {
 
+    },
+    "%@ free" : {
+      "comment" : "Server browser footer: free space, total unknown"
+    },
+    "%@ free of %@" : {
+      "comment" : "Server browser footer: free space of the total",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ free of %2$@"
+          }
+        }
+      }
     },
     "%@ is already in this folder on the server, with different contents." : {
       "comment" : "Upload to Server conflict explanation"
@@ -166,6 +195,56 @@
         }
       }
     },
+    "%@ of your photos are at %@ equivalent (%@)." : {
+      "comment" : "Insights: an angle-of-view group, e.g. 60% … 20–34mm … (Wide)",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ of your photos are at %2$@ equivalent (%3$@)."
+          }
+        }
+      }
+    },
+    "%@ of your photos are at %@ equivalent." : {
+      "comment" : "Insights: one focal length, e.g. 85% … 26mm",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ of your photos are at %2$@ equivalent."
+          }
+        }
+      }
+    },
+    "%@ of your photos were shot slower than 1/focal length." : {
+      "comment" : "Insights: share exposed longer than 1/equivalent focal length"
+    },
+    "%@ of your photos with a known equivalent focal length are at %@ equivalent (%@)." : {
+      "comment" : "Insights: an angle-of-view group, e.g. 60% … 20–34mm … (Wide)",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ of your photos with a known equivalent focal length are at %2$@ equivalent (%3$@)."
+          }
+        }
+      }
+    },
+    "%@ of your photos with a known equivalent focal length are at %@ equivalent." : {
+      "comment" : "Insights: one focal length, e.g. 75% … 35mm",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ of your photos with a known equivalent focal length are at %2$@ equivalent."
+          }
+        }
+      }
+    },
+    "%@ of your photos with a known shutter speed and focal length were shot slower than 1/focal length." : {
+      "comment" : "Insights: share exposed longer than 1/equivalent focal length"
+    },
     "%@ options" : {
 
     },
@@ -188,6 +267,39 @@
     },
     "%@ Size" : {
 
+    },
+    "%@ was your busiest month: %lld photos." : {
+      "comment" : "Insights: busiest month and its photo count (plural)",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ was your busiest month: %2$lld photos."
+          }
+        }
+      }
+    },
+    "%@ with %@ took %@ of your photos with a known camera and lens." : {
+      "comment" : "Insights: body + lens pair, e.g. EOS R6 with RF 85mm … 40%",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ with %2$@ took %3$@ of your photos with a known camera and lens."
+          }
+        }
+      }
+    },
+    "%@ with %@ took %@ of your photos." : {
+      "comment" : "Insights: body + lens pair, e.g. EOS R6 with RF 85mm … 40%",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ with %2$@ took %3$@ of your photos."
+          }
+        }
+      }
     },
     "%@, %@" : {
       "comment" : "Video Studio track header: VoiceOver label naming the track — its number badge and its kind",
@@ -241,12 +353,37 @@
         }
       }
     },
+    "%@, Folder" : {
+      "comment" : "Server browser: a folder tile"
+    },
+    "%@, folder on %@" : {
+      "comment" : "VoiceOver label for a Network tile in Collections",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@, folder on %2$@"
+          }
+        }
+      }
+    },
     "%@, from second %lld to %lld" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "new",
             "value" : "%1$@, from second %2$lld to %3$lld"
+          }
+        }
+      }
+    },
+    "%@: %lld of %lld" : {
+      "comment" : "Server export: sending one photo to a destination",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@: %2$lld of %3$lld"
           }
         }
       }
@@ -298,12 +435,6 @@
     },
     "%lld failed" : {
 
-    },
-    "%lld files not uploaded yet." : {
-      "comment" : "Upload to Server result: files the stopped batch never reached"
-    },
-    "%lld files skipped because they were already on the server." : {
-      "comment" : "Upload to Server result: files the user chose to skip"
     },
     "%lld groups" : {
       "comment" : "Detail on the Duplicates row in Collections: how many duplicate groups the last scan found",
@@ -423,6 +554,16 @@
         }
       }
     },
+    "%lld of %lld drawn" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld of %2$lld drawn"
+          }
+        }
+      }
+    },
     "%lld of %lld frames couldn't be lined up and were left out." : {
       "comment" : "Focus Stack panel: frames dropped because alignment failed. First number is dropped frames, second is all frames.",
       "localizations" : {
@@ -430,6 +571,17 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "%1$lld of %2$lld frames couldn't be lined up and were left out."
+          }
+        }
+      }
+    },
+    "%lld of %lld photos couldn't be downloaded from iCloud." : {
+      "comment" : "Preparation failure: failed of batch",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld of %2$lld photos couldn't be downloaded from iCloud."
           }
         }
       }
@@ -509,27 +661,8 @@
     "%lld Photos" : {
 
     },
-    "%lld photos · %lld files · ~%@" : {
-      "comment" : "Download from server summary: photos, files and estimated size\nUpload to Server prepare summary: photos, files and estimated size",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%1$lld photos · %2$lld files · ~%3$@"
-          }
-        }
-      }
-    },
-    "%lld photos · %lld other files hidden" : {
-      "comment" : "Server browser footer: photos shown and files left out",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%1$lld photos · %2$lld other files hidden"
-          }
-        }
-      }
+    "%lld photos are from cameras with an unknown sensor size." : {
+      "comment" : "Insights footer; opens Settings → Unknown Cameras (plural)"
     },
     "%lld photos couldn't be downloaded." : {
       "comment" : "Panorama save failed because iCloud originals were unavailable\nStack screen: frames that could not be loaded, usually iCloud originals with no network. Shown with a Retry button."
@@ -537,17 +670,20 @@
     "%lld photos couldn't be downloaded. Check the connection and try again." : {
       "comment" : "Stack save failed: some full-resolution originals could not be downloaded (usually iCloud)."
     },
-    "%lld photos not downloaded yet." : {
-      "comment" : "Download from server result: photos the stopped batch never reached"
-    },
-    "%lld photos skipped — already in your library." : {
-      "comment" : "Download from server result: photos skipped because they were already in the library"
-    },
     "%lld photos without this info." : {
 
     },
     "%lld points" : {
       "comment" : "Video Studio colour: how many points the curve has"
+    },
+    "%lld RAW files can't have their location removed" : {
+
+    },
+    "%lld RAW files can't have their metadata removed" : {
+
+    },
+    "%lld RAW photos can't be read on this iOS" : {
+      "comment" : "Collage / Video Studio: several RAWs iOS can't decode"
     },
     "%lld saved as JPEG because HEIC wasn't supported" : {
 
@@ -576,8 +712,54 @@
     "%llds per photo" : {
 
     },
+    "^[%lld file](inflect: true) not uploaded yet." : {
+      "comment" : "Upload to Server result: files the stopped batch never reached"
+    },
+    "^[%lld file](inflect: true) skipped because they were already on the server." : {
+      "comment" : "Upload to Server result: files the user chose to skip"
+    },
+    "^[%lld folder](inflect: true)" : {
+      "comment" : "Server browser footer: folders in this folder"
+    },
+    "^[%lld other file](inflect: true)" : {
+      "comment" : "Server browser footer: non-photo files shown by Show All Files"
+    },
+    "^[%lld other file](inflect: true) hidden" : {
+      "comment" : "Server browser footer: files left out"
+    },
+    "^[%lld photo](inflect: true)" : {
+      "comment" : "Server browser footer: photos shown\nUploaded to Server subtitle: how many photos have a copy on a server"
+    },
+    "^[%lld photo](inflect: true) · %@" : {
+      "comment" : "Server export summary: photos and format",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "^[%1$lld photo](inflect: true) · %2$@"
+          }
+        }
+      }
+    },
+    "^[%lld photo](inflect: true) · ^[%lld file](inflect: true) · ~%@" : {
+      "comment" : "Download from server summary: photos, files and estimated size\nUpload to Server prepare summary: photos, files and estimated size",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "^[%1$lld photo](inflect: true) · ^[%2$lld file](inflect: true) · ~%3$@"
+          }
+        }
+      }
+    },
+    "^[%lld photo](inflect: true) not imported yet." : {
+      "comment" : "Download from server result: photos the stopped batch never reached"
+    },
     "^[%lld photo](inflect: true) not placed" : {
 
+    },
+    "^[%lld photo](inflect: true) skipped — already in your library." : {
+      "comment" : "Download from server result: photos skipped because they were already in the library"
     },
     "^[%lld photo](inflect: true) were being joined when ShotDex closed. Nothing was saved." : {
 
@@ -616,6 +798,9 @@
         }
       }
     },
+    "1 RAW photo can't be read on this iOS" : {
+      "comment" : "Collage / Video Studio: one RAW iOS can't decode"
+    },
     "35mm Equivalent" : {
       "comment" : "Info panel row label"
     },
@@ -631,11 +816,26 @@
     "A date format pattern, like h:mm a. Seconds are removed — a widget is redrawn once a minute at best." : {
 
     },
+    "A folder on any saved connection." : {
+      "comment" : "Server export: Other Folder row detail"
+    },
     "A mask limits Light, Color, Detail and Effects to one area." : {
 
     },
     "A message carries your words, the app and iOS version, the device model and roughly how many photos you have. Never a photo, a name or an email address." : {
 
+    },
+    "A new photo with the edit. The original stays on the server." : {
+      "comment" : "Server export: Photos Library row detail"
+    },
+    "A new photo. The originals stay on the server." : {
+      "comment" : "Server export: Photos Library row detail, one photo made from several server photos"
+    },
+    "A new still photo with the metadata you choose. No Location also leaves the copy's place empty in Photos; No Metadata dates it today." : {
+
+    },
+    "A new video. The originals stay on the server." : {
+      "comment" : "Server export: Photos Library row detail, a video made from server photos"
     },
     "A panorama needs at least two photos." : {
       "comment" : "Panorama Arrange: refusing to remove the second-to-last frame"
@@ -645,6 +845,9 @@
     },
     "A smart album named “%@” already exists." : {
 
+    },
+    "A tile for this folder in Collections. One tap opens its photos." : {
+      "comment" : "Add to Collections switch: what it does"
     },
     "A window grades part of the frame. Brush, subject and sky are photo-only — they need a pass per frame." : {
       "comment" : "Video Studio colour: empty state for windows, and which kinds are absent"
@@ -707,6 +910,9 @@
     "Add chart" : {
 
     },
+    "Add Cloud Folder" : {
+
+    },
     "Add Condition" : {
 
     },
@@ -753,6 +959,9 @@
 
     },
     "Add to Collection" : {
+      "comment" : "Photo command"
+    },
+    "Add to Collections" : {
 
     },
     "Add to this message" : {
@@ -839,11 +1048,20 @@
     "All" : {
 
     },
+    "All %lld spots come off the photo. Undo brings them back." : {
+
+    },
     "All Items" : {
 
     },
     "All Media" : {
       "comment" : "Video Studio media pool bin label\nVideo Studio media pool filter: everything in the library"
+    },
+    "All metadata" : {
+
+    },
+    "All Metadata" : {
+
     },
     "All Originals" : {
       "comment" : "Upload to Server: send every original file of each photo (RAW, JPEG, Live Photo video)"
@@ -851,10 +1069,13 @@
     "All Time" : {
 
     },
+    "All Uploaded Photos" : {
+
+    },
     "Allow Calendar Access" : {
 
     },
-    "Allow full access to Photos to save into an album." : {
+    "Allow full access to Photos to add them to an album too." : {
 
     },
     "Allow Location Access" : {
@@ -865,6 +1086,9 @@
     },
     "Already Reported" : {
 
+    },
+    "Also catches leaves and water that moved a little." : {
+      "comment" : "HDR: what Deghost Medium is for"
     },
     "Also sent: the ShotDex and iOS versions, the device model, your language, and roughly how many photos you have." : {
 
@@ -884,6 +1108,12 @@
     "An email carries whatever you write, plus the app and iOS versions and the device model, which are filled in for you. Never a photo." : {
 
     },
+    "An item named “%@” already exists." : {
+      "comment" : "Server browser: Rename to a name already in the folder"
+    },
+    "An item with that name already exists." : {
+      "comment" : "Cloud folder: rename onto an existing name"
+    },
     "Animate" : {
 
     },
@@ -902,7 +1132,13 @@
     "Apply" : {
 
     },
+    "Apply keeps the crop. Cancel puts the frame back." : {
+
+    },
     "Apply look %@" : {
+
+    },
+    "Apply look %@, Imported" : {
 
     },
     "Apply Previous" : {
@@ -926,9 +1162,6 @@
     "Artist" : {
       "comment" : "Info panel row label"
     },
-    "Ascending" : {
-
-    },
     "Aspect Ratio Grid" : {
 
     },
@@ -947,6 +1180,9 @@
     "Auto Crop" : {
 
     },
+    "Auto Straighten" : {
+
+    },
     "Auto Sync" : {
 
     },
@@ -955,6 +1191,9 @@
     },
     "Average" : {
       "comment" : "Stack Exposures picker: equal-weight average of every frame"
+    },
+    "B&W Mix" : {
+
     },
     "Back" : {
       "comment" : "Video Studio: leaves the editor"
@@ -969,6 +1208,9 @@
 
     },
     "Back to masks" : {
+
+    },
+    "Back to the list" : {
 
     },
     "Background" : {
@@ -1010,6 +1252,9 @@
     "Both clips are long enough for this." : {
       "comment" : "Video Studio transition sheet: the requested length fits"
     },
+    "Both files of this RAW+JPEG pair are renamed. Extensions stay as they are." : {
+      "comment" : "Server browser: Rename alert for a RAW+JPEG pair"
+    },
     "Boundary Warp" : {
 
     },
@@ -1025,8 +1270,14 @@
     "Browse All Photos…" : {
       "comment" : "Video Studio media pool: opens the system picker for anything older than the pool holds"
     },
-    "Browse and download from your file servers" : {
-      "comment" : "VoiceOver detail on the On Server utilities row"
+    "Browse and download from Dropbox, Google Drive and other cloud folders" : {
+      "comment" : "VoiceOver detail on the On Cloud utilities row"
+    },
+    "Browse and download from NAS drives and computers on this network" : {
+      "comment" : "VoiceOver detail on the On Local Network utilities row"
+    },
+    "Browse and import photos from Dropbox, Google Drive, OneDrive or iCloud Drive, and upload to them. The service's app must be installed." : {
+
     },
     "Browse Looks" : {
 
@@ -1082,11 +1333,14 @@
     "Camera Database" : {
 
     },
-    "Camera EXIF, date, location and orientation" : {
-
-    },
     "Cameras you matched to a sensor format by hand go back to what the sensor database says." : {
 
+    },
+    "Can't Edit This RAW" : {
+      "comment" : "Alert title: iOS can't decode this RAW photo (FS-03.04b)"
+    },
+    "Can't Open This Photo" : {
+      "comment" : "Editor load error title: no access to the photo"
     },
     "Can't reach %@. Check that it's on and on the same network." : {
       "comment" : "File server error"
@@ -1124,6 +1378,9 @@
     "Captured" : {
       "comment" : "Info panel row label"
     },
+    "Catches the slightest movement; dark areas can come out a little noisier." : {
+      "comment" : "HDR: what Deghost High is for"
+    },
     "Category" : {
 
     },
@@ -1131,9 +1388,6 @@
 
     },
     "Centre %@" : {
-
-    },
-    "Change" : {
 
     },
     "Change date" : {
@@ -1160,14 +1414,23 @@
     "Checking" : {
       "comment" : "Download from server: checking the received file"
     },
-    "Choose a Share" : {
-
+    "Choose “%@”" : {
+      "comment" : "Server folder picker: pick the folder on screen"
+    },
+    "Choose a Connection" : {
+      "comment" : "Server export: pick the connection for Other Folder"
     },
     "Choose a Sticker…" : {
       "comment" : "Video Studio media pool: opens the picker for a sticker image"
     },
     "Choose Album" : {
 
+    },
+    "Choose Another Folder" : {
+      "comment" : "Server export: the server refused the write"
+    },
+    "Choose Home" : {
+      "comment" : "Server folder picker: pick the SFTP home folder"
     },
     "Choose how to select the area. You can add and subtract several kinds inside one mask." : {
 
@@ -1181,7 +1444,13 @@
     "Choose or create a folder on the server" : {
 
     },
+    "Choose the folder, Photos or Share next." : {
+      "comment" : "Collage of server photos: what Export… opens"
+    },
     "Choose…" : {
+
+    },
+    "Choose… signs in and shows the folders this computer shares. The first folder is the shared folder, such as Photos. Uploads start in Folder; you can pick another each time." : {
 
     },
     "Cinematic" : {
@@ -1190,7 +1459,19 @@
     "Clear" : {
 
     },
+    "Clear All" : {
+
+    },
+    "Clear All Spots" : {
+
+    },
+    "Clear all spots?" : {
+
+    },
     "Clear Filters" : {
+
+    },
+    "Clear Guides" : {
 
     },
     "Clear Index" : {
@@ -1241,11 +1522,17 @@
     "Close slideshow" : {
 
     },
+    "Cloud" : {
+      "comment" : "Utilities row: browse Dropbox, Google Drive and other cloud folders"
+    },
+    "Cloud Folders" : {
+
+    },
     "Codec" : {
       "comment" : "Info panel row label"
     },
     "Collage" : {
-      "comment" : "Kind of thing in the Creations list"
+      "comment" : "Kind of thing in the Creations list\nServer export: kind of the one file a tool made"
     },
     "Collage Error" : {
 
@@ -1278,7 +1565,7 @@
 
     },
     "Combine Photos" : {
-
+      "comment" : "Photo command"
     },
     "Combining…" : {
       "comment" : "Stack screen status while frames are combined"
@@ -1286,10 +1573,19 @@
     "Compare" : {
 
     },
-    "Computers and NAS drives sharing files on the same network as this device. Tap one to fill in its address." : {
+    "Computers and NAS drives sharing files on the same network as this device. Tap one to sign in." : {
 
     },
     "Conditions" : {
+
+    },
+    "Connect" : {
+
+    },
+    "Connect to “%@”" : {
+      "comment" : "Connect As screen title"
+    },
+    "Connect Using" : {
 
     },
     "Connected" : {
@@ -1328,8 +1624,20 @@
     "Continue Indexing (%@)" : {
 
     },
+    "Continue with %lld" : {
+
+    },
     "Conversation" : {
 
+    },
+    "Convert it to JPEG first? ShotDex uses the JPEG preview inside the RAW%@." : {
+      "comment" : "Collage / Video Studio: what converting one unreadable RAW does; the preview's size in pixels follows"
+    },
+    "Convert them to JPEG first? ShotDex uses the JPEG preview inside the RAW%@." : {
+      "comment" : "Collage / Video Studio: what converting unreadable RAWs does; the smallest preview's size follows"
+    },
+    "Convert to JPEG" : {
+      "comment" : "Use the RAW's embedded JPEG preview"
     },
     "Coordinate" : {
       "comment" : "Info panel row label"
@@ -1338,7 +1646,7 @@
 
     },
     "Copy" : {
-
+      "comment" : "Photo command"
     },
     "Copy Edits" : {
 
@@ -1358,13 +1666,28 @@
     "Couldn't Add to Collection" : {
 
     },
+    "Couldn't be downloaded from iCloud." : {
+      "comment" : "Resize summary: a photo left out"
+    },
+    "Couldn't compute insights." : {
+
+    },
     "Couldn't Create Album" : {
 
     },
-    "Couldn't Create Folder" : {
+    "Couldn't Delete Photos" : {
 
     },
-    "Couldn't Delete Photos" : {
+    "Couldn't Download" : {
+      "comment" : "Server photo command: fetch failed, title"
+    },
+    "Couldn't Download from iCloud" : {
+      "comment" : "Editor load error title"
+    },
+    "Couldn't download the photo." : {
+      "comment" : "Server photo command: nothing came down"
+    },
+    "Couldn't Finish" : {
 
     },
     "Couldn't follow that window. Move the playhead to a frame where the subject is clear and try again." : {
@@ -1384,6 +1707,9 @@
     },
     "Couldn't Open Folder" : {
 
+    },
+    "Couldn't Open Photo" : {
+      "comment" : "Editor load error title"
     },
     "Couldn't prepare the video composition." : {
 
@@ -1407,6 +1733,9 @@
       "comment" : "Alert title: the combined photo could not be rendered or saved"
     },
     "Couldn't Save Connection" : {
+
+    },
+    "Couldn't Save Folder" : {
 
     },
     "Couldn't save the password: %@" : {
@@ -1434,10 +1763,10 @@
 
     },
     "Create Collage" : {
-
+      "comment" : "Photo command"
     },
     "Create Video" : {
-
+      "comment" : "Photo command"
     },
     "Creation Date" : {
       "comment" : "Info panel row label"
@@ -1458,6 +1787,12 @@
 
     },
     "Crossfade" : {
+
+    },
+    "Curve" : {
+
+    },
+    "Curve Type" : {
 
     },
     "Curves" : {
@@ -1531,8 +1866,22 @@
     "days" : {
 
     },
+    "Deghost" : {
+      "comment" : "HDR control: how hard the merge looks for things that moved between frames"
+    },
     "Delete" : {
 
+    },
+    "Delete “%@” from %@?" : {
+      "comment" : "Server browser: delete one photo or file",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Delete “%1$@” from %2$@?"
+          }
+        }
+      }
     },
     "Delete “%@”?" : {
 
@@ -1598,6 +1947,17 @@
     "Delete %lld Photos from This Device?" : {
       "comment" : "Upload to Server: confirm deleting the uploaded photos\nUploaded to Server: confirm deleting every fully uploaded photo"
     },
+    "Delete ^[%lld photo](inflect: true) from %@?" : {
+      "comment" : "Server browser: delete the picked photos",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Delete ^[%1$lld photo](inflect: true) from %2$@?"
+          }
+        }
+      }
+    },
     "Delete 1 Photo" : {
 
     },
@@ -1614,9 +1974,6 @@
 
     },
     "Delete layer" : {
-
-    },
-    "Delete Look" : {
 
     },
     "Delete LUT" : {
@@ -1643,6 +2000,9 @@
     "Delete Spot" : {
 
     },
+    "Delete the folder “%@” and everything in it?" : {
+      "comment" : "Server browser: delete a folder"
+    },
     "Delete This Shape" : {
 
     },
@@ -1662,9 +2022,6 @@
     },
     "Depth Map" : {
       "comment" : "Focus Stack method: pick each point from its sharpest frame, smoothed like a depth map"
-    },
-    "Descending" : {
-
     },
     "Deselect" : {
 
@@ -1693,13 +2050,22 @@
     "Discard Changes" : {
 
     },
+    "Discard changes to %@?" : {
+
+    },
     "Discard this collage?" : {
+
+    },
+    "Discard this combine?" : {
 
     },
     "Discard this editing session?" : {
 
     },
     "Discard this video?" : {
+
+    },
+    "Display" : {
 
     },
     "Divider, drag to resize, double tap to reset" : {
@@ -1720,29 +2086,17 @@
     "Double tap to collapse" : {
 
     },
-    "Download" : {
-      "comment" : "Server browser: download the picked photos"
-    },
-    "Download %lld" : {
-      "comment" : "Server browser: download the picked photos, with their count"
-    },
-    "Download Finished" : {
-      "comment" : "Download from server sheet title when done"
-    },
     "Download progress" : {
-
-    },
-    "Download stopped. Photos already saved stay in your library." : {
-      "comment" : "Download from server result after Cancel"
+      "comment" : "Server photo command: progress bar, VoiceOver"
     },
     "downloaded from iCloud" : {
 
     },
     "Downloading" : {
-      "comment" : "Download from server sheet title while running\nDownload from server: receiving the file"
+      "comment" : "Download from server: receiving the file\nServer photo command: originals coming down, sheet title"
     },
     "Downloading %lld of %lld" : {
-      "comment" : "Download from server progress headline",
+      "comment" : "Server photo command: fetch progress headline",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1755,7 +2109,44 @@
     "Downloading from iCloud" : {
 
     },
+    "Downloading from iCloud · %lld of %lld · %lld%%" : {
+      "comment" : "Resize/Collage processing modal: k of n originals, overall percent",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Downloading from iCloud · %1$lld of %2$lld · %3$lld%%"
+          }
+        }
+      }
+    },
+    "Downloading from iCloud · %lld%%" : {
+      "comment" : "Share modal: overall percent"
+    },
+    "Downloading from iCloud · %lld%% · %@" : {
+      "comment" : "Share modal: overall percent and the size being downloaded",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Downloading from iCloud · %1$lld%% · %2$@"
+          }
+        }
+      }
+    },
+    "Downloading from iCloud, %lld percent" : {
+      "comment" : "VoiceOver: iCloud download ring"
+    },
     "Downloading from iCloud…" : {
+
+    },
+    "Downloading from iCloud… %lld%%" : {
+
+    },
+    "Drag a line along something that should be level" : {
+
+    },
+    "Drag a line along something that should be level, like the horizon or a table edge." : {
 
     },
     "Drag a line of text to move it, or drag the background to move the photo. Pinch to resize whatever is selected." : {
@@ -1765,9 +2156,6 @@
 
     },
     "Drag a photo to where it belongs, or off the panorama to set it aside." : {
-
-    },
-    "Drag on the graph to shape the curve" : {
 
     },
     "Drag on the photo — the loupe shows the pixel under your finger. Lift to pick it." : {
@@ -1791,26 +2179,17 @@
     "Drag to resize the crop" : {
 
     },
-    "Drag to shape · drag on empty graph to add · double-tap a point to remove" : {
-
-    },
-    "Drag to shape · drag on empty graph to add · double-tap to remove" : {
-
-    },
     "Drag up for a taller timeline, down for a bigger preview" : {
       "comment" : "Hint for the Video Studio timeline divider"
     },
     "Draw" : {
 
     },
-    "Draw on the photo. The pencil palette is the system's; it can be dragged out of the way." : {
-
-    },
     "Drop here to set aside" : {
 
     },
     "Duplicate" : {
-      "comment" : "Video Studio colour: copies a node after itself"
+      "comment" : "Photo command\nVideo Studio colour: copies a node after itself"
     },
     "Duplicates" : {
 
@@ -1821,8 +2200,11 @@
     "Duration" : {
       "comment" : "Video Studio quick strip: how long the selected still stays on screen"
     },
-    "Edit" : {
+    "Each photo is listed under every server folder it was uploaded to." : {
 
+    },
+    "Edit" : {
+      "comment" : "Photo command"
     },
     "Edit Chart" : {
 
@@ -1830,14 +2212,29 @@
     "Edit Connection" : {
 
     },
+    "Edit Curve" : {
+
+    },
+    "Edit JPEG" : {
+      "comment" : "Action sheet: open the JPEG of a pair"
+    },
     "Edit Preset" : {
 
+    },
+    "Edit RAW" : {
+      "comment" : "Action sheet: open the RAW of a pair"
     },
     "Edit Smart Album" : {
 
     },
     "Edit text full screen" : {
 
+    },
+    "Edit this mask's curve" : {
+
+    },
+    "Edit which version?" : {
+      "comment" : "Action sheet title: a photo has a RAW and a JPEG"
     },
     "Edited" : {
 
@@ -1860,10 +2257,16 @@
     "End" : {
       "comment" : "Video Studio media pool: short label for Append at End"
     },
+    "Enter a name to export." : {
+      "comment" : "Server export: the typed name leaves nothing"
+    },
     "Enter value" : {
 
     },
     "Enter Value…" : {
+
+    },
+    "Erase" : {
 
     },
     "Estimated size" : {
@@ -1878,17 +2281,32 @@
     "Every camera in your library has a known sensor format." : {
 
     },
+    "Every frame counts everywhere. For a tripod and a still scene." : {
+      "comment" : "HDR: what Deghost Off is for"
+    },
+    "Existing Album" : {
+
+    },
     "Export" : {
+      "comment" : "Editor: the save button on server photos (FS-17.06)\nServer export sheet title\nServer export: run"
+    },
+    "Export As" : {
 
     },
     "Export cancelled" : {
 
     },
     "Export EXIF (CSV)" : {
-
+      "comment" : "Photo command"
     },
     "Export Video" : {
 
+    },
+    "Export XMP Preset" : {
+
+    },
+    "Export…" : {
+      "comment" : "Collage of server photos: choose where the collage goes\nCombine of server photos: choose where the result goes\nPanorama of server photos: choose where the result goes\nVideo of server photos: choose where the video goes"
     },
     "Exporting…" : {
 
@@ -1904,6 +2322,16 @@
     },
     "Exposure Program" : {
       "comment" : "Info panel row label"
+    },
+    "Eye %lld of %lld" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Eye %1$lld of %2$lld"
+          }
+        }
+      }
     },
     "Fade" : {
 
@@ -1948,12 +2376,15 @@
       "comment" : "Info panel row label"
     },
     "Files" : {
-
+      "comment" : "Cloud folder row: a folder from the Files app, service unknown"
     },
     "Files already uploaded stay on the server." : {
 
     },
     "Fill Screen" : {
+
+    },
+    "Fills the spot from the next best place around it" : {
 
     },
     "Filter" : {
@@ -1977,6 +2408,9 @@
     "Finding place name…" : {
 
     },
+    "Finds every red pupil in the photo and fixes it" : {
+
+    },
     "Finish configuring the chart to see a preview." : {
 
     },
@@ -1998,6 +2432,9 @@
     "Fits %@" : {
 
     },
+    "Fix Red Eye" : {
+
+    },
     "Flash" : {
       "comment" : "Info panel row label"
     },
@@ -2011,7 +2448,7 @@
 
     },
     "Focus Stack" : {
-      "comment" : "Combine Photos submenu row and screen title: focus stacking"
+      "comment" : "Combine Photos submenu row and screen title: focus stacking\nServer export: kind of the one file a tool made"
     },
     "Folder" : {
 
@@ -2019,7 +2456,7 @@
     "Folder is relative to your home folder on the server. It is where uploads start; you can pick another each time." : {
 
     },
-    "Folders" : {
+    "Folder Removed" : {
 
     },
     "Following the subject from the playhead." : {
@@ -2035,7 +2472,10 @@
 
     },
     "Format" : {
-      "comment" : "Info panel row label"
+      "comment" : "Info panel row label\nServer export: output format"
+    },
+    "Forward" : {
+
     },
     "Forward a Frame" : {
       "comment" : "Video Studio transport"
@@ -2062,6 +2502,9 @@
     "Frame Saved" : {
 
     },
+    "Frames are lined up before merging, so a handheld series still works — a tripod still works better." : {
+
+    },
     "Frames are lined up before stacking, so a handheld sequence still works — a tripod still works better." : {
 
     },
@@ -2073,6 +2516,9 @@
     },
     "Freeze Frame" : {
       "comment" : "Video Studio transport: holds the frame under the playhead as a still"
+    },
+    "Full resolution at maximum quality. If Photos doesn't support HEIC for this photo, ShotDex falls back to JPEG and tells you." : {
+
     },
     "Full size keeps every pixel the frames had." : {
 
@@ -2120,7 +2566,7 @@
 
     },
     "HDR" : {
-
+      "comment" : "Combine Photos submenu row and screen title: merge a bracketed exposure series into one photo\nServer export: kind of the one file a tool made"
     },
     "Headline" : {
       "comment" : "Info panel row label"
@@ -2129,6 +2575,9 @@
 
     },
     "HEIC encoding isn't available on this device. ShotDex will save JPEG instead." : {
+
+    },
+    "HEIC sent as JPEG" : {
 
     },
     "Height" : {
@@ -2143,7 +2592,7 @@
     "Hide %@" : {
 
     },
-    "Hide Graph" : {
+    "Hide Insights" : {
 
     },
     "Hide Mask Overlay" : {
@@ -2160,6 +2609,9 @@
     },
     "Hide Tools" : {
 
+    },
+    "High" : {
+      "comment" : "HDR Deghost level"
     },
     "Histogram" : {
       "comment" : "Video Studio scope: tonal distribution"
@@ -2180,13 +2632,16 @@
       "comment" : "Focus Stack: when to use Weighted"
     },
     "Home" : {
-      "comment" : "Server browser: the SFTP login's home folder\nUpload to Server: the SFTP login's home folder, the top of the folder browser"
+      "comment" : "Connection row: the SFTP login's home folder\nServer browser: the SFTP login's home folder\nUpload to Server: the SFTP login's home folder, the top of the folder browser"
     },
     "Host" : {
 
     },
     "How many pixels at each tone." : {
       "comment" : "Video Studio scopes: histogram"
+    },
+    "HSL Mixer · %@" : {
+
     },
     "Hue %lld degrees, saturation %lld percent" : {
       "localizations" : {
@@ -2198,11 +2653,27 @@
         }
       }
     },
+    "Hue %lld°, %lld%%" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Hue %1$lld°, %2$lld%%"
+          }
+        }
+      }
+    },
     "iCloud download stalled" : {
 
     },
+    "iCloud Drive" : {
+      "comment" : "Cloud folder row: the service"
+    },
     "iCloud isn't responding" : {
 
+    },
+    "iCloud isn't responding — check iCloud Photos in Settings or the Photos app." : {
+      "comment" : "A download that has sat at 0% for 15 seconds"
     },
     "iCloud isn't responding — trying again in" : {
 
@@ -2213,14 +2684,26 @@
     "iCloud not responding, retrying automatically" : {
 
     },
+    "Icons" : {
+
+    },
     "Image" : {
+
+    },
+    "Import" : {
 
     },
     "Import .cube" : {
 
     },
+    "Import %lld to Library" : {
+      "comment" : "Server browser: copy the picked photos into the library, with their count"
+    },
     "Import a .cube file from Files to use it as a look." : {
 
+    },
+    "Import Finished" : {
+      "comment" : "Import from server sheet title when done"
     },
     "Import from Files…" : {
       "comment" : "Video Studio media pool: brings an audio file in from the Files app"
@@ -2228,11 +2711,51 @@
     "Import LUT…" : {
       "comment" : "Video Studio colour: brings a .cube in from Files"
     },
+    "Import progress" : {
+
+    },
+    "Import To" : {
+
+    },
+    "Import to Library" : {
+      "comment" : "Import from server sheet title\nPhoto command: copy server photos into the library\nServer browser: copy the picked photos into the library"
+    },
+    "Import XMP Preset" : {
+
+    },
     "Imported" : {
       "comment" : "Video Studio media pool bin label for the music tab"
     },
+    "Imported ^[%lld photo](inflect: true) into your library and “%@”." : {
+      "comment" : "Import from server result headline, with an album",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Imported ^[%1$lld photo](inflect: true) into your library and “%2$@”."
+          }
+        }
+      }
+    },
+    "Imported ^[%lld photo](inflect: true) into your library." : {
+      "comment" : "Import from server result headline, library only"
+    },
     "Imported LUT" : {
 
+    },
+    "Importing" : {
+      "comment" : "Import from server sheet title while running"
+    },
+    "Importing %lld of %lld" : {
+      "comment" : "Download from server progress headline",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Importing %1$lld of %2$lld"
+          }
+        }
+      }
     },
     "In" : {
 
@@ -2243,13 +2766,10 @@
     "In Progress" : {
 
     },
+    "In the Original Folder" : {
+      "comment" : "Server export: placement section"
+    },
     "Include Diagnostic Log" : {
-
-    },
-    "Include Location" : {
-
-    },
-    "Include Metadata" : {
 
     },
     "Includes identifiers, serial numbers, internal Exif/TIFF values, resources, and vendor-specific binary blocks." : {
@@ -2295,6 +2815,9 @@
     "Indexing, %lld percent" : {
 
     },
+    "Ink and color, %@" : {
+
+    },
     "Input Transform" : {
       "comment" : "Video Studio colour: undoing the camera's encoding"
     },
@@ -2303,6 +2826,18 @@
     },
     "Insert at Playhead" : {
       "comment" : "Video Studio media pool: new media is cut into the track where the playhead is"
+    },
+    "Insights" : {
+
+    },
+    "Insights appear once 50 photos have camera info — %lld so far." : {
+      "comment" : "Insights card under the 50-photo threshold"
+    },
+    "Insights are short sentences about your own library at the top of Statistics." : {
+
+    },
+    "Insights options" : {
+
     },
     "Inspector" : {
       "comment" : "Video Studio: shows or hides the controls column"
@@ -2316,14 +2851,65 @@
     "Invert window" : {
       "comment" : "Video Studio colour: grades outside the window instead of inside"
     },
+    "iOS %@ can't read RAW files like this .%@ yet. You can still view the preview, but you can't edit the RAW." : {
+      "comment" : "Viewer card for a RAW iOS can't read, with no camera name: the iOS version, then the extension",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "iOS %1$@ can't read RAW files like this .%2$@ yet. You can still view the preview, but you can't edit the RAW."
+          }
+        }
+      }
+    },
+    "iOS %@ can't read this DNG file. Convert the original again with the latest Adobe DNG Converter, or share it to edit on a computer." : {
+      "comment" : "A DNG file iOS can't decode: the iOS version"
+    },
+    "iOS %@ can't read this DNG file. You can still view the preview, but you can't edit the RAW." : {
+      "comment" : "Viewer card for a DNG iOS can't read: the iOS version"
+    },
+    "iOS %@ doesn't support RAW files from the %@ yet. Convert the file to DNG with Adobe DNG Converter, or wait for an iOS update that adds this camera." : {
+      "comment" : "Unsupported RAW: first the iOS version, then the camera's name",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "iOS %1$@ doesn't support RAW files from the %2$@ yet. Convert the file to DNG with Adobe DNG Converter, or wait for an iOS update that adds this camera."
+          }
+        }
+      }
+    },
+    "iOS %@ doesn't support RAW files like this .%@ yet. Convert the file to DNG with Adobe DNG Converter, or wait for an iOS update that adds this camera." : {
+      "comment" : "Unsupported RAW with no camera name in the file: first the iOS version, then the file extension such as ARW",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "iOS %1$@ doesn't support RAW files like this .%2$@ yet. Convert the file to DNG with Adobe DNG Converter, or wait for an iOS update that adds this camera."
+          }
+        }
+      }
+    },
+    "iOS can't read this RAW yet" : {
+      "comment" : "Why Edit RAW is dimmed for a RAW + JPEG pair\nWhy RAW is dimmed in the editor's Source menu"
+    },
+    "iOS can't read this RAW yet, so it can't be shared as a JPEG." : {
+
+    },
     "ISO" : {
       "comment" : "Info panel row label"
     },
     "It moves to the Hidden album in Photos. ShotDex can't show hidden photos, so you'll need the Photos app to unhide it." : {
 
     },
+    "It's deleted from the server, not moved to a trash, and can't be undone." : {
+      "comment" : "Server browser: delete confirmation"
+    },
     "Italic" : {
 
+    },
+    "Items can't be moved between shared folders." : {
+      "comment" : "File server error: SMB rename across shares"
     },
     "JPEG" : {
 
@@ -2334,13 +2920,13 @@
     "Keep Both saves the new file under the next free name, such as %@." : {
       "comment" : "Upload to Server conflict: how Keep Both names the new file"
     },
-    "Keep Downloading" : {
-
-    },
     "Keep Editing" : {
 
     },
     "Keep EXIF of first photo" : {
+
+    },
+    "Keep Importing" : {
 
     },
     "Keep only this" : {
@@ -2356,6 +2942,12 @@
 
     },
     "Keep ShotDex open until the download finishes. The screen stays on." : {
+
+    },
+    "Keep ShotDex open until the export finishes." : {
+      "comment" : "Server export: progress footer"
+    },
+    "Keep ShotDex open until the import finishes. The screen stays on." : {
 
     },
     "Keep ShotDex open until the upload finishes. The screen stays on." : {
@@ -2397,6 +2989,16 @@
     "Layers" : {
 
     },
+    "Layers · %lld %@ · front to back" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Layers · %1$lld %2$@ · front to back"
+          }
+        }
+      }
+    },
     "Layout" : {
       "comment" : "Collage panel tab: template and slot count"
     },
@@ -2405,6 +3007,9 @@
     },
     "Leave the picture as recorded." : {
       "comment" : "Video Studio colour: what None does"
+    },
+    "Leaves out what moved a lot between frames — people, cars." : {
+      "comment" : "HDR: what Deghost Low is for"
     },
     "left" : {
 
@@ -2419,9 +3024,6 @@
       "comment" : "Info panel row label"
     },
     "Lens profiles for distortion correction. Lensfun database, CC-BY-SA 3.0." : {
-
-    },
-    "Lens profiles from the Lensfun database, CC-BY-SA 3.0." : {
 
     },
     "Lens Range" : {
@@ -2441,6 +3043,9 @@
     },
     "Library" : {
       "comment" : "Download from server: save into the library, no album"
+    },
+    "Library Only" : {
+
     },
     "Library Size" : {
 
@@ -2495,9 +3100,6 @@
     "Loading %lld photos…" : {
       "comment" : "Stack screen status while the preview frames load"
     },
-    "Loading Folders…" : {
-
-    },
     "Loading full-quality preview…" : {
 
     },
@@ -2507,10 +3109,16 @@
     "Local Identifier" : {
       "comment" : "Info panel row label"
     },
+    "Local Network" : {
+      "comment" : "Utilities row: browse NAS drives and computers on this network"
+    },
     "Location" : {
       "comment" : "Info panel section title"
     },
     "Location Access" : {
+
+    },
+    "Location removed" : {
 
     },
     "Lock" : {
@@ -2545,6 +3153,9 @@
     },
     "Loop Playback" : {
       "comment" : "Video Studio transport: restarts the project when it reaches the end"
+    },
+    "Low" : {
+      "comment" : "HDR Deghost level"
     },
     "Low Power Mode is slowing indexing down" : {
 
@@ -2585,14 +3196,30 @@
     "Mask actions" : {
 
     },
+    "Mask color" : {
+
+    },
     "Mask effect" : {
 
     },
     "Mask name" : {
 
     },
+    "Mask Overlay" : {
+
+    },
     "Masks" : {
 
+    },
+    "Masks · %lld %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Masks · %1$lld %2$@"
+          }
+        }
+      }
     },
     "Master" : {
       "comment" : "Video Studio quick strip: the whole mix's level"
@@ -2653,17 +3280,35 @@
     "Media Types" : {
 
     },
+    "Medium" : {
+      "comment" : "HDR Deghost level"
+    },
     "Megapixels" : {
       "comment" : "Info panel row label"
-    },
-    "Memories" : {
-
     },
     "Merge All Groups" : {
 
     },
+    "Merges a bracketed series into one photo that keeps the highlights and the shadows." : {
+      "comment" : "HDR panel: what the screen does"
+    },
+    "Merging at full resolution…" : {
+      "comment" : "HDR screen status while the full-resolution merge is saved"
+    },
+    "Merging…" : {
+      "comment" : "HDR screen status while the series is merged for the preview"
+    },
+    "Merging… %lld%%" : {
+      "comment" : "HDR status while saving: how far the full-resolution merge has got, as a percentage"
+    },
     "Metadata" : {
       "comment" : "Info panel section title"
+    },
+    "Metadata removed" : {
+
+    },
+    "Metadata When Sharing" : {
+
     },
     "Metering" : {
       "comment" : "Info panel row label"
@@ -2701,6 +3346,9 @@
     "Monospaced digits keep the numbers from shifting as they change. A typeface another app installed may not be available to the widget; it falls back to the system font." : {
 
     },
+    "Month" : {
+
+    },
     "More" : {
 
     },
@@ -2713,10 +3361,22 @@
     "More Playhead Tools" : {
       "comment" : "Video Studio transport: the overflow menu on a phone"
     },
+    "More ratios" : {
+
+    },
+    "More ratios, %@" : {
+
+    },
     "More selection actions" : {
+      "comment" : "Server browser: the selection's ⋯ menu"
+    },
+    "More…" : {
 
     },
     "Move a photo the automatic placement got wrong." : {
+
+    },
+    "Move Down" : {
 
     },
     "Move Earlier" : {
@@ -2730,6 +3390,9 @@
     },
     "Move the playhead over a clip" : {
       "comment" : "Video Studio scopes: nothing to measure yet"
+    },
+    "Move Up" : {
+
     },
     "Music" : {
       "comment" : "Video Studio media pool tab: audio to add as a music bed\nVideo Studio timeline lane: the music track"
@@ -2769,7 +3432,10 @@
 
     },
     "Name" : {
-      "comment" : "Server photo browser sort: file name\nVideo Studio colour: the node name field"
+      "comment" : "Server export: name of the one file a tool made\nServer export: name section\nServer photo browser sort: file name\nVideo Studio colour: the node name field"
+    },
+    "Needs a Portrait photo taken on iPhone" : {
+
     },
     "Network" : {
 
@@ -2792,6 +3458,9 @@
     "New Folder" : {
 
     },
+    "New Layer" : {
+
+    },
     "New mask" : {
 
     },
@@ -2802,6 +3471,9 @@
 
     },
     "New Smart Album" : {
+
+    },
+    "New Source" : {
 
     },
     "New Video Project" : {
@@ -2846,13 +3518,13 @@
     "No Duplicates" : {
 
     },
-    "No folders inside." : {
-
-    },
     "No Indexed Photos" : {
 
     },
     "No layers yet" : {
+
+    },
+    "No Location" : {
 
     },
     "No location data" : {
@@ -2939,16 +3611,30 @@
     "Not available for this file" : {
 
     },
-    "Not Downloaded" : {
-
-    },
     "Not enough space on this device — about %@ more needed." : {
       "comment" : "Download from server: free space too low"
     },
     "Not enough space on this device to prepare the file." : {
       "comment" : "Upload to Server: no room to stage one original"
     },
+    "Not enough space to download these originals — needs %@, %@ free." : {
+      "comment" : "Preparation: the batch does not fit on the device",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Not enough space to download these originals — needs %1$@, %2$@ free."
+          }
+        }
+      }
+    },
+    "Not Everything Can Be Shared" : {
+
+    },
     "Not favorite" : {
+
+    },
+    "Not Imported" : {
 
     },
     "Not linked" : {
@@ -2984,7 +3670,7 @@
     "Nothing to add" : {
       "comment" : "Video Studio media pool: empty state title"
     },
-    "Nothing was saved." : {
+    "Nothing was imported." : {
 
     },
     "Nothing was uploaded." : {
@@ -3005,7 +3691,7 @@
 
     },
     "Off" : {
-
+      "comment" : "HDR Deghost level: no deghosting"
     },
     "Offline" : {
 
@@ -3018,6 +3704,9 @@
     },
     "On" : {
 
+    },
+    "On My iPhone" : {
+      "comment" : "Cloud folder row: a folder on this device in Files"
     },
     "On Server" : {
       "comment" : "Utilities row: browse file servers and the photos uploaded to them"
@@ -3104,11 +3793,23 @@
     "Only RAW" : {
       "comment" : "Upload to Server: send just the RAW file of each photo"
     },
+    "Only the name in Collections changes. The folder on the server keeps its name." : {
+      "comment" : "Rename a Network tile"
+    },
+    "Only the name in ShotDex changes. The folder in the cloud keeps its name." : {
+      "comment" : "Rename a cloud folder connection"
+    },
     "Opacity" : {
+
+    },
+    "Open" : {
 
     },
     "Open Library" : {
 
+    },
+    "Open one of the shared folders first." : {
+      "comment" : "Server folder picker: nothing can be chosen at an SMB root"
     },
     "Open Settings" : {
       "comment" : "Button opening the system Settings app for this app.",
@@ -3132,6 +3833,9 @@
     },
     "Opens a slider here, without covering the timeline" : {
       "comment" : "Video Studio quick strip: what tapping a chip does"
+    },
+    "Opens after the others finish." : {
+      "comment" : "Server export: Share row detail"
     },
     "Opens in the editor" : {
       "comment" : "VoiceOver hint on a row in the Creations list"
@@ -3157,23 +3861,35 @@
     "Opens your photo library in ShotDex." : {
 
     },
+    "Optional" : {
+
+    },
     "Or drop on another photo to swap" : {
 
     },
-    "Order" : {
-
-    },
     "Original" : {
-
+      "comment" : "Server export: what happens to the original"
     },
     "Original Filename" : {
       "comment" : "Info panel row label"
+    },
+    "Original Folder" : {
+      "comment" : "Server export destination"
+    },
+    "Original in iCloud" : {
+      "comment" : "VoiceOver: the photo's original is only in iCloud"
     },
     "Originals + Edited" : {
       "comment" : "Upload to Server: send the originals and the edited version made in Photos"
     },
     "Originals couldn't be deleted" : {
 
+    },
+    "Originals in RAW stay — edits are saved as JPEG or HEIC." : {
+      "comment" : "Server export: why Replace Original is off"
+    },
+    "Other Folder…" : {
+      "comment" : "Server export destination"
     },
     "Out" : {
 
@@ -3182,6 +3898,9 @@
 
     },
     "Output size" : {
+
+    },
+    "Overlay" : {
 
     },
     "Paint to take this area from the selected frame." : {
@@ -3206,7 +3925,7 @@
       "comment" : "Video Studio colour: where V-Log comes from"
     },
     "Panorama" : {
-      "comment" : "Combine Photos submenu row: stitch a panorama"
+      "comment" : "Combine Photos submenu row: stitch a panorama\nServer export: kind of the one file a tool made"
     },
     "Panorama preview" : {
 
@@ -3227,7 +3946,7 @@
 
     },
     "Paste Edits" : {
-
+      "comment" : "Photo command"
     },
     "Paste onto %lld Photos" : {
 
@@ -3322,7 +4041,7 @@
     "Photos" : {
       "comment" : "Video Studio media pool bin label for the sticker tab\nVideo Studio media pool filter: still photos only"
     },
-    "Photos already saved stay in your library." : {
+    "Photos already imported stay in your library." : {
 
     },
     "Photos and metadata stay on this device. They leave it only when you upload them to a server you set up, or in a support message you write yourself, which carries no photos." : {
@@ -3336,6 +4055,12 @@
     },
     "photos and videos per minute" : {
 
+    },
+    "Photos are added to your library and to the album “%@”." : {
+      "comment" : "Import from server: what an album destination does"
+    },
+    "Photos are added to your library only, not to any album." : {
+      "comment" : "Import from server: what Library Only does"
     },
     "Photos can't store this format (%@)." : {
       "comment" : "Download from server: Photos rejected the file type"
@@ -3354,6 +4079,9 @@
     },
     "Photos go straight into this folder." : {
       "comment" : "Upload to Server: Date Folders off"
+    },
+    "Photos Library" : {
+      "comment" : "Server export destination"
     },
     "Photos must match at least one condition below." : {
 
@@ -3458,7 +4186,7 @@
 
     },
     "Portrait" : {
-
+      "comment" : "Angle-of-view group"
     },
     "Position" : {
 
@@ -3466,7 +4194,23 @@
     "Preparing" : {
       "comment" : "Upload to Server: reading the original out of Photos / iCloud"
     },
+    "PREPARING" : {
+
+    },
+    "Preparing %lld of %lld…" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Preparing %1$lld of %2$lld…"
+          }
+        }
+      }
+    },
     "Preparing clips…" : {
+
+    },
+    "Preparing editing tools" : {
 
     },
     "Preparing original…" : {
@@ -3475,10 +4219,16 @@
     "Preparing scan…" : {
 
     },
+    "Preparing…" : {
+      "comment" : "Server export: before the first render"
+    },
     "Preset" : {
 
     },
     "Preset %@" : {
+
+    },
+    "Preset Shapes" : {
 
     },
     "Presets" : {
@@ -3541,14 +4291,33 @@
     "Raw · Image" : {
       "comment" : "Info panel section title"
     },
+    "RAW files keep their location" : {
+
+    },
+    "RAW files keep their metadata" : {
+
+    },
     "Raw Metadata" : {
 
+    },
+    "RAW not supported by iOS" : {
+      "comment" : "VoiceOver: grid tile of a RAW photo this iOS version can't decode"
     },
     "Re-index Library" : {
 
     },
     "Read the Log" : {
 
+    },
+    "Reading %lld of %lld" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Reading %1$lld of %2$lld"
+          }
+        }
+      }
     },
     "Reading dates… %lld of %lld" : {
       "comment" : "Server browser: reading capture dates for Date Taken sort",
@@ -3603,6 +4372,12 @@
     "Recents" : {
 
     },
+    "Red Eye" : {
+
+    },
+    "Red eye %lld" : {
+
+    },
     "Red, green and blue side by side — uneven feet mean a cast." : {
       "comment" : "Video Studio scopes: parade"
     },
@@ -3635,6 +4410,12 @@
     "Remove" : {
 
     },
+    "Remove %@?" : {
+
+    },
+    "Remove all %lld layers?" : {
+
+    },
     "Remove all layers" : {
 
     },
@@ -3646,6 +4427,9 @@
     },
     "Remove from Collages" : {
       "comment" : "Removes a saved collage from the Collages list — the exported photo stays in the library"
+    },
+    "Remove from Collections" : {
+
     },
     "Remove from Video Projects" : {
       "comment" : "Removes a saved video project from the Video Projects list — the exported video stays in the library"
@@ -3698,17 +4482,45 @@
     "Rename…" : {
       "comment" : "Video Studio colour: names a node"
     },
+    "Rendering %lld of %lld" : {
+      "comment" : "Server export: rendering the edit of one photo",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Rendering %1$lld of %2$lld"
+          }
+        }
+      }
+    },
     "Rendering full resolution…" : {
+
+    },
+    "Reorder %@" : {
 
     },
     "Reorder charts" : {
 
     },
     "Replace" : {
-
+      "comment" : "Server export: confirm replacing originals"
+    },
+    "Replace ^[%lld original](inflect: true) on %@?" : {
+      "comment" : "Server export: replace originals confirmation title",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Replace ^[%1$lld original](inflect: true) on %2$@?"
+          }
+        }
+      }
     },
     "Replace Image" : {
 
+    },
+    "Replace Original" : {
+      "comment" : "Server export: overwrite the original"
     },
     "Replies arrive here in the app. There is no account and no email address to give." : {
 
@@ -3759,7 +4571,7 @@
 
     },
     "Resize" : {
-
+      "comment" : "Photo command"
     },
     "Resize %lld Photos" : {
 
@@ -3784,6 +4596,9 @@
     },
     "Retry" : {
 
+    },
+    "Retry Failed" : {
+      "comment" : "Server export: run the failed destinations again"
     },
     "Retry Now" : {
 
@@ -3828,7 +4643,7 @@
 
     },
     "Save" : {
-
+      "comment" : "Editor: the save button"
     },
     "Save %lld Copies" : {
 
@@ -3836,8 +4651,17 @@
     "Save an edit here and it can be put on any other photo." : {
 
     },
+    "Save an edit here and it can be put on any photo." : {
+
+    },
+    "Save As" : {
+      "comment" : "HDR Save: alert title asking for the file format"
+    },
     "Save as Copies" : {
 
+    },
+    "Save as New File" : {
+      "comment" : "Server export: keep the original, write _edited"
     },
     "Save as Preset" : {
 
@@ -3851,16 +4675,16 @@
     "Save Changes" : {
 
     },
-    "Save Changes is non-destructive: Photos keeps the original and ShotDex reopens this photo with the saved crop, sliders and masks. A Live Photo keeps its motion. Save Copy creates a still image." : {
+    "Save Changes keeps everything — the photo's date, location and metadata — and is non-destructive: Photos keeps the original and ShotDex reopens this photo with the saved crop, sliders and masks. A Live Photo keeps its motion." : {
 
     },
     "Save Changes to %lld Photos" : {
 
     },
-    "Save Copy" : {
+    "Save Connection" : {
 
     },
-    "Save Copy is full resolution at maximum quality. Turning off metadata strips EXIF and clears the Photos date/location on Save Changes. If Photos doesn't support HEIC for this photo, ShotDex falls back to JPEG and tells you." : {
+    "Save Copy" : {
 
     },
     "Save Current" : {
@@ -3879,7 +4703,7 @@
 
     },
     "Save To" : {
-
+      "comment" : "Server export: destinations section"
     },
     "Save to Photos" : {
       "comment" : "Download from server sheet title"
@@ -3887,19 +4711,11 @@
     "Saved" : {
 
     },
-    "Saved %lld photos to %@." : {
-      "comment" : "Download from server result headline",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Saved %1$lld photos to %2$@."
-          }
-        }
-      }
-    },
     "Saved as JPEG" : {
 
+    },
+    "Saved next to the original with “_edited” added to the name." : {
+      "comment" : "Server export: new file naming"
     },
     "Saves every layer on this photo as a preset, so it can be stamped onto another one." : {
 
@@ -3907,7 +4723,7 @@
     "Saves the frame and style — not the photos or text." : {
 
     },
-    "Saves the tone, colour, curve and film look on this photo. The crop, masks and markup stay with the photo." : {
+    "Saves tone, color, curve and film look. Crop, masks and markup stay with this photo." : {
 
     },
     "Saving" : {
@@ -4066,6 +4882,30 @@
 
     },
     "Share" : {
+      "comment" : "Photo command\nServer export destination"
+    },
+    "Share %lld" : {
+
+    },
+    "Share as JPEG" : {
+
+    },
+    "Share Original" : {
+      "comment" : "Alert button: share the original file of a RAW iOS can't read"
+    },
+    "Share RAW with Location" : {
+
+    },
+    "Share With Location" : {
+
+    },
+    "Share Without Location" : {
+
+    },
+    "Share Without Metadata" : {
+
+    },
+    "Share…" : {
 
     },
     "Shared" : {
@@ -4095,8 +4935,17 @@
     "ShotDex asks for your location only when you allow it here, rounds it to about a kilometre, and fetches the current conditions from Open-Meteo. It does this only while a weather widget is on your Home Screen, and it sends nothing else." : {
 
     },
+    "ShotDex can only open photos you've allowed it to see. Allow access to this photo, or to all photos, in Settings." : {
+      "comment" : "Editor load error: photo outside the limited selection"
+    },
+    "ShotDex can open only the folders you add here." : {
+
+    },
     "ShotDex can't look for servers because Local Network access is off." : {
 
+    },
+    "ShotDex can't open this folder anymore. Add it again." : {
+      "comment" : "Cloud folder error: the saved bookmark no longer resolves"
     },
     "ShotDex copies the photos into the widget's own storage, because a widget cannot read your library. An album is copied up to %lld photos deep; use Refresh Now after adding to it." : {
 
@@ -4114,10 +4963,16 @@
     "ShotDex is reading the camera, lens and exposure info from each photo and video. For items kept in iCloud it downloads only the small part of the file holding that info — nothing is saved to this iPhone. The app may feel slow until this finishes." : {
 
     },
+    "ShotDex Look" : {
+
+    },
     "ShotDex needs Local Network access to reach this server." : {
       "comment" : "File server error"
     },
     "ShotDex only analyzes the photos you selected." : {
+
+    },
+    "ShotDex stops using this folder. Nothing in the cloud or in your library is deleted." : {
 
     },
     "ShotDex will ask Photos to remove every copy already exported." : {
@@ -4127,6 +4982,9 @@
 
     },
     "Show %@" : {
+
+    },
+    "Show All Files" : {
 
     },
     "Show All Frames" : {
@@ -4147,13 +5005,13 @@
     "Show Gear Statistics" : {
 
     },
-    "Show Graph" : {
-
-    },
     "Show High and Low" : {
 
     },
     "Show in All Photos" : {
+
+    },
+    "Show Insights" : {
 
     },
     "Show Mask Overlay" : {
@@ -4164,6 +5022,9 @@
     },
     "Show original" : {
       "comment" : "Video Studio: press-and-hold control that previews the clips without edits"
+    },
+    "Show Original" : {
+
     },
     "Show photos from ${camera}" : {
 
@@ -4234,11 +5095,23 @@
     "Shows details about shutter count availability" : {
 
     },
+    "Shows every group to jump to" : {
+
+    },
+    "Shows every layer" : {
+
+    },
+    "Shows every mask" : {
+
+    },
     "Shows indexing details" : {
 
     },
     "Shows the top group by photo count." : {
 
+    },
+    "Shows why this RAW can't be edited" : {
+      "comment" : "VoiceOver hint: the viewer's unsupported-RAW glyph"
     },
     "Shutter Count" : {
 
@@ -4246,14 +5119,23 @@
     "Shutter Speed" : {
       "comment" : "Info panel row label"
     },
-    "Size" : {
+    "Sign in to this server" : {
 
+    },
+    "Signed in." : {
+      "comment" : "File server form: Connect As logged in; the write test has not run"
+    },
+    "Size" : {
+      "comment" : "Server export: Resize preset\nServer photo browser sort: file size"
     },
     "Skip" : {
 
     },
     "Skip Photos Already in Library" : {
 
+    },
+    "Skip These %lld" : {
+      "comment" : "Leave out the RAW photos iOS can't read"
     },
     "Slide down" : {
 
@@ -4306,8 +5188,14 @@
     "Some exported copies may remain in Photos" : {
 
     },
+    "Some highlights are bright in every frame and can't be recovered." : {
+      "comment" : "HDR panel: even the darkest frame is clipped somewhere"
+    },
     "Some of the photos this was made from are no longer in your library. Remove it from the list, or start a new one with the photos you still have." : {
       "comment" : "Alert when reopening a creation whose source photos were deleted"
+    },
+    "Some of these photos aren't RAW, so all of them are merged from their processed versions." : {
+      "comment" : "HDR panel: a series mixing RAW and JPEG/HEIC is merged from the processed versions"
     },
     "Some Photos Didn't Save" : {
 
@@ -4364,8 +5252,14 @@
     "Stack Exposures" : {
       "comment" : "Combine Photos submenu row and screen title: average, lighten or darken a sequence of one scene"
     },
+    "Stacked Photo" : {
+      "comment" : "Server export: kind of the one file a tool made"
+    },
     "Stacking… %lld%%" : {
       "comment" : "Focus Stack status while saving: how far the full-resolution stack has got, as a percentage"
+    },
+    "Standard" : {
+      "comment" : "Angle-of-view group"
     },
     "Start" : {
 
@@ -4397,7 +5291,7 @@
     "Stop" : {
       "comment" : "Video Studio colour: abandons a window track in progress"
     },
-    "Stop Downloading?" : {
+    "Stop Importing?" : {
 
     },
     "Stop preview" : {
@@ -4409,8 +5303,17 @@
     "Stop Uploading?" : {
 
     },
+    "Stopped. Photos already imported stay in your library." : {
+      "comment" : "Download from server result after Cancel"
+    },
+    "Straighten ruler" : {
+
+    },
     "Strength" : {
-      "comment" : "Video Studio colour: how much of the LUT to mix in"
+      "comment" : "HDR slider: how far the shadows are lifted and the tones compressed\nVideo Studio colour: how much of the LUT to mix in"
+    },
+    "Strength controls need a lens profile" : {
+
     },
     "Stretches the curved edges out to the frame instead of cropping them off." : {
 
@@ -4424,14 +5327,14 @@
     "Subject Range" : {
       "comment" : "Info panel row label"
     },
-    "Subtract" : {
-
-    },
     "Suggested" : {
 
     },
     "Summed from the file sizes the index has read. Photos still stored only in iCloud are counted at their full size." : {
 
+    },
+    "Super telephoto" : {
+      "comment" : "Angle-of-view group"
     },
     "Support" : {
 
@@ -4445,10 +5348,19 @@
     "Switches between matching all and any" : {
 
     },
+    "Sync" : {
+
+    },
     "Sync Everything" : {
 
     },
+    "Sync Everything to %@" : {
+
+    },
     "Sync Look" : {
+
+    },
+    "Sync Look to %@" : {
 
     },
     "Sync to %lld Photos" : {
@@ -4481,6 +5393,9 @@
     "Tap Pick a Color, then drag on the photo to choose one." : {
 
     },
+    "Tap the line to add a point. Drag to move it, double-tap to remove it." : {
+
+    },
     "Tap the map or search to place this photo." : {
 
     },
@@ -4488,9 +5403,6 @@
 
     },
     "Tap the photo to pick a color, then adjust only that color" : {
-
-    },
-    "Tap to add a healing spot" : {
 
     },
     "Tap to add a point, drag it off the plot to remove it." : {
@@ -4502,6 +5414,9 @@
     "Tap to fit the photo" : {
 
     },
+    "Telephoto" : {
+      "comment" : "Angle-of-view group"
+    },
     "Template %@" : {
 
     },
@@ -4511,8 +5426,14 @@
     "Text" : {
       "comment" : "Collage panel tab: captions drawn on the collage\nVideo Studio media pool tab: captions to add over the frame\nVideo Studio timeline lane: the text and sticker overlay track"
     },
+    "Text alignment" : {
+
+    },
     "Text Position" : {
 
+    },
+    "That connection is gone." : {
+      "comment" : "Server export: the picked connection was deleted"
     },
     "That photo doesn't match what's there. Try dropping it where it overlaps." : {
       "comment" : "Panorama Arrange: the dropped frame could not be matched"
@@ -4526,11 +5447,14 @@
     "The connection to the server was lost." : {
       "comment" : "File server error"
     },
+    "The copies downloaded from the server are deleted too. The originals on the server stay as they are." : {
+
+    },
     "The copy on the server didn't match the original." : {
       "comment" : "Upload to Server: checksum read back from the server differs"
     },
-    "The crop applies when you leave this tab or save." : {
-
+    "The extension stays as it is." : {
+      "comment" : "Server browser: Rename alert for a file"
     },
     "The file could not be opened as text. ShotDex reads .cube files." : {
       "comment" : "LUT import: the picked file is not readable text"
@@ -4542,7 +5466,7 @@
       "comment" : "File server error"
     },
     "The folder is created on the server inside %@." : {
-      "comment" : "Upload to Server: New Folder alert message"
+      "comment" : "Server browser: New Folder alert message"
     },
     "The identity of %@ changed. If you didn't reinstall the server, someone may be intercepting the connection." : {
       "comment" : "File server error: SFTP host key differs from the saved one"
@@ -4553,11 +5477,23 @@
     "The log covers the last fifteen minutes of this session only — iOS does not keep it across launches. Reproduce the problem, then send. It holds no photos and no file names." : {
 
     },
+    "The long side of each exported photo. The originals keep their size." : {
+      "comment" : "Server export: Resize footer"
+    },
     "The month is worked out on this iPhone and needs no permission. Listing today's events reads your calendars — only their titles, times and colours are copied for the widget, and only for today. Nothing is read until you allow it here." : {
 
     },
+    "The original is deleted and can't be recovered." : {
+      "comment" : "Server export: replace one original, confirmation"
+    },
     "The original stays in your library. Revert in Photos brings the whole clip back." : {
 
+    },
+    "The originals are deleted and can't be recovered." : {
+      "comment" : "Server export: replace originals confirmation"
+    },
+    "The originals stay on the server. Keep ShotDex open until the download finishes." : {
+      "comment" : "Server photo command: fetch sheet footer"
     },
     "The panorama couldn't be saved." : {
 
@@ -4579,9 +5515,6 @@
     },
     "The server offered a key ShotDex can't read." : {
       "comment" : "SFTP: unreadable host key"
-    },
-    "The share is the shared folder on the server — Choose… lists them once the username and password are in. Folder is where uploads start; you can pick another each time." : {
-
     },
     "The size is a fast estimate and may change slightly when the full-resolution file is encoded." : {
 
@@ -4646,6 +5579,9 @@
         }
       }
     },
+    "These couldn't be prepared and were left out: %@" : {
+
+    },
     "These photos are no longer in your library." : {
 
     },
@@ -4655,10 +5591,19 @@
     "These photos cover too wide a sweep for a single flat photograph." : {
 
     },
+    "These photos have about the same exposure. HDR works best on a bracketed series." : {
+      "comment" : "HDR panel: the selected photos are not an exposure bracket"
+    },
     "They move to Recently Deleted and free up space after 30 days, or when you empty it in Photos. If iCloud Photos is on, they are also deleted from iCloud and your other devices." : {
 
     },
     "This build cannot use the in-app channel, so support runs by email. Replies go to wherever you write from." : {
+
+    },
+    "This computer doesn't share any folders with this account." : {
+
+    },
+    "This device can't write HEIC, so the photo is saved as JPEG." : {
 
     },
     "This device cannot reach support." : {
@@ -4676,10 +5621,16 @@
     "This Month" : {
 
     },
-    "This photo hasn't been downloaded from iCloud yet." : {
+    "This photo couldn't be downloaded from iCloud." : {
+      "comment" : "Preparation failure, one photo"
+    },
+    "This photo's original is in iCloud and couldn't be downloaded. Check your connection and try again." : {
+      "comment" : "Editor load error: iCloud download failed"
+    },
+    "This RAW file can't have its location removed" : {
 
     },
-    "This server doesn't share any folders with this account." : {
+    "This RAW file can't have its metadata removed" : {
 
     },
     "This server hasn't been trusted yet." : {
@@ -4734,6 +5685,9 @@
       "comment" : "Video Studio colour: the draggable curve plot"
     },
     "Tone curve, %@ channel" : {
+
+    },
+    "Tone, color, curve and look" : {
 
     },
     "Too many messages for now." : {
@@ -4819,9 +5773,6 @@
     "Try: Fukuoka · f > 1.2 · ISO trên 3200 · trước 2020 · 85mm" : {
 
     },
-    "Turning this off removes where a photo was taken before it leaves the app. Everything else — camera, lens, exposure, date — still goes with it.\n\nVideos are unaffected: their location lives in the file itself, and removing it would mean re-encoding the whole clip." : {
-
-    },
     "Type" : {
       "comment" : "Info panel row label"
     },
@@ -4831,11 +5782,17 @@
     "Typeface" : {
 
     },
+    "Ultra-wide" : {
+      "comment" : "Angle-of-view group"
+    },
     "Unable to Share" : {
 
     },
     "Unavailable" : {
 
+    },
+    "under %@" : {
+      "comment" : "Insights: the shortest angle-of-view group, e.g. under 20mm"
     },
     "Undo" : {
 
@@ -4879,8 +5836,14 @@
     "Unplaced photo, drag to place" : {
 
     },
+    "Unsupported RAW" : {
+      "comment" : "Filter: RAW photos this iOS version can't decode"
+    },
     "Update Now" : {
 
+    },
+    "Updating as your library is indexed." : {
+      "comment" : "Insights footer while the index is still running"
     },
     "Upload" : {
 
@@ -4912,13 +5875,13 @@
     "Upload to Server…" : {
 
     },
-    "Uploaded %lld photos (%@) to %@" : {
+    "Uploaded ^[%lld photo](inflect: true) (%@) to %@" : {
       "comment" : "Upload to Server result headline",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "Uploaded %1$lld photos (%2$@) to %3$@"
+            "value" : "Uploaded ^[%1$lld photo](inflect: true) (%2$@) to %3$@"
           }
         }
       }
@@ -4946,10 +5909,13 @@
         }
       }
     },
-    "Uploads send the original files over SMB or SFTP. Passwords are kept in the Keychain on this device." : {
+    "Uploads send the original files to the folder under each name. Passwords are kept in the Keychain on this device." : {
 
     },
     "UPRIGHT" : {
+
+    },
+    "Upright guides" : {
 
     },
     "Use as Reference" : {
@@ -4964,13 +5930,13 @@
     "Use HTTPS" : {
 
     },
+    "Use Lens Data Found in Photo" : {
+
+    },
     "Use the System Font" : {
 
     },
     "Use the System Format" : {
-
-    },
-    "Use This Folder" : {
 
     },
     "Username" : {
@@ -5001,7 +5967,7 @@
       "comment" : "Upload to Server: reading the file back to check its checksum"
     },
     "Video" : {
-      "comment" : "Info panel section title\nKind of timeline clip, read by VoiceOver\nName of one file behind a photo, as an Info panel heading\nVideo Studio timeline lane: the video and photo clip track"
+      "comment" : "Info panel section title\nKind of timeline clip, read by VoiceOver\nName of one file behind a photo, as an Info panel heading\nServer export: kind of the one file a tool made\nVideo Studio timeline lane: the video and photo clip track"
     },
     "Video Error" : {
 
@@ -5032,19 +5998,34 @@
     "Videos" : {
       "comment" : "Video Studio media pool filter: video clips only"
     },
+    "Videos and RAW files keep their metadata" : {
+
+    },
+    "Videos keep their metadata" : {
+
+    },
     "Videos Only" : {
 
     },
     "Videos you make in the Video Studio show up here, with the clips and edits behind them — so you can open one again and change it." : {
 
     },
+    "View" : {
+
+    },
     "View Full HDR" : {
+
+    },
+    "View Options" : {
 
     },
     "View Panorama" : {
 
     },
     "Vignette Pulse" : {
+
+    },
+    "Vignette Style" : {
 
     },
     "Volume" : {
@@ -5071,6 +6052,9 @@
     "Weighted" : {
       "comment" : "Focus Stack method: blend every frame by how sharp it is"
     },
+    "What goes with a photo when it leaves ShotDex: Share, Save Copy, Paste Edits, Resize and dragging it into another app. Each of them can choose differently for one time. No Location removes where it was taken; camera, lens, exposure and date still go with it. No Metadata keeps only what the picture needs to look right, and the Artist and Copyright.\n\nVideos always keep their metadata: removing it would mean copying the whole clip." : {
+
+    },
     "What happened" : {
 
     },
@@ -5095,6 +6079,9 @@
     "Where new media lands" : {
       "comment" : "Video Studio media pool: picks append-at-end or insert-at-playhead"
     },
+    "Where They Are" : {
+
+    },
     "Which camera?" : {
 
     },
@@ -5109,6 +6096,9 @@
     },
     "Wi-Fi" : {
 
+    },
+    "Wide" : {
+      "comment" : "Angle-of-view group"
     },
     "Widget Size" : {
 
@@ -5160,17 +6150,29 @@
     "Y-Axis" : {
 
     },
+    "Year" : {
+
+    },
     "Yesterday" : {
 
     },
     "You" : {
 
     },
+    "You can undo this." : {
+
+    },
+    "You can't write to this folder." : {
+      "comment" : "Server export: the server refused the write"
+    },
     "You don't have permission to write to %@." : {
       "comment" : "File server error"
     },
     "Your Albums" : {
 
+    },
+    "Your edits are still here. Try again, or choose another place." : {
+      "comment" : "Server export: some destinations failed"
     },
     "Your iPhone is warm — indexing slowed down to cool it" : {
 
