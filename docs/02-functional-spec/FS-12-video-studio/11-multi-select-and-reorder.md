@@ -140,9 +140,9 @@ mọi ranh giới cắt thẳng (None) trừ khi AC ghi khác.
 | AC-17 | project mẫu, không chọn gì | giữ clip 4 trong 0,35 s rồi kéo (> 10pt) tới ranh giới 0:03.0, thả | thứ tự 1·4·2·3·5; chỉ clip 4 dời; không vào chế độ chọn; một bước undo | ✅ route `video-press-drag.json` (iPad 13", Fit 48,7 pt/s, playhead 12 s) 2026-10-05: giữ clip 4 0,35 s rồi kéo qua giữa clip 2 → thứ tự ảnh 0–3 · ảnh 3–6 · video 6–12 · video 12–17 · video 17–24 (= 1·4·2·3·5), timeline không cuộn (playhead vẫn 12,0 s), Undo bật, không clip nào chọn. Mọi clip giờ nhận giữ-rồi-kéo, không chỉ clip đang chọn |
 | AC-18 | luật ba cử chỉ §4 | test thuần với (giữ 0,2 s, lệch 15pt) · (0,4 s, 2pt) · (0,6 s, 2pt) · (0,6 s, 20pt) | cuộn · không gì · vào chế độ chọn · dời | ✅ `TimelinePressClassifierTests.fourCasesFromTheSpec` (cuộn · không gì · vào chọn · dời) + `boundariesBelongToTheLongerGesture` (0,32 / 0,5 s, 10pt) + `aHeldPressIsPendingUntilItMovesOrLifts`; long-press của timeline lấy `minimumPressDuration` và `allowableMovement` từ `TimelinePressClassifier` |
 | AC-19 | clip 2 (video 6,2 s) và clip 4 (ảnh 3,0 s) đang chọn, chưa fade | đặt Fade in 2,0 s ở section FADE | clip 2 fade in 2,0 s; clip 4 fade in 1,5 s (kẹp ở nửa 3,0 s); một Undo trả cả hai về 0 | ✅ `VideoClipGroupEditingTests.groupFadeClampsPerClip` (2,0 s → clip 2 2,0 · clip 4 1,5; trần thanh trượt 3,1), `VideoStudioMultiSelectTests.groupFadeIsOneUndo`; mục Fade (In · Out) dưới Volume trong panel nhóm (`t8-ipad-group-muted-fade.png`) |
-| AC-20 | clip 1 và 4 (đều ảnh) đang chọn, Motion None | chạm chip Zoom In | cả hai clip Zoom In; một Undo trả cả hai về None | ⚠️ chưa có |
+| AC-20 | clip 1 và 4 (đều ảnh) đang chọn, Motion None | chạm chip Zoom In | cả hai clip Zoom In; một Undo trả cả hai về None | ✅ `VideoStudioMultiSelectTests.groupMotionAppliesToAll` (clip 1, 4 → Zoom In, một Undo về None); Look nhóm: `groupLookWritesEverySelectedClip` (ô Look mở khối look của clip nhắm **Selected**, "2 Clips", một chạm một bước cho mọi clip, khác nhau → "Mixed"); ảnh iPhone 17 (27.0) panel nhóm: FADE · Look "Whole video ›" · MOTION (`build/proofs/fs1211/t9-phone-group-panel.png`) |
 
-**Chưa chứng minh được:** AC-6 tới AC-15, AC-20 (AC-9 một phần).
+**Chưa chứng minh được:** AC-6 tới AC-15 (AC-9 một phần).
 
 ## 10. Rủi ro đã biết
 

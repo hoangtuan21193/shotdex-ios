@@ -24,6 +24,8 @@ struct VideoGroupPanel: View {
                 case .speed: speedSection(summary)
                 case .volume: volumeSection
                 case .fade: fadeSection
+                case .look: lookRow
+                case .motion: motionSection
                 }
             }
         }
@@ -113,6 +115,55 @@ struct VideoGroupPanel: View {
         }
     }
 
+    // MARK: Look and Motion
+
+    /// "Look · Moody Coast ›" — or Whole video, or Mixed. The row opens
+    /// the clip's look block, writing every clip of the group (06c's
+    /// Selected), as the Look command does.
+    private var lookRow: some View {
+        Button {
+            model.toggleItemSection(.look)
+        } label: {
+            HStack(spacing: 10) {
+                Image(systemName: VideoItemCommand.look.systemImage)
+                    .font(.system(size: isDesk ? 17 : 14, weight: .regular))
+                    .frame(width: 26)
+                Text(VideoStudioCopy.look)
+                    .font(.system(size: isDesk ? 17 : 13.5, weight: .medium))
+                Spacer(minLength: 8)
+                Text(model.groupLookName)
+                    .font(.system(size: isDesk ? 15 : 13))
+                    .foregroundStyle(.white.opacity(0.55))
+                    .lineLimit(1)
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(.white.opacity(0.55))
+            }
+            .foregroundStyle(.white)
+            .padding(.horizontal, inset)
+            .frame(height: isDesk ? 44 : 40)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
+
+    @ViewBuilder
+    private var motionSection: some View {
+        if isDesk {
+            sectionHeader(Text("Motion", tableName: VideoStudioCopy.table, comment: "Video Studio clip panel: header over the clip's motion effects — zoom, pan, shake"))
+            VideoPopUpButton(
+                title: VideoStudioCopy.motion,
+                options: VideoClipPanelSections.motionOptions,
+                selected: model.groupEffect ?? .none,
+                name: \.displayName
+            ) { model.setGroupEffect($0) }
+            .padding(.horizontal, inset)
+        } else {
+            ClipEffectRow(selected: model.groupEffect) { model.setGroupEffect($0) }
+                .padding(.top, 4)
+        }
+    }
+
     @ViewBuilder
     private func sectionHeader(_ text: Text) -> some View {
         if isDesk {
@@ -141,7 +192,7 @@ struct VideoGroupPanel: View {
 /// The group panel's sections, in order, with a lit command's brought to
 /// the top — as `VideoClipPanelSections` orders a single clip's.
 enum VideoGroupPanelSection: Equatable, CaseIterable {
-    case speed, volume, fade
+    case speed, volume, fade, look, motion
 }
 
 enum VideoGroupPanelSections {
@@ -149,12 +200,13 @@ enum VideoGroupPanelSections {
         let all = VideoGroupPanelSection.allCases.filter { section in
             switch section {
             case .speed, .volume: hasVideo
-            case .fade: true
+            case .fade, .look, .motion: true
             }
         }
         let lead: VideoGroupPanelSection? = switch command {
         case .speed: .speed
         case .volume: .volume
+        case .motion: .motion
         default: nil
         }
         guard let lead, all.contains(lead) else { return all }

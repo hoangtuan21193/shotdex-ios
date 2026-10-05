@@ -109,6 +109,31 @@ enum VideoClipGroupEditing {
         return recipe.clips.filter { wanted.contains($0.id) }.map { $0.maximumFade() }.max() ?? 0
     }
 
+    // MARK: Motion and Look (FS-12.11 §5)
+
+    static func setEffect(_ effect: VideoClipEffect, for ids: [UUID], in recipe: inout VideoProjectRecipe) {
+        let wanted = Set(ids)
+        for index in recipe.clips.indices where wanted.contains(recipe.clips[index].id) {
+            recipe.clips[index].effect = effect
+        }
+    }
+
+    /// The motion the group shares, or nil when the clips differ.
+    static func commonEffect(_ ids: [UUID], in recipe: VideoProjectRecipe) -> VideoClipEffect? {
+        let wanted = Set(ids)
+        let effects = Set(recipe.clips.filter { wanted.contains($0.id) }.map(\.effect))
+        return effects.count == 1 ? effects.first : nil
+    }
+
+    /// Whether every clip of the group has the same look of its own — or
+    /// none, following the whole video's.
+    static func sharesLook(_ ids: [UUID], in recipe: VideoProjectRecipe) -> Bool {
+        let wanted = Set(ids)
+        let looks = recipe.clips.filter { wanted.contains($0.id) }.map(\.look)
+        guard let first = looks.first else { return true }
+        return looks.allSatisfy { $0 == first }
+    }
+
     private static func videos(_ ids: [UUID], in recipe: VideoProjectRecipe) -> [VideoClip] {
         let wanted = Set(ids)
         return recipe.clips.filter { wanted.contains($0.id) && $0.kind == .video }

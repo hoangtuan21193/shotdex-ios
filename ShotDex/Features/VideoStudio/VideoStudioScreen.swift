@@ -450,12 +450,12 @@ struct VideoStudioScreen: View {
         let showsLookTool = model.inspectorTarget == .none && model.activeToolPanel == .look
         // A clip's Look block stands 340 too, over its ✕ · name · ✓ footer
         // (board F5_P_ClipLook).
-        let showsClipLook = model.inspectorTarget == .clip && model.activeItemCommand == .look
+        let showsClipLook = (model.inspectorTarget == .clip || model.inspectorTarget == .clips) && model.activeItemCommand == .look
         // A multi-select group (FS-12.11 §3, board F1_P_MultiSelect): a 260
         // panel slides over the lower lanes and nothing lifts — the timeline
         // keeps its whole height, so the clips above the panel can still be
         // tapped into the group.
-        let showsGroup = model.inspectorTarget == .clips
+        let showsGroup = model.inspectorTarget == .clips && !showsClipLook
         let contentHeight = showsLookTool || showsClipLook
             ? VideoStudioMetrics.lookSheetHeight
             : (showsGroup ? VideoStudioMetrics.groupSheetHeight : VideoStudioMetrics.sheetHeight)

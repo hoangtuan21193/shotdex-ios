@@ -371,7 +371,7 @@ struct VideoStudioSheetHost: View {
                     .padding(.top, 6)
                     .padding(.bottom, 4)
             }
-            if model.inspectorTarget == .clip, model.activeItemCommand == .look {
+            if model.inspectorTarget == .clip || model.inspectorTarget == .clips, model.activeItemCommand == .look {
                 // Look (FS-12.06c §3): the clip's own look block takes the
                 // panel, as Trim's chips take it for a cut.
                 VideoLookPanel(model: model, mode: .clip, usesTallScopes: layout != .band)

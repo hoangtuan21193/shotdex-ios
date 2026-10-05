@@ -294,7 +294,8 @@ struct VideoPopUpButton<Option: Hashable>: View {
 }
 
 struct ClipEffectRow: View {
-    let selected: VideoClipEffect
+    /// Nil when a group's clips differ: no chip is lit.
+    let selected: VideoClipEffect?
     let set: (VideoClipEffect) -> Void
 
     var body: some View {

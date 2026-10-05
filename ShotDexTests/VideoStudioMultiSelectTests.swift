@@ -199,4 +199,51 @@ struct VideoStudioMultiSelectTests {
         #expect(model.recipe.clips[3].fadeIn == 0)
         #expect(!model.canUndo)
     }
+
+    /// AC-20: clips 1 and 4 (both photos), Motion None — Zoom In on both in
+    /// one tap; one Undo puts both back to None.
+    @Test func groupMotionAppliesToAll() {
+        let model = sampleModel()
+        let ids = model.recipe.clips.map(\.id)
+        model.enterClipSelection(ids[0])
+        model.toggleClip(ids[3])
+        #expect(model.groupEffect == VideoClipEffect.none)
+
+        model.setGroupEffect(.zoomIn)
+        #expect(model.recipe.clips.map(\.effect) == [.zoomIn, .none, .none, .zoomIn, .none])
+        #expect(model.groupEffect == .zoomIn)
+
+        model.undo()
+        #expect(model.recipe.clips.map(\.effect) == Array(repeating: VideoClipEffect.none, count: 5))
+        #expect(!model.canUndo)
+    }
+
+    /// The group's Look (06c's Selected): the Look command opens the clip
+    /// block aimed at every clip of the group; one tile, one step, every
+    /// clip gets the look; the row then names it, and differing looks read
+    /// "Mixed".
+    @Test func groupLookWritesEverySelectedClip() {
+        let model = sampleModel()
+        let ids = model.recipe.clips.map(\.id)
+        model.enterClipSelection(ids[1])
+        model.toggleClip(ids[3])
+        #expect(model.groupLookName == VideoStudioCopy.wholeVideo)
+
+        model.toggleItemSection(.look)
+        #expect(model.lookTarget == .selected)
+        #expect(model.canTargetSelectedClips)
+        #expect(model.lookSubtitle == "2 Clips")
+
+        model.chooseLook(.preset(.vivid))
+        #expect(model.recipe.clips[1].look?.source == .preset(.vivid))
+        #expect(model.recipe.clips[3].look?.source == .preset(.vivid))
+        #expect(model.recipe.clips[0].look == nil)
+        #expect(model.groupLookName != VideoStudioCopy.mixed)
+
+        model.toggleClip(ids[0])
+        #expect(model.groupLookName == VideoStudioCopy.mixed)
+
+        model.undo()
+        #expect(model.recipe.clips[1].look == nil && model.recipe.clips[3].look == nil)
+    }
 }

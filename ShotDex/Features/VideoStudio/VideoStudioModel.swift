@@ -547,8 +547,9 @@ final class VideoStudioModel {
             inspectorTextTool = inspectorTextTool == tool ? .transform : tool
         default:
             activeItemCommand = activeItemCommand == command ? nil : command
-            // A clip's Look block writes that clip unless told otherwise.
-            if activeItemCommand == .look { lookTarget = .thisClip }
+            // A clip's Look block writes that clip unless told otherwise; a
+            // group's writes every clip in it — 06c's Selected (FS-12.11 §5).
+            if activeItemCommand == .look { lookTarget = isSelectingClips && selectedClipIDs.count >= 2 ? .selected : .thisClip }
         }
     }
 
@@ -1141,6 +1142,28 @@ final class VideoStudioModel {
 
     func groupFade(at end: ClipEnd) -> Double? {
         VideoClipGroupEditing.commonFade(selectedClipIDs, atStart: end == .start, in: recipe)
+    }
+
+    /// The motion the group shares; nil when the clips differ.
+    var groupEffect: VideoClipEffect? { VideoClipGroupEditing.commonEffect(selectedClipIDs, in: recipe) }
+
+    /// A Motion chip: every clip of the group, one step.
+    func setGroupEffect(_ effect: VideoClipEffect) {
+        guard isSelectingClips, groupEffect != effect else { return }
+        pushUndo()
+        VideoClipGroupEditing.setEffect(effect, for: selectedClipIDs, in: &recipe)
+        markEdited()
+        applyVideoTier()
+    }
+
+    /// What the group's Look row says: the shared look's name, "Whole
+    /// video" when every clip follows the video's look, else "Mixed".
+    var groupLookName: String {
+        guard VideoClipGroupEditing.sharesLook(selectedClipIDs, in: recipe) else { return VideoStudioCopy.mixed }
+        guard let clip = recipe.clips.first(where: { $0.id == selectedClipIDs.first }),
+              let name = lookPillText(for: clip)
+        else { return VideoStudioCopy.wholeVideo }
+        return name
     }
 
     /// ⌘-click on a clip (FS-12.11 §4): in or out of the group, which
@@ -2489,7 +2512,13 @@ final class VideoStudioModel {
     /// Whether Selected can be the target: it needs at least two selected
     /// clips (§4) — always shown, dimmed below that.
     var canTargetSelectedClips: Bool {
-        (selectedClipID == nil ? 0 : 1) >= 2
+        lookSelectedClipIDs.count >= 2
+    }
+
+    /// The clips a Look target of Selected means: the group's, or the one
+    /// selected clip.
+    private var lookSelectedClipIDs: [UUID] {
+        isSelectingClips ? selectedClipIDs : (selectedClipID.map { [$0] } ?? [])
     }
 
     /// What Import Look… brought in (FS-12.06c §7): the first new look —
@@ -2513,7 +2542,7 @@ final class VideoStudioModel {
         let underPlayhead = clipIndexUnderPlayhead.flatMap { recipe.clips.indices.contains($0) ? recipe.clips[$0].id : nil }
         return VideoLookEditing.targetClipIDs(
             lookTarget,
-            selectedClipIDs: selectedClipID.map { [$0] } ?? [],
+            selectedClipIDs: lookSelectedClipIDs,
             clipUnderPlayhead: underPlayhead
         )
     }
@@ -2529,6 +2558,9 @@ final class VideoStudioModel {
     /// The Look title's second line (§4): "Whole video", or the target
     /// clip's name as the viewer header gives it — "Clip 2", "Photo 2".
     var lookSubtitle: String {
+        if lookTarget == .selected, lookTargetClipIDs.count >= 2 {
+            return VideoStudioCopy.clipCount(lookTargetClipIDs.count)
+        }
         guard lookTarget != .allClips, let id = lookTargetClipIDs.first,
               let index = recipe.clips.firstIndex(where: { $0.id == id })
         else { return VideoStudioCopy.wholeVideo }
