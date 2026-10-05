@@ -417,6 +417,9 @@ struct MusicTrack: Identifiable, Equatable, Codable, Sendable {
     /// Snap to this bed's beats (FS-12.12 §5) — off, every beat, no offset
     /// for a new bed and for a stored one that lacks the keys.
     var beatSnap = MusicBeatSnap()
+    /// Duck under the clips' voices (FS-12.13 §4) — off for a new bed and
+    /// for a stored one that lacks the keys.
+    var ducking = MusicDucking()
 
     init(source: MusicSource, id: UUID = UUID()) {
         self.id = id
@@ -470,6 +473,53 @@ struct MusicBeatSnap: Equatable, Codable, Sendable {
         division = ((try? container.decodeIfPresent(BeatGrid.Division.self, forKey: .division)) ?? nil) ?? .beat
         let offset = ((try? container.decodeIfPresent(Int.self, forKey: .offsetMs)) ?? nil) ?? 0
         offsetMs = min(max(offset, Self.offsetRange.lowerBound), Self.offsetRange.upperBound)
+    }
+}
+
+/// A bed's ducking (FS-12.13 §4, §5): on or off, how far it dips, how long
+/// it takes to get down before a voice and back up after one, and what
+/// makes it dip. Each key reads on its own; a missing or broken one is its
+/// default.
+struct MusicDucking: Equatable, Codable, Sendable {
+    enum Trigger: String, Codable, CaseIterable, Sendable {
+        case voices, anyClipSound
+    }
+
+    var isOn = false
+    /// −24…−3 dB, step 1.
+    var amountDB = -12
+    /// 0.1…1.0 s.
+    var duckIn = 0.3
+    /// 0.2…2.0 s.
+    var recover = 0.8
+    var trigger: Trigger = .voices
+
+    static let amountRange: ClosedRange<Int> = -24 ... -3
+    static let duckInRange: ClosedRange<Double> = 0.1...1.0
+    static let recoverRange: ClosedRange<Double> = 0.2...2.0
+
+    /// The music's gain at the bottom of a dip: −12 dB = 0.251.
+    var floorGain: Double { pow(10, Double(amountDB) / 20) }
+
+    init(isOn: Bool = false, amountDB: Int = -12, duckIn: Double = 0.3, recover: Double = 0.8, trigger: Trigger = .voices) {
+        self.isOn = isOn
+        self.amountDB = amountDB
+        self.duckIn = duckIn
+        self.recover = recover
+        self.trigger = trigger
+    }
+
+    init(from decoder: any Decoder) throws {
+        self.init()
+        guard let container = try? decoder.container(keyedBy: CodingKeys.self) else { return }
+        func value<T: Decodable>(_ key: CodingKeys, _ fallback: T) -> T {
+            ((try? container.decodeIfPresent(T.self, forKey: key)) ?? nil) ?? fallback
+        }
+        isOn = value(.isOn, false)
+        amountDB = min(max(value(.amountDB, -12), Self.amountRange.lowerBound), Self.amountRange.upperBound)
+        duckIn = min(max(value(.duckIn, 0.3), Self.duckInRange.lowerBound), Self.duckInRange.upperBound)
+        recover = min(max(value(.recover, 0.8), Self.recoverRange.lowerBound), Self.recoverRange.upperBound)
+        trigger = value(.trigger, .voices)
     }
 }
 
@@ -835,6 +885,7 @@ extension MusicTrack {
         fadeIn = value(.fadeIn, 2)
         fadeOut = value(.fadeOut, 2)
         beatSnap = value(.beatSnap, MusicBeatSnap())
+        ducking = value(.ducking, MusicDucking())
     }
 }
 

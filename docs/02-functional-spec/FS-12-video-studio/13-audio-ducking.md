@@ -101,12 +101,12 @@ không nhạc có bản quyền) ở 4,2–7,4 s, 10,8–13,0 s và 18,7–21,9 
 | # | Cho | Khi | Thì | Chứng minh bằng |
 |---|---|---|---|---|
 | AC-1 | clip 10 s, giọng tổng hợp 2,0–5,0 s, phần còn lại ồn nền −50 dBFS | phân tích Voices | đúng một đoạn, hai mép lệch ≤ 0,25 s | ⚠️ chưa có |
-| AC-2 | nhạc mức 0,8; Amount −12 dB, Duck in 0,3, Recover 0,8; giọng 4,2–7,4 s | dựng đường mức | 0,8 tới 3,9 s; giảm thẳng tới 0,201 tại 4,2 s; giữ tới 7,4 s; về 0,8 tại 8,2 s | một phần: `VideoTimelineMathTests.musicRampsCoverTheWholeBed` (chưa có ducking) |
-| AC-3 | như AC-2, giọng 4,2–5,0 s và 5,8–6,5 s | dựng đường mức | một chỗ lõm 3,9–7,3 s, không lên giữa hai đoạn (khoảng lặng 0,8 < 1,1) | ⚠️ chưa có |
-| AC-4 | như AC-2, fade out 2,0 s cuối băng, giọng 16,0–18,4 s | đọc mức tại 17,4 s | 0,8 × 0,5 × 0,251 = 0,100 ±0,005 | ⚠️ chưa có |
-| AC-5 | clip có gió −30 dBFS, không có giọng | chọn Voices, rồi Any Clip Sound | Voices: không lõm; Any Clip Sound: lõm suốt clip | ⚠️ chưa có |
-| AC-6 | clip 2 có giọng, đã tắt tiếng | bật UNDER VOICES | không lõm ở clip 2; tóm tắt không đếm clip 2 | ⚠️ chưa có |
-| AC-7 | clip video Speed 2×, trim 0–10 s, đặt ở 3,0 s, giọng ở nguồn 4,0–6,0 s | dựng | đáy lõm đúng 5,0–6,0 s timeline; không phân tích lại | ⚠️ chưa có |
+| AC-2 | nhạc mức 0,8; Amount −12 dB, Duck in 0,3, Recover 0,8; giọng 4,2–7,4 s | dựng đường mức | 0,8 tới 3,9 s; giảm thẳng tới 0,201 tại 4,2 s; giữ tới 7,4 s; về 0,8 tại 8,2 s | ✅ `DuckingMathTests.singleDipShape` (0,8 tại 3,9; 0,201 tại 4,2; giữa dốc 4,05 là trung bình; giữ tới 7,4; 0,8 tại 8,2; các dốc nối liền 0–18,4); `VideoTimelineMathTests.musicRampsCoverTheWholeBed` vẫn xanh |
+| AC-3 | như AC-2, giọng 4,2–5,0 s và 5,8–6,5 s | dựng đường mức | một chỗ lõm 3,9–7,3 s, không lên giữa hai đoạn (khoảng lặng 0,8 < 1,1) | ✅ `DuckingMathTests.shortGapHoldsTheFloor` (gộp thành 4,2–6,5; 0,8 tại 3,9 và 7,3; đáy ở 5,4; cách 1,2 s thì là hai lõm) |
+| AC-4 | như AC-2, fade out 2,0 s cuối băng, giọng 16,0–18,4 s | đọc mức tại 17,4 s | 0,8 × 0,5 × 0,251 = 0,100 ±0,005 | ✅ `DuckingMathTests.fadeAndDuckMultiply` (0,100 tại 17,4 từ chính các dốc đưa vào mix; chỗ dốc fade và dốc lõm chồng nhau chia 4 đoạn thẳng, lệch < 1 % so với tích thật — D-11) |
+| AC-5 | clip có gió −30 dBFS, không có giọng | chọn Voices, rồi Any Clip Sound | Voices: không lõm; Any Clip Sound: lõm suốt clip | ✅ `DuckingMathTests.windWithoutVoice` (Voices không lõm; Any Clip Sound lõm 9,2–14,2 = cả clip 3; ở mức clip 5 % thì −56 dB, không lõm); `VoiceActivityAnalyzerTests.noiseIsNotAVoice` (ồn −30 dBFS: bộ phân loại không gọi là giọng, RMS nghe thấy cả 10 s) |
+| AC-6 | clip 2 có giọng, đã tắt tiếng | bật UNDER VOICES | không lõm ở clip 2; tóm tắt không đếm clip 2 | ✅ `DuckingMathTests.mutedClipNeverTriggers` (tắt tiếng, âm 0, V1 = 0, clip ảnh — không kích hoạt; tóm tắt 2 clip), `VideoAudioMixDuckingTests.mutedClipLeavesTheMixAlone` (mix: 0,8 suốt 4,2–7,4, clip 3 vẫn lõm) |
+| AC-7 | clip video Speed 2×, trim 0–10 s, đặt ở 3,0 s, giọng ở nguồn 4,0–6,0 s | dựng | đáy lõm đúng 5,0–6,0 s timeline; không phân tích lại | ✅ `DuckingMathTests.speedTwoMapsSourceToTimeline` (5,0–6,0; trim từ 5 → 3,0–3,5) — giây nguồn quy ra timeline mỗi lần dựng, phân tích không biết tới speed (`DuckingMath.triggers`) |
 | AC-8 | ducking bật, đã phân tích | đổi thứ tự clip 2 và 3 | chỗ lõm đi theo clip; số lần phân tích = 0 | ⚠️ chưa có |
 | AC-9 | ducking bật | tắt UNDER VOICES | audio mix bằng đúng mix khi chưa bật; một Undo bật lại | ⚠️ chưa có |
 | AC-10 | Amount −12 dB, đang phát | kéo Amount tới −18 dB trong một lần kéo | một bước undo; playback không ngắt; khung hình không dựng lại | ⚠️ chưa có |
