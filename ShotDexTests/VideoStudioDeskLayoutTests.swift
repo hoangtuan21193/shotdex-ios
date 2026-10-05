@@ -113,7 +113,7 @@ struct VideoStudioDeskLayoutTests {
     @Test func poolMediaGridIsThreeColumnsOf69() {
         let pool = VideoMediaGridMetrics.for(.iPadLandscape)
         #expect(pool.columns == 3)
-        #expect(pool.cellSide(width: VideoStudioDeskGeometry.poolWidth) == 69)
+        #expect(pool.cellSide(width: 236) == 69)
         #expect(pool.cellSide(width: 236) * 3 + pool.gap * 2 + pool.inset * 2 <= 236)
         #expect(VideoMediaGridMetrics.for(.iPadPortrait).cellSide(width: 1032) == 124)
         #expect(VideoMediaGridMetrics.for(.duoInner).cellSide(width: 264) == 80)
@@ -322,13 +322,13 @@ struct VideoStudioDeskLayoutTests {
 
     @Test func theMediaPoolFitsThreeColumnsWideAndTwoNarrow() {
         #expect(VideoStudioMetrics.mediaPoolColumnCount(columnWidth: VideoStudioMetrics.mediaPoolWideWidth) == 3)
-        #expect(VideoStudioMetrics.mediaPoolColumnCount(columnWidth: VideoStudioDeskGeometry.poolWidth) == 2)
+        #expect(VideoStudioMetrics.mediaPoolColumnCount(columnWidth: 236) == 2)
     }
 
     /// The cells and their gaps must not add up to more than the column, or
     /// the last one in every row is clipped by the divider.
     @Test func theMediaPoolCellsFitInsideTheirColumn() {
-        for width in [VideoStudioMetrics.mediaPoolWideWidth, VideoStudioDeskGeometry.poolWidth] {
+        for width in [VideoStudioMetrics.mediaPoolWideWidth, 236] {
             let count = CGFloat(VideoStudioMetrics.mediaPoolColumnCount(columnWidth: width))
             let cell = VideoStudioMetrics.mediaPoolCellWidth(columnWidth: width)
             #expect(cell > 0)

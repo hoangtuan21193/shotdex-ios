@@ -36,16 +36,16 @@ struct VideoStudioDock: View {
         .background(EditorTheme.panelSolid)
         .clipShape(UnevenRoundedRectangle(
             cornerRadii: .init(
-                topLeading: VideoStudioDeskGeometry.inspectorCornerRadius,
-                topTrailing: VideoStudioDeskGeometry.inspectorCornerRadius
+                topLeading: VideoStudioDeskGeometry.dockCornerRadius,
+                topTrailing: VideoStudioDeskGeometry.dockCornerRadius
             ),
             style: .continuous
         ))
         .overlay(alignment: .top) {
             UnevenRoundedRectangle(
                 cornerRadii: .init(
-                    topLeading: VideoStudioDeskGeometry.inspectorCornerRadius,
-                    topTrailing: VideoStudioDeskGeometry.inspectorCornerRadius
+                    topLeading: VideoStudioDeskGeometry.dockCornerRadius,
+                    topTrailing: VideoStudioDeskGeometry.dockCornerRadius
                 ),
                 style: .continuous
             )
@@ -53,7 +53,7 @@ struct VideoStudioDock: View {
             // Only the top edge and its corners: the rule is above the dock,
             // not around it.
             .mask(alignment: .top) {
-                Rectangle().frame(height: VideoStudioDeskGeometry.inspectorCornerRadius)
+                Rectangle().frame(height: VideoStudioDeskGeometry.dockCornerRadius)
             }
             .allowsHitTesting(false)
         }

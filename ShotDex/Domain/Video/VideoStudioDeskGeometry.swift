@@ -12,50 +12,110 @@ import CoreGraphics
 /// The phone's stack is `VideoStudioMetrics.stackLayout`, owned by the phone
 /// plan; nothing here draws a phone.
 enum VideoStudioDeskGeometry {
-    // MARK: iPad top band (FS-12.03 §2)
+    // MARK: iPad toolbar (FS-12.03 §2, the Mac-style canvas of 2026-10-04)
 
-    /// The band runs 0–64; its row of discs sits at y 12–52.
-    static let bandHeight: CGFloat = 64
+    /// The top 24pt are the system's status bar; the row of glass capsules
+    /// runs y 24–68, 12 apart.
+    static let toolbarTop: CGFloat = 24
+    static let toolbarHeight: CGFloat = 44
+    static let capsuleGap: CGFloat = 12
+    /// The toolbar's leading and trailing margin, pool shut.
+    static let toolbarInset: CGFloat = 16
+    /// Export: a 124×44 pill, radius `r-export` 19.
+    static let exportSize = CGSize(width: 124, height: 44)
+    static let exportRadius: CGFloat = 19
+    /// The capsules after the title, right to left from Export.
+    static let viewToggleCapsuleWidth: CGFloat = 92
+    static let settingsCapsuleWidth: CGFloat = 226
+    static let historyCapsuleWidth: CGFloat = 140
+    /// The buttons inside a capsule: 40, in a 44 capsule.
+    static let capsuleButton: CGFloat = 40
+    /// The title's leading edge from the last leading capsule.
+    static let titleGap: CGFloat = 12
+
+    // MARK: The old iPad top band — read only by `VideoStudioDeskBand` until
+    // the capsule toolbar replaces it (block M, task M2).
+
     static let bandRowTop: CGFloat = 12
     static let bandDisc: CGFloat = 40
     static let bandDiscGap: CGFloat = 10
     static let bandInset: CGFloat = 20
-    /// "16:9 · 1080p · 30 fps": 32 tall, radius 8, on one line in landscape.
     static let settingsButtonHeight: CGFloat = 32
     static let settingsButtonRadius: CGFloat = 8
     static let exportHeight: CGFloat = 40
 
-    // MARK: Columns and bands
+    // MARK: Pool and inspector
 
-    /// The library column — iPad only.
-    static let poolWidth: CGFloat = 236
+    /// The library: a floating glass panel 320×568 at (8, 8), radius 22 —
+    /// it stands beside the toolbar, not under it. iPad only.
+    static let poolFrame = CGRect(x: 8, y: 8, width: 320, height: 568)
+    static let poolCornerRadius: CGFloat = 22
+    /// What the stage leaves between the pool and itself.
+    static let poolGap: CGFloat = 8
     /// The pool opens by itself only this wide, and only if the stage keeps
     /// `poolMinimumStageWidth` beside it (FS-12.03b §1).
     static let poolOpensByDefaultWidth: CGFloat = 1100
     static let poolMinimumStageWidth: CGFloat = 330
-    /// The iPad inspector: always there in landscape, Look when nothing is
-    /// selected.
-    static let inspectorWidth: CGFloat = 280
-    static let inspectorCornerRadius: CGFloat = 16
-    static let viewerHeaderHeight: CGFloat = 32
-    /// The level meter beside the frame: a dB scale and two bars, or the
-    /// bars alone when the stage is under `meterWideStage` (FS-12.03b §3).
-    static let meterWidth: CGFloat = 50
-    static let meterNarrowWidth: CGFloat = 32
-    static let meterWideStage: CGFloat = 820
-    /// The desk transport — fifteen buttons and the timecode.
-    static let transportHeight: CGFloat = 44
-    /// The whole-project strip, with 4pt above and below it.
+    /// The iPad inspector: 360, flush right, from the window's top edge —
+    /// the toolbar's trailing capsules sit over its head and its content
+    /// starts at 80. Look when nothing is selected.
+    static let inspectorWidth: CGFloat = 360
+    static let inspectorContentTop: CGFloat = 80
+    /// The selected item's ✕ · name · ✓ at the inspector's foot: 64, with
+    /// 44pt discs (FS-12.03 §2).
+    static let inspectorFooterHeight: CGFloat = 64
+    static let deskFooterButton: CGFloat = 44
+
+    // MARK: Stage and the rows under it
+
+    /// The stage starts 12 under the toolbar.
+    static let stageTop: CGFloat = 80
+    /// The frame's box inside the stage: 16 in from the leading edge; on the
+    /// trailing side the meter, 10 after the frame, and 6 more.
+    static let stageInset: CGFloat = 16
+    static let meterGap: CGFloat = 10
+    static let meterTrailingGap: CGFloat = 6
+    /// The level meter beside the frame: two bars and a dB scale, as tall as
+    /// the frame (FS-12.03b §3).
+    static let meterWidth: CGFloat = 44
+    /// Portrait has no columns beside the frame: it starts 28 in and the
+    /// meter ends 18 short of the window's edge.
+    static let portraitFrameLeading: CGFloat = 28
+    static let portraitMeterTrailing: CGFloat = 18
+    /// The play row under the frame: the name under the playhead, the six
+    /// play buttons (Play a 48 disc), Before and After at the frame's
+    /// trailing edge (FS-12.03b §2).
+    static let playRowHeight: CGFloat = 48
+    static let playRowGap: CGFloat = 10
+    static let portraitPlayRowGap: CGFloat = 6
+    /// The six play buttons, as one group: 44 · 44 · 48 · 44 · 44, 10, 44.
+    static let playGroupWidth: CGFloat = 278
+    /// Before and After: 44, its leading edge on the frame's trailing one.
+    static let beforeAfterButton: CGFloat = 44
+    /// Under the play row: 6 to the bottom of the inspector, then 12 in
+    /// which the divider's grabber sits, then the timeline's tool row.
+    static let inspectorBelowPlayRow: CGFloat = 6
+    static let toolRowGap: CGFloat = 12
+    static let portraitToolRowGap: CGFloat = 14
+    /// The timeline's tool row: the playhead edits, the markers, the
+    /// timecode and Fit, 44 buttons, the window's whole width.
+    static let toolRowHeight: CGFloat = 44
+    static let toolRowInset: CGFloat = 16
+    /// The divider's grabber: 36×4, 10 above the tool row.
+    static let dividerSize = CGSize(width: 36, height: 4)
+    static let dividerAboveToolRow: CGFloat = 10
+    /// The whole-project strip: 4 under the tool row, 22 tall, 6 above the
+    /// timeline; from where the lanes start to 16 short of the edge.
     static let overviewHeight: CGFloat = 22
     static let overviewGap: CGFloat = 4
-    /// It starts where the lanes start, after the track headers, and stops
-    /// 16 short of the window's edge.
+    static let overviewBelowGap: CGFloat = 6
     static let overviewTrailingInset: CGFloat = 16
-    /// The iPad's track header column — where the lanes, and so the
-    /// overview, start.
-    static let trackHeaderWidth: CGFloat = 104
+    /// The iPad's track header column: a 192 card 8 in (FS-12.03b §4).
+    static let trackHeaderWidth: CGFloat = 200
+    /// Where the lanes, and so the overview, start: 8 after the headers.
+    static let overviewLeading: CGFloat = 208
     /// iPad landscape: the timeline never gets less than this.
-    static let landscapeTimelineFloor: CGFloat = 354
+    static let landscapeTimelineFloor: CGFloat = 360
     /// The least the stage keeps when the divider is dragged up.
     static let stageFloor: CGFloat = 200
     /// How far the divider may give the timeline more than it needs.
@@ -65,29 +125,32 @@ enum VideoStudioDeskGeometry {
 
     /// The controls under the timeline: fixed, 324 tall, the whole width.
     static let dockHeight: CGFloat = 324
+    /// "Look · Whole video" and the four add buttons, 104×44, 8 apart.
     static let dockTitleHeight: CGFloat = 46
-    /// Media · Text · Sticker · Music in the dock's title: 32 tall, radius 8.
-    static let dockButtonHeight: CGFloat = 32
-    static let dockButtonRadius: CGFloat = 8
-    /// The dock's three columns, at their board width on a 1032 window.
-    static let dockColumnWidth: CGFloat = 344
+    static let dockButtonSize = CGSize(width: 104, height: 44)
+    static let dockButtonGap: CGFloat = 8
+    static let dockButtonRadius: CGFloat = 12
+    static let dockInset: CGFloat = 16
+    static let dockCornerRadius: CGFloat = 16
+    /// The dock's three columns, at their board width on a 1032 window: 312,
+    /// 32 apart, a rule in the middle of each gap.
+    static let dockColumnWidth: CGFloat = 312
+    static let dockColumnGap: CGFloat = 32
     /// Under three of these a column is too narrow to read: two, scrolling.
     static let dockColumnMinimum: CGFloat = 200
-    /// A selected item in the dock: the command row 6 below its top, three
-    /// columns of controls 190 tall from 72, the ✕ · name · ✓ foot (60) at
-    /// 264 (FS-12.03 §3).
-    static let dockCommandRowTop: CGFloat = 6
-    static let dockParamTop: CGFloat = 72
-    static let dockParamHeight: CGFloat = 190
-    static let dockFooterTop: CGFloat = 264
-    static let dockFooterHeight: CGFloat = 60
-    /// The landscape inspector's foot: 58, at the column's bottom.
-    static let inspectorFooterHeight: CGFloat = 58
-    /// ✕ and ✓ in a wide window's foot.
+    /// A selected item in the dock: the command row 9 below its top, three
+    /// columns of controls from 73, the ✕ · name · ✓ foot (64) at 260
+    /// (FS-12.03 §3).
+    static let dockCommandRowTop: CGFloat = 9
+    static let dockParamTop: CGFloat = 73
+    static let dockParamHeight: CGFloat = 187
+    static let dockFooterTop: CGFloat = 260
+    static let dockFooterHeight: CGFloat = 64
+    /// ✕ and ✓ at the foot of the Duo inner display's row.
     static let footerButton: CGFloat = 40
 
-    /// Where the selected item's foot sits in the landscape inspector and in
-    /// the portrait dock.
+    /// Where the selected item's foot sits in the landscape inspector: 64
+    /// at its bottom.
     static func inspectorFooter(in inspector: CGRect) -> CGRect {
         CGRect(x: inspector.minX, y: inspector.maxY - inspectorFooterHeight, width: inspector.width, height: inspectorFooterHeight)
     }
@@ -99,15 +162,19 @@ enum VideoStudioDeskGeometry {
     /// The least the portrait timeline keeps, whatever the frame wants.
     static let portraitTimelineFloor: CGFloat = 200
 
-    /// How the dock's width splits into columns: three equal ones, or two
-    /// and a horizontal scroll where three would each fall under 200.
+    /// How the dock's width splits into columns: three on any window at
+    /// least three minimum columns wide (Split View's 639 included), two
+    /// and a horizontal scroll under that.
     static func dockColumnCount(width: CGFloat) -> Int {
         width >= dockColumnMinimum * 3 ? 3 : 2
     }
 
+    /// One column's width: the dock less its margins and the gaps, shared
+    /// equally — 312 on a 1032 window.
     static func dockColumnWidth(width: CGFloat) -> CGFloat {
-        let count = dockColumnCount(width: width)
-        return count == 3 ? width / 3 : max(dockColumnMinimum, width / 2)
+        let count = CGFloat(dockColumnCount(width: width))
+        let shared = (width - dockInset * 2 - dockColumnGap * (count - 1)) / count
+        return count == 3 ? shared : max(dockColumnMinimum, shared)
     }
 
     // MARK: Duo inner display (FS-12.03 §4)
@@ -178,16 +245,25 @@ enum VideoStudioDeskGeometry {
 
     /// The rect of every band. Nil where the window class has no such band.
     struct Frames: Equatable {
+        /// The row across the top: the iPad's toolbar of capsules (y 24–68),
+        /// the Duo cover's three discs.
         var band: CGRect
         var pool: CGRect?
-        var header: CGRect?
         /// The area the frame is fitted into (black around the frame).
         var stage: CGRect
-        /// The project's frame, aspect-fitted into `stage`.
+        /// The project's frame, aspect-fitted into the stage.
         var frame: CGRect
         var meter: CGRect?
         var inspector: CGRect?
+        /// The transport: the iPad's timeline tool row, the Duo's row of
+        /// fifteen, the cover's compact one.
         var transport: CGRect
+        /// The iPad's play row under the frame (FS-12.03b §2), and the x its
+        /// six play buttons are centred on.
+        var playRow: CGRect? = nil
+        var playGroupMidX: CGFloat? = nil
+        /// The iPad's grabber between the stage and the timeline.
+        var divider: CGRect? = nil
         var overview: CGRect?
         var timeline: CGRect
         var dock: CGRect?
@@ -226,68 +302,99 @@ enum VideoStudioDeskGeometry {
         windowWidth >= poolOpensByDefaultWidth
     }
 
-    /// Whether the pool can open at all with the inspector as it is: the
-    /// stage has to keep `poolMinimumStageWidth` beside the meter.
+    /// Whether the pool can open at all with the inspector as it is: in
+    /// landscape the stage has to keep `poolMinimumStageWidth` for the frame
+    /// beside it. In portrait the pool floats over the frame, so it always can.
     static func canOpenPool(windowWidth: CGFloat, isInspectorOpen: Bool) -> Bool {
-        let centre = windowWidth - poolWidth - (isInspectorOpen ? inspectorWidth : 0)
-        return centre - meterWidth(centreWidth: centre) >= poolMinimumStageWidth
+        let stage = windowWidth - (poolFrame.maxX + poolGap) - (isInspectorOpen ? inspectorWidth : 0)
+        return frameBoxWidth(stageWidth: stage) >= poolMinimumStageWidth
     }
 
-    static func meterWidth(centreWidth: CGFloat) -> CGFloat {
-        centreWidth >= meterWideStage ? meterWidth : meterNarrowWidth
+    /// The frame's box in a landscape stage this wide: the inset before it,
+    /// the meter and its gaps after.
+    static func frameBoxWidth(stageWidth: CGFloat) -> CGFloat {
+        stageWidth - stageInset - meterGap - meterWidth - meterTrailingGap
+    }
+
+    /// Where the toolbar's leading capsules start: past the pool when it is
+    /// open (it stands beside the toolbar), at the margin when it is shut.
+    static func toolbarLeading(isPoolOpen: Bool) -> CGFloat {
+        isPoolOpen ? poolFrame.maxX + toolbarInset : toolbarInset
+    }
+
+    /// The timeline's tool row and everything under it, from the bottom up:
+    /// the timeline (`height` tall), the overview 6 above it, the tool row
+    /// 4 above that.
+    private static func lowerBands(window: CGSize, timelineHeight: CGFloat) -> (toolRow: CGRect, overview: CGRect, timeline: CGRect) {
+        let timeline = CGRect(x: 0, y: window.height - timelineHeight, width: window.width, height: timelineHeight)
+        let overview = CGRect(
+            x: overviewLeading,
+            y: timeline.minY - overviewBelowGap - overviewHeight,
+            width: window.width - overviewLeading - overviewTrailingInset,
+            height: overviewHeight
+        )
+        let toolRow = CGRect(x: 0, y: overview.minY - overviewGap - toolRowHeight, width: window.width, height: toolRowHeight)
+        return (toolRow, overview, timeline)
+    }
+
+    private static func divider(above toolRow: CGRect, windowWidth: CGFloat) -> CGRect {
+        CGRect(
+            x: ((windowWidth - dividerSize.width) / 2).rounded(),
+            y: toolRow.minY - dividerAboveToolRow,
+            width: dividerSize.width,
+            height: dividerSize.height
+        )
+    }
+
+    private static func toolbar(windowWidth: CGFloat) -> CGRect {
+        CGRect(x: 0, y: toolbarTop, width: windowWidth, height: toolbarHeight)
     }
 
     // MARK: iPad landscape (FS-12.03 §2, board IL1)
 
-    /// Pool 236 | header + stage + meter | inspector 280 from y 64 to the
-    /// transport; the transport, the overview and the timeline run the
-    /// whole width under them. The stage flexes; the timeline keeps 354.
+    /// The toolbar's capsules across the top; the pool floating at (8, 8);
+    /// the stage between it and the 360 inspector, which runs from the
+    /// window's top edge; the play row under the frame; then the tool row,
+    /// the overview and the timeline the whole width. The stage flexes; the
+    /// timeline keeps 360.
     static func iPadLandscape(_ input: Input) -> Frames {
         let width = input.window.width
         let height = input.window.height
         let extra = min(max(0, input.timelineExtra), timelineExtraRange.upperBound)
-        // The timeline's height, then everything above it from the bottom up.
-        let fixedAbove = bandHeight + viewerHeaderHeight + transportHeight
-            + overviewGap * 2 + overviewHeight
+        // Everything above the timeline that does not flex, with the stage
+        // at its floor: what the timeline may grow into.
+        let fixedAbove = stageTop + stageFloor + playRowGap + playRowHeight + inspectorBelowPlayRow
+            + toolRowGap + toolRowHeight + overviewGap + overviewHeight + overviewBelowGap
         let timelineHeight = min(
             max(landscapeTimelineFloor, input.laneNeed) + extra,
-            max(landscapeTimelineFloor, height - fixedAbove - stageFloor)
+            max(landscapeTimelineFloor, height - fixedAbove)
         )
-        let timeline = CGRect(x: 0, y: height - timelineHeight, width: width, height: timelineHeight)
-        let overview = CGRect(
-            x: trackHeaderWidth,
-            y: timeline.minY - overviewGap - overviewHeight,
-            width: width - trackHeaderWidth - overviewTrailingInset,
-            height: overviewHeight
-        )
-        let transport = CGRect(
-            x: 0, y: overview.minY - overviewGap - transportHeight,
-            width: width, height: transportHeight
-        )
-        let rowTop = bandHeight
-        let rowHeight = transport.minY - rowTop
-        let pool = input.isPoolOpen ? CGRect(x: 0, y: rowTop, width: poolWidth, height: rowHeight) : nil
+        let (toolRow, overview, timeline) = lowerBands(window: input.window, timelineHeight: timelineHeight)
+        let upperBottom = toolRow.minY - toolRowGap
         let inspector = input.isInspectorOpen
-            ? CGRect(x: width - inspectorWidth, y: rowTop, width: inspectorWidth, height: rowHeight)
+            ? CGRect(x: width - inspectorWidth, y: 0, width: inspectorWidth, height: upperBottom)
             : nil
-        let centreX = pool?.maxX ?? 0
-        let centreWidth = (inspector?.minX ?? width) - centreX
-        let header = CGRect(x: centreX, y: rowTop, width: centreWidth, height: viewerHeaderHeight)
-        let meterW = meterWidth(centreWidth: centreWidth)
+        let pool = input.isPoolOpen ? poolFrame : nil
+        let stageX = pool.map { $0.maxX + poolGap } ?? 0
+        let playRowTop = upperBottom - inspectorBelowPlayRow - playRowHeight
         let stage = CGRect(
-            x: centreX, y: header.maxY,
-            width: centreWidth - meterW, height: transport.minY - header.maxY
+            x: stageX, y: stageTop,
+            width: (inspector?.minX ?? width) - stageX,
+            height: playRowTop - playRowGap - stageTop
         )
-        let meter = CGRect(x: stage.maxX, y: stage.minY, width: meterW, height: stage.height)
+        let box = CGRect(x: stage.minX + stageInset, y: stage.minY, width: frameBoxWidth(stageWidth: stage.width), height: stage.height)
+        let frame = fit(input.canvas, in: box)
         return Frames(
-            band: CGRect(x: 0, y: 0, width: width, height: bandHeight),
+            band: toolbar(windowWidth: width),
             pool: pool,
-            header: header,
             stage: stage,
-            frame: fit(input.canvas, in: stage),
-            meter: meter,
+            frame: frame,
+            meter: CGRect(x: frame.maxX + meterGap, y: frame.minY, width: meterWidth, height: frame.height),
             inspector: inspector,
-            transport: transport,
+            transport: toolRow,
+            playRow: CGRect(x: box.minX, y: playRowTop, width: frame.maxX + beforeAfterButton - box.minX, height: playRowHeight),
+            playGroupMidX: stage.midX,
+            divider: divider(above: toolRow, windowWidth: width),
             overview: overview,
             timeline: timeline,
             dock: nil
@@ -296,49 +403,49 @@ enum VideoStudioDeskGeometry {
 
     // MARK: iPad portrait (FS-12.03 §3, board IP1)
 
-    /// The header runs the width; the frame takes the width less the meter
-    /// and its aspect-fit height; then the transport, the overview, the
-    /// timeline — the band that flexes — and the 324pt dock. The pool, when
-    /// open, stands beside the header and the frame.
+    /// The toolbar as in landscape; the frame takes the width less the meter
+    /// and its aspect-fit height; the play row, the tool row, the overview,
+    /// the timeline — the band that flexes — and the 324pt dock. The pool,
+    /// when open, floats over the frame.
     static func iPadPortrait(_ input: Input) -> Frames {
         let width = input.window.width
         let height = input.window.height
         let dockHeight = input.isInspectorOpen ? Self.dockHeight : 0
-        let pool = input.isPoolOpen
-        let centreX: CGFloat = pool ? poolWidth : 0
-        let centreWidth = width - centreX
-        let meterW = meterWidth(centreWidth: centreWidth)
-        let stageWidth = centreWidth - meterW
-        let header = CGRect(x: centreX, y: bandHeight, width: centreWidth, height: viewerHeaderHeight)
+        let boxWidth = width - portraitFrameLeading - meterGap - meterWidth - portraitMeterTrailing
         // The frame is limited by the width; whatever the timeline needs
         // below it caps the height, and the divider takes from the frame.
-        let below = transportHeight + overviewGap * 2 + overviewHeight
+        let below = portraitPlayRowGap + playRowHeight + portraitToolRowGap + toolRowHeight
+            + overviewGap + overviewHeight + overviewBelowGap
         let timelineMinimum = max(portraitTimelineFloor, input.laneNeed)
-        let stageCap = height - header.maxY - below - timelineMinimum - dockHeight
-        let natural = input.canvas.width > 0 ? stageWidth * input.canvas.height / input.canvas.width : stageCap
+        let stageCap = height - stageTop - below - timelineMinimum - dockHeight
+        let natural = input.canvas.width > 0 ? (boxWidth * input.canvas.height / input.canvas.width).rounded() : stageCap
         let extra = min(max(0, input.timelineExtra), timelineExtraRange.upperBound)
         let stageHeight = max(stageFloor, min(natural, stageCap) - extra)
-        let stage = CGRect(x: centreX, y: header.maxY, width: stageWidth, height: stageHeight)
-        let meter = CGRect(x: stage.maxX, y: stage.minY, width: meterW, height: stage.height)
-        let transport = CGRect(x: 0, y: stage.maxY, width: width, height: transportHeight)
-        let overview = CGRect(
-            x: trackHeaderWidth,
-            y: transport.maxY + overviewGap,
-            width: width - trackHeaderWidth - overviewTrailingInset,
-            height: overviewHeight
+        let box = CGRect(x: portraitFrameLeading, y: stageTop, width: boxWidth, height: stageHeight)
+        let frame = fit(input.canvas, in: box)
+        let playRow = CGRect(
+            x: box.minX, y: box.maxY + portraitPlayRowGap,
+            width: frame.maxX + beforeAfterButton - box.minX, height: playRowHeight
         )
-        let timelineTop = overview.maxY + overviewGap
+        let toolRow = CGRect(x: 0, y: playRow.maxY + portraitToolRowGap, width: width, height: toolRowHeight)
+        let overview = CGRect(
+            x: overviewLeading, y: toolRow.maxY + overviewGap,
+            width: width - overviewLeading - overviewTrailingInset, height: overviewHeight
+        )
+        let timelineTop = overview.maxY + overviewBelowGap
         let dockTop = height - dockHeight
         let timeline = CGRect(x: 0, y: timelineTop, width: width, height: max(0, dockTop - timelineTop))
         return Frames(
-            band: CGRect(x: 0, y: 0, width: width, height: bandHeight),
-            pool: pool ? CGRect(x: 0, y: bandHeight, width: poolWidth, height: stage.maxY - bandHeight) : nil,
-            header: header,
-            stage: stage,
-            frame: fit(input.canvas, in: stage),
-            meter: meter,
+            band: toolbar(windowWidth: width),
+            pool: input.isPoolOpen ? poolFrame : nil,
+            stage: CGRect(x: 0, y: stageTop, width: width, height: stageHeight),
+            frame: frame,
+            meter: CGRect(x: frame.maxX + meterGap, y: frame.minY, width: meterWidth, height: frame.height),
             inspector: nil,
-            transport: transport,
+            transport: toolRow,
+            playRow: playRow,
+            playGroupMidX: frame.midX,
+            divider: divider(above: toolRow, windowWidth: width),
             overview: overview,
             timeline: timeline,
             dock: input.isInspectorOpen ? CGRect(x: 0, y: dockTop, width: width, height: dockHeight) : nil
@@ -362,7 +469,6 @@ enum VideoStudioDeskGeometry {
         return Frames(
             band: .zero,
             pool: nil,
-            header: nil,
             stage: stage,
             frame: fit(input.canvas, in: stage),
             meter: nil,
@@ -408,7 +514,6 @@ enum VideoStudioDeskGeometry {
         return Frames(
             band: CGRect(x: 0, y: 0, width: contentWidth, height: coverStageTop),
             pool: nil,
-            header: nil,
             stage: stage,
             frame: fit(input.canvas, in: stage),
             meter: nil,

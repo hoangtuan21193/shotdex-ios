@@ -219,7 +219,7 @@ struct VideoStudioSheetHost: View {
             }
             .foregroundStyle(.white)
             .padding(.horizontal, 12)
-            .frame(height: VideoStudioDeskGeometry.dockButtonHeight)
+            .frame(height: VideoStudioDeskGeometry.dockButtonSize.height)
             .background(
                 RoundedRectangle(cornerRadius: VideoStudioDeskGeometry.dockButtonRadius, style: .continuous)
                     .fill(Color.white.opacity(0.08))

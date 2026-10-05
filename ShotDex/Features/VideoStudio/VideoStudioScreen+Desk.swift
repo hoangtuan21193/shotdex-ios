@@ -32,7 +32,7 @@ extension VideoStudioScreen {
                 mediaPool(model, width: pool.width)
                     .placed(pool)
             }
-            if let header = frames.header {
+            Group {
                 VideoViewerHeader(
                     model: model,
                     isMediaPoolOpen: canOpenPool || showsPool ? showsPool : nil,
@@ -42,7 +42,7 @@ extension VideoStudioScreen {
                     onToggleInspector: { columns.isInspectorOpen.toggle() },
                     onToggleToolStrip: { columns.isQuickAdjustOpen.toggle() }
                 )
-                .placed(header)
+                .placed(CGRect(x: frames.stage.minX, y: frames.stage.minY - 12, width: frames.stage.width, height: 32))
             }
             preview(model)
                 .placed(quickAdjustTrimmed(frames.stage))
@@ -66,9 +66,11 @@ extension VideoStudioScreen {
             }
             deskTimeline(model, height: frames.timeline.height)
                 .placed(frames.timeline)
-            timelineDivider
-                .frame(width: 120)
-                .position(x: frames.timeline.midX, y: frames.timeline.minY + 4)
+            if let divider = frames.divider {
+                timelineDivider
+                    .frame(width: 120)
+                    .position(x: divider.midX, y: divider.midY)
+            }
         }
         .frame(width: window.width, height: window.height, alignment: .topLeading)
         .deskChrome(model, lanes: lanes, meter: levelMeter, hasMeter: frames.meter != nil, shortcuts: keyboardShortcuts(model))
@@ -98,7 +100,7 @@ extension VideoStudioScreen {
                 mediaPool(model, width: pool.width)
                     .placed(pool)
             }
-            if let header = frames.header {
+            Group {
                 VideoViewerHeader(
                     model: model,
                     isMediaPoolOpen: canOpenPool || showsPool ? showsPool : nil,
@@ -108,7 +110,7 @@ extension VideoStudioScreen {
                     onToggleInspector: { columns.isInspectorOpen.toggle() },
                     onToggleToolStrip: { columns.isQuickAdjustOpen.toggle() }
                 )
-                .placed(header)
+                .placed(CGRect(x: frames.stage.minX, y: frames.stage.minY - 12, width: frames.stage.width, height: 32))
             }
             preview(model)
                 .placed(quickAdjustTrimmed(frames.stage))
@@ -128,9 +130,11 @@ extension VideoStudioScreen {
             }
             deskTimeline(model, height: frames.timeline.height)
                 .placed(frames.timeline)
-            timelineDivider
-                .frame(width: 120)
-                .position(x: frames.timeline.midX, y: frames.timeline.minY + 4)
+            if let divider = frames.divider {
+                timelineDivider
+                    .frame(width: 120)
+                    .position(x: divider.midX, y: divider.midY)
+            }
             // Shut, the dock opens again on the next selection (FS-12.03 §5)
             // — there is no second, sliding panel for the same job.
             if let dock = frames.dock {
@@ -361,7 +365,7 @@ extension VideoStudioScreen {
         }
         .background(EditorTheme.panelSolid)
         .clipShape(UnevenRoundedRectangle(
-            cornerRadii: .init(topLeading: VideoStudioDeskGeometry.inspectorCornerRadius),
+            cornerRadii: .init(topLeading: VideoStudioDeskGeometry.dockCornerRadius),
             style: .continuous
         ))
     }

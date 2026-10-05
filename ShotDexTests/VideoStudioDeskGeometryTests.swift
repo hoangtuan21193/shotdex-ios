@@ -15,94 +15,108 @@ struct VideoStudioDeskGeometryTests {
 
     // MARK: iPad landscape
 
-    /// FS-12.03 AC-1 (board IL1): pool 236; inspector 280 at x 1096; frame
-    /// 810×456 at (236, 122); transport at 604; overview 104–1360 at 652;
-    /// timeline from 678, 354 tall.
-    @Test func iPadLandscapeIdle() throws {
-        let frames = Geometry.iPadLandscape(.init(
-            window: CGSize(width: 1376, height: 1032),
-            canvas: sixteenNine,
-            isPoolOpen: true,
-            isInspectorOpen: true,
-            laneNeed: VideoStudioMetrics.Lanes.desk.timelineContentHeight(overlayLanes: 1, musicLanes: 2)
+    /// The board's project: one text lane and two music lanes fit the
+    /// landscape floor and exactly fill the portrait timeline (FS-12.03 §2–3).
+    private let boardLaneNeed: CGFloat = 304
+
+    private func landscape(pool: Bool = true, inspector: Bool = true, extra: CGFloat = 0) -> Geometry.Frames {
+        Geometry.iPadLandscape(.init(
+            window: CGSize(width: 1376, height: 1032), canvas: sixteenNine,
+            isPoolOpen: pool, isInspectorOpen: inspector,
+            laneNeed: boardLaneNeed, timelineExtra: extra
         ))
-        let pool = try #require(frames.pool)
-        #expect(pool == CGRect(x: 0, y: 64, width: 236, height: 540))
-        let inspector = try #require(frames.inspector)
-        #expect(inspector == CGRect(x: 1096, y: 64, width: 280, height: 540))
-        #expect(frames.header == CGRect(x: 236, y: 64, width: 860, height: 32))
-        #expect(frames.meter == CGRect(x: 1046, y: 96, width: 50, height: 508))
-        #expect(near(frames.frame.minX, 236) && near(frames.frame.minY, 122))
-        #expect(near(frames.frame.width, 810) && near(frames.frame.height, 456))
-        #expect(frames.transport == CGRect(x: 0, y: 604, width: 1376, height: 44))
-        #expect(frames.overview == CGRect(x: 104, y: 652, width: 1256, height: 22))
-        #expect(frames.timeline == CGRect(x: 0, y: 678, width: 1376, height: 354))
     }
 
-    /// FS-12.03b AC-3 (position): the transport runs the window's whole
-    /// width, so on a 13" iPad it never falls back to the narrow row — not
-    /// with the pool and the inspector both open, not with either shut.
-    @Test func theTransportAlwaysGetsTheFullRowOnA13InchIPad() {
+    /// FS-12.03 AC-1 (board IL1_Main, Mac-style 2026-10-04): the toolbar at
+    /// y 24, 44 tall; the pool floating 320×568 at (8, 8); the inspector
+    /// 360 at x 1016 from y 0 to 584; the frame 604×340 at (352, 130) with
+    /// the 44 meter 10 after it, as tall as the frame; the play row at 530;
+    /// the tool row at 596; the overview from x 208 at 644; the timeline
+    /// from 672, 360 tall.
+    @Test func iPadLandscapeIdle() throws {
+        let frames = landscape()
+        #expect(frames.band == CGRect(x: 0, y: 24, width: 1376, height: 44))
+        #expect(frames.pool == CGRect(x: 8, y: 8, width: 320, height: 568))
+        #expect(frames.inspector == CGRect(x: 1016, y: 0, width: 360, height: 584))
+        #expect(frames.stage == CGRect(x: 336, y: 80, width: 680, height: 440))
+        #expect(near(frames.frame.minX, 352) && near(frames.frame.minY, 130))
+        #expect(near(frames.frame.width, 604) && near(frames.frame.height, 340))
+        let meter = try #require(frames.meter)
+        #expect(near(meter.minX, 966) && meter.width == 44)
+        #expect(meter.minY == frames.frame.minY && meter.height == frames.frame.height)
+        let playRow = try #require(frames.playRow)
+        #expect(playRow.minY == 530 && playRow.height == 48)
+        // Before and After ends the row at the frame's trailing edge + 44;
+        // the play group is centred on the stage, x 538–816 on the board.
+        #expect(near(playRow.minX, 352) && near(playRow.maxX, 1000))
+        let mid = try #require(frames.playGroupMidX)
+        #expect(near(mid - Geometry.playGroupWidth / 2, 538, 1.5))
+        #expect(frames.divider == CGRect(x: 670, y: 586, width: 36, height: 4))
+        #expect(frames.transport == CGRect(x: 0, y: 596, width: 1376, height: 44))
+        #expect(frames.overview == CGRect(x: 208, y: 644, width: 1152, height: 22))
+        #expect(frames.timeline == CGRect(x: 0, y: 672, width: 1376, height: 360))
+    }
+
+    /// FS-12.03b AC-3 (position): the timeline's tool row runs the window's
+    /// whole width with the pool and the inspector open or shut — the
+    /// columns stand beside the stage only.
+    @Test func theToolRowRunsTheFullWidth() {
         for pool in [true, false] {
             for inspector in [true, false] {
-                let frames = Geometry.iPadLandscape(.init(
-                    window: CGSize(width: 1376, height: 1032), canvas: sixteenNine,
-                    isPoolOpen: pool, isInspectorOpen: inspector
-                ))
-                #expect(frames.transport.width == 1376)
-                #expect(VideoStudioMetrics.usesFullTransportRow(stageWidth: frames.transport.width))
+                let frames = landscape(pool: pool, inspector: inspector)
+                #expect(frames.transport == CGRect(x: 0, y: 596, width: 1376, height: 44))
+                #expect(frames.timeline.width == 1376)
             }
         }
     }
 
-    /// Shutting the inspector gives its 280pt to the stage; the frame grows,
-    /// the timeline does not move.
-    @Test func shuttingTheInspectorWidensTheStage() {
-        func frames(inspector: Bool) -> Geometry.Frames {
-            Geometry.iPadLandscape(.init(
-                window: CGSize(width: 1376, height: 1032), canvas: sixteenNine,
-                isPoolOpen: true, isInspectorOpen: inspector
-            ))
-        }
-        let open = frames(inspector: true)
-        let shut = frames(inspector: false)
-        #expect(shut.inspector == nil)
-        #expect(shut.stage.width == open.stage.width + 280)
-        #expect(shut.timeline == open.timeline)
+    /// Shutting the inspector gives its 360 to the stage; the timeline does
+    /// not move. Hiding the pool gives the stage everything from x 0.
+    @Test func shuttingAColumnWidensTheStage() {
+        let open = landscape()
+        let noInspector = landscape(inspector: false)
+        #expect(noInspector.inspector == nil)
+        #expect(noInspector.stage.width == open.stage.width + 360)
+        #expect(noInspector.timeline == open.timeline)
+        let noPool = landscape(pool: false)
+        #expect(noPool.pool == nil)
+        #expect(noPool.stage.minX == 0 && noPool.stage.maxX == 1016)
+        #expect(noPool.frame.width > open.frame.width)
+    }
+
+    /// The toolbar's leading capsules start past the pool when it is open,
+    /// at the margin when it is shut: Back at 344, or Media Pool at 16.
+    @Test func theToolbarStartsPastAnOpenPool() {
+        #expect(Geometry.toolbarLeading(isPoolOpen: true) == 344)
+        #expect(Geometry.toolbarLeading(isPoolOpen: false) == 16)
     }
 
     /// The divider gives the timeline more and takes it from the stage; the
     /// stage never goes under its floor.
     @Test func theDividerTradesStageForTimeline() {
-        let base = Geometry.iPadLandscape(.init(
-            window: CGSize(width: 1376, height: 1032), canvas: sixteenNine,
-            isPoolOpen: true, isInspectorOpen: true, timelineExtra: 80
-        ))
-        #expect(base.timeline.height == CGFloat(354 + 80))
-        #expect(base.stage.height == CGFloat(508 - 80))
-        let most = Geometry.iPadLandscape(.init(
-            window: CGSize(width: 1376, height: 1032), canvas: sixteenNine,
-            isPoolOpen: true, isInspectorOpen: true, timelineExtra: 400
-        ))
-        #expect(most.stage.height >= Geometry.stageFloor)
+        let base = landscape(extra: 80)
+        #expect(base.timeline.height == CGFloat(360 + 80))
+        #expect(base.stage.height == CGFloat(440 - 80))
+        #expect(base.inspector?.height == CGFloat(584 - 80))
+        #expect(landscape(extra: 400).stage.height >= Geometry.stageFloor)
     }
 
     /// The pool opens by itself only on a window at least 1100 wide, and
-    /// opens at all only where the stage keeps 330 beside it.
+    /// opens at all only where the frame keeps 330 beside it.
     @Test func thePoolOpensWhereItCostsTheFrameNothing() {
         #expect(Geometry.poolOpensByDefault(windowWidth: 1376))
         #expect(!Geometry.poolOpensByDefault(windowWidth: 1032))
         #expect(Geometry.canOpenPool(windowWidth: 1376, isInspectorOpen: true))
-        #expect(!Geometry.canOpenPool(windowWidth: 800, isInspectorOpen: true))
-        #expect(Geometry.canOpenPool(windowWidth: 800, isInspectorOpen: false))
+        #expect(!Geometry.canOpenPool(windowWidth: 1000, isInspectorOpen: true))
+        #expect(Geometry.canOpenPool(windowWidth: 1000, isInspectorOpen: false))
     }
 
     /// FS-12.03 AC-2: selecting clip 2 does not move the frame — the
-    /// inspector is there either way — and its foot is 58 at y 546.
+    /// inspector is there either way — and its foot is 64 at y 520.
     @Test func iPadLandscapeSelectedKeepsTheFrame() throws {
         let input = Geometry.Input(
             window: CGSize(width: 1376, height: 1032), canvas: sixteenNine,
-            isPoolOpen: true, isInspectorOpen: true
+            isPoolOpen: true, isInspectorOpen: true, laneNeed: boardLaneNeed
         )
         var columns = VideoDeskColumns()
         let idle = Geometry.iPadLandscape(input)
@@ -112,63 +126,77 @@ struct VideoStudioDeskGeometryTests {
         let chosen = Geometry.iPadLandscape(selected)
         #expect(chosen.frame == idle.frame)
         let footer = Geometry.inspectorFooter(in: try #require(chosen.inspector))
-        #expect(footer == CGRect(x: 1096, y: 546, width: 280, height: 58))
+        #expect(footer == CGRect(x: 1016, y: 520, width: 360, height: 64))
+        #expect(Geometry.deskFooterButton == 44)
     }
 
     // MARK: iPad portrait
 
-    /// FS-12.03 AC-3 (board IP1): header the whole width at 64; frame
-    /// 982×552 with the meter at x 982; transport 648; overview 696; the
-    /// timeline 722–1052 (330); the dock 1052–1376 (324).
-    @Test func iPadPortraitIdle() throws {
-        let frames = Geometry.iPadPortrait(.init(
-            window: CGSize(width: 1032, height: 1376), canvas: sixteenNine,
-            isPoolOpen: false, isInspectorOpen: true,
-            laneNeed: VideoStudioMetrics.Lanes.desk.timelineContentHeight(overlayLanes: 1, musicLanes: 2)
+    private func portrait(pool: Bool = false, inspector: Bool = true, canvas: CGSize? = nil) -> Geometry.Frames {
+        Geometry.iPadPortrait(.init(
+            window: CGSize(width: 1032, height: 1376), canvas: canvas ?? sixteenNine,
+            isPoolOpen: pool, isInspectorOpen: inspector, laneNeed: boardLaneNeed
         ))
+    }
+
+    /// FS-12.03 AC-3 (board IP1_Main): the toolbar as in landscape; the
+    /// frame 932×524 at (28, 80), the meter at x 970; the play row at 610;
+    /// the divider at 662; the tool row at 672; the overview 208–1016 at
+    /// 720; the timeline 748–1052 (304); the dock 1052–1376 (324).
+    @Test func iPadPortraitIdle() throws {
+        let frames = portrait()
         #expect(frames.pool == nil)
-        #expect(frames.header == CGRect(x: 0, y: 64, width: 1032, height: 32))
-        #expect(near(frames.frame.width, 982) && near(frames.frame.height, 552))
-        #expect(frames.frame.minX == 0 && frames.frame.minY == 96)
-        #expect(frames.meter?.minX == 982)
-        #expect(near(frames.transport.minY, 648))
-        #expect(near(frames.overview?.minY ?? 0, 696))
-        #expect(near(frames.timeline.minY, 722) && near(frames.timeline.maxY, 1052))
+        #expect(frames.band == CGRect(x: 0, y: 24, width: 1032, height: 44))
+        #expect(near(frames.frame.minX, 28) && frames.frame.minY == 80)
+        #expect(near(frames.frame.width, 932) && near(frames.frame.height, 524))
+        #expect(near(frames.meter?.minX ?? 0, 970) && frames.meter?.height == frames.frame.height)
+        let playRow = try #require(frames.playRow)
+        #expect(playRow.minY == 610)
+        #expect(near(playRow.maxX, 1004))
+        #expect(near((frames.playGroupMidX ?? 0) - Geometry.playGroupWidth / 2, 355, 1.5))
+        #expect(frames.divider?.minY == 662)
+        #expect(frames.transport == CGRect(x: 0, y: 672, width: 1032, height: 44))
+        #expect(frames.overview == CGRect(x: 208, y: 720, width: 808, height: 22))
+        #expect(frames.timeline == CGRect(x: 0, y: 748, width: 1032, height: 304))
         #expect(frames.dock == CGRect(x: 0, y: 1052, width: 1032, height: 324))
     }
 
-    /// FS-12.03 AC-4: selected in portrait, the foot is 60 at y 1316 and
-    /// the timeline (722–1052) is above the dock, never under it.
-    @Test func iPadPortraitSelectedFooterAt1316() throws {
-        let frames = Geometry.iPadPortrait(.init(
-            window: CGSize(width: 1032, height: 1376), canvas: sixteenNine,
-            isPoolOpen: false, isInspectorOpen: true,
-            laneNeed: VideoStudioMetrics.Lanes.desk.timelineContentHeight(overlayLanes: 1, musicLanes: 2)
-        ))
-        let dock = try #require(frames.dock)
-        #expect(Geometry.dockFooter(in: dock) == CGRect(x: 0, y: 1316, width: 1032, height: 60))
-        #expect(frames.timeline.maxY <= dock.minY)
+    /// The pool floats over the frame in portrait: opening it moves nothing.
+    @Test func aPortraitPoolFloatsOverTheFrame() {
+        let shut = portrait()
+        let open = portrait(pool: true)
+        #expect(open.pool == Geometry.poolFrame)
+        #expect(open.frame == shut.frame)
+        #expect(open.timeline == shut.timeline)
+    }
+
+    /// FS-12.03 AC-4: selected in portrait, the foot is 64 at y 1312 and
+    /// the timeline (748–1052) is above the dock, never under it.
+    @Test func iPadPortraitSelectedFooterAt1312() throws {
+        let dock = try #require(portrait().dock)
+        #expect(Geometry.dockFooter(in: dock) == CGRect(x: 0, y: 1312, width: 1032, height: 64))
+        #expect(portrait().timeline.maxY <= dock.minY)
+        #expect(dock.minY + Geometry.dockCommandRowTop == 1061)
+        #expect(dock.minY + Geometry.dockParamTop == 1125)
         #expect(Geometry.dockParamTop + Geometry.dockParamHeight <= Geometry.dockFooterTop)
     }
 
     /// A 9:16 project would take the whole height by the width; the frame is
-    /// capped so the timeline keeps its floor above the dock.
-    @Test func aPortraitProjectLeavesTheTimelineItsFloor() {
-        let frames = Geometry.iPadPortrait(.init(
-            window: CGSize(width: 1032, height: 1376), canvas: CGSize(width: 1080, height: 1920),
-            isPoolOpen: false, isInspectorOpen: true
-        ))
-        #expect(frames.timeline.height >= Geometry.portraitTimelineFloor)
+    /// capped so the timeline keeps what its lanes need above the dock.
+    @Test func aPortraitProjectLeavesTheTimelineItsLanes() {
+        let frames = portrait(canvas: CGSize(width: 1080, height: 1920))
+        #expect(frames.timeline.height >= boardLaneNeed)
         #expect(near(frames.frame.width / frames.frame.height, 9.0 / 16.0, 0.01))
     }
 
-    /// Split View's 639pt portrait half: the dock's three columns split the
-    /// width equally; under 600 there are two, and the dock scrolls.
+    /// The dock's columns (FS-12.03 §3): three of 312, 32 apart, 16 in on a
+    /// 1032 window; Split View's 639 still splits in three, equally; under
+    /// 600 there are two, and the dock scrolls.
     @Test func aNarrowPortraitDockSplitsItsWidthInThree() {
         #expect(Geometry.dockColumnCount(width: 1032) == 3)
-        #expect(near(Geometry.dockColumnWidth(width: 1032), 344))
+        #expect(near(Geometry.dockColumnWidth(width: 1032), 312, 0.7))
         #expect(Geometry.dockColumnCount(width: 639) == 3)
-        #expect(near(Geometry.dockColumnWidth(width: 639), 213))
+        #expect(near(Geometry.dockColumnWidth(width: 639), 181))
         #expect(Geometry.dockColumnCount(width: 507) == 2)
         #expect(Geometry.dockColumnWidth(width: 507) >= Geometry.dockColumnMinimum)
     }
@@ -225,7 +253,6 @@ struct VideoStudioDeskGeometryTests {
         ))
         #expect(frames.pool == nil)
         #expect(frames.meter == nil)
-        #expect(frames.header == nil)
         #expect(frames.overview == nil)
     }
 
