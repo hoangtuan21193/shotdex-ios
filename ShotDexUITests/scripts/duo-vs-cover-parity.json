@@ -1,0 +1,111 @@
+{
+ "steps": [
+  {
+   "action": "launch"
+  },
+  {
+   "action": "wait",
+   "seconds": 6
+  },
+  {
+   "action": "tap",
+   "label": "Select",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "tap",
+   "x": 0.13,
+   "y": 0.585
+  },
+  {
+   "action": "tap",
+   "x": 0.4,
+   "y": 0.585
+  },
+  {
+   "action": "tap",
+   "x": 0.13,
+   "y": 0.775
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "tap",
+   "label": "More selection actions",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "tap",
+   "label": "Create Video"
+  },
+  {
+   "action": "wait",
+   "seconds": 10
+  },
+  {
+   "action": "screenshot",
+   "name": "DC1"
+  },
+  {
+   "action": "dump",
+   "name": "DC1-all",
+   "text": "snapshot"
+  },
+  {
+   "action": "tap",
+   "label": "Photo clip"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "screenshot",
+   "name": "DC2"
+  },
+  {
+   "action": "dump",
+   "name": "DC2-all",
+   "text": "snapshot"
+  },
+  {
+   "action": "tap",
+   "label": "Keep Changes"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "tap",
+   "label": "Music"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "screenshot",
+   "name": "DC4"
+  },
+  {
+   "action": "dump",
+   "name": "DC4-all",
+   "text": "snapshot"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  }
+ ]
+}
