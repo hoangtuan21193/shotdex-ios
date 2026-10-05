@@ -75,6 +75,9 @@ struct OverlayTextField: View {
     let onExpand: () -> Void
     /// Edit: the field takes focus as it appears, so the keyboard is up.
     var focusesOnAppear = false
+    /// The iPad's 44pt field at the column's own inset (IL3, IP3), with
+    /// a 44pt expand button; else the phone's 40pt one, 14 in.
+    var isDesk = false
 
     @FocusState private var isFocused: Bool
     /// Local mirror: routing every keystroke through the recipe and back makes
@@ -86,7 +89,7 @@ struct OverlayTextField: View {
         HStack(spacing: 8) {
             TextField("Text", text: $draft)
                 .textFieldStyle(.plain)
-                .font(.system(size: 13.5))
+                .font(.system(size: isDesk ? 17 : 13.5))
                 .foregroundStyle(.white)
                 .tint(EditorTheme.accent)
                 .submitLabel(.done)
@@ -110,20 +113,20 @@ struct OverlayTextField: View {
                 Image(systemName: "arrow.up.left.and.arrow.down.right")
                     .font(.system(size: 12, weight: .semibold))
                     .foregroundStyle(EditorTheme.dimText)
-                    .frame(width: 28, height: 28)
+                    .frame(width: isDesk ? 44 : 28, height: isDesk ? 44 : 28)
             }
             .buttonStyle(.plain)
             .accessibilityLabel("Edit text full screen")
         }
         .padding(.leading, 12)
-        .padding(.trailing, 4)
-        .frame(height: 40)
+        .padding(.trailing, isDesk ? 0 : 4)
+        .frame(height: isDesk ? 44 : 40)
         .background(
             RoundedRectangle(cornerRadius: AppTheme.Radius.md, style: .continuous)
-                .fill(Color.white.opacity(0.06))
+                .fill(Color.white.opacity(isDesk ? 0.08 : 0.06))
         )
-        .padding(.horizontal, 14)
-        .padding(.bottom, 6)
+        .padding(.horizontal, isDesk ? 0 : 14)
+        .padding(.bottom, isDesk ? 0 : 6)
     }
 }
 
@@ -255,6 +258,9 @@ struct VideoPopUpButton<Option: Hashable>: View {
     var showsTitle = true
     /// A glyph before the value — the ratio's own shape.
     var glyph: ((Option) -> AnyView)? = nil
+    /// A shorter title on the button where two pop-ups share a row — "In:
+    /// Fade" for Animate In (IL3, IP3); VoiceOver still hears `title`.
+    var visibleTitle: String? = nil
 
     var body: some View {
         Menu {
@@ -273,7 +279,7 @@ struct VideoPopUpButton<Option: Hashable>: View {
         } label: {
             HStack(spacing: 8) {
                 if let glyph { glyph(selected) }
-                Text(verbatim: showsTitle ? "\(title): \(name(selected))" : name(selected))
+                Text(verbatim: showsTitle ? "\(visibleTitle ?? title): \(name(selected))" : name(selected))
                     .font(.system(size: 17))
                     .lineLimit(1)
                     .minimumScaleFactor(0.8)

@@ -421,6 +421,18 @@
       "comment": "Video Studio Media panel tab: the user's albums; also the back button from an album's grid",
       "extractionState": "manual"
     },
+    "Align Center": {
+      "comment": "Video Studio iPad text inspector: centers the caption's lines",
+      "extractionState": "manual"
+    },
+    "Align Left": {
+      "comment": "Video Studio iPad text inspector: aligns the caption's lines to the left",
+      "extractionState": "manual"
+    },
+    "Align Right": {
+      "comment": "Video Studio iPad text inspector: aligns the caption's lines to the right",
+      "extractionState": "manual"
+    },
     "All Clips": {
       "comment": "Video Studio Look panel: a tapped look becomes the whole video's and clears every clip's own",
       "extractionState": "manual"
@@ -790,7 +802,7 @@
       "extractionState": "manual"
     },
     "In": {
-      "comment": "Video Studio clip panel: the fade-in slider under FADE",
+      "comment": "Video Studio clip panel: the fade-in slider under FADE; also the short title on the iPad text inspector's Animate In pop-up — In: Fade",
       "extractionState": "manual"
     },
     "In Video · %lld": {
@@ -982,7 +994,7 @@
       "extractionState": "manual"
     },
     "Out": {
-      "comment": "Video Studio clip panel: the fade-out slider under FADE",
+      "comment": "Video Studio clip panel: the fade-out slider under FADE; also the short title on the iPad text inspector's Animate Out pop-up — Out: None",
       "extractionState": "manual"
     },
     "Output": {
@@ -1131,6 +1143,10 @@
     },
     "Snap to beats": {
       "comment": "Video Studio iPad: the switch that makes clip edges and lengths stick to the music's beats",
+      "extractionState": "manual"
+    },
+    "Spacing": {
+      "comment": "Video Studio iPad text inspector: section title over Tracking and Line spacing",
       "extractionState": "manual"
     },
     "Speed": {

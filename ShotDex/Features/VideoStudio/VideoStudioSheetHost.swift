@@ -796,7 +796,10 @@ struct VideoStudioSheetHost: View {
 
     @ViewBuilder
     private var textParams: some View {
-        if let overlay = model.selectedOverlay {
+        if isDesk, let overlay = model.selectedOverlay, overlay.kind == .text {
+            // The iPad shows a caption's every section at once (FS-12.04b §4).
+            VideoDeskTextPanel(model: model, overlay: overlay, actions: actions, isDock: layout == .dock)
+        } else if let overlay = model.selectedOverlay {
             switch model.inspectorTextTool {
             case .edit: transformParams(overlay, editsText: true)
             case .transform: transformParams(overlay)
@@ -840,71 +843,10 @@ struct VideoStudioSheetHost: View {
     }
 
     /// Typeface plus the two weights that belong with it — Bold and Italic are
-    /// font choices, not standalone commands.
-    @ViewBuilder
+    /// font choices, not standalone commands. (The iPad's caption panel,
+    /// every section at once, is `VideoDeskTextPanel`.)
     private func fontParams(_ overlay: PhotoOverlay) -> some View {
-        if isDesk {
-            deskFontParams(overlay)
-        } else {
-            phoneFontParams(overlay)
-        }
-    }
-
-    /// The iPad (IL3_TextOverlay, IP3_TextOverlay): "Font: SF Pro ⌃⌄" — the
-    /// fonts used before, then More Fonts… for the picker — with B and I as
-    /// 44pt squares beside it.
-    private func deskFontParams(_ overlay: PhotoOverlay) -> some View {
-        // The fonts used before, by family, with the caption's own first if
-        // it is not among them.
-        let recents = model.fontRecents
-        var families = recents.map(\.familyName)
-        if !families.contains(overlay.fontFamilyName) { families.insert(overlay.fontFamilyName, at: 0) }
-        return VStack(alignment: .leading, spacing: 8) {
-            HStack(spacing: 8) {
-                VideoPopUpButton(
-                    title: VideoStudioCopy.font,
-                    options: families,
-                    selected: overlay.fontFamilyName,
-                    name: { $0.isEmpty ? String(localized: "System") : $0 },
-                    set: { family in
-                        guard let choice = recents.first(where: { $0.familyName == family }) else { return }
-                        model.rememberFont(choice)
-                        model.updateSelectedOverlay {
-                            $0.fontPostScriptName = choice.postScriptName
-                            $0.fontFamilyName = choice.familyName
-                        }
-                    },
-                    extra: (VideoStudioCopy.moreFonts, actions.onPickFont)
-                )
-                deskToggle("B", isOn: overlay.isBold, label: Text("Bold")) {
-                    model.pushUndo(); model.updateSelectedOverlay { $0.isBold.toggle() }
-                }
-                deskToggle("I", isOn: overlay.isItalic, label: Text("Italic")) {
-                    model.pushUndo(); model.updateSelectedOverlay { $0.isItalic.toggle() }
-                }
-            }
-            Spacer(minLength: 0)
-        }
-        .padding(.horizontal, deskInset)
-        .padding(.top, 6)
-    }
-
-    /// B, I: 44pt squares, white 20 % while on.
-    private func deskToggle(_ glyph: String, isOn: Bool, label: Text, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            Text(verbatim: glyph)
-                .font(.system(size: 17, weight: glyph == "B" ? .bold : .regular))
-                .italic(glyph == "I")
-                .foregroundStyle(.white)
-                .frame(width: 44, height: 44)
-                .background(
-                    RoundedRectangle(cornerRadius: AppTheme.Radius.md, style: .continuous)
-                        .fill(Color.white.opacity(isOn ? 0.20 : 0.08))
-                )
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel(label)
-        .accessibilityAddTraits(isOn ? .isSelected : [])
+        phoneFontParams(overlay)
     }
 
     private func phoneFontParams(_ overlay: PhotoOverlay) -> some View {
