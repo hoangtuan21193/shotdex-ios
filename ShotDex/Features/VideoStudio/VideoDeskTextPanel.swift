@@ -240,11 +240,13 @@ struct VideoDeskTextPanel: View {
         ))
     }
 
+    /// Seven 44pt targets from 7pt left of the column's text (IL3), flush
+    /// in the dock's column (IP3).
     private var fillSwatches: some View {
-        OverlaySwatchRow(model: model, selected: overlay.fill) { color in
+        DeskSwatchRow(model: model, selected: overlay.fill, spacing: isDock ? 0 : 2) { color in
             model.updateSelectedOverlay { $0.fill = color }
         }
-        .padding(.horizontal, -14)
+        .padding(.leading, isDock ? 0 : -7)
     }
 
     /// Outline (and its colours once there is one), Shadow (and its Blur
@@ -258,10 +260,10 @@ struct VideoDeskTextPanel: View {
             reset: { model.pushUndo(); model.updateSelectedOverlay { $0.outlineWidth = 0 } }
         ))
         if overlay.outlineWidth > 0.0005 {
-            OverlaySwatchRow(model: model, selected: overlay.outlineColor) { color in
+            DeskSwatchRow(model: model, selected: overlay.outlineColor, spacing: isDock ? 0 : 2) { color in
                 model.updateSelectedOverlay { $0.outlineColor = color }
             }
-            .padding(.horizontal, -14)
+            .padding(.leading, isDock ? 0 : -7)
         }
         row(InspectorSlider(
             label: "Shadow", value: overlay.shadowOpacity, range: 0...1,
@@ -364,18 +366,22 @@ struct VideoDeskTextPanel: View {
         ))
     }
 
-    /// A slider in the boards' 44pt row; the shared slider row brings its
-    /// own 14 inset, so it steps out by that much to line its name up.
+    /// A slider in the boards' Mac-style 44pt row (`DeskSliderRow`, IL3/IP3):
+    /// the rows are written as the shared `InspectorSlider` and drawn as
+    /// the iPad's — label 96, slider, value 60.
     private func row(_ slider: InspectorSlider) -> some View {
-        slider
-            .frame(height: 44)
-            .padding(.horizontal, -14)
+        DeskSliderRow(
+            label: slider.label, value: slider.value, range: slider.range,
+            valueText: slider.valueText,
+            anchor: min(max(slider.anchor, slider.range.lowerBound), slider.range.upperBound),
+            model: slider.model, set: slider.set, reset: slider.reset
+        )
     }
 
     /// Title Case, 28 tall in the inspector (FS-12.04b §4).
     private func header(_ title: Text) -> some View {
         title
-            .font(.system(size: 17, weight: .semibold))
+            .font(.system(size: DeskRowMetrics.headerSize, weight: .semibold))
             .foregroundStyle(.white)
             .frame(height: VideoStudioMetrics.deskSectionTitleHeight)
             .frame(maxWidth: .infinity, alignment: .leading)

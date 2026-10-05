@@ -545,6 +545,10 @@
       "comment": "Video Studio Video Settings: the black background swatch",
       "extractionState": "manual"
     },
+    "Blue": {
+      "comment": "Video Studio iPad text inspector: the blue caption colour",
+      "extractionState": "manual"
+    },
     "Blur": {
       "comment": "Video Studio Video Settings: the background is the clip itself, blurred; also the slider's name",
       "extractionState": "manual"
@@ -673,6 +677,10 @@
       "comment": "Video Studio: the command that copies the selected item right after it",
       "extractionState": "manual"
     },
+    "Duration": {
+      "comment": "Video Studio clip panel: how long a still stays on screen",
+      "extractionState": "manual"
+    },
     "Edited %@": {
       "comment": "Video Projects: when a draft was last changed; the argument is a relative time such as '5 min. ago'",
       "extractionState": "manual"
@@ -783,6 +791,10 @@
     },
     "Gray": {
       "comment": "Video Studio Video Settings: the gray background swatch",
+      "extractionState": "manual"
+    },
+    "Green": {
+      "comment": "Video Studio iPad text inspector: the green caption colour",
       "extractionState": "manual"
     },
     "HEVC is about 40% smaller; some older devices can’t play it.": {
@@ -1041,6 +1053,10 @@
       "comment": "Video Studio Media panel tab: every photo and video, newest first",
       "extractionState": "manual"
     },
+    "Red": {
+      "comment": "Video Studio iPad text inspector: the red caption colour",
+      "extractionState": "manual"
+    },
     "Resize Timeline": {
       "comment": "Video Studio iPad: the grabber between the frame and the timeline, dragged to trade one's height for the other's",
       "extractionState": "manual"
@@ -1153,6 +1169,10 @@
       "comment": "Video Studio clip panel: label of the playback-rate chips",
       "extractionState": "manual"
     },
+    "Speed Presets": {
+      "comment": "Video Studio iPad: the 0.5× 1× 2× 4× segmented control under the Speed slider",
+      "extractionState": "manual"
+    },
     "Start to Playhead": {
       "comment": "Video Studio Trim: cuts the selected clip's start to the playhead",
       "extractionState": "manual"
@@ -1229,6 +1249,10 @@
       "comment": "Video Studio Media panel: VoiceOver label of a video cell — its length",
       "extractionState": "manual"
     },
+    "Volume": {
+      "comment": "Video Studio: a clip's or a bed's own level",
+      "extractionState": "manual"
+    },
     "Waiting for iCloud": {
       "comment": "Video Studio: why Freeze and Split are dimmed on a clip whose original has not downloaded",
       "extractionState": "manual"
@@ -1239,6 +1263,10 @@
     },
     "Whole video": {
       "comment": "Video Studio: subtitle beside Look when the column shows the look of the whole video",
+      "extractionState": "manual"
+    },
+    "Yellow": {
+      "comment": "Video Studio iPad text inspector: the yellow caption colour",
       "extractionState": "manual"
     },
     "clips' own looks": {

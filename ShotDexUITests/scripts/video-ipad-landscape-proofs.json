@@ -1,0 +1,236 @@
+{
+ "steps": [
+  {
+   "action": "launch",
+   "arguments": [
+    "-video.timelineExtraHeight",
+    "0"
+   ]
+  },
+  {
+   "action": "wait",
+   "seconds": 4
+  },
+  {
+   "action": "orientation",
+   "text": "landscape"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "tap",
+   "label": "Select",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "tap",
+   "x": 0.724,
+   "y": 0.209
+  },
+  {
+   "action": "tap",
+   "x": 0.058,
+   "y": 0.295
+  },
+  {
+   "action": "tap",
+   "x": 0.945,
+   "y": 0.209
+  },
+  {
+   "action": "tap",
+   "x": 0.613,
+   "y": 0.209
+  },
+  {
+   "action": "tap",
+   "x": 0.834,
+   "y": 0.209
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "tap",
+   "label": "More selection actions",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "tap",
+   "label": "Create Video"
+  },
+  {
+   "action": "wait",
+   "seconds": 10
+  },
+  {
+   "action": "tap",
+   "label": "Look Vivid"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "dump",
+   "name": "IL1-look-vivid",
+   "text": "snapshot"
+  },
+  {
+   "action": "wait",
+   "seconds": 10
+  },
+  {
+   "action": "tap",
+   "label": "Save as Look\u2026"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "dump",
+   "name": "save-as-look-prompt",
+   "text": "snapshot"
+  },
+  {
+   "action": "wait",
+   "seconds": 10
+  },
+  {
+   "action": "tap",
+   "label": "Cancel"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "tap",
+   "label": "Video clip"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "dump",
+   "name": "IL2_ClipSelected",
+   "text": "snapshot"
+  },
+  {
+   "action": "wait",
+   "seconds": 10
+  },
+  {
+   "action": "tap",
+   "label": "Keep Changes"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "tap",
+   "label": "poolTab.text"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "tap",
+   "label": "Add Text"
+  },
+  {
+   "action": "wait",
+   "seconds": 4
+  },
+  {
+   "action": "dump",
+   "name": "IL3_TextOverlay",
+   "text": "snapshot"
+  },
+  {
+   "action": "wait",
+   "seconds": 10
+  },
+  {
+   "action": "tap",
+   "label": "itemCommand.align"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "dump",
+   "name": "IL3-align-lit",
+   "text": "snapshot"
+  },
+  {
+   "action": "wait",
+   "seconds": 10
+  },
+  {
+   "action": "tap",
+   "label": "Keep Changes"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "tap",
+   "label": "poolTab.music"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "tap",
+   "label": "Morning Drive"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "tap",
+   "label": "itemCommand.ducking"
+  },
+  {
+   "action": "wait",
+   "seconds": 8
+  },
+  {
+   "action": "tap",
+   "label": "Under Voices"
+  },
+  {
+   "action": "wait",
+   "seconds": 5
+  },
+  {
+   "action": "dump",
+   "name": "F3_IL_Ducking",
+   "text": "snapshot"
+  },
+  {
+   "action": "wait",
+   "seconds": 12
+  }
+ ]
+}

@@ -585,7 +585,9 @@ struct VideoStudioSheetHost: View {
     private var clipParams: some View {
         if let clip = model.selectedClip {
             ScrollView(showsIndicators: false) {
-                VStack(alignment: .leading, spacing: 4) {
+                // The iPad's rows are 44 tall and set their own gaps (IL2,
+                // IP2); the phone and the Duo keep 4 between rows.
+                VStack(alignment: .leading, spacing: isDesk ? 0 : 4) {
                     if model.activeItemCommand == .trim { trimBlock(clip) }
                     ForEach(
                         VideoClipPanelSections.sections(for: clip.kind, leading: model.activeItemCommand),
@@ -607,6 +609,114 @@ struct VideoStudioSheetHost: View {
 
     @ViewBuilder
     private func clipSection(_ section: VideoClipPanelSection, _ clip: VideoClip) -> some View {
+        if isDesk {
+            deskClipSection(section, clip)
+        } else {
+            phoneClipSection(section, clip)
+        }
+    }
+
+    /// The iPad's clip rows, Mac style (FS-12.03 §2, FS-12.04b §5, boards
+    /// IL2/IP2): label · slider · value at 17/15pt, Speed's slider over a
+    /// 0.5× · 1× · 2× · 4× segmented control, Volume behind a 40pt round
+    /// speaker, "Fade" and "Motion" as 15pt headers.
+    @ViewBuilder
+    private func deskClipSection(_ section: VideoClipPanelSection, _ clip: VideoClip) -> some View {
+        switch section {
+        case .speed:
+            VStack(alignment: .leading, spacing: 2) {
+                DeskSliderRow(
+                    label: String(localized: "Speed", table: VideoStudioCopy.table, comment: "Video Studio clip panel: label of the playback-rate chips"),
+                    value: clip.speed, range: VideoClip.speedRange,
+                    valueText: clip.speed.formatted(.number.precision(.significantDigits(1...3))) + "×",
+                    anchor: VideoClip.speedRange.lowerBound,
+                    model: model,
+                    set: { model.setSpeed(($0 * 20).rounded() / 20, for: clip.id) },
+                    reset: { model.pushUndo(); model.setSpeed(1, for: clip.id) }
+                )
+                DeskSpeedPresets(speed: clip.speed) { speed in
+                    guard abs(clip.speed - speed) > 0.001 else { return }
+                    model.pushUndo()
+                    model.setSpeed(speed, for: clip.id)
+                }
+                .padding(.leading, DeskRowMetrics.labelWidth)
+            }
+            .padding(.horizontal, deskInset)
+            .padding(.top, DeskRowMetrics.firstRowTop)
+        case .volume:
+            DeskVolumeRow(
+                isMuted: clip.isMuted, volume: clip.volume, model: model,
+                toggleMute: { model.toggleClipMuted(clip.id) },
+                set: { model.setClipVolume($0, for: clip.id) },
+                reset: { model.pushUndo(); model.setClipVolume(1, for: clip.id) }
+            )
+            .padding(.leading, deskInset - DeskRowMetrics.muteGap)
+            .padding(.trailing, deskInset)
+            .padding(.top, 6)
+        case .duration:
+            if model.snapGrid != nil {
+                durationSlider(clip)
+                    .padding(.top, DeskRowMetrics.firstRowTop)
+            } else {
+                DeskSliderRow(
+                    label: String(localized: "Duration", table: VideoStudioCopy.table, comment: "Video Studio clip panel: how long a still stays on screen"),
+                    value: clip.photoDuration, range: VideoClip.photoDurationRange,
+                    valueText: String(format: "%.1fs", clip.photoDuration),
+                    model: model,
+                    set: { model.setPhotoDuration($0, for: clip.id) },
+                    reset: { model.pushUndo(); model.setPhotoDuration(VideoClip.defaultPhotoDuration, for: clip.id) }
+                )
+                .padding(.horizontal, deskInset)
+                .padding(.top, DeskRowMetrics.firstRowTop)
+            }
+        case .fade:
+            deskHeader(Text("Fade", tableName: VideoStudioCopy.table, comment: "Video Studio clip panel: header over the clip's fade in and fade out"))
+            DeskSliderRow(
+                label: String(localized: "Fade in", table: VideoStudioCopy.table, comment: "Video Studio iPad clip panel: the fade-in slider"),
+                value: clip.fadeIn, range: 0...max(0.1, clip.maximumFade()),
+                valueText: String(format: "%.1fs", clip.fadeIn), model: model,
+                set: { model.setFade($0, at: .start, for: clip.id) },
+                reset: { model.pushUndo(); model.setFade(0, at: .start, for: clip.id) }
+            )
+            .padding(.horizontal, deskInset)
+            DeskSliderRow(
+                label: String(localized: "Fade out", table: VideoStudioCopy.table, comment: "Video Studio iPad clip panel: the fade-out slider"),
+                value: clip.fadeOut, range: 0...max(0.1, clip.maximumFade()),
+                valueText: String(format: "%.1fs", clip.fadeOut), model: model,
+                set: { model.setFade($0, at: .end, for: clip.id) },
+                reset: { model.pushUndo(); model.setFade(0, at: .end, for: clip.id) }
+            )
+            .padding(.horizontal, deskInset)
+        case .motion:
+            deskHeader(Text("Motion", tableName: VideoStudioCopy.table, comment: "Video Studio clip panel: header over the clip's motion effects — zoom, pan, shake"))
+            VideoPopUpButton(
+                title: VideoStudioCopy.motion,
+                options: VideoClipPanelSections.motionOptions,
+                selected: clip.effect,
+                name: \.displayName
+            ) { effect in
+                guard effect != clip.effect else { return }
+                model.setEffect(effect, for: clip.id)
+            }
+            .padding(.horizontal, deskInset)
+            .padding(.top, 2)
+        }
+    }
+
+    /// "Fade", "Motion": 15pt semibold, 28 tall (24 in the dock's
+    /// columns), 8 under the row above.
+    private func deskHeader(_ text: Text) -> some View {
+        text
+            .font(.system(size: DeskRowMetrics.headerSize, weight: .semibold))
+            .foregroundStyle(.white)
+            .frame(height: layout == .dock ? 24 : DeskRowMetrics.headerHeight)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, deskInset)
+            .padding(.top, 8)
+    }
+
+    @ViewBuilder
+    private func phoneClipSection(_ section: VideoClipPanelSection, _ clip: VideoClip) -> some View {
         switch section {
         case .speed:
             speedChips(clip)
