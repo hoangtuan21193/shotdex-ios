@@ -74,7 +74,7 @@ import ShotDexKit
         defer { service.releaseCachedSessions() }
         var services = fixture.services()
         let resizes = ResizeBox()
-        services.render = { photo, format, resize, folder in
+        services.render = { photo, format, resize, _, folder in
             resizes.add(resize)
             return try await EditorBatchSaver.renderToFile(
                 photo, recipe: .identity, service: service, format: format == .heic ? .heic : .jpeg,

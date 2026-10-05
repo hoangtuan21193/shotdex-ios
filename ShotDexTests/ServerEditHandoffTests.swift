@@ -193,7 +193,7 @@ import ShotDexKit
 
         let report = await ServerEditExporter(
             services: ServerExportServices(
-                render: { _, _, _, _ in render },
+                render: { _, _, _, _, _ in render },
                 originAccess: DirectRemoteAccess(client),
                 access: { _ in throw RemoteFileError.connectionLost },
                 saveToPhotos: { _, _ in "" }

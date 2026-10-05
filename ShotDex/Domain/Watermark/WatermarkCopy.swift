@@ -84,6 +84,11 @@ enum WatermarkCopy {
         String(localized: "Originals are kept when you add a watermark.", table: table, locale: locale, comment: "Resize: why Delete Originals is off while a watermark is on")
     }
 
+    /// Server export sheet: why Replace Original is off with a watermark.
+    static func watermarkedCopiesAreNew(locale: Locale = .current) -> String {
+        String(localized: "Watermarked copies are saved as new files.", table: table, locale: locale, comment: "Server export: why Replace Original is off while a watermark is on")
+    }
+
     // MARK: Watermark screen
 
     static func addWatermark(locale: Locale = .current) -> String {

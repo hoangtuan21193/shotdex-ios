@@ -1,4 +1,5 @@
 import Foundation
+import ImageIO
 import Observation
 import ShotDexKit
 
@@ -74,6 +75,12 @@ final class ServerExportModel {
         case share
     }
 
+    /// The forms' remembered watermark (FS-05.04 §5); nil in a test that
+    /// does not stamp, and never for one file a tool made.
+    let watermarkSettings: WatermarkSettingsStore?
+    let signaturePresets: SignaturePresetStore?
+    @ObservationIgnored let imageExists: (UUID) -> Bool
+
     private let services: ServerExportServices
     private let renderDirectory: URL
     private var exporter: ServerEditExporter?
@@ -87,8 +94,14 @@ final class ServerExportModel {
         services: ServerExportServices,
         sizePresets: [ResizePreset] = ResizePreset.builtIns,
         startingSize: ResizePreset = .original,
-        composed: ComposedSource? = nil
+        composed: ComposedSource? = nil,
+        watermarkSettings: WatermarkSettingsStore? = nil,
+        signaturePresets: SignaturePresetStore? = nil,
+        imageExists: @escaping (UUID) -> Bool = { OverlayImageStore().imageExists(id: $0) }
     ) {
+        self.watermarkSettings = composed == nil ? watermarkSettings : nil
+        self.signaturePresets = signaturePresets
+        self.imageExists = imageExists
         self.photos = photos
         self.composed = composed
         self.name = composed.map { ServerComposedName.defaultBase(firstFilename: $0.firstFilename, tool: $0.tool) } ?? ""
@@ -101,9 +114,75 @@ final class ServerExportModel {
     }
 
     /// Replace Original is offered only when every photo can take it — a
-    /// lone JPEG or HEIC (FS-17.06 §6).
+    /// lone JPEG or HEIC (FS-17.06 §6) — and never with a watermark: a
+    /// stamped copy must not take the place of the only clean one
+    /// (FS-05.04 §5).
     var canReplaceOriginals: Bool {
-        composed == nil && photos.allSatisfy { ServerExportRules.canReplaceOriginal($0.photo) }
+        composed == nil && photos.allSatisfy { ServerExportRules.canReplaceOriginal($0.photo) } && watermarkTemplate == nil
+    }
+
+    // MARK: Watermark (FS-05.04)
+
+    /// The watermark the sheet stamps, before tokens: nil when it is off,
+    /// its preset is gone, or this is one file a tool made.
+    var watermarkTemplate: WatermarkStamp? {
+        guard let watermarkSettings, let signaturePresets else { return nil }
+        let imageExists = imageExists
+        return watermarkSettings.formStamp(in: signaturePresets.presets) {
+            WatermarkAvailability.of($0, imageExists: imageExists).isSelectable
+        }
+    }
+
+    /// Whether the sheet shows the Watermark row: every per-photo export.
+    var offersWatermark: Bool { composed == nil && watermarkSettings != nil && signaturePresets != nil }
+
+    /// The Watermark screen for this sheet: one page per photo, its picture
+    /// from the fetched file, its size as the sheet will write it.
+    func makeWatermarkModel() -> WatermarkModel? {
+        guard let watermarkSettings, let signaturePresets else { return nil }
+        let preset = sizePreset
+        let pages = photos.map { photo in
+            let url = photo.primaryURL
+            let pixels = ServerExportModel.pixelSize(of: url)
+            return WatermarkPreviewPage(
+                id: photo.id,
+                filename: photo.photo.primary.name,
+                exportSize: preset.id == ResizePreset.original.id ? pixels : preset.outputPixelSize(source: pixels),
+                tokens: .empty,
+                load: { await Task.detached { ServerExportModel.preview(of: url) }.value }
+            )
+        }
+        return WatermarkModel(
+            settings: watermarkSettings, presets: signaturePresets, pages: pages,
+            formTitle: String(localized: "Export", comment: "Server export sheet title"), imageExists: imageExists
+        )
+    }
+
+    /// The picture's upright size.
+    nonisolated static func pixelSize(of url: URL) -> CGSize {
+        guard let source = CGImageSourceCreateWithURL(url as CFURL, nil),
+              let properties = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [CFString: Any],
+              let width = properties[kCGImagePropertyPixelWidth] as? Int,
+              let height = properties[kCGImagePropertyPixelHeight] as? Int
+        else { return CGSize(width: 1000, height: 1000) }
+        let orientation = properties[kCGImagePropertyOrientation] as? Int ?? 1
+        return orientation >= 5 ? CGSize(width: height, height: width) : CGSize(width: width, height: height)
+    }
+
+    /// A 1,200px upright preview read from the fetched file.
+    nonisolated static func preview(of url: URL) -> CGImage? {
+        guard let source = CGImageSourceCreateWithURL(url as CFURL, nil) else { return nil }
+        return CGImageSourceCreateThumbnailAtIndex(source, 0, [
+            kCGImageSourceCreateThumbnailFromImageAlways: true,
+            kCGImageSourceCreateThumbnailWithTransform: true,
+            kCGImageSourceThumbnailMaxPixelSize: 1_200,
+        ] as CFDictionary)
+    }
+
+    /// The row's value: the preset's name, Off, or None.
+    var watermarkRowValue: String {
+        guard let signaturePresets, !signaturePresets.presets.isEmpty else { return WatermarkCopy.none() }
+        return watermarkTemplate?.name ?? WatermarkCopy.off()
     }
 
     var isComposed: Bool { composed != nil }
@@ -178,7 +257,10 @@ final class ServerExportModel {
             resize: composed == nil ? resize : nil,
             composed: composed.map { source in
                 ComposedOutput(file: source.file, filename: composedFilename ?? source.file.lastPathComponent, folder: originFolder)
-            }
+            },
+            // A server photo has no index: its tokens are the editor's —
+            // none (FS-05.04 §3).
+            watermark: composed == nil ? watermarkTemplate?.resolved(with: .empty) : nil
         )
         start(job, exporter: ServerEditExporter(services: services, renderDirectory: renderDirectory) { [weak self] event in
             Task { @MainActor in self?.handle(event) }
@@ -204,7 +286,8 @@ final class ServerExportModel {
         })
         next.insert(.otherFolder(serverId: folder.server.id, serverName: folder.server.name, path: folder.path))
         start(ServerEditExporter.Job(photos: job.photos, destinations: next, placement: job.placement,
-                                     format: job.format, resize: job.resize, composed: job.composed),
+                                     format: job.format, resize: job.resize, composed: job.composed,
+                                     watermark: job.watermark),
               exporter: exporter)
     }
 
@@ -301,21 +384,31 @@ extension ServerExportModel {
             photos: photos,
             originServer: context.server,
             renderDirectory: context.workDirectory.appendingPathComponent("Exports", isDirectory: true),
-            services: services(context: context, dependencies: dependencies) { photo, format, resize, folder in
-                try await EditorBatchSaver.renderToFile(
+            services: services(context: context, dependencies: dependencies) { photo, format, resize, watermark, folder in
+                let recipe = recipes[photo.id] ?? .identity
+                // An edit that already has a layer from the preset is not
+                // stamped twice (FS-05.04 §5).
+                let stamp = watermark.flatMap {
+                    WatermarkPlan.alreadyStamped(savedLayers: recipe.overlays, presetID: $0.presetID) ? nil : $0
+                }
+                return try await EditorBatchSaver.renderToFile(
                     photo,
-                    recipe: recipes[photo.id] ?? .identity,
+                    recipe: recipe,
                     service: service,
                     format: format == .heic ? .heic : .jpeg,
                     // The render goes back to the server and to Photos with
                     // everything; its Share destination filters it (AC-22).
                     metadata: .all,
                     resize: resize,
+                    watermark: stamp,
                     into: folder
                 )
             },
             sizePresets: dependencies.compressionPresets.allPresets,
-            startingSize: isResize ? .twoK : .original
+            startingSize: isResize ? .twoK : .original,
+            watermarkSettings: dependencies.watermarkSettings,
+            signaturePresets: dependencies.signaturePresets,
+            imageExists: { [images = dependencies.overlayImages] in images.imageExists(id: $0) }
         )
     }
 
@@ -331,7 +424,7 @@ extension ServerExportModel {
             photos: photos,
             originServer: context.server,
             renderDirectory: context.workDirectory.appendingPathComponent("Exports", isDirectory: true),
-            services: services(context: context, dependencies: dependencies) { _, _, _, _ in
+            services: services(context: context, dependencies: dependencies) { _, _, _, _, _ in
                 // The tool rendered it already; nothing renders per photo.
                 source.file
             },
@@ -342,7 +435,7 @@ extension ServerExportModel {
     private static func services(
         context: ServerExportContext,
         dependencies: AppDependencies,
-        render: @escaping @Sendable (FetchedServerPhoto, ServerExportFormat, ResizePreset?, URL) async throws -> URL
+        render: @escaping @Sendable (FetchedServerPhoto, ServerExportFormat, ResizePreset?, WatermarkStamp?, URL) async throws -> URL
     ) -> ServerExportServices {
         let library = dependencies.photoLibrary
         dependencies.fileServerCatalog.reload()

@@ -187,6 +187,7 @@ final class EditorBatchSaver {
         format: PhotoOutputFormat,
         metadata: MetadataLevel,
         resize: ResizePreset? = nil,
+        watermark: WatermarkStamp? = nil,
         into folder: URL
     ) async throws -> URL {
         let session = try await service.beginSession(for: .serverFile(photo))
@@ -208,6 +209,7 @@ final class EditorBatchSaver {
             format: written,
             metadata: metadata,
             resize: resize,
+            watermark: watermark,
             to: url
         )
         return url

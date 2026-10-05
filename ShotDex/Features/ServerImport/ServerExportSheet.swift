@@ -20,6 +20,8 @@ struct ServerExportSheet: View {
     @State private var picksAfterRefusal = false
     /// Folder in Files…: the system picker, Export…'s recents (FS-03.07b §8).
     @State private var isPickingFilesFolder = false
+    /// The Watermark screen, pushed from its row (FS-05.04 §4).
+    @State private var watermarkModel: WatermarkModel?
 
     var body: some View {
         NavigationStack(path: $folderPath) {
@@ -31,6 +33,9 @@ struct ServerExportSheet: View {
                     ServerBrowserScreen(model: route.model) { chosen in
                         pick(route, chosen)
                     }
+                }
+                .navigationDestination(item: $watermarkModel) { model in
+                    WatermarkScreen(model: model)
                 }
         }
         .interactiveDismissDisabled(model.stage == .exporting)
@@ -227,7 +232,9 @@ struct ServerExportSheet: View {
                 } header: {
                     Text("In the Original Folder", comment: "Server export: placement section")
                 } footer: {
-                    if model.hasRAWOriginal {
+                    if model.watermarkTemplate != nil {
+                        Text(WatermarkCopy.watermarkedCopiesAreNew())
+                    } else if model.hasRAWOriginal {
                         Text("Originals in RAW stay — edits are saved as JPEG or HEIC.", comment: "Server export: why Replace Original is off")
                     } else if model.placement == .newFile {
                         Text("Saved next to the original with “_edited” added to the name.", comment: "Server export: new file naming")
@@ -245,6 +252,31 @@ struct ServerExportSheet: View {
             } footer: {
                 Text("^[\(model.photos.count) photo](inflect: true) · \(model.format == .jpeg ? "JPEG" : "HEIC")",
                      comment: "Server export summary: photos and format")
+            }
+
+            if model.offersWatermark {
+                // FS-05.04 §4: a section of its own right under Format.
+                Section {
+                    Button {
+                        watermarkModel = model.makeWatermarkModel()
+                    } label: {
+                        LabeledContent(WatermarkCopy.watermark()) {
+                            HStack(spacing: 6) {
+                                Text(model.watermarkRowValue)
+                                Image(systemName: "chevron.right")
+                                    .font(.footnote.weight(.semibold))
+                                    .foregroundStyle(.tertiary)
+                            }
+                        }
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .foregroundStyle(.primary)
+                }
+                .onChange(of: model.watermarkTemplate != nil) { _, stamps in
+                    // A stamped copy never replaces the original.
+                    if stamps { model.placement = .newFile }
+                }
             }
     }
 

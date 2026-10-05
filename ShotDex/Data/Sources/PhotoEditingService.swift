@@ -681,6 +681,7 @@ final class PhotoEditingService {
         format: PhotoOutputFormat,
         metadata: MetadataLevel,
         resize: ResizePreset? = nil,
+        watermark: WatermarkStamp? = nil,
         to url: URL
     ) async throws {
         var rendered = try await renderer.render(source: source.info, recipe: recipe)
@@ -689,6 +690,8 @@ final class PhotoEditingService {
             rendered = await renderer.resize(rendered, preset: resize, cropAnchor: .center)
             quality = resize.quality
         }
+        // Last, at the size the file is written at (FS-05.04 §3).
+        rendered = await renderer.applyingWatermark(watermark, to: rendered)
         try await renderer.write(rendered, to: url, format: format, quality: quality, metadata: metadata)
     }
 

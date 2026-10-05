@@ -115,7 +115,9 @@ struct ServerExportReport: Sendable, Equatable {
 struct ServerExportServices: Sendable {
     /// Renders one photo's edit to a file in `directory`, resized when a
     /// preset is given (Resize, FS-17.06 §3).
-    var render: @Sendable (FetchedServerPhoto, ServerExportFormat, ResizePreset?, URL) async throws -> URL
+    /// The watermark, when the sheet's row adds one (FS-05.04), is stamped
+    /// last, at the size the file is written at.
+    var render: @Sendable (FetchedServerPhoto, ServerExportFormat, ResizePreset?, WatermarkStamp?, URL) async throws -> URL
     /// The photo's own connection.
     var originAccess: any RemoteFileAccess
     /// Another saved connection, by id.
@@ -155,6 +157,8 @@ actor ServerEditExporter {
         /// A file made from all the photos: sent as it is, once per
         /// destination, instead of one render per photo.
         var composed: ComposedOutput?
+        /// The sheet's watermark (FS-05.04 §4); nil for none.
+        var watermark: WatermarkStamp?
 
         /// What the report is keyed by.
         var itemIds: [String] { composed == nil ? photos.map(\.id) : [ComposedOutput.id] }
@@ -304,7 +308,7 @@ actor ServerEditExporter {
             : job.format
         let folder = renderDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
         try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
-        let url = try await services.render(photo, format, job.resize, folder)
+        let url = try await services.render(photo, format, job.resize, job.watermark, folder)
         rendered[photo.id] = url
         return url
     }
