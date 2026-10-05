@@ -1,0 +1,41 @@
+{
+  "D1": {
+    "verdict": "ok"
+  },
+  "D2": {
+    "verdict": "ok"
+  },
+  "D3": {
+    "verdict": "ok"
+  },
+  "D4": {
+    "verdict": "ok"
+  },
+  "D5": {
+    "verdict": "ok",
+    "option": "relax"
+  },
+  "D6": {
+    "verdict": "ok",
+    "option": "commit"
+  },
+  "D7": {
+    "verdict": "ok"
+  },
+  "D8": {
+    "verdict": "ok"
+  },
+  "D9": {
+    "verdict": "ok"
+  },
+  "D10": {
+    "verdict": "ok",
+    "option": "toolbar"
+  },
+  "D11": {
+    "verdict": "not_ok"
+  },
+  "D12": {
+    "verdict": "ok"
+  }
+}

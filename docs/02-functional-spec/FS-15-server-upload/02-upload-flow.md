@@ -1,10 +1,10 @@
 # FS-15.02 — Luồng upload
 
 `FS-15.02` · `Features/ServerUpload/ServerUploadSheet.swift` · `ServerUploadModel` · `ServerImport/ServerBrowserScreen` (chọn folder)
-· `Domain/ServerUpload/` · `Data/Database/ServerUploadStore.swift` · cập nhật 2026-09-27
+· `Domain/ServerUpload/` · `Data/Database/ServerUploadStore.swift` · cập nhật 2026-10-02
 
 **Một câu:** chọn connection ngay trong menu ⋯, chọn folder đích (nhớ lần trước), rồi một sheet đi bốn bước —
-chuẩn bị → đang đẩy → (trùng tên) → kết quả — và chỉ đề nghị xoá những tấm đã khớp checksum.
+chuẩn bị → (trùng tên, hỏi trước cho cả lô) → đang đẩy → kết quả — và chỉ đề nghị xoá những tấm đã khớp checksum.
 
 ## 1. Lối vào
 
@@ -25,13 +25,18 @@ connection (một **connection** = một dòng đã khai trong Settings → File
 
 | Hàng | Nội dung |
 |---|---|
-| Connection | ≥ 2 connection: picker theo tên, đổi được mà không phải mở lại menu. 1 connection: hàng chỉ đọc |
+| Connection | hàng mở **menu**: tên các connection theo thứ tự tên (đang dùng có ✓), đường kẻ, rồi **Add Connection…** ở cuối — đổi connection không phải mở lại ⋯. 1 connection: vẫn là menu (1 tên ✓ + Add Connection…) |
 | Folder | folder đích; chạm để duyệt (§2a). Mở sẵn **folder dùng lần trước với connection này**; chưa đẩy lần nào thì folder khai trong form (rỗng = gốc) |
 | Date Folders | công tắc; bật thì chia `năm/năm-tháng-ngày` theo ngày chụp bên trong Folder (§3) |
 | Files | **Only RAW** · **All Originals** (mặc định) · **Originals + Edited** |
 | Tóm tắt | `N photos · X files · ~Y GB`; ở Only RAW thêm `M have no RAW and will be skipped` |
-| Ghi chú | "Keep ShotDex open until the upload finishes. The screen stays on." |
+| Ghi chú | theo nhánh iOS — FS-15.02b §5 |
 
+Board: `PH_ServerUpload`, `IP_ServerUpload`, `DI_ServerUpload`, `DC_ServerUpload` (H4 — Add Connection… vào menu).
+
+- **Add Connection…** chỉ nằm trong menu Connection, không là hàng riêng: section Connection là Connection → Folder →
+  Date Folders, ngay dưới là câu giải thích Date Folders (H4). 0 connection: sheet mở thẳng form (§1).
+- Một connection hay nhiều, hàng Connection cùng một dạng menu (K30) — Add Connection… luôn ở một chỗ.
 - Nút **Upload** mờ khi 0 file sẽ đẩy. Loại file **không** lưu sang lần sau — mỗi lần đều chọn.
 - Sheet này chỉ đẩy file gốc. Bản đã đổi cỡ theo preset Resize lên server đi qua sheet **Export…**, không ghi lịch sử
   upload ([FS-03.07b](../FS-03-photo-editor/07b-export-to-files.md) §7, chốt 2026-10-02, làm 2026-10-04 — `RemoteFolderWriter`).
@@ -67,7 +72,7 @@ Bản đã sửa: `<tên gốc>_edited.<đuôi của bản sửa>`, cạnh bản
 ## 4. Đẩy một file
 
 1. Chép file gốc ra thư mục tạm của app (tải từ iCloud nếu cần), rồi tính SHA-256 của file tạm theo khối 1 MB.
-2. Có file cùng tên ở đích → sang bước trùng tên (§5) **trước khi** ghi gì.
+2. Tên đã có ở đích → làm theo câu trả lời của bước dò trùng tên (§5); tên mới xuất hiện sau lúc dò → **Keep Both**.
 3. Ghi lên server dưới tên `<tên>.shotdex-part`, theo khối.
 4. Đọc lại file `.shotdex-part` từ server theo khối, tính SHA-256.
 5. Khớp → đổi tên thành tên thật, ghi một dòng lịch sử. Lệch → xoá `.shotdex-part`, file đó **lỗi**.
@@ -78,13 +83,32 @@ Bản đã sửa: `<tên gốc>_edited.<đuôi của bản sửa>`, cạnh bản
 - Một file một lúc. Lỗi mạng hay đầy đĩa server → **dừng cả lô** (file sau cũng sẽ hỏng); lỗi riêng một
   file (checksum lệch, không đọc được asset) → ghi lỗi, đi tiếp.
 
-## 5. Trùng tên
+## 5. Trùng tên — dò cả lô trước khi đẩy
+
+Board: chưa có board bước dò và màn trùng tên — cần vẽ trên bốn hàng thiết bị (H4, K28).
+
+- Bấm **Upload** → bước **Checking the server…** (spinner, Cancel): liệt kê **một lần** mỗi folder đích của lô (Date
+  Folders bật: mỗi folder ngày), trong app đang mở, trước khi ghi byte nào. *Vì lô chạy nền thì không ai ở đó trả lời.*
+- Tên trùng mà lịch sử upload có dòng cho đúng file đó, đúng đường dẫn, cùng số byte → không hỏi (lần đẩy trước).
+- Còn tên trùng → hỏi **hết, ngay bây giờ**, mỗi file một màn dưới đây, tiêu đề `1 of 7 Already on the Server`.
+  Trả lời xong file cuối (hoặc bật Apply to Remaining Conflicts) thì lô mới bắt đầu đẩy; Cancel → về bước chuẩn bị.
+- Liệt kê hỏng (không tới được máy, mất mạng, sai mật khẩu) → về bước chuẩn bị với câu lỗi FS-15.01 §3 + **Try
+  Again**; chưa ghi gì lên server, chưa gửi yêu cầu chạy nền.
+- Rời app trong lúc dò → huỷ lượt dò; quay lại thấy bước chuẩn bị, bấm Upload để dò lại.
+- Đang đẩy mà gặp tên **xuất hiện sau lúc dò** (người khác vừa chép lên) → **Keep Both**, không dừng, không hỏi;
+  kết quả ghi "1 file appeared on the server during the upload and was saved as IMG_1 (2).CR3."
+  *Vì Replace đè một file người dùng chưa thấy, còn Skip làm mất một bản không ai biết.*
+
+Màn mỗi file:
 
 - Hiện **hai ảnh cạnh nhau**: *On This Device* và *On Server* — cả hai dựng thumbnail 400px thẳng từ file
   (bản bên server tải về đĩa trước), không giải mã cả ảnh. Dưới mỗi ảnh: dung lượng.
-- Ba nút: **Replace** (đỏ — ghi đè file trên server) · **Keep Both** · **Skip**, và công tắc **Apply to remaining conflicts** (mặc định tắt).
+- Thứ tự từ trên xuống: hai ảnh → công tắc **Apply to Remaining Conflicts** (mặc định tắt) → **Replace** (đỏ — ghi
+  đè file trên server) · **Keep Both** · **Skip**. *Vì công tắc nằm dưới nút thì người dùng đã bấm Replace trước khi
+  thấy nó* (H4).
 - **Keep Both** đặt tên `<tên> (2).<đuôi>`, rồi `(3)`… cho tới tên chưa có.
-- File trên server trùng **cả SHA-256** với file sắp đẩy → coi như đã có: ghi lịch sử, không hỏi, không đẩy.
+- Lúc đẩy, file trên server trùng **cả SHA-256** với file sắp đẩy → coi như đã có: ghi lịch sử, không đẩy, bất kể
+  câu trả lời (Replace không ghi lại một file giống hệt).
 
 ## 6. Tiến độ
 
@@ -93,9 +117,9 @@ Bản đã sửa: `<tên gốc>_edited.<đuôi của bản sửa>`, cạnh bản
 - Tên file đang đẩy và bước của nó: *Preparing* (iCloud) · *Uploading* · *Verifying*.
 - Sheet không kéo xuống đóng được. Nút **Cancel** hỏi xác nhận ("Stop uploading? Files already uploaded stay
   on the server.").
-- Trong lúc đẩy, **màn hình không tự khoá**; bật lại tự khoá ở mọi lối ra: xong, huỷ, lỗi, đóng sheet, app
-  ra nền.
-- App ra nền → lô dừng như bị huỷ. Quay lại thấy kết quả với **Upload Remaining**.
+- Rời app trong lúc đẩy: iOS 26 chạy tiếp, trước iOS 26 dừng — luật đủ ở [FS-15.02b](02b-background-upload.md).
+- Khi màn hình bị giữ sáng (trước iOS 26, hoặc iOS 26 bị hệ thống từ chối chạy nền), bật lại tự khoá ở mọi lối ra:
+  xong, huỷ, lỗi, hệ thống dừng, đóng sheet, app ra nền.
 
 ## 7. Kết quả và hỏi xoá
 
@@ -104,22 +128,16 @@ Bản đã sửa: `<tên gốc>_edited.<đuôi của bản sửa>`, cạnh bản
 | có tấm xoá được | "Uploaded N photos (X GB) to <server>." + nút đỏ **Delete N from This Device** + **Done** |
 | có lỗi | danh sách file lỗi kèm lý do + **Upload Remaining** |
 | 0 tấm lên | chỉ lỗi + **Try Again**; không có nút xoá |
+| hệ thống dừng lô ở nền | **Upload Paused** + **Resume** (FS-15.02b §3) |
+| server từ chối mật khẩu | thêm **Edit Connection** cạnh Upload Remaining (FS-15.02b §4) |
 
 - **Tấm được đề nghị xoá** = mọi file gốc của asset đều có dòng lịch sử (bất kỳ server nào). Ở Only RAW, cặp
   RAW+JPEG mà JPEG chưa lên thì **không** nằm trong số N, và dòng phụ nói lý do.
 - Bấm Delete → hộp xác nhận của app nói hậu quả: "They move to Recently Deleted and free up space after 30
   days, or when you empty it in Photos. If iCloud Photos is on, they are also deleted from iCloud and your
   other devices." → rồi hộp xác nhận của hệ thống. Huỷ ở hộp nào cũng không mất gì.
-- Không xoá ngay thì xoá sau từ hàng **Uploaded to Server** (§8).
+- Không xoá ngay thì xoá sau từ hàng **Free Up Space** của màn Uploaded to Server (FS-15.02c §2).
 
 ## 8. Sau khi đẩy
 
-- **Collections → Utilities → On Server → Uploaded from This Device** (màn tên **Uploaded to Server**). Đổi 2026-09-27
-  (người dùng: "không được hiện button create video… phải biết ảnh đã upload lên chỗ nào"): màn là **danh sách nơi
-  đến** — mỗi hàng một connection + folder (tên connection, dưới là folder, bên phải số ảnh), mới nhất trước; chạm →
-  lưới ảnh của nơi đó (không có nút làm video). Ảnh lên hai nơi có ở cả hai. Hàng cuối **All Uploaded Photos** → lưới
-  mọi ảnh. Tên lấy theo connection hiện tại (đã đổi tên thì theo tên mới). Hàng chỉ hiện khi có ít nhất một ảnh. Menu
-  **⋯ → Delete N from This Device** xoá đúng những ảnh qua được luật §7, cùng hai hộp xác nhận.
-- **Dấu trên lưới**: glyph nhỏ ở góc dưới-trái ô, trên mọi lưới. Nhãn VoiceOver "Uploaded to server".
-- **Photo Info**: mỗi nơi (server + folder) một dòng: tên server, dưới là folder, bên phải ngày; mới nhất trước.
-- Ảnh bị xoá khỏi thư viện → dòng lịch sử **ở lại** (bảng giữ bằng chứng); nó chỉ không còn hiện ở đâu.
+Màn **Uploaded to Server**, hàng **Free Up Space**, dấu trên lưới, Photo Info: [FS-15.02c](02c-after-upload.md).

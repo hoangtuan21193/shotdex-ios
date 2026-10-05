@@ -18,8 +18,9 @@ trên toolbar.
 ## 2. Advanced Search
 
 - Mở từ nút trong ô tìm kiếm hoặc mục **Advanced Filter…** trong menu lọc.
-- Sheet gồm: **loại media** (All / Photo / Video) · **khớp tất cả / khớp bất kỳ** · **danh sách điều kiện**
-  (mỗi dòng một điều kiện, nút thêm, nút xoá, và một dòng đếm số ảnh khớp sống).
+- Sheet gồm: **một hàng** loại media (All / Photo / Video) + khớp tất cả / bất kỳ · **danh sách điều kiện**
+  (mỗi dòng một điều kiện, nút thêm, nút xoá). Số ảnh khớp sống nằm **dưới tiêu đề, cạnh nút Search**
+  ([05b §3](05b-gear-menu-missing-data-and-sheet.md)); sheet có nháp chưa áp thì không vuốt đóng được (§4 ở đó).
 - Thứ tự chọn nguồn khi nạp lưới: đường nhanh của hệ thống (khi không lọc gì và đang sắp theo ngày) →
   truy vấn nâng cao → bộ lọc đơn giản.
 - Nút **Search** (tắt khi không có điều kiện hợp lệ) áp truy vấn rồi chuyển về tab Library.
@@ -71,6 +72,9 @@ trên toolbar.
 | Tháng chụp | **trong tháng**: một tháng + năm, khớp trọn tháng theo lịch địa phương; chip `Aug 2026`. Bộ lọc đơn giản nhận nó từ câu "tháng bận nhất" của Statistics ([FS-07.02 §2](../FS-07-statistics/02-insights.md)); bộ dựng điều kiện có nó ở trường ngày chụp |
 | Sao | **ít nhất N sao** (1–5) hoặc **chưa chấm**, chọn một. Sao hiện hành = sao chờ của ShotDex nếu có, không thì sao của Photos ([FS-01.12 §4](12-rating-and-flags.md)); chip `★ ≥ 3` / `Unrated` |
 | Cờ | **Picks · Rejected · Unflagged**, chọn nhiều (OR trong trục). Đọc từ bảng cờ riêng; chip `Picks` / `Rejected` / `Unflagged` |
+| Khung giờ chụp | Night · Blue Hour · Golden Hour · Sunrise · Sunset · Day, chọn một ([03b §1–2](03b-time-of-day-and-acceptance.md)) |
+| Vị trí | **Has Location / No Location**, theo toạ độ — không theo tên địa điểm ([05b §2](05b-gear-menu-missing-data-and-sheet.md)) |
+| Dữ liệu thiếu | phép **is missing** trên các trường có thể rỗng ([05b §2](05b-gear-menu-missing-data-and-sheet.md)) |
 
 Nhóm góc nhìn (theo tiêu cự tương đương): < 20mm Ultra-wide · 20–34 Wide · 35–69 Standard ·
 70–134 Portrait / Short telephoto · 135–299 Telephoto · ≥ 300 Super telephoto.
@@ -81,7 +85,7 @@ Nút lọc là một mục riêng, **tách khỏi Select**; **không còn nút S
 Album Detail và Smart Album ([FS-06.09](../FS-06-collections/09-album-filter-menu.md)) — một chỗ định nghĩa các dòng.
 
 - Phần `Filter:` — All Items · Favorites · Photos Only / Videos Only (hai công tắc **loại trừ nhau**) ·
-  **Advanced Filter…**
+  Capture Kind ▸ · **Camera ▸** · **Lens ▸** ([05b §1](05b-gear-menu-missing-data-and-sheet.md)) · **Advanced Filter…**
 - Ngay sau Favorites: hai hàng phẳng **Picks**, **Rejected** và menu con **Rating ▸** ([FS-01.12 §7](12-rating-and-flags.md)).
   Bộ lọc Rejected đang bật thì thanh điều kiện có viên đỏ **Delete N** ([FS-01.12b §5](12b-culling-pass.md)).
 - Menu con **`Sort By`**: Date Taken (Newest/Oldest) + **Date Modified** (Newest/Oldest). Hệ thống **không
@@ -100,6 +104,7 @@ Album Detail và Smart Album ([FS-06.09](../FS-06-collections/09-album-filter-me
 
 ## 7. Tiêu chí nghiệm thu
 
-**Chưa viết** cho phần cũ — xem [README — Việc còn nợ](../../README.md#6-việc-còn-nợ). Hai mục mới có AC ở spec
+Menu Camera/Lens, dữ liệu thiếu, bố cục và nháp của sheet Advanced Search: [05b §5](05b-gear-menu-missing-data-and-sheet.md)
+AC-1…AC-27. **Chưa viết** cho phần cũ — xem [README — Việc còn nợ](../../README.md#6-việc-còn-nợ). Hai mục mới có AC ở spec
 sinh ra chúng: *trong tháng* ở [FS-07.03](../FS-07-statistics/03-acceptance-criteria.md) AC-17, AC-18;
 *Unsupported RAW* ở [FS-03.04b](../FS-03-photo-editor/04b-unsupported-raw.md) AC-13. Trục *sao* và *cờ*: [FS-01.12](12-rating-and-flags.md) AC-7.

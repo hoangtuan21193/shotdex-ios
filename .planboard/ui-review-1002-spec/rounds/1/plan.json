@@ -1,0 +1,1228 @@
+{
+  "title": "Spec ui-review-1002 — các câu ⚠️ CẦN QUYẾT",
+  "context": "/spec đã viết ~280 tiêu chí nghiệm thu vào 30 tài liệu FS/BD/NF cho 46 mục review đã duyệt.\nKhi viết, 34 chỗ đụng ràng buộc hoặc có hai cách làm thật — spec ghi ⚠️ CẦN QUYẾT tại chỗ, kèm đề xuất. Chọn xong, câu trả lời được thay vào tài liệu và AC liên quan được viết lại theo lựa chọn.\nMỗi thẻ ghi file chứa câu hỏi.",
+  "pages": [
+    {
+      "id": "delete",
+      "title": "Duplicates, Smart Album, Compare",
+      "intro": "An toàn khi xoá và soi ảnh.",
+      "decisions": [
+        {
+          "id": "K1",
+          "title": "Duplicates: Delete khi có dấu ở chế độ khác (FS-06.06b §1)",
+          "why": "Dấu giờ sống qua đổi chế độ Exact/Similar/Series; nút Delete phải nói đúng nó xoá gì.",
+          "proposal": "Delete chỉ xoá dấu thuộc nhóm của chế độ đang xem; con số trên nút khớp đúng thứ đang thấy.",
+          "options": [
+            {
+              "id": "a",
+              "label": "Chỉ dấu của chế độ đang xem",
+              "pros": [
+                "Số trên nút = thứ đang thấy"
+              ],
+              "cons": [
+                "Dấu ở chế độ khác phải sang đó xoá"
+              ],
+              "effort": "S",
+              "recommended": true
+            },
+            {
+              "id": "b",
+              "label": "Mọi dấu còn sống, dòng phụ 'gồm M ở mức khác'",
+              "pros": [
+                "Một lần xoá hết"
+              ],
+              "cons": [
+                "Xoá cả ảnh không nhìn thấy"
+              ],
+              "effort": "S"
+            }
+          ],
+          "tasks": [
+            "Thay dòng ⚠️ CẦN QUYẾT bằng quyết định, viết lại AC liên quan — FS-06.06b §1"
+          ]
+        },
+        {
+          "id": "K2",
+          "title": "Duplicates trên Duo inner: 1 hay 2 cột (FS-06.06b §4)",
+          "why": "Lưới adaptive 420pt cần 856pt cho 2 cột; Duo inner có 835pt.",
+          "proposal": "Giữ 420: Duo inner 1 cột, đọc dọc.",
+          "options": [
+            {
+              "id": "a",
+              "label": "Giữ 420 (Duo inner 1 cột)",
+              "pros": [
+                "Đúng số đã chốt ở Z2",
+                "Ô ảnh to hơn"
+              ],
+              "cons": [
+                "Ít nhóm trên màn thấp"
+              ],
+              "effort": "S",
+              "recommended": true
+            },
+            {
+              "id": "b",
+              "label": "Hạ 400 (Duo inner 2 cột 410pt)",
+              "pros": [
+                "Thấy 2 nhóm cạnh nhau"
+              ],
+              "cons": [
+                "Thẻ hẹp, caption cắt"
+              ],
+              "effort": "S"
+            }
+          ],
+          "importance": "minor",
+          "tasks": [
+            "Thay dòng ⚠️ CẦN QUYẾT bằng quyết định, viết lại AC liên quan — FS-06.06b §4"
+          ]
+        },
+        {
+          "id": "K3",
+          "title": "Smart Album: 'Place is missing' (FS-06.08 §2)",
+          "why": "Ảnh có toạ độ nhưng chưa tra địa chỉ cũng sẽ khớp 'thiếu địa điểm'.",
+          "proposal": "Bỏ 'is missing' ở trường địa điểm; người dùng dùng No Location (theo toạ độ).",
+          "options": [
+            {
+              "id": "a",
+              "label": "Bỏ, dùng No Location",
+              "pros": [
+                "Không khớp nhầm"
+              ],
+              "cons": [
+                "Không tìm được ảnh chưa geocode"
+              ],
+              "effort": "S",
+              "recommended": true
+            },
+            {
+              "id": "b",
+              "label": "Giữ, ghi 'gồm ảnh chưa tra địa chỉ'",
+              "pros": [
+                "Đủ phép"
+              ],
+              "cons": [
+                "Kết quả đổi dần theo geocode"
+              ],
+              "effort": "S"
+            }
+          ],
+          "tasks": [
+            "Thay dòng ⚠️ CẦN QUYẾT bằng quyết định, viết lại AC liên quan — FS-06.08 §2"
+          ]
+        },
+        {
+          "id": "K4",
+          "title": "Vuốt xuống khi sheet có thay đổi (FS-06.08 §3, FS-07.01b, cũng áp cho Advanced Search, form server)",
+          "why": "Một quyết định cho cả 4 sheet nhập liệu (C1).",
+          "proposal": "Bật về và hiện luôn alert Discard / Keep Editing như Mail (cần nối lời báo 'định đóng' của UIKit).",
+          "options": [
+            {
+              "id": "b",
+              "label": "Bật về + hiện alert ngay",
+              "pros": [
+                "Đúng mẫu HIG Sheets",
+                "Người dùng biết vì sao không đóng"
+              ],
+              "cons": [
+                "Cần cầu nối UIKit"
+              ],
+              "effort": "M",
+              "recommended": true
+            },
+            {
+              "id": "a",
+              "label": "Chỉ bật về, alert chỉ ở Cancel",
+              "pros": [
+                "Một dòng, không đụng UIKit"
+              ],
+              "cons": [
+                "Vuốt mà sheet bật lại không lời giải thích"
+              ],
+              "effort": "S"
+            }
+          ],
+          "tasks": [
+            "Thay dòng ⚠️ CẦN QUYẾT bằng quyết định, viết lại AC liên quan — FS-06.08 §3, FS-07.01b, cũng áp cho Advanced Search, form server"
+          ]
+        },
+        {
+          "id": "K5",
+          "title": "Compare: chỗ đặt hint 'Touch and hold to keep only this one' (FS-01.08)",
+          "why": "Góc trên-phải đã là nút Delete.",
+          "proposal": "Một dòng ngay dưới nút Delete, hiện khi đã có ít nhất một dấu.",
+          "options": [
+            {
+              "id": "a",
+              "label": "Dưới nút Delete",
+              "pros": [
+                "Hiện đúng lúc lệnh có ích"
+              ],
+              "cons": [
+                "Thêm một dòng chrome"
+              ],
+              "effort": "S",
+              "recommended": true
+            },
+            {
+              "id": "b",
+              "label": "Ghép vào dòng hướng dẫn đầu",
+              "pros": [
+                "0pt thêm"
+              ],
+              "cons": [
+                "Hiện trước khi có dấu, dễ bị lờ"
+              ],
+              "effort": "S"
+            }
+          ],
+          "importance": "minor",
+          "tasks": [
+            "Thay dòng ⚠️ CẦN QUYẾT bằng quyết định, viết lại AC liên quan — FS-01.08"
+          ]
+        },
+        {
+          "id": "K6",
+          "title": "Compare: mấy bản phân giải cao cùng lúc (FS-01.08 §6)",
+          "why": "Chạm sang khung B khi A đã có bản cao: nhả A hay giữ cả hai. Mỗi bản ~24 MB.",
+          "proposal": "Giữ A và B (tối đa 2 bản, ~48 MB) để so hai tấm cùng độ nét.",
+          "options": [
+            {
+              "id": "b",
+              "label": "Tối đa 2 bản (~48 MB)",
+              "pros": [
+                "So hai tấm cùng độ nét — việc chính của màn"
+              ],
+              "cons": [
+                "Gấp đôi bộ nhớ"
+              ],
+              "effort": "M",
+              "recommended": true
+            },
+            {
+              "id": "a",
+              "label": "Tối đa 1 bản (~24 MB)",
+              "pros": [
+                "Nhẹ nhất"
+              ],
+              "cons": [
+                "Tấm kia nhoè lại khi chạm sang"
+              ],
+              "effort": "M"
+            }
+          ],
+          "tasks": [
+            "Thay dòng ⚠️ CẦN QUYẾT bằng quyết định, viết lại AC liên quan — FS-01.08 §6"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "viewer",
+      "title": "Viewer và Photo Info",
+      "intro": "Đóng viewer, bàn phím, inspector.",
+      "decisions": [
+        {
+          "id": "K7",
+          "title": "Đóng viewer cuộn lưới: áp cho mọi lưới dùng chung? (FS-02.01b)",
+          "why": "Trips, Places, album trong Collections, Uploaded to Server dùng cùng lưới.",
+          "proposal": "Có: mọi lưới dùng chung, gần như 0 công.",
+          "options": [
+            {
+              "id": "a",
+              "label": "Mọi lưới",
+              "pros": [
+                "Một hành vi khắp app"
+              ],
+              "cons": [
+                "Phải kiểm thêm 4 màn"
+              ],
+              "effort": "S",
+              "recommended": true
+            },
+            {
+              "id": "b",
+              "label": "Chỉ 4 lưới của Q7",
+              "pros": [
+                "Đúng phạm vi đã chốt"
+              ],
+              "cons": [
+                "Hai cách đóng viewer"
+              ],
+              "effort": "S"
+            }
+          ],
+          "tasks": [
+            "Thay dòng ⚠️ CẦN QUYẾT bằng quyết định, viết lại AC liên quan — FS-02.01b"
+          ]
+        },
+        {
+          "id": "K8",
+          "title": "Phím ←/→ khi video đang dừng (FS-02.01b)",
+          "why": "Hôm nay ←/→ là lùi/tiến một khung khi video dừng; Z5 muốn ←/→ lật ảnh.",
+          "proposal": "←/→ luôn lật trang; lùi/tiến khung bằng ',' và '.'.",
+          "options": [
+            {
+              "id": "b",
+              "label": "←/→ lật trang, ',' '.' cho khung",
+              "pros": [
+                "Một phím một nghĩa"
+              ],
+              "cons": [
+                "Người quen ←/→ tua khung phải học lại"
+              ],
+              "effort": "S",
+              "recommended": true
+            },
+            {
+              "id": "a",
+              "label": "←/→ tua khung, ⌥←/⌥→ lật trang",
+              "pros": [
+                "Giữ hành vi video"
+              ],
+              "cons": [
+                "Lật ảnh cần hai phím"
+              ],
+              "effort": "S"
+            }
+          ],
+          "tasks": [
+            "Thay dòng ⚠️ CẦN QUYẾT bằng quyết định, viết lại AC liên quan — FS-02.01b"
+          ]
+        },
+        {
+          "id": "K9",
+          "title": "Thứ tự section Photo Info (FS-02.03)",
+          "why": "V4 chỉ chốt Camera & Lens lên trước bản đồ.",
+          "proposal": "Camera & Lens → Exposure → Location (dời cả Exposure lên trước bản đồ).",
+          "options": [
+            {
+              "id": "b",
+              "label": "Camera & Lens, Exposure, rồi Location",
+              "pros": [
+                "EXIF đọc liền một mạch"
+              ],
+              "cons": [
+                "Bản đồ xuống dưới nếp gập"
+              ],
+              "effort": "S",
+              "recommended": true
+            },
+            {
+              "id": "a",
+              "label": "Chỉ dời Camera & Lens",
+              "pros": [
+                "Thay đổi nhỏ nhất"
+              ],
+              "cons": [
+                "Bản đồ chen giữa hai khối EXIF"
+              ],
+              "effort": "S"
+            }
+          ],
+          "importance": "minor",
+          "tasks": [
+            "Thay dòng ⚠️ CẦN QUYẾT bằng quyết định, viết lại AC liên quan — FS-02.03"
+          ]
+        },
+        {
+          "id": "K10",
+          "title": "Bề rộng cột inspector Photo Info (FS-02.03b)",
+          "why": "Chưa có token trong DESIGN.md.",
+          "proposal": "360pt cố định, thêm token mới vào DESIGN §6.",
+          "options": [
+            {
+              "id": "a",
+              "label": "360pt cố định + token",
+              "pros": [
+                "Đọc rồi đóng, không cần kéo"
+              ],
+              "cons": [
+                "Một token mới"
+              ],
+              "effort": "S",
+              "recommended": true
+            },
+            {
+              "id": "b",
+              "label": "Dùng dải 280–420 kéo được của editor",
+              "pros": [
+                "Không token mới"
+              ],
+              "cons": [
+                "Thêm cử chỉ kéo cho một panel chỉ đọc"
+              ],
+              "effort": "M"
+            }
+          ],
+          "tasks": [
+            "Thay dòng ⚠️ CẦN QUYẾT bằng quyết định, viết lại AC liên quan — FS-02.03b"
+          ]
+        },
+        {
+          "id": "K11",
+          "title": "Inspector nhớ trạng thái mở? (FS-02.03b)",
+          "why": "Người soi EXIF thường soi cả loạt.",
+          "proposal": "Nhớ lần cuối như một tuỳ chọn của máy.",
+          "options": [
+            {
+              "id": "b",
+              "label": "Nhớ lần cuối",
+              "pros": [
+                "Soi cả loạt không phải mở lại"
+              ],
+              "cons": [
+                "Thêm một trạng thái lưu"
+              ],
+              "effort": "S",
+              "recommended": true
+            },
+            {
+              "id": "a",
+              "label": "Luôn đóng khi mở viewer",
+              "pros": [
+                "Ảnh luôn to nhất lúc mở"
+              ],
+              "cons": [
+                "Mở lại mỗi lần"
+              ],
+              "effort": "S"
+            }
+          ],
+          "tasks": [
+            "Thay dòng ⚠️ CẦN QUYẾT bằng quyết định, viết lại AC liên quan — FS-02.03b"
+          ]
+        },
+        {
+          "id": "K12",
+          "title": "Alert lỗi Favorite/Delete có Try Again? (FS-02.04)",
+          "why": "NF-04 đòi mọi lỗi kèm lối ra; alert hiện có chỉ có OK.",
+          "proposal": "Thêm Try Again chạy lại đúng thao tác, cho cả lưới.",
+          "options": [
+            {
+              "id": "b",
+              "label": "OK + Try Again",
+              "pros": [
+                "Đúng NF-04",
+                "Lỗi iCloud tạm thời qua được"
+              ],
+              "cons": [
+                "Phải giữ lại thao tác để chạy lại"
+              ],
+              "effort": "S",
+              "recommended": true
+            },
+            {
+              "id": "a",
+              "label": "Chỉ OK như lưới",
+              "pros": [
+                "Không đổi gì"
+              ],
+              "cons": [
+                "Trái NF-04"
+              ],
+              "effort": "0"
+            }
+          ],
+          "tasks": [
+            "Thay dòng ⚠️ CẦN QUYẾT bằng quyết định, viết lại AC liên quan — FS-02.04"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "search",
+      "title": "Tìm kiếm, khung giờ, lọc thiếu dữ liệu",
+      "intro": "S2 timeOfDay, S1 menu gear, S5 is missing.",
+      "decisions": [
+        {
+          "id": "K13",
+          "title": "Ảnh không GPS, ngoài khung đêm: ghi Day? (FS-01.03b)",
+          "why": "Quyết định 'is missing' của trường này gồm những ảnh nào.",
+          "proposal": "Ghi Day (05:00–20:00), để 'is missing' chỉ còn ảnh thật sự không biết giờ.",
+          "options": [
+            {
+              "id": "a",
+              "label": "Ghi Day",
+              "pros": [
+                "Mọi ảnh có giờ đều có khung"
+              ],
+              "cons": [
+                "Không phân biệt golden hour khi không GPS"
+              ],
+              "effort": "S",
+              "recommended": true
+            },
+            {
+              "id": "b",
+              "label": "Để trống, chỉ toạ độ mới cho Day",
+              "pros": [
+                "Day luôn chính xác"
+              ],
+              "cons": [
+                "Nhiều ảnh 'thiếu' dù có giờ"
+              ],
+              "effort": "S"
+            }
+          ],
+          "tasks": [
+            "Thay dòng ⚠️ CẦN QUYẾT bằng quyết định, viết lại AC liên quan — FS-01.03b"
+          ]
+        },
+        {
+          "id": "K14",
+          "title": "Video và ảnh không EXIF, không toạ độ (FS-01.03b)",
+          "why": "Không có giờ địa phương ghi trong file.",
+          "proposal": "Không gán khung giờ.",
+          "options": [
+            {
+              "id": "a",
+              "label": "Không khung",
+              "pros": [
+                "Không đoán sai"
+              ],
+              "cons": [
+                "Video không tìm theo giờ được"
+              ],
+              "effort": "S",
+              "recommended": true
+            },
+            {
+              "id": "b",
+              "label": "Dùng múi giờ hiện tại của máy",
+              "pros": [
+                "Có khung cho mọi thứ"
+              ],
+              "cons": [
+                "Ảnh du lịch đọc theo múi giờ ở nhà là sai cả giờ"
+              ],
+              "effort": "S"
+            }
+          ],
+          "tasks": [
+            "Thay dòng ⚠️ CẦN QUYẾT bằng quyết định, viết lại AC liên quan — FS-01.03b"
+          ]
+        },
+        {
+          "id": "K15",
+          "title": "'sunset'/'sunrise' gồm giờ xanh? (FS-01.03b)",
+          "why": "Hai từ trùng nhau một nửa nếu gộp.",
+          "proposal": "Chỉ giờ vàng; giờ xanh có từ riêng.",
+          "options": [
+            {
+              "id": "a",
+              "label": "Chỉ giờ vàng",
+              "pros": [
+                "Mỗi từ một khung"
+              ],
+              "cons": [
+                "Ảnh ngay sau mặt trời lặn không ra"
+              ],
+              "effort": "S",
+              "recommended": true
+            },
+            {
+              "id": "b",
+              "label": "Giờ vàng + giờ xanh",
+              "pros": [
+                "Ra cả ảnh chạng vạng"
+              ],
+              "cons": [
+                "Trùng với 'blue hour'"
+              ],
+              "effort": "S"
+            }
+          ],
+          "importance": "minor",
+          "tasks": [
+            "Thay dòng ⚠️ CẦN QUYẾT bằng quyết định, viết lại AC liên quan — FS-01.03b"
+          ]
+        },
+        {
+          "id": "K16",
+          "title": "Cách điền khung giờ cho thư viện đã index (BD-03.02 §7)",
+          "why": "Đọc lại cả 55k ảnh ≈ 50 GB nếu ảnh nằm trên iCloud.",
+          "proposal": "Lượt điền bù theo lô 2.000 cho ảnh có toạ độ (không đọc file); chỉ hạ phiên bản các dòng không toạ độ để lượt index kế tiếp đọc lại đúng chúng.",
+          "options": [
+            {
+              "id": "b",
+              "label": "Điền bù từ cột + đọc lại phần không GPS",
+              "pros": [
+                "Không tốn mạng cho ảnh có GPS"
+              ],
+              "cons": [
+                "Hai đường điền"
+              ],
+              "effort": "M",
+              "recommended": true
+            },
+            {
+              "id": "a",
+              "label": "Tăng phiên bản index, đọc lại cả thư viện",
+              "pros": [
+                "Một đường duy nhất"
+              ],
+              "cons": [
+                "~50 GB tải lại với Optimize Storage"
+              ],
+              "effort": "S"
+            }
+          ],
+          "tasks": [
+            "Thay dòng ⚠️ CẦN QUYẾT bằng quyết định, viết lại AC liên quan — BD-03.02 §7"
+          ]
+        },
+        {
+          "id": "K17",
+          "title": "Camera ▸ / Lens ▸ ở đâu (FS-01.05b)",
+          "why": "Menu lọc dùng chung với Album Detail và Smart Album (FS-06.09).",
+          "proposal": "Ở cả ba lưới, số đếm trong phạm vi album.",
+          "options": [
+            {
+              "id": "b",
+              "label": "Cả ba lưới",
+              "pros": [
+                "Một chỗ định nghĩa các dòng"
+              ],
+              "cons": [
+                "Phải đếm theo phạm vi album"
+              ],
+              "effort": "M",
+              "recommended": true
+            },
+            {
+              "id": "a",
+              "label": "Chỉ Library",
+              "pros": [
+                "Ít việc hơn"
+              ],
+              "cons": [
+                "Hai menu khác nhau cùng một hình"
+              ],
+              "effort": "S"
+            }
+          ],
+          "tasks": [
+            "Thay dòng ⚠️ CẦN QUYẾT bằng quyết định, viết lại AC liên quan — FS-01.05b"
+          ]
+        },
+        {
+          "id": "K18",
+          "title": "Ảnh chưa đọc xong EXIF có tính là 'thiếu' không (FS-01.05b)",
+          "why": "Lúc đang index 40.000 ảnh, 'No Lens' sẽ ra cả thư viện.",
+          "proposal": "Chỉ ảnh tĩnh đã đọc xong (hoặc đã kết luận không EXIF); dòng Unknown của Statistics đổi theo để hai số khớp.",
+          "options": [
+            {
+              "id": "b",
+              "label": "Chỉ ảnh đã đọc xong",
+              "pros": [
+                "Kết quả đúng trong lúc index"
+              ],
+              "cons": [
+                "Số đổi dần khi index chạy"
+              ],
+              "effort": "S",
+              "recommended": true
+            },
+            {
+              "id": "a",
+              "label": "Tính cả ảnh chưa đọc và video",
+              "pros": [
+                "Đơn giản"
+              ],
+              "cons": [
+                "Kết quả sai lúc index"
+              ],
+              "effort": "S"
+            }
+          ],
+          "tasks": [
+            "Thay dòng ⚠️ CẦN QUYẾT bằng quyết định, viết lại AC liên quan — FS-01.05b"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "stats",
+      "title": "Statistics, cửa sổ thấp, thiết bị",
+      "intro": "C3, C6, F2/F3, Z3.",
+      "decisions": [
+        {
+          "id": "K19",
+          "title": "DESIGN §10.6 còn ghi accent dùng cho chart (FS-07.01b)",
+          "why": "C3 đã chọn giữ indigo; tài liệu phải nói cùng một điều.",
+          "proposal": "Bỏ 'chart' khỏi danh sách accent trong DESIGN; series đầu là indigo.",
+          "options": [
+            {
+              "id": "a",
+              "label": "Sửa DESIGN",
+              "pros": [
+                "Đúng lựa chọn C3"
+              ],
+              "cons": [
+                "Không"
+              ],
+              "effort": "S",
+              "recommended": true
+            },
+            {
+              "id": "b",
+              "label": "Giữ DESIGN, đổi code sang amber",
+              "pros": [
+                "Accent có ở chart"
+              ],
+              "cons": [
+                "Ngược C3"
+              ],
+              "effort": "S"
+            }
+          ],
+          "tasks": [
+            "Thay dòng ⚠️ CẦN QUYẾT bằng quyết định, viết lại AC liên quan — FS-07.01b"
+          ]
+        },
+        {
+          "id": "K20",
+          "title": "Glyph nút menu Add Chart / Reorder (FS-07.01b)",
+          "why": "Nút ⇅ cũ trông như 'sắp xếp' và bị gộp vào menu.",
+          "proposal": "Giữ '+': câu 'Tap + to add a chart' vẫn đúng.",
+          "options": [
+            {
+              "id": "a",
+              "label": "+",
+              "pros": [
+                "Giữ chỗ người dùng quen"
+              ],
+              "cons": [
+                "Reorder nằm sau dấu +"
+              ],
+              "effort": "S",
+              "recommended": true
+            },
+            {
+              "id": "b",
+              "label": "⋯",
+              "pros": [
+                "Đúng nghĩa 'nhiều lệnh'"
+              ],
+              "cons": [
+                "Mất lối thêm chart rõ ràng"
+              ],
+              "effort": "S"
+            }
+          ],
+          "importance": "minor",
+          "tasks": [
+            "Thay dòng ⚠️ CẦN QUYẾT bằng quyết định, viết lại AC liên quan — FS-07.01b"
+          ]
+        },
+        {
+          "id": "K21",
+          "title": "Chân thẻ Insights lúc đang index / Limited (FS-07.01b)",
+          "why": "Dải đầu màn mới đã nói 'Still reading photo info'; chân thẻ nói lần nữa.",
+          "proposal": "Bỏ chân thẻ ở hai ca này, dải đầu màn nói một lần (sửa FS-07.02).",
+          "options": [
+            {
+              "id": "b",
+              "label": "Bỏ chân thẻ",
+              "pros": [
+                "Nói một lần"
+              ],
+              "cons": [
+                "Phải sửa FS-07.02 và AC-14"
+              ],
+              "effort": "S",
+              "recommended": true
+            },
+            {
+              "id": "a",
+              "label": "Giữ cả hai",
+              "pros": [
+                "Không đổi thẻ"
+              ],
+              "cons": [
+                "Nói hai lần"
+              ],
+              "effort": "0"
+            }
+          ],
+          "tasks": [
+            "Thay dòng ⚠️ CẦN QUYẾT bằng quyết định, viết lại AC liên quan — FS-07.01b"
+          ]
+        },
+        {
+          "id": "K22",
+          "title": "Ngưỡng cửa sổ thấp (NF-05 §4)",
+          "why": "Quyết định thiết bị nào nhận metrics chiều cao kiểu thấp.",
+          "proposal": "Dưới 800pt chiều cao.",
+          "options": [
+            {
+              "id": "b",
+              "label": "< 800pt",
+              "pros": [
+                "Khớp mốc editor",
+                "Bắt cả Stage Manager thấp"
+              ],
+              "cons": [
+                "Rộng hơn Duo"
+              ],
+              "effort": "S",
+              "recommended": true
+            },
+            {
+              "id": "a",
+              "label": "< 720pt",
+              "pros": [
+                "Chỉ bắt Duo và cửa sổ rất thấp"
+              ],
+              "cons": [
+                "Hai mốc khác nhau trong app"
+              ],
+              "effort": "S"
+            }
+          ],
+          "tasks": [
+            "Thay dòng ⚠️ CẦN QUYẾT bằng quyết định, viết lại AC liên quan — NF-05 §4"
+          ]
+        },
+        {
+          "id": "K23",
+          "title": "iPhone SE (375×667) trong phạm vi kiểm? (NF-05)",
+          "why": "SE thấp hơn Duo 2pt nhưng không có trong bảng thiết bị.",
+          "proposal": "Thêm SE vào danh sách thiết bị; DESIGN ghi '669pt là cửa sổ regular-width thấp nhất'.",
+          "options": [
+            {
+              "id": "a",
+              "label": "Thêm SE",
+              "pros": [
+                "FS-07.03 AC-12 đã chạy trên SE 18.6"
+              ],
+              "cons": [
+                "Thêm một máy để chụp"
+              ],
+              "effort": "S",
+              "recommended": true
+            },
+            {
+              "id": "b",
+              "label": "Bỏ SE khỏi phạm vi",
+              "pros": [
+                "Ít máy hơn"
+              ],
+              "cons": [
+                "SE chạy iOS 17+ vẫn được cài"
+              ],
+              "effort": "0"
+            }
+          ],
+          "tasks": [
+            "Thay dòng ⚠️ CẦN QUYẾT bằng quyết định, viết lại AC liên quan — NF-05"
+          ]
+        },
+        {
+          "id": "K24",
+          "title": "Insights trên cửa sổ thấp (spec-pending FS-07.02)",
+          "why": "Thẻ Insights nhiều hàng ăn chiều cao trên 669pt.",
+          "proposal": "Các câu xếp một hàng (thẻ ~120pt ở 669, không cắt chữ).",
+          "options": [
+            {
+              "id": "a",
+              "label": "Một hàng câu (~120pt)",
+              "pros": [
+                "Thấy đủ câu",
+                "Không cắt chữ"
+              ],
+              "cons": [
+                "Câu dài xuống dòng hẹp"
+              ],
+              "effort": "S",
+              "recommended": true
+            },
+            {
+              "id": "b",
+              "label": "Dải 64pt cuộn ngang",
+              "pros": [
+                "Thấp nhất"
+              ],
+              "cons": [
+                "Giấu câu thứ 2–3"
+              ],
+              "effort": "S"
+            },
+            {
+              "id": "c",
+              "label": "Giữ như nay",
+              "pros": [
+                "0 công"
+              ],
+              "cons": [
+                "Ăn chiều cao"
+              ],
+              "effort": "0"
+            }
+          ],
+          "tasks": [
+            "Thay dòng ⚠️ CẦN QUYẾT bằng quyết định, viết lại AC liên quan — spec-pending FS-07.02"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "export",
+      "title": "Resize, Collage Export, Share",
+      "intro": "D4, H1, H2.",
+      "decisions": [
+        {
+          "id": "K25",
+          "title": "Share sau khi Resize chạy sạch ở đâu (FS-03.07 §5)",
+          "why": "Banner cấp app có nút chỉ sống 4 s (FS-03.14c); người resize để gửi đi phải đua với đồng hồ.",
+          "proposal": "Không đóng màn: toast 3 s + nút Share N Photos + Done ngay trên màn Resize; Done mới đóng.",
+          "options": [
+            {
+              "id": "b",
+              "label": "Ở lại màn, Share + Done",
+              "pros": [
+                "Không đua đồng hồ",
+                "VoiceOver với kịp"
+              ],
+              "cons": [
+                "Thêm một chạm Done"
+              ],
+              "effort": "S",
+              "recommended": true
+            },
+            {
+              "id": "a",
+              "label": "Đóng màn, banner có nút Share 4 s",
+              "pros": [
+                "Về lưới ngay"
+              ],
+              "cons": [
+                "Nút biến mất sau 4 s"
+              ],
+              "effort": "S"
+            }
+          ],
+          "tasks": [
+            "Thay dòng ⚠️ CẦN QUYẾT bằng quyết định, viết lại AC liên quan — FS-03.07 §5"
+          ]
+        },
+        {
+          "id": "K26",
+          "title": "Collage Export: Share… có lưu vào Photos trước? (FS-11b §3)",
+          "why": "Công thức collage chỉ được lưu khi xuất (FS-06.01b).",
+          "proposal": "Lưu rồi share.",
+          "options": [
+            {
+              "id": "a",
+              "label": "Lưu rồi share",
+              "pros": [
+                "Collage không mất sau khi gửi"
+              ],
+              "cons": [
+                "Thêm một ảnh vào thư viện"
+              ],
+              "effort": "S",
+              "recommended": true
+            },
+            {
+              "id": "b",
+              "label": "File tạm, không lưu",
+              "pros": [
+                "Thư viện sạch"
+              ],
+              "cons": [
+                "Mất collage và công thức sau khi gửi"
+              ],
+              "effort": "M"
+            }
+          ],
+          "tasks": [
+            "Thay dòng ⚠️ CẦN QUYẾT bằng quyết định, viết lại AC liên quan — FS-11b §3"
+          ]
+        },
+        {
+          "id": "K27",
+          "title": "Share: phụ đề hàng không vẽ được (FS-08.06 §4)",
+          "why": "Dòng hành động của share sheet hệ thống chỉ có tên + icon, không có phụ đề như H2 đề xuất.",
+          "proposal": "Đưa câu 'Without Location adds camera & lens info' vào dòng thứ hai của đầu sheet.",
+          "options": [
+            {
+              "id": "a",
+              "label": "Câu giải thích ở đầu sheet",
+              "pros": [
+                "Không đổi tên đã chốt"
+              ],
+              "cons": [
+                "Đầu sheet dài thêm"
+              ],
+              "effort": "S",
+              "recommended": true
+            },
+            {
+              "id": "b",
+              "label": "Chỉ sửa tiêu đề",
+              "pros": [
+                "Gọn"
+              ],
+              "cons": [
+                "Vẫn đọc ngược được"
+              ],
+              "effort": "S"
+            },
+            {
+              "id": "c",
+              "label": "Đổi tên hàng thành 'Share With Camera Info'",
+              "pros": [
+                "Tự giải thích"
+              ],
+              "cons": [
+                "Đụng tên đã chốt §4"
+              ],
+              "effort": "S"
+            }
+          ],
+          "tasks": [
+            "Thay dòng ⚠️ CẦN QUYẾT bằng quyết định, viết lại AC liên quan — FS-08.06 §4"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "server",
+      "title": "Upload nền và server",
+      "intro": "H3, H4, C6.",
+      "decisions": [
+        {
+          "id": "K28",
+          "title": "Trùng tên file khi upload đang chạy nền (FS-15.02b §4)",
+          "why": "Lô cần người trả lời mà người dùng không nhìn màn hình.",
+          "proposal": "Lô dừng ở file đó, báo hệ thống kết thúc như bị dừng; quay lại thấy màn trùng tên, trả lời là đi tiếp.",
+          "options": [
+            {
+              "id": "a",
+              "label": "Dừng chờ người trả lời",
+              "pros": [
+                "Không ghi đè, không bỏ file âm thầm"
+              ],
+              "cons": [
+                "Lô dừng giữa đêm"
+              ],
+              "effort": "M",
+              "recommended": true
+            },
+            {
+              "id": "b",
+              "label": "Tự Skip, đếm vào 'skipped'",
+              "pros": [
+                "Lô chạy hết"
+              ],
+              "cons": [
+                "Bỏ file mà người dùng không biết"
+              ],
+              "effort": "S"
+            },
+            {
+              "id": "c",
+              "label": "Dò trùng cả lô trước khi đẩy",
+              "pros": [
+                "Hỏi một lần lúc đầu"
+              ],
+              "cons": [
+                "Thêm một lượt liệt kê server"
+              ],
+              "effort": "M"
+            }
+          ],
+          "tasks": [
+            "Thay dòng ⚠️ CẦN QUYẾT bằng quyết định, viết lại AC liên quan — FS-15.02b §4"
+          ]
+        },
+        {
+          "id": "K29",
+          "title": "App bị đóng hẳn giữa lô upload (FS-15.02b §4)",
+          "why": "Người chụp sự kiện mất nhiều nhất ở đúng chỗ này.",
+          "proposal": "Nhớ lô dở (id ảnh, connection, folder, loại file) trong một bảng riêng; lần mở sau hiện 'Upload paused · Resume'. Cần migration schema.",
+          "options": [
+            {
+              "id": "b",
+              "label": "Bảng riêng, Resume khi mở lại",
+              "pros": [
+                "Không phải chọn lại 500 ảnh"
+              ],
+              "cons": [
+                "Bảng mới + migration"
+              ],
+              "effort": "M",
+              "recommended": true
+            },
+            {
+              "id": "c",
+              "label": "File trạng thái ngoài database",
+              "pros": [
+                "Không đụng schema"
+              ],
+              "cons": [
+                "Hai nơi lưu trạng thái"
+              ],
+              "effort": "M"
+            },
+            {
+              "id": "a",
+              "label": "Không nhớ gì",
+              "pros": [
+                "0 công"
+              ],
+              "cons": [
+                "Chọn lại ảnh, rơi vào luật trùng tên"
+              ],
+              "effort": "0"
+            }
+          ],
+          "tasks": [
+            "Thay dòng ⚠️ CẦN QUYẾT bằng quyết định, viết lại AC liên quan — FS-15.02b §4"
+          ]
+        },
+        {
+          "id": "K30",
+          "title": "Hàng Connection khi chỉ có 1 connection (FS-15.02 §2)",
+          "why": "Add Connection… chuyển vào menu của hàng Connection.",
+          "proposal": "Hàng vẫn là menu (1 tên ✓ + Add Connection…).",
+          "options": [
+            {
+              "id": "a",
+              "label": "Vẫn là menu",
+              "pros": [
+                "Một chỗ cho mọi trường hợp"
+              ],
+              "cons": [
+                "Menu một mục"
+              ],
+              "effort": "S",
+              "recommended": true
+            },
+            {
+              "id": "b",
+              "label": "Hàng chỉ đọc + section Add Connection cuối form",
+              "pros": [
+                "Như hiện nay"
+              ],
+              "cons": [
+                "Hai cách thêm connection"
+              ],
+              "effort": "S"
+            }
+          ],
+          "importance": "minor",
+          "tasks": [
+            "Thay dòng ⚠️ CẦN QUYẾT bằng quyết định, viết lại AC liên quan — FS-15.02 §2"
+          ]
+        },
+        {
+          "id": "K31",
+          "title": "Glyph 'In Library' trên ô ảnh server (FS-17.01 §2b)",
+          "why": "Dấu ✓ tròn hiện tại trông như đã chọn.",
+          "proposal": "photo.badge.checkmark trắng trên đĩa tối mờ, 14pt; thêm vào từ điển icon DESIGN §8.",
+          "options": [
+            {
+              "id": "a",
+              "label": "photo.badge.checkmark 14pt",
+              "pros": [
+                "Không chiếm chỗ"
+              ],
+              "cons": [
+                "Glyph nhỏ"
+              ],
+              "effort": "S",
+              "recommended": true
+            },
+            {
+              "id": "b",
+              "label": "Nhãn chữ 'In Library'",
+              "pros": [
+                "Không thể hiểu nhầm"
+              ],
+              "cons": [
+                "Tốn chỗ trên ô hẹp"
+              ],
+              "effort": "S"
+            }
+          ],
+          "tasks": [
+            "Thay dòng ⚠️ CẦN QUYẾT bằng quyết định, viết lại AC liên quan — FS-17.01 §2b"
+          ]
+        },
+        {
+          "id": "K32",
+          "title": "Glyph hàng Cloud Folders (FS-17.05)",
+          "why": "Hàng cloud đổi tên thành Cloud Folders; logo iCloud đọc ra là iCloud Photos.",
+          "proposal": "cloud (mây trơn, không logo iCloud); thêm vào DESIGN §8.",
+          "options": [
+            {
+              "id": "a",
+              "label": "cloud",
+              "pros": [
+                "Không giống iCloud Photos"
+              ],
+              "cons": [
+                "Vẫn hơi gần iCloud"
+              ],
+              "effort": "S",
+              "recommended": true
+            },
+            {
+              "id": "b",
+              "label": "folder",
+              "pros": [
+                "Nói đúng là folder"
+              ],
+              "cons": [
+                "Trùng glyph folder trên server"
+              ],
+              "effort": "S"
+            },
+            {
+              "id": "c",
+              "label": "Giữ icloud, chỉ đổi tên",
+              "pros": [
+                "0 công icon"
+              ],
+              "cons": [
+                "Vẫn đọc nhầm"
+              ],
+              "effort": "S"
+            }
+          ],
+          "tasks": [
+            "Thay dòng ⚠️ CẦN QUYẾT bằng quyết định, viết lại AC liên quan — FS-17.05"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "copy",
+      "title": "Chữ do agent tự đặt",
+      "intro": "Một chuỗi spec tự chọn, cần bạn duyệt.",
+      "decisions": [
+        {
+          "id": "K33",
+          "title": "Empty state Statistics lúc index lần đầu (FS-07.01b)",
+          "importance": "minor",
+          "proposal": "\"Charts appear as ShotDex reads your photos.\"",
+          "tasks": [
+            "Thay dòng ⚠️ CẦN QUYẾT bằng quyết định, viết lại AC liên quan — FS-07.01b"
+          ]
+        },
+        {
+          "id": "K34",
+          "title": "Footnote Onboarding (FS-09)",
+          "importance": "minor",
+          "proposal": "\"Next, iOS asks for access — choose Allow Full Access so ShotDex can read every photo's camera info.\"",
+          "tasks": [
+            "Thay dòng ⚠️ CẦN QUYẾT bằng quyết định, viết lại AC liên quan — FS-09"
+          ]
+        }
+      ]
+    }
+  ]
+}

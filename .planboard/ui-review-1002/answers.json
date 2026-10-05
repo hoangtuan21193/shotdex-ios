@@ -1,0 +1,151 @@
+{
+  "Q1": {
+    "verdict": "ok"
+  },
+  "Q2": {
+    "verdict": "ok"
+  },
+  "Q3": {
+    "verdict": "ok"
+  },
+  "Q4": {
+    "verdict": "ok"
+  },
+  "Q5": {
+    "verdict": "ok"
+  },
+  "Q6": {
+    "verdict": "ok"
+  },
+  "Q7": {
+    "verdict": "ok"
+  },
+  "Q8": {
+    "verdict": "ok"
+  },
+  "D1": {
+    "verdict": "ok"
+  },
+  "D2": {
+    "verdict": "ok"
+  },
+  "D3": {
+    "verdict": "ok"
+  },
+  "D4": {
+    "verdict": "ok"
+  },
+  "D5": {
+    "verdict": "ok"
+  },
+  "V1": {
+    "verdict": "ok"
+  },
+  "V2": {
+    "verdict": "ok"
+  },
+  "V3": {
+    "verdict": "ok",
+    "option": "inspector"
+  },
+  "V4": {
+    "verdict": "ok"
+  },
+  "V5": {
+    "verdict": "ok"
+  },
+  "S1": {
+    "verdict": "ok"
+  },
+  "S2": {
+    "verdict": "ok",
+    "option": "timeofday"
+  },
+  "S3": {
+    "verdict": "not_ok",
+    "comment": "ko tự đổi , k hiện actual"
+  },
+  "S4": {
+    "verdict": "ok"
+  },
+  "S5": {
+    "verdict": "ok"
+  },
+  "F1": {
+    "verdict": "ok"
+  },
+  "F2": {
+    "verdict": "ok"
+  },
+  "F3": {
+    "verdict": "ok"
+  },
+  "H1": {
+    "verdict": "ok"
+  },
+  "H2": {
+    "verdict": "ok"
+  },
+  "H3": {
+    "verdict": "ok",
+    "option": "bg-now"
+  },
+  "H4": {
+    "verdict": "ok"
+  },
+  "H5": {
+    "verdict": "ok"
+  },
+  "Z1": {
+    "verdict": "ok",
+    "option": "panes"
+  },
+  "Z2": {
+    "verdict": "ok"
+  },
+  "Z3": {
+    "verdict": "ok",
+    "option": "env"
+  },
+  "Z4": {
+    "verdict": "ok"
+  },
+  "Z5": {
+    "verdict": "ok"
+  },
+  "C1": {
+    "verdict": "ok"
+  },
+  "C2": {
+    "verdict": "ok"
+  },
+  "C3": {
+    "verdict": "ok",
+    "option": "doc"
+  },
+  "C4": {
+    "verdict": "ok"
+  },
+  "C5": {
+    "verdict": "ok"
+  },
+  "C6": {
+    "verdict": "ok"
+  },
+  "P1": {
+    "verdict": "ok"
+  },
+  "P2": {
+    "verdict": "ok"
+  },
+  "P3": {
+    "verdict": "ok"
+  },
+  "P4": {
+    "verdict": "ok"
+  },
+  "P5": {
+    "verdict": "ok",
+    "option": "intent-all"
+  }
+}

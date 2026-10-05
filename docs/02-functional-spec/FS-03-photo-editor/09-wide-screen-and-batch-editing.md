@@ -6,6 +6,10 @@
 **Một câu:** từ 700pt bề rộng **và** cửa sổ ngang, editor đổi sang bố cục kiểu Lightroom desktop —
 rail công cụ, panel tham số, canvas.
 
+> **2026-10-01: §3–§7 bị thay bởi [FS-03.17](17-wide-design.md)** (design canvas 30/9: ảnh + cột cố định, không rail,
+> không panel đổi rộng, không card gập, băng nổi). Các AC của §9 chạm tới rail, panel, card, thanh cam kết hay ⋯ không còn
+> hiệu lực khi FS-03.17 xong; giữ ở đây làm lịch sử, không xoá.
+
 Sửa nhiều ảnh một lượt: [FS-03.09b](09b-batch-editing-and-reference.md).
 
 ## 1. Quy tắc

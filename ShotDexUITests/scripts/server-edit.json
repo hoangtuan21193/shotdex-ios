@@ -1,0 +1,308 @@
+{
+ "steps": [
+  {
+   "action": "launch"
+  },
+  {
+   "action": "wait",
+   "seconds": 8
+  },
+  {
+   "action": "tap",
+   "label": "Settings",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "swipe",
+   "x": 0.5,
+   "y": 0.7,
+   "direction": "up",
+   "distance": 0.5
+  },
+  {
+   "action": "swipe",
+   "x": 0.5,
+   "y": 0.7,
+   "direction": "up",
+   "distance": 0.5
+  },
+  {
+   "action": "swipe",
+   "x": 0.5,
+   "y": 0.7,
+   "direction": "up",
+   "distance": 0.5
+  },
+  {
+   "action": "swipe",
+   "x": 0.5,
+   "y": 0.7,
+   "direction": "up",
+   "distance": 0.5
+  },
+  {
+   "action": "swipe",
+   "x": 0.5,
+   "y": 0.7,
+   "direction": "up",
+   "distance": 0.5
+  },
+  {
+   "action": "tap",
+   "label": "File Servers",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "screenshot",
+   "name": "00-servers"
+  },
+  {
+   "action": "tap",
+   "label": "Add Connection",
+   "type": "button",
+   "index": 0
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "typeText",
+   "label": "Host",
+   "type": "textField",
+   "text": "127.0.0.1"
+  },
+  {
+   "action": "typeText",
+   "label": "Port",
+   "type": "textField",
+   "text": "4451"
+  },
+  {
+   "action": "typeText",
+   "label": "Username",
+   "type": "textField",
+   "text": "tester\n"
+  },
+  {
+   "action": "typeText",
+   "text": "secret\n"
+  },
+  {
+   "action": "typeText",
+   "text": "photos\n"
+  },
+  {
+   "action": "typeText",
+   "text": "Trip\n"
+  },
+  {
+   "action": "screenshot",
+   "name": "01-form"
+  },
+  {
+   "action": "tap",
+   "label": "Save",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "screenshot",
+   "name": "02-saved"
+  },
+  {
+   "action": "back"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "tap",
+   "label": "Done",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "tap",
+   "label": "Collections",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "swipe",
+   "x": 0.5,
+   "y": 0.75,
+   "direction": "up",
+   "distance": 0.5
+  },
+  {
+   "action": "swipe",
+   "x": 0.5,
+   "y": 0.75,
+   "direction": "up",
+   "distance": 0.5
+  },
+  {
+   "action": "swipe",
+   "x": 0.5,
+   "y": 0.75,
+   "direction": "up",
+   "distance": 0.5
+  },
+  {
+   "action": "swipe",
+   "x": 0.5,
+   "y": 0.75,
+   "direction": "up",
+   "distance": 0.5
+  },
+  {
+   "action": "tap",
+   "label": "Local Network"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "screenshot",
+   "name": "03-connections"
+  },
+  {
+   "action": "tap",
+   "label": "127.0.0.1"
+  },
+  {
+   "action": "wait",
+   "seconds": 6
+  },
+  {
+   "action": "screenshot",
+   "name": "04-root"
+  },
+  {
+   "action": "tap",
+   "label": "Trip"
+  },
+  {
+   "action": "wait",
+   "seconds": 8
+  },
+  {
+   "action": "screenshot",
+   "name": "10-grid"
+  },
+  {
+   "action": "longPress",
+   "label": "DSCF1000.JPG",
+   "seconds": 1.2
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "screenshot",
+   "name": "11-long-press-menu"
+  },
+  {
+   "action": "dump",
+   "name": "11-long-press-menu",
+   "type": "button"
+  },
+  {
+   "action": "tap",
+   "label": "Edit",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "screenshot",
+   "name": "12-fetching"
+  },
+  {
+   "action": "wait",
+   "seconds": 8
+  },
+  {
+   "action": "screenshot",
+   "name": "13-editor"
+  },
+  {
+   "action": "dump",
+   "name": "13-editor",
+   "type": "button"
+  },
+  {
+   "action": "tap",
+   "label": "Export",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "screenshot",
+   "name": "14-export-sheet"
+  },
+  {
+   "action": "dump",
+   "name": "14-export-sheet"
+  },
+  {
+   "action": "tap",
+   "label": "Original Folder"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "screenshot",
+   "name": "15-export-original"
+  },
+  {
+   "action": "tap",
+   "label": "Export",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 10
+  },
+  {
+   "action": "screenshot",
+   "name": "16-after-export"
+  },
+  {
+   "action": "wait",
+   "seconds": 4
+  },
+  {
+   "action": "screenshot",
+   "name": "17-grid-after"
+  }
+ ]
+}

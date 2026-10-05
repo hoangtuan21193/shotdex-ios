@@ -1,7 +1,7 @@
 # FS-11 — Collage
 
 `FS-11` · tier D · `Features/Collage/` · `Domain/Collage/` · test `CollageTemplateCatalogTests`
-· `CollageGeometryTests` · `CollageLayoutTests` · cập nhật 2026-09-22
+· `CollageGeometryTests` · `CollageLayoutTests` · cập nhật 2026-10-02 · phần tiếp: [FS-11b — Xuất](FS-11b-collage-export.md)
 
 **Một câu:** ghép 2–9 ảnh thành một ảnh mới theo khung mẫu, rồi xuất ra thư viện như một ảnh thật.
 
@@ -48,6 +48,10 @@ Tier D, **không có hàng Cancel/Save ở trên**.
   nó đang mời gì) · bộ đếm và nút lưu preset 32 → **44** · nút Export 38 → **48** · nút lệnh tròn 34 → **44**.
   Chip tỉ lệ giữ 28pt về hình nhưng **vùng chạm nở 44** (hàng chỉ cao 34 nên đóng khung 44 thật sẽ đẩy ba
   tầng panel ra). Ở điện thoại, hai nút ± giữ hàng 32pt nhưng vùng chạm vẫn nở lên 44.
+- **Tab Layout của inspector: khung mẫu là lưới 4 cột cuộn dọc**, không phải dải cuộn ngang của điện thoại (Z2).
+  Bề rộng nội dung 288pt (320 − 2×16), khe 8pt, nên ô **66pt**; preset đứng đầu lưới, rồi tới mẫu theo thứ tự danh mục.
+  Hàng bộ đếm và hàng tỉ lệ giữ nguyên ở trên lưới. Điện thoại giữ dải ngang 74pt.
+  Board: `IP_Collage` · `DI_Collage` (`PH_Collage`, `DC_Collage` không đổi).
 
 ## 4. Khung dựng và cử chỉ
 
@@ -110,20 +114,7 @@ và các tỉ lệ chia đã kéo tay.
 
 ## 8. Xuất
 
-Màn xuất toàn màn: nền là chính ảnh ghép đã làm mờ và tối, bản xem trước thật ở trên, và một thẻ kính chứa
-5 hàng — **Size (Fit/2K/4K/Max) · Quality 0–100 · Format JPEG/HEIC · Keep EXIF of first photo · dung lượng
-ước tính**. Nút `Save to Photos` cao 50.
-
-Lưu → index → thêm vào album người dùng **`ShotDex Collages`** (tạo nếu chưa có) → báo cho lưới → màn gọi
-lại nơi mở nó và đóng.
-
-Tên album là `ShotDex Collages` chứ không phải `Collages`: tab Collections đã có một hàng Utilities tên
-`Collages` là *project mở lại được*, nên một album người dùng cùng tên trên cùng màn là một cái tên hai
-nghĩa. Album `Collages` do bản cũ tạo vẫn được nhận và ghi tiếp nếu còn.
-
-Collage làm từ ảnh server ([FS-17.06 §5b](FS-17-import-from-server/06-edit-and-export.md)): nút là `Export…`, file
-render vào thư mục tạm của lượt rồi mở sheet xuất; không lưu vào Photos, không vào album, không ghi Creations.
-Ảnh library vẫn thêm được qua picker; kéo thả file từ app khác bị tắt.
+Màn xuất, bố cục hai pane ở cửa sổ rộng, nút Share… và album `ShotDex Collages`: [FS-11b](FS-11b-collage-export.md).
 
 ## 9. Lệch so với thiết kế đã ghi
 
@@ -133,4 +124,5 @@ render vào thư mục tạm của lượt rồi mở sheet xuất; không lưu 
 
 ## 10. Tiêu chí nghiệm thu
 
-**Chưa viết.** Xem [README — Việc còn nợ](../README.md#6-việc-còn-nợ).
+Mới có AC cho màn xuất và lưới khung mẫu ở inspector (Z1, H1, Z2): [FS-11b §4](FS-11b-collage-export.md).
+Phần còn lại chưa viết — xem [README — Việc còn nợ](../README.md#6-việc-còn-nợ).

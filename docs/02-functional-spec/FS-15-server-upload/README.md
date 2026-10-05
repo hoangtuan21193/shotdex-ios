@@ -2,7 +2,7 @@
 
 `FS-15` · tier A (Settings, sheet upload) + B (dấu trên lưới) · `ShotDex/Features/ServerUpload/`
 · `Data/Sources/FileServer/` · `Domain/ServerUpload/` · test `ShotDexTests/ServerUpload*Tests.swift`
-· cập nhật 2026-09-26
+· cập nhật 2026-10-02
 
 **Một câu:** khai connection SMB/SFTP trong Settings, chọn ảnh → ⋯ → **Upload to** ▸ tên connection, chọn folder,
 nhận bản gốc trên server đã kiểm checksum, rồi được hỏi có xoá khỏi máy không.
@@ -15,7 +15,10 @@ Nguồn: [intent](../../_intents/2026-09-24-local-network-upload.md).
 |---|---|---|
 | 01 | [Server và Settings](01-servers-and-settings.md) | danh sách connection, form, tên, thử kết nối, host key, quyền Local Network |
 | 02 | [Luồng upload](02-upload-flow.md) | menu connection, chọn folder, folder theo ngày, chọn file, trùng tên, checksum, tiến độ, huỷ, xoá |
-| 03 | [Tiêu chí nghiệm thu](03-acceptance-criteria.md) | 40 AC (AC-35 bỏ cùng FTP; AC-37 từ lỗi 2026-09-27; AC-38…41 quét cổng 445) và cái nào chưa chứng minh |
+| 02b | [Upload chạy nền](02b-background-upload.md) | iOS 26 chạy tiếp khi rời app, giao diện tiến độ của hệ thống, Upload Paused · Resume, đường hỏng khi ở nền |
+| 02c | [Sau khi đẩy](02c-after-upload.md) | màn Uploaded to Server, hàng Free Up Space (số ảnh + GB), dấu trên lưới, Photo Info |
+| 03 | [Tiêu chí nghiệm thu](03-acceptance-criteria.md) | AC-1…53 (AC-35 bỏ cùng FTP; AC-37 từ lỗi 2026-09-27; AC-38…41 quét cổng 445) và cái nào chưa chứng minh |
+| 03b | [Tiêu chí nghiệm thu — review UI 2/10](03b-acceptance-criteria-ui-review.md) | AC-54…83: chạy nền, dò trùng tên trước, lô dở, Add Connection, Free Up Space, hộp xoá, form chưa lưu |
 | 04 | [Tự tìm server, Connect As](04-find-servers.md) | Bonjour + quét cổng 445 (Windows), mục Servers Found on This Network, hỏi quyền Local Network, danh sách share SMB |
 | 05 | [WebDAV](05-more-protocols.md) | ô form, thao tác, cảnh báo HTTP, chứng chỉ tự ký |
 
@@ -29,7 +32,7 @@ nằm nguyên vẹn trên đó.
 
 **Có:** SMB 2/3, SFTP, WebDAV · tự tìm server trong mạng · nhiều connection, cùng server nhiều lần, có tên · chọn connection trong menu ⋯ ·
 chọn và tạo folder đích trên server, nhớ theo connection · thư mục theo ngày chụp là **tuỳ chọn** · chọn loại
-file mỗi lần đẩy · hỏi khi
+file mỗi lần đẩy · **chạy tiếp khi rời app trên iOS 26** (FS-15.02b) · hỏi khi
 trùng tên, có so hai ảnh · kiểm SHA-256 sau khi ghi · hỏi xoá khi xong · hàng **Uploaded to Server** trong
 Utilities · dấu trên lưới · lịch sử upload trong Photo Info.
 
@@ -38,7 +41,9 @@ Utilities · dấu trên lưới · lịch sử upload trong Photo Info.
 - FTP, FTPS — không có thư viện Swift đạt; libcurl + OpenSSL phải tự build (người dùng bỏ 2026-09-26).
 - Tải ảnh **về** từ server: tài liệu riêng [FS-17](../FS-17-import-from-server/README.md).
 - Đẩy từ thẻ nhớ / ổ ngoài — ShotDex đọc thư viện, không quản lý file ([FS-10](../FS-10-import.md)).
-- Upload chạy nền — hệ thống chỉ cho vài chục giây; người dùng giữ app mở, màn hình không tự khoá.
+- Upload chạy nền **trước iOS 26** — hệ thống chỉ cho vài chục giây; người dùng giữ app mở, màn hình không tự khoá.
+  Từ iOS 26 lô chạy tiếp ngoài app bằng BGContinuedProcessingTask của BackgroundTasks (FS-15.02b, chốt 2026-10-02, H3).
+- Tự khởi động lại một lô khi app không mở — chạy nền chỉ bắt đầu từ một lần bấm của người dùng.
 - Đăng nhập SFTP bằng khoá SSH — v1 chỉ mật khẩu.
 - Tự động đẩy ảnh mới, đồng bộ hai chiều, xoá trên server.
 
@@ -62,7 +67,8 @@ Utilities · dấu trên lưới · lịch sử upload trong Photo Info.
 | Bảng server | tên · giao thức · host · cổng · user · share (SMB: luôn rỗng từ v23; WebDAV: Path) · folder mặc định · folder dùng lần trước · Date Folders lần trước · dấu vân tay host (SFTP) · lần dùng cuối |
 | Mật khẩu | **Keychain**, khoá theo id server; không bao giờ vào database hay log |
 | Bảng lịch sử upload | id ảnh · id server + **tên server lúc đẩy** · loại file · đường dẫn trên server · số byte · SHA-256 · thời điểm |
-| Người dùng tự nhập? | có → **hai bảng riêng**, không cột nào trong bảng metadata ([BD-02](../../01-basic-design/BD-02-database-design.md)) |
+| Bảng lô dở (K29) | một lô: id ảnh · connection · folder · Date Folders · loại file · file đã lên; xoá khi lô xong / huỷ / xoá connection (FS-15.02b §4a) |
+| Người dùng tự nhập? | có → **ba bảng riêng** (server, lịch sử, lô dở), không cột nào trong bảng metadata ([BD-02](../../01-basic-design/BD-02-database-design.md)); bảng lô dở cần một migration schema |
 
 - **Xoá một server không xoá lịch sử của nó**: ảnh đã lên đó vẫn là ảnh đã lên server. Vì thế dòng lịch sử
   giữ tên server, và id server được phép rỗng.
@@ -76,7 +82,7 @@ Utilities · dấu trên lưới · lịch sử upload trong Photo Info.
 | Đĩa | mỗi lần chỉ chép tạm **một** file gốc ra đĩa; xoá ngay sau khi xong, và lúc khởi động |
 | Hiệu năng | dấu trên lưới đọc từ **một tập id nạp một lần**, không truy vấn theo ô ([NF-01](../../04-non-functional-design/NF-01-performance.md)) |
 | Thiết bị | iPhone 402×874 · iPad 1376×1032 · Duo trong 951×669 · Duo ngoài 466×678 |
-| iOS 26 vs trước | menu ⋯ của chế độ chọn và Settings giống nhau ở cả hai nhánh |
+| iOS 26 vs trước | menu ⋯ của chế độ chọn và Settings giống nhau ở cả hai nhánh; upload: iOS 26 chạy nền, trước 26 giữ màn hình sáng (FS-15.02b §1) |
 | Truy cập | nhãn VoiceOver cho dấu trên lưới, thanh tiến độ, hai ảnh so trùng |
 
 ## 6. Chỗ đã quyết thay người dùng (theo lệnh "plan rồi code auto", 2026-09-24)
@@ -98,6 +104,7 @@ Utilities · dấu trên lưới · lịch sử upload trong Photo Info.
 | Rủi ro | Xử lý |
 |---|---|
 | Không kiểm được trên simulator: tốc độ LAN, hộp quyền Local Network, bản gốc chỉ có trên iCloud | kiểm trên iPhone thật với Mac này (File Sharing + Remote Login) — AC ghi `⚠️ chưa có` tới lúc đó |
+| Chạy nền thật (giao diện tiến độ hệ thống, hết hạn, khoá máy, gập Duo) không chạy trên simulator | logic chạy nền kiểm bằng unit test với bộ chạy nền giả; AC chạy nền thật ghi `⚠️ chưa chứng minh — cần máy thật` và chưa tính là xong (người dùng 2026-10-02) |
 | Citadel kéo theo SwiftNIO (~6 gói) | chỉ link vào app chính; build time tăng một lần |
 | Mạng rớt giữa file | file đó hỏng, lô dừng, file tạm trên server bị dọn khi kết nối lại được |
 | Checksum làm thời gian gần gấp đôi | tiến độ tính cả lượt đọc lại; ETA theo tốc độ đo được |

@@ -1,7 +1,7 @@
 # BD-03.02 — Đọc EXIF
 
 `BD-03.02` · `Data/Sources/ExifReader.swift` · `Domain/Indexing/IndexPipeline.swift`
-· `Data/Database/MetadataStore.swift` · cập nhật 2026-09-23
+· `Data/Database/MetadataStore.swift` · cập nhật 2026-10-02
 
 **Một câu:** hai pha của một lượt chạy, thang cách lấy dữ liệu, và ba kết cục có thể xảy ra khi đọc một ảnh.
 
@@ -25,7 +25,7 @@
 biết sẵn** (ngày, kích thước, toạ độ, favorite; dung lượng để trống, **không hỏi thêm gì cho từng ảnh**),
 đánh dấu **chưa đọc**, ghi theo lô 1.000 dòng mỗi lần. Cả thư viện có dòng trong vài giây → lưới, sắp xếp
 và nhóm theo ngày dùng được ngay, còn EXIF điền dần ở pha 2. Pha này **không đè dòng đã có**, kể cả khi
-người dùng chọn đọc lại toàn bộ.
+người dùng chọn đọc lại toàn bộ. Ảnh **có toạ độ** nhận luôn khung giờ chụp ở pha này (§4) — không cần file.
 
 **Pha 2 — đọc EXIF.** Duyệt theo **ngày chụp giảm dần** (ảnh mới index trước), theo lô 200, và trong mỗi lô
 đọc song song tối đa 12 ảnh. Kết quả gom lại **đúng thứ tự lô**.
@@ -62,6 +62,10 @@ phải hỏi hệ thống ở từng ô lúc cuộn.
 
 - Đọc các nhóm thuộc tính chuẩn để lấy: ISO, khẩu, tốc độ, tiêu cự, tiêu cự quy đổi 35mm, tên và hãng ống
   kính, tên và hãng máy. **Không giữ ảnh trong bộ nhớ đệm** khi đọc.
+- **Khung giờ chụp** ([FS-01.03b §1](../../02-functional-spec/FS-01-library/03b-time-of-day-and-acceptance.md)):
+  có toạ độ → độ cao mặt trời từ ngày chụp + toạ độ của hệ thống, theo công thức vị trí mặt trời của NOAA
+  (sai số < 0,5°, hàm thuần có test); không toạ độ → giờ chụp gốc trong EXIF (kèm độ lệch múi giờ khi có).
+  Tính ở bước cuối mỗi ảnh (và ở pha 1 cho ảnh có toạ độ), cạnh tiêu cự tương đương; không mở thêm file.
 - **Chỉ đường mạng mới đọc dần và dừng sớm**: vừa tải vừa thử đọc, và **huỷ ngay khi đã có metadata**
   (thường 64–300 KB).
 - **Đường trên máy thì gom hết rồi đọc một lần.** Đưa một bộ đệm dở dang vào bộ đọc ảnh khiến nó cố khởi tạo
@@ -90,6 +94,7 @@ Với những ảnh mà lượt chạy **không lấy được byte nào**:
 
 - **Chỉ cập nhật dữ kiện hệ thống** (ngày chụp, loại media, kích thước, dung lượng, tên file, toạ độ,
   favorite) cộng trạng thái và số lần đã thử.
+- Khung giờ: ảnh có toạ độ thì **tính lại** từ dữ kiện hệ thống; ảnh không toạ độ thì **giữ nguyên** (nó đến từ EXIF).
 - **Mọi trường EXIF giữ nguyên**, và **ngày sửa cố tình để cũ** — đẩy nó lên sẽ khiến một lần chỉnh sửa bị
   quên trước khi kịp đọc lại metadata.
 - Ảnh chưa có dòng thì vẫn ghi đầy đủ để ảnh mới hiện ra ngay.
@@ -97,6 +102,18 @@ Với những ảnh mà lượt chạy **không lấy được byte nào**:
 **Vì sao**: **một** lần đọc lại toàn bộ đúng lúc iCloud trả về 0 byte đã làm trắng **49.828 dòng** đang ở
 trạng thái đã đọc xong — tên máy, ISO, tất cả về rỗng.
 
-## 7. Tiêu chí nghiệm thu
+## 7. Điền khung giờ cho thư viện đã index
+
+Dòng ghi trước khi có cột mang giá trị rỗng. Thêm cột đi kèm **tăng phiên bản bộ index**, nên mọi dòng cũ thành
+"cũ" và **cả thư viện được đọc lại** qua đường đọc lại sẵn có ([BD-03.01 §2](01-run-selection-and-diff.md)) —
+không lượt điền bù riêng, không nút mới.
+
+- **Giá trên máy bật tối ưu dung lượng** (~91% ảnh không còn bản gốc trên máy): ảnh có bản thu nhỏ trên máy đọc
+  ở bước 2 (§3), không tốn mạng; ảnh không còn bản nào trên máy ≈ 1 MB mỗi ảnh qua mạng — tệ nhất 55.000 ảnh ≈ **50 GB**, 4 lượt tải song song.
+- **Thời gian ngang lần index đầu**: chạy dần ở lượt trước mặt và lượt nền, theo chính sách mạng và nhiệt hiện có
+  ([BD-03.03](03-network-thermal-and-gate.md)); lưới, lọc và tìm vẫn dùng được, khung giờ điền dần.
+- Đọc lại không đè dữ liệu cũ khi tải hỏng (§6) — ảnh chưa tới lượt thì chỉ thiếu khung giờ, không mất gì khác.
+
+## 8. Tiêu chí nghiệm thu
 
 **Chưa viết.** Xem [README — Việc còn nợ](../../README.md#6-việc-còn-nợ).

@@ -1,9 +1,10 @@
 # FS-08.06 — Metadata khi chia sẻ và xuất
 
 `FS-08.06` · tier A (Settings, sheet Save) + D (Resize) · `Features/Shared/PhotoShareSheet.swift` · `Features/Settings/SettingsScreen.swift`
-· `Data/Sources/PhotoEditingService.swift` · `Domain/Metadata/MetadataRewriter.swift` · `Data/Sources/ShareExportPipeline.swift` · `ShotDexTests/MetadataRewriterTests.swift` · cập nhật 2026-10-01
+· `Data/Sources/PhotoEditingService.swift` · `Domain/Metadata/MetadataRewriter.swift` · `Data/Sources/ShareExportPipeline.swift` · `ShotDexTests/MetadataRewriterTests.swift` · cập nhật 2026-10-02
 
-Nguồn intent: [2026-09-30-user-wishes-research](../../_intents/2026-09-30-user-wishes-research.md) mục 3.
+Nguồn intent: [2026-09-30-user-wishes-research](../../_intents/2026-09-30-user-wishes-research.md) mục 3 · [2026-10-02-ui-review-1002](../../_intents/2026-10-02-ui-review-1002.md) H2.
+Board (H2): `PH_Share` · `IP_Share` · `DI_Share` · `DC_Share`.
 
 **Một câu:** mỗi lần chia sẻ hay xuất, người dùng chọn giữ hết metadata, bỏ vị trí, hoặc bỏ hết. Một mặc định
 trong Settings áp cho mọi lối ra; video đi nguyên bản và app nói rõ điều đó.
@@ -78,12 +79,19 @@ khác (iPad, Split View).
   - Chạm Share vẫn là một chạm và chạy theo mặc định Settings.
   - Share sheet có **hai dòng hành động** của app, cho hai mức khác mặc định: *Share With Location* (về All
     Metadata), *Share Without Location*, *Share Without Metadata* — mặc định là mức nào thì dòng đó vắng.
-  - Đầu share sheet nói mức đang áp: *"All metadata"* · *"Location removed"* · *"Metadata removed"*. **Mức nằm ở
+  - Đầu share sheet nói mức đang áp: *"All metadata"* · *"Location removed"* · *"Sharing: No Metadata"*. **Mức nằm ở
     tiêu đề** — *"PhotoA · Location removed"* khi share một ảnh, chỉ tên mức khi nhiều ảnh — vì `LPLinkMetadata`
     không có trường phụ đề công khai (người dùng chốt 2026-10-01). **Dòng thứ hai** (chỗ tên file) dành cho ghi chú,
     nối bằng " · ": *"Videos keep their metadata"*, *"RAW files keep their location"* (hoặc *metadata*), *"Videos
     and RAW files keep their metadata"*, *"HEIC sent as JPEG"*; không có ghi chú thì là tên file. Đây là thông tin
     xem trước của mục share, không phải control.
+  - **Mức đang áp là No Metadata** (mặc định hay vừa chọn cho lần này) (H2): tiêu đề dùng đúng tên mức của §3,
+    *"Sharing: No Metadata"* (một ảnh: *"PhotoA · Sharing: No Metadata"*), không dùng *"Metadata removed"*. Tên ba mức
+    và ba dòng hành động giữ nguyên. *Vì* "Metadata removed" đứng cạnh *Share Without Location* đọc như dòng đó còn
+    bỏ nhiều hơn, trong khi nó thêm lại máy, lens, phơi sáng.
+  - Ở mức đó, **dòng thứ hai** của đầu sheet mở bằng *"Without Location adds camera & lens info"*, nối " · " trước
+    các ghi chú khác (ví dụ *"Without Location adds camera & lens info · HEIC sent as JPEG"*) (K27). *Vì* dòng hành
+    động của share sheet hệ thống chỉ có tên + icon, không có phụ đề.
   - Chạm một dòng: share sheet đóng rồi mở lại ngay ở mức đó; phụ đề đổi theo. Chưa tải hay ghi lại gì cho tới
     khi người dùng chọn đích ([FS-02.06 §9](../FS-02-photo-detail/06-icloud-originals.md)).
   - Khi đã có preset chữ ký, có **dòng thứ ba** của app: *Share With Watermark* / *Share Without Watermark*
@@ -167,8 +175,12 @@ khác (iPad, Split View).
 | AC-20 | Settings = No Location; ảnh A | Share, chạm *Share With Location* | share sheet đóng rồi mở lại với phụ đề *All metadata*; file nhận được có SHA-256 bằng gốc; Settings vẫn No Location | `ShareBatchPlanTests.oneShotOverrideKeepsSettings`; iPhone 17 26.5 (2026-10-01): ảnh A → Share (*Location removed*) → *Share With Location* → sheet mở lại *PhotoA · All metadata* → Save to Files: SHA-256 `b5c546b6…` bằng file gốc; plist của app vẫn `share.metadataLevel = noLocation`. Gom lại diễn ra trước khi sheet mở lại (luồng gom-sau-khi-chọn-đích là của FS-02.06) |
 | AC-21 | iPad, Split View với Files; Settings = No Location; một ARW có GPS | kéo ARW sang Files | Files nhận một JPEG đủ cỡ, không GPS, còn Make `SONY`; không có alert | một phần: `ShareExportPipelineTests.dragRAWBecomesJPEG` (cần thư mục mẫu RAW: DNG DJI có GPS → kéo ở No Location đăng ký `public.jpeg`, JPEG đủ cỡ 4024 px, không GPS, còn Make; ở All Metadata đăng ký kiểu RAW). Kéo thật sang Files ở Split View iPad: ⚠️ lúc `/verify` |
 | AC-22 | ảnh server `DSCF1000.JPG` (của AC-13) đã chỉnh trong editor; Settings = No Location | Export…, chọn đích **Share…** ([FS-17.06 §6](../FS-17-import-from-server/06-edit-and-export.md)), rồi Save to Files | file nhận được là bản render không có nhóm GPS, còn Make/Model; share sheet có hai dòng của app như AC-7; Settings vẫn No Location | `ServerExportShareTests.noLocationRenderHasNoGPS` (bản render mang GPS + SONY/ILCE-7M4 → qua pipeline ở No Location: không GPS, còn Make/Model), `.theSheetSharesThroughThePipeline` (đích Share của sheet xuất đi qua `PhotoShareSheet.gather` ở mức Settings → cùng đầu sheet, hai dòng, `oneShotOverrideKeepsSettings`). Video do công cụ làm đi nguyên. Chạy với NAS thật trên máy: lúc `/verify` |
+| AC-23 | (H2) Settings = No Metadata; ảnh A | Share | tiêu đề đầu sheet *PhotoA · Sharing: No Metadata*; dòng thứ hai *Without Location adds camera & lens info*; không có chữ *Metadata removed* ở đâu trong sheet; hai dòng của app: Share With Location, Share Without Location | ⚠️ chưa có — `ShareBatchPlanTests.rowsAndSubtitle` cần thêm ca No Metadata + ảnh share sheet |
+| AC-24 | (H2) Settings = No Location; ảnh A | Share, chạm *Share Without Metadata* | sheet mở lại với tiêu đề *PhotoA · Sharing: No Metadata*; Settings vẫn No Location | ⚠️ chưa có |
+| AC-25 | (H2) Settings = No Metadata; 5 ảnh, 2 HEIC | Share | tiêu đề *Sharing: No Metadata*; dòng thứ hai đọc đúng *Without Location adds camera & lens info · HEIC sent as JPEG* (câu giải thích đứng trước), không bị cắt ở iPhone 402pt và Duo ngoài 382pt | ⚠️ chưa có |
+| AC-26 | (H2) Settings = All Metadata hoặc No Location; ảnh A | Share | tiêu đề vẫn *PhotoA · All metadata* / *PhotoA · Location removed* như AC-7, AC-20 | `ShareBatchPlanTests.rowsAndSubtitle` (đang có); lúc `/verify` kiểm lại sau khi đổi chuỗi |
 
-**Chưa chứng minh được (2026-10-01):** AC-14 (đo extension, dời sang `/verify`) · AC-1 depth của ảnh Portrait · AC-19, AC-21 kéo thật ở Split View iPad · Duo ngoài 382pt cho Resize. Các AC còn lại có test, phần lớn có thêm bằng chứng trên iPhone 17 26.5.
+**Chưa chứng minh được (2026-10-02):** AC-23–AC-25 (H2, chưa làm) · AC-14 (đo extension, dời sang `/verify`) · AC-1 depth của ảnh Portrait · AC-19, AC-21 kéo thật ở Split View iPad · Duo ngoài 382pt cho Resize. Các AC còn lại có test, phần lớn có thêm bằng chứng trên iPhone 17 26.5.
 
 ## 8. Rủi ro đã biết
 

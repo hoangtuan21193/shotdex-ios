@@ -12,11 +12,12 @@ compact và bố cục hai cột của hệ thống ở regular.
 | # | Phần | Trả lời |
 |---|---|---|
 | 01 | [Bố cục và tìm kiếm](01-layout-and-search.md) | split view vs một cột, sidebar 9 mục, search theo hàng |
+| 01b | [Trang gốc và kiểu hàng](01b-rows-and-root.md) | dòng phụ, thẻ Your library, nhóm viết thường, ô icon + dòng giá trị, 9 AC |
 | 02 | [Photo Library và index](02-photo-library-and-index.md) | quyền, Continue Indexing, cellular, keep-awake, Low Power |
 | 03 | [Các section còn lại](03-other-sections.md) | Notifications · Display · Playback · Sharing · Export · Camera Database · Privacy · Library Size |
 | 04 | [Photo Widget designs](04-photo-widget-designs.md) | danh sách design, preview kéo-pinch, thành phần, màu Smart |
-| 05 | [Tiêu chí nghiệm thu](05-acceptance-criteria.md) | 19 AC của bố cục + search, và cái nào chưa chứng minh |
-| 06 | [Metadata khi chia sẻ và xuất](06-share-metadata-privacy.md) | 3 mức All / No Location / No Metadata, một mặc định Settings cho mọi lối ra, hai dòng đổi mức trong share sheet, video đi nguyên bản, 21 AC |
+| 05 | [Tiêu chí nghiệm thu](05-acceptance-criteria.md) | 19 AC của bố cục + search, 5 AC widget trên cửa sổ thấp, và cái nào chưa chứng minh |
+| 06 | [Metadata khi chia sẻ và xuất](06-share-metadata-privacy.md) | 3 mức All / No Location / No Metadata, một mặc định Settings cho mọi lối ra, hai dòng đổi mức trong share sheet, video đi nguyên bản, 26 AC |
 
 ## Quy tắc
 

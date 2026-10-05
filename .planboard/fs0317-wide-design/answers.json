@@ -1,0 +1,70 @@
+{
+  "D1": {
+    "verdict": "ok"
+  },
+  "D2": {
+    "verdict": "ok"
+  },
+  "D3": {
+    "verdict": "ok"
+  },
+  "D4": {
+    "verdict": "ok"
+  },
+  "D5": {
+    "verdict": "ok",
+    "option": "unlock"
+  },
+  "D6": {
+    "verdict": "ok"
+  },
+  "D7": {
+    "verdict": "ok"
+  },
+  "D8": {
+    "verdict": "ok"
+  },
+  "D9": {
+    "verdict": "ok"
+  },
+  "D10": {
+    "verdict": "ok"
+  },
+  "D11": {
+    "verdict": "ok"
+  },
+  "D12": {
+    "verdict": "ok"
+  },
+  "D13": {
+    "verdict": "ok"
+  },
+  "D14": {
+    "verdict": "ok",
+    "option": "later"
+  },
+  "D15": {
+    "verdict": "ok"
+  },
+  "D16": {
+    "verdict": "ok"
+  },
+  "D17": {
+    "verdict": "ok"
+  },
+  "D18": {
+    "verdict": "ok"
+  },
+  "D19": {
+    "verdict": "ok"
+  },
+  "D20": {
+    "verdict": "ok"
+  },
+  "D21": {
+    "verdict": "ok"
+  },
+  "D22": {
+    "verdict": "ok"
+  }
+}

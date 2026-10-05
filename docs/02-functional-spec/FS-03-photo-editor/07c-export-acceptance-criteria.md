@@ -10,7 +10,7 @@ Người dùng chốt cả sáu 2026-10-02. Bốn mục đầu là bố cục, v
 | # | Mặt | Luật |
 |---|---|---|
 | 1 | Lệnh nằm ở đâu | ⋯ của chế độ chọn: **Export…** ngay dưới Resize; ⋯ của Photo Detail: ngay dưới Resize. Glyph `square.and.arrow.up.on.square`, thêm vào từ điển `DESIGN.md` §8. *Vì menu nhấn giữ đã 9 dòng, và `folder` đang là "folder trên server".* |
-| 2 | Bố cục sheet | một Form bốn section Destination · Export · File Names · tóm tắt (07b §3). iPhone detent large 402pt; iPad form canh giữa rộng tối đa 700pt như Resize; hàng 44pt, segmented rộng hết hàng. Folder đã nhớ thì không qua trình chọn |
+| 2 | Bố cục sheet | một Form bốn section Destination · Export · File Names · tóm tắt (07b §3). iPhone detent large 402pt; iPad form canh giữa rộng tối đa 700pt (Resize ở iPad ngang đã là hai pane, [FS-03.07 §4](07-resize-and-compression.md)); hàng 44pt, segmented rộng hết hàng. Folder đã nhớ thì không qua trình chọn |
 | 3 | Sửa mẫu tên | hàng **Name** ghi mẫu đang dùng, ví dụ ở dòng phụ; chạm đẩy màn **File Name** (07b §5). *Vì sheet ngắn hơn ~120pt, mà Duo trong chỉ có 669pt.* |
 | 4 | Upload và preset | sheet Upload **không đổi**, vẫn chỉ bản gốc. Hàng Folder của sheet Export liệt kê thêm connection đã lưu (07b §7). *Vì lời hứa của Upload là "bản gốc đã kiểm, giờ xoá được".* |
 | 5 | Tải iCloud | **cuốn chiếu**: tải trước tối đa 20 ảnh hoặc 2 GB; ảnh hỏng nêu tên ở tổng kết + **Retry Failed**. Ngoại lệ của luật tải cả mẻ, ghi ở [FS-02.06](../FS-02-photo-detail/06-icloud-originals.md) §5. *Vì Export không xoá gì.* Không bao giờ xuất bản xem trước |

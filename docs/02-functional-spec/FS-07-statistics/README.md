@@ -1,7 +1,7 @@
 # FS-07 — Statistics
 
 `FS-07` · tier A · `ShotDex/Features/Statistics/` · `Data/Database/StatisticsQueries.swift` · `ChartStore`
-· test `ChartDashboardTests` · `StatsDateScopeTests` · cập nhật 2026-10-01
+· test `ChartDashboardTests` · `StatsDateScopeTests` · cập nhật 2026-10-02
 
 **Một câu:** tab Statistics — một thẻ **Insights** nói bằng lời thói quen chụp của người dùng, rồi bên dưới là
 dashboard biểu đồ do người dùng tự dựng; chạm vào đâu cũng mở Library lọc sẵn.
@@ -14,8 +14,9 @@ Nguồn: [intent 2026-09-30, mục 5](../../_intents/2026-09-30-user-wishes-rese
 | # | Phần | Trả lời |
 |---|---|---|
 | 01 | [Dashboard biểu đồ](01-dashboard.md) | đặc tả biểu đồ, lưu trữ, thẻ, ô soạn, khoảng thời gian, bố cục cột |
+| 01b | [Thẻ, ô soạn, trạng thái màn](01b-cards-editor-and-states.md) | kiểu vẽ thẻ, định dạng số, màu, thanh công cụ, ô soạn, quyền / đang index / chờ iCloud |
 | 02 | [Insights](02-insights.md) | danh mục câu, ngưỡng, lời văn, tiêu cự tương đương, thẻ, ẩn, hiệu năng |
-| 03 | [Tiêu chí nghiệm thu](03-acceptance-criteria.md) | AC-1…18 |
+| 03 | [Tiêu chí nghiệm thu](03-acceptance-criteria.md) | AC-1…61 |
 
 ## 1. Người dùng cần gì
 
@@ -26,7 +27,7 @@ exiftool. Lần đầu mở Statistics phải trả lời ngay, bằng lời, t�
 ## 2. Phạm vi
 
 **Có:**
-- dashboard biểu đồ tự dựng (FS-07.01), lần đầu gieo 6 biểu đồ trả lời các câu ở §1;
+- dashboard biểu đồ tự dựng (FS-07.01), lần đầu gieo 7 biểu đồ (thêm Top Lens) trả lời các câu ở §1;
 - thẻ Insights với bốn loại câu: tiêu cự, cặp body + lens, chụp chậm, tháng bận nhất;
 - chạm câu → Library lọc sẵn (trừ câu chụp chậm); iPhone, iPad, Duo cùng một tập câu;
 - điều kiện **trong tháng** mới cho bộ lọc Library và smart album;
@@ -58,7 +59,7 @@ exiftool. Lần đầu mở Statistics phải trả lời ngay, bằng lời, t�
 | Rủi ro | Xử lý |
 |---|---|
 | Nhóm tiêu cự của Insights (chia trong SQL) lệch mốc với nhóm góc nhìn của bộ lọc Library | dùng chung mốc của bộ lọc; test đặt ảnh đúng ở mốc 19,999 / 20 / 34,999 / 35 mm và so số câu với số lưới sau khi chạm |
-| Máy đã có cờ "đã gieo" → không thấy bộ gieo 6 biểu đồ | cờ lên phiên bản 2; máy cũ được thêm 4 biểu đồ còn thiếu vào cuối, một lần ([01](01-dashboard.md) §3) |
+| Máy đã có cờ "đã gieo" → không thấy bộ gieo 7 biểu đồ | bộ gieo có số thế hệ, hiện là 3; máy ở thế hệ cũ được thêm các biểu đồ còn thiếu vào cuối, một lần ([01](01-dashboard.md) §3) |
 | Chuyển từ full sang `.limited`: bảng metadata còn giữ dòng của ảnh ngoài tập được cấp không | đo trên máy thật trong task của AC-14, trước khi viết code của nó |
 | Sim không cấp được `.limited` bằng lệnh | AC-14 cần máy thật |
 | Ngân sách 500 ms không có test khoá | đo tay ở `/verify` (AC-13); vượt thì mở intent mới |

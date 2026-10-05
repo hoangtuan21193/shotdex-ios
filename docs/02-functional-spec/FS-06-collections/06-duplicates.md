@@ -1,7 +1,7 @@
 # FS-06.06 — Duplicates
 
 `FS-06.06` · `Features/Duplicates/` · `Domain/Duplicates/` · bảng `perceptual_hash` · `duplicate_groups`
-· test `DuplicateSeriesTests` · cập nhật 2026-10-01
+· test `DuplicateSeriesTests`, `DuplicateReviewTests` · cập nhật 2026-10-04
 
 **Một câu:** tìm ảnh trùng và gần trùng bằng dấu vân tay hình ảnh, gom nhóm sẵn vào cache, và **để người
 dùng tự chọn tấm nào phải đi**.
@@ -9,6 +9,9 @@ dùng tự chọn tấm nào phải đi**.
 ## 1. Quy tắc
 
 - **Không tự chọn hộ.** App đánh dấu được cả nhóm giúp, nhưng không tự quyết tấm nào bị xoá.
+- **Mỗi nhóm luôn còn ít nhất một ảnh không bị đánh dấu** — đánh dấu hết một nhóm là xoá mọi bản
+  ([06b §1](06b-duplicates-marks-merge-delete.md)).
+- **Không ghi gì vào thư viện Photos trước khi người dùng bấm xác nhận** trong một alert nói rõ điều sẽ ghi ([06b §2](06b-duplicates-marks-merge-delete.md)).
 - **Mở màn chỉ đọc cache** — không băm lại, không gom lại.
 - **Không tự quét** khi thư viện đổi; chỉ cập nhật số ảnh chưa quét rồi mời Rescan. Ngoại lệ duy nhất: thư
   viện **chưa từng** quét.
@@ -28,8 +31,13 @@ Không lấy được ảnh thì ghi một dòng **rỗng**, và chỉ thử l�
 2. Danh sách việc = ảnh **chưa có dấu vân tay**, hoặc **ngày sửa đã lệch** (ảnh vừa chỉnh).
 3. Lô **200**, xin **8** ảnh song song, **ghi sau mỗi lô** nên huỷ giữa chừng thì lần sau chạy tiếp.
 
-Tiến độ `Scanning N of M` + Cancel; một lượt tại một thời điểm. Quét yêu cầu thư viện đã index; chưa index
-thì màn báo "No Indexed Photos".
+Tiến độ `Scanning N of M` + **Cancel**; một lượt tại một thời điểm.
+
+- Cancel là nút chữ màu accent, **không đỏ**: ở màn này đỏ chỉ nghĩa là "ảnh sẽ mất". Huỷ giữ mọi lô đã ghi (Q8).
+- **Lúc app còn đọc thư viện** (index chưa xong), ngay dưới dải chọn có dòng footnote *"Still reading photo info · N%"*,
+  N cùng số với thẻ tiến độ của Library; index xong thì dòng biến mất và số ảnh chưa quét cập nhật (F2).
+- Màn **không bao giờ** bảo người dùng tự index — app không có nút đó. Chưa có dòng dữ liệu nào: lúc đang index
+  thì màn rỗng ghi dòng tiến độ trên; không index mà vẫn 0 ảnh thì *"No Photos"* (NF-04 "Không có ảnh").
 
 ## 4. Ba mức
 
@@ -41,6 +49,7 @@ thì màn báo "No Indexed Photos".
 
 Mức đang dùng được nhớ lại (mặc định Similar), và dải chọn dựng từ **danh sách đầy đủ** nên thêm một mức
 không thể quên cập nhật giao diện. Dải chọn còn có tab thứ tư **Bursts** (§7b) — không phải một mức trùng.
+⚠️ Bursts chưa có trong code và chưa vẽ trên board v2 (board chỉ có 3 mức) — làm ở /plan của ui-review-1002.
 
 ## 5. Gom nhóm
 
@@ -71,27 +80,81 @@ bỏ đi: các khung **cố tình khác nhau** — cùng bối cảnh, đổi t�
 - Ảnh **không có ngày chụp bị loại** chứ không đoán — không có thời gian thì không có gì để nối.
 - Trong một loạt, ảnh xếp **theo thứ tự chụp**, không phải tốt-nhất-trước: thứ đang xem xét là tư thế đổi
   thế nào từ khung này sang khung kế, mà một loạt sắp theo dung lượng thì không còn là một loạt.
-- Ở mức này, dòng tóm tắt là "N series · M photos" và **bỏ** phần "tiết kiệm được bao nhiêu nếu giữ một tấm
-  mỗi nhóm" (ở một loạt tư thế, câu trả lời thường là giữ vài tấm), đồng thời **tắt nhãn "Largest"** — tile
-  dẫn đầu là khung **đầu tiên**, gắn nhãn đó vào là nói dối về lý do nó đứng đầu. Có màn rỗng riêng.
+- Ở mức này dải trên ghi "Reviewed N of M series" và **bỏ** phần "~MB to free" (ở một loạt tư thế, câu trả lời
+  thường là giữ vài tấm); thẻ **không có bản giữ, nhãn Keep hay chip lý do** — khung dẫn đầu là khung **đầu tiên**,
+  gắn nhãn vào là nói dối về lý do nó đứng đầu (§7.2). Có màn rỗng riêng.
 
-## 7. Màn hình
+## 7. Màn hình (v2, duyệt trên canvas 2026-10-04)
 
-Tier A. Dải chọn Exact / Similar / Series / Bursts (§7b) + dòng tóm tắt "N groups · M photos · ~X MB if one is kept per
-group".
+Board: `PH_Duplicates` · `PH_DuplicatesPinched` · `IP_Duplicates` · `DI_Duplicates` · `DC_Duplicates`
+(màn rộng: [06b §4](06b-duplicates-marks-merge-delete.md)). Tier A. Mục tiêu v2: **chọn nhanh và chắc tay** — người
+dùng app dọn ảnh hay than ba điều: sợ xoá nhầm, không biết bản nào tốt hơn, mất công đánh dấu từng ô.
 
-- Mỗi nhóm là một **thẻ**: tiêu đề "N Photos" + nút **Compare** (khi ≥ 2 ảnh) + lưới thumbnail, mỗi ô ghi
-  kích thước, dung lượng và ngày.
-- Dòng trạng thái: "N photos not scanned yet" / "Library up to date", "Last scan {thời gian}", và nút
-  **Rescan** ngay cạnh (menu ⋯ cũng có).
-- **Chạm thumbnail = đánh dấu xoá** (biểu tượng thùng rác trắng trên đỏ + viền đỏ 3pt + ảnh mờ — đỏ là phá
-  huỷ, phân biệt với dấu tick accent "đang chọn" của lưới), chạm lại thì bỏ. Dấu ghi theo id ảnh nên sống
-  qua các lần nạp lại.
-- Menu giữ-lâu: **Keep Only This** (đánh dấu mọi ảnh *khác* trong nhóm) · Mark/Unmark · Compare. Thẻ có
-  "Clear Selection" khi nhóm có dấu; menu ⋯ có bản cho cả màn.
-- **Compare là đường chính** vì thumbnail nhỏ khó phân biệt: nút Compare mở màn so sánh và chia sẻ luôn tập
-  dấu; nút đỏ ở đó chỉ xoá **đúng id của nhóm đang mở**
-  ([FS-01.08](../FS-01-library/08-compare.md)).
+### 7.1 Dải trên cùng đóng băng
+
+Dưới thanh điều hướng (Back · **Duplicates** · ⋯) là một dải nền `.bar` dính ở trên, viền tóc ở đáy; các thẻ cuộn
+bên dưới nó.
+
+- Hàng 1: dải chọn **Exact · Similar · Series** (segmented) + nút **sắp xếp** dạng viên "Most space first ▾" — menu
+  **Most space first** (nhóm giải phóng nhiều nhất lên đầu) · **Newest first** · **Oldest first**; nhớ lại lần sau.
+- Hàng 2: **"Reviewed 4 of 12 groups · ~96 MB to free"** (Series: "Reviewed 2 of 8 series", không có MB, §6) + vạch
+  tiến độ xanh 4pt; dưới là **"Scanned 2 days ago · 148 photos not scanned yet"** ("Library up to date" khi không còn gì).
+  Bên phải: nút tròn **Rescan** 32pt (vùng chạm 44).
+- Nhóm **đã xem** = có ít nhất một dấu xoá, hoặc đã bấm Keep all.
+- Đang quét: hàng 2 thành "Scanning N of M" + vạch + **Cancel** chữ (§3).
+- Regular width: cả dải nằm một hàng (dải chọn 330pt · sắp xếp · tiến độ ≤ 400pt · trạng thái · Rescan).
+
+### 7.2 Thẻ quyết định
+
+Mỗi nhóm là một thẻ bo `r-lg`, đệm 12:
+
+- Đầu thẻ: **"5 photos"** + bên phải **"~24.9 MB to free"** (giữ bản đề xuất, bỏ phần còn lại); dòng dưới
+  **"Sep 9, 2026 · 4 s apart"** (khoảng từ tấm đầu tới tấm cuối: s / min / h / days). Exact ghi **"Identical files"** thay
+  khoảng thời gian.
+- Trái: **bản giữ** cỡ lớn (rộng = 2 ô + 1 khe, bo `r-md`), góc dưới trái nhãn **"✓ Keep"** nền đen 55%; dưới ảnh dòng
+  "6240×4160 · 18.9 MB"; dưới nữa tối đa **2 chip lý do**: Edited · RAW · Favorite · Live · Largest — chip chỉ hiện khi
+  nó làm bản giữ khác ít nhất một bản sao.
+- Bản giữ là **đề xuất**: bản đã chỉnh → favorite → file lớn hơn → nhiều pixel hơn (D3). **Keep Only This** trên một ô
+  khác đổi bản giữ của nhóm đó sang ô ấy (nhớ suốt phiên như dấu).
+- Phải: các **bản sao** thành lưới `N` cột (mặc định 2 ở compact, 3 ở regular), ô vuông bo `r-sm`, khe 4; khe giữa
+  bản giữ và lưới 8. Dưới mỗi ô **một điểm khác** so với bản giữ, theo thứ tự: "Not edited" · "JPEG only" ·
+  "Not favorite" · "Still photo" · nếu không có thì kích thước "3120×2080".
+- Chân thẻ: ba nút viên cao 34 (vùng chạm 44): **"Mark the other 4"** đỏ (chỉ một bản sao: "Mark the other one";
+  nhóm đã có dấu: **"Unmark"** màu chữ thường) · **"Keep all"** (đang giữ cả: "✓ Keeping all", chạm lại để bỏ) ·
+  **Compare** dồn phải.
+- **Series** không có bản giữ (khung đầu của một loạt tư thế không phải lời khuyên): mọi khung chung một lưới `N + 2` cột
+  theo thứ tự chụp, caption "+4 s" tính từ khung đầu, không có "Mark the other", không có "~MB to free".
+- Glyph trạng thái: favorite / đã chỉnh / RAW / Live đọc **một lần khi thẻ hiện ra**, ngoài luồng chính, chỉ tài nguyên
+  trên máy (không mạng), nhớ suốt màn. Chúng là nguồn của chip lý do và dòng khác biệt; VoiceOver đọc đủ cả bốn.
+
+### 7.3 Đánh dấu
+
+- **Chạm ô = đánh dấu xoá** (đĩa thùng rác trắng trên đỏ, viền đỏ 3pt, ảnh mờ còn 45%), chạm lại bỏ. Ô chưa dấu có
+  vòng trắng rỗng. Đỏ chỉ nghĩa là "ảnh sẽ mất"; dấu tick accent của lưới là "đang chọn". Dấu ghi theo id ảnh, sống
+  suốt phiên app ([06b §1](06b-duplicates-marks-merge-delete.md)).
+- Menu giữ lâu: **Keep Only This** · Mark for Deletion / Unmark · Compare.
+- **Compare là đường xem kỹ** vì ô nhỏ khó phân biệt: mở màn so sánh, chia sẻ luôn tập dấu; nút đỏ ở đó chỉ xoá **đúng
+  id của nhóm đang mở** ([FS-01.08](../FS-01-library/08-compare.md)). Xoá trong Compare mà nhóm còn ≥ 2 ảnh thì Compare ở
+  lại (V2); lỗi xoá do chính Compare báo (Q2).
+
+### 7.4 Nhóm đã quyết tự thu gọn
+
+- Bấm **Mark the other N** hoặc **Keep all** → thẻ thu thành **một dòng 56pt**: tối đa 3 ảnh nhỏ 32pt (ảnh mang dấu mờ +
+  viền đỏ 2pt) · **"Keeping 1 · deleting 2"** ("deleting 2" màu đỏ) hoặc **"Keeping all 2"** · dòng dưới "Sep 21, 2026 ·
+  8.9 MB to free" / "… · nothing to delete" · chevron xuống. Chạm dòng → mở lại thẻ.
+- Đánh dấu từng ô **không** tự thu gọn (người dùng đang cân nhắc). Bỏ hết dấu của một nhóm đã thu → nhóm mở lại.
+
+### 7.5 Pinch
+
+Chụm/mở hai ngón trên danh sách đổi **số bản sao mỗi hàng** theo bậc 1…5 như lưới Library: mở ra = ô to hơn, chụm vào
+= nhiều ô hơn; bản giữ co giãn theo (luôn 2 ô + 1 khe). Trong lúc pinch có HUD viên kính **"3 per row"** ở trên, rung
+nhẹ mỗi bậc. Mật độ nhớ riêng cho compact và regular.
+
+### 7.6 Thanh dưới nổi
+
+Có dấu thì hiện thanh nổi thay thanh Delete đỏ cũ: viên kính **"2 marked · 8.9 MB"** / "Recently Deleted for 30 days" +
+viên đỏ cao 48 **"🗑 Delete 2"** chữ trắng. Compact: viên kính giãn hết phần còn lại; regular: cụm đứng giữa. Tab bar ẩn
+khi có dấu (iOS 26 lẫn tab bar tự vẽ trước 26). Phạm vi đếm và cổng chặn: [06b §1, §3](06b-duplicates-marks-merge-delete.md).
 
 ## 7b. Tab Bursts
 
@@ -107,22 +170,16 @@ Dải chọn là **Exact · Similar · Series · Bursts**. Bursts là lối vào
   *"No Bursts"*.
 - Series giữ nguyên: loạt chụp nhanh không phải burst thật vẫn ở Series, xoá qua Compare.
 
-## 8. Merge và Delete
+## 8. Merge, Delete và dấu xoá
 
-- **Merge All Groups** (menu ⋯): bản giữ lại là **file lớn nhất**, hoà thì **nhiều pixel hơn** — cả hai đều
-  là dấu hiệu của "bản ít bị nén lại nhất". Nó **thừa hưởng** những gì bản sao có mà nó thiếu: cờ favorite,
-  toạ độ, và **ngày chụp sớm nhất** (bản lưu lại mang ngày lúc lưu lại; khoảnh khắc gốc mới đáng giữ). Chép
-  xong **mới** đánh dấu xoá, nên hỏng giữa chừng để lại thư viện còn trùng chứ không để lại bản giữ bị mất
-  dữ liệu. Merge **không tự xoá** — nó chỉ đánh dấu.
-- **Delete**: thanh đáy nút đỏ cao 50 "Delete N Photos" + dòng phụ "~X MB · Photos move to Recently
-  Deleted." Hệ thống hỏi xác nhận; huỷ thì **giữ dấu**. Xong thì xoá dòng dữ liệu tương ứng, cập nhật nhóm
-  tại chỗ (nhóm còn một ảnh thì biến mất) và cập nhật số nhóm đã lưu.
-- **Không có bước hợp nhất album hay metadata nào khác** — chỉ xoá những ảnh người dùng đánh dấu.
+Ở [06b](06b-duplicates-marks-merge-delete.md): dấu sống bao lâu và cổng chặn "xoá mọi bản" (§1), Merge chỉ ở
+Exact sau một alert (§2), Delete (§3), màn rộng (§4), AC-1…AC-21 (§5).
 
 ## 9. Tiêu chí nghiệm thu
 
-Exact, Similar, Series, Merge và Delete **chưa có AC** — xem [README — Việc còn nợ](../../README.md#6-việc-còn-nợ).
-Tab Bursts:
+Merge, dấu xoá, glyph, quét, trạng thái đang index, màn rộng và Compare: AC-1…AC-21 ở
+[06b §5](06b-duplicates-marks-merge-delete.md#5-tiêu-chí-nghiệm-thu). Luật gom Exact/Similar/Series **chưa có AC** — xem
+[README — Việc còn nợ](../../README.md#6-việc-còn-nợ). Tab Bursts:
 
 | # | Cho | Khi | Thì | Chứng minh bằng |
 |---|---|---|---|---|

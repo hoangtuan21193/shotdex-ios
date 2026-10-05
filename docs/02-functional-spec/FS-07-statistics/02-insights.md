@@ -1,7 +1,7 @@
 # FS-07.02 — Nhận xét rút từ dữ liệu (Insights)
 
 `FS-07.02` · `Features/Statistics/` · `Domain/Statistics/` (mới) · `Data/Database/StatisticsQueries.swift`
-· test `ShotDexTests/StatisticsInsightsTests.swift` (mới) · cập nhật 2026-10-01
+· test `ShotDexTests/StatisticsInsightsTests.swift` (mới) · cập nhật 2026-10-02
 
 **Một câu:** đầu màn Statistics có một thẻ **Insights** gồm tối đa 3 câu khẳng định về chính thư viện của
 người dùng; chạm một câu là mở Library lọc đúng những ảnh câu đó nói tới.
@@ -76,7 +76,8 @@ chậm đã có.
 | Bề rộng | Bố cục |
 |---|---|
 | Hẹp (iPhone, Duo ngoài) | một thẻ đủ bề ngang, các câu xếp dọc, ngăn bằng đường kẻ |
-| Rộng (iPad, Duo trong) | một thẻ trải hết bề rộng nội dung; câu chia vào **cùng số cột** như dashboard (2…3) |
+| Rộng (iPad) | một thẻ trải hết bề rộng nội dung; câu chia vào **cùng số cột** như dashboard (2…3) |
+| Rộng + cửa sổ thấp (Duo trong 669pt) | các câu xếp **một hàng**, mỗi câu một cột (tối đa 3, cột ≥ 280pt); thẻ ~120pt ở 669, không cắt chữ; bề rộng không đủ thì về số cột của dashboard |
 
 - Lần đầu mở: thẻ Insights ở trên cùng, bên dưới là 6 biểu đồ gieo ([FS-07.01 §3](01-dashboard.md)).
 - **Ẩn được**: menu của thẻ có **Hide Insights**. Lựa chọn nhớ trong Settings — Settings → **Display**, nhóm
@@ -87,14 +88,15 @@ chậm đã có.
 - Mỗi câu: biểu tượng hệ thống của loại + câu + mũi tên nếu chạm được. Chữ xuống dòng, không cắt ở cỡ accessibility.
 - VoiceOver: mỗi câu là một phần tử, nhãn là chính câu đó; câu chạm được có trait nút, câu không chạm được thì không.
 - Duo trong 669pt: thẻ Insights không đẩy biểu đồ đầu ra khỏi màn — **≥ 120pt** của thẻ biểu đồ đầu tiên thấy
-  được khi chưa cuộn.
+  được khi chưa cuộn. "Cửa sổ thấp" theo [NF-05 §4](../../04-non-functional-design/NF-05-device-and-os-compatibility.md) (< 720pt).
+- Cỡ chữ accessibility trên cửa sổ thấp: câu xuống dòng, thẻ cao lên; không câu nào kết thúc bằng "…".
 
 | Trạng thái | Hiển thị |
 |---|---|
 | chưa index ảnh nào | "No Indexed Photos" của dashboard; không có thẻ Insights |
 | dưới ngưỡng chung | thẻ có một dòng "Insights appear once 50 photos have camera info — 32 so far." |
-| đang index | câu tính trên phần đã index; chân thẻ "Updating as your library is indexed." |
-| quyền `.limited` | câu tính trên tập được cấp; chân thẻ "Based on 312 photos you've shared with ShotDex" + **Manage** |
+| đang index | câu tính trên phần đã index; **không chân thẻ** — dải "Still reading photo info · N%" đầu màn nói thay ([FS-07.01b §5](01b-cards-editor-and-states.md)) |
+| quyền `.limited` | câu tính trên tập được cấp; **không chân thẻ** — banner Limited Access + Manage đầu màn nói thay |
 | lỗi truy vấn | "Couldn't compute insights." + **Try Again**; biểu đồ không bị ảnh hưởng |
 
 ## 7. Tính ở đâu, tốn bao nhiêu

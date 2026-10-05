@@ -1,7 +1,7 @@
 # EX-02 — Widget
 
 `EX-02` · `ShotDexWidget/` · `WidgetShared/` · `ShotDex/App/Widgets/`
-· test `WidgetSharedTests` · `PhotoWidgetDataTests` (49 ca) · cập nhật 2026-09-22
+· test `WidgetSharedTests` · `PhotoWidgetDataTests` (49 ca) · cập nhật 2026-10-02
 
 **Một câu:** hai widget đọc dữ liệu app đã ghi sẵn vào vùng chia sẻ — widget **không bao giờ tự đi lấy** ảnh,
 lịch, thời tiết hay vị trí.
@@ -14,6 +14,8 @@ lịch, thời tiết hay vị trí.
 - **App không bao giờ tự hiện hộp xin quyền lịch hay vị trí** — chỉ hai nút trong màn cài đặt widget mới hỏi.
 - **Một mặt widget duy nhất** vẽ mọi hàng **và cũng là bản xem trước trong Settings** — một bản xem trước
   thứ hai là cách bản xem trước bắt đầu nói dối.
+- Màn cài đặt widget trên **cửa sổ thấp** ([NF-05 §4](../04-non-functional-design/NF-05-device-and-os-compatibility.md):
+  cao < 720pt — Duo trong 669, Duo ngoài 678): bản xem trước cao tối đa **158pt**; cỡ Large chọn qua popover (Z4).
 - App chỉ làm việc khi **thực sự có widget đang đặt trên màn hình**.
 - Ảnh phủ kín ô **phải có khung và bị cắt** — nếu không, khối chứa nó đo theo ảnh và đẩy chữ ra ngoài mép.
 

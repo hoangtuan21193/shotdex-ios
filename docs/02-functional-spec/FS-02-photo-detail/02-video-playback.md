@@ -130,6 +130,8 @@ giao diện — máy vẫn dọc, **không gọi API xoay**, nên khoá xoay đa
 Hàng `Frame` (◀| `Frame` |▶) nằm **dưới** cụm transport, **chỉ hiện khi clip đang dừng** — tua khung là việc
 người ta làm khi đã dừng để soi một khung, và lúc đang phát thì hai nút này không có trên màn.
 
+Bàn phím: `.` / `,` tiến / lùi một khung khi clip đang dừng; → / ← luôn lật trang ([01b](01b-closing-and-keyboard.md) §2).
+
 Cắt video: [FS-02.04](04-actions-and-extras.md).
 
 ## 10. Tiêu chí nghiệm thu

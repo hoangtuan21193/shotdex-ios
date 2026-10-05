@@ -5,9 +5,9 @@
 | Tác giả | hat.tuan |
 | Ngày | 2026-09-22 |
 | Trạng thái | accepted |
-| Tiến độ | **gần xong** (2026-09-30, /verify) — FS-03.09: 33/37 AC xanh trên iPad Pro 13" M5 + iPad Pro 11"; 8 chỗ lệch đã chốt qua planboard `fs0309-divergences` (D1–D10, D12) và sửa xong: AC-1 (7 thẻ, test đọc đúng danh sách), 5 (đệm dưới), 9, 11 (kéo chỉ trên điểm curve), 13 (chip xuống hàng), 20 (mốc 832), 28/29 (một ↺, hỏi khi ≥ 2 layer), 30 (bảng cọ trong panel); full suite 1703 test xanh. Còn: AC-2 (Duo màn trong — sim gập), AC-14 (máy thật, iCloud), ảnh AC-15 (quyền `.limited` — code + test đã có), AC-24 (thuộc EX-05, chưa làm) |
+| Tiến độ | **chưa làm** phần FS-03.17 (2026-10-01) — spec FS-03.17 + 17a + 17b, AC-1…AC-49 (60 bảng design canvas 30/9); trước đó: **gần xong** (2026-09-30, /verify) — FS-03.09: 33/37 AC xanh trên iPad Pro 13" M5 + iPad Pro 11"; 8 chỗ lệch đã chốt qua planboard `fs0309-divergences` (D1–D10, D12) và sửa xong: AC-1 (7 thẻ, test đọc đúng danh sách), 5 (đệm dưới), 9, 11 (kéo chỉ trên điểm curve), 13 (chip xuống hàng), 20 (mốc 832), 28/29 (một ↺, hỏi khi ≥ 2 layer), 30 (bảng cọ trong panel); full suite 1703 test xanh. Còn: AC-2 (Duo màn trong — sim gập), AC-14 (máy thật, iCloud), ảnh AC-15 (quyền `.limited` — code + test đã có), AC-24 (thuộc EX-05, chưa làm) |
 | Nguồn | phản hồi người dùng (chủ sở hữu sản phẩm) |
-| Spec sinh ra từ đây | [FS-03.09](../02-functional-spec/FS-03-photo-editor/09-wide-screen-and-batch-editing.md) |
+| Spec sinh ra từ đây | [FS-03.09](../02-functional-spec/FS-03-photo-editor/09-wide-screen-and-batch-editing.md) · [FS-03.17](../02-functional-spec/FS-03-photo-editor/17-wide-design.md) |
 
 **Phạm vi thiết bị: iPad và iPhone Duo màn trong (lúc mở). iPhone nằm ngoài intent này** — panel 246pt và
 bánh xe chip của phone giữ nguyên, không đụng tới trong lượt này.

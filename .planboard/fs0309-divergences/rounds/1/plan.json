@@ -1,0 +1,424 @@
+{
+  "title": "FS-03.09 — chốt các chỗ code lệch spec (verify 2026-09-29) + ba điểm của luồng server",
+  "context": "Lần /verify FS-03.09 trên iPad 13\" và iPad Pro 11\" ra 24/37 AC xanh; 8 AC lệch hoặc mới một nửa, và AC-15 chưa có code. Mỗi thẻ dưới đây là một chỗ phải chọn: sửa code cho khớp AC, hay sửa AC cho khớp code.\nTrang cuối là ba điểm thấy khi /verify FS-15/FS-17 hôm nay (2026-09-30): đó là quyết định thiết kế nên chưa tự sửa.\nShotDex chưa phát hành, nên không cần giữ tương thích.",
+  "pages": [
+    {
+      "id": "panel",
+      "title": "Panel bên: số thẻ, cuộn, curve",
+      "intro": "Panel chỉnh sửa ở màn rộng liệt kê gì và cuộn ra sao.",
+      "decisions": [
+        {
+          "id": "D1",
+          "title": "AC-1: panel có 7 thẻ, AC ghi 5",
+          "importance": "important",
+          "why": "Hiện test thePanelListsFiveSections đọc EditorAdjustmentCatalog.sidebarSections, một danh sách màn hình không dùng, nên test xanh mà không chứng minh gì. Nếu giữ nguyên, lần sau ai sửa panel thì không test nào bắt được. Gộp thẻ thì ngắn hơn nhưng đổi chỗ công cụ mà người dùng đã quen.",
+          "proposal": "Sửa AC thành 7 thẻ (Light · Color · Effects · Lens Blur · Detail · Optics · Calibration) và cho test đọc đúng danh sách màn hình dùng (PhotoEditorScreen.sidebarParameterGroups).",
+          "options": [
+            {
+              "id": "seven",
+              "label": "Sửa AC thành 7, test đọc danh sách thật",
+              "pros": [
+                "Không đổi UI",
+                "Test có nghĩa trở lại"
+              ],
+              "cons": [
+                "Panel dài hơn spec gốc 2 header"
+              ],
+              "effort": "S",
+              "recommended": true
+            },
+            {
+              "id": "merge",
+              "label": "Gộp về 5: Lens Blur vào Effects, Calibration vào Color",
+              "pros": [
+                "Khớp spec gốc",
+                "Ít header phải lướt"
+              ],
+              "cons": [
+                "Thêm một tầng tab trong Effects và Color",
+                "Đổi chỗ công cụ đã có trên phone"
+              ],
+              "effort": "M"
+            }
+          ],
+          "tasks": [
+            "Sửa AC-1 — docs/02-functional-spec/FS-03-photo-editor/09-wide-screen-and-batch-editing.md",
+            "Cho test đọc sidebarParameterGroups (bỏ sidebarSections nếu không ai dùng) — ShotDexTests/EditorWideScreenTests.swift, ShotDex/Features/Editing/EditorAdjustmentCatalog.swift:99"
+          ]
+        },
+        {
+          "id": "D2",
+          "title": "AC-5: chạm header thẻ cuối thì thẻ không lên được đầu",
+          "importance": "important",
+          "why": "Detail dừng ở y 311 thay vì 212 vì danh sách chạm đáy. Người dùng chạm Optics hay Calibration sẽ thấy header nhảy tới một chỗ bất kỳ, không phải lên đầu như các thẻ khác.",
+          "proposal": "Thêm đệm dưới cho danh sách, đủ để thẻ cuối cuộn lên sát đầu (chiều cao vùng cuộn trừ chiều cao thẻ đang mở).",
+          "options": [
+            {
+              "id": "pad",
+              "label": "Đệm dưới động",
+              "pros": [
+                "Mọi thẻ cùng một hành vi"
+              ],
+              "cons": [
+                "Khi thẻ cuối đang mở, dưới đáy danh sách có khoảng trống"
+              ],
+              "effort": "S",
+              "recommended": true
+            },
+            {
+              "id": "accept",
+              "label": "Sửa AC: thẻ cuối được phép dừng ở chỗ đáy cho phép",
+              "pros": [
+                "Không đổi code"
+              ],
+              "cons": [
+                "Hai hành vi khác nhau cho cùng một cú chạm"
+              ],
+              "effort": "S"
+            }
+          ],
+          "tasks": [
+            "Đệm dưới theo thẻ đang mở — ShotDex/Features/Editing/PhotoEditorScreen.swift (sidebar list)",
+            "Chạy lại ipad-ws-lists-and-scroll.json, đo Detail/Calibration ở y 212"
+          ]
+        },
+        {
+          "id": "D3",
+          "title": "AC-11: đồ thị curve nuốt cú cuộn danh sách",
+          "importance": "critical",
+          "why": "Đồ 280×280 chiếm gần hết chiều ngang panel. Vì nó nhận mọi cú vuốt (DragGesture(minimumDistance: 0), EditorCurveGraph.swift:199), cuộn qua thẻ Light mà ngón tay chạm lên đồ thì danh sách đứng im. Trên iPad, ngón tay chạm vào đồ thị khi lướt panel là chuyện xảy ra liên tục.",
+          "proposal": "Chỉ các điểm điều khiển nhận cú kéo (mỗi điểm một vùng chạm 44pt); phần nền của đồ chỉ nhận chạm để thêm điểm, còn cú vuốt trên nền thì để danh sách cuộn.",
+          "options": [
+            {
+              "id": "points",
+              "label": "Chỉ điểm điều khiển nhận kéo",
+              "pros": [
+                "Cuộn danh sách lại chạy",
+                "Giống cách Lightroom iPad làm"
+              ],
+              "cons": [
+                "Phải bỏ kiểu kéo điểm gần nhất từ bất kỳ đâu"
+              ],
+              "effort": "M",
+              "recommended": true
+            },
+            {
+              "id": "hold",
+              "label": "Nhấn giữ 0,2 s rồi mới kéo",
+              "pros": [
+                "Giữ được kiểu kéo điểm gần nhất"
+              ],
+              "cons": [
+                "Cú kéo nhanh bị chậm lại",
+                "Khó khám phá"
+              ],
+              "effort": "M"
+            },
+            {
+              "id": "accept",
+              "label": "Chấp nhận, sửa AC",
+              "pros": [
+                "Không đổi code"
+              ],
+              "cons": [
+                "Panel cuộn không ăn khi ngón tay nằm trên đồ"
+              ],
+              "effort": "S"
+            }
+          ],
+          "tasks": [
+            "Tách gesture kéo xuống từng điểm — ShotDex/Features/Editing/EditorCurveGraph.swift:71, :199",
+            "Lưu ý bẫy SwiftUI gesture trong UIScrollView (memory swiftui-gesture-in-uiscrollview): đo bằng ipad-ws-lists-and-scroll.json, vuốt bắt đầu trên nền đồ phải cuộn"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "chrome",
+      "title": "Hàng lệnh, canvas, Crop",
+      "intro": "Các con số đo được lệch với AC: chỉnh số hay dời control.",
+      "decisions": [
+        {
+          "id": "D4",
+          "title": "AC-9: cụm lệnh rộng 361pt, AC ghi 340",
+          "importance": "minor",
+          "proposal": "Sửa AC thành 'trong bề rộng panel + 8pt' (đo được: bắt đầu 7pt trong mép panel). Cụm đã sát panel; 21pt không đáng dời nút.",
+          "tasks": [
+            "Sửa AC-9 — docs/02-functional-spec/FS-03-photo-editor/09-wide-screen-and-batch-editing.md"
+          ]
+        },
+        {
+          "id": "D5",
+          "title": "AC-20: canvas iPad 11\" chỉ rộng 832pt, dưới mốc 842",
+          "importance": "important",
+          "why": "Test xanh vì không trừ tay nắm kéo rộng 10pt. Nếu sửa AC thì mốc 'không hẹp hơn 2026-09-22' mất nghĩa; nếu giữ AC thì phải lấy lại 10pt từ đâu đó.",
+          "proposal": "Cho tay nắm đè lên mép panel (không chiếm bề ngang của canvas), rồi sửa test để trừ đúng tay nắm.",
+          "options": [
+            {
+              "id": "overlay",
+              "label": "Tay nắm đè lên mép panel",
+              "pros": [
+                "Canvas về lại 842",
+                "Tay nắm vẫn 10pt chạm được"
+              ],
+              "cons": [
+                "Tay nắm che 10pt mép panel"
+              ],
+              "effort": "S",
+              "recommended": true
+            },
+            {
+              "id": "narrow",
+              "label": "Panel hẹp đi 10pt ở iPad 11\"",
+              "pros": [
+                "Không có gì đè lên nhau"
+              ],
+              "cons": [
+                "Slider ngắn hơn"
+              ],
+              "effort": "S"
+            },
+            {
+              "id": "relax",
+              "label": "Hạ mốc AC xuống 832",
+              "pros": [
+                "Không đổi code"
+              ],
+              "cons": [
+                "Mốc đo mất nghĩa"
+              ],
+              "effort": "S"
+            }
+          ],
+          "tasks": [
+            "Tay nắm thành overlay — ShotDex/Features/Editing/PhotoEditorScreen.swift",
+            "Test trừ tay nắm — ShotDexTests/EditorPanelLayoutTests.swift:582-590",
+            "Đo lại ipad-ws-11in-orientations.json"
+          ]
+        },
+        {
+          "id": "D6",
+          "title": "AC-13: đổi mode trên rail thì áp khung cắt",
+          "importance": "critical",
+          "why": "AC nói rời Crop không áp khung; code áp khung khi chạm mode khác, chỉ bỏ khung khi chạm lại Crop hoặc Cancel/Esc (PhotoEditorScreen.swift:3303). Người dùng lỡ tay chạm Heal là ảnh bị cắt. Có Undo, nhưng nhiều người không biết cú chạm đó đã cắt ảnh.",
+          "proposal": "Giữ cách hiện tại (rời Crop là áp khung, như Lightroom và Photos) và sửa AC. Kèm hai việc: 7 slider thay vì 6, và chip 4:5, 9:16 không được bị cắt ngoài mép panel (xuống hàng).",
+          "options": [
+            {
+              "id": "commit",
+              "label": "Rời Crop là áp (sửa AC)",
+              "pros": [
+                "Giống Lightroom/Photos",
+                "Không mất khung đã dựng"
+              ],
+              "cons": [
+                "Chạm nhầm mode là cắt (Undo lấy lại được)"
+              ],
+              "effort": "S",
+              "recommended": true
+            },
+            {
+              "id": "drop",
+              "label": "Rời Crop là bỏ khung (sửa code)",
+              "pros": [
+                "Khớp AC gốc"
+              ],
+              "cons": [
+                "Mất khung đã dựng khi chỉ muốn xem Heal",
+                "Phải có nút Apply riêng"
+              ],
+              "effort": "M"
+            }
+          ],
+          "tasks": [
+            "Sửa AC-13: 7 slider, luật rời Crop — docs/02-functional-spec/FS-03-photo-editor/09-wide-screen-and-batch-editing.md",
+            "Chip tỉ lệ xuống hàng thay vì cuộn ngang — ShotDex/Features/Editing (crop panel)",
+            "Chụp lại ipad-ws-stage-modes.json"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "markup",
+      "title": "Markup, xoá layer, vẽ",
+      "intro": "Ba chỗ trong mode Markup và một lối lỗi chưa có.",
+      "decisions": [
+        {
+          "id": "D7",
+          "title": "AC-28 và AC-29: 'Layers' là hàng tiêu đề, ↺ không hỏi xác nhận, có hai ↺",
+          "importance": "important",
+          "why": "Remove all xoá mọi layer bằng một chạm, không hỏi. Có Undo một bước, nhưng hai nút ↺ cùng làm một việc ở hai chỗ thì dễ chạm nhầm.",
+          "proposal": "Giữ một ↺ trên hàng tiêu đề Layers (bỏ ↺ ở chân panel cho Markup), hỏi xác nhận khi có từ 2 layer trở lên. Sửa AC-28: 'Layers' là hàng tiêu đề, không phải thẻ.",
+          "options": [
+            {
+              "id": "one-confirm",
+              "label": "Một ↺, hỏi khi ≥ 2 layer",
+              "pros": [
+                "Hết trùng",
+                "Khớp AC-29"
+              ],
+              "cons": [
+                "Thêm một hộp thoại"
+              ],
+              "effort": "S",
+              "recommended": true
+            },
+            {
+              "id": "one-undo",
+              "label": "Một ↺, không hỏi (Undo là đủ)",
+              "pros": [
+                "Nhanh"
+              ],
+              "cons": [
+                "Lệch AC-29, phải sửa AC"
+              ],
+              "effort": "S"
+            }
+          ],
+          "tasks": [
+            "Bỏ ↺ trùng — ShotDex/Features/Editing/PhotoEditorScreen.swift:1733-1741",
+            "confirmationDialog trước removeAllOverlays — ShotDex/Features/Editing/EditorTextPanel.swift:72-83",
+            "Sửa AC-28, AC-29"
+          ]
+        },
+        {
+          "id": "D8",
+          "title": "AC-30: palette PencilKit nổi đè ảnh và che chân panel",
+          "importance": "important",
+          "why": "AC muốn cọ/cỡ/màu nằm trong panel ở màn rộng. Palette hệ thống nổi ở đáy, che dải dưới của ảnh (đúng chỗ người dùng đang vẽ) và che nút ↺.",
+          "proposal": "Ở màn rộng thì ẩn palette PencilKit, dùng hàng cọ riêng EditorDrawRows (đã có trên phone) trong panel. Màn hẹp giữ palette nổi.",
+          "options": [
+            {
+              "id": "rows",
+              "label": "EditorDrawRows trong panel",
+              "pros": [
+                "Không đè ảnh",
+                "Cùng control với phone"
+              ],
+              "cons": [
+                "Mất vài công cụ riêng của PencilKit (thước, chọn vùng)"
+              ],
+              "effort": "M",
+              "recommended": true
+            },
+            {
+              "id": "keep",
+              "label": "Giữ palette, dời nó lên trên chân panel",
+              "pros": [
+                "Đủ công cụ PencilKit"
+              ],
+              "cons": [
+                "Vẫn đè lên ảnh"
+              ],
+              "effort": "S"
+            }
+          ],
+          "tasks": [
+            "Ẩn PKToolPicker ở màn rộng, đặt EditorDrawRows vào panel — ShotDex/Features/Editing/PhotoEditorScreen.swift:2229-2269",
+            "Chụp ipad-ws-stage-modes.json lúc đang vẽ"
+          ]
+        },
+        {
+          "id": "D9",
+          "title": "AC-15: ảnh ngoài tập .limited — chưa có code",
+          "importance": "important",
+          "why": "Mọi lỗi nạp ảnh ra một alert chung 'Editor Error' + OK, không lý do, không đường vào Settings. Trường hợp .limited chỉ tới được bằng ID cũ (bản nháp EX-05), nên hiếm nhưng khi gặp thì người dùng bế tắc.",
+          "proposal": "Làm luôn: lỗi nạp do quyền thì nói lý do + nút Open Settings. Chứng minh bằng unit test ở model; ảnh chụp chờ máy thật.",
+          "options": [
+            {
+              "id": "build",
+              "label": "Làm ngay",
+              "pros": [
+                "Hết alert chung chung"
+              ],
+              "cons": [
+                "Không chụp được trên sim (quyền .limited không cấp được bằng lệnh)"
+              ],
+              "effort": "S",
+              "recommended": true
+            },
+            {
+              "id": "defer",
+              "label": "Dời, ghi vào backlog",
+              "pros": [
+                "Không tốn công bây giờ"
+              ],
+              "cons": [
+                "AC-15 vẫn đỏ, intent không xong được"
+              ],
+              "effort": "S"
+            }
+          ],
+          "tasks": [
+            "Phân loại lỗi nạp: quyền / mạng iCloud / khác — ShotDex/Features/Editing/PhotoEditorController.swift:655-657",
+            "Alert có lý do + Open Settings — ShotDex/Features/Editing/PhotoEditorScreen.swift:216-226",
+            "Test model — ShotDexTests"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "server",
+      "title": "Luồng server/cloud — ba điểm thấy hôm nay",
+      "intro": "Không nằm trong FS-03.09; thấy khi /verify FS-15 và FS-17 ngày 2026-09-30.",
+      "decisions": [
+        {
+          "id": "D10",
+          "title": "iPad: nút 'Import N to Library' và 'Choose …' dài gần 1000pt",
+          "importance": "important",
+          "why": "DESIGN.md §10.1c: một hàng trải hết 1032pt là layout điện thoại phóng to. Thanh chọn ở màn duyệt server, nút Connect và Choose đều full-width trên iPad 13\".",
+          "proposal": "Ở regular width, nút chính giới hạn 420pt và nằm giữa (thùng rác vẫn sát bên phải nút). Compact giữ full-width.",
+          "options": [
+            {
+              "id": "cap",
+              "label": "Giới hạn 420pt, căn giữa",
+              "pros": [
+                "Theo luật màn rộng",
+                "Một chỗ sửa cho ba màn"
+              ],
+              "cons": [
+                "Thêm một con số (phải vào DESIGN.md)"
+              ],
+              "effort": "S",
+              "recommended": true
+            },
+            {
+              "id": "toolbar",
+              "label": "Đưa hành động lên toolbar như Files",
+              "pros": [
+                "Giống app Files trên iPad"
+              ],
+              "cons": [
+                "Hai layout cho một thanh",
+                "Xa ngón tay cái"
+              ],
+              "effort": "M"
+            }
+          ],
+          "tasks": [
+            "maxWidth ở regular width — ShotDex/Features/ServerImport/ServerBrowserScreen.swift, ShotDex/Features/ServerUpload/ConnectAsScreen.swift:72-87",
+            "Thêm token vào DESIGN.md",
+            "Chụp lại server-import-ipad-select.json"
+          ]
+        },
+        {
+          "id": "D11",
+          "title": "Chữ 'Server' khi đích là folder cloud",
+          "importance": "minor",
+          "proposal": "Sheet upload tới folder cloud đổi tiêu đề thành 'Upload to Folder'; footer 'verified on a server' đổi thành 'verified where they were uploaded'; mục Photo Info 'Uploaded to Server' đổi thành 'Uploaded Copies'.",
+          "tasks": [
+            "Sửa chuỗi — ShotDex/Features/ServerUpload/ServerUploadSheet.swift, ShotDex/Features/Library/MetadataPanel.swift:117"
+          ]
+        },
+        {
+          "id": "D12",
+          "title": "Photo Info ghi folder '/' cho folder cloud",
+          "importance": "minor",
+          "proposal": "Folder rỗng thì hiện vị trí của connection (vd 'On My iPhone › CloudTest'), giống hàng connection ở màn Cloud, thay vì '/'.",
+          "tasks": [
+            "Tra connection theo serverId, dùng mô tả vị trí — ShotDex/Features/Library/MetadataPanel.swift:110, ShotDex/Data/Sources/FileServer/FilesFolderClient.swift:271"
+          ]
+        }
+      ]
+    }
+  ]
+}

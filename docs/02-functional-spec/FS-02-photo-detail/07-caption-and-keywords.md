@@ -54,7 +54,7 @@ Photos đã làm được việc này, còn một app quản lý thư viện th�
 
 ## 4. Một ảnh: Info
 
-Caption và keyword là **section đầu** của Info sheet, **trên Location**, như Photos. Sửa ngay tại chỗ.
+Caption và keyword là **section đầu** của Photo Info (sheet hoặc cột), **trên Camera & Lens**, như Photos. Sửa ngay tại chỗ.
 *Vì mọi chỗ khác tốn thêm một chạm cho việc làm trên từng tấm.*
 - Ô nhiều dòng, placeholder *Add a Caption*: 1 dòng, nở tới 4 dòng rồi cuộn.
 - Dưới là hàng capsule keyword cao 32pt, mỗi cái có ×, cuối hàng là capsule *+ Add Keyword*; vừa nấc medium.

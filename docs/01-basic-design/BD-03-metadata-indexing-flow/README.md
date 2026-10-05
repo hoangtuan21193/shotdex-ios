@@ -2,7 +2,7 @@
 
 `BD-03` · `ShotDex/Domain/Indexing/` · `Data/Sources/ExifReader.swift` · `Data/Database/MetadataStore.swift`
 · test `IndexDiffTests` · `IndexNetworkStatusTests` · `IndexThermalPolicyTests` · `IndexInteractionGateTests`
-· cập nhật 2026-09-22
+· cập nhật 2026-10-02
 
 **Một câu:** đường đi của dữ liệu từ một tấm ảnh trong thư viện tới một dòng trong database — chọn việc, đọc
 EXIF, sống với iCloud, báo tiến độ, và chạy tiếp ở nền.
@@ -60,8 +60,9 @@ EXIF, sống với iCloud, báo tiến độ, và chạy tiếp ở nền.
 1. Chuẩn hoá tên máy và tên ống kính ([BD-05](../BD-05-imaging-business-rules.md)).
 2. Tra khổ cảm biến từ cơ sở dữ liệu máy ảnh + phần người dùng tự gán.
 3. Tính tiêu cự tương đương Full Frame ([BD-05](../BD-05-imaging-business-rules.md)).
-4. Ghi theo lô vào database và cập nhật điểm chạy tiếp.
-5. Toạ độ lấy từ **dữ liệu ảnh của hệ thống**, không đọc thẻ GPS trong EXIF.
+4. Tính khung giờ chụp — theo mặt trời khi có toạ độ, theo giờ EXIF khi không ([BD-03.02 §4](02-exif-read.md)).
+5. Ghi theo lô vào database và cập nhật điểm chạy tiếp.
+6. Toạ độ lấy từ **dữ liệu ảnh của hệ thống**, không đọc thẻ GPS trong EXIF.
 
 Lượt index **không** đọc phần metadata riêng của hãng. Số lần đóng màn chỉ được đọc **khi người dùng mở
 bảng thông tin của một tấm ảnh** ([FS-02.03](../../02-functional-spec/FS-02-photo-detail/03-info-panel-and-metadata.md)).

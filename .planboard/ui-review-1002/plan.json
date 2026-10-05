@@ -1,0 +1,872 @@
+{
+  "title": "Review UI/UX ShotDex — chọn việc cần làm (2/10)",
+  "context": "8 agent đã review toàn bộ canvas ShotDex App Screens (144 artboard) và code: ux-flow, visual, HIG, iPhone, iPad, Duo, 3 persona người dùng (Linh 55k ảnh, Minh chụp cưới + NAS, An dùng Duo một tay) và nghiên cứu ~3.600 review App Store của Lightroom, Darkroom, Photomator, PhotoSync, Gemini, Remo…\nGộp còn 88 mục (5 blocker, 58 nên sửa, 25 gợi ý). Agent challenger phản biện: giữ 34, hạ mức 17, bỏ 15, thay bản rẻ hơn 22. Mỗi đề xuất dưới đây đã qua phản biện; đề xuất mặc định là bản challenger chọn.\nFile nguồn: scratchpad/review/merged.md, challenge.md (88 mục đầy đủ, có file:line).\nMọi việc sửa màn hình đều phải sửa artboard tương ứng trên canvas trong cùng lượt (luật design ↔ code).",
+  "pages": [
+    {
+      "id": "quick",
+      "title": "Sửa nhanh: rẻ, không đụng quyết định cũ",
+      "intro": "Các lỗi S mà ba bên (reviewer, persona, challenger) cùng đồng ý. OK tất cả nếu không phản đối.",
+      "decisions": [
+        {
+          "id": "Q1",
+          "title": "M-14 · Photo Info và Burst có nút Done",
+          "importance": "important",
+          "why": "Trên Duo inner sheet thành toàn màn (UIKit bỏ detent ở compact height) mà không có nút đóng; người không biết vuốt xuống là kẹt. Tốn 0pt.",
+          "proposal": "Thêm toolbar Done cho MetadataPanel và sheet Burst. Ghi luật mới vào DESIGN.md §10.4: mọi .sheet có nút đóng nhìn thấy được.",
+          "tasks": [
+            "Toolbar Done — ShotDex/Features/Library/MetadataPanel.swift:30-47",
+            "Toolbar Done cho Burst — ShotDex/Features/Shared/PhotoListScreen.swift:45",
+            "Luật 'mọi sheet có nút đóng' — DESIGN.md §10.4",
+            "Board PH/IP/DI/DC_Metadata vẽ thêm Done"
+          ]
+        },
+        {
+          "id": "Q2",
+          "title": "M-10 · Lỗi Favorite/Delete ở Viewer và Compare phải hiện ra",
+          "importance": "important",
+          "why": "catch {} rỗng: bấm tim hay xoá thất bại (iCloud, quyền) thì không có gì xảy ra, người dùng tưởng đã xong.",
+          "proposal": "Đưa favorite/delete của Viewer và Compare qua AssetActionsCoordinator (đã có alert sẵn); tách 'người dùng huỷ' khỏi 'lỗi'.",
+          "tasks": [
+            "Bỏ catch rỗng — ShotDex/Features/Library/PhotoDetailScreen.swift:1252,1266",
+            "Cùng đường lỗi — ShotDex/Features/Library/CompareScreen.swift"
+          ]
+        },
+        {
+          "id": "Q3",
+          "title": "M-26 · Dòng gợi ý 'Try:' đang là tiếng Việt cứng trong UI tiếng Anh",
+          "importance": "minor",
+          "proposal": "Đổi thành 'Try: Fukuoka · f > 1.2 · ISO over 3200 · before 2020' qua String Catalog.",
+          "tasks": [
+            "Chuỗi — ShotDex/Features/Library/SearchSuggestionsScreen.swift:208"
+          ]
+        },
+        {
+          "id": "Q4",
+          "title": "M-58 · Số trong Statistics có dấu phân cách hàng nghìn",
+          "importance": "minor",
+          "proposal": "Dùng .formatted() cho đếm và phần trăm theo locale ('22,640' cạnh trục '25,000').",
+          "tasks": [
+            "Format số — ShotDex/Features/Statistics/ChartCard.swift:12,24"
+          ]
+        },
+        {
+          "id": "Q5",
+          "title": "M-59 · Thêm chart Top Lens vào bộ mặc định",
+          "importance": "important",
+          "why": "'Ống kính nào tôi dùng nhiều nhất' là câu hỏi đầu tiên của người chụp (persona Linh, review Lightroom); bộ mặc định hiện chỉ có Body + Lens.",
+          "proposal": "Seed thêm Top Lens, tăng currentSeedGeneration (app chưa release, không migration).",
+          "tasks": [
+            "Seed chart — ShotDex/Data/Database/ChartStore.swift / ChartSpec.swift",
+            "Board *_Statistics thêm thẻ Top Lens"
+          ]
+        },
+        {
+          "id": "Q6",
+          "title": "M-07 · Xoá kết nối server dùng .alert thay confirmationDialog",
+          "importance": "important",
+          "why": "Trên iOS 26 confirmationDialog ẩn nút Cancel, chỉ còn nút đỏ — đúng ở thao tác xoá kết nối có mật khẩu. DESIGN §10.5 cấm, §11 lại bắt dùng: tài liệu tự mâu thuẫn.",
+          "proposal": "Đổi 3 chỗ sang .alert 2 nút (Delete đỏ + Cancel) và sửa DESIGN §11 cho khớp §10.5.",
+          "tasks": [
+            "FileServerListScreen.swift, OnServerScreen.swift, OnCloudScreen.swift",
+            "Sửa DESIGN.md §11"
+          ]
+        },
+        {
+          "id": "Q7",
+          "title": "M-16 · Đóng Viewer thì lưới cuộn tới ảnh vừa xem",
+          "importance": "important",
+          "why": "Thao tác dùng nhiều nhất app: lướt 40 ảnh trong viewer rồi đóng, lưới vẫn đứng chỗ cũ, phải tự tìm lại.",
+          "proposal": "onDismiss của fullScreenCover đẩy một token cuộn tới asset cuối cùng (như jumpToNewestToken); chưa làm zoom-transition.",
+          "tasks": [
+            "onDismiss — ShotDex/Features/Library/LibraryScreen.swift:154-157",
+            "Cùng cách cho AlbumDetail, SmartAlbum, OnThisDay"
+          ]
+        },
+        {
+          "id": "Q8",
+          "title": "Nhóm nhỏ còn lại (M-09, M-56, M-75, M-78, M-87)",
+          "importance": "minor",
+          "proposal": "Cancel quét Duplicates bỏ role destructive; OnThisDay date picker detents [.height(440), .large]; vùng chạm 44pt cho nút xoá điều kiện và ⋯ của chart card; accessibilityLabel cho slider Quality; thêm một dòng kiểm vào /release-check.",
+          "tasks": [
+            "DuplicatesScreen.swift, OnThisDayScreen.swift, SmartAlbumRuleRow.swift, ChartCard.swift, CompressionScreen.swift, .claude/skills/release-check"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "delete",
+      "title": "An toàn khi xoá và dọn ảnh",
+      "intro": "Chủ đề 1★ dày nhất của các app dọn ảnh (Gemini, Cleanup, Remo): sợ xoá nhầm, mất công đánh dấu.",
+      "decisions": [
+        {
+          "id": "D1",
+          "title": "M-01 · Merge All Groups ghi vào thư viện trước khi xác nhận",
+          "importance": "critical",
+          "why": "mergeAll ghi favorite, vị trí, ngày chụp vào Photos ngay, nuốt lỗi bằng try?, và chạy cả ở Similar/Series (ở đó dời ngày là sai thật). Huỷ xoá thì thay đổi vẫn ở lại trong thư viện thật — ba reviewer độc lập cùng chỉ ra.",
+          "proposal": "Chỉ cho Merge ở chế độ Exact (ẩn ở Similar/Series); một .alert ghi số nhóm và 'Nothing is deleted until you tap Delete'; bỏ try?, lỗi hiện qua alert.",
+          "options": [
+            {
+              "id": "exact",
+              "label": "Merge chỉ ở Exact + alert + bỏ try?",
+              "pros": [
+                "Rẻ",
+                "Ở Exact 'ngày sớm nhất + favorite' lành tính, đúng việc Photos Merge làm",
+                "Giữ FS-06.06 §8 'chép trước, xoá sau'"
+              ],
+              "cons": [
+                "Vẫn ghi trước khi xoá ở Exact"
+              ],
+              "effort": "S",
+              "recommended": true
+            },
+            {
+              "id": "txn",
+              "label": "Dời việc chép metadata vào cùng giao dịch xoá",
+              "pros": [
+                "Không ghi gì cho tới khi xoá thật"
+              ],
+              "cons": [
+                "Phải giữ danh sách chờ chép qua đổi tab/huỷ",
+                "Đảo FS-06.06 §8"
+              ],
+              "effort": "M"
+            },
+            {
+              "id": "alert",
+              "label": "Giữ hành vi, chỉ thêm alert",
+              "pros": [
+                "Rẻ nhất"
+              ],
+              "cons": [
+                "Similar/Series vẫn dời ngày sai"
+              ],
+              "effort": "S"
+            }
+          ],
+          "tasks": [
+            "Ẩn Merge ngoài Exact + alert — ShotDex/Features/Duplicates/DuplicatesScreen.swift:99-103",
+            "Bỏ try? — ShotDex/Features/Duplicates/DuplicatesModel.swift:299-330",
+            "Sửa FS-06.06 §8",
+            "Board *_Duplicates: menu ⋯ đúng trạng thái"
+          ]
+        },
+        {
+          "id": "D2",
+          "title": "M-03 · Dấu xoá ở Duplicates mất khi đổi tab/Back; đánh dấu được cả nhóm",
+          "importance": "important",
+          "why": "Đúng review 'mất 4 giờ đánh dấu' của Gemini. Đánh dấu hết cả nhóm là xoá mất mọi bản.",
+          "proposal": "Giữ dấu trong bộ nhớ qua đổi chế độ/tab, chỉ lọc theo ảnh còn sống lúc xoá; chặn (hoặc cảnh báo) khi mọi bản trong một nhóm bị đánh dấu.",
+          "options": [
+            {
+              "id": "memory",
+              "label": "Giữ trong bộ nhớ của phiên",
+              "pros": [
+                "Không thêm kho dữ liệu người dùng"
+              ],
+              "cons": [
+                "App bị kill nền thì vẫn mất"
+              ],
+              "effort": "S–M",
+              "recommended": true
+            },
+            {
+              "id": "persist",
+              "label": "Lưu xuống DB/UserDefaults",
+              "pros": [
+                "Sống qua cả khi app bị đóng"
+              ],
+              "cons": [
+                "Thêm một bảng trạng thái nháp, chưa ai đòi",
+                "Phải dọn khi ảnh đổi"
+              ],
+              "effort": "M"
+            }
+          ],
+          "tasks": [
+            "Không cắt markedForDeletion theo liveIds khi đổi chế độ — ShotDex/Features/Duplicates/DuplicatesModel.swift:162",
+            "Chặn 'all copies marked' — DuplicatesScreen.swift"
+          ]
+        },
+        {
+          "id": "D3",
+          "title": "M-04 · Ô ảnh trùng cho thấy bản nào đáng giữ",
+          "importance": "important",
+          "why": "Không biết bản nào đã chỉnh, là favorite, là RAW; bản được giữ là file lớn nhất nên bản gốc chưa chỉnh thắng bản đã chỉnh.",
+          "proposal": "Hàng glyph 12pt (favorite, đã chỉnh, RAW, Live) trên mỗi ô; thứ tự giữ ưu tiên đã chỉnh > favorite > lớn nhất. Chưa làm 'nằm trong album nào' (M, đảo FS-06.06 §8).",
+          "tasks": [
+            "Glyph + caption không cắt — DuplicatesScreen.swift",
+            "Thứ tự keeper — DuplicatesModel.swift",
+            "Board *_Duplicates"
+          ]
+        },
+        {
+          "id": "D4",
+          "title": "M-02 · Resize với Delete Originals bật sẵn",
+          "importance": "important",
+          "why": "Bật sẵn là có chủ ý (FS-03.07 §2) nhưng nút chính không nói sẽ xoá bản gốc, và chạy xong màn đóng im lặng — Minh không biết ảnh gốc đã vào Recently Deleted.",
+          "proposal": "Giữ mặc định bật. Nút đổi chữ 'Resize 8 Photos and Delete Originals' khi bật; xong thì toast 3s 'N saved · X MB freed · originals in Recently Deleted'. Cùng lúc sửa chữ trắng trên amber thành đen (M-79, 2.4:1).",
+          "options": [
+            {
+              "id": "label",
+              "label": "Giữ bật, nói rõ ở nút + toast",
+              "pros": [
+                "Giữ đúng ý 'nén là thay thế'",
+                "Hộp xoá hệ thống vẫn chặn"
+              ],
+              "cons": [
+                "Nút dài hơn"
+              ],
+              "effort": "S",
+              "recommended": true
+            },
+            {
+              "id": "off",
+              "label": "Mặc định tắt",
+              "pros": [
+                "An toàn tuyệt đối"
+              ],
+              "cons": [
+                "Thư viện dư bản trùng sau mỗi lần nén",
+                "Đảo FS-03.07 §2"
+              ],
+              "effort": "S"
+            }
+          ],
+          "tasks": [
+            "Nhãn nút + toast + chữ đen trên amber — ShotDex/Features/Editing/CompressionScreen.swift:187",
+            "Sửa FS-03.07 §5",
+            "Board *_Compress"
+          ]
+        },
+        {
+          "id": "D5",
+          "title": "M-08 · Hide nói tìm lại ở đâu",
+          "importance": "minor",
+          "proposal": "Toast 4s '12 photos hidden · Find them in Photos > Hidden'. Không làm Undo (cần giữ PHAsset, chưa thử trên máy)."
+        }
+      ]
+    },
+    {
+      "id": "viewer",
+      "title": "Viewer và Compare",
+      "intro": "Compare là màn để soi nét; Viewer là màn mở nhiều nhất.",
+      "decisions": [
+        {
+          "id": "V1",
+          "title": "M-13 · Compare zoom 5× không soi được độ nét",
+          "importance": "critical",
+          "why": "Mỗi pane chỉ xin ảnh cỡ màn hình rồi phóng 5×: hai tấm gần giống nhau nhoè như nhau, nên không chọn được tấm nét hơn — đúng lý do màn tồn tại (persona Linh, blocker).",
+          "proposal": "Khi zoom > 1.5× thì xin bản độ phân giải cao cho vùng đang xem, cạnh dài tối đa ~3000px, chỉ pane đang chạm, allowNetwork theo Optimize Storage. Nhờ perf-profiler + memory-leak kiểm.",
+          "options": [
+            {
+              "id": "tiled",
+              "label": "Bản phân giải cao theo vùng, chặn ~3000px",
+              "pros": [
+                "Soi được nét",
+                "Bộ nhớ chịu được với 4 pane"
+              ],
+              "cons": [
+                "Phức tạp nhất"
+              ],
+              "effort": "M–L",
+              "recommended": true
+            },
+            {
+              "id": "full",
+              "label": "Giải mã ảnh gốc cho pane đang zoom",
+              "pros": [
+                "Đơn giản hơn"
+              ],
+              "cons": [
+                "4 pane × ảnh 45MP vượt bộ nhớ",
+                "Chậm với ảnh iCloud"
+              ],
+              "effort": "M"
+            },
+            {
+              "id": "keep",
+              "label": "Giữ như FS-01.08 §6",
+              "pros": [
+                "Không tốn gì"
+              ],
+              "cons": [
+                "Màn không làm được việc chính"
+              ],
+              "effort": "0"
+            }
+          ],
+          "tasks": [
+            "Xin ảnh theo zoom — ShotDex/Features/Library/CompareScreen.swift:143,808",
+            "Sửa FS-01.08 §6"
+          ]
+        },
+        {
+          "id": "V2",
+          "title": "M-15 · Compare: xoá một tấm không thoát cả màn",
+          "importance": "important",
+          "why": "Xoá 1 trong 4 tấm thì màn đóng luôn, phải chọn lại từ đầu để so tiếp 3 tấm còn lại.",
+          "proposal": "Còn ≥ 2 thẻ thì ở lại màn; thêm hint 'Touch and hold to keep only this one'. Giữ hành vi 'chạm = đánh dấu' và nút xoá ở trên (khung tầng D §10.3).",
+          "tasks": [
+            "CompareScreen.swift",
+            "Board *_Compare"
+          ]
+        },
+        {
+          "id": "V3",
+          "title": "M-17 · Photo Info trên iPad",
+          "importance": "important",
+          "why": "Sheet 700pt che đúng tấm ảnh đang đọc EXIF; thanh thông tin là một nút rộng 1280pt cho một dòng chữ.",
+          "proposal": "Ở regular width (iPad, Duo inner), Photo Info là cột inspector bên phải cạnh ảnh thay vì sheet; compact giữ sheet có Done (Q1).",
+          "options": [
+            {
+              "id": "light",
+              "label": "Done + maxWidth 520",
+              "pros": [
+                "Rẻ"
+              ],
+              "cons": [
+                "Sheet vẫn che ảnh"
+              ],
+              "effort": "S"
+            },
+            {
+              "id": "inspector",
+              "label": "Cột inspector bên phải ở regular width",
+              "pros": [
+                "Đọc EXIF mà vẫn thấy ảnh",
+                "Giống Lightroom/Photos macOS"
+              ],
+              "cons": [
+                "Thêm một layout cho Viewer",
+                "Phải vẽ board IP/DI mới"
+              ],
+              "effort": "M",
+              "recommended": true
+            }
+          ],
+          "tasks": [
+            "PhotoDetailScreen.swift (thanh thông tin)",
+            "Board IP_Viewer, IP_Metadata"
+          ]
+        },
+        {
+          "id": "V4",
+          "title": "M-18, M-19 · Thứ tự Photo Info và chạm-để-ẩn chrome",
+          "importance": "minor",
+          "proposal": "Camera & Lens lên trước bản đồ trong Photo Info (0pt). Chạm-để-ẩn chrome cho ảnh tĩnh để sau (thêm trễ 0.25s cho single tap)."
+        },
+        {
+          "id": "V5",
+          "title": "M-20 · Duo cover: thùng rác gần ngón cái nhất",
+          "importance": "minor",
+          "proposal": "Không đổi (challenger): đảo Delete/Share riêng cho Duo trái quy ước Photos, thêm nhánh layout cho một thiết bị, và thùng rác đã có hộp xác nhận hệ thống."
+        }
+      ]
+    },
+    {
+      "id": "search",
+      "title": "Tìm và lọc theo gear",
+      "intro": "Lời hứa số một của app: tìm theo máy, ống kính, phơi sáng.",
+      "decisions": [
+        {
+          "id": "S1",
+          "title": "M-21 · Lọc theo Camera/Lens từ menu Filter",
+          "importance": "important",
+          "why": "Menu Filter của Library không có Camera/Lens; người không biết cú pháp search phải đi qua Advanced Search. Thread Adobe từ 2018 vẫn có người xin đúng điều này.",
+          "proposal": "Thêm 'Camera ▸' và 'Lens ▸' (top theo số ảnh) vào phần Filter của menu, chọn xong thành token trong thanh lọc.",
+          "options": [
+            {
+              "id": "submenu",
+              "label": "Submenu Camera ▸ / Lens ▸",
+              "pros": [
+                "Mọi thiết bị như nhau",
+                "Không vi phạm FS-01.05 §1"
+              ],
+              "cons": [
+                "Menu dài thêm 2 dòng"
+              ],
+              "effort": "S",
+              "recommended": true
+            },
+            {
+              "id": "column",
+              "label": "Thêm cột lọc 320pt cạnh lưới trên iPad",
+              "pros": [
+                "Lọc lặp nhanh trên màn rộng"
+              ],
+              "cons": [
+                "Ăn 3 cột lưới",
+                "iPhone vẫn cần submenu (luật iPad ↔ phone)"
+              ],
+              "effort": "M"
+            }
+          ],
+          "tasks": [
+            "Menu — ShotDex/Features/Shared/PhotoFilterMenu.swift",
+            "Board Main, *_Library (menu mở)"
+          ]
+        },
+        {
+          "id": "S2",
+          "title": "M-22 · Từ không hiểu ('night') bị đổi thành tìm theo tên file",
+          "importance": "important",
+          "why": "Linh gõ '85mm night' ra 0 ảnh mà không hiểu vì sao: 'night' lặng lẽ thành điều kiện Filename contains.",
+          "proposal": "Thêm trường timeOfDay (night, golden hour, blue hour…) tính lúc index từ giờ chụp + vị trí; SearchParser hiểu \"night\"; chip vẫn nói rõ từ nào không hiểu.",
+          "options": [
+            {
+              "id": "chip",
+              "label": "Nói rõ trên chip",
+              "pros": [
+                "Rẻ",
+                "Hết bất ngờ"
+              ],
+              "cons": [
+                "Vẫn không tìm được ảnh đêm"
+              ],
+              "effort": "S"
+            },
+            {
+              "id": "timeofday",
+              "label": "Thêm trường timeOfDay (night, golden hour)",
+              "pros": [
+                "Tìm được thật"
+              ],
+              "cons": [
+                "Cần cột indexer mới",
+                "Phụ thuộc mùa, múi giờ"
+              ],
+              "effort": "M",
+              "recommended": true
+            }
+          ],
+          "tasks": [
+            "SearchService.swift:139, FilterTokenBar.swift"
+          ]
+        },
+        {
+          "id": "S3",
+          "title": "M-23 · Capsule '85mm' nói rõ tiêu cự thật hay tương đương",
+          "importance": "minor",
+          "proposal": "Hiện '(actual)' trên capsule; không tự đổi mặc định sang tương đương 35mm."
+        },
+        {
+          "id": "S4",
+          "title": "M-25 · Rule builder gọn hơn trên màn thấp",
+          "importance": "important",
+          "why": "Trên Duo inner và iPhone, Media Type và Match chiếm 2 hàng riêng; số ảnh khớp nằm ở footer cuối danh sách, không thấy khi đang sửa.",
+          "proposal": "Gộp Media Type + Match vào một hàng (lấy lại ~200pt); đưa 'Matches N photos' lên gần nút Search. Áp cho Advanced Search, Smart Album editor, Chart editor.",
+          "tasks": [
+            "AdvancedSearchSheet.swift, SmartAlbumEditorSheet.swift, ChartEditorSheet.swift, Shared/RuleBuilderSections.swift",
+            "Board *_AdvancedSearch, *_SmartAlbumEditor, *_ChartEditor"
+          ]
+        },
+        {
+          "id": "S5",
+          "title": "M-27 · Lọc ảnh thiếu dữ liệu (không vị trí, không lens, không ngày)",
+          "importance": "important",
+          "why": "Câu hỏi dọn thư viện thật; app đã có Adjust Date/Location để sửa nhưng không tìm được ảnh cần sửa. Một người dùng 78k ảnh bỏ app khác vì thiếu điều này.",
+          "proposal": "Toán tử isMissing cho mọi trường; Location có 'Has / No Location'. Thanh 'Unknown' trong chart chạm vào mở lưới với điều kiện đó. Làm sau lô đầu.",
+          "tasks": [
+            "LibraryQueries.swift, SmartAlbumRuleRow.swift, StatisticsScreen drill-down"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "firstrun",
+      "title": "Lần chạy đầu, index và quyền",
+      "intro": "55k ảnh cần vài chục phút để đọc EXIF; Limited Access làm mọi số liệu trả thiếu mà không báo.",
+      "decisions": [
+        {
+          "id": "F1",
+          "title": "M-31 · Onboarding báo trước hộp quyền",
+          "importance": "important",
+          "why": "Linh suýt chọn Limited theo thói quen. Chọn Limited thì Search, Statistics, Duplicates trả thiếu mà chỉ có một banner ở Library.",
+          "proposal": "Một footnote trên nút Continue: 'Next, iOS asks for access — choose Allow Full Access so ShotDex can read every photo's camera info.' Nút Continue maxWidth 480 ở regular (đang 1320pt trên iPad).",
+          "tasks": [
+            "OnboardingScreen.swift",
+            "Board *_Onboarding"
+          ]
+        },
+        {
+          "id": "F2",
+          "title": "M-32 · Trạng thái 'đang index' ở Statistics, Duplicates, Search",
+          "importance": "important",
+          "why": "Lần đầu mở, Duplicates bảo 'index thư viện thủ công' (không có nút đó), Statistics đứng số cũ tới khi mở lại.",
+          "proposal": "Nhãn 'Still reading photo info · N%' ở đầu Statistics/Duplicates/Search khi isIndexing; làm mới Statistics khi index xong. Không gắn nhãn 'Partial' lên từng chart.",
+          "tasks": [
+            "StatisticsScreen.swift:136, DuplicatesScreen.swift, SearchSuggestionsScreen.swift",
+            "Board mới: Library/Statistics đang index"
+          ]
+        },
+        {
+          "id": "F3",
+          "title": "Bỏ sót · Board cho Limited Access, bị từ chối, iCloud offline",
+          "importance": "important",
+          "why": "Challenger: không board nào vẽ các trạng thái này, nên không ai review được người dùng Limited thấy gì ở Statistics/Duplicates/Search.",
+          "proposal": "Vẽ 3 trạng thái (Limited, Denied, đang chờ iCloud) cho Library + Statistics trên cả 4 thiết bị, rồi chạy ux-reviewer trên đó.",
+          "tasks": [
+            "Canvas ShotDex App Screens: thêm board vào cuối mỗi hàng thiết bị"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "share",
+      "title": "Share, xuất và server",
+      "intro": "Luồng của Minh: resize gửi khách, upload NAS cả ngày cưới.",
+      "decisions": [
+        {
+          "id": "H1",
+          "title": "M-37 · Resize xong thì Share được ngay",
+          "importance": "important",
+          "why": "Người chụp resize để gửi đi; hiện xong là 'saved to Photos', phải chọn lại đúng các bản copy trong lưới.",
+          "proposal": "Sau khi lưu, nút 'Share 8 Photos' dùng createdAssetIDs; Collage Export thêm 'Share…'. Làm cùng D4.",
+          "tasks": [
+            "CompressionScreen.swift, CollageExportScreen.swift",
+            "Board *_Compress, *_CollageExport"
+          ]
+        },
+        {
+          "id": "H2",
+          "title": "M-36 · Tên mức Share đọc ngược trong một ca",
+          "importance": "important",
+          "why": "Khi mặc định là No Metadata, header 'Metadata removed' đứng cạnh hàng 'Share Without Location' (hàng này thêm lại thông tin máy) — Minh đọc ba lần vẫn không chắc.",
+          "proposal": "Giữ ba tên mức đã chốt (FS-08.06 §4). Chỉ sửa header/phụ đề cho ca đó, ví dụ 'Sharing: No Metadata' và phụ đề hàng 'Adds camera & lens info, no location'.",
+          "tasks": [
+            "ShareLevelRow.swift, PhotoShareSheet.swift",
+            "Board *_Share"
+          ]
+        },
+        {
+          "id": "H3",
+          "title": "M-40 · Upload dừng khi app ra nền",
+          "importance": "critical",
+          "why": "Ngày cưới 40–60 GB: phải để iPad sáng màn hàng giờ. Review PhotoSync/Remo/Gemini đều than đúng điều này. Nhưng FS-15 đã chốt 'không chạy nền'.",
+          "proposal": "Làm upload nền thật bằng BGContinuedProcessingTask trên iOS 26 (pre-26 giữ màn hình sáng như cũ); sửa FS-15 README:41.",
+          "options": [
+            {
+              "id": "banner-intent",
+              "label": "Banner Resume ngay + /intent chạy nền",
+              "pros": [
+                "Hết im lặng ngay",
+                "Chạy nền đi đúng quy trình, có spike trên máy thật"
+              ],
+              "cons": [
+                "Chưa chạy nền thật"
+              ],
+              "effort": "S + intent"
+            },
+            {
+              "id": "bg-now",
+              "label": "Làm BGContinuedProcessingTask luôn",
+              "pros": [
+                "Giải đúng nỗi đau"
+              ],
+              "cons": [
+                "L, lật FS-15, chỉ iOS 26+, cần máy thật"
+              ],
+              "effort": "L",
+              "recommended": true
+            },
+            {
+              "id": "keep",
+              "label": "Giữ nguyên FS-15",
+              "pros": [
+                "Không tốn gì"
+              ],
+              "cons": [
+                "Mất người dùng chụp sự kiện"
+              ],
+              "effort": "0"
+            }
+          ],
+          "tasks": [
+            "Banner — ServerUploadModel.swift / AppBanner.swift",
+            "/intent background-upload"
+          ]
+        },
+        {
+          "id": "H4",
+          "title": "M-06, M-41, M-42 · Sửa vặt màn server",
+          "importance": "minor",
+          "proposal": "Công tắc 'Apply to Remaining Conflicts' lên trên ba nút Replace/Skip/Keep Both; 'Add Connection…' ra khỏi giữa section Connection; Server Browser đưa Select ra toolbar và đổi glyph 'In Library' cho khỏi giống dấu đã chọn."
+        },
+        {
+          "id": "H5",
+          "title": "M-43 · Uploaded to Server: Free Up Space có con số",
+          "importance": "minor",
+          "proposal": "Hàng đầu 'Free Up Space — 214 photos · ~4.2 GB'; tắt thì ghi lý do; toast sau khi xoá."
+        }
+      ]
+    },
+    {
+      "id": "sizes",
+      "title": "Màn rộng iPad và màn thấp Duo",
+      "intro": "iPad đang có vài màn điện thoại bị kéo giãn; Duo inner (669pt) nhận metrics của iPad.",
+      "decisions": [
+        {
+          "id": "Z1",
+          "title": "M-45 · Nút chính của Compress và Collage Export",
+          "importance": "important",
+          "why": "Trên Duo inner nút Resize nằm 130–230pt dưới đáy; trên iPhone nó bắt đầu dưới home indicator.",
+          "proposal": "Compress và Collage Export có hai pane ở regular width: preview trái, tuỳ chọn + nút chính phải; compact ghim nút chính vào safeAreaInset.",
+          "options": [
+            {
+              "id": "pin",
+              "label": "Ghim nút, đo lại",
+              "pros": [
+                "Một thay đổi giải cả DI và PH"
+              ],
+              "cons": [
+                "iPad vẫn cột 700pt giữa màn"
+              ],
+              "effort": "S"
+            },
+            {
+              "id": "panes",
+              "label": "Hai pane ở regular width",
+              "pros": [
+                "Dùng hết bề rộng iPad"
+              ],
+              "cons": [
+                "Layout mới cho 2 màn, board mới"
+              ],
+              "effort": "M",
+              "recommended": true
+            }
+          ],
+          "tasks": [
+            "CompressionScreen.swift, CollageExportScreen.swift",
+            "Board *_Compress, *_CollageExport"
+          ]
+        },
+        {
+          "id": "Z2",
+          "title": "M-46…49 · Lưới thay cho thẻ full-width trên iPad",
+          "importance": "important",
+          "why": "Trips là thẻ 1344×160 (8.4:1), Duplicates là card 1344pt rỗng 80%, Search Recents phóng thumbnail ~2.7× — màn điện thoại kéo giãn, trái §10.1c.",
+          "proposal": "Trips adaptive(320…440); Duplicates LazyVGrid adaptive(420) + nút Delete tối đa 360pt; Search Recents adaptive + thumbnail theo cạnh thật; Collage Layout inspector thành lưới 4 cột ở regular.",
+          "tasks": [
+            "TripsScreen.swift, DuplicatesScreen.swift, SearchSuggestionsScreen.swift, CollagePanelViews.swift",
+            "Board IP_/DI_ tương ứng"
+          ]
+        },
+        {
+          "id": "Z3",
+          "title": "M-52 · Màn thấp: 669pt nhận metrics của iPad",
+          "importance": "important",
+          "why": "Cả app chỉ hỏi horizontalSizeClass (verticalSizeClass xuất hiện 0 lần): Duo inner nhận hero 260, tile 192 trên chiều cao 669, còn chỗ cho đúng một hàng album.",
+          "proposal": "Một environment isShortWindow (chiều cao cửa sổ < ngưỡng) đặt ở RootTabView, mọi chỗ đang chọn metrics theo size class đọc thêm cờ này.",
+          "options": [
+            {
+              "id": "formula",
+              "label": "Công thức theo chiều cao ở từng chỗ",
+              "pros": [
+                "Không thêm cờ mới",
+                "Đúng cả cho iPad Split View thấp"
+              ],
+              "cons": [
+                "Mỗi chỗ tự nhớ làm"
+              ],
+              "effort": "S–M"
+            },
+            {
+              "id": "env",
+              "label": "Một environment isShortWindow + 8 điểm gọi",
+              "pros": [
+                "Một nguồn sự thật"
+              ],
+              "cons": [
+                "Hạ tầng cho một thiết bị",
+                "Thêm một trục layout phải test"
+              ],
+              "effort": "M",
+              "recommended": true
+            }
+          ],
+          "tasks": [
+            "AlbumsScreen.swift (CollectionsHeroMetrics), InsightsCard.swift, PhotoWidgetSettingsScreen.swift",
+            "DESIGN.md §10.1c"
+          ]
+        },
+        {
+          "id": "Z4",
+          "title": "M-53 · Widget editor trên Duo",
+          "importance": "minor",
+          "proposal": "Preview tối đa 158pt cao trên màn thấp; chọn cỡ Large qua popover. Hạ từ blocker xuống: màn dùng một lần lúc cài."
+        },
+        {
+          "id": "Z5",
+          "title": "M-50 · Bàn phím iPad trong Viewer",
+          "importance": "minor",
+          "proposal": "Esc đóng, ←/→ chuyển ảnh trong Viewer, Compare, Compress, Trim. Không làm ⌘A/⌘F."
+        }
+      ]
+    },
+    {
+      "id": "stats",
+      "title": "Statistics, Collections, sheet",
+      "intro": "Những sửa đáng làm sau lô đầu.",
+      "decisions": [
+        {
+          "id": "C1",
+          "title": "M-72 · Vuốt nhầm làm mất form đang nhập",
+          "importance": "important",
+          "why": "Smart Album editor, Chart editor, form kết nối (có mật khẩu), Advanced Search vuốt xuống là mất; editor ảnh/Video Studio/Collage thì đã chặn.",
+          "proposal": "isDirty + interactiveDismissDisabled + alert Discard / Keep Editing cho 4 sheet đó.",
+          "tasks": [
+            "SmartAlbumEditorSheet.swift, ChartEditorSheet.swift, FileServerFormScreen.swift, AdvancedSearchSheet.swift"
+          ]
+        },
+        {
+          "id": "C2",
+          "title": "M-61 · Chart editor: Save xám dù tên gợi ý đã hiện",
+          "importance": "minor",
+          "proposal": "canSave bỏ điều kiện tên; tên rỗng thì dùng tên gợi ý. Không ghim preview lượt này."
+        },
+        {
+          "id": "C3",
+          "title": "M-62 · Màu chart: indigo hay amber",
+          "importance": "important",
+          "why": "DESIGN nói chart dùng accent amber, code ChartPalette dùng indigo. Một bên phải sửa, nếu không reviewer nào cũng sẽ báo lại.",
+          "proposal": "Giữ chart indigo, sửa DESIGN.md (bỏ \"charts\" khỏi danh sách dùng accent ở §10.6 và AppAccentTheme).",
+          "options": [
+            {
+              "id": "amber",
+              "label": "Series đầu là amber",
+              "pros": [
+                "Khớp DESIGN, khớp icon app"
+              ],
+              "cons": [
+                "Phải kiểm tương phản amber trên nền sáng"
+              ],
+              "effort": "S"
+            },
+            {
+              "id": "doc",
+              "label": "Giữ indigo, sửa DESIGN",
+              "pros": [
+                "Không đổi code"
+              ],
+              "cons": [
+                "Accent không còn xuất hiện ở chart"
+              ],
+              "effort": "S",
+              "recommended": true
+            }
+          ],
+          "tasks": [
+            "ChartPalette.swift:6-23 hoặc DESIGN.md §10.6",
+            "Board *_Statistics"
+          ]
+        },
+        {
+          "id": "C4",
+          "title": "M-60 · Bar chart vẽ hai lần cùng dữ liệu",
+          "importance": "minor",
+          "proposal": "Khi topN ≤ 5 ghi tên lên thanh và bỏ danh sách nhãn bên dưới; giữ Swift Charts."
+        },
+        {
+          "id": "C5",
+          "title": "M-67 · Collections: 'My Albums ›' mở lưới đầy đủ",
+          "importance": "important",
+          "why": "Người có 80 album không thấy hết trong một hàng cuộn ngang; tiêu đề section không chạm được.",
+          "proposal": "Tiêu đề section 'My Albums ›' push tới lưới dọc (2 cột iPhone, adaptive iPad) có sort; bổ sung 'See All' vào DESIGN §10.1d.",
+          "tasks": [
+            "AlbumsScreen.swift",
+            "Board mới: *_AllAlbums"
+          ]
+        },
+        {
+          "id": "C6",
+          "title": "M-68, M-69, M-76 · Từ ngữ và glyph",
+          "importance": "minor",
+          "proposal": "Một tên cho album người dùng (My Albums) ở mọi chỗ; 'Cloud' bỏ icon iCloud (đó là Dropbox/Drive); nút ⇅ của Statistics vào menu 'Add Chart / Reorder'."
+        }
+      ]
+    },
+    {
+      "id": "process",
+      "title": "Bỏ sót, mục bị loại, cách làm",
+      "intro": "Những gì review chưa phủ, những gì challenger loại, và thứ tự thực hiện.",
+      "decisions": [
+        {
+          "id": "P1",
+          "title": "Bỏ sót · Review dark mode và accessibility",
+          "importance": "important",
+          "why": "Mọi reviewer chỉ xem bản sáng; không ai chạy VoiceOver/Dynamic Type. Người dùng app ảnh thường để chế độ tối; control tự vẽ (chip lọc, bar chart, vote) chưa có trạng thái đọc được.",
+          "proposal": "Chạy design-reviewer trên bản tối (đã render sẵn ở build/design/app/render-dark/) và a11y-voiceover trên code các màn tầng A/B.",
+          "tasks": [
+            "Agent design-reviewer (dark)",
+            "Agent a11y-voiceover"
+          ]
+        },
+        {
+          "id": "P2",
+          "title": "Bỏ sót · Chấm sao / Pick / Reject chưa có board",
+          "importance": "important",
+          "why": "FS-01.12 và plan cull được viết hôm nay nhưng canvas chưa có màn nào; luật design ↔ code bắt phải có board trước khi code màn mới.",
+          "proposal": "Vẽ board lưới có sao/cờ, viewer có hàng chấm, lượt Cull trên 4 thiết bị, chạy ux-reviewer, trước khi plan đó vào code.",
+          "tasks": [
+            "Canvas ShotDex App Screens",
+            "docs/_plans/2026-10-02-rating-flags-cull.md"
+          ]
+        },
+        {
+          "id": "P3",
+          "title": "Bỏ sót · Chạy vòng lõi trên thư viện thật",
+          "importance": "important",
+          "why": "Review chấm từng màn; chưa ai đo 'ống kính nào tôi dùng nhiều nhất năm ngoái → xem các khung đó → xuất' bằng số chạm và giây trên 55k ảnh.",
+          "proposal": "Một kịch bản Tools/ui-drive Statistics → drill-down → Library → Share trên máy có thư viện lớn, ghi số chạm và thời gian.",
+          "tasks": [
+            "ShotDexUITests/scripts/core-loop.json"
+          ]
+        },
+        {
+          "id": "P4",
+          "title": "15 mục challenger loại",
+          "importance": "minor",
+          "proposal": "Bỏ: M-20 (đảo nút Duo cover), M-28 (gán lại lens cơ), M-29 (capsule thành token), M-38 (strip metadata video), M-44 (test ngầm khi Save), M-55, M-63 (round-robin Statistics), M-64, M-65 (dời Compare/Edit xuống đáy), M-70, M-73 (sheet chồng sheet thành push), M-77, M-80, M-81 (refactor nút/capsule), M-85 (nit spacing). Lý do từng mục trong challenge.md; chọn Sửa để giữ lại mục nào."
+        },
+        {
+          "id": "P5",
+          "title": "Cách đi vào code",
+          "importance": "critical",
+          "why": "CLAUDE.md bắt tính năng mới đi /intent → /spec → /plan; phần lớn mục trên là sửa lỗi/hành vi nhỏ. Đi sai đường thì hoặc tốn ba tài liệu cho một dòng chữ, hoặc đổi hành vi mà docs không theo.",
+          "proposal": "Một /intent \"UI review 2/10\" cho cả 46 mục, rồi /spec với AC từng mục, /plan, mỗi AC một commit, /verify; mọi màn đổi thì sửa board cùng lượt.",
+          "options": [
+            {
+              "id": "sweep",
+              "label": "Lô đầu qua /review-sweep, việc lớn qua /intent",
+              "pros": [
+                "Đúng shortcut sửa lỗi của PROCESS §4",
+                "Mỗi mục có bằng chứng screenshot"
+              ],
+              "cons": [
+                "Nhiều commit nhỏ"
+              ],
+              "effort": "—"
+            },
+            {
+              "id": "intent-all",
+              "label": "Một /intent 'UI review 2/10' cho tất cả",
+              "pros": [
+                "Một chỗ theo dõi"
+              ],
+              "cons": [
+                "Spec quá rộng, AC khó kiểm"
+              ],
+              "effort": "—",
+              "recommended": true
+            }
+          ],
+          "tasks": [
+            "REVIEW_QUEUE.md",
+            "/review-sweep continue"
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -18,6 +18,10 @@
   ghi vào file khi ghép" ([FS-14 §7](../02-functional-spec/FS-14-panorama/01-screen-and-flow.md)), cả
   hai đều đọc lại được từ asset và từ file. Luật bảng riêng là cho thứ **không** đọc lại được: cái
   người dùng gõ vào, và kết quả quét đắt tiền.
+- **Khung giờ chụp** (`timeOfDay`) là ca thứ hai: suy ra từ ngày chụp + toạ độ của hệ thống, hoặc từ giờ EXIF —
+  đọc lại được, nên ở bảng chính ([FS-01.03b §1](../02-functional-spec/FS-01-library/03b-time-of-day-and-acceptance.md)).
+  Migration chỉ thêm cột + chỉ mục; app chưa phát hành nên **không** chuyển giá trị cũ. Điền dòng đã có:
+  [BD-03.02 §7](BD-03-metadata-indexing-flow/02-exif-read.md).
 
 ## 2. Bảng metadata chính
 
@@ -44,6 +48,7 @@ isFavorite INTEGER
 rating INTEGER                   -- sao 0–5 của Photos (iOS 27+), đọc lại từ ảnh như favorite; NULL = chưa đọc (dưới 27, dòng cũ), truy vấn coi là 0
 mediaSubtypes INTEGER            -- mặt nạ bit kiểu chụp, lấy thẳng từ thư viện hệ thống
 isPanorama INTEGER               -- cờ hệ thống HOẶC thẻ XMP của ShotDex; xem quy tắc dưới
+timeOfDay TEXT                   -- đêm · giờ xanh sáng/chiều · giờ vàng sáng/chiều · ngày; rỗng = không biết giờ
 indexedAt INTEGER
 exifStatus TEXT                  -- đã đọc / không có EXIF / chưa đọc / chờ iCloud / lỗi
 indexerVersion INTEGER           -- phiên bản bộ index đã ghi dòng này
@@ -51,7 +56,7 @@ readAttempts INTEGER             -- số lần "tải được mà đọc không
 ```
 
 Có chỉ mục trên: tên máy và tên ống kính đã chuẩn hoá · ISO · khẩu · tốc độ · tiêu cự · tiêu cự tương đương
-· khổ cảm biến · ngày chụp · loại media.
+· khổ cảm biến · ngày chụp · loại media · khung giờ chụp.
 
 ## 3. Bảng vệ tinh
 
@@ -68,10 +73,14 @@ Có chỉ mục trên: tên máy và tên ống kính đã chuẩn hoá · ISO �
 | Sản phẩm đã tạo | collage và project video mở lại được ([FS-06.01b](../02-functional-spec/FS-06-collections/01b-album-management-and-creations.md)); project video lưu thành **nháp** từ lần sửa đầu — cột "ngày xuất" rỗng = nháp, mọi dòng có trước `v29-creationDrafts` lấy ngày sửa làm ngày xuất ([FS-12.18 §5](../02-functional-spec/FS-12-video-studio/18-drafts.md)) |
 | File server | server người dùng khai: giao thức · host · cổng · user · share · thư mục · host key đã tin ([FS-15](../02-functional-spec/FS-15-server-upload/README.md)); mật khẩu ở Keychain |
 | Lịch sử upload | id ảnh · file nào của ảnh · server (id + **tên lúc đẩy**) · đường dẫn · số byte · SHA-256 · lúc nào |
+| Lô upload dở | một lô: id ảnh · connection · folder · Date Folders · loại file · các file đã khớp checksum ([FS-15.02b §4a](../02-functional-spec/FS-15-server-upload/02b-background-upload.md)) |
 | Phán quyết bộ giải RAW | máy (hãng\|model đã chuẩn hoá) · bản build iOS · đọc được / chưa đọc được / chưa biết · nguồn (danh sách / thử file / editor) · lúc nào ([FS-03.04b §5](../02-functional-spec/FS-03-photo-editor/04b-unsupported-raw.md)) |
 | Cặp RAW giữ RAW làm bản gốc | id ảnh mang tên file RAW mà có kèm JPEG/HEIC — không bao giờ có dấu RAW chưa đọc được |
 | Sao chờ lên Photos | id ảnh · sao 1–5 · lúc đặt — sao chấm trên iOS 17–26, hoặc chưa ghi lên Photos được ([FS-01.12 §4–5](../02-functional-spec/FS-01-library/12-rating-and-flags.md)) |
 | Cờ | id ảnh · Pick hoặc Reject · lúc đặt — không dòng là không cờ; chỉ ShotDex có, không đồng bộ |
+| Keyword Photos (gương) | id ảnh · keyword đúng cách viết · khoá gấp hoa-thường · khoá gấp hoa-thường + dấu — một dòng mỗi (ảnh, keyword); chỉ mục trên hai khoá ([FS-02.07 §8](../02-functional-spec/FS-02-photo-detail/07-caption-and-keywords.md)) |
+| Caption Photos (gương) | id ảnh · caption · bản gấp hoa-thường + dấu để tìm |
+| Trạng thái lượt đọc gương | id ảnh cuối của lượt đọc đầy · lúc đọc xong (rỗng = cần đọc đầy) |
 | Keyword Photos (gương) | id ảnh · keyword đúng cách viết · khoá gấp hoa-thường · khoá gấp hoa-thường + dấu — một dòng mỗi (ảnh, keyword); chỉ mục trên hai khoá ([FS-02.07 §8](../02-functional-spec/FS-02-photo-detail/07-caption-and-keywords.md)) |
 | Caption Photos (gương) | id ảnh · caption · bản gấp hoa-thường + dấu để tìm |
 | Trạng thái lượt đọc gương | id ảnh cuối của lượt đọc đầy · lúc đọc xong (rỗng = cần đọc đầy) |
@@ -82,6 +91,8 @@ Có chỉ mục trên: tên máy và tên ống kính đã chuẩn hoá · ISO �
   không phải "chưa biết". Danh sách việc = ảnh tĩnh **chưa có dòng**.
 - **Lịch sử upload sống lâu hơn server và hơn ảnh**: xoá server thì id về rỗng, tên ở lại; xoá ảnh thì dòng
   ở lại. Nó là bằng chứng một file an toàn ở nơi khác — đúng lúc xoá thứ nó mô tả là lúc cần nó nhất.
+- **Lô upload dở** do người dùng tạo nên ở bảng riêng; chỉ giữ một lô. Ghi khi bắt đầu đẩy, cập nhật sau mỗi
+  file đã khớp; xoá khi lô xong, khi huỷ, khi xoá connection của nó. Thêm bằng một migration schema.
 - Phán quyết bộ giải là **kết quả quét**: xoá bảng thì mất một lượt xét, dựng lại ở lần mở app kế tiếp. Lên bản
   build iOS mới thì có dòng mới; dòng của build cũ không còn ai đọc.
 - **Sao hiện hành = sao chờ nếu có dòng, không thì cột sao của Photos.** Một luật cho cả hai đời iOS. Lên iOS 27,
@@ -92,6 +103,12 @@ Có chỉ mục trên: tên máy và tên ống kính đã chuẩn hoá · ISO �
   dọn lúc mở app cùng mọi dữ liệu người dùng khác của ảnh, **trừ** lịch sử upload, tải về, nhập thẻ (FS-19.05 §5).
   Quyền `.limited` không bao giờ làm mồ côi — ảnh không thấy chưa chắc đã mất. Clear local metadata index không đụng
   hai bảng này.
+- **Gương caption/keyword là bản sao của Photos, không phải dữ liệu người dùng** (iOS 27, `v28-captionKeywordMirror`):
+  Photos giữ bản thật, hai bảng chỉ để lọc và tìm. Vì vậy chúng **đi theo dòng metadata** — xoá ảnh thì xoá cùng
+  transaction, Clear local metadata index xoá cả gương lẫn trạng thái rồi đọc lại từ Photos — khác bảng sao/cờ. Lượt
+  index **không bao giờ** ghi chúng (upsert dòng metadata không đụng), nên index lại toàn bộ giữ nguyên gương. Không
+  khoá ngoại: một `REPLACE` của lượt index sẽ kéo cả gương đi. Mọi truy vấn tới người dùng đều JOIN dòng metadata,
+  nên dòng gương của ảnh không còn index (hay không chia sẻ dưới `.limited`) không bao giờ lộ ra.
 - **Gương caption/keyword là bản sao của Photos, không phải dữ liệu người dùng** (iOS 27, `v28-captionKeywordMirror`):
   Photos giữ bản thật, hai bảng chỉ để lọc và tìm. Vì vậy chúng **đi theo dòng metadata** — xoá ảnh thì xoá cùng
   transaction, Clear local metadata index xoá cả gương lẫn trạng thái rồi đọc lại từ Photos — khác bảng sao/cờ. Lượt

@@ -9,7 +9,7 @@
 
 - Nút **Continue Indexing** hiện theo **số ảnh chưa đọc xong**, không theo "số ảnh thử lại được".
 - Hàng "đã index bao nhiêu" **không được đếm theo số dòng trong database**.
-- **Mỗi nút index là một hàng riêng**, và bị **làm mờ** khi đang chạy chứ không bị ẩn.
+- **Mỗi nút index đứng riêng** (Continue Indexing là một hàng, Re-index là nút chữ trên thẻ Your library), và bị **làm mờ** khi đang chạy chứ không bị ẩn.
 - App **không bao giờ** giữ màn sáng cho lượt index tự động khi máy đang ở chế độ tiết kiệm pin.
 
 ## 2. Các hàng
@@ -18,12 +18,9 @@
 |---|---|
 | Access | trạng thái quyền + **Manage photo access** |
 | **Continue Indexing (N)** | chỉ hiện khi còn ảnh chưa đọc xong; chạy qua chính model Library nên tiến độ và nút huỷ dùng chung giao diện với mọi lượt index |
-| Re-index library | đọc lại từ đầu |
 | **Use Cellular Data for Indexing** | mặc định **tắt**; dòng phụ nói rõ mỗi ảnh chỉ tải vài trăm KB, và Wi-Fi thì luôn được phép |
 | **Keep Screen Awake While Indexing** | mặc định **tắt** |
-| Tiến độ | một hàng riêng, **không chạy hoạt ảnh** |
-| Lần index gần nhất | — |
-| **Indexed Photos and Videos** | `12,495 of 54,971`, gọn lại còn một số khi đã đọc hết; đang chạy thì lấy số sống từ tiến độ |
+| Thẻ **Your library** (đầu trang) | số ảnh/video đã index (`12,495 of 54,971`, gọn còn một số khi đọc hết, đang chạy lấy số sống từ tiến độ) · vạch tiến độ **không chạy hoạt ảnh** · lần index gần nhất · nút chữ **Re-index** (mờ khi đang chạy); đang chạy thì dưới vạch có Cancel, tốc độ, mạng, cảnh báo — [01b §1](01b-rows-and-root.md) |
 | Library Size | tổng dung lượng đã biết; chưa biết hết thì in kèm `~` vì con số mới là **sàn** |
 | Privacy | giải thích xử lý cục bộ + **Clear local metadata index** (phá huỷ, có hộp xác nhận) |
 

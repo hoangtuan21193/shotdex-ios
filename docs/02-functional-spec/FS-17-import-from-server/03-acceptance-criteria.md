@@ -1,6 +1,6 @@
 # FS-17.03 — Tiêu chí nghiệm thu
 
-`FS-17.03` · `ShotDexTests/ServerImport*Tests.swift` · `ShotDexUITests/scripts/server-import*.json` · cập nhật 2026-09-27
+`FS-17.03` · `ShotDexTests/ServerImport*Tests.swift` · `ShotDexUITests/scripts/server-import*.json` · cập nhật 2026-10-02
 
 Như FS-15: phần lớn chạy trên **server giả trong bộ nhớ** (`InMemoryRemoteFileClient` thêm range read) và
 **PhotoKit giả** (bộ ghi asset nhận yêu cầu tạo), nên đường hỏng kiểm được không cần mạng; phần Photos thật chạy
@@ -50,5 +50,17 @@ trên simulator với server giả lập 127.0.0.1.
 | AC-43 | PROPFIND có `quota-available-bytes` 750 và `quota-used-bytes` 250; bản thứ hai không có quota; `df -Pk` ra dòng `/dev/disk1 976490576 488245288 488245288 50% /home` | đọc | WebDAV tổng 1000 còn 750; không quota → nil; SFTP tổng 999 926 349 824, còn 499 963 174 912; `df` rác → nil | `StorageSpaceTests.webdavQuota` + `.sftpDiskFree` |
 | AC-44 | folder 12 ảnh, server báo còn 1.2 TB trên 4 TB; rồi server không trả lời dung lượng; rồi gốc SMB | xem footer | dòng hai "1.2 TB free of 4 TB"; không trả lời → chỉ dòng đếm; gốc SMB → không dòng dung lượng; lưới hiện trước khi có dung lượng | `ServerBrowserModelTests.storageLine` + ảnh `scripts/server-connect-as.json` (`35-picker-photos`: "5 folders" / "15.21 GB free of 152.09 GB", SMB impacket); WebDAV/SFTP thật ⚠️ chưa chụp |
 
-**Chưa chứng minh được** (verify 2026-09-30): AC-15 trên Duo (sim gập); AC-44 với WebDAV/SFTP thật; máy thật (iCloud, LAN thật). Các dòng RAW khác
+### Review UI 2/10 (FS-17.01 §1, §2a, §2b) — thêm 2026-10-02
+
+Nguồn: [intent ui-review-1002](../../_intents/2026-10-02-ui-review-1002.md); ID planboard cuối cột Cho.
+
+| # | Cho | Khi | Thì | Chứng minh bằng |
+|---|---|---|---|---|
+| AC-85 | Server Browser ở folder có 2 folder + 5 ảnh, chưa chọn (H4) | xem toolbar | phải: nút chữ **Select** rồi ⋯; ⋯ không còn dòng Select; vùng chạm Select ≥ 44pt; Duo ngoài 466pt: ‹ › Select ⋯ cùng hiện, tiêu đề cắt giữa | ⚠️ chưa có — dump `scripts/server-files-browser.json` (iPhone 17 26.5, iPad Pro 13") + `server-files-browser-186.json` (18.6); Duo ⚠️ chưa có |
+| AC-86 | folder chỉ có 3 folder con, 0 ảnh; và chế độ chọn folder ở `photos` (H4) | xem toolbar | folder không ảnh: Select mờ; chế độ chọn folder: không có Select | ⚠️ chưa có — `ServerBrowserModelTests.selectNeedsPhotosAndIsHiddenWhenChoosing` |
+| AC-87 | folder 3 ảnh, `A.CR3` In Library (H4) | Select, chạm `B`, `C` | `A` mang `photo.badge.checkmark` 14pt góc dưới-trái, **không** phải dấu ✓ trong vòng tròn; `B`, `C` mang ✓ accent góc dưới-phải; không ô nào có hai dấu ✓; VoiceOver của `A` có "In Library" | ⚠️ chưa có — ảnh `scripts/server-import-select.json` (26.5, 18.6) |
+| AC-88 | On Server, connection `NAS` có 7 dòng lịch sử (Q6) | nhấn giữ → Delete Connection | alert hai nút **Delete** đỏ + **Cancel**, cả hai thấy được trên iOS 26.5 và 18.6 (không popover); Cancel → hàng còn; Delete → hàng mất, 7 dòng lịch sử còn | ⚠️ chưa có — ảnh ui-drive mới `server-delete-confirm.json` (iPhone 17 26.5, iPhone 16 Pro 18.6, iPad) |
+| AC-89 | On Cloud, folder `Dropbox/Photos` có 1 ô Network (Q6) | vuốt → Remove | alert hai nút **Remove** đỏ + **Cancel**, câu "ShotDex stops using this folder. Nothing in the cloud or in your library is deleted."; Cancel → folder và ô Network còn | ⚠️ chưa có — ảnh ui-drive `server-delete-confirm.json` (cùng script AC-88) |
+
+**Chưa chứng minh được** (verify 2026-09-30): AC-85…89 (2026-10-02, chưa code); AC-15 trên Duo (sim gập); AC-44 với WebDAV/SFTP thật; máy thật (iCloud, LAN thật). Các dòng RAW khác
 đã đo trên 10 file mẫu (AC-3).

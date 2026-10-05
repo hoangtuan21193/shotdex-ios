@@ -1,0 +1,763 @@
+{
+ "title": "Plan FS-03.13…16 — chỗ spec và code lệch",
+ "context": "Bốn plan đã đối chiếu 175 tiêu chí với code thật. Các thẻ dưới đây là mọi chỗ code hôm nay làm khác spec (⚠️) cộng vài câu thiết kế plan phát hiện. Trả lời xong thì plan được duyệt và bắt đầu code từ task 1.",
+ "pages": [
+  {
+   "id": "fs13",
+   "title": "FS-03.13 — bố cục iPhone: spec và code đang lệch",
+   "intro": "Code hôm nay làm khác spec ở 5 chỗ. Mỗi chỗ: giữ theo tài liệu hay theo code?",
+   "decisions": [
+    {
+     "id": "E1",
+     "title": "[13·AC-12] Nhãn VoiceOver của nút histogram và ⋯ là “Histogram” / “More” (spec) hay “RGB histogram” / “More editor actions” (code)?",
+     "importance": "important",
+     "why": "Nhãn VoiceOver là thứ người khiếm thị nghe; đổi qua lại làm hỏng thói quen và test UI dựa trên nhãn.",
+     "proposal": "Giữ nhãn của code (dài, rõ nghĩa hơn khi nghe), sửa spec.",
+     "options": [
+      {
+       "id": "code",
+       "label": "Theo code: “RGB histogram”, “More editor actions”",
+       "pros": [
+        "Nghe rõ đây là histogram màu và menu của editor",
+        "Không đổi code, test cũ giữ nguyên"
+       ],
+       "cons": [
+        "Spec phải sửa AC-12"
+       ],
+       "effort": "S",
+       "recommended": true
+      },
+      {
+       "id": "doc",
+       "label": "Theo spec: “Histogram”, “More”",
+       "pros": [
+        "Ngắn"
+       ],
+       "cons": [
+        "“More” nghe mơ hồ khi đọc cả màn",
+        "Phải sửa code và test"
+       ],
+       "effort": "S"
+      }
+     ],
+     "tasks": [
+      "Sửa AC-12 — 13a-chrome-and-toolbar.md"
+     ]
+    },
+    {
+     "id": "E2",
+     "title": "[13·AC-13] Menu ⋯ có giữ Undo/Redo (code, cho tay cầm một tay) hay chỉ đúng 5 mục như spec?",
+     "importance": "important",
+     "why": "Undo/Redo đã có ở băng trên; lặp trong ⋯ làm menu dài. Nhưng code để đó có chủ ý vì nút trên cùng khó với bằng ngón cái.",
+     "proposal": "Bỏ Undo/Redo khỏi ⋯ (theo spec): băng trên đã có, và vuốt hai ngón cũng undo được.",
+     "options": [
+      {
+       "id": "doc",
+       "label": "Theo spec: bỏ khỏi ⋯",
+       "pros": [
+        "⋯ gọn 5 mục như đã chốt trên canvas",
+        "Một hành động một chỗ"
+       ],
+       "cons": [
+        "Người cầm một tay phải với lên góc trên-trái"
+       ],
+       "effort": "S",
+       "recommended": true
+      },
+      {
+       "id": "code",
+       "label": "Theo code: giữ trong ⋯",
+       "pros": [
+        "Có đường thứ hai gần hơn cho một tay"
+       ],
+       "cons": [
+        "Hai chỗ cho một việc; ⋯ dài 7 mục"
+       ],
+       "effort": "S"
+      }
+     ],
+     "tasks": [
+      "Bỏ Undo/Redo khỏi ⋯ — PhotoEditorScreen.swift",
+      "Giữ AC-13 — 13a"
+     ]
+    },
+    {
+     "id": "E3",
+     "title": "[13·AC-23] Nút Auto của Straighten ghi vào góc xoay khung crop (spec) hay vào slider Rotate của Geometry như Upright Level đang làm (code)?",
+     "importance": "important",
+     "why": "Hai chỗ lưu cho cùng một góc xoay thì Reset/Copy Edits xử lý khác nhau: Straighten thuộc crop (không chép sang ảnh khác), Geometry thì đi theo look.",
+     "proposal": "Ghi vào góc Straighten của crop (theo spec); Upright Level vẫn là việc của Upright.",
+     "options": [
+      {
+       "id": "doc",
+       "label": "Theo spec: ghi góc Straighten của crop",
+       "pros": [
+        "Slider Angle hiện đúng số vừa Auto",
+        "Không bị chép sang ảnh khác khi Copy Edits (crop không chép)"
+       ],
+       "cons": [
+        "Auto và Upright Level làm hai việc gần giống nhau"
+       ],
+       "effort": "S",
+       "recommended": true
+      },
+      {
+       "id": "code",
+       "label": "Theo code: ghi slider Rotate của Geometry",
+       "pros": [
+        "Một đường code dùng chung với Upright Level"
+       ],
+       "cons": [
+        "Slider Angle vẫn 0 sau khi Auto — người dùng tưởng không có gì",
+        "Góc xoay đi theo look sang ảnh khác"
+       ],
+       "effort": "S"
+      }
+     ],
+     "tasks": [
+      "Sửa hành vi Auto — Transform (13b)",
+      "Giữ AC-23"
+     ]
+    },
+    {
+     "id": "E4",
+     "title": "[13·AC-26] Tên mask mới là “Mask 1” kèm dòng phụ “Sky − Brush” (spec) hay “Brush 1”, “Radial 1” theo loại (code, FS-03.05 AC-18)?",
+     "importance": "important",
+     "why": "Tên là thứ hiện trên hàng “đang chọn ▼” và trong danh sách; mask nhiều vùng mà tên theo loại vùng đầu tiên sẽ sai khi thêm vùng khác.",
+     "proposal": "Theo spec: “Mask 1” + dòng phụ liệt kê các vùng; sửa FS-03.05 AC-18.",
+     "options": [
+      {
+       "id": "doc",
+       "label": "Theo spec: “Mask 1” + dòng phụ vùng",
+       "pros": [
+        "Đúng khi mask có nhiều vùng (Sky − Brush)",
+        "Giống Lightroom"
+       ],
+       "cons": [
+        "Mất thông tin loại ở tên chính (đã có ở dòng phụ)",
+        "Sửa FS-03.05 AC-18 và test"
+       ],
+       "effort": "S",
+       "recommended": true
+      },
+      {
+       "id": "code",
+       "label": "Theo code: “Brush 1”, “Radial 1”",
+       "pros": [
+        "Nhìn tên biết loại ngay"
+       ],
+       "cons": [
+        "Mask thêm vùng khác thì tên sai nghĩa"
+       ],
+       "effort": "S"
+      }
+     ],
+     "tasks": [
+      "Sửa đặt tên mask — PhotoEditorController.swift",
+      "Sửa AC-18 — 05-local-masks.md"
+     ]
+    },
+    {
+     "id": "E5",
+     "title": "[13·AC-40] Apply Previous trong menu Sync luôn hiện (mờ khi chưa có ảnh trước) hay chỉ hiện khi có (code)?",
+     "importance": "minor",
+     "why": "Menu đổi số mục theo trạng thái làm người dùng không nhớ vị trí; nhưng mục mờ cũng chiếm chỗ.",
+     "proposal": "Luôn hiện, mờ khi chưa có ảnh trước (theo spec) — menu luôn 4 mục.",
+     "options": [
+      {
+       "id": "doc",
+       "label": "Theo spec: luôn hiện, mờ khi chưa có",
+       "pros": [
+        "Vị trí các mục không nhảy",
+        "Người dùng biết tính năng tồn tại"
+       ],
+       "cons": [
+        "Một mục mờ vô dụng lúc đầu phiên"
+       ],
+       "effort": "S",
+       "recommended": true
+      },
+      {
+       "id": "code",
+       "label": "Theo code: chỉ hiện khi có ảnh trước",
+       "pros": [
+        "Menu gọn lúc đầu"
+       ],
+       "cons": [
+        "Menu đổi 3↔4 mục"
+       ],
+       "effort": "S"
+      }
+     ],
+     "tasks": [
+      "Sửa menu Sync — filmstrip (13d)"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "fs14",
+   "title": "FS-03.14 — trao đổi preset: spec và code đang lệch",
+   "intro": "4 chỗ lệch giữa spec và code hiện có của My Looks.",
+   "decisions": [
+    {
+     "id": "E6",
+     "title": "[14·AC-b1] Áp một look nhập từ Lightroom: thông số preset không nhắc tới thì về 0 (như look ShotDex hôm nay) hay giữ nguyên giá trị trên ảnh (spec)?",
+     "importance": "critical",
+     "why": "Preset Lightroom thường chỉ ghi vài thông số (ví dụ chỉ màu). Về 0 thì áp preset màu sẽ xoá luôn Exposure bạn đã chỉnh; giữ nguyên thì look ShotDex và look nhập chạy hai kiểu.",
+     "proposal": "Look nhập chỉ đổi đúng thông số preset ghi (giống Lightroom); look ShotDex tự lưu vẫn như hôm nay.",
+     "options": [
+      {
+       "id": "doc",
+       "label": "Chỉ đổi thông số preset có ghi",
+       "pros": [
+        "Giống hệt cách Lightroom áp preset",
+        "Không xoá chỉnh sửa người dùng đã làm"
+       ],
+       "cons": [
+        "Hai loại look áp theo hai luật; phải lưu danh sách thông số có ghi"
+       ],
+       "effort": "M",
+       "recommended": true
+      },
+      {
+       "id": "code",
+       "label": "Mọi thông số tone/màu/curve bị thay, cái không ghi về 0",
+       "pros": [
+        "Một luật cho mọi look"
+       ],
+       "cons": [
+        "Áp preset chỉ-màu sẽ xoá Exposure/Contrast đã chỉnh",
+        "Kết quả khác Lightroom"
+       ],
+       "effort": "S"
+      }
+     ],
+     "tasks": [
+      "Lưu tập thông số có ghi trong look nhập — kho look",
+      "Sửa áp look — PhotoEditorController"
+     ]
+    },
+    {
+     "id": "E7",
+     "title": "[14·AC-b5] Nhiệt độ màu RAW: thêm trường Kelvin/Tint tuyệt đối để nhận preset Lightroom, hay bỏ qua và báo “chưa có trong ShotDex”?",
+     "importance": "important",
+     "why": "ShotDex lưu độ lệch so với As Shot (±4000K); preset Lightroom cho RAW ghi số tuyệt đối (ví dụ 5200K). Bỏ qua thì preset có chỉnh WB sẽ lệch màu rõ.",
+     "proposal": "Thêm trường Kelvin/Tint tuyệt đối chỉ cho RAW; slider hiện số Kelvin thật.",
+     "options": [
+      {
+       "id": "add",
+       "label": "Thêm trường tuyệt đối cho RAW",
+       "pros": [
+        "Preset WB của Lightroom áp đúng",
+        "Slider hiện Kelvin thật như Lightroom"
+       ],
+       "cons": [
+        "Thêm trường vào recipe và chuyển đổi hai chiều",
+        "Việc thêm cho FS-03.15"
+       ],
+       "effort": "M",
+       "recommended": true
+      },
+      {
+       "id": "skip",
+       "label": "Bỏ qua, ghi ✕ trong báo cáo",
+       "pros": [
+        "Không đổi model"
+       ],
+       "cons": [
+        "Mọi preset có WB cho RAW bị lệch màu"
+       ],
+       "effort": "S"
+      }
+     ],
+     "tasks": [
+      "Thêm trường WB tuyệt đối RAW — PhotoEditingModels.swift",
+      "Map Temperature/Tint — bộ đọc XMP"
+     ]
+    },
+    {
+     "id": "E8",
+     "title": "[14·AC-c6] Đổi tên look trùng tên look khác: từ chối (spec) hay cho phép như hôm nay (code)?",
+     "importance": "minor",
+     "why": "Hai look cùng tên thì chọn nhầm và nhập preset trùng tên (luật thêm hậu tố) không còn nghĩa.",
+     "proposal": "Từ chối, gợi ý tên kèm hậu tố “(2)”.",
+     "options": [
+      {
+       "id": "doc",
+       "label": "Từ chối, gợi ý hậu tố",
+       "pros": [
+        "Không có hai ô cùng tên",
+        "Khớp luật nhập trùng tên"
+       ],
+       "cons": [
+        "Thêm một dòng báo lỗi trong ô đổi tên"
+       ],
+       "effort": "S",
+       "recommended": true
+      },
+      {
+       "id": "code",
+       "label": "Cho phép trùng",
+       "pros": [
+        "Không đổi gì"
+       ],
+       "cons": [
+        "Hai ô giống hệt nhau khó phân biệt"
+       ],
+       "effort": "S"
+      }
+     ],
+     "tasks": [
+      "Kiểm trùng khi Rename — kho look"
+     ]
+    },
+    {
+     "id": "E9",
+     "title": "[14·AC-c7] Banner “look added” hiện ở mọi màn hình có Undo ~4 giây (spec), hay dùng lại toast của editor (3 giây, chỉ trong editor)?",
+     "importance": "important",
+     "why": "AirDrop tới lúc bạn đang ở thư viện chứ không phải editor; dùng toast editor thì ngoài editor không có Undo.",
+     "proposal": "Làm một banner cấp app (mọi màn), ~4 giây, nút Undo.",
+     "options": [
+      {
+       "id": "doc",
+       "label": "Banner cấp app, Undo, ~4 giây",
+       "pros": [
+        "Thấy ở bất kỳ màn nào",
+        "Có Undo đúng như canvas"
+       ],
+       "cons": [
+        "Thêm một thành phần chung cho cả app"
+       ],
+       "effort": "M",
+       "recommended": true
+      },
+      {
+       "id": "code",
+       "label": "Dùng lại toast editor",
+       "pros": [
+        "Không thêm thành phần mới"
+       ],
+       "cons": [
+        "Ngoài editor không có Undo, không thấy thông báo"
+       ],
+       "effort": "S"
+      }
+     ],
+     "tasks": [
+      "Banner cấp app — RootTabView / App"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "fs15",
+   "title": "FS-03.15 — thông số Lightroom: spec và code đang lệch",
+   "intro": "5 câu, gồm một phát hiện lớn: pipeline render đang bị chép tay ở ba chỗ.",
+   "decisions": [
+    {
+     "id": "E10",
+     "title": "[15·AC-41] Trừ vùng khỏi mask: “hiện tại − vùng trừ” (code) hay “hiện tại × (1 − vùng trừ)” (spec)?",
+     "importance": "important",
+     "why": "Chỉ khác ở mép mềm: 0,8 trừ 0,5 ra 0,3 (code) hay 0,4 (spec). Cách code làm mép trừ bị khuyết sâu hơn; cách spec giống Lightroom và Photoshop hơn.",
+     "proposal": "Theo spec: nhân với phần bù — mép mềm giữ lại được, giống Lightroom.",
+     "options": [
+      {
+       "id": "doc",
+       "label": "Nhân phần bù (spec)",
+       "pros": [
+        "Mép vùng trừ mềm, không bị “ăn” quá",
+        "Khớp cách Lightroom ghép mask"
+       ],
+       "cons": [
+        "Mask cũ có vùng trừ mép mềm render khác chút (app chưa phát hành, chấp nhận được)"
+       ],
+       "effort": "S",
+       "recommended": true
+      },
+      {
+       "id": "code",
+       "label": "Trừ thẳng (code)",
+       "pros": [
+        "Không đổi kernel"
+       ],
+       "cons": [
+        "Mép trừ khuyết sâu; lệch Lightroom khi nhập preset"
+       ],
+       "effort": "S"
+      }
+     ],
+     "tasks": [
+      "Sửa kernel trừ mask — MaskKernels.ci.metal",
+      "Giữ AC-40/41 — 15d"
+     ]
+    },
+    {
+     "id": "E11",
+     "title": "[15·AC-24] Vẽ đường guide thứ 5 trong Upright Guided thì báo “Up to 4 guides” (15b) hay “4 of 4 drawn.” (13b)?",
+     "importance": "minor",
+     "why": "Hai spec ghi hai câu khác nhau cho cùng một lúc; phải chọn một.",
+     "proposal": "“Up to 4 guides” — nói luật, không chỉ nói trạng thái.",
+     "options": [
+      {
+       "id": "rule",
+       "label": "“Up to 4 guides”",
+       "pros": [
+        "Nói rõ giới hạn là bao nhiêu"
+       ],
+       "cons": [
+        "—"
+       ],
+       "effort": "S",
+       "recommended": true
+      },
+      {
+       "id": "state",
+       "label": "“4 of 4 drawn.”",
+       "pros": [
+        "Cho biết đang có mấy đường"
+       ],
+       "cons": [
+        "Không nói vì sao không vẽ thêm được"
+       ],
+       "effort": "S"
+      }
+     ],
+     "tasks": [
+      "Sửa AC-24 — 13b và 15b cho giống nhau"
+     ]
+    },
+    {
+     "id": "E12",
+     "title": "[15·AC-31] Mục tiêu “0,4 ± 2/255” của test Heal Opacity đo trong không gian tuyến tính (code ra 0,4) hay trên pixel sRGB (code ra ~0,46)?",
+     "importance": "minor",
+     "why": "Chọn sai thì test đỏ dù code đúng, hoặc xanh dù trộn sai. Core Image trộn trong không gian tuyến tính.",
+     "proposal": "Đo trong không gian làm việc tuyến tính; sửa câu chữ của AC-31.",
+     "options": [
+      {
+       "id": "linear",
+       "label": "Tuyến tính",
+       "pros": [
+        "Khớp cách Core Image và mọi pass khác làm",
+        "Code hôm nay đã đạt"
+       ],
+       "cons": [
+        "Con số không trùng giá trị pixel xem trên màn"
+       ],
+       "effort": "S",
+       "recommended": true
+      },
+      {
+       "id": "srgb",
+       "label": "Trên pixel sRGB",
+       "pros": [
+        "Trùng số người dùng đo bằng công cụ chọn màu"
+       ],
+       "cons": [
+        "Phải đổi cách trộn Opacity hoặc đổi mục tiêu thành ~0,46"
+       ],
+       "effort": "S"
+      }
+     ],
+     "tasks": [
+      "Sửa AC-31 — 15c"
+     ]
+    },
+    {
+     "id": "E13",
+     "title": "[15·AC-6] Dời B&W, Vignette, Grain ra khỏi khâu chỉnh chung: mask có còn ba slider này không, và video có đổi thứ tự theo không?",
+     "importance": "critical",
+     "why": "Hôm nay khâu chỉnh chung chạy cả trong từng mask, nên mask có B&W/Vignette/Grain. Dời ra thì mask mất ba slider đó; video Studio dùng lại khâu này.",
+     "proposal": "Mask bỏ Vignette và Grain (Lightroom cũng không có ở mask), giữ Saturation −100 thay cho B&W; video giữ thứ tự cũ tới khi FS-12 tự quyết.",
+     "options": [
+      {
+       "id": "drop",
+       "label": "Mask bỏ 3 slider; video giữ thứ tự cũ",
+       "pros": [
+        "Khớp Lightroom (mask không có Vignette/Grain/B&W)",
+        "Không đụng Video Studio"
+       ],
+       "cons": [
+        "Mask cũ có Grain cục bộ mất hiệu ứng",
+        "Hai thứ tự pipeline (ảnh/video) một thời gian"
+       ],
+       "effort": "M",
+       "recommended": true
+      },
+      {
+       "id": "keep",
+       "label": "Mask giữ 3 slider (chạy riêng cho mask)",
+       "pros": [
+        "Không mất tính năng nào"
+       ],
+       "cons": [
+        "Hai đường code cho cùng một hiệu ứng",
+        "Lệch Lightroom khi nhập/xuất"
+       ],
+       "effort": "L"
+      },
+      {
+       "id": "all",
+       "label": "Mask bỏ 3 slider; video đổi theo luôn",
+       "pros": [
+        "Một thứ tự cho mọi nơi"
+       ],
+       "cons": [
+        "Đụng Video Studio, phải test lại cả FS-12"
+       ],
+       "effort": "L"
+      }
+     ],
+     "tasks": [
+      "Tách pass B&W/Vignette/Grain — PhotoRenderService",
+      "Bỏ 3 slider khỏi danh sách mask — EditorAdjustmentCatalog.swift"
+     ]
+    },
+    {
+     "id": "E14",
+     "title": "[15] Hai cặp slider cùng tên “Distortion · Vignetting” trong Optics (cặp theo hồ sơ ống 0–200 và cặp chỉnh tay ±100): đổi tên một cặp?",
+     "importance": "important",
+     "why": "Cùng panel, cùng tên, hai nghĩa: người dùng không biết đang kéo cái nào; VoiceOver đọc trùng.",
+     "proposal": "Giữ tên như Lightroom: cặp hồ sơ nằm dưới nhãn nhóm “LENS PROFILE”, cặp tay dưới “MANUAL” — cùng tên nhưng khác nhóm, như Lightroom.",
+     "options": [
+      {
+       "id": "groups",
+       "label": "Giữ tên, tách bằng nhãn nhóm như Lightroom",
+       "pros": [
+        "Người quen Lightroom nhận ra ngay"
+       ],
+       "cons": [
+        "VoiceOver cần thêm tên nhóm vào nhãn"
+       ],
+       "effort": "S",
+       "recommended": true
+      },
+      {
+       "id": "rename",
+       "label": "Đổi tên cặp tay: “Manual Distortion”, “Lens Vignetting”",
+       "pros": [
+        "Không thể nhầm"
+       ],
+       "cons": [
+        "Tên dài, lệch Lightroom"
+       ],
+       "effort": "S"
+      }
+     ],
+     "tasks": [
+      "Sửa tên/nhóm — 15b, 16b",
+      "Nhãn VoiceOver kèm nhóm — Optics"
+     ]
+    },
+    {
+     "id": "E15",
+     "title": "[15] Pipeline render đang chép tay ở 3 chỗ (ảnh tĩnh, Live Photo, mask tự động): gộp làm một trước khi đổi thứ tự pass?",
+     "importance": "critical",
+     "why": "Không gộp thì đổi thứ tự pass ở ảnh tĩnh mà quên Live Photo — Live Photo lưu ra sẽ khác ảnh xem trong editor.",
+     "proposal": "Gộp thành một danh sách pass dùng chung, làm task đầu tiên của giai đoạn render.",
+     "options": [
+      {
+       "id": "merge",
+       "label": "Gộp trước (task riêng, đầu giai đoạn)",
+       "pros": [
+        "Một chỗ sửa cho mọi nơi",
+        "Test golden một lần"
+       ],
+       "cons": [
+        "Thêm 1 task lớn trước khi thấy tính năng mới"
+       ],
+       "effort": "M",
+       "recommended": true
+      },
+      {
+       "id": "parallel",
+       "label": "Sửa song song ba chỗ",
+       "pros": [
+        "Không có task tái cấu trúc"
+       ],
+       "cons": [
+        "Dễ lệch Live Photo; mỗi pass mới sửa 3 lần"
+       ],
+       "effort": "L"
+      }
+     ],
+     "tasks": [
+      "Thêm task gộp pipeline — plan FS-03.15, giai đoạn render"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "fs16",
+   "title": "FS-03.16 — nguồn sửa ống kính: spec và code đang lệch",
+   "intro": "4 câu, chủ yếu về bộ nhớ và luật không hạ độ phân giải khi kéo.",
+   "decisions": [
+    {
+     "id": "E16",
+     "title": "[16·AC-6] Tiêu chí “render trong extension tăng ≤ 10MB” khi không extension nào render ảnh qua kit, và nạp cả bảng ống kính đã tốn ~12–24MB?",
+     "importance": "important",
+     "why": "Giữ nguyên thì tiêu chí đỏ ngay; bỏ thì sau này thêm extension render sẽ vỡ bộ nhớ mà không ai biết.",
+     "proposal": "Đo trong tiến trình test và chỉ nạp phần bảng của ống đang dùng (nạp từng phần).",
+     "options": [
+      {
+       "id": "measure",
+       "label": "Đo trong test, nạp bảng từng phần",
+       "pros": [
+        "Giữ được trần bộ nhớ cho tương lai",
+        "App cũng nhẹ hơn"
+       ],
+       "cons": [
+        "Thêm việc tách bảng theo hãng/ống"
+       ],
+       "effort": "M",
+       "recommended": true
+      },
+      {
+       "id": "defer",
+       "label": "Hoãn tiêu chí (như D60)",
+       "pros": [
+        "Không thêm việc bây giờ"
+       ],
+       "cons": [
+        "Không ai giữ trần bộ nhớ"
+       ],
+       "effort": "S"
+      },
+      {
+       "id": "drop",
+       "label": "Bỏ tiêu chí",
+       "pros": [
+        "Gọn"
+       ],
+       "cons": [
+        "Mất rào chắn khi thêm extension"
+       ],
+       "effort": "S"
+      }
+     ],
+     "tasks": [
+      "Nạp bảng Lensfun từng phần — LensProfileLibrary.swift",
+      "Sửa AC-6 — 16"
+     ]
+    },
+    {
+     "id": "E17",
+     "title": "[16·AC-a9] Bù tối góc cho RAW khi kéo slider Vignetting: giải mã lại mỗi khung (hạ độ phân giải nháp), giữ sẵn bản tuyến tính (gấp đôi cache), hay bù sau cache (sai khi +1 EV)?",
+     "importance": "critical",
+     "why": "Luật FS-03.04: không hạ độ phân giải khi kéo. Nhưng bù đúng phải làm ở ánh sáng tuyến tính, trong lúc giải mã.",
+     "proposal": "Giữ sẵn một bản giải mã tuyến tính nửa độ chính xác (half-float); kéo slider chỉ nhân gain lên bản đó.",
+     "options": [
+      {
+       "id": "cache",
+       "label": "Giữ bản tuyến tính (~2× bộ nhớ cache)",
+       "pros": [
+        "Không hạ độ phân giải",
+        "Bù đúng ở ánh sáng tuyến tính"
+       ],
+       "cons": [
+        "Tốn thêm bộ nhớ khi mở RAW lớn"
+       ],
+       "effort": "M",
+       "recommended": true
+      },
+      {
+       "id": "redecode",
+       "label": "Giải mã lại mỗi khung như Exposure hôm nay",
+       "pros": [
+        "Không tốn thêm bộ nhớ"
+       ],
+       "cons": [
+        "Hạ độ phân giải nháp khi kéo — trái FS-03.04"
+       ],
+       "effort": "S"
+      },
+      {
+       "id": "after",
+       "label": "Bù sau cache",
+       "pros": [
+        "Đơn giản, nhanh"
+       ],
+       "cons": [
+        "Sai ở vùng sáng khi bù mạnh (trượt AC-a9 ở +1 EV)"
+       ],
+       "effort": "S"
+      }
+     ],
+     "tasks": [
+      "Cache RAW tuyến tính — PhotoRenderService (RAW)"
+     ]
+    },
+    {
+     "id": "E18",
+     "title": "[16] Sync “Everything” đang chép cả hồ sơ ống kính ảnh A sang ảnh B; spec nói không được. Sửa code hay sửa spec?",
+     "importance": "important",
+     "why": "Ảnh B có thể chụp ống khác; chép hồ sơ A sang là sửa méo sai.",
+     "proposal": "Sửa code: Sync giữ hồ sơ ống của từng ảnh, chỉ chép ba mức độ mạnh.",
+     "options": [
+      {
+       "id": "doc",
+       "label": "Theo spec: mỗi ảnh giữ hồ sơ riêng",
+       "pros": [
+        "Không sửa méo sai khi ảnh khác ống"
+       ],
+       "cons": [
+        "Sửa luật chép của Sync"
+       ],
+       "effort": "S",
+       "recommended": true
+      },
+      {
+       "id": "code",
+       "label": "Theo code: chép cả hồ sơ",
+       "pros": [
+        "Không đổi code"
+       ],
+       "cons": [
+        "Ảnh khác ống bị sửa sai"
+       ],
+       "effort": "S"
+      }
+     ],
+     "tasks": [
+      "Sửa luật chép — EditClipboard.swift"
+     ]
+    },
+    {
+     "id": "E19",
+     "title": "[16] RAW vừa mở: ghi nguồn sửa ống kính vào recipe ngay lúc mở, hay chỉ khi có lần chỉnh đầu tiên?",
+     "importance": "minor",
+     "why": "Ghi lúc mở thì mọi RAW vừa mở đều bị tính là “đã chỉnh” (hiện dấu, hỏi lưu khi thoát).",
+     "proposal": "Giải nguồn lúc mở nhưng chỉ giữ trong phiên; ghi vào recipe ở lần chỉnh đầu tiên.",
+     "options": [
+      {
+       "id": "lazy",
+       "label": "Ghi ở lần chỉnh đầu tiên",
+       "pros": [
+        "Ảnh chỉ mở xem không bị tính là đã chỉnh"
+       ],
+       "cons": [
+        "Phải giữ nguồn đã giải trong phiên"
+       ],
+       "effort": "S",
+       "recommended": true
+      },
+      {
+       "id": "eager",
+       "label": "Ghi ngay lúc mở",
+       "pros": [
+        "Đơn giản"
+       ],
+       "cons": [
+        "Mọi RAW mở ra đều thành “đã chỉnh”"
+       ],
+       "effort": "S"
+      }
+     ],
+     "tasks": [
+      "Giữ nguồn trong phiên — PhotoEditorController"
+     ]
+    }
+   ]
+  }
+ ]
+}

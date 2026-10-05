@@ -1,0 +1,171 @@
+# Vòng 1 — Các điểm cần quyết — FS-03.13…16
+
+Không còn gì cần sửa: có thể chốt plan.
+
+## Không OK (bỏ, không cần sửa) (11)
+
+- **D20** [13·Q16] Lối mở Manage Looks (chọn nhiều, sắp xếp, xoá look) đặt ở đâu? — trang fs13-presets
+  - Lựa chọn: Dòng trong ⋯ băng trên, khi ở My Looks (a)
+  - Ghi chú: không cần màn hình Manage Looks nên không cần cho vào ⋯  ở màn hình presets, My looks hay LUT, hold vào bất kỳ cái nào cũng sẽ hiện option rename, share, export as và delete. Option delete k hiện ở những preset có sẵn trong app.
+- **D22** [13·Q17b] Ô filmstrip bo góc 6 (như canvas) hay 8? — trang fs13-presets
+  - Ghi chú: bo góc 6
+- **D24** [13·Q19] Mở xoay ngang cho cả app, chỉ editor, hay các màn tầng D (editor, Collage, Video Studio)? — trang fs13-landscape
+  - Lựa chọn: Chỉ editor (b)
+  - Ghi chú: khoá iPhone chỉ dọc, editor cũng k xoay, chỉ dọc thôi
+- **D25** [13·Q20a] Điều kiện nào đưa iPhone ngang vào bố cục cột phải: theo kích thước cửa sổ hay theo loại máy? — trang fs13-landscape
+  - Lựa chọn: Theo cửa sổ (≥700 rộng, <600 cao, rộng > cao) (a)
+  - Ghi chú: khoá iPhone chỉ dọc, editor cũng k xoay, chỉ dọc thôi
+- **D26** [13·Q20b] Cột phải khi iPhone ngang rộng 330 (canvas) hay 320 (mặc định sidebar có sẵn)? — trang fs13-landscape
+  - Lựa chọn: 320 (token có sẵn) (a)
+  - Ghi chú: khoá iPhone chỉ dọc, editor cũng k xoay, chỉ dọc thôi
+- **D27** [13·Q20c] Ở iPhone ngang, histogram và filmstrip đặt ở đâu? — trang fs13-landscape
+  - Ghi chú: khoá iPhone chỉ dọc, editor cũng k xoay, chỉ dọc thôi
+- **D28** [13·Q21] Trên iPhone Pro Max xoay ngang, giữ lâu trên ảnh là xem gốc hay mở menu ngữ cảnh? — trang fs13-landscape
+  - Lựa chọn: Menu chỉ ở layout sidebar; iPhone ngang giữ = xem gốc (a)
+  - Ghi chú: khoá iPhone chỉ dọc, editor cũng k xoay, chỉ dọc thôi
+- **D32** [13·Q22.4] Trên Duo màn ngoài, đang trong một công cụ thì chạm vào 5 ô công cụ còn lại của cột làm gì? — trang fs13-duo
+  - Lựa chọn: Mờ 0,28, không nhận chạm (a)
+  - Ghi chú: ✓ và ✕ button phải hiện ở chỗ thanh công cụ chiều dọc ở Duo, nên sẽ k có ô chết
+- **D38** [14·6a] Rà soát pháp lý (chữ “Lightroom”, nhãn “(LR)”, dòng điều khoản) chặn bản phát hành nào? — trang fs14-legal
+  - Lựa chọn: TestFlight trước, chặn App Store (b)
+  - Ghi chú: dùng Import XMP Preset Export XMP Preset rồi có câu giải thích ngắn kiểu: "Export presets in XMP format for use with Adobe Lightroom."
+- **D45** [14·4a] Gói nhiều look dùng cùng loại file .shotdexlook, hay một loại riêng .shotdexlooks? — trang fs14-files
+  - Lựa chọn: Cùng loại, 1…N look mỗi file (a)
+  - Ghi chú: không cho phép share nhiều Look cùng một lúc nữa, nên chỉ cần .shotdexlook
+- **D66** [15c·12] Remove (tô lên vật để xoá) lấp vùng bằng thuật toán nào? — trang fs15-algorithms
+  - Lựa chọn: PatchMatch tự viết, kernel Core Image (A)
+  - Ghi chú: tạm bỏ nếu apple chưa hỗ trờ model nào
+
+## OK (66)
+
+- **D1** [13·Q1] Panel có được đổi chiều cao theo ảnh (344 / 264 / 315) thay vì cố định 264 không? — trang fs13-panel
+  - Lựa chọn: 344 / 264 / 315 theo phần đen của ảnh (a)
+- **D2** [13·Q2] Khi sửa nhiều ảnh cùng lúc, chiều cao panel tính theo ảnh nào? — trang fs13-panel
+  - Lựa chọn: Theo ảnh đang mở (a)
+- **D3** [13·Q3] Cụm nút băng trên cách mép màn 10pt (như canvas) hay 20pt (như luật cũ)? — trang fs13-panel
+  - Lựa chọn: Chờ số đo đảo thật rồi quyết (c) — KHÁC với đề xuất
+- **D4** [13·Q6] Thanh 6 công cụ có thay hẳn bánh xe nhóm ở mọi layout không sidebar, kể cả Duo màn ngoài? — trang fs13-panel
+  - Lựa chọn: Bỏ hẳn bánh xe (a)
+- **D5** [13·Q4] Mục “gọi lại bản đã lưu / đổi nguồn” của ⋯ hôm nay sẽ đi đâu? — trang fs13-chrome
+  - Lựa chọn: Thêm vào cuối ⋯ khi có (a)
+- **D6** [13·Q5] Giữ lâu trên ảnh để xem ảnh gốc có dùng được ở Presets không, hay chỉ ở Edit? — trang fs13-chrome
+  - Lựa chọn: Edit và Presets (b)
+- **D7** [13·Q7a] Chạm ✕ trong một công cụ có hỏi xác nhận không, và có Undo lại được không? — trang fs13-chrome
+  - Lựa chọn: Hỏi khi có ≥1 thay đổi (b)
+- **D8** [13·Q7b] Trong một công cụ, Undo dừng ở lúc vào công cụ hay lùi tiếp vào các bước trước đó? — trang fs13-chrome
+  - Lựa chọn: Dừng ở lúc vào (a)
+- **D9** [13·Q8a] Trên iPhone, Edit giữ 9 nhóm phẳng hay gom về 5 nhóm như sidebar iPad? — trang fs13-edit
+  - Lựa chọn: Hai mô hình: phone 9, sidebar 5 (a)
+- **D10** [13·Q8b] Nhóm chỉnh màu theo vùng tối/trung/sáng tên là “Grading” hay “Grade”? — trang fs13-edit
+  - Lựa chọn: Grading (a)
+- **D11** [13·Q9] Curve chuyển hẳn vào panel ở mọi layout, hay vẫn giữ kiểu vẽ đè lên ảnh như một tuỳ chọn? — trang fs13-edit
+  - Lựa chọn: Curve luôn trong panel (a)
+- **D12** [13·Q10] Sáu chip Upright (Off · Auto · Level · Vertical · Full · Guided) xếp thế nào khi không được cuộn ngang? — trang fs13-edit
+  - Lựa chọn: Hai hàng 3 + 3 (b) — KHÁC với đề xuất
+- **D13** [13·Q11] Straighten Tool: kéo một đường gần dọc (cột nhà, thân cây) thì dựng nó đứng thẳng hay bỏ qua? — trang fs13-edit
+  - Lựa chọn: Dựng đứng, như Lightroom (a)
+- **D14** [13·Q12 Transform] Trước khi FS-03.15 xong, các hàng Transform chưa làm được (Upright Auto, Guided, Aspect, Constrain Crop) hiện ra sao? — trang fs13-edit
+  - Lựa chọn: Không hiện, giữ chỗ trong thứ tự (a)
+- **D15** [13·Q13] Phủ đỏ của mask theo luật mới (hiện khi vẽ, mờ dần khi nhấc tay, chip Mask Overlay ghim lại) áp cho mọi layout hay chỉ iPhone? — trang fs13-mask
+  - Lựa chọn: Luật mới cho mọi layout (a)
+- **D16** [13·Q14] Thêm/trừ vùng vào một mask được chọn mọi loại vùng, hay chỉ 8 loại như canvas vẽ? — trang fs13-mask
+  - Lựa chọn: Mọi loại, dựng từ danh sách (a)
+- **D17** [13·Q12 Heal] Trước khi FS-03.15 xong, Heal theo bố cục mới hiện các hàng chưa có (Remove, Opacity, New Source, Visualize Spots, Spot Pins, Clear All) ra sao? — trang fs13-mask
+  - Lựa chọn: Không hiện, giữ chỗ trong thứ tự (a)
+- **D18** [13·Q15a] Bảy loại mực của bút Markup (Pen, Marker, Pencil, Fountain, Monoline, Watercolor, Crayon) chọn ở đâu khi không còn dải cuộn ngang? — trang fs13-mask
+  - Lựa chọn: Chấm màu mở trang con (lưới mực + bảng màu) (a)
+- **D19** [13·Q15b] Loại lớp khung thoại gọi là “Speech bubble” hay “Bubble”? — trang fs13-mask
+- **D21** [13·Q17a] Filmstrip khi sửa nhiều ảnh có thu từ 124pt (ô 96, viền accent) về 56pt (ô 44, viền trắng) không? — trang fs13-presets
+  - Lựa chọn: 56 / 44, viền trắng (a)
+- **D23** [13·Q18] Sync (áp chỉnh sửa sang các ảnh khác) có ở cả ⋯ lẫn cuối filmstrip, hay chỉ filmstrip? — trang fs13-presets
+  - Lựa chọn: Chỉ cuối filmstrip (a) — KHÁC với đề xuất
+- **D29** [13·Q22.1] Trên Duo màn ngoài (326pt), hàng “Mask 1 ▼ · Mask Overlay · + · ⋯” giữ nguyên hay rút chip thành “Overlay”? — trang fs13-duo
+  - Lựa chọn: Giữ “Mask Overlay”, đo trước (a)
+- **D30** [13·Q22.2] Nhãn ô trong cột công cụ Duo cỡ 9,5pt (canvas) hay 10,5pt (token nhãn tab có sẵn)? — trang fs13-duo
+  - Lựa chọn: 10,5 (token nhãn tab) (a)
+- **D31** [13·Q22.3] Danh sách slider trên Duo màn ngoài cố định 300pt hay đổi theo phần đen của ảnh như iPhone? — trang fs13-duo
+  - Lựa chọn: Cố định 300 (a)
+- **D33** [13·Q22.5] Băng trên của Duo màn ngoài có thêm histogram không? — trang fs13-duo
+  - Lựa chọn: Thêm histogram vào băng (a)
+- **D34** [14·1] Kho My Looks lưu ở đâu khi cần thêm thứ tự, nguồn, mã lượt nhận và có thể cả ảnh xem trước? — trang fs14-storage
+  - Lựa chọn: File JSON trong Application Support + thư mục ảnh (b)
+- **D35** [14·5b] Có giữ file preset Lightroom gốc cạnh mỗi look đã nhập, để sau này quy đổi lại không? — trang fs14-storage
+  - Lựa chọn: Giữ file gốc (a)
+- **D36** [14·5a] Ship tính năng nhập preset trước FS-03.15 hay chờ FS-03.15 xong? — trang fs14-storage
+  - Lựa chọn: Ship trước (a)
+- **D37** [14·11] Preset có mask (kể cả preset “adaptive” Sky/Subject của Lightroom): bỏ mask, hay map các mask tự sinh theo nội dung? — trang fs14-storage
+  - Lựa chọn: Bỏ hết mask (a)
+- **D39** [14·6b] Look nhập từ Lightroom mang nhãn “(LR)” hay “Imported”? — trang fs14-legal
+  - Lựa chọn: Imported (b) — KHÁC với đề xuất
+- **D40** [14·6c] Sheet xuất .xmp có thêm câu “không liên quan / không được Adobe bảo trợ” không? — trang fs14-legal
+  - Lựa chọn: Thêm một dòng (b) — KHÁC với đề xuất
+- **D41** [14·12] Ảnh xem trước nhúng trong file look khi chia sẻ: mặc định tắt, bật, hay bỏ hẳn? — trang fs14-legal
+  - Lựa chọn: Bỏ hẳn, máy nhận tự render (c) — KHÁC với đề xuất
+- **D42** [14·2] Đường “Add to ShotDex” từ Messages/Mail có cần một share extension có vùng chia sẻ với app (App Group) không? — trang fs14-receive
+  - Lựa chọn: Extension mới “Add to ShotDex” chỉ cho look (b)
+- **D43** [14·3] Share extension làm gì với file look nhận được? — trang fs14-receive
+  - Lựa chọn: Chỉ kiểm cỡ + chép byte (a)
+- **D44** [14·4c] File look mở từ AirDrop/Files được chép vào app rồi xoá, hay mở tại chỗ? — trang fs14-receive
+  - Lựa chọn: Chép vào, xoá sau khi nhập (a)
+- **D46** [14·4b] Loại file nhập .xmp, .lrtemplate, .cube khai theo định danh của chủ định dạng, hay định danh riêng của ShotDex? — trang fs14-files
+  - Lựa chọn: Định danh riêng com.hoangtuan.shotdex.imported.* (b)
+- **D47** [14·10] Xuất .shotdexlook cho một look dùng LUT đã nhập: nhúng bảng LUT vào file hay bỏ? — trang fs14-files
+  - Lựa chọn: Nhúng bảng .cube (a)
+- **D48** [14·7] Có nhận file zip preset không, và nếu có thì giải nén bằng gì? — trang fs14-import
+  - Lựa chọn: V1 không nhận zip (c)
+  - Ghi chú: không nhận, chỉ cho phép share 1 lần 1 look
+- **D49** [14·8] Có chốt nguyên bảng trần kích thước khi đọc preset (5 MB/file, DNG 200 MB, zip 50/500/250 MB, 500 preset/lượt, XML 64 tầng, Lua 32 tầng) không? — trang fs14-import
+- **D50** [14·9] Nhập một preset trùng tên với look đã có thì làm gì? — trang fs14-import
+  - Lựa chọn: Thêm hậu tố; trùng cả nội dung thì bỏ qua (a)
+- **D51** [15a·6] Curve vùng (Shadows · Darks · Lights · Highlights) nướng chung bảng tra với curve điểm, hay là một pass riêng trước Light? — trang fs15-pipeline
+  - Lựa chọn: Chung bảng tra với curve điểm (A)
+- **D52** [15a·5] Chuyển ảnh sang đen trắng (B&W) chạy đầu chuỗi như hôm nay, hay dời vào chặng Color sau cân bằng trắng và Light? — trang fs15-pipeline
+  - Lựa chọn: Dời vào chặng Color (A)
+- **D53** [15a·4] Calibration (dời ba màu cơ bản) chạy ngay sau Lens Blur, trước Light, hay chung chặng Color sau Light? — trang fs15-pipeline
+  - Lựa chọn: Sau Lens Blur, trước Light (A)
+- **D54** [15b·7] Tối góc ống kính chỉnh tay chạy trong không gian tuyến tính ngay sau Lens Blur, hay trong lượt Optics sau curve? — trang fs15-pipeline
+  - Lựa chọn: Tuyến tính, sau Lens Blur (A)
+- **D55** [15b·8] Vignette (Effects) và Grain dời ra sau crop và mask, hay giữ chạy trước crop như hôm nay? — trang fs15-pipeline
+  - Lựa chọn: Dời ra sau crop và mask (A)
+- **D56** [15·1] Chế độ nắn thẳng Upright (Auto/Level/Vertical/Full) có đi theo look khi Copy Edits, Sync, My Looks không? — trang fs15-data
+  - Lựa chọn: Đi theo, tính lại trên ảnh đích (A)
+- **D57** [15b·10] Upright lưu thành “chế độ + phép nắn đã giải” riêng, hay tiếp tục ghi thẳng vào ba slider Geometry? — trang fs15-data
+  - Lựa chọn: Lưu chế độ + phép nắn riêng (A)
+- **D58** [15d·18] Vùng chọn tự sinh (matte của Subject, People, Object… và bản đồ lấp của Remove) tính lại mỗi lần mở, hay lưu vào kho riêng? — trang fs15-data
+  - Lựa chọn: Lưu file matte trong kho riêng (B)
+- **D59** [15e·20] Có kèm model ước lượng độ sâu Depth Anything (~50 MB) để Lens Blur chạy cả trên ảnh không có bản đồ độ sâu không? — trang fs15-data
+  - Lựa chọn: Kèm vào app (A) — KHÁC với đề xuất
+- **D60** [15·2] Các pass render mới có phải vừa trần bộ nhớ extension (ảnh 12MP ≤ 120 MB) ngay từ bây giờ không? — trang fs15-limits
+  - Lựa chọn: Hoãn ràng buộc, ghi ở EX-01 (A)
+- **D61** [15·3] Lưu ảnh 100MP (Lens Blur + 3 vết Remove + 3 mask) được dùng tối đa bao nhiêu bộ nhớ? — trang fs15-limits
+  - Lựa chọn: ≤ 1,5 GB (a)
+- **D62** [15e·19] Lens Blur chạy đầu chuỗi nên mọi slider đều phải trả giá của nó — giữ mượt bằng cách nào? — trang fs15-limits
+  - Lựa chọn: Dựng sẵn 8 mức mờ, chỉ trộn khi kéo Amount (B) — KHÁC với đề xuất
+- **D63** [15c·13] Vết Remove được giải ở cỡ preview 2400px — khi lưu ảnh đầy đủ thì phóng bản đồ lên, hay giải lại ở độ phân giải đầy đủ? — trang fs15-limits
+  - Lựa chọn: Phóng bản đồ, tra pixel đầy đủ, vá mép (A)
+- **D64** [15b·9] Upright Auto dò đường thẳng trong ảnh bằng cách nào? — trang fs15-algorithms
+  - Lựa chọn: Vision tìm chân trời cho Level + bộ tự viết cho dọc (B) — KHÁC với đề xuất
+- **D65** [15b·11] Constrain Crop tắt thì phần góc trống sau khi nắn phối cảnh xử lý thế nào? — trang fs15-algorithms
+  - Lựa chọn: Tắt thì kéo giãn mép như hôm nay (A)
+- **D67** [15d·16] Mask Subject có đổi nghĩa thành “mọi đối tượng, không cần chạm”, để Object lo phần chạm chọn từng vật không? — trang fs15-mask-heal
+  - Lựa chọn: Subject = mọi đối tượng; Object = chạm từng vật (A)
+- **D68** [15d·17] Lưới chọn loại mask 4×3 đã đầy — thêm Object và People bằng cách dời Face Skin/Eyes/Lips vào People, hay mở lưới 4×4? — trang fs15-mask-heal
+  - Lựa chọn: Lưới 4×4, giữ ba ô khuôn mặt ngoài (B) — KHÁC với đề xuất
+- **D69** [15c·14] Sửa mắt đỏ: người dùng chạm vào từng mắt, hay có nút tự dò mọi con ngươi đỏ? — trang fs15-mask-heal
+  - Lựa chọn: Cả hai (C) — KHÁC với đề xuất
+- **D70** [15c·15] Red Eye đặt ở đâu trong giao diện? — trang fs15-mask-heal
+  - Lựa chọn: Ô thứ tư trong hàng chế độ Heal (A)
+- **D71** [16·1] Các trường sửa ống kính (ba mức độ mạnh, công tắc, nguồn đã giải) nằm ở đâu trong recipe? — trang fs16-data
+  - Lựa chọn: Như A, bỏ thang RAW cũ, một công tắc (C)
+- **D72** [16a·2] Dữ liệu sửa ống kính do hãng ghi trong file RAW: v1 đọc những hãng nào? — trang fs16-data
+  - Lựa chọn: Cả năm định dạng (B) — KHÁC với đề xuất
+- **D73** [16a·4] Sửa quang sai màu (viền đỏ/lam ở rìa ảnh) theo hồ sơ bằng một kernel mới, hay ba lượt warp? — trang fs16-data
+  - Lựa chọn: Kernel mới, gộp với méo một pass (A)
+- **D74** [16b·7] Bảng dữ liệu ống kính (Lensfun, thêm tối góc và quang sai màu) được phép lớn tới đâu trong app? — trang fs16-data
+  - Lựa chọn: JSON thô, trần 4 MB (A)
+- **D75** [16a·3] JPEG từ máy ảnh đã được máy sửa ống kính sẵn — ShotDex xử lý thế nào để không sửa hai lần? — trang fs16-behavior
+  - Lựa chọn: Đọc thẻ trạng thái; đã sửa thì không tự khớp và nói rõ (B)
+- **D76** [16a·5] Chip “Remove CA” hôm nay (khử viền màu nhẹ, không theo hồ sơ ống) giữ, bỏ, hay ẩn khi ảnh đã có dữ liệu CA theo hồ sơ? — trang fs16-behavior
+  - Lựa chọn: Giữ (A1)
+- **D77** [16b·6] RAW có dữ liệu ống kính nhúng, nhưng người dùng bấm Change chọn một ống khác — bên nào thắng? — trang fs16-behavior
+  - Lựa chọn: Như A, thêm lối quay về dữ liệu trong ảnh (C)

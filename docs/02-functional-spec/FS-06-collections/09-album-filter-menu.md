@@ -3,7 +3,7 @@
 `FS-06.09` · tier B · `Features/Albums/AlbumDetailScreen.swift` · `SmartAlbumDetailScreen` · cập nhật 2026-09-25
 
 **Một câu:** Album Detail (album người dùng, album hệ thống, Media Types) và Smart Album có **cùng một
-menu Filter như Library**, thay cho nút Sort riêng. On This Day và Memories **giữ nguyên**.
+menu Filter như Library**, thay cho nút Sort riêng. On This Day **giữ nguyên** (Memories đã bỏ 2026-09-27).
 
 ## 1. Người dùng cần gì
 
@@ -24,7 +24,7 @@ Nút Filter đã có ở Library thì phải có ở mọi lưới ảnh, và c�
 - Smart Album có thêm **Sort By** (hiện chỉ xếp mới nhất trước). Thứ tự nhớ theo từng album, như FS-06.01b §3.
 
 **Cố ý không có:**
-- On This Day, Memories, People and Pets, Trips, Duplicates — các màn này có luật riêng; người dùng yêu cầu
+- On This Day, People and Pets, Trips, Duplicates — các màn này có luật riêng; người dùng yêu cầu
   để yên.
 - Sắp theo thông số chụp (ISO, tiêu cự…) — Library cũng không đưa lên menu.
 
@@ -101,10 +101,10 @@ Nút Filter đã có ở Library thì phải có ở mọi lưới ảnh, và c�
 | AC-12 | album đang lọc Advanced ISO ≥ 3200 | bật Favorites | điều kiện Advanced bị xoá, chỉ còn chip `Favorite` | `AlbumFilterTests.quickAndAdvancedAreExclusive` + chụp tay 26.5 `t12-advanced-then-favorites-26.png` |
 | AC-13 | album đang lọc Favorites | chạm `x` trên chip | về All Items, hàng chip biến mất, hàng ảnh đầu không bị thanh trên che | chụp tay 26.5 `t6-chip-removed-26.png` |
 | AC-14 | quyền `.limited`, 5 trong 40 ảnh được cấp, 2 favorite | Favorites | 2 ô; biểu ngữ Manage vẫn hiện | ⚠️ chưa có ảnh — sim không đặt được quyền `.limited` bằng lệnh; code dùng chung biểu ngữ của Library |
-| AC-15 | Album, Smart Album, On This Day, Memories | chụp thanh trên, cả lúc chọn và không chọn | Album và Smart Album có nút Filter; On This Day và Memories không có | chụp tay 26.5 `t2-album-menu-26.png`, `t7-selecting-26.png`, `t13-on-this-day-26.png`; Memories: không có trên sim, màn dùng `PhotoListScreen` không có menu (đọc code) |
+| AC-15 | Album, Smart Album, On This Day | chụp thanh trên, cả lúc chọn và không chọn | Album và Smart Album có nút Filter; On This Day không có | chụp tay 26.5 `t2-album-menu-26.png`, `t7-selecting-26.png`, `t13-on-this-day-26.png` (phần Memories bỏ cùng tính năng, 2026-09-27) |
 | AC-16 | iOS 26.5 và 18.6, Duo trong | dump menu Filter và hàng chip của album đang lọc | cùng danh sách mục; hàng ảnh đầu nằm trọn dưới hàng chip | 18.6 `t14-album-menu-18.png`, `t14-album-selecting-18.png`; Duo ngoài `ShotDexUITests/scripts/album-filter-duo.json` + `Tools/sim-shot cover`. ⚠️ Duo trong chưa chụp — sim đang gập, không có lệnh mở |
 
-**Chưa chứng minh được:** AC-14 (không đặt được `.limited` trên sim), phần Duo trong của AC-16 (sim gập), phần Memories của AC-15 (sim không có memory). Số trong AC chứng minh bằng test với dữ liệu dựng sẵn; ảnh chụp dùng đúng 5–12 ảnh có trên sim.
+**Chưa chứng minh được:** AC-14 (không đặt được `.limited` trên sim), phần Duo trong của AC-16 (sim gập). Số trong AC chứng minh bằng test với dữ liệu dựng sẵn; ảnh chụp dùng đúng 5–12 ảnh có trên sim.
 
 ## 8. Rủi ro đã biết
 

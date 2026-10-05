@@ -1,7 +1,7 @@
 # FS-15.03 — Tiêu chí nghiệm thu
 
 `FS-15.03` · `ShotDexTests/ServerUpload*Tests.swift` · `ShotDexUITests/scripts/server-upload*.json`
-· cập nhật 2026-09-27
+· cập nhật 2026-10-02
 
 Luồng upload chạy trên một **server giả trong bộ nhớ** ở unit test, nên mọi đường hỏng (rớt mạng, checksum
 lệch, huỷ) kiểm được mà không cần mạng. Phần chỉ máy thật trả lời được nằm cuối bảng.
@@ -22,7 +22,7 @@ lệch, huỷ) kiểm được mà không cần mạng. Phần chỉ máy thật
 | AC-12 | thư viện có 3 ảnh đã upload trong 50 ảnh | mở Utilities | có hàng Uploaded to Server; mở ra thấy đúng 3 ảnh; 3 ô trên Library có dấu, 47 ô không | `ServerUploadStoreTests.uploadedIdsQuery` + `scripts/server-upload-run.json` (glyph trên 3 ô) + `scripts/server-upload-sftp-conflict.json` (hàng **On Server**, lưới 3 ảnh) + `scripts/server-upload-info.json` (dòng Photo Info), iPhone 17 iOS 26.5 |
 | AC-13 | form SFTP, host mới | Test Connection lần đầu | hộp Trust hiện dấu vân tay `SHA256:…`; Trust thì lưu; lần sau dấu vân tay khác → bị chặn với câu "identity … changed" | `FileServerHostKeyTests.trustThenMismatchBlocks` + `scripts/server-upload-sftp-conflict.json` (hộp Trust hiện đúng dấu vân tay `ssh-keygen -lf` của server) |
 | AC-14 | chọn 4 ảnh, đã có 2 connection | ⋯ → Upload to ▸ NAS | sheet mở ở bước chuẩn bị, connection là "NAS", Files là All Originals; cả nhánh iOS 26.5 và 18.6 | `ServerUploadModelTests.startsOnTheLastServerWithAllOriginals` + `scripts/server-upload-run.json` (iPhone 17 iOS 26.5) + `scripts/server-upload-verify.json` (`32-prepare`, iPhone 16 Pro iOS 18.6) + `scripts/server-upload-verify-ipad.json` (`32-prepare`, iPad Pro 13" iOS 26.5); Duo ⚠️ chưa có |
-| AC-15 | đang đẩy | app ra nền, hoặc lô xong, hoặc huỷ | màn hình tự khoá lại được (không còn bị giữ sáng) ở cả ba lối | `ServerUploadModelTests.idleTimerRestoredOnEveryExit` |
+| AC-15 | đang đẩy **trước iOS 26** (hoặc iOS 26 bị hệ thống từ chối chạy nền) | app ra nền, hoặc lô xong, hoặc huỷ | màn hình tự khoá lại được (không còn bị giữ sáng) ở cả ba lối; iOS 26 được chạy nền: xem AC-54…57 ở [FS-15.03b](03b-acceptance-criteria-ui-review.md) | `ServerUploadModelTests.idleTimerRestoredOnEveryExit` (cần sửa: hiện test chạy theo luật cũ "ra nền là dừng" cho mọi nhánh) |
 | AC-16 | iPhone thật + Mac này (SMB và SFTP), 20 RAW ProRAW, một phần chỉ có trên iCloud | đẩy rồi Delete | 20 file trên Mac khớp `shasum -a 256`; hộp Local Network hiện đúng lúc Test Connection; ảnh vào Recently Deleted | một phần: simulator → SMB/SFTP giả lập trên Mac, CR3 32 MB khớp `shasum -a 256`, Keep Both ra `IMG_0001 (2).JPG`; máy thật, iCloud-only, hộp Local Network, Delete ⚠️ chưa có |
 | AC-17 | như AC-1 nhưng **Date Folders tắt** | dựng đường dẫn | `Photos/IMG_1234.CR3`; bản sửa `Photos/IMG_1234_edited.JPG` | `ServerUploadPathTests.flatPathWithoutDateFolders` |
 | AC-18 | đã có connection tên `nas.local` và `NAS` | lưu connection mới host `nas.local` tên trống; rồi một cái tên `nas` | tên thành `nas.local (2)` và `nas (2)`; sửa một connection mà giữ tên cũ thì **không** bị đánh số | `FileServerNamingTests.duplicateNamesGetNumbered` + `ServerUploadStoreTests.saveNumbersDuplicateName` + `scripts/server-upload-verify.json` (iPhone 16 Pro iOS 18.6: cùng server thêm 2 lần, tên trống → `127.0.0.1` và `127.0.0.1 (2)`) |
@@ -85,3 +85,6 @@ chạy với server SFTP giả lập.
 
 **Server giả lập cho các script** (chỉ nghe 127.0.0.1): `smbserver.py -smb2support -username tester -password
 secret -port 4450 -ip 127.0.0.1 photos <thư mục>` (impacket) và một SFTP asyncssh ở cổng 2222, user `tester`.
+
+AC-54…83 (chạy nền, dò trùng tên, lô dở, Add Connection, Free Up Space, hộp xoá, form chưa lưu — review UI 2026-10-02):
+[FS-15.03b](03b-acceptance-criteria-ui-review.md).

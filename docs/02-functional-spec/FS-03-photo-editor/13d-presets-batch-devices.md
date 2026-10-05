@@ -44,6 +44,10 @@ chia sẻ look: [FS-03.14](14-lightroom-preset-exchange.md). Phiên nhiều ản
 
 ## 3. Duo màn ngoài
 
+> **2026-10-01: mục này và AC-44/45 bị thay bởi [FS-03.17c](17c-duo-cover.md)** — dải 84 bên phải dùng được khi editor
+> ẩn status bar; công cụ, Save, ✕/✓ chuyển vào dải.
+
+
 - Vùng app 382×644 (rail iOS 84 bên phải, đáy 34). **Cột công cụ 56** ở x 326–382, trong vùng an toàn, sát rail:
   **Save** 36 accent trên cùng, rồi 6 ô công cụ 52×54 xếp dọc, vạch 16×2 dưới ô đang chọn.
 - Nhãn ô cột **10,5pt** (token nhãn tab). "Transform" phải vừa ô 52; đo thấy cắt mới thêm token 9,5 vào `DESIGN.md`.

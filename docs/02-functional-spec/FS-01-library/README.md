@@ -15,8 +15,10 @@ bằng rule, chọn hàng loạt rồi làm gì đó với chúng.
 | 01b | [Engine lưới, pinch và cử chỉ](01b-grid-engine-and-gestures.md) | layout tự viết, zoom liên tục, lưới theo tỉ lệ, section, vuốt chọn, nhãn tile |
 | 02 | [Nav bar và thanh điều kiện](02-navigation-and-condition-bar.md) | chrome kính, lề trên của lưới, chip điều kiện |
 | 03 | [Tìm kiếm](03-search.md) | query DSL, parser câu tự nhiên, AI translator iOS 26, màn search |
+| 03b | [Khung giờ, từ không hiểu, Recents màn rộng](03b-time-of-day-and-acceptance.md) | night/golden/blue hour, chip mời tìm tên file, dòng Try:, Recents regular; AC của tìm kiếm |
 | 04 | [Tìm theo địa điểm](04-place-search.md) | cột place, lưới geocode ~110m, pass riêng, giới hạn |
 | 05 | [Lọc và sắp xếp](05-filtering-and-sorting.md) | Advanced Search, media type, capture kind, các trục lọc, sort |
+| 05b | [Camera/Lens, dữ liệu thiếu, sheet](05b-gear-menu-missing-data-and-sheet.md) | menu Camera ▸ Lens ▸, is missing + Location, bố cục và nháp Advanced Search; AC |
 | 06 | [Chọn nhiều ảnh](06-multi-select.md) | overlay toàn màn, vuốt chọn, context menu, bộ điều phối hành động ảnh |
 | 07 | [Khôi phục trạng thái](07-state-restoration.md) | cái gì là scene state, cái gì là preference |
 | 08 | [Compare](08-compare.md) | nhiều card cùng zoom, chạm để đánh dấu xoá |

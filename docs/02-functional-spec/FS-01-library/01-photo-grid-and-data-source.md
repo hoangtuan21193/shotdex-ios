@@ -13,7 +13,7 @@ Engine lưới, pinch, section và nhãn tile: [FS-01.01b](01b-grid-engine-and-g
   (~200 KB cho 1.000 ảnh); ô lưới được tái dùng nên bộ nhớ phẳng dù cuộn tới đâu.
 - **Ảnh hiện trước, metadata điền sau.**
 - **Không truy vấn database trên mỗi ô.**
-- **Lưới không được nhảy**: mọi lần nạp lại phải giữ chỗ đọc, trừ bốn ca ở §5.
+- **Lưới không được nhảy**: mọi lần nạp lại phải giữ chỗ đọc, trừ năm ca ở §5.
 - **Chỉ hiển thị giá trị có thật** — không có placeholder kiểu `ISO -- · --mm · f/--`.
 
 ## 2. Ảnh ở đâu ra
@@ -92,6 +92,8 @@ Chỉ chạy **khi lưới đang trống**.
   nguyên, không xin lại thumbnail. Kiểm chứng trượt thì rơi về đường nạp lại.
 - **Chỉ neo lại về đầu** khi: lần layout đầu · chạm lại tab · danh sách mới rỗng · hoặc người dùng **đang
   đứng sẵn ở đầu neo** (Library: trong một màn hình tính từ đáy; lưới neo đỉnh: đúng ở đỉnh).
+- **Đóng viewer**: ô của ảnh vừa xem không thấy trọn thì lưới cuộn một lần, không hoạt ảnh, cho ô nằm giữa vùng
+  nhìn ([FS-02.01b](../FS-02-photo-detail/01b-closing-and-keyboard.md) §1). Ô đã thấy trọn thì đứng yên.
 
 ## 6. Tiêu chí nghiệm thu
 

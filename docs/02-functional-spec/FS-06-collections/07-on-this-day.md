@@ -1,7 +1,7 @@
 # FS-06.07 — On This Day
 
 `FS-06.07` · `Features/Albums/OnThisDayScreen.swift` · `Domain/OnThisDay/`
-· `App/OnThisDayNotificationScheduler.swift` · cập nhật 2026-09-22
+· `App/OnThisDayNotificationScheduler.swift` · cập nhật 2026-10-02
 
 **Một câu:** ảnh chụp đúng ngày này ở những năm trước, cộng một lời nhắc hằng ngày nói chúng chiếm bao nhiêu
 dung lượng.
@@ -51,6 +51,13 @@ thay đổi bất kỳ", vì tín hiệu đó bắn mỗi giây trong lúc tải
   ra danh sách **cùng số lượng** nên lưới không thể chỉ dựa vào số lượng) và "nội dung ô đổi" (bật favorite,
   ảnh vừa được index sau khi tải từ iCloud).
 - Đổi ngày: nút lịch mở một bảng chọn ngày dạng lịch + nút "Today"; **chỉ tháng và ngày** được dùng để so khớp.
+  - Bảng có **hai nấc: cao 440pt và toàn màn** (Q8). 440pt chứa trọn lịch tháng 6 hàng + thanh Today/Done.
+    *Vì nấc nửa màn ở 678pt (Duo cover) cắt lịch mà không cuộn được.*
+  - Duo inner (cao 669, compact height) và iPad: hệ thống bỏ nấc, bảng toàn màn / form sheet, vẫn có Done.
+  - Board: chưa có board cho bảng này (`*_OnThisDay` chỉ vẽ màn chi tiết).
+- **Đóng viewer thì lưới đưa tới ảnh vừa xem** (Q7), cùng luật với Library: ô của ảnh cuối cùng đang hiện trong
+  viewer không thấy trọn thì lưới cuộn, không hoạt ảnh, để ô đó thấy trọn giữa thanh trên và đáy; ô đã thấy trọn
+  thì lưới đứng yên.
 - Chọn nhiều: thanh đáy **giống các album khác**. Lựa chọn lưu **theo thứ tự chạm** nên thumbnail xem trước
   và các khung Compare theo đúng thứ tự người dùng chọn.
 
@@ -95,4 +102,15 @@ dùng chủ động vào xoá, giải phóng máy.
 
 ## 7. Tiêu chí nghiệm thu
 
-**Chưa viết.** Xem [README — Việc còn nợ](../../README.md#6-việc-còn-nợ).
+Phần cũ (§1–§6: cửa sổ ngày, ảnh bìa, nạp lại, lời nhắc) **chưa gắn AC** dù có `OnThisDayWindowsTests`,
+`OnThisDayQueriesTests`, `OnThisDayNotificationScheduleTests`, `OnThisDayNotificationCopyTests` — xem
+[README — Việc còn nợ](../../README.md#6-việc-còn-nợ).
+
+| # | Cho | Khi | Thì | Chứng minh bằng |
+|---|---|---|---|---|
+| AC-1 | (Q8) màn chi tiết ngày 14/9, iPhone 402×874 | chạm nút lịch | bảng cao 440pt; lịch tháng hiện trọn 6 hàng, Today và Done thấy được; kéo bảng lên thì thành toàn màn | ⚠️ chưa có — đề xuất script `onthisday-date-picker.json` |
+| AC-2 | (Q8) như AC-1, tháng hiển thị cần 6 hàng (ví dụ 3/2024) | mở bảng trên Duo cover 466×678 | 6 hàng ngày và thanh Today/Done thấy trọn, không cần cuộn; chạm ngày 31 chọn được | ⚠️ chưa có — chụp bằng `Tools/sim-shot … cover` |
+| AC-3 | (Q8) như AC-1 | mở bảng trên Duo inner 951×669 và iPad 1376×1032 | bảng toàn màn / form sheet; lịch không bị cắt; Done đóng bảng và ngày mới áp lên màn | ⚠️ chưa có |
+| AC-4 | (Q7) ngày có 120 ảnh trong 3 năm, lưới density 3 | mở ảnh thứ 10, vuốt sang 40 ảnh (tới ảnh thứ 50, năm khác), đóng viewer | ô ảnh thứ 50 thấy trọn trên lưới, không nằm dưới thanh trên hay đáy | ⚠️ chưa có |
+| AC-5 | (Q7) như AC-4 | mở ảnh thứ 10, vuốt 1 ảnh (ô ảnh 11 đang thấy trọn), đóng viewer | độ lệch cuộn của lưới không đổi (0pt) | ⚠️ chưa có |
+| AC-6 | (Q7) như AC-4 | mở ảnh thứ 50, xoá nó trong viewer (viewer sang ảnh 51), đóng viewer | ô ảnh 51 thấy trọn; ảnh 50 không còn trong lưới | ⚠️ chưa có |

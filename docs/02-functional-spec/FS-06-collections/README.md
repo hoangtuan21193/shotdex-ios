@@ -13,7 +13,7 @@ dùng tự lưu.
 | 01 | [Bố cục tab](01-tabs-tokens-and-album-management.md) | hàng hero, tile cover, Media Types, Utilities, Customize, Pinned |
 | 01b | [Album Detail, quản lý và Creations](01b-album-management-and-creations.md) | paging, sort theo album, rename/delete, Collages + Video Projects, kéo thả |
 | 02 | [Places](02-places-map.md) | gom cụm theo lưới độ, nhãn pin |
-| 03 | [Memories và dựng phim](03-memories-and-movie-builder.md) | màn danh sách ảnh, bộ dựng memory, nút film |
+| 03 | [Danh sách ảnh và dựng phim](03-photo-list-and-movie-builder.md) | màn danh sách ảnh, nút film; Memories đã bỏ |
 | 04 | [People and Pets](04-people-and-pets.md) | pass Vision opt-in — chỉ đếm, không nhận diện |
 | 05 | [Trips](05-trips.md) | định nghĩa "nhà", khoảng hở, gộp chuyến |
 | 06 | [Duplicates](06-duplicates.md) | perceptual hash, ba mức, cache, merge, xoá, tab Bursts (4 AC) |
@@ -27,7 +27,7 @@ dùng tự lưu.
 - Thứ **nhận ra bằng ảnh** thì làm tile cover; thứ **chọn từ danh sách biết trước** thì làm hàng.
 - Mọi thứ đắt (quét Vision, hash, geocode) là **pass riêng người dùng tự bấm**, resume được, cancel được —
   không bao giờ nằm trong index pass.
-- App **không đoán hộ**: Memories chỉ dựng từ chuyến đi / năm / nơi; Duplicates không tự chọn tấm nào xoá;
+- App **không đoán hộ**: không có Memories tự dựng (đã bỏ, xem FS-06.03 §3); Duplicates không tự chọn tấm nào xoá;
   People and Pets chỉ đếm.
 - Lưới trong mọi màn con là lưới ảnh dùng chung dùng chung
   ([FS-01](../FS-01-library/README.md)).

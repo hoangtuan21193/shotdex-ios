@@ -1,7 +1,7 @@
 # FS-17.01 — Duyệt ảnh trên server
 
 `FS-17.01` · `Features/ServerImport/ServerBrowserScreen.swift` · `ServerPhotoGrid` · `Domain/ServerImport/`
-· cập nhật 2026-09-27
+· cập nhật 2026-10-02
 
 **Một câu:** folder trên server hiện như Library — folder con ở trên, lưới ảnh bên dưới, thumbnail từ preview
 nhúng, chọn nhiều như Library.
@@ -14,9 +14,12 @@ nhúng, chọn nhiều như Library.
 | Section | Nội dung |
 |---|---|
 | Connections | mỗi connection một hàng: tên, dưới là đường dẫn folder (`FileServerRow`, FS-15.01 §2) · chạm → duyệt, mở ở **Folder của connection**; lên cha bằng menu tiêu đề (§2a) · **nhấn giữ** → Edit Connection / Delete Connection; **vuốt** → Edit, Delete (đổi 2026-09-27: trước chỉ sửa được trong Settings) |
-| (không tiêu đề) | **Uploaded from This Device** · số ảnh → màn Uploaded to Server hiện có (FS-15.02 §8); ẩn khi 0 |
+| (không tiêu đề) | **Uploaded from This Device** · số ảnh → màn Uploaded to Server (FS-15.02c); ẩn khi 0 |
 
-- Toolbar màn On Server: **+** → Add Connection (FS-15.04).
+- Toolbar màn On Server: **+** → Add Connection (FS-15.04). Form chưa lưu không vuốt đóng được (FS-15.01 §3, C1).
+- Delete Connection (nhấn giữ hoặc vuốt) → **alert hai nút** **Delete** đỏ + **Cancel**, cùng câu với Settings
+  (FS-15.01 §2); không dùng hộp kiểu action sheet — iOS 26 ẩn Cancel của nó (Q6). Remove ở On Cloud theo cùng luật.
+  Board: chưa có board On Server / On Cloud — cần vẽ.
 
 ## 2. Màn duyệt — kiểu app Files
 
@@ -30,6 +33,7 @@ folder** ở sheet upload và form connection (§5).
 |---|---|
 | Mở ra ở | **Folder của connection** (ô Folder trong form). Folder rỗng = gốc |
 | Toolbar trái | **‹ Back** (`chevron.backward`) và **› Forward** (`chevron.forward`), cạnh nhau, vùng chạm 44pt. Nút Back của hệ thống ẩn |
+| Toolbar phải | nút chữ **Select** rồi **⋯** (H4) — như Library, không giấu Select trong ⋯. Select mờ khi folder không có ảnh; không có ở chế độ chọn folder (§5). Duo ngoài 466pt: tiêu đề cắt giữa trước, ‹ › Select ⋯ luôn đủ 44pt |
 | Back | về folder **trước đó trong lịch sử**. Đang ở đầu lịch sử → rời màn (về On Server / về bước trước) |
 | Forward | đi lại folder vừa Back khỏi; mờ khi không có. Mở một folder mới sau khi Back → xoá nhánh Forward (như trình duyệt) |
 | Tiêu đề | tên folder đang mở; chạm → menu các **folder cha** tới gốc (như Files), chọn một cái là đi tới đó (vào lịch sử như mở folder) |
@@ -68,8 +72,11 @@ folder** ở sheet upload và form connection (§5).
 - **Ghép cặp**: file RAW và file JPEG/JPG/HEIC/HEIF cùng tên gốc (không phân biệt hoa thường) trong cùng folder →
   **một mục**, nhãn `RAW+JPG` / `RAW+HEIC`; thumbnail lấy từ file không-RAW.
 - Nhãn định dạng trên ô: cùng kiểu nhãn Library (`RAW`, `JPG`, `HEIC`, `PNG`, `TIFF`, `DNG`…).
-- Dấu **In Library** (glyph `checkmark.circle.fill` nhỏ góc dưới-trái, VoiceOver "In Library") khi ảnh đã có (FS-17
-  §4).
+- Dấu **In Library** khi ảnh đã có (FS-17 §4): glyph `photo.badge.checkmark` trắng trên đĩa tối mờ, 14pt, góc
+  dưới-trái ô; VoiceOver "In Library" (H4, K31). Cùng dấu ở cuối hàng List.
+- **Không** dùng hình dấu ✓ trong vòng tròn cho In Library: đó là dấu đã chọn ở góc dưới-phải lúc Select.
+
+Board: `PH_ServerBrowser`, `IP_ServerBrowser`, `DI_ServerBrowser`, `DC_ServerBrowser` (Select ở toolbar, glyph In Library).
 
 ### 2c. Menu ⋯ (toolbar phải)
 
@@ -77,7 +84,7 @@ Thứ tự theo menu ⋯ của Files:
 
 | Nhóm | Mục |
 |---|---|
-| 1 | **Select** · **New Folder** |
+| 1 | **New Folder** (Select đã ra toolbar, §2a) |
 | 2 | **Icons** / **List** (chọn một, có icon `square.grid.2x2` / `list.bullet`) |
 | 3 | **Sort By ▸** Name · Date Taken · Date Modified · Size — mục đang chọn có chevron chiều; chọn lại mục đang chọn là **đảo chiều** (như Files) |
 | 4 | **View Options ▸** Show All Files (công tắc, mặc định tắt) |
@@ -141,7 +148,7 @@ px trong 256 KB; CR3 1620 px, ARW 1616 px, ORF 3200 px, RW2 trong 1 MB; RAF 4416
 
 ### 4a. Chọn nhiều
 
-- ⋯ → **Select** → chế độ chọn giống Library: chạm để chọn/bỏ, vuốt để chọn dải, **Select All** / **Deselect All**
+- Nút **Select** trên toolbar → chế độ chọn giống Library: chạm để chọn/bỏ, vuốt để chọn dải, **Select All** / **Deselect All**
   (trái toolbar, như Files; phải là **Done**), số đã chọn ở tiêu đề. Ảnh ghép cặp = một lựa chọn. Folder và file không
   phải ảnh không chọn được và hiện mờ trong lúc chọn; menu tiêu đề tắt.
 - Thanh dưới: **Import to Library** (`arrow.down.circle`; có số: "Import 3 to Library") và **Delete** (`trash`, đỏ) — cả hai mờ khi 0. Ảnh "In Library" chọn được nhưng

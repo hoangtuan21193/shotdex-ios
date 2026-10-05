@@ -1,0 +1,114 @@
+{
+  "C1": {
+    "verdict": "ok"
+  },
+  "C2": {
+    "verdict": "not_ok",
+    "comment": "sao không để vị trí chỗ hiện índexing\n"
+  },
+  "C3": {
+    "verdict": "ok"
+  },
+  "C4": {
+    "verdict": "ok"
+  },
+  "C5": {
+    "verdict": "ok",
+    "option": "c"
+  },
+  "R1": {
+    "verdict": "ok"
+  },
+  "R2": {
+    "verdict": "not_ok",
+    "comment": "câu hỏi k rõ ràng, không hiểu mục đích là gì\n"
+  },
+  "R3": {
+    "verdict": "ok"
+  },
+  "R4": {
+    "verdict": "ok"
+  },
+  "R5": {
+    "verdict": "not_ok",
+    "comment": "phải cho chọn exit raw hay jpg trước khi vào màn hình exit\n"
+  },
+  "R6": {
+    "verdict": "not_ok",
+    "comment": "sao k hiện thông báo là đang chọn ảnh raw, rồi hỏi có muốn convert sang jpg trước khi chỉnh video không?"
+  },
+  "P1": {
+    "verdict": "not_ok",
+    "option": "c",
+    "comment": "không hiểu, vẽ design cho màn hình này cho dễ hình dung"
+  },
+  "P2": {
+    "verdict": "ok"
+  },
+  "P3": {
+    "verdict": "ok"
+  },
+  "P4": {
+    "verdict": "ok",
+    "option": "b"
+  },
+  "P5": {
+    "verdict": "ok"
+  },
+  "P6": {
+    "verdict": "ok"
+  },
+  "P7": {
+    "verdict": "ok"
+  },
+  "P8": {
+    "verdict": "ok"
+  },
+  "S1": {
+    "verdict": "ok",
+    "comment": "chart này phải cho phép người dùng xoá được, không phải cố định"
+  },
+  "S2": {
+    "verdict": "ok"
+  },
+  "S3": {
+    "verdict": "ok",
+    "option": "c"
+  },
+  "S4": {
+    "verdict": "ok"
+  },
+  "S5": {
+    "verdict": "ok",
+    "option": "b"
+  },
+  "S6": {
+    "verdict": "ok",
+    "option": "c"
+  },
+  "S7": {
+    "verdict": "ok"
+  },
+  "S8": {
+    "verdict": "ok",
+    "option": "b"
+  },
+  "B1": {
+    "verdict": "ok"
+  },
+  "B2": {
+    "verdict": "ok"
+  },
+  "B3": {
+    "verdict": "ok"
+  },
+  "B4": {
+    "verdict": "ok",
+    "option": "b"
+  },
+  "B5": {
+    "verdict": "not_ok",
+    "option": "c",
+    "comment": "tôi k hiểu chức năng Chọn khung burst dùng khi nào? có ở trong utility duplicate rồi mà, thèm một Tab vào duplicate không được à. sửa lại kill planboard luôn, câu hỏi luôn phải có hình minh hoạ cho dễ hiểu"
+  }
+}

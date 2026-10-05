@@ -28,7 +28,7 @@ Cùng một ảnh luôn rơi vào cùng ô ở cùng mức zoom.
 - Nhãn = tên địa điểm **xuất hiện nhiều nhất** trong cụm (ảnh trong một ô có thể vắt qua ranh giới hành
   chính); không có thì hiện toạ độ. Phụ đề = ngày hoặc khoảng ngày.
 - Bản đồ chỉ báo lại **khi camera dừng hẳn**, nên pin gộp và tách theo mức phóng mà không tính lại giữa lúc kéo.
-- Chạm cụm → màn danh sách ảnh ([FS-06.03](03-memories-and-movie-builder.md)).
+- Chạm cụm → màn danh sách ảnh ([FS-06.03](03-photo-list-and-movie-builder.md)).
 
 Mỗi dòng dữ liệu mang: id ảnh · ngày · toạ độ · tên phường/quận, tỉnh và quốc gia.
 

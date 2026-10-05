@@ -10,8 +10,10 @@
 | # | Phần | Trả lời |
 |---|---|---|
 | 01 | [Pager và tải ảnh](01-pager-and-image-loading.md) | lật trang, phóng, thang chất lượng ảnh, iCloud, nhường băng thông |
+| 01b | [Đóng viewer và bàn phím](01b-closing-and-keyboard.md) | đóng thì lưới tới ảnh vừa xem, Esc, ← / → |
 | 02 | [Video](02-video-playback.md) | trạng thái phát, transport, cử chỉ, tua, lưu khung, toàn màn |
 | 03 | [Bảng thông tin](03-info-panel-and-metadata.md) | hai dòng trên chrome, sheet đầy đủ, shutter count, dữ liệu thô |
+| 03b | [Photo Info ở màn rộng](03b-info-inspector.md) | cột bên phải trên iPad ngang và Duo trong, khi nào là cột khi nào là sheet |
 | 04 | [Hành động và phụ trợ](04-actions-and-extras.md) | menu ⋯, slideshow, Live Photo, Live Text, panorama, cắt video |
 | 05 | [Chọn khung trong burst](05-burst-selection.md) | chọn khung giữ, xoá phần còn lại, gợi ý khung, PhotoKit cho phép gì |
 | 06 | [Bản gốc trên iCloud](06-icloud-originals.md) | bản gốc có trên máy chưa, tải có %, chuẩn bị bản gốc trước khi sửa hàng loạt/xuất/Resize/Share, không xuất bản xem trước |
@@ -27,12 +29,13 @@
 - **Viewer có bộ điều phối hành động riêng**: nó là một lớp phủ toàn màn, mà hai nơi cùng bám một trạng thái
   trình bày thì cả hai đều mở — và sheet của màn gốc thắng bằng cách gỡ luôn lớp phủ.
 - **Đóng viewer không được làm Library nạp lại** — xem [01](01-pager-and-image-loading.md).
+- **Đóng viewer thì lưới tới ảnh vừa xem**; Esc đóng, ← / → lật ảnh — xem [01b](01b-closing-and-keyboard.md).
 
 ## Chrome
 
 | Vị trí | Nội dung |
 |---|---|
-| Trên-trái | nút **X** cao 52pt, và **bảng thông tin ngay bên phải, cùng hàng** |
+| Trên-trái | nút **X** cao 52pt, và **bảng thông tin ngay bên phải, cùng hàng** (regular width: rộng tối đa 520pt) |
 | Đáy | ba vùng kiểu Photos: **Share** tròn trái · viên kính giữa · **Delete** tròn phải |
 | Viên kính giữa | Favorite · Info · (ảnh: Edit) · ⋯ — video ẩn Edit và Resize |
 
@@ -51,7 +54,7 @@
 | Vuốt ngang | lật ảnh |
 | Pinch / chạm đôi | phóng; vượt 1,01 lần mới bật kéo bên trong |
 | Vuốt xuống | đóng viewer — chỉ nhận khi **hướng xuống rõ ràng** và **chưa phóng** |
-| Vuốt lên | mở bảng thông tin đầy đủ, giống bấm nút Info |
+| Vuốt lên | mở Photo Info, giống bấm nút Info — sheet, hoặc cột bên phải ở cửa sổ ngang ≥ 700pt ([03b](03b-info-inspector.md)) |
 | Giữ tay (ảnh đã chỉnh) | hiện **bản gốc** + nhãn "Original" ([04](04-actions-and-extras.md)) |
 
 ## Tiêu chí nghiệm thu

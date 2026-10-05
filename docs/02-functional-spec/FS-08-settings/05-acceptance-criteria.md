@@ -1,8 +1,9 @@
 # FS-08.05 — Tiêu chí nghiệm thu
 
-`FS-08.05` · cập nhật 2026-09-22
+`FS-08.05` · cập nhật 2026-10-02
 
-**Một câu:** 19 tiêu chí cho **bố cục theo bề rộng và tìm kiếm**; các mục khác của FS-08 chưa có AC.
+**Một câu:** 19 tiêu chí cho **bố cục theo bề rộng và tìm kiếm**, cộng 5 cho trình sửa widget trên cửa sổ thấp
+(AC-20–AC-24, Z4); Share có bảng riêng ở [06 §7](06-share-metadata-privacy.md).
 
 ## 1. Bảng
 
@@ -29,15 +30,20 @@
 | AC-17 | chỉ mục tìm kiếm của Settings và các section thật | đếm nhãn hàng ở hai nơi | mỗi section có số mục index **bằng** số hàng nó dựng | ✅ test mọi mục đều có chỉ mục + test mỗi mục khai đủ hàng nó vẽ (38 hàng) + test mỗi nhãn hàng cho đúng một mục chỉ mục |
 | AC-18 | Settings mở, bố cục bất kỳ | gõ `zzzz` | màn rỗng chuẩn của hệ thống, không phải danh sách rỗng | ✅ ảnh iPhone 17 Pro: gõ `zzzz` cho màn rỗng chuẩn của hệ thống — kính lúp, "No Results for “zzzz”", "Check the spelling or try a new search." |
 | AC-19 | iPad 13" ngang | chụp sidebar | 9 mục có đúng ký hiệu, mỗi hàng ≥ 44pt | ✅ kịch bản `ipad-settings-split` (hàng cao **53pt**) + test mỗi mục có biểu tượng riêng |
+| AC-20 | (Z4) Duo trong 951×669, Widgets → một design, cỡ Small | mở màn cài đặt design | bản xem trước ghim cao 158pt; ghi lại mép trên danh sách tuỳ chọn (y₀) | ⚠️ chưa có — `Tools/ui-drive` dump + `Tools/sim-shot inner` |
+| AC-21 | (Z4) như AC-20 | chạm Large ở dải chọn cỡ | popover mở neo vào ô Large, có bản xem trước Large và hàng chip; bản xem trước ghim vẫn 158pt, mép trên danh sách vẫn y₀ (dịch 0pt); không có sheet toàn màn | ⚠️ chưa có |
+| AC-22 | (Z4) popover Large đang mở | kéo dòng giờ 40pt trong popover | anchor của dòng giờ đổi; đóng popover thì bản xem trước Small cho thấy dòng giờ ở vị trí mới, dải chọn cỡ về Small | ⚠️ chưa có — script `widget-arrange.json` thêm biến thể Duo |
+| AC-23 | (Z4) Duo ngoài 466×678 | chạm Large | popover như AC-21, nằm trái rail 84pt, không bị cắt | ⚠️ chưa có |
+| AC-24 | (Z4) iPhone 402×874 và iPad 13" ngang | chạm Large | không có popover: bản xem trước ghim đổi sang Large như hiện tại | ⚠️ chưa có |
 
 ## 2. Chưa chứng minh được
 
 - **Đầy đủ:** AC-1, AC-2, AC-3, AC-3b, AC-5, AC-12, AC-15, AC-17, AC-19.
 - **Một phần:** AC-4, AC-16.
-- **Chưa chạm:** AC-6, AC-7, AC-8, AC-9, AC-11, AC-13, AC-18.
+- **Chưa chạm:** AC-6, AC-7, AC-8, AC-9, AC-11, AC-13, AC-18, AC-20–AC-24 (Z4, chưa làm).
 - **Không có đường tự động:** AC-4b (Slide Over), AC-10 (Stage Manager), AC-14 (VoiceOver) — chứng minh
   bằng hàm thuần cộng một ảnh chụp tay.
-- Các mục khác của FS-08 (index, notifications, widget, playback…) **chưa có AC nào** — xem
+- Các mục khác của FS-08 (index, notifications, phần còn lại của widget, playback…) **chưa có AC nào** — xem
   [README — Việc còn nợ](../../README.md#6-việc-còn-nợ).
 
 ## 3. Hai chỗ chứng minh còn hở

@@ -1,7 +1,7 @@
 # FS-08.04 — Photo Widget designs
 
 `FS-08.04` · `Features/Settings/PhotoWidgetDesignsScreen.swift` · `PhotoWidgetSettingsScreen`
-· `WidgetShared/` · cập nhật 2026-09-22
+· `WidgetShared/` · cập nhật 2026-10-02
 
 **Một câu:** màn sửa widget ảnh — danh sách design, bản xem trước kéo được, và **mỗi dòng chữ đặt riêng**.
 
@@ -44,6 +44,14 @@ xem trước nằm trong đó.
   bản xem trước 158pt xong thì các điều khiển của chính nó nằm dưới năm mục không liên quan, không có gì
   báo là chúng tồn tại. Chỉ cuộn khi đi **từ không-chọn-gì sang có chọn**; bỏ chọn thì không giật danh sách
   đi đâu cả.
+- **Cửa sổ thấp** (cao dưới 720pt, [NF-05 §4](../../04-non-functional-design/NF-05-device-and-os-compatibility.md) — Duo trong
+  951×669 và Duo ngoài 466×678) (Z4):
+  - Bản xem trước ghim cao **tối đa 158pt** ở mọi cỡ; Small và Medium vẽ như thường.
+  - Chạm **Large** mở một **popover** neo vào ô Large, chứa bản xem trước Large cùng hàng chip, cùng mọi cử chỉ
+    chọn, kéo, phóng. Popover giữ là popover cả ở chiều cao compact, không thành sheet toàn màn.
+  - Đóng popover thì bản xem trước ghim về lại cỡ trước đó và dải chọn cỡ chọn lại cỡ đó.
+  - *Vì* preview Large ghim trên 669pt ăn 58–76% chiều cao, danh sách tuỳ chọn còn 160–280pt.
+  - Board: `DI_WidgetSettings` · `DC_WidgetSettings` (`PH_`, `IP_` không đổi).
 - Calendar và Weather **không còn bị khoá theo loại widget** — mỗi mục mở đầu bằng một công tắc, phần còn
   lại hiện theo công tắc đó. Một design mới bật sẵn **giờ và ngày**, tắt hai cái kia — đúng cái người ta
   đặt nhiều nhất, và hai cái kia chỉ cách một công tắc.

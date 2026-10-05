@@ -1,7 +1,7 @@
 # FS-01.06 — Chế độ chọn nhiều ảnh
 
 `FS-01.06` · `App/AssetActionsCoordinator.swift` · `Features/Shared/SelectionBarViews.swift`
-· `PhotoTileContextMenu` · `Domain/Selection/SwipeSelection.swift` · cập nhật 2026-09-22
+· `PhotoTileContextMenu` · `Domain/Selection/SwipeSelection.swift` · cập nhật 2026-10-02
 
 **Một câu:** một lớp phủ toàn màn do màn gốc dựng, dùng chung cho bốn lưới, và **một** bộ điều phối cầm mọi
 hành động lên thư viện.
@@ -43,9 +43,9 @@ hai nhánh iOS, mờ dần theo việc có đang chọn hay không.
 - **Menu ⋯**: Paste Edits (chỉ khi có bản sửa đã copy) · **Combine Photos ▸** (menu con Focus Stack ·
   Panorama · Stack Exposures, [FS-01.09](09-photo-stacking.md)) · Create Collage (bật khi số ảnh nằm trong tập
   template hỗ trợ) · Create Video · Resize · Add to Collection · Export EXIF (CSV) · **Upload to Server**
-  ([FS-15](../FS-15-server-upload/README.md)) · Duplicate. Màn không cấp
-  hành động nào thì dòng đó **không hiện**; ngoài khoảng hợp lệ thì **mờ** — ở Combine Photos là từng dòng con
-  mờ, dòng cha vẫn mở được.
+  ([FS-15](../FS-15-server-upload/README.md)) · Duplicate · rồi nhóm riêng cuối cùng: **Hide** (album thêm
+  Remove from Album). Màn không cấp hành động nào thì dòng đó **không hiện**; ngoài khoảng hợp lệ thì **mờ** —
+  ở Combine Photos là từng dòng con mờ, dòng cha vẫn mở được.
 - Compare và Edit **không** nằm trong menu — hai thứ người ta chọn ảnh *để làm*, còn menu là chỗ tìm những
   thứ còn lại.
 - Share đổi thành vòng quay khi đang gom ảnh. Delete **không tô đỏ** (hệ thống đã hỏi xác nhận). Không dùng
@@ -114,9 +114,25 @@ Collection bấm xong **không mở gì**, lỗi và toast cũng không hiện.
   0 chứ không phải lỗi** — và phải nói ra (*"Those photos couldn't be copied."*), nếu không lệnh trông như
   bị lờ đi.
 - Lỗi của các hành động trong menu hiện cảnh báo riêng, không đụng cảnh báo của Delete.
+- Cảnh báo lỗi **"Couldn't Update Photos"** có hai nút **OK** và **Try Again** (K12), ở lưới cũng như ở viewer:
+  Try Again chạy lại đúng thao tác vừa hỏng trên đúng những ảnh đó; người dùng tự huỷ thì không có cảnh báo.
+- **Hide xong nói tìm lại ở đâu** (D5): toast **4 giây** *"12 photos hidden · Find them in Photos > Hidden"*
+  (một ảnh: *"1 photo hidden · Find it in Photos > Hidden"*), số nhiều qua String Catalog. **Không có Undo.**
+  Cùng chữ ở chế độ chọn (⋯ → Hide), menu ngữ cảnh của ô và viewer.
+- Toast tối đa **2 dòng**, không cắt chữ, nằm trên thanh chọn; các toast khác (Copied) giữ 1,6 giây.
+- Board: `PH_LibrarySelect`, `IP_LibrarySelect`, `DI_LibrarySelect`, `DC_LibrarySelect` — vẽ toast Hide.
 - Áp cho **Library, album thường, smart album**; **On This Day** giữ gọn — chỉ Share, Compare, Resize,
   Delete; không có Create, không có ⋯.
 
 ## 7. Tiêu chí nghiệm thu
 
-**Chưa viết.** Xem [README — Việc còn nợ](../../README.md#6-việc-còn-nợ).
+Các luật khác của file chưa có AC — xem [README — Việc còn nợ](../../README.md#6-việc-còn-nợ).
+
+| # | Cho | Khi | Thì | Chứng minh bằng |
+|---|---|---|---|---|
+| AC-1 | (D5) iPhone 402×874, Library, chọn 12 ảnh | ⋯ → Hide | toast "12 photos hidden · Find them in Photos > Hidden" hiện 4 s ± 0,2 s rồi mất; không có nút Undo; 12 ô rời lưới | ⚠️ chưa có |
+| AC-2 | (D5) album thường, không ở chế độ chọn | giữ một ô → Hide | toast "1 photo hidden · Find it in Photos > Hidden", 4 s | ⚠️ chưa có |
+| AC-3 | (D5) Duo ngoài 466×678 và iPhone 16 iOS 18.6, chọn 12 ảnh | ⋯ → Hide | toast đọc đủ chữ trong ≤ 2 dòng, không dấu "…"; trên Duo ngoài nằm trọn bên trái rail 84pt và trên thanh chọn | ⚠️ chưa có |
+| AC-4 | (D5) chọn 1 ảnh | ⋯ → Copy | toast "Copied" vẫn 1,6 s | ⚠️ chưa có |
+| AC-5 | (D5) chọn 3 ảnh, lệnh ẩn trả lỗi (giả lập) | ⋯ → Hide | không có toast; cảnh báo "Couldn't Update Photos" có OK + Try Again; 3 ô vẫn ở lưới | ⚠️ chưa có |
+| AC-6 | (K12) như AC-5, lỗi giả lập chỉ ở lần ghi đầu | bấm Try Again | lệnh ẩn chạy lại đúng 1 lần cho đúng 3 ảnh đó; toast "3 photos hidden · Find them in Photos > Hidden" | ⚠️ chưa có |

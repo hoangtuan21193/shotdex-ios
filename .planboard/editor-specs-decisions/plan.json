@@ -1,0 +1,1063 @@
+{
+  "title": "Các điểm cần quyết — FS-03.13…16",
+  "context": "Đây là mọi điểm ⚠️ CẦN QUYẾT còn mở của 4 spec viết ngày 2026-09-27: FS-03.13 (bố cục editor trên iPhone), FS-03.14 (nhập/xuất preset Lightroom và chia sẻ look), FS-03.15 (đủ thông số Lightroom) và FS-03.16 (nguồn sửa ống kính). Mỗi thẻ là một câu hỏi, có hậu quả nếu chọn sai, được/mất của từng phương án và gợi ý của spec (chỗ spec chưa đề xuất thì ghi rõ là gợi ý). Trả lời xong thì /plan chạy được cho từng spec; nên chốt các thẻ critical (kho dữ liệu, recipe, thứ tự render, pháp lý, kèm model) trước. Câu hỏi đo (Dynamic Island, SE 375, Duo) không nằm ở đây vì agent đo được, không cần bạn quyết.",
+  "pages": [
+    {
+      "id": "fs13-panel",
+      "title": "FS-03.13 · Panel, lề băng trên, thanh công cụ",
+      "intro": "Chiều cao panel, lề của băng trên và việc bỏ bánh xe nhóm — nền của mọi màn editor trên iPhone.",
+      "decisions": [
+        {
+          "id": "D1",
+          "title": "[13·Q1] Panel có được đổi chiều cao theo ảnh (344 / 264 / 315) thay vì cố định 264 không?",
+          "importance": "important",
+          "why": "Đây là luật nền của cả bố cục iPhone: mọi AC về khung ảnh, số hàng slider và Curve đều tính từ nó. Giữ 264 thì ảnh ngang (3:2, 16:9) bỏ phí 80pt đen và chỉ thấy 4 hàng slider thay vì 6.\nVì sao phải hỏi: FS-03.12 §3, FS-03.01 §1, FS-03.03 §1 và DESIGN.md §10.3 đều ghi “264 cố định, không đổi chiều cao”.",
+          "proposal": "Nhận 344 / 264 / 315: panel 344 chỉ khi 80pt thêm lấy trọn từ phần đen (ảnh không nhỏ đi), Curve với ảnh dọc tạm cao 315; viết lại bốn chỗ đang ghi 264 cố định.",
+          "options": [
+            { "id": "a", "label": "344 / 264 / 315 theo phần đen của ảnh", "pros": ["Ảnh ngang thấy 6 hàng slider thay vì 4", "Ảnh không nhỏ đi pt nào so với panel 264", "Curve có chỗ trong panel"], "cons": ["Viết lại 4 tài liệu và token trong DESIGN.md", "Panel có 3 chiều cao, thêm test cho từng ca"], "effort": "M", "recommended": true },
+            { "id": "b", "label": "Giữ 264 mọi lúc", "pros": ["Không sửa tài liệu nào", "Một chiều cao, dễ kiểm"], "cons": ["Bỏ phí 80pt mà ảnh ngang không dùng", "Đồ thị Curve 220×220 không vừa 185pt — lại phải đè ảnh hoặc cuộn"], "effort": "S" }
+          ],
+          "tasks": ["Viết lại “264pt = 185 + 54 + 25” — DESIGN.md §10.3", "Sửa §3 “không đổi chiều cao” — FS-03.12 12-phone-panel-grid.md", "Sửa §1 — FS-03.01 01-scope-and-panel.md", "Sửa §1 “panel giữ nguyên chiều cao” — FS-03.03", "Giữ AC-1…5 — 13a-chrome-and-toolbar.md"]
+        },
+        {
+          "id": "D2",
+          "title": "[13·Q2] Khi sửa nhiều ảnh cùng lúc, chiều cao panel tính theo ảnh nào?",
+          "importance": "important",
+          "why": "Một phiên nhiều ảnh trộn ảnh ngang và dọc. Tính theo ảnh đang mở thì panel nhảy 80pt khi lướt filmstrip; cố định thì có ảnh chịu thiệt chỗ.\nVì sao phải hỏi: intent chỉ nói “cố định trong một phiên sửa”, không nói tới phiên nhiều ảnh.",
+          "proposal": "Tính theo ảnh đang mở — cùng luật với sửa một ảnh và khớp AC-42 đang viết (ảnh 3:4 trong phiên nhiều ảnh được panel 264). Spec chưa chọn; đây là phương án phần AC đã theo.",
+          "options": [
+            { "id": "a", "label": "Theo ảnh đang mở", "pros": ["Mỗi ảnh được panel tốt nhất cho nó", "Khớp AC-42", "Một luật cho một ảnh và nhiều ảnh"], "cons": ["Panel và ảnh nhảy 80pt khi đổi giữa ảnh ngang và dọc"], "effort": "S", "recommended": true },
+            { "id": "b", "label": "Theo ảnh đầu phiên", "pros": ["Panel đứng yên suốt phiên"], "cons": ["Ảnh dọc sau một ảnh ngang đầu phiên bị nhỏ đi", "Kết quả phụ thuộc thứ tự chọn ảnh"], "effort": "S" },
+            { "id": "c", "label": "344 chỉ khi mọi ảnh trong phiên đều được 344", "pros": ["Đứng yên, không ảnh nào bị thu nhỏ"], "cons": ["Một ảnh dọc trong 20 ảnh ngang là cả phiên mất 2 hàng slider", "Phải đọc kích thước mọi ảnh trước khi mở"], "effort": "M" }
+          ],
+          "tasks": ["Ghi luật phiên nhiều ảnh vào §2 — 13a-chrome-and-toolbar.md", "Chốt AC-42 — 13d-presets-batch-devices.md"]
+        },
+        {
+          "id": "D3",
+          "title": "[13·Q3] Cụm nút băng trên cách mép màn 10pt (như canvas) hay 20pt (như luật cũ)?",
+          "importance": "important",
+          "why": "Sát mép quá thì góc bo của màn cắt mất nút; lùi vào 20pt thì cụm 120pt chạm Dynamic Island.\nVì sao phải hỏi: FS-03.01 §3 đặt 20pt “để góc bo màn không cắt”, canvas đặt 10pt.",
+          "proposal": "10pt như canvas, và chứng minh bằng ảnh chụp có mask góc bo (Tools/sim-shot) trước khi land. Spec chưa chọn; đây là gợi ý theo canvas đã chốt.",
+          "options": [
+            { "id": "a", "label": "10pt, kiểm trên khung có mask", "pros": ["Giữ nút 36 và cụm 120 như canvas", "Hở 8pt mỗi bên với đảo"], "cons": ["Phải chứng minh góc bo không cắt nút", "Lệch luật 20pt của FS-03.01"], "effort": "S", "recommended": true },
+            { "id": "b", "label": "20pt, nút 34 cách 4 (cụm 110)", "pros": ["Giữ luật cũ, chắc chắn không bị góc bo cắt"], "cons": ["Nút nhỏ hơn 2pt, vùng chạm hẹp hơn", "Vẫn phải đo khe với đảo"], "effort": "S" },
+            { "id": "c", "label": "Chờ số đo đảo thật rồi quyết", "pros": ["Quyết theo số thật"], "cons": ["Treo phần băng trên của /plan tới khi device-layout đo xong"], "effort": "S" }
+          ],
+          "tasks": ["Sửa §3 lề 20pt — FS-03.01", "Ghi lề vào §3 — 13a-chrome-and-toolbar.md", "Đo khe với đảo (câu đo 1) — agent device-layout"]
+        },
+        {
+          "id": "D4",
+          "title": "[13·Q6] Thanh 6 công cụ có thay hẳn bánh xe nhóm ở mọi layout không sidebar, kể cả Duo màn ngoài?",
+          "importance": "important",
+          "why": "Giữ bánh xe ở đâu đó là giữ hai cách tới cùng một công cụ, hai bộ test, và cú vuốt ngang sát cạnh vuốt-chuyển-app mà intent muốn bỏ.\nVì sao phải hỏi: FS-03.01 §5, FS-03.12 §6 và DESIGN.md §10.3 đang mô tả bánh xe là “tầng cuộn ngang duy nhất”.",
+          "proposal": "Bỏ hẳn bánh xe ở mọi layout không sidebar (iPhone dọc, iPhone ngang, Duo màn ngoài), viết lại ba tài liệu.",
+          "options": [
+            { "id": "a", "label": "Bỏ hẳn bánh xe", "pros": ["Một mô hình điều hướng cho iPhone dọc, ngang và Duo ngoài", "Không còn vuốt ngang ở đáy màn", "Khớp canvas A7"], "cons": ["Viết lại 3 tài liệu", "Script/test đang lái bánh xe phải đổi"], "effort": "M", "recommended": true },
+            { "id": "b", "label": "Giữ bánh xe riêng cho Duo màn ngoài", "pros": ["Duo ngoài không cần cột công cụ 56pt"], "cons": ["Hai mô hình cho cùng một panel compact", "Trái canvas A7 đã chốt"], "effort": "M" }
+          ],
+          "tasks": ["Viết lại §5 dải nhóm — FS-03.01", "Viết lại §6 — FS-03.12", "Thay “bánh xe + vạch” bằng thanh 6 công cụ — DESIGN.md §10.3", "Sửa “cũng có trên bánh xe điện thoại” — FS-03.11 §2"]
+        }
+      ]
+    },
+    {
+      "id": "fs13-chrome",
+      "title": "FS-03.13 · Băng trên, xem gốc, huỷ công cụ",
+      "intro": "Những gì nằm trong ⋯, cử chỉ xem ảnh gốc, và ✕ / Undo hoạt động thế nào trong một công cụ.",
+      "decisions": [
+        {
+          "id": "D5",
+          "title": "[13·Q4] Mục “gọi lại bản đã lưu / đổi nguồn” của ⋯ hôm nay sẽ đi đâu?",
+          "importance": "important",
+          "why": "Danh sách ⋯ mới của intent không có mục này; bỏ quên là mất một chức năng đang có.\nVì sao phải hỏi: FS-03.01 §3 đang liệt kê nó trong ⋯, còn FS-03.13 §3 cấm mất chức năng.",
+          "proposal": "Thêm vào cuối ⋯, chỉ hiện khi ảnh có bản đã lưu / nguồn khác. Spec chưa chọn giữa (a) và (b); (c) trái luật.",
+          "options": [
+            { "id": "a", "label": "Thêm vào cuối ⋯ khi có", "pros": ["Ở đúng chỗ người dùng đã quen", "Chỉ hiện khi dùng được, ⋯ vẫn gọn với ảnh mới"], "cons": ["⋯ dài thêm một dòng với ảnh đã lưu"], "effort": "S", "recommended": true },
+            { "id": "b", "label": "Chuyển vào sheet lưu", "pros": ["⋯ không đổi", "Gần hành động lưu"], "cons": ["Phải bấm Save mới thấy — khó tìm", "Sheet lưu thêm một lựa chọn"], "effort": "S" },
+            { "id": "c", "label": "Bỏ", "pros": ["Ít code nhất"], "cons": ["Mất chức năng đang có, trái luật §3"], "effort": "S" }
+          ],
+          "tasks": ["Thêm dòng vào danh sách ⋯ §3 — 13a-chrome-and-toolbar.md", "Thêm ca ảnh đã lưu vào AC-12 — 13a", "Sửa bảng ⋯ — FS-03.01 §3"]
+        },
+        {
+          "id": "D6",
+          "title": "[13·Q5] Giữ lâu trên ảnh để xem ảnh gốc có dùng được ở Presets không, hay chỉ ở Edit?",
+          "importance": "important",
+          "why": "Nút compare đã bỏ, nên giữ lâu là đường so sánh duy nhất. Chỉ ở Edit thì lúc thử look ở Presets — lúc hay so với gốc nhất — phải sang Edit mới so được.",
+          "proposal": "Cho cả Edit và Presets: Presets không có cử chỉ nào khác trên ảnh nên không tranh chấp. Intent ghi “chỉ Edit”; phần lý lẽ của spec nghiêng về (b).",
+          "options": [
+            { "id": "a", "label": "Chỉ Edit (như intent)", "pros": ["Đúng chữ intent", "Một chỗ để học"], "cons": ["Thử look ở Presets không so được với gốc"], "effort": "S" },
+            { "id": "b", "label": "Edit và Presets", "pros": ["So look với gốc ngay lúc chọn look", "Không tranh chấp cử chỉ ở Presets"], "cons": ["Lệch chữ intent", "Thêm một ca trong AC-10"], "effort": "S", "recommended": true }
+          ],
+          "tasks": ["Sửa §3 “chỉ ở Edit” — 13a-chrome-and-toolbar.md", "Thêm ca Presets vào AC-10 — 13a"]
+        },
+        {
+          "id": "D7",
+          "title": "[13·Q7a] Chạm ✕ trong một công cụ có hỏi xác nhận không, và có Undo lại được không?",
+          "importance": "important",
+          "why": "✕ bỏ mọi nét, vết, lớp vừa làm trong công cụ. Không hỏi và không Undo được thì một chạm nhầm mất 10 phút tô mask; hỏi mọi lần thì phiền người hay thử rồi huỷ.",
+          "proposal": "Hỏi xác nhận chỉ khi phiên công cụ có ít nhất một thay đổi; ✕ vẫn trả recipe và độ sâu lịch sử về lúc vào (giữ AC-8). Spec chưa chọn; đây là gợi ý vì không mất việc mà vẫn khớp AC.",
+          "options": [
+            { "id": "a", "label": "Chạy ngay, không hỏi, không Redo", "pros": ["Nhanh nhất, một chạm", "Khớp AC-8"], "cons": ["Chạm nhầm là mất hết việc trong công cụ"], "effort": "S" },
+            { "id": "b", "label": "Hỏi khi có ≥1 thay đổi", "pros": ["Không mất việc vì chạm nhầm", "Không hỏi khi chưa làm gì", "Vẫn khớp AC-8"], "cons": ["Thêm một chạm khi huỷ thật", "Thêm hộp thoại phải dịch và test"], "effort": "S", "recommended": true },
+            { "id": "c", "label": "✕ là một bước Undo được", "pros": ["Không hộp thoại, vẫn lấy lại được"], "cons": ["Độ sâu lịch sử không về lúc vào — viết lại AC-8", "Undo sau ✕ trả trạng thái công cụ về khi đang ở Edit, dễ rối"], "effort": "M" }
+          ],
+          "tasks": ["Ghi hành vi ✕ vào §5 — 13a-chrome-and-toolbar.md", "Sửa AC-8 (thêm bước xác nhận) — 13a", "Thêm chuỗi hộp thoại — String Catalog"]
+        },
+        {
+          "id": "D8",
+          "title": "[13·Q7b] Trong một công cụ, Undo dừng ở lúc vào công cụ hay lùi tiếp vào các bước trước đó?",
+          "importance": "important",
+          "why": "Lùi tiếp thì người dùng có thể Undo xuyên qua lúc vào, và ✕ không còn nghĩa “về lúc vào”; dừng lại thì muốn sửa bước trước phải ✓ hoặc ✕ trước.",
+          "proposal": "Dừng ở lúc vào (nút Undo mờ), để ✕ và Undo cùng một mốc. Spec chưa chọn; đây là phương án giữ nghĩa của ✕ mà spec đã viết.",
+          "options": [
+            { "id": "a", "label": "Dừng ở lúc vào", "pros": ["✕ và Undo cùng một mốc, dễ hiểu", "Không trộn bước của công cụ với bước của Edit"], "cons": ["Muốn lùi bước trước công cụ phải ra khỏi công cụ"], "effort": "S", "recommended": true },
+            { "id": "b", "label": "Lùi tiếp qua lúc vào", "pros": ["Undo không bao giờ bị chặn"], "cons": ["Phải định nghĩa lại ✕ khi đã lùi quá mốc", "Dễ lùi mất bước Edit mà không thấy"], "effort": "M" }
+          ],
+          "tasks": ["Ghi luật Undo trong công cụ vào §5 — 13a-chrome-and-toolbar.md", "Thêm AC Undo dừng ở mốc — 13a §7"]
+        }
+      ]
+    },
+    {
+      "id": "fs13-edit",
+      "title": "FS-03.13 · Edit và Transform",
+      "intro": "Cách nhóm thông số, Curve, hàng Upright, Straighten và các hàng chờ FS-03.15.",
+      "decisions": [
+        {
+          "id": "D9",
+          "title": "[13·Q8a] Trên iPhone, Edit giữ 9 nhóm phẳng hay gom về 5 nhóm như sidebar iPad?",
+          "importance": "important",
+          "why": "Hai mô hình nghĩa là cùng một thông số nằm ở nhóm khác nhau trên iPhone và iPad; một mô hình thì một bên phải chịu bố cục không hợp.\nVì sao phải hỏi: FS-03.01 §5 và FS-03.09 §10 đang treo đúng câu này.",
+          "proposal": "Nhận hai mô hình: phone 9 nhóm phẳng (danh sách đằng nào cũng dài, mục lục 9 dòng ngắn hơn 5 thẻ lồng), sidebar giữ 5 nhóm.",
+          "options": [
+            { "id": "a", "label": "Hai mô hình: phone 9, sidebar 5", "pros": ["Mục lục nhảy thẳng tới Color Mix / Grading", "Sidebar giữ thẻ lồng đang chạy"], "cons": ["Cùng thông số khác nhóm giữa iPhone và iPad", "Tài liệu phải ghi hai bảng"], "effort": "S", "recommended": true },
+            { "id": "b", "label": "Phone theo 5 nhóm, mục con thành nhãn phụ", "pros": ["Một mô hình cho mọi thiết bị"], "cons": ["Nhóm Color rất dài, mục lục kém tác dụng", "Thêm tầng nhãn phụ trong danh sách"], "effort": "M" }
+          ],
+          "tasks": ["Đóng câu treo — FS-03.01 §5 và FS-03.09 §10", "Ghi hai mô hình vào §1 — 13b-edit-and-transform.md"]
+        },
+        {
+          "id": "D10",
+          "title": "[13·Q8b] Nhóm chỉnh màu theo vùng tối/trung/sáng tên là “Grading” hay “Grade”?",
+          "importance": "minor",
+          "proposal": "Dùng “Grading” như canvas ở nhãn nhóm, mục lục và chip; chip hôm nay đổi theo. Spec chưa chọn, đây là gợi ý.",
+          "options": [
+            { "id": "a", "label": "Grading", "pros": ["Như canvas đã chốt", "Gần “Color Grading” của Lightroom"], "cons": ["Đổi chữ chip đang có"], "effort": "S", "recommended": true },
+            { "id": "b", "label": "Grade", "pros": ["Giữ chữ chip hôm nay, ngắn hơn"], "cons": ["Lệch canvas"], "effort": "S" }
+          ]
+        },
+        {
+          "id": "D11",
+          "title": "[13·Q9] Curve chuyển hẳn vào panel ở mọi layout, hay vẫn giữ kiểu vẽ đè lên ảnh như một tuỳ chọn?",
+          "importance": "important",
+          "why": "Giữ hai kiểu là hai thứ phải học và hai bộ test; bỏ hẳn lớp đè thì iPad/sidebar cũng phải đổi.\nVì sao phải hỏi: FS-04.02 §1, §4 ghi “curve đè lên ảnh, không phải một màn riêng”.",
+          "proposal": "Curve luôn nằm trong panel ở mọi layout; viết lại FS-04.02.",
+          "options": [
+            { "id": "a", "label": "Curve luôn trong panel", "pros": ["Ảnh không bị che khi chỉnh curve", "Một trình sửa curve cho mọi thiết bị"], "cons": ["Viết lại FS-04.02 cả phần iPad", "Panel ảnh dọc phải tạm cao 315"], "effort": "M", "recommended": true },
+            { "id": "b", "label": "Giữ lớp đè ảnh như tuỳ chọn trong ⋯", "pros": ["Người quen kiểu cũ vẫn dùng được"], "cons": ["Thêm một thứ phải học và bảo trì", "Thêm một dòng vào ⋯ đang cố làm gọn"], "effort": "M" }
+          ],
+          "tasks": ["Viết lại §1, §4 — FS-04.02 02-grading-and-curve.md", "Giữ AC-5, AC-18 — 13a, 13b"]
+        },
+        {
+          "id": "D12",
+          "title": "[13·Q10] Sáu chip Upright (Off · Auto · Level · Vertical · Full · Guided) xếp thế nào khi không được cuộn ngang?",
+          "importance": "important",
+          "why": "Trên 402pt mỗi chip chỉ ~56pt mà “Vertical” cần ~66pt; xếp sai là chữ bị cắt hoặc lại phải cuộn ngang.\nVì sao phải hỏi: FS-03.12 §4 cho dải >5 mục cuộn ngang, luật mới cấm.",
+          "proposal": "6 chip chia đều một hàng, chữ co tối đa 0,85, không icon — khớp AC-23 (“6 chip nằm một hàng”); đo trên 402 và 375 trước khi chốt.",
+          "options": [
+            { "id": "a", "label": "Một hàng, chữ co tối đa 0,85", "pros": ["Thấy hết chế độ một lúc", "Khớp AC-23"], "cons": ["Chữ nhỏ hơn chip khác", "Có thể vẫn cắt trên SE 375 — phải đo"], "effort": "S", "recommended": true },
+            { "id": "b", "label": "Hai hàng 3 + 3", "pros": ["Chữ đủ cỡ"], "cons": ["Tốn thêm 40pt trong danh sách Transform"], "effort": "S" },
+            { "id": "c", "label": "Off tách riêng + 5 chip", "pros": ["5 chip rộng ~66pt, vừa chữ"], "cons": ["Off thành control khác kiểu, thêm một thứ phải hiểu"], "effort": "S" }
+          ],
+          "tasks": ["Sửa §4 “dải >5 cuộn ngang” — FS-03.12", "Ghi cách xếp vào §3 — 13b-edit-and-transform.md", "Đo trên 402 và 375 (câu đo 2) — agent device-layout"]
+        },
+        {
+          "id": "D13",
+          "title": "[13·Q11] Straighten Tool: kéo một đường gần dọc (cột nhà, thân cây) thì dựng nó đứng thẳng hay bỏ qua?",
+          "importance": "important",
+          "why": "Bỏ qua thì ảnh kiến trúc, nội thất — nơi đường dọc rõ hơn chân trời — không dùng được công cụ; nhận thì một đường kéo chéo gần 45° có thể xoay ảnh ngược ý.",
+          "proposal": "Dựng đường gần dọc đứng thẳng như Lightroom, cùng luật với Guided ở FS-03.15b (gần dọc thành dọc). Spec chưa chọn; intent chỉ nói “theo chân trời”.",
+          "options": [
+            { "id": "a", "label": "Dựng đứng, như Lightroom", "pros": ["Dùng được cho ảnh kiến trúc, nội thất", "Cùng luật với Guided"], "cons": ["Đường gần 45° có thể xoay ngược ý", "Thêm ca test"], "effort": "S", "recommended": true },
+            { "id": "b", "label": "Chỉ nhận đường gần ngang", "pros": ["Đúng chữ intent", "Không có ca mơ hồ"], "cons": ["Ảnh không có chân trời không dùng được", "Lệch hành vi Lightroom người dùng đã quen"], "effort": "S" }
+          ],
+          "tasks": ["Ghi luật đường dọc vào §3 — 13b-edit-and-transform.md", "Thêm ca vào StraightenToolTests (AC-21) — 13b"]
+        },
+        {
+          "id": "D14",
+          "title": "[13·Q12 Transform] Trước khi FS-03.15 xong, các hàng Transform chưa làm được (Upright Auto, Guided, Aspect, Constrain Crop) hiện ra sao?",
+          "importance": "important",
+          "why": "Hiện nút không làm gì là một thao tác chết im lặng; chặn cả Transform thì Crop huỷ được và Straighten Tool mới phải chờ FS-03.15.\nVì sao phải hỏi: 13b §3 dựa vào thông số FS-03.15 chưa có trong recipe.",
+          "proposal": "Hàng chưa có thì không hiện, thứ tự giữ chỗ; hiện ra khi FS-03.15 land. Spec chưa chọn; đây là gợi ý vì không có nút chết và Transform land được ngay.",
+          "options": [
+            { "id": "a", "label": "Không hiện, giữ chỗ trong thứ tự", "pros": ["Không nút chết", "Transform mới land ngay"], "cons": ["Người dùng chưa biết tính năng sắp có", "Bố cục đổi khi FS-03.15 land"], "effort": "S", "recommended": true },
+            { "id": "b", "label": "Hiện mờ 0,35 kèm lý do", "pros": ["Thấy trước bố cục cuối cùng"], "cons": ["Nút mờ lâu ngày trông như lỗi", "Thêm chuỗi lý do tạm"], "effort": "S" },
+            { "id": "c", "label": "Chặn phần Transform tới khi FS-03.15 xong", "pros": ["Land một lần, trọn vẹn"], "cons": ["Crop huỷ được và Straighten Tool phải chờ cả FS-03.15"], "effort": "S" }
+          ],
+          "tasks": ["Ghi luật hàng chờ vào §3 — 13b-edit-and-transform.md", "Sửa AC-19, AC-23 cho giai đoạn trước FS-03.15 — 13b"]
+        }
+      ]
+    },
+    {
+      "id": "fs13-mask",
+      "title": "FS-03.13 · Mask, Heal, Markup",
+      "intro": "Phủ đỏ của mask, vùng cộng/trừ, các hàng Heal chờ FS-03.15 và chỗ chọn loại mực Markup.",
+      "decisions": [
+        {
+          "id": "D15",
+          "title": "[13·Q13] Phủ đỏ của mask theo luật mới (hiện khi vẽ, mờ dần khi nhấc tay, chip Mask Overlay ghim lại) áp cho mọi layout hay chỉ iPhone?",
+          "importance": "important",
+          "why": "Hai luật cho một nút cùng tên trên iPhone và iPad là một hành vi phải học hai lần và hai bộ test; áp mọi nơi thì iPad cũng đổi.\nVì sao phải hỏi: FS-03.05 §6 ghi phủ đỏ “bật và giữ” và “slider luôn thắng, không ngoại lệ”; canvas đổi cả hai vế. Số 1,5s chưa có trong DESIGN.md.",
+          "proposal": "Nhận luật mới cho mọi layout, viết lại FS-03.05 §6–7, thêm thời gian mờ dần 1,5s vào DESIGN.md.",
+          "options": [
+            { "id": "a", "label": "Luật mới cho mọi layout", "pros": ["Một hành vi cho nút Mask Overlay mọi nơi", "Thấy vùng khi vẽ, thấy hiệu ứng khi kéo slider"], "cons": ["Viết lại FS-03.05 §6–7 và AC liên quan", "Thêm token thời gian vào DESIGN.md"], "effort": "M", "recommended": true },
+            { "id": "b", "label": "Luật mới chỉ trên phone", "pros": ["iPad không đổi"], "cons": ["Hai hành vi cho một nút cùng tên", "Hai bộ test chính sách phủ đỏ"], "effort": "M" }
+          ],
+          "tasks": ["Viết lại §6–7 — FS-03.05 05-local-masks.md", "Thêm token mờ dần 1,5s — DESIGN.md", "Giữ AC-30 — 13c-mask-heal-markup.md"]
+        },
+        {
+          "id": "D16",
+          "title": "[13·Q14] Thêm/trừ vùng vào một mask được chọn mọi loại vùng, hay chỉ 8 loại như canvas vẽ?",
+          "importance": "important",
+          "why": "Chỉ 8 loại là mất Background, Color, Luminance, Depth khi cộng/trừ — đúng những loại hay dùng để trừ (vd bỏ trời theo độ sáng).\nVì sao phải hỏi: canvas bảng L3 vẽ lưới 8 ô, FS-03.05 §4 cho mọi loại.",
+          "proposal": "Mọi loại, lưới dựng từ danh sách đầy đủ — đúng luật không mất chức năng.",
+          "options": [
+            { "id": "a", "label": "Mọi loại, dựng từ danh sách", "pros": ["Không mất chức năng đang có", "Loại mới (Object, People của FS-03.15) tự có trong lưới"], "cons": ["Lệch hình canvas"], "effort": "S", "recommended": true },
+            { "id": "b", "label": "8 loại như canvas", "pros": ["Đúng hình đã chốt"], "cons": ["Mất 4 loại cộng/trừ đang dùng được", "Danh sách viết tay — kiểu lỗi từng làm mất Color trên phone"], "effort": "S" }
+          ],
+          "tasks": ["Ghi “dựng từ danh sách đầy đủ” vào §2 — 13c-mask-heal-markup.md", "Thêm ca lưới Subtract vào AC-28 — 13c"]
+        },
+        {
+          "id": "D17",
+          "title": "[13·Q12 Heal] Trước khi FS-03.15 xong, Heal theo bố cục mới hiện các hàng chưa có (Remove, Opacity, New Source, Visualize Spots, Spot Pins, Clear All) ra sao?",
+          "importance": "important",
+          "why": "Sáu trên tám control của panel Heal mới thuộc FS-03.15. Ẩn thì panel còn thưa như hôm nay; hiện mờ thì nhiều nút chết; chờ thì Heal chưa có ✕ để huỷ.",
+          "proposal": "Hàng chưa có thì không hiện, thứ tự giữ chỗ — cùng luật với Transform (thẻ 13·Q12 Transform). Spec chưa chọn, đây là gợi ý.",
+          "options": [
+            { "id": "a", "label": "Không hiện, giữ chỗ trong thứ tự", "pros": ["Không nút chết", "Heal/Clone có ✕ / ✓ ngay"], "cons": ["Panel Heal còn thưa tới khi FS-03.15 xong"], "effort": "S", "recommended": true },
+            { "id": "b", "label": "Hiện mờ kèm lý do", "pros": ["Thấy bố cục cuối"], "cons": ["6 nút mờ trên một panel"], "effort": "S" },
+            { "id": "c", "label": "Heal mới chỉ land cùng FS-03.15", "pros": ["Land trọn một lần"], "cons": ["Heal không huỷ được tới khi FS-03.15 xong"], "effort": "S" }
+          ],
+          "tasks": ["Ghi luật hàng chờ vào §4 — 13c-mask-heal-markup.md", "Sửa AC-32 cho giai đoạn trước FS-03.15 — 13c"]
+        },
+        {
+          "id": "D18",
+          "title": "[13·Q15a] Bảy loại mực của bút Markup (Pen, Marker, Pencil, Fountain, Monoline, Watercolor, Crayon) chọn ở đâu khi không còn dải cuộn ngang?",
+          "importance": "important",
+          "why": "Canvas nói “mực ở chấm màu” nhưng không vẽ bề mặt mở ra; chọn sai là giấu 6 loại mực sau một chạm không ai đoán ra, hoặc tốn thêm một hàng panel.\nVì sao phải hỏi: FS-05.01 §4 đặt 7 loại mực trên dải chip cuộn ngang, nay cấm.",
+          "proposal": "Chạm chấm màu mở trang con trong panel gồm lưới mực + bảng màu, như trang bảng màu custom của FS-05.02. Spec chưa chọn; đây là phương án theo hướng canvas.",
+          "options": [
+            { "id": "a", "label": "Chấm màu mở trang con (lưới mực + bảng màu)", "pros": ["Đúng hướng canvas", "Dùng lại kiểu trang của FS-05.02", "Panel không thêm hàng"], "cons": ["Mực ẩn sau một chạm, khó khám phá"], "effort": "M", "recommended": true },
+            { "id": "b", "label": "Thêm một hàng 7 ô mực chia đều", "pros": ["Thấy hết mực, một chạm"], "cons": ["Thêm 40pt, đẩy hàng Select/Ruler xuống", "7 ô trên 375pt chỉ ~48pt mỗi ô"], "effort": "S" }
+          ],
+          "tasks": ["Ghi bề mặt chọn mực vào §5 — 13c-mask-heal-markup.md", "Sửa §4 dải mực — FS-05.01", "Giữ AC-35 — 13c"]
+        },
+        {
+          "id": "D19",
+          "title": "[13·Q15b] Loại lớp khung thoại gọi là “Speech bubble” hay “Bubble”?",
+          "importance": "minor",
+          "proposal": "Giữ “Speech bubble” như FS-05.01 — “Bubble” đã là tên một hình bokeh của Lens Blur (FS-03.15e), trùng tên dễ nhầm."
+        }
+      ]
+    },
+    {
+      "id": "fs13-presets",
+      "title": "FS-03.13 · Presets và sửa nhiều ảnh",
+      "intro": "Lối vào Manage Looks, filmstrip mới và chỗ đặt Sync.",
+      "decisions": [
+        {
+          "id": "D20",
+          "title": "[13·Q16] Lối mở Manage Looks (chọn nhiều, sắp xếp, xoá look) đặt ở đâu?",
+          "importance": "important",
+          "why": "Đặt chỗ khó thấy thì tính năng sắp xếp look coi như không có; thêm nút vào dải nguồn thì ba chip Presets · My Looks · LUTs hẹp lại.\nVì sao phải hỏi: intent chỉ ghi “⋯ tab → Manage Looks”, không rõ ⋯ nào.",
+          "proposal": "Thêm dòng Manage Looks vào ⋯ của băng trên khi đang ở tab My Looks. Spec chưa chọn; đây là gợi ý vì không thêm nút và dải nguồn giữ 3 chip đều.",
+          "options": [
+            { "id": "a", "label": "Dòng trong ⋯ băng trên, khi ở My Looks", "pros": ["Không thêm nút", "Dải nguồn giữ 3 chip đều"], "cons": ["⋯ đổi nội dung theo tab — phải ghi vào AC-12", "Khó thấy hơn một nút tại chỗ"], "effort": "S", "recommended": true },
+            { "id": "b", "label": "Nút ⋯ 30×30 cuối dải nguồn khi ở My Looks", "pros": ["Ngay cạnh danh sách look, dễ thấy"], "cons": ["Dải nguồn mất 38pt, chip hẹp lại", "Hai nút ⋯ trên cùng màn"], "effort": "S" }
+          ],
+          "tasks": ["Ghi lối vào vào §1 — 13d-presets-batch-devices.md", "Cập nhật danh sách ⋯ và AC-12 — 13a-chrome-and-toolbar.md", "Sửa “⋯ của tab” — 14c-export-share-receive.md §3"]
+        },
+        {
+          "id": "D21",
+          "title": "[13·Q17a] Filmstrip khi sửa nhiều ảnh có thu từ 124pt (ô 96, viền accent) về 56pt (ô 44, viền trắng) không?",
+          "importance": "important",
+          "why": "Filmstrip 124 ăn thẳng vào chiều cao ảnh; viền accent phạm luật “accent chỉ trên Save”.\nVì sao phải hỏi: FS-03.09b §2 và DESIGN.md §10.3 ghi 124 / 96 và “viền accent = đang sửa”.",
+          "proposal": "Nhận 56 / 44, viền trắng; viết lại FS-03.09b §2 và DESIGN.md §10.3.",
+          "options": [
+            { "id": "a", "label": "56 / 44, viền trắng", "pros": ["Trả ~68pt cho ảnh", "Không accent ngoài Save", "Khớp canvas B4"], "cons": ["Ô 44 khó nhận ảnh hơn", "Viết lại hai tài liệu"], "effort": "S", "recommended": true },
+            { "id": "b", "label": "Giữ 124 / 96", "pros": ["Thumbnail to, dễ nhận ảnh"], "cons": ["Ảnh nhỏ đi 68pt", "Giữ ngoại lệ accent"], "effort": "S" }
+          ],
+          "tasks": ["Viết lại §2 filmstrip — FS-03.09b", "Sửa filmstrip 96/124 và viền accent — DESIGN.md §10.3"]
+        },
+        {
+          "id": "D22",
+          "title": "[13·Q17b] Ô filmstrip bo góc 6 (như canvas) hay 8?",
+          "importance": "minor",
+          "proposal": "Dùng r-sm 8 có sẵn; 6 là token riêng của Video Studio (DESIGN.md §5)."
+        },
+        {
+          "id": "D23",
+          "title": "[13·Q18] Sync (áp chỉnh sửa sang các ảnh khác) có ở cả ⋯ lẫn cuối filmstrip, hay chỉ filmstrip?",
+          "importance": "important",
+          "why": "Chỉ filmstrip thì khi tràn viền (filmstrip ẩn) và với VoiceOver không có đường tới Sync; hai chỗ thì trái “một hành động — một chỗ”.",
+          "proposal": "Cả hai: ⋯ là đường khi filmstrip ẩn và cho VoiceOver — khớp danh sách ⋯ đang viết ở 13a §3.",
+          "options": [
+            { "id": "a", "label": "Chỉ cuối filmstrip", "pros": ["Một hành động, một chỗ", "⋯ gọn hơn một dòng"], "cons": ["Không tới được khi filmstrip ẩn", "Khó với VoiceOver"], "effort": "S" },
+            { "id": "b", "label": "Cả hai", "pros": ["Luôn tới được, kể cả tràn viền", "Khớp 13a §3"], "cons": ["Hai chỗ cho một hành động"], "effort": "S", "recommended": true }
+          ],
+          "tasks": ["Chốt §2 — 13d-presets-batch-devices.md", "Giữ “Sync to N Photos” trong ⋯ — 13a §3", "Sửa §3 lối vào Sync — FS-03.09b"]
+        }
+      ]
+    },
+    {
+      "id": "fs13-landscape",
+      "title": "FS-03.13 · iPhone xoay ngang",
+      "intro": "Mở xoay ở đâu, cổng nào đưa iPhone ngang vào bố cục cột phải, và cú giữ lâu trên ảnh.",
+      "decisions": [
+        {
+          "id": "D24",
+          "title": "[13·Q19] Mở xoay ngang cho cả app, chỉ editor, hay các màn tầng D (editor, Collage, Video Studio)?",
+          "importance": "important",
+          "why": "Mở cả app là lộ Library, Statistics, Settings ở bố cục ngang chưa ai thiết kế; chỉ editor thì xoay máy giữa app không có gì xảy ra cho tới khi vào editor.\nVì sao phải hỏi: project hôm nay khoá iPhone chỉ dọc.",
+          "proposal": "Chỉ editor xoay, các màn khác giữ dọc — đúng phạm vi intent, việc ít nhất. Spec chưa chọn, đây là gợi ý.",
+          "options": [
+            { "id": "a", "label": "Cả app", "pros": ["Nhất quán như hầu hết app"], "cons": ["device-layout phải đi ngang mọi tab trước khi land", "Việc lớn nhất"], "effort": "L" },
+            { "id": "b", "label": "Chỉ editor", "pros": ["Đúng phạm vi intent", "Việc ít nhất"], "cons": ["Một màn xoay giữa app không xoay — hơi lạ", "Cần khoá hướng theo từng màn"], "effort": "M", "recommended": true },
+            { "id": "c", "label": "Chỉ màn tầng D", "pros": ["Collage và Video Studio cũng được ngang"], "cons": ["Collage và Video Studio chưa có thiết kế ngang trên iPhone"], "effort": "L" }
+          ],
+          "tasks": ["Mở hướng ngang cho iPhone trong project setting (khi /plan)", "Ghi phạm vi xoay vào §3 — 13d-presets-batch-devices.md", "Thêm iPhone ngang 874×402 vào bảng kích thước — NF-05 §1"]
+        },
+        {
+          "id": "D25",
+          "title": "[13·Q20a] Điều kiện nào đưa iPhone ngang vào bố cục cột phải: theo kích thước cửa sổ hay theo loại máy?",
+          "importance": "important",
+          "why": "iPhone ngang cao 402 < 600 nên hôm nay rơi về slab dọc — ảnh bị ép còn một dải. Luật theo loại máy lệch nguyên tắc “hỏi kích thước, đừng hỏi idiom” và bỏ sót cửa sổ Stage Manager thấp trên iPad.\nVì sao phải hỏi: cổng sidebar của DESIGN.md §10.3 đòi cao ≥600.",
+          "proposal": "Theo cửa sổ: rộng ≥700, cao <600, rộng > cao thì dùng cột phải — iPhone ngang và cửa sổ iPad thấp cùng vào.",
+          "options": [
+            { "id": "a", "label": "Theo cửa sổ (≥700 rộng, <600 cao, rộng > cao)", "pros": ["Đúng nguyên tắc hỏi kích thước", "Cửa sổ Stage Manager thấp trên iPad cũng được bố cục hợp"], "cons": ["iPad cửa sổ thấp cũng đổi bố cục — thêm ca phải kiểm"], "effort": "M", "recommended": true },
+            { "id": "b", "label": "Theo loại máy: phone + ngang", "pros": ["Đơn giản, chỉ ảnh hưởng iPhone"], "cons": ["Trái luật hỏi kích thước", "Cửa sổ iPad thấp vẫn ép ảnh"], "effort": "S" }
+          ],
+          "tasks": ["Viết lại cổng ≥700 / ≥600 — DESIGN.md §10.3", "Ghi cổng mới vào §3 — 13d-presets-batch-devices.md", "Kiểm cửa sổ Stage Manager thấp — agent ipad-multitasking"]
+        },
+        {
+          "id": "D26",
+          "title": "[13·Q20b] Cột phải khi iPhone ngang rộng 330 (canvas) hay 320 (mặc định sidebar có sẵn)?",
+          "importance": "minor",
+          "proposal": "Dùng 320, mặc định sidebar có sẵn (dải 280–420); 330 chưa có trong token. Spec chưa chọn, đây là gợi ý.",
+          "options": [
+            { "id": "a", "label": "320 (token có sẵn)", "pros": ["Không thêm token", "Ảnh rộng thêm 10pt"], "cons": ["Lệch canvas 10pt"], "effort": "S", "recommended": true },
+            { "id": "b", "label": "330, thêm vào DESIGN.md", "pros": ["Đúng canvas"], "cons": ["Thêm một số mới vào token"], "effort": "S" }
+          ]
+        },
+        {
+          "id": "D27",
+          "title": "[13·Q20c] Ở iPhone ngang, histogram và filmstrip đặt ở đâu?",
+          "importance": "important",
+          "why": "Canvas không vẽ hai thứ này ở bố cục ngang; thiếu là mất chức năng so với dọc (trái luật không mất chức năng). Cột có đè vùng an toàn khi đảo nằm bên phải hay không cũng chưa đo.",
+          "proposal": "Histogram 40×28 nằm trong băng lệnh đầu cột phải như bản dọc; filmstrip 56 nằm ngang dưới vùng ảnh bên trái, ẩn khi vào công cụ như bản dọc. Spec không có phương án — đây là gợi ý, cần vẽ lại trên canvas và đo.",
+          "tasks": ["Vẽ bố cục ngang có histogram và filmstrip — canvas", "Ghi vào §3 — 13d-presets-batch-devices.md", "Đo cột có đè vùng an toàn đảo/home khi xoay hai chiều (câu đo 5) — agent device-layout"]
+        },
+        {
+          "id": "D28",
+          "title": "[13·Q21] Trên iPhone Pro Max xoay ngang, giữ lâu trên ảnh là xem gốc hay mở menu ngữ cảnh?",
+          "importance": "important",
+          "why": "Pro Max ngang là size class regular nên luật hiện tại sẽ dựng menu ngữ cảnh — cướp cú giữ-xem-gốc, lặp lại bug “kẹt bản gốc” đã ghi ở DESIGN.md §10.3.",
+          "proposal": "Menu ngữ cảnh chỉ khi đang ở layout sidebar; iPhone ngang giữ lâu = xem gốc như iPhone dọc.",
+          "options": [
+            { "id": "a", "label": "Menu chỉ ở layout sidebar; iPhone ngang giữ = xem gốc", "pros": ["Một cử chỉ như iPhone dọc", "Tránh bug kẹt bản gốc"], "cons": ["Đổi điều kiện menu từ size class sang layout"], "effort": "S", "recommended": true },
+            { "id": "b", "label": "iPhone ngang dùng menu ngữ cảnh", "pros": ["Giống iPad"], "cons": ["Mất đường xem gốc duy nhất — trái luật không mất chức năng"], "effort": "S" }
+          ],
+          "tasks": ["Sửa luật menu ngữ cảnh theo size class — DESIGN.md §10.3", "Viết AC giữ lâu trên Pro Max ngang — 13d §5"]
+        }
+      ]
+    },
+    {
+      "id": "fs13-duo",
+      "title": "FS-03.13 · Duo màn ngoài",
+      "intro": "Bốn chỗ canvas D1/S7/S15 chưa khớp ràng buộc trên màn ngoài 466×678 của iPhone Duo, và histogram.",
+      "decisions": [
+        {
+          "id": "D29",
+          "title": "[13·Q22.1] Trên Duo màn ngoài (326pt), hàng “Mask 1 ▼ · Mask Overlay · + · ⋯” giữ nguyên hay rút chip thành “Overlay”?",
+          "importance": "important",
+          "why": "Không vừa thì tên mask thành “…” hoặc + / ⋯ bị đẩy ra ngoài khung (cột cuối của hàng ngang bị đẩy đi). Rút chữ thì một nút có hai tên trên hai màn.",
+          "proposal": "Giữ nguyên chữ, đo trước; chỉ rút thành “Overlay” trên Duo ngoài nếu đo thấy cắt (AC-31 fail). Spec để câu này cho số đo.",
+          "options": [
+            { "id": "a", "label": "Giữ “Mask Overlay”, đo trước", "pros": ["Một tên cho một nút mọi màn"], "cons": ["Có thể không vừa 326pt"], "effort": "S", "recommended": true },
+            { "id": "b", "label": "Rút thành “Overlay” trên Duo ngoài", "pros": ["Chắc chắn vừa"], "cons": ["Một nút hai tên"], "effort": "S" }
+          ],
+          "tasks": ["Đo hàng Mask trên 326pt (câu đo 3) — agent duo-ux-review", "Chốt AC-31 — 13c-mask-heal-markup.md"]
+        },
+        {
+          "id": "D30",
+          "title": "[13·Q22.2] Nhãn ô trong cột công cụ Duo cỡ 9,5pt (canvas) hay 10,5pt (token nhãn tab có sẵn)?",
+          "importance": "important",
+          "why": "9,5 là cỡ chữ mới không có trong DESIGN.md; 10,5 có thể làm “Transform” bị cắt trong ô 52pt.",
+          "proposal": "Dùng 10,5 có sẵn, đo “Transform” trong ô 52pt; chỉ thêm token 9,5 nếu đo thấy cắt. Spec chưa chọn, đây là gợi ý theo luật không bịa token.",
+          "options": [
+            { "id": "a", "label": "10,5 (token nhãn tab)", "pros": ["Không thêm token", "Dễ đọc hơn"], "cons": ["Có thể cắt “Transform” trong ô 52pt"], "effort": "S", "recommended": true },
+            { "id": "b", "label": "9,5, thêm vào DESIGN.md", "pros": ["Chắc chắn vừa"], "cons": ["Thêm một cỡ chữ mới", "Nhỏ, khó đọc"], "effort": "S" }
+          ],
+          "tasks": ["Đo nhãn trong ô 52pt — agent device-layout", "Nếu chọn 9,5: thêm token — DESIGN.md"]
+        },
+        {
+          "id": "D31",
+          "title": "[13·Q22.3] Danh sách slider trên Duo màn ngoài cố định 300pt hay đổi theo phần đen của ảnh như iPhone?",
+          "importance": "important",
+          "why": "Cố định thì ảnh ngang trên Duo ngoài để trống phần đen; đổi theo ảnh thì thêm một luật chiều cao nữa cho một màn hiếm dùng.",
+          "proposal": "Cố định 300pt — 13a §2 đã ghi Duo màn ngoài không dùng luật 344/264. Spec chưa chọn; đây là phương án khớp phần thân spec.",
+          "options": [
+            { "id": "a", "label": "Cố định 300", "pros": ["Đơn giản, khớp 13a §2", "Một số để kiểm"], "cons": ["Ảnh ngang để trống phần đen"], "effort": "S", "recommended": true },
+            { "id": "b", "label": "Theo phần đen như iPhone", "pros": ["Tận dụng chỗ trống"], "cons": ["Thêm luật và test cho màn hiếm dùng", "Sửa 13a §2"], "effort": "M" }
+          ],
+          "tasks": ["Ghi chiều cao danh sách vào §4 — 13d-presets-batch-devices.md", "Nếu chọn (b): sửa “Duo màn ngoài không dùng luật này” — 13a §2"]
+        },
+        {
+          "id": "D32",
+          "title": "[13·Q22.4] Trên Duo màn ngoài, đang trong một công cụ thì chạm vào 5 ô công cụ còn lại của cột làm gì?",
+          "importance": "important",
+          "why": "Chạm để đổi thì khác iPhone (nơi phải ✓ hoặc ✕ trước) — một thói quen hai hành vi, và áp công cụ ngầm; mờ thì cột 56pt có 5 ô chết.",
+          "proposal": "Mờ 0,28, không nhận chạm — cùng luật với iPhone đã chốt ở 13a §5. Spec chưa chọn, đây là gợi ý.",
+          "options": [
+            { "id": "a", "label": "Mờ 0,28, không nhận chạm", "pros": ["Cùng luật với iPhone", "Không áp công cụ ngầm"], "cons": ["5 ô chết trong cột"], "effort": "S", "recommended": true },
+            { "id": "b", "label": "Chạm = ✓ rồi đổi công cụ", "pros": ["Nhanh hơn một chạm"], "cons": ["Áp công cụ mà người dùng có thể không muốn", "Khác iPhone"], "effort": "S" }
+          ],
+          "tasks": ["Ghi hành vi cột vào §4 — 13d-presets-batch-devices.md", "Thêm ca vào AC-46 — 13d"]
+        },
+        {
+          "id": "D33",
+          "title": "[13·Q22.5] Băng trên của Duo màn ngoài có thêm histogram không?",
+          "importance": "important",
+          "why": "Canvas bỏ histogram ở Duo ngoài; không có là mất một chức năng iPhone có (luật “không mất chức năng”, dựng từ danh sách đầy đủ).",
+          "proposal": "Thêm histogram 40×28 vào băng trước ⋯ — băng 326pt còn chỗ. Spec chỉ ghi nhận thiếu, đây là gợi ý.",
+          "options": [
+            { "id": "a", "label": "Thêm histogram vào băng", "pros": ["Không mất chức năng", "Cùng băng với iPhone"], "cons": ["Băng chật hơn 40pt"], "effort": "S", "recommended": true },
+            { "id": "b", "label": "Chấp nhận không có", "pros": ["Băng thoáng"], "cons": ["Mất histogram trên Duo ngoài"], "effort": "S" }
+          ],
+          "tasks": ["Ghi histogram vào băng §4 — 13d-presets-batch-devices.md", "Thêm vào AC-46 — 13d"]
+        }
+      ]
+    },
+    {
+      "id": "fs14-storage",
+      "title": "FS-03.14 · Kho look và thứ tự làm",
+      "intro": "Look lưu ở đâu, có giữ file preset gốc không, ship trước hay sau FS-03.15, và mask trong preset.",
+      "decisions": [
+        {
+          "id": "D34",
+          "title": "[14·1] Kho My Looks lưu ở đâu khi cần thêm thứ tự, nguồn, mã lượt nhận và có thể cả ảnh xem trước?",
+          "importance": "critical",
+          "why": "Đây là chỗ lưu dữ liệu người dùng: đổi chỗ sau khi có người dùng là phải chuyển dữ liệu. Kho cài đặt hôm nay là một mảng JSON nạp mỗi lần mở app — 300 preset ~1 MB và không chứa được ảnh.\nVì sao phải hỏi: look là dữ liệu người dùng, không được vào photo_metadata (BD-02); kit và extension không được đụng GRDB.",
+          "proposal": "File JSON trong Application Support cộng một thư mục ảnh, cùng khuôn với kho LUT đã nhập.",
+          "options": [
+            { "id": "a", "label": "Giữ kho cài đặt, thứ tự = thứ tự mảng", "pros": ["Không đổi chỗ lưu", "Ít code nhất"], "cons": ["~1 MB nạp mỗi lần mở app với 300 preset", "Không để được ảnh xem trước hay file gốc"], "effort": "S" },
+            { "id": "b", "label": "File JSON trong Application Support + thư mục ảnh", "pros": ["Cùng khuôn kho LUT đã nhập", "Để được file gốc và ảnh xem trước", "Kit/extension đọc được, không cần GRDB"], "cons": ["Phải viết ghi nguyên tử và chuyển kho cũ một lần (app chưa phát hành nên đơn giản)"], "effort": "M", "recommended": true },
+            { "id": "c", "label": "Bảng GRDB riêng", "pros": ["Truy vấn, sắp xếp mạnh"], "cons": ["Thừa: kho không cần truy vấn", "Kit và extension không được đụng GRDB"], "effort": "M" }
+          ],
+          "tasks": ["Chốt §6 — 14c-export-share-receive.md", "Sửa §9 My Looks (kho, thứ tự) — FS-03.02 02-film-simulation-and-presets.md", "Ghi kho look ngoài photo_metadata — BD-02 §1"]
+        },
+        {
+          "id": "D35",
+          "title": "[14·5b] Có giữ file preset Lightroom gốc cạnh mỗi look đã nhập, để sau này quy đổi lại không?",
+          "importance": "critical",
+          "why": "Không giữ thì khi FS-03.15 thêm Calibration, B&W mixer, curve vùng…, preset đã nhập vẫn thiếu mãi — người dùng phải tìm lại file gốc để nhập lại. Giữ thì thêm một trường vào kho look (khó thêm lại sau khi đã nhập).",
+          "proposal": "Giữ file gốc cạnh look (phần “giữ file gốc” của phương án (c) trong 14b §5), để bản sau có nút quy đổi lại.",
+          "options": [
+            { "id": "a", "label": "Giữ file gốc", "pros": ["Bản sau quy đổi lại được, look tự đủ hơn", "Không cần người dùng còn giữ file"], "cons": ["Vài KB mỗi preset (vài trăm KB nếu có RGBTable)", "Thêm trường vào kho look"], "effort": "S", "recommended": true },
+            { "id": "b", "label": "Không giữ", "pros": ["Kho gọn"], "cons": ["Preset nhập trước FS-03.15 thiếu vĩnh viễn"], "effort": "S" }
+          ],
+          "tasks": ["Thêm trường file gốc vào kho — 14c §6", "Ghi vào §5 — 14b-lightroom-mapping.md"]
+        },
+        {
+          "id": "D36",
+          "title": "[14·5a] Ship tính năng nhập preset trước FS-03.15 hay chờ FS-03.15 xong?",
+          "importance": "important",
+          "why": "Ship trước thì báo cáo nhập đầy dòng ✕ “not in ShotDex yet” cho Calibration, curve vùng, B&W mixer, Upright; chờ thì rào cản đổi app từ Lightroom còn nguyên lâu hơn.",
+          "proposal": "Ship FS-03.14 trước (cùng với giữ file gốc ở thẻ 14·5b — tức phương án (c) của spec).",
+          "options": [
+            { "id": "a", "label": "Ship trước", "pros": ["Người dùng mang preset sang ngay", "Báo cáo nói thật cái gì còn thiếu"], "cons": ["Nhiều ✕ lúc đầu, look nhập vào chưa đủ"], "effort": "M", "recommended": true },
+            { "id": "b", "label": "Chờ FS-03.15", "pros": ["Ít ✕, ấn tượng đầu tốt hơn"], "cons": ["Rào cản đổi app kéo dài theo tiến độ FS-03.15 (nhiều thử nghiệm còn treo)"], "effort": "M" }
+          ],
+          "tasks": ["Chốt §5 — 14b-lightroom-mapping.md", "Giữ AC-b7 (thẻ chưa có chỗ đặt) — 14b"]
+        },
+        {
+          "id": "D37",
+          "title": "[14·11] Preset có mask (kể cả preset “adaptive” Sky/Subject của Lightroom): bỏ mask, hay map các mask tự sinh theo nội dung?",
+          "importance": "important",
+          "why": "Bỏ hết thì preset adaptive mất phần chính của nó; map thì phải đổi luật chung “look không mang mask” của FS-03 README và Copy/Sync.",
+          "proposal": "V1 bỏ hết mask, báo ✕ “Masks stay with each photo” — đúng lát cắt look của FS-03.10.",
+          "options": [
+            { "id": "a", "label": "Bỏ hết mask", "pros": ["Giữ lát cắt look của FS-03.10", "Không đổi recipe look"], "cons": ["Preset adaptive chỉ sang được phần toàn cục"], "effort": "S", "recommended": true },
+            { "id": "b", "label": "Map mask tự sinh (Subject, Sky, People), bỏ mask vẽ tay", "pros": ["Preset adaptive gần đúng hơn"], "cons": ["Đổi luật look không mang mask ở FS-03 README và FS-03.10", "Phụ thuộc Object/People của FS-03.15"], "effort": "L" }
+          ],
+          "tasks": ["Chốt §4 — 14b-lightroom-mapping.md", "Giữ dòng lý do trong báo cáo — 14a §3"]
+        }
+      ]
+    },
+    {
+      "id": "fs14-legal",
+      "title": "FS-03.14 · Pháp lý và riêng tư",
+      "intro": "Cổng rà soát pháp lý, nhãn “(LR)” và ảnh xem trước rời máy.",
+      "decisions": [
+        {
+          "id": "D38",
+          "title": "[14·6a] Rà soát pháp lý (chữ “Lightroom”, nhãn “(LR)”, dòng điều khoản) chặn bản phát hành nào?",
+          "importance": "critical",
+          "why": "Dùng tên thương hiệu Adobe sai cách có thể bị App Store từ chối hoặc nhận khiếu nại sau khi phát hành — sửa lúc đó đắt hơn nhiều. Chặn cả TestFlight thì tính năng không có người thử thật trong lúc chờ.",
+          "proposal": "Cho phát hành TestFlight trước, chặn App Store tới khi người có chuyên môn pháp lý xem xong. Spec chưa chọn, đây là gợi ý.",
+          "options": [
+            { "id": "a", "label": "Chặn mọi phát hành tới khi xem xong", "pros": ["An toàn nhất"], "cons": ["Không thử được với người dùng thật trong lúc chờ"], "effort": "S" },
+            { "id": "b", "label": "TestFlight trước, chặn App Store", "pros": ["Thử được với người dùng thật", "Vẫn chặn phát hành công khai"], "cons": ["TestFlight ngoài vẫn là phát hành giới hạn — chữ “Lightroom” vẫn lộ ra"], "effort": "S", "recommended": true }
+          ],
+          "tasks": ["Chốt §7 — 14-lightroom-preset-exchange.md", "Thêm mục rà soát pháp lý — .claude/skills/release-check/SKILL.md", "Thêm dòng “chỉ chia sẻ look bạn có quyền chia sẻ” vào điều khoản sử dụng"]
+        },
+        {
+          "id": "D39",
+          "title": "[14·6b] Look nhập từ Lightroom mang nhãn “(LR)” hay “Imported”?",
+          "importance": "important",
+          "why": "“(LR)” nói rõ look đến từ đâu nhưng dùng tên viết tắt sản phẩm Adobe; “Imported” an toàn hơn nhưng không phân biệt preset Lightroom với look nhận từ đồng nghiệp.",
+          "proposal": "Giữ “(LR)” như spec đang viết, chờ ý kiến pháp lý; đổi sang “Imported” nếu họ khuyên.",
+          "options": [
+            { "id": "a", "label": "(LR)", "pros": ["Nói rõ nguồn, người quen Lightroom nhận ra ngay", "Spec và AC đang viết theo nhãn này"], "cons": ["Phụ thuộc ý kiến pháp lý"], "effort": "S", "recommended": true },
+            { "id": "b", "label": "Imported", "pros": ["Không dùng tên Adobe"], "cons": ["Không phân biệt nguồn Lightroom với look nhận qua AirDrop"], "effort": "S" }
+          ],
+          "tasks": ["Giữ hoặc đổi nhãn §4 — 14a-import-and-report.md", "Nếu đổi: sửa AC-a1, a2, a9 — 14a"]
+        },
+        {
+          "id": "D40",
+          "title": "[14·6c] Sheet xuất .xmp có thêm câu “không liên quan / không được Adobe bảo trợ” không?",
+          "importance": "minor",
+          "proposal": "Không thêm, trừ khi luật sư yêu cầu — spec giữ chữ “Lightroom” ở đúng ba chỗ (§7).",
+          "options": [
+            { "id": "a", "label": "Không thêm, trừ khi luật sư yêu cầu", "pros": ["Giữ luật ba chỗ"], "cons": ["Chờ ý kiến pháp lý"], "effort": "S", "recommended": true },
+            { "id": "b", "label": "Thêm một dòng", "pros": ["Rõ ràng về bảo trợ"], "cons": ["Thêm một chỗ có chữ “Lightroom”"], "effort": "S" }
+          ]
+        },
+        {
+          "id": "D41",
+          "title": "[14·12] Ảnh xem trước nhúng trong file look khi chia sẻ: mặc định tắt, bật, hay bỏ hẳn?",
+          "importance": "important",
+          "why": "Ảnh xem trước là một tấm ảnh của người dùng rời máy; bật mặc định là gửi ảnh riêng đi mà người dùng có thể không để ý.",
+          "proposal": "Mặc định tắt, bật theo từng lần chia sẻ; ảnh 256px đã gỡ hết metadata.",
+          "options": [
+            { "id": "a", "label": "Mặc định tắt, bật từng lần", "pros": ["Không ảnh nào rời máy nếu không chủ ý", "Người gửi vẫn chọn được"], "cons": ["Đa số file đi ra không có ảnh xem trước"], "effort": "S", "recommended": true },
+            { "id": "b", "label": "Mặc định bật, nhớ lựa chọn cuối", "pros": ["File look hấp dẫn hơn"], "cons": ["Gửi ảnh riêng đi theo mặc định"], "effort": "S" },
+            { "id": "c", "label": "Bỏ hẳn, máy nhận tự render", "pros": ["Không ảnh nào rời máy", "File nhỏ"], "cons": ["Người nhận chưa có ảnh phù hợp thì không thấy look trông ra sao"], "effort": "S" }
+          ],
+          "tasks": ["Chốt §2 — 14c-export-share-receive.md", "Giữ gỡ metadata ảnh xem trước — 14c §2"]
+        }
+      ]
+    },
+    {
+      "id": "fs14-receive",
+      "title": "FS-03.14 · Nhận look từ app khác",
+      "intro": "Share extension có được thêm quyền không, làm gì với file, và file mở vào thì chép hay dùng tại chỗ.",
+      "decisions": [
+        {
+          "id": "D42",
+          "title": "[14·2] Đường “Add to ShotDex” từ Messages/Mail có cần một share extension có vùng chia sẻ với app (App Group) không?",
+          "importance": "critical",
+          "why": "Mở vùng chia sẻ cho extension ảnh là nới quyền của một extension cố ý giữ tối thiểu; thêm extension mới là thêm target, bản khai riêng tư và mục release-check; bỏ thì Messages/Mail chỉ còn “Open in ShotDex”.\nVì sao phải hỏi: EX-03 §1 và NF-03 §1 ghi extension cố ý không có vùng chia sẻ với app.",
+          "proposal": "Extension mới “Add to ShotDex” chỉ cho look, có App Group; extension ảnh giữ quyền tối thiểu. Spec để ngỏ (b) hoặc (c) — AC-c9 viết theo (b); (c) là lùi an toàn nếu không muốn thêm target.",
+          "options": [
+            { "id": "a", "label": "Mở rộng extension “Save to ShotDex” hiện có", "pros": ["Không thêm target"], "cons": ["Nới quyền extension ảnh — sửa EX-03, NF-03", "Một hàng tên “Save” làm hai việc khác nhau"], "effort": "M" },
+            { "id": "b", "label": "Extension mới “Add to ShotDex” chỉ cho look", "pros": ["Extension ảnh giữ quyền tối thiểu", "Tên đúng việc", "Khớp AC-c9"], "cons": ["Target thứ sáu, bản khai riêng tư riêng, thêm mục /release-check"], "effort": "L", "recommended": true },
+            { "id": "c", "label": "Bỏ đường extension", "pros": ["Không quyền mới, việc ít nhất"], "cons": ["Messages/Mail chỉ dùng “Open in ShotDex” — vẫn được, kém tiện hơn", "Bỏ AC-c9, c10"], "effort": "S" }
+          ],
+          "tasks": ["Chốt §4 — 14c-export-share-receive.md", "Nếu (a) hoặc (b): sửa §1 — EX-03-share-extension.md và NF-03 §1, §4", "Nếu (b): thêm target vào /release-check và kiểm bởi agent privacy-manifest"]
+        },
+        {
+          "id": "D43",
+          "title": "[14·3] Share extension làm gì với file look nhận được?",
+          "importance": "important",
+          "why": "Extension có trần bộ nhớ thấp (NF-02 §3); đọc và giải mã trong extension là kéo bộ đọc look/preset vào ShotDexKit và mở công khai. Chỉ chép byte thì người dùng không thấy tên look cho tới khi mở app. Chỉ cần quyết nếu giữ đường extension (thẻ 14·2).",
+          "proposal": "Chỉ kiểm cỡ và chép byte vào hộp thư chờ, báo “Added. Open ShotDex to use it.”; trần hộp thư 50 file / 50 MB.",
+          "options": [
+            { "id": "a", "label": "Chỉ kiểm cỡ + chép byte", "pros": ["Bộ nhớ thấp nhất", "Không đổi ranh giới kit"], "cons": ["Không thấy tên hay ảnh look trong extension"], "effort": "S", "recommended": true },
+            { "id": "b", "label": "Đọc .shotdexlook để hiện tên và ảnh xem trước", "pros": ["Người dùng thấy mình vừa thêm gì"], "cons": ["Bộ đọc look vào kit, mở công khai", "Giải mã JPEG trong extension"], "effort": "M" },
+            { "id": "c", "label": "Đọc mọi định dạng, kể cả XMP", "pros": ["Có báo cáo ngay trong extension"], "cons": ["Bộ đọc preset (XML, Lua) vào kit", "Rủi ro trần bộ nhớ cao nhất"], "effort": "L" }
+          ],
+          "tasks": ["Chốt §4 — 14c-export-share-receive.md", "Kiểm ranh giới kit — agent extension-boundary", "Giữ AC-c10 — 14c"]
+        },
+        {
+          "id": "D44",
+          "title": "[14·4c] File look mở từ AirDrop/Files được chép vào app rồi xoá, hay mở tại chỗ?",
+          "importance": "important",
+          "why": "Mở tại chỗ cần quyền truy cập có phạm vi và giữ đường dẫn tới file người khác sở hữu (file bị xoá/di chuyển là hỏng); chép vào thì tốn một bản chép tạm.",
+          "proposal": "Chép vào hộp thư của app rồi xoá sau khi nhập — look được chép vào kho, không cần giữ file gốc.",
+          "options": [
+            { "id": "a", "label": "Chép vào, xoá sau khi nhập", "pros": ["Không cần quyền truy cập có phạm vi", "Không phụ thuộc file gốc"], "cons": ["Một bản chép tạm mỗi lần nhận"], "effort": "S", "recommended": true },
+            { "id": "b", "label": "Mở tại chỗ", "pros": ["Không chép"], "cons": ["Phải quản lý quyền truy cập có phạm vi", "File gốc bị xoá/di chuyển là hỏng"], "effort": "M" }
+          ],
+          "tasks": ["Khai không mở tài liệu tại chỗ — ShotDex/Info.plist", "Chốt §5 — 14c-export-share-receive.md"]
+        }
+      ]
+    },
+    {
+      "id": "fs14-files",
+      "title": "FS-03.14 · Định dạng file look",
+      "intro": "Gói nhiều look, định danh loại file nhập, và LUT đi kèm look khi xuất.",
+      "decisions": [
+        {
+          "id": "D45",
+          "title": "[14·4a] Gói nhiều look dùng cùng loại file .shotdexlook, hay một loại riêng .shotdexlooks?",
+          "importance": "important",
+          "why": "Đuôi file là thứ người dùng thấy và gửi cho nhau; đổi sau khi file đã lưu hành là file cũ không mở được. Hai loại là hai khai báo, hai biểu tượng, hai đường nhập.",
+          "proposal": "Cùng loại com.hoangtuan.shotdex.look, đuôi .shotdexlook, một file chứa 1…N look; khai tuân public.data + public.content (không public.json).",
+          "options": [
+            { "id": "a", "label": "Cùng loại, 1…N look mỗi file", "pros": ["Một đuôi, một bộ đọc", "Người dùng không phải phân biệt"], "cons": ["Nhìn đuôi không biết file có mấy look"], "effort": "S", "recommended": true },
+            { "id": "b", "label": "Loại riêng .shotdexlooks", "pros": ["Nhìn đuôi biết là gói"], "cons": ["Hai khai báo loại, hai ca test"], "effort": "S" }
+          ],
+          "tasks": ["Khai loại xuất — ShotDex/Info.plist", "Chốt §5 — 14c-export-share-receive.md"]
+        },
+        {
+          "id": "D46",
+          "title": "[14·4b] Loại file nhập .xmp, .lrtemplate, .cube khai theo định danh của chủ định dạng, hay định danh riêng của ShotDex?",
+          "importance": "important",
+          "why": "Khai sai thì ShotDex không hiện trong “Open in…” cho file đó, hoặc đụng khai báo của app khác và hành vi mở khó đoán. Hôm nay .cube chỉ khớp theo đuôi, không khai loại.",
+          "proposal": "Định danh riêng dưới com.hoangtuan.shotdex.imported.*, khớp theo đuôi file. Spec chưa chọn — đây là gợi ý vì không đụng khai báo của ai.",
+          "options": [
+            { "id": "a", "label": "Định danh kiểu chủ sở hữu định dạng", "pros": ["Hệ thống có thể nhận là cùng loại với app khác đã khai"], "cons": ["Có thể đụng khai báo khác của app khác"], "effort": "S" },
+            { "id": "b", "label": "Định danh riêng com.hoangtuan.shotdex.imported.*", "pros": ["Không đụng khai báo của ai", "Kiểm soát hoàn toàn"], "cons": ["App khác không coi là cùng loại với khai báo của họ"], "effort": "S", "recommended": true }
+          ],
+          "tasks": ["Khai loại nhập — ShotDex/Info.plist", "Chốt §5 — 14c-export-share-receive.md", "Giữ luật DNG không đăng ký mở từ Files — 14a §1"]
+        },
+        {
+          "id": "D47",
+          "title": "[14·10] Xuất .shotdexlook cho một look dùng LUT đã nhập: nhúng bảng LUT vào file hay bỏ?",
+          "importance": "important",
+          "why": "Không nhúng thì máy nhận render look như LUT đã bị xoá — look sai mà trông như lỗi. Nhúng thì file từ vài KB thành ~1 MB.",
+          "proposal": "Nhúng bảng .cube vào file; máy nhận thêm LUT vào My LUTs, và Undo của lần nhận gỡ cả LUT.",
+          "options": [
+            { "id": "a", "label": "Nhúng bảng .cube", "pros": ["Look sang máy khác đúng 100%"], "cons": ["File ~1 MB với LUT 33³", "Máy nhận có thêm LUT"], "effort": "M", "recommended": true },
+            { "id": "b", "label": "Không nhúng, ghi dòng “LUT isn't included”", "pros": ["File nhỏ"], "cons": ["Máy nhận render sai look"], "effort": "S" }
+          ],
+          "tasks": ["Chốt §1 — 14c-export-share-receive.md", "Giữ AC-c8 (Undo gỡ cả LUT) — 14c"]
+        }
+      ]
+    },
+    {
+      "id": "fs14-import",
+      "title": "FS-03.14 · Nhập preset",
+      "intro": "Zip, trần kích thước và trùng tên khi nhập.",
+      "decisions": [
+        {
+          "id": "D48",
+          "title": "[14·7] Có nhận file zip preset không, và nếu có thì giải nén bằng gì?",
+          "importance": "important",
+          "why": "Preset Lightroom hay được phát hành dạng zip, nhưng iOS không có API giải nén zip công khai. Thêm thư viện là lệch luật “phụ thuộc ngoài duy nhất là GRDB” (CLAUDE.md); tự viết là thêm bề mặt tấn công (zip bomb).",
+          "proposal": "V1 không nhận zip: Files tự giải nén khi chạm, người dùng chọn nhiều file; tự viết bộ đọc (a) để bản sau. Spec ghi (c) là rẻ nhất, chưa chốt.",
+          "options": [
+            { "id": "a", "label": "Tự viết bộ đọc zip (lưu thẳng + deflate) bằng Compression", "pros": ["Nhận zip trực tiếp, không phụ thuộc mới"], "cons": ["Tự viết và bảo trì, phải chặn zip bomb", "Zip mã hoá / zip64 thành ✕"], "effort": "M" },
+            { "id": "b", "label": "Thêm một thư viện SPM giải nén", "pros": ["Nhận zip đầy đủ, ít code tự viết"], "cons": ["Lệch luật chỉ GRDB", "Thêm bản khai riêng tư của thư viện"], "effort": "S" },
+            { "id": "c", "label": "V1 không nhận zip", "pros": ["Rẻ nhất, không code giải nén", "Không có bề mặt zip bomb"], "cons": ["Người dùng phải giải nén rồi chọn nhiều file", "Đổi AC-a6 thành 10 file chọn cùng lúc"], "effort": "S", "recommended": true }
+          ],
+          "tasks": ["Chốt §2, bỏ zip khỏi bảng định dạng — 14a-import-and-report.md", "Đổi đầu vào AC-a6 — 14a", "Sửa phạm vi “nhiều file và zip” — 14 §2"]
+        },
+        {
+          "id": "D49",
+          "title": "[14·8] Có chốt nguyên bảng trần kích thước khi đọc preset (5 MB/file, DNG 200 MB, zip 50/500/250 MB, 500 preset/lượt, XML 64 tầng, Lua 32 tầng) không?",
+          "importance": "important",
+          "why": "Trần thấp quá thì preset thật (có RGBTable, DNG của bản di động) bị từ chối; cao quá thì một file độc hại làm app hết bộ nhớ. Các số là đề xuất, chưa đo trên preset thật.",
+          "proposal": "Chốt nguyên bảng ở 14a §2 cho v1; đo lại trên một bộ preset thật trước /verify và chỉnh dòng nào lệch.",
+          "tasks": ["Chốt bảng §2 — 14a-import-and-report.md", "Đo cỡ preset thật (có RGBTable, DNG di động) — thử nghiệm", "Giữ AC-a5 — 14a"]
+        },
+        {
+          "id": "D50",
+          "title": "[14·9] Nhập một preset trùng tên với look đã có thì làm gì?",
+          "importance": "important",
+          "why": "Ghi đè là xoá look người dùng tự làm mà không hỏi; từ chối thì preset hợp lệ không vào được.\nVì sao phải hỏi: Save Current hôm nay ghi đè khi trùng tên (FS-03.02 §9).",
+          "proposal": "Thêm hậu tố (“Golden 2”); trùng cả tên lẫn nội dung thì ✕ “Already in My Looks” — nhập không bao giờ xoá look của người dùng.",
+          "options": [
+            { "id": "a", "label": "Thêm hậu tố; trùng cả nội dung thì bỏ qua", "pros": ["Nhập không bao giờ xoá look người dùng", "Không trùng lặp vô ích"], "cons": ["Có thể sinh nhiều “Golden 2, 3”"], "effort": "S", "recommended": true },
+            { "id": "b", "label": "Ghi đè như Save Current", "pros": ["Một luật với Save Current"], "cons": ["Mất look người dùng tự làm, không hỏi"], "effort": "S" },
+            { "id": "c", "label": "Từ chối, báo “already exists”", "pros": ["Không mất gì"], "cons": ["Preset hợp lệ bị bỏ, phải đổi tên file rồi nhập lại"], "effort": "S" }
+          ],
+          "tasks": ["Chốt §4 — 14a-import-and-report.md", "Giữ AC-a9 — 14a"]
+        }
+      ]
+    },
+    {
+      "id": "fs15-pipeline",
+      "title": "FS-03.15 · Thứ tự render",
+      "intro": "Mỗi pass mới đứng ở đâu trong chuỗi — quyết định ảnh ra trông thế nào, preset Lightroom có ra gần đúng không, và golden nào phải chụp lại.",
+      "decisions": [
+        {
+          "id": "D51",
+          "title": "[15a·6] Curve vùng (Shadows · Darks · Lights · Highlights) nướng chung bảng tra với curve điểm, hay là một pass riêng trước Light?",
+          "importance": "critical",
+          "why": "Thứ tự render là nền của mọi golden test; đổi sau là chụp lại golden. Pass riêng thêm chi phí mỗi khung và khác thứ tự Lightroom; nướng chung thì phải chứng minh bảng “vùng rồi điểm” khớp tính tay (AC-8).",
+          "proposal": "Nướng vùng rồi điểm vào cùng bảng tra 256 mức của curve RGB đang có — một lượt, đúng thứ tự Lightroom, không thêm pass.",
+          "options": [
+            { "id": "A", "label": "Chung bảng tra với curve điểm", "pros": ["Không thêm pass nào", "Đúng thứ tự Lightroom"], "cons": ["Bảng tra dựng lại khi kéo slider vùng"], "effort": "S", "recommended": true },
+            { "id": "B", "label": "Pass riêng trước Light", "pros": ["Tách bạch, dễ debug"], "cons": ["Thêm một pass mỗi khung", "Lệch Lightroom — preset nhập ra khác"], "effort": "M" }
+          ],
+          "tasks": ["Chốt §1 — 15a-tone-color-calibration.md", "Cập nhật bảng thứ tự render §3 — 15-lightroom-parameter-parity.md", "Giữ AC-8 — 15a"]
+        },
+        {
+          "id": "D52",
+          "title": "[15a·5] Chuyển ảnh sang đen trắng (B&W) chạy đầu chuỗi như hôm nay, hay dời vào chặng Color sau cân bằng trắng và Light?",
+          "importance": "critical",
+          "why": "Đầu chuỗi thì Temp/Tint không làm gì với ảnh xám — preset B&W Lightroom dùng Temp để đổi tông xám sẽ ra sai. Dời thì mọi ảnh B&W đã sửa ra khác (được phép vì app chưa phát hành) và golden toàn pipeline chụp lại.",
+          "proposal": "Dời chuyển xám vào chặng Color, sau WB và Light — Temp đổi tông xám như Lightroom.",
+          "options": [
+            { "id": "A", "label": "Dời vào chặng Color", "pros": ["Temp/Tint đổi tông xám như Lightroom", "B&W Mixer đọc màu đã cân bằng trắng"], "cons": ["Ảnh B&W cũ ra khác", "Chụp lại golden toàn pipeline"], "effort": "M", "recommended": true },
+            { "id": "B", "label": "Giữ đầu chuỗi, mixer đọc màu gốc", "pros": ["Không đổi ảnh cũ, không chụp lại golden"], "cons": ["Temp/Tint vô tác dụng trên ảnh B&W", "Preset B&W nhập vào sai tông"], "effort": "S" }
+          ],
+          "tasks": ["Chốt §2 — 15a-tone-color-calibration.md", "Cập nhật bảng thứ tự §3 và rủi ro §9 — 15", "Chụp lại golden một commit riêng — FS-16"]
+        },
+        {
+          "id": "D53",
+          "title": "[15a·4] Calibration (dời ba màu cơ bản) chạy ngay sau Lens Blur, trước Light, hay chung chặng Color sau Light?",
+          "importance": "critical",
+          "why": "Sau Light thì Exposure đã đẩy màu sang vùng khác trước khi calibrate — preset có Calibration (rất hay gặp trong preset giả phim) ra lệch. Trước Light thì thêm một pass màu riêng.",
+          "proposal": "Ngay sau Lens Blur, trước Light, trong không gian tuyến tính — gần Lightroom nhất vì Calibration là một phần hồ sơ màu máy ảnh.",
+          "options": [
+            { "id": "A", "label": "Sau Lens Blur, trước Light", "pros": ["Gần Lightroom nhất", "B&W Mixer và HSL đọc màu đã calibrate"], "cons": ["Thêm một pass màu riêng"], "effort": "M", "recommended": true },
+            { "id": "B", "label": "Chung chặng Color, sau Light", "pros": ["Rẻ hơn — gộp một kernel màu"], "cons": ["Exposure đẩy màu trước khi calibrate — lệch Lightroom"], "effort": "S" }
+          ],
+          "tasks": ["Chốt §3 — 15a-tone-color-calibration.md", "Cập nhật bảng thứ tự §3 — 15"]
+        },
+        {
+          "id": "D54",
+          "title": "[15b·7] Tối góc ống kính chỉnh tay chạy trong không gian tuyến tính ngay sau Lens Blur, hay trong lượt Optics sau curve?",
+          "importance": "critical",
+          "why": "Sau curve thì độ sáng đã bị uốn cong, bù tối góc sẽ sai (góc loang hoặc sáng quá). Vị trí này cũng phải khớp chỗ bù tối góc theo hồ sơ của FS-03.16.",
+          "proposal": "Không gian tuyến tính, ngay sau Lens Blur — như Lightroom và cùng chỗ với bù tối góc theo hồ sơ.",
+          "options": [
+            { "id": "A", "label": "Tuyến tính, sau Lens Blur", "pros": ["Bù đúng vật lý, như Lightroom", "Cùng chỗ với FS-03.16"], "cons": ["Thêm một bước đầu chuỗi"], "effort": "S", "recommended": true },
+            { "id": "B", "label": "Trong lượt Optics sau curve", "pros": ["Rẻ hơn, gộp với Optics"], "cons": ["Curve đã uốn độ sáng — bù sai"], "effort": "S" }
+          ],
+          "tasks": ["Chốt §3 — 15b-detail-optics-transform.md", "Cập nhật bảng thứ tự §3 — 15", "Khớp vị trí tối góc theo hồ sơ — 16a §5"]
+        },
+        {
+          "id": "D55",
+          "title": "[15b·8] Vignette (Effects) và Grain dời ra sau crop và mask, hay giữ chạy trước crop như hôm nay?",
+          "importance": "critical",
+          "why": "Trước crop thì cắt lệch một bên là vignette lệch tâm — sai nghĩa “post-crop vignette” mà preset Lightroom mang. Dời thì ảnh có vignette đã sửa ra khác và golden chụp lại.",
+          "proposal": "Dời vignette rồi grain ra sau mask, trước bước hạ cỡ preview.",
+          "options": [
+            { "id": "A", "label": "Dời ra sau crop và mask", "pros": ["Vignette theo khung sau crop, đúng Lightroom", "Grain không bị crop phóng to"], "cons": ["Ảnh cũ có vignette ra khác", "Chụp lại golden"], "effort": "M", "recommended": true },
+            { "id": "B", "label": "Giữ trước crop", "pros": ["Không đổi gì"], "cons": ["Crop lệch là vignette lệch tâm", "AC-24 không đạt"], "effort": "S" }
+          ],
+          "tasks": ["Chốt §5 — 15b-detail-optics-transform.md", "Cập nhật bảng thứ tự §3 — 15", "Giữ AC-24 — 15b"]
+        }
+      ]
+    },
+    {
+      "id": "fs15-data",
+      "title": "FS-03.15 · Recipe, look và dữ liệu lưu",
+      "intro": "Upright có đi theo look không và lưu thế nào, matte sinh ra lưu ở đâu, và có kèm model độ sâu ~50 MB không.",
+      "decisions": [
+        {
+          "id": "D56",
+          "title": "[15·1] Chế độ nắn thẳng Upright (Auto/Level/Vertical/Full) có đi theo look khi Copy Edits, Sync, My Looks không?",
+          "importance": "critical",
+          "why": "Quyết định lát cắt look — thứ Copy/Sync/My Looks chép. Không đi theo thì preset Lightroom có Upright Auto mất phần đó; đi theo thì dán sang ảnh khác phải tính lại Upright trên ảnh đích.",
+          "proposal": "Chế độ Auto/Level/Vertical/Full đi theo và tính lại trên ảnh đích như preset Lightroom; Guided (đường guide vẽ tay) luôn ở lại ảnh gốc.",
+          "options": [
+            { "id": "A", "label": "Đi theo, tính lại trên ảnh đích", "pros": ["Giống preset Lightroom", "Sync một loạt ảnh kiến trúc được"], "cons": ["Dán Upright là chạy phân tích trên từng ảnh", "Cần lưu chế độ riêng (thẻ 15b·10)"], "effort": "M", "recommended": true },
+            { "id": "B", "label": "Không Upright nào đi theo", "pros": ["Look chỉ là màu/tone, đơn giản"], "cons": ["Preset có Upright mất phần đó"], "effort": "S" }
+          ],
+          "tasks": ["Chốt §4 lát cắt look — 15-lightroom-parameter-parity.md", "Sửa lát cắt look — FS-03.10 10-copy-paste-edits.md", "Giữ AC-2 — 15"]
+        },
+        {
+          "id": "D57",
+          "title": "[15b·10] Upright lưu thành “chế độ + phép nắn đã giải” riêng, hay tiếp tục ghi thẳng vào ba slider Geometry?",
+          "importance": "critical",
+          "why": "Đây là bố cục recipe. Ghi vào slider thì recipe không biết ảnh đang ở “Auto” — preset không mang được Upright, và slider tay bị ghi đè. Lưu riêng là thêm một khối vào recipe.",
+          "proposal": "Lưu chế độ + phép nắn đã giải riêng, slider tay cộng lên trên; phép nắn giải một lần lúc bấm, không giải lại mỗi lượt render.",
+          "options": [
+            { "id": "A", "label": "Lưu chế độ + phép nắn riêng", "pros": ["Như Lightroom, preset mang được “Auto”", "Slider tay không bị ghi đè", "Không giải lại mỗi lượt render"], "cons": ["Thêm khối mới vào recipe"], "effort": "M", "recommended": true },
+            { "id": "B", "label": "Giữ ghi vào slider", "pros": ["Không đổi recipe"], "cons": ["Không biết ảnh đang ở chế độ nào", "Upright không đi theo look được"], "effort": "S" }
+          ],
+          "tasks": ["Chốt §4 — 15b-detail-optics-transform.md", "Thêm khối Upright vào recipe — ShotDexKit/Models/PhotoEditingModels.swift (khi /plan)", "Ghi thẻ crs: Upright §6 — 15b"]
+        },
+        {
+          "id": "D58",
+          "title": "[15d·18] Vùng chọn tự sinh (matte của Subject, People, Object… và bản đồ lấp của Remove) tính lại mỗi lần mở, hay lưu vào kho riêng?",
+          "importance": "critical",
+          "why": "Vision có thể trả kết quả khác giữa hai bản iOS: tính lại thì mở một bản sửa sau khi cập nhật hệ điều hành có thể ra mask khác. Lưu thì tốn 100–400 KB mỗi mask và thêm một kho dữ liệu.",
+          "proposal": "Lưu file matte 8-bit ¼ độ phân giải trong kho riêng của app, khoá theo ảnh + vùng + nguồn; mất thì tính lại. Dùng chung cho bản đồ Remove.",
+          "options": [
+            { "id": "A", "label": "Tính lại mỗi lần mở", "pros": ["Không tốn chỗ", "Như hôm nay"], "cons": ["Sau cập nhật iOS mask có thể đổi", "Remove phải giải lại khi mở ảnh"], "effort": "S" },
+            { "id": "B", "label": "Lưu file matte trong kho riêng", "pros": ["Mask ổn định qua cập nhật iOS", "Dùng chung cho bản đồ Remove", "Mất thì tính lại được"], "cons": ["100–400 KB mỗi mask", "Thêm kho và việc dọn khi xoá ảnh"], "effort": "M", "recommended": true },
+            { "id": "C", "label": "Nhúng vào recipe", "pros": ["Đi cùng recipe"], "cons": ["Phình recipe — trái luật đã có với LUT"], "effort": "S" }
+          ],
+          "tasks": ["Chốt §5 — 15d-mask-additions.md", "Ghi kho matte là kết quả quét đắt tiền — BD-02", "Dùng cho bản đồ Remove — 15c §3"]
+        },
+        {
+          "id": "D59",
+          "title": "[15e·20] Có kèm model ước lượng độ sâu Depth Anything (~50 MB) để Lens Blur chạy cả trên ảnh không có bản đồ độ sâu không?",
+          "importance": "critical",
+          "why": "Kèm vào app là thêm ~50 MB tải về cho mọi người (cạnh model bầu trời 41 MB); tải theo yêu cầu thì cần mạng lần đầu — trái tinh thần “không cần mạng”; không kèm thì Lens Blur chỉ cho ảnh Portrait.",
+          "proposal": "Chưa kèm (C) cho tới khi thử nghiệm Depth Anything có số đo (dung lượng, thời gian trên iPhone 12/15, mép tóc); quyết lại A/B sau thử nghiệm.",
+          "options": [
+            { "id": "A", "label": "Kèm vào app", "pros": ["Lens Blur cho mọi ảnh, không cần mạng"], "cons": ["+~50 MB dung lượng app (chưa đo)", "Thời gian và chất lượng mép tóc chưa đo"], "effort": "M" },
+            { "id": "B", "label": "Tải theo yêu cầu từ App Store", "pros": ["App gọn, chỉ ai dùng mới tải"], "cons": ["Cần mạng lần đầu", "Thêm luồng tải và lỗi mạng"], "effort": "L" },
+            { "id": "C", "label": "Không kèm — chỉ ảnh có độ sâu", "pros": ["Không tốn dung lượng, không cần mạng"], "cons": ["Ảnh thường không có Lens Blur (nhóm hiện mờ kèm lý do)"], "effort": "S", "recommended": true }
+          ],
+          "tasks": ["Chạy thử nghiệm Depth Anything V2 — 15 §7 câu 2", "Chốt §3 — 15e-lens-blur.md"]
+        }
+      ]
+    },
+    {
+      "id": "fs15-limits",
+      "title": "FS-03.15 · Trần bộ nhớ và hiệu năng",
+      "intro": "Trần extension, trần ảnh 100MP, cách giữ Lens Blur mượt và cách Remove lưu ở độ phân giải đầy đủ.",
+      "decisions": [
+        {
+          "id": "D60",
+          "title": "[15·2] Các pass render mới có phải vừa trần bộ nhớ extension (ảnh 12MP ≤ 120 MB) ngay từ bây giờ không?",
+          "importance": "important",
+          "why": "Giữ ràng buộc là thêm test đo bộ nhớ cho mọi pass trong khi hôm nay không extension nào link renderer; bỏ thì ngày thêm extension render phải đo lại và có thể sửa pass.\nVì sao phải hỏi: FS-16 §5 (grep 2026-09-25) nói widget/share/edit không link renderer, còn intent đòi pass mới vừa trần extension. Lưu ý FS-03.16 §6 và AC-6 lại giả định extension chia sẻ render có sửa ống kính.",
+          "proposal": "Bỏ ràng buộc cho tới khi có extension render, ghi lại ở EX-01; đối chiếu lại FS-03.16 AC-6 cho khớp.",
+          "options": [
+            { "id": "A", "label": "Hoãn ràng buộc, ghi ở EX-01", "pros": ["Không tốn test cho thứ chưa dùng"], "cons": ["Ngày có extension render phải đo và có thể sửa pass", "Phải chỉnh FS-03.16 AC-6 cho khớp"], "effort": "S", "recommended": true },
+            { "id": "B", "label": "Giữ: mỗi pass có test bộ nhớ 12MP ≤ 120 MB", "pros": ["Sẵn sàng cho extension render", "Khớp FS-03.16 AC-6"], "cons": ["Thêm test cho mọi pass, có thể ép thuật toán kém hơn"], "effort": "M" }
+          ],
+          "tasks": ["Chốt §5 — 15-lightroom-parameter-parity.md", "Ghi ràng buộc hoãn — EX-01", "Đối chiếu AC-6 — 16-lens-correction-sources.md"]
+        },
+        {
+          "id": "D61",
+          "title": "[15·3] Lưu ảnh 100MP (Lens Blur + 3 vết Remove + 3 mask) được dùng tối đa bao nhiêu bộ nhớ?",
+          "importance": "important",
+          "why": "Trần cao quá thì máy 6 GB bị hệ thống giết app lúc lưu (mất phiên); thấp quá thì phải render theo ô, chậm và phức tạp hơn.",
+          "proposal": "Đỉnh ≤ 1,5 GB (vừa máy 6 GB); vượt trần thì giữ phiên và báo lỗi, không tạo ảnh rỗng.",
+          "options": [
+            { "id": "a", "label": "≤ 1,5 GB", "pros": ["Vừa máy 6 GB có dư"], "cons": ["Có thể phải render theo ô cho Lens Blur/Remove"], "effort": "M", "recommended": true },
+            { "id": "b", "label": "≤ 2 GB", "pros": ["Dễ đạt hơn"], "cons": ["Sát ngưỡng bị hệ thống giết trên máy 6 GB"], "effort": "S" }
+          ],
+          "tasks": ["Chốt §5 và AC-4 — 15-lightroom-parameter-parity.md", "Đo trên máy thật — agent memory-leak"]
+        },
+        {
+          "id": "D62",
+          "title": "[15e·19] Lens Blur chạy đầu chuỗi nên mọi slider đều phải trả giá của nó — giữ mượt bằng cách nào?",
+          "importance": "important",
+          "why": "Không xử lý thì kéo Exposure trên ảnh Portrait cũng chạy lại blur 8 lớp mỗi khung — giật. Hạ độ phân giải khi kéo bị FS-03.04 cấm (spec đã loại phương án đó).",
+          "proposal": "Nướng kết quả Lens Blur vào nền tương tác khi không kéo control Lens Blur; chỉ chuyển sang dựng sẵn 8 mức khi đo thấy dưới 15 khung/giây trên iPhone 12.",
+          "options": [
+            { "id": "A", "label": "Nướng vào nền tương tác", "pros": ["Kéo slider khác không tốn thêm (AC-50)", "Không tốn bộ nhớ thêm nhiều"], "cons": ["Kéo Amount/Range thì ít khung hơn"], "effort": "M", "recommended": true },
+            { "id": "B", "label": "Dựng sẵn 8 mức mờ, chỉ trộn khi kéo Amount", "pros": ["Kéo Amount mượt"], "cons": ["Tốn bộ nhớ 8 khung ảnh"], "effort": "L" }
+          ],
+          "tasks": ["Chốt §2 — 15e-lens-blur.md", "Đo thời gian khung trên iPhone 12 — AC-50"]
+        },
+        {
+          "id": "D63",
+          "title": "[15c·13] Vết Remove được giải ở cỡ preview 2400px — khi lưu ảnh đầy đủ thì phóng bản đồ lên, hay giải lại ở độ phân giải đầy đủ?",
+          "importance": "important",
+          "why": "Giải lại tốn hàng giây mỗi vết và bộ nhớ lớn (đụng trần 100MP); phóng bản đồ thì vùng lấp có thể mờ nếu vá mép không tốt.\nVì sao phải hỏi: luật không hạ độ phân giải của FS-03.04.",
+          "proposal": "Phóng bản đồ lên rồi tra pixel ở độ phân giải đầy đủ, vá mép bằng phép sửa màu của Heal.",
+          "options": [
+            { "id": "A", "label": "Phóng bản đồ, tra pixel đầy đủ, vá mép", "pros": ["Rẻ, nhanh", "Giữ vân thật từ pixel đầy đủ (AC-35)"], "cons": ["Chi tiết nhỏ hơn một pixel preview có thể lệch"], "effort": "M", "recommended": true },
+            { "id": "B", "label": "Giải lại ở độ phân giải đầy đủ", "pros": ["Chính xác nhất"], "cons": ["Hàng giây mỗi vết, bộ nhớ lớn", "Ảnh lưu có thể khác preview"], "effort": "L" }
+          ],
+          "tasks": ["Chốt §3 — 15c-retouch-and-red-eye.md", "Giữ AC-35 — 15c"]
+        }
+      ]
+    },
+    {
+      "id": "fs15-algorithms",
+      "title": "FS-03.15 · Thuật toán Upright và Remove",
+      "intro": "Cách dò đường thẳng cho Upright, cách xử lý góc trống sau khi nắn, và cách lấp vùng Remove.",
+      "decisions": [
+        {
+          "id": "D64",
+          "title": "[15b·9] Upright Auto dò đường thẳng trong ảnh bằng cách nào?",
+          "importance": "important",
+          "why": "Bộ dò yếu thì Auto nắn sai toà nhà; bộ dò nặng thì chạm Auto phải chờ. Guided không cần dò.",
+          "proposal": "Dùng lại bộ bỏ phiếu đường thẳng tự viết (ảnh xám 256px, vài ms), thêm ước lượng điểm tụ cho Auto.",
+          "options": [
+            { "id": "A", "label": "Bộ tự viết có sẵn + ước lượng điểm tụ", "pros": ["Đã có test, vài ms", "Không phụ thuộc mới"], "cons": ["Ảnh nhiễu có thể dò kém ở 256px"], "effort": "S", "recommended": true },
+            { "id": "B", "label": "Vision tìm chân trời cho Level + bộ tự viết cho dọc", "pros": ["Level ổn định hơn trên phong cảnh"], "cons": ["Hai bộ dò, hai hành vi", "Vision khác nhau giữa bản iOS"], "effort": "M" },
+            { "id": "C", "label": "Bộ tìm đoạn thẳng mới trên GPU ở 1024px", "pros": ["Chính xác hơn"], "cons": ["Viết mới hoàn toàn, thêm kernel"], "effort": "L" }
+          ],
+          "tasks": ["Chốt §4 — 15b-detail-optics-transform.md", "Giữ AC-21 — 15b"]
+        },
+        {
+          "id": "D65",
+          "title": "[15b·11] Constrain Crop tắt thì phần góc trống sau khi nắn phối cảnh xử lý thế nào?",
+          "importance": "important",
+          "why": "Để góc trống trong suốt như Lightroom là có thể lọt pixel trống vào ảnh lưu — JPEG/HEIC không có trong suốt nên thành viền đen hoặc trắng.",
+          "proposal": "Bật = tự cắt về hình chữ nhật lớn nhất nằm trong ảnh sau nắn, giữ tỉ lệ đang khoá; tắt = kéo giãn mép như hôm nay.",
+          "options": [
+            { "id": "A", "label": "Tắt thì kéo giãn mép như hôm nay", "pros": ["Không pixel trống nào lọt ra file lưu", "Giữ hành vi hôm nay"], "cons": ["Khác Lightroom khi tắt"], "effort": "S", "recommended": true },
+            { "id": "B", "label": "Tắt thì góc trống trong suốt như Lightroom", "pros": ["Giống Lightroom"], "cons": ["Pixel trống lọt vào ảnh lưu thành viền"], "effort": "S" }
+          ],
+          "tasks": ["Chốt §4 — 15b-detail-optics-transform.md", "Ghi thẻ CropConstrainToWarp §6 — 15b"]
+        },
+        {
+          "id": "D66",
+          "title": "[15c·12] Remove (tô lên vật để xoá) lấp vùng bằng thuật toán nào?",
+          "importance": "important",
+          "why": "Lấp kém trên cỏ/tường là tính năng thành đồ chơi; model vá ảnh thì Apple chưa công bố — trái ràng buộc “chỉ model Apple công bố”. Bị chặn bởi thử nghiệm 1 (chất lượng, thời gian trên iPhone 12).",
+          "proposal": "Vá theo mẫu kiểu PatchMatch tự viết bằng kernel Core Image nhiều lượt, lùi về nội suy màu (như Heal) cho vùng phẳng; chốt sau thử nghiệm 1.",
+          "options": [
+            { "id": "A", "label": "PatchMatch tự viết, kernel Core Image", "pros": ["Giữ vân cỏ/tường", "Chạy trên máy, không model"], "cons": ["Việc lớn nhất, phải thử nghiệm trước", "Kit không có shader compute thường (EX-01 §5)"], "effort": "L", "recommended": true },
+            { "id": "B", "label": "Model vá ảnh Core ML", "pros": ["Chất lượng có thể cao nhất"], "cons": ["Apple chưa công bố model nào — trái ràng buộc"], "effort": "L" },
+            { "id": "C", "label": "Chỉ nội suy màu như Heal", "pros": ["Có sẵn, rẻ"], "cons": ["Hỏng trên cỏ, tường — chỉ ổn với trời"], "effort": "S" }
+          ],
+          "tasks": ["Chạy thử nghiệm 1 — 15 §7", "Chốt §3 — 15c-retouch-and-red-eye.md", "Mở khoá AC-26…28, AC-35 — 15c"]
+        }
+      ]
+    },
+    {
+      "id": "fs15-mask-heal",
+      "title": "FS-03.15 · Mask mới và Red Eye",
+      "intro": "Subject và Object khác nhau thế nào, lưới chọn loại mask, và cách dùng Red Eye.",
+      "decisions": [
+        {
+          "id": "D67",
+          "title": "[15d·16] Mask Subject có đổi nghĩa thành “mọi đối tượng, không cần chạm”, để Object lo phần chạm chọn từng vật không?",
+          "importance": "important",
+          "why": "Giữ Subject như cũ (chạm vật nào lấy vật đó, chạm nền lấy tất cả) thì Object chỉ là tên thứ hai cho cùng việc; đổi thì người quen chạm Subject thấy khác, nhưng preset Lightroom map đúng hơn.",
+          "proposal": "Subject = luôn mọi đối tượng, không cần chạm; Object = chạm chọn từng vật — đúng tên Lightroom.",
+          "options": [
+            { "id": "A", "label": "Subject = mọi đối tượng; Object = chạm từng vật", "pros": ["Đúng tên và nghĩa Lightroom", "Hai ô, hai việc rõ ràng"], "cons": ["Đổi hành vi Subject đang có"], "effort": "M", "recommended": true },
+            { "id": "B", "label": "Giữ Subject, Object là tên khác", "pros": ["Không đổi Subject"], "cons": ["Hai ô làm cùng một việc", "Preset Subject của Lightroom map sai"], "effort": "S" }
+          ],
+          "tasks": ["Chốt §3 — 15d-mask-additions.md", "Sửa mô tả Subject — FS-03.05 §2"]
+        },
+        {
+          "id": "D68",
+          "title": "[15d·17] Lưới chọn loại mask 4×3 đã đầy — thêm Object và People bằng cách dời Face Skin/Eyes/Lips vào People, hay mở lưới 4×4?",
+          "importance": "important",
+          "why": "4×4 thì ảnh dọc (panel 264) phải cuộn tới hàng 3 và 4; dời thì chỉnh da mặt, mắt, môi sâu thêm một chạm.",
+          "proposal": "Dời Face Skin/Eyes/Lips vào People, lưới còn 11 ô: Subject · Sky · Background · Object · People · Brush · Linear · Radial · Color · Luminance · Depth.",
+          "options": [
+            { "id": "A", "label": "Dời ba ô khuôn mặt vào People", "pros": ["Lưới giữ 3 hàng", "Lightroom cũng xếp như vậy"], "cons": ["Chỉnh da mặt thêm một chạm"], "effort": "S", "recommended": true },
+            { "id": "B", "label": "Lưới 4×4, giữ ba ô khuôn mặt ngoài", "pros": ["Da mặt một chạm"], "cons": ["Thêm một hàng, panel 264 cuộn nhiều hơn"], "effort": "S" }
+          ],
+          "tasks": ["Chốt §3 — 15d-mask-additions.md", "Sửa danh sách ô Mask §1 — 13c-mask-heal-markup.md", "Giữ AC-24 — 13c"]
+        },
+        {
+          "id": "D69",
+          "title": "[15c·14] Sửa mắt đỏ: người dùng chạm vào từng mắt, hay có nút tự dò mọi con ngươi đỏ?",
+          "importance": "important",
+          "why": "Tự dò trên mắt không đỏ (mắt nâu tối) là làm tối oan; chỉ chạm thì ảnh đông người phải chạm từng mắt.",
+          "proposal": "Chạm vào mắt, Vision căn tâm vào con ngươi (không thấy mặt thì đặt đúng chỗ chạm).",
+          "options": [
+            { "id": "A", "label": "Chạm + Vision căn tâm", "pros": ["Không sửa oan mắt không đỏ", "Có đường lùi khi không thấy mặt"], "cons": ["Ảnh đông người phải chạm nhiều lần"], "effort": "M", "recommended": true },
+            { "id": "B", "label": "Nút “Fix Red Eye” tự dò", "pros": ["Một chạm cho cả ảnh"], "cons": ["Làm tối oan mắt không đỏ", "Phụ thuộc Vision dò đúng mọi mắt"], "effort": "M" },
+            { "id": "C", "label": "Cả hai", "pros": ["Linh hoạt nhất"], "cons": ["Hai đường, thêm UI và test"], "effort": "L" }
+          ],
+          "tasks": ["Chốt §5 — 15c-retouch-and-red-eye.md", "Giữ AC-33, AC-34 — 15c"]
+        },
+        {
+          "id": "D70",
+          "title": "[15c·15] Red Eye đặt ở đâu trong giao diện?",
+          "importance": "important",
+          "why": "Thanh 6 công cụ của FS-03.13 không còn chỗ; giấu trong ⋯ thì khó tìm; thêm ô vào hàng chế độ Heal thì hàng chật hơn trên máy nhỏ.",
+          "proposal": "Ô thứ tư trong hàng chế độ Heal: Remove · Heal · Clone · Red Eye.",
+          "options": [
+            { "id": "A", "label": "Ô thứ tư trong hàng chế độ Heal", "pros": ["Cùng chỗ với Lightroom", "Không thêm công cụ"], "cons": ["Hàng 4 ô trên 375pt chật hơn"], "effort": "S", "recommended": true },
+            { "id": "B", "label": "Mục trong ⋯ của Heal", "pros": ["Hàng chế độ giữ 3 ô"], "cons": ["Khó tìm"], "effort": "S" },
+            { "id": "C", "label": "Công cụ riêng", "pros": ["Nổi bật"], "cons": ["Thanh 6 công cụ không còn chỗ — phải đổi FS-03.13"], "effort": "M" }
+          ],
+          "tasks": ["Chốt §5 — 15c-retouch-and-red-eye.md", "Sửa hàng chế độ Heal §4 — 13c-mask-heal-markup.md"]
+        }
+      ]
+    },
+    {
+      "id": "fs16-data",
+      "title": "FS-03.16 · Recipe, nguồn dữ liệu, dung lượng",
+      "intro": "Bố cục trường sửa ống kính trong recipe, hãng nào đọc dữ liệu nhúng ở v1, cách sửa quang sai màu và trần dung lượng bảng ống kính.",
+      "decisions": [
+        {
+          "id": "D71",
+          "title": "[16·1] Các trường sửa ống kính (ba mức độ mạnh, công tắc, nguồn đã giải) nằm ở đâu trong recipe?",
+          "importance": "critical",
+          "why": "Chỗ đặt quyết định Copy Edits/Sync có tự chép đúng hay không: ba mức phải đi theo look, nguồn đã giải thì không. Hôm nay có hai chỗ (thang RAW trong bộ thông số, lựa chọn hồ sơ riêng) — giữ cả hai là hai khái niệm cho một việc.",
+          "proposal": "Ba mức + công tắc vào bộ thông số chỉnh, lựa chọn hồ sơ thêm loại nguồn, và bỏ hẳn thang RAW cũ — một công tắc cho mọi nguồn.",
+          "options": [
+            { "id": "A", "label": "Vào bộ thông số chỉnh; hồ sơ thêm loại nguồn", "pros": ["Copy tự đúng"], "cons": ["Thang RAW cũ vẫn còn — hai công tắc"], "effort": "M" },
+            { "id": "B", "label": "Một khối “sửa ống kính” riêng", "pros": ["Gọn một chỗ"], "cons": ["Phải thêm ba mức vào danh sách cho phép của Copy/Sync — dễ quên"], "effort": "M" },
+            { "id": "C", "label": "Như A, bỏ thang RAW cũ, một công tắc", "pros": ["Một khái niệm, một chỗ", "Copy tự đúng", "Panel chỉ một công tắc (AC-b6)"], "cons": ["Bỏ trường cũ — được vì app chưa phát hành"], "effort": "M", "recommended": true }
+          ],
+          "tasks": ["Chốt §4 — 16-lens-correction-sources.md", "Bỏ hàng Lens ở nhóm RAW — EditorAdjustmentCatalog (khi /plan)", "Giữ AC-1, AC-3 — 16"]
+        },
+        {
+          "id": "D72",
+          "title": "[16a·2] Dữ liệu sửa ống kính do hãng ghi trong file RAW: v1 đọc những hãng nào?",
+          "importance": "important",
+          "why": "Nhận nhiều hãng mà định dạng chưa rõ thì cả đợt trễ; ít quá thì người chụp Sony/Fuji — nhóm đông nhất có dữ liệu nhúng — chưa được gì. Cổng: spike với RAW thật của từng hãng.",
+          "proposal": "DNG + Sony + Fujifilm — các định dạng có mô tả công khai đủ; Panasonic, OM để sau spike.",
+          "options": [
+            { "id": "A", "label": "DNG + Sony + Fujifilm", "pros": ["Mô tả công khai đủ (đặc tả DNG, bảng thẻ ExifTool)", "Phủ hai hãng mirrorless lớn"], "cons": ["Panasonic, OM chờ bản sau"], "effort": "M", "recommended": true },
+            { "id": "B", "label": "Cả năm định dạng", "pros": ["Phủ rộng nhất"], "cons": ["Panasonic/OM thiếu dữ liệu tối góc/CA, dễ trễ cả đợt"], "effort": "L" },
+            { "id": "C", "label": "Chỉ DNG trước", "pros": ["Ít rủi ro nhất"], "cons": ["Người chụp Sony/Fuji chưa được gì"], "effort": "S" }
+          ],
+          "tasks": ["Spike RAW thật từng hãng — 16 §8 câu 1", "Chốt §1 — 16a-correction-sources-and-render.md", "Giữ AC-a1, a2 — 16a"]
+        },
+        {
+          "id": "D73",
+          "title": "[16a·4] Sửa quang sai màu (viền đỏ/lam ở rìa ảnh) theo hồ sơ bằng một kernel mới, hay ba lượt warp?",
+          "importance": "important",
+          "why": "Kernel warp của Core Image trả một toạ độ cho cả ba kênh nên không tách được đỏ/lam; ba lượt warp tốn ~3× thời gian mỗi khung (đích ≤ 8 ms, chưa đo).",
+          "proposal": "Kernel lấy mẫu mới đọc R, G, B ở ba bán kính, gộp với sửa méo trong một pass.",
+          "options": [
+            { "id": "A", "label": "Kernel mới, gộp với méo một pass", "pros": ["Một pass, nội suy một lần", "Dễ đạt đích 8 ms"], "cons": ["Kernel Metal mới, golden méo phải chụp lại"], "effort": "M", "recommended": true },
+            { "id": "B", "label": "Ba lượt warp rồi ghép kênh", "pros": ["Dùng lại kernel có sẵn"], "cons": ["Chi phí ~3×", "Nội suy ba lần"], "effort": "S" }
+          ],
+          "tasks": ["Chốt §5 — 16a-correction-sources-and-render.md", "Viết kernel và golden — FS-16", "Đo thời gian mỗi khung ở /verify"]
+        },
+        {
+          "id": "D74",
+          "title": "[16b·7] Bảng dữ liệu ống kính (Lensfun, thêm tối góc và quang sai màu) được phép lớn tới đâu trong app?",
+          "importance": "important",
+          "why": "Bảng hôm nay 823 KB, thêm tối góc + CA ước 1–2 MB (chưa đo). Không đặt trần thì mỗi lần làm mới dữ liệu app phình dần; nén thì lần mở đầu chậm hơn; cắt bớt thì mất ống.",
+          "proposal": "JSON thô, trần 4 MB; vượt trần thì chuyển sang nén trong bundle.",
+          "options": [
+            { "id": "A", "label": "JSON thô, trần 4 MB", "pros": ["Không tốn thời gian mở", "So sánh được trong git"], "cons": ["App lớn hơn vài MB"], "effort": "S", "recommended": true },
+            { "id": "B", "label": "Nén trong bundle, giải nén lần đầu dùng", "pros": ["App nhỏ hơn"], "cons": ["Thêm thời gian lần mở đầu, chưa đo"], "effort": "M" },
+            { "id": "C", "label": "Bỏ ống ngoài phạm vi (GoPro, drone, medium format)", "pros": ["Bảng nhỏ, vẫn chép nguyên văn"], "cons": ["Mất ống của người dùng các máy đó"], "effort": "S" }
+          ],
+          "tasks": ["Chốt §4 — 16b-optics-panel-and-data-refresh.md", "Đặt ngưỡng fail trong bước làm mới dữ liệu — .claude/skills/release-check/SKILL.md", "Đo dung lượng thật — 16 §8 câu 3"]
+        }
+      ]
+    },
+    {
+      "id": "fs16-behavior",
+      "title": "FS-03.16 · Hành vi sửa ống kính",
+      "intro": "JPEG đã được máy ảnh sửa sẵn, chip Remove CA cũ, và khi người dùng chọn ống khác dữ liệu trong ảnh.",
+      "decisions": [
+        {
+          "id": "D75",
+          "title": "[16a·3] JPEG từ máy ảnh đã được máy sửa ống kính sẵn — ShotDex xử lý thế nào để không sửa hai lần?",
+          "importance": "important",
+          "why": "Bật sửa lên ảnh máy đã nắn là méo ngược, tối góc thành sáng góc — người dùng khó nhận ra vì sao.",
+          "proposal": "Đọc thẻ trạng thái sửa trong maker notes của JPEG (Sony, Panasonic, OM; Fujifilm xác nhận ở spike): đã sửa thì không tự khớp và nói rõ lý do; câu chữ cần chốt thêm.",
+          "options": [
+            { "id": "A", "label": "Giữ bật tay như hôm nay", "pros": ["Không code mới"], "cons": ["Bật nhầm là sửa hai lần mà không biết"], "effort": "S" },
+            { "id": "B", "label": "Đọc thẻ trạng thái; đã sửa thì không tự khớp và nói rõ", "pros": ["Tránh sửa hai lần", "Người dùng biết vì sao"], "cons": ["Spike từng hãng", "Thêm một câu chữ phải chốt"], "effort": "M", "recommended": true },
+            { "id": "C", "label": "Bật mặc định cho JPEG, dựa vào B để tránh ảnh đã sửa", "pros": ["JPEG được sửa mà không cần bật"], "cons": ["Gợi ý sai là ảnh méo ngược, không ai để ý"], "effort": "M" }
+          ],
+          "tasks": ["Chốt §4 — 16a-correction-sources-and-render.md", "Chốt câu chữ trạng thái — 16b §2", "Spike thẻ trạng thái JPEG từng hãng"]
+        },
+        {
+          "id": "D76",
+          "title": "[16a·5] Chip “Remove CA” hôm nay (khử viền màu nhẹ, không theo hồ sơ ống) giữ, bỏ, hay ẩn khi ảnh đã có dữ liệu CA theo hồ sơ?",
+          "importance": "important",
+          "why": "Hai control cùng chữ “CA” dễ rối; bỏ thì ảnh không có hồ sơ ống mất đường sửa CA duy nhất, và thẻ AutoLateralCA của preset Lightroom (14b) mất chỗ đặt.",
+          "proposal": "Giữ, là “sửa CA không cần hồ sơ” — Lightroom cũng tách ô này khỏi phần Profile.",
+          "options": [
+            { "id": "A1", "label": "Giữ", "pros": ["Như Lightroom", "AutoLateralCA vẫn có chỗ"], "cons": ["Hai control liên quan CA trong Optics"], "effort": "S", "recommended": true },
+            { "id": "A2", "label": "Bỏ, nhường Defringe tím/lục của FS-03.15", "pros": ["Ít control hơn"], "cons": ["Ảnh không hồ sơ mất sửa CA", "AutoLateralCA không còn chỗ"], "effort": "S" },
+            { "id": "A3", "label": "Ẩn khi ảnh có dữ liệu CA theo hồ sơ", "pros": ["Không chồng hai kiểu sửa CA"], "cons": ["Control hiện/ẩn theo ảnh — khó đoán"], "effort": "S" }
+          ],
+          "tasks": ["Chốt §5 — 16a-correction-sources-and-render.md", "Giữ thứ tự hàng Optics — 16b §1"]
+        },
+        {
+          "id": "D77",
+          "title": "[16b·6] RAW có dữ liệu ống kính nhúng, nhưng người dùng bấm Change chọn một ống khác — bên nào thắng?",
+          "importance": "important",
+          "why": "Dữ liệu nhúng luôn thắng thì người dùng không sửa được khi hãng ghi sai; người dùng thắng mà không có lối quay lại thì bấm nhầm là mất dữ liệu chuẩn của ảnh.",
+          "proposal": "Người dùng thắng (nguồn thành “Chosen by you”), và đầu danh sách chọn có một dòng quay về dữ liệu trong ảnh (câu chữ cần chốt).",
+          "options": [
+            { "id": "A", "label": "Người dùng thắng", "pros": ["Người dùng kiểm soát"], "cons": ["Không có lối rõ ràng quay về dữ liệu trong ảnh"], "effort": "S" },
+            { "id": "B", "label": "Dữ liệu nhúng luôn thắng, không có Change", "pros": ["Đơn giản, luôn dùng dữ liệu hãng"], "cons": ["Không sửa được khi dữ liệu sai"], "effort": "S" },
+            { "id": "C", "label": "Như A, thêm lối quay về dữ liệu trong ảnh", "pros": ["Kiểm soát và quay lại được"], "cons": ["Thêm một dòng và câu chữ phải chốt"], "effort": "S", "recommended": true }
+          ],
+          "tasks": ["Chốt §2 — 16b-optics-panel-and-data-refresh.md", "Chốt câu chữ dòng quay về — 16b §2", "Giữ AC-b3 — 16b"]
+        }
+      ]
+    }
+  ]
+}

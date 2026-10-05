@@ -1,0 +1,72 @@
+# Vòng 1 — Spec ui-review-1002 — các câu ⚠️ CẦN QUYẾT
+
+Không còn gì cần sửa: có thể chốt plan.
+
+## OK (34)
+
+- **K1** Duplicates: Delete khi có dấu ở chế độ khác (FS-06.06b §1) — trang delete
+  - Lựa chọn: Chỉ dấu của chế độ đang xem (a)
+- **K2** Duplicates trên Duo inner: 1 hay 2 cột (FS-06.06b §4) — trang delete
+  - Lựa chọn: Hạ 400 (Duo inner 2 cột 410pt) (b) — KHÁC với đề xuất
+- **K3** Smart Album: 'Place is missing' (FS-06.08 §2) — trang delete
+  - Lựa chọn: Giữ, ghi 'gồm ảnh chưa tra địa chỉ' (b) — KHÁC với đề xuất
+- **K4** Vuốt xuống khi sheet có thay đổi (FS-06.08 §3, FS-07.01b, cũng áp cho Advanced Search, form server) — trang delete
+  - Lựa chọn: Bật về + hiện alert ngay (b)
+- **K5** Compare: chỗ đặt hint 'Touch and hold to keep only this one' (FS-01.08) — trang delete
+  - Lựa chọn: Dưới nút Delete (a)
+- **K6** Compare: mấy bản phân giải cao cùng lúc (FS-01.08 §6) — trang delete
+  - Lựa chọn: Tối đa 2 bản (~48 MB) (b)
+- **K7** Đóng viewer cuộn lưới: áp cho mọi lưới dùng chung? (FS-02.01b) — trang viewer
+  - Lựa chọn: Mọi lưới (a)
+- **K8** Phím ←/→ khi video đang dừng (FS-02.01b) — trang viewer
+  - Lựa chọn: ←/→ lật trang, ',' '.' cho khung (b)
+- **K9** Thứ tự section Photo Info (FS-02.03) — trang viewer
+  - Lựa chọn: Camera & Lens, Exposure, rồi Location (b)
+- **K10** Bề rộng cột inspector Photo Info (FS-02.03b) — trang viewer
+  - Lựa chọn: 360pt cố định + token (a)
+- **K11** Inspector nhớ trạng thái mở? (FS-02.03b) — trang viewer
+  - Lựa chọn: Nhớ lần cuối (b)
+- **K12** Alert lỗi Favorite/Delete có Try Again? (FS-02.04) — trang viewer
+  - Lựa chọn: OK + Try Again (b)
+- **K13** Ảnh không GPS, ngoài khung đêm: ghi Day? (FS-01.03b) — trang search
+  - Lựa chọn: Ghi Day (a)
+- **K14** Video và ảnh không EXIF, không toạ độ (FS-01.03b) — trang search
+  - Lựa chọn: Dùng múi giờ hiện tại của máy (b) — KHÁC với đề xuất
+- **K15** 'sunset'/'sunrise' gồm giờ xanh? (FS-01.03b) — trang search
+  - Lựa chọn: Chỉ giờ vàng (a)
+- **K16** Cách điền khung giờ cho thư viện đã index (BD-03.02 §7) — trang search
+  - Lựa chọn: Tăng phiên bản index, đọc lại cả thư viện (a) — KHÁC với đề xuất
+- **K17** Camera ▸ / Lens ▸ ở đâu (FS-01.05b) — trang search
+  - Lựa chọn: Cả ba lưới (b)
+- **K18** Ảnh chưa đọc xong EXIF có tính là 'thiếu' không (FS-01.05b) — trang search
+  - Lựa chọn: Chỉ ảnh đã đọc xong (b)
+- **K19** DESIGN §10.6 còn ghi accent dùng cho chart (FS-07.01b) — trang stats
+  - Lựa chọn: Sửa DESIGN (a)
+- **K20** Glyph nút menu Add Chart / Reorder (FS-07.01b) — trang stats
+  - Lựa chọn: + (a)
+- **K21** Chân thẻ Insights lúc đang index / Limited (FS-07.01b) — trang stats
+  - Lựa chọn: Bỏ chân thẻ (b)
+- **K22** Ngưỡng cửa sổ thấp (NF-05 §4) — trang stats
+  - Lựa chọn: < 720pt (a) — KHÁC với đề xuất
+- **K23** iPhone SE (375×667) trong phạm vi kiểm? (NF-05) — trang stats
+  - Lựa chọn: Bỏ SE khỏi phạm vi (b) — KHÁC với đề xuất
+- **K24** Insights trên cửa sổ thấp (spec-pending FS-07.02) — trang stats
+  - Lựa chọn: Một hàng câu (~120pt) (a)
+- **K25** Share sau khi Resize chạy sạch ở đâu (FS-03.07 §5) — trang export
+  - Lựa chọn: Ở lại màn, Share + Done (b)
+- **K26** Collage Export: Share… có lưu vào Photos trước? (FS-11b §3) — trang export
+  - Lựa chọn: Lưu rồi share (a)
+- **K27** Share: phụ đề hàng không vẽ được (FS-08.06 §4) — trang export
+  - Lựa chọn: Câu giải thích ở đầu sheet (a)
+- **K28** Trùng tên file khi upload đang chạy nền (FS-15.02b §4) — trang server
+  - Lựa chọn: Dò trùng cả lô trước khi đẩy (c) — KHÁC với đề xuất
+- **K29** App bị đóng hẳn giữa lô upload (FS-15.02b §4) — trang server
+  - Lựa chọn: Bảng riêng, Resume khi mở lại (b)
+- **K30** Hàng Connection khi chỉ có 1 connection (FS-15.02 §2) — trang server
+  - Lựa chọn: Vẫn là menu (a)
+- **K31** Glyph 'In Library' trên ô ảnh server (FS-17.01 §2b) — trang server
+  - Lựa chọn: photo.badge.checkmark 14pt (a)
+- **K32** Glyph hàng Cloud Folders (FS-17.05) — trang server
+  - Lựa chọn: cloud (a)
+- **K33** Empty state Statistics lúc index lần đầu (FS-07.01b) — trang copy
+- **K34** Footnote Onboarding (FS-09) — trang copy

@@ -1,7 +1,7 @@
 # BD-03.04 — Tiến độ và chạy nền
 
 `BD-03.04` · `Features/Library/LibraryModel.swift` · `App/BackgroundIndexService.swift`
-· cập nhật 2026-09-22
+· cập nhật 2026-10-02
 
 **Một câu:** người dùng thấy gì trong lúc index, và index chạy tiếp thế nào khi app không ở trước mặt.
 
@@ -98,6 +98,9 @@
   index dừng hẳn tới lần mở app sau nữa.
 - Tác vụ nền được đăng ký lúc app khởi động (cần khai trong cấu hình app) và chạy tiếp khi app bị treo hoặc
   bị tắt, vào lúc hệ thống thấy phù hợp.
+- Cấu hình app khai thêm một tác vụ chạy tiếp do người dùng bắt đầu: upload lên server trên iOS 26
+  ([FS-15.02b](../../02-functional-spec/FS-15-server-upload/02b-background-upload.md)). Nó không xếp hàng và không
+  chạy khi app chưa mở — khác tác vụ index nền.
 - **Lượt nền dùng cùng chính sách mạng với lượt trước mặt.** Trước đây nó bị ghim ở "không dùng mạng", và
   trên một thư viện bật tối ưu dung lượng (~91% ảnh không còn bản gốc trên máy) thì nó **không đọc được gì
   cả** — trong khi đó chính là chỗ duy nhất hợp lý để trả hàng chục giờ tải iCloud.

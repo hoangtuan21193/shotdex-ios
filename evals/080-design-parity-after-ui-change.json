@@ -1,0 +1,19 @@
+{
+  "id": "080-design-parity-after-ui-change",
+  "description": "màn có artboard trên canvas: sau khi code phải so app với design bằng design-parity / Tools/design-board, sai thì sửa code",
+  "prompt": "Tôi vừa đổi băng trên của editor iPad cho giống bảng IP1_Edit trên design canvas. Liệt kê các bước kiểm tra trước khi báo xong, đừng sửa file.",
+  "checks": [
+    {
+      "any_of": ["design-parity", "design-board"],
+      "why": "phải dùng agent design-parity hoặc Tools/design-board để so app với artboard"
+    },
+    {
+      "any_of": ["IP1_Edit", "artboard", "canvas"],
+      "why": "phải so với đúng bảng trên canvas"
+    },
+    {
+      "any_of": ["sim-shot", "screenshot", "chụp"],
+      "why": "phải chụp app thật trên simulator"
+    }
+  ]
+}

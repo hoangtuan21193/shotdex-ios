@@ -31,6 +31,7 @@ render với extension sửa ảnh và các màn khác.
 | 14 | [Trao đổi preset Lightroom](14-lightroom-preset-exchange.md) | nhập .xmp/.lrtemplate/DNG, xuất .shotdexlook/.xmp/.cube, quản lý và chia sẻ look |
 | 15 | [Đủ thông số Lightroom](15-lightroom-parameter-parity.md) | calibration, curve vùng, B&W mixer, Upright, Remove, Red Eye, thông số riêng của mask, Lens Blur |
 | 16 | [Nguồn sửa ống kính](16-lens-correction-sources.md) | ba slider độ mạnh, dữ liệu nhúng trong RAW → Lensfun → Apple, làm mới dữ liệu mỗi bản phát hành |
+| 17 | [iPad và Duo theo design 30/9](17-wide-design.md) | ảnh + cột cố định 280/260 hoặc panel dưới 400, băng nút nổi, công cụ ở chân cột, Duo màn ngoài dùng dải 84, Duo trong xoay dọc; thay 09 §3–7 và 13d §3 |
 
 ## Quy tắc chung
 

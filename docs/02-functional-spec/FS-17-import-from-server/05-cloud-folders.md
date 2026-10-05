@@ -13,10 +13,17 @@ Nguồn: [intent](../../_intents/2026-09-27-cloud-folders.md).
 | Hàng | Glyph | Mở |
 |---|---|---|
 | **Local Network** (thay "On Server") | `server.rack` | màn On Server hiện nay, tiêu đề **Local Network**: connection SMB/SFTP/WebDAV + Uploaded from This Device |
-| **Cloud** | `icloud` | màn Cloud (§2) |
+| **Cloud Folders** | `cloud` | màn Cloud (§2) |
 
 Tên người dùng chọn là "On Local Network" / "On Cloud"; thẻ Utilities rộng 190pt cắt còn "On Local Networ" (đo 2026-09-27,
-iPhone 17) nên bỏ chữ "On" ở cả hai.
+iPhone 17) nên bỏ chữ "On" ở cả hai. Hàng cloud ghi **Cloud Folders** (C6, 2026-10-02): "Cloud" trần cùng glyph iCloud
+đọc ra là iCloud Photos, trong khi hàng này là folder của Dropbox/Drive/OneDrive.
+
+Glyph `cloud` là mây trơn, không logo iCloud. *Vì* `folder` đã là glyph folder trên server (DESIGN §8).
+
+| # | Cho | Khi | Thì | Chứng minh bằng |
+|---|---|---|---|---|
+| AC-C6 | tab Collections, Utilities hiện trên iPhone 17 (thẻ 190pt) | nhìn hàng cloud | nhãn đọc trọn "Cloud Folders", không cắt; glyph là mây trơn, không phải logo iCloud; VoiceOver đọc "Cloud Folders" + mô tả Dropbox, Google Drive (C6) | ⚠️ chưa có |
 
 Cả hai luôn hiện, kể cả khi chưa có gì — màn trống nói nó dùng để làm gì.
 
@@ -25,8 +32,10 @@ Cả hai luôn hiện, kể cả khi chưa có gì — màn trống nói nó dù
 - Rỗng: "Browse and import photos from Dropbox, Google Drive, OneDrive or iCloud Drive, and upload to them. The
   service's app must be installed." + nút **Add Cloud Folder**.
 - Có: section **Cloud Folders**, mỗi hàng: tên, dưới là đường dẫn trong dịch vụ (`FileServerRow`); chạm → màn duyệt
-  (FS-17.01) ở folder đó; nhấn giữ/vuốt → **Rename** / **Remove** (bỏ khỏi ShotDex, không xoá gì trong cloud). Toolbar
-  **+** = Add Cloud Folder. Hàng **Uploaded from This Device** như On Local Network.
+  (FS-17.01) ở folder đó; nhấn giữ/vuốt → **Rename** / **Remove** (bỏ khỏi ShotDex, không xoá gì trong cloud).
+  Remove hỏi bằng **alert hai nút** **Remove** đỏ + **Cancel**, câu "ShotDex stops using this folder. Nothing in the
+  cloud or in your library is deleted." — không dùng hộp kiểu action sheet (iOS 26 ẩn Cancel của nó). AC-89 ở FS-17.03.
+  Toolbar **+** = Add Cloud Folder. Hàng **Uploaded from This Device** như On Local Network.
 - **Add Cloud Folder** → trình chọn folder của hệ thống (Files). Chọn xong → hộp **Save Connection** (FS-15.04 §3 bước
   4) với Name = tên folder và công tắc Add to Collections; Save → lưu.
 - Folder cloud được lưu như một connection giao thức **Files**: bookmark security-scoped của folder, không host/mật

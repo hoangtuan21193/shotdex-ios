@@ -62,6 +62,8 @@ Màn mới, giống màn chọn burst của Photos: **một khung lớn + dải 
   Vì người dùng Photos đã quen màn này; hình dạng khác hẳn Compare, và nút đỏ đếm khung **không** giữ.
 
 Luật của màn:
+- **Nút đóng nhìn thấy** ở trái thanh trên, chỗ Cancel của mọi màn tầng D (Q1): đóng mà không xoá gì, dấu giữ
+  bị bỏ. Màn mở dạng sheet thì vẫn có nút này, không trông vào vuốt xuống.
 - Khung xếp theo thứ tự chụp, cũ trước; mở ra **không khung nào được giữ**. Không tự chọn hộ, cùng luật
   với Duplicates.
 - Khung đã chọn trong Photos mang nhãn **Picked in Photos**; khung được gợi ý mang nhãn **Suggested**.
@@ -71,6 +73,8 @@ Luật của màn:
   với Duplicates.
 - **Phải giữ ít nhất một khung:** chưa giữ khung nào thì nút tắt, và dòng phụ là "Keep at least one frame. To
   delete the whole burst, use Delete in the viewer."
+
+Board: chưa có board màn chọn khung trên canvas ShotDex App Screens — vẽ `PH_`/`IP_`/`DI_`/`DC_` trước khi code.
 
 ## 5. Gợi ý khung
 
@@ -121,8 +125,9 @@ Luật của màn:
 | AC-10 | khung 7 và 15 được giữ, lệnh xoá trả lỗi (giả lập) | bấm Delete | 0 khung mất, tick giữ nguyên, có lỗi và nút Try Again | ⚠️ chưa có |
 | AC-11 | giữ khung 7 và 15, cả hai **không** phải khung đại diện | xoá 22 khung còn lại, về Library | lưới có ô cho **cả** khung 7 và khung 15 (giữ trong burst, hoặc bản chép nếu §9 đo ra bị ẩn); không ô nào trỏ tới khung đã xoá | ⚠️ chưa có — cần máy thật |
 | AC-12 | vừa xoá xong 22 khung | nhìn banner | banner nói 22 frames ở Recently Deleted, cứu được trong Photos 30 ngày; không có nút Undo | ⚠️ chưa có |
+| AC-13 | (Q1) màn chọn khung mở trên iPhone 402×874, Duo trong 951×669 và Duo ngoài 466×678, đã giữ 2 khung | bấm nút đóng ở trái thanh trên | trước khi bấm nút thấy trên cả 3 máy, trên Duo ngoài nằm ngoài rail 84pt; màn đóng, 0 ảnh bị xoá, 0 hộp thoại hệ thống | ⚠️ chưa có |
 
-**Chưa chứng minh được:** AC-1 → AC-12. Simulator chưa có burst nào (PHOTOS_PARITY B8).
+**Chưa chứng minh được:** AC-1 → AC-13. Simulator chưa có burst nào (PHOTOS_PARITY B8).
 
 ## 9. Rủi ro và phần phải đo trước `/plan`
 

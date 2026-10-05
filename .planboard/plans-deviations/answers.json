@@ -1,0 +1,61 @@
+{
+  "E1": {
+    "verdict": "ok"
+  },
+  "E2": {
+    "verdict": "ok"
+  },
+  "E3": {
+    "verdict": "ok"
+  },
+  "E4": {
+    "verdict": "ok"
+  },
+  "E5": {
+    "verdict": "ok"
+  },
+  "E6": {
+    "verdict": "ok",
+    "option": "doc"
+  },
+  "E7": {
+    "verdict": "ok"
+  },
+  "E8": {
+    "verdict": "ok"
+  },
+  "E9": {
+    "verdict": "ok"
+  },
+  "E10": {
+    "verdict": "ok"
+  },
+  "E11": {
+    "verdict": "ok"
+  },
+  "E12": {
+    "verdict": "ok"
+  },
+  "E13": {
+    "verdict": "ok"
+  },
+  "E14": {
+    "verdict": "ok"
+  },
+  "E15": {
+    "verdict": "ok"
+  },
+  "E16": {
+    "verdict": "ok",
+    "option": "drop"
+  },
+  "E17": {
+    "verdict": "ok"
+  },
+  "E18": {
+    "verdict": "ok"
+  },
+  "E19": {
+    "verdict": "ok"
+  }
+}

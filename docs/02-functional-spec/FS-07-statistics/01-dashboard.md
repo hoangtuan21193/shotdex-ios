@@ -1,10 +1,10 @@
 # FS-07.01 — Dashboard biểu đồ
 
 `FS-07.01` · `Features/Statistics/` · `Data/Database/StatisticsQueries.swift` · `ChartStore` · bảng `stat_charts`
-· cập nhật 2026-10-01
+· cập nhật 2026-10-02
 
 **Một câu:** một bảng điều khiển biểu đồ **do người dùng tự dựng** — mỗi thẻ là một đặc tả biểu đồ, có
-khoảng thời gian riêng.
+khoảng thời gian riêng. Thẻ, ô soạn, thanh công cụ và trạng thái màn: [01b](01b-cards-editor-and-states.md).
 
 ## 1. Quy tắc
 
@@ -39,37 +39,36 @@ Loại biểu đồ · **trục X** (nhóm theo) · **trục Y** (đo cái gì) 
 Mỗi biểu đồ là một dòng gồm id, **đặc tả dạng JSON** và vị trí. Mã hoá và giải mã JSON **tự viết** (giống
 smart album) để tránh bẫy lồng kiểu dữ liệu của thư viện database.
 
-Lần cài đầu gieo **sáu** biểu đồ, theo thứ tự:
+Lần cài đầu gieo **bảy** biểu đồ, theo thứ tự:
 
 | # | Biểu đồ | Loại · trục X · trục Y |
 |---|---|---|
-| 1 | Top Camera | cột ngang · thân máy · số ảnh |
-| 2 | Total Photos & Videos | một con số · — · số ảnh |
-| 3 | Equivalent Focal Length | cột ngang · dải tiêu cự tương đương · số ảnh |
-| 4 | Body + Lens | cột ngang · cặp thân máy + ống · số ảnh |
-| 5 | Slow Shutter | một con số · — · tỉ lệ chụp chậm hơn 1/tiêu cự tương đương |
-| 6 | Photos per Month | đường theo tháng · tách chuỗi theo thân máy, 3 mục đầu · số ảnh |
+| 1 | Top Camera | cột ngang · thân máy · số ảnh · 5 mục đầu |
+| 2 | Top Lens | cột ngang · ống kính · số ảnh · 5 mục đầu |
+| 3 | Total Photos & Videos | một con số · — · số ảnh |
+| 4 | Equivalent Focal Length | cột ngang · dải tiêu cự tương đương · số ảnh |
+| 5 | Body + Lens | cột ngang · cặp thân máy + ống · số ảnh · 5 mục đầu |
+| 6 | Slow Shutter | một con số · — · tỉ lệ chụp chậm hơn 1/tiêu cự tương đương |
+| 7 | Photos per Month | đường theo tháng · tách chuỗi theo thân máy, 3 mục đầu · số ảnh |
 
-- **Không biểu đồ nào cố định**: cả sáu sửa và xoá được như biểu đồ người dùng tự dựng.
-- Việc gieo chỉ chạy **một lần duy nhất** — bảng người dùng cố ý xoá sạch không được tự mọc lại.
-- **Máy đã gieo bộ cũ** (2 biểu đồ: Top Camera, Total Photos & Videos): lần mở Statistics đầu tiên sau khi cập nhật
-  thêm **một lần** 4 biểu đồ còn thiếu (#3–#6) vào **cuối** bảng, theo đúng thứ tự trên; không đụng biểu đồ đang
-  có. Cờ "đã gieo" lên phiên bản 2 để việc này chỉ chạy một lần (người dùng chốt 2026-10-01).
+- **Không biểu đồ nào cố định**: cả bảy sửa và xoá được như biểu đồ người dùng tự dựng.
+- Bộ gieo có **số thế hệ**, hiện là **3**. Mỗi thế hệ chạy **một lần duy nhất** — bảng người dùng cố ý xoá
+  sạch không được tự mọc lại.
+- Máy đã qua thế hệ trước: lần mở Statistics đầu tiên sau khi cập nhật thêm **một lần** các biểu đồ còn
+  thiếu vào **cuối** bảng, theo đúng thứ tự trên; không đụng biểu đồ đang có.
+
+| Máy đang ở | Thêm vào cuối |
+|---|---|
+| chưa gieo | cả bảy, đúng thứ tự |
+| thế hệ 1 (Top Camera, Total Photos & Videos) | Top Lens · Equivalent Focal Length · Body + Lens · Slow Shutter · Photos per Month |
+| thế hệ 2 (bộ sáu, không có Top Lens) | Top Lens |
+
+- Không có migration dữ liệu: chỉ cờ thế hệ lên 3. *Vì app chưa phát hành (CLAUDE.md, 2026-09-23).*
 
 ## 4. Thẻ và ô soạn
 
-- Mỗi thẻ là một hàng **có nền bo góc riêng**; danh sách bỏ đường kẻ và thêm lề, nên các biểu đồ là những
-  khối rời chứ không dính thành một mảng — mà vẫn kéo sắp xếp và vuốt xoá được.
-- Tiêu đề thẻ: tên + **khoảng thời gian của chính nó** + menu Edit / Duplicate / Delete.
-- Kiểu vẽ: cột ngang (nhãn ở trục Y, mỗi hàng ~28pt, bo góc, dải màu) · vành khuyên (lỗ giữa 0,6) · bảng
-  màu dùng chung.
-- Chạm một cột, một lát hay một hàng **rời rạc hoặc theo dải** thì mở Library đã lọc sẵn. Biểu đồ **theo
-  thời gian không mở được**. Bộ lọc có điều kiện *trong tháng* ([FS-07.02 §2](02-insights.md)), nhưng chạm
-  một điểm trên biểu đồ đường chưa được đặc tả.
-- Nhóm **"Unknown" bị ẩn khỏi biểu đồ**, và thay bằng một dòng chú "N photos without this info".
-- **Ô soạn** soi gương ô soạn smart album: chọn loại · trục X · trục Y · tách chuỗi và N mục đầu · mục
-  **Conditions** nhúng **bộ dựng điều kiện dùng chung** · mục **Date Range**. Có **xem trước sống** vẽ bằng
-  dữ liệu thật của bản nháp.
+Đặc tả ở [FS-07.01b](01b-cards-editor-and-states.md): kiểu vẽ thẻ, định dạng số, màu, thanh công cụ, ô soạn,
+trạng thái màn (quyền, đang index, chờ iCloud).
 
 ## 5. Khoảng thời gian
 
@@ -100,4 +99,5 @@ ngày**.
 - **Chừa 48pt dưới thẻ cuối**, cộng thêm chỗ cho thanh chrome tự vẽ ở bản iOS trước 26 — vùng cuộn dừng
   đúng ở tab bar nổi nên không chừa thì thẻ cuối dính vào nó.
 - Thẻ Insights ([FS-07.02](02-insights.md)) đứng **trên** mọi biểu đồ, không bị chia vòng tròn vào cột.
-- Màn rỗng: chưa index → "No Indexed Photos"; chưa có biểu đồ nào → "No Charts".
+- Dải trạng thái (Limited, đang index, chờ iCloud — [01b §5](01b-cards-editor-and-states.md)) đứng trên thẻ
+  Insights, trải hết bề rộng nội dung ở mọi bố cục.

@@ -5,9 +5,9 @@
 | Tác giả | hat.tuan |
 | Ngày | 2026-09-27 |
 | Trạng thái | accepted |
-| Tiến độ | **gần xong** (2026-09-30) — task 45/45, 45/45 AC xanh (AC-36 trừ phần quyền .limited); AC-18 mới xanh (vị trí list Edit giữ đúng từng pt khi quay lại, 26.5 + 18.6); còn: phần .limited của AC-36 (sim không cấp được .limited bằng lệnh), D3 chờ số đo · plan [2026-09-28-fs-03-13](../_plans/2026-09-28-fs-03-13-iphone-editor-layout.md) |
+| Tiến độ | **chưa làm** phần FS-03.17 (2026-10-01) — spec FS-03.17 + 17c, AC-1…AC-49 (60 bảng design canvas 30/9); trước đó: **gần xong** (2026-09-30) — task 45/45, 45/45 AC xanh (AC-36 trừ phần quyền .limited); AC-18 mới xanh (vị trí list Edit giữ đúng từng pt khi quay lại, 26.5 + 18.6); còn: phần .limited của AC-36 (sim không cấp được .limited bằng lệnh), D3 chờ số đo · plan [2026-09-28-fs-03-13](../_plans/2026-09-28-fs-03-13-iphone-editor-layout.md) |
 | Nguồn | phản hồi người dùng (chủ sở hữu sản phẩm) — phiên thiết kế 2026-09-27, mọi quyết định chốt trên canvas |
-| Spec sinh ra từ đây | [FS-03.13](../02-functional-spec/FS-03-photo-editor/13-iphone-editor-layout.md) (+ 13a–13d) |
+| Spec sinh ra từ đây | [FS-03.13](../02-functional-spec/FS-03-photo-editor/13-iphone-editor-layout.md) (+ 13a–13d) · [FS-03.17](../02-functional-spec/FS-03-photo-editor/17-wide-design.md) |
 
 Canvas thiết kế (mọi màn đã chốt, đánh dấu "ĐÃ CHỌN" / hàng "Bản chốt"):
 <https://claude.ai/artifact/T4tEUQrJtxBbi48HokiL9F> — private, chủ sở hữu mở được.

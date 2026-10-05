@@ -1,0 +1,1361 @@
+{
+ "title": "Đợt 1 — 32 điểm cần quyết của 5 spec",
+ "context": "Intent user-wishes-research (đã accepted). Đợt 1 có 5 spec, 68 AC: iCloud FS-02.06, RAW FS-03.04b, riêng tư FS-08.06, thống kê FS-07, burst FS-02.05.\nMỗi thẻ là một chỗ spec cần bạn chốt trước khi /plan. Đề xuất = phương án tôi khuyên.",
+ "pages": [
+  {
+   "id": "icloud",
+   "title": "FS-02.06 · Bản gốc trên iCloud",
+   "intro": "Khi nào và ở đâu người dùng thấy ảnh gốc đang tải, và xuất hàng loạt xử lý tải thế nào.",
+   "decisions": [
+    {
+     "id": "C1",
+     "title": "Dấu 'chỉ có trên iCloud' ở ô lưới",
+     "importance": "important",
+     "why": "Kiểm từng ô khi đang cuộn phạm luật hiệu năng NF-01, còn dùng thuộc tính không công khai thì có thể bị App Store từ chối.",
+     "proposal": "Lưới không có dấu. Chỉ hiện ở màn xem ảnh, ở filmstrip, và lúc một lệnh bắt đầu tải.",
+     "options": [
+      {
+       "id": "a",
+       "label": "Không có dấu ở lưới",
+       "pros": [
+        "Không tốn gì khi cuộn",
+        "Không rủi ro App Store"
+       ],
+       "cons": [
+        "Không biết trước ảnh nào phải tải"
+       ],
+       "effort": "S",
+       "recommended": true
+      },
+      {
+       "id": "b",
+       "label": "Kiểm từng ô đang hiện (khi tắt mạng)",
+       "pros": [
+        "Thấy trước ngay trên lưới"
+       ],
+       "cons": [
+        "Phạm NF-01 luật 1 và 4",
+        "Tốn pin khi cuộn 55k ảnh"
+       ],
+       "effort": "M"
+      },
+      {
+       "id": "c",
+       "label": "Dùng thuộc tính không công khai",
+       "pros": [
+        "Chính xác, rẻ"
+       ],
+       "cons": [
+        "Rủi ro bị reject"
+       ],
+       "effort": "S"
+      }
+     ],
+     "tasks": [
+      "Ghi luật vào FS-02.06 §2 — docs/02-functional-spec/FS-02-photo-detail/06-icloud-originals.md"
+     ]
+    },
+    {
+     "id": "C2",
+     "title": "Thanh tiến độ ở lưới và màn xem ảnh",
+     "importance": "important",
+     "why": "DESIGN.md §10.3 mới có mẫu cho màn tối kiểu editor. Chọn gì thì thành mẫu chung cho mọi lệnh tải về sau.",
+     "proposal": "Một viên kính (tier C) nổi phía trên selection bar: 'Downloading 3 of 12 from iCloud · 42%' kèm nút Cancel. Không chặn màn hình.",
+     "options": [
+      {
+       "id": "a",
+       "label": "Viên kính trên selection bar",
+       "pros": [
+        "Không chặn thao tác",
+        "Cùng chỗ với lệnh vừa bấm"
+       ],
+       "cons": [
+        "Thêm một mẫu vào DESIGN.md"
+       ],
+       "effort": "S",
+       "recommended": true
+      },
+      {
+       "id": "b",
+       "label": "Modal có scrim như màn editor",
+       "pros": [
+        "Mẫu đã có sẵn"
+       ],
+       "cons": [
+        "Chặn cả màn hình suốt lúc tải"
+       ],
+       "effort": "S"
+      },
+      {
+       "id": "c",
+       "label": "Sheet cao nửa màn hình",
+       "pros": [
+        "Chỗ rộng để liệt kê ảnh lỗi"
+       ],
+       "cons": [
+        "Nặng nề cho việc tải vài giây"
+       ],
+       "effort": "M"
+      }
+     ],
+     "tasks": [
+      "Thêm mẫu viên tiến độ và glyph iCloud vào DESIGN.md §8/§10 (người dùng tự commit DESIGN.md)"
+     ]
+    },
+    {
+     "id": "C3",
+     "title": "Tải hết trước hay tải từng ảnh",
+     "importance": "important",
+     "why": "Tải từng ảnh thì có thể Resize xong nửa lô rồi mới hỏng, để lại nửa số bản sao.",
+     "proposal": "Tải hết trước: kiểm dung lượng trống cho cả lô, tải, báo ảnh lỗi (Continue with N / Retry / Cancel), rồi mới ghi hay xoá gì.",
+     "options": [
+      {
+       "id": "a",
+       "label": "Tải hết trước",
+       "pros": [
+        "Biết lỗi trước khi ghi",
+        "Không có nửa lô"
+       ],
+       "cons": [
+        "Cần dung lượng cho cả lô"
+       ],
+       "effort": "M",
+       "recommended": true
+      },
+      {
+       "id": "b",
+       "label": "Tải từng ảnh ngay trước khi dùng",
+       "pros": [
+        "Ít dung lượng"
+       ],
+       "cons": [
+        "Lỗi giữa chừng, Resize đã tạo nửa số bản"
+       ],
+       "effort": "M"
+      }
+     ],
+     "tasks": [
+      "Ghi lựa chọn vào spec, bỏ dấu ⚠️ CẦN QUYẾT — docs/02-functional-spec/FS-02-photo-detail/06-icloud-originals.md"
+     ]
+    },
+    {
+     "id": "C4",
+     "title": "Hiện phần trăm ở màn xem ảnh",
+     "importance": "important",
+     "why": "Trên iPhone 402pt, thêm con số làm mất khoảng 28pt của dòng tiêu đề.",
+     "proposal": "Chỉ vòng 22pt (vòng đầy dần theo %). VoiceOver đọc phần trăm. Con số chỉ hiện trong viên tiến độ của lệnh hàng loạt.",
+     "options": [
+      {
+       "id": "a",
+       "label": "Số cạnh vòng",
+       "pros": [
+        "Đọc được % chính xác"
+       ],
+       "cons": [
+        "Mất ~28pt dòng tiêu đề"
+       ],
+       "effort": "S"
+      },
+      {
+       "id": "b",
+       "label": "Chỉ vòng, VoiceOver đọc %",
+       "pros": [
+        "Không tốn chỗ"
+       ],
+       "cons": [
+        "Không có con số trên màn"
+       ],
+       "effort": "S",
+       "recommended": true
+      }
+     ],
+     "tasks": [
+      "Ghi lựa chọn vào spec, bỏ dấu ⚠️ CẦN QUYẾT — docs/02-functional-spec/FS-02-photo-detail/06-icloud-originals.md"
+     ]
+    },
+    {
+     "id": "C5",
+     "title": "Video Studio có theo luật này không",
+     "importance": "important",
+     "why": "FS-12.08 §6 cố ý bỏ tiến độ từng clip ở v1. Mở lại là thêm việc cho Video Studio.",
+     "proposal": "Kiểm pixel và 'không lỗi im lặng' áp cho ảnh tĩnh đưa vào Video Studio. Tiến độ từng clip video để FS-12 lo riêng.",
+     "options": [
+      {
+       "id": "a",
+       "label": "Bỏ giới hạn, làm luôn tiến độ từng clip",
+       "pros": [
+        "Đồng nhất mọi nơi"
+       ],
+       "cons": [
+        "Thêm việc lớn cho FS-12"
+       ],
+       "effort": "L"
+      },
+      {
+       "id": "b",
+       "label": "Chỉ áp cho ảnh tĩnh",
+       "pros": [
+        "Chặn được lỗi xuất bản xem trước"
+       ],
+       "cons": [
+        "Clip video vẫn chưa có %"
+       ],
+       "effort": "S",
+       "recommended": true
+      },
+      {
+       "id": "c",
+       "label": "Để hẳn Video Studio cho FS-12",
+       "pros": [
+        "Không đụng Video Studio"
+       ],
+       "cons": [
+        "Ảnh tĩnh vẫn có thể lọt bản xem trước"
+       ],
+       "effort": "S"
+      }
+     ],
+     "tasks": [
+      "Ghi lựa chọn vào spec, bỏ dấu ⚠️ CẦN QUYẾT — docs/02-functional-spec/FS-02-photo-detail/06-icloud-originals.md"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "raw",
+   "title": "FS-03.04b · RAW iOS chưa đọc được",
+   "intro": "Biết một RAW không đọc được bằng cách nào, và báo cho người dùng ở đâu.",
+   "decisions": [
+    {
+     "id": "R1",
+     "title": "Nguồn phán quyết 'không hỗ trợ'",
+     "importance": "critical",
+     "why": "Danh sách máy của hệ thống ghi tên khác EXIF ('Nikon Z 6 2' và 'NIKON Z 6_2'). Tin danh sách một cách máy móc thì đánh dấu sai cả máy đang đọc được.",
+     "proposal": "Kết hợp: tên khớp danh sách thì là hỗ trợ; không khớp thì giải mã thử một file đã có trên máy; máy mà toàn bộ file chỉ nằm trên iCloud thì để 'chưa biết' tới lúc mở editor.",
+     "options": [
+      {
+       "id": "a",
+       "label": "Tra danh sách hệ thống + bảng tên tương đương",
+       "pros": [
+        "Không tốn giải mã"
+       ],
+       "cons": [
+        "Bảng tên phải bảo trì",
+        "Sai với chế độ nén"
+       ],
+       "effort": "M"
+      },
+      {
+       "id": "b",
+       "label": "Giải mã thử một file mỗi máy",
+       "pros": [
+        "Đúng thực tế"
+       ],
+       "cons": [
+        "Tốn thời gian với file lớn"
+       ],
+       "effort": "M"
+      },
+      {
+       "id": "c",
+       "label": "Kết hợp cả hai",
+       "pros": [
+        "Nhanh khi khớp tên, đúng khi không khớp"
+       ],
+       "cons": [
+        "Phức tạp hơn một chút"
+       ],
+       "effort": "M",
+       "recommended": true
+      }
+     ],
+     "tasks": [
+      "Bảng vệ tinh lưu phán quyết theo máy × bản iOS — BD-02 §1, AppDatabase migration mới"
+     ]
+    },
+    {
+     "id": "R2",
+     "title": "Dấu trên ô lưới",
+     "importance": "important",
+     "why": "Lưới là chỗ duy nhất người dùng thấy trước khi mở. Nhưng thêm glyph là thêm một mục vào từ điển icon DESIGN.md.",
+     "proposal": "Glyph tam giác cảnh báo trong hàng glyph trạng thái của ô lưới, thêm vào DESIGN.md §8.",
+     "options": [
+      {
+       "id": "a",
+       "label": "Glyph cảnh báo trong hàng trạng thái",
+       "pros": [
+        "Thấy ngay",
+        "Không phụ thuộc Settings"
+       ],
+       "cons": [
+        "Thêm glyph mới vào DESIGN.md"
+       ],
+       "effort": "S",
+       "recommended": true
+      },
+      {
+       "id": "b",
+       "label": "Đổi chữ nhãn 'RAW'",
+       "pros": [
+        "Không thêm glyph"
+       ],
+       "cons": [
+        "Người dùng tắt được nhãn trong Settings, nên có thể mất dấu"
+       ],
+       "effort": "S"
+      },
+      {
+       "id": "c",
+       "label": "Không đánh dấu, chỉ có bộ lọc",
+       "pros": [
+        "Lưới gọn"
+       ],
+       "cons": [
+        "Chỉ biết khi đi tìm"
+       ],
+       "effort": "S"
+      }
+     ],
+     "tasks": [
+      "Ghi lựa chọn vào spec, bỏ dấu ⚠️ CẦN QUYẾT — docs/02-functional-spec/FS-03-photo-editor/04b-unsupported-raw.md"
+     ]
+    },
+    {
+     "id": "R3",
+     "title": "Bộ lọc 'Unsupported RAW'",
+     "importance": "minor",
+     "why": "Là ngoại lệ thứ hai trong menu loại ảnh (sau Panoramas).",
+     "proposal": "Thêm vào menu con capture-kind.",
+     "options": [
+      {
+       "id": "a",
+       "label": "Thêm",
+       "pros": [
+        "Tìm hết ảnh cần chuyển DNG trong một lần"
+       ],
+       "cons": [
+        "Menu dài thêm một dòng"
+       ],
+       "effort": "S",
+       "recommended": true
+      },
+      {
+       "id": "b",
+       "label": "Không thêm",
+       "pros": [
+        "Menu gọn"
+       ],
+       "cons": [
+        "Không gom được ảnh cần xử lý"
+       ],
+       "effort": "S"
+      }
+     ]
+    },
+    {
+     "id": "R4",
+     "title": "DNG vẫn lỗi và không có JPEG",
+     "importance": "important",
+     "why": "NF-04 bắt mọi lỗi phải có bước tiếp theo.",
+     "proposal": "Có cả nút Share Original (gửi sang app khác mở được) lẫn gợi ý thử lại bằng DNG Converter bản mới hơn.",
+     "options": [
+      {
+       "id": "a",
+       "label": "Chỉ nút Share Original",
+       "pros": [
+        "Có lối ra ngay"
+       ],
+       "cons": [
+        "Không nói nguyên nhân"
+       ],
+       "effort": "S"
+      },
+      {
+       "id": "b",
+       "label": "OK + gợi ý",
+       "pros": [
+        "Nói rõ nguyên nhân"
+       ],
+       "cons": [
+        "Không có lối ra trong app"
+       ],
+       "effort": "S"
+      },
+      {
+       "id": "c",
+       "label": "Cả hai",
+       "pros": [
+        "Đủ NF-04"
+       ],
+       "cons": [
+        "Thêm một nút"
+       ],
+       "effort": "S",
+       "recommended": true
+      }
+     ],
+     "tasks": [
+      "Ghi lựa chọn vào spec, bỏ dấu ⚠️ CẦN QUYẾT — docs/02-functional-spec/FS-03-photo-editor/04b-unsupported-raw.md"
+     ]
+    },
+    {
+     "id": "R5",
+     "title": "Cặp RAW+JPEG của máy chưa hỗ trợ",
+     "importance": "important",
+     "why": "Mở thẳng JPEG thì nhanh; hỏi trước thì thêm một bước mỗi lần.",
+     "proposal": "Mở thẳng JPEG, hiện một dòng banner 'RAW của Sony A7 V chưa đọc được trên iOS này — đang sửa JPEG'. RAW mờ trong menu Source.",
+     "options": [
+      {
+       "id": "a",
+       "label": "Mở JPEG + banner",
+       "pros": [
+        "Không thêm bước"
+       ],
+       "cons": [
+        "Người dùng có thể không đọc banner"
+       ],
+       "effort": "S",
+       "recommended": true
+      },
+      {
+       "id": "b",
+       "label": "Hỏi trước: Edit JPEG / Cancel",
+       "pros": [
+        "Không bất ngờ"
+       ],
+       "cons": [
+        "Thêm một bước mỗi lần mở"
+       ],
+       "effort": "S"
+      }
+     ],
+     "tasks": [
+      "Ghi lựa chọn vào spec, bỏ dấu ⚠️ CẦN QUYẾT — docs/02-functional-spec/FS-03-photo-editor/04b-unsupported-raw.md"
+     ]
+    },
+    {
+     "id": "R6",
+     "title": "Combine / Collage / Video Studio với RAW chưa đọc được",
+     "importance": "important",
+     "why": "Collage và Video Studio sẽ dùng bản xem trước nhúng trong RAW, mà intent cấm xuất bản xem trước một cách âm thầm.",
+     "proposal": "Cho phép, kèm một dòng báo cho biết ảnh dùng bản xem trước W×H. Không âm thầm.",
+     "options": [
+      {
+       "id": "a",
+       "label": "Cho phép kèm thông báo kích thước",
+       "pros": [
+        "Không chặn công việc",
+        "Không âm thầm"
+       ],
+       "cons": [
+        "Ảnh ra nhỏ hơn"
+       ],
+       "effort": "S",
+       "recommended": true
+      },
+      {
+       "id": "b",
+       "label": "Bỏ các ảnh đó, báo số lượng",
+       "pros": [
+        "Chất lượng đều"
+       ],
+       "cons": [
+        "Mất ảnh trong collage"
+       ],
+       "effort": "S"
+      },
+      {
+       "id": "c",
+       "label": "Chặn cả lượt",
+       "pros": [
+        "Rõ ràng"
+       ],
+       "cons": [
+        "Một ảnh chặn cả việc"
+       ],
+       "effort": "S"
+      }
+     ],
+     "tasks": [
+      "Ghi lựa chọn vào spec, bỏ dấu ⚠️ CẦN QUYẾT — docs/02-functional-spec/FS-03-photo-editor/04b-unsupported-raw.md"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "privacy1",
+   "title": "FS-08.06 · Riêng tư khi chia sẻ (1/2)",
+   "intro": "Chọn mức metadata ở đâu, và những file không ghi lại được thì xử lý thế nào.",
+   "decisions": [
+    {
+     "id": "P1",
+     "title": "Chọn mức cho một lần chia sẻ ở đâu",
+     "importance": "critical",
+     "why": "ShotDex đưa file cho share sheet, không đưa PHAsset, nên không có mục Options của hệ thống. Thêm một bước mỗi lần thì người dùng chia sẻ nhiều sẽ khó chịu.",
+     "proposal": "Chạm Share = dùng mặc định trong Settings. Nhấn giữ Share mở menu có thêm 'Share Without Location' và 'Share Without Metadata'.",
+     "options": [
+      {
+       "id": "a",
+       "label": "Chạm = mặc định, nhấn giữ = chọn mức khác",
+       "pros": [
+        "Không thêm bước"
+       ],
+       "cons": [
+        "Nhấn giữ khó phát hiện"
+       ],
+       "effort": "S",
+       "recommended": true
+      },
+      {
+       "id": "b",
+       "label": "Sheet nhỏ trước share sheet",
+       "pros": [
+        "Luôn thấy lựa chọn"
+       ],
+       "cons": [
+        "+1 chạm mỗi lần"
+       ],
+       "effort": "S"
+      },
+      {
+       "id": "c",
+       "label": "Hai hàng hành động riêng trong share sheet",
+       "pros": [
+        "Nằm cùng chỗ chia sẻ"
+       ],
+       "cons": [
+        "Phải mở lại share sheet"
+       ],
+       "effort": "M"
+      }
+     ],
+     "tasks": [
+      "Menu nhấn giữ Share — ShotDex/Features/Shared/PhotoShareSheet.swift, PhotoDetailScreen.swift"
+     ]
+    },
+    {
+     "id": "P2",
+     "title": "Save Changes (sửa tại chỗ)",
+     "importance": "critical",
+     "why": "Code hiện tại xoá ngày và vị trí của chính ảnh trong Photos, và Revert không lấy lại được. Đây là lỗi mất dữ liệu.",
+     "proposal": "Không có lựa chọn metadata khi Save Changes, vì ảnh vẫn ở trên máy. Sửa lỗi xoá ngày/vị trí.",
+     "options": [
+      {
+       "id": "a",
+       "label": "Không có lựa chọn, sửa lỗi xoá",
+       "pros": [
+        "Hết mất dữ liệu"
+       ],
+       "cons": [
+        "Không bỏ được vị trí khi lưu"
+       ],
+       "effort": "S",
+       "recommended": true
+      },
+      {
+       "id": "b",
+       "label": "Đủ 3 mức, ghi chú Revert không khôi phục",
+       "pros": [
+        "Linh hoạt"
+       ],
+       "cons": [
+        "Giữ nguyên nguy cơ mất dữ liệu"
+       ],
+       "effort": "S"
+      }
+     ],
+     "tasks": [
+      "Bỏ đoạn xoá ngày/vị trí — ShotDex/Data/Sources/PhotoEditingService.swift:773-776"
+     ]
+    },
+    {
+     "id": "P3",
+     "title": "RAW không ghi lại được metadata",
+     "importance": "critical",
+     "why": "Hiện tại app âm thầm gửi RAW còn nguyên GPS. Người chụp gửi RAW thì thường muốn gửi RAW thật.",
+     "proposal": "Hỏi: 'RAW không bỏ được vị trí' → Share as JPEG / Share RAW with Location / Skip. Chọn một lần cho cả lô.",
+     "options": [
+      {
+       "id": "a",
+       "label": "Bỏ ra, báo số lượng",
+       "pros": [
+        "Không lộ GPS"
+       ],
+       "cons": [
+        "Không gửi được RAW"
+       ],
+       "effort": "S"
+      },
+      {
+       "id": "b",
+       "label": "Gửi bản JPEG thay thế",
+       "pros": [
+        "Không lộ GPS"
+       ],
+       "cons": [
+        "Người nhận không có RAW"
+       ],
+       "effort": "M"
+      },
+      {
+       "id": "c",
+       "label": "Hỏi mỗi lần",
+       "pros": [
+        "Người dùng tự quyết, không âm thầm"
+       ],
+       "cons": [
+        "Thêm một bước khi có RAW"
+       ],
+       "effort": "S",
+       "recommended": true
+      }
+     ],
+     "tasks": [
+      "Bỏ đường fallback gửi bản gốc — PhotoShareSheet.swift:26, ServerPhotoCommands.swift:33-36"
+     ]
+    },
+    {
+     "id": "P4",
+     "title": "Video",
+     "importance": "important",
+     "why": "NF-03 hiện cho video đi nguyên. Chép track sang container mới thì không nén lại, nhưng cần dung lượng bằng clip.",
+     "proposal": "Chép track sang container mới, không encode lại. Thiếu chỗ thì bỏ clip đó và báo.",
+     "options": [
+      {
+       "id": "a",
+       "label": "Chép track, không encode",
+       "pros": [
+        "Bỏ được GPS của video",
+        "Không mất chất lượng"
+       ],
+       "cons": [
+        "Cần dung lượng tạm bằng clip"
+       ],
+       "effort": "M",
+       "recommended": true
+      },
+      {
+       "id": "b",
+       "label": "Giữ luật cũ, video đi nguyên",
+       "pros": [
+        "Không tốn gì"
+       ],
+       "cons": [
+        "Video lộ vị trí"
+       ],
+       "effort": "S"
+      }
+     ],
+     "tasks": [
+      "Ghi lựa chọn vào spec, bỏ dấu ⚠️ CẦN QUYẾT — docs/02-functional-spec/FS-08-settings/06-share-metadata-privacy.md"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "privacy2",
+   "title": "FS-08.06 · Riêng tư khi chia sẻ (2/2)",
+   "intro": "Mặc định áp tới đâu, và các đường ra khác.",
+   "decisions": [
+    {
+     "id": "P5",
+     "title": "Mặc định Settings áp cho Save Copy / Paste Edits / Resize",
+     "importance": "important",
+     "why": "Hai mặc định khác nhau dễ làm người dùng tưởng đã bỏ vị trí mà thật ra chưa.",
+     "proposal": "Có: một mặc định dùng cho mọi đường ra.",
+     "options": [
+      {
+       "id": "a",
+       "label": "Một mặc định cho mọi nơi",
+       "pros": [
+        "Dễ đoán"
+       ],
+       "cons": [
+        "Save Copy cũng bỏ vị trí nếu bật"
+       ],
+       "effort": "S",
+       "recommended": true
+      },
+      {
+       "id": "b",
+       "label": "Settings chỉ cho Share",
+       "pros": [
+        "Lưu vào Photos giữ đủ"
+       ],
+       "cons": [
+        "Hai luật khác nhau"
+       ],
+       "effort": "S"
+      }
+     ],
+     "tasks": [
+      "Ghi lựa chọn vào spec, bỏ dấu ⚠️ CẦN QUYẾT — docs/02-functional-spec/FS-08-settings/06-share-metadata-privacy.md"
+     ]
+    },
+    {
+     "id": "P6",
+     "title": "No Metadata có giữ Copyright/Artist không",
+     "importance": "minor",
+     "why": "Photographer thường muốn giữ bản quyền kể cả khi xoá mọi thứ khác.",
+     "proposal": "Giữ Copyright và Artist, giống 'Copyright Only' của Lightroom.",
+     "options": [
+      {
+       "id": "a",
+       "label": "Xoá hết",
+       "pros": [
+        "Sạch hoàn toàn"
+       ],
+       "cons": [
+        "Mất thông tin bản quyền"
+       ],
+       "effort": "S"
+      },
+      {
+       "id": "b",
+       "label": "Giữ Copyright + Artist",
+       "pros": [
+        "Bảo vệ bản quyền"
+       ],
+       "cons": [
+        "Không 'sạch' tuyệt đối"
+       ],
+       "effort": "S",
+       "recommended": true
+      }
+     ]
+    },
+    {
+     "id": "P7",
+     "title": "Share extension 'Save to ShotDex'",
+     "importance": "minor",
+     "why": "Extension này chỉ nhận ảnh vào, không gửi gì ra khỏi máy. Nó cũng không có app group để đọc Settings.",
+     "proposal": "Ngoài phạm vi: lưu nguyên byte.",
+     "options": [
+      {
+       "id": "a",
+       "label": "Ngoài phạm vi",
+       "pros": [
+        "Không đụng extension"
+       ],
+       "cons": [
+        "—"
+       ],
+       "effort": "S",
+       "recommended": true
+      },
+      {
+       "id": "b",
+       "label": "Picker 3 mức trong extension",
+       "pros": [
+        "Kiểm soát cả chiều vào"
+       ],
+       "cons": [
+        "Việc thừa cho chiều vào"
+       ],
+       "effort": "M"
+      }
+     ]
+    },
+    {
+     "id": "P8",
+     "title": "Kéo ảnh sang app khác",
+     "importance": "important",
+     "why": "Hiện kéo ảnh sang app khác thì gửi đủ EXIF. Đây là một đường ra khác của cùng một file.",
+     "proposal": "Theo mặc định Settings.",
+     "options": [
+      {
+       "id": "a",
+       "label": "Theo mặc định Settings",
+       "pros": [
+        "Không có lỗ rò"
+       ],
+       "cons": [
+        "Kéo chậm hơn một chút vì phải ghi lại file"
+       ],
+       "effort": "S",
+       "recommended": true
+      },
+      {
+       "id": "b",
+       "label": "Luôn giữ đủ",
+       "pros": [
+        "Nhanh"
+       ],
+       "cons": [
+        "Lỗ rò vị trí"
+       ],
+       "effort": "S"
+      }
+     ],
+     "tasks": [
+      "Ghi lại file khi kéo — ShotDex/Features/Shared/PhotoDragItem.swift"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "stats1",
+   "title": "FS-07 · Nhận xét thống kê (1/2)",
+   "intro": "Mở Statistics lần đầu thấy gì, và nhận xét nói gì.",
+   "decisions": [
+    {
+     "id": "S1",
+     "title": "Bốn câu trả lời đầu tiên nằm đâu",
+     "importance": "important",
+     "why": "Chọn (a) hoặc (c) thì phải thêm trục 'cặp body + lens' và thước đo 'chậm hơn 1/tiêu cự' vào chart editor.",
+     "proposal": "Card Insights ở trên cùng, cộng thêm 4 chart mặc định (tiêu cự quy đổi, cặp body+lens, tỉ lệ chụp chậm, xu hướng tháng của 3 máy dùng nhiều nhất). Tổng 6 chart mặc định.",
+     "options": [
+      {
+       "id": "a",
+       "label": "Card + thêm 4 chart (6 mặc định)",
+       "pros": [
+        "Trả lời đủ ngay lần đầu"
+       ],
+       "cons": [
+        "Thêm trục/thước đo mới"
+       ],
+       "effort": "M",
+       "recommended": true
+      },
+      {
+       "id": "b",
+       "label": "Chỉ card, giữ 2 mặc định",
+       "pros": [
+        "Ít việc nhất"
+       ],
+       "cons": [
+        "Không thấy phân bố tiêu cự"
+       ],
+       "effort": "S"
+      },
+      {
+       "id": "c",
+       "label": "Thay mặc định bằng 4 chart + card",
+       "pros": [
+        "Gọn"
+       ],
+       "cons": [
+        "Mất Top Camera/Total quen thuộc"
+       ],
+       "effort": "M"
+      }
+     ],
+     "tasks": [
+      "Ghi lựa chọn vào spec, bỏ dấu ⚠️ CẦN QUYẾT — docs/02-functional-spec/FS-07-statistics/02-insights.md"
+     ]
+    },
+    {
+     "id": "S2",
+     "title": "Ngưỡng hiện nhận xét",
+     "importance": "important",
+     "why": "Thấp quá thì câu vô nghĩa ('100% ảnh ở 26mm' với 3 ảnh); cao quá thì người mới không thấy gì.",
+     "proposal": "50 ảnh có EXIF, 20%, 5%, 90 ngày, 50%. Tối đa 3 câu.",
+     "options": [
+      {
+       "id": "a",
+       "label": "Ngưỡng đề xuất, tối đa 3",
+       "pros": [
+        "Cân bằng"
+       ],
+       "cons": [
+        "—"
+       ],
+       "effort": "S",
+       "recommended": true
+      },
+      {
+       "id": "b",
+       "label": "Chặt hơn: 200 ảnh, 180 ngày",
+       "pros": [
+        "Chắc chắn đúng"
+       ],
+       "cons": [
+        "Người mới không có gì"
+       ],
+       "effort": "S"
+      },
+      {
+       "id": "c",
+       "label": "Lỏng hơn: 20 ảnh",
+       "pros": [
+        "Hiện sớm"
+       ],
+       "cons": [
+        "Câu dễ sai"
+       ],
+       "effort": "S"
+      }
+     ],
+     "tasks": [
+      "Ghi lựa chọn vào spec, bỏ dấu ⚠️ CẦN QUYẾT — docs/02-functional-spec/FS-07-statistics/02-insights.md"
+     ]
+    },
+    {
+     "id": "S3",
+     "title": "Cách viết",
+     "importance": "important",
+     "why": "Câu 'lens lâu không dùng' có thể đọc như gợi ý bán lens, trái tinh thần 'chỉ nói về dữ liệu'.",
+     "proposal": "Dùng các câu của §2, thêm biến thể nêu mẫu số khi dưới 90% ảnh có dữ liệu. Giữ câu 'lens lâu không dùng' nhưng không dùng từ mua/bán.",
+     "options": [
+      {
+       "id": "a",
+       "label": "Câu §2 + nêu mẫu số khi dưới 90%",
+       "pros": [
+        "Tự nhiên, trung thực"
+       ],
+       "cons": [
+        "Hai biến thể câu"
+       ],
+       "effort": "S",
+       "recommended": true
+      },
+      {
+       "id": "b",
+       "label": "Luôn nêu mẫu số",
+       "pros": [
+        "Nhất quán"
+       ],
+       "cons": [
+        "Câu dài"
+       ],
+       "effort": "S"
+      },
+      {
+       "id": "c",
+       "label": "Bỏ câu 'lens không dùng'",
+       "pros": [
+        "Không ai hiểu nhầm"
+       ],
+       "cons": [
+        "Mất một nhận xét hay"
+       ],
+       "effort": "S"
+      }
+     ],
+     "tasks": [
+      "Ghi lựa chọn vào spec, bỏ dấu ⚠️ CẦN QUYẾT — docs/02-functional-spec/FS-07-statistics/02-insights.md"
+     ]
+    },
+    {
+     "id": "S4",
+     "title": "Chạm vào 'chụp chậm' và 'tháng nhiều ảnh nhất'",
+     "importance": "important",
+     "why": "Bộ lọc Library không có điều kiện ngày và không so được hai cột với nhau.",
+     "proposal": "Chỉ thêm điều kiện ngày vào bộ lọc Library và smart album. 'Chụp chậm' tạm thời không chạm được.",
+     "options": [
+      {
+       "id": "a",
+       "label": "Hai câu này không chạm được",
+       "pros": [
+        "Không đụng FS-01"
+       ],
+       "cons": [
+        "Câu cụt"
+       ],
+       "effort": "S"
+      },
+      {
+       "id": "b",
+       "label": "Thêm 'trong tháng' + 'chậm hơn 1/tiêu cự'",
+       "pros": [
+        "Chạm được cả hai"
+       ],
+       "cons": [
+        "Đụng FS-01 và BD-02"
+       ],
+       "effort": "L"
+      },
+      {
+       "id": "c",
+       "label": "Chỉ thêm điều kiện ngày",
+       "pros": [
+        "Lọc theo ngày có ích ở nhiều chỗ"
+       ],
+       "cons": [
+        "'Chụp chậm' chưa chạm được"
+       ],
+       "effort": "M",
+       "recommended": true
+      }
+     ],
+     "tasks": [
+      "Điều kiện ngày trong bộ lọc — ShotDex/Core/Models/FilterCriteria.swift, PhotoFilterMenu.swift"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "stats2",
+   "title": "FS-07 · Nhận xét thống kê (2/2)",
+   "intro": "Ẩn, tên lens, quyền .limited và cách kiểm tốc độ.",
+   "decisions": [
+    {
+     "id": "S5",
+     "title": "Ẩn Insights",
+     "importance": "minor",
+     "why": "Có người không muốn máy 'nhận xét' mình.",
+     "proposal": "Một lệnh Hide Insights, nhớ trong Settings.",
+     "options": [
+      {
+       "id": "a",
+       "label": "Luôn hiện",
+       "pros": [
+        "Đơn giản"
+       ],
+       "cons": [
+        "Không tắt được"
+       ],
+       "effort": "S"
+      },
+      {
+       "id": "b",
+       "label": "Một lệnh Hide Insights",
+       "pros": [
+        "Tắt được, ít code"
+       ],
+       "cons": [
+        "Không ẩn từng câu"
+       ],
+       "effort": "S",
+       "recommended": true
+      },
+      {
+       "id": "c",
+       "label": "Ẩn từng câu",
+       "pros": [
+        "Tinh chỉnh"
+       ],
+       "cons": [
+        "Phải lưu danh sách"
+       ],
+       "effort": "M"
+      }
+     ]
+    },
+    {
+     "id": "S6",
+     "title": "Tên lens của điện thoại",
+     "importance": "important",
+     "why": "EXIF ghi 'iPhone 15 Pro back triple camera 6.765mm f/1.78', quá dài để đặt trong câu.",
+     "proposal": "Giữ nguyên tên EXIF ở đợt này. Tên ngắn cho cả app làm thành một spec riêng.",
+     "options": [
+      {
+       "id": "a",
+       "label": "Giữ nguyên",
+       "pros": [
+        "Khớp nhãn bộ lọc"
+       ],
+       "cons": [
+        "Câu dài"
+       ],
+       "effort": "S",
+       "recommended": true
+      },
+      {
+       "id": "b",
+       "label": "Tên ngắn chỉ trong câu",
+       "pros": [
+        "Câu gọn"
+       ],
+       "cons": [
+        "Không khớp nhãn bộ lọc sau khi chạm"
+       ],
+       "effort": "S"
+      },
+      {
+       "id": "c",
+       "label": "Tên ngắn toàn app",
+       "pros": [
+        "Đẹp mọi nơi"
+       ],
+       "cons": [
+        "Một spec riêng"
+       ],
+       "effort": "L"
+      }
+     ],
+     "tasks": [
+      "Ghi lựa chọn vào spec, bỏ dấu ⚠️ CẦN QUYẾT — docs/02-functional-spec/FS-07-statistics/02-insights.md"
+     ]
+    },
+    {
+     "id": "S7",
+     "title": "Quyền .limited",
+     "importance": "minor",
+     "why": "Chỉ thấy một phần thư viện thì câu nhận xét có thể sai về toàn bộ.",
+     "proposal": "Vẫn hiện câu, thêm dòng chân 'Based on N photos you've shared with ShotDex' kèm nút Manage.",
+     "options": [
+      {
+       "id": "a",
+       "label": "Hiện câu + chân trang + Manage",
+       "pros": [
+        "Vẫn có ích"
+       ],
+       "cons": [
+        "Có thể lệch thực tế"
+       ],
+       "effort": "S",
+       "recommended": true
+      },
+      {
+       "id": "b",
+       "label": "Không hiện câu, chỉ giải thích + Manage",
+       "pros": [
+        "Không sai"
+       ],
+       "cons": [
+        "Mất tính năng"
+       ],
+       "effort": "S"
+      }
+     ]
+    },
+    {
+     "id": "S8",
+     "title": "Kiểm tốc độ 55k ảnh",
+     "importance": "important",
+     "why": "NF-01 §4 hiện chưa có test benchmark nào. Không đo thì tốc độ sẽ âm thầm chậm dần.",
+     "proposal": "Unit test trên 55.000 row in-memory, trần 1.000 ms.",
+     "options": [
+      {
+       "id": "a",
+       "label": "Unit test 55k, trần 1s",
+       "pros": [
+        "Tự động mỗi lần gate"
+       ],
+       "cons": [
+        "Máy CI chậm có thể nhiễu"
+       ],
+       "effort": "S",
+       "recommended": true
+      },
+      {
+       "id": "b",
+       "label": "Đo tay lúc /verify",
+       "pros": [
+        "Không thêm test"
+       ],
+       "cons": [
+        "Dễ quên"
+       ],
+       "effort": "S"
+      },
+      {
+       "id": "c",
+       "label": "Ghi mẫu vào gate.jsonl + band",
+       "pros": [
+        "Theo dõi xu hướng"
+       ],
+       "cons": [
+        "Nhiều việc hơn"
+       ],
+       "effort": "M"
+      }
+     ],
+     "tasks": [
+      "Ghi lựa chọn vào spec, bỏ dấu ⚠️ CẦN QUYẾT — docs/02-functional-spec/FS-07-statistics/02-insights.md"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "burst",
+   "title": "FS-02.05 · Chọn khung burst",
+   "intro": "PhotoKit không cho app ghi lựa chọn khung của burst. Cần chốt luồng gần nhất mà vẫn trung thực.",
+   "decisions": [
+    {
+     "id": "B1",
+     "title": "Sau khi xoá thì 'giữ' nghĩa là gì",
+     "importance": "critical",
+     "why": "Chép khung ra ảnh riêng thì phải tải bản gốc, mất album và chỉnh sửa. Chỉ xoá phần còn lại thì khung giữ có thể bị ẩn khỏi lưới.",
+     "proposal": "Chỉ xoá các khung không chọn. Nếu đo trên máy thật thấy khung giữ bị ẩn khỏi lưới, thì riêng khung đó mới chép ra ảnh độc lập. Chốt sau khi đo.",
+     "options": [
+      {
+       "id": "a",
+       "label": "Chỉ xoá khung không chọn",
+       "pros": [
+        "Không tải, không mất album"
+       ],
+       "cons": [
+        "Khung giữ có thể bị ẩn"
+       ],
+       "effort": "S"
+      },
+      {
+       "id": "b",
+       "label": "Chép khung giữ ra ảnh riêng rồi xoá cả burst",
+       "pros": [
+        "Luôn hiện"
+       ],
+       "cons": [
+        "Tải iCloud, mất album/chỉnh sửa"
+       ],
+       "effort": "M"
+      },
+      {
+       "id": "c",
+       "label": "(a), rơi sang (b) khi bị ẩn",
+       "pros": [
+        "Tốt nhất cả hai"
+       ],
+       "cons": [
+        "Cần đo máy thật trước"
+       ],
+       "effort": "M",
+       "recommended": true
+      }
+     ],
+     "tasks": [
+      "Đo 5 phép trên iPhone thật trước /plan — FS-02.05 §9"
+     ]
+    },
+    {
+     "id": "B2",
+     "title": "Dùng màn nào",
+     "importance": "important",
+     "why": "Compare trên điện thoại một cột: 24 khung là 24 khung cao phải cuộn.",
+     "proposal": "Màn mới: khung lớn + dải thumbnail, chạm vào khung để chọn giữ (giống Photos).",
+     "options": [
+      {
+       "id": "a",
+       "label": "Dùng lại Compare",
+       "pros": [
+        "Không có màn mới"
+       ],
+       "cons": [
+        "24 khung phải cuộn",
+        "Chạm = xoá"
+       ],
+       "effort": "S"
+      },
+      {
+       "id": "b",
+       "label": "Màn mới kiểu Photos",
+       "pros": [
+        "Quen tay người dùng Photos"
+       ],
+       "cons": [
+        "Chạm ngược nghĩa với Compare/Duplicates"
+       ],
+       "effort": "M",
+       "recommended": true
+      }
+     ],
+     "tasks": [
+      "Ghi lựa chọn vào spec, bỏ dấu ⚠️ CẦN QUYẾT — docs/02-functional-spec/FS-02-photo-detail/05-burst-selection.md"
+     ]
+    },
+    {
+     "id": "B3",
+     "title": "Show All Frames",
+     "importance": "minor",
+     "why": "Hai mục gần giống nhau trong menu ⋯ dễ gây rối.",
+     "proposal": "Thay Show All Frames bằng Select Frames….",
+     "options": [
+      {
+       "id": "a",
+       "label": "Giữ cả hai",
+       "pros": [
+        "Không mất gì"
+       ],
+       "cons": [
+        "Menu thừa"
+       ],
+       "effort": "S"
+      },
+      {
+       "id": "b",
+       "label": "Thay bằng Select Frames…",
+       "pros": [
+        "Menu gọn"
+       ],
+       "cons": [
+        "—"
+       ],
+       "effort": "S",
+       "recommended": true
+      }
+     ]
+    },
+    {
+     "id": "B4",
+     "title": "Tự chấm độ nét ở v1",
+     "importance": "important",
+     "why": "Photos chỉ gợi ý khung cho một phần burst. Không tự chấm thì những burst còn lại không có gợi ý nào.",
+     "proposal": "Có, chỉ chạy khi Photos không gợi ý khung nào. Dùng lại bản đồ Laplacian của Focus Stack.",
+     "options": [
+      {
+       "id": "a",
+       "label": "Có, làm dự phòng",
+       "pros": [
+        "Luôn có gợi ý"
+       ],
+       "cons": [
+        "Tốn CPU với 100 khung"
+       ],
+       "effort": "M",
+       "recommended": true
+      },
+      {
+       "id": "b",
+       "label": "Chỉ dùng gợi ý của Photos",
+       "pros": [
+        "Rẻ"
+       ],
+       "cons": [
+        "Nhiều burst không có gợi ý"
+       ],
+       "effort": "S"
+      }
+     ],
+     "tasks": [
+      "Ghi lựa chọn vào spec, bỏ dấu ⚠️ CẦN QUYẾT — docs/02-functional-spec/FS-02-photo-detail/05-burst-selection.md"
+     ]
+    },
+    {
+     "id": "B5",
+     "title": "Series của Duplicates",
+     "importance": "minor",
+     "why": "Series (chụp liên tiếp, không phải burst) dùng chung luồng thì phạm vi lớn thêm.",
+     "proposal": "Đợt này không đụng Series.",
+     "options": [
+      {
+       "id": "a",
+       "label": "Thêm Keep Only Suggested vào Compare",
+       "pros": [
+        "Tận dụng"
+       ],
+       "cons": [
+        "Phạm vi to thêm"
+       ],
+       "effort": "M"
+      },
+      {
+       "id": "b",
+       "label": "Mở chung màn chọn khung",
+       "pros": [
+        "Một luồng"
+       ],
+       "cons": [
+        "Phạm vi to thêm"
+       ],
+       "effort": "M"
+      },
+      {
+       "id": "c",
+       "label": "Không đụng đợt này",
+       "pros": [
+        "Gọn"
+       ],
+       "cons": [
+        "Series chưa có gợi ý"
+       ],
+       "effort": "S",
+       "recommended": true
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}

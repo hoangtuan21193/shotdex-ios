@@ -1,0 +1,2525 @@
+{
+  "title": "Chốt 5 plan Mac + iPad (FS-19, FS-20, FS-01.08c, FS-21, FS-18)",
+  "context": "Có 5 plan nháp: FS-19 nguồn ảnh (76 task), FS-20 nhập thẻ (27), Compare FS-01.08c (26), FS-21 iPad kiểu Mac (59), FS-18 app Mac (85 + 13 khối V).\nThứ tự làm: FS-19 → FS-20 → Compare → FS-21 → FS-18, nên trang ở đây đi theo cùng thứ tự, nền dữ liệu trước.\nBảng này chỉ chứa những gì các plan không tự quyết được; mọi điều đã chốt ở SPEC-DECISIONS không mở lại (mục nhỏ chỉ để bạn OK một lần).",
+  "pages": [
+    {
+      "id": "fs19-core",
+      "title": "FS-19 · Danh tính và dữ liệu ảnh",
+      "intro": "Bốn lựa chọn tạo nên schema và đường index của nguồn thư mục/server; mọi plan sau đứng trên chúng.",
+      "decisions": [
+        {
+          "id": "D1",
+          "title": "FS-19 K1 · Pipeline index cho thư mục và server",
+          "importance": "critical",
+          "why": "Chọn sai thì hoặc làm hỏng đường index 55k ảnh Photos đã tinh chỉnh (change token, iCloud, .limited), hoặc lặp luật ghép/hash/sidecar ở ba nơi. Đổi sau khi B3 xong là viết lại khối B và D.",
+          "proposal": "Actor mới SourceIndexPipeline cho thư mục + server. IndexPipeline giữ PhotoKit, chỉ thêm bước ghi bảng Bản sao. Tách chung nhịp đọc (readConcurrency, interBatchPause, thermal), MetadataComposer, ExifReader.parse.",
+          "options": [
+            {
+              "id": "a",
+              "label": "Tổng quát hoá IndexPipeline (protocol PhotoSourceReader)",
+              "pros": [
+                "Một pipeline, một chỗ cho nhịp, nhiệt, mạng"
+              ],
+              "cons": [
+                "Đụng 69 KB code PhotoKit đã tinh chỉnh",
+                "Rủi ro hồi quy index 55k"
+              ],
+              "effort": "L"
+            },
+            {
+              "id": "b",
+              "label": "Actor mới SourceIndexPipeline, IndexPipeline giữ PhotoKit",
+              "pros": [
+                "Không đụng đường PhotoKit",
+                "Thư mục và server chung một hàng đợi"
+              ],
+              "cons": [
+                "Hai actor cùng ghi DB (GRDB tuần tự hoá ghi, ổn)"
+              ],
+              "effort": "M",
+              "recommended": true
+            },
+            {
+              "id": "c",
+              "label": "Mỗi loại nguồn một pipeline",
+              "pros": [
+                "Từng cái đơn giản"
+              ],
+              "cons": [
+                "Ba nơi lặp luật ghép, hash, sidecar"
+              ],
+              "effort": "M, nợ về sau"
+            }
+          ],
+          "tasks": [
+            "B3 SourceIndexPipeline + FolderSourceReader + SourceStore — ShotDex/Domain/Indexing/",
+            "A1 IndexPipeline thêm/bỏ bản sao kind photos thay vì xoá dòng — ShotDex/Domain/Indexing/IndexPipeline.swift",
+            "D1 ServerSourceReader trên RemoteFileClient + AsyncGate"
+          ]
+        },
+        {
+          "id": "D2",
+          "title": "FS-19 K2 · Hash phần dữ liệu ảnh",
+          "importance": "critical",
+          "why": "Hash là khoá gộp ảnh. Đổi định nghĩa sau khi đã băm là băm lại cả thư viện và tách/gộp sai ảnh đã có sao, cờ, recipe. Parser quá hẹp thì DNG/HEIC/TIFF bị app khác nhúng XMP thành ảnh mới.",
+          "proposal": "Parser v1: JPEG (từ SOS, bỏ APPn/COM), ISOBMFF (HEIC, CR3: mdat trừ extent Exif/XMP), TIFF-family (DNG, ARW, NEF, TIFF: strip/tile mọi IFD). Định dạng khác băm cả file. Tên thuật toán sdx-image-sha256 + version.",
+          "options": [
+            {
+              "id": "a",
+              "label": "Parser JPEG + ISOBMFF + TIFF",
+              "pros": [
+                "Phủ AC-22 cho JPEG, DNG, HEIC, TIFF như spec"
+              ],
+              "cons": [
+                "TIFF đọc ngẫu nhiên: luồng Photos phải đệm (đo M3)",
+                "Server đọc dải theo offset IFD"
+              ],
+              "effort": "L",
+              "recommended": true
+            },
+            {
+              "id": "b",
+              "label": "Chỉ JPEG có parser, còn lại băm cả file",
+              "pros": [
+                "Nhỏ"
+              ],
+              "cons": [
+                "DNG/HEIC/TIFF có XMP nhúng tách thành ảnh mới",
+                "Vỡ AC-22 cho 3/4 định dạng"
+              ],
+              "effort": "S"
+            },
+            {
+              "id": "c",
+              "label": "Băm điểm ảnh đã giải mã",
+              "pros": [
+                "Không phụ thuộc container"
+              ],
+              "cons": [
+                "iOS đổi bộ giải mã là đổi hash",
+                "NF-02 cấm giải mã khi index"
+              ],
+              "effort": "L"
+            }
+          ],
+          "tasks": [
+            "A4 ContentHasher thuần Domain, nguồn byte trừu tượng — ShotDex/Domain/",
+            "A5 hash nhanh vs đầy đủ, chỉ gộp khi đầy đủ trùng",
+            "M3 đo đỉnh RAM băm luồng RAW 50 MB trên iPhone thật"
+          ]
+        },
+        {
+          "id": "D3",
+          "title": "FS-19 K4 · Bảng dấu (sao, keyword) cho ảnh file",
+          "importance": "critical",
+          "why": "Sao là dữ liệu người dùng không đọc lại được. Gộp bảng thì phải viết lại FS-01.12 vừa duyệt và RatingMigrationPass, rủi ro mất sao đã có.",
+          "proposal": "Bảng mới photo_user_marks + photo_user_keyword (giờ đổi từng trường) cho ảnh có bản file. pending_photo_rating giữ vai hộp thư đi sang Photos. Luật ưu tiên sao nằm đúng một chỗ: PhotoMarksStore.ratingCondition.",
+          "options": [
+            {
+              "id": "a",
+              "label": "Bảng mới, giữ pending_photo_rating",
+              "pros": [
+                "Không đụng FS-01.12 (iOS 27, RatingMigrationPass)"
+              ],
+              "cons": [
+                "Hai bảng cho sao: luật ưu tiên phải ở đúng một hàm"
+              ],
+              "effort": "M",
+              "recommended": true
+            },
+            {
+              "id": "b",
+              "label": "Gộp pending_photo_rating vào bảng dấu mới",
+              "pros": [
+                "Một bảng cho sao"
+              ],
+              "cons": [
+                "Viết lại FS-01.12 §4–§5 và RatingMigrationPass",
+                "Rủi ro dữ liệu sao"
+              ],
+              "effort": "L"
+            }
+          ],
+          "tasks": [
+            "A1 migration v30-photoSources tạo bảng — ShotDex/Data/Database/AppDatabase.swift",
+            "Mở rộng ratingCondition — ShotDex/Data/Database/PhotoMarksStore.swift:20-49"
+          ]
+        },
+        {
+          "id": "D4",
+          "title": "FS-19 K5 · Recipe của bản Photos khi có bảng recipe theo id",
+          "importance": "critical",
+          "why": "Sai thì ảnh vừa ở Photos vừa ở file có hai bản recipe. Gộp ảnh (AC-65) không biết bên nào mới hơn, chỉnh sửa có thể mất.",
+          "proposal": "photo_recipes là bản làm việc cho mọi ảnh. Done trên bản Photos ghi thêm adjustment data. Mở bản Photos mà adjustment data mới hơn updatedAt (máy khác sửa qua iCloud) thì lấy adjustment data.",
+          "options": [
+            {
+              "id": "a",
+              "label": "Bảng recipe cho mọi ảnh",
+              "pros": [
+                "Một luật cho mọi bản sao (02 §3)"
+              ],
+              "cons": [
+                "Ghi đôi với ảnh Photos"
+              ],
+              "effort": "M",
+              "recommended": true
+            },
+            {
+              "id": "b",
+              "label": "Bảng chỉ cho ảnh không có bản Photos",
+              "pros": [
+                "Ít ghi"
+              ],
+              "cons": [
+                "Ảnh Photos + file có hai sự thật",
+                "Gộp không có giờ đổi cho recipe Photos"
+              ],
+              "effort": "S, nợ"
+            }
+          ],
+          "tasks": [
+            "A1 bảng photo_recipes có updatedAt — ShotDex/Data/Database/AppDatabase.swift",
+            "E12 thứ tự mở bản sao + PhotoEditOrigin.fileCopy, tự lưu recipe"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "fs19-sidecar",
+      "title": "FS-19 · Sidecar, hiển thị, cache",
+      "intro": "Ba lựa chọn quyết cách ghi file của app khác, cách lưới lọc ảnh ở 55k mục và cách cache được giữ.",
+      "decisions": [
+        {
+          "id": "D5",
+          "title": "FS-19 K3 · Ghi .xmp mà thẻ lạ giữ nguyên byte",
+          "importance": "critical",
+          "why": "Sidecar là file của Lightroom và app khác trên ổ người dùng. Ghi lại cả tài liệu thì đổi thứ tự/định dạng thẻ lạ, vỡ AC-25 và làm hỏng dữ liệu của app khác.",
+          "proposal": "Đọc bằng CGImageMetadata. Ghi bằng bộ vá văn bản thuần Domain: chỉ thay/chèn xmp:Rating, dc:subject, dc:title, dc:description và khối namespace ShotDex; phần còn lại chép nguyên byte; ghi file tạm rồi replaceItemAt.",
+          "options": [
+            {
+              "id": "a",
+              "label": "CGImageMetadata đọc + CGImageMetadataCreateXMPData ghi",
+              "pros": [
+                "Có sẵn, đủ chuẩn"
+              ],
+              "cons": [
+                "Serialize lại cả tài liệu, vỡ AC-25"
+              ],
+              "effort": "S"
+            },
+            {
+              "id": "b",
+              "label": "Đọc ImageIO, ghi bằng bộ vá văn bản",
+              "pros": [
+                "Đúng AC-25, test bằng so byte"
+              ],
+              "cons": [
+                "Tự xử lý hai dạng RDF (thuộc tính và phần tử)"
+              ],
+              "effort": "M",
+              "recommended": true
+            }
+          ],
+          "tasks": [
+            "C4 bộ vá XMP (SidecarWriter) — ShotDex/Domain/",
+            "C5 SidecarWriter: trễ 1 s, tmp + replace, mọi bản online"
+          ]
+        },
+        {
+          "id": "D6",
+          "title": "FS-19 K6 · Ảnh nào hiện trong lưới (ẩn, offline, cloud, mồ côi)",
+          "importance": "critical",
+          "why": "Điều kiện này nằm trong mọi truy vấn lưới, Statistics, smart album, tìm. Cột dẫn xuất lệch thì ảnh biến mất hoặc đếm sai. Subquery chậm thì cuộn 55k giật.",
+          "proposal": "Tính lúc truy vấn: EXISTS bản sao thấy được qua chỉ mục copies(photoId, online). Một hàm SQL dùng chung. Cổng đo 55k bằng perf-profiler trước khi đóng E7.",
+          "options": [
+            {
+              "id": "a",
+              "label": "Tính lúc truy vấn (EXISTS)",
+              "pros": [
+                "Không có dữ liệu dẫn xuất phải giữ khớp"
+              ],
+              "cons": [
+                "Mỗi truy vấn thêm một subquery"
+              ],
+              "effort": "M",
+              "recommended": true
+            },
+            {
+              "id": "b",
+              "label": "Cột dẫn xuất photos.visibility",
+              "pros": [
+                "Truy vấn rẻ nhất"
+              ],
+              "cons": [
+                "Dễ lệch: rút ổ, ẩn, mồ côi đều phải nhớ cập nhật"
+              ],
+              "effort": "M"
+            }
+          ],
+          "tasks": [
+            "B6 hàm hiển thị vào LibraryQueries, StatisticsQueries, SmartAlbumSQLBuilder — ShotDex/Data/Database/",
+            "E7 cổng đo 55k (perf-profiler)"
+          ]
+        },
+        {
+          "id": "D7",
+          "title": "FS-19 K7 · Sổ sách cache preview chung",
+          "importance": "critical",
+          "why": "Sai thì DB chính bị ghi mỗi lần xem ảnh, hoặc không bỏ preview trước thumbnail (AC-37) và phải quét 55k file mỗi lần dọn. Đổi sau là bỏ cả cache.",
+          "proposal": "Thư mục cache tự chứa: file + một cache.sqlite riêng (khoá, loại thumbnail/preview, byte, lần dùng cuối, nguồn). Chuyển chỗ hay xoá cache là thao tác trên một thư mục.",
+          "options": [
+            {
+              "id": "a",
+              "label": "Bảng chỉ mục trong DB chính",
+              "pros": [
+                "Dọn theo SQL"
+              ],
+              "cons": [
+                "DB chính bị ghi mỗi lần xem",
+                "Change Location trên Mac mất đồng bộ"
+              ],
+              "effort": "M"
+            },
+            {
+              "id": "b",
+              "label": "Thư mục + cache.sqlite riêng",
+              "pros": [
+                "Chuyển chỗ = chuyển thư mục",
+                "Xoá cache = xoá thư mục"
+              ],
+              "cons": [
+                "Thêm một DB (GRDB có sẵn)"
+              ],
+              "effort": "M",
+              "recommended": true
+            },
+            {
+              "id": "c",
+              "label": "Chỉ hệ thống file, LRU theo ngày sửa",
+              "pros": [
+                "Có sẵn (RemoteThumbnailCache)"
+              ],
+              "cons": [
+                "Không phân loại preview/thumbnail (AC-37)",
+                "Quét 55k file mỗi lần dọn"
+              ],
+              "effort": "S"
+            }
+          ],
+          "tasks": [
+            "W1 PreviewCache ở Application Support, loại khỏi backup — ShotDex/Data/",
+            "W2 bỏ preview mở lâu nhất trước, thumbnail sau"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "fs19-commands",
+      "title": "FS-19 · Câu hỏi: lệnh ẩn, xoá và AC mới",
+      "intro": "Chữ trên lệnh Hide, xoá, upload và bốn AC còn thiếu; mục nhỏ đi theo quyết định đã chốt.",
+      "decisions": [
+        {
+          "id": "D8",
+          "title": "FS-19 Q9 · Hai lệnh Hide trên một ảnh",
+          "importance": "critical",
+          "why": "Hide của Photos ẩn ảnh trên mọi máy qua iCloud; Hide của ShotDex chỉ ẩn bản NAS trong app. Bấm nhầm thì ảnh biến khỏi Photos, hoặc tưởng đã ẩn mà vẫn còn. Tên lệnh đã quen thì khó đổi.",
+          "proposal": "Ảnh có bản Photos: Hide giữ nghĩa Photos như hôm nay. Hide của ShotDex chỉ hiện khi ảnh không có bản Photos, hoặc trong màn duyệt NAS. copy-consistency duyệt chữ.",
+          "options": [
+            {
+              "id": "by-copy",
+              "label": "Một lệnh Hide, nghĩa theo bản sao",
+              "pros": [
+                "Hành vi hôm nay không đổi",
+                "Mỗi ảnh chỉ thấy một lệnh Hide"
+              ],
+              "cons": [
+                "Cùng chữ Hide làm hai việc tuỳ ảnh"
+              ],
+              "effort": "M",
+              "recommended": true
+            },
+            {
+              "id": "two-names",
+              "label": "Hai lệnh tên riêng (ẩn trong Photos / ẩn trong ShotDex)",
+              "pros": [
+                "Mỗi tên một nghĩa"
+              ],
+              "cons": [
+                "Thêm một dòng menu",
+                "Lệch chữ Hide của Photos"
+              ],
+              "effort": "M"
+            }
+          ],
+          "tasks": [
+            "E8 mục Hidden trong Collections; sửa FS-06.01",
+            "Hide hôm nay — ShotDex/Features/Library/PhotoDetailScreen.swift:3153"
+          ]
+        },
+        {
+          "id": "D12",
+          "title": "FS-19 Q7 · Free Up Space hay Delete N from This Device",
+          "why": "Lệnh xoá bản trên máy sau khi upload. Tên mơ hồ thì người dùng không biết ảnh còn ở đâu.",
+          "proposal": "Code đúng: giữ Delete N from This Device. Sửa AC-56, thêm câu They stay in ShotDex from NAS Home. vào hộp.",
+          "options": [
+            {
+              "id": "code",
+              "label": "Code đúng (Delete N from This Device)",
+              "pros": [
+                "Tên nói thẳng điều xảy ra",
+                "Không đổi chuỗi đã có"
+              ],
+              "cons": [
+                "Sửa AC-56"
+              ],
+              "effort": "S",
+              "recommended": true
+            },
+            {
+              "id": "doc",
+              "label": "Tài liệu đúng (Free Up Space)",
+              "pros": [
+                "Ngắn"
+              ],
+              "cons": [
+                "Không nói ảnh bị xoá khỏi máy"
+              ],
+              "effort": "S"
+            }
+          ],
+          "tasks": [
+            "D7 upload vào folder nguồn, câu hộp — ShotDex/Features/ServerUpload/ServerUploadSheet.swift:325"
+          ]
+        },
+        {
+          "id": "D13",
+          "title": "FS-19 · Thêm AC-69…AC-72",
+          "why": "Bốn task không có AC thì /verify không có gì để chứng minh: migration, Clear giữ bảng, popup Source của Statistics và Duplicates.",
+          "proposal": "Thêm vào FS-19.06: AC-69 migration backfill hợp id mọi bảng; AC-70 Clear Local Metadata Index giữ mọi bảng FS-19; AC-71 Statistics popup Source đếm một lần; AC-72 Duplicates popup Source.",
+          "tasks": [
+            "Thêm AC — docs/02-functional-spec/FS-19-photo-sources/06-acceptance-criteria.md",
+            "A1, A2, E13, E14 dùng các AC này"
+          ]
+        },
+        {
+          "id": "D15",
+          "title": "FS-19 Q8 + Compare Q2 · Tên lệnh xoá Reject theo đích",
+          "importance": "minor",
+          "proposal": "Theo vòng dọn đã chốt: Move N… (có file vào Thùng rác), Delete N… (chỉ Photos hoặc xoá hẳn), Hide N… (chỉ NAS) ở Cull, Compare, mọi thiết bị. Toàn Photos vẫn chỉ hộp hệ thống. Sửa chữ AC-12, 13, 23 của 08c. Phục vụ FS-19, Compare, FS-18 S6.",
+          "options": [
+            {
+              "id": "doc",
+              "label": "Tài liệu đúng (tên theo đích)",
+              "effort": "M",
+              "recommended": true
+            },
+            {
+              "id": "code",
+              "label": "Code đúng (luôn Delete N)",
+              "effort": "S"
+            }
+          ],
+          "tasks": [
+            "FS-19 E1 MixedDeletionPlan — ShotDex/Domain/",
+            "Sửa 08c AC-12, AC-13, AC-23 — docs/02-functional-spec/FS-01-library/08c-compare-viewer-mode.md"
+          ]
+        },
+        {
+          "id": "D16",
+          "title": "Compare Q3 + FS-19 04 §2 · Huỷ hộp hệ thống khi xoá trộn nguồn",
+          "importance": "minor",
+          "proposal": "Theo vòng dọn đã chốt: xác nhận hộp ShotDex thì phần file/NAS chạy; huỷ hộp hệ thống chỉ bỏ phần Photos. 08c §6 đúng; sửa FS-19.04 §2 và test L2/E3 của FS-19 (photosCancelMovesNothing đổi nghĩa). Phục vụ FS-19 và Compare.",
+          "options": [
+            {
+              "id": "08c",
+              "label": "08c đúng: huỷ chỉ bỏ phần Photos",
+              "effort": "S",
+              "recommended": true
+            },
+            {
+              "id": "fs19",
+              "label": "FS-19.04 §2 đúng: huỷ là không gì bị chuyển",
+              "effort": "S"
+            }
+          ],
+          "tasks": [
+            "Sửa docs/02-functional-spec/FS-19-photo-sources/04-deleting-and-duplicates.md §2",
+            "FS-19 L2, E3 sửa MixedDeletionTests"
+          ]
+        },
+        {
+          "id": "D18",
+          "title": "FS-19 Q6 · Bỏ Import to Library, thêm Save to Photos",
+          "importance": "minor",
+          "proposal": "Tài liệu đúng (D5 đã chốt): bỏ Import to Library mọi thiết bị; Save to Photos là lệnh xuất, tái dùng PhotoKitAssetCreator. Giữ bảng server_downloads, không ghi thêm.",
+          "options": [
+            {
+              "id": "doc",
+              "label": "Tài liệu đúng",
+              "effort": "M",
+              "recommended": true
+            },
+            {
+              "id": "code",
+              "label": "Code đúng (giữ Import to Library)",
+              "effort": "S"
+            }
+          ],
+          "tasks": [
+            "D8 — ShotDex/Features/Shared/PhotoCommand.swift:42, ServerBrowserScreen.swift:433"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "fs19-index",
+      "title": "FS-19 · Câu hỏi: index, cache, trùng, album",
+      "intro": "ETA, trần byte, AC-66 và các mục nhỏ đã có câu trả lời ở SPEC-DECISIONS.",
+      "decisions": [
+        {
+          "id": "D9",
+          "title": "FS-19 Q1 · ETA index Photos theo luật nguồn",
+          "why": "Hai banner index tính giờ hai kiểu thì người dùng thấy hai con số khác nhau cho cùng một việc.",
+          "proposal": "Tài liệu đúng. Một IndexEstimate thuần Domain (cửa sổ 200 file, làm tròn phút, chữ thường about) cho cả banner Photos và banner nguồn.",
+          "options": [
+            {
+              "id": "doc",
+              "label": "Tài liệu đúng, dùng chung IndexEstimate",
+              "pros": [
+                "Một khái niệm một cách tính"
+              ],
+              "cons": [
+                "Banner Photos đổi chữ và cách tính"
+              ],
+              "effort": "S",
+              "recommended": true
+            },
+            {
+              "id": "code",
+              "label": "Code đúng (giữ ETA Photos trung bình cả lượt)",
+              "pros": [
+                "Banner Photos không đổi"
+              ],
+              "cons": [
+                "Hai cách ước lượng"
+              ],
+              "effort": "S"
+            }
+          ],
+          "tasks": [
+            "W3 IndexEstimate — ShotDex/Domain/",
+            "Banner Photos dùng chung — ShotDex/Features/Library/LibraryModel.swift:7-50"
+          ]
+        },
+        {
+          "id": "D10",
+          "title": "FS-19 Q4 · AC-66 đo smart album hay Recents",
+          "why": "AC-66 kiểm id thua sau gộp vẫn mở được. Đo sai chỗ thì AC xanh mà Recents, widget vẫn trỏ id chết.",
+          "proposal": "Sửa AC-66: đo widget + Recents (recents.viewed). Mọi chỗ khác lưu id (On This Day, PanoramaSaveRecord, bộ đếm tên file) đi qua PhotoAliasResolver.",
+          "options": [
+            {
+              "id": "fix-ac",
+              "label": "Sửa AC: widget + Recents",
+              "pros": [
+                "Đo chỗ thật sự lưu id"
+              ],
+              "cons": [
+                "Sửa câu AC"
+              ],
+              "effort": "S",
+              "recommended": true
+            },
+            {
+              "id": "doc",
+              "label": "Tài liệu đúng (smart album)",
+              "pros": [
+                "AC không đổi"
+              ],
+              "cons": [
+                "Không smart album nào lưu id ảnh (SmartAlbumQuery.swift:293-327): AC không đo gì"
+              ],
+              "effort": "S"
+            }
+          ],
+          "tasks": [
+            "A7 PhotoAliasResolver cho widget + Recents",
+            "Sửa AC-66 — docs/02-functional-spec/FS-19-photo-sources/06-acceptance-criteria.md"
+          ]
+        },
+        {
+          "id": "D11",
+          "title": "FS-19 Q5 · Trần byte khi index server (AC-33)",
+          "why": "Trần quá thấp thì RAW (preview nhúng 1–8 MB) không bao giờ đạt AC-33. Trần quá cao thì index NAS tải quá nhiều qua mạng.",
+          "proposal": "03 §2 đúng, sửa AC-33: trần = byte của thang thumbnail + 3 × 64 KB. Với ARW: ≤ 1,102 × (1 MB + 192 KB). Không bao giờ tải cả file trong lượt index.",
+          "options": [
+            {
+              "id": "fix-ac",
+              "label": "Sửa AC-33 theo 03 §2",
+              "pros": [
+                "Khớp thang thumbnail có sẵn",
+                "RAW đạt được"
+              ],
+              "cons": [
+                "AC dài hơn một con số"
+              ],
+              "effort": "S",
+              "recommended": true
+            },
+            {
+              "id": "keep-ac",
+              "label": "Giữ AC-33 (256 KB + 3 × 64 KB)",
+              "pros": [
+                "Ít byte qua mạng"
+              ],
+              "cons": [
+                "Mâu thuẫn 03 §2",
+                "RAW, RAF không đạt"
+              ],
+              "effort": "M"
+            }
+          ],
+          "tasks": [
+            "D1 ServerSourceReader đọc dải, trần theo câu trả lời",
+            "Sửa AC-33 — docs/02-functional-spec/FS-19-photo-sources/06-acceptance-criteria.md"
+          ]
+        },
+        {
+          "id": "D14",
+          "title": "FS-19 Q3 + Compare Q1 · Dấu sao/cờ khi ảnh bị xoá: giữ 30 ngày",
+          "importance": "minor",
+          "proposal": "Theo Schema FS-19 đã chốt: không gỡ ngay, mồ côi 30 ngày. Sửa FS-01.12 AC-9 ở task A3. Compare AC-9 đổi thành điều quan sát được: 0 Reject trong phép so, bộ lọc Rejected không còn 2 ảnh. Phục vụ plan FS-19 và Compare.",
+          "options": [
+            {
+              "id": "doc",
+              "label": "Tài liệu FS-19 đúng (30 ngày)",
+              "effort": "S",
+              "recommended": true
+            },
+            {
+              "id": "code",
+              "label": "Code đúng (gỡ ngay, UserMarkRemovalPolicy)",
+              "effort": "S"
+            }
+          ],
+          "tasks": [
+            "FS-19 A3 OrphanRetention thay UserMarkRemovalPolicy — ShotDex/App/AppDependencies.swift:349-357",
+            "Compare task 6 test theo câu AC-9 mới"
+          ]
+        },
+        {
+          "id": "D17",
+          "title": "FS-19 Q2 · Cache server FS-17 thành cache chung",
+          "importance": "minor",
+          "proposal": "Tài liệu đúng (đã chốt): RemoteThumbnailCache gộp vào PreviewCache ở Application Support, loại khỏi backup, iOS 5 GB, bỏ preview trước. Thư mục cũ xoá ở lần mở đầu.",
+          "options": [
+            {
+              "id": "doc",
+              "label": "Tài liệu đúng",
+              "effort": "M",
+              "recommended": true
+            },
+            {
+              "id": "code",
+              "label": "Code đúng (Caches, 500 MB)",
+              "effort": "S"
+            }
+          ],
+          "tasks": [
+            "W1 PreviewCache"
+          ]
+        },
+        {
+          "id": "D19",
+          "title": "FS-19 Q10 · Duplicates theo nguồn",
+          "importance": "minor",
+          "proposal": "Tài liệu đúng (đã chốt): khoá Duplicates thêm nguồn; Exact cùng nguồn = hash nội dung trùng. Ảnh chỉ ở Photos giữ dHash như hôm nay.",
+          "options": [
+            {
+              "id": "doc",
+              "label": "Tài liệu đúng",
+              "effort": "M",
+              "recommended": true
+            },
+            {
+              "id": "code",
+              "label": "Code đúng (khoá strictness, assetId)",
+              "effort": "S"
+            }
+          ],
+          "tasks": [
+            "E9 DuplicateSourceScopeTests"
+          ]
+        },
+        {
+          "id": "D20",
+          "title": "FS-19 Q11 · Merge ảnh file chỉ sao, cờ, keyword",
+          "importance": "minor",
+          "proposal": "Tài liệu đúng (đã chốt): ảnh giữ là ảnh file thì Merge chỉ nhận sao, cờ, keyword. Câu hộp Merge đổi theo loại ảnh giữ.",
+          "options": [
+            {
+              "id": "doc",
+              "label": "Tài liệu đúng",
+              "effort": "S",
+              "recommended": true
+            },
+            {
+              "id": "code",
+              "label": "Code đúng (luôn favorite, vị trí, ngày qua PhotoKit)",
+              "effort": "S"
+            }
+          ],
+          "tasks": [
+            "E10 FileMergeTests"
+          ]
+        },
+        {
+          "id": "D21",
+          "title": "FS-19 Q12 · Album ShotDex chứa mọi nguồn",
+          "importance": "minor",
+          "proposal": "Tài liệu đúng (đã chốt): thêm album ShotDex chứa mọi nguồn, album Photos vẫn hiện, New Album theo nguồn.",
+          "options": [
+            {
+              "id": "doc",
+              "label": "Tài liệu đúng",
+              "effort": "M",
+              "recommended": true
+            },
+            {
+              "id": "code",
+              "label": "Code đúng (chỉ album PhotoKit)",
+              "effort": "S"
+            }
+          ],
+          "tasks": [
+            "E11 ShotDexAlbumTests"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "fs20-copy",
+      "title": "FS-20 · Chép, kiểm và chạy nền",
+      "intro": "Bộ chạy mẻ nhập thẻ dựng trên đường Export đến đâu, và cái gì sống qua lần tắt app.",
+      "decisions": [
+        {
+          "id": "D22",
+          "title": "FS-20 K1 · Bộ chạy mẻ nhập",
+          "why": "Chọn sai thì hoặc đụng runner Export đang được phiên khác sửa và phải chạy lại toàn bộ test Export, hoặc hai runner lặp logic part/rename.",
+          "proposal": "IngestRunner mới trong Domain/Ingest, dùng lại FileExportPlan, writer, FileChecksum, FileExportFailure. Runner Export không đổi.",
+          "options": [
+            {
+              "id": "a",
+              "label": "IngestRunner mới, dùng lại khối Export",
+              "pros": [
+                "Runner Export không đổi",
+                "Khoảng 1 ngày"
+              ],
+              "cons": [
+                "Hai runner cạnh nhau"
+              ],
+              "effort": "S",
+              "recommended": true
+            },
+            {
+              "id": "b",
+              "label": "Tổng quát FileExportRunner thành pipeline bước",
+              "pros": [
+                "Một runner"
+              ],
+              "cons": [
+                "Đụng file phiên khác đang sửa",
+                "Render/prefetch PhotoKit không liên quan thẻ",
+                "Chạy lại test Export"
+              ],
+              "effort": "2–3 ngày"
+            }
+          ],
+          "tasks": [
+            "Task 4 IngestPlan + IngestRunner — ShotDex/Domain/Ingest/IngestRunner.swift"
+          ]
+        },
+        {
+          "id": "D23",
+          "title": "FS-20 K2 · Bước đọc lại SHA trước khi đổi tên",
+          "why": "Bước kiểm bảo vệ ảnh gốc trước khi thẻ bị format. Hai đường part/rename thì một đường sẽ lệch luật dọn part.",
+          "proposal": "ExportDestinationWriter.write nhận expectedSHA256 tuỳ chọn: đọc lại part, lệch thì xoá part và ném .checksumMismatch trước rename. Export truyền nil, hành vi 07b §6 giữ.",
+          "options": [
+            {
+              "id": "a",
+              "label": "Verify tuỳ chọn trong writer chung",
+              "pros": [
+                "Một chỗ part/rename"
+              ],
+              "cons": [
+                "Sửa writer của Export"
+              ],
+              "effort": "S",
+              "recommended": true
+            },
+            {
+              "id": "b",
+              "label": "VerifiedCopier riêng cho Import",
+              "pros": [
+                "Writer Export không đổi"
+              ],
+              "cons": [
+                "Hai đường part/rename"
+              ],
+              "effort": "S"
+            }
+          ],
+          "tasks": [
+            "Task 4 verify trong writer — ShotDex/Data/Sources/FileExport/ExportDestinationWriter.swift",
+            "Task 6 SHA lệch: chép lại 1 lần rồi báo lỗi"
+          ]
+        },
+        {
+          "id": "D24",
+          "title": "FS-20 K5 · Chạy nền iOS 26",
+          "why": "Không có bộ chạy chung thì FS-20 và FS-15.02b viết hai bản, hoặc task 26 kẹt chờ FS-15.02b không hạn.",
+          "proposal": "App/ContinuedProcessingRun chung (yêu cầu, tỉ lệ, kết thúc, bị từ chối thì giữ màn sáng). FS-20 làm trước, FS-15.02b dùng lại.",
+          "options": [
+            {
+              "id": "a",
+              "label": "Bộ chạy chung, FS-20 làm trước",
+              "pros": [
+                "Một bản cho hai tính năng"
+              ],
+              "cons": [
+                "FS-20 gánh phần chung"
+              ],
+              "effort": "M",
+              "recommended": true
+            },
+            {
+              "id": "b",
+              "label": "Riêng cho FS-20",
+              "pros": [
+                "Không chờ ai"
+              ],
+              "cons": [
+                "FS-15.02b viết bản thứ hai"
+              ],
+              "effort": "M"
+            },
+            {
+              "id": "c",
+              "label": "Chờ FS-15.02b",
+              "pros": [
+                "Không làm phần chung"
+              ],
+              "cons": [
+                "Task 26 kẹt không hạn"
+              ],
+              "effort": "—"
+            }
+          ],
+          "tasks": [
+            "Task 26 — ShotDex/App/ContinuedProcessingRun.swift",
+            "Thêm id tác vụ — ShotDex/Info.plist BGTaskSchedulerPermittedIdentifiers"
+          ]
+        },
+        {
+          "id": "D25",
+          "title": "FS-20 K7 · Back Up Remaining sau khi mở lại app",
+          "why": "Chỉ giữ trong phiên thì tắt app giữa mẻ là mất danh sách ảnh chưa backup. Người dùng tưởng có hai bản mà chỉ có một.",
+          "proposal": "Cột backupPath trong card_imports, trống tới khi backup kiểm xong. Back Up Remaining đọc lại được sau khi mở lại app.",
+          "options": [
+            {
+              "id": "a",
+              "label": "Cột backupPath trong card_imports",
+              "pros": [
+                "Sống qua lần tắt app"
+              ],
+              "cons": [
+                "Thêm một cột"
+              ],
+              "effort": "S",
+              "recommended": true
+            },
+            {
+              "id": "b",
+              "label": "Chỉ trong phiên",
+              "pros": [
+                "Không đụng schema"
+              ],
+              "cons": [
+                "Tắt app là mất danh sách"
+              ],
+              "effort": "S"
+            }
+          ],
+          "tasks": [
+            "Task 13 bảng card_imports — ShotDex/Data/Database/AppDatabase.swift",
+            "Task 12 Back Up Remaining"
+          ]
+        },
+        {
+          "id": "D26",
+          "title": "FS-20 Q4 · SHA-256 của nhập thẻ và hash FS-19",
+          "importance": "minor",
+          "proposal": "Sửa FS-20 §7.3 theo FS-19 (hash chỉ phần ảnh, đã chốt): SHA-256 cả file để kiểm bản chép và lịch sử; hash FS-19 băm từ cùng các khối trong lúc chép, ghi bảng Hash.",
+          "tasks": [
+            "Task 4 sửa FS-20 §7.3; task 18 CardHashPass — ShotDex/Data/Sources/Ingest/CardHashPass.swift"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "fs20-card",
+      "title": "FS-20 · Nhận thẻ và lịch sử nhập",
+      "intro": "Đọc thẻ bằng đường nào, nhận thẻ cắm vào ra sao, giờ chụp lấy từ đâu và nhả thẻ trên iOS.",
+      "decisions": [
+        {
+          "id": "D27",
+          "title": "FS-20 K3 · Đường đọc khi bookmark và ImageCaptureCore cùng thấy thẻ",
+          "why": "Chọn đường chậm thì mỗi mẻ nhập lâu gấp mấy lần. Hai hàng cho cùng một thẻ thì người dùng nhập trùng.",
+          "proposal": "Bookmark ổ thắng khi có (FileHandle trực tiếp, đo được free/used); ICC khi chỉ ICC thấy (máy ảnh USB). Gộp hàng theo cardId. Đo tốc độ ICC ở task 23 trước khi khoá.",
+          "options": [
+            {
+              "id": "a",
+              "label": "Bookmark thắng, ICC dự phòng",
+              "pros": [
+                "Nhanh, đo được dung lượng"
+              ],
+              "cons": [
+                "Hai đường đọc phải gộp theo cardId"
+              ],
+              "effort": "M",
+              "recommended": true
+            },
+            {
+              "id": "b",
+              "label": "ICC luôn thắng",
+              "pros": [
+                "Một đường",
+                "Nhả được qua requestEject"
+              ],
+              "cons": [
+                "requestReadData qua IPC mỗi khối, chưa đo tốc độ"
+              ],
+              "effort": "M"
+            },
+            {
+              "id": "c",
+              "label": "Cho người dùng chọn",
+              "pros": [
+                "Linh hoạt"
+              ],
+              "cons": [
+                "Thêm một câu hỏi người dùng khó trả lời"
+              ],
+              "effort": "M"
+            }
+          ],
+          "tasks": [
+            "Task 23 CardBrowser — ShotDex/Data/Sources/Ingest/CardBrowser.swift",
+            "VolumeCardReader + CameraCardReader — ShotDex/Data/Sources/Ingest/CardReader.swift"
+          ]
+        },
+        {
+          "id": "D28",
+          "title": "FS-20 K4 · Nhận thẻ cắm vào trong 2 s",
+          "why": "iOS không báo khi ổ được cắm. Không thăm dò thì AC-19 trượt khi cắm thẻ lúc app đang mở.",
+          "proposal": "Khi app active, mỗi 1 s thử checkResourceIsReachable các bookmark thẻ (tối đa 5) + callback ICC. Mac dùng NSWorkspace.didMountNotification (FS-18).",
+          "options": [
+            {
+              "id": "a",
+              "label": "Thăm dò 1 s khi active",
+              "pros": [
+                "Đạt AC-19 cả khi app đang mở"
+              ],
+              "cons": [
+                "Một timer chạy khi app active"
+              ],
+              "effort": "S",
+              "recommended": true
+            },
+            {
+              "id": "b",
+              "label": "Chỉ thử khi về foreground + kéo làm mới",
+              "pros": [
+                "Không timer"
+              ],
+              "cons": [
+                "AC-19 trượt nếu cắm lúc đang mở"
+              ],
+              "effort": "S"
+            }
+          ],
+          "tasks": [
+            "Task 23 CardBrowser thăm dò bookmark",
+            "Task 24 CardBookmarkStore theo volume UUID — ShotDex/Data/Sources/Ingest/CardBookmarkStore.swift"
+          ]
+        },
+        {
+          "id": "D29",
+          "title": "FS-20 K6 · Giờ chụp cho khoá lịch sử và nhóm ngày",
+          "why": "Khoá lịch sử dùng giờ chụp. Chọn EXIF thì phải đọc 0,3–1 GB đầu file trước khi hiện nhãn ngày. Đổi khoá sau là lịch sử cũ không khớp.",
+          "proposal": "Ngày file trong danh mục thẻ cho khoá và nhóm ngày lúc mở. EXIF đọc nền để tinh nhóm + nơi chụp. Nơi chụp chỉ từ PlaceStore.cachedCell, không mạng.",
+          "options": [
+            {
+              "id": "a",
+              "label": "Ngày file, EXIF tinh chỉnh nền",
+              "pros": [
+                "Nhãn hiện ngay"
+              ],
+              "cons": [
+                "Nhóm có thể nhảy khi EXIF về"
+              ],
+              "effort": "S",
+              "recommended": true
+            },
+            {
+              "id": "b",
+              "label": "EXIF DateTimeOriginal cho cả hai",
+              "pros": [
+                "Đúng giờ chụp ngay"
+              ],
+              "cons": [
+                "Đọc đầu 1.046 file trước khi hiện nhãn"
+              ],
+              "effort": "M"
+            }
+          ],
+          "tasks": [
+            "Task 13 cột capturedAt trong card_imports",
+            "Nơi chụp — ShotDex/Data/Database/PlaceStore.swift:135"
+          ]
+        },
+        {
+          "id": "D30",
+          "title": "FS-20 Q3 · Nhả thẻ trên iOS",
+          "why": "iOS không có API công khai nhả ổ chỉ tới qua bookmark. Hứa Eject mà không làm được thì người dùng rút thẻ khi chưa an toàn.",
+          "proposal": "Nhả qua ICC khi ICC thấy thẻ. Không thì banner Imported 811 photos. You can remove EOS_DIGITAL. Công tắc Eject … After Import chỉ hiện khi nhả được. Sửa FS-20 §6, §7 và AC-18.",
+          "tasks": [
+            "Task 22 nhả khi sạch — ShotDex/Domain/Ingest/IngestRunner.swift",
+            "Sửa docs/02-functional-spec/FS-20-card-ingest/README.md §6, §7 và AC-18"
+          ]
+        },
+        {
+          "id": "D31",
+          "title": "FS-20 Q2 · Ảnh đã nhập khi đích đang offline",
+          "importance": "minor",
+          "proposal": "Imported (theo FS-19.05 §5: ổ offline không làm ảnh mồ côi). Chỉ bản sao mất khi ổ online mới thành New.",
+          "tasks": [
+            "Task 17 IngestStatusTests.deletedAtDestinationIsNewAgain"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "fs20-ui",
+      "title": "FS-20 · Tên file và màn tiến độ",
+      "intro": "Hai câu về bộ token tên chung với Export và một nút trên board iPhone.",
+      "decisions": [
+        {
+          "id": "D32",
+          "title": "FS-20 Q1 · Chip Text trong mẫu tên",
+          "why": "Chip Text làm khác nhau ở Export và Import thì bộ token chung (AC-25) thành hai.",
+          "proposal": "Chèn _ + chữ Text được bôi chọn để gõ đè. Chuỗi lưu là chữ thường, không có token {text}. Import (token field Mac) cũng lưu thành chữ.",
+          "options": [
+            {
+              "id": "a",
+              "label": "Chip chèn chữ thường",
+              "pros": [
+                "Không thêm token",
+                "Ô iOS đã gõ tự do được"
+              ],
+              "cons": [
+                "Sửa chữ phải sửa trong chuỗi"
+              ],
+              "effort": "S",
+              "recommended": true
+            },
+            {
+              "id": "b",
+              "label": "Token {text} lưu riêng",
+              "pros": [
+                "Chữ người dùng là một khối"
+              ],
+              "cons": [
+                "Thêm token chỉ để giữ chữ gõ được"
+              ],
+              "effort": "S"
+            }
+          ],
+          "tasks": [
+            "Task 1 bộ token chung — ShotDex/Domain/FileExport/FileNameTemplate.swift",
+            "FileNameTokenGrid dùng chung — ShotDex/Features/FileExport/FileNameScreen.swift:53-68"
+          ]
+        },
+        {
+          "id": "D33",
+          "title": "FS-20 Q6 · Preset Date and Number",
+          "why": "Mẫu mặc định quyết tên hàng nghìn file trên ổ. Đổi sau thì thư mục cũ và mới đặt tên hai kiểu.",
+          "proposal": "{date}_{originalNumber}: số máy ảnh là thứ photographer tra lại.",
+          "options": [
+            {
+              "id": "orig",
+              "label": "{date}_{originalNumber}",
+              "pros": [
+                "Khớp số trên máy ảnh",
+                "Khớp board"
+              ],
+              "cons": [
+                "Có thể trùng giữa hai thân máy (Keep Both xử lý)"
+              ],
+              "effort": "S",
+              "recommended": true
+            },
+            {
+              "id": "seq",
+              "label": "{date}_{sequence}",
+              "pros": [
+                "Số liền nhau trong mẻ"
+              ],
+              "cons": [
+                "Mất liên hệ với số trên máy ảnh"
+              ],
+              "effort": "S"
+            }
+          ],
+          "tasks": [
+            "Task 1 mẫu dựng sẵn — ShotDex/Domain/FileExport/ExportCopy.swift",
+            "Task 4 mặc định — ShotDex/Domain/Ingest/IngestSettings.swift"
+          ]
+        },
+        {
+          "id": "D34",
+          "title": "FS-20 Q5 · Nút Pause trên board iPhone",
+          "why": "Board có nút mà spec không có AC thì design-parity luôn lệch, hoặc làm một tính năng không ai kiểm.",
+          "proposal": "Bỏ Pause khỏi board PH_IngestProgress (không có AC). Muốn giữ thì thêm AC vào FS-20 trước task 25.",
+          "options": [
+            {
+              "id": "drop",
+              "label": "Bỏ Pause khỏi board",
+              "pros": [
+                "Board khớp spec"
+              ],
+              "cons": [
+                "iPhone không tạm dừng được, chỉ Stop"
+              ],
+              "effort": "S",
+              "recommended": true
+            },
+            {
+              "id": "keep",
+              "label": "Thêm AC Pause cho iPhone",
+              "pros": [
+                "Ngang Activity trên Mac"
+              ],
+              "cons": [
+                "Runner phải tạm dừng giữa file",
+                "Thêm một vòng /spec"
+              ],
+              "effort": "M"
+            }
+          ],
+          "tasks": [
+            "Sửa docs/design/iphone/project/PH_IngestProgress.dc.html, publish canvas iPhone",
+            "Task 25 tiến độ không chặn"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "compare-frame",
+      "title": "Compare · Khung trong Viewer",
+      "intro": "Compare cắm vào Viewer ở đâu, đo cửa sổ bằng gì, và ai làm phần sáng/tối, toolbar iPad.",
+      "decisions": [
+        {
+          "id": "D35",
+          "title": "Compare K1 · Compare nằm ở đâu trong Viewer",
+          "importance": "critical",
+          "why": "Sai chỗ thì Single ↔ 2-Up nháy cover và Compare lại là màn riêng, trái D15. Tách ViewerScreen thì refactor lớn chồng lên FS-21 trước khi có AC nào.",
+          "proposal": "PhotoDetailScreen thêm viewerMode; chế độ khác Single thì CompareStage thay pager. Luật ở CompareSession/CompareModel, view chỉ nối. Tách ViewerScreen để FS-21 quyết nếu toolbar iPad cần.",
+          "options": [
+            {
+              "id": "a",
+              "label": "viewerMode trong PhotoDetailScreen",
+              "pros": [
+                "Một cover, một chrome, đổi chế độ tại chỗ",
+                "FS-21 chỉ đặt segmented lên toolbar"
+              ],
+              "cons": [
+                "Thêm nhánh vào file 3169 dòng mà FS-21 cũng sửa"
+              ],
+              "effort": "M",
+              "recommended": true
+            },
+            {
+              "id": "b",
+              "label": "Giữ cover CompareScreen, vẽ lại tầng B",
+              "pros": [
+                "Ít đụng PhotoDetailScreen"
+              ],
+              "cons": [
+                "Single ↔ 2-Up nháy cover",
+                "Trái D15"
+              ],
+              "effort": "S"
+            },
+            {
+              "id": "c",
+              "label": "Tách ViewerScreen chứa chrome chung",
+              "pros": [
+                "Sạch nhất lâu dài"
+              ],
+              "cons": [
+                "Refactor lớn trước mọi AC",
+                "Chồng lên FS-21"
+              ],
+              "effort": "L"
+            }
+          ],
+          "tasks": [
+            "Task 2 CompareSession, CompareModel, CompareStage — ShotDex/Domain/Compare/, ShotDex/Features/Library/Compare/",
+            "Nhánh pager ↔ CompareStage — ShotDex/Features/Library/PhotoDetailScreen.swift",
+            "Xoá ShotDex/Features/Library/CompareScreen.swift"
+          ]
+        },
+        {
+          "id": "D36",
+          "title": "Compare K3 + FS-21 ShellLayout · Lớp cửa sổ dùng chung",
+          "why": "Nhiều hàm cùng đo bề rộng cửa sổ. Viết ngưỡng hai lần thì Compare, Video Studio, khung iPad và Mac lệch nhau ở cùng một cỡ cửa sổ.",
+          "proposal": "Nâng VideoStudioWindowClass thành Domain/Layout/WindowClass (600/84/720) cho nội dung tầng D: Compare, Video. ShellLayout của FS-21 (700/1100, có idiom) giữ việc chọn khung gốc; FS-18 thêm lớp .mac vào ShellLayout. EditorLayoutMetrics giữ ngưỡng riêng. Phục vụ Compare, FS-21, FS-18 và plan Video.",
+          "options": [
+            {
+              "id": "a",
+              "label": "Hai kiểu, hai việc: WindowClass cho nội dung, ShellLayout cho khung",
+              "pros": [
+                "Mỗi bộ ngưỡng giữ test đã có",
+                "Không ai viết ngưỡng lần hai"
+              ],
+              "cons": [
+                "Hai kiểu đo bề rộng, phải ghi rõ ranh giới",
+                "Dời file của plan Video (phải hẹn)"
+              ],
+              "effort": "S",
+              "recommended": true
+            },
+            {
+              "id": "b",
+              "label": "Một kiểu trả cả khung lẫn lớp nội dung",
+              "pros": [
+                "Một chỗ cho mọi ngưỡng"
+              ],
+              "cons": [
+                "Gộp hai bộ ngưỡng khác nghĩa",
+                "Đụng plan Video và FS-21 cùng lúc"
+              ],
+              "effort": "M"
+            },
+            {
+              "id": "c",
+              "label": "Compare gọi thẳng VideoStudioWindowClass",
+              "pros": [
+                "Không đổi file"
+              ],
+              "cons": [
+                "Tên sai chỗ, Compare phụ thuộc Video"
+              ],
+              "effort": "S"
+            }
+          ],
+          "tasks": [
+            "Dời ShotDex/Domain/Video/VideoStudioWindowClass.swift → ShotDex/Domain/Layout/WindowClass.swift, typealias cho Video (báo plan vs-wide-and-duo-layout)",
+            "FS-21 task 10 ShellLayout.resolve — ShotDex/Domain/Shell/ShellLayout.swift",
+            "FS-18 M1–M3 thêm lớp .mac vào ShellLayout"
+          ]
+        },
+        {
+          "id": "D37",
+          "title": "Compare K4 · Ai làm Viewer theo sáng/tối",
+          "why": "Plan nào làm thì sửa chrome Viewer. Hai plan cùng làm thì giẫm nhau trong PhotoDetailScreen.",
+          "proposal": "Compare chỉ dùng màu ngữ nghĩa, ăn theo scheme của Viewer. FS-21 AC-52 làm Viewer sáng/tối và chụp nửa sáng của AC-1.",
+          "options": [
+            {
+              "id": "a",
+              "label": "Plan Compare bỏ ép tối của Viewer",
+              "pros": [
+                "AC-1 chứng minh trọn ngay"
+              ],
+              "cons": [
+                "Đổi toàn bộ chrome Viewer, việc của FS-21"
+              ],
+              "effort": "M"
+            },
+            {
+              "id": "b",
+              "label": "FS-21 làm, Compare dùng màu ngữ nghĩa",
+              "pros": [
+                "Không giẫm FS-21"
+              ],
+              "cons": [
+                "AC-1 chờ FS-21 mới xanh trọn"
+              ],
+              "effort": "S",
+              "recommended": true
+            }
+          ],
+          "tasks": [
+            "Compare task 2 màu ngữ nghĩa",
+            "FS-21 task 42 Viewer sáng/tối — ShotDex/Features/Library/PhotoDetailScreen.swift:203, :316"
+          ]
+        },
+        {
+          "id": "D38",
+          "title": "Compare K5 · Chrome iPad trước khi có toolbar FS-21",
+          "why": "Chờ toolbar FS-21 thì hơn 10 AC iPad đứng yên. Làm trước thì một phần chrome phải dời lại.",
+          "proposal": "iPad dùng chrome Viewer hiện có: segmented kính trên-phải, Make Select + Delete N ở thanh dưới như iPhone. FS-21 dời vào toolbar. design-parity IP_Compare chỉ qua phần sân khấu tới khi FS-21 xong.",
+          "options": [
+            {
+              "id": "a",
+              "label": "Dùng chrome Viewer hiện có",
+              "pros": [
+                "Làm và chứng minh sân khấu, Survey, cờ ngay"
+              ],
+              "cons": [
+                "Toolbar iPad làm hai lần"
+              ],
+              "effort": "S",
+              "recommended": true
+            },
+            {
+              "id": "b",
+              "label": "Task iPad chờ FS-21",
+              "pros": [
+                "Không làm hai lần"
+              ],
+              "cons": [
+                "Hơn 10 AC iPad đứng chờ"
+              ],
+              "effort": "—"
+            }
+          ],
+          "tasks": [
+            "Compare task 13 Make Select tạm ở chrome Viewer",
+            "FS-21 task 43 dời segmented lên toolbar Viewer"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "compare-marks",
+      "title": "Compare · Cờ, xoá và lối vào",
+      "intro": "Cờ Compare và dấu Duplicates sống chung ra sao, ai giữ luật xoá theo đích, báo lỗi và lối vào iPhone.",
+      "decisions": [
+        {
+          "id": "D39",
+          "title": "Compare K2 · Dấu Duplicates và cờ thật",
+          "why": "Duplicates có dấu phiên, Compare ghi cờ thật. Hai bản ghi trôi nhau thì người dùng xoá nhầm hoặc giữ nhầm ảnh.",
+          "proposal": "Compare chỉ ghi cờ. Lúc mở, dấu phiên của nhóm được nâng thành Reject. Duplicates coi ô đã đánh dấu khi session.marks ∪ Reject. Sửa FS-06.06b §1 ở task 9.",
+          "options": [
+            {
+              "id": "a",
+              "label": "Chỉ cờ, nâng dấu phiên thành Reject",
+              "pros": [
+                "Một nguồn sự thật trên khung",
+                "AC-17 và cổng AC-15 dùng một vị từ"
+              ],
+              "cons": [
+                "Ảnh Reject từ Cull cũng hiện là dấu trong Duplicates"
+              ],
+              "effort": "M",
+              "recommended": true
+            },
+            {
+              "id": "b",
+              "label": "Ghi cờ và dấu phiên (gương hai chiều)",
+              "pros": [
+                "Duplicates giữ nghĩa dấu phiên"
+              ],
+              "cons": [
+                "Hai bản ghi trôi nhau"
+              ],
+              "effort": "S"
+            },
+            {
+              "id": "c",
+              "label": "Duplicates bỏ hẳn dấu phiên",
+              "pros": [
+                "Gọn nhất"
+              ],
+              "cons": [
+                "Mở lại D2 của FS-06.06b (dấu không ghi xuống đĩa)"
+              ],
+              "effort": "L"
+            }
+          ],
+          "tasks": [
+            "Compare task 9 — ShotDex/Features/Duplicates/DuplicatesModel.swift",
+            "Compare task 17 cổng canMark thuần — ShotDex/Domain/Duplicates/"
+          ]
+        },
+        {
+          "id": "D40",
+          "title": "Compare K6 · Ai giữ luật xoá theo đích",
+          "why": "Xoá đi sai đích là mất ảnh. Hai plan cùng viết luật nhãn và hộp thì hai bản lệch nhau.",
+          "proposal": "FS-19 mở rộng RejectedDeleter thành bộ định tuyến (nhãn nút, câu hộp, thực thi theo đích). Compare chỉ gọi nó. Trước FS-19 mọi ảnh là Photos: Delete N Photos.",
+          "options": [
+            {
+              "id": "a",
+              "label": "FS-19 làm bộ định tuyến, Compare gọi",
+              "pros": [
+                "Một luật cho Cull, Compare, Duplicates"
+              ],
+              "cons": [
+                "Compare task 21–26 chờ FS-19"
+              ],
+              "effort": "—",
+              "recommended": true
+            },
+            {
+              "id": "b",
+              "label": "Compare dựng trước hàm nhãn/câu hộp",
+              "pros": [
+                "Compare tự chứng minh được nhãn"
+              ],
+              "cons": [
+                "Hai plan cùng viết một luật"
+              ],
+              "effort": "S"
+            }
+          ],
+          "tasks": [
+            "FS-19 E1 MixedDeletionPlan + DeletionService",
+            "Compare task 6 deleteRejected qua ShotDex/Data/Sources/RejectedDeleter.swift:43-50"
+          ]
+        },
+        {
+          "id": "D41",
+          "title": "Compare Q4 · Báo lỗi khi xoá hỏng",
+          "why": "Hai cách báo lỗi cho cùng lệnh xoá thì người dùng gặp alert ở Compare, banner ở Cull.",
+          "proposal": "Code đúng: banner + Try Again như RejectedDeleter (NF-04). Compare giờ ở trong Viewer có appBannerHost. Sửa câu trong 08c §6.",
+          "options": [
+            {
+              "id": "code",
+              "label": "Code đúng (banner + Try Again)",
+              "pros": [
+                "Một cách báo lỗi cho mọi lệnh xoá Reject",
+                "Có đường thử lại"
+              ],
+              "cons": [
+                "Sửa 08c §6"
+              ],
+              "effort": "S",
+              "recommended": true
+            },
+            {
+              "id": "doc",
+              "label": "Tài liệu đúng (alert Couldn't Update Photos)",
+              "pros": [
+                "Spec không đổi"
+              ],
+              "cons": [
+                "Lý do cũ (alert dưới cover) không còn",
+                "Hai cách báo lỗi"
+              ],
+              "effort": "S"
+            }
+          ],
+          "tasks": [
+            "Sửa docs/02-functional-spec/FS-01-library/08c-compare-viewer-mode.md §6",
+            "Banner — ShotDex/Features/Library/PhotoDetailScreen.swift:322"
+          ]
+        },
+        {
+          "id": "D42",
+          "title": "Compare Q5 · iPhone vào Compare từ Viewer Single",
+          "why": "Không có lối vào thì iPhone không mở Compare từ Viewer. Thêm segmented thì Single iPhone cần board mới trước code.",
+          "proposal": "iPhone vào từ ⋯ Viewer → Compare with Next. AC-26 áp cho màn rộng. Muốn segmented trên Single thì vẽ thêm PH_Viewer.",
+          "options": [
+            {
+              "id": "menu",
+              "label": "⋯ → Compare with Next",
+              "pros": [
+                "Không chiếm chỗ thanh trên",
+                "Không cần board mới"
+              ],
+              "cons": [
+                "Khó thấy hơn segmented"
+              ],
+              "effort": "S",
+              "recommended": true
+            },
+            {
+              "id": "seg",
+              "label": "Segmented trên Single iPhone (vẽ PH_Viewer)",
+              "pros": [
+                "Giống màn rộng"
+              ],
+              "cons": [
+                "Thanh trên đã có Close + panel info",
+                "Cần board trước code"
+              ],
+              "effort": "M"
+            }
+          ],
+          "tasks": [
+            "Compare task 20 CompareSession.start(viewing:next:)",
+            "Sửa AC-26 — docs/02-functional-spec/FS-01-library/08c-compare-viewer-mode.md"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ipad-shell",
+      "title": "iPad · Khung gốc và điều hướng",
+      "intro": "Khung sidebar · nội dung · inspector dựng bằng gì, trạng thái điều hướng nằm đâu, Viewer và Settings mở ra sao.",
+      "decisions": [
+        {
+          "id": "D43",
+          "title": "FS-21 K1 · Khung gốc iPad",
+          "importance": "critical",
+          "why": "Khung gốc là thứ mọi màn iPad nằm trong. Đổi sau là viết lại hầu hết 59 task FS-21 và phần Mac đọc lại.",
+          "proposal": "NavigationSplitView cho sidebar ghim/phủ, đổi kiểu theo ShellLayout. Giữ TabView/LiquidGlassTabBar cho .phone. ShellLayout.resolve(windowWidth:idiom:) có idiom bắt buộc: iPhone và Duo luôn .phone, kể cả Duo trong 951pt.",
+          "options": [
+            {
+              "id": "a",
+              "label": "NavigationSplitView + giữ TabView cho phone",
+              "pros": [
+                "Sidebar hệ thống ở 26 và 17/18 (AC-27b)",
+                "Có trên iOS 17"
+              ],
+              "cons": [
+                "Hai cây view ở gốc: qua mốc 700 phải mang trạng thái"
+              ],
+              "effort": "L",
+              "recommended": true
+            },
+            {
+              "id": "b",
+              "label": "TabView .sidebarAdaptable",
+              "pros": [
+                "Một cây, hệ thống tự đổi"
+              ],
+              "cons": [
+                "Chỉ iOS 18+, min là 17",
+                "Đổi theo size class: AC-21 không đạt",
+                "Duo trong thành sidebar"
+              ],
+              "effort": "M"
+            },
+            {
+              "id": "c",
+              "label": "Sidebar tự vẽ trong ZStack",
+              "pros": [
+                "Toàn quyền số đo"
+              ],
+              "cons": [
+                "Spec cấm giả kính",
+                "Tự làm VoiceOver, kéo-thả"
+              ],
+              "effort": "L"
+            }
+          ],
+          "tasks": [
+            "Task 10 ShellLayout — ShotDex/Domain/Shell/ShellLayout.swift",
+            "Task 13 ShellSplitView, ShellSidebar — ShotDex/App/Shell/",
+            "Rẽ theo ShellLayout — ShotDex/App/RootTabView.swift"
+          ]
+        },
+        {
+          "id": "D44",
+          "title": "FS-21 K3 · Trạng thái điều hướng",
+          "why": "Intent, widget, notification đều đọc selectedTab. Thay một lần thì dễ gãy lối vào từ ngoài app.",
+          "proposal": "SidebarItem (enum, Domain) là tập lớn; SidebarItem.tab ↔ AppTab hai chiều. AppNavigation thêm sidebarSelection, selectedTab thành suy ra.",
+          "options": [
+            {
+              "id": "a",
+              "label": "SidebarItem + chiếu sang AppTab",
+              "pros": [
+                "Mọi đường cũ (openLibrary, Intent) vẫn chạy",
+                "Qua mốc 700 giữ hàng ↔ tab"
+              ],
+              "cons": [
+                "Hai tên cho một khái niệm trong giai đoạn chuyển"
+              ],
+              "effort": "M",
+              "recommended": true
+            },
+            {
+              "id": "b",
+              "label": "Thay AppTab bằng AppRoute chung",
+              "pros": [
+                "Một khái niệm"
+              ],
+              "cons": [
+                "Sửa mọi nơi đọc selectedTab cùng lúc (Intent, widget, IntentRoutingTests)"
+              ],
+              "effort": "L"
+            }
+          ],
+          "tasks": [
+            "Task 13 SidebarItem — ShotDex/Domain/Shell/SidebarItem.swift",
+            "sidebarSelection — ShotDex/App/AppNavigation.swift"
+          ]
+        },
+        {
+          "id": "D45",
+          "title": "FS-21 K4 · Viewer và Settings trong khung",
+          "why": "Viewer là cover thì không có Show Sidebar như board. Settings thành đích sidebar thì hai sidebar lồng nhau.",
+          "proposal": "Viewer đẩy trong NavigationStack của cột detail; sidebar ẩn khi vào, trả lại khi Back. Settings giữ fullScreenCover (AC-37 tự đúng). iPhone giữ cover.",
+          "options": [
+            {
+              "id": "a",
+              "label": "Viewer đẩy trong cột, Settings giữ cover",
+              "pros": [
+                "Đúng Show Sidebar · Back của board",
+                "AC-37 tự đúng"
+              ],
+              "cons": [
+                "Đổi cách mở Viewer trên iPad"
+              ],
+              "effort": "M",
+              "recommended": true
+            },
+            {
+              "id": "b",
+              "label": "Cả hai giữ cover, vẽ toolbar bên trong",
+              "pros": [
+                "Ít đụng"
+              ],
+              "cons": [
+                "Không có Show Sidebar trong Viewer/Editor"
+              ],
+              "effort": "S"
+            },
+            {
+              "id": "c",
+              "label": "Settings thành đích sidebar",
+              "pros": [
+                "Một khung"
+              ],
+              "cons": [
+                "Hai sidebar lồng nhau",
+                "AC-37 phải tự nhớ hàng trước"
+              ],
+              "effort": "M"
+            }
+          ],
+          "tasks": [
+            "Task 43 Viewer trong cửa sổ — ShotDex/Features/Library/PhotoDetailScreen.swift, LibraryScreen.swift:154",
+            "Task 55 Done của Settings về hàng trước"
+          ]
+        },
+        {
+          "id": "D46",
+          "title": "FS-21 K2 · Inspector ở đâu",
+          "why": "Inspector có mặt ở mọi màn. Đặt sai thì nội dung xa model của nó, hoặc lặp lỗi cover sau overlay (RootTabView.swift:217-219).",
+          "proposal": "Modifier dùng chung .shellInspector(isPresented:content:): cột .inspector 360 khi ghim, sheet 576 có Done ở 700–1099, sheet như iPhone ở .phone.",
+          "options": [
+            {
+              "id": "a",
+              "label": "Modifier .shellInspector từng màn",
+              "pros": [
+                "Mở/đóng theo từng màn",
+                "Một chỗ quyết cột hay sheet"
+              ],
+              "cons": [
+                "Phải tự bẻ .inspector sang sheet ở 700–1099"
+              ],
+              "effort": "M",
+              "recommended": true
+            },
+            {
+              "id": "b",
+              "label": "Một cột ở gốc, màn đẩy nội dung qua preference",
+              "pros": [
+                "Đổi màn không nháy"
+              ],
+              "cons": [
+                "Nội dung xa model",
+                "Preference + AnyView, lặp lỗi cover sau overlay"
+              ],
+              "effort": "M"
+            }
+          ],
+          "tasks": [
+            "Task 31 — ShotDex/App/Shell/ShellInspector.swift",
+            "Task 45 Info dọc = sheet 576"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ipad-commands",
+      "title": "iPad · Lệnh, phím và phần dùng chung với Mac",
+      "intro": "Một nguồn lệnh, menu bar, kiểu shell dùng chung với Mac, khung cho công cụ tầng D.",
+      "decisions": [
+        {
+          "id": "D47",
+          "title": "FS-21 K5 · Một nguồn lệnh (CommandCatalog)",
+          "why": "Lệnh khai ở ba builder thì iPad và iPhone lệch ngay lần thêm lệnh sau, và AC-38 chỉ chứng minh được bằng máy ảo.",
+          "proposal": "Mở rộng PhotoCommand thành CommandCatalog thuần ở Domain. Toolbar, ⋯, menu nhấn giữ, menu bar đều đọc nó. Ngoại lệ nền tảng: New Window, Activity.",
+          "options": [
+            {
+              "id": "a",
+              "label": "CommandCatalog ở Domain",
+              "pros": [
+                "AC-38 là một unit test",
+                "Mac dùng lại"
+              ],
+              "cons": [
+                "Chuyển 3 builder hiện có sang đọc catalog"
+              ],
+              "effort": "M",
+              "recommended": true
+            },
+            {
+              "id": "b",
+              "label": "Giữ builder rời, so dump",
+              "pros": [
+                "Ít sửa"
+              ],
+              "cons": [
+                "Chỉ chứng minh trên máy ảo",
+                "Lệch lại lần thêm lệnh sau"
+              ],
+              "effort": "S"
+            }
+          ],
+          "tasks": [
+            "Task 28 — ShotDex/Domain/Shell/CommandCatalog.swift (từ ShotDex/Features/Shared/PhotoCommand.swift)",
+            "Chuyển SelectionBarViews.swift:209-390, PhotoTileContextMenu.swift:33-125, PhotoDetailScreen.swift:760-912"
+          ]
+        },
+        {
+          "id": "D48",
+          "title": "FS-21 K7 · Phím và menu bar",
+          "why": "Không có menu bar thì AC-15 không đạt và bảng giữ ⌘ trống.",
+          "proposal": ".commands { CommandMenu … } trên WindowGroup; hành động qua FocusedValue của màn đang mở. Phím trần 0–5/P/X/U giữ đường nút ẩn đã có test.",
+          "options": [
+            {
+              "id": "a",
+              "label": ".commands + FocusedValue",
+              "pros": [
+                "Một chỗ khai báo",
+                "Bảng ⌘ tự có",
+                "Dùng chung với Mac"
+              ],
+              "cons": [
+                "Mỗi màn có lệnh cần focusedSceneValue"
+              ],
+              "effort": "M",
+              "recommended": true
+            },
+            {
+              "id": "b",
+              "label": "Nút ẩn .keyboardShortcut từng màn",
+              "pros": [
+                "Đã quen"
+              ],
+              "cons": [
+                "Không ra thanh menu, AC-15 không đạt"
+              ],
+              "effort": "S"
+            }
+          ],
+          "tasks": [
+            "Task 29 menu bar 8 menu — ShotDex/App/Shell/ShellCommands.swift"
+          ]
+        },
+        {
+          "id": "D49",
+          "title": "FS-21 K6 + FS-18 · Kiểu shell dùng chung iPad và Mac",
+          "why": "Viết hai bản ShellLayout/CommandCatalog cho iPad và Mac thì luật lệch nhau. Tách package sớm thì quyết thay FS-18 khi chưa có target Mac.",
+          "proposal": "ShellLayout, SidebarItem, CommandCatalog, ToolbarSubtitle, ModifierTapSelection viết không import UIKit, ở ShotDex/Domain/Shell/. Mac nhận chúng qua target ShotDexMac (FS-18 K1). FS-18 thêm lớp .mac vào ShellLayout, thứ tự menu Mac vào CommandCatalog, EditorKeyMap chung; không viết MacWindowLayout hay MacCommandCatalog. Phục vụ FS-21 và FS-18.",
+          "options": [
+            {
+              "id": "a",
+              "label": "Kiểu thuần ở Domain/Shell, FS-18 mở rộng",
+              "pros": [
+                "FS-21 không chờ FS-18",
+                "Một bản luật cho hai nền tảng"
+              ],
+              "cons": [
+                "View vẫn viết riêng cho macOS"
+              ],
+              "effort": "S",
+              "recommended": true
+            },
+            {
+              "id": "b",
+              "label": "Tách Swift package ShellKit ngay",
+              "pros": [
+                "Biên do compiler giữ"
+              ],
+              "cons": [
+                "Quyết thay FS-18 khi chưa có target Mac",
+                "Thêm công build, public hoá"
+              ],
+              "effort": "M"
+            }
+          ],
+          "tasks": [
+            "FS-21 task 10, 13, 28 — ShotDex/Domain/Shell/",
+            "FS-18 M1–M3, M5 mở rộng cùng file",
+            "FS-18 S9 — ShotDex/Domain/Shell/EditorKeyMap.swift"
+          ]
+        },
+        {
+          "id": "D50",
+          "title": "FS-21 K8 · Khung chung cho công cụ tầng D có inspector",
+          "why": "Mỗi công cụ tự viết cột 360 thì lệch số đo và vị trí nút chính. Gộp mà không có AC thì làm cả Combine, Cull, cắt video không ai kiểm.",
+          "proposal": "Một ToolInspectorLayout (xem trước trái, cột 360 phải, nút chính mép phải toolbar, giữ cột ở dọc) cho Collage, Xuất collage, Resize, Combine Photos và inspector Editor. Combine chưa có AC: xử lý theo D56.",
+          "options": [
+            {
+              "id": "a",
+              "label": "Một ToolInspectorLayout",
+              "pros": [
+                "Một chỗ đúng 360 và nút chính"
+              ],
+              "cons": [
+                "Màn không có AC phải xin thêm AC"
+              ],
+              "effort": "M",
+              "recommended": true
+            },
+            {
+              "id": "b",
+              "label": "Sửa từng màn theo board",
+              "pros": [
+                "Không đụng màn không có AC"
+              ],
+              "cons": [
+                "4–5 bản cột 360 tự viết"
+              ],
+              "effort": "M"
+            }
+          ],
+          "tasks": [
+            "Task 50 — ShotDex/Features/Shared/ToolInspectorLayout.swift",
+            "Bỏ HStack tự viết — CollageScreen.swift:238-243, PanoramaMergeScreen.swift:371-379"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "fs21-labels",
+      "title": "FS-21 · Câu hỏi: nhãn và thao tác",
+      "intro": "Chữ trên menu, kéo ảnh, pill Keep All và số cột mặc định.",
+      "decisions": [
+        {
+          "id": "D51",
+          "title": "FS-21 Q2 · Nhãn Adjust Date & Time…",
+          "why": "Nhãn menu khác Photos hoặc thiếu … khi mở sheet thì sai HIG, và hai nơi gọi hai tên.",
+          "proposal": "Nửa nửa: giữ & như Photos và code, thêm … vì mở sheet. Sửa FS-21 01 §5 và AC-11 thành Adjust Date & Time… và Adjust Location…",
+          "options": [
+            {
+              "id": "mix",
+              "label": "Giữ &, thêm …",
+              "pros": [
+                "Giống Photos",
+                "Đúng HIG (mở sheet)"
+              ],
+              "cons": [
+                "Sửa cả spec lẫn code"
+              ],
+              "effort": "S",
+              "recommended": true
+            },
+            {
+              "id": "code",
+              "label": "Code đúng (không …)",
+              "pros": [
+                "Không đổi code"
+              ],
+              "cons": [
+                "Thiếu … khi mở sheet"
+              ],
+              "effort": "S"
+            },
+            {
+              "id": "doc",
+              "label": "Tài liệu đúng (Date and Time…)",
+              "pros": [
+                "Spec không đổi"
+              ],
+              "cons": [
+                "Khác chữ của Photos"
+              ],
+              "effort": "S"
+            }
+          ],
+          "tasks": [
+            "Task 7 SelectionMenuOrderTests trên PhotoCommand.albumSelectionMenu",
+            "Sửa docs/02-functional-spec/FS-21-ipad-mac-style/01-shell.md §5, AC-11"
+          ]
+        },
+        {
+          "id": "D52",
+          "title": "FS-21 Q3 · Kéo một ảnh ngoài chế độ chọn",
+          "why": "Không kéo được ngoài chế độ chọn thì kéo vào album trên sidebar mất một bước. Bật sai cách thì nhấn giữ tranh với menu.",
+          "proposal": "Tài liệu đúng: nhấn giữ rồi kéo như Photos iPad; UIKit tự chuyển menu sang kéo khi ngón di. Bật cả ở .phone (cùng lưới).",
+          "options": [
+            {
+              "id": "doc",
+              "label": "Tài liệu đúng (kéo được ngoài chế độ chọn)",
+              "pros": [
+                "Giống Photos iPad",
+                "Kéo vào sidebar ít bước"
+              ],
+              "cons": [
+                "Phải kiểm menu vẫn mở khi không di ngón"
+              ],
+              "effort": "S",
+              "recommended": true
+            },
+            {
+              "id": "code",
+              "label": "Code đúng (chỉ kéo khi đang chọn)",
+              "pros": [
+                "Không tranh với menu"
+              ],
+              "cons": [
+                "Thêm một bước trước khi kéo"
+              ],
+              "effort": "S"
+            }
+          ],
+          "tasks": [
+            "Task 37 — ShotDex/Features/Shared/PhotoGridCollectionView.swift"
+          ]
+        },
+        {
+          "id": "D55",
+          "title": "FS-21 Q6 · Keep All N Photos: pill hay ⋯ nhóm",
+          "why": "Thêm ⋯ nhóm chỉ để chứa một lệnh đã có ở pill thì một lệnh hai chỗ.",
+          "proposal": "Code đúng một nửa: giữ pill, đổi chữ thành Keep All N Photos. AC-56 đo pill. Đổi kiểu biểu đồ làm như spec.",
+          "options": [
+            {
+              "id": "pill",
+              "label": "Giữ pill, đổi chữ",
+              "pros": [
+                "Lệnh đã có trên iPhone",
+                "Không thêm menu"
+              ],
+              "cons": [
+                "Sửa AC-56"
+              ],
+              "effort": "S",
+              "recommended": true
+            },
+            {
+              "id": "menu",
+              "label": "Tài liệu đúng: ⋯ nhóm",
+              "pros": [
+                "Spec không đổi"
+              ],
+              "cons": [
+                "Một lệnh hai chỗ"
+              ],
+              "effort": "M"
+            }
+          ],
+          "tasks": [
+            "Task 9 — ShotDex/Features/Duplicates/DuplicatesScreen.swift, ShotDex/Features/Statistics/ChartCard.swift"
+          ]
+        },
+        {
+          "id": "D57",
+          "title": "FS-21 Q1 + FS-18 Q3 · Số cột mặc định trên màn rộng",
+          "importance": "minor",
+          "proposal": "Theo quyết định 7/6 là mặc định: thêm tham số khung vào GridDensity (ô ~143 iPad, 165 Mac, inspector −1 cột), không viết hàm thứ hai. iPad 7 cột ở 1016, 6 ở 656; Mac 7, ⌘+ ra 6, ⌘− hai lần ra 8. iPhone, Duo không đổi. Phục vụ FS-21 và FS-18.",
+          "options": [
+            {
+              "id": "doc",
+              "label": "Tài liệu đúng (7/6)",
+              "effort": "S",
+              "recommended": true
+            },
+            {
+              "id": "code",
+              "label": "Code đúng (11/7 iPad, 13 Mac)",
+              "effort": "S"
+            }
+          ],
+          "tasks": [
+            "FS-21 task 30 — ShotDex/Domain/Grid/GridDensity.swift:73-79",
+            "FS-18 M10 truyền bề rộng Mac"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "fs21-editor",
+      "title": "FS-21 · Câu hỏi: Editor và phần chưa có AC",
+      "intro": "Editor iPad bỏ gì, panel iPhone, và spec chưa có AC.",
+      "decisions": [
+        {
+          "id": "D53",
+          "title": "FS-21 Q4 · Editor iPad: bỏ kéo rộng và đổi bên",
+          "why": "Giữ thứ board không vẽ thì design-parity không bao giờ qua. Bỏ thì mất tính năng người dùng có thể đã quen.",
+          "proposal": "Bỏ cột kéo rộng 280…420 và đổi bên trái/phải. Rail thay bằng segmented. Giữ ghim ảnh tham chiếu và Hide Inspector. History vào sidebar Presets như board.",
+          "options": [
+            {
+              "id": "drop",
+              "label": "Bỏ kéo rộng và đổi bên, giữ ghim tham chiếu",
+              "pros": [
+                "Khớp board 360 cố định",
+                "Bớt một quyết định cho người dùng"
+              ],
+              "cons": [
+                "Mất cột rộng 420"
+              ],
+              "effort": "M",
+              "recommended": true
+            },
+            {
+              "id": "keep",
+              "label": "Giữ hết, vẽ lại board Editor",
+              "pros": [
+                "Không mất gì"
+              ],
+              "cons": [
+                "Vẽ lại IP1_Edit, IPP1_Edit",
+                "Inspector không còn đúng 360"
+              ],
+              "effort": "L"
+            }
+          ],
+          "tasks": [
+            "Task 48 — ShotDex/Features/Editing/PhotoEditorScreen.swift, EditorSidebar.swift"
+          ]
+        },
+        {
+          "id": "D54",
+          "title": "FS-21 Q5 · Panel Editor iPhone 246 hay 264",
+          "why": "AC đo số 246 không còn trong code thì AC đỏ mãi, hoặc ép đổi panel iPhone vừa chỉnh.",
+          "proposal": "Code đúng: AC-54 thành panel không đổi so với hiện tại (264). Dọn 4 comment 246 cùng commit.",
+          "options": [
+            {
+              "id": "code",
+              "label": "Code đúng (264)",
+              "pros": [
+                "Bố cục iPhone không đổi, đúng ý AC"
+              ],
+              "cons": [
+                "Sửa AC-54"
+              ],
+              "effort": "S",
+              "recommended": true
+            },
+            {
+              "id": "doc",
+              "label": "Tài liệu đúng (246)",
+              "pros": [
+                "Spec không đổi"
+              ],
+              "cons": [
+                "Đổi panel iPhone đã chỉnh"
+              ],
+              "effort": "M"
+            }
+          ],
+          "tasks": [
+            "Task 8 — ShotDex/Domain/Editing/EditorLayoutMetrics.swift:46-48"
+          ]
+        },
+        {
+          "id": "D56",
+          "title": "FS-21 · Phần spec chưa có AC",
+          "why": "Plan không nhận việc không có AC. Không xử lý thì Trips 3 cột, Places inspector, trang album, Duplicates 360, Combine/Cull/cắt video, phím . và Space không bao giờ được làm trên iPad.",
+          "proposal": "Chạy /spec FS-21 thêm AC cho các phần này, rồi plan thêm task. Không tự làm khi chưa có AC.",
+          "options": [
+            {
+              "id": "spec",
+              "label": "/spec thêm AC, rồi thêm task",
+              "pros": [
+                "Mỗi màn có AC để /verify"
+              ],
+              "cons": [
+                "Thêm một vòng /spec"
+              ],
+              "effort": "M",
+              "recommended": true
+            },
+            {
+              "id": "board",
+              "label": "Làm theo board, chứng minh bằng design-parity",
+              "pros": [
+                "Không chờ /spec"
+              ],
+              "cons": [
+                "Không có AC để /verify"
+              ],
+              "effort": "M"
+            },
+            {
+              "id": "out",
+              "label": "Để ngoài đợt này",
+              "pros": [
+                "Plan gọn 59 task"
+              ],
+              "cons": [
+                "iPad thiếu các màn đó theo kiểu Mac"
+              ],
+              "effort": "—"
+            }
+          ],
+          "tasks": [
+            "/spec FS-21 — docs/02-functional-spec/FS-21-ipad-mac-style/04-acceptance-criteria.md"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "mac-code",
+      "title": "Mac · Chia mã, ảnh, bề mặt cuộn",
+      "intro": "Ba lựa chọn đắt nếu phải đổi giữa chừng.",
+      "decisions": [
+        {
+          "id": "D58",
+          "title": "FS-18 K1 · Target và cách chia sẻ mã",
+          "importance": "critical",
+          "why": "Cách chia mã quyết mọi commit Mac sau đó. Framework thì public hoá ~320 file; target đa nền thì mọi build iOS kéo cấu hình Mac. Đổi giữa chừng là dời hàng trăm file trong checkout dùng chung.",
+          "proposal": "Target app riêng ShotDexMac, cùng module nội bộ: thêm ShotDex/ vào target Mac, loại trừ App/, Features/, Assets iOS. Model @Observable Mac cần dời sang ShotDex/Models/<Feature>/ khi màn Mac đầu tiên cần. Đo ở T1 xem membershipExceptions có nhận thư mục không.",
+          "options": [
+            {
+              "id": "a",
+              "label": "Target ShotDexMac riêng, loại trừ App/ + Features/",
+              "pros": [
+                "Không public hoá",
+                "File mới ở Domain/Data tự vào cả hai",
+                "Scheme riêng"
+              ],
+              "cons": [
+                "Danh sách loại trừ trong pbxproj",
+                "~25 model phải dời dần"
+              ],
+              "effort": "S",
+              "recommended": true
+            },
+            {
+              "id": "b",
+              "label": "Framework đa nền ShotDexCore",
+              "pros": [
+                "Ranh giới do compiler giữ"
+              ],
+              "cons": [
+                "~320 file, hàng nghìn khai báo phải public",
+                "@testable đổi"
+              ],
+              "effort": "L"
+            },
+            {
+              "id": "c",
+              "label": "Một target app đa nền",
+              "pros": [
+                "Một bundle, một Info.plist"
+              ],
+              "cons": [
+                "~170 file lọc nền tảng",
+                "Mọi build iOS kéo cấu hình Mac"
+              ],
+              "effort": "M, rủi ro cao"
+            },
+            {
+              "id": "d",
+              "label": "Dời hẳn thư mục Shared/",
+              "pros": [
+                "Danh sách trắng, sạch nhất"
+              ],
+              "cons": [
+                "Một commit dời hàng trăm file trong checkout dùng chung"
+              ],
+              "effort": "M, xung đột cao"
+            }
+          ],
+          "tasks": [
+            "T1 target ShotDexMac — ShotDex.xcodeproj/project.pbxproj",
+            "P2 gỡ 9 chỗ rò tầng (dời 8 kiểu sang Domain/Core)"
+          ]
+        },
+        {
+          "id": "D59",
+          "title": "FS-18 K2 · Ảnh nền tảng trong mã chung",
+          "importance": "critical",
+          "why": "UIImage có 173 chỗ trong 56 file, trên đường lưới nóng nhất. CGImage thì đổi chữ ký PhotoLibraryService và cache lưới iOS; #if thì hai bản mỗi hàm.",
+          "proposal": "typealias PlatformImage = UIImage / NSImage ở Core/Utils/PlatformImage.swift + shim 3 thành viên (cgImage, pixelSize, init(cgImage:scale:)). Hàm mới ở Domain nhận/trả CGImage.",
+          "options": [
+            {
+              "id": "a",
+              "label": "typealias PlatformImage + shim",
+              "pros": [
+                "Khớp PhotoKit (PHImageManager trả NSImage trên macOS)",
+                "Đổi tên cơ học"
+              ],
+              "cons": [
+                "NSImage không có scale: shim phải mang pixel size"
+              ],
+              "effort": "M",
+              "recommended": true
+            },
+            {
+              "id": "b",
+              "label": "Tầng chung chỉ dùng CGImage",
+              "pros": [
+                "Thuần, test được"
+              ],
+              "cons": [
+                "Đổi ~14 hàm PhotoLibraryService và cache lưới iOS",
+                "Rủi ro hiệu năng đường nóng"
+              ],
+              "effort": "L"
+            },
+            {
+              "id": "c",
+              "label": "#if os(macOS) lặp hàm",
+              "pros": [
+                "Nhanh"
+              ],
+              "cons": [
+                "Hai bản mỗi hàm"
+              ],
+              "effort": "M"
+            }
+          ],
+          "tasks": [
+            "P3 — ShotDex/Core/Utils/PlatformImage.swift ở 11 file Data/Core/Domain",
+            "perf-profiler lưới iOS sau P3"
+          ]
+        },
+        {
+          "id": "D60",
+          "title": "FS-18 K3 · Bề mặt cuộn lớn trên Mac",
+          "importance": "critical",
+          "why": "Lưới 55k, timeline, ảnh phóng to là chỗ người dùng thấy app chậm ngay. Chọn SwiftUI thuần mà không đạt NF-01 thì viết lại cả lưới Mac.",
+          "proposal": "AppKit qua NSViewRepresentable: NSCollectionView cho lưới (tách toán bố cục PhotoGridLayout sang Domain để iOS và Mac cùng dùng), NSScrollView cho ảnh và timeline. Bảng ⌘2 dùng Table của SwiftUI.",
+          "options": [
+            {
+              "id": "a",
+              "label": "AppKit cho lưới, ảnh, timeline",
+              "pros": [
+                "Kéo khung chọn, kéo ra Finder, cuộn 55k đã chứng minh",
+                "Giữ NF-01"
+              ],
+              "cons": [
+                "3 bọc AppKit mới (~1.5k dòng)"
+              ],
+              "effort": "L",
+              "recommended": true
+            },
+            {
+              "id": "b",
+              "label": "SwiftUI thuần",
+              "pros": [
+                "Ít mã, một kiểu"
+              ],
+              "cons": [
+                "Lưới 55k + chọn ⇧/⌘ chưa đo",
+                "Gesture trong scroll host từng chết"
+              ],
+              "effort": "M"
+            },
+            {
+              "id": "c",
+              "label": "Lai: lưới AppKit, ảnh + timeline SwiftUI",
+              "pros": [
+                "Giảm bọc"
+              ],
+              "cons": [
+                "Timeline cần kéo chính xác + cuộn ngang bánh xe"
+              ],
+              "effort": "M"
+            }
+          ],
+          "tasks": [
+            "Tách toán bố cục — ShotDex/Domain/Grid/PhotoGridLayoutMath.swift (từ ShotDex/Features/Shared/PhotoGridLayout.swift:35)",
+            "M10–M13 lưới AppKit",
+            "M57–M58 timeline NSScrollView"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "mac-theme",
+      "title": "Mac · Token, bundle id, undo",
+      "intro": "Ba lựa chọn sửa được nhưng nên chốt trước T1.",
+      "decisions": [
+        {
+          "id": "D61",
+          "title": "FS-18 K4 · Token Mac",
+          "why": "Token Mac để chung với iOS thì phải dời AppTheme trước (rò tầng). Để riêng thì iPad mượn số Mac phải tự khai.",
+          "proposal": "MacTheme enum ở ShotDexMac/Theme/MacTheme.swift, chỉ target Mac. Giá trị chung iPad + Mac (accent, EditorTheme) đọc từ AppTheme. FS-21 chốt token iPad trùng số Mac thì dời phần trùng vào AppTheme lúc đó.",
+          "options": [
+            {
+              "id": "a",
+              "label": "MacTheme riêng target Mac",
+              "pros": [
+                "Mac-only không rò sang iOS",
+                "design-reviewer soát một file"
+              ],
+              "cons": [
+                "iPad mượn số Mac phải tự khai"
+              ],
+              "effort": "S",
+              "recommended": true
+            },
+            {
+              "id": "b",
+              "label": "AppTheme.Mac trong file chung",
+              "pros": [
+                "Một chỗ cho mọi token"
+              ],
+              "cons": [
+                "Phải dời AppTheme khỏi App/Theme trước"
+              ],
+              "effort": "M"
+            }
+          ],
+          "tasks": [
+            "T5 — ShotDexMac/Theme/MacTheme.swift",
+            "DESIGN.md §10b thêm tên Swift"
+          ]
+        },
+        {
+          "id": "D62",
+          "title": "FS-18 K5 · Bundle id",
+          "why": "Bundle id là quyết định giá và phát hành. Đã lên App Store thì không đổi được.",
+          "proposal": "Cùng com.hoangtuan.shotdex (Universal Purchase): mua một lần dùng hai nơi. App group group.com.hoangtuan.shotdex cần provisioning trên macOS.",
+          "options": [
+            {
+              "id": "a",
+              "label": "Cùng com.hoangtuan.shotdex",
+              "pros": [
+                "Mua một lần dùng hai nơi",
+                "Một bản ghi App Store"
+              ],
+              "cons": [
+                "App group cần provisioning macOS"
+              ],
+              "effort": "S",
+              "recommended": true
+            },
+            {
+              "id": "b",
+              "label": "com.hoangtuan.shotdex.mac",
+              "pros": [
+                "Tách giá, tách review"
+              ],
+              "cons": [
+                "Người dùng mua hai lần",
+                "Hai bản ghi"
+              ],
+              "effort": "S"
+            }
+          ],
+          "tasks": [
+            "T1 bundle id + entitlements — ShotDexMac/ShotDexMac.entitlements"
+          ]
+        },
+        {
+          "id": "D63",
+          "title": "FS-18 K6 · Undo trên Mac",
+          "why": "Menu Edit tự vẽ đi ngược HIG macOS và xung đột ⌘Z trong ô nhập. Chọn sai thì bọc lại mọi thao tác.",
+          "proposal": "Nối lịch sử có sẵn (Editor, thêm vào album, sao/cờ, xoay) vào UndoManager của cửa sổ qua UndoRegistrar ở Data. Tên hành động lấy từ CommandCatalog. iPad có bàn phím dùng lại.",
+          "options": [
+            {
+              "id": "a",
+              "label": "UndoManager qua UndoRegistrar",
+              "pros": [
+                "Menu Edit hệ thống, ⌘Z/⇧⌘Z sẵn",
+                "iPad dùng lại"
+              ],
+              "cons": [
+                "Bọc từng thao tác"
+              ],
+              "effort": "M",
+              "recommended": true
+            },
+            {
+              "id": "b",
+              "label": "Lịch sử riêng từng model + menu Edit tự vẽ",
+              "pros": [
+                "Không đụng UndoManager"
+              ],
+              "cons": [
+                "Ngược HIG macOS",
+                "⌘Z trong ô nhập xung đột"
+              ],
+              "effort": "M"
+            }
+          ],
+          "tasks": [
+            "UndoRegistrar — ShotDex/Data/",
+            "M18 kéo vào album + undo, M21 xoay + undo"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "mac-questions",
+      "title": "Mac · Câu hỏi và chỗ chưa kết luận",
+      "intro": "Màn Mac không có AC, máy macOS 15, AC cần phần cứng thật, và hai câu tài liệu.",
+      "decisions": [
+        {
+          "id": "D64",
+          "title": "FS-18 ❓ · 13 màn Mac không có AC (khối V)",
+          "why": "D2 bắt 13 màn này có trong bản 1.0. Không có cách chứng minh thì /verify không nói được chúng xong.",
+          "proposal": "Chứng minh bằng design-parity board + AC của FS gốc chạy lại trên Mac. Chỉ thêm AC mới cho Activity và Support (cửa sổ chỉ Mac có).",
+          "options": [
+            {
+              "id": "board",
+              "label": "design-parity + AC FS gốc; AC mới chỉ cho Activity, Support",
+              "pros": [
+                "Không thêm vòng /spec lớn",
+                "Dùng AC đã có"
+              ],
+              "cons": [
+                "Màn Mac không có AC riêng"
+              ],
+              "effort": "M",
+              "recommended": true
+            },
+            {
+              "id": "spec",
+              "label": "/spec thêm AC cho cả 13 màn",
+              "pros": [
+                "Mỗi màn có AC riêng"
+              ],
+              "cons": [
+                "Thêm một vòng /spec trước khối V"
+              ],
+              "effort": "L"
+            }
+          ],
+          "tasks": [
+            "Khối V: 13 task — ShotDexMac/Features/",
+            "/spec FS-18 thêm AC Activity, Support — docs/02-functional-spec/FS-18-mac-app/06-acceptance-criteria.md"
+          ]
+        },
+        {
+          "id": "D65",
+          "title": "FS-18 ❓ · Máy macOS 15 để kiểm AC-14",
+          "why": "Bản Mac hỗ trợ macOS 15. Không có máy chạy macOS 15 thì nhánh trước Liquid Glass không ai kiểm.",
+          "proposal": "Dùng máy ảo macOS 15 trên Apple silicon (Virtualization.framework), trừ khi bạn có sẵn máy macOS 15 thật.",
+          "options": [
+            {
+              "id": "vm",
+              "label": "Máy ảo macOS 15",
+              "pros": [
+                "Không cần phần cứng thêm"
+              ],
+              "cons": [
+                "Tốn đĩa (đang còn 16 GB)",
+                "GPU ảo khác máy thật"
+              ],
+              "effort": "M",
+              "recommended": true
+            },
+            {
+              "id": "real",
+              "label": "Máy macOS 15 thật",
+              "pros": [
+                "Đúng phần cứng"
+              ],
+              "cons": [
+                "Cần một máy để ở macOS 15"
+              ],
+              "effort": "S"
+            }
+          ],
+          "tasks": [
+            "M63 mac-os15-parity.json",
+            "T4 luật Mac trong CLAUDE.md (macOS 26 + một máy macOS 15)"
+          ]
+        },
+        {
+          "id": "D66",
+          "title": "FS-18 ❓ · AC cần phần cứng thật (AC-44, 62, 63, 65)",
+          "why": "Bốn AC cần Mac thật, iPhone, ổ T7, sandbox bật, iCloud. Không ai chạy thì chúng ở ⚠️ khi phát hành.",
+          "proposal": "Bạn chạy tay theo script trong ShotDexMacUITests/scripts/manual/. Claude viết script và ghi kết quả vào cột Chứng minh bằng.",
+          "options": [
+            {
+              "id": "manual",
+              "label": "Bạn chạy tay theo script",
+              "pros": [
+                "Bốn AC được chứng minh trước phát hành"
+              ],
+              "cons": [
+                "Tốn thời gian của bạn"
+              ],
+              "effort": "M",
+              "recommended": true
+            },
+            {
+              "id": "defer",
+              "label": "Để ⚠️ tới khi có máy",
+              "pros": [
+                "Không tốn thời gian bây giờ"
+              ],
+              "cons": [
+                "Bốn AC chưa chứng minh"
+              ],
+              "effort": "—"
+            }
+          ],
+          "tasks": [
+            "Viết script — ShotDexMacUITests/scripts/manual/",
+            "M59–M62 bookmark, mất quyền Photos, chéo thiết bị"
+          ]
+        },
+        {
+          "id": "D67",
+          "title": "FS-18 Q2 · Số đo UIKit trong 05 §1",
+          "why": "Số sai thì ước lượng công Mac sai, và người đọc 05 §1 tưởng kit và Domain dùng chung nguyên.",
+          "proposal": "Code đúng: sửa 05 §1 theo số đo (70 file import UIKit, 26 file bọc, PencilKit 3 + 1 kit, 127 file dùng kiểu UIKit; kit có 1 file UIKit; Domain gọi UIColor, AppTheme). Coordinator sửa intent. Commit cùng P1.",
+          "options": [
+            {
+              "id": "code",
+              "label": "Code đúng (sửa số trong spec)",
+              "pros": [
+                "Spec khớp spike"
+              ],
+              "cons": [
+                "Sửa 05 §1 và intent"
+              ],
+              "effort": "S",
+              "recommended": true
+            },
+            {
+              "id": "doc",
+              "label": "Tài liệu đúng",
+              "pros": [
+                "Không sửa gì"
+              ],
+              "cons": [
+                "Số trong spec sai so với đo"
+              ],
+              "effort": "S"
+            }
+          ],
+          "tasks": [
+            "P1 — docs/02-functional-spec/FS-18-mac-app/05-platform-and-distribution.md §1"
+          ]
+        },
+        {
+          "id": "D68",
+          "title": "FS-18 Q1 · Phím Viewer: một luật mọi thiết bị",
+          "importance": "minor",
+          "proposal": "07 §3 đúng (NF-05 và gói phím đã chốt): thêm . = Favorite trên iOS, ←/→ giữ bước khung khi dừng. Bỏ câu khác FS-02.01b ở 01b §3, viết lại FS-02.01b §2 + AC-13/14/15 ở task S8.",
+          "options": [
+            {
+              "id": "07",
+              "label": "07 §3 đúng (một luật)",
+              "effort": "S",
+              "recommended": true
+            },
+            {
+              "id": "01b",
+              "label": "01b §3 đúng (Mac khác iOS)",
+              "effort": "S"
+            }
+          ],
+          "tasks": [
+            "S8 ViewerKeyMapTests"
+          ]
+        }
+      ]
+    }
+  ]
+}

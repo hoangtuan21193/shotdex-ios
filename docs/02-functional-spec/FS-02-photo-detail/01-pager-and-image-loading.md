@@ -1,6 +1,6 @@
 # FS-02.01 — Pager và tải ảnh
 
-`FS-02.01` · `Features/Library/PhotoDetailScreen.swift` · `ZoomableImageView` · cập nhật 2026-10-01
+`FS-02.01` · `Features/Library/PhotoDetailScreen.swift` · `ZoomableImageView` · cập nhật 2026-10-02
 
 **Một câu:** lật trang dựng lười, và thang chất lượng ảnh đi từ bản local rẻ nhất lên bản cỡ màn, rồi lên bản
 gốc — chỉ khi người dùng chủ động phóng.
@@ -94,4 +94,5 @@ Mở một trang là xin index **đúng một ảnh đó**:
 
 ## 8. Tiêu chí nghiệm thu
 
-**Chưa viết.** Xem [README — Việc còn nợ](../../README.md#6-việc-còn-nợ).
+**Chưa viết.** Xem [README — Việc còn nợ](../../README.md#6-việc-còn-nợ). Đóng viewer và bàn phím có AC riêng ở
+[01b](01b-closing-and-keyboard.md) §3.

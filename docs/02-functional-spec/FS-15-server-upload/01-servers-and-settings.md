@@ -1,7 +1,7 @@
 # FS-15.01 — Server và Settings
 
 `FS-15.01` · `Features/ServerUpload/FileServerListScreen.swift` · `FileServerFormScreen.swift`
-· `Data/Database/FileServerStore.swift` · `Domain/ServerUpload/FileServerNaming.swift` · cập nhật 2026-09-27
+· `Data/Database/FileServerStore.swift` · `Domain/ServerUpload/FileServerNaming.swift` · cập nhật 2026-10-02
 
 **Một câu:** danh sách connection trong Settings, form khai một connection, và nút thử kết nối nói rõ chỗ hỏng.
 
@@ -24,7 +24,13 @@ chúng ở menu ⋯ (FS-15.02 §1).
 | có connection | mỗi hàng: **tên** và dưới nó **đường dẫn folder** (`PHOTOS/Import`; SFTP `Home/…`) — không giao thức, không host (đổi 2026-09-27: tên + folder là thứ phân biệt hai connection); chạm để sửa, vuốt để xoá |
 
 - Nút **+** trên toolbar thêm connection (nhãn VoiceOver "Add Connection").
-- Xoá connection (**Delete Connection**): hộp xác nhận có nút Huỷ; câu nói rõ **lịch sử upload vẫn giữ**, ảnh không bị đụng.
+- Xoá connection (**Delete Connection**): **hộp alert hai nút** — **Delete** đỏ + **Cancel** — tiêu đề "Delete <tên>?",
+  câu "The upload history is kept, and nothing on the server or in your library is deleted." (Q6)
+- Không dùng hộp kiểu action sheet cho việc này. *Vì iOS 26 vẽ nó thành popover và ẩn nút Cancel, chỉ còn nút đỏ.*
+  Cùng luật ở On Server và On Cloud (FS-17.01 §1).
+- Xoá hỏng (database báo lỗi) → hộp "Couldn't Delete Connection" + lý do; hàng còn nguyên.
+
+Board: `PH_ServerList`, `IP_ServerList`, `DI_ServerList`, `DC_ServerList` — hộp xoá chưa có board, cần vẽ.
 
 ## 3. Form connection
 
@@ -44,6 +50,16 @@ chúng ở menu ⋯ (FS-15.02 §1).
 - Tiêu đề form: **Add Connection** / **Edit Connection**. Chân section Folder không nhắc thư mục theo ngày — đó là
   công tắc ở sheet upload.
 - **Save** mờ khi thiếu ô bắt buộc. Lưu **không** bắt buộc thử kết nối trước — server có thể đang tắt.
+- **Form có thay đổi chưa lưu thì không vuốt xuống đóng được** (C1). "Có thay đổi" = bất kỳ ô nào (cả Password,
+  công tắc, màn Connect As đẩy trong form, máy chọn từ Servers Found) khác lúc mở form.
+  - Vuốt xuống khi có thay đổi → sheet **bật về chỗ cũ và hiện ngay** alert "Discard Changes?" (K4) — không cần
+    bấm thêm Cancel. Bấm **Cancel** khi có thay đổi → cùng alert.
+  - Alert hai nút: **Discard** đỏ (đóng, không lưu gì, mật khẩu đã gõ không vào Keychain) + **Keep Editing** (ở lại,
+    chữ đã gõ còn nguyên).
+  - Không thay đổi gì → vuốt hoặc Cancel đóng ngay, không hỏi. Đang tìm server trong mạng không tính là thay đổi.
+  - Cùng luật khi form mở từ sheet upload (FS-15.02 §1) và từ On Server (FS-17.01 §1).
+
+Board: `PH_ServerForm`, `IP_ServerForm`, `DI_ServerForm`, `DC_ServerForm` — hộp Discard chưa có board, cần vẽ.
 - Hàng **Test Connection** chạy bốn bước và dừng ở bước hỏng đầu tiên: tìm thấy máy → đăng nhập → mở thư
   mục → ghi thử rồi xoá một file nhỏ.
 

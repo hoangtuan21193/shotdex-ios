@@ -2,7 +2,7 @@
 
 `FS-01.03` · `Domain/Filtering/SearchIntentParser.swift` · `SearchIntentMapper` · `AISearchTranslator`
 · `Features/Library/SearchSuggestionsScreen.swift` · test `SearchParserTests` · `SearchIntentParserTests`
-· cập nhật 2026-09-22
+· cập nhật 2026-10-02
 
 **Một câu:** gõ câu tiếng Việt hoặc tiếng Anh, ra chip điều kiện sửa được — bộ phân tích trước, model sau,
 tìm chữ tự do cuối.
@@ -19,10 +19,11 @@ tìm chữ tự do cuối.
 
 ## 2. Tìm được theo gì
 
-Địa điểm · tên file · thân máy · ống kính · tiêu cự · ISO · khẩu · tốc độ · khổ cảm biến · ngày · favorite.
+Địa điểm · tên file · thân máy · ống kính · tiêu cự · ISO · khẩu · tốc độ · khổ cảm biến · ngày · favorite ·
+**khung giờ chụp** (đêm, giờ xanh, giờ vàng — [03b §1](03b-time-of-day-and-acceptance.md)).
 
 Ví dụ: `Fukuoka` · `f > 1.2` · `ISO trên 3200` · `trước 2020` · `nhanh hơn 1/500` · `IMG_1234` ·
-`Canon R6` · `85mm`.
+`Canon R6` · `85mm` · `85mm night` · `hoàng hôn`.
 
 ## 3. Bộ hiểu câu
 
@@ -32,6 +33,7 @@ Ví dụ: `Fukuoka` · `f > 1.2` · `ISO trên 3200` · `trước 2020` · `nhan
 | Khoảng | `iso 100-400` · `tiêu cự từ 24 đến 70` |
 | **Tốc độ theo nghĩa người dùng** | `nhanh hơn 1/500` → tốc độ **nhỏ hơn** 0,002 giây. Nhanh = số bé, **chỗ duy nhất trong app nói ngược với số**, có test riêng |
 | Ngày | `trước 2020` = trước mốc **đầu** năm; `sau 2023` = sau mốc **cuối** năm (dùng mốc thô là mất 12 tháng ảnh); `năm 2023`, `hôm qua`, `tháng trước`, `7 ngày qua`, `last 30 days` |
+| Khung giờ | `night` · `blue hour` · `golden hour` · `sunset` · `sunrise` và bản tiếng Việt — bảng ở [03b §2](03b-time-of-day-and-acceptance.md) |
 | Khác | favorite · định dạng file · khổ cảm biến · tên (địa điểm, máy, ống kính) |
 
 - **Tiếng Việt không có bộ ngữ pháp riêng**: cụm nhiều từ được quy về đúng ký hiệu mà tiếng Anh sinh ra
@@ -45,8 +47,8 @@ Ví dụ: `Fukuoka` · `f > 1.2` · `ISO trên 3200` · `trước 2020` · `nhan
   trắng.
 - **Số vô lý bị từ chối** thay vì thành điều kiện (`iso 1.4`, `f 3200`): một điều kiện như thế cho ra chip
   tự tin trên lưới rỗng, còn tìm chữ tự do thì ít nhất còn tìm.
-- Phần không hiểu khi *đã* có điều kiện thì thành một chip "tên file chứa …" — một chip nhìn thấy và xoá
-  được hơn là một từ bị âm thầm bỏ.
+- Phần không hiểu khi *đã* có điều kiện thì thành **một chip nói rõ từ đó không hiểu** và **mời** tìm theo
+  tên file; chip này không lọc cho tới khi được chạm ([03b §3](03b-time-of-day-and-acceptance.md)).
 
 ## 4. Model trên iOS 26
 
@@ -85,10 +87,11 @@ ngang đọc ra như giao diện chính, làm ô tìm kiếm trông như đườ
 - Đang gõ → **cách hiểu của bộ phân tích đứng trước** (chữ đúng bằng chip mà thanh kết quả sẽ hiện; chạm
   chạy **chính câu đã gõ**, không chạy chuỗi rút gọn), rồi tới tên khớp trong thư viện.
 - Ô rỗng → **địa điểm và máy thư viện thật sự có**, không phải ví dụ bịa: một gợi ý trả về 0 ảnh còn tệ hơn
-  không có gợi ý. Chưa index gì thì hiện một dòng ví dụ.
+  không có gợi ý. Chưa index gì thì hiện một dòng ví dụ **theo ngôn ngữ giao diện, qua String Catalog**:
+  `Try: Fukuoka · f > 1.2 · ISO over 3200 · before 2020` (bản tiếng Việt dịch trong catalog).
 - Capsule "cách hiểu" được giữ **kèm câu đã sinh ra nó** — bản xem trước bị huỷ thì không gán gì.
-- **Recents kiểu Photos**: tối đa **3 thẻ ảnh**, mỗi thẻ là thumbnail **kết quả đầu tiên** với câu đã gõ
-  trong ngoặc kép. **Truy vấn không còn kết quả thì không hiện** — recents rỗng đọc ra như app quên mất ảnh;
+- **Recents kiểu Photos**: mỗi thẻ là thumbnail **kết quả đầu tiên** với câu đã gõ trong ngoặc kép. Compact:
+  **3 thẻ vuông** chia đều bề ngang; regular: **một hàng** thẻ 150–200pt, tối đa 6 ([03b §5](03b-time-of-day-and-acceptance.md)). **Truy vấn không còn kết quả thì không hiện** — recents rỗng đọc ra như app quên mất ảnh;
   vì thế mỗi mục tốn một truy vấn lấy đúng một ảnh, và chỉ chạy bộ phân tích (ba lần gọi model mỗi lần mở
   màn là không trả nổi).
 - Lưu tối đa 10 câu, bỏ trùng không phân biệt hoa thường, mới nhất lên đầu (hàm gộp là hàm thuần, có test).
@@ -140,4 +143,5 @@ Hai cái giá đã biết và chấp nhận:
 
 ## 10. Tiêu chí nghiệm thu
 
-**Chưa viết.** Xem [README — Việc còn nợ](../../README.md#6-việc-còn-nợ).
+Ở [03b §6](03b-time-of-day-and-acceptance.md) (khung giờ, từ không hiểu, dòng "Try:", Recents màn rộng). Phần
+còn lại của file này **chưa viết** — xem [README — Việc còn nợ](../../README.md#6-việc-còn-nợ).

@@ -21,7 +21,7 @@ Quản lý album, Creations, sắp xếp và kéo thả: [FS-06.01b](01b-album-m
 
 1. **Hàng hero** — thẻ On This Day co giãn bên trái, cột Recents bên phải
 2. **Pinned**
-3. Memories · People and Pets · Smart Albums · My Albums · Shared Albums (tile cover)
+3. People and Pets · Smart Albums · My Albums · Shared Albums (tile cover)
 4. **Media Types**
 5. **Utilities**
 
@@ -58,7 +58,6 @@ lên đáy cover** (tối đa 2 dòng), **một hàng cuộn ngang**.
 - Ảnh bìa xin theo **đúng cỡ tile**, không xin 44pt rồi phóng to.
 - **Lớp làm tối sau tên được đo chứ không đặt sẵn**: đo độ sáng trung bình của dải đáy (42% chiều cao) bằng
   một lần vẽ thu về một điểm ảnh lúc cover về; sáng thì bật lớp tối, **đọc không được thì cứ bật** (có test).
-- Thẻ **Memory** to theo (360×208) vì nó là cùng một loại thứ.
 - Cover được phép to ra ở màn rộng dù luật chung cấm phóng to — ba điều kiện phải thoả nằm ở `DESIGN.md`.
 
 **Smart Albums** là một mục duy nhất: smart album **do người dùng tạo** (glyph cái phễu khi chưa có cover)
@@ -115,7 +114,7 @@ API** — bảng phân loại album của hệ thống không có mục nào cho
   vào cuối**.
 - **Pinned** lưu một danh sách **chuỗi có tiền tố** (`album:…`, `smart:…`, `utility:…`) để chứa được cả
   album, smart album lẫn công cụ đúng thứ tự người dùng ghim. Ghim không tìm thấy thì **bỏ qua im lặng**
-  (album có thể đã bị xoá trong Photos). Mục Pinned nằm trên cùng, trên cả Memories; mọi tile đều có
+  (album có thể đã bị xoá trong Photos). Mục Pinned nằm trên cùng; mọi tile đều có
   "Pin to Top" / "Unpin" trong menu giữ-lâu.
 
 ## 7. Tiêu chí nghiệm thu

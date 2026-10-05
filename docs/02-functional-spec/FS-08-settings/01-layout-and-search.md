@@ -1,7 +1,7 @@
 # FS-08.01 — Bố cục theo bề rộng và tìm kiếm
 
 `FS-08.01` · `Features/Settings/SettingsLayout.swift` · `SettingsSearchIndex`
-· test `SettingsLayoutTests` · `SettingsSearchTests` · cập nhật 2026-09-22
+· test `SettingsLayoutTests` · `SettingsSearchTests` · cập nhật 2026-10-03
 
 **Một câu:** một cột ở màn hẹp, hai cột ở màn rộng, và một ô tìm kiếm chạy **theo từng hàng** ở cả hai.
 
@@ -11,7 +11,7 @@
   không phải một câu `if` nằm trong phần vẽ.
 - Bề rộng chưa xác định thì **rơi về một cột**, không đoán.
 - Hai bố cục dựng từ **cùng một danh sách mục**.
-- **Bố cục hẹp không đổi một dòng nào** so với trước khi có hai cột.
+- Ở bố cục hẹp trang gốc là **danh sách mục** mở trang con; kiểu hàng, thẻ thư viện và trang gốc ở [01b](01b-rows-and-root.md).
 
 ## 2. Hai bố cục
 
@@ -39,9 +39,7 @@ thoại, trong khi Settings của chính iPadOS ở đúng bề rộng đó đan
 | 8 | Camera Database | Camera Database |
 | 9 | Support | Support |
 
-- **Chỉ cột mục mới có biểu tượng**; bố cục hẹp vẫn là các nhóm có tiêu đề chữ. Biểu tượng vẽ theo kiểu phân
-  tầng, màu accent, **không** có nền bo tròn kiểu Settings hệ thống — app không có bộ icon màu riêng cho
-  từng mục, và một dãy chín ô xám sẽ ồn hơn là giúp.
+- Mọi hàng mục có **ô biểu tượng màu theo nhóm** và một dòng giá trị, ở cả hai bố cục ([01b §2](01b-rows-and-root.md)).
 - Library Size và Privacy **không** là mục riêng: cái đầu là hai hàng số đọc xong là thôi, cái sau là một
   đoạn giải thích cộng một nút phá huỷ — cả hai nằm cuối **Photo Library**.
 - Chín mục gom lại để **vừa một màn 669pt** (màn trong Duo) mà không phải cuộn.

@@ -1,0 +1,19 @@
+{
+  "D1": {
+    "verdict": "ok"
+  },
+  "D2": {
+    "verdict": "ok"
+  },
+  "D3": {
+    "verdict": "ok",
+    "option": "b"
+  },
+  "D4": {
+    "verdict": "not_ok",
+    "comment": "không hiểu câu hoi"
+  },
+  "D5": {
+    "verdict": "ok"
+  }
+}

@@ -1,0 +1,275 @@
+{
+  "title": "FS-17.06 — Sửa và xuất ảnh trên server",
+  "context": "Spec FS-17.06 (AC-52…70): ảnh trong folder On Local Network / On Cloud có menu như album (Edit, Share, Copy, Paste Edits, Combine, Collage, Video, Resize, Export EXIF). Bản gốc được tải về máy làm bản tạm, lúc xuất hỏi 4 nơi lưu.\nĐiểm nghẽn trong code: editor, collage, video, combine và resize chỉ nhận PHAsset. Editor chỉ bám PHAsset ở lớp session (PhotoEditingService.swift:22-41, :115, :207); từ lúc có file tạm trở đi, mọi thứ đã chạy trên file URL (PhotoRenderService là actor nhận URL).\nPhía server đã có sẵn RemoteFileClient (download/upload/move/remove) cho SMB, SFTP, WebDAV và Files, ServerUploadPath (_edited, (2)), cách ghi .part rồi kiểm SHA, và TemporaryWorkspace dọn thư mục tạm lúc khởi động.",
+  "pages": [
+    {
+      "id": "source",
+      "title": "Nguồn ảnh từ file",
+      "intro": "Các công cụ nhận ảnh không nằm trong Photos bằng cách nào, và làm trong mấy đợt.",
+      "decisions": [
+        {
+          "id": "D1",
+          "title": "Editor và các công cụ nhận ảnh server bằng cách nào",
+          "importance": "critical",
+          "why": "Đây là quyết định kiến trúc của cả tính năng. Chọn tạm-asset thì mọi ảnh đều đi qua Photos: iCloud đồng bộ nó lên, và xoá thì hệ thống bật hộp xác nhận, ảnh còn nằm 30 ngày trong Recently Deleted. Như vậy trái đúng điều người dùng muốn là không để lại bản sao trong library.",
+          "proposal": "Thêm một nguồn ảnh dạng file. Phiên sửa ảnh có hai loại: từ PHAsset như hiện nay, hoặc từ file tạm đã tải về. Từ bước có file tạm trở đi, editor, render, mask và lens profile dùng chung code. Những chỗ cần PHAsset (revert, Live Photo, adjustment data, ngày chụp khi Save Copy) chuyển sang đọc EXIF của file, hoặc ẩn đi.",
+          "options": [
+            {
+              "id": "file-source",
+              "label": "Nguồn dạng file (song song với PHAsset)",
+              "pros": ["Không đụng library", "Editor phía sau loadSource đã chạy trên file URL", "Mở đường cho Files và share extension sau này"],
+              "cons": ["Phải sửa lớp session ở 6 công cụ", "Phải kiểm từng chỗ đọc asset.pixelWidth / canPerform / creationDate"],
+              "effort": "L",
+              "recommended": true
+            },
+            {
+              "id": "temp-asset",
+              "label": "Tạo asset tạm trong Photos, xuất xong thì xoá",
+              "pros": ["Gần như không sửa code công cụ nào"],
+              "cons": ["Mỗi lần xoá hệ thống hỏi xác nhận", "iCloud đẩy lên rồi lại xoá; Recently Deleted giữ 30 ngày", "Quyền .limited: asset mới có thể không đọc lại được"],
+              "effort": "M"
+            },
+            {
+              "id": "hybrid",
+              "label": "Editor dùng nguồn file, collage/video/combine dùng asset tạm",
+              "pros": ["Editor sạch, ba công cụ kia rẻ"],
+              "cons": ["Một khái niệm hai cách làm", "Vẫn dính hộp xác nhận xoá cho collage và video"],
+              "effort": "M"
+            }
+          ],
+          "tasks": [
+            "Phiên sửa ảnh nguồn file (tách PHAsset khỏi PhotoEditingSession) — Data/Sources/PhotoEditingService.swift",
+            "Controller và EditorSession nhận nguồn file, draft keyed theo connection+đường dẫn — Features/Editing/PhotoEditorController.swift, EditorSession.swift",
+            "Preloader và batch saver chạy được trên nguồn file — EditorPreviewPreloader.swift, EditorBatchSaver.swift"
+          ]
+        },
+        {
+          "id": "D2",
+          "title": "Làm trong mấy đợt",
+          "importance": "critical",
+          "why": "Collage, Video Studio và Combine (focus stack, panorama) mỗi cái bám PHAsset theo một kiểu riêng. Video Studio còn khoá clip theo assetID và requestAVAsset. Làm hết một lần thì 3 tuần không có gì dùng được, và rủi ro dồn vào một commit lớn.",
+          "proposal": "Hai đợt trong cùng intent. Đợt 1: menu, tải tạm, Edit một tấm và cả loạt, Paste Edits, Resize, Share, Copy, Export EXIF, sheet xuất. Đợt 2: Create Collage, Create Video, Combine Photos (AC-67). Trong đợt 1 ba mục này chưa có trong menu, chứ không hiện rồi mờ.",
+          "options": [
+            {
+              "id": "two-phases",
+              "label": "Hai đợt: editor và nhóm file trước, collage/video/combine sau",
+              "pros": ["Đợt 1 dùng được ngay và kiểm được D1", "Đợt 2 dùng lại nguồn file đã chạy thật"],
+              "cons": ["Menu đợt 1 ít hơn menu album 3 mục"],
+              "effort": "L + M",
+              "recommended": true
+            },
+            {
+              "id": "all-at-once",
+              "label": "Làm hết một lần",
+              "pros": ["Menu đủ ngay từ đầu"],
+              "cons": ["Lâu mới có gì chạy được", "Sai ở D1 thì sửa 6 chỗ một lúc"],
+              "effort": "L+"
+            }
+          ],
+          "tasks": [
+            "Ghi đợt vào spec §2 và bảng AC (AC-67 sang đợt 2) — docs/02-functional-spec/FS-17-import-from-server/06-edit-and-export.md"
+          ]
+        },
+        {
+          "id": "D3",
+          "title": "Tải về bản tạm",
+          "importance": "important",
+          "why": "ServerDownloadSession hiện luôn ghi vào Photos rồi xoá file (ServerDownloadSession.swift:153-200). Sửa nó thì dễ làm hỏng Import đang chạy tốt; viết lại từ đầu thì có hai cách kiểm file.",
+          "proposal": "Tách bước tải + kiểm của một ảnh (theo khối, số byte, ImageIO mở được, SHA khi biết) thành một hàm Domain dùng chung. Import gọi nó rồi ghi Photos; bản tạm gọi nó rồi dừng. Thư mục tạm có tiền tố ShotDexServerEdit-, đăng ký vào TemporaryWorkspace để được dọn lúc khởi động. Kiểm chỗ trống dùng lại spaceShortfall (ước tính + 1 GB).",
+          "tasks": [
+            "Tách fetch+verify dùng chung — Domain/ServerImport/ServerDownloadSession.swift",
+            "Phiên tải bản tạm: tiến độ, Cancel, kiểm chỗ trống — Domain/ServerImport/ (mới)",
+            "Thêm tiền tố và test sweep — Core/Utils/TemporaryWorkspace.swift"
+          ]
+        },
+        {
+          "id": "D4",
+          "title": "Đích Photos Library lưu thành gì",
+          "importance": "important",
+          "why": "Spec đang ghi 'như Save Copy'. Nhưng Save Copy của editor đưa cả bản gốc vào làm base, kèm adjustment data (PhotoEditingService.swift:303-331). Với ảnh server, bản gốc RAW 60 MB sẽ vào library, mà điều này người dùng không muốn.",
+          "proposal": "Asset phẳng, chỉ gồm bản render JPEG/HEIC, giống kết quả Resize (createFlatAsset). Ngày chụp và vị trí lấy từ EXIF của file gốc. Spec §6 đổi 'như Save Copy' thành câu này.",
+          "options": [
+            {
+              "id": "flat",
+              "label": "Asset phẳng: chỉ bản render",
+              "pros": ["Library không nhận bản gốc RAW", "Đúng ý 'lưu tạm, xuất xong là xong'"],
+              "cons": ["Mở lại trong ShotDex không thấy slider cũ, không Revert được"],
+              "effort": "S",
+              "recommended": true
+            },
+            {
+              "id": "save-copy",
+              "label": "Như Save Copy: bản gốc + render + recipe",
+              "pros": ["Sửa tiếp và Revert được trong Photos"],
+              "cons": ["Bản gốc (có khi là RAW) vào library", "Recipe còn sống sau khi xuất, trái luật 'xoá sau khi xuất'"],
+              "effort": "M"
+            }
+          ],
+          "tasks": [
+            "Lưu asset phẳng từ file render + EXIF gốc — Data/Sources/PhotoEditingService.swift (createFlatAsset)",
+            "Sửa câu §6 hàng Photos Library — docs/.../06-edit-and-export.md"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "export",
+      "title": "Xuất về server",
+      "intro": "Ghi file lên server bằng code nào, có ghi lịch sử không, và 'chỉ đọc' nhận biết ra sao.",
+      "decisions": [
+        {
+          "id": "D5",
+          "title": "Ghi lên server bằng code nào",
+          "importance": "critical",
+          "why": "ServerUploadSession khoá mọi item theo assetId: ServerUploadItem, AssetFileExporting và dòng lịch sử (ServerUploadSession.swift:4-14, :273-283). Bản render từ ảnh server không có assetId. Nới session đó ra thì upload FS-15, vốn đã có 40 AC, dễ bị hỏng theo.",
+          "proposal": "Viết một bộ ghi nhỏ trong Domain cho file cục bộ: tạo folder thiếu, tên _edited theo ServerUploadPath.editedFilename, trùng thì nextFreeName (2), ghi .shotdex-part, đọc lại SHA, rồi move. Replace Original: xoá bản gốc rồi move, sau khi người dùng đã xác nhận. Bộ ghi dùng lại RemoteFileClient và ServerUploadPath, không đụng ServerUploadSession.",
+          "options": [
+            {
+              "id": "small-writer",
+              "label": "Bộ ghi file cục bộ riêng, dùng lại path và client",
+              "pros": ["Không chạm luồng upload FS-15", "Test được bằng client giả, như ServerUploadSession"],
+              "cons": ["Bước .part → SHA → move có hai bản (khoảng 40 dòng)"],
+              "effort": "M",
+              "recommended": true
+            },
+            {
+              "id": "generalize-upload",
+              "label": "Nới ServerUploadSession cho item không có assetId",
+              "pros": ["Một chỗ duy nhất cho .part/verify"],
+              "cons": ["Đổi kiểu item và exporter, lịch sử phải nullable (cần migration)", "Có nguy cơ làm hỏng 40 AC FS-15"],
+              "effort": "L"
+            }
+          ],
+          "tasks": [
+            "Bộ ghi file cục bộ lên server + test với client giả — Domain/ServerImport/ (mới), ShotDexTests/ServerEditExportTests.swift"
+          ]
+        },
+        {
+          "id": "D6",
+          "title": "Ghi lịch sử upload cho file xuất",
+          "importance": "important",
+          "why": "Spec §6 ghi 'ghi lịch sử upload để lưới hiện dấu'. Nhưng dòng lịch sử cần assetId, và dấu In Library nghĩa là 'asset còn trong thư viện'. File xuất từ server không có asset nào.",
+          "proposal": "Không ghi lịch sử. Bỏ câu đó khỏi spec §6. Lưới tải lại folder nên file mới vẫn hiện ra.",
+          "options": [
+            {
+              "id": "no-history",
+              "label": "Không ghi, sửa spec",
+              "pros": ["Không cần migration", "Dấu In Library giữ đúng nghĩa"],
+              "cons": ["Utilities → Uploaded from This Device không liệt kê các file này"],
+              "effort": "S",
+              "recommended": true
+            },
+            {
+              "id": "nullable-asset",
+              "label": "Cho assetId rỗng trong bảng lịch sử (migration)",
+              "pros": ["Có dấu vết mọi lần ghi lên server"],
+              "cons": ["Migration trên bảng đang có dữ liệu", "Phải sửa mọi truy vấn In Library cho khỏi dính dòng rỗng"],
+              "effort": "M"
+            }
+          ],
+          "tasks": ["Bỏ câu 'ghi lịch sử upload' ở §6 — docs/.../06-edit-and-export.md"]
+        },
+        {
+          "id": "D7",
+          "title": "Nhận biết folder 'chỉ đọc'",
+          "importance": "important",
+          "why": "Spec §6 và AC-65 muốn Original Folder mờ khi connection chỉ đọc. Nhưng code không có cờ chỉ đọc (ServerBrowserModel.swift:208-215): canEdit chỉ là 'không ở gốc SMB', và lỗi quyền chỉ lộ ra khi ghi thật (permissionDenied).",
+          "proposal": "Không thử ghi trước. Original Folder chỉ mờ khi biết chắc: đang ở gốc SMB, hoặc folder Files không ghi được (hệ thống báo qua bookmark). Còn lại, lỗi quyền lúc ghi hiện ở đúng đích đó ('You can't write to this folder') kèm Choose Another Folder, và bản tạm vẫn được giữ. AC-65 đổi theo.",
+          "options": [
+            {
+              "id": "fail-late",
+              "label": "Không thử trước; lỗi quyền báo ở đích, có Choose Another Folder",
+              "pros": ["Mở sheet không ghi gì lên server", "Không tốn một vòng mạng"],
+              "cons": ["Người dùng chỉ biết sau khi bấm Export"],
+              "effort": "S",
+              "recommended": true
+            },
+            {
+              "id": "probe",
+              "label": "Mở sheet là thử ghi rồi xoá một file .shotdex-probe",
+              "pros": ["Hàng mờ trước khi bấm"],
+              "cons": ["Chỉ mở sheet đã ghi lên server", "Chậm thêm một vòng mạng; NAS có log ghi"],
+              "effort": "M"
+            }
+          ],
+          "tasks": ["Sửa §6 và AC-65 — docs/.../06-edit-and-export.md", "Thông báo lỗi quyền + Choose Another Folder — sheet xuất"]
+        },
+        {
+          "id": "D8",
+          "title": "Chọn folder khác",
+          "importance": "minor",
+          "proposal": "Dùng lại màn duyệt server ở chế độ chọn folder (ServerBrowserModel mode .chooseFolder) như sheet upload, kèm danh sách connection từ FileServerCatalog."
+        }
+      ]
+    },
+    {
+      "id": "ui",
+      "title": "Menu, editor, sheet",
+      "intro": "Tên lệnh lấy từ đâu, editor thay nút lưu thế nào, tiến độ tải hiện ở đâu.",
+      "decisions": [
+        {
+          "id": "D9",
+          "title": "Một nguồn cho tên và glyph của lệnh",
+          "importance": "important",
+          "why": "AC-53 đòi menu server trùng menu album. Nếu chép chữ sang ServerBrowserScreen thì lần sau đổi tên ở album, bên server sẽ lệch mà không ai biết (component-consistency).",
+          "proposal": "Tách định nghĩa lệnh (tên, glyph, thứ tự) ra một chỗ chung. SelectionBarViews của album và menu server cùng đọc từ đó, và test so hai danh sách bằng cách duyệt qua chúng.",
+          "options": [
+            {
+              "id": "shared-defs",
+              "label": "Định nghĩa lệnh dùng chung",
+              "pros": ["Đổi một chỗ là hai menu đổi theo", "Test lặp qua danh sách được"],
+              "cons": ["Phải chạm SelectionBarViews của album (rủi ro thấp: chỉ đổi nơi lấy chữ)"],
+              "effort": "S",
+              "recommended": true
+            },
+            {
+              "id": "copy-strings",
+              "label": "Chép tên sang menu server",
+              "pros": ["Không đụng album"],
+              "cons": ["Hai bản chữ, sẽ lệch dần"],
+              "effort": "S"
+            }
+          ],
+          "tasks": ["Định nghĩa lệnh dùng chung — Features/Library/SelectionBarViews.swift + Features/Shared/ (mới)", "Menu nhấn giữ, ⋯ chế độ chọn, viewer — Features/ServerImport/ServerBrowserScreen.swift"]
+        },
+        {
+          "id": "D10",
+          "title": "Tiến độ tải hiện ở đâu",
+          "importance": "important",
+          "why": "Tải loạt 12 RAW trên SMB mất vài phút. Nếu tiến độ chỉ là một vòng xoay trên lưới thì người dùng tưởng app treo; còn một sheet thì che lưới trong lúc chờ.",
+          "proposal": "Một sheet nhỏ (tier A) cùng khuôn với tiến độ Import: 'Downloading 3 of 12', byte, Cancel có hỏi, giữ màn hình sáng. Tải xong thì sheet đóng và editor mở.",
+          "options": [
+            {
+              "id": "sheet",
+              "label": "Sheet tiến độ như Import",
+              "pros": ["Cùng khuôn với FS-17.02, người dùng đã quen", "Cancel và giữ màn sáng có sẵn"],
+              "cons": ["Che lưới trong lúc tải"],
+              "effort": "S",
+              "recommended": true
+            },
+            {
+              "id": "inline",
+              "label": "Thanh tiến độ trên lưới",
+              "pros": ["Vẫn xem được lưới"],
+              "cons": ["Thêm một kiểu tiến độ thứ hai", "Chạm vào lưới lúc đang tải thì sao: phải thêm luật"],
+              "effort": "M"
+            }
+          ],
+          "tasks": ["Sheet tiến độ bản tạm — Features/ServerImport/ (mới)"]
+        },
+        {
+          "id": "D11",
+          "title": "Nút lưu của editor khi nguồn là file",
+          "importance": "minor",
+          "proposal": "Save Copy / Save Changes thay bằng Export…. Loạt nhiều ảnh: Export… xuất mọi ảnh đã sửa. Cancel khi có sửa thì hỏi Discard edits?. Menu ⋯ của editor ẩn Revert và Live Photo."
+        },
+        {
+          "id": "D12",
+          "title": "Share và Copy",
+          "importance": "minor",
+          "proposal": "Share đưa file tạm (URL) vào PhotoShareSheet.present(items:), vốn đã nhận URL, và dùng lại luật bỏ GPS. Copy đặt ảnh giải mã (tối đa 4096 px) lên pasteboard. Xong thì xoá bản tạm."
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,268 @@
+{
+  "D1": {
+    "verdict": "ok"
+  },
+  "D2": {
+    "verdict": "ok",
+    "option": "a"
+  },
+  "D3": {
+    "verdict": "ok",
+    "option": "c"
+  },
+  "D4": {
+    "verdict": "ok"
+  },
+  "D5": {
+    "verdict": "ok"
+  },
+  "D6": {
+    "verdict": "ok"
+  },
+  "D7": {
+    "verdict": "ok"
+  },
+  "D8": {
+    "verdict": "ok"
+  },
+  "D9": {
+    "verdict": "ok"
+  },
+  "D10": {
+    "verdict": "ok"
+  },
+  "D11": {
+    "verdict": "ok"
+  },
+  "D12": {
+    "verdict": "ok",
+    "option": "b"
+  },
+  "D13": {
+    "verdict": "ok"
+  },
+  "D14": {
+    "verdict": "ok"
+  },
+  "D15": {
+    "verdict": "ok"
+  },
+  "D16": {
+    "verdict": "ok"
+  },
+  "D17": {
+    "verdict": "ok"
+  },
+  "D18": {
+    "verdict": "ok",
+    "option": "a"
+  },
+  "D19": {
+    "verdict": "ok"
+  },
+  "D20": {
+    "verdict": "not_ok",
+    "comment": "không cần màn hình Manage Looks nên không cần cho vào ⋯ \nở màn hình presets, My looks hay LUT, hold vào bất kỳ cái nào cũng sẽ hiện option rename, share, export as và delete. Option delete k hiện ở những preset có sẵn trong app.\n"
+  },
+  "D21": {
+    "verdict": "ok"
+  },
+  "D22": {
+    "verdict": "not_ok",
+    "comment": "bo góc 6"
+  },
+  "D23": {
+    "verdict": "ok",
+    "option": "a"
+  },
+  "D24": {
+    "verdict": "not_ok",
+    "comment": "khoá iPhone chỉ dọc, editor cũng k xoay, chỉ dọc thôi"
+  },
+  "D25": {
+    "verdict": "not_ok",
+    "comment": "khoá iPhone chỉ dọc, editor cũng k xoay, chỉ dọc thôi"
+  },
+  "D26": {
+    "verdict": "not_ok",
+    "comment": "khoá iPhone chỉ dọc, editor cũng k xoay, chỉ dọc thôi"
+  },
+  "D27": {
+    "verdict": "not_ok",
+    "comment": "khoá iPhone chỉ dọc, editor cũng k xoay, chỉ dọc thôi"
+  },
+  "D28": {
+    "verdict": "not_ok",
+    "comment": "khoá iPhone chỉ dọc, editor cũng k xoay, chỉ dọc thôi"
+  },
+  "D29": {
+    "verdict": "ok"
+  },
+  "D30": {
+    "verdict": "ok"
+  },
+  "D31": {
+    "verdict": "ok",
+    "option": "a"
+  },
+  "D32": {
+    "verdict": "not_ok",
+    "comment": "✓ và ✕ button phải hiện ở chỗ thanh công cụ chiều dọc ở Duo, nên sẽ k có ô chết"
+  },
+  "D33": {
+    "verdict": "ok"
+  },
+  "D34": {
+    "verdict": "ok",
+    "option": "b"
+  },
+  "D35": {
+    "verdict": "ok"
+  },
+  "D36": {
+    "verdict": "ok"
+  },
+  "D37": {
+    "verdict": "ok"
+  },
+  "D38": {
+    "verdict": "not_ok",
+    "comment": "dùng Import XMP Preset\nExport XMP Preset\nrồi có câu giải thích ngắn kiểu: \"Export presets in XMP format for use with Adobe Lightroom.\""
+  },
+  "D39": {
+    "verdict": "ok",
+    "option": "b"
+  },
+  "D40": {
+    "verdict": "ok",
+    "option": "b"
+  },
+  "D41": {
+    "verdict": "ok",
+    "option": "c"
+  },
+  "D42": {
+    "verdict": "ok"
+  },
+  "D43": {
+    "verdict": "ok",
+    "option": "a"
+  },
+  "D44": {
+    "verdict": "ok"
+  },
+  "D45": {
+    "verdict": "not_ok",
+    "comment": "không cho phép share nhiều Look cùng một lúc nữa, nên chỉ cần .shotdexlook"
+  },
+  "D46": {
+    "verdict": "ok",
+    "option": "b"
+  },
+  "D47": {
+    "verdict": "ok"
+  },
+  "D48": {
+    "verdict": "ok",
+    "comment": "không nhận, chỉ cho phép share 1 lần 1 look"
+  },
+  "D49": {
+    "verdict": "ok"
+  },
+  "D50": {
+    "verdict": "ok",
+    "option": "a"
+  },
+  "D51": {
+    "verdict": "ok"
+  },
+  "D52": {
+    "verdict": "ok"
+  },
+  "D53": {
+    "verdict": "ok",
+    "option": "A"
+  },
+  "D54": {
+    "verdict": "ok"
+  },
+  "D55": {
+    "verdict": "ok"
+  },
+  "D56": {
+    "verdict": "ok"
+  },
+  "D57": {
+    "verdict": "ok"
+  },
+  "D58": {
+    "verdict": "ok"
+  },
+  "D59": {
+    "verdict": "ok",
+    "option": "A"
+  },
+  "D60": {
+    "verdict": "ok"
+  },
+  "D61": {
+    "verdict": "ok"
+  },
+  "D62": {
+    "verdict": "ok",
+    "option": "B"
+  },
+  "D63": {
+    "verdict": "ok",
+    "option": "A"
+  },
+  "D64": {
+    "verdict": "ok",
+    "option": "B"
+  },
+  "D65": {
+    "verdict": "ok"
+  },
+  "D66": {
+    "verdict": "not_ok",
+    "comment": "tạm bỏ nếu apple chưa hỗ trờ model nào"
+  },
+  "D67": {
+    "verdict": "ok"
+  },
+  "D68": {
+    "verdict": "ok",
+    "option": "B"
+  },
+  "D69": {
+    "verdict": "ok",
+    "option": "C"
+  },
+  "D70": {
+    "verdict": "ok"
+  },
+  "D71": {
+    "verdict": "ok"
+  },
+  "D72": {
+    "verdict": "ok",
+    "option": "B"
+  },
+  "D73": {
+    "verdict": "ok",
+    "option": "A"
+  },
+  "D74": {
+    "verdict": "ok",
+    "option": "A"
+  },
+  "D75": {
+    "verdict": "ok"
+  },
+  "D76": {
+    "verdict": "ok"
+  },
+  "D77": {
+    "verdict": "ok"
+  }
+}
