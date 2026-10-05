@@ -55,6 +55,37 @@ import Testing
         #expect(try Self.fingerprint(root) == before)
     }
 
+    /// AC-3: a folder with 100 files at the top and 3 subfolders of 50 each,
+    /// added with Include Subfolders off, is 100 photos. Turning it on reads
+    /// exactly the 150 new files; the 100 already read are not opened again.
+    @Test func subfoldersToggleReadsOnlyDelta() throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent("Delta-\(UUID().uuidString)", isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let jpeg = try MetadataFixture.encode(.jpeg, options: MetadataFixture.Options())
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        for n in 0..<100 { try jpeg.write(to: root.appendingPathComponent("TOP_\(n).JPG")) }
+        for folder in ["A", "B", "C"] {
+            let sub = root.appendingPathComponent(folder, isDirectory: true)
+            try FileManager.default.createDirectory(at: sub, withIntermediateDirectories: true)
+            for n in 0..<50 { try jpeg.write(to: sub.appendingPathComponent("\(folder)_\(n).JPG")) }
+        }
+        let database = try AppDatabase.makeEmpty()
+        let sources = SourceStore(database: database)
+        let sourceId = try sources.addFolder(name: "Delta", bookmark: Data(), includesSubfolders: false, pairsRawAndJpeg: true)
+        let indexer = FolderSourceIndexer(database: database, composer: Self.composer)
+
+        let first = try indexer.index(sourceId: sourceId, root: root, includesSubfolders: false, pairsRawAndJpeg: true)
+        #expect(first == FolderSourceIndexer.Summary(photos: 100, unchanged: 0))
+
+        try sources.setIncludesSubfolders(true, sourceId: sourceId)
+        let source = try #require(try sources.sources().first { $0.id == sourceId })
+        #expect(source.includesSubfolders)
+        let second = try indexer.index(sourceId: sourceId, root: root, includesSubfolders: source.includesSubfolders, pairsRawAndJpeg: true)
+        #expect(second == FolderSourceIndexer.Summary(photos: 150, unchanged: 100))
+        let total = try database.reader.read { db in try Int.fetchOne(db, sql: "SELECT COUNT(*) FROM photo_copies WHERE sourceId = ?", arguments: [sourceId]) }
+        #expect(total == 250)
+    }
+
     /// Path → SHA-256 of every file under `root`, hidden ones included.
     static func fingerprint(_ root: URL) throws -> [String: String] {
         var out: [String: String] = [:]

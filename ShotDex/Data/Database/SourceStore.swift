@@ -29,6 +29,15 @@ struct SourceStore: Sendable {
         return id
     }
 
+    /// Include Subfolders, changed in Settings › Sources (FS-19.01 §2). The
+    /// next read only opens files it has not seen: the rest are matched by
+    /// path, size and date.
+    func setIncludesSubfolders(_ on: Bool, sourceId: String) throws {
+        try database.writer.write { db in
+            try db.execute(sql: "UPDATE sources SET subfolder = ? WHERE id = ?", arguments: [on ? "all" : "top", sourceId])
+        }
+    }
+
     func sources() throws -> [Source] {
         try database.reader.read { db in
             try Row.fetchAll(db, sql: "SELECT * FROM sources ORDER BY createdAt, id").map {
