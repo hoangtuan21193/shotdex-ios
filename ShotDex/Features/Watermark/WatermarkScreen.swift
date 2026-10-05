@@ -168,6 +168,7 @@ struct WatermarkScreen: View {
 
     private func presetChip(_ preset: SignaturePreset) -> some View {
         let selected = model.isEnabled && model.selectedPreset?.id == preset.id
+        let availability = model.availability(of: preset)
         return Button {
             model.choose(preset)
         } label: {
@@ -175,15 +176,26 @@ struct WatermarkScreen: View {
                 Text(preset.name)
                     .font(.system(size: 14, weight: .medium))
                     .foregroundStyle(selected ? .white : .white.opacity(0.85))
-                Text(WatermarkCopy.contents(of: preset))
+                Text(WatermarkCopy.chipDetail(preset, availability: availability))
                     .font(.system(size: 11))
             }
             .padding(.horizontal, 14)
             .frame(minHeight: 48)
         }
         .buttonStyle(CompressionChoiceStyle(selected: selected, accent: accent))
-        .accessibilityLabel(preset.name)
+        .disabled(!availability.isSelectable)
+        .opacity(availability.isSelectable ? 1 : 0.45)
+        .accessibilityLabel(WatermarkScreen.presetLabel(preset, availability))
         .accessibilityAddTraits(selected ? .isSelected : [])
+    }
+
+    /// `Logo, Missing file` — the chip's name and why it is limited.
+    static func presetLabel(_ preset: SignaturePreset, _ availability: WatermarkAvailability) -> String {
+        switch availability {
+        case .available: preset.name
+        case .missingFile: "\(preset.name), \(WatermarkCopy.missingFile())"
+        case .fontUnavailable: "\(preset.name), \(WatermarkCopy.unavailable())"
+        }
     }
 
     private func positionGrid(cell: CGSize, gap: CGFloat, radius: CGFloat) -> some View {
@@ -534,6 +546,7 @@ private struct WatermarkInspector: View {
 
     private func presetRow(_ preset: SignaturePreset) -> some View {
         let selected = model.isEnabled && model.selectedPreset?.id == preset.id
+        let availability = model.availability(of: preset)
         return Button {
             model.choose(preset)
         } label: {
@@ -545,17 +558,27 @@ private struct WatermarkInspector: View {
                     .frame(width: 22)
                 VStack(alignment: .leading, spacing: 0) {
                     Text(preset.name).font(.system(size: 17)).foregroundStyle(.white)
-                    Text(WatermarkCopy.contents(of: preset)).font(.system(size: 13)).foregroundStyle(EditorTheme.secondaryText)
+                    Text(WatermarkCopy.chipDetail(preset, availability: availability))
+                        .font(.system(size: 13))
+                        .foregroundStyle(EditorTheme.secondaryText)
                 }
                 Spacer(minLength: 0)
+                if !availability.isSelectable {
+                    Image(systemName: "exclamationmark.triangle")
+                        .font(.system(size: 15))
+                        .foregroundStyle(.yellow)
+                        .accessibilityHidden(true)
+                }
             }
             .padding(.horizontal, AppTheme.Spacing.sm)
             .frame(height: 52)
             .background(selected ? EditorTheme.chipSelected.opacity(0.6) : .clear, in: RoundedRectangle.app(AppTheme.Radius.md))
             .contentShape(Rectangle())
+            .opacity(availability.isSelectable ? 1 : 0.45)
         }
         .buttonStyle(.plain)
-        .accessibilityLabel(preset.name)
+        .disabled(!availability.isSelectable)
+        .accessibilityLabel(WatermarkScreen.presetLabel(preset, availability))
         .accessibilityAddTraits(selected ? .isSelected : [])
     }
 

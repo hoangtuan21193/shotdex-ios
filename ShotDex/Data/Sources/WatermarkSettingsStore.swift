@@ -71,17 +71,26 @@ final class WatermarkSettingsStore {
         }
     }
 
-    /// The preset the forms point at, if it still exists. A preset deleted
-    /// since is no preset — the row reads Off, never a silent substitute.
-    func formPreset(in presets: [SignaturePreset]) -> SignaturePreset? {
-        guard let id = settings.presetID else { return nil }
-        return presets.first { $0.id == id }
+    /// The preset the forms point at, if it still exists and can be stamped.
+    /// A preset deleted since, or whose logo file is gone, is no preset — the
+    /// row reads Off, never a silent substitute (FS-05.04 §5).
+    func formPreset(
+        in presets: [SignaturePreset],
+        isSelectable: (SignaturePreset) -> Bool = { _ in true }
+    ) -> SignaturePreset? {
+        guard let id = settings.presetID, let preset = presets.first(where: { $0.id == id }),
+              isSelectable(preset)
+        else { return nil }
+        return preset
     }
 
     /// What a form stamps, before tokens: nil when the watermark is off or its
-    /// preset is gone.
-    func formStamp(in presets: [SignaturePreset]) -> WatermarkStamp? {
-        guard settings.isEnabled, let preset = formPreset(in: presets) else { return nil }
+    /// preset is gone or unusable.
+    func formStamp(
+        in presets: [SignaturePreset],
+        isSelectable: (SignaturePreset) -> Bool = { _ in true }
+    ) -> WatermarkStamp? {
+        guard settings.isEnabled, let preset = formPreset(in: presets, isSelectable: isSelectable) else { return nil }
         return WatermarkStamp(preset: preset, placement: settings.placement)
     }
 }

@@ -119,6 +119,23 @@ enum WatermarkCopy {
         String(localized: "Cancel", table: table, locale: locale, comment: "Alert button")
     }
 
+    static func missingFile(locale: Locale = .current) -> String {
+        String(localized: "Missing file", table: table, locale: locale, comment: "Watermark preset chip: its logo image is gone; it cannot be chosen")
+    }
+
+    static func unavailable(locale: Locale = .current) -> String {
+        String(localized: "Unavailable", table: table, locale: locale, comment: "Watermark preset chip: its typeface is gone from this device; a fallback is used")
+    }
+
+    /// The line under a preset's name: what it holds, or why it is limited.
+    static func chipDetail(_ preset: SignaturePreset, availability: WatermarkAvailability, locale: Locale = .current) -> String {
+        switch availability {
+        case .available: contents(of: preset, locale: locale)
+        case .missingFile: missingFile(locale: locale)
+        case .fontUnavailable: unavailable(locale: locale)
+        }
+    }
+
     /// What a preset is made of, under its name: `Text + logo`.
     static func contents(of preset: SignaturePreset, locale: Locale = .current) -> String {
         var parts: [String] = []

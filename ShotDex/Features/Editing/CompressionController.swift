@@ -41,6 +41,8 @@ final class CompressionController {
     /// Token values of one photo, from the index — the same source the editor
     /// resolves `{camera}` from.
     @ObservationIgnored private let tokenValues: @MainActor (String) -> OverlayTokenValues
+    /// Whether a logo file is still there (FS-05.04 §5).
+    @ObservationIgnored let imageExists: (UUID) -> Bool
     @ObservationIgnored private var operations: ResizeOperations!
     private var previewSession: PhotoEditingSession?
     private var previewSource: LoadedPhotoEditSource?
@@ -106,7 +108,8 @@ final class CompressionController {
         availableBytes: @escaping @Sendable () -> Int64? = { DiskSpace.availableBytes() },
         watermarkSettings: WatermarkSettingsStore? = nil,
         signaturePresets: SignaturePresetStore? = nil,
-        tokenValues: @escaping @MainActor (String) -> OverlayTokenValues = { _ in .empty }
+        tokenValues: @escaping @MainActor (String) -> OverlayTokenValues = { _ in .empty },
+        imageExists: @escaping (UUID) -> Bool = { OverlayImageStore().imageExists(id: $0) }
     ) {
         self.assets = assets
         self.photos = assets.map { OriginalItem(asset: $0) }
@@ -119,6 +122,7 @@ final class CompressionController {
         self.watermarkSettings = watermarkSettings
         self.signaturePresets = signaturePresets
         self.tokenValues = tokenValues
+        self.imageExists = imageExists
         let byID = Dictionary(assets.map { ($0.localIdentifier, $0) }, uniquingKeysWith: { first, _ in first })
         self.operations = ResizeOperations(
             compress: { [weak self] photo, prepared, watermark in
@@ -147,7 +151,8 @@ final class CompressionController {
         availableBytes: @escaping @Sendable () -> Int64? = { nil },
         watermarkSettings: WatermarkSettingsStore? = nil,
         signaturePresets: SignaturePresetStore? = nil,
-        tokenValues: @escaping @MainActor (String) -> OverlayTokenValues = { _ in .empty }
+        tokenValues: @escaping @MainActor (String) -> OverlayTokenValues = { _ in .empty },
+        imageExists: @escaping (UUID) -> Bool = { OverlayImageStore().imageExists(id: $0) }
     ) {
         self.assets = []
         self.photos = photos
@@ -160,6 +165,7 @@ final class CompressionController {
         self.watermarkSettings = watermarkSettings
         self.signaturePresets = signaturePresets
         self.tokenValues = tokenValues
+        self.imageExists = imageExists
         self.operations = operations
     }
 
@@ -169,7 +175,10 @@ final class CompressionController {
     /// its preset is gone.
     var watermarkTemplate: WatermarkStamp? {
         guard let watermarkSettings, let signaturePresets else { return nil }
-        return watermarkSettings.formStamp(in: signaturePresets.presets)
+        let imageExists = imageExists
+        return watermarkSettings.formStamp(in: signaturePresets.presets) {
+            WatermarkAvailability.of($0, imageExists: imageExists).isSelectable
+        }
     }
 
     /// The stamp for one photo of the batch, its tokens filled from that

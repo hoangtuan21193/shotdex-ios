@@ -94,7 +94,8 @@ struct CompressionScreen: View {
                 signaturePresets: dependencies.signaturePresets,
                 tokenValues: { [libraryQueries = dependencies.libraryQueries] id in
                     OverlayTokenValues(metadata: try? libraryQueries.metadata(assetId: id))
-                }
+                },
+                imageExists: { [images = dependencies.overlayImages] in images.imageExists(id: $0) }
             )
             controller = newController
             await newController.load()
@@ -399,7 +400,8 @@ struct CompressionScreen: View {
             settings: dependencies.watermarkSettings,
             presets: dependencies.signaturePresets,
             pages: pages,
-            formTitle: WatermarkCopy.resizeForm()
+            formTitle: WatermarkCopy.resizeForm(),
+            imageExists: { dependencies.overlayImages.imageExists(id: $0) }
         )
     }
 

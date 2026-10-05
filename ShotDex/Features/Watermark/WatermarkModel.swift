@@ -28,6 +28,8 @@ final class WatermarkModel {
     let pages: [WatermarkPreviewPage]
     /// The form this screen was opened from, for the back button: "Resize".
     let formTitle: String
+    /// Whether a logo file is still there (FS-05.04 §5).
+    @ObservationIgnored let imageExists: (UUID) -> Bool
 
     var currentIndex = 0 {
         didSet { if currentIndex != oldValue { renderCurrent() } }
@@ -41,11 +43,29 @@ final class WatermarkModel {
     @ObservationIgnored private var renderTask: Task<Void, Never>?
     @ObservationIgnored private let renderer = WatermarkPreviewRenderer()
 
-    init(settings: WatermarkSettingsStore, presets: SignaturePresetStore, pages: [WatermarkPreviewPage], formTitle: String) {
+    init(
+        settings: WatermarkSettingsStore,
+        presets: SignaturePresetStore,
+        pages: [WatermarkPreviewPage],
+        formTitle: String,
+        imageExists: @escaping (UUID) -> Bool = { OverlayImageStore().imageExists(id: $0) }
+    ) {
         self.settings = settings
         self.presets = presets
         self.pages = pages
         self.formTitle = formTitle
+        self.imageExists = imageExists
+    }
+
+    /// Whether a preset can be stamped: Missing file is not selectable,
+    /// Unavailable (a font fell back) is.
+    func availability(of preset: SignaturePreset) -> WatermarkAvailability {
+        WatermarkAvailability.of(preset, imageExists: imageExists)
+    }
+
+    /// The presets a switched-on watermark may fall to.
+    private var selectablePresets: [SignaturePreset] {
+        presets.presets.filter { availability(of: $0).isSelectable }
     }
 
     // MARK: State
@@ -54,8 +74,10 @@ final class WatermarkModel {
 
     var isEnabled: Bool { settings.settings.isEnabled && selectedPreset != nil }
 
-    /// The remembered preset, if it still exists.
-    var selectedPreset: SignaturePreset? { settings.formPreset(in: presets.presets) }
+    /// The remembered preset, if it still exists and can be stamped.
+    var selectedPreset: SignaturePreset? {
+        settings.formPreset(in: presets.presets) { availability(of: $0).isSelectable }
+    }
 
     var placement: WatermarkPlacement { settings.settings.placement }
 
@@ -85,8 +107,8 @@ final class WatermarkModel {
             settings.isEnabled = enabled
             // Turning it on with nothing chosen picks the newest preset, so
             // the switch never reads On over a blank preview.
-            if enabled, settings.presetID.flatMap({ id in presets.presets.first { $0.id == id } }) == nil {
-                settings.presetID = presets.presets.first?.id
+            if enabled, settings.presetID.flatMap({ id in selectablePresets.first { $0.id == id } }) == nil {
+                settings.presetID = selectablePresets.first?.id
                 settings.placement.size = nil
             }
         }
@@ -94,6 +116,7 @@ final class WatermarkModel {
     }
 
     func choose(_ preset: SignaturePreset) {
+        guard availability(of: preset).isSelectable else { return }
         settings.update { settings in
             if settings.presetID != preset.id {
                 // Another preset starts at its own saved size.
