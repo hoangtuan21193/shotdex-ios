@@ -157,6 +157,19 @@
    "text": "snapshot"
   },
   {
+   "action": "tap",
+   "label": "Mute"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "dump",
+   "name": "50-group-muted",
+   "text": "snapshot"
+  },
+  {
    "action": "wait",
    "seconds": 30
   }

@@ -22,6 +22,8 @@ struct VideoGroupPanel: View {
             ForEach(VideoGroupPanelSections.sections(hasVideo: summary.hasVideo, leading: model.activeItemCommand), id: \.self) { section in
                 switch section {
                 case .speed: speedSection(summary)
+                case .volume: volumeSection
+                case .fade: fadeSection
                 }
             }
         }
@@ -78,6 +80,59 @@ struct VideoGroupPanel: View {
         .padding(.vertical, 4)
     }
 
+    // MARK: Volume
+
+    /// Only the clips with sound: the speaker mutes the whole group, and a
+    /// mix of muted and not draws it on (FS-12.11 §5).
+    private var volumeSection: some View {
+        MutableVolumeRow(
+            isMuted: model.isGroupMuted, volume: model.groupVolume, model: model,
+            toggleMute: { model.toggleGroupMuted() },
+            set: { model.setGroupVolume($0) },
+            reset: { model.pushUndo(); model.setGroupVolume(1) }
+        )
+    }
+
+    // MARK: Fade
+
+    private var fadeSection: some View {
+        let top = max(0.1, VideoClipGroupEditing.maximumFade(model.selectedClipIDs, in: model.recipe))
+        return VStack(alignment: .leading, spacing: 0) {
+            sectionHeader(Text("Fade", tableName: VideoStudioCopy.table, comment: "Video Studio clip panel: header over the clip's fade in and fade out"))
+            ForEach([VideoStudioModel.ClipEnd.start, .end], id: \.self) { end in
+                let common = model.groupFade(at: end)
+                InspectorSlider(
+                    label: end == .start ? "In" : "Out",
+                    value: common ?? 0, range: 0...top,
+                    valueText: common.map { String(format: "%.1fs", $0) } ?? VideoStudioCopy.mixed,
+                    model: model,
+                    set: { model.setGroupFade($0, at: end) },
+                    reset: { model.pushUndo(); model.setGroupFade(0, at: end) }
+                )
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func sectionHeader(_ text: Text) -> some View {
+        if isDesk {
+            text
+                .font(.system(size: 17, weight: .semibold))
+                .foregroundStyle(.white)
+                .frame(height: VideoStudioMetrics.deskSectionTitleHeight)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, inset)
+                .padding(.top, 8)
+        } else {
+            text
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundStyle(EditorTheme.dimText)
+                .textCase(.uppercase)
+                .padding(.horizontal, inset)
+                .padding(.top, 6)
+        }
+    }
+
     private static func speedText(_ speed: Double) -> String {
         speed.formatted(.number.precision(.significantDigits(1...2))) + "×"
     }
@@ -86,18 +141,20 @@ struct VideoGroupPanel: View {
 /// The group panel's sections, in order, with a lit command's brought to
 /// the top — as `VideoClipPanelSections` orders a single clip's.
 enum VideoGroupPanelSection: Equatable, CaseIterable {
-    case speed
+    case speed, volume, fade
 }
 
 enum VideoGroupPanelSections {
     static func sections(hasVideo: Bool, leading command: VideoItemCommand?) -> [VideoGroupPanelSection] {
         let all = VideoGroupPanelSection.allCases.filter { section in
             switch section {
-            case .speed: hasVideo
+            case .speed, .volume: hasVideo
+            case .fade: true
             }
         }
         let lead: VideoGroupPanelSection? = switch command {
         case .speed: .speed
+        case .volume: .volume
         default: nil
         }
         guard let lead, all.contains(lead) else { return all }

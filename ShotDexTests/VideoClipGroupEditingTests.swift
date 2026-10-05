@@ -63,4 +63,29 @@ struct VideoClipGroupEditingTests {
         #expect(VideoStudioCopy.speedNote(videos: 1, stills: [edited.clips[0]]) == "Applies to the video · the photo keeps its 3.0s")
         #expect(VideoStudioCopy.speedNote(videos: 2, stills: []) == nil)
     }
+
+    /// AC-5: clip 2 muted, clip 3 not — the speaker reads on; muting is for
+    /// the whole group, and only videos carry sound to mute.
+    @Test func speakerMutesWholeMixedGroup() {
+        var edited = recipe
+        edited.clips[1].isMuted = true
+        let group = [ids[1], ids[2]]
+        #expect(!VideoClipGroupEditing.isMuted(group, in: edited))
+        VideoClipGroupEditing.setMuted(true, for: group + [ids[3]], in: &edited)
+        #expect(edited.clips.map(\.isMuted) == [false, true, true, false, false])
+        #expect(VideoClipGroupEditing.isMuted(group, in: edited))
+    }
+
+    /// AC-19: Fade in 2.0s on clip 2 (6.2s video) and clip 4 (3.0s photo)
+    /// — clip 2 fades 2.0s, clip 4 is held to half its length, 1.5s.
+    @Test func groupFadeClampsPerClip() {
+        var edited = recipe
+        let group = [ids[1], ids[3]]
+        VideoClipGroupEditing.setFade(2.0, atStart: true, for: group, in: &edited)
+        #expect(edited.clips[1].fadeIn == 2.0)
+        #expect(edited.clips[3].fadeIn == 1.5)
+        #expect(edited.clips[1].fadeOut == 0)
+        #expect(VideoClipGroupEditing.commonFade(group, atStart: true, in: edited) == nil)
+        #expect(VideoClipGroupEditing.maximumFade(group, in: edited) == 3.1)
+    }
 }

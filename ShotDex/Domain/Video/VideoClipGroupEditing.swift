@@ -56,6 +56,59 @@ enum VideoClipGroupEditing {
         return recipe.clips.filter { wanted.contains($0.id) && $0.kind != .video }
     }
 
+    // MARK: Volume (FS-12.11 §5) — only the clips with sound: videos
+
+    /// The speaker reads muted only when every video in the group is; a
+    /// mix of muted and not draws it on, and a tap then mutes them all.
+    static func isMuted(_ ids: [UUID], in recipe: VideoProjectRecipe) -> Bool {
+        let sound = videos(ids, in: recipe)
+        return !sound.isEmpty && sound.allSatisfy(\.isMuted)
+    }
+
+    /// The level the slider shows: the first video's.
+    static func volume(_ ids: [UUID], in recipe: VideoProjectRecipe) -> Double {
+        videos(ids, in: recipe).first?.volume ?? 1
+    }
+
+    static func setMuted(_ muted: Bool, for ids: [UUID], in recipe: inout VideoProjectRecipe) {
+        let wanted = Set(ids)
+        for index in recipe.clips.indices where wanted.contains(recipe.clips[index].id) && recipe.clips[index].kind == .video {
+            recipe.clips[index].isMuted = muted
+        }
+    }
+
+    static func setVolume(_ volume: Double, for ids: [UUID], in recipe: inout VideoProjectRecipe) {
+        let value = min(max(volume, 0), 1)
+        let wanted = Set(ids)
+        for index in recipe.clips.indices where wanted.contains(recipe.clips[index].id) && recipe.clips[index].kind == .video {
+            recipe.clips[index].volume = value
+        }
+    }
+
+    // MARK: Fade (FS-12.11 §5)
+
+    /// One fade for every clip, each held to half its own length.
+    static func setFade(_ seconds: Double, atStart: Bool, for ids: [UUID], in recipe: inout VideoProjectRecipe) {
+        let wanted = Set(ids)
+        for index in recipe.clips.indices where wanted.contains(recipe.clips[index].id) {
+            let value = min(max(0, seconds), recipe.clips[index].maximumFade())
+            if atStart { recipe.clips[index].fadeIn = value } else { recipe.clips[index].fadeOut = value }
+        }
+    }
+
+    /// The fade the group shares, or nil when the clips differ.
+    static func commonFade(_ ids: [UUID], atStart: Bool, in recipe: VideoProjectRecipe) -> Double? {
+        let wanted = Set(ids)
+        let values = Set(recipe.clips.filter { wanted.contains($0.id) }.map { atStart ? $0.fadeIn : $0.fadeOut })
+        return values.count == 1 ? values.first : nil
+    }
+
+    /// The longest fade any clip of the group can take — the slider's top.
+    static func maximumFade(_ ids: [UUID], in recipe: VideoProjectRecipe) -> Double {
+        let wanted = Set(ids)
+        return recipe.clips.filter { wanted.contains($0.id) }.map { $0.maximumFade() }.max() ?? 0
+    }
+
     private static func videos(_ ids: [UUID], in recipe: VideoProjectRecipe) -> [VideoClip] {
         let wanted = Set(ids)
         return recipe.clips.filter { wanted.contains($0.id) && $0.kind == .video }

@@ -158,4 +158,45 @@ struct VideoStudioMultiSelectTests {
         #expect(model.recipe.clips[1].speed == 1)
         #expect(!model.canUndo)
     }
+
+    /// AC-5: one tap on the speaker mutes clip 2 (already muted) and clip 3;
+    /// one Undo puts back exactly the mix there was.
+    @Test func oneUndoRestoresMixedMute() {
+        let model = VideoStudioModelFixture.model(
+            clips: VideoStudioModelFixture.mediaSampleRecipe().clips,
+            configure: { $0.clips[1].isMuted = true }
+        )
+        let ids = model.recipe.clips.map(\.id)
+        model.enterClipSelection(ids[1])
+        model.toggleClip(ids[2])
+        #expect(!model.isGroupMuted)
+
+        model.toggleGroupMuted()
+        #expect(model.recipe.clips[1].isMuted && model.recipe.clips[2].isMuted)
+        #expect(model.isGroupMuted)
+
+        model.undo()
+        #expect(model.recipe.clips[1].isMuted)
+        #expect(!model.recipe.clips[2].isMuted)
+        #expect(!model.canUndo)
+    }
+
+    /// AC-19: the Fade in drag across clips 2 and 4 is one step; one Undo
+    /// puts both back to no fade.
+    @Test func groupFadeIsOneUndo() {
+        let model = sampleModel()
+        let ids = model.recipe.clips.map(\.id)
+        model.enterClipSelection(ids[1])
+        model.toggleClip(ids[3])
+        model.beginUndoGroup()
+        model.setGroupFade(1.0, at: .start)
+        model.setGroupFade(2.0, at: .start)
+        model.endUndoGroup()
+        #expect(model.recipe.clips[1].fadeIn == 2.0)
+        #expect(model.recipe.clips[3].fadeIn == 1.5)
+        model.undo()
+        #expect(model.recipe.clips[1].fadeIn == 0)
+        #expect(model.recipe.clips[3].fadeIn == 0)
+        #expect(!model.canUndo)
+    }
 }

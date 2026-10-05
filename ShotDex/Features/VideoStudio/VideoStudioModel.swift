@@ -1110,6 +1110,39 @@ final class VideoStudioModel {
         setGroupSpeed(speed)
     }
 
+    /// The group's speaker: muted only when every video in it is.
+    var isGroupMuted: Bool { VideoClipGroupEditing.isMuted(selectedClipIDs, in: recipe) }
+    var groupVolume: Double { VideoClipGroupEditing.volume(selectedClipIDs, in: recipe) }
+
+    /// The speaker tapped: the whole group muted — or, when every video in
+    /// it already is, unmuted. One step; the levels underneath are kept.
+    func toggleGroupMuted() {
+        guard isSelectingClips, groupSummary.hasVideo else { return }
+        pushUndo()
+        VideoClipGroupEditing.setMuted(!isGroupMuted, for: selectedClipIDs, in: &recipe)
+        markEdited()
+        applyAudioTier()
+    }
+
+    func setGroupVolume(_ volume: Double) {
+        guard isSelectingClips else { return }
+        VideoClipGroupEditing.setVolume(volume, for: selectedClipIDs, in: &recipe)
+        markEdited()
+        applyAudioTier()
+    }
+
+    /// One fade for the group, each clip held to half its length.
+    func setGroupFade(_ seconds: Double, at end: ClipEnd) {
+        guard isSelectingClips else { return }
+        VideoClipGroupEditing.setFade(seconds, atStart: end == .start, for: selectedClipIDs, in: &recipe)
+        markEdited()
+        applyVideoTier()
+    }
+
+    func groupFade(at end: ClipEnd) -> Double? {
+        VideoClipGroupEditing.commonFade(selectedClipIDs, atStart: end == .start, in: recipe)
+    }
+
     /// ⌘-click on a clip (FS-12.11 §4): in or out of the group, which
     /// begins with it if none is open.
     func commandClickClip(_ id: UUID) {
