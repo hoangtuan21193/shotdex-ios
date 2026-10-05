@@ -187,4 +187,16 @@ struct VideoClipGroupEditingTests {
         #expect(edited.clips.map(\.id) == [ids[0], ids[3], ids[1], ids[2], ids[4]])
         #expect(VideoClipGroupEditing.singleMoveBoundary(clipAt: 1, tileWidths: widths, translation: 200) == 3)
     }
+
+    /// AC-10: clips 1 and 4, not neighbours, dragged past the end — they
+    /// land together in their own timeline order: 2·3·5·1·4.
+    @Test func nonContiguousGroupLandsInTimelineOrder() {
+        var edited = recipe
+        let placements = VideoTimelineMath.placements(durations: edited.clips.map(\.effectiveDuration), overlaps: [0, 0, 0, 0])
+        let end = VideoClipGroupEditing.boundary(forFingerTime: 23.9, placements: placements)
+        #expect(end == 5)
+        #expect(VideoClipGroupEditing.move([ids[3], ids[0]], toBoundary: end, in: &edited))
+        #expect(edited.clips.map(\.id) == [ids[1], ids[2], ids[4], ids[0], ids[3]])
+        #expect(abs(edited.clips.map(\.effectiveDuration).reduce(0, +) - 24.0) < 1e-9)
+    }
 }
