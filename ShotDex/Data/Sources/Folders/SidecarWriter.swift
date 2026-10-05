@@ -8,6 +8,9 @@ struct SidecarWriter: Sendable {
     let database: AppDatabase
     /// Where a copy's file is now; nil when its source cannot be opened.
     let fileURL: @Sendable (_ sourceId: String, _ relativePath: String) -> URL?
+    /// Read and Write .xmp Sidecars. Off: nothing is written and nothing is
+    /// marked pending — the values stay in ShotDex's own tables.
+    var isEnabled: @Sendable () -> Bool = { SidecarSetting.isOn() }
 
     struct Summary: Equatable, Sendable {
         /// Sidecars whose text changed. One that already said the photo's
@@ -26,6 +29,7 @@ struct SidecarWriter: Sendable {
 
     func write(photoIds: [String]) throws -> Summary {
         var summary = Summary()
+        guard isEnabled() else { return summary }
         for photoId in photoIds {
             let copies = try database.reader.read { db in try Self.fileCopies(db, photoId: photoId) }
             var sidecars: [(copyId: String, url: URL)] = []
@@ -260,5 +264,13 @@ actor SidecarWriteQueue {
             Task { await onReread(summary.reread) }
         }
         return summary
+    }
+}
+
+/// The Read and Write .xmp Sidecars switch (FS-19.02 §5), on unless the
+/// user turned it off.
+enum SidecarSetting {
+    static func isOn(_ defaults: UserDefaults = .standard) -> Bool {
+        defaults.object(forKey: SettingsKeys.readsAndWritesSidecars) as? Bool ?? true
     }
 }

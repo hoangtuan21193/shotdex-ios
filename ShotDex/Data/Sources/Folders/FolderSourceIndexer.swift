@@ -11,6 +11,8 @@ struct FolderSourceIndexer: Sendable {
     let composer: MetadataComposer
     /// Where grid thumbnails go; nil skips them (tests that only count rows).
     var thumbnails: FolderThumbnails? = nil
+    /// Read and Write .xmp Sidecars: off, a sidecar beside a file is not read.
+    var readsSidecars = SidecarSetting.isOn()
 
     struct Summary: Equatable, Sendable {
         var photos = 0
@@ -70,9 +72,14 @@ struct FolderSourceIndexer: Sendable {
             let file = unit.primary
             let key = Self.pathKey(file.relativePath)
             let modified = file.modified.map { Int($0.timeIntervalSince1970) }
+            // `hasMetadata`: Clear Local Metadata Index took the row away, so a
+            // file the same as before is still read again (FS-19.05 §7).
             let existing = try database.reader.read { db in
-                try Row.fetchOne(db, sql: "SELECT id, photoId, size, modifiedAt, isCloudPlaceholder FROM photo_copies WHERE sourceId = ? AND relativePathKey = ?",
-                                 arguments: [sourceId, key])
+                try Row.fetchOne(db, sql: """
+                    SELECT c.id, c.photoId, c.size, c.modifiedAt, c.isCloudPlaceholder,
+                           EXISTS(SELECT 1 FROM photo_metadata m WHERE m.assetId = c.photoId) AS hasMetadata
+                    FROM photo_copies c WHERE c.sourceId = ? AND c.relativePathKey = ?
+                    """, arguments: [sourceId, key])
             }
             if file.isCloudPlaceholder {
                 // Listed, never opened: a photo and a copy so the grid can show
@@ -89,7 +96,8 @@ struct FolderSourceIndexer: Sendable {
                 summary.placeholders += 1
                 continue
             }
-            if let existing, existing["size"] as Int64? == file.size, existing["modifiedAt"] as Int? == modified {
+            if let existing, existing["size"] as Int64? == file.size, existing["modifiedAt"] as Int? == modified,
+               existing["hasMetadata"] as Bool {
                 try database.writer.write { db in
                     try db.execute(sql: "UPDATE photo_copies SET lastSeenAt = ?, isOnline = 1, missingSince = NULL WHERE id = ?",
                                    arguments: [stamp, existing["id"] as String])
@@ -135,7 +143,7 @@ struct FolderSourceIndexer: Sendable {
                 name, siblings: namesByFolder[(file.relativePath as NSString).deletingLastPathComponent] ?? [])
             let sidecar = SidecarReader.sidecar(for: [file.relativePath] + [unit.companion?.relativePath].compactMap { $0 },
                                                 fullNameOnly: fullNameOnly, in: sidecars, modified: \.modified, pathKey: Self.pathKey)
-            let sidecarURL = sidecar.map { root.appendingPathComponent($0.relativePath) }
+            let sidecarURL = readsSidecars ? sidecar.map { root.appendingPathComponent($0.relativePath) } : nil
             let sidecarValues = sidecarURL.flatMap(SidecarReader.read(sidecarAt:))
             let sidecarStamp = sidecarValues == nil ? nil : sidecarURL.flatMap(SidecarReader.stamp(of:))
             let marks = SidecarReader.combined(embedded: embedded, sidecar: sidecarValues)

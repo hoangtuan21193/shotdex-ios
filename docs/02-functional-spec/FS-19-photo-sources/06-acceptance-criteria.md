@@ -63,7 +63,7 @@
 | AC-28 | ảnh A có sidecar ★2 ở "2026 Japan" và ★5 ở T7 (T7 mới hơn) | đọc cả hai nguồn | sidecar mới hơn thắng: A ★5; sidecar ở "2026 Japan" ghi thành ★5 | `SidecarConflictTests.copiesDisagreeNewestWins` (lượt gộp trả `survivors`; nối vào app cùng khối F) |
 | AC-29 | A có bản sao ở ổ trong và T7; T7 offline | đặt ★5, rồi ★3 | sidecar ổ trong ★3; 1 dấu chờ cho bản T7; Clear Local Metadata Index → dấu chờ còn | `PendingSidecarTests.offlineCopyMarkedSurvivesClear` |
 | AC-30 | như AC-29 | cắm T7 | sidecar T7 ★3 (giá trị hiện hành, không qua ★5) ≤ 10 s sau khi gắn; đúng 1 lần ghi; 0 dấu chờ | `PendingSidecarTests.writesCurrentValueOnReconnect` (`SidecarWriteQueue.sourceCameOnline`; gọi nó khi ổ gắn lại — nối ở khối F) |
-| AC-31 | công tắc Read and Write .xmp Sidecars tắt | đặt ★4 cho 10 ảnh | 0 file `.xmp` mới; lọc ★ ≥ 4 ra 10; Clear Local Metadata Index → vẫn 10 | `PhotoMarksStoreTests.clearIndexKeepsMarks` (nửa Clear: Clear Local Metadata Index giữ sao/cờ); ⚠️ công tắc sidecar tắt — `SidecarSettingTests.offKeepsMarksInDatabaseOnly` chưa có (C13) |
+| AC-31 | công tắc Read and Write .xmp Sidecars tắt | đặt ★4 cho 10 ảnh | 0 file `.xmp` mới; lọc ★ ≥ 4 ra 10; Clear Local Metadata Index → vẫn 10 | `SidecarSettingTests.offKeepsMarksInDatabaseOnly`, `PhotoMarksStoreTests.clearIndexKeepsMarks` (công tắc là `SettingsKeys.readsAndWritesSidecars`; hàng trong Settings › Sources dựng ở F1) |
 | AC-32 | T7 gắn chỉ đọc, 3 ảnh | đặt ★4 cho 3 ảnh | ShotDex hiện ★4; 3 dấu chờ "chỉ đọc"; hàng nguồn "Couldn't save .xmp for 3 photos · T7 RAW Archive is read-only" | ⚠️ chưa có — `PendingSidecarTests.readOnlyVolume` |
 
 ## Server ([03](03-servers-as-sources.md))

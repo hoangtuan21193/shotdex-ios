@@ -3,6 +3,9 @@ import ShotDexKit
 
 /// UserDefaults keys shared between the Settings UI and the feature models.
 enum SettingsKeys {
+    /// Read and Write .xmp Sidecars (FS-19.02 §5). Unwritten means on.
+    static let readsAndWritesSidecars = "sources.sidecars"
+
     /// Allow streaming EXIF from iCloud over cellular/expensive paths during
     /// automatic index runs. Wi-Fi is always allowed. Defaults to false.
     static let allowCellularIndexing = "index.allowCellular"
