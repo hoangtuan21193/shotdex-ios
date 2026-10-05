@@ -157,6 +157,10 @@
       "comment": "Export sheet: open the system folder picker",
       "extractionState": "manual"
     },
+    "Color Space": {
+      "comment": "Export sheet row: the color profile the files are written in",
+      "extractionState": "manual"
+    },
     "Connect “%@” or choose another folder.": {
       "comment": "Export footer: the folder's drive is unplugged",
       "extractionState": "manual"

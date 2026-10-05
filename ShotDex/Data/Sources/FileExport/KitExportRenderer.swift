@@ -6,8 +6,9 @@ import UniformTypeIdentifiers
 /// Current Version through the kit's renderer, as Resize renders
 /// (FS-03.07 §3–4): the source as it is (`.identity` — an edit made in
 /// Photos is already in the file), once, at the preset, Fill cropped from
-/// the centre; then the stamp; then written with the **source's** metadata
-/// at the level, so a stamp never changes what the file says about itself.
+/// the centre; then the stamp; then the Color Space; then written with the
+/// **source's** metadata at the level, so a stamp never changes what the
+/// file says about itself.
 struct KitExportRenderer: ExportRendering {
     let renderer: PhotoRenderService
 
@@ -39,8 +40,18 @@ struct KitExportRenderer: ExportRendering {
                 throw FileExportFailure.stampFailed
             }
         }
+        // Color Space last: the pixels, stamp included, are rendered into
+        // the profile the encoder embeds (FS-03.07b §3a).
+        if let space = options.colorSpace.cgColorSpace {
+            result = result.converted(to: space)
+        }
         try Task.checkCancellation()
-        try await renderer.write(result, to: url, format: options.format, quality: options.quality, metadata: options.metadata)
+        // Same as Original resolved per photo, so a HEIC named `.heic` is
+        // HEIC inside — the plan names the file by the same rule.
+        try await renderer.write(
+            result, to: url, format: Self.format(for: item, requested: options.format),
+            quality: options.quality, metadata: options.metadata
+        )
     }
 
     /// The format a photo is written in: JPEG or HEIC as asked; Same as

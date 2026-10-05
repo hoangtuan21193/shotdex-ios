@@ -67,6 +67,7 @@ enum ExportCopy {
 
     static var size: String { String(localized: "Size", table: table, comment: "Export sheet row: Resize preset") }
     static var format: String { String(localized: "Format", table: table, comment: "Export sheet row: output format") }
+    static var colorSpace: String { String(localized: "Color Space", table: table, comment: "Export sheet row: the color profile the files are written in") }
     static var quality: String { String(localized: "Quality", table: table, comment: "Export sheet row: compression quality") }
     static var metadata: String { String(localized: "Metadata", table: table, comment: "Export sheet row: metadata level") }
     static var livePhotoVideo: String { String(localized: "Live Photo Video", table: table, comment: "Export sheet switch: include the movie of a Live Photo") }
@@ -87,6 +88,15 @@ enum ExportCopy {
         case .preserve: String(localized: "Same as Original", table: table, comment: "Export Format: HEIC stays HEIC, JPEG stays JPEG, the rest JPEG")
         case .jpeg: "JPEG"
         case .heic: "HEIC"
+        }
+    }
+
+    static func colorSpaceName(_ space: ExportColorSpace) -> String {
+        switch space {
+        case .original: String(localized: "Original", table: table, comment: "Export Color Space: keep the photo's own profile")
+        case .sRGB: "sRGB"
+        case .displayP3: "Display P3"
+        case .adobeRGB: "Adobe RGB"
         }
     }
 

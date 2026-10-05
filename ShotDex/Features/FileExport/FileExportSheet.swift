@@ -339,12 +339,11 @@ struct FileExportSheet: View {
                 ForEach(PhotoOutputFormat.allCases) { Text(ExportCopy.formatName($0)).tag($0) }
             }
             divider
-            menuRow(ExportCopy.quality, value: ExportCopy.qualityText(model.settings.quality), selection: Binding(
-                get: { FileExportQuality.nearest(model.settings.quality) },
-                set: { model.settings.quality = $0 }
-            )) {
-                ForEach(FileExportQuality.steps, id: \.self) { Text(ExportCopy.qualityText($0)).tag($0) }
+            menuRow(ExportCopy.colorSpace, value: ExportCopy.colorSpaceName(model.settings.colorSpace), selection: $model.settings.colorSpace) {
+                ForEach(ExportColorSpace.allCases, id: \.self) { Text(ExportCopy.colorSpaceName($0)).tag($0) }
             }
+            divider
+            qualityRow
             divider
             menuRow(ExportCopy.metadata, value: String(localized: model.metadata.title), selection: $model.metadata) {
                 ForEach(MetadataLevel.allCases, id: \.self) { Text($0.title).tag($0) }
@@ -355,6 +354,31 @@ struct FileExportSheet: View {
             Toggle(ExportCopy.livePhotoVideo, isOn: $model.settings.includesLivePhotoVideo)
                 .modifier(RowHeight(layout: layout))
         }
+    }
+
+    /// Quality: Resize's slider — 10…100% in steps of 1%, the value on the
+    /// right (FS-03.07b §3a). Every format the sheet writes is lossy, so it
+    /// shows with the other render rows.
+    private var qualityRow: some View {
+        HStack(spacing: AppTheme.Spacing.md) {
+            Text(ExportCopy.quality).foregroundStyle(.primary)
+            Slider(
+                value: Binding(
+                    get: { model.settings.quality },
+                    set: { model.settings.quality = FileExportQuality.clamped($0) }
+                ),
+                in: FileExportQuality.range,
+                step: FileExportQuality.step
+            )
+            .accessibilityLabel(ExportCopy.quality)
+            .accessibilityValue(ExportCopy.qualityText(model.settings.quality))
+            Text(ExportCopy.qualityText(model.settings.quality))
+                .monospacedDigit()
+                .foregroundStyle(.secondary)
+                .frame(minWidth: 44, alignment: .trailing)
+                .accessibilityHidden(true)
+        }
+        .modifier(RowHeight(layout: layout))
     }
 
     /// A row separator in the card; the Form draws its own.

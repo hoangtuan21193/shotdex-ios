@@ -118,12 +118,21 @@ final class FileExportModel: Identifiable {
         guard let preset = presets.first(where: { $0.id == id }) else { return }
         settings.presetId = id
         if !preset.isBuiltIn {
-            settings.quality = FileExportQuality.nearest(preset.quality)
+            // The preset's own quality, exactly — 85% stays 85% (§3a).
+            settings.quality = FileExportQuality.clamped(preset.quality)
             settings.format = preset.format
         }
     }
 
     var template: FileNameTemplate { FileNameTemplate(settings.nameTemplate) }
+
+    /// What Current Version renders with: the rows as they stand.
+    var renderOptions: FileExportRenderOptions {
+        FileExportRenderOptions(
+            preset: preset, format: settings.format, quality: settings.quality,
+            metadata: metadata, colorSpace: settings.colorSpace
+        )
+    }
 
     /// The Version row: only for Current Version, only with an edited photo.
     var showsVersion: Bool { mode == .currentVersion && selection.editedCount > 0 }
@@ -433,9 +442,7 @@ final class FileExportModel: Identifiable {
         progress = FileExportProgress(total: total, totalBytes: Self.estimatedBytes(plan, ids: ids))
         let job = job ?? FileExportJob(
             plan: plan, mode: settings.mode, version: version,
-            render: FileExportRenderOptions(
-                preset: preset, format: settings.format, quality: settings.quality, metadata: metadata
-            ),
+            render: renderOptions,
             stamp: runWatermark.map(WatermarkExportStamping.init(watermark:))
         )
         self.job = job

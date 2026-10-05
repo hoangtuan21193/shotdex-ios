@@ -29,6 +29,8 @@ struct FileExportRenderOptions: Sendable, Equatable {
     var format: PhotoOutputFormat = .jpeg
     var quality = 0.8
     var metadata: MetadataLevel = .all
+    /// Color Space (FS-03.07b §3a); Original keeps the photo's profile.
+    var colorSpace: ExportColorSpace = .original
 }
 
 /// Renders Current Version: read the source, render, resize, stamp, write

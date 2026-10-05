@@ -47,6 +47,13 @@ public struct PhotoRenderResult {
     /// Survives `resize` — it is placed by the short edge, so it lands in
     /// proportion at any size.
     public var watermark: WatermarkStamp?
+
+    /// The same picture written in another profile (FS-03.07b §3a): `write`
+    /// renders the pixels into `colorSpace` and the encoder embeds it, so
+    /// this converts the colours, not just the label.
+    public func converted(to colorSpace: CGColorSpace) -> PhotoRenderResult {
+        PhotoRenderResult(image: image, colorSpace: colorSpace, properties: properties, watermark: watermark)
+    }
 }
 
 public struct ResolvedAutomaticMasks: @unchecked Sendable {
