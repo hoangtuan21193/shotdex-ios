@@ -65,4 +65,10 @@ extension VideoStudioCopy {
         }
         return "\(applies) · \(keeps)"
     }
+
+    /// "Move 2 clips here": the pill over the drop line, and the button
+    /// that drops when Move is used without a drag.
+    static func moveClipsHere(_ count: Int) -> String {
+        String(localized: "Move \(count) clips here", table: table, comment: "Video Studio multi-select: the pill over the drop line — where the selected clips will go (plural)")
+    }
 }

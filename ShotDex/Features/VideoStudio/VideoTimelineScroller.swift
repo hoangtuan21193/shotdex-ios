@@ -50,9 +50,10 @@ enum TimelineZoneDragPhase {
     /// A press on a clip's body that ended without moving it (FS-12.11
     /// §4): held long enough to select, or held and let go for nothing.
     case pressed(TimelinePressClassifier.Outcome)
-    /// The press on a clip's body has held `movePress`: from here on the
-    /// finger's release is the press's, not the clip's tap.
-    case holding
+    /// The press on a clip's body has held `movePress` — at `atX` in the
+    /// content: from here on the finger's release is the press's, not the
+    /// clip's tap.
+    case holding(atX: CGFloat)
     /// A click on a clip's body with ⌘ or ⇧ held — the iPad's pointer and
     /// keyboard (FS-12.11 §4): ⌘ toggles the clip in the group, ⇧ adds the
     /// run of clips up to it.
@@ -284,6 +285,12 @@ struct VideoTimelineScroller<Content: View>: UIViewRepresentable {
         private var pressDownTime: CFTimeInterval = 0
         /// Whether this press has become a move — once it has, it stays one.
         private var isMovingClip = false
+        /// Scrolls the timeline under a clip dragged within 44pt of a lane
+        /// edge (FS-12.11 §6), at a speed that grows toward the edge.
+        private var autoScrollLink: CADisplayLink?
+        private var autoScrollSpeed: CGFloat = 0
+        private weak var autoScrollRecognizer: UILongPressGestureRecognizer?
+        private var lastAutoScrollTick: CFTimeInterval = 0
 
         init(_ parent: VideoTimelineScroller) { self.parent = parent }
 
@@ -425,7 +432,7 @@ struct VideoTimelineScroller<Content: View>: UIViewRepresentable {
                 if let reorderZone {
                     scrollView.panGestureRecognizer.isEnabled = false
                     scrollView.panGestureRecognizer.isEnabled = true
-                    parent.onZoneDrag(reorderZone.kind, .holding)
+                    parent.onZoneDrag(reorderZone.kind, .holding(atX: point.x))
                 }
             case .changed:
                 guard let reorderZone else { return }
@@ -436,8 +443,10 @@ struct VideoTimelineScroller<Content: View>: UIViewRepresentable {
                 }
                 if isMovingClip {
                     parent.onZoneDrag(reorderZone.kind, .changed(translationX: point.x - reorderStart.x))
+                    updateAutoScroll(recognizer, in: scrollView)
                 }
             case .ended:
+                stopAutoScroll()
                 guard let reorderZone else { return }
                 if isMovingClip {
                     parent.onZoneDrag(reorderZone.kind, .ended(translationX: point.x - reorderStart.x))
@@ -448,11 +457,70 @@ struct VideoTimelineScroller<Content: View>: UIViewRepresentable {
                 self.reorderZone = nil
                 isMovingClip = false
             case .cancelled, .failed:
+                stopAutoScroll()
                 if let reorderZone, isMovingClip { parent.onZoneDrag(reorderZone.kind, .cancelled) }
                 reorderZone = nil
                 isMovingClip = false
             default:
                 break
+            }
+        }
+
+        // MARK: Auto-scroll under a dragged clip
+
+        private func updateAutoScroll(_ recognizer: UILongPressGestureRecognizer, in scrollView: UIScrollView) {
+            let visibleX = recognizer.location(in: scrollView).x - scrollView.contentOffset.x
+            let edge = VideoStudioMetrics.groupAutoScrollEdge
+            let width = scrollView.bounds.width
+            let speed: CGFloat = if visibleX < edge {
+                -(edge - max(0, visibleX)) / edge * 600
+            } else if visibleX > width - edge {
+                (visibleX - (width - edge)) / edge * 600
+            } else {
+                0
+            }
+            autoScrollSpeed = speed
+            autoScrollRecognizer = recognizer
+            if speed != 0, autoScrollLink == nil {
+                parent.onScrubStart()
+                lastAutoScrollTick = CACurrentMediaTime()
+                let link = CADisplayLink(target: self, selector: #selector(autoScrollTick(_:)))
+                link.add(to: .main, forMode: .common)
+                autoScrollLink = link
+            } else if speed == 0 {
+                stopAutoScroll()
+            }
+        }
+
+        @objc private func autoScrollTick(_ link: CADisplayLink) {
+            guard let recognizer = autoScrollRecognizer,
+                  let scrollView = recognizer.view as? TimelineScrollView,
+                  let hostView = scrollView.hostView,
+                  let reorderZone
+            else { stopAutoScroll(); return }
+            let now = CACurrentMediaTime()
+            let dt = min(0.05, now - lastAutoScrollTick)
+            lastAutoScrollTick = now
+            let minX = -scrollView.contentInset.left
+            let maxX = max(minX, scrollView.contentSize.width - scrollView.bounds.width + scrollView.contentInset.right)
+            let target = min(max(minX, scrollView.contentOffset.x + autoScrollSpeed * dt), maxX)
+            guard abs(target - scrollView.contentOffset.x) > 0.01 else { return }
+            isProgrammaticScroll = true
+            scrollView.contentOffset.x = target
+            isProgrammaticScroll = false
+            parent.onScrubTime(time(at: target, in: scrollView))
+            // The finger has not moved, the content under it has.
+            let point = recognizer.location(in: hostView)
+            parent.onZoneDrag(reorderZone.kind, .changed(translationX: point.x - reorderStart.x))
+        }
+
+        private func stopAutoScroll() {
+            guard let link = autoScrollLink else { return }
+            link.invalidate()
+            autoScrollLink = nil
+            autoScrollSpeed = 0
+            if let scrollView = autoScrollRecognizer?.view as? UIScrollView {
+                parent.onScrubEnd(time(at: scrollView.contentOffset.x, in: scrollView))
             }
         }
 
@@ -482,7 +550,7 @@ struct VideoTimelineScroller<Content: View>: UIViewRepresentable {
                   let zone = scrollView.reorderZone(at: touch.location(in: hostView))
             else { return false }
             modifiedTapFlags = flags
-            parent.onZoneDrag(zone.kind, .holding)
+            parent.onZoneDrag(zone.kind, .holding(atX: touch.location(in: hostView).x))
             return true
         }
 

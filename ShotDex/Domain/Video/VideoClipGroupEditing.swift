@@ -72,6 +72,66 @@ enum VideoClipGroupEditing {
         return copies.map { (original: $0.0, copy: $0.1.id) }
     }
 
+    // MARK: Move (FS-12.11 §6)
+
+    /// The boundary a finger at `time` points at — 0 before the first clip,
+    /// `placements.count` after the last: past a clip's midpoint the line
+    /// jumps to that clip's far boundary.
+    static func boundary(forFingerTime time: Double, placements: [VideoTimelineMath.Placement]) -> Int {
+        placements.filter { ($0.start + $0.end) / 2 < time }.count
+    }
+
+    /// The boundary nearest `time` (Move without a drag starts its line at
+    /// the one nearest the playhead).
+    static func nearestBoundary(to time: Double, placements: [VideoTimelineMath.Placement]) -> Int {
+        guard !placements.isEmpty else { return 0 }
+        let positions = (0...placements.count).map { boundaryTime($0, placements: placements) }
+        return positions.indices.min { abs(positions[$0] - time) < abs(positions[$1] - time) } ?? 0
+    }
+
+    /// Where boundary `index` sits on the timeline: between two clips, the
+    /// middle of any overlap their transition makes.
+    static func boundaryTime(_ index: Int, placements: [VideoTimelineMath.Placement]) -> Double {
+        guard !placements.isEmpty else { return 0 }
+        if index <= 0 { return placements[0].start }
+        if index >= placements.count { return placements[placements.count - 1].end }
+        return (placements[index - 1].end + placements[index].start) / 2
+    }
+
+    /// The group dropped at boundary `index` (of the clips as they stand):
+    /// it lands there in its own timeline order, the rest close up around
+    /// it, and the boundaries follow their two clips. Returns false — and
+    /// changes nothing — when the order would not change (a drop back where
+    /// it came from).
+    @discardableResult
+    static func move(_ ids: [UUID], toBoundary index: Int, in recipe: inout VideoProjectRecipe) -> Bool {
+        let wanted = Set(ids)
+        let group = recipe.clips.filter { wanted.contains($0.id) }
+        guard !group.isEmpty else { return false }
+        let clamped = min(max(0, index), recipe.clips.count)
+        let before = recipe.clips[..<clamped].filter { !wanted.contains($0.id) }.count
+        var rest = recipe.clips.filter { !wanted.contains($0.id) }
+        rest.insert(contentsOf: group, at: before)
+        guard rest.map(\.id) != recipe.clips.map(\.id) else { return false }
+        let old = recipe
+        recipe.clips = rest
+        recipe.transitions = remapTransitions(from: old, to: rest)
+        return true
+    }
+
+    /// One clip dragged on its own (not in a group): where its tile's
+    /// centre lands among the tiles (`VideoTimelineMath.dropIndex`), as a
+    /// boundary for `move`.
+    static func singleMoveBoundary(clipAt source: Int, tileWidths widths: [Double], translation: Double) -> Int {
+        guard widths.indices.contains(source) else { return source }
+        let origin = widths.prefix(source).reduce(0, +)
+        let centre = origin + widths[source] / 2 + translation
+        let target = VideoTimelineMath.dropIndex(forOffset: centre, widths: widths)
+        // An index among the clips once the dragged one is out is a
+        // boundary of the clips as they stand: one further on past itself.
+        return target > source ? target + 1 : target
+    }
+
     // MARK: Delete (FS-12.11 §5)
 
     /// Takes the clips out and closes the track up; the boundaries left

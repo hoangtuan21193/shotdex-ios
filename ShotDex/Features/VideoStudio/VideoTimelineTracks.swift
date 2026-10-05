@@ -7,6 +7,9 @@ import ShotDexKit
 struct TimelineActiveDrag: Equatable {
     var kind: TimelineDragZone.Kind
     var translationX: CGFloat
+    /// Where in the content the finger came down — a group's drag follows
+    /// the finger itself, not a clip's offset (FS-12.11 §6).
+    var startX: CGFloat = 0
 }
 
 /// The drag zones the rows publish for the scroller's UIKit recognizers.
@@ -169,22 +172,105 @@ private struct VideoTrack: View {
         ZStack(alignment: .leading) {
             ForEach(Array(model.recipe.clips.enumerated()), id: \.element.id) { index, clip in
                 if index < placements.count {
-                    ClipBand(model: model, clip: clip, placement: placements[index], pps: pps, reorderShift: reorderShift(clip))
+                    ClipBand(
+                        model: model, clip: clip, placement: placements[index], pps: pps,
+                        reorderShift: reorderShift(clip),
+                        isLiftedFrom: groupDrag != nil && model.selectedClipIDs.contains(clip.id)
+                    )
                 }
             }
             if model.mode == .multiClip {
                 transitionChips
             }
             addMediaButton
+            if let groupDrag {
+                dropLine(at: groupDrag.boundary)
+                groupStack(at: groupDrag.fingerX)
+            }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .animation(EditorTheme.animation, value: model.selectedClipID)
     }
 
     private func reorderShift(_ clip: VideoClip) -> CGFloat {
-        guard let activeDrag, case .clipReorder(let id) = activeDrag.kind, id == clip.id
+        guard groupDrag == nil, let activeDrag, case .clipReorder(let id) = activeDrag.kind, id == clip.id
         else { return 0 }
         return activeDrag.translationX
+    }
+
+    /// A drag that started on a clip of the group (FS-12.11 §6): where the
+    /// finger is, and the boundary it points at.
+    private var groupDrag: (fingerX: CGFloat, boundary: Int)? {
+        guard let activeDrag, case .clipReorder(let id) = activeDrag.kind,
+              model.selectedClipIDs.contains(id), pps > 0
+        else { return nil }
+        let x = activeDrag.startX + activeDrag.translationX
+        return (x, VideoClipGroupEditing.boundary(forFingerTime: Double(x / pps), placements: placements))
+    }
+
+    /// The drop line, 3×82 in the selection colour with a glow, and over it
+    /// "Move 2 clips here" (100×18).
+    private func dropLine(at boundary: Int) -> some View {
+        let x = CGFloat(VideoClipGroupEditing.boundaryTime(boundary, placements: placements)) * pps
+        let size = VideoStudioMetrics.groupDropLine
+        let top = (lanes.clipCell - size.height) / 2
+        return ZStack(alignment: .topLeading) {
+            Rectangle()
+                .fill(EditorTheme.timelineSelection)
+                .frame(width: size.width, height: size.height)
+                .shadow(color: EditorTheme.timelineSelection.opacity(0.8), radius: 6)
+                .offset(x: x - size.width / 2, y: top)
+            Text(VideoStudioCopy.moveClipsHere(model.selectedClipIDs.count))
+                .font(.system(size: 10, weight: .bold))
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
+                .foregroundStyle(EditorTheme.timelineSelectionInk)
+                .padding(.horizontal, 6)
+                .frame(width: VideoStudioMetrics.groupDropPill.width, height: VideoStudioMetrics.groupDropPill.height)
+                .background(Capsule().fill(EditorTheme.timelineSelection))
+                .offset(x: x - VideoStudioMetrics.groupDropPill.width / 2, y: top - VideoStudioMetrics.groupDropPill.height - 2)
+        }
+        .allowsHitTesting(false)
+        .zIndex(4)
+        .accessibilityHidden(true)
+    }
+
+    /// The group lifted under the finger: a 131×54 stack — the first clip
+    /// 80 wide, the next ones 50 — with a 2pt ring and the count in a 22pt
+    /// badge.
+    private func groupStack(at fingerX: CGFloat) -> some View {
+        let clips = model.recipe.clips.filter { model.selectedClipIDs.contains($0.id) }
+        let size = VideoStudioMetrics.groupStack
+        return ZStack(alignment: .topTrailing) {
+            HStack(spacing: 1) {
+                ForEach(Array(clips.prefix(2).enumerated()), id: \.element.id) { index, clip in
+                    ClipFilmstrip(
+                        assetID: clip.assetID,
+                        fileURL: model.serverFileURL(for: clip.assetID),
+                        photoLibrary: model.photoLibrary,
+                        width: index == 0 ? 80 : size.width - 81,
+                        height: size.height
+                    )
+                }
+            }
+            .frame(width: size.width, height: size.height, alignment: .leading)
+            .clipShape(RoundedRectangle(cornerRadius: VideoStudioMetrics.trackRadius, style: .continuous))
+            .overlay {
+                RoundedRectangle(cornerRadius: VideoStudioMetrics.trackRadius, style: .continuous)
+                    .strokeBorder(EditorTheme.timelineSelection, lineWidth: VideoStudioMetrics.groupRing)
+            }
+            Text("\(clips.count)")
+                .font(.system(size: 12, weight: .bold).monospacedDigit())
+                .foregroundStyle(EditorTheme.timelineSelectionInk)
+                .frame(width: VideoStudioMetrics.groupCountBadge, height: VideoStudioMetrics.groupCountBadge)
+                .background(Circle().fill(EditorTheme.timelineSelection))
+                .offset(x: 8, y: -8)
+        }
+        .shadow(color: .black.opacity(0.5), radius: 8)
+        .offset(x: fingerX - size.width / 2, y: (lanes.clipCell - size.height) / 2)
+        .allowsHitTesting(false)
+        .zIndex(5)
+        .accessibilityHidden(true)
     }
 
     private var addMediaButton: some View {
@@ -258,6 +344,9 @@ private struct ClipBand: View {
     let placement: VideoTimelineMath.Placement
     let pps: CGFloat
     let reorderShift: CGFloat
+    /// Where a lifted group came from (FS-12.11 §6): darkened 0.66 under a
+    /// dashed 1.5pt ring while the group is in the air.
+    var isLiftedFrom = false
 
     private var isSelected: Bool { model.selectedClipID == clip.id }
     /// In the multi-select group (FS-12.11 §3): a 2pt ring and a ✓ badge,
@@ -285,6 +374,16 @@ private struct ClipBand: View {
                 )
         }
         .overlay(alignment: .topTrailing) { groupBadge }
+        .overlay {
+            if isLiftedFrom {
+                RoundedRectangle(cornerRadius: VideoStudioMetrics.trackRadius, style: .continuous)
+                    .fill(Color.black.opacity(0.66))
+                    .overlay {
+                        RoundedRectangle(cornerRadius: VideoStudioMetrics.trackRadius, style: .continuous)
+                            .strokeBorder(EditorTheme.timelineSelection, style: StrokeStyle(lineWidth: 1.5, dash: [4, 3]))
+                    }
+            }
+        }
         .frame(width: width, height: lanes.clipCell)
         // Everything that is hit-tested goes on the clip's own frame,
         // *before* it is moved into place: a modifier added after `.offset`

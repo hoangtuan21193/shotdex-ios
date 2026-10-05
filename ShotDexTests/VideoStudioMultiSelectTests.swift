@@ -321,4 +321,26 @@ struct VideoStudioMultiSelectTests {
         model.toggleClip(ids[4])
         #expect(model.isItemCommandEnabled(.delete))
     }
+
+    /// AC-9 on the model: the group move is one step and keeps the group;
+    /// one Undo puts back the order **and** the crossfade on 1 → 2.
+    @Test func oneUndoRestoresOrderAndCrossfade() {
+        let model = VideoStudioModelFixture.model(
+            clips: VideoStudioModelFixture.mediaSampleRecipe().clips,
+            configure: { $0.transitions[0] = .defaultCrossfade; $0.transitions[2] = .defaultCrossfade }
+        )
+        let ids = model.recipe.clips.map(\.id)
+        model.enterClipSelection(ids[2])
+        model.toggleClip(ids[3])
+
+        #expect(model.moveClips(model.selectedClipIDs, toBoundary: 1))
+        #expect(model.recipe.clips.map(\.id) == [ids[0], ids[2], ids[3], ids[1], ids[4]])
+        #expect(model.selectedClipIDs == [ids[2], ids[3]])
+        #expect(model.recipe.transitions.map(\.kind) == [.none, .crossfade, .none, .none])
+
+        model.undo()
+        #expect(model.recipe.clips.map(\.id) == ids)
+        #expect(model.recipe.transitions.map(\.kind) == [.crossfade, .none, .crossfade, .none])
+        #expect(!model.canUndo)
+    }
 }

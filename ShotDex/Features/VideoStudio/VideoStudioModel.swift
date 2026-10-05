@@ -1714,16 +1714,21 @@ final class VideoStudioModel {
 
     // MARK: - Structural edits (full rebuild)
 
-    func moveClip(from source: Int, to destination: Int) {
-        guard !isLaneLocked(.video) else { return }
-        guard recipe.clips.indices.contains(source),
-              recipe.clips.indices.contains(destination),
-              source != destination
-        else { return }
-        let clip = recipe.clips.remove(at: source)
-        recipe.clips.insert(clip, at: destination)
+    /// Moves clips to a boundary (FS-12.11 §6) — a group, or one clip on
+    /// its own — as one undo step. The boundaries left follow their two
+    /// clips: a pair that stays together keeps its transition, every new
+    /// one is a cut. A drop that changes nothing adds no step.
+    @discardableResult
+    func moveClips(_ ids: [UUID], toBoundary index: Int) -> Bool {
+        guard !isLaneLocked(.video) else { return false }
+        var edited = recipe
+        guard VideoClipGroupEditing.move(ids, toBoundary: index, in: &edited) else { return false }
+        pushUndo()
+        recipe = edited
+        if isSelectingClips { selectedClipIDs = VideoClipGroupEditing.ordered(selectedClipIDs, in: recipe) }
         markEdited()
         schedulePreviewRebuild()
+        return true
     }
 
     func setPhotoDuration(_ duration: Double, for clipID: UUID) {

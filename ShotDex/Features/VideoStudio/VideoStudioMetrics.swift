@@ -303,6 +303,15 @@ enum VideoStudioMetrics {
     static let groupRing: CGFloat = 2
     static let groupBadge: CGFloat = 19
     static let groupBadgeInset: CGFloat = 5
+    /// A dragged group (FS-12.11 §6): the stack under the finger, its count
+    /// badge, the drop line and the pill over it.
+    static let groupStack = CGSize(width: 131, height: 54)
+    static let groupCountBadge: CGFloat = 22
+    static let groupDropLine = CGSize(width: 3, height: 82)
+    static let groupDropPill = CGSize(width: 100, height: 18)
+    /// How near a lane's edge the finger must come for the timeline to
+    /// scroll under a dragged group.
+    static let groupAutoScrollEdge: CGFloat = 44
 
     /// How far the phone's stack lifts under the group panel: just enough
     /// for the video lane to clear the panel's top by 8 — zero whenever it

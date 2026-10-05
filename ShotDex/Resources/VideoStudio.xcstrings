@@ -633,6 +633,30 @@
       "comment": "Video Studio multi-select: command that moves the selected clips to another place without dragging",
       "extractionState": "manual"
     },
+    "Move %lld clips here": {
+      "comment": "Video Studio multi-select: the pill over the drop line — where the selected clips will go (plural)",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Move %lld clip here"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Move %lld clips here"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "Move the playhead into this clip.": {
       "comment": "Video Studio Trim: why the Start/End to Playhead chips are dimmed",
       "extractionState": "manual"

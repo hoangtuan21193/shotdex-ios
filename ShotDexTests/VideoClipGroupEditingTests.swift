@@ -145,4 +145,46 @@ struct VideoClipGroupEditingTests {
         #expect(!VideoClipGroupEditing.delete(ids, in: &all))
         #expect(all == recipe)
     }
+
+    /// AC-9: clips 3, 4 dropped at 0:03.0 with crossfades on 1 → 2 and
+    /// 3 → 4 — order 1·3·4·2·5, every length unchanged, 3 → 4 keeps its
+    /// crossfade (still neighbours), 1 → 3, 4 → 2 and 2 → 5 are cuts.
+    @Test func moveGroupKeepsInnerTransitionDropsOthers() {
+        var edited = recipe
+        edited.transitions[0] = .defaultCrossfade
+        edited.transitions[2] = .defaultCrossfade
+        let placements = VideoTimelineMath.placements(durations: edited.clips.map(\.effectiveDuration), overlaps: [0, 0, 0, 0])
+        let boundary = VideoClipGroupEditing.boundary(forFingerTime: 3.0, placements: placements)
+        #expect(boundary == 1)
+        #expect(VideoClipGroupEditing.move([ids[2], ids[3]], toBoundary: boundary, in: &edited))
+        #expect(edited.clips.map(\.id) == [ids[0], ids[2], ids[3], ids[1], ids[4]])
+        #expect(edited.clips.map(\.effectiveDuration) == [3.0, 5.0, 3.0, 6.2, 6.8])
+        #expect(edited.transitions.map(\.kind) == [.none, .crossfade, .none, .none])
+    }
+
+    /// Past a clip's midpoint the line jumps to that clip's far boundary;
+    /// before it, it stays at the near one. Boundaries sit mid-overlap.
+    @Test func fingerPastMidpointJumpsToNextBoundary() {
+        let placements = VideoTimelineMath.placements(durations: [3.0, 6.2, 5.0, 3.0, 6.8], overlaps: [0, 0, 0, 0])
+        #expect(VideoClipGroupEditing.boundary(forFingerTime: 0.2, placements: placements) == 0)
+        #expect(VideoClipGroupEditing.boundary(forFingerTime: 1.6, placements: placements) == 1)
+        #expect(VideoClipGroupEditing.boundary(forFingerTime: 6.0, placements: placements) == 1)
+        #expect(VideoClipGroupEditing.boundary(forFingerTime: 6.2, placements: placements) == 2)
+        #expect(VideoClipGroupEditing.boundary(forFingerTime: 30, placements: placements) == 5)
+        #expect(VideoClipGroupEditing.boundaryTime(2, placements: placements) == 9.2)
+        let overlapping = VideoTimelineMath.placements(durations: [3, 3], overlaps: [0.5])
+        #expect(VideoClipGroupEditing.boundaryTime(1, placements: overlapping) == 2.75)
+    }
+
+    /// One clip dragged alone lands where its tile's centre falls among the
+    /// tiles (AC-17: clip 4 past clip 2's middle → 1·4·2·3·5).
+    @Test func singleClipMoveUsesTileCentres() {
+        var edited = recipe
+        let widths = edited.clips.map { $0.effectiveDuration * 48.7 }
+        let boundary = VideoClipGroupEditing.singleMoveBoundary(clipAt: 3, tileWidths: widths, translation: -555)
+        #expect(boundary == 1)
+        #expect(VideoClipGroupEditing.move([ids[3]], toBoundary: boundary, in: &edited))
+        #expect(edited.clips.map(\.id) == [ids[0], ids[3], ids[1], ids[2], ids[4]])
+        #expect(VideoClipGroupEditing.singleMoveBoundary(clipAt: 1, tileWidths: widths, translation: 200) == 3)
+    }
 }

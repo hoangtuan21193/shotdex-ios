@@ -31,6 +31,10 @@ struct VideoTimelineView: View {
     @State private var hasAppliedWindowZoom = false
     @State private var dragZones: [TimelineDragZone] = []
     @State private var activeDrag: TimelineActiveDrag?
+    /// Where the clip press began, in content points. A reference: the
+    /// press's callbacks land before any render could hand back state.
+    @State private var pressStartHolder = TimelinePressStart()
+    private var pressStart: TimelinePressStart { pressStartHolder }
     @State private var viewportWidth: CGFloat = 393
     @State private var lastHapticSecond = 0
     /// Whether the edge being dragged sat at a limit, or on a snap, on the
@@ -369,7 +373,8 @@ struct VideoTimelineView: View {
             break
         }
         switch phase {
-        case .holding:
+        case .holding(let x):
+            pressStart.x = x
             if case .clipReorder(let id) = kind { model.clipPressGate.began(on: id) }
         case .modifiedTap(let command, let shift):
             model.clipPressGate.ended()
@@ -377,7 +382,7 @@ struct VideoTimelineView: View {
                 if shift { model.shiftClickClip(id) } else if command { model.commandClickClip(id) }
             }
         case .changed(let tx):
-            activeDrag = TimelineActiveDrag(kind: kind, translationX: tx)
+            activeDrag = TimelineActiveDrag(kind: kind, translationX: tx, startX: pressStart.x)
         case .ended(let tx):
             model.clipPressGate.ended()
             commit(kind, translationX: tx)
@@ -460,16 +465,27 @@ struct VideoTimelineView: View {
             guard let sourceIndex = model.recipe.clips.firstIndex(where: { $0.id == id }) else { return }
             let placements = model.clipPlacements
             guard sourceIndex < placements.count else { return }
-            let widths = placements.map { max(16, Double($0.duration) * Double(pps)) }
-            let origin = widths.prefix(sourceIndex).reduce(0, +)
-            let centre = origin + widths[sourceIndex] / 2 + Double(translationX)
-            let target = VideoTimelineMath.dropIndex(forOffset: centre, widths: widths)
-            if target != sourceIndex {
-                model.pushUndo()
-                model.moveClip(from: sourceIndex, to: target)
+            if model.selectedClipIDs.contains(id) {
+                // A clip of the group carries the whole group (FS-12.11 §6):
+                // it lands at the boundary the finger points at.
+                let fingerTime = Double(pressStart.x + translationX) / Double(pps)
+                let boundary = VideoClipGroupEditing.boundary(forFingerTime: fingerTime, placements: placements)
+                model.moveClips(model.selectedClipIDs, toBoundary: boundary)
+            } else {
+                let widths = placements.map { max(16, Double($0.duration) * Double(pps)) }
+                let boundary = VideoClipGroupEditing.singleMoveBoundary(
+                    clipAt: sourceIndex, tileWidths: widths, translation: Double(translationX)
+                )
+                model.moveClips([id], toBoundary: boundary)
             }
         case .clipLeadingHandle, .clipTrailingHandle:
             break  // handled in `handleZoneDrag`, phase by phase
         }
     }
+}
+
+/// Where a press on a clip's body came down, in the timeline's content.
+@MainActor
+final class TimelinePressStart {
+    var x: CGFloat = 0
 }
