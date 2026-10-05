@@ -27,9 +27,9 @@ struct CollectionsLayoutTests {
 
     @Test func hidingRemovesASectionFromTheTab() {
         let store = makeStore()
-        store.setHidden(true, for: .memories)
-        #expect(store.isHidden(.memories))
-        #expect(!store.visibleOrder.contains(.memories))
+        store.setHidden(true, for: .subjects)
+        #expect(store.isHidden(.subjects))
+        #expect(!store.visibleOrder.contains(.subjects))
         #expect(store.visibleOrder.count == CollectionsSection.allCases.count - 1)
     }
 
@@ -46,7 +46,7 @@ struct CollectionsLayoutTests {
     @Test func resetGoesBackToTheDefault() {
         let store = makeStore()
         store.move(fromOffsets: IndexSet(integer: 0), toOffset: 4)
-        store.setHidden(true, for: .memories)
+        store.setHidden(true, for: .subjects)
         store.reset()
         #expect(store.order == CollectionsSection.allCases)
         #expect(store.hidden.isEmpty)
@@ -57,10 +57,10 @@ struct CollectionsLayoutTests {
     /// build that removes one must not choke on the id left behind.
     @Test func anUnknownOrMissingSectionIsHandled() {
         let merged = CollectionsLayoutStore.merged(stored: [
-            "utilities", "somethingRemovedInALaterBuild", "memories",
+            "utilities", "somethingRemovedInALaterBuild", "subjects",
         ])
         #expect(merged.first == .utilities)
-        #expect(merged[1] == .memories)
+        #expect(merged[1] == .subjects)
         #expect(Set(merged) == Set(CollectionsSection.allCases))
         #expect(merged.count == CollectionsSection.allCases.count)
     }

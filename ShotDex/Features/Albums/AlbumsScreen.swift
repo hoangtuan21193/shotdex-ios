@@ -268,8 +268,6 @@ struct AlbumsScreen: View {
                 || !pinnedUtilities.isEmpty {
                 pinnedSection()
             }
-        case .memories:
-            if !model.memories.isEmpty { memoriesSection() }
         case .subjects:
             if !subjectTokens.isEmpty { subjectsSection() }
         case .smartAlbums:
@@ -940,35 +938,6 @@ extension AlbumsScreen {
         }
     }
 
-    /// The Memories row: wide cards the user scrolls sideways, each opening
-    /// the photos it stands for.
-    fileprivate func memoriesSection() -> some View {
-        VStack(alignment: .leading, spacing: AppTheme.Spacing.md) {
-            Text("Memories")
-                .font(.title2.bold())
-                .padding(.horizontal)
-
-            ScrollView(.horizontal, showsIndicators: false) {
-                LazyHStack(alignment: .top, spacing: tileSpacing) {
-                    ForEach(model.memories) { memory in
-                        NavigationLink {
-                            PhotoListScreen(
-                                title: memory.title,
-                                subtitle: memory.subtitle,
-                                assetIds: memory.assetIds
-                            )
-                        } label: {
-                            MemoryCard(memory: memory)
-                        }
-                        .buttonStyle(.plain)
-                    }
-                }
-                .padding(.horizontal)
-            }
-            .scrollClipDisabled()
-        }
-    }
-
 }
 
 /// Navigation value for a user-created smart album's detail screen. Distinct
@@ -1254,79 +1223,3 @@ enum CollectionsHeroMetrics {
 }
 
 
-/// One memory as a wide cover with its title and count burned into the bottom.
-/// Same shape as `TripCard` but narrower, because these scroll sideways.
-struct MemoryCard: View {
-    let memory: Memory
-
-    @Environment(PhotoLibraryService.self) private var photoLibrary
-    @State private var cover: UIImage?
-
-    /// Wider and taller as the text grows: a memory card is mostly title and
-    /// date, and at accessibility sizes both were being cut in half. It also
-    /// grows with the window, on the same terms as the cover tiles beside it
-    /// (`DESIGN.md` §10.1d) — it is the same kind of thing.
-    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
-    @ScaledMetric(relativeTo: .headline) private var typeScale = 1.0
-
-    private var size: CGSize {
-        let base = AlbumTileMetrics.memorySize(isRegularWidth: horizontalSizeClass == .regular)
-        return CGSize(width: base.width * typeScale, height: base.height * typeScale)
-    }
-    private var width: CGFloat { size.width }
-    private var height: CGFloat { size.height }
-
-    var body: some View {
-        ZStack(alignment: .bottomLeading) {
-            Group {
-                if let cover {
-                    Image(uiImage: cover)
-                        .resizable()
-                        .scaledToFill()
-                } else {
-                    Color(.secondarySystemBackground)
-                }
-            }
-            .frame(width: width, height: height)
-            .clipped()
-
-            LinearGradient(
-                colors: [.clear, .black.opacity(0.65)],
-                startPoint: .center,
-                endPoint: .bottom
-            )
-
-            VStack(alignment: .leading, spacing: 2) {
-                Text(memory.title)
-                    .font(.headline)
-                    .foregroundStyle(.white)
-                    .lineLimit(1)
-                Text(memory.subtitle)
-                    .font(.caption)
-                    .foregroundStyle(.white.opacity(0.8))
-                    .lineLimit(1)
-            }
-            .padding(12)
-        }
-        .frame(width: width, height: height)
-        .clipShape(RoundedRectangle(cornerRadius: AppTheme.Radius.lg, style: .continuous))
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel("\(memory.title), \(memory.subtitle)")
-        .task(id: memory.coverAssetId) { await loadCover() }
-    }
-
-    private func loadCover() async {
-        guard let asset = PhotoLibraryService.fetchAssets(ids: [memory.coverAssetId]).first
-        else { return }
-        let scale = ActiveDisplay.scale
-        let size = CGSize(width: width * scale, height: height * scale)
-        cover = await withCheckedContinuation { continuation in
-            var hasResumed = false
-            _ = photoLibrary.requestAlbumCover(for: asset, targetSize: size, allowNetwork: true) { image in
-                guard !hasResumed, let image else { return }
-                hasResumed = true
-                continuation.resume(returning: image)
-            }
-        }
-    }
-}

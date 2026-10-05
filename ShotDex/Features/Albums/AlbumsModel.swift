@@ -171,7 +171,6 @@ final class AlbumsModel {
                     smartAlbumStore: deps.smartAlbumStore,
                     libraryQueries: deps.libraryQueries
                 )
-                await loadMemories(libraryQueries: deps.libraryQueries)
                 await loadSubjects(libraryQueries: deps.libraryQueries)
             }
             isLoading = false
@@ -220,8 +219,6 @@ final class AlbumsModel {
         }
     }
 
-    /// Auto-curated collections for the Memories row.
-    private(set) var memories: [Memory] = []
     /// Photos the opt-in subject scan found faces in. Empty until the user
     /// runs that scan from Settings, which is when the People token appears.
     private(set) var peopleAssetIds: [String] = []
@@ -263,23 +260,6 @@ final class AlbumsModel {
     func deleteSmartAlbum(id: String) {
         try? dependencies?.smartAlbumStore.delete(id: id)
         load()
-    }
-
-    /// Builds the Memories row. The grouping runs off the main thread: it
-    /// walks every located photo twice, which is cheap but not free on a large
-    /// library.
-    private func loadMemories(libraryQueries: LibraryQueries) async {
-        let photos = (try? await libraryQueries.locatedPhotos()) ?? []
-        guard !photos.isEmpty else {
-            memories = []
-            return
-        }
-        memories = await Task.detached(priority: .utility) {
-            MemoryBuilder.memories(
-                from: photos,
-                trips: TripGrouping.trips(from: photos)
-            )
-        }.value
     }
 
     /// Reads the two subject collections. Both are plain indexed reads of a

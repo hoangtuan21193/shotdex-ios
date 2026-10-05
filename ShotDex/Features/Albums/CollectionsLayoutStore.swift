@@ -4,7 +4,6 @@ import SwiftUI
 /// One section of the Collections tab, in the order it appears by default.
 enum CollectionsSection: String, CaseIterable, Identifiable, Codable, Sendable {
     case pinned
-    case memories
     case subjects
     case smartAlbums
     case myAlbums
@@ -23,7 +22,6 @@ enum CollectionsSection: String, CaseIterable, Identifiable, Codable, Sendable {
     var displayName: String {
         switch self {
         case .pinned: "Pinned"
-        case .memories: "Memories"
         case .subjects: "People and Pets"
         case .smartAlbums: "Smart Albums"
         case .mediaTypes: "Media Types"
@@ -37,7 +35,6 @@ enum CollectionsSection: String, CaseIterable, Identifiable, Codable, Sendable {
     var systemImage: String {
         switch self {
         case .pinned: "pin"
-        case .memories: "sparkles"
         case .subjects: "person.crop.square"
         case .smartAlbums: "line.3.horizontal.decrease.circle"
         case .mediaTypes: "square.stack.3d.down.right"
@@ -63,7 +60,7 @@ enum CollectionsSection: String, CaseIterable, Identifiable, Codable, Sendable {
 /// The order and visibility of the Collections tab's sections.
 ///
 /// The tab's default order is an opinion about what most people reach for.
-/// Somebody who lives in their own albums and never opens Memories should be
+/// Somebody who lives in their own albums and never opens Smart Albums should be
 /// able to say so once, which is what this stores — Photos calls the same idea
 /// "Customize & Reorder".
 ///

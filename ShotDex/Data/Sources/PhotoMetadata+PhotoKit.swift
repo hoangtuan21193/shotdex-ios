@@ -51,7 +51,7 @@ extension LibraryGridItem {
     }
 
     /// The slim projection of an indexed row, for the screens that build their
-    /// own list (Places, Trips, Memories) and need one item type across both
+    /// own list (Places, Trips) and need one item type across both
     /// indexed and un-indexed assets.
     init(metadata: PhotoMetadata) {
         self.init(
