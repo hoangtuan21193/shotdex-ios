@@ -3,7 +3,7 @@
 `FS-05.04` · tier D (Resize, màn Watermark) + A (Settings, sheet xuất) · `Data/Sources/SignaturePresetStore.swift`
 · `ShotDexKit/Render/PhotoRenderService+Overlay.swift` · `Features/Editing/CompressionScreen.swift`
 · `Features/Shared/PhotoShareSheet.swift` · `Data/Sources/ShareExportPipeline.swift` · nguồn intent
-[user-wishes-research](../../_intents/2026-09-30-user-wishes-research.md) mục 6 · cập nhật 2026-10-02
+[user-wishes-research](../../_intents/2026-09-30-user-wishes-research.md) mục 6 · cập nhật 2026-10-05
 
 **Một câu:** chữ ký đã lưu trong Markup ([FS-05.03 §8](03-canvas-gestures-and-render.md#8-preset-watermark)) được
 đóng lên ảnh ở mọi lối xuất ra file — Resize, Share, sheet xuất của ảnh server, xuất ra Files (đợt 2 mục 4) — mà
@@ -68,6 +68,41 @@ phải:
   slider **Margin** và **Opacity** 44pt, stepper **Size**.
 - iPad 1376×1032 và Duo trong 951×669: xem trước bên trái, cột điều khiển 320pt bên phải, cuộn dọc.
 - Duo ngoài: vùng 382pt sau rail 84pt; xem trước 382×240 ở trên, điều khiển cuộn bên dưới.
+
+### 4a. Xem trước: Before and After, Zoom, Hide Inspector (người dùng chốt 2026-10-05)
+
+Màn Watermark là chỗ duy nhất người dùng thấy dấu trước khi giao 200 ảnh, nên xem trước phải soi được: so có/không
+dấu, phóng to chỗ dấu, và trên iPad lấy hết bề ngang cho ảnh.
+
+- **iPad, ngang và dọc** (board `IP22_Watermark`, `IPP18_Watermark`): toolbar một hàng 44pt ở y 32, cách hai mép
+  16, nằm **trên** cả xem trước lẫn inspector: nút kính `‹` (về form; VoiceOver *Back to Resize*), tiêu đề
+  **Watermark** 20 semibold + dòng phụ `Resize · 12 photos · 3 of 12`, khoảng trống, rồi **một** capsule kính
+  44pt chứa **Before and After** (44×40, `rectangle.split.2x1`) · **Zoom** (chữ mức hiện tại `Fit` + `⌃⌄`) ·
+  vạch ngăn · **Hide Inspector** (44×40, `sidebar.right`), rồi **Done** (nền accent, cao 44) ở mép phải. Done
+  rời khỏi đầu inspector; inspector bắt đầu dưới toolbar.
+- **Before and After** là công tắc: bật thì xem trước vẽ ảnh **không dấu** (cùng ảnh, cùng khung, cùng mức zoom),
+  nút ở trạng thái active của editor (nền trắng, glyph đen — DESIGN.md §9), VoiceOver đọc *Before and After, on*.
+  Chạm lại, hay đổi bất kỳ điều khiển nào của dấu (preset, Position, Size, Margin, Opacity, công tắc), thì tắt —
+  vì người dùng vừa đổi dấu là để nhìn dấu. Rời màn thì tắt. Không đổi gì của cấu hình đã nhớ.
+- **Zoom** mở menu **Fit · 200% · 400%** — phần trăm của khung vừa màn, như pill zoom của editor đếm
+  (`EditorLayoutMetrics.zoomPercent`). Capsule ghi mức đang dùng (`Fit`, `200%`, `400%`).
+  - Chọn 200% hay 400%: ảnh phóng quanh **tâm khung bao của dấu** (dấu là thứ cần soi), rồi kẹp để ảnh luôn phủ
+    kín khung xem trước (không lộ nền đen ở mép). Dấu tắt thì phóng quanh tâm ảnh.
+  - Một ngón kéo để dời ảnh trong lúc phóng; vuốt chuyển trang tắt khi đang phóng (dải ảnh của iPad vẫn chuyển
+    trang). Chuyển trang giữ mức zoom, canh lại theo dấu của ảnh mới. Fit trả về khung vừa và bật lại vuốt.
+  - Lúc phóng, ảnh của trang được đọc lại ở cạnh dài **min(cạnh dài file xuất, cạnh dài khung xem trước × mức
+    zoom × scale màn, 4096 px)**, để 400% không phải bản 1200 px kéo giãn. Dấu vẽ lên bản đó bằng đúng bộ raster
+    của bản xuất. Về Fit thì bỏ bản lớn (một trang lớn một lúc).
+- **Hide Inspector** ẩn cột inspector 360pt (trượt sang phải, `EditorTheme.animation`); xem trước và dải ảnh lấy
+  hết bề ngang; nút đổi thành **Show Inspector** (cùng glyph, VoiceOver đọc tên mới). Toolbar và Done ở nguyên.
+  Không nhớ qua lần mở sau: mở màn là thấy inspector.
+- **Phone có mọi chức năng của iPad, khác đường vào** (luật người dùng 2026-09-21). iPhone, Duo trong ngang
+  951×669 và dọc 669×951, Duo ngoài: **Before and After** và **Zoom** là hai nút kính tối trên **góc trên** của
+  xem trước — Before and After đĩa 36 ở trên-trái, Zoom capsule cao 36 (`Fit ⌃⌄`) ở trên-phải, cách mép 10, vùng
+  chạm 44. Góc dưới để trống vì dấu mặc định nằm dưới-phải và pill `i / N` nằm giữa đáy. Hành vi y như iPad.
+  **Hide Inspector** chỉ có trên iPad: các bố cục kia không có cột inspector để ẩn (điều khiển nằm dưới, hay cột
+  320 của Duo trong vốn là toàn bộ điều khiển).
+- iOS 26 và trước 26: cùng nút, cùng chỗ; không có nhánh `#available` ở màn này.
 
 | Lối xuất | Bật/tắt mặc định | Đổi cho lần này |
 |---|---|---|
@@ -134,8 +169,8 @@ phải:
 | Truy cập | lưới Position đọc *"Position, bottom right"*; Size đọc giá trị px; chip preset đọc tên và *"Missing file"* |
 | Chữ | String Catalog; một tên **Watermark** ở form, Settings và share sheet |
 
-Design canvas: đã vẽ trên canvas [ShotDex Photo Editor](../../design/README.md), nối vào
-hàng của từng thiết bị: màn Watermark `PH31`/`IP22`/`IPP18`/`DI17`/`DIP17`/`DC18` `_Watermark`, Resize có hàng
+Design canvas: board trên canvas từng thiết bị ([design/README](../../design/README.md)), nối vào
+hàng của từng thiết bị: màn Watermark `PH31`/`IP22`/`IPP18`/`DI17`/`DIP17`/`DC18` `_Watermark` (2026-10-05: toolbar §4a trên `IP22`/`IPP18`, hai nút góc trên trên bốn board còn lại), Resize có hàng
 Watermark `PH32_ResizeWatermark`, share sheet có dòng watermark `PH37_ShareWatermark`. Canvas Video Studio không đổi.
 
 ## 7. Tiêu chí nghiệm thu
@@ -161,8 +196,13 @@ Size 4%, Opacity 100%.
 | AC-13 | lần trước dùng preset **Logo**; file ảnh logo của nó đã bị xoá khỏi thư mục của app | mở Resize | hàng Watermark ghi `Off`; chip Logo trong màn Watermark ghi *Missing file* và không chọn được | ✅ `WatermarkAvailabilityTests.missingLogoFileIsOffAndNotSelectable` (lần trước dùng Logo, xoá file ảnh thật trong thư mục tạm: hàng đọc `Off`, không stamp, chip *Logo, Missing file* không chọn được, bật lại rơi về preset dùng được) + `.lostFontIsUnavailableButSelectable`, `.deletedPresetIsOff`, `.noPresetIsNone`; ảnh iPhone 17 Pro: chip mất file mờ, màn rỗng *No watermarks yet* (lưu preset: `PhotoOverlayModelsTests.signaturePresetRoundTrips`) |
 | AC-14 | HEIC 48MP 8064×6048, Resize Original, cấu hình W | Save to Photos | đỉnh RAM cao hơn cùng lượt không dấu ≤ 40 MB, đo trên iPhone 17 26.5 | ⚠️ sim đạt, máy thật chưa đo: `WatermarkMemoryTests.stampAt48MPAddsUnder40MB` (8064×6048 — JPEG sinh lúc chạy, không HEIC vì mã hoá HEVC trên sim treo khi chồng lượt; Resize Original; Size 4%: +0 MB, Size 25%: +3–6 MB so với lượt không dấu, sau khi `write` vẽ dấu theo dải ≤ 4 MB — một khối 25% từng đo +59 MB); `.bandsLeaveNoSeam` (dải chồng nhau theo độ lan của bóng, lệch ≤ 3 mức với bản ghép nguyên khối). Còn: đo trên iPhone 17 26.5 thật |
 | AC-15 | 10 ảnh, 4 ảnh chỉ có trên iCloud; Settings: Watermark When Sharing = Credit | Share → Save to Files | modal FS-02.06 tải 4 bản gốc; Files nhận 10 file có dấu, mỗi file đúng cỡ pixel của bản gốc, không file nào ở cỡ bản xem trước | ✅ `ShareWatermarkTests.iCloudOriginalsAreStampedAtFullSize` (mẻ lazy 10 ảnh, `FakeOriginalFetcher` kịch bản 4 ảnh chỉ trên iCloud: tải đúng 4 bản gốc trước, 10 file đều có dấu, mỗi file đúng cỡ pixel của bản gốc của nó — không file nào ở cỡ xem trước); modal tải: `CompressionPreparationTests.copiesReadThePreparedOriginals`, `LazyShareItemTests.viewerSharesPreparedOriginal`. Ảnh chỉ trên iCloud thật: chưa đo (sim không có iCloud) |
+| AC-16 | iPad 13 ngang, mẻ Resize 12 ảnh, cấu hình W | mở màn Watermark | toolbar ở y 32 cao 44: `‹`, *Watermark* + `Resize · 12 photos · 1 of 12`, capsule [Before and After · `Fit` · Hide Inspector], Done ở mép phải (x cuối ≤ 1360); inspector 360 bắt đầu dưới toolbar, không còn Done riêng; iPad dọc cùng toolbar | ⏳ ảnh + dump `IP22`/`IPP18`, `Tools/design-board compare` ≤ 2pt |
+| AC-17 | như AC-16 | chạm Before and After; rồi chạm lại; bật lại rồi đổi Opacity 60% | lần 1: xem trước là ảnh không dấu (khung bao của dấu trùng pixel ảnh gốc), nút active; lần 2: dấu trở lại; đổi Opacity thì Before and After tự tắt và dấu hiện ở 60%; cấu hình đã nhớ không đổi vì Before and After | ⏳ `WatermarkModelTests.beforeShowsTheBarePicture`, `.changingTheStampEndsBefore`; ảnh iPad |
+| AC-18 | như AC-16, ảnh 6000×4000 xuất 2048, dấu dưới-phải | Zoom → 400% | capsule ghi `400%`; tâm khung bao của dấu nằm trong khung xem trước và ảnh phủ kín khung (không mép đen); ảnh trang được đọc lại ở cạnh dài 2048 (≤ 4096, ≤ cỡ file xuất); kéo một ngón dời ảnh, không chuyển trang; chạm ảnh 5 ở dải ảnh → vẫn 400%, canh theo dấu ảnh 5; Fit → khung vừa, vuốt chuyển trang lại được | ⏳ `WatermarkZoomTests.centresOnTheStampAndCoversTheFrame`, `.detailEdgeIsCapped`, `.pageChangeKeepsTheLevel`; ảnh iPad |
+| AC-19 | như AC-16 | Hide Inspector; rồi Show Inspector | inspector ẩn, xem trước rộng 1376 − 32 (cách mép như toolbar), dải ảnh hết bề ngang; nút đọc *Show Inspector*; chạm lại → về như AC-16; mở lại màn → inspector hiện | ⏳ ảnh + dump iPad ngang và dọc |
+| AC-20 | iPhone 17 Pro 402×874, Duo ngoài 382pt, Duo trong (stand-in 951×669 và 669×951) | mở màn Watermark | Before and After (đĩa 36) ở góc trên-trái và Zoom (`Fit ⌃⌄`, cao 36) ở góc trên-phải của xem trước, cách mép 10, vùng chạm 44; không nút nào ở góc dưới; không có Hide Inspector; hành vi như AC-17, AC-18 | ⏳ ảnh iPhone + Duo ngoài + stand-in; dump so `PH31`/`DC18`/`DI17`/`DIP17` |
 
-**Chưa chứng minh được:** AC-2, AC-9, AC-14.
+**Chưa chứng minh được:** AC-2, AC-9, AC-14; AC-16 → AC-20 (thêm 2026-10-05).
 
 ## 8. Rủi ro đã biết
 
