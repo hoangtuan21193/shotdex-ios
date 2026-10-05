@@ -38,7 +38,9 @@ struct WatermarkScreen: View {
         }
         .background(EditorTheme.panelSolid.ignoresSafeArea())
         .toolbar(.hidden, for: .navigationBar)
-        .preferredColorScheme(.dark)
+        // Dark here only: a preferred scheme travelled up to the Export
+        // card on iPad and stayed after Back (FS-05.04 AC-21).
+        .scopedDarkAppearance()
         .alert(WatermarkCopy.sizeInPixels(), isPresented: $isTypingSize) {
             TextField(WatermarkCopy.pixels(), text: $typedSize)
                 .keyboardType(.numberPad)
