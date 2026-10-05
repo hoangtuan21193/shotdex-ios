@@ -2,7 +2,7 @@
 
 `FS-03.07b` · tier A (sheet Export) · `Data/Sources/CompressionPresetStore.swift` · `Data/Sources/ShareExportPipeline.swift`
 · `Data/Sources/OriginalPreparation.swift` · `Data/Sources/FileServer/FilesFolderClient.swift` · `Domain/ServerUpload/ServerUploadPath.swift`
-· test `ShotDexTests/FileExport*Tests.swift` (chưa có) · cập nhật 2026-10-02
+· test `ShotDexTests/FileExport*Tests.swift` · cập nhật 2026-10-05
 
 Nguồn intent: [2026-09-30-user-wishes-research](../../_intents/2026-09-30-user-wishes-research.md) mục 4.
 Chạy mẻ, tiến độ, đường hỏng, tiêu chí nghiệm thu, rủi ro: [07c](07c-export-acceptance-criteria.md). Preset dùng chung: [07](07-resize-and-compression.md) §3.
@@ -43,7 +43,10 @@ Sheet là **một Form**: iPhone detent large 402pt; iPad canh giữa, rộng t�
 | | **Date Folders** | công tắc; bật thì ghi vào `năm/năm-tháng-ngày` theo ngày chụp, cùng luật FS-15.02 §3 |
 | Export | **Export As** | segmented **Current Version** · **Unmodified Original** (chữ của Photos) |
 | | Version | chỉ khi có ảnh đã chỉnh, chỉ ở Current Version: **Edited** (mặc định) · **Original** |
-| | Size · Format · Quality | chỉ ở Current Version: danh sách preset của Resize, rồi Format và Quality như màn Resize |
+| | **Size** | chỉ ở Current Version: danh sách preset của Resize, kể cả preset tự tạo; đầu danh sách là **Original**, mặc định lần đầu (không phải 2048 px) |
+| | **Format** | chỉ ở Current Version: **Same as Original** (mặc định) · **JPEG** · **HEIC**, như màn Resize |
+| | **Color Space** | chỉ ở Current Version: **Original** (mặc định) · **sRGB** · **Display P3** · **Adobe RGB** (§3a) |
+| | **Quality** | chỉ ở Current Version: slider 10–100%, bước 1%, mặc định 80%, giá trị `80%` bên phải (§3a) |
 | | Metadata | chỉ ở Current Version: 3 mức của FS-08.06, mặc định lấy từ Settings |
 | | Live Photo Video | chỉ ở Unmodified Original: công tắc, mặc định bật |
 | File Names | **Name** | tên mẫu đang dùng, dòng phụ là ví dụ; chạm đẩy màn **File Name** (§5) |
@@ -51,8 +54,8 @@ Sheet là **một Form**: iPhone detent large 402pt; iPad canh giữa, rộng t�
 | Tóm tắt | footer | `48 photos · 3 videos · ~1.2 GB` và `412 GB free on T7`; Current Version thêm *Videos are exported as they are.* |
 
 - Toolbar: **Cancel** trái, **Export** phải; Export mờ khi chưa có folder, folder không mở được, hoặc mẫu tên rỗng.
-- **Nhớ sang lần sau:** folder và danh sách gần đây, Date Folders, Export As, preset, Format, Quality, mẫu tên,
-  If a File Exists, Live Photo Video. **Không nhớ:** Metadata (luôn từ Settings, FS-08.06 §4) và Version.
+- **Nhớ sang lần sau:** folder và danh sách gần đây, Date Folders, Export As, preset, Format, Color Space, Quality,
+  mẫu tên, If a File Exists, Live Photo Video. **Không nhớ:** Metadata (luôn từ Settings, FS-08.06 §4) và Version.
   Khác Resize (không nhớ gì) vì xuất ra cùng một ổ là việc lặp lại sau mỗi buổi chụp.
 - Unmodified Original chép **nguyên byte**; footer ghi *"Original files are copied as they are, with all their
   metadata. Edits aren't included."* Không có hàng Metadata: đây là bản lưu trữ, như Upload (07c §1 mục 6).
@@ -60,6 +63,38 @@ Sheet là **một Form**: iPhone detent large 402pt; iPad canh giữa, rộng t�
   **Same as Original**: HEIC ra HEIC, JPEG ra JPEG, mọi thứ khác (RAW, PNG, TIFF) ra JPEG.
   Preset Fill dùng crop giữa cho mọi ảnh, như Resize cả mẻ.
 - Live Photo ở Current Version ra **ảnh tĩnh**, như Resize và Share.
+
+### 3a. Size, Color Space, Quality (người dùng chốt 2026-10-05)
+
+- **Size mặc định Original.** Lần đầu mở sheet (chưa nhớ gì), hàng Size ghi `Original`; sau đó là preset lần trước.
+  Preset đã nhớ bị xoá trong Settings → Resize Presets thì về Original. Khác Resize (mặc định 2048 px): Export là
+  bản giao đầy đủ, ai cần nhỏ thì chọn. Mọi board sheet Export vẽ `Original` ở hàng Size.
+- **Color Space** — bốn lựa chọn, cùng tên với popup của bản Mac ([FS-18 §4](../FS-18-mac-app/03-editor-and-export.md), D17):
+
+  | Lựa chọn | File ra |
+  |---|---|
+  | **Original** (mặc định) | giữ profile của ảnh như renderer làm hôm nay ([FS-03.04 §2](04-raw-and-render-graph.md)): Display P3 hay Adobe RGB khi file nguồn ghi vậy, RAW ra Display P3, mọi profile khác ra sRGB |
+  | **sRGB** | điểm ảnh đổi sang sRGB, file mang profile `sRGB IEC61966-2.1` |
+  | **Display P3** | đổi sang Display P3, profile `Display P3` |
+  | **Adobe RGB** | đổi sang Adobe RGB (1998), profile `Adobe RGB (1998)` |
+
+  - Bốn lựa chọn là bốn profile bộ ghi ImageIO của app ghi được cho **cả JPEG lẫn HEIC** (đo 2026-10-05: ghi rồi
+    đọc lại, profile và không gian màu của ảnh giải ra đúng cả 6 tổ hợp). Không có ProPhoto RGB, không có
+    "Display" của máy: file 8 bit ở profile rộng hơn Adobe RGB thì dải màu vỡ.
+  - Đổi profile là đổi điểm ảnh, không chỉ gắn nhãn: cùng một màu trong gamut, đọc lại qua profile của file, lệch ≤ 2 mức
+    (8 bit) giữa các lựa chọn, trừ màu nằm ngoài gamut đích (bị cắt về mép gamut — vì vậy mặc định là Original).
+  - Đổi sau mọi chỉnh sửa và **trước** dấu watermark: dấu được vẽ trong profile đích như mọi điểm ảnh khác.
+  - Preset tự tạo không mang color space (Resize Presets không có hàng này): chọn preset không đổi Color Space.
+  - Resize, Share và sheet xuất ảnh server **không** có hàng này; chúng giữ profile gốc như cũ.
+- **Quality** dùng đúng dải, bước và mặc định của Resize và Settings → Resize Presets: 10–100%, bước 1%,
+  mặc định 80%. Chọn preset tự tạo thì Quality lấy **đúng** chất lượng của preset (`85%` ra `85%`, không làm tròn
+  về bước 10). Kéo slider không đổi preset.
+  - Quality chỉ có nghĩa với định dạng nén mất dữ liệu. Mọi Format của sheet đều nén mất dữ liệu (JPEG, HEIC; Same
+    as Original đổi RAW, PNG, TIFF sang JPEG), nên hàng hiện **mỗi khi** Current Version hiện và ẩn cùng các hàng
+    render ở Unmodified Original. Sau này có định dạng không mất dữ liệu thì hàng ẩn với định dạng đó.
+- **Thứ tự và hình:** Size · Format · Color Space · Quality ngay dưới Version, trước Metadata, mọi thiết bị.
+  Color Space là hàng menu như Format (`Original ⌃⌄`); Quality là hàng slider: nhãn, slider, giá trị. iPhone, Duo
+  ngoài: hàng Form; iPad, Duo trong: hàng 44pt của thẻ (board `IPP19_Export`).
 
 ## 4. Folder và quyền truy cập
 
@@ -139,7 +174,7 @@ thêm các connection đã lưu (SMB, SFTP, WebDAV, folder cloud) — chọn m�
 | Truy cập | chip token có nhãn *"Insert Date"*…; VoiceOver đọc dòng ví dụ và phần trăm tiến độ |
 | Chữ | nhãn trong String Catalog; tên preset trùng tên ở Resize và Settings → Resize Presets |
 
-**Design canvas:** không board cũ nào đổi. Board mới đã vẽ trên canvas
-[ShotDex Photo Editor](../../design/README.md), nối vào hàng từng thiết bị: sheet Export
+**Design canvas:** không board cũ nào đổi. Board mới nằm trên canvas từng thiết bị ([design/README](../../design/README.md)),
+nối vào hàng từng thiết bị (2026-10-05: mọi board sheet Export vẽ Size `Original` và hai hàng Color Space, Quality của §3a): sheet Export
 `PH33`/`IP23`/`IPP19`/`DI18`/`DIP18`/`DC19` `_Export`, màn File Name `PH34`/`IP24`/`IPP20`/`DI19`/`DIP19`/`DC20`
 `_FileName`, sheet đang chạy `PH35_ExportRunning`, tổng kết `PH36_ExportSummary` (hai board sau chỉ ở hàng iPhone).

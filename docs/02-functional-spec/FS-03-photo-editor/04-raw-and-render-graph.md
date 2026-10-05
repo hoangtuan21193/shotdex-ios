@@ -31,7 +31,8 @@ phân giải** để chạy cho mượt.
   thẳng, slider hiện đúng số đó, kéo slider ghi lại cặp tuyệt đối. JPEG không có white balance của decoder nên
   cặp này không đổi gì.
 - Output giữ color profile gốc tốt nhất có thể (Display P3 / Adobe RGB / sRGB). **Không có picker color
-  space.**
+  space**, trừ hàng **Color Space** của sheet Export ([FS-03.07b §3a](07b-export-to-files.md), chốt 2026-10-05):
+  Original · sRGB · Display P3 · Adobe RGB, mặc định Original = đúng luật giữ profile ở dòng này.
 
 ## 3. Preview
 
