@@ -104,98 +104,142 @@ struct VideoCommand: Identifiable {
     let action: () -> Void
 }
 
-// MARK: - iPad top band (FS-12.03 §2–3)
+// MARK: - iPad toolbar (FS-12.03 §2–3, the Mac-style canvas)
 
-/// The iPad's top band, 0–64: Back · Undo · Redo · Show original from x 20 on
-/// the leading edge; "5 clips · 16:9 · 0:24" in the middle — the project has
-/// no name, so this is what the band says about it; the size read-out, the
-/// Video Settings button and Export on the trailing edge. Export and the
-/// settings button stay while an item is selected: the inspector's footer
-/// carries ✕ · ✓, so the band never has to make way.
-struct VideoStudioDeskBand: View {
+/// The iPad's toolbar row, y 24–68: glass capsules 44 tall, 12 apart, the
+/// way the Mac and the redrawn iPad canvas draw a window's toolbar. Leading:
+/// Media Pool (while the pool is shut) · Back · the project's summary
+/// ("5 clips · 16:9 · 0:24") over its length and size — the project has no
+/// name. Trailing: Undo · Redo · Show original · Video Settings · Quick
+/// Adjust · Inspector · Export. Export and Video Settings stay while an item
+/// is selected: the inspector's foot carries ✕ · ✓.
+///
+/// Tier D, so the capsules are the editor's dark glass (`editorGlass`) on
+/// both sides of iOS 26 — no fourth way into glass (DESIGN §9).
+struct VideoStudioDeskToolbar: View {
     @Bindable var model: VideoStudioModel
     let actions: VideoInspectorActions
-    /// Portrait folds the settings button onto two lines — ratio and
-    /// resolution over frame rate and size — and drops the separate read-out.
-    var isPortrait = false
+    /// Nil where the pool cannot open at all; false shows the Media Pool
+    /// capsule that opens it.
+    var isPoolOpen: Bool?
+    var isInspectorOpen: Bool
+    var isQuickAdjustOpen: Bool
+    /// The Export Video sheet is up: the pill goes quiet (FS-12.16 §5).
+    var isExportOpen = false
+    let onTogglePool: () -> Void
+    let onToggleInspector: () -> Void
+    let onToggleQuickAdjust: () -> Void
 
     private typealias Geometry = VideoStudioDeskGeometry
 
     var body: some View {
-        ZStack {
-            Text(projectSummary)
-                .font(.system(size: 12, weight: .medium))
-                .foregroundStyle(EditorTheme.dimText)
-                .lineLimit(1)
-            HStack(spacing: Geometry.bandDiscGap) {
-                disc("chevron.left", isEnabled: true, action: actions.onBack)
-                    .accessibilityLabel(Text("Back", comment: "Video Studio: leaves the editor"))
-                disc("arrow.uturn.backward", isEnabled: model.canUndo) { model.undo() }
-                    .accessibilityLabel("Undo")
-                disc("arrow.uturn.forward", isEnabled: model.canRedo) { model.redo() }
-                    .accessibilityLabel("Redo")
-                VideoShowOriginalButton(model: model, diameter: Geometry.bandDisc)
-                Spacer(minLength: 0)
-                if !isPortrait { readout.padding(.trailing, 6) }
-                VideoSettingsButton(model: model, isTwoLine: isPortrait, presentsPopover: true)
-                exportPill
+        HStack(spacing: Geometry.capsuleGap) {
+            if isPoolOpen == false {
+                capsule(width: Geometry.toolbarHeight) {
+                    toolbarButton("sidebar.leading", isOn: false, action: onTogglePool)
+                        .accessibilityLabel(Text("Media Pool", comment: "Video Studio: shows or hides the library column"))
+                }
             }
-            .padding(.horizontal, Geometry.bandInset)
+            capsule(width: Geometry.toolbarHeight) {
+                toolbarButton("chevron.left", isOn: false, action: actions.onBack)
+                    .accessibilityLabel(Text("Back", comment: "Video Studio: leaves the editor"))
+            }
+            title
+            Spacer(minLength: 0)
+            capsule(width: Geometry.historyCapsuleWidth, spacing: 6) {
+                toolbarButton("arrow.uturn.backward", isEnabled: model.canUndo, isOn: false) { model.undo() }
+                    .accessibilityLabel("Undo")
+                toolbarButton("arrow.uturn.forward", isEnabled: model.canRedo, isOn: false) { model.redo() }
+                    .accessibilityLabel("Redo")
+                VideoShowOriginalButton(
+                    model: model,
+                    diameter: Geometry.capsuleButton,
+                    glyphSize: 18,
+                    restingFill: .clear
+                )
+            }
+            capsule(width: Geometry.settingsCapsuleWidth) {
+                VideoSettingsButton(model: model, style: .capsule, presentsPopover: true)
+            }
+            capsule(width: Geometry.viewToggleCapsuleWidth, spacing: 4) {
+                toolbarButton("slider.horizontal.3", isOn: isQuickAdjustOpen, action: onToggleQuickAdjust)
+                    .accessibilityLabel(Text("Quick Adjust", comment: "Video Studio: shows or hides the quick slider strip under the frame"))
+                toolbarButton("sidebar.trailing", isOn: isInspectorOpen, action: onToggleInspector)
+                    .accessibilityLabel(Text("Inspector", comment: "Video Studio: shows or hides the controls column"))
+            }
+            exportPill
         }
-        .frame(height: Geometry.bandDisc)
-        .padding(.top, Geometry.bandRowTop)
+        .padding(.leading, Geometry.toolbarLeading(isPoolOpen: isPoolOpen == true))
+        .padding(.trailing, Geometry.toolbarInset)
+        .frame(height: Geometry.toolbarHeight)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
     }
 
-    /// "5 clips · 16:9 · 0:24".
-    private var projectSummary: String {
-        VideoStudioCopy.projectSummary(
-            clips: model.recipe.clips.count,
-            ratio: model.recipe.aspect.displayName,
-            length: VideoStudioMetrics.shortDuration(model.totalDuration)
-        )
-    }
-
-    /// "0:24 · ~30 MB".
-    private var readout: some View {
-        Text(VideoStudioMetrics.lengthAndSize(duration: model.totalDuration, bytes: model.estimatedExportBytes))
-            .font(.system(size: 11, weight: .medium).monospacedDigit())
-            .foregroundStyle(EditorTheme.dimText)
-            .lineLimit(1)
-            .fixedSize()
-            .padding(.trailing, 4)
+    /// "5 clips · 16:9 · 0:24" in 20 semibold over "0:24 · ~30 MB" in 13.
+    private var title: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            Text(verbatim: VideoStudioCopy.projectSummary(
+                clips: model.recipe.clips.count,
+                ratio: model.recipe.aspect.displayName,
+                length: VideoStudioMetrics.shortDuration(model.totalDuration)
+            ))
+            .font(.system(size: 20, weight: .semibold))
+            .foregroundStyle(.white)
+            Text(verbatim: VideoStudioMetrics.lengthAndSize(duration: model.totalDuration, bytes: model.estimatedExportBytes))
+                .font(.system(size: 13).monospacedDigit())
+                .foregroundStyle(EditorTheme.secondaryText)
+        }
+        .lineLimit(1)
+        .accessibilityElement(children: .combine)
     }
 
     private var exportPill: some View {
         Button(action: actions.onExport) {
-            HStack(spacing: 6) {
+            HStack(spacing: 8) {
                 Image(systemName: "square.and.arrow.down")
-                    .font(.system(size: 14, weight: .semibold))
+                    .font(.system(size: 17, weight: .semibold))
                 Text("Export", comment: "Video Studio: renders the video and saves it")
-                    .font(.system(size: 15, weight: .semibold))
+                    .font(.system(size: 17, weight: .semibold))
             }
-            .foregroundStyle(.black)
-            .padding(.horizontal, 18)
-            .frame(height: Geometry.exportHeight)
-            .background(Capsule().fill(EditorTheme.accent))
-            .contentShape(Capsule())
+            .foregroundStyle(isExportOpen ? Color.white : Color.black)
+            .frame(width: Geometry.exportSize.width, height: Geometry.exportSize.height)
+            .background(
+                RoundedRectangle(cornerRadius: Geometry.exportRadius, style: .continuous)
+                    .fill(isExportOpen ? Color.white.opacity(0.08) : EditorTheme.accent)
+            )
+            .contentShape(RoundedRectangle(cornerRadius: Geometry.exportRadius, style: .continuous))
         }
         .buttonStyle(.plain)
-        .padding(.leading, 4)
     }
 
-    /// A 40pt disc on white 10 %, glyph white — dim when it cannot act.
-    private func disc(_ systemName: String, isEnabled: Bool, action: @escaping () -> Void) -> some View {
+    /// A glass capsule `width`×44, its buttons from 3pt inside its leading
+    /// edge (the 1pt stroke and 2 of padding).
+    private func capsule<Content: View>(width: CGFloat, spacing: CGFloat = 0, @ViewBuilder content: () -> Content) -> some View {
+        HStack(spacing: spacing) { content() }
+            .padding(.leading, 3)
+            .frame(width: width, height: Geometry.toolbarHeight, alignment: .leading)
+            .editorGlass(Capsule())
+    }
+
+    /// A 40pt button inside a capsule: glyph 20, white; on white 14 % while
+    /// what it shows is open; dim when it cannot act.
+    private func toolbarButton(
+        _ systemName: String,
+        isEnabled: Bool = true,
+        isOn: Bool,
+        action: @escaping () -> Void
+    ) -> some View {
         Button(action: action) {
             Image(systemName: systemName)
-                .font(.system(size: 16, weight: .semibold))
+                .font(.system(size: 18, weight: .medium))
                 .foregroundStyle(isEnabled ? Color.white : Color.white.opacity(0.28))
-                .frame(width: Geometry.bandDisc, height: Geometry.bandDisc)
-                .background(Circle().fill(Color.white.opacity(0.10)))
+                .frame(width: Geometry.capsuleButton, height: Geometry.capsuleButton)
+                .background(Circle().fill(isOn ? VideoStudioMetrics.openCellFill : .clear))
                 .contentShape(Circle())
         }
         .buttonStyle(.plain)
         .disabled(!isEnabled)
+        .accessibilityAddTraits(isOn ? .isSelected : [])
     }
 }
 
@@ -238,11 +282,19 @@ struct VideoShowOriginalButton: View {
 }
 
 /// The Video Settings button of a wide window: the project's shape as a
-/// glyph, then what it exports — "16:9 · 1080p · 30 fps" on one line, or on
-/// two ("16:9 · 1080p" over "30 fps · ~30 MB") where the band is narrow.
+/// glyph, then what it exports — "16:9 · 1080p · 30 fps" on one line in the
+/// iPad toolbar's capsule, or on two ("16:9 · 1080p" over "30 fps · ~30 MB")
+/// in the Duo's bottom row.
 struct VideoSettingsButton: View {
+    enum Style {
+        /// 222×40 inside the iPad toolbar's 226 capsule.
+        case capsule
+        /// Two lines, 40 tall, radius 10 — the Duo inner display's row.
+        case twoLine
+    }
+
     @Bindable var model: VideoStudioModel
-    var isTwoLine = false
+    var style: Style = .twoLine
     /// The iPad opens Video Settings as a popover under the button
     /// (FS-12.10 §3) rather than in the inspector column.
     var presentsPopover = false
@@ -260,9 +312,10 @@ struct VideoSettingsButton: View {
                 model.toggleToolPanel(.videoSettings)
             }
         } label: {
-            HStack(spacing: 6) {
-                ratioGlyph
-                if isTwoLine {
+            switch style {
+            case .twoLine:
+                HStack(spacing: 6) {
+                    ratioGlyph(side: 14)
                     VStack(alignment: .leading, spacing: 1) {
                         Text(verbatim: "\(ratio) · \(preset)")
                             .font(.system(size: 13, weight: .semibold))
@@ -270,27 +323,39 @@ struct VideoSettingsButton: View {
                             .font(.system(size: 10.5, weight: .medium).monospacedDigit())
                             .foregroundStyle(.white.opacity(0.5))
                     }
-                } else {
-                    Text(verbatim: "\(ratio) · \(preset) · \(fps)")
-                        .font(.system(size: 13, weight: .semibold))
+                    chevron(isOpen: isOpen)
                 }
-                // ⌃ while open, ⌄ while shut (FS-12.10 §3).
-                Image(systemName: isOpen ? "chevron.up" : "chevron.down")
-                    .font(.system(size: 10, weight: .semibold))
-                    .foregroundStyle(.white.opacity(0.6))
-            }
-            .foregroundStyle(.white)
-            .lineLimit(1)
-            .padding(.horizontal, 9)
-            .frame(height: isTwoLine ? 40 : VideoStudioDeskGeometry.settingsButtonHeight)
-            .background(
-                RoundedRectangle(
-                    cornerRadius: isTwoLine ? 10 : VideoStudioDeskGeometry.settingsButtonRadius,
-                    style: .continuous
+                .foregroundStyle(.white)
+                .lineLimit(1)
+                .padding(.horizontal, 9)
+                .frame(height: 40)
+                .background(
+                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                        .fill(isOpen ? VideoStudioMetrics.openCellFill : Color.white.opacity(0.08))
                 )
-                .fill(isOpen ? VideoStudioMetrics.openCellFill : Color.white.opacity(0.08))
-            )
-            .contentShape(Rectangle())
+                .contentShape(Rectangle())
+            case .capsule:
+                HStack(spacing: 8) {
+                    ratioGlyph(side: 19)
+                    Text(verbatim: "\(ratio) · \(preset) · \(fps)")
+                        .font(.system(size: 15, weight: .semibold))
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    // ⌃⌄: a pop-up of settings (FS-12.10 §3).
+                    Image(systemName: "chevron.up.chevron.down")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(.white.opacity(0.6))
+                }
+                .foregroundStyle(.white)
+                .lineLimit(1)
+                .padding(.leading, 14)
+                .padding(.trailing, 12)
+                .frame(
+                    width: VideoStudioDeskGeometry.settingsCapsuleWidth - 4,
+                    height: VideoStudioDeskGeometry.capsuleButton
+                )
+                .background(Capsule().fill(isOpen ? VideoStudioMetrics.openCellFill : .clear))
+                .contentShape(Capsule())
+            }
         }
         .buttonStyle(.plain)
         .fixedSize()
@@ -305,11 +370,17 @@ struct VideoSettingsButton: View {
         .accessibilityAddTraits(isOpen ? .isSelected : [])
     }
 
+    /// ⌃ while open, ⌄ while shut (FS-12.10 §3).
+    private func chevron(isOpen: Bool) -> some View {
+        Image(systemName: isOpen ? "chevron.up" : "chevron.down")
+            .font(.system(size: 10, weight: .semibold))
+            .foregroundStyle(.white.opacity(0.6))
+    }
+
     /// A frame in the project's ratio, so the button says what it changes.
-    private var ratioGlyph: some View {
+    private func ratioGlyph(side: CGFloat) -> some View {
         let ratio = model.recipe.aspect.ratio
-        let side: CGFloat = 14
-        return RoundedRectangle(cornerRadius: 2.5, style: .continuous)
+        return RoundedRectangle(cornerRadius: side * 0.18, style: .continuous)
             .strokeBorder(Color.white, lineWidth: 1.5)
             .frame(width: ratio >= 1 ? side : side * ratio, height: ratio >= 1 ? side / ratio : side)
             .frame(width: side, height: side)

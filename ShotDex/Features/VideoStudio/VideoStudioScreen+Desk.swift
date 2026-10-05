@@ -25,52 +25,12 @@ extension VideoStudioScreen {
         ))
         return ZStack(alignment: .topLeading) {
             EditorTheme.background
-            VideoStudioDeskBand(model: model, actions: actions(model))
-                .disabled(model.isExportBusy)
-                .placed(frames.band)
-            if let pool = frames.pool {
-                mediaPool(model, width: pool.width)
-                    .placed(pool)
-            }
-            Group {
-                VideoViewerHeader(
-                    model: model,
-                    isMediaPoolOpen: canOpenPool || showsPool ? showsPool : nil,
-                    isInspectorOpen: columns.isInspectorOpen,
-                    isToolStripOpen: columns.isQuickAdjustOpen,
-                    onToggleMediaPool: { columns.isPoolOpen = !showsPool },
-                    onToggleInspector: { columns.isInspectorOpen.toggle() },
-                    onToggleToolStrip: { columns.isQuickAdjustOpen.toggle() }
-                )
-                .placed(CGRect(x: frames.stage.minX, y: frames.stage.minY - 12, width: frames.stage.width, height: 32))
-            }
-            preview(model)
-                .placed(quickAdjustTrimmed(frames.stage))
-            if columns.isQuickAdjustOpen {
-                VideoViewerToolStrip(model: model)
-                    .placed(quickAdjustStrip(frames.stage))
-            }
-            if let meter = frames.meter {
-                VideoAudioMeterColumn(model: model, meter: levelMeter, width: meter.width)
-                    .placed(meter)
-            }
+            deskStage(model, frames: frames)
             if let inspector = frames.inspector {
                 inspectorColumn(model)
                     .placed(inspector)
             }
-            VideoTransportBar(model: model)
-                .placed(frames.transport)
-            if let overview = frames.overview {
-                VideoTimelineOverview(model: model, visibleDuration: timelineVisibleDuration)
-                    .placed(overview)
-            }
-            deskTimeline(model, height: frames.timeline.height)
-                .placed(frames.timeline)
-            if let divider = frames.divider {
-                timelineDivider
-                    .frame(width: 120)
-                    .position(x: divider.midX, y: divider.midY)
-            }
+            deskPoolAndToolbar(model, frames: frames, canOpenPool: canOpenPool, showsPool: showsPool)
         }
         .frame(width: window.width, height: window.height, alignment: .topLeading)
         .deskChrome(model, lanes: lanes, meter: levelMeter, hasMeter: frames.meter != nil, shortcuts: keyboardShortcuts(model))
@@ -93,57 +53,82 @@ extension VideoStudioScreen {
         ))
         return ZStack(alignment: .topLeading) {
             EditorTheme.background
-            VideoStudioDeskBand(model: model, actions: actions(model), isPortrait: true)
-                .disabled(model.isExportBusy)
-                .placed(frames.band)
-            if let pool = frames.pool {
-                mediaPool(model, width: pool.width)
-                    .placed(pool)
-            }
-            Group {
-                VideoViewerHeader(
-                    model: model,
-                    isMediaPoolOpen: canOpenPool || showsPool ? showsPool : nil,
-                    isInspectorOpen: columns.isInspectorOpen,
-                    isToolStripOpen: columns.isQuickAdjustOpen,
-                    onToggleMediaPool: { columns.isPoolOpen = !showsPool },
-                    onToggleInspector: { columns.isInspectorOpen.toggle() },
-                    onToggleToolStrip: { columns.isQuickAdjustOpen.toggle() }
-                )
-                .placed(CGRect(x: frames.stage.minX, y: frames.stage.minY - 12, width: frames.stage.width, height: 32))
-            }
-            preview(model)
-                .placed(quickAdjustTrimmed(frames.stage))
-            if columns.isQuickAdjustOpen {
-                VideoViewerToolStrip(model: model)
-                    .placed(quickAdjustStrip(frames.stage))
-            }
-            if let meter = frames.meter {
-                VideoAudioMeterColumn(model: model, meter: levelMeter, width: meter.width)
-                    .placed(meter)
-            }
-            VideoTransportBar(model: model)
-                .placed(frames.transport)
-            if let overview = frames.overview {
-                VideoTimelineOverview(model: model, visibleDuration: timelineVisibleDuration)
-                    .placed(overview)
-            }
-            deskTimeline(model, height: frames.timeline.height)
-                .placed(frames.timeline)
-            if let divider = frames.divider {
-                timelineDivider
-                    .frame(width: 120)
-                    .position(x: divider.midX, y: divider.midY)
-            }
+            deskStage(model, frames: frames)
             // Shut, the dock opens again on the next selection (FS-12.03 §5)
             // — there is no second, sliding panel for the same job.
             if let dock = frames.dock {
                 VideoStudioDock(model: model, actions: actions(model), importedMusic: importedMusic)
                     .placed(dock)
             }
+            deskPoolAndToolbar(model, frames: frames, canOpenPool: canOpenPool, showsPool: showsPool)
         }
         .frame(width: window.width, height: window.height, alignment: .topLeading)
         .deskChrome(model, lanes: lanes, meter: levelMeter, hasMeter: frames.meter != nil, shortcuts: keyboardShortcuts(model))
+    }
+
+    /// The iPad's bands from the frame down, the same in both orientations:
+    /// the frame and its meter, the play row under them, the timeline's tool
+    /// row, the overview, the timeline and the divider's grabber.
+    @ViewBuilder
+    private func deskStage(_ model: VideoStudioModel, frames: VideoStudioDeskGeometry.Frames) -> some View {
+        let box = frames.frameBox ?? frames.stage
+        preview(model)
+            .placed(quickAdjustTrimmed(box))
+        if columns.isQuickAdjustOpen {
+            VideoViewerToolStrip(model: model)
+                .placed(quickAdjustStrip(box))
+        }
+        if let meter = frames.meter {
+            VideoAudioMeterColumn(model: model, meter: levelMeter, width: meter.width)
+                .placed(meter)
+        }
+        if let playRow = frames.playRow {
+            VideoPlayheadName(model: model)
+                .frame(height: playRow.height)
+                .offset(x: playRow.minX, y: playRow.minY)
+        }
+        VideoTransportBar(model: model)
+            .placed(frames.transport)
+        if let overview = frames.overview {
+            VideoTimelineOverview(model: model, visibleDuration: timelineVisibleDuration)
+                .placed(overview)
+        }
+        deskTimeline(model, height: frames.timeline.height)
+            .placed(frames.timeline)
+        if let divider = frames.divider {
+            timelineDivider
+                .frame(width: 120)
+                .position(x: divider.midX, y: divider.midY)
+        }
+    }
+
+    /// The floating pool and the toolbar's capsules: drawn last, over the
+    /// inspector's head (it runs from the window's top edge) and, in
+    /// portrait, over the frame.
+    @ViewBuilder
+    private func deskPoolAndToolbar(
+        _ model: VideoStudioModel,
+        frames: VideoStudioDeskGeometry.Frames,
+        canOpenPool: Bool,
+        showsPool: Bool
+    ) -> some View {
+        if let pool = frames.pool {
+            mediaPool(model, width: pool.width)
+                .placed(pool)
+        }
+        VideoStudioDeskToolbar(
+            model: model,
+            actions: actions(model),
+            isPoolOpen: canOpenPool || showsPool ? showsPool : nil,
+            isInspectorOpen: columns.isInspectorOpen,
+            isQuickAdjustOpen: columns.isQuickAdjustOpen,
+            isExportOpen: isExportSheetPresented,
+            onTogglePool: { columns.isPoolOpen = !showsPool },
+            onToggleInspector: { columns.isInspectorOpen.toggle() },
+            onToggleQuickAdjust: { columns.isQuickAdjustOpen.toggle() }
+        )
+        .disabled(model.isExportBusy)
+        .placed(frames.band)
     }
 
     // MARK: Duo inner display (FS-12.03 §4, board DI1)
@@ -341,6 +326,10 @@ extension VideoStudioScreen {
     /// open. Rounded at its top leading corner.
     func inspectorColumn(_ model: VideoStudioModel) -> some View {
         VStack(spacing: 0) {
+            // The column runs from the window's top edge; the toolbar's
+            // trailing capsules sit over its head, so its content starts
+            // at 80 (FS-12.03 §2).
+            Color.clear.frame(height: VideoStudioDeskGeometry.inspectorContentTop)
             VideoStudioSheetHost(
                 model: model,
                 actions: actions(model),
@@ -364,10 +353,9 @@ extension VideoStudioScreen {
             }
         }
         .background(EditorTheme.panelSolid)
-        .clipShape(UnevenRoundedRectangle(
-            cornerRadii: .init(topLeading: VideoStudioDeskGeometry.dockCornerRadius),
-            style: .continuous
-        ))
+        .overlay(alignment: .leading) {
+            Rectangle().fill(EditorTheme.hairline).frame(width: 1)
+        }
     }
 
     func mediaPool(_ model: VideoStudioModel, width: CGFloat) -> some View {

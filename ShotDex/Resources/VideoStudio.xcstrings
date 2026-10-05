@@ -685,6 +685,10 @@
       "comment": "Video Studio session footer: the kind of a selected still, after its length — 3.0s · photo",
       "extractionState": "manual"
     },
+    "under playhead": {
+      "comment": "Video Studio iPad: after the name of the clip the playhead is over, under the frame — Clip 2 under playhead",
+      "extractionState": "manual"
+    },
     "video": {
       "comment": "Video Studio session footer: the kind of a selected clip, after its length — 6.2s · video",
       "extractionState": "manual"

@@ -1,87 +1,81 @@
 {
-  "steps": [
-    {
-      "action": "launch",
-      "arguments": [
-        "-video.timelineExtraHeight",
-        "0"
-      ]
-    },
-    {
-      "action": "wait",
-      "seconds": 5
-    },
-    {
-      "action": "tap",
-      "label": "Select",
-      "type": "button"
-    },
-    {
-      "action": "wait",
-      "seconds": 1
-    },
-    {
-      "action": "tap",
-      "x": 0.06,
-      "y": 0.09
-    },
-    {
-      "action": "tap",
-      "x": 0.18,
-      "y": 0.09
-    },
-    {
-      "action": "tap",
-      "x": 0.3,
-      "y": 0.09
-    },
-    {
-      "action": "wait",
-      "seconds": 1
-    },
-    {
-      "action": "tap",
-      "label": "More selection actions",
-      "type": "button"
-    },
-    {
-      "action": "wait",
-      "seconds": 1
-    },
-    {
-      "action": "tap",
-      "label": "Create Video"
-    },
-    {
-      "action": "wait",
-      "seconds": 10
-    },
-    {
-      "action": "screenshot",
-      "name": "10-portrait-idle"
-    },
-    {
-      "action": "dump",
-      "name": "10-portrait-idle-buttons",
-      "type": "button"
-    },
-    {
-      "action": "tap",
-      "label": "Music",
-      "type": "button",
-      "index": 0
-    },
-    {
-      "action": "wait",
-      "seconds": 3
-    },
-    {
-      "action": "screenshot",
-      "name": "20-portrait-music"
-    },
-    {
-      "action": "wait",
-      "seconds": 3
-    }
-  ]
+ "steps": [
+  {
+   "action": "launch",
+   "arguments": [
+    "-video.timelineExtraHeight",
+    "0"
+   ]
+  },
+  {
+   "action": "wait",
+   "seconds": 4
+  },
+  {
+   "action": "orientation",
+   "text": "portrait"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "tap",
+   "label": "Select",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "tap",
+   "x": 0.93,
+   "y": 0.12
+  },
+  {
+   "action": "tap",
+   "x": 0.06,
+   "y": 0.12
+  },
+  {
+   "action": "tap",
+   "x": 0.18,
+   "y": 0.12
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "tap",
+   "label": "More selection actions",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "tap",
+   "label": "Create Video"
+  },
+  {
+   "action": "wait",
+   "seconds": 10
+  },
+  {
+   "action": "screenshot",
+   "name": "10-portrait-idle"
+  },
+  {
+   "action": "dump",
+   "name": "10-portrait-idle-all",
+   "text": "snapshot"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  }
+ ]
 }

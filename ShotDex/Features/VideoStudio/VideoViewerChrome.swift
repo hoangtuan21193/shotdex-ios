@@ -1,77 +1,24 @@
 import SwiftUI
 import ShotDexKit
 
-/// The strip directly above the frame: what is under the playhead on the left,
-/// the project's name in the middle, and the two view toggles — the media pool
-/// and the inspector — on the right.
-///
-/// Every desk-shaped editor labels its viewer. Without it the frame is the one
-/// region on screen that does not say what it is showing, and on a window wide
-/// enough to hold a media pool the user is looking at two images at once.
-struct VideoViewerHeader: View {
+/// What the frame is showing, at the head of the iPad's play row under it
+/// (FS-12.03b §1): "Clip 2" in 17 semibold over nothing, then "under
+/// playhead" in 13. The frame is the one region on screen that does not say
+/// what it shows, and with the pool open there are two pictures on screen.
+struct VideoPlayheadName: View {
     @Bindable var model: VideoStudioModel
-    /// Nil where the column cannot fit at all, so the button is not drawn as
-    /// a control that does nothing.
-    var isMediaPoolOpen: Bool?
-    var isInspectorOpen: Bool?
-    /// The quick-adjust strip under the frame. Resolve keeps its own behind a
-    /// tools icon in the viewer rather than always on, and for the reason
-    /// this screen just proved: on a 669pt-tall window every band that is
-    /// always there comes out of the frame.
-    var isToolStripOpen: Bool = false
-    let onToggleMediaPool: () -> Void
-    let onToggleInspector: () -> Void
-    let onToggleToolStrip: () -> Void
 
     var body: some View {
-        HStack(spacing: 8) {
-            if let isMediaPoolOpen {
-                toggle(
-                    systemImage: "sidebar.leading",
-                    isOn: isMediaPoolOpen,
-                    label: Text("Media Pool", comment: "Video Studio: shows or hides the library column"),
-                    action: onToggleMediaPool
-                )
-            }
-
-            Spacer(minLength: 0)
-
-            VStack(spacing: 0) {
-                Text(clipTitle)
-                    .font(.system(size: 12, weight: .semibold))
-                    .foregroundStyle(.white)
-                    .lineLimit(1)
-            }
-
-            Spacer(minLength: 0)
-
-            Text(VideoStudioMetrics.timecode(model.totalDuration))
-                .font(.system(size: 11, weight: .medium).monospacedDigit())
-                .foregroundStyle(EditorTheme.dimText)
-
-            toggle(
-                systemImage: "wand.and.rays",
-                isOn: isToolStripOpen,
-                label: Text("Quick Adjust", comment: "Video Studio: shows or hides the quick slider strip under the frame"),
-                action: onToggleToolStrip
-            )
-
-            if let isInspectorOpen {
-                toggle(
-                    systemImage: "slider.horizontal.3",
-                    isOn: isInspectorOpen,
-                    label: Text("Inspector", comment: "Video Studio: shows or hides the controls column"),
-                    action: onToggleInspector
-                )
-            }
+        HStack(alignment: .firstTextBaseline, spacing: 8) {
+            Text(verbatim: clipTitle)
+                .font(.system(size: 17, weight: .semibold))
+                .foregroundStyle(.white)
+            Text(VideoStudioCopy.underPlayhead)
+                .font(.system(size: 13))
+                .foregroundStyle(EditorTheme.secondaryText)
         }
-        .padding(.horizontal, 10)
-        .frame(height: VideoStudioMetrics.viewerHeaderHeight)
-        .frame(maxWidth: .infinity)
-        .background(EditorTheme.panelSolid)
-        .overlay(alignment: .bottom) {
-            Rectangle().fill(EditorTheme.panelDivider).frame(height: 1)
-        }
+        .lineLimit(1)
+        .accessibilityElement(children: .combine)
     }
 
     /// What the playhead is over, named the way the timeline names it.
@@ -83,29 +30,6 @@ struct VideoViewerHeader: View {
         }
         // The same name the session footer gives a selected clip.
         return VideoItemTitle.clipName(model.recipe.clips[index].kind, index: index)
-    }
-
-    private func toggle(
-        systemImage: String,
-        isOn: Bool,
-        label: Text,
-        action: @escaping () -> Void
-    ) -> some View {
-        Button(action: action) {
-            Image(systemName: systemImage)
-                .font(.system(size: 13, weight: .medium))
-                .foregroundStyle(isOn ? EditorTheme.accent : EditorTheme.secondaryText)
-                .frame(width: AppTheme.Size.minTouch, height: 26)
-                .background(
-                    RoundedRectangle(cornerRadius: 5, style: .continuous)
-                        .fill(isOn ? EditorTheme.accent.opacity(0.14) : .clear)
-                        .padding(.horizontal, 7)
-                )
-                .videoHitTarget(drawnHeight: 26)
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel(label)
-        .accessibilityAddTraits(isOn ? .isSelected : [])
     }
 }
 

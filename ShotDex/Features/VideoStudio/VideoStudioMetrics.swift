@@ -79,8 +79,6 @@ enum VideoStudioMetrics {
 
     // MARK: Desk chrome
 
-    /// Names what is under the playhead and holds the two column toggles.
-    static let viewerHeaderHeight: CGFloat = 32
     /// Cut tools, play controls, timecode.
     static let transportBarHeight: CGFloat = 44
     /// The quick-adjust strip under the frame: the one or two values a user

@@ -35,7 +35,7 @@ struct VideoStudioDuoBottomRow: View {
                 sessionGroup(title)
             } else {
                 HStack(spacing: 10) {
-                    VideoSettingsButton(model: model, isTwoLine: true)
+                    VideoSettingsButton(model: model, style: .twoLine)
                     exportPill
                 }
             }
@@ -111,7 +111,7 @@ struct VideoStudioDuoBottomRow: View {
                 .font(.system(size: 15, weight: .semibold))
                 .foregroundStyle(.black)
                 .padding(.horizontal, 18)
-                .frame(height: Geometry.exportHeight)
+                .frame(height: Geometry.duoExportHeight)
                 .background(Capsule().fill(EditorTheme.accent))
                 .contentShape(Capsule())
         }

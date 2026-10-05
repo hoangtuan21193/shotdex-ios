@@ -33,17 +33,6 @@ enum VideoStudioDeskGeometry {
     /// The title's leading edge from the last leading capsule.
     static let titleGap: CGFloat = 12
 
-    // MARK: The old iPad top band — read only by `VideoStudioDeskBand` until
-    // the capsule toolbar replaces it (block M, task M2).
-
-    static let bandRowTop: CGFloat = 12
-    static let bandDisc: CGFloat = 40
-    static let bandDiscGap: CGFloat = 10
-    static let bandInset: CGFloat = 20
-    static let settingsButtonHeight: CGFloat = 32
-    static let settingsButtonRadius: CGFloat = 8
-    static let exportHeight: CGFloat = 40
-
     // MARK: Pool and inspector
 
     /// The library: a floating glass panel 320×568 at (8, 8), radius 22 —
@@ -185,6 +174,8 @@ enum VideoStudioDeskGeometry {
     static let duoTransportHeight: CGFloat = 40
     static let duoTimelineHeight: CGFloat = 188
     static let duoBottomRowHeight: CGFloat = 56
+    /// Export at the right end of the bottom row: a pill 40 tall.
+    static let duoExportHeight: CGFloat = 40
     /// Back · Undo · Redo · Show original over the frame: 36pt discs on
     /// black 55 %, 8 apart, from (16, 12).
     static let duoDisc: CGFloat = 36
@@ -253,6 +244,9 @@ enum VideoStudioDeskGeometry {
         var stage: CGRect
         /// The project's frame, aspect-fitted into the stage.
         var frame: CGRect
+        /// The box the frame is fitted into, where it is not the whole stage:
+        /// the iPad's, inset for the meter beside it.
+        var frameBox: CGRect? = nil
         var meter: CGRect?
         var inspector: CGRect?
         /// The transport: the iPad's timeline tool row, the Duo's row of
@@ -389,6 +383,7 @@ enum VideoStudioDeskGeometry {
             pool: pool,
             stage: stage,
             frame: frame,
+            frameBox: box,
             meter: CGRect(x: frame.maxX + meterGap, y: frame.minY, width: meterWidth, height: frame.height),
             inspector: inspector,
             transport: toolRow,
@@ -440,6 +435,7 @@ enum VideoStudioDeskGeometry {
             pool: input.isPoolOpen ? poolFrame : nil,
             stage: CGRect(x: 0, y: stageTop, width: width, height: stageHeight),
             frame: frame,
+            frameBox: box,
             meter: CGRect(x: frame.maxX + meterGap, y: frame.minY, width: meterWidth, height: frame.height),
             inspector: nil,
             transport: toolRow,

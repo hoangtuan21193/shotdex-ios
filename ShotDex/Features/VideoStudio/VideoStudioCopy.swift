@@ -26,6 +26,12 @@ enum VideoStudioCopy {
         String(localized: "Leave Without Saving", table: table, comment: "Video Studio: closes the studio although the latest draft could not be written")
     }
 
+    /// After the name at the head of the iPad's play row: "Clip 2 under
+    /// playhead" (FS-12.03b §1).
+    static var underPlayhead: String {
+        String(localized: "under playhead", table: table, comment: "Video Studio iPad: after the name of the clip the playhead is over, under the frame — Clip 2 under playhead")
+    }
+
     static var media: String {
         String(localized: "Media", table: table, comment: "Video Studio: the bottom-row tool that adds photos and videos to the timeline")
     }

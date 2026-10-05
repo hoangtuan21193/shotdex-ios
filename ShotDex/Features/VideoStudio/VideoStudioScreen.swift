@@ -43,7 +43,7 @@ struct VideoStudioScreen: View {
     /// Back found the draft would not write (FS-12.18 §6): the one time
     /// Back asks anything, because closing quietly would lose the session.
     @State private var isDraftSaveFailurePresented = false
-    @State private var isExportSheetPresented = false
+    @State var isExportSheetPresented = false
     @State var isMusicImporterPresented = false
     @State private var isFontPickerPresented = false
     @State private var musicChooserIntent: MusicChooserIntent?
