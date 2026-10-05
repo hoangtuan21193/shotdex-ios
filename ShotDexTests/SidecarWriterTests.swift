@@ -1,6 +1,7 @@
 import Foundation
 import GRDB
 import ImageIO
+import ShotDexKit
 import Testing
 @testable import ShotDex
 
@@ -162,5 +163,83 @@ extension SidecarWriterTests {
         var criteria = FilterCriteria()
         criteria.ratingFilter = .atLeast(4)
         #expect(try LibraryQueries(database: database).count(matching: criteria) == 1)
+    }
+}
+
+extension SidecarWriterTests {
+    private static func standardRating(_ sidecar: URL) -> String? {
+        guard let data = try? Data(contentsOf: sidecar),
+              let metadata = CGImageMetadataCreateFromXMPData(data as CFData) else { return nil }
+        return CGImageMetadataCopyStringValueWithPath(metadata, nil, "xmp:Rating" as CFString) as String?
+    }
+
+    /// Reads `root` into a fresh library — another device plugging in T7.
+    private static func readElsewhere(_ root: URL) throws -> (rating: Int?, favorite: Bool?, flag: String?, recipe: PhotoEditRecipe?) {
+        let database = try AppDatabase.makeEmpty()
+        let sourceId = try SourceStore(database: database).addFolder(name: "T7 RAW Archive", bookmark: Data(), includesSubfolders: true,
+                                                                     pairsRawAndJpeg: true, kind: "drive")
+        let composer = MetadataComposer(sensorLookup: SensorLookup(records: [], customMappings: []))
+        _ = try FolderSourceIndexer(database: database, composer: composer)
+            .index(sourceId: sourceId, root: root, includesSubfolders: true, pairsRawAndJpeg: true)
+        return try database.reader.read { db in
+            let marks = try Row.fetchOne(db, sql: "SELECT rating, isFavorite FROM photo_user_marks")
+            let recipe = try Data.fetchOne(db, sql: "SELECT recipe FROM photo_recipes")
+            return (marks?["rating"], marks?["isFavorite"], try String.fetchOne(db, sql: "SELECT flag FROM photo_flag"),
+                    try recipe.map { try JSONDecoder().decode(PhotoEditRecipe.self, from: $0) })
+        }
+    }
+
+    /// AC-54: A is ★4 on T7. X (Reject): the standard field says −1 and
+    /// ShotDex's namespace keeps ★4. U (unflag): the standard field is 4
+    /// again. Favorite and an Exposure +0.5 recipe go into ShotDex's
+    /// namespace. Another device reading T7 gets ★4, the favorite and the
+    /// recipe — and, while A was Rejected, the Reject with its ★4.
+    @MainActor
+    @Test func rejectPickFavoriteRecipe() async throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent("T7-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        var options = MetadataFixture.Options()
+        options.starRating = nil
+        try MetadataFixture.encode(.tiff, options: options).write(to: root.appendingPathComponent("A.ARW"))
+        let sidecar = root.appendingPathComponent("A.xmp")
+        try SidecarReaderTests.lightroomSidecar(rating: 4).write(to: sidecar)
+        try FileManager.default.setAttributes([.modificationDate: Date().addingTimeInterval(-3600)], ofItemAtPath: sidecar.path)
+
+        let database = try AppDatabase.makeEmpty()
+        let sourceId = try SourceStore(database: database).addFolder(name: "T7 RAW Archive", bookmark: Data(), includesSubfolders: true,
+                                                                     pairsRawAndJpeg: true, kind: "drive")
+        _ = try FolderSourceIndexer(database: database, composer: FolderSourceIndexTests.composer)
+            .index(sourceId: sourceId, root: root, includesSubfolders: true, pairsRawAndJpeg: true)
+        let photoId = try #require(try await database.reader.read { db in try String.fetchOne(db, sql: "SELECT id FROM photos") })
+        let queue = SidecarWriteQueue(writer: SidecarWriter(database: database) { _, path in root.appendingPathComponent(path) })
+        let marks = PhotoMarks(store: PhotoMarksStore(database: database), sidecarQueue: queue)
+
+        await marks.setFlag(.reject, ids: [photoId])
+        await queue.flush()
+        #expect(Self.standardRating(sidecar) == "-1")
+        #expect(SidecarReader.read(sidecarAt: sidecar) == SidecarValues(rating: 4, isRejected: true))
+        let rejected = try Self.readElsewhere(root)
+        #expect(rejected.rating == 4)
+        #expect(rejected.flag == PhotoFlag.reject.rawValue)
+
+        await marks.setFlag(nil, ids: [photoId])
+        await queue.flush()
+        #expect(Self.standardRating(sidecar) == "4")
+
+        var recipe = PhotoEditRecipe()
+        recipe.adjustments.exposure = 0.5
+        try PhotoUserMarksStore(database: database).setFavorite(true, ids: [photoId])
+        try await database.writer.write { [recipe] db in
+            try db.execute(sql: "INSERT INTO photo_recipes (photoId, recipe, updatedAt) VALUES (?, ?, ?)",
+                           arguments: [photoId, try JSONEncoder().encode(recipe), Int(Date().timeIntervalSince1970)])
+        }
+        await queue.schedule([photoId])
+        await queue.flush()
+        let elsewhere = try Self.readElsewhere(root)
+        #expect(elsewhere.rating == 4)
+        #expect(elsewhere.favorite == true)
+        #expect(elsewhere.flag == nil)
+        #expect(elsewhere.recipe == recipe)
     }
 }

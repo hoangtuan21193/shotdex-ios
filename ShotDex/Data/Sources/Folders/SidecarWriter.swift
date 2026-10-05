@@ -103,19 +103,28 @@ struct SidecarWriter: Sendable {
     }
 
     /// The photo's current values as a patch: the standard rating (−1 when
-    /// Rejected), its keywords, title and caption.
+    /// Rejected), its keywords, title and caption, and in ShotDex's namespace
+    /// its flag, real stars, favorite and recipe.
     static func patch(_ db: Database, photoId: String) throws -> XMPPatch {
         var patch = XMPPatch()
-        let marks = try Row.fetchOne(db, sql: "SELECT rating, title, caption FROM photo_user_marks WHERE photoId = ?", arguments: [photoId])
+        let marks = try Row.fetchOne(db, sql: "SELECT rating, isFavorite, title, caption FROM photo_user_marks WHERE photoId = ?",
+                                     arguments: [photoId])
         let flag = try String.fetchOne(db, sql: "SELECT flag FROM photo_flag WHERE assetId = ?", arguments: [photoId])
+        let rating: Int? = marks?["rating"]
         if flag == PhotoFlag.reject.rawValue {
             patch.rating = .set(-1)
-        } else if let rating: Int = marks?["rating"] {
+        } else if let rating {
             patch.rating = .set(rating)
         }
         // Pick and Reject both live in ShotDex's namespace too: the standard
-        // field has no Pick, and its −1 hides the stars a Reject keeps.
+        // field has no Pick, and its −1 hides the stars a Reject keeps —
+        // which is why the real stars are there as well.
         patch.shotdex["Flag"] = flag.map { .set($0) } ?? .remove
+        patch.shotdex["Rating"] = rating.map { .set(String($0)) } ?? .remove
+        let isFavorite: Bool? = marks?["isFavorite"]
+        patch.shotdex["Favorite"] = isFavorite == true ? .set("True") : .remove
+        let recipe = try Data.fetchOne(db, sql: "SELECT recipe FROM photo_recipes WHERE photoId = ?", arguments: [photoId])
+        patch.shotdex["Recipe"] = recipe.map { .set($0.base64EncodedString()) } ?? .remove
         if let title: String = marks?["title"] { patch.title = .set(title) }
         if let caption: String = marks?["caption"] { patch.caption = .set(caption) }
         let keywords = try String.fetchAll(db, sql: "SELECT keyword FROM photo_user_keyword WHERE photoId = ? ORDER BY addedAt, rowid",

@@ -6,14 +6,19 @@ import ImageIO
 /// ShotDex reads, nothing else. Develop settings are not read here: Import
 /// Lightroom Edits reads them on command (FS-03.14b).
 struct SidecarValues: Equatable, Sendable {
-    /// 0–5 from the standard `xmp:Rating`; nil when the field is absent or
-    /// says Reject.
+    /// The photo's stars, 0–5: the standard `xmp:Rating`, or — while it says
+    /// Reject — the stars ShotDex keeps in its own namespace.
     var rating: Int?
     /// `xmp:Rating` = −1, the way Lightroom and Bridge write Reject.
     var isRejected = false
     var keywords: [String] = []
     var title: String?
     var caption: String?
+    /// ShotDex's namespace: Pick, favorite and the edit recipe — fields
+    /// other apps skip (FS-19.02 §5).
+    var isPicked = false
+    var isFavorite: Bool?
+    var recipe: Data?
 
     var isEmpty: Bool { self == SidecarValues() }
 }
@@ -62,6 +67,8 @@ enum SidecarReader {
         out.keywords += embedded.keywords.filter { seen.insert(KeywordInput.caseKey($0)).inserted }
         out.title = sidecar.title ?? embedded.title
         out.caption = sidecar.caption ?? embedded.caption
+        out.isFavorite = sidecar.isFavorite ?? embedded.isFavorite
+        out.recipe = sidecar.recipe ?? embedded.recipe
         return out
     }
 
@@ -91,9 +98,11 @@ enum SidecarReader {
 
     static func values(_ metadata: CGImageMetadata) -> SidecarValues {
         var values = SidecarValues()
+        let own = shotdexFields(metadata)
         if let text = string(metadata, "xmp:Rating"), let stars = Int(text.trimmingCharacters(in: .whitespaces)) {
             if stars < 0 {
                 values.isRejected = true
+                values.rating = own["Rating"].flatMap { Int($0) }.map { min(max($0, 0), 5) }
             } else {
                 values.rating = min(stars, 5)
             }
@@ -101,7 +110,26 @@ enum SidecarReader {
         values.keywords = strings(metadata, "dc:subject")
         values.title = strings(metadata, "dc:title").first
         values.caption = strings(metadata, "dc:description").first
+        values.isPicked = own["Flag"] == PhotoFlag.pick.rawValue && !values.isRejected
+        values.isFavorite = own["Favorite"].map { $0.lowercased() == "true" }
+        values.recipe = own["Recipe"].flatMap { Data(base64Encoded: $0) }
         return values
+    }
+
+    /// Simple properties in ShotDex's namespace, by local name — found by
+    /// namespace, whatever prefix the file bound it to.
+    private static func shotdexFields(_ metadata: CGImageMetadata) -> [String: String] {
+        final class Fields { var values: [String: String] = [:] }
+        let fields = Fields()
+        CGImageMetadataEnumerateTagsUsingBlock(metadata, nil, nil) { _, tag in
+            if CGImageMetadataTagCopyNamespace(tag) as String? == XMPPatcher.shotdexNamespace,
+               let name = CGImageMetadataTagCopyName(tag) as String?,
+               let value = CGImageMetadataTagCopyValue(tag) as? String {
+                fields.values[name] = value
+            }
+            return true
+        }
+        return fields.values
     }
 
     private static func string(_ metadata: CGImageMetadata, _ path: String) -> String? {

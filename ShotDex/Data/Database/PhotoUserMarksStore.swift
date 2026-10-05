@@ -62,11 +62,26 @@ struct PhotoUserMarksStore: Sendable {
         }
     }
 
+    /// Sets the favorite of file photos, as of `date`.
+    func setFavorite(_ isFavorite: Bool, ids: [String], at date: Date = Date()) throws {
+        guard !ids.isEmpty else { return }
+        let stamp = Int(date.timeIntervalSince1970)
+        try database.writer.write { db in
+            for id in ids {
+                try db.execute(sql: """
+                    INSERT INTO photo_user_marks (photoId, isFavorite, favoriteAt) VALUES (?, ?, ?)
+                    ON CONFLICT(photoId) DO UPDATE SET isFavorite = excluded.isFavorite, favoriteAt = excluded.favoriteAt
+                    """, arguments: [id, isFavorite, stamp])
+            }
+        }
+    }
+
     /// Takes what a sidecar written at `at` says into ShotDex: each field
     /// only when the sidecar changed after ShotDex last did; keywords are a
     /// set, so the sidecar's join the photo's. A Reject in the sidecar is the
-    /// shared Reject flag (FS-19.02 §4); the photo's own stars stay as they
-    /// were, because a −1 in the standard field says nothing about them.
+    /// shared Reject flag (FS-19.02 §4); the photo's stars come from
+    /// ShotDex's namespace then, because a −1 in the standard field says
+    /// nothing about them. Pick, favorite and the recipe come from there too.
     static func applySidecar(_ db: Database, values: SidecarValues, photoId: String, at: Int) throws {
         if let rating = values.rating {
             try setField(db, "rating", "ratingAt", value: rating, photoId: photoId, at: at)
@@ -77,12 +92,23 @@ struct PhotoUserMarksStore: Sendable {
         if let caption = values.caption {
             try setField(db, "caption", "captionAt", value: caption, photoId: photoId, at: at)
         }
-        if values.isRejected {
+        if let isFavorite = values.isFavorite {
+            try setField(db, "isFavorite", "favoriteAt", value: isFavorite, photoId: photoId, at: at)
+        }
+        if values.isRejected || values.isPicked {
+            let flag = values.isRejected ? PhotoFlag.reject : PhotoFlag.pick
             try db.execute(sql: """
                 INSERT INTO photo_flag (assetId, flag, flaggedAt) VALUES (?, ?, ?)
                 ON CONFLICT(assetId) DO UPDATE SET flag = excluded.flag, flaggedAt = excluded.flaggedAt
                 WHERE photo_flag.flaggedAt < excluded.flaggedAt
-                """, arguments: [photoId, PhotoFlag.reject.rawValue, at])
+                """, arguments: [photoId, flag.rawValue, at])
+        }
+        if let recipe = values.recipe {
+            try db.execute(sql: """
+                INSERT INTO photo_recipes (photoId, recipe, updatedAt) VALUES (?, ?, ?)
+                ON CONFLICT(photoId) DO UPDATE SET recipe = excluded.recipe, updatedAt = excluded.updatedAt
+                WHERE photo_recipes.updatedAt < excluded.updatedAt
+                """, arguments: [photoId, recipe, at])
         }
         try addKeywords(db, values.keywords, photoId: photoId, at: at)
     }
