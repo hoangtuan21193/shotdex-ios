@@ -246,4 +246,23 @@ struct VideoStudioMultiSelectTests {
         model.undo()
         #expect(model.recipe.clips[1].look == nil && model.recipe.clips[3].look == nil)
     }
+
+    /// AC-6 on the model: Duplicate on clips 2, 3 is one step, the copies
+    /// become the group, and one Undo is back to five clips.
+    @Test func duplicateIsOneUndo() {
+        let model = sampleModel()
+        let ids = model.recipe.clips.map(\.id)
+        model.enterClipSelection(ids[1])
+        model.toggleClip(ids[2])
+
+        model.duplicateGroup()
+        #expect(model.recipe.clips.count == 7)
+        #expect(model.selectedClipIDs == [model.recipe.clips[3].id, model.recipe.clips[4].id])
+        #expect(abs(model.recipe.clips.map(\.effectiveDuration).reduce(0, +) - 35.2) < 1e-9)
+        #expect(model.recipe.transitions.count == 6)
+
+        model.undo()
+        #expect(model.recipe.clips.map(\.id) == ids)
+        #expect(!model.canUndo)
+    }
 }

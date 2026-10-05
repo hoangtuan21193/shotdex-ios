@@ -1144,6 +1144,26 @@ final class VideoStudioModel {
         VideoClipGroupEditing.commonFade(selectedClipIDs, atStart: end == .start, in: recipe)
     }
 
+    /// Duplicate (FS-12.11 §5): copies of the group right after its last
+    /// clip, in order, and the copies become the group. One step; the copies
+    /// share their originals' loaded media, so nothing is decoded again.
+    func duplicateGroup() {
+        guard isSelectingClips else { return }
+        var edited = recipe
+        let pairs = VideoClipGroupEditing.duplicate(selectedClipIDs, in: &edited)
+        guard !pairs.isEmpty else { return }
+        for pair in pairs {
+            if let source = sources[pair.original] { sources[pair.copy] = source }
+            if let duration = measuredSourceDurations[pair.original] { measuredSourceDurations[pair.copy] = duration }
+        }
+        pushUndo()
+        recipe = edited
+        selectedClipIDs = pairs.map(\.copy)
+        groupAnchor = pairs.last?.copy
+        markEdited()
+        schedulePreviewRebuild()
+    }
+
     /// The motion the group shares; nil when the clips differ.
     var groupEffect: VideoClipEffect? { VideoClipGroupEditing.commonEffect(selectedClipIDs, in: recipe) }
 

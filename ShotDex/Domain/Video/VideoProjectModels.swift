@@ -648,6 +648,27 @@ struct VideoProjectRecipe: Equatable, Codable, Sendable {
     }
 }
 
+extension VideoClip {
+    /// This clip again under a new id — same media, trim, speed, fades,
+    /// motion and look (Duplicate, FS-12.04b, FS-12.11 §5).
+    func duplicated(id: UUID) -> VideoClip {
+        var copy = VideoClip(assetID: assetID, kind: kind, id: id)
+        copy.photoDuration = photoDuration
+        copy.trimStart = trimStart
+        copy.trimEnd = trimEnd
+        copy.volume = volume
+        copy.isMuted = isMuted
+        copy.fadeIn = fadeIn
+        copy.fadeOut = fadeOut
+        copy.effect = effect
+        copy.speed = speed
+        copy.freezeSourceTime = freezeSourceTime
+        copy.sourceDuration = sourceDuration
+        copy.look = look
+        return copy
+    }
+}
+
 extension VideoProjectRecipe {
     /// The node at `id`, or the first one — a recipe is never without a node,
     /// so this never has to answer nil.

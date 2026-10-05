@@ -88,4 +88,45 @@ struct VideoClipGroupEditingTests {
         #expect(VideoClipGroupEditing.commonFade(group, atStart: true, in: edited) == nil)
         #expect(VideoClipGroupEditing.maximumFade(group, in: edited) == 3.1)
     }
+
+    /// AC-6: clips 2 and 3 duplicated — 7 clips, the copies at positions 4
+    /// and 5 with the same speed, look and motion and their own ids; the
+    /// boundary 3 → copy is a straight cut; the project runs 35.2s.
+    @Test func duplicateInsertsAfterLastKeepsOrder() {
+        var edited = recipe
+        edited.clips[1].speed = 2
+        edited.clips[2].effect = .zoomIn
+        edited.clips[2].look = VideoLook(.preset(.vivid))
+        edited.transitions[1] = .defaultCrossfade
+        let before = edited
+        let pairs = VideoClipGroupEditing.duplicate([ids[2], ids[1]], in: &edited)
+
+        #expect(edited.clips.count == 7)
+        #expect(pairs.map(\.original) == [ids[1], ids[2]])
+        #expect(edited.clips.map(\.id) == [ids[0], ids[1], ids[2], pairs[0].copy, pairs[1].copy, ids[3], ids[4]])
+        #expect(Set(pairs.map(\.copy)).isDisjoint(with: Set(ids)))
+        #expect(edited.clips[3].speed == 2 && edited.clips[3].assetID == before.clips[1].assetID)
+        #expect(edited.clips[4].effect == .zoomIn && edited.clips[4].look == before.clips[2].look)
+        // 2 → 3 kept its crossfade; 3 → copy, copy → copy, copy → 4 are new.
+        #expect(edited.transitions.map(\.kind) == [.none, .crossfade, .none, .none, .none, .none])
+        let total = VideoTimelineMath.placements(
+            durations: edited.clips.map(\.effectiveDuration),
+            overlaps: VideoTimelineMath.effectiveOverlaps(requested: edited.transitions.map(\.requestedOverlap), durations: edited.clips.map(\.effectiveDuration))
+        ).last?.end ?? 0
+        // 35.2s at 1×; clip 2 and its copy at 2× give 3.1s back each, the crossfade 0.5s.
+        #expect(abs(total - (35.2 - 3.1 - 3.1 - 0.5)) < 1e-9)
+    }
+
+    /// The pair rule on its own: boundaries between clips that stay
+    /// neighbours keep their transition, new ones are cuts.
+    @Test func transitionsFollowTheirTwoClips() {
+        var old = recipe
+        old.transitions[0] = .defaultCrossfade
+        old.transitions[2] = VideoBoundaryTransition(kind: .wipe, duration: 1)
+        let reordered = [old.clips[0], old.clips[1], old.clips[3], old.clips[2], old.clips[4]]
+        let remapped = VideoClipGroupEditing.remapTransitions(from: old, to: reordered)
+        #expect(remapped.map(\.kind) == [.crossfade, .none, .none, .none])
+        let reversed = VideoClipGroupEditing.remapTransitions(from: old, to: [old.clips[2], old.clips[3]])
+        #expect(reversed.map(\.kind) == [.wipe])
+    }
 }

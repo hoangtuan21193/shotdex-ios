@@ -453,7 +453,8 @@ struct VideoStudioSheetHost: View {
             case .clip: model.duplicateSelectedClip()
             case .text: model.duplicateSelectedOverlay()
             case .music: model.duplicateSelectedMusic()
-            case .clips, .none: break
+            case .clips: model.duplicateGroup()
+            case .none: break
             }
         case .rotate:
             model.pushUndo()

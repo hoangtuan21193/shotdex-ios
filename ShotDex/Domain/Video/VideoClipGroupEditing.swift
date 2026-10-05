@@ -31,6 +31,47 @@ enum VideoClipGroupEditing {
         return Array(ids[min(a, b)...max(a, b)])
     }
 
+    // MARK: Transitions follow their two clips (FS-12.11 §6)
+
+    private struct Pair: Hashable {
+        let left: UUID
+        let right: UUID
+    }
+
+    /// The boundaries of `clips` given the transitions `old` had: a
+    /// boundary between two clips that were already neighbours keeps its
+    /// transition; every boundary that is new is a straight cut. A
+    /// crossfade chosen for two shots means nothing between two others.
+    static func remapTransitions(from old: VideoProjectRecipe, to clips: [VideoClip]) -> [VideoBoundaryTransition] {
+        var byPair: [Pair: VideoBoundaryTransition] = [:]
+        for index in old.clips.indices.dropLast() where old.transitions.indices.contains(index) {
+            byPair[Pair(left: old.clips[index].id, right: old.clips[index + 1].id)] = old.transitions[index]
+        }
+        return clips.indices.dropLast().map { index in
+            byPair[Pair(left: clips[index].id, right: clips[index + 1].id)] ?? VideoBoundaryTransition()
+        }
+    }
+
+    // MARK: Duplicate (FS-12.11 §5)
+
+    /// Copies of the group, in their timeline order, right after the
+    /// group's last clip; each copy has its own id and everything else of
+    /// its original. Returns the copies' ids, in order — the new group.
+    @discardableResult
+    static func duplicate(
+        _ ids: [UUID],
+        in recipe: inout VideoProjectRecipe,
+        makeID: () -> UUID = UUID.init
+    ) -> [(original: UUID, copy: UUID)] {
+        let group = ordered(ids, in: recipe)
+        guard let last = recipe.clips.lastIndex(where: { group.contains($0.id) }) else { return [] }
+        let old = recipe
+        let copies = group.compactMap { id in recipe.clips.first { $0.id == id } }.map { ($0.id, $0.duplicated(id: makeID())) }
+        recipe.clips.insert(contentsOf: copies.map(\.1), at: last + 1)
+        recipe.transitions = remapTransitions(from: old, to: recipe.clips)
+        return copies.map { (original: $0.0, copy: $0.1.id) }
+    }
+
     // MARK: Speed (FS-12.11 §5)
 
     /// The speed every video in the group shares, or nil when they differ
