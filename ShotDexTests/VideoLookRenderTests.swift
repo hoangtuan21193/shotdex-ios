@@ -254,6 +254,64 @@ struct VideoLookRenderTests {
         #expect(scaled <= 2, "scaled \(scaled)/255")
     }
 
+    // MARK: AC-8
+
+    /// AC-8: clip 2's LUT "Kodak 2383" was deleted — clip 2 renders as if it
+    /// had no look, and the project says which look is missing.
+    @Test @MainActor func missingLUTRendersAsNoLook() throws {
+        let canvas = CGRect(x: 0, y: 0, width: 64, height: 64)
+        var project = VideoProjectRecipe(clips: VideoStudioModelFixture.photoClips(3))
+        project.clips[1].look = VideoLook(.lut(id: "kodak-2383-gone", name: "Kodak 2383"))
+        let render = VideoRenderRecipe(
+            recipe: project, renderSize: canvas.size, totalDuration: 9, bakesOverlays: false,
+            lutExists: { _ in false }
+        )
+        let frame = VideoLookBakerTests.testFrame()
+        let composed = VideoFrameCompositor.composeFrame(
+            front: (frame, .init(clipIndex: 1, clipID: project.clips[1].id, start: 3, duration: 3, effect: .none)),
+            back: nil, transition: nil, recipe: render, canvas: canvas, at: 4.5
+        )
+        #expect(Self.meanDifference(Self.bytes(composed, in: canvas), Self.bytes(frame, in: canvas)) <= 0.5)
+
+        let model = VideoStudioModelFixture.model(clips: project.clips)
+        model.lutExists = { _ in false }
+        #expect(model.lookPillText(for: model.recipe.clips[1]) == "Kodak 2383 · Missing")
+        #expect(model.missingLUTLookCount == 1)
+    }
+
+    /// A My Look whose LUT is gone keeps the rest of the look.
+    @Test func missingLUTInsideMyLookKeepsTheRest() throws {
+        var look = PhotoEditRecipe.identity
+        look.adjustments.exposure = 0.3
+        look.adjustments.contrast = 0.2
+        look.lutID = "kodak-2383-gone"
+        let plan = try #require(VideoLookPlan(
+            VideoLook(.myLook(sourceID: UUID(), name: "Coast", isImported: false, recipe: look)),
+            lutExists: { _ in false }
+        ))
+        #expect(plan.recipe.lutID == nil)
+        let frame = VideoLookBakerTests.testFrame()
+        var withoutLUT = look
+        withoutLUT.lutID = nil
+        let rendered = VideoLookRenderer.apply(plan, to: frame, cache: VideoLookTableCache(capacity: 2))
+        let expected = VideoLookBakerTests.editorChain(withoutLUT, on: frame)
+        #expect(Self.meanDifference(Self.bytes(rendered, in: frame.extent), Self.bytes(expected, in: frame.extent)) <= 1)
+        #expect(VideoLookEditing.isMissingLUT(VideoLook(.myLook(sourceID: UUID(), name: "Coast", isImported: false, recipe: look)), lutExists: { _ in false }))
+    }
+
+    /// AC-8: the Export line counts looks, in the catalog's plural.
+    @Test @MainActor func exportLineCountsLooks() {
+        #expect(VideoStudioCopy.looksMissingLUT(1) == "1 look is missing its LUT and exports without it.")
+        #expect(VideoStudioCopy.looksMissingLUT(2) == "2 looks are missing their LUT and export without it.")
+        var project = VideoProjectRecipe(clips: VideoStudioModelFixture.photoClips(3))
+        project.look = VideoLook(.lut(id: "a", name: "A"))
+        project.clips[0].look = VideoLook(.lut(id: "b", name: "B"))
+        project.clips[2].look = VideoLookSamples.velvia
+        #expect(VideoLookEditing.missingLUTLookCount(in: project, lutExists: { _ in false }) == 2)
+        #expect(VideoLookEditing.missingLUTLookCount(in: project, lutExists: { $0 == "a" }) == 1)
+        #expect(VideoStudioCopy.lookMissingLUT("Kodak 2383") == "Kodak 2383 is missing. Import it again, then pick it in LUTs.")
+    }
+
     // MARK: AC-4
 
     /// AC-4: half way through a dissolve the frame is the two clips, each

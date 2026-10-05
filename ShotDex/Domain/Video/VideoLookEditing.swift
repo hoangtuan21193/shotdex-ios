@@ -144,12 +144,37 @@ enum VideoLookEditing {
 
     /// The pill on a clip's band in the V1 lane: only a clip with a look of
     /// its own wears one — a clip following the whole video has nothing to
-    /// say there (§3).
+    /// say there (§3). A look whose LUT file is gone says so:
+    /// "Kodak 2383 · Missing" (§6).
     static func pillText(
         for clip: VideoClip,
-        presetName: (PhotoFilter) -> String = { $0.displayName }
+        presetName: (PhotoFilter) -> String = { $0.displayName },
+        lutExists: (String) -> Bool = { _ in true }
     ) -> String? {
         guard let look = clip.look else { return nil }
-        return name(of: look, presetName: presetName)
+        let name = name(of: look, presetName: presetName)
+        return isMissingLUT(look, lutExists: lutExists) ? missingName(name) : name
+    }
+
+    /// "Kodak 2383 · Missing".
+    static func missingName(_ name: String) -> String {
+        "\(name) · " + String(localized: "Missing", table: "VideoStudio", comment: "Video Studio: after the name of a look whose LUT file is gone — Kodak 2383 · Missing")
+    }
+
+    /// Whether `look` reads a LUT whose file is gone — chosen directly, or
+    /// inside a My Look (§6). That part then renders as if it were not
+    /// there; the rest of the look stays.
+    static func isMissingLUT(_ look: VideoLook, lutExists: (String) -> Bool) -> Bool {
+        guard let id = look.lutID else { return false }
+        return !lutExists(id)
+    }
+
+    /// How many looks in the project — the whole video's and every clip's
+    /// own — are missing their LUT: the Export line counts them (§6).
+    static func missingLUTLookCount(in recipe: VideoProjectRecipe, lutExists: (String) -> Bool) -> Int {
+        ([recipe.look] + recipe.clips.map(\.look))
+            .compactMap { $0 }
+            .filter { isMissingLUT($0, lutExists: lutExists) }
+            .count
     }
 }

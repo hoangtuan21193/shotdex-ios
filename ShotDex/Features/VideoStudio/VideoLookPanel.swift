@@ -217,7 +217,12 @@ struct VideoLookPanel: View {
 
     private var caption: some View {
         let skipped = model.lookSlot.map { VideoLookEditing.skippedOnVideo($0.recipe) } ?? []
-        return Text(VideoStudioCopy.lookSkippedLine(skipped))
+        let line: String = if let look = model.lookSlot, VideoLookEditing.isMissingLUT(look, lutExists: model.lutExists) {
+            VideoStudioCopy.lookMissingLUT(VideoLookEditing.name(of: look, presetName: model.presetName))
+        } else {
+            VideoStudioCopy.lookSkippedLine(skipped)
+        }
+        return Text(line)
             .font(.system(size: style.captionSize))
             .foregroundStyle(.white.opacity(0.35))
             .fixedSize(horizontal: false, vertical: true)
@@ -448,4 +453,29 @@ extension EnvironmentValues {
 extension VideoLookTarget {
     /// The whole video's panel offers two; a clip's block three (§4).
     static let wholeVideoTargets: [VideoLookTarget] = [.allClips, .thisClip]
+}
+
+/// "1 look is missing its LUT and exports without it." (FS-12.06c §6), as
+/// the boards ES_* draw it: a 10-rounded band of white 6 % with the
+/// warning glyph. Export is never blocked by it.
+struct VideoMissingLUTBanner: View {
+    let count: Int
+
+    var body: some View {
+        HStack(alignment: .firstTextBaseline, spacing: 8) {
+            Image(systemName: "exclamationmark.triangle")
+                .font(.system(size: 11.5, weight: .medium))
+                .foregroundStyle(.white.opacity(0.6))
+            Text(VideoStudioCopy.looksMissingLUT(count))
+                .font(.system(size: 11.5))
+                .foregroundStyle(.white.opacity(0.8))
+                .fixedSize(horizontal: false, vertical: true)
+            Spacer(minLength: 0)
+        }
+        .padding(.vertical, 8)
+        .padding(.horizontal, 10)
+        .background(RoundedRectangle(cornerRadius: 10, style: .continuous).fill(Color.white.opacity(0.06)))
+        .accessibilityElement(children: .combine)
+        .accessibilityIdentifier("missingLUTLine")
+    }
 }

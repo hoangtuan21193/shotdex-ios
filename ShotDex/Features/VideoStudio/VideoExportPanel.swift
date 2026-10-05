@@ -159,6 +159,12 @@ struct VideoExportPanel: View {
             }
         }
         Spacer(minLength: 12)
+        // A look whose LUT is gone exports without it, and says so here
+        // rather than stopping the export (FS-12.06c §6).
+        if model.missingLUTLookCount > 0 {
+            VideoMissingLUTBanner(count: model.missingLUTLookCount)
+                .padding(.bottom, 10)
+        }
         // The Duo has no second export button: a second tap on the one in
         // its bottom row or rail exports (FS-12.10b §2).
         if !isDuo {

@@ -2318,9 +2318,17 @@ final class VideoStudioModel {
     /// the names the user gave them. Set by the screen.
     var presetName: @MainActor (PhotoFilter) -> String = { $0.displayName }
 
+    /// Whether an imported LUT's file is on disk. A seam for tests.
+    var lutExists: (String) -> Bool = VideoLookPlan.lutFileExists
+
     /// The pill on a clip's band, when the clip has a look of its own.
     func lookPillText(for clip: VideoClip) -> String? {
-        VideoLookEditing.pillText(for: clip, presetName: presetName)
+        VideoLookEditing.pillText(for: clip, presetName: presetName, lutExists: lutExists)
+    }
+
+    /// Looks whose LUT file is gone, for the line over Export (§6).
+    var missingLUTLookCount: Int {
+        VideoLookEditing.missingLUTLookCount(in: recipe, lutExists: lutExists)
     }
 
     /// Amount of the whole video's look. No undo push per tick — the slider

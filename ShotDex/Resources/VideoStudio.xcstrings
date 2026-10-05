@@ -1,6 +1,10 @@
 {
   "sourceLanguage": "en",
   "strings": {
+    "%@ is missing. Import it again, then pick it in LUTs.": {
+      "comment": "Video Studio Look panel: the chosen look's LUT file was deleted — e.g. Kodak 2383 is missing",
+      "extractionState": "manual"
+    },
     "%@ · %@": {
       "comment": "Video Projects: a draft's subtitle — when it was edited, then how many clips",
       "extractionState": "manual"
@@ -85,6 +89,30 @@
         }
       }
     },
+    "%lld looks are missing their LUT and export without it.": {
+      "comment": "Video Studio Export and Video Settings: how many looks (the video's and clips' own) lost their LUT file; the export goes on without it",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld look is missing its LUT and exports without it."
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld looks are missing their LUT and export without it."
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "%lld selected · Add puts them at %@": {
       "comment": "Video Studio Media panel: under its name while selecting — how many are picked and the playhead time Add inserts them at",
       "extractionState": "manual"
@@ -105,6 +133,10 @@
       "comment": "Video Studio Video Settings: why 4K is dimmed — one clip falls short",
       "extractionState": "manual"
     },
+    "APPLY TO": {
+      "comment": "Video Studio Look panel: header over All Clips · This Clip — where a tapped look goes",
+      "extractionState": "manual"
+    },
     "Add (%lld)": {
       "comment": "Video Studio Media panel: adds the picked items at the playhead, with how many",
       "extractionState": "manual"
@@ -117,8 +149,16 @@
       "comment": "Video Studio Media panel tab: the user's albums; also the back button from an album's grid",
       "extractionState": "manual"
     },
+    "All Clips": {
+      "comment": "Video Studio Look panel: a tapped look becomes the whole video's and clears every clip's own",
+      "extractionState": "manual"
+    },
     "Allow access to your photo library in Settings to add photos and videos here.": {
       "comment": "Video Studio Media panel: body when Photos access is denied",
+      "extractionState": "manual"
+    },
+    "Amount": {
+      "comment": "Video Studio Look panel: how much of the chosen look is mixed in, 0–100",
       "extractionState": "manual"
     },
     "BACKGROUND": {
@@ -165,6 +205,10 @@
       "comment": "Video Studio Video Settings: picks the library photo behind fitted clips",
       "extractionState": "manual"
     },
+    "Clarity": {
+      "comment": "Video Studio Look panel: a photo setting skipped on video",
+      "extractionState": "manual"
+    },
     "Close": {
       "comment": "Video Studio: closes a panel",
       "extractionState": "manual"
@@ -183,6 +227,10 @@
     },
     "Custom Color": {
       "comment": "Video Studio Video Settings: picks a background color of one's own",
+      "extractionState": "manual"
+    },
+    "Dehaze": {
+      "comment": "Video Studio Look panel: a photo setting skipped on video",
       "extractionState": "manual"
     },
     "Delete Draft": {
@@ -223,6 +271,10 @@
     },
     "End to Playhead": {
       "comment": "Video Studio Trim: cuts the selected clip's end to the playhead",
+      "extractionState": "manual"
+    },
+    "Everything in this look applies to video.": {
+      "comment": "Video Studio Look panel: nothing in the chosen look is skipped on video",
       "extractionState": "manual"
     },
     "Export": {
@@ -297,6 +349,10 @@
       "comment": "Video Studio Video Settings: the background photo was deleted or can no longer be read",
       "extractionState": "manual"
     },
+    "Import Look…": {
+      "comment": "Video Studio Look panel: brings Lightroom presets, .shotdexlook files and .cube LUTs in from Files",
+      "extractionState": "manual"
+    },
     "In Video · %lld": {
       "comment": "Video Studio Media panel tab: what of the library is in this video, and how many uses",
       "extractionState": "manual"
@@ -311,6 +367,10 @@
     },
     "Leave Without Saving": {
       "comment": "Video Studio: closes the studio although the latest draft could not be written",
+      "extractionState": "manual"
+    },
+    "Lens Correction": {
+      "comment": "Video Studio Look panel: a photo setting skipped on video",
       "extractionState": "manual"
     },
     "Library": {
@@ -329,6 +389,14 @@
       "comment": "Video Studio: the bottom-row tool that changes the whole video's look — filter, adjustments, colour",
       "extractionState": "manual"
     },
+    "Look %@": {
+      "comment": "Video Studio: VoiceOver — a look by name, after a timeline clip with a look of its own or on a look tile",
+      "extractionState": "manual"
+    },
+    "Look %@, imported from Lightroom": {
+      "comment": "Video Studio Look panel: VoiceOver on a look tile brought in from a Lightroom preset",
+      "extractionState": "manual"
+    },
     "MY MUSIC": {
       "comment": "Video Studio Music panel: header over the user's imported songs",
       "extractionState": "manual"
@@ -339,6 +407,10 @@
     },
     "Media": {
       "comment": "Video Studio: the bottom-row tool that adds photos and videos to the timeline",
+      "extractionState": "manual"
+    },
+    "Missing": {
+      "comment": "Video Studio: after the name of a look whose LUT file is gone — Kodak 2383 · Missing",
       "extractionState": "manual"
     },
     "Motion": {
@@ -375,6 +447,10 @@
     },
     "No photos or videos yet.": {
       "comment": "Video Studio Media panel: Recents when the library is empty",
+      "extractionState": "manual"
+    },
+    "Noise Reduction": {
+      "comment": "Video Studio Look panel: a photo setting skipped on video",
       "extractionState": "manual"
     },
     "Not enough space to export — about %@ needed. Free up space, then try again.": {
@@ -453,6 +529,14 @@
       "comment": "Video Studio Media panel: starts picking several items to add at once",
       "extractionState": "manual"
     },
+    "Selected": {
+      "comment": "Video Studio Look panel: a tapped look goes to every selected clip",
+      "extractionState": "manual"
+    },
+    "Sharpening": {
+      "comment": "Video Studio Look panel: a photo setting skipped on video",
+      "extractionState": "manual"
+    },
     "ShotDex can see the %lld items you chose.": {
       "comment": "Video Studio Media panel: with limited Photos access, how many items the user granted",
       "extractionState": "manual",
@@ -481,6 +565,10 @@
       "comment": "Video Studio Export: Photos refused the finished video because access is denied",
       "extractionState": "manual"
     },
+    "Skipped on video: %@.": {
+      "comment": "Video Studio Look panel: the settings of the chosen look a video frame does not run — e.g. Noise Reduction, Upright",
+      "extractionState": "manual"
+    },
     "Speed": {
       "comment": "Video Studio clip panel: label of the playback-rate chips",
       "extractionState": "manual"
@@ -501,8 +589,16 @@
       "comment": "Video Studio: a caption laid over the video",
       "extractionState": "manual"
     },
+    "Texture": {
+      "comment": "Video Studio Look panel: a photo setting skipped on video",
+      "extractionState": "manual"
+    },
     "The photos and videos stay in your library.": {
       "comment": "Video Projects: message of the Delete Draft confirmation — deleting a draft never touches the library",
+      "extractionState": "manual"
+    },
+    "This Clip": {
+      "comment": "Video Studio Look panel: a tapped look goes to the clip under the playhead (or the selected clip)",
       "extractionState": "manual"
     },
     "This size can't be encoded as H.264 on this device. Switch Codec to HEVC.": {
@@ -523,6 +619,10 @@
     },
     "Unmute Video Sound": {
       "comment": "Video Studio level meter: restores the clips' own audio for the whole project",
+      "extractionState": "manual"
+    },
+    "Upright": {
+      "comment": "Video Studio Look panel: a photo setting skipped on video",
       "extractionState": "manual"
     },
     "Video Project, Draft, %@, %@": {

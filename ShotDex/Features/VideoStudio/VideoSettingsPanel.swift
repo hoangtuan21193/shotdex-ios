@@ -38,6 +38,13 @@ struct VideoSettingsPanel: View {
             Rectangle().fill(Color.white.opacity(0.07)).frame(height: 1)
             ScrollView(showsIndicators: true) {
                 VStack(alignment: .leading, spacing: 0) {
+                    // Board ES_*: the look-LUT line at the panel's head
+                    // (FS-12.06c §6).
+                    if model.missingLUTLookCount > 0 {
+                        VideoMissingLUTBanner(count: model.missingLUTLookCount)
+                            .padding(.horizontal, 16)
+                            .padding(.top, 6)
+                    }
                     ratioSection
                     framingRow
                     if model.recipe.framing == .fit { backgroundSection }

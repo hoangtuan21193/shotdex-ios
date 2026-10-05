@@ -63,3 +63,16 @@ extension VideoLookTarget {
         }
     }
 }
+
+extension VideoStudioCopy {
+    /// The Look panel's line when the chosen look's LUT file is gone (§6).
+    static func lookMissingLUT(_ name: String) -> String {
+        String(localized: "\(name) is missing. Import it again, then pick it in LUTs.", table: table, comment: "Video Studio Look panel: the chosen look's LUT file was deleted — e.g. Kodak 2383 is missing")
+    }
+
+    /// Over Export and in Video Settings (§6): "1 look is missing its LUT
+    /// and exports without it." — plural in the catalog.
+    static func looksMissingLUT(_ count: Int) -> String {
+        String(localized: "\(count) looks are missing their LUT and export without it.", table: table, comment: "Video Studio Export: how many looks (the video's and clips' own) lost their LUT file; the export goes on without it")
+    }
+}
