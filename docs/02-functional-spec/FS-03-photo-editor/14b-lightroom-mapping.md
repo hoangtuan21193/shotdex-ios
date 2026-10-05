@@ -6,6 +6,11 @@
 **Một câu:** mỗi thẻ `crs:` đi về đâu trong look của ShotDex, gần đúng tới mức nào, và vì sao những thẻ còn
 lại bị bỏ. Tổng quan: [FS-03.14](14-lightroom-preset-exchange.md).
 
+> **Dùng ở hai chỗ** (2026-10-06): preset nhập (FS-03.14) và lệnh **Import Lightroom Edits** trên ảnh file — thiết lập
+> chỉnh ảnh trong sidecar `.xmp` cạnh RAW thành recipe của ảnh, cùng bảng này, chỉ khi người dùng bấm
+> ([FS-19.02 §4](../FS-19-photo-sources/02-identity-and-sidecars.md), `LightroomEditsImport`). Lượt đọc nguồn không bao
+> giờ tự quy đổi.
+
 > Tên thẻ và dải đã kiểm 2026-09-29 (câu treo 3, agent `lightroom-parity`): danh sách XMP-crs của ExifTool và một
 > bộ ghi/đọc XMP độc lập tự mô tả "đối chiếu với Lightroom Classic 15.3, PV 15.4"; trang helpx của Adobe chặn bot nên
 > chưa đối chiếu trực tiếp. **FS-03.15 và FS-03.16 đã ship trước FS-03.14** (thứ tự thực hiện 2026-09-29), nên các
