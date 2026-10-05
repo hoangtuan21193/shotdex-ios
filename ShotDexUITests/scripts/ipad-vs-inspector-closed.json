@@ -1,105 +1,122 @@
 {
-  "steps": [
-    {
-      "action": "launch",
-      "arguments": [
-        "-video.timelineExtraHeight",
-        "0"
-      ]
-    },
-    {
-      "action": "wait",
-      "seconds": 5
-    },
-    {
-      "action": "tap",
-      "label": "Select",
-      "type": "button"
-    },
-    {
-      "action": "wait",
-      "seconds": 1
-    },
-    {
-      "action": "tap",
-      "x": 0.06,
-      "y": 0.09
-    },
-    {
-      "action": "tap",
-      "x": 0.18,
-      "y": 0.09
-    },
-    {
-      "action": "tap",
-      "x": 0.3,
-      "y": 0.09
-    },
-    {
-      "action": "wait",
-      "seconds": 1
-    },
-    {
-      "action": "tap",
-      "label": "More selection actions",
-      "type": "button"
-    },
-    {
-      "action": "wait",
-      "seconds": 1
-    },
-    {
-      "action": "tap",
-      "label": "Create Video"
-    },
-    {
-      "action": "wait",
-      "seconds": 10
-    },
-    {
-      "action": "orientation",
-      "text": "landscape"
-    },
-    {
-      "action": "wait",
-      "seconds": 10
-    },
-    {
-      "action": "tap",
-      "label": "Inspector"
-    },
-    {
-      "action": "wait",
-      "seconds": 3
-    },
-    {
-      "action": "screenshot",
-      "name": "10-inspector-closed"
-    },
-    {
-      "action": "tap",
-      "label": "Photo clip",
-      "index": 1
-    },
-    {
-      "action": "wait",
-      "seconds": 3
-    },
-    {
-      "action": "screenshot",
-      "name": "20-clip2-opens-column"
-    },
-    {
-      "action": "wait",
-      "seconds": 3
-    },
-    {
-      "action": "orientation",
-      "text": "portrait"
-    },
-    {
-      "action": "wait",
-      "seconds": 4
-    }
-  ]
+ "steps": [
+  {
+   "action": "launch",
+   "arguments": [
+    "-video.timelineExtraHeight",
+    "0"
+   ]
+  },
+  {
+   "action": "wait",
+   "seconds": 4
+  },
+  {
+   "action": "orientation",
+   "text": "portrait"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "tap",
+   "label": "Select",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "tap",
+   "x": 0.93,
+   "y": 0.12
+  },
+  {
+   "action": "tap",
+   "x": 0.06,
+   "y": 0.12
+  },
+  {
+   "action": "tap",
+   "x": 0.18,
+   "y": 0.12
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "tap",
+   "label": "More selection actions",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "tap",
+   "label": "Create Video"
+  },
+  {
+   "action": "wait",
+   "seconds": 10
+  },
+  {
+   "action": "orientation",
+   "text": "landscape"
+  },
+  {
+   "action": "wait",
+   "seconds": 8
+  },
+  {
+   "action": "tap",
+   "label": "Inspector"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "screenshot",
+   "name": "10-inspector-shut"
+  },
+  {
+   "action": "dump",
+   "name": "10-inspector-shut-all",
+   "text": "snapshot"
+  },
+  {
+   "action": "tap",
+   "label": "Video clip"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "screenshot",
+   "name": "20-selected-reopens"
+  },
+  {
+   "action": "dump",
+   "name": "20-selected-reopens-all",
+   "text": "snapshot"
+  },
+  {
+   "action": "orientation",
+   "text": "portrait"
+  },
+  {
+   "action": "wait",
+   "seconds": 8
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  }
+ ]
 }
