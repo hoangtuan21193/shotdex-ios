@@ -67,6 +67,27 @@ enum AppTheme {
         /// its value 900pt apart, which is the phone layout stretched — the
         /// thing §10.1c forbids.
         static let settingsDetailContentMaxWidth: CGFloat = 840
+        /// The tinted icon tile on a Settings row — the compact root and every
+        /// section page (FS-08.01b §2). Settings on iOS draws the same shape.
+        static let settingsTile: CGFloat = 36
+        /// The same tile in the regular-width sidebar, where rows are 44pt.
+        static let settingsSidebarTile: CGFloat = 28
+        /// Point size of the SF Symbol inside a `settingsTile` — draws a glyph
+        /// about 20pt across, the list-row icon size of DESIGN.md §8.
+        static let settingsTileGlyph: CGFloat = 17
+        /// Point size of the SF Symbol inside a `settingsSidebarTile`.
+        static let settingsSidebarTileGlyph: CGFloat = 14
+        /// Corner radius of a `settingsTile`. A named exception to the radius
+        /// scale, like the Video Studio's: 8 reads as a chip at 36pt and 12 as a
+        /// button; 10 is the tile shape iOS Settings uses. The 28pt sidebar tile
+        /// takes `Radius.sm`.
+        static let settingsTileCornerRadius: CGFloat = 10
+        /// Fill of a tile: its system colour at this opacity in light mode…
+        static let settingsTileFillOpacityLight: Double = 0.14
+        /// …and at this one in dark mode, where 14% disappears into the card.
+        static let settingsTileFillOpacityDark: Double = 0.24
+        /// Minimum height of a Settings row with a tile and a value line.
+        static let settingsRowMinHeight: CGFloat = 60
         /// Clearance a scrolling screen leaves under its content for the
         /// bottom chrome. Pre-iOS 26 the custom tab bar floats over the
         /// content and needs the room; on 26 the native bar reserves its own

@@ -16,8 +16,8 @@ final class SettingsNavigation {
     /// The sidebar item shown in the detail pane. Only the wide layout reads it.
     var selection: SettingsSection? = .photoLibrary
 
-    /// What the compact layout has pushed. Empty means the settings list itself.
-    var compactPath: [SettingsSection] = []
+    /// What the compact layout has pushed. Empty means the root list itself.
+    var compactPath: [SettingsDestination] = []
 
     /// What is typed in the search field. Empty means show the settings, not
     /// results.
@@ -39,19 +39,24 @@ final class SettingsNavigation {
 
     var isSearching: Bool { !query.trimmingCharacters(in: .whitespaces).isEmpty }
 
-    /// Opens the section holding a result and asks its list to scroll to the row.
+    /// Opens the page holding a result and asks its list to scroll to the row.
     ///
     /// Clearing the query is part of the same move: a result that leaves the
     /// results list on screen has taken the reader somewhere they cannot see.
+    /// A page that is a screen of its own (Resize Presets, File Servers,
+    /// Support) is the answer itself, so nothing is left waiting to scroll —
+    /// a target no list claims would fire on whichever page drew it next.
     func open(_ entry: SettingsSearchEntry, usesSplitView: Bool) {
+        let drawsRows: Bool
         if usesSplitView {
             selection = entry.section
+            drawsRows = entry.section.drawsRows
         } else {
-            // The compact layout stays one flat list — the row is already on it,
-            // a few thousand points down.
-            compactPath = []
+            let destination = SettingsDestination.containing(entry.label)
+            compactPath = [destination]
+            drawsRows = destination.drawsRows
         }
-        pendingScrollTarget = entry.label
+        pendingScrollTarget = drawsRows ? entry.label : nil
         query = ""
         isSearchPresented = false
     }

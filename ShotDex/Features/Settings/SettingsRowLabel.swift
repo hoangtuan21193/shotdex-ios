@@ -182,6 +182,78 @@ enum SettingsRowLabel: String, CaseIterable, Identifiable, Hashable, Sendable {
         }
     }
 
+    /// The symbol in the row's icon tile (FS-08.01b §2).
+    var systemImage: String {
+        switch self {
+        case .access: "checkmark.shield"
+        case .manageSelectedPhotos: "photo.badge.plus"
+        case .openPhotoSettings, .openNotificationSettings: "gear"
+        case .indexedPhotosAndVideos: "photo.stack"
+        case .lastIndexed: "clock"
+        case .continueIndexing: "arrow.forward.circle"
+        case .reindexLibrary: "arrow.clockwise"
+        case .useCellularData: "antenna.radiowaves.left.and.right"
+        case .keepScreenAwake: "sun.max"
+        case .lookUpPlaceNames: "mappin.and.ellipse"
+        case .dailyOnThisDayReminder: "bell"
+        case .remindMeAt: "clock"
+        case .notificationsDenied: "bell.slash"
+        case .photoWidget: "square.grid.2x2"
+        case .fileTypeBadge: "doc"
+        case .iso: "camera.aperture"
+        case .aperture: "circle.circle"
+        case .shutterSpeed: "timer"
+        case .focalLength: "scope"
+        case .focalLengthStyle: "arrow.left.and.right"
+        case .megapixels: "square.grid.3x3"
+        case .fileSize: "internaldrive"
+        case .showInsights: "lightbulb"
+        case .autoplayVideos: "play.circle"
+        case .viewFullHDR: "sun.max"
+        case .scanned: "person.2"
+        case .findPeopleAndPets: "viewfinder"
+        case .scanAgain: "arrow.clockwise"
+        case .clearScanResults: "trash"
+        case .photosAndVideos: "internaldrive"
+        case .measured: "ruler"
+        case .metadataWhenSharing: "square.and.arrow.up"
+        case .watermarkWhenSharing: "signature"
+        case .resizePresets: "arrow.down.right.and.arrow.up.left"
+        case .fileServers: "server.rack"
+        case .unknownCameras: "camera"
+        case .resetCustomMappings: "arrow.counterclockwise"
+        case .support: "questionmark.circle"
+        case .clearLocalMetadataIndex: "trash"
+        }
+    }
+
+    /// The tile's colour: the owning item's, except where the board gives a
+    /// row its own (the Photo Library page, FS-08.01b board `IP_Settings`), and
+    /// red for every row that throws something away.
+    var tint: SettingsTint {
+        switch self {
+        case .access, .useCellularData: .green
+        case .keepScreenAwake: .blue
+        case .lookUpPlaceNames: .teal
+        case .photosAndVideos, .measured, .openPhotoSettings, .openNotificationSettings: .gray
+        case .clearScanResults, .resetCustomMappings, .clearLocalMetadataIndex: .red
+        case .resizePresets: .purple
+        case .fileServers: .cyan
+        case .metadataWhenSharing, .watermarkWhenSharing: .green
+        default: SettingsSearchIndex.section(for: self).tint
+        }
+    }
+
+    /// What a search result scrolls to. Three rows now live inside the
+    /// "Your library" card (FS-08.01b §1) rather than as rows of their own, so
+    /// they all land on the card, which carries this id.
+    var scrollAnchor: SettingsRowLabel {
+        switch self {
+        case .indexedPhotosAndVideos, .lastIndexed, .reindexLibrary: .indexedPhotosAndVideos
+        default: self
+        }
+    }
+
     /// Words someone types for this row that are not in its title — the
     /// protocol names and the box people call it. Not localized: nobody
     /// translates "SMB".

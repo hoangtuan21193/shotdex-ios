@@ -49,6 +49,16 @@ struct SettingsScreen: View {
     /// do", and what the Continue action offers to finish.
     @State private var unfinishedCount = 0
     @State private var lastIndexedAt: Date?
+    /// The library split by kind, for the "Your library" card. Read from the
+    /// index rather than `LibraryModel.items`, which is the grid's *filtered*
+    /// list — a search left in Library would shrink the card's count.
+    @State private var photoCount = 0
+    @State private var videoCount = 0
+    /// Value-line facts that cost a query, read off the main actor when
+    /// Settings opens and whenever the root list comes back on screen — the
+    /// screens they summarise are pushed from it and can change them.
+    @State private var unknownCameraCount = 0
+    @State private var fileServerNames: [String] = []
     @State private var isClearIndexConfirmationPresented = false
     @State private var isResetMappingsConfirmationPresented = false
     @State private var isClearScanConfirmationPresented = false
@@ -99,6 +109,9 @@ struct SettingsScreen: View {
             .environment(navigation)
             .task(id: libraryModel?.isIndexing) {
                 await refreshIndexInfo()
+                // A finished run changes the unknown cameras and what the
+                // people scan has left to look at.
+                await refreshSummaries()
             }
             .task {
                 // Opened from another tab to a row: land on it like a search result.
@@ -107,6 +120,7 @@ struct SettingsScreen: View {
                 }
                 notificationAuthorization = await dependencies.onThisDayNotifications.authorizationState()
             }
+            .task { await refreshSummaries() }
             .onChange(of: isOnThisDayReminderEnabled) { _, isEnabled in
                 Task { await applyReminderToggle(isEnabled) }
             }
@@ -139,31 +153,120 @@ struct SettingsScreen: View {
         SettingsLayout.usesSplitView(horizontalSizeClass: horizontalSizeClass)
     }
 
-    // MARK: Compact — one list, unchanged
+    // MARK: Compact — the root list of items, each pushing its page
 
     private var compactLayout: some View {
         @Bindable var navigation = navigation
         return NavigationStack(path: $navigation.compactPath) {
-            settingsList
+            settingsOrResults { compactRoot }
                 .navigationTitle("Settings")
-                .navigationBarTitleDisplayMode(.inline)
+                .navigationBarTitleDisplayMode(.large)
+                .settingsSubtitle(Self.subtitle)
                 .toolbar { doneToolbarItem }
-                // Only reached by a window that shrank out of the split view;
-                // nothing on this list pushes a section.
-                .navigationDestination(for: SettingsSection.self) { item in
-                    detailRoot(for: item)
+                .navigationDestination(for: SettingsDestination.self) { destination in
+                    destinationRoot(for: destination)
                         .toolbar { doneToolbarItem }
                 }
                 .searchable(
                     text: $navigation.query,
                     isPresented: $navigation.isSearchPresented,
+                    placement: .navigationBarDrawer(displayMode: .always),
                     prompt: Text("Search Settings")
                 )
         }
     }
 
-    private var settingsList: some View {
-        settingsOrResults { groupedList(SettingsGroup.allCases) }
+    /// The phone's root (FS-08.01b §1): the library card, then the four
+    /// headings of item rows, each saying its own value — no switch lives
+    /// here, every one is a tap away on its item's page.
+    private var compactRoot: some View {
+        List {
+            if #unavailable(iOS 26.0) {
+                legacySubtitleRow
+            }
+            Section {
+                rootLibraryCard
+                    .listRowInsets(EdgeInsets())
+                    .listRowBackground(Color.clear)
+            }
+            ForEach(SettingsCategory.allCases) { category in
+                Section {
+                    ForEach(category.destinations) { destination in
+                        NavigationLink(value: destination) {
+                            SettingsTileRowLabel(
+                                title: String(localized: destination.title),
+                                value: summary(for: destination),
+                                systemImage: destination.systemImage,
+                                tint: destination.tint
+                            )
+                        }
+                        .settingsRowInsets()
+                        .accessibilityIdentifier("settings.root.\(destination.rawValue)")
+                    }
+                } header: {
+                    SettingsSectionHeader(category.title)
+                }
+            }
+            Section {
+                rootFooter
+                    .listRowInsets(EdgeInsets())
+                    .listRowBackground(Color.clear)
+            }
+        }
+        .listStyle(.insetGrouped)
+        .onAppear { Task { await refreshSummaries() } }
+    }
+
+    /// One row of the root, opened.
+    @ViewBuilder
+    private func destinationRoot(for destination: SettingsDestination) -> some View {
+        switch destination {
+        case .resizePresets:
+            CompressionPresetsScreen()
+        case .fileServers:
+            FileServerListScreen()
+        case .support:
+            supportScreen
+        default:
+            groupedList(destination.groups)
+                .navigationTitle(destination.title)
+                .navigationBarTitleDisplayMode(.inline)
+        }
+    }
+
+    /// The version, and where the things that are not settings live.
+    private var rootFooter: some View {
+        VStack(spacing: AppTheme.Spacing.sm) {
+            Text(Self.versionLine)
+                .frame(maxWidth: .infinity)
+            Text("Albums and smart albums are in Collections; charts and gear statistics are in Statistics. Pinch the photo grid to change how many columns it shows.", comment: "Settings root footer: where the things that are not settings live")
+                .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .font(.footnote)
+        .foregroundStyle(.secondary)
+        .padding(.horizontal, AppTheme.Spacing.xs)
+    }
+
+    /// Before iOS 26 a navigation bar has no subtitle, so the line opens the
+    /// list instead.
+    private var legacySubtitleRow: some View {
+        Self.subtitle
+            .font(.subheadline)
+            .foregroundStyle(.secondary)
+            .listRowInsets(EdgeInsets(top: 0, leading: AppTheme.Spacing.xs, bottom: 0, trailing: AppTheme.Spacing.xs))
+            .listRowBackground(Color.clear)
+    }
+
+    private static let subtitle = Text(
+        "How ShotDex reads, shows and shares your photos",
+        comment: "Settings: the line under the large title, saying what the screen is for"
+    )
+
+    private static var versionLine: String {
+        let info = Bundle.main.infoDictionary
+        let version = info?["CFBundleShortVersionString"] as? String ?? "?"
+        let build = info?["CFBundleVersion"] as? String ?? "?"
+        return String(localized: "ShotDex \(version) (\(build))", comment: "Settings root footer: app version and build number")
     }
 
     // MARK: Regular — sidebar and detail
@@ -198,28 +301,36 @@ struct SettingsScreen: View {
             if navigation.isSearching {
                 searchResultRows
             } else {
-                ForEach(SettingsSection.allCases) { item in
-                    Label {
-                        Text(item.title)
-                    } icon: {
-                        Image(systemName: item.systemImage)
-                            .symbolRenderingMode(.hierarchical)
+                if #unavailable(iOS 26.0) {
+                    legacySubtitleRow
+                }
+                // The same four headings as the phone's root, drawn as gaps:
+                // a heading over two rows in a 320pt column is more label
+                // than list.
+                ForEach(SettingsCategory.allCases) { category in
+                    Section {
+                        ForEach(category.sections) { item in
+                            sidebarRow(item)
+                                // "Support" is a sidebar item, a pane title and a
+                                // row on the phone's list all at once, so the
+                                // driver cannot pick this one out by label.
+                                .accessibilityIdentifier("settings.sidebar.\(item.rawValue)")
+                                .tag(item)
+                        }
                     }
-                    // "Support" is a sidebar item, a pane title and a row on the
-                    // phone's list all at once, so the driver cannot pick this
-                    // one out by label.
-                    .accessibilityIdentifier("settings.sidebar.\(item.rawValue)")
-                    .tag(item)
                 }
             }
         }
+        // 44pt rows (FS-08.01b §2); the sidebar style's own default is taller.
+        .environment(\.defaultMinListRowHeight, AppTheme.Size.minTouch)
         .overlay {
             if navigation.isSearching, SettingsSearchIndex.results(for: navigation.query).isEmpty {
                 ContentUnavailableView.search(text: navigation.query)
             }
         }
         .navigationTitle("Settings")
-        .navigationBarTitleDisplayMode(.inline)
+        .navigationBarTitleDisplayMode(.large)
+        .settingsSubtitle(Self.subtitle)
         .navigationSplitViewColumnWidth(
             min: AppTheme.Size.settingsSidebarWidthMin,
             ideal: AppTheme.Size.settingsSidebarWidth,
@@ -232,6 +343,37 @@ struct SettingsScreen: View {
             placement: .navigationBarDrawer(displayMode: .always),
             prompt: Text("Search Settings")
         )
+        .task { await refreshSummaries() }
+    }
+
+    /// A 44pt sidebar row: 28pt tile, title, and the short form of the value
+    /// at the trailing edge (FS-08.01b §2) — "76%", "6 unknown", "9:00 AM".
+    private func sidebarRow(_ item: SettingsSection) -> some View {
+        HStack(spacing: AppTheme.Spacing.md) {
+            // The tile keeps its colour on the selected row: iOS 26 draws the
+            // selection as a grey capsule with tinted text, and a white tile on
+            // grey disappears.
+            SettingsTileIcon(
+                systemImage: item.systemImage,
+                tint: item.tint,
+                isCompact: true
+            )
+            Text(item.title)
+                .lineLimit(1)
+            Spacer(minLength: AppTheme.Spacing.sm)
+            if let value = shortSummary(for: item) {
+                Text(value)
+                    .font(.subheadline)
+                    .monospacedDigit()
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+            }
+        }
+        .frame(minHeight: AppTheme.Size.minTouch)
+        .listRowInsets(EdgeInsets(
+            top: 0, leading: AppTheme.Spacing.sm, bottom: 0, trailing: AppTheme.Spacing.md
+        ))
+        .accessibilityElement(children: .combine)
     }
 
     /// One sidebar item's content.
@@ -243,15 +385,19 @@ struct SettingsScreen: View {
     private func detailRoot(for item: SettingsSection) -> some View {
         switch item {
         case .support:
-            SupportScreen(
-                service: dependencies.support,
-                metadataStore: dependencies.metadataStore
-            )
+            supportScreen
         default:
             groupedList(item.groups)
                 .navigationTitle(item.title)
                 .navigationBarTitleDisplayMode(.inline)
         }
+    }
+
+    private var supportScreen: some View {
+        SupportScreen(
+            service: dependencies.support,
+            metadataStore: dependencies.metadataStore
+        )
     }
 
     // MARK: Shared pieces
@@ -279,11 +425,16 @@ struct SettingsScreen: View {
         }
     }
 
-    /// A list of sections, able to be sent to one of its rows by a search result.
+    /// A page of sections, able to be sent to one of its rows by a search result.
+    ///
+    /// A page holding one group drops that group's header: the navigation
+    /// title already says it, and "Notifications" over "Notifications" is
+    /// the same word twice.
     private func groupedList(_ groups: [SettingsGroup]) -> some View {
-        ScrollViewReader { proxy in
+        let showsHeaders = groups.count > 1
+        return ScrollViewReader { proxy in
             List {
-                ForEach(groups) { group($0) }
+                ForEach(groups) { group($0, showsHeader: showsHeaders) }
             }
             .listStyle(.insetGrouped)
             // Held to a readable width and centred, with the grouped grey put
@@ -304,13 +455,13 @@ struct SettingsScreen: View {
     /// Scrolls to the row a search result asked for and lights it up briefly.
     ///
     /// The row is claimed only by the list that actually draws it — in the split
-    /// view the other panes do not exist yet, but the compact list and a detail
-    /// pane must not both answer for the same target.
+    /// view the other panes do not exist yet, but two lists must not both
+    /// answer for the same target.
     private func revealPendingRow(in groups: [SettingsGroup], proxy: ScrollViewProxy) async {
         guard let target = navigation.pendingScrollTarget, groups.contains(target.group) else { return }
         _ = navigation.consumeScrollTarget()
         withAnimation(AppTheme.Motion.standard) {
-            proxy.scrollTo(target, anchor: .center)
+            proxy.scrollTo(target.scrollAnchor, anchor: .center)
         }
         navigation.flash(target)
     }
@@ -325,84 +476,203 @@ struct SettingsScreen: View {
         }
     }
 
-    // MARK: The thirteen sections, addressed by name
+    // MARK: The fourteen sections, addressed by name
 
     /// One `Section`, picked by its case.
     ///
-    /// Both layouts render their sections through here, so the phone's list and
-    /// an iPad detail pane are drawing the same views off the same state — this
-    /// screen keeps owning every `@AppStorage` and `@State` it always had.
+    /// Both layouts render their sections through here, so the phone's pages
+    /// and an iPad detail pane are drawing the same views off the same state —
+    /// this screen keeps owning every `@AppStorage` and `@State` it always had.
     /// No `AnyView`: erasing the type would blur the row identity `List`
     /// animates against, which is the diff bug `indexControls` documents below.
     @ViewBuilder
-    private func group(_ group: SettingsGroup) -> some View {
+    private func group(_ group: SettingsGroup, showsHeader: Bool) -> some View {
         switch group {
-        case .photoLibrary: photoLibrarySection
-        case .notifications: notificationsSection
-        case .widgets: widgetsSection
-        case .display: displaySection
-        case .statistics: statisticsSection
-        case .playback: playbackSection
-        case .subjectScan: subjectScanSection
-        case .libraryStorage: storageSection
-        case .sharing: sharingSection
-        case .export: exportSection
-        case .fileServers: fileServersSection
-        case .cameraDatabase: cameraDatabaseSection
+        case .photoLibrary: photoLibrarySection(showsHeader: showsHeader)
+        case .notifications: notificationsSection(showsHeader: showsHeader)
+        case .widgets: widgetsSection(showsHeader: showsHeader)
+        case .display: displaySection(showsHeader: showsHeader)
+        case .statistics: statisticsSection(showsHeader: showsHeader)
+        case .playback: playbackSection(showsHeader: showsHeader)
+        case .subjectScan: subjectScanSection(showsHeader: showsHeader)
+        case .libraryStorage: storageSection(showsHeader: showsHeader)
+        case .sharing: sharingSection(showsHeader: showsHeader)
+        case .export: exportSection(showsHeader: showsHeader)
+        case .fileServers: fileServersSection(showsHeader: showsHeader)
+        case .cameraDatabase: cameraDatabaseSection(showsHeader: showsHeader)
         case .support: supportSection
-        case .privacy: privacySection
+        case .privacy: privacySection(showsHeader: showsHeader)
         }
+    }
+
+    // MARK: Row building
+
+    /// A row's tile, title and value line, from its `SettingsRowLabel`.
+    private func rowLabel(
+        _ row: Row,
+        value: String? = nil,
+        title: String? = nil,
+        style: SettingsTileRowLabel.TitleStyle = .standard
+    ) -> SettingsTileRowLabel {
+        SettingsTileRowLabel(
+            title: title ?? row.title,
+            value: value,
+            systemImage: row.systemImage,
+            tint: row.tint,
+            titleStyle: style,
+            valueLineLimit: 2
+        )
+    }
+
+    /// A row that only reads out: tile, title, value line, and a number at
+    /// the trailing edge. Not `LabeledContent`, which drops its value under
+    /// the label once a two-line label leaves it short of room — measured on
+    /// the phone, "13.1 MB" fell to a line of its own.
+    private func valueRow(_ row: Row, value: String? = nil, trailing: String? = nil) -> some View {
+        HStack(spacing: AppTheme.Spacing.sm) {
+            rowLabel(row, value: value)
+            Spacer(minLength: 0)
+            if let trailing {
+                Text(trailing)
+                    .monospacedDigit()
+                    .foregroundStyle(Color(.secondaryLabel))
+                    // Pinned: a greedy label must not push the number off the row.
+                    .fixedSize()
+            }
+        }
+        .accessibilityElement(children: .combine)
+    }
+
+    /// "On · …" / "Off · …" — a switch's state, then what that state means.
+    private func toggleValue(_ isOn: Bool, on: String, off: String) -> String {
+        isOn
+            ? SettingsSummary.joined(String(localized: "On", comment: "Settings: a switch that is on, at the start of its value line"), on)
+            : SettingsSummary.joined(String(localized: "Off", comment: "Settings: a switch that is off, at the start of its value line"), off)
     }
 
     // MARK: Photo Library
 
-    private var photoLibrarySection: some View {
+    /// The library card, then access and the indexing switches. The card is
+    /// where Indexed Photos and Videos, Last Indexed and Re-index live now —
+    /// one status in one place (FS-08.01b §1), the row labels kept so search
+    /// still lands on it.
+    @ViewBuilder
+    private func photoLibrarySection(showsHeader: Bool) -> some View {
         Section {
-            LabeledContent(Row.access.title, value: authorizationLabel)
+            pageLibraryCard
+                .listRowInsets(EdgeInsets())
+                .listRowBackground(Color.clear)
+        }
+        Section {
+            valueRow(.access, value: SettingsSummary.accessDetail(photoLibrary.authorizationState))
                 .settingsRow(.access)
             if photoLibrary.authorizationState == .limited {
-                Button(Row.manageSelectedPhotos.title) {
+                Button {
                     photoLibrary.presentLimitedLibraryPicker()
+                } label: {
+                    rowLabel(.manageSelectedPhotos, style: .action)
                 }
                 .settingsRow(.manageSelectedPhotos)
             }
             if photoLibrary.authorizationState == .denied {
-                Button(Row.openPhotoSettings.title) { openAppSettings() }
-                    .settingsRow(.openPhotoSettings)
-            }
-
-            // The pair, not a single number: the fast pass writes a row for every
-            // asset within seconds, so a plain row count sat at the library total
-            // from the first run and read as 100 % done forever.
-            LabeledContent(Row.indexedPhotosAndVideos.title, value: readCountLabel)
-                .settingsRow(.indexedPhotosAndVideos)
-            if let lastIndexedAt {
-                LabeledContent(
-                    Row.lastIndexed.title,
-                    value: lastIndexedAt.formatted(date: .abbreviated, time: .shortened)
-                )
-                .settingsRow(.lastIndexed)
+                Button { openAppSettings() } label: {
+                    rowLabel(.openPhotoSettings, style: .action)
+                }
+                .settingsRow(.openPhotoSettings)
             }
 
             if let model = libraryModel {
                 indexControls(model)
             }
 
-            Toggle(Row.useCellularData.title, isOn: $allowCellularIndexing)
-                .settingsRow(.useCellularData)
-            Toggle(Row.keepScreenAwake.title, isOn: $keepScreenAwake)
-                .settingsRow(.keepScreenAwake)
-            Toggle(Row.lookUpPlaceNames.title, isOn: $looksUpPlaces)
-                .settingsRow(.lookUpPlaceNames)
+            Toggle(isOn: $allowCellularIndexing) {
+                rowLabel(.useCellularData, value: toggleValue(
+                    allowCellularIndexing,
+                    on: String(localized: "a few hundred KB per photo", comment: "Settings, Use Cellular Data value line when on"),
+                    off: String(localized: "Wi-Fi is always allowed", comment: "Settings, Use Cellular Data value line when off")
+                ))
+            }
+            .settingsRow(.useCellularData)
+            Toggle(isOn: $keepScreenAwake) {
+                rowLabel(.keepScreenAwake, value: toggleValue(
+                    keepScreenAwake,
+                    on: String(localized: "while indexing runs", comment: "Settings, Keep Screen Awake value line when on"),
+                    off: String(localized: "the screen locks as usual", comment: "Settings, Keep Screen Awake value line when off")
+                ))
+            }
+            .settingsRow(.keepScreenAwake)
+            Toggle(isOn: $looksUpPlaces) {
+                rowLabel(.lookUpPlaceNames, value: toggleValue(
+                    looksUpPlaces,
+                    on: String(localized: "the only step that leaves this device", comment: "Settings, Look Up Place Names value line when on"),
+                    off: String(localized: "places stay as coordinates", comment: "Settings, Look Up Place Names value line when off")
+                ))
+            }
+            .settingsRow(.lookUpPlaceNames)
         } header: {
-            Text("Photo Library")
+            if showsHeader {
+                SettingsSectionHeader(LocalizedStringResource("Access and indexing", comment: "Settings → Photo Library: section header"))
+            }
         } footer: {
-            Text("Indexing reads the camera, lens and exposure info out of each photo and video. Wi-Fi is always allowed; in Low Power Mode automatic indexing pauses.\n\nLook Up Place Names is the only step that leaves this device — one lookup per place, then remembered.")
+            Text("Indexing reads the camera, lens and exposure info out of each photo and video. In Low Power Mode automatic indexing pauses. Place names are looked up once per place, then remembered.", comment: "Settings → Photo Library: footer under the indexing switches")
         }
     }
 
-    /// The index actions — **one row each**, disabled while a run is going —
-    /// plus the live progress readout as a single row below them.
+    /// The library status, read from the same counts the Photo Library page
+    /// always showed.
+    private var libraryStatus: SettingsLibraryStatus {
+        let progress = libraryModel?.indexProgress
+        return SettingsLibraryStatus(.init(
+            access: photoLibrary.authorizationState,
+            photoCount: photoCount,
+            videoCount: videoCount,
+            readCount: readCount,
+            totalCount: totalCount,
+            isIndexing: libraryModel?.isIndexing ?? false,
+            runFraction: progress.flatMap { $0.total > 0 ? $0.fraction : nil },
+            lastIndexedAt: lastIndexedAt
+        ))
+    }
+
+    private var canReindex: Bool {
+        guard let libraryModel else { return false }
+        return photoLibrary.authorizationState.canReadLibrary && !libraryModel.isIndexing
+    }
+
+    private func reindex() {
+        libraryModel?.startIndexing(fullReindex: true, manual: true)
+    }
+
+    /// The root's card: the status only. Everything about a run in progress
+    /// is one tap away on the Photo Library page.
+    private var rootLibraryCard: some View {
+        SettingsLibraryCard(status: libraryStatus, canReindex: canReindex, reindex: reindex)
+            .accessibilityIdentifier("settings.libraryCard")
+    }
+
+    /// The page's card, which a search for "indexed", "last indexed" or
+    /// "re-index" lands on — so it carries those rows' scroll id and flash.
+    private var pageLibraryCard: some View {
+        let isFlashing = navigation.flashedRow.map { $0.scrollAnchor == .indexedPhotosAndVideos } ?? false
+        return SettingsLibraryCard(status: libraryStatus, canReindex: canReindex, reindex: reindex) {
+            if let model = libraryModel, model.isIndexing {
+                indexRunDetails(model)
+            }
+        }
+        .overlay {
+            RoundedRectangle.app(AppTheme.Radius.lg)
+                .fill(Color.accentColor.opacity(isFlashing ? 0.18 : 0))
+                .allowsHitTesting(false)
+        }
+        .animation(AppTheme.Motion.standard, value: isFlashing)
+        .id(Row.indexedPhotosAndVideos)
+        .accessibilityIdentifier(
+            isFlashing ? "settings.libraryCard.flashing" : "settings.libraryCard"
+        )
+    }
+
+    /// The index actions that are rows — Continue Indexing — disabled while a
+    /// run is going. Re-index is the card's button.
     ///
     /// "Continue Indexing" is keyed to `unfinishedCount`, not the retryable
     /// (`pendingICloud`/`error`) count: a run stopped part-way leaves its
@@ -412,99 +682,81 @@ struct SettingsScreen: View {
     /// still picks the cheaper targeted retry when every unread row is one it
     /// can serve.
     ///
-    /// The actions stay put instead of being replaced by the progress rows: the
-    /// swap changed the section's row set, and `List` animates that diff, so a
-    /// tap slid the whole sheet around instead of acknowledging the tap. Keeping
-    /// them and disabling them is also the feedback the tap needs — the row greys
-    /// out on the same frame (a manual run sets `isIndexing` synchronously), and a
-    /// disabled row can't be hammered into starting the run twice.
-    ///
-    /// `transaction` on the progress row kills the implicit animation on the one
-    /// structural change that remains — this is a state readout, not a transition.
+    /// The row stays put while a run goes instead of disappearing: `List`
+    /// animates a change in its row set, so a tap would slide the page around
+    /// instead of acknowledging the tap. Disabling it is also the feedback the
+    /// tap needs — it greys out on the same frame (a manual run sets
+    /// `isIndexing` synchronously), and a disabled row can't be hammered into
+    /// starting the run twice.
     @ViewBuilder
     private func indexControls(_ model: LibraryModel) -> some View {
-        if photoLibrary.authorizationState.canReadLibrary {
-            if unfinishedCount > 0 {
-                // The count rides inside the localized string, not appended to
-                // it: "Continue Indexing (%@)" is one phrase to translate, and
-                // splitting it would leave the brackets to English word order.
-                Button("Continue Indexing (\(unfinishedCount.formatted()))") {
-                    model.continueIndexing()
-                }
-                .disabled(model.isIndexing)
-                .settingsRow(.continueIndexing)
-            }
-
-            Button(Row.reindexLibrary.title) {
-                model.startIndexing(fullReindex: true, manual: true)
+        if photoLibrary.authorizationState.canReadLibrary, unfinishedCount > 0 {
+            // The count rides inside the localized string, not appended to
+            // it: "Continue Indexing (%@)" is one phrase to translate, and
+            // splitting it would leave the brackets to English word order.
+            Button {
+                model.continueIndexing()
+            } label: {
+                rowLabel(
+                    .continueIndexing,
+                    value: String(localized: "Picks up where the last run stopped", comment: "Settings, Continue Indexing value line"),
+                    title: String(localized: "Continue Indexing (\(unfinishedCount.formatted()))"),
+                    style: .action
+                )
             }
             .disabled(model.isIndexing)
-            .settingsRow(.reindexLibrary)
-        }
-
-        if model.isIndexing {
-            indexProgressRow(model)
-                .transaction { $0.animation = nil }
+            .settingsRow(.continueIndexing)
         }
     }
 
-    private func indexProgressRow(_ model: LibraryModel) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack {
-                if let progress = model.indexProgress {
-                    ProgressView(value: progress.fraction)
-                    Text("\(progress.percent)%")
-                        .font(.caption.monospacedDigit())
-                        .foregroundStyle(.secondary)
-                } else {
-                    ProgressView()
-                    Text("Reading photo and video info…")
-                        .foregroundStyle(.secondary)
-                }
-                Spacer()
-                Button("Cancel") { model.cancelIndexing() }
-            }
+    /// What a run in progress is doing, under the card's bar on the Photo
+    /// Library page: counts, speed, network, warnings, and Cancel.
+    private func indexRunDetails(_ model: LibraryModel) -> some View {
+        VStack(alignment: .leading, spacing: AppTheme.Spacing.xs) {
             if let progress = model.indexProgress, progress.total > 0 {
                 Text("\(progress.processed.formatted()) of \(progress.total.formatted()) photos and videos")
-                    .font(.caption2.monospacedDigit())
-                    .foregroundStyle(.secondary)
             }
             if let throughput = model.indexThroughput {
                 Text(throughput.summaryLine)
-                    .font(.caption2.monospacedDigit())
-                    .foregroundStyle(.secondary)
             }
             if let network = model.indexNetworkStatus {
                 Text(network.displayLine)
-                    .font(.caption2.monospacedDigit())
-                    .foregroundStyle(.secondary)
             }
             if let diagnostics = model.indexDiagnostics {
                 ForEach(diagnostics.advisories, id: \.self) { advisory in
                     Label(advisory, systemImage: "exclamationmark.triangle")
-                        .font(.caption2)
-                        .foregroundStyle(.secondary)
                 }
             }
             Text(Self.explainer)
-                .font(.caption2)
-                .foregroundStyle(.secondary)
+            Button("Cancel") { model.cancelIndexing() }
+                .font(.subheadline.weight(.semibold))
+                .buttonStyle(.borderless)
+                .padding(.top, AppTheme.Spacing.xs)
         }
+        .font(.caption2.monospacedDigit())
+        .foregroundStyle(.secondary)
+        .padding(.top, AppTheme.Spacing.sm)
+        // A state readout, not a transition.
+        .transaction { $0.animation = nil }
     }
 
-    private var sharingSection: some View {
+    private func sharingSection(showsHeader: Bool) -> some View {
         Section {
-            Picker(Row.metadataWhenSharing.title, selection: $shareMetadataLevel) {
+            Picker(selection: $shareMetadataLevel) {
                 ForEach(MetadataLevel.allCases, id: \.self) { level in
                     Text(level.title).tag(level)
                 }
+            } label: {
+                rowLabel(.metadataWhenSharing, value: String(localized: "Each share can change it", comment: "Settings, Metadata When Sharing value line"))
             }
             .settingsRow(.metadataWhenSharing)
             watermarkWhenSharingPicker {
-                Text(Row.watermarkWhenSharing.title)
+                rowLabel(.watermarkWhenSharing, value: WatermarkCopy.sharingValueLine())
             }
         } header: {
-            Text("Sharing")
+            if showsHeader {
+                SettingsSectionHeader(LocalizedStringResource("Sharing", comment: "Settings: section header over Metadata When Sharing"))
+            }
         } footer: {
             Text("What goes with a photo when it leaves ShotDex: Share, Save Copy, Paste Edits, Resize and dragging it into another app. Each of them can choose differently for one time. No Location removes where it was taken; camera, lens, exposure and date still go with it. No Metadata keeps only what the picture needs to look right, and the Artist and Copyright.\n\nVideos always keep their metadata: removing it would mean copying the whole clip.")
         }
@@ -539,19 +791,20 @@ struct SettingsScreen: View {
     /// because Vision publishes no face-identity request, so no app can tell
     /// one person from another or name them.
     @ViewBuilder
-    private var subjectScanSection: some View {
+    private func subjectScanSection(showsHeader: Bool) -> some View {
         @Bindable var scan = dependencies.subjectScan
         Section {
-            LabeledContent(Row.scanned.title, value: subjectScanCountLabel)
-                .monospacedDigit()
+            valueRow(.scanned, trailing: subjectScanCountLabel)
                 .settingsRow(.scanned)
 
             if scan.isScanning {
                 subjectScanProgressRow(scan)
                     .transaction { $0.animation = nil }
             } else {
-                Button(scan.isComplete ? Row.scanAgain.title : Row.findPeopleAndPets.title) {
+                Button {
                     scan.start()
+                } label: {
+                    rowLabel(scan.isComplete ? .scanAgain : .findPeopleAndPets, style: .action)
                 }
                 .disabled(!photoLibrary.authorizationState.canReadLibrary)
                 .settingsRow(scan.isComplete ? .scanAgain : .findPeopleAndPets)
@@ -559,14 +812,18 @@ struct SettingsScreen: View {
                     // Confirmed like the other two destructive rows on this
                     // screen: the scan it throws away is the slowest thing the
                     // app does.
-                    Button(Row.clearScanResults.title, role: .destructive) {
+                    Button(role: .destructive) {
                         isClearScanConfirmationPresented = true
+                    } label: {
+                        rowLabel(.clearScanResults, style: .destructive)
                     }
                     .settingsRow(.clearScanResults)
                 }
             }
         } header: {
-            Text("People and Pets")
+            if showsHeader {
+                SettingsSectionHeader(SettingsSection.subjectScan.title)
+            }
         } footer: {
             Text("Looks through your photos for faces and for cats and dogs, then offers them as collections. This is the one thing ShotDex does that opens each photo in full, so it is slower than indexing and better left to a charger.\n\nIt all happens on this iPhone, and it counts faces without recognising anyone — iOS gives apps no way to tell one person from another.")
         }
@@ -609,26 +866,33 @@ struct SettingsScreen: View {
 
     // MARK: Notifications
 
-    private var notificationsSection: some View {
+    private func notificationsSection(showsHeader: Bool) -> some View {
         Section {
-            Toggle(Row.dailyOnThisDayReminder.title, isOn: $isOnThisDayReminderEnabled)
-                .settingsRow(.dailyOnThisDayReminder)
+            Toggle(isOn: $isOnThisDayReminderEnabled) {
+                rowLabel(.dailyOnThisDayReminder)
+            }
+            .settingsRow(.dailyOnThisDayReminder)
             if isOnThisDayReminderEnabled, notificationAuthorization.canNotify {
                 DatePicker(
-                    Row.remindMeAt.title,
                     selection: notifyTimeBinding,
                     displayedComponents: .hourAndMinute
-                )
+                ) {
+                    rowLabel(.remindMeAt)
+                }
                 .settingsRow(.remindMeAt)
             }
             if notificationAuthorization == .denied {
-                LabeledContent(Row.notificationsDenied.title) { Text("Denied") }
+                valueRow(.notificationsDenied, trailing: String(localized: "Denied", comment: "Settings → Notifications: iOS refuses this app's notifications"))
                     .settingsRow(.notificationsDenied)
-                Button(Row.openNotificationSettings.title) { openAppSettings() }
-                    .settingsRow(.openNotificationSettings)
+                Button { openAppSettings() } label: {
+                    rowLabel(.openNotificationSettings, style: .action)
+                }
+                .settingsRow(.openNotificationSettings)
             }
         } header: {
-            Text("Notifications")
+            if showsHeader {
+                SettingsSectionHeader(SettingsSection.notifications.title)
+            }
         } footer: {
             Text("A daily reminder of what you shot on this date in past years, and how much space it takes. Days with nothing are skipped.")
         }
@@ -671,69 +935,79 @@ struct SettingsScreen: View {
 
     // MARK: Widgets
 
-    /// How many designs there are, because the row leads to a list rather
-    /// than to one widget's settings.
-    private var photoWidgetSummary: String {
-        let count = dependencies.photoWidgetSettings.designs.count
-        return count == 1
-            ? dependencies.photoWidgetSettings.designs[0].name
-            : "\(count) designs"
-    }
-
-    private var widgetsSection: some View {
+    private func widgetsSection(showsHeader: Bool) -> some View {
         Section {
             NavigationLink {
                 PhotoWidgetDesignsScreen()
             } label: {
-                LabeledContent(Row.photoWidget.title, value: photoWidgetSummary)
+                rowLabel(.photoWidget, value: photoWidgetSummary)
             }
             .settingsRow(.photoWidget)
         } header: {
-            Text("Widgets")
+            if showsHeader {
+                SettingsSectionHeader(SettingsSection.widgets.title)
+            }
         } footer: {
             Text("Add widgets by touching and holding the Home Screen. A photo widget draws the time, the date, the month, today's events or the weather over a photo you choose — make a design for each one you want. On This Day needs no setting up.")
         }
     }
 
+    /// How many designs there are, because the row leads to a list rather
+    /// than to one widget's settings.
+    private var photoWidgetSummary: String {
+        let designs = dependencies.photoWidgetSettings.designs
+        return designs.count == 1
+            ? designs[0].name
+            : SettingsSummary.widgetsShort(designCount: designs.count)
+    }
+
     // MARK: Display
 
-    private var displaySection: some View {
+    private func displaySection(showsHeader: Bool) -> some View {
         Section {
-            Toggle(Row.fileTypeBadge.title, isOn: $showsFileTypeBadge).settingsRow(.fileTypeBadge)
-            Toggle(Row.iso.title, isOn: $showsISO).settingsRow(.iso)
-            Toggle(Row.aperture.title, isOn: $showsAperture).settingsRow(.aperture)
-            Toggle(Row.shutterSpeed.title, isOn: $showsShutter).settingsRow(.shutterSpeed)
-            Toggle(Row.focalLength.title, isOn: $showsFocal).settingsRow(.focalLength)
-            Picker(Row.focalLengthStyle.title, selection: $showsEquivalentFocalLength) {
+            Toggle(isOn: $showsFileTypeBadge) { rowLabel(.fileTypeBadge) }.settingsRow(.fileTypeBadge)
+            Toggle(isOn: $showsISO) { rowLabel(.iso) }.settingsRow(.iso)
+            Toggle(isOn: $showsAperture) { rowLabel(.aperture) }.settingsRow(.aperture)
+            Toggle(isOn: $showsShutter) { rowLabel(.shutterSpeed) }.settingsRow(.shutterSpeed)
+            Toggle(isOn: $showsFocal) { rowLabel(.focalLength) }.settingsRow(.focalLength)
+            Picker(selection: $showsEquivalentFocalLength) {
                 Text("Actual").tag(false)
                 Text("FF Equivalent").tag(true)
+            } label: {
+                rowLabel(.focalLengthStyle)
             }
             .settingsRow(.focalLengthStyle)
-            Toggle(Row.megapixels.title, isOn: $showsMegapixels).settingsRow(.megapixels)
-            Toggle(Row.fileSize.title, isOn: $showsFileSize).settingsRow(.fileSize)
+            Toggle(isOn: $showsMegapixels) { rowLabel(.megapixels) }.settingsRow(.megapixels)
+            Toggle(isOn: $showsFileSize) { rowLabel(.fileSize) }.settingsRow(.fileSize)
         } header: {
-            Text("Thumbnail Metadata")
+            if showsHeader {
+                SettingsSectionHeader(LocalizedStringResource("Thumbnail metadata", comment: "Settings → Display: section header over the thumbnail switches"))
+            }
         } footer: {
             Text("Pinch the photo grid to change how many columns it shows.")
         }
     }
 
-    private var statisticsSection: some View {
+    private func statisticsSection(showsHeader: Bool) -> some View {
         Section {
-            Toggle(Row.showInsights.title, isOn: $showsInsights).settingsRow(.showInsights)
+            Toggle(isOn: $showsInsights) { rowLabel(.showInsights) }.settingsRow(.showInsights)
         } header: {
-            Text("Statistics")
+            if showsHeader {
+                SettingsSectionHeader(LocalizedStringResource("Statistics", comment: "Settings → Display: section header over Show Insights"))
+            }
         } footer: {
             Text("Insights are short sentences about your own library at the top of Statistics.")
         }
     }
 
-    private var playbackSection: some View {
+    private func playbackSection(showsHeader: Bool) -> some View {
         Section {
-            Toggle(Row.autoplayVideos.title, isOn: $autoplayVideos).settingsRow(.autoplayVideos)
-            Toggle(Row.viewFullHDR.title, isOn: $viewFullHDR).settingsRow(.viewFullHDR)
+            Toggle(isOn: $autoplayVideos) { rowLabel(.autoplayVideos) }.settingsRow(.autoplayVideos)
+            Toggle(isOn: $viewFullHDR) { rowLabel(.viewFullHDR) }.settingsRow(.viewFullHDR)
         } header: {
-            Text("Playback")
+            if showsHeader {
+                SettingsSectionHeader(SettingsSection.playback.title)
+            }
         } footer: {
             Text("When autoplay is off, a video waits for you to press play. Looping is a button on the player itself. Full HDR shows high-range photos at their real brightness, which makes everything around them look darker.")
         }
@@ -742,22 +1016,24 @@ struct SettingsScreen: View {
     /// How much of the device the library takes up, from the indexed file
     /// sizes. Photos reports the same figure in Settings, and for a metadata
     /// app it is one of the more interesting numbers there is.
-    private var storageSection: some View {
+    private func storageSection(showsHeader: Bool) -> some View {
         Section {
-            LabeledContent(Row.photosAndVideos.title, value: storageTotalLabel)
-                .settingsRow(.photosAndVideos)
+            valueRow(
+                .photosAndVideos,
+                value: String(localized: "Summed from the file sizes the index has read", comment: "Settings → Library size: value line under Photos and Videos"),
+                trailing: storageTotalLabel
+            )
+            .settingsRow(.photosAndVideos)
             if let storage, storage.knownCount < storage.totalCount {
-                LabeledContent(
-                    Row.measured.title,
-                    value: "\(storage.knownCount.formatted()) of \(storage.totalCount.formatted())"
-                )
-                .monospacedDigit()
-                .settingsRow(.measured)
+                valueRow(.measured, trailing: "\(storage.knownCount.formatted()) of \(storage.totalCount.formatted())")
+                    .settingsRow(.measured)
             }
         } header: {
-            Text("Library Size")
+            if showsHeader {
+                SettingsSectionHeader(LocalizedStringResource("Library size", comment: "Settings → Photo Library: section header over the library's size"))
+            }
         } footer: {
-            Text("Summed from the file sizes the index has read. Photos still stored only in iCloud are counted at their full size.")
+            Text("Photos still stored only in iCloud are counted at their full size.", comment: "Settings → Library size footer")
         }
         .task { await loadStorage() }
     }
@@ -777,80 +1053,92 @@ struct SettingsScreen: View {
 
     // MARK: Export
 
-    private var exportSection: some View {
+    private func exportSection(showsHeader: Bool) -> some View {
         Section {
             NavigationLink {
                 CompressionPresetsScreen()
             } label: {
-                LabeledContent(
-                    Row.resizePresets.title,
-                    value: "\(dependencies.compressionPresets.customPresets.count) custom"
-                )
+                rowLabel(.resizePresets, value: resizePresetsSummary)
             }
             .settingsRow(.resizePresets)
         } header: {
-            Text("Export")
+            if showsHeader {
+                SettingsSectionHeader(LocalizedStringResource("Export", comment: "Settings: section header over Resize Presets"))
+            }
         } footer: {
             Text("Built-in presets keep the original proportions. Add named presets for exact dimensions.")
         }
     }
 
+    private var resizePresetsSummary: String {
+        SettingsSummary.resizePresets(
+            builtIn: ResizePreset.builtIns.count,
+            custom: dependencies.compressionPresets.customPresets.count
+        )
+    }
+
     // MARK: File Servers
 
-    private var fileServersSection: some View {
+    private func fileServersSection(showsHeader: Bool) -> some View {
         Section {
             NavigationLink {
                 FileServerListScreen()
             } label: {
-                LabeledContent(Row.fileServers.title, value: fileServerCountText)
+                rowLabel(.fileServers, value: SettingsSummary.fileServers(names: fileServerNames))
             }
             .settingsRow(.fileServers)
         } header: {
-            Text("Upload")
+            if showsHeader {
+                SettingsSectionHeader(LocalizedStringResource("Upload", comment: "Settings: section header over File Servers"))
+            }
         } footer: {
             Text("Upload originals to your NAS or computer over SMB or SFTP, then free up space on this device.")
         }
-    }
-
-    private var fileServerCountText: String {
-        let count = (try? dependencies.fileServers.count()) ?? 0
-        return count == 0
-            ? String(localized: "None", comment: "Settings → File Servers: no server set up yet")
-            : count.formatted()
+        .onAppear { Task { await refreshSummaries() } }
     }
 
     // MARK: Camera Database
 
     /// The camera database, then the credit for the lens data beside it —
-    /// the same pane on iPad and the same stretch of list on the phone.
+    /// the same pane on iPad and the same page on the phone.
     @ViewBuilder
-    private var cameraDatabaseSection: some View {
-        cameraDatabaseRows
-        acknowledgementsSection
-    }
-
-    private var cameraDatabaseRows: some View {
-        Section("Camera Database") {
-            NavigationLink(Row.unknownCameras.title) {
+    private func cameraDatabaseSection(showsHeader: Bool) -> some View {
+        Section {
+            NavigationLink {
                 CameraDatabaseScreen(libraryModel: libraryModel)
+            } label: {
+                rowLabel(.unknownCameras, value: SettingsSummary.cameraDatabase(unknownCameras: unknownCameraCount))
             }
             .settingsRow(.unknownCameras)
-            Button(Row.resetCustomMappings.title, role: .destructive) {
+            Button(role: .destructive) {
                 isResetMappingsConfirmationPresented = true
+            } label: {
+                rowLabel(
+                    .resetCustomMappings,
+                    value: String(localized: "Undoes the formats you picked by hand", comment: "Settings, Reset Custom Mappings value line"),
+                    style: .destructive
+                )
             }
             .settingsRow(.resetCustomMappings)
+        } header: {
+            if showsHeader {
+                SettingsSectionHeader(SettingsSection.cameraDatabase.title)
+            }
         }
+        .onAppear { Task { await refreshSummaries() } }
+        acknowledgementsSection
     }
 
     // MARK: Support
 
+    /// Only reached through search on a layout that draws groups — both
+    /// layouts open Support as its own screen.
     private var supportSection: some View {
         Section {
-            NavigationLink(Row.support.title) {
-                SupportScreen(
-                    service: dependencies.support,
-                    metadataStore: dependencies.metadataStore
-                )
+            NavigationLink {
+                supportScreen
+            } label: {
+                rowLabel(.support, value: SettingsSummary.support())
             }
             .settingsRow(.support)
         } footer: {
@@ -879,62 +1167,137 @@ struct SettingsScreen: View {
                     .foregroundStyle(.secondary)
             }
         } header: {
-            Text("Acknowledgements")
+            SettingsSectionHeader(LocalizedStringResource("Acknowledgements", comment: "Settings → Camera Database: section header over the data credits"))
         }
     }
 
-    private var privacySection: some View {
+    private func privacySection(showsHeader: Bool) -> some View {
         Section {
-            Text("Photos and metadata stay on this device. They leave it only when you upload them to a server you set up, or in a support message you write yourself, which carries no photos.")
-                .font(.footnote)
-                .foregroundStyle(.secondary)
-            Button(Row.clearLocalMetadataIndex.title, role: .destructive) {
+            Button(role: .destructive) {
                 isClearIndexConfirmationPresented = true
+            } label: {
+                rowLabel(
+                    .clearLocalMetadataIndex,
+                    value: String(localized: "Your photos are not affected", comment: "Settings, Clear Local Metadata Index value line"),
+                    style: .destructive
+                )
             }
             .settingsRow(.clearLocalMetadataIndex)
         } header: {
-            Text("Privacy")
+            if showsHeader {
+                SettingsSectionHeader(LocalizedStringResource("Privacy", comment: "Settings → Photo Library: section header over Clear Local Metadata Index"))
+            }
+        } footer: {
+            Text("Photos and metadata stay on this device. They leave it only when you upload them to a server you set up, or in a support message you write yourself, which carries no photos.")
         }
+    }
+
+    // MARK: Value lines
+
+    /// The value line under a root row (FS-08.01b §1) — live state from the
+    /// same sources the row's page reads.
+    private func summary(for destination: SettingsDestination) -> String {
+        switch destination {
+        case .photoLibrary:
+            SettingsSummary.photoLibrary(
+                access: photoLibrary.authorizationState,
+                allowsCellular: allowCellularIndexing
+            )
+        case .display:
+            SettingsSummary.display(
+                showsISO: showsISO,
+                showsAperture: showsAperture,
+                showsShutterSpeed: showsShutter,
+                showsFocalLength: showsFocal,
+                showsMegapixels: showsMegapixels,
+                showsFileSize: showsFileSize,
+                showsFileType: showsFileTypeBadge
+            )
+        case .playback:
+            SettingsSummary.playback(autoplaysVideos: autoplayVideos, viewsFullHDR: viewFullHDR)
+        case .subjectScan:
+            SettingsSummary.subjectScan(
+                scanned: dependencies.subjectScan.scannedCount,
+                total: dependencies.subjectScan.totalCount,
+                scanningPercent: subjectScanPercent
+            )
+        case .cameraDatabase:
+            SettingsSummary.cameraDatabase(unknownCameras: unknownCameraCount)
+        case .metadataWhenSharing:
+            SettingsSummary.metadataWhenSharing(shareMetadataLevel)
+        case .resizePresets:
+            resizePresetsSummary
+        case .fileServers:
+            SettingsSummary.fileServers(names: fileServerNames)
+        case .widgets:
+            SettingsSummary.widgets(designCount: dependencies.photoWidgetSettings.designs.count)
+        case .notifications:
+            SettingsSummary.notifications(
+                isReminderOn: isOnThisDayReminderEnabled,
+                isDenied: notificationAuthorization == .denied,
+                time: reminderTimeText
+            )
+        case .support:
+            SettingsSummary.support()
+        }
+    }
+
+    /// The sidebar's short form of the same facts — `nil` where the item has
+    /// nothing short to say.
+    private func shortSummary(for item: SettingsSection) -> String? {
+        switch item {
+        case .photoLibrary:
+            SettingsSummary.photoLibraryShort(
+                indexingPercent: (libraryModel?.isIndexing ?? false) ? libraryModel?.indexProgress?.percent : nil
+            )
+        case .subjectScan:
+            SettingsSummary.subjectScanShort(
+                scanned: dependencies.subjectScan.scannedCount,
+                total: dependencies.subjectScan.totalCount,
+                scanningPercent: subjectScanPercent
+            )
+        case .cameraDatabase:
+            SettingsSummary.cameraDatabaseShort(unknownCameras: unknownCameraCount)
+        case .widgets:
+            SettingsSummary.widgetsShort(designCount: dependencies.photoWidgetSettings.designs.count)
+        case .notifications:
+            SettingsSummary.notificationsShort(
+                isReminderOn: isOnThisDayReminderEnabled,
+                isDenied: notificationAuthorization == .denied,
+                time: reminderTimeText
+            )
+        case .display, .playback, .sharingAndExport, .support:
+            nil
+        }
+    }
+
+    private var subjectScanPercent: Int? {
+        let scan = dependencies.subjectScan
+        guard scan.isScanning else { return nil }
+        return Int(((scan.progress?.fraction ?? 0) * 100).rounded(.down))
+    }
+
+    private var reminderTimeText: String {
+        notifyTimeBinding.wrappedValue.formatted(date: .omitted, time: .shortened)
     }
 
     // MARK: Helpers
 
-    private var authorizationLabel: String {
-        switch photoLibrary.authorizationState {
-        case .notDetermined: "Not Requested"
-        case .authorized: "Full Access"
-        case .limited: "Limited Access"
-        case .denied: "Denied"
-        case .restricted: "Restricted"
-        }
-    }
-
-    /// `12,495 of 54,971` while work remains, the plain total once every asset
-    /// has been read — "54,971 of 54,971" is noise.
-    ///
-    /// While a run is going the live progress is preferred over the stored
-    /// counts: the counts refresh only at run edges, and a run that takes hours
-    /// would otherwise show the same stale pair the whole time.
-    private var readCountLabel: String {
-        if let progress = libraryModel?.indexProgress, progress.total > 0 {
-            return "\(progress.processed.formatted()) of \(progress.total.formatted())"
-        }
-        guard totalCount > 0 else { return "0" }
-        guard readCount < totalCount else { return totalCount.formatted() }
-        return "\(readCount.formatted()) of \(totalCount.formatted())"
-    }
-
-    /// Off-main: three `COUNT(*)` over a 55k-row table plus a state read, none of
+    /// Off-main: four `COUNT(*)` over a 55k-row table plus a state read, none of
     /// them indexed by `exifStatus` — run on the main actor they land right on the
     /// frame that opens the sheet or reacts to a tap, which is exactly when the UI
     /// has to feel instant.
     private func refreshIndexInfo() async {
         let store = dependencies.metadataStore
-        let info = await Task.detached(priority: .userInitiated) { () -> (read: Int, total: Int, unfinished: Int, lastIndexedAt: Date?) in
-            (
+        let queries = dependencies.libraryQueries
+        let info = await Task.detached(priority: .userInitiated) { () -> (read: Int, total: Int, unfinished: Int, videos: Int, lastIndexedAt: Date?) in
+            var videosOnly = FilterCriteria()
+            videosOnly.mediaKinds = [.video]
+            return (
                 read: (try? store.completedCount()) ?? 0,
                 total: (try? store.rowCount()) ?? 0,
                 unfinished: (try? store.unfinishedCount()) ?? 0,
+                videos: (try? queries.count(matching: videosOnly)) ?? 0,
                 lastIndexedAt: (try? store.indexState())?.lastIndexedAt
                     .map { Date(timeIntervalSince1970: TimeInterval($0)) }
             )
@@ -942,7 +1305,25 @@ struct SettingsScreen: View {
         readCount = info.read
         totalCount = info.total
         unfinishedCount = info.unfinished
+        videoCount = info.videos
+        photoCount = max(0, info.total - info.videos)
         lastIndexedAt = info.lastIndexedAt
+    }
+
+    /// The value-line facts that need a query: unknown cameras and the file
+    /// servers' names. Small reads, but off the main actor all the same.
+    private func refreshSummaries() async {
+        let store = dependencies.metadataStore
+        let servers = dependencies.fileServers
+        let facts = await Task.detached(priority: .userInitiated) { () -> (unknown: Int, names: [String]) in
+            (
+                unknown: (try? store.unknownCameraModels().count) ?? 0,
+                names: (try? servers.fetchAll().map(\.name)) ?? []
+            )
+        }.value
+        unknownCameraCount = facts.unknown
+        fileServerNames = facts.names
+        dependencies.subjectScan.refreshCoverage()
     }
 
     private func openAppSettings() {
@@ -996,5 +1377,35 @@ private extension View {
             } message: {
                 Text("The scan opens every photo in full, so building these again takes a while.")
             }
+    }
+}
+
+/// A section header in sentence case (FS-08.01b §1): "Library and viewing",
+/// not "LIBRARY AND VIEWING".
+struct SettingsSectionHeader: View {
+    let title: LocalizedStringResource
+
+    init(_ title: LocalizedStringResource) {
+        self.title = title
+    }
+
+    var body: some View {
+        Text(title)
+            .font(.subheadline.weight(.semibold))
+            .foregroundStyle(Color(.secondaryLabel))
+            .textCase(nil)
+    }
+}
+
+private extension View {
+    /// The line under the large title. A navigation bar has a subtitle only
+    /// from iOS 26; earlier, the list draws the line as its first row.
+    @ViewBuilder
+    func settingsSubtitle(_ subtitle: Text) -> some View {
+        if #available(iOS 26.0, *) {
+            navigationSubtitle(subtitle)
+        } else {
+            self
+        }
     }
 }

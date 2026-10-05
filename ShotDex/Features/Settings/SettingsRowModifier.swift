@@ -26,6 +26,7 @@ private struct SettingsRowMarker: ViewModifier {
         let isFlashing = navigation.flashedRow == label
         content
             .id(label)
+            .settingsRowInsets()
             // `nil`, not `.clear`: a clear row background replaces the grouped
             // list's own fill and leaves the row floating on the grey.
             .listRowBackground(isFlashing ? Color.accentColor.opacity(0.18) : nil)

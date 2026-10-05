@@ -47,18 +47,36 @@ struct SettingsNavigationTests {
         #expect(navigation.query.isEmpty)
     }
 
-    /// On a phone the row is already on the one long list, so nothing is pushed
-    /// — the list just scrolls.
-    @Test func openingAResultOnAPhonePushesNothing() throws {
+    /// On a phone the root is a list of items (FS-08.01b §1), so a result
+    /// pushes the page holding its row — replacing whatever was pushed — and
+    /// arms the scroll (AC-8).
+    @Test func openingAResultOnAPhonePushesItsPage() throws {
         let navigation = makeNavigation()
         navigation.compactPath = [.display]
         let entry = try #require(SettingsSearchIndex.results(for: "cellular").first)
 
         navigation.open(entry, usesSplitView: false)
 
-        #expect(navigation.compactPath.isEmpty)
+        #expect(navigation.compactPath == [.photoLibrary])
         #expect(navigation.pendingScrollTarget == .useCellularData)
         #expect(navigation.query.isEmpty)
+    }
+
+    /// A result whose page is a screen of its own opens that screen and leaves
+    /// nothing waiting to scroll — a target no list claims would fire on the
+    /// next page that drew it.
+    @Test func openingAResultForAScreenOfItsOwnArmsNoScroll() throws {
+        let navigation = makeNavigation()
+        let entry = try #require(SettingsSearchIndex.results(for: "resize").first)
+
+        navigation.open(entry, usesSplitView: false)
+        #expect(navigation.compactPath == [.resizePresets])
+        #expect(navigation.pendingScrollTarget == nil)
+
+        let support = try #require(SettingsSearchIndex.results(for: "support").first)
+        navigation.open(support, usesSplitView: true)
+        #expect(navigation.selection == .support)
+        #expect(navigation.pendingScrollTarget == nil)
     }
 
     /// The target is handed over once: the detail pane is rebuilt whenever the
