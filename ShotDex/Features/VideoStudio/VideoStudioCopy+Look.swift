@@ -76,3 +76,21 @@ extension VideoStudioCopy {
         String(localized: "\(count) looks are missing their LUT and export without it.", table: table, comment: "Video Studio Export: how many looks (the video's and clips' own) lost their LUT file; the export goes on without it")
     }
 }
+
+extension VideoStudioCopy {
+    static var lookForThisClip: String {
+        String(localized: "Look for This Clip", table: table, comment: "Video Studio: header of a selected clip's own look block")
+    }
+
+    static var useVideoLook: String {
+        String(localized: "Use Video Look", table: table, comment: "Video Studio: drops a clip's own look so it follows the whole video's again")
+    }
+
+    static var useVideoLookForThisClip: String {
+        String(localized: "Use Video Look for this clip", table: table, comment: "Video Studio: VoiceOver on the button that drops a clip's own look")
+    }
+
+    static var applyToRow: String {
+        String(localized: "Apply to", table: table, comment: "Video Studio clip Look block: label before This Clip · Selected · All Clips")
+    }
+}

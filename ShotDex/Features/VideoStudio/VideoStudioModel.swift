@@ -513,6 +513,8 @@ final class VideoStudioModel {
             inspectorTextTool = inspectorTextTool == tool ? .transform : tool
         default:
             activeItemCommand = activeItemCommand == command ? nil : command
+            // A clip's Look block writes that clip unless told otherwise.
+            if activeItemCommand == .look { lookTarget = .thisClip }
         }
     }
 
@@ -547,6 +549,8 @@ final class VideoStudioModel {
     }
 
     private func deselectAll() {
+        // A look tapped with nothing selected is the whole video's (§4).
+        lookTarget = .allClips
         mediaSelection = nil
         mediaPickPurpose = nil
         mediaShowsInVideo = false
@@ -2270,6 +2274,25 @@ final class VideoStudioModel {
         recipe = changed
         markEdited()
         applyLookTier()
+    }
+
+    /// Use Video Look (§3): the target clips drop their own look and follow
+    /// the whole video's again — one undo step, and the pill goes.
+    func useVideoLook() {
+        let ids = Set(lookTarget == .allClips ? [] : lookTargetClipIDs)
+        guard recipe.clips.contains(where: { ids.contains($0.id) && $0.look != nil }) else { return }
+        pushUndo()
+        for index in recipe.clips.indices where ids.contains(recipe.clips[index].id) {
+            recipe.clips[index].look = nil
+        }
+        markEdited()
+        applyLookTier()
+    }
+
+    /// Whether Selected can be the target: it needs at least two selected
+    /// clips (§4) — always shown, dimmed below that.
+    var canTargetSelectedClips: Bool {
+        (selectedClipID == nil ? 0 : 1) >= 2
     }
 
     /// What Import Look… brought in (FS-12.06c §7): the first new look —

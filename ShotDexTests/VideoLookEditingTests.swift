@@ -190,6 +190,52 @@ struct VideoLookEditingTests {
         #expect(VideoLookEditing.targetClipIDs(.thisClip, selectedClipIDs: [], clipUnderPlayhead: nil).isEmpty)
     }
 
+    // MARK: AC-16
+
+    /// AC-16: the video in Velvia, clip 2 in Night Teal; select clip 2 →
+    /// Look → Use Video Look — clip 2 follows Velvia, its pill is gone, one
+    /// undo step.
+    @Test func useVideoLookRemovesClipLookInOneStep() {
+        let model = VideoStudioModelFixture.model(configure: {
+            $0.look = VideoLookSamples.velvia
+            $0.clips[1].look = VideoLookSamples.nightTeal
+        })
+        let clip2 = model.recipe.clips[1].id
+        model.selectClip(clip2)
+        #expect(model.selectedItemCommands.contains(.look))
+        #expect(model.selectedItemCommands.suffix(2) == [.look, .delete])
+        model.toggleItemSection(.look)
+        #expect(model.activeItemCommand == .look)
+        #expect(model.lookTarget == .thisClip)
+        #expect(model.lookSlot == VideoLookSamples.nightTeal)
+        let steps = model.history.undoEntries.count
+        model.useVideoLook()
+        #expect(model.history.undoEntries.count == steps + 1)
+        #expect(model.recipe.clips[1].look == nil)
+        #expect(VideoLookEditing.effectiveLook(for: model.recipe.clips[1], in: model.recipe) == VideoLookSamples.velvia)
+        #expect(model.lookPillText(for: model.recipe.clips[1]) == nil)
+        #expect(model.lookSlot == nil)
+        // Nothing left to drop: no further step.
+        model.useVideoLook()
+        #expect(model.history.undoEntries.count == steps + 1)
+        // Closing the selection puts the target back on the whole video.
+        model.commitSession()
+        #expect(model.lookTarget == .allClips)
+    }
+
+    /// Selected is always offered and dimmed below two selected clips; a
+    /// look tapped in the clip block lands on the selected clip.
+    @Test func selectedDisabledBelowTwoClips() {
+        let model = VideoStudioModelFixture.model()
+        model.selectClip(model.recipe.clips[0].id)
+        model.toggleItemSection(.look)
+        #expect(!model.canTargetSelectedClips)
+        #expect(VideoLookTarget.allCases == [.thisClip, .selected, .allClips])
+        model.seek(to: 15)  // playhead in clip 2; the selection still wins
+        model.chooseLook(VideoLookSamples.nightTeal.source)
+        #expect(model.recipe.clips.map { $0.look != nil } == [true, false, false])
+    }
+
     // MARK: AC-7
 
     private func myLookTile(_ store: LookPresetStore, named name: String) -> VideoLookTile? {

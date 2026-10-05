@@ -329,6 +329,8 @@ private struct ClipBand: View {
             .frame(height: VideoStudioMetrics.lookPillHeight)
             .background(Capsule().fill(Color.black.opacity(0.66)))
             .padding(3)
+            // Clear of the fade grip a selected clip wears at its corner.
+            .padding(.leading, isSelected ? 18 : 0)
             .accessibilityHidden(true)
         }
     }

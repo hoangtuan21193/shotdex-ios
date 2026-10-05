@@ -11,7 +11,12 @@ import ShotDexKit
 /// on the phone, 60 on the Duo's cover, a 3-column grid of 66 in the Duo's
 /// 264 column and of 103×50 in the iPad's 360 inspector.
 struct VideoLookPanel: View {
+    /// The whole video's Look tool, or a selected clip's Look block
+    /// (LOOK FOR THIS CLIP, §3), reached from the clip's command row.
+    enum Mode { case wholeVideo, clip }
+
     @Bindable var model: VideoStudioModel
+    var mode: Mode = .wholeVideo
     /// The Color tab's scopes draw taller in a column.
     var usesTallScopes = false
 
@@ -23,10 +28,23 @@ struct VideoLookPanel: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             Color.clear.frame(height: style.topGap)
-            chipRow(VideoLookTab.allCases, selected: model.lookTab, height: style.tabHeight, title: { Text($0.title) }) {
-                model.lookTab = $0
+            if mode == .clip {
+                clipHeader
+                if !style.segmented {
+                    // The phone's order (board F5_P_ClipLook): where the
+                    // look goes comes first, under the header.
+                    clipApplyRow
+                    Color.clear.frame(height: 8)
+                }
             }
-            switch model.lookTab {
+            // The iPad's clip block is the shelves alone (F5_IL_Looks):
+            // Adjust and Color are the whole video's, in its idle Look.
+            if !(mode == .clip && style.segmented) {
+                chipRow(VideoLookTab.allCases, selected: model.lookTab, height: style.tabHeight, title: { Text($0.title) }) {
+                    model.lookTab = $0
+                }
+            }
+            switch mode == .clip && style.segmented ? .filter : model.lookTab {
             case .filter: filterBody
             case .adjust: adjustBody
             case .color: VideoColorPanel(model: model, usesTallScopes: usesTallScopes)
@@ -70,7 +88,7 @@ struct VideoLookPanel: View {
                 if VideoLookEditing.showsAmount(model.lookSlot), let look = model.lookSlot {
                     amountRow(look)
                 }
-                applyTo
+                if mode == .wholeVideo || style.segmented { applyTo }
                 caption
                 Color.clear.frame(height: 4)
                 if !style.importsBesideShelf { importRow }
@@ -211,8 +229,52 @@ struct VideoLookPanel: View {
                 .frame(height: 26, alignment: .top)
                 .padding(.top, 6)
         }
-        chipRow(VideoLookTarget.wholeVideoTargets, selected: model.lookTarget, height: style.applyHeight, title: { Text($0.title) }) {
+        chipRow(
+            mode == .clip ? VideoLookTarget.allCases : VideoLookTarget.wholeVideoTargets,
+            selected: model.lookTarget, height: style.applyHeight, title: { Text($0.title) },
+            isEnabled: { $0 != .selected || model.canTargetSelectedClips }
+        ) {
             model.lookTarget = $0
+        }
+    }
+
+    /// LOOK FOR THIS CLIP, and Use Video Look at its right while the clip
+    /// has a look of its own — white, not accent: accent is Export's (§3).
+    private var clipHeader: some View {
+        HStack(spacing: 8) {
+            Text(style.segmented ? VideoStudioCopy.lookForThisClip : VideoStudioCopy.lookForThisClip.uppercased())
+                .font(.system(size: style.segmented ? 15 : 11, weight: style.segmented ? .semibold : .bold))
+                .foregroundStyle(.white.opacity(style.segmented ? 1 : 0.7))
+                .lineLimit(1)
+            Spacer(minLength: 0)
+            if model.lookSlot != nil {
+                Button { model.useVideoLook() } label: {
+                    Text(VideoStudioCopy.useVideoLook)
+                        .font(.system(size: style.segmented ? 17 : 12.5, weight: style.segmented ? .regular : .semibold))
+                        .foregroundStyle(.white)
+                        .frame(minHeight: 44)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(VideoStudioCopy.useVideoLookForThisClip)
+            }
+        }
+        .padding(.horizontal, style.inset)
+        .frame(height: style.segmented ? 44 : 28)
+    }
+
+    /// "Apply to" and This Clip · Selected · All Clips, on one row.
+    private var clipApplyRow: some View {
+        HStack(spacing: 8) {
+            Text(VideoStudioCopy.applyToRow)
+                .font(.system(size: 12))
+                .foregroundStyle(.white.opacity(0.6))
+                .padding(.leading, style.inset)
+            chipRow(
+                VideoLookTarget.allCases, selected: model.lookTarget, height: style.tabHeight,
+                title: { Text($0.title) }, isEnabled: { $0 != .selected || model.canTargetSelectedClips }
+            ) { model.lookTarget = $0 }
+                .padding(.leading, -style.inset)
         }
     }
 

@@ -161,6 +161,10 @@
       "comment": "Video Studio Look panel: how much of the chosen look is mixed in, 0–100",
       "extractionState": "manual"
     },
+    "Apply to": {
+      "comment": "Video Studio clip Look block: label before This Clip · Selected · All Clips",
+      "extractionState": "manual"
+    },
     "BACKGROUND": {
       "comment": "Video Studio Video Settings: section header over what shows around a fitted clip",
       "extractionState": "manual"
@@ -397,6 +401,10 @@
       "comment": "Video Studio Look panel: VoiceOver on a look tile brought in from a Lightroom preset",
       "extractionState": "manual"
     },
+    "Look for This Clip": {
+      "comment": "Video Studio: header of a selected clip's own look block",
+      "extractionState": "manual"
+    },
     "MY MUSIC": {
       "comment": "Video Studio Music panel: header over the user's imported songs",
       "extractionState": "manual"
@@ -623,6 +631,14 @@
     },
     "Upright": {
       "comment": "Video Studio Look panel: a photo setting skipped on video",
+      "extractionState": "manual"
+    },
+    "Use Video Look": {
+      "comment": "Video Studio: drops a clip's own look so it follows the whole video's again",
+      "extractionState": "manual"
+    },
+    "Use Video Look for this clip": {
+      "comment": "Video Studio: VoiceOver on the button that drops a clip's own look",
       "extractionState": "manual"
     },
     "Video Project, Draft, %@, %@": {

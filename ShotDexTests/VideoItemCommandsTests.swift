@@ -50,7 +50,7 @@ extension VideoItemCommandsTests {
         for absent in [VideoItemCommand.speed, .volume, .freeze] {
             #expect(!row.contains(absent))
         }
-        #expect(VideoItemCommand.commands(for: .freezeClip) == [.split, .trim, .duplicate, .delete])
+        #expect(VideoItemCommand.commands(for: .freezeClip) == [.split, .trim, .duplicate, .look, .delete])
     }
 }
 

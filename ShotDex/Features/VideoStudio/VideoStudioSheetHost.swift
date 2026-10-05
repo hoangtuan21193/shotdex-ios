@@ -293,7 +293,12 @@ struct VideoStudioSheetHost: View {
                 .frame(height: 1)
                 .padding(.top, 6)
                 .padding(.bottom, 4)
-            if layout == .dock, model.inspectorTarget == .clip, let clip = model.selectedClip {
+            if model.inspectorTarget == .clip, model.activeItemCommand == .look {
+                // Look (FS-12.06c §3): the clip's own look block takes the
+                // panel, as Trim's chips take it for a cut.
+                VideoLookPanel(model: model, mode: .clip, usesTallScopes: layout != .band)
+                    .frame(maxHeight: .infinity, alignment: .top)
+            } else if layout == .dock, model.inspectorTarget == .clip, let clip = model.selectedClip {
                 dockClipColumns(clip)
             } else {
                 paramZone

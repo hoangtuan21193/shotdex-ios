@@ -233,7 +233,7 @@ enum VideoItemCommand: String, CaseIterable, Identifiable {
     /// rest keep their order (FS-12.04b §3). Beats is FS-12.12, Ducking
     /// FS-12.13, a clip's own Look is FS-12.06c — each plan takes its
     /// command out of this list when it lands.
-    static let notYetBuilt: Set<VideoItemCommand> = [.beats, .ducking, .look]
+    static let notYetBuilt: Set<VideoItemCommand> = [.beats, .ducking]
 
     /// The row for `kind`, in the spec's order — most used first, Delete
     /// last — on every layout. `singleVideo` adds Rotate before Delete on a

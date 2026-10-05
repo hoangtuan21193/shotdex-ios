@@ -447,9 +447,13 @@ struct VideoStudioScreen: View {
         let showsSessionFooter = model.sessionFooterTitle != nil
         // The Look tool's panel stands over the tool row (FS-12.06c §3).
         let showsLookTool = model.inspectorTarget == .none && model.activeToolPanel == .look
+        // A clip's Look block stands 340 too, over its ✕ · name · ✓ footer
+        // (board F5_P_ClipLook).
+        let showsClipLook = model.inspectorTarget == .clip && model.activeItemCommand == .look
+        let contentHeight = showsLookTool || showsClipLook ? VideoStudioMetrics.lookSheetHeight : VideoStudioMetrics.sheetHeight
         let panelHeight = showsLookTool
             ? VideoStudioMetrics.lookSheetHeight
-            : VideoStudioMetrics.sheetHeight + proxy.safeAreaInsets.bottom
+            : contentHeight + proxy.safeAreaInsets.bottom
                 + (showsSessionFooter ? VideoStudioMetrics.toolbarHeight : 0)
         let lanes = VideoStudioMetrics.Lanes.for(.phone)
         // The reader sits inside the safe area while the stack below ignores
@@ -476,7 +480,7 @@ struct VideoStudioScreen: View {
             presentsSessionFooter: showsSessionFooter,
             sheetHeight: showsLookTool
                 ? VideoStudioMetrics.lookSheetHeight + VideoStudioMetrics.toolbarHeight
-                : VideoStudioMetrics.sheetHeight
+                : contentHeight
         )
         return ZStack(alignment: .bottom) {
             VStack(spacing: 0) {
