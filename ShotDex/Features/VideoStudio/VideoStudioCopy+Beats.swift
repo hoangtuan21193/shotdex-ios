@@ -48,4 +48,18 @@ extension VideoStudioCopy {
         let minutes = Int(seconds) / 60
         return String(format: "%d:%05.2f", minutes, seconds - Double(minutes * 60))
     }
+
+    /// "+50 ms", "0 ms", "−25 ms".
+    static func offsetMilliseconds(_ value: Int) -> String {
+        let sign = value > 0 ? "+" : (value < 0 ? "−" : "")
+        return String(localized: "\(sign)\(abs(value)) ms", table: table, comment: "Video Studio beats: the Offset of the beat grid in milliseconds — +50 ms")
+    }
+
+    /// "Beat 14 · 0:08.75 · −0.45s": the beat an edge sticks to, when it
+    /// is, and how far the edge moved to reach it.
+    static func beatSnapPill(_ number: Int, at time: Double, moved: Double) -> String {
+        let sign = moved >= 0 ? "+" : "−"
+        let shift = String(format: "\(sign)%.2fs", abs(moved))
+        return String(localized: "Beat \(number) · \(beatTime(time)) · \(shift)", table: table, comment: "Video Studio beats: the pill over the ruler while a clip edge sticks to a beat — Beat 14 · 0:08.75 · −0.45s")
+    }
 }

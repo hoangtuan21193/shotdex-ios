@@ -67,6 +67,30 @@ struct VideoBeatSnapTests {
     }
 }
 
+/// Offset (FS-12.12 §5).
+@MainActor
+struct VideoBeatOffsetTests {
+    /// AC-9: one drag of Offset to +50 ms is one undo step back to 0; values
+    /// step by 5 and stay within ±250.
+    @Test func offsetDragIsOneUndo() {
+        let bed = MusicTrack(source: .bundled(id: "drive"))
+        let model = VideoStudioModelFixture.model(configure: { $0.musicTracks = [bed] })
+        model.beginUndoGroup()
+        model.setBeatOffset(12, for: bed.id)
+        model.setBeatOffset(33, for: bed.id)
+        model.setBeatOffset(51, for: bed.id)
+        model.endUndoGroup()
+        #expect(model.recipe.musicTracks[0].beatSnap.offsetMs == 50)
+
+        model.undo()
+        #expect(model.recipe.musicTracks[0].beatSnap.offsetMs == 0)
+        #expect(!model.canUndo)
+
+        model.setBeatOffset(900, for: bed.id)
+        #expect(model.recipe.musicTracks[0].beatSnap.offsetMs == 250)
+    }
+}
+
 actor Counter {
     private(set) var value = 0
     func increment() { value += 1 }

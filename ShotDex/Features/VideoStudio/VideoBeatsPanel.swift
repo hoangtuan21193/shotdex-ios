@@ -15,6 +15,7 @@ struct VideoBeatsPanel: View {
         VStack(alignment: .leading, spacing: 8) {
             beatCard
             snapRow
+            offsetRow
         }
         .padding(.top, 4)
         .padding(.bottom, 8)
@@ -43,6 +44,24 @@ struct VideoBeatsPanel: View {
         .frame(height: isDesk ? 44 : 42)
         .disabled(!canSnap && !music.beatSnap.isOn)
         .opacity(canSnap || music.beatSnap.isOn ? 1 : 0.28)
+    }
+
+    /// Offset −250…+250 ms, a notch at 0 (§5): the grid moves under a
+    /// beat that was found a hair early or late.
+    private var offsetRow: some View {
+        let canSnap = model.canSnap(to: music)
+        return InspectorSlider(
+            label: String(localized: "Offset", table: VideoStudioCopy.table, comment: "Video Studio beats: shifts every beat of the bed a few milliseconds earlier or later"),
+            value: Double(music.beatSnap.offsetMs),
+            range: Double(MusicBeatSnap.offsetRange.lowerBound)...Double(MusicBeatSnap.offsetRange.upperBound),
+            valueText: VideoStudioCopy.offsetMilliseconds(music.beatSnap.offsetMs),
+            anchor: 0, notch: true, detent: 0,
+            model: model,
+            set: { model.setBeatOffset(Int($0.rounded()), for: music.id) },
+            reset: { model.pushUndo(); model.setBeatOffset(0, for: music.id) }
+        )
+        .disabled(!canSnap)
+        .opacity(canSnap ? 1 : 0.28)
     }
 
     // MARK: Card

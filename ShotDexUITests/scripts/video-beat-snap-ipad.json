@@ -164,7 +164,45 @@
   },
   {
    "action": "wait",
-   "seconds": 25
+   "seconds": 2
+  },
+  {
+   "action": "tap",
+   "label": "Keep Changes"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "tap",
+   "label": "Video clip, from second 3 to 9"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "drag",
+   "x": 0.4797,
+   "y": 0.7946,
+   "toX": 0.4546,
+   "toY": 0.7946,
+   "pressSeconds": 0.05,
+   "seconds": 14
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "dump",
+   "name": "30-edge-on-beat",
+   "text": "snapshot"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
   }
  ]
 }

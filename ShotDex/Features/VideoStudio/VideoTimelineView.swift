@@ -125,6 +125,7 @@ struct VideoTimelineView: View {
                 playhead.offset(x: VideoStudioMetrics.playheadX(screenWidth: screenWidth, gutter: lanes.gutter) - 1)
             }
             .overlay(alignment: .topLeading) { groupPill }
+            .overlay(alignment: .topLeading) { beatSnapMark(screenWidth: screenWidth) }
             .onAppear {
                 if !hasAppliedWindowZoom {
                     hasAppliedWindowZoom = true
@@ -222,6 +223,42 @@ struct VideoTimelineView: View {
         case .text: model.selectedOverlayID.flatMap { model.overlayLaneAssignment[$0] }.map(VideoTimelineLane.overlay)
         case .music: model.selectedMusicID.flatMap { model.musicLaneAssignment[$0] }.map(VideoTimelineLane.music)
         case .none: nil
+        }
+    }
+
+    // MARK: Beat snap (FS-12.12 §5, board F2_IL_BeatSnap)
+
+    /// While a clip's edge sticks to a beat: a 1.5pt line in the beat colour
+    /// through every lane, and over the ruler the pill "Beat 14 · 0:08.75 ·
+    /// −0.45s" — which beat, when, and how far the edge moved.
+    @ViewBuilder
+    private func beatSnapMark(screenWidth: CGFloat) -> some View {
+        if let preview = model.edgeTrimPreview, let beat = preview.beat,
+           let index = model.recipe.clips.firstIndex(where: { $0.id == preview.clipID }),
+           index < model.clipPlacements.count {
+            let placement = model.clipPlacements[index]
+            let origin = preview.edge == .leading ? placement.start : placement.end
+            let x = VideoStudioMetrics.playheadX(screenWidth: screenWidth, gutter: lanes.gutter)
+                + CGFloat(beat.time - model.currentTime) * pps
+            let pill = VideoStudioMetrics.beatSnapPill
+            ZStack(alignment: .topLeading) {
+                Rectangle()
+                    .fill(EditorTheme.timelineBeat)
+                    .frame(width: 1.5, height: max(0, height - lanes.topPadding - lanes.ruler))
+                    .offset(x: x - 0.75, y: lanes.topPadding + lanes.ruler)
+                Text(VideoStudioCopy.beatSnapPill(beat.number, at: beat.time, moved: beat.time - origin))
+                    .font(.system(size: 12, weight: .bold).monospacedDigit())
+                    .foregroundStyle(EditorTheme.timelineBeatInk)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+                    .frame(width: pill.width, height: pill.height)
+                    .background(Capsule().fill(EditorTheme.timelineBeat))
+                    .offset(x: x - pill.width / 2, y: lanes.topPadding + (lanes.ruler - pill.height) / 2)
+            }
+            .allowsHitTesting(false)
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel(Text(VideoStudioCopy.beatSnapPill(beat.number, at: beat.time, moved: beat.time - origin)))
+            .accessibilityIdentifier("beatSnapPill")
         }
     }
 
@@ -459,7 +496,8 @@ struct VideoTimelineView: View {
         case .musicBody(let id):
             guard let music = model.recipe.musicTracks.first(where: { $0.id == id }) else { return }
             model.pushUndo()
-            model.setMusicStart(model.snappedTime(music.start + delta, within: snap), for: id)
+            // A bed never sticks to its own beats (FS-12.12 §5).
+            model.setMusicStart(model.snappedTime(music.start + delta, within: snap, includesBeats: !music.beatSnap.isOn), for: id)
         case .musicLeadingHandle(let id):
             // Head trim moves the source window and the placement together, in
             // one undo step, so the untouched tail stays where it plays.

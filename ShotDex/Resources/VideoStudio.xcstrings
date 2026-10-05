@@ -13,6 +13,10 @@
       "comment": "Video Projects: a draft's subtitle — when it was edited, then how many clips",
       "extractionState": "manual"
     },
+    "%@%lld ms": {
+      "comment": "Video Studio beats: the Offset of the beat grid in milliseconds — +50 ms",
+      "extractionState": "manual"
+    },
     "%@, unavailable": {
       "comment": "Video Studio Video Settings: VoiceOver name of a dimmed choice, e.g. 4K, unavailable",
       "extractionState": "manual"
@@ -391,6 +395,10 @@
     },
     "Background": {
       "comment": "Video Studio iPad Video Settings: label of Blur · Color · Image — what shows around a fitted clip",
+      "extractionState": "manual"
+    },
+    "Beat %lld · %@ · %@": {
+      "comment": "Video Studio beats: the pill over the ruler while a clip edge sticks to a beat — Beat 14 · 0:08.75 · −0.45s",
       "extractionState": "manual"
     },
     "Beats": {
@@ -791,6 +799,10 @@
     },
     "Nothing in your library matches.": {
       "comment": "Video Studio Media panel: a search that found nothing",
+      "extractionState": "manual"
+    },
+    "Offset": {
+      "comment": "Video Studio beats: shifts every beat of the bed a few milliseconds earlier or later",
       "extractionState": "manual"
     },
     "Open Settings": {

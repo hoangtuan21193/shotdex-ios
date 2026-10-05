@@ -63,4 +63,18 @@ struct BeatGridTests {
         #expect(bar.tick == nil)
         #expect(bar.duration == 3.85)
     }
+
+    /// AC-9: Offset +50 ms moves every tick, and so every snap point, 0.05s
+    /// later.
+    @Test func offsetShiftsEveryBeat() {
+        let shifted = BeatGrid(analysis: Self.morningDrive(), start: 0, trimStart: 0, trimEnd: 18.4, offset: 0.05)
+        let plain = Self.grid
+        #expect(shifted.ticks.count == plain.ticks.count)
+        for (a, b) in zip(shifted.ticks, plain.ticks) {
+            #expect(abs(a.time - b.time - 0.05) < 1e-9)
+        }
+        #expect(abs((shifted.nearest(to: 8.8, division: .beat, tolerance: 0.1)?.time ?? 0) - 8.8) < 1e-9)
+        #expect(VideoStudioCopy.offsetMilliseconds(50) == "+50 ms")
+        #expect(VideoStudioCopy.offsetMilliseconds(0) == "0 ms")
+    }
 }

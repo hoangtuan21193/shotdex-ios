@@ -615,6 +615,13 @@ final class VideoStudioModel {
         }
         if let id = selectedClipID, let index = recipe.clips.firstIndex(where: { $0.id == id }) {
             let lines = VideoItemTitle.clip(recipe.clips[index], index: index)
+            // An edge on a beat mid-drag: "5.75s · on beat 14" (F2_IL).
+            if let preview = edgeTrimPreview, preview.clipID == id, let beat = preview.beat {
+                return VideoItemTitle.Lines(
+                    name: lines.name,
+                    detail: String(format: "%.2fs", preview.result.duration) + " · " + VideoStudioCopy.onBeat(beat.number)
+                )
+            }
             // "3.30s · on beat 28" while a still ends on a beat (F2_P).
             if recipe.clips[index].kind != .video, let grid = snapGrid,
                index < clipPlacements.count, let tick = grid.tick(at: clipPlacements[index].end) {
@@ -2200,24 +2207,32 @@ final class VideoStudioModel {
     /// exactly what a user wants landing on a cut rather than 40ms past it.
     var snapsToEdits = true
 
-    /// The nearest edit point to `time`, or nil when nothing is close enough.
-    /// Candidates are every clip boundary, every marker, and the playhead.
-    func snappedTime(_ time: Double, within tolerance: Double, excluding excluded: Double? = nil) -> Double {
-        guard snapsToEdits else { return time }
-        // The playhead the drag started from, not the one the preview is
-        // scrubbing along with the finger.
-        var candidates: [Double] = [0, totalDuration, playheadBeforeEdgeTrim ?? currentTime]
+    /// The nearest edit point to `time`, or `time` when nothing is close
+    /// enough. Candidates are every clip boundary, every marker, the
+    /// playhead — and the snapping bed's beats (FS-12.12 §5).
+    func snappedTime(_ time: Double, within tolerance: Double, excluding excluded: Double? = nil, includesBeats: Bool = true) -> Double {
+        snapTarget(time, within: tolerance, excluding: excluded, includesBeats: includesBeats)?.time ?? time
+    }
+
+    /// What `time` sticks to, and what that is — an edit or a beat.
+    func snapTarget(_ time: Double, within tolerance: Double, excluding excluded: Double? = nil, includesBeats: Bool = true) -> TimelineSnapping.Target? {
+        var edits: [Double] = [0, totalDuration]
         for placement in clipPlacements {
-            candidates.append(placement.start)
-            candidates.append(placement.end)
+            edits.append(placement.start)
+            edits.append(placement.end)
         }
-        candidates.append(contentsOf: recipe.markers.map(\.time))
-        // A dragged edge never sticks to where it started.
-        if let excluded { candidates.removeAll { abs($0 - excluded) < 0.000_1 } }
-        guard let nearest = candidates.min(by: { abs($0 - time) < abs($1 - time) }),
-              abs(nearest - time) <= tolerance
-        else { return time }
-        return nearest
+        return TimelineSnapping.target(
+            for: time,
+            tolerance: tolerance,
+            edits: snapsToEdits ? edits : [],
+            markers: snapsToEdits ? recipe.markers.map(\.time) : [],
+            // The playhead the drag started from, not the one the preview
+            // is scrubbing along with the finger.
+            playhead: snapsToEdits ? (playheadBeforeEdgeTrim ?? currentTime) : nil,
+            beats: includesBeats ? snapGrid : nil,
+            division: snapDivision,
+            excluding: excluded
+        )
     }
 
     // MARK: - Edge trim (FS-12.05 §3)
@@ -2230,6 +2245,9 @@ final class VideoStudioModel {
         let result: VideoEdgeTrimMath.Result
         /// Timeline seconds the edge has moved, after clamping and snapping.
         let appliedDelta: Double
+        /// The beat the edge sticks to (FS-12.12 §5), for the pill
+        /// "Beat 14 · 0:08.75 · −0.45s".
+        var beat: BeatGrid.Tick?
     }
 
     enum EdgeTrimPhase: Equatable {
@@ -2242,6 +2260,7 @@ final class VideoStudioModel {
     struct EdgeTrimFeedback: Equatable {
         var hitLimit = false
         var snapped = false
+        var beat: BeatGrid.Tick?
     }
 
     private(set) var edgeTrimPreview: EdgeTrimPreview?
@@ -2281,10 +2300,10 @@ final class VideoStudioModel {
             var delta = raw
             if snapTolerance > 0 {
                 let wanted = origin + raw
-                let snapped = snappedTime(wanted, within: snapTolerance, excluding: origin)
-                if snapped != wanted {
-                    delta = snapped - origin
+                if let target = snapTarget(wanted, within: snapTolerance, excluding: origin), target.time != wanted {
+                    delta = target.time - origin
                     feedback.snapped = true
+                    feedback.beat = target.beat
                 }
             }
             let result = VideoEdgeTrimMath.drag(clip, edge: edge, by: delta)
@@ -2299,7 +2318,9 @@ final class VideoStudioModel {
                     playheadBeforeEdgeTrim = currentTime
                     beginScrub()
                 }
-                edgeTrimPreview = EdgeTrimPreview(clipID: clipID, edge: edge, result: result, appliedDelta: applied)
+                // A clamped edge is not on the beat it reached for.
+                let onBeat = feedback.beat.flatMap { abs(applied - delta) < 0.000_1 ? $0 : nil }
+                edgeTrimPreview = EdgeTrimPreview(clipID: clipID, edge: edge, result: result, appliedDelta: applied, beat: onBeat)
                 // The frame that will sit at the edge after the cut.
                 scrub(to: edge == .leading ? placement.start + applied : placement.end - 0.001 + applied)
                 return feedback
@@ -3536,6 +3557,19 @@ final class VideoStudioModel {
         }
         recipe.musicTracks[index].beatSnap.isOn = isOn
         if isOn, let url = musicURL(for: recipe.musicTracks[index].source) { beats.findBeats(of: url) }
+        markEdited()
+    }
+
+    /// Offset (§5): the bed's whole grid shifted −250…+250 ms in steps of
+    /// 5 — ticks, snap points and Cut to Beat with it. No undo push per
+    /// tick: a drag is one step (the slider groups it).
+    func setBeatOffset(_ milliseconds: Int, for id: UUID) {
+        guard let index = recipe.musicTracks.firstIndex(where: { $0.id == id }) else { return }
+        let step = MusicBeatSnap.offsetStep
+        let rounded = Int((Double(milliseconds) / Double(step)).rounded()) * step
+        let clamped = min(max(rounded, MusicBeatSnap.offsetRange.lowerBound), MusicBeatSnap.offsetRange.upperBound)
+        guard recipe.musicTracks[index].beatSnap.offsetMs != clamped else { return }
+        recipe.musicTracks[index].beatSnap.offsetMs = clamped
         markEdited()
     }
 
