@@ -1,3 +1,4 @@
+import CryptoKit
 import Foundation
 import ImageIO
 
@@ -62,6 +63,20 @@ enum SidecarReader {
         out.title = sidecar.title ?? embedded.title
         out.caption = sidecar.caption ?? embedded.caption
         return out
+    }
+
+    /// What ShotDex remembers of a sidecar it read or wrote: its
+    /// modification time and a hash of its bytes (FS-19.02 §6). A different
+    /// stamp before a write means another app wrote it since.
+    static func stamp(of url: URL) -> String? {
+        guard let data = try? Data(contentsOf: url) else { return nil }
+        let modified = (try? url.resourceValues(forKeys: [.contentModificationDateKey]).contentModificationDate) ?? .distantPast
+        let digest = SHA256.hash(data: data).prefix(12).map { String(format: "%02x", $0) }.joined()
+        return "\(Int(modified.timeIntervalSince1970)):\(digest)"
+    }
+
+    static func modified(_ url: URL) -> Date? {
+        try? url.resourceValues(forKeys: [.contentModificationDateKey]).contentModificationDate
     }
 
     static func read(sidecarAt url: URL) -> SidecarValues? {

@@ -132,17 +132,19 @@ import Testing
         let summary = try FolderSourceIndexer(database: database, composer: Self.composer)
             .index(sourceId: sourceId, root: root, includesSubfolders: true, pairsRawAndJpeg: false)
         #expect(summary.photos == 2)
+        struct Copy: Sendable { let path: String, photoId: String, pairedPath: String?, rating: Int? }
         let copies = try await database.reader.read { db in
             try Row.fetchAll(db, sql: """
                 SELECT c.relativePath, c.photoId, c.pairedPath, u.rating FROM photo_copies c
                 LEFT JOIN photo_user_marks u ON u.photoId = c.photoId WHERE c.sourceId = ? ORDER BY c.relativePath
                 """, arguments: [sourceId])
+                .map { Copy(path: $0["relativePath"], photoId: $0["photoId"], pairedPath: $0["pairedPath"], rating: $0["rating"]) }
         }
-        #expect(copies.map { $0["relativePath"] as String } == ["DSC04512.ARW", "DSC04512.JPG"])
-        #expect(copies.allSatisfy { ($0["pairedPath"] as String?) == nil })
-        #expect(copies.map { $0["rating"] as Int? } == [2, nil])
+        #expect(copies.map(\.path) == ["DSC04512.ARW", "DSC04512.JPG"])
+        #expect(copies.allSatisfy { $0.pairedPath == nil })
+        #expect(copies.map(\.rating) == [2, nil])
 
-        let jpeg: String = copies[1]["photoId"]
+        let jpeg = copies[1].photoId
         let queue = SidecarWriteQueue(writer: SidecarWriter(database: database) { _, path in root.appendingPathComponent(path) })
         let marks = PhotoMarks(store: PhotoMarksStore(database: database), sidecarQueue: queue)
         await marks.setRating(3, ids: [jpeg])

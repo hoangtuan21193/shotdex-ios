@@ -135,7 +135,9 @@ struct FolderSourceIndexer: Sendable {
                 name, siblings: namesByFolder[(file.relativePath as NSString).deletingLastPathComponent] ?? [])
             let sidecar = SidecarReader.sidecar(for: [file.relativePath] + [unit.companion?.relativePath].compactMap { $0 },
                                                 fullNameOnly: fullNameOnly, in: sidecars, modified: \.modified, pathKey: Self.pathKey)
-            let sidecarValues = sidecar.flatMap { SidecarReader.read(sidecarAt: root.appendingPathComponent($0.relativePath)) }
+            let sidecarURL = sidecar.map { root.appendingPathComponent($0.relativePath) }
+            let sidecarValues = sidecarURL.flatMap(SidecarReader.read(sidecarAt:))
+            let sidecarStamp = sidecarValues == nil ? nil : sidecarURL.flatMap(SidecarReader.stamp(of:))
             let marks = SidecarReader.combined(embedded: embedded, sidecar: sidecarValues)
             // A sidecar's values date from when it was written; the file's own
             // from when the file was.
@@ -148,13 +150,15 @@ struct FolderSourceIndexer: Sendable {
                 try db.execute(sql: "INSERT OR IGNORE INTO photos (id, createdAt) VALUES (?, ?)", arguments: [photoId, stamp])
                 try db.execute(sql: "UPDATE photos SET orphanedAt = NULL WHERE id = ?", arguments: [photoId])
                 try db.execute(sql: """
-                    INSERT INTO photo_copies (id, photoId, sourceId, kind, relativePath, relativePathKey, size, modifiedAt, pairedPath, isOnline, lastSeenAt)
-                    VALUES (?, ?, ?, 'file', ?, ?, ?, ?, ?, 1, ?)
+                    INSERT INTO photo_copies (id, photoId, sourceId, kind, relativePath, relativePathKey, size, modifiedAt, pairedPath,
+                                              sidecarStamp, isOnline, lastSeenAt)
+                    VALUES (?, ?, ?, 'file', ?, ?, ?, ?, ?, ?, 1, ?)
                     ON CONFLICT(id) DO UPDATE SET relativePath = excluded.relativePath, relativePathKey = excluded.relativePathKey,
                         size = excluded.size, modifiedAt = excluded.modifiedAt, pairedPath = excluded.pairedPath,
+                        sidecarStamp = excluded.sidecarStamp,
                         isOnline = 1, missingSince = NULL, isCloudPlaceholder = 0, lastSeenAt = excluded.lastSeenAt
                     """, arguments: [copyId, photoId, sourceId, file.relativePath, key, file.size, modified,
-                                     unit.companion?.relativePath, stamp])
+                                     unit.companion?.relativePath, sidecarStamp, stamp])
                 try db.execute(sql: """
                     INSERT INTO content_hashes (copyId, algorithm, algorithmVersion, fastHash, fullHash, hashedAt)
                     VALUES (?, ?, ?, ?, NULL, ?)

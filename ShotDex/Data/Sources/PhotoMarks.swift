@@ -196,7 +196,18 @@ final class PhotoMarks {
         await Task.detached(priority: .userInitiated) {
             try? store.setFlag(flag, ids: ids)
         }.value
+        await scheduleSidecars(ids)
         return change
+    }
+
+    /// Photos with a file copy carry their flag in their sidecars too.
+    private func scheduleSidecars(_ ids: [String]) async {
+        guard let sidecarQueue else { return }
+        let userMarks = PhotoUserMarksStore(database: store.database)
+        let files = await Task.detached(priority: .userInitiated) {
+            (try? userMarks.copyKinds(ids: ids).files) ?? []
+        }.value
+        if !files.isEmpty { await sidecarQueue.schedule(Array(files)) }
     }
 
     /// iOS 27: one block for the whole command. The cells show the new value
@@ -254,6 +265,7 @@ final class PhotoMarks {
             await Task.detached(priority: .userInitiated) {
                 try? store.restoreFlags(previous)
             }.value
+            await scheduleSidecars(Array(previous.keys))
         }
     }
 

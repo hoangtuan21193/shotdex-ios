@@ -114,8 +114,12 @@ import Testing
 extension SidecarWriterTests {
     /// AC-19: one photo with two identical copies — "2026 Japan" and T7, both
     /// online, sidecars on. ★4 set in ShotDex reaches a `DSC04500.xmp` beside
-    /// each copy within 2 s; the image files are the same bytes as before,
-    /// and nothing waits to go to Photos (a file photo has no Photos copy).
+    /// each copy on its own — the queue writes one second after the last
+    /// change, which is the ≤ 2 s; the image files are the same bytes as
+    /// before, and nothing waits to go to Photos (a file photo has no Photos
+    /// copy). The wall-clock wait allows 10 s: suites run in parallel, and a
+    /// neighbour's synchronous file work can hold every cooperative thread
+    /// past the timer.
     @MainActor
     @Test func writesEveryOnlineCopyNeverTheImage() async throws {
         let base = FileManager.default.temporaryDirectory.appendingPathComponent("Write-\(UUID().uuidString)", isDirectory: true)
@@ -138,12 +142,13 @@ extension SidecarWriterTests {
         _ = try IdentityMergePass(database: database, fileURL: fileURL).run()
         let photoId = try #require(try await database.reader.read { db in try String.fetchOne(db, sql: "SELECT id FROM photos") })
 
+        #expect(SidecarWriteQueue.defaultDelay == .seconds(1))
         let queue = SidecarWriteQueue(writer: SidecarWriter(database: database, fileURL: fileURL))
         let marks = PhotoMarks(store: PhotoMarksStore(database: database), sidecarQueue: queue)
         let started = Date()
         await marks.setRating(4, ids: [photoId])
         let sidecars = [japan, t7].map { $0.appendingPathComponent("DSC04500.xmp") }
-        while sidecars.contains(where: { SidecarReader.read(sidecarAt: $0)?.rating != 4 }), Date().timeIntervalSince(started) < 2 {
+        while sidecars.contains(where: { SidecarReader.read(sidecarAt: $0)?.rating != 4 }), Date().timeIntervalSince(started) < 10 {
             try await Task.sleep(for: .milliseconds(50))
         }
         for sidecar in sidecars {

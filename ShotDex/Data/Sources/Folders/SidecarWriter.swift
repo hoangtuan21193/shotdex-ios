@@ -18,16 +18,25 @@ struct SidecarWriter: Sendable {
     func write(photoIds: [String]) throws -> Summary {
         var summary = Summary()
         for photoId in photoIds {
-            let (patch, copies) = try database.reader.read { db in
-                (try Self.patch(db, photoId: photoId), try Self.onlineFileCopies(db, photoId: photoId))
-            }
+            let copies = try database.reader.read { db in try Self.onlineFileCopies(db, photoId: photoId) }
+            var sidecars: [(copyId: String, url: URL)] = []
             for copy in copies {
                 guard let image = fileURL(copy.sourceId, copy.relativePath) else {
                     summary.failed += 1
                     continue
                 }
+                let sidecar = Self.sidecarURL(forImageAt: image, isPaired: copy.isPaired)
+                try rereadIfChanged(sidecar, since: copy.sidecarStamp, photoId: photoId)
+                sidecars.append((copy.id, sidecar))
+            }
+            let patch = try database.reader.read { db in try Self.patch(db, photoId: photoId) }
+            for sidecar in sidecars {
                 do {
-                    try Self.write(patch, beside: image, isPaired: copy.isPaired)
+                    try Self.write(patch, to: sidecar.url)
+                    let stamp = SidecarReader.stamp(of: sidecar.url)
+                    try database.writer.write { db in
+                        try db.execute(sql: "UPDATE photo_copies SET sidecarStamp = ? WHERE id = ?", arguments: [stamp, sidecar.copyId])
+                    }
                     summary.written += 1
                 } catch {
                     summary.failed += 1
@@ -35,6 +44,19 @@ struct SidecarWriter: Sendable {
             }
         }
         return summary
+    }
+
+    /// Another app may have written the sidecar since ShotDex last read or
+    /// wrote it: its stamp no longer matches. What it says comes in first —
+    /// each field by the later change — so the write carries it along rather
+    /// than over it (FS-19.02 §6).
+    private func rereadIfChanged(_ sidecar: URL, since known: String?, photoId: String) throws {
+        guard let stamp = SidecarReader.stamp(of: sidecar), stamp != known,
+              let values = SidecarReader.read(sidecarAt: sidecar) else { return }
+        let at = Int((SidecarReader.modified(sidecar) ?? Date()).timeIntervalSince1970)
+        try database.writer.write { db in
+            try PhotoUserMarksStore.applySidecar(db, values: values, photoId: photoId, at: at)
+        }
     }
 
     /// The sidecar of `image`: whichever of `DSC0001.xmp` and
@@ -55,8 +77,7 @@ struct SidecarWriter: Sendable {
 
     /// Patches the sidecar through a temporary file in the same folder and
     /// swaps it in, so a reader never sees half a file.
-    static func write(_ patch: XMPPatch, beside image: URL, isPaired: Bool = true) throws {
-        let sidecar = sidecarURL(forImageAt: image, isPaired: isPaired)
+    static func write(_ patch: XMPPatch, to sidecar: URL) throws {
         let current = try? String(contentsOf: sidecar, encoding: .utf8)
         let text = XMPPatcher.apply(patch, to: current)
         guard text != current else { return }
@@ -86,6 +107,9 @@ struct SidecarWriter: Sendable {
         } else if let rating: Int = marks?["rating"] {
             patch.rating = .set(rating)
         }
+        // Pick and Reject both live in ShotDex's namespace too: the standard
+        // field has no Pick, and its −1 hides the stars a Reject keeps.
+        patch.shotdex["Flag"] = flag.map { .set($0) } ?? .remove
         if let title: String = marks?["title"] { patch.title = .set(title) }
         if let caption: String = marks?["caption"] { patch.caption = .set(caption) }
         let keywords = try String.fetchAll(db, sql: "SELECT keyword FROM photo_user_keyword WHERE photoId = ? ORDER BY addedAt, rowid",
@@ -94,12 +118,23 @@ struct SidecarWriter: Sendable {
         return patch
     }
 
-    private static func onlineFileCopies(_ db: Database, photoId: String) throws -> [(sourceId: String, relativePath: String, isPaired: Bool)] {
+    private struct Copy {
+        let id: String
+        let sourceId: String
+        let relativePath: String
+        let isPaired: Bool
+        let sidecarStamp: String?
+    }
+
+    private static func onlineFileCopies(_ db: Database, photoId: String) throws -> [Copy] {
         try Row.fetchAll(db, sql: """
-            SELECT sourceId, relativePath, pairedPath FROM photo_copies
+            SELECT id, sourceId, relativePath, pairedPath, sidecarStamp FROM photo_copies
             WHERE photoId = ? AND kind = 'file' AND isOnline = 1 AND missingSince IS NULL AND isCloudPlaceholder = 0
             ORDER BY id
-            """, arguments: [photoId]).map { ($0["sourceId"], $0["relativePath"], ($0["pairedPath"] as String?) != nil) }
+            """, arguments: [photoId]).map {
+            Copy(id: $0["id"], sourceId: $0["sourceId"], relativePath: $0["relativePath"],
+                 isPaired: ($0["pairedPath"] as String?) != nil, sidecarStamp: $0["sidecarStamp"])
+        }
     }
 
     private static func modified(_ url: URL) -> Date {
@@ -116,7 +151,9 @@ actor SidecarWriteQueue {
     private var pending: Set<String> = []
     private var timer: Task<Void, Never>?
 
-    init(writer: SidecarWriter, delay: Duration = .seconds(1)) {
+    static let defaultDelay: Duration = .seconds(1)
+
+    init(writer: SidecarWriter, delay: Duration = SidecarWriteQueue.defaultDelay) {
         self.writer = writer
         self.delay = delay
     }
