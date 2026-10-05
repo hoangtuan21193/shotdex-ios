@@ -80,6 +80,8 @@ struct ShareExportResult: Sendable, Equatable {
     var heicSentAsJPEG = 0
     /// Photos handed over with the watermark (FS-05.04).
     var watermarked = 0
+    /// Of those, RAW files sent as stamped JPEGs.
+    var rawStampedAsJPEG = 0
 }
 
 /// Gathers a share one item at a time into a scratch folder of its own
@@ -210,6 +212,7 @@ struct ShareExportPipeline: Sendable {
                 result.files.append(file)
                 if let watermark, case .stamp = watermark.decision(for: source) {
                     result.watermarked += 1
+                    if source.kind == .raw { result.rawStampedAsJPEG += 1 }
                 }
                 if source.kind == .photo, file.pathExtension == "jpg",
                    (source.filename as NSString).pathExtension.lowercased() != "jpg",

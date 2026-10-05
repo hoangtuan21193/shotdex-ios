@@ -62,6 +62,16 @@ struct ShareBatchPlanTests {
         #expect(videos.watermarkRow == nil)
     }
 
+    /// AC-6: with a watermark the RAW question is never asked — the RAW goes
+    /// as a stamped JPEG — and the header says so.
+    @Test func watermarkNeverAsksAboutRAW() {
+        var plan = ShareBatchPlan(level: .noLocation, photoCount: 1, videoCount: 0, rawCount: 2)
+        #expect(plan.asksAboutRAW)
+        plan.watermarkName = "Credit"
+        #expect(!plan.asksAboutRAW)
+        #expect(PhotoShareSheet.headerNote(plan: plan) == "Watermark: Credit · RAW sent as JPEG")
+    }
+
     /// Video goes as it is at every level, so a share of only videos has no
     /// level to change.
     @Test func videosOnlyHaveNoRows() {

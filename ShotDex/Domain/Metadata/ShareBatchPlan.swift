@@ -86,7 +86,13 @@ struct ShareBatchPlan: Equatable, Sendable {
     /// Whether the share stops once, before anything is gathered, to ask
     /// what to do with its RAW files: only below All Metadata, where a RAW
     /// would otherwise leave with what the level promised to remove.
-    var asksAboutRAW: Bool { rawCount > 0 && level != .all }
+    /// Never with a watermark (FS-05.04 §5): a RAW cannot carry a stamp, so
+    /// it goes as a stamped JPEG and the header says so.
+    var asksAboutRAW: Bool { rawCount > 0 && level != .all && watermarkName == nil }
+
+    /// "RAW sent as JPEG" on the header's second line: a watermarked share
+    /// turns every RAW into a stamped JPEG.
+    var notesRAWAsJPEG: Bool { watermarkName != nil && rawCount > 0 }
 
     /// The second line's watermark segment, first among the notes:
     /// "Watermark: Credit".

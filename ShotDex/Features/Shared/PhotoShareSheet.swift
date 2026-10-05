@@ -38,6 +38,8 @@ enum PhotoShareSheet {
         var watermarkName: String?
         /// Whether any watermark preset exists — the third row needs one.
         var hasWatermarkPresets = false
+        /// RAW files sent as stamped JPEGs.
+        var rawStampedAsJPEG = 0
         /// Prepares the same share again with (true) or without the
         /// watermark, for the third row. `nil` where a share offers none.
         var rewatermark: (@MainActor (Bool) async -> Prepared)?
@@ -45,6 +47,7 @@ enum PhotoShareSheet {
         var plan: ShareBatchPlan {
             ShareBatchPlan(
                 level: level, photoCount: photoCount, videoCount: items.count - photoCount,
+                rawCount: rawStampedAsJPEG,
                 rawSharedAsIsCount: rawSharedAsIs,
                 heicAsJPEGCount: heicSentAsJPEG,
                 watermarkName: watermarkName,
@@ -88,6 +91,7 @@ enum PhotoShareSheet {
         }
         var pipeline = ShareExportPipeline(reader: reader, folder: folder, level: level)
         pipeline.watermark = watermark
+        if watermark != nil { pipeline.rawChoice = .shareAsJPEG }
         var plan = ShareBatchPlan(sources: sources, level: level)
         plan.watermarkName = watermark?.name
         if plan.asksAboutRAW {
@@ -100,6 +104,7 @@ enum PhotoShareSheet {
             rawSharedAsIs: result.rawSharedAsIs,
             heicSentAsJPEG: result.heicSentAsJPEG,
             watermarkName: result.watermarked > 0 ? watermark?.name : nil,
+            rawStampedAsJPEG: result.rawStampedAsJPEG,
             onClose: onClose
         )
     }
@@ -128,7 +133,8 @@ enum PhotoShareSheet {
         let watermark = await downloads?.watermark?.watermark(for: sources, override: watermarkOverride)
         var full = ShareBatchPlan(sources: sources, level: level)
         full.watermarkName = watermark?.name
-        var rawChoice = RAWChoice.skip
+        // A watermark turns every RAW into a stamped JPEG, unasked.
+        var rawChoice: RAWChoice = watermark == nil ? .skip : .shareAsJPEG
         if full.asksAboutRAW {
             rawChoice = await askAboutRAW(full)
         }
@@ -223,7 +229,8 @@ enum PhotoShareSheet {
         case nil: nil
         }
         let converted = plan.notesHEICAsJPEG ? String(localized: "HEIC sent as JPEG") : nil
-        let notes = [plan.watermarkNote, keeps, converted].compactMap { $0 }
+        let rawAsJPEG = plan.notesRAWAsJPEG ? WatermarkCopy.rawSentAsJPEG() : nil
+        let notes = [plan.watermarkNote, keeps, converted, rawAsJPEG].compactMap { $0 }
         return notes.isEmpty ? nil : notes.joined(separator: " · ")
     }
 

@@ -124,4 +124,80 @@ import UniformTypeIdentifiers
         // No index for a server file: `{camera}` is empty, the literal stays.
         #expect(try Self.whitePixels(in: file, rect: try Self.boxes().stamped) > 100)
     }
+
+    /// AC-6: a RAW iOS reads becomes a full-size stamped JPEG — at any level,
+    /// with no RAW question; one iOS cannot read is left out by name, never
+    /// sent unstamped; photo A goes stamped beside them.
+    @Test func rawBecomesStampedJPEG() async throws {
+        defer { try? FileManager.default.removeItem(at: folder) }
+        guard let arw = RAWFixtures.available(RAWFixtures.sony) else {
+            print("SKIP rawBecomesStampedJPEG: \(RAWFixtures.sony) is not on this machine")
+            return
+        }
+        let broken = folder.appendingPathComponent("DSCF9999.RAF")
+        try Data((0..<4096).map { UInt8(truncatingIfNeeded: $0 &* 31) }).write(to: broken)
+        let sources = [
+            ShareSource(id: "R", kind: .raw, filename: "DSC0001.ARW", uniformType: "com.sony.arw-raw-image"),
+            ShareSource(id: "F", kind: .raw, filename: "DSCF9999.RAF", isReadable: false, uniformType: "com.fuji.raw-image"),
+            Self.sourceA,
+        ]
+        var watermark = Self.credit()
+        watermark.tokens["R"] = OverlayTokenValues(camera: "ILCE-7M3")
+        var plan = ShareBatchPlan(sources: sources, level: .noLocation)
+        plan.watermarkName = watermark.name
+        #expect(!plan.asksAboutRAW)
+        #expect(plan.notesRAWAsJPEG)
+        #expect(PhotoShareSheet.headerNote(plan: plan)?.contains("RAW sent as JPEG") == true)
+
+        var pipeline = ShareExportPipeline(
+            reader: LocalFileShareReader(files: ["R": arw, "F": broken, "A": try photoA()]),
+            folder: try ShareExportPipeline.makeFolder(in: folder), level: .noLocation
+        )
+        pipeline.watermark = watermark
+        pipeline.rawChoice = .shareAsJPEG
+        let result = await pipeline.export(sources)
+        #expect(result.failed == ["DSCF9999.RAF"])
+        #expect(result.files.count == 2)
+        #expect(result.rawStampedAsJPEG == 1)
+        let jpeg = try #require(result.files.first)
+        #expect(jpeg.lastPathComponent == "DSC0001.jpg")
+        let source = try #require(CGImageSourceCreateWithURL(jpeg as CFURL, nil))
+        #expect(CGImageSourceGetType(source) as String? == UTType.jpeg.identifier)
+        let raw = try #require(CGImageSourceCreateWithURL(arw as CFURL, nil))
+        let rawProps = CGImageSourceCopyPropertiesAtIndex(raw, 0, nil) as? [CFString: Any] ?? [:]
+        let props = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [CFString: Any] ?? [:]
+        // Full size: the decoder's whole frame, upright.
+        let rawLong = max(rawProps[kCGImagePropertyPixelWidth] as? Int ?? 0, rawProps[kCGImagePropertyPixelHeight] as? Int ?? 0)
+        let long = max(props[kCGImagePropertyPixelWidth] as? Int ?? 0, props[kCGImagePropertyPixelHeight] as? Int ?? 0)
+        #expect(long >= rawLong - 64, "\(long) vs \(rawLong)")
+        #expect(props[kCGImagePropertyGPSDictionary] == nil)
+    }
+
+    /// The batch names the RAW it could not stamp in the left-out modal.
+    @Test func unreadableRAWIsLeftOutByName() async throws {
+        defer { try? FileManager.default.removeItem(at: folder) }
+        let broken = folder.appendingPathComponent("DSCF9999.RAF")
+        try Data(repeating: 7, count: 2048).write(to: broken)
+        let sources = [
+            ShareSource(id: "F", kind: .raw, filename: "DSCF9999.RAF", isReadable: false, uniformType: "com.fuji.raw-image"),
+            Self.sourceA,
+        ]
+        let batch = LazyShareBatch(
+            sources: sources, originals: [:], level: .noLocation, rawChoice: .shareAsJPEG,
+            fetcher: FakeOriginalFetcher(script: .init("cloud=none"), base: FixtureOriginalFetcher()),
+            availableBytes: { 10_000_000_000 },
+            reader: LocalFileShareReader(files: ["F": broken, "A": try photoA()]),
+            directory: folder, watermark: Self.credit()
+        )
+        let start = Task { await batch.start() }
+        for _ in 0..<200 {
+            if case .leftOut = batch.stage { break }
+            try await Task.sleep(for: .milliseconds(50))
+        }
+        #expect(batch.stage == .leftOut(names: ["DSCF9999.RAF"], sharing: 1))
+        batch.shareRest()
+        await start.value
+        #expect(batch.stage == .finished)
+        batch.removeFiles()
+    }
 }

@@ -44,6 +44,11 @@ enum WatermarkCopy {
         String(localized: "Each share can change it", table: table, locale: locale, comment: "Settings, Watermark When Sharing value line")
     }
 
+    /// Share sheet header: a watermarked share sends its RAW files as JPEG.
+    static func rawSentAsJPEG(locale: Locale = .current) -> String {
+        String(localized: "RAW sent as JPEG", table: table, locale: locale, comment: "Share sheet header: RAW files go as stamped JPEGs with a watermark")
+    }
+
     static func shareWithWatermark(locale: Locale = .current) -> String {
         String(localized: "Share With Watermark", table: table, locale: locale, comment: "Share sheet row: this share again, stamped")
     }
