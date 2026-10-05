@@ -93,6 +93,10 @@
       "comment": "VoiceOver: the Watermark screen's back button",
       "extractionState": "manual"
     },
+    "Before and After": {
+      "comment": "Watermark screen: show the photo without the watermark while on",
+      "extractionState": "manual"
+    },
     "Cancel": {
       "comment": "Alert button",
       "extractionState": "manual"
@@ -119,6 +123,14 @@
     },
     "Expand %@": {
       "comment": "VoiceOver: unfold an inspector section",
+      "extractionState": "manual"
+    },
+    "Fit": {
+      "comment": "Watermark screen zoom level: the whole photo in the preview",
+      "extractionState": "manual"
+    },
+    "Hide Inspector": {
+      "comment": "Watermark screen on iPad: hide the controls column",
       "extractionState": "manual"
     },
     "In the editor, open Markup, set up a caption or a logo, then choose Save as Preset.": {
@@ -209,6 +221,10 @@
       "comment": "Share sheet row: this share again, unstamped",
       "extractionState": "manual"
     },
+    "Show Inspector": {
+      "comment": "Watermark screen on iPad: show the controls column again",
+      "extractionState": "manual"
+    },
     "Size": {
       "comment": "Watermark screen: height of the stamp",
       "extractionState": "manual"
@@ -247,6 +263,10 @@
     },
     "Without Watermark": {
       "comment": "Resize summary section: photos that went without the watermark",
+      "extractionState": "manual"
+    },
+    "Zoom": {
+      "comment": "Watermark screen: the preview's zoom menu",
       "extractionState": "manual"
     },
     "bottom": {

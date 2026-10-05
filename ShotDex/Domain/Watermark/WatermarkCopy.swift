@@ -222,6 +222,28 @@ enum WatermarkCopy {
         return [form, photos, pageCounter(index, of: count, locale: locale)].joined(separator: " · ")
     }
 
+    // MARK: Preview tools (FS-05.04 §4a)
+
+    static func beforeAndAfter(locale: Locale = .current) -> String {
+        String(localized: "Before and After", table: table, locale: locale, comment: "Watermark screen: show the photo without the watermark while on")
+    }
+
+    static func zoom(locale: Locale = .current) -> String {
+        String(localized: "Zoom", table: table, locale: locale, comment: "Watermark screen: the preview's zoom menu")
+    }
+
+    static func fit(locale: Locale = .current) -> String {
+        String(localized: "Fit", table: table, locale: locale, comment: "Watermark screen zoom level: the whole photo in the preview")
+    }
+
+    static func hideInspector(locale: Locale = .current) -> String {
+        String(localized: "Hide Inspector", table: table, locale: locale, comment: "Watermark screen on iPad: hide the controls column")
+    }
+
+    static func showInspector(locale: Locale = .current) -> String {
+        String(localized: "Show Inspector", table: table, locale: locale, comment: "Watermark screen on iPad: show the controls column again")
+    }
+
     static func backTo(_ form: String, locale: Locale = .current) -> String {
         String(localized: "Back to \(form)", table: table, locale: locale, comment: "VoiceOver: the Watermark screen's back button")
     }

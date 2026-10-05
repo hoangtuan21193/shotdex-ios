@@ -7,8 +7,11 @@ import SwiftUI
 /// - Phone 402×874 and the Duo's cover (382pt after its rail): preview on
 ///   top (320pt; 240 on the cover), controls scrolling underneath.
 /// - Duo inner 951×669: preview left, a 320pt control column right.
-/// - iPad: the Mac-style tool frame — header row, preview left, a 360pt
-///   inspector right, a filmstrip under a landscape preview.
+/// - iPad: the Mac-style tool frame — one toolbar row over everything
+///   (back, title, Before and After · Zoom · Hide Inspector, Done), preview
+///   left, a 360pt inspector right, a filmstrip under a landscape preview.
+/// - Every other layout has Before and After and Zoom on the preview's top
+///   corners (FS-05.04 §4a).
 struct WatermarkScreen: View {
     @Bindable var model: WatermarkModel
     @Environment(\.dismiss) private var dismiss
@@ -16,6 +19,8 @@ struct WatermarkScreen: View {
 
     @State private var isTypingSize = false
     @State private var typedSize = ""
+    /// Hide Inspector on the iPad (FS-05.04 §4a); not remembered.
+    @State private var showsInspector = true
 
     var body: some View {
         GeometryReader { proxy in
@@ -49,7 +54,7 @@ struct WatermarkScreen: View {
     private func compactLayout(_ size: CGSize) -> some View {
         VStack(spacing: 0) {
             header
-            WatermarkPreviewPager(model: model, pill: true)
+            WatermarkPreviewPager(model: model, pill: true, showsCornerTools: true)
                 .frame(height: size.height < 700 ? 240 : 320)
                 .background(Color.black)
             ScrollView {
@@ -64,7 +69,7 @@ struct WatermarkScreen: View {
         VStack(spacing: 0) {
             header
             HStack(spacing: 0) {
-                WatermarkPreviewPager(model: model, pill: true)
+                WatermarkPreviewPager(model: model, pill: true, showsCornerTools: true)
                     .background(Color.black)
                 Rectangle().fill(EditorTheme.panelDivider).frame(width: 1)
                 ScrollView {
@@ -290,48 +295,54 @@ struct WatermarkScreen: View {
     private func padLayout(_ size: CGSize) -> some View {
         let landscape = size.width >= 1100
         let inspectorWidth: CGFloat = 360
-        return HStack(spacing: 0) {
-            VStack(spacing: 0) {
-                padHeader(landscape: landscape)
-                WatermarkPreviewPager(model: model, pill: false)
-                    .padding(.horizontal, AppTheme.Spacing.lg)
-                if model.pages.count > 1 {
-                    if landscape {
-                        WatermarkFilmstrip(model: model)
-                            .frame(height: 100)
-                    } else {
-                        Text(WatermarkCopy.pageCounter(model.currentIndex + 1, of: model.pages.count))
-                            .font(.system(size: 15).monospacedDigit())
-                            .foregroundStyle(EditorTheme.secondaryText)
-                            .padding(.vertical, AppTheme.Spacing.lg)
+        return ZStack(alignment: .top) {
+            HStack(spacing: 0) {
+                VStack(spacing: 0) {
+                    Color.clear.frame(height: WatermarkPadMetrics.contentTop)
+                    WatermarkPreviewPager(model: model, pill: false)
+                        .padding(.horizontal, WatermarkPadMetrics.previewInset)
+                    if model.pages.count > 1 {
+                        if landscape {
+                            WatermarkFilmstrip(model: model)
+                                .frame(height: 100)
+                        } else {
+                            Text(WatermarkCopy.pageCounter(model.currentIndex + 1, of: model.pages.count))
+                                .font(.system(size: 15).monospacedDigit())
+                                .foregroundStyle(EditorTheme.secondaryText)
+                                .padding(.vertical, AppTheme.Spacing.lg)
+                        }
                     }
                 }
+                .frame(maxWidth: .infinity)
+                .background(Color.black)
+                if showsInspector {
+                    WatermarkInspector(
+                        model: model, accent: accent, isPortrait: !landscape,
+                        isTypingSize: $isTypingSize, typedSize: $typedSize
+                    )
+                    .frame(width: inspectorWidth)
+                    .transition(.move(edge: .trailing))
+                }
             }
-            .frame(maxWidth: .infinity)
-            .background(Color.black)
-            WatermarkInspector(
-                model: model, accent: accent, isPortrait: !landscape,
-                isTypingSize: $isTypingSize, typedSize: $typedSize
-            ) {
-                dismiss()
-            }
-            .frame(width: inspectorWidth)
+            padToolbar
         }
-        .ignoresSafeArea(edges: .bottom)
+        // The boards measure from the screen's edges: the toolbar at y 32
+        // clears the 24pt status bar, the inspector runs to both edges.
+        .ignoresSafeArea()
     }
 
-    private func padHeader(landscape: Bool) -> some View {
+    /// The iPad's one toolbar row, over preview and inspector alike (boards
+    /// `IP22_Watermark`, `IPP18_Watermark`): back, title, the preview tools'
+    /// capsule, Done.
+    private var padToolbar: some View {
         HStack(spacing: AppTheme.Spacing.md) {
             Button(action: { dismiss() }) {
-                HStack(spacing: 6) {
-                    Image(systemName: "chevron.left").font(.system(size: 17, weight: .semibold))
-                    Text(model.formTitle).font(.system(size: 17, weight: .medium))
-                }
-                .foregroundStyle(.white)
-                .padding(.horizontal, AppTheme.Spacing.lg)
-                .frame(height: 44)
-                .editorGlass(Capsule())
-                .contentShape(Capsule())
+                Image(systemName: "chevron.left")
+                    .font(.system(size: 20, weight: .medium))
+                    .foregroundStyle(.white)
+                    .frame(width: 44, height: 44)
+                    .editorGlass(Capsule())
+                    .contentShape(Capsule())
             }
             .buttonStyle(.plain)
             .accessibilityLabel(WatermarkCopy.backTo(model.formTitle))
@@ -343,15 +354,56 @@ struct WatermarkScreen: View {
                     .font(.system(size: 13).monospacedDigit())
                     .foregroundStyle(EditorTheme.secondaryText)
             }
-            Spacer()
+            .lineLimit(1)
+            .accessibilityElement(children: .combine)
+            Spacer(minLength: 8)
+            HStack(spacing: 0) {
+                WatermarkBeforeAfterButton(model: model)
+                WatermarkZoomMenu(model: model)
+                Rectangle().fill(EditorTheme.hairline).frame(width: 1, height: 22).padding(.horizontal, 4)
+                Button {
+                    withAnimation(EditorTheme.animation) { showsInspector.toggle() }
+                } label: {
+                    Image(systemName: "sidebar.right")
+                        .font(.system(size: 18, weight: .medium))
+                        .foregroundStyle(.white)
+                        .frame(width: 44, height: 40)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(showsInspector ? WatermarkCopy.hideInspector() : WatermarkCopy.showInspector())
+            }
+            .padding(.horizontal, 2)
+            .frame(height: 44)
+            .editorGlass(Capsule())
+            Button { dismiss() } label: {
+                Text(WatermarkCopy.done())
+                    .font(.system(size: 17, weight: .semibold))
+                    .foregroundStyle(.black)
+                    .padding(.horizontal, 20)
+                    .frame(height: 44)
+                    .background(accent, in: Capsule())
+                    .contentShape(Capsule())
+            }
+            .buttonStyle(.plain)
         }
-        .padding(.horizontal, AppTheme.Spacing.lg)
-        .padding(.top, 32)
-        .padding(.bottom, AppTheme.Spacing.md)
+        .padding(.horizontal, WatermarkPadMetrics.toolbarInset)
+        .padding(.top, WatermarkPadMetrics.toolbarTop)
+        .frame(height: WatermarkPadMetrics.toolbarTop + 44, alignment: .bottom)
     }
 }
 
-/// The iPad inspector (board `IP22_Watermark`): Done on top, then the
+/// The iPad frame's numbers, from `IP22_Watermark`: the toolbar 44 tall at
+/// y 32, 16 from both edges; content starts under it.
+enum WatermarkPadMetrics {
+    static let toolbarTop: CGFloat = 32
+    static let toolbarInset: CGFloat = 16
+    static let contentTop: CGFloat = toolbarTop + 44 + 12
+    /// The photo at 28 from the column's edges: 960 wide in landscape.
+    static let previewInset: CGFloat = 28
+}
+
+/// The iPad inspector (board `IP22_Watermark`): under the toolbar, the
 /// Watermark section — Add Watermark and the presets as rows — and the
 /// Placement section — Position, Size, Margin, Opacity.
 private struct WatermarkInspector: View {
@@ -363,7 +415,6 @@ private struct WatermarkInspector: View {
     let isPortrait: Bool
     @Binding var isTypingSize: Bool
     @Binding var typedSize: String
-    let done: () -> Void
 
     @State private var showsPresets = true
     @State private var showsPlacement = true
@@ -372,22 +423,7 @@ private struct WatermarkInspector: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            HStack {
-                Spacer()
-                Button(action: done) {
-                    Text(WatermarkCopy.done())
-                        .font(.system(size: 17, weight: .semibold))
-                        .foregroundStyle(.black)
-                        .padding(.horizontal, 20)
-                        .frame(height: 44)
-                        .background(accent, in: Capsule())
-                        .contentShape(Capsule())
-                }
-                .buttonStyle(.plain)
-            }
-            .padding(.horizontal, AppTheme.Spacing.lg)
-            .padding(.top, 32)
-            .padding(.bottom, AppTheme.Spacing.lg)
+            Color.clear.frame(height: WatermarkPadMetrics.contentTop)
             ScrollView {
                 if model.hasPresets, isPortrait {
                     portraitSections
@@ -669,7 +705,7 @@ private struct WatermarkInspector: View {
             Text(label)
                 .font(.system(size: 17))
                 .foregroundStyle(.white)
-                .frame(width: 112, alignment: .leading)
+                .frame(width: 88, alignment: .leading)
             Slider(value: Binding(get: { value }, set: set), in: range)
                 .tint(Color.white.opacity(0.62))
                 .accessibilityLabel(label)
@@ -677,7 +713,7 @@ private struct WatermarkInspector: View {
             Text("\(Int((value * 100).rounded()))%")
                 .font(.system(size: 15).monospacedDigit())
                 .foregroundStyle(.white)
-                .frame(width: 56, alignment: .trailing)
+                .frame(width: 60, alignment: .trailing)
                 .accessibilityHidden(true)
         }
         .frame(height: 44)

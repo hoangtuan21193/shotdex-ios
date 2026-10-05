@@ -16,6 +16,9 @@ struct WatermarkPreviewPage: Identifiable {
     /// The picture without the stamp, at preview size, cropped as the export
     /// crops it. Nil when it cannot be read.
     let load: @MainActor () async -> CGImage?
+    /// The same picture re-read with the given long edge, for Zoom (§4a).
+    /// Nil where the preview picture is already the sharpest there is.
+    var loadDetail: (@MainActor (CGFloat) async -> CGImage?)?
 }
 
 /// The Watermark screen (FS-05.04 §4): one remembered configuration, edited
@@ -32,7 +35,53 @@ final class WatermarkModel {
     @ObservationIgnored let imageExists: (UUID) -> Bool
 
     var currentIndex = 0 {
-        didSet { if currentIndex != oldValue { renderCurrent() } }
+        didSet {
+            guard currentIndex != oldValue else { return }
+            // Another page keeps the zoom level, re-centred on its own stamp.
+            pan = .zero
+            details.removeAll()
+            renderCurrent()
+        }
+    }
+
+    // MARK: Preview tools (FS-05.04 §4a)
+
+    /// Before and After: the bare picture while on. Never saved; any change
+    /// to the stamp turns it off.
+    var showsBefore = false
+
+    private(set) var zoom: WatermarkZoom = .fit
+    /// The finger's pan on top of the stamp-centred position, in points.
+    var pan: CGSize = .zero
+
+    /// The current page re-read sharper while zoomed — one at a time.
+    private(set) var details: [String: CGImage] = [:]
+
+    func setZoom(_ level: WatermarkZoom) {
+        guard level != zoom else { return }
+        zoom = level
+        pan = .zero
+        if level == .fit, !details.isEmpty {
+            details.removeAll()
+            renderCurrent()
+        }
+    }
+
+    /// Reads the current page at `longEdge` for Zoom, once per level.
+    func loadDetail(for page: WatermarkPreviewPage, longEdge: CGFloat) async {
+        guard zoom != .fit, page.id == currentPage?.id, let loadDetail = page.loadDetail else { return }
+        if let have = details[page.id], CGFloat(max(have.width, have.height)) >= longEdge - 1 { return }
+        guard let image = await loadDetail(longEdge),
+              zoom != .fit, page.id == currentPage?.id else { return }
+        details = [page.id: image]
+        renderCurrent()
+    }
+
+    /// The stamp's centre on a preview `displaySize` big, for Zoom to centre
+    /// on; nil when the stamp is off.
+    func zoomFocus(for page: WatermarkPreviewPage, displaySize: CGSize) -> CGPoint? {
+        guard let stamp = stamp(for: page), let image = details[page.id] ?? bases[page.id] else { return nil }
+        return Self.previewBoxCentre(stamp, imageSize: CGSize(width: image.width, height: image.height), displaySize: displaySize)
     }
 
     /// Pictures without the stamp, per page.
@@ -112,7 +161,7 @@ final class WatermarkModel {
                 settings.placement.size = nil
             }
         }
-        renderCurrent()
+        stampChanged()
     }
 
     func choose(_ preset: SignaturePreset) {
@@ -125,12 +174,12 @@ final class WatermarkModel {
             settings.presetID = preset.id
             settings.isEnabled = true
         }
-        renderCurrent()
+        stampChanged()
     }
 
     func setAnchor(_ anchor: WatermarkAnchor) {
         settings.update { $0.placement.anchor = anchor }
-        renderCurrent()
+        stampChanged()
     }
 
     func setMargin(_ margin: Double) {
@@ -138,7 +187,7 @@ final class WatermarkModel {
         settings.update { $0.placement = WatermarkPlacement(
             anchor: $0.placement.anchor, margin: stepped, size: $0.placement.size, opacity: $0.placement.opacity
         ) }
-        renderCurrent()
+        stampChanged()
     }
 
     func setOpacity(_ opacity: Double) {
@@ -146,7 +195,7 @@ final class WatermarkModel {
         settings.update { $0.placement = WatermarkPlacement(
             anchor: $0.placement.anchor, margin: $0.placement.margin, size: $0.placement.size, opacity: stepped
         ) }
-        renderCurrent()
+        stampChanged()
     }
 
     /// One step of Size: 1% of the short edge.
@@ -163,6 +212,12 @@ final class WatermarkModel {
     private func setSize(_ size: Double) {
         let clamped = min(max(size, WatermarkPlacement.sizeRange.lowerBound), WatermarkPlacement.sizeRange.upperBound)
         settings.update { $0.placement.size = clamped }
+        stampChanged()
+    }
+
+    /// A control of the stamp moved: show it, so Before and After ends.
+    private func stampChanged() {
+        showsBefore = false
         renderCurrent()
     }
 
@@ -177,9 +232,12 @@ final class WatermarkModel {
     }
 
     /// What the preview shows for a page: stamped when ready, else the bare
-    /// picture.
+    /// picture; the bare one while Before and After is on. Zoomed, the
+    /// sharper re-read stands in for the preview picture.
     func image(for page: WatermarkPreviewPage) -> CGImage? {
-        stamped[page.id] ?? bases[page.id]
+        let bare = details[page.id] ?? bases[page.id]
+        if showsBefore { return bare }
+        return stamped[page.id] ?? bare
     }
 
     func load(_ page: WatermarkPreviewPage) async {
@@ -192,7 +250,7 @@ final class WatermarkModel {
     /// Re-stamps the current page. The last change wins: a slider drag
     /// cancels the render it overtakes.
     func renderCurrent() {
-        guard let page = currentPage, let base = bases[page.id] else { return }
+        guard let page = currentPage, let base = details[page.id] ?? bases[page.id] else { return }
         let stamp = stamp(for: page)
         renderTask?.cancel()
         let renderer = renderer

@@ -149,7 +149,8 @@ final class ServerExportModel {
                 filename: photo.photo.primary.name,
                 exportSize: preset.id == ResizePreset.original.id ? pixels : preset.outputPixelSize(source: pixels),
                 tokens: .empty,
-                load: { await Task.detached { ServerExportModel.preview(of: url) }.value }
+                load: { await Task.detached { ServerExportModel.preview(of: url) }.value },
+                loadDetail: { longEdge in await Task.detached { ServerExportModel.preview(of: url, longEdge: longEdge) }.value }
             )
         }
         return WatermarkModel(
@@ -169,13 +170,14 @@ final class ServerExportModel {
         return orientation >= 5 ? CGSize(width: height, height: width) : CGSize(width: width, height: height)
     }
 
-    /// A 1,200px upright preview read from the fetched file.
-    nonisolated static func preview(of url: URL) -> CGImage? {
+    /// An upright preview read from the fetched file, 1,200px unless Zoom
+    /// asks for more (FS-05.04 §4a).
+    nonisolated static func preview(of url: URL, longEdge: CGFloat = 1_200) -> CGImage? {
         guard let source = CGImageSourceCreateWithURL(url as CFURL, nil) else { return nil }
         return CGImageSourceCreateThumbnailAtIndex(source, 0, [
             kCGImageSourceCreateThumbnailFromImageAlways: true,
             kCGImageSourceCreateThumbnailWithTransform: true,
-            kCGImageSourceThumbnailMaxPixelSize: 1_200,
+            kCGImageSourceThumbnailMaxPixelSize: Int(longEdge),
         ] as CFDictionary)
     }
 

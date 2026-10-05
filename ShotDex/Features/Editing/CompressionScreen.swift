@@ -377,6 +377,12 @@ struct CompressionScreen: View {
         let library = dependencies.photoLibrary
         let pages: [WatermarkPreviewPage] = controller.photos.enumerated().map { index, photo in
             let asset = assets.first { $0.localIdentifier == photo.id }
+            // Zoom re-reads a batch page sharper; the one photo's preview is
+            // already the form's 2000px render, cropped as the file is.
+            var detail: (@MainActor (CGFloat) async -> CGImage?)?
+            if assets.count > 1, let asset {
+                detail = { longEdge in await library.detailCGImage(for: asset, longEdge: longEdge) }
+            }
             return WatermarkPreviewPage(
                 id: photo.id,
                 filename: photo.filename,
@@ -393,7 +399,8 @@ struct CompressionScreen: View {
                     }
                     guard let asset else { return nil }
                     return await library.detailCGImage(for: asset, longEdge: 1_200)
-                }
+                },
+                loadDetail: detail
             )
         }
         return WatermarkModel(

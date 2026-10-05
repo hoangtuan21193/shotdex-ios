@@ -173,7 +173,8 @@ final class FileExportModel: Identifiable {
                 filename: Self.filename(asset),
                 exportSize: preset.outputPixelSize(source: CGSize(width: asset.pixelWidth, height: asset.pixelHeight)),
                 tokens: OverlayTokenValues(metadata: rows[asset.localIdentifier]),
-                load: { await photoLibrary.detailCGImage(for: asset, longEdge: 1_200) }
+                load: { await photoLibrary.detailCGImage(for: asset, longEdge: 1_200) },
+                loadDetail: { await photoLibrary.detailCGImage(for: asset, longEdge: $0) }
             )
         }
         return WatermarkModel(
