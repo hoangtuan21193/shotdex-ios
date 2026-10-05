@@ -179,9 +179,13 @@ final class VideoStudioModel {
         restoring: Creation? = nil,
         /// A project of server photos (FS-17.06 §5b): Export stops at the
         /// file, which goes to the export sheet instead of Photos.
-        serverWorkDirectory: URL? = nil
+        serverWorkDirectory: URL? = nil,
+        /// Where the app's going to the background is heard — the default
+        /// center; a test's own, so its post reaches only its model.
+        appNotifications: NotificationCenter = .default
     ) {
         self.serverWorkDirectory = serverWorkDirectory
+        self.appNotifications = appNotifications
         self.serverFiles = Dictionary(
             photos.compactMap { photo in photo.serverFile.map { (photo.id, $0.primaryURL) } },
             uniquingKeysWith: { first, _ in first }
@@ -331,10 +335,11 @@ final class VideoStudioModel {
     /// (FS-12.18 §2): the system may end the process from there without
     /// another word, and a second of edits is all a crash should cost.
     private var backgroundObserver: NSObjectProtocol?
+    @ObservationIgnored private let appNotifications: NotificationCenter
 
     private func observeBackgrounding() {
         guard drafts != nil else { return }
-        backgroundObserver = NotificationCenter.default.addObserver(
+        backgroundObserver = appNotifications.addObserver(
             forName: UIApplication.didEnterBackgroundNotification,
             object: nil,
             queue: nil
@@ -1277,7 +1282,7 @@ final class VideoStudioModel {
             Task { await self.saveDraftNow() }
         }
         if let backgroundObserver {
-            NotificationCenter.default.removeObserver(backgroundObserver)
+            appNotifications.removeObserver(backgroundObserver)
             self.backgroundObserver = nil
         }
         rebuildTask?.cancel()

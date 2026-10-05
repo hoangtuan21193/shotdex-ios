@@ -27,12 +27,31 @@ final class DraftWriteLog: @unchecked Sendable {
     struct DiskFull: Error {}
 }
 
+/// The autosave's wait, held by the test: it records what was asked for
+/// and returns only when `open()` is called.
+final class SleepGate: @unchecked Sendable {
+    private let lock = NSLock()
+    private var durations: [Duration] = []
+    private var isOpen = false
+
+    var requested: [Duration] { lock.withLock { durations } }
+
+    func open() { lock.withLock { isOpen = true } }
+
+    func sleep(_ duration: Duration) async throws {
+        lock.withLock { durations.append(duration) }
+        while !lock.withLock({ isOpen }) {
+            try await Task.sleep(for: .milliseconds(10))
+        }
+    }
+}
+
 /// FS-12.18 §2: the project writes itself about a second after the last
 /// change, once per burst.
 @MainActor
 struct VideoDraftAutosaveTests {
     /// Waits for `condition`, polling, up to `seconds`.
-    static func eventually(_ seconds: Double = 3, _ condition: @MainActor () -> Bool) async -> Bool {
+    static func eventually(_ seconds: Double = 10, _ condition: @MainActor () -> Bool) async -> Bool {
         let deadline = Date().addingTimeInterval(seconds)
         while Date() < deadline {
             if condition() { return true }
@@ -41,22 +60,25 @@ struct VideoDraftAutosaveTests {
         return condition()
     }
 
-    /// FS-12.18 AC-1: Speed 2× on clip 2 is in the stored row 1.0 s ±0.3 s
-    /// after the change — not before, not much later.
+    /// FS-12.18 AC-1: Speed 2× on clip 2 is in the stored row a second
+    /// after the change — not before. The wait is the autosave's own: it
+    /// asks for exactly one second, and nothing is written until that wait
+    /// ends. (Timing the write against the wall clock failed whenever a
+    /// parallel run kept the main actor busy, without the code being wrong.)
     @Test func savesOneSecondAfterTheLastChange() async throws {
         let model = VideoStudioModelFixture.model()
         let log = DraftWriteLog()
-        model.drafts = VideoDraftAutosave(write: { try log.write($0) })
+        let gate = SleepGate()
+        model.drafts = VideoDraftAutosave(write: { try log.write($0) }, sleep: { try await gate.sleep($0) })
         let clip2 = model.recipe.clips[1].id
 
-        let changed = Date()
         model.setSpeed(2, for: clip2)
-        try await Task.sleep(for: .milliseconds(500))
-        #expect(log.writes.isEmpty)
-        #expect(await Self.eventually { !log.writes.isEmpty })
+        #expect(await Self.eventually { gate.requested == [.seconds(1)] })
+        try await Task.sleep(for: .milliseconds(200))
+        #expect(log.writes.isEmpty, "written before the second was up")
 
-        let elapsed = try #require(log.times.first).timeIntervalSince(changed)
-        #expect(elapsed >= 0.7 && elapsed <= 1.3)
+        gate.open()
+        #expect(await Self.eventually { !log.writes.isEmpty })
         let stored = try #require(log.writes.first?.videoRecipe)
         #expect(stored.clips[1].speed == 2)
         #expect(log.writes.first?.isDraft == true)
@@ -149,18 +171,26 @@ struct VideoDraftBackTests {
 /// FS-12.18 §2: leaving the app writes at once.
 @MainActor
 struct VideoDraftBackgroundTests {
-    /// FS-12.18 AC-3: Speed changed, then Home within 0.3 s — the draft has
-    /// the change long before the one-second autosave would have run.
+    /// FS-12.18 AC-3: Speed changed, then Home — the draft has the change
+    /// long before the autosave would have run. The autosave here waits a
+    /// minute, so a write inside the window can only be the immediate one;
+    /// the test does not race a wall clock, which a parallel run starves.
+    /// The post goes to the model's own center: on the default one it
+    /// reached every other test's model, and its main-queue delivery hung
+    /// the host (now `queue: nil`, `onMain`).
     @Test func backgroundingSavesImmediately() async throws {
+        let center = NotificationCenter()
         let store = CreationStore(database: try AppDatabase.makeEmpty())
-        let model = VideoStudioModelFixture.model(creationStore: store)
+        let model = VideoStudioModelFixture.model(creationStore: store, appNotifications: center)
         defer { model.close() }
+        let log = DraftWriteLog()
+        model.drafts = VideoDraftAutosave(write: { try log.write($0) }, sleep: { _ in try await Task.sleep(for: .seconds(60)) })
         model.setSpeed(2, for: model.recipe.clips[1].id)
 
-        NotificationCenter.default.post(name: UIApplication.didEnterBackgroundNotification, object: nil)
+        center.post(name: UIApplication.didEnterBackgroundNotification, object: nil)
 
-        #expect(await VideoDraftAutosaveTests.eventually(0.4) {
-            (try? store.fetch(id: model.creationID))??.videoRecipe?.clips[1].speed == 2
+        #expect(await VideoDraftAutosaveTests.eventually(10) {
+            log.writes.last?.videoRecipe?.clips[1].speed == 2
         })
         #expect(model.drafts?.isSavePending == false)
     }
@@ -171,17 +201,19 @@ struct VideoDraftBackgroundTests {
 struct VideoDraftSceneTests {
     /// FS-12.18 AC-4 (model half): Speed changed, then the scene changes —
     /// the Duo folding, a window closing — and the draft has the change
-    /// before the one-second autosave. The fold itself is measured by hand.
+    /// before the autosave (here a minute away, as above). The fold itself
+    /// is measured by hand.
     @Test func sceneChangeSavesImmediately() async throws {
-        let store = CreationStore(database: try AppDatabase.makeEmpty())
-        let model = VideoStudioModelFixture.model(creationStore: store)
+        let model = VideoStudioModelFixture.model()
         defer { model.close() }
+        let log = DraftWriteLog()
+        model.drafts = VideoDraftAutosave(write: { try log.write($0) }, sleep: { _ in try await Task.sleep(for: .seconds(60)) })
         model.setSpeed(2, for: model.recipe.clips[1].id)
 
         model.sceneDidChange()
 
-        #expect(await VideoDraftAutosaveTests.eventually(0.4) {
-            (try? store.fetch(id: model.creationID))??.videoRecipe?.clips[1].speed == 2
+        #expect(await VideoDraftAutosaveTests.eventually(10) {
+            log.writes.last?.videoRecipe?.clips[1].speed == 2
         })
     }
 }

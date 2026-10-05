@@ -35,6 +35,7 @@ enum VideoStudioModelFixture {
         creationStore: CreationStore? = nil,
         mode: VideoStudioMode = .multiClip,
         serverWorkDirectory: URL? = nil,
+        appNotifications: NotificationCenter = .default,
         configureService: (VideoStudioService) -> Void = { _ in }
     ) -> VideoStudioModel {
         var recipe = VideoProjectRecipe(clips: clips)
@@ -52,7 +53,8 @@ enum VideoStudioModelFixture {
             overlayImages: dependencies.overlayImages,
             creationStore: creationStore,
             restoring: row,
-            serverWorkDirectory: serverWorkDirectory
+            serverWorkDirectory: serverWorkDirectory,
+            appNotifications: appNotifications
         )
     }
 
