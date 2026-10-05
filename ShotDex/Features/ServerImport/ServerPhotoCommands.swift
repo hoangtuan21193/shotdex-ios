@@ -170,8 +170,12 @@ struct ServerPhotoCommandHost: ViewModifier {
         case .share:
             let (sources, reader) = ServerPhotoHandoff.shareSources(for: finished.photos)
             Task { @MainActor in
+                // A server photo follows Watermark When Sharing like any
+                // share (FS-05.04 §4); it has no indexed tokens.
+                let watermark = await dependencies.shareWatermark.watermark(for: sources)
                 let share = await PhotoShareSheet.gather(
-                    sources: sources, reader: reader, level: .sharingDefault(), onClose: { self.closeTool() }
+                    sources: sources, reader: reader, level: .sharingDefault(), watermark: watermark,
+                    onClose: { self.closeTool() }
                 )
                 PhotoShareSheet.present(share)
             }

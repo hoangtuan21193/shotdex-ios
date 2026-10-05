@@ -22,6 +22,8 @@ struct ShareBatchPlan: Equatable, Sendable {
     var rawSharedAsIsCount = 0
     /// HEIC photos going out as JPEG because the level is No Metadata.
     var heicAsJPEGCount = 0
+    /// The watermark this share stamps, by name (FS-05.04 §4); nil for none.
+    var watermarkName: String?
 
     /// The one-shot rows, in order: the two levels that are not in force.
     /// Choosing one changes this share only, never Settings.
@@ -67,6 +69,13 @@ struct ShareBatchPlan: Equatable, Sendable {
     /// what to do with its RAW files: only below All Metadata, where a RAW
     /// would otherwise leave with what the level promised to remove.
     var asksAboutRAW: Bool { rawCount > 0 && level != .all }
+
+    /// The second line's watermark segment, first among the notes:
+    /// "Watermark: Credit".
+    var watermarkNote: String? {
+        guard let watermarkName, photoCount + rawCount > 0 else { return nil }
+        return WatermarkCopy.watermarkNote(watermarkName)
+    }
 
     /// Whether Share as JPEG can be offered: not when a RAW in the share
     /// cannot be decoded on this device.

@@ -32,6 +32,8 @@ final class LazyShareBatch: Identifiable {
     let sources: [ShareSource]
     let level: MetadataLevel
     let rawChoice: RAWChoice
+    /// What this share stamps (FS-05.04); nil for none.
+    let watermark: ShareWatermark?
     nonisolated let results = LazyShareResults()
 
     private(set) var stage: Stage = .waiting
@@ -64,8 +66,10 @@ final class LazyShareBatch: Identifiable {
         gate: IndexInteractionGate? = nil,
         availableBytes: @escaping @Sendable () -> Int64? = { DiskSpace.availableBytes() },
         reader: any ShareAssetReader,
-        directory: URL = FileManager.default.temporaryDirectory
+        directory: URL = FileManager.default.temporaryDirectory,
+        watermark: ShareWatermark? = nil
     ) {
+        self.watermark = watermark
         self.sources = sources
         self.originals = originals
         self.level = level
@@ -99,7 +103,7 @@ final class LazyShareBatch: Identifiable {
         return sources.enumerated().map { index, source in
             LazyShareItemProvider(
                 index: index,
-                placeholder: Self.placeholder(for: source, level: level, rawChoice: rawChoice, in: directory),
+                placeholder: Self.placeholder(for: source, level: level, rawChoice: rawChoice, in: directory, watermark: watermark),
                 results: results,
                 start: start,
                 skippedTypes: skip,
@@ -111,10 +115,15 @@ final class LazyShareBatch: Identifiable {
     /// The file URL a provider shows the share sheet before anything is
     /// prepared: the name and type the item will have. Nothing is there yet.
     nonisolated static func placeholder(
-        for source: ShareSource, level: MetadataLevel, rawChoice: RAWChoice, in directory: URL
+        for source: ShareSource, level: MetadataLevel, rawChoice: RAWChoice, in directory: URL,
+        watermark: ShareWatermark? = nil
     ) -> URL {
         var name = source.filename
-        if source.kind == .raw, level != .all, rawChoice == .shareAsJPEG {
+        if let watermark, case .stamp = watermark.decision(for: source) {
+            // A stamped copy is written again: its own type and name.
+            let type = ShareWatermarkRenderer.outputType(sourceType: source.uniformType, level: level)
+            name = ShareWatermarkRenderer.outputName(for: name, type: type)
+        } else if source.kind == .raw, level != .all, rawChoice == .shareAsJPEG {
             name = (name as NSString).deletingPathExtension + ".jpg"
         } else if source.kind == .photo, let type = source.uniformType,
                   MetadataRewriter.convertsToJPEG(type, at: level) {
@@ -156,6 +165,7 @@ final class LazyShareBatch: Identifiable {
             reader: PreparedShareReader(files: downloaded, fallback: reader), folder: folder, level: level
         )
         pipeline.rawChoice = rawChoice
+        pipeline.watermark = watermark
         var files: [Int: URL] = [:]
         var leftOut: [String] = []
         gate?.beginInteraction()

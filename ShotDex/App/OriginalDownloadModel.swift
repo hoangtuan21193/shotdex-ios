@@ -12,6 +12,8 @@ final class OriginalDownloadModel {
     let fetcher: any OriginalFetching
     let gate: IndexInteractionGate?
     let availableBytes: @Sendable () -> Int64?
+    /// What shares stamp (FS-05.04); nil in previews and tests.
+    @ObservationIgnored var watermark: ShareWatermarkContext?
     private(set) var activeShare: LazyShareBatch?
     @ObservationIgnored private var window: UIWindow?
 
@@ -27,11 +29,11 @@ final class OriginalDownloadModel {
 
     func makeShare(
         sources: [ShareSource], originals: [String: OriginalItem], level: MetadataLevel,
-        rawChoice: RAWChoice, reader: any ShareAssetReader
+        rawChoice: RAWChoice, reader: any ShareAssetReader, watermark: ShareWatermark? = nil
     ) -> LazyShareBatch {
         let batch = LazyShareBatch(
             sources: sources, originals: originals, level: level, rawChoice: rawChoice,
-            fetcher: fetcher, gate: gate, availableBytes: availableBytes, reader: reader
+            fetcher: fetcher, gate: gate, availableBytes: availableBytes, reader: reader, watermark: watermark
         )
         activeShare = batch
         track(batch)

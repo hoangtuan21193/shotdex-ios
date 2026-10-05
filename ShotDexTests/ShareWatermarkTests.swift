@@ -1,0 +1,127 @@
+import CoreGraphics
+import Foundation
+import ImageIO
+import ShotDexKit
+import Testing
+import UniformTypeIdentifiers
+@testable import ShotDex
+
+/// FS-05.04 through the share pipeline (FS-08.06): a stamped photo is
+/// rendered, stamped and written with its metadata at the share's level.
+@MainActor
+@Suite(.serialized) struct ShareWatermarkTests {
+    let folder: URL
+
+    init() throws {
+        folder = FileManager.default.temporaryDirectory.appendingPathComponent("ShareWatermarkTests-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+    }
+
+    /// Photo A, 1200×800 as encoded, orientation 6 — upright 800×1200.
+    func photoA() throws -> URL {
+        var options = MetadataFixture.Options()
+        options.width = 1200
+        options.height = 800
+        options.xmp = false
+        let url = folder.appendingPathComponent("A.JPG")
+        try MetadataFixture.encode(.jpeg, options: options).write(to: url)
+        return url
+    }
+
+    static func credit() -> ShareWatermark {
+        ShareWatermark(
+            template: WatermarkStamp(preset: WatermarkFixture.credit(logo: nil), placement: WatermarkFixture.placementW),
+            tokens: ["A": OverlayTokenValues(camera: "ILCE-7M4")]
+        )
+    }
+
+    static let sourceA = ShareSource(id: "A", kind: .photo, filename: "A.JPG", uniformType: UTType.jpeg.identifier)
+
+    /// Near-white pixels — the white credit line — inside `rect` (top-down).
+    static func whitePixels(in url: URL, rect: CGRect) throws -> Int {
+        let pixels = try #require(WatermarkFixture.pixels(of: url))
+        var count = 0
+        for y in Int(rect.minY)..<Int(rect.maxY) {
+            for x in Int(rect.minX)..<Int(rect.maxX) {
+                let i = (y * pixels.width + x) * 4
+                if pixels.data[i] > 235, pixels.data[i + 1] > 235, pixels.data[i + 2] > 235 { count += 1 }
+            }
+        }
+        return count
+    }
+
+    /// The stamp's box on an upright 800×1200 photo, and the same box in the
+    /// opposite corner, where nothing was stamped.
+    static func boxes() throws -> (stamped: CGRect, other: CGRect) {
+        let stamp = credit().template.resolved(with: OverlayTokenValues(camera: "ILCE-7M4"))
+        let box = try #require(PhotoRenderService.watermarkFrame(stamp, imageSize: CGSize(width: 800, height: 1200))).box.integral
+        return (box, CGRect(x: 0, y: 0, width: box.width, height: box.height))
+    }
+
+    /// AC-4: Watermark When Sharing = Credit, No Location — the JPEG carries
+    /// the stamp bottom right, no GPS, and still Make SONY, Model ILCE-7M4.
+    @Test func noLocationWithWatermark() async throws {
+        defer { try? FileManager.default.removeItem(at: folder) }
+        let original = try photoA()
+        var pipeline = ShareExportPipeline(
+            reader: LocalFileShareReader(files: ["A": original]),
+            folder: try ShareExportPipeline.makeFolder(in: folder), level: .noLocation
+        )
+        pipeline.watermark = Self.credit()
+        let result = await pipeline.export([Self.sourceA])
+        #expect(result.failed.isEmpty)
+        #expect(result.watermarked == 1)
+        let file = try #require(result.files.first)
+        #expect(file.lastPathComponent == "A.JPG")
+        #expect(MetadataFixture.properties(of: file)[kCGImagePropertyGPSDictionary] == nil)
+        let tiff = try #require(MetadataFixture.dictionary(kCGImagePropertyTIFFDictionary, of: file))
+        #expect(tiff[kCGImagePropertyTIFFMake] as? String == "SONY")
+        #expect(tiff[kCGImagePropertyTIFFModel] as? String == "ILCE-7M4")
+        // Upright: the pixels were turned, so the file says orientation 1.
+        #expect(MetadataFixture.properties(of: file)[kCGImagePropertyOrientation] as? Int ?? 1 == 1)
+        #expect(MetadataFixture.properties(of: file)[kCGImagePropertyPixelWidth] as? Int == 800)
+        let boxes = try Self.boxes()
+        #expect(try Self.whitePixels(in: file, rect: boxes.stamped) > 200)
+        #expect(try Self.whitePixels(in: file, rect: boxes.other) < 20)
+    }
+
+    /// A drag at the Settings level stamps the same way (FS-08.06 §5).
+    @Test func dragFollowsSettings() async throws {
+        defer { try? FileManager.default.removeItem(at: folder) }
+        let original = try photoA()
+        let plan = ShareDragPlan(source: Self.sourceA, level: .noLocation, stamps: true)
+        #expect(plan.type == .jpeg)
+        let url = try #require(await PhotoDragItem.fileURL(
+            for: Self.sourceA, level: .noLocation, rawChoice: plan.rawChoice,
+            watermark: Self.credit(), reader: LocalFileShareReader(files: ["A": original])
+        ))
+        defer { try? FileManager.default.removeItem(at: url.deletingLastPathComponent().deletingLastPathComponent()) }
+        #expect(try Self.whitePixels(in: url, rect: try Self.boxes().stamped) > 200)
+    }
+
+    /// A server photo's share follows Settings too: the context picks the
+    /// preset, the gather stamps, the header names it.
+    @Test func serverShareFollowsSettings() async throws {
+        defer { try? FileManager.default.removeItem(at: folder) }
+        let original = try photoA()
+        let credit = WatermarkFixture.credit(logo: nil)
+        let stores = try WatermarkModelTests.stores(presets: [credit])
+        let context = ShareWatermarkContext(
+            settings: stores.settings, presets: stores.presets, libraryQueries: nil, editing: nil, imageExists: { _ in true }
+        )
+        #expect(await context.watermark(for: [Self.sourceA]) == nil, "Off by default")
+        stores.settings.setSharingPreset(credit.id)
+        let watermark = try #require(await context.watermark(for: [Self.sourceA]))
+        #expect(watermark.name == "Credit")
+        let prepared = await PhotoShareSheet.gather(
+            sources: [Self.sourceA], reader: LocalFileShareReader(files: ["A": original]),
+            level: .noLocation, watermark: watermark
+        )
+        defer { prepared.removeFiles() }
+        #expect(prepared.watermarkName == "Credit")
+        #expect(PhotoShareSheet.headerNote(plan: prepared.plan) == "Watermark: Credit")
+        let file = try #require(prepared.items.first as? URL)
+        // No index for a server file: `{camera}` is empty, the literal stays.
+        #expect(try Self.whitePixels(in: file, rect: try Self.boxes().stamped) > 100)
+    }
+}

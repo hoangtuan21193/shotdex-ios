@@ -429,7 +429,9 @@ struct ShareExportPipelineTests {
         let drag = try AssetMetadataCarryOverTests.codeLines(of: "ShotDex/Features/Shared/PhotoDragItem.swift")
             .joined(separator: "\n")
         #expect(drag.contains("let level = MetadataLevel.sharingDefault()"))
-        #expect(drag.contains("ShareExportPipeline(reader: PhotoKitShareReader()"))
+        // The library is the drag's reader; a test hands in another.
+        #expect(drag.contains("reader: any ShareAssetReader = PhotoKitShareReader()"))
+        #expect(drag.contains("ShareExportPipeline(reader: reader"))
         #expect(!drag.contains("PHAssetResourceManager"))
     }
 

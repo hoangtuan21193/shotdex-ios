@@ -78,6 +78,8 @@ struct ShareExportResult: Sendable, Equatable {
     var rawSharedAsIs = 0
     /// HEIC photos handed over as JPEG — No Metadata (spec §3).
     var heicSentAsJPEG = 0
+    /// Photos handed over with the watermark (FS-05.04).
+    var watermarked = 0
 }
 
 /// Gathers a share one item at a time into a scratch folder of its own
@@ -94,6 +96,9 @@ struct ShareExportPipeline: Sendable {
     /// to the RAW question. Skip unless asked: a RAW never leaves carrying
     /// what the level removes without the user having said so.
     var rawChoice: RAWChoice = .skip
+    /// The watermark this share stamps (FS-05.04 §4), or nil. A stamped
+    /// photo is rendered again, so it never goes byte for byte.
+    var watermark: ShareWatermark?
 
     static let prefix = "ShotDexShare-"
 
@@ -107,6 +112,9 @@ struct ShareExportPipeline: Sendable {
     /// Prepares one item. Each lands in a numbered subfolder, so two photos
     /// both called `IMG_0001.JPG` (two cameras, one counter) keep their names.
     func export(_ source: ShareSource, index: Int) async throws -> URL {
+        if let watermark, case .stamp(let stamp) = watermark.decision(for: source) {
+            return try await exportStamped(source, stamp: stamp, index: index)
+        }
         switch source.kind {
         case .video:
             return try await reader.videoURL(for: source)
@@ -155,6 +163,24 @@ struct ShareExportPipeline: Sendable {
         }
     }
 
+    /// A photo or a RAW with the watermark: the original comes down under a
+    /// name of its own, is rendered stamped and written with its metadata at
+    /// the share's level, and is gone once that is done. A RAW leaves as a
+    /// full-size JPEG at any level — a RAW cannot carry a stamp — and one
+    /// iOS cannot decode is left out, never sent unstamped (FS-05.04 §5).
+    private func exportStamped(_ source: ShareSource, stamp: WatermarkStamp, index: Int) async throws -> URL {
+        let slot = try slotFile(for: source, index: index).deletingLastPathComponent()
+        let original = slot.appendingPathComponent("original-" + source.filename)
+        defer { try? FileManager.default.removeItem(at: original) }
+        try await reader.writePhoto(source, to: original)
+        let fileType = CGImageSourceCreateWithURL(original as CFURL, nil).flatMap(CGImageSourceGetType) as String?
+        let effective = effectiveLevel(for: source, file: original)
+        let type = ShareWatermarkRenderer.outputType(sourceType: fileType ?? source.uniformType, level: effective)
+        let file = slot.appendingPathComponent(ShareWatermarkRenderer.outputName(for: source.filename, type: type))
+        try await ShareWatermarkRenderer.render(original, stamp: stamp, type: type, level: effective, to: file)
+        return file
+    }
+
     /// Where item `index` lands: a numbered subfolder of its own, so two
     /// photos with one name both arrive.
     private func slotFile(for source: ShareSource, index: Int) throws -> URL {
@@ -182,6 +208,9 @@ struct ShareExportPipeline: Sendable {
             do {
                 let file = try await export(source, index: index)
                 result.files.append(file)
+                if let watermark, case .stamp = watermark.decision(for: source) {
+                    result.watermarked += 1
+                }
                 if source.kind == .photo, file.pathExtension == "jpg",
                    (source.filename as NSString).pathExtension.lowercased() != "jpg",
                    let type = UTType(filenameExtension: (source.filename as NSString).pathExtension),
@@ -193,7 +222,7 @@ struct ShareExportPipeline: Sendable {
                 }
             } catch is Skipped {
                 result.skipped.append(source.filename)
-            } catch is MetadataRewriter.Failure, is ShareRAWRenderer.Failure {
+            } catch is MetadataRewriter.Failure, is ShareRAWRenderer.Failure, is ShareWatermarkRenderer.Failure {
                 result.failed.append(source.filename)
             } catch {
                 result.failed.append(source.filename)
@@ -237,8 +266,13 @@ struct ShareDragPlan: Equatable, Sendable {
     /// The answer a share would have asked for.
     let rawChoice: RAWChoice
 
-    init(source: ShareSource, level: MetadataLevel) {
-        if source.kind == .raw && level != .all {
+    /// `stamps`: the drag carries a watermark (FS-05.04), so a photo is
+    /// written again — a RAW as a JPEG, a HEIC at No Metadata as a JPEG.
+    init(source: ShareSource, level: MetadataLevel, stamps: Bool = false) {
+        if stamps, source.kind != .video {
+            type = ShareWatermarkRenderer.outputType(sourceType: source.uniformType, level: level)
+            rawChoice = .shareAsJPEG
+        } else if source.kind == .raw && level != .all {
             type = .jpeg
             rawChoice = .shareAsJPEG
         } else {

@@ -646,11 +646,11 @@ final class PhotoEditingService {
     /// The edit saved with a photo, read from its adjustment resource — for a
     /// path that has the original but no editing session (an original the
     /// Resize preparation downloaded). Nil when the photo has no ShotDex edit.
-    func savedRecipe(of asset: PHAsset) async -> PhotoEditRecipe? {
+    func savedRecipe(of asset: PHAsset, allowNetwork: Bool = true) async -> PhotoEditRecipe? {
         guard let resource = PHAssetResource.assetResources(for: asset).first(where: { $0.type == .adjustmentData })
         else { return nil }
         let options = PHAssetResourceRequestOptions()
-        options.isNetworkAccessAllowed = true
+        options.isNetworkAccessAllowed = allowNetwork
         let data: Data? = await withCheckedContinuation { continuation in
             var collected = Data()
             PHAssetResourceManager.default().requestData(for: resource, options: options) { chunk in

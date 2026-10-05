@@ -32,6 +32,18 @@ enum WatermarkCopy {
         String(localized: "Without Watermark", table: table, locale: locale, comment: "Resize summary section: photos that went without the watermark")
     }
 
+    // MARK: Share (FS-05.04 §4)
+
+    /// The share sheet header's second line: `Watermark: Credit`.
+    static func watermarkNote(_ preset: String, locale: Locale = .current) -> String {
+        String(localized: "Watermark: \(preset)", table: table, locale: locale, comment: "Share sheet header: the watermark this share stamps")
+    }
+
+    /// Settings → Watermark When Sharing, the line under the row.
+    static func sharingValueLine(locale: Locale = .current) -> String {
+        String(localized: "Each share can change it", table: table, locale: locale, comment: "Settings, Watermark When Sharing value line")
+    }
+
     // MARK: Form row (FS-05.04 §4)
 
     /// The Resize form, as the Watermark screen's back button names it.

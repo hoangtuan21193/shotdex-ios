@@ -500,11 +500,32 @@ struct SettingsScreen: View {
                 }
             }
             .settingsRow(.metadataWhenSharing)
+            watermarkWhenSharingPicker {
+                Text(Row.watermarkWhenSharing.title)
+            }
         } header: {
             Text("Sharing")
         } footer: {
             Text("What goes with a photo when it leaves ShotDex: Share, Save Copy, Paste Edits, Resize and dragging it into another app. Each of them can choose differently for one time. No Location removes where it was taken; camera, lens, exposure and date still go with it. No Metadata keeps only what the picture needs to look right, and the Artist and Copyright.\n\nVideos always keep their metadata: removing it would mean copying the whole clip.")
         }
+    }
+
+    /// Settings → Watermark When Sharing (FS-05.04 §4): Off or a saved
+    /// preset, stamped on every share and drag; each share can change it for
+    /// one time.
+    private func watermarkWhenSharingPicker<Label: View>(@ViewBuilder label: () -> Label) -> some View {
+        Picker(selection: Binding(
+            get: { dependencies.watermarkSettings.sharingPresetID },
+            set: { dependencies.watermarkSettings.setSharingPreset($0) }
+        )) {
+            Text(WatermarkCopy.off()).tag(UUID?.none)
+            ForEach(dependencies.signaturePresets.presets) { preset in
+                Text(preset.name).tag(UUID?.some(preset.id))
+            }
+        } label: {
+            label()
+        }
+        .settingsRow(.watermarkWhenSharing)
     }
 
     // MARK: People and pets

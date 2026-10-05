@@ -29,6 +29,8 @@ final class AppDependencies {
     /// The watermark the export forms remember and Watermark When Sharing
     /// (FS-05.04).
     let watermarkSettings: WatermarkSettingsStore
+    /// What shares and drags stamp; the drag holds it weakly.
+    let shareWatermark: ShareWatermarkContext
     let overlayFontRecents: OverlayFontRecentsStore
     let collagePresets: CollagePresetStore
     let overlayImages: OverlayImageStore
@@ -282,6 +284,14 @@ final class AppDependencies {
             fetcher: originalFetcher, gate: indexInteractionGate, availableBytes: availableBytes
         )
         self.originalDownloads = originalDownloads
+        // Shares and drags stamp Watermark When Sharing (FS-05.04 §4).
+        let shareWatermark = ShareWatermarkContext(
+            settings: watermarkSettings, presets: signaturePresets, libraryQueries: libraryQueries,
+            editing: photoEditing, imageExists: { [overlayImages] in overlayImages.imageExists(id: $0) }
+        )
+        originalDownloads.watermark = shareWatermark
+        PhotoDragItem.watermarkContext = shareWatermark
+        self.shareWatermark = shareWatermark
         let unsupportedRAWIndex = UnsupportedRAWIndex(store: RAWVerdictStore(database: database))
         self.unsupportedRAWIndex = unsupportedRAWIndex
         let photoMarksStore = PhotoMarksStore(database: database)

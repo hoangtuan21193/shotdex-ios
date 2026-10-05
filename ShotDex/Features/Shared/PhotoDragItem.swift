@@ -16,6 +16,11 @@ enum PhotoDragItem {
     /// should be offered it.
     static let assetIdentifierType = "com.hoangtuan.shotdex.asset-identifier"
 
+    /// Where a drag learns its watermark — the same as a share, Settings →
+    /// Watermark When Sharing (FS-05.04 §4). Set once by `AppDependencies`;
+    /// weak, so a drag never keeps the app's stores alive.
+    @MainActor static weak var watermarkContext: ShareWatermarkContext?
+
     static func provider(for asset: PHAsset) -> NSItemProvider {
         let provider = NSItemProvider()
         let id = asset.localIdentifier
@@ -34,7 +39,10 @@ enum PhotoDragItem {
         // drag; it is never handed over as it was.
         let level = MetadataLevel.sharingDefault()
         let source = ShareSource(asset: asset)
-        let plan = ShareDragPlan(source: source, level: level)
+        // A drag starts on the main thread; whether it stamps decides the
+        // type it offers (a stamped RAW is a JPEG).
+        let stamps = Thread.isMainThread && MainActor.assumeIsolated { watermarkContext?.settingsPreset != nil }
+        let plan = ShareDragPlan(source: source, level: level, stamps: stamps)
         provider.suggestedName = (source.filename as NSString).deletingPathExtension
         provider.registerFileRepresentation(
             forTypeIdentifier: plan.type.identifier,
@@ -46,7 +54,8 @@ enum PhotoDragItem {
             // exists at all.
             let progress = Progress(totalUnitCount: 100)
             Task {
-                if let url = await fileURL(for: source, level: level, rawChoice: plan.rawChoice) {
+                let watermark = stamps ? await watermarkContext?.watermark(for: [source]) : nil
+                if let url = await fileURL(for: source, level: level, rawChoice: plan.rawChoice, watermark: watermark) {
                     progress.completedUnitCount = 100
                     // `false` keeps the temporary file alive until UIKit has
                     // read it; the launch sweep removes the folder.
@@ -89,10 +98,14 @@ enum PhotoDragItem {
 
     // MARK: Files
 
-    private static func fileURL(for source: ShareSource, level: MetadataLevel, rawChoice: RAWChoice) async -> URL? {
+    static func fileURL(
+        for source: ShareSource, level: MetadataLevel, rawChoice: RAWChoice,
+        watermark: ShareWatermark? = nil, reader: any ShareAssetReader = PhotoKitShareReader()
+    ) async -> URL? {
         guard let folder = try? ShareExportPipeline.makeFolder() else { return nil }
-        var pipeline = ShareExportPipeline(reader: PhotoKitShareReader(), folder: folder, level: level)
+        var pipeline = ShareExportPipeline(reader: reader, folder: folder, level: level)
         pipeline.rawChoice = rawChoice
+        pipeline.watermark = watermark
         let result = await pipeline.export([source])
         return result.files.first
     }

@@ -148,13 +148,24 @@ enum MetadataRewriter {
     /// Writes a rendered image — a JPEG made from a RAW — with the metadata
     /// of the file it was made from, filtered by `level`. The render is
     /// upright, so the orientation says so, whatever the RAW's said.
-    static func rewrite(_ rendered: URL, metadataFrom original: URL, to destination: URL, level: MetadataLevel) throws {
+    ///
+    /// `droppingGainMap`: a watermarked render is SDR (FS-05.04 §8) — the
+    /// source's `hdrgm:` tags would tell a viewer otherwise.
+    static func rewrite(
+        _ rendered: URL, metadataFrom original: URL, to destination: URL, level: MetadataLevel,
+        droppingGainMap: Bool = false
+    ) throws {
         guard let image = CGImageSourceCreateWithURL(rendered as CFURL, nil),
               let type = CGImageSourceGetType(image),
               let source = CGImageSourceCreateWithURL(original as CFURL, nil)
         else { throw Failure.unreadable }
         let filtered = try metadata(of: source, keeping: level)
         guard let metadata = CGImageMetadataCreateMutableCopy(filtered) else { throw Failure.cannotWrite }
+        if droppingGainMap {
+            for path in topLevelPaths(of: metadata) where path.hasPrefix("hdrgm:") {
+                CGImageMetadataRemoveTagWithPath(metadata, nil, path as CFString)
+            }
+        }
         CGImageMetadataSetValueWithPath(metadata, nil, "tiff:Orientation" as CFString, "1" as CFString)
         try write(image, type: type, metadata: metadata, to: destination, level: level)
     }

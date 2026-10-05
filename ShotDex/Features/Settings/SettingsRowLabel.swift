@@ -70,6 +70,7 @@ enum SettingsRowLabel: String, CaseIterable, Identifiable, Hashable, Sendable {
 
     // Sharing
     case metadataWhenSharing
+    case watermarkWhenSharing
 
     // Export
     case resizePresets
@@ -129,6 +130,7 @@ enum SettingsRowLabel: String, CaseIterable, Identifiable, Hashable, Sendable {
         case .photosAndVideos: "Photos and Videos"
         case .measured: "Measured"
         case .metadataWhenSharing: "Metadata When Sharing"
+        case .watermarkWhenSharing: "Watermark When Sharing"
         case .resizePresets: "Resize Presets"
         case .fileServers: "File Servers"
         case .unknownCameras: "Unknown Cameras"
@@ -165,7 +167,7 @@ enum SettingsRowLabel: String, CaseIterable, Identifiable, Hashable, Sendable {
             .subjectScan
         case .photosAndVideos, .measured:
             .libraryStorage
-        case .metadataWhenSharing:
+        case .metadataWhenSharing, .watermarkWhenSharing:
             .sharing
         case .resizePresets:
             .export
@@ -187,6 +189,7 @@ enum SettingsRowLabel: String, CaseIterable, Identifiable, Hashable, Sendable {
         switch self {
         case .fileServers: ["SMB", "SFTP", "NAS", "upload"]
         case .metadataWhenSharing: ["location", "GPS", "EXIF", "privacy"]
+        case .watermarkWhenSharing: ["signature", "logo", "credit", "copyright"]
         case .showInsights: ["Statistics"]
         default: []
         }

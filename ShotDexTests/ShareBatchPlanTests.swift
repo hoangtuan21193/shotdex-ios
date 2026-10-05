@@ -27,6 +27,16 @@ struct ShareBatchPlanTests {
         for plan in [plan, all, none] { #expect(plan.rows.count == 2) }
     }
 
+    /// FS-05.04 §4: the watermark leads the header's second line, joined to
+    /// the other notes by " · "; no watermark, no segment.
+    @Test func watermarkNote() {
+        var plan = ShareBatchPlan(level: .noLocation, photoCount: 1, videoCount: 1)
+        #expect(PhotoShareSheet.headerNote(plan: plan) == "Videos keep their metadata")
+        plan.watermarkName = "Credit"
+        #expect(PhotoShareSheet.headerNote(plan: plan)?.hasPrefix("Watermark: Credit · Videos keep their metadata") == true)
+        #expect(ShareBatchPlan(level: .all, photoCount: 0, videoCount: 1, watermarkName: "Credit").watermarkNote == nil)
+    }
+
     /// Video goes as it is at every level, so a share of only videos has no
     /// level to change.
     @Test func videosOnlyHaveNoRows() {

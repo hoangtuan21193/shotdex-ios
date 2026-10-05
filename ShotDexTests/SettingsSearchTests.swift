@@ -79,7 +79,7 @@ struct SettingsSearchTests {
             .display: 9,            // :429 (8) + Statistics → Show Insights (1, FS-07)
             .playback: 2,           // :449
             .subjectScan: 4,        // :279
-            .sharingAndExport: 3,   // :258 (1) + :496 (1) + File Servers (1, FS-15)
+            .sharingAndExport: 4,   // :258 (1) + :496 (2, Watermark When Sharing FS-05.04) + File Servers (1, FS-15)
             .cameraDatabase: 2,     // :515
             .support: 1,            // :528
         ]
@@ -89,7 +89,7 @@ struct SettingsSearchTests {
                 "\(section) indexes \(SettingsSearchIndex.entries(in: section).count) rows"
             )
         }
-        #expect(SettingsSearchIndex.entries.count == 39)
+        #expect(SettingsSearchIndex.entries.count == 40)
     }
 
     /// One case, one entry — a copy-pasted case that forgot to change its text

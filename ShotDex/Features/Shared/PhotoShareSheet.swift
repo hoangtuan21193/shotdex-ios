@@ -34,12 +34,15 @@ enum PhotoShareSheet {
         var rawSharedAsIs = 0
         /// HEIC photos in `items` written as JPEG (No Metadata).
         var heicSentAsJPEG = 0
+        /// The watermark the photos were stamped with (FS-05.04), by name.
+        var watermarkName: String?
 
         var plan: ShareBatchPlan {
             ShareBatchPlan(
                 level: level, photoCount: photoCount, videoCount: items.count - photoCount,
                 rawSharedAsIsCount: rawSharedAsIs,
-                heicAsJPEGCount: heicSentAsJPEG
+                heicAsJPEGCount: heicSentAsJPEG,
+                watermarkName: watermarkName
             )
         }
 
@@ -71,22 +74,26 @@ enum PhotoShareSheet {
         sources: [ShareSource],
         reader: any ShareAssetReader,
         level: MetadataLevel,
+        watermark: ShareWatermark? = nil,
         onClose: (@MainActor () -> Void)? = nil
     ) async -> Prepared {
         guard let folder = try? ShareExportPipeline.makeFolder() else {
             return Prepared(items: [], failed: sources.map(\.filename), folder: nil, onClose: onClose)
         }
         var pipeline = ShareExportPipeline(reader: reader, folder: folder, level: level)
-        let plan = ShareBatchPlan(sources: sources, level: level)
+        pipeline.watermark = watermark
+        var plan = ShareBatchPlan(sources: sources, level: level)
+        plan.watermarkName = watermark?.name
         if plan.asksAboutRAW {
             pipeline.rawChoice = await askAboutRAW(plan)
         }
         let result = await pipeline.export(sources)
         return Prepared(
             items: result.files, failed: result.failed, unread: result.unread, folder: folder, level: level,
-            regather: { await gather(sources: sources, reader: reader, level: $0, onClose: onClose) },
+            regather: { await gather(sources: sources, reader: reader, level: $0, watermark: watermark, onClose: onClose) },
             rawSharedAsIs: result.rawSharedAsIs,
             heicSentAsJPEG: result.heicSentAsJPEG,
+            watermarkName: result.watermarked > 0 ? watermark?.name : nil,
             onClose: onClose
         )
     }
@@ -101,7 +108,8 @@ enum PhotoShareSheet {
         assets: [PHAsset],
         downloads: OriginalDownloadModel?,
         level: MetadataLevel = .sharingDefault(),
-        unreadableRAW: Set<String> = []
+        unreadableRAW: Set<String> = [],
+        watermarkOverride: Bool? = nil
     ) async {
         // A RAW iOS can't decode has no JPEG to offer (FS-03.04b AC-8).
         var sources = assets.map { asset in
@@ -109,7 +117,11 @@ enum PhotoShareSheet {
             if source.kind == .raw, unreadableRAW.contains(source.id) { source.isReadable = false }
             return source
         }
-        let full = ShareBatchPlan(sources: sources, level: level)
+        // The watermark first (FS-05.04 §4): Settings' preset, or the share
+        // sheet's one-off row.
+        let watermark = await downloads?.watermark?.watermark(for: sources, override: watermarkOverride)
+        var full = ShareBatchPlan(sources: sources, level: level)
+        full.watermarkName = watermark?.name
         var rawChoice = RAWChoice.skip
         if full.asksAboutRAW {
             rawChoice = await askAboutRAW(full)
@@ -126,12 +138,14 @@ enum PhotoShareSheet {
         let fetcher = downloads?.fetcher ?? PhotoKitOriginalFetcher()
         let reader = PhotoKitShareReader()
         let batch = downloads?.makeShare(
-            sources: sources, originals: originals, level: level, rawChoice: rawChoice, reader: reader
+            sources: sources, originals: originals, level: level, rawChoice: rawChoice, reader: reader,
+            watermark: watermark
         ) ?? LazyShareBatch(
             sources: sources, originals: originals, level: level, rawChoice: rawChoice,
-            fetcher: fetcher, reader: reader
+            fetcher: fetcher, reader: reader, watermark: watermark
         )
         var plan = ShareBatchPlan(sources: sources, level: level)
+        plan.watermarkName = watermark?.name
         plan.rawSharedAsIsCount = rawChoice == .shareRAWWithLocation && level != .all ? plan.rawCount : 0
         plan.heicAsJPEGCount = sources.filter { source in
             source.kind == .photo && source.uniformType.map { MetadataRewriter.convertsToJPEG($0, at: level) } == true
@@ -161,7 +175,10 @@ enum PhotoShareSheet {
             // A level row: the same share again at that level, still lazy.
             Task { @MainActor in
                 await waitForDismissal()
-                await share(assets: assets, downloads: downloads, level: again, unreadableRAW: unreadableRAW)
+                await share(
+                    assets: assets, downloads: downloads, level: again, unreadableRAW: unreadableRAW,
+                    watermarkOverride: watermarkOverride
+                )
             }
         }
         batch.onCancel = { [weak activity] in activity?.dismiss(animated: true) }
@@ -174,7 +191,8 @@ enum PhotoShareSheet {
         return count == 1 ? "\(name) · \(plan.subtitle.text)" : plan.subtitle.text
     }
 
-    /// The header's second line: what keeps its metadata, and HEIC as JPEG.
+    /// The header's second line: the watermark, what keeps its metadata,
+    /// and HEIC as JPEG.
     static func headerNote(plan: ShareBatchPlan) -> String? {
         let keeps: String? = switch plan.keepsNote {
         case .videos: String(localized: "Videos keep their metadata")
@@ -185,7 +203,7 @@ enum PhotoShareSheet {
         case nil: nil
         }
         let converted = plan.notesHEICAsJPEG ? String(localized: "HEIC sent as JPEG") : nil
-        let notes = [keeps, converted].compactMap { $0 }
+        let notes = [plan.watermarkNote, keeps, converted].compactMap { $0 }
         return notes.isEmpty ? nil : notes.joined(separator: " · ")
     }
 
@@ -285,19 +303,9 @@ enum PhotoShareSheet {
         if plan.photoCount > 0, let first = items.first as? URL {
             let name = first.deletingPathExtension().lastPathComponent
             let title = items.count == 1 ? "\(name) · \(plan.subtitle.text)" : plan.subtitle.text
-            // One line each: the level on the title, the video note on the
-            // line below it, where the file name would be.
-            let keeps: String? = switch plan.keepsNote {
-            case .videos: String(localized: "Videos keep their metadata")
-            case .raw: plan.level == .noLocation
-                ? String(localized: "RAW files keep their location")
-                : String(localized: "RAW files keep their metadata")
-            case .videosAndRAW: String(localized: "Videos and RAW files keep their metadata")
-            case nil: nil
-            }
-            let converted = plan.notesHEICAsJPEG ? String(localized: "HEIC sent as JPEG") : nil
-            let notes = [keeps, converted].compactMap { $0 }
-            let note: String? = notes.isEmpty ? nil : notes.joined(separator: " · ")
+            // One line each: the level on the title, the notes on the line
+            // below it, where the file name would be.
+            let note = headerNote(plan: plan)
             let isPhoto = prepared.folder.map { first.path.hasPrefix($0.path) } ?? false
             items[0] = ShareHeaderItem(file: first, title: title, note: note, showsImage: isPhoto)
         }
