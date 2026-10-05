@@ -25,7 +25,16 @@ enum PhotoMergePlan {
     struct Side: Sendable {
         let id: String
         let createdAt: Int
+        /// Which was recorded first when both carry the same second.
+        var insertionOrder: Int64 = 0
         let data: PhotoUserData
+
+        init(id: String, createdAt: Int, insertionOrder: Int64 = 0, data: PhotoUserData) {
+            self.id = id
+            self.createdAt = createdAt
+            self.insertionOrder = insertionOrder
+            self.data = data
+        }
     }
 
     struct Result: Equatable, Sendable {
@@ -35,7 +44,7 @@ enum PhotoMergePlan {
     }
 
     static func merge(_ a: Side, _ b: Side) -> Result {
-        let (winner, loser) = (a.createdAt, a.id) <= (b.createdAt, b.id) ? (a, b) : (b, a)
+        let (winner, loser) = (a.createdAt, a.insertionOrder, a.id) <= (b.createdAt, b.insertionOrder, b.id) ? (a, b) : (b, a)
         var data = PhotoUserData()
         data.rating = latest(winner.data.rating, loser.data.rating)
         data.isFavorite = latest(winner.data.isFavorite, loser.data.isFavorite)

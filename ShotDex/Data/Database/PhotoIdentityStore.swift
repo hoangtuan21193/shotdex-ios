@@ -18,8 +18,9 @@ struct PhotoIdentityStore: Sendable {
 
     static func merge(_ db: Database, _ a: String, _ b: String, now: Int) throws -> PhotoMergePlan.Result {
         let sides = try [a, b].map { id in
-            PhotoMergePlan.Side(id: id, createdAt: try Int.fetchOne(db, sql: "SELECT createdAt FROM photos WHERE id = ?", arguments: [id]) ?? now,
-                                data: try userData(db, id))
+            let row = try Row.fetchOne(db, sql: "SELECT createdAt, rowid FROM photos WHERE id = ?", arguments: [id])
+            return PhotoMergePlan.Side(id: id, createdAt: row?["createdAt"] ?? now, insertionOrder: row?["rowid"] ?? Int64.max,
+                                       data: try userData(db, id))
         }
         let result = PhotoMergePlan.merge(sides[0], sides[1])
         let winner = result.winnerId, loser = result.loserId

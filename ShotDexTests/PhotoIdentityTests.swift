@@ -169,6 +169,49 @@ extension PhotoIdentityTests {
         #expect(state.missing == ["DSC04514.JPG"])
     }
 
+    /// AC-21: photo A lives only in "2026 Japan" with ★4 and a recipe, its
+    /// full hash already taken. Moved to T7 in Finder, it is one photo — the
+    /// same id — with its copy on T7, ★4 and the recipe kept, and no orphan.
+    @Test func moveAcrossSourcesKeepsData() throws {
+        let base = FileManager.default.temporaryDirectory.appendingPathComponent("Move-\(UUID().uuidString)", isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: base) }
+        let japan = base.appendingPathComponent("2026 Japan"), t7 = base.appendingPathComponent("T7")
+        for folder in [japan, t7] { try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true) }
+        try MetadataFixture.encode(.jpeg, options: MetadataFixture.Options()).write(to: japan.appendingPathComponent("DSC04512.JPG"))
+        let database = try AppDatabase.makeEmpty()
+        let sources = SourceStore(database: database)
+        let japanId = try sources.addFolder(name: "2026 Japan", bookmark: Data(), includesSubfolders: true, pairsRawAndJpeg: true)
+        let t7Id = try sources.addFolder(name: "T7 RAW Archive", bookmark: Data(), includesSubfolders: true, pairsRawAndJpeg: true, kind: "drive")
+        let roots = [japanId: japan, t7Id: t7]
+        let indexer = FolderSourceIndexer(database: database, composer: FolderSourceIndexTests.composer)
+        let pass = IdentityMergePass(database: database) { sourceId, path in roots[sourceId]?.appendingPathComponent(path) }
+        _ = try indexer.index(sourceId: japanId, root: japan, includesSubfolders: true, pairsRawAndJpeg: true)
+        #expect(try pass.run().hashed == 1)
+        let original = try copy("DSC04512.JPG", database).photoId
+        try database.writer.write { db in
+            try db.execute(sql: "INSERT INTO photo_user_marks (photoId, rating, ratingAt) VALUES (?, 4, 1)", arguments: [original])
+            try db.execute(sql: "INSERT INTO photo_recipes (photoId, recipe, updatedAt) VALUES (?, x'0A0B', 1)", arguments: [original])
+        }
+
+        try FileManager.default.moveItem(at: japan.appendingPathComponent("DSC04512.JPG"), to: t7.appendingPathComponent("DSC04512.JPG"))
+        _ = try indexer.index(sourceId: japanId, root: japan, includesSubfolders: true, pairsRawAndJpeg: true)
+        _ = try indexer.index(sourceId: t7Id, root: t7, includesSubfolders: true, pairsRawAndJpeg: true)
+        #expect(try pass.run() == IdentityMergePass.Summary(hashed: 1, merged: 1))
+
+        let state = try database.reader.read { db in
+            (photos: try String.fetchAll(db, sql: "SELECT id FROM photos"),
+             present: try String.fetchAll(db, sql: "SELECT sourceId FROM photo_copies WHERE missingSince IS NULL"),
+             rating: try Int.fetchOne(db, sql: "SELECT rating FROM photo_user_marks WHERE photoId = ?", arguments: [original]),
+             recipe: try Int.fetchOne(db, sql: "SELECT COUNT(*) FROM photo_recipes WHERE photoId = ?", arguments: [original]),
+             orphans: try Int.fetchOne(db, sql: "SELECT COUNT(*) FROM photos WHERE orphanedAt IS NOT NULL"))
+        }
+        #expect(state.photos == [original])
+        #expect(state.present == [t7Id])
+        #expect(state.rating == 4)
+        #expect(state.recipe == 1)
+        #expect(state.orphans == 0)
+    }
+
     private func copy(_ path: String, _ database: AppDatabase) throws -> (copyId: String, photoId: String) {
         try database.reader.read { db in
             let row = try Row.fetchOne(db, sql: "SELECT id, photoId FROM photo_copies WHERE relativePath = ?", arguments: [path])
