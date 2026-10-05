@@ -32,6 +32,9 @@ struct VideoRenderRecipe: Sendable {
     /// the preview composition skips baking them (no per-edit rebuild, no ghosting
     /// while a caption is dragged). Export has no proxy — it bakes them into pixels.
     let bakesOverlays: Bool
+    /// The caption lane, drawn over everything when it is burnt in — the
+    /// export only: the preview draws captions live (FS-12.14 §6).
+    let captionBurner: VideoCaptionBurner?
 
     init(
         recipe: VideoProjectRecipe,
@@ -59,6 +62,7 @@ struct VideoRenderRecipe: Sendable {
                 return live
             }
         self.overlays = recipe.overlays
+        self.captionBurner = bakesOverlays ? VideoCaptionBurner(lane: recipe.captions, recipe: recipe) : nil
         self.renderSize = renderSize
         self.totalDuration = totalDuration
         self.bakesOverlays = bakesOverlays
@@ -477,6 +481,11 @@ final class VideoFrameCompositor: NSObject, AVVideoCompositing {
                 image = layer.composited(over: image)
             }
             image = image.cropped(to: canvas)
+        }
+        // Captions last of all, over every overlay, measured against the
+        // frame that is written (FS-12.14 §6).
+        if let burner = recipe.captionBurner, front != nil {
+            image = burner.burn(into: image, frame: canvas, at: seconds).cropped(to: canvas)
         }
 
         render(image, to: output, request: request)

@@ -34,6 +34,17 @@ enum VideoExportWriter {
     }
 
     /// The audio half of `Pipeline`, present only when there is real audio.
+    /// The subtitle track's input and its samples, one per caption.
+    private final class SubtitlePump: @unchecked Sendable {
+        let input: AVAssetWriterInput
+        let samples: [CMSampleBuffer]
+        var next = 0
+        init(input: AVAssetWriterInput, samples: [CMSampleBuffer]) {
+            self.input = input
+            self.samples = samples
+        }
+    }
+
     private struct AudioPump: @unchecked Sendable {
         let output: AVAssetReaderAudioMixOutput
         let input: AVAssetWriterInput
@@ -89,6 +100,9 @@ enum VideoExportWriter {
         audioMix: AVAudioMix,
         encoding: VideoEncodingSettings,
         totalDuration: Double,
+        /// Captions as a soft subtitle track when they are not burnt in
+        /// (FS-12.14 §6).
+        subtitles: VideoSubtitleTrackWriter.Track? = nil,
         to outputURL: URL,
         progress: @escaping @MainActor (Double) -> Void
     ) async throws {
@@ -96,7 +110,7 @@ enum VideoExportWriter {
         do {
             try await pump(
                 composition: composition, videoComposition: videoComposition, audioMix: audioMix,
-                encoding: encoding, totalDuration: totalDuration, to: outputURL, progress: progress
+                encoding: encoding, totalDuration: totalDuration, subtitles: subtitles, to: outputURL, progress: progress
             )
         } catch {
             // Cancelled or failed: no half-written file is left behind
@@ -112,6 +126,7 @@ enum VideoExportWriter {
         audioMix: AVAudioMix,
         encoding: VideoEncodingSettings,
         totalDuration: Double,
+        subtitles: VideoSubtitleTrackWriter.Track?,
         to outputURL: URL,
         progress: @escaping @MainActor (Double) -> Void
     ) async throws {
@@ -194,6 +209,13 @@ enum VideoExportWriter {
             }
         }
 
+        // Timed text, one sample per caption, appended alongside.
+        let subtitlePump = subtitles.flatMap { track in
+            VideoSubtitleTrackWriter.input(for: track, writer: writer).map {
+                SubtitlePump(input: $0, samples: VideoSubtitleTrackWriter.samples(for: track))
+            }
+        }
+
         guard reader.startReading() else {
             throw reader.error ?? ExportError(errorDescription: String(localized: "Couldn't start reading."))
         }
@@ -256,6 +278,22 @@ enum VideoExportWriter {
                                 return
                             }
                             audio.input.append(sample)
+                        }
+                    }
+                }
+
+                if let subtitlePump {
+                    group.enter()
+                    let textQueue = DispatchQueue(label: "shotdex.export.subtitles")
+                    subtitlePump.input.requestMediaDataWhenReady(on: textQueue) {
+                        while subtitlePump.input.isReadyForMoreMediaData {
+                            guard !pipe.isCancelled.withLock({ $0 }), subtitlePump.next < subtitlePump.samples.count else {
+                                subtitlePump.input.markAsFinished()
+                                group.leave()
+                                return
+                            }
+                            subtitlePump.input.append(subtitlePump.samples[subtitlePump.next])
+                            subtitlePump.next += 1
                         }
                     }
                 }

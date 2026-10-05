@@ -134,6 +134,10 @@ với **mọi** preset, và đó là lỗi thật đằng sau triệu chứng ng
 - **Kích thước khung** = tỉ lệ × lớp độ phân giải (cạnh ngắn 720 / 1080 / 2160, cạnh dài trần 3840 — bảng ở
   [10 §5](10-video-settings-and-export.md)) của **đích xuất**: preset đang chọn ([16](16-export-presets.md)) hoặc
   Custom = Video Settings của project. Bản dựng mang kích thước đó; preset không ghi gì vào project.
+- **Phụ đề** ([14 §6](14-captions.md)): Burn into video bật → compositor vẽ khối đang phát **sau** mọi overlay, đo theo
+  khung ghi ra (`VideoCaptionBurner`, cùng ảnh mà lớp sống của preview vẽ); tắt → khung sạch và file `.mp4` có thêm
+  **một track `tx3g`** (văn bản theo thời gian, mã ngôn ngữ của lane, khoảng giữa hai khối là mẫu rỗng) —
+  `VideoSubtitleTrackWriter`, ghi song song với video và âm thanh.
 - Ra file tạm rồi nhập vào thư viện, index ngay, và phát tín hiệu để lưới thấy — video mới vào Library như
   asset thường (không có EXIF).
 

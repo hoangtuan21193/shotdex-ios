@@ -557,6 +557,7 @@ final class VideoStudioService {
             audioMix: audioMix,
             encoding: VideoEncodingSettings.make(for: recipe),
             totalDuration: layout.totalDuration,
+            subtitles: VideoSubtitleTrackWriter.track(recipe.captions, recipe: recipe),
             to: outputURL,
             progress: progress
         )
