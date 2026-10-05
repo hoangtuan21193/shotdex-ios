@@ -51,7 +51,8 @@ struct FileExportJob: Sendable {
     let mode: FileExportMode
     var version: FileExportVersion = .edited
     var render = FileExportRenderOptions()
-    /// The watermark seam (FS-05.04); nil here.
+    /// The watermark (FS-05.04): `WatermarkExportStamping` when the sheet's
+    /// row is on, else nil.
     var stamp: (any ExportStamping)?
 }
 

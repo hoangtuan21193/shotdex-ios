@@ -16,6 +16,8 @@ struct FileExportSheet: View {
 
     enum Route: Hashable {
         case fileName
+        /// The Watermark screen (FS-05.04 §4).
+        case watermark(WatermarkModel)
         /// Browsing a saved connection for the folder (FS-03.07b §7).
         case serverFolder(FolderPickerRoute)
     }
@@ -42,6 +44,7 @@ struct FileExportSheet: View {
             .navigationDestination(for: Route.self) { route in
                 switch route {
                 case .fileName: FileNameScreen(model: model)
+                case .watermark(let watermark): WatermarkScreen(model: watermark)
                 case .serverFolder(let route):
                     ServerBrowserScreen(model: route.model) { path in
                         self.path = []
@@ -114,6 +117,14 @@ struct FileExportSheet: View {
             } header: {
                 Text(ExportCopy.exportSection)
             }
+            if model.showsWatermark {
+                // A section of its own right under Format (FS-05.04 §4).
+                Section {
+                    watermarkRow
+                } header: {
+                    Text(WatermarkCopy.watermark())
+                }
+            }
             Section {
                 nameRow
                 conflictRow
@@ -166,6 +177,11 @@ struct FileExportSheet: View {
                         CardGroup(title: ExportCopy.exportSection) {
                             modeRow.padding(.vertical, AppTheme.Spacing.sm)
                             exportRows
+                        }
+                        if model.showsWatermark {
+                            CardGroup(title: WatermarkCopy.watermark()) {
+                                watermarkRow
+                            }
                         }
                     }
                     VStack(alignment: .leading, spacing: AppTheme.Spacing.sm) {
@@ -345,6 +361,27 @@ struct FileExportSheet: View {
     @ViewBuilder
     private var divider: some View {
         if layout == .card { Divider() }
+    }
+
+    /// Watermark: the preset's name or Off, into the Watermark screen.
+    private var watermarkRow: some View {
+        Button {
+            if let watermark = model.makeWatermarkModel(photoLibrary: dependencies.photoLibrary, queries: dependencies.libraryQueries) {
+                path.append(.watermark(watermark))
+            }
+        } label: {
+            HStack(spacing: AppTheme.Spacing.sm) {
+                Text(WatermarkCopy.watermark()).foregroundStyle(.primary)
+                Spacer(minLength: AppTheme.Spacing.sm)
+                Text(model.watermarkRowValue).foregroundStyle(.secondary).lineLimit(1)
+                Image(systemName: "chevron.right").font(.footnote.weight(.semibold)).foregroundStyle(.tertiary)
+            }
+            .modifier(RowHeight(layout: layout))
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(WatermarkCopy.watermark())
+        .accessibilityValue(model.watermarkRowValue)
     }
 
     private var nameRow: some View {

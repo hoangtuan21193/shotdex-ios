@@ -1,6 +1,7 @@
 import CoreGraphics
+import CoreImage
 import Foundation
-import ShotDexKit
+@testable import ShotDexKit
 import Testing
 @testable import ShotDex
 
@@ -146,5 +147,68 @@ struct WatermarkSettingsStoreTests {
         stores.settings.setSharingPreset(nil)
         #expect(WatermarkSettingsStore(defaults: stores.defaults).sharingPresetID == nil)
         #expect(stores.settings.settings == WatermarkSettings())
+    }
+
+    /// AC-12: Credit, top left, Margin 5%, Opacity 60% set in Resize — the
+    /// Export to Files sheet reads the same: the row says Credit, the screen
+    /// opens there, switched on. Unmodified Original hides the row and
+    /// leaves the choice alone.
+    @Test func resizeThenExportSheetSeeTheSame() throws {
+        let credit = WatermarkFixture.credit(logo: nil)
+        let stores = try WatermarkModelTests.stores(presets: [credit])
+        let resize = WatermarkModel(
+            settings: stores.settings, presets: stores.presets,
+            pages: [WatermarkModelTests.page("a")], formTitle: "Resize", imageExists: { _ in true }
+        )
+        resize.choose(credit)
+        resize.setAnchor(.topLeft)
+        resize.setMargin(0.05)
+        resize.setOpacity(0.6)
+
+        let context = ShareWatermarkContext(
+            settings: WatermarkSettingsStore(defaults: stores.defaults), presets: stores.presets,
+            libraryQueries: nil, editing: nil, imageExists: { _ in true }
+        )
+        let sheet = FileExportModel(
+            assetIds: ["b"], selection: .init(photoCount: 1), presets: ResizePreset.builtIns,
+            settingsStore: FileExportSettingsStore(defaults: stores.defaults), watermarkContext: context
+        )
+        #expect(sheet.showsWatermark)
+        #expect(sheet.watermarkRowValue == "Credit")
+        let template = try #require(sheet.watermarkTemplate)
+        #expect(template.placement.anchor == .topLeft)
+        #expect(abs(template.placement.margin - 0.05) < 0.0001)
+        #expect(abs(template.placement.opacity - 0.6) < 0.0001)
+
+        let screen = WatermarkModel(
+            settings: context.settings, presets: stores.presets,
+            pages: [WatermarkModelTests.page("b")], formTitle: "Export", imageExists: { _ in true }
+        )
+        #expect(screen.isEnabled && screen.selectedPreset?.id == credit.id && screen.placement.anchor == .topLeft)
+
+        sheet.mode = .unmodifiedOriginal
+        #expect(!sheet.showsWatermark)
+        #expect(context.settings.settings.isEnabled, "the remembered choice stays for the next Current Version")
+    }
+
+    /// The Export to Files seam: the photo's stamp rides on the render, and
+    /// a photo whose edit already carries the preset gets none.
+    @Test func exportStampingSetsThePhotosStamp() async throws {
+        let template = WatermarkStamp(preset: WatermarkFixture.credit(logo: nil), placement: WatermarkFixture.placementW)
+        let watermark = ShareWatermark(
+            template: template, tokens: ["a": OverlayTokenValues(camera: "X-T5")], alreadyStamped: ["b"]
+        )
+        let stamping = WatermarkExportStamping(watermark: watermark)
+        let result = PhotoRenderResult(
+            image: CIImage(color: .white).cropped(to: CGRect(x: 0, y: 0, width: 10, height: 10)),
+            colorSpace: CGColorSpace(name: CGColorSpace.sRGB)!, properties: [:]
+        )
+        func item(_ id: String) -> FileExportItem {
+            FileExportItem(id: id, filename: "\(id).JPG", captureDate: Date(), kind: .photo, files: [])
+        }
+        let a = try await stamping.stamp(result, for: item("a"))
+        #expect(a.watermark?.layers.first?.text == "© Nguyen An · X-T5")
+        let b = try await stamping.stamp(result, for: item("b"))
+        #expect(b.watermark == nil)
     }
 }

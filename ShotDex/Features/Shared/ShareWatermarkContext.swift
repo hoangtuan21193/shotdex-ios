@@ -62,8 +62,20 @@ final class ShareWatermarkContext {
     /// What a share of `sources` stamps, decided before the sheet opens.
     func watermark(for sources: [ShareSource], override: Bool? = nil) async -> ShareWatermark? {
         guard let preset = preset(override: override) else { return nil }
+        return await watermark(preset: preset, ids: sources.filter { $0.kind != .video }.map(\.id))
+    }
+
+    /// What a form stamps on `ids` — the remembered configuration, on or
+    /// off (Export to Files, FS-05.04 §4).
+    func formWatermark(ids: [String]) async -> ShareWatermark? {
+        guard settings.settings.isEnabled,
+              let preset = settings.formPreset(in: presets.presets, isSelectable: usable)
+        else { return nil }
+        return await watermark(preset: preset, ids: ids)
+    }
+
+    private func watermark(preset: SignaturePreset, ids: [String]) async -> ShareWatermark {
         var watermark = ShareWatermark(template: WatermarkStamp(preset: preset, placement: settings.settings.placement))
-        let ids = sources.filter { $0.kind != .video }.map(\.id)
         if let libraryQueries, let rows = try? libraryQueries.metadata(assetIds: ids) {
             for (id, row) in rows { watermark.tokens[id] = OverlayTokenValues(metadata: row) }
         }

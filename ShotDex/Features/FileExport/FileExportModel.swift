@@ -42,6 +42,11 @@ final class FileExportModel: Identifiable {
     private let settingsStore: FileExportSettingsStore
     let folders: ExportFolderStore
     private let environment: FileExportEnvironment?
+    /// The forms' remembered watermark (FS-05.04 §4–5); nil where the sheet
+    /// does not stamp.
+    let watermarkContext: ShareWatermarkContext?
+    /// What this run stamps, worked out once the batch is named.
+    private var runWatermark: ShareWatermark?
 
     /// Where the sheet is: the form, the run, the summary.
     enum Stage: Equatable {
@@ -80,8 +85,10 @@ final class FileExportModel: Identifiable {
         settingsStore: FileExportSettingsStore = FileExportSettingsStore(),
         metadataDefault: MetadataLevel = .sharingDefault(),
         folders: ExportFolderStore? = nil,
-        environment: FileExportEnvironment? = nil
+        environment: FileExportEnvironment? = nil,
+        watermarkContext: ShareWatermarkContext? = nil
     ) {
+        self.watermarkContext = watermarkContext
         self.assetIds = assetIds
         self.selection = selection
         self.presets = ServerExportSizes.offered(presets)
@@ -122,6 +129,48 @@ final class FileExportModel: Identifiable {
     var showsVersion: Bool { mode == .currentVersion && selection.editedCount > 0 }
     var showsLivePhotoVideo: Bool { mode == .unmodifiedOriginal }
     var showsRenderRows: Bool { mode == .currentVersion }
+
+    // MARK: Watermark (FS-05.04)
+
+    /// The Watermark row: Current Version only — Unmodified Original is the
+    /// original, and an original never carries a stamp (§2). Switching to
+    /// it hides the row and leaves the remembered choice as it was.
+    var showsWatermark: Bool { mode == .currentVersion && watermarkContext != nil }
+
+    /// The row's value: the preset's name, Off, or None.
+    var watermarkRowValue: String {
+        guard let context = watermarkContext, context.hasPresets else { return WatermarkCopy.none() }
+        return watermarkTemplate?.name ?? WatermarkCopy.off()
+    }
+
+    /// The remembered stamp, before tokens; nil when it is off.
+    var watermarkTemplate: WatermarkStamp? {
+        guard let context = watermarkContext else { return nil }
+        let images = OverlayImageStore()
+        return context.settings.formStamp(in: context.presets.presets) {
+            WatermarkAvailability.of($0, imageExists: { images.imageExists(id: $0) }).isSelectable
+        }
+    }
+
+    /// The Watermark screen, one page per picked photo.
+    func makeWatermarkModel(photoLibrary: PhotoLibraryService, queries: LibraryQueries?) -> WatermarkModel? {
+        guard let context = watermarkContext else { return nil }
+        let assets = PhotoLibraryService.fetchAssets(ids: assetIds).filter { $0.mediaType == .image }
+        let rows = (try? queries?.metadata(assetIds: assets.map(\.localIdentifier))) ?? [:]
+        let preset = preset
+        let pages = assets.map { asset in
+            WatermarkPreviewPage(
+                id: asset.localIdentifier,
+                filename: Self.filename(asset),
+                exportSize: preset.outputPixelSize(source: CGSize(width: asset.pixelWidth, height: asset.pixelHeight)),
+                tokens: OverlayTokenValues(metadata: rows[asset.localIdentifier]),
+                load: { await photoLibrary.detailCGImage(for: asset, longEdge: 1_200) }
+            )
+        }
+        return WatermarkModel(
+            settings: context.settings, presets: context.presets, pages: pages, formTitle: ExportCopy.title
+        )
+    }
 
     var subtitle: String {
         ExportCopy.countsTitle(photos: selection.photoCount, videos: selection.videoCount)
@@ -318,6 +367,10 @@ final class FileExportModel: Identifiable {
                 return
             }
             guard let self else { return }
+            // The stamp, per photo, before the first byte (FS-05.04).
+            self.runWatermark = settings.mode == .currentVersion
+                ? await self.watermarkContext?.formWatermark(ids: assetIds)
+                : nil
             let plan = FileExportPlan.make(
                 items: items, mode: settings.mode, template: template, policy: settings.conflictPolicy,
                 dateFolders: settings.dateFolders, includesLivePhotoVideo: settings.includesLivePhotoVideo,
@@ -382,7 +435,8 @@ final class FileExportModel: Identifiable {
             plan: plan, mode: settings.mode, version: version,
             render: FileExportRenderOptions(
                 preset: preset, format: settings.format, quality: settings.quality, metadata: metadata
-            )
+            ),
+            stamp: runWatermark.map(WatermarkExportStamping.init(watermark:))
         )
         self.job = job
         let runner = runner ?? FileExportRunner(
@@ -463,7 +517,8 @@ extension FileExportModel {
                     if holds { ScreenAwakeCoordinator.shared.beginHold() } else { ScreenAwakeCoordinator.shared.endHold() }
                 },
                 makeRemoteWriter: remoteWriter(dependencies: dependencies)
-            )
+            ),
+            watermarkContext: dependencies.shareWatermark
         )
     }
 

@@ -18,6 +18,15 @@ struct ShareWatermark: Sendable, Equatable {
 
     var name: String { template.name }
 
+    /// The stamp for one photo by id, or nil when its edit already carries
+    /// the preset or every token is empty.
+    func stamp(forID id: String) -> WatermarkStamp? {
+        guard !alreadyStamped.contains(id),
+              case .stamp(let stamp) = WatermarkPlan.decide(template, values: tokens[id] ?? .empty)
+        else { return nil }
+        return stamp
+    }
+
     /// What happens to one source.
     func decision(for source: ShareSource) -> ShareWatermarkDecision {
         guard source.kind != .video else { return .video }
@@ -26,6 +35,19 @@ struct ShareWatermark: Sendable, Equatable {
         case .stamp(let stamp): return .stamp(stamp)
         case .nothingToStamp: return .nothingToStamp
         }
+    }
+}
+
+/// Export to Files' stamp step (FS-03.07b seam, FS-05.04 §4): the photo's
+/// stamp rides on the render and `write` composites it inside its box.
+struct WatermarkExportStamping: ExportStamping {
+    let watermark: ShareWatermark
+
+    func stamp(_ result: PhotoRenderResult, for item: FileExportItem) async throws -> PhotoRenderResult {
+        guard let stamp = watermark.stamp(forID: item.id) else { return result }
+        var stamped = result
+        stamped.watermark = stamp
+        return stamped
     }
 }
 
