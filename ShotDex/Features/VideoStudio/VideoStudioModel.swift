@@ -614,7 +614,16 @@ final class VideoStudioModel {
             return VideoItemTitle.Lines(name: VideoStudioCopy.clipCount(summary.count), detail: VideoStudioCopy.groupDetail(summary))
         }
         if let id = selectedClipID, let index = recipe.clips.firstIndex(where: { $0.id == id }) {
-            return VideoItemTitle.clip(recipe.clips[index], index: index)
+            let lines = VideoItemTitle.clip(recipe.clips[index], index: index)
+            // "3.30s · on beat 28" while a still ends on a beat (F2_P).
+            if recipe.clips[index].kind != .video, let grid = snapGrid,
+               index < clipPlacements.count, let tick = grid.tick(at: clipPlacements[index].end) {
+                return VideoItemTitle.Lines(
+                    name: lines.name,
+                    detail: String(format: "%.2fs", recipe.clips[index].effectiveDuration) + " · " + VideoStudioCopy.onBeat(tick.number)
+                )
+            }
+            return lines
         }
         if let timed = selectedTimedOverlay {
             return VideoItemTitle.overlay(timed, totalDuration: totalDuration)
@@ -3494,13 +3503,46 @@ final class VideoStudioModel {
             start: track.start,
             trimStart: track.trimStart,
             trimEnd: track.trimEnd ?? sourceDuration,
+            offset: track.beatSnap.offsetSeconds,
             timelineEnd: totalDuration
         )
     }
 
-    /// Whether a bed draws its beat ticks: while its Beats tab is open (§3).
+    /// Whether a bed draws its beat ticks: while it snaps, or while its
+    /// Beats tab is open (§3).
     func showsBeatTicks(for track: MusicTrack) -> Bool {
-        selectedMusicID == track.id && activeItemCommand == .beats
+        track.beatSnap.isOn || (selectedMusicID == track.id && activeItemCommand == .beats)
+    }
+
+    /// The one bed the project snaps to (§5), if any.
+    var snapSource: MusicTrack? { recipe.musicTracks.first { $0.beatSnap.isOn } }
+
+    /// The beats edits snap to — the snapping bed's grid — once found.
+    var snapGrid: BeatGrid? { snapSource.flatMap { beatGrid(for: $0) } }
+
+    /// What snaps on the snapping bed: every beat, or the bar's first.
+    var snapDivision: BeatGrid.Division { snapSource?.beatSnap.division ?? .beat }
+
+    /// Snap clips to beats, on one bed (§5): one undo step; turning it on
+    /// turns every other bed's off — two grids of two tempos make every
+    /// snap a guess — and starts finding the beats if they are not known.
+    func setBeatSnap(_ isOn: Bool, for id: UUID) {
+        guard let index = recipe.musicTracks.firstIndex(where: { $0.id == id }),
+              recipe.musicTracks[index].beatSnap.isOn != isOn
+        else { return }
+        pushUndo()
+        for other in recipe.musicTracks.indices where isOn {
+            recipe.musicTracks[other].beatSnap.isOn = false
+        }
+        recipe.musicTracks[index].beatSnap.isOn = isOn
+        if isOn, let url = musicURL(for: recipe.musicTracks[index].source) { beats.findBeats(of: url) }
+        markEdited()
+    }
+
+    /// Whether a bed's beats are something to snap to: found, and steady.
+    func canSnap(to track: MusicTrack) -> Bool {
+        if case .found = beatState(for: track) { return true }
+        return false
     }
 
     /// "A1": the bed's lane, as the gutter names it.

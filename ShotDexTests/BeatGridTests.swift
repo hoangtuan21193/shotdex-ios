@@ -46,4 +46,21 @@ struct BeatGridTests {
         #expect(grid.visibleTicks(pointsPerSecond: 55).count == 30)
         #expect(grid.visibleTicks(pointsPerSecond: 8).allSatisfy { $0.isBar })
     }
+
+    /// AC-5: clip 4 (the Night photo) starts at 14.2s; its Duration dragged
+    /// to 3.25s ends at 17.45s, 0.05s from beat 28 at 17.5s — it sticks at
+    /// 3.30s. Beat 29 (18.125s) sticks under Every Beat, not under Every
+    /// Bar — it is no bar's first.
+    @Test func durationSnapsToBeat28() {
+        let grid = Self.grid
+        let snapped = grid.snappedDuration(3.25, clipStart: 14.2, division: .beat, tolerance: 0.2, range: VideoClip.photoDurationRange)
+        #expect(abs(snapped.duration - 3.30) < 1e-9)
+        #expect(snapped.tick?.number == 28)
+        #expect(VideoStudioCopy.endsOnBeat(28, at: VideoStudioCopy.beatTime(17.5)) == "Ends on beat 28 · 0:17.50 · hold to move freely")
+        let beat29 = grid.snappedDuration(3.85, clipStart: 14.2, division: .beat, tolerance: 0.2, range: VideoClip.photoDurationRange)
+        #expect(beat29.tick?.number == 29)
+        let bar = grid.snappedDuration(3.85, clipStart: 14.2, division: .bar, tolerance: 0.2, range: VideoClip.photoDurationRange)
+        #expect(bar.tick == nil)
+        #expect(bar.duration == 3.85)
+    }
 }

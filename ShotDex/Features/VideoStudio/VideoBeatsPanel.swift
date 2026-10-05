@@ -14,9 +14,35 @@ struct VideoBeatsPanel: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             beatCard
+            snapRow
         }
         .padding(.top, 4)
         .padding(.bottom, 8)
+    }
+
+    // MARK: Snap
+
+    /// "Snap clips to beats" — dimmed 0.28 with no steady beat to snap to
+    /// (AC-3); turning it on turns every other bed's off (§5).
+    private var snapRow: some View {
+        let canSnap = model.canSnap(to: music)
+        return Toggle(isOn: Binding(
+            get: { music.beatSnap.isOn },
+            set: { model.setBeatSnap($0, for: music.id) }
+        )) {
+            HStack(spacing: 10) {
+                Image(systemName: "arrow.right.to.line")
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundStyle(.white.opacity(0.7))
+                Text(VideoStudioCopy.snapClipsToBeats)
+                    .font(.system(size: isDesk ? 17 : 14))
+                    .foregroundStyle(.white)
+            }
+        }
+        .padding(.horizontal, inset)
+        .frame(height: isDesk ? 44 : 42)
+        .disabled(!canSnap && !music.beatSnap.isOn)
+        .opacity(canSnap || music.beatSnap.isOn ? 1 : 0.28)
     }
 
     // MARK: Card
@@ -50,6 +76,9 @@ struct VideoBeatsPanel: View {
             }
             Spacer(minLength: 0)
         }
+        .padding(.horizontal, 12)
+        .frame(height: VideoStudioMetrics.beatCardHeight)
+        .background(RoundedRectangle(cornerRadius: AppTheme.Radius.md, style: .continuous).fill(Color.white.opacity(0.06)))
         .padding(.horizontal, inset)
         .accessibilityElement(children: .combine)
     }

@@ -414,6 +414,9 @@ struct MusicTrack: Identifiable, Equatable, Codable, Sendable {
     var isMuted = false
     var fadeIn: Double = 2
     var fadeOut: Double = 2
+    /// Snap to this bed's beats (FS-12.12 §5) — off, every beat, no offset
+    /// for a new bed and for a stored one that lacks the keys.
+    var beatSnap = MusicBeatSnap()
 
     init(source: MusicSource, id: UUID = UUID()) {
         self.id = id
@@ -437,6 +440,37 @@ struct MusicTrack: Identifiable, Equatable, Codable, Sendable {
 
     static let minimumDuration: Double = 0.1
     static let fadeRange: ClosedRange<Double> = 0...10
+}
+
+/// A bed's snap to its beats (FS-12.12 §5, §7): on or off, every beat or
+/// only the bar's first, and the grid's Offset in milliseconds (±250,
+/// step 5). One bed of a project snaps at most.
+struct MusicBeatSnap: Equatable, Codable, Sendable {
+    var isOn = false
+    var division: BeatGrid.Division = .beat
+    var offsetMs = 0
+
+    static let offsetRange: ClosedRange<Int> = -250...250
+    static let offsetStep = 5
+
+    var offsetSeconds: Double { Double(offsetMs) / 1000 }
+
+    init(isOn: Bool = false, division: BeatGrid.Division = .beat, offsetMs: Int = 0) {
+        self.isOn = isOn
+        self.division = division
+        self.offsetMs = offsetMs
+    }
+
+    /// Each key on its own: one that is missing or will not read is its
+    /// default, and the bed — and the project — still opens.
+    init(from decoder: any Decoder) throws {
+        self.init()
+        guard let container = try? decoder.container(keyedBy: CodingKeys.self) else { return }
+        isOn = ((try? container.decodeIfPresent(Bool.self, forKey: .isOn)) ?? nil) ?? false
+        division = ((try? container.decodeIfPresent(BeatGrid.Division.self, forKey: .division)) ?? nil) ?? .beat
+        let offset = ((try? container.decodeIfPresent(Int.self, forKey: .offsetMs)) ?? nil) ?? 0
+        offsetMs = min(max(offset, Self.offsetRange.lowerBound), Self.offsetRange.upperBound)
+    }
 }
 
 enum VideoStudioMode: Sendable {
@@ -800,6 +834,7 @@ extension MusicTrack {
         isMuted = value(.isMuted, false)
         fadeIn = value(.fadeIn, 2)
         fadeOut = value(.fadeOut, 2)
+        beatSnap = value(.beatSnap, MusicBeatSnap())
     }
 }
 

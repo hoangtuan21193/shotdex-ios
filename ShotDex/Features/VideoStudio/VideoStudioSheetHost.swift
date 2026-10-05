@@ -758,7 +758,20 @@ struct VideoStudioSheetHost: View {
 
     /// How long a still stays on screen, 0.5–10 s. Stills only: a video's
     /// length is cut at its edges.
+    @ViewBuilder
     private func durationSlider(_ clip: VideoClip) -> some View {
+        if let grid = model.snapGrid,
+           let index = model.recipe.clips.firstIndex(where: { $0.id == clip.id }),
+           index < model.clipPlacements.count {
+            // Snapping to a bed's beats (FS-12.12 §5): the still's end
+            // sticks to them.
+            VideoBeatSlider(model: model, clip: clip, clipStart: model.clipPlacements[index].start, grid: grid, isDesk: isDesk)
+        } else {
+            plainDurationSlider(clip)
+        }
+    }
+
+    private func plainDurationSlider(_ clip: VideoClip) -> some View {
         InspectorSlider(
             label: "Duration", value: clip.photoDuration, range: VideoClip.photoDurationRange,
             valueText: String(format: "%.1fs", clip.photoDuration), model: model,

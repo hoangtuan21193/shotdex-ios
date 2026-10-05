@@ -62,4 +62,58 @@ struct BeatGrid: Equatable, Sendable {
         else { return nil }
         return best
     }
+
+    /// A still's Duration on its slider (FS-12.12 §5): the length whose end
+    /// lands on the nearest beat — of `division` — within `tolerance`
+    /// seconds of the proposed end, or the proposed length when none is
+    /// that close. Always inside `range`.
+    func snappedDuration(
+        _ proposed: Double,
+        clipStart: Double,
+        division: Division,
+        tolerance: Double,
+        range: ClosedRange<Double>
+    ) -> (duration: Double, tick: Tick?) {
+        let clamped = min(max(proposed, range.lowerBound), range.upperBound)
+        guard let tick = nearest(to: clipStart + clamped, division: division, tolerance: tolerance) else {
+            return (clamped, nil)
+        }
+        let snapped = tick.time - clipStart
+        guard range.contains(snapped) else { return (clamped, nil) }
+        return (snapped, tick)
+    }
+
+    /// The beat a time stands on, within a millisecond — for "on beat 28".
+    func tick(at time: Double) -> Tick? {
+        ticks.first { abs($0.time - time) < 0.001 }
+    }
+}
+
+/// "hold to move freely" (FS-12.12 §5): a finger that stops for half a
+/// second in the middle of a drag lets go of the beats until it lifts.
+/// Fed every move of the drag; the pause is measured between two moves.
+struct BeatSliderHold: Equatable, Sendable {
+    /// How long a finger must stay still to release the snap.
+    static let releaseAfter: Double = 0.5
+    /// Movement under this, in points, is still "still".
+    static let stillness: Double = 2
+
+    private(set) var isFree = false
+    private var anchorX: Double?
+    private var anchorTime: Double = 0
+
+    /// Records a move to `x` at `time`; returns whether the drag is free.
+    mutating func update(x: Double, at time: Double) -> Bool {
+        guard let anchor = anchorX else {
+            anchorX = x
+            anchorTime = time
+            return isFree
+        }
+        if abs(x - anchor) >= Self.stillness {
+            if time - anchorTime >= Self.releaseAfter { isFree = true }
+            anchorX = x
+            anchorTime = time
+        }
+        return isFree
+    }
 }

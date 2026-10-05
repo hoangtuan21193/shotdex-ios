@@ -525,6 +525,10 @@
       "comment": "Video Studio Trim: cuts the selected clip's end to the playhead",
       "extractionState": "manual"
     },
+    "Ends on beat %lld · %@ · hold to move freely": {
+      "comment": "Video Studio beats: under the Duration slider when the still's end sticks to a beat — which beat, when, and how to let go of it",
+      "extractionState": "manual"
+    },
     "Everything in this look applies to video.": {
       "comment": "Video Studio Look panel: nothing in the chosen look is skipped on video",
       "extractionState": "manual"
@@ -917,6 +921,10 @@
       "comment": "Video Studio Look panel: the settings of the chosen look a video frame does not run — e.g. Noise Reduction, Upright",
       "extractionState": "manual"
     },
+    "Snap clips to beats": {
+      "comment": "Video Studio beats: the switch that makes clip edges and lengths stick to the music's beats",
+      "extractionState": "manual"
+    },
     "Snap needs music with a clear beat": {
       "comment": "Video Studio beats card: under No steady beat — why Snap and Cut to Beat are dimmed",
       "extractionState": "manual"
@@ -1019,6 +1027,10 @@
     },
     "in this video": {
       "comment": "Video Studio Media panel: VoiceOver, after an item that is already in the video — Video, 0:06, in this video",
+      "extractionState": "manual"
+    },
+    "on beat %lld": {
+      "comment": "Video Studio beats: a clip ends on this beat — 3.30s · on beat 28",
       "extractionState": "manual"
     },
     "photo": {

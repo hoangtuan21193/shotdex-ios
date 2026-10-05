@@ -45,6 +45,28 @@ struct VideoBeatsModelTests {
     }
 }
 
+/// One bed snaps at a time (FS-12.12 §5).
+@MainActor
+struct VideoBeatSnapTests {
+    /// Snap turned on for A2 turns A1's off — one undo step for the switch.
+    @Test func snapOnA2TurnsA1Off() {
+        let a1 = MusicTrack(source: .bundled(id: "a1"))
+        let a2 = MusicTrack(source: .bundled(id: "a2"))
+        let model = VideoStudioModelFixture.model(configure: { recipe in
+            recipe.musicTracks = [a1, a2]
+            recipe.musicTracks[0].beatSnap.isOn = true
+        })
+        #expect(model.snapSource?.id == a1.id)
+
+        model.setBeatSnap(true, for: a2.id)
+        #expect(model.recipe.musicTracks.map(\.beatSnap.isOn) == [false, true])
+        #expect(model.snapSource?.id == a2.id)
+
+        model.undo()
+        #expect(model.recipe.musicTracks.map(\.beatSnap.isOn) == [true, false])
+    }
+}
+
 actor Counter {
     private(set) var value = 0
     func increment() { value += 1 }

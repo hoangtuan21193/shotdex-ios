@@ -143,4 +143,34 @@ extension VideoRecipeDecodingTests {
         let back = try JSONDecoder().decode(VideoProjectRecipe.self, from: JSONEncoder().encode(recipe))
         #expect(back == recipe)
     }
+
+    /// FS-12.12 §7: a music bed stored before beats existed opens with Snap
+    /// off, Every Beat, Offset 0.
+    @Test func musicTrackWithoutBeatKeysDecodesDefaults() throws {
+        let recipe = try decode("""
+        {"clips":[{"id":"\(clipA)","assetID":"a","kind":"photo"}],
+         "musicTracks":[{"id":"\(clipB)","source":{"bundled":{"id":"song"}},"start":0,"volume":0.8}]}
+        """)
+        let bed = try #require(recipe.musicTracks.first)
+        #expect(bed.beatSnap == MusicBeatSnap())
+        #expect(bed.volume == 0.8)
+    }
+
+    /// Beat keys that will not read — a division this build does not know,
+    /// an Offset of the wrong type, one out of range — cost those keys, not
+    /// the bed or the project.
+    @Test func garbageBeatKeysDecodeDefaults() throws {
+        let recipe = try decode("""
+        {"clips":[{"id":"\(clipA)","assetID":"a","kind":"photo"}],
+         "musicTracks":[
+           {"id":"\(clipB)","source":{"bundled":{"id":"song"}},"beatSnap":{"isOn":true,"division":"halfBar","offsetMs":"x"}},
+           {"id":"\(clipC)","source":{"bundled":{"id":"song"}},"beatSnap":{"isOn":"yes","offsetMs":900}}]}
+        """)
+        #expect(recipe.musicTracks.count == 2)
+        #expect(recipe.musicTracks[0].beatSnap == MusicBeatSnap(isOn: true, division: .beat, offsetMs: 0))
+        #expect(recipe.musicTracks[1].beatSnap == MusicBeatSnap(isOn: false, division: .beat, offsetMs: 250))
+        // And it writes back what it read.
+        let again = try JSONDecoder().decode(VideoProjectRecipe.self, from: JSONEncoder().encode(recipe))
+        #expect(again.musicTracks.map(\.beatSnap) == recipe.musicTracks.map(\.beatSnap))
+    }
 }
