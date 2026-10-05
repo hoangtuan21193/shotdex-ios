@@ -53,6 +53,28 @@ enum VideoStudioCopy {
         String(localized: "Resize Timeline", table: table, comment: "Video Studio iPad: the grabber between the frame and the timeline, dragged to trade one's height for the other's")
     }
 
+    /// The iPad's pop-ups (FS-12.04b §6): "Motion: Zoom In", "Font: SF Pro",
+    /// "Animate In: Fade", "Animate Out: None".
+    static var motion: String {
+        String(localized: "Motion", table: table, comment: "Video Studio clip panel: header over the clip's motion effects — zoom, pan, shake")
+    }
+
+    static var font: String {
+        String(localized: "Font", table: table, comment: "Video Studio iPad text panel: title of the pop-up that picks the caption's font — Font: SF Pro")
+    }
+
+    static var moreFonts: String {
+        String(localized: "More Fonts…", table: table, comment: "Video Studio iPad text panel: last row of the font pop-up, opens the font picker")
+    }
+
+    static var animateIn: String {
+        String(localized: "Animate In", table: table, comment: "Video Studio iPad text panel: title of the pop-up that picks how the caption comes in — Animate In: Fade")
+    }
+
+    static var animateOut: String {
+        String(localized: "Animate Out", table: table, comment: "Video Studio iPad text panel: title of the pop-up that picks how the caption goes out — Animate Out: None")
+    }
+
     static var media: String {
         String(localized: "Media", table: table, comment: "Video Studio: the bottom-row tool that adds photos and videos to the timeline")
     }

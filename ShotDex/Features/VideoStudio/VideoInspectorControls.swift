@@ -238,6 +238,55 @@ struct OverlayAnimationRow: View {
 /// The clip's motion / look effect as a chip strip — every option visible and
 /// named, where the old Animate command cycled blindly through them. Fills the
 /// param zone a photo clip (Duration only) left mostly empty.
+/// A pop-up button (FS-12.04b §6 on the iPad, the Mac-style canvas): one
+/// choice of many as "Motion: Zoom In ⌃⌄", 44 tall on white 8 %, radius 12,
+/// opening a menu of every option with the current one checked. The iPhone
+/// and the Duo show the same options as chips; both are built from one list.
+struct VideoPopUpButton<Option: Hashable>: View {
+    let title: String
+    let options: [Option]
+    let selected: Option
+    let name: (Option) -> String
+    let set: (Option) -> Void
+    /// Rows after the options — "More Fonts…".
+    var extra: (title: String, action: () -> Void)? = nil
+
+    var body: some View {
+        Menu {
+            Picker(selection: Binding(get: { selected }, set: { set($0) })) {
+                ForEach(options, id: \.self) { option in
+                    Text(verbatim: name(option)).tag(option)
+                }
+            } label: {
+                Text(verbatim: title)
+            }
+            .pickerStyle(.inline)
+            if let extra {
+                Divider()
+                Button(extra.title, action: extra.action)
+            }
+        } label: {
+            HStack(spacing: 6) {
+                Text(verbatim: "\(title): \(name(selected))")
+                    .font(.system(size: 17))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+                Spacer(minLength: 0)
+                Image(systemName: "chevron.up.chevron.down")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(.white.opacity(0.6))
+            }
+            .foregroundStyle(.white)
+            .padding(.horizontal, 14)
+            .frame(height: VideoStudioMetrics.popUpHeight)
+            .frame(maxWidth: .infinity)
+            .background(RoundedRectangle(cornerRadius: AppTheme.Radius.md, style: .continuous).fill(Color.white.opacity(0.08)))
+            .contentShape(Rectangle())
+        }
+        .accessibilityLabel(Text(verbatim: "\(title): \(name(selected))"))
+    }
+}
+
 struct ClipEffectRow: View {
     let selected: VideoClipEffect
     let set: (VideoClipEffect) -> Void
@@ -251,7 +300,7 @@ struct ClipEffectRow: View {
                 .padding(.leading, 14)
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 8) {
-                    ForEach(VideoClipEffect.allCases) { effect in
+                    ForEach(VideoClipPanelSections.motionOptions) { effect in
                         chip(effect)
                     }
                 }

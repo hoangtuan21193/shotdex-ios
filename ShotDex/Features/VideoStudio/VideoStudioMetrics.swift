@@ -242,6 +242,12 @@ enum VideoStudioMetrics {
         return start...(start + dynamicIslandWidth)
     }
 
+    /// A pop-up button on the iPad (Motion, Font, Animate In / Out, Ratio).
+    static let popUpHeight: CGFloat = 44
+    /// The iPad's section titles in the inspector and the dock: Title Case,
+    /// 17 semibold in a 28 row (FS-12.03b §1).
+    static let deskSectionTitleHeight: CGFloat = 28
+
     // MARK: Media pool
 
     /// The iPad pool's insides, in the 320pt panel's own coordinates (board

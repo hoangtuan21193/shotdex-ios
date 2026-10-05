@@ -165,6 +165,14 @@
       "comment": "Video Studio Look panel: how much of the chosen look is mixed in, 0–100",
       "extractionState": "manual"
     },
+    "Animate In": {
+      "comment": "Video Studio iPad text panel: title of the pop-up that picks how the caption comes in — Animate In: Fade",
+      "extractionState": "manual"
+    },
+    "Animate Out": {
+      "comment": "Video Studio iPad text panel: title of the pop-up that picks how the caption goes out — Animate Out: None",
+      "extractionState": "manual"
+    },
     "Apply To": {
       "comment": "Video Studio iPad Look panel: header over All Clips · This Clip — where a tapped look goes",
       "extractionState": "manual"
@@ -349,6 +357,10 @@
       "comment": "Video Studio Video Settings: the whole clip shows, on the background",
       "extractionState": "manual"
     },
+    "Font": {
+      "comment": "Video Studio iPad text panel: title of the pop-up that picks the caption's font — Font: SF Pro",
+      "extractionState": "manual"
+    },
     "Fonts You Used": {
       "comment": "Video Studio media pool Text tab: header over the fonts the user has used before",
       "extractionState": "manual"
@@ -439,6 +451,10 @@
     },
     "Missing": {
       "comment": "Video Studio: after the name of a look whose LUT file is gone — Kodak 2383 · Missing",
+      "extractionState": "manual"
+    },
+    "More Fonts…": {
+      "comment": "Video Studio iPad text panel: last row of the font pop-up, opens the font picker",
       "extractionState": "manual"
     },
     "Motion": {

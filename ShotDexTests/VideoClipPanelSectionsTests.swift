@@ -24,4 +24,19 @@ struct VideoClipPanelSectionsTests {
         }
         #expect(VideoClip.photoDurationRange == 0.5...10)
     }
+
+    /// FS-12.04b AC-10 (iPad): Motion is a pop-up on the iPad and chips on
+    /// the phone and the Duo — one list behind both, every effect in it, in
+    /// the same order. Iterates the enum rather than counting.
+    @Test func iPadMotionIsAPopUpWithEveryEffect() {
+        let options = VideoClipPanelSections.motionOptions
+        for effect in VideoClipEffect.allCases {
+            #expect(options.contains(effect), "\(effect) is missing from Motion")
+        }
+        #expect(options == VideoClipEffect.allCases)
+        #expect(options.first == VideoClipEffect.none)
+        #expect(VideoStudioMetrics.popUpHeight == 44)
+        // The pop-up names the choice the way the chips do.
+        #expect(Set(options.map(\.displayName)).count == options.count)
+    }
 }

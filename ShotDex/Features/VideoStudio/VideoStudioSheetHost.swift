@@ -63,6 +63,10 @@ struct VideoStudioSheetHost: View {
         return layout == .dock ? VideoStudioDeskGeometry.dockInset : VideoStudioMetrics.itemCommandRowInset
     }
 
+    /// The iPad's inspector or dock: pop-ups instead of chips, Title Case
+    /// section titles, 44pt controls (FS-12.04b §6, the Mac-style canvas).
+    private var isDesk: Bool { isDeskInspector || layout == .dock }
+
     private var commandRowTop: CGFloat {
         if isDeskInspector { return 0 }
         return layout == .dock ? VideoStudioDeskGeometry.dockCommandRowTop : VideoStudioMetrics.itemCommandRowTop
@@ -628,11 +632,25 @@ struct VideoStudioSheetHost: View {
                 reset: { model.pushUndo(); model.setFade(0, at: .end, for: clip.id) }
             )
         case .motion:
-            ClipEffectRow(selected: clip.effect) { effect in
-                guard effect != clip.effect else { return }
-                model.setEffect(effect, for: clip.id)
+            if isDesk {
+                sectionHeader(Text("Motion", tableName: VideoStudioCopy.table, comment: "Video Studio clip panel: header over the clip's motion effects — zoom, pan, shake"))
+                VideoPopUpButton(
+                    title: VideoStudioCopy.motion,
+                    options: VideoClipPanelSections.motionOptions,
+                    selected: clip.effect,
+                    name: \.displayName
+                ) { effect in
+                    guard effect != clip.effect else { return }
+                    model.setEffect(effect, for: clip.id)
+                }
+                .padding(.horizontal, deskInset)
+            } else {
+                ClipEffectRow(selected: clip.effect) { effect in
+                    guard effect != clip.effect else { return }
+                    model.setEffect(effect, for: clip.id)
+                }
+                .padding(.top, 4)
             }
-            .padding(.top, 4)
         }
     }
 
@@ -686,14 +704,30 @@ struct VideoStudioSheetHost: View {
         .disabled(!isEnabled)
     }
 
+    @ViewBuilder
     private func sectionHeader(_ text: Text) -> some View {
-        text
-            .font(.system(size: 11, weight: .semibold))
-            .foregroundStyle(EditorTheme.dimText)
-            .textCase(.uppercase)
-            .padding(.horizontal, 14)
-            .padding(.top, 6)
+        if isDesk {
+            // Title Case, as the iPad's inspector writes its sections.
+            text
+                .font(.system(size: 17, weight: .semibold))
+                .foregroundStyle(.white)
+                .frame(height: VideoStudioMetrics.deskSectionTitleHeight)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, deskInset)
+                .padding(.top, 8)
+        } else {
+            text
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundStyle(EditorTheme.dimText)
+                .textCase(.uppercase)
+                .padding(.horizontal, 14)
+                .padding(.top, 6)
+        }
     }
+
+    /// Controls' inset in the iPad's inspector (17 from the column's edge,
+    /// past its hairline) and in the dock's columns (their own edge).
+    private var deskInset: CGFloat { layout == .dock ? 0 : 16 }
 
     /// 0.5× · 1× · 2× · 4× — the speeds a cut is usually after, one tap each.
     private func speedChips(_ clip: VideoClip) -> some View {
@@ -782,7 +816,73 @@ struct VideoStudioSheetHost: View {
 
     /// Typeface plus the two weights that belong with it — Bold and Italic are
     /// font choices, not standalone commands.
+    @ViewBuilder
     private func fontParams(_ overlay: PhotoOverlay) -> some View {
+        if isDesk {
+            deskFontParams(overlay)
+        } else {
+            phoneFontParams(overlay)
+        }
+    }
+
+    /// The iPad (IL3_TextOverlay, IP3_TextOverlay): "Font: SF Pro ⌃⌄" — the
+    /// fonts used before, then More Fonts… for the picker — with B and I as
+    /// 44pt squares beside it.
+    private func deskFontParams(_ overlay: PhotoOverlay) -> some View {
+        // The fonts used before, by family, with the caption's own first if
+        // it is not among them.
+        let recents = model.fontRecents
+        var families = recents.map(\.familyName)
+        if !families.contains(overlay.fontFamilyName) { families.insert(overlay.fontFamilyName, at: 0) }
+        return VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 8) {
+                VideoPopUpButton(
+                    title: VideoStudioCopy.font,
+                    options: families,
+                    selected: overlay.fontFamilyName,
+                    name: { $0.isEmpty ? String(localized: "System") : $0 },
+                    set: { family in
+                        guard let choice = recents.first(where: { $0.familyName == family }) else { return }
+                        model.rememberFont(choice)
+                        model.updateSelectedOverlay {
+                            $0.fontPostScriptName = choice.postScriptName
+                            $0.fontFamilyName = choice.familyName
+                        }
+                    },
+                    extra: (VideoStudioCopy.moreFonts, actions.onPickFont)
+                )
+                deskToggle("B", isOn: overlay.isBold, label: Text("Bold")) {
+                    model.pushUndo(); model.updateSelectedOverlay { $0.isBold.toggle() }
+                }
+                deskToggle("I", isOn: overlay.isItalic, label: Text("Italic")) {
+                    model.pushUndo(); model.updateSelectedOverlay { $0.isItalic.toggle() }
+                }
+            }
+            Spacer(minLength: 0)
+        }
+        .padding(.horizontal, deskInset)
+        .padding(.top, 6)
+    }
+
+    /// B, I: 44pt squares, white 20 % while on.
+    private func deskToggle(_ glyph: String, isOn: Bool, label: Text, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Text(verbatim: glyph)
+                .font(.system(size: 17, weight: glyph == "B" ? .bold : .regular))
+                .italic(glyph == "I")
+                .foregroundStyle(.white)
+                .frame(width: 44, height: 44)
+                .background(
+                    RoundedRectangle(cornerRadius: AppTheme.Radius.md, style: .continuous)
+                        .fill(Color.white.opacity(isOn ? 0.20 : 0.08))
+                )
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(label)
+        .accessibilityAddTraits(isOn ? .isSelected : [])
+    }
+
+    private func phoneFontParams(_ overlay: PhotoOverlay) -> some View {
         VStack(spacing: 10) {
             Button(action: actions.onPickFont) {
                 HStack(spacing: 8) {
@@ -931,12 +1031,38 @@ struct VideoStudioSheetHost: View {
         let timed = model.selectedTimedOverlay
         ScrollView(showsIndicators: false) {
             VStack(spacing: 6) {
+                if isDesk {
+                    // Two pop-ups side by side (IL3, IP3): Animate In ·
+                    // Animate Out.
+                    HStack(spacing: 8) {
+                        VideoPopUpButton(
+                            title: VideoStudioCopy.animateIn,
+                            options: OverlayAnimation.allCases,
+                            selected: timed?.animateIn ?? .none,
+                            name: \.displayName
+                        ) { kind in
+                            model.pushUndo()
+                            model.updateSelectedTimedOverlay { $0.animateIn = kind }
+                        }
+                        VideoPopUpButton(
+                            title: VideoStudioCopy.animateOut,
+                            options: OverlayAnimation.allCases,
+                            selected: timed?.animateOut ?? .none,
+                            name: \.displayName
+                        ) { kind in
+                            model.pushUndo()
+                            model.updateSelectedTimedOverlay { $0.animateOut = kind }
+                        }
+                    }
+                    .padding(.horizontal, deskInset)
+                } else {
                 OverlayAnimationRow(
                     title: "In",
                     selected: timed?.animateIn ?? .none
                 ) { kind in
                     model.pushUndo()
                     model.updateSelectedTimedOverlay { $0.animateIn = kind }
+                }
                 }
                 if (timed?.animateIn ?? .none) != .none {
                     InspectorSlider(
@@ -946,12 +1072,14 @@ struct VideoStudioSheetHost: View {
                         reset: { model.pushUndo(); model.updateSelectedTimedOverlay { $0.inDuration = 0.4 } }
                     )
                 }
-                OverlayAnimationRow(
-                    title: "Out",
-                    selected: timed?.animateOut ?? .none
-                ) { kind in
-                    model.pushUndo()
-                    model.updateSelectedTimedOverlay { $0.animateOut = kind }
+                if !isDesk {
+                    OverlayAnimationRow(
+                        title: "Out",
+                        selected: timed?.animateOut ?? .none
+                    ) { kind in
+                        model.pushUndo()
+                        model.updateSelectedTimedOverlay { $0.animateOut = kind }
+                    }
                 }
                 if (timed?.animateOut ?? .none) != .none {
                     InspectorSlider(

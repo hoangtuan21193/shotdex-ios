@@ -34,4 +34,9 @@ enum VideoClipPanelSections {
 
     /// The Speed chips (FS-12.04b §6).
     static let speedPresets: [Double] = [0.5, 1, 2, 4]
+
+    /// Motion's choices, in order — the phone's and the Duo's chips and the
+    /// iPad's pop-up are both built from this one list, so neither can lose
+    /// an effect the other has.
+    static let motionOptions: [VideoClipEffect] = VideoClipEffect.allCases
 }
