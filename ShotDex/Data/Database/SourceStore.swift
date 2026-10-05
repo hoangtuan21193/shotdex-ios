@@ -38,6 +38,29 @@ struct SourceStore: Sendable {
         }
     }
 
+    /// When a Drive Is Disconnected (FS-19.01 §1): keep its photos in the
+    /// library (offline) or hide them until it is back.
+    enum WhenUnplugged: String, Sendable {
+        case keepPhotos
+        case hidePhotos
+    }
+
+    func setWhenUnplugged(_ choice: WhenUnplugged, sourceId: String) throws {
+        try database.writer.write { db in
+            try db.execute(sql: "UPDATE sources SET whenUnplugged = ? WHERE id = ?", arguments: [choice.rawValue, sourceId])
+        }
+    }
+
+    /// A drive unplugged or plugged back (FS-19.01b §1). Its copies follow
+    /// the source: offline, not missing — an unplugged drive never makes an
+    /// orphan, and nothing about its photos is forgotten.
+    func setOnline(_ online: Bool, sourceId: String) throws {
+        try database.writer.write { db in
+            try db.execute(sql: "UPDATE sources SET status = ? WHERE id = ?", arguments: [online ? "online" : "offline", sourceId])
+            try db.execute(sql: "UPDATE photo_copies SET isOnline = ? WHERE sourceId = ?", arguments: [online, sourceId])
+        }
+    }
+
     func sources() throws -> [Source] {
         try database.reader.read { db in
             try Row.fetchAll(db, sql: "SELECT * FROM sources ORDER BY createdAt, id").map {

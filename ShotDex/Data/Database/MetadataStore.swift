@@ -120,9 +120,11 @@ struct MetadataStore: Sendable {
     /// Upserts a single row **without touching the resume cursor** — used by
     /// the detail viewer to fill in an incomplete row after an iCloud download,
     /// so it must not disturb the batch pipeline's cursor/last-indexed state.
+    /// One Photos asset's row, with its Photos copy (FS-19.05 §1).
     func upsert(_ record: PhotoMetadata) throws {
         try database.writer.write { db in
             try record.upsert(db)
+            try Self.keepPhotoLibraryCopy(db, assetId: record.assetId, now: Int(Date().timeIntervalSince1970))
         }
     }
 

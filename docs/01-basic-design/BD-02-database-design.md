@@ -119,6 +119,9 @@ Một ảnh là một **id** với các **bản sao** ở các **nguồn** (thư
 | Album ShotDex · thành viên | id · tên · vị trí · lúc tạo · (album, id ảnh) | người dùng |
 
 - **Không khoá ngoại**: lượt quét cập nhật bản sao tại chỗ; một `REPLACE` kéo theo cascade là mất dữ liệu người dùng.
+- **Ảnh nào hiện** tính lúc truy vấn, không lưu: một dòng metadata vào lưới, bộ lọc, smart album và Statistics khi ảnh
+  còn ít nhất một bản sao **không mất, không ẩn**, và nguồn đang online **hoặc** nguồn chọn giữ ảnh khi rút
+  (`whenUnplugged = keepPhotos`). Rút ổ chỉ đổi cờ online của bản sao — không ghi lại metadata, không làm mồ côi.
 - Duy nhất: bản sao theo (nguồn, khoá đường dẫn) khi có đường dẫn; theo id PhotoKit khi có. Hash đầy đủ **có chỉ
   mục, không duy nhất** — hai bản sao cùng nội dung mang cùng hash; luật gộp giữ một id ảnh cho mỗi hash đầy đủ.
 - Chỉ mục: bản sao theo (nguồn, id ảnh) và (id ảnh, online); ảnh theo lúc mồ côi (chỉ dòng có giá trị); hash

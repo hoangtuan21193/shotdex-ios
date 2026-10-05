@@ -35,8 +35,8 @@ enum SmartAlbumSQLBuilder {
     /// The predicate as a full `WHERE …` clause (empty → no WHERE).
     static func whereClause(for query: SmartAlbumQuery) -> (sql: String, arguments: StatementArguments) {
         let (sql, values) = predicate(for: query)
-        guard !sql.isEmpty else { return ("", StatementArguments()) }
-        return ("WHERE " + sql, StatementArguments(values))
+        guard !sql.isEmpty else { return ("WHERE " + PhotoVisibility.condition, StatementArguments()) }
+        return ("WHERE (" + sql + ") AND " + PhotoVisibility.condition, StatementArguments(values))
     }
 
     /// SQL + bound values for a single rule, or nil if it carries nothing to

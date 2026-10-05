@@ -254,7 +254,8 @@ struct LibraryQueries: Sendable {
             conditions.append("assetId IN (SELECT value FROM json_each(?))")
             arguments += [json]
         }
-        let sql = conditions.isEmpty ? "" : "WHERE " + conditions.joined(separator: " AND ")
+        conditions.append(PhotoVisibility.condition)
+        let sql = "WHERE " + conditions.joined(separator: " AND ")
         return (sql, arguments)
     }
 
@@ -465,7 +466,8 @@ struct LibraryQueries: Sendable {
             }
         }
 
-        let sql = conditions.isEmpty ? "" : "WHERE " + conditions.joined(separator: " AND ")
+        conditions.append(PhotoVisibility.condition)
+        let sql = "WHERE " + conditions.joined(separator: " AND ")
         return (sql, StatementArguments(values))
     }
 

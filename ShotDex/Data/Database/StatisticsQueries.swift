@@ -13,17 +13,17 @@ struct StatisticsQueries: Sendable {
 
     private func whereSQL(_ extra: String?, scope: StatsDateScope) -> (sql: String, arguments: StatementArguments) {
         let (scopeSQL, scopeArgs) = scopeClause(scope)
-        var conditions: [String] = []
+        var conditions: [String] = [PhotoVisibility.condition]
         if let extra { conditions.append(extra) }
         if !scopeSQL.isEmpty { conditions.append(scopeSQL) }
-        let sql = conditions.isEmpty ? "" : "WHERE " + conditions.joined(separator: " AND ")
+        let sql = "WHERE " + conditions.joined(separator: " AND ")
         return (sql, StatementArguments(scopeArgs))
     }
 
     /// Oldest capture date in the index — the far end of the custom range picker.
     func earliestCreationDate() throws -> Date? {
         try database.reader.read { db in
-            try Int.fetchOne(db, sql: "SELECT MIN(creationDate) FROM photo_metadata")
+            try Int.fetchOne(db, sql: "SELECT MIN(creationDate) FROM photo_metadata WHERE \(PhotoVisibility.condition)")
         }.map { Date(timeIntervalSince1970: TimeInterval($0)) }
     }
 
@@ -122,7 +122,7 @@ struct StatisticsQueries: Sendable {
     /// Photos with no capture date — invisible to every non-all-time scope.
     func undatedCount() throws -> Int {
         try database.reader.read { db in
-            try Int.fetchOne(db, sql: "SELECT COUNT(*) FROM photo_metadata WHERE creationDate IS NULL") ?? 0
+            try Int.fetchOne(db, sql: "SELECT COUNT(*) FROM photo_metadata WHERE creationDate IS NULL AND \(PhotoVisibility.condition)") ?? 0
         }
     }
 
@@ -237,6 +237,7 @@ struct StatisticsQueries: Sendable {
         var conditions = [
             "normalizedCameraModel IN (\(placeholders))",
             "creationDate IS NOT NULL",
+            PhotoVisibility.condition,
         ]
         if !scopeSQL.isEmpty { conditions.append(scopeSQL) }
         let sql = """
@@ -384,7 +385,7 @@ extension StatisticsQueries {
         _ filter: SmartAlbumQuery,
         _ scope: StatsDateScope
     ) -> (conditions: [String], values: [DatabaseValueConvertible]) {
-        var conditions: [String] = []
+        var conditions: [String] = [PhotoVisibility.condition]
         var values: [DatabaseValueConvertible] = []
         let (filterSQL, filterValues) = SmartAlbumSQLBuilder.predicate(for: filter)
         if !filterSQL.isEmpty {
