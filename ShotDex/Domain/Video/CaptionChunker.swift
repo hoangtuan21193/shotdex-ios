@@ -35,10 +35,10 @@ enum CaptionChunker {
         for word in words {
             if let first = current.first, let previous = current.last {
                 let text = (current.map(\.text) + [word.text]).joined(separator: " ")
-                let breaks = word.start - previous.end >= pauseBreak
+                let breaks = word.start - previous.end >= pauseBreak - 1e-9
                     || endsSentence(previous.text)
                     || text.count > maximumCharacters
-                    || word.end - first.start > maximumDuration
+                    || word.end - first.start > maximumDuration + 1e-9
                 if breaks { close() }
             }
             current.append(word)

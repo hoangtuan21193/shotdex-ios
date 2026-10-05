@@ -86,6 +86,19 @@ struct VideoEditHistory: Sendable {
         return newest.snapshot
     }
 
+    /// Changes every snapshot, undo and redo alike, without adding or
+    /// removing a step — what was heard while the user edited reaches the
+    /// projects Undo and Redo would bring back (FS-12.14, plan K4).
+    mutating func patchSnapshots(_ change: (inout VideoProjectRecipe) -> Void) {
+        func patched(_ entry: Entry) -> Entry {
+            var snapshot = entry.snapshot
+            change(&snapshot)
+            return Entry(sequence: entry.sequence, snapshot: snapshot)
+        }
+        undoEntries = undoEntries.map(patched)
+        redoEntries = redoEntries.map(patched)
+    }
+
     /// ✕: forgets every step made since `checkpoint` — undoable or undone —
     /// so neither Undo nor Redo can bring any of them back. Steps from before
     /// the checkpoint stay exactly as they were.

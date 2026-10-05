@@ -112,9 +112,6 @@ struct VideoCaptionLane: Codable, Equatable, Sendable {
     static let defaultSizePercent: Double = 6
     /// English (US) when the device's language has no on-device model (§4).
     static let defaultLanguage = "en-US"
-
-    /// Cues not yet in the lane are on their way.
-    var isRecognising: Bool { !recognition.isComplete && recognition.stoppedAtPercent == nil }
 }
 
 // MARK: - Lenient decoding (FS-12.14 §7)

@@ -17,6 +17,8 @@ struct VideoEditSession: Equatable, Sendable {
         case clipGroup
         /// A tool's panel — Look, Music, Media, Video Settings — by name.
         case tool(String)
+        /// The caption lane C1 (FS-12.14): its cues are selections inside it.
+        case captions
 
         /// A clip, caption, sticker or music bed — something on the timeline.
         var isItem: Bool {
