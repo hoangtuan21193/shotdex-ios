@@ -1062,7 +1062,7 @@ struct VideoStudioScreen: View {
     private func compareAfterRect(_ model: VideoStudioModel, contentRect: CGRect, stage: CGRect) -> CGRect {
         guard let compare = model.compare, compare.mode == .sideBySide else { return contentRect }
         let canvas = model.recipe.canvasSize()
-        let inset: CGFloat = currentWindowClass == .duoInner ? 9 : 16
+        let inset: CGFloat = currentWindowClass == .duoInner ? 9 : 14
         let gap: CGFloat = currentWindowClass == .duoInner ? 8 : 16
         let frames = VideoBeforeAfterStage.frames(in: stage, aspect: canvas.width / max(canvas.height, 1), inset: inset, gap: gap, windowClass: currentWindowClass)
         return compare.isSwapped ? frames.left : frames.right

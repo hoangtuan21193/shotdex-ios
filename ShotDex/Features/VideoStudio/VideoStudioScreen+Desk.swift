@@ -79,12 +79,22 @@ extension VideoStudioScreen {
                 .placed(quickAdjustStrip(box))
         }
         if let meter = frames.meter {
-            VideoAudioMeterColumn(model: model, meter: levelMeter, width: meter.width)
-                .placed(meter)
+            // Side by Side spans the frame's box; the meter moves to the
+            // box's edge, beside the After frame (board F7_IL).
+            let placedMeter = model.compare?.mode == .sideBySide
+                ? CGRect(x: box.maxX - 1, y: box.minY + 40, width: meter.width, height: min(meter.height, box.height - 40))
+                : meter
+            VideoAudioMeterColumn(model: model, meter: levelMeter, width: placedMeter.width)
+                .placed(placedMeter)
         }
         if let playRow = frames.playRow {
-            VideoPlayRow(model: model, groupMidX: (frames.playGroupMidX ?? playRow.midX) - playRow.minX)
-                .placed(playRow)
+            // Side by Side: the row runs to the After frame's edge, Before
+            // and After at its end (FS-12.15 §4: x 945 with the pool shut).
+            let row = model.compare?.mode == .sideBySide
+                ? CGRect(x: playRow.minX, y: playRow.minY, width: box.maxX + 33 - playRow.minX, height: playRow.height)
+                : playRow
+            VideoPlayRow(model: model, groupMidX: (frames.playGroupMidX ?? row.midX) - row.minX)
+                .placed(row)
         }
         VideoTimelineToolRow(model: model)
             .placed(frames.transport)

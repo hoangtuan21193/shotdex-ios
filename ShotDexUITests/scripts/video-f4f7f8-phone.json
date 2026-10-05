@@ -1,0 +1,155 @@
+{
+ "steps": [
+  {
+   "action": "launch",
+   "arguments": [
+    "-video.timelineExtraHeight",
+    "0",
+    "-ShotDexFakeSpeechSlow",
+    "-ShotDexStartCaptions"
+   ]
+  },
+  {
+   "action": "wait",
+   "seconds": 6
+  },
+  {
+   "action": "tap",
+   "label": "Select",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "tap",
+   "x": 0.83,
+   "y": 0.457
+  },
+  {
+   "action": "tap",
+   "x": 0.163,
+   "y": 0.61
+  },
+  {
+   "action": "tap",
+   "x": 0.5,
+   "y": 0.61
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "tap",
+   "label": "More selection actions"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "tap",
+   "label": "Create Video"
+  },
+  {
+   "action": "wait",
+   "seconds": 12
+  },
+  {
+   "action": "wait",
+   "seconds": 20
+  },
+  {
+   "action": "dump",
+   "name": "F4_P_Captions",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 10
+  },
+  {
+   "action": "tap",
+   "x": 0.91,
+   "y": 0.947
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "tap",
+   "x": 0.888,
+   "y": 0.94
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "tap",
+   "x": 0.326,
+   "y": 0.709
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "tap",
+   "x": 0.736,
+   "y": 0.54
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "dump",
+   "name": "F7_P_BeforeAfter",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 10
+  },
+  {
+   "action": "tap",
+   "x": 0.935,
+   "y": 0.545
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "tap",
+   "x": 0.92,
+   "y": 0.06
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "tap",
+   "x": 0.4,
+   "y": 0.771
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "dump",
+   "name": "F8_P_ExportPresets",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 12
+  }
+ ]
+}

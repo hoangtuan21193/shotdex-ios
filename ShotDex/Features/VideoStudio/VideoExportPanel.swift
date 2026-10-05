@@ -21,7 +21,7 @@ struct VideoExportPanel: View {
     @Environment(\.videoStudioWindowClass) private var windowClass
     @State private var serverExportModel: ServerExportModel?
 
-    private var inset: CGFloat { windowClass == .duoCover ? 14 : 20 }
+    private var inset: CGFloat { isDuo ? 14 : 20 }
 
     /// The iPad: a form sheet over a scrim, not a panel (FS-12.10b §2,
     /// boards IL5_Export, IP_Export, F8_IL_ExportPresets).
@@ -147,13 +147,13 @@ struct VideoExportPanel: View {
                 .font(.system(size: 17, weight: .semibold))
                 .foregroundStyle(.white)
                 .frame(height: 24, alignment: .leading)
-                .padding(.top, 14)
+                .padding(.top, 20)
             VideoDeskSegmented(
                 items: [VideoFraming.fit, .fill].map { ($0, VideoStudioCopy.exportFraming($0), "exportFraming.\($0.rawValue)") },
                 selection: Binding(get: { model.exportFraming }, set: { model.setExportFraming($0) }),
                 label: Text(VideoStudioCopy.yourProjectIsTitle(model.recipe.aspect.displayName))
             )
-            .padding(.top, 6)
+            .padding(.top, 10)
         }
         Text(VideoStudioCopy.exportInfoLine(
             length: VideoStudioMetrics.shortDuration(model.totalDuration),
@@ -247,6 +247,7 @@ struct VideoExportPanel: View {
                         .lineLimit(1)
                         .truncationMode(.tail)
                 }
+                .layoutPriority(1)
                 Spacer(minLength: 4)
                 if refusal == nil {
                     Text(verbatim: VideoExportEstimate.label(bytes))
@@ -359,8 +360,12 @@ struct VideoExportPanel: View {
 
     private var panelBody: some View {
         VStack(spacing: 0) {
-            header
-            Rectangle().fill(Color.white.opacity(0.07)).frame(height: 1)
+            // The cover's panel has no title row and no ✕ (board F8_DC):
+            // a tool in the rail closes it, Export in the rail exports.
+            if windowClass != .duoCover || model.isExportBusy {
+                header
+                Rectangle().fill(Color.white.opacity(0.07)).frame(height: 1)
+            }
             VStack(alignment: .leading, spacing: 0) {
                 switch model.exportState {
                 case .idle, .failed:
@@ -372,7 +377,8 @@ struct VideoExportPanel: View {
                 }
             }
             .padding(.horizontal, inset)
-            .padding(.top, 14)
+            // The Duo's column starts its rows right under the title (F8_DI).
+            .padding(.top, windowClass == .duoInner ? 1 : (windowClass == .duoCover ? 8 : 14))
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         }
         .background(EditorTheme.panelSolid)
@@ -415,7 +421,7 @@ struct VideoExportPanel: View {
                     Image(systemName: "xmark")
                         .font(.system(size: 14, weight: .semibold))
                         .foregroundStyle(.white)
-                        .frame(width: 32, height: 32)
+                        .frame(width: closeSize, height: closeSize)
                         .background(Circle().fill(Color.white.opacity(0.10)))
                 }
                 .buttonStyle(.plain)
@@ -513,6 +519,9 @@ struct VideoExportPanel: View {
             .accessibilityIdentifier("exportStartButton")
         }
     }
+
+    /// ✕: 32, 28 in the Duo's inner column (F8_DI).
+    private var closeSize: CGFloat { windowClass == .duoInner ? 28 : 32 }
 
     private var isDuo: Bool { windowClass == .duoInner || windowClass == .duoCover }
 

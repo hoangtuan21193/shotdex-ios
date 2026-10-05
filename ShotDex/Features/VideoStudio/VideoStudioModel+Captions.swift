@@ -186,6 +186,9 @@ extension VideoStudioModel {
         #if DEBUG
         let arguments = ProcessInfo.processInfo.arguments
         if arguments.contains("-ShotDexFakeSpeechDenied") { return .fake(denied: true) }
+        // `-ShotDexFakeSpeechSlow`: 15 s a clip, so a route can photograph
+        // the card part-way with a cue selected (boards F4_*).
+        if arguments.contains("-ShotDexFakeSpeechSlow") { return .fake(denied: false, delay: .seconds(15)) }
         if arguments.contains("-ShotDexFakeSpeech") { return .fake(denied: false) }
         #endif
         return .system()

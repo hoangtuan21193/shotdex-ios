@@ -1613,6 +1613,13 @@ final class VideoStudioModel {
         }
         await rebuildPreview()
         phase = .ready
+        #if DEBUG
+        // `-ShotDexStartCaptions`: a UI route starts Auto Captions on open —
+        // the Duo's inner display has no entry for it yet (FS-12.14 AC-1).
+        if ProcessInfo.processInfo.arguments.contains("-ShotDexStartCaptions") {
+            Task { await startAutoCaptions() }
+        }
+        #endif
     }
 
     /// Loads the media of `clips` again — Retry for clips Auto Captions

@@ -28,11 +28,11 @@ struct VideoBeforeAfterStage: View {
     // MARK: Side by Side
 
     private var sideBySideInsets: (inset: CGFloat, gap: CGFloat) {
-        windowClass == .duoInner ? (9, 8) : (16, 16)
+        windowClass == .duoInner ? (9, 8) : (14, 16)
     }
 
     /// The level meter's column, kept clear of the frames on the iPad.
-    static let meterAllowance: CGFloat = 40
+    static let meterAllowance: CGFloat = 0
 
     /// The two frames: centred on the Duo; on the iPad 80 under the stage's
     /// top — under Side by Side · Split — as the boards draw them.

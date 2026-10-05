@@ -189,8 +189,8 @@ struct VideoCaptionsPanel: View {
                 .foregroundStyle(EditorTheme.dimText)
                 .textCase(.uppercase)
                 .padding(.horizontal, 16)
-                .padding(.top, 10)
-                .padding(.bottom, 6)
+                .padding(.top, 4)
+                .padding(.bottom, 5)
             CaptionChipRow(items: CaptionStyle.allCases.map { ($0, VideoStudioCopy.captionStyleName($0)) }, selection: lane.style) {
                 model.setCaptionStyle($0)
             }
@@ -292,7 +292,7 @@ struct VideoCaptionsPanel: View {
     private var card: some View {
         switch model.captionCard {
         case .running(let percent, let done, let total):
-            VStack(alignment: .leading, spacing: 7) {
+            VStack(alignment: .leading, spacing: isDesk ? 4 : 7) {
                 HStack {
                     Text(VideoStudioCopy.transcribing)
                         .font(.system(size: isDesk ? 15 : 13.5, weight: .semibold))
@@ -313,7 +313,8 @@ struct VideoCaptionsPanel: View {
                     .foregroundStyle(.white.opacity(0.5))
                     .lineLimit(1)
             }
-            .padding(12)
+            .padding(.horizontal, 12)
+            .padding(.vertical, isDesk ? 8 : 12)
             .background(cardFill)
             .accessibilityElement(children: .combine)
             .accessibilityIdentifier("captionProgressCard")
@@ -413,7 +414,7 @@ struct VideoCaptionsPanel: View {
     private var selectedCueBlock: some View {
         if let cue = model.selectedCaption, let index = model.placedCaptions.firstIndex(where: { $0.cue.id == cue.id }) {
             let placed = model.placedCaptions[index]
-            deskTitle(CaptionChunker.name(at: index))
+            deskTitle(CaptionChunker.name(at: index), top: 8, height: 22)
             HStack(spacing: 0) {
                 CaptionTextField(model: model, cue: cue, isDesk: true)
                     .padding(.leading, 12)
@@ -449,7 +450,7 @@ struct VideoCaptionsPanel: View {
     @ViewBuilder
     private var deskStyleBlock: some View {
         if let lane {
-            deskTitle(VideoStudioCopy.captionStyle)
+            deskTitle(VideoStudioCopy.captionStyle, top: 4, height: 22)
             VideoDeskSegmented(
                 items: CaptionStyle.allCases.map { ($0, VideoStudioCopy.captionStyleName($0), "captionStyle.\($0.rawValue)") },
                 selection: Binding(get: { lane.style }, set: { model.setCaptionStyle($0) }),
@@ -461,7 +462,7 @@ struct VideoCaptionsPanel: View {
                 set: { model.setCaptionSize($0) },
                 reset: { model.pushUndo(); model.setCaptionSize(VideoCaptionLane.defaultSizePercent) }
             )
-            .padding(.top, 4)
+            .padding(.top, 2)
             HStack(spacing: 12) {
                 Text(VideoStudioCopy.captionPosition)
                     .font(.system(size: 17))
@@ -473,18 +474,18 @@ struct VideoCaptionsPanel: View {
                     label: Text(VideoStudioCopy.captionPosition)
                 )
             }
-            .frame(height: 44)
+            .frame(height: 36)
             burnRow(lane).padding(.top, 4)
         }
     }
 
-    private func deskTitle(_ text: String) -> some View {
+    private func deskTitle(_ text: String, top: CGFloat = 8, height: CGFloat = 28) -> some View {
         Text(verbatim: text)
             .font(.system(size: 17, weight: .semibold))
             .foregroundStyle(.white)
-            .frame(height: 28)
+            .frame(height: height)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.top, 8)
+            .padding(.top, top)
             .accessibilityAddTraits(.isHeader)
     }
 
@@ -571,10 +572,23 @@ struct CaptionChipRow<Value: Hashable>: View {
     let selection: Value
     /// Chips share the row's width instead of hugging their titles.
     var fills = false
+    /// 28 in the panels; 30 for the phone's COMPARE row (board F7_P).
+    var height: CGFloat = 28
     let choose: (Value) -> Void
 
     var body: some View {
-        HStack(spacing: 6) {
+        if fills {
+            HStack(spacing: 6) { chips }
+        } else {
+            // Wrapping, as the Duo's 264 column draws Word by Word on a
+            // second line (board F4_DI).
+            EditorChipFlowLayout(spacing: 6) { chips }
+                .frame(maxWidth: .infinity, alignment: .leading)
+        }
+    }
+
+    @ViewBuilder
+    private var chips: some View {
             ForEach(items, id: \.0) { value, title in
                 let isOn = value == selection
                 Button {
@@ -586,14 +600,12 @@ struct CaptionChipRow<Value: Hashable>: View {
                         .lineLimit(1)
                         .padding(.horizontal, 10)
                         .frame(maxWidth: fills ? .infinity : nil)
-                        .frame(height: 28)
+                        .frame(height: height)
                         .background(VideoMediaPanelMetrics.tabFill(isOn: isOn))
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
                 .accessibilityAddTraits(isOn ? .isSelected : [])
             }
-            if !fills { Spacer(minLength: 0) }
-        }
     }
 }

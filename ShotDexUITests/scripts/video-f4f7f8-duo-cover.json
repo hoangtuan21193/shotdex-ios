@@ -1,0 +1,155 @@
+{
+ "steps": [
+  {
+   "action": "launch",
+   "arguments": [
+    "-video.timelineExtraHeight",
+    "0",
+    "-ShotDexFakeSpeechSlow",
+    "-ShotDexStartCaptions"
+   ]
+  },
+  {
+   "action": "wait",
+   "seconds": 6
+  },
+  {
+   "action": "tap",
+   "label": "Select",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "tap",
+   "x": 0.14,
+   "y": 0.45
+  },
+  {
+   "action": "tap",
+   "x": 0.42,
+   "y": 0.45
+  },
+  {
+   "action": "tap",
+   "x": 0.7,
+   "y": 0.45
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "tap",
+   "label": "More selection actions",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "tap",
+   "label": "Create Video"
+  },
+  {
+   "action": "wait",
+   "seconds": 12
+  },
+  {
+   "action": "wait",
+   "seconds": 20
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "dump",
+   "name": "F4_DC_Captions",
+   "text": "snapshot"
+  },
+  {
+   "action": "wait",
+   "seconds": 10
+  },
+  {
+   "action": "tap",
+   "label": "Keep Changes"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "tap",
+   "label": "Look",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "tap",
+   "label": "Vivid"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "tap",
+   "label": "beforeAndAfterButton"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "dump",
+   "name": "F7_DC_BeforeAfter",
+   "text": "snapshot"
+  },
+  {
+   "action": "wait",
+   "seconds": 10
+  },
+  {
+   "action": "tap",
+   "label": "Keep Changes"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "tap",
+   "label": "Export",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "tap",
+   "label": "exportPreset.reels"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "dump",
+   "name": "F8_DC_ExportPresets",
+   "text": "snapshot"
+  },
+  {
+   "action": "wait",
+   "seconds": 12
+  }
+ ]
+}

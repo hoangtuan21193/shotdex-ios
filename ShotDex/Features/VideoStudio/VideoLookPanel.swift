@@ -271,9 +271,9 @@ struct VideoLookPanel: View {
                 CaptionChipRow(
                     items: VideoBeforeAfter.modes(sideBySide: sideBySide).map { ($0, VideoStudioCopy.compareMode($0)) },
                     selection: compare.mode,
-                    fills: true
+                    fills: true,
+                    height: sideBySide ? 28 : 30
                 ) { model.setCompareMode($0) }
-                .frame(height: sideBySide ? 28 : 30)
                 if !sideBySide {
                     Text(model.hasNothingToCompare
                          ? VideoStudioCopy.noEditsToCompare
