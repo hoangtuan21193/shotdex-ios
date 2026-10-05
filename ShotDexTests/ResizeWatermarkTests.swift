@@ -159,6 +159,27 @@ import Testing
         #expect(WatermarkCopy.alreadyHadWatermark(1, locale: Locale(identifier: "en")) == "1 photo already had this watermark")
     }
 
+    /// AC-8: five photos, Delete Originals on, watermark on — the switch
+    /// reads off and locked, five copies are made and no original is
+    /// deleted; turning the watermark off gives the choice back.
+    @Test func watermarkKeepsOriginals() async throws {
+        let photos = (1...5).map { OriginalItem.test("p\($0)") }
+        let batch = try resize(photos, metadata: [:])
+        batch.controller.deleteOriginals = true
+        #expect(batch.controller.isDeleteOriginalsLocked)
+        #expect(!batch.controller.deletesOriginals)
+        batch.controller.startExport()
+        try await until { batch.controller.didFinish }
+        #expect(batch.library.created.count == 5)
+        #expect(batch.library.deleted.isEmpty)
+        #expect(batch.controller.deletedOriginalCount == 0)
+
+        batch.watermark.update { $0.isEnabled = false }
+        #expect(!batch.controller.isDeleteOriginalsLocked)
+        #expect(batch.controller.deletesOriginals, "the choice made before comes back")
+        #expect(WatermarkCopy.originalsAreKept(locale: Locale(identifier: "en")) == "Originals are kept when you add a watermark.")
+    }
+
     /// Off: nothing stamped, nothing to report.
     @Test func offStampsNothing() async throws {
         let batch = try resize([OriginalItem.test("a")], metadata: [:], enabled: false)

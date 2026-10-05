@@ -49,6 +49,11 @@ enum WatermarkCopy {
         String(localized: "None", table: table, locale: locale, comment: "Watermark row value: no watermark preset saved yet")
     }
 
+    /// Resize's Delete Originals line while a watermark is on.
+    static func originalsAreKept(locale: Locale = .current) -> String {
+        String(localized: "Originals are kept when you add a watermark.", table: table, locale: locale, comment: "Resize: why Delete Originals is off while a watermark is on")
+    }
+
     // MARK: Watermark screen
 
     static func addWatermark(locale: Locale = .current) -> String {

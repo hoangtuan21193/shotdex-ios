@@ -52,8 +52,17 @@ final class CompressionController {
     /// (FS-08.06 §4).
     var metadata = MetadataLevel.sharingDefault()
     /// Delete each source photo once its compressed copy is saved. On by default
-    /// — compressing is normally a replace, not a duplicate.
+    /// — compressing is normally a replace, not a duplicate. The user's
+    /// choice; `deletesOriginals` is what the run does.
     var deleteOriginals = true
+
+    /// A watermark keeps the originals (FS-05.04 §5): the stamped copy must
+    /// never become the only copy. Turning the watermark off gives the
+    /// choice back as it was.
+    var isDeleteOriginalsLocked: Bool { watermarkTemplate != nil }
+
+    /// Whether this run deletes the originals.
+    var deletesOriginals: Bool { deleteOriginals && !isDeleteOriginalsLocked }
     var cropAnchor = NormalizedPoint.center
     var previewImage: UIImage?
     /// The single photo's preview before the stamp, cropped as the export
@@ -458,7 +467,7 @@ final class CompressionController {
     /// system confirmation; deletions land in Recently Deleted. A failure here is
     /// non-fatal — the compressed copies are already saved.
     private func deleteOriginalsIfRequested() async {
-        guard deleteOriginals, !compressedOriginalIDs.isEmpty else { return }
+        guard deletesOriginals, !compressedOriginalIDs.isEmpty else { return }
         isDeletingOriginals = true
         defer { isDeletingOriginals = false }
         do {

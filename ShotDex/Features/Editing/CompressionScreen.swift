@@ -404,12 +404,17 @@ struct CompressionScreen: View {
     }
 
     private func deleteOriginalsSection(_ controller: CompressionController) -> some View {
-        let subtitle = assets.count == 1
-            ? "Remove the source photo after the resized copy is saved"
-            : "Remove each source photo after its resized copy is saved"
+        let locked = controller.isDeleteOriginalsLocked
+        let subtitle = if locked {
+            WatermarkCopy.originalsAreKept()
+        } else if assets.count == 1 {
+            "Remove the source photo after the resized copy is saved"
+        } else {
+            "Remove each source photo after its resized copy is saved"
+        }
         return Toggle(
             isOn: Binding(
-                get: { controller.deleteOriginals },
+                get: { controller.deletesOriginals },
                 set: { controller.deleteOriginals = $0 }
             )
         ) {
@@ -423,6 +428,10 @@ struct CompressionScreen: View {
             }
         }
         .tint(accent)
+        // FS-05.04 §5: with a watermark the originals stay — off, dimmed,
+        // and the line says why.
+        .disabled(locked)
+        .opacity(locked ? 0.4 : 1)
     }
 
     /// Centered modal shown while the batch runs — spinner + determinate bar over
