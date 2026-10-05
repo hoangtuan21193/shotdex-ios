@@ -186,6 +186,10 @@ private struct VideoTrack: View {
             if let groupDrag {
                 dropLine(at: groupDrag.boundary)
                 groupStack(at: groupDrag.fingerX)
+            } else if model.isPlacingGroup {
+                // Move without a drag: the line follows the playhead, and
+                // its pill is the button that drops (FS-12.11 §6).
+                dropLine(at: model.placingBoundary, dropsOnTap: true)
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -210,29 +214,44 @@ private struct VideoTrack: View {
 
     /// The drop line, 3×82 in the selection colour with a glow, and over it
     /// "Move 2 clips here" (100×18).
-    private func dropLine(at boundary: Int) -> some View {
+    private func dropLine(at boundary: Int, dropsOnTap: Bool = false) -> some View {
         let x = CGFloat(VideoClipGroupEditing.boundaryTime(boundary, placements: placements)) * pps
         let size = VideoStudioMetrics.groupDropLine
         let top = (lanes.clipCell - size.height) / 2
+        let pill = Text(VideoStudioCopy.moveClipsHere(model.selectedClipIDs.count))
+            .font(.system(size: 10, weight: .bold))
+            .lineLimit(1)
+            .minimumScaleFactor(0.8)
+            .foregroundStyle(EditorTheme.timelineSelectionInk)
+            .padding(.horizontal, 6)
+            .frame(width: VideoStudioMetrics.groupDropPill.width, height: VideoStudioMetrics.groupDropPill.height)
+            .background(Capsule().fill(EditorTheme.timelineSelection))
         return ZStack(alignment: .topLeading) {
             Rectangle()
                 .fill(EditorTheme.timelineSelection)
                 .frame(width: size.width, height: size.height)
                 .shadow(color: EditorTheme.timelineSelection.opacity(0.8), radius: 6)
                 .offset(x: x - size.width / 2, y: top)
-            Text(VideoStudioCopy.moveClipsHere(model.selectedClipIDs.count))
-                .font(.system(size: 10, weight: .bold))
-                .lineLimit(1)
-                .minimumScaleFactor(0.8)
-                .foregroundStyle(EditorTheme.timelineSelectionInk)
-                .padding(.horizontal, 6)
-                .frame(width: VideoStudioMetrics.groupDropPill.width, height: VideoStudioMetrics.groupDropPill.height)
-                .background(Capsule().fill(EditorTheme.timelineSelection))
-                .offset(x: x - VideoStudioMetrics.groupDropPill.width / 2, y: top - VideoStudioMetrics.groupDropPill.height - 2)
+                .allowsHitTesting(false)
+                .accessibilityHidden(true)
+            Group {
+                if dropsOnTap {
+                    Button { model.placeGroupAtLine() } label: {
+                        // The pill answers a 44pt-tall touch, drawn 18 tall.
+                        pill.frame(height: 44).contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityHint(Text("Scroll the timeline to move the line", tableName: VideoStudioCopy.table, comment: "Video Studio multi-select: VoiceOver hint on the Move pill — the line follows the playhead as the timeline scrolls"))
+                    .offset(y: -13)
+                } else {
+                    pill
+                        .allowsHitTesting(false)
+                        .accessibilityHidden(true)
+                }
+            }
+            .offset(x: x - VideoStudioMetrics.groupDropPill.width / 2, y: top - VideoStudioMetrics.groupDropPill.height - 2)
         }
-        .allowsHitTesting(false)
         .zIndex(4)
-        .accessibilityHidden(true)
     }
 
     /// The group lifted under the finger: a 131×54 stack — the first clip

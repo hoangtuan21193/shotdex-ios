@@ -773,6 +773,10 @@
       "comment": "Video Studio Export: the file is written and is going into the library",
       "extractionState": "manual"
     },
+    "Scroll the timeline to move the line": {
+      "comment": "Video Studio multi-select: VoiceOver hint on the Move pill — the line follows the playhead as the timeline scrolls",
+      "extractionState": "manual"
+    },
     "Search Library": {
       "comment": "Video Studio Media panel: the search button, by camera, lens, settings or words",
       "extractionState": "manual"

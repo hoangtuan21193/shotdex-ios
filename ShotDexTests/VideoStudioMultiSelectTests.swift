@@ -360,4 +360,25 @@ struct VideoStudioMultiSelectTests {
         #expect(model.recipe == before)
         #expect(!model.canUndo)
     }
+
+    /// AC-12: clip 4 in a group, playhead at 2.8s — Move shows the line at
+    /// 0:03.0 and its pill drops the group there: 1·4·2·3·5, one step,
+    /// the line gone, the group still selected.
+    @Test func moveWithoutDragDropsAtTheLine() {
+        let model = sampleModel()
+        let ids = model.recipe.clips.map(\.id)
+        model.seek(to: 2.8)
+        model.enterClipSelection(ids[3])
+        model.toggleGroupPlacing()
+        #expect(model.isPlacingGroup)
+        #expect(model.isItemCommandOn(.move))
+        #expect(model.placingBoundary == 1)
+
+        model.placeGroupAtLine()
+        #expect(model.recipe.clips.map(\.id) == [ids[0], ids[3], ids[1], ids[2], ids[4]])
+        #expect(!model.isPlacingGroup)
+        #expect(model.selectedClipIDs == [ids[3]])
+        model.undo()
+        #expect(model.recipe.clips.map(\.id) == ids)
+    }
 }

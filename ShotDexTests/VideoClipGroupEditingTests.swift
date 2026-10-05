@@ -211,4 +211,14 @@ struct VideoClipGroupEditingTests {
             #expect(edited == before)
         }
     }
+
+    /// AC-12's line: at 2.8s the nearest boundary is 0:03.0, between clips
+    /// 1 and 2 — boundary 1.
+    @Test func nearestBoundaryToPlayhead() {
+        let placements = VideoTimelineMath.placements(durations: [3.0, 6.2, 5.0, 3.0, 6.8], overlaps: [0, 0, 0, 0])
+        #expect(VideoClipGroupEditing.nearestBoundary(to: 2.8, placements: placements) == 1)
+        #expect(VideoClipGroupEditing.nearestBoundary(to: 0.4, placements: placements) == 0)
+        #expect(VideoClipGroupEditing.nearestBoundary(to: 12.0, placements: placements) == 3)
+        #expect(VideoClipGroupEditing.nearestBoundary(to: 40, placements: placements) == 5)
+    }
 }

@@ -459,6 +459,8 @@ struct VideoStudioSheetHost: View {
         case .rotate:
             model.pushUndo()
             model.rotateClockwise()
+        case .move:
+            model.toggleGroupPlacing()
         case .addTrack:
             actions.onAddMusic()
         case .delete:

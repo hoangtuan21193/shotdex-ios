@@ -531,6 +531,7 @@ final class VideoStudioModel {
 
     /// Whether a section command's cell is lit.
     func isItemCommandOn(_ command: VideoItemCommand) -> Bool {
+        if command == .move { return isPlacingGroup }
         guard command.isSection else { return false }
         switch selectedItemKind {
         case .text, .sticker: return textTool(for: command) == inspectorTextTool
@@ -546,6 +547,7 @@ final class VideoStudioModel {
             guard let tool = textTool(for: command) else { return }
             inspectorTextTool = inspectorTextTool == tool ? .transform : tool
         default:
+            isPlacingGroup = false
             activeItemCommand = activeItemCommand == command ? nil : command
             // A clip's Look block writes that clip unless told otherwise; a
             // group's writes every clip in it — 06c's Selected (FS-12.11 §5).
@@ -591,6 +593,7 @@ final class VideoStudioModel {
         mediaShowsInVideo = false
         selectedClipID = nil
         selectedClipIDs = []
+        isPlacingGroup = false
         selectedOverlayID = nil
         selectedMusicID = nil
         activeToolPanel = nil
@@ -1162,6 +1165,30 @@ final class VideoStudioModel {
         groupAnchor = pairs.last?.copy
         markEdited()
         schedulePreviewRebuild()
+    }
+
+    /// Move without a drag (FS-12.11 §6): a line at the boundary nearest
+    /// the playhead; scrolling the timeline moves it, and its pill drops the
+    /// group there. For VoiceOver and one-handed use. Screen state.
+    private(set) var isPlacingGroup = false
+
+    /// Where the group would land now: the boundary nearest the playhead.
+    var placingBoundary: Int {
+        VideoClipGroupEditing.nearestBoundary(to: currentTime, placements: clipPlacements)
+    }
+
+    /// The Move command: shows the line, or takes it away again.
+    func toggleGroupPlacing() {
+        guard isSelectingClips else { return }
+        isPlacingGroup.toggle()
+    }
+
+    /// The pill tapped: the group goes to the line, one step, and the line
+    /// goes away.
+    func placeGroupAtLine() {
+        guard isSelectingClips, isPlacingGroup else { return }
+        isPlacingGroup = false
+        moveClips(selectedClipIDs, toBoundary: placingBoundary)
     }
 
     /// Delete (FS-12.11 §5): the group goes, the rest close up, and the
