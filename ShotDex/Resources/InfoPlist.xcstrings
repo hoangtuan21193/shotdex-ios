@@ -1,0 +1,24 @@
+{
+  "sourceLanguage": "en",
+  "strings": {
+    "NSSpeechRecognitionUsageDescription": {
+      "comment": "Privacy - Speech Recognition Usage Description: asked the first time Auto Captions is tapped in the Video Studio (FS-12.14 §4)",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ShotDex turns speech in your clips into captions. It runs on this device; audio never leaves it."
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ShotDex biến lời nói trong các clip của bạn thành phụ đề. Việc này chạy ngay trên máy; âm thanh không bao giờ rời khỏi máy."
+          }
+        }
+      }
+    }
+  },
+  "version": "1.0"
+}

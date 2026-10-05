@@ -721,6 +721,8 @@ struct VideoProjectRecipe: Equatable, Codable, Sendable {
     var resolution: VideoResolution = .p1080
     var frameRate: VideoFrameRate = .fps30
     var codec: VideoCodec = .h264
+    /// The caption lane C1 (FS-12.14), nil until Auto Captions makes one.
+    var captions: VideoCaptionLane?
     /// Where the playhead was when the draft was written (FS-12.18 §3).
     /// Only in what is stored: the model takes it out on open and puts the
     /// current one in on each save, so it is never part of an edit or undo.
@@ -915,6 +917,7 @@ extension VideoProjectRecipe {
         resolution = value(.resolution, VideoResolution.p1080)
         frameRate = value(.frameRate, VideoFrameRate.fps30)
         codec = value(.codec, VideoCodec.h264)
+        captions = value(.captions, VideoCaptionLane?.none)
         playhead = value(.playhead, Double?.none)
         // A dropped clip leaves one boundary too many; boundaries are
         // positional, so trimming the tail is the honest repair.

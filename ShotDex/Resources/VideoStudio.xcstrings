@@ -609,6 +609,10 @@
       "comment": "Video Studio Export: stops the export in progress",
       "extractionState": "manual"
     },
+    "Caption %lld": {
+      "comment": "Video Studio captions: a caption block, by its place in time order — Caption 2",
+      "extractionState": "manual"
+    },
     "Change Marker Color": {
       "comment": "Video Studio transport: cycles the color of the marker at the playhead",
       "extractionState": "manual"

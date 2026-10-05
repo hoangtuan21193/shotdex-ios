@@ -41,6 +41,8 @@
 	<string>ShotDex looks for file servers on your network, such as a NAS or a computer, and connects to the ones you add to upload and download your photos.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>ShotDex uses a rough location — about a kilometre — to fetch the weather for your weather widget. It is never stored and nothing else is sent.</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>ShotDex turns speech in your clips into captions. It runs on this device; audio never leaves it.</string>
 	<key>NSUserActivityTypes</key>
 	<array>
 		<string>com.hoangtuan.shotdex.view-photo</string>
