@@ -466,7 +466,8 @@ struct VideoStudioSheetHost: View {
             case .clip: if let id = model.selectedClipID { model.deleteClip(id) }
             case .text: model.deleteSelectedOverlay()
             case .music: if let id = model.selectedMusicID { model.removeMusicTrack(id) }
-            case .clips, .none: break
+            case .clips: model.deleteGroup()
+            case .none: break
             }
         default:
             break

@@ -265,4 +265,40 @@ struct VideoStudioMultiSelectTests {
         #expect(model.recipe.clips.map(\.id) == ids)
         #expect(!model.canUndo)
     }
+
+    /// AC-7 on the model: Delete leaves the group and is one step; one Undo
+    /// brings back the five clips **and** the crossfade on 1 → 2.
+    @Test func oneUndoRestoresClipsAndCrossfade() {
+        let model = VideoStudioModelFixture.model(
+            clips: VideoStudioModelFixture.mediaSampleRecipe().clips,
+            configure: { $0.transitions[0] = .defaultCrossfade }
+        )
+        let ids = model.recipe.clips.map(\.id)
+        model.enterClipSelection(ids[1])
+        model.toggleClip(ids[2])
+        model.toggleClip(ids[3])
+
+        model.deleteGroup()
+        #expect(model.recipe.clips.map(\.id) == [ids[0], ids[4]])
+        #expect(model.recipe.transitions.map(\.kind) == [.none])
+        #expect(!model.isSelectingClips)
+        #expect(model.session == nil)
+
+        model.undo()
+        #expect(model.recipe.clips.map(\.id) == ids)
+        #expect(model.recipe.transitions[0].kind == .crossfade)
+    }
+
+    /// Q-a for one clip: deleting clip 2 with a crossfade on 2 → 3 no
+    /// longer slides that crossfade onto 1 → 3.
+    @Test func deletingOneClipLeavesACut() {
+        let model = VideoStudioModelFixture.model(
+            clips: VideoStudioModelFixture.mediaSampleRecipe().clips,
+            configure: { $0.transitions[1] = .defaultCrossfade }
+        )
+        let ids = model.recipe.clips.map(\.id)
+        model.deleteClip(ids[1])
+        #expect(model.recipe.clips.map(\.id) == [ids[0], ids[2], ids[3], ids[4]])
+        #expect(model.recipe.transitions.map(\.kind) == [.none, .none, .none])
+    }
 }

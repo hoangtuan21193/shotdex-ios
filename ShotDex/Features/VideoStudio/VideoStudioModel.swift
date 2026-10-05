@@ -1164,6 +1164,23 @@ final class VideoStudioModel {
         schedulePreviewRebuild()
     }
 
+    /// Delete (FS-12.11 §5): the group goes, the rest close up, and the
+    /// group ends as ✓ ends it — the delete is a step only Undo takes back.
+    /// Every clip in the group is refused: a project keeps one.
+    func deleteGroup() {
+        guard isSelectingClips else { return }
+        var edited = recipe
+        guard VideoClipGroupEditing.delete(selectedClipIDs, in: &edited) else { return }
+        pushUndo()
+        recipe = edited
+        clearSelection()
+        if let boundary = editingTransitionIndex, !recipe.transitions.indices.contains(boundary) {
+            editingTransitionIndex = nil
+        }
+        markEdited()
+        schedulePreviewRebuild()
+    }
+
     /// The motion the group shares; nil when the clips differ.
     var groupEffect: VideoClipEffect? { VideoClipGroupEditing.commonEffect(selectedClipIDs, in: recipe) }
 
@@ -1762,13 +1779,18 @@ final class VideoStudioModel {
     /// holds no gaps), and deleting the selected clip ends its session the
     /// way ✓ does (FS-12.04 §5): the delete is a step Undo can take back.
     func deleteClip(_ clipID: UUID) {
-        guard recipe.clips.count > 1,
-              let index = recipe.clips.firstIndex(where: { $0.id == clipID })
-        else { return }
+        // The boundaries left follow their two clips (FS-12.11 §6): the one
+        // the delete makes is a straight cut, not the next transition slid
+        // along — the same rule as a group's Delete and every Move.
+        var edited = recipe
+        guard VideoClipGroupEditing.delete([clipID], in: &edited) else { return }
         pushUndo()
-        recipe.clips.remove(at: index)
-        recipe.syncTransitionsWithClips()
+        recipe = edited
         if selectedClipID == clipID { clearSelection() }
+        if isSelectingClips {
+            selectedClipIDs = VideoClipGroupEditing.ordered(selectedClipIDs, in: recipe)
+            if selectedClipIDs.isEmpty { clearSelection() }
+        }
         if let boundary = editingTransitionIndex,
            !recipe.transitions.indices.contains(boundary) {
             editingTransitionIndex = nil

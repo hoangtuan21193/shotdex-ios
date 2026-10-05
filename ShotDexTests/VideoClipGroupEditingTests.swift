@@ -129,4 +129,20 @@ struct VideoClipGroupEditingTests {
         let reversed = VideoClipGroupEditing.remapTransitions(from: old, to: [old.clips[2], old.clips[3]])
         #expect(reversed.map(\.kind) == [.wipe])
     }
+
+    /// AC-7: clips 2, 3, 4 deleted with a Crossfade on 1 → 2 — clips 1 and 5
+    /// close up, 1 → 5 is a straight cut (the crossfade was for 1 → 2),
+    /// 9.8s. Deleting every clip is refused and changes nothing.
+    @Test func deleteMiddleThreeLeavesNoneBoundary() {
+        var edited = recipe
+        edited.transitions[0] = .defaultCrossfade
+        #expect(VideoClipGroupEditing.delete([ids[1], ids[2], ids[3]], in: &edited))
+        #expect(edited.clips.map(\.id) == [ids[0], ids[4]])
+        #expect(edited.transitions.map(\.kind) == [.none])
+        #expect(abs(edited.clips.map(\.effectiveDuration).reduce(0, +) - 9.8) < 1e-9)
+
+        var all = recipe
+        #expect(!VideoClipGroupEditing.delete(ids, in: &all))
+        #expect(all == recipe)
+    }
 }

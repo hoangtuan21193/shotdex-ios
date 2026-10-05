@@ -72,6 +72,22 @@ enum VideoClipGroupEditing {
         return copies.map { (original: $0.0, copy: $0.1.id) }
     }
 
+    // MARK: Delete (FS-12.11 §5)
+
+    /// Takes the clips out and closes the track up; the boundaries left
+    /// follow the transition rule. Refuses — and changes nothing — when
+    /// they are every clip: a project keeps at least one.
+    @discardableResult
+    static func delete(_ ids: [UUID], in recipe: inout VideoProjectRecipe) -> Bool {
+        let wanted = Set(ids)
+        let kept = recipe.clips.filter { !wanted.contains($0.id) }
+        guard !kept.isEmpty, kept.count < recipe.clips.count else { return false }
+        let old = recipe
+        recipe.clips = kept
+        recipe.transitions = remapTransitions(from: old, to: kept)
+        return true
+    }
+
     // MARK: Speed (FS-12.11 §5)
 
     /// The speed every video in the group shares, or nil when they differ

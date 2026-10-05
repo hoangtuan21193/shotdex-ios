@@ -122,6 +122,59 @@
    "text": "snapshot"
   },
   {
+   "action": "tap",
+   "label": "Undo"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "longPress",
+   "label": "Video clip, from second 3 to 9",
+   "seconds": 0.6
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "tap",
+   "label": "Video clip, from second 9 to 14"
+  },
+  {
+   "action": "tap",
+   "label": "Photo clip, from second 14 to 17"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "swipe",
+   "x": 0.93,
+   "y": 0.105,
+   "direction": "left",
+   "distance": 0.12
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "tap",
+   "label": "itemCommand.delete"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "dump",
+   "name": "20-deleted",
+   "text": "snapshot"
+  },
+  {
    "action": "wait",
    "seconds": 30
   }
