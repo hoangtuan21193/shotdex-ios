@@ -37,7 +37,7 @@ nằm ở sidecar và ở bảng riêng khoá theo id đó, **không bao giờ**
 | Bảng | Giữ gì | Loại |
 |---|---|---|
 | **Ảnh** | id · lúc tạo · **lúc thành mồ côi** (trống khi còn bản sao) | danh tính; mọi lượt dọn neo vào đây |
-| **Bản sao** | id bền · id ảnh · nguồn · loại · id PhotoKit **hoặc** đường dẫn tương đối chuẩn hoá · kích thước · ngày sửa · file ghép cặp · dấu sidecar · online · **ẩn** · lần thấy cuối | kết quả quét |
+| **Bản sao** | id bền · id ảnh · nguồn · loại · id PhotoKit **hoặc** đường dẫn tương đối chuẩn hoá · kích thước · ngày sửa · file ghép cặp · dấu sidecar · online (nguồn) · **mất từ** (file không còn ở nguồn đang online) · **ẩn** · lần thấy cuối | kết quả quét |
 | **Hash** | bản sao · thuật toán + phiên bản · hash nhanh · hash đầy đủ (có thể trống) · lúc băm | kết quả quét đắt tiền |
 | **Nguồn** | loại · tên · bookmark · id ổ · connection · thư mục con (`all`/`top`) · ghép cặp · khi ổ rút · trạng thái · điểm chạy tiếp (thư mục; lượt đọc thư mục không cần — mỗi file ghi riêng một transaction, đọc lại bỏ qua file đã có theo đường dẫn + kích thước + ngày sửa) | người dùng tạo |
 | **Dấu ảnh** | id ảnh · sao thật · favorite · title · caption · lúc đổi **từng trường**; keyword một dòng mỗi (ảnh, keyword) | dữ liệu người dùng |
@@ -72,7 +72,8 @@ nằm ở sidecar và ở bảng riêng khoá theo id đó, **không bao giờ**
 ## 5. Mồ côi và dọn
 
 - File biến mất: dòng bản sao **ở lại** (lần thấy cuối cũ) cùng hash của nó, tới khi dọn — hash đó là thứ nối file quay lại.
-- Ảnh mất bản sao cuối → đặt lúc thành mồ côi, không gỡ gì. Bản sao quay lại có hash trùng → xoá dấu mồ côi.
+- Ảnh mất bản sao cuối (mọi bản sao **mất từ** có giá trị) → đặt lúc thành mồ côi, không gỡ gì. Bản sao trên ổ đang rút
+  không "mất" — chỉ offline. Bản sao quay lại có hash trùng → xoá dấu mồ côi.
 - Dọn lúc mở app: mồ côi > **30 ngày** → gỡ dòng ở mọi bảng dữ liệu người dùng, **trừ** lịch sử upload, lịch sử tải
   về và lịch sử nhập thẻ — chúng sống lâu hơn ảnh như BD-02 nói.
 - Ổ offline không làm ảnh mồ côi. Quyền `.limited` như BD-02 §3: không gỡ. Mọi lượt dọn neo vào bảng Ảnh, không vào

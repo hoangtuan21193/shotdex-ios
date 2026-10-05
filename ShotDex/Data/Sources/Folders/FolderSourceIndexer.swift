@@ -29,6 +29,19 @@ struct FolderSourceIndexer: Sendable {
                                       folder: { ($0.relativePath as NSString).deletingLastPathComponent })
         var summary = Summary()
         let stamp = Int(now.timeIntervalSince1970)
+        // Copies this source knew that are not at their path any more: a
+        // renamed or moved file is matched back to one of these by its fast
+        // hash and size (FS-19.02 §2); what is left over went missing.
+        let listed = Set(units.map { Self.pathKey($0.primary.relativePath) })
+        var vanished = try database.reader.read { db in
+            try Row.fetchAll(db, sql: """
+                SELECT c.id, c.photoId, c.relativePathKey, c.size, h.fastHash FROM photo_copies c
+                LEFT JOIN content_hashes h ON h.copyId = c.id
+                WHERE c.sourceId = ? AND c.kind = 'file'
+                """, arguments: [sourceId])
+                .filter { !listed.contains($0["relativePathKey"] as String) }
+                .map { (copyId: $0["id"] as String, photoId: $0["photoId"] as String, size: $0["size"] as Int64?, fast: $0["fastHash"] as String?) }
+        }
         for unit in units {
             try Task.checkCancellation()
             guard shouldContinue() else {
@@ -44,7 +57,7 @@ struct FolderSourceIndexer: Sendable {
             }
             if let existing, existing["size"] as Int64? == file.size, existing["modifiedAt"] as Int? == modified {
                 try database.writer.write { db in
-                    try db.execute(sql: "UPDATE photo_copies SET lastSeenAt = ?, isOnline = 1 WHERE id = ?",
+                    try db.execute(sql: "UPDATE photo_copies SET lastSeenAt = ?, isOnline = 1, missingSince = NULL WHERE id = ?",
                                    arguments: [stamp, existing["id"] as String])
                 }
                 summary.unchanged += 1
@@ -53,8 +66,14 @@ struct FolderSourceIndexer: Sendable {
 
             let url = root.appendingPathComponent(file.relativePath)
             let hash = try ContentHasher.hash(FileBytes(url: url), full: false)
-            let photoId: String = existing?["photoId"] ?? UUID().uuidString
-            let copyId: String = existing?["id"] ?? UUID().uuidString
+            var photoId: String = existing?["photoId"] ?? UUID().uuidString
+            var copyId: String = existing?["id"] ?? UUID().uuidString
+            if existing == nil, let match = vanished.firstIndex(where: { $0.fast == hash.fast && $0.size == file.size }) {
+                // Renamed or moved inside the source: same copy, same photo.
+                photoId = vanished[match].photoId
+                copyId = vanished[match].copyId
+                vanished.remove(at: match)
+            }
             let record = metadata(photoId: photoId, url: url, file: file)
 
             try database.writer.write { db in
@@ -63,8 +82,9 @@ struct FolderSourceIndexer: Sendable {
                 try db.execute(sql: """
                     INSERT INTO photo_copies (id, photoId, sourceId, kind, relativePath, relativePathKey, size, modifiedAt, pairedPath, isOnline, lastSeenAt)
                     VALUES (?, ?, ?, 'file', ?, ?, ?, ?, ?, 1, ?)
-                    ON CONFLICT(id) DO UPDATE SET relativePath = excluded.relativePath, size = excluded.size,
-                        modifiedAt = excluded.modifiedAt, pairedPath = excluded.pairedPath, isOnline = 1, lastSeenAt = excluded.lastSeenAt
+                    ON CONFLICT(id) DO UPDATE SET relativePath = excluded.relativePath, relativePathKey = excluded.relativePathKey,
+                        size = excluded.size, modifiedAt = excluded.modifiedAt, pairedPath = excluded.pairedPath,
+                        isOnline = 1, missingSince = NULL, lastSeenAt = excluded.lastSeenAt
                     """, arguments: [copyId, photoId, sourceId, file.relativePath, key, file.size, modified,
                                      unit.companion?.relativePath, stamp])
                 try db.execute(sql: """
@@ -77,7 +97,25 @@ struct FolderSourceIndexer: Sendable {
             }
             summary.photos += 1
         }
+        try markMissing(vanished.map(\.copyId), at: stamp)
         return summary
+    }
+
+    /// Files a complete read no longer finds: the copy stays (its hash is
+    /// what joins the file back when it returns) and is marked missing; a
+    /// photo left with no present copy becomes an orphan (FS-19.05 §5).
+    private func markMissing(_ copyIds: [String], at stamp: Int) throws {
+        guard !copyIds.isEmpty else { return }
+        try database.writer.write { db in
+            let marks = databaseQuestionMarks(count: copyIds.count)
+            try db.execute(sql: "UPDATE photo_copies SET missingSince = ? WHERE id IN (\(marks)) AND missingSince IS NULL",
+                           arguments: StatementArguments([stamp] + copyIds))
+            try db.execute(sql: """
+                UPDATE photos SET orphanedAt = ?
+                WHERE orphanedAt IS NULL AND id IN (SELECT photoId FROM photo_copies WHERE id IN (\(marks)))
+                  AND NOT EXISTS (SELECT 1 FROM photo_copies c WHERE c.photoId = photos.id AND c.missingSince IS NULL)
+                """, arguments: StatementArguments([stamp] + copyIds))
+        }
     }
 
     /// The metadata row of a file photo — the same composer as Photos assets,

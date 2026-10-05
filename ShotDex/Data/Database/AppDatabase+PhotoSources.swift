@@ -186,6 +186,20 @@ extension AppDatabase {
         }
     }
 
+    /// FS-19.02 §2: a file that vanished from a source it was read from is
+    /// told apart from a copy on an unplugged drive. `missingSince` is set
+    /// when a complete read of an online source no longer finds the file
+    /// (NULL while it is there); `isOnline` stays about the source. A photo
+    /// whose every copy is missing is an orphan; one whose copies sit on an
+    /// unplugged drive is not.
+    static func registerMissingCopies(_ migrator: inout DatabaseMigrator) {
+        migrator.registerMigration("v31-missingCopies") { db in
+            try db.alter(table: "photo_copies") { t in
+                t.add(column: "missingSince", .integer)
+            }
+        }
+    }
+
     /// Every photo id a table held before v30, once each. `creations` keeps
     /// NULL for a draft with no source photo; the caller drops it.
     static let everyPhotoIdSQL = """

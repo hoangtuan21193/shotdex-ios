@@ -1,4 +1,5 @@
 import Foundation
+import GRDB
 import Testing
 import UniformTypeIdentifiers
 @testable import ShotDex
@@ -124,5 +125,54 @@ extension PhotoIdentityTests {
 
     private func count(_ sql: String, _ database: AppDatabase) throws -> Int {
         try database.reader.read { db in try Int.fetchOne(db, sql: sql) ?? -1 }
+    }
+
+    /// AC-20: a photo with ★4 whose file is renamed in Finder keeps its id,
+    /// its copy and its star; only the renamed file is read; no new photo.
+    /// A file deleted outside ShotDex leaves its photo an orphan with the copy
+    /// marked missing.
+    @Test func renameKeepsIdentity() throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent("Rename-\(UUID().uuidString)", isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        for (name, width) in [("DSC04512.JPG", 256), ("DSC04513.JPG", 264), ("DSC04514.JPG", 272)] {
+            var options = MetadataFixture.Options()
+            options.width = width
+            try MetadataFixture.encode(.jpeg, options: options).write(to: root.appendingPathComponent(name))
+        }
+        let database = try AppDatabase.makeEmpty()
+        let sourceId = try SourceStore(database: database).addFolder(name: "2026 Japan", bookmark: Data(), includesSubfolders: true, pairsRawAndJpeg: true)
+        let indexer = FolderSourceIndexer(database: database, composer: FolderSourceIndexTests.composer)
+        _ = try indexer.index(sourceId: sourceId, root: root, includesSubfolders: true, pairsRawAndJpeg: true)
+        let before = try copy("DSC04512.JPG", database)
+        try database.writer.write { db in
+            try db.execute(sql: "INSERT INTO photo_user_marks (photoId, rating, ratingAt) VALUES (?, 4, 1)", arguments: [before.photoId])
+        }
+
+        try FileManager.default.moveItem(at: root.appendingPathComponent("DSC04512.JPG"), to: root.appendingPathComponent("Nara_001.JPG"))
+        try FileManager.default.removeItem(at: root.appendingPathComponent("DSC04514.JPG"))
+        let summary = try indexer.index(sourceId: sourceId, root: root, includesSubfolders: true, pairsRawAndJpeg: true)
+
+        #expect(summary == FolderSourceIndexer.Summary(photos: 1, unchanged: 1))
+        let after = try copy("Nara_001.JPG", database)
+        #expect(after.copyId == before.copyId)
+        #expect(after.photoId == before.photoId)
+        let state = try database.reader.read { db in
+            (photos: try Int.fetchOne(db, sql: "SELECT COUNT(*) FROM photos") ?? 0,
+             rating: try Int.fetchOne(db, sql: "SELECT rating FROM photo_user_marks WHERE photoId = ?", arguments: [before.photoId]),
+             orphans: try Int.fetchOne(db, sql: "SELECT COUNT(*) FROM photos WHERE orphanedAt IS NOT NULL") ?? 0,
+             missing: try String.fetchAll(db, sql: "SELECT relativePath FROM photo_copies WHERE missingSince IS NOT NULL"))
+        }
+        #expect(state.photos == 3)
+        #expect(state.rating == 4)
+        #expect(state.orphans == 1)
+        #expect(state.missing == ["DSC04514.JPG"])
+    }
+
+    private func copy(_ path: String, _ database: AppDatabase) throws -> (copyId: String, photoId: String) {
+        try database.reader.read { db in
+            let row = try Row.fetchOne(db, sql: "SELECT id, photoId FROM photo_copies WHERE relativePath = ?", arguments: [path])
+            return (row?["id"] ?? "", row?["photoId"] ?? "")
+        }
     }
 }

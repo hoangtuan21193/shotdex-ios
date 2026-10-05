@@ -25,7 +25,7 @@ struct PhotoOrphanStore: Sendable {
                     sql: """
                         UPDATE photos SET orphanedAt = ?
                         WHERE id IN (\(marks)) AND orphanedAt IS NULL
-                          AND NOT EXISTS (SELECT 1 FROM photo_copies c WHERE c.photoId = photos.id)
+                          AND NOT EXISTS (SELECT 1 FROM photo_copies c WHERE c.photoId = photos.id AND c.missingSince IS NULL)
                         """,
                     arguments: StatementArguments([stamp] + slice)
                 )

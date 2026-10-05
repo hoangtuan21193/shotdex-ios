@@ -110,7 +110,7 @@ Một ảnh là một **id** với các **bản sao** ở các **nguồn** (thư
 |---|---|---|
 | Nguồn | loại · tên · bookmark · id ổ · connection · thư mục con · ghép RAW+JPEG · khi ổ rút · trạng thái · điểm chạy tiếp; thư viện Photos là dòng `photos-library` | người dùng tạo |
 | Ảnh | id · lúc tạo · lúc thành mồ côi (rỗng khi còn bản sao) | danh tính; mọi lượt dọn neo vào đây |
-| Bản sao | id bền · id ảnh · nguồn · loại · id PhotoKit **hoặc** đường dẫn tương đối + khoá chuẩn NFC gấp hoa-thường · kích thước · ngày sửa · file ghép cặp · dấu sidecar · online · ẩn · lần thấy cuối | kết quả quét |
+| Bản sao | id bền · id ảnh · nguồn · loại · id PhotoKit **hoặc** đường dẫn tương đối + khoá chuẩn NFC gấp hoa-thường · kích thước · ngày sửa · file ghép cặp · dấu sidecar · online (nguồn) · **mất từ** (`v31-missingCopies`: lượt đọc trọn của nguồn đang online không thấy file; rỗng = còn) · ẩn · lần thấy cuối | kết quả quét |
 | Hash | một dòng mỗi bản sao: thuật toán + phiên bản · hash nhanh · hash đầy đủ · lúc băm | kết quả quét đắt tiền |
 | Bí danh | id thua → id thắng · lúc gộp | sau mỗi lần gộp |
 | Recipe | id ảnh · recipe · lúc đổi | người dùng |
