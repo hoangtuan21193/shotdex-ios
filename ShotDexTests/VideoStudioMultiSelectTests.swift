@@ -381,4 +381,31 @@ struct VideoStudioMultiSelectTests {
         model.undo()
         #expect(model.recipe.clips.map(\.id) == ids)
     }
+
+    /// AC-13: a step made before, then a group: 2× and Duplicate — ✕ puts
+    /// the project back exactly as it was before the press, and neither
+    /// Undo nor Redo knows the two steps any more; the earlier step is
+    /// still the one Undo takes.
+    @Test func discardRestoresEntrySnapshotAndUndoDepth() {
+        let model = sampleModel()
+        let ids = model.recipe.clips.map(\.id)
+        model.pushUndo()
+        model.setPhotoDuration(4, for: ids[0])
+        let entry = model.recipe
+
+        model.enterClipSelection(ids[1])
+        model.toggleClip(ids[2])
+        model.chooseGroupSpeed(2)
+        model.duplicateGroup()
+        #expect(model.recipe.clips.count == 7)
+
+        model.cancelSession()
+        #expect(model.recipe == entry)
+        #expect(!model.isSelectingClips)
+        #expect(!model.canRedo)
+        #expect(model.canUndo)
+        model.undo()
+        #expect(model.recipe.clips[0].photoDuration == 3)
+        #expect(!model.canUndo)
+    }
 }

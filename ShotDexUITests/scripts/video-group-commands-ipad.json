@@ -241,8 +241,44 @@
    "text": "snapshot"
   },
   {
+   "action": "tap",
+   "label": "2\u00d7"
+  },
+  {
    "action": "wait",
-   "seconds": 30
+   "seconds": 2
+  },
+  {
+   "action": "tap",
+   "label": "itemCommand.duplicate"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "dump",
+   "name": "40-before-discard",
+   "text": "snapshot",
+   "type": "button"
+  },
+  {
+   "action": "tap",
+   "label": "Discard Changes"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "dump",
+   "name": "41-discarded",
+   "text": "snapshot",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
   }
  ]
 }
