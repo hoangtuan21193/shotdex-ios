@@ -41,12 +41,14 @@ public extension PhotoRenderService {
     /// shadow or outline paints past it, and clipped to the photo.
     static func watermarkRaster(
         _ stamp: WatermarkStamp,
-        imageSize: CGSize
+        imageSize: CGSize,
+        region: CGRect? = nil
     ) -> (image: CGImage, rect: CGRect)? {
         guard let frame = watermarkFrame(stamp, imageSize: imageSize) else { return nil }
-        let ink = watermarkInkPadding(stamp.layers, frame: frame.frameSize)
-        let rect = frame.box.insetBy(dx: -ink, dy: -ink).integral
-            .intersection(CGRect(origin: .zero, size: imageSize))
+        let full = rasterRect(stamp, frame: frame, imageSize: imageSize)
+        // A band of the block when `region` is given: the same drawing, only
+        // the part of it under `region` allocated.
+        let rect = region.map { full.intersection($0).integral } ?? full
         let width = Int(rect.width)
         let height = Int(rect.height)
         guard !rect.isNull, width > 0, height > 0,
@@ -73,6 +75,19 @@ public extension PhotoRenderService {
         guard let image = context.makeImage() else { return nil }
         return (image, rect)
     }
+
+    /// The box grown by what a shadow or outline paints past it, in whole
+    /// pixels, clipped to the photo.
+    private static func rasterRect(_ stamp: WatermarkStamp, frame: WatermarkFrame, imageSize: CGSize) -> CGRect {
+        let ink = watermarkInkPadding(stamp.layers, frame: frame.frameSize)
+        return frame.box.insetBy(dx: -ink, dy: -ink).integral
+            .intersection(CGRect(origin: .zero, size: imageSize))
+    }
+
+    /// The most a single band of the stamp may take while a file is written.
+    /// A block at Size 25% across a 48MP photo is ~32 MB as one bitmap and
+    /// read +59 MB at peak; in 4 MB bands it adds a few.
+    static let largestWatermarkBandBytes = 4 * 1024 * 1024
 
     /// `image` with the stamp composited over it — the preview's way. A file
     /// gets the same composite through `write`, inside the box only.
@@ -149,22 +164,44 @@ public extension PhotoRenderService {
             image, toBitmap: buffer, rowBytes: rowBytes, bounds: extent,
             format: .RGBA8, colorSpace: result.colorSpace
         )
-        if let layer = Self.watermarkLayer(watermark, extent: extent) {
-            let rect = layer.rect
-            let bounds = CGRect(
-                x: extent.minX + rect.minX,
-                y: extent.minY + extent.height - rect.maxY,
-                width: rect.width,
-                height: rect.height
-            )
-            context.render(
-                layer.image.composited(over: image),
-                toBitmap: buffer.advanced(by: Int(rect.minY) * rowBytes + Int(rect.minX) * 4),
-                rowBytes: rowBytes,
-                bounds: bounds,
-                format: .RGBA8,
-                colorSpace: result.colorSpace
-            )
+        if let frame = Self.watermarkFrame(watermark, imageSize: extent.size) {
+            // Band by band, each released before the next: the whole box as
+            // one bitmap is tens of megabytes at Size 25% on a 48MP photo.
+            let full = Self.rasterRect(watermark, frame: frame, imageSize: extent.size)
+            let rowsPerBand = max(16, Self.largestWatermarkBandBytes / max(1, Int(full.width) * 4))
+            // Each band is drawn with what a shadow spreads across its edge,
+            // then cut back to the band, so no seam shows where two meet.
+            let overlap = Self.watermarkInkPadding(watermark.layers, frame: frame.frameSize).rounded(.up) + 2
+            var top = full.minY
+            while top < full.maxY {
+                let band = CGRect(x: full.minX, y: top, width: full.width, height: min(CGFloat(rowsPerBand), full.maxY - top))
+                top = band.maxY
+                autoreleasepool {
+                    guard let raster = Self.watermarkRaster(
+                        watermark, imageSize: extent.size, region: band.insetBy(dx: 0, dy: -overlap)
+                    ) else { return }
+                    let drawn = raster.rect
+                    let rect = band
+                    let bounds = CGRect(
+                        x: extent.minX + rect.minX,
+                        y: extent.minY + extent.height - rect.maxY,
+                        width: rect.width,
+                        height: rect.height
+                    )
+                    let layer = CIImage(cgImage: raster.image).transformed(by: CGAffineTransform(
+                        translationX: extent.minX + drawn.minX,
+                        y: extent.minY + extent.height - drawn.maxY
+                    )).cropped(to: bounds)
+                    context.render(
+                        layer.composited(over: image),
+                        toBitmap: buffer.advanced(by: Int(rect.minY) * rowBytes + Int(rect.minX) * 4),
+                        rowBytes: rowBytes,
+                        bounds: bounds,
+                        format: .RGBA8,
+                        colorSpace: result.colorSpace
+                    )
+                }
+            }
         }
         guard let provider = CGDataProvider(
             dataInfo: nil, data: buffer, size: rowBytes * height,
