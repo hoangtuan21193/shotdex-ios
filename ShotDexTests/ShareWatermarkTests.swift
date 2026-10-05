@@ -222,4 +222,52 @@ import UniformTypeIdentifiers
         #expect(SHA256.hash(data: try Data(contentsOf: shared)) == digest)
         #expect(try Self.whitePixels(in: try #require(result.files.first), rect: try Self.boxes().stamped) > 200)
     }
+
+    /// AC-15: ten photos, four only in iCloud, Watermark When Sharing on —
+    /// the four originals come down first, and every file is stamped at its
+    /// original's own pixel size, never a preview's.
+    @Test func iCloudOriginalsAreStampedAtFullSize() async throws {
+        defer { try? FileManager.default.removeItem(at: folder) }
+        let ids = (1...10).map { String(format: "%02d", $0) }
+        let sizes = Dictionary(uniqueKeysWithValues: ids.enumerated().map { ($1, PixelSize(width: 900 + $0 * 40, height: 600)) })
+        var local: [String: URL] = [:]
+        for id in ids {
+            var options = MetadataFixture.Options()
+            options.width = sizes[id]!.width
+            options.height = sizes[id]!.height
+            options.xmp = false
+            let url = folder.appendingPathComponent("local-\(id).jpg")
+            try MetadataFixture.encode(.jpeg, options: options).write(to: url)
+            local[id] = url
+        }
+        let sources = ids.map { ShareSource(id: $0, kind: .photo, filename: "IMG_\($0).JPG", uniformType: "public.jpeg") }
+        let originals = Dictionary(uniqueKeysWithValues: ids.map {
+            ($0, OriginalItem(id: $0, filename: "IMG_\($0).JPG", photo: sizes[$0]!, byteCount: 1_000_000))
+        })
+        let fake = FakeOriginalFetcher(script: .init("cloud=4,seconds=0.2"), base: FixtureOriginalFetcher())
+        let watermark = ShareWatermark(template: Self.credit().template)
+        let batch = LazyShareBatch(
+            sources: sources, originals: originals, level: .noLocation, fetcher: fake,
+            availableBytes: { 10_000_000_000 }, reader: LocalFileShareReader(files: local),
+            directory: folder, watermark: watermark
+        )
+        await batch.start()
+        #expect(batch.stage == .finished)
+        #expect(fake.fetchCount == 4)
+        let files = try #require(batch.results.wait())
+        #expect(files.count == 10)
+        for (index, id) in ids.enumerated() {
+            let file = try #require(files[index])
+            let props = MetadataFixture.properties(of: file)
+            // The fixture is orientation 6: upright, width and height swap.
+            #expect(props[kCGImagePropertyPixelWidth] as? Int == sizes[id]!.height, "\(id)")
+            #expect(props[kCGImagePropertyPixelHeight] as? Int == sizes[id]!.width, "\(id)")
+            let box = try #require(PhotoRenderService.watermarkFrame(
+                watermark.template.resolved(with: .empty),
+                imageSize: CGSize(width: sizes[id]!.height, height: sizes[id]!.width)
+            )).box.integral
+            #expect(try Self.whitePixels(in: file, rect: box) > 100, "\(id) is stamped")
+        }
+        batch.removeFiles()
+    }
 }
