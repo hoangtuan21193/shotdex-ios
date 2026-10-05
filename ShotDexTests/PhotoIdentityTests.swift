@@ -79,3 +79,50 @@ extension PhotoIdentityTests {
         #expect(order == ["a", "b", "x", "y"])
     }
 }
+
+@MainActor
+@Suite struct PhotoIdentityMergeTests {
+    /// AC-18: 5 identical files in "2026 Japan" and on T7, plus 2 files only
+    /// in each. Both sources read: 14 photos (fast hashes never merge). Full
+    /// hashes done: 9 photos — the library grows by the 9, not 14 — each
+    /// shared one with "2 copies", one metadata row each (what the grid and
+    /// Statistics count).
+    @Test func identicalCopiesAreOnePhoto() throws {
+        let base = FileManager.default.temporaryDirectory.appendingPathComponent("Identity-\(UUID().uuidString)", isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: base) }
+        let japan = base.appendingPathComponent("2026 Japan"), t7 = base.appendingPathComponent("T7")
+        for folder in [japan, t7] { try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true) }
+        for n in 0..<5 {
+            var options = MetadataFixture.Options()
+            options.width += n * 8
+            let shared = try MetadataFixture.encode(.jpeg, options: options)
+            try shared.write(to: japan.appendingPathComponent("DSC0450\(n).JPG"))
+            try shared.write(to: t7.appendingPathComponent("DSC0450\(n).JPG"))
+        }
+        for (folder, prefix, offset) in [(japan, "JP", 100), (t7, "T7", 200)] {
+            for n in 0..<2 {
+                var options = MetadataFixture.Options()
+                options.width += offset + n * 8
+                try MetadataFixture.encode(.jpeg, options: options).write(to: folder.appendingPathComponent("\(prefix)_\(n).JPG"))
+            }
+        }
+        let database = try AppDatabase.makeEmpty()
+        let sources = SourceStore(database: database)
+        let roots = [try sources.addFolder(name: "2026 Japan", bookmark: Data(), includesSubfolders: true, pairsRawAndJpeg: true): japan,
+                     try sources.addFolder(name: "T7 RAW Archive", bookmark: Data(), includesSubfolders: true, pairsRawAndJpeg: true, kind: "drive"): t7]
+        let indexer = FolderSourceIndexer(database: database, composer: FolderSourceIndexTests.composer)
+        for (id, root) in roots { _ = try indexer.index(sourceId: id, root: root, includesSubfolders: true, pairsRawAndJpeg: true) }
+        #expect(try count("SELECT COUNT(*) FROM photos", database) == 14)
+
+        let pass = IdentityMergePass(database: database) { sourceId, path in roots[sourceId]?.appendingPathComponent(path) }
+        #expect(try pass.run() == IdentityMergePass.Summary(hashed: 14, merged: 5))
+        #expect(try count("SELECT COUNT(*) FROM photos", database) == 9)
+        #expect(try count("SELECT COUNT(*) FROM photo_metadata", database) == 9)
+        #expect(try count("SELECT COUNT(*) FROM (SELECT photoId FROM photo_copies GROUP BY photoId HAVING COUNT(*) = 2)", database) == 5)
+        #expect(try pass.run() == IdentityMergePass.Summary(hashed: 0, merged: 0))
+    }
+
+    private func count(_ sql: String, _ database: AppDatabase) throws -> Int {
+        try database.reader.read { db in try Int.fetchOne(db, sql: sql) ?? -1 }
+    }
+}

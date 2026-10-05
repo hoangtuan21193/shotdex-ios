@@ -38,7 +38,7 @@
 
 | # | Cho | Khi | Thì | Chứng minh |
 |---|---|---|---|---|
-| AC-18 | 50 file giống hệt nằm ở "2026 Japan" và T7 | đọc xong cả hai nguồn và hash đầy đủ chạy xong | thư viện +50 (không +100); Get Info mỗi ảnh "2 copies"; Statistics +50 | ⚠️ chưa có — `PhotoIdentityTests.identicalCopiesAreOnePhoto` |
+| AC-18 | 50 file giống hệt nằm ở "2026 Japan" và T7 | đọc xong cả hai nguồn và hash đầy đủ chạy xong | thư viện +50 (không +100); Get Info mỗi ảnh "2 copies"; Statistics +50 | `PhotoIdentityMergeTests.identicalCopiesAreOnePhoto` (gộp + một dòng metadata mỗi ảnh; Get Info "2 copies" chờ UI) |
 | AC-48 | 2 RAW cùng kích thước, trùng 64 KB đầu/giữa/cuối, khác 1 byte ở giữa hai khối; và 2 RAW giống hệt | lượt đọc đầu xong, rồi hash đầy đủ xong | sau lượt đầu: 4 ảnh (0 gộp); sau hash đầy đủ: cặp khác byte vẫn 2 ảnh, cặp giống hệt 1 ảnh "2 copies" | `PhotoIdentityTests.fastHashNeverMergesAlone` (luật gộp + thứ tự băm đầy đủ) — ⚠️ đếm ảnh sau lượt đọc chứng minh khi lượt đọc thư mục có (B) |
 | AC-49 | 200 asset Photos, 50 chỉ-iCloud; 1 asset giống hệt `IMG_0420.HEIC` trong "2026 Japan" | băm ảnh Photos ở nền | mỗi asset chỉ-iCloud được yêu cầu tải đúng 1 lần; dung lượng thư mục app (trừ database) trước = sau ± 1 MB; `IMG_0420` là 1 ảnh "2 copies" | `PhotosHashTests.streamsWithoutDiskGrowth` (đọc vào bộ nhớ, 0 file ghi ra; lượt chạy nối vào app khi có nguồn ngoài Photos — B) |
 | AC-50 | ảnh A có bản sao ở Photos (bản gốc trên máy), T7, NAS Home | mở A; rồi xoá bản Photos và mở lại | lần 1 mở bản Photos, toolbar có Done; lần 2 mở bản T7, toolbar "Edited · Saved", không Done | ⚠️ chưa có — `CopyOrderTests.internalPhotosExternalServerCloud` |
