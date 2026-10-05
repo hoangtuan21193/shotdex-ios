@@ -316,27 +316,35 @@ struct VideoTimelineToolRow: View {
     }
 }
 
-/// The Duo inner display's transport (FS-12.03 §4): the fifteen controls on
-/// one row — edits, play, markers, then Fit and the timecode.
+/// The Duo inner display's transport (FS-12.03 §4, board DI1_Main): the
+/// fifteen controls on one 40pt row, 36 each and 2 apart — the playhead
+/// edits from the leading edge, the play controls centred on the window,
+/// the markers, Fit and the timecode against the trailing edge — 36 in
+/// from both edges, clear of the rounded corners.
 struct VideoTransportBar: View {
     @Bindable var model: VideoStudioModel
-    var height: CGFloat = VideoStudioMetrics.transportBarHeight
+    var height: CGFloat = VideoStudioDeskGeometry.duoTransportHeight
     /// Each control's square.
-    var buttonSize: CGFloat = 44
+    var buttonSize: CGFloat = VideoStudioDeskGeometry.duoTransportButton
 
     var body: some View {
-        HStack(spacing: 2) {
-            group(.edit)
-            Spacer(minLength: 0)
-            group(.play)
-            Spacer(minLength: 0)
-            group(.marker)
-            Spacer(minLength: 0)
-            VideoTransportButton(model: model, control: .fit, size: buttonSize)
-            VideoTransportTimecode(model: model, size: 12)
-                .padding(.horizontal, 8)
+        ZStack {
+            HStack(spacing: 2) {
+                group(.edit)
+                Spacer(minLength: 0)
+            }
+            HStack(spacing: 2) {
+                group(.play)
+            }
+            HStack(spacing: 2) {
+                Spacer(minLength: 0)
+                group(.marker)
+                VideoTransportButton(model: model, control: .fit, size: buttonSize)
+                VideoTransportTimecode(model: model, size: 12)
+                    .padding(.leading, 10)
+            }
         }
-        .padding(.horizontal, 8)
+        .padding(.horizontal, VideoStudioDeskGeometry.duoTransportInset)
         .frame(height: height)
         .frame(maxWidth: .infinity)
         .background(EditorTheme.panelSolid)

@@ -181,6 +181,10 @@ enum VideoStudioDeskGeometry {
     /// these 264pt cost it nothing.
     static let duoColumnWidth: CGFloat = 264
     static let duoTransportHeight: CGFloat = 40
+    /// The transport's controls: 36 squares, 2 apart, 36 in from both
+    /// edges — the play group centred on the window (board DI1_Main).
+    static let duoTransportButton: CGFloat = 36
+    static let duoTransportInset: CGFloat = 36
     static let duoTimelineHeight: CGFloat = 188
     static let duoBottomRowHeight: CGFloat = 56
     /// Export at the right end of the bottom row: a pill 40 tall.

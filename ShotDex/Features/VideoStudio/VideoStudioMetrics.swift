@@ -79,8 +79,6 @@ enum VideoStudioMetrics {
 
     // MARK: Desk chrome
 
-    /// Cut tools, play controls, timecode.
-    static let transportBarHeight: CGFloat = 44
     /// The quick-adjust strip under the frame: the one or two values a user
     /// changes constantly, editable without opening the 264pt panel. Resolve
     /// states the reason for its own viewer tool strip plainly — the common
@@ -95,22 +93,6 @@ enum VideoStudioMetrics {
     /// carries no play pill: the frame has a 56pt play button on it already,
     /// and a tap on the stage pauses.
     static let compactTransportHeight: CGFloat = 40
-
-    /// What the desk transport row needs to lay all sixteen of its controls
-    /// out without clipping: five cut glyphs, four transport glyphs and the
-    /// play pill, loop, three marker glyphs, fit, the timecode and the row's
-    /// margins. Below this the row is the phone's — the same commands with
-    /// the chosen-once ones behind a menu.
-    ///
-    /// Measured against the case that broke it: a 13" iPad with the media
-    /// pool **and** the inspector column open leaves the stage 756pt, and
-    /// the full row wants 780. `Back a Frame` was laid out off the end of
-    /// it, which XCUITest reports as a button at `{inf, inf}`.
-    static let transportBarFullWidth: CGFloat = 780
-
-    static func usesFullTransportRow(stageWidth: CGFloat) -> Bool {
-        stageWidth >= transportBarFullWidth
-    }
 
     /// The look picker in the Filter panel: a 62pt tile, its name, and the
     /// gap between them.

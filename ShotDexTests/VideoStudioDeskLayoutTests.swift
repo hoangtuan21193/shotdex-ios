@@ -129,6 +129,26 @@ struct VideoStudioDeskLayoutTests {
         #expect(dock.cellSide(width: 1032) * 8 + dock.gap * 7 + dock.inset * 2 == 1032)
     }
 
+    /// Task 16 (FS-12.03b §2, Duo inner, board DI1_Main): the Duo keeps the
+    /// fifteen in one 40 row — 36 squares 2 apart, 36 in from each edge, the
+    /// play group centred: edits 36–224, play 362.5–588.5, markers and Fit
+    /// ending at 791.7 on a 951 window.
+    @Test func theTransportRowHasFifteenControlsInFourGroups() {
+        let button = VideoStudioDeskGeometry.duoTransportButton
+        let inset = VideoStudioDeskGeometry.duoTransportInset
+        #expect(button == 36 && inset == 36 && VideoStudioDeskGeometry.duoTransportHeight == 40)
+        let groups: [VideoTransportControl.Group] = [.edit, .play, .marker, .view]
+        let counts = groups.map { VideoTransportControl.controls(in: $0).count }
+        #expect(counts == [5, 6, 3, 1])
+        #expect(counts.reduce(0, +) == VideoTransportControl.allCases.count)
+        func width(_ n: Int) -> CGFloat { CGFloat(n) * button + CGFloat(n - 1) * 2 }
+        #expect(inset + width(5) == 224)
+        let playStart = (951 - width(6)) / 2
+        #expect(abs(playStart - 362.5) < 0.5)
+        // Every control fits between the insets with the timecode beside.
+        #expect(inset + width(5) < playStart && playStart + width(6) < 641.7)
+    }
+
     /// FS-12.03b AC-3 (contents): the iPad splits the fifteen transport
     /// controls into the play row (six, Play a 48 disc) and the timeline's
     /// tool row (five edits, three markers, Fit) — every control in exactly
