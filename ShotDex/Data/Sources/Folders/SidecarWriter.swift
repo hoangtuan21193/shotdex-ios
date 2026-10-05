@@ -27,7 +27,7 @@ struct SidecarWriter: Sendable {
                     continue
                 }
                 do {
-                    try Self.write(patch, beside: image)
+                    try Self.write(patch, beside: image, isPaired: copy.isPaired)
                     summary.written += 1
                 } catch {
                     summary.failed += 1
@@ -39,18 +39,24 @@ struct SidecarWriter: Sendable {
 
     /// The sidecar of `image`: whichever of `DSC0001.xmp` and
     /// `DSC0001.ARW.xmp` is there (the newer when both are), else
-    /// `DSC0001.xmp` — the name Lightroom, Capture One and Bridge read.
-    static func sidecarURL(forImageAt image: URL) -> URL {
+    /// `DSC0001.xmp` — the name Lightroom, Capture One and Bridge read. A
+    /// JPEG not paired with the RAW beside it always uses `DSC0001.JPG.xmp`;
+    /// `DSC0001.xmp` is the RAW's (FS-19.01 §3).
+    static func sidecarURL(forImageAt image: URL, isPaired: Bool = true) -> URL {
         let base = image.deletingPathExtension().appendingPathExtension("xmp")
         let full = image.appendingPathExtension("xmp")
+        if !isPaired {
+            let siblings = (try? FileManager.default.contentsOfDirectory(atPath: image.deletingLastPathComponent().path)) ?? []
+            if PairingRule.usesFullNameSidecar(image.lastPathComponent, siblings: siblings) { return full }
+        }
         let existing = [base, full].filter { FileManager.default.fileExists(atPath: $0.path) }
         return existing.max { modified($0) < modified($1) } ?? base
     }
 
     /// Patches the sidecar through a temporary file in the same folder and
     /// swaps it in, so a reader never sees half a file.
-    static func write(_ patch: XMPPatch, beside image: URL) throws {
-        let sidecar = sidecarURL(forImageAt: image)
+    static func write(_ patch: XMPPatch, beside image: URL, isPaired: Bool = true) throws {
+        let sidecar = sidecarURL(forImageAt: image, isPaired: isPaired)
         let current = try? String(contentsOf: sidecar, encoding: .utf8)
         let text = XMPPatcher.apply(patch, to: current)
         guard text != current else { return }
@@ -88,12 +94,12 @@ struct SidecarWriter: Sendable {
         return patch
     }
 
-    private static func onlineFileCopies(_ db: Database, photoId: String) throws -> [(sourceId: String, relativePath: String)] {
+    private static func onlineFileCopies(_ db: Database, photoId: String) throws -> [(sourceId: String, relativePath: String, isPaired: Bool)] {
         try Row.fetchAll(db, sql: """
-            SELECT sourceId, relativePath FROM photo_copies
+            SELECT sourceId, relativePath, pairedPath FROM photo_copies
             WHERE photoId = ? AND kind = 'file' AND isOnline = 1 AND missingSince IS NULL AND isCloudPlaceholder = 0
             ORDER BY id
-            """, arguments: [photoId]).map { ($0["sourceId"], $0["relativePath"]) }
+            """, arguments: [photoId]).map { ($0["sourceId"], $0["relativePath"], ($0["pairedPath"] as String?) != nil) }
     }
 
     private static func modified(_ url: URL) -> Date {

@@ -20,18 +20,19 @@ struct SidecarValues: Equatable, Sendable {
 /// Reads `.xmp` sidecars with ImageIO's XMP parser. Never writes.
 enum SidecarReader {
     /// The two names a sidecar of `relativePath` goes by — `DSC0001.xmp`
-    /// (Lightroom, Capture One, Bridge) and `DSC0001.ARW.xmp` — as path keys.
-    static func candidateKeys(for relativePath: String, pathKey: (String) -> String) -> [String] {
+    /// (Lightroom, Capture One, Bridge) and `DSC0001.ARW.xmp` — as path keys;
+    /// only the second for a JPEG whose RAW keeps the first.
+    static func candidateKeys(for relativePath: String, fullNameOnly: Bool = false, pathKey: (String) -> String) -> [String] {
         let base = (relativePath as NSString).deletingPathExtension
-        return [pathKey(base + ".xmp"), pathKey(relativePath + ".xmp")]
+        return fullNameOnly ? [pathKey(relativePath + ".xmp")] : [pathKey(base + ".xmp"), pathKey(relativePath + ".xmp")]
     }
 
     /// The sidecar of a photo among the sidecars a listing found: the newer
     /// of its two names when both are there (FS-19.02 §4).
-    static func sidecar<Entry>(for relativePaths: [String], in sidecars: [String: Entry],
+    static func sidecar<Entry>(for relativePaths: [String], fullNameOnly: Bool = false, in sidecars: [String: Entry],
                                modified: (Entry) -> Date?, pathKey: (String) -> String) -> Entry? {
         relativePaths
-            .flatMap { candidateKeys(for: $0, pathKey: pathKey) }
+            .flatMap { candidateKeys(for: $0, fullNameOnly: fullNameOnly, pathKey: pathKey) }
             .compactMap { sidecars[$0] }
             .max { (modified($0) ?? .distantPast) < (modified($1) ?? .distantPast) }
     }

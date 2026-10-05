@@ -111,6 +111,46 @@ import Testing
         #expect(photos == 38)
     }
 
+    /// AC-2: the same pairs with Pair RAW + JPEG off are two photos each,
+    /// none labelled RAW+JPG. Lightroom's `DSC04512.xmp` (★2) is the RAW's:
+    /// the JPEG does not read it, and ★3 on the JPEG goes to a new
+    /// `DSC04512.JPG.xmp` while `DSC04512.xmp` keeps every byte.
+    @Test func pairingOffSeparateSidecar() async throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent("Unpaired-\(UUID().uuidString)", isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        var options = MetadataFixture.Options()
+        options.starRating = nil
+        try MetadataFixture.encode(.tiff, options: options).write(to: root.appendingPathComponent("DSC04512.ARW"))
+        try MetadataFixture.encode(.jpeg, options: options).write(to: root.appendingPathComponent("DSC04512.JPG"))
+        let rawSidecar = root.appendingPathComponent("DSC04512.xmp")
+        try SidecarReaderTests.lightroomSidecar(rating: 2).write(to: rawSidecar)
+        let rawSidecarBefore = try Data(contentsOf: rawSidecar)
+
+        let database = try AppDatabase.makeEmpty()
+        let sourceId = try SourceStore(database: database).addFolder(name: "2026 Japan", bookmark: Data(), includesSubfolders: true, pairsRawAndJpeg: false)
+        let summary = try FolderSourceIndexer(database: database, composer: Self.composer)
+            .index(sourceId: sourceId, root: root, includesSubfolders: true, pairsRawAndJpeg: false)
+        #expect(summary.photos == 2)
+        let copies = try await database.reader.read { db in
+            try Row.fetchAll(db, sql: """
+                SELECT c.relativePath, c.photoId, c.pairedPath, u.rating FROM photo_copies c
+                LEFT JOIN photo_user_marks u ON u.photoId = c.photoId WHERE c.sourceId = ? ORDER BY c.relativePath
+                """, arguments: [sourceId])
+        }
+        #expect(copies.map { $0["relativePath"] as String } == ["DSC04512.ARW", "DSC04512.JPG"])
+        #expect(copies.allSatisfy { ($0["pairedPath"] as String?) == nil })
+        #expect(copies.map { $0["rating"] as Int? } == [2, nil])
+
+        let jpeg: String = copies[1]["photoId"]
+        let queue = SidecarWriteQueue(writer: SidecarWriter(database: database) { _, path in root.appendingPathComponent(path) })
+        let marks = PhotoMarks(store: PhotoMarksStore(database: database), sidecarQueue: queue)
+        await marks.setRating(3, ids: [jpeg])
+        #expect(await queue.flush().written == 1)
+        #expect(SidecarReader.read(sidecarAt: root.appendingPathComponent("DSC04512.JPG.xmp"))?.rating == 3)
+        #expect(try Data(contentsOf: rawSidecar) == rawSidecarBefore)
+    }
+
     /// Path → SHA-256 of every file under `root`, hidden ones included.
     static func fingerprint(_ root: URL) throws -> [String: String] {
         var out: [String: String] = [:]

@@ -42,6 +42,10 @@ struct FolderSourceIndexer: Sendable {
                                       name: { ($0.relativePath as NSString).lastPathComponent },
                                       folder: { ($0.relativePath as NSString).deletingLastPathComponent })
             + files.filter(\.isCloudPlaceholder).map { PairingRule.Unit(primary: $0, companion: nil) }
+        // File names by folder, for telling a JPEG beside an unpaired RAW
+        // to read its own `.JPG.xmp`.
+        let namesByFolder = Dictionary(grouping: files.map { $0.relativePath }) { ($0 as NSString).deletingLastPathComponent }
+            .mapValues { $0.map { ($0 as NSString).lastPathComponent } }
         var summary = Summary()
         let stamp = Int(now.timeIntervalSince1970)
         // Copies this source knew that are not at their path any more: a
@@ -126,8 +130,11 @@ struct FolderSourceIndexer: Sendable {
                 photoId = UUID().uuidString
             }
             let (record, embedded) = metadata(photoId: photoId, url: url, file: file)
+            let name = (file.relativePath as NSString).lastPathComponent
+            let fullNameOnly = unit.companion == nil && PairingRule.usesFullNameSidecar(
+                name, siblings: namesByFolder[(file.relativePath as NSString).deletingLastPathComponent] ?? [])
             let sidecar = SidecarReader.sidecar(for: [file.relativePath] + [unit.companion?.relativePath].compactMap { $0 },
-                                                in: sidecars, modified: \.modified, pathKey: Self.pathKey)
+                                                fullNameOnly: fullNameOnly, in: sidecars, modified: \.modified, pathKey: Self.pathKey)
             let sidecarValues = sidecar.flatMap { SidecarReader.read(sidecarAt: root.appendingPathComponent($0.relativePath)) }
             let marks = SidecarReader.combined(embedded: embedded, sidecar: sidecarValues)
             // A sidecar's values date from when it was written; the file's own

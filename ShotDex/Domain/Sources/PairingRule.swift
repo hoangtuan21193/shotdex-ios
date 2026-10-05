@@ -7,6 +7,19 @@ import Foundation
 enum PairingRule {
     static let renderedTwinExtensions: Set<String> = ["jpg", "jpeg", "heic", "heif"]
 
+    static func isRaw(_ name: String) -> Bool {
+        FileTypeBadge.text(forExtension: (name as NSString).pathExtension) == "RAW"
+    }
+
+    /// A JPEG or HEIC that is not paired with the RAW beside it keeps its own
+    /// sidecar, `DSC0001.JPG.xmp`: `DSC0001.xmp` is the RAW's (FS-19.01 §3).
+    /// `siblings` are the other file names in its folder.
+    static func usesFullNameSidecar(_ name: String, siblings: some Sequence<String>) -> Bool {
+        guard renderedTwinExtensions.contains((name as NSString).pathExtension.lowercased()) else { return false }
+        let base = (name as NSString).deletingPathExtension.lowercased()
+        return siblings.contains { isRaw($0) && ($0 as NSString).deletingPathExtension.lowercased() == base }
+    }
+
     struct Unit<File: Equatable>: Equatable {
         /// The original: the RAW of a pair, else the only file.
         let primary: File
@@ -30,7 +43,7 @@ enum PairingRule {
         var out: [Unit<File>] = []
         for key in order {
             let group = groups[key] ?? []
-            let raws = group.filter { FileTypeBadge.text(forExtension: (name($0) as NSString).pathExtension) == "RAW" }
+            let raws = group.filter { isRaw(name($0)) }
             let twins = group.filter { renderedTwinExtensions.contains((name($0) as NSString).pathExtension.lowercased()) }
             if raws.count == 1, twins.count == 1 {
                 out.append(Unit(primary: raws[0], companion: twins[0]))
