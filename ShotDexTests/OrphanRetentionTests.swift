@@ -112,4 +112,57 @@ import Testing
         #expect(histories.0 == 2)
         #expect(histories.1 == 1)
     }
+
+    /// AC-51: file photo A (★4, Picked, a recipe, one copy) is deleted in
+    /// Finder and put back 29 days later; B has been an orphan for 31 days.
+    /// After the read and the launch purge, A is back with the same id and
+    /// all its data; B is gone from every table.
+    @Test func thirtyDays() throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent("PutBack-\(UUID().uuidString)", isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        let file = root.appendingPathComponent("DSC04512.JPG")
+        let bytes = try MetadataFixture.encode(.jpeg, options: MetadataFixture.Options())
+        try bytes.write(to: file)
+        let database = try AppDatabase.makeEmpty()
+        let sourceId = try SourceStore(database: database).addFolder(name: "2026 Japan", bookmark: Data(), includesSubfolders: true, pairsRawAndJpeg: true)
+        let indexer = FolderSourceIndexer(database: database, composer: FolderSourceIndexTests.composer)
+        let day = 24.0 * 60 * 60
+        let start = Date(timeIntervalSince1970: 1_791_000_000)
+        _ = try indexer.index(sourceId: sourceId, root: root, includesSubfolders: true, pairsRawAndJpeg: true, now: start)
+        let a = try database.reader.read { db in try String.fetchOne(db, sql: "SELECT photoId FROM photo_copies") ?? "" }
+        try database.writer.write { db in
+            try db.execute(sql: "INSERT INTO photo_user_marks (photoId, rating, ratingAt) VALUES (?, 4, 1)", arguments: [a])
+            try db.execute(sql: "INSERT INTO photo_flag (assetId, flag, flaggedAt) VALUES (?, 'pick', 1)", arguments: [a])
+            try db.execute(sql: "INSERT INTO photo_recipes (photoId, recipe, updatedAt) VALUES (?, x'01', 1)", arguments: [a])
+            try db.execute(sql: "INSERT INTO photos (id, createdAt, orphanedAt) VALUES ('B', 0, ?)", arguments: [Int(start.timeIntervalSince1970 - 2 * day)])
+            try db.execute(sql: "INSERT INTO photo_flag (assetId, flag, flaggedAt) VALUES ('B', 'reject', 1)")
+        }
+
+        let attributes = try FileManager.default.attributesOfItem(atPath: file.path)
+        try FileManager.default.removeItem(at: file)
+        _ = try indexer.index(sourceId: sourceId, root: root, includesSubfolders: true, pairsRawAndJpeg: true, now: start.addingTimeInterval(day))
+        let orphaned = try database.reader.read { db in try Int.fetchOne(db, sql: "SELECT orphanedAt FROM photos WHERE id = ?", arguments: [a]) }
+        #expect(orphaned != nil)
+
+        // Put Back: same path, same bytes, same dates — 29 days later.
+        try bytes.write(to: file)
+        try FileManager.default.setAttributes([.modificationDate: attributes[.modificationDate] as Any], ofItemAtPath: file.path)
+        let later = start.addingTimeInterval(30 * day)
+        _ = try indexer.index(sourceId: sourceId, root: root, includesSubfolders: true, pairsRawAndJpeg: true, now: later)
+        try PhotoOrphanStore(database: database).purge(orphanedBefore: OrphanRetention.purgeCutoff(now: later))
+
+        let state = try database.reader.read { db in
+            (photos: try String.fetchAll(db, sql: "SELECT id FROM photos"),
+             orphan: try Int.fetchOne(db, sql: "SELECT orphanedAt FROM photos WHERE id = ?", arguments: [a]),
+             rating: try Int.fetchOne(db, sql: "SELECT rating FROM photo_user_marks WHERE photoId = ?", arguments: [a]),
+             flags: try String.fetchAll(db, sql: "SELECT assetId || ':' || flag FROM photo_flag"),
+             recipes: try Int.fetchOne(db, sql: "SELECT COUNT(*) FROM photo_recipes WHERE photoId = ?", arguments: [a]))
+        }
+        #expect(state.photos == [a])
+        #expect(state.orphan == nil)
+        #expect(state.rating == 4)
+        #expect(state.flags == ["\(a):pick"])
+        #expect(state.recipes == 1)
+    }
 }

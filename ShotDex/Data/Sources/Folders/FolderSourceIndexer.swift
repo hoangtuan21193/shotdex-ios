@@ -59,6 +59,10 @@ struct FolderSourceIndexer: Sendable {
                 try database.writer.write { db in
                     try db.execute(sql: "UPDATE photo_copies SET lastSeenAt = ?, isOnline = 1, missingSince = NULL WHERE id = ?",
                                    arguments: [stamp, existing["id"] as String])
+                    // Put Back: the file is where it was — the photo is no
+                    // orphan any more, its data never left.
+                    try db.execute(sql: "UPDATE photos SET orphanedAt = NULL WHERE id = ? AND orphanedAt IS NOT NULL",
+                                   arguments: [existing["photoId"] as String])
                 }
                 summary.unchanged += 1
                 continue
