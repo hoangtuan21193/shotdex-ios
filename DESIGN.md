@@ -73,9 +73,11 @@ Chỉ dùng system color để tự có light/dark:
 
 ### 3.3 Bảng màu tầng D
 
-Chỉ dùng token trong `EditorTheme`: `background`, `panel`, `panelSolid`, `panelTopHairline`, `panelDivider`, `stickyHeader`, `control`, `sliderTrack`, `hairline`, `secondaryText`, `dimText`, `clipping`, `maskRow`, `activeRow`, `glass`, `glassLight`, `glassStroke`, `timelineSelection`, `timelineDestructive`.
+Chỉ dùng token trong `EditorTheme`: `background`, `panel`, `panelSolid`, `panelTopHairline`, `panelDivider`, `stickyHeader`, `control`, `sliderTrack`, `hairline`, `secondaryText`, `dimText`, `clipping`, `maskRow`, `activeRow`, `glass`, `glassLight`, `glassStroke`, `timelineSelection`, `timelineSelectionInk`, `timelineDestructive`, `timelineBeat`, `timelineBeatInk`, `timelineSpeech`, `timelineSpeechInk`.
 
 `timelineSelection` (`#57BFD1`) chỉ dùng cho **trạng thái chọn trong Video Studio timeline** (clip/băng/overlay đang chọn) — cố ý khác accent để "đang chọn" (xanh) không đụng "đang bật" (vàng accent). `timelineDestructive` (`#FF6B5E`) là glyph phá hủy trong panel ngữ cảnh Video Studio.
+
+**Ba màu riêng của Video Studio timeline, mỗi màu một nghĩa** (FS-12.11–12.14, chốt 2026-10-03): `timelineSelection` #57BFD1 = *đang chọn* (chữ trên nó `timelineSelectionInk` #0B2A30 — pill "3 selected", huy hiệu ✓ của nhóm); `timelineBeat` #FFD60A = *nhịp nhạc* — vạch nhịp, pill dính nhịp, núm slider đang dính, mũi tên Cut to Beat (chữ trên nó `timelineBeatInk` #1A1500); `timelineSpeech` #5E9CFF = *tiếng người* — đoạn có giọng của ducking, nhãn Voice, phụ đề (chữ trên nó `timelineSpeechInk` #06142E). Chỉ trong Video Studio; không dùng cho nghĩa khác, và accent #EB9526 vẫn chỉ ở Export.
 
 Thiếu token thì **thêm vào `EditorTheme`**, không viết `Color(white: 0.13)` trong file feature.
 

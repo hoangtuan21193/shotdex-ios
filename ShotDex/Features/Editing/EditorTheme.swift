@@ -75,6 +75,17 @@ enum EditorTheme {
     /// Text and glyphs drawn *on* `timelineSelection` (`#0B2A30`) — the
     /// multi-select pill and the ✓ badge of a clip in the group (FS-12.11).
     static let timelineSelectionInk = Color(red: 0x0B / 255, green: 0x2A / 255, blue: 0x30 / 255)
+    /// A beat of the music (FS-12.12 §3) — `#FFD60A`, the system yellow of
+    /// the dark appearance: tick marks, the snap pill, the slider's knob,
+    /// Cut to Beat's arrows. Video Studio only, beats only.
+    static let timelineBeat = Color(red: 0xFF / 255, green: 0xD6 / 255, blue: 0x0A / 255)
+    /// Text on `timelineBeat` (`#1A1500`).
+    static let timelineBeatInk = Color(red: 0x1A / 255, green: 0x15 / 255, blue: 0x00 / 255)
+    /// Speech in a clip's sound (FS-12.13 §3, FS-12.14) — `#5E9CFF`: the
+    /// ducking graph's voiced stretches, the Voice labels, captions.
+    static let timelineSpeech = Color(red: 0x5E / 255, green: 0x9C / 255, blue: 0xFF / 255)
+    /// Text on `timelineSpeech` (`#06142E`).
+    static let timelineSpeechInk = Color(red: 0x06 / 255, green: 0x14 / 255, blue: 0x2E / 255)
     /// Destructive glyph in the Video Studio inspector (`#FF6B5E`) — a warmer
     /// coral than the `clipping` red, matching the timeline spec.
     static let timelineDestructive = Color(red: 1, green: 0.42, blue: 0.369)

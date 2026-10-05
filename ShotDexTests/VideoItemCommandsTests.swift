@@ -31,7 +31,8 @@ struct VideoItemCommandsTests {
         }
         #expect(VideoItemCommand.commands(for: .text) == [.edit, .font, .color, .style, .align, .animate, .duplicate, .delete])
         #expect(VideoItemCommand.commands(for: .sticker) == [.animate, .duplicate, .delete])
-        #expect(VideoItemCommand.commands(for: .music) == [.replace, .addTrack, .duplicate, .delete])
+        // Beats is built (FS-12.12); Ducking waits for FS-12.13.
+        #expect(VideoItemCommand.commands(for: .music) == [.beats, .replace, .addTrack, .duplicate, .delete])
     }
 
     @Test func sectionsAndActions() {

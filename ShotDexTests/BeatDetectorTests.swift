@@ -6,8 +6,7 @@ import Testing
 /// a click and a bass note on every beat, the bar's first beat twice as
 /// loud, made in the test at 11 025 Hz.
 struct BeatDetectorTests {
-    static func click(bpm: Double, seconds: Double, leadingSilence: Double = 0, accent: Bool = true) -> [Float] {
-        let rate = BeatDetector.sampleRate
+    static func click(bpm: Double, seconds: Double, leadingSilence: Double = 0, accent: Bool = true, rate: Double = BeatDetector.sampleRate) -> [Float] {
         var samples = [Float](repeating: 0, count: Int(seconds * rate))
         let beat = 60 / bpm
         var index = 0
@@ -59,7 +58,6 @@ struct BeatDetectorTests {
     @Test func leadingSilenceShiftsFirstBeat() {
         let analysis = BeatDetector.analyze(Self.click(bpm: 120, seconds: 30, leadingSilence: 0.37))
         #expect(abs(analysis.bpm - 120) <= 0.5)
-        let first = try? #require(analysis.beats.first)
-        #expect(abs((first ?? 0) - 0.37) <= 0.02)
+        #expect(abs((analysis.beats.first ?? -1) - 0.37) <= 0.02)
     }
 }

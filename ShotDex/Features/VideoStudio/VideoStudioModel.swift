@@ -49,6 +49,8 @@ final class VideoStudioModel {
 
     private let service: VideoStudioService
     let photoLibrary: PhotoLibraryService
+    /// The music beds' beats (FS-12.12): found on demand, cached by file.
+    let beats: VideoBeatsModel
     private let overlayFontRecents: OverlayFontRecentsStore
     let overlayImages: OverlayImageStore
 
@@ -195,6 +197,7 @@ final class VideoStudioModel {
         service.setServerFiles(serverFiles)
         self.mode = mode
         self.service = service
+        self.beats = VideoBeatsModel(cache: service.audioAnalysis)
         self.photoLibrary = photoLibrary
         self.overlayFontRecents = overlayFontRecents
         self.overlayImages = overlayImages
@@ -549,6 +552,10 @@ final class VideoStudioModel {
         default:
             isPlacingGroup = false
             activeItemCommand = activeItemCommand == command ? nil : command
+            // Beats opened on a bed: its beats are found now, once (§4).
+            if activeItemCommand == .beats, let music = selectedMusicTrack, let url = musicURL(for: music.source) {
+                beats.findBeats(of: url)
+            }
             // A clip's Look block writes that clip unless told otherwise; a
             // group's writes every clip in it — 06c's Selected (FS-12.11 §5).
             if activeItemCommand == .look { lookTarget = isSelectingClips && selectedClipIDs.count >= 2 ? .selected : .thisClip }
@@ -1539,6 +1546,7 @@ final class VideoStudioModel {
         dropImportTask?.cancel()
         for task in waveformTasks.values { task.cancel() }
         waveformTasks.removeAll()
+        beats.cancelAll()
         detachObservers()
         player?.pause()
         player = nil
@@ -1855,8 +1863,14 @@ final class VideoStudioModel {
     func removeMusicTrack(_ id: UUID) {
         guard let index = recipe.musicTracks.firstIndex(where: { $0.id == id }) else { return }
         pushUndo()
-        recipe.musicTracks.remove(at: index)
+        let removed = recipe.musicTracks.remove(at: index)
         if selectedMusicID == id { clearSelection() }
+        // A bed deleted mid-analysis stops it — unless another bed plays the
+        // same file (FS-12.12 §4).
+        if let url = musicURL(for: removed.source),
+           !recipe.musicTracks.contains(where: { musicURL(for: $0.source) == url }) {
+            beats.cancel(url)
+        }
         waveformTasks[id]?.cancel()
         waveformTasks[id] = nil
         musicWaveforms[id] = nil
@@ -3460,6 +3474,39 @@ final class VideoStudioModel {
     }
 
     // MARK: - Waveform
+
+    // MARK: - Beats (FS-12.12)
+
+    /// Where a bed's audio file is.
+    func musicFileURL(_ track: MusicTrack) -> URL? { musicURL(for: track.source) }
+
+    /// What finding a bed's beats has come to, if it has started.
+    func beatState(for track: MusicTrack) -> VideoBeatsModel.State? {
+        musicFileURL(track).flatMap { beats.state(for: $0) }
+    }
+
+    /// The bed's beats on the timeline, once found.
+    func beatGrid(for track: MusicTrack) -> BeatGrid? {
+        guard let url = musicFileURL(track), let analysis = beats.analysis(for: url) else { return nil }
+        let sourceDuration = track.sourceDuration ?? track.effectiveDuration
+        return BeatGrid(
+            analysis: analysis,
+            start: track.start,
+            trimStart: track.trimStart,
+            trimEnd: track.trimEnd ?? sourceDuration,
+            timelineEnd: totalDuration
+        )
+    }
+
+    /// Whether a bed draws its beat ticks: while its Beats tab is open (§3).
+    func showsBeatTicks(for track: MusicTrack) -> Bool {
+        selectedMusicID == track.id && activeItemCommand == .beats
+    }
+
+    /// "A1": the bed's lane, as the gutter names it.
+    func laneName(for track: MusicTrack) -> String {
+        "A\((musicLaneAssignment[track.id] ?? 0) + 1)"
+    }
 
     private func musicURL(for source: MusicSource) -> URL? {
         switch source {

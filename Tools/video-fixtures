@@ -4,9 +4,8 @@
 # people), generated video with the system synthesizer's speech in it, and
 # synthetic music — to build/video-fixtures/, and with a udid adds the media
 # (photos and videos) to that simulator's library, listed together in
-# project order: Falls · Coast · Lake · Night · Forest. Music goes in through
-# the studio's Add Music from Files…; copy it into the simulator's Files with
-# `xcrun simctl addmedia` or drag it in.
+# project order: Falls · Coast · Lake · Night · Forest — and seeds the music
+# into the app's My Music (the app must be installed on that simulator).
 # The generator is Swift (Tools/src/video-fixtures.swift), compiled on first use.
 set -e
 root=$(cd "$(dirname "$0")/.." && pwd)
@@ -23,4 +22,24 @@ mkdir -p "$out"
 if [ -n "${2:-}" ] && [ "$which" != "music" ]; then
   xcrun simctl addmedia "$2" "$out/Falls.jpg" "$out/Coast.mov" "$out/Lake.mov" "$out/Night.jpg" "$out/Forest.mov"
   echo "added to $2"
+fi
+if [ -n "${2:-}" ] && [ "$which" != "media" ]; then
+  # Music goes where Add Music from Files… would have copied it — the
+  # app's ImportedMusic folder, named in its manifest — so it shows in the
+  # studio's My Music without driving the Files picker.
+  container=$(xcrun simctl get_app_container "$2" com.hoangtuan.shotdex data)
+  music="$container/Library/Application Support/ImportedMusic"
+  mkdir -p "$music"
+  for name in MorningDrive Sine440 LongTrack Noise; do
+    cp "$out/$name.m4a" "$music/fixture-$name.m4a"
+  done
+  python3 - "$music/names.json" <<'PY'
+import json, os, sys
+path = sys.argv[1]
+names = json.load(open(path)) if os.path.exists(path) else {}
+names.update({"fixture-MorningDrive": "Morning Drive", "fixture-Sine440": "Sine 440 Hz",
+              "fixture-LongTrack": "Long Track 3:24", "fixture-Noise": "White Noise"})
+json.dump(names, open(path, "w"))
+PY
+  echo "music seeded into $2"
 fi

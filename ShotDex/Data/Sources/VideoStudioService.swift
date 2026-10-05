@@ -19,6 +19,9 @@ final class VideoStudioService {
     private let publishCreatedAsset: () -> Void
     /// One per session: preview-sized stills. Export builds its own.
     private let previewStillStore = StillFrameStore(targetLongEdge: previewLongEdge)
+    /// What analysing sound found — beats, voices — kept in Caches across
+    /// sessions (FS-12.12 §4, FS-12.13 §4). Tests swap in a memory-only one.
+    var audioAnalysis = AudioAnalysisCache()
     private var sessionDirectory: URL?
     /// Server copies on this device by clip id, for a project made from
     /// server photos (FS-17.06 §5b). Empty otherwise.

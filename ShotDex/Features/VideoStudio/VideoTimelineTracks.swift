@@ -945,6 +945,13 @@ private struct MusicLaneRow: View {
             .padding(.leading, 5 + max(0, stickyInset))
         }
         .frame(width: width, height: VideoStudioMetrics.musicBandHeight)
+        .overlay(alignment: .topLeading) {
+            // The bed's beats while its Beats tab is open (FS-12.12 §3).
+            if model.showsBeatTicks(for: music), let grid = model.beatGrid(for: music) {
+                BeatTickMarks(ticks: grid.visibleTicks(pointsPerSecond: Double(pps)), origin: win.start, scale: Double(pps))
+                    .frame(width: width, height: VideoStudioMetrics.musicBandHeight)
+            }
+        }
         .overlay {
             if isSelected {
                 RoundedRectangle(cornerRadius: VideoStudioMetrics.trackRadius, style: .continuous)

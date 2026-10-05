@@ -17,6 +17,10 @@
       "comment": "Video Studio Video Settings: VoiceOver name of a dimmed choice, e.g. 4K, unavailable",
       "extractionState": "manual"
     },
+    "%lld BPM · 4/4": {
+      "comment": "Video Studio beats card: the track's tempo and its (always 4/4) time signature — 96 BPM · 4/4",
+      "extractionState": "manual"
+    },
     "%lld Clips": {
       "comment": "Video Studio multi-select: the footer's name for the selected clips — 3 Clips (plural)",
       "extractionState": "manual",
@@ -34,6 +38,30 @@
                 "stringUnit": {
                   "state": "translated",
                   "value": "%lld Clips"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "%lld beats marked on %@ · found on this %@": {
+      "comment": "Video Studio beats card: how many beats are on the bed's lane, and that they were found on this device, not online — 30 beats marked on A1 · found on this iPhone (plural)",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld beat marked on %@ · found on this %@"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld beats marked on %@ · found on this %@"
                 }
               }
             }
@@ -389,6 +417,10 @@
       "comment": "Video Studio Media panel: placeholder of the search field — the Library's query language",
       "extractionState": "manual"
     },
+    "Can't read this track": {
+      "comment": "Video Studio beats card: the music file could not be decoded",
+      "extractionState": "manual"
+    },
     "Cancel": {
       "comment": "Video Studio: leaves search",
       "extractionState": "manual"
@@ -543,6 +575,10 @@
     },
     "Fill (Crop)": {
       "comment": "Video Studio Video Settings: the clip fills the frame, cropped from the middle",
+      "extractionState": "manual"
+    },
+    "Finding beats…": {
+      "comment": "Video Studio beats card: the track is being analysed on the device",
       "extractionState": "manual"
     },
     "Fit": {
@@ -733,6 +769,10 @@
       "comment": "Video Studio Media panel: Recents when the library is empty",
       "extractionState": "manual"
     },
+    "No steady beat": {
+      "comment": "Video Studio beats card: the analysis found no tempo to snap to",
+      "extractionState": "manual"
+    },
     "Noise Reduction": {
       "comment": "Video Studio Look panel: a photo setting skipped on video",
       "extractionState": "manual"
@@ -875,6 +915,10 @@
     },
     "Skipped on video: %@.": {
       "comment": "Video Studio Look panel: the settings of the chosen look a video frame does not run — e.g. Noise Reduction, Upright",
+      "extractionState": "manual"
+    },
+    "Snap needs music with a clear beat": {
+      "comment": "Video Studio beats card: under No steady beat — why Snap and Cut to Beat are dimmed",
       "extractionState": "manual"
     },
     "Speed": {

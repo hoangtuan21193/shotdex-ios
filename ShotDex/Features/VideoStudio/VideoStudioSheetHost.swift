@@ -1113,7 +1113,11 @@ struct VideoStudioSheetHost: View {
 
     @ViewBuilder
     private var musicParams: some View {
-        if let music = model.selectedMusicTrack {
+        if let music = model.selectedMusicTrack, model.activeItemCommand == .beats {
+            ScrollView(showsIndicators: false) {
+                VideoBeatsPanel(model: model, music: music, isDesk: isDesk)
+            }
+        } else if let music = model.selectedMusicTrack {
             VStack(spacing: 0) {
                 MutableVolumeRow(
                     isMuted: music.isMuted, volume: music.volume, model: model,

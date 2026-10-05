@@ -293,6 +293,18 @@ enum VideoStudioMetrics {
     /// so Look stays lit under it.
     static let lookSheetHeight: CGFloat = 340
 
+    // MARK: Beats (FS-12.12 §3)
+
+    /// The beat card's disc.
+    static let beatCardDisc: CGFloat = 34
+    /// Ticks on a music band: a bar is a 2×12 line under a 6×6 square, a
+    /// beat a 1×7 line; on the overview strip 1×8 and 1×5.
+    static let barTick = CGSize(width: 2, height: 12)
+    static let barTickSquare: CGFloat = 6
+    static let beatTick = CGSize(width: 1, height: 7)
+    static let overviewBarTick = CGSize(width: 1, height: 8)
+    static let overviewBeatTick = CGSize(width: 1, height: 5)
+
     // MARK: Multi-select (FS-12.11 §3)
 
     /// The phone's group panel: 260 over the lower lanes, the timeline

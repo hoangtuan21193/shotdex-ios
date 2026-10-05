@@ -418,6 +418,14 @@ struct VideoTimelineOverview: View {
                         .accessibilityLabel(Text("Marker at \(VideoStudioMetrics.timecode(marker.time))", comment: "Video Studio: a note pinned to a point on the timeline"))
                 }
 
+                // The beats of the bed whose Beats tab is open (FS-12.12 §3).
+                if let music = model.recipe.musicTracks.first(where: { model.showsBeatTicks(for: $0) }),
+                   let grid = model.beatGrid(for: music) {
+                    let scale = Double(width) / total
+                    BeatTickMarks(ticks: grid.visibleTicks(pointsPerSecond: scale), origin: 0, scale: scale, style: .overview)
+                        .frame(width: width, height: VideoStudioMetrics.timelineOverviewHeight, alignment: .topLeading)
+                }
+
                 Rectangle()
                     .fill(EditorTheme.clipping)
                     .frame(width: 1.5)
