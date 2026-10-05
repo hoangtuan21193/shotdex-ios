@@ -1,0 +1,113 @@
+{
+  "steps": [
+    {
+      "action": "launch"
+    },
+    {
+      "action": "wait",
+      "seconds": 6
+    },
+    {
+      "action": "tap",
+      "label": "Select photos",
+      "type": "button"
+    },
+    {
+      "action": "wait",
+      "seconds": 1
+    },
+    {
+      "action": "tap",
+      "x": 0.227,
+      "y": 0.137
+    },
+    {
+      "action": "wait",
+      "seconds": 0.6
+    },
+    {
+      "action": "tap",
+      "x": 0.59,
+      "y": 0.137
+    },
+    {
+      "action": "wait",
+      "seconds": 0.6
+    },
+    {
+      "action": "tap",
+      "x": 0.68,
+      "y": 0.137
+    },
+    {
+      "action": "wait",
+      "seconds": 0.6
+    },
+    {
+      "action": "tap",
+      "label": "More selection actions"
+    },
+    {
+      "action": "wait",
+      "seconds": 1
+    },
+    {
+      "action": "tap",
+      "label": "Resize"
+    },
+    {
+      "action": "wait",
+      "seconds": 5
+    },
+    {
+      "action": "screenshot",
+      "name": "01-resize"
+    },
+    {
+      "action": "dump",
+      "name": "01-resize",
+      "type": "button"
+    },
+    {
+      "action": "tap",
+      "label": "Watermark",
+      "type": "button"
+    },
+    {
+      "action": "wait",
+      "seconds": 4
+    },
+    {
+      "action": "screenshot",
+      "name": "02-watermark-portrait"
+    },
+    {
+      "action": "dump",
+      "name": "02-watermark-portrait"
+    },
+    {
+      "action": "orientation",
+      "text": "landscape"
+    },
+    {
+      "action": "wait",
+      "seconds": 4
+    },
+    {
+      "action": "screenshot",
+      "name": "03-watermark-landscape"
+    },
+    {
+      "action": "dump",
+      "name": "03-watermark-landscape"
+    },
+    {
+      "action": "orientation",
+      "text": "portrait"
+    },
+    {
+      "action": "wait",
+      "seconds": 2
+    }
+  ]
+}

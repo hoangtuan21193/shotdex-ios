@@ -1,0 +1,20 @@
+{ "steps": [
+  { "action": "launch" },
+  { "action": "wait", "seconds": 6 },
+  { "action": "tap", "label": "Select photos", "type": "button" },
+  { "action": "wait", "seconds": 1 },
+  { "action": "tap", "x": 0.14, "y": 0.58 },
+  { "action": "tap", "x": 0.41, "y": 0.58 },
+  { "action": "tap", "label": "More selection actions" },
+  { "action": "wait", "seconds": 1 },
+  { "action": "tap", "label": "Resize" },
+  { "action": "wait", "seconds": 5 },
+  { "action": "screenshot", "name": "01-resize" },
+  { "action": "swipe", "x": 0.4, "y": 0.75, "direction": "up", "distance": 0.45 },
+  { "action": "wait", "seconds": 1.5 },
+  { "action": "screenshot", "name": "02-resize-row" },
+  { "action": "tap", "label": "Watermark", "type": "button" },
+  { "action": "wait", "seconds": 4 },
+  { "action": "screenshot", "name": "03-watermark" },
+  { "action": "dump", "name": "03-watermark" }
+] }

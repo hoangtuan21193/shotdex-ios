@@ -24,6 +24,7 @@ struct CompressionScreen: View {
 
     @State private var controller: CompressionController?
     @State private var isCancelConfirmationPresented = false
+    @State private var watermarkModel: WatermarkModel?
 
     private var stage: some View {
         ZStack {
@@ -69,6 +70,14 @@ struct CompressionScreen: View {
             }
             .toolbarBackground(EditorTheme.panelSolid, for: .navigationBar)
             .toolbarBackground(.visible, for: .navigationBar)
+            .navigationDestination(item: $watermarkModel) { model in
+                WatermarkScreen(model: model)
+            }
+        }
+        // Back from the Watermark screen, or any change to the remembered
+        // watermark: the preview and the gallery stamp again.
+        .onChange(of: dependencies.watermarkSettings.settings) {
+            controller?.schedulePreviewUpdate()
         }
         .preferredColorScheme(.dark)
         .task {
@@ -155,14 +164,19 @@ struct CompressionScreen: View {
                 CompressionPreview(controller: controller)
                     .frame(height: previewHeight)
             } else {
-                CompressionGallery(assets: assets, photoLibrary: dependencies.photoLibrary)
-                    .frame(height: previewHeight)
+                CompressionGallery(
+                    assets: assets,
+                    photoLibrary: dependencies.photoLibrary,
+                    stamp: { controller.watermarkStamp(for: $0) }
+                )
+                .frame(height: previewHeight)
             }
 
             presetSection(controller)
             qualitySection(controller)
             formatSection(controller)
             metadataSection(controller)
+            watermarkRow(controller)
             deleteOriginalsSection(controller)
 
             if assets.count > 1 {
@@ -259,7 +273,8 @@ struct CompressionScreen: View {
                         .font(.caption)
                         .foregroundStyle(EditorTheme.secondaryText)
                 } else if let text = controller.estimatedSizeText {
-                    Text("~\(text)")
+                    // The text carries its own "~".
+                    Text(text)
                         .font(.caption.monospacedDigit())
                         .foregroundStyle(EditorTheme.secondaryText)
                 }
@@ -324,6 +339,68 @@ struct CompressionScreen: View {
             }
             .pickerStyle(.segmented)
         }
+    }
+
+    /// FS-05.04 §4: one 44pt row, the preset's name or Off, into the
+    /// Watermark screen. Dimmed and None before any preset exists.
+    private func watermarkRow(_ controller: CompressionController) -> some View {
+        Button {
+            watermarkModel = makeWatermarkModel(controller)
+        } label: {
+            HStack(spacing: 10) {
+                Text(WatermarkCopy.watermark())
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(.white)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                Text(controller.watermarkRowValue)
+                    .font(.system(size: 15))
+                    .foregroundStyle(EditorTheme.secondaryText)
+                    .lineLimit(1)
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(EditorTheme.dimText)
+            }
+            .padding(.leading, 14)
+            .padding(.trailing, 12)
+            .frame(height: 44)
+            .background(EditorTheme.control, in: RoundedRectangle.app(AppTheme.Radius.md))
+            .contentShape(RoundedRectangle.app(AppTheme.Radius.md))
+        }
+        .buttonStyle(.plain)
+        .opacity(controller.hasWatermarkPresets ? 1 : EditorTheme.rowDisabled)
+        .accessibilityLabel(WatermarkCopy.watermark())
+        .accessibilityValue(controller.watermarkRowValue)
+    }
+
+    private func makeWatermarkModel(_ controller: CompressionController) -> WatermarkModel {
+        let library = dependencies.photoLibrary
+        let pages: [WatermarkPreviewPage] = controller.photos.enumerated().map { index, photo in
+            let asset = assets.first { $0.localIdentifier == photo.id }
+            return WatermarkPreviewPage(
+                id: photo.id,
+                filename: photo.filename,
+                exportSize: controller.exportPixelSize(of: photo),
+                tokens: OverlayTokenValues(metadata: try? dependencies.libraryQueries.metadata(assetId: photo.id)),
+                load: { @MainActor in
+                    // One photo: the form's own preview, cropped as the file
+                    // is. A batch: each page from Photos, like the gallery.
+                    if assets.count == 1, index == 0 {
+                        for _ in 0..<100 where controller.previewBase == nil {
+                            try? await Task.sleep(for: .milliseconds(100))
+                        }
+                        return controller.previewBase
+                    }
+                    guard let asset else { return nil }
+                    return await library.detailCGImage(for: asset, longEdge: 1_200)
+                }
+            )
+        }
+        return WatermarkModel(
+            settings: dependencies.watermarkSettings,
+            presets: dependencies.signaturePresets,
+            pages: pages,
+            formTitle: WatermarkCopy.resizeForm()
+        )
     }
 
     private func deleteOriginalsSection(_ controller: CompressionController) -> some View {
@@ -478,7 +555,7 @@ struct CompressionScreen: View {
 }
 
 /// The uppercase tier-D group heading (DESIGN.md §7.2) used above each control.
-private struct CompressionGroupLabel: View {
+struct CompressionGroupLabel: View {
     let text: String
 
     var body: some View {
@@ -554,6 +631,8 @@ private struct CompressionPreview: View {
 private struct CompressionGallery: View {
     let assets: [PHAsset]
     let photoLibrary: PhotoLibraryService
+    /// Each page's watermark, tokens filled for that photo (FS-05.04 §5).
+    let stamp: (String) -> WatermarkStamp?
 
     @State private var currentIndex: Int?
 
@@ -564,7 +643,11 @@ private struct CompressionGallery: View {
             ScrollView(.horizontal, showsIndicators: false) {
                 LazyHStack(spacing: 0) {
                     ForEach(Array(assets.enumerated()), id: \.element.localIdentifier) { index, asset in
-                        CompressionGalleryPage(asset: asset, photoLibrary: photoLibrary)
+                        CompressionGalleryPage(
+                            asset: asset,
+                            photoLibrary: photoLibrary,
+                            stamp: stamp(asset.localIdentifier)
+                        )
                             .frame(width: proxy.size.width)
                             .id(index)
                     }
@@ -589,15 +672,25 @@ private struct CompressionGallery: View {
 private struct CompressionGalleryPage: View {
     let asset: PHAsset
     let photoLibrary: PhotoLibraryService
+    let stamp: WatermarkStamp?
 
     @State private var image: UIImage?
+    /// `image` with the stamp, by the same raster as the file.
+    @State private var stamped: CGImage?
     @State private var requestId: PHImageRequestID?
+    private static let renderer = WatermarkPreviewRenderer()
 
     var body: some View {
         ZStack {
             RoundedRectangle.app(AppTheme.Radius.lg)
                 .fill(EditorTheme.panel)
-            if let image {
+            if let stamped, stamp != nil {
+                Image(decorative: stamped, scale: 1)
+                    .resizable()
+                    .interpolation(.high)
+                    .aspectRatio(contentMode: .fit)
+                    .padding(AppTheme.Spacing.sm)
+            } else if let image {
                 Image(uiImage: image)
                     .resizable()
                     .interpolation(.high)
@@ -611,6 +704,15 @@ private struct CompressionGalleryPage: View {
         .padding(.horizontal, AppTheme.Spacing.xs)
         .onAppear(perform: load)
         .onDisappear(perform: cancel)
+        .task(id: StampKey(hasImage: image != nil, stamp: stamp)) {
+            guard let cgImage = image?.cgImage, stamp != nil else { return }
+            stamped = await Self.renderer.stamped(cgImage, stamp: stamp)
+        }
+    }
+
+    private struct StampKey: Equatable {
+        let hasImage: Bool
+        let stamp: WatermarkStamp?
     }
 
     private func load() {
@@ -747,7 +849,7 @@ private struct CompressionSummary: View {
     }
 }
 
-private struct CompressionChoiceStyle: ButtonStyle {
+struct CompressionChoiceStyle: ButtonStyle {
     let selected: Bool
     /// Passed in rather than read from the environment: `makeBody` is not a view
     /// body, so `@Environment` in a `ButtonStyle` never resolves.

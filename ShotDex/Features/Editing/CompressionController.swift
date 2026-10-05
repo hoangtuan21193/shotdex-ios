@@ -56,6 +56,9 @@ final class CompressionController {
     var deleteOriginals = true
     var cropAnchor = NormalizedPoint.center
     var previewImage: UIImage?
+    /// The single photo's preview before the stamp, cropped as the export
+    /// crops — what the Watermark screen stamps live.
+    private(set) var previewBase: CGImage?
 
     private(set) var estimatedBytes: Int?
     private(set) var isLoading = true
@@ -164,6 +167,20 @@ final class CompressionController {
     /// photo's own metadata.
     func watermarkStamp(for photoID: String) -> WatermarkStamp? {
         watermarkTemplate?.resolved(with: tokenValues(photoID))
+    }
+
+    /// The Watermark row's value (FS-05.04 §4): the preset's name, Off, or
+    /// None before any preset exists.
+    var watermarkRowValue: String {
+        guard let signaturePresets, !signaturePresets.presets.isEmpty else { return WatermarkCopy.none() }
+        return watermarkTemplate?.name ?? WatermarkCopy.off()
+    }
+
+    var hasWatermarkPresets: Bool { !(signaturePresets?.presets.isEmpty ?? true) }
+
+    /// The pixel size a photo is written at with the form's current preset.
+    func exportPixelSize(of photo: OriginalItem) -> CGSize {
+        selectedPreset.outputPixelSize(source: CGSize(width: photo.photo.width, height: photo.photo.height))
     }
 
     /// What the watermark does to one photo; nil when it is off.
@@ -414,6 +431,7 @@ final class CompressionController {
             )
             let cgImage = try await service.renderer.previewImage(stamped)
             previewImage = UIImage(cgImage: cgImage)
+            previewBase = try await service.renderer.previewImage(resized)
             await updateEstimate()
         } catch {
             errorMessage = error.localizedDescription
