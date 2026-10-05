@@ -1732,6 +1732,9 @@
     "Couldn't Save" : {
       "comment" : "Alert title: the combined photo could not be rendered or saved"
     },
+    "Couldn't save .xmp for ^[%lld photo](inflect: true) · %@ is read-only" : {
+      "comment" : "Sources: a folder or drive ShotDex may not write to; stars and keywords stay in ShotDex until it can"
+    },
     "Couldn't Save Connection" : {
 
     },

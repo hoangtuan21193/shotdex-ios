@@ -57,7 +57,7 @@ struct SidecarWriter: Sendable {
                         try db.execute(sql: "DELETE FROM pending_sidecar WHERE copyId = ?", arguments: [sidecar.copyId])
                     }
                 } catch {
-                    try markPending(sidecar.copyId, photoId: photoId, reason: .writeFailed)
+                    try markPending(sidecar.copyId, photoId: photoId, reason: Self.isReadOnly(error) ? .readOnly : .writeFailed)
                     summary.failed += 1
                 }
             }
@@ -73,8 +73,49 @@ struct SidecarWriter: Sendable {
         case offline
         /// The source's folder cannot be opened now.
         case unavailable
-        /// The write itself failed.
+        /// The volume, the share or the folder does not let ShotDex write.
+        /// Retried when the copy comes back online.
+        case readOnly
+        /// The write itself failed for another reason.
         case writeFailed
+    }
+
+    /// A write refused for lack of permission rather than for space or a
+    /// vanished folder.
+    static func isReadOnly(_ error: Error) -> Bool {
+        let error = error as NSError
+        if error.domain == NSCocoaErrorDomain,
+           [NSFileWriteNoPermissionError, NSFileWriteVolumeReadOnlyError].contains(error.code) { return true }
+        if error.domain == NSPOSIXErrorDomain, [Int(EACCES), Int(EROFS), Int(EPERM)].contains(error.code) { return true }
+        if let underlying = error.userInfo[NSUnderlyingErrorKey] as? Error { return isReadOnly(underlying) }
+        return false
+    }
+
+    /// Photos with a pending mark in `sourceId`, by reason — what the source
+    /// row reports (FS-19.02 §5).
+    func pendingProblems(sourceId: String) throws -> [PendingReason: Int] {
+        try database.reader.read { db in
+            var out: [PendingReason: Int] = [:]
+            for row in try Row.fetchAll(db, sql: """
+                SELECT p.reason, COUNT(DISTINCT p.photoId) AS photos FROM pending_sidecar p
+                JOIN photo_copies c ON c.id = p.copyId WHERE c.sourceId = ? GROUP BY p.reason
+                """, arguments: [sourceId]) {
+                if let reason = PendingReason(rawValue: row["reason"]) { out[reason] = row["photos"] }
+            }
+            return out
+        }
+    }
+
+    /// The source row's line for photos whose sidecar could not be saved;
+    /// nil for a reason the row does not report (an unplugged drive says so
+    /// on its own).
+    static func problemLine(reason: PendingReason, photos: Int, sourceName: String, locale: Locale = .current) -> String? {
+        guard reason == .readOnly else { return nil }
+        return String(AttributedString(
+            localized: "Couldn't save .xmp for ^[\(photos) photo](inflect: true) · \(sourceName) is read-only",
+            locale: locale,
+            comment: "Sources: a folder or drive ShotDex may not write to; stars and keywords stay in ShotDex until it can"
+        ).characters)
     }
 
     /// Photos with a pending mark on a copy in `sourceId`.

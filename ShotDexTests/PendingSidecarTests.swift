@@ -100,4 +100,47 @@ import Testing
         #expect(try library.pendingCount() == 0)
         #expect(await library.queue.sourceCameOnline(library.t7Id).written == 0)
     }
+
+    /// AC-32: T7 is read-only (here: a folder nobody may write to) and holds
+    /// three photos. ★4 on all three shows ★4 in ShotDex, leaves three
+    /// pending marks for "read-only", and the source row says so.
+    @Test func readOnlyVolume() async throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent("ReadOnly-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        defer {
+            try? FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: root.path)
+            try? FileManager.default.removeItem(at: root)
+        }
+        var options = MetadataFixture.Options()
+        options.starRating = nil
+        for n in 0..<3 {
+            options.width = 64 + n
+            try MetadataFixture.encode(.tiff, options: options).write(to: root.appendingPathComponent("DSC\(n).ARW"))
+        }
+        let database = try AppDatabase.makeEmpty()
+        let sourceId = try SourceStore(database: database).addFolder(name: "T7 RAW Archive", bookmark: Data(), includesSubfolders: true,
+                                                                     pairsRawAndJpeg: true, kind: "drive")
+        _ = try FolderSourceIndexer(database: database, composer: FolderSourceIndexTests.composer)
+            .index(sourceId: sourceId, root: root, includesSubfolders: true, pairsRawAndJpeg: true)
+        try FileManager.default.setAttributes([.posixPermissions: 0o555], ofItemAtPath: root.path)
+        let ids = try await database.reader.read { db in try String.fetchAll(db, sql: "SELECT id FROM photos") }
+        let writer = SidecarWriter(database: database) { _, path in root.appendingPathComponent(path) }
+        let queue = SidecarWriteQueue(writer: writer)
+        let marks = PhotoMarks(store: PhotoMarksStore(database: database), sidecarQueue: queue)
+
+        await marks.setRating(4, ids: ids)
+        #expect(await queue.flush().failed == 3)
+        #expect(ids.allSatisfy { marks.rating(for: $0) == 4 })
+        #expect(try FileManager.default.contentsOfDirectory(atPath: root.path).filter { $0.hasSuffix(".xmp") }.isEmpty)
+        let reasons = try await database.reader.read { db in try String.fetchAll(db, sql: "SELECT reason FROM pending_sidecar") }
+        #expect(reasons == Array(repeating: SidecarWriter.PendingReason.readOnly.rawValue, count: 3))
+
+        let problems = try writer.pendingProblems(sourceId: sourceId)
+        #expect(problems == [.readOnly: 3])
+        let english = Locale(identifier: "en_US")
+        #expect(SidecarWriter.problemLine(reason: .readOnly, photos: 3, sourceName: "T7 RAW Archive", locale: english)
+                == "Couldn't save .xmp for 3 photos · T7 RAW Archive is read-only")
+        #expect(SidecarWriter.problemLine(reason: .readOnly, photos: 1, sourceName: "T7 RAW Archive", locale: english)
+                == "Couldn't save .xmp for 1 photo · T7 RAW Archive is read-only")
+    }
 }
