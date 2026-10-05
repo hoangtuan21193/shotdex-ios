@@ -1,0 +1,26 @@
+#!/bin/sh
+# FS-12.11 · 12 · 13: Tools/video-fixtures [media|music|all] [udid]
+# Writes the Video Studio sample project's media — drawn landscapes (no
+# people), generated video with the system synthesizer's speech in it, and
+# synthetic music — to build/video-fixtures/, and with a udid adds the media
+# (photos and videos) to that simulator's library, listed together in
+# project order: Falls · Coast · Lake · Night · Forest. Music goes in through
+# the studio's Add Music from Files…; copy it into the simulator's Files with
+# `xcrun simctl addmedia` or drag it in.
+# The generator is Swift (Tools/src/video-fixtures.swift), compiled on first use.
+set -e
+root=$(cd "$(dirname "$0")/.." && pwd)
+src="$root/Tools/src/video-fixtures.swift"
+bin="$root/build/tools/video-fixtures"
+if [ ! -x "$bin" ] || [ "$src" -nt "$bin" ]; then
+  mkdir -p "$root/build/tools"
+  swiftc -O "$src" -o "$bin"
+fi
+which=${1:-all}
+out="$root/build/video-fixtures"
+mkdir -p "$out"
+"$bin" "$out" "$which"
+if [ -n "${2:-}" ] && [ "$which" != "music" ]; then
+  xcrun simctl addmedia "$2" "$out/Falls.jpg" "$out/Coast.mov" "$out/Lake.mov" "$out/Night.jpg" "$out/Forest.mov"
+  echo "added to $2"
+fi
