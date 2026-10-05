@@ -26,28 +26,11 @@ struct VideoLookPanel: View {
     @State private var thumbnails = VideoLookThumbnails()
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            Color.clear.frame(height: style.topGap)
-            if mode == .clip {
-                clipHeader
-                if !style.segmented {
-                    // The phone's order (board F5_P_ClipLook): where the
-                    // look goes comes first, under the header.
-                    clipApplyRow
-                    Color.clear.frame(height: 8)
-                }
-            }
-            // The iPad's clip block is the shelves alone (F5_IL_Looks):
-            // Adjust and Color are the whole video's, in its idle Look.
-            if !(mode == .clip && style.segmented) {
-                chipRow(VideoLookTab.allCases, selected: model.lookTab, height: style.tabHeight, title: { Text($0.title) }) {
-                    model.lookTab = $0
-                }
-            }
-            switch mode == .clip && style.segmented ? .filter : model.lookTab {
-            case .filter: filterBody
-            case .adjust: adjustBody
-            case .color: VideoColorPanel(model: model, usesTallScopes: usesTallScopes)
+        Group {
+            if style.dockColumns {
+                dockBody
+            } else {
+                stackBody
             }
         }
         .task(id: model.clipIndexUnderPlayhead) {
@@ -73,6 +56,143 @@ struct VideoLookPanel: View {
         )) {
             LookImportReportSheet(model: dependencies.lookExchange)
         }
+    }
+
+    /// Every window but the iPad's portrait dock: one column, top to bottom.
+    private var stackBody: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            Color.clear.frame(height: style.topGap)
+            if mode == .clip {
+                clipHeader
+                if !style.segmented {
+                    // The phone's order (board F5_P_ClipLook): where the
+                    // look goes comes first, under the header.
+                    clipApplyRow
+                    Color.clear.frame(height: 8)
+                }
+            }
+            // The iPad's clip block is the shelves alone (F5_IL_Looks):
+            // Adjust and Color are the whole video's, in its idle Look.
+            if !(mode == .clip && style.segmented) {
+                chipRow(VideoLookTab.allCases, selected: model.lookTab, height: style.tabHeight, title: { Text($0.title) }) {
+                    model.lookTab = $0
+                }
+            }
+            switch mode == .clip && style.segmented ? .filter : model.lookTab {
+            case .filter: filterBody
+            case .adjust: adjustBody
+            case .color: VideoColorPanel(model: model, usesTallScopes: usesTallScopes)
+            }
+        }
+    }
+
+    // MARK: Portrait dock (FS-12.03 §3, boards IP1_Main, F5_IP_Looks)
+
+    /// The iPad portrait dock has width and no height: the panel stands in
+    /// three columns of 312, 32 apart, all seen at once. First column: the
+    /// tabs (a clip: its header) and the shelves over the first row of
+    /// tiles; second: the tiles that follow, Amount and the line under it;
+    /// third: where the look goes, Import Look… and what it means. Adjust
+    /// and Color keep the tabs in the first column and take the other two.
+    private var dockBody: some View {
+        let isClip = mode == .clip
+        let tab: VideoLookTab = isClip ? .filter : model.lookTab
+        return DockColumns(gap: VideoStudioDeskGeometry.dockColumnGap) {
+            // First column.
+            VStack(alignment: .leading, spacing: 0) {
+                if isClip {
+                    clipHeader
+                } else {
+                    chipRow(VideoLookTab.allCases, selected: model.lookTab, height: style.tabHeight, title: { Text($0.title) }) {
+                        model.lookTab = $0
+                    }
+                }
+                if tab == .filter {
+                    Color.clear.frame(height: style.afterTabs)
+                    shelfRow
+                    Color.clear.frame(height: style.afterShelf)
+                    dockTiles(Array(tileItems.prefix(style.columns ?? 3)))
+                } else if tab == .adjust {
+                    adjustSliders(Array(Self.adjustKinds.prefix(3)))
+                }
+                Spacer(minLength: 0)
+            }
+        } second: {
+            VStack(alignment: .leading, spacing: 0) {
+                switch tab {
+                case .filter:
+                    ScrollView(showsIndicators: false) {
+                        VStack(alignment: .leading, spacing: 0) {
+                            dockTiles(Array(tileItems.dropFirst(style.columns ?? 3)))
+                            Color.clear.frame(height: style.afterTiles)
+                            if VideoLookEditing.showsAmount(model.lookSlot), let look = model.lookSlot {
+                                amountRow(look)
+                            }
+                            caption
+                        }
+                        .padding(.bottom, 8)
+                    }
+                    .scrollBounceBehavior(.basedOnSize)
+                case .adjust:
+                    adjustSliders(Array(Self.adjustKinds.dropFirst(3)))
+                case .color:
+                    EmptyView()
+                }
+                Spacer(minLength: 0)
+            }
+        } third: {
+            VStack(alignment: .leading, spacing: 0) {
+                if tab == .filter {
+                    Text(VideoStudioCopy.applyToTitle)
+                        .font(.system(size: 17, weight: .semibold))
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, style.inset)
+                        .frame(height: 24, alignment: .leading)
+                    Color.clear.frame(height: 2)
+                    applyTo
+                    Color.clear.frame(height: 4)
+                    importRow
+                    Text(isClip ? VideoStudioCopy.clipLookExplainer : VideoStudioCopy.wholeVideoLookExplainer)
+                        .font(.system(size: style.captionSize))
+                        .foregroundStyle(.white.opacity(0.55))
+                        .fixedSize(horizontal: false, vertical: true)
+                        .padding(.horizontal, style.inset)
+                } else if tab == .color {
+                    VideoColorPanel(model: model, usesTallScopes: false)
+                }
+                Spacer(minLength: 0)
+            }
+        }
+    }
+
+    private static let adjustKinds: [PhotoAdjustmentKind] = [.exposure, .contrast, .saturation, .warmth, .brightness, .vignette]
+
+    private func adjustSliders(_ kinds: [PhotoAdjustmentKind]) -> some View {
+        VStack(spacing: 0) {
+            ForEach(kinds, id: \.self) { kind in
+                let value = model.activeNode.adjustments[kind]
+                InspectorSlider(
+                    label: kind.displayName, value: value, range: -1...1,
+                    valueText: String(format: "%+.0f", value * 100), anchor: 0, notch: true, detent: 0, model: model,
+                    set: { model.setAdjustment(kind, value: $0) },
+                    reset: { model.pushUndo(); model.setAdjustment(kind, value: 0) }
+                )
+            }
+        }
+        .padding(.top, style.afterTabs)
+    }
+
+    /// One run of the dock's tiles: three across the column, 10 apart.
+    private func dockTiles(_ items: [VideoLookTile]) -> some View {
+        LazyVGrid(
+            columns: Array(repeating: GridItem(.flexible(), spacing: style.tileGap), count: style.columns ?? 3),
+            alignment: .leading,
+            spacing: style.tileRowGap
+        ) {
+            ForEach(items) { tile($0) }
+        }
+        .padding(.horizontal, style.inset)
+        .onAppear { thumbnails.request(tileItems.map { ($0.id, $0.look) }) }
     }
 
     // MARK: Filter
@@ -326,7 +446,7 @@ struct VideoLookPanel: View {
     private var adjustBody: some View {
         ScrollView(showsIndicators: false) {
             VStack(spacing: 0) {
-                ForEach([PhotoAdjustmentKind.exposure, .contrast, .saturation, .warmth, .brightness, .vignette], id: \.self) { kind in
+                ForEach(Self.adjustKinds, id: \.self) { kind in
                     let value = model.activeNode.adjustments[kind]
                     InspectorSlider(
                         label: kind.displayName, value: value, range: -1...1,
@@ -465,6 +585,8 @@ struct VideoLookPanelStyle: Equatable {
     var fillsColumns = false
     var inset: CGFloat = 16
     var topGap: CGFloat = 6
+    /// The iPad portrait dock's three columns (FS-12.03 §3).
+    var dockColumns = false
     var afterTabs: CGFloat = 10
     var afterShelf: CGFloat = 12
     var afterTiles: CGFloat = 6
@@ -493,6 +615,16 @@ struct VideoLookPanelStyle: Equatable {
         captionSize: 13, showsApplyHeader: false, showsOriginalTile: false, importsBesideShelf: true,
         segmented: true, fillsColumns: true, inset: 16, topGap: 4, afterTabs: 10, afterShelf: 10, afterTiles: 6
     )
+
+    /// iPad portrait, `F5_IP_Looks` / `IP1_Main`: the dock's three columns
+    /// of 312, tiles 3 across, 72 tall with their names.
+    static let iPadDock = VideoLookPanelStyle(
+        tile: CGSize(width: 97.33, height: 50), columns: 3, tileGap: 10, tileRowGap: 6, tileLabelSize: 13,
+        badgeSize: 11, tabHeight: 36, shelfHeight: 36, amountHeight: 44, applyHeight: 36, chipFontSize: 15,
+        captionSize: 13, showsApplyHeader: false, showsOriginalTile: false, importsBesideShelf: false,
+        segmented: true, fillsColumns: true, inset: 0, topGap: 0, dockColumns: true, afterTabs: 10,
+        afterShelf: 10, afterTiles: 6
+    )
 }
 
 extension VideoLookPanelStyle {
@@ -501,7 +633,8 @@ extension VideoLookPanelStyle {
         case .phone: .phone
         case .duoCover: .duoCover
         case .duoInner: .duoInner
-        case .iPadLandscape, .iPadPortrait: .iPad
+        case .iPadLandscape: .iPad
+        case .iPadPortrait: .iPadDock
         }
     }
 }

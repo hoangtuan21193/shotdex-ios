@@ -59,3 +59,37 @@ struct VideoStudioDock: View {
         }
     }
 }
+
+/// Three columns of the dock's width shared out — 312 each on a 1032
+/// window, `gap` apart with a 1pt rule in the middle of each gap, 16 in.
+struct DockColumns<First: View, Second: View, Third: View>: View {
+    let gap: CGFloat
+    @ViewBuilder let first: First
+    @ViewBuilder let second: Second
+    @ViewBuilder let third: Third
+
+    init(gap: CGFloat, @ViewBuilder _ first: () -> First, @ViewBuilder second: () -> Second, @ViewBuilder third: () -> Third) {
+        self.gap = gap
+        self.first = first()
+        self.second = second()
+        self.third = third()
+    }
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 0) {
+            first.frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+            rule
+            second.frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+            rule
+            third.frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        }
+        .padding(.horizontal, VideoStudioDeskGeometry.dockInset)
+    }
+
+    private var rule: some View {
+        Rectangle()
+            .fill(Color.white.opacity(0.07))
+            .frame(width: 1)
+            .padding(.horizontal, (gap - 1) / 2)
+    }
+}

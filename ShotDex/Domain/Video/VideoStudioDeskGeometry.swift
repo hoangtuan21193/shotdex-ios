@@ -137,6 +137,9 @@ enum VideoStudioDeskGeometry {
     /// columns of controls from 73, the ✕ · name · ✓ foot (64) at 260
     /// (FS-12.03 §3).
     static let dockCommandRowTop: CGFloat = 9
+    /// Nothing selected, the Look's columns start 65 under the dock's top,
+    /// under the 44 title row (y 1117 on the board).
+    static let dockColumnsTop: CGFloat = 65
     static let dockParamTop: CGFloat = 73
     static let dockParamHeight: CGFloat = 187
     static let dockFooterTop: CGFloat = 260

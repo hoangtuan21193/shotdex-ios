@@ -133,6 +133,10 @@
       "comment": "Video Studio Video Settings: why 4K is dimmed — one clip falls short",
       "extractionState": "manual"
     },
+    "A clip with its own look uses it instead of the video look. Use Video Look hands it back.": {
+      "comment": "Video Studio iPad Look panel, a clip selected: what a clip's own look means",
+      "extractionState": "manual"
+    },
     "APPLY TO": {
       "comment": "Video Studio Look panel: header over All Clips · This Clip — where a tapped look goes",
       "extractionState": "manual"
@@ -159,6 +163,10 @@
     },
     "Amount": {
       "comment": "Video Studio Look panel: how much of the chosen look is mixed in, 0–100",
+      "extractionState": "manual"
+    },
+    "Apply To": {
+      "comment": "Video Studio iPad Look panel: header over All Clips · This Clip — where a tapped look goes",
       "extractionState": "manual"
     },
     "Apply to": {
@@ -539,6 +547,10 @@
     },
     "Select": {
       "comment": "Video Studio Media panel: starts picking several items to add at once",
+      "extractionState": "manual"
+    },
+    "Select a clip to give it its own look.": {
+      "comment": "Video Studio iPad Look panel, nothing selected: how to give one clip a different look",
       "extractionState": "manual"
     },
     "Selected": {

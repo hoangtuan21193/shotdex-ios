@@ -54,6 +54,7 @@ struct VideoStudioSheetHost: View {
     /// The iPad's inspector column, whose content already starts under the
     /// toolbar at 80: the command row sits at its top, 13 in (FS-12.03 §2).
     var isDeskInspector = false
+
     /// A project of server photos, for Export Video's destination.
     var server: ServerVideoStudioLaunch?
     var onServerExported: () -> Void = {}
@@ -136,9 +137,39 @@ struct VideoStudioSheetHost: View {
     /// undo step.
     private var idleLook: some View {
         VStack(spacing: 0) {
-            lookTitle(showsSessionButtons: false)
+            if layout == .dock {
+                dockLookTitle
+                Color.clear.frame(height: VideoStudioDeskGeometry.dockColumnsTop - VideoStudioDeskGeometry.dockCommandRowTop - VideoStudioDeskGeometry.dockButtonSize.height)
+            } else {
+                lookTitle(showsSessionButtons: false)
+            }
             VideoLookPanel(model: model, usesTallScopes: layout != .band)
         }
+    }
+
+    /// The portrait dock's head with nothing selected (FS-12.03 §3, board
+    /// IP1_Main): "Look" 20 · "Whole video", and the four ways to add —
+    /// Media · Text · Sticker · Music, 104×44, 8 apart — on the right.
+    private var dockLookTitle: some View {
+        HStack(alignment: .firstTextBaseline, spacing: 8) {
+            Text(VideoStudioCopy.look)
+                .font(.system(size: 20, weight: .semibold))
+                .foregroundStyle(.white)
+            Text(model.lookSubtitle)
+                .font(.system(size: 15))
+                .foregroundStyle(EditorTheme.secondaryText)
+            Spacer(minLength: 0)
+            HStack(spacing: VideoStudioDeskGeometry.dockButtonGap) {
+                ForEach(idleTools) { tool in
+                    idleToolButton(tool)
+                }
+            }
+            .alignmentGuide(.firstTextBaseline) { $0[VerticalAlignment.center] + 7 }
+        }
+        .lineLimit(1)
+        .padding(.horizontal, VideoStudioDeskGeometry.dockInset)
+        .frame(height: VideoStudioDeskGeometry.dockButtonSize.height)
+        .padding(.top, VideoStudioDeskGeometry.dockCommandRowTop)
     }
 
     /// The Look tool's panel (FS-12.06c §3, board F5_P_Looks): a 46pt title
@@ -203,7 +234,7 @@ struct VideoStudioSheetHost: View {
         .frame(height: VideoStudioMetrics.musicPanelTitleHeight)
     }
 
-    /// One of the dock's add buttons: glyph and name, 32 tall, radius 8.
+    /// One of the dock's add buttons: glyph and name, 104×44, radius 12.
     private func idleToolButton(_ tool: VideoAddTool) -> some View {
         Button {
             switch tool {
@@ -216,13 +247,14 @@ struct VideoStudioSheetHost: View {
         } label: {
             HStack(spacing: 6) {
                 Image(systemName: tool.systemImage)
-                    .font(.system(size: 13, weight: .medium))
+                    .font(.system(size: 17, weight: .medium))
                 Text(tool.title)
-                    .font(.system(size: 13, weight: .semibold))
+                    .font(.system(size: 17, weight: .semibold))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
             }
             .foregroundStyle(.white)
-            .padding(.horizontal, 12)
-            .frame(height: VideoStudioDeskGeometry.dockButtonSize.height)
+            .frame(width: VideoStudioDeskGeometry.dockButtonSize.width, height: VideoStudioDeskGeometry.dockButtonSize.height)
             .background(
                 RoundedRectangle(cornerRadius: VideoStudioDeskGeometry.dockButtonRadius, style: .continuous)
                     .fill(Color.white.opacity(0.08))

@@ -17,12 +17,16 @@ struct VideoLookLayoutTests {
         #expect(inner.tile == CGSize(width: 66, height: 66) && inner.columns == 3 && inner.amountHeight == 34)
         // Three 66 tiles, two 10 gaps and 14 either side fit the 264 column.
         #expect(3 * inner.tile.width + 2 * inner.tileGap + 2 * inner.inset <= 264)
-        for windowClass in [VideoStudioWindowClass.iPadLandscape, .iPadPortrait] {
-            let iPad = VideoLookPanelStyle.for(windowClass)
-            #expect(iPad.tile.height == 50 && iPad.columns == 3 && iPad.amountHeight == 44 && iPad.segmented)
-            // 103-wide tiles in the 360 inspector: 3 × 102.67 + 2 × 10 + 2 × 16.
-            #expect(abs(3 * iPad.tile.width + 2 * iPad.tileGap + 2 * iPad.inset - 360) < 1)
-        }
+        let iPad = VideoLookPanelStyle.for(.iPadLandscape)
+        #expect(iPad.tile.height == 50 && iPad.columns == 3 && iPad.amountHeight == 44 && iPad.segmented)
+        // 103-wide tiles in the 360 inspector: 3 × 102.67 + 2 × 10 + 2 × 16.
+        #expect(abs(3 * iPad.tile.width + 2 * iPad.tileGap + 2 * iPad.inset - 360) < 1)
+        // The portrait dock (F5_IP_Looks): three columns of 312, tiles 3
+        // across each — 3 × 97.3 + 2 × 10 — and a tile with its name 72.
+        let dock = VideoLookPanelStyle.for(.iPadPortrait)
+        #expect(dock.dockColumns && dock.columns == 3 && dock.segmented && dock.amountHeight == 44)
+        #expect(abs(3 * dock.tile.width + 2 * dock.tileGap - VideoStudioDeskGeometry.dockColumnWidth(width: 1032)) < 1)
+        #expect(dock.tile.height + 5 + dock.tileLabelSize + 4 == 72)
         // The phone's panel: 340 tall, standing on the 62 tool row.
         #expect(VideoStudioMetrics.lookSheetHeight == 340)
         #expect(VideoStudioMetrics.toolbarHeight == 62)

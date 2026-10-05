@@ -42,6 +42,22 @@ extension VideoStudioCopy {
         String(localized: "APPLY TO", table: table, comment: "Video Studio Look panel: header over All Clips · This Clip — where a tapped look goes")
     }
 
+    /// The same header in the iPad's portrait dock, Title Case (FS-12.03b
+    /// §1, board F5_IP_Looks).
+    static var applyToTitle: String {
+        String(localized: "Apply To", table: table, comment: "Video Studio iPad Look panel: header over All Clips · This Clip — where a tapped look goes")
+    }
+
+    /// Under Import Look… in the iPad dock's third column (F5_IP_Looks).
+    static var clipLookExplainer: String {
+        String(localized: "A clip with its own look uses it instead of the video look. Use Video Look hands it back.", table: table, comment: "Video Studio iPad Look panel, a clip selected: what a clip's own look means")
+    }
+
+    /// The same line while the panel shows the whole video's look.
+    static var wholeVideoLookExplainer: String {
+        String(localized: "Select a clip to give it its own look.", table: table, comment: "Video Studio iPad Look panel, nothing selected: how to give one clip a different look")
+    }
+
     static var importLook: String {
         String(localized: "Import Look…", table: table, comment: "Video Studio Look panel: brings Lightroom presets, .shotdexlook files and .cube LUTs in from Files")
     }
