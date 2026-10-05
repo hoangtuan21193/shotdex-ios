@@ -28,15 +28,24 @@ struct PhotoKeywordStore: Sendable {
     /// Photos carrying a keyword, as SQL on `assetId` — matched on the
     /// folded key, so `sunset`, `Sunset` and `súnset` are one (FS-02.07 §7).
     static func keywordCondition(has keyword: String) -> (sql: String, arguments: StatementArguments) {
-        ("assetId IN (SELECT assetId FROM photo_keyword WHERE foldKey = ?)", [KeywordInput.foldKey(keyword)])
+        ("assetId IN (SELECT assetId FROM (\(everyKeywordSQL)) WHERE foldKey = ?)", [KeywordInput.foldKey(keyword)])
     }
 
     static func keywordCondition(lacks keyword: String) -> (sql: String, arguments: StatementArguments) {
-        ("assetId NOT IN (SELECT assetId FROM photo_keyword WHERE foldKey = ?)", [KeywordInput.foldKey(keyword)])
+        ("assetId NOT IN (SELECT assetId FROM (\(everyKeywordSQL)) WHERE foldKey = ?)", [KeywordInput.foldKey(keyword)])
     }
 
-    static let hasAnyKeywordSQL = "assetId IN (SELECT assetId FROM photo_keyword)"
-    static let hasNoKeywordsSQL = "assetId NOT IN (SELECT assetId FROM photo_keyword)"
+    /// Every keyword of every photo: the mirror of Photos' keywords and the
+    /// keywords of file photos (`photo_user_keyword`) — a keyword filter
+    /// reads both (FS-19.05 §6). Columns `assetId`, `keyword`, `caseKey`,
+    /// `foldKey`.
+    static let everyKeywordSQL = """
+        SELECT assetId, keyword, caseKey, foldKey FROM photo_keyword \
+        UNION ALL SELECT photoId, keyword, caseKey, foldKey FROM photo_user_keyword
+        """
+
+    static let hasAnyKeywordSQL = "assetId IN (SELECT assetId FROM (\(everyKeywordSQL)))"
+    static let hasNoKeywordsSQL = "assetId NOT IN (SELECT assetId FROM (\(everyKeywordSQL)))"
 
     // MARK: Writes
 
@@ -184,7 +193,7 @@ struct PhotoKeywordStore: Sendable {
                 db,
                 sql: """
                     SELECT k.caseKey, k.keyword, COUNT(*) AS n
-                    FROM photo_keyword k JOIN photo_metadata m ON m.assetId = k.assetId
+                    FROM (\(Self.everyKeywordSQL)) k JOIN photo_metadata m ON m.assetId = k.assetId
                     GROUP BY k.caseKey, k.keyword
                     """
             )
@@ -204,7 +213,7 @@ struct PhotoKeywordStore: Sendable {
                 db,
                 sql: """
                     SELECT k.caseKey, COUNT(DISTINCT k.assetId) AS n
-                    FROM photo_keyword k JOIN photo_metadata m ON m.assetId = k.assetId
+                    FROM (\(Self.everyKeywordSQL)) k JOIN photo_metadata m ON m.assetId = k.assetId
                     GROUP BY k.caseKey
                     """
             )

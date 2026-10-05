@@ -13,7 +13,8 @@ struct PhotoMarksStore: Sendable {
     // MARK: SQL
 
     /// The current star rating of a `photo_metadata` row, as SQL: the pending
-    /// row when there is one, else what Photos holds, else 0. Written with
+    /// row when there is one, else a file photo's own stars, else what
+    /// Photos holds, else 0. Written with
     /// `IN (SELECT …)` rather than a correlated subquery so it needs no table
     /// alias — the grid, smart album and statistics queries name the table
     /// differently.
@@ -41,10 +42,14 @@ struct PhotoMarksStore: Sendable {
         )
     }
 
+    /// One order everywhere (K4): a star waiting for Photos, then the stars
+    /// of a file photo (`photo_user_marks`, FS-19.05 §3), then Photos' own.
     private static func ratingSQL(pendingTest: String, photosTest: String) -> String {
         """
         (assetId IN (SELECT assetId FROM pending_photo_rating WHERE \(pendingTest)) \
-        OR (assetId NOT IN (SELECT assetId FROM pending_photo_rating) AND \(photosTest)))
+        OR (assetId NOT IN (SELECT assetId FROM pending_photo_rating) \
+        AND (assetId IN (SELECT photoId FROM photo_user_marks WHERE rating IS NOT NULL AND \(pendingTest)) \
+        OR (assetId NOT IN (SELECT photoId FROM photo_user_marks WHERE rating IS NOT NULL) AND \(photosTest)))))
         """
     }
 

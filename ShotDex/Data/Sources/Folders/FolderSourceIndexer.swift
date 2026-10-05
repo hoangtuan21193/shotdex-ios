@@ -33,7 +33,10 @@ struct FolderSourceIndexer: Sendable {
     /// and date — Resume, even after a relaunch, reads only what is left.
     func index(sourceId: String, root: URL, includesSubfolders: Bool, pairsRawAndJpeg: Bool,
                now: Date = Date(), shouldContinue: () -> Bool = { true }) throws -> Summary {
-        let files = FolderEnumeration.entries(in: root, includeSubfolders: includesSubfolders).filter { !$0.isSidecar }
+        let listing = FolderEnumeration.entries(in: root, includeSubfolders: includesSubfolders)
+        let files = listing.filter { !$0.isSidecar }
+        let sidecars = Dictionary(listing.filter(\.isSidecar).map { (Self.pathKey($0.relativePath), $0) },
+                                  uniquingKeysWith: { first, _ in first })
         // Placeholders never pair: their twin may not exist yet either.
         let units = PairingRule.units(files.filter { !$0.isCloudPlaceholder }, pairs: pairsRawAndJpeg,
                                       name: { ($0.relativePath as NSString).lastPathComponent },
@@ -123,6 +126,9 @@ struct FolderSourceIndexer: Sendable {
                 photoId = UUID().uuidString
             }
             let record = metadata(photoId: photoId, url: url, file: file)
+            let sidecar = SidecarReader.sidecar(for: [file.relativePath] + [unit.companion?.relativePath].compactMap { $0 },
+                                                in: sidecars, modified: \.modified, pathKey: Self.pathKey)
+            let sidecarValues = sidecar.flatMap { SidecarReader.read(sidecarAt: root.appendingPathComponent($0.relativePath)) }
 
             try database.writer.write { db in
                 if splitFrom != nil {
@@ -145,6 +151,10 @@ struct FolderSourceIndexer: Sendable {
                         fastHash = excluded.fastHash, fullHash = NULL, hashedAt = excluded.hashedAt
                     """, arguments: [copyId, hash.algorithm, hash.version, hash.fast, stamp])
                 try record.upsert(db)
+                if let sidecar, let sidecarValues {
+                    try PhotoUserMarksStore.applySidecar(db, values: sidecarValues, photoId: photoId,
+                                                         at: Int((sidecar.modified ?? now).timeIntervalSince1970))
+                }
             }
             if let thumbnails, !summary.previewsStoppedForSpace,
                thumbnails.write(from: url, copyId: copyId) == .noSpace {

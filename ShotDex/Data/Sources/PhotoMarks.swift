@@ -40,6 +40,9 @@ final class PhotoMarks {
 
     @ObservationIgnored private var flags: [String: PhotoFlag] = [:]
     @ObservationIgnored private var pendingRatings: [String: Int] = [:]
+    /// Stars of file photos — read from their sidecars or set in ShotDex
+    /// (FS-19.05 §3). Below a pending star, above Photos' own.
+    @ObservationIgnored private var fileRatings: [String: Int] = [:]
     /// Ratings this session wrote to Photos. The grid's `PHAsset`s are not
     /// refetched after a content-only change, so their `rating` is stale
     /// until the chunk reloads; this map is what the cells read meanwhile.
@@ -80,7 +83,7 @@ final class PhotoMarks {
     /// The rating the app shows. `photosRating` is `PHAsset.rating` on
     /// iOS 27 (nil below it, or when the caller has no asset).
     func rating(for assetId: String, photosRating: Int? = nil) -> Int {
-        pendingRatings[assetId] ?? writtenRatings[assetId] ?? photosRating ?? 0
+        pendingRatings[assetId] ?? writtenRatings[assetId] ?? fileRatings[assetId] ?? photosRating ?? 0
     }
 
     func summary(for assetId: String, photosRating: Int? = nil) -> PhotoMarkSummary {
@@ -109,11 +112,13 @@ final class PhotoMarks {
 
     func reload() async {
         let store = store
-        let (flags, ratings) = await Task.detached(priority: .utility) {
-            ((try? store.allFlags()) ?? [:], (try? store.allPendingRatings()) ?? [:])
+        let (flags, ratings, fileRatings) = await Task.detached(priority: .utility) {
+            ((try? store.allFlags()) ?? [:], (try? store.allPendingRatings()) ?? [:],
+             (try? PhotoUserMarksStore(database: store.database).allRatings()) ?? [:])
         }.value
         self.flags = flags
         self.pendingRatings = ratings
+        self.fileRatings = fileRatings
         version += 1
     }
 
@@ -262,6 +267,7 @@ final class PhotoMarks {
             writtenRatings.removeValue(forKey: id)
             if flags.removeValue(forKey: id) != nil { changed = true }
             if pendingRatings.removeValue(forKey: id) != nil { changed = true }
+            if fileRatings.removeValue(forKey: id) != nil { changed = true }
         }
         if changed { version += 1 }
     }

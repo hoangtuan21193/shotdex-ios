@@ -165,14 +165,15 @@ enum SmartAlbumSQLBuilder {
             return ("isFavorite = ?", [rule.boolValue ? 1 : 0])
 
         case .keyword:
-            // The mirror of Photos' keywords (FS-02.07 §8), on its folded key:
-            // `sunset` finds Sunset, `da lat` finds Đà Lạt.
+            // The mirror of Photos' keywords (FS-02.07 §8) and the keywords of
+            // file photos (FS-19.05 §6), on the folded key: `sunset` finds
+            // Sunset, `da lat` finds Đà Lạt.
             let key = KeywordInput.foldKey(rule.text)
             switch rule.op {
             case .hasKeyword where !key.isEmpty:
-                return ("assetId IN (SELECT assetId FROM photo_keyword WHERE foldKey = ?)", [key])
+                return ("assetId IN (SELECT assetId FROM (\(PhotoKeywordStore.everyKeywordSQL)) WHERE foldKey = ?)", [key])
             case .lacksKeyword where !key.isEmpty:
-                return ("assetId NOT IN (SELECT assetId FROM photo_keyword WHERE foldKey = ?)", [key])
+                return ("assetId NOT IN (SELECT assetId FROM (\(PhotoKeywordStore.everyKeywordSQL)) WHERE foldKey = ?)", [key])
             case .hasAnyKeyword: return (PhotoKeywordStore.hasAnyKeywordSQL, [])
             case .hasNoKeywords: return (PhotoKeywordStore.hasNoKeywordsSQL, [])
             default: return nil
@@ -265,7 +266,7 @@ enum SmartAlbumSQLBuilder {
         let columns = anyTextColumns.map { "\($0) LIKE ? COLLATE NOCASE" }
         let sql = "(" + (columns + [
             "assetId IN (SELECT assetId FROM photo_caption WHERE foldKey LIKE ?)",
-            "assetId IN (SELECT assetId FROM photo_keyword WHERE foldKey LIKE ?)",
+            "assetId IN (SELECT assetId FROM (\(PhotoKeywordStore.everyKeywordSQL)) WHERE foldKey LIKE ?)",
         ]).joined(separator: " OR ") + ")"
         return (sql, anyTextColumns.map { _ in like as DatabaseValueConvertible } + [folded, folded])
     }

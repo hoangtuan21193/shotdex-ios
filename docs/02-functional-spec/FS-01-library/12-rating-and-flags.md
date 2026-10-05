@@ -46,8 +46,10 @@ việc này bằng P/X và 1–5. Trên ShotDex hôm nay phải mở Compare the
 
 - Cả hai đều là dữ liệu người dùng tự nhập nên **không** nằm trong cột nào của bảng metadata chính. Cột sao trên
   iOS 27 là ngoại lệ có lý: nó **đọc lại được** từ ảnh, giống favorite ([BD-02 §1](../../01-basic-design/BD-02-database-design.md)).
-- **Sao hiện hành của một ảnh = sao trong bảng chờ nếu có, không thì sao của Photos.** Một luật duy nhất cho
-  cả hai đời iOS. Sao còn chờ (chưa lên Photos được) vẫn lọc đúng. Dưới 27 cột Photos luôn bằng 0.
+- **Sao hiện hành của một ảnh = sao trong bảng chờ nếu có, không thì sao của ảnh file (bảng Dấu ảnh, đọc từ sidecar
+  hoặc chấm trong ShotDex — [FS-19.05 §3](../FS-19-photo-sources/05-data.md)), không thì sao của Photos.** Một luật
+  duy nhất cho cả hai đời iOS, viết một chỗ (`PhotoMarksStore.ratingCondition`). Sao còn chờ (chưa lên Photos được)
+  vẫn lọc đúng. Dưới 27 cột Photos luôn bằng 0.
 - Hai bảng tách nhau. Bảng sao **sẽ rỗng dần** trên iOS 27, còn bảng cờ thì sống mãi. Gộp lại thì "dòng rỗng"
   mang hai nghĩa.
 - **Clear local metadata index** (Settings) không đụng hai bảng này.
