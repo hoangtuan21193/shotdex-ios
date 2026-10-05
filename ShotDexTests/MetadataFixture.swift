@@ -33,6 +33,11 @@ enum MetadataFixture {
         /// Adds the XMP packet: the coordinate again, City, State, Country,
         /// `Iptc4xmpCore:Location` and `xmp:Rating`.
         var xmp = true
+        /// The IPTC star rating written into the file, which ImageIO also
+        /// reports as `xmp:Rating`; nil writes none. File photos read it as
+        /// their stars (FS-19.02 §4), so a folder test that sets stars
+        /// itself starts from unrated files.
+        var starRating: Int? = MetadataFixture.rating
     }
 
     /// Noise in Display P3, the same every run.
@@ -142,6 +147,11 @@ enum MetadataFixture {
         let output = NSMutableData()
         guard let destination = CGImageDestinationCreateWithData(output, type.identifier as CFString, 1, nil)
         else { throw FixtureError.cannotEncode(type.identifier) }
+        var properties = properties
+        if options.starRating != rating, var iptc = properties[kCGImagePropertyIPTCDictionary] as? [CFString: Any] {
+            iptc[kCGImagePropertyIPTCStarRating] = options.starRating
+            properties[kCGImagePropertyIPTCDictionary] = iptc
+        }
         CGImageDestinationAddImage(destination, image(width: options.width, height: options.height), properties as CFDictionary)
         if options.gainMap { CGImageDestinationAddAuxiliaryDataInfo(destination, kCGImageAuxiliaryDataTypeHDRGainMap, gainMapInfo(options) as CFDictionary) }
         if options.depth { CGImageDestinationAddAuxiliaryDataInfo(destination, kCGImageAuxiliaryDataTypeDisparity, disparityInfo(options) as CFDictionary) }

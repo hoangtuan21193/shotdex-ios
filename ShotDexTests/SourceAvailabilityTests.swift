@@ -19,6 +19,7 @@ import Testing
         for n in 0..<10 {
             var options = MetadataFixture.Options()
             options.width += n * 8
+            options.starRating = nil
             let data = try MetadataFixture.encode(.jpeg, options: options)
             try data.write(to: t7.appendingPathComponent("DSC\(n).JPG"))
             if n < 3 { try data.write(to: japan.appendingPathComponent("DSC\(n).JPG")) }

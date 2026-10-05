@@ -1,5 +1,8 @@
 import Foundation
+import GRDB
+import ImageIO
 import Testing
+import UniformTypeIdentifiers
 @testable import ShotDex
 
 /// FS-19 §2 (sidecars and in-file ratings).
@@ -25,6 +28,7 @@ import Testing
         #expect(composer.compose(asset: unrated, exif: exif, exifStatus: .indexed).rating == nil)
         let zero = AssetInfo(assetId: "B", mediaType: 1, isFavorite: false, rating: 0)
         #expect(composer.compose(asset: zero, exif: exif, exifStatus: .indexed).rating == 0)
+
     }
 }
 
@@ -77,6 +81,7 @@ extension SidecarReaderTests {
         defer { try? FileManager.default.removeItem(at: root) }
         var options = MetadataFixture.Options()
         options.xmp = false
+        options.starRating = nil
         for index in 0..<300 {
             options.width = 32 + index
             options.height = 24
@@ -114,5 +119,55 @@ extension SidecarReaderTests {
         #expect(try library.count(matching: criteria) == 80)
         let counts = try PhotoKeywordStore(database: database).keywordCounts()
         #expect(counts.first { $0.keyword == "Kyoto" }?.count == 80)
+    }
+}
+
+extension SidecarReaderTests {
+    /// A file whose own XMP says `xmp:Rating` = `rating` — the way a camera
+    /// (Sony, Fuji) or an app that writes into JPEGs leaves it. Pixels untouched.
+    static func embeddingRating(_ rating: Int, in data: Data, type: UTType) throws -> Data {
+        let source = try #require(CGImageSourceCreateWithData(data as CFData, nil))
+        let metadata = CGImageMetadataCreateMutable()
+        CGImageMetadataSetValueWithPath(metadata, nil, "xmp:Rating" as CFString, String(rating) as CFString)
+        let output = NSMutableData()
+        let destination = try #require(CGImageDestinationCreateWithData(output, type.identifier as CFString, 1, nil))
+        let options: [CFString: Any] = [kCGImageDestinationMetadata: metadata, kCGImageDestinationMergeMetadata: true]
+        #expect(CGImageDestinationCopyImageSource(destination, source, options as CFDictionary, nil))
+        return output as Data
+    }
+
+    /// Reads one folder and returns each file photo's stars by file name.
+    static func starsAfterReading(_ root: URL) throws -> [String: Int] {
+        let database = try AppDatabase.makeEmpty()
+        let sourceId = try SourceStore(database: database).addFolder(name: "Files", bookmark: Data(), includesSubfolders: true, pairsRawAndJpeg: true)
+        let composer = MetadataComposer(sensorLookup: SensorLookup(records: [], customMappings: []))
+        _ = try FolderSourceIndexer(database: database, composer: composer)
+            .index(sourceId: sourceId, root: root, includesSubfolders: true, pairsRawAndJpeg: true)
+        return try database.reader.read { db in
+            Dictionary(uniqueKeysWithValues: try Row.fetchAll(db, sql: """
+                SELECT c.relativePath, u.rating FROM photo_copies c LEFT JOIN photo_user_marks u ON u.photoId = c.photoId
+                WHERE c.sourceId = ?
+                """, arguments: [sourceId]).map { ($0["relativePath"] as String, ($0["rating"] as Int?) ?? 0) })
+        }
+    }
+
+    /// AC-24: a JPEG whose own XMP says ★2 and has no sidecar is ★2; a JPEG
+    /// that says ★2 inside and has a sidecar saying ★5 is ★5 — the sidecar
+    /// wins.
+    @Test func sidecarBeatsEmbedded() throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent("Embedded-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        var options = MetadataFixture.Options()
+        options.xmp = false
+        options.starRating = nil
+        let plain = try MetadataFixture.encode(.jpeg, options: options)
+        try Self.embeddingRating(2, in: plain, type: .jpeg).write(to: root.appendingPathComponent("A.JPG"))
+        options.width += 1
+        let other = try MetadataFixture.encode(.jpeg, options: options)
+        try Self.embeddingRating(2, in: other, type: .jpeg).write(to: root.appendingPathComponent("B.JPG"))
+        try Self.lightroomSidecar(rating: 5).write(to: root.appendingPathComponent("B.xmp"))
+
+        #expect(try Self.starsAfterReading(root) == ["A.JPG": 2, "B.JPG": 5])
     }
 }

@@ -36,6 +36,33 @@ enum SidecarReader {
             .max { (modified($0) ?? .distantPast) < (modified($1) ?? .distantPast) }
     }
 
+    /// What a file says about itself in its own XMP — a camera's stars
+    /// (Sony, Fuji), or what an app wrote into a JPEG. Only for file photos:
+    /// a Photos asset takes its stars from Photos (FS-01.12 §7).
+    static func embedded(in source: CGImageSource) -> SidecarValues? {
+        guard let metadata = CGImageSourceCopyMetadataAtIndex(source, 0, nil) else { return nil }
+        let values = values(metadata)
+        return values.isEmpty ? nil : values
+    }
+
+    /// A sidecar beats the file's own XMP field by field; keywords from both
+    /// are kept (FS-19.02 §4).
+    static func combined(embedded: SidecarValues?, sidecar: SidecarValues?) -> SidecarValues? {
+        guard let sidecar else { return embedded }
+        guard let embedded else { return sidecar }
+        var out = sidecar
+        let sidecarSaysStars = sidecar.rating != nil || sidecar.isRejected
+        if !sidecarSaysStars {
+            out.rating = embedded.rating
+            out.isRejected = embedded.isRejected
+        }
+        var seen = Set(out.keywords.map(KeywordInput.caseKey))
+        out.keywords += embedded.keywords.filter { seen.insert(KeywordInput.caseKey($0)).inserted }
+        out.title = sidecar.title ?? embedded.title
+        out.caption = sidecar.caption ?? embedded.caption
+        return out
+    }
+
     static func read(sidecarAt url: URL) -> SidecarValues? {
         guard let data = try? Data(contentsOf: url) else { return nil }
         return values(xmp: data)

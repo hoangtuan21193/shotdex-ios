@@ -122,7 +122,9 @@ import Testing
         defer { try? FileManager.default.removeItem(at: root) }
         try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
         let file = root.appendingPathComponent("DSC04512.JPG")
-        let bytes = try MetadataFixture.encode(.jpeg, options: MetadataFixture.Options())
+        var unrated = MetadataFixture.Options()
+        unrated.starRating = nil
+        let bytes = try MetadataFixture.encode(.jpeg, options: unrated)
         try bytes.write(to: file)
         let database = try AppDatabase.makeEmpty()
         let sourceId = try SourceStore(database: database).addFolder(name: "2026 Japan", bookmark: Data(), includesSubfolders: true, pairsRawAndJpeg: true)

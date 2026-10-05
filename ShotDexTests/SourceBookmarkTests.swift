@@ -18,6 +18,7 @@ import Testing
         for n in 0..<5 {
             var options = MetadataFixture.Options()
             options.width += n * 8
+            options.starRating = nil
             try MetadataFixture.encode(.jpeg, options: options).write(to: folder.appendingPathComponent("C\(n).JPG"))
         }
         let database = try AppDatabase.makeEmpty()

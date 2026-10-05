@@ -125,10 +125,14 @@ struct FolderSourceIndexer: Sendable {
                 splitFrom = photoId
                 photoId = UUID().uuidString
             }
-            let record = metadata(photoId: photoId, url: url, file: file)
+            let (record, embedded) = metadata(photoId: photoId, url: url, file: file)
             let sidecar = SidecarReader.sidecar(for: [file.relativePath] + [unit.companion?.relativePath].compactMap { $0 },
                                                 in: sidecars, modified: \.modified, pathKey: Self.pathKey)
             let sidecarValues = sidecar.flatMap { SidecarReader.read(sidecarAt: root.appendingPathComponent($0.relativePath)) }
+            let marks = SidecarReader.combined(embedded: embedded, sidecar: sidecarValues)
+            // A sidecar's values date from when it was written; the file's own
+            // from when the file was.
+            let marksAt = Int(((sidecarValues != nil ? sidecar?.modified : nil) ?? file.modified ?? now).timeIntervalSince1970)
 
             try database.writer.write { db in
                 if splitFrom != nil {
@@ -151,9 +155,8 @@ struct FolderSourceIndexer: Sendable {
                         fastHash = excluded.fastHash, fullHash = NULL, hashedAt = excluded.hashedAt
                     """, arguments: [copyId, hash.algorithm, hash.version, hash.fast, stamp])
                 try record.upsert(db)
-                if let sidecar, let sidecarValues {
-                    try PhotoUserMarksStore.applySidecar(db, values: sidecarValues, photoId: photoId,
-                                                         at: Int((sidecar.modified ?? now).timeIntervalSince1970))
+                if let marks {
+                    try PhotoUserMarksStore.applySidecar(db, values: marks, photoId: photoId, at: marksAt)
                 }
             }
             if let thumbnails, !summary.previewsStoppedForSpace,
@@ -205,21 +208,25 @@ struct FolderSourceIndexer: Sendable {
     }
 
     /// The metadata row of a file photo — the same composer as Photos assets,
-    /// fed from the file instead of the asset.
-    private func metadata(photoId: String, url: URL, file: FolderEnumeration.Entry) -> PhotoMetadata {
+    /// fed from the file instead of the asset — and what the file's own XMP
+    /// says about it.
+    private func metadata(photoId: String, url: URL, file: FolderEnumeration.Entry) -> (PhotoMetadata, SidecarValues?) {
         let isVideo = FolderEnumeration.isMovie(url)
         var exif = RawExif.empty
         var status = ExifStatus.noExif
         var width: Int?, height: Int?
+        var embedded: SidecarValues?
         if !isVideo {
             if case .success(let read) = ExifReader.readExif(fromImageAt: url) {
                 exif = read
                 status = .indexed
             }
-            if let source = CGImageSourceCreateWithURL(url as CFURL, [kCGImageSourceShouldCache: false] as CFDictionary),
-               let properties = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [CFString: Any] {
-                width = (properties[kCGImagePropertyPixelWidth] as? NSNumber)?.intValue
-                height = (properties[kCGImagePropertyPixelHeight] as? NSNumber)?.intValue
+            if let source = CGImageSourceCreateWithURL(url as CFURL, [kCGImageSourceShouldCache: false] as CFDictionary) {
+                if let properties = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [CFString: Any] {
+                    width = (properties[kCGImagePropertyPixelWidth] as? NSNumber)?.intValue
+                    height = (properties[kCGImagePropertyPixelHeight] as? NSNumber)?.intValue
+                }
+                embedded = SidecarReader.embedded(in: source)
             }
         }
         let asset = AssetInfo(
@@ -232,7 +239,7 @@ struct FolderSourceIndexer: Sendable {
             isFavorite: false,
             originalFilename: url.lastPathComponent
         )
-        return composer.compose(asset: asset, exif: exif, exifStatus: status)
+        return (composer.compose(asset: asset, exif: exif, exifStatus: status), embedded)
     }
 
     static func isReachable(_ root: URL) -> Bool {
