@@ -29,6 +29,9 @@ struct VideoLookPanel: View {
     @Environment(AppDependencies.self) private var dependencies
     @Environment(PhotoLibraryService.self) private var photoLibrary
     @State private var thumbnails = VideoLookThumbnails()
+    /// Save as Look… (§6b): the naming prompt, and the name in it.
+    @State private var isNamingLook = false
+    @State private var lookName = ""
 
     var body: some View {
         Group {
@@ -62,6 +65,19 @@ struct VideoLookPanel: View {
             set: { if !$0 { dependencies.lookExchange.dismissReport() } }
         )) {
             LookImportReportSheet(model: dependencies.lookExchange)
+        }
+        // The photo editor's Save Look prompt (FS-03.02 §9): a blank name
+        // cannot be saved, Cancel saves nothing, a name already in My Looks
+        // is saved over. The message names what stays in the video.
+        .alert(VideoStudioCopy.saveLookTitle, isPresented: $isNamingLook) {
+            TextField(VideoStudioCopy.lookNameField, text: $lookName)
+            Button(VideoStudioCopy.cancel, role: .cancel) {}
+            Button(VideoStudioCopy.saveLook) {
+                model.saveVideoLook(named: lookName, into: dependencies.lookPresets)
+            }
+            .disabled(lookName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+        } message: {
+            Text(VideoStudioCopy.saveLookMessage(notSaved: model.photoLookCut.notSaved))
         }
     }
 
@@ -161,6 +177,7 @@ struct VideoLookPanel: View {
                     applyTo
                     Color.clear.frame(height: 4)
                     importRow
+                    if !isClip { saveRow }
                     Text(isClip ? VideoStudioCopy.clipLookExplainer : VideoStudioCopy.wholeVideoLookExplainer)
                         .font(.system(size: style.captionSize))
                         .foregroundStyle(.white.opacity(0.55))
@@ -228,6 +245,7 @@ struct VideoLookPanel: View {
                 caption
                 Color.clear.frame(height: 4)
                 if !style.importsBesideShelf { importRow }
+                if mode == .wholeVideo { saveRow }
             }
             .padding(.bottom, 12)
         }
@@ -432,27 +450,48 @@ struct VideoLookPanel: View {
     }
 
     private var importRow: some View {
-        Button { dependencies.lookExchange.isPickingFiles = true } label: {
-            HStack(spacing: 10) {
-                Image(systemName: "square.and.arrow.down")
-                    .font(.system(size: 14, weight: .medium))
-                    .foregroundStyle(.white.opacity(0.55))
-                Text(VideoStudioCopy.importLook)
-                    .font(.system(size: 12.5))
-                    .foregroundStyle(.white)
-                Spacer(minLength: 0)
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 11, weight: .semibold))
-                    .foregroundStyle(.white.opacity(0.35))
-            }
-            .padding(.horizontal, style.inset)
-            .frame(height: 42)
-            .contentShape(Rectangle())
+        listRow(VideoStudioCopy.importLook, systemImage: "square.and.arrow.down") {
+            dependencies.lookExchange.isPickingFiles = true
         }
-        .buttonStyle(.plain)
         #if DEBUG
         .onAppear { dependencies.lookExchange.importFixturesIfAsked(completion: imported) }
         #endif
+    }
+
+    /// Save as Look… (§6b), the whole video's only: dimmed while the video
+    /// has nothing a photo would show — no look, no grade.
+    private var saveRow: some View {
+        listRow(VideoStudioCopy.saveAsLook, systemImage: "plus", isEnabled: !model.photoLookCut.isEmpty) {
+            lookName = dependencies.lookPresets.suggestedName()
+            isNamingLook = true
+        }
+    }
+
+    /// A row of the panel's foot: icon, title, chevron — the phone's 42pt
+    /// row, the iPad's 44 at 17pt (boards F5_P_Looks, IP1_Main).
+    private func listRow(_ title: String, systemImage: String, isEnabled: Bool = true, action: @escaping () -> Void) -> some View {
+        let isWide = style.segmented
+        return Button(action: action) {
+            HStack(spacing: isWide ? 12 : 10) {
+                Image(systemName: systemImage)
+                    .font(.system(size: isWide ? 17 : 14, weight: .medium))
+                    .foregroundStyle(.white.opacity(0.55))
+                    .frame(width: isWide ? 20 : nil)
+                Text(title)
+                    .font(.system(size: isWide ? 17 : 12.5))
+                    .foregroundStyle(.white)
+                Spacer(minLength: 0)
+                Image(systemName: "chevron.right")
+                    .font(.system(size: isWide ? 14 : 11, weight: .semibold))
+                    .foregroundStyle(.white.opacity(0.35))
+            }
+            .opacity(isEnabled ? 1 : 0.35)
+            .padding(.horizontal, style.inset)
+            .frame(height: isWide ? 44 : 42)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .disabled(!isEnabled)
     }
 
     private func imported(_ report: PresetImportReport) {

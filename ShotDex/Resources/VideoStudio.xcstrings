@@ -5,6 +5,10 @@
       "comment": "Video Studio multi-select: the kinds in the group — 2 videos + 1 photo",
       "extractionState": "manual"
     },
+    "%@ in %@": {
+      "comment": "Video Studio Save as Look: a node's setting the look already sets — e.g. Exposure in Node 1",
+      "extractionState": "manual"
+    },
     "%@ is missing. Import it again, then pick it in LUTs.": {
       "comment": "Video Studio Look panel: the chosen look's LUT file was deleted — e.g. Kodak 2383 is missing",
       "extractionState": "manual"
@@ -549,12 +553,20 @@
       "comment": "Video Studio Video Settings: the background is one color",
       "extractionState": "manual"
     },
+    "Color in %@": {
+      "comment": "Video Studio Save as Look: a node's colour settings, which the look already sets — e.g. Color in Node 1",
+      "extractionState": "manual"
+    },
     "Commands": {
       "comment": "Video Studio: VoiceOver name of the selected item's row of commands",
       "extractionState": "manual"
     },
     "Couldn't save your video draft": {
       "comment": "Video Studio: banner and alert when the draft could not be written (disk full, database error)",
+      "extractionState": "manual"
+    },
+    "Curve in %@": {
+      "comment": "Video Studio Save as Look: a node's tone curve, which the look already sets — e.g. Curve in Node 1",
       "extractionState": "manual"
     },
     "Custom": {
@@ -745,6 +757,10 @@
       "comment": "Video Studio Media panel tab: what of the library is in this video, and how many uses",
       "extractionState": "manual"
     },
+    "Input Transform": {
+      "comment": "Video Studio Save as Look: the de-log step, which a photo look does not keep",
+      "extractionState": "manual"
+    },
     "Insert at Playhead": {
       "comment": "Video Studio Media panel: VoiceOver action — adds the item at the playhead, as a tap does",
       "extractionState": "manual"
@@ -869,6 +885,10 @@
       "comment": "Video Studio iPad media pool Music tab: header over the user's imported songs",
       "extractionState": "manual"
     },
+    "Name": {
+      "comment": "Video Studio Save Look prompt: the look's name field",
+      "extractionState": "manual"
+    },
     "No Access to Photos": {
       "comment": "Video Studio Media panel: title when Photos access is denied",
       "extractionState": "manual"
@@ -891,6 +911,10 @@
     },
     "Not enough space to export — about %@ needed. Free up space, then try again.": {
       "comment": "Video Studio Export: the device lacks room for the file and its copy in Photos; the size is about twice the estimate",
+      "extractionState": "manual"
+    },
+    "Not saved: %@.": {
+      "comment": "Video Studio Save Look prompt: the parts of the video's grade a photo look cannot hold — e.g. Input Transform, Node 2 and clips' own looks",
       "extractionState": "manual"
     },
     "Nothing from your library is in this video yet.": {
@@ -973,8 +997,24 @@
       "comment": "Video Studio iPad Video Settings: label of 720p · 1080p · 4K",
       "extractionState": "manual"
     },
+    "Save": {
+      "comment": "Video Studio Save Look prompt: saves the look into My Looks",
+      "extractionState": "manual"
+    },
+    "Save Look": {
+      "comment": "Video Studio: title of the prompt that names a look saved from the video",
+      "extractionState": "manual"
+    },
+    "Save as Look…": {
+      "comment": "Video Studio Look panel: saves the whole video's look and grade as one of My Looks, for photos and videos",
+      "extractionState": "manual"
+    },
     "Saved to Photos as a new video": {
       "comment": "Video Studio Export: where the exported video goes",
+      "extractionState": "manual"
+    },
+    "Saves the whole video's look, Adjust and Color into My Looks, for photos and videos.": {
+      "comment": "Video Studio Save Look prompt: what the saved look carries",
       "extractionState": "manual"
     },
     "Saving to Photos…": {
@@ -1139,6 +1179,10 @@
     },
     "Whole video": {
       "comment": "Video Studio: subtitle beside Look when the column shows the look of the whole video",
+      "extractionState": "manual"
+    },
+    "clips' own looks": {
+      "comment": "Video Studio Save as Look: the looks single clips have, which stay in the video",
       "extractionState": "manual"
     },
     "freeze": {

@@ -19,7 +19,8 @@ phải xuất look ra `.cube`, nhập lại trong Color, và mất Clarity, Grai
 ## 2. Phạm vi
 
 **Có:** một ô look cho cả video và một ô look riêng cho từng clip; ba nguồn Presets · My Looks · LUTs; Amount;
-Import Look… dùng chung kho với editor ảnh.
+Import Look… dùng chung kho với editor ảnh; **Save as Look…** lưu look và grade của cả video thành một My Look
+(§6b, người dùng chốt 2026-10-05: mọi máy).
 
 **Cố ý không có:**
 - Node chain, de-log, Adjust riêng cho từng clip — Adjust và Color vẫn cho cả video; per-clip chỉ là look.
@@ -110,6 +111,54 @@ Ngân sách preview: **30 khung/giây = 33,3 ms/khung** ở cạnh dài 1280. Ex
   - Export không bị chặn; sheet Export thêm một dòng phụ trên nút Export: "1 look is missing its LUT and exports without it."
   - Nhập lại cùng file cấp id mới nên **không tự nối lại**; người dùng chọn lại một chạm.
 
+## 6b. Save as Look… — look của video thành một My Look
+
+Người dùng chốt 2026-10-05 (board `IP1_Main` vẽ nút này; không spec nào có): thêm vào spec và app, **trên mọi
+máy** ("phone has every iPad feature"). Lưu look + grade **của cả video** vào đúng kho My Looks mà editor ảnh dùng
+(`LookPresetStore`), để tông của reel dùng lại được cho ảnh và cho video khác.
+
+**Ở đâu.** Một dòng **Save as Look…** (icon ＋, chevron) ngay dưới Import Look…, chỉ trong Look **cả video**, tab
+Filter — không có trong khối LOOK FOR THIS CLIP, không có trong hàng Look của nhóm clip (FS-12.11). Cao 42, chữ 12.5
+trên iPhone và Duo (theo dòng Import Look…); 44, chữ 17 trên iPad.
+
+| Máy | Vị trí |
+|---|---|
+| iPhone 402×874 · Duo ngoài | panel Look, cuối nội dung cuộn, dưới Import Look… (board `F5_P_Looks`, `F5_P_SaveLook`, `F5_DC_Looks`) |
+| Duo trong 951×669 | cột 264, dưới Import Look… (`F5_DI_Looks`) |
+| iPad ngang · inspector 360 | dưới dòng chú thích, sau Apply To — Import Look… ở đó là icon 44 cạnh hàng shelves (`IL1_Main`) |
+| iPad dọc · dock | cột 3, dưới Import Look… (`IP1_Main`: y 1230, 312×44) |
+
+**Hộp đặt tên** = hộp Save Look của editor ảnh (FS-03.02 §9): tiêu đề "Save Look", ô **Name** gợi sẵn "Look N"
+(`suggestedName()`), Cancel · Save. Dòng phụ: "Saves the whole video's look, Adjust and Color into My Looks, for
+photos and videos." — và khi có phần không giữ được, thêm "Not saved: …" kể đúng tên từng phần (bảng dưới).
+
+**Phần nào thành look ảnh.** Look ảnh là **một** bộ thông số + **một** film look hoặc LUT (cắt `EditorSyncScope.look`).
+Grade của video là de-log → chuỗi node → look; nên:
+
+| Phần của video | Thành | Vì |
+|---|---|---|
+| Look cả video là **film look** hoặc **LUT** | film look / LUT đó, **Amount** = độ mạnh film/LUT của ảnh | trên cả hai, Amount của film look hay LUT là cùng một phép trộn |
+| Look cả video là **My Look** | các thông số của My Look đó; **Amount < 100 bị bỏ** — "Amount" | Amount của ảnh chỉ làm nhạt film/LUT, không làm nhạt cả look |
+| **Node đầu tiên** có đổi pixel (bật, không identity) **và không có cửa sổ** | Light/Adjust, Color, Curve của nó, cộng vào look | node dùng đúng kiểu thông số của ảnh |
+| Thông số mà My Look **đã đặt** và node cũng đặt (giá trị khác) | giữ giá trị của look; của node bị bỏ — "Exposure in Node 1", "Color in Node 1", "Curve in Node 1" | một look ảnh chỉ có một giá trị cho mỗi thông số; không đoán phép cộng |
+| Mọi node đổi pixel **khác** (sau node đầu, hoặc có cửa sổ/qualifier) | bỏ — tên node ("Node 2") | look ảnh không chạy hai lượt chỉnh nối nhau, và không mang mask (FS-03.02 §9) |
+| **Input Transform** (de-log) | bỏ — "Input Transform" | nó gỡ mã hoá của máy quay: thuộc footage, không thuộc look |
+| Look riêng của clip | bỏ — "clips' own looks" | không phải look của cả video |
+| Node tắt (bypass), node identity, Original | không có gì để lưu, không kể tên | — |
+
+Thứ tự "Not saved:": Input Transform, Amount, thông số trùng, các node bỏ, clips' own looks.
+
+**Luật lưu** = luật của editor ảnh, cùng hàm `LookPresetStore.save`:
+- Tên được trim; tên trắng → nút **Save tắt**, không lưu được.
+- Tên đã có trong My Looks (không phân biệt hoa thường) → **ghi đè** look đó, giữ id (FS-03.02 §9). Video nào đã
+  chọn bản cũ vẫn giữ **bản chép** của nó tới khi chạm lại ô (§6).
+- **Không có gì để lưu** (không look hoặc Original, và không node nào thành look — chỉ de-log, node tắt, node chỉ có
+  cửa sổ): dòng Save as Look… **mờ, không bấm được**, không mở hộp.
+- **Cancel**: không lưu gì; project, undo, shelf giữ nguyên.
+- Lưu xong: look mới đứng **đầu My Looks** ở cả Video Studio lẫn editor ảnh; panel chuyển sang shelf My Looks.
+  **Project không đổi** và **không thêm bước undo** — lưu một look không sửa video. ✕ của panel sau đó trả video về
+  lúc mở panel nhưng look đã lưu vẫn ở My Looks (kho, không phải project).
+
 ## 7. Undo, huỷ, đường hỏng
 
 - Chạm một ô = một bước undo; một lần kéo Amount = một bước; đổi đích kéo theo đổi look = một bước. Trần 40 bước.
@@ -142,8 +191,14 @@ Look mẫu **Moody Coast**: Exposure +0,3 · Contrast +20 · Velvia 100% · Grai
 | AC-14 | iPhone 402×874 · Duo ngoài 466×678 · Duo trong 951×669 · iPad 1376×1032 | mở Look (iPad: chọn clip) | khớp **cả board** F5_P/F5_DC/F5_DI/F5_IL (iPad kiểu Mac) lệch ≤ 2pt, chrome lẫn panel (ô 70/60/66/103×72); Apply To tới được; không control nào dưới góc bo hay rail 84 | ⚠️ một phần — số đo: `VideoLookLayoutTests.lookPanelFitsEveryDevice` (ô 70/60/66/103×50, Amount 40/36/34/44, 3 cột vừa cột 264 và inspector 360), `phoneStackLiftsForTheLookPanel` (panel 340 đứng trên hàng đáy 62); ảnh `build/proofs/fs1206c/t6-*`, `t13-*`, `t14-*` (iPhone 17, iPad 13" ngang/dọc, Duo trong/ngoài qua stand-in). **Chưa khớp cả board ≤ 2pt**: (1) tay nắm 17pt của panel đẩy cả khối xuống (khung chung mọi panel); (2) Amount dùng slider chung của studio (nhãn hoa, vạch accent) thay vạch trắng của board; (3) ~~giữ nút so sánh trước/sau trong tiêu đề phone~~ — **bỏ 2026-10-05** (người dùng chốt theo board; §3): tiêu đề chỉ còn ✕ · ✓, ảnh `build/proofs/fs1206c/j1-phone-look-title.png`; (4) Duo ngoài còn dòng tiêu đề; (5) ~~inspector iPad 316, dock dọc một cột~~ — **xong sau khối M (2026-10-05)**: inspector 360 (x 1016, nội dung từ y 80), dock dọc 3 cột 312 cách 32 (`VideoLookPanelStyle.iPadDock`, `VideoLookLayoutTests.lookPanelFitsEveryDevice`); route `ipad-vs-looks.json` + `Tools/design-board compare`: `F5_IL_Looks` — hàng lệnh 1029/80, Presets · My Looks · LUTs 89×32 ở y 201 (board 200), Import Look… 44 ở 1316; `F5_IP_Looks` — Look for This Clip 16/1138, Presets 18/1177, ô 97×72 ở 16/1221 và 360/1125, Apply To · Import Look… ở x 704 lệch −4 (board vẽ cột thông số từ y 1129, spec FS-12.03 §3 nói 1125 — giữ spec); `IL1_Main` idle: Look · Whole video ở y 80, Filter · Adjust · Color ở 122 khớp; còn lệch là nội dung mẫu (ô Moody Coast…). **2026-10-05:** board `IL1_Main`/`IP1_Main` vẽ lại khối Look cả video theo F5 (người dùng chốt): Filter · Adjust · Color → hàng **Presets · My Looks · LUTs** (+ Import Look… icon 44 trên IL1) → lưới ô 103×72 (IP1 97×72, ba cột dock) → Amount → **All Clips · This Clip** → chú thích; Intensity đổi tên Amount; (6) hàng đáy phone ở y 780 thay 790 (khung). Không chạy `design-board compare`: XCUITest không liệt kê được Video Studio trên phone, và chrome iPad chưa theo board kiểu Mac |
 | AC-15 | clip HEVC 4K 30 fps, Moody Coast + Clarity 30 + Texture 20 + Dehaze 15, preview 1280; máy thật iPhone 17 và iPad | play 10 s, có một dissolve giữa hai look | ≤ 3 khung rơi trong 10 s, kể cả trong dissolve | ⚠️ chưa có — máy thật |
 | AC-16 | cả video Velvia; clip 2 có look riêng Night Teal | chọn clip 2 → LOOK FOR THIS CLIP → **Use Video Look** | clip 2 render Velvia như clip 1 và 3; pill trên lane của clip 2 mất; undo +1 | ✅ `VideoLookEditingTests.useVideoLookRemovesClipLookInOneStep` (clip 2 Night Teal → Use Video Look → theo Velvia, không pill, +1 undo; ô Look ngay trước Delete), `selectedDisabledBelowTwoClips`; ảnh `build/proofs/fs1206c/t14-*` (iPhone 17: hàng lệnh có Look trước Delete, khối LOOK FOR THIS CLIP, chọn Vivid → pill "Vivid" trên lane + Use Video Look chữ trắng; iPad dọc: khối Look for This Clip trong dock) |
+| AC-17 | cả video Velvia Amount 60; một node Exposure +0,3 · Contrast +20; My Looks có "Moody Coast" | Save as Look… → tên "  Reel Velvia " → Save | My Looks = "Reel Velvia", "Moody Coast" (mới đứng đầu, tên đã trim); look = Velvia, độ mạnh 0,6, Exposure +0,3, Contrast +20; dòng phụ không có "Not saved"; project và số bước undo không đổi; shelf My Looks | ✅ `VideoLookSavingTests.filmLookAndOneNodeBecomeOneLook`, `lutKeepsItsAmount`; ảnh `build/proofs/fs1206c/s1-phone-*` (iPhone 17 26.5: dòng dưới Import Look…, hộp Save Look, "Reel Vivid" đầu My Looks), `s1-ipad-portrait-*` (iPad Air 13 26.5 dock dọc: dòng cột 3, hộp, "Look 1" vào My Looks), `s1-duo-inner-standin-alert.png` (Duo trong qua stand-in) |
+| AC-18 | S-Log3; cả video My Look Moody Coast Amount 40; node 1 Exposure +0,2 · Warmth +10; node 2 Saturation +15; node 3 Contrast +10 có cửa sổ; clip 2 có look riêng | mở Save as Look… | "Not saved: Input Transform, Amount, Exposure in Node 1, Node 2, Node 3, and clips' own looks."; look = Moody Coast (Exposure +0,3 của look) + Warmth +10 | ✅ `VideoLookSavingTests.whatStaysInTheVideoIsNamed`, `aWindowedNodeIsLeftOut` (node 1 có cửa sổ → bỏ, node 2 thành grade) |
+| AC-19 | không look / chỉ S-Log3 / Original / node chỉ có cửa sổ / node Exposure +0,4 nhưng tắt | nhìn dòng Save as Look… rồi lưu | dòng mờ (`isEmpty`); lưu trả nil; My Looks rỗng; shelf không đổi | ✅ `VideoLookSavingTests.nothingToSave` (5 trường hợp) |
+| AC-20 | cả video Velvia | Save as Look…, xoá hết tên (hoặc chỉ dấu cách); rồi Cancel | Save tắt; không lưu; Cancel không đổi project, undo, My Looks | ✅ `VideoLookSavingTests.blankNameSavesNothing`; ảnh `s1-phone-empty-name.png` (ô trống → Save mờ). Cancel là nút `.cancel` của alert, không gọi lưu |
+| AC-21 | My Looks có "Golden" (Moody Coast); video A đã chọn Golden; video B: Acros + node Contrast +40 | ở video B: Save as Look… tên "golden" | My Looks vẫn 1 look, cùng id, tên "golden", film look Acros; video A vẫn render bản chép cũ | ✅ `VideoLookSavingTests.takenNameIsSavedOver`; `LookPresetStoreTests.savingOverAnExistingNameReplacesIt` |
+| AC-22 | iPhone · Duo ngoài · Duo trong · iPad ngang · iPad dọc | mở Look cả video, tab Filter; rồi chọn một clip (LOOK FOR THIS CLIP) | Save as Look… ở đúng chỗ của bảng §6b, 42/44 cao; không có trong khối look của clip và hàng Look của nhóm | ⚠️ một phần — ảnh iPhone 17, iPad dọc, Duo trong (stand-in) như AC-17; iPad ngang chưa chụp được trên sim clone (bước `orientation` của driver không xoay app); Duo ngoài chưa chụp. Code: `VideoLookPanel.saveRow` chỉ ở `mode == .wholeVideo` / dock `!isClip` |
 
-**Chưa chứng minh được** (2026-10-05, sau plan [video-photo-looks](../../_plans/2026-10-02-video-photo-looks.md) task 1–15): AC-14 một phần (số đo xanh; chưa khớp cả board ≤ 2pt — xem hàng AC-14); AC-15 cần máy thật (task 16 chưa đo; công tắc `VideoLookNeighbourPolicy` đang `.run`). Duo trong/ngoài chỉ chụp qua stand-in trên iPad, chưa trên máy Duo mở.
+**Chưa chứng minh được** (2026-10-05, sau plan [video-photo-looks](../../_plans/2026-10-02-video-photo-looks.md) task 1–15; AC-17…22 thêm cùng ngày): AC-22 một phần (iPad ngang, Duo ngoài chưa chụp); AC-14 một phần (số đo xanh; chưa khớp cả board ≤ 2pt — xem hàng AC-14); AC-15 cần máy thật (task 16 chưa đo; công tắc `VideoLookNeighbourPolicy` đang `.run`). Duo trong/ngoài chỉ chụp qua stand-in trên iPad, chưa trên máy Duo mở.
 
 ## 9. Rủi ro và phần phải đo trước `/plan`
 

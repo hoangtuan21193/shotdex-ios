@@ -20,7 +20,7 @@ nhạc, chữ, và một tầng màu đủ để grade.
 | 05 | [Cắt, marker, fade](05-cutting-markers-and-fades.md) | tay nắm mép và Trim to Playhead, độ dài transition, snapping, fade |
 | 06 | [Tầng màu](06-color-layer.md) | de-log, primaries, power window, node chain |
 | 06b | [Scope, LUT, tracker](06b-scopes-luts-and-tracking.md) | bốn máy đo, LUT nhập từ Files, bám window theo khung |
-| 06c | [Look ảnh cho video](06c-photo-looks.md) | F5 — film look, My Looks, LUT trong một ô look cả video + ô tuỳ chọn mỗi clip, Amount |
+| 06c | [Look ảnh cho video](06c-photo-looks.md) | F5 — film look, My Looks, LUT trong một ô look cả video + ô tuỳ chọn mỗi clip, Amount, Save as Look… (look + grade của video thành My Look) |
 | 07 | [Bố cục iPhone](07-phone-layout.md) | chỉ dọc, khung cố định theo sáu tỉ lệ, panel cao theo tỉ lệ, thu panel còn 78 |
 | 07b | [Bố cục Duo màn ngoài](07b-duo-cover-layout.md) | công cụ trong dải 84 bên phải, khung 382×215, ✕ / ✓ dưới ngón cái |
 | 08 | [Model và giới hạn v1](08-model-and-v1-limits.md) | project giữ gì, nhạc từ đâu, cố ý chưa làm gì |

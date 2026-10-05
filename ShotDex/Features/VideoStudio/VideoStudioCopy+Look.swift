@@ -110,3 +110,33 @@ extension VideoStudioCopy {
         String(localized: "Apply to", table: table, comment: "Video Studio clip Look block: label before This Clip · Selected · All Clips")
     }
 }
+
+extension VideoStudioCopy {
+    /// FS-12.06c §6b: the whole video's look and grade, into My Looks.
+    static var saveAsLook: String {
+        String(localized: "Save as Look…", table: table, comment: "Video Studio Look panel: saves the whole video's look and grade as one of My Looks, for photos and videos")
+    }
+
+    /// The naming prompt's title — the photo editor's own words for the same act.
+    static var saveLookTitle: String {
+        String(localized: "Save Look", table: table, comment: "Video Studio: title of the prompt that names a look saved from the video")
+    }
+
+    static var lookNameField: String {
+        String(localized: "Name", table: table, comment: "Video Studio Save Look prompt: the look's name field")
+    }
+
+    static var saveLook: String {
+        String(localized: "Save", table: table, comment: "Video Studio Save Look prompt: saves the look into My Looks")
+    }
+
+    /// Under the name: what the look keeps, and — when the video's grade
+    /// has more than a photo look can hold — what stays in the video.
+    static func saveLookMessage(notSaved: [String]) -> String {
+        let keeps = String(localized: "Saves the whole video's look, Adjust and Color into My Looks, for photos and videos.", table: table, comment: "Video Studio Save Look prompt: what the saved look carries")
+        guard !notSaved.isEmpty else { return keeps }
+        let list = notSaved.formatted(.list(type: .and, width: .standard))
+        let rest = String(localized: "Not saved: \(list).", table: table, comment: "Video Studio Save Look prompt: the parts of the video's grade a photo look cannot hold — e.g. Input Transform, Node 2 and clips' own looks")
+        return keeps + " " + rest
+    }
+}
