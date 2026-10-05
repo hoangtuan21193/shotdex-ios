@@ -74,9 +74,19 @@ struct FolderSourceIndexer: Sendable {
                 copyId = vanished[match].copyId
                 vanished.remove(at: match)
             }
+            var splitFrom: String?
+            if existing != nil, try changedPictureWhileOthersKeepOld(copyId: copyId, photoId: photoId, newFast: hash.fast) {
+                // Overwritten with another picture while another copy keeps
+                // the old one: this copy becomes a photo of its own.
+                splitFrom = photoId
+                photoId = UUID().uuidString
+            }
             let record = metadata(photoId: photoId, url: url, file: file)
 
             try database.writer.write { db in
+                if splitFrom != nil {
+                    try PhotoIdentityStore.split(db, copyId: copyId, into: photoId, now: stamp)
+                }
                 try db.execute(sql: "INSERT OR IGNORE INTO photos (id, createdAt) VALUES (?, ?)", arguments: [photoId, stamp])
                 try db.execute(sql: "UPDATE photos SET orphanedAt = NULL WHERE id = ?", arguments: [photoId])
                 try db.execute(sql: """
@@ -99,6 +109,21 @@ struct FolderSourceIndexer: Sendable {
         }
         try markMissing(vanished.map(\.copyId), at: stamp)
         return summary
+    }
+
+    /// True when this copy's new fast hash differs from its old one and
+    /// another present copy of the same photo still carries the old one
+    /// (FS-19.02 §2). A photo with only this copy keeps its id: same source,
+    /// same path, new bytes is the same photo edited elsewhere.
+    private func changedPictureWhileOthersKeepOld(copyId: String, photoId: String, newFast: String) throws -> Bool {
+        try database.reader.read { db in
+            guard let old = try String.fetchOne(db, sql: "SELECT fastHash FROM content_hashes WHERE copyId = ?", arguments: [copyId]),
+                  old != newFast else { return false }
+            return try Bool.fetchOne(db, sql: """
+                SELECT EXISTS(SELECT 1 FROM photo_copies c JOIN content_hashes h ON h.copyId = c.id
+                              WHERE c.photoId = ? AND c.id != ? AND c.missingSince IS NULL AND h.fastHash = ?)
+                """, arguments: [photoId, copyId, old]) == true
+        }
     }
 
     /// Files a complete read no longer finds: the copy stays (its hash is

@@ -57,6 +57,23 @@ struct PhotoIdentityStore: Sendable {
         return result
     }
 
+    /// FS-19.05 §4 split: copy `copyId` now holds a different picture while
+    /// another copy of its photo still holds the old one. The changed copy
+    /// becomes photo `newPhotoId`, carrying a copy of the user data — nothing
+    /// is lost on either side, and the two go their own ways from here.
+    static func split(_ db: Database, copyId: String, into newPhotoId: String, now: Int) throws {
+        guard let oldPhotoId = try String.fetchOne(db, sql: "SELECT photoId FROM photo_copies WHERE id = ?", arguments: [copyId]) else { return }
+        let data = try userData(db, oldPhotoId)
+        try db.execute(sql: "INSERT OR IGNORE INTO photos (id, createdAt) VALUES (?, ?)", arguments: [newPhotoId, now])
+        try db.execute(sql: "UPDATE photo_copies SET photoId = ? WHERE id = ?", arguments: [newPhotoId, copyId])
+        try db.execute(sql: "UPDATE pending_sidecar SET photoId = ? WHERE copyId = ?", arguments: [newPhotoId, copyId])
+        try write(db, data, for: newPhotoId, now: now)
+        try db.execute(sql: """
+            INSERT OR IGNORE INTO shotdex_album_members (albumId, photoId, addedAt)
+            SELECT albumId, ?, ? FROM shotdex_album_members WHERE photoId = ?
+            """, arguments: [newPhotoId, now, oldPhotoId])
+    }
+
     /// What the user typed about `id`, from every table it may live in.
     static func userData(_ db: Database, _ id: String) throws -> PhotoUserData {
         var data = PhotoUserData()

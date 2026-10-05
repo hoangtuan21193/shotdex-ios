@@ -212,6 +212,59 @@ extension PhotoIdentityTests {
         #expect(state.orphans == 0)
     }
 
+    /// AC-64: photo A (★4, keyword "Nara") has copies in "2026 Japan" and
+    /// on T7. Another app saves a different picture over the T7 file. The T7
+    /// copy becomes photo B with a new id, ★4 and "Nara" copied over; A keeps
+    /// its "2026 Japan" copy and ★4; a later star on B leaves A alone.
+    @Test func overwrittenCopySplits() throws {
+        let base = FileManager.default.temporaryDirectory.appendingPathComponent("Split-\(UUID().uuidString)", isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: base) }
+        let japan = base.appendingPathComponent("2026 Japan"), t7 = base.appendingPathComponent("T7")
+        for folder in [japan, t7] { try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true) }
+        let picture = try MetadataFixture.encode(.jpeg, options: MetadataFixture.Options())
+        try picture.write(to: japan.appendingPathComponent("DSC04512.JPG"))
+        try picture.write(to: t7.appendingPathComponent("DSC04512.JPG"))
+        let database = try AppDatabase.makeEmpty()
+        let sources = SourceStore(database: database)
+        let japanId = try sources.addFolder(name: "2026 Japan", bookmark: Data(), includesSubfolders: true, pairsRawAndJpeg: true)
+        let t7Id = try sources.addFolder(name: "T7 RAW Archive", bookmark: Data(), includesSubfolders: true, pairsRawAndJpeg: true, kind: "drive")
+        let roots = [japanId: japan, t7Id: t7]
+        let indexer = FolderSourceIndexer(database: database, composer: FolderSourceIndexTests.composer)
+        for (id, root) in roots { _ = try indexer.index(sourceId: id, root: root, includesSubfolders: true, pairsRawAndJpeg: true) }
+        _ = try IdentityMergePass(database: database) { sourceId, path in roots[sourceId]?.appendingPathComponent(path) }.run()
+        let a = try database.reader.read { db in try String.fetchAll(db, sql: "SELECT id FROM photos") }
+        #expect(a.count == 1)
+        try database.writer.write { db in
+            try db.execute(sql: "INSERT INTO photo_user_marks (photoId, rating, ratingAt) VALUES (?, 4, 1)", arguments: [a[0]])
+            try db.execute(sql: "INSERT INTO photo_user_keyword (photoId, keyword, caseKey, foldKey, addedAt) VALUES (?, 'Nara', 'nara', 'nara', 1)", arguments: [a[0]])
+        }
+
+        var other = MetadataFixture.Options()
+        other.width += 40
+        let overwritten = t7.appendingPathComponent("DSC04512.JPG")
+        try MetadataFixture.encode(.jpeg, options: other).write(to: overwritten)
+        try FileManager.default.setAttributes([.modificationDate: Date().addingTimeInterval(120)], ofItemAtPath: overwritten.path)
+        _ = try indexer.index(sourceId: t7Id, root: t7, includesSubfolders: true, pairsRawAndJpeg: true)
+
+        let state = try database.reader.read { db in
+            (photos: try String.fetchAll(db, sql: "SELECT id FROM photos ORDER BY rowid"),
+             japanPhoto: try String.fetchOne(db, sql: "SELECT photoId FROM photo_copies WHERE sourceId = ?", arguments: [japanId]),
+             t7Photo: try String.fetchOne(db, sql: "SELECT photoId FROM photo_copies WHERE sourceId = ?", arguments: [t7Id]),
+             ratings: try Row.fetchAll(db, sql: "SELECT photoId, rating FROM photo_user_marks").map { "\($0["photoId"] as String)=\($0["rating"] as Int)" },
+             keywords: try String.fetchAll(db, sql: "SELECT photoId FROM photo_user_keyword WHERE keyword = 'Nara'"))
+        }
+        #expect(state.photos.count == 2)
+        #expect(state.japanPhoto == a[0])
+        let b = try #require(state.t7Photo)
+        #expect(b != a[0])
+        #expect(Set(state.ratings) == ["\(a[0])=4", "\(b)=4"])
+        #expect(Set(state.keywords) == [a[0], b])
+
+        try database.writer.write { db in try db.execute(sql: "UPDATE photo_user_marks SET rating = 1 WHERE photoId = ?", arguments: [b]) }
+        let aRating = try database.reader.read { db in try Int.fetchOne(db, sql: "SELECT rating FROM photo_user_marks WHERE photoId = ?", arguments: [a[0]]) }
+        #expect(aRating == 4)
+    }
+
     private func copy(_ path: String, _ database: AppDatabase) throws -> (copyId: String, photoId: String) {
         try database.reader.read { db in
             let row = try Row.fetchOne(db, sql: "SELECT id, photoId FROM photo_copies WHERE relativePath = ?", arguments: [path])
