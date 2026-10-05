@@ -246,6 +246,12 @@ enum VideoStudioDeskGeometry {
     static let coverOverviewInset: CGFloat = 12
     static let coverItemPanelTop: CGFloat = 334
     static let coverCollapsedPanelHeight: CGFloat = 78
+    /// A multi-select group on the cover (FS-12.11 §3, board F1_DC): the
+    /// timeline stays — 240 tall from under the transport, zoomed out to
+    /// 18pt a second to show most of the film — over a 104pt panel (the
+    /// command row and one row of controls).
+    static let coverGroupTimelineHeight: CGFloat = 240
+    static let coverGroupPointsPerSecond: CGFloat = 18
 
     /// The rect of every band. Nil where the window class has no such band.
     struct Frames: Equatable {
@@ -560,6 +566,15 @@ enum VideoStudioDeskGeometry {
             panel: CGRect(x: 0, y: coverItemPanelTop, width: width, height: bottom - coverItemPanelTop),
             timeline: nil
         )
+    }
+
+    /// The cover with a group selected: the timeline 240 tall under the
+    /// transport, the panel under it to the window's foot.
+    static func coverGroupSelection(_ frames: Frames) -> CoverSelection {
+        let width = frames.timeline.width
+        let timeline = CGRect(x: 0, y: frames.timeline.minY, width: width, height: coverGroupTimelineHeight)
+        let panel = CGRect(x: 0, y: timeline.maxY, width: width, height: frames.timeline.maxY - timeline.maxY)
+        return CoverSelection(overview: nil, panel: panel, timeline: timeline)
     }
 
     /// Back, Undo, Redo over the cover's content.

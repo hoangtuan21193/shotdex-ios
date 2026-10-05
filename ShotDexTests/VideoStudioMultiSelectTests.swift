@@ -408,4 +408,22 @@ struct VideoStudioMultiSelectTests {
         #expect(model.recipe.clips[0].photoDuration == 3)
         #expect(!model.canUndo)
     }
+
+    /// AC-14's geometry: on the Duo cover a group keeps the timeline, 240
+    /// tall from under the transport (y 300), at 18pt a second — a 6.2s
+    /// clip draws 111.6pt wide; the panel runs from 540 to the foot.
+    @Test func duoCoverMultiSelectZoom() {
+        let frames = VideoStudioDeskGeometry.duoCover(.init(
+            window: CGSize(width: 466, height: 678),
+            canvas: CGSize(width: 1920, height: 1080),
+            isPoolOpen: false,
+            isInspectorOpen: false
+        ))
+        let selection = VideoStudioDeskGeometry.coverGroupSelection(frames)
+        #expect(selection.timeline == CGRect(x: 0, y: 300, width: 382, height: 240))
+        #expect(selection.panel.minY == 540)
+        #expect(selection.overview == nil)
+        #expect(abs(VideoStudioDeskGeometry.coverGroupPointsPerSecond * 6.2 - 111.6) < 1e-9)
+        #expect(VideoStudioMetrics.pointsPerSecondRange.contains(VideoStudioDeskGeometry.coverGroupPointsPerSecond))
+    }
 }

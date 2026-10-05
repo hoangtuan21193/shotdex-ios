@@ -236,7 +236,20 @@ extension VideoStudioScreen {
                 .placed(frames.stage)
             VideoCompactTransportBar(model: model)
                 .placed(frames.transport)
-            if model.inspectorTarget != .none {
+            if model.inspectorTarget == .clips, model.activeItemCommand != .look {
+                // A multi-select group (FS-12.11 §3, board F1_DC): the
+                // timeline stays, 240 tall at 18pt a second, so more clips
+                // can be tapped; the panel is the row and one control row.
+                let selection = VideoStudioDeskGeometry.coverGroupSelection(frames)
+                if let timeline = selection.timeline {
+                    deskTimeline(model, height: timeline.height, zoomOverride: VideoStudioDeskGeometry.coverGroupPointsPerSecond)
+                        .placed(timeline)
+                }
+                contextPanel(model, height: window.height - selection.panel.minY)
+                    .frame(width: selection.panel.width)
+                    .offset(x: selection.panel.minX, y: selection.panel.minY)
+                    .transition(.move(edge: .bottom))
+            } else if model.inspectorTarget != .none {
                 // A selected item (FS-12.07b §4): the overview under the
                 // transport and the panel from 334 — or, pulled down, the
                 // timeline back down to 566 over a 78pt panel. ✕ and ✓ are
@@ -377,7 +390,7 @@ extension VideoStudioScreen {
         )
     }
 
-    func deskTimeline(_ model: VideoStudioModel, height: CGFloat) -> some View {
+    func deskTimeline(_ model: VideoStudioModel, height: CGFloat, zoomOverride: CGFloat? = nil) -> some View {
         VideoTimelineView(
             model: model,
             height: height,
@@ -386,7 +399,8 @@ extension VideoStudioScreen {
             onAddMedia: { addMedia(model) },
             onEditText: { editingOverlay = $0 },
             onTransition: { model.editingTransitionIndex = $0 },
-            onVisibleDuration: { timelineVisibleDuration = $0 }
+            onVisibleDuration: { timelineVisibleDuration = $0 },
+            zoomOverride: zoomOverride
         )
         // Drop photos or clips straight onto the timeline from Photos or
         // Files beside us in Split View.

@@ -731,7 +731,9 @@ enum VideoStudioMetrics {
 
     // MARK: Scale
 
-    static let pointsPerSecondRange: ClosedRange<CGFloat> = 20...160
+    /// From 18 — the Duo cover's multi-select zoom (FS-12.11 AC-14, D-6) —
+    /// to 160.
+    static let pointsPerSecondRange: ClosedRange<CGFloat> = 18...160
 
     // MARK: Bands & controls (timeline-only radius exception r-track = 6)
 

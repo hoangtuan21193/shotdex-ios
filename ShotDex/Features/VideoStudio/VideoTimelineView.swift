@@ -23,6 +23,9 @@ struct VideoTimelineView: View {
     /// a band of the stack, not a lane), but the zoom that decides it is in
     /// here.
     var onVisibleDuration: ((Double) -> Void)?
+    /// A zoom the layout imposes for now — the Duo cover's 18pt a second
+    /// while a group is selected (FS-12.11 §4). Nil gives back the user's.
+    var zoomOverride: CGFloat? = nil
 
     /// Opens at the window's own zoom (`Lanes.pointsPerSecond`) — set once,
     /// on appear, so a pinch the user made is never taken back.
@@ -125,7 +128,7 @@ struct VideoTimelineView: View {
             .onAppear {
                 if !hasAppliedWindowZoom {
                     hasAppliedWindowZoom = true
-                    pps = lanes.pointsPerSecond
+                    pps = zoomOverride ?? model.timelineZoom ?? lanes.pointsPerSecond
                     pinchStartPPS = pps
                 }
                 viewportWidth = screenWidth
@@ -136,6 +139,9 @@ struct VideoTimelineView: View {
                 reportVisibleDuration(screenWidth: screenWidth)
             }
             .onChange(of: pps) { reportVisibleDuration(screenWidth: screenWidth) }
+            .onChange(of: zoomOverride) { _, new in
+                pps = new ?? model.timelineZoom ?? lanes.pointsPerSecond
+            }
             // Where a drag from Media can land (FS-12.09 §5), kept current
             // as the timeline moves, zooms, or stacks lanes.
             .onAppear { publishDropGeometry(geo) }
@@ -326,6 +332,8 @@ struct VideoTimelineView: View {
                 max(pinchStartPPS * scale, VideoStudioMetrics.pointsPerSecondRange.lowerBound),
                 VideoStudioMetrics.pointsPerSecondRange.upperBound
             )
+            // The user's zoom — not one the layout is imposing for now.
+            if zoomOverride == nil { model.timelineZoom = pps }
         case .ended:
             break
         }
@@ -341,6 +349,7 @@ struct VideoTimelineView: View {
                 VideoStudioMetrics.pointsPerSecondRange.upperBound
             )
         }
+        if zoomOverride == nil { model.timelineZoom = pps }
     }
 
     // MARK: Zone drag commit

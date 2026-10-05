@@ -790,6 +790,10 @@ final class VideoStudioModel {
     /// The timeline's lanes and the overview strip as drop targets, kept up
     /// to date by those views. Not observed: they change on every scroll.
     @ObservationIgnored var timelineDropGeometry: VideoDropGeometry?
+    /// The zoom the user left the timeline at, kept across the timeline
+    /// views a layout swap builds — so a zoom a layout imposes for a while
+    /// (the Duo cover's 18pt a second in multi-select) gives it back.
+    @ObservationIgnored var timelineZoom: CGFloat?
     /// Lets a clip's tap know a held press already owns the finger
     /// (FS-12.11 §4). Screen plumbing, not state anyone observes.
     @ObservationIgnored let clipPressGate = TimelinePressGate()
