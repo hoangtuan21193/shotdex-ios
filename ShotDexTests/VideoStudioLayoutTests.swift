@@ -126,12 +126,12 @@ struct VideoStudioLayoutTests {
     }
 
     /// The preview's clamp has to reserve what the *lanes* need, not the
-    /// phone's floor. At `Lanes.desk` one overlay and one music lane want
-    /// 255pt; reserving 248 handed the preview the other 7 and left the lanes
-    /// scrolling on every regular-width window.
+    /// phone's floor. At `Lanes.desk` one overlay and two music lanes want
+    /// 300pt; reserving 248 handed the preview the rest and left the lanes
+    /// scrolling.
     @Test func theClampReservesWhatTheLanesActuallyNeed() {
         let landscape = CGSize(width: 1376 - 92, height: 1032)
-        let content = VideoStudioMetrics.Lanes.desk.timelineContentHeight(overlayLanes: 1, musicLanes: 1)
+        let content = VideoStudioMetrics.Lanes.desk.timelineContentHeight(overlayLanes: 1, musicLanes: 2)
         #expect(content > VideoStudioMetrics.timelineMinimumHeight, "the case this test is about")
         let layout = VideoStudioMetrics.stackLayout(
             screen: landscape, bandHeight: 48, bottomInset: 20,
@@ -172,7 +172,7 @@ struct VideoStudioLayoutTests {
         #expect([Lanes.phone.overlay, Lanes.phone.video, Lanes.phone.music] == [40, 80, 46])
         #expect(Lanes.phone.ruler == 33 && Lanes.phone.clipCell == 60)
         #expect(Lanes.duo.ruler == 33 && Lanes.duo.clipCell == 54)
-        #expect(Lanes.desk.ruler == 39 && Lanes.desk.clipCell == 88)
+        #expect(Lanes.desk.ruler == 28 && Lanes.desk.clipCell == 88)
     }
 
     /// The lift is the panel's height less the bands it lands on. Take the

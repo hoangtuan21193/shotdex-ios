@@ -265,71 +265,57 @@ struct VideoTrackBadgeRow: View {
 /// you reach for *while* cutting, to stop a drag landing in the wrong lane or
 /// to hear the music without the camera audio under it.
 ///
-/// A lane taller than `stackedHeight` gets the name over the buttons; a
-/// shorter one puts everything on one line, because a 34pt text lane has no
-/// room for two rows and a clipped label is worse than a missing one.
+/// The iPad's card (FS-12.03b §4): badge, name, then Lock and Mute on one
+/// line — every iPad lane is at least 44 tall. The text lane has Lock only.
 struct VideoTrackHeader: View {
     let lane: VideoTimelineLane
     @Bindable var model: VideoStudioModel
     let isActive: Bool
     let height: CGFloat
 
-    /// Below this a header is one row.
-    private static let stackedHeight: CGFloat = 56
-
-    private var isStacked: Bool { height >= Self.stackedHeight }
+    private typealias Lanes = VideoStudioMetrics.Lanes
 
     /// A track's own controls cannot be taller than the track: a hit shape
-    /// that spills upward steals the taps of the lane above it. So these get
-    /// the full 44 on a tall lane and the lane's height on a short one —
-    /// the same constraint every NLE's track header lives with.
-    private var buttonWidth: CGFloat { isStacked ? AppTheme.Size.minTouch : 34 }
-    private var buttonHeight: CGFloat { min(AppTheme.Size.minTouch, max(20, height - 6)) }
+    /// that spills upward steals the taps of the lane above it. 44 on every
+    /// iPad lane (the shortest, text, is 44).
+    private var buttonHeight: CGFloat { min(Lanes.trackHeaderSwitch.height, height) }
     private var isLocked: Bool { model.isLaneLocked(lane) }
-    private var tint: Color { isActive ? EditorTheme.timelineSelection : EditorTheme.secondaryText }
+    private var tint: Color { isActive ? EditorTheme.timelineSelection : .white }
 
     var body: some View {
-        Group {
-            if isStacked {
-                VStack(alignment: .leading, spacing: 3) {
-                    title
-                    HStack(spacing: 2) {
-                        lockButton
-                        if muteAction != nil { muteButton }
-                        Spacer(minLength: 0)
-                    }
-                }
-            } else {
-                HStack(spacing: 2) {
-                    title
-                    Spacer(minLength: 0)
-                    lockButton
-                    if muteAction != nil { muteButton }
-                }
-            }
+        HStack(spacing: 0) {
+            title
+            Spacer(minLength: 0)
+            lockButton
+            if muteAction != nil { muteButton }
         }
-        .padding(.horizontal, 6)
-        .frame(width: VideoStudioMetrics.Lanes.trackHeaderWidth, height: height, alignment: .leading)
+        .padding(.leading, 8)
+        .padding(.trailing, 4)
+        .frame(width: Lanes.trackHeaderCardWidth, height: height)
         .background(
-            RoundedRectangle(cornerRadius: 4, style: .continuous)
+            RoundedRectangle(cornerRadius: 8, style: .continuous)
                 .fill(isActive ? EditorTheme.timelineSelection.opacity(0.12) : EditorTheme.trackChip)
-                .padding(.trailing, 4)
         )
+        .padding(.leading, Lanes.trackHeaderCardInset)
+        .frame(width: Lanes.trackHeaderWidth + Lanes.trackHeaderCardInset, height: height, alignment: .leading)
     }
 
     private var title: some View {
-        HStack(spacing: 4) {
+        HStack(spacing: 8) {
             Text(lane.badge)
-                .font(.system(size: 9.5, weight: .bold).monospacedDigit())
-                .foregroundStyle(.black)
-                .padding(.horizontal, 3)
-                .padding(.vertical, 1)
-                .background(RoundedRectangle(cornerRadius: 2.5, style: .continuous).fill(tint))
+                .font(.system(size: 13, weight: .semibold).monospacedDigit())
+                .foregroundStyle(isActive ? Color.black : Color.white)
+                .frame(width: Lanes.trackHeaderBadge.width, height: Lanes.trackHeaderBadge.height)
+                .background(
+                    RoundedRectangle(cornerRadius: 5, style: .continuous)
+                        .fill(isActive ? EditorTheme.timelineSelection : Color.white.opacity(0.14))
+                )
             Text(lane.name)
-                .font(.system(size: 10.5, weight: .medium))
+                .font(.system(size: 15, weight: .medium))
                 .foregroundStyle(tint)
                 .lineLimit(1)
                 .minimumScaleFactor(0.8)
+                .frame(width: Lanes.trackHeaderNameWidth, alignment: .leading)
         }
         .accessibilityElement(children: .combine)
         .accessibilityLabel(Text(verbatim: "\(lane.badge), \(lane.name)"))
@@ -338,9 +324,9 @@ struct VideoTrackHeader: View {
     private var lockButton: some View {
         Button { model.toggleLaneLock(lane) } label: {
             Image(systemName: isLocked ? "lock.fill" : "lock.open")
-                .font(.system(size: 10, weight: .medium))
-                .foregroundStyle(isLocked ? EditorTheme.accent : EditorTheme.dimText)
-                .frame(width: buttonWidth, height: buttonHeight)
+                .font(.system(size: 15, weight: .regular))
+                .foregroundStyle(isLocked ? Color.white : EditorTheme.secondaryText)
+                .frame(width: Lanes.trackHeaderSwitch.width, height: buttonHeight)
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
@@ -353,10 +339,10 @@ struct VideoTrackHeader: View {
 
     private var muteButton: some View {
         Button { muteAction?() } label: {
-            Image(systemName: isMuted ? "speaker.slash.fill" : "speaker.wave.2.fill")
-                .font(.system(size: 10, weight: .medium))
-                .foregroundStyle(isMuted ? EditorTheme.timelineDestructive : EditorTheme.dimText)
-                .frame(width: buttonWidth, height: buttonHeight)
+            Image(systemName: isMuted ? "speaker.slash" : "speaker.wave.2")
+                .font(.system(size: 15, weight: .regular))
+                .foregroundStyle(isMuted ? EditorTheme.timelineDestructive : EditorTheme.secondaryText)
+                .frame(width: Lanes.trackHeaderSwitch.width, height: buttonHeight)
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)

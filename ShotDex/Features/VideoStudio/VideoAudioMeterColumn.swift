@@ -237,51 +237,18 @@ struct VideoAudioMeterColumn: View {
     let meter: VideoLevelMeterModel
     let width: CGFloat
 
-    /// The mute silences Video sound — the clips' own audio for the whole
-    /// project, the one project-wide level there is (FS-12.04 §2). The model
-    /// remembers the level it restores, as the Video lane's header does.
-    private var isMuted: Bool { model.isVideoTrackMuted }
-    private var showsScale: Bool { width >= 48 }
-
     var body: some View {
-        VStack(spacing: 6) {
-            Button {
-                model.toggleVideoTrackMuted()
-            } label: {
-                Image(systemName: isMuted ? "speaker.slash.fill" : "speaker.wave.2.fill")
-                    .font(.system(size: 13, weight: .medium))
-                    .foregroundStyle(isMuted ? EditorTheme.timelineDestructive : .white)
-                    .frame(width: width, height: 28)
-                    .videoHitTarget(drawnHeight: 28)
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel(
-                isMuted
-                    ? Text("Unmute Video Sound", tableName: VideoStudioCopy.table, comment: "Video Studio level meter: restores the clips' own audio for the whole project")
-                    : Text("Mute Video Sound", tableName: VideoStudioCopy.table, comment: "Video Studio level meter: silences the clips' own audio for the whole project")
-            )
-
-            HStack(spacing: 3) {
-                if showsScale { scale }
-                bar(level: meter.left, peak: meter.peakLeft)
-                bar(level: meter.right, peak: meter.peakRight)
-            }
-            .frame(maxHeight: .infinity)
-
-            Text(readout)
-                .font(.system(size: 8.5, weight: .medium).monospacedDigit())
-                .foregroundStyle(EditorTheme.dimText)
-                .frame(height: 12)
+        // Two bars 6 wide, 3 apart, then the dB scale in 26 — 44 in all, as
+        // tall as the frame (FS-12.03b §3). Video sound's mute is the V1
+        // header's; the meter only reads.
+        HStack(alignment: .top, spacing: 3) {
+            bar(level: meter.left, peak: meter.peakLeft)
+            bar(level: meter.right, peak: meter.peakRight)
+            scale
         }
-        .padding(.horizontal, 4)
-        .padding(.vertical, 6)
-        .frame(width: width)
+        .frame(width: width, alignment: .leading)
         .frame(maxHeight: .infinity)
-        .background(EditorTheme.panelSolid)
-        .overlay(alignment: .leading) {
-            Rectangle().fill(EditorTheme.panelDivider).frame(width: 1)
-        }
-        .accessibilityElement(children: .contain)
+        .accessibilityElement(children: .ignore)
         .accessibilityLabel(Text("Audio Levels", comment: "Video Studio: the level meter beside the viewer"))
         .accessibilityValue(Text(readout))
     }
@@ -294,26 +261,28 @@ struct VideoAudioMeterColumn: View {
         return String(format: "%.0f", loudest)
     }
 
-    /// The dB landmarks down the side. Drawn as labels pinned to their own
-    /// fraction of the bar's height, so a label always sits on the level it
-    /// names however tall the column is.
+    /// The dB landmarks down the side, 11pt in a 26 column. Drawn as labels
+    /// pinned to their own fraction of the bar's height, so a label always
+    /// sits on the level it names however tall the column is.
     private var scale: some View {
         GeometryReader { geo in
-            ZStack(alignment: .topTrailing) {
+            ZStack(alignment: .topLeading) {
                 ForEach(Self.scaleMarks, id: \.self) { mark in
-                    Text("\(mark)")
-                        .font(.system(size: 7.5).monospacedDigit())
-                        .foregroundStyle(EditorTheme.dimText)
-                        .frame(height: 8)
-                        .offset(y: geo.size.height * (1 - fraction(of: Double(mark))) - 4)
+                    Text(mark == 0 ? "0" : "\u{2212}\(-mark)")
+                        .font(.system(size: 11).monospacedDigit())
+                        .foregroundStyle(EditorTheme.secondaryText)
+                        .frame(height: 14)
+                        .offset(y: geo.size.height * (1 - fraction(of: Double(mark))) - 7)
                 }
             }
-            .frame(width: 18, alignment: .trailing)
+            .frame(width: Self.scaleWidth, alignment: .leading)
         }
-        .frame(width: 18)
+        .frame(width: Self.scaleWidth)
+        .padding(.leading, 3)
     }
 
-    private static let scaleMarks = [0, -6, -12, -18, -24, -36, -48]
+    private static let scaleWidth: CGFloat = 26
+    private static let scaleMarks = [0, -6, -18, -36, -54]
 
     private func bar(level: Double, peak: Double) -> some View {
         GeometryReader { geo in
@@ -338,7 +307,7 @@ struct VideoAudioMeterColumn: View {
                 }
             }
         }
-        .frame(width: 7)
+        .frame(width: 6)
         .animation(.linear(duration: 0.08), value: level)
     }
 

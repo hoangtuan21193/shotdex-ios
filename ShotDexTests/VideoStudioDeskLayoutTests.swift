@@ -12,7 +12,7 @@ struct VideoStudioDeskLayoutTests {
         #expect(!VideoStudioMetrics.Lanes.for(.phone).showsTrackControls)
         #expect(!VideoStudioMetrics.Lanes.for(.duoCover).showsTrackControls)
         #expect(VideoStudioMetrics.Lanes.for(.duoInner).showsTrackControls)
-        #expect(VideoStudioMetrics.Lanes.desk.gutter == VideoStudioMetrics.Lanes.trackHeaderWidth)
+        #expect(VideoStudioMetrics.Lanes.desk.gutter == VideoStudioMetrics.Lanes.trackHeaderWidth + VideoStudioMetrics.Lanes.trackHeaderCardInset)
     }
 
     /// FS-12.03b AC-8: the Duo's inner display has a 100pt badge column —
@@ -145,6 +145,50 @@ struct VideoStudioDeskLayoutTests {
         // Five 44s, a 48 disc and the 10 before Loop: the board's 278.
         let group: CGFloat = 5 * VideoStudioDeskGeometry.toolRowHeight + VideoStudioDeskGeometry.playRowHeight + 10
         #expect(group == VideoStudioDeskGeometry.playGroupWidth, "\(group) vs \(VideoStudioDeskGeometry.playGroupWidth)")
+    }
+
+    /// FS-12.03b AC-9 (track header): the iPad's header column is a 192
+    /// card 8 in — badge 30×22, name 62, Lock and Mute 40×44 ending 4 short —
+    /// and the lanes start at 208, 44 / 104 / 52, 4 apart, 32 under the
+    /// timeline's top (ruler 28): IL1_Main's T1 704, V1 752, A1 860, A2 916.
+    @Test func theDeskTrackHeaderIs200WithLockAndMute44() {
+        let lanes = VideoStudioMetrics.Lanes.for(.iPadLandscape)
+        let header = VideoStudioMetrics.Lanes.self
+        #expect(lanes.gutter == 208 && lanes.gutterStyle == .headers)
+        #expect(header.trackHeaderCardInset + header.trackHeaderCardWidth == header.trackHeaderWidth)
+        #expect(header.trackHeaderSwitch == CGSize(width: 40, height: 44))
+        // Badge 8 in, 8 to the name, then the two switches 4 short of the
+        // card's end: 8 + 30 + 8 + 62 + 4… + 40 + 40 + 4 ≤ 192.
+        #expect(8 + header.trackHeaderBadge.width + 8 + header.trackHeaderNameWidth + 2 * header.trackHeaderSwitch.width + 4 <= header.trackHeaderCardWidth)
+        #expect(lanes.ruler == 28 && lanes.topPadding + lanes.ruler + lanes.rulerGap == 32)
+        let top: CGFloat = 672 + 32
+        #expect(top + lanes.overlayLaneTop(0) == 704)
+        #expect(top + lanes.videoLaneTop(overlayLanes: 1) == 752)
+        #expect(top + lanes.musicLaneTop(0, overlayLanes: 1) == 860)
+        #expect(top + lanes.musicLaneTop(1, overlayLanes: 1) == 916)
+        // One text lane and two music lanes fit the portrait timeline (304)
+        // and the landscape floor (360).
+        #expect(lanes.timelineContentHeight(overlayLanes: 1, musicLanes: 2) <= 304)
+        // The Duo inner display keeps its own tier.
+        #expect(VideoStudioMetrics.Lanes.for(.duoInner).ruler == 33)
+    }
+
+    /// FS-12.03b §3 (iPad): the meter is 44 — two bars of 6 and the scale —
+    /// 10 after the frame and exactly as tall as it, in both orientations.
+    @Test func theDeskMeterIsAsTallAsTheFrame() throws {
+        let canvas = CGSize(width: 1920, height: 1080)
+        let landscape = VideoStudioDeskGeometry.iPadLandscape(.init(
+            window: CGSize(width: 1376, height: 1032), canvas: canvas, isPoolOpen: true, isInspectorOpen: true
+        ))
+        let portrait = VideoStudioDeskGeometry.iPadPortrait(.init(
+            window: CGSize(width: 1032, height: 1376), canvas: canvas, isPoolOpen: false, isInspectorOpen: true
+        ))
+        for frames in [landscape, portrait] {
+            let meter = try #require(frames.meter)
+            #expect(meter.width == 44)
+            #expect(meter.minY == frames.frame.minY && meter.height == frames.frame.height)
+            #expect(meter.minX == frames.frame.maxX + 10)
+        }
     }
 
     /// The pool's two segmented rows fit its 320pt panel at 294, 13 in.

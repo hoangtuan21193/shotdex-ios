@@ -48,6 +48,11 @@ enum VideoStudioCopy {
         String(localized: "Before and After", table: table, comment: "Video Studio: compares the clips with and without the look")
     }
 
+    /// The grabber between the stage and the timeline (FS-12.03b §4).
+    static var resizeTimeline: String {
+        String(localized: "Resize Timeline", table: table, comment: "Video Studio iPad: the grabber between the frame and the timeline, dragged to trade one's height for the other's")
+    }
+
     static var media: String {
         String(localized: "Media", table: table, comment: "Video Studio: the bottom-row tool that adds photos and videos to the timeline")
     }

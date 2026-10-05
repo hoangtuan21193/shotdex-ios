@@ -47,7 +47,7 @@ struct TimelineTracksContent: View {
         let musicLanes = model.musicLaneAssignment
         let musicLaneCount = model.musicLaneCount
 
-        VStack(spacing: VideoStudioMetrics.laneSpacing) {
+        VStack(spacing: lanes.laneGap) {
             ForEach(0..<overlayLaneCount, id: \.self) { lane in
                 OverlayLaneRow(
                     model: model,

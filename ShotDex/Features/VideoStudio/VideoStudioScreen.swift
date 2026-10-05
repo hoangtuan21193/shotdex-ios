@@ -664,8 +664,8 @@ struct VideoStudioScreen: View {
     /// handle at the top of its timeline.
     var timelineDivider: some View {
         Capsule()
-            .fill(EditorTheme.panelDivider)
-            .frame(width: 44, height: 4)
+            .fill(Color.white.opacity(0.28))
+            .frame(width: VideoStudioDeskGeometry.dividerSize.width, height: VideoStudioDeskGeometry.dividerSize.height)
             .frame(maxWidth: .infinity)
             .frame(height: VideoStudioMetrics.previewTimelineGap + 12)
             .contentShape(Rectangle())
@@ -685,7 +685,7 @@ struct VideoStudioScreen: View {
                         timelineDragOffset = 0
                     }
             )
-            .accessibilityLabel(Text("Timeline height", comment: "Video Studio: the divider dragged to trade preview height for timeline height"))
+            .accessibilityLabel(Text(VideoStudioCopy.resizeTimeline))
             .accessibilityHint(Text("Drag up for a taller timeline, down for a bigger preview", comment: "Hint for the Video Studio timeline divider"))
             .accessibilityAdjustableAction { direction in
                 let range = VideoStudioMetrics.timelineExtraRange

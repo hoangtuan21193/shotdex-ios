@@ -508,6 +508,12 @@ enum VideoStudioMetrics {
         var gutterStyle: GutterStyle
         /// The zoom a timeline opens at on this window (FS-12.03 §2–4).
         var pointsPerSecond: CGFloat
+        /// Above the ruler, between the ruler and the first lane, and between
+        /// lanes: 8 · 3 · 3 on the phone and the Duo; 0 · 4 · 4 on the iPad,
+        /// whose lanes start 32 under the timeline's top (FS-12.03b §4).
+        var topPadding: CGFloat = VideoStudioMetrics.timelineTopPadding
+        var rulerGap: CGFloat = VideoStudioMetrics.rulerToTracks
+        var laneGap: CGFloat = VideoStudioMetrics.laneSpacing
 
         /// The leading column of the lane stack.
         enum GutterStyle: Equatable, Sendable {
@@ -518,7 +524,7 @@ enum VideoStudioMetrics {
             /// beside them, no names (100pt — FS-12.03b §4).
             case badges
             /// The iPad: a track header card per lane — badge, name, Lock,
-            /// Mute (104pt).
+            /// Mute (a 192 card in a 208 column).
             case headers
         }
 
@@ -533,13 +539,21 @@ enum VideoStudioMetrics {
             gutter: 30, gutterStyle: .glyphs, pointsPerSecond: 55
         )
         static let desk = Lanes(
-            overlay: 44, video: 104, music: 52, ruler: 39, clipCell: 88,
-            gutter: trackHeaderWidth, gutterStyle: .headers, pointsPerSecond: 70
+            overlay: 44, video: 104, music: 52, ruler: 28, clipCell: 88,
+            gutter: VideoStudioDeskGeometry.overviewLeading, gutterStyle: .headers, pointsPerSecond: 70,
+            topPadding: 0, rulerGap: 4, laneGap: 4
         )
 
-        /// The iPad's track header column: a 92pt card — badge, name, Lock,
-        /// Mute — and the gap after it.
+        /// The iPad's track header (FS-12.03b §4, board IL1_Main): a card
+        /// 192 wide, 8 in, radius 8 — badge 30×22 8 in, the name 15 in 62,
+        /// Lock and Mute 40×44 ending 4 short of the card's edge. The lanes
+        /// start 8 after it, at 208.
         static let trackHeaderWidth: CGFloat = VideoStudioDeskGeometry.trackHeaderWidth
+        static let trackHeaderCardInset: CGFloat = 8
+        static let trackHeaderCardWidth: CGFloat = 192
+        static let trackHeaderBadge = CGSize(width: 30, height: 22)
+        static let trackHeaderNameWidth: CGFloat = 62
+        static let trackHeaderSwitch = CGSize(width: 40, height: 44)
 
         /// The Duo inner display's badge column: margin 6 · badge 26 · gap 4
         /// · Lock 28 · gap 4 · Mute 28 · margin 4 (FS-12.03b §4).
@@ -583,7 +597,7 @@ enum VideoStudioMetrics {
         var gutterGlyph: CGFloat { 13 }
 
         func overlayLaneTop(_ lane: Int) -> CGFloat {
-            laneAreaTop + CGFloat(lane) * (overlay + laneSpacing)
+            laneAreaTop + CGFloat(lane) * (overlay + laneGap)
         }
 
         func videoLaneTop(overlayLanes: Int) -> CGFloat {
@@ -592,8 +606,8 @@ enum VideoStudioMetrics {
 
         func musicLaneTop(_ lane: Int, overlayLanes: Int) -> CGFloat {
             videoLaneTop(overlayLanes: overlayLanes)
-                + video + laneSpacing
-                + CGFloat(lane) * (music + laneSpacing)
+                + video + laneGap
+                + CGFloat(lane) * (music + laneGap)
         }
 
         /// Total scrollable height of the lane stack (excludes the pinned ruler).
@@ -606,14 +620,14 @@ enum VideoStudioMetrics {
         /// What the timeline needs to show every lane of this project without
         /// scrolling: the ruler, the lanes, and the paddings around them.
         func timelineContentHeight(overlayLanes: Int, musicLanes: Int) -> CGFloat {
-            timelineTopPadding + ruler + rulerToTracks
+            topPadding + ruler + rulerGap
                 + laneContentHeight(overlayLanes: overlayLanes, musicLanes: musicLanes)
                 + scrollbarHeight
         }
 
         /// Height of the scrolling viewport under the pinned ruler.
         func laneViewportHeight(timelineHeight: CGFloat) -> CGFloat {
-            timelineHeight - timelineTopPadding - ruler - rulerToTracks - scrollbarHeight - 2
+            timelineHeight - topPadding - ruler - rulerGap - scrollbarHeight - 2
         }
     }
 

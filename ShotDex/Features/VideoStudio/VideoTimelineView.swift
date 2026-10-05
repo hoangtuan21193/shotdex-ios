@@ -64,8 +64,8 @@ struct VideoTimelineView: View {
                 TimelineRuler(totalDuration: model.totalDuration, pps: pps, visibleLeftTime: visibleLeftTime)
                     .frame(height: lanes.ruler)
                     .padding(.leading, lanes.gutter)
-                    .padding(.top, VideoStudioMetrics.timelineTopPadding)
-                    .padding(.bottom, VideoStudioMetrics.rulerToTracks)
+                    .padding(.top, lanes.topPadding)
+                    .padding(.bottom, lanes.rulerGap)
                     .allowsHitTesting(false)
 
                 HStack(spacing: 0) {
@@ -152,9 +152,9 @@ struct VideoTimelineView: View {
     /// the playhead's x, the zoom, and the video lane's band for the line.
     private func publishDropGeometry(_ geo: GeometryProxy) {
         let frame = geo.frame(in: .global)
-        let lanesTop = VideoStudioMetrics.timelineTopPadding + lanes.ruler + VideoStudioMetrics.rulerToTracks
+        let lanesTop = lanes.topPadding + lanes.ruler + lanes.rulerGap
         let videoTop = lanesTop
-            + CGFloat(model.overlayLaneCount) * (lanes.overlay + VideoStudioMetrics.laneSpacing)
+            + CGFloat(model.overlayLaneCount) * (lanes.overlay + lanes.laneGap)
             - laneOffsetY
         model.timelineDropGeometry = VideoDropGeometry(
             frame: CGRect(x: frame.minX + lanes.gutter, y: frame.minY, width: max(0, frame.width - lanes.gutter), height: frame.height),
@@ -233,11 +233,11 @@ struct VideoTimelineView: View {
         }
         .frame(
             height: height
-                - VideoStudioMetrics.timelineTopPadding
+                - lanes.topPadding
                 - VideoStudioMetrics.scrollbarHeight
                 - 2
         )
-        .padding(.top, VideoStudioMetrics.timelineTopPadding)
+        .padding(.top, lanes.topPadding)
         .offset(x: -4.5)  // centre the 11pt cap on the 2pt line
         .allowsHitTesting(false)
     }

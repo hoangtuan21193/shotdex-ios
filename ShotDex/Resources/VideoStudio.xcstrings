@@ -461,10 +461,6 @@
       "comment": "Video Studio track switch: silences the named lane (e.g. Video, Music 2); the trait says whether it is on",
       "extractionState": "manual"
     },
-    "Mute Video Sound": {
-      "comment": "Video Studio level meter: silences the clips' own audio for the whole project",
-      "extractionState": "manual"
-    },
     "My Music": {
       "comment": "Video Studio iPad media pool Music tab: header over the user's imported songs",
       "extractionState": "manual"
@@ -543,6 +539,10 @@
     },
     "Recents": {
       "comment": "Video Studio Media panel tab: every photo and video, newest first",
+      "extractionState": "manual"
+    },
+    "Resize Timeline": {
+      "comment": "Video Studio iPad: the grabber between the frame and the timeline, dragged to trade one's height for the other's",
       "extractionState": "manual"
     },
     "Saved to Photos as a new video": {
@@ -651,10 +651,6 @@
     },
     "Unmute": {
       "comment": "Video Studio: the speaker at the head of a Volume row — brings back the clip's or the song's level",
-      "extractionState": "manual"
-    },
-    "Unmute Video Sound": {
-      "comment": "Video Studio level meter: restores the clips' own audio for the whole project",
       "extractionState": "manual"
     },
     "Upright": {
