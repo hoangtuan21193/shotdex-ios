@@ -199,4 +199,16 @@ struct VideoClipGroupEditingTests {
         #expect(edited.clips.map(\.id) == [ids[1], ids[2], ids[4], ids[0], ids[3]])
         #expect(abs(edited.clips.map(\.effectiveDuration).reduce(0, +) - 24.0) < 1e-9)
     }
+
+    /// AC-11: a group let go at any of its own boundaries is back where it
+    /// came from — no change at all, so nothing to undo.
+    @Test func dropAtOriginIsNoOp() {
+        for boundary in 1...3 {
+            var edited = recipe
+            edited.transitions[1] = .defaultCrossfade
+            let before = edited
+            #expect(!VideoClipGroupEditing.move([ids[1], ids[2]], toBoundary: boundary, in: &edited))
+            #expect(edited == before)
+        }
+    }
 }

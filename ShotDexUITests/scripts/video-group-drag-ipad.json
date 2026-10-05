@@ -118,6 +118,44 @@
    "action": "drag",
    "x": 0.565,
    "y": 0.779,
+   "toX": 0.62,
+   "toY": 0.779,
+   "pressSeconds": 0.4,
+   "seconds": 0.3
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "dump",
+   "name": "15-dropped-at-origin",
+   "text": "snapshot",
+   "type": "button"
+  },
+  {
+   "action": "drag",
+   "x": 0.565,
+   "y": 0.779,
+   "toX": 0.3,
+   "toY": 0.4,
+   "pressSeconds": 0.4,
+   "seconds": 0.3
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "dump",
+   "name": "16-dropped-off-lane",
+   "text": "snapshot",
+   "type": "button"
+  },
+  {
+   "action": "drag",
+   "x": 0.565,
+   "y": 0.779,
    "toX": 0.2515,
    "toY": 0.779,
    "pressSeconds": 0.4,

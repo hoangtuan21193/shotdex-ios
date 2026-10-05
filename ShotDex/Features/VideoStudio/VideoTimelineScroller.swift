@@ -449,7 +449,11 @@ struct VideoTimelineScroller<Content: View>: UIViewRepresentable {
                 stopAutoScroll()
                 guard let reorderZone else { return }
                 if isMovingClip {
-                    parent.onZoneDrag(reorderZone.kind, .ended(translationX: point.x - reorderStart.x))
+                    // Let go well off the lane — a lane's height above or
+                    // below it — is a cancel, not a drop (FS-12.11 §6).
+                    let band = reorderZone.rect.height
+                    let isOffLane = point.y < reorderZone.rect.minY - band || point.y > reorderZone.rect.maxY + band
+                    parent.onZoneDrag(reorderZone.kind, isOffLane ? .cancelled : .ended(translationX: point.x - reorderStart.x))
                 } else {
                     let outcome = TimelinePressClassifier.classify(held: held, travel: travel, isReleased: true)
                     parent.onZoneDrag(reorderZone.kind, .pressed(outcome))

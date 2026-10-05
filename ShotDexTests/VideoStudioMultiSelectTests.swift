@@ -343,4 +343,21 @@ struct VideoStudioMultiSelectTests {
         #expect(model.recipe.transitions.map(\.kind) == [.crossfade, .none, .crossfade, .none])
         #expect(!model.canUndo)
     }
+
+    /// AC-11 on the model: a drop at the group's own place adds no undo
+    /// step and leaves order and transitions as they were.
+    @Test func cancelledDragAddsNoUndo() {
+        let model = VideoStudioModelFixture.model(
+            clips: VideoStudioModelFixture.mediaSampleRecipe().clips,
+            configure: { $0.transitions[2] = .defaultCrossfade }
+        )
+        let ids = model.recipe.clips.map(\.id)
+        let before = model.recipe
+        model.enterClipSelection(ids[2])
+        model.toggleClip(ids[3])
+        #expect(!model.moveClips(model.selectedClipIDs, toBoundary: 2))
+        #expect(!model.moveClips(model.selectedClipIDs, toBoundary: 4))
+        #expect(model.recipe == before)
+        #expect(!model.canUndo)
+    }
 }
