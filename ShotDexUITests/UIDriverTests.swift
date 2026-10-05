@@ -244,13 +244,21 @@ final class UIDriverTests: XCTestCase {
             // for: the accessibility snapshot of a screen whose content never
             // settles can time the whole query out (measured on the Video
             // Studio on the phone, where even `app.buttons` never returns).
+            // `text: "snapshot"` reads the whole screen in one accessibility
+            // snapshot and filters it here: one round trip instead of one
+            // per element per attribute, which on the iPad Video Studio is
+            // seconds against minutes. A screen whose tree never settles (the
+            // phone's Video Studio) can still hang it — that is why it is
+            // opt-in.
             write(
                 name: step.name ?? "tree",
-                tree: tree(
-                    everything: step.text == "all",
-                    only: step.type,
-                    hittable: step.hittable ?? false
-                )
+                tree: step.text == "snapshot"
+                    ? snapshotTree(only: step.type)
+                    : tree(
+                        everything: step.text == "all",
+                        only: step.type,
+                        hittable: step.hittable ?? false
+                    )
             )
         case "back":
             let back = app.navigationBars.buttons.element(boundBy: 0)
@@ -415,6 +423,35 @@ final class UIDriverTests: XCTestCase {
                 hittable: hittable ? element.isHittable : nil
             )
         }
+    }
+
+    /// Every element of `type` (all of them when nil) from one snapshot of
+    /// the app, in the dump's shape.
+    private func snapshotTree(only type: String?) -> [UIDriverElement] {
+        guard let root = try? app.snapshot() else { return [] }
+        var out: [UIDriverElement] = []
+        func walk(_ node: XCUIElementSnapshot) {
+            let name = Self.name(of: node.elementType)
+            let frame = node.frame
+            if type == nil || type == name, frame.width > 0, frame.height > 0 {
+                out.append(UIDriverElement(
+                    type: name,
+                    label: node.label,
+                    identifier: node.identifier,
+                    value: node.value as? String,
+                    x: frame.origin.x,
+                    y: frame.origin.y,
+                    width: frame.width,
+                    height: frame.height,
+                    enabled: node.isEnabled,
+                    selected: node.isSelected,
+                    hittable: nil
+                ))
+            }
+            node.children.forEach(walk)
+        }
+        walk(root)
+        return out
     }
 
     /// `XCUIElement.ElementType` has no string form, and a dump full of raw
