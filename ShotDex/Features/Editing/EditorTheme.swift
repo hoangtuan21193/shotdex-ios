@@ -72,6 +72,9 @@ enum EditorTheme {
     /// Deliberately not the accent, so "selected" (blue) never reads as "on"
     /// (amber) — and accent stays Export's.
     static let timelineSelection = Color(red: 0x57 / 255, green: 0xBF / 255, blue: 0xD1 / 255)
+    /// Text and glyphs drawn *on* `timelineSelection` (`#0B2A30`) — the
+    /// multi-select pill and the ✓ badge of a clip in the group (FS-12.11).
+    static let timelineSelectionInk = Color(red: 0x0B / 255, green: 0x2A / 255, blue: 0x30 / 255)
     /// Destructive glyph in the Video Studio inspector (`#FF6B5E`) — a warmer
     /// coral than the `clipping` red, matching the timeline spec.
     static let timelineDestructive = Color(red: 1, green: 0.42, blue: 0.369)

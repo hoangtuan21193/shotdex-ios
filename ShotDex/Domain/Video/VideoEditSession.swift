@@ -12,6 +12,9 @@ struct VideoEditSession: Equatable, Sendable {
         case clip(UUID)
         case overlay(UUID)
         case music(UUID)
+        /// A multi-select group of clips (FS-12.11): ✕ puts back the
+        /// project as it was when the group was entered, every step of it.
+        case clipGroup
         /// A tool's panel — Look, Music, Media, Video Settings — by name.
         case tool(String)
 

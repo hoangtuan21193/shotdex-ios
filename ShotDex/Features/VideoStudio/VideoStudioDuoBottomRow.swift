@@ -15,7 +15,8 @@ struct VideoStudioDuoBottomRow: View {
         // An item's session or the Media panel's (FS-12.09 §3): ✕ · name ·
         // ✓ takes Video Settings' and Export's place. Only an item makes
         // the tools inert.
-        let title = model.sessionFooterTitle
+        // The Duo's footer is narrow: a group reads "2 Clips" over "8.0s".
+        let title = model.compactSessionFooterTitle
         let toolsInert = VideoAddTool.toolsAreInert(in: .duoInner, isSelecting: model.selectionTitle != nil)
         HStack(spacing: Geometry.duoToolGap) {
             // While an item is selected the tools stay where they are, at

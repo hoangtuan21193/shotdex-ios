@@ -10,12 +10,20 @@ struct VideoPlayheadName: View {
 
     var body: some View {
         HStack(alignment: .firstTextBaseline, spacing: 8) {
-            Text(verbatim: clipTitle)
-                .font(.system(size: 17, weight: .semibold))
-                .foregroundStyle(.white)
-            Text(VideoStudioCopy.underPlayhead)
-                .font(.system(size: 13))
-                .foregroundStyle(EditorTheme.secondaryText)
+            if model.isSelectingClips {
+                // A group open (FS-12.11 §3, board F1_IL_MultiSelect): the
+                // head of the row says what the inspector is editing.
+                Text(verbatim: VideoStudioCopy.clipsSelected(model.selectedClipIDs.count))
+                    .font(.system(size: 17, weight: .semibold))
+                    .foregroundStyle(.white)
+            } else {
+                Text(verbatim: clipTitle)
+                    .font(.system(size: 17, weight: .semibold))
+                    .foregroundStyle(.white)
+                Text(VideoStudioCopy.underPlayhead)
+                    .font(.system(size: 13))
+                    .foregroundStyle(EditorTheme.secondaryText)
+            }
         }
         .lineLimit(1)
         .accessibilityElement(children: .combine)

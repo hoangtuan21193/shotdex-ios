@@ -121,7 +121,7 @@ mọi ranh giới cắt thẳng (None) trừ khi AC ghi khác.
 
 | # | Cho | Khi | Thì | Chứng minh bằng |
 |---|---|---|---|---|
-| AC-1 | project mẫu, không chọn gì | giữ clip 2 trong 0,5 s rồi thả, xê dịch < 10pt | clip 2 có viền 2pt + huy hiệu ✓; pill "1 selected · 6.2s"; đáy ✕ · "1 Clip" · ✓; hàng lệnh đúng 7 ô từ Speed tới Delete | ⚠️ chưa có |
+| AC-1 | project mẫu, không chọn gì | giữ clip 2 trong 0,5 s rồi thả, xê dịch < 10pt | clip 2 có viền 2pt + huy hiệu ✓; pill "1 selected · 6.2s"; đáy ✕ · "1 Clip" · ✓; hàng lệnh đúng 7 ô từ Speed tới Delete | ✅ `VideoStudioMultiSelectTests.holdReleaseEntersWithOneClip` (nhóm một clip, chân "1 Clip" / "6.2s", hàng 7 lệnh Speed…Delete, recipe và Undo không đổi), `enteringKeepsTheOpenSession`; route `video-multiselect-ipad.json` (iPad 13", giữ clip 2 0,6 s): clip 2 mang trait selected, pill "1 selected, 6.2s" 154×26 ở (212, 673) khớp `F1_IL_MultiSelect`, hàng lệnh Speed (1029, 80) … Delete, chân ✕ · "1 Clip" · ✓, dòng đầu hàng phát "1 clip selected", Undo tắt (`build/proofs/fs1211/t4-ipad-one-clip.png`); iPhone 17 (27.0) `t4-phone-one-clip.png`: viền 2pt + huy hiệu ✓ 19, pill 190×22, chân "1 Clip" |
 | AC-2 | chế độ chọn, clip 2 đã chọn | chạm clip 3 rồi clip 4 | pill "3 selected · 14.2s"; phụ đề "14.2s · 2 videos + 1 photo"; chạm clip 3 lần nữa → "2 selected" | ⚠️ chưa có |
 | AC-3 | clip 2, 3, 4 đang chọn, Speed 1× | chạm chip 2× | clip 2 dài 3,1 s, clip 3 dài 2,5 s, clip 4 vẫn 3,0 s; tổng 18,4 s; một Undo trả cả hai video về 1× | ⚠️ chưa có |
 | AC-4 | clip 1 và 4 (đều ảnh) đang chọn | nhìn hàng lệnh | đúng 5 ô Look · Motion · Move · Duplicate · Delete; không có Speed, Volume | ⚠️ chưa có |
@@ -142,7 +142,7 @@ mọi ranh giới cắt thẳng (None) trừ khi AC ghi khác.
 | AC-19 | clip 2 (video 6,2 s) và clip 4 (ảnh 3,0 s) đang chọn, chưa fade | đặt Fade in 2,0 s ở section FADE | clip 2 fade in 2,0 s; clip 4 fade in 1,5 s (kẹp ở nửa 3,0 s); một Undo trả cả hai về 0 | ⚠️ chưa có |
 | AC-20 | clip 1 và 4 (đều ảnh) đang chọn, Motion None | chạm chip Zoom In | cả hai clip Zoom In; một Undo trả cả hai về None | ⚠️ chưa có |
 
-**Chưa chứng minh được:** AC-1 tới AC-15, AC-19, AC-20 (AC-9 một phần).
+**Chưa chứng minh được:** AC-2 tới AC-15, AC-19, AC-20 (AC-9 một phần).
 
 ## 10. Rủi ro đã biết
 

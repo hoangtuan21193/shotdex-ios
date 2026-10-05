@@ -28,7 +28,9 @@ final class VideoStudioModel {
     /// Which object the contextual bottom sheet reskins for. Purely derived
     /// from the selection.
     enum InspectorTarget: Equatable {
-        case none, clip, text, music
+        /// `clips` is a multi-select group (FS-12.11) — even a group of one,
+        /// which has the group's commands, not a clip's.
+        case none, clip, clips, text, music
     }
 
     /// The selected-text sheet's sub-panel: transform (content/size/opacity/
@@ -441,8 +443,10 @@ final class VideoStudioModel {
         return recipe.musicTracks.first { $0.id == selectedMusicID }
     }
 
-    /// Which object the inspector reskins for — selection is single-target.
+    /// Which object the inspector reskins for: one item, or a group of
+    /// clips.
     var inspectorTarget: InspectorTarget {
+        if !selectedClipIDs.isEmpty { return .clips }
         if selectedOverlayID != nil { return .text }
         if selectedClipID != nil { return .clip }
         if selectedMusicID != nil { return .music }
@@ -480,6 +484,12 @@ final class VideoStudioModel {
     /// Split need a video's frames, which an unavailable clip does not have;
     /// a project keeps at least one clip.
     func isItemCommandEnabled(_ command: VideoItemCommand) -> Bool {
+        if isSelectingClips {
+            // A project keeps at least one clip: Delete on every clip is
+            // drawn dimmed, not hidden — it applies, it is only blocked
+            // (FS-12.11 §5).
+            return command != .delete || selectedClipIDs.count < recipe.clips.count
+        }
         if let clip = selectedClip {
             switch command {
             case .delete: return recipe.clips.count > 1
@@ -502,8 +512,10 @@ final class VideoStudioModel {
     /// none. Captions and stickers use `inspectorTextTool`.
     var activeItemCommand: VideoItemCommand?
 
-    /// What is selected, for its command row.
+    /// What is selected, for its command row. A group has no kind of its
+    /// own: its row is `VideoItemCommand.groupCommands`.
     var selectedItemKind: VideoItemKind? {
+        if isSelectingClips { return nil }
         if let clip = selectedClip { return VideoItemKind(clip) }
         if let overlay = selectedOverlay { return overlay.kind == .image ? .sticker : .text }
         if selectedMusicTrack != nil { return .music }
@@ -512,6 +524,7 @@ final class VideoStudioModel {
 
     /// The command row of the selected item.
     var selectedItemCommands: [VideoItemCommand] {
+        if isSelectingClips { return VideoItemCommand.groupCommands(hasVideo: groupSummary.hasVideo) }
         guard let kind = selectedItemKind else { return [] }
         return VideoItemCommand.commands(for: kind, singleVideo: mode == .singleVideo)
     }
@@ -576,13 +589,19 @@ final class VideoStudioModel {
         mediaPickPurpose = nil
         mediaShowsInVideo = false
         selectedClipID = nil
+        selectedClipIDs = []
         selectedOverlayID = nil
         selectedMusicID = nil
         activeToolPanel = nil
     }
 
-    /// The name the footer shows for the selected item (FS-12.04 §5).
+    /// The name the footer shows for the selected item (FS-12.04 §5) —
+    /// for a group, "3 Clips" over "14.2s · 2 videos + 1 photo".
     var selectionTitle: VideoItemTitle.Lines? {
+        if isSelectingClips {
+            let summary = groupSummary
+            return VideoItemTitle.Lines(name: VideoStudioCopy.clipCount(summary.count), detail: VideoStudioCopy.groupDetail(summary))
+        }
         if let id = selectedClipID, let index = recipe.clips.firstIndex(where: { $0.id == id }) {
             return VideoItemTitle.clip(recipe.clips[index], index: index)
         }
@@ -1023,8 +1042,59 @@ final class VideoStudioModel {
     }
 
     func toggleClip(_ id: UUID) {
+        if isSelectingClips {
+            toggleGroupClip(id)
+            return
+        }
         guard !isLaneLocked(.video) else { return }
         selectClip(selectedClipID == id ? nil : id)
+    }
+
+    // MARK: - Multi-select (FS-12.11)
+
+    /// The multi-select group, in timeline order. Screen state: never in
+    /// the recipe, never saved. Empty when no group is open.
+    private(set) var selectedClipIDs: [UUID] = []
+
+    var isSelectingClips: Bool { !selectedClipIDs.isEmpty }
+
+    /// What the group is: how many clips, how long, of which kinds.
+    var groupSummary: VideoClipGroupEditing.Summary {
+        VideoClipGroupEditing.summary(of: selectedClipIDs, in: recipe)
+    }
+
+    /// The footer's lines where it is narrow — the Duo's — "3 Clips" over
+    /// "14.2s", no kinds; any other selection's lines as they are.
+    var compactSessionFooterTitle: VideoItemTitle.Lines? {
+        guard isSelectingClips else { return sessionFooterTitle }
+        let summary = groupSummary
+        return VideoItemTitle.Lines(
+            name: VideoStudioCopy.clipCount(summary.count),
+            detail: VideoStudioCopy.groupDetail(summary, includesKinds: false)
+        )
+    }
+
+    /// A clip held for half a second and let go (FS-12.11 §4): whatever was
+    /// open is kept, as ✓ keeps it, and a group of that one clip begins —
+    /// its own session, so ✕ puts back the project as it is now.
+    func enterClipSelection(_ id: UUID) {
+        guard mode == .multiClip, recipe.clips.contains(where: { $0.id == id }) else { return }
+        endSession()
+        deselectAll()
+        selectedClipIDs = [id]
+        beginSession(.clipGroup)
+    }
+
+    /// A tap on a clip while a group is open adds it or takes it out. The
+    /// last one out ends the group as ✓ does.
+    func toggleGroupClip(_ id: UUID) {
+        guard isSelectingClips, recipe.clips.contains(where: { $0.id == id }) else { return }
+        if selectedClipIDs.contains(id) {
+            selectedClipIDs.removeAll { $0 == id }
+            if selectedClipIDs.isEmpty { commitSession() }
+        } else {
+            selectedClipIDs = VideoClipGroupEditing.ordered(selectedClipIDs + [id], in: recipe)
+        }
     }
 
     func selectOverlay(_ id: UUID?) {
@@ -1474,6 +1544,10 @@ final class VideoStudioModel {
         recipe = restored
         if let selectedClipID, !recipe.clips.contains(where: { $0.id == selectedClipID }) {
             self.selectedClipID = nil
+        }
+        // A clip the step took away leaves the group (FS-12.11 §8).
+        if isSelectingClips {
+            selectedClipIDs = VideoClipGroupEditing.ordered(selectedClipIDs, in: recipe)
         }
         if let selectedOverlayID, !recipe.overlays.contains(where: { $0.id == selectedOverlayID }) {
             self.selectedOverlayID = nil

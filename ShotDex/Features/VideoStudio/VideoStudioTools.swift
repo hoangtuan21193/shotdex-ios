@@ -163,6 +163,9 @@ enum VideoItemKind: CaseIterable, Equatable {
 /// One cell of a selected item's command row (FS-12.04b §3–4).
 enum VideoItemCommand: String, CaseIterable, Identifiable {
     case split, trim, speed, volume, replace, freeze, duplicate, look, rotate
+    /// A multi-select group's (FS-12.11 §5): Motion for every clip in it,
+    /// and Move without dragging.
+    case motion, move
     case edit, font, color, style, align, animate
     case beats, ducking, addTrack
     case delete
@@ -174,8 +177,8 @@ enum VideoItemCommand: String, CaseIterable, Identifiable {
     /// command does its thing once and never lights.
     var isSection: Bool {
         switch self {
-        case .trim, .speed, .volume, .look, .edit, .font, .color, .style, .align, .animate, .beats, .ducking: true
-        case .split, .replace, .freeze, .duplicate, .rotate, .addTrack, .delete: false
+        case .trim, .speed, .volume, .look, .motion, .edit, .font, .color, .style, .align, .animate, .beats, .ducking: true
+        case .split, .replace, .freeze, .duplicate, .rotate, .move, .addTrack, .delete: false
         }
     }
 
@@ -192,6 +195,8 @@ enum VideoItemCommand: String, CaseIterable, Identifiable {
         case .duplicate: LocalizedStringKey(VideoStudioCopy.duplicate)
         case .look: LocalizedStringKey(VideoStudioCopy.look)
         case .rotate: "Rotate"
+        case .motion: LocalizedStringKey(VideoStudioCopy.motion)
+        case .move: LocalizedStringKey(VideoStudioCopy.move)
         case .edit: "Edit"
         case .font: "Font"
         case .color: "Color"
@@ -216,6 +221,8 @@ enum VideoItemCommand: String, CaseIterable, Identifiable {
         case .duplicate: "plus.square.on.square"
         case .look: "camera.filters"
         case .rotate: "rotate.right"
+        case .motion: "wand.and.rays"
+        case .move: "arrow.left.arrow.right"
         case .edit: "character.cursor.ibeam"
         case .font: "textformat.alt"
         case .color: "paintpalette"
@@ -253,6 +260,13 @@ enum VideoItemCommand: String, CaseIterable, Identifiable {
 }
 
 extension VideoItemCommand {
+    /// A multi-select group's row (FS-12.11 §5): Speed · Volume · Look ·
+    /// Motion · Move · Duplicate · Delete. A group with no video has no
+    /// Speed and no Volume — hidden, not dimmed (FS-12.04b §3).
+    static func groupCommands(hasVideo: Bool) -> [VideoItemCommand] {
+        (hasVideo ? [.speed, .volume] : []) + [.look, .motion, .move, .duplicate, .delete]
+    }
+
     /// How a window lays the row out: one scrolling row everywhere — the
     /// Duo's 264pt column included — never folded into a grid
     /// (FS-12.04b §1).

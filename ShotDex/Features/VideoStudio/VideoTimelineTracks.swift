@@ -260,6 +260,9 @@ private struct ClipBand: View {
     let reorderShift: CGFloat
 
     private var isSelected: Bool { model.selectedClipID == clip.id }
+    /// In the multi-select group (FS-12.11 §3): a 2pt ring and a ✓ badge,
+    /// no edge handles or fade grips — those edit one clip.
+    private var isInGroup: Bool { model.selectedClipIDs.contains(clip.id) }
     private var width: CGFloat { max(16, CGFloat(placement.duration) * pps) }
 
     var body: some View {
@@ -277,10 +280,11 @@ private struct ClipBand: View {
         .overlay {
             RoundedRectangle(cornerRadius: VideoStudioMetrics.trackRadius, style: .continuous)
                 .strokeBorder(
-                    isSelected ? EditorTheme.timelineSelection : EditorTheme.trackBorder,
-                    lineWidth: isSelected ? 2.5 : 1
+                    isSelected || isInGroup ? EditorTheme.timelineSelection : EditorTheme.trackBorder,
+                    lineWidth: isSelected ? 2.5 : (isInGroup ? VideoStudioMetrics.groupRing : 1)
                 )
         }
+        .overlay(alignment: .topTrailing) { groupBadge }
         .frame(width: width, height: lanes.clipCell)
         // Everything that is hit-tested goes on the clip's own frame,
         // *before* it is moved into place: a modifier added after `.offset`
@@ -298,11 +302,29 @@ private struct ClipBand: View {
         .overlay(fadeZones)
         .accessibilityElement()
         .accessibilityLabel(accessibilityLabel)
-        .accessibilityAddTraits(isSelected ? [.isSelected, .isButton] : .isButton)
+        .accessibilityAddTraits(isSelected || isInGroup ? [.isSelected, .isButton] : .isButton)
         .offset(x: CGFloat(placement.start) * pps + reorderShift)
         .scaleEffect(reorderShift != 0 ? 1.05 : 1)
         .zIndex(reorderShift != 0 ? 3 : 0)
         .shadow(color: reorderShift != 0 ? .black.opacity(0.5) : .clear, radius: 8)
+    }
+
+    /// The ✓ of a clip in the group: a 19pt disc in the selection colour,
+    /// a dark tick, 5 in from the top and trailing edges.
+    @ViewBuilder
+    private var groupBadge: some View {
+        if isInGroup {
+            Circle()
+                .fill(EditorTheme.timelineSelection)
+                .frame(width: VideoStudioMetrics.groupBadge, height: VideoStudioMetrics.groupBadge)
+                .overlay {
+                    Image(systemName: "checkmark")
+                        .font(.system(size: 9.5, weight: .heavy))
+                        .foregroundStyle(EditorTheme.timelineSelectionInk)
+                }
+                .padding(VideoStudioMetrics.groupBadgeInset)
+                .accessibilityHidden(true)
+        }
     }
 
     private var durationBadge: some View {

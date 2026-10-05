@@ -453,7 +453,7 @@ struct VideoStudioSheetHost: View {
             case .clip: model.duplicateSelectedClip()
             case .text: model.duplicateSelectedOverlay()
             case .music: model.duplicateSelectedMusic()
-            case .none: break
+            case .clips, .none: break
             }
         case .rotate:
             model.pushUndo()
@@ -465,7 +465,7 @@ struct VideoStudioSheetHost: View {
             case .clip: if let id = model.selectedClipID { model.deleteClip(id) }
             case .text: model.deleteSelectedOverlay()
             case .music: if let id = model.selectedMusicID { model.removeMusicTrack(id) }
-            case .none: break
+            case .clips, .none: break
             }
         default:
             break
@@ -512,6 +512,7 @@ struct VideoStudioSheetHost: View {
             }
         case .text: (model.selectedOverlay?.kind == .image ? "photo" : "textformat", true)
         case .music: ("music.note", true)
+        case .clips: ("square.stack", true)
         case .none: (model.activeToolPanel?.systemImage ?? "slider.horizontal.3", false)
         }
     }
@@ -528,13 +529,14 @@ struct VideoStudioSheetHost: View {
             ? String(localized: "Sticker")
             : (model.selectedOverlay?.text.isEmpty == false ? model.selectedOverlay!.text : String(localized: "Text"))
         case .music: model.selectedMusicTrack?.displayName ?? String(localized: "Music")
+        case .clips: model.selectionTitle?.name ?? ""
         case .none: model.activeToolPanel?.title ?? String(localized: "Project")
         }
     }
 
     private var subtitleText: String? {
         switch model.inspectorTarget {
-        case .clip:
+        case .clip, .clips:
             // "6.2s · video": the length, and what kind of clip it is.
             return model.selectionTitle?.detail
         case .text: return nil
@@ -550,7 +552,7 @@ struct VideoStudioSheetHost: View {
     @ViewBuilder
     private var titleButtons: some View {
         switch model.inspectorTarget {
-        case .clip, .text, .music:
+        case .clip, .clips, .text, .music:
             EmptyView()
         case .none:
             switch model.activeToolPanel {
@@ -565,6 +567,7 @@ struct VideoStudioSheetHost: View {
     private var paramZone: some View {
         switch model.inspectorTarget {
         case .clip: clipParams
+        case .clips: groupParams
         case .text: textParams
         case .music: musicParams
         case .none: globalParams
@@ -758,6 +761,12 @@ struct VideoStudioSheetHost: View {
             set: { model.setPhotoDuration($0, for: clip.id) },
             reset: { model.pushUndo(); model.setPhotoDuration(VideoClip.defaultPhotoDuration, for: clip.id) }
         )
+    }
+
+    /// A multi-select group's controls (FS-12.11 §5), under its row.
+    @ViewBuilder
+    private var groupParams: some View {
+        EmptyView()
     }
 
     @ViewBuilder

@@ -117,6 +117,7 @@ struct VideoTimelineView: View {
             .overlay(alignment: .topLeading) {
                 playhead.offset(x: VideoStudioMetrics.playheadX(screenWidth: screenWidth, gutter: lanes.gutter) - 1)
             }
+            .overlay(alignment: .topLeading) { groupPill }
             .onAppear {
                 if !hasAppliedWindowZoom {
                     hasAppliedWindowZoom = true
@@ -207,10 +208,46 @@ struct VideoTimelineView: View {
     /// The lane the selection sits in, so its gutter icon lights up.
     private var activeLane: VideoTimelineLane? {
         switch model.inspectorTarget {
-        case .clip: .video
+        case .clip, .clips: .video
         case .text: model.selectedOverlayID.flatMap { model.overlayLaneAssignment[$0] }.map(VideoTimelineLane.overlay)
         case .music: model.selectedMusicID.flatMap { model.musicLaneAssignment[$0] }.map(VideoTimelineLane.music)
         case .none: nil
+        }
+    }
+
+    // MARK: Multi-select pill (FS-12.11 §3)
+
+    /// "✓ 3 selected 14.2s" at the head of the lanes while a group is
+    /// open; out of the way while the group is being dragged.
+    @ViewBuilder
+    private var groupPill: some View {
+        let isDragging: Bool = {
+            guard let activeDrag, case .clipReorder = activeDrag.kind else { return false }
+            return true
+        }()
+        if model.isSelectingClips, !isDragging {
+            let summary = model.groupSummary
+            let pill = VideoStudioMetrics.groupPill(desk: lanes.gutterStyle == .headers)
+            HStack(spacing: 6) {
+                Image(systemName: "checkmark")
+                    .font(.system(size: 10, weight: .heavy))
+                Text(VideoStudioCopy.selectedCount(summary.count))
+                    .font(.system(size: 11, weight: .bold))
+                Text(String(format: "%.1fs", summary.seconds))
+                    .font(.system(size: 11, weight: .semibold, design: .monospaced))
+                    .opacity(0.8)
+                Spacer(minLength: 0)
+            }
+            .lineLimit(1)
+            .foregroundStyle(EditorTheme.timelineSelectionInk)
+            .padding(.horizontal, 10)
+            .frame(width: pill.size.width, height: pill.size.height)
+            .background(Capsule().fill(EditorTheme.timelineSelection))
+            .shadow(color: .black.opacity(0.5), radius: 4, y: 2)
+            .offset(x: lanes.gutter + pill.inset, y: pill.top)
+            .allowsHitTesting(false)
+            .accessibilityElement(children: .combine)
+            .accessibilityIdentifier("groupPill")
         }
     }
 
@@ -343,11 +380,20 @@ struct VideoTimelineView: View {
         case .cancelled:
             model.clipPressGate.ended()
             activeDrag = nil
-        case .pressed:
-            // Held in place and let go (FS-12.11 §4): under 0.5 s that is
-            // nothing at all — no selection, no move, no step.
+        case .pressed(let outcome):
+            // Held in place and let go (FS-12.11 §4): half a second or more
+            // selects the clip into a group; under that it is nothing at
+            // all — no selection, no move, no step.
             model.clipPressGate.ended()
             activeDrag = nil
+            if outcome == .enterSelection, case .clipReorder(let id) = kind {
+                if !model.isSelectingClips {
+                    model.enterClipSelection(id)
+                } else if !model.selectedClipIDs.contains(id) {
+                    model.toggleGroupClip(id)
+                }
+                UISelectionFeedbackGenerator().selectionChanged()
+            }
         }
     }
 

@@ -451,7 +451,14 @@ struct VideoStudioScreen: View {
         // A clip's Look block stands 340 too, over its ✕ · name · ✓ footer
         // (board F5_P_ClipLook).
         let showsClipLook = model.inspectorTarget == .clip && model.activeItemCommand == .look
-        let contentHeight = showsLookTool || showsClipLook ? VideoStudioMetrics.lookSheetHeight : VideoStudioMetrics.sheetHeight
+        // A multi-select group (FS-12.11 §3, board F1_P_MultiSelect): a 260
+        // panel slides over the lower lanes and nothing lifts — the timeline
+        // keeps its whole height, so the clips above the panel can still be
+        // tapped into the group.
+        let showsGroup = model.inspectorTarget == .clips
+        let contentHeight = showsLookTool || showsClipLook
+            ? VideoStudioMetrics.lookSheetHeight
+            : (showsGroup ? VideoStudioMetrics.groupSheetHeight : VideoStudioMetrics.sheetHeight)
         let panelHeight = showsLookTool
             ? VideoStudioMetrics.lookSheetHeight
             : contentHeight + proxy.safeAreaInsets.bottom
@@ -459,11 +466,36 @@ struct VideoStudioScreen: View {
         let lanes = VideoStudioMetrics.Lanes.for(.phone)
         // The reader sits inside the safe area while the stack below ignores
         // it, so the stack's real height is the reader's plus both insets.
-        let layout = VideoStudioMetrics.stackLayout(
-            screen: CGSize(
-                width: proxy.size.width,
-                height: proxy.size.height + proxy.safeAreaInsets.top + proxy.safeAreaInsets.bottom
+        let screen = CGSize(
+            width: proxy.size.width,
+            height: proxy.size.height + proxy.safeAreaInsets.top + proxy.safeAreaInsets.bottom
+        )
+        let idleLayout = VideoStudioMetrics.stackLayout(
+            screen: screen,
+            bandHeight: bandHeight,
+            bottomInset: proxy.safeAreaInsets.bottom,
+            canvas: model.recipe.canvasSize(),
+            presentsSheet: false,
+            timelineContentHeight: lanes.timelineContentHeight(
+                overlayLanes: max(1, model.overlayLaneCount),
+                musicLanes: max(1, model.musicLaneCount)
             ),
+            showsBottomBar: false,
+            deskChromeHeight: VideoStudioMetrics.compactTransportHeight
+        )
+        // The group's panel lifts the stack only as far as keeps the video
+        // lane clear of it: none on a 16:9 project, where the lane already
+        // stands above y 530; a taller frame gives up what it must.
+        let groupLift = showsGroup
+            ? VideoStudioMetrics.groupPanelLift(
+                timelineTop: bandHeight + idleLayout.preview + VideoStudioMetrics.compactTransportHeight + VideoStudioMetrics.previewTimelineGap,
+                videoLaneBottom: lanes.topPadding + lanes.ruler + lanes.rulerGap
+                    + lanes.videoLaneTop(overlayLanes: max(1, model.overlayLaneCount)) + lanes.video,
+                panelTop: screen.height - panelHeight
+            )
+            : 0
+        let layout = showsGroup && groupLift == 0 ? idleLayout : VideoStudioMetrics.stackLayout(
+            screen: screen,
             bandHeight: bandHeight,
             bottomInset: proxy.safeAreaInsets.bottom,
             canvas: model.recipe.canvasSize(),
@@ -479,9 +511,9 @@ struct VideoStudioScreen: View {
             showsBottomBar: false,
             deskChromeHeight: VideoStudioMetrics.compactTransportHeight,
             presentsSessionFooter: showsSessionFooter,
-            sheetHeight: showsLookTool
-                ? VideoStudioMetrics.lookSheetHeight + VideoStudioMetrics.toolbarHeight
-                : contentHeight
+            sheetHeight: showsGroup
+                ? groupLift
+                : (showsLookTool ? VideoStudioMetrics.lookSheetHeight + VideoStudioMetrics.toolbarHeight : contentHeight)
         )
         return ZStack(alignment: .bottom) {
             VStack(spacing: 0) {

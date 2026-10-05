@@ -36,7 +36,7 @@ struct VideoStudioDuoCoverRail: View {
                     .allowsHitTesting(!toolsInert)
                     .offset(x: parts.tools[index].minX - railX, y: parts.tools[index].minY)
             }
-            if let title = model.sessionFooterTitle {
+            if let title = model.compactSessionFooterTitle {
                 VStack(spacing: 2) {
                     Text(title.name)
                         .font(.system(size: 11, weight: .semibold))

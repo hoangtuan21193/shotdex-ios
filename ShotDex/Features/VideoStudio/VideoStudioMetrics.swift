@@ -292,6 +292,30 @@ enum VideoStudioMetrics {
     /// tall at y 450, standing over the tool row rather than covering it,
     /// so Look stays lit under it.
     static let lookSheetHeight: CGFloat = 340
+
+    // MARK: Multi-select (FS-12.11 §3)
+
+    /// The phone's group panel: 260 over the lower lanes, the timeline
+    /// left whole underneath so more clips can be tapped above it.
+    static let groupSheetHeight: CGFloat = 260
+    /// The ring of a clip in the group, and its ✓ badge 5 in from the top
+    /// and trailing edges.
+    static let groupRing: CGFloat = 2
+    static let groupBadge: CGFloat = 19
+    static let groupBadgeInset: CGFloat = 5
+
+    /// How far the phone's stack lifts under the group panel: just enough
+    /// for the video lane to clear the panel's top by 8 — zero whenever it
+    /// already does, which keeps the 16:9 board's frame at its 226.
+    static func groupPanelLift(timelineTop: CGFloat, videoLaneBottom: CGFloat, panelTop: CGFloat) -> CGFloat {
+        max(0, timelineTop + videoLaneBottom + 8 - panelTop)
+    }
+    /// The pill at the head of the lanes: 190×22, 6 past the gutter and 5
+    /// under the timeline's top (phone, Duo); 154×26 at the ruler's head on
+    /// the iPad (x 212).
+    static func groupPill(desk: Bool) -> (size: CGSize, inset: CGFloat, top: CGFloat) {
+        desk ? (CGSize(width: 154, height: 26), 4, 1) : (CGSize(width: 190, height: 22), 6, 5)
+    }
     /// The iPad's Video Settings popover (FS-12.10 §3, Mac-style board
     /// ES_IL_ExportSettings: 400×548).
     static let videoSettingsPopoverSize = CGSize(width: 400, height: 548)

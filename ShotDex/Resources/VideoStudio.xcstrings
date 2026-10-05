@@ -1,6 +1,10 @@
 {
   "sourceLanguage": "en",
   "strings": {
+    "%@ + %@": {
+      "comment": "Video Studio multi-select: the kinds in the group — 2 videos + 1 photo",
+      "extractionState": "manual"
+    },
     "%@ is missing. Import it again, then pick it in LUTs.": {
       "comment": "Video Studio Look panel: the chosen look's LUT file was deleted — e.g. Kodak 2383 is missing",
       "extractionState": "manual"
@@ -12,6 +16,30 @@
     "%@, unavailable": {
       "comment": "Video Studio Video Settings: VoiceOver name of a dimmed choice, e.g. 4K, unavailable",
       "extractionState": "manual"
+    },
+    "%lld Clips": {
+      "comment": "Video Studio multi-select: the footer's name for the selected clips — 3 Clips (plural)",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld Clip"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld Clips"
+                }
+              }
+            }
+          }
+        }
+      }
     },
     "%lld clips": {
       "comment": "Video Projects: how many clips a video project has (plural)",
@@ -54,6 +82,30 @@
                 "stringUnit": {
                   "state": "translated",
                   "value": "%lld clips are waiting for iCloud"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "%lld clips selected": {
+      "comment": "Video Studio iPad multi-select: under the frame, at the head of the play row — how many clips are selected (plural)",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld clip selected"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld clips selected"
                 }
               }
             }
@@ -113,9 +165,81 @@
         }
       }
     },
+    "%lld photos": {
+      "comment": "Video Studio multi-select: how many of the selected clips are stills — 1 photo (plural)",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld photo"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld photos"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "%lld selected": {
+      "comment": "Video Studio multi-select: the pill over the timeline — how many clips are selected (plural)",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld selected"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld selected"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "%lld selected · Add puts them at %@": {
       "comment": "Video Studio Media panel: under its name while selecting — how many are picked and the playhead time Add inserts them at",
       "extractionState": "manual"
+    },
+    "%lld videos": {
+      "comment": "Video Studio multi-select: how many of the selected clips are videos — 2 videos (plural)",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld video"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld videos"
+                }
+              }
+            }
+          }
+        }
+      }
     },
     "4K needs 4K clips — %lld of your %lld clips are %@.": {
       "comment": "Video Studio Video Settings: why 4K is dimmed — how many clips fall short, and the resolution they all are",
@@ -475,6 +599,10 @@
     },
     "Motion": {
       "comment": "Video Studio clip panel: header over the clip's motion effects — zoom, pan, shake",
+      "extractionState": "manual"
+    },
+    "Move": {
+      "comment": "Video Studio multi-select: command that moves the selected clips to another place without dragging",
       "extractionState": "manual"
     },
     "Move the playhead into this clip.": {
