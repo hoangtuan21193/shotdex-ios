@@ -86,6 +86,31 @@ import Testing
         #expect(total == 250)
     }
 
+    /// AC-6: a first read of 38 files is paused after 12; the app is gone
+    /// (a fresh indexer, as after a relaunch) and Resume reads exactly the
+    /// 26 left — none of the first 12 again — for 38 photos in all.
+    @Test func resumeAfterRelaunch() throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent("Resume-\(UUID().uuidString)", isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        let jpeg = try MetadataFixture.encode(.jpeg, options: MetadataFixture.Options())
+        for n in 0..<38 { try jpeg.write(to: root.appendingPathComponent(String(format: "DSC%05d.JPG", n))) }
+        let database = try AppDatabase.makeEmpty()
+        let sourceId = try SourceStore(database: database).addFolder(name: "Resume", bookmark: Data(), includesSubfolders: true, pairsRawAndJpeg: true)
+
+        var asked = 0
+        let first = try FolderSourceIndexer(database: database, composer: Self.composer).index(
+            sourceId: sourceId, root: root, includesSubfolders: true, pairsRawAndJpeg: true,
+            shouldContinue: { asked += 1; return asked <= 12 })
+        #expect(first == FolderSourceIndexer.Summary(photos: 12, unchanged: 0, paused: true))
+
+        let resumed = try FolderSourceIndexer(database: database, composer: Self.composer).index(
+            sourceId: sourceId, root: root, includesSubfolders: true, pairsRawAndJpeg: true)
+        #expect(resumed == FolderSourceIndexer.Summary(photos: 26, unchanged: 12, paused: false))
+        let photos = try database.reader.read { db in try Int.fetchOne(db, sql: "SELECT COUNT(*) FROM photo_copies WHERE sourceId = ?", arguments: [sourceId]) }
+        #expect(photos == 38)
+    }
+
     /// Path → SHA-256 of every file under `root`, hidden ones included.
     static func fingerprint(_ root: URL) throws -> [String: String] {
         var out: [String: String] = [:]

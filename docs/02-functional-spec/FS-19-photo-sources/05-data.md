@@ -39,7 +39,7 @@ nằm ở sidecar và ở bảng riêng khoá theo id đó, **không bao giờ**
 | **Ảnh** | id · lúc tạo · **lúc thành mồ côi** (trống khi còn bản sao) | danh tính; mọi lượt dọn neo vào đây |
 | **Bản sao** | id bền · id ảnh · nguồn · loại · id PhotoKit **hoặc** đường dẫn tương đối chuẩn hoá · kích thước · ngày sửa · file ghép cặp · dấu sidecar · online · **ẩn** · lần thấy cuối | kết quả quét |
 | **Hash** | bản sao · thuật toán + phiên bản · hash nhanh · hash đầy đủ (có thể trống) · lúc băm | kết quả quét đắt tiền |
-| **Nguồn** | loại · tên · bookmark · id ổ · connection · thư mục con · ghép cặp · khi ổ rút · trạng thái · điểm chạy tiếp | người dùng tạo |
+| **Nguồn** | loại · tên · bookmark · id ổ · connection · thư mục con (`all`/`top`) · ghép cặp · khi ổ rút · trạng thái · điểm chạy tiếp (thư mục; lượt đọc thư mục không cần — mỗi file ghi riêng một transaction, đọc lại bỏ qua file đã có theo đường dẫn + kích thước + ngày sửa) | người dùng tạo |
 | **Dấu ảnh** | id ảnh · sao thật · favorite · title · caption · lúc đổi **từng trường**; keyword một dòng mỗi (ảnh, keyword) | dữ liệu người dùng |
 | **Recipe** | id ảnh · recipe · lúc đổi | dữ liệu người dùng |
 | **Dấu chờ sidecar** | id ảnh · bản sao · lý do · lúc đặt | dữ liệu người dùng |

@@ -13,10 +13,16 @@ struct FolderSourceIndexer: Sendable {
     struct Summary: Equatable, Sendable {
         var photos = 0
         var unchanged = 0
+        /// Pause stopped the read before the end (FS-19.01 §4).
+        var paused = false
     }
 
+    /// `shouldContinue` is asked before each file; false pauses the read.
+    /// Every file is recorded in its own transaction, so a pause, a quit or a
+    /// crash keeps what was read, and the next read skips it by path, size
+    /// and date — Resume, even after a relaunch, reads only what is left.
     func index(sourceId: String, root: URL, includesSubfolders: Bool, pairsRawAndJpeg: Bool,
-               now: Date = Date()) throws -> Summary {
+               now: Date = Date(), shouldContinue: () -> Bool = { true }) throws -> Summary {
         let files = FolderEnumeration.entries(in: root, includeSubfolders: includesSubfolders).filter { !$0.isSidecar }
         let units = PairingRule.units(files, pairs: pairsRawAndJpeg,
                                       name: { ($0.relativePath as NSString).lastPathComponent },
@@ -25,6 +31,10 @@ struct FolderSourceIndexer: Sendable {
         let stamp = Int(now.timeIntervalSince1970)
         for unit in units {
             try Task.checkCancellation()
+            guard shouldContinue() else {
+                summary.paused = true
+                return summary
+            }
             let file = unit.primary
             let key = Self.pathKey(file.relativePath)
             let modified = file.modified.map { Int($0.timeIntervalSince1970) }
