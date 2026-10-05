@@ -3,8 +3,9 @@ import Testing
 @testable import ShotDex
 import ShotDexKit
 
-/// FS-03.07b §3 / FS-03.07c AC-1: Export… sits under Resize, and the sheet
-/// remembers what the spec says — never Metadata, never Version.
+/// FS-03.07b §3, §3a / FS-03.07c AC-1, AC-16: Export… sits under Resize,
+/// the sheet remembers what the spec says — never Metadata, never Version —
+/// and Size starts at Original.
 @Suite @MainActor struct FileExportSettingsTests {
     static let client = ResizePreset(name: "Client 3000", kind: .longEdge, longEdge: 3_000, quality: 0.9, format: .jpeg)
 
@@ -66,6 +67,31 @@ import ShotDexKit
         let loaded = FileExportSettingsStore(defaults: defaults).load()
         #expect(loaded.mode == .currentVersion)
         #expect(loaded.dateFolders)
+    }
+
+    /// AC-16: a fresh install opens at Size Original, the Resize presets in
+    /// Resize's order after it; a choice is remembered; Original fills the
+    /// gap a deleted preset leaves.
+    @Test func sizeStartsAtOriginal() throws {
+        let defaults = try defaults()
+        let first = model(defaults)
+        #expect(first.preset.id == ResizePreset.original.id)
+        #expect(first.preset.name == "Original")
+        #expect(first.presets.map(\.name) == ["Original", "4K", "2048 px", "1080 px", "Client 3000"])
+        #expect(first.preset.kind == .original)
+
+        first.choosePreset(ResizePreset.twoK.id)
+        #expect(model(defaults).preset.name == "2048 px")
+    }
+
+    @Test func deletedPresetFallsBackToOriginal() throws {
+        let defaults = try defaults()
+        model(defaults).choosePreset(Self.client.id)
+        let withoutIt = FileExportModel(
+            assetIds: ["a"], selection: .init(photoCount: 1), presets: ResizePreset.builtIns,
+            settingsStore: FileExportSettingsStore(defaults: defaults)
+        )
+        #expect(withoutIt.preset.id == ResizePreset.original.id)
     }
 
     /// AC-1: Export… is right under Resize in the album's ⋯, with its glyph;
