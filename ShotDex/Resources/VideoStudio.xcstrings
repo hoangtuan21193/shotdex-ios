@@ -181,6 +181,10 @@
       "comment": "Video Studio: the music command that marks a song's beats",
       "extractionState": "manual"
     },
+    "Before and After": {
+      "comment": "Video Studio: compares the clips with and without the look",
+      "extractionState": "manual"
+    },
     "Black": {
       "comment": "Video Studio Video Settings: the black background swatch",
       "extractionState": "manual"
@@ -203,6 +207,10 @@
     },
     "Cancel Export": {
       "comment": "Video Studio Export: stops the export in progress",
+      "extractionState": "manual"
+    },
+    "Change Marker Color": {
+      "comment": "Video Studio transport: cycles the color of the marker at the playhead",
       "extractionState": "manual"
     },
     "Changes apply right away — Export uses them.": {
@@ -243,6 +251,10 @@
     },
     "Dehaze": {
       "comment": "Video Studio Look panel: a photo setting skipped on video",
+      "extractionState": "manual"
+    },
+    "Delete Clip at Playhead": {
+      "comment": "Video Studio transport: removes the clip under the playhead",
       "extractionState": "manual"
     },
     "Delete Draft": {

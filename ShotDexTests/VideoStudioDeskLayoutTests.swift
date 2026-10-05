@@ -129,6 +129,24 @@ struct VideoStudioDeskLayoutTests {
         #expect(dock.cellSide(width: 1032) * 8 + dock.gap * 7 + dock.inset * 2 == 1032)
     }
 
+    /// FS-12.03b AC-3 (contents): the iPad splits the fifteen transport
+    /// controls into the play row (six, Play a 48 disc) and the timeline's
+    /// tool row (five edits, three markers, Fit) — every control in exactly
+    /// one of them, in the groups of §2.
+    @Test func theTwoDeskRowsCarryFifteenControls() {
+        let play = VideoTransportControl.playRow
+        let tools = VideoTransportControl.toolRow
+        #expect(play == [.goToStart, .backFrame, .play, .forwardFrame, .goToEnd, .loop])
+        #expect(tools == [.split, .freeze, .trimStart, .trimEnd, .delete, .previousMarker, .addMarker, .nextMarker, .fit])
+        for control in VideoTransportControl.allCases {
+            #expect((play.contains(control) ? 1 : 0) + (tools.contains(control) ? 1 : 0) == 1)
+        }
+        #expect(VideoTransportControl.allCases.count == 15)
+        // Five 44s, a 48 disc and the 10 before Loop: the board's 278.
+        let group: CGFloat = 5 * VideoStudioDeskGeometry.toolRowHeight + VideoStudioDeskGeometry.playRowHeight + 10
+        #expect(group == VideoStudioDeskGeometry.playGroupWidth, "\(group) vs \(VideoStudioDeskGeometry.playGroupWidth)")
+    }
+
     /// The pool's two segmented rows fit its 320pt panel at 294, 13 in.
     @Test func thePoolsSegmentedRowsAre294() {
         let pool = VideoStudioMetrics.Pool.self
@@ -376,6 +394,27 @@ struct VideoStudioTrackSwitchTests {
         let volumes = model.recipe.musicTracks.map(\.volume)
         #expect(volumes == [0.8, 0.4])
         #expect(!model.canUndo)
+    }
+
+    /// FS-12.03b AC-3 (contents): the transport's Delete removes the clip
+    /// under the playhead, not the selected one — clip 1 selected, playhead
+    /// on clip 2, clip 2 goes and clip 1 stays.
+    @Test func deleteInTheTransportRemovesTheClipUnderThePlayhead() {
+        let model = VideoStudioModelFixture.model()
+        let clip1 = model.recipe.clips[0].id
+        let clip2 = model.recipe.clips[1].id
+        model.selectClip(clip1)
+        model.seek(to: 15)
+        #expect(model.clipIndexUnderPlayhead == 1)
+        #expect(model.canDeleteClipUnderPlayhead)
+        model.deleteClipUnderPlayhead()
+        #expect(model.recipe.clips.count == 2)
+        #expect(!model.recipe.clips.contains { $0.id == clip2 })
+        #expect(model.recipe.clips.contains { $0.id == clip1 })
+        // One clip left: there is nothing Delete may take.
+        model.seek(to: 0)
+        model.deleteClipUnderPlayhead()
+        #expect(!VideoStudioModelFixture.model(clips: VideoStudioModelFixture.videoClips(1)).canDeleteClipUnderPlayhead)
     }
 
     /// FS-12.03b AC-6: Esc ends the session keeping its change (= ✓), and

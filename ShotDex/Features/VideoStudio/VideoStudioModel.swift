@@ -1738,6 +1738,22 @@ final class VideoStudioModel {
         schedulePreviewRebuild()
     }
 
+    /// Whether the transport's Delete can act: a clip is under the playhead,
+    /// it is not the project's last, and the video lane is not locked.
+    var canDeleteClipUnderPlayhead: Bool {
+        recipe.clips.count > 1 && clipIndexUnderPlayhead != nil && !isLaneLocked(.video)
+    }
+
+    /// The transport's Delete (FS-12.03b §2): the clip **under the playhead**,
+    /// whatever is selected — the selected item has its own Delete in its
+    /// command row. A selection still open is kept first (✓), as Split does.
+    func deleteClipUnderPlayhead() {
+        guard canDeleteClipUnderPlayhead, let index = clipIndexUnderPlayhead, index < recipe.clips.count else { return }
+        let id = recipe.clips[index].id
+        if session?.target.isItem == true, selectedClipID != id { endSession() }
+        deleteClip(id)
+    }
+
     /// Throw away everything in the clip under the playhead **before** the
     /// playhead, or everything **after** it.
     ///

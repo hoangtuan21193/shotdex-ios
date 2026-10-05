@@ -33,19 +33,45 @@ struct VideoPlayheadName: View {
     }
 }
 
-/// The transport, between the frame and the timeline: the cut tools that act
-/// on the playhead on the left, the play controls in the middle, the timecode
-/// on the right.
-///
-/// On a phone these live in the contextual panel and the command band, which
-/// is right when there is one column of space. A desk window has a row of it,
-/// and every editor spends that row the same way — because the tools that act
-/// on *where the playhead is* belong between the thing that shows the frame
-/// and the thing that moves it.
-struct VideoTransportBar: View {
+/// The transport's fifteen controls (FS-12.03b §2), in their four groups.
+/// Every row that draws them is built from this list, so no window can
+/// drop one: the Duo's single row, the iPad's play row and tool row.
+enum VideoTransportControl: CaseIterable, Hashable {
+    case split, freeze, trimStart, trimEnd, delete
+    case goToStart, backFrame, play, forwardFrame, goToEnd, loop
+    case previousMarker, addMarker, nextMarker
+    case fit
+
+    enum Group { case edit, play, marker, view }
+
+    var group: Group {
+        switch self {
+        case .split, .freeze, .trimStart, .trimEnd, .delete: .edit
+        case .goToStart, .backFrame, .play, .forwardFrame, .goToEnd, .loop: .play
+        case .previousMarker, .addMarker, .nextMarker: .marker
+        case .fit: .view
+        }
+    }
+
+    static func controls(in group: Group) -> [Self] { allCases.filter { $0.group == group } }
+
+    /// The iPad's play row under the frame: the six play controls (Before
+    /// and After follows them, FS-12.15).
+    static let playRow = controls(in: .play)
+    /// The iPad's tool row over the timeline: the playhead edits, the
+    /// markers, Fit — with the timecode before Fit.
+    static let toolRow = controls(in: .edit) + controls(in: .marker) + controls(in: .view)
+}
+
+/// One transport control, `size` square (44 on the iPad, 36 on the Duo's
+/// inner display). The edit group acts on the clip **under the playhead**,
+/// not the selected item — that is the command row's job (FS-12.03b §2).
+struct VideoTransportButton: View {
     @Bindable var model: VideoStudioModel
-    /// 44 on an iPad, 40 on the Duo's inner display (FS-12.03 §4).
-    var height: CGFloat = VideoStudioMetrics.transportBarHeight
+    let control: VideoTransportControl
+    var size: CGFloat = VideoStudioDeskGeometry.toolRowHeight
+    /// Play's disc: 48 in the iPad's play row, the button's size elsewhere.
+    var playDisc: CGFloat?
 
     /// One frame at the rate the timecode is counted in.
     private var frame: Double { 1.0 / VideoStudioMetrics.timecodeFrameRate }
@@ -56,52 +82,50 @@ struct VideoTransportBar: View {
     private var markerHere: TimedMarker? { model.marker(near: model.currentTime) }
 
     var body: some View {
-        HStack(spacing: 2) {
+        switch control {
+        case .split:
             glyph("scissors", label: Text("Split at Playhead", comment: "Video Studio transport: cuts the clip under the playhead in two")) {
                 model.splitClipUnderPlayhead()
             }
+        case .freeze:
             glyph("snowflake", label: Text("Freeze Frame", comment: "Video Studio transport: holds the frame under the playhead as a still")) {
                 model.freezeUnderPlayhead()
             }
-            // Resolve's Cut page keeps this pair here, to the left of the
-            // transport, for the same reason: the commonest trim is losing a
-            // run-up or a tail, and it should be one tap.
-            glyph(
-                "arrow.left.to.line",
-                label: Text("Trim Start to Playhead", comment: "Video Studio transport: throws away the part of the clip before the playhead")
-            ) {
+        case .trimStart:
+            glyph("arrow.left.to.line", label: Text("Trim Start to Playhead", comment: "Video Studio transport: throws away the part of the clip before the playhead")) {
                 model.trimToPlayhead(.start)
             }
-            glyph(
-                "arrow.right.to.line",
-                label: Text("Trim End to Playhead", comment: "Video Studio transport: throws away the part of the clip after the playhead")
-            ) {
+        case .trimEnd:
+            glyph("arrow.right.to.line", label: Text("Trim End to Playhead", comment: "Video Studio transport: throws away the part of the clip after the playhead")) {
                 model.trimToPlayhead(.end)
             }
+        case .delete:
             glyph(
                 "trash",
-                label: Text("Delete Clip", comment: "Video Studio transport: removes the selected clip"),
-                isEnabled: model.selectedClipID != nil,
+                label: Text(VideoStudioCopy.deleteClipAtPlayhead),
+                isEnabled: model.canDeleteClipUnderPlayhead,
                 isDestructive: true
             ) {
-                if let id = model.selectedClipID { model.deleteClip(id) }
+                model.deleteClipUnderPlayhead()
             }
-
-            Spacer(minLength: 0)
-
-            glyph("backward.end.fill", label: Text("Go to Start", comment: "Video Studio transport")) {
+        case .goToStart:
+            glyph("backward.end", label: Text("Go to Start", comment: "Video Studio transport")) {
                 model.seek(to: 0)
             }
-            glyph("backward.frame.fill", label: Text("Back a Frame", comment: "Video Studio transport")) {
+        case .backFrame:
+            glyph("backward.frame", label: Text("Back a Frame", comment: "Video Studio transport")) {
                 model.seek(to: model.currentTime - frame)
             }
+        case .play:
+            // White 12 %, not accent: accent is Export's alone (FS-12.03b §2).
+            let disc = playDisc ?? size
             Button { model.togglePlayback() } label: {
                 Image(systemName: model.isPlaying ? "pause.fill" : "play.fill")
-                    .font(.system(size: 15, weight: .semibold))
-                    .foregroundStyle(.black)
-                    .frame(width: 44, height: 30)
-                    .background(Capsule().fill(EditorTheme.accent))
-                    .videoHitTarget(drawnHeight: 30)
+                    .font(.system(size: disc * 0.38, weight: .semibold))
+                    .foregroundStyle(.white)
+                    .frame(width: disc, height: disc)
+                    .background(Circle().fill(Color.white.opacity(0.12)))
+                    .contentShape(Circle())
             }
             .buttonStyle(.plain)
             .accessibilityLabel(
@@ -109,12 +133,15 @@ struct VideoTransportBar: View {
                     ? Text("Pause", comment: "Video Studio transport")
                     : Text("Play", comment: "Video Studio transport")
             )
-            glyph("forward.frame.fill", label: Text("Forward a Frame", comment: "Video Studio transport")) {
+        case .forwardFrame:
+            glyph("forward.frame", label: Text("Forward a Frame", comment: "Video Studio transport")) {
                 model.seek(to: model.currentTime + frame)
             }
-            glyph("forward.end.fill", label: Text("Go to End", comment: "Video Studio transport")) {
+        case .goToEnd:
+            glyph("forward.end", label: Text("Go to End", comment: "Video Studio transport")) {
                 model.seek(to: model.totalDuration)
             }
+        case .loop:
             glyph(
                 "repeat",
                 label: Text("Loop Playback", comment: "Video Studio transport: restarts the project when it reaches the end"),
@@ -122,19 +149,16 @@ struct VideoTransportBar: View {
             ) {
                 model.loopsPlayback.toggle()
             }
-
-            Spacer(minLength: 0)
-
-            // Markers, the way Resolve's Cut page has them: drop one where
-            // you are, then step between them.
+        case .previousMarker:
             glyph("chevron.left.2", label: Text("Previous Marker", comment: "Video Studio transport")) {
                 model.seekToMarker(after: false)
             }
+        case .addMarker:
             glyph(
                 markerHere == nil ? "mappin" : "mappin.circle.fill",
                 label: markerHere == nil
                     ? Text("Add Marker", comment: "Video Studio transport: pins a note at the playhead")
-                    : Text("Change Marker Colour", comment: "Video Studio transport: cycles the colour of the marker at the playhead"),
+                    : Text(VideoStudioCopy.changeMarkerColor),
                 isOn: markerHere != nil
             ) {
                 if let marker = markerHere {
@@ -143,36 +167,14 @@ struct VideoTransportBar: View {
                     model.addMarker()
                 }
             }
+        case .nextMarker:
             glyph("chevron.right.2", label: Text("Next Marker", comment: "Video Studio transport")) {
                 model.seekToMarker(after: true)
             }
-
-            Spacer(minLength: 0)
-
-            glyph("rectangle.compress.vertical", label: Text("Fit Timeline to Window", comment: "Video Studio transport: rescales the timeline so the whole project fits")) {
+        case .fit:
+            glyph("arrow.left.and.right", label: Text("Fit Timeline to Window", comment: "Video Studio transport: rescales the timeline so the whole project fits")) {
                 model.fitToWindow()
             }
-            Text(VideoStudioMetrics.timecode(model.currentTime))
-                .font(.system(size: 12, weight: .semibold).monospacedDigit())
-                .foregroundStyle(.white)
-                // The one thing in this row that must never shrink: a
-                // truncated timecode ("00:0…") is worse than no timecode.
-                // The spacers either side give way instead.
-                .fixedSize()
-                .padding(.horizontal, 8)
-                .frame(height: 26)
-                .background(
-                    RoundedRectangle(cornerRadius: VideoStudioMetrics.trackRadius, style: .continuous)
-                        .fill(EditorTheme.trackChip)
-                )
-                .accessibilityLabel(Text("Playhead at \(VideoStudioMetrics.timecode(model.currentTime))", comment: "Video Studio transport: VoiceOver label for the timecode read-out"))
-        }
-        .padding(.horizontal, 8)
-        .frame(height: height)
-        .frame(maxWidth: .infinity)
-        .background(EditorTheme.panelSolid)
-        .overlay(alignment: .top) {
-            Rectangle().fill(EditorTheme.panelDivider).frame(height: 1)
         }
     }
 
@@ -186,15 +188,11 @@ struct VideoTransportBar: View {
     ) -> some View {
         Button(action: action) {
             Image(systemName: systemImage)
-                .font(.system(size: 14, weight: .medium))
-                .foregroundStyle(tint(isEnabled: isEnabled, isOn: isOn, isDestructive: isDestructive))
-                .frame(width: AppTheme.Size.minTouch, height: 30)
-                .background(
-                    RoundedRectangle(cornerRadius: 5, style: .continuous)
-                        .fill(isOn ? EditorTheme.accent.opacity(0.14) : .clear)
-                        .padding(.horizontal, 5)
-                )
-                .videoHitTarget(drawnHeight: 30)
+                .font(.system(size: size * 0.43, weight: .regular))
+                .foregroundStyle(tint(isEnabled: isEnabled, isDestructive: isDestructive))
+                .frame(width: size, height: size)
+                .background(Circle().fill(isOn ? VideoStudioMetrics.openCellFill : .clear))
+                .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .disabled(!isEnabled)
@@ -202,10 +200,155 @@ struct VideoTransportBar: View {
         .accessibilityAddTraits(isOn ? .isSelected : [])
     }
 
-    private func tint(isEnabled: Bool, isOn: Bool, isDestructive: Bool) -> Color {
-        guard isEnabled else { return EditorTheme.dimText }
-        if isOn { return EditorTheme.accent }
+    private func tint(isEnabled: Bool, isDestructive: Bool) -> Color {
+        guard isEnabled else { return Color.white.opacity(0.28) }
         return isDestructive ? EditorTheme.timelineDestructive : .white
+    }
+}
+
+/// `0:08.4 / 0:24.0` — the playhead, then the length dimmed, in mono; one
+/// form on every device (FS-12.03b §2, FS-12.07 §2). Never shrinks: a
+/// truncated timecode is worse than none.
+struct VideoTransportTimecode: View {
+    @Bindable var model: VideoStudioModel
+    var size: CGFloat = 17
+
+    var body: some View {
+        let text = VideoStudioMetrics.compactTransportReadout(playhead: model.currentTime, length: model.totalDuration)
+        return (Text(text.playhead).foregroundStyle(.white)
+            + Text(text.length).foregroundStyle(.white.opacity(0.4)))
+            .font(.system(size: size, weight: .semibold, design: .monospaced))
+            .fixedSize()
+            .accessibilityLabel(Text(
+                "Playhead at \(text.playhead) of \(VideoStudioMetrics.compactTimecode(model.totalDuration))",
+                tableName: VideoStudioCopy.table,
+                comment: "Video Studio transport: VoiceOver label for the phone read-out — playhead, then the project's length"
+            ))
+    }
+}
+
+/// Before and After at the end of the iPad's play row (FS-12.03b §2,
+/// FS-12.15 §4): 44, transparent, white 14 % while it shows the original.
+/// Until the side-by-side compare lands (FS-12.15) it is the press-and-hold
+/// compare the toolbar's Show original also gives.
+struct VideoBeforeAfterButton: View {
+    @Bindable var model: VideoStudioModel
+    var size: CGFloat = VideoStudioDeskGeometry.beforeAfterButton
+
+    var body: some View {
+        let isEnabled = model.hasEdits
+        Image(systemName: "square.split.2x1")
+            .font(.system(size: size * 0.43, weight: .regular))
+            .foregroundStyle(isEnabled ? Color.white : Color.white.opacity(0.28))
+            .frame(width: size, height: size)
+            .background(Circle().fill(model.showsOriginal ? VideoStudioMetrics.openCellFill : .clear))
+            .contentShape(Circle())
+            .gesture(
+                DragGesture(minimumDistance: 0)
+                    .onChanged { _ in
+                        guard isEnabled, !model.showsOriginal else { return }
+                        model.setShowsOriginal(true)
+                    }
+                    .onEnded { _ in model.setShowsOriginal(false) }
+            )
+            .allowsHitTesting(isEnabled)
+            .accessibilityElement()
+            .accessibilityLabel(Text(VideoStudioCopy.beforeAndAfter))
+            .accessibilityHint(Text("Press and hold to see the clips without edits", comment: "Hint for the Video Studio before/after control"))
+            .accessibilityAddTraits(.isButton)
+            .accessibilityAddTraits(model.showsOriginal ? .isSelected : [])
+    }
+}
+
+/// The iPad's play row, under the frame (FS-12.03b §1–2, board IL1_Main):
+/// what the frame shows at its head, the six play controls centred on the
+/// stage, Before and After at the frame's trailing edge.
+struct VideoPlayRow: View {
+    @Bindable var model: VideoStudioModel
+    /// Where the play group's centre falls, in the row's own coordinates.
+    let groupMidX: CGFloat
+
+    var body: some View {
+        ZStack(alignment: .leading) {
+            VideoPlayheadName(model: model)
+            HStack(spacing: 0) {
+                ForEach(VideoTransportControl.playRow, id: \.self) { control in
+                    if control == .loop { Color.clear.frame(width: 10) }
+                    VideoTransportButton(model: model, control: control, playDisc: VideoStudioDeskGeometry.playRowHeight)
+                }
+            }
+            .frame(width: VideoStudioDeskGeometry.playGroupWidth)
+            .position(x: groupMidX, y: VideoStudioDeskGeometry.playRowHeight / 2)
+            HStack {
+                Spacer(minLength: 0)
+                VideoBeforeAfterButton(model: model)
+            }
+        }
+        .frame(height: VideoStudioDeskGeometry.playRowHeight)
+    }
+}
+
+/// The timeline's tool row on the iPad, the window's whole width
+/// (FS-12.03b §2, board IL1_Main): the five playhead edits, a rule, the
+/// three marker controls; on the right the timecode and Fit.
+struct VideoTimelineToolRow: View {
+    @Bindable var model: VideoStudioModel
+
+    var body: some View {
+        HStack(spacing: 2) {
+            ForEach(VideoTransportControl.controls(in: .edit), id: \.self) { control in
+                VideoTransportButton(model: model, control: control)
+            }
+            Rectangle()
+                .fill(Color.white.opacity(0.14))
+                .frame(width: 1, height: 22)
+                .padding(.horizontal, 8)
+            ForEach(VideoTransportControl.controls(in: .marker), id: \.self) { control in
+                VideoTransportButton(model: model, control: control)
+            }
+            Spacer(minLength: 0)
+            VideoTransportTimecode(model: model)
+                .padding(.trailing, 12)
+            VideoTransportButton(model: model, control: .fit)
+        }
+        .padding(.horizontal, VideoStudioDeskGeometry.toolRowInset)
+        .frame(height: VideoStudioDeskGeometry.toolRowHeight)
+    }
+}
+
+/// The Duo inner display's transport (FS-12.03 §4): the fifteen controls on
+/// one row — edits, play, markers, then Fit and the timecode.
+struct VideoTransportBar: View {
+    @Bindable var model: VideoStudioModel
+    var height: CGFloat = VideoStudioMetrics.transportBarHeight
+    /// Each control's square.
+    var buttonSize: CGFloat = 44
+
+    var body: some View {
+        HStack(spacing: 2) {
+            group(.edit)
+            Spacer(minLength: 0)
+            group(.play)
+            Spacer(minLength: 0)
+            group(.marker)
+            Spacer(minLength: 0)
+            VideoTransportButton(model: model, control: .fit, size: buttonSize)
+            VideoTransportTimecode(model: model, size: 12)
+                .padding(.horizontal, 8)
+        }
+        .padding(.horizontal, 8)
+        .frame(height: height)
+        .frame(maxWidth: .infinity)
+        .background(EditorTheme.panelSolid)
+        .overlay(alignment: .top) {
+            Rectangle().fill(EditorTheme.panelDivider).frame(height: 1)
+        }
+    }
+
+    private func group(_ group: VideoTransportControl.Group) -> some View {
+        ForEach(VideoTransportControl.controls(in: group), id: \.self) { control in
+            VideoTransportButton(model: model, control: control, size: buttonSize)
+        }
     }
 }
 
@@ -475,7 +618,7 @@ struct VideoCompactTransportBar: View {
                     Label {
                         markerHere == nil
                             ? Text("Add Marker", comment: "Video Studio transport: pins a note at the playhead")
-                            : Text("Change Marker Colour", comment: "Video Studio transport: cycles the colour of the marker at the playhead")
+                            : Text(VideoStudioCopy.changeMarkerColor)
                     } icon: {
                         Image(systemName: markerHere == nil ? "mappin" : "mappin.circle.fill")
                     }

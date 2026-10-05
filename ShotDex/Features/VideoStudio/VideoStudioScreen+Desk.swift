@@ -83,11 +83,10 @@ extension VideoStudioScreen {
                 .placed(meter)
         }
         if let playRow = frames.playRow {
-            VideoPlayheadName(model: model)
-                .frame(height: playRow.height)
-                .offset(x: playRow.minX, y: playRow.minY)
+            VideoPlayRow(model: model, groupMidX: (frames.playGroupMidX ?? playRow.midX) - playRow.minX)
+                .placed(playRow)
         }
-        VideoTransportBar(model: model)
+        VideoTimelineToolRow(model: model)
             .placed(frames.transport)
         if let overview = frames.overview {
             VideoTimelineOverview(model: model, visibleDuration: timelineVisibleDuration)

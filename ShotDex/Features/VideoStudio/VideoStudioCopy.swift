@@ -32,6 +32,22 @@ enum VideoStudioCopy {
         String(localized: "under playhead", table: table, comment: "Video Studio iPad: after the name of the clip the playhead is over, under the frame — Clip 2 under playhead")
     }
 
+    /// The transport's Delete: the clip under the playhead, not the selected
+    /// item (FS-12.03b §2) — the label says so for VoiceOver.
+    static var deleteClipAtPlayhead: String {
+        String(localized: "Delete Clip at Playhead", table: table, comment: "Video Studio transport: removes the clip under the playhead")
+    }
+
+    /// The marker button while the playhead sits on a marker.
+    static var changeMarkerColor: String {
+        String(localized: "Change Marker Color", table: table, comment: "Video Studio transport: cycles the color of the marker at the playhead")
+    }
+
+    /// The compare button at the end of the iPad's play row (FS-12.15).
+    static var beforeAndAfter: String {
+        String(localized: "Before and After", table: table, comment: "Video Studio: compares the clips with and without the look")
+    }
+
     static var media: String {
         String(localized: "Media", table: table, comment: "Video Studio: the bottom-row tool that adds photos and videos to the timeline")
     }
