@@ -76,7 +76,9 @@ struct UnsupportedRAWGateTests {
         for path in [
             "ShotDex/Features/Library/LibraryScreen.swift", "ShotDex/Features/Albums/AlbumDetailScreen.swift",
             "ShotDex/Features/Albums/SmartAlbumDetailScreen.swift", "ShotDex/Features/Shared/PhotoListScreen.swift",
-            "ShotDex/Features/VideoStudio/VideoStudioScreen.swift",
+            // The door inside the studio is its Media panel (FS-12.09 §2),
+            // which replaced the system picker the screen used to open.
+            "ShotDex/Features/VideoStudio/VideoMediaPanel.swift",
         ] {
             let code = try AssetMetadataCarryOverTests.codeLines(of: path).joined(separator: "\n")
             #expect(code.contains("UnsupportedRAWBatchPrompt.resolve("), "\(path) opens Video Studio without asking")

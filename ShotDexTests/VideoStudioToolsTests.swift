@@ -81,7 +81,11 @@ struct VideoStudioToolPanelTests {
     @Test func theMusicCellOpensTheMusicPanel() {
         #expect(VideoStudioToolbar.panel(for: .music) == .music)
         #expect(VideoStudioToolbar.panel(for: .look) == .look)
-        #expect(VideoStudioToolbar.panel(for: .media) == nil)
+        // Media is the library in the studio's own panel now (FS-12.09 §2),
+        // not the system picker.
+        #expect(VideoStudioToolbar.panel(for: .media) == .media)
+        #expect(VideoStudioToolbar.panel(for: .text) == nil)
+        #expect(VideoStudioToolbar.panel(for: .sticker) == nil)
         let model = VideoStudioModelFixture.model()
         model.toggleToolPanel(.music)
         #expect(model.activeToolPanel == .music)
