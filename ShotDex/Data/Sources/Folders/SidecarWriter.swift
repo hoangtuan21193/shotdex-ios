@@ -11,8 +11,12 @@ struct SidecarWriter: Sendable {
 
     struct Summary: Equatable, Sendable {
         var written = 0
-        /// Copies whose sidecar could not be written (no folder, no permission).
+        /// Copies whose sidecar could not be written (no permission, a full
+        /// disk); each keeps a pending mark.
         var failed = 0
+        /// Copies not written because their source is offline or cannot be
+        /// opened now; each keeps a pending mark.
+        var pending = 0
         /// Photos whose values changed because another app had written their
         /// sidecar — what the app shows of them is out of date.
         var reread: Set<String> = []
@@ -21,11 +25,14 @@ struct SidecarWriter: Sendable {
     func write(photoIds: [String]) throws -> Summary {
         var summary = Summary()
         for photoId in photoIds {
-            let copies = try database.reader.read { db in try Self.onlineFileCopies(db, photoId: photoId) }
+            let copies = try database.reader.read { db in try Self.fileCopies(db, photoId: photoId) }
             var sidecars: [(copyId: String, url: URL)] = []
             for copy in copies {
-                guard let image = fileURL(copy.sourceId, copy.relativePath) else {
-                    summary.failed += 1
+                // A copy on a drive that is not plugged in is written when it
+                // comes back; until then it carries a pending mark (FS-19.02 §7).
+                guard copy.isOnline, let image = fileURL(copy.sourceId, copy.relativePath) else {
+                    try markPending(copy.id, photoId: photoId, reason: copy.isOnline ? .unavailable : .offline)
+                    summary.pending += 1
                     continue
                 }
                 let sidecar = Self.sidecarURL(forImageAt: image, isPaired: copy.isPaired)
@@ -41,14 +48,37 @@ struct SidecarWriter: Sendable {
                     let stamp = SidecarReader.stamp(of: sidecar.url)
                     try database.writer.write { db in
                         try db.execute(sql: "UPDATE photo_copies SET sidecarStamp = ? WHERE id = ?", arguments: [stamp, sidecar.copyId])
+                        try db.execute(sql: "DELETE FROM pending_sidecar WHERE copyId = ?", arguments: [sidecar.copyId])
                     }
                     summary.written += 1
                 } catch {
+                    try markPending(sidecar.copyId, photoId: photoId, reason: .writeFailed)
                     summary.failed += 1
                 }
             }
         }
         return summary
+    }
+
+    /// Why a copy's sidecar waits. The mark is user data (FS-19.05 §3): it
+    /// survives Clear Local Metadata Index and points at the winner after a
+    /// merge.
+    enum PendingReason: String {
+        /// The drive is not plugged in.
+        case offline
+        /// The source's folder cannot be opened now.
+        case unavailable
+        /// The write itself failed.
+        case writeFailed
+    }
+
+    private func markPending(_ copyId: String, photoId: String, reason: PendingReason) throws {
+        try database.writer.write { db in
+            try db.execute(sql: """
+                INSERT INTO pending_sidecar (copyId, photoId, reason, markedAt) VALUES (?, ?, ?, ?)
+                ON CONFLICT(copyId) DO UPDATE SET photoId = excluded.photoId, reason = excluded.reason, markedAt = excluded.markedAt
+                """, arguments: [copyId, photoId, reason.rawValue, Int(Date().timeIntervalSince1970)])
+        }
     }
 
     /// Another app may have written the sidecar since ShotDex last read or
@@ -138,17 +168,21 @@ struct SidecarWriter: Sendable {
         let sourceId: String
         let relativePath: String
         let isPaired: Bool
+        let isOnline: Bool
         let sidecarStamp: String?
     }
 
-    private static func onlineFileCopies(_ db: Database, photoId: String) throws -> [Copy] {
+    /// Every file copy that is still there — online or on a drive that is
+    /// not plugged in. A missing file or a cloud placeholder has no sidecar
+    /// to write.
+    private static func fileCopies(_ db: Database, photoId: String) throws -> [Copy] {
         try Row.fetchAll(db, sql: """
-            SELECT id, sourceId, relativePath, pairedPath, sidecarStamp FROM photo_copies
-            WHERE photoId = ? AND kind = 'file' AND isOnline = 1 AND missingSince IS NULL AND isCloudPlaceholder = 0
+            SELECT id, sourceId, relativePath, pairedPath, isOnline, sidecarStamp FROM photo_copies
+            WHERE photoId = ? AND kind = 'file' AND missingSince IS NULL AND isCloudPlaceholder = 0
             ORDER BY id
             """, arguments: [photoId]).map {
             Copy(id: $0["id"], sourceId: $0["sourceId"], relativePath: $0["relativePath"],
-                 isPaired: ($0["pairedPath"] as String?) != nil, sidecarStamp: $0["sidecarStamp"])
+                 isPaired: ($0["pairedPath"] as String?) != nil, isOnline: $0["isOnline"], sidecarStamp: $0["sidecarStamp"])
         }
     }
 
