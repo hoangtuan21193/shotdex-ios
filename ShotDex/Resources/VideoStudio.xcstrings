@@ -217,6 +217,30 @@
       "comment": "Video Studio Media panel: under its name while selecting — how many are picked and the playhead time Add inserts them at",
       "extractionState": "manual"
     },
+    "%lld selected, %@ seconds": {
+      "comment": "Video Studio multi-select: VoiceOver name of the pill over the timeline — how many clips are selected and how long they run (plural)",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld selected, %@ seconds"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld selected, %@ seconds"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "%lld videos": {
       "comment": "Video Studio multi-select: how many of the selected clips are videos — 2 videos (plural)",
       "extractionState": "manual",
@@ -329,6 +353,10 @@
       "comment": "Video Studio clip Look block: label before This Clip · Selected · All Clips",
       "extractionState": "manual"
     },
+    "Audio": {
+      "comment": "Video Studio iPad clip panel: header over the clips' volume",
+      "extractionState": "manual"
+    },
     "BACKGROUND": {
       "comment": "Video Studio Video Settings: section header over what shows around a fitted clip",
       "extractionState": "manual"
@@ -399,6 +427,10 @@
     },
     "Color": {
       "comment": "Video Studio Video Settings: the background is one color",
+      "extractionState": "manual"
+    },
+    "Commands": {
+      "comment": "Video Studio: VoiceOver name of the selected item's row of commands",
       "extractionState": "manual"
     },
     "Couldn't save your video draft": {
@@ -497,6 +529,14 @@
       "comment": "Video Studio clip panel: header over the clip's fade in and fade out",
       "extractionState": "manual"
     },
+    "Fade in": {
+      "comment": "Video Studio iPad clip panel: the fade-in slider",
+      "extractionState": "manual"
+    },
+    "Fade out": {
+      "comment": "Video Studio iPad clip panel: the fade-out slider",
+      "extractionState": "manual"
+    },
     "Fill": {
       "comment": "Video Studio: the frame label's framing word — clips fill the frame",
       "extractionState": "manual"
@@ -551,6 +591,10 @@
     },
     "Import Look…": {
       "comment": "Video Studio Look panel: brings Lightroom presets, .shotdexlook files and .cube LUTs in from Files",
+      "extractionState": "manual"
+    },
+    "In": {
+      "comment": "Video Studio clip panel: the fade-in slider under FADE",
       "extractionState": "manual"
     },
     "In Video · %lld": {
@@ -715,6 +759,10 @@
     },
     "Original clip audio, whole project": {
       "comment": "Video Studio Music panel: caption under the Video sound slider",
+      "extractionState": "manual"
+    },
+    "Out": {
+      "comment": "Video Studio clip panel: the fade-out slider under FADE",
       "extractionState": "manual"
     },
     "Output": {

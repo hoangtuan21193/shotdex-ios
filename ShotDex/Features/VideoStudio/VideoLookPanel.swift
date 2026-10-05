@@ -13,7 +13,12 @@ import ShotDexKit
 struct VideoLookPanel: View {
     /// The whole video's Look tool, or a selected clip's Look block
     /// (LOOK FOR THIS CLIP, §3), reached from the clip's command row.
-    enum Mode { case wholeVideo, clip }
+    enum Mode {
+        case wholeVideo, clip
+        /// A multi-select group's Look row (FS-12.11 §5): the shelf's tiles
+        /// alone, one scrolling row, writing every clip of the group.
+        case groupRow
+    }
 
     @Bindable var model: VideoStudioModel
     var mode: Mode = .wholeVideo
@@ -27,7 +32,9 @@ struct VideoLookPanel: View {
 
     var body: some View {
         Group {
-            if style.dockColumns {
+            if mode == .groupRow {
+                tiles
+            } else if style.dockColumns {
                 dockBody
             } else {
                 stackBody

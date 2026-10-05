@@ -67,6 +67,11 @@
    "seconds": 16
   },
   {
+   "action": "dump",
+   "name": "F1_DC_MultiSelect",
+   "type": "button"
+  },
+  {
    "action": "tap",
    "label": "Keep Changes"
   },

@@ -771,7 +771,7 @@ struct VideoStudioSheetHost: View {
     @ViewBuilder
     private var groupParams: some View {
         ScrollView(showsIndicators: false) {
-            VideoGroupPanel(model: model, isDesk: isDesk)
+            VideoGroupPanel(model: model, isDesk: isDesk, showsLookTiles: layout != .band)
         }
     }
 

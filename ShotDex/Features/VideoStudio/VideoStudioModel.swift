@@ -1091,6 +1091,8 @@ final class VideoStudioModel {
         deselectAll()
         selectedClipIDs = [id]
         groupAnchor = id
+        // The group's Look tiles write every clip in it (06c's Selected).
+        lookTarget = .selected
         beginSession(.clipGroup)
     }
 

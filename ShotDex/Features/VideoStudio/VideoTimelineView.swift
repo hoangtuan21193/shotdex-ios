@@ -256,7 +256,8 @@ struct VideoTimelineView: View {
             .shadow(color: .black.opacity(0.5), radius: 4, y: 2)
             .offset(x: lanes.gutter + pill.inset, y: pill.top)
             .allowsHitTesting(false)
-            .accessibilityElement(children: .combine)
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel(VideoStudioCopy.groupPillLabel(count: summary.count, seconds: summary.seconds))
             .accessibilityIdentifier("groupPill")
         }
     }

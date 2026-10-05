@@ -1,0 +1,125 @@
+{
+ "steps": [
+  {
+   "action": "launch",
+   "arguments": [
+    "-video.timelineExtraHeight",
+    "0"
+   ]
+  },
+  {
+   "action": "wait",
+   "seconds": 4
+  },
+  {
+   "action": "orientation",
+   "text": "landscape"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "tap",
+   "label": "Select",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "tap",
+   "x": 0.724,
+   "y": 0.209
+  },
+  {
+   "action": "tap",
+   "x": 0.058,
+   "y": 0.295
+  },
+  {
+   "action": "tap",
+   "x": 0.945,
+   "y": 0.209
+  },
+  {
+   "action": "tap",
+   "x": 0.613,
+   "y": 0.209
+  },
+  {
+   "action": "tap",
+   "x": 0.834,
+   "y": 0.209
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "tap",
+   "label": "More selection actions",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "tap",
+   "label": "Create Video"
+  },
+  {
+   "action": "wait",
+   "seconds": 10
+  },
+  {
+   "action": "tap",
+   "x": 0.446,
+   "y": 0.635
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "longPress",
+   "label": "Video clip, from second 3 to 9",
+   "seconds": 0.6
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "tap",
+   "label": "Video clip, from second 9 to 14"
+  },
+  {
+   "action": "tap",
+   "label": "Photo clip, from second 14 to 17"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "tap",
+   "label": "itemCommand.speed"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "dump",
+   "name": "F1_IL_MultiSelect",
+   "text": "snapshot"
+  },
+  {
+   "action": "wait",
+   "seconds": 25
+  }
+ ]
+}

@@ -10,11 +10,25 @@ struct VideoGroupPanel: View {
     /// The iPad's inspector and dock: Title Case section titles, 36pt
     /// segmented chips.
     var isDesk = false
+    /// A column (the iPad's inspector, the Duo's 264): Look is a row of
+    /// tiles. The phone's panel has no height for them: Look is a row that
+    /// opens the look block (board F1_P_MultiSelect).
+    var showsLookTiles = false
 
-    private var inset: CGFloat { isDesk ? 16 : 14 }
-    /// Where the chips start: under the slider's track, past its label.
-    private var chipLead: CGFloat { isDesk ? 96 : 74 }
-    private var chipHeight: CGFloat { isDesk ? 36 : 28 }
+    /// Every board puts the section titles and the line under Speed 16 in.
+    private let inset: CGFloat = 16
+    /// Where the chips start, as the boards draw them: under the iPad's
+    /// slider track — the shared slider's 14pt margin, label column and gap
+    /// (`EditorValueSlider`), 1126 against the board's 1129 — and at 88 on
+    /// the phone (F1_P), 82 in the Duo's 264 column (F1_DI), where the
+    /// shared slider's longer label column would leave the chips no room.
+    /// The Duo's 264 column: smaller chips (board F1_DI_Reorder).
+    private var isColumn: Bool { !isDesk && showsLookTiles }
+
+    private var chipLead: CGFloat {
+        if isDesk { return 14 + EditorLayoutMetrics.editorRowLabelWidth + AppTheme.Spacing.sm }
+        return showsLookTiles ? 82 : 88
+    }
 
     var body: some View {
         let summary = model.groupSummary
@@ -24,7 +38,8 @@ struct VideoGroupPanel: View {
                 case .speed: speedSection(summary)
                 case .volume: volumeSection
                 case .fade: fadeSection
-                case .look: lookRow
+                case .look:
+                    if showsLookTiles { lookTiles } else { lookRow }
                 case .motion: motionSection
                 }
             }
@@ -36,7 +51,9 @@ struct VideoGroupPanel: View {
 
     private func speedSection(_ summary: VideoClipGroupEditing.Summary) -> some View {
         let common = model.groupSpeed
-        return VStack(alignment: .leading, spacing: 6) {
+        // The phone's and the Duo's chips sit right under the slider's row;
+        // the iPad's well 2 below it (F1_P, F1_DI, F1_IL).
+        return VStack(alignment: .leading, spacing: isDesk ? 2 : 0) {
             InspectorSlider(
                 label: String(localized: "Speed", table: VideoStudioCopy.table, comment: "Video Studio clip panel: label of the playback-rate chips"),
                 value: common ?? 1,
@@ -46,27 +63,7 @@ struct VideoGroupPanel: View {
                 set: { model.setGroupSpeed($0) },
                 reset: { model.chooseGroupSpeed(1) }
             )
-            HStack(spacing: 6) {
-                ForEach(VideoClipPanelSections.speedPresets, id: \.self) { speed in
-                    let isOn = common.map { abs($0 - speed) < 0.001 } ?? false
-                    Button {
-                        model.chooseGroupSpeed(speed)
-                    } label: {
-                        Text(Self.speedText(speed))
-                            .font(.system(size: isDesk ? 15 : 12, weight: .semibold).monospacedDigit())
-                            .foregroundStyle(isOn ? Color.black : Color.white)
-                            .padding(.horizontal, 12)
-                            .frame(minWidth: isDesk ? 54 : 34)
-                            .frame(height: chipHeight)
-                            .background(
-                                RoundedRectangle(cornerRadius: isDesk ? 8 : 7, style: .continuous)
-                                    .fill(isOn ? Color.white : Color.white.opacity(0.08))
-                            )
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityAddTraits(isOn ? .isSelected : [])
-                }
-            }
+            speedChips(common)
             .padding(.leading, chipLead)
             if let note = VideoStudioCopy.speedNote(
                 videos: summary.videos,
@@ -86,7 +83,11 @@ struct VideoGroupPanel: View {
 
     /// Only the clips with sound: the speaker mutes the whole group, and a
     /// mix of muted and not draws it on (FS-12.11 §5).
+    @ViewBuilder
     private var volumeSection: some View {
+        if isDesk {
+            sectionHeader(Text("Audio", tableName: VideoStudioCopy.table, comment: "Video Studio iPad clip panel: header over the clips' volume"))
+        }
         MutableVolumeRow(
             isMuted: model.isGroupMuted, volume: model.groupVolume, model: model,
             toggleMute: { model.toggleGroupMuted() },
@@ -104,7 +105,7 @@ struct VideoGroupPanel: View {
             ForEach([VideoStudioModel.ClipEnd.start, .end], id: \.self) { end in
                 let common = model.groupFade(at: end)
                 InspectorSlider(
-                    label: end == .start ? "In" : "Out",
+                    label: Self.fadeLabel(end, isDesk: isDesk),
                     value: common ?? 0, range: 0...top,
                     valueText: common.map { String(format: "%.1fs", $0) } ?? VideoStudioCopy.mixed,
                     model: model,
@@ -147,6 +148,27 @@ struct VideoGroupPanel: View {
         .buttonStyle(.plain)
     }
 
+    /// The iPad's and the Duo's Look: a header over one row of the shelf's
+    /// tiles — 76×68 in the inspector, 46 in the Duo's column — each writing
+    /// every clip of the group.
+    @ViewBuilder
+    private var lookTiles: some View {
+        sectionHeader(Text("Look", tableName: VideoStudioCopy.table, comment: "Video Studio multi-select: header over the look tiles that apply to every selected clip"))
+        VideoLookPanel(model: model, mode: .groupRow)
+            .environment(\.videoLookPanelStyle, groupTileStyle)
+    }
+
+    private var groupTileStyle: VideoLookPanelStyle {
+        var style = isDesk ? VideoLookPanelStyle.iPad : VideoLookPanelStyle.duoInner
+        style.tile = isDesk ? CGSize(width: 76, height: 50) : CGSize(width: 46, height: 46)
+        style.columns = nil
+        style.fillsColumns = false
+        style.tileGap = 8
+        style.tileLabelSize = isDesk ? 13 : 10
+        style.inset = inset
+        return style
+    }
+
     @ViewBuilder
     private var motionSection: some View {
         if isDesk {
@@ -161,6 +183,17 @@ struct VideoGroupPanel: View {
         } else {
             ClipEffectRow(selected: model.groupEffect) { model.setGroupEffect($0) }
                 .padding(.top, 4)
+        }
+    }
+
+    /// "In" / "Out" under the phone's FADE; "Fade in" / "Fade out" in the
+    /// iPad's inspector (board F1_IL_MultiSelect).
+    private static func fadeLabel(_ end: VideoStudioModel.ClipEnd, isDesk: Bool) -> String {
+        switch (end, isDesk) {
+        case (.start, false): String(localized: "In", table: VideoStudioCopy.table, comment: "Video Studio clip panel: the fade-in slider under FADE")
+        case (.end, false): String(localized: "Out", table: VideoStudioCopy.table, comment: "Video Studio clip panel: the fade-out slider under FADE")
+        case (.start, true): String(localized: "Fade in", table: VideoStudioCopy.table, comment: "Video Studio iPad clip panel: the fade-in slider")
+        case (.end, true): String(localized: "Fade out", table: VideoStudioCopy.table, comment: "Video Studio iPad clip panel: the fade-out slider")
         }
     }
 
@@ -182,6 +215,51 @@ struct VideoGroupPanel: View {
                 .padding(.horizontal, inset)
                 .padding(.top, 6)
         }
+    }
+
+    /// 0.5× · 1× · 2× · 4×: content-sized chips 28 tall on the phone and
+    /// the Duo; on the iPad a segmented control, four 56×32 segments in a
+    /// 232×36 well (board F1_IL_MultiSelect).
+    @ViewBuilder
+    private func speedChips(_ common: Double?) -> some View {
+        let presets = VideoClipPanelSections.speedPresets
+        if isDesk {
+            HStack(spacing: 2) {
+                ForEach(presets, id: \.self) { speed in
+                    chip(speed, isOn: common.map { abs($0 - speed) < 0.001 } ?? false)
+                        .frame(width: 56, height: 32)
+                }
+            }
+            .padding(2)
+            .background(RoundedRectangle(cornerRadius: 9, style: .continuous).fill(Color.white.opacity(0.08)))
+        } else {
+            HStack(spacing: 6) {
+                ForEach(presets, id: \.self) { speed in
+                    chip(speed, isOn: common.map { abs($0 - speed) < 0.001 } ?? false)
+                }
+            }
+            .fixedSize()
+        }
+    }
+
+    private func chip(_ speed: Double, isOn: Bool) -> some View {
+        Button {
+            model.chooseGroupSpeed(speed)
+        } label: {
+            Text(Self.speedText(speed))
+                .font(.system(size: isDesk ? 15 : (isColumn ? 11 : 12), weight: .semibold).monospacedDigit())
+                .foregroundStyle(isOn ? Color.black : Color.white)
+                .padding(.horizontal, isDesk ? 0 : (isColumn ? 10 : 12))
+                .frame(minWidth: isDesk ? nil : (isColumn ? 28 : 34), maxWidth: isDesk ? .infinity : nil, maxHeight: isDesk ? .infinity : nil)
+                .frame(height: isDesk ? nil : 28)
+                .background(
+                    RoundedRectangle(cornerRadius: 7, style: .continuous)
+                        .fill(isOn ? Color.white : (isDesk ? Color.clear : Color.white.opacity(0.08)))
+                )
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityAddTraits(isOn ? .isSelected : [])
     }
 
     private static func speedText(_ speed: Double) -> String {

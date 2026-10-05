@@ -22,6 +22,8 @@ struct VideoItemCommandRow: View {
             .padding(.horizontal, inset)
         }
         .frame(height: VideoStudioMetrics.itemCommandCell.height)
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel(Text("Commands", tableName: VideoStudioCopy.table, comment: "Video Studio: VoiceOver name of the selected item's row of commands"))
         .overlay(alignment: .trailing) {
             LinearGradient(
                 colors: [EditorTheme.panelSolid.opacity(0), EditorTheme.panelSolid],

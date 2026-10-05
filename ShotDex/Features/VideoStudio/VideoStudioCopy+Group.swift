@@ -71,4 +71,9 @@ extension VideoStudioCopy {
     static func moveClipsHere(_ count: Int) -> String {
         String(localized: "Move \(count) clips here", table: table, comment: "Video Studio multi-select: the pill over the drop line — where the selected clips will go (plural)")
     }
+
+    /// VoiceOver's reading of the pill: "3 selected, 14.2 seconds".
+    static func groupPillLabel(count: Int, seconds: Double) -> String {
+        String(localized: "\(count) selected, \(String(format: "%.1f", seconds)) seconds", table: table, comment: "Video Studio multi-select: VoiceOver name of the pill over the timeline — how many clips are selected and how long they run (plural)")
+    }
 }
