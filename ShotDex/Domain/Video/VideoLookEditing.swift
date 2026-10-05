@@ -56,9 +56,14 @@ enum VideoLookEditing {
     /// A tile tap, applied to `recipe` (§4). **All Clips** sets the whole
     /// video's look and clears every clip's own — what "all clips" says, so
     /// afterwards every clip wears the tapped look.
+    ///
+    /// **This Clip** and **Selected** write the slot of each clip in
+    /// `clipIDs` — Original included, which then means "no look on this
+    /// clip" — and leave the whole video's look alone.
     static func applying(
         _ source: VideoLook.Source,
         target: VideoLookTarget,
+        clipIDs: [UUID] = [],
         to recipe: VideoProjectRecipe
     ) -> VideoProjectRecipe {
         var result = recipe
@@ -68,9 +73,25 @@ enum VideoLookEditing {
             result.look = look.isOriginal ? nil : look
             for index in result.clips.indices { result.clips[index].look = nil }
         case .thisClip, .selected:
-            break
+            for index in result.clips.indices where clipIDs.contains(result.clips[index].id) {
+                result.clips[index].look = chosen(source, replacing: result.clips[index].look)
+            }
         }
         return result
+    }
+
+    /// The clips a clip target writes: the selected clip, else the one under
+    /// the playhead (This Clip); every selected clip (Selected).
+    static func targetClipIDs(
+        _ target: VideoLookTarget,
+        selectedClipIDs: [UUID],
+        clipUnderPlayhead: UUID?
+    ) -> [UUID] {
+        switch target {
+        case .allClips: []
+        case .thisClip: selectedClipIDs.first.map { [$0] } ?? clipUnderPlayhead.map { [$0] } ?? []
+        case .selected: selectedClipIDs
+        }
     }
 
     /// Amount shows only while there is a look to mix (FS-03.02's rule).

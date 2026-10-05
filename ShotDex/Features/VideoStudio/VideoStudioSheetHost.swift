@@ -161,7 +161,7 @@ struct VideoStudioSheetHost: View {
             Text(VideoStudioCopy.look)
                 .font(.system(size: 14.5, weight: .semibold))
                 .foregroundStyle(.white)
-            Text(VideoStudioCopy.wholeVideo)
+            Text(model.lookSubtitle)
                 .font(.system(size: 11.5))
                 .foregroundStyle(.white.opacity(0.35))
             Spacer(minLength: 0)

@@ -2262,12 +2262,54 @@ final class VideoStudioModel {
     /// A tile tapped in the Look panel: the look goes where Apply To says.
     /// A new look starts at Amount 100; Original is no look.
     func chooseLook(_ source: VideoLook.Source) {
-        let changed = VideoLookEditing.applying(source, target: lookTarget, to: recipe)
+        let changed = VideoLookEditing.applying(source, target: lookTarget, clipIDs: lookTargetClipIDs, to: recipe)
         guard changed != recipe else { return }
         // One tap, one step — All Clips clearing every clip's own look
         // included, so one Undo brings them all back (§7).
         pushUndo()
         recipe = changed
+        markEdited()
+        applyLookTier()
+    }
+
+    /// The clips a clip target writes (FS-12.06c §4).
+    var lookTargetClipIDs: [UUID] {
+        let underPlayhead = clipIndexUnderPlayhead.flatMap { recipe.clips.indices.contains($0) ? recipe.clips[$0].id : nil }
+        return VideoLookEditing.targetClipIDs(
+            lookTarget,
+            selectedClipIDs: selectedClipID.map { [$0] } ?? [],
+            clipUnderPlayhead: underPlayhead
+        )
+    }
+
+    /// The slot the panel shows and Amount changes: the whole video's, or
+    /// the target clip's own (nil when it follows the video).
+    var lookSlot: VideoLook? {
+        guard lookTarget != .allClips else { return recipe.look }
+        guard let id = lookTargetClipIDs.first else { return nil }
+        return recipe.clips.first { $0.id == id }?.look
+    }
+
+    /// The Look title's second line (§4): "Whole video", or the target
+    /// clip's name as the viewer header gives it — "Clip 2", "Photo 2".
+    var lookSubtitle: String {
+        guard lookTarget != .allClips, let id = lookTargetClipIDs.first,
+              let index = recipe.clips.firstIndex(where: { $0.id == id })
+        else { return VideoStudioCopy.wholeVideo }
+        return VideoItemTitle.clipName(recipe.clips[index].kind, index: index)
+    }
+
+    /// Amount of the slot the panel shows — the whole video's or the
+    /// target clips'. No undo push per tick (the slider groups it).
+    func setLookAmount(_ amount: Double) {
+        guard lookTarget != .allClips else {
+            setVideoLookAmount(amount)
+            return
+        }
+        let ids = lookTargetClipIDs
+        for index in recipe.clips.indices where ids.contains(recipe.clips[index].id) {
+            recipe.clips[index].look?.amount = min(max(amount, 0), 1)
+        }
         markEdited()
         applyLookTier()
     }

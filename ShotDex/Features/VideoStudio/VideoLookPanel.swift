@@ -66,7 +66,7 @@ struct VideoLookPanel: View {
                 Color.clear.frame(height: style.afterShelf)
                 tiles
                 Color.clear.frame(height: style.afterTiles)
-                if VideoLookEditing.showsAmount(model.recipe.look), let look = model.recipe.look {
+                if VideoLookEditing.showsAmount(model.lookSlot), let look = model.lookSlot {
                     amountRow(look)
                 }
                 applyTo
@@ -144,7 +144,7 @@ struct VideoLookPanel: View {
     }
 
     private func tile(_ item: VideoLookTile) -> some View {
-        let isSelected = item.isChosen(in: model.recipe.look)
+        let isSelected = item.isChosen(in: model.lookSlot, slotIsClip: model.lookTarget != .allClips)
         let shape = RoundedRectangle(cornerRadius: 8, style: .continuous)
         return Button {
             model.chooseLook(item.look.source)
@@ -194,8 +194,8 @@ struct VideoLookPanel: View {
         InspectorSlider(
             label: VideoStudioCopy.amount, value: look.amount, range: 0...1,
             valueText: "\(Int((look.amount * 100).rounded()))", detent: 1, model: model,
-            set: { model.setVideoLookAmount($0) },
-            reset: { model.pushUndo(); model.setVideoLookAmount(1) }
+            set: { model.setLookAmount($0) },
+            reset: { model.pushUndo(); model.setLookAmount(1) }
         )
         .frame(height: style.amountHeight)
     }
@@ -216,7 +216,7 @@ struct VideoLookPanel: View {
     }
 
     private var caption: some View {
-        let skipped = model.recipe.look.map { VideoLookEditing.skippedOnVideo($0.recipe) } ?? []
+        let skipped = model.lookSlot.map { VideoLookEditing.skippedOnVideo($0.recipe) } ?? []
         return Text(VideoStudioCopy.lookSkippedLine(skipped))
             .font(.system(size: style.captionSize))
             .foregroundStyle(.white.opacity(0.35))
@@ -324,9 +324,10 @@ struct VideoLookTile: Identifiable {
     }
 
     /// Whether the slot holds this tile's look. Original is lit when the
-    /// slot holds nothing.
-    func isChosen(in slot: VideoLook?) -> Bool {
-        guard let slot else { return look.isOriginal }
+    /// whole video's slot holds nothing; a clip with no look of its own
+    /// follows the video and lights no tile.
+    func isChosen(in slot: VideoLook?, slotIsClip: Bool = false) -> Bool {
+        guard let slot else { return look.isOriginal && !slotIsClip }
         return VideoLookEditing.isSameChoice(slot.source, look.source)
     }
 

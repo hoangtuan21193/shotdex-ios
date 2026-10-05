@@ -150,6 +150,46 @@ struct VideoLookEditingTests {
         #expect(model.lookPillText(for: model.recipe.clips[1]) == "Night Teal")
     }
 
+    /// AC-11: the playhead at 7.0 s is in clip 2 (5 s clips); Look with This
+    /// Clip, tap Warm Fjord — only clip 2 has a look, the title's second
+    /// line is "Clip 2", and the whole video's look does not move.
+    @Test func thisClipTargetsClipUnderPlayhead() {
+        let model = VideoStudioModelFixture.model(
+            clips: VideoStudioModelFixture.videoClips(3, seconds: 5),
+            configure: { $0.look = VideoLookSamples.velvia }
+        )
+        model.seek(to: 7)
+        model.toggleToolPanel(.look)
+        #expect(model.lookSubtitle == VideoStudioCopy.wholeVideo)
+        model.lookTarget = .thisClip
+        #expect(model.lookSubtitle == "Clip 2")
+        #expect(model.lookSlot == nil)
+        let warmFjord = VideoLook.Source.myLook(sourceID: UUID(), name: "Warm Fjord", isImported: false, recipe: {
+            var recipe = PhotoEditRecipe.identity
+            recipe.adjustments.warmth = 0.3
+            return recipe
+        }())
+        let steps = model.history.undoEntries.count
+        model.chooseLook(warmFjord)
+        #expect(model.history.undoEntries.count == steps + 1)
+        #expect(model.recipe.clips.map { $0.look?.source } == [nil, warmFjord, nil])
+        #expect(model.recipe.look == VideoLookSamples.velvia)
+        #expect(model.lookSlot?.source == warmFjord)
+        // Amount now moves clip 2's look, not the video's.
+        model.setLookAmount(0.5)
+        #expect(model.recipe.clips[1].look?.amount == 0.5)
+        #expect(model.recipe.look?.amount == 1)
+    }
+
+    /// The subtitle names a still the way the viewer header does.
+    @Test func subtitleNamesTheClip() {
+        let model = VideoStudioModelFixture.model(clips: VideoStudioModelFixture.photoClips(3))
+        model.seek(to: 4)
+        model.lookTarget = .thisClip
+        #expect(model.lookSubtitle == "Photo 2")
+        #expect(VideoLookEditing.targetClipIDs(.thisClip, selectedClipIDs: [], clipUnderPlayhead: nil).isEmpty)
+    }
+
     /// The cache holds 24 tables and lets the least recently used one go.
     @Test func cacheEvictsBeyond24Tables() {
         let cache = VideoLookTableCache()
