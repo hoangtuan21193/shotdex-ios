@@ -32,7 +32,10 @@ final class LookExchangeModel {
         ["xmp", "lrtemplate", "dng", "shotdexlook", "cube"].compactMap { UTType(filenameExtension: $0) }
     }
 
-    func startImport(_ urls: [URL]) {
+    /// `completion` hears what the import added, once the stores are
+    /// written — the Video Studio selects the first new look (FS-12.06c
+    /// §7). Not called when the import is cancelled.
+    func startImport(_ urls: [URL], completion: (@MainActor (PresetImportReport) -> Void)? = nil) {
         guard !urls.isEmpty else { return }
         task?.cancel()
         report = nil
@@ -57,8 +60,10 @@ final class LookExchangeModel {
                 progress = nil
                 return
             }
-            report = PresetImporter.apply(plan, looks: looks, luts: luts)
+            let applied = PresetImporter.apply(plan, looks: looks, luts: luts)
+            report = applied
             progress = nil
+            completion?(applied)
         }
     }
 
@@ -84,7 +89,7 @@ final class LookExchangeModel {
     /// one of each outcome — and a LUT, the first time My Looks is shown.
     private var hasImportedFixtures = false
 
-    func importFixturesIfAsked() {
+    func importFixturesIfAsked(completion: (@MainActor (PresetImportReport) -> Void)? = nil) {
         guard !hasImportedFixtures, ProcessInfo.processInfo.arguments.contains("-ShotDexImportFixtures") else { return }
         hasImportedFixtures = true
         let folder = FileManager.default.temporaryDirectory.appendingPathComponent("preset-fixtures", isDirectory: true)
@@ -108,7 +113,7 @@ final class LookExchangeModel {
             try? Data(text.utf8).write(to: url)
             return url
         }
-        startImport(urls)
+        startImport(urls, completion: completion)
     }
     #endif
 }

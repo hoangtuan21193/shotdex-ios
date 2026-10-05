@@ -290,3 +290,67 @@ struct VideoLookEditingTests {
         #expect(!cache.contains(.init(.whole, of: looks[2])))
     }
 }
+
+/// FS-12.06c AC-13: Import Look… is the photo editor's import, and what it
+/// adds is chosen for the slot being edited.
+@MainActor
+struct VideoLookImportTests {
+    private func folder() throws -> URL {
+        let url = FileManager.default.temporaryDirectory.appendingPathComponent("video-import-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: url, withIntermediateDirectories: true)
+        return url
+    }
+
+    private func store(in folder: URL) -> LookPresetStore {
+        LookPresetStore(directory: folder.appendingPathComponent("store"), defaults: UserDefaults(suiteName: "vimport-\(UUID().uuidString)")!)
+    }
+
+    /// The report carries what was added, in file order.
+    @Test func applyReturnsAddedIDsInFileOrder() throws {
+        let folder = try folder()
+        defer { try? FileManager.default.removeItem(at: folder) }
+        let a = folder.appendingPathComponent("A.xmp"), b = folder.appendingPathComponent("B.xmp")
+        try LightroomXMPReaderTests.preset(#"crs:Exposure2012="+0.20""#).write(to: a)
+        try LightroomXMPReaderTests.preset(#"crs:Exposure2012="+0.40""#).write(to: b)
+        let looks = store(in: folder)
+        let report = PresetImporter.apply(try PresetImporter.read([a, b]), looks: looks, luts: nil)
+        #expect(report.addedLookIDs.count == 2)
+        #expect(report.addedLookIDs.compactMap { id in looks.presets.first { $0.id == id }?.name } == ["A", "B"])
+    }
+
+    /// AC-13: an .xmp goes to the top of My Looks, wears the XMP badge, and
+    /// is the slot's look; a .cube goes to LUTs and is the slot's look.
+    @Test func importSelectsFirstAddedForTarget() throws {
+        let folder = try folder()
+        defer { try? FileManager.default.removeItem(at: folder) }
+        let xmp = folder.appendingPathComponent("Golden.xmp")
+        try LightroomXMPReaderTests.preset(#"crs:Exposure2012="+0.50""#).write(to: xmp)
+        let looks = store(in: folder)
+        let luts = ImportedLUTStore()
+        let model = VideoStudioModelFixture.model()
+        model.toggleToolPanel(.look)
+        model.lookTarget = .allClips
+
+        let report = PresetImporter.apply(try PresetImporter.read([xmp]), looks: looks, luts: luts)
+        model.lookImported(report, looks: looks, luts: luts)
+        let first = try #require(looks.presets.first)
+        #expect(model.lookShelf == .myLooks)
+        #expect(model.recipe.look?.source == .myLook(sourceID: first.id, name: first.name, isImported: true, recipe: first.applied(onto: .identity)))
+        let tile = try #require(VideoLookTile.tiles(shelf: .myLooks, includesOriginal: true, looks: looks, luts: luts).dropFirst().first)
+        #expect(tile.isImported)
+        #expect(tile.isChosen(in: model.recipe.look))
+
+        let cube = folder.appendingPathComponent("Teal.cube")
+        try "LUT_3D_SIZE 2\n0 0.05 0.1\n0.9 0.05 0.1\n0 0.95 1\n0.9 0.95 1\n0 0.1 0.9\n0.9 0.1 0.9\n0 1 1\n0.9 1 1\n".write(to: cube, atomically: true, encoding: .utf8)
+        let cubeReport = PresetImporter.apply(try PresetImporter.read([cube]), looks: looks, luts: luts)
+        defer { for id in cubeReport.addedLUTIDs { if let lut = luts.luts.first(where: { $0.id == id }) { luts.delete(lut) } } }
+        model.lookImported(cubeReport, looks: looks, luts: luts)
+        #expect(model.lookShelf == .luts)
+        #expect(model.recipe.look?.lutID == cubeReport.addedLUTIDs.first)
+
+        // Cancelling the picker reports nothing, and nothing changes.
+        let before = model.recipe
+        model.lookImported(PresetImportReport(), looks: looks, luts: luts)
+        #expect(model.recipe == before)
+    }
+}

@@ -122,6 +122,8 @@ enum PresetImporter {
     ) -> PresetImportReport {
         var entries: [PresetImportReport.Entry] = []
         var added: [PresetImportReport.Entry] = []
+        var addedLookIDs: [UUID] = []
+        var addedLUTIDs: [String] = []
         // Reverse, so the first file ends up first.
         for look in plan.looks.reversed() {
             guard look.status != .skipped else {
@@ -138,6 +140,8 @@ enum PresetImporter {
             switch outcome {
             case let .added(preset):
                 added.insert(.init(name: preset.name, status: look.status, lines: look.lines), at: 0)
+                // Walking the plan backwards, so the first file lands first.
+                addedLookIDs.insert(preset.id, at: 0)
             case .alreadyInMyLooks:
                 added.insert(.init(name: look.name, status: .skipped, lines: [.init(kind: .skipped, text: "Already in My Looks")]), at: 0)
             }
@@ -146,12 +150,13 @@ enum PresetImporter {
         for lut in plan.luts {
             do {
                 let stored = try luts?.add(from: lut.url, receiveID: receiveID)
+                if let stored { addedLUTIDs.append(stored.id) }
                 entries.append(.init(name: stored?.displayName ?? lut.name, status: .added, lines: [.init(kind: .applied, text: "Added to LUTs")]))
             } catch {
                 entries.append(.init(name: lut.name, status: .skipped, lines: [.init(kind: .skipped, text: LUTImportMessage.text(for: error))]))
             }
         }
         entries += plan.skipped
-        return PresetImportReport(entries: entries)
+        return PresetImportReport(entries: entries, addedLookIDs: addedLookIDs, addedLUTIDs: addedLUTIDs)
     }
 }

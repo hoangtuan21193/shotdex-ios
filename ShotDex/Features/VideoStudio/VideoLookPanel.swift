@@ -46,7 +46,8 @@ struct VideoLookPanel: View {
             allowedContentTypes: LookExchangeModel.importTypes,
             allowsMultipleSelection: true
         ) { result in
-            if case let .success(urls) = result { dependencies.lookExchange.startImport(urls) }
+            // Cancelling the picker changes nothing (§7).
+            if case let .success(urls) = result { dependencies.lookExchange.startImport(urls, completion: imported) }
         }
         .sheet(isPresented: Binding(
             get: { dependencies.lookExchange.isSheetPresented },
@@ -250,8 +251,12 @@ struct VideoLookPanel: View {
         }
         .buttonStyle(.plain)
         #if DEBUG
-        .onAppear { dependencies.lookExchange.importFixturesIfAsked() }
+        .onAppear { dependencies.lookExchange.importFixturesIfAsked(completion: imported) }
         #endif
+    }
+
+    private func imported(_ report: PresetImportReport) {
+        model.lookImported(report, looks: dependencies.lookPresets, luts: dependencies.importedLUTs)
     }
 
     // MARK: Adjust

@@ -2272,6 +2272,22 @@ final class VideoStudioModel {
         applyLookTier()
     }
 
+    /// What Import Look… brought in (FS-12.06c §7): the first new look —
+    /// a preset into My Looks, else a `.cube` into LUTs — is chosen for the
+    /// slot the panel is editing, and its shelf comes up.
+    func lookImported(_ report: PresetImportReport, looks: LookPresetStore, luts: ImportedLUTStore) {
+        if let id = report.addedLookIDs.first, let preset = looks.presets.first(where: { $0.id == id }) {
+            lookShelf = .myLooks
+            chooseLook(.myLook(
+                sourceID: preset.id, name: preset.name, isImported: preset.source == .imported,
+                recipe: preset.applied(onto: .identity)
+            ))
+        } else if let id = report.addedLUTIDs.first, let lut = luts.luts.first(where: { $0.id == id }) {
+            lookShelf = .luts
+            chooseLook(.lut(id: lut.id, name: lut.displayName))
+        }
+    }
+
     /// The clips a clip target writes (FS-12.06c §4).
     var lookTargetClipIDs: [UUID] {
         let underPlayhead = clipIndexUnderPlayhead.flatMap { recipe.clips.indices.contains($0) ? recipe.clips[$0].id : nil }

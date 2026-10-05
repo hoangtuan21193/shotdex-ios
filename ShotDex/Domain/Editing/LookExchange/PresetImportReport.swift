@@ -35,6 +35,11 @@ struct PresetImportReport: Equatable {
     }
 
     var entries: [Entry] = []
+    /// What the import put on the shelves, in file order: the new My Looks
+    /// and the new LUTs. The Video Studio selects the first of them for the
+    /// slot being edited (FS-12.06c §7).
+    var addedLookIDs: [UUID] = []
+    var addedLUTIDs: [String] = []
 
     var addedCount: Int { entries.filter { $0.status != .skipped }.count }
     var skippedCount: Int { entries.filter { $0.status == .skipped }.count }
