@@ -26,6 +26,10 @@ enum FolderEnumeration {
     /// Types ImageIO reads, plus every movie type.
     static let readableImageTypes: Set<String> = Set(CGImageSourceCopyTypeIdentifiers() as? [String] ?? [])
 
+    static func isMovie(_ url: URL) -> Bool {
+        UTType(filenameExtension: url.pathExtension)?.conforms(to: .movie) == true
+    }
+
     static func isReadable(_ url: URL) -> Bool {
         guard let type = UTType(filenameExtension: url.pathExtension) else { return false }
         return readableImageTypes.contains(type.identifier) || type.conforms(to: .rawImage) || type.conforms(to: .movie)

@@ -13,7 +13,7 @@
 
 | # | Cho | Khi | Thì | Chứng minh |
 |---|---|---|---|---|
-| AC-1 | Mac, thư viện trống; thư mục "2026 Japan" có 2.000 CR3 + 2.000 JPG cùng tên gốc + 118 HEIC, mặc định Include Subfolders và Pair bật | Add Folder or Drive… → Choose Folder… chọn thư mục | sau lượt đọc: 2.118 ảnh, hàng sidebar "2026 Japan · 2,118"; SHA-256 của cả 4.118 file trước = sau; 0 file mới trong thư mục | ⚠️ chưa có — `FolderSourceIndexTests.pairsAndNeverWrites` + ảnh chụp tay |
+| AC-1 | Mac, thư viện trống; thư mục "2026 Japan" có 2.000 CR3 + 2.000 JPG cùng tên gốc + 118 HEIC, mặc định Include Subfolders và Pair bật | Add Folder or Drive… → Choose Folder… chọn thư mục | sau lượt đọc: 2.118 ảnh, hàng sidebar "2026 Japan · 2,118"; SHA-256 của cả 4.118 file trước = sau; 0 file mới trong thư mục | `FolderSourceIndexTests.pairsAndNeverWrites` (lượt đọc: ghép cặp, 0 byte ghi vào thư mục) — ⚠️ hàng sidebar "2026 Japan · 2,118" chờ UI (F) + ảnh chụp tay |
 | AC-2 | như AC-1 nhưng bỏ đánh dấu Pair RAW + JPEG | thêm nguồn, đặt ★3 cho `DSC0001.JPG` | 4.118 ảnh; không JPG nào mang nhãn `RAW+JPG`; có `DSC0001.JPG.xmp` ★3; `DSC0001.xmp` không đổi byte | ⚠️ chưa có — `FolderSourceIndexTests.pairingOffSeparateSidecar` |
 | AC-3 | thư mục có 100 file ở tầng đầu và 3 thư mục con 50 file mỗi cái | thêm với Include Subfolders tắt | 100 ảnh; bật lại trong Settings → thêm đúng 150 ảnh, 100 ảnh cũ không đọc lại (0 lần đọc file) | ⚠️ chưa có — `FolderSourceIndexTests.subfoldersToggleReadsOnlyDelta` |
 | AC-4 | `~/Pictures` chứa gói Photos Library (500 ảnh), 20 JPG và 3 file bắt đầu bằng `.` | thêm `~/Pictures` | đúng 20 ảnh; 0 file trong gói được mở | `FolderEnumerationTests.skipsPackagesAndDotFiles` |

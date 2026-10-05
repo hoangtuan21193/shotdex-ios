@@ -77,7 +77,7 @@ enum ServerFolderListing {
     }()
 
     /// Extensions a RAW pairs with.
-    static let renderedTwinExtensions: Set<String> = ["jpg", "jpeg", "heic", "heif"]
+    static let renderedTwinExtensions = PairingRule.renderedTwinExtensions
 
     static func isRAW(_ name: String) -> Bool {
         FileTypeBadge.text(forExtension: (name as NSString).pathExtension) == "RAW"
@@ -103,17 +103,9 @@ enum ServerFolderListing {
             }
         }
 
-        let groups = Dictionary(grouping: images) { ($0.name as NSString).deletingPathExtension.lowercased() }
-        var photos: [ServerPhoto] = []
-        for (_, group) in groups {
-            let raws = group.filter { isRAW($0.name) }
-            let twins = group.filter { renderedTwinExtensions.contains(($0.name as NSString).pathExtension.lowercased()) }
-            if raws.count == 1, twins.count == 1 {
-                photos.append(ServerPhoto(files: [twins[0], raws[0]]))
-                photos += group.filter { $0 != raws[0] && $0 != twins[0] }.map { ServerPhoto(files: [$0]) }
-            } else {
-                photos += group.map { ServerPhoto(files: [$0]) }
-            }
+        // The one pairing rule, shared with folder sources (FS-19.01 §3).
+        let photos = PairingRule.units(images, pairs: true, name: \.name).map { unit in
+            unit.companion.map { ServerPhoto(files: [$0, unit.primary]) } ?? ServerPhoto(files: [unit.primary])
         }
 
         return ServerFolderContents(

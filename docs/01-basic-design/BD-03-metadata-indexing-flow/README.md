@@ -26,6 +26,11 @@ EXIF, sống với iCloud, báo tiến độ, và chạy tiếp ở nền.
 - **Huỷ phản hồi ngay khung hình bấm**; phần đuôi dọn ở nền.
 - **"Xong" nghĩa là thư viện đã đọc hết**, không phải "một suất chạy đã hết giờ".
 - Việc index chạy ở mức ưu tiên thấp, **không chặn giao diện**.
+- **Nguồn thư mục và ổ ngoài** ([FS-19.01 §4](../../02-functional-spec/FS-19-photo-sources/01-folders-and-drives.md)) có lượt
+  đọc riêng, cùng bộ ghép metadata với asset Photos: liệt kê (bỏ gói và tên bắt đầu bằng `.`), ghép RAW + JPEG cùng
+  tên gốc, rồi với mỗi file mới hay đổi (so kích thước + ngày sửa) đọc EXIF, kích thước ảnh, ngày chụp từ đầu file
+  và **hash nhanh**; ghi Ảnh + Bản sao + dòng metadata trong một transaction. File không đổi chỉ làm mới "lần thấy
+  cuối". **Không bao giờ ghi vào thư mục nguồn.**
 
 ## Hằng số
 
