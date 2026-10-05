@@ -32,4 +32,15 @@ struct VideoClipGroupEditingTests {
         #expect(VideoClipGroupEditing.ordered([ids[3], ids[1], UUID()], in: recipe) == [ids[1], ids[3]])
         #expect(VideoClipGroupEditing.range(from: ids[3], to: ids[1], in: recipe) == [ids[1], ids[2], ids[3]])
     }
+
+    /// AC-4: a group of clips 1 and 4, both photos, has five commands —
+    /// Look · Motion · Move · Duplicate · Delete; Speed and Volume, which
+    /// only touch video, are hidden rather than dimmed.
+    @Test func photoOnlyGroupHasFiveCommands() {
+        let photos = VideoClipGroupEditing.summary(of: [ids[0], ids[3]], in: recipe)
+        #expect(!photos.hasVideo)
+        #expect(VideoItemCommand.groupCommands(hasVideo: photos.hasVideo) == [.look, .motion, .move, .duplicate, .delete])
+        let mixed = VideoClipGroupEditing.summary(of: [ids[0], ids[1]], in: recipe)
+        #expect(VideoItemCommand.groupCommands(hasVideo: mixed.hasVideo) == [.speed, .volume, .look, .motion, .move, .duplicate, .delete])
+    }
 }

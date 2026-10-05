@@ -112,4 +112,14 @@ struct VideoStudioMultiSelectTests {
         model.commandClickClip(ids[0])
         #expect(model.selectedClipIDs == [ids[0], ids[1], ids[3]])
     }
+
+    /// AC-4 on the model: clips 1 and 4 selected, the row is the five
+    /// commands a photo can take.
+    @Test func photoOnlyGroupRowHasNoSpeedOrVolume() {
+        let model = sampleModel()
+        let ids = model.recipe.clips.map(\.id)
+        model.enterClipSelection(ids[0])
+        model.toggleClip(ids[3])
+        #expect(model.selectedItemCommands == [.look, .motion, .move, .duplicate, .delete])
+    }
 }
