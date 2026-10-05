@@ -75,4 +75,29 @@ import Testing
         try MetadataStore(database: library.database).deleteAll()
         #expect(try library.pendingCount() == 1)
     }
+
+    /// AC-30: as AC-29, then T7 is plugged in. Its sidecar gets ★3 — the
+    /// current value, never the ★5 in between — in one write, and no pending
+    /// mark is left. The internal sidecar, already ★3, is not rewritten.
+    @Test func writesCurrentValueOnReconnect() async throws {
+        let library = try Self.twoCopies()
+        defer { try? FileManager.default.removeItem(at: library.base) }
+        let sources = SourceStore(database: library.database)
+        try sources.setOnline(false, sourceId: library.t7Id)
+        await library.marks.setRating(5, ids: [library.photoId])
+        await library.queue.flush()
+        await library.marks.setRating(3, ids: [library.photoId])
+        await library.queue.flush()
+        let internalSidecar = library.internalFolder.appendingPathComponent("A.xmp")
+        let internalBefore = try Data(contentsOf: internalSidecar)
+
+        try sources.setOnline(true, sourceId: library.t7Id)
+        let summary = await library.queue.sourceCameOnline(library.t7Id)
+
+        #expect(summary.written == 1)
+        #expect(SidecarReader.read(sidecarAt: library.t7.appendingPathComponent("A.xmp"))?.rating == 3)
+        #expect(try Data(contentsOf: internalSidecar) == internalBefore)
+        #expect(try library.pendingCount() == 0)
+        #expect(await library.queue.sourceCameOnline(library.t7Id).written == 0)
+    }
 }

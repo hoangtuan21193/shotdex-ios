@@ -10,6 +10,8 @@ struct SidecarWriter: Sendable {
     let fileURL: @Sendable (_ sourceId: String, _ relativePath: String) -> URL?
 
     struct Summary: Equatable, Sendable {
+        /// Sidecars whose text changed. One that already said the photo's
+        /// values is left alone and not counted.
         var written = 0
         /// Copies whose sidecar could not be written (no permission, a full
         /// disk); each keeps a pending mark.
@@ -44,13 +46,12 @@ struct SidecarWriter: Sendable {
             let patch = try database.reader.read { db in try Self.patch(db, photoId: photoId) }
             for sidecar in sidecars {
                 do {
-                    try Self.write(patch, to: sidecar.url)
+                    if try Self.write(patch, to: sidecar.url) { summary.written += 1 }
                     let stamp = SidecarReader.stamp(of: sidecar.url)
                     try database.writer.write { db in
                         try db.execute(sql: "UPDATE photo_copies SET sidecarStamp = ? WHERE id = ?", arguments: [stamp, sidecar.copyId])
                         try db.execute(sql: "DELETE FROM pending_sidecar WHERE copyId = ?", arguments: [sidecar.copyId])
                     }
-                    summary.written += 1
                 } catch {
                     try markPending(sidecar.copyId, photoId: photoId, reason: .writeFailed)
                     summary.failed += 1
@@ -70,6 +71,16 @@ struct SidecarWriter: Sendable {
         case unavailable
         /// The write itself failed.
         case writeFailed
+    }
+
+    /// Photos with a pending mark on a copy in `sourceId`.
+    func pendingPhotoIds(sourceId: String) throws -> [String] {
+        try database.reader.read { db in
+            try String.fetchAll(db, sql: """
+                SELECT DISTINCT p.photoId FROM pending_sidecar p JOIN photo_copies c ON c.id = p.copyId
+                WHERE c.sourceId = ? ORDER BY p.photoId
+                """, arguments: [sourceId])
+        }
     }
 
     private func markPending(_ copyId: String, photoId: String, reason: PendingReason) throws {
@@ -113,10 +124,12 @@ struct SidecarWriter: Sendable {
 
     /// Patches the sidecar through a temporary file in the same folder and
     /// swaps it in, so a reader never sees half a file.
-    static func write(_ patch: XMPPatch, to sidecar: URL) throws {
+    /// Returns whether the file changed.
+    @discardableResult
+    static func write(_ patch: XMPPatch, to sidecar: URL) throws -> Bool {
         let current = try? String(contentsOf: sidecar, encoding: .utf8)
         let text = XMPPatcher.apply(patch, to: current)
-        guard text != current else { return }
+        guard text != current else { return false }
         let temporary = sidecar.deletingLastPathComponent()
             .appendingPathComponent(".\(sidecar.lastPathComponent).\(UUID().uuidString).tmp")
         try Data(text.utf8).write(to: temporary)
@@ -130,6 +143,7 @@ struct SidecarWriter: Sendable {
             try? FileManager.default.removeItem(at: temporary)
             throw error
         }
+        return true
     }
 
     /// The photo's current values as a patch: the standard rating (−1 when
@@ -222,6 +236,16 @@ actor SidecarWriteQueue {
             guard !Task.isCancelled else { return }
             self.flush()
         }
+    }
+
+    /// A drive came back (or a folder opened again): the photos with a
+    /// pending mark there get their current values, once (FS-19.02 §7) —
+    /// not a replay of every change made while it was away.
+    @discardableResult
+    func sourceCameOnline(_ sourceId: String) -> SidecarWriter.Summary {
+        guard let ids = try? writer.pendingPhotoIds(sourceId: sourceId), !ids.isEmpty else { return SidecarWriter.Summary() }
+        pending.formUnion(ids)
+        return flush()
     }
 
     /// Writes everything waiting now.
