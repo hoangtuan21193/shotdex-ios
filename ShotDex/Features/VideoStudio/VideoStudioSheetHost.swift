@@ -156,11 +156,31 @@ struct VideoStudioSheetHost: View {
             if layout == .dock {
                 dockLookTitle
                 Color.clear.frame(height: VideoStudioDeskGeometry.dockColumnsTop - VideoStudioDeskGeometry.dockCommandRowTop - VideoStudioDeskGeometry.dockButtonSize.height)
+            } else if isDeskInspector {
+                inspectorLookTitle
             } else {
                 lookTitle(showsSessionButtons: false)
             }
             VideoLookPanel(model: model, usesTallScopes: layout != .band)
         }
+    }
+
+    /// The iPad inspector's head with nothing selected (board IL1_Main,
+    /// F5_IL_Looks): "Look" 20 · "Whole video" 15 at the content's top, 36
+    /// tall — no glyph, no buttons: nothing was opened, nothing to end.
+    private var inspectorLookTitle: some View {
+        HStack(alignment: .firstTextBaseline, spacing: 8) {
+            Text(VideoStudioCopy.look)
+                .font(.system(size: 20, weight: .semibold))
+                .foregroundStyle(.white)
+            Text(model.lookSubtitle)
+                .font(.system(size: 15))
+                .foregroundStyle(EditorTheme.secondaryText)
+            Spacer(minLength: 0)
+        }
+        .lineLimit(1)
+        .padding(.horizontal, 16)
+        .frame(height: 36, alignment: .top)
     }
 
     /// The portrait dock's head with nothing selected (FS-12.03 §3, board

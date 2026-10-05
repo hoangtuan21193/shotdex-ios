@@ -1,0 +1,166 @@
+{
+ "steps": [
+  {
+   "action": "launch",
+   "arguments": [
+    "-video.timelineExtraHeight",
+    "0"
+   ]
+  },
+  {
+   "action": "wait",
+   "seconds": 4
+  },
+  {
+   "action": "orientation",
+   "text": "portrait"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "tap",
+   "label": "Select",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "tap",
+   "x": 0.93,
+   "y": 0.12
+  },
+  {
+   "action": "tap",
+   "x": 0.06,
+   "y": 0.12
+  },
+  {
+   "action": "tap",
+   "x": 0.18,
+   "y": 0.12
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "tap",
+   "label": "More selection actions",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "tap",
+   "label": "Create Video"
+  },
+  {
+   "action": "wait",
+   "seconds": 10
+  },
+  {
+   "action": "orientation",
+   "text": "landscape"
+  },
+  {
+   "action": "wait",
+   "seconds": 8
+  },
+  {
+   "action": "screenshot",
+   "name": "10-idle-look"
+  },
+  {
+   "action": "dump",
+   "name": "10-idle-look-all",
+   "text": "snapshot"
+  },
+  {
+   "action": "tap",
+   "label": "Video clip"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "swipe",
+   "x": 0.93,
+   "y": 0.105,
+   "direction": "left",
+   "distance": 0.12
+  },
+  {
+   "action": "wait",
+   "seconds": 1.0
+  },
+  {
+   "action": "tap",
+   "label": "itemCommand.look"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "screenshot",
+   "name": "20-clip-look-landscape"
+  },
+  {
+   "action": "dump",
+   "name": "20-clip-look-landscape-all",
+   "text": "snapshot"
+  },
+  {
+   "action": "tap",
+   "label": "Keep Changes"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "orientation",
+   "text": "portrait"
+  },
+  {
+   "action": "wait",
+   "seconds": 8
+  },
+  {
+   "action": "tap",
+   "label": "Video clip"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "tap",
+   "label": "itemCommand.look"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "screenshot",
+   "name": "30-clip-look-portrait"
+  },
+  {
+   "action": "dump",
+   "name": "30-clip-look-portrait-all",
+   "text": "snapshot"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  }
+ ]
+}

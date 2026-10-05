@@ -61,7 +61,9 @@ struct VideoLookPanel: View {
     /// Every window but the iPad's portrait dock: one column, top to bottom.
     private var stackBody: some View {
         VStack(alignment: .leading, spacing: 0) {
-            Color.clear.frame(height: style.topGap)
+            // The iPad's clip header sits right under the command row's
+            // rule (F5_IL_Looks).
+            Color.clear.frame(height: mode == .clip && style.segmented ? 0 : style.topGap)
             if mode == .clip {
                 clipHeader
                 if !style.segmented {
@@ -108,7 +110,7 @@ struct VideoLookPanel: View {
                     }
                 }
                 if tab == .filter {
-                    Color.clear.frame(height: style.afterTabs)
+                    Color.clear.frame(height: gapAfterHead)
                     shelfRow
                     Color.clear.frame(height: style.afterShelf)
                     dockTiles(Array(tileItems.prefix(style.columns ?? 3)))
@@ -165,6 +167,13 @@ struct VideoLookPanel: View {
         }
     }
 
+    /// Under the tabs, the tab row's gap; under the iPad's clip header —
+    /// no tabs there, the shelves follow the 44pt header — 4 (F5_IL_Looks,
+    /// F5_IP_Looks).
+    private var gapAfterHead: CGFloat {
+        mode == .clip && style.segmented ? 4 : style.afterTabs
+    }
+
     private static let adjustKinds: [PhotoAdjustmentKind] = [.exposure, .contrast, .saturation, .warmth, .brightness, .vignette]
 
     private func adjustSliders(_ kinds: [PhotoAdjustmentKind]) -> some View {
@@ -200,7 +209,7 @@ struct VideoLookPanel: View {
     private var filterBody: some View {
         ScrollView(showsIndicators: false) {
             VStack(alignment: .leading, spacing: 0) {
-                Color.clear.frame(height: style.afterTabs)
+                Color.clear.frame(height: gapAfterHead)
                 shelfRow
                 Color.clear.frame(height: style.afterShelf)
                 tiles
@@ -223,6 +232,8 @@ struct VideoLookPanel: View {
             chipRow(EditorPresetSource.allCases, selected: model.lookShelf, height: style.shelfHeight, title: { Text(LocalizedStringKey($0.title)) }) {
                 model.lookShelf = $0
             }
+            // Beside Import, the shelves run up to its 8pt gap.
+            .padding(.trailing, style.importsBesideShelf ? -style.inset : 0)
             if style.importsBesideShelf {
                 Button { dependencies.lookExchange.isPickingFiles = true } label: {
                     Image(systemName: "square.and.arrow.down")
