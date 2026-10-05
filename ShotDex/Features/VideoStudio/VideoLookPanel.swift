@@ -241,6 +241,7 @@ struct VideoLookPanel: View {
                 if VideoLookEditing.showsAmount(model.lookSlot), let look = model.lookSlot {
                     amountRow(look)
                 }
+                if mode == .wholeVideo, !style.segmented, model.compare != nil { compareSection }
                 if mode == .wholeVideo || style.segmented { applyTo }
                 caption
                 Color.clear.frame(height: 4)
@@ -250,6 +251,43 @@ struct VideoLookPanel: View {
             .padding(.bottom, 12)
         }
         .scrollBounceBehavior(.basedOnSize)
+    }
+
+    /// COMPARE under Amount while Before and After is on (FS-12.15 §4):
+    /// Split · Hold to Compare on the phone and the cover (181×30), Side by
+    /// Side · Split in the Duo's inner column (112×28), and the line that
+    /// says what Before is — or that there is nothing to tell apart.
+    @ViewBuilder
+    private var compareSection: some View {
+        if let compare = model.compare {
+            let sideBySide = style == .duoInner
+            VStack(alignment: .leading, spacing: 6) {
+                if !sideBySide {
+                    Text(VideoStudioCopy.compareHeader)
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundStyle(EditorTheme.dimText)
+                        .accessibilityAddTraits(.isHeader)
+                }
+                CaptionChipRow(
+                    items: VideoBeforeAfter.modes(sideBySide: sideBySide).map { ($0, VideoStudioCopy.compareMode($0)) },
+                    selection: compare.mode,
+                    fills: true
+                ) { model.setCompareMode($0) }
+                .frame(height: sideBySide ? 28 : 30)
+                if !sideBySide {
+                    Text(model.hasNothingToCompare
+                         ? VideoStudioCopy.noEditsToCompare
+                         : (compare.mode == .hold ? VideoStudioCopy.holdHint : VideoStudioCopy.splitHint))
+                        .font(.system(size: style.captionSize))
+                        .foregroundStyle(.white.opacity(0.45))
+                        .fixedSize(horizontal: false, vertical: true)
+                        .accessibilityIdentifier("compareCaption")
+                }
+            }
+            .padding(.horizontal, style.inset)
+            .padding(.top, 6)
+            .padding(.bottom, 4)
+        }
     }
 
     private var shelfRow: some View {

@@ -151,12 +151,16 @@ struct VideoStudioDeskToolbar: View {
                     .accessibilityLabel("Undo")
                 toolbarButton("arrow.uturn.forward", isEnabled: model.canRedo, isOn: false) { model.redo() }
                     .accessibilityLabel("Redo")
-                VideoShowOriginalButton(
-                    model: model,
-                    diameter: Geometry.capsuleButton,
-                    glyphSize: 18,
-                    restingFill: .clear
-                )
+                // Gone while Before and After is up: the frames already
+                // show the original (FS-12.15 AC-6).
+                if model.compare == nil {
+                    VideoShowOriginalButton(
+                        model: model,
+                        diameter: Geometry.capsuleButton,
+                        glyphSize: 18,
+                        restingFill: .clear
+                    )
+                }
             }
             capsule(width: Geometry.settingsCapsuleWidth) {
                 VideoSettingsButton(model: model, style: .capsule, presentsPopover: true)

@@ -44,6 +44,7 @@ struct VideoStudioSheetHost: View {
     @Bindable var model: VideoStudioModel
     let actions: VideoInspectorActions
     var layout: Layout = .band
+    @Environment(\.videoStudioWindowClass) private var windowClass
     /// The user's songs, for the Music panel.
     var importedMusic: ImportedMusicStore?
     /// A column that is always there (iPad, Duo inner) shows the whole
@@ -83,6 +84,9 @@ struct VideoStudioSheetHost: View {
                 // Replace (FS-12.04b §4): Media in single-pick mode, in the
                 // clip's own place — the clip's ✕ / ✓ stays.
                 VideoMediaPanel(model: model)
+            } else if showsIdleLook, layout == .dock, model.compare != nil, model.inspectorTarget == .none, model.activeToolPanel == nil {
+                // iPad portrait: Look · Compare · Adjust (FS-12.15 §4).
+                VideoCompareDock(model: model)
             } else if showsIdleLook, model.inspectorTarget == .none, model.activeToolPanel == nil {
                 idleLook
             } else if model.inspectorTarget == .none, model.activeToolPanel == .look {
@@ -240,6 +244,9 @@ struct VideoStudioSheetHost: View {
             Spacer(minLength: 0)
             ForEach(idleTools) { tool in
                 idleToolButton(tool)
+            }
+            if showsSessionButtons, windowClass == .phone || windowClass == .duoCover {
+                VideoLookCompareButton(model: model)
             }
             if showsSessionButtons {
                 Button {

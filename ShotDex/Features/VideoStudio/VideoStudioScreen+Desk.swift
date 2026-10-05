@@ -159,13 +159,10 @@ extension VideoStudioScreen {
             duoDisc("arrow.uturn.forward", isEnabled: model.canRedo, action: { model.redo() })
                 .accessibilityLabel("Redo")
                 .placed(discs[2])
-            VideoShowOriginalButton(
-                model: model,
-                diameter: VideoStudioDeskGeometry.duoDisc,
-                glyphSize: 14,
-                restingFill: Color.black.opacity(0.55)
-            )
-            .placed(discs[3])
+            // Before and After in Show original's place (FS-12.15 §4):
+            // a tap compares, a hold still shows the original.
+            VideoDuoCompareDisc(model: model, diameter: VideoStudioDeskGeometry.duoDisc)
+                .placed(discs[3])
             if let column = frames.inspector {
                 VideoStudioSheetHost(
                     model: model,

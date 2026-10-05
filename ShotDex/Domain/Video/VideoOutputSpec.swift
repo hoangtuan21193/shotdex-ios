@@ -29,6 +29,26 @@ enum VideoOutputSpec {
 
 }
 
+/// What the compositor hands out per frame, beyond the project's own frame
+/// (plan K1): one place for Before and After's pair (FS-12.15) and a
+/// preset's reframing (FS-12.16) — captions are drawn after it, so they are
+/// always measured against what is written or shown.
+enum VideoOutputStage: Equatable, Sendable {
+    /// The project's frame as it is.
+    case single
+    /// Before and After side by side in one frame, each a canvas wide: one
+    /// request, one clock, the same source pixels on both sides.
+    case pair
+
+    /// The frame a stage writes for a project canvas of `canvas`.
+    func outputSize(canvas: CGSize) -> CGSize {
+        switch self {
+        case .single: canvas
+        case .pair: CGSize(width: canvas.width * 2, height: canvas.height)
+        }
+    }
+}
+
 /// Whether 4K is open (FS-12.10 §5): only when **every** clip's source has
 /// a short edge of at least 2160 — a photo by its pixels, a freeze frame by
 /// the video it came from. Upscaling adds no detail and quadruples the file.

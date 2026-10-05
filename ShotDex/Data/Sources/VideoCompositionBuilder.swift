@@ -292,14 +292,17 @@ enum VideoCompositionBuilder {
         frameRate: VideoFrameRate = .fps30,
         /// The canvas to draw on, from the fresh recipe — a new ratio swaps
         /// the composition, not the build. Defaults to the build's.
-        renderSize: CGSize? = nil
+        renderSize: CGSize? = nil,
+        /// What each composed frame becomes — Before and After's pair.
+        stage: VideoOutputStage = .single
     ) -> AVMutableVideoComposition {
         let renderSize = renderSize ?? layout.renderSize
         let renderRecipe = VideoRenderRecipe(
             recipe: recipe,
             renderSize: renderSize,
             totalDuration: layout.totalDuration,
-            bakesOverlays: bakesOverlays
+            bakesOverlays: bakesOverlays,
+            outputStage: stage
         )
         // Effects come from the FRESH recipe, not the layout: an effect edit
         // swaps the video composition without rebuilding the AVComposition.
@@ -327,7 +330,7 @@ enum VideoCompositionBuilder {
         }
         let videoComposition = AVMutableVideoComposition()
         videoComposition.customVideoCompositorClass = VideoFrameCompositor.self
-        videoComposition.renderSize = renderSize
+        videoComposition.renderSize = stage.outputSize(canvas: renderSize)
         let place = { (media: Layout.Media) in
             media.placed(in: renderSize, framing: recipe.framing, quarterTurns: recipe.quarterTurns)
         }

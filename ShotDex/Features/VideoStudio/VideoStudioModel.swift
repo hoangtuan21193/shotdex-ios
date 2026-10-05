@@ -643,7 +643,9 @@ final class VideoStudioModel {
     /// Ends the session keeping every step it made — the ✓ half of the
     /// rule. Each step stays its own undo step.
     private func endSession() {
+        let ended = session
         session = nil
+        endCompareWithLookPanel(ended)
     }
 
     private func deselectAll() {
@@ -1114,6 +1116,7 @@ final class VideoStudioModel {
             return
         }
         self.session = nil
+        endCompareWithLookPanel(session)
         // ✕ on the caption lane stops a run that is going (AC-11).
         if session.target == .captions { stopCaptionsForCancel() }
         history.rollback(to: session.checkpoint)
@@ -2688,17 +2691,88 @@ final class VideoStudioModel {
     func setShowsOriginal(_ value: Bool) {
         showsOriginal = value
         guard let playerItem, let layout else { return }
-        var preview = recipe
-        if value {
-            // The whole chain, not one stage: "show me the original" means
-            // the picture before the grade — every node and every look, the
-            // clips' own included (FS-12.06c).
-            preview.look = nil
-            for index in preview.clips.indices { preview.clips[index].look = nil }
-            preview.nodes = [ColorNode()]
-            preview.overlays = []
+        // The whole chain, not one stage: "show me the original" means the
+        // picture before the grade — every node and every look, the clips'
+        // own included, de-log too (FS-12.15 §3: the same Before as Before
+        // and After's). While a pair is up both sides show it (AC-12).
+        let preview = value ? VideoBeforeAfter.beforeRecipe(recipe) : recipe
+        service.applyVideoComposition(recipe: preview, layout: layout, stage: previewStage, to: playerItem)
+    }
+
+    // MARK: - Before and After (FS-12.15) — screen state, never the recipe
+
+    /// Nil when off. Not undoable, not saved, never in an export (§5, §7).
+    private(set) var compare: VideoBeforeAfter?
+    /// Opened from the Look panel's title (iPhone, Duo cover): closing the
+    /// panel turns it off (AC-5).
+    @ObservationIgnored private var compareEndsWithLookPanel = false
+
+    /// What the preview composes per frame.
+    var previewStage: VideoOutputStage { compare?.drawsPair == true ? .pair : .single }
+
+    /// Nothing for Before and After to tell apart (AC-10).
+    var hasNothingToCompare: Bool { VideoBeforeAfter.hasNothingToCompare(recipe) }
+
+    /// The button: on in the window's first mode, or off. `sideBySide` —
+    /// the iPad and the Duo's inner display — opens Side by Side, the
+    /// others Split. The `\` key calls this too (FS-12.17b).
+    func toggleBeforeAfter(sideBySide: Bool, fromLookPanel: Bool = false) {
+        if compare == nil {
+            compare = .opening(sideBySide: sideBySide)
+            compareEndsWithLookPanel = fromLookPanel
+        } else {
+            compare = nil
+            compareEndsWithLookPanel = false
         }
-        service.applyVideoComposition(recipe: preview, layout: layout, to: playerItem)
+        applyCompareStage()
+    }
+
+    func setCompareMode(_ mode: VideoBeforeAfter.Mode) {
+        guard var value = compare, value.mode != mode else { return }
+        value.mode = mode
+        compare = value
+        applyCompareStage()
+    }
+
+    /// The Split line, 0…1 — a mask over the pair, no new composition.
+    func setCompareFraction(_ fraction: Double) {
+        guard compare != nil else { return }
+        compare?.fraction = min(max(fraction, 0), 1)
+    }
+
+    func adjustCompareFraction(by steps: Int) {
+        guard let value = compare else { return }
+        compare = value.adjusted(by: steps)
+    }
+
+    /// Swap sides (iPad portrait, AC-9): drawn the other way round; the
+    /// frame the compositor makes does not change.
+    func swapCompareSides() {
+        compare?.isSwapped.toggle()
+    }
+
+    func endCompare() {
+        guard compare != nil else { return }
+        compare = nil
+        compareEndsWithLookPanel = false
+        applyCompareStage()
+    }
+
+    /// Hold to Compare's finger on the frame (AC-4): Before while down.
+    func holdCompare(_ isDown: Bool) {
+        guard compare?.mode == .hold else { return }
+        setShowsOriginal(isDown)
+    }
+
+    private func applyCompareStage() {
+        if showsOriginal { showsOriginal = false }
+        applyVideoTier()
+    }
+
+    /// The Look panel closed (✓ or ✕) on a window where it owns compare.
+    private func endCompareWithLookPanel(_ ended: VideoEditSession?) {
+        guard compareEndsWithLookPanel, ended?.target == .tool(VideoToolPanel.look.rawValue) else { return }
+        endCompare()
     }
 
     // MARK: - Look (FS-12.06c, videoComposition tier)
@@ -3822,7 +3896,7 @@ final class VideoStudioModel {
 
     private func applyVideoTier() {
         guard let playerItem, let layout else { return }
-        service.applyVideoComposition(recipe: recipe, layout: layout, to: playerItem)
+        service.applyVideoComposition(recipe: recipe, layout: layout, stage: previewStage, to: playerItem)
     }
 
     /// Debounced full rebuild for structural edits: a drag over the timeline
@@ -3853,7 +3927,7 @@ final class VideoStudioModel {
         resumeTimeAfterRebuild = nil
         do {
             refreshDucking()
-            let build = try await service.makePreviewItem(recipe: recipe, sources: sources, activity: ducking.activity)
+            let build = try await service.makePreviewItem(recipe: recipe, sources: sources, activity: ducking.activity, stage: previewStage)
             guard !isClosed, mine == rebuildGeneration else {
                 if mine != rebuildGeneration, resumeTimeAfterRebuild == nil { resumeTimeAfterRebuild = requested }
                 return

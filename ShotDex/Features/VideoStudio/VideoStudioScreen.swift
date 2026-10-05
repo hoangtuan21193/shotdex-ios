@@ -415,6 +415,10 @@ struct VideoStudioScreen: View {
         .environment(\.videoStudioWindowClass, windowClass)
         .onAppear { currentWindowClass = windowClass }
         .onChange(of: windowClass) { _, new in currentWindowClass = new }
+        .onChange(of: model.compare?.mode) { old, new in
+            guard windowClass == .iPadLandscape || windowClass == .iPadPortrait else { return }
+            columns.compareModeChanged(from: old, to: new)
+        }
     }
 
     /// Export: Export Video opens and nothing is exported yet (FS-12.10b
@@ -828,7 +832,9 @@ struct VideoStudioScreen: View {
     private func previewContent(_ model: VideoStudioModel) -> some View {
         ZStack {
             Color.black
-            if let player = model.player {
+            // While Before and After draws a pair, the stage below shows it
+            // through two windows on the same player (FS-12.15, plan K2).
+            if let player = model.player, model.compare?.drawsPair != true {
                 VideoPlayerLayerView(player: player)
             }
             // Text and sticker overlays, drawn and manipulated live on top of the
@@ -848,6 +854,7 @@ struct VideoStudioScreen: View {
                 Rectangle()
                     .strokeBorder(EditorTheme.hairline, lineWidth: 1)
                     .frame(width: contentRect.width, height: contentRect.height)
+                    .opacity(model.compare?.mode == .sideBySide ? 0 : 1)
                     .position(x: contentRect.midX, y: contentRect.midY)
                     .allowsHitTesting(false)
                     .accessibilityHidden(true)
@@ -869,21 +876,48 @@ struct VideoStudioScreen: View {
                         .allowsHitTesting(false)
                         .accessibilityIdentifier("videoFrameLabel")
                 }
-                VideoOverlayCanvas(
-                    model: model,
-                    contentRect: contentRect,
-                    images: stickerImages
-                )
-                // Captions over everything, as the export burns them in
-                // (FS-12.14 §6).
-                VideoCaptionProxyLayer(
-                    model: model,
-                    contentRect: contentRect,
-                    frame: model.recipe.canvasSize(),
-                    showsSelectionOutline: currentWindowClass != .phone && currentWindowClass != .duoCover
-                )
+                let afterRect = compareAfterRect(model, contentRect: contentRect, stage: compareStage(geo.size))
+                if let compare = model.compare, compare.drawsPair, let player = model.player {
+                    VideoBeforeAfterStage(
+                        model: model, compare: compare, player: player,
+                        contentRect: contentRect, stage: compareStage(geo.size),
+                        windowClass: currentWindowClass
+                    )
+                }
+                // Overlays and captions belong to After: hidden while the
+                // original is held, on the After frame side by side, and cut
+                // at the Split line (FS-12.15 §3).
+                if !model.showsOriginal {
+                    Group {
+                        VideoOverlayCanvas(
+                            model: model,
+                            contentRect: afterRect,
+                            images: stickerImages
+                        )
+                        // Captions over everything, as the export burns them
+                        // in (FS-12.14 §6).
+                        VideoCaptionProxyLayer(
+                            model: model,
+                            contentRect: afterRect,
+                            frame: model.recipe.canvasSize(),
+                            showsSelectionOutline: currentWindowClass != .phone && currentWindowClass != .duoCover
+                        )
+                    }
+                    .allowsHitTesting(model.compare?.drawsPair != true)
+                    .mask {
+                        if let compare = model.compare, compare.mode == .split {
+                            Rectangle()
+                                .frame(width: max(0, contentRect.maxX - compare.lineX(in: contentRect)), height: geo.size.height)
+                                .position(x: (compare.lineX(in: contentRect) + contentRect.maxX) / 2, y: geo.size.height / 2)
+                        } else {
+                            Rectangle()
+                        }
+                    }
+                }
             }
-            if !model.isPlaying {
+            // In Split the play button moves to After's half, clear of the
+            // line's handle (FS-12.15 §4) — the stage draws it there.
+            if !model.isPlaying, model.compare?.mode != .split {
                 // `.editorGlass`, like every other round control this app
                 // floats over a photo. This was a hand-rolled colour plus
                 // `.ultraThinMaterial` from the feature's first commit —
@@ -913,8 +947,46 @@ struct VideoStudioScreen: View {
                 withAnimation(EditorTheme.animation) { model.clearSelection() }
             }
         }
+        // Side by Side · Split over the iPad's stage (FS-12.15 §4).
+        .overlay(alignment: .top) {
+            if let compare = model.compare, currentWindowClass == .iPadLandscape || currentWindowClass == .iPadPortrait {
+                VideoDeskSegmented(
+                    items: VideoBeforeAfter.modes(sideBySide: true).map { ($0, VideoStudioCopy.compareMode($0), "compareMode.\($0.rawValue)") },
+                    selection: Binding(get: { compare.mode }, set: { model.setCompareMode($0) }),
+                    label: Text(VideoStudioCopy.beforeAndAfter)
+                )
+                .frame(width: 280)
+                .padding(.top, 4)
+            }
+        }
+        // Hold to Compare (FS-12.15 §5, AC-4): a finger on the frame shows
+        // Before until it lifts.
+        .highPriorityGesture(
+            DragGesture(minimumDistance: 0)
+                .onChanged { _ in if !model.showsOriginal { model.holdCompare(true) } }
+                .onEnded { _ in model.holdCompare(false) },
+            including: model.compare?.mode == .hold ? .all : .none
+        )
         .onAppear { loadStickerImages(model) }
         .onChange(of: model.recipe.overlays) { loadStickerImages(model) }
+    }
+
+    /// Where Side by Side lays its two frames: the stage, short of the
+    /// iPad's level meter on the right.
+    private func compareStage(_ size: CGSize) -> CGRect {
+        let isPad = currentWindowClass == .iPadLandscape || currentWindowClass == .iPadPortrait
+        return CGRect(x: 0, y: 0, width: max(0, size.width - (isPad ? VideoBeforeAfterStage.meterAllowance : 0)), height: size.height)
+    }
+
+    /// Where After's frame is: the project frame, or — side by side — the
+    /// After window of the pair.
+    private func compareAfterRect(_ model: VideoStudioModel, contentRect: CGRect, stage: CGRect) -> CGRect {
+        guard let compare = model.compare, compare.mode == .sideBySide else { return contentRect }
+        let canvas = model.recipe.canvasSize()
+        let inset: CGFloat = currentWindowClass == .duoInner ? 9 : 16
+        let gap: CGFloat = currentWindowClass == .duoInner ? 8 : 16
+        let frames = VideoBeforeAfterStage.frames(in: stage, aspect: canvas.width / max(canvas.height, 1), inset: inset, gap: gap, windowClass: currentWindowClass)
+        return compare.isSwapped ? frames.left : frames.right
     }
 
     /// Decode the sticker PNGs the preview proxy draws — off the render path, keyed

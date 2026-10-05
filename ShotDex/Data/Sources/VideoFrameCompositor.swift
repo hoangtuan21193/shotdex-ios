@@ -35,12 +35,17 @@ struct VideoRenderRecipe: Sendable {
     /// The caption lane, drawn over everything when it is burnt in — the
     /// export only: the preview draws captions live (FS-12.14 §6).
     let captionBurner: VideoCaptionBurner?
+    /// What each frame becomes after it is composed (plan K1).
+    let outputStage: VideoOutputStage
+    /// Before's own settings, when the stage is a pair (FS-12.15 §3).
+    let before: VideoBeforeRender?
 
     init(
         recipe: VideoProjectRecipe,
         renderSize: CGSize,
         totalDuration: Double,
         bakesOverlays: Bool,
+        outputStage: VideoOutputStage = .single,
         /// Whether a LUT's file is on disk. Asked here, once per build, so
         /// the compositor never touches the file system per frame and a LUT
         /// deleted since renders as no LUT (§6).
@@ -63,6 +68,13 @@ struct VideoRenderRecipe: Sendable {
             }
         self.overlays = recipe.overlays
         self.captionBurner = bakesOverlays ? VideoCaptionBurner(lane: recipe.captions, recipe: recipe) : nil
+        self.outputStage = outputStage
+        self.before = outputStage == .pair
+            ? VideoBeforeRender(VideoRenderRecipe(
+                recipe: VideoBeforeAfter.beforeRecipe(recipe), renderSize: renderSize,
+                totalDuration: totalDuration, bakesOverlays: false, lutExists: lutExists
+            ))
+            : nil
         self.renderSize = renderSize
         self.totalDuration = totalDuration
         self.bakesOverlays = bakesOverlays
@@ -171,6 +183,12 @@ struct VideoRenderRecipe: Sendable {
     func activeTimedOverlays(at time: Double) -> [TimedOverlay] {
         overlays.filter { $0.isActive(at: time, total: totalDuration) }
     }
+}
+
+/// Before's settings inside After's (a struct cannot hold itself).
+final class VideoBeforeRender: Sendable {
+    let recipe: VideoRenderRecipe
+    init(_ recipe: VideoRenderRecipe) { self.recipe = recipe }
 }
 
 /// Serves still photos to the compositor. Loads synchronously off-main via
@@ -436,10 +454,13 @@ final class VideoFrameCompositor: NSObject, AVVideoCompositing {
             return
         }
 
-        let renderSize = request.renderContext.size
-        let canvas = CGRect(origin: .zero, size: renderSize)
-        let seconds = request.compositionTime.seconds
         let recipe = instruction.recipe
+        // The project's frame, where the clips were laid out — the output
+        // can be larger (a pair, a preset's frame).
+        let renderSize = recipe.renderSize
+        let canvas = CGRect(origin: .zero, size: renderSize)
+        let outputFrame = CGRect(origin: .zero, size: request.renderContext.size)
+        let seconds = request.compositionTime.seconds
         let backgroundPhoto: CIImage? = if recipe.framing == .fit, recipe.backgroundKind == .image,
                                             let id = recipe.backgroundImageID {
             instruction.stillStore.backgroundImage(for: id)
@@ -448,24 +469,27 @@ final class VideoFrameCompositor: NSObject, AVVideoCompositing {
         }
         let front = resolvedImage(instruction.front, request: request, renderSize: renderSize)
         let back = instruction.back.flatMap { resolvedImage($0, request: request, renderSize: renderSize) }
-        var image = Self.composeFrame(
-            front: front.map { ($0, instruction.frontClip) },
-            back: back.flatMap { image in instruction.backClip.map { (image, $0) } },
-            transition: instruction.back == nil ? nil : (
-                kind: instruction.transitionKind,
-                start: instruction.fadeStart,
-                duration: instruction.fadeDuration
-            ),
-            recipe: recipe,
-            canvas: canvas,
-            at: seconds,
-            backgroundPhoto: backgroundPhoto,
-            materialize: { [context] image in
-                guard let buffer = request.renderContext.newPixelBuffer() else { return image }
-                context.render(image, to: buffer)
-                return CIImage(cvPixelBuffer: buffer).cropped(to: image.extent)
-            }
-        )
+        let compose = { [context] (settings: VideoRenderRecipe) -> CIImage in
+            Self.composeFrame(
+                front: front.map { ($0, instruction.frontClip) },
+                back: back.flatMap { image in instruction.backClip.map { (image, $0) } },
+                transition: instruction.back == nil ? nil : (
+                    kind: instruction.transitionKind,
+                    start: instruction.fadeStart,
+                    duration: instruction.fadeDuration
+                ),
+                recipe: settings,
+                canvas: canvas,
+                at: seconds,
+                backgroundPhoto: backgroundPhoto,
+                materialize: { image in
+                    guard let buffer = request.renderContext.newPixelBuffer() else { return image }
+                    context.render(image, to: buffer)
+                    return CIImage(cvPixelBuffer: buffer).cropped(to: image.extent)
+                }
+            )
+        }
+        var image = compose(recipe)
 
         // Overlays last, over the finished frame: a caption is not part of
         // either clip, so it is neither graded nor dissolved.
@@ -482,10 +506,16 @@ final class VideoFrameCompositor: NSObject, AVVideoCompositing {
             }
             image = image.cropped(to: canvas)
         }
+        // The stage: Before beside After from the same source pixels
+        // (FS-12.15, plan K2) — Before's own settings, never an overlay.
+        if recipe.outputStage == .pair, let before = recipe.before?.recipe {
+            let after = image.transformed(by: CGAffineTransform(translationX: canvas.width, y: 0))
+            image = after.composited(over: compose(before).cropped(to: canvas)).cropped(to: outputFrame)
+        }
         // Captions last of all, over every overlay, measured against the
         // frame that is written (FS-12.14 §6).
         if let burner = recipe.captionBurner, front != nil {
-            image = burner.burn(into: image, frame: canvas, at: seconds).cropped(to: canvas)
+            image = burner.burn(into: image, frame: canvas, at: seconds).cropped(to: outputFrame)
         }
 
         render(image, to: output, request: request)

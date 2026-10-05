@@ -236,35 +236,80 @@ struct VideoTransportTimecode: View {
 }
 
 /// Before and After at the end of the iPad's play row (FS-12.03b §2,
-/// FS-12.15 §4): 44, transparent, white 14 % while it shows the original.
-/// Until the side-by-side compare lands (FS-12.15) it is the press-and-hold
-/// compare the toolbar's Show original also gives.
+/// FS-12.15 §4): 44, transparent, white 14 % while on. A tap turns the
+/// compare on — Side by Side, the pool folded — or off.
 struct VideoBeforeAfterButton: View {
     @Bindable var model: VideoStudioModel
     var size: CGFloat = VideoStudioDeskGeometry.beforeAfterButton
 
     var body: some View {
-        let isEnabled = model.hasEdits
+        let isOn = model.compare != nil
+        Button {
+            model.toggleBeforeAfter(sideBySide: true)
+        } label: {
+            Image(systemName: "square.split.2x1")
+                .font(.system(size: size * 0.43, weight: .regular))
+                .foregroundStyle(.white)
+                .frame(width: size, height: size)
+                .background(Circle().fill(isOn ? VideoStudioMetrics.openCellFill : .clear))
+                .contentShape(Circle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(Text(VideoStudioCopy.beforeAndAfter))
+        .accessibilityAddTraits(isOn ? .isSelected : [])
+        .accessibilityIdentifier("beforeAndAfterButton")
+    }
+}
+
+/// The Duo inner display's disc at (148, 12) (FS-12.15 §4, AC-12): a tap
+/// turns Before and After on or off; held for 0.3 s or more it is Show
+/// original — both frames show Before until the finger lifts. White with
+/// a black glyph when on, the dark disc when off.
+struct VideoDuoCompareDisc: View {
+    @Bindable var model: VideoStudioModel
+    let diameter: CGFloat
+
+    @State private var pressedAt: Date?
+    @State private var isHolding = false
+
+    var body: some View {
+        let isOn = model.compare != nil
         Image(systemName: "square.split.2x1")
-            .font(.system(size: size * 0.43, weight: .regular))
-            .foregroundStyle(isEnabled ? Color.white : Color.white.opacity(0.28))
-            .frame(width: size, height: size)
-            .background(Circle().fill(model.showsOriginal ? VideoStudioMetrics.openCellFill : .clear))
+            .font(.system(size: 14, weight: .medium))
+            .foregroundStyle(isOn || model.showsOriginal ? Color.black : Color.white)
+            .frame(width: diameter, height: diameter)
+            .background(Circle().fill(isOn || model.showsOriginal ? Color.white : Color.black.opacity(0.55)))
             .contentShape(Circle())
             .gesture(
                 DragGesture(minimumDistance: 0)
                     .onChanged { _ in
-                        guard isEnabled, !model.showsOriginal else { return }
-                        model.setShowsOriginal(true)
+                        if pressedAt == nil {
+                            pressedAt = .now
+                            Task { @MainActor in
+                                try? await Task.sleep(for: .seconds(0.3))
+                                guard pressedAt != nil, !isHolding else { return }
+                                isHolding = true
+                                model.setShowsOriginal(true)
+                            }
+                        }
                     }
-                    .onEnded { _ in model.setShowsOriginal(false) }
+                    .onEnded { _ in
+                        if isHolding {
+                            model.setShowsOriginal(false)
+                        } else {
+                            model.toggleBeforeAfter(sideBySide: true)
+                        }
+                        isHolding = false
+                        pressedAt = nil
+                    }
             )
-            .allowsHitTesting(isEnabled)
             .accessibilityElement()
             .accessibilityLabel(Text(VideoStudioCopy.beforeAndAfter))
             .accessibilityHint(Text("Press and hold to see the clips without edits", comment: "Hint for the Video Studio before/after control"))
             .accessibilityAddTraits(.isButton)
-            .accessibilityAddTraits(model.showsOriginal ? .isSelected : [])
+            .accessibilityAddTraits(isOn ? .isSelected : [])
+            .accessibilityAction { model.toggleBeforeAfter(sideBySide: true) }
+            .accessibilityIdentifier("beforeAndAfterButton")
     }
 }
 

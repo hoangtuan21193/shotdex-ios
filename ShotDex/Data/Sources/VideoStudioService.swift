@@ -446,7 +446,8 @@ final class VideoStudioService {
     func makePreviewItem(
         recipe: VideoProjectRecipe,
         sources: [UUID: VideoClipSource],
-        activity: [String: ClipSoundActivity] = [:]
+        activity: [String: ClipSoundActivity] = [:],
+        stage: VideoOutputStage = .single
     ) async throws -> PreviewBuild {
         let music = await loadMusicSources(recipe.musicTracks)
         let blank = try await blankClipIfNeeded(recipe: recipe, sources: sources)
@@ -475,7 +476,9 @@ final class VideoStudioService {
             recipe: recipe,
             layout: layout,
             stillStore: previewStillStore,
-            bakesOverlays: false
+            bakesOverlays: false,
+            renderSize: previewRenderSize(for: recipe, stage: stage),
+            stage: stage
         )
         item.audioMix = VideoCompositionBuilder.audioMix(recipe: recipe, layout: layout, activity: activity)
         return PreviewBuild(playerItem: item, layout: layout)
@@ -486,6 +489,7 @@ final class VideoStudioService {
     func applyVideoComposition(
         recipe: VideoProjectRecipe,
         layout: VideoCompositionBuilder.Layout,
+        stage: VideoOutputStage = .single,
         to item: AVPlayerItem
     ) {
         item.videoComposition = VideoCompositionBuilder.videoComposition(
@@ -493,7 +497,8 @@ final class VideoStudioService {
             layout: layout,
             stillStore: previewStillStore,
             bakesOverlays: false,
-            renderSize: previewRenderSize(for: recipe)
+            renderSize: previewRenderSize(for: recipe, stage: stage),
+            stage: stage
         )
     }
 
@@ -611,9 +616,13 @@ final class VideoStudioService {
 
     // MARK: - Internals
 
-    private func previewRenderSize(for recipe: VideoProjectRecipe) -> CGSize {
+    /// The preview's canvas: the long edge at 1280 — at 960 for each side
+    /// of a pair, so Before and After together cost about what one frame
+    /// did (FS-12.15 §6).
+    private func previewRenderSize(for recipe: VideoProjectRecipe, stage: VideoOutputStage = .single) -> CGSize {
         let full = recipe.canvasSize()
-        let scale = Self.previewLongEdge / max(full.width, full.height)
+        let longEdge = stage == .pair ? Self.previewLongEdge * 0.75 : Self.previewLongEdge
+        let scale = longEdge / max(full.width, full.height)
         return CGSize(
             width: (full.width * scale / 2).rounded() * 2,
             height: (full.height * scale / 2).rounded() * 2

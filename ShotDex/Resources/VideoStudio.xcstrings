@@ -361,6 +361,10 @@
       "comment": "Video Studio captions: under the progress bar — clips read so far, and the privacy promise",
       "extractionState": "manual"
     },
+    "%lld percent": {
+      "comment": "Video Studio compare: VoiceOver value of the Split handle — how much of the frame is Before",
+      "extractionState": "manual"
+    },
     "%lld photos": {
       "comment": "Video Studio multi-select: how many of the selected clips are stills — 1 photo (plural)",
       "extractionState": "manual",
@@ -501,6 +505,14 @@
       "comment": "Video Studio: title of the Music tool's panel",
       "extractionState": "manual"
     },
+    "Adjust": {
+      "comment": "Video Studio compare, iPad portrait: the column of exposure, contrast, saturation and warmth",
+      "extractionState": "manual"
+    },
+    "After": {
+      "comment": "Video Studio compare: the label on the edited frame",
+      "extractionState": "manual"
+    },
     "Albums": {
       "comment": "Video Studio Media panel tab: the user's albums; also the back button from an album's grid",
       "extractionState": "manual"
@@ -629,8 +641,20 @@
       "comment": "Video Studio: the music command that marks a song's beats",
       "extractionState": "manual"
     },
+    "Before": {
+      "comment": "Video Studio compare: the label on the original frame, and VoiceOver's name for it and for the Split handle",
+      "extractionState": "manual"
+    },
     "Before and After": {
       "comment": "Video Studio: compares the clips with and without the look",
+      "extractionState": "manual"
+    },
+    "Before drops the look, adjustments, color and overlays — the same thing holding the frame shows.": {
+      "comment": "Video Studio compare, iPad portrait: the note under the Compare column",
+      "extractionState": "manual"
+    },
+    "Before shows": {
+      "comment": "Video Studio compare, iPad portrait: the row saying what the Before side is",
       "extractionState": "manual"
     },
     "Black": {
@@ -643,6 +667,14 @@
     },
     "Blur": {
       "comment": "Video Studio Video Settings: the background is the clip itself, blurred; also the slider's name",
+      "extractionState": "manual"
+    },
+    "Both sides play and scrub together · %@": {
+      "comment": "Video Studio compare: under the two frames, with the playhead",
+      "extractionState": "manual"
+    },
+    "Both sides play together · %@": {
+      "comment": "Video Studio compare, Duo: under the two frames, with the playhead",
       "extractionState": "manual"
     },
     "Bottom": {
@@ -663,6 +695,10 @@
     },
     "CODEC": {
       "comment": "Video Studio Video Settings: section header over H.264 / HEVC",
+      "extractionState": "manual"
+    },
+    "COMPARE": {
+      "comment": "Video Studio Look panel: the header over Split · Hold to Compare",
       "extractionState": "manual"
     },
     "Camera, lens, 85mm, ISO 3200…": {
@@ -737,6 +773,10 @@
       "comment": "Video Studio: VoiceOver name of the selected item's row of commands",
       "extractionState": "manual"
     },
+    "Compare": {
+      "comment": "Video Studio compare: the iPad dock's column title over Side by Side · Split",
+      "extractionState": "manual"
+    },
     "Continue": {
       "comment": "Video Studio captions: resumes recognition with the clips not read yet",
       "extractionState": "manual"
@@ -791,6 +831,14 @@
     },
     "Draft": {
       "comment": "Video Projects: label on a video project that has never been exported",
+      "extractionState": "manual"
+    },
+    "Drag the white line across the frame. Before drops the look, adjustments, color and overlays.": {
+      "comment": "Video Studio Look panel: under COMPARE when Split is chosen",
+      "extractionState": "manual"
+    },
+    "Drag to compare": {
+      "comment": "Video Studio compare: VoiceOver hint on the Split handle",
       "extractionState": "manual"
     },
     "Drop between clips · back on the grid cancels": {
@@ -943,6 +991,14 @@
     },
     "HEVC is about 40% smaller; some older devices can’t play it.": {
       "comment": "Video Studio Video Settings: under the codec choice",
+      "extractionState": "manual"
+    },
+    "Hold a finger on the frame to see the original. Before drops the look, adjustments, color and overlays.": {
+      "comment": "Video Studio Look panel: under COMPARE when Hold to Compare is chosen",
+      "extractionState": "manual"
+    },
+    "Hold to Compare": {
+      "comment": "Video Studio compare: holding a finger on the frame shows the original",
       "extractionState": "manual"
     },
     "Image": {
@@ -1125,6 +1181,10 @@
       "comment": "Video Studio Media panel: the Albums tab when the library has no albums of the user's own",
       "extractionState": "manual"
     },
+    "No edits to compare yet.": {
+      "comment": "Video Studio compare: the project has no look, adjustments, color or overlays — both sides are the same",
+      "extractionState": "manual"
+    },
     "No photos or videos yet.": {
       "comment": "Video Studio Media panel: Recents when the library is empty",
       "extractionState": "manual"
@@ -1187,6 +1247,10 @@
     },
     "Or drag the clip's edges on the timeline.": {
       "comment": "Video Studio Trim: the other way to cut a clip",
+      "extractionState": "manual"
+    },
+    "Original clip": {
+      "comment": "Video Studio compare, iPad portrait: what the Before side shows",
       "extractionState": "manual"
     },
     "Original clip audio, whole project": {
@@ -1349,6 +1413,10 @@
       "comment": "Video Studio Export: Photos refused the finished video because access is denied",
       "extractionState": "manual"
     },
+    "Side by Side": {
+      "comment": "Video Studio compare: the original and the edit as two frames",
+      "extractionState": "manual"
+    },
     "Size": {
       "comment": "Video Studio captions: the text height, as a share of the frame's short edge",
       "extractionState": "manual"
@@ -1417,6 +1485,10 @@
       "comment": "Video Studio iPad: the 0.5× 1× 2× 4× segmented control under the Speed slider",
       "extractionState": "manual"
     },
+    "Split": {
+      "comment": "Video Studio compare: one frame, the original left of a line the user drags",
+      "extractionState": "manual"
+    },
     "Start to Playhead": {
       "comment": "Video Studio Trim: cuts the selected clip's start to the playhead",
       "extractionState": "manual"
@@ -1427,6 +1499,10 @@
     },
     "Style": {
       "comment": "Video Studio captions: the look of every caption in the lane",
+      "extractionState": "manual"
+    },
+    "Swap Sides": {
+      "comment": "Video Studio compare, iPad portrait: puts After on the left and Before on the right",
       "extractionState": "manual"
     },
     "Tap adds at %@ · hold to drag": {
