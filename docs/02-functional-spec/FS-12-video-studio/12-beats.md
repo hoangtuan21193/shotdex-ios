@@ -116,7 +116,7 @@ Project mẫu: 5 clip 3.0s ảnh · 6.2s video (nguồn 10 s, trim 0–6,2) · 5
 
 | # | Cho | Khi | Thì | Chứng minh bằng |
 |---|---|---|---|---|
-| AC-1 | click 30 s, 96 BPM, 4/4, phách 1 to gấp đôi, bắt đầu 0,0 s | phân tích | BPM 96 ±0,5; mọi nhịp lệch ≤ 20 ms; nhịp 0, 4, 8… là phách 1 | ⚠️ chưa có |
+| AC-1 | click 30 s, 96 BPM, 4/4, phách 1 to gấp đôi, bắt đầu 0,0 s | phân tích | BPM 96 ±0,5; mọi nhịp lệch ≤ 20 ms; nhịp 0, 4, 8… là phách 1 | ✅ `BeatDetectorTests.click96BarAccented` (click tổng hợp 30 s trong test: 96,0 BPM, 48 nhịp, mọi nhịp lệch ≤ 1 ms so với click — AC cho 20 ms — phách 1 ở nhịp 0, 4, 8…), `click170NotHalved` (170, không 85), `click60NotDoubled` (60, không 120); `BeatDetector` ở Domain, Accelerate (khung 256 / bước 128, tự tương quan 60–180 BPM chọn đỉnh nhanh hơn khi hai đỉnh gần bằng, lập trình động trôi ±5 %, mỗi nhịp ghim vào khởi âm tới mili-giây, phách 1 = pha mạnh nhất dưới 200 Hz) |
 | AC-2 | click 120 BPM, 0,37 s im lặng ở đầu | phân tích | nhịp đầu ở 0,37 ±0,02 s; BPM 120 ±0,5 | ⚠️ chưa có |
 | AC-3 | 30 s tiếng ồn trắng | phân tích | thẻ "No steady beat"; Snap và Cut Clips to Beat mờ 0,28; không vạch nào | ⚠️ chưa có |
 | AC-4 | project mẫu, iPhone, zoom 55 pt/s | mở tab Beats của A1 | thẻ "96 BPM · 4/4" / "30 beats marked on A1 · found on this iPhone"; vạch bar cách nhau 137,5 ±1pt, nhịp 34,4 ±1pt | ⚠️ chưa có |
@@ -134,7 +134,7 @@ Project mẫu: 5 clip 3.0s ảnh · 6.2s video (nguồn 10 s, trim 0–6,2) · 5
 
 | AC-16 | mọi trạng thái của AC-4 → AC-12 | `design-reviewer` đọc màu vạch, pill, núm, mũi tên nhịp | đều là `timelineBeat` #FFD60A, chữ trên pill #1A1500; không chỗ nào dùng #EB9526 hay #57BFD1 cho nhịp | ⚠️ chưa có — agent `design-reviewer` |
 
-**Chưa chứng minh được:** AC-1 tới AC-16.
+**Chưa chứng minh được:** AC-2 tới AC-16.
 
 ## 10. Rủi ro đã biết
 
