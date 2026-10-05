@@ -121,6 +121,15 @@ enum SettingsKeys {
     /// Unwritten means `.similar`.
     static let duplicateStrictness = "duplicates.strictness"
 
+    /// `DuplicateSort` raw value of the group list. Unwritten means `.mostSpace`.
+    static let duplicateSort = "duplicates.sort"
+
+    /// Copies per row on a Duplicates card, as the user pinched it — one per
+    /// width class, like the Library grid's density. Unwritten means 2 compact,
+    /// 3 regular.
+    static let duplicateCopyColumnsCompact = "duplicates.copyColumns.compact"
+    static let duplicateCopyColumnsRegular = "duplicates.copyColumns.regular"
+
     /// Group count of the last duplicate grouping, so the Collections tab token
     /// can show it without loading every hash. Unwritten means never scanned.
     static let duplicateGroupCount = "duplicates.lastGroupCount"

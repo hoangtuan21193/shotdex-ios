@@ -1,0 +1,30 @@
+{
+  "steps": [
+    { "action": "launch" },
+    { "action": "wait", "seconds": 6 },
+    { "action": "tap", "label": "Collections", "type": "button" },
+    { "action": "wait", "seconds": 3 },
+    { "action": "scrollTo", "label": "Duplicates" },
+    { "action": "tap", "label": "Duplicates" },
+    { "action": "wait", "seconds": 8 },
+    { "action": "screenshot", "name": "01-top" },
+    { "action": "dump", "name": "01-top" },
+    { "action": "tap", "label": "Mark the other" },
+    { "action": "wait", "seconds": 2 },
+    { "action": "screenshot", "name": "02-marked" },
+    { "action": "dump", "name": "02-marked" },
+    { "action": "tap", "label": "Reviewed group" },
+    { "action": "wait", "seconds": 2 },
+    { "action": "screenshot", "name": "03-expanded" },
+    { "action": "tap", "label": "Keep all" },
+    { "action": "wait", "seconds": 2 },
+    { "action": "screenshot", "name": "04-keepall" },
+    { "action": "swipe", "x": 0.5, "y": 0.7, "direction": "up", "distance": 0.4 },
+    { "action": "wait", "seconds": 2 },
+    { "action": "screenshot", "name": "05-scrolled" },
+    { "action": "tap", "label": "Series" },
+    { "action": "wait", "seconds": 5 },
+    { "action": "screenshot", "name": "06-series" },
+    { "action": "dump", "name": "06-series" }
+  ]
+}

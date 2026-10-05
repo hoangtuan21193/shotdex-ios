@@ -1,10 +1,19 @@
 import Foundation
 import Photos
 import SwiftUI
+import UniformTypeIdentifiers
 
 /// Payload for the compare cover opened from a duplicate group: the members
 /// as `ComparePhoto`s, ready to render (DESIGN.md §10.5 — the item carries
 /// its data, the cover never reads state back).
+/// An alert the Duplicates screen owes the user: a merge that failed for some
+/// groups, or a Delete that would have emptied a group.
+struct DuplicateNotice: Identifiable {
+    let id = UUID()
+    let title: String
+    let message: String
+}
+
 struct DuplicateComparePresentation: Identifiable {
     let id = UUID()
     let photos: [ComparePhoto]
@@ -36,11 +45,37 @@ final class DuplicatesModel {
     private(set) var scanState: DuplicateScanState?
     /// Photos the next scan would hash — new or edited since the last one.
     private(set) var pendingCount = 0
-    /// Members the user tapped to remove. Asset ids, so a mark survives a reload.
-    var markedForDeletion: Set<String> = []
+    /// The user's marks and decisions; lives in `AppDependencies` so it
+    /// outlasts this model (FS-06.06b §1).
+    let session: DuplicateReviewSession
+    /// Edited / RAW / Live / favourite per member, read per card as it appears.
+    private(set) var traits: [String: DuplicateMemberTraits] = [:]
+    private var traitsRequested: Set<String> = []
     var comparePresentation: DuplicateComparePresentation?
     var errorMessage: String?
+    /// Title + message of the alert raised when Merge could not write some
+    /// groups, or Delete would empty a group.
+    var notice: DuplicateNotice?
+    var isConfirmingMerge = false
     var isDeleting = false
+    private(set) var isMerging = false
+    /// Group whose last unmarked photo the user just tried to mark; the card
+    /// shows "Keep at least one photo in this group." for a moment.
+    private(set) var blockedGroupId: String?
+    private var blockedResetTask: Task<Void, Never>?
+
+    /// Asset ids marked for deletion, every strictness — what Compare binds to.
+    var markedForDeletion: Set<String> {
+        get { session.marks }
+        set { session.marks = newValue }
+    }
+
+    var sort: DuplicateSort {
+        didSet {
+            guard sort != oldValue else { return }
+            UserDefaults.standard.set(sort.rawValue, forKey: SettingsKeys.duplicateSort)
+        }
+    }
 
     var strictness: DuplicateStrictness {
         didSet {
@@ -56,8 +91,11 @@ final class DuplicatesModel {
 
     init(dependencies: AppDependencies) {
         self.dependencies = dependencies
+        self.session = dependencies.duplicateReview
         let stored = UserDefaults.standard.string(forKey: SettingsKeys.duplicateStrictness)
         self.strictness = stored.flatMap(DuplicateStrictness.init(rawValue:)) ?? .similar
+        let storedSort = UserDefaults.standard.string(forKey: SettingsKeys.duplicateSort)
+        self.sort = storedSort.flatMap(DuplicateSort.init(rawValue:)) ?? .mostSpace
     }
 
     var isScanning: Bool {
@@ -65,21 +103,191 @@ final class DuplicatesModel {
         return false
     }
 
-    var isBusy: Bool { phase != .idle || isDeleting }
+    var isBusy: Bool { phase != .idle || isDeleting || isMerging }
 
     /// The library has never been scanned at any strictness.
     var hasNeverScanned: Bool { scanState == nil && hasLoadedOnce && phase == .idle }
 
     var duplicatePhotoCount: Int { groups.reduce(0) { $0 + $1.count } }
 
-    var markedBytes: Int {
-        groups.lazy
-            .flatMap(\.members)
-            .filter { self.markedForDeletion.contains($0.assetId) }
-            .reduce(0) { $0 + ($1.fileSize ?? 0) }
+    /// Marks that belong to a group of the strictness on screen. The Delete
+    /// bar counts and deletes only these, so its number matches the tiles the
+    /// user can see; marks made under another strictness wait there.
+    var scopedMarks: Set<String> {
+        let marks = session.marks
+        guard !marks.isEmpty else { return [] }
+        var scoped: Set<String> = []
+        for group in groups {
+            for member in group.members where marks.contains(member.assetId) {
+                scoped.insert(member.assetId)
+            }
+        }
+        return scoped
     }
 
-    var markedCount: Int { markedForDeletion.count }
+    var markedBytes: Int {
+        let scoped = scopedMarks
+        var seen: Set<String> = []
+        var bytes = 0
+        for member in groups.lazy.flatMap(\.members)
+        where scoped.contains(member.assetId) && seen.insert(member.assetId).inserted {
+            bytes += member.fileSize ?? 0
+        }
+        return bytes
+    }
+
+    var markedCount: Int { scopedMarks.count }
+
+    // MARK: Review
+
+    /// Groups in the order the sort menu asks for.
+    var sortedGroups: [DuplicateGroup] {
+        DuplicateReview.sorted(groups, by: sort) { self.freeBytes(of: $0) ?? 0 }
+    }
+
+    private func key(_ group: DuplicateGroup) -> String {
+        DuplicateReviewSession.key(strictness, group.id)
+    }
+
+    /// The member the card puts big with "Keep": the user's Keep Only This
+    /// pick, else the suggestion (D3). `nil` for a series — the lead frame of
+    /// a run of poses is not a recommendation.
+    func keeper(of group: DuplicateGroup) -> HashedPhoto? {
+        guard strictness != .series else { return nil }
+        if let picked = session.keeperOverride[key(group)],
+           let member = group.members.first(where: { $0.assetId == picked }) {
+            return member
+        }
+        return DuplicateReview.keeper(of: group.members, traits: traits)
+    }
+
+    /// Bytes freed by keeping only the keeper; `nil` for a series (§6).
+    func freeBytes(of group: DuplicateGroup) -> Int? {
+        guard let keeper = keeper(of: group) else { return nil }
+        return DuplicateReview.freeBytes(members: group.members, keeper: keeper)
+    }
+
+    func reasons(for group: DuplicateGroup) -> [DuplicateKeepReason] {
+        guard let keeper = keeper(of: group) else { return [] }
+        return DuplicateReview.reasons(keeper: keeper, members: group.members, traits: traits)
+    }
+
+    func difference(of member: HashedPhoto, in group: DuplicateGroup) -> String {
+        guard let keeper = keeper(of: group) else {
+            return DuplicateReview.dimensions(member) ?? "—"
+        }
+        return DuplicateReview.difference(of: member, from: keeper, traits: traits)
+    }
+
+    func traits(of assetId: String) -> DuplicateMemberTraits {
+        traits[assetId] ?? DuplicateMemberTraits(isFavorite: assetsById[assetId]?.isFavorite ?? false)
+    }
+
+    func isKeptAll(_ group: DuplicateGroup) -> Bool {
+        session.keptAll.contains(key(group))
+    }
+
+    /// Decided = something in it is marked, or the user kept it whole.
+    func isReviewed(_ group: DuplicateGroup) -> Bool {
+        isKeptAll(group) || markedCount(in: group) > 0
+    }
+
+    func isCollapsed(_ group: DuplicateGroup) -> Bool {
+        session.collapsed.contains(key(group)) && isReviewed(group)
+    }
+
+    var reviewedCount: Int { groups.filter(isReviewed).count }
+
+    /// "~96 MB to free" in the header: what keeping one per group would free.
+    var totalFreeBytes: Int {
+        groups.reduce(0) { $0 + (freeBytes(of: $1) ?? 0) }
+    }
+
+    /// Every member of the group carries a mark — possible when marks made
+    /// under another strictness fill a group of this one (§1).
+    func isFullyMarked(_ group: DuplicateGroup) -> Bool {
+        group.members.allSatisfy { session.marks.contains($0.assetId) }
+    }
+
+    func expand(_ group: DuplicateGroup) {
+        session.collapsed.remove(key(group))
+    }
+
+    /// "Mark the other N": every member but the keeper, then fold the card.
+    func markOthers(in group: DuplicateGroup) {
+        guard let keeper = keeper(of: group) else { return }
+        for member in group.members where member.assetId != keeper.assetId {
+            session.marks.insert(member.assetId)
+        }
+        session.marks.remove(keeper.assetId)
+        session.keptAll.remove(key(group))
+        session.collapsed.insert(key(group))
+    }
+
+    /// "Unmark": drops every mark in the group, and the group is open again.
+    func unmark(_ group: DuplicateGroup) {
+        clearMarks(in: group)
+        session.collapsed.remove(key(group))
+    }
+
+    /// "Keep all" toggles: on, it clears the group's marks and folds it as
+    /// "Keeping all N"; off, the group is undecided again.
+    func toggleKeepAll(_ group: DuplicateGroup) {
+        let key = key(group)
+        if session.keptAll.contains(key) {
+            session.keptAll.remove(key)
+            session.collapsed.remove(key)
+        } else {
+            clearMarks(in: group)
+            session.keptAll.insert(key)
+            session.collapsed.insert(key)
+        }
+    }
+
+    /// Reads edited / RAW / Live for the members of a group not read yet —
+    /// once per member per screen, off the main thread, local resources only.
+    func loadTraits(for group: DuplicateGroup) {
+        let missing = group.members.map(\.assetId).filter { !traitsRequested.contains($0) }
+        guard !missing.isEmpty else { return }
+        traitsRequested.formUnion(missing)
+        let assets = missing.compactMap { assetsById[$0] }
+        Task { [weak self] in
+            let read = await Task.detached(priority: .userInitiated) {
+                Self.readTraits(assets)
+            }.value
+            self?.traits.merge(read) { _, new in new }
+        }
+    }
+
+    /// Same as `loadTraits(for:)` for many groups at once, awaited — Merge
+    /// needs the edited flag of every member before it picks keepers.
+    private func loadAllTraits(_ groups: [DuplicateGroup]) async {
+        let missing = groups.flatMap { $0.members.map(\.assetId) }.filter { traits[$0] == nil }
+        guard !missing.isEmpty else { return }
+        traitsRequested.formUnion(missing)
+        let assets = missing.compactMap { assetsById[$0] }
+        let read = await Task.detached(priority: .userInitiated) {
+            Self.readTraits(assets)
+        }.value
+        traits.merge(read) { _, new in new }
+    }
+
+    nonisolated private static func readTraits(_ assets: [PHAsset]) -> [String: DuplicateMemberTraits] {
+        var result: [String: DuplicateMemberTraits] = [:]
+        for asset in assets {
+            let resources = PHAssetResource.assetResources(for: asset)
+            let hasRAW = resources.contains { resource in
+                UTType(resource.uniformTypeIdentifier)?.conforms(to: .rawImage) == true
+            }
+            result[asset.localIdentifier] = DuplicateMemberTraits(
+                isEdited: resources.contains { $0.type == .adjustmentData },
+                hasRAW: hasRAW,
+                isLive: asset.mediaSubtypes.contains(.photoLive),
+                isFavorite: asset.isFavorite
+            )
+        }
+        return result
+    }
 
     // MARK: Load
 
@@ -158,8 +366,8 @@ final class DuplicatesModel {
         coverage = snapshot.coverage
         scanState = snapshot.scanState
         pendingCount = snapshot.pendingCount
-        let liveIds = Set(self.groups.flatMap { $0.members.map(\.assetId) })
-        markedForDeletion = markedForDeletion.intersection(liveIds)
+        // Marks are not cut on reload (§1): one made under another strictness,
+        // or on a photo missing from this cache, stays until the app is killed.
         UserDefaults.standard.set(self.groups.count, forKey: SettingsKeys.duplicateGroupCount)
     }
 
@@ -246,73 +454,122 @@ final class DuplicatesModel {
         markedForDeletion.contains(assetId)
     }
 
-    func toggleMark(_ assetId: String) {
-        if markedForDeletion.contains(assetId) {
-            markedForDeletion.remove(assetId)
-        } else {
-            markedForDeletion.insert(assetId)
+    /// Whether marking `assetId` would leave its group with nothing to keep.
+    func isLastUnmarked(_ assetId: String, in group: DuplicateGroup) -> Bool {
+        !session.marks.contains(assetId)
+            && group.members.allSatisfy { $0.assetId == assetId || session.marks.contains($0.assetId) }
+    }
+
+    /// Marks or unmarks one tile. Returns `false` — and changes nothing — when
+    /// the tile is the group's last unmarked photo (§1): a group is never
+    /// marked whole from this screen.
+    @discardableResult
+    func toggleMark(_ assetId: String, in group: DuplicateGroup) -> Bool {
+        if session.marks.contains(assetId) {
+            session.marks.remove(assetId)
+            if markedCount(in: group) == 0 { session.collapsed.remove(key(group)) }
+            return true
+        }
+        guard !isLastUnmarked(assetId, in: group) else {
+            showBlocked(group)
+            return false
+        }
+        session.marks.insert(assetId)
+        session.keptAll.remove(key(group))
+        return true
+    }
+
+    private func showBlocked(_ group: DuplicateGroup) {
+        blockedGroupId = group.id
+        blockedResetTask?.cancel()
+        blockedResetTask = Task { [weak self] in
+            try? await Task.sleep(for: .seconds(3))
+            guard !Task.isCancelled else { return }
+            self?.blockedGroupId = nil
         }
     }
 
-    /// Marks every other member of `group` — the fast path for "this is the
-    /// one I keep".
+    /// Keep Only This: the picked member becomes the group's keeper and every
+    /// other member is marked — the fast path for "this is the one I keep".
     func keepOnly(_ assetId: String, in group: DuplicateGroup) {
+        if strictness != .series {
+            session.keeperOverride[key(group)] = assetId
+        }
         for member in group.members {
             if member.assetId == assetId {
-                markedForDeletion.remove(member.assetId)
+                session.marks.remove(member.assetId)
             } else {
-                markedForDeletion.insert(member.assetId)
+                session.marks.insert(member.assetId)
             }
         }
+        session.keptAll.remove(key(group))
     }
 
     func clearMarks(in group: DuplicateGroup) {
         for member in group.members {
-            markedForDeletion.remove(member.assetId)
+            session.marks.remove(member.assetId)
         }
     }
 
+    /// Clear Selection in ⋯: every mark and decision of the strictness on screen.
     func clearAllMarks() {
-        markedForDeletion.removeAll()
+        for group in groups {
+            clearMarks(in: group)
+            session.keptAll.remove(key(group))
+            session.collapsed.remove(key(group))
+        }
     }
 
     // MARK: Merge
 
-    /// Which member of a group survives a merge: the biggest file, then the
-    /// most pixels. Both are proxies for "the least re-compressed copy", which
-    /// is what a duplicate set usually differs by.
-    nonisolated static func keeper(of group: DuplicateGroup) -> HashedPhoto? {
-        group.members.max { left, right in
-            let leftSize = left.fileSize ?? 0
-            let rightSize = right.fileSize ?? 0
-            if leftSize != rightSize { return leftSize < rightSize }
-            return left.pixelCount < right.pixelCount
-        }
-    }
+    /// Merge is only offered on Exact (D1): under Similar or Series the kept
+    /// photo is not the same moment as its copies, and copying a date across
+    /// would be wrong.
+    var canMerge: Bool { strictness == .exact && !groups.isEmpty }
 
-    /// Folds every group down to one photo, the way Photos' own Merge does:
-    /// the keeper inherits anything its copies have and it lacks — the
-    /// favourite flag, a location, the earliest capture date — and the rest are
-    /// marked for deletion.
-    ///
-    /// Metadata is copied *before* anything is deleted, so a failure half way
-    /// leaves the library with duplicates rather than with a stripped keeper.
+    /// Folds every Exact group down to one photo, the way Photos' own Merge
+    /// does: the keeper (D3) inherits anything its copies have and it lacks —
+    /// the favourite flag, a location, the earliest capture date — and only
+    /// once that is saved are the rest marked. A group whose write fails is
+    /// left unmarked, the others go on, and one alert names the failures.
     func mergeAll() async {
-        guard !isDeleting else { return }
+        guard canMerge, !isBusy else { return }
+        isMerging = true
+        defer { isMerging = false }
+        let groups = self.groups
+        await loadAllTraits(groups)
+        var failures: [Error] = []
         for group in groups {
-            guard let keeper = Self.keeper(of: group),
+            guard let keeper = DuplicateReview.keeper(of: group.members, traits: traits),
                   let keeperAsset = assetsById[keeper.assetId]
             else { continue }
             let others = group.members
                 .filter { $0.assetId != keeper.assetId }
                 .compactMap { assetsById[$0.assetId] }
-            await adoptMetadata(into: keeperAsset, from: others)
-            keepOnly(keeper.assetId, in: group)
+            do {
+                try await adoptMetadata(into: keeperAsset, from: others)
+            } catch {
+                failures.append(error)
+                continue
+            }
+            session.keeperOverride[key(group)] = keeper.assetId
+            markOthers(in: group)
+        }
+        if let first = failures.first {
+            let count = failures.count
+            notice = DuplicateNotice(
+                title: count == 1
+                    ? String(localized: "Couldn't Merge 1 Group", comment: "Duplicates: Merge failed for one group")
+                    : String(localized: "Couldn't Merge \(count) Groups", comment: "Duplicates: Merge failed for several groups"),
+                message: first.localizedDescription + " "
+                    + String(localized: "Their photos are not marked.", comment: "Duplicates: after a failed merge, nothing in the failed groups is marked")
+            )
         }
     }
 
-    /// Gives `keeper` the facts its duplicates have and it does not.
-    private func adoptMetadata(into keeper: PHAsset, from others: [PHAsset]) async {
+    /// Gives `keeper` the facts its duplicates have and it does not. Throws
+    /// when Photos refuses the change, so the caller leaves that group alone.
+    private func adoptMetadata(into keeper: PHAsset, from others: [PHAsset]) async throws {
         let shouldFavorite = !keeper.isFavorite && others.contains { $0.isFavorite }
         let adoptedLocation = keeper.location == nil
             ? others.compactMap(\.location).first
@@ -323,7 +580,7 @@ final class DuplicatesModel {
         let adoptedDate = earliest.flatMap { $0 < (keeper.creationDate ?? .distantFuture) ? $0 : nil }
 
         guard shouldFavorite || adoptedLocation != nil || adoptedDate != nil else { return }
-        try? await PHPhotoLibrary.shared().performChanges {
+        try await PHPhotoLibrary.shared().performChanges {
             let request = PHAssetChangeRequest(for: keeper)
             if shouldFavorite { request.isFavorite = true }
             if let adoptedLocation { request.location = adoptedLocation }
@@ -349,7 +606,7 @@ final class DuplicatesModel {
     }
 
     func markedCount(in group: DuplicateGroup) -> Int {
-        group.members.filter { markedForDeletion.contains($0.assetId) }.count
+        group.members.filter { session.marks.contains($0.assetId) }.count
     }
 
     // MARK: Compare
@@ -383,7 +640,17 @@ final class DuplicatesModel {
     /// the marks. Returns whether anything was deleted.
     @discardableResult
     func deleteMarked() async -> Bool {
-        await delete(ids: markedForDeletion)
+        let full = groups.filter(isFullyMarked)
+        guard full.isEmpty else {
+            notice = DuplicateNotice(
+                title: full.count == 1
+                    ? String(localized: "1 Group Has Every Copy Marked", comment: "Duplicates: Delete blocked because a group would lose every photo")
+                    : String(localized: "\(full.count) Groups Have Every Copy Marked", comment: "Duplicates: Delete blocked because groups would lose every photo"),
+                message: String(localized: "Nothing would be kept from them. Unmark at least one photo in each, then delete.", comment: "Duplicates: how to get past the every-copy-marked block")
+            )
+            return false
+        }
+        return await delete(ids: scopedMarks)
     }
 
     /// Deletes a subset of the marks and leaves the rest marked.
@@ -415,7 +682,7 @@ final class DuplicatesModel {
             let remaining = group.members.filter { !ids.contains($0.assetId) }
             return remaining.count > 1 ? DuplicateGroup(members: remaining) : nil
         }
-        markedForDeletion.subtract(ids)
+        session.marks.subtract(ids)
         UserDefaults.standard.set(groups.count, forKey: SettingsKeys.duplicateGroupCount)
         return true
     }
