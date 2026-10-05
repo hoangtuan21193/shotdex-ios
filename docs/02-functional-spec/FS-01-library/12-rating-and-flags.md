@@ -110,8 +110,10 @@ Chốt 2026-10-02.
 - **Menu lọc:** hai hàng phẳng **Picks** và **Rejected** ngay sau Favorites (một chạm, như Favorites), cộng
   menu con **Rating ▸** (Any · ★ & Up … ★★★★★ · Unrated, chọn một).
   - Menu dài thêm 3 hàng, tổng 9 hàng; Advanced Filter… vẫn hiện trên iPhone.
-- **Sao chấm trên máy ảnh:** v1 không đọc. Sao trong file (Sony, Fuji ghi được) không thành sao của ShotDex.
-  *Vì trên iOS 27 đọc nó thành một lần ghi Photos cho mỗi ảnh mới.*
+- **Sao chấm trên máy ảnh:** asset Photos **không** đọc — sao trong file (Sony, Fuji ghi được) không thành sao của
+  ShotDex. *Vì trên iOS 27 đọc nó thành một lần ghi Photos cho mỗi ảnh mới.* **Ảnh file** (thư mục, ổ, server) thì
+  đọc: sao trong XMP của file là sao của ảnh, sidecar `.xmp` có sao thì sidecar thắng
+  ([FS-19.02 §4](../FS-19-photo-sources/02-identity-and-sidecars.md)) — ảnh file không có đường ghi Photos nào.
 
 ## 8. Thiết bị và iOS
 

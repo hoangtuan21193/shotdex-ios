@@ -9,10 +9,11 @@ import UniformTypeIdentifiers
 @Suite struct SidecarReaderTests {
     private let composer = MetadataComposer(sensorLookup: SensorLookup(records: [], customMappings: []))
 
-    /// AC-52, Photos half: a Photos asset takes its stars from Photos only.
-    /// The original carries a 4-star XMP rating (as a Lightroom export does),
-    /// and indexing it as an asset keeps Photos' value — none, or 0 — rather
-    /// than the file's. Reading the file's rating is for file photos (C3).
+    /// AC-52: a file photo takes the stars its camera wrote into it; a
+    /// Photos asset takes its stars from Photos only. The original carries a
+    /// 4-star XMP rating (as a Lightroom export does), and indexing it as an
+    /// asset keeps Photos' value — none, or 0 — rather than the file's. An
+    /// ARW in a folder whose own XMP says ★3, with no sidecar, is ★3.
     @Test func cameraRatingFilesOnly() throws {
         let folder = FileManager.default.temporaryDirectory.appendingPathComponent("ShotDexSidecar-\(UUID().uuidString)")
         try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
@@ -29,6 +30,14 @@ import UniformTypeIdentifiers
         let zero = AssetInfo(assetId: "B", mediaType: 1, isFavorite: false, rating: 0)
         #expect(composer.compose(asset: zero, exif: exif, exifStatus: .indexed).rating == 0)
 
+        let drive = folder.appendingPathComponent("T7", isDirectory: true)
+        try FileManager.default.createDirectory(at: drive, withIntermediateDirectories: true)
+        var options = MetadataFixture.Options()
+        options.xmp = false
+        options.starRating = nil
+        let raw = try MetadataFixture.encode(.tiff, options: options)
+        try Self.embeddingRating(3, in: raw, type: .tiff).write(to: drive.appendingPathComponent("DSC00001.ARW"))
+        #expect(try Self.starsAfterReading(drive) == ["DSC00001.ARW": 3])
     }
 }
 
