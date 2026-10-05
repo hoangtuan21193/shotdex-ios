@@ -16,9 +16,12 @@ struct VideoExportPanel: View {
     var onClose: (() -> Void)?
     @Environment(AppDependencies.self) private var dependencies
     @Environment(\.videoMediaGrid) private var window
+    /// Which window this is — the grid's metrics cannot tell the phone from
+    /// the Duo's cover (both are four columns edge to edge).
+    @Environment(\.videoStudioWindowClass) private var windowClass
     @State private var serverExportModel: ServerExportModel?
 
-    private var inset: CGFloat { window == .cover ? 14 : 20 }
+    private var inset: CGFloat { windowClass == .duoCover ? 14 : 20 }
 
     /// The iPad: a form sheet over a scrim, not a panel (FS-12.10b §2,
     /// boards IL5_Export, IP_Export, F8_IL_ExportPresets).
@@ -115,48 +118,60 @@ struct VideoExportPanel: View {
         .background(EditorTheme.sheet)
     }
 
-    /// The choices: the project's own settings as the one row until the
-    /// export presets land (FS-12.16), where it goes, and what went wrong.
+    /// The choices (FS-12.16 §5, F8_IL / F8_IP): Where Is It Going — the
+    /// five presets and Custom as 320×72 cards in two columns — then Your
+    /// Project Is 16:9 with Fit · Fill when the ratios differ, the line of
+    /// what and where, and what went wrong.
     @ViewBuilder
     private var sheetChoices: some View {
-        Button {
-            model.openVideoSettingsFromExport()
-            onClose?()
-        } label: {
-            HStack(spacing: 12) {
-                VideoSettingsPanel.ratioGlyph(model.recipe.aspect, side: 20)
-                    .frame(width: 30)
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(VideoStudioCopy.custom)
-                        .font(.system(size: 17, weight: .semibold))
-                        .foregroundStyle(.white)
-                    Text(verbatim: model.exportSpecSummary)
-                        .font(.system(size: 13, design: .monospaced))
-                        .foregroundStyle(EditorTheme.secondaryText)
-                        .lineLimit(1)
-                }
-                Spacer(minLength: 0)
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundStyle(.white.opacity(0.35))
+        Text(VideoStudioCopy.whereIsItGoing)
+            .font(.system(size: 17, weight: .semibold))
+            .foregroundStyle(.white)
+            .frame(height: 24, alignment: .leading)
+            .accessibilityAddTraits(.isHeader)
+        LazyVGrid(
+            columns: [GridItem(.fixed(Sheet.cardSize.width), spacing: 12), GridItem(.fixed(Sheet.cardSize.width), spacing: 12)],
+            alignment: .leading,
+            spacing: 12
+        ) {
+            ForEach(VideoExportPreset.allCases) { preset in
+                presetRow(.preset(preset), style: .card)
             }
-            .padding(.horizontal, 14)
-            .frame(width: Sheet.cardSize.width, height: Sheet.cardSize.height)
-            .background(RoundedRectangle(cornerRadius: AppTheme.Radius.md, style: .continuous).fill(Color.white.opacity(0.08)))
-            .contentShape(Rectangle())
+            presetRow(.custom, style: .card)
         }
-        .buttonStyle(.plain)
+        .padding(.top, 8)
         .disabled(model.isExportBusy)
         .opacity(model.isExportBusy ? 0.4 : 1)
-        .accessibilityIdentifier("exportCustomRow")
-        Text(Self.destination(isServerRun: server != nil))
+        if model.exportNeedsFraming {
+            Text(VideoStudioCopy.yourProjectIsTitle(model.recipe.aspect.displayName))
+                .font(.system(size: 17, weight: .semibold))
+                .foregroundStyle(.white)
+                .frame(height: 24, alignment: .leading)
+                .padding(.top, 14)
+            VideoDeskSegmented(
+                items: [VideoFraming.fit, .fill].map { ($0, VideoStudioCopy.exportFraming($0), "exportFraming.\($0.rawValue)") },
+                selection: Binding(get: { model.exportFraming }, set: { model.setExportFraming($0) }),
+                label: Text(VideoStudioCopy.yourProjectIsTitle(model.recipe.aspect.displayName))
+            )
+            .padding(.top, 6)
+        }
+        Text(VideoStudioCopy.exportInfoLine(
+            length: VideoStudioMetrics.shortDuration(model.totalDuration),
+            codec: model.exportSpec.codec.displayName,
+            isServerRun: server != nil
+        ))
             .font(.system(size: 13))
             .foregroundStyle(EditorTheme.secondaryText)
             .padding(.top, 12)
             .accessibilityIdentifier("exportDestination")
+        failureLines(fontSize: 15)
+    }
+
+    @ViewBuilder
+    private func failureLines(fontSize: CGFloat) -> some View {
         if case .failed(let message) = model.exportState {
             Text(message)
-                .font(.system(size: 15, weight: .medium))
+                .font(.system(size: fontSize, weight: .medium))
                 .foregroundStyle(EditorTheme.timelineDestructive)
                 .fixedSize(horizontal: false, vertical: true)
                 .padding(.top, 12)
@@ -165,9 +180,116 @@ struct VideoExportPanel: View {
                 Button(VideoStudioCopy.openSettings) {
                     if let url = URL(string: UIApplication.openSettingsURLString) { UIApplication.shared.open(url) }
                 }
-                .font(.system(size: 15, weight: .semibold))
+                .font(.system(size: fontSize, weight: .semibold))
                 .padding(.top, 6)
             }
+        }
+    }
+
+    /// How a preset row is drawn: the iPad's card, the phone's 54pt row,
+    /// the Duo inner column's 45 and the cover's 43.
+    enum RowStyle {
+        case card, phone, duoColumn, cover
+
+        var height: CGFloat {
+            switch self {
+            case .card: 72
+            case .phone: 54
+            case .duoColumn: 45
+            case .cover: 43
+            }
+        }
+    }
+
+    /// One destination: its shape, name, numbers, size and — chosen — a
+    /// white rule and ✓. YouTube 4K is dimmed with the 4K gate's reason;
+    /// Custom opens Video Settings.
+    private func presetRow(_ target: VideoExportTarget, style: RowStyle) -> some View {
+        let isSelected = model.exportTarget == target
+        let isCard = style == .card
+        let refusal: String? = if case .preset(let preset) = target, preset.resolution == .uhd4K { model.fourKPresetRefusal } else { nil }
+        let name: String
+        let line: String
+        let aspect: VideoAspect
+        switch target {
+        case .preset(let preset):
+            name = preset.name
+            line = refusal ?? preset.specLine
+            aspect = preset.aspect
+        case .custom:
+            name = VideoStudioCopy.custom
+            line = model.customExportLine
+            aspect = model.recipe.aspect
+        }
+        let bytes = model.estimatedBytes(for: target)
+        let compact = style == .duoColumn || style == .cover
+        return Button {
+            if target == .custom {
+                model.chooseCustomExport()
+                onClose?()
+            } else {
+                model.chooseExportTarget(target)
+            }
+        } label: {
+            HStack(spacing: compact ? 8 : 12) {
+                RoundedRectangle(cornerRadius: AppTheme.Radius.sm, style: .continuous)
+                    .fill(Color.white.opacity(0.08))
+                    .frame(width: compact ? 28 : 34, height: compact ? 28 : 34)
+                    .overlay { VideoSettingsPanel.ratioGlyph(aspect, side: compact ? 14 : 18) }
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(verbatim: name)
+                        .font(.system(size: isCard ? 17 : (compact ? 12.5 : 13.5), weight: .semibold))
+                        .foregroundStyle(.white)
+                        .lineLimit(1)
+                    Text(verbatim: line)
+                        .font(.system(size: isCard ? 13 : (compact ? 9.5 : 10.5), design: .monospaced))
+                        .foregroundStyle(.white.opacity(0.5))
+                        .lineLimit(1)
+                        .truncationMode(.tail)
+                }
+                Spacer(minLength: 4)
+                if refusal == nil {
+                    Text(verbatim: VideoExportEstimate.label(bytes))
+                        .font(.system(size: isCard ? 15 : (compact ? 10.5 : 11.5), weight: .medium, design: .monospaced))
+                        .foregroundStyle(.white.opacity(0.75))
+                        .lineLimit(1)
+                        .fixedSize()
+                }
+                if isSelected {
+                    Image(systemName: "checkmark")
+                        .font(.system(size: compact ? 11 : 13, weight: .bold))
+                        .foregroundStyle(.white)
+                }
+            }
+            .padding(.horizontal, compact ? 8 : 12)
+            .frame(maxWidth: .infinity)
+            .frame(width: isCard ? Sheet.cardSize.width : nil, height: style.height)
+            .background(
+                RoundedRectangle(cornerRadius: AppTheme.Radius.md, style: .continuous)
+                    .fill(Color.white.opacity(isSelected ? 0.08 : (isCard ? 0.05 : 0)))
+            )
+            .overlay {
+                if isSelected {
+                    RoundedRectangle(cornerRadius: AppTheme.Radius.md, style: .continuous)
+                        .strokeBorder(Color.white, lineWidth: 1.5)
+                }
+            }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .disabled(refusal != nil)
+        .opacity(refusal == nil ? 1 : 0.28)
+        .accessibilityLabel(Text(verbatim: accessibilityName(target, bytes: bytes)))
+        .accessibilityHint(refusal.map { Text(verbatim: $0) } ?? Text(verbatim: ""))
+        .accessibilityAddTraits(isSelected ? .isSelected : [])
+        .accessibilityIdentifier("exportPreset.\(target.storedID)")
+    }
+
+    private func accessibilityName(_ target: VideoExportTarget, bytes: Int64) -> String {
+        let megabytes = Int((Double(bytes) / 1_000_000).rounded())
+        switch target {
+        case .preset(let preset): return VideoStudioCopy.presetAccessibility(preset, megabytes: megabytes)
+        case .custom: return "\(VideoStudioCopy.custom), \(model.customExportLine)"
         }
     }
 
@@ -203,7 +325,7 @@ struct VideoExportPanel: View {
                 .buttonStyle(.plain)
                 .accessibilityIdentifier("exportCancelButton")
             } else {
-                Text(verbatim: model.outputSummary(includesLength: true))
+                Text(verbatim: exportFootSummary)
                     .font(.system(size: 15, design: .monospaced))
                     .foregroundStyle(EditorTheme.secondaryText)
                     .lineLimit(1)
@@ -211,9 +333,12 @@ struct VideoExportPanel: View {
                 Button {
                     model.export()
                 } label: {
-                    Text(Self.exportTitle(isServerRun: server != nil))
+                    Text(server != nil ? Self.exportTitle(isServerRun: true) : model.exportButtonTitle)
                         .font(.system(size: 17, weight: .semibold))
                         .foregroundStyle(.black)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.8)
+                        .padding(.horizontal, 8)
                         .frame(width: Sheet.exportSize.width, height: Sheet.exportSize.height)
                         .background(RoundedRectangle(cornerRadius: AppTheme.Radius.md, style: .continuous).fill(EditorTheme.accent))
                         .contentShape(Rectangle())
@@ -278,6 +403,9 @@ struct VideoExportPanel: View {
             Text(VideoStudioCopy.exportVideo)
                 .font(.system(size: 14.5, weight: .semibold))
                 .foregroundStyle(.white)
+            Text(verbatim: VideoStudioMetrics.shortDuration(model.totalDuration))
+                .font(.system(size: 11.5, design: .monospaced))
+                .foregroundStyle(.white.opacity(0.35))
             Spacer(minLength: 0)
             // ✕ goes while the export runs: Cancel Export is the one way out.
             if !model.isExportBusy {
@@ -301,61 +429,57 @@ struct VideoExportPanel: View {
 
     // MARK: States
 
+    /// The size line of the foot: "1080×1920 · 0:24 · ~30 MB".
+    private var exportFootSummary: String {
+        let spec = model.exportSpec
+        return "\(Int(spec.size.width))×\(Int(spec.size.height)) · \(VideoStudioMetrics.shortDuration(model.totalDuration)) · \(VideoExportEstimate.label(model.estimatedExportBytes))"
+    }
+
+    private var rowStyle: RowStyle {
+        switch windowClass {
+        case .duoInner: .duoColumn
+        case .duoCover: .cover
+        default: .phone
+        }
+    }
+
+    /// Ready (FS-12.16 §5, F8_P / F8_DI / F8_DC): the five presets — and
+    /// Custom on the phone — then YOUR PROJECT IS 16:9 with Fit · Fill when
+    /// the ratios differ; the phone's one accent, "Export for …", at the
+    /// foot. The Duo has no second button: its Export exports.
     @ViewBuilder
     private var ready: some View {
-        Button {
-            model.openVideoSettingsFromExport()
-            onClose?()
-        } label: {
-            HStack(spacing: 12) {
-                VideoSettingsPanel.ratioGlyph(model.recipe.aspect, side: 18)
-                    .frame(width: 30)
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(VideoStudioCopy.custom)
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundStyle(.white)
-                    Text(verbatim: model.exportSpecSummary)
-                        .font(.system(size: 11, design: .monospaced))
+        ScrollView(showsIndicators: false) {
+            VStack(alignment: .leading, spacing: rowStyle == .phone ? 2 : 0) {
+                ForEach(VideoExportPreset.allCases) { preset in
+                    presetRow(.preset(preset), style: rowStyle)
+                }
+                if !isDuo {
+                    presetRow(.custom, style: rowStyle)
+                }
+                if model.exportNeedsFraming {
+                    Text(VideoStudioCopy.yourProjectIs(model.recipe.aspect.displayName))
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundStyle(EditorTheme.dimText)
+                        .padding(.top, 10)
+                        .padding(.bottom, 6)
+                    CaptionChipRow(
+                        items: [VideoFraming.fit, .fill].map { ($0, VideoStudioCopy.exportFraming($0)) },
+                        selection: model.exportFraming,
+                        fills: true
+                    ) { model.setExportFraming($0) }
+                }
+                if windowClass == .duoCover {
+                    Text(VideoStudioCopy.railExportNote)
+                        .font(.system(size: 11))
                         .foregroundStyle(.white.opacity(0.45))
-                        .lineLimit(2)
-                        .fixedSize(horizontal: false, vertical: true)
+                        .padding(.top, 8)
                 }
-                Spacer(minLength: 0)
-                Text(verbatim: VideoExportEstimate.label(model.estimatedExportBytes))
-                    .font(.system(size: 12, weight: .medium, design: .monospaced))
-                    .foregroundStyle(.white.opacity(0.7))
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 11, weight: .semibold))
-                    .foregroundStyle(.white.opacity(0.35))
+                failureLines(fontSize: 12.5)
             }
-            .padding(.horizontal, 12)
-            .frame(height: 52)
-            .background(VideoMediaPanelMetrics.tabFill(isOn: false))
-            .contentShape(Rectangle())
+            .padding(.bottom, 8)
         }
-        .buttonStyle(.plain)
-        .accessibilityIdentifier("exportCustomRow")
-        Text(Self.destination(isServerRun: server != nil))
-            .font(.system(size: 12))
-            .foregroundStyle(.white.opacity(0.45))
-            .padding(.top, 10)
-            .accessibilityIdentifier("exportDestination")
-        if case .failed(let message) = model.exportState {
-            Text(message)
-                .font(.system(size: 12.5, weight: .medium))
-                .foregroundStyle(EditorTheme.timelineDestructive)
-                .fixedSize(horizontal: false, vertical: true)
-                .padding(.top, 12)
-                .accessibilityIdentifier("exportError")
-            if model.exportFailureOffersSettings {
-                Button(VideoStudioCopy.openSettings) {
-                    if let url = URL(string: UIApplication.openSettingsURLString) { UIApplication.shared.open(url) }
-                }
-                .font(.system(size: 12.5, weight: .semibold))
-                .padding(.top, 6)
-            }
-        }
-        Spacer(minLength: 12)
+        Spacer(minLength: 8)
         // A look whose LUT is gone exports without it, and says so here
         // rather than stopping the export (FS-12.06c §6).
         if model.missingLUTLookCount > 0 {
@@ -365,31 +489,32 @@ struct VideoExportPanel: View {
         // The Duo has no second export button: a second tap on the one in
         // its bottom row or rail exports (FS-12.10b §2).
         if !isDuo {
-        Button {
-            model.export()
-        } label: {
-            HStack(spacing: 8) {
-                Image(systemName: "square.and.arrow.down")
-                    .font(.system(size: 15, weight: .semibold))
-                Text(Self.exportTitle(isServerRun: server != nil))
-                    .font(.system(size: 16, weight: .semibold))
-                Text(verbatim: VideoExportEstimate.label(model.estimatedExportBytes))
-                    .font(.system(size: 13, weight: .medium, design: .monospaced))
-                    .opacity(0.7)
+            Button {
+                model.export()
+            } label: {
+                HStack(spacing: 8) {
+                    Image(systemName: "square.and.arrow.down")
+                        .font(.system(size: 15, weight: .semibold))
+                    Text(server != nil ? Self.exportTitle(isServerRun: true) : model.exportButtonTitle)
+                        .font(.system(size: 16, weight: .semibold))
+                        .lineLimit(1)
+                    Text(verbatim: VideoExportEstimate.label(model.estimatedExportBytes))
+                        .font(.system(size: 13, weight: .medium, design: .monospaced))
+                        .opacity(0.7)
+                }
+                .foregroundStyle(.black)
+                .frame(maxWidth: .infinity)
+                .frame(height: 50)
+                .background(RoundedRectangle(cornerRadius: AppTheme.Radius.md, style: .continuous).fill(EditorTheme.accent))
+                .contentShape(Rectangle())
             }
-            .foregroundStyle(.black)
-            .frame(maxWidth: .infinity)
-            .frame(height: 50)
-            .background(RoundedRectangle(cornerRadius: AppTheme.Radius.md, style: .continuous).fill(EditorTheme.accent))
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-        .padding(.bottom, 12)
-        .accessibilityIdentifier("exportStartButton")
+            .buttonStyle(.plain)
+            .padding(.bottom, 12)
+            .accessibilityIdentifier("exportStartButton")
         }
     }
 
-    private var isDuo: Bool { window == .duoColumn || window == .cover }
+    private var isDuo: Bool { windowClass == .duoInner || windowClass == .duoCover }
 
     private func exporting(_ progress: Double) -> some View {
         VStack(alignment: .leading, spacing: 10) {

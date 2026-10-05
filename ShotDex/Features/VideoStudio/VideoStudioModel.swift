@@ -855,7 +855,9 @@ final class VideoStudioModel {
     func outputSummary(includesLength: Bool = true) -> String {
         let size = recipe.canvasSize()
         let frame = "\(Int(size.width))×\(Int(size.height))"
-        let estimate = VideoExportEstimate.label(estimatedExportBytes)
+        // The project's own settings — Video Settings' Output line — not
+        // the chosen preset's.
+        let estimate = VideoExportEstimate.label(VideoExportEstimate.bytes(for: recipe, duration: totalDuration))
         return includesLength
             ? "\(frame) · \(VideoStudioMetrics.shortDuration(totalDuration)) · \(estimate)"
             : "\(frame) · \(estimate)"
@@ -1827,6 +1829,10 @@ final class VideoStudioModel {
     private func restore(_ snapshot: VideoProjectRecipe) {
         history.endGroup()
         var restored = snapshot
+        // Where it exports to is not an edit (FS-12.16 §6, plan K5): Undo of
+        // a colour change must not quietly change the preset.
+        restored.exportTarget = recipe.exportTarget
+        restored.exportFraming = recipe.exportFraming
         for index in restored.clips.indices where restored.clips[index].sourceDuration == nil {
             guard let duration = measuredSourceDurations[restored.clips[index].id] else { continue }
             restored.clips[index].sourceDuration = duration
@@ -3565,6 +3571,7 @@ final class VideoStudioModel {
         guard exportState == .idle || isFailedExport else { return }
         // Not enough room for the file and its copy in Photos: say so and do
         // not start (FS-12.10b §5).
+        let spec = exportSpec
         if let needed = ExportSpaceCheck.shortfall(estimate: estimatedExportBytes, available: availableBytes()) {
             exportState = .failed(VideoStudioCopy.notEnoughSpace(VideoExportEstimate.label(needed).replacingOccurrences(of: "~", with: "")))
             return
@@ -3601,7 +3608,8 @@ final class VideoStudioModel {
                 let url = try await service.export(
                     recipe: recipe,
                     sources: sources,
-                    activity: ducking.activity
+                    activity: ducking.activity,
+                    spec: spec
                 ) { [weak self] progress in
                     if case .exporting = self?.exportState {
                         self?.exportState = .exporting(progress)
@@ -3699,7 +3707,7 @@ final class VideoStudioModel {
     /// The export's size before it is written (FS-12.10 §5): the same
     /// numbers the writer encodes at.
     var estimatedExportBytes: Int64 {
-        VideoExportEstimate.bytes(for: recipe, duration: totalDuration)
+        exportSpec.estimatedBytes(duration: totalDuration)
     }
 
     // MARK: - Waveform

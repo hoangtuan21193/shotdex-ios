@@ -512,10 +512,28 @@ final class VideoFrameCompositor: NSObject, AVVideoCompositing {
             let after = image.transformed(by: CGAffineTransform(translationX: canvas.width, y: 0))
             image = after.composited(over: compose(before).cropped(to: canvas)).cropped(to: outputFrame)
         }
+        // A preset's frame (FS-12.16 §4): the project's frame — overlays
+        // and all, so a sticker is cut as the preview shows — centred in
+        // it, cropped (Fill) or on the project's background (Fit).
+        if case .reframe(_, let framing) = recipe.outputStage {
+            let placed = image.cropped(to: canvas).transformed(by: CGAffineTransform(
+                translationX: (outputFrame.width - canvas.width) / 2,
+                y: (outputFrame.height - canvas.height) / 2
+            ))
+            if framing == .fit {
+                let backdrop = VideoBackgroundRenderer.backdrop(
+                    behind: placed, canvas: outputFrame, kind: recipe.backgroundKind,
+                    colour: recipe.background, blurAmount: recipe.blurAmount, image: backgroundPhoto
+                )
+                image = placed.composited(over: backdrop).cropped(to: outputFrame)
+            } else {
+                image = placed.cropped(to: outputFrame)
+            }
+        }
         // Captions last of all, over every overlay, measured against the
         // frame that is written (FS-12.14 §6).
         if let burner = recipe.captionBurner, front != nil {
-            image = burner.burn(into: image, frame: canvas, at: seconds).cropped(to: outputFrame)
+            image = burner.burn(into: image, frame: outputFrame, at: seconds).cropped(to: outputFrame)
         }
 
         render(image, to: output, request: request)

@@ -53,6 +53,8 @@ struct VideoStudioScreen: View {
     /// everywhere else.
     @State var currentWindowClass: VideoStudioWindowClass?
     @State var editingOverlay: PhotoOverlay?
+    /// The preview's size, for the export preset's Fit preview (FS-12.16 §4).
+    @State var previewSize: CGSize = .zero
     /// A caption cue in the full-screen editor (FS-12.14 §5, Expand Text Field).
     @State var editingCaptionID: UUID?
     @State private var stickerImages: [UUID: CGImage] = [:]
@@ -430,7 +432,13 @@ struct VideoStudioScreen: View {
         case .duoInner, .duoCover:
             model.duoExportTapped()
         default:
-            if model.activeToolPanel != .export { model.showToolPanel(.export) }
+            // A second tap closes it, keeping the choice (FS-12.16 §5);
+            // opening never exports.
+            if model.activeToolPanel != .export {
+                model.showToolPanel(.export)
+            } else if !model.isExportBusy {
+                model.showToolPanel(nil)
+            }
         }
     }
 
@@ -834,6 +842,7 @@ struct VideoStudioScreen: View {
             Color.black
             // While Before and After draws a pair, the stage below shows it
             // through two windows on the same player (FS-12.15, plan K2).
+            Group {
             if let player = model.player, model.compare?.drawsPair != true {
                 VideoPlayerLayerView(player: player)
             }
@@ -915,6 +924,11 @@ struct VideoStudioScreen: View {
                     }
                 }
             }
+            }
+            // Fit on Background: the project's frame drawn smaller inside
+            // the preset's frame while Export Video is open (FS-12.16 §4).
+            .scaleEffect(exportFitScale(model))
+            exportFramingOverlay(model)
             // In Split the play button moves to After's half, clear of the
             // line's handle (FS-12.15 §4) — the stage draws it there.
             if !model.isPlaying, model.compare?.mode != .split {
@@ -936,6 +950,11 @@ struct VideoStudioScreen: View {
             }
         }
         .frame(maxWidth: .infinity)
+        .background(GeometryReader { geometry in
+            Color.clear
+                .onAppear { previewSize = geometry.size }
+                .onChange(of: geometry.size) { _, size in previewSize = size }
+        })
         .contentShape(Rectangle())
         // Paused, with a sheet up: a tap on the stage outside the video is the
         // obvious "done with this" — it closes the sheet. (A tap *inside* the video
@@ -969,6 +988,66 @@ struct VideoStudioScreen: View {
         )
         .onAppear { loadStickerImages(model) }
         .onChange(of: model.recipe.overlays) { loadStickerImages(model) }
+    }
+
+    /// Export Video is open with a preset whose ratio is not the project's.
+    private func exportFraming(_ model: VideoStudioModel) -> (spec: VideoExportSpec, framing: VideoFraming, preset: VideoExportPreset)? {
+        guard model.activeToolPanel == .export || isExportSheetPresented,
+              case .preset(let preset) = model.exportTarget
+        else { return nil }
+        let spec = model.exportSpec
+        guard let framing = spec.framing else { return nil }
+        return (spec, framing, preset)
+    }
+
+    private func exportFitScale(_ model: VideoStudioModel) -> CGFloat {
+        guard let framing = exportFraming(model), framing.framing == .fit, previewSize.width > 0 else { return 1 }
+        let content = VideoGeometry.stillFitRect(imageSize: model.recipe.canvasSize(), renderSize: previewSize)
+        let fit = VideoExportFraming.fit(in: content, output: framing.spec.size, project: model.recipe.canvasSize())
+        return fit.project.width / max(content.width, 1)
+    }
+
+    /// Fill: the crop over the frame — outside it dimmed 62 %, a 1.5pt
+    /// white rule, "9:16 · Fill" at its corner. Fit: the preset's frame,
+    /// the project's background in the bands around the smaller frame.
+    @ViewBuilder
+    private func exportFramingOverlay(_ model: VideoStudioModel) -> some View {
+        if let framing = exportFraming(model), previewSize.width > 0 {
+            let content = VideoGeometry.stillFitRect(imageSize: model.recipe.canvasSize(), renderSize: previewSize)
+            let output = framing.framing == .fill
+                ? VideoExportFraming.fillCrop(in: content, output: framing.spec.size)
+                : VideoExportFraming.fit(in: content, output: framing.spec.size, project: model.recipe.canvasSize()).output
+            ZStack(alignment: .topLeading) {
+                if framing.framing == .fill {
+                    Path { path in
+                        path.addRect(content)
+                        path.addRect(output)
+                    }
+                    .fill(Color.black.opacity(0.62), style: FillStyle(eoFill: true))
+                } else {
+                    let inner = VideoExportFraming.fit(in: content, output: framing.spec.size, project: model.recipe.canvasSize()).project
+                    let colour = model.recipe.background.colour
+                    Path { path in
+                        path.addRect(output)
+                        path.addRect(inner)
+                    }
+                    .fill(Color(red: colour.red, green: colour.green, blue: colour.blue), style: FillStyle(eoFill: true))
+                }
+                Rectangle()
+                    .strokeBorder(Color.white, lineWidth: 1.5)
+                    .frame(width: output.width, height: output.height)
+                    .offset(x: output.minX, y: output.minY)
+                Text(verbatim: VideoExportFraming.pill(framing.preset, framing: framing.framing))
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(.black)
+                    .frame(width: 70, height: 20)
+                    .background(Capsule().fill(Color.white))
+                    .offset(x: output.minX + 6, y: output.minY + 6)
+                    .accessibilityIdentifier("exportFramingPill")
+            }
+            .frame(width: previewSize.width, height: previewSize.height, alignment: .topLeading)
+            .allowsHitTesting(false)
+        }
     }
 
     /// Where Side by Side lays its two frames: the stage, short of the

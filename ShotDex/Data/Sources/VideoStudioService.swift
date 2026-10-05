@@ -523,9 +523,16 @@ final class VideoStudioService {
         recipe: VideoProjectRecipe,
         sources: [UUID: VideoClipSource],
         activity: [String: ClipSoundActivity] = [:],
+        /// A preset's frame, rate and codec (FS-12.16); nil — the project's
+        /// own Video Settings.
+        spec: VideoExportSpec? = nil,
         progress: @escaping @MainActor (Double) -> Void
     ) async throws -> URL {
-        let renderSize = recipe.canvasSize()
+        let spec = spec ?? VideoExportSpec.make(target: .custom, framing: .fill, recipe: recipe)
+        // The clips are laid out on the canvas the export frame needs, at
+        // its resolution; a different ratio is a reframe of that canvas.
+        let renderSize = spec.layoutCanvas(project: recipe.canvasSize())
+        let stage: VideoOutputStage = spec.framing.map { .reframe(output: spec.size, framing: $0) } ?? .single
         let sources = await Self.freezesLifted(at: renderSize, in: sources)
         let music = await loadMusicSources(recipe.musicTracks)
         let blank = try await blankClipIfNeeded(recipe: recipe, sources: sources)
@@ -549,7 +556,9 @@ final class VideoStudioService {
             layout: layout,
             stillStore: exportStillStore,
             bakesOverlays: true,
-            frameRate: recipe.frameRate
+            frameRate: spec.frameRate,
+            renderSize: renderSize,
+            stage: stage
         )
         let audioMix = VideoCompositionBuilder.audioMix(recipe: recipe, layout: layout, activity: activity)
 
@@ -560,7 +569,7 @@ final class VideoStudioService {
             composition: composition,
             videoComposition: videoComposition,
             audioMix: audioMix,
-            encoding: VideoEncodingSettings.make(for: recipe),
+            encoding: VideoEncodingSettings.make(for: spec),
             totalDuration: layout.totalDuration,
             subtitles: VideoSubtitleTrackWriter.track(recipe.captions, recipe: recipe),
             to: outputURL,

@@ -41,6 +41,14 @@
       "comment": "Video Projects: a draft's subtitle — when it was edited, then how many clips",
       "extractionState": "manual"
     },
+    "%@ · %@ · saved to Photos, then Share": {
+      "comment": "Video Studio iPad Export Video: the line under Fit · Fill — length, codec, where it goes",
+      "extractionState": "manual"
+    },
+    "%@ · %@ · then choose where it goes": {
+      "comment": "Video Studio iPad Export Video: the line under Fit · Fill for server photos",
+      "extractionState": "manual"
+    },
     "%@ · %lld BPM": {
       "comment": "Video Studio beats card on the Duo cover: the track's name and tempo — Morning Drive · 96 BPM",
       "extractionState": "manual"
@@ -55,6 +63,10 @@
     },
     "%@%lld ms": {
       "comment": "Video Studio beats: the Offset of the beat grid in milliseconds — +50 ms",
+      "extractionState": "manual"
+    },
+    "%@, %@ by %@, %lld frames per second%@, about %lld megabytes": {
+      "comment": "Video Studio Export Video: VoiceOver label of a preset row — name, size, rate, codec when not H.264, estimate",
       "extractionState": "manual"
     },
     "%@, unavailable": {
@@ -553,6 +565,10 @@
       "comment": "Video Studio ducking: the music goes down whenever a clip has sound of its own",
       "extractionState": "manual"
     },
+    "Any ratio · 720p–4K · 24/30/60": {
+      "comment": "Video Studio Export Video: the Custom row's line before Video Settings are known",
+      "extractionState": "manual"
+    },
     "Applies to the %lld videos": {
       "comment": "Video Studio multi-select: under Speed, which clips it changes — Applies to the 2 videos; one: Applies to the video (plural)",
       "extractionState": "manual",
@@ -907,6 +923,14 @@
     },
     "Export Video": {
       "comment": "Video Studio: title of the export panel",
+      "extractionState": "manual"
+    },
+    "Export for %@": {
+      "comment": "Video Studio Export Video: the export button, naming the chosen preset",
+      "extractionState": "manual"
+    },
+    "Export in the rail uses the chosen preset.": {
+      "comment": "Video Studio Duo cover Export Video: under the presets — the rail's Export button exports with the chosen one",
       "extractionState": "manual"
     },
     "Export stopped when you left ShotDex. Export again to finish.": {
@@ -1637,6 +1661,10 @@
       "comment": "Video Studio: why Freeze and Split are dimmed on a clip whose original has not downloaded",
       "extractionState": "manual"
     },
+    "Where Is It Going": {
+      "comment": "Video Studio iPad Export Video: the title over the export presets",
+      "extractionState": "manual"
+    },
     "White": {
       "comment": "Video Studio Video Settings: the white background swatch",
       "extractionState": "manual"
@@ -1647,6 +1675,10 @@
     },
     "Word by Word": {
       "comment": "Video Studio caption style: each word appears as it is said",
+      "extractionState": "manual"
+    },
+    "YOUR PROJECT IS %@": {
+      "comment": "Video Studio Export Video: the header over Fit on Background · Fill (Crop) when the preset's ratio is not the project's",
       "extractionState": "manual"
     },
     "Yellow": {
@@ -1676,6 +1708,10 @@
           }
         }
       }
+    },
+    "Your Project Is %@": {
+      "comment": "Video Studio iPad Export Video: the section title over Fit on Background · Fill (Crop)",
+      "extractionState": "manual"
     },
     "clips' own looks": {
       "comment": "Video Studio Save as Look: the looks single clips have, which stay in the video",

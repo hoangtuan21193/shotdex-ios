@@ -39,12 +39,17 @@ enum VideoOutputStage: Equatable, Sendable {
     /// Before and After side by side in one frame, each a canvas wide: one
     /// request, one clock, the same source pixels on both sides.
     case pair
+    /// A preset's frame (FS-12.16 §4): the project's frame, laid out at the
+    /// size the export needs, centred in `output` — cropped (Fill) or on
+    /// the project's background (Fit).
+    case reframe(output: CGSize, framing: VideoFraming)
 
     /// The frame a stage writes for a project canvas of `canvas`.
     func outputSize(canvas: CGSize) -> CGSize {
         switch self {
         case .single: canvas
         case .pair: CGSize(width: canvas.width * 2, height: canvas.height)
+        case .reframe(let output, _): output
         }
     }
 }
@@ -138,6 +143,16 @@ struct VideoEncodingSettings: Equatable {
     let frameRate: VideoFrameRate
     let codec: VideoCodec
     let bitrate: Int
+
+    /// What a preset's export encodes at (FS-12.16).
+    static func make(for spec: VideoExportSpec) -> VideoEncodingSettings {
+        VideoEncodingSettings(
+            size: spec.size,
+            frameRate: spec.frameRate,
+            codec: spec.codec,
+            bitrate: VideoExportEstimate.videoBitrate(frame: spec.size, frameRate: spec.frameRate, codec: spec.codec)
+        )
+    }
 
     static func make(for recipe: VideoProjectRecipe) -> VideoEncodingSettings {
         let size = recipe.canvasSize()

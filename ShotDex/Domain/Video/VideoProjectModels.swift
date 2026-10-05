@@ -723,6 +723,13 @@ struct VideoProjectRecipe: Equatable, Codable, Sendable {
     var codec: VideoCodec = .h264
     /// The caption lane C1 (FS-12.14), nil until Auto Captions makes one.
     var captions: VideoCaptionLane?
+    /// Where it exports to (FS-12.16 §6): a preset's id or "custom", as a
+    /// string — an id this build does not know falls back by ratio
+    /// (`VideoExportTarget.resolve`). Nil: the preset of the ratio.
+    var exportTarget: String?
+    /// Fit on Background or Fill (Crop) when the preset's ratio is not the
+    /// project's. Nil: Fill.
+    var exportFraming: VideoFraming?
     /// Where the playhead was when the draft was written (FS-12.18 §3).
     /// Only in what is stored: the model takes it out on open and puts the
     /// current one in on each save, so it is never part of an edit or undo.
@@ -918,6 +925,8 @@ extension VideoProjectRecipe {
         frameRate = value(.frameRate, VideoFrameRate.fps30)
         codec = value(.codec, VideoCodec.h264)
         captions = value(.captions, VideoCaptionLane?.none)
+        exportTarget = value(.exportTarget, String?.none)
+        exportFraming = value(.exportFraming, VideoFraming?.none)
         playhead = value(.playhead, Double?.none)
         // A dropped clip leaves one boundary too many; boundaries are
         // positional, so trimming the tail is the honest repair.

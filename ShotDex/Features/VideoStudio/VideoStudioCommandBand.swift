@@ -30,12 +30,15 @@ struct VideoStudioTopBand: View {
             Spacer(minLength: 0)
             HStack(spacing: VideoStudioMetrics.phoneBandTrailingGap) {
                 videoSettingsDisc
+                // One accent (FS-12.16 §5): while Export Video is open the
+                // accent is its "Export for …" and this goes white 10 %.
+                let isExportOpen = model.activeToolPanel == .export
                 Button(action: actions.onExport) {
                     Image(systemName: "square.and.arrow.down")
                         .font(.system(size: 16, weight: .semibold))
-                        .foregroundStyle(.black)
+                        .foregroundStyle(isExportOpen ? Color.white : Color.black)
                         .frame(width: VideoStudioMetrics.phoneBandButton, height: VideoStudioMetrics.phoneBandButton)
-                        .background(Circle().fill(EditorTheme.accent))
+                        .background(Circle().fill(isExportOpen ? Color.white.opacity(0.10) : EditorTheme.accent))
                         .contentShape(Circle())
                 }
                 .buttonStyle(.plain)
@@ -163,7 +166,7 @@ struct VideoStudioDeskToolbar: View {
                 }
             }
             capsule(width: Geometry.settingsCapsuleWidth) {
-                VideoSettingsButton(model: model, style: .capsule, presentsPopover: true)
+                VideoSettingsButton(model: model, style: .capsule, presentsPopover: true, showsExportTarget: isExportOpen)
             }
             capsule(width: Geometry.viewToggleCapsuleWidth, spacing: 4) {
                 toolbarButton("slider.horizontal.3", isOn: isQuickAdjustOpen, action: onToggleQuickAdjust)
@@ -303,6 +306,10 @@ struct VideoSettingsButton: View {
     /// The iPad opens Video Settings as a popover under the button
     /// (FS-12.10 §3) rather than in the inspector column.
     var presentsPopover = false
+    /// Export Video is open (FS-12.16 §4, AC-15): the button names what
+    /// will be written — the preset's "9:16 · 1080p · 30 fps" — not the
+    /// project's settings, which do not change.
+    var showsExportTarget = false
     @State private var isPopoverOpen = false
 
     var body: some View {
@@ -324,7 +331,7 @@ struct VideoSettingsButton: View {
                     VStack(alignment: .leading, spacing: 1) {
                         Text(verbatim: "\(ratio) · \(preset)")
                             .font(.system(size: 13, weight: .semibold))
-                        Text(verbatim: "\(fps) · \(VideoExportEstimate.label(model.estimatedExportBytes))")
+                        Text(verbatim: "\(fps) · \(VideoExportEstimate.label(VideoExportEstimate.bytes(for: model.recipe, duration: model.totalDuration)))")
                             .font(.system(size: 10.5, weight: .medium).monospacedDigit())
                             .foregroundStyle(.white.opacity(0.5))
                     }
@@ -342,7 +349,7 @@ struct VideoSettingsButton: View {
             case .capsule:
                 HStack(spacing: 8) {
                     ratioGlyph(side: 19)
-                    Text(verbatim: "\(ratio) · \(preset) · \(fps)")
+                    Text(verbatim: showsExportTarget ? model.exportTargetSettingsLine : "\(ratio) · \(preset) · \(fps)")
                         .font(.system(size: 15, weight: .semibold))
                         .frame(maxWidth: .infinity, alignment: .leading)
                     // ⌃⌄: a pop-up of settings (FS-12.10 §3).
