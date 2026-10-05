@@ -360,7 +360,7 @@ struct VideoSettingsButton: View {
         .buttonStyle(.plain)
         .fixedSize()
         .popover(isPresented: $isPopoverOpen, arrowEdge: .top) {
-            VideoSettingsPanel(model: model, onDone: { isPopoverOpen = false })
+            VideoSettingsPanel(model: model, onDone: { isPopoverOpen = false }, isForm: style == .capsule)
                 .frame(width: VideoStudioMetrics.videoSettingsPopoverSize.width,
                        height: VideoStudioMetrics.videoSettingsPopoverSize.height)
                 .presentationCompactAdaptation(.popover)

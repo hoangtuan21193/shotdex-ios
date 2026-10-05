@@ -185,6 +185,10 @@
       "comment": "Video Studio Video Settings: section header over what shows around a fitted clip",
       "extractionState": "manual"
     },
+    "Background": {
+      "comment": "Video Studio iPad Video Settings: label of Blur · Color · Image — what shows around a fitted clip",
+      "extractionState": "manual"
+    },
     "Beats": {
       "comment": "Video Studio: the music command that marks a song's beats",
       "extractionState": "manual"
@@ -239,6 +243,10 @@
     },
     "Close": {
       "comment": "Video Studio: closes a panel",
+      "extractionState": "manual"
+    },
+    "Codec": {
+      "comment": "Video Studio iPad Video Settings: label of H.264 · HEVC",
       "extractionState": "manual"
     },
     "Color": {
@@ -365,12 +373,20 @@
       "comment": "Video Studio media pool Text tab: header over the fonts the user has used before",
       "extractionState": "manual"
     },
+    "Frame Rate": {
+      "comment": "Video Studio iPad Video Settings: label of 24 · 30 · 60",
+      "extractionState": "manual"
+    },
+    "Framing": {
+      "comment": "Video Studio iPad Video Settings: label of Fit on Background · Fill (Crop)",
+      "extractionState": "manual"
+    },
     "Freeze · clip %lld": {
       "comment": "Video Studio In Video row: a held frame and its place on the track",
       "extractionState": "manual"
     },
-    "Grey": {
-      "comment": "Video Studio Video Settings: the grey background swatch",
+    "Gray": {
+      "comment": "Video Studio Video Settings: the gray background swatch",
       "extractionState": "manual"
     },
     "HEVC is about 40% smaller; some older devices can’t play it.": {
@@ -549,6 +565,10 @@
       "comment": "Video Studio Video Settings: section header over 720p / 1080p / 4K",
       "extractionState": "manual"
     },
+    "Ratio": {
+      "comment": "Video Studio iPad Video Settings: label of the frame-ratio pop-up — Ratio: 9:16",
+      "extractionState": "manual"
+    },
     "Ratio %@": {
       "comment": "Video Studio Video Settings: VoiceOver name of a ratio button",
       "extractionState": "manual"
@@ -559,6 +579,10 @@
     },
     "Resize Timeline": {
       "comment": "Video Studio iPad: the grabber between the frame and the timeline, dragged to trade one's height for the other's",
+      "extractionState": "manual"
+    },
+    "Resolution": {
+      "comment": "Video Studio iPad Video Settings: label of 720p · 1080p · 4K",
       "extractionState": "manual"
     },
     "Saved to Photos as a new video": {

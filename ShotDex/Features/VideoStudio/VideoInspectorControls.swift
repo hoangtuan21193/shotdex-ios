@@ -250,6 +250,11 @@ struct VideoPopUpButton<Option: Hashable>: View {
     let set: (Option) -> Void
     /// Rows after the options — "More Fonts…".
     var extra: (title: String, action: () -> Void)? = nil
+    /// Where a label beside it already names it (the Video Settings form's
+    /// "Ratio"), the button shows only the value; VoiceOver still hears both.
+    var showsTitle = true
+    /// A glyph before the value — the ratio's own shape.
+    var glyph: ((Option) -> AnyView)? = nil
 
     var body: some View {
         Menu {
@@ -266,8 +271,9 @@ struct VideoPopUpButton<Option: Hashable>: View {
                 Button(extra.title, action: extra.action)
             }
         } label: {
-            HStack(spacing: 6) {
-                Text(verbatim: "\(title): \(name(selected))")
+            HStack(spacing: 8) {
+                if let glyph { glyph(selected) }
+                Text(verbatim: showsTitle ? "\(title): \(name(selected))" : name(selected))
                     .font(.system(size: 17))
                     .lineLimit(1)
                     .minimumScaleFactor(0.8)

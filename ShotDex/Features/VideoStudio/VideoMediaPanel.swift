@@ -661,11 +661,15 @@ struct VideoDeskSegmented<Value: Hashable>: View {
     let items: [(Value, String, String)]
     @Binding var selection: Value
     let label: Text
+    /// Choices drawn dim and refused — 4K without 4K clips — with what
+    /// VoiceOver says for them instead of the title.
+    var disabled: [Value: String] = [:]
 
     var body: some View {
         HStack(spacing: 2) {
             ForEach(items, id: \.2) { value, title, identifier in
                 let isOn = value == selection
+                let refusal = disabled[value]
                 Button {
                     selection = value
                 } label: {
@@ -684,8 +688,11 @@ struct VideoDeskSegmented<Value: Hashable>: View {
                             }
                         }
                         .contentShape(Rectangle())
+                        .opacity(refusal == nil ? 1 : 0.35)
                 }
                 .buttonStyle(.plain)
+                .disabled(refusal != nil)
+                .accessibilityLabel(Text(verbatim: refusal ?? title))
                 // A stable handle for the UI driver: "Text" and "Music" also
                 // name a timeline lane and an add-button.
                 .accessibilityIdentifier(identifier)

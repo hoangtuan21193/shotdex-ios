@@ -313,6 +313,19 @@ enum VideoStudioMetrics {
     /// The iPad's Video Settings popover (FS-12.10 §3, Mac-style board
     /// ES_IL_ExportSettings: 400×548).
     static let videoSettingsPopoverSize = CGSize(width: 400, height: 548)
+
+    /// The iPad's Video Settings form (FS-12.10 §3, board
+    /// ES_IL_ExportSettings): 16 in, labels in 96, 8 to the controls in
+    /// 264; Ratio a 150 pop-up; Done 72×44.
+    enum SettingsForm {
+        static let inset: CGFloat = 16
+        static let labelWidth: CGFloat = 96
+        static let labelGap: CGFloat = 8
+        static let controlWidth: CGFloat = 264
+        static let ratioWidth: CGFloat = 150
+        static let doneSize = CGSize(width: 72, height: 44)
+        static let rowGap: CGFloat = 6
+    }
     /// How far the contextual panel reaches above the toolbar and bottom bar.
     /// The stack lifts by this much while the panel is up, so the whole timeline
     /// stays visible above it and the selected band never hides under the panel.

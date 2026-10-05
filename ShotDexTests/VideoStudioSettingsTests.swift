@@ -103,4 +103,16 @@ extension VideoStudioSettingsTests {
         #expect(VideoStudioCopy.unavailable("4K") == "4K, unavailable")
         #expect(VideoToolPanel.videoSettings.title == "Video Settings")
     }
+
+    /// FS-12.10 AC-9 (iPad form): the popover is 400×548 — 16 in, labels in
+    /// 96, 8 to the controls in 264, 16 out; Ratio is a 150 pop-up that
+    /// offers every ratio, in VideoAspect's order.
+    @Test func theIPadVideoSettingsIsAForm400By548() {
+        let form = VideoStudioMetrics.SettingsForm.self
+        #expect(VideoStudioMetrics.videoSettingsPopoverSize == CGSize(width: 400, height: 548))
+        #expect(form.inset * 2 + form.labelWidth + form.labelGap + form.controlWidth == 400)
+        #expect(form.ratioWidth == 150 && form.doneSize == CGSize(width: 72, height: 44))
+        #expect(VideoAspect.allCases.count == 6)
+        #expect(Set(VideoAspect.allCases.map(\.displayName)).count == VideoAspect.allCases.count)
+    }
 }

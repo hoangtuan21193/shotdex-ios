@@ -75,6 +75,31 @@ enum VideoStudioCopy {
         String(localized: "Animate Out", table: table, comment: "Video Studio iPad text panel: title of the pop-up that picks how the caption goes out — Animate Out: None")
     }
 
+    /// The iPad's Video Settings form labels, Title Case (FS-12.10 §3).
+    static var ratioTitle: String {
+        String(localized: "Ratio", table: table, comment: "Video Studio iPad Video Settings: label of the frame-ratio pop-up — Ratio: 9:16")
+    }
+
+    static var framingTitle: String {
+        String(localized: "Framing", table: table, comment: "Video Studio iPad Video Settings: label of Fit on Background · Fill (Crop)")
+    }
+
+    static var backgroundTitle: String {
+        String(localized: "Background", table: table, comment: "Video Studio iPad Video Settings: label of Blur · Color · Image — what shows around a fitted clip")
+    }
+
+    static var resolutionTitle: String {
+        String(localized: "Resolution", table: table, comment: "Video Studio iPad Video Settings: label of 720p · 1080p · 4K")
+    }
+
+    static var frameRateTitle: String {
+        String(localized: "Frame Rate", table: table, comment: "Video Studio iPad Video Settings: label of 24 · 30 · 60")
+    }
+
+    static var codecTitle: String {
+        String(localized: "Codec", table: table, comment: "Video Studio iPad Video Settings: label of H.264 · HEVC")
+    }
+
     static var media: String {
         String(localized: "Media", table: table, comment: "Video Studio: the bottom-row tool that adds photos and videos to the timeline")
     }
@@ -304,7 +329,7 @@ enum VideoStudioCopy {
         switch colour {
         case .black: String(localized: "Black", table: table, comment: "Video Studio Video Settings: the black background swatch")
         case .white: String(localized: "White", table: table, comment: "Video Studio Video Settings: the white background swatch")
-        default: String(localized: "Grey", table: table, comment: "Video Studio Video Settings: the grey background swatch")
+        default: String(localized: "Gray", table: table, comment: "Video Studio Video Settings: the gray background swatch")
         }
     }
 

@@ -18,6 +18,9 @@ struct VideoSettingsPanel: View {
     private var showsLength: Bool { window != .cover && window != .duoColumn }
     /// Done when the panel is not the open tool — the iPad's popover.
     var onDone: (() -> Void)?
+    /// The iPad's popover is a form (FS-12.10 §3, board ES_IL_ExportSettings):
+    /// labels on the left, controls in 264 on the right, Ratio a pop-up.
+    var isForm = false
     @Environment(\.openURL) private var openURL
     /// Whether the Image background's photo can still be read.
     @State private var isBackgroundImageMissing = false
@@ -27,9 +30,164 @@ struct VideoSettingsPanel: View {
             // Image → Choose…: Media in single-pick mode, photos only, in
             // the panel's place (FS-12.10 §5).
             VideoMediaPanel(model: model)
+        } else if isForm {
+            form
         } else {
             settings
         }
+    }
+
+    // MARK: iPad form (FS-12.10 §3)
+
+    private typealias Form = VideoStudioMetrics.SettingsForm
+
+    private var form: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            HStack(alignment: .top, spacing: 8) {
+                VStack(alignment: .leading, spacing: 0) {
+                    Text(VideoStudioCopy.videoSettings)
+                        .font(.system(size: 20, weight: .semibold))
+                        .foregroundStyle(.white)
+                        .frame(height: 24)
+                    Text(verbatim: model.outputSummary(includesLength: false))
+                        .font(.system(size: 13, design: .monospaced))
+                        .foregroundStyle(EditorTheme.secondaryText)
+                        .frame(height: 18)
+                }
+                .lineLimit(1)
+                .padding(.top, 2)
+                Spacer(minLength: 0)
+                Button {
+                    onDone?()
+                } label: {
+                    Text(VideoStudioCopy.done)
+                        .font(.system(size: 17, weight: .semibold))
+                        .foregroundStyle(.white)
+                        .frame(width: Form.doneSize.width, height: Form.doneSize.height)
+                        .background(Capsule().fill(Color.white.opacity(0.08)))
+                }
+                .buttonStyle(.plain)
+                .padding(.trailing, -4)
+            }
+            .padding(.top, 12)
+            ScrollView(showsIndicators: false) {
+                VStack(alignment: .leading, spacing: Form.rowGap) {
+                    if model.missingLUTLookCount > 0 {
+                        VideoMissingLUTBanner(count: model.missingLUTLookCount)
+                    }
+                    formRow(VideoStudioCopy.ratioTitle, height: VideoStudioMetrics.popUpHeight) {
+                        VideoPopUpButton(
+                            title: VideoStudioCopy.ratioTitle,
+                            options: VideoAspect.allCases,
+                            selected: model.recipe.aspect,
+                            name: \.displayName,
+                            set: { model.setAspect($0) },
+                            showsTitle: false,
+                            glyph: { AnyView(Self.ratioGlyph($0, side: 16)) }
+                        )
+                        .frame(width: Form.ratioWidth)
+                    }
+                    formRow(VideoStudioCopy.framingTitle) {
+                        VideoDeskSegmented(
+                            items: [
+                                (VideoFraming.fit, VideoStudioCopy.fitOnBackground, "settings.fit"),
+                                (VideoFraming.fill, VideoStudioCopy.fillCrop, "settings.fill"),
+                            ],
+                            selection: Binding(get: { model.recipe.framing }, set: { model.setFraming($0) }),
+                            label: Text(VideoStudioCopy.framingTitle)
+                        )
+                    }
+                    if model.recipe.framing == .fit {
+                        formRow(VideoStudioCopy.backgroundTitle) {
+                            VideoDeskSegmented(
+                                items: VideoBackground.Kind.allCases.map { ($0, VideoStudioCopy.backgroundKind($0), "settings.background.\($0.rawValue)") },
+                                selection: Binding(get: { model.recipe.background.kind }, set: { model.setBackgroundKind($0) }),
+                                label: Text(VideoStudioCopy.backgroundTitle)
+                            )
+                        }
+                        switch model.recipe.background.kind {
+                        case .blur:
+                            formRow(VideoStudioCopy.blur, height: VideoStudioMetrics.popUpHeight) { blurRow }
+                        case .colour:
+                            formRow("", height: VideoStudioMetrics.popUpHeight) { colourRow }
+                        case .image:
+                            formRow("", height: VideoStudioMetrics.popUpHeight) { imageRow }
+                        }
+                    }
+                    let verdict = model.fourKVerdict
+                    VStack(alignment: .leading, spacing: 2) {
+                        formRow(VideoStudioCopy.resolutionTitle) {
+                            VideoDeskSegmented(
+                                items: VideoResolution.allCases.map { ($0, $0.displayName, "settings.resolution.\($0.rawValue)") },
+                                selection: Binding(get: { model.recipe.resolution }, set: { model.setResolution($0) }),
+                                label: Text(VideoStudioCopy.resolutionTitle),
+                                // 4K without 4K clips: dim, refused, and
+                                // said so (FS-12.10 §7).
+                                disabled: verdict == .allowed ? [:] : [.uhd4K: VideoStudioCopy.unavailable(VideoResolution.uhd4K.displayName)]
+                            )
+                        }
+                        if let reason = VideoStudioCopy.fourKReason(verdict) { formNote(reason) }
+                    }
+                    formRow(VideoStudioCopy.frameRateTitle) {
+                        VideoDeskSegmented(
+                            items: VideoFrameRate.allCases.map { ($0, "\($0.rawValue)", "settings.fps.\($0.rawValue)") },
+                            selection: Binding(get: { model.recipe.frameRate }, set: { model.setFrameRate($0) }),
+                            label: Text(VideoStudioCopy.frameRateTitle)
+                        )
+                    }
+                    VStack(alignment: .leading, spacing: 2) {
+                        formRow(VideoStudioCopy.codecTitle) {
+                            VideoDeskSegmented(
+                                items: VideoCodec.allCases.map { ($0, $0.displayName, "settings.codec.\($0.rawValue)") },
+                                selection: Binding(get: { model.recipe.codec }, set: { model.setCodec($0) }),
+                                label: Text(VideoStudioCopy.codecTitle)
+                            )
+                        }
+                        formNote(VideoStudioCopy.hevcNote)
+                    }
+                    formRow(VideoStudioCopy.output, height: VideoStudioMetrics.popUpHeight) {
+                        Text(verbatim: model.outputSummary(includesLength: true))
+                            .font(.system(size: 15, design: .monospaced))
+                            .foregroundStyle(.white)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                    formNote(VideoStudioCopy.changesApplyRightAway)
+                }
+                .padding(.top, 10)
+                .padding(.bottom, 12)
+            }
+            .scrollBounceBehavior(.basedOnSize)
+        }
+        .padding(.horizontal, Form.inset)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        .background(EditorTheme.sheet)
+        .task(id: model.recipe.background.imageAssetID) { checkBackgroundImage() }
+    }
+
+    /// A form row: the label 17 in 96 on the left, the control in 264.
+    private func formRow<Control: View>(
+        _ label: String,
+        height: CGFloat = VideoStudioMetrics.Pool.segmentedHeight,
+        @ViewBuilder control: () -> Control
+    ) -> some View {
+        HStack(spacing: Form.labelGap) {
+            Text(label)
+                .font(.system(size: 17))
+                .foregroundStyle(.white)
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
+                .frame(width: Form.labelWidth, alignment: .leading)
+            control()
+                .frame(width: Form.controlWidth, alignment: .leading)
+        }
+        .frame(height: height)
+    }
+
+    private func formNote(_ text: String) -> some View {
+        Text(text)
+            .font(.system(size: 13))
+            .foregroundStyle(EditorTheme.secondaryText)
+            .fixedSize(horizontal: false, vertical: true)
     }
 
     private var settings: some View {

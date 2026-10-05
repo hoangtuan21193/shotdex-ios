@@ -80,6 +80,9 @@ enum EditorTheme {
     /// Studio's media pool — rather than a few buttons over the picture:
     /// nearly opaque, so a grid stays legible over the frame it floats on.
     static let sidebarGlass = Color(red: 22 / 255, green: 22 / 255, blue: 24 / 255).opacity(0.92)
+    /// A popover or sheet raised over tier D on the iPad — Video Settings,
+    /// Export Video: `#2A2A2D`, lighter than the panels it stands on.
+    static let sheet = Color(red: 42 / 255, green: 42 / 255, blue: 45 / 255)
     /// For glass that sits over the photo permanently — the histogram card —
     /// where the image underneath still has to stay legible.
     static let glassLight = Color(white: 0.05).opacity(0.12)
