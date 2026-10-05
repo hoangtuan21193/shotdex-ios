@@ -297,6 +297,30 @@
       "comment": "Video Studio iPad text panel: title of the pop-up that picks how the caption goes out — Animate Out: None",
       "extractionState": "manual"
     },
+    "Applies to the %lld videos": {
+      "comment": "Video Studio multi-select: under Speed, which clips it changes — Applies to the 2 videos; one: Applies to the video (plural)",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Applies to the video"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Applies to the %lld videos"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "Apply To": {
       "comment": "Video Studio iPad Look panel: header over All Clips · This Clip — where a tapped look goes",
       "extractionState": "manual"
@@ -593,6 +617,10 @@
       "comment": "Video Studio: after the name of a look whose LUT file is gone — Kodak 2383 · Missing",
       "extractionState": "manual"
     },
+    "Mixed": {
+      "comment": "Video Studio multi-select: the value of a control whose selected clips are set differently — Speed Mixed, Look Mixed",
+      "extractionState": "manual"
+    },
     "More Fonts…": {
       "comment": "Video Studio iPad text panel: last row of the font pop-up, opens the font picker",
       "extractionState": "manual"
@@ -875,6 +903,34 @@
     },
     "photo": {
       "comment": "Video Studio session footer: the kind of a selected still, after its length — 3.0s · photo",
+      "extractionState": "manual"
+    },
+    "the %lld photos keep their length": {
+      "comment": "Video Studio multi-select: under Speed, the stills it leaves alone — the 2 photos keep their length (plural)",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "the photo keeps its length"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "the %lld photos keep their length"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "the photo keeps its %@": {
+      "comment": "Video Studio multi-select: under Speed, the one still it leaves alone — the photo keeps its 3.0s",
       "extractionState": "manual"
     },
     "under playhead": {

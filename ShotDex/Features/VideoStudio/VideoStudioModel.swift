@@ -1089,6 +1089,27 @@ final class VideoStudioModel {
     /// The clip Shift-click ranges from: the last one clicked into the group.
     private var groupAnchor: UUID?
 
+    // MARK: Group commands (FS-12.11 §5) — each one undo step; a slider
+    // drag is grouped by its caller, as for one clip.
+
+    /// The speed the group's videos share; nil reads "Mixed".
+    var groupSpeed: Double? { VideoClipGroupEditing.commonSpeed(of: selectedClipIDs, in: recipe) }
+
+    /// Every video in the group to `speed`; the stills keep their length.
+    func setGroupSpeed(_ speed: Double) {
+        guard isSelectingClips else { return }
+        VideoClipGroupEditing.setSpeed(speed, for: selectedClipIDs, in: &recipe)
+        markEdited()
+        schedulePreviewRebuild()
+    }
+
+    /// A Speed chip: one step for the whole group.
+    func chooseGroupSpeed(_ speed: Double) {
+        guard isSelectingClips, groupSpeed != speed else { return }
+        pushUndo()
+        setGroupSpeed(speed)
+    }
+
     /// ⌘-click on a clip (FS-12.11 §4): in or out of the group, which
     /// begins with it if none is open.
     func commandClickClip(_ id: UUID) {

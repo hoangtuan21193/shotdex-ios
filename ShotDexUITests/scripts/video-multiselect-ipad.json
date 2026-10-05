@@ -123,10 +123,6 @@
    "text": "snapshot"
   },
   {
-   "action": "wait",
-   "seconds": 25
-  },
-  {
    "action": "tap",
    "label": "Video clip, from second 9 to 14"
   },
@@ -140,8 +136,29 @@
    "text": "snapshot"
   },
   {
+   "action": "tap",
+   "label": "Video clip, from second 9 to 14"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "tap",
+   "label": "2\u00d7"
+  },
+  {
    "action": "wait",
    "seconds": 2
+  },
+  {
+   "action": "dump",
+   "name": "40-speed-2x",
+   "text": "snapshot"
+  },
+  {
+   "action": "wait",
+   "seconds": 30
   }
  ]
 }

@@ -46,4 +46,23 @@ extension VideoStudioCopy {
         )
         return "\(seconds) · \(kinds)"
     }
+
+    /// A group control whose clips differ: Speed, Look.
+    static var mixed: String {
+        String(localized: "Mixed", table: table, comment: "Video Studio multi-select: the value of a control whose selected clips are set differently — Speed Mixed, Look Mixed")
+    }
+
+    /// The line under the group's Speed when it holds stills (FS-12.11 §5):
+    /// "Applies to the 2 videos · the photo keeps its 3.0s". Nil for a group
+    /// of videos only.
+    static func speedNote(videos: Int, stills: [VideoClip]) -> String? {
+        guard videos > 0, !stills.isEmpty else { return nil }
+        let applies = String(localized: "Applies to the \(videos) videos", table: table, comment: "Video Studio multi-select: under Speed, which clips it changes — Applies to the 2 videos; one: Applies to the video (plural)")
+        let keeps: String = if stills.count == 1 {
+            String(localized: "the photo keeps its \(String(format: "%.1fs", stills[0].effectiveDuration))", table: table, comment: "Video Studio multi-select: under Speed, the one still it leaves alone — the photo keeps its 3.0s")
+        } else {
+            String(localized: "the \(stills.count) photos keep their length", table: table, comment: "Video Studio multi-select: under Speed, the stills it leaves alone — the 2 photos keep their length (plural)")
+        }
+        return "\(applies) · \(keeps)"
+    }
 }

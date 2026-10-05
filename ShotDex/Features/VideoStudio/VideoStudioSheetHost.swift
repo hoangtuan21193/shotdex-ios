@@ -766,7 +766,9 @@ struct VideoStudioSheetHost: View {
     /// A multi-select group's controls (FS-12.11 §5), under its row.
     @ViewBuilder
     private var groupParams: some View {
-        EmptyView()
+        ScrollView(showsIndicators: false) {
+            VideoGroupPanel(model: model, isDesk: isDesk)
+        }
     }
 
     @ViewBuilder

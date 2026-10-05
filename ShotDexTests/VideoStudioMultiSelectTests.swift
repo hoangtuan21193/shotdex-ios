@@ -122,4 +122,40 @@ struct VideoStudioMultiSelectTests {
         model.toggleClip(ids[3])
         #expect(model.selectedItemCommands == [.look, .motion, .move, .duplicate, .delete])
     }
+
+    /// AC-3: the 2× chip is one step — one Undo puts both videos back to
+    /// 1×, and the photo never moved.
+    @Test func oneUndoRestoresBothSpeeds() {
+        let model = sampleModel()
+        let ids = model.recipe.clips.map(\.id)
+        model.enterClipSelection(ids[1])
+        model.toggleClip(ids[2])
+        model.toggleClip(ids[3])
+
+        model.chooseGroupSpeed(2)
+        #expect(model.recipe.clips.map(\.speed) == [1, 2, 2, 1, 1])
+        #expect(model.groupSpeed == 2)
+
+        model.undo()
+        #expect(model.recipe.clips.map(\.speed) == [1, 1, 1, 1, 1])
+        #expect(!model.canUndo)
+        #expect(model.isSelectingClips)
+    }
+
+    /// A Speed slider drag across the group is one step too.
+    @Test func groupSpeedDragIsOneStep() {
+        let model = sampleModel()
+        let ids = model.recipe.clips.map(\.id)
+        model.enterClipSelection(ids[1])
+        model.toggleClip(ids[4])
+        model.beginUndoGroup()
+        model.setGroupSpeed(1.5)
+        model.setGroupSpeed(3)
+        model.endUndoGroup()
+        #expect(model.recipe.clips[1].speed == 3)
+        #expect(model.recipe.clips[4].speed == 3)
+        model.undo()
+        #expect(model.recipe.clips[1].speed == 1)
+        #expect(!model.canUndo)
+    }
 }

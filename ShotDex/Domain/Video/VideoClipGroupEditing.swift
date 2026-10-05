@@ -31,6 +31,36 @@ enum VideoClipGroupEditing {
         return Array(ids[min(a, b)...max(a, b)])
     }
 
+    // MARK: Speed (FS-12.11 §5)
+
+    /// The speed every video in the group shares, or nil when they differ
+    /// ("Mixed") or the group has no video.
+    static func commonSpeed(of ids: [UUID], in recipe: VideoProjectRecipe) -> Double? {
+        let speeds = Set(videos(ids, in: recipe).map(\.speed))
+        return speeds.count == 1 ? speeds.first : nil
+    }
+
+    /// Every video in the group to one speed; stills keep their length.
+    static func setSpeed(_ speed: Double, for ids: [UUID], in recipe: inout VideoProjectRecipe) {
+        let value = min(max(speed, VideoClip.speedRange.lowerBound), VideoClip.speedRange.upperBound)
+        let wanted = Set(ids)
+        for index in recipe.clips.indices where wanted.contains(recipe.clips[index].id) && recipe.clips[index].kind == .video {
+            recipe.clips[index].speed = value
+        }
+    }
+
+    /// The stills of the group that Speed leaves alone, for the line under
+    /// it: their count and, for one, its length.
+    static func stillsSpeedLeaves(_ ids: [UUID], in recipe: VideoProjectRecipe) -> [VideoClip] {
+        let wanted = Set(ids)
+        return recipe.clips.filter { wanted.contains($0.id) && $0.kind != .video }
+    }
+
+    private static func videos(_ ids: [UUID], in recipe: VideoProjectRecipe) -> [VideoClip] {
+        let wanted = Set(ids)
+        return recipe.clips.filter { wanted.contains($0.id) && $0.kind == .video }
+    }
+
     static func summary(of ids: [UUID], in recipe: VideoProjectRecipe) -> Summary {
         let wanted = Set(ids)
         let clips = recipe.clips.filter { wanted.contains($0.id) }

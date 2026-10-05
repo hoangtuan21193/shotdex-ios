@@ -43,4 +43,24 @@ struct VideoClipGroupEditingTests {
         let mixed = VideoClipGroupEditing.summary(of: [ids[0], ids[1]], in: recipe)
         #expect(VideoItemCommand.groupCommands(hasVideo: mixed.hasVideo) == [.speed, .volume, .look, .motion, .move, .duplicate, .delete])
     }
+
+    /// AC-3: 2× on clips 2, 3, 4 — the videos halve to 3.1s and 2.5s, the
+    /// photo keeps its 3.0s, the project runs 18.4s; the line under Speed
+    /// says exactly that, and differing speeds read as "Mixed".
+    @Test func speedTouchesOnlyVideos() {
+        var edited = recipe
+        let group = [ids[1], ids[2], ids[3]]
+        #expect(VideoClipGroupEditing.commonSpeed(of: group, in: edited) == 1)
+        VideoClipGroupEditing.setSpeed(2, for: group, in: &edited)
+        #expect(edited.clips.map(\.effectiveDuration) == [3.0, 3.1, 2.5, 3.0, 6.8])
+        #expect(abs(edited.clips.map(\.effectiveDuration).reduce(0, +) - 18.4) < 1e-9)
+        #expect(VideoClipGroupEditing.commonSpeed(of: group, in: edited) == 2)
+        #expect(VideoClipGroupEditing.commonSpeed(of: [ids[1], ids[4]], in: edited) == nil)
+        #expect(VideoClipGroupEditing.commonSpeed(of: [ids[0], ids[3]], in: edited) == nil)
+        #expect(VideoStudioCopy.speedNote(
+            videos: 2, stills: VideoClipGroupEditing.stillsSpeedLeaves(group, in: edited)
+        ) == "Applies to the 2 videos · the photo keeps its 3.0s")
+        #expect(VideoStudioCopy.speedNote(videos: 1, stills: [edited.clips[0]]) == "Applies to the video · the photo keeps its 3.0s")
+        #expect(VideoStudioCopy.speedNote(videos: 2, stills: []) == nil)
+    }
 }
