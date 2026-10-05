@@ -14,6 +14,8 @@ enum FolderEnumeration {
         let size: Int64
         let modified: Date?
         let isSidecar: Bool
+        /// Only in the cloud: listed, never opened (FS-19.01b §4).
+        var isCloudPlaceholder = false
     }
 
     /// Package extensions the system may not know on every platform (the
@@ -36,15 +38,29 @@ enum FolderEnumeration {
     }
 
     static func entries(in root: URL, includeSubfolders: Bool) -> [Entry] {
-        let keys: [URLResourceKey] = [.isDirectoryKey, .isPackageKey, .fileSizeKey, .contentModificationDateKey]
-        var options: FileManager.DirectoryEnumerationOptions = [.skipsHiddenFiles, .skipsPackageDescendants]
+        let keys: [URLResourceKey] = [.isDirectoryKey, .isPackageKey, .fileSizeKey, .contentModificationDateKey,
+                                      .ubiquitousItemDownloadingStatusKey]
+        // Hidden files are walked so iOS's `.Name.ext.icloud` placeholders
+        // show up; every other dot name is dropped below.
+        var options: FileManager.DirectoryEnumerationOptions = [.skipsPackageDescendants]
         if !includeSubfolders { options.insert(.skipsSubdirectoryDescendants) }
         guard let walk = FileManager.default.enumerator(at: root, includingPropertiesForKeys: keys, options: options) else { return [] }
         let rootPath = root.standardizedFileURL.path
         var out: [Entry] = []
         for case let url as URL in walk {
             let name = url.lastPathComponent
-            guard !name.hasPrefix(".") else { continue }
+            if let realName = placeholderName(name) {
+                let real = url.deletingLastPathComponent().appendingPathComponent(realName)
+                guard isReadable(real) else { continue }
+                let values = try? url.resourceValues(forKeys: Set(keys))
+                out.append(Entry(relativePath: relative(real, to: rootPath), size: 0, modified: values?.contentModificationDate,
+                                 isSidecar: false, isCloudPlaceholder: true))
+                continue
+            }
+            guard !name.hasPrefix(".") else {
+                if (try? url.resourceValues(forKeys: [.isDirectoryKey]).isDirectory) == true { walk.skipDescendants() }
+                continue
+            }
             let values = try? url.resourceValues(forKeys: Set(keys))
             if values?.isDirectory == true {
                 if values?.isPackage == true || knownPackageExtensions.contains(url.pathExtension.lowercased())
@@ -55,12 +71,27 @@ enum FolderEnumeration {
             }
             let isSidecar = url.pathExtension.lowercased() == "xmp"
             guard isSidecar || isReadable(url) else { continue }
-            var relative = url.standardizedFileURL.path
-            if relative.hasPrefix(rootPath) { relative.removeFirst(rootPath.count) }
-            if relative.hasPrefix("/") { relative.removeFirst() }
-            out.append(Entry(relativePath: relative, size: Int64(values?.fileSize ?? 0),
-                             modified: values?.contentModificationDate, isSidecar: isSidecar))
+            // A dataless file (macOS file providers) is a placeholder too.
+            let status = values?.ubiquitousItemDownloadingStatus
+            let isPlaceholder = status != nil && status != .current && status != .downloaded
+            out.append(Entry(relativePath: relative(url, to: rootPath), size: Int64(values?.fileSize ?? 0),
+                             modified: values?.contentModificationDate, isSidecar: isSidecar,
+                             isCloudPlaceholder: isPlaceholder && !isSidecar))
         }
         return out.sorted { $0.relativePath < $1.relativePath }
+    }
+
+    /// `IMG_1.JPG` for iOS's placeholder `.IMG_1.JPG.icloud`.
+    static func placeholderName(_ name: String) -> String? {
+        guard name.hasPrefix("."), name.hasSuffix(".icloud"), name.count > ".x.icloud".count - 1 else { return nil }
+        let inner = String(name.dropFirst().dropLast(".icloud".count))
+        return inner.isEmpty ? nil : inner
+    }
+
+    private static func relative(_ url: URL, to rootPath: String) -> String {
+        var path = url.standardizedFileURL.path
+        if path.hasPrefix(rootPath) { path.removeFirst(rootPath.count) }
+        if path.hasPrefix("/") { path.removeFirst() }
+        return path
     }
 }

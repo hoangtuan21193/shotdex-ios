@@ -13,6 +13,8 @@ struct FolderSourceIndexer: Sendable {
     struct Summary: Equatable, Sendable {
         var photos = 0
         var unchanged = 0
+        /// Cloud-only files recorded without a byte read (FS-19.01b §4).
+        var placeholders = 0
         /// Pause stopped the read before the end (FS-19.01 §4).
         var paused = false
     }
@@ -24,9 +26,11 @@ struct FolderSourceIndexer: Sendable {
     func index(sourceId: String, root: URL, includesSubfolders: Bool, pairsRawAndJpeg: Bool,
                now: Date = Date(), shouldContinue: () -> Bool = { true }) throws -> Summary {
         let files = FolderEnumeration.entries(in: root, includeSubfolders: includesSubfolders).filter { !$0.isSidecar }
-        let units = PairingRule.units(files, pairs: pairsRawAndJpeg,
+        // Placeholders never pair: their twin may not exist yet either.
+        let units = PairingRule.units(files.filter { !$0.isCloudPlaceholder }, pairs: pairsRawAndJpeg,
                                       name: { ($0.relativePath as NSString).lastPathComponent },
                                       folder: { ($0.relativePath as NSString).deletingLastPathComponent })
+            + files.filter(\.isCloudPlaceholder).map { PairingRule.Unit(primary: $0, companion: nil) }
         var summary = Summary()
         let stamp = Int(now.timeIntervalSince1970)
         // Copies this source knew that are not at their path any more: a
@@ -52,8 +56,23 @@ struct FolderSourceIndexer: Sendable {
             let key = Self.pathKey(file.relativePath)
             let modified = file.modified.map { Int($0.timeIntervalSince1970) }
             let existing = try database.reader.read { db in
-                try Row.fetchOne(db, sql: "SELECT id, photoId, size, modifiedAt FROM photo_copies WHERE sourceId = ? AND relativePathKey = ?",
+                try Row.fetchOne(db, sql: "SELECT id, photoId, size, modifiedAt, isCloudPlaceholder FROM photo_copies WHERE sourceId = ? AND relativePathKey = ?",
                                  arguments: [sourceId, key])
+            }
+            if file.isCloudPlaceholder {
+                // Listed, never opened: a photo and a copy so the grid can show
+                // it, no hash, no metadata row — nothing counts it yet.
+                try database.writer.write { db in
+                    let photoId: String = existing?["photoId"] ?? UUID().uuidString
+                    try db.execute(sql: "INSERT OR IGNORE INTO photos (id, createdAt) VALUES (?, ?)", arguments: [photoId, stamp])
+                    try db.execute(sql: """
+                        INSERT INTO photo_copies (id, photoId, sourceId, kind, relativePath, relativePathKey, modifiedAt, isOnline, isCloudPlaceholder, lastSeenAt)
+                        VALUES (?, ?, ?, 'file', ?, ?, ?, 1, 1, ?)
+                        ON CONFLICT(id) DO UPDATE SET missingSince = NULL, lastSeenAt = excluded.lastSeenAt
+                        """, arguments: [existing?["id"] ?? UUID().uuidString, photoId, sourceId, file.relativePath, key, modified, stamp])
+                }
+                summary.placeholders += 1
+                continue
             }
             if let existing, existing["size"] as Int64? == file.size, existing["modifiedAt"] as Int? == modified {
                 try database.writer.write { db in
@@ -98,7 +117,7 @@ struct FolderSourceIndexer: Sendable {
                     VALUES (?, ?, ?, 'file', ?, ?, ?, ?, ?, 1, ?)
                     ON CONFLICT(id) DO UPDATE SET relativePath = excluded.relativePath, relativePathKey = excluded.relativePathKey,
                         size = excluded.size, modifiedAt = excluded.modifiedAt, pairedPath = excluded.pairedPath,
-                        isOnline = 1, missingSince = NULL, lastSeenAt = excluded.lastSeenAt
+                        isOnline = 1, missingSince = NULL, isCloudPlaceholder = 0, lastSeenAt = excluded.lastSeenAt
                     """, arguments: [copyId, photoId, sourceId, file.relativePath, key, file.size, modified,
                                      unit.companion?.relativePath, stamp])
                 try db.execute(sql: """

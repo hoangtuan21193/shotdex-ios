@@ -200,6 +200,18 @@ extension AppDatabase {
         }
     }
 
+    /// FS-19.01b §4: a cloud placeholder (iCloud Drive, a file provider) is
+    /// recorded as a copy — the grid shows it with a cloud glyph — but never
+    /// read, so it has no hash and no metadata row, and filters and
+    /// Statistics do not count it until the file is on the device.
+    static func registerCloudPlaceholders(_ migrator: inout DatabaseMigrator) {
+        migrator.registerMigration("v32-cloudPlaceholders") { db in
+            try db.alter(table: "photo_copies") { t in
+                t.add(column: "isCloudPlaceholder", .boolean).notNull().defaults(to: false)
+            }
+        }
+    }
+
     /// Every photo id a table held before v30, once each. `creations` keeps
     /// NULL for a draft with no source photo; the caller drops it.
     static let everyPhotoIdSQL = """

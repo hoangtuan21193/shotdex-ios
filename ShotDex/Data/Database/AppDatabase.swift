@@ -662,6 +662,7 @@ final class AppDatabase: Sendable {
 
         registerPhotoSources(&migrator)
         registerMissingCopies(&migrator)
+        registerCloudPlaceholders(&migrator)
 
         return migrator
     }
