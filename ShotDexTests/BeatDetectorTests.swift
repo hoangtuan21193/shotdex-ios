@@ -53,4 +53,13 @@ struct BeatDetectorTests {
         let analysis = BeatDetector.analyze(Self.click(bpm: 60, seconds: 30))
         #expect(abs(analysis.bpm - 60) <= 0.5)
     }
+
+    /// AC-2: 120 BPM after 0.37 s of silence — the first beat is the first
+    /// click, not a beat made up in the silence before it.
+    @Test func leadingSilenceShiftsFirstBeat() {
+        let analysis = BeatDetector.analyze(Self.click(bpm: 120, seconds: 30, leadingSilence: 0.37))
+        #expect(abs(analysis.bpm - 120) <= 0.5)
+        let first = try? #require(analysis.beats.first)
+        #expect(abs((first ?? 0) - 0.37) <= 0.02)
+    }
 }
