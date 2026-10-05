@@ -23,6 +23,14 @@ enum VideoClipGroupEditing {
         return recipe.clips.map(\.id).filter { wanted.contains($0) }
     }
 
+    /// Every clip from `anchor` to `target`, both ends in, in timeline
+    /// order — what Shift-click adds to a group (FS-12.11 §4).
+    static func range(from anchor: UUID, to target: UUID, in recipe: VideoProjectRecipe) -> [UUID] {
+        let ids = recipe.clips.map(\.id)
+        guard let a = ids.firstIndex(of: anchor), let b = ids.firstIndex(of: target) else { return [] }
+        return Array(ids[min(a, b)...max(a, b)])
+    }
+
     static func summary(of ids: [UUID], in recipe: VideoProjectRecipe) -> Summary {
         let wanted = Set(ids)
         let clips = recipe.clips.filter { wanted.contains($0.id) }

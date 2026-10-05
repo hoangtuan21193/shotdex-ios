@@ -354,7 +354,7 @@ struct VideoTimelineView: View {
                 model.edgeTrim(id, edge: edge, phase: .changed(Double(tx) / Double(pps)), snapTolerance: snap)
             case .ended(let tx):
                 model.edgeTrim(id, edge: edge, phase: .ended(Double(tx) / Double(pps)), snapTolerance: snap)
-            case .cancelled, .pressed, .holding:
+            case .cancelled, .pressed, .holding, .modifiedTap:
                 model.edgeTrim(id, edge: edge, phase: .cancelled)
             }
             // One tick when the edge reaches the source's end or a clip's
@@ -371,6 +371,11 @@ struct VideoTimelineView: View {
         switch phase {
         case .holding:
             if case .clipReorder(let id) = kind { model.clipPressGate.began(on: id) }
+        case .modifiedTap(let command, let shift):
+            model.clipPressGate.ended()
+            if case .clipReorder(let id) = kind {
+                if shift { model.shiftClickClip(id) } else if command { model.commandClickClip(id) }
+            }
         case .changed(let tx):
             activeDrag = TimelineActiveDrag(kind: kind, translationX: tx)
         case .ended(let tx):

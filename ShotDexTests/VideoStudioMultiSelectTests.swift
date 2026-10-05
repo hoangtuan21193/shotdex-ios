@@ -60,4 +60,56 @@ struct VideoStudioMultiSelectTests {
         #expect(VideoStudioMetrics.groupPanelLift(timelineTop: 326, videoLaneBottom: 147, panelTop: 518) == 0)
         #expect(VideoStudioMetrics.groupPanelLift(timelineTop: 490, videoLaneBottom: 147, panelTop: 518) == 127)
     }
+
+    /// AC-2: clips 3 and 4 tapped into clip 2's group — "3 selected ·
+    /// 14.2s"; clip 3 tapped again leaves two. Tapping the last ones out
+    /// ends the group as ✓ does: nothing selected, the tools back.
+    @Test func toggleDownToZeroExitsLikeDone() {
+        let model = sampleModel()
+        let ids = model.recipe.clips.map(\.id)
+        model.enterClipSelection(ids[1])
+        model.toggleClip(ids[2])
+        model.toggleClip(ids[3])
+        #expect(model.selectedClipIDs == [ids[1], ids[2], ids[3]])
+        #expect(model.groupSummary.seconds == 14.2)
+        #expect(model.selectionTitle?.detail == "14.2s · 2 videos + 1 photo")
+
+        model.toggleClip(ids[2])
+        #expect(model.selectedClipIDs == [ids[1], ids[3]])
+
+        model.toggleClip(ids[1])
+        model.toggleClip(ids[3])
+        #expect(!model.isSelectingClips)
+        #expect(model.session == nil)
+        #expect(model.inspectorTarget == .none)
+    }
+
+    /// A caption or a music bed tapped while a group is open: the group
+    /// ends as ✓ ends it, then that item is selected (FS-12.11 §4).
+    @Test func tappingAnotherItemKeepsAndMovesOn() {
+        let model = VideoStudioModelFixture.model(
+            clips: VideoStudioModelFixture.mediaSampleRecipe().clips,
+            configure: { $0.overlays = VideoStudioModelFixture.mediaSampleRecipe().overlays }
+        )
+        let ids = model.recipe.clips.map(\.id)
+        model.enterClipSelection(ids[1])
+        model.toggleOverlay(model.recipe.overlays[0].id)
+        #expect(!model.isSelectingClips)
+        #expect(model.inspectorTarget == .text)
+    }
+
+    /// The iPad's pointer: Shift-click adds the run of clips up to the one
+    /// clicked, ⌘-click toggles one, and ⌘-click with no group starts one.
+    @Test func pointerClicksExtendAndToggle() {
+        let model = sampleModel()
+        let ids = model.recipe.clips.map(\.id)
+        model.commandClickClip(ids[1])
+        #expect(model.selectedClipIDs == [ids[1]])
+        model.shiftClickClip(ids[3])
+        #expect(model.selectedClipIDs == [ids[1], ids[2], ids[3]])
+        model.commandClickClip(ids[2])
+        #expect(model.selectedClipIDs == [ids[1], ids[3]])
+        model.commandClickClip(ids[0])
+        #expect(model.selectedClipIDs == [ids[0], ids[1], ids[3]])
+    }
 }

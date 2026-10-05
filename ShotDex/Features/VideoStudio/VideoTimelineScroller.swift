@@ -53,6 +53,10 @@ enum TimelineZoneDragPhase {
     /// The press on a clip's body has held `movePress`: from here on the
     /// finger's release is the press's, not the clip's tap.
     case holding
+    /// A click on a clip's body with ⌘ or ⇧ held — the iPad's pointer and
+    /// keyboard (FS-12.11 §4): ⌘ toggles the clip in the group, ⇧ adds the
+    /// run of clips up to it.
+    case modifiedTap(command: Bool, shift: Bool)
 }
 
 /// Stops a clip's SwiftUI tap from firing at the end of a press the
@@ -67,14 +71,19 @@ enum TimelineZoneDragPhase {
 final class TimelinePressGate {
     private var heldClip: UUID?
     private var isHolding = false
+    private var heldAt: CFTimeInterval = 0
     private var releasedAt: CFTimeInterval = 0
 
     /// How long after a press ends its clip's tap is still the press's.
     static let window: CFTimeInterval = 0.4
+    /// A hold that never reported its end (a gesture the system took over)
+    /// stops swallowing taps after this long.
+    static let staleHold: CFTimeInterval = 3
 
-    func began(on clip: UUID) {
+    func began(on clip: UUID, now: CFTimeInterval = CACurrentMediaTime()) {
         heldClip = clip
         isHolding = true
+        heldAt = now
     }
 
     func ended(now: CFTimeInterval = CACurrentMediaTime()) {
@@ -85,7 +94,8 @@ final class TimelinePressGate {
     /// Whether a tap on `clip` is the tail of a press: if so it is
     /// swallowed, once.
     func swallowsTap(on clip: UUID, now: CFTimeInterval = CACurrentMediaTime()) -> Bool {
-        guard heldClip == clip, isHolding || now - releasedAt < Self.window else { return false }
+        let holds = isHolding && now - heldAt < Self.staleHold
+        guard heldClip == clip, holds || now - releasedAt < Self.window else { return false }
         heldClip = nil
         return true
     }
@@ -183,6 +193,15 @@ struct VideoTimelineScroller<Content: View>: UIViewRepresentable {
         scrollView.addGestureRecognizer(longPress)
         context.coordinator.reorderPress = longPress
 
+        // ⌘- and ⇧-click on a clip's body (an iPad with a keyboard): a tap
+        // that only takes touches with a modifier down.
+        let modifiedTap = UITapGestureRecognizer(
+            target: context.coordinator, action: #selector(Coordinator.handleModifiedTap(_:))
+        )
+        modifiedTap.delegate = context.coordinator
+        scrollView.addGestureRecognizer(modifiedTap)
+        context.coordinator.modifiedTap = modifiedTap
+
         context.coordinator.host = host
         context.coordinator.widthConstraint = widthConstraint
         context.coordinator.heightConstraint = heightConstraint
@@ -251,6 +270,8 @@ struct VideoTimelineScroller<Content: View>: UIViewRepresentable {
         var heightConstraint: NSLayoutConstraint?
         var zonePan: UIPanGestureRecognizer?
         var reorderPress: UILongPressGestureRecognizer?
+        var modifiedTap: UITapGestureRecognizer?
+        private var modifiedTapFlags: UIKeyModifierFlags = []
 
         private var isProgrammaticScroll = false
         private var lastVerticalOffset: CGFloat = 0
@@ -433,6 +454,36 @@ struct VideoTimelineScroller<Content: View>: UIViewRepresentable {
             default:
                 break
             }
+        }
+
+        // MARK: ⌘/⇧-click on a clip body
+
+        @objc func handleModifiedTap(_ recognizer: UITapGestureRecognizer) {
+            guard recognizer.state == .ended,
+                  let scrollView = recognizer.view as? TimelineScrollView,
+                  let hostView = scrollView.hostView,
+                  let zone = scrollView.reorderZone(at: recognizer.location(in: hostView))
+            else { return }
+            parent.onZoneDrag(zone.kind, .modifiedTap(
+                command: modifiedTapFlags.contains(.command),
+                shift: modifiedTapFlags.contains(.shift)
+            ))
+        }
+
+        /// The modified tap takes a touch only with ⌘ or ⇧ down, on a
+        /// clip's body; the clip's own tap is told to stand aside.
+        func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldReceive event: UIEvent) -> Bool {
+            guard gestureRecognizer === modifiedTap else { return true }
+            let flags = event.modifierFlags.intersection([.command, .shift])
+            guard !flags.isEmpty,
+                  let scrollView = gestureRecognizer.view as? TimelineScrollView,
+                  let hostView = scrollView.hostView,
+                  let touch = event.allTouches?.first,
+                  let zone = scrollView.reorderZone(at: touch.location(in: hostView))
+            else { return false }
+            modifiedTapFlags = flags
+            parent.onZoneDrag(zone.kind, .holding)
+            return true
         }
 
         func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {

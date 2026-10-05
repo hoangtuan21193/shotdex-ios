@@ -1082,7 +1082,35 @@ final class VideoStudioModel {
         endSession()
         deselectAll()
         selectedClipIDs = [id]
+        groupAnchor = id
         beginSession(.clipGroup)
+    }
+
+    /// The clip Shift-click ranges from: the last one clicked into the group.
+    private var groupAnchor: UUID?
+
+    /// ⌘-click on a clip (FS-12.11 §4): in or out of the group, which
+    /// begins with it if none is open.
+    func commandClickClip(_ id: UUID) {
+        guard isSelectingClips else {
+            enterClipSelection(id)
+            return
+        }
+        toggleGroupClip(id)
+    }
+
+    /// Shift-click: every clip from the last one clicked to this one joins
+    /// the group — from the selected clip when one is selected alone.
+    func shiftClickClip(_ id: UUID) {
+        let anchor = isSelectingClips ? groupAnchor : selectedClipID
+        guard let anchor, recipe.clips.contains(where: { $0.id == anchor }) else {
+            commandClickClip(id)
+            return
+        }
+        let range = VideoClipGroupEditing.range(from: anchor, to: id, in: recipe)
+        if !isSelectingClips { enterClipSelection(anchor) }
+        selectedClipIDs = VideoClipGroupEditing.ordered(selectedClipIDs + range, in: recipe)
+        groupAnchor = id
     }
 
     /// A tap on a clip while a group is open adds it or takes it out. The
@@ -1095,6 +1123,7 @@ final class VideoStudioModel {
         } else {
             selectedClipIDs = VideoClipGroupEditing.ordered(selectedClipIDs + [id], in: recipe)
         }
+        groupAnchor = id
     }
 
     func selectOverlay(_ id: UUID?) {
