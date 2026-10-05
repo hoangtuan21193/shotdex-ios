@@ -358,6 +358,11 @@ enum VideoStudioCopy {
         String(localized: "MY MUSIC", table: table, comment: "Video Studio Music panel: header over the user's imported songs")
     }
 
+    /// The same header in the iPad pool, Title Case (FS-12.03b §1).
+    static var myMusicTitle: String {
+        String(localized: "My Music", table: table, comment: "Video Studio iPad media pool Music tab: header over the user's imported songs")
+    }
+
     static var addMusic: String {
         String(localized: "Add Music", table: table, comment: "Video Studio: title of the Music tool's panel")
     }
@@ -452,8 +457,9 @@ enum VideoStudioCopy {
         String(localized: "Library", table: table, comment: "Video Studio: title of the iPad's media pool column")
     }
 
-    /// Header over the fonts the user has added captions in.
+    /// Header over the fonts the user has added captions in — Title Case,
+    /// as the iPad's pool writes its section titles (FS-12.03b §1).
     static var fontsYouUsed: String {
-        String(localized: "FONTS YOU USED", table: table, comment: "Video Studio media pool Text tab: header over the fonts the user has used before")
+        String(localized: "Fonts You Used", table: table, comment: "Video Studio media pool Text tab: header over the fonts the user has used before")
     }
 }

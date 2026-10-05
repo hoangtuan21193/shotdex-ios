@@ -12,10 +12,10 @@ struct VideoMediaGridMetrics: Equatable {
 
     /// Phone: four columns of 99 with 2pt gaps, edge to edge.
     static let phone = VideoMediaGridMetrics(columns: 4, gap: 2, inset: 0)
-    /// The iPad's 236pt pool: three of 69, gaps of 6, 8 at the edges.
-    static let pool = VideoMediaGridMetrics(columns: 3, gap: 6, inset: 8)
-    /// The iPad portrait dock: eight of 124, 2pt gaps, 12 at the edges.
-    static let dock = VideoMediaGridMetrics(columns: 8, gap: 2, inset: 12)
+    /// The iPad's 320pt pool: three of 96, gaps of 4, 12 at the edges.
+    static let pool = VideoMediaGridMetrics(columns: 3, gap: 4, inset: 12)
+    /// The iPad portrait dock: eight of 121.5, gaps of 4, 16 at the edges.
+    static let dock = VideoMediaGridMetrics(columns: 8, gap: 4, inset: 16)
     /// The Duo's 264pt inner column: three of 80, gaps of 4.
     static let duoColumn = VideoMediaGridMetrics(columns: 3, gap: 4, inset: 8)
     /// The Duo cover's 382pt panel: four of 94, 2pt gaps, edge to edge.
@@ -31,9 +31,11 @@ struct VideoMediaGridMetrics: Equatable {
         }
     }
 
-    /// The side of one square cell in a grid `width` wide, in whole points.
+    /// The side of one square cell in a grid `width` wide, to the half
+    /// point below — a 2× pixel grid, and eight dock cells of 121.5 that
+    /// would lose 4pt across the row in whole points.
     func cellSide(width: CGFloat) -> CGFloat {
         let usable = width - inset * 2 - gap * CGFloat(max(0, columns - 1))
-        return max(1, (usable / CGFloat(max(1, columns))).rounded(.down))
+        return max(1, (usable / CGFloat(max(1, columns)) * 2).rounded(.down) / 2)
     }
 }

@@ -43,130 +43,85 @@ struct VideoMediaPoolColumn: View {
     /// cap: it is the Media panel, over a lazy fetch (FS-12.09 §2).
     private static let capacity = 400
 
+    private typealias Pool = VideoStudioMetrics.Pool
+
     var body: some View {
         VStack(spacing: 0) {
             header
-            tabStrip
-            Divider().overlay(EditorTheme.panelDivider)
-            if tab == .stickers { binLabel }
+            VideoDeskSegmented(
+                items: Tab.allCases.map { ($0, $0.title, "poolTab.\($0.rawValue)") },
+                selection: Binding(get: { tab }, set: { new in withAnimation(EditorTheme.animation) { tab = new } }),
+                label: Text(verbatim: "Pool")
+            )
+            .padding(.horizontal, Pool.inset)
+            .padding(.top, Pool.segmentedTop)
+            .padding(.bottom, Pool.contentGap)
             content
         }
         .padding(.top, topInset)
         .padding(.bottom, bottomInset)
         .frame(width: width)
-        .frame(maxHeight: .infinity)
-        .background(EditorTheme.panelSolid)
-        .overlay(alignment: .trailing) {
-            Rectangle().fill(EditorTheme.panelDivider).frame(width: 1)
-        }
+        .frame(maxHeight: .infinity, alignment: .top)
+        // The pool floats: the editor's dark glass, its stroke and a soft
+        // shadow, radius 22 (FS-12.03 §2, board IL1_Main).
+        .clipShape(RoundedRectangle(cornerRadius: VideoStudioDeskGeometry.poolCornerRadius, style: .continuous))
+        .editorGlass(cornerRadius: VideoStudioDeskGeometry.poolCornerRadius, tint: EditorTheme.sidebarGlass)
+        .shadow(color: .black.opacity(0.6), radius: 14, y: 8)
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel(Text("Media Pool", comment: "Video Studio: shows or hides the library column"))
         .task(id: photoLibrary.libraryChangeToken) { reload() }
         .onChange(of: tab) { reload() }
     }
 
     // MARK: Bands
 
-    /// "Library", and the control that hides the column (FS-12.03b §1).
+    /// "Library" · Select · Search Library · Hide Media (FS-12.03b §1,
+    /// FS-12.09 §3). Select and search act on the Media tab, so from another
+    /// tab they open it first.
     private var header: some View {
-        HStack(spacing: 8) {
+        HStack(spacing: 0) {
             Text(VideoStudioCopy.library)
-                .font(.system(size: 14, weight: .semibold))
+                .font(.system(size: 20, weight: .semibold))
                 .foregroundStyle(.white)
                 .accessibilityAddTraits(.isHeader)
             Spacer(minLength: 0)
-            // Library · Select · 🔍 · Hide Media (FS-12.09 §3): the Media
-            // tab's Select and search live up here, not in its tab row.
-            HStack(spacing: 0) {
-            if tab == .media {
-                VideoMediaHeaderControls(model: model, spacing: 0, onSearch: { searchRequest += 1 })
-            }
-            Button(action: onClose) {
-                Image(systemName: "sidebar.leading")
-                    .font(.system(size: 13, weight: .medium))
-                    .foregroundStyle(EditorTheme.secondaryText)
-                    .frame(width: 30, height: 30)
-                    .videoHitTarget(drawnHeight: 30)
+            Button {
+                tab = .media
+                model.toggleMediaSelecting()
+            } label: {
+                Text(VideoStudioCopy.select)
+                    .font(.system(size: 17, weight: model.isSelectingMedia ? .semibold : .regular))
+                    .foregroundStyle(.white)
+                    .frame(width: Pool.selectWidth, height: Pool.headerHeight)
+                    .background(Capsule().fill(model.isSelectingMedia ? VideoStudioMetrics.openCellFill : .clear))
+                    .contentShape(Capsule())
             }
             .buttonStyle(.plain)
-            .accessibilityLabel(Text("Hide Media", comment: "Video Studio: closes the library column"))
+            .accessibilityAddTraits(model.isSelectingMedia ? .isSelected : [])
+            headerButton("magnifyingglass") {
+                tab = .media
+                searchRequest += 1
             }
-            .layoutPriority(1)
+            .accessibilityLabel(VideoStudioCopy.searchLibrary)
+            headerButton("sidebar.leading", action: onClose)
+                .accessibilityLabel(Text("Hide Media", comment: "Video Studio: closes the library column"))
         }
-        .padding(.leading, 14)
-        .padding(.trailing, 8)
-        .frame(height: VideoStudioMetrics.mediaPoolHeaderHeight)
+        .padding(.leading, Pool.titleLeading)
+        .padding(.trailing, Pool.headerTrailing)
+        .padding(.top, Pool.headerTop)
+        .frame(height: Pool.headerTop + Pool.headerHeight, alignment: .bottom)
     }
 
-    /// The one row that says what this column is for right now — the same
-    /// job Resolve's Media / Titles / Effects tabs do, and the same rule: the
-    /// tab decides **what a tap inserts**, not just what is listed. Media
-    /// adds a clip, Stickers adds an overlay, Music adds a bed.
-    private var tabStrip: some View {
-        // Four equal tabs across the whole 236pt (board IL1: 59 each).
-        HStack(spacing: 0) {
-            ForEach(Tab.allCases) { candidate in
-                Button {
-                    withAnimation(EditorTheme.animation) { tab = candidate }
-                } label: {
-                    VStack(spacing: 2) {
-                        Image(systemName: candidate.systemImage)
-                            .font(.system(size: 13, weight: .medium))
-                        Text(candidate.title)
-                            .font(.system(size: 10.5, weight: .medium))
-                            .lineLimit(1)
-                            .minimumScaleFactor(0.8)
-                    }
-                    .foregroundStyle(candidate == tab ? EditorTheme.accent : EditorTheme.secondaryText)
-                    .frame(maxWidth: .infinity)
-                    .frame(height: VideoStudioMetrics.mediaPoolTabStripHeight)
-                    .background(
-                        RoundedRectangle(cornerRadius: 5, style: .continuous)
-                            .fill(candidate == tab ? EditorTheme.accent.opacity(0.14) : .clear)
-                    )
-                    .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
-                // A stable handle for the UI driver: "Text" and "Music" also
-                // name a timeline lane and an add-button, so a label match
-                // cannot tell them apart.
-                .accessibilityIdentifier("poolTab.\(candidate.rawValue)")
-                .accessibilityLabel(candidate.title)
-                .accessibilityAddTraits(candidate == tab ? .isSelected : [])
-            }
-        }
-        .frame(height: VideoStudioMetrics.mediaPoolTabStripHeight)
-    }
-
-    /// Resolve labels the open bin above its grid; here the bin is whichever
-    /// slice of the library the filter is showing, and the count is the thing
-    /// a photographer actually checks before scrolling.
-    private var binLabel: some View {
-        HStack(spacing: 6) {
-            Text(tab.binTitle)
-                .font(.system(size: 11, weight: .semibold))
+    /// A 44pt glyph button in the pool's title row.
+    private func headerButton(_ systemName: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Image(systemName: systemName)
+                .font(.system(size: 18, weight: .medium))
                 .foregroundStyle(.white)
-            Text(binCount)
-                .font(.system(size: 11).monospacedDigit())
-                .foregroundStyle(EditorTheme.dimText)
-            Spacer(minLength: 0)
+                .frame(width: Pool.headerHeight, height: Pool.headerHeight)
+                .contentShape(Rectangle())
         }
-        .padding(.horizontal, 12)
-        .frame(height: 24)
-        .background(EditorTheme.stickyHeader)
-    }
-
-    private var binCount: String {
-        switch tab {
-        case .media: ""
-        case .stickers: countText
-        case .text: "\(model.fontRecents.count)"
-        case .music: "\(importedMusic.tracks.count)"
-        }
-    }
-
-    private var countText: String {
-        assets.count >= Self.capacity
-            ? String(localized: "\(Self.capacity)+", comment: "Video Studio media pool: the column is showing its first N items and the library holds more")
-            : "\(assets.count)"
+        .buttonStyle(.plain)
     }
 
     @ViewBuilder
@@ -187,33 +142,34 @@ struct VideoMediaPoolColumn: View {
                 Button { onAddText(nil) } label: {
                     HStack(spacing: 8) {
                         Image(systemName: "textformat")
-                            .font(.system(size: 15, weight: .semibold))
+                            .font(.system(size: 18, weight: .semibold))
                         Text("Add Text", comment: "Video Studio media pool: adds a caption in the last-used font")
-                            .font(.system(size: 14, weight: .semibold))
+                            .font(.system(size: 17, weight: .semibold))
                     }
                     .foregroundStyle(.white)
                     .frame(maxWidth: .infinity)
-                    .frame(height: 44)
+                    .frame(height: Pool.buttonHeight)
                     .background(
                         RoundedRectangle(cornerRadius: AppTheme.Radius.md, style: .continuous)
-                            .fill(Color.white.opacity(0.10))
+                            .fill(Color.white.opacity(0.08))
                     )
                     .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
-                .padding(.horizontal, 10)
-                .padding(.top, 10)
+                .padding(.horizontal, Pool.inset)
                 Text(VideoStudioCopy.fontsYouUsed)
-                    .font(.system(size: 11, weight: .bold)).tracking(0.6)
-                    .foregroundStyle(.white.opacity(0.7))
-                    .padding(.horizontal, 14)
-                    .padding(.top, 18)
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(.white)
+                    .frame(height: Pool.sectionTitleHeight)
+                    .padding(.horizontal, Pool.titleLeading)
+                    .padding(.top, Pool.sectionGap)
                     .padding(.bottom, 4)
+                    .accessibilityAddTraits(.isHeader)
                 if model.fontRecents.isEmpty {
                     Text("Fonts you use appear here, ready to reuse.", comment: "Video Studio media pool: empty state for the text tab")
-                        .font(.system(size: 12))
-                        .foregroundStyle(EditorTheme.dimText)
-                        .padding(.horizontal, 14)
+                        .font(.system(size: 13))
+                        .foregroundStyle(EditorTheme.secondaryText)
+                        .padding(.horizontal, Pool.titleLeading)
                         .padding(.top, 6)
                 }
                 ForEach(model.fontRecents) { font in
@@ -224,16 +180,17 @@ struct VideoMediaPoolColumn: View {
                                 .foregroundStyle(.white)
                                 .frame(width: 40)
                             Text(font.displayName)
-                                .font(.system(size: 13))
+                                .font(.system(size: 17))
                                 .foregroundStyle(.white)
                                 .lineLimit(1)
                             Spacer(minLength: 0)
                         }
-                        .padding(.horizontal, 14)
-                        .frame(height: 50)
+                        .padding(.horizontal, 8)
+                        .frame(height: Pool.fontRowHeight)
                         .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
+                    .padding(.horizontal, Pool.rowInset)
                     .accessibilityHint(Text("Adds a caption in this font", comment: "Video Studio media pool: what tapping a font row does"))
                 }
             }
@@ -244,7 +201,7 @@ struct VideoMediaPoolColumn: View {
     /// The Music tab is the Music panel itself (FS-12.03b §1): Video sound,
     /// Add Music from Files…, My Music — one place, one set of names.
     private var musicContent: some View {
-        VideoMusicPanelContent(model: model, importedMusic: importedMusic, onImport: onImportMusic)
+        VideoMusicPanelContent(model: model, importedMusic: importedMusic, onImport: onImportMusic, style: .pool)
     }
 
     /// A font's own face at list size, the way the editor's font picker
@@ -313,13 +270,11 @@ struct VideoMediaPoolColumn: View {
     }
 
     private var gridBody: some View {
-        let cell = VideoStudioMetrics.mediaPoolCellWidth(columnWidth: width)
+        // Stickers: two columns across the pool's 294pt, 8 apart.
+        let cell = (width - Pool.inset * 2 - Pool.stickerGap) / 2
         return LazyVGrid(
-            columns: Array(
-                repeating: GridItem(.fixed(cell), spacing: VideoStudioMetrics.mediaPoolCellSpacing),
-                count: VideoStudioMetrics.mediaPoolColumnCount(columnWidth: width)
-            ),
-            spacing: VideoStudioMetrics.mediaPoolCellSpacing
+            columns: Array(repeating: GridItem(.fixed(cell), spacing: Pool.stickerGap), count: 2),
+            spacing: Pool.stickerGap
         ) {
             ForEach(assets, id: \.localIdentifier) { asset in
                 VideoMediaPoolCell(
@@ -330,7 +285,7 @@ struct VideoMediaPoolColumn: View {
                 )
             }
         }
-        .padding(.horizontal, VideoStudioMetrics.mediaPoolCellSpacing)
+        .padding(.horizontal, Pool.inset)
         .padding(.vertical, 8)
     }
 
@@ -386,15 +341,6 @@ struct VideoMediaPoolColumn: View {
             case .stickers: String(localized: "Stickers", comment: "Video Studio media pool tab: photos to add as an overlay")
             case .text: String(localized: "Text", comment: "Video Studio media pool tab: captions to add over the frame")
             case .music: String(localized: "Music", comment: "Video Studio media pool tab: audio to add as a music bed")
-            }
-        }
-
-        var binTitle: String {
-            switch self {
-            case .media: String(localized: "All Media", comment: "Video Studio media pool bin label")
-            case .stickers: String(localized: "Photos", comment: "Video Studio media pool bin label for the sticker tab")
-            case .text: String(localized: "Recent Fonts", comment: "Video Studio media pool bin label for the text tab")
-            case .music: String(localized: "Imported", comment: "Video Studio media pool bin label for the music tab")
             }
         }
     }

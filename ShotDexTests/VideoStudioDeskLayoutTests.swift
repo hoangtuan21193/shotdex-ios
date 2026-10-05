@@ -107,17 +107,34 @@ struct VideoStudioDeskLayoutTests {
         #expect(VideoMediaPoolColumn.Tab.allCases == [.media, .text, .stickers, .music])
     }
 
-    /// FS-12.09 AC-13 (grid): the pool's Media grid is three columns of 69
-    /// with 6pt gaps and 8 at the edges across its 236pt; the dock's eight
-    /// of 124, the Duo column's three of 80 and the cover's four of 94.
-    @Test func poolMediaGridIsThreeColumnsOf69() {
+    /// FS-12.09 AC-13 (grid): the pool's Media grid is three columns of 96
+    /// with 4pt gaps across the 320pt floating pool (board IL1_Main); the
+    /// dock's eight of 121.5 (MP_IP_Media), the Duo column's three of 80 and
+    /// the cover's four of 94.
+    @Test func poolMediaGridIsThreeColumnsOf96() {
         let pool = VideoMediaGridMetrics.for(.iPadLandscape)
+        let width = VideoStudioDeskGeometry.poolFrame.width
         #expect(pool.columns == 3)
-        #expect(pool.cellSide(width: 236) == 69)
-        #expect(pool.cellSide(width: 236) * 3 + pool.gap * 2 + pool.inset * 2 <= 236)
-        #expect(VideoMediaGridMetrics.for(.iPadPortrait).cellSide(width: 1032) == 124)
+        #expect(pool.cellSide(width: width) == 96)
+        #expect(pool.cellSide(width: width) * 3 + pool.gap * 2 + pool.inset * 2 <= width)
         #expect(VideoMediaGridMetrics.for(.duoInner).cellSide(width: 264) == 80)
         #expect(VideoMediaGridMetrics.for(.duoCover).cellSide(width: 382) == 94)
+        #expect(VideoMediaGridMetrics.for(.phone).cellSide(width: 402) == 99)
+    }
+
+    @Test func dockGridIsEightOf121AndAHalf() {
+        let dock = VideoMediaGridMetrics.for(.iPadPortrait)
+        #expect(dock.columns == 8)
+        #expect(dock.cellSide(width: 1032) == 121.5)
+        #expect(dock.cellSide(width: 1032) * 8 + dock.gap * 7 + dock.inset * 2 == 1032)
+    }
+
+    /// The pool's two segmented rows fit its 320pt panel at 294, 13 in.
+    @Test func thePoolsSegmentedRowsAre294() {
+        let pool = VideoStudioMetrics.Pool.self
+        #expect(VideoStudioDeskGeometry.poolFrame.width - pool.inset * 2 == 294)
+        #expect(pool.headerTop + pool.headerHeight + pool.segmentedTop == 69)
+        #expect(69 + pool.segmentedHeight + pool.contentGap == 113)
     }
 
     /// A phone has no pool to move the insert commands onto, so it keeps all
@@ -318,23 +335,6 @@ struct VideoStudioDeskLayoutTests {
         }
     }
 
-    // MARK: Media pool cells
-
-    @Test func theMediaPoolFitsThreeColumnsWideAndTwoNarrow() {
-        #expect(VideoStudioMetrics.mediaPoolColumnCount(columnWidth: VideoStudioMetrics.mediaPoolWideWidth) == 3)
-        #expect(VideoStudioMetrics.mediaPoolColumnCount(columnWidth: 236) == 2)
-    }
-
-    /// The cells and their gaps must not add up to more than the column, or
-    /// the last one in every row is clipped by the divider.
-    @Test func theMediaPoolCellsFitInsideTheirColumn() {
-        for width in [VideoStudioMetrics.mediaPoolWideWidth, 236] {
-            let count = CGFloat(VideoStudioMetrics.mediaPoolColumnCount(columnWidth: width))
-            let cell = VideoStudioMetrics.mediaPoolCellWidth(columnWidth: width)
-            #expect(cell > 0)
-            #expect(cell * count + VideoStudioMetrics.mediaPoolCellSpacing * (count + 1) <= width)
-        }
-    }
 }
 
 /// The track header's switches and the keyboard's Esc, held at the model —

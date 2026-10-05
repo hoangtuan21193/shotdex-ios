@@ -305,10 +305,6 @@
       "comment": "Video Studio Export, server photos: renders, then asks where the file goes",
       "extractionState": "manual"
     },
-    "FONTS YOU USED": {
-      "comment": "Video Studio media pool Text tab: header over the fonts the user has used before",
-      "extractionState": "manual"
-    },
     "FRAME RATE": {
       "comment": "Video Studio Video Settings: section header over 24 / 30 / 60",
       "extractionState": "manual"
@@ -331,6 +327,10 @@
     },
     "Fit on Background": {
       "comment": "Video Studio Video Settings: the whole clip shows, on the background",
+      "extractionState": "manual"
+    },
+    "Fonts You Used": {
+      "comment": "Video Studio media pool Text tab: header over the fonts the user has used before",
       "extractionState": "manual"
     },
     "Freeze · clip %lld": {
@@ -443,6 +443,10 @@
     },
     "Mute Video Sound": {
       "comment": "Video Studio level meter: silences the clips' own audio for the whole project",
+      "extractionState": "manual"
+    },
+    "My Music": {
+      "comment": "Video Studio iPad media pool Music tab: header over the user's imported songs",
       "extractionState": "manual"
     },
     "No Access to Photos": {

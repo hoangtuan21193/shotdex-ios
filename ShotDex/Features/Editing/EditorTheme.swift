@@ -76,6 +76,10 @@ enum EditorTheme {
     /// coral than the `clipping` red, matching the timeline spec.
     static let timelineDestructive = Color(red: 1, green: 0.42, blue: 0.369)
     static let glass = Color(white: 0.07).opacity(0.6)
+    /// A floating panel that holds content of its own — the iPad Video
+    /// Studio's media pool — rather than a few buttons over the picture:
+    /// nearly opaque, so a grid stays legible over the frame it floats on.
+    static let sidebarGlass = Color(red: 22 / 255, green: 22 / 255, blue: 24 / 255).opacity(0.92)
     /// For glass that sits over the photo permanently — the histogram card —
     /// where the image underneath still has to stay legible.
     static let glassLight = Color(white: 0.05).opacity(0.12)

@@ -244,24 +244,31 @@ enum VideoStudioMetrics {
 
     // MARK: Media pool
 
-    /// From this width the pool's grid has three columns (the Media plan,
-    /// FS-12.09, owns the grid; the pool itself is 236 — `VideoStudioDeskGeometry`).
-    static let mediaPoolWideWidth: CGFloat = 300
-    static let mediaPoolHeaderHeight: CGFloat = 34
-    /// Media · Stickers · Music. Resolve's top tab row, moved onto the column
-    /// it actually drives.
-    static let mediaPoolTabStripHeight: CGFloat = 38
-    static let mediaPoolToolRowHeight: CGFloat = 32
-    static let mediaPoolCellSpacing: CGFloat = 6
-
-    static func mediaPoolColumnCount(columnWidth: CGFloat) -> Int {
-        columnWidth >= mediaPoolWideWidth ? 3 : 2
-    }
-
-    static func mediaPoolCellWidth(columnWidth: CGFloat) -> CGFloat {
-        let count = CGFloat(mediaPoolColumnCount(columnWidth: columnWidth))
-        let gaps = mediaPoolCellSpacing * (count + 1)
-        return ((columnWidth - gaps) / count).rounded(.down)
+    /// The iPad pool's insides, in the 320pt panel's own coordinates (board
+    /// IL1_Main, FS-12.03b §1): "Library" 20 at (17, 17) in a 44 row with
+    /// Select 68 · Search 44 · Hide Media 44 ending 11 short of the edge; the
+    /// tabs' segmented 294×36 at y 69, 13 in; the tab's content from 113.
+    enum Pool {
+        static let inset: CGFloat = 13
+        static let headerTop: CGFloat = 17
+        static let headerHeight: CGFloat = 44
+        static let titleLeading: CGFloat = 17
+        static let headerTrailing: CGFloat = 11
+        static let selectWidth: CGFloat = 68
+        static let segmentedTop: CGFloat = 8
+        static let segmentedHeight: CGFloat = 36
+        static let contentGap: CGFloat = 8
+        /// Add Text, Add Music from Files…: 294×44, radius 12.
+        static let buttonHeight: CGFloat = 44
+        /// "Fonts You Used", "My Music": Title Case, 15 semibold, 28 tall,
+        /// 14 under what is above.
+        static let sectionTitleHeight: CGFloat = 28
+        static let sectionGap: CGFloat = 14
+        /// Rows 302 wide (9 in): fonts 50, songs and In Video 56.
+        static let rowInset: CGFloat = 9
+        static let fontRowHeight: CGFloat = 50
+        static let songRowHeight: CGFloat = 56
+        static let stickerGap: CGFloat = 8
     }
 
     // MARK: Phone bands

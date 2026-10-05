@@ -35,10 +35,12 @@ struct VideoMediaPanel: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            Color.clear.frame(height: isPoolColumn ? 4 : (metrics == .duoColumn ? 14 : 10))
+            if !isPoolColumn {
+                Color.clear.frame(height: metrics == .duoColumn ? 14 : 10)
+            }
             header
-                .frame(height: VideoMediaPanelMetrics.tabHeight)
-            Color.clear.frame(height: 6)
+                .frame(height: isPoolColumn ? VideoStudioMetrics.Pool.segmentedHeight : VideoMediaPanelMetrics.tabHeight)
+            Color.clear.frame(height: isPoolColumn ? VideoStudioMetrics.Pool.contentGap : 6)
             if !isPoolColumn {
                 Rectangle().fill(Color.white.opacity(0.07)).frame(height: 1)
                 Color.clear.frame(height: 2)
@@ -87,6 +89,20 @@ struct VideoMediaPanel: View {
                 Spacer(minLength: 0)
             }
             .padding(.horizontal, VideoMediaPanelMetrics.rowInset)
+        } else if isPoolColumn, model.mediaPickPurpose == nil {
+            // The iPad pool (FS-12.09 §3): Recents · Albums · In Video as a
+            // segmented 294×36 under the pool's own tabs; Select and search
+            // are in the pool's title row.
+            VideoDeskSegmented(
+                items: [
+                    (Tab.recents, VideoStudioCopy.recents, "mediaTab.recents"),
+                    (Tab.albums, VideoStudioCopy.albums, "mediaTab.albums"),
+                    (Tab.inVideo, VideoStudioCopy.inVideo(MediaUsage.useCount(in: model.recipe)), "mediaTab.inVideo"),
+                ],
+                selection: Binding(get: { tab }, set: { select($0) }),
+                label: Text(verbatim: "Source")
+            )
+            .padding(.horizontal, VideoStudioMetrics.Pool.inset)
         } else if scrollsTabRow {
             // The Duo's 264pt column (FS-12.09 §3): the row scrolls, Select
             // and search at its end, the right edge fading over 24pt to say
@@ -162,7 +178,7 @@ struct VideoMediaPanel: View {
         case .recents, .albums:
             libraryContent
         case .inVideo:
-            VideoInVideoList(model: model, rowHeight: metrics == .pool ? 52 : 56)
+            VideoInVideoList(model: model, rowHeight: 56)
         }
     }
 
@@ -634,6 +650,53 @@ struct VideoMediaHeaderControls: View {
                 .accessibilityLabel(VideoStudioCopy.searchLibrary)
             }
         }
+    }
+}
+
+/// A segmented control in the iPad's Mac-style chrome (FS-12.03b §1): a
+/// 36pt track on white 8 %, radius 12, buttons 32 tall in it, 2 apart and
+/// 2 in, the chosen one raised on white 20 % with a soft shadow; labels 15,
+/// semibold when chosen. The pool's tabs, its Media sources.
+struct VideoDeskSegmented<Value: Hashable>: View {
+    let items: [(Value, String, String)]
+    @Binding var selection: Value
+    let label: Text
+
+    var body: some View {
+        HStack(spacing: 2) {
+            ForEach(items, id: \.2) { value, title, identifier in
+                let isOn = value == selection
+                Button {
+                    selection = value
+                } label: {
+                    Text(title)
+                        .font(.system(size: 15, weight: isOn ? .semibold : .medium))
+                        .foregroundStyle(.white)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.8)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 32)
+                        .background {
+                            if isOn {
+                                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                    .fill(Color.white.opacity(0.20))
+                                    .shadow(color: .black.opacity(0.3), radius: 1, y: 1)
+                            }
+                        }
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                // A stable handle for the UI driver: "Text" and "Music" also
+                // name a timeline lane and an add-button.
+                .accessibilityIdentifier(identifier)
+                .accessibilityAddTraits(isOn ? .isSelected : [])
+            }
+        }
+        .padding(2)
+        .frame(height: VideoStudioMetrics.Pool.segmentedHeight)
+        .background(RoundedRectangle(cornerRadius: AppTheme.Radius.md, style: .continuous).fill(Color.white.opacity(0.08)))
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel(label)
     }
 }
 

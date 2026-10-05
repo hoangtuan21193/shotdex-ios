@@ -11,6 +11,16 @@ struct VideoMusicPanelContent: View {
     @Bindable var model: VideoStudioModel
     @ObservedObject var importedMusic: ImportedMusicStore
     let onImport: () -> Void
+    /// The phone's and the Duo's panel, or the iPad pool's Music tab — the
+    /// Mac-style canvas's sizes: 44pt buttons, 17pt names, Title Case.
+    var style: Style = .panel
+
+    enum Style { case panel, pool }
+
+    private typealias Pool = VideoStudioMetrics.Pool
+    private var isPool: Bool { style == .pool }
+    /// Labels' inset from the panel's edge.
+    private var textInset: CGFloat { isPool ? Pool.titleLeading : 16 }
 
     @StateObject private var preview = MusicPreviewPlayer()
     @StateObject private var waveforms = MusicWaveformCache()
@@ -20,7 +30,7 @@ struct VideoMusicPanelContent: View {
     var body: some View {
         ScrollView(showsIndicators: false) {
             VStack(alignment: .leading, spacing: 0) {
-                Color.clear.frame(height: 6)
+                Color.clear.frame(height: isPool ? 0 : 6)
                 InspectorSlider(
                     label: VideoStudioCopy.videoSound, value: model.recipe.videoVolume, range: 0...1,
                     valueText: "\(Int(model.recipe.videoVolume * 100))", model: model,
@@ -28,17 +38,29 @@ struct VideoMusicPanelContent: View {
                     reset: { model.pushUndo(); model.setVideoVolume(1) }
                 )
                 Text(VideoStudioCopy.videoSoundCaption)
-                    .font(.system(size: 11))
-                    .foregroundStyle(.white.opacity(0.35))
-                    .padding(.horizontal, 16)
-                    .padding(.bottom, 8)
+                    .font(.system(size: isPool ? 13 : 11))
+                    .foregroundStyle(.white.opacity(isPool ? 0.55 : 0.35))
+                    .padding(.horizontal, textInset)
+                    .padding(.bottom, isPool ? 10 : 8)
                 importButton
-                Text(VideoStudioCopy.myMusic)
-                    .font(.system(size: 11, weight: .bold)).tracking(0.6)
-                    .foregroundStyle(.white.opacity(0.7))
-                    .padding(.horizontal, 16)
-                    .padding(.top, 18)
-                    .padding(.bottom, 6)
+                Group {
+                    if isPool {
+                        Text(VideoStudioCopy.myMusicTitle)
+                            .font(.system(size: 15, weight: .semibold))
+                            .foregroundStyle(.white)
+                            .frame(height: Pool.sectionTitleHeight)
+                            .padding(.top, Pool.sectionGap - 2)
+                            .padding(.bottom, 10)
+                    } else {
+                        Text(VideoStudioCopy.myMusic)
+                            .font(.system(size: 11, weight: .bold)).tracking(0.6)
+                            .foregroundStyle(.white.opacity(0.7))
+                            .padding(.top, 18)
+                            .padding(.bottom, 6)
+                    }
+                }
+                .padding(.horizontal, textInset)
+                .accessibilityAddTraits(.isHeader)
                 if importedMusic.tracks.isEmpty {
                     Text("Add a track from Files — it's saved here for reuse.")
                         .font(.system(size: 12))
@@ -75,21 +97,20 @@ struct VideoMusicPanelContent: View {
             onImport()
         } label: {
             HStack(spacing: 10) {
-                Image(systemName: "folder.badge.plus").font(.system(size: 17))
-                // One line in the 236pt pool too: it shrinks before it wraps.
-                Text("Add Music from Files…").font(.system(size: 14, weight: .semibold))
+                Image(systemName: "folder.badge.plus").font(.system(size: isPool ? 18 : 17))
+                Text("Add Music from Files…").font(.system(size: isPool ? 17 : 14, weight: .semibold))
                     .lineLimit(1)
                     .minimumScaleFactor(0.8)
                 Spacer(minLength: 0)
             }
             .foregroundStyle(.white)
             .padding(.horizontal, 14)
-            .frame(height: 48)
+            .frame(height: isPool ? Pool.buttonHeight : 48)
             .background(RoundedRectangle(cornerRadius: AppTheme.Radius.md, style: .continuous).fill(Color.white.opacity(0.08)))
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .padding(.horizontal, 16)
+        .padding(.horizontal, isPool ? Pool.inset : 16)
     }
 
     private func isInUse(_ url: URL) -> Bool {
@@ -111,6 +132,8 @@ struct VideoMusicPanelContent: View {
                     .foregroundStyle(.white)
                     .frame(width: 34, height: 34)
                     .background(Circle().fill(Color.white.opacity(0.14)))
+                    .frame(width: isPool ? 44 : 34, height: isPool ? 44 : 34)
+                    .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
             .accessibilityLabel(isPlaying ? Text("Stop preview") : Text("Preview \(track.displayName)"))
@@ -121,15 +144,17 @@ struct VideoMusicPanelContent: View {
             } label: {
                 HStack(spacing: 10) {
                     VStack(alignment: .leading, spacing: 2) {
-                        Text(track.displayName).font(.system(size: 13.5, weight: .medium)).lineLimit(1)
+                        Text(track.displayName).font(.system(size: isPool ? 17 : 13.5, weight: .medium)).lineLimit(1)
                         Text(waveforms.detail(for: track.id, url: track.url))
-                            .font(.system(size: 11, design: .monospaced))
+                            .font(.system(size: isPool ? 13 : 11, design: .monospaced))
                             .foregroundStyle(.white.opacity(0.35))
                     }
                     Spacer(minLength: 0)
                     if inUse { Image(systemName: "checkmark").foregroundStyle(.white) }
-                    MusicRowWaveform(samples: waveforms.samples(for: track.id), active: isPlaying)
-                        .frame(width: 56, height: 20)
+                    if !isPool {
+                        MusicRowWaveform(samples: waveforms.samples(for: track.id), active: isPlaying)
+                            .frame(width: 56, height: 20)
+                    }
                 }
                 .foregroundStyle(.white)
                 .contentShape(Rectangle())
@@ -144,12 +169,13 @@ struct VideoMusicPanelContent: View {
                 Image(systemName: "trash")
                     .font(.system(size: 14))
                     .foregroundStyle(EditorTheme.timelineDestructive)
-                    .frame(width: 30, height: 30)
+                    .frame(width: isPool ? 44 : 30, height: isPool ? 44 : 30)
+                    .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
             .accessibilityLabel(Text("Delete \(track.displayName)"))
         }
-        .padding(.horizontal, 16)
+        .padding(.horizontal, isPool ? Pool.rowInset : 16)
         .frame(height: 56)
         .overlay(alignment: .bottom) { Rectangle().fill(Color.white.opacity(0.07)).frame(height: 1) }
     }
