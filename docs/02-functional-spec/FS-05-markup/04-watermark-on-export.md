@@ -168,7 +168,7 @@ Size 4%, Opacity 100%.
 
 | Rủi ro | Xử lý |
 |---|---|
-| mã hoá lại HEIC/JPEG để đóng dấu làm mất gain map HDR và depth của ảnh Portrait | chấp nhận: file có dấu là SDR. Đo lúc `/plan` xem Core Image giữ được gain map khi ghép dấu hay không |
+| mã hoá lại HEIC/JPEG để đóng dấu làm mất gain map HDR và depth của ảnh Portrait | chấp nhận: file có dấu là SDR. **Đo lúc `/plan` (2026-10-02):** ghép kiểu thường mất gain map; ghép trên ảnh đọc `.expandToHDR` rồi ghi kèm `hdrImage` thì giữ được — chưa làm (tốn thêm một lượt render HDR, `REVIEW_QUEUE.md`). Share bỏ các thẻ XMP `hdrgm:` của file nguồn để file SDR không tự nhận là HDR |
 | tên trong editor là "Presets" / "Sign" / "Rename Signature", còn lối xuất gọi là "Watermark" | chạy `copy-consistency` sau khi làm; spec này dùng **Watermark** ở mọi lối xuất |
 | hai lối (Resize nhớ lựa chọn, Share theo Settings) có thể làm người dùng quên dấu đang bật | xem trước luôn vẽ dấu; đầu share sheet luôn nêu tên dấu |
 | dấu màu trắng trên trời trắng không đọc được | không tự đổi màu theo nền; người dùng chọn preset khác hoặc thêm viền/bóng trong editor |

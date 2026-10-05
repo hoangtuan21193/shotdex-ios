@@ -86,6 +86,9 @@ khác (iPad, Split View).
     xem trước của mục share, không phải control.
   - Chạm một dòng: share sheet đóng rồi mở lại ngay ở mức đó; phụ đề đổi theo. Chưa tải hay ghi lại gì cho tới
     khi người dùng chọn đích ([FS-02.06 §9](../FS-02-photo-detail/06-icloud-originals.md)).
+  - Khi đã có preset chữ ký, có **dòng thứ ba** của app: *Share With Watermark* / *Share Without Watermark*
+    ([FS-05.04 §4](../FS-05-markup/04-watermark-on-export.md#4-đặt-ở-đâu)) — một lần, không đổi Settings, giữ mức
+    metadata đang chọn. Đầu sheet có dấu thì dòng hai mở bằng *"Watermark: <tên>"*, nối " · " với các ghi chú khác.
 - **Save Changes không bao giờ đổi ngày hay vị trí của asset.** Code 2026-10-01 xoá cả hai khi Include Metadata
   tắt (editing service ở dòng đầu, dòng 773–776), mà Revert to Original không trả lại — lỗi này phải sửa cùng spec.
 

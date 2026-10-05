@@ -43,6 +43,10 @@ Settings → Export cho thêm/sửa preset `{tên, width, height, Fill/Fit, qual
   chữ cách nhau cả gang tay. iPhone hẹp hơn mức trần nên không đổi gì.
 - **Preview**: một ảnh thì kéo được điểm neo crop; nhiều ảnh thì thành **carousel vuốt ngang** để duyệt
   lại đúng các ảnh đã chọn, kèm pill `i / N`.
+- **Watermark** ([FS-05.04](../FS-05-markup/04-watermark-on-export.md)): hàng 44pt giữa Metadata và Delete Originals,
+  giá trị là tên preset, `Off`, hoặc `None` mờ khi chưa có preset; chạm mở màn Watermark. Bật dấu thì Delete Originals
+  tắt, mờ, dòng phụ *"Originals are kept when you add a watermark."*; preview 320pt và từng trang carousel vẽ dấu bằng
+  đúng bộ raster của bản xuất. Cấu hình dấu được nhớ (ngoại lệ có ghi ở §1).
 - **Fit** giữ trọn ảnh trong khung; **Fill** crop đúng kích thước. Một ảnh cho kéo neo để chọn vùng crop;
   cả mẻ dùng crop giữa cố định.
 - Ước lượng dung lượng: encode một bản preview nhỏ rồi scale theo số pixel đích, debounce khi kéo Quality.

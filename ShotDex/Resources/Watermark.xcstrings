@@ -1,6 +1,38 @@
 {
   "sourceLanguage": "en",
   "strings": {
+    "%@%% of the short side": {
+      "comment": "Watermark Size: the height as a share of each photo's short side",
+      "extractionState": "manual"
+    },
+    "%lld of %lld": {
+      "comment": "Watermark preview: which photo of the batch is shown",
+      "extractionState": "manual"
+    },
+    "%lld photos": {
+      "comment": "Count of photos in an export (plural)",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld photo"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld photos"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "%lld photos already had this watermark": {
       "comment": "Export summary: photos whose edit already had this watermark, not stamped twice (plural)",
       "extractionState": "manual",
@@ -48,6 +80,210 @@
           }
         }
       }
+    },
+    "%lld px": {
+      "comment": "Watermark Size in pixels of the previewed photo, e.g. 55 px",
+      "extractionState": "manual"
+    },
+    "Add Watermark": {
+      "comment": "Watermark screen switch",
+      "extractionState": "manual"
+    },
+    "Back to %@": {
+      "comment": "VoiceOver: the Watermark screen's back button",
+      "extractionState": "manual"
+    },
+    "Cancel": {
+      "comment": "Alert button",
+      "extractionState": "manual"
+    },
+    "Collapse %@": {
+      "comment": "VoiceOver: fold an inspector section",
+      "extractionState": "manual"
+    },
+    "Done": {
+      "comment": "Watermark screen: close",
+      "extractionState": "manual"
+    },
+    "Drawing": {
+      "comment": "Watermark preset contents: freehand strokes",
+      "extractionState": "manual"
+    },
+    "Each share can change it": {
+      "comment": "Settings, Watermark When Sharing value line",
+      "extractionState": "manual"
+    },
+    "Every part of %@ is empty for this photo.": {
+      "comment": "Resize summary: why a photo has no watermark — its tokens all came out empty",
+      "extractionState": "manual"
+    },
+    "Expand %@": {
+      "comment": "VoiceOver: unfold an inspector section",
+      "extractionState": "manual"
+    },
+    "In the editor, open Markup, set up a caption or a logo, then choose Save as Preset.": {
+      "comment": "Watermark screen with no preset: where watermarks are made",
+      "extractionState": "manual"
+    },
+    "Larger": {
+      "comment": "Watermark Size stepper: plus",
+      "extractionState": "manual"
+    },
+    "Logo": {
+      "comment": "Watermark preset contents: an image",
+      "extractionState": "manual"
+    },
+    "Margin": {
+      "comment": "Watermark screen slider: gap from the photo's edges",
+      "extractionState": "manual"
+    },
+    "Missing file": {
+      "comment": "Watermark preset chip: its logo image is gone; it cannot be chosen",
+      "extractionState": "manual"
+    },
+    "No watermarks yet": {
+      "comment": "Watermark screen with no preset saved",
+      "extractionState": "manual"
+    },
+    "None": {
+      "comment": "Watermark row value: no watermark preset saved yet",
+      "extractionState": "manual"
+    },
+    "Off": {
+      "comment": "Watermark row value: no watermark",
+      "extractionState": "manual"
+    },
+    "Opacity": {
+      "comment": "Watermark screen slider",
+      "extractionState": "manual"
+    },
+    "Originals are kept when you add a watermark.": {
+      "comment": "Resize: why Delete Originals is off while a watermark is on",
+      "extractionState": "manual"
+    },
+    "Photo %lld": {
+      "comment": "VoiceOver: filmstrip photo",
+      "extractionState": "manual"
+    },
+    "Photo %lld, current": {
+      "comment": "VoiceOver: filmstrip photo being previewed",
+      "extractionState": "manual"
+    },
+    "Pixels": {
+      "comment": "Text field placeholder: watermark height in pixels",
+      "extractionState": "manual"
+    },
+    "Placement": {
+      "comment": "Watermark inspector section (iPad): position, size, margin, opacity",
+      "extractionState": "manual"
+    },
+    "Position": {
+      "comment": "Watermark screen: the 3×3 anchor grid",
+      "extractionState": "manual"
+    },
+    "Position, %@": {
+      "comment": "VoiceOver: one cell of the watermark position grid",
+      "extractionState": "manual"
+    },
+    "RAW sent as JPEG": {
+      "comment": "Share sheet header: RAW files go as stamped JPEGs with a watermark",
+      "extractionState": "manual"
+    },
+    "Resize": {
+      "comment": "The form the Watermark screen goes back to",
+      "extractionState": "manual"
+    },
+    "Set": {
+      "comment": "Alert button: apply the typed watermark size",
+      "extractionState": "manual"
+    },
+    "Shape": {
+      "comment": "Watermark preset contents: a drawn shape",
+      "extractionState": "manual"
+    },
+    "Share With Watermark": {
+      "comment": "Share sheet row: this share again, stamped",
+      "extractionState": "manual"
+    },
+    "Share Without Watermark": {
+      "comment": "Share sheet row: this share again, unstamped",
+      "extractionState": "manual"
+    },
+    "Size": {
+      "comment": "Watermark screen: height of the stamp",
+      "extractionState": "manual"
+    },
+    "Size in Pixels": {
+      "comment": "Alert title: type the watermark's height in pixels",
+      "extractionState": "manual"
+    },
+    "Smaller": {
+      "comment": "Watermark Size stepper: minus",
+      "extractionState": "manual"
+    },
+    "Text": {
+      "comment": "Watermark preset contents: a caption",
+      "extractionState": "manual"
+    },
+    "Unavailable": {
+      "comment": "Watermark preset chip: its typeface is gone from this device; a fallback is used",
+      "extractionState": "manual"
+    },
+    "Videos aren't watermarked": {
+      "comment": "Share sheet header: videos in a watermarked share go as they are",
+      "extractionState": "manual"
+    },
+    "Watermark": {
+      "comment": "Export form row and screen title: the stamp added on export",
+      "extractionState": "manual"
+    },
+    "Watermark: %@": {
+      "comment": "Share sheet header: the watermark this share stamps",
+      "extractionState": "manual"
+    },
+    "Watermarked copies are saved as new files.": {
+      "comment": "Server export: why Replace Original is off while a watermark is on",
+      "extractionState": "manual"
+    },
+    "Without Watermark": {
+      "comment": "Resize summary section: photos that went without the watermark",
+      "extractionState": "manual"
+    },
+    "bottom": {
+      "comment": "Watermark position",
+      "extractionState": "manual"
+    },
+    "bottom left": {
+      "comment": "Watermark position",
+      "extractionState": "manual"
+    },
+    "bottom right": {
+      "comment": "Watermark position",
+      "extractionState": "manual"
+    },
+    "center": {
+      "comment": "Watermark position",
+      "extractionState": "manual"
+    },
+    "left": {
+      "comment": "Watermark position",
+      "extractionState": "manual"
+    },
+    "right": {
+      "comment": "Watermark position",
+      "extractionState": "manual"
+    },
+    "top": {
+      "comment": "Watermark position",
+      "extractionState": "manual"
+    },
+    "top left": {
+      "comment": "Watermark position",
+      "extractionState": "manual"
+    },
+    "top right": {
+      "comment": "Watermark position",
+      "extractionState": "manual"
     }
   },
   "version": "1.0"
