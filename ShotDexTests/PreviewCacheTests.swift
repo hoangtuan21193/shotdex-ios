@@ -65,3 +65,38 @@ import Testing
         #expect(try prepared.resourceValues(forKeys: [.isExcludedFromBackupKey]).isExcludedFromBackup == true)
     }
 }
+
+@MainActor
+@Suite struct FolderThumbnailTests {
+    /// AC-17: the cache's volume has no room. A read of a whole source still
+    /// writes every metadata row, writes no thumbnail, reports "Not enough
+    /// space for previews", and deletes nothing — the source files are all
+    /// there. With room, the same read writes one thumbnail per photo.
+    @Test func diskFullStopsPreviewsOnly() throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent("Full-\(UUID().uuidString)", isDirectory: true)
+        let cache = FileManager.default.temporaryDirectory.appendingPathComponent("Cache-\(UUID().uuidString)", isDirectory: true)
+        defer { for url in [root, cache] { try? FileManager.default.removeItem(at: url) } }
+        for folder in [root, cache] { try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true) }
+        let jpeg = try MetadataFixture.encode(.jpeg, options: MetadataFixture.Options())
+        for n in 0..<12 { try jpeg.write(to: root.appendingPathComponent("DSC\(n).JPG")) }
+
+        let full = try AppDatabase.makeEmpty()
+        let fullSource = try SourceStore(database: full).addFolder(name: "T7", bookmark: Data(), includesSubfolders: true, pairsRawAndJpeg: true)
+        let noRoom = FolderThumbnails(directory: cache) { 0 }
+        let summary = try FolderSourceIndexer(database: full, composer: FolderSourceIndexTests.composer, thumbnails: noRoom)
+            .index(sourceId: fullSource, root: root, includesSubfolders: true, pairsRawAndJpeg: true)
+        #expect(summary.photos == 12)
+        #expect(summary.previewsStoppedForSpace)
+        #expect(try FileManager.default.contentsOfDirectory(atPath: cache.path).isEmpty)
+        #expect(try FileManager.default.contentsOfDirectory(atPath: root.path).count == 12)
+        #expect(try full.reader.read { db in try Int.fetchOne(db, sql: "SELECT COUNT(*) FROM photo_metadata") } == 12)
+
+        let roomy = try AppDatabase.makeEmpty()
+        let roomySource = try SourceStore(database: roomy).addFolder(name: "T7", bookmark: Data(), includesSubfolders: true, pairsRawAndJpeg: true)
+        let plenty = FolderThumbnails(directory: cache) { 100_000_000_000 }
+        let written = try FolderSourceIndexer(database: roomy, composer: FolderSourceIndexTests.composer, thumbnails: plenty)
+            .index(sourceId: roomySource, root: root, includesSubfolders: true, pairsRawAndJpeg: true)
+        #expect(!written.previewsStoppedForSpace)
+        #expect(try FileManager.default.contentsOfDirectory(atPath: cache.path).count == 12)
+    }
+}

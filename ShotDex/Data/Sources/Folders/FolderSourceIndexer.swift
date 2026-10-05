@@ -9,6 +9,8 @@ import ImageIO
 struct FolderSourceIndexer: Sendable {
     let database: AppDatabase
     let composer: MetadataComposer
+    /// Where grid thumbnails go; nil skips them (tests that only count rows).
+    var thumbnails: FolderThumbnails? = nil
 
     struct Summary: Equatable, Sendable {
         var photos = 0
@@ -17,6 +19,9 @@ struct FolderSourceIndexer: Sendable {
         var placeholders = 0
         /// Pause stopped the read before the end (FS-19.01 §4).
         var paused = false
+        /// The cache volume ran out of room: thumbnails stopped, metadata did
+        /// not ("Not enough space for previews", FS-19.01b §5).
+        var previewsStoppedForSpace = false
     }
 
     /// `shouldContinue` is asked before each file; false pauses the read.
@@ -127,6 +132,10 @@ struct FolderSourceIndexer: Sendable {
                         fastHash = excluded.fastHash, fullHash = NULL, hashedAt = excluded.hashedAt
                     """, arguments: [copyId, hash.algorithm, hash.version, hash.fast, stamp])
                 try record.upsert(db)
+            }
+            if let thumbnails, !summary.previewsStoppedForSpace,
+               thumbnails.write(from: url, copyId: copyId) == .noSpace {
+                summary.previewsStoppedForSpace = true
             }
             summary.photos += 1
         }
