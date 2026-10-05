@@ -190,6 +190,82 @@ struct VideoLookEditingTests {
         #expect(VideoLookEditing.targetClipIDs(.thisClip, selectedClipIDs: [], clipUnderPlayhead: nil).isEmpty)
     }
 
+    // MARK: AC-7
+
+    private func myLookTile(_ store: LookPresetStore, named name: String) -> VideoLookTile? {
+        VideoLookTile.tiles(shelf: .myLooks, includesOriginal: false, looks: store, luts: ImportedLUTStore())
+            .first { $0.name { $0.displayName } == name }
+    }
+
+    private func makeStore() -> LookPresetStore {
+        LookPresetStore(
+            directory: FileManager.default.temporaryDirectory.appendingPathComponent("looks-\(UUID().uuidString)", isDirectory: true),
+            defaults: UserDefaults(suiteName: "video-looks-\(UUID().uuidString)")!
+        )
+    }
+
+    /// AC-7: the project holds a **copy** of Moody Coast. Saved over in the
+    /// photo editor at Contrast 60, the reopened project still renders
+    /// Contrast 20, and the tile of the look it came from wears the ring; a
+    /// tap on that tile takes the new version — one undo step.
+    @Test func copyIgnoresLaterEditUntilRetaken() throws {
+        let store = makeStore()
+        var moody = VideoLookSamples.moodyCoast
+        store.save(moody, name: "Moody Coast")
+        let model = VideoStudioModelFixture.model()
+        model.toggleToolPanel(.look)
+        let tile = try #require(myLookTile(store, named: "Moody Coast"))
+        model.chooseLook(tile.look.source)
+        model.commitSession()
+
+        moody.adjustments.contrast = 0.6
+        store.save(moody, name: "Moody Coast")
+        // As reopening a project does: the recipe through its stored JSON.
+        let reopened = try JSONDecoder().decode(VideoProjectRecipe.self, from: JSONEncoder().encode(model.recipe))
+        #expect(reopened.look?.recipe.adjustments.contrast == 0.2)
+
+        let edited = try #require(myLookTile(store, named: "Moody Coast"))
+        #expect(edited.isChosen(in: model.recipe.look))
+        model.toggleToolPanel(.look)
+        let steps = model.history.undoEntries.count
+        model.chooseLook(edited.look.source)
+        #expect(model.recipe.look?.recipe.adjustments.contrast == 0.6)
+        #expect(model.history.undoEntries.count == steps + 1)
+        // Tapping it again, with nothing new to take, is not a step.
+        model.chooseLook(edited.look.source)
+        #expect(model.history.undoEntries.count == steps + 1)
+    }
+
+    /// Taking the new version keeps the Amount the look had.
+    @Test func retakeKeepsAmount() throws {
+        let store = makeStore()
+        var moody = VideoLookSamples.moodyCoast
+        store.save(moody, name: "Moody Coast")
+        let model = VideoStudioModelFixture.model()
+        model.toggleToolPanel(.look)
+        model.chooseLook(try #require(myLookTile(store, named: "Moody Coast")).look.source)
+        model.setLookAmount(0.4)
+        moody.adjustments.contrast = 0.6
+        store.save(moody, name: "Moody Coast")
+        model.chooseLook(try #require(myLookTile(store, named: "Moody Coast")).look.source)
+        #expect(model.recipe.look?.amount == 0.4)
+        #expect(model.recipe.look?.recipe.adjustments.contrast == 0.6)
+    }
+
+    /// The look it came from deleted, the video still renders its copy.
+    @Test func deletedSourceStillRenders() throws {
+        let store = makeStore()
+        store.save(VideoLookSamples.moodyCoast, name: "Moody Coast")
+        let model = VideoStudioModelFixture.model()
+        model.toggleToolPanel(.look)
+        model.chooseLook(try #require(myLookTile(store, named: "Moody Coast")).look.source)
+        store.delete(try #require(store.presets.first))
+        #expect(myLookTile(store, named: "Moody Coast") == nil)
+        let look = try #require(model.recipe.look)
+        #expect(VideoLookPlan(look, lutExists: { _ in true }) != nil)
+        #expect(VideoLookEditing.pillText(for: { var clip = model.recipe.clips[0]; clip.look = look; return clip }()) == "Moody Coast")
+    }
+
     /// The cache holds 24 tables and lets the least recently used one go.
     @Test func cacheEvictsBeyond24Tables() {
         let cache = VideoLookTableCache()

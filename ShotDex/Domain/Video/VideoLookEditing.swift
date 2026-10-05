@@ -48,6 +48,11 @@ enum VideoLookEditing {
 
     /// The look a tile tap puts in a slot (§3, FS-03.02): a new look starts
     /// at Amount 100; the tile already chosen keeps the Amount it had.
+    ///
+    /// A My Look's tile carries the store's current recipe, so tapping the
+    /// tile of the look a slot was copied from takes that look **again** —
+    /// the newer version if it was saved over in the photo editor (§6) —
+    /// and nothing else ever updates the copy behind the user's back.
     static func chosen(_ source: VideoLook.Source, replacing current: VideoLook?) -> VideoLook {
         guard let current, isSameChoice(current.source, source) else { return VideoLook(source) }
         return VideoLook(source, amount: current.amount)
