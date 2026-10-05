@@ -7,7 +7,7 @@
 | Design | board trong repo — `F5_P_*` ở [`docs/design/iphone/project/`](../design/iphone/project/) · `F5_IL_Looks`, `F5_IP_Looks` ở [`docs/design/ipad/project/`](../design/ipad/project/) · `F5_DI_*`, `F5_DC_*` ở [`docs/design/duo/project/`](../design/duo/project/); board iPad vẽ lại kiểu Mac 2026-10-04 (commit `76df46d5`, xem khối M của [vs-wide-and-duo-layout](2026-10-03-vs-wide-and-duo-layout.md)). Hàng F5: `F5_P_Looks` · `F5_P_ClipLook` · `F5_DC_Looks` · `F5_DC_ClipLook` · `F5_DI_Looks` · `F5_DI_ClipLook` · `F5_IL_Looks` · `F5_IP_Looks`; dòng LUT mất trên `ES_P/DC/DI/IL_ExportSettings` — **4 board ES_* phải đổi chữ** theo spec (Q2, việc của canvas) |
 | Phụ thuộc | intent [video-studio-canvas-chrome](../_intents/2026-10-03-video-studio-canvas-chrome.md) — khung Video Studio dựng lại theo canvas **trước** mọi task của plan này (người dùng chốt 2026-10-03) |
 | Ngày | 2026-10-02 |
-| Trạng thái | **approved 2026-10-03 — chờ intent video-studio-canvas-chrome (khung mới) xong mới code**. 16 task = 16 commit (task 16 là phép đo máy thật; chỉ commit nếu phải lật công tắc §5 của spec). Quyết định ở §6 |
+| Trạng thái | **đang làm — task 1–15 xong 2026-10-05** (commit `592038fd` … `21ba8da0`); task 16 (máy thật, AC-15) chưa làm; AC-14 một phần. Duyệt 2026-10-03. 16 task = 16 commit (task 16 là phép đo máy thật; chỉ commit nếu phải lật công tắc §5 của spec). Quyết định ở §6 |
 
 > Dòng `Tiến độ` của intent đã ghi lúc duyệt 2026-10-03. Spec đã sửa theo §6 trong cùng commit duyệt. Task 1 chỉ
 > bắt đầu khi khung mới của intent video-studio-canvas-chrome đã vào code: hàng đáy 5 ô, hàng lệnh clip có chỗ

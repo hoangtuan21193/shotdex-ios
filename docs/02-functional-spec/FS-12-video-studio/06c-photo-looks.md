@@ -138,7 +138,7 @@ Look mẫu **Moody Coast**: Exposure +0,3 · Contrast +20 · Velvia 100% · Grai
 | AC-15 | clip HEVC 4K 30 fps, Moody Coast + Clarity 30 + Texture 20 + Dehaze 15, preview 1280; máy thật iPhone 17 và iPad | play 10 s, có một dissolve giữa hai look | ≤ 3 khung rơi trong 10 s, kể cả trong dissolve | ⚠️ chưa có — máy thật |
 | AC-16 | cả video Velvia; clip 2 có look riêng Night Teal | chọn clip 2 → LOOK FOR THIS CLIP → **Use Video Look** | clip 2 render Velvia như clip 1 và 3; pill trên lane của clip 2 mất; undo +1 | ✅ `VideoLookEditingTests.useVideoLookRemovesClipLookInOneStep` (clip 2 Night Teal → Use Video Look → theo Velvia, không pill, +1 undo; ô Look ngay trước Delete), `selectedDisabledBelowTwoClips`; ảnh `build/proofs/fs1206c/t14-*` (iPhone 17: hàng lệnh có Look trước Delete, khối LOOK FOR THIS CLIP, chọn Vivid → pill "Vivid" trên lane + Use Video Look chữ trắng; iPad dọc: khối Look for This Clip trong dock) |
 
-**Chưa chứng minh được:** AC-1 → AC-16. AC-1 và AC-8 có test một phần; AC-15 cần máy thật, Duo chỉ có simulator.
+**Chưa chứng minh được** (2026-10-05, sau plan [video-photo-looks](../../_plans/2026-10-02-video-photo-looks.md) task 1–15): AC-14 một phần (số đo xanh; chưa khớp cả board ≤ 2pt — xem hàng AC-14); AC-15 cần máy thật (task 16 chưa đo; công tắc `VideoLookNeighbourPolicy` đang `.run`). Duo trong/ngoài chỉ chụp qua stand-in trên iPad, chưa trên máy Duo mở.
 
 ## 9. Rủi ro và phần phải đo trước `/plan`
 
