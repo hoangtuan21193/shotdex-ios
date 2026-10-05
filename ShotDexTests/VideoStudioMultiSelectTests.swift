@@ -301,4 +301,24 @@ struct VideoStudioMultiSelectTests {
         #expect(model.recipe.clips.map(\.id) == [ids[0], ids[2], ids[3], ids[4]])
         #expect(model.recipe.transitions.map(\.kind) == [.none, .none, .none])
     }
+
+    /// AC-8: every clip in the group — Delete is drawn dimmed (it applies,
+    /// it is only blocked) and does nothing when tapped.
+    @Test func deletingEveryClipIsRefused() {
+        let model = sampleModel()
+        let ids = model.recipe.clips.map(\.id)
+        model.enterClipSelection(ids[0])
+        for id in ids.dropFirst() { model.toggleClip(id) }
+        #expect(model.selectedItemCommands.last == .delete)
+        #expect(!model.isItemCommandEnabled(.delete))
+        #expect(model.isItemCommandEnabled(.duplicate))
+
+        model.deleteGroup()
+        #expect(model.recipe.clips.map(\.id) == ids)
+        #expect(model.isSelectingClips)
+        #expect(!model.canUndo)
+
+        model.toggleClip(ids[4])
+        #expect(model.isItemCommandEnabled(.delete))
+    }
 }
