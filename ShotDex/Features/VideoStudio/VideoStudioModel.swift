@@ -31,6 +31,8 @@ final class VideoStudioModel {
         /// `clips` is a multi-select group (FS-12.11) — even a group of one,
         /// which has the group's commands, not a clip's.
         case none, clip, clips, text, music
+        /// The caption lane C1, with or without a cue selected (FS-12.14).
+        case caption
     }
 
     /// The selected-text sheet's sub-panel: transform (content/size/opacity/
@@ -55,6 +57,16 @@ final class VideoStudioModel {
     let ducking: VideoDuckingModel
     /// The export is waiting for the voices before it writes (D-14).
     var isListeningForExport = false
+    /// Auto Captions while it runs (FS-12.14): permission, progress, the
+    /// clips that could not be read.
+    let captions: VideoCaptionSession
+    /// The caption lane's panel is open (FS-12.14 §5) — the lane is the
+    /// item; `selectedCaptionID` is the cue inside it.
+    var isCaptionLaneOpen = false
+    var selectedCaptionID: UUID?
+    /// The undo step that made the lane, while it is the run's — taken back
+    /// when the run hears nothing (AC-14).
+    @ObservationIgnored var laneMadeAtStep: Int?
     private let overlayFontRecents: OverlayFontRecentsStore
     let overlayImages: OverlayImageStore
 
@@ -188,6 +200,9 @@ final class VideoStudioModel {
         /// A project of server photos (FS-17.06 §5b): Export stops at the
         /// file, which goes to the export sheet instead of Photos.
         serverWorkDirectory: URL? = nil,
+        /// Auto Captions' recogniser — the system's unless a test or a UI
+        /// route brings its own.
+        captions: VideoCaptionSession? = nil,
         /// Where the app's going to the background is heard — the default
         /// center; a test's own, so its post reaches only its model.
         appNotifications: NotificationCenter = .default
@@ -203,6 +218,7 @@ final class VideoStudioModel {
         self.service = service
         self.beats = VideoBeatsModel(cache: service.audioAnalysis)
         self.ducking = VideoDuckingModel(cache: service.audioAnalysis)
+        self.captions = captions ?? Self.launchCaptionSession()
         self.photoLibrary = photoLibrary
         self.overlayFontRecents = overlayFontRecents
         self.overlayImages = overlayImages
@@ -427,6 +443,8 @@ final class VideoStudioModel {
     /// Back is ✓, never ✕ — writes the draft at once and lets the studio
     /// close. No "Discard this video?": nothing is discarded.
     func back() async -> BackOutcome {
+        // A caption run stops here and the lane remembers where (FS-12.14 §8).
+        stopCaptionsForLeaving()
         clearSelection()
         if isServerRun { return hasEdits ? .confirmDiscard : .close }
         return await saveDraftNow() ? .close : .saveFailed
@@ -454,6 +472,7 @@ final class VideoStudioModel {
     /// Which object the inspector reskins for: one item, or a group of
     /// clips.
     var inspectorTarget: InspectorTarget {
+        if isCaptionLaneOpen { return .caption }
         if !selectedClipIDs.isEmpty { return .clips }
         if selectedOverlayID != nil { return .text }
         if selectedClipID != nil { return .clip }
@@ -474,6 +493,23 @@ final class VideoStudioModel {
         activeItemCommand = nil
     }
 
+    /// The caption lane's session, opened before the lane exists.
+    func beginCaptionSession() {
+        beginSession(.captions)
+    }
+
+    /// Changes what ✕ of the open session would restore — a recognised
+    /// clip reaches that snapshot too (plan K4).
+    func patchSessionStart(_ change: (inout VideoProjectRecipe) -> Void) {
+        guard let open = session else { return }
+        var start = open.startRecipe
+        change(&start)
+        guard start != open.startRecipe else { return }
+        var patched = VideoEditSession(target: open.target, startRecipe: start, checkpoint: open.checkpoint)
+        patched.isCollapsed = open.isCollapsed
+        session = patched
+    }
+
     /// Clips whose media cannot be read yet (FS-12.04 §7): screen state,
     /// never stored — the next open tries again.
     var unavailableClipIDs: Set<UUID> {
@@ -492,6 +528,14 @@ final class VideoStudioModel {
     /// Split need a video's frames, which an unavailable clip does not have;
     /// a project keeps at least one clip.
     func isItemCommandEnabled(_ command: VideoItemCommand) -> Bool {
+        if isCaptionLaneOpen {
+            switch command {
+            case .split: return captionSplit != nil
+            case .merge: return captionMergePartner != nil
+            case .style, .language, .delete: return hasCaptionLane
+            default: return true
+            }
+        }
         if isSelectingClips {
             // A project keeps at least one clip: Delete on every clip is
             // drawn dimmed, not hidden — it applies, it is only blocked
@@ -523,6 +567,7 @@ final class VideoStudioModel {
     /// What is selected, for its command row. A group has no kind of its
     /// own: its row is `VideoItemCommand.groupCommands`.
     var selectedItemKind: VideoItemKind? {
+        if isCaptionLaneOpen { return .caption }
         if isSelectingClips { return nil }
         if let clip = selectedClip { return VideoItemKind(clip) }
         if let overlay = selectedOverlay { return overlay.kind == .image ? .sticker : .text }
@@ -613,12 +658,15 @@ final class VideoStudioModel {
         isPreviewingCutToBeat = false
         selectedOverlayID = nil
         selectedMusicID = nil
+        isCaptionLaneOpen = false
+        selectedCaptionID = nil
         activeToolPanel = nil
     }
 
     /// The name the footer shows for the selected item (FS-12.04 §5) —
     /// for a group, "3 Clips" over "14.2s · 2 videos + 1 photo".
     var selectionTitle: VideoItemTitle.Lines? {
+        if isCaptionLaneOpen { return captionFooterTitle }
         if isSelectingClips {
             let summary = groupSummary
             return VideoItemTitle.Lines(name: VideoStudioCopy.clipCount(summary.count), detail: VideoStudioCopy.groupDetail(summary))
@@ -1066,6 +1114,8 @@ final class VideoStudioModel {
             return
         }
         self.session = nil
+        // ✕ on the caption lane stops a run that is going (AC-11).
+        if session.target == .captions { stopCaptionsForCancel() }
         history.rollback(to: session.checkpoint)
         deselectAll()
         if recipe != session.startRecipe {
@@ -1199,9 +1249,11 @@ final class VideoStudioModel {
             if let duration = measuredSourceDurations[pair.original] { measuredSourceDurations[pair.copy] = duration }
         }
         pushUndo()
+        let clipsBefore = recipe.clips
         recipe = edited
         selectedClipIDs = pairs.map(\.copy)
         groupAnchor = pairs.last?.copy
+        reconcileCaptions(from: clipsBefore)
         markEdited()
         schedulePreviewRebuild()
     }
@@ -1238,11 +1290,13 @@ final class VideoStudioModel {
         var edited = recipe
         guard VideoClipGroupEditing.delete(selectedClipIDs, in: &edited) else { return }
         pushUndo()
+        let clipsBefore = recipe.clips
         recipe = edited
         clearSelection()
         if let boundary = editingTransitionIndex, !recipe.transitions.indices.contains(boundary) {
             editingTransitionIndex = nil
         }
+        reconcileCaptions(from: clipsBefore)
         markEdited()
         schedulePreviewRebuild()
     }
@@ -1357,6 +1411,8 @@ final class VideoStudioModel {
             // A locked lane cannot stay selected, or the inspector goes on
             // offering edits the lane will refuse.
             switch lane {
+            case .captions:
+                if isCaptionLaneOpen { clearSelection() }
             case .video:
                 if selectedClipID != nil { selectClip(nil) }
             case .overlay(let index):
@@ -1554,6 +1610,21 @@ final class VideoStudioModel {
         phase = .ready
     }
 
+    /// Loads the media of `clips` again — Retry for clips Auto Captions
+    /// could not read (FS-12.14 AC-13) — and answers the ones now readable.
+    func reloadSources(for clips: [VideoClip]) async -> [UUID] {
+        guard !clips.isEmpty else { return [] }
+        let loaded = await service.loadSources(for: clips, maximumStillSize: recipe.canvasSize())
+        guard !isClosed else { return [] }
+        var readable: [UUID] = []
+        for (id, source) in loaded.sources {
+            sources[id] = source
+            if case .unavailable = source { continue }
+            readable.append(id)
+        }
+        return recipe.clips.map(\.id).filter { readable.contains($0) }
+    }
+
     func close() {
         isClosed = true
         trackingTask?.cancel()
@@ -1574,6 +1645,7 @@ final class VideoStudioModel {
         waveformTasks.removeAll()
         beats.cancelAll()
         ducking.cancelAll()
+        captions.cancel()
         detachObservers()
         player?.pause()
         player = nil
@@ -1713,6 +1785,17 @@ final class VideoStudioModel {
         history.endGroup()
     }
 
+    /// Takes the newest step back out of the history, when it is still
+    /// `sequence` — a lane the run heard nothing for (FS-12.14 AC-14).
+    func takeBackStep(_ sequence: Int) -> VideoProjectRecipe? {
+        history.takeBack(sequence)
+    }
+
+    /// Changes every undo and redo snapshot without adding a step (plan K4).
+    func patchHistory(_ change: (inout VideoProjectRecipe) -> Void) {
+        history.patchSnapshots(change)
+    }
+
     var canUndo: Bool { history.canUndo }
     var canRedo: Bool { history.canRedo }
 
@@ -1765,6 +1848,17 @@ final class VideoStudioModel {
         }
         if let selectedMusicID, !recipe.musicTracks.contains(where: { $0.id == selectedMusicID }) {
             self.selectedMusicID = nil
+        }
+        // Undone past the lane's making: the lane is gone and so is the run
+        // that was filling it (plan K4); its panel closes with it.
+        if recipe.captions == nil {
+            captions.cancel()
+            if isCaptionLaneOpen, captions.status == .idle {
+                endSession()
+                deselectAll()
+            }
+        } else if let id = selectedCaptionID, recipe.captions?.cues.contains(where: { $0.id == id }) != true {
+            selectedCaptionID = nil
         }
         if inspectorTarget == .none, activeToolPanel == nil, session?.target.isItem == true {
             endSession()
@@ -1858,6 +1952,7 @@ final class VideoStudioModel {
         var edited = recipe
         guard VideoClipGroupEditing.delete([clipID], in: &edited) else { return }
         pushUndo()
+        let clipsBefore = recipe.clips
         recipe = edited
         if selectedClipID == clipID { clearSelection() }
         if isSelectingClips {
@@ -1868,6 +1963,7 @@ final class VideoStudioModel {
            !recipe.transitions.indices.contains(boundary) {
             editingTransitionIndex = nil
         }
+        reconcileCaptions(from: clipsBefore)
         markEdited()
         schedulePreviewRebuild()
     }
@@ -2052,6 +2148,7 @@ final class VideoStudioModel {
         // ✕ cannot take the cut back (FS-12.04b §4).
         if session?.target.isItem == true { endSession() }
         pushUndo()
+        let clipsBefore = recipe.clips
         if let source = sources[recipe.clips[index].id] {
             sources[first.id] = source
             sources[second.id] = source
@@ -2059,6 +2156,7 @@ final class VideoStudioModel {
         recipe.clips.replaceSubrange(index...index, with: [first, second])
         recipe.syncTransitionsWithClips()
         selectClip(second.id)
+        reconcileCaptions(from: clipsBefore)
         markEdited()
         schedulePreviewRebuild()
     }
@@ -2447,6 +2545,7 @@ final class VideoStudioModel {
               let index = recipe.clips.firstIndex(where: { $0.id == selectedClipID })
         else { return }
         pushUndo()
+        let clipsBefore = recipe.clips
         let new = Self.clip(for: pick)
         // The old clip's source stays: ✕ or Undo puts the old clip back.
         recipe.clips[index] = new
@@ -2456,6 +2555,7 @@ final class VideoStudioModel {
         // replacement back with the rest.
         self.selectedClipID = new.id
         retargetSession(.clip(new.id))
+        reconcileCaptions(from: clipsBefore)
         markEdited()
         Task { await loadAndMerge([new]) }
     }
@@ -3328,9 +3428,11 @@ final class VideoStudioModel {
         if let duration = measuredSourceDurations[original.id] { measuredSourceDurations[copy.id] = duration }
         beginAddSession(.clip(copy.id))
         pushUndo()
+        let clipsBefore = recipe.clips
         recipe.clips.insert(copy, at: index + 1)
         recipe.syncTransitionsWithClips()
         selectedClipID = copy.id
+        reconcileCaptions(from: clipsBefore)
         markEdited()
         schedulePreviewRebuild()
     }

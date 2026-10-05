@@ -53,6 +53,8 @@ struct VideoStudioScreen: View {
     /// everywhere else.
     @State var currentWindowClass: VideoStudioWindowClass?
     @State var editingOverlay: PhotoOverlay?
+    /// A caption cue in the full-screen editor (FS-12.14 §5, Expand Text Field).
+    @State var editingCaptionID: UUID?
     @State private var stickerImages: [UUID: CGImage] = [:]
     /// How much taller than its lanes the user has dragged the timeline.
     ///
@@ -93,6 +95,21 @@ struct VideoStudioScreen: View {
             }
             if let editingOverlay {
                 inlineTextEditor(editingOverlay)
+            }
+            if let model, let id = editingCaptionID, let cue = model.recipe.captions?.cues.first(where: { $0.id == id }) {
+                EditorInlineTextEditor(
+                    initialText: cue.text,
+                    tokens: .empty,
+                    showsTokens: false,
+                    alignment: .center,
+                    onCommit: { text in
+                        model.pushUndo()
+                        model.setCaptionText(text, for: id)
+                        editingCaptionID = nil
+                    },
+                    onCancel: { editingCaptionID = nil }
+                )
+                .transition(.opacity)
             }
             if let model, model.mediaDrag != nil {
                 VideoMediaDragOverlay(model: model)
@@ -797,7 +814,8 @@ struct VideoStudioScreen: View {
             onReplaceMusic: { musicChooserIntent = .replace($0) },
             onEditText: { editingOverlay = $0 },
             onPickFont: { isFontPickerPresented = true },
-            onImportMusic: { isMusicImporterPresented = true }
+            onImportMusic: { isMusicImporterPresented = true },
+            onEditCaption: { editingCaptionID = $0 }
         )
     }
 
@@ -855,6 +873,14 @@ struct VideoStudioScreen: View {
                     model: model,
                     contentRect: contentRect,
                     images: stickerImages
+                )
+                // Captions over everything, as the export burns them in
+                // (FS-12.14 §6).
+                VideoCaptionProxyLayer(
+                    model: model,
+                    contentRect: contentRect,
+                    frame: model.recipe.canvasSize(),
+                    showsSelectionOutline: currentWindowClass != .phone && currentWindowClass != .duoCover
                 )
             }
             if !model.isPlaying {

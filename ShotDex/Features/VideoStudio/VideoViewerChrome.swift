@@ -403,6 +403,22 @@ struct VideoTimelineOverview: View {
                         .offset(x: min(max(0, centre - windowWidth / 2), width - windowWidth))
                 }
 
+                // Every caption, a 3pt mark along the top in the speech
+                // colour; the selected one in the selection colour
+                // (FS-12.14 §3, AC-17).
+                ForEach(model.placedCaptions, id: \.cue.id) { placed in
+                    let isSelected = placed.cue.id == model.selectedCaptionID
+                    Rectangle()
+                        .fill(isSelected ? EditorTheme.timelineSelection : EditorTheme.timelineSpeech)
+                        .frame(width: max(2, CGFloat(placed.duration / total) * width - 1), height: 3)
+                        .offset(
+                            x: CGFloat(placed.start / total) * width,
+                            y: -VideoStudioMetrics.timelineOverviewHeight / 2 + 1.5
+                        )
+                        .allowsHitTesting(false)
+                        .accessibilityHidden(true)
+                }
+
                 // Markers ride the ruler, not the clips: trimming a shot
                 // must not drag every note along with it.
                 ForEach(model.recipe.markers) { marker in
@@ -699,6 +715,23 @@ struct VideoCompactTransportBar: View {
                 tracksMenu
             }
 
+            // Auto Captions where the window has no media pool (FS-12.14 §3
+            // names a Text tool panel the phone does not have — open
+            // question in the captions plan); Edit Captions once there is a
+            // lane.
+            Section {
+                Button {
+                    Task { await model.startAutoCaptions() }
+                } label: {
+                    Label {
+                        Text(model.hasCaptionLane ? VideoStudioCopy.editCaptions : VideoStudioCopy.autoCaptions)
+                    } icon: {
+                        Image(systemName: "captions.bubble")
+                    }
+                }
+                .disabled(!model.canAutoCaption && !model.hasCaptionLane)
+            }
+
             if let id = model.selectedClipID {
                 Section {
                     Button(role: .destructive) {
@@ -767,7 +800,8 @@ struct VideoCompactTransportBar: View {
 
     /// The same order the timeline stacks them in.
     private var laneOrder: [VideoTimelineLane] {
-        (0..<max(1, model.overlayLaneCount)).map { VideoTimelineLane.overlay($0) }
+        (model.hasCaptionLane ? [.captions] : [])
+            + (0..<max(1, model.overlayLaneCount)).map { VideoTimelineLane.overlay($0) }
             + [.video]
             + (0..<max(1, model.musicLaneCount)).map { VideoTimelineLane.music($0) }
     }
@@ -776,6 +810,7 @@ struct VideoCompactTransportBar: View {
     /// places name the same track the same way.
     private func laneTitle(_ lane: VideoTimelineLane) -> String {
         let badge = switch lane {
+        case .captions: "C1"
         case .overlay(let index): "T\(index + 1)"
         case .video: "V1"
         case .music(let index): "A\(index + 1)"
@@ -787,7 +822,7 @@ struct VideoCompactTransportBar: View {
     /// switch over silence is the control the track header exists to avoid.
     private func muteBinding(_ lane: VideoTimelineLane) -> Binding<Bool>? {
         switch lane {
-        case .overlay:
+        case .captions, .overlay:
             return nil
         case .video:
             return Binding(

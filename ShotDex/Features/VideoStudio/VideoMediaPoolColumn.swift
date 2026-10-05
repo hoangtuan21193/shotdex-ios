@@ -134,6 +134,45 @@ struct VideoMediaPoolColumn: View {
         }
     }
 
+    /// Auto Captions, right under Add Text (FS-12.14 §3) — Edit Captions
+    /// once the project has a lane; dimmed, with the reason, when the
+    /// device has no on-device speech model at all.
+    private var autoCaptionsRow: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Button {
+                Task { await model.startAutoCaptions() }
+            } label: {
+                HStack(spacing: 8) {
+                    Image(systemName: "captions.bubble")
+                        .font(.system(size: 17, weight: .semibold))
+                    Text(model.hasCaptionLane ? VideoStudioCopy.editCaptions : VideoStudioCopy.autoCaptions)
+                        .font(.system(size: 17, weight: .semibold))
+                    Spacer(minLength: 0)
+                }
+                .foregroundStyle(.white)
+                .padding(.horizontal, 16)
+                .frame(maxWidth: .infinity)
+                .frame(height: Pool.buttonHeight)
+                .background(
+                    RoundedRectangle(cornerRadius: AppTheme.Radius.md, style: .continuous)
+                        .fill(Color.white.opacity(0.08))
+                )
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .disabled(!model.canAutoCaption && !model.hasCaptionLane)
+            .opacity(model.canAutoCaption || model.hasCaptionLane ? 1 : 0.35)
+            .accessibilityIdentifier("autoCaptionsButton")
+            Text(model.canAutoCaption || model.hasCaptionLane ? VideoStudioCopy.autoCaptionsNote : VideoStudioCopy.captionsUnavailable)
+                .font(.system(size: 13))
+                .foregroundStyle(EditorTheme.secondaryText)
+                .fixedSize(horizontal: false, vertical: true)
+                .padding(.horizontal, 4)
+        }
+        .padding(.horizontal, Pool.inset)
+        .padding(.top, 8)
+    }
+
     /// The Text tab (FS-12.03b §1): Add Text, then the fonts the user has
     /// reached for — picking one adds a caption already wearing it.
     private var textContent: some View {
@@ -157,6 +196,7 @@ struct VideoMediaPoolColumn: View {
                 }
                 .buttonStyle(.plain)
                 .padding(.horizontal, Pool.inset)
+                autoCaptionsRow
                 Text(VideoStudioCopy.fontsYouUsed)
                     .font(.system(size: 15, weight: .semibold))
                     .foregroundStyle(.white)

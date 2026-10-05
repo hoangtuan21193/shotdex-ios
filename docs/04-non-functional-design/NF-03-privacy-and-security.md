@@ -96,3 +96,7 @@ Danh tính là **khoá chứng thực của bản cài** — gỡ app là mất.
 Mức quyền đang xin đã đủ và **không thiếu khoá khai nào** — nhưng câu chữ thì từng thiếu sự thật: bản cũ chỉ
 nói app "phân tích metadata", trong khi app **ghi rất nhiều** (sửa ảnh, đánh dấu yêu thích, tạo album, nhân
 bản, xoá, xuất video). Câu đó phải nói cả phần ghi.
+
+- **Nhận dạng giọng nói** (`NSSpeechRecognitionUsageDescription`, có từ 2026-10-06 cùng commit đầu của Auto Captions):
+  "ShotDex turns speech in your clips into captions. It runs on this device; audio never leaves it." — bản vi trong
+  `ShotDex/Resources/InfoPlist.xcstrings`. Chỉ hỏi lần đầu chạm Auto Captions ([FS-12.14 §4](../02-functional-spec/FS-12-video-studio/14-captions.md)).

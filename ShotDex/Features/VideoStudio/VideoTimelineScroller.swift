@@ -28,6 +28,10 @@ struct TimelineDragZone: Equatable {
         case overlayBody(UUID)
         case overlayLeadingHandle(UUID)
         case overlayTrailingHandle(UUID)
+        /// A caption block on C1 (FS-12.14 §5).
+        case captionBody(UUID)
+        case captionLeadingHandle(UUID)
+        case captionTrailingHandle(UUID)
         case musicBody(UUID)
         case musicLeadingHandle(UUID)
         case musicTrailingHandle(UUID)

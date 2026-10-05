@@ -222,6 +222,7 @@ struct VideoTimelineView: View {
         case .clip, .clips: .video
         case .text: model.selectedOverlayID.flatMap { model.overlayLaneAssignment[$0] }.map(VideoTimelineLane.overlay)
         case .music: model.selectedMusicID.flatMap { model.musicLaneAssignment[$0] }.map(VideoTimelineLane.music)
+        case .caption: .captions
         case .none: nil
         }
     }
@@ -509,6 +510,12 @@ struct VideoTimelineView: View {
             let end = music.trimEnd ?? sourceDuration
             model.pushUndo()
             model.setMusicTrim(start: music.trimStart, end: end + delta, for: id)
+        case .captionBody(let id):
+            model.dragCaption(id, edge: .body, by: delta)
+        case .captionLeadingHandle(let id):
+            model.dragCaption(id, edge: .start, by: delta)
+        case .captionTrailingHandle(let id):
+            model.dragCaption(id, edge: .end, by: delta)
         case .clipReorder(let id):
             guard let sourceIndex = model.recipe.clips.firstIndex(where: { $0.id == id }) else { return }
             let placements = model.clipPlacements

@@ -606,6 +606,10 @@ enum VideoStudioMetrics {
         var topPadding: CGFloat = VideoStudioMetrics.timelineTopPadding
         var rulerGap: CGFloat = VideoStudioMetrics.rulerToTracks
         var laneGap: CGFloat = VideoStudioMetrics.laneSpacing
+        /// C1, the caption lane above the text lanes (FS-12.14, FS-12.03b
+        /// §4): 44 on the iPad, 34 on the Duo; 0 when the project has no
+        /// lane or the window has no room for one (the phone: Voice chips).
+        var caption: CGFloat = 0
 
         /// The leading column of the lane stack.
         enum GutterStyle: Equatable, Sendable {
@@ -692,8 +696,23 @@ enum VideoStudioMetrics {
         var gutterIcon: CGFloat { 20 }
         var gutterGlyph: CGFloat { 13 }
 
+        /// The caption lane's height on this tier when the project has one.
+        var captionLaneHeight: CGFloat { gutterStyle == .headers ? 44 : 34 }
+
+        /// This tier with the caption lane shown, or not.
+        func showingCaptions(_ shows: Bool) -> Lanes {
+            var lanes = self
+            lanes.caption = shows ? captionLaneHeight : 0
+            return lanes
+        }
+
+        var captionLaneTop: CGFloat { laneAreaTop }
+
+        /// What the caption lane takes above the first text lane.
+        private var captionBlock: CGFloat { caption > 0 ? caption + laneGap : 0 }
+
         func overlayLaneTop(_ lane: Int) -> CGFloat {
-            laneAreaTop + CGFloat(lane) * (overlay + laneGap)
+            laneAreaTop + captionBlock + CGFloat(lane) * (overlay + laneGap)
         }
 
         func videoLaneTop(overlayLanes: Int) -> CGFloat {

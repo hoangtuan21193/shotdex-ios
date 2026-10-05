@@ -158,6 +158,8 @@ extension VideoStudioMetrics {
 /// What is selected, as far as its command row is concerned.
 enum VideoItemKind: CaseIterable, Equatable {
     case videoClip, photoClip, freezeClip, text, sticker, music
+    /// The caption lane C1 and its cues (FS-12.14 §5).
+    case caption
 }
 
 /// One cell of a selected item's command row (FS-12.04b §3–4).
@@ -168,6 +170,9 @@ enum VideoItemCommand: String, CaseIterable, Identifiable {
     case motion, move
     case edit, font, color, style, align, animate
     case beats, ducking, addTrack
+    /// The caption lane's (FS-12.14 §5): join a cue with the next one, and
+    /// recognise the lane again in another language.
+    case merge, language
     case delete
 
     var id: String { rawValue }
@@ -177,8 +182,8 @@ enum VideoItemCommand: String, CaseIterable, Identifiable {
     /// command does its thing once and never lights.
     var isSection: Bool {
         switch self {
-        case .trim, .speed, .volume, .look, .motion, .edit, .font, .color, .style, .align, .animate, .beats, .ducking: true
-        case .split, .replace, .freeze, .duplicate, .rotate, .move, .addTrack, .delete: false
+        case .trim, .speed, .volume, .look, .motion, .edit, .font, .color, .style, .align, .animate, .beats, .ducking, .language: true
+        case .split, .replace, .freeze, .duplicate, .rotate, .move, .addTrack, .merge, .delete: false
         }
     }
 
@@ -206,6 +211,8 @@ enum VideoItemCommand: String, CaseIterable, Identifiable {
         case .beats: LocalizedStringKey(VideoStudioCopy.beats)
         case .ducking: LocalizedStringKey(VideoStudioCopy.ducking)
         case .addTrack: "Add Track"
+        case .merge: LocalizedStringKey(VideoStudioCopy.merge)
+        case .language: LocalizedStringKey(VideoStudioCopy.language)
         case .delete: "Delete"
         }
     }
@@ -232,6 +239,8 @@ enum VideoItemCommand: String, CaseIterable, Identifiable {
         case .beats: "metronome"
         case .ducking: "waveform.badge.minus"
         case .addTrack: "plus"
+        case .merge: "arrow.triangle.merge"
+        case .language: "globe"
         case .delete: "trash"
         }
     }
@@ -254,6 +263,7 @@ enum VideoItemCommand: String, CaseIterable, Identifiable {
         case .text: [.edit, .font, .color, .style, .align, .animate, .duplicate, .delete]
         case .sticker: [.animate, .duplicate, .delete]
         case .music: [.beats, .ducking, .replace, .addTrack, .duplicate, .delete]
+        case .caption: [.edit, .style, .split, .merge, .language, .delete]
         }
         return row.filter { !notYetBuilt.contains($0) }
     }

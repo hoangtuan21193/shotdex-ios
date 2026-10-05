@@ -161,6 +161,30 @@
         }
       }
     },
+    "%lld captions": {
+      "comment": "Video Studio captions: how many caption blocks the lane has (plural)",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld caption"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld captions"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "%lld clips": {
       "comment": "Video Projects: how many clips a video project has (plural)",
       "extractionState": "manual",
@@ -202,6 +226,30 @@
                 "stringUnit": {
                   "state": "translated",
                   "value": "%lld clips are waiting for iCloud"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "%lld clips couldn't be read — they're in iCloud.": {
+      "comment": "Video Studio captions: clips skipped because their media is not on the device (plural)",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld clip couldn't be read — it's in iCloud."
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld clips couldn't be read — they're in iCloud."
                 }
               }
             }
@@ -308,6 +356,10 @@
           }
         }
       }
+    },
+    "%lld of %lld clips · nothing leaves the device": {
+      "comment": "Video Studio captions: under the progress bar — clips read so far, and the privacy promise",
+      "extractionState": "manual"
     },
     "%lld photos": {
       "comment": "Video Studio multi-select: how many of the selected clips are stills — 1 photo (plural)",
@@ -549,6 +601,10 @@
       "comment": "Video Studio iPad clip panel: header over the clips' volume",
       "extractionState": "manual"
     },
+    "Auto Captions": {
+      "comment": "Video Studio captions: the row under Add Text that turns speech in the clips into captions",
+      "extractionState": "manual"
+    },
     "BACKGROUND": {
       "comment": "Video Studio Video Settings: section header over what shows around a fitted clip",
       "extractionState": "manual"
@@ -589,6 +645,22 @@
       "comment": "Video Studio Video Settings: the background is the clip itself, blurred; also the slider's name",
       "extractionState": "manual"
     },
+    "Bottom": {
+      "comment": "Video Studio caption position",
+      "extractionState": "manual"
+    },
+    "Box": {
+      "comment": "Video Studio caption style: white text on a dark box",
+      "extractionState": "manual"
+    },
+    "Burn into video": {
+      "comment": "Video Studio captions: the switch that draws the captions into every exported frame",
+      "extractionState": "manual"
+    },
+    "CAPTIONS · %lld": {
+      "comment": "Video Studio captions: the header over the list of caption blocks, with how many there are",
+      "extractionState": "manual"
+    },
     "CODEC": {
       "comment": "Video Studio Video Settings: section header over H.264 / HEVC",
       "extractionState": "manual"
@@ -613,6 +685,14 @@
       "comment": "Video Studio captions: a caption block, by its place in time order — Caption 2",
       "extractionState": "manual"
     },
+    "Captions": {
+      "comment": "Video Studio captions: the caption lane C1, and its name in the session footer",
+      "extractionState": "manual"
+    },
+    "Captions stopped at %lld%%": {
+      "comment": "Video Studio captions: the card on a reopened project whose recognition was interrupted",
+      "extractionState": "manual"
+    },
     "Change Marker Color": {
       "comment": "Video Studio transport: cycles the color of the marker at the playhead",
       "extractionState": "manual"
@@ -633,6 +713,10 @@
       "comment": "Video Studio Look panel: a photo setting skipped on video",
       "extractionState": "manual"
     },
+    "Clean": {
+      "comment": "Video Studio caption style: white text with a shadow",
+      "extractionState": "manual"
+    },
     "Close": {
       "comment": "Video Studio: closes a panel",
       "extractionState": "manual"
@@ -651,6 +735,10 @@
     },
     "Commands": {
       "comment": "Video Studio: VoiceOver name of the selected item's row of commands",
+      "extractionState": "manual"
+    },
+    "Continue": {
+      "comment": "Video Studio captions: resumes recognition with the clips not read yet",
       "extractionState": "manual"
     },
     "Couldn't save your video draft": {
@@ -729,6 +817,10 @@
       "comment": "Video Studio clip panel: how long a still stays on screen",
       "extractionState": "manual"
     },
+    "Edit Captions": {
+      "comment": "Video Studio captions: the Auto Captions row once the project has a caption lane — opens it",
+      "extractionState": "manual"
+    },
     "Edited %@": {
       "comment": "Video Projects: when a draft was last changed; the argument is a relative time such as '5 min. ago'",
       "extractionState": "manual"
@@ -755,6 +847,10 @@
     },
     "Everything in this look applies to video.": {
       "comment": "Video Studio Look panel: nothing in the chosen look is skipped on video",
+      "extractionState": "manual"
+    },
+    "Expand Text Field": {
+      "comment": "Video Studio captions: opens the full-screen text editor for the selected caption",
       "extractionState": "manual"
     },
     "Export": {
@@ -881,6 +977,10 @@
       "comment": "Video Studio: the ✓ that ends a selection keeping what it changed",
       "extractionState": "manual"
     },
+    "Language": {
+      "comment": "Video Studio captions command and row: the language the speech is recognised in",
+      "extractionState": "manual"
+    },
     "Leave Without Saving": {
       "comment": "Video Studio: closes the studio although the latest draft could not be written",
       "extractionState": "manual"
@@ -931,6 +1031,14 @@
     },
     "Media": {
       "comment": "Video Studio: the bottom-row tool that adds photos and videos to the timeline",
+      "extractionState": "manual"
+    },
+    "Merge": {
+      "comment": "Video Studio captions command: joins the selected caption with the next one",
+      "extractionState": "manual"
+    },
+    "Middle": {
+      "comment": "Video Studio caption position",
       "extractionState": "manual"
     },
     "Missing": {
@@ -1025,6 +1133,10 @@
       "comment": "Video Studio ducking, Any Clip Sound: none of the clips has sound loud enough to lower the music",
       "extractionState": "manual"
     },
+    "No speech found in these clips.": {
+      "comment": "Video Studio captions: every clip was read and none had words",
+      "extractionState": "manual"
+    },
     "No steady beat": {
       "comment": "Video Studio beats card: the analysis found no tempo to snap to",
       "extractionState": "manual"
@@ -1041,6 +1153,10 @@
       "comment": "Video Studio Export: the device lacks room for the file and its copy in Photos; the size is about twice the estimate",
       "extractionState": "manual"
     },
+    "Not on this %@": {
+      "comment": "Video Studio captions: under a language whose speech model is not on the device",
+      "extractionState": "manual"
+    },
     "Not saved: %@.": {
       "comment": "Video Studio Save Look prompt: the parts of the video's grade a photo look cannot hold — e.g. Input Transform, Node 2 and clips' own looks",
       "extractionState": "manual"
@@ -1055,6 +1171,10 @@
     },
     "Offset": {
       "comment": "Video Studio beats: shifts every beat of the bed a few milliseconds earlier or later",
+      "extractionState": "manual"
+    },
+    "On-device speech recognition isn't available on this %@.": {
+      "comment": "Video Studio captions: under the dimmed Auto Captions row when the device has no speech model at all",
       "extractionState": "manual"
     },
     "Only the music moves. Each clip keeps its own level.": {
@@ -1075,6 +1195,10 @@
     },
     "Out": {
       "comment": "Video Studio clip panel: the fade-out slider under FADE; also the short title on the iPad text inspector's Animate Out pop-up — Out: None",
+      "extractionState": "manual"
+    },
+    "Outline": {
+      "comment": "Video Studio caption style: white text with a black outline",
       "extractionState": "manual"
     },
     "Output": {
@@ -1099,6 +1223,10 @@
     },
     "Playhead at %@ of %@": {
       "comment": "Video Studio transport: VoiceOver label for the phone read-out — playhead, then the project's length",
+      "extractionState": "manual"
+    },
+    "Position": {
+      "comment": "Video Studio captions: where the line sits — Bottom, Middle, Top",
       "extractionState": "manual"
     },
     "RATIO": {
@@ -1137,6 +1265,10 @@
       "comment": "Video Studio iPad Video Settings: label of 720p · 1080p · 4K",
       "extractionState": "manual"
     },
+    "Retry": {
+      "comment": "Video Studio captions: reads the clips that could not be read again",
+      "extractionState": "manual"
+    },
     "Save": {
       "comment": "Video Studio Save Look prompt: saves the look into My Looks",
       "extractionState": "manual"
@@ -1147,6 +1279,10 @@
     },
     "Save as Look…": {
       "comment": "Video Studio Look panel: saves the whole video's look and grade as one of My Looks, for photos and videos",
+      "extractionState": "manual"
+    },
+    "Saved as a subtitle track — Photos, Instagram and TikTok don't show it.": {
+      "comment": "Video Studio captions: under Burn into video when it is off",
       "extractionState": "manual"
     },
     "Saved to Photos as a new video": {
@@ -1213,6 +1349,10 @@
       "comment": "Video Studio Export: Photos refused the finished video because access is denied",
       "extractionState": "manual"
     },
+    "Size": {
+      "comment": "Video Studio captions: the text height, as a share of the frame's short edge",
+      "extractionState": "manual"
+    },
     "Skipped on video: %@.": {
       "comment": "Video Studio Look panel: the settings of the chosen look a video frame does not run — e.g. Noise Reduction, Upright",
       "extractionState": "manual"
@@ -1261,6 +1401,14 @@
       "comment": "Video Studio iPad text inspector: section title over Tracking and Line spacing",
       "extractionState": "manual"
     },
+    "Speech in your clips becomes editable text, made on this %@.": {
+      "comment": "Video Studio captions: the note under Auto Captions; the argument is iPhone or iPad",
+      "extractionState": "manual"
+    },
+    "Speech recognition is off for ShotDex.": {
+      "comment": "Video Studio captions: the card when the speech recognition permission was refused or is restricted",
+      "extractionState": "manual"
+    },
     "Speed": {
       "comment": "Video Studio clip panel: label of the playback-rate chips",
       "extractionState": "manual"
@@ -1275,6 +1423,10 @@
     },
     "Sticker": {
       "comment": "Video Studio: a picture laid over the video",
+      "extractionState": "manual"
+    },
+    "Style": {
+      "comment": "Video Studio captions: the look of every caption in the lane",
       "extractionState": "manual"
     },
     "Tap adds at %@ · hold to drag": {
@@ -1299,6 +1451,26 @@
     },
     "This size can't be encoded as H.264 on this device. Switch Codec to HEVC.": {
       "comment": "Video Studio Export: the H.264 encoder refused the frame size (e.g. 4K portrait)",
+      "extractionState": "manual"
+    },
+    "Top": {
+      "comment": "Video Studio caption position",
+      "extractionState": "manual"
+    },
+    "Transcribe": {
+      "comment": "Video Studio captions: confirms recognising the lane again in another language",
+      "extractionState": "manual"
+    },
+    "Transcribe again in %@?": {
+      "comment": "Video Studio captions: asked before a language change replaces captions edited by hand",
+      "extractionState": "manual"
+    },
+    "Transcribing on this %@…": {
+      "comment": "Video Studio captions: the progress card's title while speech is recognised on the device",
+      "extractionState": "manual"
+    },
+    "Transcribing…": {
+      "comment": "Video Studio captions: the striped block on the caption lane over the part not recognised yet",
       "extractionState": "manual"
     },
     "Trim": {
@@ -1397,9 +1569,37 @@
       "comment": "Video Studio: subtitle beside Look when the column shows the look of the whole video",
       "extractionState": "manual"
     },
+    "Word by Word": {
+      "comment": "Video Studio caption style: each word appears as it is said",
+      "extractionState": "manual"
+    },
     "Yellow": {
       "comment": "Video Studio iPad text inspector: the yellow caption colour",
       "extractionState": "manual"
+    },
+    "Your %lld edited captions will be replaced.": {
+      "comment": "Video Studio captions: what a new language does to the captions edited by hand (plural)",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Your %lld edited caption will be replaced."
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Your %lld edited captions will be replaced."
+                }
+              }
+            }
+          }
+        }
+      }
     },
     "clips' own looks": {
       "comment": "Video Studio Save as Look: the looks single clips have, which stay in the video",
@@ -1411,6 +1611,14 @@
     },
     "freeze": {
       "comment": "Video Studio session footer: the kind of a selected held frame, after its length — 2.0s · freeze",
+      "extractionState": "manual"
+    },
+    "iPad": {
+      "comment": "Video Studio captions: the device the speech is recognised on, as in Transcribing on this iPad",
+      "extractionState": "manual"
+    },
+    "iPhone": {
+      "comment": "Video Studio captions: the device the speech is recognised on, as in Transcribing on this iPhone",
       "extractionState": "manual"
     },
     "in this video": {

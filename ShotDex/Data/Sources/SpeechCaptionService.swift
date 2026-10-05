@@ -128,6 +128,13 @@ enum ClipAudioReader {
     }
 }
 
+/// The languages the system recognises, as BCP-47.
+enum SFSpeechRecognizerLocales {
+    static func identifiers() -> [String] {
+        SFSpeechRecognizer.supportedLocales().map { $0.identifier.replacingOccurrences(of: "_", with: "-") }
+    }
+}
+
 // MARK: - The system's recogniser
 
 /// `SFSpeechRecognizer` behind `SpeechRecognizing`: one task per request,

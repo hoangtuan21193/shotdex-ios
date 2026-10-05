@@ -8,7 +8,7 @@ extension VideoStudioScreen {
     // MARK: iPad landscape (FS-12.03 §2, board IL1)
 
     func deskLandscape(_ model: VideoStudioModel, window: CGSize) -> some View {
-        let lanes = VideoStudioMetrics.Lanes.for(.iPadLandscape)
+        let lanes = VideoStudioMetrics.Lanes.for(.iPadLandscape).showingCaptions(model.hasCaptionLane)
         let canOpenPool = VideoStudioDeskGeometry.canOpenPool(
             windowWidth: window.width,
             isInspectorOpen: columns.isInspectorOpen
@@ -39,7 +39,7 @@ extension VideoStudioScreen {
     // MARK: iPad portrait (FS-12.03 §3, board IP1)
 
     func deskPortrait(_ model: VideoStudioModel, window: CGSize) -> some View {
-        let lanes = VideoStudioMetrics.Lanes.for(.iPadPortrait)
+        let lanes = VideoStudioMetrics.Lanes.for(.iPadPortrait).showingCaptions(model.hasCaptionLane)
         let canOpenPool = VideoStudioDeskGeometry.canOpenPool(windowWidth: window.width, isInspectorOpen: false)
         let showsPool = canOpenPool
             && (columns.isPoolOpen ?? VideoStudioDeskGeometry.poolOpensByDefault(windowWidth: window.width))
@@ -138,7 +138,7 @@ extension VideoStudioScreen {
     /// meter, no viewer header: each would cost the height this window
     /// lacks. Back · Undo · Redo · Show original float over the frame.
     func duoInner(_ model: VideoStudioModel, window: CGSize) -> some View {
-        let lanes = VideoStudioMetrics.Lanes.for(.duoInner)
+        let lanes = VideoStudioMetrics.Lanes.for(.duoInner).showingCaptions(model.hasCaptionLane)
         let frames = VideoStudioDeskGeometry.duoInner(.init(
             window: window,
             canvas: model.recipe.canvasSize(),
@@ -213,7 +213,7 @@ extension VideoStudioScreen {
     /// indicator — and the tools in the 84pt rail beside it. A tool's panel
     /// covers the timeline; the frame and the transport never move.
     func duoCover(_ model: VideoStudioModel, window: CGSize) -> some View {
-        let lanes = VideoStudioMetrics.Lanes.for(.duoCover)
+        let lanes = VideoStudioMetrics.Lanes.for(.duoCover).showingCaptions(model.hasCaptionLane)
         let frames = VideoStudioDeskGeometry.duoCover(.init(
             window: window,
             canvas: model.recipe.canvasSize(),

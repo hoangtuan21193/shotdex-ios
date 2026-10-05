@@ -16,6 +16,8 @@ struct VideoInspectorActions {
     var onPickFont: () -> Void
     /// Add Music from Files… in the Music panel.
     var onImportMusic: () -> Void = {}
+    /// A caption's Expand Text Field: the full-screen editor (FS-12.14 §5).
+    var onEditCaption: (UUID) -> Void = { _ in }
 }
 
 /// The contextual bottom sheet: a title row naming what is selected, the params
@@ -439,7 +441,9 @@ struct VideoStudioSheetHost: View {
         }
         switch command {
         case .split:
-            model.splitClipUnderPlayhead()
+            if model.inspectorTarget == .caption { model.splitSelectedCaption() } else { model.splitClipUnderPlayhead() }
+        case .merge:
+            model.mergeSelectedCaption()
         case .replace:
             if let id = model.selectedMusicID {
                 actions.onReplaceMusic(id)
@@ -454,7 +458,7 @@ struct VideoStudioSheetHost: View {
             case .text: model.duplicateSelectedOverlay()
             case .music: model.duplicateSelectedMusic()
             case .clips: model.duplicateGroup()
-            case .none: break
+            case .caption, .none: break
             }
         case .rotate:
             model.pushUndo()
@@ -469,6 +473,7 @@ struct VideoStudioSheetHost: View {
             case .text: model.deleteSelectedOverlay()
             case .music: if let id = model.selectedMusicID { model.removeMusicTrack(id) }
             case .clips: model.deleteGroup()
+            case .caption: model.deleteSelectedCaption()
             case .none: break
             }
         default:
@@ -517,6 +522,7 @@ struct VideoStudioSheetHost: View {
         case .text: (model.selectedOverlay?.kind == .image ? "photo" : "textformat", true)
         case .music: ("music.note", true)
         case .clips: ("square.stack", true)
+        case .caption: ("captions.bubble", true)
         case .none: (model.activeToolPanel?.systemImage ?? "slider.horizontal.3", false)
         }
     }
@@ -534,6 +540,7 @@ struct VideoStudioSheetHost: View {
             : (model.selectedOverlay?.text.isEmpty == false ? model.selectedOverlay!.text : String(localized: "Text"))
         case .music: model.selectedMusicTrack?.displayName ?? String(localized: "Music")
         case .clips: model.selectionTitle?.name ?? ""
+        case .caption: VideoStudioCopy.captions
         case .none: model.activeToolPanel?.title ?? String(localized: "Project")
         }
     }
@@ -543,7 +550,7 @@ struct VideoStudioSheetHost: View {
         case .clip, .clips:
             // "6.2s · video": the length, and what kind of clip it is.
             return model.selectionTitle?.detail
-        case .text: return nil
+        case .text, .caption: return nil
         case .music:
             guard let music = model.selectedMusicTrack else { return nil }
             return String(format: "%.1fs → %.1fs", music.start, music.end)
@@ -556,7 +563,7 @@ struct VideoStudioSheetHost: View {
     @ViewBuilder
     private var titleButtons: some View {
         switch model.inspectorTarget {
-        case .clip, .clips, .text, .music:
+        case .clip, .clips, .text, .music, .caption:
             EmptyView()
         case .none:
             switch model.activeToolPanel {
@@ -574,6 +581,7 @@ struct VideoStudioSheetHost: View {
         case .clips: groupParams
         case .text: textParams
         case .music: musicParams
+        case .caption: VideoCaptionsPanel(model: model, actions: actions, shape: isDeskInspector ? .inspector : layout == .dock ? .dock : .band)
         case .none: globalParams
         }
     }

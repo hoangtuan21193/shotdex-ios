@@ -51,6 +51,10 @@ struct TimelineTracksContent: View {
         let musicLaneCount = model.musicLaneCount
 
         VStack(spacing: lanes.laneGap) {
+            if lanes.caption > 0 {
+                VideoCaptionLaneRow(model: model, pps: pps, visibleLeftTime: visibleLeftTime, activeDrag: activeDrag)
+                    .frame(width: contentWidth, height: lanes.caption, alignment: .leading)
+            }
             ForEach(0..<overlayLaneCount, id: \.self) { lane in
                 OverlayLaneRow(
                     model: model,
@@ -205,6 +209,9 @@ private struct VideoTrack: View {
     /// iPad and the Duo's inner display, while a bed's Ducking tab is open
     /// (FS-12.13 §3) — 16pt tall, 14 on the Duo.
     private var showsVoiceLabels: Bool {
+        // The phone has no room for C1 (FS-12.14 §3): a clip with spoken
+        // captions wears a Voice chip where they are.
+        if windowClass == .phone, model.hasCaptionLane, !model.placedCaptions.isEmpty { return true }
         guard model.activeItemCommand == .ducking, model.selectedMusicTrack != nil else { return false }
         switch windowClass {
         case .iPadLandscape, .iPadPortrait, .duoInner: return true
@@ -212,10 +219,27 @@ private struct VideoTrack: View {
         }
     }
 
+    /// Where the chips go: the ducking's voices while its tab is open, else
+    /// the captions' stretches, a gap under 0.4 s closed.
+    private var voiceSpans: [(start: Double, duration: Double)] {
+        if model.activeItemCommand == .ducking, model.selectedMusicTrack != nil {
+            return model.voiceSpansOnTimeline.map { ($0.start, $0.duration) }
+        }
+        var spans: [(start: Double, end: Double)] = []
+        for placed in model.placedCaptions {
+            if let last = spans.last, placed.start - last.end < CaptionChunker.pauseBreak {
+                spans[spans.count - 1].end = max(last.end, placed.end)
+            } else {
+                spans.append((placed.start, placed.end))
+            }
+        }
+        return spans.map { ($0.start, $0.end - $0.start) }
+    }
+
     private var voiceLabels: some View {
         let height: CGFloat = windowClass == .duoInner ? 14 : 16
         return ZStack(alignment: .topLeading) {
-            ForEach(Array(model.voiceSpansOnTimeline.enumerated()), id: \.offset) { _, voice in
+            ForEach(Array(voiceSpans.enumerated()), id: \.offset) { _, voice in
                 Text(VideoStudioCopy.voiceLabel)
                     .font(.system(size: height == 16 ? 10.5 : 9.5, weight: .semibold))
                     .foregroundStyle(EditorTheme.timelineSpeechInk)

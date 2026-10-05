@@ -57,6 +57,7 @@ struct VideoTimelineGutter: View {
     private func laneTop(of lane: VideoTimelineLane) -> CGFloat {
         let overlayLanes = max(1, overlayLaneCount)
         switch lane {
+        case .captions: return lanes.captionLaneTop
         case .overlay(let index): return lanes.overlayLaneTop(index)
         case .video: return lanes.videoLaneTop(overlayLanes: overlayLanes)
         case .music(let index): return lanes.musicLaneTop(index, overlayLanes: overlayLanes)
@@ -65,6 +66,7 @@ struct VideoTimelineGutter: View {
 
     private func height(of lane: VideoTimelineLane) -> CGFloat {
         switch lane {
+        case .captions: lanes.caption
         case .overlay: lanes.overlay
         case .video: lanes.video
         case .music: lanes.music
@@ -72,7 +74,8 @@ struct VideoTimelineGutter: View {
     }
 
     private var laneOrder: [VideoTimelineLane] {
-        (0..<max(1, overlayLaneCount)).map { VideoTimelineLane.overlay($0) }
+        (lanes.caption > 0 ? [.captions] : [])
+            + (0..<max(1, overlayLaneCount)).map { VideoTimelineLane.overlay($0) }
             + [.video]
             + (0..<max(1, musicLaneCount)).map { VideoTimelineLane.music($0) }
     }
@@ -80,6 +83,8 @@ struct VideoTimelineGutter: View {
     private func top(of lane: VideoTimelineLane) -> CGFloat {
         let overlayLanes = max(1, overlayLaneCount)
         switch lane {
+        case .captions:
+            return lanes.captionLaneTop + (lanes.caption - lanes.gutterIcon) / 2
         case .overlay(let index):
             return lanes.overlayLaneTop(index)
                 + (lanes.overlay - lanes.gutterIcon) / 2
@@ -114,12 +119,15 @@ struct VideoTimelineGutter: View {
 /// One row of the timeline, in the order they stack: overlay lanes above the
 /// video lane, music lanes below it.
 enum VideoTimelineLane: Hashable {
+    /// C1, the caption lane (FS-12.14), above the text lanes.
+    case captions
     case overlay(Int)
     case video
     case music(Int)
 
     var systemImage: String {
         switch self {
+        case .captions: "captions.bubble"
         case .overlay: "textformat"
         case .video: "film"
         case .music: "music.note"
@@ -131,6 +139,7 @@ enum VideoTimelineLane: Hashable {
         switch self {
         // "Text" with no context reads as an SMS in half the languages this
         // ships in; every one of these says which lane it names.
+        case .captions: VideoStudioCopy.captions
         case .overlay: String(localized: "Text", comment: "Video Studio timeline lane: the text and sticker overlay track")
         case .video: String(localized: "Video", comment: "Video Studio timeline lane: the video and photo clip track")
         case .music: String(localized: "Music", comment: "Video Studio timeline lane: the music track")
@@ -141,6 +150,7 @@ enum VideoTimelineLane: Hashable {
     /// per kind, in the order they stack.
     var badge: String {
         switch self {
+        case .captions: "C1"
         case .overlay(let index): "T\(index + 1)"
         case .video: "V1"
         case .music(let index): "A\(index + 1)"
@@ -151,6 +161,7 @@ enum VideoTimelineLane: Hashable {
     /// lane's Lock is not read as the first one's.
     var switchName: String {
         switch self {
+        case .captions: name
         case .overlay(let index): index == 0 ? name : "\(name) \(index + 1)"
         case .video: name
         case .music(let index): index == 0 ? name : "\(name) \(index + 1)"
@@ -165,7 +176,7 @@ extension VideoStudioModel {
     /// to hear, and a mute that does nothing is the control to avoid.
     func muteAction(for lane: VideoTimelineLane) -> (() -> Void)? {
         switch lane {
-        case .overlay: nil
+        case .captions, .overlay: nil
         case .video: { self.toggleVideoTrackMuted() }
         case .music(let index):
             musicTracks(inLane: index).isEmpty ? nil : { self.toggleMusicLaneMuted(index) }
@@ -174,7 +185,7 @@ extension VideoStudioModel {
 
     func isLaneMuted(_ lane: VideoTimelineLane) -> Bool {
         switch lane {
-        case .overlay: false
+        case .captions, .overlay: false
         case .video: isVideoTrackMuted
         case .music(let index): isMusicLaneMuted(index)
         }
