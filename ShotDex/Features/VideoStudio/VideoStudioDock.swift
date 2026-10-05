@@ -21,7 +21,7 @@ struct VideoStudioDock: View {
                 idleTools: [.media, .text, .sticker, .music]
             )
             // Selected: the command row, three columns of controls, then
-            // ✕ · name · ✓ at dock + 264 (FS-12.03 §3). The add buttons
+            // ✕ · name · ✓, 64 at dock + 260 (FS-12.03 §3). The add buttons
             // make way for the commands.
             if let title = model.sessionFooterTitle {
                 VideoSessionFooter(
@@ -29,7 +29,8 @@ struct VideoStudioDock: View {
                     onCancel: { model.cancelSession() },
                     onCommit: { model.commitSession() },
                     height: VideoStudioDeskGeometry.dockFooterHeight,
-                    buttonSize: VideoStudioDeskGeometry.footerButton
+                    buttonSize: VideoStudioDeskGeometry.deskFooterButton,
+                    style: .desk
                 )
             }
         }

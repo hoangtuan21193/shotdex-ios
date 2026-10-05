@@ -55,6 +55,18 @@ struct VideoStudioSheetHost: View {
     /// toolbar at 80: the command row sits at its top, 13 in (FS-12.03 §2).
     var isDeskInspector = false
 
+    /// The selected item's command row: at the top of the iPad inspector's
+    /// content, 13 in; 9 under the portrait dock's top, 16 in; 10 and 10
+    /// everywhere else.
+    private var commandRowInset: CGFloat {
+        if isDeskInspector { return VideoStudioDeskGeometry.inspectorCommandInset }
+        return layout == .dock ? VideoStudioDeskGeometry.dockInset : VideoStudioMetrics.itemCommandRowInset
+    }
+
+    private var commandRowTop: CGFloat {
+        if isDeskInspector { return 0 }
+        return layout == .dock ? VideoStudioDeskGeometry.dockCommandRowTop : VideoStudioMetrics.itemCommandRowTop
+    }
     /// A project of server photos, for Export Video's destination.
     var server: ServerVideoStudioLaunch?
     var onServerExported: () -> Void = {}
@@ -313,9 +325,9 @@ struct VideoStudioSheetHost: View {
                 isOn: { model.isItemCommandOn($0) },
                 isEnabled: { model.isItemCommandEnabled($0) },
                 perform: perform,
-                inset: isDeskInspector ? VideoStudioDeskGeometry.inspectorCommandInset : VideoStudioMetrics.itemCommandRowInset
+                inset: commandRowInset
             )
-            .padding(.top, isDeskInspector ? 0 : VideoStudioMetrics.itemCommandRowTop)
+            .padding(.top, commandRowTop)
             if let note = model.itemCommandNote {
                 Text(note)
                     .font(.system(size: 11))
@@ -324,11 +336,17 @@ struct VideoStudioSheetHost: View {
                     .padding(.horizontal, VideoStudioMetrics.itemCommandRowInset)
                     .padding(.top, 2)
             }
-            Rectangle()
-                .fill(Color.white.opacity(0.07))
-                .frame(height: 1)
-                .padding(.top, 6)
-                .padding(.bottom, 4)
+            if layout == .dock {
+                // The dock's columns start 8 under the row (y 1125 on the
+                // board), no rule: the dock's own top rule is enough.
+                Color.clear.frame(height: VideoStudioDeskGeometry.dockParamTop - VideoStudioDeskGeometry.dockCommandRowTop - VideoStudioMetrics.itemCommandCell.height)
+            } else {
+                Rectangle()
+                    .fill(Color.white.opacity(0.07))
+                    .frame(height: 1)
+                    .padding(.top, 6)
+                    .padding(.bottom, 4)
+            }
             if model.inspectorTarget == .clip, model.activeItemCommand == .look {
                 // Look (FS-12.06c §3): the clip's own look block takes the
                 // panel, as Trim's chips take it for a cut.
@@ -353,30 +371,39 @@ struct VideoStudioSheetHost: View {
             sections.filter { $0 == .fade },
             sections.filter { $0 == .motion },
         ]
+        func column(_ index: Int) -> some View {
+            ScrollView(showsIndicators: false) {
+                VStack(alignment: .leading, spacing: 4) {
+                    if index == 0, model.activeItemCommand == .trim { trimBlock(clip) }
+                    ForEach(columns[index], id: \.self) { section in
+                        clipSection(section, clip)
+                    }
+                }
+                .padding(.bottom, 8)
+            }
+        }
         return GeometryReader { geo in
-            let width = VideoStudioDeskGeometry.dockColumnWidth(width: geo.size.width)
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(alignment: .top, spacing: 0) {
-                    ForEach(Array(columns.enumerated()), id: \.offset) { index, column in
-                        ScrollView(showsIndicators: false) {
-                            VStack(alignment: .leading, spacing: 4) {
-                                if index == 0, model.activeItemCommand == .trim { trimBlock(clip) }
-                                ForEach(column, id: \.self) { section in
-                                    clipSection(section, clip)
-                                }
-                            }
-                            .padding(.bottom, 8)
-                        }
-                        .frame(width: width, height: VideoStudioDeskGeometry.dockParamHeight, alignment: .top)
-                        .overlay(alignment: .trailing) {
-                            if index < columns.count - 1 {
-                                Rectangle().fill(Color.white.opacity(0.07)).frame(width: 1)
-                            }
+            if VideoStudioDeskGeometry.dockColumnCount(width: geo.size.width) == 3 {
+                // Three columns of 312, 32 apart, 16 in (FS-12.03 §3):
+                // Speed · Volume | Fade | Motion, all seen at once.
+                DockColumns(gap: VideoStudioDeskGeometry.dockColumnGap) {
+                    column(0)
+                } second: {
+                    column(1)
+                } third: {
+                    column(2)
+                }
+            } else {
+                // Split View under 600: two columns and a sideways scroll.
+                let width = VideoStudioDeskGeometry.dockColumnWidth(width: geo.size.width)
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(alignment: .top, spacing: 0) {
+                        ForEach(0..<3, id: \.self) { index in
+                            column(index).frame(width: width, height: VideoStudioDeskGeometry.dockParamHeight, alignment: .top)
                         }
                     }
                 }
             }
-            .scrollDisabled(width * 3 <= geo.size.width + 0.5)
         }
         .frame(height: VideoStudioDeskGeometry.dockParamHeight)
     }
