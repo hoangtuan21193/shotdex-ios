@@ -51,6 +51,9 @@ struct VideoStudioSheetHost: View {
     /// Tools offered in the idle Look's title — the iPad portrait dock's
     /// Media · Text · Sticker · Music (FS-12.03 §3).
     var idleTools: [VideoAddTool] = []
+    /// The iPad's inspector column, whose content already starts under the
+    /// toolbar at 80: the command row sits at its top, 13 in (FS-12.03 §2).
+    var isDeskInspector = false
     /// A project of server photos, for Export Video's destination.
     var server: ServerVideoStudioLaunch?
     var onServerExported: () -> Void = {}
@@ -277,9 +280,10 @@ struct VideoStudioSheetHost: View {
                 commands: model.selectedItemCommands,
                 isOn: { model.isItemCommandOn($0) },
                 isEnabled: { model.isItemCommandEnabled($0) },
-                perform: perform
+                perform: perform,
+                inset: isDeskInspector ? VideoStudioDeskGeometry.inspectorCommandInset : VideoStudioMetrics.itemCommandRowInset
             )
-            .padding(.top, VideoStudioMetrics.itemCommandRowTop)
+            .padding(.top, isDeskInspector ? 0 : VideoStudioMetrics.itemCommandRowTop)
             if let note = model.itemCommandNote {
                 Text(note)
                     .font(.system(size: 11))

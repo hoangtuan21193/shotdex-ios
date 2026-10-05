@@ -336,6 +336,7 @@ extension VideoStudioScreen {
                 layout: .column,
                 importedMusic: importedMusic,
                 showsIdleLook: true,
+                isDeskInspector: true,
                 server: server,
                 onServerExported: serverExported
             )
@@ -348,8 +349,10 @@ extension VideoStudioScreen {
                     onCancel: { model.cancelSession() },
                     onCommit: { model.commitSession() },
                     height: VideoStudioDeskGeometry.inspectorFooterHeight,
-                    buttonSize: VideoStudioDeskGeometry.footerButton
+                    buttonSize: VideoStudioDeskGeometry.deskFooterButton,
+                    style: .desk
                 )
+                .padding(.leading, 1)
             }
         }
         .background(EditorTheme.panelSolid)

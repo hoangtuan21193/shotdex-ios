@@ -54,6 +54,12 @@ enum VideoStudioDeskGeometry {
     /// 44pt discs (FS-12.03 §2).
     static let inspectorFooterHeight: CGFloat = 64
     static let deskFooterButton: CGFloat = 44
+    /// ✕ and ✓ 16 in from the foot's edges (17 from the column's, past its
+    /// hairline).
+    static let footerInset: CGFloat = 16
+    /// The selected item's command row in the inspector: 13 in, at the
+    /// content's top (y 80).
+    static let inspectorCommandInset: CGFloat = 13
 
     // MARK: Stage and the rows under it
 

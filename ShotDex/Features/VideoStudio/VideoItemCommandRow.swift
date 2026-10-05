@@ -9,6 +9,8 @@ struct VideoItemCommandRow: View {
     let isOn: (VideoItemCommand) -> Bool
     let isEnabled: (VideoItemCommand) -> Bool
     let perform: (VideoItemCommand) -> Void
+    /// 10 on the phone and the Duo; 13 in the iPad's inspector.
+    var inset: CGFloat = VideoStudioMetrics.itemCommandRowInset
 
     var body: some View {
         ScrollView(.horizontal, showsIndicators: false) {
@@ -17,7 +19,7 @@ struct VideoItemCommandRow: View {
                     cell(command)
                 }
             }
-            .padding(.horizontal, VideoStudioMetrics.itemCommandRowInset)
+            .padding(.horizontal, inset)
         }
         .frame(height: VideoStudioMetrics.itemCommandCell.height)
         .overlay(alignment: .trailing) {

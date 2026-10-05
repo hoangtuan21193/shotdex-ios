@@ -8,13 +8,19 @@ struct VideoSessionFooter: View {
     let title: VideoItemTitle.Lines
     let onCancel: () -> Void
     let onCommit: () -> Void
-    /// The phone's row is 62 with 44pt discs; the iPad inspector's foot is
-    /// 58 (60 in the portrait dock) with 40pt discs (FS-12.03 §2–3).
+    /// The phone's row is 62 with 44pt discs; the iPad's foot — the
+    /// inspector's and the portrait dock's — is 64 with 44pt discs 16 in,
+    /// the name 17 over 13 (FS-12.03 §2–3, the Mac-style canvas).
     var height: CGFloat = VideoStudioMetrics.toolbarHeight
     var buttonSize: CGFloat = VideoStudioMetrics.sessionButton
+    var style: Style = .phone
+
+    enum Style { case phone, desk }
+
+    private var isDesk: Bool { style == .desk }
 
     var body: some View {
-        HStack(spacing: 12) {
+        HStack(spacing: isDesk ? 8 : 12) {
             Button(action: onCancel) {
                 Image(systemName: "xmark")
                     .font(.system(size: 16, weight: .semibold))
@@ -29,11 +35,11 @@ struct VideoSessionFooter: View {
 
             VStack(spacing: 1) {
                 Text(title.name)
-                    .font(.system(size: 14, weight: .semibold))
+                    .font(.system(size: isDesk ? 17 : 14, weight: .semibold))
                     .foregroundStyle(.white)
                     .lineLimit(1)
                 Text(title.detail)
-                    .font(.system(size: 11, design: .monospaced))
+                    .font(.system(size: isDesk ? 13 : 11, design: .monospaced))
                     .foregroundStyle(.white.opacity(0.35))
                     .lineLimit(1)
                     .minimumScaleFactor(0.8)
@@ -52,7 +58,7 @@ struct VideoSessionFooter: View {
             .buttonStyle(.plain)
             .accessibilityLabel(VideoStudioCopy.keepChanges)
         }
-        .padding(.horizontal, 14)
+        .padding(.horizontal, isDesk ? VideoStudioDeskGeometry.footerInset : 14)
         .frame(height: height)
         .frame(maxWidth: .infinity)
         .background(EditorTheme.panelSolid)
