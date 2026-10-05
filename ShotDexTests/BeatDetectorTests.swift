@@ -60,4 +60,27 @@ struct BeatDetectorTests {
         #expect(abs(analysis.bpm - 120) <= 0.5)
         #expect(abs((analysis.beats.first ?? -1) - 0.37) <= 0.02)
     }
+
+    /// AC-3: 30 s of white noise has no steady beat — below the confidence
+    /// floor, no beats to snap to.
+    @Test func whiteNoiseHasNoSteadyBeat() {
+        var generator = BeatNoiseGenerator(seed: 3)
+        let noise = (0..<Int(30 * BeatDetector.sampleRate)).map { _ in Float.random(in: -0.3...0.3, using: &generator) }
+        let analysis = BeatDetector.analyze(noise)
+        #expect(!analysis.isSteady)
+        #expect(analysis.confidence < BeatDetector.steadyThreshold)
+        #expect(analysis.beats.isEmpty)
+    }
+}
+
+/// A deterministic generator, so the noise is the same on every run.
+private struct BeatNoiseGenerator: RandomNumberGenerator {
+    private var state: UInt64
+    init(seed: UInt64) { state = seed &* 0x9E37_79B9_7F4A_7C15 | 1 }
+    mutating func next() -> UInt64 {
+        state ^= state << 13
+        state ^= state >> 7
+        state ^= state << 17
+        return state
+    }
 }

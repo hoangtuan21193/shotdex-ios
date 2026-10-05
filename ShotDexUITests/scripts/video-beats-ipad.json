@@ -105,6 +105,39 @@
   },
   {
    "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "tap",
+   "label": "Keep Changes"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "tap",
+   "label": "White Noise"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "tap",
+   "label": "itemCommand.beats"
+  },
+  {
+   "action": "wait",
+   "seconds": 6
+  },
+  {
+   "action": "dump",
+   "name": "20-noise",
+   "text": "snapshot"
+  },
+  {
+   "action": "wait",
    "seconds": 25
   }
  ]
