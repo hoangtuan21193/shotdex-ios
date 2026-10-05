@@ -47,6 +47,48 @@ enum TimelineZoneDragPhase {
     case changed(translationX: CGFloat)
     case ended(translationX: CGFloat)
     case cancelled
+    /// A press on a clip's body that ended without moving it (FS-12.11
+    /// §4): held long enough to select, or held and let go for nothing.
+    case pressed(TimelinePressClassifier.Outcome)
+    /// The press on a clip's body has held `movePress`: from here on the
+    /// finger's release is the press's, not the clip's tap.
+    case holding
+}
+
+/// Stops a clip's SwiftUI tap from firing at the end of a press the
+/// timeline's long-press already owns (FS-12.11 AC-16: held 0.4 s and let
+/// go is nothing, not a selection). The tap gesture lives in the hosted
+/// content, where a UIKit recognizer on the scroll view cannot make it
+/// fail, so the press leaves word here and the tap asks before acting.
+///
+/// A reference, not view state: the press's callback and the tap land in
+/// the same run-loop turn, before any render could hand back a new value.
+@MainActor
+final class TimelinePressGate {
+    private var heldClip: UUID?
+    private var isHolding = false
+    private var releasedAt: CFTimeInterval = 0
+
+    /// How long after a press ends its clip's tap is still the press's.
+    static let window: CFTimeInterval = 0.4
+
+    func began(on clip: UUID) {
+        heldClip = clip
+        isHolding = true
+    }
+
+    func ended(now: CFTimeInterval = CACurrentMediaTime()) {
+        isHolding = false
+        releasedAt = now
+    }
+
+    /// Whether a tap on `clip` is the tail of a press: if so it is
+    /// swallowed, once.
+    func swallowsTap(on clip: UUID, now: CFTimeInterval = CACurrentMediaTime()) -> Bool {
+        guard heldClip == clip, isHolding || now - releasedAt < Self.window else { return false }
+        heldClip = nil
+        return true
+    }
 }
 
 /// The timeline's horizontal scroller: a `UIScrollView` wrapping hosted SwiftUI
@@ -129,12 +171,14 @@ struct VideoTimelineScroller<Content: View>: UIViewRepresentable {
         scrollView.addGestureRecognizer(zonePan)
         context.coordinator.zonePan = zonePan
 
-        // Reorder: long-press a clip body then drag. Coexists with scrolling —
-        // a quick drag scrubs, a held drag reorders.
+        // A clip body's press (FS-12.11 §4): held 0.32 s then dragged moves
+        // the clip; held 0.5 s and let go selects it; anything shorter that
+        // travels is the scroll's. The rule is `TimelinePressClassifier`'s.
         let longPress = UILongPressGestureRecognizer(
             target: context.coordinator, action: #selector(Coordinator.handleReorder(_:))
         )
-        longPress.minimumPressDuration = 0.32
+        longPress.minimumPressDuration = TimelinePressClassifier.movePress
+        longPress.allowableMovement = TimelinePressClassifier.slop
         longPress.delegate = context.coordinator
         scrollView.addGestureRecognizer(longPress)
         context.coordinator.reorderPress = longPress
@@ -215,6 +259,10 @@ struct VideoTimelineScroller<Content: View>: UIViewRepresentable {
         private var activeZone: TimelineDragZone?
         private var reorderZone: TimelineDragZone?
         private var reorderStart: CGPoint = .zero
+        /// When the finger came down: the press fires `movePress` after it.
+        private var pressDownTime: CFTimeInterval = 0
+        /// Whether this press has become a move — once it has, it stays one.
+        private var isMovingClip = false
 
         init(_ parent: VideoTimelineScroller) { self.parent = parent }
 
@@ -335,31 +383,53 @@ struct VideoTimelineScroller<Content: View>: UIViewRepresentable {
             }
         }
 
-        // MARK: Reorder (long-press then drag a clip body)
+        // MARK: Press on a clip body (FS-12.11 §4)
 
         @objc func handleReorder(_ recognizer: UILongPressGestureRecognizer) {
             guard let scrollView = recognizer.view as? TimelineScrollView,
                   let hostView = scrollView.hostView
             else { return }
             let point = recognizer.location(in: hostView)
+            let held = CACurrentMediaTime() - pressDownTime
+            let travel = hypot(point.x - reorderStart.x, point.y - reorderStart.y)
             switch recognizer.state {
             case .began:
                 reorderZone = scrollView.reorderZone(at: point)
                 reorderStart = point
-                if reorderZone != nil {
-                    UIImpactFeedbackGenerator(style: .rigid).impactOccurred()
-                    parent.onZoneDrag(reorderZone!.kind, .changed(translationX: 0))
+                pressDownTime = CACurrentMediaTime() - recognizer.minimumPressDuration
+                isMovingClip = false
+                // The press owns the finger from here: the timeline holds
+                // still under a clip being held or dragged. Turning the pan
+                // off and on again cancels the scroll it may have begun.
+                if let reorderZone {
+                    scrollView.panGestureRecognizer.isEnabled = false
+                    scrollView.panGestureRecognizer.isEnabled = true
+                    parent.onZoneDrag(reorderZone.kind, .holding)
                 }
             case .changed:
                 guard let reorderZone else { return }
-                parent.onZoneDrag(reorderZone.kind, .changed(translationX: point.x - reorderStart.x))
+                if !isMovingClip,
+                   TimelinePressClassifier.classify(held: held, travel: travel, isReleased: false) == .move {
+                    isMovingClip = true
+                    UIImpactFeedbackGenerator(style: .rigid).impactOccurred()
+                }
+                if isMovingClip {
+                    parent.onZoneDrag(reorderZone.kind, .changed(translationX: point.x - reorderStart.x))
+                }
             case .ended:
                 guard let reorderZone else { return }
-                parent.onZoneDrag(reorderZone.kind, .ended(translationX: point.x - reorderStart.x))
+                if isMovingClip {
+                    parent.onZoneDrag(reorderZone.kind, .ended(translationX: point.x - reorderStart.x))
+                } else {
+                    let outcome = TimelinePressClassifier.classify(held: held, travel: travel, isReleased: true)
+                    parent.onZoneDrag(reorderZone.kind, .pressed(outcome))
+                }
                 self.reorderZone = nil
+                isMovingClip = false
             case .cancelled, .failed:
-                if let reorderZone { parent.onZoneDrag(reorderZone.kind, .cancelled) }
+                if let reorderZone, isMovingClip { parent.onZoneDrag(reorderZone.kind, .cancelled) }
                 reorderZone = nil
+                isMovingClip = false
             default:
                 break
             }
@@ -374,7 +444,8 @@ struct VideoTimelineScroller<Content: View>: UIViewRepresentable {
                 return scrollView.blockingZone(at: point) != nil
             }
             if gestureRecognizer === reorderPress {
-                return scrollView.reorderZone(at: point) != nil
+                // A handle's drag is the zone pan's, never a press on the body.
+                return scrollView.reorderZone(at: point) != nil && scrollView.blockingZone(at: point) == nil
             }
             return true
         }

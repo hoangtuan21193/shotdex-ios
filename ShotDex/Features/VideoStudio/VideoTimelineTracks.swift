@@ -288,7 +288,11 @@ private struct ClipBand: View {
         // frame is — so a tap on the first clip went to the topmost one, and
         // the selected clip's fade knobs drew over clip 1.
         .contentShape(Rectangle())
-        .onTapGesture { model.toggleClip(clip.id) }
+        .onTapGesture {
+            // The tail of a held press is the press's (FS-12.11 §4).
+            guard !model.clipPressGate.swallowsTap(on: clip.id) else { return }
+            model.toggleClip(clip.id)
+        }
         .background(reorderZone)
         .overlay(edgeHandles)
         .overlay(fadeZones)
@@ -515,9 +519,12 @@ private struct ClipBand: View {
             .padding(leading ? .leading : .trailing, 3)
     }
 
+    /// Every clip's body takes the press (FS-12.11 §4) — selected or not:
+    /// held then dragged it moves, held and let go it selects. A locked
+    /// lane lifts nothing (§8).
     @ViewBuilder
     private var reorderZone: some View {
-        if isSelected, model.mode == .multiClip {
+        if model.mode == .multiClip, !model.isLaneLocked(.video) {
             GeometryReader { proxy in
                 Color.clear.preference(
                     key: TimelineDragZonesKey.self,

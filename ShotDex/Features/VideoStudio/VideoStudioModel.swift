@@ -767,6 +767,9 @@ final class VideoStudioModel {
     /// The timeline's lanes and the overview strip as drop targets, kept up
     /// to date by those views. Not observed: they change on every scroll.
     @ObservationIgnored var timelineDropGeometry: VideoDropGeometry?
+    /// Lets a clip's tap know a held press already owns the finger
+    /// (FS-12.11 §4). Screen plumbing, not state anyone observes.
+    @ObservationIgnored let clipPressGate = TimelinePressGate()
     @ObservationIgnored var overviewDropGeometry: VideoDropGeometry?
     /// The lifted cell's thumbnail, for the ghost under the finger.
     @ObservationIgnored var mediaDragImage: UIImage?
