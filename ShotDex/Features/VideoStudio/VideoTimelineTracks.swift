@@ -186,7 +186,10 @@ private struct VideoTrack: View {
             if let groupDrag {
                 dropLine(at: groupDrag.boundary)
                 groupStack(at: groupDrag.fingerX)
-            } else if model.isPlacingGroup {
+            } else if let preview = model.cutToBeatPreview {
+                cutToBeatMarks(preview)
+            }
+            if groupDrag == nil, model.isPlacingGroup {
                 // Move without a drag: the line follows the playhead, and
                 // its pill is the button that drops (FS-12.11 §6).
                 dropLine(at: model.placingBoundary, dropsOnTap: true)
@@ -210,6 +213,55 @@ private struct VideoTrack: View {
         else { return nil }
         let x = activeDrag.startX + activeDrag.translationX
         return (x, VideoClipGroupEditing.boundary(forFingerTime: Double(x / pps), placements: placements))
+    }
+
+    /// Cut to Beat's preview on the lane (FS-12.12 §6, board F2_DI): from
+    /// each cut that moves, a 2pt arrow in the beat colour to its bar, a
+    /// dashed 2×74 line at the bar, and the move in a 40×16 pill.
+    private func cutToBeatMarks(_ preview: CutToBeatMath.Preview) -> some View {
+        let moving = preview.cuts.filter(\.moves)
+        let lineHeight: CGFloat = 74
+        let top = (lanes.clipCell - lineHeight) / 2
+        return ZStack(alignment: .topLeading) {
+            Canvas { context, _ in
+                for cut in moving {
+                    guard let target = cut.target else { continue }
+                    let from = CGFloat(cut.time) * pps
+                    let to = CGFloat(target) * pps
+                    let y = lanes.clipCell / 2
+                    var shaft = Path()
+                    shaft.move(to: CGPoint(x: from, y: y))
+                    shaft.addLine(to: CGPoint(x: to, y: y))
+                    context.stroke(shaft, with: .color(EditorTheme.timelineBeat), lineWidth: 2)
+                    let direction: CGFloat = to >= from ? 1 : -1
+                    var head = Path()
+                    head.move(to: CGPoint(x: to, y: y))
+                    head.addLine(to: CGPoint(x: to - 6 * direction, y: y - 4))
+                    head.addLine(to: CGPoint(x: to - 6 * direction, y: y + 4))
+                    head.closeSubpath()
+                    context.fill(head, with: .color(EditorTheme.timelineBeat))
+                    var line = Path()
+                    line.move(to: CGPoint(x: to, y: top))
+                    line.addLine(to: CGPoint(x: to, y: top + lineHeight))
+                    context.stroke(line, with: .color(EditorTheme.timelineBeat), style: StrokeStyle(lineWidth: 2, dash: [4, 3]))
+                }
+            }
+            .frame(width: CGFloat(model.totalDuration) * pps + 40, height: lanes.clipCell)
+            ForEach(moving, id: \.clipIndex) { cut in
+                Text(VideoStudioCopy.cutShift(cut.shift))
+                    .font(.system(size: 10, weight: .bold).monospacedDigit())
+                    .foregroundStyle(EditorTheme.timelineBeatInk)
+                    .frame(width: VideoStudioMetrics.cutToBeatPill.width, height: VideoStudioMetrics.cutToBeatPill.height)
+                    .background(Capsule().fill(EditorTheme.timelineBeat))
+                    .offset(
+                        x: CGFloat(cut.target ?? cut.time) * pps - VideoStudioMetrics.cutToBeatPill.width / 2,
+                        y: top - VideoStudioMetrics.cutToBeatPill.height - 2
+                    )
+            }
+        }
+        .allowsHitTesting(false)
+        .zIndex(4)
+        .accessibilityHidden(true)
     }
 
     /// The drop line, 3×82 in the selection colour with a glow, and over it

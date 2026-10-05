@@ -1128,7 +1128,7 @@ struct VideoStudioSheetHost: View {
     private var musicParams: some View {
         if let music = model.selectedMusicTrack, model.activeItemCommand == .beats {
             ScrollView(showsIndicators: false) {
-                VideoBeatsPanel(model: model, music: music, isDesk: isDesk)
+                VideoBeatsPanel(model: model, music: music, isDesk: isDesk, previewsInline: layout != .band)
             }
         } else if let music = model.selectedMusicTrack {
             VStack(spacing: 0) {

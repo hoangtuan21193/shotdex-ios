@@ -551,6 +551,8 @@ final class VideoStudioModel {
             inspectorTextTool = inspectorTextTool == tool ? .transform : tool
         default:
             isPlacingGroup = false
+            // Another command leaves the Cut to Beat preview (AC-13).
+            isPreviewingCutToBeat = false
             activeItemCommand = activeItemCommand == command ? nil : command
             // Beats opened on a bed: its beats are found now, once (§4).
             if activeItemCommand == .beats, let music = selectedMusicTrack, let url = musicURL(for: music.source) {
@@ -601,6 +603,7 @@ final class VideoStudioModel {
         selectedClipID = nil
         selectedClipIDs = []
         isPlacingGroup = false
+        isPreviewingCutToBeat = false
         selectedOverlayID = nil
         selectedMusicID = nil
         activeToolPanel = nil
@@ -3558,6 +3561,45 @@ final class VideoStudioModel {
         recipe.musicTracks[index].beatSnap.isOn = isOn
         if isOn, let url = musicURL(for: recipe.musicTracks[index].source) { beats.findBeats(of: url) }
         markEdited()
+    }
+
+    // MARK: Cut to Beat (FS-12.12 §6)
+
+    /// The preview is up: arrows on the lanes, the summary, Apply. Leaving
+    /// it — another command, ✕, ✓, a new selection — changes nothing.
+    private(set) var isPreviewingCutToBeat = false
+    /// Every Bar · 2 Bars · 4 Bars.
+    var cutToBeatSpacing: CutToBeatMath.Spacing = .everyBar
+
+    /// The grid cuts go to: the open bed's, else the snapping bed's.
+    var cutToBeatGrid: BeatGrid? {
+        selectedMusicTrack.flatMap { beatGrid(for: $0) } ?? snapGrid
+    }
+
+    /// What Apply would do, computed afresh from the project as it is.
+    var cutToBeatPreview: CutToBeatMath.Preview? {
+        guard isPreviewingCutToBeat, let grid = cutToBeatGrid else { return nil }
+        return CutToBeatMath.preview(recipe, grid: grid, spacing: cutToBeatSpacing)
+    }
+
+    func beginCutToBeatPreview() {
+        guard cutToBeatGrid != nil else { return }
+        isPreviewingCutToBeat = true
+    }
+
+    func endCutToBeatPreview() {
+        isPreviewingCutToBeat = false
+    }
+
+    /// Apply to N Clips: every reachable cut to its bar, one undo step for
+    /// all the lengths; the preview closes.
+    func applyCutToBeat() {
+        guard let preview = cutToBeatPreview, preview.movingCount > 0 else { return }
+        pushUndo()
+        recipe = preview.applied
+        isPreviewingCutToBeat = false
+        markEdited()
+        schedulePreviewRebuild()
     }
 
     /// SNAP TO (§5): every beat, or only the bar's first. One undo step.

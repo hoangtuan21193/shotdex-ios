@@ -303,6 +303,8 @@ enum VideoStudioMetrics {
     static let beatSnapTolerance: CGFloat = 8
     /// "Beat 14 · 0:08.75 · −0.45s" over the ruler while an edge sticks.
     static let beatSnapPill = CGSize(width: 206, height: 26)
+    /// Cut to Beat's move over each target: "+0.8s".
+    static let cutToBeatPill = CGSize(width: 40, height: 16)
     /// Ticks on a music band: a bar is a 2×12 line under a 6×6 square, a
     /// beat a 1×7 line; on the overview strip 1×8 and 1×5.
     static let barTick = CGSize(width: 2, height: 12)

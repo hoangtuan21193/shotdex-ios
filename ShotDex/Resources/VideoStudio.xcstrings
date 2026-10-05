@@ -73,6 +73,30 @@
         }
       }
     },
+    "%lld can't move": {
+      "comment": "Video Studio beats: in the Cut to Beat summary — cuts whose clip cannot reach its bar (plural)",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld can't move"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld can't move"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "%lld clips": {
       "comment": "Video Projects: how many clips a video project has (plural)",
       "extractionState": "manual",
@@ -138,6 +162,30 @@
                 "stringUnit": {
                   "state": "translated",
                   "value": "%lld clips selected"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "%lld cuts move · largest %@": {
+      "comment": "Video Studio beats: the Cut to Beat preview's summary — how many cuts move and the largest move (plural)",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld cut moves · largest %@"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld cuts move · largest %@"
                 }
               }
             }
@@ -297,6 +345,14 @@
         }
       }
     },
+    "2 Bars": {
+      "comment": "Video Studio Cut to Beat: cuts land every second bar",
+      "extractionState": "manual"
+    },
+    "4 Bars": {
+      "comment": "Video Studio Cut to Beat: cuts land every fourth bar",
+      "extractionState": "manual"
+    },
     "4K needs 4K clips — %lld of your %lld clips are %@.": {
       "comment": "Video Studio Video Settings: why 4K is dimmed — how many clips fall short, and the resolution they all are",
       "extractionState": "manual"
@@ -384,6 +440,30 @@
     "Apply to": {
       "comment": "Video Studio clip Look block: label before This Clip · Selected · All Clips",
       "extractionState": "manual"
+    },
+    "Apply to %lld Clips": {
+      "comment": "Video Studio beats: commits the Cut to Beat preview (plural)",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Apply to %lld Clip"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Apply to %lld Clips"
+                }
+              }
+            }
+          }
+        }
+      }
     },
     "Audio": {
       "comment": "Video Studio iPad clip panel: header over the clips' volume",
@@ -483,6 +563,14 @@
     },
     "Custom Color": {
       "comment": "Video Studio Video Settings: picks a background color of one's own",
+      "extractionState": "manual"
+    },
+    "Cut Clips to Beat": {
+      "comment": "Video Studio beats: opens the preview that moves every cut to the nearest bar",
+      "extractionState": "manual"
+    },
+    "Cut to Beat": {
+      "comment": "Video Studio beats: header over the Cut to Beat preview",
       "extractionState": "manual"
     },
     "Dehaze": {
@@ -761,6 +849,10 @@
       "comment": "Video Studio Trim: why the Start/End to Playhead chips are dimmed",
       "extractionState": "manual"
     },
+    "Moves every cut to the nearest bar. Photos stretch, videos trim. One undo.": {
+      "comment": "Video Studio beats: under Cut Clips to Beat — what it does",
+      "extractionState": "manual"
+    },
     "Music": {
       "comment": "Video Studio: a music bed on the timeline",
       "extractionState": "manual"
@@ -843,6 +935,10 @@
     },
     "Photo, %@": {
       "comment": "Video Studio Media panel: VoiceOver label of a photo cell — when it was taken",
+      "extractionState": "manual"
+    },
+    "Photos stretch, videos trim": {
+      "comment": "Video Studio beats: in the Cut to Beat preview — how the clips reach their bars",
       "extractionState": "manual"
     },
     "Playhead at %@ of %@": {

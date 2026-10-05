@@ -8,6 +8,10 @@ struct VideoBeatsPanel: View {
     @Bindable var model: VideoStudioModel
     let music: MusicTrack
     var isDesk = false
+    /// A column — the iPad's inspector, the Duo's 264 — draws the Cut to
+    /// Beat preview in place; the phone and the cover open it from a
+    /// button (§6).
+    var previewsInline = false
 
     private var inset: CGFloat { 16 }
 
@@ -17,7 +21,10 @@ struct VideoBeatsPanel: View {
             snapRow
             snapToRow
             offsetRow
+            cutToBeatSection
         }
+        .onAppear { if previewsInline { model.beginCutToBeatPreview() } }
+        .onChange(of: model.beatState(for: music)) { if previewsInline { model.beginCutToBeatPreview() } }
         .padding(.top, 4)
         .padding(.bottom, 8)
     }
@@ -97,6 +104,93 @@ struct VideoBeatsPanel: View {
         )
         .disabled(!canSnap)
         .opacity(canSnap ? 1 : 0.28)
+    }
+
+    // MARK: Cut to Beat
+
+    @ViewBuilder
+    private var cutToBeatSection: some View {
+        let canSnap = model.canSnap(to: music)
+        Group {
+            if let preview = model.cutToBeatPreview {
+                cutToBeatPreview(preview)
+            } else if !previewsInline {
+                VStack(alignment: .leading, spacing: 6) {
+                    Button { model.beginCutToBeatPreview() } label: {
+                        HStack(spacing: 8) {
+                            Image(systemName: "scissors")
+                                .font(.system(size: 15, weight: .semibold))
+                            Text(VideoStudioCopy.cutClipsToBeat)
+                                .font(.system(size: 15, weight: .semibold))
+                        }
+                        .foregroundStyle(.white)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: isDesk ? 44 : 44)
+                        .background(
+                            RoundedRectangle(cornerRadius: AppTheme.Radius.md, style: .continuous)
+                                .fill(Color.white.opacity(0.08))
+                        )
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    Text(VideoStudioCopy.cutToBeatExplainer)
+                        .font(.system(size: 11.5))
+                        .foregroundStyle(.white.opacity(0.4))
+                }
+                .padding(.horizontal, inset)
+            }
+        }
+        .disabled(!canSnap)
+        .opacity(canSnap ? 1 : 0.28)
+    }
+
+    /// The preview (§6, board F2_DI_CutToBeat): CUT TO BEAT, the spacing
+    /// chips, "4 cuts move · largest +0.8s", what reaches how, and Apply.
+    private func cutToBeatPreview(_ preview: CutToBeatMath.Preview) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(VideoStudioCopy.cutToBeat)
+                .font(.system(size: isDesk ? 17 : 11, weight: .semibold))
+                .foregroundStyle(isDesk ? .white : EditorTheme.dimText)
+                .textCase(isDesk ? nil : .uppercase)
+            HStack(spacing: 4) {
+                ForEach(CutToBeatMath.Spacing.allCases, id: \.self) { spacing in
+                    let isOn = model.cutToBeatSpacing == spacing
+                    Button { model.cutToBeatSpacing = spacing } label: {
+                        Text(VideoStudioCopy.spacingTitle(spacing))
+                            .font(.system(size: isDesk ? 15 : 12.5, weight: .semibold))
+                            .foregroundStyle(.white)
+                            .frame(maxWidth: .infinity)
+                            .frame(height: isDesk ? 32 : 28)
+                            .background(
+                                RoundedRectangle(cornerRadius: 7, style: .continuous)
+                                    .fill(isOn ? Color.white.opacity(0.18) : Color.white.opacity(0.06))
+                            )
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityAddTraits(isOn ? .isSelected : [])
+                }
+            }
+            Text(VideoStudioCopy.cutsMove(preview.movingCount, largest: preview.largestShift, cannotMove: preview.cannotMoveCount))
+                .font(.system(size: isDesk ? 15 : 13, weight: .semibold))
+                .foregroundStyle(.white)
+            Text(VideoStudioCopy.photosStretchVideosTrim)
+                .font(.system(size: isDesk ? 13 : 11.5))
+                .foregroundStyle(.white.opacity(0.45))
+            Button { model.applyCutToBeat() } label: {
+                Text(VideoStudioCopy.applyToClips(preview.clipCount))
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(.black)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: isDesk ? 44 : 40)
+                    .background(RoundedRectangle(cornerRadius: AppTheme.Radius.md, style: .continuous).fill(Color.white))
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .disabled(preview.movingCount == 0)
+            .opacity(preview.movingCount == 0 ? 0.28 : 1)
+        }
+        .padding(.horizontal, inset)
     }
 
     // MARK: Card

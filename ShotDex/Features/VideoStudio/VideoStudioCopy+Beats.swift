@@ -71,3 +71,51 @@ extension VideoStudioCopy {
         String(localized: "Every Bar", table: table, comment: "Video Studio beats: snap only to the first beat of each bar")
     }
 }
+
+/// Cut to Beat (FS-12.12 §6).
+extension VideoStudioCopy {
+    static var cutClipsToBeat: String {
+        String(localized: "Cut Clips to Beat", table: table, comment: "Video Studio beats: opens the preview that moves every cut to the nearest bar")
+    }
+
+    static var cutToBeat: String {
+        String(localized: "Cut to Beat", table: table, comment: "Video Studio beats: header over the Cut to Beat preview")
+    }
+
+    static var cutToBeatExplainer: String {
+        String(localized: "Moves every cut to the nearest bar. Photos stretch, videos trim. One undo.", table: table, comment: "Video Studio beats: under Cut Clips to Beat — what it does")
+    }
+
+    static var photosStretchVideosTrim: String {
+        String(localized: "Photos stretch, videos trim", table: table, comment: "Video Studio beats: in the Cut to Beat preview — how the clips reach their bars")
+    }
+
+    /// "4 cuts move · largest +0.8s", with "· 1 can't move" when some cannot.
+    static func cutsMove(_ count: Int, largest: Double, cannotMove: Int) -> String {
+        let sign = largest >= 0 ? "+" : "−"
+        let shift = String(format: "\(sign)%.1fs", abs(largest))
+        let moving = String(localized: "\(count) cuts move · largest \(shift)", table: table, comment: "Video Studio beats: the Cut to Beat preview's summary — how many cuts move and the largest move (plural)")
+        guard cannotMove > 0 else { return moving }
+        let stuck = String(localized: "\(cannotMove) can't move", table: table, comment: "Video Studio beats: in the Cut to Beat summary — cuts whose clip cannot reach its bar (plural)")
+        return moving + " · " + stuck
+    }
+
+    /// "Apply to 5 Clips".
+    static func applyToClips(_ count: Int) -> String {
+        String(localized: "Apply to \(count) Clips", table: table, comment: "Video Studio beats: commits the Cut to Beat preview (plural)")
+    }
+
+    static func spacingTitle(_ spacing: CutToBeatMath.Spacing) -> String {
+        switch spacing {
+        case .everyBar: everyBar
+        case .twoBars: String(localized: "2 Bars", table: table, comment: "Video Studio Cut to Beat: cuts land every second bar")
+        case .fourBars: String(localized: "4 Bars", table: table, comment: "Video Studio Cut to Beat: cuts land every fourth bar")
+        }
+    }
+
+    /// "−0.5s", "+0.8s": how far a cut moves.
+    static func cutShift(_ seconds: Double) -> String {
+        let sign = seconds >= 0 ? "+" : "−"
+        return sign + String(format: "%.1fs", abs(seconds))
+    }
+}

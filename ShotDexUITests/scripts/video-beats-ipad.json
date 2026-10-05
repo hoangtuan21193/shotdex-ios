@@ -125,6 +125,19 @@
    "text": "snapshot"
   },
   {
+   "action": "tap",
+   "label": "Apply to 5 Clips"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "dump",
+   "name": "16-applied",
+   "text": "snapshot"
+  },
+  {
    "action": "wait",
    "seconds": 14
   },

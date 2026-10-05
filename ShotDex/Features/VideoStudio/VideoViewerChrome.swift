@@ -418,6 +418,17 @@ struct VideoTimelineOverview: View {
                         .accessibilityLabel(Text("Marker at \(VideoStudioMetrics.timecode(marker.time))", comment: "Video Studio: a note pinned to a point on the timeline"))
                 }
 
+                // Where Cut to Beat would put each cut — on the Duo's cover
+                // the strip is the only timeline there is (§6).
+                if let preview = model.cutToBeatPreview {
+                    ForEach(preview.cuts.filter(\.moves), id: \.clipIndex) { cut in
+                        Rectangle()
+                            .fill(EditorTheme.timelineBeat)
+                            .frame(width: 2, height: VideoStudioMetrics.timelineOverviewHeight)
+                            .offset(x: CGFloat((cut.target ?? cut.time) / total) * width - 1)
+                    }
+                }
+
                 // The beats of the bed whose Beats tab is open (FS-12.12 §3).
                 if let music = model.recipe.musicTracks.first(where: { model.showsBeatTicks(for: $0) }),
                    let grid = model.beatGrid(for: music) {
