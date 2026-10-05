@@ -54,3 +54,47 @@ import Testing
         #expect(starred == 10)
     }
 }
+
+extension SourceAvailabilityTests {
+    /// AC-10, AC-11: T7 is unplugged after 12 of 38 files are read. No error
+    /// stops the app: the read reports a disconnect, the 12 photos stay (now
+    /// offline), nothing is marked missing, nothing is orphaned. Plugged back,
+    /// the read goes on from file 13 — 38 photos, no duplicate.
+    @Test func unplugMidIndexKeepsReadThenResumes() throws {
+        let base = FileManager.default.temporaryDirectory.appendingPathComponent("Drive-\(UUID().uuidString)", isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: base) }
+        let t7 = base.appendingPathComponent("T7"), shelf = base.appendingPathComponent("unplugged")
+        try FileManager.default.createDirectory(at: t7, withIntermediateDirectories: true)
+        let jpeg = try MetadataFixture.encode(.jpeg, options: MetadataFixture.Options())
+        for n in 0..<38 { try jpeg.write(to: t7.appendingPathComponent(String(format: "DSC%05d.JPG", n))) }
+        let database = try AppDatabase.makeEmpty()
+        let t7Id = try SourceStore(database: database).addFolder(name: "T7 RAW Archive", bookmark: Data(), includesSubfolders: true, pairsRawAndJpeg: true, kind: "drive")
+        let indexer = FolderSourceIndexer(database: database, composer: FolderSourceIndexTests.composer)
+
+        var asked = 0
+        let first = try indexer.index(sourceId: t7Id, root: t7, includesSubfolders: true, pairsRawAndJpeg: true, shouldContinue: {
+            asked += 1
+            if asked == 13 { try? FileManager.default.moveItem(at: t7, to: shelf) }
+            return true
+        })
+        #expect(first.disconnected)
+        #expect(first.photos == 12)
+        let offline = try database.reader.read { db in
+            (copies: try Int.fetchOne(db, sql: "SELECT COUNT(*) FROM photo_copies WHERE isOnline = 0") ?? 0,
+             missing: try Int.fetchOne(db, sql: "SELECT COUNT(*) FROM photo_copies WHERE missingSince IS NOT NULL") ?? 0,
+             orphans: try Int.fetchOne(db, sql: "SELECT COUNT(*) FROM photos WHERE orphanedAt IS NOT NULL") ?? 0,
+             status: try String.fetchOne(db, sql: "SELECT status FROM sources WHERE id = ?", arguments: [t7Id]))
+        }
+        #expect(offline.copies == 12)
+        #expect(offline.missing == 0)
+        #expect(offline.orphans == 0)
+        #expect(offline.status == "offline")
+
+        try FileManager.default.moveItem(at: shelf, to: t7)
+        try SourceStore(database: database).setOnline(true, sourceId: t7Id)
+        let resumed = try indexer.index(sourceId: t7Id, root: t7, includesSubfolders: true, pairsRawAndJpeg: true)
+        #expect(resumed == FolderSourceIndexer.Summary(photos: 26, unchanged: 12))
+        let total = try database.reader.read { db in try Int.fetchOne(db, sql: "SELECT COUNT(*) FROM photos") }
+        #expect(total == 38)
+    }
+}

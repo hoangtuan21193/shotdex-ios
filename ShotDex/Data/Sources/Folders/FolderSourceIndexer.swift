@@ -22,6 +22,9 @@ struct FolderSourceIndexer: Sendable {
         /// The cache volume ran out of room: thumbnails stopped, metadata did
         /// not ("Not enough space for previews", FS-19.01b §5).
         var previewsStoppedForSpace = false
+        /// The folder went away mid-read — a drive unplugged (FS-19.01b §1).
+        /// What was read stays; the source is offline, nothing is missing.
+        var disconnected = false
     }
 
     /// `shouldContinue` is asked before each file; false pauses the read.
@@ -93,7 +96,17 @@ struct FolderSourceIndexer: Sendable {
             }
 
             let url = root.appendingPathComponent(file.relativePath)
-            let hash = try ContentHasher.hash(FileBytes(url: url), full: false)
+            let hash: ContentHash
+            do {
+                hash = try ContentHasher.hash(FileBytes(url: url), full: false)
+            } catch {
+                guard Self.isReachable(root) else {
+                    try SourceStore(database: database).setOnline(false, sourceId: sourceId)
+                    summary.disconnected = true
+                    return summary
+                }
+                continue
+            }
             var photoId: String = existing?["photoId"] ?? UUID().uuidString
             var copyId: String = existing?["id"] ?? UUID().uuidString
             if existing == nil, let match = vanished.firstIndex(where: { $0.fast == hash.fast && $0.size == file.size }) {
@@ -138,6 +151,12 @@ struct FolderSourceIndexer: Sendable {
                 summary.previewsStoppedForSpace = true
             }
             summary.photos += 1
+        }
+        // A folder that is gone as a whole is unplugged, not emptied.
+        guard Self.isReachable(root) else {
+            try SourceStore(database: database).setOnline(false, sourceId: sourceId)
+            summary.disconnected = true
+            return summary
         }
         try markMissing(vanished.map(\.copyId), at: stamp)
         return summary
@@ -204,6 +223,11 @@ struct FolderSourceIndexer: Sendable {
             originalFilename: url.lastPathComponent
         )
         return composer.compose(asset: asset, exif: exif, exifStatus: status)
+    }
+
+    static func isReachable(_ root: URL) -> Bool {
+        var isDirectory: ObjCBool = false
+        return FileManager.default.fileExists(atPath: root.path, isDirectory: &isDirectory) && isDirectory.boolValue
     }
 
     /// What makes two paths one file: NFC, case folded.
