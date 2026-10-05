@@ -44,6 +44,11 @@ enum WatermarkCopy {
         String(localized: "Each share can change it", table: table, locale: locale, comment: "Settings, Watermark When Sharing value line")
     }
 
+    /// Share sheet header: videos go unstamped (FS-05.04 §2).
+    static func videosArentWatermarked(locale: Locale = .current) -> String {
+        String(localized: "Videos aren't watermarked", table: table, locale: locale, comment: "Share sheet header: videos in a watermarked share go as they are")
+    }
+
     /// Share sheet header: a watermarked share sends its RAW files as JPEG.
     static func rawSentAsJPEG(locale: Locale = .current) -> String {
         String(localized: "RAW sent as JPEG", table: table, locale: locale, comment: "Share sheet header: RAW files go as stamped JPEGs with a watermark")

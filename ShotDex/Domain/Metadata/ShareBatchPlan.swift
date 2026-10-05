@@ -90,6 +90,10 @@ struct ShareBatchPlan: Equatable, Sendable {
     /// it goes as a stamped JPEG and the header says so.
     var asksAboutRAW: Bool { rawCount > 0 && level != .all && watermarkName == nil }
 
+    /// "Videos aren't watermarked" on the header's second line: a stamp would
+    /// mean encoding the whole clip again, so videos go as they are.
+    var notesVideosNotWatermarked: Bool { watermarkName != nil && videoCount > 0 }
+
     /// "RAW sent as JPEG" on the header's second line: a watermarked share
     /// turns every RAW into a stamped JPEG.
     var notesRAWAsJPEG: Bool { watermarkName != nil && rawCount > 0 }

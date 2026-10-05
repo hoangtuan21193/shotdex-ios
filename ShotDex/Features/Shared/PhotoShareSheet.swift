@@ -230,7 +230,8 @@ enum PhotoShareSheet {
         }
         let converted = plan.notesHEICAsJPEG ? String(localized: "HEIC sent as JPEG") : nil
         let rawAsJPEG = plan.notesRAWAsJPEG ? WatermarkCopy.rawSentAsJPEG() : nil
-        let notes = [plan.watermarkNote, keeps, converted, rawAsJPEG].compactMap { $0 }
+        let videos = plan.notesVideosNotWatermarked ? WatermarkCopy.videosArentWatermarked() : nil
+        let notes = [plan.watermarkNote, videos, keeps, converted, rawAsJPEG].compactMap { $0 }
         return notes.isEmpty ? nil : notes.joined(separator: " · ")
     }
 

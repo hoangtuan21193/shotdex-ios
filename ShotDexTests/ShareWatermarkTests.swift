@@ -1,4 +1,5 @@
 import CoreGraphics
+import CryptoKit
 import Foundation
 import ImageIO
 import ShotDexKit
@@ -199,5 +200,26 @@ import UniformTypeIdentifiers
         await start.value
         #expect(batch.stage == .finished)
         batch.removeFiles()
+    }
+
+    /// AC-7: photo A and a 10 s MOV — A is stamped, the MOV arrives byte for
+    /// byte the same, and the header says videos aren't watermarked.
+    @Test func movieKeepsItsBytes() async throws {
+        defer { try? FileManager.default.removeItem(at: folder) }
+        let movie = folder.appendingPathComponent("IMG_0003.MOV")
+        try Data((0..<300_000).map { UInt8(truncatingIfNeeded: $0 &* 7919) }).write(to: movie)
+        let digest = SHA256.hash(data: try Data(contentsOf: movie))
+        let sources = [Self.sourceA, ShareSource(id: "V", kind: .video, filename: "IMG_0003.MOV", uniformType: "com.apple.quicktime-movie")]
+        var pipeline = ShareExportPipeline(
+            reader: LocalFileShareReader(files: ["A": try photoA(), "V": movie]),
+            folder: try ShareExportPipeline.makeFolder(in: folder), level: .noLocation
+        )
+        pipeline.watermark = Self.credit()
+        let result = await pipeline.export(sources)
+        #expect(result.files.count == 2)
+        #expect(result.watermarked == 1)
+        let shared = try #require(result.files.last)
+        #expect(SHA256.hash(data: try Data(contentsOf: shared)) == digest)
+        #expect(try Self.whitePixels(in: try #require(result.files.first), rect: try Self.boxes().stamped) > 200)
     }
 }

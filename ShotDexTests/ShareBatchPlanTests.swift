@@ -33,7 +33,7 @@ struct ShareBatchPlanTests {
         var plan = ShareBatchPlan(level: .noLocation, photoCount: 1, videoCount: 1)
         #expect(PhotoShareSheet.headerNote(plan: plan) == "Videos keep their metadata")
         plan.watermarkName = "Credit"
-        #expect(PhotoShareSheet.headerNote(plan: plan)?.hasPrefix("Watermark: Credit · Videos keep their metadata") == true)
+        #expect(PhotoShareSheet.headerNote(plan: plan) == "Watermark: Credit · Videos aren't watermarked · Videos keep their metadata")
         #expect(ShareBatchPlan(level: .all, photoCount: 0, videoCount: 1, watermarkName: "Credit").watermarkNote == nil)
     }
 
@@ -70,6 +70,15 @@ struct ShareBatchPlanTests {
         plan.watermarkName = "Credit"
         #expect(!plan.asksAboutRAW)
         #expect(PhotoShareSheet.headerNote(plan: plan) == "Watermark: Credit · RAW sent as JPEG")
+    }
+
+    /// AC-7: a watermarked share with a video says the video is not stamped.
+    @Test func videosArentWatermarked() {
+        var plan = ShareBatchPlan(level: .all, photoCount: 1, videoCount: 1)
+        #expect(!plan.notesVideosNotWatermarked)
+        plan.watermarkName = "Credit"
+        #expect(plan.notesVideosNotWatermarked)
+        #expect(PhotoShareSheet.headerNote(plan: plan) == "Watermark: Credit · Videos aren't watermarked")
     }
 
     /// Video goes as it is at every level, so a share of only videos has no
