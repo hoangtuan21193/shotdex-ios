@@ -39,4 +39,21 @@ struct VideoLookSessionTests {
         #expect(!model.canRedo)
         #expect(model.activeToolPanel == nil)
     }
+
+    /// AC-10: ✓, then Undo three times, one at a time: Moody Coast at 100,
+    /// then Velvia, then no look.
+    @Test func commitKeepsEachStep() {
+        let model = VideoStudioModelFixture.model()
+        threeSteps(on: model)
+        model.commitSession()
+        #expect(model.activeToolPanel == nil)
+        #expect(model.recipe.look?.source == Self.moody)
+        model.undo()
+        #expect(model.recipe.look?.source == Self.moody)
+        #expect(model.recipe.look?.amount == 1)
+        model.undo()
+        #expect(model.recipe.look == VideoLookSamples.velvia)
+        model.undo()
+        #expect(model.recipe.look == nil)
+    }
 }
