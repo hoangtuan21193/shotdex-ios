@@ -1,0 +1,88 @@
+{
+  "steps": [
+    {
+      "action": "launch"
+    },
+    {
+      "action": "wait",
+      "seconds": 6
+    },
+    {
+      "action": "tap",
+      "label": "Library",
+      "type": "button"
+    },
+    {
+      "action": "wait",
+      "seconds": 2
+    },
+    {
+      "action": "tap",
+      "label": "Select photos",
+      "type": "button"
+    },
+    {
+      "action": "wait",
+      "seconds": 1
+    },
+    {
+      "action": "tap",
+      "x": 0.165,
+      "y": 0.3
+    },
+    {
+      "action": "wait",
+      "seconds": 0.6
+    },
+    {
+      "action": "tap",
+      "label": "Share",
+      "type": "button"
+    },
+    {
+      "action": "wait",
+      "seconds": 12
+    },
+    {
+      "action": "screenshot",
+      "name": "01-share-off"
+    },
+    {
+      "action": "dump",
+      "name": "01-share-off",
+      "type": "button"
+    },
+    {
+      "action": "swipe",
+      "x": 0.5,
+      "y": 0.8,
+      "direction": "up",
+      "distance": 0.4
+    },
+    {
+      "action": "wait",
+      "seconds": 1.5
+    },
+    {
+      "action": "screenshot",
+      "name": "02-share-rows"
+    },
+    {
+      "action": "tap",
+      "label": "Share With Watermark"
+    },
+    {
+      "action": "wait",
+      "seconds": 6
+    },
+    {
+      "action": "screenshot",
+      "name": "03-share-with"
+    },
+    {
+      "action": "dump",
+      "name": "03-share-with",
+      "type": "staticText"
+    }
+  ]
+}

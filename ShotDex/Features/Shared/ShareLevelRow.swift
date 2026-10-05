@@ -43,6 +43,38 @@ final class ShareLevelRow: UIActivity {
     override func perform() { activityDidFinish(true) }
 }
 
+/// The app's third row (FS-05.04 §4): shares this one share again with or
+/// without the watermark. Settings is never touched.
+final class ShareWatermarkRow: UIActivity {
+    let row: ShareBatchPlan.WatermarkRow
+
+    init(row: ShareBatchPlan.WatermarkRow) {
+        self.row = row
+        super.init()
+    }
+
+    static let activityType = UIActivity.ActivityType("com.hoangtuan.shotdex.share.watermark")
+
+    static func title(for row: ShareBatchPlan.WatermarkRow) -> String {
+        switch row {
+        case .with: WatermarkCopy.shareWithWatermark()
+        case .without: WatermarkCopy.shareWithoutWatermark()
+        }
+    }
+
+    override class var activityCategory: UIActivity.Category { .action }
+    override var activityType: UIActivity.ActivityType? { Self.activityType }
+    override var activityTitle: String? { Self.title(for: row) }
+    override var activityImage: UIImage? {
+        UIImage(systemName: row == .with ? "signature" : "pencil.slash")
+    }
+
+    override func canPerform(withActivityItems activityItems: [Any]) -> Bool { true }
+
+    /// The sheet closes; its completion handler shares again.
+    override func perform() { activityDidFinish(true) }
+}
+
 /// The first item of a photo share, carrying the header the share sheet
 /// shows: the photo (or the count) and the metadata level in force. The
 /// header is preview information, not a control (spec §4).

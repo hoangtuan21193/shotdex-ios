@@ -24,6 +24,24 @@ struct ShareBatchPlan: Equatable, Sendable {
     var heicAsJPEGCount = 0
     /// The watermark this share stamps, by name (FS-05.04 §4); nil for none.
     var watermarkName: String?
+    /// Whether any watermark preset exists. Without one there is neither the
+    /// one-off row nor the note.
+    var hasWatermarkPresets = false
+
+    /// The app's third row (FS-05.04 §4): the opposite of what this share
+    /// does — Share With Watermark when it stamps nothing, Without when it
+    /// stamps. A one-off; Settings never changes.
+    var watermarkRow: WatermarkRow? {
+        guard hasWatermarkPresets, photoCount + rawCount > 0 else { return nil }
+        return watermarkName == nil ? .with : .without
+    }
+
+    enum WatermarkRow: Equatable, Sendable {
+        case with, without
+
+        /// What the share does again once the row is chosen.
+        var stamps: Bool { self == .with }
+    }
 
     /// The one-shot rows, in order: the two levels that are not in force.
     /// Choosing one changes this share only, never Settings.

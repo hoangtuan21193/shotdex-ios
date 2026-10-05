@@ -44,6 +44,14 @@ enum WatermarkCopy {
         String(localized: "Each share can change it", table: table, locale: locale, comment: "Settings, Watermark When Sharing value line")
     }
 
+    static func shareWithWatermark(locale: Locale = .current) -> String {
+        String(localized: "Share With Watermark", table: table, locale: locale, comment: "Share sheet row: this share again, stamped")
+    }
+
+    static func shareWithoutWatermark(locale: Locale = .current) -> String {
+        String(localized: "Share Without Watermark", table: table, locale: locale, comment: "Share sheet row: this share again, unstamped")
+    }
+
     // MARK: Form row (FS-05.04 §4)
 
     /// The Resize form, as the Watermark screen's back button names it.

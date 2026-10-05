@@ -93,6 +93,17 @@ import UIKit
         #expect(!batch.results.hasBeenAsked)
     }
 
+    /// FS-05.04 AC-5: the watermark row reopens the sheet like a level row —
+    /// nothing is downloaded or written for it.
+    @Test func watermarkRowPreparesNothing() async throws {
+        defer { cleanUp() }
+        let (batch, fake) = batch(2, script: "cloud=all,seconds=0.2")
+        let items = await Self.ask(batch.providers(header: nil), activity: ShareWatermarkRow.activityType)
+        #expect(items.allSatisfy { $0 is URL })
+        #expect(fake.fetchCount == 0)
+        #expect(!batch.results.hasBeenAsked)
+    }
+
     /// FS-08.06 AC-11 / FS-02.06 §5. Cancel in the modal while the batch is
     /// gathering: the destination gets no file, the folders of this share
     /// are gone, and the share sheet is told to close.

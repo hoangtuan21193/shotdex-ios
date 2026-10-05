@@ -108,6 +108,26 @@ struct WatermarkSettingsStoreTests {
         #expect(reopened.formStamp(in: stores.presets.presets)?.presetID == credit.id)
     }
 
+    /// Share With Watermark when Settings is Off (FS-05.04 §4): the preset
+    /// last used on a form, else the newest; Settings stays Off.
+    @Test func shareWithUsesLastFormPresetElseNewest() throws {
+        let older = SignaturePreset(name: "Studio", createdAt: Date(timeIntervalSince1970: 1), layers: [.text()])
+        var credit = WatermarkFixture.credit(logo: nil)
+        credit.createdAt = Date(timeIntervalSince1970: 2)
+        let stores = try WatermarkModelTests.stores(presets: [credit, older])
+        let context = ShareWatermarkContext(
+            settings: stores.settings, presets: stores.presets, libraryQueries: nil, editing: nil, imageExists: { _ in true }
+        )
+        #expect(context.preset(override: nil) == nil)
+        #expect(context.preset(override: true)?.name == "Credit", "no form used yet: the newest")
+        stores.settings.update { $0.presetID = older.id }
+        #expect(context.preset(override: true)?.name == "Studio", "the one last used on a form")
+        #expect(stores.settings.sharingPresetID == nil, "Settings stays Off")
+        stores.settings.setSharingPreset(credit.id)
+        #expect(context.preset(override: false) == nil)
+        #expect(context.preset(override: nil)?.name == "Credit")
+    }
+
     /// A preset deleted since reads as Off — never another preset.
     @Test func aDeletedPresetIsOff() throws {
         let credit = WatermarkFixture.credit(logo: nil)

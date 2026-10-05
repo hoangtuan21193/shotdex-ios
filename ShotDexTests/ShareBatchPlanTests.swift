@@ -37,6 +37,31 @@ struct ShareBatchPlanTests {
         #expect(ShareBatchPlan(level: .all, photoCount: 0, videoCount: 1, watermarkName: "Credit").watermarkNote == nil)
     }
 
+    /// AC-5: the third row is the opposite of what the share does — With
+    /// when Settings is Off, Without when it names a preset.
+    @Test func watermarkRowFlipsSettings() {
+        var off = ShareBatchPlan(level: .noLocation, photoCount: 1, videoCount: 0)
+        off.hasWatermarkPresets = true
+        #expect(off.watermarkRow == .with)
+        #expect(ShareWatermarkRow.title(for: .with) == "Share With Watermark")
+        var on = off
+        on.watermarkName = "Credit"
+        #expect(on.watermarkRow == .without)
+        #expect(ShareWatermarkRow.title(for: .without) == "Share Without Watermark")
+        #expect(ShareBatchPlan.WatermarkRow.with.stamps && !ShareBatchPlan.WatermarkRow.without.stamps)
+    }
+
+    /// No preset at all: neither the row nor the note; a share of only
+    /// videos has nothing to stamp either.
+    @Test func noPresetNoRow() {
+        let none = ShareBatchPlan(level: .noLocation, photoCount: 2, videoCount: 0)
+        #expect(none.watermarkRow == nil)
+        #expect(none.watermarkNote == nil)
+        var videos = ShareBatchPlan(level: .noLocation, photoCount: 0, videoCount: 2)
+        videos.hasWatermarkPresets = true
+        #expect(videos.watermarkRow == nil)
+    }
+
     /// Video goes as it is at every level, so a share of only videos has no
     /// level to change.
     @Test func videosOnlyHaveNoRows() {

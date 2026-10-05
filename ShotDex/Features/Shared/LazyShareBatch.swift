@@ -96,7 +96,8 @@ final class LazyShareBatch: Identifiable {
 
     /// One lazy provider per item, in order. The first carries the header.
     func providers(header: ShareHeader?) -> [LazyShareItemProvider] {
-        let skip = Set(MetadataLevel.allCases.map(ShareLevelRow.activityType(for:)))
+        // The app's own rows reopen the sheet: nothing is prepared for them.
+        let skip = Set(MetadataLevel.allCases.map(ShareLevelRow.activityType(for:)) + [ShareWatermarkRow.activityType])
         let start: @Sendable () -> Void = { [weak self] in
             Task { @MainActor in await self?.start() }
         }

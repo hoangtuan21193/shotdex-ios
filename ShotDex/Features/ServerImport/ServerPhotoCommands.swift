@@ -172,12 +172,20 @@ struct ServerPhotoCommandHost: ViewModifier {
             Task { @MainActor in
                 // A server photo follows Watermark When Sharing like any
                 // share (FS-05.04 §4); it has no indexed tokens.
-                let watermark = await dependencies.shareWatermark.watermark(for: sources)
-                let share = await PhotoShareSheet.gather(
-                    sources: sources, reader: reader, level: .sharingDefault(), watermark: watermark,
-                    onClose: { self.closeTool() }
-                )
-                PhotoShareSheet.present(share)
+                let context = dependencies.shareWatermark
+                let close: @MainActor () -> Void = { self.closeTool() }
+                // Both kinds of row share again with the other choice kept.
+                @MainActor func gather(level: MetadataLevel, override: Bool?) async -> PhotoShareSheet.Prepared {
+                    let watermark = await context.watermark(for: sources, override: override)
+                    var share = await PhotoShareSheet.gather(
+                        sources: sources, reader: reader, level: level, watermark: watermark, onClose: close
+                    )
+                    share.hasWatermarkPresets = context.hasPresets
+                    share.regather = { await gather(level: $0, override: override) }
+                    share.rewatermark = { await gather(level: level, override: $0) }
+                    return share
+                }
+                PhotoShareSheet.present(await gather(level: .sharingDefault(), override: nil))
             }
         case .copy:
             if let photo = finished.photos.first, let image = ServerPhotoHandoff.pasteboardImage(for: photo) {

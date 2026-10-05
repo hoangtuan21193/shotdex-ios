@@ -36,13 +36,19 @@ enum PhotoShareSheet {
         var heicSentAsJPEG = 0
         /// The watermark the photos were stamped with (FS-05.04), by name.
         var watermarkName: String?
+        /// Whether any watermark preset exists — the third row needs one.
+        var hasWatermarkPresets = false
+        /// Prepares the same share again with (true) or without the
+        /// watermark, for the third row. `nil` where a share offers none.
+        var rewatermark: (@MainActor (Bool) async -> Prepared)?
 
         var plan: ShareBatchPlan {
             ShareBatchPlan(
                 level: level, photoCount: photoCount, videoCount: items.count - photoCount,
                 rawSharedAsIsCount: rawSharedAsIs,
                 heicAsJPEGCount: heicSentAsJPEG,
-                watermarkName: watermarkName
+                watermarkName: watermarkName,
+                hasWatermarkPresets: hasWatermarkPresets && rewatermark != nil
             )
         }
 
@@ -146,6 +152,7 @@ enum PhotoShareSheet {
         )
         var plan = ShareBatchPlan(sources: sources, level: level)
         plan.watermarkName = watermark?.name
+        plan.hasWatermarkPresets = downloads?.watermark?.hasPresets ?? false
         plan.rawSharedAsIsCount = rawChoice == .shareRAWWithLocation && level != .all ? plan.rawCount : 0
         plan.heicAsJPEGCount = sources.filter { source in
             source.kind == .photo && source.uniformType.map { MetadataRewriter.convertsToJPEG($0, at: level) } == true
@@ -163,12 +170,25 @@ enum PhotoShareSheet {
             imageFile: imageFile
         )
         let providers = batch.providers(header: plan.photoCount + plan.rawCount > 0 ? header : nil)
-        let rows = plan.rows.map(ShareLevelRow.init(level:))
+        let rows: [UIActivity] = plan.rows.map(ShareLevelRow.init(level:))
+            + (plan.watermarkRow.map { [ShareWatermarkRow(row: $0)] } ?? [])
         let activity = present(items: providers, activities: rows) { chosen in
             batch.cancel()
             batch.removeFiles()
             if let imageFile { try? FileManager.default.removeItem(at: imageFile) }
             downloads?.end(batch)
+            if chosen == ShareWatermarkRow.activityType, let row = plan.watermarkRow {
+                // The watermark row: the same share again, stamped or not,
+                // for this once (FS-05.04 §4).
+                Task { @MainActor in
+                    await waitForDismissal()
+                    await share(
+                        assets: assets, downloads: downloads, level: level, unreadableRAW: unreadableRAW,
+                        watermarkOverride: row.stamps
+                    )
+                }
+                return
+            }
             guard let chosen,
                   let again = MetadataLevel.allCases.first(where: { ShareLevelRow.activityType(for: $0) == chosen })
             else { return }
@@ -309,8 +329,18 @@ enum PhotoShareSheet {
             let isPhoto = prepared.folder.map { first.path.hasPrefix($0.path) } ?? false
             items[0] = ShareHeaderItem(file: first, title: title, note: note, showsImage: isPhoto)
         }
-        let rows = prepared.regather == nil ? [] : plan.rows.map(ShareLevelRow.init(level:))
+        var rows: [UIActivity] = prepared.regather == nil ? [] : plan.rows.map(ShareLevelRow.init(level:))
+        if let row = plan.watermarkRow { rows.append(ShareWatermarkRow(row: row)) }
         present(items: items, activities: rows) { chosen in
+            if chosen == ShareWatermarkRow.activityType, let row = plan.watermarkRow, let rewatermark = prepared.rewatermark {
+                prepared.removeFiles()
+                Task { @MainActor in
+                    let again = await rewatermark(row.stamps)
+                    await waitForDismissal()
+                    present(again)
+                }
+                return
+            }
             guard let chosen, let regather = prepared.regather,
                   let level = MetadataLevel.allCases.first(where: { ShareLevelRow.activityType(for: $0) == chosen })
             else { return prepared.finish() }
