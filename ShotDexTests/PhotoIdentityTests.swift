@@ -116,11 +116,12 @@ extension PhotoIdentityTests {
         #expect(try count("SELECT COUNT(*) FROM photos", database) == 14)
 
         let pass = IdentityMergePass(database: database) { sourceId, path in roots[sourceId]?.appendingPathComponent(path) }
-        #expect(try pass.run() == IdentityMergePass.Summary(hashed: 14, merged: 5))
+        let first = try pass.run()
+        #expect((first.hashed, first.merged, first.survivors.count) == (14, 5, 5))
         #expect(try count("SELECT COUNT(*) FROM photos", database) == 9)
         #expect(try count("SELECT COUNT(*) FROM photo_metadata", database) == 9)
         #expect(try count("SELECT COUNT(*) FROM (SELECT photoId FROM photo_copies GROUP BY photoId HAVING COUNT(*) = 2)", database) == 5)
-        #expect(try pass.run() == IdentityMergePass.Summary(hashed: 0, merged: 0))
+        #expect(try pass.run() == IdentityMergePass.Summary())
     }
 
     private func count(_ sql: String, _ database: AppDatabase) throws -> Int {
@@ -196,7 +197,8 @@ extension PhotoIdentityTests {
         try FileManager.default.moveItem(at: japan.appendingPathComponent("DSC04512.JPG"), to: t7.appendingPathComponent("DSC04512.JPG"))
         _ = try indexer.index(sourceId: japanId, root: japan, includesSubfolders: true, pairsRawAndJpeg: true)
         _ = try indexer.index(sourceId: t7Id, root: t7, includesSubfolders: true, pairsRawAndJpeg: true)
-        #expect(try pass.run() == IdentityMergePass.Summary(hashed: 1, merged: 1))
+        let summary = try pass.run()
+        #expect((summary.hashed, summary.merged, summary.survivors.count) == (1, 1, 1))
 
         let state = try database.reader.read { db in
             (photos: try String.fetchAll(db, sql: "SELECT id FROM photos"),

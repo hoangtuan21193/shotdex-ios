@@ -93,6 +93,43 @@ import Testing
         }
     }
 
+    /// AC-28: photo A has a sidecar saying ★2 in "2026 Japan" and one saying
+    /// ★5 on T7, the T7 one newer. Both sources read and merged: A is ★5,
+    /// and the "2026 Japan" sidecar is rewritten to ★5.
+    @Test func copiesDisagreeNewestWins() async throws {
+        let base = FileManager.default.temporaryDirectory.appendingPathComponent("Disagree-\(UUID().uuidString)", isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: base) }
+        let japan = base.appendingPathComponent("2026 Japan"), t7 = base.appendingPathComponent("T7")
+        var options = MetadataFixture.Options()
+        options.starRating = nil
+        let raw = try MetadataFixture.encode(.tiff, options: options)
+        let now = Date()
+        for (folder, stars, age) in [(japan, 2, 600.0), (t7, 5, 60.0)] {
+            try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+            try raw.write(to: folder.appendingPathComponent("A.ARW"))
+            try Self.overwrite(folder.appendingPathComponent("A.xmp"), with: SidecarReaderTests.lightroomSidecar(rating: stars),
+                               modified: now.addingTimeInterval(-age))
+        }
+        let database = try AppDatabase.makeEmpty()
+        let sources = SourceStore(database: database)
+        let roots = [try sources.addFolder(name: "2026 Japan", bookmark: Data(), includesSubfolders: true, pairsRawAndJpeg: true): japan,
+                     try sources.addFolder(name: "T7 RAW Archive", bookmark: Data(), includesSubfolders: true, pairsRawAndJpeg: true, kind: "drive"): t7]
+        let indexer = FolderSourceIndexer(database: database, composer: FolderSourceIndexTests.composer)
+        for (id, root) in roots { _ = try indexer.index(sourceId: id, root: root, includesSubfolders: true, pairsRawAndJpeg: true) }
+        let fileURL: @Sendable (String, String) -> URL? = { sourceId, path in roots[sourceId]?.appendingPathComponent(path) }
+        let merge = try IdentityMergePass(database: database, fileURL: fileURL).run()
+        #expect(merge.survivors.count == 1)
+
+        let queue = SidecarWriteQueue(writer: SidecarWriter(database: database, fileURL: fileURL))
+        await queue.schedule(merge.survivors)
+        #expect(await queue.flush().written == 2)
+        for folder in [japan, t7] {
+            #expect(SidecarReader.read(sidecarAt: folder.appendingPathComponent("A.xmp"))?.rating == 5, "\(folder.lastPathComponent)")
+        }
+        let stored = try await database.reader.read { db in try Int.fetchAll(db, sql: "SELECT rating FROM photo_user_marks") }
+        #expect(stored == [5])
+    }
+
     /// Polls the main actor for up to 5 s.
     private func waitUntil(_ condition: () -> Bool) async throws {
         let start = Date()

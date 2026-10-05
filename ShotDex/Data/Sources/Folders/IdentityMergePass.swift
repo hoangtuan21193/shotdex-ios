@@ -12,6 +12,10 @@ struct IdentityMergePass: Sendable {
     struct Summary: Equatable, Sendable {
         var hashed = 0
         var merged = 0
+        /// The photos others were folded into. Their copies may carry
+        /// sidecars that disagree; the merged values go out to all of them
+        /// (FS-19.02 §6) — the caller queues the write.
+        var survivors: Set<String> = []
     }
 
     func run(limit: Int = 500) throws -> Summary {
@@ -34,13 +38,13 @@ struct IdentityMergePass: Sendable {
             try store.save(hash, copyId: copy.id)
             summary.hashed += 1
         }
-        summary.merged = try mergeSharedHashes()
+        (summary.merged, summary.survivors) = try mergeSharedHashes()
         return summary
     }
 
     /// Folds every set of photos sharing a full hash into one; returns how
-    /// many photos went.
-    func mergeSharedHashes() throws -> Int {
+    /// many photos went and the ids they went into.
+    func mergeSharedHashes() throws -> (merged: Int, survivors: Set<String>) {
         try database.writer.write { db in
             let groups = try Row.fetchAll(db, sql: """
                 SELECT GROUP_CONCAT(DISTINCT c.photoId) AS ids FROM content_hashes h
@@ -49,6 +53,7 @@ struct IdentityMergePass: Sendable {
                 GROUP BY h.fullHash HAVING COUNT(DISTINCT c.photoId) > 1
                 """, arguments: [ContentHash.algorithm, ContentHash.version])
             var merged = 0
+            var survivors = Set<String>()
             let now = Int(Date().timeIntervalSince1970)
             for group in groups {
                 var ids = (group["ids"] as String).split(separator: ",").map(String.init)
@@ -57,8 +62,9 @@ struct IdentityMergePass: Sendable {
                     survivor = try PhotoIdentityStore.merge(db, survivor, other, now: now).winnerId
                     merged += 1
                 }
+                survivors.insert(survivor)
             }
-            return merged
+            return (merged, survivors)
         }
     }
 }
