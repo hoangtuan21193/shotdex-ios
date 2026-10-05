@@ -51,6 +51,10 @@ final class VideoStudioModel {
     let photoLibrary: PhotoLibraryService
     /// The music beds' beats (FS-12.12): found on demand, cached by file.
     let beats: VideoBeatsModel
+    /// The clips' voices, for the beds that duck under them (FS-12.13).
+    let ducking: VideoDuckingModel
+    /// The export is waiting for the voices before it writes (D-14).
+    var isListeningForExport = false
     private let overlayFontRecents: OverlayFontRecentsStore
     let overlayImages: OverlayImageStore
 
@@ -198,6 +202,7 @@ final class VideoStudioModel {
         self.mode = mode
         self.service = service
         self.beats = VideoBeatsModel(cache: service.audioAnalysis)
+        self.ducking = VideoDuckingModel(cache: service.audioAnalysis)
         self.photoLibrary = photoLibrary
         self.overlayFontRecents = overlayFontRecents
         self.overlayImages = overlayImages
@@ -558,6 +563,8 @@ final class VideoStudioModel {
             if activeItemCommand == .beats, let music = selectedMusicTrack, let url = musicURL(for: music.source) {
                 beats.findBeats(of: url)
             }
+            // Ducking opened: the clips are listened to now (FS-12.13 §4).
+            if activeItemCommand == .ducking { refreshDucking(force: true) }
             // A clip's Look block writes that clip unless told otherwise; a
             // group's writes every clip in it — 06c's Selected (FS-12.11 §5).
             if activeItemCommand == .look { lookTarget = isSelectingClips && selectedClipIDs.count >= 2 ? .selected : .thisClip }
@@ -1566,6 +1573,7 @@ final class VideoStudioModel {
         for task in waveformTasks.values { task.cancel() }
         waveformTasks.removeAll()
         beats.cancelAll()
+        ducking.cancelAll()
         detachObservers()
         player?.pause()
         player = nil
@@ -3403,9 +3411,21 @@ final class VideoStudioModel {
                 exportBackgroundObserver = nil
             }
             do {
+                // A bed that ducks waits for the voices: no file goes out
+                // without its dips (FS-12.13 §6).
+                if recipe.musicTracks.contains(where: \.ducking.isOn) {
+                    refreshDucking()
+                    if ducking.isListening {
+                        isListeningForExport = true
+                        await ducking.waitUntilDone()
+                        isListeningForExport = false
+                        try Task.checkCancellation()
+                    }
+                }
                 let url = try await service.export(
                     recipe: recipe,
-                    sources: sources
+                    sources: sources,
+                    activity: ducking.activity
                 ) { [weak self] progress in
                     if case .exporting = self?.exportState {
                         self?.exportState = .exporting(progress)
@@ -3685,11 +3705,17 @@ final class VideoStudioModel {
 
     // MARK: - Preview pipeline
 
-    private func markEdited() { hasEdits = true }
+    func markEdited() { hasEdits = true }
 
-    private func applyAudioTier() {
+    /// How often each tier was asked for — the proof that a setting is the
+    /// audio tier and nothing more (FS-12.13 AC-10).
+    private(set) var audioTierRequests = 0
+    private(set) var structuralRebuildRequests = 0
+
+    func applyAudioTier() {
+        audioTierRequests += 1
         guard let playerItem, let layout else { return }
-        service.applyAudioMix(recipe: recipe, layout: layout, to: playerItem)
+        service.applyAudioMix(recipe: recipe, layout: layout, activity: ducking.activity, to: playerItem)
     }
 
     private func applyVideoTier() {
@@ -3700,6 +3726,7 @@ final class VideoStudioModel {
     /// Debounced full rebuild for structural edits: a drag over the timeline
     /// fires many changes, one composition build at the end is enough.
     private func schedulePreviewRebuild() {
+        structuralRebuildRequests += 1
         rebuildTask?.cancel()
         rebuildTask = Task {
             try? await Task.sleep(for: .milliseconds(300))
@@ -3723,7 +3750,8 @@ final class VideoStudioModel {
         let requested = resumeTimeAfterRebuild
         resumeTimeAfterRebuild = nil
         do {
-            let build = try await service.makePreviewItem(recipe: recipe, sources: sources)
+            refreshDucking()
+            let build = try await service.makePreviewItem(recipe: recipe, sources: sources, activity: ducking.activity)
             guard !isClosed, mine == rebuildGeneration else {
                 if mine != rebuildGeneration, resumeTimeAfterRebuild == nil { resumeTimeAfterRebuild = requested }
                 return

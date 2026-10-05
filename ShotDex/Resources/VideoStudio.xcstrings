@@ -1,6 +1,30 @@
 {
   "sourceLanguage": "en",
   "strings": {
+    " · %lld clips not checked": {
+      "comment": "Video Studio ducking: after the summary — clips whose sound could not be read (in iCloud with no network), so they lower nothing (plural)",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": " · %lld clip not checked"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": " · %lld clips not checked"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "%@ + %@": {
       "comment": "Video Studio multi-select: the kinds in the group — 2 videos + 1 photo",
       "extractionState": "manual"
@@ -19,6 +43,14 @@
     },
     "%@ · %lld BPM": {
       "comment": "Video Studio beats card on the Duo cover: the track's name and tempo — Morning Drive · 96 BPM",
+      "extractionState": "manual"
+    },
+    "%@ · music": {
+      "comment": "Video Studio ducking graph: the bed it draws — A1 · music",
+      "extractionState": "manual"
+    },
+    "%@%lld dB": {
+      "comment": "Video Studio ducking: a level in decibels, with a real minus sign — −12 dB",
       "extractionState": "manual"
     },
     "%@%lld ms": {
@@ -442,7 +474,7 @@
       "extractionState": "manual"
     },
     "Amount": {
-      "comment": "Video Studio Look panel: how much of the chosen look is mixed in, 0–100",
+      "comment": "Video Studio: Look panel — how much of the chosen look is mixed in, 0–100; ducking — how far the music goes down under a voice, in dB",
       "extractionState": "manual"
     },
     "Animate In": {
@@ -451,6 +483,10 @@
     },
     "Animate Out": {
       "comment": "Video Studio iPad text panel: title of the pop-up that picks how the caption goes out — Animate Out: None",
+      "extractionState": "manual"
+    },
+    "Any Clip Sound": {
+      "comment": "Video Studio ducking: the music goes down whenever a clip has sound of its own",
       "extractionState": "manual"
     },
     "Applies to the %lld videos": {
@@ -669,6 +705,14 @@
       "comment": "Video Studio Media panel: under its name while an item is being dragged",
       "extractionState": "manual"
     },
+    "Duck Under": {
+      "comment": "Video Studio ducking: header over Voices and Any Clip Sound — what makes the music go down",
+      "extractionState": "manual"
+    },
+    "Duck in": {
+      "comment": "Video Studio ducking: how long the music takes to go down before a voice starts",
+      "extractionState": "manual"
+    },
     "Ducking": {
       "comment": "Video Studio: the music command that lowers music under speech",
       "extractionState": "manual"
@@ -849,6 +893,10 @@
       "comment": "Video Studio Media panel: under its name when Photos access is limited",
       "extractionState": "manual"
     },
+    "Listening for voices…": {
+      "comment": "Video Studio ducking: the clips' sound is being analysed on the device; also shown while an export waits for it",
+      "extractionState": "manual"
+    },
     "Lock %@": {
       "comment": "Video Studio track switch: stops the named lane (e.g. Video, Music 2) being selected or dragged; the trait says whether it is on",
       "extractionState": "manual"
@@ -937,6 +985,10 @@
       "comment": "Video Studio: a music bed on the timeline",
       "extractionState": "manual"
     },
+    "Music level": {
+      "comment": "Video Studio ducking graph legend: the white line is the music's level",
+      "extractionState": "manual"
+    },
     "Mute": {
       "comment": "Video Studio: the speaker at the head of a Volume row — silences the clip or the song, keeping its level",
       "extractionState": "manual"
@@ -965,8 +1017,16 @@
       "comment": "Video Studio Media panel: Recents when the library is empty",
       "extractionState": "manual"
     },
+    "No sound in the clips": {
+      "comment": "Video Studio ducking, Any Clip Sound: none of the clips has sound loud enough to lower the music",
+      "extractionState": "manual"
+    },
     "No steady beat": {
       "comment": "Video Studio beats card: the analysis found no tempo to snap to",
+      "extractionState": "manual"
+    },
+    "No voices in clip sound": {
+      "comment": "Video Studio ducking: none of the clips has someone speaking",
       "extractionState": "manual"
     },
     "Noise Reduction": {
@@ -991,6 +1051,10 @@
     },
     "Offset": {
       "comment": "Video Studio beats: shifts every beat of the bed a few milliseconds earlier or later",
+      "extractionState": "manual"
+    },
+    "Only the music moves. Each clip keeps its own level.": {
+      "comment": "Video Studio ducking: under the settings — ducking never lowers the clips",
       "extractionState": "manual"
     },
     "Open Settings": {
@@ -1051,6 +1115,10 @@
     },
     "Recents": {
       "comment": "Video Studio Media panel tab: every photo and video, newest first",
+      "extractionState": "manual"
+    },
+    "Recover": {
+      "comment": "Video Studio ducking: how long the music takes to come back up after a voice ends",
       "extractionState": "manual"
     },
     "Red": {
@@ -1161,6 +1229,30 @@
       "comment": "Video Studio iPad: the switch that makes clip edges and lengths stick to the music's beats",
       "extractionState": "manual"
     },
+    "Sound in %lld clips · %@": {
+      "comment": "Video Studio ducking, Any Clip Sound: how many clips lower the music, and for how long in all — Sound in 3 clips · 9.4s (plural)",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Sound in %lld clip · %@"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Sound in %lld clips · %@"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "Spacing": {
       "comment": "Video Studio iPad text inspector: section title over Tracking and Line spacing",
       "extractionState": "manual"
@@ -1213,6 +1305,10 @@
       "comment": "Video Studio: retries writing the video draft",
       "extractionState": "manual"
     },
+    "Under Voices": {
+      "comment": "Video Studio ducking: the switch that lowers the music while the clips have someone speaking",
+      "extractionState": "manual"
+    },
     "Unmute": {
       "comment": "Video Studio: the speaker at the head of a Volume row — brings back the clip's or the song's level",
       "extractionState": "manual"
@@ -1248,6 +1344,38 @@
     "Video, %@": {
       "comment": "Video Studio Media panel: VoiceOver label of a video cell — its length",
       "extractionState": "manual"
+    },
+    "Voice": {
+      "comment": "Video Studio ducking: label on the video lane where a clip has someone speaking",
+      "extractionState": "manual"
+    },
+    "Voices": {
+      "comment": "Video Studio ducking: the music goes down while someone speaks in a clip",
+      "extractionState": "manual"
+    },
+    "Voices in %lld clips · %@": {
+      "comment": "Video Studio ducking: how many clips have someone speaking, and for how long in all — Voices in 3 clips · 8.6s (plural)",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Voices in %lld clip · %@"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Voices in %lld clips · %@"
+                }
+              }
+            }
+          }
+        }
+      }
     },
     "Volume": {
       "comment": "Video Studio: a clip's or a bed's own level",

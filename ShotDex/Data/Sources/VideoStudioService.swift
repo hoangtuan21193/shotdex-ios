@@ -445,7 +445,8 @@ final class VideoStudioService {
     /// structural edits; filter/volume edits use the cheap tiers below.
     func makePreviewItem(
         recipe: VideoProjectRecipe,
-        sources: [UUID: VideoClipSource]
+        sources: [UUID: VideoClipSource],
+        activity: [String: ClipSoundActivity] = [:]
     ) async throws -> PreviewBuild {
         let music = await loadMusicSources(recipe.musicTracks)
         let blank = try await blankClipIfNeeded(recipe: recipe, sources: sources)
@@ -476,7 +477,7 @@ final class VideoStudioService {
             stillStore: previewStillStore,
             bakesOverlays: false
         )
-        item.audioMix = VideoCompositionBuilder.audioMix(recipe: recipe, layout: layout)
+        item.audioMix = VideoCompositionBuilder.audioMix(recipe: recipe, layout: layout, activity: activity)
         return PreviewBuild(playerItem: item, layout: layout)
     }
 
@@ -500,9 +501,10 @@ final class VideoStudioService {
     func applyAudioMix(
         recipe: VideoProjectRecipe,
         layout: VideoCompositionBuilder.Layout,
+        activity: [String: ClipSoundActivity] = [:],
         to item: AVPlayerItem
     ) {
-        item.audioMix = VideoCompositionBuilder.audioMix(recipe: recipe, layout: layout)
+        item.audioMix = VideoCompositionBuilder.audioMix(recipe: recipe, layout: layout, activity: activity)
     }
 
     // MARK: - Export
@@ -515,6 +517,7 @@ final class VideoStudioService {
     func export(
         recipe: VideoProjectRecipe,
         sources: [UUID: VideoClipSource],
+        activity: [String: ClipSoundActivity] = [:],
         progress: @escaping @MainActor (Double) -> Void
     ) async throws -> URL {
         let renderSize = recipe.canvasSize()
@@ -543,7 +546,7 @@ final class VideoStudioService {
             bakesOverlays: true,
             frameRate: recipe.frameRate
         )
-        let audioMix = VideoCompositionBuilder.audioMix(recipe: recipe, layout: layout)
+        let audioMix = VideoCompositionBuilder.audioMix(recipe: recipe, layout: layout, activity: activity)
 
         let outputURL = try makeSessionDirectory()
             .appendingPathComponent("ShotDex-Video-\(UUID().uuidString).mp4")

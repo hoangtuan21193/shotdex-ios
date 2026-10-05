@@ -1188,6 +1188,10 @@ struct VideoStudioSheetHost: View {
             ScrollView(showsIndicators: false) {
                 VideoBeatsPanel(model: model, music: music, isDesk: isDesk, previewsInline: layout != .band)
             }
+        } else if let music = model.selectedMusicTrack, model.activeItemCommand == .ducking {
+            ScrollView(showsIndicators: false) {
+                VideoDuckingPanel(model: model, music: music, isDesk: isDesk, isColumn: layout == .column && !isDesk)
+            }
         } else if let music = model.selectedMusicTrack {
             VStack(spacing: 0) {
                 MutableVolumeRow(

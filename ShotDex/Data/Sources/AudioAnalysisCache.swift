@@ -79,3 +79,40 @@ struct MusicBeatAnalyzer: Sendable {
         return analysis
     }
 }
+
+/// A clip's sound (FS-12.13 §4) by asset: what the cache holds, plus the
+/// parts of `range` it does not hold yet, read and joined on — a trim that
+/// grew analyses only what is new. Nothing leaves the device.
+struct ClipSoundAnalyzer: Sendable {
+    let cache: AudioAnalysisCache
+
+    enum Failure: Error, Equatable { case unreadable }
+
+    static func key(_ assetID: String) -> String { AudioAnalysisCache.hashed("voices|\(assetID)") }
+
+    func activity(assetID: String, source: VideoClipSource, range: ClosedRange<Double>) async throws -> ClipSoundActivity {
+        let key = Self.key(assetID)
+        let known = await cache.value(ClipSoundActivity.self, for: key)
+        if let known, known.covers(range.lowerBound, range.upperBound) { return known }
+        guard case let .video(asset, _, audioTrack, _, _, _) = source, let audioTrack else { throw Failure.unreadable }
+        let parts = known?.missing(range.lowerBound, range.upperBound) ?? [range]
+        var result = known
+        for part in parts {
+            let piece: ClipSoundActivity
+            do {
+                piece = try await VoiceActivityAnalyzer.analyze(track: audioTrack, asset: asset, range: part)
+            } catch AudioPCMReader.ReadError.cancelled {
+                throw CancellationError()
+            } catch is CancellationError {
+                throw CancellationError()
+            } catch {
+                throw Failure.unreadable
+            }
+            result = result.map { $0.joined(with: piece) } ?? piece
+        }
+        guard let result else { throw Failure.unreadable }
+        try Task.checkCancellation()
+        await cache.store(result, for: key)
+        return result
+    }
+}

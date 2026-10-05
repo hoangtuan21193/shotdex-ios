@@ -351,7 +351,10 @@ enum VideoCompositionBuilder {
 
     /// Volume ramps from the recipe over the stored track layout — the
     /// audio-only rebuild tier (assigning a new mix never interrupts playback).
-    static func audioMix(recipe: VideoProjectRecipe, layout: Layout) -> AVAudioMix {
+    /// `activity` is the clips' sound by asset, for the beds that duck
+    /// under it (FS-12.13); without it, or with ducking off, a bed's ramps
+    /// are its fades alone.
+    static func audioMix(recipe: VideoProjectRecipe, layout: Layout, activity: [String: ClipSoundActivity] = [:]) -> AVAudioMix {
         let mix = AVMutableAudioMix()
         var parameters: [AVMutableAudioMixInputParameters] = []
 
@@ -387,11 +390,17 @@ enum VideoCompositionBuilder {
             params.trackID = entry.trackID
             // Ramps come back relative to the track's own window, so shift them
             // onto the timeline by where the track was inserted.
-            let ramps = VideoTimelineMath.musicRamps(
+            let dips = music.ducking.isOn
+                ? DuckingMath.dips(DuckingMath.triggers(recipe, activity: activity, trigger: music.ducking.trigger), ducking: music.ducking)
+                : []
+            let ramps = DuckingMath.ramps(
                 total: entry.duration,
                 volume: music.isMuted ? 0 : music.volume,
                 fadeIn: music.fadeIn,
-                fadeOut: music.fadeOut
+                fadeOut: music.fadeOut,
+                insertAt: entry.insertAt,
+                dips: dips,
+                ducking: music.ducking
             )
             for ramp in ramps {
                 params.setVolumeRamp(

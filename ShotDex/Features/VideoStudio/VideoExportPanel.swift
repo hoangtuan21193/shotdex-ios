@@ -176,7 +176,8 @@ struct VideoExportPanel: View {
             if case .exporting(let progress) = model.exportState {
                 let percent = Int((progress * 100).rounded(.down))
                 VStack(alignment: .leading, spacing: 8) {
-                    Text(VideoStudioCopy.exportingPercent(percent))
+                    // A bed that ducks waits for the voices first (FS-12.13 §6).
+                    Text(model.isListeningForExport ? VideoStudioCopy.listeningForVoices : VideoStudioCopy.exportingPercent(percent))
                         .font(.system(size: 17, weight: .medium).monospacedDigit())
                         .foregroundStyle(.white)
                     ZStack(alignment: .leading) {
@@ -392,7 +393,9 @@ struct VideoExportPanel: View {
 
     private func exporting(_ progress: Double) -> some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text(VideoStudioCopy.exportingPercent(Int((progress * 100).rounded(.down))))
+            Text(model.isListeningForExport
+                ? VideoStudioCopy.listeningForVoices
+                : VideoStudioCopy.exportingPercent(Int((progress * 100).rounded(.down))))
                 .font(.system(size: 13.5, weight: .medium).monospacedDigit())
                 .foregroundStyle(.white)
             GeometryReader { geo in

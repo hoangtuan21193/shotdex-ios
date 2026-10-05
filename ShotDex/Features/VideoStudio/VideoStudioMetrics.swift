@@ -298,6 +298,12 @@ enum VideoStudioMetrics {
     /// The beat card's disc.
     static let beatCardDisc: CGFloat = 34
     static let beatCardHeight: CGFloat = 54
+    /// Ducking's graph of the whole film (FS-12.13 §3): 370×78 on the
+    /// phone, 354×78 on the cover — label 14, the bed's box 50, the clip
+    /// strip 8 under a 6pt gap.
+    static let duckingGraphHeight: CGFloat = 78
+    /// The "−12 dB" pill on the music lane.
+    static let duckingPill = CGSize(width: 60, height: 16)
     /// How near a beat a finger must bring an edge or a slider for it to
     /// stick: 8pt, at any zoom (§5).
     static let beatSnapTolerance: CGFloat = 8

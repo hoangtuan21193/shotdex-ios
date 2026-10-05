@@ -237,10 +237,10 @@ enum VideoItemCommand: String, CaseIterable, Identifiable {
     }
 
     /// Commands whose feature is not built yet: hidden, not dimmed, and the
-    /// rest keep their order (FS-12.04b §3). Beats is FS-12.12, Ducking
-    /// FS-12.13, a clip's own Look is FS-12.06c — each plan takes its
-    /// command out of this list when it lands.
-    static let notYetBuilt: Set<VideoItemCommand> = [.ducking]
+    /// rest keep their order (FS-12.04b §3). Each plan takes its command
+    /// out of this list when it lands — Beats (FS-12.12) and Ducking
+    /// (FS-12.13) have.
+    static let notYetBuilt: Set<VideoItemCommand> = []
 
     /// The row for `kind`, in the spec's order — most used first, Delete
     /// last — on every layout. `singleVideo` adds Rotate before Delete on a

@@ -160,6 +160,7 @@ struct TimelineRuler: View {
 
 private struct VideoTrack: View {
     @Environment(\.videoLaneMetrics) private var lanes
+    @Environment(\.videoStudioWindowClass) private var windowClass
 
     @Bindable var model: VideoStudioModel
     let pps: CGFloat
@@ -189,6 +190,7 @@ private struct VideoTrack: View {
             } else if let preview = model.cutToBeatPreview {
                 cutToBeatMarks(preview)
             }
+            if showsVoiceLabels { voiceLabels }
             if groupDrag == nil, model.isPlacingGroup {
                 // Move without a drag: the line follows the playhead, and
                 // its pill is the button that drops (FS-12.11 §6).
@@ -197,6 +199,37 @@ private struct VideoTrack: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .animation(EditorTheme.animation, value: model.selectedClipID)
+    }
+
+    /// "Voice" on V1 over every stretch with someone speaking, on the
+    /// iPad and the Duo's inner display, while a bed's Ducking tab is open
+    /// (FS-12.13 §3) — 16pt tall, 14 on the Duo.
+    private var showsVoiceLabels: Bool {
+        guard model.activeItemCommand == .ducking, model.selectedMusicTrack != nil else { return false }
+        switch windowClass {
+        case .iPadLandscape, .iPadPortrait, .duoInner: return true
+        default: return false
+        }
+    }
+
+    private var voiceLabels: some View {
+        let height: CGFloat = windowClass == .duoInner ? 14 : 16
+        return ZStack(alignment: .topLeading) {
+            ForEach(Array(model.voiceSpansOnTimeline.enumerated()), id: \.offset) { _, voice in
+                Text(VideoStudioCopy.voiceLabel)
+                    .font(.system(size: height == 16 ? 10.5 : 9.5, weight: .semibold))
+                    .foregroundStyle(EditorTheme.timelineSpeechInk)
+                    .lineLimit(1)
+                    .padding(.horizontal, 5)
+                    .frame(width: max(1, CGFloat(voice.duration) * pps), height: height, alignment: .leading)
+                    .background(RoundedRectangle(cornerRadius: VideoStudioMetrics.trackRadius, style: .continuous).fill(EditorTheme.timelineSpeech))
+                    .clipped()
+                    .offset(x: CGFloat(voice.start) * pps, y: lanes.video - height)
+            }
+        }
+        .frame(height: lanes.video, alignment: .topLeading)
+        .allowsHitTesting(false)
+        .accessibilityHidden(true)
     }
 
     private func reorderShift(_ clip: VideoClip) -> CGFloat {
@@ -1004,6 +1037,20 @@ private struct MusicLaneRow: View {
                     .frame(width: width, height: VideoStudioMetrics.musicBandHeight)
             }
         }
+        .overlay(alignment: .topLeading) {
+            // The bed's level while it ducks; the dB pills while its
+            // Ducking tab is open (FS-12.13 §3).
+            if music.ducking.isOn {
+                DuckingLaneLine(
+                    music: music,
+                    dips: model.duckingDips(for: music),
+                    origin: win.start,
+                    scale: Double(pps),
+                    showsPills: isSelected && model.activeItemCommand == .ducking
+                )
+                .frame(width: width, height: VideoStudioMetrics.musicBandHeight)
+            }
+        }
         .overlay {
             if isSelected {
                 RoundedRectangle(cornerRadius: VideoStudioMetrics.trackRadius, style: .continuous)
@@ -1101,5 +1148,55 @@ private struct WaveformShape: Shape {
             )
         }
         return path
+    }
+}
+
+/// A ducking bed's level on its lane (FS-12.13 §3): a white line that dips
+/// under every voice — the graph's shape at the lane's height — with a
+/// "−12 dB" pill on each dip while the Ducking tab is open.
+struct DuckingLaneLine: View {
+    let music: MusicTrack
+    let dips: [ClipSoundActivity.Span]
+    /// Timeline second at x = 0.
+    let origin: Double
+    let scale: Double
+    var showsPills = false
+
+    var body: some View {
+        GeometryReader { proxy in
+            let width = proxy.size.width
+            let top: CGFloat = 4
+            let depthScale = (proxy.size.height - 8) / 50
+            ZStack(alignment: .topLeading) {
+                Canvas { context, _ in
+                    var line = Path()
+                    let steps = max(2, Int(width / 2))
+                    for step in 0...steps {
+                        let x = width * CGFloat(step) / CGFloat(steps)
+                        let gain = DuckingMath.duckGain(at: origin + Double(x) / scale, dips: dips, ducking: music.ducking)
+                        let decibels = 20 * log10(max(gain, 1e-4))
+                        let depth = min(CGFloat(abs(decibels)) * 26 / 12, 50) * depthScale
+                        let point = CGPoint(x: x, y: top + depth)
+                        if step == 0 { line.move(to: point) } else { line.addLine(to: point) }
+                    }
+                    context.stroke(line, with: .color(.white), lineWidth: 1.6)
+                }
+                if showsPills {
+                    ForEach(Array(dips.enumerated()), id: \.offset) { _, dip in
+                        let x = CGFloat((dip.start + dip.end) / 2 - origin) * scale
+                        if x >= 0, x <= width {
+                            Text(VideoStudioCopy.decibels(music.ducking.amountDB))
+                                .font(.system(size: 10, weight: .semibold).monospacedDigit())
+                                .foregroundStyle(.white)
+                                .frame(width: VideoStudioMetrics.duckingPill.width, height: VideoStudioMetrics.duckingPill.height)
+                                .background(Capsule().fill(Color.black.opacity(0.7)))
+                                .position(x: x, y: proxy.size.height - VideoStudioMetrics.duckingPill.height / 2 - 2)
+                        }
+                    }
+                }
+            }
+        }
+        .allowsHitTesting(false)
+        .accessibilityHidden(true)
     }
 }
