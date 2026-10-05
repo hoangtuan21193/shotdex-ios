@@ -199,6 +199,7 @@ struct VideoStudioScreen: View {
                 .environment(\.videoMediaGrid, .pool)
                 .interactiveDismissDisabled(model.isExportBusy)
                 .preferredColorScheme(.dark)
+                .modifier(VideoExportSheetSizing(isExporting: model.isExportBusy))
             }
         }
         .sheet(item: $musicChooserIntent) { intent in
@@ -1212,5 +1213,26 @@ struct VideoPlayerLayerView: UIViewRepresentable {
 
     func updateUIView(_ uiView: PlayerHostView, context: Context) {
         if uiView.playerLayer.player !== player { uiView.playerLayer.player = player }
+    }
+}
+
+/// The iPad's Export Video sheet at the size the boards draw it (FS-12.10b
+/// §2): 700 × 620, 572 while exporting, radius 22, over the system scrim.
+private struct VideoExportSheetSizing: ViewModifier {
+    let isExporting: Bool
+
+    func body(content: Content) -> some View {
+        let sheet = VideoStudioMetrics.ExportSheet.self
+        let height = isExporting ? sheet.exportingHeight : sheet.readyHeight
+        if #available(iOS 18.0, *) {
+            content
+                .frame(width: sheet.width, height: height)
+                .presentationSizing(.fitted)
+                .presentationCornerRadius(sheet.cornerRadius)
+        } else {
+            content
+                .frame(idealWidth: sheet.width, idealHeight: height)
+                .presentationCornerRadius(sheet.cornerRadius)
+        }
     }
 }

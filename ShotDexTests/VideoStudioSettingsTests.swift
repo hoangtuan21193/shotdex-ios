@@ -115,4 +115,21 @@ extension VideoStudioSettingsTests {
         #expect(VideoAspect.allCases.count == 6)
         #expect(Set(VideoAspect.allCases.map(\.displayName)).count == VideoAspect.allCases.count)
     }
+
+    /// FS-12.10b §2 (iPad frame, boards IL5_Export / F8_IL_ExportPresets):
+    /// the sheet is 700 × 620 ready and × 572 exporting, 24 in; centred on
+    /// a 1376 × 1032 window it sits at (338, 206) — Close at (978, 222), the
+    /// Export button 270 × 44 at (744, 768); a preset card 320 × 72, two
+    /// across with 12 between them in the 652 inside.
+    @Test func theIPadExportSheetIs700By620() {
+        let sheet = VideoStudioMetrics.ExportSheet.self
+        let origin = CGPoint(x: (1376 - sheet.width) / 2, y: (1032 - sheet.readyHeight) / 2)
+        #expect(origin == CGPoint(x: 338, y: 206))
+        #expect(origin.x + sheet.width - sheet.closeTrailing - sheet.closeSize == 978)
+        #expect(origin.y + sheet.closeTop == 222)
+        #expect(origin.x + sheet.width - sheet.inset - sheet.exportSize.width == 744)
+        #expect(origin.y + sheet.readyHeight - sheet.footBottom - sheet.footHeight == 768)
+        #expect(2 * sheet.cardSize.width + 12 == sheet.width - 2 * sheet.inset)
+        #expect(sheet.exportingHeight == 572 && sheet.cancelSize == CGSize(width: 180, height: 44) && sheet.progressWidth == 360)
+    }
 }
