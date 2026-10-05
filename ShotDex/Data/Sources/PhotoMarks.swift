@@ -27,8 +27,8 @@ struct MarkChange: Equatable, Sendable {
 /// and a swipe all go through the same code.
 ///
 /// The current rating of a photo is the pending row when there is one, else
-/// what Photos holds (`photosRating`, read off the asset by the caller),
-/// else 0. Where stars are stored is decided once, by whether a
+/// a file photo's own stars (FS-19.05 §3), else what Photos holds
+/// (`photosRating`, read off the asset by the caller), else 0. Where stars are stored is decided once, by whether a
 /// `ratingWriter` is given: none below iOS 27 (pending rows), the PhotoKit
 /// writer from iOS 27 (FS-01.12 §4–5). Tests inject either.
 @MainActor
@@ -76,6 +76,12 @@ final class PhotoMarks {
         self.metadataStore = metadataStore
         self.ratingWriter = ratingWriter
         self.readPhotosRatings = readPhotosRatings
+        if let sidecarQueue {
+            // Values another app wrote into a sidecar come in during a write;
+            // the cells follow them.
+            let reload: @Sendable (Set<String>) async -> Void = { [weak self] _ in await self?.reload() }
+            Task { await sidecarQueue.setOnReread(reload) }
+        }
     }
 
     /// Whether stars go to Photos rather than to pending rows.

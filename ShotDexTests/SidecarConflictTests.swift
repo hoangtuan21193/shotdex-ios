@@ -67,4 +67,37 @@ import Testing
         criteria.searchText = "Nara"
         #expect(try LibraryQueries(database: library.database).count(matching: criteria) == 1)
     }
+
+    /// AC-27: ShotDex sets A ★4; five seconds later, before ShotDex writes,
+    /// Lightroom writes A's sidecar as ★2. The later change wins: the sidecar
+    /// and ShotDex both say ★2. The other way round — Lightroom's ★2 five
+    /// seconds before ShotDex's ★4 — ★4 wins in both.
+    @Test func sameFieldLastWriterWins() async throws {
+        for (offset, expected) in [(5.0, 2), (-5.0, 4)] {
+            let library = try Self.library(sidecar: SidecarReaderTests.lightroomSidecar(rating: 3),
+                                           modified: Date().addingTimeInterval(-3600))
+            defer { try? FileManager.default.removeItem(at: library.root) }
+            let changed = Date()
+            await library.marks.setRating(4, ids: [library.photoId])
+            try Self.overwrite(library.sidecar, with: SidecarReaderTests.lightroomSidecar(rating: 2),
+                               modified: changed.addingTimeInterval(offset))
+
+            await library.queue.flush()
+            #expect(SidecarReader.read(sidecarAt: library.sidecar)?.rating == expected, "Lightroom \(offset)s")
+            let stored = try await library.database.reader.read { [photoId = library.photoId] db in
+                try Int.fetchOne(db, sql: "SELECT rating FROM photo_user_marks WHERE photoId = ?", arguments: [photoId])
+            }
+            #expect(stored == expected)
+            try await waitUntil { library.marks.rating(for: library.photoId) == expected }
+            #expect(library.marks.rating(for: library.photoId) == expected, "Lightroom \(offset)s")
+        }
+    }
+
+    /// Polls the main actor for up to 5 s.
+    private func waitUntil(_ condition: () -> Bool) async throws {
+        let start = Date()
+        while !condition(), Date().timeIntervalSince(start) < 5 {
+            try await Task.sleep(for: .milliseconds(20))
+        }
+    }
 }

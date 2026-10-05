@@ -13,6 +13,9 @@ struct SidecarWriter: Sendable {
         var written = 0
         /// Copies whose sidecar could not be written (no folder, no permission).
         var failed = 0
+        /// Photos whose values changed because another app had written their
+        /// sidecar — what the app shows of them is out of date.
+        var reread: Set<String> = []
     }
 
     func write(photoIds: [String]) throws -> Summary {
@@ -26,7 +29,9 @@ struct SidecarWriter: Sendable {
                     continue
                 }
                 let sidecar = Self.sidecarURL(forImageAt: image, isPaired: copy.isPaired)
-                try rereadIfChanged(sidecar, since: copy.sidecarStamp, photoId: photoId)
+                if try rereadIfChanged(sidecar, since: copy.sidecarStamp, photoId: photoId) {
+                    summary.reread.insert(photoId)
+                }
                 sidecars.append((copy.id, sidecar))
             }
             let patch = try database.reader.read { db in try Self.patch(db, photoId: photoId) }
@@ -50,13 +55,14 @@ struct SidecarWriter: Sendable {
     /// wrote it: its stamp no longer matches. What it says comes in first —
     /// each field by the later change — so the write carries it along rather
     /// than over it (FS-19.02 §6).
-    private func rereadIfChanged(_ sidecar: URL, since known: String?, photoId: String) throws {
+    private func rereadIfChanged(_ sidecar: URL, since known: String?, photoId: String) throws -> Bool {
         guard let stamp = SidecarReader.stamp(of: sidecar), stamp != known,
-              let values = SidecarReader.read(sidecarAt: sidecar) else { return }
+              let values = SidecarReader.read(sidecarAt: sidecar) else { return false }
         let at = Int((SidecarReader.modified(sidecar) ?? Date()).timeIntervalSince1970)
         try database.writer.write { db in
             try PhotoUserMarksStore.applySidecar(db, values: values, photoId: photoId, at: at)
         }
+        return true
     }
 
     /// The sidecar of `image`: whichever of `DSC0001.xmp` and
@@ -150,12 +156,19 @@ actor SidecarWriteQueue {
     private let delay: Duration
     private var pending: Set<String> = []
     private var timer: Task<Void, Never>?
+    /// Told which photos took values from a sidecar another app wrote, so
+    /// what is on screen follows (`PhotoMarks.reload`).
+    private var onReread: (@Sendable (Set<String>) async -> Void)?
 
     static let defaultDelay: Duration = .seconds(1)
 
     init(writer: SidecarWriter, delay: Duration = SidecarWriteQueue.defaultDelay) {
         self.writer = writer
         self.delay = delay
+    }
+
+    func setOnReread(_ handler: @escaping @Sendable (Set<String>) async -> Void) {
+        onReread = handler
     }
 
     func schedule(_ photoIds: some Sequence<String> & Sendable) {
@@ -175,6 +188,10 @@ actor SidecarWriteQueue {
         timer = nil
         let ids = pending.sorted()
         pending = []
-        return (try? writer.write(photoIds: ids)) ?? SidecarWriter.Summary()
+        let summary = (try? writer.write(photoIds: ids)) ?? SidecarWriter.Summary()
+        if !summary.reread.isEmpty, let onReread {
+            Task { await onReread(summary.reread) }
+        }
+        return summary
     }
 }
