@@ -537,6 +537,14 @@
       "comment": "Video Studio beats: under the Duration slider when the still's end sticks to a beat — which beat, when, and how to let go of it",
       "extractionState": "manual"
     },
+    "Every Bar": {
+      "comment": "Video Studio beats: snap only to the first beat of each bar",
+      "extractionState": "manual"
+    },
+    "Every Beat": {
+      "comment": "Video Studio beats: snap to every beat of the bar",
+      "extractionState": "manual"
+    },
     "Everything in this look applies to video.": {
       "comment": "Video Studio Look panel: nothing in the chosen look is skipped on video",
       "extractionState": "manual"
@@ -931,6 +939,10 @@
     },
     "Skipped on video: %@.": {
       "comment": "Video Studio Look panel: the settings of the chosen look a video frame does not run — e.g. Noise Reduction, Upright",
+      "extractionState": "manual"
+    },
+    "Snap To": {
+      "comment": "Video Studio beats: header over Every Beat and Every Bar",
       "extractionState": "manual"
     },
     "Snap clips to beats": {

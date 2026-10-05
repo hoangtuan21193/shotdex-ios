@@ -15,6 +15,7 @@ struct VideoBeatsPanel: View {
         VStack(alignment: .leading, spacing: 8) {
             beatCard
             snapRow
+            snapToRow
             offsetRow
         }
         .padding(.top, 4)
@@ -44,6 +45,40 @@ struct VideoBeatsPanel: View {
         .frame(height: isDesk ? 44 : 42)
         .disabled(!canSnap && !music.beatSnap.isOn)
         .opacity(canSnap || music.beatSnap.isOn ? 1 : 0.28)
+    }
+
+    /// SNAP TO: Every Beat · Every Bar (§5) — two 30pt segments on the
+    /// phone, a 36pt segmented control on the iPad.
+    private var snapToRow: some View {
+        let canSnap = model.canSnap(to: music)
+        return VStack(alignment: .leading, spacing: 6) {
+            Text(String(localized: "Snap To", table: VideoStudioCopy.table, comment: "Video Studio beats: header over Every Beat and Every Bar"))
+                .font(.system(size: isDesk ? 17 : 11, weight: .semibold))
+                .foregroundStyle(isDesk ? .white : EditorTheme.dimText)
+                .textCase(isDesk ? nil : .uppercase)
+            HStack(spacing: 4) {
+                ForEach(BeatGrid.Division.allCases, id: \.self) { division in
+                    let isOn = music.beatSnap.division == division
+                    Button { model.setBeatDivision(division, for: music.id) } label: {
+                        Text(division == .beat ? VideoStudioCopy.everyBeat : VideoStudioCopy.everyBar)
+                            .font(.system(size: isDesk ? 15 : 13, weight: .semibold))
+                            .foregroundStyle(.white)
+                            .frame(maxWidth: .infinity)
+                            .frame(height: isDesk ? 32 : 30)
+                            .background(
+                                RoundedRectangle(cornerRadius: 7, style: .continuous)
+                                    .fill(isOn ? Color.white.opacity(0.18) : Color.white.opacity(0.06))
+                            )
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityAddTraits(isOn ? .isSelected : [])
+                }
+            }
+        }
+        .padding(.horizontal, inset)
+        .disabled(!canSnap)
+        .opacity(canSnap ? 1 : 0.28)
     }
 
     /// Offset −250…+250 ms, a notch at 0 (§5): the grid moves under a

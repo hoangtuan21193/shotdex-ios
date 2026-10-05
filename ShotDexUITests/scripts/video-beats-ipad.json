@@ -104,6 +104,31 @@
    "text": "snapshot"
   },
   {
+   "action": "tap",
+   "label": "Snap clips to beats"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "tap",
+   "label": "Every Bar"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "dump",
+   "name": "15-snap-every-bar",
+   "text": "snapshot"
+  },
+  {
+   "action": "wait",
+   "seconds": 14
+  },
+  {
    "action": "wait",
    "seconds": 3
   },

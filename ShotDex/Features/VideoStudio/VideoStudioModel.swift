@@ -3560,6 +3560,16 @@ final class VideoStudioModel {
         markEdited()
     }
 
+    /// SNAP TO (§5): every beat, or only the bar's first. One undo step.
+    func setBeatDivision(_ division: BeatGrid.Division, for id: UUID) {
+        guard let index = recipe.musicTracks.firstIndex(where: { $0.id == id }),
+              recipe.musicTracks[index].beatSnap.division != division
+        else { return }
+        pushUndo()
+        recipe.musicTracks[index].beatSnap.division = division
+        markEdited()
+    }
+
     /// Offset (§5): the bed's whole grid shifted −250…+250 ms in steps of
     /// 5 — ticks, snap points and Cut to Beat with it. No undo push per
     /// tick: a drag is one step (the slider groups it).

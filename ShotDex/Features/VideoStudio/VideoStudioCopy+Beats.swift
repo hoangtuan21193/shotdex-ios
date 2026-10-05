@@ -62,4 +62,12 @@ extension VideoStudioCopy {
         let shift = String(format: "\(sign)%.2fs", abs(moved))
         return String(localized: "Beat \(number) · \(beatTime(time)) · \(shift)", table: table, comment: "Video Studio beats: the pill over the ruler while a clip edge sticks to a beat — Beat 14 · 0:08.75 · −0.45s")
     }
+
+    static var everyBeat: String {
+        String(localized: "Every Beat", table: table, comment: "Video Studio beats: snap to every beat of the bar")
+    }
+
+    static var everyBar: String {
+        String(localized: "Every Bar", table: table, comment: "Video Studio beats: snap only to the first beat of each bar")
+    }
 }

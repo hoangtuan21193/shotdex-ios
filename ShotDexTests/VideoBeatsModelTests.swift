@@ -91,6 +91,25 @@ struct VideoBeatOffsetTests {
     }
 }
 
+/// SNAP TO (FS-12.12 §5).
+@MainActor
+struct VideoBeatDivisionTests {
+    /// AC-8 on the model: Every Bar is one step, and the snap target
+    /// follows it.
+    @Test func everyBarIsOneStep() {
+        let bed = MusicTrack(source: .bundled(id: "drive"))
+        let model = VideoStudioModelFixture.model(configure: { recipe in
+            recipe.musicTracks = [bed]
+            recipe.musicTracks[0].beatSnap.isOn = true
+        })
+        model.setBeatDivision(.bar, for: bed.id)
+        #expect(model.snapDivision == .bar)
+        model.undo()
+        #expect(model.snapDivision == .beat)
+        #expect(!model.canUndo)
+    }
+}
+
 actor Counter {
     private(set) var value = 0
     func increment() { value += 1 }
