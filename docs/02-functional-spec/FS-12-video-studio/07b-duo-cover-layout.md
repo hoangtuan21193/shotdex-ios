@@ -22,7 +22,7 @@ iPhone: [07](07-phone-layout.md). Mô hình chọn: [04](04-tools-and-inspector.
 
 | Vùng | y (pt) | Nội dung |
 |---|---|---|
-| Hàng trên | 6–42 | Back · Undo · Redo — đĩa 34 nền trắng 10%, cách 6, từ x 10; **không có ⋯ và không có Show original** — so sánh nằm ở header của Look ([FS-12.15](15-before-after.md)) (chốt 2026-10-03) |
+| Hàng trên | 6–42 | Back · Undo · Redo — đĩa 34 nền trắng 10%, cách 6, từ x 10; **không có ⋯ và không có Show original** — so sánh nằm ở header của Look ([FS-12.15](15-before-after.md)) (chốt 2026-10-03) — chưa có tới khi FS-12.15 xong, header Look hôm nay chỉ ✕ · ✓ ([06c §3](06c-photo-looks.md)) |
 | Khung | 45–260 | 382×215 (16:9); tỉ lệ khác fit trong 382×215 (9:16 → 121×215 căn giữa); Play 50 ở tâm |
 | Transport | 260–300 | Go to Start · Back a Frame · timecode · Forward a Frame · Go to End · ⋯ (nút 40), menu ⋯ như iPhone |
 | Timeline | 300–644 = **344** | thước 33 · cột glyph 30 không nhận chạm · lane chữ 34 / video 66 / nhạc 40 · thumbnail 54 · ô chuyển cảnh 22 |

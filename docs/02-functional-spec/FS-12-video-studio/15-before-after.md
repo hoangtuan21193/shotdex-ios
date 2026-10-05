@@ -51,7 +51,9 @@ sticker, phụ đề [FS-12.14](14-captions.md)). **Before giữ:** cắt, trim,
   10%, glyph trắng. iPad: nút tròn 44 trong hàng phát, nền trắng 14% (`pressed`) khi bật, trong suốt khi tắt. Accent chỉ ở Export (luật intent).
   Board F7_P và F7_DI đang vẽ glyph trắng trên nền trắng — sửa glyph sang đen; tiêu đề board DI bỏ chữ "(cam)".
 - **iPhone:** không còn nút Show original ở băng trên (canvas). Giữ-để-xem là chế độ **Hold to Compare** trong
-  COMPARE. *Vì* trên điện thoại mọi chỉnh màu đều nằm trong panel Look, nên so sánh nằm cùng chỗ.
+  COMPARE. **Hôm nay (2026-10-05):** iPhone và Duo ngoài chưa có lối so sánh nào — nút giữ-để-xem tạm trong tiêu
+  đề Look đã bỏ (board F5_P_Looks không vẽ, người dùng chốt); nút 32 ở x 280 của spec này là lối vào duy nhất khi
+  làm. *Vì* trên điện thoại mọi chỉnh màu đều nằm trong panel Look, nên so sánh nằm cùng chỗ.
 - **Duo trong:** nút thay Show original nhưng **giữ lâu ≥ 0,3 s vẫn là xem bản gốc**. *Vì* Duo không còn chỗ nào
   khác cho cử chỉ đó, và luật "điện thoại đủ mọi chức năng" cấm làm mất nó.
 

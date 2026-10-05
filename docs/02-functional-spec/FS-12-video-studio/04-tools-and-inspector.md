@@ -55,7 +55,7 @@ Người dựng cần biết nút nào **thêm** thứ mới, nút nào **chỉn
 | Công cụ | Giữ / huỷ ở đâu |
 |---|---|
 | Media | đáy thành ✕ · Media · ✓ như một phiên ([09](09-media-panel.md)) |
-| Look | ✕ và ✓ ở tiêu đề panel ([06c §7](06c-photo-looks.md)) |
+| Look | ✕ và ✓ ở tiêu đề panel ([06c §7](06c-photo-looks.md)); tiêu đề **không có** nút so sánh (bỏ 2026-10-05, board F5_P_Looks) — trước/sau của iPhone và Duo ngoài là Before and After của [15 §4](15-before-after.md), chưa có tới khi FS-12.15 xong |
 | Music | tiêu đề 46pt: icon 24 · "Add Music" 14,5 · ✕ 32 ở phải; thanh dưới giữ 5 công cụ |
 | Video Settings | chỉ có Done ✓ ở tiêu đề, không ✕ — mọi thay đổi áp ngay ([10 §4](10-video-settings-and-export.md)) |
 

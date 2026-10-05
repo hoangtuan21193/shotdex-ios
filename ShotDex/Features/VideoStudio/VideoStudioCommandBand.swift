@@ -245,8 +245,9 @@ struct VideoStudioDeskToolbar: View {
 
 /// Show original: press and hold to see the clips without the look — the
 /// filter, the adjustments, the grade — and without overlays. One control,
-/// wherever it is drawn: the iPad's top band, the Duo's floating discs, the
-/// Look panel's title.
+/// wherever it is drawn: the iPad's toolbar capsule and the Duo's floating
+/// discs. The phone and the Duo's cover have none until FS-12.15's Before and
+/// After lands in the Look panel's title.
 struct VideoShowOriginalButton: View {
     @Bindable var model: VideoStudioModel
     var diameter: CGFloat

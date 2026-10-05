@@ -209,8 +209,9 @@ struct VideoStudioSheetHost: View {
     }
 
     /// The Look tool's panel (FS-12.06c §3, board F5_P_Looks): a 46pt title
-    /// — glyph, "Look", "Whole video", hold-to-compare, ✕, ✓ — over the
-    /// panel.
+    /// — glyph, "Look", "Whole video", ✕, ✓ — over the panel. No compare
+    /// button: the board draws none, and the phone's Before and After comes
+    /// with FS-12.15 (board F7_P_BeforeAfter).
     private var lookToolPanel: some View {
         VStack(spacing: 0) {
             lookTitle(showsSessionButtons: true)
@@ -239,7 +240,6 @@ struct VideoStudioSheetHost: View {
                 idleToolButton(tool)
             }
             if showsSessionButtons {
-                beforeAfterButton
                 Button {
                     model.cancelSession()
                 } label: {
@@ -557,35 +557,6 @@ struct VideoStudioSheetHost: View {
             case .look, .music, .media, .videoSettings, .export, nil: EmptyView()
             }
         }
-    }
-
-    /// Press and hold, like the photo editor's before/after: the preview
-    /// drops the look — filter, adjustments, grade — and every overlay while
-    /// the finger is down. In the Look panel's title, beside what it
-    /// compares (FS-12.04 §4).
-    private var beforeAfterButton: some View {
-        let isEnabled = model.hasEdits
-        return Image(systemName: "rectangle.on.rectangle")
-            .font(.system(size: 14, weight: .medium))
-            .foregroundStyle(
-                model.showsOriginal ? Color.black : (isEnabled ? Color.white : Color.white.opacity(0.28))
-            )
-            .frame(width: VideoStudioMetrics.inspectorTitleButton, height: VideoStudioMetrics.inspectorTitleButton)
-            .background(Circle().fill(model.showsOriginal ? Color.white : Color.white.opacity(0.06)))
-            .contentShape(Circle())
-            .gesture(
-                DragGesture(minimumDistance: 0)
-                    .onChanged { _ in
-                        guard isEnabled, !model.showsOriginal else { return }
-                        model.setShowsOriginal(true)
-                    }
-                    .onEnded { _ in model.setShowsOriginal(false) }
-            )
-            .allowsHitTesting(isEnabled)
-            .accessibilityElement()
-            .accessibilityLabel(Text("Show original", comment: "Video Studio: press-and-hold control that previews the clips without edits"))
-            .accessibilityHint(Text("Press and hold to see the clips without edits", comment: "Hint for the Video Studio before/after control"))
-            .accessibilityAddTraits(model.showsOriginal ? .isSelected : [])
     }
 
     // MARK: Param zone

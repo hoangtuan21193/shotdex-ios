@@ -31,7 +31,8 @@ P8–P10, và ba board cần vẽ thêm: `P11_Ratio43`, `P12_Ratio219`, `P9_Coll
 | Vạch home | 852–874 | trống |
 
 - Băng trên **chỉ icon**: không có chữ Export, không hàng thông số "1080p · 30", không nút Show original. So
-  sánh trước/sau nằm ở tiêu đề panel Look ([15](15-before-after.md)). Export vẫn hiện khi đang chọn item.
+  sánh trước/sau sẽ nằm ở tiêu đề panel Look — nút Before and After của [15](15-before-after.md); **chưa có** tới
+  khi FS-12.15 xong (nút giữ-để-xem từng ở đó đã bỏ 2026-10-05, [06c §3](06c-photo-looks.md)). Export vẫn hiện khi đang chọn item.
 - Menu ⋯ của transport: Split · Freeze · Trim Start to Playhead · Trim End to Playhead · Add Marker · Previous /
   Next Marker · Loop · **Snap to Edits** · Fit Timeline · **Tracks ▸** (Lock/Mute từng lane, tên `V1 · Video`,
   `A1 · Music`) · Delete Clip. Không có nút play trong hàng: khung đã có Play 56, chạm khung là pause.
