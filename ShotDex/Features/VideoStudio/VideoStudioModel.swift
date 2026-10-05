@@ -337,9 +337,25 @@ final class VideoStudioModel {
         backgroundObserver = NotificationCenter.default.addObserver(
             forName: UIApplication.didEnterBackgroundNotification,
             object: nil,
-            queue: .main
+            queue: nil
         ) { [weak self] _ in
-            MainActor.assumeIsolated { self?.saveDraftInBackground() }
+            Self.onMain { self?.saveDraftInBackground() }
+        }
+    }
+
+    /// Runs `work` on the main actor from a notification block: at once when
+    /// the post came on the main thread (UIKit's do), else on the next turn.
+    ///
+    /// The observers pass `queue: nil` rather than `.main`. With `.main`, a
+    /// post from main-actor async code — not an `OperationQueue` operation,
+    /// so `OperationQueue.current` is not the main queue — is enqueued on the
+    /// main queue and waited for, on the main thread: a deadlock, which the
+    /// parallel test run hit (FS-12.18 AC-3's test).
+    nonisolated static func onMain(_ work: @escaping @MainActor () -> Void) {
+        if Thread.isMainThread {
+            MainActor.assumeIsolated { work() }
+        } else {
+            Task { @MainActor in work() }
         }
     }
 
@@ -3053,9 +3069,9 @@ final class VideoStudioModel {
         // a broken file. No background task is held.
         exportStoppedByLeaving = false
         exportBackgroundObserver = exportNotifications.addObserver(
-            forName: UIApplication.didEnterBackgroundNotification, object: nil, queue: .main
+            forName: UIApplication.didEnterBackgroundNotification, object: nil, queue: nil
         ) { [weak self] _ in
-            MainActor.assumeIsolated { self?.stopExportForLeaving() }
+            Self.onMain { self?.stopExportForLeaving() }
         }
         exportTask = Task { [self] in
             defer {
