@@ -1,0 +1,119 @@
+{
+ "steps": [
+  {
+   "action": "launch",
+   "arguments": [
+    "-video.timelineExtraHeight",
+    "0"
+   ]
+  },
+  {
+   "action": "wait",
+   "seconds": 6
+  },
+  {
+   "action": "tap",
+   "label": "Select",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "tap",
+   "x": 0.83,
+   "y": 0.457
+  },
+  {
+   "action": "tap",
+   "x": 0.163,
+   "y": 0.61
+  },
+  {
+   "action": "tap",
+   "x": 0.5,
+   "y": 0.61
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "tap",
+   "label": "More selection actions"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "tap",
+   "label": "Create Video"
+  },
+  {
+   "action": "wait",
+   "seconds": 12
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "pinch",
+   "label": "VideoTimeline",
+   "type": "scrollView",
+   "scale": 12,
+   "velocity": "default",
+   "seconds": 20
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "screenshot",
+   "name": "frame-zoom"
+  },
+  {
+   "action": "drag",
+   "x": 0.7,
+   "y": 0.8,
+   "toX": 0.4313,
+   "toY": 0.8,
+   "hold": 0.1,
+   "velocity": "slow",
+   "seconds": 0.5
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "screenshot",
+   "name": "pre-scrub"
+  },
+  {
+   "action": "drag",
+   "x": 0.55,
+   "y": 0.8,
+   "toX": 0.6396,
+   "toY": 0.8,
+   "hold": 0.1,
+   "velocity": "slow",
+   "seconds": 6
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "screenshot",
+   "name": "after-scrub"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  }
+ ]
+}

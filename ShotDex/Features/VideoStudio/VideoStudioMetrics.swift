@@ -808,6 +808,8 @@ extension VideoStudioMetrics {
     /// 270×26, radius 13, 276 under the timeline's top.
     static let frameZoomPill = CGSize(width: 270, height: 26)
     static let frameZoomPillTop: CGFloat = 276
+    /// "−3 f · 0:08.80" over the finger while scrubbing at Frame zoom.
+    static let frameScrubBadge = CGSize(width: 92, height: 18)
 
     /// The frame trim's geometry (FS-12.17 §4–5, boards F6_P_PreciseTrim,
     /// F6_DI_TouchTrim, F6_IP_PencilTrim, F6_DC_PreciseTrim).

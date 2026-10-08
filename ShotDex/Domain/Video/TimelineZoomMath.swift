@@ -45,6 +45,35 @@ enum TimelineZoomMath {
         pps >= frameZoomPPS(fps: fps) - 0.5
     }
 
+    /// A scrub at Frame zoom (§6): how many frames the playhead has moved
+    /// since the drag began — 12pt each — rounded to the nearest frame.
+    static func scrubFrames(from start: Double, to time: Double, fps: Int) -> Int {
+        VideoFrameGrid(fps: fps).frameCount(from: start, to: time)
+    }
+
+    /// How many frame lines lie between two playhead times — one haptic
+    /// each (§6).
+    static func framesCrossed(from a: Double, to b: Double, fps: Int) -> Int {
+        let grid = VideoFrameGrid(fps: fps)
+        return abs(grid.nearestFrame(to: b) - grid.nearestFrame(to: a))
+    }
+
+    /// The badge over the finger while scrubbing at Frame zoom: "−3 f ·
+    /// 0:08.80" — the frames since the drag began, then the time.
+    static func scrubBadge(frames: Int, time: Double) -> String {
+        let sign = frames < 0 ? "−" : (frames > 0 ? "+" : "")
+        return "\(sign)\(abs(frames)) f · " + VideoFrameGrid.hundredths(time)
+    }
+
+    /// Where a scroll at Frame zoom comes to rest: the content offset of
+    /// the nearest frame line under the playhead.
+    static func restingOffset(_ offset: CGFloat, inset: CGFloat, pps: CGFloat, fps: Int) -> CGFloat {
+        guard pps > 0 else { return offset }
+        let grid = VideoFrameGrid(fps: fps)
+        let time = grid.snapped(Double((offset + inset) / pps))
+        return CGFloat(time) * pps - inset
+    }
+
     /// The ruler's label for frame `index` at Frame zoom: "8:12f" — the
     /// second, then the frame inside it.
     static func rulerFrameLabel(frame index: Int, fps: Int) -> String {

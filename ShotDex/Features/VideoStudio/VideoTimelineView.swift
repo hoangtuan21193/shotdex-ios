@@ -42,6 +42,10 @@ struct VideoTimelineView: View {
     /// reference, like `pressStart`: the drag's callbacks land before any
     /// render could hand state back.
     @State private var frameTrimDrag = TimelineFrameTrimDrag()
+    /// Where the scrub began, for the Frame zoom badge's count.
+    @State private var scrubStart = TimelineScrubStart()
+    /// "−3 f · 0:08.80" while scrubbing at Frame zoom (FS-12.17 §6).
+    @State private var scrubBadge: String?
     @State private var viewportWidth: CGFloat = 393
     @State private var lastHapticSecond = 0
     /// Whether the edge being dragged sat at a limit, or on a snap, on the
@@ -95,12 +99,19 @@ struct VideoTimelineView: View {
                         currentTime: model.currentTime,
                         pps: pps,
                         dragZones: dragZones,
-                        onScrubStart: { model.beginScrub() },
+                        onScrubStart: {
+                            scrubStart.time = model.currentTime
+                            model.beginScrub()
+                        },
                         onScrubTime: { scrub(to: $0) },
-                        onScrubEnd: { model.endScrub(at: $0) },
+                        onScrubEnd: {
+                            scrubBadge = nil
+                            model.endScrub(at: $0)
+                        },
                         onVerticalOffset: { laneOffsetY = $0 },
                         onPinch: handlePinch,
-                        onZoneDrag: handleZoneDrag
+                        onZoneDrag: handleZoneDrag,
+                        frameSnapFPS: isFrameZoom ? model.recipe.frameRate.rawValue : nil
                     ) {
                         TimelineTracksContent(
                             model: model,
@@ -132,6 +143,7 @@ struct VideoTimelineView: View {
             .overlay(alignment: .topLeading) { groupPill }
             .overlay(alignment: .topLeading) { frameTrimLoupeAnchor(screenWidth: screenWidth) }
             .overlay(alignment: .top) { frameZoomPill(screenWidth: screenWidth) }
+            .overlay(alignment: .topLeading) { frameScrubBadge(screenWidth: screenWidth) }
             .overlay(alignment: .topLeading) { beatSnapMark(screenWidth: screenWidth) }
             .onAppear {
                 if !hasAppliedWindowZoom {
@@ -360,12 +372,58 @@ struct VideoTimelineView: View {
 
     // MARK: Scrub / pinch / fit
 
+    private var isFrameZoom: Bool {
+        TimelineZoomMath.isFrameZoom(pps, fps: model.recipe.frameRate.rawValue)
+    }
+
     private func scrub(to seconds: Double) {
-        model.scrub(to: seconds)
-        let second = Int(seconds)
-        if second != lastHapticSecond {
-            lastHapticSecond = second
+        guard isFrameZoom else {
+            model.scrub(to: seconds)
+            let second = Int(seconds)
+            if second != lastHapticSecond {
+                lastHapticSecond = second
+                UISelectionFeedbackGenerator().selectionChanged()
+            }
+            return
+        }
+        // Frame zoom (§6): every 12pt is a frame — a tick each, the frame
+        // found exactly, the count since the drag began over the finger.
+        let fps = model.recipe.frameRate.rawValue
+        let before = model.currentTime
+        model.scrub(to: seconds, exact: true)
+        if TimelineZoomMath.framesCrossed(from: before, to: seconds, fps: fps) > 0,
+           VideoInputPreferences.shared.frameStepHaptics {
             UISelectionFeedbackGenerator().selectionChanged()
+        }
+        // Counted where the playhead really is: at either end of the
+        // project the finger can go on, the playhead cannot.
+        let landed = model.frameGrid.snapped(model.currentTime)
+        let frames = TimelineZoomMath.scrubFrames(from: scrubStart.time, to: landed, fps: fps)
+        scrubBadge = VideoStudioCopy.frameCount(frames, compact: true) + " · " + VideoFrameGrid.hundredths(landed)
+    }
+
+    /// The badge over the playhead while scrubbing at Frame zoom:
+    /// 92×18 in the selection colour, at the video lane's top.
+    @ViewBuilder
+    private func frameScrubBadge(screenWidth: CGFloat) -> some View {
+        if let scrubBadge, isFrameZoom {
+            let size = VideoStudioMetrics.frameScrubBadge
+            let laneTop = lanes.topPadding + lanes.ruler + lanes.rulerGap
+                + lanes.videoLaneTop(overlayLanes: max(1, model.overlayLaneCount))
+                - laneOffsetY
+            Text(verbatim: scrubBadge)
+                .font(.system(size: 10, weight: .bold, design: .monospaced))
+                .foregroundStyle(EditorTheme.timelineSelectionInk)
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
+                .frame(width: size.width, height: size.height)
+                .background(Capsule().fill(EditorTheme.timelineSelection))
+                .offset(
+                    x: VideoStudioMetrics.playheadX(screenWidth: screenWidth, gutter: lanes.gutter) - size.width / 2,
+                    y: laneTop + 4
+                )
+                .allowsHitTesting(false)
+                .accessibilityIdentifier("frameScrubBadge")
         }
     }
 
@@ -667,6 +725,12 @@ struct VideoTimelineView: View {
 @MainActor
 final class TimelinePressStart {
     var x: CGFloat = 0
+}
+
+/// Where a scrub began, in timeline seconds.
+@MainActor
+final class TimelineScrubStart {
+    var time: Double = 0
 }
 
 /// A drag on the trimmed edge: the frames it started from, and whether the

@@ -133,6 +133,7 @@ final class VideoStudioModel {
     /// wins when the previous seek lands.
     private var isSeekInFlight = false
     private var pendingScrubTime: Double?
+    private var pendingScrubIsExact = false
 
 
     var exportState: ExportState = .idle
@@ -1742,26 +1743,30 @@ final class VideoStudioModel {
     /// Continuous scrub updates: `currentTime` follows the finger instantly;
     /// the actual player seeks self-pace behind an in-flight gate so the
     /// composition decodes as fast as it can without a seek pile-up.
-    func scrub(to seconds: Double) {
+    /// `exact` — at Frame zoom — seeks with no tolerance: ±0.05 s is wider
+    /// than a frame, and the viewer would show the wrong one (FS-12.17 §6).
+    func scrub(to seconds: Double, exact: Bool = false) {
         let clamped = min(max(seconds, 0), totalDuration)
         currentTime = clamped
         guard let player else { return }
         if isSeekInFlight {
             pendingScrubTime = clamped
+            pendingScrubIsExact = exact
             return
         }
         isSeekInFlight = true
+        let tolerance = exact ? CMTime.zero : CMTime(value: 30, timescale: 600)
         player.seek(
             to: VideoCompositionBuilder.time(clamped),
-            toleranceBefore: CMTime(value: 30, timescale: 600),
-            toleranceAfter: CMTime(value: 30, timescale: 600)
+            toleranceBefore: tolerance,
+            toleranceAfter: tolerance
         ) { [weak self] _ in
             Task { @MainActor [weak self] in
                 guard let self else { return }
                 self.isSeekInFlight = false
                 if let pending = self.pendingScrubTime {
                     self.pendingScrubTime = nil
-                    self.scrub(to: pending)
+                    self.scrub(to: pending, exact: self.pendingScrubIsExact)
                 }
             }
         }

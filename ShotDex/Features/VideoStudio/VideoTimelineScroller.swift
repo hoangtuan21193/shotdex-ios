@@ -161,6 +161,9 @@ struct VideoTimelineScroller<Content: View>: UIViewRepresentable {
     var onVerticalOffset: (CGFloat) -> Void
     var onPinch: (TimelinePinchPhase) -> Void
     var onZoneDrag: (TimelineDragZone.Kind, TimelineZoneDragPhase) -> Void
+    /// At Frame zoom, the project's frame rate: a scroll comes to rest on
+    /// a frame (FS-12.17 §6). Nil otherwise.
+    var frameSnapFPS: Int? = nil
     @ViewBuilder var content: () -> Content
 
     func makeCoordinator() -> Coordinator { Coordinator(self) }
@@ -410,6 +413,17 @@ struct VideoTimelineScroller<Content: View>: UIViewRepresentable {
             }
             guard !isProgrammaticScroll, !isPinching, isUserDriven(scrollView) else { return }
             parent.onScrubTime(time(at: scrollView.contentOffset.x, in: scrollView))
+        }
+
+        func scrollViewWillEndDragging(
+            _ scrollView: UIScrollView,
+            withVelocity velocity: CGPoint,
+            targetContentOffset: UnsafeMutablePointer<CGPoint>
+        ) {
+            guard let fps = parent.frameSnapFPS else { return }
+            targetContentOffset.pointee.x = TimelineZoomMath.restingOffset(
+                targetContentOffset.pointee.x, inset: scrollView.contentInset.left, pps: parent.pps, fps: fps
+            )
         }
 
         func scrollViewDidEndDragging(_ scrollView: UIScrollView, willDecelerate decelerate: Bool) {
