@@ -1,0 +1,14 @@
+{
+ "steps": [
+  {"action": "launch"},
+  {"action": "wait", "seconds": 5},
+  {"action": "hover", "x": 0.5, "y": 0.4, "seconds": 1},
+  {"action": "key", "text": "down"},
+  {"action": "key", "text": "home"},
+  {"action": "key", "text": "space"},
+  {"action": "key", "text": "up", "direction": "ctrl"},
+  {"action": "holdKeys", "direction": "cmd", "seconds": 3, "name": "cmd-held"},
+  {"action": "wait", "seconds": 1},
+  {"action": "screenshot", "name": "after-keys"}
+ ]
+}

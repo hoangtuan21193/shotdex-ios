@@ -7,7 +7,8 @@ import Foundation
 /// only the two or three it needs.
 struct UIDriverStep: Decodable {
     /// `launch`, `activate`, `tap`, `tapIndex`, `longPress`, `typeText`,
-    /// `key`, `swipe`, `drag`, `pinch`, `scrollTo`, `wait`, `screenshot`, `dump`,
+    /// `key`, `holdKeys`, `hover`, `swipe`, `drag`, `pinch`, `scrollTo`,
+    /// `wait`, `screenshot`, `dump`,
     /// `back`, `home`.
     let action: String
     /// Accessibility label or identifier of the element to act on.
@@ -34,8 +35,13 @@ struct UIDriverStep: Decodable {
     let toX: Double?
     let toY: Double?
     /// Text for `typeText`; for `key`, the one key to press — a character,
-    /// or `left` / `right` / `escape` — with `cmd`, `shift`, `option` in
-    /// `direction` (comma-separated) as modifiers.
+    /// or `left` / `right` / `up` / `down` / `escape` / `home` / `end` /
+    /// `delete` / `return` / `space` / `tab` — with `cmd`, `shift`,
+    /// `option`, `ctrl` in `direction` (comma-separated) as modifiers.
+    /// `holdKeys` holds the modifiers in `direction` for `seconds`, and when
+    /// it has a `name` takes a screenshot and a button dump while they are
+    /// down (the ⌘ list of FS-12.17b §4). `hover` rests the pointer at
+    /// `x`/`y` for `seconds` (iPad: skim, FS-12.17b §6).
     let text: String?
     /// Seconds for `wait`, and the timeout an element wait may take.
     let seconds: Double?

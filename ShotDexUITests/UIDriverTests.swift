@@ -158,22 +158,24 @@ final class UIDriverTests: XCTestCase {
             // hidden button answers. Sent to the app, not to an element, so
             // whatever has focus gets it the way a real keyboard would.
             guard let text = step.text else { throw DriverError.missing("text") }
-            let key: String = switch text {
-            case "left": XCUIKeyboardKey.leftArrow.rawValue
-            case "right": XCUIKeyboardKey.rightArrow.rawValue
-            case "escape": XCUIKeyboardKey.escape.rawValue
-            default: text
-            }
-            var flags: XCUIElement.KeyModifierFlags = []
-            for modifier in (step.direction ?? "").split(separator: ",") {
-                switch modifier.trimmingCharacters(in: .whitespaces) {
-                case "cmd": flags.insert(.command)
-                case "shift": flags.insert(.shift)
-                case "option": flags.insert(.option)
-                default: break
+            app.typeKey(Self.keyName(text), modifierFlags: Self.modifiers(step.direction))
+        case "holdKeys":
+            // Modifiers held down with nothing pressed — what makes iPadOS
+            // show its ⌘ list, and the studio its own card on a phone.
+            let flags = Self.modifiers(step.direction ?? "cmd")
+            XCUIElement.perform(withKeyModifiers: flags) {
+                Thread.sleep(forTimeInterval: step.seconds ?? 1.0)
+                if let name = step.name {
+                    screenshot(named: name)
+                    write(name: name, tree: tree(only: "button"))
                 }
             }
-            app.typeKey(key, modifierFlags: flags)
+        case "hover":
+            // A pointer resting over a point (iPad with a trackpad): the
+            // skim of a Media cell (FS-12.17b §6).
+            guard let point = coordinate(for: step) else { throw DriverError.missing("x and y") }
+            point.hover()
+            Thread.sleep(forTimeInterval: step.seconds ?? 1.0)
         case "drag":
             guard let start = coordinate(for: step), let toX = step.toX, let toY = step.toY else {
                 throw DriverError.missing("drag needs x, y, toX and toY")
@@ -394,6 +396,39 @@ final class UIDriverTests: XCTestCase {
         case "collection": app.collectionViews
         default: app.descendants(matching: .any)
         }
+    }
+
+    /// A key's name in a script → what `typeKey` wants.
+    private static func keyName(_ text: String) -> String {
+        switch text {
+        case "left": XCUIKeyboardKey.leftArrow.rawValue
+        case "right": XCUIKeyboardKey.rightArrow.rawValue
+        case "up": XCUIKeyboardKey.upArrow.rawValue
+        case "down": XCUIKeyboardKey.downArrow.rawValue
+        case "escape": XCUIKeyboardKey.escape.rawValue
+        case "home": XCUIKeyboardKey.home.rawValue
+        case "end": XCUIKeyboardKey.end.rawValue
+        case "delete": XCUIKeyboardKey.delete.rawValue
+        case "return": XCUIKeyboardKey.return.rawValue
+        case "space": XCUIKeyboardKey.space.rawValue
+        case "tab": XCUIKeyboardKey.tab.rawValue
+        default: text
+        }
+    }
+
+    /// `cmd,shift` → the flags.
+    private static func modifiers(_ list: String?) -> XCUIElement.KeyModifierFlags {
+        var flags: XCUIElement.KeyModifierFlags = []
+        for modifier in (list ?? "").split(separator: ",") {
+            switch modifier.trimmingCharacters(in: .whitespaces) {
+            case "cmd": flags.insert(.command)
+            case "shift": flags.insert(.shift)
+            case "option": flags.insert(.option)
+            case "ctrl": flags.insert(.control)
+            default: break
+            }
+        }
+        return flags
     }
 
     private static func dragVelocity(_ name: String?) -> XCUIGestureVelocity {
