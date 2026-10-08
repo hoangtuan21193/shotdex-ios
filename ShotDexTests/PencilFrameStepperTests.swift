@@ -33,4 +33,24 @@ struct PencilFrameStepperTests {
         let free = PencilFrameStepper(x: 50, time: 0)
         #expect(free.effectiveTranslation(from: 50, to: 80, pps: 55, fps: 30) == 30)
     }
+
+    /// FS-12.17 AC-12: a double-tap toggles trim and scrub; in scrub the
+    /// Pencil moves the playhead and Clip 2's window stays as it is.
+    @MainActor
+    @Test func scrubModeMovesPlayheadOnly() {
+        #expect(PencilFrameStepper.Mode.trim.toggled == .scrub)
+        let model = VideoStudioModelFixture.model(clips: VideoStudioModelFixture.frameTrimSampleClips())
+        let clip2 = model.recipe.clips[1].id
+        model.selectClip(clip2)
+        model.toggleFrameTrimFromCell()
+        #expect(model.pencilMode == .trim)
+        model.pencilDoubleTapped()
+        #expect(model.pencilMode == .scrub)
+        let window = (model.recipe.clips[1].trimStart, model.recipe.clips[1].trimEnd)
+        model.scrub(to: 5)
+        #expect(model.currentTime == 5)
+        #expect(model.recipe.clips[1].trimStart == window.0 && model.recipe.clips[1].trimEnd == window.1)
+        model.pencilDoubleTapped()
+        #expect(model.pencilMode == .trim)
+    }
 }
