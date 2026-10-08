@@ -68,3 +68,38 @@ struct FrameTrimSessionTests {
         #expect(!locked.isFrameTrimming)
     }
 }
+
+extension FrameTrimSessionTests {
+    /// FS-12.17 AC-2: −1 Frame four times — the edge at 9.0667
+    /// ("0:09.07 · −4 frames"), Clip 3 still starts at 9.20, the recipe
+    /// exactly as it was.
+    @MainActor
+    @Test func fourFramesEarlier() {
+        var trim = Self.session()
+        for _ in 0..<4 {
+            let moved = trim.step(by: -1)
+            #expect(moved)
+        }
+        #expect(trim.frames == -4)
+        #expect(abs(trim.edgeTime - (9.2 - 4.0 / 30)) < 1e-9)
+        #expect(VideoFrameGrid.hundredths(trim.edgeTime) == "0:09.07")
+        #expect(VideoStudioCopy.frameCount(trim.frames) == "−4 frames")
+        #expect(VideoStudioCopy.frameCount(trim.frames, compact: true) == "−4 f")
+        #expect(abs((trim.trimmedClip.trimEnd ?? 0) - (6.2 - 4.0 / 30)) < 1e-9)
+
+        let model = VideoStudioModelFixture.model(clips: Self.clips)
+        let clip2 = model.recipe.clips[1].id
+        model.selectClip(clip2)
+        model.beginFrameTrim(clip2, edge: .trailing)
+        let before = model.recipe
+        for _ in 0..<4 { #expect(model.stepFrameTrim(-1)) }
+        #expect(model.recipe == before)
+        #expect(abs(model.clipPlacements[2].start - 9.2) < 1e-9)
+        #expect(abs(model.currentTime - (9.2 - 4.0 / 30)) < 1e-9)
+        #expect(model.frameTrimTitle() == VideoItemTitle.Lines(name: "Trim · Clip 2", detail: "0:09.07 · −4 frames"))
+        #expect(!model.canUndo)
+        // +1 Frame walks back; one frame is "1 frame".
+        #expect(model.stepFrameTrim(1))
+        #expect(VideoStudioCopy.frameCount(1) == "+1 frame")
+    }
+}

@@ -677,6 +677,44 @@ private struct ClipBand: View {
         return preview
     }
 
+    /// The frame trim open on this clip (FS-12.17 §3).
+    private var frameTrim: FrameTrimSession? {
+        guard let trim = model.frameTrim, trim.clipID == clip.id else { return nil }
+        return trim
+    }
+
+    /// How far each edge sits from where it was, in points, while the
+    /// frame trim is open: the edges are virtual until ✓.
+    private func frameTrimOffsets(_ trim: FrameTrimSession) -> (lead: CGFloat, trail: CGFloat) {
+        (
+            CGFloat(trim.edgeTime(of: .leading) - trim.originTime(of: .leading)) * pps,
+            CGFloat(trim.edgeTime(of: .trailing) - trim.originTime(of: .trailing)) * pps
+        )
+    }
+
+    /// What the trim cuts off is hatched where it lies; what it adds is
+    /// outlined in the selection colour over the next clip — the recipe has
+    /// not changed yet and the next clip only closes up at ✓ (§3).
+    @ViewBuilder
+    private func frameTrimMarks(_ trim: FrameTrimSession, width: CGFloat, height: CGFloat) -> some View {
+        let offsets = frameTrimOffsets(trim)
+        ZStack(alignment: .topLeading) {
+            if offsets.lead > 0.5 {
+                FrameTrimHatch().frame(width: offsets.lead, height: height)
+            } else if offsets.lead < -0.5 {
+                FrameTrimAddedOutline().frame(width: -offsets.lead, height: height).offset(x: offsets.lead)
+            }
+            if offsets.trail < -0.5 {
+                FrameTrimHatch().frame(width: -offsets.trail, height: height).offset(x: width + offsets.trail)
+            } else if offsets.trail > 0.5 {
+                FrameTrimAddedOutline().frame(width: offsets.trail, height: height).offset(x: width)
+            }
+        }
+        .frame(width: width, height: height, alignment: .topLeading)
+        .allowsHitTesting(false)
+        .accessibilityHidden(true)
+    }
+
     /// The edge handles (FS-12.05 §3): a 12pt tab in the selection colour
     /// outside each edge of the selected clip, the clip's height; each
     /// answers a 44pt-wide drag (16 of it outside the clip). The top 20pt is
@@ -689,12 +727,14 @@ private struct ClipBand: View {
                 let height = proxy.size.height
                 let frame = proxy.frame(in: .named("timelineContent"))
                 let preview = edgePreview
-                let lead = preview?.edge == .leading ? CGFloat(preview?.appliedDelta ?? 0) * pps : 0
-                let trail = preview?.edge == .trailing ? CGFloat(preview?.appliedDelta ?? 0) * pps : 0
+                let trimOffsets = frameTrim.map(frameTrimOffsets)
+                let lead = trimOffsets?.lead ?? (preview?.edge == .leading ? CGFloat(preview?.appliedDelta ?? 0) * pps : 0)
+                let trail = trimOffsets?.trail ?? (preview?.edge == .trailing ? CGFloat(preview?.appliedDelta ?? 0) * pps : 0)
                 let band = VideoStudioMetrics.edgeHandleTouchWidth
                 let outside = VideoStudioMetrics.edgeHandleTouchOutside
                 let fadeBand = VideoStudioMetrics.fadeGripBand
                 ZStack(alignment: .topLeading) {
+                    if let frameTrim { frameTrimMarks(frameTrim, width: width, height: height) }
                     edgeTab(leading: true)
                         .offset(x: -VideoStudioMetrics.edgeHandleWidth + lead)
                     edgeTab(leading: false)
@@ -714,13 +754,15 @@ private struct ClipBand: View {
                 .preference(
                     key: TimelineDragZonesKey.self,
                     value: [
+                        // The zones follow a trimmed edge, so the finger finds
+                        // the handle where it is drawn.
                         TimelineDragZone(
                             kind: .clipLeadingHandle(clip.id),
-                            rect: CGRect(x: frame.minX - outside, y: frame.minY + fadeBand, width: band, height: max(0, height - fadeBand))
+                            rect: CGRect(x: frame.minX - outside + (trimOffsets?.lead ?? 0), y: frame.minY + fadeBand, width: band, height: max(0, height - fadeBand))
                         ),
                         TimelineDragZone(
                             kind: .clipTrailingHandle(clip.id),
-                            rect: CGRect(x: frame.maxX + outside - band, y: frame.minY + fadeBand, width: band, height: max(0, height - fadeBand))
+                            rect: CGRect(x: frame.maxX + outside - band + (trimOffsets?.trail ?? 0), y: frame.minY + fadeBand, width: band, height: max(0, height - fadeBand))
                         ),
                     ]
                 )
@@ -784,6 +826,37 @@ private struct ClipBand: View {
                 )
             }
         }
+    }
+}
+
+/// The part of a clip the frame trim cuts away: black 45 % under white
+/// diagonal stripes 30 % (FS-12.17 §3).
+private struct FrameTrimHatch: View {
+    var body: some View {
+        Canvas { context, size in
+            context.fill(Path(CGRect(origin: .zero, size: size)), with: .color(.black.opacity(0.45)))
+            var stripes = Path()
+            var x: CGFloat = -size.height
+            while x < size.width {
+                stripes.move(to: CGPoint(x: x, y: size.height))
+                stripes.addLine(to: CGPoint(x: x + size.height, y: 0))
+                x += 6
+            }
+            context.stroke(stripes, with: .color(.white.opacity(0.3)), lineWidth: 1)
+        }
+    }
+}
+
+/// The time the frame trim adds past the clip's old edge, drawn over the
+/// clip next to it: a 2pt selection-colour outline over a light wash.
+private struct FrameTrimAddedOutline: View {
+    var body: some View {
+        RoundedRectangle(cornerRadius: 2, style: .continuous)
+            .fill(EditorTheme.timelineSelection.opacity(0.18))
+            .overlay(
+                RoundedRectangle(cornerRadius: 2, style: .continuous)
+                    .strokeBorder(EditorTheme.timelineSelection, lineWidth: 2)
+            )
     }
 }
 
