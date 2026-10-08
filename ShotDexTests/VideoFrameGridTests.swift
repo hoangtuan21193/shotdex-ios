@@ -67,3 +67,16 @@ extension VideoFrameGridTests {
         #expect(VideoStudioMetrics.timecode(model.currentTime, fps: 24) == "00:00:02:00")
     }
 }
+
+extension VideoFrameGridTests {
+    /// FS-12.17 AC-17: the footers' second line — "0:09.07 · −4 frames" on
+    /// the iPad, "0:09.07 · −4 f" on the Duo's inner display.
+    @MainActor
+    @Test func compactFrameLabel() {
+        let time = VideoFrameGrid.hundredths(9.2 - 4.0 / 30)
+        #expect(time + " · " + VideoStudioCopy.frameCount(-4) == "0:09.07 · −4 frames")
+        #expect(time + " · " + VideoStudioCopy.frameCount(-4, compact: true) == "0:09.07 · −4 f")
+        #expect(VideoStudioCopy.frameCount(-1) == "−1 frame")
+        #expect(VideoStudioCopy.frameCount(0) == "0 frames")
+    }
+}

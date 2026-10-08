@@ -917,6 +917,18 @@
       "comment": "Video Studio Video Settings: closes the panel; every change is already applied",
       "extractionState": "manual"
     },
+    "Double-tap the Pencil to switch between trim and scrub.": {
+      "comment": "Video Studio iPad frame trim: what a double-tap on the Apple Pencil does",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Double-tap the Pencil to switch between trim and scrub."
+          }
+        }
+      }
+    },
     "Draft": {
       "comment": "Video Projects: label on a video project that has never been exported",
       "extractionState": "manual"
@@ -1105,6 +1117,18 @@
         }
       }
     },
+    "Frame steps when held still": {
+      "comment": "Video Studio iPad Pencil switch: a Pencil held still for a moment then moves the edge one frame per 12 points",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Frame steps when held still"
+          }
+        }
+      }
+    },
     "Frame steps with haptics": {
       "comment": "Video Studio Precision switch: a haptic tick for every frame the edge or the playhead moves",
       "extractionState": "manual",
@@ -1180,6 +1204,18 @@
     "Hold to Compare": {
       "comment": "Video Studio compare: holding a finger on the frame shows the original",
       "extractionState": "manual"
+    },
+    "Hover shows the trim point": {
+      "comment": "Video Studio iPad Pencil switch: a hovering Pencil shows where the edge would land",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hover shows the trim point"
+          }
+        }
+      }
     },
     "Image": {
       "comment": "Video Studio Video Settings: the background is a library photo",
@@ -1472,6 +1508,18 @@
     "Output": {
       "comment": "Video Studio Video Settings: the row that states the frame size, length and estimated file size",
       "extractionState": "manual"
+    },
+    "Pencil": {
+      "comment": "Video Studio iPad frame trim: the block of Apple Pencil switches",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pencil"
+          }
+        }
+      }
     },
     "Photo · clip %lld": {
       "comment": "Video Studio In Video row: a photo clip and its place on the track",

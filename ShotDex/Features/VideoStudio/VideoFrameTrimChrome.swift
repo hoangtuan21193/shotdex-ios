@@ -203,26 +203,90 @@ struct VideoPrecisionBlock: View {
                 .font(.system(size: 15, weight: .semibold))
                 .foregroundStyle(.white)
                 .frame(height: 24, alignment: .leading)
+                .padding(.bottom, 2)
         }
     }
 
+    @ViewBuilder
     private func row(_ title: String, systemImage: String, isOn: Binding<Bool>) -> some View {
-        HStack(spacing: 10) {
-            if style == .column {
+        if style == .desk {
+            VideoDeskSwitchRow(title: title, systemImage: systemImage, isOn: isOn)
+        } else {
+            HStack(spacing: 10) {
                 Image(systemName: systemImage)
                     .font(.system(size: 13, weight: .medium))
                     .foregroundStyle(.white.opacity(0.55))
                     .frame(width: 17)
+                Toggle(isOn: isOn) {
+                    Text(verbatim: title)
+                        .font(.system(size: 12.5))
+                        .foregroundStyle(.white)
+                        .lineLimit(2)
+                }
+                .tint(.green)
             }
-            Toggle(isOn: isOn) {
-                Text(verbatim: title)
-                    .font(.system(size: style == .desk ? 15 : 12.5))
-                    .foregroundStyle(.white)
-                    .lineLimit(2)
-            }
-            .tint(.green)
+            .padding(.horizontal, 16)
+            .frame(height: 38)
         }
-        .padding(.horizontal, style == .column ? 16 : 0)
-        .frame(height: style == .desk ? 48 : 38)
     }
+}
+
+/// One switch of the iPad's trim columns (board F6_IP_PencilTrim): a 20pt
+/// glyph, the name in 15pt over two lines at most (146 wide, 32 in), the
+/// 51×31 switch at the column's end — 44 tall, 48 apart.
+struct VideoDeskSwitchRow: View {
+    let title: String
+    let systemImage: String
+    let isOn: Binding<Bool>
+
+    var body: some View {
+        HStack(spacing: 0) {
+            Image(systemName: systemImage)
+                .font(.system(size: 15, weight: .medium))
+                .foregroundStyle(EditorTheme.secondaryText)
+                .frame(width: 20, alignment: .leading)
+                .padding(.trailing, 12)
+                .accessibilityHidden(true)
+            Text(verbatim: title)
+                .font(.system(size: 15))
+                .foregroundStyle(.white)
+                .lineLimit(2)
+                .frame(width: 146, alignment: .leading)
+                .accessibilityHidden(true)
+            Spacer(minLength: 0)
+            Toggle(isOn: isOn) { Text(verbatim: title) }
+                .labelsHidden()
+                .tint(.green)
+                .accessibilityLabel(Text(verbatim: title))
+        }
+        .frame(height: 44)
+        .padding(.bottom, 4)
+    }
+}
+
+/// PENCIL (FS-12.17 §8): the iPad's two Pencil switches in the frame
+/// trim, and what a double-tap does. "Hover shows the trim point" only
+/// shows once this iPad has reported a Pencil hovering — never guessed from
+/// the model of the device.
+struct VideoPencilBlock: View {
+    var body: some View {
+        @Bindable var preferences = VideoInputPreferences.shared
+        VStack(alignment: .leading, spacing: 0) {
+            Text(verbatim: VideoStudioCopy.pencil)
+                .font(.system(size: 15, weight: .semibold))
+                .foregroundStyle(.white)
+                .frame(height: 24, alignment: .leading)
+            VideoDeskSwitchRow(title: VideoStudioCopy.frameStepsWhenHeldStill, systemImage: "pencil.tip", isOn: $preferences.pencilStillSteps)
+                .padding(.top, 2)
+            if preferences.hasSeenPencilHover {
+                VideoDeskSwitchRow(title: VideoStudioCopy.hoverShowsTrimPoint, systemImage: "hand.point.up", isOn: $preferences.pencilHover)
+            }
+            Text(verbatim: VideoStudioCopy.pencilDoubleTapHint)
+                .font(.system(size: 13))
+                .foregroundStyle(.white.opacity(0.35))
+                .fixedSize(horizontal: false, vertical: true)
+                .padding(.top, 2)
+        }
+    }
+
 }

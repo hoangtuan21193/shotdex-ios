@@ -28,9 +28,16 @@ actor VideoEdgeFrameSource {
         let maximumSide: Int
     }
 
-    /// Whether `asset` can be read without the network.
+    /// Whether `asset` can be read without the network: a file on this
+    /// device, or a composition PhotoKit built over such files (a slow-mo
+    /// or an edited video). An iCloud stream is not.
     nonisolated static func isLocal(_ asset: AVAsset) -> Bool {
-        (asset as? AVURLAsset)?.url.isFileURL ?? false
+        if let url = (asset as? AVURLAsset)?.url { return url.isFileURL }
+        if let composition = asset as? AVComposition {
+            let urls = composition.tracks.flatMap(\.segments).compactMap(\.sourceURL)
+            return !urls.isEmpty && urls.allSatisfy(\.isFileURL)
+        }
+        return false
     }
 
     init(asset: AVAsset) {

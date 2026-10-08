@@ -385,6 +385,8 @@ struct VideoStudioSheetHost: View {
                 // panel, as Trim's chips take it for a cut.
                 VideoLookPanel(model: model, mode: .clip, usesTallScopes: layout != .band)
                     .frame(maxHeight: .infinity, alignment: .top)
+            } else if layout == .dock, model.inspectorTarget == .clip, model.isFrameTrimming, let clip = model.selectedClip {
+                dockTrimColumns(clip)
             } else if layout == .dock, model.inspectorTarget == .clip, let clip = model.selectedClip {
                 dockClipColumns(clip)
             } else {
@@ -392,6 +394,109 @@ struct VideoStudioSheetHost: View {
                     .frame(maxHeight: .infinity, alignment: .top)
             }
         }
+    }
+
+    /// The frame trim in the portrait dock (FS-12.17 §4, board
+    /// F6_IP_PencilTrim): four columns of 238, 16 apart — Trim (Start /
+    /// End to Playhead) │ Speed · Volume │ Pencil │ Precision.
+    private func dockTrimColumns(_ clip: VideoClip) -> some View {
+        let metrics = VideoStudioDeskGeometry.self
+        return HStack(alignment: .top, spacing: metrics.dockTrimColumnGap) {
+            deskTrimBlock(clip)
+                .frame(width: metrics.dockTrimColumnWidth, alignment: .topLeading)
+            deskTrimLengthRows(clip)
+                .frame(width: metrics.dockTrimColumnWidth, alignment: .topLeading)
+            VideoPencilBlock()
+                .frame(width: metrics.dockTrimColumnWidth, alignment: .topLeading)
+            VideoPrecisionBlock(style: .desk)
+                .frame(width: metrics.dockTrimColumnWidth, alignment: .topLeading)
+        }
+        .padding(.horizontal, metrics.dockInset)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .frame(height: metrics.dockParamHeight, alignment: .top)
+    }
+
+    /// Speed · Volume (a still: Duration) in a 238 column: the label column
+    /// 64, the speed presets the column's width (board F6_IP_PencilTrim).
+    @ViewBuilder
+    private func deskTrimLengthRows(_ clip: VideoClip) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            if clip.kind == .video {
+                DeskSliderRow(
+                    label: String(localized: "Speed", table: VideoStudioCopy.table, comment: "Video Studio clip panel: label of the playback-rate chips"),
+                    value: clip.speed, range: VideoClip.speedRange,
+                    valueText: clip.speed.formatted(.number.precision(.significantDigits(1...3))) + "×",
+                    anchor: VideoClip.speedRange.lowerBound,
+                    labelWidth: VideoStudioDeskGeometry.dockTrimLabelWidth,
+                    model: model,
+                    set: { model.setSpeed(($0 * 20).rounded() / 20, for: clip.id) },
+                    reset: { model.pushUndo(); model.setSpeed(1, for: clip.id) }
+                )
+                DeskSpeedPresets(speed: clip.speed) { speed in
+                    guard abs(clip.speed - speed) > 0.001 else { return }
+                    model.pushUndo()
+                    model.setSpeed(speed, for: clip.id)
+                }
+                DeskVolumeRow(
+                    isMuted: clip.isMuted, volume: clip.volume, model: model,
+                    toggleMute: { model.toggleClipMuted(clip.id) },
+                    set: { model.setClipVolume($0, for: clip.id) },
+                    reset: { model.pushUndo(); model.setClipVolume(1, for: clip.id) }
+                )
+                .padding(.leading, -DeskRowMetrics.muteGap)
+                .padding(.top, 4)
+            } else {
+                DeskSliderRow(
+                    label: String(localized: "Duration", table: VideoStudioCopy.table, comment: "Video Studio clip panel: how long a still stays on screen"),
+                    value: clip.photoDuration, range: VideoClip.photoDurationRange,
+                    valueText: String(format: "%.1fs", clip.photoDuration),
+                    labelWidth: VideoStudioDeskGeometry.dockTrimLabelWidth,
+                    model: model,
+                    set: { model.setPhotoDuration($0, for: clip.id) },
+                    reset: { model.pushUndo(); model.setPhotoDuration(VideoClip.defaultPhotoDuration, for: clip.id) }
+                )
+            }
+        }
+    }
+
+    /// The iPad's Trim block in the frame trim: "Trim", Start to Playhead
+    /// and End to Playhead 238×44, and how else to cut.
+    private func deskTrimBlock(_ clip: VideoClip) -> some View {
+        let isAvailable = model.trimChipsUnavailable == nil
+        return VStack(alignment: .leading, spacing: 0) {
+            Text(VideoStudioCopy.trim)
+                .font(.system(size: DeskRowMetrics.headerSize, weight: .semibold))
+                .foregroundStyle(.white)
+                .frame(height: 24, alignment: .leading)
+            VStack(spacing: 6) {
+                deskTrimButton(VideoStudioCopy.startToPlayhead, systemImage: "arrow.left.to.line", isEnabled: isAvailable) { trim(.start) }
+                deskTrimButton(VideoStudioCopy.endToPlayhead, systemImage: "arrow.right.to.line", isEnabled: isAvailable) { trim(.end) }
+            }
+            .padding(.top, 2)
+            Text(isAvailable ? VideoStudioCopy.dragEdgesHint : VideoStudioCopy.movePlayheadIntoClip)
+                .font(.system(size: 13))
+                .foregroundStyle(.white.opacity(0.35))
+                .fixedSize(horizontal: false, vertical: true)
+                .padding(.top, 8)
+        }
+    }
+
+    private func deskTrimButton(_ title: String, systemImage: String, isEnabled: Bool, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            HStack(spacing: 8) {
+                Image(systemName: systemImage).font(.system(size: 15, weight: .medium))
+                Text(title).font(.system(size: 15, weight: .medium)).lineLimit(1)
+                Spacer(minLength: 0)
+            }
+            .padding(.horizontal, 12)
+            .foregroundStyle(isEnabled ? Color.white : Color.white.opacity(0.28))
+            .frame(height: 44)
+            .background(RoundedRectangle(cornerRadius: 10, style: .continuous).fill(Color.white.opacity(0.08)))
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .disabled(!isEnabled)
+        .accessibilityLabel(title)
     }
 
     /// A clip's controls in the dock's three columns: Duration · Speed ·
@@ -632,7 +737,22 @@ struct VideoStudioSheetHost: View {
                 // The iPad's rows are 44 tall and set their own gaps (IL2,
                 // IP2); the phone and the Duo keep 4 between rows.
                 VStack(alignment: .leading, spacing: isDesk ? 0 : 4) {
-                    if windowClass == .duoInner, model.isFrameTrimming {
+                    if isDeskInspector, model.isFrameTrimming {
+                        // The landscape inspector stacks what the portrait
+                        // dock spreads in four columns (FS-12.17 §4).
+                        deskTrimBlock(clip)
+                            .padding(.horizontal, deskInset)
+                            .padding(.top, 8)
+                        ForEach(VideoClipPanelSections.sections(for: clip.kind, leading: nil).filter { $0 == .speed || $0 == .volume || $0 == .duration }, id: \.self) { section in
+                            clipSection(section, clip)
+                        }
+                        VideoPencilBlock()
+                            .padding(.horizontal, deskInset)
+                            .padding(.top, 12)
+                        VideoPrecisionBlock(style: .desk)
+                            .padding(.horizontal, deskInset)
+                            .padding(.top, 12)
+                    } else if windowClass == .duoInner, model.isFrameTrimming {
                         // The Duo's column while trimming (board
                         // F6_DI_TouchTrim): the clip's length controls,
                         // then PRECISION and how the trim works.

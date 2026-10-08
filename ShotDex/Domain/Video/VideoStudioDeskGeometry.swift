@@ -144,6 +144,12 @@ enum VideoStudioDeskGeometry {
     static let dockParamTop: CGFloat = 77
     static let dockParamHeight: CGFloat = 183
     static let dockFooterTop: CGFloat = 260
+    /// The frame trim in the dock (FS-12.17 §4, board F6_IP_PencilTrim):
+    /// four columns of 238, 16 apart — 16 + 4 × 238 + 3 × 16 + 16 = 1032.
+    static let dockTrimColumnWidth: CGFloat = 238
+    static let dockTrimColumnGap: CGFloat = 16
+    /// A slider's label column in a 238 column (Speed).
+    static let dockTrimLabelWidth: CGFloat = 64
     static let dockFooterHeight: CGFloat = 64
     /// ✕ and ✓ at the foot of the Duo inner display's row.
     static let footerButton: CGFloat = 40

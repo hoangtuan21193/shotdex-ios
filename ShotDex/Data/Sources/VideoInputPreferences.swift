@@ -16,6 +16,8 @@ final class VideoInputPreferences {
         static let pencilHover = "video.pencilHover"
         /// The keyboard list has shown itself once (17b §4).
         static let keyboardListShown = "video.keyboardListShown"
+        /// This iPad has reported a Pencil hovering (17 §8).
+        static let pencilHoverSeen = "video.pencilHoverSeen"
     }
 
     @ObservationIgnored private let defaults: UserDefaults
@@ -27,6 +29,7 @@ final class VideoInputPreferences {
         pencilStillSteps = Self.bool(Key.pencilStillSteps, defaults, default: true)
         pencilHover = Self.bool(Key.pencilHover, defaults, default: true)
         hasShownKeyboardList = Self.bool(Key.keyboardListShown, defaults, default: false)
+        hasSeenPencilHover = Self.bool(Key.pencilHoverSeen, defaults, default: false)
     }
 
     /// PRECISION — Frame steps with haptics: a selection tick each frame.
@@ -51,6 +54,11 @@ final class VideoInputPreferences {
 
     var hasShownKeyboardList: Bool {
         didSet { defaults.set(hasShownKeyboardList, forKey: Key.keyboardListShown) }
+    }
+
+    /// The hover switch shows only after this.
+    var hasSeenPencilHover: Bool {
+        didSet { defaults.set(hasSeenPencilHover, forKey: Key.pencilHoverSeen) }
     }
 
     private static func bool(_ key: String, _ defaults: UserDefaults, default value: Bool) -> Bool {

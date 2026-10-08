@@ -33,6 +33,15 @@ extension VideoStudioScreen {
             deskPoolAndToolbar(model, frames: frames, canOpenPool: canOpenPool, showsPool: showsPool)
         }
         .frame(width: window.width, height: window.height, alignment: .topLeading)
+        // The loupe over a held edge: Ø152, 20 over the clip (FS-12.17 §5).
+        .overlayPreferenceValue(FrameTrimLoupeAnchorKey.self) { anchor in
+            frameTrimLoupe(
+                model, anchor: anchor,
+                diameter: VideoStudioMetrics.FrameTrim.loupeDiameterIPad,
+                gap: VideoStudioMetrics.FrameTrim.loupeGapIPad,
+                compact: false
+            )
+        }
         .deskChrome(model, lanes: lanes, meter: levelMeter, hasMeter: frames.meter != nil, shortcuts: keyboardShortcuts(model))
     }
 
@@ -63,6 +72,15 @@ extension VideoStudioScreen {
             deskPoolAndToolbar(model, frames: frames, canOpenPool: canOpenPool, showsPool: showsPool)
         }
         .frame(width: window.width, height: window.height, alignment: .topLeading)
+        // The loupe over a held edge: Ø152, 20 over the clip (FS-12.17 §5).
+        .overlayPreferenceValue(FrameTrimLoupeAnchorKey.self) { anchor in
+            frameTrimLoupe(
+                model, anchor: anchor,
+                diameter: VideoStudioMetrics.FrameTrim.loupeDiameterIPad,
+                gap: VideoStudioMetrics.FrameTrim.loupeGapIPad,
+                compact: false
+            )
+        }
         .deskChrome(model, lanes: lanes, meter: levelMeter, hasMeter: frames.meter != nil, shortcuts: keyboardShortcuts(model))
     }
 

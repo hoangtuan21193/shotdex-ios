@@ -352,3 +352,16 @@ struct VideoStudioDeskGeometryTests {
         #expect(frames.stage.minY == 45)
     }
 }
+
+extension VideoStudioDeskGeometryTests {
+    /// FS-12.17 §4 (board F6_IP_PencilTrim): the frame trim's four dock
+    /// columns, 238 wide and 16 apart, fill the 1032 window between the
+    /// dock's 16pt insets — x 16, 270, 524, 778.
+    @Test func portraitTrimColumnsFillTheDock() {
+        let width = Geometry.dockTrimColumnWidth
+        let gap = Geometry.dockTrimColumnGap
+        let xs = (0..<4).map { Geometry.dockInset + CGFloat($0) * (width + gap) }
+        #expect(xs == [16, 270, 524, 778])
+        #expect(xs[3] + width + Geometry.dockInset == 1032)
+    }
+}

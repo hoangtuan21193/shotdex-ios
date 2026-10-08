@@ -78,6 +78,23 @@ extension VideoStudioCopy {
         String(localized: "Frame zoom on pinch", table: table, comment: "Video Studio Precision switch: a pinch on the timeline can zoom in until one frame is 12 points wide")
     }
 
+    /// PENCIL (§8): its block, its switches, its double-tap.
+    static var pencil: String {
+        String(localized: "Pencil", table: table, comment: "Video Studio iPad frame trim: the block of Apple Pencil switches")
+    }
+
+    static var frameStepsWhenHeldStill: String {
+        String(localized: "Frame steps when held still", table: table, comment: "Video Studio iPad Pencil switch: a Pencil held still for a moment then moves the edge one frame per 12 points")
+    }
+
+    static var hoverShowsTrimPoint: String {
+        String(localized: "Hover shows the trim point", table: table, comment: "Video Studio iPad Pencil switch: a hovering Pencil shows where the edge would land")
+    }
+
+    static var pencilDoubleTapHint: String {
+        String(localized: "Double-tap the Pencil to switch between trim and scrub.", table: table, comment: "Video Studio iPad frame trim: what a double-tap on the Apple Pencil does")
+    }
+
     /// The loupe when the clip's media is not on this device (§10).
     static var offline: String {
         String(localized: "Offline", table: table, comment: "Video Studio frame trim: the loupe cannot show frames — the clip is not downloaded and there is no network")
