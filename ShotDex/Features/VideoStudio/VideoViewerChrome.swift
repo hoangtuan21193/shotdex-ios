@@ -756,6 +756,7 @@ struct VideoCompactTransportBar: View {
 
             Section {
                 tracksMenu
+                precisionMenu
             }
 
             // Auto Captions where the window has no media pool (FS-12.14 §3
@@ -797,6 +798,27 @@ struct VideoCompactTransportBar: View {
         }
         .accessibilityLabel(Text("More Playhead Tools", comment: "Video Studio transport: the overflow menu on a phone"))
         .accessibilityIdentifier("transport.more")
+    }
+
+    /// PRECISION (FS-12.17 §7): the device's two frame switches, in the ⋯
+    /// on a phone and the Duo's cover — the panel is hidden while trimming,
+    /// and the phone has everything the iPad has.
+    private var precisionMenu: some View {
+        @Bindable var preferences = VideoInputPreferences.shared
+        return Menu {
+            Toggle(isOn: $preferences.frameStepHaptics) {
+                Text(verbatim: VideoStudioCopy.frameStepsWithHaptics)
+            }
+            Toggle(isOn: $preferences.frameZoomOnPinch) {
+                Text(verbatim: VideoStudioCopy.frameZoomOnPinch)
+            }
+        } label: {
+            Label {
+                Text(verbatim: VideoStudioCopy.precision)
+            } icon: {
+                Image(systemName: "dial.low")
+            }
+        }
     }
 
     /// Lock and mute, per track.

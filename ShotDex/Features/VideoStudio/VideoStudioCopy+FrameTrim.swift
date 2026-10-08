@@ -45,6 +45,29 @@ extension VideoStudioCopy {
             : String(localized: "\(itemName) start", table: table, comment: "VoiceOver: a clip's leading edge handle on the Video Studio timeline (e.g. Clip 2 start); adjustable a frame at a time")
     }
 
+    /// The pill at Frame zoom (§6).
+    static var frameZoomPill: String {
+        String(localized: "Frame zoom · 1 frame = \(Int(TimelineZoomMath.pointsPerFrame)) pt", table: table, comment: "Video Studio timeline: the pill shown at the deepest zoom, where one frame is this many points wide")
+    }
+
+    /// Under the pill: how to use Frame zoom and how to leave it.
+    static var frameZoomHint: String {
+        String(localized: "Drag slowly to step one frame · pinch in to return", table: table, comment: "Video Studio timeline at Frame zoom: the hint under the pill")
+    }
+
+    /// PRECISION's two switches (§7) and their menu.
+    static var precision: String {
+        String(localized: "Precision", table: table, comment: "Video Studio: the menu of the frame-trim switches — haptics per frame, Frame zoom on pinch")
+    }
+
+    static var frameStepsWithHaptics: String {
+        String(localized: "Frame steps with haptics", table: table, comment: "Video Studio Precision switch: a haptic tick for every frame the edge or the playhead moves")
+    }
+
+    static var frameZoomOnPinch: String {
+        String(localized: "Frame zoom on pinch", table: table, comment: "Video Studio Precision switch: a pinch on the timeline can zoom in until one frame is 12 points wide")
+    }
+
     /// The loupe when the clip's media is not on this device (§10).
     static var offline: String {
         String(localized: "Offline", table: table, comment: "Video Studio frame trim: the loupe cannot show frames — the clip is not downloaded and there is no network")

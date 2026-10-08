@@ -32,6 +32,9 @@ struct TimelineTracksContent: View {
     let contentWidth: CGFloat
     /// Timeline time at the visible left edge — drives sticky band labels.
     let visibleLeftTime: Double
+    /// How wide the visible stretch of lanes is: with `visibleLeftTime`, the
+    /// window a filmstrip draws its frames in (FS-12.17 §13).
+    var visibleWidth: CGFloat = .infinity
     let activeDrag: TimelineActiveDrag?
 
     @Environment(\.videoLaneMetrics) private var lanes
@@ -72,6 +75,7 @@ struct TimelineTracksContent: View {
                 model: model,
                 pps: pps,
                 placements: placements,
+                visibleWindow: CGFloat(visibleLeftTime) * pps...(CGFloat(visibleLeftTime) * pps + max(0, visibleWidth)),
                 activeDrag: activeDrag,
                 onAddMedia: onAddMedia,
                 onTransition: onTransition
@@ -109,10 +113,17 @@ struct TimelineRuler: View {
     let totalDuration: Double
     let pps: CGFloat
     let visibleLeftTime: Double
+    /// The project's frame rate: at Frame zoom the ruler counts its frames
+    /// (FS-12.17 §6).
+    var fps: Int = 30
 
     var body: some View {
         Canvas { context, size in
             guard pps > 0 else { return }
+            if TimelineZoomMath.isFrameZoom(pps, fps: fps) {
+                drawFrames(in: &context, size: size)
+                return
+            }
             // The rule runs the whole width even where there is no time to
             // mark yet. Before this the lead-in at t = 0 was blank canvas, so
             // the timeline looked like it started half way across the screen
@@ -158,6 +169,49 @@ struct TimelineRuler: View {
             }
         }
     }
+
+    /// Frame zoom: a tick a frame, a taller one labelled "8:12f" every six
+    /// (72pt).
+    private func drawFrames(in context: inout GraphicsContext, size: CGSize) {
+        context.stroke(
+            Path { p in
+                p.move(to: CGPoint(x: 0, y: size.height - 0.5))
+                p.addLine(to: CGPoint(x: size.width, y: size.height - 0.5))
+            },
+            with: .color(EditorTheme.trackBorder),
+            lineWidth: 1
+        )
+        let rate = Double(max(1, fps))
+        let every = TimelineZoomMath.framesPerRulerLabel
+        var frame = max(0, Int((visibleLeftTime * rate).rounded(.down)))
+        let last = Int(((min(totalDuration, visibleLeftTime + Double(size.width / pps))) * rate).rounded(.up)) + 1
+        while frame <= last {
+            let x = CGFloat(Double(frame) / rate - visibleLeftTime) * pps
+            if x > size.width + 1 { break }
+            if x >= -1 {
+                let isMajor = frame % every == 0
+                let tickHeight: CGFloat = isMajor ? 7 : 4
+                context.stroke(
+                    Path { p in
+                        p.move(to: CGPoint(x: x, y: size.height - tickHeight))
+                        p.addLine(to: CGPoint(x: x, y: size.height))
+                    },
+                    with: .color(.white.opacity(isMajor ? 0.36 : 0.22)),
+                    lineWidth: 1
+                )
+                if isMajor {
+                    context.draw(
+                        Text(verbatim: TimelineZoomMath.rulerFrameLabel(frame: frame, fps: fps))
+                            .font(.system(size: 9).monospacedDigit())
+                            .foregroundStyle(.white.opacity(0.36)),
+                        at: CGPoint(x: x, y: size.height - 15),
+                        anchor: .center
+                    )
+                }
+            }
+            frame += 1
+        }
+    }
 }
 
 // MARK: - Video track
@@ -169,6 +223,8 @@ private struct VideoTrack: View {
     @Bindable var model: VideoStudioModel
     let pps: CGFloat
     let placements: [VideoTimelineMath.Placement]
+    /// The lanes' visible stretch, in content points.
+    var visibleWindow: ClosedRange<CGFloat>? = nil
     let activeDrag: TimelineActiveDrag?
     let onAddMedia: () -> Void
     let onTransition: (Int) -> Void
@@ -180,7 +236,8 @@ private struct VideoTrack: View {
                     ClipBand(
                         model: model, clip: clip, placement: placements[index], pps: pps,
                         reorderShift: reorderShift(clip),
-                        isLiftedFrom: groupDrag != nil && model.selectedClipIDs.contains(clip.id)
+                        isLiftedFrom: groupDrag != nil && model.selectedClipIDs.contains(clip.id),
+                        visibleWindow: visibleWindow
                     )
                 }
             }
@@ -475,6 +532,9 @@ private struct ClipBand: View {
     /// Where a lifted group came from (FS-12.11 §6): darkened 0.66 under a
     /// dashed 1.5pt ring while the group is in the air.
     var isLiftedFrom = false
+    /// The lanes' visible stretch, in content points: the filmstrip draws
+    /// only the frames that fall in it.
+    var visibleWindow: ClosedRange<CGFloat>? = nil
 
     private var isSelected: Bool { model.selectedClipID == clip.id }
     /// In the multi-select group (FS-12.11 §3): a 2pt ring and a ✓ badge,
@@ -488,7 +548,11 @@ private struct ClipBand: View {
             fileURL: model.serverFileURL(for: clip.assetID),
             photoLibrary: model.photoLibrary,
             width: width,
-            height: lanes.clipCell
+            height: lanes.clipCell,
+            visibleRange: visibleWindow.map { window in
+                let left = CGFloat(placement.start) * pps + reorderShift
+                return (window.lowerBound - left)...(window.upperBound - left)
+            }
         )
         .overlay(alignment: .bottomTrailing) { durationBadge }
         .overlay(alignment: .bottomLeading) { corners }
@@ -897,21 +961,31 @@ struct ClipFilmstrip: View {
     let photoLibrary: PhotoLibraryService
     let width: CGFloat
     let height: CGFloat
+    /// The part of the strip on screen, in its own points. Only the frames
+    /// that touch it (and one either side) are built: at Frame zoom a
+    /// minute of clip is 21 600pt wide — hundreds of frames nobody sees
+    /// (FS-12.17 §13). Nil builds them all.
+    var visibleRange: ClosedRange<CGFloat>? = nil
 
     @State private var image: UIImage?
 
     var body: some View {
-        HStack(spacing: 0) {
-            let count = max(1, Int((width / max(height, 1)).rounded(.up)))
-            ForEach(0..<count, id: \.self) { _ in
-                Rectangle()
-                    .fill(EditorTheme.control)
-                    .overlay { if let image { Image(uiImage: image).resizable().scaledToFill() } }
-                    .frame(width: height, height: height)
-                    .clipped()
+        let side = max(height, 1)
+        let count = max(1, Int((width / side).rounded(.up)))
+        let range = ClipFilmstrip.drawnCells(count: count, side: side, visible: visibleRange)
+        ZStack(alignment: .topLeading) {
+            if let range {
+                ForEach(range, id: \.self) { index in
+                    Rectangle()
+                        .fill(EditorTheme.control)
+                        .overlay { if let image { Image(uiImage: image).resizable().scaledToFill() } }
+                        .frame(width: height, height: height)
+                        .clipped()
+                        .offset(x: CGFloat(index) * side)
+                }
             }
         }
-        .frame(width: width, height: height, alignment: .leading)
+        .frame(width: width, height: height, alignment: .topLeading)
         .clipped()
         .onAppear {
             guard image == nil else { return }
@@ -933,6 +1007,17 @@ struct ClipFilmstrip: View {
                 allowNetwork: false
             ) { result in if let result { image = result } }
         }
+    }
+
+    /// The cells to build for a strip of `count` square cells `side` wide,
+    /// of which `visible` is on screen: the ones it touches and one more
+    /// each side. Nil when none is on screen.
+    static func drawnCells(count: Int, side: CGFloat, visible: ClosedRange<CGFloat>?) -> ClosedRange<Int>? {
+        guard count > 0 else { return nil }
+        guard let visible else { return 0...(count - 1) }
+        let first = max(0, Int((visible.lowerBound / side).rounded(.down)) - 1)
+        let last = min(count - 1, Int((visible.upperBound / side).rounded(.down)) + 1)
+        return first <= last ? first...last : nil
     }
 }
 

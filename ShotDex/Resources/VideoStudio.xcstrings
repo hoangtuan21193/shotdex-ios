@@ -921,6 +921,18 @@
       "comment": "Video Projects: label on a video project that has never been exported",
       "extractionState": "manual"
     },
+    "Drag slowly to step one frame · pinch in to return": {
+      "comment": "Video Studio timeline at Frame zoom: the hint under the pill",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Drag slowly to step one frame · pinch in to return"
+          }
+        }
+      }
+    },
     "Drag the white line across the frame. Before drops the look, adjustments, color and overlays.": {
       "comment": "Video Studio Look panel: under COMPARE when Split is chosen",
       "extractionState": "manual"
@@ -1080,6 +1092,42 @@
     "Frame Rate": {
       "comment": "Video Studio iPad Video Settings: label of 24 · 30 · 60",
       "extractionState": "manual"
+    },
+    "Frame steps with haptics": {
+      "comment": "Video Studio Precision switch: a haptic tick for every frame the edge or the playhead moves",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Frame steps with haptics"
+          }
+        }
+      }
+    },
+    "Frame zoom on pinch": {
+      "comment": "Video Studio Precision switch: a pinch on the timeline can zoom in until one frame is 12 points wide",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Frame zoom on pinch"
+          }
+        }
+      }
+    },
+    "Frame zoom · 1 frame = %lld pt": {
+      "comment": "Video Studio timeline: the pill shown at the deepest zoom, where one frame is this many points wide",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Frame zoom · 1 frame = %lld pt"
+          }
+        }
+      }
     },
     "Framing": {
       "comment": "Video Studio iPad Video Settings: label of Fit on Background · Fill (Crop)",
@@ -1424,6 +1472,18 @@
     "Position": {
       "comment": "Video Studio captions: where the line sits — Bottom, Middle, Top",
       "extractionState": "manual"
+    },
+    "Precision": {
+      "comment": "Video Studio: the menu of the frame-trim switches — haptics per frame, Frame zoom on pinch",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Precision"
+          }
+        }
+      }
     },
     "RATIO": {
       "comment": "Video Studio Video Settings: section header over the six frame ratios",

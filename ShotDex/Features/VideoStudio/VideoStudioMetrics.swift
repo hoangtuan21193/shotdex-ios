@@ -804,6 +804,11 @@ enum VideoStudioMetrics {
 }
 
 extension VideoStudioMetrics {
+    /// "Frame zoom · 1 frame = 12 pt" (FS-12.17 §6, board F6_P_FineScrub):
+    /// 270×26, radius 13, 276 under the timeline's top.
+    static let frameZoomPill = CGSize(width: 270, height: 26)
+    static let frameZoomPillTop: CGFloat = 276
+
     /// The frame trim's geometry (FS-12.17 §4–5, boards F6_P_PreciseTrim,
     /// F6_DI_TouchTrim, F6_IP_PencilTrim, F6_DC_PreciseTrim).
     enum FrameTrim {

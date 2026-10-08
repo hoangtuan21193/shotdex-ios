@@ -180,6 +180,9 @@ struct VideoTimelineScroller<Content: View>: UIViewRepresentable {
         scrollView.delaysContentTouches = false
         scrollView.backgroundColor = .clear
         scrollView.delegate = context.coordinator
+        // A name a UI test can pinch by, and the zoom as its value
+        // (FS-12.17 plan task 13 — the phone's tree is not walkable).
+        scrollView.accessibilityIdentifier = "VideoTimeline"
 
         let host = UIHostingController(rootView: AnyView(content()))
         host.view.backgroundColor = .clear
@@ -278,6 +281,8 @@ struct VideoTimelineScroller<Content: View>: UIViewRepresentable {
         }
         coordinator.applyContentHeight(scrollView)
         scrollView.dragZones = dragZones
+        scrollView.accessibilityValue = "\(Int(pps.rounded()))"
+
         coordinator.syncOffsetIfIdle(scrollView)
     }
 

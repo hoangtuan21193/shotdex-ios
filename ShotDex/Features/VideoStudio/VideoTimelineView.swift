@@ -72,7 +72,7 @@ struct VideoTimelineView: View {
             VStack(spacing: 0) {
                 // Inset by the gutter so the ruler's x = 0 lines up with the
                 // scrolling content's x = 0.
-                TimelineRuler(totalDuration: model.totalDuration, pps: pps, visibleLeftTime: visibleLeftTime)
+                TimelineRuler(totalDuration: model.totalDuration, pps: pps, visibleLeftTime: visibleLeftTime, fps: model.recipe.frameRate.rawValue)
                     .frame(height: lanes.ruler)
                     .padding(.leading, lanes.gutter)
                     .padding(.top, lanes.topPadding)
@@ -107,6 +107,7 @@ struct VideoTimelineView: View {
                             pps: pps,
                             contentWidth: contentWidth,
                             visibleLeftTime: visibleLeftTime,
+                            visibleWidth: screenWidth - lanes.gutter,
                             activeDrag: activeDrag,
                             onAddOverlay: onAddOverlay,
                             onAddMusic: onAddMusic,
@@ -130,6 +131,7 @@ struct VideoTimelineView: View {
             }
             .overlay(alignment: .topLeading) { groupPill }
             .overlay(alignment: .topLeading) { frameTrimLoupeAnchor(screenWidth: screenWidth) }
+            .overlay(alignment: .top) { frameZoomPill(screenWidth: screenWidth) }
             .overlay(alignment: .topLeading) { beatSnapMark(screenWidth: screenWidth) }
             .onAppear {
                 if !hasAppliedWindowZoom {
@@ -372,11 +374,54 @@ struct VideoTimelineView: View {
         case .began:
             pinchStartPPS = pps
         case .changed(let scale):
-            pps = TimelineZoomMath.clampedPPS(pinchStartPPS * scale)
+            pps = TimelineZoomMath.clampedPPS(pinchStartPPS * scale, ceiling: zoomCeiling)
             // The user's zoom — not one the layout is imposing for now.
             if zoomOverride == nil { model.timelineZoom = pps }
         case .ended:
             break
+        }
+    }
+
+    /// Where a pinch stops: Frame zoom — 12pt a frame — while "Frame zoom
+    /// on pinch" is on, 160 when it is off (FS-12.17 §6–7).
+    private var zoomCeiling: CGFloat {
+        TimelineZoomMath.ceiling(
+            frameZoomOnPinch: VideoInputPreferences.shared.frameZoomOnPinch,
+            fps: model.recipe.frameRate.rawValue
+        )
+    }
+
+    /// At Frame zoom (§6, board F6_P_FineScrub): "Frame zoom · 1 frame =
+    /// 12 pt" in a 270×26 pill, 276 under the timeline's top, and a hint
+    /// under it — the way back is a pinch in.
+    @ViewBuilder
+    private func frameZoomPill(screenWidth: CGFloat) -> some View {
+        if TimelineZoomMath.isFrameZoom(pps, fps: model.recipe.frameRate.rawValue) {
+            let size = VideoStudioMetrics.frameZoomPill
+            let top = min(VideoStudioMetrics.frameZoomPillTop, max(0, height - size.height - 40))
+            VStack(spacing: 8) {
+                HStack(spacing: 6) {
+                    Image(systemName: "plus.magnifyingglass")
+                        .font(.system(size: 11, weight: .semibold))
+                    Text(verbatim: VideoStudioCopy.frameZoomPill)
+                        .font(.system(size: 11.5, weight: .semibold))
+                        .lineLimit(1)
+                }
+                .foregroundStyle(.white)
+                .frame(width: size.width, height: size.height)
+                .background(Capsule().fill(Color(red: 28 / 255, green: 28 / 255, blue: 30 / 255).opacity(0.95)))
+                .accessibilityElement(children: .combine)
+                .accessibilityIdentifier("frameZoomPill")
+                Text(verbatim: VideoStudioCopy.frameZoomHint)
+                    .font(.system(size: 11.5))
+                    .foregroundStyle(.white.opacity(0.35))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+                    .frame(width: max(0, screenWidth - lanes.gutter))
+                    .offset(x: lanes.gutter / 2)
+            }
+            .padding(.top, top)
+            .allowsHitTesting(false)
         }
     }
 

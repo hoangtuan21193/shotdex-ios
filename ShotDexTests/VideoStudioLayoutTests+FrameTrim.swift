@@ -30,3 +30,16 @@ extension VideoStudioLayoutTests {
         #expect(atRight.maxX == 394)
     }
 }
+
+extension VideoStudioLayoutTests {
+    /// FS-12.17 §13: a filmstrip builds only the frames on screen and one
+    /// either side — a minute of clip at Frame zoom is 400 cells of 54pt,
+    /// a 402pt window shows 9 of them.
+    @Test func filmstripBuildsOnlyVisibleCells() {
+        #expect(ClipFilmstrip.drawnCells(count: 400, side: 54, visible: 1000...1402) == 17...26)
+        #expect(ClipFilmstrip.drawnCells(count: 400, side: 54, visible: -500 ... -200) == nil)
+        #expect(ClipFilmstrip.drawnCells(count: 400, side: 54, visible: -500 ... -10) == 0...0)
+        #expect(ClipFilmstrip.drawnCells(count: 3, side: 54, visible: nil) == 0...2)
+        #expect(ClipFilmstrip.drawnCells(count: 3, side: 54, visible: -100...20) == 0...1)
+    }
+}
