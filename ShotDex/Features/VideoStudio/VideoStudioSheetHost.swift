@@ -354,7 +354,7 @@ struct VideoStudioSheetHost: View {
     private var itemBody: some View {
         VStack(spacing: 0) {
             VideoItemCommandRow(
-                commands: model.selectedItemCommands,
+                commands: rowCommands,
                 isOn: { model.isItemCommandOn($0) },
                 isEnabled: { model.isItemCommandEnabled($0) },
                 perform: perform,
@@ -443,12 +443,39 @@ struct VideoStudioSheetHost: View {
         .frame(height: VideoStudioDeskGeometry.dockParamHeight)
     }
 
+    /// The selected item's row — on the Duo's inner display, while a
+    /// clip's edge is being trimmed, opened by −1 · +1 · Frame Zoom · Trim
+    /// (FS-12.17 §4).
+    private var rowCommands: [VideoItemCommand] {
+        let row = model.selectedItemCommands
+        guard windowClass == .duoInner, model.isFrameTrimming else { return row }
+        return VideoItemCommand.duoInnerTrimRow(row)
+    }
+
+    /// Where the Trim cell opens the frame trim instead of its two chips:
+    /// the Duo's inner display (no chips there, FS-12.04b §4) and the iPad
+    /// (chips and Pencil side by side, FS-12.17 §4).
+    private var trimCellOpensFrameTrim: Bool {
+        let opensTrim: [VideoStudioWindowClass] = [.duoInner, .iPadLandscape, .iPadPortrait]
+        return windowClass.map(opensTrim.contains) == true && model.inspectorTarget == .clip
+    }
+
     private func perform(_ command: VideoItemCommand) {
+        if command == .trim, trimCellOpensFrameTrim {
+            model.toggleFrameTrimFromCell()
+            return
+        }
         if command.isSection {
             model.toggleItemSection(command)
             return
         }
         switch command {
+        case .minusFrame, .plusFrame:
+            if model.stepFrameTrim(command == .minusFrame ? -1 : 1), VideoInputPreferences.shared.frameStepHaptics {
+                UISelectionFeedbackGenerator().selectionChanged()
+            }
+        case .frameZoom:
+            model.toggleFrameZoom()
         case .split:
             if model.inspectorTarget == .caption { model.splitSelectedCaption() } else { model.splitClipUnderPlayhead() }
         case .merge:
@@ -605,6 +632,15 @@ struct VideoStudioSheetHost: View {
                 // The iPad's rows are 44 tall and set their own gaps (IL2,
                 // IP2); the phone and the Duo keep 4 between rows.
                 VStack(alignment: .leading, spacing: isDesk ? 0 : 4) {
+                    if windowClass == .duoInner, model.isFrameTrimming {
+                        // The Duo's column while trimming (board
+                        // F6_DI_TouchTrim): the clip's length controls,
+                        // then PRECISION and how the trim works.
+                        ForEach(VideoClipPanelSections.sections(for: clip.kind, leading: nil).filter { $0 == .speed || $0 == .volume || $0 == .duration }, id: \.self) { section in
+                            clipSection(section, clip)
+                        }
+                        VideoPrecisionBlock(style: .column)
+                    } else {
                     if model.activeItemCommand == .trim { trimBlock(clip) }
                     ForEach(
                         VideoClipPanelSections.sections(for: clip.kind, leading: model.activeItemCommand),
@@ -617,6 +653,7 @@ struct VideoStudioSheetHost: View {
                            let bed = model.snapSource {
                             VideoBeatsPanel(model: model, music: bed, isDesk: true, isClipSection: true)
                         }
+                    }
                     }
                 }
                 .padding(.bottom, 8)

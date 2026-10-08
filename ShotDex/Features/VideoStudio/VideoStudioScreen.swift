@@ -939,16 +939,22 @@ struct VideoStudioScreen: View {
                         .allowsHitTesting(false)
                         .accessibilityHidden(true)
                     }
+                    // The phone's sits at the viewer's top-left; the Duo's
+                    // inner display floats Back · Undo · Redo there, so its
+                    // label sits low on the left (board F6_DI_TouchTrim).
+                    let isDuoInner = currentWindowClass == .duoInner
                     VideoEdgeFrameLabel(
                         trim: trim,
-                        height: currentWindowClass == .duoInner
+                        height: isDuoInner
                             ? VideoStudioMetrics.FrameTrim.viewerLabelHeightDuoInner
-                            : VideoStudioMetrics.FrameTrim.viewerLabelHeightPhone
+                            : VideoStudioMetrics.FrameTrim.viewerLabelHeightPhone,
+                        fontSize: isDuoInner ? 11.5 : 11
                     )
                     .fixedSize()
-                    .padding(.leading, VideoStudioMetrics.FrameTrim.viewerLabelInset)
-                    .padding(.top, VideoStudioMetrics.FrameTrim.viewerLabelInset)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                    .padding(.leading, isDuoInner ? VideoStudioMetrics.FrameTrim.viewerLabelInsetDuoInner : VideoStudioMetrics.FrameTrim.viewerLabelInset)
+                    .padding(.top, isDuoInner ? 0 : VideoStudioMetrics.FrameTrim.viewerLabelInset)
+                    .padding(.bottom, isDuoInner ? VideoStudioMetrics.FrameTrim.viewerLabelBottomDuoInner : 0)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: isDuoInner ? .bottomLeading : .topLeading)
                     .allowsHitTesting(false)
                 }
                 // "9:16 · Fill" at the frame's top-left while Video

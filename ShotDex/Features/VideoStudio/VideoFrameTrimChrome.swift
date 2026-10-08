@@ -145,18 +145,84 @@ struct VideoFrameTrimLoupe: View {
 struct VideoEdgeFrameLabel: View {
     let trim: FrameTrimSession
     var height: CGFloat = 22
+    var fontSize: CGFloat = 11
 
     var body: some View {
         Text(verbatim: VideoStudioCopy.edgeFrameLabel(
             trailing: trim.edge == .trailing,
             at: VideoFrameGrid.hundredths(trim.edgeTime)
         ))
-        .font(.system(size: 11, weight: .semibold))
+        .font(.system(size: fontSize, weight: .semibold))
         .foregroundStyle(.white)
         .lineLimit(1)
         .padding(.horizontal, 10)
         .frame(height: height)
         .background(Capsule().fill(Color.black.opacity(0.6)))
         .accessibilityIdentifier("frameTrimViewerLabel")
+    }
+}
+
+/// PRECISION (FS-12.17 §7): the device's two frame switches — the Duo's
+/// inner display shows them in its column while trimming (board
+/// F6_DI_TouchTrim), the iPad as the trim's fourth column (F6_IP_PencilTrim).
+/// The phone and the cover keep them in the transport's ⋯.
+struct VideoPrecisionBlock: View {
+    enum Style { case column, desk }
+    let style: Style
+
+    var body: some View {
+        @Bindable var preferences = VideoInputPreferences.shared
+        VStack(alignment: .leading, spacing: 0) {
+            header(VideoStudioCopy.precision)
+            row(VideoStudioCopy.frameStepsWithHaptics, systemImage: "waveform", isOn: $preferences.frameStepHaptics)
+            row(VideoStudioCopy.frameZoomOnPinch, systemImage: "plus.magnifyingglass", isOn: $preferences.frameZoomOnPinch)
+            if style == .column {
+                Text(verbatim: VideoStudioCopy.frameTrimHint)
+                    .font(.system(size: 11))
+                    .foregroundStyle(.white.opacity(0.35))
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.horizontal, 16)
+                    .padding(.top, 6)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func header(_ title: String) -> some View {
+        switch style {
+        case .column:
+            Text(verbatim: title)
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundStyle(EditorTheme.dimText)
+                .textCase(.uppercase)
+                .padding(.horizontal, 16)
+                .padding(.top, 14)
+                .padding(.bottom, 4)
+        case .desk:
+            Text(verbatim: title)
+                .font(.system(size: 15, weight: .semibold))
+                .foregroundStyle(.white)
+                .frame(height: 24, alignment: .leading)
+        }
+    }
+
+    private func row(_ title: String, systemImage: String, isOn: Binding<Bool>) -> some View {
+        HStack(spacing: 10) {
+            if style == .column {
+                Image(systemName: systemImage)
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundStyle(.white.opacity(0.55))
+                    .frame(width: 17)
+            }
+            Toggle(isOn: isOn) {
+                Text(verbatim: title)
+                    .font(.system(size: style == .desk ? 15 : 12.5))
+                    .foregroundStyle(.white)
+                    .lineLimit(2)
+            }
+            .tint(.green)
+        }
+        .padding(.horizontal, style == .column ? 16 : 0)
+        .frame(height: style == .desk ? 48 : 38)
     }
 }

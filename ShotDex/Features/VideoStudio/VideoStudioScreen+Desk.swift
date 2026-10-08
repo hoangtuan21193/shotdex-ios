@@ -196,6 +196,15 @@ extension VideoStudioScreen {
             }
         }
         .frame(width: window.width, height: window.height, alignment: .topLeading)
+        // The loupe over a held edge: Ø140, 25 over the clip (FS-12.17 §5).
+        .overlayPreferenceValue(FrameTrimLoupeAnchorKey.self) { anchor in
+            frameTrimLoupe(
+                model, anchor: anchor,
+                diameter: VideoStudioMetrics.FrameTrim.loupeDiameterDuoInner,
+                gap: VideoStudioMetrics.FrameTrim.loupeGapDuoInner,
+                compact: false
+            )
+        }
         .deskChrome(model, lanes: lanes, meter: levelMeter, hasMeter: false, shortcuts: keyboardShortcuts(model))
     }
 

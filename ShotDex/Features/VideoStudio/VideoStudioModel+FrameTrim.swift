@@ -54,6 +54,19 @@ extension VideoStudioModel {
         return beginFrameTrim(id, edge: edge)
     }
 
+    /// The Trim cell on the Duo's inner display and the iPad (§3, FS-12.04b
+    /// §4 exception): opens the frame trim on the edge nearer the playhead,
+    /// the cell lit; tapped again, keeps it (✓) and the cell goes out.
+    func toggleFrameTrimFromCell() {
+        if frameTrim != nil {
+            commitFrameTrim()
+            return
+        }
+        guard beginFrameTrimAtNearerEdge() else { return }
+        activeItemCommand = .trim
+        isFrameTrimFromCell = true
+    }
+
     /// −1 / +1 Frame (§4–5): one frame of the project, when it fits.
     /// Returns whether the edge moved.
     @discardableResult
@@ -89,9 +102,7 @@ extension VideoStudioModel {
     /// close up now. The playhead stays on the edge where it landed.
     func commitFrameTrim() {
         guard let trim = frameTrim else { return }
-        frameTrim = nil
-        isFrameTrimHolding = false
-        frameTrimFrames.clear()
+        endFrameTrimState()
         guard trim.changesClip, recipe.clips.contains(where: { $0.id == trim.clipID }) else { return }
         pushUndo()
         recipe = trim.applied(to: recipe)
@@ -108,10 +119,19 @@ extension VideoStudioModel {
     /// the playhead back on the edge as it was.
     func cancelFrameTrim() {
         guard let trim = frameTrim else { return }
+        endFrameTrimState()
+        seek(to: trim.originTime(of: trim.edge))
+    }
+
+    /// The trim's own state goes; a trim the Trim cell opened turns it off.
+    private func endFrameTrimState() {
         frameTrim = nil
         isFrameTrimHolding = false
         frameTrimFrames.clear()
-        seek(to: trim.originTime(of: trim.edge))
+        if isFrameTrimFromCell {
+            isFrameTrimFromCell = false
+            if activeItemCommand == .trim { activeItemCommand = nil }
+        }
     }
 
     /// Where a clip's edge is now on the timeline — the trimmed edge's

@@ -523,3 +523,16 @@ struct VideoStudioTrackSwitchTests {
         #expect(model.recipe.clips[1].speed == 1)
     }
 }
+
+extension VideoStudioDeskLayoutTests {
+    /// FS-12.17 AC-10 (board F6_DI_TouchTrim): while trimming, the Duo
+    /// inner display's row opens −1 Frame · +1 Frame · Frame Zoom · Trim,
+    /// then the clip's row without Split.
+    @Test func duoInnerTrimRowOrder() {
+        let row = VideoItemCommand.duoInnerTrimRow(VideoItemCommand.commands(for: .videoClip))
+        #expect(Array(row.prefix(4)) == [.minusFrame, .plusFrame, .frameZoom, .trim])
+        #expect(!row.contains(.split))
+        #expect(row.filter { $0 == .trim }.count == 1)
+        #expect(Array(row.dropFirst(4)) == [.speed, .volume, .replace, .freeze, .duplicate, .look, .delete])
+    }
+}

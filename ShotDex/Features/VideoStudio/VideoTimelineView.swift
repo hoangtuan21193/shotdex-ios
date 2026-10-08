@@ -46,6 +46,8 @@ struct VideoTimelineView: View {
     @State private var scrubStart = TimelineScrubStart()
     /// "−3 f · 0:08.80" while scrubbing at Frame zoom (FS-12.17 §6).
     @State private var scrubBadge: String?
+    /// The zoom the Frame Zoom cell left, to go back to.
+    @State private var frameZoomReturnPPS = TimelineZoomReturn()
     @State private var viewportWidth: CGFloat = 393
     @State private var lastHapticSecond = 0
     /// Whether the edge being dragged sat at a limit, or on a snap, on the
@@ -177,6 +179,8 @@ struct VideoTimelineView: View {
         // Still while an export runs (FS-12.10b §4).
         .allowsHitTesting(!model.isExportBusy)
         .onChange(of: model.fitToWindowToken) { fitToWindow() }
+        .onChange(of: model.frameZoomToggleToken) { toggleFrameZoom() }
+        .onChange(of: pps, initial: true) { model.isTimelineAtFrameZoom = isFrameZoom }
     }
 
     /// The lanes as a drop target: the whole lane area right of the gutter,
@@ -483,6 +487,21 @@ struct VideoTimelineView: View {
         }
     }
 
+    /// The Frame Zoom cell (FS-12.17 §4): to 12pt a frame around the
+    /// playhead — whatever the pinch switch says — and back to the zoom it
+    /// came from.
+    private func toggleFrameZoom() {
+        withAnimation(EditorTheme.animation) {
+            if isFrameZoom {
+                pps = TimelineZoomMath.clampedPPS(frameZoomReturnPPS.value ?? lanes.pointsPerSecond)
+            } else {
+                frameZoomReturnPPS.value = pps
+                pps = TimelineZoomMath.frameZoomPPS(fps: model.recipe.frameRate.rawValue)
+            }
+        }
+        if zoomOverride == nil { model.timelineZoom = pps }
+    }
+
     private func fitToWindow() {
         let rowWidth = viewportWidth - lanes.gutter
         guard model.totalDuration > 0.1, rowWidth > 0 else { return }
@@ -725,6 +744,12 @@ struct VideoTimelineView: View {
 @MainActor
 final class TimelinePressStart {
     var x: CGFloat = 0
+}
+
+/// The zoom to return to from Frame zoom.
+@MainActor
+final class TimelineZoomReturn {
+    var value: CGFloat?
 }
 
 /// Where a scrub began, in timeline seconds.

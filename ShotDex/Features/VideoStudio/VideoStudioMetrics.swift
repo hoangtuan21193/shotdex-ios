@@ -842,6 +842,9 @@ extension VideoStudioMetrics {
         static let viewerLabelHeightPhone: CGFloat = 22
         static let viewerLabelHeightDuoInner: CGFloat = 24
         static let viewerLabelInset: CGFloat = 10
+        /// The Duo's inner display: 12 in, 31 over the viewer's foot.
+        static let viewerLabelInsetDuoInner: CGFloat = 12
+        static let viewerLabelBottomDuoInner: CGFloat = 31
 
         /// The pill's origin, centred across `width`, its foot `pillGap`
         /// above `floor`.

@@ -496,6 +496,19 @@ final class VideoStudioModel {
     var isFrameTrimHolding = false
     /// The frames the loupe and the viewer draw while trimming.
     let frameTrimFrames = VideoFrameTrimFrames()
+    /// The trim was opened by the Trim cell (Duo inner, iPad): ending it
+    /// turns the cell off.
+    var isFrameTrimFromCell = false
+    /// Asks the timeline to go to Frame zoom around the playhead, or back
+    /// to where it was — the Frame Zoom cell (FS-12.17 §4). The timeline
+    /// keeps the zoom; the model only asks.
+    private(set) var frameZoomToggleToken = 0
+    /// Whether the timeline is at Frame zoom now — what lights the cell.
+    var isTimelineAtFrameZoom = false
+
+    func toggleFrameZoom() {
+        frameZoomToggleToken += 1
+    }
 
     /// Opens a session on `target`, remembering the project as it is now.
     private func beginSession(_ target: VideoEditSession.Target) {
@@ -554,6 +567,8 @@ final class VideoStudioModel {
         }
         if let clip = selectedClip {
             switch command {
+            case .minusFrame: return frameTrim?.canStep(by: -1) ?? false
+            case .plusFrame: return frameTrim?.canStep(by: 1) ?? false
             case .delete: return recipe.clips.count > 1
             case .freeze, .split:
                 return !(clip.kind == .video && isClipUnavailable(clip.id))
@@ -595,6 +610,7 @@ final class VideoStudioModel {
     /// Whether a section command's cell is lit.
     func isItemCommandOn(_ command: VideoItemCommand) -> Bool {
         if command == .move { return isPlacingGroup }
+        if command == .frameZoom { return isTimelineAtFrameZoom }
         guard command.isSection else { return false }
         switch selectedItemKind {
         case .text, .sticker: return textTool(for: command) == inspectorTextTool
@@ -722,6 +738,9 @@ final class VideoStudioModel {
     /// panel — a session of its own on every layout but the iPad's pool
     /// (FS-12.09 §5). Nil when there is no row to show.
     var sessionFooterTitle: VideoItemTitle.Lines? {
+        // The frame trim is a session inside the clip's: its footer names
+        // it, and its ✕ / ✓ end it first (FS-12.17 §3–4).
+        if let trim = frameTrimTitle() { return trim }
         if let selectionTitle { return selectionTitle }
         guard inspectorTarget == .none, activeToolPanel == .media else { return nil }
         let time = VideoStudioMetrics.compactTimecode(currentTime)
@@ -744,6 +763,10 @@ final class VideoStudioModel {
     /// losing three picks to the button that means "keep" would be a silent
     /// loss (FS-12.09 §5).
     func commitSession() {
+        if frameTrim != nil {
+            commitFrameTrim()
+            return
+        }
         if activeToolPanel == .media, let picks = mediaSelection, !picks.isEmpty {
             insertMedia(picks)
         }
@@ -1126,11 +1149,11 @@ final class VideoStudioModel {
     /// bring them back — and nothing is selected. With nothing changed it is
     /// only a deselect.
     func cancelSession() {
-        // ✕ of the clip forgets a frame trim open inside it.
+        // The frame trim is a session inside the clip's: ✕ ends it first,
+        // the clip stays selected (FS-12.17 §3).
         if frameTrim != nil {
-            frameTrim = nil
-            isFrameTrimHolding = false
-            frameTrimFrames.clear()
+            cancelFrameTrim()
+            return
         }
         guard let session else {
             deselectAll()
@@ -1184,6 +1207,8 @@ final class VideoStudioModel {
     /// The footer's lines where it is narrow — the Duo's — "3 Clips" over
     /// "14.2s", no kinds; any other selection's lines as they are.
     var compactSessionFooterTitle: VideoItemTitle.Lines? {
+        // "0:09.07 · −4 f" where the row is narrow (FS-12.17 §4).
+        if let trim = frameTrimTitle(compact: true) { return trim }
         guard isSelectingClips else { return sessionFooterTitle }
         let summary = groupSummary
         return VideoItemTitle.Lines(

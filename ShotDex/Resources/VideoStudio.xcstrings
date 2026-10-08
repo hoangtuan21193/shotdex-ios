@@ -1093,6 +1093,18 @@
       "comment": "Video Studio iPad Video Settings: label of 24 · 30 · 60",
       "extractionState": "manual"
     },
+    "Frame Zoom": {
+      "comment": "Video Studio frame trim: the command that zooms the timeline in until one frame is 12 points wide, or back",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Frame Zoom"
+          }
+        }
+      }
+    },
     "Frame steps with haptics": {
       "comment": "Video Studio Precision switch: a haptic tick for every frame the edge or the playhead moves",
       "extractionState": "manual",
@@ -1148,6 +1160,18 @@
     "HEVC is about 40% smaller; some older devices can’t play it.": {
       "comment": "Video Studio Video Settings: under the codec choice",
       "extractionState": "manual"
+    },
+    "Hold a clip edge to trim frame by frame. Pinch the timeline out until one frame is 12 pt.": {
+      "comment": "Video Studio frame trim: the note under the Precision switches",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hold a clip edge to trim frame by frame. Pinch the timeline out until one frame is 12 pt."
+          }
+        }
+      }
     },
     "Hold a finger on the frame to see the original. Before drops the look, adjustments, color and overlays.": {
       "comment": "Video Studio Look panel: under COMPARE when Hold to Compare is chosen",

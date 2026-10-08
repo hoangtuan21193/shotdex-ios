@@ -107,3 +107,45 @@ extension VideoStudioFrameTrimTests {
         #expect(!model.stepClipEdge(model.recipe.clips[2].id, edge: .trailing, by: 1))
     }
 }
+
+extension VideoStudioFrameTrimTests {
+    /// FS-12.17 §3: the Trim cell (Duo inner, iPad) opens the trim on the
+    /// edge nearer the playhead, lights the cell, and tapped again keeps it.
+    @Test func trimCellPicksEdgeNearerPlayhead() {
+        let model = VideoStudioModelFixture.model(clips: VideoStudioModelFixture.frameTrimSampleClips())
+        let clip2 = model.recipe.clips[1].id
+        model.selectClip(clip2)
+        model.seek(to: 8)        // Clip 2 runs 3.0–9.2: nearer its end
+        model.toggleFrameTrimFromCell()
+        #expect(model.frameTrim?.edge == .trailing)
+        #expect(model.isItemCommandOn(.trim))
+        #expect(abs(model.currentTime - 9.2) < 1e-9)
+        model.stepFrameTrim(-1)
+        model.toggleFrameTrimFromCell()       // tapped again: ✓
+        #expect(!model.isFrameTrimming)
+        #expect(!model.isItemCommandOn(.trim))
+        #expect(model.canUndo)
+
+        model.seek(to: 4)        // nearer its start
+        model.toggleFrameTrimFromCell()
+        #expect(model.frameTrim?.edge == .leading)
+        // The footer's ✕ ends the trim first; the clip stays selected.
+        model.cancelSession()
+        #expect(!model.isFrameTrimming)
+        #expect(model.selectedClipID == clip2)
+        #expect(model.compactSessionFooterTitle?.name == "Clip 2")
+    }
+
+    /// The footer names the trim while it is open, in both widths.
+    @Test func footersNameTheTrim() {
+        let model = VideoStudioModelFixture.model(clips: VideoStudioModelFixture.frameTrimSampleClips())
+        let clip2 = model.recipe.clips[1].id
+        model.selectClip(clip2)
+        model.beginFrameTrim(clip2, edge: .trailing)
+        for _ in 0..<4 { model.stepFrameTrim(-1) }
+        #expect(model.sessionFooterTitle == VideoItemTitle.Lines(name: "Trim · Clip 2", detail: "0:09.07 · −4 frames"))
+        #expect(model.compactSessionFooterTitle == VideoItemTitle.Lines(name: "Trim · Clip 2", detail: "0:09.07 · −4 f"))
+        #expect(model.isItemCommandEnabled(.minusFrame))
+        #expect(model.isItemCommandEnabled(.plusFrame))
+    }
+}

@@ -173,6 +173,9 @@ enum VideoItemCommand: String, CaseIterable, Identifiable {
     /// The caption lane's (FS-12.14 §5): join a cue with the next one, and
     /// recognise the lane again in another language.
     case merge, language
+    /// The frame trim's (FS-12.17 §4): on the Duo's inner display the row
+    /// opens with −1 Frame · +1 Frame · Frame Zoom · Trim while trimming.
+    case minusFrame, plusFrame, frameZoom
     case delete
 
     var id: String { rawValue }
@@ -183,7 +186,8 @@ enum VideoItemCommand: String, CaseIterable, Identifiable {
     var isSection: Bool {
         switch self {
         case .trim, .speed, .volume, .look, .motion, .edit, .font, .color, .style, .align, .animate, .beats, .ducking, .language: true
-        case .split, .replace, .freeze, .duplicate, .rotate, .move, .addTrack, .merge, .delete: false
+        case .split, .replace, .freeze, .duplicate, .rotate, .move, .addTrack, .merge, .delete,
+             .minusFrame, .plusFrame, .frameZoom: false
         }
     }
 
@@ -213,6 +217,9 @@ enum VideoItemCommand: String, CaseIterable, Identifiable {
         case .addTrack: "Add Track"
         case .merge: LocalizedStringKey(VideoStudioCopy.merge)
         case .language: LocalizedStringKey(VideoStudioCopy.language)
+        case .minusFrame: LocalizedStringKey(VideoStudioCopy.minusOneFrame)
+        case .plusFrame: LocalizedStringKey(VideoStudioCopy.plusOneFrame)
+        case .frameZoom: LocalizedStringKey(VideoStudioCopy.frameZoomCell)
         case .delete: "Delete"
         }
     }
@@ -241,6 +248,9 @@ enum VideoItemCommand: String, CaseIterable, Identifiable {
         case .addTrack: "plus"
         case .merge: "arrow.triangle.merge"
         case .language: "globe"
+        case .minusFrame: "backward.frame"
+        case .plusFrame: "forward.frame"
+        case .frameZoom: "plus.magnifyingglass"
         case .delete: "trash"
         }
     }
@@ -270,6 +280,14 @@ enum VideoItemCommand: String, CaseIterable, Identifiable {
 }
 
 extension VideoItemCommand {
+    /// The Duo inner display's row while a clip's edge is being trimmed
+    /// (FS-12.17 §4, board F6_DI_TouchTrim): −1 Frame · +1 Frame · Frame
+    /// Zoom · Trim, then the rest of the clip's row — without Split, which
+    /// cuts at the playhead the trim is moving.
+    static func duoInnerTrimRow(_ row: [VideoItemCommand]) -> [VideoItemCommand] {
+        [.minusFrame, .plusFrame, .frameZoom, .trim] + row.filter { $0 != .split && $0 != .trim }
+    }
+
     /// A multi-select group's row (FS-12.11 §5): Speed · Volume · Look ·
     /// Motion · Move · Duplicate · Delete. A group with no video has no
     /// Speed and no Volume — hidden, not dimmed (FS-12.04b §3).

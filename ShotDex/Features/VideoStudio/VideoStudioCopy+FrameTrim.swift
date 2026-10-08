@@ -29,6 +29,16 @@ extension VideoStudioCopy {
             : String(localized: "First frame · \(time)", table: table, comment: "Video Studio frame trim: the label over the viewer — it shows the clip's first frame, at this time")
     }
 
+    /// The Frame Zoom cell (Duo inner, §4).
+    static var frameZoomCell: String {
+        String(localized: "Frame Zoom", table: table, comment: "Video Studio frame trim: the command that zooms the timeline in until one frame is 12 points wide, or back")
+    }
+
+    /// Under the PRECISION switches on the Duo's inner display.
+    static var frameTrimHint: String {
+        String(localized: "Hold a clip edge to trim frame by frame. Pinch the timeline out until one frame is 12 pt.", table: table, comment: "Video Studio frame trim: the note under the Precision switches")
+    }
+
     static var minusOneFrame: String {
         String(localized: "−1 Frame", table: table, comment: "Video Studio frame trim: moves the trimmed edge one frame earlier")
     }
