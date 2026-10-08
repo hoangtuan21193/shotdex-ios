@@ -41,13 +41,26 @@ enum VideoKeyboardRouter {
         case .undo: model.canUndo
         case .redo: model.canRedo
         case .export: model.exportState == .idle
-        case .deselect: model.presentsSheet || model.isFrameTrimming
+        case .deselect: model.presentsSheet || model.isFrameTrimming || model.isShortcutListShown
         case .selectAll: model.mode == .multiClip && !model.recipe.clips.isEmpty
         case .trimStart, .trimEnd: !model.recipe.clips.isEmpty && !model.isLaneLocked(.video)
         case .delete: model.hasSelection
         case .clearInOut: !model.recipe.inOutRange.isEmpty
         default: true
         }
+    }
+
+    /// Return (§3): ✓ while something is open — not one of the 28 listed
+    /// shortcuts, it only ever confirms. Bare, so silent while typing,
+    /// where Return belongs to the field.
+    static func returnIsEnabled(model: VideoStudioModel, screenModalIsUp: Bool = false) -> Bool {
+        guard passesGate(.deselect, model: model, screenModalIsUp: screenModalIsUp) else { return false }
+        return model.presentsSheet || model.isFrameTrimming
+    }
+
+    static func pressReturn(model: VideoStudioModel, screenModalIsUp: Bool = false) {
+        guard returnIsEnabled(model: model, screenModalIsUp: screenModalIsUp) else { return }
+        model.pressReturn()
     }
 
     /// Runs `shortcut` on `model`.
@@ -61,8 +74,10 @@ enum VideoKeyboardRouter {
         case .playForward, .faster: model.shuttle(.l)
         case .backSecond: model.seek(to: model.currentTime - 1)
         case .forwardSecond: model.seek(to: model.currentTime + 1)
-        case .backFrame: model.stepFrames(-1)
-        case .forwardFrame: model.stepFrames(1)
+        // In the frame trim ⇧←/⇧→ are −1/+1 Frame: the edge moves, the
+        // playhead follows it, never past it (FS-12.17b §3).
+        case .backFrame: if model.isFrameTrimming { model.stepFrameTrim(-1) } else { model.stepFrames(-1) }
+        case .forwardFrame: if model.isFrameTrimming { model.stepFrameTrim(1) } else { model.stepFrames(1) }
         case .goToStart: model.goToStart()
         case .goToEnd: model.goToEnd()
         case .split: model.splitClipUnderPlayhead()

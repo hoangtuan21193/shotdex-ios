@@ -1159,6 +1159,19 @@ final class VideoStudioModel {
     /// Esc (FS-12.03b §5): ✓, never ✕ — an editor's Esc deselects, it
     /// does not undo. The keyboard shortcut calls this and nothing else.
     func pressEscape() {
+        // FS-12.17b §3: in order — out of the frame trim as ✕ does, then
+        // the shortcut list closes, then ✓ and deselect.
+        if frameTrim != nil {
+            cancelFrameTrim()
+        } else if isShortcutListShown {
+            isShortcutListShown = false
+        } else {
+            commitSession()
+        }
+    }
+
+    /// Return (FS-12.17b §3): ✓ — the frame trim's, or the open session's.
+    func pressReturn() {
         commitSession()
     }
 
@@ -1556,6 +1569,10 @@ final class VideoStudioModel {
     var loopsPlayback = false {
         didSet { syncLoopBoundary() }
     }
+
+    /// The keyboard's shortcut list is open on the phone or the Duo
+    /// (FS-12.17b §4). Esc closes it before it deselects.
+    var isShortcutListShown = false
 
     /// Something in the studio is being typed in (FS-12.17b §3): only ⌘
     /// keys answer, so "jim k" goes into the field and not to the

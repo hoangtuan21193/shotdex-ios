@@ -130,3 +130,62 @@ struct VideoKeyboardGateTests {
         #expect(!VideoKeyboardRouter.isEnabled(.playPause, model: model))
     }
 }
+
+/// Esc, Return and ⇧←/⇧→ in the frame trim (FS-12.17b §3, AC-11).
+@MainActor
+struct VideoKeyboardTrimTests {
+    private func trimmingModel() -> (VideoStudioModel, UUID) {
+        let model = VideoStudioModelFixture.model(clips: VideoStudioModelFixture.frameTrimSampleClips())
+        let clip = model.recipe.clips[1].id
+        #expect(model.beginFrameTrim(clip, edge: .trailing))
+        return (model, clip)
+    }
+
+    /// ⇧← four times moves Clip 2's end four frames in — the edge, with
+    /// the playhead on it; the recipe waits for ✓.
+    @Test func shiftArrowsStepEdgeNotPlayhead() {
+        let (model, _) = trimmingModel()
+        let before = model.recipe
+        for _ in 0..<4 { VideoKeyboardRouter.perform(.backFrame, model: model) }
+        #expect(model.frameTrim?.frames == -4)
+        #expect(abs(model.currentTime - (9.2 - 4.0 / 30)) < 1e-6)
+        #expect(model.recipe == before)
+        VideoKeyboardRouter.perform(.forwardFrame, model: model)
+        #expect(model.frameTrim?.frames == -3)
+    }
+
+    /// FS-12.17b AC-11 and the order: Esc leaves the trim as ✕ (the recipe
+    /// as before it, the clip still selected), then closes the shortcut
+    /// list, then deselects.
+    @Test func escapeOrder() {
+        let (model, clip) = trimmingModel()
+        let before = model.recipe
+        for _ in 0..<4 { VideoKeyboardRouter.perform(.backFrame, model: model) }
+        model.isShortcutListShown = true
+        VideoKeyboardRouter.perform(.deselect, model: model)
+        #expect(!model.isFrameTrimming)
+        #expect(model.recipe == before)
+        #expect(!model.canUndo)
+        #expect(model.selectedClipID == clip)
+        #expect(model.isShortcutListShown)
+        VideoKeyboardRouter.perform(.deselect, model: model)
+        #expect(!model.isShortcutListShown)
+        #expect(model.selectedClipID == clip)
+        VideoKeyboardRouter.perform(.deselect, model: model)
+        #expect(model.selectedClipID == nil)
+    }
+
+    /// Return is ✓: the four frames become one undo step.
+    @Test func returnCommitsTrim() {
+        let (model, _) = trimmingModel()
+        for _ in 0..<4 { VideoKeyboardRouter.perform(.backFrame, model: model) }
+        #expect(VideoKeyboardRouter.returnIsEnabled(model: model))
+        VideoKeyboardRouter.pressReturn(model: model)
+        #expect(!model.isFrameTrimming)
+        #expect(abs((model.recipe.clips[1].trimEnd ?? 0) - (6.2 - 4.0 / 30)) < 1e-6)
+        #expect(model.canUndo)
+        // While typing, Return is the field's.
+        model.isTypingText = true
+        #expect(!VideoKeyboardRouter.returnIsEnabled(model: model))
+    }
+}
