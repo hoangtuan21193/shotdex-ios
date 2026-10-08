@@ -138,3 +138,50 @@ extension FrameTrimSessionTests {
     }
 }
 
+
+extension FrameTrimSessionTests {
+    /// FS-12.17 AC-6: Clip 1, a photo at its 0.5 s minimum — −1 Frame does
+    /// not fit (the button dims and takes no touch), the length stays 0.5;
+    /// +1 still fits. At 10 s it is the other way round.
+    @Test func photoAtMinimumCannotShorten() {
+        var clips = Self.clips
+        clips[0].photoDuration = 0.5
+        let placements = VideoTimelineMath.placements(durations: clips.map(\.effectiveDuration), overlaps: [0, 0])
+        var trim = FrameTrimSession(clipID: clips[0].id, clip: clips[0], placement: placements[0], grid: VideoFrameGrid(.fps30), edge: .trailing)
+        #expect(!trim.canStep(by: -1))
+        let moved = trim.step(by: -1)
+        #expect(!moved)
+        #expect(trim.trimmedClip.photoDuration == 0.5)
+        #expect(trim.canStep(by: 1))
+
+        clips[0].photoDuration = 10
+        let long = FrameTrimSession(clipID: clips[0].id, clip: clips[0], placement: .init(start: 0, duration: 10), grid: VideoFrameGrid(.fps30), edge: .trailing)
+        #expect(!long.canStep(by: 1))
+        #expect(long.canStep(by: -1))
+    }
+
+    /// A video at its source's end cannot lengthen; at its start the
+    /// leading edge cannot go earlier; a clip at 0.1 s cannot shorten.
+    /// A drag past a limit stops on it and says so (one bump).
+    @Test func videoAtSourceEndCannotLengthen() {
+        let clip3 = Self.session(clip: 2, edge: .trailing)
+        #expect(!clip3.canStep(by: 1))
+        #expect(clip3.canStep(by: -1))
+        let leading = Self.session(clip: 1, edge: .leading)
+        #expect(!leading.canStep(by: -1))
+
+        var clips = Self.clips
+        clips[1].trimStart = 1
+        clips[1].trimEnd = 1.1
+        var short = FrameTrimSession(clipID: clips[1].id, clip: clips[1], placement: .init(start: 3, duration: 0.1), grid: VideoFrameGrid(.fps30), edge: .trailing)
+        #expect(!short.canStep(by: -1))
+
+        var dragged = Self.session(clip: 2, edge: .trailing)
+        let outcome = dragged.move(toFrames: 5)
+        #expect(outcome.crossed == 0)
+        #expect(outcome.hitLimit)
+        let back = short.move(toFrames: 3)
+        #expect(back.crossed == 3)
+        #expect(!back.hitLimit)
+    }
+}
