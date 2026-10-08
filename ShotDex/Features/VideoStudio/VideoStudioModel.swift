@@ -487,6 +487,15 @@ final class VideoStudioModel {
     /// nothing is selected and no tool panel is open.
     private(set) var session: VideoEditSession?
 
+    /// The frame trim open inside the clip's selection (FS-12.17 §3), see
+    /// `VideoStudioModel+FrameTrim`. Nil when no edge is being trimmed.
+    var frameTrim: FrameTrimSession?
+    /// A finger (or the Pencil) is holding the trimmed edge: the loupe is
+    /// up while it is (§5).
+    var isFrameTrimHolding = false
+    /// The frames the loupe and the viewer draw while trimming.
+    let frameTrimFrames = VideoFrameTrimFrames()
+
     /// Opens a session on `target`, remembering the project as it is now.
     private func beginSession(_ target: VideoEditSession.Target) {
         session = VideoEditSession(target: target, startRecipe: recipe, checkpoint: history.checkpoint)
@@ -643,6 +652,9 @@ final class VideoStudioModel {
     /// Ends the session keeping every step it made — the ✓ half of the
     /// rule. Each step stays its own undo step.
     private func endSession() {
+        // Leaving the clip any way that keeps (= ✓) keeps its frame trim
+        // too — Back included (FS-12.17 §3).
+        commitFrameTrim()
         let ended = session
         session = nil
         endCompareWithLookPanel(ended)
@@ -1113,6 +1125,12 @@ final class VideoStudioModel {
     /// bring them back — and nothing is selected. With nothing changed it is
     /// only a deselect.
     func cancelSession() {
+        // ✕ of the clip forgets a frame trim open inside it.
+        if frameTrim != nil {
+            frameTrim = nil
+            isFrameTrimHolding = false
+            frameTrimFrames.clear()
+        }
         guard let session else {
             deselectAll()
             return
@@ -1143,6 +1161,9 @@ final class VideoStudioModel {
             return
         }
         guard !isLaneLocked(.video) else { return }
+        // A tap on the clip whose edge is being trimmed is a finger near
+        // its handle, not a deselect (FS-12.17 §3).
+        guard frameTrim?.clipID != id else { return }
         selectClip(selectedClipID == id ? nil : id)
     }
 
@@ -1827,13 +1848,24 @@ final class VideoStudioModel {
             endSession()
             deselectAll()
         }
+        dropFrameTrim()
         guard let previous = history.undo(from: recipe) else { return }
         restore(previous)
     }
 
     func redo() {
+        dropFrameTrim()
         guard let next = history.redo(from: recipe) else { return }
         restore(next)
+    }
+
+    /// Undo or Redo while trimming: the trim was measured from a clip the
+    /// step is about to replace, so it goes, unwritten.
+    private func dropFrameTrim() {
+        guard frameTrim != nil else { return }
+        frameTrim = nil
+        isFrameTrimHolding = false
+        frameTrimFrames.clear()
     }
 
     /// Source lengths the media turned out to have, by clip or track id.
@@ -3925,7 +3957,7 @@ final class VideoStudioModel {
 
     /// Debounced full rebuild for structural edits: a drag over the timeline
     /// fires many changes, one composition build at the end is enough.
-    private func schedulePreviewRebuild() {
+    func schedulePreviewRebuild() {
         structuralRebuildRequests += 1
         rebuildTask?.cancel()
         rebuildTask = Task {

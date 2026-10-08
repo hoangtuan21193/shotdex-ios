@@ -524,7 +524,11 @@ struct VideoStudioScreen: View {
                 panelTop: screen.height - panelHeight
             )
             : 0
-        let layout = showsGroup && groupLift == 0 ? idleLayout : VideoStudioMetrics.stackLayout(
+        // The frame trim (FS-12.17 §4, board F6_P_PreciseTrim): the panel
+        // goes, the timeline has its idle height back, and ✕ · "Trim · Clip
+        // 2" · ✓ stands where the tools were.
+        let isFrameTrimming = model.isFrameTrimming
+        let layout = (showsGroup && groupLift == 0) || isFrameTrimming ? idleLayout : VideoStudioMetrics.stackLayout(
             screen: screen,
             bandHeight: bandHeight,
             bottomInset: proxy.safeAreaInsets.bottom,
@@ -577,17 +581,35 @@ struct VideoStudioScreen: View {
                 }
                 // Sits under the panel; keeps the timeline above it.
                 Color.clear.frame(height: layout.lift)
-                VideoStudioToolbar(model: model, actions: actions(model))
+                if isFrameTrimming, let title = model.frameTrimTitle() {
+                    VideoSessionFooter(
+                        title: title,
+                        onCancel: { model.cancelFrameTrim() },
+                        onCommit: { model.commitFrameTrim() }
+                    )
+                    .accessibilityIdentifier("frameTrimFooter")
+                } else {
+                    VideoStudioToolbar(model: model, actions: actions(model))
+                }
                 Color.clear.frame(height: proxy.safeAreaInsets.bottom)
+            }
+
+            if isFrameTrimming {
+                // ‹ −1 Frame · 0:09.07 · +1 Frame ›, 14 above the footer.
+                VideoFrameTrimPill(model: model)
+                    .padding(.bottom, VideoStudioMetrics.toolbarHeight + proxy.safeAreaInsets.bottom + VideoStudioMetrics.FrameTrim.pillGap)
             }
 
             // The panel slides over the bars; the layout underneath never
             // moves, so the timeline stays exactly where the user left it.
-            if model.presentsSheet {
+            if model.presentsSheet, !isFrameTrimming {
                 contextPanel(model, height: panelHeight, showsFooter: showsSessionFooter, bottomInset: proxy.safeAreaInsets.bottom)
                     .padding(.bottom, showsLookTool ? VideoStudioMetrics.toolbarHeight + proxy.safeAreaInsets.bottom : 0)
                     .transition(.move(edge: .bottom))
             }
+        }
+        .overlayPreferenceValue(FrameTrimLoupeAnchorKey.self) { anchor in
+            frameTrimLoupe(model, anchor: anchor, diameter: VideoStudioMetrics.FrameTrim.loupeDiameterPhone, gap: VideoStudioMetrics.FrameTrim.loupeGapPhone, compact: true)
         }
         .background { keyboardShortcuts(model) }
         .environment(\.videoLaneMetrics, lanes)
@@ -831,6 +853,36 @@ struct VideoStudioScreen: View {
         )
     }
 
+    /// The loupe over the held edge (FS-12.17 §5): hung on the point the
+    /// timeline publishes, drawn over everything, slid in from the screen's
+    /// edges.
+    @ViewBuilder
+    func frameTrimLoupe(
+        _ model: VideoStudioModel,
+        anchor: Anchor<CGPoint>?,
+        diameter: CGFloat,
+        gap: CGFloat,
+        compact: Bool
+    ) -> some View {
+        if let anchor, let trim = model.frameTrim, model.isFrameTrimHolding {
+            GeometryReader { geo in
+                let point = geo[anchor]
+                let frame = VideoStudioMetrics.FrameTrim.loupeFrame(
+                    edgeX: point.x, clipTop: point.y, diameter: diameter, gap: gap,
+                    bounds: CGRect(origin: .zero, size: geo.size)
+                )
+                VideoFrameTrimLoupe(
+                    frames: model.frameTrimFrames.loupe,
+                    label: VideoFrameGrid.hundredths(trim.edgeTime) + " · " + VideoStudioCopy.frameCount(trim.frames, compact: compact),
+                    diameter: diameter,
+                    isOffline: model.frameTrimFrames.isOffline
+                )
+                .offset(x: frame.minX, y: frame.minY)
+            }
+            .allowsHitTesting(false)
+        }
+    }
+
     func preview(_ model: VideoStudioModel) -> some View {
         previewContent(model)
             // The frame takes no touches while an export runs (FS-12.10b §4).
@@ -867,6 +919,38 @@ struct VideoStudioScreen: View {
                     .position(x: contentRect.midX, y: contentRect.midY)
                     .allowsHitTesting(false)
                     .accessibilityHidden(true)
+                // The frame trim (FS-12.17 §4): the viewer shows the frame
+                // at the edge — decoded from the source, since the preview
+                // has not been rebuilt — under "Last frame · 0:09.07".
+                if let trim = model.frameTrim {
+                    if let image = model.frameTrimFrames.viewer {
+                        // Framed the way the compositor frames the clip —
+                        // filled or fitted on the project's background.
+                        ZStack {
+                            let colour = model.recipe.background.colour
+                            Color(red: colour.red, green: colour.green, blue: colour.blue)
+                            Image(uiImage: image)
+                                .resizable()
+                                .aspectRatio(contentMode: model.recipe.framing == .fill ? .fill : .fit)
+                        }
+                        .frame(width: contentRect.width, height: contentRect.height)
+                        .clipped()
+                        .position(x: contentRect.midX, y: contentRect.midY)
+                        .allowsHitTesting(false)
+                        .accessibilityHidden(true)
+                    }
+                    VideoEdgeFrameLabel(
+                        trim: trim,
+                        height: currentWindowClass == .duoInner
+                            ? VideoStudioMetrics.FrameTrim.viewerLabelHeightDuoInner
+                            : VideoStudioMetrics.FrameTrim.viewerLabelHeightPhone
+                    )
+                    .fixedSize()
+                    .padding(.leading, VideoStudioMetrics.FrameTrim.viewerLabelInset)
+                    .padding(.top, VideoStudioMetrics.FrameTrim.viewerLabelInset)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                    .allowsHitTesting(false)
+                }
                 // "9:16 · Fill" at the frame's top-left while Video
                 // Settings is open (FS-12.10 §4): what the frame is now.
                 if model.activeToolPanel == .videoSettings {
@@ -931,7 +1015,7 @@ struct VideoStudioScreen: View {
             exportFramingOverlay(model)
             // In Split the play button moves to After's half, clear of the
             // line's handle (FS-12.15 §4) — the stage draws it there.
-            if !model.isPlaying, model.compare?.mode != .split {
+            if !model.isPlaying, model.compare?.mode != .split, !model.isFrameTrimming {
                 // `.editorGlass`, like every other round control this app
                 // floats over a photo. This was a hand-rolled colour plus
                 // `.ultraThinMaterial` from the feature's first commit —

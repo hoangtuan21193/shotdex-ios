@@ -42,6 +42,15 @@ struct TimelineDragZone: Equatable {
             if case .clipReorder = self { return true }
             return false
         }
+
+        /// A clip's edge handle: held still it opens the frame trim
+        /// (FS-12.17 §3).
+        var isClipEdgeHandle: Bool {
+            switch self {
+            case .clipLeadingHandle, .clipTrailingHandle: true
+            default: false
+            }
+        }
     }
     var kind: Kind
     var rect: CGRect
@@ -62,6 +71,25 @@ enum TimelineZoneDragPhase {
     /// keyboard (FS-12.11 §4): ⌘ toggles the clip in the group, ⇧ adds the
     /// run of clips up to it.
     case modifiedTap(command: Bool, shift: Bool)
+    /// A clip's edge handle held still for `TimelineEdgeHold.duration`
+    /// (FS-12.17 §3): the frame trim opens on that edge.
+    case edgeHeld
+    /// The finger that held the edge moves on: `translationX` from where
+    /// the hold began — a drag that walks the frame grid (§5).
+    case edgeHeldMoved(translationX: CGFloat)
+    /// The finger that held the edge lifts: the loupe goes, the trim stays.
+    case edgeHeldEnded
+    /// A tap on a clip's edge handle — while trimming, it moves the trim
+    /// to that edge (§3).
+    case edgeTapped
+}
+
+/// The hold that opens the frame trim (FS-12.17 §3): half a second, the
+/// finger within 4pt of where it came down. Moved sooner or further, the
+/// handle's ordinary drag (FS-12.05) has it.
+enum TimelineEdgeHold {
+    static let duration: CFTimeInterval = 0.5
+    static let slop: CGFloat = 4
 }
 
 /// Stops a clip's SwiftUI tap from firing at the end of a press the
@@ -198,6 +226,27 @@ struct VideoTimelineScroller<Content: View>: UIViewRepresentable {
         scrollView.addGestureRecognizer(longPress)
         context.coordinator.reorderPress = longPress
 
+        // A clip's edge handle held still (FS-12.17 §3): the frame trim.
+        // A finger that moves 4pt fails it at once, so an ordinary trim
+        // drag starts as it always did; once it has begun, the handle's
+        // own drag stands aside (`gestureRecognizerShouldBegin`).
+        let edgeHold = UILongPressGestureRecognizer(
+            target: context.coordinator, action: #selector(Coordinator.handleEdgeHold(_:))
+        )
+        edgeHold.minimumPressDuration = TimelineEdgeHold.duration
+        edgeHold.allowableMovement = TimelineEdgeHold.slop
+        edgeHold.delegate = context.coordinator
+        scrollView.addGestureRecognizer(edgeHold)
+        context.coordinator.edgeHold = edgeHold
+
+        // A tap on an edge handle: while trimming, switches the edge.
+        let edgeTap = UITapGestureRecognizer(
+            target: context.coordinator, action: #selector(Coordinator.handleEdgeTap(_:))
+        )
+        edgeTap.delegate = context.coordinator
+        scrollView.addGestureRecognizer(edgeTap)
+        context.coordinator.edgeTap = edgeTap
+
         // ⌘- and ⇧-click on a clip's body (an iPad with a keyboard): a tap
         // that only takes touches with a modifier down.
         let modifiedTap = UITapGestureRecognizer(
@@ -253,6 +302,10 @@ struct VideoTimelineScroller<Content: View>: UIViewRepresentable {
             dragZones.first { !$0.kind.isReorder && $0.rect.contains(point) }
         }
 
+        func edgeHandleZone(at point: CGPoint) -> TimelineDragZone? {
+            dragZones.first { $0.kind.isClipEdgeHandle && $0.rect.contains(point) }
+        }
+
         func reorderZone(at point: CGPoint) -> TimelineDragZone? {
             dragZones.first { $0.kind.isReorder && $0.rect.contains(point) }
         }
@@ -276,6 +329,10 @@ struct VideoTimelineScroller<Content: View>: UIViewRepresentable {
         var zonePan: UIPanGestureRecognizer?
         var reorderPress: UILongPressGestureRecognizer?
         var modifiedTap: UITapGestureRecognizer?
+        var edgeHold: UILongPressGestureRecognizer?
+        var edgeTap: UITapGestureRecognizer?
+        private var heldEdge: TimelineDragZone?
+        private var heldEdgeStart: CGPoint = .zero
         private var modifiedTapFlags: UIKeyModifierFlags = []
 
         private var isProgrammaticScroll = false
@@ -532,6 +589,46 @@ struct VideoTimelineScroller<Content: View>: UIViewRepresentable {
             }
         }
 
+        // MARK: A clip's edge held still (FS-12.17 §3)
+
+        @objc func handleEdgeHold(_ recognizer: UILongPressGestureRecognizer) {
+            guard let scrollView = recognizer.view as? TimelineScrollView,
+                  let hostView = scrollView.hostView
+            else { return }
+            let point = recognizer.location(in: hostView)
+            switch recognizer.state {
+            case .began:
+                heldEdge = scrollView.edgeHandleZone(at: point)
+                heldEdgeStart = point
+                if let heldEdge {
+                    // The hold owns the finger: nothing under it scrolls.
+                    scrollView.panGestureRecognizer.isEnabled = false
+                    scrollView.panGestureRecognizer.isEnabled = true
+                    parent.onZoneDrag(heldEdge.kind, .edgeHeld)
+                }
+            case .changed:
+                guard let heldEdge else { return }
+                parent.onZoneDrag(heldEdge.kind, .edgeHeldMoved(translationX: point.x - heldEdgeStart.x))
+            case .ended, .cancelled, .failed:
+                // A gesture the system took (a call, Control Center) ends
+                // like a lift: the edge stays on the last frame it reached
+                // and the trim stays open (§10).
+                if let heldEdge { parent.onZoneDrag(heldEdge.kind, .edgeHeldEnded) }
+                heldEdge = nil
+            default:
+                break
+            }
+        }
+
+        @objc func handleEdgeTap(_ recognizer: UITapGestureRecognizer) {
+            guard recognizer.state == .ended,
+                  let scrollView = recognizer.view as? TimelineScrollView,
+                  let hostView = scrollView.hostView,
+                  let zone = scrollView.edgeHandleZone(at: recognizer.location(in: hostView))
+            else { return }
+            parent.onZoneDrag(zone.kind, .edgeTapped)
+        }
+
         // MARK: ⌘/⇧-click on a clip body
 
         @objc func handleModifiedTap(_ recognizer: UITapGestureRecognizer) {
@@ -548,6 +645,17 @@ struct VideoTimelineScroller<Content: View>: UIViewRepresentable {
 
         /// The modified tap takes a touch only with ⌘ or ⇧ down, on a
         /// clip's body; the clip's own tap is told to stand aside.
+        func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldReceive touch: UITouch) -> Bool {
+            // The edge's hold and tap only ever see touches on an edge
+            // handle: everywhere else they do not exist, so nothing waits
+            // on them.
+            guard gestureRecognizer === edgeHold || gestureRecognizer === edgeTap else { return true }
+            guard let scrollView = gestureRecognizer.view as? TimelineScrollView,
+                  let hostView = scrollView.hostView
+            else { return false }
+            return scrollView.edgeHandleZone(at: touch.location(in: hostView)) != nil
+        }
+
         func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldReceive event: UIEvent) -> Bool {
             guard gestureRecognizer === modifiedTap else { return true }
             let flags = event.modifierFlags.intersection([.command, .shift])
@@ -568,13 +676,22 @@ struct VideoTimelineScroller<Content: View>: UIViewRepresentable {
             else { return true }
             let point = gestureRecognizer.location(in: hostView)
             if gestureRecognizer === zonePan {
+                // A held edge is the frame trim's: its moves walk the grid.
+                if let edgeHold, edgeHold.state == .began || edgeHold.state == .changed { return false }
                 return scrollView.blockingZone(at: point) != nil
             }
             if gestureRecognizer === reorderPress {
                 // A handle's drag is the zone pan's, never a press on the body.
                 return scrollView.reorderZone(at: point) != nil && scrollView.blockingZone(at: point) == nil
             }
+            if gestureRecognizer === edgeHold || gestureRecognizer === edgeTap {
+                return scrollView.edgeHandleZone(at: point) != nil
+            }
             return true
+        }
+
+        private func scrollView(of recognizer: UIGestureRecognizer) -> UIScrollView? {
+            recognizer.view as? UIScrollView
         }
 
         func gestureRecognizer(
@@ -585,6 +702,13 @@ struct VideoTimelineScroller<Content: View>: UIViewRepresentable {
             // scroll pan (the press wins once it fires; a quick drag scrubs).
             if gestureRecognizer === zonePan || otherGestureRecognizer === zonePan {
                 return false
+            }
+            // The edge's hold and tap never share the finger with the
+            // body's press (the handle sits in front of the body).
+            if gestureRecognizer === edgeHold || otherGestureRecognizer === edgeHold
+                || gestureRecognizer === edgeTap || otherGestureRecognizer === edgeTap {
+                return gestureRecognizer === scrollView(of: gestureRecognizer)?.panGestureRecognizer
+                    || otherGestureRecognizer === scrollView(of: gestureRecognizer)?.panGestureRecognizer
             }
             if gestureRecognizer === reorderPress || otherGestureRecognizer === reorderPress {
                 return true

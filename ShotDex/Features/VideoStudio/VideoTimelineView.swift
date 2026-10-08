@@ -38,6 +38,10 @@ struct VideoTimelineView: View {
     /// press's callbacks land before any render could hand back state.
     @State private var pressStartHolder = TimelinePressStart()
     private var pressStart: TimelinePressStart { pressStartHolder }
+    /// Where a drag on the trimmed edge began, in frames (FS-12.17 §5). A
+    /// reference, like `pressStart`: the drag's callbacks land before any
+    /// render could hand state back.
+    @State private var frameTrimDrag = TimelineFrameTrimDrag()
     @State private var viewportWidth: CGFloat = 393
     @State private var lastHapticSecond = 0
     /// Whether the edge being dragged sat at a limit, or on a snap, on the
@@ -125,6 +129,7 @@ struct VideoTimelineView: View {
                 playhead.offset(x: VideoStudioMetrics.playheadX(screenWidth: screenWidth, gutter: lanes.gutter) - 1)
             }
             .overlay(alignment: .topLeading) { groupPill }
+            .overlay(alignment: .topLeading) { frameTrimLoupeAnchor(screenWidth: screenWidth) }
             .overlay(alignment: .topLeading) { beatSnapMark(screenWidth: screenWidth) }
             .onAppear {
                 if !hasAppliedWindowZoom {
@@ -394,13 +399,14 @@ struct VideoTimelineView: View {
         switch kind {
         case .clipLeadingHandle(let id), .clipTrailingHandle(let id):
             let edge: VideoEdgeTrimMath.Edge = if case .clipLeadingHandle = kind { .leading } else { .trailing }
+            if handleFrameTrim(id, edge: edge, phase) { return }
             let snap = Double(8 / pps)
             let feedback: VideoStudioModel.EdgeTrimFeedback = switch phase {
             case .changed(let tx):
                 model.edgeTrim(id, edge: edge, phase: .changed(Double(tx) / Double(pps)), snapTolerance: snap)
             case .ended(let tx):
                 model.edgeTrim(id, edge: edge, phase: .ended(Double(tx) / Double(pps)), snapTolerance: snap)
-            case .cancelled, .pressed, .holding, .modifiedTap:
+            case .cancelled, .pressed, .holding, .modifiedTap, .edgeHeld, .edgeHeldMoved, .edgeHeldEnded, .edgeTapped:
                 model.edgeTrim(id, edge: edge, phase: .cancelled)
             }
             // One tick when the edge reaches the source's end or a clip's
@@ -432,6 +438,8 @@ struct VideoTimelineView: View {
         case .cancelled:
             model.clipPressGate.ended()
             activeDrag = nil
+        case .edgeHeld, .edgeHeldMoved, .edgeHeldEnded, .edgeTapped:
+            break  // only a clip's edge handles report these
         case .pressed(let outcome):
             // Held in place and let go (FS-12.11 §4): half a second or more
             // selects the clip into a group; under that it is nothing at
@@ -446,6 +454,83 @@ struct VideoTimelineView: View {
                 }
                 UISelectionFeedbackGenerator().selectionChanged()
             }
+        }
+    }
+
+    // MARK: Frame trim (FS-12.17 §3, §5)
+
+    /// The frame trim's share of an edge handle's gestures. Returns whether
+    /// it took the phase: a hold opens the trim, a held finger walks the
+    /// frame grid, a lift drops the loupe, a tap switches the edge — and
+    /// while the edge is being trimmed an ordinary drag of either handle
+    /// walks the grid too, writing nothing until ✓.
+    private func handleFrameTrim(_ id: UUID, edge: VideoEdgeTrimMath.Edge, _ phase: TimelineZoneDragPhase) -> Bool {
+        let haptics = VideoInputPreferences.shared.frameStepHaptics
+        func walk(_ translation: CGFloat) {
+            guard let start = frameTrimDrag.startFrames else { return }
+            let outcome = model.dragFrameTrim(by: Double(translation / pps), fromFrames: start)
+            if outcome.crossed > 0, haptics { UISelectionFeedbackGenerator().selectionChanged() }
+            if outcome.hitLimit, !frameTrimDrag.atLimit { UIImpactFeedbackGenerator(style: .light).impactOccurred() }
+            frameTrimDrag.atLimit = outcome.hitLimit
+        }
+        switch phase {
+        case .edgeHeld:
+            guard model.beginFrameTrim(id, edge: edge) else { return true }
+            model.isFrameTrimHolding = true
+            frameTrimDrag.startFrames = model.frameTrim?.frames
+            frameTrimDrag.atLimit = false
+            UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+            return true
+        case .edgeHeldMoved(let translation):
+            guard model.frameTrim?.clipID == id else { return true }
+            walk(translation)
+            return true
+        case .edgeHeldEnded:
+            model.isFrameTrimHolding = false
+            frameTrimDrag.startFrames = nil
+            return true
+        case .edgeTapped:
+            if model.frameTrim?.clipID == id { model.switchFrameTrimEdge(to: edge) }
+            return true
+        case .changed(let translation):
+            guard let trim = model.frameTrim, trim.clipID == id else { return false }
+            if frameTrimDrag.startFrames == nil {
+                model.switchFrameTrimEdge(to: edge)
+                model.isFrameTrimHolding = true
+                frameTrimDrag.startFrames = model.frameTrim?.frames
+                frameTrimDrag.atLimit = false
+            }
+            walk(translation)
+            return true
+        case .ended, .cancelled:
+            guard model.frameTrim?.clipID == id else { return false }
+            model.isFrameTrimHolding = false
+            frameTrimDrag.startFrames = nil
+            return true
+        case .pressed, .holding, .modifiedTap:
+            return false
+        }
+    }
+
+    /// Where the loupe stands while the trimmed edge is held: over the
+    /// playhead — which stands on the edge — at the video lane's top. A
+    /// point the screen reads (`FrameTrimLoupeAnchorKey`) to draw the loupe
+    /// over everything: inside the timeline it would be clipped.
+    @ViewBuilder
+    private func frameTrimLoupeAnchor(screenWidth: CGFloat) -> some View {
+        if model.isFrameTrimHolding, model.frameTrim != nil {
+            let laneTop = lanes.topPadding + lanes.ruler + lanes.rulerGap
+                + lanes.videoLaneTop(overlayLanes: max(1, model.overlayLaneCount))
+                + (lanes.video - lanes.clipCell) / 2
+                - laneOffsetY
+            Color.clear
+                .frame(width: 1, height: 1)
+                .anchorPreference(key: FrameTrimLoupeAnchorKey.self, value: .center) { $0 }
+                .offset(
+                    x: VideoStudioMetrics.playheadX(screenWidth: screenWidth, gutter: lanes.gutter) - 0.5,
+                    y: laneTop - 0.5
+                )
+                .allowsHitTesting(false)
         }
     }
 
@@ -537,4 +622,21 @@ struct VideoTimelineView: View {
 @MainActor
 final class TimelinePressStart {
     var x: CGFloat = 0
+}
+
+/// A drag on the trimmed edge: the frames it started from, and whether the
+/// edge sat at a limit on the last callback (one tick on arrival).
+@MainActor
+final class TimelineFrameTrimDrag {
+    var startFrames: Int?
+    var atLimit = false
+}
+
+/// The held edge's point — the video lane's top over the playhead — for
+/// the screen to hang the loupe on (FS-12.17 §5).
+struct FrameTrimLoupeAnchorKey: PreferenceKey {
+    static let defaultValue: Anchor<CGPoint>? = nil
+    static func reduce(value: inout Anchor<CGPoint>?, nextValue: () -> Anchor<CGPoint>?) {
+        value = value ?? nextValue()
+    }
 }

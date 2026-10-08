@@ -802,3 +802,54 @@ enum VideoStudioMetrics {
     static let addMediaButtonWidth: CGFloat = 40
     static let transitionChipSize: CGFloat = 22
 }
+
+extension VideoStudioMetrics {
+    /// The frame trim's geometry (FS-12.17 §4–5, boards F6_P_PreciseTrim,
+    /// F6_DI_TouchTrim, F6_IP_PencilTrim, F6_DC_PreciseTrim).
+    enum FrameTrim {
+        /// ‹ −1 Frame · time · +1 Frame ›, radius 24.
+        static let pill = CGSize(width: 248, height: 48)
+        /// Its two buttons, radius 12.
+        static let pillButton = CGSize(width: 76, height: 40)
+        /// The pill floats this far above the floor of the area it is in:
+        /// the phone's footer (y 790 → pill at 728), the Duo cover's
+        /// timeline foot (644 → 582).
+        static let pillGap: CGFloat = 14
+        /// The loupe: Ø124 on the phone, 140 on the Duo's inner display, 152
+        /// on the iPad (Mac-style canvas).
+        static let loupeDiameterPhone: CGFloat = 124
+        static let loupeDiameterDuoInner: CGFloat = 140
+        static let loupeDiameterIPad: CGFloat = 152
+        /// From the loupe's foot to the clip's top: 2 on the phone, 25 on
+        /// the Duo's inner display, 20 on the iPad.
+        static let loupeGapPhone: CGFloat = 2
+        static let loupeGapDuoInner: CGFloat = 25
+        static let loupeGapIPad: CGFloat = 20
+        /// Ten frames inside it: 13pt slices, 14 apart.
+        static let loupeSlice: CGFloat = 13
+        static let loupeStep: CGFloat = 14
+        /// At a screen edge the loupe slides in and stops this far from it.
+        static let loupeEdgeInset: CGFloat = 8
+        /// "Last frame · 0:09.07" over the viewer: 22 on the phone, 24 on
+        /// the Duo's inner display, 10 in from the viewer's corner.
+        static let viewerLabelHeightPhone: CGFloat = 22
+        static let viewerLabelHeightDuoInner: CGFloat = 24
+        static let viewerLabelInset: CGFloat = 10
+
+        /// The pill's origin, centred across `width`, its foot `pillGap`
+        /// above `floor`.
+        static func pillOrigin(width: CGFloat, floor: CGFloat) -> CGPoint {
+            CGPoint(x: ((width - pill.width) / 2).rounded(), y: floor - pillGap - pill.height)
+        }
+
+        /// The loupe's frame: centred on the edge's x, its foot `gap` above
+        /// the clip's top — slid in to stay `loupeEdgeInset` inside
+        /// `bounds` at either side and at the top.
+        static func loupeFrame(edgeX: CGFloat, clipTop: CGFloat, diameter: CGFloat, gap: CGFloat, bounds: CGRect) -> CGRect {
+            var x = edgeX - diameter / 2
+            x = min(max(x, bounds.minX + loupeEdgeInset), bounds.maxX - loupeEdgeInset - diameter)
+            let y = max(bounds.minY + loupeEdgeInset, clipTop - gap - diameter)
+            return CGRect(x: x, y: y, width: diameter, height: diameter)
+        }
+    }
+}

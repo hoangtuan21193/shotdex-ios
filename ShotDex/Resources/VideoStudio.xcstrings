@@ -317,9 +317,45 @@
         }
       }
     },
+    "%lld f": {
+      "comment": "Video Studio frame trim: a short count of frames, after a sign (−4 f) — the narrow form",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld f"
+          }
+        }
+      }
+    },
     "%lld fps": {
       "comment": "Video Studio settings button: the project's frame rate, e.g. 30 fps",
       "extractionState": "manual"
+    },
+    "%lld frames": {
+      "comment": "Video Studio frame trim: how many frames the edge moved, after a sign (−4 frames) (plural)",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld frame"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld frames"
+                }
+              }
+            }
+          }
+        }
+      }
     },
     "%lld items in this video": {
       "comment": "Video Studio Media panel: under its name on the In Video tab — how many uses of library items the video has",
@@ -473,6 +509,18 @@
                 }
               }
             }
+          }
+        }
+      }
+    },
+    "+1 Frame": {
+      "comment": "Video Studio frame trim: moves the trimmed edge one frame later",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "+1 Frame"
           }
         }
       }
@@ -977,6 +1025,18 @@
       "comment": "Video Studio beats card: the track is being analysed on the device",
       "extractionState": "manual"
     },
+    "First frame · %@": {
+      "comment": "Video Studio frame trim: the label over the viewer — it shows the clip's first frame, at this time",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "First frame · %@"
+          }
+        }
+      }
+    },
     "Fit": {
       "comment": "Video Studio: the frame label's framing word — clips fit on the background",
       "extractionState": "manual"
@@ -1060,6 +1120,18 @@
     "Language": {
       "comment": "Video Studio captions command and row: the language the speech is recognised in",
       "extractionState": "manual"
+    },
+    "Last frame · %@": {
+      "comment": "Video Studio frame trim: the label over the viewer — it shows the clip's last frame, at this time",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Last frame · %@"
+          }
+        }
+      }
     },
     "Leave Without Saving": {
       "comment": "Video Studio: closes the studio although the latest draft could not be written",
@@ -1252,6 +1324,18 @@
     "Nothing in your library matches.": {
       "comment": "Video Studio Media panel: a search that found nothing",
       "extractionState": "manual"
+    },
+    "Offline": {
+      "comment": "Video Studio frame trim: the loupe cannot show frames — the clip is not downloaded and there is no network",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Offline"
+          }
+        }
+      }
     },
     "Offset": {
       "comment": "Video Studio beats: shifts every beat of the bed a few milliseconds earlier or later",
@@ -1577,6 +1661,18 @@
       "comment": "Video Studio: the command that cuts a clip's start or end",
       "extractionState": "manual"
     },
+    "Trim · %@": {
+      "comment": "Video Studio frame trim: the footer's title — the mode, then the clip whose edge moves (e.g. Trim · Clip 2)",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Trim · %@"
+          }
+        }
+      }
+    },
     "Try Again": {
       "comment": "Video Studio: retries writing the video draft",
       "extractionState": "manual"
@@ -1780,6 +1876,18 @@
     "video": {
       "comment": "Video Studio session footer: the kind of a selected clip, after its length — 6.2s · video",
       "extractionState": "manual"
+    },
+    "−1 Frame": {
+      "comment": "Video Studio frame trim: moves the trimmed edge one frame earlier",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "−1 Frame"
+          }
+        }
+      }
     }
   },
   "version": "1.0"

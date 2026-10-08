@@ -1,0 +1,141 @@
+{
+ "steps": [
+  {
+   "action": "launch",
+   "arguments": [
+    "-video.timelineExtraHeight",
+    "0"
+   ]
+  },
+  {
+   "action": "wait",
+   "seconds": 6
+  },
+  {
+   "action": "tap",
+   "label": "Select",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "tap",
+   "x": 0.83,
+   "y": 0.457
+  },
+  {
+   "action": "tap",
+   "x": 0.163,
+   "y": 0.61
+  },
+  {
+   "action": "tap",
+   "x": 0.5,
+   "y": 0.61
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "tap",
+   "label": "More selection actions"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "tap",
+   "label": "Create Video"
+  },
+  {
+   "action": "wait",
+   "seconds": 12
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "tap",
+   "x": 0.75,
+   "y": 0.733
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "screenshot",
+   "name": "selected"
+  },
+  {
+   "action": "screenshot",
+   "name": "pre-hold"
+  },
+  {
+   "action": "drag",
+   "x": 0.965,
+   "y": 0.431,
+   "toX": 0.965,
+   "toY": 0.431,
+   "hold": 0.7,
+   "seconds": 6
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "screenshot",
+   "name": "trim-open"
+  },
+  {
+   "action": "tap",
+   "x": 0.296,
+   "y": 0.8467
+  },
+  {
+   "action": "wait",
+   "seconds": 0.6
+  },
+  {
+   "action": "tap",
+   "x": 0.296,
+   "y": 0.8467
+  },
+  {
+   "action": "wait",
+   "seconds": 0.6
+  },
+  {
+   "action": "tap",
+   "x": 0.296,
+   "y": 0.8467
+  },
+  {
+   "action": "wait",
+   "seconds": 0.6
+  },
+  {
+   "action": "tap",
+   "x": 0.296,
+   "y": 0.8467
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "screenshot",
+   "name": "minus-four"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  }
+ ]
+}
