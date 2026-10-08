@@ -167,3 +167,23 @@ extension VideoStudioFrameTrimTests {
         #expect(model.session?.isCollapsed == false)
     }
 }
+
+extension VideoStudioFrameTrimTests {
+    /// FS-12.17 AC-13 / §10: Clip 2's media is not on this device — the
+    /// loupe is offline (grey bands, "Offline"), nothing is decoded or
+    /// fetched, and −1 Frame twice then ✓ still writes two frames off.
+    @Test func offlineClipStillTrims() {
+        let model = VideoStudioModelFixture.model(clips: VideoStudioModelFixture.frameTrimSampleClips())
+        let clip2 = model.recipe.clips[1].id
+        model.selectClip(clip2)
+        model.beginFrameTrim(clip2, edge: .trailing)
+        #expect(model.frameTrimFrames.isOffline)
+        #expect(model.frameTrimFrames.loupe.allSatisfy { $0 == nil })
+        #expect(VideoStudioCopy.offline == "Offline")
+        model.stepFrameTrim(-1)
+        model.stepFrameTrim(-1)
+        model.commitFrameTrim()
+        let clip = model.recipe.clips.first { $0.id == clip2 }
+        #expect(abs((clip?.effectiveDuration ?? 0) - (6.2 - 2.0 / 30)) < 1e-9)
+    }
+}
