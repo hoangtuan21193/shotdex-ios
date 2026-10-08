@@ -29,6 +29,18 @@
       "comment": "Video Studio multi-select: the kinds in the group — 2 videos + 1 photo",
       "extractionState": "manual"
     },
+    "%@ end": {
+      "comment": "VoiceOver: a clip's trailing edge handle on the Video Studio timeline (e.g. Clip 2 end); adjustable a frame at a time",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ end"
+          }
+        }
+      }
+    },
     "%@ in %@": {
       "comment": "Video Studio Save as Look: a node's setting the look already sets — e.g. Exposure in Node 1",
       "extractionState": "manual"
@@ -36,6 +48,18 @@
     "%@ is missing. Import it again, then pick it in LUTs.": {
       "comment": "Video Studio Look panel: the chosen look's LUT file was deleted — e.g. Kodak 2383 is missing",
       "extractionState": "manual"
+    },
+    "%@ start": {
+      "comment": "VoiceOver: a clip's leading edge handle on the Video Studio timeline (e.g. Clip 2 start); adjustable a frame at a time",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ start"
+          }
+        }
+      }
     },
     "%@ · %@": {
       "comment": "Video Projects: a draft's subtitle — when it was edited, then how many clips",

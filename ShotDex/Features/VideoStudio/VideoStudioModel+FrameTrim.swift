@@ -114,6 +114,39 @@ extension VideoStudioModel {
         seek(to: trim.originTime(of: trim.edge))
     }
 
+    /// Where a clip's edge is now on the timeline — the trimmed edge's
+    /// virtual time while its frame trim is open.
+    func clipEdgeTime(_ clipID: UUID, edge: VideoEdgeTrimMath.Edge) -> Double? {
+        if let trim = frameTrim, trim.clipID == clipID { return trim.edgeTime(of: edge) }
+        guard let index = recipe.clips.firstIndex(where: { $0.id == clipID }), index < clipPlacements.count else { return nil }
+        return edge == .leading ? clipPlacements[index].start : clipPlacements[index].end
+    }
+
+    /// VoiceOver's adjust on an edge handle (AC-14): a frame of the
+    /// project, written at once as one undo step. Inside an open frame
+    /// trim it is that trim's ±1 instead. Returns whether the edge moved.
+    @discardableResult
+    func stepClipEdge(_ clipID: UUID, edge: VideoEdgeTrimMath.Edge, by count: Int) -> Bool {
+        if let trim = frameTrim, trim.clipID == clipID {
+            switchFrameTrimEdge(to: edge)
+            return stepFrameTrim(count)
+        }
+        guard !isLaneLocked(.video),
+              let index = recipe.clips.firstIndex(where: { $0.id == clipID }),
+              index < clipPlacements.count
+        else { return false }
+        var session = FrameTrimSession(
+            clipID: clipID, clip: recipe.clips[index], placement: clipPlacements[index],
+            grid: frameGrid, edge: edge
+        )
+        guard session.step(by: count) else { return false }
+        pushUndo()
+        recipe = session.applied(to: recipe)
+        markEdited()
+        schedulePreviewRebuild()
+        return true
+    }
+
     /// The footer while trimming (§4): "Trim · Clip 2" over
     /// "0:09.07 · −4 frames" — the Duo's inner display says "−4 f".
     func frameTrimTitle(compact: Bool = false) -> VideoItemTitle.Lines? {

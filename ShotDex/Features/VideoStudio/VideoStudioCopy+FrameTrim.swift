@@ -37,6 +37,14 @@ extension VideoStudioCopy {
         String(localized: "+1 Frame", table: table, comment: "Video Studio frame trim: moves the trimmed edge one frame later")
     }
 
+    /// VoiceOver's name for a clip's edge handle: "Clip 2 end",
+    /// "Clip 2 start" (AC-14).
+    static func edgeHandleName(_ itemName: String, trailing: Bool) -> String {
+        trailing
+            ? String(localized: "\(itemName) end", table: table, comment: "VoiceOver: a clip's trailing edge handle on the Video Studio timeline (e.g. Clip 2 end); adjustable a frame at a time")
+            : String(localized: "\(itemName) start", table: table, comment: "VoiceOver: a clip's leading edge handle on the Video Studio timeline (e.g. Clip 2 start); adjustable a frame at a time")
+    }
+
     /// The loupe when the clip's media is not on this device (§10).
     static var offline: String {
         String(localized: "Offline", table: table, comment: "Video Studio frame trim: the loupe cannot show frames — the clip is not downloaded and there is no network")

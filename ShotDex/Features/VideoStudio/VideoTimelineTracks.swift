@@ -524,12 +524,14 @@ private struct ClipBand: View {
             guard !model.clipPressGate.swallowsTap(on: clip.id) else { return }
             model.toggleClip(clip.id)
         }
-        .background(reorderZone)
-        .overlay(edgeHandles)
-        .overlay(fadeZones)
+        // The clip is one element; its edge handles are two more, beside
+        // it — adjustable a frame at a time (FS-12.17 §5, AC-14).
         .accessibilityElement()
         .accessibilityLabel(accessibilityLabel)
         .accessibilityAddTraits(isSelected || isInGroup ? [.isSelected, .isButton] : .isButton)
+        .background(reorderZone)
+        .overlay(edgeHandles)
+        .overlay(fadeZones)
         .offset(x: CGFloat(placement.start) * pps + reorderShift)
         .scaleEffect(reorderShift != 0 ? 1.05 : 1)
         .zIndex(reorderShift != 0 ? 3 : 0)
@@ -736,11 +738,16 @@ private struct ClipBand: View {
                 ZStack(alignment: .topLeading) {
                     if let frameTrim { frameTrimMarks(frameTrim, width: width, height: height) }
                     edgeTab(leading: true)
+                        .accessibilityElement()
+                        .modifier(EdgeHandleAccessibility(model: model, clip: clip, edge: .leading))
                         .offset(x: -VideoStudioMetrics.edgeHandleWidth + lead)
                     edgeTab(leading: false)
+                        .accessibilityElement()
+                        .modifier(EdgeHandleAccessibility(model: model, clip: clip, edge: .trailing))
                         .offset(x: width + trail)
                     if let preview {
                         Text("\(preview.result.duration.formatted(.number.precision(.fractionLength(1))))s")
+                            .accessibilityHidden(true)
                             .font(.system(size: 10, weight: .semibold).monospacedDigit())
                             .foregroundStyle(.black)
                             .padding(.horizontal, 5)
@@ -826,6 +833,27 @@ private struct ClipBand: View {
                 )
             }
         }
+    }
+}
+
+/// A clip's edge handle for VoiceOver (FS-12.17 AC-14): "Clip 2 end",
+/// its time "0:09.20"; swipe down moves it a frame earlier, up a frame
+/// later — each one undo step, written at once.
+private struct EdgeHandleAccessibility: ViewModifier {
+    let model: VideoStudioModel
+    let clip: VideoClip
+    let edge: VideoEdgeTrimMath.Edge
+
+    func body(content: Content) -> some View {
+        let index = model.recipe.clips.firstIndex { $0.id == clip.id } ?? 0
+        let name = VideoItemTitle.clip(clip, index: index).name
+        content
+            .accessibilityLabel(Text(verbatim: VideoStudioCopy.edgeHandleName(name, trailing: edge == .trailing)))
+            .accessibilityValue(Text(verbatim: model.clipEdgeTime(clip.id, edge: edge).map(VideoFrameGrid.hundredths) ?? ""))
+            .accessibilityAdjustableAction { direction in
+                model.stepClipEdge(clip.id, edge: edge, by: direction == .increment ? 1 : -1)
+            }
+            .accessibilityIdentifier(edge == .trailing ? "clipEndHandle" : "clipStartHandle")
     }
 }
 

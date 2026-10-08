@@ -86,3 +86,24 @@ extension VideoStudioFrameTrimTests {
         #expect(model.recipe.clips[1].speed == 1)
     }
 }
+
+extension VideoStudioFrameTrimTests {
+    /// FS-12.17 AC-14: VoiceOver on Clip 2's end handle reads "Clip 2 end,
+    /// 0:09.20"; one swipe down moves it a frame earlier — written at once,
+    /// one undo step — and it reads "0:09.17".
+    @Test func adjustableDecrementStepsOneFrame() {
+        let model = VideoStudioModelFixture.model(clips: VideoStudioModelFixture.frameTrimSampleClips())
+        let clip2 = model.recipe.clips[1].id
+        model.selectClip(clip2)
+        #expect(VideoStudioCopy.edgeHandleName("Clip 2", trailing: true) == "Clip 2 end")
+        #expect(model.clipEdgeTime(clip2, edge: .trailing).map(VideoFrameGrid.hundredths) == "0:09.20")
+        #expect(model.stepClipEdge(clip2, edge: .trailing, by: -1))
+        #expect(model.clipEdgeTime(clip2, edge: .trailing).map(VideoFrameGrid.hundredths) == "0:09.17")
+        #expect(abs(model.recipe.clips[1].effectiveDuration - (6.2 - 1.0 / 30)) < 1e-9)
+        #expect(model.canUndo)
+        model.undo()
+        #expect(model.clipEdgeTime(clip2, edge: .trailing).map(VideoFrameGrid.hundredths) == "0:09.20")
+        // Clip 3 at the end of its source cannot go later.
+        #expect(!model.stepClipEdge(model.recipe.clips[2].id, edge: .trailing, by: 1))
+    }
+}
