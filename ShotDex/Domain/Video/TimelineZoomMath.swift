@@ -15,6 +15,19 @@ enum TimelineZoomMath {
     /// the timeline had before FS-12.17.
     static let standardCeiling: CGFloat = 160
 
+    /// ⌘− stops here (FS-12.17b §3): 20 pt/s, a touch above the pinch's
+    /// floor, which only the Duo cover's multi-select reaches.
+    static let keyboardFloor: CGFloat = 20
+
+    /// ⌘+ / ⌘− (FS-12.17b §3): the zoom doubled or halved, inside
+    /// `keyboardFloor…ceiling`. The timeline keeps the playhead where it is
+    /// on screen, so the step is "around the playhead" by construction.
+    static func keyboardStep(_ pps: CGFloat, zoomsIn: Bool, ceiling: CGFloat) -> CGFloat {
+        let target = zoomsIn ? pps * 2 : pps / 2
+        guard target.isFinite else { return keyboardFloor }
+        return min(max(target, keyboardFloor), max(keyboardFloor, ceiling))
+    }
+
     /// Frame zoom: one frame of the project 12pt wide (§6).
     static let pointsPerFrame: CGFloat = 12
     /// The ruler's labels at Frame zoom: every 6 frames, 72pt apart.

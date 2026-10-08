@@ -1593,6 +1593,20 @@ final class VideoStudioModel {
         fitToWindowToken &+= 1
     }
 
+    /// A ⌘+ or ⌘− the timeline has yet to apply (FS-12.17b §3). The zoom
+    /// stays the timeline's own state — a pinch writes it sixty times a
+    /// second — so the key only asks, as Fit does.
+    struct ZoomStepRequest: Equatable {
+        var serial = 0
+        var zoomsIn = true
+    }
+
+    private(set) var zoomStepRequest = ZoomStepRequest()
+
+    func stepZoom(zoomsIn: Bool) {
+        zoomStepRequest = ZoomStepRequest(serial: zoomStepRequest.serial &+ 1, zoomsIn: zoomsIn)
+    }
+
     /// Where each clip sits on the timeline, honoring the per-boundary
     /// transition overlaps — the single source of truth the track rows and
     /// the builder share.

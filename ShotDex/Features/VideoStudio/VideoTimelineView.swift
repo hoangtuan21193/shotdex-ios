@@ -193,6 +193,7 @@ struct VideoTimelineView: View {
         .allowsHitTesting(!model.isExportBusy)
         .onChange(of: model.fitToWindowToken) { fitToWindow() }
         .onChange(of: model.frameZoomToggleToken) { toggleFrameZoom() }
+        .onChange(of: model.zoomStepRequest) { _, request in stepZoom(zoomsIn: request.zoomsIn) }
         .onChange(of: pps, initial: true) { model.isTimelineAtFrameZoom = isFrameZoom }
     }
 
@@ -539,6 +540,14 @@ struct VideoTimelineView: View {
                 frameZoomReturnPPS.value = pps
                 pps = TimelineZoomMath.frameZoomPPS(fps: model.recipe.frameRate.rawValue)
             }
+        }
+        if zoomOverride == nil { model.timelineZoom = pps }
+    }
+
+    /// ⌘+ / ⌘−: twice or half the zoom, 20 pt/s up to the pinch's ceiling.
+    private func stepZoom(zoomsIn: Bool) {
+        withAnimation(EditorTheme.animation) {
+            pps = TimelineZoomMath.keyboardStep(pps, zoomsIn: zoomsIn, ceiling: zoomCeiling)
         }
         if zoomOverride == nil { model.timelineZoom = pps }
     }

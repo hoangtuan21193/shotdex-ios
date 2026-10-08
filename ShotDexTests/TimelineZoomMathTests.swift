@@ -82,3 +82,34 @@ extension TimelineZoomMathTests {
         #expect(abs(past - (CGFloat(8.8) * pps - inset + 12)) < 0.001)
     }
 }
+
+/// ⌘+ / ⌘− (FS-12.17b §3, AC-7).
+extension TimelineZoomMathTests {
+    /// FS-12.17b AC-7: 55 pt/s, ⌘+ twice — 220 (Frame zoom on pinch on,
+    /// 30 fps: the ceiling is 360).
+    @Test func commandPlusTwiceFrom55Is220() {
+        let ceiling = TimelineZoomMath.ceiling(frameZoomOnPinch: true, fps: 30)
+        let once = TimelineZoomMath.keyboardStep(55, zoomsIn: true, ceiling: ceiling)
+        let twice = TimelineZoomMath.keyboardStep(once, zoomsIn: true, ceiling: ceiling)
+        #expect(once == 110)
+        #expect(twice == 220)
+    }
+
+    /// …and ⌘− twice brings it back to 55; it stops at 20.
+    @Test func minusBack() {
+        let ceiling = TimelineZoomMath.ceiling(frameZoomOnPinch: true, fps: 30)
+        let once = TimelineZoomMath.keyboardStep(220, zoomsIn: false, ceiling: ceiling)
+        #expect(TimelineZoomMath.keyboardStep(once, zoomsIn: false, ceiling: ceiling) == 55)
+        #expect(TimelineZoomMath.keyboardStep(30, zoomsIn: false, ceiling: ceiling) == 20)
+        #expect(TimelineZoomMath.keyboardStep(20, zoomsIn: false, ceiling: ceiling) == 20)
+    }
+
+    /// Frame zoom on pinch off: ⌘+ stops where a pinch does, at 160; on, at
+    /// Frame zoom (360 at 30 fps).
+    @Test func ceilingWithFrameZoomOff() {
+        let off = TimelineZoomMath.ceiling(frameZoomOnPinch: false, fps: 30)
+        #expect(TimelineZoomMath.keyboardStep(110, zoomsIn: true, ceiling: off) == 160)
+        let on = TimelineZoomMath.ceiling(frameZoomOnPinch: true, fps: 30)
+        #expect(TimelineZoomMath.keyboardStep(220, zoomsIn: true, ceiling: on) == 360)
+    }
+}

@@ -58,7 +58,9 @@ enum VideoKeyboardRouter {
         // button does, it does not start writing to their library.
         case .delete: model.deleteSelection()
         case .export: return .openExport
-        case .zoomIn, .zoomOut, .markIn, .markOut, .clearInOut:
+        case .zoomIn: model.stepZoom(zoomsIn: true)
+        case .zoomOut: model.stepZoom(zoomsIn: false)
+        case .markIn, .markOut, .clearInOut:
             break
         }
         return .done
