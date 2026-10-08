@@ -29,7 +29,7 @@
     "-video.timelineExtraHeight",
     "0",
     "-VideoStudioDebugSkim",
-    "1,0.46"
+    "1,0.46,8"
    ]
   },
   {
@@ -109,6 +109,20 @@
   {
    "action": "dump",
    "name": "skim",
+   "text": "snapshot",
+   "type": "staticText"
+  },
+  {
+   "action": "wait",
+   "seconds": 6
+  },
+  {
+   "action": "screenshot",
+   "name": "left"
+  },
+  {
+   "action": "dump",
+   "name": "left",
    "text": "snapshot",
    "type": "staticText"
   }

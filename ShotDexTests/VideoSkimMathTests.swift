@@ -44,3 +44,30 @@ struct VideoSkimMathTests {
         #expect(throttle.pending == nil)
     }
 }
+
+/// The skim in the model (FS-12.17b §6).
+@MainActor
+struct VideoSkimModelTests {
+    /// FS-12.17b AC-13: the pointer leaves — the line is the clip under
+    /// the playhead's again and the viewer the project's, at once; the
+    /// playhead never moved.
+    @Test func leavingRestoresPlayheadTitle() {
+        let model = VideoStudioModelFixture.model(clips: VideoStudioModelFixture.frameTrimSampleClips())
+        model.seek(to: 8.4)
+        model.skimMedia(assetID: "lake", name: "Lake", isVideo: true, duration: 5, fraction: 0.46, thumbnail: nil)
+        #expect(model.skim?.detail == "· Lake · 0:02.3 / 0:05")
+        #expect(model.currentTime == 8.4)
+        model.endSkim()
+        #expect(model.skim == nil)
+        #expect(model.skimImage == nil)
+        #expect(model.currentTime == 8.4)
+    }
+
+    /// A photo: its name only; while playing, nothing is skimmed.
+    @Test func photoShowsNameAndPlayingSkimsNothing() {
+        let model = VideoStudioModelFixture.model(clips: VideoStudioModelFixture.frameTrimSampleClips())
+        model.skimMedia(assetID: "falls", name: "Falls", isVideo: false, duration: 0, fraction: 0.5, thumbnail: nil)
+        #expect(model.skim?.detail == "· Falls")
+        #expect(model.skim?.time == nil)
+    }
+}

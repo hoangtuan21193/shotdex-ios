@@ -279,7 +279,8 @@ struct VideoMediaGridView: UIViewRepresentable {
 
         #if DEBUG
         /// `-VideoStudioDebugSkim "1,0.46"`: the pointer 46% across cell 1,
-        /// through the same path a hover takes. The simulator's XCUITest
+        /// through the same path a hover takes; a third number leaves the
+        /// cell that many seconds later, as the hover's end does. The simulator's XCUITest
         /// hover sends no pointer to a `UIHoverGestureRecognizer` (measured
         /// 2026-10-08), so this is how the skim's screens are photographed.
         private var hasDebugSkimmed = false
@@ -288,11 +289,14 @@ struct VideoMediaGridView: UIViewRepresentable {
                   let spec = UserDefaults.standard.string(forKey: "VideoStudioDebugSkim")
             else { return }
             let parts = spec.split(separator: ",").compactMap { Double($0) }
-            guard parts.count == 2,
+            guard parts.count >= 2,
                   let cell = collectionView.cellForItem(at: IndexPath(item: Int(parts[0]), section: 0))
             else { return }
             hasDebugSkimmed = true
             skim(at: CGPoint(x: cell.frame.minX + cell.frame.width * parts[1], y: cell.frame.midY))
+            if parts.count == 3 {
+                DispatchQueue.main.asyncAfter(deadline: .now() + parts[2]) { [weak self] in self?.endSkim() }
+            }
         }
         #endif
 
