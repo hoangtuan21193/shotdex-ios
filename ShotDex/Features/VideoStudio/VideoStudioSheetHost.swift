@@ -72,6 +72,9 @@ struct VideoStudioSheetHost: View {
 
     private var commandRowTop: CGFloat {
         if isDeskInspector { return 0 }
+        // Pulled down to 78 (FS-12.07b §4): the row sits right under the
+        // grabber — 17 + 56 + 5.
+        if model.session?.isCollapsed == true { return 0 }
         return layout == .dock ? VideoStudioDeskGeometry.dockCommandRowTop : VideoStudioMetrics.itemCommandRowTop
     }
     /// A project of server photos, for Export Video's destination.

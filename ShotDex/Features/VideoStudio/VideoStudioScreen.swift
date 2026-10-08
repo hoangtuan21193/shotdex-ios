@@ -804,8 +804,21 @@ struct VideoStudioScreen: View {
                 .contentShape(Rectangle())
                 .gesture(
                     DragGesture(minimumDistance: 8)
-                        .onEnded { if $0.translation.height > 40 { model.clearSelection() } }
+                        .onEnded { value in
+                            let dy = value.translation.height
+                            // The Duo cover pulls a selected item's panel
+                            // down to its 78pt strip and back (FS-12.07b
+                            // §4); elsewhere a pull down closes and keeps.
+                            if currentWindowClass == .duoCover, model.selectionTitle != nil, !model.isSelectingClips {
+                                if dy > 40 { model.setPanelCollapsed(true) } else if dy < -40 { model.setPanelCollapsed(false) }
+                            } else if dy > 40 {
+                                model.clearSelection()
+                            }
+                        }
                 )
+                .accessibilityElement()
+                .accessibilityLabel(Text(verbatim: VideoStudioCopy.panelGrabber))
+                .accessibilityIdentifier("panelGrabber")
             VideoStudioSheetHost(
                 model: model, actions: actions(model), importedMusic: importedMusic,
                 server: server, onServerExported: serverExported

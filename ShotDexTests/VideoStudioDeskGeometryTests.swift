@@ -365,3 +365,22 @@ extension VideoStudioDeskGeometryTests {
         #expect(xs[3] + width + Geometry.dockInset == 1032)
     }
 }
+
+extension VideoStudioDeskGeometryTests {
+    /// FS-12.17 AC-16 (board F6_DC_PreciseTrim): on the cover, trimming
+    /// hides the panel — "Trim · Clip 2" in a band at 300–334, the timeline
+    /// 334–644, the pill 248×48 at (67, 582); ✕ and ✓ stay at 504 and 556
+    /// in the rail, nothing touchable above 72 or below 600 there.
+    @Test func duoCoverFrameTrim() {
+        let frames = cover(CGSize(width: 1920, height: 1080))
+        let trim = Geometry.coverFrameTrim(frames)
+        #expect(trim.nameBand == CGRect(x: 0, y: 300, width: 382, height: 34))
+        #expect(trim.timeline == CGRect(x: 0, y: 334, width: 382, height: 310))
+        #expect(trim.pill == CGRect(x: 67, y: 582, width: 248, height: 48))
+        let rail = Geometry.coverRail(windowWidth: 466)
+        #expect(rail.upperAction.minY == 504)
+        #expect(rail.lowerAction.minY == 556)
+        #expect(rail.lowerAction.maxY <= Geometry.coverTouchFloor)
+        #expect(rail.tools.allSatisfy { $0.minY >= Geometry.coverCapHeight })
+    }
+}

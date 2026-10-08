@@ -575,6 +575,32 @@ enum VideoStudioDeskGeometry {
         )
     }
 
+    /// The cover while a clip's edge is trimmed (FS-12.17 §4, board
+    /// F6_DC_PreciseTrim): the panel goes; "Trim · Clip 2" over its frame
+    /// count in a 34pt band under the transport (300–334), the timeline
+    /// 334–644, the pill 248×48 centred in the 382 content, 14 over 644.
+    struct CoverFrameTrim: Equatable {
+        var nameBand: CGRect
+        var timeline: CGRect
+        var pill: CGRect
+    }
+
+    static let coverTrimNameHeight: CGFloat = 34
+    static let coverTrimPill = CGSize(width: 248, height: 48)
+    static let coverTrimPillGap: CGFloat = 14
+
+    static func coverFrameTrim(_ frames: Frames) -> CoverFrameTrim {
+        let width = frames.timeline.width
+        let band = CGRect(x: 0, y: frames.timeline.minY, width: width, height: coverTrimNameHeight)
+        let timeline = CGRect(x: 0, y: band.maxY, width: width, height: frames.timeline.maxY - band.maxY)
+        let pill = CGRect(
+            x: ((width - coverTrimPill.width) / 2).rounded(),
+            y: frames.timeline.maxY - coverTrimPillGap - coverTrimPill.height,
+            width: coverTrimPill.width, height: coverTrimPill.height
+        )
+        return CoverFrameTrim(nameBand: band, timeline: timeline, pill: pill)
+    }
+
     /// The cover with a group selected: the timeline 240 tall under the
     /// transport, the panel under it to the window's foot.
     static func coverGroupSelection(_ frames: Frames) -> CoverSelection {

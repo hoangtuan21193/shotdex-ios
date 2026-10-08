@@ -37,6 +37,9 @@ struct VideoStudioDuoCoverRail: View {
                     .offset(x: parts.tools[index].minX - railX, y: parts.tools[index].minY)
             }
             if let title = model.compactSessionFooterTitle {
+                // While trimming, the name is the timeline's first line
+                // (board F6_DC_PreciseTrim); the rail keeps ✕ and ✓.
+                if !model.isFrameTrimming {
                 VStack(spacing: 2) {
                     Text(title.name)
                         .font(.system(size: 11, weight: .semibold))
@@ -50,6 +53,7 @@ struct VideoStudioDuoCoverRail: View {
                 .frame(width: parts.name.width, height: parts.name.height)
                 .accessibilityElement(children: .combine)
                 .offset(x: parts.name.minX - railX, y: parts.name.minY)
+                }
                 disc(at: parts.upperAction) {
                     Button { model.cancelSession() } label: {
                         Image(systemName: "xmark")

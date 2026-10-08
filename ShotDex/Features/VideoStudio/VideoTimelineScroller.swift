@@ -289,6 +289,12 @@ struct VideoTimelineScroller<Content: View>: UIViewRepresentable {
         coordinator.syncOffsetIfIdle(scrollView)
     }
 
+    /// A timeline that goes away under a held edge (a layout change) still
+    /// lets the edge go: the loupe must not outlive the finger's view.
+    static func dismantleUIView(_ scrollView: TimelineScrollView, coordinator: Coordinator) {
+        coordinator.releaseHeldEdge()
+    }
+
     // MARK: - Scroll view subclass
 
     final class TimelineScrollView: UIScrollView {
@@ -637,6 +643,12 @@ struct VideoTimelineScroller<Content: View>: UIViewRepresentable {
             default:
                 break
             }
+        }
+
+        func releaseHeldEdge() {
+            guard let heldEdge else { return }
+            parent.onZoneDrag(heldEdge.kind, .edgeHeldEnded)
+            self.heldEdge = nil
         }
 
         @objc func handleEdgeTap(_ recognizer: UITapGestureRecognizer) {

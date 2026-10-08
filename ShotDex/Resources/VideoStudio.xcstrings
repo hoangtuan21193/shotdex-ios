@@ -1509,6 +1509,18 @@
       "comment": "Video Studio Video Settings: the row that states the frame size, length and estimated file size",
       "extractionState": "manual"
     },
+    "Panel Handle": {
+      "comment": "VoiceOver: the grabber at the top of the Video Studio panel — drag down to pull the panel down or close it",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Panel Handle"
+          }
+        }
+      }
+    },
     "Pencil": {
       "comment": "Video Studio iPad frame trim: the block of Apple Pencil switches",
       "extractionState": "manual",

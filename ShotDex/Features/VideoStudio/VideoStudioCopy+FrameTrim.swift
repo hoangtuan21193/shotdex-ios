@@ -95,6 +95,11 @@ extension VideoStudioCopy {
         String(localized: "Double-tap the Pencil to switch between trim and scrub.", table: table, comment: "Video Studio iPad frame trim: what a double-tap on the Apple Pencil does")
     }
 
+    /// VoiceOver's name for the panel's grabber.
+    static var panelGrabber: String {
+        String(localized: "Panel Handle", table: table, comment: "VoiceOver: the grabber at the top of the Video Studio panel — drag down to pull the panel down or close it")
+    }
+
     /// The loupe when the clip's media is not on this device (§10).
     static var offline: String {
         String(localized: "Offline", table: table, comment: "Video Studio frame trim: the loupe cannot show frames — the clip is not downloaded and there is no network")

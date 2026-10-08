@@ -149,3 +149,21 @@ extension VideoStudioFrameTrimTests {
         #expect(model.isItemCommandEnabled(.plusFrame))
     }
 }
+
+extension VideoStudioFrameTrimTests {
+    /// FS-12.07b §4 / AC-12: the cover's panel pulls down to its strip and
+    /// back; the item stays selected; a section command brings it back up.
+    @Test func coverPanelCollapsesAndASectionExpandsIt() {
+        let model = VideoStudioModelFixture.model(clips: VideoStudioModelFixture.frameTrimSampleClips())
+        model.selectClip(model.recipe.clips[1].id)
+        model.setPanelCollapsed(true)
+        #expect(model.session?.isCollapsed == true)
+        #expect(model.selectedClipID != nil)
+        model.toggleItemSection(.speed)
+        #expect(model.session?.isCollapsed == false)
+        // A tool panel has no strip to pull down to.
+        model.showToolPanel(.music)
+        model.setPanelCollapsed(true)
+        #expect(model.session?.isCollapsed == false)
+    }
+}

@@ -516,6 +516,15 @@ final class VideoStudioModel {
         activeItemCommand = nil
     }
 
+    /// The selected item's panel pulled down to its 78pt strip, or back up
+    /// (FS-12.07b §4): the timeline shows again over it, with the item's
+    /// edge handles, and the item stays selected.
+    func setPanelCollapsed(_ collapsed: Bool) {
+        guard var open = session, open.target.isItem, open.isCollapsed != collapsed else { return }
+        open.isCollapsed = collapsed
+        session = open
+    }
+
     /// The caption lane's session, opened before the lane exists.
     func beginCaptionSession() {
         beginSession(.captions)
@@ -621,6 +630,9 @@ final class VideoStudioModel {
     /// A section command tapped: lights it, or turns it off if it was lit.
     func toggleItemSection(_ command: VideoItemCommand) {
         guard command.isSection else { return }
+        // A section opened from the pulled-down strip brings the panel back
+        // up to show it (FS-12.07b §4).
+        setPanelCollapsed(false)
         switch selectedItemKind {
         case .text, .sticker:
             guard let tool = textTool(for: command) else { return }

@@ -1,0 +1,158 @@
+{
+ "steps": [
+  {
+   "action": "launch",
+   "arguments": [
+    "-video.timelineExtraHeight",
+    "0"
+   ]
+  },
+  {
+   "action": "wait",
+   "seconds": 6
+  },
+  {
+   "action": "tap",
+   "label": "Select",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "tap",
+   "x": 0.14,
+   "y": 0.45
+  },
+  {
+   "action": "tap",
+   "x": 0.42,
+   "y": 0.45
+  },
+  {
+   "action": "tap",
+   "x": 0.7,
+   "y": 0.45
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "tap",
+   "label": "More selection actions",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "tap",
+   "label": "Create Video"
+  },
+  {
+   "action": "wait",
+   "seconds": 12
+  },
+  {
+   "action": "tap",
+   "label": "Photo clip",
+   "index": 0
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "drag",
+   "x": 0.41,
+   "y": 0.504,
+   "toX": 0.41,
+   "toY": 0.7,
+   "hold": 0.05,
+   "velocity": "default",
+   "seconds": 0.2
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "dump",
+   "name": "DC2_Collapsed",
+   "text": "snapshot"
+  },
+  {
+   "action": "screenshot",
+   "name": "collapsed"
+  },
+  {
+   "action": "screenshot",
+   "name": "pre-hold"
+  },
+  {
+   "action": "drag",
+   "x": 0.8047,
+   "y": 0.6047,
+   "toX": 0.8047,
+   "toY": 0.6047,
+   "hold": 0.7,
+   "seconds": 6
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "tap",
+   "x": 0.234,
+   "y": 0.894
+  },
+  {
+   "action": "wait",
+   "seconds": 0.6
+  },
+  {
+   "action": "tap",
+   "x": 0.234,
+   "y": 0.894
+  },
+  {
+   "action": "wait",
+   "seconds": 0.6
+  },
+  {
+   "action": "tap",
+   "x": 0.234,
+   "y": 0.894
+  },
+  {
+   "action": "wait",
+   "seconds": 0.6
+  },
+  {
+   "action": "tap",
+   "x": 0.234,
+   "y": 0.894
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "dump",
+   "name": "F6_DC_PreciseTrim",
+   "text": "snapshot"
+  },
+  {
+   "action": "screenshot",
+   "name": "cover-trim"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  }
+ ]
+}

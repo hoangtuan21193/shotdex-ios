@@ -283,31 +283,53 @@ extension VideoStudioScreen {
                     .frame(width: selection.panel.width)
                     .offset(x: selection.panel.minX, y: selection.panel.minY)
                     .transition(.move(edge: .bottom))
-            } else if model.inspectorTarget != .none {
-                // A selected item (FS-12.07b §4): the overview under the
-                // transport and the panel from 334 — or, pulled down, the
-                // timeline back down to 566 over a 78pt panel. ✕ and ✓ are
-                // in the rail.
-                let selection = VideoStudioDeskGeometry.coverSelection(
-                    frames,
-                    isCollapsed: model.session?.isCollapsed == true
-                )
-                if let timeline = selection.timeline {
+            } else {
+                // One timeline, whatever the state — idle, an item selected
+                // (pulled down or not), its edge being trimmed — so a finger
+                // holding an edge keeps its timeline when the layout moves
+                // under it (FS-12.17 §3).
+                let trim = model.isFrameTrimming ? VideoStudioDeskGeometry.coverFrameTrim(frames) : nil
+                let selection = trim == nil && model.inspectorTarget != .none
+                    ? VideoStudioDeskGeometry.coverSelection(frames, isCollapsed: model.session?.isCollapsed == true)
+                    : nil
+                let timeline: CGRect? = trim?.timeline ?? (selection.map(\.timeline) ?? frames.timeline)
+                if let timeline {
                     deskTimeline(model, height: timeline.height)
                         .placed(timeline)
                 }
-                if let overview = selection.overview {
-                    VideoTimelineOverview(model: model, visibleDuration: timelineVisibleDuration)
-                        .placed(overview)
-                }
-                contextPanel(model, height: window.height - selection.panel.minY)
-                    .frame(width: selection.panel.width)
-                    .offset(x: selection.panel.minX, y: selection.panel.minY)
-                    .transition(.move(edge: .bottom))
-            } else {
-                deskTimeline(model, height: frames.timeline.height)
-                    .placed(frames.timeline)
-                if model.presentsSheet, let panel = frames.toolPanel {
+                if let trim, let title = model.frameTrimTitle() {
+                    // The frame trim (FS-12.17 §4, board F6_DC_PreciseTrim):
+                    // the panel goes, the name heads the timeline, the pill
+                    // floats over its foot; ✕ and ✓ stay in the rail.
+                    VStack(spacing: 1) {
+                        Text(verbatim: title.name)
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundStyle(.white)
+                        Text(verbatim: title.detail)
+                            .font(.system(size: 10, design: .monospaced))
+                            .foregroundStyle(.white.opacity(0.35))
+                    }
+                    .lineLimit(1)
+                    .frame(width: trim.nameBand.width, height: trim.nameBand.height)
+                    .accessibilityElement(children: .combine)
+                    .accessibilityIdentifier("frameTrimName")
+                    .placed(trim.nameBand)
+                    VideoFrameTrimPill(model: model)
+                        .placed(trim.pill)
+                } else if let selection {
+                    // A selected item (FS-12.07b §4): the overview under the
+                    // transport and the panel from 334 — or, pulled down, the
+                    // timeline back down to 566 over a 78pt panel. ✕ and ✓
+                    // are in the rail.
+                    if let overview = selection.overview {
+                        VideoTimelineOverview(model: model, visibleDuration: timelineVisibleDuration)
+                            .placed(overview)
+                    }
+                    contextPanel(model, height: window.height - selection.panel.minY)
+                        .frame(width: selection.panel.width)
+                        .offset(x: selection.panel.minX, y: selection.panel.minY)
+                        .transition(.move(edge: .bottom))
+                } else if model.presentsSheet, let panel = frames.toolPanel {
                     // A tool's panel covers the timeline; its background
                     // runs on under the home indicator.
                     contextPanel(model, height: window.height - panel.minY)
@@ -322,6 +344,15 @@ extension VideoStudioScreen {
             }
         }
         .frame(width: window.width, height: window.height, alignment: .topLeading)
+        // The loupe over a held edge: Ø124, 2 over the clip, as on the phone.
+        .overlayPreferenceValue(FrameTrimLoupeAnchorKey.self) { anchor in
+            frameTrimLoupe(
+                model, anchor: anchor,
+                diameter: VideoStudioMetrics.FrameTrim.loupeDiameterPhone,
+                gap: VideoStudioMetrics.FrameTrim.loupeGapPhone,
+                compact: true
+            )
+        }
         .deskChrome(model, lanes: lanes, meter: levelMeter, hasMeter: false, shortcuts: keyboardShortcuts(model))
     }
 
