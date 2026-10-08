@@ -141,42 +141,13 @@ extension VideoStudioScreen {
     }
 
     func shortcutIsEnabled(_ shortcut: VideoShortcut, model: VideoStudioModel) -> Bool {
-        switch shortcut {
-        case .undo: model.canUndo
-        case .redo: model.canRedo
-        case .export: model.exportState == .idle
-        case .deselect: model.presentsSheet || model.isFrameTrimming
-        case .selectAll: model.mode == .multiClip && !model.recipe.clips.isEmpty
-        default: true
-        }
+        VideoKeyboardRouter.isEnabled(shortcut, model: model)
     }
 
     func performShortcut(_ shortcut: VideoShortcut, model: VideoStudioModel) {
-        switch shortcut {
-        case .playPause: model.togglePlayback()
-        case .stop: model.shuttle(.k)
-        case .playBackward: model.shuttle(.j)
-        case .playForward, .faster: model.shuttle(.l)
-        case .backSecond: model.seek(to: model.currentTime - 1)
-        case .forwardSecond: model.seek(to: model.currentTime + 1)
-        case .backFrame: model.stepFrames(-1)
-        case .forwardFrame: model.stepFrames(1)
-        case .goToStart: model.seek(to: 0)
-        case .goToEnd: model.seek(to: model.totalDuration)
-        case .split: model.splitClipUnderPlayhead()
-        case .addMarker: model.addMarker()
-        case .undo: model.undo()
-        case .redo: model.redo()
-        case .fitTimeline: model.fitToWindow()
-        case .selectAll: model.selectAllClips()
-        case .deselect: model.pressEscape()
-        case .beforeAfter: model.toggleBeforeAfter(sideBySide: false)
-        // The sheet, not the export: ⌘E puts the user where the Export
-        // button does, it does not start writing to their library.
-        case .export: openExport(model)
-        case .trimStart, .trimEnd, .delete, .zoomIn, .zoomOut,
-             .markIn, .markOut, .clearInOut:
-            break
+        switch VideoKeyboardRouter.perform(shortcut, model: model) {
+        case .done: break
+        case .openExport: openExport(model)
         }
     }
 }
