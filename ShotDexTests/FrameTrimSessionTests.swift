@@ -103,3 +103,38 @@ extension FrameTrimSessionTests {
         #expect(VideoStudioCopy.frameCount(1) == "+1 frame")
     }
 }
+
+extension FrameTrimSessionTests {
+    /// FS-12.17 AC-5: Clip 2 at 2× — −1 Frame moves its edge on the timeline
+    /// 1/30 s earlier and shortens its window in the source by 2/30 s.
+    @Test func speedTwoMovesSourceTwice() {
+        var trim = Self.session(speed: 2)
+        let edgeBefore = trim.edgeTime
+        #expect(abs(edgeBefore - (3 + 3.1)) < 1e-9)
+        let step1 = trim.step(by: -1)
+        #expect(step1)
+        #expect(abs((edgeBefore - trim.edgeTime) - 1.0 / 30) < 1e-9)
+        #expect(abs((6.2 - (trim.trimmedClip.trimEnd ?? 0)) - 2.0 / 30) < 1e-9)
+        #expect(abs(trim.sourceStep - 2.0 / 30) < 1e-9)
+    }
+
+    /// §10: a 24 fps project over a 30 fps source — the edge walks the
+    /// project's grid (1/24 s a step), the loupe asks the source for the
+    /// frames at those times.
+    @Test func projectGridWinsOverSourceRate() {
+        var trim = Self.session(fps: .fps24)
+        let step2 = trim.step(by: -1)
+        #expect(step2)
+        #expect(VideoFrameGrid(.fps24).isOnGrid(trim.edgeTime))
+        // 9.2 is not on the 24 fps grid: the first step lands on the line
+        // below it, 220/24 = 9.1667, and every later step is 1/24.
+        #expect(abs(trim.edgeTime - 220.0 / 24) < 1e-9)
+        let step3 = trim.step(by: -1)
+        #expect(step3)
+        #expect(abs(trim.edgeTime - 219.0 / 24) < 1e-9)
+        #expect(abs(trim.sourceStep - 1.0 / 24) < 1e-9)
+        let loupe = trim.loupeSourceTimes.compactMap { $0 }
+        #expect(zip(loupe, loupe.dropFirst()).allSatisfy { abs(($1 - $0) - 1.0 / 24) < 1e-9 })
+    }
+}
+
