@@ -367,10 +367,7 @@ struct VideoTimelineView: View {
         case .began:
             pinchStartPPS = pps
         case .changed(let scale):
-            pps = min(
-                max(pinchStartPPS * scale, VideoStudioMetrics.pointsPerSecondRange.lowerBound),
-                VideoStudioMetrics.pointsPerSecondRange.upperBound
-            )
+            pps = TimelineZoomMath.clampedPPS(pinchStartPPS * scale)
             // The user's zoom — not one the layout is imposing for now.
             if zoomOverride == nil { model.timelineZoom = pps }
         case .ended:
@@ -383,10 +380,7 @@ struct VideoTimelineView: View {
         guard model.totalDuration > 0.1, rowWidth > 0 else { return }
         let target = rowWidth / CGFloat(model.totalDuration)
         withAnimation(EditorTheme.animation) {
-            pps = min(
-                max(target, VideoStudioMetrics.pointsPerSecondRange.lowerBound),
-                VideoStudioMetrics.pointsPerSecondRange.upperBound
-            )
+            pps = TimelineZoomMath.clampedPPS(target)
         }
         if zoomOverride == nil { model.timelineZoom = pps }
     }

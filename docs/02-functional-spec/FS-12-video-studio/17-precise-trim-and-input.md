@@ -141,7 +141,7 @@ Project mẫu 30 fps: Clip 1 ảnh 3,0 s · **Clip 2** video nguồn 12,0 s, c�
 | AC-6 | Clip 1 ảnh 0,5 s, chế độ ở mép cuối | bấm −1 Frame | thời lượng giữ 0,5 s; nút −1 Frame mờ 35%, không nhận chạm | ⚠️ chưa có |
 | AC-7 | iPhone, không chọn gì, zoom 55 pt/giây | pinch ra hết cỡ | zoom dừng ở 360 pt/giây; hiện "Frame zoom · 1 frame = 12 pt"; nhãn thước cách nhau 72pt | ⚠️ chưa có |
 | AC-8 | AC-7, playhead ở 8,90 s | kéo timeline 36pt sang phải | playhead lùi đúng 3 khung (8,80 s); 3 haptic; huy hiệu "−3 f · 0:08.80"; khung viewer bằng khung nguồn tại 8,80 s | ⚠️ chưa có |
-| AC-9 | "Frame zoom on pinch" tắt | pinch ra hết cỡ | zoom dừng ở 160 pt/giây; không có pill Frame zoom | ⚠️ chưa có |
+| AC-9 | "Frame zoom on pinch" tắt | pinch ra hết cỡ | zoom dừng ở 160 pt/giây; không có pill Frame zoom | ⚠️ một phần — kẹp pinch và Fit nằm ở `TimelineZoomMath.clampedPPS` (Domain): `TimelineZoomMathTests.pinchStopsAt160WhenFrameZoomOff`, `noFrameZoomStateBelowCeiling` (hôm nay mọi pinch dừng ở 160, chưa có pill — đúng trạng thái "tắt"); công tắc thật vào ở task 13 của plan precise-trim-input |
 | AC-10 | Duo trong, Clip 2 chọn | giữ mép cuối 0,5 s | 4 ô đầu cột phải: −1 Frame · +1 Frame · Frame Zoom · Trim (bật); không có Split; 5 công cụ hàng đáy không nhận chạm | ⚠️ chưa có |
 | AC-11 | iPad dọc, ô Trim bật | Pencil kéo mép cuối, đứng yên 0,3 s, rồi đi tiếp 24pt sang trái | mép sớm hơn đúng 2 khung; một ngón tay kéo timeline cùng lúc thì cuộn, không cắt | ⚠️ chưa có |
 | AC-12 | iPad dọc, ô Trim bật | chạm đúp Pencil rồi kéo Pencil trên Clip 2 | playhead chạy theo Pencil; cửa sổ cắt Clip 2 không đổi | ⚠️ chưa có |
