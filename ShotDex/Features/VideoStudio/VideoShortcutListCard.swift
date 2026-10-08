@@ -8,6 +8,10 @@ import SwiftUI
 /// each, scrolling. It does not cover the frame, so it may stay.
 struct VideoShortcutListCard: View {
     @Bindable var model: VideoStudioModel
+    @Environment(\.videoStudioWindowClass) private var windowClass
+
+    /// 16 in on the phone, 14 on the cover's 382 (F6_DC_Keyboard).
+    private var rowInset: CGFloat { VideoStudioMetrics.ShortcutList.rowInset(windowClass) }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -81,7 +85,7 @@ struct VideoShortcutListCard: View {
                 .foregroundStyle(.white.opacity(0.35))
         }
         .lineLimit(1)
-        .padding(.horizontal, 16)
+        .padding(.horizontal, rowInset)
         .frame(height: VideoStudioMetrics.ShortcutList.connectedRowHeight)
         .accessibilityElement(children: .combine)
     }
@@ -99,7 +103,7 @@ struct VideoShortcutListCard: View {
                 }
             }
         }
-        .padding(.horizontal, 16)
+        .padding(.horizontal, rowInset)
         .frame(height: VideoStudioMetrics.ShortcutList.rowHeight)
         // The hairline under the row, not in it: 33 a row, as the board.
         .padding(.bottom, 1)
@@ -233,5 +237,10 @@ extension VideoStudioMetrics {
         static let overlayColumnWidth: CGFloat = 290
         static let overlayColumnGap: CGFloat = 12
         static let overlayRowHeight: CGFloat = 34
+
+        /// The rows' side inset: 16 on the phone, 14 on the Duo's cover.
+        static func rowInset(_ windowClass: VideoStudioWindowClass?) -> CGFloat {
+            windowClass == .duoCover ? 14 : 16
+        }
     }
 }

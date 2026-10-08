@@ -289,8 +289,12 @@ extension VideoStudioScreen {
                 // holding an edge keeps its timeline when the layout moves
                 // under it (FS-12.17 §3).
                 let trim = model.isFrameTrimming ? VideoStudioDeskGeometry.coverFrameTrim(frames) : nil
-                let selection = trim == nil && model.inspectorTarget != .none
-                    ? VideoStudioDeskGeometry.coverSelection(frames, isCollapsed: model.session?.isCollapsed == true)
+                // The keyboard's list stands where a selected item's panel
+                // does — from 334 under the overview (FS-12.17b §4, board
+                // F6_DC_Keyboard).
+                let showsList = model.isShortcutListInPanel
+                let selection = trim == nil && (model.inspectorTarget != .none || showsList)
+                    ? VideoStudioDeskGeometry.coverSelection(frames, isCollapsed: !showsList && model.session?.isCollapsed == true)
                     : nil
                 let timeline: CGRect? = trim?.timeline ?? (selection.map(\.timeline) ?? frames.timeline)
                 if let timeline {
@@ -325,7 +329,9 @@ extension VideoStudioScreen {
                         VideoTimelineOverview(model: model, visibleDuration: timelineVisibleDuration)
                             .placed(overview)
                     }
-                    contextPanel(model, height: window.height - selection.panel.minY)
+                    // The list has no strip to pull down to: no grabber, its
+                    // head at 334 as the board draws it.
+                    contextPanel(model, height: window.height - selection.panel.minY, showsGrabber: !showsList)
                         .frame(width: selection.panel.width)
                         .offset(x: selection.panel.minX, y: selection.panel.minY)
                         .transition(.move(edge: .bottom))

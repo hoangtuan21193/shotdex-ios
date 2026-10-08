@@ -55,6 +55,7 @@ extension VideoStudioLayoutTests {
         #expect(list.firstRowTop == 88)
         #expect(list.rowHeight == 32)
         #expect(list.keycapSide == 24 && list.keycapGap == 3)
+        #expect(list.rowInset(.phone) == 16 && list.rowInset(.duoCover) == 14)
         // On the board the card is at 450: rows start at 538.
         #expect(450 + list.firstRowTop == 538)
         // The frame keeps its idle height; the timeline pays for the panel.

@@ -788,32 +788,35 @@ struct VideoStudioScreen: View {
         _ model: VideoStudioModel,
         height: CGFloat,
         showsFooter: Bool = false,
-        bottomInset: CGFloat = 0
+        bottomInset: CGFloat = 0,
+        showsGrabber: Bool = true
     ) -> some View {
         VStack(spacing: 0) {
-            Capsule()
-                .fill(Color.white.opacity(0.22))
-                .frame(width: 36, height: 5)
-                .padding(.vertical, 6)
-                .frame(maxWidth: .infinity)
-                .contentShape(Rectangle())
-                .gesture(
-                    DragGesture(minimumDistance: 8)
-                        .onEnded { value in
-                            let dy = value.translation.height
-                            // The Duo cover pulls a selected item's panel
-                            // down to its 78pt strip and back (FS-12.07b
-                            // §4); elsewhere a pull down closes and keeps.
-                            if currentWindowClass == .duoCover, model.selectionTitle != nil, !model.isSelectingClips {
-                                if dy > 40 { model.setPanelCollapsed(true) } else if dy < -40 { model.setPanelCollapsed(false) }
-                            } else if dy > 40 {
-                                model.clearSelection()
+            if showsGrabber {
+                Capsule()
+                    .fill(Color.white.opacity(0.22))
+                    .frame(width: 36, height: 5)
+                    .padding(.vertical, 6)
+                    .frame(maxWidth: .infinity)
+                    .contentShape(Rectangle())
+                    .gesture(
+                        DragGesture(minimumDistance: 8)
+                            .onEnded { value in
+                                let dy = value.translation.height
+                                // The Duo cover pulls a selected item's panel
+                                // down to its 78pt strip and back (FS-12.07b
+                                // §4); elsewhere a pull down closes and keeps.
+                                if currentWindowClass == .duoCover, model.selectionTitle != nil, !model.isSelectingClips {
+                                    if dy > 40 { model.setPanelCollapsed(true) } else if dy < -40 { model.setPanelCollapsed(false) }
+                                } else if dy > 40 {
+                                    if model.isShortcutListInPanel { model.closeShortcutList() } else { model.clearSelection() }
+                                }
                             }
-                        }
-                )
-                .accessibilityElement()
-                .accessibilityLabel(Text(verbatim: VideoStudioCopy.panelGrabber))
-                .accessibilityIdentifier("panelGrabber")
+                    )
+                    .accessibilityElement()
+                    .accessibilityLabel(Text(verbatim: VideoStudioCopy.panelGrabber))
+                    .accessibilityIdentifier("panelGrabber")
+            }
             VideoStudioSheetHost(
                 model: model, actions: actions(model), importedMusic: importedMusic,
                 server: server, onServerExported: serverExported
