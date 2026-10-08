@@ -112,7 +112,7 @@ Project mẫu 30 fps của [FS-12.17 §12](17-precise-trim-and-input.md), playhe
 | AC-1 | project 24 fps, playhead 2,000 s | bấm ⇧→ | playhead 2,0417 s (±1 ms) | ⚠️ chưa có |
 | AC-2 | đang dừng | bấm L, L | phát tới rate 2,0; nhãn "2×" trên nút play; bấm K thì rate 0 | ⚠️ chưa có |
 | AC-3 | playhead 5,0 s rồi 12,0 s | bấm I tại 5,0 s, O tại 12,0 s, bật Loop, Space | phát tới 12,0 s thì quay về 5,0 s; cờ I và O trên thước; ⌥X xoá cả hai | ⚠️ chưa có |
-| AC-4 | playhead 7,0 s trong Clip 2 (bắt đầu 3,0 s) | bấm ⌥[ | Clip 2 bắt đầu nguồn ở 4,0 s, dài 2,2 s; undo thêm 1 bước | ⚠️ chưa có |
+| AC-4 | playhead 7,0 s trong Clip 2 (bắt đầu 3,0 s) | bấm ⌥[ | Clip 2 bắt đầu nguồn ở 4,0 s, dài 2,2 s; undo thêm 1 bước | ⚠️ một phần — **lệnh** xanh: `VideoTrimToPlayheadTests.startAtSevenSecondsInClipTwo` (nguồn 4,0, dài 2,2), `speedTwoHalvesTheLocalDelta`, `edgeOrBelowMinimumDoesNothing`, `theModelAddsOneUndoStep` (+1 bước, Undo trả 0–6,2) — phép tính là `VideoClipTrimMath.trimToPlayhead`, dùng chung cho nút transport và chip; **phím ⌥[**: task 24 |
 | AC-5 | đang sửa chữ của một text overlay | gõ "jim k" | ô nhập có "jim k"; playhead đứng yên; không có In mới | ⚠️ chưa có |
 | AC-6 | không chọn gì | bấm ⌫ | recipe không đổi | ⚠️ chưa có |
 | AC-7 | zoom 55 pt/giây | bấm ⌘+ hai lần | zoom 220 pt/giây; ⌘− hai lần về 55 | ⚠️ chưa có |

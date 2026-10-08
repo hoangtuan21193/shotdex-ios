@@ -60,6 +60,19 @@ enum VideoStudioModelFixture {
         )
     }
 
+    /// FS-12.17 §12's project, 30 fps: Clip 1 a 3.0 s photo · Clip 2 a
+    /// video of a 12.0 s source cut to 0.0–6.2 · Clip 3 a 5.0 s video. Clip
+    /// 2 runs 3.0–9.2 on the timeline.
+    static func frameTrimSampleClips() -> [VideoClip] {
+        var clips = photoClips(1, seconds: 3) + videoClips(2)
+        clips[1].sourceDuration = 12
+        clips[1].trimStart = 0
+        clips[1].trimEnd = 6.2
+        clips[2].sourceDuration = 5
+        clips[2].trimEnd = 5
+        return clips
+    }
+
     /// FS-12.09 §8's project: Falls photo 0–3.0 · Coast video 3.0–9.2 ·
     /// Lake video 9.2–14.2 · Night photo 14.2–17.2 · Forest video
     /// 17.2–24.0, and the sticker "Road" 6.0–8.0 cut from a library photo.
