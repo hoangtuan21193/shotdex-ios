@@ -133,6 +133,18 @@ struct VideoTransportButton: View {
                     .frame(width: disc, height: disc)
                     .background(Circle().fill(Color.white.opacity(0.12)))
                     .contentShape(Circle())
+                    // J / L at 2× or 4× (FS-12.17b §3): the rate on a white
+                    // 30×15 tag at the button's corner.
+                    .overlay(alignment: .topTrailing) {
+                        if let rate = VideoShuttle.label(for: model.shuttleRate) {
+                            Text(verbatim: rate)
+                                .font(.system(size: 9.5, weight: .bold).monospacedDigit())
+                                .foregroundStyle(.black)
+                                .frame(width: 30, height: 15)
+                                .background(Capsule().fill(Color.white))
+                                .offset(x: 10, y: -4)
+                        }
+                    }
             }
             .buttonStyle(.plain)
             .accessibilityLabel(
@@ -140,6 +152,7 @@ struct VideoTransportButton: View {
                     ? Text("Pause", comment: "Video Studio transport")
                     : Text("Play", comment: "Video Studio transport")
             )
+            .accessibilityValue(Text(verbatim: VideoShuttle.label(for: model.shuttleRate) ?? ""))
         case .forwardFrame:
             glyph("forward.frame", label: Text("Forward a Frame", comment: "Video Studio transport")) {
                 model.stepFrames(1)

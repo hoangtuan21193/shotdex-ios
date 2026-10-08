@@ -44,6 +44,16 @@ struct VideoStudioKeyboardActions {
     let isEnabled: (VideoShortcut) -> Bool
 }
 
+/// The menu bar's way to the open studio: **one object per screen**, its
+/// closures refreshed on every render. A focused value that changed with
+/// every render — a struct of closures — had the scene re-render forever
+/// and hung the iPad as the studio opened.
+@MainActor
+final class VideoStudioKeyboardTarget {
+    var perform: (VideoShortcut) -> Void = { _ in }
+    var isEnabled: (VideoShortcut) -> Bool = { _ in false }
+}
+
 /// The zero-size buttons that carry the keys (iPhone, Duo; Undo and Redo
 /// on the iPad).
 struct VideoKeyboardShortcutLayer: View {
@@ -70,7 +80,7 @@ struct VideoKeyboardShortcutLayer: View {
 /// scene's (`focusedSceneValue`): Playback a menu of its own, the editing
 /// keys after the system's Edit items, the view keys in View.
 struct VideoStudioCommands: Commands {
-    @FocusedValue(\.videoStudioKeyboard) private var keyboard
+    @FocusedValue(\.videoStudioKeyboard) private var keyboard: VideoStudioKeyboardTarget?
 
     var body: some Commands {
         CommandMenu(Text(verbatim: VideoStudioCopy.shortcutGroupName(.playback))) {
@@ -99,11 +109,11 @@ struct VideoStudioCommands: Commands {
 }
 
 struct VideoStudioKeyboardKey: FocusedValueKey {
-    typealias Value = VideoStudioKeyboardActions
+    typealias Value = VideoStudioKeyboardTarget
 }
 
 extension FocusedValues {
-    var videoStudioKeyboard: VideoStudioKeyboardActions? {
+    var videoStudioKeyboard: VideoStudioKeyboardTarget? {
         get { self[VideoStudioKeyboardKey.self] }
         set { self[VideoStudioKeyboardKey.self] = newValue }
     }
@@ -114,11 +124,13 @@ extension VideoStudioScreen {
     func keyboardShortcuts(_ model: VideoStudioModel) -> some View {
         let actions = keyboardActions(model)
         let isIPad = currentWindowClass == .iPadLandscape || currentWindowClass == .iPadPortrait
+        keyboardTarget.perform = actions.perform
+        keyboardTarget.isEnabled = actions.isEnabled
         return VideoKeyboardShortcutLayer(
             shortcuts: isIPad ? [.undo, .redo] : VideoShortcut.built,
             actions: actions
         )
-        .focusedSceneValue(\.videoStudioKeyboard, isIPad ? actions : nil)
+        .focusedSceneValue(\.videoStudioKeyboard, isIPad ? keyboardTarget : nil)
     }
 
     func keyboardActions(_ model: VideoStudioModel) -> VideoStudioKeyboardActions {
@@ -142,6 +154,9 @@ extension VideoStudioScreen {
     func performShortcut(_ shortcut: VideoShortcut, model: VideoStudioModel) {
         switch shortcut {
         case .playPause: model.togglePlayback()
+        case .stop: model.shuttle(.k)
+        case .playBackward: model.shuttle(.j)
+        case .playForward, .faster: model.shuttle(.l)
         case .backSecond: model.seek(to: model.currentTime - 1)
         case .forwardSecond: model.seek(to: model.currentTime + 1)
         case .backFrame: model.stepFrames(-1)
@@ -159,8 +174,7 @@ extension VideoStudioScreen {
         // The sheet, not the export: ⌘E puts the user where the Export
         // button does, it does not start writing to their library.
         case .export: openExport(model)
-        case .stop, .playBackward, .playForward, .faster,
-             .trimStart, .trimEnd, .delete, .zoomIn, .zoomOut,
+        case .trimStart, .trimEnd, .delete, .zoomIn, .zoomOut,
              .markIn, .markOut, .clearInOut:
             break
         }

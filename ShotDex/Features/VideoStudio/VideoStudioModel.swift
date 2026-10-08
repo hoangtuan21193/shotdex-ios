@@ -1746,6 +1746,7 @@ final class VideoStudioModel {
 
     func togglePlayback() {
         guard let player else { return }
+        endShuttle(player)
         if isPlaying {
             player.pause()
             isPlaying = false
@@ -1760,6 +1761,68 @@ final class VideoStudioModel {
             player.play()
             isPlaying = true
         }
+    }
+
+    // MARK: Shuttle — J / K / L (FS-12.17b §3)
+
+    /// The rate the keys set: 0 when they have not (Space plays at 1×),
+    /// 2 or 4 forward, negative backward.
+    private(set) var shuttleRate: Float = 0
+    @ObservationIgnored private var reverseStepTask: Task<Void, Never>?
+
+    func shuttle(_ key: VideoShuttle.Key) {
+        let current: Float = isPlaying ? (shuttleRate == 0 ? 1 : shuttleRate) : 0
+        let rate = VideoShuttle.rate(after: key, from: current)
+        guard let player else {
+            shuttleRate = rate == 1 ? 0 : rate
+            return
+        }
+        reverseStepTask?.cancel()
+        reverseStepTask = nil
+        guard rate != 0 else {
+            endShuttle(player)
+            player.pause()
+            isPlaying = false
+            return
+        }
+        if !isAudioSessionActive {
+            VideoAudioSession.activate()
+            isAudioSessionActive = true
+        }
+        shuttleRate = rate == 1 ? 0 : rate
+        // 2× keeps its pitch; 4× and backwards play silent.
+        playerItem?.audioTimePitchAlgorithm = .timeDomain
+        player.isMuted = VideoShuttle.isMuted(rate)
+        if rate < 0, playerItem?.canPlayReverse != true {
+            // The item cannot play backwards: the playhead steps back 15
+            // times a second instead, silent (§7).
+            player.pause()
+            isPlaying = true
+            let step = Double(-rate) / VideoShuttle.reverseStepsPerSecond
+            reverseStepTask = Task { @MainActor [weak self] in
+                while !Task.isCancelled, let self, self.currentTime > 0 {
+                    self.seek(to: max(0, self.currentTime - step))
+                    try? await Task.sleep(for: .milliseconds(Int(1000 / VideoShuttle.reverseStepsPerSecond)))
+                }
+                guard !Task.isCancelled, let self else { return }
+                self.isPlaying = false
+                self.shuttleRate = 0
+            }
+            return
+        }
+        if rate > 0, currentTime >= totalDuration - 0.05 {
+            player.seek(to: .zero, toleranceBefore: .zero, toleranceAfter: .zero)
+        }
+        player.rate = rate
+        isPlaying = true
+    }
+
+    /// Back to plain playback: sound on, no shuttle.
+    private func endShuttle(_ player: AVPlayer) {
+        reverseStepTask?.cancel()
+        reverseStepTask = nil
+        shuttleRate = 0
+        player.isMuted = false
     }
 
     /// The project's frame grid — Video Settings' frame rate (FS-12.17b §3).

@@ -52,6 +52,9 @@ struct VideoStudioScreen: View {
     /// Media opens the pool on an iPad in landscape and the Media panel
     /// everywhere else.
     @State var currentWindowClass: VideoStudioWindowClass?
+    /// The menu bar's way to this studio (FS-12.17b §4) — one object, so
+    /// the scene's focused value does not change with every render.
+    @State var keyboardTarget = VideoStudioKeyboardTarget()
     @State var editingOverlay: PhotoOverlay?
     /// The preview's size, for the export preset's Fit preview (FS-12.16 §4).
     @State var previewSize: CGSize = .zero

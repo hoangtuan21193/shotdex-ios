@@ -121,7 +121,6 @@ enum VideoShortcut: String, CaseIterable, Identifiable, Sendable {
     /// (vs-precise-trim-input 23–29): not registered and not listed until
     /// then — a list never shows a key that does nothing.
     static let notYetBuilt: Set<VideoShortcut> = [
-        .stop, .playBackward, .playForward, .faster,
         .trimStart, .trimEnd, .delete, .zoomIn, .zoomOut,
         .markIn, .markOut, .clearInOut,
     ]
