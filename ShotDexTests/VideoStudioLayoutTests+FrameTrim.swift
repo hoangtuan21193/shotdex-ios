@@ -43,3 +43,36 @@ extension VideoStudioLayoutTests {
         #expect(ClipFilmstrip.drawnCells(count: 3, side: 54, visible: -100...20) == 0...1)
     }
 }
+
+extension VideoStudioLayoutTests {
+    /// FS-12.17b AC-8 (board F6_P_Keyboard): the list stands in the Look
+    /// panel's 340 slot over the tool row; the head 46, then 6 and the
+    /// 36pt "Keyboard connected" row, the twelve rows 32 each.
+    @Test func keyboardCardTakesPanelSlot() {
+        #expect(VideoStudioMetrics.lookSheetHeight == 340)
+        let list = VideoStudioMetrics.ShortcutList.self
+        #expect(list.headerHeight == 46)
+        #expect(list.firstRowTop == 88)
+        #expect(list.rowHeight == 32)
+        #expect(list.keycapSide == 24 && list.keycapGap == 3)
+        // On the board the card is at 450: rows start at 538.
+        #expect(450 + list.firstRowTop == 538)
+        // The frame keeps its idle height; the timeline pays for the panel.
+        let screen = CGSize(width: 402, height: 874)
+        let idle = VideoStudioMetrics.stackLayout(
+            screen: screen, bandHeight: 60, bottomInset: 34, canvas: CGSize(width: 1920, height: 1080),
+            presentsSheet: false, timelineContentHeight: 200, showsBottomBar: false, deskChromeHeight: 36
+        )
+        let open = VideoStudioMetrics.stackLayout(
+            screen: screen, bandHeight: 60, bottomInset: 34, canvas: CGSize(width: 1920, height: 1080),
+            presentsSheet: true, timelineContentHeight: 200, showsBottomBar: false, deskChromeHeight: 36,
+            sheetHeight: VideoStudioMetrics.lookSheetHeight + VideoStudioMetrics.toolbarHeight
+        )
+        let natural: CGFloat = 402 * 1080 / 1920
+        #expect(idle.preview >= natural)
+        #expect(open.preview < natural)   // what the Look panel's layout does
+        let kept = open.keepingPicture(of: idle, natural: natural)
+        #expect(kept.preview == natural)  // a 402×226 picture, as idle
+        #expect(kept.preview + kept.timeline == open.preview + open.timeline)
+    }
+}

@@ -493,7 +493,8 @@ struct VideoStudioScreen: View {
         // stands a row taller.
         let showsSessionFooter = model.sessionFooterTitle != nil
         // The Look tool's panel stands over the tool row (FS-12.06c §3).
-        let showsLookTool = model.inspectorTarget == .none && model.activeToolPanel == .look
+        // So does the keyboard's list (FS-12.17b §4, board F6_P_Keyboard).
+        let showsLookTool = (model.inspectorTarget == .none && model.activeToolPanel == .look) || model.isShortcutListShown
         // A clip's Look block stands 340 too, over its ✕ · name · ✓ footer
         // (board F5_P_ClipLook).
         let showsClipLook = (model.inspectorTarget == .clip || model.inspectorTarget == .clips) && model.activeItemCommand == .look
@@ -544,7 +545,7 @@ struct VideoStudioScreen: View {
         // goes, the timeline has its idle height back, and ✕ · "Trim · Clip
         // 2" · ✓ stands where the tools were.
         let isFrameTrimming = model.isFrameTrimming
-        let layout = (showsGroup && groupLift == 0) || isFrameTrimming ? idleLayout : VideoStudioMetrics.stackLayout(
+        var layout = (showsGroup && groupLift == 0) || isFrameTrimming ? idleLayout : VideoStudioMetrics.stackLayout(
             screen: screen,
             bandHeight: bandHeight,
             bottomInset: proxy.safeAreaInsets.bottom,
@@ -565,6 +566,14 @@ struct VideoStudioScreen: View {
                 ? groupLift
                 : (showsLookTool ? VideoStudioMetrics.lookSheetHeight + VideoStudioMetrics.toolbarHeight : contentHeight)
         )
+        // The keyboard's list leaves the frame as it was (FS-12.17b §4,
+        // AC-8): the timeline gives up what the panel takes, down to a
+        // slice — the list is reference, the frame is the work.
+        if model.isShortcutListShown, !isFrameTrimming {
+            let canvas = model.recipe.canvasSize()
+            let natural = canvas.width > 0 ? screen.width * canvas.height / canvas.width : layout.preview
+            layout = layout.keepingPicture(of: idleLayout, natural: natural)
+        }
         return ZStack(alignment: .bottom) {
             VStack(spacing: 0) {
                 VideoStudioTopBand(model: model, phoneActions: actions(model))

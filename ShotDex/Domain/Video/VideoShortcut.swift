@@ -92,15 +92,17 @@ enum VideoShortcut: String, CaseIterable, Identifiable, Sendable {
         return Self.label(key)
     }
 
+    static func symbol(_ modifier: Key.Modifier) -> String {
+        switch modifier {
+        case .control: "⌃"
+        case .option: "⌥"
+        case .shift: "⇧"
+        case .command: "⌘"
+        }
+    }
+
     static func label(_ key: Key) -> String {
-        let modifiers = key.modifiers.sorted().map { modifier -> String in
-            switch modifier {
-            case .control: "⌃"
-            case .option: "⌥"
-            case .shift: "⇧"
-            case .command: "⌘"
-            }
-        }.joined()
+        let modifiers = key.modifiers.sorted().map(symbol).joined()
         let input: String = switch key.input {
         case .character("="): "+"
         case .character("-"): "−"
@@ -124,6 +126,21 @@ enum VideoShortcut: String, CaseIterable, Identifiable, Sendable {
     /// The shortcuts of `group`, in the list's order.
     static func shortcuts(in group: Group) -> [VideoShortcut] {
         allCases.filter { $0.group == group }
+    }
+
+    /// The keycaps a folded row draws (boards F6_P_Keyboard, F6_DC_Keyboard,
+    /// F6_DI_Keyboard): the modifiers the row's keys share, once, then each
+    /// key — bare where it has only those modifiers, whole where it has
+    /// more. ⌘ B · J K L · ⇧ ← → · ⌘ Z ⇧⌘Z · Space.
+    static func keycaps(_ row: [VideoShortcut]) -> [String] {
+        let keys = row.compactMap(\.key)
+        guard let first = keys.first else { return [] }
+        let shared = keys.dropFirst().reduce(first.modifiers) { $0.intersection($1.modifiers) }
+        let modifierCaps = shared.sorted().map(symbol)
+        let keyCaps = keys.map { key in
+            key.modifiers == shared ? label(Key(input: key.input)) : label(key)
+        }
+        return modifierCaps + keyCaps
     }
 
     /// The twelve rows of the phone's and the Duo's card (§4, boards

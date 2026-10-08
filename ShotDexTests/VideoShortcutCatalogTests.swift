@@ -59,3 +59,55 @@ struct VideoShortcutCatalogTests {
         #expect(Set(bare) == [.playPause, .playBackward, .stop, .playForward, .markIn, .markOut, .addMarker, .beforeAfter, .delete])
     }
 }
+
+/// The phone's and the Duo's card (FS-12.17b §4, AC-8).
+extension VideoShortcutCatalogTests {
+    /// The keycaps each folded row draws, as board F6_P_Keyboard does.
+    @Test func keycapsMatchTheBoard() {
+        let caps = VideoShortcut.compactRows.map(VideoShortcut.keycaps)
+        #expect(caps == [
+            ["Space"], ["J", "K", "L"], ["⇧", "←", "→"], ["⌘", "B"], ["I", "O"],
+            ["⌥", "[", "]"], ["⌫"], ["M"], ["⌘", "Z", "⇧⌘Z"], ["⌘", "+", "−"], ["Esc"], ["⌘", "E"],
+        ])
+        #expect(VideoShortcut.compactRows.map(VideoStudioCopy.shortcutRowName) == [
+            "Play or Pause", "Backward · Stop · Forward", "Back · Forward a Frame", "Split at Playhead",
+            "Mark In · Out", "Trim Start · End to Playhead", "Delete", "Add Marker", "Undo · Redo",
+            "Zoom In · Out", "Deselect", "Export…",
+        ])
+    }
+
+    /// VoiceOver reads a row as its name and its keys.
+    @Test func rowReadsNameThenKeys() {
+        #expect(VideoStudioCopy.shortcutRowSpoken([.split]) == "Split at Playhead, Command B")
+    }
+}
+
+/// When the card shows itself (FS-12.17b §4).
+@MainActor
+struct VideoShortcutListTests {
+    private func preferences() -> VideoInputPreferences {
+        let suite = "VideoShortcutListTests.\(UUID().uuidString)"
+        return VideoInputPreferences(defaults: UserDefaults(suiteName: suite)!)
+    }
+
+    /// FS-12.17b AC-8: the first hardware key shows the list — once per
+    /// install; the iPad never does. It takes the panel's place.
+    @Test func firstKeyShowsTheListOnce() {
+        let prefs = preferences()
+        let model = VideoStudioModelFixture.model(clips: VideoStudioModelFixture.frameTrimSampleClips())
+        model.noteHardwareKey(isIPad: false, preferences: prefs)
+        #expect(model.isShortcutListShown)
+        #expect(model.presentsSheet)
+        VideoKeyboardRouter.perform(.deselect, model: model)
+        #expect(!model.isShortcutListShown)
+        model.noteHardwareKey(isIPad: false, preferences: prefs)
+        #expect(!model.isShortcutListShown)
+        // Holding ⌘ brings it back.
+        model.showShortcutList()
+        #expect(model.isShortcutListShown)
+
+        let iPad = VideoStudioModelFixture.model(clips: VideoStudioModelFixture.frameTrimSampleClips())
+        iPad.noteHardwareKey(isIPad: true, preferences: preferences())
+        #expect(!iPad.isShortcutListShown)
+    }
+}

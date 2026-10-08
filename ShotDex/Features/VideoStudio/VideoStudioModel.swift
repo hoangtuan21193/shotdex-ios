@@ -1626,7 +1626,7 @@ final class VideoStudioModel {
     /// True whenever the contextual bottom sheet should be up: something is
     /// selected, or a project-wide tool is open.
     var presentsSheet: Bool {
-        inspectorTarget != .none || activeToolPanel != nil
+        inspectorTarget != .none || activeToolPanel != nil || isShortcutListShown
     }
 
     /// The clip currently under the playhead — the target for playhead-relative

@@ -83,7 +83,11 @@ struct VideoStudioSheetHost: View {
 
     var body: some View {
         Group {
-            if model.mediaPickPurpose == .replaceClip {
+            if model.isShortcutListShown {
+                // The keyboard's list (FS-12.17b §4): in the panel's place,
+                // over whatever the panel was showing, until ✕ or Esc.
+                VideoShortcutListCard(model: model)
+            } else if model.mediaPickPurpose == .replaceClip {
                 // Replace (FS-12.04b §4): Media in single-pick mode, in the
                 // clip's own place — the clip's ✕ / ✓ stays.
                 VideoMediaPanel(model: model)

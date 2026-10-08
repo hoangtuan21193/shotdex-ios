@@ -1,0 +1,128 @@
+{
+ "steps": [
+  {
+   "action": "launch",
+   "arguments": [
+    "-video.timelineExtraHeight",
+    "0",
+    "-video.keyboardListShown",
+    "NO"
+   ]
+  },
+  {
+   "action": "wait",
+   "seconds": 6
+  },
+  {
+   "action": "tap",
+   "label": "Select",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "tap",
+   "x": 0.83,
+   "y": 0.457
+  },
+  {
+   "action": "tap",
+   "x": 0.163,
+   "y": 0.61
+  },
+  {
+   "action": "tap",
+   "x": 0.5,
+   "y": 0.61
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "tap",
+   "label": "More selection actions"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "tap",
+   "label": "Create Video"
+  },
+  {
+   "action": "wait",
+   "seconds": 12
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "tap",
+   "label": "Video Settings",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "tap",
+   "label": "Ratio 16:9",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "tap",
+   "label": "Done",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "screenshot",
+   "name": "nocard"
+  },
+  {
+   "action": "key",
+   "text": "space"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "screenshot",
+   "name": "card"
+  },
+  {
+   "action": "dump",
+   "name": "F6_P_Keyboard",
+   "text": "snapshot",
+   "type": "staticText"
+  },
+  {
+   "action": "dump",
+   "name": "card-buttons",
+   "text": "snapshot",
+   "type": "button"
+  },
+  {
+   "action": "key",
+   "text": "space"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  }
+ ]
+}

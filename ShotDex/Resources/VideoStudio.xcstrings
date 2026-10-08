@@ -745,9 +745,33 @@
         }
       }
     },
+    "Back · Forward a Frame": {
+      "comment": "Video Studio keyboard card row: Shift-Left, Shift-Right",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Back · Forward a Frame"
+          }
+        }
+      }
+    },
     "Background": {
       "comment": "Video Studio iPad Video Settings: label of Blur · Color · Image — what shows around a fitted clip",
       "extractionState": "manual"
+    },
+    "Backward · Stop · Forward": {
+      "comment": "Video Studio keyboard card row: J, K, L",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Backward · Stop · Forward"
+          }
+        }
+      }
     },
     "Beat %lld · %@ · %@": {
       "comment": "Video Studio beats: the pill over the ruler while a clip edge sticks to a beat — Beat 14 · 0:08.75 · −0.45s",
@@ -905,6 +929,18 @@
       "comment": "Video Studio Save as Look: a node's colour settings, which the look already sets — e.g. Color in Node 1",
       "extractionState": "manual"
     },
+    "Command": {
+      "comment": "VoiceOver: the Command key",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Command"
+          }
+        }
+      }
+    },
     "Commands": {
       "comment": "Video Studio: VoiceOver name of the selected item's row of commands",
       "extractionState": "manual"
@@ -916,6 +952,18 @@
     "Continue": {
       "comment": "Video Studio captions: resumes recognition with the clips not read yet",
       "extractionState": "manual"
+    },
+    "Control": {
+      "comment": "VoiceOver: the Control key",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Control"
+          }
+        }
+      }
     },
     "Couldn't save your video draft": {
       "comment": "Video Studio: banner and alert when the draft could not be written (disk full, database error)",
@@ -1069,6 +1117,18 @@
       "comment": "Video Projects: when a draft was last changed; the argument is a relative time such as '5 min. ago'",
       "extractionState": "manual"
     },
+    "End": {
+      "comment": "VoiceOver: the End key",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "End"
+          }
+        }
+      }
+    },
     "End to Playhead": {
       "comment": "Video Studio Trim: cuts the selected clip's end to the playhead",
       "extractionState": "manual"
@@ -1076,6 +1136,18 @@
     "Ends on beat %lld · %@ · hold to move freely": {
       "comment": "Video Studio beats: under the Duration slider when the still's end sticks to a beat — which beat, when, and how to let go of it",
       "extractionState": "manual"
+    },
+    "Escape": {
+      "comment": "VoiceOver: the Escape key",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Escape"
+          }
+        }
+      }
     },
     "Every Bar": {
       "comment": "Video Studio beats: snap only to the first beat of each bar",
@@ -1361,6 +1433,30 @@
       "comment": "Video Studio compare: holding a finger on the frame shows the original",
       "extractionState": "manual"
     },
+    "Hold ⌘ to see these again": {
+      "comment": "Video Studio keyboard card on the Duo's inner display: subtitle under the title",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hold ⌘ to see these again"
+          }
+        }
+      }
+    },
+    "Home": {
+      "comment": "VoiceOver: the Home key",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Home"
+          }
+        }
+      }
+    },
     "Hover shows the trim point": {
       "comment": "Video Studio iPad Pencil switch: a hovering Pencil shows where the edge would land",
       "extractionState": "manual",
@@ -1417,6 +1513,30 @@
       "comment": "Video Studio: the ✓ that ends a selection keeping what it changed",
       "extractionState": "manual"
     },
+    "Keyboard Shortcuts": {
+      "comment": "Video Studio: title of the card that lists the keyboard shortcuts (phone, Duo)",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Keyboard Shortcuts"
+          }
+        }
+      }
+    },
+    "Keyboard connected": {
+      "comment": "Video Studio keyboard card: a hardware keyboard is attached",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Keyboard connected"
+          }
+        }
+      }
+    },
     "Language": {
       "comment": "Video Studio captions command and row: the language the speech is recognised in",
       "extractionState": "manual"
@@ -1436,6 +1556,18 @@
     "Leave Without Saving": {
       "comment": "Video Studio: closes the studio although the latest draft could not be written",
       "extractionState": "manual"
+    },
+    "Left Arrow": {
+      "comment": "VoiceOver: the Left Arrow key",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Left Arrow"
+          }
+        }
+      }
     },
     "Lens Correction": {
       "comment": "Video Studio Look panel: a photo setting skipped on video",
@@ -1489,6 +1621,18 @@
           "stringUnit": {
             "state": "translated",
             "value": "Mark In"
+          }
+        }
+      }
+    },
+    "Mark In · Out": {
+      "comment": "Video Studio keyboard card row: I, O",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mark In · Out"
           }
         }
       }
@@ -1676,6 +1820,18 @@
     "Open Settings": {
       "comment": "Video Studio: opens the app's page in Settings",
       "extractionState": "manual"
+    },
+    "Option": {
+      "comment": "VoiceOver: the Option key",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Option"
+          }
+        }
+      }
     },
     "Or drag the clip's edges on the timeline.": {
       "comment": "Video Studio Trim: the other way to cut a clip",
@@ -1873,6 +2029,30 @@
       "comment": "Video Studio captions: reads the clips that could not be read again",
       "extractionState": "manual"
     },
+    "Return": {
+      "comment": "VoiceOver: the Return key",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Return"
+          }
+        }
+      }
+    },
+    "Right Arrow": {
+      "comment": "VoiceOver: the Right Arrow key",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Right Arrow"
+          }
+        }
+      }
+    },
     "Save": {
       "comment": "Video Studio Save Look prompt: saves the look into My Looks",
       "extractionState": "manual"
@@ -1936,6 +2116,18 @@
     "Sharpening": {
       "comment": "Video Studio Look panel: a photo setting skipped on video",
       "extractionState": "manual"
+    },
+    "Shift": {
+      "comment": "VoiceOver: the Shift key",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Shift"
+          }
+        }
+      }
     },
     "ShotDex can see the %lld items you chose.": {
       "comment": "Video Studio Media panel: with limited Photos access, how many items the user granted",
@@ -2013,6 +2205,18 @@
                 }
               }
             }
+          }
+        }
+      }
+    },
+    "Space": {
+      "comment": "VoiceOver: the Space bar",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Space"
           }
         }
       }
@@ -2153,6 +2357,18 @@
         }
       }
     },
+    "Trim Start · End to Playhead": {
+      "comment": "Video Studio keyboard card row: Option-[, Option-]",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Trim Start · End to Playhead"
+          }
+        }
+      }
+    },
     "Trim · %@": {
       "comment": "Video Studio frame trim: the footer's title — the mode, then the clip whose edge moves (e.g. Trim · Clip 2)",
       "extractionState": "manual",
@@ -2181,6 +2397,18 @@
           "stringUnit": {
             "state": "translated",
             "value": "Undo"
+          }
+        }
+      }
+    },
+    "Undo · Redo": {
+      "comment": "Video Studio keyboard card row: Command-Z, Shift-Command-Z",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Undo · Redo"
           }
         }
       }
@@ -2337,6 +2565,18 @@
         }
       }
     },
+    "Zoom In · Out": {
+      "comment": "Video Studio keyboard card row: Command-+, Command-−",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zoom In · Out"
+          }
+        }
+      }
+    },
     "Zoom Out": {
       "comment": "Video Studio keyboard shortcut (⌘−): the timeline",
       "extractionState": "manual",
@@ -2360,6 +2600,18 @@
     "freeze": {
       "comment": "Video Studio session footer: the kind of a selected held frame, after its length — 2.0s · freeze",
       "extractionState": "manual"
+    },
+    "hold ⌘ for this list": {
+      "comment": "Video Studio keyboard card: holding the Command key brings the list back",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "hold ⌘ for this list"
+          }
+        }
+      }
     },
     "iPad": {
       "comment": "Video Studio captions: the device the speech is recognised on, as in Transcribing on this iPad",

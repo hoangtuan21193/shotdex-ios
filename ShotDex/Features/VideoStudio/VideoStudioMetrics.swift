@@ -408,6 +408,18 @@ enum VideoStudioMetrics {
 
     /// The preview / timeline split for one screen. Pure, so it is unit-tested.
     struct StackLayout: Equatable {
+        /// This layout with the picture as big as `idle` shows it — the
+        /// stage no taller than the picture needs (`natural`, the frame's
+        /// height at full width) — and the timeline takes the difference
+        /// (FS-12.17b AC-8: the keyboard's list leaves the frame alone).
+        func keepingPicture(of idle: StackLayout, natural: CGFloat) -> StackLayout {
+            let total = preview + timeline
+            var kept = self
+            kept.preview = min(total, max(preview, min(idle.preview, natural)))
+            kept.timeline = total - kept.preview
+            return kept
+        }
+
         var preview: CGFloat
         var timeline: CGFloat
         /// Spacer under the timeline while the panel is up (`sheetLift`), zero

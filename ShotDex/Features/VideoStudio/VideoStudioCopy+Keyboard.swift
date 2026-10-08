@@ -45,6 +45,69 @@ extension VideoStudioCopy {
         }
     }
 
+    // MARK: The card (phone, Duo — FS-12.17b §4)
+
+    static var keyboardShortcutsTitle: String {
+        String(localized: "Keyboard Shortcuts", table: table, comment: "Video Studio: title of the card that lists the keyboard shortcuts (phone, Duo)")
+    }
+
+    static var keyboardConnected: String {
+        String(localized: "Keyboard connected", table: table, comment: "Video Studio keyboard card: a hardware keyboard is attached")
+    }
+
+    static var holdCommandHint: String {
+        String(localized: "hold ⌘ for this list", table: table, comment: "Video Studio keyboard card: holding the Command key brings the list back")
+    }
+
+    static var holdCommandAgainHint: String {
+        String(localized: "Hold ⌘ to see these again", table: table, comment: "Video Studio keyboard card on the Duo's inner display: subtitle under the title")
+    }
+
+    /// A folded row's name, as the boards write it.
+    static func shortcutRowName(_ row: [VideoShortcut]) -> String {
+        guard row.count > 1, let first = row.first else { return row.first.map(shortcutName) ?? "" }
+        switch first {
+        case .playBackward: return String(localized: "Backward · Stop · Forward", table: table, comment: "Video Studio keyboard card row: J, K, L")
+        case .backFrame: return String(localized: "Back · Forward a Frame", table: table, comment: "Video Studio keyboard card row: Shift-Left, Shift-Right")
+        case .markIn: return String(localized: "Mark In · Out", table: table, comment: "Video Studio keyboard card row: I, O")
+        case .trimStart: return String(localized: "Trim Start · End to Playhead", table: table, comment: "Video Studio keyboard card row: Option-[, Option-]")
+        case .undo: return String(localized: "Undo · Redo", table: table, comment: "Video Studio keyboard card row: Command-Z, Shift-Command-Z")
+        case .zoomIn: return String(localized: "Zoom In · Out", table: table, comment: "Video Studio keyboard card row: Command-+, Command-−")
+        default: return row.map(shortcutName).joined(separator: " · ")
+        }
+    }
+
+    /// What VoiceOver reads for a row: "Split at Playhead, Command B".
+    static func shortcutRowSpoken(_ row: [VideoShortcut]) -> String {
+        let keys = row.compactMap(\.key).map(spokenKey).joined(separator: ", ")
+        return shortcutRowName(row) + ", " + keys
+    }
+
+    static func spokenKey(_ key: VideoShortcut.Key) -> String {
+        let modifiers = key.modifiers.sorted().map { modifier -> String in
+            switch modifier {
+            case .control: String(localized: "Control", table: table, comment: "VoiceOver: the Control key")
+            case .option: String(localized: "Option", table: table, comment: "VoiceOver: the Option key")
+            case .shift: String(localized: "Shift", table: table, comment: "VoiceOver: the Shift key")
+            case .command: String(localized: "Command", table: table, comment: "VoiceOver: the Command key")
+            }
+        }
+        let input: String = switch key.input {
+        case .character("="): "+"
+        case .character("-"): "−"
+        case .character(let character): String(character).uppercased()
+        case .space: String(localized: "Space", table: table, comment: "VoiceOver: the Space bar")
+        case .escape: String(localized: "Escape", table: table, comment: "VoiceOver: the Escape key")
+        case .delete: String(localized: "Delete", table: table, comment: "VoiceOver: the Delete key")
+        case .returnKey: String(localized: "Return", table: table, comment: "VoiceOver: the Return key")
+        case .leftArrow: String(localized: "Left Arrow", table: table, comment: "VoiceOver: the Left Arrow key")
+        case .rightArrow: String(localized: "Right Arrow", table: table, comment: "VoiceOver: the Right Arrow key")
+        case .home: String(localized: "Home", table: table, comment: "VoiceOver: the Home key")
+        case .end: String(localized: "End", table: table, comment: "VoiceOver: the End key")
+        }
+        return (modifiers + [input]).joined(separator: " ")
+    }
+
     static func shortcutGroupName(_ group: VideoShortcut.Group) -> String {
         switch group {
         case .playback: String(localized: "Playback", table: table, comment: "Video Studio keyboard shortcuts: the group of play, stop and stepping keys")

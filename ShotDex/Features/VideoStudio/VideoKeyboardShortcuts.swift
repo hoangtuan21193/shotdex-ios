@@ -151,7 +151,11 @@ extension VideoStudioScreen {
             .filter { !VideoSystemKeyResponder.handles($0) }
         return VideoKeyboardShortcutLayer(shortcuts: layerKeys, actions: actions)
             .background {
-                VideoSystemKeyResponder(actions: actions, isTyping: model.isTypingText)
+                VideoSystemKeyResponder(
+                    actions: actions, isTyping: model.isTypingText,
+                    onKeyPress: { model.noteHardwareKey(isIPad: isIPad) },
+                    onCommandHold: { held in if held, !isIPad { model.showShortcutList() } }
+                )
                     .frame(width: 0, height: 0)
                     .accessibilityHidden(true)
             }
@@ -264,6 +268,14 @@ extension View {
 struct VideoSystemKeyResponder: UIViewRepresentable {
     let actions: VideoStudioKeyboardActions
     let isTyping: Bool
+    /// Any key from a hardware keyboard (FS-12.17b §4: the first one shows
+    /// the list once).
+    var onKeyPress: () -> Void = {}
+    /// ⌘ held 0.6 s (true), then let go (false) — decision 11 of the plan.
+    var onCommandHold: (Bool) -> Void = { _ in }
+
+    /// How long ⌘ is held before the list shows.
+    static let commandHoldDelay: Duration = .milliseconds(600)
 
     /// Whether `shortcut`'s key is one the system would otherwise take.
     static func handles(_ shortcut: VideoShortcut) -> Bool {
@@ -279,20 +291,68 @@ struct VideoSystemKeyResponder: UIViewRepresentable {
     func makeUIView(context: Context) -> KeyView {
         let view = KeyView()
         view.actions = actions
+        view.onKeyPress = onKeyPress
+        view.onCommandHold = onCommandHold
         return view
     }
 
     func updateUIView(_ view: KeyView, context: Context) {
         view.actions = actions
         view.isTyping = isTyping
+        view.onKeyPress = onKeyPress
+        view.onCommandHold = onCommandHold
         view.claimIfFree()
     }
 
     final class KeyView: UIView {
         var actions: VideoStudioKeyboardActions?
         var isTyping = false
+        var onKeyPress: () -> Void = {}
+        var onCommandHold: (Bool) -> Void = { _ in }
+        private var commandHoldTask: Task<Void, Never>?
+        private var isCommandHeld = false
 
         override var canBecomeFirstResponder: Bool { true }
+
+        override func pressesBegan(_ presses: Set<UIPress>, with event: UIPressesEvent?) {
+            for press in presses {
+                guard let key = press.key else { continue }
+                onKeyPress()
+                if key.keyCode == .keyboardLeftGUI || key.keyCode == .keyboardRightGUI {
+                    commandHoldTask?.cancel()
+                    commandHoldTask = Task { @MainActor [weak self] in
+                        try? await Task.sleep(for: VideoSystemKeyResponder.commandHoldDelay)
+                        guard let self, !Task.isCancelled else { return }
+                        self.isCommandHeld = true
+                        self.onCommandHold(true)
+                    }
+                } else {
+                    // ⌘ with a key is a shortcut, not a request for the list.
+                    commandHoldTask?.cancel()
+                }
+            }
+            super.pressesBegan(presses, with: event)
+        }
+
+        override func pressesEnded(_ presses: Set<UIPress>, with event: UIPressesEvent?) {
+            releaseCommand(presses)
+            super.pressesEnded(presses, with: event)
+        }
+
+        override func pressesCancelled(_ presses: Set<UIPress>, with event: UIPressesEvent?) {
+            releaseCommand(presses)
+            super.pressesCancelled(presses, with: event)
+        }
+
+        private func releaseCommand(_ presses: Set<UIPress>) {
+            guard presses.contains(where: { $0.key?.keyCode == .keyboardLeftGUI || $0.key?.keyCode == .keyboardRightGUI }) else { return }
+            commandHoldTask?.cancel()
+            commandHoldTask = nil
+            if isCommandHeld {
+                isCommandHeld = false
+                onCommandHold(false)
+            }
+        }
 
         override func didMoveToWindow() {
             super.didMoveToWindow()

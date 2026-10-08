@@ -30,3 +30,26 @@ extension VideoStudioModel {
         syncLoopBoundary()
     }
 }
+
+/// The keyboard's shortcut list on the phone and the Duo (FS-12.17b §4).
+extension VideoStudioModel {
+    /// A key from a hardware keyboard reached the studio: the first one
+    /// ever shows the list, once per install. The iPad has the system's
+    /// list and never shows one of its own.
+    func noteHardwareKey(isIPad: Bool, preferences: VideoInputPreferences? = nil) {
+        let preferences = preferences ?? .shared
+        guard !isIPad, !preferences.hasShownKeyboardList else { return }
+        preferences.hasShownKeyboardList = true
+        isShortcutListShown = true
+    }
+
+    /// ⌘ held for 0.6 s: the list again.
+    func showShortcutList() {
+        isShortcutListShown = true
+    }
+
+    /// ✕, Esc, the keyboard unplugged.
+    func closeShortcutList() {
+        isShortcutListShown = false
+    }
+}
