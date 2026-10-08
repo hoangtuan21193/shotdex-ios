@@ -3,6 +3,15 @@ import Foundation
 /// Words of the keyboard (FS-12.17b): the 28 shortcuts' names as the boards
 /// write them, their groups, the card's folded rows.
 extension VideoStudioCopy {
+    /// The In–Out flags on the ruler (FS-12.17b §5), for VoiceOver.
+    static var inPointLabel: String {
+        String(localized: "In Point", table: table, comment: "Video Studio ruler: the In flag of the In–Out range (VoiceOver)")
+    }
+
+    static var outPointLabel: String {
+        String(localized: "Out Point", table: table, comment: "Video Studio ruler: the Out flag of the In–Out range (VoiceOver)")
+    }
+
     static func shortcutName(_ shortcut: VideoShortcut) -> String {
         switch shortcut {
         case .playPause: String(localized: "Play or Pause", table: table, comment: "Video Studio keyboard shortcut (Space)")

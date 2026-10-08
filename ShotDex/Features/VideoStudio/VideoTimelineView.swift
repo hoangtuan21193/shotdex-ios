@@ -81,6 +81,12 @@ struct VideoTimelineView: View {
                 // Inset by the gutter so the ruler's x = 0 lines up with the
                 // scrolling content's x = 0.
                 TimelineRuler(totalDuration: model.totalDuration, pps: pps, visibleLeftTime: visibleLeftTime, fps: model.recipe.frameRate.rawValue)
+                    .overlay {
+                        TimelineInOutFlags(
+                            range: model.recipe.inOutRange, totalDuration: model.totalDuration,
+                            pps: pps, visibleLeftTime: visibleLeftTime
+                        )
+                    }
                     .frame(height: lanes.ruler)
                     .padding(.leading, lanes.gutter)
                     .padding(.top, lanes.topPadding)

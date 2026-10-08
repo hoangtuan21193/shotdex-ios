@@ -160,6 +160,8 @@ final class VideoStudioModel {
 
     private var timeObserver: Any?
     private var endObserver: NSObjectProtocol?
+    /// Loop with an Out (FS-12.17b §5): the player turns back to In there.
+    private var loopBoundaryObserver: Any?
     private var rebuildTask: Task<Void, Never>?
     private var exportTask: Task<Void, Never>?
     /// Media dropped on the timeline from another app, being imported into
@@ -1548,9 +1550,27 @@ final class VideoStudioModel {
         endUndoGroup()
     }
 
-    /// Restarts at the end instead of stopping. Session state: it is how the
+    /// Restarts at the end instead of stopping — at In and Out when the
+    /// In–Out range is set (FS-12.17b §5). Session state: it is how the
     /// user is watching the project, not part of the project.
-    var loopsPlayback = false
+    var loopsPlayback = false {
+        didSet { syncLoopBoundary() }
+    }
+
+    /// Puts the player's turn-back point at Out while Loop is on and an
+    /// Out is set; none otherwise (the end of the item does it).
+    func syncLoopBoundary() {
+        if let loopBoundaryObserver { player?.removeTimeObserver(loopBoundaryObserver) }
+        loopBoundaryObserver = nil
+        guard loopsPlayback, let player, let out = recipe.outPoint, out < totalDuration - 0.05 else { return }
+        let time = NSValue(time: VideoCompositionBuilder.time(out))
+        loopBoundaryObserver = player.addBoundaryTimeObserver(forTimes: [time], queue: .main) { [weak self] in
+            MainActor.assumeIsolated {
+                guard let self, self.loopsPlayback, self.isPlaying, !self.isScrubbing else { return }
+                self.seek(to: self.recipe.inOutRange.loopStart)
+            }
+        }
+    }
 
     /// Ends whatever is open keeping it (= ✓) and deselects: an empty
     /// stretch of timeline, the frame while paused, the grabber, Esc,
@@ -1769,7 +1789,11 @@ final class VideoStudioModel {
                 VideoAudioSession.activate()
                 isAudioSessionActive = true
             }
-            if currentTime >= totalDuration - 0.05 {
+            if loopsPlayback, !recipe.inOutRange.isEmpty {
+                // Loop inside In–Out: outside it, Play starts at In (§5).
+                let start = recipe.inOutRange.loopPlayStart(from: currentTime, totalDuration: totalDuration)
+                if abs(start - currentTime) > 0.001 { seek(to: start) }
+            } else if currentTime >= totalDuration - 0.05 {
                 player.seek(to: .zero, toleranceBefore: .zero, toleranceAfter: .zero)
             }
             player.play()
@@ -2013,6 +2037,9 @@ final class VideoStudioModel {
         // a colour change must not quietly change the preset.
         restored.exportTarget = recipe.exportTarget
         restored.exportFraming = recipe.exportFraming
+        // Nor is the In–Out range (FS-12.17b §5): Undo of a cut must not
+        // take away the In the user just set.
+        restored.inOutRange = recipe.inOutRange
         for index in restored.clips.indices where restored.clips[index].sourceDuration == nil {
             guard let duration = measuredSourceDurations[restored.clips[index].id] else { continue }
             restored.clips[index].sourceDuration = duration
@@ -4204,16 +4231,19 @@ final class VideoStudioModel {
                     self.isPlaying = false
                     return
                 }
-                self.seek(to: 0)
+                self.seek(to: self.recipe.inOutRange.loopStart)
                 self.player?.play()
                 self.isPlaying = true
             }
         }
+        syncLoopBoundary()
     }
 
     private func detachObservers() {
         if let timeObserver { player?.removeTimeObserver(timeObserver) }
         timeObserver = nil
+        if let loopBoundaryObserver { player?.removeTimeObserver(loopBoundaryObserver) }
+        loopBoundaryObserver = nil
         if let endObserver { NotificationCenter.default.removeObserver(endObserver) }
         endObserver = nil
     }

@@ -734,6 +734,21 @@ struct VideoProjectRecipe: Equatable, Codable, Sendable {
     /// Only in what is stored: the model takes it out on open and puts the
     /// current one in on each save, so it is never part of an edit or undo.
     var playhead: Double?
+    /// The In–Out range (FS-12.17b §5), seconds of timeline. Where the user
+    /// is watching, not an edit: no undo step, and Undo keeps it as it is;
+    /// the export never reads it. Optional so a project written before it
+    /// existed opens as it was.
+    var inPoint: Double?
+    var outPoint: Double?
+
+    /// The In–Out range as one value.
+    var inOutRange: VideoInOutRange {
+        get { VideoInOutRange(inPoint: inPoint, outPoint: outPoint) }
+        set {
+            inPoint = newValue.inPoint
+            outPoint = newValue.outPoint
+        }
+    }
 
     /// The export's frame: the ratio at the resolution (FS-12.10 §5).
     func canvasSize() -> CGSize {
@@ -928,6 +943,8 @@ extension VideoProjectRecipe {
         exportTarget = value(.exportTarget, String?.none)
         exportFraming = value(.exportFraming, VideoFraming?.none)
         playhead = value(.playhead, Double?.none)
+        inPoint = value(.inPoint, Double?.none)
+        outPoint = value(.outPoint, Double?.none)
         // A dropped clip leaves one boundary too many; boundaries are
         // positional, so trimming the tail is the honest repair.
         syncTransitionsWithClips()

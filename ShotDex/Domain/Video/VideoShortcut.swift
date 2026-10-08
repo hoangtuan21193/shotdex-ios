@@ -117,15 +117,9 @@ enum VideoShortcut: String, CaseIterable, Identifiable, Sendable {
         return modifiers + input
     }
 
-    /// Shortcuts whose command lands in a later task of the plan
-    /// (vs-precise-trim-input 23–29): not registered and not listed until
-    /// then — a list never shows a key that does nothing.
-    static let notYetBuilt: Set<VideoShortcut> = [
-        .markIn, .markOut, .clearInOut,
-    ]
-
-    /// The shortcuts that run today, in the list's order.
-    static var built: [VideoShortcut] { allCases.filter { !notYetBuilt.contains($0) } }
+    /// The shortcuts that run, in the list's order — all 28 since the
+    /// In–Out keys landed (plan vs-precise-trim-input task 27).
+    static var built: [VideoShortcut] { allCases }
 
     /// The shortcuts of `group`, in the list's order.
     static func shortcuts(in group: Group) -> [VideoShortcut] {

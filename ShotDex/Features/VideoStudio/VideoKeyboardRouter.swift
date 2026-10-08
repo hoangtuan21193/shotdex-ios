@@ -24,6 +24,7 @@ enum VideoKeyboardRouter {
         case .selectAll: model.mode == .multiClip && !model.recipe.clips.isEmpty
         case .trimStart, .trimEnd: !model.recipe.clips.isEmpty && !model.isLaneLocked(.video)
         case .delete: model.hasSelection
+        case .clearInOut: !model.recipe.inOutRange.isEmpty
         default: true
         }
     }
@@ -60,8 +61,9 @@ enum VideoKeyboardRouter {
         case .export: return .openExport
         case .zoomIn: model.stepZoom(zoomsIn: true)
         case .zoomOut: model.stepZoom(zoomsIn: false)
-        case .markIn, .markOut, .clearInOut:
-            break
+        case .markIn: model.markIn()
+        case .markOut: model.markOut()
+        case .clearInOut: model.clearInOut()
         }
         return .done
     }

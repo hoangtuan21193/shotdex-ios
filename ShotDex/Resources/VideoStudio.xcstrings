@@ -1389,6 +1389,18 @@
       "comment": "Video Studio clip panel: the fade-in slider under FADE; also the short title on the iPad text inspector's Animate In pop-up — In: Fade",
       "extractionState": "manual"
     },
+    "In Point": {
+      "comment": "Video Studio ruler: the In flag of the In–Out range (VoiceOver)",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "In Point"
+          }
+        }
+      }
+    },
     "In Video · %lld": {
       "comment": "Video Studio Media panel tab: what of the library is in this video, and how many uses",
       "extractionState": "manual"
@@ -1680,6 +1692,18 @@
     "Out": {
       "comment": "Video Studio clip panel: the fade-out slider under FADE; also the short title on the iPad text inspector's Animate Out pop-up — Out: None",
       "extractionState": "manual"
+    },
+    "Out Point": {
+      "comment": "Video Studio ruler: the Out flag of the In–Out range (VoiceOver)",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Out Point"
+          }
+        }
+      }
     },
     "Outline": {
       "comment": "Video Studio caption style: white text with a black outline",

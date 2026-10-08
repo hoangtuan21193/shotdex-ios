@@ -214,6 +214,60 @@ struct TimelineRuler: View {
     }
 }
 
+// MARK: - In–Out flags
+
+/// The In–Out range on the ruler (FS-12.17b §5): the stretch between In
+/// and Out lit, a white 18×18 flag with a bold 11pt "I" whose left edge is
+/// In, and one with "O" whose right edge is Out. Only In: lit to the end;
+/// only Out: lit from 0. Pinned to the ruler's time like a marker.
+struct TimelineInOutFlags: View {
+    let range: VideoInOutRange
+    let totalDuration: Double
+    let pps: CGFloat
+    let visibleLeftTime: Double
+
+    static let flagSide: CGFloat = 18
+
+    var body: some View {
+        if !range.isEmpty {
+            GeometryReader { geo in
+                let start = x(range.inPoint ?? 0)
+                let end = x(range.outPoint ?? totalDuration)
+                Rectangle()
+                    .fill(.white.opacity(0.14))
+                    .frame(width: max(0, end - start), height: geo.size.height)
+                    .offset(x: start)
+                    .accessibilityHidden(true)
+                if let inPoint = range.inPoint {
+                    flag("I", label: VideoStudioCopy.inPointLabel, time: inPoint)
+                        .offset(x: x(inPoint))
+                }
+                if let outPoint = range.outPoint {
+                    flag("O", label: VideoStudioCopy.outPointLabel, time: outPoint)
+                        .offset(x: x(outPoint) - Self.flagSide)
+                }
+            }
+            .allowsHitTesting(false)
+        }
+    }
+
+    private func x(_ time: Double) -> CGFloat {
+        CGFloat(time - visibleLeftTime) * pps
+    }
+
+    private func flag(_ letter: String, label: String, time: Double) -> some View {
+        Text(verbatim: letter)
+            .font(.system(size: 11, weight: .bold))
+            .foregroundStyle(.black)
+            .frame(width: Self.flagSide, height: Self.flagSide)
+            .background(.white, in: RoundedRectangle(cornerRadius: 3, style: .continuous))
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel(label)
+            .accessibilityValue(VideoFrameGrid.hundredths(time))
+            .accessibilityAddTraits(.isStaticText)
+    }
+}
+
 // MARK: - Video track
 
 private struct VideoTrack: View {
