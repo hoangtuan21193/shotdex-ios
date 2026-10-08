@@ -58,3 +58,31 @@ struct VideoStudioFrameTrimTests {
         #expect(!still.canUndo)
     }
 }
+
+extension VideoStudioFrameTrimTests {
+    /// FS-12.17 AC-4: ✕ after −4 frames — the recipe exactly as before the
+    /// hold, the undo depth unchanged (an earlier step in the clip's
+    /// session stays where it was), the playhead back on the edge.
+    @Test func cancelRestoresAndKeepsUndoDepth() {
+        let model = VideoStudioModelFixture.model(clips: VideoStudioModelFixture.frameTrimSampleClips())
+        let clip2 = model.recipe.clips[1].id
+        model.selectClip(clip2)
+        model.pushUndo()
+        model.setSpeed(1.5, for: clip2)    // a step of the clip's own session
+        let before = model.recipe
+        let checkpoint = model.history.checkpoint
+        let newest = model.history.newestSequence
+        model.beginFrameTrim(clip2, edge: .trailing)
+        for _ in 0..<4 { model.stepFrameTrim(-1) }
+        model.cancelFrameTrim()
+        #expect(!model.isFrameTrimming)
+        #expect(model.recipe == before)
+        #expect(model.history.checkpoint == checkpoint)
+        #expect(model.history.newestSequence == newest)
+        #expect(model.selectedClipID == clip2)
+        #expect(abs(model.currentTime - model.clipPlacements[1].end) < 1e-9)
+        // ✕ of the clip after it still takes back the speed step.
+        model.cancelSession()
+        #expect(model.recipe.clips[1].speed == 1)
+    }
+}
