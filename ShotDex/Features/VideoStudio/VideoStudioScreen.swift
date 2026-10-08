@@ -700,49 +700,6 @@ struct VideoStudioScreen: View {
         }
     }
 
-    /// The bindings every NLE has, for an iPad with a keyboard attached.
-    ///
-    /// Zero-size buttons in a background, the same shape the photo editor
-    /// uses: a shortcut on a visible control only fires while that control is
-    /// in the hierarchy, and half of these have no visible control at all.
-    func keyboardShortcuts(_ model: VideoStudioModel) -> some View {
-        ZStack {
-            Button("Play or Pause") { model.togglePlayback() }
-                .keyboardShortcut(.space, modifiers: [])
-            Button("Back a Second") { model.seek(to: model.currentTime - 1) }
-                .keyboardShortcut(.leftArrow, modifiers: [])
-            Button("Forward a Second") { model.seek(to: model.currentTime + 1) }
-                .keyboardShortcut(.rightArrow, modifiers: [])
-            Button("Back a Frame") { model.stepFrames(-1) }
-                .keyboardShortcut(.leftArrow, modifiers: .shift)
-            Button("Forward a Frame") { model.stepFrames(1) }
-                .keyboardShortcut(.rightArrow, modifiers: .shift)
-            Button("Start") { model.seek(to: 0) }
-                .keyboardShortcut(.home, modifiers: [])
-            Button("End") { model.seek(to: model.totalDuration) }
-                .keyboardShortcut(.end, modifiers: [])
-            Button("Undo") { model.undo() }
-                .keyboardShortcut("z", modifiers: .command)
-                .disabled(!model.canUndo)
-            Button("Redo") { model.redo() }
-                .keyboardShortcut("z", modifiers: [.command, .shift])
-                .disabled(!model.canRedo)
-            Button("Split") { model.splitClipUnderPlayhead() }
-                .keyboardShortcut("b", modifiers: .command)
-            // The sheet, not the export: ⌘E should put the user where the
-            // Export button does, not start writing to their library.
-            Button("Export") { openExport(model) }
-                .keyboardShortcut("e", modifiers: .command)
-                .disabled(model.exportState != .idle)
-            Button("Deselect") { model.pressEscape() }
-                .keyboardShortcut(.escape, modifiers: [])
-                .disabled(!model.presentsSheet)
-        }
-        .opacity(0)
-        .frame(width: 0, height: 0)
-        .accessibilityHidden(true)
-    }
-
     /// Drag to trade preview height for timeline height. The app's own answer
     /// is that the surplus belongs around the frame (spec §7.9); this is how
     /// the user says otherwise, and Final Cut for iPad publishes the same

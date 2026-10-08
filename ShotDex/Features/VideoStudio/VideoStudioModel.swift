@@ -1250,6 +1250,15 @@ final class VideoStudioModel {
     /// The clip Shift-click ranges from: the last one clicked into the group.
     private var groupAnchor: UUID?
 
+    /// ⌘A (FS-12.11 §4, FS-12.17b §3): every clip on the video lane into
+    /// the multi-select group.
+    func selectAllClips() {
+        guard let first = recipe.clips.first, mode == .multiClip, !isLaneLocked(.video) else { return }
+        enterClipSelection(first.id)
+        selectedClipIDs = recipe.clips.map(\.id)
+        groupAnchor = recipe.clips.last?.id
+    }
+
     // MARK: Group commands (FS-12.11 §5) — each one undo step; a slider
     // drag is grouped by its caller, as for one clip.
 

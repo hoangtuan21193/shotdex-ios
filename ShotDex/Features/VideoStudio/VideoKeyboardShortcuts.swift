@@ -1,0 +1,168 @@
+import SwiftUI
+
+/// The Video Studio's keyboard (FS-12.17b §3): every key comes from
+/// `VideoShortcut` — one list makes the keys and every list of them.
+///
+/// - iPhone and the Duo: a layer of zero-size buttons, one per shortcut —
+///   a shortcut on a visible control only fires while the control is on
+///   screen, and most of these have no control.
+/// - iPad: the menu bar's commands (`VideoStudioCommands`), so the system's
+///   ⌘ list shows them in three groups — Playback · Edit · View — and no
+///   key is listed twice. Undo and Redo stay in the layer there: the
+///   system's Edit menu owns ⌘Z for every text field in the app.
+
+extension VideoShortcut.Key {
+    var keyEquivalent: KeyEquivalent {
+        switch input {
+        case .character(let character): KeyEquivalent(character)
+        case .space: .space
+        case .escape: .escape
+        case .delete: .delete
+        case .returnKey: .return
+        case .leftArrow: .leftArrow
+        case .rightArrow: .rightArrow
+        case .home: .home
+        case .end: .end
+        }
+    }
+
+    var eventModifiers: EventModifiers {
+        var modifiers: EventModifiers = []
+        if self.modifiers.contains(.command) { modifiers.insert(.command) }
+        if self.modifiers.contains(.shift) { modifiers.insert(.shift) }
+        if self.modifiers.contains(.option) { modifiers.insert(.option) }
+        if self.modifiers.contains(.control) { modifiers.insert(.control) }
+        return modifiers
+    }
+}
+
+/// What a shortcut does, and whether it can right now — handed to the
+/// layer and, on the iPad, to the menu bar through a focused value.
+@MainActor
+struct VideoStudioKeyboardActions {
+    let perform: (VideoShortcut) -> Void
+    let isEnabled: (VideoShortcut) -> Bool
+}
+
+/// The zero-size buttons that carry the keys (iPhone, Duo; Undo and Redo
+/// on the iPad).
+struct VideoKeyboardShortcutLayer: View {
+    let shortcuts: [VideoShortcut]
+    let actions: VideoStudioKeyboardActions
+
+    var body: some View {
+        ZStack {
+            ForEach(shortcuts) { shortcut in
+                if let key = shortcut.key {
+                    Button(VideoStudioCopy.shortcutName(shortcut)) { actions.perform(shortcut) }
+                        .keyboardShortcut(key.keyEquivalent, modifiers: key.eventModifiers)
+                        .disabled(!actions.isEnabled(shortcut))
+                }
+            }
+        }
+        .opacity(0)
+        .frame(width: 0, height: 0)
+        .accessibilityHidden(true)
+    }
+}
+
+/// The Video Studio's keys in the iPad's menu bar, while the studio is the
+/// scene's (`focusedSceneValue`): Playback a menu of its own, the editing
+/// keys after the system's Edit items, the view keys in View.
+struct VideoStudioCommands: Commands {
+    @FocusedValue(\.videoStudioKeyboard) private var keyboard
+
+    var body: some Commands {
+        CommandMenu(Text(verbatim: VideoStudioCopy.shortcutGroupName(.playback))) {
+            buttons(.playback)
+        }
+        CommandGroup(after: .pasteboard) {
+            buttons(.edit, excluding: [.undo, .redo])
+        }
+        CommandGroup(after: .toolbar) {
+            buttons(.view)
+        }
+    }
+
+    @ViewBuilder
+    private func buttons(_ group: VideoShortcut.Group, excluding: Set<VideoShortcut> = []) -> some View {
+        if let keyboard {
+            ForEach(VideoShortcut.built.filter { $0.group == group && !excluding.contains($0) }) { shortcut in
+                if let key = shortcut.key {
+                    Button(VideoStudioCopy.shortcutName(shortcut)) { keyboard.perform(shortcut) }
+                        .keyboardShortcut(key.keyEquivalent, modifiers: key.eventModifiers)
+                        .disabled(!keyboard.isEnabled(shortcut))
+                }
+            }
+        }
+    }
+}
+
+struct VideoStudioKeyboardKey: FocusedValueKey {
+    typealias Value = VideoStudioKeyboardActions
+}
+
+extension FocusedValues {
+    var videoStudioKeyboard: VideoStudioKeyboardActions? {
+        get { self[VideoStudioKeyboardKey.self] }
+        set { self[VideoStudioKeyboardKey.self] = newValue }
+    }
+}
+
+extension VideoStudioScreen {
+    /// The studio's keys for a window of `windowClass`.
+    func keyboardShortcuts(_ model: VideoStudioModel) -> some View {
+        let actions = keyboardActions(model)
+        let isIPad = currentWindowClass == .iPadLandscape || currentWindowClass == .iPadPortrait
+        return VideoKeyboardShortcutLayer(
+            shortcuts: isIPad ? [.undo, .redo] : VideoShortcut.built,
+            actions: actions
+        )
+        .focusedSceneValue(\.videoStudioKeyboard, isIPad ? actions : nil)
+    }
+
+    func keyboardActions(_ model: VideoStudioModel) -> VideoStudioKeyboardActions {
+        VideoStudioKeyboardActions(
+            perform: { performShortcut($0, model: model) },
+            isEnabled: { shortcutIsEnabled($0, model: model) }
+        )
+    }
+
+    func shortcutIsEnabled(_ shortcut: VideoShortcut, model: VideoStudioModel) -> Bool {
+        switch shortcut {
+        case .undo: model.canUndo
+        case .redo: model.canRedo
+        case .export: model.exportState == .idle
+        case .deselect: model.presentsSheet || model.isFrameTrimming
+        case .selectAll: model.mode == .multiClip && !model.recipe.clips.isEmpty
+        default: true
+        }
+    }
+
+    func performShortcut(_ shortcut: VideoShortcut, model: VideoStudioModel) {
+        switch shortcut {
+        case .playPause: model.togglePlayback()
+        case .backSecond: model.seek(to: model.currentTime - 1)
+        case .forwardSecond: model.seek(to: model.currentTime + 1)
+        case .backFrame: model.stepFrames(-1)
+        case .forwardFrame: model.stepFrames(1)
+        case .goToStart: model.seek(to: 0)
+        case .goToEnd: model.seek(to: model.totalDuration)
+        case .split: model.splitClipUnderPlayhead()
+        case .addMarker: model.addMarker()
+        case .undo: model.undo()
+        case .redo: model.redo()
+        case .fitTimeline: model.fitToWindow()
+        case .selectAll: model.selectAllClips()
+        case .deselect: model.pressEscape()
+        case .beforeAfter: model.toggleBeforeAfter(sideBySide: false)
+        // The sheet, not the export: ⌘E puts the user where the Export
+        // button does, it does not start writing to their library.
+        case .export: openExport(model)
+        case .stop, .playBackward, .playForward, .faster,
+             .trimStart, .trimEnd, .delete, .zoomIn, .zoomOut,
+             .markIn, .markOut, .clearInOut:
+            break
+        }
+    }
+}

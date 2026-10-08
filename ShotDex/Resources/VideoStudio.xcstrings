@@ -585,6 +585,18 @@
       "comment": "Video Studio Media panel: adds the picked items at the playhead, with how many",
       "extractionState": "manual"
     },
+    "Add Marker": {
+      "comment": "Video Studio keyboard shortcut (M)",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add Marker"
+          }
+        }
+      }
+    },
     "Add Music": {
       "comment": "Video Studio: title of the Music tool's panel",
       "extractionState": "manual"
@@ -708,6 +720,30 @@
     "BACKGROUND": {
       "comment": "Video Studio Video Settings: section header over what shows around a fitted clip",
       "extractionState": "manual"
+    },
+    "Back a Frame": {
+      "comment": "Video Studio keyboard shortcut (⇧←)",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Back a Frame"
+          }
+        }
+      }
+    },
+    "Back a Second": {
+      "comment": "Video Studio keyboard shortcut (←)",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Back a Second"
+          }
+        }
+      }
     },
     "Background": {
       "comment": "Video Studio iPad Video Settings: label of Blur · Color · Image — what shows around a fitted clip",
@@ -841,6 +877,18 @@
       "comment": "Video Studio caption style: white text with a shadow",
       "extractionState": "manual"
     },
+    "Clear In and Out": {
+      "comment": "Video Studio keyboard shortcut (⌥X)",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Clear In and Out"
+          }
+        }
+      }
+    },
     "Close": {
       "comment": "Video Studio: closes a panel",
       "extractionState": "manual"
@@ -897,6 +945,18 @@
       "comment": "Video Studio Look panel: a photo setting skipped on video",
       "extractionState": "manual"
     },
+    "Delete": {
+      "comment": "Video Studio keyboard shortcut (⌫): deletes what is selected",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete"
+          }
+        }
+      }
+    },
     "Delete Clip at Playhead": {
       "comment": "Video Studio transport: removes the clip under the playhead",
       "extractionState": "manual"
@@ -908,6 +968,18 @@
     "Delete Draft?": {
       "comment": "Video Projects: title of the confirmation before a draft is deleted",
       "extractionState": "manual"
+    },
+    "Deselect": {
+      "comment": "Video Studio keyboard shortcut (Esc)",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Deselect"
+          }
+        }
+      }
     },
     "Discard Changes": {
       "comment": "Video Studio: the ✕ that closes a tool panel and throws away what it changed",
@@ -976,6 +1048,18 @@
     "Duration": {
       "comment": "Video Studio clip panel: how long a still stays on screen",
       "extractionState": "manual"
+    },
+    "Edit": {
+      "comment": "Video Studio keyboard shortcuts: the group of editing keys",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Edit"
+          }
+        }
+      }
     },
     "Edit Captions": {
       "comment": "Video Studio captions: the Auto Captions row once the project has a caption lane — opens it",
@@ -1061,6 +1145,18 @@
       "comment": "Video Studio iPad clip panel: the fade-out slider",
       "extractionState": "manual"
     },
+    "Faster": {
+      "comment": "Video Studio keyboard shortcut (L pressed again: 2×, 4×)",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Faster"
+          }
+        }
+      }
+    },
     "Fill": {
       "comment": "Video Studio: the frame label's framing word — clips fill the frame",
       "extractionState": "manual"
@@ -1089,6 +1185,18 @@
       "comment": "Video Studio: the frame label's framing word — clips fit on the background",
       "extractionState": "manual"
     },
+    "Fit Timeline": {
+      "comment": "Video Studio keyboard shortcut (⇧Z)",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fit Timeline"
+          }
+        }
+      }
+    },
     "Fit on Background": {
       "comment": "Video Studio Video Settings: the whole clip shows, on the background",
       "extractionState": "manual"
@@ -1100,6 +1208,30 @@
     "Fonts You Used": {
       "comment": "Video Studio media pool Text tab: header over the fonts the user has used before",
       "extractionState": "manual"
+    },
+    "Forward a Frame": {
+      "comment": "Video Studio keyboard shortcut (⇧→)",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Forward a Frame"
+          }
+        }
+      }
+    },
+    "Forward a Second": {
+      "comment": "Video Studio keyboard shortcut (→)",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Forward a Second"
+          }
+        }
+      }
     },
     "Frame Rate": {
       "comment": "Video Studio iPad Video Settings: label of 24 · 30 · 60",
@@ -1172,6 +1304,30 @@
     "Freeze · clip %lld": {
       "comment": "Video Studio In Video row: a held frame and its place on the track",
       "extractionState": "manual"
+    },
+    "Go to End": {
+      "comment": "Video Studio keyboard shortcut (End)",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Go to End"
+          }
+        }
+      }
+    },
+    "Go to Start": {
+      "comment": "Video Studio keyboard shortcut (Home)",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Go to Start"
+          }
+        }
+      }
     },
     "Gray": {
       "comment": "Video Studio Video Settings: the gray background swatch",
@@ -1312,6 +1468,30 @@
     "Manage Access…": {
       "comment": "Video Studio Media panel: opens the system picker to grant more photos under limited access",
       "extractionState": "manual"
+    },
+    "Mark In": {
+      "comment": "Video Studio keyboard shortcut (I)",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mark In"
+          }
+        }
+      }
+    },
+    "Mark Out": {
+      "comment": "Video Studio keyboard shortcut (O)",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mark Out"
+          }
+        }
+      }
     },
     "Media": {
       "comment": "Video Studio: the bottom-row tool that adds photos and videos to the timeline",
@@ -1549,6 +1729,54 @@
       "comment": "Video Studio beats: in the Cut to Beat preview — how the clips reach their bars",
       "extractionState": "manual"
     },
+    "Play Backward": {
+      "comment": "Video Studio keyboard shortcut (J)",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Play Backward"
+          }
+        }
+      }
+    },
+    "Play Forward": {
+      "comment": "Video Studio keyboard shortcut (L)",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Play Forward"
+          }
+        }
+      }
+    },
+    "Play or Pause": {
+      "comment": "Video Studio keyboard shortcut (Space)",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Play or Pause"
+          }
+        }
+      }
+    },
+    "Playback": {
+      "comment": "Video Studio keyboard shortcuts: the group of play, stop and stepping keys",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Playback"
+          }
+        }
+      }
+    },
     "Playhead at %@ of %@": {
       "comment": "Video Studio transport: VoiceOver label for the phone read-out — playhead, then the project's length",
       "extractionState": "manual"
@@ -1596,6 +1824,18 @@
     "Red": {
       "comment": "Video Studio iPad text inspector: the red caption colour",
       "extractionState": "manual"
+    },
+    "Redo": {
+      "comment": "Video Studio keyboard shortcut (⇧⌘Z)",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Redo"
+          }
+        }
+      }
     },
     "Resize Timeline": {
       "comment": "Video Studio iPad: the grabber between the frame and the timeline, dragged to trade one's height for the other's",
@@ -1648,6 +1888,18 @@
     "Select": {
       "comment": "Video Studio Media panel: starts picking several items to add at once",
       "extractionState": "manual"
+    },
+    "Select All": {
+      "comment": "Video Studio keyboard shortcut (⌘A): every clip",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Select All"
+          }
+        }
+      }
     },
     "Select a clip to give it its own look.": {
       "comment": "Video Studio iPad Look panel, nothing selected: how to give one clip a different look",
@@ -1765,6 +2017,18 @@
       "comment": "Video Studio compare: one frame, the original left of a line the user drags",
       "extractionState": "manual"
     },
+    "Split at Playhead": {
+      "comment": "Video Studio keyboard shortcut (⌘B)",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Split at Playhead"
+          }
+        }
+      }
+    },
     "Start to Playhead": {
       "comment": "Video Studio Trim: cuts the selected clip's start to the playhead",
       "extractionState": "manual"
@@ -1772,6 +2036,18 @@
     "Sticker": {
       "comment": "Video Studio: a picture laid over the video",
       "extractionState": "manual"
+    },
+    "Stop": {
+      "comment": "Video Studio keyboard shortcut (K)",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Stop"
+          }
+        }
+      }
     },
     "Style": {
       "comment": "Video Studio captions: the look of every caption in the lane",
@@ -1829,6 +2105,30 @@
       "comment": "Video Studio: the command that cuts a clip's start or end",
       "extractionState": "manual"
     },
+    "Trim End to Playhead": {
+      "comment": "Video Studio keyboard shortcut (⌥])",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Trim End to Playhead"
+          }
+        }
+      }
+    },
+    "Trim Start to Playhead": {
+      "comment": "Video Studio keyboard shortcut (⌥[)",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Trim Start to Playhead"
+          }
+        }
+      }
+    },
     "Trim · %@": {
       "comment": "Video Studio frame trim: the footer's title — the mode, then the clip whose edge moves (e.g. Trim · Clip 2)",
       "extractionState": "manual",
@@ -1848,6 +2148,18 @@
     "Under Voices": {
       "comment": "Video Studio ducking: the switch that lowers the music while the clips have someone speaking",
       "extractionState": "manual"
+    },
+    "Undo": {
+      "comment": "Video Studio keyboard shortcut (⌘Z)",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Undo"
+          }
+        }
+      }
     },
     "Unmute": {
       "comment": "Video Studio: the speaker at the head of a Volume row — brings back the clip's or the song's level",
@@ -1884,6 +2196,18 @@
     "Video, %@": {
       "comment": "Video Studio Media panel: VoiceOver label of a video cell — its length",
       "extractionState": "manual"
+    },
+    "View": {
+      "comment": "Video Studio keyboard shortcuts: the group of zoom, selection and export keys",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "View"
+          }
+        }
+      }
     },
     "Voice": {
       "comment": "Video Studio ducking: label on the video lane where a clip has someone speaking",
@@ -1976,6 +2300,30 @@
     "Your Project Is %@": {
       "comment": "Video Studio iPad Export Video: the section title over Fit on Background · Fill (Crop)",
       "extractionState": "manual"
+    },
+    "Zoom In": {
+      "comment": "Video Studio keyboard shortcut (⌘+): the timeline",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zoom In"
+          }
+        }
+      }
+    },
+    "Zoom Out": {
+      "comment": "Video Studio keyboard shortcut (⌘−): the timeline",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zoom Out"
+          }
+        }
+      }
     },
     "clips' own looks": {
       "comment": "Video Studio Save as Look: the looks single clips have, which stay in the video",

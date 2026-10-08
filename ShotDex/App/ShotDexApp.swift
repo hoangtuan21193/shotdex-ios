@@ -108,5 +108,8 @@ struct ShotDexApp: App {
                     await dependencies.refreshWidgetSnapshot()
                 }
         }
+        // The Video Studio's keys in the iPad's menu bar and ⌘ list, while
+        // the studio is open (FS-12.17b §4).
+        .commands { VideoStudioCommands() }
     }
 }
