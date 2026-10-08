@@ -3603,6 +3603,34 @@ final class VideoStudioModel {
         updateSelectedOverlay { $0.rotationDegrees = degrees }
     }
 
+    /// Whether a clip, a group, a caption or sticker, or a music bed is
+    /// selected — what ⌫ would delete.
+    var hasSelection: Bool {
+        isSelectingClips || selectedClipID != nil || selectedOverlayID != nil || selectedMusicID != nil
+    }
+
+    /// ⌫ (FS-12.17b §3): deletes what is selected — the group, the clip,
+    /// the caption or sticker, the music bed — as the panel's Delete does,
+    /// one undo step. Nothing selected, a locked lane or an open frame trim:
+    /// nothing happens. A key that deletes whatever is under the playhead
+    /// would take a clip the user never pointed at.
+    func deleteSelection() {
+        guard !isFrameTrimming else { return }
+        if isSelectingClips {
+            guard !isLaneLocked(.video) else { return }
+            deleteGroup()
+        } else if let id = selectedClipID {
+            guard !isLaneLocked(.video) else { return }
+            deleteClip(id)
+        } else if let id = selectedOverlayID {
+            guard !isLaneLocked(.overlay(overlayLaneAssignment[id] ?? 0)) else { return }
+            deleteSelectedOverlay()
+        } else if let id = selectedMusicID {
+            guard !isLaneLocked(.music(musicLaneAssignment[id] ?? 0)) else { return }
+            removeMusicTrack(id)
+        }
+    }
+
     /// Deletes the selected caption or sticker as one undo step and ends
     /// its session as ✓ does.
     func deleteSelectedOverlay() {

@@ -23,6 +23,7 @@ enum VideoKeyboardRouter {
         case .deselect: model.presentsSheet || model.isFrameTrimming
         case .selectAll: model.mode == .multiClip && !model.recipe.clips.isEmpty
         case .trimStart, .trimEnd: !model.recipe.clips.isEmpty && !model.isLaneLocked(.video)
+        case .delete: model.hasSelection
         default: true
         }
     }
@@ -55,8 +56,9 @@ enum VideoKeyboardRouter {
         case .trimEnd: model.trimToPlayhead(.end)
         // The sheet, not the export: ⌘E puts the user where the Export
         // button does, it does not start writing to their library.
+        case .delete: model.deleteSelection()
         case .export: return .openExport
-        case .delete, .zoomIn, .zoomOut, .markIn, .markOut, .clearInOut:
+        case .zoomIn, .zoomOut, .markIn, .markOut, .clearInOut:
             break
         }
         return .done
