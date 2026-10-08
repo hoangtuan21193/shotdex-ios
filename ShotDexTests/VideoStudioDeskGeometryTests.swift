@@ -177,7 +177,11 @@ struct VideoStudioDeskGeometryTests {
         #expect(Geometry.dockFooter(in: dock) == CGRect(x: 0, y: 1312, width: 1032, height: 64))
         #expect(portrait().timeline.maxY <= dock.minY)
         #expect(dock.minY + Geometry.dockCommandRowTop == 1061)
-        #expect(dock.minY + Geometry.dockParamTop == 1125)
+        // The columns start where boards IP2, IP3 and F5_IP draw them
+        // (user decision 2026-10-08): 12 under the command row.
+        #expect(dock.minY + Geometry.dockParamTop == 1129)
+        #expect(dock.minY + Geometry.dockCommandRowTop + 56 + 12 == 1129)
+        #expect(Geometry.dockParamTop + Geometry.dockParamHeight == Geometry.dockFooterTop)
         #expect(Geometry.dockParamTop + Geometry.dockParamHeight <= Geometry.dockFooterTop)
     }
 

@@ -370,8 +370,8 @@ struct VideoStudioSheetHost: View {
                     .padding(.top, 2)
             }
             if layout == .dock {
-                // The dock's columns start 8 under the row (y 1125 on the
-                // board), no rule: the dock's own top rule is enough.
+                // The dock's columns start 12 under the row (y 1129 on the
+                // boards), no rule: the dock's own top rule is enough.
                 Color.clear.frame(height: VideoStudioDeskGeometry.dockParamTop - VideoStudioDeskGeometry.dockCommandRowTop - VideoStudioMetrics.itemCommandCell.height)
             } else {
                 Rectangle()
@@ -406,7 +406,9 @@ struct VideoStudioSheetHost: View {
         ]
         func column(_ index: Int) -> some View {
             ScrollView(showsIndicators: false) {
-                VStack(alignment: .leading, spacing: 4) {
+                // Rows sit flush in the dock's columns: each row is 44 and
+                // carries its own gap (board IP2).
+                VStack(alignment: .leading, spacing: 0) {
                     if index == 0, model.activeItemCommand == .trim { trimBlock(clip) }
                     ForEach(columns[index], id: \.self) { section in
                         clipSection(section, clip)
@@ -657,7 +659,7 @@ struct VideoStudioSheetHost: View {
                 .padding(.leading, DeskRowMetrics.labelWidth)
             }
             .padding(.horizontal, deskInset)
-            .padding(.top, DeskRowMetrics.firstRowTop)
+            .padding(.top, firstRowTop)
         case .volume:
             DeskVolumeRow(
                 isMuted: clip.isMuted, volume: clip.volume, model: model,
@@ -671,7 +673,7 @@ struct VideoStudioSheetHost: View {
         case .duration:
             if model.snapGrid != nil {
                 durationSlider(clip)
-                    .padding(.top, DeskRowMetrics.firstRowTop)
+                    .padding(.top, firstRowTop)
             } else {
                 DeskSliderRow(
                     label: String(localized: "Duration", table: VideoStudioCopy.table, comment: "Video Studio clip panel: how long a still stays on screen"),
@@ -682,7 +684,7 @@ struct VideoStudioSheetHost: View {
                     reset: { model.pushUndo(); model.setPhotoDuration(VideoClip.defaultPhotoDuration, for: clip.id) }
                 )
                 .padding(.horizontal, deskInset)
-                .padding(.top, DeskRowMetrics.firstRowTop)
+                .padding(.top, firstRowTop)
             }
         case .fade:
             deskHeader(Text("Fade", tableName: VideoStudioCopy.table, comment: "Video Studio clip panel: header over the clip's fade in and fade out"))
@@ -694,6 +696,7 @@ struct VideoStudioSheetHost: View {
                 reset: { model.pushUndo(); model.setFade(0, at: .start, for: clip.id) }
             )
             .padding(.horizontal, deskInset)
+            .padding(.top, layout == .dock ? 2 : 0)
             DeskSliderRow(
                 label: String(localized: "Fade out", table: VideoStudioCopy.table, comment: "Video Studio iPad clip panel: the fade-out slider"),
                 value: clip.fadeOut, range: 0...max(0.1, clip.maximumFade()),
@@ -714,12 +717,18 @@ struct VideoStudioSheetHost: View {
                 model.setEffect(effect, for: clip.id)
             }
             .padding(.horizontal, deskInset)
-            .padding(.top, 2)
+            .padding(.top, layout == .dock ? 4 : 2)
         }
     }
 
-    /// "Fade", "Motion": 15pt semibold, 28 tall (24 in the dock's
-    /// columns), 8 under the row above.
+    /// The first row's top: 3 under the inspector's divider, flush with a
+    /// dock column's top (y 1129, board IP2).
+    private var firstRowTop: CGFloat {
+        layout == .dock ? 0 : DeskRowMetrics.firstRowTop
+    }
+
+    /// "Fade", "Motion": 15pt semibold, 28 tall and 8 under the row above;
+    /// in the dock 24 tall at the top of its own column (y 1129, board IP2).
     private func deskHeader(_ text: Text) -> some View {
         text
             .font(.system(size: DeskRowMetrics.headerSize, weight: .semibold))
@@ -727,7 +736,7 @@ struct VideoStudioSheetHost: View {
             .frame(height: layout == .dock ? 24 : DeskRowMetrics.headerHeight)
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.horizontal, deskInset)
-            .padding(.top, 8)
+            .padding(.top, layout == .dock ? 0 : 8)
     }
 
     @ViewBuilder

@@ -1,0 +1,155 @@
+{
+ "steps": [
+  {
+   "action": "home"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "orientation",
+   "text": "landscapeRight"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "orientation",
+   "text": "portrait"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "launch",
+   "arguments": [
+    "-video.timelineExtraHeight",
+    "0"
+   ]
+  },
+  {
+   "action": "wait",
+   "seconds": 4
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "tap",
+   "label": "Select",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "tap",
+   "x": 0.93,
+   "y": 0.12
+  },
+  {
+   "action": "tap",
+   "x": 0.06,
+   "y": 0.12
+  },
+  {
+   "action": "tap",
+   "x": 0.18,
+   "y": 0.12
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "tap",
+   "label": "More selection actions",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "tap",
+   "label": "Create Video"
+  },
+  {
+   "action": "screenshot",
+   "name": "s0"
+  },
+  {
+   "action": "tap",
+   "label": "Video clip"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "dump",
+   "name": "IP2_ClipSelected",
+   "text": "snapshot"
+  },
+  {
+   "action": "screenshot",
+   "name": "shot-IP2_ClipSelected"
+  },
+  {
+   "action": "tap",
+   "label": "itemCommand.look"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "dump",
+   "name": "F5_IP_Looks",
+   "text": "snapshot"
+  },
+  {
+   "action": "screenshot",
+   "name": "shot-F5_IP_Looks"
+  },
+  {
+   "action": "tap",
+   "label": "Keep Changes"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "tap",
+   "label": "Text",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "dump",
+   "name": "IP3_TextOverlay",
+   "text": "snapshot"
+  },
+  {
+   "action": "screenshot",
+   "name": "shot-IP3_TextOverlay"
+  },
+  {
+   "action": "screenshot",
+   "name": "s1"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  }
+ ]
+}
