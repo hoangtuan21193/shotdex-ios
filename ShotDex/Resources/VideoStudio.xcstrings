@@ -913,6 +913,18 @@
         }
       }
     },
+    "Click adds · drag to place": {
+      "comment": "Video Studio iPad: under the library cell the pointer skims — a click adds it at the playhead, a drag places it",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Click adds · drag to place"
+          }
+        }
+      }
+    },
     "Close": {
       "comment": "Video Studio: closes a panel",
       "extractionState": "manual"
@@ -1773,6 +1785,18 @@
       "comment": "Video Studio Look panel: a photo setting skipped on video",
       "extractionState": "manual"
     },
+    "Not downloaded": {
+      "comment": "Video Studio iPad skim: the video is only in iCloud, so the frame shows its thumbnail",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Not downloaded"
+          }
+        }
+      }
+    },
     "Not enough space to export — about %@ needed. Free up space, then try again.": {
       "comment": "Video Studio Export: the device lacks room for the file and its copy in Photos; the size is about twice the estimate",
       "extractionState": "manual"
@@ -2164,6 +2188,18 @@
     "Size": {
       "comment": "Video Studio captions: the text height, as a share of the frame's short edge",
       "extractionState": "manual"
+    },
+    "Skimming": {
+      "comment": "Video Studio iPad: under the frame while the pointer skims a library video — Skimming · Lake · 0:02.3 / 0:05",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Skimming"
+          }
+        }
+      }
     },
     "Skipped on video: %@.": {
       "comment": "Video Studio Look panel: the settings of the chosen look a video frame does not run — e.g. Noise Reduction, Upright",

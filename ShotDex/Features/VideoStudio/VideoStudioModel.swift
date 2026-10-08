@@ -1570,6 +1570,16 @@ final class VideoStudioModel {
         didSet { syncLoopBoundary() }
     }
 
+    /// The library video the pointer is skimming (FS-12.17b §6), and the
+    /// frame under it.
+    var skim: VideoSkim?
+    var skimImage: CGImage?
+    @ObservationIgnored var skimThumbnail: CGImage?
+    @ObservationIgnored var skimThrottle = VideoSkimMath.Throttle()
+    @ObservationIgnored var skimTask: Task<Void, Never>?
+    @ObservationIgnored var skimFlushTask: Task<Void, Never>?
+    @ObservationIgnored lazy var skimSource = VideoSkimFrameSource()
+
     /// The keyboard's shortcut list is open on the phone or the Duo
     /// (FS-12.17b §4). Esc closes it before it deselects.
     var isShortcutListShown = false
@@ -1825,6 +1835,8 @@ final class VideoStudioModel {
                 VideoAudioSession.activate()
                 isAudioSessionActive = true
             }
+            // Playing, the frame is the project's again (FS-12.17b §6).
+            endSkim()
             if loopsPlayback, !recipe.inOutRange.isEmpty {
                 // Loop inside In–Out: outside it, Play starts at In (§5).
                 let start = recipe.inOutRange.loopPlayStart(from: currentTime, totalDuration: totalDuration)

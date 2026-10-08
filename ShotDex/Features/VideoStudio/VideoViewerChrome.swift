@@ -10,7 +10,16 @@ struct VideoPlayheadName: View {
 
     var body: some View {
         HStack(alignment: .firstTextBaseline, spacing: 8) {
-            if model.isSelectingClips {
+            if let skim = model.skim {
+                // The pointer on a library item (FS-12.17b §6): what the
+                // frame shows now is that, not the project.
+                Text(VideoStudioCopy.skimming)
+                    .font(.system(size: 17, weight: .semibold))
+                    .foregroundStyle(.white)
+                Text(verbatim: skim.detail)
+                    .font(.system(size: 13))
+                    .foregroundStyle(EditorTheme.secondaryText)
+            } else if model.isSelectingClips {
                 // A group open (FS-12.11 §3, board F1_IL_MultiSelect): the
                 // head of the row says what the inspector is editing.
                 Text(verbatim: VideoStudioCopy.clipsSelected(model.selectedClipIDs.count))

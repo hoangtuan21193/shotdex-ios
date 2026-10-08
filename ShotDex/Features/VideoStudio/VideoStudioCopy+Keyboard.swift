@@ -45,6 +45,20 @@ extension VideoStudioCopy {
         }
     }
 
+    // MARK: Skim (iPad — FS-12.17b §6)
+
+    static var skimming: String {
+        String(localized: "Skimming", table: table, comment: "Video Studio iPad: under the frame while the pointer skims a library video — Skimming · Lake · 0:02.3 / 0:05")
+    }
+
+    static var notDownloaded: String {
+        String(localized: "Not downloaded", table: table, comment: "Video Studio iPad skim: the video is only in iCloud, so the frame shows its thumbnail")
+    }
+
+    static var skimHint: String {
+        String(localized: "Click adds · drag to place", table: table, comment: "Video Studio iPad: under the library cell the pointer skims — a click adds it at the playhead, a drag places it")
+    }
+
     // MARK: The card (phone, Duo — FS-12.17b §4)
 
     static var keyboardShortcutsTitle: String {

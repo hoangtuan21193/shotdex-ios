@@ -33,6 +33,12 @@ struct VideoMediaGridView: UIViewRepresentable {
     var onDragMoved: ((CGPoint) -> Bool)?
     /// …and let go.
     var onDragEnded: (() -> Void)?
+    /// The pointer over a cell (iPad, FS-12.17b §6): the asset, how far
+    /// across the cell, and the cell's thumbnail — nil when it leaves.
+    var onSkim: ((PHAsset, Double, CGImage?) -> Void)?
+    var onSkimEnd: (() -> Void)?
+    /// Skimming shows nothing in the cells while the project plays.
+    var isSkimPaused = false
 
     func makeCoordinator() -> Coordinator { Coordinator(self) }
 
@@ -58,6 +64,9 @@ struct VideoMediaGridView: UIViewRepresentable {
         hold.allowableMovement = VideoMediaGridView.holdSlop
         hold.delegate = context.coordinator
         view.addGestureRecognizer(hold)
+        // A pointer resting on a video skims it (FS-12.17b §6).
+        let hover = UIHoverGestureRecognizer(target: context.coordinator, action: #selector(Coordinator.handleHover(_:)))
+        view.addGestureRecognizer(hover)
         return view
     }
 
@@ -75,6 +84,9 @@ struct VideoMediaGridView: UIViewRepresentable {
         } else if metricsChanged {
             view.collectionViewLayout.invalidateLayout()
         }
+        #if DEBUG
+        DispatchQueue.main.asyncAfter(deadline: .now() + 3) { [weak coordinator] in coordinator?.debugSkimIfAsked() }
+        #endif
         if usesChanged {
             // Marks only: the visible cells are re-marked in place, nothing
             // reloads and no thumbnail is asked for again.
@@ -236,6 +248,90 @@ struct VideoMediaGridView: UIViewRepresentable {
             default:
                 break
             }
+        }
+
+        // MARK: Skim (FS-12.17b §6)
+
+        private weak var skimmedCell: VideoMediaGridCell?
+        private lazy var skimHint: UILabel = {
+            let label = UILabel()
+            label.text = VideoStudioCopy.skimHint
+            label.font = .systemFont(ofSize: 13)
+            label.textColor = UIColor(white: 1, alpha: 0.75)
+            label.textAlignment = .center
+            label.backgroundColor = UIColor(white: 0, alpha: 0.78)
+            label.layer.cornerRadius = VideoMediaGridCell.skimHintSize.height / 2
+            label.layer.masksToBounds = true
+            label.isAccessibilityElement = false
+            label.isUserInteractionEnabled = false
+            return label
+        }()
+
+        @objc func handleHover(_ recognizer: UIHoverGestureRecognizer) {
+            guard let collectionView else { return }
+            switch recognizer.state {
+            case .began, .changed:
+                skim(at: recognizer.location(in: collectionView))
+            default:
+                endSkim()
+            }
+        }
+
+        #if DEBUG
+        /// `-VideoStudioDebugSkim "1,0.46"`: the pointer 46% across cell 1,
+        /// through the same path a hover takes. The simulator's XCUITest
+        /// hover sends no pointer to a `UIHoverGestureRecognizer` (measured
+        /// 2026-10-08), so this is how the skim's screens are photographed.
+        private var hasDebugSkimmed = false
+        func debugSkimIfAsked() {
+            guard !hasDebugSkimmed, let collectionView,
+                  let spec = UserDefaults.standard.string(forKey: "VideoStudioDebugSkim")
+            else { return }
+            let parts = spec.split(separator: ",").compactMap { Double($0) }
+            guard parts.count == 2,
+                  let cell = collectionView.cellForItem(at: IndexPath(item: Int(parts[0]), section: 0))
+            else { return }
+            hasDebugSkimmed = true
+            skim(at: CGPoint(x: cell.frame.minX + cell.frame.width * parts[1], y: cell.frame.midY))
+        }
+        #endif
+
+        private func skim(at point: CGPoint) {
+            guard let collectionView else { return }
+            guard !parent.isSkimPaused, !isDragging,
+                  let indexPath = collectionView.indexPathForItem(at: point),
+                  let asset = library.asset(at: indexPath.item),
+                  let cell = collectionView.cellForItem(at: indexPath) as? VideoMediaGridCell
+            else { return endSkim() }
+            let fraction = Double((point.x - cell.frame.minX) / max(1, cell.frame.width))
+            if skimmedCell !== cell { skimmedCell?.hideSkim() }
+            skimmedCell = cell
+            if asset.mediaType == .video {
+                let time = VideoSkimMath.time(fraction: fraction, duration: asset.duration)
+                cell.showSkim(fraction: fraction, time: VideoSkimMath.timeLabel(time))
+            } else {
+                cell.hideSkim()
+            }
+            placeHint(under: cell, in: collectionView)
+            parent.onSkim?(asset, fraction, cell.imageView.image?.cgImage)
+        }
+
+        private func endSkim() {
+            guard skimmedCell != nil || skimHint.superview != nil else { return }
+            skimmedCell?.hideSkim()
+            skimmedCell = nil
+            skimHint.removeFromSuperview()
+            parent.onSkimEnd?()
+        }
+
+        /// "Click adds · drag to place", 4 under the cell, its right edge 2
+        /// in from the cell's (board F6_IL_HoverScrub).
+        private func placeHint(under cell: UICollectionViewCell, in collectionView: UICollectionView) {
+            if skimHint.superview == nil { collectionView.addSubview(skimHint) }
+            let size = VideoMediaGridCell.skimHintSize
+            let maxX = min(cell.frame.maxX - 2, collectionView.bounds.width - 2)
+            skimHint.frame = CGRect(x: max(2, maxX - size.width), y: cell.frame.maxY + 4, width: size.width, height: size.height)
+            collectionView.bringSubviewToFront(skimHint)
         }
 
         /// The hold watches alongside the scroll, so a drag that starts
@@ -409,6 +505,50 @@ final class VideoMediaGridCell: UICollectionViewCell {
 
     static let badgeSide: CGFloat = 19
     static let pickSide: CGFloat = 21
+    /// The skim's marks (board F6_IL_HoverScrub): a 1.5pt line at the
+    /// pointer, the time 64×20 at (4, 4), the hint 160×22 under the cell.
+    static let skimTimeSize = CGSize(width: 64, height: 20)
+    static let skimHintSize = CGSize(width: 160, height: 22)
+
+    private lazy var skimLine: UIView = {
+        let line = UIView()
+        line.backgroundColor = .white
+        line.isHidden = true
+        line.isUserInteractionEnabled = false
+        contentView.addSubview(line)
+        return line
+    }()
+
+    private lazy var skimTime: UILabel = {
+        let label = UILabel()
+        label.font = .monospacedSystemFont(ofSize: 12, weight: .semibold)
+        label.textColor = .white
+        label.textAlignment = .center
+        label.backgroundColor = UIColor(white: 0, alpha: 0.75)
+        label.layer.cornerRadius = Self.skimTimeSize.height / 2
+        label.layer.masksToBounds = true
+        label.isHidden = true
+        label.isAccessibilityElement = false
+        contentView.addSubview(label)
+        return label
+    }()
+
+    /// The pointer `fraction` of the way across, at `time` of the source.
+    func showSkim(fraction: Double, time: String) {
+        let x = contentView.bounds.width * CGFloat(min(max(0, fraction), 1))
+        skimLine.frame = CGRect(x: x - 0.75, y: 0, width: 1.5, height: contentView.bounds.height)
+        skimLine.isHidden = false
+        skimTime.frame = CGRect(origin: CGPoint(x: 4, y: 4), size: Self.skimTimeSize)
+        skimTime.text = time
+        skimTime.isHidden = false
+        contentView.bringSubviewToFront(skimLine)
+        contentView.bringSubviewToFront(skimTime)
+    }
+
+    func hideSkim() {
+        skimLine.isHidden = true
+        skimTime.isHidden = true
+    }
 
     override func layoutSubviews() {
         super.layoutSubviews()
@@ -417,6 +557,7 @@ final class VideoMediaGridCell: UICollectionViewCell {
     }
 
     func clear() {
+        hideSkim()
         isLiftedSource = false
         badge.isHidden = true
         markPick(nil)
@@ -473,3 +614,4 @@ final class VideoMediaGridCell: UICollectionViewCell {
         accessibilityLabel = VideoMediaPoolFormat.mediaCellLabel(isVideo: isVideo, duration: duration, name: name, uses: uses)
     }
 }
+

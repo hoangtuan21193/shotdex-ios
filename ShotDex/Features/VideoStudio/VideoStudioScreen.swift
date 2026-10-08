@@ -909,6 +909,15 @@ struct VideoStudioScreen: View {
             if let player = model.player, model.compare?.drawsPair != true {
                 VideoPlayerLayerView(player: player)
             }
+            // A library item under the pointer (FS-12.17b §6): its frame
+            // over the project's, as it is in the source — no look yet.
+            if let image = model.skimImage {
+                Color.black
+                Image(decorative: image, scale: 1)
+                    .resizable()
+                    .scaledToFit()
+                    .accessibilityIdentifier("skimFrame")
+            }
             // Text and sticker overlays, drawn and manipulated live on top of the
             // player (the preview composition does not bake them). `contentRect` is
             // the aspect-fitted video rect the overlays' normalized centres map into.

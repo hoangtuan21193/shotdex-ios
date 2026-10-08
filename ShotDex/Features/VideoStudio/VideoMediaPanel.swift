@@ -306,7 +306,16 @@ struct VideoMediaPanel: View {
                     model.beginMediaDrag(VideoMediaPick(asset), at: location, from: origin, image: image)
                 },
                 onDragMoved: { model.moveMediaDrag(to: $0) },
-                onDragEnded: { model.endMediaDrag() }
+                onDragEnded: { model.endMediaDrag() },
+                onSkim: { asset, fraction, thumbnail in
+                    model.skimMedia(
+                        assetID: asset.localIdentifier, name: VideoMediaPoolFormat.name(for: asset),
+                        isVideo: asset.mediaType == .video, duration: asset.duration,
+                        fraction: fraction, thumbnail: thumbnail
+                    )
+                },
+                onSkimEnd: { model.endSkim() },
+                isSkimPaused: model.isPlaying
             )
         } else {
             Color.clear
