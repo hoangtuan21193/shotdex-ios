@@ -1,0 +1,15 @@
+{
+ "steps": [
+  {"action": "launch"},
+  {"action": "wait", "seconds": 5},
+  {"action": "drag", "x": 0.2, "y": 0.3, "toX": 0.2, "toY": 0.45, "hold": 0.6, "velocity": "slow"},
+  {"action": "wait", "seconds": 2},
+  {"action": "screenshot", "name": "after-hold-drag"},
+  {"action": "pinch", "type": "collection", "scale": 2.0, "velocity": "slow"},
+  {"action": "wait", "seconds": 2},
+  {"action": "screenshot", "name": "after-pinch-out"},
+  {"action": "pinch", "type": "collection", "scale": 0.5},
+  {"action": "wait", "seconds": 2},
+  {"action": "screenshot", "name": "after-pinch-in"}
+ ]
+}

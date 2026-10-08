@@ -105,6 +105,8 @@ final class UIDriverTests: XCTestCase {
         if let x = step.x, let y = step.y { parts.append("at=(\(x), \(y))") }
         if let direction = step.direction { parts.append("direction=\(direction)") }
         if let name = step.name { parts.append("name=\(name)") }
+        if let scale = step.scale { parts.append("scale=\(scale)") }
+        if let hold = step.hold ?? step.pressSeconds { parts.append("hold=\(hold)") }
         return parts.joined(separator: " ")
     }
 
@@ -177,7 +179,36 @@ final class UIDriverTests: XCTestCase {
                 throw DriverError.missing("drag needs x, y, toX and toY")
             }
             let end = app.coordinate(withNormalizedOffset: CGVector(dx: toX, dy: toY))
-            start.press(forDuration: step.pressSeconds ?? 0.1, thenDragTo: end, withVelocity: .slow, thenHoldForDuration: step.seconds ?? 0.2)
+            // Held still first, then moved: what a long-press-then-drag
+            // recogniser (frame trim, a clip lifted to move) needs to see.
+            start.press(
+                forDuration: step.hold ?? step.pressSeconds ?? 0.1,
+                thenDragTo: end,
+                withVelocity: Self.dragVelocity(step.velocity),
+                thenHoldForDuration: step.seconds ?? 0.2
+            )
+        case "pinch":
+            // `XCUIElement.pinch` exists on elements only, so the target is
+            // named: the timeline answers to `VideoTimeline`. The velocity
+            // is in scale per second and must carry the pinch's sign.
+            guard let scale = step.scale, scale > 0 else { throw DriverError.missing("scale") }
+            let target: XCUIElement
+            if step.label != nil {
+                target = try element(for: step)
+            } else if let type = step.type {
+                target = queryForType(type).element(boundBy: step.index ?? 0)
+                guard target.waitForExistence(timeout: step.seconds ?? 10) else {
+                    throw DriverError.notFound("an element of type \(type)")
+                }
+            } else {
+                target = app
+            }
+            let speed: CGFloat = switch step.velocity {
+            case "slow": 1
+            case "fast": 8
+            default: 3
+            }
+            target.pinch(withScale: CGFloat(scale), velocity: scale >= 1 ? speed : -speed)
         case "swipe":
             // A point drag when the step gives coordinates: the element
             // swipes start at the element's centre, and on a panel with a
@@ -359,7 +390,17 @@ final class UIDriverTests: XCTestCase {
         case "tab": app.tabBars.buttons
         case "menuItem": app.menuItems
         case "other": app.otherElements
+        case "scrollView": app.scrollViews
+        case "collection": app.collectionViews
         default: app.descendants(matching: .any)
+        }
+    }
+
+    private static func dragVelocity(_ name: String?) -> XCUIGestureVelocity {
+        switch name {
+        case "fast": .fast
+        case "default": .default
+        default: .slow
         }
     }
 

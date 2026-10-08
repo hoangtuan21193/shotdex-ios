@@ -7,7 +7,7 @@ import Foundation
 /// only the two or three it needs.
 struct UIDriverStep: Decodable {
     /// `launch`, `activate`, `tap`, `tapIndex`, `longPress`, `typeText`,
-    /// `key`, `swipe`, `drag`, `scrollTo`, `wait`, `screenshot`, `dump`,
+    /// `key`, `swipe`, `drag`, `pinch`, `scrollTo`, `wait`, `screenshot`, `dump`,
     /// `back`, `home`.
     let action: String
     /// Accessibility label or identifier of the element to act on.
@@ -48,8 +48,19 @@ struct UIDriverStep: Decodable {
     /// difference between a dump and a timeout.
     let hittable: Bool?
     /// `drag` only: how long the finger rests before it moves. Default 0.1;
-    /// 0.35 lifts a Media cell, whose hold is 0.3 s (FS-12.09 §5).
+    /// 0.35 lifts a Media cell, whose hold is 0.3 s (FS-12.09 §5); 0.6 on
+    /// a clip's edge handle opens frame trim (FS-12.17 §3) and on a clip's
+    /// body moves it (FS-12.11 §4). `hold` is the same field, and wins.
     var pressSeconds: Double?
+    var hold: Double?
+    /// `drag` and `pinch`: `slow`, `default` or `fast`. A drag defaults to
+    /// `slow` (no fling, the content lands under the finger), a pinch to
+    /// `default`.
+    var velocity: String?
+    /// `pinch` only: the scale to pinch to — above 1 spreads the fingers
+    /// (zoom in), below 1 closes them. The element is `label` (label or
+    /// identifier), else the first of `type`, else the app.
+    var scale: Double?
 }
 
 struct UIDriverScript: Decodable {
