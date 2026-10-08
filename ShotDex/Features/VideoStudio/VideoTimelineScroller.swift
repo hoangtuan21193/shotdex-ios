@@ -164,6 +164,19 @@ struct VideoTimelineScroller<Content: View>: UIViewRepresentable {
     /// At Frame zoom, the project's frame rate: a scroll comes to rest on
     /// a frame (FS-12.17 §6). Nil otherwise.
     var frameSnapFPS: Int? = nil
+    /// The project's frame rate, for the Pencil's frame steps.
+    var projectFPS: Int = 30
+    /// The iPad's Trim cell has the frame trim open (FS-12.17 §8): an Apple
+    /// Pencil on an edge trims it at once; fingers keep scrolling; a palm
+    /// is ignored.
+    var pencilTrimsEdges = false
+    /// After a double-tap the Pencil scrubs instead.
+    var pencilScrubs = false
+    /// A Pencil hovering over the lanes, at this content x — nil when it
+    /// leaves (§8, "Hover shows the trim point").
+    var onPencilHover: (CGFloat?) -> Void = { _ in }
+    /// The Pencil's double-tap.
+    var onPencilDoubleTap: () -> Void = {}
     @ViewBuilder var content: () -> Content
 
     func makeCoordinator() -> Coordinator { Coordinator(self) }
@@ -245,6 +258,29 @@ struct VideoTimelineScroller<Content: View>: UIViewRepresentable {
         scrollView.addGestureRecognizer(edgeHold)
         context.coordinator.edgeHold = edgeHold
 
+        // Apple Pencil on an edge while the iPad's Trim cell is on (§8):
+        // no hold — the Pencil touching the handle is the intent.
+        let pencilPan = UIPanGestureRecognizer(
+            target: context.coordinator, action: #selector(Coordinator.handlePencilPan(_:))
+        )
+        pencilPan.allowedTouchTypes = [NSNumber(value: UITouch.TouchType.pencil.rawValue)]
+        pencilPan.maximumNumberOfTouches = 1
+        pencilPan.delegate = context.coordinator
+        scrollView.addGestureRecognizer(pencilPan)
+        context.coordinator.pencilPan = pencilPan
+
+        // A Pencil hovering over the lanes (§8) — and, the first time, the
+        // proof that this iPad can (the hover switch shows from then on).
+        let hover = UIHoverGestureRecognizer(
+            target: context.coordinator, action: #selector(Coordinator.handleHover(_:))
+        )
+        scrollView.addGestureRecognizer(hover)
+
+        // The Pencil's double-tap: trim ↔ scrub.
+        let pencilInteraction = UIPencilInteraction()
+        pencilInteraction.delegate = context.coordinator
+        scrollView.addInteraction(pencilInteraction)
+
         // A tap on an edge handle: while trimming, switches the edge.
         let edgeTap = UITapGestureRecognizer(
             target: context.coordinator, action: #selector(Coordinator.handleEdgeTap(_:))
@@ -285,6 +321,13 @@ struct VideoTimelineScroller<Content: View>: UIViewRepresentable {
         coordinator.applyContentHeight(scrollView)
         scrollView.dragZones = dragZones
         scrollView.accessibilityValue = "\(Int(pps.rounded()))"
+        // While the Pencil trims, the scroll and the handles' own drag take
+        // fingers only — the Pencil is the trim's (§8).
+        let pencilOwnsEdges = pencilTrimsEdges && !pencilScrubs
+        let fingers = [NSNumber(value: UITouch.TouchType.direct.rawValue), NSNumber(value: UITouch.TouchType.indirectPointer.rawValue)]
+        let everything = fingers + [NSNumber(value: UITouch.TouchType.pencil.rawValue)]
+        scrollView.panGestureRecognizer.allowedTouchTypes = pencilOwnsEdges ? fingers : everything
+        coordinator.zonePan?.allowedTouchTypes = pencilOwnsEdges ? fingers : everything
 
         coordinator.syncOffsetIfIdle(scrollView)
     }
@@ -335,7 +378,7 @@ struct VideoTimelineScroller<Content: View>: UIViewRepresentable {
 
     // MARK: - Coordinator
 
-    final class Coordinator: NSObject, UIScrollViewDelegate, UIGestureRecognizerDelegate {
+    final class Coordinator: NSObject, UIScrollViewDelegate, UIGestureRecognizerDelegate, UIPencilInteractionDelegate {
         var parent: VideoTimelineScroller
         var host: UIHostingController<AnyView>?
         var widthConstraint: NSLayoutConstraint?
@@ -345,6 +388,10 @@ struct VideoTimelineScroller<Content: View>: UIViewRepresentable {
         var modifiedTap: UITapGestureRecognizer?
         var edgeHold: UILongPressGestureRecognizer?
         var edgeTap: UITapGestureRecognizer?
+        var pencilPan: UIPanGestureRecognizer?
+        private var pencilEdge: TimelineDragZone?
+        private var pencilStart: CGFloat = 0
+        private var pencilStepper: PencilFrameStepper?
         private var heldEdge: TimelineDragZone?
         private var heldEdgeStart: CGPoint = .zero
         private var modifiedTapFlags: UIKeyModifierFlags = []
@@ -645,6 +692,68 @@ struct VideoTimelineScroller<Content: View>: UIViewRepresentable {
             }
         }
 
+        // MARK: Apple Pencil (FS-12.17 §8)
+
+        @objc func handlePencilPan(_ recognizer: UIPanGestureRecognizer) {
+            guard let scrollView = recognizer.view as? TimelineScrollView,
+                  let hostView = scrollView.hostView
+            else { return }
+            let point = recognizer.location(in: hostView)
+            switch recognizer.state {
+            case .began:
+                let translation = recognizer.translation(in: hostView)
+                let origin = CGPoint(x: point.x - translation.x, y: point.y - translation.y)
+                pencilEdge = scrollView.edgeHandleZone(at: origin) ?? scrollView.edgeHandleZone(at: point)
+                pencilStart = origin.x
+                pencilStepper = PencilFrameStepper(x: point.x, time: CACurrentMediaTime())
+                if let pencilEdge {
+                    parent.onZoneDrag(pencilEdge.kind, .edgeHeld)
+                    parent.onZoneDrag(pencilEdge.kind, .edgeHeldMoved(translationX: point.x - pencilStart))
+                }
+            case .changed:
+                guard let pencilEdge, var stepper = pencilStepper else { return }
+                if VideoInputPreferencesSnapshot.pencilStillSteps {
+                    stepper.sample(x: point.x, time: CACurrentMediaTime())
+                    pencilStepper = stepper
+                }
+                let translation = stepper.effectiveTranslation(from: pencilStart, to: point.x, pps: parent.pps, fps: parent.projectFPS)
+                parent.onZoneDrag(pencilEdge.kind, .edgeHeldMoved(translationX: translation))
+            case .ended, .cancelled, .failed:
+                if let pencilEdge { parent.onZoneDrag(pencilEdge.kind, .edgeHeldEnded) }
+                pencilEdge = nil
+                pencilStepper = nil
+            default:
+                break
+            }
+        }
+
+        @objc func handleHover(_ recognizer: UIHoverGestureRecognizer) {
+            guard let scrollView = recognizer.view as? TimelineScrollView,
+                  let hostView = scrollView.hostView
+            else { return }
+            // A Pencil hovers above the glass; a trackpad's pointer does not.
+            guard recognizer.zOffset > 0 else {
+                parent.onPencilHover(nil)
+                return
+            }
+            switch recognizer.state {
+            case .began, .changed:
+                parent.onPencilHover(recognizer.location(in: hostView).x)
+            default:
+                parent.onPencilHover(nil)
+            }
+        }
+
+        @available(iOS 17.5, *)
+        func pencilInteraction(_ interaction: UIPencilInteraction, didReceiveTap tap: UIPencilInteraction.Tap) {
+            parent.onPencilDoubleTap()
+        }
+
+        /// iOS 17.0–17.4 deliver the double-tap here instead.
+        func pencilInteractionDidTap(_ interaction: UIPencilInteraction) {
+            if #unavailable(iOS 17.5) { parent.onPencilDoubleTap() }
+        }
+
         func releaseHeldEdge() {
             guard let heldEdge else { return }
             parent.onZoneDrag(heldEdge.kind, .edgeHeldEnded)
@@ -677,6 +786,12 @@ struct VideoTimelineScroller<Content: View>: UIViewRepresentable {
         /// The modified tap takes a touch only with ⌘ or ⇧ down, on a
         /// clip's body; the clip's own tap is told to stand aside.
         func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldReceive touch: UITouch) -> Bool {
+            // A palm resting on the glass while the Pencil trims is not a
+            // finger (§8).
+            if parent.pencilTrimsEdges, touch.type == .direct, touch.majorRadius > 35 { return false }
+            if gestureRecognizer === pencilPan {
+                return parent.pencilTrimsEdges && !parent.pencilScrubs
+            }
             // The edge's hold and tap only ever see touches on an edge
             // handle: everywhere else they do not exist, so nothing waits
             // on them.
@@ -718,6 +833,9 @@ struct VideoTimelineScroller<Content: View>: UIViewRepresentable {
             if gestureRecognizer === edgeHold || gestureRecognizer === edgeTap {
                 return scrollView.edgeHandleZone(at: point) != nil
             }
+            if gestureRecognizer === pencilPan {
+                return scrollView.edgeHandleZone(at: point) != nil
+            }
             return true
         }
 
@@ -746,5 +864,14 @@ struct VideoTimelineScroller<Content: View>: UIViewRepresentable {
             }
             return true
         }
+    }
+}
+
+/// The Pencil's switch, read where a UIKit callback cannot wait on the main
+/// actor's `@Observable` (FS-12.17 §8).
+enum VideoInputPreferencesSnapshot {
+    static var pencilStillSteps: Bool {
+        UserDefaults.standard.object(forKey: VideoInputPreferences.Key.pencilStillSteps) == nil
+            || UserDefaults.standard.bool(forKey: VideoInputPreferences.Key.pencilStillSteps)
     }
 }

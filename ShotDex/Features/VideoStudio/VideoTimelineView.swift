@@ -48,6 +48,8 @@ struct VideoTimelineView: View {
     @State private var scrubBadge: String?
     /// The zoom the Frame Zoom cell left, to go back to.
     @State private var frameZoomReturnPPS = TimelineZoomReturn()
+    /// Where a hovering Pencil is, in content points (FS-12.17 §8).
+    @State private var pencilHoverX: CGFloat?
     @State private var viewportWidth: CGFloat = 393
     @State private var lastHapticSecond = 0
     /// Whether the edge being dragged sat at a limit, or on a snap, on the
@@ -113,7 +115,17 @@ struct VideoTimelineView: View {
                         onVerticalOffset: { laneOffsetY = $0 },
                         onPinch: handlePinch,
                         onZoneDrag: handleZoneDrag,
-                        frameSnapFPS: isFrameZoom ? model.recipe.frameRate.rawValue : nil
+                        frameSnapFPS: isFrameZoom ? model.recipe.frameRate.rawValue : nil,
+                        projectFPS: model.recipe.frameRate.rawValue,
+                        pencilTrimsEdges: model.pencilTrimsEdges,
+                        pencilScrubs: model.pencilMode == .scrub,
+                        onPencilHover: { x in
+                            if x != nil, !VideoInputPreferences.shared.hasSeenPencilHover {
+                                VideoInputPreferences.shared.hasSeenPencilHover = true
+                            }
+                            pencilHoverX = x
+                        },
+                        onPencilDoubleTap: { model.pencilDoubleTapped() }
                     ) {
                         TimelineTracksContent(
                             model: model,
@@ -146,6 +158,7 @@ struct VideoTimelineView: View {
             .overlay(alignment: .topLeading) { frameTrimLoupeAnchor(screenWidth: screenWidth) }
             .overlay(alignment: .top) { frameZoomPill(screenWidth: screenWidth) }
             .overlay(alignment: .topLeading) { frameScrubBadge(screenWidth: screenWidth) }
+            .overlay(alignment: .topLeading) { pencilHoverMark(screenWidth: screenWidth) }
             .overlay(alignment: .topLeading) { beatSnapMark(screenWidth: screenWidth) }
             .onAppear {
                 if !hasAppliedWindowZoom {
@@ -404,6 +417,34 @@ struct VideoTimelineView: View {
         let landed = model.frameGrid.snapped(model.currentTime)
         let frames = TimelineZoomMath.scrubFrames(from: scrubStart.time, to: landed, fps: fps)
         scrubBadge = VideoStudioCopy.frameCount(frames, compact: true) + " · " + VideoFrameGrid.hundredths(landed)
+    }
+
+    /// "Hover shows the trim point" (FS-12.17 §8): a 1pt line in the
+    /// selection colour through the lanes where the Pencil hovers, on the
+    /// frame the edge would land on, and its time.
+    @ViewBuilder
+    private func pencilHoverMark(screenWidth: CGFloat) -> some View {
+        if let x = pencilHoverX, model.pencilTrimsEdges, VideoInputPreferences.shared.pencilHover, pps > 0 {
+            let time = model.frameGrid.snapped(Double(x / pps))
+            let screenX = VideoStudioMetrics.playheadX(screenWidth: screenWidth, gutter: lanes.gutter)
+                + CGFloat(time - model.currentTime) * pps
+            let top = lanes.topPadding + lanes.ruler
+            ZStack(alignment: .topLeading) {
+                Rectangle()
+                    .fill(EditorTheme.timelineSelection)
+                    .frame(width: 1, height: max(0, height - top))
+                    .offset(x: screenX - 0.5, y: top)
+                Text(verbatim: VideoFrameGrid.hundredths(time))
+                    .font(.system(size: 10, weight: .bold, design: .monospaced))
+                    .foregroundStyle(EditorTheme.timelineSelectionInk)
+                    .padding(.horizontal, 5)
+                    .frame(height: 16)
+                    .background(Capsule().fill(EditorTheme.timelineSelection))
+                    .offset(x: screenX + 4, y: top)
+            }
+            .allowsHitTesting(false)
+            .accessibilityHidden(true)
+        }
     }
 
     /// The badge over the playhead while scrubbing at Frame zoom:

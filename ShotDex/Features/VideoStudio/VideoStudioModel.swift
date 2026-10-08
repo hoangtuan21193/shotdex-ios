@@ -505,6 +505,10 @@ final class VideoStudioModel {
     private(set) var frameZoomToggleToken = 0
     /// Whether the timeline is at Frame zoom now — what lights the cell.
     var isTimelineAtFrameZoom = false
+    /// What an Apple Pencil does on the lanes while the iPad's Trim cell is
+    /// on (FS-12.17 §8): trims the edge it touches, or scrubs. A double-tap
+    /// switches.
+    var pencilMode: PencilFrameStepper.Mode = .trim
 
     func toggleFrameZoom() {
         frameZoomToggleToken += 1

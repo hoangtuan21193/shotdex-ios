@@ -67,6 +67,17 @@ extension VideoStudioModel {
         isFrameTrimFromCell = true
     }
 
+    /// The Pencil's double-tap (§8): trim ↔ scrub, while the Trim cell
+    /// has the frame trim open.
+    func pencilDoubleTapped() {
+        guard isFrameTrimFromCell else { return }
+        pencilMode = pencilMode.toggled
+    }
+
+    /// Whether the Pencil works the lanes in its own way now: the Trim
+    /// cell's frame trim is open (iPad).
+    var pencilTrimsEdges: Bool { isFrameTrimFromCell && frameTrim != nil }
+
     /// −1 / +1 Frame (§4–5): one frame of the project, when it fits.
     /// Returns whether the edge moved.
     @discardableResult
@@ -125,6 +136,7 @@ extension VideoStudioModel {
 
     /// The trim's own state goes; a trim the Trim cell opened turns it off.
     private func endFrameTrimState() {
+        pencilMode = .trim
         frameTrim = nil
         isFrameTrimHolding = false
         frameTrimFrames.clear()
