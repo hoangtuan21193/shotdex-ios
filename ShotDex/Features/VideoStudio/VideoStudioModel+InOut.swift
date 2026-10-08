@@ -40,16 +40,29 @@ extension VideoStudioModel {
         let preferences = preferences ?? .shared
         guard !isIPad, !preferences.hasShownKeyboardList else { return }
         preferences.hasShownKeyboardList = true
+        isShortcutListFromHold = false
         isShortcutListShown = true
     }
 
     /// ⌘ held for 0.6 s: the list again.
-    func showShortcutList() {
+    func commandHoldBegan() {
+        guard !isShortcutListShown else { return }
+        isShortcutListFromHold = true
         isShortcutListShown = true
     }
 
-    /// ✕, Esc, the keyboard unplugged.
+    /// ⌘ let go: the inner display's card goes with it when the hold
+    /// opened it; the phone's and the cover's list stay until ✕ or Esc —
+    /// they cover nothing (§4).
+    func commandHoldEnded() {
+        guard isShortcutListFromHold, shortcutListIsOverlay else { return }
+        closeShortcutList()
+    }
+
+    /// ✕, Esc, a tap outside the inner display's card, the keyboard
+    /// unplugged.
     func closeShortcutList() {
         isShortcutListShown = false
+        isShortcutListFromHold = false
     }
 }

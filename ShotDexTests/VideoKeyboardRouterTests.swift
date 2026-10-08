@@ -189,3 +189,36 @@ struct VideoKeyboardTrimTests {
         #expect(!VideoKeyboardRouter.returnIsEnabled(model: model))
     }
 }
+
+/// Holding ⌘ (FS-12.17b §4, AC-9; plan decision 11).
+@MainActor
+struct VideoKeyboardHoldTests {
+    /// The Duo's inner display: ⌘ held 0.6 s shows the card, letting go
+    /// hides it. Shown on its own the first time, it stays until a tap
+    /// outside or Esc. The phone's list stays when ⌘ is let go.
+    @Test func holdOpensAfter600ms() {
+        #expect(VideoSystemKeyResponder.commandHoldDelay == .milliseconds(600))
+        let model = VideoStudioModelFixture.model(clips: VideoStudioModelFixture.frameTrimSampleClips())
+        model.shortcutListIsOverlay = true
+        model.commandHoldBegan()
+        #expect(model.isShortcutListShown)
+        #expect(!model.presentsSheet)          // a card over the studio, not a panel
+        model.commandHoldEnded()
+        #expect(!model.isShortcutListShown)
+
+        let prefs = VideoInputPreferences(defaults: UserDefaults(suiteName: "hold.\(UUID().uuidString)")!)
+        model.noteHardwareKey(isIPad: false, preferences: prefs)
+        #expect(model.isShortcutListShown)
+        model.commandHoldBegan()
+        model.commandHoldEnded()
+        #expect(model.isShortcutListShown)     // not opened by the hold
+        model.pressEscape()
+        #expect(!model.isShortcutListShown)
+
+        let phone = VideoStudioModelFixture.model(clips: VideoStudioModelFixture.frameTrimSampleClips())
+        phone.commandHoldBegan()
+        phone.commandHoldEnded()
+        #expect(phone.isShortcutListShown)
+        #expect(phone.presentsSheet)
+    }
+}

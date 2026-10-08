@@ -109,6 +109,94 @@ struct VideoShortcutListCard: View {
     }
 }
 
+/// The Duo's inner display (board F6_DI_Keyboard, FS-12.17b §4): the
+/// studio under 50% black, a 640×300 card at (155, 150) — "Keyboard
+/// Shortcuts" 16 and "Hold ⌘ to see these again", then the twelve rows
+/// in two columns of six, 290 wide, 12 apart, 34 a row. Held open by ⌘
+/// it goes when ⌘ is let go; shown on its own the first time, a tap
+/// outside or Esc closes it.
+struct VideoShortcutListOverlay: View {
+    @Bindable var model: VideoStudioModel
+
+    var body: some View {
+        let metrics = VideoStudioMetrics.ShortcutList.self
+        let rows = VideoShortcut.compactRows
+        let half = (rows.count + 1) / 2
+        ZStack(alignment: .topLeading) {
+            Color.black.opacity(0.5)
+                .contentShape(Rectangle())
+                .onTapGesture { model.closeShortcutList() }
+                .accessibilityAddTraits(.isButton)
+                .accessibilityLabel(VideoStudioCopy.close)
+            VStack(alignment: .leading, spacing: 0) {
+                HStack(spacing: 10) {
+                    Image(systemName: "keyboard")
+                        .font(.system(size: 15))
+                        .frame(width: 19)
+                        .accessibilityHidden(true)
+                    Text(VideoStudioCopy.keyboardShortcutsTitle)
+                        .font(.system(size: 16, weight: .semibold))
+                        .accessibilityAddTraits(.isHeader)
+                    Spacer(minLength: 0)
+                    Text(VideoStudioCopy.holdCommandAgainHint)
+                        .font(.system(size: 12))
+                        .foregroundStyle(.white.opacity(0.35))
+                }
+                .foregroundStyle(.white)
+                .lineLimit(1)
+                .frame(height: 30)
+                .padding(.top, 16)
+                HStack(alignment: .top, spacing: metrics.overlayColumnGap) {
+                    column(Array(rows.prefix(half)))
+                    column(Array(rows.dropFirst(half)))
+                }
+                .padding(.top, 14)
+                Spacer(minLength: 0)
+            }
+            .padding(.horizontal, 24)
+            .frame(width: metrics.overlayCard.width, height: metrics.overlayCard.height, alignment: .topLeading)
+            .background(
+                RoundedRectangle(cornerRadius: 20, style: .continuous)
+                    .fill(Color(red: 30 / 255, green: 30 / 255, blue: 32 / 255).opacity(0.97))
+                    .shadow(color: .black.opacity(0.7), radius: 30, y: 20)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 20, style: .continuous)
+                    .strokeBorder(Color.white.opacity(0.08), lineWidth: 1)
+            )
+            .offset(x: metrics.overlayCardOrigin.x, y: metrics.overlayCardOrigin.y)
+            .accessibilityElement(children: .contain)
+            .accessibilityIdentifier("shortcutList")
+        }
+        .ignoresSafeArea()
+    }
+
+    private func column(_ rows: [[VideoShortcut]]) -> some View {
+        VStack(spacing: 0) {
+            ForEach(Array(rows.enumerated()), id: \.offset) { _, row in
+                HStack(spacing: 10) {
+                    Text(VideoStudioCopy.shortcutRowName(row))
+                        .font(.system(size: 12.5))
+                        .foregroundStyle(.white.opacity(0.88))
+                        .lineLimit(1)
+                    Spacer(minLength: 0)
+                    HStack(spacing: VideoStudioMetrics.ShortcutList.keycapGap) {
+                        ForEach(Array(VideoShortcut.keycaps(row).enumerated()), id: \.offset) { _, cap in
+                            VideoKeycap(text: cap)
+                        }
+                    }
+                }
+                .frame(height: VideoStudioMetrics.ShortcutList.overlayRowHeight)
+                .padding(.bottom, 1)
+                .overlay(alignment: .bottom) { Rectangle().fill(Color.white.opacity(0.07)).frame(height: 1) }
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel(VideoStudioCopy.shortcutRowSpoken(row))
+            }
+        }
+        .frame(width: VideoStudioMetrics.ShortcutList.overlayColumnWidth)
+    }
+}
+
 /// One keycap: at least 24×24, corner 6, monospaced 12 (FS-12.17b §4).
 struct VideoKeycap: View {
     let text: String
@@ -137,5 +225,13 @@ extension VideoStudioMetrics {
         static let keycapGap: CGFloat = 3
         /// Where the first row starts under the card's top: 46 + 6 + 36.
         static var firstRowTop: CGFloat { headerHeight + topGap + connectedRowHeight }
+
+        /// The Duo's inner display (F6_DI_Keyboard): a 640×300 card at
+        /// (155, 150), two columns of 290, 12 apart, rows 34.
+        static let overlayCard = CGSize(width: 640, height: 300)
+        static let overlayCardOrigin = CGPoint(x: 155, y: 150)
+        static let overlayColumnWidth: CGFloat = 290
+        static let overlayColumnGap: CGFloat = 12
+        static let overlayRowHeight: CGFloat = 34
     }
 }

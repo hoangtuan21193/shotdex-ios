@@ -103,7 +103,7 @@ struct VideoShortcutListTests {
         model.noteHardwareKey(isIPad: false, preferences: prefs)
         #expect(!model.isShortcutListShown)
         // Holding ⌘ brings it back.
-        model.showShortcutList()
+        model.commandHoldBegan()
         #expect(model.isShortcutListShown)
 
         let iPad = VideoStudioModelFixture.model(clips: VideoStudioModelFixture.frameTrimSampleClips())

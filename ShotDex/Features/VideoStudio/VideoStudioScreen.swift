@@ -431,8 +431,21 @@ struct VideoStudioScreen: View {
         .environment(\.videoMediaGrid, VideoMediaGridMetrics.for(windowClass))
         .environment(\.videoLookPanelStyle, VideoLookPanelStyle.for(windowClass))
         .environment(\.videoStudioWindowClass, windowClass)
-        .onAppear { currentWindowClass = windowClass }
-        .onChange(of: windowClass) { _, new in currentWindowClass = new }
+        .overlay {
+            // The Duo's inner display: the keyboard's list as a card over
+            // the studio (FS-12.17b §4, board F6_DI_Keyboard).
+            if windowClass == .duoInner, model.isShortcutListShown {
+                VideoShortcutListOverlay(model: model)
+            }
+        }
+        .onAppear {
+            currentWindowClass = windowClass
+            model.shortcutListIsOverlay = windowClass == .duoInner
+        }
+        .onChange(of: windowClass) { _, new in
+            currentWindowClass = new
+            model.shortcutListIsOverlay = new == .duoInner
+        }
         .onChange(of: model.compare?.mode) { old, new in
             guard windowClass == .iPadLandscape || windowClass == .iPadPortrait else { return }
             columns.compareModeChanged(from: old, to: new)
@@ -494,7 +507,7 @@ struct VideoStudioScreen: View {
         let showsSessionFooter = model.sessionFooterTitle != nil
         // The Look tool's panel stands over the tool row (FS-12.06c §3).
         // So does the keyboard's list (FS-12.17b §4, board F6_P_Keyboard).
-        let showsLookTool = (model.inspectorTarget == .none && model.activeToolPanel == .look) || model.isShortcutListShown
+        let showsLookTool = (model.inspectorTarget == .none && model.activeToolPanel == .look) || model.isShortcutListInPanel
         // A clip's Look block stands 340 too, over its ✕ · name · ✓ footer
         // (board F5_P_ClipLook).
         let showsClipLook = (model.inspectorTarget == .clip || model.inspectorTarget == .clips) && model.activeItemCommand == .look
@@ -569,7 +582,7 @@ struct VideoStudioScreen: View {
         // The keyboard's list leaves the frame as it was (FS-12.17b §4,
         // AC-8): the timeline gives up what the panel takes, down to a
         // slice — the list is reference, the frame is the work.
-        if model.isShortcutListShown, !isFrameTrimming {
+        if model.isShortcutListInPanel, !isFrameTrimming {
             let canvas = model.recipe.canvasSize()
             let natural = canvas.width > 0 ? screen.width * canvas.height / canvas.width : layout.preview
             layout = layout.keepingPicture(of: idleLayout, natural: natural)

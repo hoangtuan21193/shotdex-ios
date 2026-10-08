@@ -83,7 +83,7 @@ struct VideoStudioSheetHost: View {
 
     var body: some View {
         Group {
-            if model.isShortcutListShown {
+            if model.isShortcutListInPanel {
                 // The keyboard's list (FS-12.17b §4): in the panel's place,
                 // over whatever the panel was showing, until ✕ or Esc.
                 VideoShortcutListCard(model: model)

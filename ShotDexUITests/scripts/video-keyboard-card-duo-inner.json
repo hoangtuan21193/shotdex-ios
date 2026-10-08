@@ -1,0 +1,144 @@
+{
+ "steps": [
+  {
+   "action": "home"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "orientation",
+   "text": "landscapeRight"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "orientation",
+   "text": "portrait"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "launch",
+   "arguments": [
+    "-video.timelineExtraHeight",
+    "0",
+    "-VideoStudioStandIn",
+    "duoInner",
+    "-video.keyboardListShown",
+    "NO"
+   ]
+  },
+  {
+   "action": "wait",
+   "seconds": 4
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "tap",
+   "label": "Select",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "tap",
+   "x": 0.93,
+   "y": 0.12
+  },
+  {
+   "action": "tap",
+   "x": 0.06,
+   "y": 0.12
+  },
+  {
+   "action": "tap",
+   "x": 0.18,
+   "y": 0.12
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "tap",
+   "label": "More selection actions",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "tap",
+   "label": "Create Video"
+  },
+  {
+   "action": "screenshot",
+   "name": "s0"
+  },
+  {
+   "action": "wait",
+   "seconds": 4
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "key",
+   "text": "k"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "screenshot",
+   "name": "auto"
+  },
+  {
+   "action": "dump",
+   "name": "F6_DI_Keyboard",
+   "text": "snapshot",
+   "type": "staticText"
+  },
+  {
+   "action": "tap",
+   "x": 0.048,
+   "y": 0.436
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "screenshot",
+   "name": "closed"
+  },
+  {
+   "action": "holdKeys",
+   "direction": "cmd",
+   "seconds": 3,
+   "name": "pre-hold"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "screenshot",
+   "name": "released"
+  }
+ ]
+}

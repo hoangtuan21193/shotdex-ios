@@ -154,7 +154,10 @@ extension VideoStudioScreen {
                 VideoSystemKeyResponder(
                     actions: actions, isTyping: model.isTypingText,
                     onKeyPress: { model.noteHardwareKey(isIPad: isIPad) },
-                    onCommandHold: { held in if held, !isIPad { model.showShortcutList() } }
+                    onCommandHold: { held in
+                        guard !isIPad else { return }
+                        if held { model.commandHoldBegan() } else { model.commandHoldEnded() }
+                    }
                 )
                     .frame(width: 0, height: 0)
                     .accessibilityHidden(true)

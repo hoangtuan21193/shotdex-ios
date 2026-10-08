@@ -1164,7 +1164,7 @@ final class VideoStudioModel {
         if frameTrim != nil {
             cancelFrameTrim()
         } else if isShortcutListShown {
-            isShortcutListShown = false
+            closeShortcutList()
         } else {
             commitSession()
         }
@@ -1573,6 +1573,16 @@ final class VideoStudioModel {
     /// The keyboard's shortcut list is open on the phone or the Duo
     /// (FS-12.17b §4). Esc closes it before it deselects.
     var isShortcutListShown = false
+    /// The Duo's inner display shows the list as a card over the studio,
+    /// not in the panel's place (board F6_DI_Keyboard). Set by the screen
+    /// from its window class.
+    var shortcutListIsOverlay = false
+    /// The list is up because ⌘ is held: letting go closes the inner
+    /// display's card (§4).
+    var isShortcutListFromHold = false
+
+    /// The list stands in the panel's place — phone, Duo cover.
+    var isShortcutListInPanel: Bool { isShortcutListShown && !shortcutListIsOverlay }
 
     /// Something in the studio is being typed in (FS-12.17b §3): only ⌘
     /// keys answer, so "jim k" goes into the field and not to the
@@ -1626,7 +1636,7 @@ final class VideoStudioModel {
     /// True whenever the contextual bottom sheet should be up: something is
     /// selected, or a project-wide tool is open.
     var presentsSheet: Bool {
-        inspectorTarget != .none || activeToolPanel != nil || isShortcutListShown
+        inspectorTarget != .none || activeToolPanel != nil || isShortcutListInPanel
     }
 
     /// The clip currently under the playhead — the target for playhead-relative
