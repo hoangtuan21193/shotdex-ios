@@ -44,13 +44,17 @@ iPhone: [07](07-phone-layout.md). Mô hình chọn: [04](04-tools-and-inspector.
 
 ## 4. Panel
 
+- **Mọi panel mở đầu bằng dải tay nắm 17** (chốt 2026-10-08, người dùng: vẽ vào board, code giữ): vạch 36×5 trắng
+  22% ở y + 6, giữa bề ngang, đệm 6 trên và dưới; vuốt xuống trên dải. Panel chọn item, panel nhóm (F1) và panel
+  công cụ đều vậy — một khung `contextPanel` chung.
 - **Panel chọn item**: dải tổng quan y 306–328 (x 12, rộng 358); panel từ y 334, nội dung tới 644 (nền kéo tới
-  678), bo trên 16; hàng lệnh ở y + 6 ([04b](04b-command-rows.md)); dòng thông số cao 36.
-- **Panel công cụ** (Music, Look, Media): từ y 300 tới 644, **phủ cả timeline**, grabber 36×5 ở y + 6, nội dung
-  từ y + 14. Khung 382×215 và transport không đổi.
+  678), bo trên 16; dải tay nắm y 334–351, **hàng lệnh ở y + 27 = 361** (10 dưới dải, [04b](04b-command-rows.md));
+  dòng thông số cao 36. Panel nhóm (F1, [11 §3](11-multi-select-and-reorder.md)) từ y 540: dải 540–557, hàng lệnh 567.
+- **Panel công cụ** (Music, Look, Media): từ y 300 tới 644, **phủ cả timeline**, dải tay nắm 300–317, nội dung
+  từ y + 17 (Music: tiêu đề 46 "Add Music" · ✕ ở 317–363, Video sound từ 363). Khung 382×215 và transport không đổi.
 - Chiều cao không đổi theo item hay lệnh (luật [04 §2](04-tools-and-inspector.md)).
 - **Thu panel chọn** (chốt 2026-10-03, cùng luật [07 §3](07-phone-layout.md)): vuốt grabber xuống → panel còn **78**
-  (grabber + hàng lệnh) neo đáy 644, y 566–644; dải tổng quan ẩn; timeline 300–566 lộ lại, cuộn tới lane của item,
+  (dải tay nắm 17 + hàng lệnh 56 ngay dưới dải + 5) neo đáy 644, y 566–644; dải tổng quan ẩn; timeline 300–566 lộ lại, cuộn tới lane của item,
   tay nắm mép chạm được; item vẫn chọn, ✕ / ✓ vẫn ở dải 84. Vuốt lên hoặc chạm lệnh kiểu *mục* trả về đủ cao.
 
 ## 5. Gập và mở máy
@@ -78,11 +82,12 @@ Mọi thứ đã có chỗ: Video Settings và Export ở dải 84, việc timel
 | AC-7 | project 9:16 | mở Video Studio | khung 121×215 căn giữa trong x 0–382 | ✅ `VideoStudioDeskGeometryTests.aPortraitProjectFitsCentred` (121×215 ở x 130,5 — cùng hàm fit khung xem trước dùng); chưa chụp project 9:16 thật |
 | AC-8 | clip 2 đang chọn, Speed đổi sang 2× | mở máy | màn trong: góc phải hàng đáy là ✕ · Clip 2 · ✓; bấm ✕ trả Speed về 1× | ⚠️ một phần — `VideoStudioWindowClassTests.aClassChangeKeepsTheSelectionAndItsCancel` (phiên chọn + bản chụp ✕ nằm trong model, đổi lớp không dựng lại model; ✕ trả 1×); nhóm ✕ · tên · ✓ của màn trong: FS-12.03 AC-6; **mở máy thật trong Simulator.app: chưa làm** — máy này không có Simulator.app, simctl không gập/mở được |
 | AC-9 | DC1, DC2 | `Tools/sim-shot <udid> out.png cover` (có mask) | Back và ✓ không bị góc bo cắt | ✅ `Tools/sim-shot … cover` (có mask) 2026-10-04: DC1 (`duo-vs-cover.json`) — Back ở (10,7) nguyên đĩa; DC2 (`duo-vs-cover-select.json`) — ✓ ở (402,556) nguyên đĩa, cách góc bo dưới |
-| AC-10 | các board DC1–DC4, DC2_Collapsed | `Tools/design-board compare` với dump app cùng trạng thái | mọi phần tử chrome lệch ≤ 2pt | ⚠️ một phần — task 18, 2026-10-05, máy Duo sim (màn ngoài, `duo-vs-cover-parity.json`, dump snapshot) so `Tools/design-board compare`: **DC1_Main** khớp ≤ 2pt trừ nút Play trên khung 56 (board 50 — nút chung với iPhone); **DC2_ClipSelected**: dải 84 (5 ô, tên, ✕ ở 504, ✓ ở 556) và overview khớp, hàng lệnh panel ở y 361 thay 340 (+21: tay nắm 17pt của panel chung, đã ghi ở FS-12.06c AC-14), Motion là hàng chip 54×44 cuộn thay hai hàng chip 28 của board; **DC4_Music**: "Add Music from Files…" ở y 424 thay 375 (cùng tay nắm + dòng Video sound 44); DC3, DC2_Collapsed chưa dump (cần cử chỉ kéo tay nắm theo điểm). Ảnh có mask: DC1, DC2, DC4 sạch góc bo |
+| AC-10 | các board DC1–DC4, DC2_Collapsed | `Tools/design-board compare` với dump app cùng trạng thái | mọi phần tử chrome lệch ≤ 2pt | ⚠️ một phần — **2026-10-08**, board vẽ tay nắm 17 (§4); dump snapshot trên Duo sim thật, màn ngoài (`video-duo-cover-panels.json`, `video-duo-cover-captions-text.json`), so `Tools/design-board compare`: **DC1_Main** khớp ≤ 2pt trừ Play 56 (board 50 — nút chung với iPhone); **DC2_ClipSelected** hàng lệnh 361 khớp (trước +21), dải 84 và overview khớp (overview: khung trợ năng 302–332 quanh dải vẽ 306–328); còn lệch là nội dung — project trên sim toàn ảnh (không Speed/Volume/Freeze) và Motion là hàng chip 54×44 cuộn thay hai hàng chip 28; **DC4_Music** tiêu đề Add Music · ✕ ở 317–363, Add Music from Files… 16/424 350×48, MY MUSIC 490 khớp (trước +49: tay nắm + tiêu đề board không vẽ); **DC3_TextOverlay** hàng lệnh 361 khớp (dump có bàn phím sửa chữ đang mở). DC2_Collapsed: board đặt hàng lệnh ngay dưới dải (17 + 56 + 5 = 78) — cử chỉ thu chưa có nên chưa dump |
 | AC-11 | như AC-1 | dump hàng trên y 6–42 | đúng 3 đĩa Back · Undo · Redo; không có ⋯, không có Show original | ✅ `duoCoverIdle` (3 đĩa ở x 10/50/90, y 7–41) + dump `duo-vs-cover.json`: Back (10,7) · Undo (50,7) · Redo (90,7) 34pt, không nút nào khác trong y 6–42 của nội dung |
 | AC-12 | clip 2 đang chọn | vuốt grabber xuống | panel 78 ở y 566–644; timeline 300–566 có tay nắm mép clip 2; ✕ y 504, ✓ y 556 vẫn còn; khung không đổi | ⚠️ một phần — số: `VideoStudioDeskGeometryTests.duoCoverCollapsedPanelIs78At566` (panel 566–644, timeline 300–566, không dải tổng quan); bố cục đọc `session.isCollapsed`; **cử chỉ vuốt grabber + đặt cờ là của plan `vs-tools-selection-phone` (khối E), chưa có** nên chưa chụp được |
 
-**Chưa chứng minh được:** AC-8 (gập/mở trên máy), AC-10 một phần (panel +21, chip Motion), AC-12.
+**Chưa chứng minh được:** AC-8 (gập/mở trên máy), AC-10 một phần (chip Motion, DC3 chưa so được ở trạng thái
+không bàn phím, DC2_Collapsed chưa có cử chỉ), AC-12.
 
 ## 8. Rủi ro đã biết
 

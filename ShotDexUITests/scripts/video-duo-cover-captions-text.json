@@ -1,0 +1,243 @@
+{
+ "steps": [
+  {
+   "action": "launch",
+   "arguments": [
+    "-video.timelineExtraHeight",
+    "0",
+    "-ShotDexFakeSpeechSlow",
+    "-ShotDexStartCaptions"
+   ]
+  },
+  {
+   "action": "wait",
+   "seconds": 6
+  },
+  {
+   "action": "tap",
+   "label": "Select",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "tap",
+   "x": 0.14,
+   "y": 0.45
+  },
+  {
+   "action": "tap",
+   "x": 0.42,
+   "y": 0.45
+  },
+  {
+   "action": "tap",
+   "x": 0.7,
+   "y": 0.45
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "tap",
+   "label": "More selection actions",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "tap",
+   "label": "Create Video"
+  },
+  {
+   "action": "wait",
+   "seconds": 12
+  },
+  {
+   "action": "wait",
+   "seconds": 20
+  },
+  {
+   "action": "dump",
+   "name": "F4_DC_Captions",
+   "text": "snapshot"
+  },
+  {
+   "action": "wait",
+   "seconds": 8
+  },
+  {
+   "action": "tap",
+   "label": "Keep Changes"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "tap",
+   "label": "Photo clip",
+   "index": 0
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "tap",
+   "label": "itemCommand.look"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "dump",
+   "name": "F5_DC_ClipLook",
+   "text": "snapshot"
+  },
+  {
+   "action": "tap",
+   "label": "Keep Changes"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "tap",
+   "label": "Text",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "dump",
+   "name": "DC3_TextOverlay",
+   "text": "snapshot"
+  },
+  {
+   "action": "tap",
+   "label": "Keep Changes"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "tap",
+   "label": "Video Settings"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "dump",
+   "name": "ES_DC_ExportSettings",
+   "text": "snapshot"
+  },
+  {
+   "action": "tap",
+   "label": "Keep Changes"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "tap",
+   "label": "Look",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "tap",
+   "label": "Vivid"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "tap",
+   "label": "beforeAndAfterButton"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "dump",
+   "name": "F7_DC_BeforeAfter",
+   "text": "snapshot"
+  },
+  {
+   "action": "tap",
+   "label": "Keep Changes"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "tap",
+   "label": "Export",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "tap",
+   "label": "exportPreset.reels"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "dump",
+   "name": "F8_DC_ExportPresets",
+   "text": "snapshot"
+  },
+  {
+   "action": "tap",
+   "label": "Discard Changes"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "longPress",
+   "x": 0.62,
+   "y": 0.61,
+   "seconds": 0.6
+  },
+  {
+   "action": "wait",
+   "seconds": 4
+  },
+  {
+   "action": "dump",
+   "name": "F1_DC_MultiSelect",
+   "text": "snapshot"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  }
+ ]
+}

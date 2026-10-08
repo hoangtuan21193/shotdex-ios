@@ -1,0 +1,191 @@
+{
+ "steps": [
+  {
+   "action": "launch",
+   "arguments": [
+    "-video.timelineExtraHeight",
+    "0"
+   ]
+  },
+  {
+   "action": "wait",
+   "seconds": 6
+  },
+  {
+   "action": "tap",
+   "label": "Select",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "tap",
+   "x": 0.14,
+   "y": 0.45
+  },
+  {
+   "action": "tap",
+   "x": 0.42,
+   "y": 0.45
+  },
+  {
+   "action": "tap",
+   "x": 0.7,
+   "y": 0.45
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "tap",
+   "label": "More selection actions",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "tap",
+   "label": "Create Video"
+  },
+  {
+   "action": "wait",
+   "seconds": 12
+  },
+  {
+   "action": "dump",
+   "name": "DC1_Main",
+   "text": "snapshot"
+  },
+  {
+   "action": "tap",
+   "label": "Photo clip",
+   "index": 0
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "dump",
+   "name": "DC2_ClipSelected",
+   "text": "snapshot"
+  },
+  {
+   "action": "tap",
+   "label": "Keep Changes"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "tap",
+   "label": "Music",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "dump",
+   "name": "DC4_Music",
+   "text": "snapshot"
+  },
+  {
+   "action": "tap",
+   "label": "Morning Drive"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "tap",
+   "label": "itemCommand.beats"
+  },
+  {
+   "action": "wait",
+   "seconds": 14
+  },
+  {
+   "action": "dump",
+   "name": "F2_DC_Beats",
+   "text": "snapshot"
+  },
+  {
+   "action": "tap",
+   "label": "itemCommand.ducking"
+  },
+  {
+   "action": "wait",
+   "seconds": 6
+  },
+  {
+   "action": "tap",
+   "label": "UNDER VOICES"
+  },
+  {
+   "action": "wait",
+   "seconds": 5
+  },
+  {
+   "action": "dump",
+   "name": "F3_DC_Ducking",
+   "text": "snapshot"
+  },
+  {
+   "action": "tap",
+   "label": "Keep Changes"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "tap",
+   "label": "Look",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "dump",
+   "name": "F5_DC_Looks",
+   "text": "snapshot"
+  },
+  {
+   "action": "tap",
+   "label": "Keep Changes"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "tap",
+   "label": "Media",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 4
+  },
+  {
+   "action": "dump",
+   "name": "MP_DC_Media",
+   "text": "snapshot"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  }
+ ]
+}
