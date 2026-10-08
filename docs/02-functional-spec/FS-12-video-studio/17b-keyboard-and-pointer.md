@@ -125,7 +125,7 @@ Project mẫu 30 fps của [FS-12.17 §12](17-precise-trim-and-input.md), playhe
 | AC-14 | video chỉ có trên iCloud, tắt mạng | rê con trỏ qua ô | không có request mạng; viewer chiếu thumbnail; dòng tên có "· Not downloaded" | ⚠️ chưa có |
 | AC-15 | board F6_P_Keyboard, F6_DI_Keyboard, F6_DC_Keyboard, F6_IL_HoverScrub | `design-parity` trên từng board | mọi phần tử lệch ≤ 2pt, không thiếu, không thừa | ⚠️ chưa có |
 | AC-16 | In 5,0 s, Out 12,0 s, playhead 8,4 s | bấm Home, rồi End | playhead 5,0 s, rồi 12,0 s; ⌥X rồi Home → 0,0 s | ✅ `VideoInOutGoToTests.homeGoesToInEndToOut` (Home 5,0, End 12,0 qua `VideoKeyboardRouter`), `onlyInMeansEndIsProjectEnd` (chỉ In: End → 24,0; chỉ Out: Home → 0), `clearedHomeIsZero` — Home/End và cả bốn nút Go to Start/End của transport (iPhone, Duo, iPad) cùng gọi `goToStart()`/`goToEnd()` |
-| AC-17 | In 5,0 s, Out 12,0 s | Export | file dài đủ 24,0 s (In–Out không cắt bản xuất); recipe clip không đổi | ⚠️ chưa có |
+| AC-17 | In 5,0 s, Out 12,0 s | Export | file dài đủ 24,0 s (In–Out không cắt bản xuất); recipe clip không đổi | ✅ `VideoInOutExportTests.placementsIgnoreInOut` (project 24,0 s, In 5 · Out 12: vị trí clip, tổng 24,0 s và clip không đổi); `VideoExportInOutSmokeTests.inOutDoesNotShortenTheExport` — xuất thật (compositor → writer) project 6,0 s có In 1 · Out 4: file dài 6,0 s ±1 khung (rút từ 24 s cho nhanh — cùng luật, ¼ thời gian xuất) |
 | AC-18 | Duo ngoài, lần đầu cắm bàn phím | bấm Space | danh sách hiện trong vùng 334–644 với 12 dòng như F6_DC_Keyboard; khung 382×215 không đổi | ⚠️ chưa có — `Tools/sim-shot` |
 
 **Chưa chứng minh được:** cả 18. Phím tắt chưa có test nào hôm nay; `Tools/ui-drive` chưa có bước bấm phím — cần

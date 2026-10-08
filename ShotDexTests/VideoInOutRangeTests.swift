@@ -161,3 +161,26 @@ struct VideoInOutGoToTests {
         #expect(model.currentTime == 0)
     }
 }
+
+/// FS-12.17b AC-17: nothing that lays the project out reads the range.
+@MainActor
+struct VideoInOutExportTests {
+    @Test func placementsIgnoreInOut() {
+        let recipe = VideoStudioModelFixture.mediaSampleRecipe()
+        let model = VideoStudioModelFixture.model(clips: recipe.clips, configure: { $0 = recipe })
+        let placements = model.clipPlacements
+        let total = model.totalDuration
+        let clips = model.recipe.clips
+        model.seek(to: 5)
+        model.markIn()
+        model.seek(to: 12)
+        model.markOut()
+        #expect(model.clipPlacements == placements)
+        #expect(model.totalDuration == total)
+        #expect(abs(total - 24) < 1e-9)
+        #expect(model.recipe.clips == clips)
+        var marked = recipe
+        marked.inOutRange = VideoInOutRange(inPoint: 5, outPoint: 12)
+        #expect(MediaInsertMath.placements(of: marked) == MediaInsertMath.placements(of: recipe))
+    }
+}

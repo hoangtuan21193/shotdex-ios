@@ -370,3 +370,44 @@ extension VideoExportSmokeTests {
         #expect(abs(Int(frame.bytes[0]) - 128) <= 2)
     }
 }
+
+/// FS-12.17b AC-17: the In–Out range is where the user watches, not a cut
+/// — the export writes the whole project. Six seconds, not AC-17's 24:
+/// the length is the same rule and a quarter of the export time
+/// (`VideoInOutExportTests.placementsIgnoreInOut` holds the 24.0).
+@Suite(.serialized) @MainActor
+struct VideoExportInOutSmokeTests {
+    @Test func inOutDoesNotShortenTheExport() async throws {
+        let directory = try VideoExportFixtures.makeDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let photoA = directory.appendingPathComponent("a.jpg")
+        let photoB = directory.appendingPathComponent("b.jpg")
+        try VideoExportFixtures.writePhoto(width: 1200, height: 800, to: photoA)
+        try VideoExportFixtures.writePhoto(width: 1200, height: 800, red: 0.1, green: 0.6, blue: 0.3, to: photoB)
+
+        var clipA = VideoClip(assetID: "S1|a.jpg", kind: .photo)
+        clipA.photoDuration = 3
+        var clipB = VideoClip(assetID: "S1|b.jpg", kind: .photo)
+        clipB.photoDuration = 3
+        var recipe = VideoProjectRecipe(clips: [clipA, clipB])
+        recipe.syncTransitionsWithClips()
+        recipe.inPoint = 1
+        recipe.outPoint = 4
+        let before = recipe.clips
+
+        let service = VideoExportFixtures.service()
+        defer { service.cleanupSession() }
+        service.setServerFiles([clipA.assetID: photoA, clipB.assetID: photoB])
+        let url = try await service.export(
+            recipe: recipe,
+            sources: [
+                clipA.id: .photo(assetID: clipA.assetID, pixelSize: CGSize(width: 1200, height: 800)),
+                clipB.id: .photo(assetID: clipB.assetID, pixelSize: CGSize(width: 1200, height: 800)),
+            ],
+            progress: { _ in }
+        )
+        let output = try await VideoExportFixtures.inspect(url)
+        #expect(abs(output.videoTrackDuration - 6) < 1.0 / 30)
+        #expect(recipe.clips == before)
+    }
+}
