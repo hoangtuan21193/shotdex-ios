@@ -691,9 +691,9 @@ struct VideoStudioScreen: View {
                 .keyboardShortcut(.leftArrow, modifiers: [])
             Button("Forward a Second") { model.seek(to: model.currentTime + 1) }
                 .keyboardShortcut(.rightArrow, modifiers: [])
-            Button("Back a Frame") { model.seek(to: model.currentTime - 1.0 / 30) }
+            Button("Back a Frame") { model.stepFrames(-1) }
                 .keyboardShortcut(.leftArrow, modifiers: .shift)
-            Button("Forward a Frame") { model.seek(to: model.currentTime + 1.0 / 30) }
+            Button("Forward a Frame") { model.stepFrames(1) }
                 .keyboardShortcut(.rightArrow, modifiers: .shift)
             Button("Start") { model.seek(to: 0) }
                 .keyboardShortcut(.home, modifiers: [])

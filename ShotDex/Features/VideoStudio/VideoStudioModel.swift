@@ -1690,6 +1690,15 @@ final class VideoStudioModel {
         }
     }
 
+    /// The project's frame grid — Video Settings' frame rate (FS-12.17b §3).
+    var frameGrid: VideoFrameGrid { VideoFrameGrid(recipe.frameRate) }
+
+    /// Back / Forward a Frame, ⇧← / ⇧→: `count` frames of the project,
+    /// landing on its grid.
+    func stepFrames(_ count: Int) {
+        seek(to: frameGrid.step(from: currentTime, by: count))
+    }
+
     func seek(to seconds: Double) {
         currentTime = min(max(seconds, 0), totalDuration)
         player?.seek(

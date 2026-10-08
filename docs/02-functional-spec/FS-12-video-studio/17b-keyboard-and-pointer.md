@@ -109,7 +109,7 @@ Project mẫu 30 fps của [FS-12.17 §12](17-precise-trim-and-input.md), playhe
 
 | # | Cho | Khi | Thì | Chứng minh bằng |
 |---|---|---|---|---|
-| AC-1 | project 24 fps, playhead 2,000 s | bấm ⇧→ | playhead 2,0417 s (±1 ms) | ⚠️ chưa có |
+| AC-1 | project 24 fps, playhead 2,000 s | bấm ⇧→ | playhead 2,0417 s (±1 ms) | ✅ `VideoFrameGridTests.stepAt24fps` (2,000 → 2,0417 ±1 ms), `stepAt60fps`, `offGridStepsToNextLine`, `shiftRightStepsOneProjectFrame` (qua `model.stepFrames` — hàm chung của ⇧←/→ và Back/Forward a Frame của cả hai transport; read-out đếm cùng lưới: `00:00:02:01`); route `vs-keys-frame-step.json` iPad Pro 13" dọc 2026-10-08: Video Settings → 24, ⇧→ → giá trị "Project Overview" `00:00:00:01`, ⇧← về `…:00` (phím trong simulator giao không đều — một lượt mất hai → trần, một lượt ⇧→ tới hai lần — số đếm chính xác do unit test chứng minh) |
 | AC-2 | đang dừng | bấm L, L | phát tới rate 2,0; nhãn "2×" trên nút play; bấm K thì rate 0 | ⚠️ chưa có |
 | AC-3 | playhead 5,0 s rồi 12,0 s | bấm I tại 5,0 s, O tại 12,0 s, bật Loop, Space | phát tới 12,0 s thì quay về 5,0 s; cờ I và O trên thước; ⌥X xoá cả hai | ⚠️ chưa có |
 | AC-4 | playhead 7,0 s trong Clip 2 (bắt đầu 3,0 s) | bấm ⌥[ | Clip 2 bắt đầu nguồn ở 4,0 s, dài 2,2 s; undo thêm 1 bước | ⚠️ một phần — **lệnh** xanh: `VideoTrimToPlayheadTests.startAtSevenSecondsInClipTwo` (nguồn 4,0, dài 2,2), `speedTwoHalvesTheLocalDelta`, `edgeOrBelowMinimumDoesNothing`, `theModelAddsOneUndoStep` (+1 bước, Undo trả 0–6,2) — phép tính là `VideoClipTrimMath.trimToPlayhead`, dùng chung cho nút transport và chip; **phím ⌥[**: task 24 |

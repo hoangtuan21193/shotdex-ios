@@ -119,24 +119,25 @@ enum VideoStudioMetrics {
     /// near the glass.
     static let displayCornerClearance: CGFloat = 16
 
-    /// Timecode is counted at 30fps: the studio renders at 30 and the frame
-    /// step in the transport has to land on the same grid the read-out shows,
-    /// or stepping forward one frame moves the last field by two.
+    /// Timecode is counted at the project's frame rate (30 unless Video
+    /// Settings says otherwise): the frame step in the transport lands on
+    /// the same grid the read-out shows, or stepping forward one frame
+    /// would move the last field by two (FS-12.17b §3).
     static let timecodeFrameRate: Double = 30
 
     /// `hh:mm:ss:ff`, the form every NLE's read-out takes. The command band's
     /// pill keeps its shorter `m:ss.t` — it is read while scrubbing with a
     /// thumb, not while matching a cut to a number.
-    static func timecode(_ seconds: Double) -> String {
-        let clamped = max(0, seconds)
-        let whole = Int(clamped)
-        let frames = Int((clamped - Double(whole)) * timecodeFrameRate)
+    static func timecode(_ seconds: Double, fps: Int = Int(timecodeFrameRate)) -> String {
+        let rate = max(1, fps)
+        let totalFrames = Int((max(0, seconds) * Double(rate) + 1e-6).rounded(.down))
+        let whole = totalFrames / rate
         return String(
             format: "%02d:%02d:%02d:%02d",
             whole / 3600,
             (whole % 3600) / 60,
             whole % 60,
-            min(Int(timecodeFrameRate) - 1, frames)
+            totalFrames % rate
         )
     }
 

@@ -82,7 +82,6 @@ struct VideoTransportButton: View {
     var playDisc: CGFloat?
 
     /// One frame at the rate the timecode is counted in.
-    private var frame: Double { 1.0 / VideoStudioMetrics.timecodeFrameRate }
 
     /// The marker the playhead is sitting on, if any — the button changes
     /// from "add one" to "recolour this one" rather than stacking a second
@@ -122,7 +121,7 @@ struct VideoTransportButton: View {
             }
         case .backFrame:
             glyph("backward.frame", label: Text("Back a Frame", comment: "Video Studio transport")) {
-                model.seek(to: model.currentTime - frame)
+                model.stepFrames(-1)
             }
         case .play:
             // White 12 %, not accent: accent is Export's alone (FS-12.03b §2).
@@ -143,7 +142,7 @@ struct VideoTransportButton: View {
             )
         case .forwardFrame:
             glyph("forward.frame", label: Text("Forward a Frame", comment: "Video Studio transport")) {
-                model.seek(to: model.currentTime + frame)
+                model.stepFrames(1)
             }
         case .goToEnd:
             glyph("forward.end", label: Text("Go to End", comment: "Video Studio transport")) {
@@ -527,7 +526,7 @@ struct VideoTimelineOverview: View {
         .background(EditorTheme.background)
         .accessibilityElement()
         .accessibilityLabel(Text("Project Overview", comment: "Video Studio: the whole-project strip above the timeline"))
-        .accessibilityValue(Text(VideoStudioMetrics.timecode(model.currentTime)))
+        .accessibilityValue(Text(VideoStudioMetrics.timecode(model.currentTime, fps: model.recipe.frameRate.rawValue)))
         .accessibilityAdjustableAction { direction in
             let step = max(model.totalDuration / 20, 0.5)
             model.seek(to: model.currentTime + (direction == .increment ? step : -step))
@@ -600,7 +599,6 @@ enum VideoMarkerPalette {
 struct VideoCompactTransportBar: View {
     @Bindable var model: VideoStudioModel
 
-    private var frame: Double { 1.0 / VideoStudioMetrics.timecodeFrameRate }
     private var markerHere: TimedMarker? { model.marker(near: model.currentTime) }
 
     var body: some View {
@@ -612,7 +610,7 @@ struct VideoCompactTransportBar: View {
                 model.seek(to: 0)
             }
             glyph("backward.frame.fill", label: Text("Back a Frame", comment: "Video Studio transport")) {
-                model.seek(to: model.currentTime - frame)
+                model.stepFrames(-1)
             }
 
             Spacer(minLength: 0)
@@ -620,7 +618,7 @@ struct VideoCompactTransportBar: View {
             Spacer(minLength: 0)
 
             glyph("forward.frame.fill", label: Text("Forward a Frame", comment: "Video Studio transport")) {
-                model.seek(to: model.currentTime + frame)
+                model.stepFrames(1)
             }
             glyph("forward.end.fill", label: Text("Go to End", comment: "Video Studio transport")) {
                 model.seek(to: model.totalDuration)
