@@ -117,7 +117,7 @@ struct VideoTransportButton: View {
             }
         case .goToStart:
             glyph("backward.end", label: Text("Go to Start", comment: "Video Studio transport")) {
-                model.seek(to: 0)
+                model.goToStart()
             }
         case .backFrame:
             glyph("backward.frame", label: Text("Back a Frame", comment: "Video Studio transport")) {
@@ -159,7 +159,7 @@ struct VideoTransportButton: View {
             }
         case .goToEnd:
             glyph("forward.end", label: Text("Go to End", comment: "Video Studio transport")) {
-                model.seek(to: model.totalDuration)
+                model.goToEnd()
             }
         case .loop:
             glyph(
@@ -620,7 +620,7 @@ struct VideoCompactTransportBar: View {
             // steps are what a thumb taps over and over, so each sits next
             // to the number it moves.
             glyph("backward.end.fill", label: Text("Go to Start", comment: "Video Studio transport")) {
-                model.seek(to: 0)
+                model.goToStart()
             }
             glyph("backward.frame.fill", label: Text("Back a Frame", comment: "Video Studio transport")) {
                 model.stepFrames(-1)
@@ -634,7 +634,7 @@ struct VideoCompactTransportBar: View {
                 model.stepFrames(1)
             }
             glyph("forward.end.fill", label: Text("Go to End", comment: "Video Studio transport")) {
-                model.seek(to: model.totalDuration)
+                model.goToEnd()
             }
             overflow
         }

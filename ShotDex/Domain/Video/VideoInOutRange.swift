@@ -29,6 +29,14 @@ struct VideoInOutRange: Equatable, Sendable {
         return range
     }
 
+    /// Go to Start — the transport's button and Home (§5): In, or 0 when
+    /// there is no In (only an Out set, or nothing).
+    var goToStartTarget: Double { inPoint ?? 0 }
+
+    /// Go to End — the button and End: Out, or the project's end when there
+    /// is no Out (only an In set, or nothing).
+    func goToEndTarget(totalDuration: Double) -> Double { outPoint ?? totalDuration }
+
     /// Where Loop plays from: In, or the project's start.
     var loopStart: Double { inPoint ?? 0 }
 

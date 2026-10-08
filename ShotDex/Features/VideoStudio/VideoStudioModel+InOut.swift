@@ -14,6 +14,16 @@ extension VideoStudioModel {
         syncLoopBoundary()
     }
 
+    /// Go to Start: In when there is one (FS-12.17b §5).
+    func goToStart() {
+        seek(to: recipe.inOutRange.goToStartTarget)
+    }
+
+    /// Go to End: Out when there is one.
+    func goToEnd() {
+        seek(to: recipe.inOutRange.goToEndTarget(totalDuration: totalDuration))
+    }
+
     func clearInOut() {
         guard !recipe.inOutRange.isEmpty else { return }
         recipe.inOutRange = VideoInOutRange()

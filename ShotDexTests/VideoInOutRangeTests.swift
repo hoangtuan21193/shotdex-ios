@@ -112,3 +112,52 @@ struct VideoStudioInOutTests {
         #expect(decoded.clips.count == recipe.clips.count)
     }
 }
+
+/// Go to Start / Go to End and Home / End follow the range (FS-12.17b
+/// AC-16).
+@MainActor
+struct VideoInOutGoToTests {
+    private func model() -> VideoStudioModel {
+        let recipe = VideoStudioModelFixture.mediaSampleRecipe()
+        return VideoStudioModelFixture.model(clips: recipe.clips, configure: { $0 = recipe })
+    }
+
+    /// FS-12.17b AC-16: In 5.0, Out 12.0, playhead 8.4 — Home 5.0, End 12.0.
+    @Test func homeGoesToInEndToOut() {
+        let model = model()
+        model.seek(to: 5)
+        model.markIn()
+        model.seek(to: 12)
+        model.markOut()
+        model.seek(to: 8.4)
+        VideoKeyboardRouter.perform(.goToStart, model: model)
+        #expect(model.currentTime == 5)
+        VideoKeyboardRouter.perform(.goToEnd, model: model)
+        #expect(model.currentTime == 12)
+    }
+
+    /// Only an In: End goes to the project's end. Only an Out: Home goes
+    /// to 0.
+    @Test func onlyInMeansEndIsProjectEnd() {
+        let model = model()
+        model.seek(to: 5)
+        model.markIn()
+        model.goToEnd()
+        #expect(abs(model.currentTime - 24) < 1e-9)
+        #expect(VideoInOutRange(outPoint: 12).goToStartTarget == 0)
+        #expect(VideoInOutRange(outPoint: 12).goToEndTarget(totalDuration: 24) == 12)
+    }
+
+    /// FS-12.17b AC-16: ⌥X, then Home — 0.0.
+    @Test func clearedHomeIsZero() {
+        let model = model()
+        model.seek(to: 5)
+        model.markIn()
+        model.seek(to: 12)
+        model.markOut()
+        model.seek(to: 8.4)
+        VideoKeyboardRouter.perform(.clearInOut, model: model)
+        VideoKeyboardRouter.perform(.goToStart, model: model)
+        #expect(model.currentTime == 0)
+    }
+}
