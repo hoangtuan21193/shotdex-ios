@@ -1557,6 +1557,15 @@ final class VideoStudioModel {
         didSet { syncLoopBoundary() }
     }
 
+    /// Something in the studio is being typed in (FS-12.17b §3): only ⌘
+    /// keys answer, so "jim k" goes into the field and not to the
+    /// transport. Set by `VideoTextInputMonitor`.
+    var isTypingText = false
+    /// Sheets and alerts a panel opens over the studio (Save Look, the
+    /// look import report, a server export): every key is silent under
+    /// them (§3). The screen's own sheets it knows itself.
+    var nestedModalCount = 0
+
     /// Puts the player's turn-back point at Out while Loop is on and an
     /// Out is set; none otherwise (the end of the item does it).
     func syncLoopBoundary() {

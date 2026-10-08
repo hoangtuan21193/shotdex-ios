@@ -60,6 +60,7 @@ struct VideoLookPanel: View {
             // Cancelling the picker changes nothing (§7).
             if case let .success(urls) = result { dependencies.lookExchange.startImport(urls, completion: imported) }
         }
+        .silencesVideoStudioKeys(model, while: isNamingLook || dependencies.lookExchange.isSheetPresented)
         .sheet(isPresented: Binding(
             get: { dependencies.lookExchange.isSheetPresented },
             set: { if !$0 { dependencies.lookExchange.dismissReport() } }

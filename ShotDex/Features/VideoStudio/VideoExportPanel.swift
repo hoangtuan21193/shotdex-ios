@@ -44,6 +44,7 @@ struct VideoExportPanel: View {
                 dependencies: dependencies
             )
         }
+        .silencesVideoStudioKeys(model, while: serverExportModel != nil)
         .sheet(item: $serverExportModel, onDismiss: { model.composedFile = nil }) { exportModel in
             ServerExportSheet(model: exportModel) {
                 serverExportModel = nil

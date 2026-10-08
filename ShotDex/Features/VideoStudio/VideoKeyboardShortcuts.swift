@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 /// The Video Studio's keyboard (FS-12.17b §3): every key comes from
 /// `VideoShortcut` — one list makes the keys and every list of them.
@@ -141,13 +142,81 @@ extension VideoStudioScreen {
     }
 
     func shortcutIsEnabled(_ shortcut: VideoShortcut, model: VideoStudioModel) -> Bool {
-        VideoKeyboardRouter.isEnabled(shortcut, model: model)
+        VideoKeyboardRouter.isEnabled(shortcut, model: model, screenModalIsUp: presentsModal)
     }
 
     func performShortcut(_ shortcut: VideoShortcut, model: VideoStudioModel) {
-        switch VideoKeyboardRouter.perform(shortcut, model: model) {
+        switch VideoKeyboardRouter.perform(shortcut, model: model, screenModalIsUp: presentsModal) {
         case .done: break
         case .openExport: openExport(model)
         }
+    }
+}
+
+/// Whether anything in the app is being typed in (FS-12.17b §3): a text
+/// field or a text view began editing and has not ended. SwiftUI's
+/// `TextField` and `TextEditor` are UIKit's underneath, so their
+/// notifications cover every field the studio has, panels and sheets
+/// alike, without each one reporting its focus.
+@MainActor
+final class VideoTextInputMonitor {
+    private var editing: Set<ObjectIdentifier> = []
+    private var observers: [NSObjectProtocol] = []
+
+    /// Starts reporting to `onChange`; once is enough.
+    func start(_ onChange: @escaping @MainActor (Bool) -> Void) {
+        guard observers.isEmpty else { return }
+        let center = NotificationCenter.default
+        let pairs: [(Notification.Name, Bool)] = [
+            (UITextField.textDidBeginEditingNotification, true),
+            (UITextField.textDidEndEditingNotification, false),
+            (UITextView.textDidBeginEditingNotification, true),
+            (UITextView.textDidEndEditingNotification, false),
+        ]
+        for (name, begins) in pairs {
+            observers.append(center.addObserver(forName: name, object: nil, queue: .main) { [weak self] note in
+                guard let object = note.object as AnyObject? else { return }
+                let id = ObjectIdentifier(object)
+                MainActor.assumeIsolated {
+                    guard let self else { return }
+                    if begins { self.editing.insert(id) } else { self.editing.remove(id) }
+                    onChange(!self.editing.isEmpty)
+                }
+            })
+        }
+    }
+
+    func stop() {
+        observers.forEach(NotificationCenter.default.removeObserver)
+        observers.removeAll()
+        editing.removeAll()
+    }
+}
+
+/// Counts a sheet or alert a panel opens over the studio while it is up
+/// (FS-12.17b §3): the keys are silent under it.
+struct VideoStudioModalPresence: ViewModifier {
+    let model: VideoStudioModel?
+    let isPresented: Bool
+    /// Whether this one is in the model's count now.
+    @State private var isCounted = false
+
+    func body(content: Content) -> some View {
+        content
+            .onChange(of: isPresented, initial: true) { _, presented in count(presented) }
+            .onDisappear { count(false) }
+    }
+
+    private func count(_ presented: Bool) {
+        guard let model, presented != isCounted else { return }
+        isCounted = presented
+        model.nestedModalCount = max(0, model.nestedModalCount + (presented ? 1 : -1))
+    }
+}
+
+extension View {
+    /// The keys go quiet while `isPresented` (FS-12.17b §3).
+    func silencesVideoStudioKeys(_ model: VideoStudioModel?, while isPresented: Bool) -> some View {
+        modifier(VideoStudioModalPresence(model: model, isPresented: isPresented))
     }
 }

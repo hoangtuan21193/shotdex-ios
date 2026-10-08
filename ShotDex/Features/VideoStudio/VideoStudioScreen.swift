@@ -55,6 +55,17 @@ struct VideoStudioScreen: View {
     /// The menu bar's way to this studio (FS-12.17b §4) — one object, so
     /// the scene's focused value does not change with every render.
     @State var keyboardTarget = VideoStudioKeyboardTarget()
+    /// Whether something is being typed in — the bare keys go quiet
+    /// (FS-12.17b §3).
+    @State var textInputMonitor = VideoTextInputMonitor()
+
+    /// One of the screen's own sheets or alerts is up: every key is silent
+    /// (FS-12.17b §3). Panels report theirs through `nestedModalCount`.
+    var presentsModal: Bool {
+        isDiscardConfirmationPresented || isDraftSaveFailurePresented || isExportSheetPresented
+            || isMusicImporterPresented || isFontPickerPresented || musicChooserIntent != nil
+            || isStickerPickerPresented
+    }
     @State var editingOverlay: PhotoOverlay?
     /// The preview's size, for the export preset's Fit preview (FS-12.16 §4).
     @State var previewSize: CGSize = .zero
@@ -163,9 +174,11 @@ struct VideoStudioScreen: View {
             newModel.onSaved = { assetID in onSaved(assetID); dismiss() }
             newModel.presetName = { [looks = dependencies.lookPresets] in looks.displayName(of: $0) }
             model = newModel
+            textInputMonitor.start { [weak newModel] typing in newModel?.isTypingText = typing }
             await newModel.load()
         }
         .onDisappear {
+            textInputMonitor.stop()
             model?.close()
             levelMeter.cancelDecoding()
         }
