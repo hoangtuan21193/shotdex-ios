@@ -100,6 +100,16 @@ final class FolderSourceRoots: @unchecked Sendable {
         return url
     }
 
+    /// Whether files of `sourceId` can go to a Trash (FS-19.04 §1): a USB-C
+    /// drive on iPad or iPhone, some exFAT/FAT volumes and the app's own
+    /// folder have none, and are deleted for good after the red dialog.
+    /// Unknown — the source is away — counts as having one: nothing is
+    /// deleted then anyway.
+    func hasTrash(_ sourceId: String) -> Bool {
+        guard let root = root(sourceId) else { return true }
+        return (try? FileManager.default.url(for: .trashDirectory, in: .userDomainMask, appropriateFor: root, create: false)) != nil
+    }
+
     func fileURL(sourceId: String, relativePath: String) -> URL? {
         root(sourceId)?.appendingPathComponent(relativePath)
     }

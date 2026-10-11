@@ -19,7 +19,7 @@ enum PhotoCommand: String, CaseIterable, Identifiable {
     case captionKeywords
     case exportEXIF
     case duplicate
-    case importToLibrary
+    case saveToPhotos
 
     var id: String { rawValue }
 
@@ -39,7 +39,9 @@ enum PhotoCommand: String, CaseIterable, Identifiable {
         case .captionKeywords: String(localized: "Caption & Keywords…", table: KeywordCopy.table, comment: "Photo command: edit Photos caption and keywords of the selection (iOS 27)")
         case .exportEXIF: String(localized: "Export EXIF (CSV)", comment: "Photo command")
         case .duplicate: String(localized: "Duplicate", comment: "Photo command")
-        case .importToLibrary: String(localized: "Import to Library", comment: "Photo command: copy server photos into the library")
+        // An export, not an import (FS-19.03 §4, D5): the photo is already in
+        // the library through its server copy; this puts a copy in Photos.
+        case .saveToPhotos: String(localized: "Save to Photos", comment: "Photo command: copy server originals into the Photos library")
         }
     }
 
@@ -59,7 +61,7 @@ enum PhotoCommand: String, CaseIterable, Identifiable {
         case .captionKeywords: "tag"
         case .exportEXIF: "doc.badge.arrow.up"
         case .duplicate: "plus.square.on.square"
-        case .importToLibrary: "arrow.down.circle"
+        case .saveToPhotos: "arrow.down.circle"
         }
     }
 
@@ -73,9 +75,9 @@ enum PhotoCommand: String, CaseIterable, Identifiable {
     /// What works on a file: the album's rows minus the Photos-only ones,
     /// in the album's order, then the server's own Import (FS-17.06 §3).
     static let serverSelectionMenu: [PhotoCommand] = [
-        .pasteEdits, .combine, .collage, .video, .resize, .exportEXIF, .importToLibrary,
+        .pasteEdits, .combine, .collage, .video, .resize, .exportEXIF, .saveToPhotos,
     ]
 
     /// The long-press menu of a server photo, before the Files group.
-    static let serverPhotoMenu: [PhotoCommand] = [.edit, .share, .copy, .importToLibrary]
+    static let serverPhotoMenu: [PhotoCommand] = [.edit, .share, .copy, .saveToPhotos]
 }

@@ -430,8 +430,8 @@ struct ServerBrowserScreen: View {
 
     private var importTitle: String {
         folder.selected.isEmpty
-            ? String(localized: "Import to Library", comment: "Server browser: copy the picked photos into the library")
-            : String(localized: "Import \(folder.selected.count) to Library", comment: "Server browser: copy the picked photos into the library, with their count")
+            ? String(localized: "Save to Photos", comment: "Server browser: copy the picked originals into Photos")
+            : String(localized: "Save \(folder.selected.count) to Photos", comment: "Server browser: copy the picked originals into Photos, with their count")
     }
 
     /// The selection's ⋯: the album's rows that work on a file, in the
@@ -630,7 +630,7 @@ struct ServerBrowserScreen: View {
         case .pasteEdits: run(.pasteEdits, on: photos)
         case .resize: run(.resize, on: photos)
         case .exportEXIF: exportEXIF(photos)
-        case .importToLibrary: presentDownload(photos)
+        case .saveToPhotos: presentDownload(photos)
         case .collage: run(.collage, on: photos)
         case .video: run(.video, on: photos)
         // Combine needs its purpose, which the submenu passes to `run`.
@@ -1025,10 +1025,10 @@ struct ServerPhotoViewer: View {
                     .buttonStyle(.bordered)
                     .accessibilityLabel(PhotoCommand.share.title)
                     Button {
-                        onCommand(.importToLibrary)
+                        onCommand(.saveToPhotos)
                         dismiss()
                     } label: {
-                        Label(PhotoCommand.importToLibrary.title, systemImage: PhotoCommand.importToLibrary.systemImage)
+                        Label(PhotoCommand.saveToPhotos.title, systemImage: PhotoCommand.saveToPhotos.systemImage)
                             .lineLimit(1)
                             .frame(maxWidth: .infinity)
                     }

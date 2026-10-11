@@ -1,0 +1,19 @@
+{
+  "steps": [
+    { "action": "launch" },
+    { "action": "wait", "seconds": 5 },
+    { "action": "tap", "label": "Settings" },
+    { "action": "wait", "seconds": 3 },
+    { "action": "tap", "label": "Sources" },
+    { "action": "wait", "seconds": 3 },
+    { "action": "tap", "label": "Connect to Server…" },
+    { "action": "wait", "seconds": 3 },
+    { "action": "screenshot", "name": "PH_ServerList" },
+    { "action": "tap", "label": "Add Connection" },
+    { "action": "wait", "seconds": 4 },
+    { "action": "swipe", "x": 0.5, "y": 0.7, "direction": "up", "distance": 0.4 },
+    { "action": "wait", "seconds": 2 },
+    { "action": "screenshot", "name": "PH_ServerForm" },
+    { "action": "dump", "name": "PH_ServerForm" }
+  ]
+}

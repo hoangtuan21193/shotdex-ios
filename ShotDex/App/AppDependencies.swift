@@ -163,6 +163,21 @@ final class AppDependencies {
     let folderSources: FolderSourceRunner
     /// Their folders, kept open once used.
     let folderRoots: FolderSourceRoots
+
+    /// Move / Delete / Hide across sources (FS-19.04): Photos through
+    /// PhotoKit's dialog, files to the Trash of their volume, NAS hidden.
+    func makeDeletionService() -> DeletionService {
+        let photoLibrary = photoLibrary
+        let roots = folderRoots
+        return DeletionService(
+            database: database,
+            deletePhotosAssets: { ids in try await photoLibrary.deleteAssets(PhotoLibraryService.fetchAssets(ids: ids)) },
+            root: { roots.root($0) }
+        )
+    }
+    /// Connections added as sources: compared at launch, when the server
+    /// comes back, and on Rescan (FS-19.03 §3).
+    let serverSources: ServerSourceRefresh
     /// Every source's row in Settings › Sources and the Sources group.
     let sources: SourcesModel
 
@@ -474,7 +489,13 @@ final class AppDependencies {
         self.serverThumbnails = RemoteThumbnailCache.standard
         let folderSources = FolderSourceRunner(database: database, metadataStore: metadataStore)
         self.folderSources = folderSources
-        let sources = SourcesModel(database: database, runner: folderSources, photoLibrary: photoLibrary)
+        let serverSources = ServerSourceRefresh(database: database, servers: fileServers,
+                                                composer: MetadataComposer(sensorLookup: SensorLookup(
+                                                    records: (try? SensorDatabaseLoader().loadRecords()) ?? [],
+                                                    customMappings: (try? metadataStore.customMappings()) ?? [])),
+                                                thumbnails: .standard)
+        self.serverSources = serverSources
+        let sources = SourcesModel(database: database, runner: folderSources, servers: serverSources, photoLibrary: photoLibrary)
         self.sources = sources
         photoLibrary.fileThumbnails.reload(database)
         let openCopies = OpenCopyQueries(database: database)

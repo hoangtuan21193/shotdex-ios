@@ -1,5 +1,11 @@
 # FS-17 — Tải ảnh từ file server về thư viện
 
+> **2026-10-12 (FS-19 D8):** "Import to Library" giờ là **Save to Photos** — một lệnh **xuất** chép bản gốc vào Photos
+> ([FS-19.03 §4](../FS-19-photo-sources/03-servers-as-sources.md), D5); cùng luồng tải + kiểm SHA-256 + `PhotoKitAssetCreator`.
+> Chữ trên màn: "Save to Photos" / "Save N to Photos" / "Saving N of M" / "Saved N photos to Photos". Mọi chỗ "Import to
+> Library" trong tài liệu này đọc là Save to Photos.
+
+
 `FS-17` · tier B (lưới ảnh server) + A (sheet tải về, danh sách connection) · `ShotDex/Features/ServerImport/`
 · `Domain/ServerImport/` · `Data/Sources/FileServer/` · test `ShotDexTests/ServerImport*Tests.swift`
 · cập nhật 2026-09-26

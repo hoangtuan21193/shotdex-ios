@@ -31,9 +31,9 @@ struct ServerDownloadSheet: View {
             if phase == .background, model.stage == .downloading { model.cancel() }
         }
         .onDisappear { model.tearDown() }
-        .alert("Stop Importing?", isPresented: $isConfirmingCancel) {
+        .alert("Stop Saving?", isPresented: $isConfirmingCancel) {
             Button("Stop", role: .destructive) { model.cancel() }
-            Button("Keep Importing", role: .cancel) {}
+            Button("Keep Saving", role: .cancel) {}
         } message: {
             Text("Photos already imported stay in your library.")
         }
@@ -57,9 +57,9 @@ struct ServerDownloadSheet: View {
 
     private var title: String {
         switch model.stage {
-        case .preparing: String(localized: "Import to Library", comment: "Import from server sheet title")
-        case .downloading: String(localized: "Importing", comment: "Import from server sheet title while running")
-        case .finished: String(localized: "Import Finished", comment: "Import from server sheet title when done")
+        case .preparing: String(localized: "Save to Photos", comment: "Save server originals to Photos: sheet title")
+        case .downloading: String(localized: "Saving to Photos", comment: "Save server originals to Photos: sheet title while running")
+        case .finished: String(localized: "Saved to Photos", comment: "Save server originals to Photos: sheet title when done")
         }
     }
 
@@ -71,7 +71,7 @@ struct ServerDownloadSheet: View {
                 Button("Cancel") { dismiss() }
             }
             ToolbarItem(placement: .confirmationAction) {
-                Button("Import") { model.start() }
+                Button("Save") { model.start() }
                     .disabled(!model.canStart)
             }
         case .downloading:
@@ -142,7 +142,7 @@ struct ServerDownloadSheet: View {
                     .buttonStyle(.plain)
                 }
             } header: {
-                Text("Import To")
+                Text("Save To")
             } footer: {
                 VStack(alignment: .leading, spacing: 6) {
                     Text(model.destinationSentence)
@@ -191,10 +191,10 @@ struct ServerDownloadSheet: View {
         Form {
             Section {
                 VStack(alignment: .leading, spacing: 10) {
-                    Text("Importing \(model.progress.index + 1) of \(model.progress.count)", comment: "Download from server progress headline")
+                    Text("Saving \(model.progress.index + 1) of \(model.progress.count)", comment: "Save server originals to Photos: progress headline")
                         .font(.headline)
                     ProgressView(value: model.progress.fraction)
-                        .accessibilityLabel("Import progress")
+                        .accessibilityLabel("Save progress")
                         .accessibilityValue(Text(model.progress.fraction, format: .percent.precision(.fractionLength(0))))
                     Text(byteLine)
                         .font(.subheadline)
@@ -237,8 +237,8 @@ struct ServerDownloadSheet: View {
             Section {
                 if summary.savedCount > 0 {
                     Text(model.destination == .library
-                         ? String(AttributedString(localized: "Imported ^[\(summary.savedCount) photo](inflect: true) into your library.", comment: "Import from server result headline, library only").characters)
-                         : String(AttributedString(localized: "Imported ^[\(summary.savedCount) photo](inflect: true) into your library and “\(model.destinationTitle)”.", comment: "Import from server result headline, with an album").characters))
+                         ? String(AttributedString(localized: "Saved ^[\(summary.savedCount) photo](inflect: true) to Photos.", comment: "Save server originals to Photos: result headline, Photos only").characters)
+                         : String(AttributedString(localized: "Saved ^[\(summary.savedCount) photo](inflect: true) to Photos and “\(model.destinationTitle)”.", comment: "Save server originals to Photos: result headline, with an album").characters))
                         .font(.headline)
                     // Library only: opening an album from here would mean
                     // rebuilding the Collections album entry (FS-17.02 §4).
@@ -278,7 +278,7 @@ struct ServerDownloadSheet: View {
                         Button("Try Again") { model.tryAgain() }
                     }
                 } header: {
-                    Text("Not Imported")
+                    Text("Not Saved")
                 }
             }
         }

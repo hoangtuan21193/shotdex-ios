@@ -1,0 +1,18 @@
+{
+  "steps": [
+    { "action": "launch" },
+    { "action": "wait", "seconds": 8 },
+    { "action": "tap", "x": 0.5, "y": 0.51 },
+    { "action": "wait", "seconds": 3 },
+    { "action": "tap", "label": "Delete" },
+    { "action": "wait", "seconds": 2 },
+    { "action": "screenshot", "name": "delete-confirm" },
+    { "action": "dump", "name": "delete-confirm" },
+    { "action": "tap", "label": "Delete" },
+    { "action": "wait", "seconds": 3 },
+    { "action": "screenshot", "name": "delete-permanent" },
+    { "action": "tap", "label": "Delete Permanently" },
+    { "action": "wait", "seconds": 4 },
+    { "action": "screenshot", "name": "after-delete" }
+  ]
+}

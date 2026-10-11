@@ -43,6 +43,27 @@ struct SourceStore: Sendable {
         return id
     }
 
+    /// Remove Source (FS-19.01b §2): its photos leave ShotDex unless another
+    /// source holds a copy; a photo left with none becomes an orphan and
+    /// keeps its stars, flags and recipe for 30 days. Nothing in the folder,
+    /// on the drive or on the server is touched.
+    func remove(sourceId: String, at now: Date = Date()) throws {
+        guard sourceId != PhotoLibrarySource.id else { return }
+        try database.writer.write { db in
+            let copies = try String.fetchAll(db, sql: "SELECT id FROM photo_copies WHERE sourceId = ?", arguments: [sourceId])
+            try FileCopyWriter.markMissing(db, copies, at: Int(now.timeIntervalSince1970))
+            try db.execute(sql: "DELETE FROM pending_sidecar WHERE copyId IN (SELECT id FROM photo_copies WHERE sourceId = ?)", arguments: [sourceId])
+            try db.execute(sql: "DELETE FROM sources WHERE id = ?", arguments: [sourceId])
+        }
+    }
+
+    /// The server source of a connection, if it was added as one (FS-19.03 §1).
+    func serverSourceId(connectionId: String) throws -> String? {
+        try database.reader.read { db in
+            try String.fetchOne(db, sql: "SELECT id FROM sources WHERE kind = 'server' AND connectionId = ?", arguments: [connectionId])
+        }
+    }
+
     /// Include Subfolders, changed in Settings › Sources (FS-19.01 §2). The
     /// next read only opens files it has not seen: the rest are matched by
     /// path, size and date.

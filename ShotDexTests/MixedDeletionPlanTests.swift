@@ -65,6 +65,17 @@ import Testing
         #expect(sd.needsPermanentConfirmation)
         #expect(sd.permanentTitle == "Delete 12 Photos Permanently?")
         #expect(sd.permanentMessage == "“2026 Japan” has no Trash. These files can't be recovered.")
+
+        // One photo reads as one: "Move 1 photo?", "1 goes to …".
+        let one = try queries.plan(photoIds: [ids[0]], selection: .photos)
+        #expect(one.title == "Move 1 photo?")
+        #expect(one.commandName == "Move 1 Photo…")
+        #expect(one.message == "1 goes to Recently Deleted in Files.")
+        let lone = try noTrash.plan(photoIds: [ids[0]], selection: .photos)
+        #expect(lone.title == "Delete 1 photo?")
+        #expect(lone.message == "1 on 2026 Japan is deleted permanently.")
+        #expect(lone.permanentTitle == "Delete 1 Photo Permanently?")
+        #expect(lone.permanentMessage == "“2026 Japan” has no Trash. This file can't be recovered.")
     }
 
     /// AC-43: six photos only on NAS Home. The dialog is "Hide 6 photos?"

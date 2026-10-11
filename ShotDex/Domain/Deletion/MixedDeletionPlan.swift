@@ -33,6 +33,11 @@ struct MixedDeletionPlan: Equatable, Sendable {
 
     var count: Int { photos.count }
 
+    /// "1 photo" / "2 photos" — grammar agreement on the counted noun.
+    private static func inflected(_ text: AttributedString) -> String {
+        String(text.inflected().characters)
+    }
+
     /// Photos per destination — a photo with copies to two places counts in both.
     func count(_ destination: DeletionDestination) -> Int {
         photos.filter { $0.contains(destination) }.count
@@ -52,12 +57,12 @@ struct MixedDeletionPlan: Equatable, Sendable {
     /// The command in menus and toolbars: named after where the photos go.
     var commandName: String {
         switch (selection, verb) {
-        case (.rejected, .move): String(localized: "Move \(count) Rejected…", comment: "Cull: deletion that sends files to the Trash")
-        case (.rejected, .delete): String(localized: "Delete \(count) Rejected…", comment: "Cull: deletion of Photos items or of files with no Trash")
-        case (.rejected, .hide): String(localized: "Hide \(count) Rejected…", comment: "Cull: rejected photos that are all on a server")
-        case (.photos, .move): String(localized: "Move \(count) Photos…", comment: "Grid: deletion that sends files to the Trash")
-        case (.photos, .delete): String(localized: "Delete \(count) Photos", comment: "Grid: deletion of Photos items or of files with no Trash")
-        case (.photos, .hide): String(localized: "Hide \(count) Photos", comment: "Grid: photos that are all on a server")
+        case (.rejected, .move): Self.inflected(AttributedString(localized: "Move ^[\(count) Rejected](inflect: true)…", comment: "Cull: deletion that sends files to the Trash"))
+        case (.rejected, .delete): Self.inflected(AttributedString(localized: "Delete ^[\(count) Rejected](inflect: true)…", comment: "Cull: deletion of Photos items or of files with no Trash"))
+        case (.rejected, .hide): Self.inflected(AttributedString(localized: "Hide ^[\(count) Rejected](inflect: true)…", comment: "Cull: rejected photos that are all on a server"))
+        case (.photos, .move): Self.inflected(AttributedString(localized: "Move ^[\(count) Photo](inflect: true)…", comment: "Grid: deletion that sends files to the Trash"))
+        case (.photos, .delete): Self.inflected(AttributedString(localized: "Delete ^[\(count) Photo](inflect: true)", comment: "Grid: deletion of Photos items or of files with no Trash"))
+        case (.photos, .hide): Self.inflected(AttributedString(localized: "Hide ^[\(count) Photo](inflect: true)", comment: "Grid: photos that are all on a server"))
         }
     }
 
@@ -74,11 +79,11 @@ struct MixedDeletionPlan: Equatable, Sendable {
 
     var title: String {
         switch verb {
-        case .hide: String(localized: "Hide \(count) photos?", comment: "Deletion confirmation title: every photo is on a server")
-        case .move where selection == .rejected: String(localized: "Move \(count) rejected photos?", comment: "Cull: confirmation title")
-        case .move: String(localized: "Move \(count) photos?", comment: "Grid: confirmation title when files go to the Trash")
-        case .delete where selection == .rejected: String(localized: "Delete \(count) rejected photos?", comment: "Cull: confirmation title")
-        case .delete: String(localized: "Delete \(count) photos?", comment: "Grid: confirmation title")
+        case .hide: Self.inflected(AttributedString(localized: "Hide ^[\(count) photo](inflect: true)?", comment: "Deletion confirmation title: every photo is on a server"))
+        case .move where selection == .rejected: Self.inflected(AttributedString(localized: "Move ^[\(count) rejected photo](inflect: true)?", comment: "Cull: confirmation title"))
+        case .move: Self.inflected(AttributedString(localized: "Move ^[\(count) photo](inflect: true)?", comment: "Grid: confirmation title when files go to the Trash"))
+        case .delete where selection == .rejected: Self.inflected(AttributedString(localized: "Delete ^[\(count) rejected photo](inflect: true)?", comment: "Cull: confirmation title"))
+        case .delete: Self.inflected(AttributedString(localized: "Delete ^[\(count) photo](inflect: true)?", comment: "Grid: confirmation title"))
         }
     }
 
@@ -100,17 +105,23 @@ struct MixedDeletionPlan: Equatable, Sendable {
         var moves: [String] = []
         let trashed = count(.trash), photosItems = count(.recentlyDeleted)
         if trashed > 0 {
-            moves.append(String(localized: "\(trashed) go to \(trashName)", comment: "Deletion confirmation: first destination, e.g. '84 go to the Trash'"))
+            moves.append(trashed == 1
+                ? String(localized: "1 goes to \(trashName)", comment: "Deletion confirmation: one file, first destination")
+                : String(localized: "\(trashed) go to \(trashName)", comment: "Deletion confirmation: first destination, e.g. '84 go to the Trash'"))
         }
         if photosItems > 0 {
             moves.append(moves.isEmpty
-                ? String(localized: "\(photosItems) go to Recently Deleted", comment: "Deletion confirmation: Photos items, first destination")
+                ? (photosItems == 1
+                    ? String(localized: "1 goes to Recently Deleted", comment: "Deletion confirmation: one Photos item, first destination")
+                    : String(localized: "\(photosItems) go to Recently Deleted", comment: "Deletion confirmation: Photos items, first destination"))
                 : String(localized: "\(photosItems) to Recently Deleted", comment: "Deletion confirmation: Photos items after another destination"))
         }
         var sentences: [String] = moves.isEmpty ? [] : [moves.joined(separator: ", ") + "."]
         for name in permanentSources {
             let n = count(.permanent(sourceName: name))
-            sentences.append(String(localized: "\(n) on \(name) are deleted permanently.", comment: "Deletion confirmation: files on a volume with no Trash"))
+            sentences.append(n == 1
+                ? String(localized: "1 on \(name) is deleted permanently.", comment: "Deletion confirmation: one file on a volume with no Trash")
+                : String(localized: "\(n) on \(name) are deleted permanently.", comment: "Deletion confirmation: files on a volume with no Trash"))
         }
         for name in hiddenSources {
             let n = count(.hide(sourceName: name))
@@ -122,11 +133,14 @@ struct MixedDeletionPlan: Equatable, Sendable {
     /// The second, red dialog for files that cannot be recovered (FS-19.04 §1).
     var permanentTitle: String {
         let n = photos.filter { $0.contains { if case .permanent = $0 { true } else { false } } }.count
-        return String(localized: "Delete \(n) Photos Permanently?", comment: "Deletion: second confirmation for a volume with no Trash")
+        return Self.inflected(AttributedString(localized: "Delete ^[\(n) Photo](inflect: true) Permanently?", comment: "Deletion: second confirmation for a volume with no Trash"))
     }
 
     var permanentMessage: String {
         let list = permanentSources.map { "“\($0)”" }.formatted(.list(type: .and))
-        return String(localized: "\(list) has no Trash. These files can't be recovered.", comment: "Deletion: second confirmation for a volume with no Trash")
+        let n = photos.filter { $0.contains { if case .permanent = $0 { true } else { false } } }.count
+        return n == 1
+            ? String(localized: "\(list) has no Trash. This file can't be recovered.", comment: "Deletion: second confirmation for one file on a volume with no Trash")
+            : String(localized: "\(list) has no Trash. These files can't be recovered.", comment: "Deletion: second confirmation for a volume with no Trash")
     }
 }

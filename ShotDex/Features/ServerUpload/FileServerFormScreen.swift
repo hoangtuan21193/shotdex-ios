@@ -81,6 +81,9 @@ struct FileServerFormScreen: View {
     /// Add to Collections for the Folder (FS-17.04 §1); on edit, whether it
     /// already has a tile.
     @State private var addsTile = false
+    /// Add as Source (FS-19.03 §1): the Folder is indexed like a folder and
+    /// listed under Sources; off, the connection is an upload destination.
+    @State private var addsAsSource = false
     /// Connect As picked a folder: Save Connection is up (FS-15.04 §3).
     @State private var pendingSave: PendingSave?
     /// Choose… stopped at the Trust alert and resumes after it.
@@ -196,6 +199,14 @@ struct FileServerFormScreen: View {
                     Text(folderFooter)
                 }
                 Section {
+                    Toggle(isOn: $addsAsSource) {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Add as Source", comment: "Connection form: index this server's Folder like a folder")
+                            Text("Indexed like a folder and listed under Sources", comment: "Connection form: what Add as Source does")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
                     Toggle(isOn: $addsTile) {
                         VStack(alignment: .leading, spacing: 2) {
                             Text("Add to Collections")
@@ -296,6 +307,7 @@ struct FileServerFormScreen: View {
                     draft.hasSavedPassword = dependencies.fileServers.password(for: draft.server.id) != nil
                     dependencies.serverShortcuts.reload()
                     addsTile = dependencies.serverShortcuts.shortcut(serverId: draft.server.id, path: draft.server.folder) != nil
+                    addsAsSource = ((try? SourceStore(database: dependencies.database).serverSourceId(connectionId: draft.server.id)) ?? nil) != nil
                 }
             }
             // Opening the form is what starts the search — and so what asks
@@ -513,7 +525,11 @@ struct FileServerFormScreen: View {
     }
 
     private var folderFooter: String {
-        switch draft.server.transferProtocol {
+        if addsAsSource {
+            return String(localized: "Folder is what ShotDex indexes and where uploads start; each upload can pick another.",
+                          comment: "Connection form: Folder footer when the connection is a source")
+        }
+        return switch draft.server.transferProtocol {
         case .smb:
             String(localized: "Choose… signs in and shows the folders this computer shares. The first folder is the shared folder, such as Photos. Uploads start in Folder; you can pick another each time.")
         case .sftp:
@@ -653,6 +669,8 @@ struct FileServerFormScreen: View {
         do {
             let saved = try ConnectionSaver.save(draft, addsTile: addsTile, servers: dependencies.fileServers, shortcuts: dependencies.serverShortcuts)
             dependencies.fileServerCatalog.reload()
+            let (sources, isSource) = (dependencies.sources, addsAsSource)
+            Task { await sources.setServerSource(isSource, connection: saved) }
             onSaved?(saved)
             dismiss()
         } catch {

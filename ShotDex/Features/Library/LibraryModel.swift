@@ -1424,6 +1424,25 @@ final class LibraryModel {
         assetCache.replaceKeys(items.map(\.assetId))
     }
 
+    /// A photo with no Photos asset: its default copy goes where its source
+    /// sends deletions (FS-19.04 §1), and it leaves the grid once no copy is
+    /// left to show.
+    func deleteFilePhoto(id: String, using service: DeletionService,
+                         hasTrash: @escaping @Sendable (String) -> Bool) async throws -> String? {
+        let targets = try DeletionTargetQueries(database: service.database, hasTrash: hasTrash).targets(photoIds: [id])
+        let summary = try await service.run(targets)
+        if let failure = summary.failure { return failure }
+        let stillShown = try await service.database.reader.read { db in
+            try Bool.fetchOne(db, sql: "SELECT EXISTS(SELECT 1 FROM photo_copies WHERE photoId = ? AND missingSince IS NULL AND isHidden = 0)", arguments: [id])
+        } ?? false
+        guard !stillShown else { return nil }
+        let ids: Set<String> = [id]
+        lastRemoval = .next(after: lastRemoval, removing: ids)
+        items.removeAll { ids.contains($0.assetId) }
+        assetCache.replaceKeys(items.map(\.assetId))
+        return nil
+    }
+
     // MARK: Favorites
 
     /// DB only — slim grid rows carry no favorite flag (the grid never
