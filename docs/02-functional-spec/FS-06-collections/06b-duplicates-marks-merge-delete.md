@@ -22,7 +22,8 @@ Board: `PH_Duplicates` · `PH_DuplicatesPinched` · `IP_Duplicates` · `DI_Dupli
   ghi *"All copies marked — nothing will be kept"*; bấm Delete thì hiện alert nói số nhóm như vậy, **không** mở
   hộp xoá của hệ thống, không xoá ảnh nào.
 - Compare mở từ Duplicates giữ cùng cổng chặn: nút **Reject** của ảnh chưa Reject cuối cùng mờ, bấm thì rung cảnh báo +
-  *"Keep at least one photo in this group."* (FS-01.08c AC-15). Reject ở đó là cờ thật của FS-01.12.
+  *"Keep at least one photo in this group."* (FS-01.08c AC-15). Reject ở đó là cờ thật của FS-01.12: mở Compare thì dấu
+  của nhóm thành Reject, đóng lại thì ô của nhóm theo cờ — Reject = đã đánh dấu, bỏ Reject = bỏ dấu (plan K2).
 
 ## 2. Merge
 

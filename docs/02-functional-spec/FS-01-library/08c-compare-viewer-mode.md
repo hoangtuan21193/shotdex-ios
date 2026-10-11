@@ -126,7 +126,7 @@ phóng, cắm Pick/Reject từng ảnh; **Reject = đánh dấu xoá**, và mộ
 | AC-14 | Duo trong, Survey 6 ảnh, ô 4 đang làm việc | gập máy | Duo ngoài mở Compare xếp chồng, Select = ảnh 4; mọi control trong x ≤ 366 | ⚠️ chưa có (không có lệnh gập trên sim) |
 | AC-15 | Duplicates nhóm 2 ảnh, ảnh 1 Reject | bấm Reject trên ảnh 2 | ảnh 2 không đổi; rung cảnh báo + *Keep at least one photo in this group.* | `DuplicateKeepGateTests`, `CompareModelTests.theGroupsLastPhotoRefusesReject` |
 | AC-16 | iPad và Mac, 2-Up | đọc toolbar; pinch khung Select lên 100% | 0 nút *Sync Zoom and Pan*; cả hai khung 100% | `CompareScrollSynchronizerTests` (không có công tắc trong code) |
-| AC-17 | Duplicates nhóm 3 ảnh, mở Compare | Reject ảnh 2 → đóng Compare và Duplicates | lưới: ảnh 2 mờ 45% có cờ Reject; bộ lọc Rejected chứa nó | ⚠️ chưa có |
+| AC-17 | Duplicates nhóm 3 ảnh, mở Compare | Reject ảnh 2 → đóng Compare và Duplicates | lưới: ảnh 2 mờ 45% có cờ Reject; bộ lọc Rejected chứa nó | route `cmp-dup`: Reject trong Compare → đóng → ô Duplicates đã đánh dấu; cờ là `photo_flag` thật (lưới mờ 45 % theo FS-01.12) |
 | AC-18 | Mac, Survey 6 ảnh, 2 Reject | đọc toolbar; bấm `⌘⌫`; chuột phải khung 1 | **Delete 2 Photos** ngay trước Edit; `⌘⌫` mở cùng hộp xác nhận; menu chuột phải và menu Photo có **Keep Only This** | ⚠️ chưa có |
 | AC-19 | iPad 1376×1032, 2-Up | dump khung segmented cờ | cao 44pt ±1 | ⚠️ chưa có |
 | AC-20 | iPhone 402×874, 2-Up 100%, `Candidate 1 of 3` | vuốt trái một ngón trên Candidate | ảnh dịch ở cả hai khung; vẫn `Candidate 1 of 3`; về Fit rồi vuốt → `Candidate 2 of 3` | code: `panRequiresTwoFingers` bỏ, vuốt chỉ ở Fit · ❓ chưa chụp ở 100% |
@@ -137,4 +137,4 @@ phóng, cắm Pick/Reject từng ảnh; **Reject = đánh dấu xoá**, và mộ
 | AC-25 | ảnh `DSC04513.ARW` của nguồn thư mục | Reject trong Compare → thoát app → mở lại | `.xmp` cạnh file có sao −1; ảnh vẫn Rejected | ⚠️ chưa có |
 | AC-26 | (a) iPad 1376×1032, Viewer mở từ ô 5 của lưới, không chọn · (b) iPhone 402×874 và Duo ngoài, Viewer mở từ ô 5 · (c) iPhone, chế độ chọn | (a) bấm 2-Up · (b) đọc thanh trên và ⋯ · (c) chọn 1 ảnh, rồi chọn thêm 1 → Compare | (a) Select = ảnh 5, Candidate = ảnh 6, `Candidate 1 of 1` · (b) 0 segmented Single · Compare, 0 dòng Compare trong ⋯ · (c) 1 ảnh: Compare mờ; 2 ảnh: Compare mở xếp chồng, Select = ảnh chọn đầu | `CompareSessionTests.fromTheViewerTheCandidateIsTheNextCell`, `ViewerModeTests.compactSingleOffersNoCompare`; route iPad Viewer → 2-Up `Candidate 1 of 1`; dump iPhone Viewer: 0 segmented |
 
-**Chưa chứng minh được:** AC-12, 13, 18, 23, 24, 25 (chờ FS-19/FS-18) · AC-14 (không gập được trên sim; code `CompareSession.fold`) · AC-17 (K2 chưa làm) · AC-19 (chưa dump iPad ngang) · nửa sáng AC-1 · AC-4/AC-20 bằng cử chỉ.
+**Chưa chứng minh được:** AC-12, 13, 18, 23, 24, 25 (chờ FS-19/FS-18) · AC-14 (không gập được trên sim; code `CompareSession.fold`) · AC-19 (chưa dump iPad ngang) · nửa sáng AC-1 · AC-4/AC-20 bằng cử chỉ.

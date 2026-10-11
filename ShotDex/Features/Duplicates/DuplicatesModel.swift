@@ -52,6 +52,8 @@ final class DuplicatesModel {
     private(set) var traits: [String: DuplicateMemberTraits] = [:]
     private var traitsRequested: Set<String> = []
     var comparePresentation: DuplicateComparePresentation?
+    /// The comparison on screen, kept past its dismissal for `didCloseCompare`.
+    @ObservationIgnored private var openCompare: DuplicateComparePresentation?
     var errorMessage: String?
     /// Title + message of the alert raised when Merge could not write some
     /// groups, or Delete would empty a group.
@@ -624,7 +626,29 @@ final class DuplicatesModel {
         source.load()
         guard var request = CompareRequest(selection: ids, source: source, duplicateGroup: ids) else { return }
         request.onDeleted = { [weak self] gone in self?.didDelete(ids: gone) }
-        comparePresentation = DuplicateComparePresentation(source: source, request: request)
+        // Compare speaks only in flags (plan K2): this group's marks become
+        // Reject before it opens, so the frames show what the tiles showed.
+        let marked = ids.filter { session.marks.contains($0) && dependencies.photoMarks.flag(for: $0) != .reject }
+        Task {
+            if !marked.isEmpty { _ = await dependencies.photoMarks.setFlag(.reject, ids: marked) }
+            let presentation = DuplicateComparePresentation(source: source, request: request)
+            openCompare = presentation
+            comparePresentation = presentation
+        }
+    }
+
+    /// Back from Compare: the group's tiles take what its flags say now — a
+    /// Reject set there marks the tile, one taken back unmarks it
+    /// (FS-01.08c AC-17).
+    func didCloseCompare() {
+        guard let presentation = openCompare else { return }
+        openCompare = nil
+        let ids = presentation.request.ids.filter { assetsById[$0] != nil }
+        let rejected = ids.filter { dependencies.photoMarks.flag(for: $0) == .reject }
+        session.marks = session.marks.subtracting(ids).union(rejected)
+        if let group = groups.first(where: { $0.members.contains { ids.contains($0.assetId) } }), !rejected.isEmpty {
+            session.keptAll.remove(key(group))
+        }
     }
 
     // MARK: Delete

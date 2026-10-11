@@ -136,7 +136,7 @@ struct DuplicatesScreen: View {
                 .accessibilityLabel("More")
             }
         }
-        .fullScreenCover(item: $model.comparePresentation) { presentation in
+        .fullScreenCover(item: $model.comparePresentation, onDismiss: model.didCloseCompare) { presentation in
             PhotoDetailScreen(
                 model: presentation.source,
                 currentIndex: presentation.request.startIndex,
