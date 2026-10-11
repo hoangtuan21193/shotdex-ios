@@ -84,7 +84,8 @@ struct VideoStudioToolPanelTests {
         // Media is the library in the studio's own panel now (FS-12.09 §2),
         // not the system picker.
         #expect(VideoStudioToolbar.panel(for: .media) == .media)
-        #expect(VideoStudioToolbar.panel(for: .text) == nil)
+        // Text opens its panel on the phone and the Duo (decided 2026-10-11).
+        #expect(VideoStudioToolbar.panel(for: .text) == .text)
         #expect(VideoStudioToolbar.panel(for: .sticker) == nil)
         let model = VideoStudioModelFixture.model()
         model.toggleToolPanel(.music)

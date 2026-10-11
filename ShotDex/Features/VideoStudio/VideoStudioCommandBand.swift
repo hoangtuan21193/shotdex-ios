@@ -104,6 +104,8 @@ struct VideoCommand: Identifiable {
     /// The cell whose panel is open: drawn on white 14 %, never accent —
     /// accent is Export's alone (FS-12.04 §3, DESIGN §3.1).
     var isOpen = false
+    /// What a UI route finds the cell by — `tool.text` and the rest.
+    var identifier: String? = nil
     let action: () -> Void
 }
 

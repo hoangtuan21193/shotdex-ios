@@ -134,123 +134,20 @@ struct VideoMediaPoolColumn: View {
         }
     }
 
-    /// Auto Captions, right under Add Text (FS-12.14 §3) — Edit Captions
-    /// once the project has a lane; dimmed, with the reason, when the
-    /// device has no on-device speech model at all.
-    private var autoCaptionsRow: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Button {
-                Task { await model.startAutoCaptions() }
-            } label: {
-                HStack(spacing: 8) {
-                    Image(systemName: "captions.bubble")
-                        .font(.system(size: 17, weight: .semibold))
-                    Text(model.hasCaptionLane ? VideoStudioCopy.editCaptions : VideoStudioCopy.autoCaptions)
-                        .font(.system(size: 17, weight: .semibold))
-                    Spacer(minLength: 0)
-                }
-                .foregroundStyle(.white)
-                .padding(.horizontal, 16)
-                .frame(maxWidth: .infinity)
-                .frame(height: Pool.buttonHeight)
-                .background(
-                    RoundedRectangle(cornerRadius: AppTheme.Radius.md, style: .continuous)
-                        .fill(Color.white.opacity(0.08))
-                )
-                .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-            .disabled(!model.canAutoCaption && !model.hasCaptionLane)
-            .opacity(model.canAutoCaption || model.hasCaptionLane ? 1 : 0.35)
-            .accessibilityIdentifier("autoCaptionsButton")
-            Text(model.canAutoCaption || model.hasCaptionLane ? VideoStudioCopy.autoCaptionsNote : VideoStudioCopy.captionsUnavailable)
-                .font(.system(size: 13))
-                .foregroundStyle(EditorTheme.secondaryText)
-                .fixedSize(horizontal: false, vertical: true)
-                .padding(.horizontal, 4)
-        }
-        .padding(.horizontal, Pool.inset)
-        .padding(.top, 8)
-    }
-
-    /// The Text tab (FS-12.03b §1): Add Text, then the fonts the user has
-    /// reached for — picking one adds a caption already wearing it.
+    /// The Text tab (FS-12.03b §1): the Text tool's content, the same view
+    /// the phone and the Duo show in their Text panel.
     private var textContent: some View {
-        ScrollView(.vertical) {
-            LazyVStack(alignment: .leading, spacing: 0) {
-                Button { onAddText(nil) } label: {
-                    HStack(spacing: 8) {
-                        Image(systemName: "textformat")
-                            .font(.system(size: 18, weight: .semibold))
-                        Text("Add Text", comment: "Video Studio media pool: adds a caption in the last-used font")
-                            .font(.system(size: 17, weight: .semibold))
-                    }
-                    .foregroundStyle(.white)
-                    .frame(maxWidth: .infinity)
-                    .frame(height: Pool.buttonHeight)
-                    .background(
-                        RoundedRectangle(cornerRadius: AppTheme.Radius.md, style: .continuous)
-                            .fill(Color.white.opacity(0.08))
-                    )
-                    .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
-                .padding(.horizontal, Pool.inset)
-                autoCaptionsRow
-                Text(VideoStudioCopy.fontsYouUsed)
-                    .font(.system(size: 15, weight: .semibold))
-                    .foregroundStyle(.white)
-                    .frame(height: Pool.sectionTitleHeight)
-                    .padding(.horizontal, Pool.titleLeading)
-                    .padding(.top, Pool.sectionGap)
-                    .padding(.bottom, 4)
-                    .accessibilityAddTraits(.isHeader)
-                if model.fontRecents.isEmpty {
-                    Text("Fonts you use appear here, ready to reuse.", comment: "Video Studio media pool: empty state for the text tab")
-                        .font(.system(size: 13))
-                        .foregroundStyle(EditorTheme.secondaryText)
-                        .padding(.horizontal, Pool.titleLeading)
-                        .padding(.top, 6)
-                }
-                ForEach(model.fontRecents) { font in
-                    Button { onAddText(font) } label: {
-                        HStack(spacing: 10) {
-                            Text(verbatim: "Aa")
-                                .font(Self.preview(for: font, size: 22))
-                                .foregroundStyle(.white)
-                                .frame(width: 40)
-                            Text(font.displayName)
-                                .font(.system(size: 17))
-                                .foregroundStyle(.white)
-                                .lineLimit(1)
-                            Spacer(minLength: 0)
-                        }
-                        .padding(.horizontal, 8)
-                        .frame(height: Pool.fontRowHeight)
-                        .contentShape(Rectangle())
-                    }
-                    .buttonStyle(.plain)
-                    .padding(.horizontal, Pool.rowInset)
-                    .accessibilityHint(Text("Adds a caption in this font", comment: "Video Studio media pool: what tapping a font row does"))
-                }
-            }
-            .padding(.bottom, 10)
-        }
+        VideoTextToolContent(
+            model: model, style: .pool,
+            onAddText: onAddText,
+            onAutoCaptions: { Task { await model.startAutoCaptions() } }
+        )
     }
 
     /// The Music tab is the Music panel itself (FS-12.03b §1): Video sound,
     /// Add Music from Files…, My Music — one place, one set of names.
     private var musicContent: some View {
         VideoMusicPanelContent(model: model, importedMusic: importedMusic, onImport: onImportMusic, style: .pool)
-    }
-
-    /// A font's own face at list size, the way the editor's font picker
-    /// draws it.
-    private static func preview(for choice: OverlayFontChoice, size: CGFloat) -> Font {
-        guard !choice.postScriptName.isEmpty,
-              let font = UIFont(name: choice.postScriptName, size: size)
-        else { return .system(size: size) }
-        return Font(font)
     }
 
     /// One full-width row that opens something rather than inserting it.

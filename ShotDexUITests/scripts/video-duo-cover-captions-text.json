@@ -5,8 +5,7 @@
    "arguments": [
     "-video.timelineExtraHeight",
     "0",
-    "-ShotDexFakeSpeechSlow",
-    "-ShotDexStartCaptions"
+    "-ShotDexFakeSpeechSlow"
    ]
   },
   {
@@ -63,6 +62,22 @@
    "seconds": 20
   },
   {
+   "action": "tap",
+   "label": "tool.text"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "tap",
+   "label": "autoCaptionsButton"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
    "action": "dump",
    "name": "F4_DC_Captions",
    "text": "snapshot"
@@ -111,8 +126,15 @@
   },
   {
    "action": "tap",
-   "label": "Text",
-   "type": "button"
+   "label": "tool.text"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "tap",
+   "label": "addTextButton"
   },
   {
    "action": "wait",

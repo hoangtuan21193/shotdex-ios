@@ -45,6 +45,16 @@ extension VideoStudioCopy {
         }
     }
 
+    // MARK: The Text panel (phone, Duo — FS-12.04 §3)
+
+    static var textPanelTitle: String {
+        String(localized: "Text", table: table, comment: "Video Studio: title of the Text tool's panel on the phone and the Duo")
+    }
+
+    static var addText: String {
+        String(localized: "Add Text", table: table, comment: "Video Studio: adds a caption block at the playhead in the last-used font")
+    }
+
     // MARK: Skim (iPad — FS-12.17b §6)
 
     static var skimming: String {

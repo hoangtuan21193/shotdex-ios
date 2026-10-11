@@ -1,4 +1,5 @@
 import Foundation
+import ShotDexKit
 
 /// The In–Out range (FS-12.17b §5): I, O and ⌥X. Where the user is
 /// watching, like the playhead — not an undo step, saved with the draft
@@ -64,5 +65,26 @@ extension VideoStudioModel {
     func closeShortcutList() {
         isShortcutListShown = false
         isShortcutListFromHold = false
+    }
+}
+
+/// The Text panel (FS-12.04 §3, FS-12.14 §3): what it adds closes it and
+/// opens a session of its own.
+extension VideoStudioModel {
+    /// Add Text, or a font row: the panel goes — kept, it changed nothing —
+    /// and the new block is selected with Edit open, as Text used to do in
+    /// one tap. ✕ then takes the block away.
+    @discardableResult
+    func addTextFromPanel(font: OverlayFontChoice? = nil) -> UUID {
+        if activeToolPanel == .text { showToolPanel(nil) }
+        if let font { rememberFont(font) }
+        return addTextBlock(font: font)
+    }
+
+    /// Auto Captions, or Edit Captions once there is a lane: the panel goes
+    /// and the caption lane's opens.
+    func startAutoCaptionsFromPanel() async {
+        if activeToolPanel == .text { showToolPanel(nil) }
+        await startAutoCaptions()
     }
 }

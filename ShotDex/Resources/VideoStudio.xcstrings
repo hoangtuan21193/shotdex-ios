@@ -601,6 +601,18 @@
       "comment": "Video Studio: title of the Music tool's panel",
       "extractionState": "manual"
     },
+    "Add Text": {
+      "comment": "Video Studio: adds a caption block at the playhead in the last-used font",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add Text"
+          }
+        }
+      }
+    },
     "Adjust": {
       "comment": "Video Studio compare, iPad portrait: the column of exposure, contrast, saturation and warmth",
       "extractionState": "manual"

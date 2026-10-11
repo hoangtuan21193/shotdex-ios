@@ -39,6 +39,7 @@ struct VideoStudioToolbar: View {
                 title: tool.title,
                 systemImage: tool.systemImage,
                 isOpen: Self.panel(for: tool).map { model.activeToolPanel == $0 } ?? false,
+                identifier: "tool.\(tool)",
                 action: action(for: tool)
             )
         }
@@ -50,14 +51,17 @@ struct VideoStudioToolbar: View {
         case .look: .look
         case .music: .music
         case .media: .media
-        case .text, .sticker: nil
+        // Text opens its panel on the phone and the Duo (FS-12.04 §3,
+        // decided 2026-10-11): Add Text, Auto Captions, the fonts used.
+        case .text: .text
+        case .sticker: nil
         }
     }
 
     private func action(for tool: VideoAddTool) -> () -> Void {
         switch tool {
         case .media: actions.onAddMedia
-        case .text: actions.onAddText
+        case .text: { model.toggleToolPanel(.text) }
         case .sticker: actions.onAddSticker
         case .music: actions.onAddMusic
         case .look: { model.toggleToolPanel(.look) }
@@ -100,6 +104,7 @@ struct VideoToolbarCell: View {
         }
         .buttonStyle(.plain)
         .accessibilityAddTraits(command.isOpen ? .isSelected : [])
+        .accessibilityIdentifier(command.identifier ?? "")
     }
 
     private var tintColor: Color {

@@ -108,6 +108,9 @@ enum VideoToolPanel: String, Equatable, Identifiable, CaseIterable {
     case media
     /// Export Video (FS-12.10b): opening it never starts an export.
     case export
+    /// Text on the phone and the Duo (FS-12.04 §3): Add Text, Auto
+    /// Captions, the fonts used — the iPad pool's Text tab.
+    case text
 
     var id: String { rawValue }
 
@@ -118,6 +121,7 @@ enum VideoToolPanel: String, Equatable, Identifiable, CaseIterable {
         case .music: VideoStudioCopy.addMusic
         case .media: VideoStudioCopy.media
         case .export: VideoStudioCopy.exportVideo
+        case .text: VideoStudioCopy.textPanelTitle
         }
     }
 
@@ -128,6 +132,7 @@ enum VideoToolPanel: String, Equatable, Identifiable, CaseIterable {
         case .music: "music.note"
         case .media: VideoAddTool.media.systemImage
         case .export: "square.and.arrow.down"
+        case .text: VideoAddTool.text.systemImage
         }
     }
 }

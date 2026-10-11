@@ -507,7 +507,10 @@ struct VideoStudioScreen: View {
         let showsSessionFooter = model.sessionFooterTitle != nil
         // The Look tool's panel stands over the tool row (FS-12.06c §3).
         // So does the keyboard's list (FS-12.17b §4, board F6_P_Keyboard).
-        let showsLookTool = (model.inspectorTarget == .none && model.activeToolPanel == .look) || model.isShortcutListInPanel
+        // So does the Text panel (FS-12.04 §4, board TX_P_TextPanel): the
+        // five tools stay, Text lit.
+        let showsTextTool = model.inspectorTarget == .none && model.activeToolPanel == .text
+        let showsLookTool = (model.inspectorTarget == .none && model.activeToolPanel == .look) || model.isShortcutListInPanel || showsTextTool
         // A clip's Look block stands 340 too, over its ✕ · name · ✓ footer
         // (board F5_P_ClipLook).
         let showsClipLook = (model.inspectorTarget == .clip || model.inspectorTarget == .clips) && model.activeItemCommand == .look

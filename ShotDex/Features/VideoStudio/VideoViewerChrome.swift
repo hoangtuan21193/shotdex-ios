@@ -781,23 +781,6 @@ struct VideoCompactTransportBar: View {
                 precisionMenu
             }
 
-            // Auto Captions where the window has no media pool (FS-12.14 §3
-            // names a Text tool panel the phone does not have — open
-            // question in the captions plan); Edit Captions once there is a
-            // lane.
-            Section {
-                Button {
-                    Task { await model.startAutoCaptions() }
-                } label: {
-                    Label {
-                        Text(model.hasCaptionLane ? VideoStudioCopy.editCaptions : VideoStudioCopy.autoCaptions)
-                    } icon: {
-                        Image(systemName: "captions.bubble")
-                    }
-                }
-                .disabled(!model.canAutoCaption && !model.hasCaptionLane)
-            }
-
             if let id = model.selectedClipID {
                 Section {
                     Button(role: .destructive) {

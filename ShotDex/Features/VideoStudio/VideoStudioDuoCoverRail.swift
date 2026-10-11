@@ -150,10 +150,11 @@ struct VideoStudioDuoCoverRail: View {
             title: tool.title,
             systemImage: tool.systemImage,
             isOpen: VideoStudioToolbar.panel(for: tool).map { model.activeToolPanel == $0 } ?? false,
+            identifier: "tool.\(tool)",
             action: {
                 switch tool {
                 case .media: actions.onAddMedia()
-                case .text: actions.onAddText()
+                case .text: model.toggleToolPanel(.text)
                 case .sticker: actions.onAddSticker()
                 case .music: actions.onAddMusic()
                 case .look: model.toggleToolPanel(.look)

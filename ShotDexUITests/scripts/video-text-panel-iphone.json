@@ -1,0 +1,106 @@
+{
+ "steps": [
+  {
+   "action": "launch",
+   "arguments": [
+    "-video.timelineExtraHeight",
+    "0",
+    "-ShotDexFakeSpeechSlow"
+   ]
+  },
+  {
+   "action": "wait",
+   "seconds": 6
+  },
+  {
+   "action": "tap",
+   "label": "Select",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "tap",
+   "x": 0.83,
+   "y": 0.457
+  },
+  {
+   "action": "tap",
+   "x": 0.163,
+   "y": 0.61
+  },
+  {
+   "action": "tap",
+   "x": 0.5,
+   "y": 0.61
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "tap",
+   "label": "More selection actions"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "tap",
+   "label": "Create Video"
+  },
+  {
+   "action": "wait",
+   "seconds": 12
+  },
+  {
+   "action": "wait",
+   "seconds": 20
+  },
+  {
+   "action": "tap",
+   "label": "tool.text"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "screenshot",
+   "name": "panel"
+  },
+  {
+   "action": "dump",
+   "name": "TX_P_TextPanel",
+   "text": "snapshot",
+   "type": "staticText"
+  },
+  {
+   "action": "dump",
+   "name": "tx-buttons",
+   "text": "snapshot",
+   "type": "button"
+  },
+  {
+   "action": "tap",
+   "label": "autoCaptionsButton"
+  },
+  {
+   "action": "wait",
+   "seconds": 4
+  },
+  {
+   "action": "screenshot",
+   "name": "captions"
+  },
+  {
+   "action": "dump",
+   "name": "cap",
+   "text": "snapshot",
+   "type": "staticText"
+  }
+ ]
+}

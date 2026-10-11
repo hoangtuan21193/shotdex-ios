@@ -100,6 +100,8 @@ struct VideoStudioSheetHost: View {
                 lookToolPanel
             } else if model.inspectorTarget == .none, model.activeToolPanel == .music, let importedMusic {
                 musicPanel(importedMusic)
+            } else if model.inspectorTarget == .none, model.activeToolPanel == .text {
+                textPanel
             } else if model.inspectorTarget == .none, model.activeToolPanel == .media {
                 VideoMediaPanel(model: model)
             } else if model.inspectorTarget == .none, model.activeToolPanel == .videoSettings {
@@ -158,6 +160,57 @@ struct VideoStudioSheetHost: View {
             .frame(height: VideoStudioMetrics.musicPanelTitleHeight)
             .overlay(alignment: .bottom) { Rectangle().fill(Color.white.opacity(0.07)).frame(height: 1) }
             VideoMusicPanelContent(model: model, importedMusic: importedMusic, onImport: actions.onImportMusic)
+        }
+    }
+
+    /// The Text tool's panel (FS-12.04 §3–4, boards TX_P_TextPanel,
+    /// TX_DC_TextPanel, TX_DI_TextPanel): a 46pt title — glyph, "Text", ✕
+    /// — over Add Text, Auto Captions and the fonts used; the Duo's inner
+    /// column has no title, as its Music has none. Opening it changes
+    /// nothing, so ✕ only closes.
+    private var textPanel: some View {
+        VStack(spacing: 0) {
+            if layout == .band {
+                HStack(spacing: 8) {
+                    RoundedRectangle(cornerRadius: 7, style: .continuous)
+                        .fill(Color.white.opacity(0.08))
+                        .frame(width: 24, height: 24)
+                        .overlay {
+                            Image(systemName: VideoToolPanel.text.systemImage)
+                                .font(.system(size: 12, weight: .medium))
+                                .foregroundStyle(.white.opacity(0.8))
+                        }
+                        .accessibilityHidden(true)
+                    Text(VideoStudioCopy.textPanelTitle)
+                        .font(.system(size: 14.5, weight: .semibold))
+                        .foregroundStyle(.white)
+                        .lineLimit(1)
+                        .accessibilityAddTraits(.isHeader)
+                    Spacer(minLength: 0)
+                    Button {
+                        model.cancelSession()
+                    } label: {
+                        Image(systemName: "xmark")
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundStyle(.white)
+                            .frame(width: 32, height: 32)
+                            .background(Circle().fill(Color.white.opacity(0.10)))
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel(VideoStudioCopy.close)
+                }
+                .padding(.leading, 14)
+                .padding(.trailing, 10)
+                .frame(height: VideoStudioMetrics.musicPanelTitleHeight)
+                .overlay(alignment: .bottom) { Rectangle().fill(Color.white.opacity(0.07)).frame(height: 1) }
+            }
+            VideoTextToolContent(
+                model: model,
+                panelInset: VideoStudioMetrics.TextPanel.inset(windowClass),
+                panelTopGap: VideoStudioMetrics.TextPanel.topGap(windowClass),
+                onAddText: { font in model.addTextFromPanel(font: font) },
+                onAutoCaptions: { Task { await model.startAutoCaptionsFromPanel() } }
+            )
         }
     }
 
@@ -715,7 +768,7 @@ struct VideoStudioSheetHost: View {
             EmptyView()
         case .none:
             switch model.activeToolPanel {
-            case .look, .music, .media, .videoSettings, .export, nil: EmptyView()
+            case .look, .music, .media, .videoSettings, .export, .text, nil: EmptyView()
             }
         }
     }
@@ -1411,7 +1464,7 @@ struct VideoStudioSheetHost: View {
         // say, and the screen does not draw it at all.
         case .none:
             EmptyView()
-        case .look, .music, .media, .videoSettings, .export:
+        case .look, .music, .media, .videoSettings, .export, .text:
             // Drawn by their own panels in place of the whole band.
             EmptyView()
         }

@@ -7,8 +7,7 @@
     "0",
     "-VideoStudioStandIn",
     "duoInner",
-    "-ShotDexFakeSpeechSlow",
-    "-ShotDexStartCaptions"
+    "-ShotDexFakeSpeechSlow"
    ]
   },
   {
@@ -77,6 +76,22 @@
   {
    "action": "wait",
    "seconds": 30
+  },
+  {
+   "action": "tap",
+   "label": "tool.text"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "tap",
+   "label": "autoCaptionsButton"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
   },
   {
    "action": "tap",
