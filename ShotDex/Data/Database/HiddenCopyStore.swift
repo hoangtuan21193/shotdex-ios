@@ -45,4 +45,17 @@ struct HiddenCopyStore: Sendable {
                 """)
         }
     }
+
+    /// What a source's own view shows: photos with a copy there that is
+    /// not hidden. Hiding the NAS Home copy takes the photo out of NAS
+    /// Home's view even while it stays in the grid through another copy.
+    func photoIds(inSource sourceId: String) throws -> [String] {
+        try database.reader.read { db in
+            try String.fetchAll(db, sql: """
+                SELECT DISTINCT photoId FROM photo_copies
+                WHERE sourceId = ? AND missingSince IS NULL AND isHidden = 0
+                ORDER BY photoId
+                """, arguments: [sourceId])
+        }
+    }
 }
