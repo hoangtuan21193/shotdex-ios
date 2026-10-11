@@ -1,6 +1,6 @@
 # FS-19.04 — Xoá, ẩn, ảnh trùng và thống kê
 
-`FS-19.04` · board `MAC_Cull` · `MAC_Duplicates` · `MAC_Statistics` · mục Hidden, hộp xoá hẳn, hộp chọn bản sao: chưa có
+`FS-19.04` · board `MAC_Cull` · `MAC_Duplicates` · `MAC_Statistics` · mục Hidden: `PH_Hidden`, `MAC_Hidden` · hộp xoá hẳn: `PH_DeletePermanent` · hộp chọn bản sao: `PH_DeleteCopies`
 board · cập nhật 2026-10-04
 
 **Một câu:** xoá đi tới đúng thùng rác của nơi chứa — Photos vào Recently Deleted, file vào Thùng rác, NAS chỉ ẩn (D6),

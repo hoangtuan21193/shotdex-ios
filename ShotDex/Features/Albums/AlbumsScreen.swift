@@ -40,6 +40,8 @@ struct AlbumsScreen: View {
     @State private var editingSmartAlbum: SmartAlbum?
     @State private var namingRequest: NamingRequest?
     @State private var enteredName = ""
+    /// Photos ShotDex has hidden; the Hidden row shows only above zero.
+    @State private var hiddenCount = 0
     @State private var deletionRequest: DeletionRequest?
 
     /// A pending "type a name" alert — creating an album or renaming one.
@@ -172,6 +174,9 @@ struct AlbumsScreen: View {
                 SmartAlbumDetailScreen(album: item.album)
             }
         }
+        .navigationDestination(for: HiddenPhotosDestination.self) { _ in
+            HiddenPhotosScreen()
+        }
         .navigationDestination(for: DuplicatesDestination.self) { _ in
             DuplicatesScreen()
         }
@@ -195,6 +200,10 @@ struct AlbumsScreen: View {
                 ContentUnavailableView("Folder Removed", systemImage: "folder")
             }
         }
+        // Again on every return: Unhide on the Hidden screen and a Hide
+        // anywhere else both change it, and neither moves a PhotoKit token.
+        .task(id: dependencies.sources.readCount) { refreshHiddenCount() }
+        .onAppear { refreshHiddenCount() }
         .task {
             dependencies.fileServerCatalog.reload()
             dependencies.serverShortcuts.reload()
@@ -680,6 +689,21 @@ extension AlbumsScreen {
             // Recently Deleted and Unable to Upload: library housekeeping
             // rather than browsing, so they sit with Duplicates the way
             // Photos groups its own utilities.
+            // What ShotDex hid (FS-19.04 §3) — only while something is.
+            if hiddenCount > 0 {
+                NavigationLink(value: HiddenPhotosDestination()) {
+                    CollectionListRow(
+                        title: String(localized: "Hidden", comment: "Utilities row: photos ShotDex has hidden"),
+                        systemImage: "eye.slash",
+                        spokenDetail: String(
+                            localized: "\(hiddenCount) photos",
+                            comment: "VoiceOver detail on the Hidden row: how many photos ShotDex has hidden"
+                        )
+                    )
+                }
+                .buttonStyle(.plain)
+            }
+
             ForEach(model.utilityAlbums) { album in
                 NavigationLink(value: album.id) {
                     CollectionListRow(
@@ -735,6 +759,11 @@ extension AlbumsScreen {
     /// is actually there.
     private var utilityEntryCount: Int {
         5 + model.utilityAlbums.count + (dependencies.serverUploadIndex.assetIds.isEmpty ? 0 : 1)
+            + (hiddenCount > 0 ? 1 : 0)
+    }
+
+    private func refreshHiddenCount() {
+        hiddenCount = (try? HiddenCopyStore(database: dependencies.database).hiddenCount()) ?? 0
     }
 
     /// How many rows the band stacks before it starts scrolling sideways.

@@ -46,6 +46,48 @@ struct HiddenCopyStore: Sendable {
         }
     }
 
+    /// The Hidden section's grid: `hiddenPhotoIds()` as grid rows, newest
+    /// first. The library's own queries leave these out (`PhotoVisibility`),
+    /// so this one reads `photo_metadata` without that condition.
+    func hiddenGridItems() async throws -> [LibraryGridItem] {
+        try await database.reader.read { db in
+            try LibraryGridItem.fetchAll(db, sql: """
+                SELECT assetId, creationDate, mediaType, originalFilename,
+                       iso, aperture, shutterSpeedDisplay,
+                       focalLength, equivalentFocalLength, width, height, fileSize
+                FROM photo_metadata WHERE \(Self.isHidden)
+                ORDER BY creationDate DESC, assetId
+                """)
+        }
+    }
+
+    /// How many photos the Hidden section holds; its Collections row shows
+    /// only above zero.
+    func hiddenCount() throws -> Int {
+        try database.reader.read { db in
+            try Int.fetchOne(db, sql: "SELECT COUNT(*) FROM photo_metadata WHERE \(Self.isHidden)") ?? 0
+        }
+    }
+
+    /// A `photo_metadata` row whose every present copy is hidden.
+    private static let isHidden = """
+        EXISTS (SELECT 1 FROM photo_copies c WHERE c.photoId = photo_metadata.assetId AND c.missingSince IS NULL) \
+        AND NOT EXISTS (SELECT 1 FROM photo_copies c WHERE c.photoId = photo_metadata.assetId \
+        AND c.missingSince IS NULL AND c.isHidden = 0)
+        """
+
+    /// The names of the sources the hidden photos are on — the grid's
+    /// footer ("6 Photos · NAS Home").
+    func hiddenSourceNames() throws -> [String] {
+        try database.reader.read { db in
+            try String.fetchAll(db, sql: """
+                SELECT DISTINCT s.name FROM photo_copies c JOIN sources s ON s.id = c.sourceId
+                WHERE c.isHidden = 1 AND c.missingSince IS NULL
+                ORDER BY s.name
+                """)
+        }
+    }
+
     /// What a source's own view shows: photos with a copy there that is
     /// not hidden. Hiding the NAS Home copy takes the photo out of NAS
     /// Home's view even while it stays in the grid through another copy.

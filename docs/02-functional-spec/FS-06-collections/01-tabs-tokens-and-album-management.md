@@ -94,9 +94,11 @@ mục cạnh nó do PhotoKit cấp đã có số.
 **Utilities** = Places · Trips · Duplicates (kèm số nhóm của lần gom cuối, **số nhiều dịch đúng trong bộ
 chuỗi**) · **Collages** · **Video Projects** · **On Server** (luôn hiện; mở ra danh sách connection để duyệt và tải ảnh về —
 [FS-17.01](../FS-17-import-from-server/01-browse.md) — và hàng ảnh đã upload, [FS-15.02 §8](../FS-15-server-upload/02-upload-flow.md)) · và các smart album nhóm tiện ích (hiện chỉ
-Unable to Upload).
+Unable to Upload) · **Hidden** cuối cùng, chỉ khi ShotDex đang ẩn ≥ 1 ảnh: lưới các ảnh ShotDex đã ẩn,
+chọn → **Unhide N Photos** ở chỗ nút Delete ([FS-19.04 §3](../FS-19-photo-sources/04-deleting-and-duplicates.md), board `PH_Hidden`).
 
-**Không có album Hidden và không có Recently Deleted**: từ iOS 16 hệ thống không cho app bên thứ ba đọc ảnh
+**Không có album Hidden của Photos và không có Recently Deleted**: mục Hidden ở trên chỉ chứa thứ ShotDex
+tự ẩn; từ iOS 16 hệ thống không cho app bên thứ ba đọc ảnh
 ẩn (đo trên iOS 26: album đó trả về 0 ảnh); còn Recently Deleted **không phải bị chặn quyền mà là không có
 API** — bảng phân loại album của hệ thống không có mục nào cho nó, và cũng không có đường mở Photos ở album
 đó.

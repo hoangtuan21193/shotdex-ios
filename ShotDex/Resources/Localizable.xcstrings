@@ -10,6 +10,54 @@
     " m" : {
 
     },
+    "%lld Hidden Photos" : {
+      "comment" : "Hidden section title: how many photos ShotDex has hidden",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld Hidden Photo"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld Hidden Photos"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "Unhide %lld Photos" : {
+      "comment" : "Hidden section selection bar: bring the selected photos back to the library",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Unhide %lld Photo"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Unhide %lld Photos"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "—" : {
       "comment" : "Video Studio level meter: the mix is silent at the playhead"
     },
@@ -659,7 +707,27 @@
       }
     },
     "%lld Photos" : {
-
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld Photo"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld Photos"
+                }
+              }
+            }
+          }
+        }
+      }
     },
     "%lld photos are from cameras with an unknown sensor size." : {
       "comment" : "Insights footer; opens Settings → Unknown Cameras (plural)"

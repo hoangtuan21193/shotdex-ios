@@ -172,7 +172,6 @@ struct PhotoDetailScreen: View {
     /// once via `measureWidth` rather than a per-frame GeometryReader — the
     /// dismiss drag re-evaluates this body every frame.
     @State private var panelContentWidth: CGFloat = 0
-    @State private var shareItems: [Any]?
     @State private var dragOffset: CGSize = .zero
     @State private var currentFilename: String?
     /// Fetched lazily per page — reading a resource's file size loads the
@@ -1419,7 +1418,7 @@ struct PhotoDetailScreen: View {
     private func share(_ metadata: PhotoMetadata) {
         guard let asset = model.asset(for: metadata.assetId) else {
             // A folder photo shares its file as it is.
-            if let url = photoLibrary.filePhotoURL(metadata.assetId) { shareItems = [url] }
+            if let url = photoLibrary.filePhotoURL(metadata.assetId) { PhotoShareSheet.present(items: [url]) }
             return
         }
         let downloads = dependencies.originalDownloads

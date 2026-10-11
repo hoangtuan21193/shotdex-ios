@@ -78,13 +78,25 @@ private struct SelectionBottomBar: View {
             SelectionCountCaption(model: model, action: showSelected)
                 .frame(maxWidth: .infinity)
 
-            SelectionCircleButton(
-                systemImage: "trash",
-                iconSize: 20,
-                isEnabled: model.selectionCount > 0 && !model.isDeleting,
-                action: model.onDelete
-            )
-            .accessibilityLabel("Delete")
+            if let onUnhide = model.onUnhide {
+                SelectionPillButton(
+                    title: String(
+                        localized: "Unhide \(model.selectionCount) Photos",
+                        comment: "Hidden section selection bar: bring the selected photos back to the library"
+                    ),
+                    systemImage: "eye",
+                    isEnabled: model.selectionCount > 0,
+                    action: onUnhide
+                )
+            } else {
+                SelectionCircleButton(
+                    systemImage: "trash",
+                    iconSize: 20,
+                    isEnabled: model.selectionCount > 0 && !model.isDeleting,
+                    action: model.onDelete
+                )
+                .accessibilityLabel("Delete")
+            }
         }
     }
 }
@@ -125,6 +137,9 @@ struct SelectionCountCaption: View {
 
     private var captionText: String {
         guard model.selectionCount > 0 else { return "Select Items" }
+        // Beside a worded trailing button (Unhide N Photos) the words go:
+        // the pill keeps only what it counts (board `PH_Hidden`).
+        if model.onUnhide != nil { return "\(model.selectionCount)・\(sizeText)" }
         return "Show Selected (\(model.selectionCount)・\(sizeText))"
     }
 
@@ -144,6 +159,7 @@ struct SelectionCountCaption: View {
                 .selectionGlass(Capsule())
         }
         .buttonStyle(.plain)
+        .accessibilityLabel(model.selectionCount > 0 ? "Show Selected (\(model.selectionCount)・\(sizeText))" : "Select Items")
         .disabled(model.selectionCount == 0)
         .task(id: model.selectedIds) { await recomputeSize() }
     }
@@ -411,6 +427,33 @@ private struct SelectionCircleButton: View {
         }
         .buttonStyle(.plain)
         .disabled(!isEnabled)
+    }
+}
+
+/// A 48pt glass pill with a glyph and a verb — the trailing slot where the
+/// screen's one action needs its words (Unhide in the Hidden section).
+private struct SelectionPillButton: View {
+    let title: String
+    let systemImage: String
+    var isEnabled: Bool = true
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            Label(title, systemImage: systemImage)
+                .font(.headline)
+                .labelStyle(.titleAndIcon)
+                .lineLimit(1)
+                .foregroundStyle(isEnabled ? Color.primary : Color.primary.opacity(0.3))
+                .padding(.leading, 15)
+                .padding(.trailing, 18)
+                .frame(height: 48)
+                .contentShape(Capsule())
+                .selectionGlass(Capsule())
+        }
+        .buttonStyle(.plain)
+        .disabled(!isEnabled)
+        .fixedSize()
     }
 }
 

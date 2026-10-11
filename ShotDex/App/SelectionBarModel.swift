@@ -61,6 +61,9 @@ struct SelectionBarModel {
     var onCombine: ((CombinePurpose) -> Void)? = nil
     /// Trailing standalone button — delete the selection (confirmed by PhotoKit).
     var onDelete: () -> Void
+    /// The Hidden section (FS-19.04 §3): the trailing slot reads "Unhide N
+    /// Photos" instead of Delete — what that screen is for.
+    var onUnhide: (() -> Void)? = nil
 
     // ⋯ More menu (each `nil` omits its row; all `nil` hides the ⋯ button).
     var onAddToCollection: (() -> Void)? = nil

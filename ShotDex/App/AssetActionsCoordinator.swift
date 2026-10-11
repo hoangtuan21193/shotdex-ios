@@ -232,7 +232,12 @@ final class AssetActionsCoordinator {
     /// then the Share modal shows the iCloud download (FS-02.06 §9).
     func share(ids: [String]) {
         let assets = PhotoLibraryService.fetchAssets(ids: ids)
-        guard !assets.isEmpty else { return }
+        guard !assets.isEmpty else {
+            // Only folder and server photos: each shares its file as it is,
+            // the way the viewer shares one.
+            PhotoShareSheet.present(items: ids.compactMap { photoLibrary.filePhotoURL($0) })
+            return
+        }
         recentActivity?.recordShared(ids)
         let downloads = originalDownloads
         let unreadable = unsupportedRAW?.assetIds ?? []

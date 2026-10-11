@@ -1,0 +1,154 @@
+{
+  "steps": [
+    {
+      "action": "launch"
+    },
+    {
+      "action": "wait",
+      "seconds": 6
+    },
+    {
+      "action": "tap",
+      "label": "Collections",
+      "type": "button"
+    },
+    {
+      "action": "wait",
+      "seconds": 2
+    },
+    {
+      "action": "swipe",
+      "x": 0.85,
+      "y": 0.785,
+      "direction": "left",
+      "distance": 0.7
+    },
+    {
+      "action": "wait",
+      "seconds": 1
+    },
+    {
+      "action": "tap",
+      "label": "Hidden",
+      "type": "button"
+    },
+    {
+      "action": "wait",
+      "seconds": 2
+    },
+    {
+      "action": "screenshot",
+      "name": "01-hidden"
+    },
+    {
+      "action": "dump",
+      "name": "01-hidden",
+      "type": "staticText"
+    },
+    {
+      "action": "tap",
+      "label": "Select photos",
+      "type": "button"
+    },
+    {
+      "action": "wait",
+      "seconds": 1
+    },
+    {
+      "action": "tap",
+      "x": 0.5,
+      "y": 0.34
+    },
+    {
+      "action": "tap",
+      "x": 0.5,
+      "y": 0.5
+    },
+    {
+      "action": "wait",
+      "seconds": 1
+    },
+    {
+      "action": "screenshot",
+      "name": "02-selected"
+    },
+    {
+      "action": "dump",
+      "name": "02-selected",
+      "type": "button"
+    },
+    {
+      "action": "tap",
+      "label": "Unhide 2 Photos",
+      "type": "button"
+    },
+    {
+      "action": "wait",
+      "seconds": 2
+    },
+    {
+      "action": "screenshot",
+      "name": "03-four-left"
+    },
+    {
+      "action": "dump",
+      "name": "03-four-left",
+      "type": "staticText"
+    },
+    {
+      "action": "tap",
+      "label": "Select photos",
+      "type": "button"
+    },
+    {
+      "action": "wait",
+      "seconds": 1
+    },
+    {
+      "action": "tap",
+      "x": 0.17,
+      "y": 0.34
+    },
+    {
+      "action": "tap",
+      "x": 0.5,
+      "y": 0.34
+    },
+    {
+      "action": "tap",
+      "x": 0.83,
+      "y": 0.34
+    },
+    {
+      "action": "tap",
+      "x": 0.17,
+      "y": 0.5
+    },
+    {
+      "action": "wait",
+      "seconds": 1
+    },
+    {
+      "action": "screenshot",
+      "name": "04-four-selected"
+    },
+    {
+      "action": "tap",
+      "label": "Unhide 4 Photos",
+      "type": "button"
+    },
+    {
+      "action": "wait",
+      "seconds": 3
+    },
+    {
+      "action": "screenshot",
+      "name": "05-section-gone"
+    },
+    {
+      "action": "dump",
+      "name": "05-section-gone",
+      "type": "button"
+    }
+  ]
+}
