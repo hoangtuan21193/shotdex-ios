@@ -98,4 +98,48 @@ extension SourceAvailabilityTests {
         let total = try database.reader.read { db in try Int.fetchOne(db, sql: "SELECT COUNT(*) FROM photos") }
         #expect(total == 38)
     }
+
+    /// AC-35: the NAS is switched off. The next pass marks NAS Home offline
+    /// without an error; its row reads Not reachable; every photo stays in
+    /// the grid with its cached thumbnail; opening one says "NAS Home isn't
+    /// reachable. Showing the saved preview." and the original cannot be
+    /// opened for Edit. A photo with a Photos copy too opens as before.
+    @Test func serverUnreachable() async throws {
+        let client = InMemoryRemoteFileClient()
+        for n in 1...3 { client.put("Photos/2026/DSC\(n).ARW", try ServerSourceIndexTests.raw(padding: 1_024, seed: UInt8(n))) }
+        let cache = FileManager.default.temporaryDirectory.appendingPathComponent("Unreachable-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: cache, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: cache) }
+        let database = try AppDatabase.makeEmpty()
+        let sources = SourceStore(database: database)
+        let source = try sources.addServer(name: "NAS Home", connectionId: "C1")
+        let indexer = ServerSourceIndexer(database: database, composer: FolderSourceIndexTests.composer, client: client,
+                                          thumbnails: FolderThumbnails(directory: cache) { 100_000_000_000 }, readsSidecars: false)
+        #expect(try await indexer.index(sourceId: source, folder: "Photos/2026", pairsRawAndJpeg: true).photos == 3)
+        let photoIds = try await database.reader.read { db in
+            try String.fetchAll(db, sql: "SELECT photoId FROM photo_copies WHERE sourceId = ? ORDER BY relativePath", arguments: [source])
+        }
+        // One of them is also in Photos.
+        try await database.writer.write { db in
+            try db.execute(sql: "INSERT INTO photo_copies (id, photoId, sourceId, kind, photoKitId) VALUES ('photos:x', ?, 'photos-library', 'photos', 'x')",
+                           arguments: [photoIds[0]])
+        }
+
+        client.connectError = .unreachable(host: "nas.local")
+        let pass = try await indexer.index(sourceId: source, folder: "Photos/2026", pairsRawAndJpeg: true)
+        #expect(pass.disconnected)
+        #expect(pass.stoppedBy == .unreachable(host: "nas.local"))
+        #expect(try sources.status(sourceId: source) == .offline)
+        #expect(SourceRowStatus.offlineLabel(isServer: true) == "Not reachable")
+        #expect(try LibraryQueries(database: database).count(matching: FilterCriteria()) == 3)
+        #expect(try FileManager.default.contentsOfDirectory(atPath: cache.path).count == 3)
+        #expect(try await database.reader.read { db in try Int.fetchOne(db, sql: "SELECT COUNT(*) FROM photo_copies WHERE missingSince IS NOT NULL") } == 0)
+
+        let reachability = CopyReachabilityQueries(database: database)
+        let offline = try reachability.reachability(photoId: photoIds[1])
+        #expect(offline == .offline(sourceName: "NAS Home", isServer: true))
+        #expect(!offline.canOpenOriginal)
+        #expect(offline.viewerNote == "NAS Home isn't reachable. Showing the saved preview.")
+        #expect(try reachability.reachability(photoId: photoIds[0]) == .available)
+    }
 }
