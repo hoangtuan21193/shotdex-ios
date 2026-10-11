@@ -67,6 +67,13 @@ struct DeletionTargetQueries: Sendable {
         }.filter { !$0.isEmpty }
     }
 
+    /// Every copy of each photo in `photoIds` order — what the checklist of
+    /// a deletion from All Photos lists.
+    func allCopies(photoIds: [String]) throws -> [[DeletionTarget]] {
+        let all = try copies(photoIds: photoIds)
+        return photoIds.compactMap { all[$0] }
+    }
+
     func plan(photoIds: [String], inSource sourceId: String? = nil, selection: MixedDeletionPlan.Selection) throws -> MixedDeletionPlan {
         MixedDeletionPlan(photos: try targets(photoIds: photoIds, inSource: sourceId).map { $0.map(\.destination) }, selection: selection)
     }
