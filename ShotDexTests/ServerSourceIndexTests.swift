@@ -98,6 +98,46 @@ import Testing
         #expect(try await database.reader.read { db in try Int.fetchOne(db, sql: "SELECT COUNT(*) FROM photos") } == 17)
     }
 
+    /// AC-55: NAS Home connected, the app open for hours, nothing touched.
+    /// The listing is compared once at launch — not again when the app
+    /// comes back to the foreground, not while the server stays reachable,
+    /// not on any clock. Rescan, and a server back from Not reachable, each
+    /// compare once.
+    @Test func noTimedRescan() async throws {
+        let client = InMemoryRemoteFileClient()
+        client.put("Photos/2026/Day1/DSC1.ARW", try Self.raw(padding: 1_024, seed: 1))
+        client.put("Photos/2026/Day2/DSC2.ARW", try Self.raw(padding: 1_024, seed: 2))
+        let database = try AppDatabase.makeEmpty()
+        let servers = FileServerStore(database: database, passwords: InMemoryPasswordStore())
+        try servers.save(FileServer(id: "C1", name: "NAS Home", transferProtocol: .smb, host: "nas.local", username: "u",
+                                    folder: "Photos/2026"), password: "pw")
+        let source = try SourceStore(database: database).addServer(name: "NAS Home", connectionId: "C1")
+        let refresh = ServerSourceRefresh(database: database, servers: servers, composer: FolderSourceIndexTests.composer) { _, _ in client }
+
+        let launch = await refresh.appLaunched()
+        #expect(launch[source]?.photos == 2)
+        let afterLaunch = client.listingCount
+        #expect(afterLaunch == 3)
+
+        // Back to the foreground, server still there, time passing.
+        #expect(await refresh.appLaunched().isEmpty)
+        #expect(await refresh.serverReachable(sourceId: source) == nil)
+        try await Task.sleep(for: .milliseconds(300))
+        #expect(client.listingCount == afterLaunch)
+
+        // Rescan: one pass, nothing read again.
+        let reads = client.rangeReadPaths.count
+        #expect(await refresh.rescan(sourceId: source)?.unchanged == 2)
+        #expect(client.listingCount == afterLaunch * 2)
+        #expect(client.rangeReadPaths.count == reads)
+
+        // Server gone, then back: one pass when it returns.
+        try SourceStore(database: database).setOnline(false, sourceId: source)
+        #expect(await refresh.serverReachable(sourceId: source)?.unchanged == 2)
+        #expect(client.listingCount == afterLaunch * 3)
+        #expect(await refresh.serverReachable(sourceId: source) == nil)
+    }
+
     private func photo(_ client: InMemoryRemoteFileClient, _ name: String) -> ServerDownloadItem {
         let data = RemoteThumbnailTests.jpeg(width: 200)
         client.put("Trip/\(name)", data)

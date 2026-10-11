@@ -52,6 +52,8 @@ struct ServerSourceIndexer: Sendable {
             try stop(&summary, error, sourceId: sourceId)
             return summary
         }
+        // Listed: the server is there, whatever it was before.
+        try SourceStore(database: database).setOnline(true, sourceId: sourceId)
 
         let files = listing.filter { !$0.isSidecar }
         let sidecars = Dictionary(listing.filter(\.isSidecar).map { (FolderSourceIndexer.pathKey($0.relativePath), $0) },
