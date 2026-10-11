@@ -61,4 +61,38 @@ import Testing
         #expect(try queries.groups().isEmpty)
         #expect(try LibraryQueries(database: database).count(matching: FilterCriteria()) == 1)
     }
+
+    /// AC-72: a group of similar photos on T7 and another in Photos. The
+    /// Source popup set to T7 shows only T7's group; All Sources shows both,
+    /// each in its own source.
+    @Test func sourcePopupFilters() throws {
+        let database = try AppDatabase.makeEmpty()
+        let t7 = try SourceStore(database: database).addFolder(name: "T7", bookmark: Data(), includesSubfolders: true, pairsRawAndJpeg: true, kind: "drive")
+        let ids = try database.writer.write { db in
+            let files = try MixedDeletionPlanTests.addPhotos(db, count: 2, sourceId: t7, kind: "file", prefix: "F")
+            let photos = try MixedDeletionPlanTests.addPhotos(db, count: 2, sourceId: PhotoLibrarySource.id, kind: "photos", prefix: "P")
+            for id in files + photos {
+                try db.execute(sql: "INSERT INTO photo_metadata (assetId, mediaType, isFavorite, indexedAt, exifStatus, width, height) VALUES (?, 1, 0, 1, 'indexed', 6000, 4000)",
+                               arguments: [id])
+            }
+            return (files, photos)
+        }
+        let hashes = PerceptualHashStore(database: database)
+        try hashes.upsert((ids.0 + ids.1).map { PerceptualHashRecord(assetId: $0, hash: PerceptualHash(bits: 7), modificationDate: 1, computedAt: 1) })
+        func group(_ members: [String]) -> DuplicateGroup {
+            DuplicateGroup(members: members.map { HashedPhoto(assetId: $0, hash: PerceptualHash(bits: 7), width: 6000, height: 4000,
+                                                              fileSize: nil, creationDate: nil, isFavorite: false) })
+        }
+        try hashes.replaceGroups([group(ids.0)], strictness: .similar, scannedAt: Date(), sourceId: t7)
+        try hashes.replaceGroups([group(ids.1)], strictness: .similar, scannedAt: Date())
+
+        let queries = DuplicateSourceQueries(database: database)
+        #expect(try queries.sources(strictness: .similar).map(\.name) == ["Photos Library", "T7"])
+        let onlyT7 = try queries.groups(strictness: .similar, sourceId: t7)
+        #expect(onlyT7.map(\.sourceId) == [t7])
+        #expect(Set(onlyT7[0].group.members.map(\.assetId)) == Set(ids.0))
+        let all = try queries.groups(strictness: .similar, sourceId: nil)
+        #expect(all.map(\.sourceId) == [PhotoLibrarySource.id, t7])
+        #expect(DuplicateSourceQueries.allSources == "All Sources")
+    }
 }
