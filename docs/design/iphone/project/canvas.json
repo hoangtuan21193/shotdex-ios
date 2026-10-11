@@ -938,6 +938,13 @@
       "h": 874,
       "radius": 44,
       "title": "Save as Look… — look + Adjust/Color của cả video thành My Look; hộp Save Look của editor, dòng \"Not saved:\" kể phần bị bỏ (FS-12.06c §6b)"
+    },
+    "TX_P_TextPanel.dc.html": {
+      "x": 16388,
+      "y": 4834,
+      "w": 402,
+      "h": 874,
+      "title": "iPhone · Text: panel Text — Add Text, Auto Captions, Fonts You Used (thay vì thêm khối ngay, 2026-10-11)"
     }
   },
   "createdOnFiles": {
@@ -1142,7 +1149,8 @@
     "PH_EmptyLibrary.dc.html",
     "PH_LibraryMore.dc.html",
     "PH_ViewerMore.dc.html",
-    "F5_P_SaveLook.dc.html"
+    "F5_P_SaveLook.dc.html",
+    "TX_P_TextPanel.dc.html"
   ],
   "pages": [],
   "title": "ShotDex · iPhone"

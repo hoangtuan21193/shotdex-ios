@@ -35,7 +35,7 @@ Người dựng cần biết nút nào **thêm** thứ mới, nút nào **chỉn
 | Công cụ | Mở | Kết quả |
 |---|---|---|
 | **Media** | thư viện trong panel ([09](09-media-panel.md)) | chạm = chèn ở playhead; kéo = thả vào timeline |
-| **Text** | thêm một khối chữ "Text" từ playhead tới hết video, chọn nó, mở lệnh **Edit** | phiên chọn mở ngay (§5) |
+| **Text** | **panel Text** (iPhone, Duo ngoài, Duo trong — chốt 2026-10-11; board `TX_P_TextPanel`, `TX_DC_TextPanel`, `TX_DI_TextPanel`): **Add Text** · **Auto Captions** + chú thích ([14 §3](14-captions.md)) · **FONTS YOU USED** — đúng nội dung tab Text của pool iPad ([03b §1](03b-desk-bands-and-lanes.md)) | Add Text = thêm khối chữ "Text" từ playhead tới hết video, chọn nó, mở lệnh **Edit** (phiên chọn mở ngay, §5); một dòng font = cùng thế, khối mặc font đó; Auto Captions = mở lane C1 ([14](14-captions.md)) |
 | **Sticker** | trình chọn ảnh tĩnh; chọn xong thêm sticker từ playhead tới hết video và chọn nó | huỷ trình chọn: không đổi gì |
 | **Music** | panel Music: Video sound · Add Music from Files… · My Music | chọn một bài = thêm track tại playhead, chọn track đó |
 | **Look** | panel Look cả video ([06c](06c-photo-looks.md)) | — |
@@ -44,8 +44,10 @@ Người dựng cần biết nút nào **thêm** thứ mới, nút nào **chỉn
 - Nơi đặt thanh: iPhone hàng đáy 62pt; Duo ngoài cột 5 ô trong rail 84; Duo trong hàng đáy 56pt bên trái;
   iPad ngang là 4 tab pool (Media · Text · Stickers · Music) + inspector mặc định là Look; iPad dọc là 4 nút ở
   tiêu đề dock + dock mặc định là Look.
-- *Vì sao Text thêm ngay chứ không mở trang chọn kiểu:* chưa có gallery kiểu chữ; khối chữ trống ở playhead là
-  thứ người dùng sửa được ngay.
+- *Vì sao Text mở panel (đổi 2026-10-11, trước đó thêm khối ngay):* Auto Captions cần một lối vào trên iPhone và Duo
+  ngoài menu ⋯ của transport, và Duo trong không có lối nào — panel Text là chỗ của nó trên mọi máy, như tab Text
+  của pool iPad. Thêm khối vẫn là một chạm nữa (Add Text). iPad không đổi: tab Text của pool (ngang) và nút Text ở
+  tiêu đề dock (dọc, thêm khối ngay) — ngoài phạm vi chốt này.
 
 ## 4. Panel công cụ (không có item nào đang chọn)
 
@@ -57,6 +59,7 @@ Người dựng cần biết nút nào **thêm** thứ mới, nút nào **chỉn
 | Media | đáy thành ✕ · Media · ✓ như một phiên ([09](09-media-panel.md)) |
 | Look | ✕ và ✓ ở tiêu đề panel ([06c §7](06c-photo-looks.md)); tiêu đề **không có** nút so sánh (bỏ 2026-10-05, board F5_P_Looks) — trước/sau của iPhone và Duo ngoài là Before and After của [15 §4](15-before-after.md), chưa có tới khi FS-12.15 xong |
 | Music | tiêu đề 46pt: icon 24 · "Add Music" 14,5 · ✕ 32 ở phải; thanh dưới giữ 5 công cụ |
+| Text | iPhone và Duo ngoài: tiêu đề 46pt icon 24 · "Text" 14,5 · ✕ 32 ("Close"); Duo trong: cột 264 không tiêu đề, như Music. Nút 48 bo 12 nền trắng 8%, lề 16 (iPhone) / 14 (Duo); dòng font 44. Panel không đổi project: ✕ chỉ đóng; Add Text, một font hay Auto Captions đóng panel và mở phiên của thứ vừa thêm |
 | Video Settings | chỉ có Done ✓ ở tiêu đề, không ✕ — mọi thay đổi áp ngay ([10 §4](10-video-settings-and-export.md)) |
 
 - **✕ ở đâu cũng là: bỏ mọi thay đổi từ lúc mở panel**, không để lại bước undo nào — cùng luật với ✕ của item.
@@ -118,7 +121,7 @@ Chọn nhiều clip một lúc dùng cùng ✕ · "N Clips" · ✓ ([11](11-mult
 | AC-2 | danh sách công cụ của mọi bố cục (iPhone, Duo trong, Duo ngoài, iPad) | duyệt từng bố cục | mỗi bố cục có đủ 5 công cụ (iPad: 4 tab/nút + Look mặc định), kiểm bằng lặp, không đếm | ✅ `VideoStudioWindowClassTests.everyLayoutOffersTheFiveAddTools` (lặp `VideoStudioWindowClass.allCases` × `VideoAddTool.allCases`; iPad: 4 nút/tab + Look mặc định) |
 | AC-3 | clip 2 đang chọn, Speed đổi 1× → 2× rồi Volume 100 → 60 | bấm ✕ | clip 2 về 1× và 100; số bước undo bằng lúc trước khi chọn; Redo tắt | ✅ `VideoSessionCancelTests.cancelRestoresTheClipAndTheUndoDepth` (1×/100, độ sâu undo như trước, Redo tắt), `cancelAfterReplaceKeepsTheOldSource`, `cancelWithNoChangeOnlyDeselects` |
 | AC-4 | như AC-3 | bấm ✓ rồi Undo hai lần | lần 1: Volume về 100, Speed vẫn 2×; lần 2: Speed về 1× | ✅ `VideoSessionCommitTests.commitKeepsEachStep` (2× + Volume 60, ✓, Undo → Volume 100 Speed 2×, Undo → 1×), `undoPastTheSessionStartDeselects`, `VideoEditHistoryTests`; sim-shot iPhone 17: chân ✕ · Photo 2 · ✓ (2026-10-04) |
-| AC-5 | không chọn gì | bấm Text rồi ✕ | project không có khối chữ mới; ngăn undo như trước khi bấm Text | ✅ `VideoAddSessionTests.textThenCancelLeavesNoBlockAndNoUndo` (+ `stickerThenCancelRemovesIt`, `musicThenCancelRemovesTheTrack`); sim-shot iPhone 17: Text → khối "Text" ở playhead, Edit sáng, bàn phím lên (2026-10-04) |
+| AC-5 | không chọn gì | bấm Text, Add Text, rồi ✕ | panel Text mở trước (không thêm gì); sau Add Text có khối "Text" ở playhead; sau ✕ project không có khối chữ mới, ngăn undo như trước khi bấm Text | ⚠️ chưa có — đổi 2026-10-11 (Text mở panel); bằng chứng cũ: `VideoAddSessionTests.textThenCancelLeavesNoBlockAndNoUndo` |
 | AC-6 | clip 2 đang chọn, Speed đã đổi sang 2× | chạm băng chữ GOLDEN HOUR | clip 2 giữ 2×; đáy là ✕ · GOLDEN HOUR · ✓; panel cùng chiều cao như trước (±0pt) | ✅ `VideoItemTitleTests.switchingItemsKeepsTheFirstItemsEdits` (clip 2 giữ 2×, chân tên khối chữ, panel một chiều cao cho mọi item), `captionsAndMusicSayWhatAndWhen`, `clipsAreNamedByTheirPlaceOnTheTrack`; sim-shot iPhone 17: chân ✕ · Text GOLDEN HOUR / "Text · 0.0 → 9.0s" · ✓ (2026-10-04) |
 | AC-7 | project 3 clip, clip 2 đang chọn | bấm Delete | còn 2 clip liền nhau, đáy về 5 công cụ; Undo một lần trả clip 2 về đúng chỗ | ✅ `VideoDeleteTests.deleteKeepsClipsContiguousAndUndoesOnce`, `deleteFromTheTransportMenuIsUndoable`, `captionAndMusicDeletesAreOneStepEach` |
 | AC-8 | Duo trong 951×669, clip 2 đang chọn | chạm ô Media | không có gì mở; 5 ô công cụ vẽ trắng 30% | ⚠️ một phần — luật: `VideoToolsWhileSelectingTests.toolsAreInertWhileSelectingOnTheDuo` (lặp mọi lớp cửa sổ), `insertingFromThePoolCommitsTheSelection`. Còn dump Duo trong bằng `Tools/ui-drive` sau khi plan vs-wide-and-duo-layout đặt hàng đáy Duo trong (hôm nay Duo trong chưa có hàng đáy) |
@@ -129,6 +132,7 @@ Chọn nhiều clip một lúc dùng cùng ✕ · "N Clips" · ✓ ([11](11-mult
 | AC-13 | iOS 26.5 và iOS 18.6, cùng project, clip 2 đang chọn | dump hai bên | cùng tập nút: ✕, ✓, mọi lệnh hàng đầu panel | ✅ agent `ios26-parity` 2026-10-04, iPhone 17 (26.5) vs iPhone 16 Pro (18.6), ảnh sim-shot: Main (5 công cụ, băng trên), clip video chọn (✕ · Clip 1 · ✓, hàng Split … Delete, nội dung Speed/Volume/Fade), khối chữ chọn (✕ · Text GOLDEN HOUR · ✓, Edit … Delete) — cùng tập nút, không khác hành vi; thư mục `Features/VideoStudio` không có nhánh `#available`. Chưa: P5 (sim không có nhạc), menu/alert hệ thống chỉ soát tĩnh |
 | AC-14 | iPad ngang, Quick Adjust bật, clip 2 (video) dưới playhead; iPhone, panel Music mở | dump cả hai | Quick Adjust: Speed · Video sound, không có Master; panel Music: Video sound là dòng âm lượng duy nhất trên "Add Music from Files…" | ✅ iPad Pro 13 (dọc) dump nút 2026-10-04: Quick Adjust = Duration · Video sound (clip ảnh; clip video thay Duration bằng Speed), không "Master", meter "Mute Video Sound"; iPhone 17 sim-shot panel Music: Video sound là dòng âm duy nhất trên "Add Music from Files…"; `VideoStudioToolPanelTests.theMusicCellOpensTheMusicPanel` |
 | AC-15 | project JSON còn khoá Master = 0,5; Video sound 100, clip 2 Volume 100 | mở project, Export | project mở bình thường; mức âm clip 2 trong file xuất = mức nguồn (không nhân 0,5) | ✅ `VideoRecipeDecodingTests.aMasterKeyIsIgnored` (JSON có Master 0,5 mở ra, ghi lại không còn khoá) + `VideoAudioMixTests.clipGainIsVideoSoundOnly` (tham số audio mix của clip tại 1 s = 1,0); smoke export file dùng chung test của plan Export |
+| AC-16 | iPhone, Duo ngoài, Duo trong; không chọn gì | bấm Text | panel Text mở: Add Text · Auto Captions + chú thích · FONTS YOU USED, ô Text sáng; không có khối chữ mới, không bước undo; menu ⋯ của transport không có Auto Captions | ⚠️ chưa có |
 
 **Chưa chứng minh được:** AC-8, AC-11.
 
