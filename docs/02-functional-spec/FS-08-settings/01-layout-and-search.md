@@ -29,7 +29,7 @@ thoại, trong khi Settings của chính iPadOS ở đúng bề rộng đó đan
 
 | # | Mục | Gom mục nào của bố cục hẹp |
 |---|---|---|
-| 1 | Photo Library | Photo Library + Library Size + Privacy |
+| 1 | Sources (trước 2026-10-11: Photo Library) | Sources ([FS-19.01 §1](../FS-19-photo-sources/01-folders-and-drives.md): mọi nguồn + Add Folder or Drive… + Connect to Server…) + Photo Library + Library Size + Privacy |
 | 2 | Notifications | Notifications |
 | 3 | Widgets | Widgets |
 | 4 | Display | Thumbnail Metadata + Statistics (Show Insights, [FS-07.02 §6](../FS-07-statistics/02-insights.md)) |

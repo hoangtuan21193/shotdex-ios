@@ -19,6 +19,8 @@ struct SettingsScreen: View {
     @AppStorage(SettingsKeys.autoplayVideos) private var autoplayVideos = true
     @AppStorage(SettingsKeys.viewFullHDR) private var viewFullHDR = false
     @AppStorage(SettingsKeys.shareMetadataLevel) private var shareMetadataLevel = MetadataLevel.all
+    /// Add a Source, from Add Folder or Drive… or Grant Access….
+    @State private var isAddingSource = false
     @State private var storage: LibraryQueries.StorageTotals?
     @AppStorage("display.showISO") private var showsISO = true
     @AppStorage("display.showAperture") private var showsAperture = true
@@ -107,6 +109,12 @@ struct SettingsScreen: View {
     private var lifecycleBody: some View {
         layoutRoot
             .environment(navigation)
+            // Above the panes: a sheet hung on a list section is torn down
+            // with the row that presented it.
+            .sheet(isPresented: $isAddingSource) {
+                AddSourceSheet()
+                    .environment(dependencies)
+            }
             .task(id: libraryModel?.isIndexing) {
                 await refreshIndexInfo()
                 // A finished run changes the unknown cameras and what the
@@ -488,6 +496,7 @@ struct SettingsScreen: View {
     @ViewBuilder
     private func group(_ group: SettingsGroup, showsHeader: Bool) -> some View {
         switch group {
+        case .sources: sourcesSection
         case .photoLibrary: photoLibrarySection(showsHeader: showsHeader)
         case .notifications: notificationsSection(showsHeader: showsHeader)
         case .widgets: widgetsSection(showsHeader: showsHeader)
@@ -548,6 +557,33 @@ struct SettingsScreen: View {
         isOn
             ? SettingsSummary.joined(String(localized: "On", comment: "Settings: a switch that is on, at the start of its value line"), on)
             : SettingsSummary.joined(String(localized: "Off", comment: "Settings: a switch that is off, at the start of its value line"), off)
+    }
+
+    // MARK: Sources
+
+    /// Every source, then the two ways to add one (FS-19.01 §1, board
+    /// `PH_SettingsSources`).
+    private var sourcesSection: some View {
+        Section {
+            ForEach(dependencies.sources.rows) { row in
+                SourceRowView(row: row)
+                    .settingsRowInsets()
+            }
+            Button { isAddingSource = true } label: {
+                rowLabel(.addFolderOrDrive, style: .action)
+            }
+            .settingsRow(.addFolderOrDrive)
+            NavigationLink {
+                FileServerListScreen()
+            } label: {
+                rowLabel(.connectToServer, style: .action)
+            }
+            .settingsRow(.connectToServer)
+        } footer: {
+            Text("Folders, drives and servers are indexed in place. ShotDex never edits file contents; ratings and keywords go to .xmp sidecars.",
+                 comment: "Settings → Sources: footer under the list of sources")
+        }
+        .onAppear { dependencies.sources.load() }
     }
 
     // MARK: Photo Library

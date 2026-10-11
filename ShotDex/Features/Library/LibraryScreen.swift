@@ -62,6 +62,12 @@ struct LibraryScreen: View {
 
     var body: some View {
         Group {
+            // Folders, drives and servers need no Photos access: with one of
+            // them added, the grid shows their photos either way (FS-19.01 §1).
+            if !photoLibrary.authorizationState.canReadLibrary, photoLibrary.authorizationState != .notDetermined,
+               dependencies.sources.rows.contains(where: { $0.text.kind != .photos }), let model {
+                gridContent(model)
+            } else {
             switch photoLibrary.authorizationState {
             case .notDetermined:
                 requestAccessState
@@ -85,6 +91,7 @@ struct LibraryScreen: View {
                 } else {
                     ProgressView()
                 }
+            }
             }
         }
         .toolbar { toolbarContent }

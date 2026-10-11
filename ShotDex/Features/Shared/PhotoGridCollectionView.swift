@@ -2409,6 +2409,19 @@ final class PhotoGridCell: UICollectionViewCell {
     /// Requests the thumbnail sized to the cell. Re-requests only when the
     /// asset changed or the cell grew materially (density step to fewer
     /// columns) — the old image stays visible until the sharper one arrives.
+    /// A photo only in a folder, on a drive or on a server has no asset: its
+    /// tile comes from the shared preview cache (FS-19.01b §5), decoded off
+    /// the main thread once.
+    private func paintFileThumbnail() {
+        guard let photoLibrary, let id = configuredAssetId, photoLibrary.fileThumbnails.hasThumbnail(for: id) else { return }
+        let index = photoLibrary.fileThumbnails
+        Task { [weak self] in
+            let image = await Task.detached(priority: .userInitiated) { index.image(for: id) }.value
+            guard let self, self.configuredAssetId == id else { return }
+            self.imageView.image = image
+        }
+    }
+
     private func requestThumbnail(asset: PHAsset?, targetSize: CGSize) {
         guard let asset, let photoLibrary else {
             cancelRequest()
@@ -2422,6 +2435,7 @@ final class PhotoGridCell: UICollectionViewCell {
             requestedTargetSize = .zero
             lastRequestedPixelWidth = 0
             pendingUpgrade = nil
+            paintFileThumbnail()
             return
         }
         let assetChanged = asset.localIdentifier != requestedAssetId

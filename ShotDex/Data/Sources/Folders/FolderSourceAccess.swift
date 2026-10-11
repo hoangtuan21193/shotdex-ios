@@ -73,3 +73,34 @@ struct FolderSourceAccess: Sendable {
         return state
     }
 }
+
+/// Source folders kept open for the app's lifetime once used — the sidecar
+/// writer and the viewer reach files one at a time, and a security scope
+/// opened and closed around each would cost a bookmark resolve per file.
+final class FolderSourceRoots: @unchecked Sendable {
+    private let database: AppDatabase
+    private let lock = NSLock()
+    private var roots: [String: URL] = [:]
+
+    init(database: AppDatabase) {
+        self.database = database
+    }
+
+    /// The folder of `sourceId`, inside its scope; nil while it cannot be
+    /// opened (unplugged, access lost).
+    func root(_ sourceId: String) -> URL? {
+        if let known = lock.withLock({ roots[sourceId] }) {
+            if (try? known.checkResourceIsReachable()) == true { return known }
+            lock.withLock { roots[sourceId] = nil }
+            known.stopAccessingSecurityScopedResource()
+        }
+        guard case .available(let url) = try? FolderSourceAccess(database: database).open(sourceId: sourceId) else { return nil }
+        _ = url.startAccessingSecurityScopedResource()
+        lock.withLock { roots[sourceId] = url }
+        return url
+    }
+
+    func fileURL(sourceId: String, relativePath: String) -> URL? {
+        root(sourceId)?.appendingPathComponent(relativePath)
+    }
+}

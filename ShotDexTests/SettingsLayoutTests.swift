@@ -22,13 +22,13 @@ struct SettingsLayoutTests {
 
     // MARK: the two orders and the mapping between them
 
-    /// Nine sidebar items cover all thirteen groups, and no group is shown twice.
+    /// Nine sidebar items cover all fifteen groups, and no group is shown twice.
     @Test func bothLayoutsCoverEverySection() {
         let mapped = SettingsSection.allCases.flatMap(\.groups)
         #expect(Set(mapped) == Set(SettingsGroup.allCases))
         #expect(mapped.count == SettingsGroup.allCases.count)
         #expect(SettingsSection.allCases.count == 9)
-        #expect(SettingsGroup.allCases.count == 14)
+        #expect(SettingsGroup.allCases.count == 15)
     }
 
     /// The sidebar reads in the order of the four headings (FS-08.01b §1).
@@ -122,7 +122,7 @@ struct SettingsLayoutTests {
     /// Library Size and Privacy have no sidebar item of their own; they ride
     /// with the photo library.
     @Test func libraryStorageAndPrivacyBelongToPhotoLibrary() {
-        #expect(SettingsSection.photoLibrary.groups == [.photoLibrary, .libraryStorage, .privacy])
+        #expect(SettingsSection.photoLibrary.groups == [.sources, .photoLibrary, .libraryStorage, .privacy])
         // Display holds Thumbnail Metadata and Statistics (Show Insights, FS-07.02 §6).
         #expect(SettingsSection.display.groups == [.display, .statistics])
         // File Servers joins them rather than taking a tenth item: nine is what

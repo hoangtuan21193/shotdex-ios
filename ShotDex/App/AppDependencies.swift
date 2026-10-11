@@ -159,6 +159,12 @@ final class AppDependencies {
     let serverShortcuts: ServerShortcutCatalog
     /// Server photo thumbnails and capture dates on disk (FS-17 §4).
     let serverThumbnails: RemoteThumbnailCache
+    /// Folder and drive sources: adding them and reading them (FS-19.01).
+    let folderSources: FolderSourceRunner
+    /// Their folders, kept open once used.
+    let folderRoots: FolderSourceRoots
+    /// Every source's row in Settings › Sources and the Sources group.
+    let sources: SourcesModel
 
     init(database: AppDatabase, photoLibrary: PhotoLibraryService) {
         let metadataStore = MetadataStore(database: database)
@@ -315,6 +321,13 @@ final class AppDependencies {
             ratingWriter = RefusingPropertyWriter(base: base, count: refuse)
         }
         #endif
+        // Stars, flags and keywords of file photos go to the sidecars beside
+        // their files (FS-19.02 §5), a second after the last change.
+        let folderRoots = FolderSourceRoots(database: database)
+        self.folderRoots = folderRoots
+        let sidecarQueue = SidecarWriteQueue(writer: SidecarWriter(database: database) { sourceId, path in
+            folderRoots.fileURL(sourceId: sourceId, relativePath: path)
+        })
         let photoMarks = PhotoMarks(
             store: photoMarksStore,
             metadataStore: metadataStore,
@@ -323,7 +336,8 @@ final class AppDependencies {
                 PhotoLibraryService.fetchAssets(ids: ids).reduce(into: [:]) { result, asset in
                     if let rating = asset.photosStarRating { result[asset.localIdentifier] = rating }
                 }
-            }
+            },
+            sidecarQueue: sidecarQueue
         )
         self.photoMarks = photoMarks
         self.propertyWriter = ratingWriter
@@ -458,6 +472,12 @@ final class AppDependencies {
         self.serverShortcuts = ServerShortcutCatalog(store: ServerShortcutStore(database: database))
         PreviewCacheLocation.removeRetiredServerThumbnails()
         self.serverThumbnails = RemoteThumbnailCache.standard
+        let folderSources = FolderSourceRunner(database: database, metadataStore: metadataStore)
+        self.folderSources = folderSources
+        let sources = SourcesModel(database: database, runner: folderSources, photoLibrary: photoLibrary)
+        self.sources = sources
+        photoLibrary.fileThumbnails.reload(database)
+        sources.load()
     }
 
     /// Refreshes everything the Home and Lock Screen widgets read: the next

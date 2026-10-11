@@ -46,6 +46,9 @@ struct ShotDexApp: App {
                         Task { await dependencies.refreshWidgetSnapshot() }
                         // Looks "Add to ShotDex" left while the app was away.
                         Task { await dependencies.lookInbox.drain() }
+                        // Files added to a folder source while ShotDex was
+                        // away: read now, no Re-index (FS-19.01 §5).
+                        Task { await dependencies.sources.readAll() }
                     }
                 }
                 // A tapped Spotlight result arrives as a user activity rather

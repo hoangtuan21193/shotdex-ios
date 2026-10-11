@@ -98,6 +98,19 @@ struct SourceStore: Sendable {
         }
     }
 
+    /// Photos the library shows with a copy in each source — the number on
+    /// each Sources row. A photo in two sources counts in both.
+    func photoCounts() throws -> [String: Int] {
+        try database.reader.read { db in
+            Dictionary(uniqueKeysWithValues: try Row.fetchAll(db, sql: """
+                SELECT c.sourceId, COUNT(DISTINCT c.photoId) AS n FROM photo_copies c
+                JOIN photo_metadata ON photo_metadata.assetId = c.photoId
+                WHERE c.missingSince IS NULL AND c.isHidden = 0 AND \(PhotoVisibility.condition)
+                GROUP BY c.sourceId
+                """).map { ($0["sourceId"] as String, $0["n"] as Int) })
+        }
+    }
+
     func sources() throws -> [Source] {
         try database.reader.read { db in
             try Row.fetchAll(db, sql: "SELECT * FROM sources ORDER BY createdAt, id").map {

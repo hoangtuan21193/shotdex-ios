@@ -84,6 +84,11 @@ final class PhotoLibraryService: NSObject {
         LibraryChangeTokens(asset: assetChangeToken, collection: collectionChangeToken)
     }
 
+    /// Thumbnails of photos that live only in folders, on drives or on a
+    /// server (FS-19.01b §5): a grid cell with no asset paints from here.
+    @ObservationIgnored
+    let fileThumbnails = FileThumbnailIndex()
+
     @ObservationIgnored
     /// Not private: the original-image request lives in its own extension
     /// file, and it needs the same manager so its requests share the cache and

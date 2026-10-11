@@ -26,7 +26,10 @@ enum SettingsSection: String, CaseIterable, Identifiable, Hashable, Sendable {
     /// names between the sidebar and the list.
     var title: LocalizedStringResource {
         switch self {
-        case .photoLibrary: "Photo Library"
+        // Every place photos come from, Photos first (FS-19.01 §1, board
+        // `PH_SettingsSources`); the Photos library's own access and indexing
+        // follow on the same page.
+        case .photoLibrary: "Sources"
         case .notifications: "Notifications"
         case .widgets: "Widgets"
         case .display: "Display"
@@ -97,7 +100,7 @@ enum SettingsSection: String, CaseIterable, Identifiable, Hashable, Sendable {
     /// the list it belongs to. Both belong to the photo library.
     var groups: [SettingsGroup] {
         switch self {
-        case .photoLibrary: [.photoLibrary, .libraryStorage, .privacy]
+        case .photoLibrary: [.sources, .photoLibrary, .libraryStorage, .privacy]
         case .notifications: [.notifications]
         case .widgets: [.widgets]
         case .display: [.display, .statistics]
@@ -243,6 +246,8 @@ enum SettingsDestination: String, CaseIterable, Identifiable, Hashable, Sendable
 /// one list, never a hand-written per-device copy of it (`NF-05` §37: a list
 /// written out by hand is how a whole row went missing).
 enum SettingsGroup: String, CaseIterable, Identifiable, Hashable, Sendable {
+    /// Photos, folders, drives and servers (FS-19.01 §1).
+    case sources
     case photoLibrary
     case notifications
     case widgets

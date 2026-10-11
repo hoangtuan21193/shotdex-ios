@@ -103,7 +103,8 @@ struct AlbumsScreen: View {
 
     var body: some View {
         Group {
-            if photoLibrary.authorizationState.canReadLibrary {
+            if photoLibrary.authorizationState.canReadLibrary
+                || dependencies.sources.rows.contains(where: { $0.text.kind != .photos }) {
                 albumGrid
             } else {
                 ContentUnavailableView(
@@ -197,6 +198,7 @@ struct AlbumsScreen: View {
         .task {
             dependencies.fileServerCatalog.reload()
             dependencies.serverShortcuts.reload()
+            dependencies.sources.load()
         }
         .alert("Rename", isPresented: Binding(get: { renamingShortcut != nil }, set: { if !$0 { renamingShortcut = nil } }), presenting: renamingShortcut) { shortcut in
             TextField("Name", text: $shortcutName)
@@ -352,6 +354,12 @@ struct AlbumsScreen: View {
                         photoLibrary.presentLimitedLibraryPicker()
                     }
                     .padding(.top, 4)
+                }
+
+                // Only once there is more than the Photos library: a
+                // Photos-only library reads as it always has.
+                if dependencies.sources.rows.count > 1 {
+                    SourcesGroup()
                 }
 
                 heroRow

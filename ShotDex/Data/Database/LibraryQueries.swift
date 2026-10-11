@@ -135,6 +135,14 @@ struct LibraryQueries: Sendable {
     }
 
     /// Number of photos matching the criteria (for the filter tokens bar).
+    /// True once any photo has a copy that is not a Photos asset — the grid
+    /// can no longer be drawn from PhotoKit alone.
+    func hasPhotosOutsidePhotos() throws -> Bool {
+        try database.reader.read { db in
+            try Bool.fetchOne(db, sql: "SELECT EXISTS(SELECT 1 FROM photo_copies WHERE kind != 'photos' AND missingSince IS NULL)") ?? false
+        }
+    }
+
     func count(matching criteria: FilterCriteria) throws -> Int {
         let (whereSQL, arguments) = Self.whereClause(for: criteria)
         let sql = "SELECT COUNT(*) FROM photo_metadata \(whereSQL)"

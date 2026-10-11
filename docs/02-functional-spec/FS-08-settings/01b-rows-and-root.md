@@ -23,7 +23,7 @@ các nhóm mà **mỗi hàng nói giá trị hiện tại của nó**, không ph
 
 | Nhóm | Hàng (mở trang) | Dòng giá trị |
 |---|---|---|
-| Library and viewing | Photo Library | quyền + điều kiện index ("Full Access · indexing on Wi-Fi only") |
+| Library and viewing | Sources (FS-19, board `PH_SettingsSources`) | quyền + điều kiện index ("Full Access · indexing on Wi-Fi only") |
 | | Display | các thông số hiện trên ô lưới ("ISO, aperture, focal length, file type") |
 | | Playback | "Autoplay on · Full HDR off" |
 | | People and Pets | "41,870 of 55,231 photos scanned" |

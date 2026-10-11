@@ -1,0 +1,16 @@
+{
+  "steps": [
+    { "action": "launch" },
+    { "action": "wait", "seconds": 5 },
+    { "action": "tap", "label": "Settings" },
+    { "action": "wait", "seconds": 3 },
+    { "action": "tap", "label": "Sources" },
+    { "action": "wait", "seconds": 3 },
+    { "action": "screenshot", "name": "PH_SettingsSources" },
+    { "action": "dump", "name": "PH_SettingsSources" },
+    { "action": "tap", "label": "Add Folder or Drive…" },
+    { "action": "wait", "seconds": 3 },
+    { "action": "screenshot", "name": "PH_AddSource" },
+    { "action": "dump", "name": "PH_AddSource" }
+  ]
+}

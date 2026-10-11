@@ -265,6 +265,11 @@ struct RootTabView: View {
             autoIndex()
             refreshOnThisDayNotifications()
         }
+        // A folder or drive read added or changed photos (FS-19.01 §4).
+        .onChange(of: dependencies.sources.readCount) { _, _ in
+            dependencies.photoLibrary.fileThumbnails.reload(dependencies.database)
+            libraryModel?.reload()
+        }
         .onChange(of: navigation.pendingLibraryFilter) { _, pending in
             guard let pending else { return }
             libraryModel?.criteria = pending

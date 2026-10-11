@@ -20,6 +20,10 @@ import Foundation
 /// progress readouts themselves. None of them is a destination.
 enum SettingsRowLabel: String, CaseIterable, Identifiable, Hashable, Sendable {
 
+    // Sources
+    case addFolderOrDrive
+    case connectToServer
+
     // Photo Library
     case access
     case manageSelectedPhotos
@@ -94,6 +98,8 @@ enum SettingsRowLabel: String, CaseIterable, Identifiable, Hashable, Sendable {
     /// search index together, which is the point.
     var text: LocalizedStringResource {
         switch self {
+        case .addFolderOrDrive: "Add Folder or Drive…"
+        case .connectToServer: "Connect to Server…"
         case .access: "Access"
         case .manageSelectedPhotos: "Manage Selected Photos"
         case .openPhotoSettings, .openNotificationSettings: "Open Settings"
@@ -148,6 +154,8 @@ enum SettingsRowLabel: String, CaseIterable, Identifiable, Hashable, Sendable {
     /// Which `Section` draws the row.
     var group: SettingsGroup {
         switch self {
+        case .addFolderOrDrive, .connectToServer:
+            .sources
         case .access, .manageSelectedPhotos, .openPhotoSettings, .indexedPhotosAndVideos,
              .lastIndexed, .continueIndexing, .reindexLibrary,
              .useCellularData, .keepScreenAwake, .lookUpPlaceNames:
@@ -185,6 +193,8 @@ enum SettingsRowLabel: String, CaseIterable, Identifiable, Hashable, Sendable {
     /// The symbol in the row's icon tile (FS-08.01b §2).
     var systemImage: String {
         switch self {
+        case .addFolderOrDrive: "folder.badge.plus"
+        case .connectToServer: "server.rack"
         case .access: "checkmark.shield"
         case .manageSelectedPhotos: "photo.badge.plus"
         case .openPhotoSettings, .openNotificationSettings: "gear"
@@ -260,6 +270,8 @@ enum SettingsRowLabel: String, CaseIterable, Identifiable, Hashable, Sendable {
     var searchAliases: [String] {
         switch self {
         case .fileServers: ["SMB", "SFTP", "NAS", "upload"]
+        case .addFolderOrDrive: ["SSD", "USB", "Files", "source", "Lightroom"]
+        case .connectToServer: ["SMB", "SFTP", "WebDAV", "NAS", "source"]
         case .metadataWhenSharing: ["location", "GPS", "EXIF", "privacy"]
         case .watermarkWhenSharing: ["signature", "logo", "credit", "copyright"]
         case .showInsights: ["Statistics"]

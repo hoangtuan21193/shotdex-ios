@@ -321,7 +321,10 @@ final class LibraryModel {
         // shows instantly, like the system Photos app, instead of waiting on the
         // EXIF index. Any active filter, advanced query, or metric sort falls
         // back to the DB query.
+        // PhotoKit only knows Photos: with a folder, drive or server photo in
+        // the library the grid comes from the index (FS-19.05 §3).
         let usePhotoKit = criteria.isEmpty && advancedQuery == nil && sort.photoKitSortKey != nil
+            && !((try? libraryQueries.hasPhotosOutsidePhotos()) ?? false)
         // The capped first-paint phase exists only for a grid with nothing on
         // screen (enumerating a large library takes seconds). With rows already
         // showing, publishing the 600-row slice first would replace the content

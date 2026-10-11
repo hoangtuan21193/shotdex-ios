@@ -1,0 +1,17 @@
+{
+  "steps": [
+    { "action": "launch", "arguments": ["-ShotDexSeedFolderSource", "Kyoto"] },
+    { "action": "wait", "seconds": 25 },
+    { "action": "screenshot", "name": "library-kyoto" },
+    { "action": "tap", "label": "Collections" },
+    { "action": "wait", "seconds": 3 },
+    { "action": "screenshot", "name": "PH_Sources" },
+    { "action": "dump", "name": "PH_Sources" },
+    { "action": "tap", "label": "Settings" },
+    { "action": "wait", "seconds": 3 },
+    { "action": "tap", "label": "Sources" },
+    { "action": "wait", "seconds": 3 },
+    { "action": "screenshot", "name": "PH_SettingsSources" },
+    { "action": "dump", "name": "PH_SettingsSources" }
+  ]
+}
