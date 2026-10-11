@@ -187,7 +187,7 @@ struct SelectionToolbarItems: ToolbarContent {
             if let onCompare = model.onCompare {
                 Button("Compare", action: onCompare)
                     .tint(.primary)
-                    .disabled(model.selectionCount < CompareScreen.minPhotoCount)
+                    .disabled(model.selectionCount < CompareSession.minimumCount)
             }
         }
         // Two text labels side by side merge into one glass pill on iOS 26,

@@ -21,7 +21,8 @@ Board: `PH_Duplicates` · `PH_DuplicatesPinched` · `IP_Duplicates` · `DI_Dupli
 - Một ảnh có thể nằm trong nhóm của hai mức, nên dấu đặt ở mức kia có thể làm đầy một nhóm ở mức này. Thẻ đó
   ghi *"All copies marked — nothing will be kept"*; bấm Delete thì hiện alert nói số nhóm như vậy, **không** mở
   hộp xoá của hệ thống, không xoá ảnh nào.
-- Compare mở từ Duplicates giữ cùng cổng chặn: nút thùng rác của pane chưa đánh dấu cuối cùng mờ.
+- Compare mở từ Duplicates giữ cùng cổng chặn: nút **Reject** của ảnh chưa Reject cuối cùng mờ, bấm thì rung cảnh báo +
+  *"Keep at least one photo in this group."* (FS-01.08c AC-15). Reject ở đó là cờ thật của FS-01.12.
 
 ## 2. Merge
 

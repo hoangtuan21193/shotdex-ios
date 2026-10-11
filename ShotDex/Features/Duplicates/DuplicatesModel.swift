@@ -3,9 +3,6 @@ import Photos
 import SwiftUI
 import UniformTypeIdentifiers
 
-/// Payload for the compare cover opened from a duplicate group: the members
-/// as `ComparePhoto`s, ready to render (DESIGN.md §10.5 — the item carries
-/// its data, the cover never reads state back).
 /// An alert the Duplicates screen owes the user: a merge that failed for some
 /// groups, or a Delete that would have emptied a group.
 struct DuplicateNotice: Identifiable {
@@ -14,9 +11,12 @@ struct DuplicateNotice: Identifiable {
     let message: String
 }
 
+/// Payload for the viewer opened in Compare on a duplicate group (DESIGN.md
+/// §10.5 — the item carries its data, the cover never reads state back).
 struct DuplicateComparePresentation: Identifiable {
     let id = UUID()
-    let photos: [ComparePhoto]
+    let source: PhotoListModel
+    let request: CompareRequest
 }
 
 /// Drives the Duplicates screen. Opening the screen reads the **cached**
@@ -612,24 +612,19 @@ final class DuplicatesModel {
     // MARK: Compare
 
     func canCompare(_ group: DuplicateGroup) -> Bool {
-        group.count >= CompareScreen.minPhotoCount
+        group.count >= CompareSession.minimumCount
     }
 
-    /// Opens the group in the compare screen, where each pane carries its own
-    /// trash toggle bound to `markedForDeletion`.
+    /// Opens the group in the viewer's Compare (FS-01.08c §7). Reject there
+    /// is the real flag; the keep-one gate rides along with the group.
     func compare(_ group: DuplicateGroup) {
         guard canCompare(group) else { return }
-        let ids = group.members.map(\.assetId)
-        let metadata = (try? dependencies.database.reader.read { db in
-            try PhotoMetadata.fetchAll(db, keys: ids)
-        }) ?? []
-        let metadataById = Dictionary(uniqueKeysWithValues: metadata.map { ($0.assetId, $0) })
-        let photos = ids.compactMap { id -> ComparePhoto? in
-            guard let asset = assetsById[id] else { return nil }
-            return ComparePhoto(metadata: metadataById[id], asset: asset)
-        }
-        guard photos.count >= 2 else { return }
-        comparePresentation = DuplicateComparePresentation(photos: photos)
+        let ids = group.members.map(\.assetId).filter { assetsById[$0] != nil }
+        let source = PhotoListModel(assetIds: ids, dependencies: dependencies)
+        source.load()
+        guard var request = CompareRequest(selection: ids, source: source, duplicateGroup: ids) else { return }
+        request.onDeleted = { [weak self] gone in self?.didDelete(ids: gone) }
+        comparePresentation = DuplicateComparePresentation(source: source, request: request)
     }
 
     // MARK: Delete
@@ -671,6 +666,13 @@ final class DuplicatesModel {
             errorMessage = error.localizedDescription
             return false
         }
+        didDelete(ids: ids)
+        return true
+    }
+
+    /// Prunes photos that are gone — deleted here or from Compare — from the
+    /// rows, the hash cache and the groups, so the screen updates at once.
+    func didDelete(ids: Set<String>) {
         let idList = Array(ids)
         try? dependencies.metadataStore.deleteAssets(ids: idList)
         try? dependencies.perceptualHashStore.delete(assetIds: idList)
@@ -684,6 +686,5 @@ final class DuplicatesModel {
         }
         session.marks.subtract(ids)
         UserDefaults.standard.set(groups.count, forKey: SettingsKeys.duplicateGroupCount)
-        return true
     }
 }

@@ -29,7 +29,7 @@ struct AlbumDetailScreen: View {
     /// next visit to the album starts from All Items.
     @State private var filter = AlbumFilter()
     @State private var isAdvancedFilterPresented = false
-    @State private var isComparePresented = false
+    @State private var compareRequest: CompareRequest?
     @State private var compressionPresentation: CompressionPresentation?
     @State private var multiEditPresentation: MultiEditPresentation?
     @State private var collagePresentation: CollagePresentation?
@@ -54,9 +54,9 @@ struct AlbumDetailScreen: View {
                 PhotoDetailScreen(model: model, currentIndex: target.startIndex)
             }
         }
-        .fullScreenCover(isPresented: $isComparePresented, onDismiss: stopSelecting) {
-            if let model, let photos = comparePhotos(model) {
-                CompareScreen(photos: photos)
+        .fullScreenCover(item: $compareRequest, onDismiss: stopSelecting) { request in
+            if let model {
+                PhotoDetailScreen(model: model, currentIndex: request.startIndex, compareRequest: request)
             }
         }
         .multiEditCover($multiEditPresentation, sourceAlbum: model?.sourceAlbum, onDismiss: stopSelecting)
@@ -467,18 +467,6 @@ struct AlbumDetailScreen: View {
         swipeBaseline = []
     }
 
-    /// Compare panes follow the pick order of the selection.
-    private func comparePhotos(_ model: AlbumDetailModel) -> [ComparePhoto]? {
-        guard selectedIds.count >= CompareScreen.minPhotoCount else { return nil }
-        // Videos have no metadata row (index is image-only) — require the
-        // asset instead, and let the caption go missing.
-        let photos = selectedIds.compactMap { id -> ComparePhoto? in
-            guard let asset = model.assetsById[id] else { return nil }
-            return ComparePhoto(metadata: model.metadata(for: id), asset: asset)
-        }
-        return photos.count >= 2 ? photos : nil
-    }
-
     private func shareSelected(_ model: AlbumDetailModel) {
         guard !selectedIds.isEmpty else { return }
         let assets = selectedIds.compactMap { model.assetsById[$0] }
@@ -553,7 +541,9 @@ struct AlbumDetailScreen: View {
             onDeselectAll: { selectedIds = [] },
             onCollage: { presentCollage(model) },
             onVideo: { presentVideoStudio(model) },
-            onCompare: { isComparePresented = true },
+            onCompare: {
+                compareRequest = CompareRequest(selection: selectedIds, source: model)
+            },
             onCompress: { presentCompression(model) },
             onEdit: { presentMultiEdit(model) },
             onCombine: { presentCombine($0, model) },
@@ -577,7 +567,6 @@ struct AlbumDetailScreen: View {
     private var bottomChromeInset: CGFloat {
         AppTheme.Size.bottomChromeClearance
     }
-
 
     /// The long-press menu for one tile. Album Detail is the only screen that
     /// can also take a photo out of the album it is showing.

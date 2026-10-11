@@ -19,7 +19,7 @@ Mỗi màn hình phải khai báo rõ mình thuộc tầng nào. Không trộn h
 | **C. Glass chrome** | Thanh nổi trên ảnh: tab bar, selection bar, nút tròn, panel trạng thái | Kính mờ trong suốt | `GlassPanel`, `GlassIconButton`, `LiquidGlassTabBar`, `.glassBackground(_:)` |
 | **D. Tool (dark)** | Toàn màn hình chỉnh sửa: Photo Editor, Compress, Collage, Video Studio | `EditorTheme.background` (đen) / `panelSolid` `#0F1012` | `EditorTheme`, `.editorGlass()`, `EditorPillLabel` |
 
-**Compare là một chế độ của Viewer, không phải tầng D** (người dùng chốt 2026-10-04, mọi thiết bị): Single · 2-Up · Survey trong Viewer, theo sáng/tối như Viewer, cờ Pick/Reject từng ảnh (Reject = đánh dấu xoá). Board: `PH_Compare`, `IP_Compare`/`IP_CompareSurvey`, `DI_Compare`, `DC_Compare`, `MAC_Compare`/`MAC_CompareSurvey`. Code hiện vẫn vẽ Compare ở tầng D — design đi trước code tới khi FS-01.08 được sửa.
+**Compare là một chế độ của Viewer, không phải tầng D** (người dùng chốt 2026-10-04, mọi thiết bị): Single · 2-Up · Survey trong Viewer, theo sáng/tối như Viewer, cờ Pick/Reject từng ảnh (Reject = đánh dấu xoá). Board: `PH_Compare`, `IP_Compare`/`IP_CompareSurvey`, `DI_Compare`, `DC_Compare`, `MAC_Compare`/`MAC_CompareSurvey`. Code theo đúng điều này từ 2026-10-12 (`Features/Library/Compare/`); Viewer còn luôn tối tới FS-21 AC-52.
 
 **Collage và Video Studio thuộc tầng D**, không có ngoại lệ: cả hai thao tác trực tiếp lên pixel/khung hình nên cần nền trung tính để đánh giá màu. Kéo theo đó, bước chọn layout collage và **timeline video** phải nằm **trong màn hình** tầng D — không được tách ra thành sheet hệ thống, vì như vậy màn hình lại lai hai tầng.
 

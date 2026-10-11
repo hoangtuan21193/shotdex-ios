@@ -137,10 +137,10 @@ struct DuplicatesScreen: View {
             }
         }
         .fullScreenCover(item: $model.comparePresentation) { presentation in
-            CompareScreen(
-                photos: presentation.photos,
-                deletionMarks: $model.markedForDeletion,
-                onDeleteMarked: { ids in await model.delete(ids: ids) }
+            PhotoDetailScreen(
+                model: presentation.source,
+                currentIndex: presentation.request.startIndex,
+                compareRequest: presentation.request
             )
         }
         .alert(mergeAlertTitle(model), isPresented: $model.isConfirmingMerge) {

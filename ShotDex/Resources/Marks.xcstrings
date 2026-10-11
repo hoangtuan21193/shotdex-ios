@@ -5,6 +5,30 @@
       "comment": "Rating filter row, e.g. ★★★ & Up",
       "extractionState": "manual"
     },
+    "%lld Photos": {
+      "comment": "Compare: title, how many photos are being compared (plural)",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld Photo"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld Photos"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "%lld photos": {
       "comment": "Culling summary: photos in the pass (plural)",
       "extractionState": "manual",
@@ -204,6 +228,30 @@
     "Delete %lld": {
       "comment": "Conditions bar: delete the Rejected photos shown (count)",
       "extractionState": "manual"
+    },
+    "Delete %lld Photos": {
+      "comment": "Compare: deletes every Rejected photo in the comparison (plural)",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Delete %lld Photo"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Delete %lld Photos"
+                }
+              }
+            }
+          }
+        }
+      }
     },
     "Delete %lld Rejected photos": {
       "comment": "VoiceOver: the conditions bar's Delete Rejected pill (plural)",

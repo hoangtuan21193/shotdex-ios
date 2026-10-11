@@ -657,3 +657,8 @@ Outside the acceptance criteria of plan `docs/_plans/2026-10-03-vs-wide-and-duo-
 - [ ] The caption Box plate (black 62 %) and every baked overlay are composited in Core Image's linear light, so 62 % reads lighter than the board's sRGB 62 % (grey 139 under the plate reads 89, not 53) — same for the text overlays; decide whether overlays composite in sRGB _(FS-12.14 AC-9)_
 - [ ] Auto Captions entry on the iPhone and the Duo: FS-12.14 §3 puts it under Add Text in a "Text tool panel" that FS-12.04 §3 does not have (Text adds a block at once). Interim: the transport's ⋯ menu (iPhone, Duo cover); the Duo inner display has none (a DEBUG `-ShotDexStartCaptions` flag drives the routes). Needs the user's call _(FS-12.14 AC-1)_
 - [ ] Only the speech-recognition usage string has a Vietnamese translation (`InfoPlist.xcstrings`); Calendars, Location and Local Network are English only _(localization)_
+
+## Compare as a viewer mode — seen in passing (2026-10-12)
+
+- [ ] 08 §6 high-resolution rule is not in code: 2-Up frames load a screen-sized image, so `100%` on a 24 MP original is an upscale of that, not the original's pixels. Load a ≤ 3000px rendition for at most two frames past Fit and release it at Fit (NF-02) _(FS-01.08 §6, FS-01.08c AC-4)_
+- [ ] iPad Compare has no 100pt filmstrip and no Edit in the toolbar, so `IP_Compare` frames come out taller than the board's 832 — both belong to the FS-21 viewer toolbar (plan K5) _(FS-01.08c §2)_

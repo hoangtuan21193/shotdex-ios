@@ -1,7 +1,12 @@
 # FS-01.08 — Compare
 
-`FS-01.08` · `Features/Library/CompareScreen.swift` · `Domain/Grid/CompareLayout.swift`
-· test `CompareLayoutTests` · cập nhật 2026-10-02
+`FS-01.08` · `Features/Library/Compare/` · `Domain/Compare/`
+· test `CompareLayoutTests`, `CompareSessionTests`, `CompareModelTests` · cập nhật 2026-10-12
+
+> **Đã thay bởi [08c](08c-compare-viewer-mode.md) (code 2026-10-12):** §1 chạm = đánh dấu xoá, §2 dấu riêng của
+> Duplicates, §3 một cách nhìn nhiều cột, §4 chạm-để-đánh-dấu và góc trên-phải, §7 "dấu bỏ khi đóng". Compare giờ là
+> chế độ của Viewer, cờ là cờ thật của FS-01.12. Phần còn giữ: §2 cổng Duplicates, §4 xác nhận/huỷ, §5 đồng bộ, §6 video
+> và bản cao (luật bản cao vẫn chưa có trong code — `REVIEW_QUEUE.md`).
 
 **Một câu:** xem nhiều ảnh cạnh nhau ở **cùng một mức phóng**, và chạm để đánh dấu tấm sẽ xoá.
 

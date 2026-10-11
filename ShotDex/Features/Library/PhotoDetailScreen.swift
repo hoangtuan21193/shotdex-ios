@@ -99,6 +99,14 @@ struct PhotoDetailScreen: View {
 
     let model: any PhotoBrowsingSource
     @State var currentIndex: Int
+    /// Opens the viewer in Compare — a selection or a Duplicates group
+    /// (FS-01.08c §7).
+    var compareRequest: CompareRequest? = nil
+    /// Compare's stage covers the pager: the viewer's chrome and keys stand
+    /// down so a key never means two things.
+    @State private var isComparing = false
+    /// Room the Single · 2-Up · Survey control takes in the top bar.
+    @State private var modePickerWidth: CGFloat = 0
 
     /// Bumped after an in-viewer deletion prunes the source; forces the pager
     /// to rebuild the current page even when the (clamped) index is unchanged.
@@ -312,6 +320,7 @@ struct PhotoDetailScreen: View {
                             }
                         }
                     }
+                    .padding(.trailing, modePickerWidth)
                     .padding(.horizontal)
                     .padding(.top, 8)
                     Spacer()
@@ -350,6 +359,20 @@ struct PhotoDetailScreen: View {
         .onPreferenceChange(ChromeHeightKey.self) { bottomChromeHeight = $0 }
         .offset(y: max(0, dragOffset.height))
         .scaleEffect(dismissScale)
+        .compareHost(
+            source: model,
+            request: compareRequest,
+            currentIndex: $currentIndex,
+            reveal: { id in
+                guard let index = model.index(of: id) else { return }
+                currentIndex = index
+                reseatToken += 1
+                refreshCurrentPhoto()
+            },
+            isComparing: $isComparing,
+            modePickerWidth: $modePickerWidth,
+            showsChrome: showsViewerChrome
+        )
         .preferredColorScheme(.dark)
         .statusBarHidden(shouldHideStatusBar)
         // The viewer is a fullScreenCover, so a sheet presented from the root
@@ -737,7 +760,8 @@ struct PhotoDetailScreen: View {
     }
 
     private var showsViewerChrome: Bool {
-        !isZoomed
+        !isComparing
+            && !isZoomed
             && !isVideoFullscreen
             && (!isCurrentVideo || isVideoChromeVisible)
     }

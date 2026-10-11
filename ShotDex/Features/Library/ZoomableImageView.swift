@@ -58,12 +58,15 @@ struct ZoomableImageView: UIViewRepresentable {
     /// hold is one. Off while zoomed, where a drag pans. The culling pass
     /// flags and pages with them (FS-01.12b §5).
     var onSwipe: ((CullGesturePolicy.Swipe) -> Void)?
+    /// How far a pinch may go. Compare raises it so 100% of a large original
+    /// is reachable in a small frame (FS-01.08c §3).
+    var maximumZoomScale: CGFloat = 5
 
     func makeUIView(context: Context) -> UIScrollView {
         let scrollView = UIScrollView()
         scrollView.delegate = context.coordinator
         scrollView.minimumZoomScale = 1
-        scrollView.maximumZoomScale = 5
+        scrollView.maximumZoomScale = maximumZoomScale
         scrollView.showsVerticalScrollIndicator = false
         scrollView.showsHorizontalScrollIndicator = false
         scrollView.bouncesZoom = true
@@ -145,6 +148,7 @@ struct ZoomableImageView: UIViewRepresentable {
     }
 
     func updateUIView(_ scrollView: UIScrollView, context: Context) {
+        scrollView.maximumZoomScale = maximumZoomScale
         context.coordinator.imageView?.image = image
         context.coordinator.imageView?.preferredImageDynamicRange =
             showsFullHDR ? .high : .standard

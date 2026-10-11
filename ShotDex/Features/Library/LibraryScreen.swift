@@ -24,7 +24,7 @@ struct LibraryScreen: View {
     /// order (Compare panes follow it); ids survive grid reloads.
     @State private var isSelecting = false
     @State private var selectedIds: [String] = []
-    @State private var isComparePresented = false
+    @State private var compareRequest: CompareRequest?
     @State private var compressionPresentation: CompressionPresentation?
     @State private var collagePresentation: CollagePresentation?
     @State private var videoStudioPresentation: VideoStudioPresentation?
@@ -169,9 +169,9 @@ struct LibraryScreen: View {
                 PhotoDetailScreen(model: model, currentIndex: target.startIndex)
             }
         }
-        .fullScreenCover(isPresented: $isComparePresented, onDismiss: stopSelecting) {
-            if let model, let photos = comparePhotos(model) {
-                CompareScreen(photos: photos)
+        .fullScreenCover(item: $compareRequest, onDismiss: stopSelecting) { request in
+            if let model {
+                PhotoDetailScreen(model: model, currentIndex: request.startIndex, compareRequest: request)
             }
         }
         .multiEditCover($multiEditPresentation, sourceAlbum: nil, onDismiss: stopSelecting)
@@ -443,23 +443,6 @@ struct LibraryScreen: View {
         selectedIds.contains(assetId)
     }
 
-    /// Compare panes follow the pick order of the selection. Full rows are
-    /// fetched on demand — the grid only holds slim items. A photo deleted
-    /// mid-selection just drops out.
-    private func comparePhotos(_ model: LibraryModel) -> [ComparePhoto]? {
-        guard selectedIds.count >= CompareScreen.minPhotoCount else { return nil }
-        let metadataById = (try? dependencies.libraryQueries.metadata(assetIds: selectedIds)) ?? [:]
-        let assets = PhotoLibraryService.fetchAssets(ids: selectedIds)
-        let assetById = Dictionary(uniqueKeysWithValues: assets.map { ($0.localIdentifier, $0) })
-        // Videos have no metadata row (index is image-only) — require the
-        // asset instead, and let the caption go missing.
-        let photos = selectedIds.compactMap { id -> ComparePhoto? in
-            guard let asset = assetById[id] else { return nil }
-            return ComparePhoto(metadata: metadataById[id], asset: asset)
-        }
-        return photos.count >= 2 ? photos : nil
-    }
-
     // MARK: Grid
 
     @ViewBuilder
@@ -593,7 +576,9 @@ struct LibraryScreen: View {
             onDeselectAll: { selectedIds = [] },
             onCollage: { presentCollage(model) },
             onVideo: { presentVideoStudio(model) },
-            onCompare: { isComparePresented = true },
+            onCompare: {
+                compareRequest = CompareRequest(selection: selectedIds, source: model)
+            },
             onCompress: { presentCompression(model) },
             onEdit: { presentMultiEdit(model) },
             onPasteEdits: dependencies.editClipboard.hasContent
@@ -611,7 +596,6 @@ struct LibraryScreen: View {
             onSelectAll: { selectedIds = model.items.map(\.assetId) }
         )
     }
-
 
     /// The long-press menu for one tile. Share, delete and duplicate route
     /// through the shared coordinator so they behave exactly as they do from

@@ -2,85 +2,108 @@ import CoreGraphics
 import Testing
 @testable import ShotDex
 
-/// How many card columns the compare screen takes, and how cards are dealt
-/// into them. The interesting cases are the ones that are awkward to reach by
-/// hand: the Duo's cover display, an iPad in portrait, and a comparison with
-/// fewer photos than the screen has room for.
+/// Compare's frame sizes against the boards (FS-01.08c §2, §4): stage areas
+/// are the boards' — the space between the top bar and the bottom bar.
 struct CompareLayoutTests {
 
-    private let spacing: CGFloat = 14
-
-    @Test func aPhoneIsOneColumn() {
-        // iPhone 17: 402pt wide, 12pt padding each side.
-        #expect(CompareLayout.columns(count: 6, width: 378, spacing: spacing) == 1)
+    private func close(_ a: CGFloat, _ b: CGFloat, within tolerance: CGFloat = 1) -> Bool {
+        abs(a - b) <= tolerance
     }
 
-    /// The Duo's cover display is 466pt with an 84pt rail — narrower than two
-    /// readable cards, so it stays a single column like a phone.
-    @Test func theDuoCoverIsOneColumn() {
-        #expect(CompareLayout.columns(count: 6, width: 466 - 84 - 24, spacing: spacing) == 1)
+    /// `PH_Compare`: stage 402 × 600 → two 370 × 294 frames, photo 226 tall.
+    @Test func phoneStacksTwo370x294() {
+        let frame = CompareLayout.stacked(area: CGSize(width: 402, height: 600), metrics: .cullRow)
+        #expect(frame.size == CGSize(width: 370, height: 294))
+        #expect(frame.photo.height == 226)
     }
 
-    @Test func anIPadInPortraitIsTwoColumnsAndInLandscapeThree() {
-        // iPad Pro 11": 834pt portrait, 1194pt landscape.
-        #expect(CompareLayout.columns(count: 6, width: 834 - 24, spacing: spacing) == 2)
-        #expect(CompareLayout.columns(count: 6, width: 1194 - 24, spacing: spacing) == 3)
+    /// `DC_Compare`: 382 beside the 84pt rail → 350 × 224, everything left
+    /// of x = 366.
+    @Test func coverKeepsEverythingLeftOf366() {
+        let frame = CompareLayout.stacked(area: CGSize(width: 382, height: 456), metrics: .cover)
+        #expect(frame.size == CGSize(width: 350, height: 224))
+        #expect(CompareLayout.margin + frame.size.width <= 366)
+        #expect(frame.photo.height == 176)
     }
 
-    /// Three columns is the ceiling however wide the display gets: a fourth
-    /// card is one too small to tell two exposures apart.
-    @Test func threeColumnsIsTheCeiling() {
-        #expect(CompareLayout.columns(count: 12, width: 4000, spacing: spacing) == 3)
+    /// `IP_Compare`: 1376 × 832 → two 664 × 832 frames.
+    @Test func iPadTwoUpFramesAre664x832() {
+        let frame = CompareLayout.twoUp(area: CGSize(width: 1376, height: 832), metrics: .wide)
+        #expect(frame.size == CGSize(width: 664, height: 832))
+        #expect(frame.photo.height == 768)
     }
 
-    /// Two photos on a 13" iPad are two columns, not three with a hole in it.
-    @Test func columnsNeverExceedThePhotoCount() {
-        #expect(CompareLayout.columns(count: 2, width: 1366, spacing: spacing) == 2)
-        #expect(CompareLayout.columns(count: 1, width: 1366, spacing: spacing) == 1)
+    /// `DI_Compare`: 951 × 453 → two 451 × 453 frames, photo 385 tall.
+    @Test func duoInnerTwoUpFramesAre451x453() {
+        let frame = CompareLayout.twoUp(area: CGSize(width: 951, height: 453), metrics: .cullRow)
+        #expect(frame.size == CGSize(width: 451, height: 453))
+        #expect(frame.photo.height == 385)
     }
 
-    @Test func aCanvasWithNoWidthStillAsksForOneColumn() {
-        #expect(CompareLayout.columns(count: 4, width: 0, spacing: spacing) == 1)
-        #expect(CompareLayout.columns(count: 0, width: 1000, spacing: spacing) == 1)
+    /// `IP_CompareSurvey`: six photos in 432 × 288 boxes, no scroll.
+    @Test func sixFitWithoutScroll() {
+        let survey = CompareLayout.survey(count: 6, area: CGSize(width: 1376, height: 832), metrics: .wide)
+        #expect(survey.columns == 3)
+        #expect(close(survey.photo.width, 432))
+        #expect(close(survey.photo.height, 288))
+        #expect(!survey.scrolls)
     }
 
-    @Test func oneColumnKeepsEveryCardInOrder() {
-        let buckets = CompareLayout.distribute(aspectRatios: [1.5, 0.66, 1], columns: 1)
-        #expect(buckets == [[0, 1, 2]])
+    /// AC-21: twelve on an iPad shrink to the floor, 216 × 144, and scroll.
+    @Test func twelveOnIPadShrinkTo216x144AndScroll() {
+        let survey = CompareLayout.survey(count: 12, area: CGSize(width: 1376, height: 832), metrics: .wide)
+        #expect(close(survey.photo.width, 216))
+        #expect(close(survey.photo.height, 144))
+        #expect(survey.scrolls)
     }
 
-    /// Landscape frames are short and portrait ones are tall, so dealing them
-    /// out round-robin would leave one column running far past the other. Each
-    /// card goes to whichever column is shortest so far.
-    @Test func tallCardsAreBalancedAgainstShortOnes() {
-        // One portrait (tall) then four landscape (short).
-        let buckets = CompareLayout.distribute(
-            aspectRatios: [0.5, 2, 2, 2, 2],
-            columns: 2
+    /// Nine fit in three rows without reaching the floor.
+    @Test func nineShrinkButFit() {
+        let survey = CompareLayout.survey(count: 9, area: CGSize(width: 1376, height: 832), metrics: .wide)
+        #expect(survey.photo.height < 288)
+        #expect(survey.photo.height >= 144)
+        #expect(!survey.scrolls)
+    }
+
+    /// `DI_CompareSurvey`: 264 × 176 on the Duo's inner display, floor 132 × 88.
+    @Test func duoInnerSurveyIs264x176() {
+        let area = CGSize(width: 951, height: 452)
+        let six = CompareLayout.survey(count: 6, area: area, metrics: .duoInner)
+        #expect(close(six.photo.width, 264))
+        #expect(close(six.photo.height, 176))
+        let many = CompareLayout.survey(count: 15, area: area, metrics: .duoInner)
+        #expect(close(many.photo.width, 132))
+        #expect(many.scrolls)
+    }
+}
+
+struct CompareZoomTests {
+    /// AC-4: 100% is one original pixel per screen pixel.
+    @Test func hundredPercentIsOnePixelPerPixel() {
+        // 6000 × 4000 in a 370 × 226 box at 3x: Fit shows 1017 px across.
+        let scale = CompareZoom.actualPixelsScale(
+            pixelSize: CGSize(width: 6000, height: 4000),
+            box: CGSize(width: 370, height: 226),
+            screenScale: 3
         )
-        #expect(buckets.count == 2)
-        #expect(buckets[0].first == 0)
-        // The tall frame is 2 units; each short one is 0.5, so the other column
-        // takes four of them before the first column is asked for a second.
-        #expect(buckets[1].count == 4)
-        #expect(buckets.flatMap { $0 }.sorted() == [0, 1, 2, 3, 4])
+        #expect(abs(scale - 6000.0 / (339 * 3)) < 0.01)
+        #expect(CompareZoom.percent(zoomScale: scale, pixelSize: CGSize(width: 6000, height: 4000),
+                                    box: CGSize(width: 370, height: 226), screenScale: 3) == 100)
+        #expect(CompareZoom.percent(zoomScale: 1, pixelSize: CGSize(width: 6000, height: 4000),
+                                    box: CGSize(width: 370, height: 226), screenScale: 3) == nil)
     }
 
-    @Test func equalCardsAlternateLeftToRight() {
-        let buckets = CompareLayout.distribute(aspectRatios: [1, 1, 1, 1], columns: 2)
-        #expect(buckets == [[0, 2], [1, 3]])
+    @Test func aSmallPhotoIsAlreadyPastFull() {
+        let scale = CompareZoom.actualPixelsScale(
+            pixelSize: CGSize(width: 300, height: 200),
+            box: CGSize(width: 664, height: 768),
+            screenScale: 2
+        )
+        #expect(scale == 1)
     }
 
-    /// A missing asset reports a zero ratio; it must not divide the running
-    /// height by zero or swallow every later card into one column.
-    @Test func aMissingAssetCountsAsSquare() {
-        let buckets = CompareLayout.distribute(aspectRatios: [0, 1, 1, 1], columns: 2)
-        #expect(buckets.flatMap { $0 }.sorted() == [0, 1, 2, 3])
-        #expect(buckets[0].count == 2)
-        #expect(buckets[1].count == 2)
-    }
-
-    @Test func noPhotosIsNoCards() {
-        #expect(CompareLayout.distribute(aspectRatios: [], columns: 3) == [[], [], []])
+    @Test func zTogglesFitAndFull() {
+        #expect(CompareZoom.fit.toggled() == .actualPixels)
+        #expect(CompareZoom.actualPixels.toggled() == .fit)
     }
 }

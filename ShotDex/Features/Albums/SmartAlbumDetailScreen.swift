@@ -28,7 +28,7 @@ struct SmartAlbumDetailScreen: View {
     /// visit starts from the whole album.
     @State private var filter = AlbumFilter()
     @State private var isAdvancedFilterPresented = false
-    @State private var isComparePresented = false
+    @State private var compareRequest: CompareRequest?
     @State private var compressionPresentation: CompressionPresentation?
     @State private var stackPresentation: PhotoStackPresentation?
     @State private var panoramaPresentation: PanoramaMergePresentation?
@@ -106,9 +106,9 @@ struct SmartAlbumDetailScreen: View {
                 PhotoDetailScreen(model: model, currentIndex: target.startIndex)
             }
         }
-        .fullScreenCover(isPresented: $isComparePresented, onDismiss: stopSelecting) {
-            if let model, let photos = comparePhotos(model) {
-                CompareScreen(photos: photos)
+        .fullScreenCover(item: $compareRequest, onDismiss: stopSelecting) { request in
+            if let model {
+                PhotoDetailScreen(model: model, currentIndex: request.startIndex, compareRequest: request)
             }
         }
         .multiEditCover($multiEditPresentation, sourceAlbum: nil, onDismiss: stopSelecting)
@@ -458,16 +458,6 @@ struct SmartAlbumDetailScreen: View {
         swipeBaseline = []
     }
 
-    /// Compare panes follow the pick order of the selection.
-    private func comparePhotos(_ model: SmartAlbumDetailModel) -> [ComparePhoto]? {
-        guard selectedIds.count >= CompareScreen.minPhotoCount else { return nil }
-        let photos = selectedIds.compactMap { id -> ComparePhoto? in
-            guard let asset = model.asset(for: id) else { return nil }
-            return ComparePhoto(metadata: model.metadata(for: id), asset: asset)
-        }
-        return photos.count >= 2 ? photos : nil
-    }
-
     private func shareSelected(_ model: SmartAlbumDetailModel) {
         guard !selectedIds.isEmpty else { return }
         let assets = selectedIds.compactMap { model.asset(for: $0) }
@@ -528,7 +518,9 @@ struct SmartAlbumDetailScreen: View {
             onDeselectAll: { selectedIds = [] },
             onCollage: { presentCollage(model) },
             onVideo: { presentVideoStudio(model) },
-            onCompare: { isComparePresented = true },
+            onCompare: {
+                compareRequest = CompareRequest(selection: selectedIds, source: model)
+            },
             onCompress: { presentCompression(model) },
             onEdit: { presentMultiEdit(model) },
             onCombine: { presentCombine($0, model) },
@@ -547,7 +539,6 @@ struct SmartAlbumDetailScreen: View {
     private var bottomChromeInset: CGFloat {
         AppTheme.Size.bottomChromeClearance
     }
-
 
     /// The long-press menu for one tile.
     private func tileMenu(assetId: String) -> PhotoTileContextMenu {

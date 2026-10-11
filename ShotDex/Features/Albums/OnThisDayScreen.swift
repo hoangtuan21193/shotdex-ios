@@ -24,7 +24,7 @@ struct OnThisDayScreen: View {
     /// Delete selection: asset ids in pick order, no count cap (unlike
     /// Compare), so Compare panes and the selection bar follow the taps.
     @State private var isSelecting = false
-    @State private var isComparePresented = false
+    @State private var compareRequest: CompareRequest?
     @State private var compressionPresentation: CompressionPresentation?
     @State private var stackPresentation: PhotoStackPresentation?
     @State private var panoramaPresentation: PanoramaMergePresentation?
@@ -94,9 +94,9 @@ struct OnThisDayScreen: View {
                 PhotoDetailScreen(model: model, currentIndex: target.startIndex)
             }
         }
-        .fullScreenCover(isPresented: $isComparePresented, onDismiss: stopSelecting) {
-            if let photos = comparePhotos() {
-                CompareScreen(photos: photos)
+        .fullScreenCover(item: $compareRequest, onDismiss: stopSelecting) { request in
+            if let model {
+                PhotoDetailScreen(model: model, currentIndex: request.startIndex, compareRequest: request)
             }
         }
         .multiEditCover($multiEditPresentation, sourceAlbum: nil, onDismiss: stopSelecting)
@@ -199,7 +199,6 @@ struct OnThisDayScreen: View {
         )
         .ignoresSafeArea(edges: .bottom)
     }
-
 
     /// The long-press menu for one tile.
     private func tileMenu(assetId: String) -> PhotoTileContextMenu {
@@ -321,7 +320,9 @@ struct OnThisDayScreen: View {
             onClose: { withAnimation { stopSelecting() } },
             onDeselect: { toggleSelection(of: $0) },
             onDeselectAll: { selectedIds = [] },
-            onCompare: { isComparePresented = true },
+            onCompare: {
+                if let model { compareRequest = CompareRequest(selection: selectedIds, source: model) }
+            },
             onCompress: presentCompression,
             onEdit: presentMultiEdit,
             onCombine: presentCombine,
@@ -330,17 +331,6 @@ struct OnThisDayScreen: View {
             assetActions: assetActions,
             onSelectAll: { selectedIds = (model?.photos ?? []).map(\.assetId) }
         )
-    }
-
-    /// Compare panes follow the pick order of the selection.
-    private func comparePhotos() -> [ComparePhoto]? {
-        guard let model,
-              selectedIds.count >= CompareScreen.minPhotoCount else { return nil }
-        let photos = selectedIds.compactMap { id -> ComparePhoto? in
-            guard let asset = model.assetsById[id] else { return nil }
-            return ComparePhoto(metadata: model.metadata(for: id), asset: asset)
-        }
-        return photos.count >= 2 ? photos : nil
     }
 
     private func shareSelected() {

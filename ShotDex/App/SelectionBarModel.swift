@@ -46,7 +46,7 @@ struct SelectionBarModel {
     var onCollage: (() -> Void)? = nil
     /// Create cluster — build a video from the picked photos/videos.
     var onVideo: (() -> Void)? = nil
-    /// Middle cluster — side-by-side compare (valid from `CompareScreen.minPhotoCount` up).
+    /// Middle cluster — side-by-side compare (valid from `CompareSession.minimumCount` up).
     var onCompare: (() -> Void)? = nil
     /// Middle cluster — resize / compress the picked images.
     var onCompress: (() -> Void)? = nil

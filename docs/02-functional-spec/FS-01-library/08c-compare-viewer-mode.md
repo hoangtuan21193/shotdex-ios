@@ -1,7 +1,7 @@
 # FS-01.08c — Compare là một chế độ của Viewer (mọi thiết bị)
 
-`FS-01.08c` · tier B (theo sáng/tối như Viewer, **không** tầng D) · `Features/Library/CompareScreen.swift`
-· test `CompareLayoutTests` · cập nhật 2026-10-04 · nguồn: D15 ([DECISIONS](../../../.planboard/macos-app/DECISIONS.md)),
+`FS-01.08c` · tier B (theo sáng/tối như Viewer, **không** tầng D) · `Features/Library/Compare/` · `Domain/Compare/`
+· test `CompareLayoutTests`, `CompareSessionTests`, `CompareModelTests` · cập nhật 2026-10-12 · nguồn: D15 ([DECISIONS](../../../.planboard/macos-app/DECISIONS.md)),
 intent [iPad](../../_intents/2026-10-04-ipad-mac-style.md) · board `MAC_Compare(Survey)`, `IP_Compare(Survey)`,
 `PH_Compare`, `DI_Compare(Survey)`, `DC_Compare`
 
@@ -110,31 +110,31 @@ phóng, cắm Pick/Reject từng ảnh; **Reject = đánh dấu xoá**, và mộ
 
 | # | Cho | Khi | Thì | Chứng minh bằng |
 |---|---|---|---|---|
-| AC-1 | iPad 1376×1032, chế độ chọn có 4 ảnh, máy ở chế độ sáng rồi tối | bấm Compare | 2-Up: Select = ảnh chọn đầu, `Candidate 1 of 3`; nền và chữ giống Viewer Single ở cùng chế độ (ảnh chụp cả sáng và tối), không nền đen tầng D | ⚠️ chưa có |
-| AC-2 | như AC-1, khung Candidate đang làm việc | bấm `X` | Candidate có nhãn `Rejected`; toolbar có **Delete 1 Photo**; lưới sau khi đóng: ô đó mờ 45% và có cờ Reject | ⚠️ chưa có |
-| AC-3 | iPhone 402×874, Compare 4 ảnh, Candidate 1 of 3 | vuốt trái trên khung Candidate | khung dưới thành `Candidate 2 of 3`; khung Select không đổi ảnh | ⚠️ chưa có |
-| AC-4 | iPhone, cả hai khung ở Fit | pinch khung Select lên 100% | cả hai khung 100%, cùng tâm tỉ lệ; nhãn `100%` trên cả hai | ⚠️ chưa có |
-| AC-5 | 2-Up, ảnh A Select, ảnh B Candidate | Make Select | B là Select, A là Candidate; cờ và sao của hai ảnh không đổi | ⚠️ chưa có |
-| AC-6 | Survey 6 ảnh (iPad), không cờ | chạm ô 3 rồi bấm `P` | ô 3 viền amber, nhãn `Picked`; 5 ô còn lại không đổi | ⚠️ chưa có |
-| AC-7 | Survey 6 ảnh, ô 3 đang làm việc | Remove from Survey | còn 5 ô; ảnh 3 vẫn trong thư viện, cờ không đổi; tiêu đề `5 Photos` | ⚠️ chưa có |
-| AC-8 | Compare 4 ảnh, 0 Reject | giữ-lâu khung 2 → Keep Only This | 3 ảnh khác Reject, ảnh 2 không Reject; `Delete 3 Photos` | ⚠️ chưa có |
-| AC-9 | Compare 4 ảnh Photos, 2 Reject | Delete 2 Photos → xác nhận ở hộp hệ thống | 2 ảnh vào Recently Deleted; còn 2 khung ở 2-Up; 0 Reject; dòng cờ của 2 ảnh bị gỡ | ⚠️ chưa có |
-| AC-10 | Compare 3 ảnh Photos, 2 Reject | Delete 2 Photos → xác nhận | còn 1 ảnh → Viewer về Single trên ảnh đó | ⚠️ chưa có |
-| AC-11 | Compare 3 ảnh, 1 Reject | Delete → Cancel ở hộp hệ thống | 0 cảnh báo; 3 khung; cờ Reject còn | ⚠️ chưa có |
+| AC-1 | iPad 1376×1032, chế độ chọn có 4 ảnh, máy ở chế độ sáng rồi tối | bấm Compare | 2-Up: Select = ảnh chọn đầu, `Candidate 1 of 3`; nền và chữ giống Viewer Single ở cùng chế độ (ảnh chụp cả sáng và tối), không nền đen tầng D | ⚠️ một nửa: iPad dọc 2-Up đúng vai (route `cmp-ipad`); Viewer còn luôn tối → nửa sáng chờ FS-21 AC-52 |
+| AC-2 | như AC-1, khung Candidate đang làm việc | bấm `X` | Candidate có nhãn `Rejected`; toolbar có **Delete 1 Photo**; lưới sau khi đóng: ô đó mờ 45% và có cờ Reject | `CompareModelTests.xOnTheWorkingFrameRejectsItForReal`; route iPhone: Reject → nhãn `Rejected`, `Delete 1 Photo` |
+| AC-3 | iPhone 402×874, Compare 4 ảnh, Candidate 1 of 3 | vuốt trái trên khung Candidate | khung dưới thành `Candidate 2 of 3`; khung Select không đổi ảnh | `CompareSessionTests.swipeMovesOnlyTheCandidate`; route `cmp-iphone`: vuốt → `Candidate 2 of 3` |
+| AC-4 | iPhone, cả hai khung ở Fit | pinch khung Select lên 100% | cả hai khung 100%, cùng tâm tỉ lệ; nhãn `100%` trên cả hai | `CompareZoomTests.hundredPercentIsOnePixelPerPixel` · ❓ pinch trên sim chưa chụp |
+| AC-5 | 2-Up, ảnh A Select, ảnh B Candidate | Make Select | B là Select, A là Candidate; cờ và sao của hai ảnh không đổi | `CompareSessionTests.makeSelectSwapsRolesNotMarks` |
+| AC-6 | Survey 6 ảnh (iPad), không cờ | chạm ô 3 rồi bấm `P` | ô 3 viền amber, nhãn `Picked`; 5 ô còn lại không đổi | `CompareSessionTests.tapSetsTheWorkingFrameOnly`; route `cmp-ipad`: chạm ô 3 → viền amber |
+| AC-7 | Survey 6 ảnh, ô 3 đang làm việc | Remove from Survey | còn 5 ô; ảnh 3 vẫn trong thư viện, cờ không đổi; tiêu đề `5 Photos` | `CompareSessionTests.removeKeepsTheRestAndTheTitle` |
+| AC-8 | Compare 4 ảnh, 0 Reject | giữ-lâu khung 2 → Keep Only This | 3 ảnh khác Reject, ảnh 2 không Reject; `Delete 3 Photos` | `CompareSessionTests.keepOnlyRejectsTheOthersAndKeepsAPick`, `CompareModelTests.keepOnlyGivesDeleteThree` |
+| AC-9 | Compare 4 ảnh Photos, 2 Reject | Delete 2 Photos → xác nhận ở hộp hệ thống | 2 ảnh vào Recently Deleted; còn 2 khung ở 2-Up; 0 Reject; dòng cờ của 2 ảnh bị gỡ | `CompareSessionTests.twoLeftStayInTwoUp`, `CompareModelTests.deletedFramesLeaveAndOnlyThisComparisonsRejectsGo` |
+| AC-10 | Compare 3 ảnh Photos, 2 Reject | Delete 2 Photos → xác nhận | còn 1 ảnh → Viewer về Single trên ảnh đó | `CompareSessionTests.oneLeftGoesSingleOnIt`; route `cmp-iphone-delete`: xoá 2/3 → Single trên ảnh còn lại |
+| AC-11 | Compare 3 ảnh, 1 Reject | Delete → Cancel ở hộp hệ thống | 0 cảnh báo; 3 khung; cờ Reject còn | `CompareModelTests.cancelInTheSystemDialogKeepsFramesAndFlags` |
 | AC-12 | Mac, 3 ảnh của nguồn thư mục `2026 Japan`, 1 Reject | Delete → *Move 1 Photo to the Trash?* → Move | file và `.xmp` của nó ở Thùng rác; nguồn còn 2 ảnh trong lưới | ⚠️ chưa có |
 | AC-13 | 3 ảnh của nguồn NAS, 1 Reject | Delete → *Hide 1 Photo?* → Hide | ảnh mất khỏi lưới ShotDex; file trên NAS có cùng SHA-256 như trước | ⚠️ chưa có |
 | AC-14 | Duo trong, Survey 6 ảnh, ô 4 đang làm việc | gập máy | Duo ngoài mở Compare xếp chồng, Select = ảnh 4; mọi control trong x ≤ 366 | ⚠️ chưa có (không có lệnh gập trên sim) |
-| AC-15 | Duplicates nhóm 2 ảnh, ảnh 1 Reject | bấm Reject trên ảnh 2 | ảnh 2 không đổi; rung cảnh báo + *Keep at least one photo in this group.* | ⚠️ chưa có |
-| AC-16 | iPad và Mac, 2-Up | đọc toolbar; pinch khung Select lên 100% | 0 nút *Sync Zoom and Pan*; cả hai khung 100% | ⚠️ chưa có |
+| AC-15 | Duplicates nhóm 2 ảnh, ảnh 1 Reject | bấm Reject trên ảnh 2 | ảnh 2 không đổi; rung cảnh báo + *Keep at least one photo in this group.* | `DuplicateKeepGateTests`, `CompareModelTests.theGroupsLastPhotoRefusesReject` |
+| AC-16 | iPad và Mac, 2-Up | đọc toolbar; pinch khung Select lên 100% | 0 nút *Sync Zoom and Pan*; cả hai khung 100% | `CompareScrollSynchronizerTests` (không có công tắc trong code) |
 | AC-17 | Duplicates nhóm 3 ảnh, mở Compare | Reject ảnh 2 → đóng Compare và Duplicates | lưới: ảnh 2 mờ 45% có cờ Reject; bộ lọc Rejected chứa nó | ⚠️ chưa có |
 | AC-18 | Mac, Survey 6 ảnh, 2 Reject | đọc toolbar; bấm `⌘⌫`; chuột phải khung 1 | **Delete 2 Photos** ngay trước Edit; `⌘⌫` mở cùng hộp xác nhận; menu chuột phải và menu Photo có **Keep Only This** | ⚠️ chưa có |
 | AC-19 | iPad 1376×1032, 2-Up | dump khung segmented cờ | cao 44pt ±1 | ⚠️ chưa có |
-| AC-20 | iPhone 402×874, 2-Up 100%, `Candidate 1 of 3` | vuốt trái một ngón trên Candidate | ảnh dịch ở cả hai khung; vẫn `Candidate 1 of 3`; về Fit rồi vuốt → `Candidate 2 of 3` | ⚠️ chưa có |
-| AC-21 | iPad, Compare 12 ảnh | mở Survey | ô 216×144; lưới cuộn dọc tới đủ 12 ô | ⚠️ chưa có |
-| AC-22 | Compare 3 ảnh, 0 Reject | đọc nút Delete | **Delete** mờ, bấm không mở hộp nào | ⚠️ chưa có |
+| AC-20 | iPhone 402×874, 2-Up 100%, `Candidate 1 of 3` | vuốt trái một ngón trên Candidate | ảnh dịch ở cả hai khung; vẫn `Candidate 1 of 3`; về Fit rồi vuốt → `Candidate 2 of 3` | code: `panRequiresTwoFingers` bỏ, vuốt chỉ ở Fit · ❓ chưa chụp ở 100% |
+| AC-21 | iPad, Compare 12 ảnh | mở Survey | ô 216×144; lưới cuộn dọc tới đủ 12 ô | `CompareLayoutTests.twelveOnIPadShrinkTo216x144AndScroll` |
+| AC-22 | Compare 3 ảnh, 0 Reject | đọc nút Delete | **Delete** mờ, bấm không mở hộp nào | `CompareModelTests.noRejectsMeansADisabledDelete`; ảnh chụp iPhone/iPad: `Delete` mờ |
 | AC-23 | Mac, Compare: 1 ảnh Photos + 1 ảnh thư mục `2026 Japan`, cả hai Reject | Delete 2 Photos → xác nhận → Delete ở hộp hệ thống | 1 hộp của app liệt kê 2 đích; ảnh Photos vào Recently Deleted, file vào Thùng rác | ⚠️ chưa có |
 | AC-24 | iPad, nguồn thư mục ổ ngoài, 1 Reject | Delete → xác nhận → hộp đỏ thứ hai | **Delete Permanently** → file và `.xmp` mất khỏi ổ; Cancel ở hộp thứ hai → file còn, cờ còn | ⚠️ chưa có |
 | AC-25 | ảnh `DSC04513.ARW` của nguồn thư mục | Reject trong Compare → thoát app → mở lại | `.xmp` cạnh file có sao −1; ảnh vẫn Rejected | ⚠️ chưa có |
-| AC-26 | (a) iPad 1376×1032, Viewer mở từ ô 5 của lưới, không chọn · (b) iPhone 402×874 và Duo ngoài, Viewer mở từ ô 5 · (c) iPhone, chế độ chọn | (a) bấm 2-Up · (b) đọc thanh trên và ⋯ · (c) chọn 1 ảnh, rồi chọn thêm 1 → Compare | (a) Select = ảnh 5, Candidate = ảnh 6, `Candidate 1 of 1` · (b) 0 segmented Single · Compare, 0 dòng Compare trong ⋯ · (c) 1 ảnh: Compare mờ; 2 ảnh: Compare mở xếp chồng, Select = ảnh chọn đầu | ⚠️ chưa có |
+| AC-26 | (a) iPad 1376×1032, Viewer mở từ ô 5 của lưới, không chọn · (b) iPhone 402×874 và Duo ngoài, Viewer mở từ ô 5 · (c) iPhone, chế độ chọn | (a) bấm 2-Up · (b) đọc thanh trên và ⋯ · (c) chọn 1 ảnh, rồi chọn thêm 1 → Compare | (a) Select = ảnh 5, Candidate = ảnh 6, `Candidate 1 of 1` · (b) 0 segmented Single · Compare, 0 dòng Compare trong ⋯ · (c) 1 ảnh: Compare mờ; 2 ảnh: Compare mở xếp chồng, Select = ảnh chọn đầu | `CompareSessionTests.fromTheViewerTheCandidateIsTheNextCell`, `ViewerModeTests.compactSingleOffersNoCompare`; route iPad Viewer → 2-Up `Candidate 1 of 1`; dump iPhone Viewer: 0 segmented |
 
-**Chưa chứng minh được:** cả 26 AC — code vẫn vẽ Compare ở tầng D (DESIGN.md §2).
+**Chưa chứng minh được:** AC-12, 13, 18, 23, 24, 25 (chờ FS-19/FS-18) · AC-14 (không gập được trên sim; code `CompareSession.fold`) · AC-17 (K2 chưa làm) · AC-19 (chưa dump iPad ngang) · nửa sáng AC-1 · AC-4/AC-20 bằng cử chỉ.

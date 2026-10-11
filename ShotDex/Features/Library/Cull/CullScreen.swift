@@ -168,55 +168,13 @@ struct CullScreen: View {
     // MARK: Control row
 
     private var controlRow: some View {
-        let marks = model.currentMarks
-        return HStack(spacing: CullLayout.controlGap) {
-            flagButton(.reject, isOn: marks.flag == .reject)
-            HStack(spacing: 0) {
-                ForEach(1...5, id: \.self) { stars in
-                    Button {
-                        Task { await model.setRating(marks.rating == stars ? 0 : stars) }
-                    } label: {
-                        Image(systemName: stars <= marks.rating ? "star.fill" : "star")
-                            .font(.system(size: CullLayout.starGlyph))
-                            .foregroundStyle(stars <= marks.rating ? Color.white : Color.white.opacity(0.28))
-                            .frame(width: CullLayout.control, height: CullLayout.control)
-                            .contentShape(Rectangle())
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityLabel(MarkCopy.starsAccessibility(stars))
-                    .accessibilityAddTraits(stars <= marks.rating ? .isSelected : [])
-                }
-            }
-            flagButton(.pick, isOn: marks.flag == .pick)
-        }
+        PhotoMarkRow(
+            marks: model.currentMarks,
+            onRate: { stars in Task { await model.setRating(stars) } },
+            onFlag: { flag in Task { await model.setFlag(flag) } }
+        )
         .frame(width: CullLayout.controlRowWidth, height: CullLayout.controlRowHeight)
         .frame(maxWidth: .infinity)
-        .accessibilityElement(children: .contain)
-        .accessibilityLabel(MarkCopy.ratingAndFlag)
-    }
-
-    /// Pick on = accent disc + black glyph; Reject on = red disc + white
-    /// glyph, the destructive "on" (DESIGN.md tier D). Tapping the flag the
-    /// photo already has clears it.
-    private func flagButton(_ flag: PhotoFlag, isOn: Bool) -> some View {
-        Button {
-            Task { await model.setFlag(isOn ? nil : flag) }
-        } label: {
-            Image(systemName: flag == .pick ? "flag.fill" : "xmark")
-                .font(.system(size: flag == .pick ? 19 : 20, weight: .semibold))
-                .foregroundStyle(isOn ? (flag == .pick ? Color.black : Color.white) : Color.white)
-                .frame(width: CullLayout.control, height: CullLayout.control)
-                .background {
-                    if isOn {
-                        Circle().fill(flag == .pick ? EditorTheme.accent : Color.red)
-                    }
-                }
-                .editorGlass(Circle(), tint: isOn ? .clear : EditorTheme.glass)
-                .contentShape(Circle())
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel(flag == .pick ? MarkCopy.pick : MarkCopy.reject)
-        .accessibilityAddTraits(isOn ? .isSelected : [])
     }
 
     private func roundButton(systemImage: String, glyph: CGFloat, label: String, action: @escaping () -> Void) -> some View {
