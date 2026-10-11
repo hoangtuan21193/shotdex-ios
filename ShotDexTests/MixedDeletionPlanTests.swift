@@ -66,4 +66,38 @@ import Testing
         #expect(sd.permanentTitle == "Delete 12 Photos Permanently?")
         #expect(sd.permanentMessage == "“2026 Japan” has no Trash. These files can't be recovered.")
     }
+
+    /// AC-43: six photos only on NAS Home. The dialog is "Hide 6 photos?"
+    /// with a Hide button and no word "delete"; Hide takes them out of the
+    /// grid and Statistics, and the files on the server are untouched.
+    @Test func allServerIsHide() throws {
+        let database = try AppDatabase.makeEmpty()
+        let nas = try SourceStore(database: database).addServer(name: "NAS Home", connectionId: "C1")
+        let ids = try database.writer.write { db in
+            let ids = try Self.addPhotos(db, count: 6, sourceId: nas, kind: "server", prefix: "N")
+                + Self.addPhotos(db, count: 2, sourceId: PhotoLibrarySource.id, kind: "photos", prefix: "P")
+            for id in ids {
+                try db.execute(sql: "INSERT INTO photo_metadata (assetId, mediaType, isFavorite, indexedAt, exifStatus) VALUES (?, 1, 0, 1, 'indexed')",
+                               arguments: [id])
+            }
+            return Array(ids.prefix(6))
+        }
+        let queries = DeletionTargetQueries(database: database)
+        let plan = try queries.plan(photoIds: ids, selection: .photos)
+        #expect(plan.verb == .hide)
+        #expect(plan.commandName == "Hide 6 Photos")
+        #expect(plan.title == "Hide 6 photos?")
+        #expect(plan.message == "Files on NAS Home stay on the server; ShotDex hides them.")
+        #expect(plan.confirmTitle == "Hide")
+        for text in [plan.commandName, plan.title, plan.message, plan.confirmTitle] {
+            #expect(!text.localizedCaseInsensitiveContains("delete"))
+        }
+
+        let library = LibraryQueries(database: database)
+        #expect(try library.count(matching: FilterCriteria()) == 8)
+        try HiddenCopyStore(database: database).hide(copyIds: try queries.targets(photoIds: ids).flatMap { $0.map(\.copyId) })
+        #expect(try library.count(matching: FilterCriteria()) == 2)
+        #expect(try StatisticsQueries(database: database).totalPhotos(scope: .allTime) == 2)
+        #expect(try HiddenCopyStore(database: database).hiddenPhotoIds().sorted() == ids.sorted())
+    }
 }
