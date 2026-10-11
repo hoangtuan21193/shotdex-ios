@@ -71,13 +71,13 @@ struct FolderSourceIndexer: Sendable {
                 // Listed, never opened: a photo and a copy so the grid can show
                 // it, no hash, no metadata row — nothing counts it yet.
                 try database.writer.write { db in
-                    let photoId: String = existing?["photoId"] ?? UUID().uuidString
+                    let photoId = existing?.photoId ?? UUID().uuidString
                     try db.execute(sql: "INSERT OR IGNORE INTO photos (id, createdAt) VALUES (?, ?)", arguments: [photoId, stamp])
                     try db.execute(sql: """
                         INSERT INTO photo_copies (id, photoId, sourceId, kind, relativePath, relativePathKey, modifiedAt, isOnline, isCloudPlaceholder, lastSeenAt)
                         VALUES (?, ?, ?, 'file', ?, ?, ?, 1, 1, ?)
                         ON CONFLICT(id) DO UPDATE SET missingSince = NULL, lastSeenAt = excluded.lastSeenAt
-                        """, arguments: [existing?["id"] ?? UUID().uuidString, photoId, sourceId, file.relativePath, key, modified, stamp])
+                        """, arguments: [existing?.id ?? UUID().uuidString, photoId, sourceId, file.relativePath, key, modified, stamp])
                 }
                 summary.placeholders += 1
                 continue
@@ -100,8 +100,8 @@ struct FolderSourceIndexer: Sendable {
                 }
                 continue
             }
-            var photoId: String = existing?["photoId"] ?? UUID().uuidString
-            var copyId: String = existing?["id"] ?? UUID().uuidString
+            var photoId = existing?.photoId ?? UUID().uuidString
+            var copyId = existing?.id ?? UUID().uuidString
             if existing == nil, let match = vanished.firstIndex(where: { $0.fast == hash.fast && $0.size == file.size }) {
                 // Renamed or moved inside the source: same copy, same photo.
                 photoId = vanished[match].photoId

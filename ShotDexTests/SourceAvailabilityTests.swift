@@ -113,7 +113,7 @@ extension SourceAvailabilityTests {
         let database = try AppDatabase.makeEmpty()
         let sources = SourceStore(database: database)
         let source = try sources.addServer(name: "NAS Home", connectionId: "C1")
-        let indexer = ServerSourceIndexer(database: database, composer: FolderSourceIndexTests.composer, client: client,
+        let indexer = ServerSourceIndexer(database: database, composer: ServerSourceIndexTests.composer, client: client,
                                           thumbnails: FolderThumbnails(directory: cache) { 100_000_000_000 }, readsSidecars: false)
         #expect(try await indexer.index(sourceId: source, folder: "Photos/2026", pairsRawAndJpeg: true).photos == 3)
         let photoIds = try await database.reader.read { db in

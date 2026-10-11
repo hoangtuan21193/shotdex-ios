@@ -26,29 +26,40 @@ enum FileCopyWriter {
             .map { Vanished(copyId: $0["id"], photoId: $0["photoId"], size: $0["size"], fast: $0["fastHash"]) }
     }
 
-    /// The copy at `key`, and whether Clear Local Metadata Index took its row
-    /// away — then a file the same as before is still read again (FS-19.05 §7).
-    static func existing(_ db: Database, sourceId: String, key: String) throws -> Row? {
+    /// The copy already recorded at a path.
+    struct Existing: Sendable {
+        let id: String
+        let photoId: String
+        let size: Int64?
+        let modifiedAt: Int?
+        /// False when Clear Local Metadata Index took the row away — then a
+        /// file the same as before is still read again (FS-19.05 §7).
+        let hasMetadata: Bool
+    }
+
+    static func existing(_ db: Database, sourceId: String, key: String) throws -> Existing? {
         try Row.fetchOne(db, sql: """
-            SELECT c.id, c.photoId, c.size, c.modifiedAt, c.isCloudPlaceholder,
+            SELECT c.id, c.photoId, c.size, c.modifiedAt,
                    EXISTS(SELECT 1 FROM photo_metadata m WHERE m.assetId = c.photoId) AS hasMetadata
             FROM photo_copies c WHERE c.sourceId = ? AND c.relativePathKey = ?
-            """, arguments: [sourceId, key])
+            """, arguments: [sourceId, key]).map {
+            Existing(id: $0["id"], photoId: $0["photoId"], size: $0["size"], modifiedAt: $0["modifiedAt"], hasMetadata: $0["hasMetadata"])
+        }
     }
 
     /// True when `existing` is the file as last read: same size, same date,
     /// metadata row still there.
-    static func isUnchanged(_ existing: Row?, size: Int64, modified: Int?) -> Bool {
+    static func isUnchanged(_ existing: Existing?, size: Int64, modified: Int?) -> Bool {
         guard let existing else { return false }
-        return existing["size"] as Int64? == size && existing["modifiedAt"] as Int? == modified && existing["hasMetadata"] as Bool
+        return existing.size == size && existing.modifiedAt == modified && existing.hasMetadata
     }
 
     /// Seen again, unchanged: online, present, and — Put Back — no orphan.
-    static func touch(_ db: Database, existing: Row, at stamp: Int) throws {
+    static func touch(_ db: Database, existing: Existing, at stamp: Int) throws {
         try db.execute(sql: "UPDATE photo_copies SET lastSeenAt = ?, isOnline = 1, missingSince = NULL WHERE id = ?",
-                       arguments: [stamp, existing["id"] as String])
+                       arguments: [stamp, existing.id])
         try db.execute(sql: "UPDATE photos SET orphanedAt = NULL WHERE id = ? AND orphanedAt IS NOT NULL",
-                       arguments: [existing["photoId"] as String])
+                       arguments: [existing.photoId])
     }
 
     /// True when this copy's new fast hash differs from its old one and

@@ -23,7 +23,7 @@ final class ServerOriginal: Sendable {
 struct ServerOriginalLoader: Sendable {
     let database: AppDatabase
     let servers: FileServerStore
-    var makeClient: @Sendable (FileServer, String) -> any RemoteFileClient = RemoteFileClientFactory.make(for:password:)
+    var makeClient: @Sendable (FileServer, String) -> any RemoteFileClient = { RemoteFileClientFactory.make(for: $0, password: $1) }
     var workDirectory = FileManager.default.temporaryDirectory
     /// Free bytes on this device; nil when unknown.
     var freeSpace: @Sendable () -> Int64? = {
@@ -40,17 +40,16 @@ struct ServerOriginalLoader: Sendable {
     /// `progress` gets bytes so far; a RAW over 25 MB shows it with Cancel,
     /// and cancelling the task deletes what came down.
     func load(copyId: String, progress: @escaping @Sendable (Int64) -> Void = { _ in }) async throws -> ServerOriginal {
-        guard let row = try await database.reader.read({ db in
-                  try Row.fetchOne(db, sql: """
-                      SELECT c.relativePath, c.size, s.connectionId FROM photo_copies c JOIN sources s ON s.id = c.sourceId
-                      WHERE c.id = ? AND c.kind = 'server'
-                      """, arguments: [copyId])
-              }),
-              let relativePath: String = row["relativePath"],
-              let connectionId: String = row["connectionId"],
+        let found: (path: String?, size: Int64?, connectionId: String?)? = try await database.reader.read { db in
+            try Row.fetchOne(db, sql: """
+                SELECT c.relativePath, c.size, s.connectionId FROM photo_copies c JOIN sources s ON s.id = c.sourceId
+                WHERE c.id = ? AND c.kind = 'server'
+                """, arguments: [copyId]).map { ($0["relativePath"], $0["size"], $0["connectionId"]) }
+        }
+        guard let found, let relativePath = found.path, let connectionId = found.connectionId,
               let server = try servers.fetch(id: connectionId)
         else { throw Failure.notAServerCopy }
-        if let short = DeviceSpaceCheck.shortfall(for: row["size"] ?? 0, free: freeSpace()) {
+        if let short = DeviceSpaceCheck.shortfall(for: found.size ?? 0, free: freeSpace()) {
             throw Failure.notEnoughSpace(short)
         }
         let directory = workDirectory.appendingPathComponent(TemporaryWorkspace.serverEditPrefix + UUID().uuidString, isDirectory: true)

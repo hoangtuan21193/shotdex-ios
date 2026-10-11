@@ -17,7 +17,7 @@ actor ServerSourceRefresh {
     private var running: Set<String> = []
 
     init(database: AppDatabase, servers: FileServerStore, composer: MetadataComposer, thumbnails: FolderThumbnails? = nil,
-         makeClient: @escaping @Sendable (FileServer, String) -> any RemoteFileClient = RemoteFileClientFactory.make(for:password:)) {
+         makeClient: @escaping @Sendable (FileServer, String) -> any RemoteFileClient = { RemoteFileClientFactory.make(for: $0, password: $1) }) {
         self.database = database
         self.servers = servers
         self.composer = composer
@@ -64,14 +64,15 @@ actor ServerSourceRefresh {
     private func refresh(_ sourceId: String) async -> ServerSourceIndexer.Summary? {
         guard running.insert(sourceId).inserted else { return nil }
         defer { running.remove(sourceId) }
-        guard let row = try? await database.reader.read({ db in
-                  try Row.fetchOne(db, sql: "SELECT connectionId, pairsRawAndJpeg FROM sources WHERE id = ?", arguments: [sourceId])
-              }),
-              let connectionId: String = row["connectionId"],
+        let found: (connectionId: String?, pairs: Bool)? = try? await database.reader.read { db in
+            try Row.fetchOne(db, sql: "SELECT connectionId, pairsRawAndJpeg FROM sources WHERE id = ?", arguments: [sourceId])
+                .map { ($0["connectionId"], $0["pairsRawAndJpeg"]) }
+        }
+        guard let found, let connectionId = found.connectionId,
               let server = try? servers.fetch(id: connectionId)
         else { return nil }
         let client = makeClient(server, servers.password(for: server.id) ?? "")
         let indexer = ServerSourceIndexer(database: database, composer: composer, client: client, thumbnails: thumbnails)
-        return try? await indexer.index(sourceId: sourceId, folder: server.folder, pairsRawAndJpeg: row["pairsRawAndJpeg"])
+        return try? await indexer.index(sourceId: sourceId, folder: server.folder, pairsRawAndJpeg: found.pairs)
     }
 }

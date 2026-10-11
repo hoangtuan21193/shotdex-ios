@@ -5,6 +5,8 @@ import Testing
 /// FS-19 §3 (servers as sources): the server stack under the source read,
 /// and the read itself against an in-memory server that counts every byte.
 @Suite struct ServerSourceIndexTests {
+    static let composer = MetadataComposer(sensorLookup: SensorLookup(records: [], customMappings: []))
+
     /// A RAW-named file whose head carries a sharp 480px JPEG with the
     /// camera's EXIF, followed by megabytes of image data — what a 30 MB ARW
     /// looks like to the thumbnail ladder and the hasher.
@@ -21,7 +23,7 @@ import Testing
 
     private static func indexer(_ database: AppDatabase, _ client: InMemoryRemoteFileClient,
                                 thumbnails: FolderThumbnails? = nil) -> ServerSourceIndexer {
-        ServerSourceIndexer(database: database, composer: FolderSourceIndexTests.composer, client: client,
+        ServerSourceIndexer(database: database, composer: Self.composer, client: client,
                             thumbnails: thumbnails, readsSidecars: true)
     }
 
@@ -112,7 +114,7 @@ import Testing
         try servers.save(FileServer(id: "C1", name: "NAS Home", transferProtocol: .smb, host: "nas.local", username: "u",
                                     folder: "Photos/2026"), password: "pw")
         let source = try SourceStore(database: database).addServer(name: "NAS Home", connectionId: "C1")
-        let refresh = ServerSourceRefresh(database: database, servers: servers, composer: FolderSourceIndexTests.composer) { _, _ in client }
+        let refresh = ServerSourceRefresh(database: database, servers: servers, composer: Self.composer) { _, _ in client }
 
         let launch = await refresh.appLaunched()
         #expect(launch[source]?.photos == 2)
@@ -152,7 +154,7 @@ import Testing
         try servers.save(nas, password: "old")
         let sources = SourceStore(database: database)
         let source = try sources.addServer(name: "NAS Home", connectionId: "C1")
-        let refresh = ServerSourceRefresh(database: database, servers: servers, composer: FolderSourceIndexTests.composer) { _, _ in client }
+        let refresh = ServerSourceRefresh(database: database, servers: servers, composer: Self.composer) { _, _ in client }
         #expect(await refresh.appLaunched()[source]?.photos == 1)
 
         client.connectError = .authenticationFailed

@@ -18,7 +18,7 @@ import Testing
         try servers.save(FileServer(id: "C1", name: "NAS Home", transferProtocol: .smb, host: "nas.local", username: "u",
                                     folder: "Photos/2026"), password: "pw")
         let source = try SourceStore(database: database).addServer(name: "NAS Home", connectionId: "C1")
-        _ = try await ServerSourceIndexer(database: database, composer: FolderSourceIndexTests.composer, client: client, readsSidecars: false)
+        _ = try await ServerSourceIndexer(database: database, composer: ServerSourceIndexTests.composer, client: client, readsSidecars: false)
             .index(sourceId: source, folder: "Photos/2026", pairsRawAndJpeg: true)
         let copyId = try #require(try await database.reader.read { db in
             try String.fetchOne(db, sql: "SELECT id FROM photo_copies WHERE sourceId = ?", arguments: [source])

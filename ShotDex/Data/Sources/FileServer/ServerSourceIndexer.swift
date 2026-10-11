@@ -96,8 +96,8 @@ struct ServerSourceIndexer: Sendable {
                 continue
             }
 
-            var photoId: String = existing?["photoId"] ?? UUID().uuidString
-            var copyId: String = existing?["id"] ?? UUID().uuidString
+            var photoId = existing?.photoId ?? UUID().uuidString
+            var copyId = existing?.id ?? UUID().uuidString
             if existing == nil, let match = vanished.firstIndex(where: { $0.fast == read.hash.fast && $0.size == file.size }) {
                 // Renamed or moved on the server: same copy, same photo.
                 photoId = vanished[match].photoId
@@ -105,8 +105,9 @@ struct ServerSourceIndexer: Sendable {
                 vanished.remove(at: match)
             }
             var splitFrom: String?
+            let (matchedCopy, matchedPhoto, fast) = (copyId, photoId, read.hash.fast)
             if existing != nil, try await database.reader.read({ db in
-                try FileCopyWriter.changedPictureWhileOthersKeepOld(db, copyId: copyId, photoId: photoId, newFast: read.hash.fast)
+                try FileCopyWriter.changedPictureWhileOthersKeepOld(db, copyId: matchedCopy, photoId: matchedPhoto, newFast: fast)
             }) {
                 splitFrom = photoId
                 photoId = UUID().uuidString
@@ -117,9 +118,10 @@ struct ServerSourceIndexer: Sendable {
             let copy = FileCopyWriter.Copy(photoId: photoId, copyId: copyId, sourceId: sourceId, kind: "server",
                                            relativePath: file.relativePath, key: key, size: file.size, modified: modified,
                                            pairedPath: unit.companion?.relativePath, sidecarStamp: read.sidecar?.stamp)
+            let (hash, split) = (read.hash, splitFrom)
             try await database.writer.write { db in
-                try FileCopyWriter.record(db, copy, hash: read.hash, metadata: record, marks: marks, marksAt: marksAt,
-                                          splitFrom: splitFrom, at: stamp)
+                try FileCopyWriter.record(db, copy, hash: hash, metadata: record, marks: marks, marksAt: marksAt,
+                                          splitFrom: split, at: stamp)
             }
             if let thumbnails, !summary.previewsStoppedForSpace, let image = read.thumbnail?.image,
                thumbnails.write(image, copyId: copyId) == .noSpace {
@@ -127,7 +129,8 @@ struct ServerSourceIndexer: Sendable {
             }
             summary.photos += 1
         }
-        try await database.writer.write { db in try FileCopyWriter.markMissing(db, vanished.map(\.copyId), at: stamp) }
+        let missing = vanished.map(\.copyId)
+        try await database.writer.write { db in try FileCopyWriter.markMissing(db, missing, at: stamp) }
         return summary
     }
 
