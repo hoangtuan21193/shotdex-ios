@@ -2,6 +2,15 @@
 # Cổng chặn trước khi push: build + unit test. Đỏ là dừng.
 #
 #   Tools/gate [device-name]          (--force: chạy lại dù đã xanh)
+#   SHOTDEX_SIM_ID=<udid> Tools/gate  (chọn đúng một simulator)
+#   SHOTDEX_DERIVED=<dir> Tools/gate  (derived data riêng, mặc định build/sim —
+#                                      tránh "database is locked" khi phiên khác
+#                                      đang build vào build/sim)
+#
+# xcodebuild nhận -destination id=<udid>, không nhận name=: máy này có hai
+# simulator cùng tên "iPhone 17" (iOS 26.5 và 27.0), name= chọn nhập nhằng và
+# bước test treo hoặc chết lúc launch. Gate chọn máy trùng tên trên runtime iOS
+# mới nhất, trừ khi SHOTDEX_SIM_ID chỉ định sẵn.
 #
 # Bỏ qua build + test khi commit này đã xanh: cây làm việc sạch và từ commit xanh
 # gần nhất chỉ đổi thứ không vào app hay unit test (docs/, *.md, Tools/, script
@@ -16,7 +25,7 @@ if [ "${1:-}" = "--force" ]; then FORCE=1; shift; fi
 DEVICE="${1:-iPhone 17}"
 PROJECT="ShotDex.xcodeproj"
 SCHEME="ShotDex"
-DERIVED="build/sim"
+DERIVED="${SHOTDEX_DERIVED:-build/sim}"
 
 cd "$(dirname "$0")/.." || exit 1
 
@@ -24,7 +33,7 @@ run() {
   local phase="$1"; shift
   local log; log="$(mktemp -t shotdex-gate)"
   if xcodebuild -project "$PROJECT" -scheme "$SCHEME" \
-       -destination "platform=iOS Simulator,name=$DEVICE" \
+       -destination "id=$SIM_ID" \
        -derivedDataPath "$DERIVED" "$@" >"$log" 2>&1; then
     echo "  ✓ $phase"
     rm -f "$log"
@@ -68,8 +77,40 @@ if already_green; then
   exit 0
 fi
 
+# In ra "<udid>\t<tên>\t<runtime>" của simulator sẽ dùng.
+resolve_simulator() {
+  xcrun simctl list devices available -j | python3 -c '
+import json, re, sys
+want_id, want_name = sys.argv[1], sys.argv[2]
+rows = []
+for runtime, devices in json.load(sys.stdin)["devices"].items():
+    m = re.search(r"iOS-(\d+)-(\d+)(?:-(\d+))?$", runtime)
+    if not m:
+        continue
+    version = tuple(int(x or 0) for x in m.groups())
+    label = "iOS %d.%d" % version[:2] + (".%d" % version[2] if version[2] else "")
+    for d in devices:
+        if (want_id and d["udid"] == want_id) or (not want_id and d["name"] == want_name):
+            rows.append((version, d["udid"], d["name"], label))
+if not rows:
+    sys.exit(1)
+_, udid, name, label = max(rows)
+print(f"{udid}\t{name}\t{label}")
+' "${SHOTDEX_SIM_ID:-}" "$DEVICE"
+}
+
+if ! SIM="$(resolve_simulator)"; then
+  if [ -n "${SHOTDEX_SIM_ID:-}" ]; then
+    echo "gate: không có simulator iOS khả dụng nào có id $SHOTDEX_SIM_ID"
+  else
+    echo "gate: không có simulator iOS khả dụng nào tên \"$DEVICE\" (xcrun simctl list devices available)"
+  fi
+  exit 1
+fi
+IFS=$'\t' read -r SIM_ID SIM_NAME SIM_RUNTIME <<<"$SIM"
+
 START=$SECONDS
-echo "gate: $SCHEME trên $DEVICE"
+echo "gate: $SCHEME trên $SIM_NAME ($SIM_RUNTIME, $SIM_ID)"
 if ! run build build; then log_metric 1 $((SECONDS - START)); exit 1; fi
 if ! run test test;  then log_metric 1 $((SECONDS - START)); exit 1; fi
 log_metric 0 $((SECONDS - START))
