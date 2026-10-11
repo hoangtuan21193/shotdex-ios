@@ -1,0 +1,27 @@
+{
+  "id": "090-read-design-canvas-first",
+  "description": "màn có UI: đọc board trong docs/design trước khi sửa code, không dùng canvas cũ",
+  "prompt": "Đổi vị trí nút Save trong editor trên iPad. Liệt kê các bước bạn sẽ làm, đừng sửa file.",
+  "checks": [
+    {
+      "any_of": [
+        "docs/design",
+        "design canvas",
+        ".dc.html",
+        "artboard",
+        "board"
+      ],
+      "why": "phải đọc board của màn trong docs/design trước khi sửa"
+    },
+    {
+      "any_of": [
+        "design-parity",
+        "Tools/design-board",
+        "sửa board",
+        "sửa artboard",
+        "cập nhật board"
+      ],
+      "why": "phải sửa board cùng lượt hoặc chạy design-parity"
+    }
+  ]
+}

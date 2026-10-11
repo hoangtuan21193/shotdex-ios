@@ -9,6 +9,10 @@ A view change is done when the screenshots are clean, not when it compiles. This
 skill turns that rule into a checklist so nothing is skipped and the final message
 can say exactly which screens were checked.
 
+
+**Design canvas first.** Any screen with UI: open `docs/design/README.md` and read that screen's board
+(`docs/design/<iphone|ipad|duo|mac>/project/`) *before* screenshotting; after inspecting, run the `design-parity` agent for every screen that has a board. Board and code must match; if they differ, say so — do not silently pick one.
+
 ## Step 1 — enumerate what the change touches
 
 Before launching anything, write the list:

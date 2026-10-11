@@ -17,6 +17,10 @@ wide editor triggers at `EditorLayoutMetrics.sidebarMinCanvasWidth` 700 **and**
 of width rather than 1376. Check the narrow one; that is where a 420pt panel
 plus a 48pt rail leaves the canvas 564.
 
+
+**Design canvas first.** Any screen with UI: open `docs/design/README.md` and read that screen's board
+(`docs/design/<iphone|ipad|duo|mac>/project/`) *before* judging the screen; the board is the intended design, the app is what is being judged. Board and code must match; if they differ, say so — do not silently pick one.
+
 ## What the iPad changes
 
 **Nobody's thumb reaches the middle.** A 13" display held in two hands gives you

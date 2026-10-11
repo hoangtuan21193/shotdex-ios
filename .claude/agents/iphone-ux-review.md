@@ -15,6 +15,10 @@ the reference device; `iPhone 16 Pro` (393×852) is the floor and the one to
 check when something is tight. Landscape on a phone is a second pass, not the
 main one — ShotDex is used portrait.
 
+
+**Design canvas first.** Any screen with UI: open `docs/design/README.md` and read that screen's board
+(`docs/design/<iphone|ipad|duo|mac>/project/`) *before* judging the screen; the board is the intended design, the app is what is being judged. Board and code must match; if they differ, say so — do not silently pick one.
+
 ## What the phone changes
 
 **The hand is the constraint, not the pixels.** A 402pt screen held in one hand

@@ -4,7 +4,7 @@
 
 **Một câu:** trên iPad và iPhone Duo, editor là ảnh cộng một cột (hoặc panel dưới) dựng từ chính các mảnh của
 editor iPhone, với băng nút tròn nổi trên ảnh, đúng như 60 artboard trên
-[design canvas](https://claude.ai/artifact/T4tEUQrJtxBbi48HokiL9F).
+[design canvas](../../design/README.md) (hàng editor `IP*`/`IPP*` trên canvas iPad, `DI*`/`DIP*`/`DC*` trên canvas Duo).
 
 Thay thế: [FS-03.09](09-wide-screen-and-batch-editing.md) §3–§7 (rail, panel đổi rộng, card gập, thanh cam kết
 `[↺] Cancel Apply`) và [FS-03.13d](13d-presets-batch-devices.md) §3 + AC-44/45 (Duo màn ngoài). Quyết định:

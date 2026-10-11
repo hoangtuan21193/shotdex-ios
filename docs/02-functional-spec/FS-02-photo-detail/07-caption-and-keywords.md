@@ -164,7 +164,7 @@ Luật:
 - DESIGN.md §8 thêm một dòng từ điển icon: Caption & Keywords = `tag`.
 
 **Design canvas:** không board cũ nào bị đổi. Section Info (§4) và sheet hàng loạt (§5) đã vẽ trên canvas
-[ShotDex Photo Editor](https://claude.ai/artifact/T4tEUQrJtxBbi48HokiL9F), nối vào hàng thiết bị:
+các canvas theo thiết bị ([index](../../design/README.md); canvas Photo Editor cũ đã gộp 2026-10-04), nối vào hàng thiết bị:
 `PH29`/`IP20`/`IPP16`/`DI15`/`DIP15`/`DC16` `_InfoKeywords` và `PH30`/`IP21`/`IPP17`/`DI16`/`DIP16`/`DC17`
 `_BulkKeywords`.
 

@@ -21,6 +21,10 @@ You review **two screens and the transition between them.**
 `spec.md` and `CLAUDE.md` carry the measured numbers, and `Tools/ui-drive`'s
 dump carries the frames.
 
+
+**Design canvas first.** Any screen with UI: open `docs/design/README.md` and read that screen's board
+(`docs/design/<iphone|ipad|duo|mac>/project/`) *before* judging the screen; the board is the intended design, the app is what is being judged. Board and code must match; if they differ, say so — do not silently pick one.
+
 ## The finding you are here for: 669pt of height
 
 This is the device that breaks layouts, and it breaks them in one direction.

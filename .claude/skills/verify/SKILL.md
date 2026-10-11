@@ -19,6 +19,10 @@ tự kiểm trước khi người review*. Quy trình repo: `docs/PROCESS.md` m�
 
 Skill này **đo rồi nói thật**. Không sửa code cho test xanh.
 
+
+**Design canvas trước, code sau.** Màn có UI: mở `docs/design/README.md`, đọc board của màn đó
+(`docs/design/<iphone|ipad|duo|mac>/project/`) *trước khi* chứng minh AC của nó; xong chạy agent `design-parity` cho mọi màn có board và ghi kết quả vào báo cáo. Board và code phải khớp; lệch thì nói rõ, không tự chọn bên nào.
+
 ## Trình tự
 
 1. Mở `FS-xx`, lấy bảng tiêu chí nghiệm thu. Không có → dừng, báo tính năng chưa có định nghĩa "xong".

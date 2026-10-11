@@ -20,6 +20,10 @@ Quy trình repo: `docs/PROCESS.md` mục 2 (bảng lệnh) và mục 6 (cách vi
 
 Đầu ra là **tài liệu**. Không sửa `.swift` trong lượt này.
 
+
+**Design canvas trước, code sau.** Màn có UI: mở `docs/design/README.md`, đọc board của màn đó
+(`docs/design/<iphone|ipad|duo|mac>/project/`) *trước khi* viết AC cho nó. Board và code phải khớp; lệch thì nói rõ, không tự chọn bên nào.
+
 ## Trình tự
 
 1. **Đính `intent.md`.** Không có intent → hỏi người dùng, hoặc chạy `/intent` trước.

@@ -11,6 +11,10 @@ environment from the composition root `ShotDex/App/AppDependencies.swift`. Read
 `DESIGN.md` first — it decides the tier, which decides chrome, glass, radii and
 margins.
 
+
+**Design canvas first.** Any screen with UI: open `docs/design/README.md` and read that screen's board
+(`docs/design/<iphone|ipad|duo|mac>/project/`) *before* writing code; no board yet means draw it first (global rule), then code. Board and code must match; if they differ, say so — do not silently pick one.
+
 ## Before writing
 
 1. `DESIGN.md` → which tier the screen is. Tier D (editor-like, full-bleed,
