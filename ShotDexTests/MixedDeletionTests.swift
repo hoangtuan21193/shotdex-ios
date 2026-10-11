@@ -123,6 +123,31 @@ import Testing
         #expect(rating == 4)
     }
 
+    /// AC-58, data half: a folder on a volume with no Trash ("SD_BACKUP").
+    /// The plan asks the red second question; Delete Permanently removes
+    /// each file, its twin and its `.xmp` — nothing goes to any Trash or to
+    /// Recently Deleted.
+    @Test func noTrashDeletesPermanently() async throws {
+        let library = try Self.library()
+        defer { try? FileManager.default.removeItem(at: library.root.deletingLastPathComponent()) }
+        let folder = library.folder
+        let queries = DeletionTargetQueries(database: library.database, hasTrash: { $0 != folder })
+        let files = Array(library.ids.prefix(3))
+        let plan = try queries.plan(photoIds: files, selection: .photos)
+        #expect(plan.verb == .delete)
+        #expect(plan.needsPermanentConfirmation)
+        #expect(plan.permanentTitle == "Delete 3 Photos Permanently?")
+
+        let trashed = Counter()
+        let summary = try await Self.service(library, photos: { _ in Issue.record("Photos asked") }, trashed: { _ in trashed.add() })
+            .run(try queries.targets(photoIds: files))
+        #expect(summary.removedFiles == 3)
+        #expect(summary.trashedFiles == 0 && summary.recentlyDeleted == 0)
+        #expect(trashed.value == 0)
+        #expect(try FileManager.default.contentsOfDirectory(atPath: library.root.path).isEmpty)
+        #expect(try FileManager.default.contentsOfDirectory(atPath: library.trashed.path).isEmpty)
+    }
+
     final class Counter: @unchecked Sendable {
         private let lock = NSLock()
         private var count = 0
