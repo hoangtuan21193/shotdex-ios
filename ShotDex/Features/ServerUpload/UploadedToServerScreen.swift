@@ -10,6 +10,8 @@ struct UploadedToServerScreen: View {
     @State private var assetIds: [String]?
     @State private var destinations: [UploadDestination] = []
     @State private var deletable: [String] = []
+    /// Server sources the deletable photos stay in (FS-19.03 §8).
+    @State private var keepingSources: [String] = []
     @State private var isConfirmingDelete = false
     @State private var isDeleting = false
     @State private var deleteError: String?
@@ -64,6 +66,7 @@ struct UploadedToServerScreen: View {
             ToolbarItem(placement: .topBarTrailing) {
                 Menu {
                     Button(role: .destructive) {
+                        keepingSources = (try? dependencies.serverUploads.keepingSources(assetIds: deletable)) ?? []
                         isConfirmingDelete = true
                     } label: {
                         Label("Delete \(deletable.count) from This Device", systemImage: "trash")
@@ -83,7 +86,10 @@ struct UploadedToServerScreen: View {
             Button("Delete", role: .destructive) { Task { await delete() } }
             Button("Cancel", role: .cancel) {}
         } message: {
-            Text("Only photos whose every original file is verified on a server are included. They move to Recently Deleted and free up space after 30 days, or when you empty it in Photos. If iCloud Photos is on, they are also deleted from iCloud and your other devices.")
+            Text(FreeUpSpaceNote.message(
+                String(localized: "Only photos whose every original file is verified on a server are included. They move to Recently Deleted and free up space after 30 days, or when you empty it in Photos. If iCloud Photos is on, they are also deleted from iCloud and your other devices."),
+                keepingSources: keepingSources
+            ))
         }
         .alert(
             "Couldn't Delete Photos",

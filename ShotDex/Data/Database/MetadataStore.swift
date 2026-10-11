@@ -150,14 +150,21 @@ struct MetadataStore: Sendable {
     func deleteAssets(ids: [String]) throws {
         guard !ids.isEmpty else { return }
         _ = try database.writer.write { db in
-            try PhotoMetadata.deleteAll(db, keys: ids)
-            try PhotoKeywordStore.delete(db, ids: ids)
             // The copy goes; the photo row stays, so its user data is still
             // anchored (the 30-day orphan rule, FS-19.05 §5).
             try db.execute(
                 sql: "DELETE FROM photo_copies WHERE kind = 'photos' AND photoKitId IN (\(databaseQuestionMarks(count: ids.count)))",
                 arguments: StatementArguments(ids)
             )
+            // A photo with a copy elsewhere — a NAS file it was uploaded to —
+            // stays in the library with its row (FS-19.03 §8).
+            let kept = Set(try String.fetchAll(db, sql: """
+                SELECT DISTINCT photoId FROM photo_copies
+                WHERE photoId IN (\(databaseQuestionMarks(count: ids.count))) AND missingSince IS NULL
+                """, arguments: StatementArguments(ids)))
+            let gone = ids.filter { !kept.contains($0) }
+            try PhotoMetadata.deleteAll(db, keys: gone)
+            try PhotoKeywordStore.delete(db, ids: gone)
         }
     }
 

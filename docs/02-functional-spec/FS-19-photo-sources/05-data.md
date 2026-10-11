@@ -72,6 +72,8 @@ nằm ở sidecar và ở bảng riêng khoá theo id đó, **không bao giờ**
 ## 5. Mồ côi và dọn
 
 - File biến mất: dòng bản sao **ở lại** (lần thấy cuối cũ) cùng hash của nó, tới khi dọn — hash đó là thứ nối file quay lại.
+- Asset Photos bị xoá: chỉ bản sao Photos đi. Dòng metadata của ảnh **ở lại** khi ảnh còn bản sao khác (file vừa upload
+  lên NAS nguồn — 03 §8), nên ảnh vẫn trong lưới; không còn bản nào thì dòng đi theo asset như trước.
 - Ảnh mất bản sao cuối (mọi bản sao **mất từ** có giá trị) → đặt lúc thành mồ côi, không gỡ gì. Bản sao trên ổ đang rút
   không "mất" — chỉ offline. Bản sao quay lại có hash trùng → xoá dấu mồ côi.
 - Dọn lúc mở app: mồ côi > **30 ngày** → gỡ dòng ở mọi bảng dữ liệu người dùng, **trừ** lịch sử upload, lịch sử tải

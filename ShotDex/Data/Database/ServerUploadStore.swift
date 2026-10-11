@@ -11,7 +11,14 @@ struct ServerUploadStore: Sendable {
         try database.writer.write { db in
             var row = upload
             try row.insert(db)
+            try UploadIntoSource.record(db, upload)
         }
+    }
+
+    /// Server sources that keep all of `assetIds` in ShotDex once they are
+    /// deleted from Photos (FS-19.03 §8); empty when any would leave.
+    func keepingSources(assetIds: [String]) throws -> [String] {
+        try database.reader.read { db in try UploadIntoSource.keepingSources(db, assetIds: assetIds) }
     }
 
     /// Every asset with at least one verified file on any server — the grid

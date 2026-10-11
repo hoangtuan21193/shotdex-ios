@@ -12,6 +12,8 @@ struct ServerUploadSheet: View {
     @State private var isAddingServer = false
     @State private var isConfirmingCancel = false
     @State private var isConfirmingDelete = false
+    /// Server sources the deletable photos stay in (FS-19.03 §8).
+    @State private var keepingSources: [String] = []
     /// The folder picker, pushed over the prepare step (FS-15.02 §2a).
     @State private var folderPath: [FolderPickerRoute] = []
     /// ⋯ → Add Connection…: the sheet opens on the form.
@@ -66,7 +68,10 @@ struct ServerUploadSheet: View {
             }
             Button("Cancel", role: .cancel) {}
         } message: {
-            Text("They move to Recently Deleted and free up space after 30 days, or when you empty it in Photos. If iCloud Photos is on, they are also deleted from iCloud and your other devices.")
+            Text(FreeUpSpaceNote.message(
+                String(localized: "They move to Recently Deleted and free up space after 30 days, or when you empty it in Photos. If iCloud Photos is on, they are also deleted from iCloud and your other devices."),
+                keepingSources: keepingSources
+            ))
         }
         .alert(
             "Couldn't Delete Photos",
@@ -319,6 +324,7 @@ struct ServerUploadSheet: View {
             if !summary.deletableAssetIds.isEmpty {
                 Section {
                     Button(role: .destructive) {
+                        keepingSources = (try? dependencies.serverUploads.keepingSources(assetIds: summary.deletableAssetIds)) ?? []
                         isConfirmingDelete = true
                     } label: {
                         HStack {
