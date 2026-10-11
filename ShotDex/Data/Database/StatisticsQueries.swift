@@ -5,6 +5,23 @@ import GRDB
 /// happens in SQLite — Swift only shapes the results.
 struct StatisticsQueries: Sendable {
     let database: AppDatabase
+    /// The Source popup (FS-19.04 §5): nil is All Sources; a source id
+    /// counts the photos with a copy there. Each photo counts once either way.
+    var sourceId: String? = nil
+
+    /// Under the Source popup.
+    static let sourceFootnote = String(localized: "Each photo counted once across sources",
+                                       comment: "Statistics: under the Source popup — a photo with copies in two sources counts once in All")
+
+    /// Visible photos (FS-19.05 §3), narrowed to the chosen source.
+    private var visible: String {
+        guard let sourceId else { return PhotoVisibility.condition }
+        let quoted = "'" + sourceId.replacingOccurrences(of: "'", with: "''") + "'"
+        return PhotoVisibility.condition + """
+             AND EXISTS (SELECT 1 FROM photo_copies sc WHERE sc.photoId = photo_metadata.assetId AND sc.sourceId = \(quoted) \
+            AND sc.missingSince IS NULL AND sc.isHidden = 0)
+            """
+    }
 
     private func scopeClause(_ scope: StatsDateScope) -> (sql: String, arguments: [DatabaseValueConvertible]) {
         guard let interval = scope.dateInterval() else { return ("", []) }
@@ -13,7 +30,7 @@ struct StatisticsQueries: Sendable {
 
     private func whereSQL(_ extra: String?, scope: StatsDateScope) -> (sql: String, arguments: StatementArguments) {
         let (scopeSQL, scopeArgs) = scopeClause(scope)
-        var conditions: [String] = [PhotoVisibility.condition]
+        var conditions: [String] = [visible]
         if let extra { conditions.append(extra) }
         if !scopeSQL.isEmpty { conditions.append(scopeSQL) }
         let sql = "WHERE " + conditions.joined(separator: " AND ")
@@ -23,7 +40,7 @@ struct StatisticsQueries: Sendable {
     /// Oldest capture date in the index — the far end of the custom range picker.
     func earliestCreationDate() throws -> Date? {
         try database.reader.read { db in
-            try Int.fetchOne(db, sql: "SELECT MIN(creationDate) FROM photo_metadata WHERE \(PhotoVisibility.condition)")
+            try Int.fetchOne(db, sql: "SELECT MIN(creationDate) FROM photo_metadata WHERE \(visible)")
         }.map { Date(timeIntervalSince1970: TimeInterval($0)) }
     }
 
@@ -122,7 +139,7 @@ struct StatisticsQueries: Sendable {
     /// Photos with no capture date — invisible to every non-all-time scope.
     func undatedCount() throws -> Int {
         try database.reader.read { db in
-            try Int.fetchOne(db, sql: "SELECT COUNT(*) FROM photo_metadata WHERE creationDate IS NULL AND \(PhotoVisibility.condition)") ?? 0
+            try Int.fetchOne(db, sql: "SELECT COUNT(*) FROM photo_metadata WHERE creationDate IS NULL AND \(visible)") ?? 0
         }
     }
 
@@ -237,7 +254,7 @@ struct StatisticsQueries: Sendable {
         var conditions = [
             "normalizedCameraModel IN (\(placeholders))",
             "creationDate IS NOT NULL",
-            PhotoVisibility.condition,
+            visible,
         ]
         if !scopeSQL.isEmpty { conditions.append(scopeSQL) }
         let sql = """
@@ -385,7 +402,7 @@ extension StatisticsQueries {
         _ filter: SmartAlbumQuery,
         _ scope: StatsDateScope
     ) -> (conditions: [String], values: [DatabaseValueConvertible]) {
-        var conditions: [String] = [PhotoVisibility.condition]
+        var conditions: [String] = [visible]
         var values: [DatabaseValueConvertible] = []
         let (filterSQL, filterValues) = SmartAlbumSQLBuilder.predicate(for: filter)
         if !filterSQL.isEmpty {
