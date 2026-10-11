@@ -148,6 +148,35 @@ import Testing
         #expect(try FileManager.default.contentsOfDirectory(atPath: library.trashed.path).isEmpty)
     }
 
+    /// E1: one request for a whole grid selection. A selection of Photos
+    /// items only is nil — the system dialog is the whole confirmation; one
+    /// that reaches a file or the NAS carries the ShotDex plan, and an id
+    /// with no copy row yet rides along with the Photos part. Afterwards
+    /// the grid drops what no copy shows, and keeps a cancelled Photos part.
+    @Test func gridSelectionIsOneRequest() async throws {
+        let library = try Self.library()
+        defer { try? FileManager.default.removeItem(at: library.root.deletingLastPathComponent()) }
+        let queries = DeletionTargetQueries(database: library.database)
+        let photos = library.ids.filter { $0.hasPrefix("P-") }
+        #expect(try queries.request(photoIds: photos, selection: .photos) == nil)
+
+        let selection = library.ids + ["UNINDEXED"]
+        let request = try #require(try queries.request(photoIds: selection, selection: .photos))
+        #expect(request.photosOnly == ["UNINDEXED"])
+        #expect(request.plan.count == 7)
+        #expect(request.plan.count(.recentlyDeleted) == 3)
+        #expect(request.plan.count(.trash) == 3)
+
+        let asked = Recorder()
+        let summary = try await Self.service(library, photos: { ids in
+            asked.record(ids)
+            throw PHPhotosError(.userCancelled)
+        }).run(request.targets, alsoPhotos: request.photosOnly)
+        #expect(summary.photosCancelled)
+        #expect(asked.ids.contains("UNINDEXED"))
+        #expect(try queries.stillShown(photoIds: selection) == Set(photos))
+    }
+
     final class Counter: @unchecked Sendable {
         private let lock = NSLock()
         private var count = 0

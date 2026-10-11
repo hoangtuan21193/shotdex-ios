@@ -38,21 +38,17 @@ protocol PhotoBrowsingSource: AnyObject {
     /// never needs re-downloading. Returns the refreshed row (for the info
     /// panel), or nil when nothing changed.
     func refreshMetadataAfterDownload(assetId: String) async -> PhotoMetadata?
-    /// A photo with no Photos asset, deleted through its source after the
-    /// ShotDex confirmation (FS-19.04 §2). Returns the reason when the file
-    /// stayed. A requirement, not only an extension method, so the Library's
-    /// own version is the one a viewer calls.
-    func deleteFilePhoto(id: String, using service: DeletionService,
-                         hasTrash: @escaping @Sendable (String) -> Bool) async throws -> String?
+    /// Drops photos a deletion through the sources removed (FS-19.04 §2).
+    /// A requirement, not only an extension method, so a source's own
+    /// version is the one a viewer calls.
+    func removeDeleted(ids: Set<String>)
 }
 
 extension PhotoBrowsingSource {
     var sourceAlbum: PHAssetCollection? { nil }
 
-    /// Only the Library holds photos with no asset today; other sources have
-    /// none to delete.
-    func deleteFilePhoto(id: String, using service: DeletionService,
-                         hasTrash: @escaping @Sendable (String) -> Bool) async throws -> String? { nil }
+    /// Sources that hold only Photos assets drop them on their next load.
+    func removeDeleted(ids: Set<String>) {}
 
     /// Every photo the viewer is paging through, for Cull From Here
     /// (FS-01.12b §5). The default walks the indices — the whole list for a
@@ -192,13 +188,9 @@ struct PhotoDetailScreen: View {
     /// A photo with no asset — only in a folder, on a drive or on a server:
     /// whether its original can be opened now (FS-19.01b §1, FS-19.03 §6).
     @State private var fileReachability: CopyReachability?
-    /// The ShotDex confirmation of a file photo's deletion — files have no
-    /// system dialog of their own (FS-19.04 §2).
-    @State private var pendingFileDeletion: MixedDeletionPlan?
-    /// The second, red question for files that cannot be recovered.
-    @State private var pendingPermanentDeletion: MixedDeletionPlan?
-    /// "Couldn't move 1 file to …", with the system's reason.
-    @State private var fileDeletionFailure: String?
+    /// The ShotDex confirmation of a deletion that reaches a file or a
+    /// server copy — those have no system dialog of their own (FS-19.04 §2).
+    @State private var sourceDeletion: DeletionTargetQueries.Request?
 
     /// True for a photo that has no Photos asset: the Photos-only rows
     /// (Copy, Duplicate, Adjust Date and Location, Live Text) are not offered.
@@ -416,43 +408,7 @@ struct PhotoDetailScreen: View {
         } message: { message in
             Text(message)
         }
-        .alert(
-            pendingFileDeletion?.title ?? "",
-            isPresented: Binding(get: { pendingFileDeletion != nil }, set: { if !$0 { pendingFileDeletion = nil } }),
-            presenting: pendingFileDeletion
-        ) { plan in
-            Button("Cancel", role: .cancel) { pendingFileDeletion = nil }
-            Button(plan.confirmTitle, role: .destructive) {
-                if plan.needsPermanentConfirmation {
-                    pendingFileDeletion = nil
-                    pendingPermanentDeletion = plan
-                } else {
-                    runFileDeletion()
-                }
-            }
-        } message: { plan in
-            Text(plan.message + "\n\n" + MixedDeletionPlan.footnote)
-        }
-        .alert(
-            pendingPermanentDeletion?.permanentTitle ?? "",
-            isPresented: Binding(get: { pendingPermanentDeletion != nil }, set: { if !$0 { pendingPermanentDeletion = nil } }),
-            presenting: pendingPermanentDeletion
-        ) { _ in
-            Button("Cancel", role: .cancel) { pendingPermanentDeletion = nil }
-            Button(String(localized: "Delete Permanently", comment: "Deletion: second confirmation button for a volume with no Trash"), role: .destructive) {
-                pendingPermanentDeletion = nil
-                runFileDeletion()
-            }
-        } message: { plan in
-            Text(plan.permanentMessage)
-        }
-        .alert(
-            String(localized: "Couldn't Delete Photo", comment: "Viewer: a file photo's deletion failed"),
-            isPresented: Binding(get: { fileDeletionFailure != nil }, set: { if !$0 { fileDeletionFailure = nil } }),
-            presenting: fileDeletionFailure
-        ) { _ in
-            Button("OK", role: .cancel) { fileDeletionFailure = nil }
-        } message: { Text($0) }
+        .sourceDeletion($sourceDeletion) { removed, _ in afterSourceDeletion(removed) }
         .onChange(of: currentIndex) { _, _ in
             isLiveTextActive = false
             recordCurrentAsViewed()
@@ -1415,40 +1371,27 @@ struct PhotoDetailScreen: View {
     /// successful delete the source shrinks, so the pager is re-seated to the
     /// same (clamped) index — showing the next photo, iOS-Photos style — or the
     /// viewer dismisses when the album empties.
-    /// After the ShotDex confirmation: the file goes to its Trash with its
-    /// twin and sidecar (a NAS copy is hidden), and the viewer moves on.
-    private func runFileDeletion() {
-        guard let assetId = model.photoId(at: currentIndex) else { return }
-        pendingFileDeletion = nil
-        let service = dependencies.makeDeletionService()
-        let roots = dependencies.folderRoots
-        Task {
-            do {
-                if let failure = try await model.deleteFilePhoto(id: assetId, using: service, hasTrash: { roots.hasTrash($0) }) {
-                    fileDeletionFailure = failure
-                    return
-                }
-            } catch {
-                fileDeletionFailure = error.localizedDescription
-                return
-            }
-            let count = model.photoCount
-            guard count > 0 else {
-                dismiss()
-                return
-            }
-            currentIndex = min(currentIndex, count - 1)
-            reseatToken += 1
-            refreshCurrentPhoto()
+    /// After the ShotDex confirmation ran: the source drops what went, and
+    /// the viewer moves on the way a Photos deletion does.
+    private func afterSourceDeletion(_ removed: Set<String>) {
+        guard !removed.isEmpty else { return }
+        model.removeDeleted(ids: removed)
+        let count = model.photoCount
+        guard count > 0 else {
+            dismiss()
+            return
         }
+        currentIndex = min(currentIndex, count - 1)
+        reseatToken += 1
+        refreshCurrentPhoto()
     }
 
     private func deleteCurrentPhoto() {
         guard let assetId = model.photoId(at: currentIndex) else { return }
-        if isFilePhoto {
-            let roots = dependencies.folderRoots
-            pendingFileDeletion = try? DeletionTargetQueries(database: dependencies.database, hasTrash: { roots.hasTrash($0) })
-                .plan(photoIds: [assetId], selection: .photos)
+        let roots = dependencies.folderRoots
+        if let request = try? DeletionTargetQueries(database: dependencies.database, hasTrash: { roots.hasTrash($0) })
+            .request(photoIds: [assetId], selection: .photos) {
+            sourceDeletion = request
             return
         }
         Task {

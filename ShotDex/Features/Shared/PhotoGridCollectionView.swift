@@ -424,7 +424,10 @@ struct PhotoGridCollectionView<Item: PhotoGridDisplayable>: UIViewRepresentable 
             }
             appliedContentRefreshVersion = newParent.contentRefreshVersion
             appliedTrailingFooterText = newParent.trailingFooterText
-            if footerChanged { syncLayoutMetrics() }
+            if footerChanged {
+                syncLayoutMetrics()
+                refreshVisibleFooter(in: collectionView)
+            }
 
             if let token = appliedJumpToken, token != newParent.jumpToNewestToken {
                 // Re-tapping the tab: go to the newest photos. The content
@@ -838,6 +841,21 @@ struct PhotoGridCollectionView<Item: PhotoGridDisplayable>: UIViewRepresentable 
                 }
             }
             return true
+        }
+
+        /// The count under the last row is a supplementary view an in-place
+        /// removal never asks for again: it would keep saying "330 Photos"
+        /// after two went. Re-set it where it is on screen.
+        private func refreshVisibleFooter(in collectionView: UICollectionView) {
+            let kind = UICollectionView.elementKindSectionFooter
+            for indexPath in collectionView.indexPathsForVisibleSupplementaryElements(ofKind: kind) {
+                guard let view = collectionView.supplementaryView(forElementKind: kind, at: indexPath) as? UICollectionViewCell
+                else { continue }
+                view.contentConfiguration = UIHostingConfiguration {
+                    GridTrailingFooter(text: parent.trailingFooterText ?? "")
+                }
+                .margins(.all, 0)
+            }
         }
 
         private func flatIndex(for indexPath: IndexPath) -> Int? {

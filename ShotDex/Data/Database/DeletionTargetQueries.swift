@@ -77,4 +77,40 @@ struct DeletionTargetQueries: Sendable {
     func plan(photoIds: [String], inSource sourceId: String? = nil, selection: MixedDeletionPlan.Selection) throws -> MixedDeletionPlan {
         MixedDeletionPlan(photos: try targets(photoIds: photoIds, inSource: sourceId).map { $0.map(\.destination) }, selection: selection)
     }
+
+    /// One deletion of a selection, ready to confirm and run.
+    struct Request: Identifiable, Sendable {
+        let id = UUID()
+        let photoIds: [String]
+        let targets: [[DeletionTarget]]
+        /// Photos assets with no copy row yet (not indexed): deleted with
+        /// the Photos part.
+        let photosOnly: [String]
+        let plan: MixedDeletionPlan
+    }
+
+    /// The deletion of `photoIds` through their sources, or nil when every
+    /// one of them goes to Recently Deleted — then the system's own dialog
+    /// is the whole confirmation and the old PhotoKit path runs.
+    func request(photoIds: [String], inSource sourceId: String? = nil, selection: MixedDeletionPlan.Selection) throws -> Request? {
+        let targets = try targets(photoIds: photoIds, inSource: sourceId)
+        guard targets.joined().contains(where: { $0.kind != "photos" }) else { return nil }
+        let covered = Set(targets.compactMap(\.first?.photoId))
+        let photosOnly = photoIds.filter { !covered.contains($0) }
+        let destinations = targets.map { $0.map(\.destination) } + photosOnly.map { _ in [DeletionDestination.recentlyDeleted] }
+        return Request(photoIds: photoIds, targets: targets, photosOnly: photosOnly,
+                       plan: MixedDeletionPlan(photos: destinations, selection: selection))
+    }
+
+    /// Of `photoIds`, those a grid still shows after a deletion: a copy
+    /// left that is present and not hidden.
+    func stillShown(photoIds: [String]) throws -> Set<String> {
+        guard !photoIds.isEmpty else { return [] }
+        return try database.reader.read { db in
+            Set(try String.fetchAll(db, sql: """
+                SELECT DISTINCT photoId FROM photo_copies
+                WHERE photoId IN (\(databaseQuestionMarks(count: photoIds.count))) AND missingSince IS NULL AND isHidden = 0
+                """, arguments: StatementArguments(photoIds)))
+        }
+    }
 }

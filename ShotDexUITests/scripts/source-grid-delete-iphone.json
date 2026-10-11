@@ -1,0 +1,23 @@
+{
+  "steps": [
+    { "action": "launch" },
+    { "action": "wait", "seconds": 8 },
+    { "action": "tap", "label": "Select photos", "type": "button" },
+    { "action": "wait", "seconds": 1 },
+    { "action": "tap", "x": 0.5, "y": 0.45 },
+    { "action": "tap", "x": 0.83, "y": 0.45 },
+    { "action": "wait", "seconds": 1 },
+    { "action": "screenshot", "name": "01-selected" },
+    { "action": "tap", "label": "Delete", "type": "button" },
+    { "action": "wait", "seconds": 2 },
+    { "action": "screenshot", "name": "02-confirm" },
+    { "action": "dump", "name": "02-confirm", "type": "staticText" },
+    { "action": "tap", "label": "Hide", "type": "button" },
+    { "action": "wait", "seconds": 3 },
+    { "action": "screenshot", "name": "03-after" },
+    { "action": "swipe", "x": 0.5, "y": 0.75, "direction": "up", "distance": 0.6 },
+    { "action": "swipe", "x": 0.5, "y": 0.75, "direction": "up", "distance": 0.6 },
+    { "action": "wait", "seconds": 1 },
+    { "action": "screenshot", "name": "04-count" }
+  ]
+}

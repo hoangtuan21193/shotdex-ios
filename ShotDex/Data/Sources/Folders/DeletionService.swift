@@ -33,7 +33,9 @@ struct DeletionService: Sendable {
         var photosCancelled = false
     }
 
-    func run(_ targets: [[DeletionTarget]], now: Date = Date()) async throws -> Summary {
+    /// `alsoPhotos`: Photos assets with no copy row yet, deleted in the same
+    /// system dialog as the Photos part.
+    func run(_ targets: [[DeletionTarget]], alsoPhotos: [String] = [], now: Date = Date()) async throws -> Summary {
         let copies = targets.flatMap { $0 }
         var summary = Summary()
 
@@ -67,7 +69,7 @@ struct DeletionService: Sendable {
         try HiddenCopyStore(database: database).hide(copyIds: hidden.map(\.copyId))
         for copy in hidden { summary.hidden[copy.sourceName, default: 0] += 1 }
 
-        let assets = copies.filter { $0.kind == "photos" }.compactMap(\.photoKitId)
+        let assets = copies.filter { $0.kind == "photos" }.compactMap(\.photoKitId) + alsoPhotos
         if !assets.isEmpty {
             do {
                 try await deletePhotosAssets(assets)
