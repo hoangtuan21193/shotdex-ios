@@ -77,9 +77,13 @@ enum SidecarReader {
     /// stamp before a write means another app wrote it since.
     static func stamp(of url: URL) -> String? {
         guard let data = try? Data(contentsOf: url) else { return nil }
-        let modified = (try? url.resourceValues(forKeys: [.contentModificationDateKey]).contentModificationDate) ?? .distantPast
+        return stamp(of: data, modified: try? url.resourceValues(forKeys: [.contentModificationDateKey]).contentModificationDate)
+    }
+
+    /// The same stamp from bytes already read — a sidecar on a server.
+    static func stamp(of data: Data, modified: Date?) -> String {
         let digest = SHA256.hash(data: data).prefix(12).map { String(format: "%02x", $0) }.joined()
-        return "\(Int(modified.timeIntervalSince1970)):\(digest)"
+        return "\(Int((modified ?? .distantPast).timeIntervalSince1970)):\(digest)"
     }
 
     static func modified(_ url: URL) -> Date? {

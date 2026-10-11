@@ -20,6 +20,9 @@ struct RemoteThumbnailer: Sendable {
     /// 400 for a grid tile; the large view asks for more.
     var maxPixelSize = EmbeddedPreview.maxPixelSize
     var sharpEnough = EmbeddedPreview.sharpEnough
+    /// Where range reads go: the client, or a reader that keeps them for the
+    /// fast hash and metadata that follow (FS-19.03 §2).
+    var ranges: RemoteRangeReader?
 
     func thumbnail(for photo: ServerPhoto, in folder: String) async throws -> RemoteThumbnailResult {
         if client.peeksWithSystemThumbnails {
@@ -58,21 +61,26 @@ struct RemoteThumbnailer: Sendable {
         return EmbeddedPreview.captureDate(from: head)
     }
 
+    private func readRange(_ path: String, offset: Int64, length: Int) async throws -> Data {
+        if let ranges { return try await ranges.read(path, offset: offset, length: length) }
+        return try await client.readRange(path, offset: offset, length: length)
+    }
+
     private func preview(of file: RemoteEntry, at path: String) async throws -> RemoteThumbnailResult {
         let isRAW = ServerFolderListing.isRAW(file.name)
-        var head = try await client.readRange(path, offset: 0, length: EmbeddedPreview.firstRead)
+        var head = try await readRange(path, offset: 0, length: EmbeddedPreview.firstRead)
         let date = EmbeddedPreview.captureDate(from: head)
         var best = EmbeddedPreview.thumbnail(from: head, isWholeFile: Int64(head.count) >= file.size, maxPixelSize: maxPixelSize, sharpEnough: sharpEnough)
         func sharp() -> Bool { (best?.sourceLongSide ?? 0) >= self.sharpEnough }
 
         if !sharp(), let raf = EmbeddedPreview.rafPreviewRange(header: head), raf.length <= EmbeddedPreview.rafPreviewLimit {
-            let jpeg = try await client.readRange(path, offset: raf.offset, length: raf.length)
+            let jpeg = try await readRange(path, offset: raf.offset, length: raf.length)
             if let found = EmbeddedPreview.thumbnail(from: jpeg, maxPixelSize: maxPixelSize, sharpEnough: sharpEnough), found.sourceLongSide > (best?.sourceLongSide ?? 0) {
                 best = found
             }
         }
         if !sharp(), isRAW, file.size > Int64(EmbeddedPreview.firstRead) {
-            head.append(try await client.readRange(
+            head.append(try await readRange(
                 path, offset: Int64(head.count), length: EmbeddedPreview.secondRead - head.count
             ))
             if let found = EmbeddedPreview.thumbnail(from: head, maxPixelSize: maxPixelSize, sharpEnough: sharpEnough), found.sourceLongSide > (best?.sourceLongSide ?? 0) {

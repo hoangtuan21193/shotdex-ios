@@ -29,6 +29,20 @@ struct SourceStore: Sendable {
         return id
     }
 
+    /// A server connection added as a source (FS-19.03 §1): its Folder is
+    /// what gets indexed; returns the source id.
+    @discardableResult
+    func addServer(name: String, connectionId: String, pairsRawAndJpeg: Bool = true, at now: Date = Date()) throws -> String {
+        let id = UUID().uuidString
+        try database.writer.write { db in
+            try db.execute(sql: """
+                INSERT INTO sources (id, kind, name, connectionId, subfolder, pairsRawAndJpeg, createdAt)
+                VALUES (?, 'server', ?, ?, 'all', ?, ?)
+                """, arguments: [id, name, connectionId, pairsRawAndJpeg, Int(now.timeIntervalSince1970)])
+        }
+        return id
+    }
+
     /// Include Subfolders, changed in Settings › Sources (FS-19.01 §2). The
     /// next read only opens files it has not seen: the rest are matched by
     /// path, size and date.

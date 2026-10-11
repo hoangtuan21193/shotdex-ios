@@ -55,13 +55,7 @@ struct FolderSourceIndexer: Sendable {
         // hash and size (FS-19.02 §2); what is left over went missing.
         let listed = Set(units.map { Self.pathKey($0.primary.relativePath) })
         var vanished = try database.reader.read { db in
-            try Row.fetchAll(db, sql: """
-                SELECT c.id, c.photoId, c.relativePathKey, c.size, h.fastHash FROM photo_copies c
-                LEFT JOIN content_hashes h ON h.copyId = c.id
-                WHERE c.sourceId = ? AND c.kind = 'file'
-                """, arguments: [sourceId])
-                .filter { !listed.contains($0["relativePathKey"] as String) }
-                .map { (copyId: $0["id"] as String, photoId: $0["photoId"] as String, size: $0["size"] as Int64?, fast: $0["fastHash"] as String?) }
+            try FileCopyWriter.vanished(db, sourceId: sourceId, kind: "file", listed: listed)
         }
         for unit in units {
             try Task.checkCancellation()
@@ -72,15 +66,7 @@ struct FolderSourceIndexer: Sendable {
             let file = unit.primary
             let key = Self.pathKey(file.relativePath)
             let modified = file.modified.map { Int($0.timeIntervalSince1970) }
-            // `hasMetadata`: Clear Local Metadata Index took the row away, so a
-            // file the same as before is still read again (FS-19.05 §7).
-            let existing = try database.reader.read { db in
-                try Row.fetchOne(db, sql: """
-                    SELECT c.id, c.photoId, c.size, c.modifiedAt, c.isCloudPlaceholder,
-                           EXISTS(SELECT 1 FROM photo_metadata m WHERE m.assetId = c.photoId) AS hasMetadata
-                    FROM photo_copies c WHERE c.sourceId = ? AND c.relativePathKey = ?
-                    """, arguments: [sourceId, key])
-            }
+            let existing = try database.reader.read { db in try FileCopyWriter.existing(db, sourceId: sourceId, key: key) }
             if file.isCloudPlaceholder {
                 // Listed, never opened: a photo and a copy so the grid can show
                 // it, no hash, no metadata row — nothing counts it yet.
@@ -96,16 +82,8 @@ struct FolderSourceIndexer: Sendable {
                 summary.placeholders += 1
                 continue
             }
-            if let existing, existing["size"] as Int64? == file.size, existing["modifiedAt"] as Int? == modified,
-               existing["hasMetadata"] as Bool {
-                try database.writer.write { db in
-                    try db.execute(sql: "UPDATE photo_copies SET lastSeenAt = ?, isOnline = 1, missingSince = NULL WHERE id = ?",
-                                   arguments: [stamp, existing["id"] as String])
-                    // Put Back: the file is where it was — the photo is no
-                    // orphan any more, its data never left.
-                    try db.execute(sql: "UPDATE photos SET orphanedAt = NULL WHERE id = ? AND orphanedAt IS NOT NULL",
-                                   arguments: [existing["photoId"] as String])
-                }
+            if let existing, FileCopyWriter.isUnchanged(existing, size: file.size, modified: modified) {
+                try database.writer.write { db in try FileCopyWriter.touch(db, existing: existing, at: stamp) }
                 summary.unchanged += 1
                 continue
             }
@@ -131,7 +109,9 @@ struct FolderSourceIndexer: Sendable {
                 vanished.remove(at: match)
             }
             var splitFrom: String?
-            if existing != nil, try changedPictureWhileOthersKeepOld(copyId: copyId, photoId: photoId, newFast: hash.fast) {
+            if existing != nil, try database.reader.read({ db in
+                try FileCopyWriter.changedPictureWhileOthersKeepOld(db, copyId: copyId, photoId: photoId, newFast: hash.fast)
+            }) {
                 // Overwritten with another picture while another copy keeps
                 // the old one: this copy becomes a photo of its own.
                 splitFrom = photoId
@@ -151,32 +131,12 @@ struct FolderSourceIndexer: Sendable {
             // from when the file was.
             let marksAt = Int(((sidecarValues != nil ? sidecar?.modified : nil) ?? file.modified ?? now).timeIntervalSince1970)
 
+            let copy = FileCopyWriter.Copy(photoId: photoId, copyId: copyId, sourceId: sourceId, kind: "file",
+                                           relativePath: file.relativePath, key: key, size: file.size, modified: modified,
+                                           pairedPath: unit.companion?.relativePath, sidecarStamp: sidecarStamp)
             try database.writer.write { db in
-                if splitFrom != nil {
-                    try PhotoIdentityStore.split(db, copyId: copyId, into: photoId, now: stamp)
-                }
-                try db.execute(sql: "INSERT OR IGNORE INTO photos (id, createdAt) VALUES (?, ?)", arguments: [photoId, stamp])
-                try db.execute(sql: "UPDATE photos SET orphanedAt = NULL WHERE id = ?", arguments: [photoId])
-                try db.execute(sql: """
-                    INSERT INTO photo_copies (id, photoId, sourceId, kind, relativePath, relativePathKey, size, modifiedAt, pairedPath,
-                                              sidecarStamp, isOnline, lastSeenAt)
-                    VALUES (?, ?, ?, 'file', ?, ?, ?, ?, ?, ?, 1, ?)
-                    ON CONFLICT(id) DO UPDATE SET relativePath = excluded.relativePath, relativePathKey = excluded.relativePathKey,
-                        size = excluded.size, modifiedAt = excluded.modifiedAt, pairedPath = excluded.pairedPath,
-                        sidecarStamp = excluded.sidecarStamp,
-                        isOnline = 1, missingSince = NULL, isCloudPlaceholder = 0, lastSeenAt = excluded.lastSeenAt
-                    """, arguments: [copyId, photoId, sourceId, file.relativePath, key, file.size, modified,
-                                     unit.companion?.relativePath, sidecarStamp, stamp])
-                try db.execute(sql: """
-                    INSERT INTO content_hashes (copyId, algorithm, algorithmVersion, fastHash, fullHash, hashedAt)
-                    VALUES (?, ?, ?, ?, NULL, ?)
-                    ON CONFLICT(copyId) DO UPDATE SET algorithm = excluded.algorithm, algorithmVersion = excluded.algorithmVersion,
-                        fastHash = excluded.fastHash, fullHash = NULL, hashedAt = excluded.hashedAt
-                    """, arguments: [copyId, hash.algorithm, hash.version, hash.fast, stamp])
-                try record.upsert(db)
-                if let marks {
-                    try PhotoUserMarksStore.applySidecar(db, values: marks, photoId: photoId, at: marksAt)
-                }
+                try FileCopyWriter.record(db, copy, hash: hash, metadata: record, marks: marks, marksAt: marksAt,
+                                          splitFrom: splitFrom, at: stamp)
             }
             if let thumbnails, !summary.previewsStoppedForSpace,
                thumbnails.write(from: url, copyId: copyId) == .noSpace {
@@ -190,40 +150,8 @@ struct FolderSourceIndexer: Sendable {
             summary.disconnected = true
             return summary
         }
-        try markMissing(vanished.map(\.copyId), at: stamp)
+        try database.writer.write { db in try FileCopyWriter.markMissing(db, vanished.map(\.copyId), at: stamp) }
         return summary
-    }
-
-    /// True when this copy's new fast hash differs from its old one and
-    /// another present copy of the same photo still carries the old one
-    /// (FS-19.02 §2). A photo with only this copy keeps its id: same source,
-    /// same path, new bytes is the same photo edited elsewhere.
-    private func changedPictureWhileOthersKeepOld(copyId: String, photoId: String, newFast: String) throws -> Bool {
-        try database.reader.read { db in
-            guard let old = try String.fetchOne(db, sql: "SELECT fastHash FROM content_hashes WHERE copyId = ?", arguments: [copyId]),
-                  old != newFast else { return false }
-            return try Bool.fetchOne(db, sql: """
-                SELECT EXISTS(SELECT 1 FROM photo_copies c JOIN content_hashes h ON h.copyId = c.id
-                              WHERE c.photoId = ? AND c.id != ? AND c.missingSince IS NULL AND h.fastHash = ?)
-                """, arguments: [photoId, copyId, old]) == true
-        }
-    }
-
-    /// Files a complete read no longer finds: the copy stays (its hash is
-    /// what joins the file back when it returns) and is marked missing; a
-    /// photo left with no present copy becomes an orphan (FS-19.05 §5).
-    private func markMissing(_ copyIds: [String], at stamp: Int) throws {
-        guard !copyIds.isEmpty else { return }
-        try database.writer.write { db in
-            let marks = databaseQuestionMarks(count: copyIds.count)
-            try db.execute(sql: "UPDATE photo_copies SET missingSince = ? WHERE id IN (\(marks)) AND missingSince IS NULL",
-                           arguments: StatementArguments([stamp] + copyIds))
-            try db.execute(sql: """
-                UPDATE photos SET orphanedAt = ?
-                WHERE orphanedAt IS NULL AND id IN (SELECT photoId FROM photo_copies WHERE id IN (\(marks)))
-                  AND NOT EXISTS (SELECT 1 FROM photo_copies c WHERE c.photoId = photos.id AND c.missingSince IS NULL)
-                """, arguments: StatementArguments([stamp] + copyIds))
-        }
     }
 
     /// The metadata row of a file photo — the same composer as Photos assets,

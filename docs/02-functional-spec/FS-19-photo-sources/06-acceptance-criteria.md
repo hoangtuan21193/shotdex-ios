@@ -70,7 +70,7 @@
 
 | # | Cho | Khi | Thì | Chứng minh |
 |---|---|---|---|---|
-| AC-33 | SMB "NAS Home", Folder Photos/2026: 9 thư mục, 1.102 ảnh RAW ~30 MB | bật Add as Source, Save | sau lượt đọc đầu: 1.102 ảnh trong thư viện; byte tải ≤ 1.102 × (256 KB + 3 × 64 KB) — không file nào tải trọn; 1.102 thumbnail trong cache chung | ⚠️ chưa có — `ServerSourceIndexTests.rangeReadsOnly` (máy chủ SMB cục bộ) |
+| AC-33 | SMB "NAS Home", Folder Photos/2026: 9 thư mục, 1.102 ảnh RAW ~30 MB | bật Add as Source, Save | sau lượt đọc đầu: 1.102 ảnh trong thư viện; byte tải ≤ 1.102 × (byte thang thumbnail FS-17.01 §3 — 256 KB đầu file, tới 1 MB khi preview mờ — + 3 × 64 KB của hash nhanh) — không file nào tải trọn; 1.102 thumbnail trong cache chung | `ServerSourceIndexTests.rangeReadsOnly` (máy chủ trong bộ nhớ đếm từng byte; 27 RAW 2 MB, preview nét: ≤ 256 KB + 3 × 64 KB mỗi file, 0 lần tải trọn); ⚠️ công tắc Add as Source + Save chưa có (D8) |
 | AC-34 | NAS Home đã index | mở một ARW 48 MB trong viewer, rồi rời viewer | preview cache hiện ngay; bản gốc tải vào thư mục tạm; rời viewer → thư mục tạm rỗng; 0 ảnh mới trong Photos | ⚠️ chưa có — `ServerOriginalTests.tempDeletedOnClose` |
 | AC-35 | tắt máy chủ NAS | chạm nguồn NAS Home, mở một ảnh | hàng "Not reachable"; 1.102 ô có thumbnail cache; viewer "NAS Home isn't reachable. Showing the saved preview."; Edit mờ | ⚠️ chưa có — ảnh chụp tay + `SourceAvailabilityTests.serverUnreachable` |
 | AC-36 | mật khẩu NAS bị đổi trên server | ShotDex thử 3 lượt so | hàng "Password rejected" + Edit Connection…; 0 hộp hỏi mật khẩu bật lên | `ServerSourceIndexTests.passwordRejectedNoPrompts` (nửa client: dừng lô, không hỏi mật khẩu); ⚠️ hàng nguồn "Password rejected" chưa có |

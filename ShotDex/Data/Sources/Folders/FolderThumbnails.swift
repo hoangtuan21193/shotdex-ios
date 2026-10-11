@@ -43,8 +43,20 @@ struct FolderThumbnails: Sendable {
         ]
         guard let source = CGImageSourceCreateWithURL(file as CFURL, [kCGImageSourceShouldCache: false] as CFDictionary),
               let image = CGImageSourceCreateThumbnailAtIndex(source, 0, options as CFDictionary)
-                ?? CGImageSourceCreateThumbnailAtIndex(source, 0, options.merging([kCGImageSourceCreateThumbnailFromImageIfAbsent: true]) { $1 } as CFDictionary),
-              let destination = CGImageDestinationCreateWithURL(url(copyId: copyId) as CFURL, UTType.jpeg.identifier as CFString, 1, nil)
+                ?? CGImageSourceCreateThumbnailAtIndex(source, 0, options.merging([kCGImageSourceCreateThumbnailFromImageIfAbsent: true]) { $1 } as CFDictionary)
+        else { return .noPreview }
+        return save(image, copyId: copyId)
+    }
+
+    /// A thumbnail already drawn — a server file's, from the preview its
+    /// head carried (FS-19.03 §2).
+    func write(_ image: CGImage, copyId: String) -> Outcome {
+        if let free = availableBytes(), free < Self.reserveBytes { return .noSpace }
+        return save(image, copyId: copyId)
+    }
+
+    private func save(_ image: CGImage, copyId: String) -> Outcome {
+        guard let destination = CGImageDestinationCreateWithURL(url(copyId: copyId) as CFURL, UTType.jpeg.identifier as CFString, 1, nil)
         else { return .noPreview }
         CGImageDestinationAddImage(destination, image, [kCGImageDestinationLossyCompressionQuality: 0.8] as CFDictionary)
         return CGImageDestinationFinalize(destination) ? .written : .noPreview
