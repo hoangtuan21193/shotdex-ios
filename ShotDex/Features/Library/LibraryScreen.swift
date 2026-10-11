@@ -60,12 +60,18 @@ struct LibraryScreen: View {
     /// the popover's presentation.
     @State private var isIndexPanelExpanded = false
 
+    /// A folder, drive or server source exists: the grid has photos to show
+    /// whatever Photos access says (FS-19.01 §1).
+    private var hasSourcesBeyondPhotos: Bool {
+        dependencies.sources.rows.contains { $0.text.kind != .photos }
+    }
+
     var body: some View {
         Group {
             // Folders, drives and servers need no Photos access: with one of
             // them added, the grid shows their photos either way (FS-19.01 §1).
             if !photoLibrary.authorizationState.canReadLibrary, photoLibrary.authorizationState != .notDetermined,
-               dependencies.sources.rows.contains(where: { $0.text.kind != .photos }), let model {
+               hasSourcesBeyondPhotos, let model {
                 gridContent(model)
             } else {
             switch photoLibrary.authorizationState {
@@ -120,8 +126,8 @@ struct LibraryScreen: View {
         // translucent strip the grid scrolls under, instead of a tall empty
         // band. Matches Album Detail.
         .navigationBarTitleDisplayMode(.inline)
-        .task(id: "\(photoLibrary.authorizationState.canReadLibrary)-\(model != nil)") {
-            guard photoLibrary.authorizationState.canReadLibrary, let model else { return }
+        .task(id: "\(photoLibrary.authorizationState.canReadLibrary)-\(model != nil)-\(hasSourcesBeyondPhotos)") {
+            guard photoLibrary.authorizationState.canReadLibrary || hasSourcesBeyondPhotos, let model else { return }
             // Full-screen covers can cause this task to re-enter on dismissal.
             // The model owns the one-shot guard so returning from Detail
             // never restarts the two-phase load or re-anchors the grid.

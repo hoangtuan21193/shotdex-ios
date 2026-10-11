@@ -170,6 +170,16 @@ struct PhotoDetailScreen: View {
     @State private var currentMetadata: PhotoMetadata?
     /// Resolved PHAsset of the current page — feeds the raw-metadata sheet.
     @State private var currentAsset: PHAsset?
+    /// A photo with no asset — only in a folder, on a drive or on a server:
+    /// whether its original can be opened now (FS-19.01b §1, FS-19.03 §6).
+    @State private var fileReachability: CopyReachability?
+
+    /// True for a photo that has no Photos asset: the Photos-only rows
+    /// (Copy, Duplicate, Adjust Date and Location, Live Text) are not offered.
+    private var isFilePhoto: Bool { currentAsset == nil && currentMetadata != nil }
+
+    /// Share, Export and Delete need the original; an offline source dims them.
+    private var filePhotoIsOffline: Bool { isFilePhoto && fileReachability?.canOpenOriginal == false }
     /// iCloud download state of the *current* page, bubbled up from the pages so
     /// the ring can live in the info panel (pages report their own index; only
     /// the visible page's updates are kept).
@@ -273,7 +283,15 @@ struct PhotoDetailScreen: View {
                             dismiss()
                         }
                         if let metadata = currentMetadata {
-                            infoPanel(metadata)
+                            VStack(alignment: .leading, spacing: AppTheme.Spacing.xs) {
+                                infoPanel(metadata)
+                                if filePhotoIsOffline, let note = fileReachability?.viewerNote {
+                                    Text(note)
+                                        .font(.footnote)
+                                        .foregroundStyle(.white.opacity(0.85))
+                                        .padding(.horizontal, AppTheme.Spacing.md)
+                                }
+                            }
                         }
                     }
                     .padding(.horizontal)
@@ -525,6 +543,9 @@ struct PhotoDetailScreen: View {
         }
         currentMetadata = model.metadata(for: assetId)
         currentAsset = model.asset(for: assetId)
+        fileReachability = currentAsset == nil
+            ? try? CopyReachabilityQueries(database: dependencies.database).reachability(photoId: assetId)
+            : nil
         updateFilename(assetId: assetId)
         probeOriginal()
         publishHandoffActivity()
@@ -689,6 +710,8 @@ struct PhotoDetailScreen: View {
                 share(metadata)
             }
             .keyboardShortcut("s", modifiers: .command)
+            .disabled(filePhotoIsOffline)
+            .opacity(filePhotoIsOffline ? 0.4 : 1)
 
             Spacer(minLength: AppTheme.Spacing.sm)
 
@@ -747,6 +770,10 @@ struct PhotoDetailScreen: View {
                 deleteCurrentPhoto()
             }
             .keyboardShortcut(.delete, modifiers: [])
+            // A file photo is deleted through its source (FS-19.04), not
+            // PhotoKit; until that lands here the button stays dim.
+            .disabled(isFilePhoto)
+            .opacity(isFilePhoto ? 0.4 : 1)
         }
         .background { PhotoMarkKeyButtons(ids: { currentMetadata.map { [$0.assetId] } ?? [] }) }
         .frame(maxWidth: .infinity)
@@ -779,12 +806,14 @@ struct PhotoDetailScreen: View {
                 } label: {
                     Label("Add to Collection", systemImage: "rectangle.stack.badge.plus")
                 }
-                Button {
-                    actions.duplicate(ids: [id])
-                } label: {
-                    Label("Duplicate", systemImage: "plus.square.on.square")
+                if !isFilePhoto {
+                    Button {
+                        actions.duplicate(ids: [id])
+                    } label: {
+                        Label("Duplicate", systemImage: "plus.square.on.square")
+                    }
                 }
-                if !isCurrentVideo {
+                if !isCurrentVideo, !isFilePhoto {
                     Button {
                         actions.copyToPasteboard(id: id)
                     } label: {
@@ -835,20 +864,22 @@ struct PhotoDetailScreen: View {
                 }
                 // Right under Resize, for photos and videos alike
                 // (FS-03.07c §1 item 1).
-                Button {
-                    fileExportRequest = FileExportRequest(model: .make(assetIds: [id], dependencies: dependencies))
-                } label: {
-                    PhotoCommand.export.label
-                }
-                Button {
-                    actions.presentAdjustDate(ids: [id])
-                } label: {
-                    Label("Adjust Date & Time", systemImage: "calendar")
-                }
-                Button {
-                    actions.presentAdjustLocation(ids: [id])
-                } label: {
-                    Label("Adjust Location", systemImage: "mappin.and.ellipse")
+                if !isFilePhoto {
+                    Button {
+                        fileExportRequest = FileExportRequest(model: .make(assetIds: [id], dependencies: dependencies))
+                    } label: {
+                        PhotoCommand.export.label
+                    }
+                    Button {
+                        actions.presentAdjustDate(ids: [id])
+                    } label: {
+                        Label("Adjust Date & Time", systemImage: "calendar")
+                    }
+                    Button {
+                        actions.presentAdjustLocation(ids: [id])
+                    } label: {
+                        Label("Adjust Location", systemImage: "mappin.and.ellipse")
+                    }
                 }
                 if metadata.latitude != nil, metadata.longitude != nil {
                     Button {
@@ -1330,7 +1361,11 @@ struct PhotoDetailScreen: View {
     /// share sheet opens at once, and a photo only in iCloud downloads in the
     /// Share modal once a destination asks. A video goes as it is.
     private func share(_ metadata: PhotoMetadata) {
-        guard let asset = model.asset(for: metadata.assetId) else { return }
+        guard let asset = model.asset(for: metadata.assetId) else {
+            // A folder photo shares its file as it is.
+            if let url = photoLibrary.filePhotoURL(metadata.assetId) { shareItems = [url] }
+            return
+        }
         let downloads = dependencies.originalDownloads
         let unreadable = unsupportedRAWIndex?.assetIds ?? []
         Task { await PhotoShareSheet.share(assets: [asset], downloads: downloads, unreadableRAW: unreadable) }
