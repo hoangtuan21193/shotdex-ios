@@ -25,13 +25,20 @@ struct CompareStage: View {
     /// iPad: the commands sit in the top bar. Everywhere else they sit in a
     /// bottom bar where the viewer keeps its own.
     private var hasToolbarOnTop: Bool { windowClass == .iPadLandscape || windowClass == .iPadPortrait }
+    /// The cover keeps no status bar above the app, so its top bar would sit
+    /// in the display's ~37pt corner curve: it starts 28pt down, as
+    /// `DC_Compare` draws it.
+    private var topInset: CGFloat {
+        windowClass == .duoCover ? 28 : AppTheme.Spacing.sm
+    }
+
     private var modes: [ViewerMode] { ViewerMode.available(for: windowClass, isComparing: true) }
 
     var body: some View {
         VStack(spacing: 0) {
             topBar
                 .padding(.horizontal, CompareLayout.margin)
-                .padding(.top, AppTheme.Spacing.sm)
+                .padding(.top, topInset)
                 .padding(.bottom, AppTheme.Spacing.md)
             stage
             if !hasToolbarOnTop {
