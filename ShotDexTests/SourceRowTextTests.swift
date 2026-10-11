@@ -29,4 +29,13 @@ import Testing
         #expect(photos.dot == .away)
         #expect(SourceRowText(kind: .onDevice, status: .reading(done: 12, total: 0), count: 12).detail(now: now) == "Reading… 12 items so far")
     }
+
+    /// A read that finished a moment "after" now — the stored stamp and the
+    /// clock disagree by a fraction — still reads as the past, never "in 0 sec."
+    @Test func justReadIsNeverInTheFuture() {
+        let now = Date(timeIntervalSince1970: 1_790_000_000)
+        let nas = SourceRowText(kind: .server(protocolName: "SMB"), status: .online, count: 20, lastReadAt: now.addingTimeInterval(0.6))
+        #expect(!nas.detail(now: now).contains("in "))
+        #expect(nas.detail(now: now).hasPrefix("SMB · 20 items · indexed"))
+    }
 }

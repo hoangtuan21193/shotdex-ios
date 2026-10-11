@@ -64,7 +64,10 @@ struct SourceRowText: Equatable, Sendable {
             if let lastReadAt {
                 let formatter = RelativeDateTimeFormatter()
                 formatter.unitsStyle = .short
-                let ago = formatter.localizedString(for: lastReadAt, relativeTo: now)
+                // The formatter calls zero seconds — and a stamp a fraction
+                // ahead of the clock — "in 0 sec."; a read that just ended
+                // is a second ago.
+                let ago = formatter.localizedString(for: min(lastReadAt, now.addingTimeInterval(-1)), relativeTo: now)
                 parts.append(String(localized: "indexed \(ago)", comment: "Sources: when a source was last read, e.g. 'indexed 2 min ago'"))
             }
             return parts.joined(separator: " · ")
