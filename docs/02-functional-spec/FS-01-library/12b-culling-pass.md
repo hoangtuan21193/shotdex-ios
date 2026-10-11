@@ -31,6 +31,9 @@ ngay, theo luật lưu của [FS-01.12 §4–5](12-rating-and-flags.md).
 - **Undo** (nút + ⌘Z) lùi từng thao tác trong lượt, quay về đúng ảnh đã đổi. Đóng màn là hết lượt và hết undo.
 - Đặt cờ ở **ảnh cuối** → thẻ tóm tắt: "240 photos · 52 picks · 120 rejected · 68 unflagged". Thẻ có ba nút:
   **Delete 120 Rejected…** (đỏ), **Review Unflagged** (mở lại lượt chỉ với ảnh chưa cờ), **Done**.
+  Tên lệnh theo đích khi lượt có ảnh file/NAS ([FS-19.04 §2](../FS-19-photo-sources/04-deleting-and-duplicates.md),
+  `MixedDeletionPlan`): có file đi Thùng rác → **Move 120 Rejected…**; chỉ ảnh NAS → **Hide 120 Rejected…**; chỉ Photos
+  giữ **Delete 120 Rejected…** như trên.
 - Mỗi lần đặt cờ có rung nhẹ.
 - **VoiceOver:** ảnh đọc "Photo 37 of 240, 3 stars, Picked". Vuốt lên/xuống chỉnh sao. Pick, Reject, Clear Flag
   là action.
