@@ -52,6 +52,7 @@ import Testing
 
         let again = try indexer.index(sourceId: sourceId, root: root, includesSubfolders: true, pairsRawAndJpeg: true)
         #expect(again == FolderSourceIndexer.Summary(photos: 0, unchanged: 3))
+        #expect(!again.changesLibrary, "an unchanged folder must not reload the grid under an open viewer")
         #expect(try Self.fingerprint(root) == before)
     }
 

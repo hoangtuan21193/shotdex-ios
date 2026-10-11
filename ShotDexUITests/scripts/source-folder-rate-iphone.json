@@ -1,0 +1,21 @@
+{
+  "steps": [
+    { "action": "launch", "arguments": ["-ShotDexSeedFolderSource", "Kyoto"] },
+    { "action": "wait", "seconds": 6 },
+    { "action": "tap", "label": "Continue" },
+    { "action": "systemTap", "label": "Allow Full Access", "seconds": 20 },
+    { "action": "wait", "seconds": 20 },
+    { "action": "screenshot", "name": "library-kyoto" },
+    { "action": "tap", "x": 0.17, "y": 0.32 },
+    { "action": "wait", "seconds": 4 },
+    { "action": "screenshot", "name": "viewer-file" },
+    { "action": "tap", "label": "More actions" },
+    { "action": "wait", "seconds": 2 },
+    { "action": "tap", "label": "Rating" },
+    { "action": "wait", "seconds": 2 },
+    { "action": "tap", "label": "4 stars" },
+    { "action": "wait", "seconds": 4 },
+    { "action": "screenshot", "name": "viewer-rated" },
+    { "action": "dump", "name": "viewer-rated" }
+  ]
+}

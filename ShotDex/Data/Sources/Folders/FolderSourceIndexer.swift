@@ -27,6 +27,13 @@ struct FolderSourceIndexer: Sendable {
         /// The folder went away mid-read — a drive unplugged (FS-19.01b §1).
         /// What was read stays; the source is offline, nothing is missing.
         var disconnected = false
+        /// Files that went missing on this read.
+        var missing = 0
+        /// Placeholders seen for the first time.
+        var newPlaceholders = 0
+
+        /// Whether the grid has anything new to show.
+        var changesLibrary: Bool { photos > 0 || newPlaceholders > 0 || missing > 0 || disconnected }
     }
 
     /// `shouldContinue` is asked before each file; false pauses the read.
@@ -80,6 +87,7 @@ struct FolderSourceIndexer: Sendable {
                         """, arguments: [existing?.id ?? UUID().uuidString, photoId, sourceId, file.relativePath, key, modified, stamp])
                 }
                 summary.placeholders += 1
+                if existing == nil { summary.newPlaceholders += 1 }
                 continue
             }
             if let existing, FileCopyWriter.isUnchanged(existing, size: file.size, modified: modified) {
@@ -151,6 +159,7 @@ struct FolderSourceIndexer: Sendable {
             return summary
         }
         try database.writer.write { db in try FileCopyWriter.markMissing(db, vanished.map(\.copyId), at: stamp) }
+        summary.missing = vanished.count
         return summary
     }
 

@@ -477,6 +477,11 @@ final class AppDependencies {
         let sources = SourcesModel(database: database, runner: folderSources, photoLibrary: photoLibrary)
         self.sources = sources
         photoLibrary.fileThumbnails.reload(database)
+        let openCopies = OpenCopyQueries(database: database)
+        photoLibrary.filePhotoURL = { [folderRoots] id in
+            guard let copy = try? openCopies.openCopy(photoId: id), copy.kind == "file", let path = copy.relativePath else { return nil }
+            return folderRoots.fileURL(sourceId: copy.sourceId, relativePath: path)
+        }
         sources.load()
     }
 

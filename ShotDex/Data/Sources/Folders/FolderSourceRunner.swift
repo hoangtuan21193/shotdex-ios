@@ -52,9 +52,15 @@ actor FolderSourceRunner {
     }
 
     /// Every folder and drive source, in the order they were added — at
-    /// launch and on each return to the foreground (FS-19.01 §5).
-    func readAll() {
+    /// launch and on each return to the foreground (FS-19.01 §5). True when
+    /// any of them changed what the library shows.
+    @discardableResult
+    func readAll() -> Bool {
         let ids = (try? SourceStore(database: database).sources().filter { $0.kind == "folder" || $0.kind == "drive" }.map(\.id)) ?? []
-        for id in ids { _ = try? read(sourceId: id) }
+        var changed = false
+        for id in ids {
+            if let summary = try? read(sourceId: id), summary.changesLibrary { changed = true }
+        }
+        return changed
     }
 }

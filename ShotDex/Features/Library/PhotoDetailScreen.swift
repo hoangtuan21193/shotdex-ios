@@ -1,5 +1,6 @@
 import AVKit
 import CoreLocation
+import ImageIO
 import MapKit
 import Photos
 import ShotDexKit
@@ -2445,9 +2446,11 @@ struct PhotoDetailPage: View {
     }
 
     private func load() {
-        guard let assetId = source.photoId(at: index),
-              let asset = source.asset(for: assetId)
-        else { return }
+        guard let assetId = source.photoId(at: index) else { return }
+        guard let asset = source.asset(for: assetId) else {
+            loadFilePhoto(assetId)
+            return
+        }
         self.asset = asset
         isLivePhoto = asset.mediaSubtypes.contains(.photoLive)
         // Off the main actor: resource enumeration can reach for on-demand
@@ -2484,6 +2487,34 @@ struct PhotoDetailPage: View {
     }
 
     private var targetSize: CGSize { ActiveDisplay.pixelSize() }
+
+    /// A photo only in a folder or on a drive (FS-19.02 §3): its file, read
+    /// at screen size by ImageIO — the embedded preview of a RAW when that is
+    /// big enough, never a full decode — with the cached tile first.
+    private func loadFilePhoto(_ id: String) {
+        if image == nil, let tile = photoLibrary.fileThumbnails.image(for: id) {
+            image = tile
+            imageQuality = .thumbnail
+        }
+        let resolve = photoLibrary.filePhotoURL
+        let longSide = Int(max(targetSize.width, targetSize.height))
+        Task {
+            let loaded = await Task.detached(priority: .userInitiated) { () -> UIImage? in
+                guard let url = resolve(id),
+                      let source = CGImageSourceCreateWithURL(url as CFURL, [kCGImageSourceShouldCache: false] as CFDictionary),
+                      let cgImage = CGImageSourceCreateThumbnailAtIndex(source, 0, [
+                          kCGImageSourceCreateThumbnailFromImageAlways: true,
+                          kCGImageSourceCreateThumbnailWithTransform: true,
+                          kCGImageSourceThumbnailMaxPixelSize: longSide,
+                      ] as CFDictionary)
+                else { return nil }
+                return UIImage(cgImage: cgImage)
+            }.value
+            guard let loaded, source.photoId(at: index) == id else { return }
+            image = loaded
+            imageQuality = .displayFinal
+        }
+    }
 
     /// Paging is local-only: paint a cached thumbnail immediately, then replace
     /// it with the exact best-local screen rendition. No iCloud image request

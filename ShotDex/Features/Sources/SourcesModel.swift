@@ -85,8 +85,9 @@ final class SourcesModel {
         #if DEBUG
         await addSeededFolder()
         #endif
-        await runner.readAll()
-        readCount += 1
+        // Only a read that changed something reloads the grid: a reload under
+        // an open viewer would take it away.
+        if await runner.readAll() { readCount += 1 }
         load()
     }
 

@@ -88,6 +88,10 @@ final class PhotoLibraryService: NSObject {
     /// server (FS-19.01b §5): a grid cell with no asset paints from here.
     @ObservationIgnored
     let fileThumbnails = FileThumbnailIndex()
+    /// The file a photo with no asset opens from — its first reachable copy
+    /// in a folder or on a drive (FS-19.02 §3); nil when none is reachable.
+    @ObservationIgnored
+    var filePhotoURL: @Sendable (String) -> URL? = { _ in nil }
 
     @ObservationIgnored
     /// Not private: the original-image request lives in its own extension
