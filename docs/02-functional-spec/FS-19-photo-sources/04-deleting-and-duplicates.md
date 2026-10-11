@@ -44,8 +44,9 @@ Board `MAC_Cull` (Move 120 Rejected…), `MAC_Duplicates` (Move 2 Photos…). Ti
 - **Toàn bộ là ảnh NAS** → tiêu đề "Hide 6 photos?", lời "Files on NAS Home stay on the server; ShotDex hides them.", nút
   **Hide**. Không chữ "delete" nào.
 - **Toàn bộ là ảnh Photos** → bỏ hộp của ShotDex, chỉ còn hộp của hệ thống (như iOS, [FS-01.12b §3](../FS-01-library/12b-culling-pass.md)).
-- Thứ tự khi trộn: bấm Move → **phần Photos chạy trước** (hộp của hệ thống); Cancel ở đó → **không file nào** bị chuyển.
-  Photos xong mới chuyển file vào Thùng rác, rồi ẩn phần NAS. *Vì* hủy giữa chừng không được để lại mẻ nửa vời.
+- Thứ tự khi trộn (planboard mac-ipad-v2 A7, như [FS-01.08c §6](../FS-01-library/08c-compare-viewer-mode.md)): bấm Move →
+  file vào Thùng rác, ẩn phần NAS, **rồi phần Photos** qua hộp của hệ thống. Cancel ở đó → **chỉ phần Photos ở lại** (vẫn
+  Rejected); phần khác đã chạy. *Vì* hộp của ShotDex đã là bước xác nhận cho file và NAS; hộp hệ thống chỉ hỏi về Photos.
 - Có phần xoá hẳn: hộp thứ hai hiện **trước** hộp Photos; Cancel ở đó → không gì chạy.
 - Chuyển file hỏng một phần (quyền, ổ rút ra): dừng, báo "Couldn't move 3 files to the Trash" kèm lý do của lỗi đầu; phần đã
   chuyển giữ nguyên; dấu Rejected của 3 ảnh còn lại không mất.
