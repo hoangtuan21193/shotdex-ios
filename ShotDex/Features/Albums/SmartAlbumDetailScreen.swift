@@ -40,6 +40,8 @@ struct SmartAlbumDetailScreen: View {
     @State private var isDeleting = false
     @State private var isDuplicating = false
     @State private var deleteErrorMessage: String?
+    /// A selection that reaches a file or a server copy (FS-19.04 §2).
+    @State private var sourceDeletion: DeletionTargetQueries.Request?
     /// Errors from the ⋯ actions (Export EXIF, Duplicate).
     @State private var actionErrorMessage: String?
 
@@ -144,6 +146,10 @@ struct SmartAlbumDetailScreen: View {
                 photoLibrary: photoLibrary,
                 onAdded: { withAnimation { stopSelecting() } }
             )
+        }
+        .sourceDeletion($sourceDeletion) { removed, _ in
+            model?.removeDeleted(ids: removed)
+            if !removed.isEmpty { withAnimation { stopSelecting() } }
         }
         .alert(
             "Couldn't Delete Photos",
@@ -472,6 +478,12 @@ struct SmartAlbumDetailScreen: View {
     private func deleteSelected(_ model: SmartAlbumDetailModel) {
         guard !selectedIds.isEmpty else { return }
         let ids = Set(selectedIds)
+        let roots = dependencies.folderRoots
+        if let request = try? DeletionTargetQueries(database: dependencies.database, hasTrash: { roots.hasTrash($0) })
+            .request(photoIds: selectedIds, selection: .photos) {
+            sourceDeletion = request
+            return
+        }
         isDeleting = true
         Task {
             defer { isDeleting = false }

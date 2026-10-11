@@ -144,6 +144,17 @@ final class SmartAlbumDetailModel {
         // fallback reload if the removal cannot be applied in place.
         contentGeneration &+= 1
     }
+
+    /// After a deletion through the sources (FS-19.04 §2): a smart album
+    /// matches folder and server photos too, and no PhotoKit change says
+    /// they went.
+    func removeDeleted(ids: Set<String>) {
+        guard !ids.isEmpty else { return }
+        lastRemoval = .next(after: lastRemoval, removing: ids)
+        items.removeAll { ids.contains($0.assetId) }
+        assetCache.replaceKeys(items.map(\.assetId))
+        contentGeneration &+= 1
+    }
 }
 
 // MARK: PhotoBrowsingSource
