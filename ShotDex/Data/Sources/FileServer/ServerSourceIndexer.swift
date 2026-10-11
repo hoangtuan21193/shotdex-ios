@@ -249,6 +249,8 @@ struct ServerSourceIndexer: Sendable {
         case .unreachable, .connectionLost, .localNetworkDenied:
             try SourceStore(database: database).setOnline(false, sourceId: sourceId)
             summary.disconnected = true
+        case .authenticationFailed:
+            try SourceStore(database: database).setPasswordRejected(sourceId: sourceId)
         default:
             break
         }

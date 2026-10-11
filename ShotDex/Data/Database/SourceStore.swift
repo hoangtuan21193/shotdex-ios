@@ -75,6 +75,29 @@ struct SourceStore: Sendable {
         }
     }
 
+    /// What a source row says beside its name (FS-19.03 §1, §6).
+    enum Status: String, Sendable {
+        case online
+        case offline
+        /// The server refused the saved password; the row offers Edit
+        /// Connection… and nothing asks for the password again.
+        case passwordRejected
+    }
+
+    func status(sourceId: String) throws -> Status {
+        try database.reader.read { db in
+            try String.fetchOne(db, sql: "SELECT status FROM sources WHERE id = ?", arguments: [sourceId])
+        }.flatMap(Status.init(rawValue:)) ?? .online
+    }
+
+    /// A refused password: the photos stay as they are — online or not is
+    /// unknown, nothing is missing.
+    func setPasswordRejected(sourceId: String) throws {
+        try database.writer.write { db in
+            try db.execute(sql: "UPDATE sources SET status = ? WHERE id = ?", arguments: [Status.passwordRejected.rawValue, sourceId])
+        }
+    }
+
     func sources() throws -> [Source] {
         try database.reader.read { db in
             try Row.fetchAll(db, sql: "SELECT * FROM sources ORDER BY createdAt, id").map {

@@ -138,6 +138,45 @@ import Testing
         #expect(await refresh.serverReachable(sourceId: source) == nil)
     }
 
+    /// AC-36, source half: the NAS password was changed on the server.
+    /// Three passes (launch, two Rescans) each stop at the login — one try,
+    /// no file read, no prompt — and the row says Password rejected; the
+    /// photos stay. Saving the new password in Edit Connection… and one
+    /// Rescan bring it back.
+    @Test func passwordRejectedRow() async throws {
+        let client = InMemoryRemoteFileClient()
+        client.put("Photos/2026/DSC1.ARW", try Self.raw(padding: 1_024, seed: 1))
+        let database = try AppDatabase.makeEmpty()
+        let servers = FileServerStore(database: database, passwords: InMemoryPasswordStore())
+        let nas = FileServer(id: "C1", name: "NAS Home", transferProtocol: .smb, host: "nas.local", username: "u", folder: "Photos/2026")
+        try servers.save(nas, password: "old")
+        let sources = SourceStore(database: database)
+        let source = try sources.addServer(name: "NAS Home", connectionId: "C1")
+        let refresh = ServerSourceRefresh(database: database, servers: servers, composer: FolderSourceIndexTests.composer) { _, _ in client }
+        #expect(await refresh.appLaunched()[source]?.photos == 1)
+
+        client.connectError = .authenticationFailed
+        let connects = client.connectCount
+        let reads = client.rangeReadPaths.count
+        #expect(await refresh.rescan(sourceId: source)?.stoppedBy == .authenticationFailed)
+        #expect(await refresh.rescan(sourceId: source)?.stoppedBy == .authenticationFailed)
+        #expect(await refresh.rescan(sourceId: source)?.stoppedBy == .authenticationFailed)
+        #expect(client.connectCount == connects + 3)
+        #expect(client.rangeReadPaths.count == reads)
+        #expect(try sources.status(sourceId: source) == .passwordRejected)
+        // A refused password is not an unreachable server: the reachability
+        // trigger leaves it alone, and the photo is still in the grid.
+        #expect(await refresh.serverReachable(sourceId: source) == nil)
+        #expect(try await database.reader.read { db in
+            try Int.fetchOne(db, sql: "SELECT COUNT(*) FROM photo_copies WHERE sourceId = ? AND isOnline = 1 AND missingSince IS NULL", arguments: [source])
+        } == 1)
+
+        try servers.save(nas, password: "new")
+        client.connectError = nil
+        #expect(await refresh.rescan(sourceId: source)?.stoppedBy == nil)
+        #expect(try sources.status(sourceId: source) == .online)
+    }
+
     private func photo(_ client: InMemoryRemoteFileClient, _ name: String) -> ServerDownloadItem {
         let data = RemoteThumbnailTests.jpeg(width: 200)
         client.put("Trip/\(name)", data)
