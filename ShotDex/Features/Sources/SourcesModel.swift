@@ -103,6 +103,13 @@ final class SourcesModel {
         load()
     }
 
+    /// A deletion through the sources from a screen with no grid of its own
+    /// behind it (Cull): the Library reloads what went, the rows recount.
+    func photosDeleted() {
+        readCount += 1
+        load()
+    }
+
     /// Rescan in a server source's browser, or Try Again on its row.
     func rescanServer(sourceId: String) async {
         if let summary = await servers.rescan(sourceId: sourceId), summary.photos > 0 { readCount += 1 }

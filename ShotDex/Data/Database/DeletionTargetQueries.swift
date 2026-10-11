@@ -27,32 +27,39 @@ struct DeletionTargetQueries: Sendable {
     /// Every copy of each photo that could be deleted, in copy order.
     func copies(photoIds: [String]) throws -> [String: [DeletionTarget]] {
         guard !photoIds.isEmpty else { return [:] }
-        return try database.reader.read { db in
-            let rows = try Row.fetchAll(db, sql: """
+        let rows = try database.reader.read { db in
+            try Row.fetchAll(db, sql: """
                 SELECT c.id, c.photoId, c.sourceId, c.kind, c.photoKitId, c.relativePath, c.pairedPath, c.isOnline,
                        c.isCloudPlaceholder, s.name, s.kind AS sourceKind
                 FROM photo_copies c JOIN sources s ON s.id = c.sourceId
                 WHERE c.photoId IN (\(databaseQuestionMarks(count: photoIds.count))) AND c.missingSince IS NULL AND c.isHidden = 0
                 """, arguments: StatementArguments(photoIds))
-            var out: [String: [(CopyOrder.Candidate, DeletionTarget)]] = [:]
-            for row in rows {
-                let kind: String = row["kind"], sourceId: String = row["sourceId"], name: String = row["name"]
-                let destination: DeletionDestination = switch kind {
-                case "photos": .recentlyDeleted
-                case "server": .hide(sourceName: name)
-                default: hasTrash(sourceId) ? .trash : .permanent(sourceName: name)
-                }
-                let target = DeletionTarget(photoId: row["photoId"], copyId: row["id"], sourceId: sourceId, sourceName: name, kind: kind,
-                                            photoKitId: row["photoKitId"], relativePath: row["relativePath"],
-                                            pairedPath: row["pairedPath"], destination: destination)
-                let candidate = CopyOrder.Candidate(copyId: target.copyId, kind: kind, sourceKind: row["sourceKind"],
-                                                    isOnline: row["isOnline"], isCloudPlaceholder: row["isCloudPlaceholder"])
-                out[target.photoId, default: []].append((candidate, target))
+        }
+        // Outside the read: `hasTrash` resolves the source's folder, which
+        // reads the database itself, and GRDB reads are not reentrant.
+        var trashBySource: [String: Bool] = [:]
+        var out: [String: [(CopyOrder.Candidate, DeletionTarget)]] = [:]
+        for row in rows {
+            let kind: String = row["kind"], sourceId: String = row["sourceId"], name: String = row["name"]
+            let destination: DeletionDestination
+            switch kind {
+            case "photos": destination = .recentlyDeleted
+            case "server": destination = .hide(sourceName: name)
+            default:
+                let hasTrash = trashBySource[sourceId] ?? self.hasTrash(sourceId)
+                trashBySource[sourceId] = hasTrash
+                destination = hasTrash ? .trash : .permanent(sourceName: name)
             }
-            return out.mapValues { pairs in
-                let order = CopyOrder.sorted(pairs.map(\.0)).map(\.copyId)
-                return pairs.map(\.1).sorted { order.firstIndex(of: $0.copyId)! < order.firstIndex(of: $1.copyId)! }
-            }
+            let target = DeletionTarget(photoId: row["photoId"], copyId: row["id"], sourceId: sourceId, sourceName: name, kind: kind,
+                                        photoKitId: row["photoKitId"], relativePath: row["relativePath"],
+                                        pairedPath: row["pairedPath"], destination: destination)
+            let candidate = CopyOrder.Candidate(copyId: target.copyId, kind: kind, sourceKind: row["sourceKind"],
+                                                isOnline: row["isOnline"], isCloudPlaceholder: row["isCloudPlaceholder"])
+            out[target.photoId, default: []].append((candidate, target))
+        }
+        return out.mapValues { pairs in
+            let order = CopyOrder.sorted(pairs.map(\.0)).map(\.copyId)
+            return pairs.map(\.1).sorted { order.firstIndex(of: $0.copyId)! < order.firstIndex(of: $1.copyId)! }
         }
     }
 

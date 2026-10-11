@@ -550,7 +550,8 @@ struct LibraryScreen: View {
                         get: { model.criteria },
                         set: { model.criteria = $0 }
                     ),
-                    rejectedScope: { model.items.map(\.assetId) }
+                    rejectedScope: { model.items.map(\.assetId) },
+                    onSourceDeletion: { model.removeDeleted(ids: $0) }
                 )
             }
         }

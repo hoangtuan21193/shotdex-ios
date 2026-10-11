@@ -317,6 +317,9 @@ struct CullHost: View {
     let request: CullRequest
     @Environment(AppDependencies.self) private var dependencies
     @State private var model: CullModel?
+    /// A Rejected batch that reaches a file or a server copy, waiting on
+    /// the ShotDex confirmation (FS-19.04 §2).
+    @State private var sourceDeletion: DeletionTargetQueries.Request?
 
     var body: some View {
         Group {
@@ -324,6 +327,12 @@ struct CullHost: View {
                 CullScreen(
                     model: model, photoLibrary: dependencies.photoLibrary,
                     deleteRejectedPhotos: { ids in
+                        let roots = dependencies.folderRoots
+                        if let request = try? DeletionTargetQueries(database: dependencies.database, hasTrash: { roots.hasTrash($0) })
+                            .request(photoIds: ids, selection: .rejected) {
+                            sourceDeletion = request
+                            return
+                        }
                         let deleter = RejectedDeleter.live(photoLibrary: dependencies.photoLibrary, banner: dependencies.banner)
                         if case .deleted = await deleter.delete(ids) { model.removeDeleted(ids) }
                     }
@@ -331,6 +340,10 @@ struct CullHost: View {
             } else {
                 EditorTheme.background.ignoresSafeArea()
             }
+        }
+        .sourceDeletion($sourceDeletion) { removed, _ in
+            model?.removeDeleted(Array(removed))
+            if !removed.isEmpty { dependencies.sources.photosDeleted() }
         }
         .appBannerHost(dependencies.banner, bottomInset: 140)
         .task {

@@ -99,8 +99,12 @@ struct FilterTokenBar: View {
     /// exactly these photos' Rejected ones to the system's deletion. Nil on
     /// a bar with no grid behind it.
     var rejectedScope: (() -> [String])?
+    /// Photos a Delete Rejected that reached a file or a server copy took
+    /// out of the grid — no PhotoKit change arrives to say so.
+    var onSourceDeletion: ((Set<String>) -> Void)?
     @Environment(PhotoMarks.self) private var photoMarks: PhotoMarks?
     @Environment(AppDependencies.self) private var dependencies: AppDependencies?
+    @State private var sourceDeletion: DeletionTargetQueries.Request?
 
     var body: some View {
         HStack(spacing: 0) {
@@ -144,6 +148,7 @@ struct FilterTokenBar: View {
                     .layoutPriority(1)
             }
         }
+        .sourceDeletion($sourceDeletion) { removed, _ in onSourceDeletion?(removed) }
         // No background. The bar is floating chrome over the grid, like the
         // toolbar above it: a full-width fill — opaque or glass — draws a band
         // with a cut edge across the photos, and a second one against the
@@ -172,6 +177,12 @@ struct FilterTokenBar: View {
         Button {
             let ids = rejectedIds
             guard let dependencies, !ids.isEmpty else { return }
+            let roots = dependencies.folderRoots
+            if let request = try? DeletionTargetQueries(database: dependencies.database, hasTrash: { roots.hasTrash($0) })
+                .request(photoIds: ids, selection: .rejected) {
+                sourceDeletion = request
+                return
+            }
             Task { _ = await RejectedDeleter.live(photoLibrary: dependencies.photoLibrary, banner: dependencies.banner).delete(ids) }
         } label: {
             HStack(spacing: 6) {

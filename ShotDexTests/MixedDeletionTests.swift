@@ -177,6 +177,21 @@ import Testing
         #expect(try queries.stillShown(photoIds: selection) == Set(photos))
     }
 
+    /// The app's `hasTrash` opens the folder's bookmark from the database.
+    /// Called inside the copies read it trapped ("Database methods are not
+    /// reentrant") the first time a folder photo was deleted from the grid.
+    @Test func hasTrashMayReadTheDatabase() async throws {
+        let library = try Self.library()
+        defer { try? FileManager.default.removeItem(at: library.root.deletingLastPathComponent()) }
+        let database = library.database
+        let queries = DeletionTargetQueries(database: database, hasTrash: { sourceId in
+            (try? database.reader.read { db in try Bool.fetchOne(db, sql: "SELECT EXISTS(SELECT 1 FROM sources WHERE id = ?)", arguments: [sourceId]) }) == true
+        })
+        let files = Array(library.ids.prefix(3))
+        let request = try #require(try queries.request(photoIds: files, selection: .rejected))
+        #expect(request.plan.count(.trash) == 3)
+    }
+
     final class Counter: @unchecked Sendable {
         private let lock = NSLock()
         private var count = 0
