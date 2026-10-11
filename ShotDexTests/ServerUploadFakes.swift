@@ -133,6 +133,7 @@ final class InMemoryRemoteFileClient: RemoteFileClient, @unchecked Sendable {
     var entriesError: RemoteFileError?
 
     func entries(in directory: String) async throws -> [RemoteEntry] {
+        lock.withLock { listingCount += 1 }
         if let entriesError { throw entriesError }
         return lock.withLock {
             let files = storage.filter { ServerUploadPath.parent(of: $0.key) == directory }.map { path, data in
@@ -145,8 +146,14 @@ final class InMemoryRemoteFileClient: RemoteFileClient, @unchecked Sendable {
         }
     }
 
+    /// Every path `readRange` was asked for, in order.
+    private(set) var rangeReadPaths: [String] = []
+    /// How many directory listings were asked for.
+    private(set) var listingCount = 0
+
     func readRange(_ path: String, offset: Int64, length: Int) async throws -> Data {
         try lock.withLock {
+            rangeReadPaths.append(path)
             guard let data = storage[path] else { throw RemoteFileError.other("missing \(path)") }
             let start = min(Int(offset), data.count)
             let slice = data.subdata(in: start..<min(data.count, start + length))

@@ -70,6 +70,34 @@ import Testing
         #expect(try FileManager.default.contentsOfDirectory(atPath: cache.path).count == 27)
     }
 
+    /// AC-38: another computer adds 5 files to NAS Home/Photos/2026. Rescan
+    /// adds 5 photos and opens none of the files it already had — they are
+    /// matched by size and write time from the listing alone.
+    @Test func rescanReadsOnlyNew() async throws {
+        let client = InMemoryRemoteFileClient()
+        let date = Date(timeIntervalSince1970: 1_790_000_000)
+        func add(_ path: String, seed: UInt8) throws {
+            client.put(path, try Self.raw(padding: 64 * 1024, seed: seed))
+            client.modified[path] = date
+        }
+        for n in 1...12 { try add("Photos/2026/Day\(n % 3)/DSC\(n).ARW", seed: UInt8(n)) }
+        let database = try AppDatabase.makeEmpty()
+        let source = try SourceStore(database: database).addServer(name: "NAS Home", connectionId: "C1")
+        let first = try await Self.indexer(database, client).index(sourceId: source, folder: "Photos/2026", pairsRawAndJpeg: true)
+        #expect(first.photos == 12)
+
+        let added = (1...5).map { "Photos/2026/Day9/NEW\($0).ARW" }
+        for (n, path) in added.enumerated() { try add(path, seed: UInt8(100 + n)) }
+        let readsBefore = client.rangeReadPaths.count
+        let rescan = try await Self.indexer(database, client).index(sourceId: source, folder: "Photos/2026", pairsRawAndJpeg: true)
+
+        #expect(rescan.photos == 5)
+        #expect(rescan.unchanged == 12)
+        #expect(Set(client.rangeReadPaths.dropFirst(readsBefore)) == Set(added))
+        #expect(client.downloadCount == 0)
+        #expect(try await database.reader.read { db in try Int.fetchOne(db, sql: "SELECT COUNT(*) FROM photos") } == 17)
+    }
+
     private func photo(_ client: InMemoryRemoteFileClient, _ name: String) -> ServerDownloadItem {
         let data = RemoteThumbnailTests.jpeg(width: 200)
         client.put("Trip/\(name)", data)
