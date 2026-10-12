@@ -41,7 +41,7 @@ thật → ghi sổ trong cùng một transaction với dòng lịch sử upload
 |---|---|---|
 | iOS 26+, bắt đầu từ thao tác người dùng (Start, Resume, Back Up Now, Retry) | chạy | xin tác vụ xử lý tiếp tục như FS-15.02b; hệ thống vẽ tiến độ `Backing up to <connection>`; chạy tới hết hàng đợi hoặc bị dừng |
 | iOS 26+, phát hiện tự động (§1) | chạy | dừng ở file đang làm; chờ lượt nền §3b |
-| trước iOS 26 | chạy; **Keep Screen On** trong 5/5 (mặc định tắt) giữ màn sáng như FS-15.02 §6 | dừng ở file đang làm; chờ lượt nền §3b |
+| trước iOS 26 | chạy; **Keep Screen On** trong 5/5 (mặc định tắt, board tweak `ios18`) giữ màn sáng như FS-15.02 §6 | dừng ở file đang làm; chờ lượt nền §3b |
 
 **§3b. Lượt nền do iOS chọn giờ** (mọi nhánh):
 - Làm mới nền ngắn (khoảng 30 s): phát hiện file mới (§1), đẩy những file ≤ 25 MB còn kịp, xin tiếp một lượt xử lý dài.
@@ -68,7 +68,8 @@ Khi hàng đợi còn > 20 file, 5/5 ghi "Leave ShotDex open to finish faster.";
 - **Pause** (1/5, 5/5): dừng ở file đang làm, xoá `.shotdex-part` nếu còn kết nối; job ngừng theo dõi tới **Resume**.
 - iOS dừng (hết giờ nền, hệ thống bấm dừng): như Pause nhưng job vẫn theo dõi; lượt sau tự chạy tiếp. Dòng trạng thái
   `Paused` + "iOS stopped ShotDex at 812 of 2,940. Resumes from there." tới lượt kế.
-- **Stop** (5/5) = Pause. Không có "huỷ job" ngoài Delete Job.
+- 5/5 chỉ có **Pause** (bỏ Stop — hai nút cùng một việc). Không có "huỷ job" ngoài Delete Job.
+- 5/5 có dòng `Watching · new photos back up as they appear` dưới nút Pause: job vẫn theo dõi sau lượt này.
 - Mất Wi‑Fi khi Only on Wi‑Fi bật → dừng ở file đang làm, trạng thái `Waiting for Wi‑Fi`; có Wi‑Fi lại → tự chạy tiếp.
 - Đích không với tới (lỗi kết nối) → `Can't Reach <connection>`, thử lại ở lượt phát hiện kế; lỗi mật khẩu → dừng hẳn,
   nút **Edit Server** mở form FS-15.01. Đích báo hết chỗ → `<connection> Is Full`, dừng hẳn, nút Retry.
