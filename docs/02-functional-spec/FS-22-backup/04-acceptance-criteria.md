@@ -11,8 +11,8 @@ Server giả: SMB (impacket) và WebDAV (wsgidav) ở 127.0.0.1 như FS-15. Ản
 | AC-1 | Collections, chưa có job, có 1 connection | mở Utilities | ô **Backup** đứng đầu Utilities; chạm → màn rỗng có **New Backup** | ⚠️ chưa có — `scripts/backup-entry.json` |
 | AC-2 | chưa có connection FS-15 nào | mở Backup | nút là **Add a Server**, chạm mở form FS-15.01 | ⚠️ chưa có — `scripts/backup-entry.json` |
 | AC-3 | New Backup, đã chọn nguồn + connection, chưa chọn folder | nhìn Start | Start mờ; chọn folder → Start sáng; mặc định Only on Wi‑Fi bật, Include Edited tắt | ⚠️ chưa có — `BackupJobFormTests.startNeedsSourceDestinationFolder` |
-| AC-4 | Organize Year › Month › Day, Month `Oct`, Day `2025.10.12`, Videos Apart at the Top | đường dẫn cho `IMG_1.HEIC` và `IMG_2.MOV` chụp 2025-10-12 | `2025/Oct/2025.10.12/IMG_1.HEIC` và `Videos/2025/Oct/2025.10.12/IMG_2.MOV` | ⚠️ chưa có — `BackupPathPlannerTests.yearMonthDayVideosAtTop` |
-| AC-5 | 6 mức × 3 kiểu tên file × 5 chỗ Videos (bộ hợp lệ) | lập đường dẫn cho 1 ảnh + 1 video | mọi đường dẫn khớp bảng 01 §3–§5; không tên folder nào chứa `/` | ⚠️ chưa có — `BackupPathPlannerTests.everyCombinationMatchesTable` |
+| AC-4 | Organize Year › Month › Day, Month `Oct`, Day `2025.10.12`, Videos Apart at the Top | đường dẫn cho `IMG_1.HEIC` và `IMG_2.MOV` chụp 2025-10-12 | `2025/Oct/2025.10.12/IMG_1.HEIC` và `Videos/2025/Oct/2025.10.12/IMG_2.MOV` | `BackupPathPlannerTests.yearMonthDayVideosAtTop` |
+| AC-5 | 6 mức × 3 kiểu tên file × 5 chỗ Videos (bộ hợp lệ) | lập đường dẫn cho 1 ảnh + 1 video | mọi đường dẫn khớp bảng 01 §3–§5; không tên folder nào chứa `/` | `BackupPathPlannerTests.everyCombinationMatchesTable` |
 | AC-6 | Custom ngày, gõ separator `a/b` rồi `:` | gõ | cả `/` và `:` bị chặn, ô giữ `ab`; separator `年` cho `2025年10年12` | ⚠️ chưa có — `BackupDateNameTests.forbiddenCharactersRefused` + `scripts/backup-organize.json` |
 | AC-7 | job mới, Photos 10 ảnh + 2 video (2 ảnh chỉ trên iCloud), WebDAV giả | Start | đích có 12 file khớp `shasum -a 256`, 0 `.shotdex-part`; sổ 12 dòng `uploaded`; trạng thái `Watching · Up to Date` | ⚠️ chưa có — `BackupRunnerTests.firstRunUploadsAndRecords` + `scripts/backup-run.json` |
 | AC-8 | đích đã có `IMG_3.CR3` cùng cỡ và `IMG_4.CR3` khác cỡ | chạy | `IMG_3` sổ `found`, 0 byte ghi; `IMG_4` thành `IMG_4 (2).CR3`; không hộp hỏi nào | ⚠️ chưa có — `BackupRunnerTests.nameAndSizeMatchIsFoundOtherwiseKeepBoth` |
@@ -39,7 +39,7 @@ Server giả: SMB (impacket) và WebDAV (wsgidav) ở 127.0.0.1 như FS-15. Ản
 
 ## 2. Chưa chứng minh được
 
-- Mọi AC trừ AC-20, AC-21 — chưa có code.
+- Mọi AC trừ AC-4, AC-5, AC-20, AC-21 — chưa có code.
 - AC-17 lượt dừng của hệ thống không gây được trên sim: chứng minh bằng test giả lập lời dừng, không bằng ảnh.
 - Bố cục iPad và Duo trong/ngoài: board đã vẽ (2026-10-12); AC-25 áp cho `IP_Backup`, `DI_Backup`, `DC_Backup` như `PH_Backup`,
   chứng minh bằng design-parity từng thiết bị. Mac ngoài phạm vi FS-22.
