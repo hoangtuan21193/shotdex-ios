@@ -89,6 +89,12 @@ struct BackupDateName: Sendable {
         )
     }
 
+    /// True when `format` names a folder at all — the Custom… sheet's Done
+    /// stays off until it does (FS-22.01 §4).
+    func isUsable(_ format: BackupCustomDate, sample: Date = Date()) -> Bool {
+        !custom(sample, format).isEmpty
+    }
+
     /// The separator as typed, minus every character a NAS refuses.
     static func cleanSeparator(_ typed: String) -> String {
         String(typed.filter { !forbiddenCharacters.contains($0) })
