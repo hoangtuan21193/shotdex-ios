@@ -973,7 +973,7 @@
     "PH_BackupNew.dc.html": {
       "h": 874,
       "radius": 44,
-      "title": "iPhone · New Backup: chọn Source, Destination (connection + folder, Date Folders), What to Copy, When (Wi‑Fi, sạc) — đề xuất 12/10",
+      "title": "iPhone · New Backup: Source, Destination (connection + folder), Organize (Folders Year/Month, Photos và Videos tách folder, File Names; đường ví dụ), What to Copy, When (Wi‑Fi, sạc) — đề xuất 12/10",
       "w": 402,
       "x": 26534,
       "y": 560
@@ -984,6 +984,14 @@
       "title": "iPhone · Backup đang chạy: %, Pause/Stop, file đang tải iCloud/đang up, tổng, file lỗi; chạy nền, resume theo sổ từng file — đề xuất 12/10",
       "w": 402,
       "x": 26996,
+      "y": 560
+    },
+    "PH_BackupOrganize.dc.html": {
+      "h": 874,
+      "radius": 44,
+      "title": "iPhone · Backup › Organize: Folders (Year, Year/Month, Year/Month/Day, Year/Date, Album, One Folder — ví dụ dưới mỗi dòng), File Names (Original, Date and Time, Date and Original), trùng tên khác file → Keep Both — đề xuất 12/10 theo PhotoSync/Synology/Lightroom",
+      "w": 402,
+      "x": 27458,
       "y": 560
     }
   },
@@ -1080,6 +1088,7 @@
     "PH_Backup.dc.html",
     "PH_BackupNew.dc.html",
     "PH_BackupRunning.dc.html",
+    "PH_BackupOrganize.dc.html",
     "PH_AlbumDetail.dc.html",
     "PH_SmartAlbum.dc.html",
     "PH_SmartAlbumEditor.dc.html",
