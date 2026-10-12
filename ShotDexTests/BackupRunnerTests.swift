@@ -33,4 +33,29 @@ import Testing
         #expect(again.progress.total == 0)
         #expect(!again.progress.isFirstRun || again.progress.total == 0)
     }
+
+    /// AC-8: same name and size at the destination = found, nothing written;
+    /// same name, other size = kept beside it as `(2)`; nothing is asked.
+    @Test func nameAndSizeMatchIsFoundOtherwiseKeepBoth() async throws {
+        var f = try BackupFixture(photos: 0)
+        let (three, d3) = BackupFixture.item(3, name: "IMG_3.CR3")
+        let (four, d4) = BackupFixture.item(4, name: "IMG_4.CR3")
+        f.source.replace([three, four])
+        f.contents = d3.merging(d4) { $1 }
+        f.client.put("Backup/iPhone/IMG_3.CR3", Data(repeating: 1, count: 4_000))
+        f.client.put("Backup/iPhone/IMG_4.CR3", Data(repeating: 2, count: 1_234))
+        let uploadsBefore = f.client.uploadCount
+
+        let result = await f.runner().run()
+
+        #expect(result.stop == .finished)
+        #expect(f.client.uploadCount == uploadsBefore + 1)
+        #expect(f.remoteFiles["Backup/iPhone/IMG_3.CR3"] == Data(repeating: 1, count: 4_000))
+        #expect(f.remoteFiles["Backup/iPhone/IMG_4.CR3"] == Data(repeating: 2, count: 1_234))
+        #expect(f.remoteFiles["Backup/iPhone/IMG_4 (2).CR3"] == d4.values.first)
+        let rows = try await f.database.reader.read { db in try BackupLedgerEntry.order(Column("itemKey")).fetchAll(db) }
+        #expect(rows.map(\.outcome) == [.found, .uploaded])
+        #expect(rows[0].sha256 == nil)
+        #expect(rows[1].remotePath == "Backup/iPhone/IMG_4 (2).CR3")
+    }
 }
