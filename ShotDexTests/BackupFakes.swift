@@ -118,6 +118,7 @@ struct BackupFixture {
     func runner(
         exporter: (any AssetFileExporting)? = nil,
         retriesExhausted: Bool = false,
+        freeBytes: @escaping @Sendable () -> Int64? = { nil },
         gate: @escaping @Sendable () async -> BackupJobState.Status? = { nil },
         onProgress: @escaping @Sendable (BackupProgress) -> Void = { _ in }
     ) -> BackupRunner {
@@ -133,6 +134,7 @@ struct BackupFixture {
             names: BackupDateName(calendar: calendar, locale: Locale(identifier: "en_US")),
             workDirectory: workDirectory,
             retriesExhausted: retriesExhausted,
+            freeBytes: freeBytes,
             gate: gate,
             onProgress: onProgress
         )

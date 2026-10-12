@@ -28,6 +28,11 @@ Theo đúng FS-15.02 §4: tải bản gốc vào thư mục tạm (iCloud nếu 
 ([01 §5](01-jobs-and-organize.md#5-tên-file-và-trùng-tên)) → ghi `<tên>.shotdex-part` → đọc lại, so SHA-256 → đổi tên
 thật → ghi sổ trong cùng một transaction với dòng lịch sử upload FS-15 → xoá file tạm.
 
+- **Không làm đầy máy** (người dùng 2026-10-12): bản gốc đầy đủ tải về thư mục tạm, đẩy lên, kiểm SHA-256, rồi **xoá
+  ngay** trước khi sang file sau — trên máy không bao giờ có quá 1 file của Backup. Đầu mỗi lượt xoá sạch thư mục tạm
+  (file sót của lượt bị giết). Trước khi tải: còn trống trừ cỡ file < 2 GB → `Waiting for Storage`, không tải.
+- Bản tải từ iCloud qua Photos có thể được Photos giữ lại trong bộ đệm của nó; bộ đệm đó do iOS (Optimize Storage) tự
+  dọn, app không xoá được — ghi ở README §4.
 - Một job một file một lúc; nhiều job chạy lần lượt theo thứ tự trong danh sách. *Vì một NAS nhà, một đường Wi‑Fi.*
 - Folder đích chưa có thì tạo theo từng tầng; danh sách tên + cỡ của mỗi folder đích liệt kê một lần mỗi lượt chạy.
 - Sổ ghi **sau** khi đổi tên thật thành công. iOS giết app giữa chừng → lần sau file đó chép lại từ đầu, `.shotdex-part`
@@ -73,7 +78,7 @@ Khi hàng đợi còn > 20 file, 5/5 ghi "Leave ShotDex open to finish faster.";
 - Mất Wi‑Fi khi Only on Wi‑Fi bật → dừng ở file đang làm, trạng thái `Waiting for Wi‑Fi`; có Wi‑Fi lại → tự chạy tiếp.
 - Đích không với tới (lỗi kết nối) → `Can't Reach <connection>`, thử lại ở lượt phát hiện kế; lỗi mật khẩu → dừng hẳn,
   nút **Edit Server** mở form FS-15.01. Đích báo hết chỗ → `<connection> Is Full`, dừng hẳn, nút Retry.
-- Máy còn < 2 GB trống → `Waiting for Storage`, không tải thêm từ iCloud.
+- Máy còn trống trừ cỡ file sắp tải < 2 GB → `Waiting for Storage`, không tải thêm (§2).
 
 ## 5. Trạng thái hiển thị
 

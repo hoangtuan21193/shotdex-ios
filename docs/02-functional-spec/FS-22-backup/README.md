@@ -21,7 +21,7 @@ ngoài `DC_Backup…` (cùng 5 bước), lối vào `DI_Collections` / `DC_Colle
 | 01 | [Job và Organize](01-jobs-and-organize.md) | danh sách job, tạo/sửa job, nguồn, đích, What to Copy, Organize, tên file, trùng tên |
 | 02 | [Chạy và theo dõi](02-running-and-watching.md) | theo dõi liên tục, nền iOS 26 / trước 26, Wi‑Fi, iCloud, dừng/chạy tiếp, trạng thái hiển thị |
 | 03 | [Dữ liệu](03-data.md) | bảng job, sổ từng file, mốc thay đổi, dùng lại bảng FS-15/FS-19 |
-| 04 | [Tiêu chí nghiệm thu](04-acceptance-criteria.md) | AC-1…AC-28 |
+| 04 | [Tiêu chí nghiệm thu](04-acceptance-criteria.md) | AC-1…AC-29 |
 
 ## 1. Người dùng cần gì
 
@@ -66,4 +66,5 @@ ngoài `DC_Backup…` (cùng 5 bước), lối vào `DI_Collections` / `DC_Colle
 | Tác vụ xử lý tiếp tục của FS-15.02b có trong spec nhưng chưa có trong code | Backup làm phần dùng chung đó; Upload FS-15 nối vào sau, ngoài FS-22 |
 | iOS chọn giờ lượt nền; máy ít sạc thì lượt dài hiếm khi chạy | trạng thái ghi "checked N min ago" thật; chép bù ngay khi mở app |
 | Phần mở rộng tải nền Photos là API iOS 26.1, sim có thể không gọi | test giả lập lời gọi; thử trên máy thật trước khi ship |
-| Lượt đầu hàng trăm GB tải iCloud | một file tạm một lúc, chờ khi máy < 2 GB trống |
+| Lượt đầu hàng trăm GB tải iCloud | một file tạm một lúc, xoá ngay sau khi kiểm; chờ khi trống trừ cỡ file < 2 GB |
+| Photos có thể giữ bản gốc vừa tải trong bộ đệm của nó | iOS tự dọn khi cần chỗ (Optimize Storage); app không xoá được — cần đo trên máy thật với thư viện lớn |

@@ -34,6 +34,12 @@ protocol BackupSourceReading: Sendable {
     func items(for job: BackupJob, context: BackupSourceContext) async throws -> [BackupSourceItem]
 }
 
+/// A run stopped by the device rather than by a file.
+enum BackupRunError: Error, Equatable, Sendable {
+    /// Downloading the next original would leave less than the minimum free.
+    case noRoom
+}
+
 /// Why a source could not be listed — each has its own status line.
 enum BackupSourceError: Error, Equatable, Sendable {
     case noPhotosAccess
@@ -102,6 +108,11 @@ actor BackupRunner {
     private let onProgress: @Sendable (BackupProgress) -> Void
     /// Retry: files past `maxAttempts` are tried once more.
     private let retriesExhausted: Bool
+    /// Free bytes on the device; nil = unknown. A file is downloaded only if
+    /// `minimumFreeBytes` stay free after it (FS-22.02 §2).
+    private let freeBytes: @Sendable () -> Int64?
+    /// What stays free while a file sits in the work folder.
+    static let minimumFreeBytes: Int64 = 2 * 1024 * 1024 * 1024
 
     private var progress = BackupProgress()
     /// Folder → lowercased name → size, listed once per folder per run.
@@ -117,6 +128,7 @@ actor BackupRunner {
         names: BackupDateName = BackupDateName(),
         workDirectory: URL,
         retriesExhausted: Bool = false,
+        freeBytes: @escaping @Sendable () -> Int64? = { nil },
         gate: @escaping @Sendable () async -> BackupJobState.Status? = { nil },
         onProgress: @escaping @Sendable (BackupProgress) -> Void = { _ in }
     ) {
@@ -129,6 +141,7 @@ actor BackupRunner {
         self.planner = BackupPathPlanner(organize: job.settings.organize, names: names)
         self.workDirectory = workDirectory
         self.retriesExhausted = retriesExhausted
+        self.freeBytes = freeBytes
         self.gate = gate
         self.onProgress = onProgress
     }
@@ -172,6 +185,9 @@ actor BackupRunner {
         onProgress(progress)
         guard !pending.isEmpty else { return BackupRunResult(stop: .finished, progress: progress) }
 
+        // Whatever a killed run left in the work folder goes first: only one
+        // file is ever on the device at a time.
+        try? FileManager.default.removeItem(at: workDirectory)
         do {
             try await client.connect()
         } catch {
@@ -189,6 +205,8 @@ actor BackupRunner {
             } catch BackupSourceError.offline {
                 // The drive went away mid-run: the file is not the problem.
                 return BackupRunResult(stop: .blocked(.sourceOffline), progress: progress)
+            } catch BackupRunError.noRoom {
+                return BackupRunResult(stop: .blocked(.waitingForStorage), progress: progress)
             } catch let error as RemoteFileError where error.stopsBatch {
                 return BackupRunResult(stop: Self.stop(for: error), progress: progress)
             } catch {
@@ -256,6 +274,9 @@ actor BackupRunner {
             return
         }
 
+        // The original is downloaded full size, uploaded, checked and deleted
+        // before the next one: never fill the device (FS-22.02 §2).
+        if let free = freeBytes(), free - max(0, estimate) < Self.minimumFreeBytes { throw BackupRunError.noRoom }
         progress.phase = .downloading
         onProgress(progress)
         let local = try await exporter.export(assetId: planned.item.itemKey, file: planned.file.file, into: workDirectory)

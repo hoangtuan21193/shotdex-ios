@@ -35,6 +35,7 @@ extension BackupEnvironment {
                     exporter: exporter,
                     workDirectory: workDirectory,
                     retriesExhausted: retriesExhausted,
+                    freeBytes: { Self.freeBytes() },
                     gate: { Self.blockingCondition(settings, network: network, power: power) },
                     onProgress: onProgress
                 )
@@ -45,18 +46,15 @@ extension BackupEnvironment {
         )
     }
 
-    /// Free space below which nothing more is downloaded from iCloud.
-    static let minimumFreeBytes: Int64 = 2 * 1024 * 1024 * 1024
-
     static func blockingCondition(_ settings: BackupSettings, network: NetworkMonitor, power: PowerMonitor) -> BackupJobState.Status? {
         if settings.onlyOnWiFi, network.isExpensivePath { return .waitingForWiFi }
         if settings.onlyWhileCharging, !power.isCharging { return .waitingToCharge }
-        let home = URL(fileURLWithPath: NSHomeDirectory())
-        if let free = try? home.resourceValues(forKeys: [.volumeAvailableCapacityForImportantUsageKey]).volumeAvailableCapacityForImportantUsage,
-           free < minimumFreeBytes {
-            return .waitingForStorage
-        }
         return nil
+    }
+
+    static func freeBytes() -> Int64? {
+        let home = URL(fileURLWithPath: NSHomeDirectory())
+        return try? home.resourceValues(forKeys: [.volumeAvailableCapacityForImportantUsageKey]).volumeAvailableCapacityForImportantUsage
     }
 
     /// Whether any asset was added, changed or removed since `archived`. An
