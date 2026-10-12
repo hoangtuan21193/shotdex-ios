@@ -19,19 +19,37 @@ struct DateRangePickerSheet: View {
 
     var body: some View {
         NavigationStack {
-            VStack(spacing: 0) {
-                weekdayHeader
-                Divider()
-                ScrollView {
-                    LazyVStack(spacing: 24) {
-                        ForEach(months, id: \.self) { month in
-                            monthView(month)
-                        }
+            GeometryReader { proxy in
+                let layout = DateRangeMonthLayout(width: proxy.size.width)
+                VStack(spacing: 0) {
+                    if layout.columns == 1 {
+                        weekdayHeader
+                            .padding(.horizontal, DateRangeMonthLayout.margin)
+                            .padding(.vertical, 6)
+                        Divider()
                     }
-                    .padding(.horizontal)
-                    .padding(.vertical, 16)
+                    ScrollView {
+                        LazyVGrid(
+                            columns: Array(
+                                repeating: GridItem(.flexible(), spacing: DateRangeMonthLayout.columnGap, alignment: .top),
+                                count: layout.columns
+                            ),
+                            spacing: layout.columns == 1 ? 24 : 16
+                        ) {
+                            // Blanks before the oldest month, so the current
+                            // month always closes the bottom row.
+                            ForEach(0..<layout.leadingBlanks(monthCount: months.count), id: \.self) { _ in
+                                Color.clear.frame(height: 1)
+                            }
+                            ForEach(months, id: \.self) { month in
+                                monthView(month, layout: layout)
+                            }
+                        }
+                        .padding(.horizontal, DateRangeMonthLayout.margin)
+                        .padding(.vertical, 16)
+                    }
+                    .defaultScrollAnchor(.bottom)
                 }
-                .defaultScrollAnchor(.bottom)
             }
             .navigationTitle("Date Range")
             .navigationBarTitleDisplayMode(.inline)
@@ -119,25 +137,31 @@ struct DateRangePickerSheet: View {
     }
 
     @ViewBuilder
-    private func monthView(_ month: Date) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
+    private func monthView(_ month: Date, layout: DateRangeMonthLayout) -> some View {
+        VStack(alignment: .leading, spacing: layout.columns == 1 ? 8 : 4) {
             Text(MetadataFormatter.monthHeader(month))
                 .font(.headline)
+
+            // Side-by-side months each carry their weekdays: one header row
+            // cannot line up over several grids.
+            if layout.columns > 1 {
+                weekdayHeader
+            }
 
             let days = daysInMonth(month)
             let leading = leadingBlankCount(month)
             LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 0), count: 7), spacing: 4) {
                 ForEach(0..<leading, id: \.self) { _ in
-                    Color.clear.frame(height: 36)
+                    Color.clear.frame(height: layout.dayHeight)
                 }
                 ForEach(days, id: \.self) { day in
-                    dayCell(day)
+                    dayCell(day, layout: layout)
                 }
             }
         }
     }
 
-    private func dayCell(_ day: Date) -> some View {
+    private func dayCell(_ day: Date, layout: DateRangeMonthLayout) -> some View {
         let state = dayState(day)
         let isFuture = day > Date()
         let dayNumber = calendar.component(.day, from: day)
@@ -145,10 +169,10 @@ struct DateRangePickerSheet: View {
             select(day)
         } label: {
             Text("\(dayNumber)")
-                .font(.callout)
+                .font(layout.columns == 1 ? .callout : .subheadline)
                 .monospacedDigit()
                 .frame(maxWidth: .infinity)
-                .frame(height: 36)
+                .frame(height: layout.dayHeight)
                 .foregroundStyle(foreground(for: state, isFuture: isFuture))
                 .background(background(for: state))
         }
@@ -217,8 +241,35 @@ struct DateRangePickerSheet: View {
                     .frame(maxWidth: .infinity)
             }
         }
-        .padding(.horizontal)
-        .padding(.vertical, 6)
+    }
+}
+
+/// How many months sit side by side (FS-07 Date Range): one column on a
+/// phone, more on a wide sheet so the days stay close together instead of
+/// spreading 130pt apart — two in an iPad form sheet, four on the Duo's
+/// inner display.
+struct DateRangeMonthLayout: Equatable {
+    static let margin: CGFloat = 16
+    static let columnGap: CGFloat = 24
+    /// Narrowest month: seven 30pt days.
+    static let minimumMonthWidth: CGFloat = 210
+
+    let columns: Int
+
+    init(width: CGFloat) {
+        let usable = width - 2 * Self.margin
+        columns = max(1, Int((usable + Self.columnGap) / (Self.minimumMonthWidth + Self.columnGap)))
+    }
+
+    /// Shorter days once months sit side by side, so two rows of months fit
+    /// the Duo's 669pt.
+    var dayHeight: CGFloat { columns == 1 ? 36 : 32 }
+
+    /// Empty cells before the oldest month, so the newest month ends the
+    /// last row and the bottom-anchored scroll opens on a full row.
+    func leadingBlanks(monthCount: Int) -> Int {
+        let remainder = monthCount % columns
+        return remainder == 0 ? 0 : columns - remainder
     }
 }
 
