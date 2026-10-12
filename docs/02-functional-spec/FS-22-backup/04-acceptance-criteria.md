@@ -41,8 +41,12 @@ Server giả: SMB (impacket) và WebDAV (wsgidav) ở 127.0.0.1 như FS-15. Ản
 
 ## 2. Chưa chứng minh được
 
-- Mọi AC trừ AC-4, AC-5, AC-20, AC-21 — chưa có code.
-- AC-17 lượt dừng của hệ thống không gây được trên sim: chứng minh bằng test giả lập lời dừng, không bằng ảnh.
-- Bố cục iPad và Duo trong/ngoài: board đã vẽ (2026-10-12); AC-25 áp cho `IP_Backup`, `DI_Backup`, `DC_Backup` như `PH_Backup`,
-  chứng minh bằng design-parity từng thiết bị. Mac ngoài phạm vi FS-22.
-- AC-27 phần mở rộng có thể không được iOS gọi trên sim: nếu vậy chứng minh bằng test giả lập lời gọi, ghi rõ.
+Lần kiểm 2026-10-12 (iPhone 17 26.5, iPhone 16 18.6, iPad Pro 13" 26.5, Duo 27.1 màn ngoài):
+
+- **AC-17**: giao diện tiến độ hệ thống của tác vụ chạy tiếp và lúc iOS tự dừng — sim không tạo được; phía app có test.
+- **AC-22**: nửa `.limited` trên sim (chọn ảnh giới hạn cần chạm tay vào hộp hệ thống).
+- **AC-25**: `Waiting for Wi‑Fi` trên sim (sim không có mạng đắt); màn trong Duo (sim mới bật ở trạng thái gập, không mở được
+  bằng lệnh); chưa chạy `Tools/design-board compare`.
+- **AC-27**: Photos gọi phần mở rộng tải nền thật — cần máy thật iOS 26.1+.
+- Toàn bộ test suite: 6 test đo thời gian ngoài FS-22 (HiddenCopy 55k, MusicBeat, Share lazy, OriginalPreparation…) hỏng khi
+  chạy cả suite lúc máy tải nặng, xanh khi chạy riêng.
