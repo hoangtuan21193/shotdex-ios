@@ -115,6 +115,8 @@ struct OriginalDownloadModal: View {
                     Text("Retry").frame(maxWidth: .infinity)
                 }
                 .buttonStyle(.bordered)
+                // Neutral beside Share N, the one accent button (DESIGN.md §3.1).
+                .tint(state.continueCount > 0 ? Color.primary : nil)
                 Button("Cancel", role: .cancel) { batch.cancel() }
             }
             .padding(.top, AppTheme.Spacing.xs)

@@ -96,6 +96,8 @@ struct BackupRunningScreen: View {
                         Label(String(localized: "Back Up Now", comment: "Backup: compare the source now"), systemImage: "arrow.clockwise")
                     }
                     .buttonStyle(.bordered)
+                    // Pause/Resume below keeps the accent (DESIGN.md §3.1).
+                    .tint(.primary)
                 }
             }
             if state.status == .uploading || state.status == .watching {

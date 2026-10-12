@@ -805,6 +805,7 @@ struct LibraryScreen: View {
                         model.resumeIndexingOverCellular()
                     }
                     .buttonStyle(.bordered)
+                    .tint(.secondary)
                 }
             }
         } else if model.isIndexing {

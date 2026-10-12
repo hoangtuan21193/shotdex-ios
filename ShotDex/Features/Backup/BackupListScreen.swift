@@ -255,6 +255,9 @@ struct BackupJobCard: View {
                         Text(action.title).frame(minHeight: AppTheme.Size.minTouch - 14)
                     }
                     .buttonStyle(.bordered)
+                    // Every card has one; none of them is the screen's main
+                    // action, so none gets the accent (DESIGN.md §3.1).
+                    .tint(.primary)
                     .buttonBorderShape(.capsule)
                     // 44pt to the finger everywhere; drawn that big where there is room.
                     .controlSize(sizeClass == .regular ? .large : .regular)

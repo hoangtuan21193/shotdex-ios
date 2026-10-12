@@ -255,13 +255,14 @@ struct PhotoWidgetSettingsScreen: View {
                 .font(.caption.weight(isSelected ? .semibold : .regular))
                 .padding(.horizontal, 12)
                 .frame(height: AppTheme.Size.pillHeightLight)
+                // Neutral when chosen (DESIGN.md §3.1: one accent button a screen).
                 .background(
-                    isSelected ? Color.accentColor.opacity(0.18) : Color(.secondarySystemFill),
+                    isSelected ? Color(.systemFill) : Color(.secondarySystemFill),
                     in: Capsule()
                 )
                 .overlay(
                     Capsule().strokeBorder(
-                        isSelected ? Color.accentColor : .clear, lineWidth: 1
+                        isSelected ? Color.primary : .clear, lineWidth: 1
                     )
                 )
                 .frame(height: AppTheme.Size.minTouch)

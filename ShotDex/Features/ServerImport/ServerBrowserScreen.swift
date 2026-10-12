@@ -611,6 +611,8 @@ struct ServerBrowserScreen: View {
                         .frame(minWidth: 28)
                 }
                 .buttonStyle(.bordered)
+                // Import is the one accent button on the bar (DESIGN.md §3.1).
+                .tint(.primary)
                 .accessibilityLabel(PhotoCommand.share.title)
                 Button {
                     presentDownload(folder.selectedPhotos)
@@ -1061,6 +1063,7 @@ struct ServerPhotoViewer: View {
                             .frame(minWidth: 28)
                     }
                     .buttonStyle(.bordered)
+                    .tint(.primary)
                     .accessibilityLabel(PhotoCommand.edit.title)
                     Button {
                         onCommand(.share)
@@ -1070,6 +1073,7 @@ struct ServerPhotoViewer: View {
                             .frame(minWidth: 28)
                     }
                     .buttonStyle(.bordered)
+                    .tint(.primary)
                     .accessibilityLabel(PhotoCommand.share.title)
                     Button {
                         onCommand(.saveToPhotos)
@@ -1088,7 +1092,9 @@ struct ServerPhotoViewer: View {
             .navigationTitle(photo.primary.name)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .confirmationAction) {
+                // Not `.confirmationAction`: on iOS 26 that draws Done as a
+                // second accent button beside Save to Photos (DESIGN.md §3.1).
+                ToolbarItem(placement: .topBarTrailing) {
                     Button("Done") { dismiss() }
                 }
             }
