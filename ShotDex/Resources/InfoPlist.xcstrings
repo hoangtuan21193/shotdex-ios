@@ -1,24 +1,111 @@
 {
-  "sourceLanguage": "en",
-  "strings": {
-    "NSSpeechRecognitionUsageDescription": {
-      "comment": "Privacy - Speech Recognition Usage Description: asked the first time Auto Captions is tapped in the Video Studio (FS-12.14 §4)",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ShotDex turns speech in your clips into captions. It runs on this device; audio never leaves it."
-          }
-        },
-        "vi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ShotDex biến lời nói trong các clip của bạn thành phụ đề. Việc này chạy ngay trên máy; âm thanh không bao giờ rời khỏi máy."
+  "sourceLanguage" : "en",
+  "strings" : {
+    "CFBundleName" : {
+      "comment" : "Bundle name",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "ShotDex"
           }
         }
       }
+    },
+    "Cube LUT" : {
+
+    },
+    "Lightroom Template" : {
+
+    },
+    "Lightroom XMP Preset" : {
+
+    },
+    "NSCalendarsFullAccessUsageDescription" : {
+      "comment" : "Privacy - Calendars Full Access Usage Description",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "ShotDex reads today's events so the calendar widget can list them on your Home Screen. Only their titles, times and colours are copied, and only for today."
+          }
+        }
+      }
+    },
+    "NSCalendarsUsageDescription" : {
+      "comment" : "Privacy - Calendars Usage Description",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "ShotDex reads today's events so the calendar widget can list them on your Home Screen."
+          }
+        }
+      }
+    },
+    "NSLocalNetworkUsageDescription" : {
+      "comment" : "Privacy - Local Network Usage Description",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "ShotDex looks for file servers on your network, such as a NAS or a computer, and connects to the ones you add to upload and download your photos."
+          }
+        }
+      }
+    },
+    "NSLocationWhenInUseUsageDescription" : {
+      "comment" : "Privacy - Location When In Use Usage Description",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "ShotDex uses a rough location — about a kilometre — to fetch the weather for your weather widget. It is never stored and nothing else is sent."
+          }
+        }
+      }
+    },
+    "NSPhotoLibraryUsageDescription" : {
+      "comment" : "Privacy - Photo Library Usage Description",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "ShotDex reads your photos' camera, lens and exposure metadata to build your statistics, and saves the edits, favourites, albums and videos you make back to your library. Your photos stay on this device; only a rounded location goes to Apple's map service, to name the place a shot was taken."
+          }
+        }
+      }
+    },
+    "NSSpeechRecognitionUsageDescription" : {
+      "comment" : "Privacy - Speech Recognition Usage Description: asked the first time Auto Captions is tapped in the Video Studio (FS-12.14 §4)",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ShotDex turns speech in your clips into captions. It runs on this device; audio never leaves it."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ShotDex biến lời nói trong các clip của bạn thành phụ đề. Việc này chạy ngay trên máy; âm thanh không bao giờ rời khỏi máy."
+          }
+        }
+      }
+    },
+    "ShotDex Look" : {
+
+    },
+    "ShotDex Photo Reference" : {
+
     }
   },
-  "version": "1.0"
+  "version" : "1.0"
 }

@@ -1,0 +1,16 @@
+{
+  "run": [
+    {
+      "label": "iPhone 16 Pro",
+      "command": "xcodebuild -project ShotDex.xcodeproj -scheme ShotDex -destination 'id=00008140-000144A63E60801C' -derivedDataPath build/device -allowProvisioningUpdates build 2>&1 | grep -E 'error:|BUILD' ; test ${pipestatus[1]} -eq 0 && xcrun devicectl device install app --device 00008140-000144A63E60801C build/device/Build/Products/Debug-iphoneos/ShotDex.app && xcrun devicectl device process launch --terminate-existing --device 00008140-000144A63E60801C com.hoangtuan.shotdex"
+    },
+    {
+      "label": "iPad",
+      "command": "xcodebuild -project ShotDex.xcodeproj -scheme ShotDex -destination 'id=00008027-001C51043A06802E' -derivedDataPath build/device -allowProvisioningUpdates build 2>&1 | grep -E 'error:|BUILD' ; test ${pipestatus[1]} -eq 0 && xcrun devicectl device install app --device 00008027-001C51043A06802E build/device/Build/Products/Debug-iphoneos/ShotDex.app && xcrun devicectl device process launch --terminate-existing --device 00008027-001C51043A06802E com.hoangtuan.shotdex"
+    },
+    {
+      "label": "Mac",
+      "command": "xcodebuild -project ShotDex.xcodeproj -scheme ShotDex -destination 'platform=macOS,variant=Designed for [iPad,iPhone]' -derivedDataPath build/device -allowProvisioningUpdates build 2>&1 | grep -E 'error:|BUILD' ; test ${pipestatus[1]} -eq 0 && open build/device/Build/Products/Debug-iphoneos/ShotDex.app"
+    }
+  ]
+}
