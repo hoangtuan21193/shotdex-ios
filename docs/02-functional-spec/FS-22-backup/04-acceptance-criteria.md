@@ -9,7 +9,7 @@ Server giả: SMB (impacket) và WebDAV (wsgidav) ở 127.0.0.1 như FS-15. Ản
 | # | Cho | Khi | Thì | Chứng minh bằng |
 |---|---|---|---|---|
 | AC-1 | Collections, chưa có job, có 1 connection | mở Utilities | ô **Backup** đứng đầu Utilities; chạm → màn rỗng có **New Backup** | `scripts/backup-flow.json` (iPhone 17 26.5, 2026-10-12: `05-utilities` Backup đầu Utilities, `10-empty` No Backups + New Backup) |
-| AC-2 | chưa có connection FS-15 nào | mở Backup | nút là **Add a Server**, chạm mở form FS-15.01 | ⚠️ chưa có — `scripts/backup-entry.json` |
+| AC-2 | chưa có connection FS-15 nào | mở Backup | nút là **Add a Server**, chạm mở form FS-15.01 | `scripts/backup-no-server.json` (iPhone 16 18.6, 2026-10-12: `80-no-server` No Backups + Add a Server) |
 | AC-3 | New Backup, đã chọn nguồn + connection, chưa chọn folder | nhìn Start | Start mờ; chọn folder → Start sáng; mặc định Only on Wi‑Fi bật, Include Edited tắt | `BackupJobFormTests.startNeedsSourceDestinationFolder` + `scripts/backup-flow.json` (`20-form`) |
 | AC-4 | Organize Year › Month › Day, Month `Oct`, Day `2025.10.12`, Videos Apart at the Top | đường dẫn cho `IMG_1.HEIC` và `IMG_2.MOV` chụp 2025-10-12 | `2025/Oct/2025.10.12/IMG_1.HEIC` và `Videos/2025/Oct/2025.10.12/IMG_2.MOV` | `BackupPathPlannerTests.yearMonthDayVideosAtTop` |
 | AC-5 | 6 mức × 3 kiểu tên file × 5 chỗ Videos (bộ hợp lệ) | lập đường dẫn cho 1 ảnh + 1 video | mọi đường dẫn khớp bảng 01 §3–§5; không tên folder nào chứa `/` | `BackupPathPlannerTests.everyCombinationMatchesTable` |
@@ -25,7 +25,7 @@ Server giả: SMB (impacket) và WebDAV (wsgidav) ở 127.0.0.1 như FS-15. Ản
 | AC-15 | 1 ảnh iCloud tải hỏng ở 3 lượt đầu | 4 lượt chạy | sổ `failed`, lỗi cuối có câu; 5/5 hiện `1 File Not Copied`; Retry chạy lại đúng file đó | `BackupRunnerTests.failedItemRetriedThreeTimesThenListed` |
 | AC-16 | đang chạy file 5/10 | bấm Pause | dừng ≤ 2 s, `.shotdex-part` file 5 bị xoá; thêm ảnh mới không làm job chạy; Resume → chép 5–10 | `BackupWatcherTests.pauseStopsWatchingUntilResume` |
 | AC-17 | iOS 26.5, Start với 40 file | rời app | có đúng 1 yêu cầu tác vụ xử lý tiếp tục; hệ thống dừng → `Paused` + "iOS stopped ShotDex at N of 40" | `BackupBackgroundTests.continuedTaskOnUserStart` (phía app) + ⚠️ chưa có giao diện hệ thống |
-| AC-18 | iOS 18.6, đang chạy, Keep Screen On bật | rời app / chạy xong / Pause | màn được tự khoá lại ở cả ba lối; lượt nền dài được xin khi rời app | `BackupBackgroundTests.pre26KeepsScreenAndSchedules` |
+| AC-18 | iOS 18.6, đang chạy, Keep Screen On bật | rời app / chạy xong / Pause | màn được tự khoá lại ở cả ba lối; lượt nền dài được xin khi rời app | `BackupBackgroundTests.pre26KeepsScreenAndSchedules` + `scripts/backup-detail-pre26.json` (iPhone 16 18.6: job chạy xong 18 mục, `91-detail-18` có Keep Screen On + chú thích trước iOS 26) |
 | AC-19 | 2 mã tác vụ nền mới | build | cả 2 có trong Info.plist; được đăng ký trước khi app khởi động xong | `BackupBackgroundTests.identifiersRegistered` |
 | AC-20 | sổ 4.118 dòng | Clear Local Metadata Index rồi index lại | sổ vẫn 4.118 dòng; lượt so kế 0 byte đẩy | `BackupStoreTests.ledgerSurvivesIndexClear` |
 | AC-21 | sổ 55.000 dòng, nguồn 55.000 mục + 3 mới | lượt so | trả đúng 3 mục, ≤ 3 s trên iPhone 17 sim | `BackupStoreTests.diffAt55kIsOneQuery` |

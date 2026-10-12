@@ -1,0 +1,17 @@
+{
+ "steps": [
+  {"action": "launch"},
+  {"action": "wait", "seconds": 6},
+  {"action": "tap", "label": "Continue", "type": "button", "seconds": 4},
+  {"action": "wait", "seconds": 4},
+  {"action": "systemTap", "label": "Allow Full Access", "seconds": 15},
+  {"action": "wait", "seconds": 8},
+  {"action": "tap", "label": "Collections", "type": "button"},
+  {"action": "wait", "seconds": 2},
+  {"action": "scrollTo", "label": "Backup"},
+  {"action": "tap", "label": "Backup"},
+  {"action": "wait", "seconds": 2},
+  {"action": "screenshot", "name": "80-no-server"},
+  {"action": "dump", "name": "80-no-server", "type": "button"}
+ ]
+}
