@@ -49,6 +49,8 @@ final class BackupCoordinator {
         if #available(iOS 26.0, *) { false } else { true }
     }()
     @ObservationIgnored private var isHoldingScreen = false
+    /// The 5-minute tick for folder and server sources.
+    @ObservationIgnored var tickTask: Task<Void, Never>?
 
     @ObservationIgnored private var queue: [(id: String, retriesExhausted: Bool)] = []
     @ObservationIgnored private var loop: Task<Void, Never>?
@@ -63,6 +65,8 @@ final class BackupCoordinator {
     }
 
     func reload() {
+        // A job whose FS-19 source was removed goes with it (FS-22.03 §1).
+        try? store.removeJobsWithoutSource()
         jobs = (try? store.jobs()) ?? []
         var states: [String: BackupJobState] = [:]
         for job in jobs { states[job.id] = (try? store.state(jobId: job.id)) ?? BackupJobState(jobId: job.id) }
@@ -237,6 +241,9 @@ final class BackupCoordinator {
 
     private func receive(_ live: BackupProgress, jobId: String) {
         guard runningJobId == jobId else { return }
+        // Hops are not FIFO: never let an older report overwrite a newer one.
+        if let shown = progress[jobId], shown.total == live.total,
+           (shown.done, shown.bytesDone) > (live.done, live.bytesDone) { return }
         progress[jobId] = live
         if let started = runStartedAt, live.bytesDone > 0 {
             let elapsed = Date().timeIntervalSince(started)
@@ -255,7 +262,7 @@ final class BackupCoordinator {
             switch result.stop {
             case .finished:
                 state.status = .watching
-                state.lastCheckedAt = now
+                state.lastCheckedAt = Int(result.listedAt.timeIntervalSince1970)
                 state.hasFinishedFirstRun = true
                 if let token { state.changeToken = token }
             case .cancelled:

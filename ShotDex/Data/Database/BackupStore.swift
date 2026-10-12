@@ -39,6 +39,16 @@ struct BackupStore: Sendable {
         }
     }
 
+    /// Removes jobs whose FS-19 source is gone, with their state and ledger.
+    func removeJobsWithoutSource() throws {
+        try database.writer.write { db in
+            try db.execute(sql: """
+                DELETE FROM backup_jobs
+                WHERE sourceId != ? AND sourceId NOT IN (SELECT id FROM sources)
+                """, arguments: [PhotoLibrarySource.id])
+        }
+    }
+
     /// Saves the form's changes. Files already copied stay where they are and
     /// stay in the ledger (FS-22.01 §2).
     func update(_ job: BackupJob) throws {
@@ -153,6 +163,13 @@ struct BackupStore: Sendable {
                 try row.update(db)
             } else {
                 try row.insert(db)
+            }
+            if entry.outcome != .failed {
+                // Earlier failures of this file (under an older stamp) are over.
+                try db.execute(sql: """
+                    DELETE FROM backup_ledger
+                    WHERE jobId = ? AND itemKey = ? AND resourceKey = ? AND outcome = 'failed' AND sourceStamp != ?
+                    """, arguments: [entry.jobId, entry.itemKey, entry.resourceKey, entry.sourceStamp])
             }
             if let upload, entry.outcome == .uploaded {
                 try ServerUploadStore.insert(upload, in: db)

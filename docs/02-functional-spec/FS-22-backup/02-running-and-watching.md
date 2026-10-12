@@ -21,6 +21,8 @@ nếu điều kiện (Wi‑Fi, sạc, đích với tới được) cho phép, v�
 - Mục đã chép rồi bị sửa (ngày sửa/cỡ đổi): bản gốc Photos không chép lại; bản sửa (khi bật) và file FS-19 đổi nội dung
   được chép thêm một bản theo luật Keep Both, bản cũ ở đích giữ nguyên.
 - Mục bị xoá ở nguồn: không làm gì ở đích; dòng sổ giữ nguyên.
+- Mốc "đổi từ lần trước" là lúc lượt trước **bắt đầu liệt kê**, không phải lúc xong — sửa ảnh giữa lượt không bị sót.
+- Pause dừng cả lúc đang tải bản gốc từ iCloud và lúc đang băm SHA-256, không chờ hết file.
 
 ## 2. Chép một file
 

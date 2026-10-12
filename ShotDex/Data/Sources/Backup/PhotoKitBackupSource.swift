@@ -39,10 +39,14 @@ struct PhotoKitBackupSource: BackupSourceReading {
         for asset in toRead {
             try Task.checkCancellation()
             let modified = Int(asset.modificationDate?.timeIntervalSince1970 ?? 0)
+            let created = Int(asset.creationDate?.timeIntervalSince1970 ?? 0)
             let files = PhotoKitOriginalExporter.uploadFiles(for: asset).map { file in
                 // An original never changes in Photos; stamping it with the
                 // asset's modification time would re-copy it after every edit.
-                BackupSourceFile(file: file, sourceStamp: file.role == .original ? "\(file.estimatedBytes)" : "\(file.estimatedBytes):\(modified)")
+                // Photos does not always report a size: then the creation date
+                // stands in, never a shared "0".
+                let size = file.estimatedBytes > 0 ? "\(file.estimatedBytes)" : "c\(created)"
+                return BackupSourceFile(file: file, sourceStamp: file.role == .original ? size : "\(size):\(modified)")
             }
             guard !files.isEmpty else { continue }
             items.append(BackupSourceItem(
@@ -61,7 +65,13 @@ struct PhotoKitBackupSource: BackupSourceReading {
         let wanted = Set(assets.map(\.localIdentifier))
         var names: [String: String] = [:]
         let albums = PHAssetCollection.fetchAssetCollections(with: .album, subtype: .albumRegular, options: nil)
-        albums.enumerateObjects { album, _, _ in
+        albums.enumerateObjects { album, _, stopAlbums in
+            // Albums are walked one at a time; stop as soon as every asset has
+            // one, or when the run is cancelled.
+            if Task.isCancelled || names.count == wanted.count {
+                stopAlbums.pointee = true
+                return
+            }
             let title = album.localizedTitle ?? ""
             PHAsset.fetchAssets(in: album, options: nil).enumerateObjects { asset, _, _ in
                 let id = asset.localIdentifier

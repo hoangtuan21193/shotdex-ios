@@ -38,6 +38,19 @@ struct BackupJob: Codable, Hashable, Sendable, Identifiable {
 
 extension BackupJob: FetchableRecord, PersistableRecord {
     static let databaseTableName = "backup_jobs"
+
+    /// Settings this build cannot read at all fall back to the defaults, so
+    /// one damaged row never takes the whole job list with it.
+    init(row: Row) {
+        id = row["id"]
+        sourceId = row["sourceId"]
+        connectionId = row["connectionId"]
+        folder = row["folder"]
+        let json: Data? = (row["settings"] as String?).map { Data($0.utf8) } ?? row["settings"]
+        settings = json.flatMap { try? JSONDecoder().decode(BackupSettings.self, from: $0) } ?? BackupSettings()
+        sortOrder = row["sortOrder"]
+        createdAt = row["createdAt"]
+    }
 }
 
 /// Where a job stands between runs (FS-22.03 §1). One row per job.

@@ -33,6 +33,11 @@ enum BackupUploadExtensionSync {
     static func apply(jobs: [BackupJob], servers: FileServerStore) {
         let all = (try? servers.fetchAll()) ?? []
         let config = config(jobs: jobs, servers: all)
+        // Sign-ins of connections no longer served leave the shared Keychain.
+        let kept = Set(config.jobs.map(\.account))
+        for gone in Set(BackupUploadShared.readConfig().jobs.map(\.account)).subtracting(kept) {
+            BackupUploadShared.setAuthorization(nil, account: gone)
+        }
         BackupUploadShared.writeConfig(config)
         for job in config.jobs {
             guard let server = all.first(where: { $0.id == job.account }) else { continue }

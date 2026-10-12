@@ -82,6 +82,9 @@ struct BackupRunResult: Equatable, Sendable {
 
     var stop: Stop
     var progress: BackupProgress
+    /// When the source was listed — the next run's "changed since" mark, so an
+    /// edit made during this run is not missed.
+    var listedAt = Date()
 }
 
 /// Runs one pass of one job: lists the source, subtracts the ledger, and
@@ -155,6 +158,13 @@ actor BackupRunner {
     }
 
     func run() async -> BackupRunResult {
+        let listedAt = Date()
+        var result = await pass()
+        result.listedAt = listedAt
+        return result
+    }
+
+    private func pass() async -> BackupRunResult {
         let items: [BackupSourceItem]
         do {
             let state = try store.state(jobId: job.id)
@@ -334,11 +344,13 @@ actor BackupRunner {
                 sourceStamp: planned.key.sourceStamp, remotePath: destination, byteCount: size,
                 sha256: localHash, outcome: .uploaded
             ),
-            upload: ServerUploadRecord(
+            // The FS-15 history is keyed on Photos assets; an FS-19 copy has
+            // its own record of where it lives.
+            upload: job.sourceId == PhotoLibrarySource.id ? ServerUploadRecord(
                 assetId: planned.item.itemKey, fileKey: planned.file.file.key,
                 serverId: self.destination.connectionId, serverName: self.destination.connectionName,
                 remotePath: destination, byteCount: size, sha256: localHash
-            )
+            ) : nil
         )
     }
 

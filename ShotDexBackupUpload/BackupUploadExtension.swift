@@ -1,5 +1,6 @@
 import ExtensionFoundation
 import Foundation
+import os
 import Photos
 
 /// Photos wakes this extension when new photos arrive, even with ShotDex
@@ -46,7 +47,7 @@ struct BackupUploadExtension: PHBackgroundResourceUploadExtension {
                 default: break
                 }
                 for resource in PHAssetResource.assetResources(for: asset) where Self.isOriginal(resource.type) {
-                    guard room > 0 else {
+                    guard room > 0, !Self.isTerminating.withLock({ $0 }) else {
                         completedAll = false
                         stop.pointee = true
                         return
@@ -74,13 +75,21 @@ struct BackupUploadExtension: PHBackgroundResourceUploadExtension {
                     }
                 }
             }
-            if completedAll { tokens[job.jobId] = current } else { finishedEverything = false }
+            // The token always moves on, so a later wake never queues the same
+            // files twice; what did not fit is copied by the app's next run.
+            tokens[job.jobId] = current
+            if !completedAll { finishedEverything = false }
         }
         BackupUploadShared.writeTokens(tokens)
         return finishedEverything ? .completed : .processing
     }
 
-    func notifyTermination() {}
+    func notifyTermination() {
+        Self.isTerminating.withLock { $0 = true }
+    }
+
+    /// Set when iOS is about to end the extension; `process()` stops queuing.
+    private static let isTerminating = OSAllocatedUnfairLock(initialState: false)
 
     private static func isOriginal(_ type: PHAssetResourceType) -> Bool {
         [.photo, .alternatePhoto, .video, .pairedVideo].contains(type)

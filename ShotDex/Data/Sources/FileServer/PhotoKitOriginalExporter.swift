@@ -1,4 +1,5 @@
 import Foundation
+import os
 import Photos
 import UniformTypeIdentifiers
 
@@ -88,7 +89,7 @@ struct PhotoKitOriginalExporter: AssetFileExporting {
         let options = PHAssetResourceRequestOptions()
         options.isNetworkAccessAllowed = true
         do {
-            try await PHAssetResourceManager.default().writeData(for: resource, toFile: url, options: options)
+            try await Self.stream(resource, to: url, options: options)
         } catch {
             try? FileManager.default.removeItem(at: url)
             if Task.isCancelled { throw CancellationError() }
@@ -99,5 +100,35 @@ struct PhotoKitOriginalExporter: AssetFileExporting {
             throw error
         }
         return url
+    }
+
+    /// The original, streamed to `url` chunk by chunk, and cancelled with the
+    /// task — Pause must stop a multi-GB iCloud download at once, which
+    /// `writeData` does not (FS-22.02 §4).
+    private static func stream(_ resource: PHAssetResource, to url: URL, options: PHAssetResourceRequestOptions) async throws {
+        guard FileManager.default.createFile(atPath: url.path, contents: nil) else {
+            throw CocoaError(.fileWriteUnknown)
+        }
+        let handle = try FileHandle(forWritingTo: url)
+        defer { try? handle.close() }
+        let manager = PHAssetResourceManager.default()
+        let request = OSAllocatedUnfairLock<PHAssetResourceDataRequestID?>(initialState: nil)
+        let writeError = OSAllocatedUnfairLock<Error?>(initialState: nil)
+        try await withTaskCancellationHandler {
+            try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+                let id = manager.requestData(for: resource, options: options) { chunk in
+                    do { try handle.write(contentsOf: chunk) } catch { writeError.withLock { $0 = $0 ?? error } }
+                } completionHandler: { error in
+                    if let error = error ?? writeError.withLock({ $0 }) {
+                        continuation.resume(throwing: error)
+                    } else {
+                        continuation.resume()
+                    }
+                }
+                request.withLock { $0 = id }
+            }
+        } onCancel: {
+            if let id = request.withLock({ $0 }) { manager.cancelDataRequest(id) }
+        }
     }
 }

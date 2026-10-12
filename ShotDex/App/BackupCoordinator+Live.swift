@@ -88,10 +88,11 @@ extension BackupCoordinator {
         environment.power?.setPowerChangeHandler { [weak self] _, _ in
             Task { @MainActor in self?.conditionsChanged() }
         }
-        Task { [weak self] in
+        tickTask?.cancel()
+        tickTask = Task { [weak self] in
             while !Task.isCancelled {
                 try? await Task.sleep(for: .seconds(300))
-                guard let self else { return }
+                guard let self, !Task.isCancelled else { return }
                 self.sourcesTick()
             }
         }

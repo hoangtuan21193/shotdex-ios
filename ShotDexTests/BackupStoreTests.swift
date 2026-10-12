@@ -130,4 +130,40 @@ import Testing
         #expect(settings.organize.levels == .yearMonth)
         #expect(settings.organize.monthStyle == .abbreviated)
     }
+
+    /// One damaged settings row falls back to defaults; the others still load.
+    @Test func corruptSettingsLosesOnlyThatJob() throws {
+        let f = try makeFixture()
+        try f.store.add(BackupJob(sourceId: PhotoLibrarySource.id, connectionId: f.nas.id, folder: "Other"))
+        try f.database.writer.write { db in
+            try db.execute(sql: "UPDATE backup_jobs SET settings = 'x' WHERE id = ?", arguments: [f.job.id])
+        }
+        let jobs = try f.store.jobs()
+        #expect(jobs.count == 2)
+        #expect(jobs.first { $0.id == f.job.id }?.settings == BackupSettings())
+    }
+
+    /// A job whose FS-19 source was removed is removed with its ledger.
+    @Test func jobWithoutSourceIsRemoved() throws {
+        let f = try makeFixture()
+        let sourceId = try SourceStore(database: f.database).addFolder(name: "T7", bookmark: Data(), includesSubfolders: true, pairsRawAndJpeg: true)
+        let folderJob = BackupJob(sourceId: sourceId, connectionId: f.nas.id, folder: "Archive/T7")
+        try f.store.add(folderJob)
+        try f.store.record(uploaded(1, job: folderJob.id))
+        try f.store.removeJobsWithoutSource()
+        #expect(try f.store.jobs().count == 2)
+
+        try f.database.writer.write { db in try db.execute(sql: "DELETE FROM sources WHERE id = ?", arguments: [sourceId]) }
+        try f.store.removeJobsWithoutSource()
+        #expect(try f.store.jobs().map(\.id) == [f.job.id])
+        #expect(try f.store.handledCount(jobId: folderJob.id) == 0)
+    }
+
+    /// A file copied after it changed clears its older failures.
+    @Test func successClearsOlderFailures() throws {
+        let f = try makeFixture()
+        try f.store.record(BackupLedgerEntry(jobId: f.job.id, itemKey: "A1", resourceKey: "r", sourceStamp: "1", outcome: .failed, lastError: "x"))
+        try f.store.record(BackupLedgerEntry(jobId: f.job.id, itemKey: "A1", resourceKey: "r", sourceStamp: "2", remotePath: "p", byteCount: 2, sha256: "s", outcome: .uploaded))
+        #expect(try f.store.failedEntries(jobId: f.job.id).isEmpty)
+    }
 }

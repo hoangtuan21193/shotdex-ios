@@ -147,6 +147,8 @@ enum FileChecksum {
         defer { try? handle.close() }
         var hasher = SHA256()
         while let data = try handle.read(upToCount: chunkSize), !data.isEmpty {
+            // A multi-GB video must not hold up Pause.
+            try Task.checkCancellation()
             hasher.update(data: data)
         }
         return hex(hasher.finalize())

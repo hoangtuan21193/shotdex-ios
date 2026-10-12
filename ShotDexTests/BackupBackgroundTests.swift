@@ -59,17 +59,17 @@ import Testing
     /// AC-18: before iOS 26, Keep Screen On holds the screen only while a
     /// run goes, and lets go when it finishes or is paused.
     @Test func pre26KeepsScreenAndSchedules() async throws {
-        var f = try BackupFixture(photos: 6, bytes: 64)
+        var f = try BackupFixture(photos: 8, bytes: 64)
         f.job.settings.keepsScreenOn = true
         try f.store.update(f.job)
-        let slow = SlowExporter(base: FakeAssetExporter(contents: f.contents), delay: .milliseconds(150))
+        let slow = SlowExporter(base: FakeAssetExporter(contents: f.contents), delay: .milliseconds(500))
         let c = coordinator(f, exporter: slow)
         let screen = FakeScreen()
         c.screen = screen
         c.usesKeepScreenOn = true
 
         c.backUpNow(f.job.id)
-        while (c.progress[f.job.id]?.done ?? 0) < 1 { try await Task.sleep(for: .milliseconds(20)) }
+        while c.runningJobId == nil { try await Task.sleep(for: .milliseconds(10)) }
         #expect(screen.holds == 1)
         c.pause(f.job.id)
         await c.waitUntilIdle()

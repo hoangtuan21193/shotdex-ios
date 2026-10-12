@@ -16,11 +16,14 @@ Metadata Index xoá; sổ là thứ duy nhất quyết định "đã chép chưa
 
 - Khoá mục: Photos → id ảnh của Photos; FS-19 → id bản sao trong bảng bản sao. Duy nhất theo (job, khoá mục, loại
   tài nguyên, dấu nguồn).
-- Mỗi file `uploaded` cũng thêm một dòng vào bảng lịch sử upload FS-15 trong cùng transaction — để Photo Detail hiện
-  **Uploaded to Server** và Free Up Space (FS-15.02c) tính được ảnh đã lên. `found` không thêm (không kiểm SHA-256).
+- Mỗi file `uploaded` **của job nguồn Photos** cũng thêm một dòng vào bảng lịch sử upload FS-15 trong cùng transaction —
+  để Photo Detail hiện **Uploaded to Server** và Free Up Space (FS-15.02c) tính được. `found` không thêm (không kiểm
+  SHA-256); job nguồn FS-19 không thêm (lịch sử FS-15 tính theo ảnh Photos, bản sao FS-19 đã có chỗ của nó).
+- File đã chép xong xoá các dòng `failed` cũ (dấu nguồn khác) của chính nó.
+- Settings không đọc được cả khối → job đó dùng mặc định; các job khác vẫn tải.
 - Xoá job: xoá trạng thái + sổ của job (khoá ngoại xoá theo). Dòng lịch sử upload FS-15 giữ nguyên.
 - Xoá connection FS-15: job của nó xoá theo, sau hộp xác nhận nói số job.
-- Xoá nguồn FS-19: job của nó xoá theo, cùng hộp xác nhận của FS-19.
+- Xoá nguồn FS-19: job của nó xoá theo ở lần đọc danh sách job kế (không sửa code FS-19).
 
 ## 2. Luật
 

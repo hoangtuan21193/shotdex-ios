@@ -92,16 +92,23 @@ final class BackupBackgroundService {
         try? BGTaskScheduler.shared.submit(request)
     }
 
+    /// Registered with `using: .main`, so the handlers run on the main thread
+    /// and `assumeIsolated` above holds.
     private static func run(_ task: BGTask, coordinator: BackupCoordinator, then: @escaping @MainActor () -> Void) {
+        let completion = TaskCompletion(task)
         task.expirationHandler = {
-            Task { @MainActor in coordinator.systemWillStop() }
+            Task { @MainActor in
+                coordinator.systemWillStop()
+                // Even if a call does not notice the cancel, iOS is told.
+                completion.finish(success: false)
+            }
         }
         coordinator.appBecameActive()
         coordinator.sourcesTick()
         Task { @MainActor in
             await coordinator.waitUntilIdle()
             then()
-            task.setTaskCompleted(success: true)
+            completion.finish(success: true)
         }
     }
 
@@ -127,5 +134,21 @@ final class BackupBackgroundService {
             hasContinuedTask = false
             task.setTaskCompleted(success: !stopped)
         }
+    }
+}
+
+/// Ends a background task exactly once — the run finishing and the expiry
+/// can both try.
+@MainActor
+private final class TaskCompletion {
+    private let task: BGTask
+    private var isDone = false
+
+    init(_ task: BGTask) { self.task = task }
+
+    func finish(success: Bool) {
+        guard !isDone else { return }
+        isDone = true
+        task.setTaskCompleted(success: success)
     }
 }
