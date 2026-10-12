@@ -1,0 +1,276 @@
+import SwiftUI
+
+/// New Backup / Edit (FS-22.01 §2, board `PH_BackupNew` 2/5).
+struct BackupFormSheet: View {
+    @State var model: BackupFormModel
+    /// Called with the saved job; the list starts it.
+    var onSaved: (BackupJob) -> Void
+
+    @Environment(\.dismiss) private var dismiss
+    @Environment(AppDependencies.self) private var dependencies
+    @State private var path: [Route] = []
+
+    enum Route: Hashable {
+        case organize
+        case customMonth
+        case customDay
+        case serverFolder(FolderPickerRoute)
+    }
+
+    var body: some View {
+        NavigationStack(path: $path) {
+            Form {
+                sourceSection
+                destinationSection
+                organizeSection
+                contentSection
+                whenSection
+            }
+            .navigationTitle(model.isEditing
+                ? String(localized: "Edit Backup", comment: "Backup form title when editing")
+                : String(localized: "New Backup", comment: "Backup form title"))
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button(String(localized: "Cancel", comment: "Backup form: close without saving")) { dismiss() }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button(model.isEditing
+                        ? String(localized: "Save", comment: "Backup form: save changes")
+                        : String(localized: "Start", comment: "Backup form: create the job and start it")) {
+                        if let job = model.save() {
+                            onSaved(job)
+                            dismiss()
+                        }
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .disabled(!model.canStart)
+                    .accessibilityLabel(model.isEditing
+                        ? String(localized: "Save Backup", comment: "VoiceOver: save the backup form")
+                        : String(localized: "Start Backup", comment: "VoiceOver: start the backup"))
+                }
+            }
+            .alert(String(localized: "This backup already exists.", comment: "Backup form: same source, connection and folder"), isPresented: $model.duplicateError) {
+                Button(String(localized: "OK", comment: "Dismiss alert"), role: .cancel) {}
+            }
+            .navigationDestination(for: Route.self) { route in
+                switch route {
+                case .organize:
+                    BackupOrganizeScreen(settings: $model.settings, previewRoot: previewRoot) { path.append($0 == .month ? .customMonth : .customDay) }
+                case .customMonth:
+                    BackupCustomDateScreen(organize: $model.settings.organize, part: .month, previewRoot: previewRoot)
+                case .customDay:
+                    BackupCustomDateScreen(organize: $model.settings.organize, part: .day, previewRoot: previewRoot)
+                case .serverFolder(let route):
+                    ServerBrowserScreen(model: route.model) { chosen in
+                        path = []
+                        model.folder = chosen
+                        Task { await route.model.session.close() }
+                    }
+                }
+            }
+        }
+    }
+
+    private var previewRoot: String {
+        String(localized: "\(BackupDevice.kindName)  ·  the backup folder on \(model.connection?.name ?? "")", comment: "Organize preview: the root line of the folder tree")
+    }
+
+    // MARK: Sections
+
+    private var sourceSection: some View {
+        Section(String(localized: "Source", comment: "Backup form section")) {
+            ForEach(model.sources) { option in
+                Button {
+                    model.sourceId = option.id
+                } label: {
+                    HStack(spacing: AppTheme.Spacing.md) {
+                        Label(option.name, systemImage: option.systemImage)
+                            .foregroundStyle(option.isOnline ? .primary : .secondary)
+                        Spacer()
+                        Text(option.isOnline
+                            ? option.count.formatted()
+                            : String(localized: "Offline", comment: "Backup form: a source that is not connected"))
+                            .foregroundStyle(.secondary)
+                            .monospacedDigit()
+                        Image(systemName: "checkmark")
+                            .foregroundStyle(.tint)
+                            .opacity(model.sourceId == option.id ? 1 : 0)
+                    }
+                }
+                .tint(.primary)
+                .disabled(model.isEditing && model.sourceId != option.id)
+                .accessibilityAddTraits(model.sourceId == option.id ? .isSelected : [])
+            }
+        }
+    }
+
+    private var destinationSection: some View {
+        Section(String(localized: "Destination", comment: "Backup form section")) {
+            if model.connections.isEmpty {
+                NavigationLink {
+                    FileServerFormScreen(draft: FileServerDraft()) { saved in
+                        model.reloadChoices()
+                        model.choose(connection: saved.id)
+                    }
+                } label: {
+                    Text(String(localized: "Add a Server", comment: "Backup form: no connection yet"))
+                }
+            } else {
+                Picker(String(localized: "Connection", comment: "Backup form row: which server"), selection: Binding(
+                    get: { model.connectionId ?? "" },
+                    set: { model.choose(connection: $0) }
+                )) {
+                    ForEach(model.connections) { server in
+                        Text(server.name).tag(server.id)
+                    }
+                }
+                .pickerStyle(.menu)
+                .disabled(model.isEditing)
+
+                Button {
+                    browseFolder()
+                } label: {
+                    LabeledContent(String(localized: "Folder", comment: "Backup form row: folder on the server")) {
+                        HStack(spacing: AppTheme.Spacing.xs) {
+                            Text(model.folder.isEmpty ? "/" : model.folder)
+                                .lineLimit(1)
+                                .truncationMode(.head)
+                            Image(systemName: "chevron.right")
+                                .font(.footnote.weight(.semibold))
+                                .foregroundStyle(.tertiary)
+                        }
+                    }
+                }
+                .tint(.primary)
+                .disabled(model.connection == nil)
+            }
+        }
+    }
+
+    private var organizeSection: some View {
+        Section {
+            NavigationLink(value: Route.organize) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(String(localized: "Organize", comment: "Backup form row: how folders are laid out"))
+                    Text(BackupOrganizeText.summary(model.settings.organize))
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                }
+            }
+        } header: {
+            Text(String(localized: "Folders on \(model.connection?.name ?? "")", comment: "Backup form section header"))
+        } footer: {
+            Text(String(localized: "\(BackupOrganizeText.sampleTree(model.settings.organize)). Tap Organize to change the folders, the names and where videos go.", comment: "Backup form footer: an example path"))
+        }
+    }
+
+    private var contentSection: some View {
+        Section {
+            ForEach(BackupSettings.Content.allCases, id: \.self) { content in
+                Button {
+                    model.settings.content = content
+                } label: {
+                    HStack {
+                        Text(BackupOrganizeText.content(content))
+                        Spacer()
+                        Image(systemName: "checkmark")
+                            .foregroundStyle(.tint)
+                            .opacity(model.settings.content == content ? 1 : 0)
+                    }
+                }
+                .tint(.primary)
+                .accessibilityAddTraits(model.settings.content == content ? .isSelected : [])
+            }
+            Toggle(String(localized: "Include Edited Versions", comment: "Backup form switch: also copy the edited render"), isOn: $model.settings.includesEditedVersions)
+        } header: {
+            Text(String(localized: "What to Copy", comment: "Backup form section"))
+        } footer: {
+            Text("\(model.summary). \(String(localized: "Full-size originals, RAW included; iCloud photos download first.", comment: "Backup form footer"))")
+        }
+    }
+
+    private var whenSection: some View {
+        Section(String(localized: "When", comment: "Backup form section")) {
+            Toggle(String(localized: "Only on Wi‑Fi", comment: "Backup form switch"), isOn: $model.settings.onlyOnWiFi)
+            Toggle(String(localized: "Only While Charging", comment: "Backup form switch"), isOn: $model.settings.onlyWhileCharging)
+        }
+    }
+
+    private func browseFolder() {
+        guard let server = model.connection else { return }
+        let session = ServerBrowseSession(server: server, client: RemoteFileClientFactory.make(
+            for: server, password: dependencies.fileServers.password(for: server.id) ?? ""
+        ))
+        let dependencies = dependencies
+        let picker = ServerBrowserModel(session: session, start: model.folder.isEmpty ? server.folder : model.folder, mode: .chooseFolder) { folder in
+            ServerFolderModel(
+                session: session, folder: folder, cache: dependencies.serverThumbnails,
+                downloads: dependencies.serverDownloads,
+                existingAssetIds: { PhotoKitAssetCreator.existingAssetIds($0) }
+            )
+        }
+        path.append(.serverFolder(FolderPickerRoute(model: picker)))
+    }
+}
+
+/// Words and example paths for Organize choices (FS-22.01 §3–§5).
+enum BackupOrganizeText {
+    /// The sample the menus and the preview are drawn from.
+    static let sampleDate = Date(timeIntervalSince1970: 1_760_277_807)
+    static let sampleVideo = "IMG_8812.MOV"
+
+    static var names: BackupDateName { BackupDateName() }
+
+    static func content(_ content: BackupSettings.Content) -> String {
+        switch content {
+        case .photosAndVideos: String(localized: "Photos & Videos", comment: "Backup: what to copy")
+        case .photosOnly: String(localized: "Photos Only", comment: "Backup: what to copy")
+        case .videosOnly: String(localized: "Videos Only", comment: "Backup: what to copy")
+        }
+    }
+
+    /// `Year › Month › Day · videos apart`.
+    static func summary(_ organize: BackupOrganize) -> String {
+        let videos = organize.videoPlacement == .together
+            ? String(localized: "videos together", comment: "Organize summary: photos and videos share folders")
+            : String(localized: "videos apart", comment: "Organize summary: videos in their own folder")
+        return organize.levels == .noFolders ? levels(organize.levels) : "\(levels(organize.levels)) · \(videos)"
+    }
+
+    /// `Videos › 2025 › Oct › 2025.10.12 › IMG_8812.MOV`.
+    static func sampleTree(_ organize: BackupOrganize) -> String {
+        let planner = BackupPathPlanner(organize: organize, names: names)
+        let input = BackupPlacementInput(date: sampleDate, isVideo: true, originalFilename: sampleVideo, album: String(localized: "Trip", comment: "Organize preview: sample album name"))
+        return (planner.folders(for: input) + [planner.fileName(for: input)]).joined(separator: " › ")
+    }
+
+    static func levels(_ levels: BackupOrganize.Levels) -> String {
+        switch levels {
+        case .yearMonthDay: String(localized: "Year › Month › Day", comment: "Organize levels")
+        case .yearMonth: String(localized: "Year › Month", comment: "Organize levels")
+        case .yearDate: String(localized: "Year › Date", comment: "Organize levels")
+        case .dateOnly: String(localized: "Date Only", comment: "Organize levels")
+        case .album: String(localized: "Album", comment: "Organize levels")
+        case .noFolders: String(localized: "No Folders", comment: "Organize levels")
+        }
+    }
+
+    static func videos(_ placement: BackupOrganize.VideoPlacement) -> String {
+        switch placement {
+        case .together: String(localized: "Together", comment: "Organize: photos and videos in the same folders")
+        case .apartAtTop: String(localized: "Apart at the Top", comment: "Organize: a Videos folder at the top")
+        case .apartInYear: String(localized: "Apart in Each Year", comment: "Organize: a Videos folder inside each year")
+        case .apartInMonth: String(localized: "Apart in Each Month", comment: "Organize: a Videos folder inside each month")
+        case .apartInDay: String(localized: "Apart in Each Day", comment: "Organize: a Videos folder inside each day")
+        }
+    }
+
+    static func fileNames(_ names: BackupOrganize.FileNames) -> String {
+        switch names {
+        case .original: String(localized: "Original", comment: "Organize: keep the original file name")
+        case .dateAndTime: String(localized: "Date and Time", comment: "Organize: name files by when they were taken")
+        case .dateAndOriginal: String(localized: "Date and Original", comment: "Organize: date then the original name")
+        }
+    }
+}

@@ -8,13 +8,13 @@ Server giả: SMB (impacket) và WebDAV (wsgidav) ở 127.0.0.1 như FS-15. Ản
 
 | # | Cho | Khi | Thì | Chứng minh bằng |
 |---|---|---|---|---|
-| AC-1 | Collections, chưa có job, có 1 connection | mở Utilities | ô **Backup** đứng đầu Utilities; chạm → màn rỗng có **New Backup** | ⚠️ chưa có — `scripts/backup-entry.json` |
+| AC-1 | Collections, chưa có job, có 1 connection | mở Utilities | ô **Backup** đứng đầu Utilities; chạm → màn rỗng có **New Backup** | `scripts/backup-flow.json` (iPhone 17 26.5, 2026-10-12: `05-utilities` Backup đầu Utilities, `10-empty` No Backups + New Backup) |
 | AC-2 | chưa có connection FS-15 nào | mở Backup | nút là **Add a Server**, chạm mở form FS-15.01 | ⚠️ chưa có — `scripts/backup-entry.json` |
-| AC-3 | New Backup, đã chọn nguồn + connection, chưa chọn folder | nhìn Start | Start mờ; chọn folder → Start sáng; mặc định Only on Wi‑Fi bật, Include Edited tắt | ⚠️ chưa có — `BackupJobFormTests.startNeedsSourceDestinationFolder` |
+| AC-3 | New Backup, đã chọn nguồn + connection, chưa chọn folder | nhìn Start | Start mờ; chọn folder → Start sáng; mặc định Only on Wi‑Fi bật, Include Edited tắt | `BackupJobFormTests.startNeedsSourceDestinationFolder` + `scripts/backup-flow.json` (`20-form`) |
 | AC-4 | Organize Year › Month › Day, Month `Oct`, Day `2025.10.12`, Videos Apart at the Top | đường dẫn cho `IMG_1.HEIC` và `IMG_2.MOV` chụp 2025-10-12 | `2025/Oct/2025.10.12/IMG_1.HEIC` và `Videos/2025/Oct/2025.10.12/IMG_2.MOV` | `BackupPathPlannerTests.yearMonthDayVideosAtTop` |
 | AC-5 | 6 mức × 3 kiểu tên file × 5 chỗ Videos (bộ hợp lệ) | lập đường dẫn cho 1 ảnh + 1 video | mọi đường dẫn khớp bảng 01 §3–§5; không tên folder nào chứa `/` | `BackupPathPlannerTests.everyCombinationMatchesTable` |
-| AC-6 | Custom ngày, gõ separator `a/b` rồi `:` | gõ | cả `/` và `:` bị chặn, ô giữ `ab`; separator `年` cho `2025年10年12` | `BackupDateNameTests.forbiddenCharactersRefused` + ⚠️ chưa có `scripts/backup-organize.json` (phần ô gõ) |
-| AC-7 | job mới, Photos 10 ảnh + 2 video (2 ảnh chỉ trên iCloud), WebDAV giả | Start | đích có 12 file khớp `shasum -a 256`, 0 `.shotdex-part`; sổ 12 dòng `uploaded`; trạng thái `Watching · Up to Date` | `BackupRunnerTests.firstRunUploadsAndRecords` + ⚠️ chưa có `scripts/backup-run.json` (phần màn hình) |
+| AC-6 | Custom ngày, gõ separator `a/b` rồi `:` | gõ | cả `/` và `:` bị chặn, ô giữ `ab`; separator `年` cho `2025年10年12` | `BackupDateNameTests.forbiddenCharactersRefused` + `scripts/backup-flow.json` (`41-custom-typed`: gõ `a/b:` sau `.` còn `.ab`) |
+| AC-7 | job mới, Photos 10 ảnh + 2 video (2 ảnh chỉ trên iCloud), WebDAV giả | Start | đích có 12 file khớp `shasum -a 256`, 0 `.shotdex-part`; sổ 12 dòng `uploaded`; trạng thái `Watching · Up to Date` | `BackupRunnerTests.firstRunUploadsAndRecords` + `scripts/backup-flow.json` (WebDAV wsgidav 127.0.0.1: 18 mục lên `Backup/iPhone/…`, 0 `.shotdex-part`, `shasum -a 256` = SHA-256 trong sổ; `50-list` Watching · Up to Date, `60-detail`) |
 | AC-8 | đích đã có `IMG_3.CR3` cùng cỡ và `IMG_4.CR3` khác cỡ | chạy | `IMG_3` sổ `found`, 0 byte ghi; `IMG_4` thành `IMG_4 (2).CR3`; không hộp hỏi nào | `BackupRunnerTests.nameAndSizeMatchIsFoundOtherwiseKeepBoth` |
 | AC-9 | lượt 3.580 file, app bị giết sau file 812 (sổ 812 dòng) | mở lại app | chạy tiếp từ file 813; tổng byte ghi lên đích = byte của 2.768 file còn lại (+ tối đa 1 file dở) | `BackupRunnerTests.resumesAfterKillWithoutRecopy` |
 | AC-10 | job Up to Date, app mở ở Backup | chụp/thêm 3 ảnh vào thư viện sim | ≤ 10 s sau, dòng trạng thái `3 New · Uploading`; xong → `Watching · Up to Date`, đích có 3 file mới | `BackupWatcherTests.libraryChangeQueuesNewItems` + ⚠️ chưa có `scripts/backup-watch.json` (sim) |
@@ -36,7 +36,7 @@ Server giả: SMB (impacket) và WebDAV (wsgidav) ở 127.0.0.1 như FS-15. Ản
 | AC-27 | iOS 26.5, quyền đầy đủ, job Photos → WebDAV giả | thêm 2 ảnh khi app đã đóng, rồi mở app | phần mở rộng đã PUT 2 file `.shotdex-part`; lượt mở app kiểm SHA-256, đổi tên thật, sổ 2 dòng `uploaded`; 0 file đẩy lại | ⚠️ chưa có — `BackupUploadExtensionTests.partFilesVerifiedOnNextRun` + `scripts/backup-webdav-extension.json` |
 | AC-28 | job duy nhất Photos → WebDAV bị xoá, hoặc quyền xuống `.limited` | thao tác | phần mở rộng tải nền bị tắt | ⚠️ chưa có — `BackupUploadExtensionTests.disabledWithoutWebDAVJobOrFullAccess` |
 | AC-29 | 5 ảnh, thư mục tạm còn 1 file sót của lượt bị giết; lần hai máy trống chỉ hơn 2 GB 1 KB | chạy | trong lượt không lúc nào quá 1 file trong thư mục tạm, hết lượt thư mục rỗng (file sót bị xoá); lần hai `Waiting for Storage`, 0 byte đẩy | `BackupRunnerTests.originalsNeverPileUpOnDevice` + `BackupRunnerTests.waitsWhenTheNextFileWouldFillTheDevice` |
-| AC-26 | cùng nguồn + connection + folder đã có job | Start | báo "This backup already exists." và không tạo job thứ hai | ⚠️ chưa có — `BackupJobFormTests.duplicateJobRefused` |
+| AC-26 | cùng nguồn + connection + folder đã có job | Start | báo "This backup already exists." và không tạo job thứ hai | `BackupJobFormTests.duplicateJobRefused` |
 
 ## 2. Chưa chứng minh được
 

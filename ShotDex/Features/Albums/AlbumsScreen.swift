@@ -180,6 +180,9 @@ struct AlbumsScreen: View {
         .navigationDestination(for: DuplicatesDestination.self) { _ in
             DuplicatesScreen()
         }
+        .navigationDestination(for: BackupScreenDestination.self) { _ in
+            BackupListScreen()
+        }
         .navigationDestination(for: PlacesDestination.self) { _ in
             PlacesMapScreen()
         }
@@ -617,6 +620,14 @@ extension AlbumsScreen {
 
     fileprivate func utilitiesSection() -> some View {
         listSection("Utilities", entryCount: utilityEntryCount) {
+            NavigationLink(value: BackupScreenDestination()) {
+                CollectionListRow(
+                    title: String(localized: "Backup", comment: "Utilities row: back a whole library up to a network drive (FS-22)"),
+                    systemImage: "clock.arrow.circlepath"
+                )
+            }
+            .buttonStyle(.plain)
+
             NavigationLink(value: DuplicatesDestination()) {
                 CollectionListRow(
                     title: String(localized: "Duplicates"),
@@ -760,7 +771,7 @@ extension AlbumsScreen {
     /// system utility albums come and go, and the packing has to count what
     /// is actually there.
     private var utilityEntryCount: Int {
-        5 + model.utilityAlbums.count + (dependencies.serverUploadIndex.assetIds.isEmpty ? 0 : 1)
+        6 + model.utilityAlbums.count + (dependencies.serverUploadIndex.assetIds.isEmpty ? 0 : 1)
             + (hiddenCount > 0 ? 1 : 0)
     }
 

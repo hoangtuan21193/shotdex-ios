@@ -1,0 +1,187 @@
+{
+ "steps": [
+  {
+   "action": "launch"
+  },
+  {
+   "action": "wait",
+   "seconds": 6
+  },
+  {
+   "action": "tap",
+   "label": "Collections",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "scrollTo",
+   "label": "Backup"
+  },
+  {
+   "action": "screenshot",
+   "name": "05-utilities"
+  },
+  {
+   "action": "tap",
+   "label": "Backup"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "screenshot",
+   "name": "10-empty"
+  },
+  {
+   "action": "dump",
+   "name": "10-empty"
+  },
+  {
+   "action": "tap",
+   "label": "New Backup",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "screenshot",
+   "name": "20-form"
+  },
+  {
+   "action": "dump",
+   "name": "20-form"
+  },
+  {
+   "action": "swipe",
+   "x": 0.5,
+   "y": 0.75,
+   "direction": "up",
+   "distance": 0.4
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "screenshot",
+   "name": "21-form-bottom"
+  },
+  {
+   "action": "tap",
+   "label": "Organize"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "screenshot",
+   "name": "30-organize"
+  },
+  {
+   "action": "dump",
+   "name": "30-organize"
+  },
+  {
+   "action": "tap",
+   "label": "Day, ",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "screenshot",
+   "name": "31-day-menu"
+  },
+  {
+   "action": "tap",
+   "label": "Custom…"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "screenshot",
+   "name": "40-custom"
+  },
+  {
+   "action": "typeText",
+   "label": "Separator",
+   "type": "textField",
+   "text": "a/b:"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "screenshot",
+   "name": "41-custom-typed"
+  },
+  {
+   "action": "dump",
+   "name": "41-custom-typed",
+   "type": "textField"
+  },
+  {
+   "action": "back"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "screenshot",
+   "name": "32-organize-custom"
+  },
+  {
+   "action": "back"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "tap",
+   "label": "Start Backup",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 10
+  },
+  {
+   "action": "screenshot",
+   "name": "50-list"
+  },
+  {
+   "action": "dump",
+   "name": "50-list"
+  },
+  {
+   "action": "tap",
+   "label": "Photos Library"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "screenshot",
+   "name": "60-detail"
+  },
+  {
+   "action": "dump",
+   "name": "60-detail"
+  }
+ ]
+}

@@ -1,0 +1,11 @@
+{
+ "steps": [
+  {"action": "launch"},
+  {"action": "wait", "seconds": 6},
+  {"action": "tap", "label": "Continue", "type": "button", "seconds": 4},
+  {"action": "wait", "seconds": 4},
+  {"action": "systemTap", "label": "Allow Full Access", "seconds": 15},
+  {"action": "wait", "seconds": 8},
+  {"action": "screenshot", "name": "00-library"}
+ ]
+}
