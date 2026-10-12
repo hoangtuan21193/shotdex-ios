@@ -59,10 +59,14 @@ struct FileNameScreen: View {
                             Label(ExportCopy.tokenTitle(token), systemImage: "plus")
                                 .labelStyle(TokenChipLabelStyle())
                                 .frame(maxWidth: .infinity, minHeight: FileNameMetrics.chipHeight)
-                                .background(.tint.opacity(0.14), in: Capsule())
+                                // Neutral, the look of `.bordered` + `.tint(.secondary)`
+                                // without its 12pt side padding (three to a row
+                                // wraps "Original Name" otherwise): Export is the
+                                // sheet's one accent button (DESIGN.md §3.1).
+                                .background(Color(.secondarySystemFill), in: Capsule())
                         }
                         .buttonStyle(.plain)
-                        .foregroundStyle(.tint)
+                        .foregroundStyle(.secondary)
                         .accessibilityLabel(ExportCopy.insertToken(token))
                     }
                 }

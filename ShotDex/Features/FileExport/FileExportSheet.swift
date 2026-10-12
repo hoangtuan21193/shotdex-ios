@@ -210,6 +210,7 @@ struct FileExportSheet: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
                 Button(String(localized: "Cancel", table: ExportCopy.table, comment: "Export sheet: close without exporting")) { dismiss() }
                     .buttonStyle(.bordered)
+                    .tint(.secondary)
                     .controlSize(.large)
                 Button(ExportCopy.title, action: export)
                     .buttonStyle(.borderedProminent)

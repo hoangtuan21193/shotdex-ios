@@ -169,7 +169,8 @@ struct FileExportSummaryView: View {
 }
 
 /// A full-width 50pt button of the run and the summary (`PH35`, `PH36`):
-/// Done filled, the ways on tinted, Cancel red.
+/// Done filled, the ways on neutral, Cancel red — one accent button a
+/// screen (DESIGN.md §3.1).
 private struct SummaryButtonStyle: ButtonStyle {
     enum Kind { case prominent, secondary, destructive }
 
@@ -180,9 +181,12 @@ private struct SummaryButtonStyle: ButtonStyle {
         let tint: Color = kind == .destructive ? .red : .accentColor
         configuration.label
             .font(.headline)
-            .foregroundStyle(kind == .prominent ? Color.white : tint)
+            .foregroundStyle(kind == .prominent ? Color.white : kind == .secondary ? Color.primary : tint)
             .frame(maxWidth: .infinity, minHeight: AppTheme.Size.primaryActionHeight)
-            .background(kind == .prominent ? tint : tint.opacity(0.15), in: RoundedRectangle.app(AppTheme.Radius.md))
+            .background(
+                kind == .prominent ? tint : kind == .secondary ? Color(.secondarySystemFill) : tint.opacity(0.15),
+                in: RoundedRectangle.app(AppTheme.Radius.md)
+            )
             .opacity(isEnabled ? (configuration.isPressed ? 0.7 : 1) : 0.4)
     }
 }
