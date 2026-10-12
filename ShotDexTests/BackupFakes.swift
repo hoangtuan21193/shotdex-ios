@@ -15,7 +15,7 @@ final class FakeBackupSource: BackupSourceReading, @unchecked Sendable {
     func add(_ more: [BackupSourceItem]) { lock.withLock { _items += more } }
     func replace(_ items: [BackupSourceItem]) { lock.withLock { _items = items } }
 
-    func items(for job: BackupJob) async throws -> [BackupSourceItem] {
+    func items(for job: BackupJob, context: BackupSourceContext) async throws -> [BackupSourceItem] {
         if let listError { throw listError }
         return items.filter { item in
             switch job.settings.content {

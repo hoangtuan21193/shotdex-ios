@@ -82,6 +82,15 @@ struct BackupStore: Sendable {
         }
     }
 
+    /// Items with at least one file uploaded or found.
+    func handledItemKeys(jobId: String) throws -> Set<String> {
+        try database.reader.read { db in
+            Set(try String.fetchAll(db, sql: """
+                SELECT DISTINCT itemKey FROM backup_ledger WHERE jobId = ? AND outcome IN ('uploaded', 'found')
+                """, arguments: [jobId]))
+        }
+    }
+
     /// Of `keys`, the ones the ledger does not count as done, in the order given.
     func pending(_ keys: [BackupFileKey], jobId: String) throws -> [BackupFileKey] {
         let handled = try handledKeys(jobId: jobId)

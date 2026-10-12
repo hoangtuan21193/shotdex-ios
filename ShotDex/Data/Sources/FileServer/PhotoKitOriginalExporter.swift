@@ -31,37 +31,49 @@ struct PhotoKitOriginalExporter: AssetFileExporting {
     static func entries(for assetIds: [String]) -> [AssetUploadEntry] {
         let assets = PhotoLibraryService.fetchAssets(ids: assetIds)
         return assets.map { asset in
-            let resources = PHAssetResource.assetResources(for: asset)
-            let primaryName = resources.first { originalTypes.contains($0.type) }?.originalFilename
-            let files: [AssetUploadFile] = resources.compactMap { resource in
-                let role: AssetUploadFile.Role
-                if originalTypes.contains(resource.type) {
-                    role = .original
-                } else if editedTypes.contains(resource.type) {
-                    role = .edited
-                } else {
-                    return nil
-                }
-                let isRAW = UTType(resource.uniformTypeIdentifier)?.conforms(to: .rawImage) ?? false
-                // An edited render is called FullSizeRender.jpg in Photos;
-                // on the server it sits beside its original as IMG_1234_edited.jpg.
-                let filename = role == .edited
-                    ? ServerUploadPath.editedFilename(original: primaryName ?? resource.originalFilename, rendered: resource.originalFilename)
-                    : resource.originalFilename
-                return AssetUploadFile(
-                    key: key(for: resource),
-                    filename: filename,
-                    isRAW: isRAW,
-                    role: role,
-                    estimatedBytes: (resource.value(forKey: "fileSize") as? NSNumber)?.int64Value ?? 0
-                )
-            }
+            let files = uploadFiles(for: asset)
             return AssetUploadEntry(
                 assetId: asset.localIdentifier,
                 captureDate: asset.creationDate ?? Date(),
                 files: files
             )
         }
+    }
+
+    /// The asset's originals and edited renders, in resource order — one
+    /// PhotoKit round trip.
+    static func uploadFiles(for asset: PHAsset) -> [AssetUploadFile] {
+        let resources = PHAssetResource.assetResources(for: asset)
+        let primaryName = resources.first { originalTypes.contains($0.type) }?.originalFilename
+        return resources.compactMap { uploadFile(for: $0, primaryName: primaryName) }
+    }
+
+    /// One resource as the upload sees it; nil for resources that are
+    /// neither an original nor an edit's render (adjustment data, thumbnails).
+    /// `primaryName` is the asset's first original, which an edited render is
+    /// named after.
+    static func uploadFile(for resource: PHAssetResource, primaryName: String?) -> AssetUploadFile? {
+        let role: AssetUploadFile.Role
+        if originalTypes.contains(resource.type) {
+            role = .original
+        } else if editedTypes.contains(resource.type) {
+            role = .edited
+        } else {
+            return nil
+        }
+        let isRAW = UTType(resource.uniformTypeIdentifier)?.conforms(to: .rawImage) ?? false
+        // An edited render is called FullSizeRender.jpg in Photos;
+        // on the server it sits beside its original as IMG_1234_edited.jpg.
+        let filename = role == .edited
+            ? ServerUploadPath.editedFilename(original: primaryName ?? resource.originalFilename, rendered: resource.originalFilename)
+            : resource.originalFilename
+        return AssetUploadFile(
+            key: key(for: resource),
+            filename: filename,
+            isRAW: isRAW,
+            role: role,
+            estimatedBytes: (resource.value(forKey: "fileSize") as? NSNumber)?.int64Value ?? 0
+        )
     }
 
     func export(assetId: String, file: AssetUploadFile, into directory: URL) async throws -> URL {

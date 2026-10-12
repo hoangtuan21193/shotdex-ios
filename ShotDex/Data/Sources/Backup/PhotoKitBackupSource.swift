@@ -1,0 +1,73 @@
+import Foundation
+import Photos
+
+/// The Photos library as a backup source (FS-22.02 §1). Under `.limited`
+/// access it sees — and so backs up — only the photos the user allowed.
+///
+/// Listing every asset is cheap; reading an asset's resources is a PhotoKit
+/// round trip each. So resources are read only for assets the ledger has not
+/// seen or that changed since the last run.
+struct PhotoKitBackupSource: BackupSourceReading {
+    func items(for job: BackupJob, context: BackupSourceContext) async throws -> [BackupSourceItem] {
+        let status = PHPhotoLibrary.authorizationStatus(for: .readWrite)
+        guard status == .authorized || status == .limited else { throw BackupSourceError.noPhotosAccess }
+
+        let options = PHFetchOptions()
+        options.sortDescriptors = [NSSortDescriptor(key: "creationDate", ascending: true)]
+        switch job.settings.content {
+        case .photosAndVideos:
+            options.predicate = NSPredicate(format: "mediaType == %d OR mediaType == %d", PHAssetMediaType.image.rawValue, PHAssetMediaType.video.rawValue)
+        case .photosOnly:
+            options.predicate = NSPredicate(format: "mediaType == %d", PHAssetMediaType.image.rawValue)
+        case .videosOnly:
+            options.predicate = NSPredicate(format: "mediaType == %d", PHAssetMediaType.video.rawValue)
+        }
+        let assets = PHAsset.fetchAssets(with: options)
+
+        var toRead: [PHAsset] = []
+        assets.enumerateObjects { asset, _, _ in
+            let changed = context.lastCheckedAt.map { (asset.modificationDate ?? .distantFuture) > $0 } ?? true
+            if !context.handledItemKeys.contains(asset.localIdentifier) || changed {
+                toRead.append(asset)
+            }
+        }
+        try Task.checkCancellation()
+
+        let albums = job.settings.organize.levels == .album ? Self.albumNames(for: toRead) : [:]
+        var items: [BackupSourceItem] = []
+        items.reserveCapacity(toRead.count)
+        for asset in toRead {
+            try Task.checkCancellation()
+            let modified = Int(asset.modificationDate?.timeIntervalSince1970 ?? 0)
+            let files = PhotoKitOriginalExporter.uploadFiles(for: asset).map { file in
+                // An original never changes in Photos; stamping it with the
+                // asset's modification time would re-copy it after every edit.
+                BackupSourceFile(file: file, sourceStamp: file.role == .original ? "\(file.estimatedBytes)" : "\(file.estimatedBytes):\(modified)")
+            }
+            guard !files.isEmpty else { continue }
+            items.append(BackupSourceItem(
+                itemKey: asset.localIdentifier,
+                date: asset.creationDate ?? asset.modificationDate ?? Date(),
+                isVideo: asset.mediaType == .video,
+                album: albums[asset.localIdentifier],
+                files: files
+            ))
+        }
+        return items
+    }
+
+    /// The first user album (in Photos' order) each asset is in.
+    private static func albumNames(for assets: [PHAsset]) -> [String: String] {
+        let wanted = Set(assets.map(\.localIdentifier))
+        var names: [String: String] = [:]
+        let albums = PHAssetCollection.fetchAssetCollections(with: .album, subtype: .albumRegular, options: nil)
+        albums.enumerateObjects { album, _, _ in
+            let title = album.localizedTitle ?? ""
+            PHAsset.fetchAssets(in: album, options: nil).enumerateObjects { asset, _, _ in
+                let id = asset.localIdentifier
+                if wanted.contains(id), names[id] == nil { names[id] = title }
+            }
+        }
+        return names
+    }
+}

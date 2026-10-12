@@ -19,9 +19,25 @@ struct BackupSourceFile: Sendable {
     let sourceStamp: String
 }
 
+/// What the runner already knows, so a source can skip reading files of
+/// items that cannot have changed — a PhotoKit resource lookup per asset is
+/// the slow part of listing 55k photos.
+struct BackupSourceContext: Sendable {
+    /// Items with at least one file uploaded or found.
+    var handledItemKeys: Set<String> = []
+    /// The last time a run listed this source; nil = never.
+    var lastCheckedAt: Date?
+}
+
 /// Lists what a job's source holds right now (FS-22.02 §1).
 protocol BackupSourceReading: Sendable {
-    func items(for job: BackupJob) async throws -> [BackupSourceItem]
+    func items(for job: BackupJob, context: BackupSourceContext) async throws -> [BackupSourceItem]
+}
+
+/// Why a source could not be listed — each has its own status line.
+enum BackupSourceError: Error, Equatable, Sendable {
+    case noPhotosAccess
+    case offline
 }
 
 /// The connection the files go to, as the history row names it.
@@ -128,9 +144,18 @@ actor BackupRunner {
     func run() async -> BackupRunResult {
         let items: [BackupSourceItem]
         do {
-            items = try await source.items(for: job)
+            let state = try store.state(jobId: job.id)
+            let context = BackupSourceContext(
+                handledItemKeys: try store.handledItemKeys(jobId: job.id),
+                lastCheckedAt: state.lastCheckedAt.map { Date(timeIntervalSince1970: TimeInterval($0)) }
+            )
+            items = try await source.items(for: job, context: context)
         } catch is CancellationError {
             return BackupRunResult(stop: .cancelled, progress: progress)
+        } catch BackupSourceError.noPhotosAccess {
+            return BackupRunResult(stop: .blocked(.noPhotosAccess), progress: progress)
+        } catch BackupSourceError.offline {
+            return BackupRunResult(stop: .blocked(.sourceOffline), progress: progress)
         } catch {
             return BackupRunResult(stop: .sourceUnavailable, progress: progress)
         }
@@ -161,6 +186,9 @@ actor BackupRunner {
                 try await copy(planned)
             } catch is CancellationError {
                 return BackupRunResult(stop: .cancelled, progress: progress)
+            } catch BackupSourceError.offline {
+                // The drive went away mid-run: the file is not the problem.
+                return BackupRunResult(stop: .blocked(.sourceOffline), progress: progress)
             } catch let error as RemoteFileError where error.stopsBatch {
                 return BackupRunResult(stop: Self.stop(for: error), progress: progress)
             } catch {
