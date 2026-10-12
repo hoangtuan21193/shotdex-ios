@@ -1,6 +1,7 @@
 import Foundation
 import GRDB
 import Testing
+import ShotDexKit
 @testable import ShotDex
 
 /// FS-19.02 §3 — which copy a photo opens from.
@@ -44,5 +45,40 @@ import Testing
                                       candidate("drive", "file", "drive", online: false), candidate("photos", "photos", "photos"),
                                       candidate("internal", "file", "folder")]).map(\.copyId)
         #expect(order == ["internal", "photos", "server", "cloud", "icloud", "drive"])
+    }
+
+    /// AC-50, the editor half (D16): a file copy opens with the recipe saved
+    /// under the photo's id, an edit writes it back with no Done, and
+    /// Revert to Original — an identity recipe — removes the row.
+    @MainActor
+    @Test func fileCopyRecallsAndAutosavesRecipe() async throws {
+        let database = try AppDatabase.makeEmpty()
+        let folder = FileManager.default.temporaryDirectory.appendingPathComponent("CopyOrder-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: folder) }
+        let url = folder.appendingPathComponent("A.JPG")
+        try ServerEditHandoffTests.jpeg(width: 60, height: 40).write(to: url)
+        let store = PhotoRecipeStore(database: database)
+        let service = PhotoEditingService(temporaryRoot: folder)
+        service.savedFileRecipe = { (try? store.recipe(photoId: $0)) ?? nil }
+        defer { service.releaseCachedSessions() }
+        let file = FileCopyPhoto(photoId: "A", url: url)
+
+        let fresh = try await service.beginSession(for: .fileCopy(file))
+        #expect(fresh.recalledRecipe == nil)
+        #expect(fresh.contentInput == nil)
+        #expect(fresh.sourceOptions.map(\.filename) == ["A.JPG"])
+        service.releaseCachedSessions()
+
+        var edited = PhotoEditRecipe.identity
+        edited.adjustments.exposure = 0.4
+        try store.save(edited, photoId: "A")
+        let reopened = try await service.beginSession(for: .fileCopy(file))
+        #expect(reopened.recalledRecipe?.adjustments.exposure == 0.4)
+        #expect(PhotoEditOrigin.fileCopy(file).localFileURL == url)
+
+        try store.save(.identity, photoId: "A")
+        #expect(try store.recipe(photoId: "A") == nil)
+        #expect(try await database.reader.read { db in try Int.fetchOne(db, sql: "SELECT COUNT(*) FROM photo_recipes") } == 0)
     }
 }

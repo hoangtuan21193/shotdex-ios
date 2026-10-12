@@ -1,0 +1,165 @@
+{
+  "steps": [
+    {
+      "action": "launch"
+    },
+    {
+      "action": "wait",
+      "seconds": 6
+    },
+    {
+      "action": "swipe",
+      "x": 0.5,
+      "y": 0.35,
+      "direction": "down",
+      "distance": 0.5
+    },
+    {
+      "action": "swipe",
+      "x": 0.5,
+      "y": 0.35,
+      "direction": "down",
+      "distance": 0.5
+    },
+    {
+      "action": "wait",
+      "seconds": 2
+    },
+    {
+      "action": "tap",
+      "x": 0.5,
+      "y": 0.5
+    },
+    {
+      "action": "wait",
+      "seconds": 2
+    },
+    {
+      "action": "screenshot",
+      "name": "00-viewer"
+    },
+    {
+      "action": "tap",
+      "label": "Edit",
+      "type": "button"
+    },
+    {
+      "action": "wait",
+      "seconds": 5
+    },
+    {
+      "action": "screenshot",
+      "name": "01-opened"
+    },
+    {
+      "action": "dump",
+      "name": "01-opened"
+    },
+    {
+      "action": "swipe",
+      "x": 0.54,
+      "y": 0.668,
+      "direction": "right",
+      "distance": 0.15
+    },
+    {
+      "action": "wait",
+      "seconds": 2
+    },
+    {
+      "action": "screenshot",
+      "name": "02-edited"
+    },
+    {
+      "action": "dump",
+      "name": "02-edited"
+    },
+    {
+      "action": "tap",
+      "label": "Edited \u00b7 Saved",
+      "type": "button"
+    },
+    {
+      "action": "wait",
+      "seconds": 1.5
+    },
+    {
+      "action": "screenshot",
+      "name": "03-status-menu"
+    },
+    {
+      "action": "dump",
+      "name": "03-status-menu"
+    },
+    {
+      "action": "tap",
+      "x": 0.5,
+      "y": 0.5
+    },
+    {
+      "action": "wait",
+      "seconds": 1
+    },
+    {
+      "action": "tap",
+      "label": "Back",
+      "type": "button"
+    },
+    {
+      "action": "wait",
+      "seconds": 2
+    },
+    {
+      "action": "screenshot",
+      "name": "04-back-in-viewer"
+    },
+    {
+      "action": "tap",
+      "label": "Edit",
+      "type": "button"
+    },
+    {
+      "action": "wait",
+      "seconds": 5
+    },
+    {
+      "action": "screenshot",
+      "name": "05-reopened"
+    },
+    {
+      "action": "dump",
+      "name": "05-reopened"
+    },
+    {
+      "action": "tap",
+      "label": "Edited \u00b7 Saved",
+      "type": "button"
+    },
+    {
+      "action": "wait",
+      "seconds": 1.5
+    },
+    {
+      "action": "tap",
+      "label": "Revert to Original",
+      "type": "button"
+    },
+    {
+      "action": "wait",
+      "seconds": 1.5
+    },
+    {
+      "action": "tap",
+      "label": "Revert",
+      "type": "button"
+    },
+    {
+      "action": "wait",
+      "seconds": 2
+    },
+    {
+      "action": "screenshot",
+      "name": "06-reverted"
+    }
+  ]
+}

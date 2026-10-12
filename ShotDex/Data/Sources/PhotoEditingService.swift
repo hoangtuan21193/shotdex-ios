@@ -100,6 +100,8 @@ final class PhotoEditingService {
     /// the simulator shows the editor's download card (FS-02.06). PhotoKit's
     /// fetcher returns at once; nil does the same.
     var originalFetcher: (any OriginalFetching)?
+    /// The recipe a file copy was left with (FS-19.02 §8), by photo id.
+    var savedFileRecipe: @Sendable (String) -> PhotoEditRecipe? = { _ in nil }
     /// Where sessions put their `ShotDexPhoto-` folders: the temporary
     /// directory, or a test's own.
     private let temporaryRoot: URL
@@ -213,7 +215,34 @@ final class PhotoEditingService {
         switch origin {
         case .asset(let asset): try await makeSession(for: asset, progress: progress)
         case .serverFile(let photo): try makeSession(for: photo)
+        case .fileCopy(let file): try makeSession(for: file)
         }
+    }
+
+    /// A photo's file copy (FS-19.02 §3): the file is the one source, and
+    /// the recipe saved under the photo's id is the one recalled (D16).
+    private func makeSession(for file: FileCopyPhoto) throws -> PhotoEditingSession {
+        guard FileManager.default.isReadableFile(atPath: file.url.path) else { throw PhotoEditingError.missingSource }
+        let type = UTType(filenameExtension: file.url.pathExtension) ?? .image
+        let isRAW = type.conforms(to: .rawImage)
+        let source: PhotoEditSource = isRAW ? .raw : .rendered
+        let option = PhotoEditSourceOption(
+            id: "\(source.rawValue)-\(file.url.lastPathComponent)",
+            source: source,
+            displayName: isRAW ? "RAW" : type.preferredFilenameExtension?.uppercased() ?? "JPEG",
+            filename: file.url.lastPathComponent,
+            type: type,
+            resource: nil,
+            contentInputURL: nil,
+            localFileURL: file.url
+        )
+        return PhotoEditingSession(
+            origin: .fileCopy(file),
+            contentInput: nil,
+            sourceOptions: [option],
+            recalledRecipe: savedFileRecipe(file.photoId),
+            temporaryDirectory: try makeTemporaryDirectory()
+        )
     }
 
     /// A server original fetched to disk: its files are the sources — the

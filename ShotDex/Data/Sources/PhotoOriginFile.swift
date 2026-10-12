@@ -49,6 +49,8 @@ extension PhotoEditOrigin {
             PHAssetResource.assetResources(for: asset).first?.originalFilename ?? asset.localIdentifier
         case .serverFile(let photo):
             photo.photo.primary.name
+        case .fileCopy(let file):
+            file.url.lastPathComponent
         }
     }
 
@@ -57,6 +59,7 @@ extension PhotoEditOrigin {
         switch self {
         case .asset(let asset): asset.creationDate
         case .serverFile(let photo): PhotoOriginFile.captureDate(at: photo.primaryURL)
+        case .fileCopy(let file): PhotoOriginFile.captureDate(at: file.url)
         }
     }
 }

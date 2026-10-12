@@ -2,14 +2,25 @@ import Foundation
 import ImageIO
 import Photos
 
-/// What the editor opens: a photo in the library, or a server original
-/// fetched to this device (FS-17.06 §5). Every type that holds "the photo
-/// being edited" — the render session, the controller, the multi-photo run,
-/// the batch saver, Resize — holds one of these, so a server photo takes the
-/// same path from the first render on.
+/// A photo whose open copy is a file in a folder, on a drive or on a server
+/// source (FS-19.02 §3): edited in place of the file, never written to it.
+/// Its recipe saves as it changes, under the photo's id (D16).
+struct FileCopyPhoto: Hashable, Sendable, Identifiable {
+    var id: String { photoId }
+    /// The photo's id — what the recipe is stored under, shared by every copy.
+    let photoId: String
+    let url: URL
+}
+
+/// What the editor opens: a photo in the library, a server original
+/// fetched to this device (FS-17.06 §5), or a photo's file copy (FS-19.02
+/// §3). Every type that holds "the photo being edited" — the render session,
+/// the controller, the multi-photo run, the batch saver, Resize — holds one
+/// of these, so a file takes the same path from the first render on.
 enum PhotoEditOrigin: Identifiable, Hashable {
     case asset(PHAsset)
     case serverFile(FetchedServerPhoto)
+    case fileCopy(FileCopyPhoto)
 
     /// Stable across a run: the asset's local identifier, or connection +
     /// server path.
@@ -17,6 +28,7 @@ enum PhotoEditOrigin: Identifiable, Hashable {
         switch self {
         case .asset(let asset): asset.localIdentifier
         case .serverFile(let photo): photo.id
+        case .fileCopy(let file): file.photoId
         }
     }
 
@@ -32,6 +44,20 @@ enum PhotoEditOrigin: Identifiable, Hashable {
     /// recall a recipe from.
     var isServerFile: Bool { serverFile != nil }
 
+    var fileCopy: FileCopyPhoto? {
+        if case .fileCopy(let file) = self { file } else { nil }
+    }
+
+    /// The file on this device the picture is read from — a server
+    /// original's download or a file copy; nil for a library asset.
+    var localFileURL: URL? {
+        switch self {
+        case .asset: nil
+        case .serverFile(let photo): photo.primaryURL
+        case .fileCopy(let file): file.url
+        }
+    }
+
     /// The image's size as it is shown — orientation applied — for the
     /// panel's shape before the first render.
     var pixelSize: (width: Int, height: Int) {
@@ -40,6 +66,8 @@ enum PhotoEditOrigin: Identifiable, Hashable {
             return (asset.pixelWidth, asset.pixelHeight)
         case .serverFile(let photo):
             return Self.orientedPixelSize(of: photo.primaryURL) ?? (0, 0)
+        case .fileCopy(let file):
+            return Self.orientedPixelSize(of: file.url) ?? (0, 0)
         }
     }
 
@@ -53,6 +81,12 @@ enum PhotoEditOrigin: Identifiable, Hashable {
             // same second still differs in size nearly always.
             let modified = photo.photo.modified?.timeIntervalSince1970 ?? 0
             return modified + Double(photo.photo.totalBytes % 1_000_000) / 1_000_000
+        case .fileCopy(let file):
+            // The file never changes under ShotDex; another app writing it
+            // moves its date.
+            let values = try? file.url.resourceValues(forKeys: [.contentModificationDateKey, .fileSizeKey])
+            let modified = values?.contentModificationDate?.timeIntervalSince1970 ?? 0
+            return modified + Double((values?.fileSize ?? 0) % 1_000_000) / 1_000_000
         }
     }
 

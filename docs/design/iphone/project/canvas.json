@@ -945,6 +945,14 @@
       "w": 402,
       "h": 874,
       "title": "iPhone · Text: panel Text — Add Text, Auto Captions, Fonts You Used (thay vì thêm khối ngay, 2026-10-11)"
+    },
+    "PH38_EditFileCopy.dc.html": {
+      "h": 874,
+      "radius": 44,
+      "title": "iPhone · Edit ảnh file (T7, thư mục) — tự lưu: chỗ Save là ✓ xám \"Edited · Saved\", menu Revert to Original; không Done (FS-19 AC-50)",
+      "w": 402,
+      "x": 18274,
+      "y": 2534
     }
   },
   "createdOnFiles": {
@@ -1105,6 +1113,7 @@
     "PH35_ExportRunning.dc.html",
     "PH36_ExportSummary.dc.html",
     "PH37_ShareWatermark.dc.html",
+    "PH38_EditFileCopy.dc.html",
     "P1_Main.dc.html",
     "P2_ClipSelected.dc.html",
     "P3_TextOverlay.dc.html",

@@ -340,8 +340,8 @@ extension PanoramaStitchService {
 
     static func frame(for photo: PhotoEditOrigin) async -> PanoramaStitchFrame? {
         switch photo {
-        case .serverFile(let file):
-            let url = file.primaryURL
+        case .serverFile, .fileCopy:
+            guard let url = photo.localFileURL else { return nil }
             return await Task.detached(priority: .userInitiated) {
                 CGImageSourceCreateWithURL(url as CFURL, [kCGImageSourceShouldCache: false] as CFDictionary)
                     .flatMap(frame(from:))

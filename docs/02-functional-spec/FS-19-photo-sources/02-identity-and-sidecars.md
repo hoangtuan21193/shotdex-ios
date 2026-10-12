@@ -111,6 +111,11 @@ keyword, title, caption đi vào sidecar `.xmp` cạnh mọi bản sao file (D3)
 ## 8. Recipe nằm ở đâu
 
 - Ảnh file và server **tự lưu** khi sửa (D16): toolbar "Edited · Saved" + Revert, không Done.
+  iPhone/iPad/Duo: chỗ nút Save là một nút tròn xám (không màu nhấn) ✓ "Edited · Saved" — "Original" khi chưa sửa;
+  bấm mở menu "Saved as you edit. The file itself never changes." + **Revert to Original** (về recipe
+  rỗng, editor vẫn mở). Recipe ghi sau khi chỉnh đứng yên 0,5 s và khi đóng editor (`PhotoRecipeStore`,
+  `PhotoEditOrigin.fileCopy`), rồi xếp hàng ghi sidecar. Board iPhone `PH38_EditFileCopy`.
+  Chưa làm: bản sao chỉ ở server (cần tải về như FS-17.06) — Edit chưa hiện cho ảnh đó.
 - Recipe ở **database theo id ảnh** — bản làm việc, chung mọi bản sao — **và** trong vùng ShotDex của sidecar, để đi theo
   ổ giữa các máy. Lightroom bỏ qua vùng này.
 - Lúc index, recipe trong sidecar mới hơn bản database thì thắng (luật §6). Sidecar tắt → recipe chỉ ở database.

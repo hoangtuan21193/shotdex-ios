@@ -93,9 +93,8 @@ struct EditorReferencePane: View {
     private func load() {
         cancel()
         image = nil
-        if let file = photo.serverFile {
-            // A server original on disk (FS-17.06 §5): shown as the file is.
-            let url = file.primaryURL
+        if let url = photo.localFileURL {
+            // A server original or a file copy on disk: shown as the file is.
             Task {
                 let decoded = await Task.detached {
                     EmbeddedPreview.thumbnail(ofFileAt: url, maxPixelSize: 1400)?.image

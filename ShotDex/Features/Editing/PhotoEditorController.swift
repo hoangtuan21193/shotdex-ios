@@ -834,9 +834,8 @@ final class PhotoEditorController {
     /// screen this frame. If it comes back empty because the original lives in
     /// iCloud, that is itself worth saying.
     private func requestPlaceholder() {
-        if let file = origin.serverFile {
+        if let url = origin.localFileURL {
             // Already on this device: the file's own thumbnail.
-            let url = file.primaryURL
             Task { [weak self] in
                 let image = await Task.detached {
                     EmbeddedPreview.thumbnail(ofFileAt: url, maxPixelSize: 1024)?.image
@@ -3366,6 +3365,12 @@ final class PhotoEditorController {
         } catch {
             errorMessage = error.localizedDescription
         }
+    }
+
+    /// A failure from outside the controller — a file copy's autosave —
+    /// in the same alert.
+    func showError(_ message: String) {
+        errorMessage = message
     }
 
     func clearError() {

@@ -31,6 +31,8 @@ enum HDRFrameSource {
         switch photo {
         case .serverFile(let server):
             return frameFile(at: server.rawURL ?? server.primaryURL)
+        case .fileCopy(let file):
+            return frameFile(at: file.url)
         case .asset(let asset):
             let resources = PHAssetResource.assetResources(for: asset)
             if let raw = resources.first(where: { isRAW($0) && [.photo, .alternatePhoto].contains($0.type) }) {

@@ -64,6 +64,14 @@ struct PhotoEditorScreen: View {
         self.serverExport = export
     }
 
+    /// A photo's file copy (FS-19.02 §3): the same editor, and its recipe
+    /// saves as it changes — no Save, no Done (D16).
+    init(fileCopy: FileCopyPhoto, metadata: PhotoMetadata? = nil) {
+        self.origin = .fileCopy(fileCopy)
+        self.sourceAlbum = nil
+        self.metadata = metadata
+    }
+
     /// Set for a server run: where Export… writes from.
     private var serverExport: ServerExportContext?
     /// The open export sheet's run, made once when it opens.
@@ -96,10 +104,16 @@ struct PhotoEditorScreen: View {
     /// net back to its baseline therefore dismissed without a word and took
     /// every parked draft with it.
     private var hasUnsavedWork: Bool {
+        // A file copy has nothing to lose: every change is already saved.
+        if isFileCopy { return false }
         let canvasHasChanges = controller?.hasSessionChanges == true
         return session?.hasUnsavedWork(canvasHasChanges: canvasHasChanges) ?? canvasHasChanges
     }
     @State private var chrome = EditorChromeModel()
+    /// The last recipe written for a file copy, and the write waiting on
+    /// the edit to settle.
+    @State private var autosavedRecipe: PhotoEditRecipe?
+    @State private var autosaveTask: Task<Void, Never>?
     @State private var isSaveSheetPresented = false
     /// The tool whose ✕ is waiting on "Discard changes to …?".
     /// The name of the tool whose ✕ is waiting on "Discard changes to …?".
@@ -180,6 +194,7 @@ struct PhotoEditorScreen: View {
             EditorTheme.background.ignoresSafeArea()
             if let controller {
                 editor(controller)
+                    .onChange(of: controller.recipe) { _, recipe in scheduleAutosave(recipe) }
             } else {
                 ProgressView("Opening original…")
                     .tint(.white)
@@ -208,6 +223,7 @@ struct PhotoEditorScreen: View {
             await openCurrentPhoto()
         }
         .onDisappear {
+            flushAutosave()
             preloader?.cancel()
             controller?.close()
             // The cached sessions belong to this editor run: their temporary
@@ -228,11 +244,9 @@ struct PhotoEditorScreen: View {
             isPresented: $isRevertConfirmationPresented
         ) {
             Button("Cancel", role: .cancel) {}
-            Button("Revert", role: .destructive) {
-                controller?.revertToOriginal { dismiss() }
-            }
+            Button("Revert", role: .destructive) { revertToOriginal() }
         } message: {
-            Text("This throws away every edit saved to this photo, including edits made in Photos.")
+            Text(revertMessage)
         }
         .alert(
             "Discard changes to \(pendingToolCancel ?? "")?",
@@ -387,7 +401,7 @@ struct PhotoEditorScreen: View {
                 .disabled(!controller.canRedo)
             Button("Save") {
                 controller.commitCropSession()
-                presentSave(controller)
+                if isFileCopy { flushAutosave() } else { presentSave(controller) }
             }
             .keyboardShortcut("s", modifiers: .command)
             .disabled(controller.isLoading || controller.isSaving)
@@ -3034,7 +3048,16 @@ struct PhotoEditorScreen: View {
     /// Save (✓): the one accent control on the screen, a filled circle on the
     /// trailing end of the group strip (42) or of the command band (the band's
     /// own size). Commits a draft crop first, then opens the save sheet.
+    @ViewBuilder
     private func saveButton(_ controller: PhotoEditorController, side: CGFloat = 42) -> some View {
+        if isFileCopy {
+            fileSaveStatus(controller, side: side)
+        } else {
+            librarySaveButton(controller, side: side)
+        }
+    }
+
+    private func librarySaveButton(_ controller: PhotoEditorController, side: CGFloat) -> some View {
         Button {
             // Save inside a tool is ✓ and then the sheet (FS-03.13a §3).
             if !chrome.isWideLayout,
@@ -3069,6 +3092,101 @@ struct PhotoEditorScreen: View {
         .disabled(controller.isLoading || controller.isSaving)
         .hoverEffect(.lift)
         .accessibilityLabel(saveTitle)
+    }
+
+    // MARK: File copy autosave (FS-19.02 §8)
+
+    private var isFileCopy: Bool { origin.fileCopy != nil }
+
+    private var revertMessage: String {
+        isFileCopy
+            ? String(localized: "This throws away every edit saved to this photo. The file itself was never changed.")
+            : String(localized: "This throws away every edit saved to this photo, including edits made in Photos.")
+    }
+
+    /// A file copy goes back to no recipe and stays open; a library asset
+    /// is reverted in Photos and the editor closes.
+    private func revertToOriginal() {
+        if isFileCopy {
+            controller?.reset()
+            flushAutosave()
+        } else {
+            controller?.revertToOriginal { dismiss() }
+        }
+    }
+
+    /// Where Save sits on a file copy: a quiet status, never accent — there
+    /// is nothing to commit. Its menu says why and holds Revert to Original.
+    private func fileSaveStatus(_ controller: PhotoEditorController, side: CGFloat) -> some View {
+        let isEdited = !controller.recipe.isIdentity
+        let status = isEdited
+            ? OpenCopy.autosavedLabel
+            : String(localized: "Original", comment: "Editor toolbar: a file photo with no edits")
+        return Menu {
+            Text("Saved as you edit. The file itself never changes.")
+            Button(role: .destructive) {
+                isRevertConfirmationPresented = true
+            } label: {
+                Label("Revert to Original", systemImage: "arrow.uturn.backward")
+            }
+            .disabled(!isEdited)
+        } label: {
+            if chrome.isWideLayout {
+                Label(status, systemImage: "checkmark")
+                    .font(EditorTheme.pillLabel)
+                    .foregroundStyle(isEdited ? .white : EditorTheme.secondaryText)
+                    .padding(.horizontal, AppTheme.Spacing.md)
+                    .frame(height: EditorLayoutMetrics.editorPrimaryButtonHeight)
+                    .background(EditorTheme.trackChip, in: Capsule())
+            } else {
+                Image(systemName: "checkmark")
+                    .font(.system(size: 17, weight: .semibold))
+                    .foregroundStyle(isEdited ? .white : EditorTheme.secondaryText)
+                    .frame(width: side, height: side)
+                    .background(EditorTheme.trackChip, in: Circle())
+                    .contentShape(Circle())
+            }
+        }
+        .buttonStyle(.plain)
+        .disabled(controller.isLoading)
+        .hoverEffect(.lift)
+        .accessibilityLabel(status)
+    }
+
+    /// Writes a file copy's recipe once the edit has settled for half a
+    /// second — a slider drag is one write, not sixty.
+    private func scheduleAutosave(_ recipe: PhotoEditRecipe) {
+        guard isFileCopy, let controller, !controller.isLoading else { return }
+        autosaveTask?.cancel()
+        autosaveTask = Task {
+            try? await Task.sleep(for: .milliseconds(500))
+            guard !Task.isCancelled else { return }
+            writeAutosave(recipe)
+        }
+    }
+
+    private func flushAutosave() {
+        autosaveTask?.cancel()
+        autosaveTask = nil
+        guard isFileCopy, let controller, !controller.isLoading else { return }
+        writeAutosave(controller.recipe)
+    }
+
+    private func writeAutosave(_ recipe: PhotoEditRecipe) {
+        guard let file = origin.fileCopy else { return }
+        let last = autosavedRecipe ?? controller?.recalledRecipe ?? .identity
+        // Opening the photo is not an edit: nothing to write.
+        guard recipe != last, !(recipe.isIdentity && last.isIdentity) else { return }
+        do {
+            try PhotoRecipeStore(database: dependencies.database).save(recipe, photoId: file.photoId)
+            autosavedRecipe = recipe
+        } catch {
+            controller?.showError(error.localizedDescription)
+            return
+        }
+        // The sidecars beside the file carry the recipe on (FS-19.02 §5).
+        let queue = dependencies.sidecarQueue
+        Task { await queue.schedule([file.photoId]) }
     }
 
     /// The panel for whichever group the phone layout has open.

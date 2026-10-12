@@ -554,8 +554,8 @@ extension PhotoStackModel {
     /// is, a library original written into the session folder.
     static func originalFile(for photo: PhotoEditOrigin, index: Int, session: PhotoStackSession?) async throws -> URL? {
         switch photo {
-        case .serverFile(let file):
-            return file.primaryURL
+        case .serverFile, .fileCopy:
+            return photo.localFileURL
         case .asset(let asset):
             guard let data = await originalData(for: asset) else { return nil }
             return try session?.store(data, index: index)
@@ -566,8 +566,9 @@ extension PhotoStackModel {
     /// an iCloud-only original is fetched rather than skipped.
     static func previewImage(for photo: PhotoEditOrigin, photoLibrary: PhotoLibraryService) async -> UIImage? {
         switch photo {
-        case .serverFile(let file):
-            return await PhotoOriginFile.loadImage(at: file.primaryURL, maxPixelSize: 1600)
+        case .serverFile, .fileCopy:
+            guard let url = photo.localFileURL else { return nil }
+            return await PhotoOriginFile.loadImage(at: url, maxPixelSize: 1600)
         case .asset(let asset):
             return await previewImage(for: asset, photoLibrary: photoLibrary)
         }

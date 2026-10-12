@@ -131,6 +131,12 @@ struct PhotoDetailScreen: View {
     /// own guidance reserves an alert for.
     @State private var hideConfirmationAssetId: String?
     @State private var editorTarget: PhotoDetailActionTarget?
+    /// A file photo's copy open in the editor (FS-19.02 §3).
+    @State private var fileEditorTarget: FileCopyPhoto?
+    /// The folder or drive file Edit opens for a photo with no asset; nil
+    /// when its only copies are on a server, whose originals come down
+    /// through the server editor (FS-17.06) instead.
+    @State private var fileEditURL: URL?
     /// Edit on a RAW this iOS build can't read says so instead of opening
     /// the editor (FS-03.04b §3).
     @State private var unsupportedRAWMessage: UnsupportedRAWMessage?
@@ -441,6 +447,9 @@ struct PhotoDetailScreen: View {
                 onSaved: { pendingSavedAssetID = $0 }
             )
         }
+        .fullScreenCover(item: $fileEditorTarget) { file in
+            PhotoEditorScreen(fileCopy: file, metadata: currentMetadata)
+        }
         // Reveal only once the cover is gone — paging the viewer underneath a
         // dismissing full-screen cover just flashes.
         .onChange(of: editorTarget?.id) { _, targetID in
@@ -579,6 +588,7 @@ struct PhotoDetailScreen: View {
         fileReachability = currentAsset == nil
             ? try? CopyReachabilityQueries(database: dependencies.database).reachability(photoId: assetId)
             : nil
+        fileEditURL = currentAsset == nil ? photoLibrary.filePhotoURL(assetId) : nil
         updateFilename(assetId: assetId)
         probeOriginal()
         publishHandoffActivity()
@@ -777,6 +787,14 @@ struct PhotoDetailScreen: View {
                         ) {
                             openEditor(for: currentAsset)
                         }
+                    } else if !isCurrentVideo, isFilePhoto, fileEditURL != nil {
+                        actionBarCenterButton(
+                            systemImage: "slider.horizontal.3",
+                            accessibilityLabel: "Edit"
+                        ) {
+                            openFileEditor()
+                        }
+                        .disabled(filePhotoIsOffline)
                     }
                     if isCurrentVideo, let currentAsset {
                         actionBarCenterButton(
@@ -1324,6 +1342,13 @@ struct PhotoDetailScreen: View {
                 id: asset.localIdentifier, asset: asset, sourceAlbum: album, editSource: source
             )
         }
+    }
+
+    /// Edit on a photo with no asset: its first reachable file copy, by the
+    /// copy order of FS-19.02 §3. The recipe saves as it changes (D16).
+    private func openFileEditor() {
+        guard let id = currentMetadata?.assetId, let url = fileEditURL else { return }
+        fileEditorTarget = FileCopyPhoto(photoId: id, url: url)
     }
 
     /// Share Original from the unreadable-DNG alert (FS-03.04b AC-7): the

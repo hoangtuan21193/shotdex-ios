@@ -163,6 +163,9 @@ final class AppDependencies {
     let folderSources: FolderSourceRunner
     /// Their folders, kept open once used.
     let folderRoots: FolderSourceRoots
+    /// Stars, flags, keywords and recipes of file photos, out to their
+    /// sidecars a second after the last change (FS-19.02 §5).
+    let sidecarQueue: SidecarWriteQueue
 
     /// Move / Delete / Hide across sources (FS-19.04): Photos through
     /// PhotoKit's dialog, files to the Trash of their volume, NAS hidden.
@@ -232,6 +235,8 @@ final class AppDependencies {
             }
         )
         photoEditing.originalFetcher = originalFetcher
+        let photoRecipes = PhotoRecipeStore(database: database)
+        photoEditing.savedFileRecipe = { photoId in (try? photoRecipes.recipe(photoId: photoId)) ?? nil }
         let placeStore = PlaceStore(database: database)
         let placeGeocoding = PlaceGeocodingService(store: placeStore)
         self.placeStore = placeStore
@@ -343,6 +348,7 @@ final class AppDependencies {
         let sidecarQueue = SidecarWriteQueue(writer: SidecarWriter(database: database) { sourceId, path in
             folderRoots.fileURL(sourceId: sourceId, relativePath: path)
         })
+        self.sidecarQueue = sidecarQueue
         let photoMarks = PhotoMarks(
             store: photoMarksStore,
             metadataStore: metadataStore,

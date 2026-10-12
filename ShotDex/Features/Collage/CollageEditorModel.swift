@@ -695,8 +695,9 @@ final class CollageEditorModel {
             // after the aspect-fill crop without pulling the full original.
             let side = max(frame.width, frame.height) * CGFloat(cell.contentScale) * 1.5
             switch photo {
-            case .serverFile(let file):
-                let image = await PhotoOriginFile.loadImage(at: file.primaryURL, maxPixelSize: Int(side.rounded(.up)))
+            case .serverFile, .fileCopy:
+                guard let url = photo.localFileURL else { continue }
+                let image = await PhotoOriginFile.loadImage(at: url, maxPixelSize: Int(side.rounded(.up)))
                 if let cgImage = image?.cgImage {
                     images[index] = cgImage
                 }
@@ -738,7 +739,7 @@ final class CollageEditorModel {
         if options.keepFirstPhotoEXIF, let firstPlaced {
             switch firstPlaced {
             case .asset(let asset): metadata = await photoLibrary.imageProperties(for: asset)
-            case .serverFile(let file): metadata = PhotoOriginFile.properties(at: file.primaryURL)
+            case .serverFile, .fileCopy: metadata = firstPlaced.localFileURL.map(PhotoOriginFile.properties(at:))
             }
         }
 

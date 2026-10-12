@@ -417,9 +417,8 @@ struct EditorFilmstripThumbnail: View {
     private func load() {
         cancel()
         let side = EditorLayoutMetrics.filmstripThumbnailSide * 3
-        if let file = photo.serverFile {
+        if let url = photo.localFileURL {
             // Already on disk: ImageIO's thumbnail, off the main thread.
-            let url = file.primaryURL
             Task {
                 let thumbnail = await Task.detached {
                     EmbeddedPreview.thumbnail(ofFileAt: url, maxPixelSize: Int(side))?.image

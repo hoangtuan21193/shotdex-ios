@@ -845,8 +845,9 @@ final class PanoramaMergeModel {
         photoLibrary: PhotoLibraryService
     ) async -> UIImage? {
         switch photo {
-        case .serverFile(let file):
-            return await PhotoOriginFile.loadImage(at: file.primaryURL, maxPixelSize: previewEdge)
+        case .serverFile, .fileCopy:
+            guard let url = photo.localFileURL else { return nil }
+            return await PhotoOriginFile.loadImage(at: url, maxPixelSize: previewEdge)
         case .asset(let asset):
             return await proxyImage(for: asset, photoLibrary: photoLibrary)
         }
