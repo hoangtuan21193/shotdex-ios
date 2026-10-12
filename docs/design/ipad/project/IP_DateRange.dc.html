@@ -69,7 +69,7 @@ input{font-family:inherit}
 <!-- Dimming scrim, drawn above sidebar and toolbar -->
 <div style="position:absolute;inset:0;background:{{t.scrim}}"></div>
 <!-- Underlying sheet (Edit Chart), pushed back and dimmed -->
-<div aria-hidden="true" style="position:absolute;left:354px;top:160px;width:668px;height:640px;border-radius:22px;background:{{t.sheet}};box-shadow:{{t.sheetShadow}};overflow:hidden"><div style="position:absolute;left:16px;top:10px;height:40px;padding:0 14px;border-radius:20px;background:{{t.fill}};font-size:17px;line-height:40px;color:{{t.label}}">Cancel</div><div style="position:absolute;left:0;right:0;top:10px;height:40px;display:flex;align-items:center;justify-content:center;font-size:17px;font-weight:600">Edit Chart</div><div style="position:absolute;right:16px;top:10px;height:40px;padding:0 18px;border-radius:20px;background:{{t.accentFill}};font-size:17px;font-weight:600;line-height:40px;color:{{t.onAccentFill}}">Save</div><div style="position:absolute;inset:0;background:{{t.scrim}}"></div></div>
+<div aria-hidden="true" style="position:absolute;left:354px;top:160px;width:668px;height:640px;border-radius:22px;background:{{t.sheet}};box-shadow:{{t.sheetShadow}};overflow:hidden"><div style="position:absolute;left:16px;top:10px;height:40px;padding:0 14px;border-radius:20px;background:{{t.fill}};font-size:17px;line-height:40px;color:{{t.label}}">Cancel</div><div style="position:absolute;left:0;right:0;top:10px;height:40px;display:flex;align-items:center;justify-content:center;font-size:17px;font-weight:600">Edit Chart</div><div style="position:absolute;right:16px;top:10px;height:40px;padding:0 18px;border-radius:20px;background:{{t.fill}};font-size:17px;font-weight:600;line-height:40px;color:{{t.label}}">Save</div><div style="position:absolute;inset:0;background:{{t.scrim}}"></div></div>
 <!-- FORM SHEET (Date Range), stacked on Edit Chart: two months a row, scrolls by month (July above, October below) -->
 <div role="dialog" aria-label="Date Range" style="position:absolute;left:338px;top:220px;width:700px;height:612px;border-radius:22px;background:{{t.sheet}};box-shadow:{{t.sheetShadow}};overflow:hidden"><div style="position:absolute;left:0;right:0;top:0;height:68px"><button style="position:absolute;left:16px;top:12px;height:44px;padding:0 16px;border-radius:22px;border:none;background:{{t.fill}};color:{{t.label}};font-size:17px">Cancel</button><div role="heading" aria-level="2" style="position:absolute;left:140px;right:140px;top:12px;height:44px;display:flex;align-items:center;justify-content:center;font-size:17px;font-weight:600">Date Range</div><button style="position:absolute;right:16px;top:12px;height:44px;padding:0 20px;border-radius:22px;border:none;background:{{t.accentFill}};color:{{t.onAccentFill}};font-size:17px;font-weight:600">Apply</button></div><div style="position:absolute;left:0;right:0;top:68px;bottom:64px;overflow:hidden"><div style="position:absolute;left:24px;right:24px;top:6px;display:grid;grid-template-columns:1fr 1fr;column-gap:32px;row-gap:12px"><sc-for list="{{months}}" as="mo" hint-placeholder-count="4">
 <div style="display:flex;flex-direction:column">
@@ -79,7 +79,7 @@ input{font-family:inherit}
 <sc-for list="{{mo.days}}" as="d" hint-placeholder-count="35">
 <div style="position:relative;display:flex;align-items:center;justify-content:center">
 <div style="position:absolute;left:{{d.bl}};right:{{d.br}};top:3px;bottom:3px;background:{{d.band}}"></div>
-<button aria-label="{{d.aria}}" disabled="{{d.dis}}" style="position:relative;width:36px;height:36px;border-radius:18px;border:none;background:{{d.bg}};color:{{d.fg}};font-size:17px;font-weight:{{d.fw}};font-variant-numeric:tabular-nums">{{d.n}}</button>
+<button aria-label="{{d.aria}}" disabled="{{d.dis}}" style="position:relative;width:36px;height:36px;border-radius:18px;border:none;background:{{d.bg}};box-shadow:{{d.sh}};color:{{d.fg}};font-size:17px;font-weight:{{d.fw}};font-variant-numeric:tabular-nums">{{d.n}}</button>
 </div>
 </sc-for>
 </div>
@@ -213,12 +213,12 @@ function edges(dark){ return { edge: dark?'rgba(28,28,30,0.85)':'rgba(255,255,25
 const MONTHS=['January','February','March','April','May','June','July','August','September','October','November','December'];
 function month(t, y, m, first, len){
   const days=[]; const key=(mm,dd)=>mm*100+dd; const A=key(7,23), B=key(8,12), TODAY=key(9,4);
-  for(let i=0;i<first;i++) days.push({n:'',aria:'',dis:true,bg:'transparent',fg:t.label,fw:'400',band:'transparent',bl:'0',br:'0'});
+  for(let i=0;i<first;i++) days.push({n:'',aria:'',dis:true,bg:'transparent',sh:'none',fg:t.label,fw:'400',band:'transparent',bl:'0',br:'0'});
   for(let d=1; d<=len; d++){
     const k=key(m,d); const inR=k>=A&&k<=B; const end=(k===A||k===B); const fut=k>TODAY; const dow=(first+d-1)%7;
     days.push({n:String(d), aria:MONTHS[m]+' '+d+(end?(k===A?', range start':', range end'):(inR?', in range':''))+(k===TODAY?', today':''), dis:fut,
-      bg:end?t.accentFill:'transparent', fg:end?t.onAccentFill:(fut?t.label3:(k===TODAY?t.accentText:t.label)), fw:(end||k===TODAY)?'600':'400',
-      band:inR?t.accentSoft:'transparent', bl:(k===A||dow===0||d===1)?'50%':'0', br:(k===B||dow===6||d===len)?'50%':'0'});
+      bg:end?t.segOn:'transparent', sh:end?'0 1px 3px rgba(0,0,0,0.15)':'none', fg:end?t.label:(fut?t.label3:(k===TODAY?t.accentText:t.label)), fw:(end||k===TODAY)?'600':'400',
+      band:inR?t.fill:'transparent', bl:(k===A||dow===0||d===1)?'50%':'0', br:(k===B||dow===6||d===len)?'50%':'0'});
   }
   return {title:MONTHS[m]+' '+y, days};
 }
