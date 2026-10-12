@@ -58,4 +58,51 @@ import Testing
         #expect(rows[0].sha256 == nil)
         #expect(rows[1].remotePath == "Backup/iPhone/IMG_4 (2).CR3")
     }
+
+    /// AC-9: a run of 3,580 files stopped after file 812 resumes at 813 —
+    /// the second run writes the remaining 2,768 files, plus at most the one
+    /// it was on.
+    @Test func resumesAfterKillWithoutRecopy() async throws {
+        let f = try BackupFixture(photos: 3_580, bytes: 64)
+        let box = BackupTaskBox()
+        let runner = f.runner(onProgress: { progress in
+            if progress.done == 812 { box.cancel() }
+        })
+        let first = Task { await runner.run() }
+        box.set(first)
+        let stopped = await first.value
+        #expect(stopped.stop == .cancelled)
+        let ledger = try f.store.handledCount(jobId: f.job.id)
+        #expect(ledger == 812)
+
+        let uploadsBefore = f.client.uploadCount
+        let resumed = await f.runner().run()
+        #expect(resumed.stop == .finished)
+        #expect(!resumed.progress.isFirstRun)
+        #expect(resumed.progress.total == 3_580 - 812)
+        #expect((2_768...2_769).contains(f.client.uploadCount - uploadsBefore))
+        #expect(f.remoteFiles.count == 3_580)
+        #expect(f.partFiles.isEmpty)
+    }
+}
+
+/// Lets a progress callback cancel the task that is running it.
+final class BackupTaskBox: @unchecked Sendable {
+    private let lock = NSLock()
+    private var task: Task<BackupRunResult, Never>?
+    private var cancelled = false
+
+    func set(_ task: Task<BackupRunResult, Never>) {
+        lock.withLock {
+            self.task = task
+            if cancelled { task.cancel() }
+        }
+    }
+
+    func cancel() {
+        lock.withLock {
+            cancelled = true
+            task?.cancel()
+        }
+    }
 }
