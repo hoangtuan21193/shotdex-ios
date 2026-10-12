@@ -925,6 +925,41 @@
    "w": 1032,
    "h": 1376,
    "title": "iPad dọc · Nhập từ thẻ nhớ: Import Settings là sheet dưới có Done"
+  },
+  "IP_Backup.dc.html": {
+   "h": 1032,
+   "title": "iPad · Backup 1/5 · danh sách job bên trái (4 trạng thái như iPhone), job đang chọn bên phải ở trạng thái 3 New; New Backup trên toolbar = 2/5 — đề xuất 12/10, code chưa có",
+   "w": 1376,
+   "x": 74256,
+   "y": 560
+  },
+  "IP_BackupNew.dc.html": {
+   "h": 1032,
+   "title": "iPad · Backup 2/5 · form sheet New Backup 700×640: 3 ô Source, Connection, Folder, Organize (mở 3/5), What to Copy, When",
+   "w": 1376,
+   "x": 75712,
+   "y": 560
+  },
+  "IP_BackupOrganize.dc.html": {
+   "h": 1032,
+   "title": "iPad · Backup 3/5 · Organize trong sheet: cột Preview cạnh Folders (Levels, Year, Month, Day), Photos and Videos, File Names, Keep Both",
+   "w": 1376,
+   "x": 77168,
+   "y": 560
+  },
+  "IP_BackupCustomDate.dc.html": {
+   "h": 1032,
+   "title": "iPad · Backup 4/5 · Day › Custom… trong sheet: Preview; Order, Year, Month, Day, Separator gõ tự do + chọn nhanh",
+   "w": 1376,
+   "x": 78624,
+   "y": 560
+  },
+  "IP_BackupRunning.dc.html": {
+   "h": 1032,
+   "title": "iPad · Backup 5/5 · job đang chạy lượt đầu 34% ở pane phải: Pause (không Stop), dòng Watching, file đang chạy, tổng, file lỗi; tweak ios18 = Keep Screen On",
+   "w": 1376,
+   "x": 80080,
+   "y": 560
   }
  },
  "order": [
@@ -1054,7 +1089,12 @@
   "IPP22_CollageExport.dc.html",
   "IPP23_Compress.dc.html",
   "IPP24_FocusStack.dc.html",
-  "IPP_Ingest.dc.html"
+  "IPP_Ingest.dc.html",
+  "IP_Backup.dc.html",
+  "IP_BackupNew.dc.html",
+  "IP_BackupOrganize.dc.html",
+  "IP_BackupCustomDate.dc.html",
+  "IP_BackupRunning.dc.html"
  ],
  "notes": {
   "sec_app": {
