@@ -111,14 +111,16 @@ Mỗi nhóm là một thẻ bo `r-lg`, đệm 12:
 - Đầu thẻ: **"5 photos"** + bên phải **"~24.9 MB to free"** (giữ bản đề xuất, bỏ phần còn lại); dòng dưới
   **"Sep 9, 2026 · 4 s apart"** (khoảng từ tấm đầu tới tấm cuối: s / min / h / days). Exact ghi **"Identical files"** thay
   khoảng thời gian.
-- Trái: **bản giữ** cỡ lớn (rộng = 2 ô + 1 khe, bo `r-md`), góc dưới trái nhãn **"✓ Keep"** nền đen 55%; dưới ảnh dòng
-  "6240×4160 · 18.9 MB"; dưới nữa tối đa **2 chip lý do**: Edited · RAW · Favorite · Live · Largest — chip chỉ hiện khi
-  nó làm bản giữ khác ít nhất một bản sao.
+- Một lưới `N + 2` cột ô vuông, khe 4 (board `PH_DuplicatesLargeGroup`, 2026-10-12). **Bản giữ** chiếm 2×2 ô ở góc
+  trên trái (mỗi cạnh gấp 2 một ô bản sao, bo `r-md`); trong ảnh: tối đa **2 chip lý do** ở góc trên trái (Edited · RAW ·
+  Favorite · Live · Largest — chip chỉ hiện khi nó làm bản giữ khác ít nhất một bản sao), góc dưới trái nhãn
+  **"✓ Keep"** nền đen 55% cạnh nhãn kích thước hai dòng "6240×4160 / 18.9 MB".
 - Bản giữ là **đề xuất**: bản đã chỉnh → favorite → file lớn hơn → nhiều pixel hơn (D3). **Keep Only This** trên một ô
   khác đổi bản giữ của nhóm đó sang ô ấy (nhớ suốt phiên như dấu).
-- Phải: các **bản sao** thành lưới `N` cột (mặc định 2 ở compact, 3 ở regular), ô vuông bo `r-sm`, khe 4; khe giữa
-  bản giữ và lưới 8. Dưới mỗi ô **một điểm khác** so với bản giữ, theo thứ tự: "Not edited" · "JPEG only" ·
-  "Not favorite" · "Still photo" · nếu không có thì kích thước "3120×2080".
+- **Bản sao** (`N` mặc định 2 ở compact, 3 ở regular, đổi bằng chụm) lấp các ô bên phải bản giữ trước (`N` cột × 2 hàng),
+  rồi các hàng đầy đủ bên dưới, trái sang phải; luôn là ô vuông bo `r-sm`, không giãn — hàng cuối thiếu thì để trống bên
+  phải. Kích thước + dung lượng nằm trong ảnh (nhãn hai dòng góc dưới trái), không có chữ dưới ô. **Điểm khác** so với bản
+  giữ ("Not edited" · "JPEG only" · "Not favorite" · "Still photo" · kích thước) chỉ còn trong nhãn VoiceOver.
 - Chân thẻ: ba nút viên cao 34 (vùng chạm 44): **"Mark the other 4"** đỏ (chỉ một bản sao: "Mark the other one";
   nhóm đã có dấu: **"Unmark"** màu chữ thường) · **"Keep all"** (đang giữ cả: "✓ Keeping all", chạm lại để bỏ) ·
   **Compare** dồn phải.
@@ -147,7 +149,7 @@ Mỗi nhóm là một thẻ bo `r-lg`, đệm 12:
 ### 7.5 Pinch
 
 Chụm/mở hai ngón trên danh sách đổi **số bản sao mỗi hàng** theo bậc 1…5 như lưới Library: mở ra = ô to hơn, chụm vào
-= nhiều ô hơn; bản giữ co giãn theo (luôn 2 ô + 1 khe). Trong lúc pinch có HUD viên kính **"3 per row"** ở trên, rung
+= nhiều ô hơn; bản giữ co giãn theo (luôn 2×2 ô). Trong lúc pinch có HUD viên kính **"3 per row"** ở trên, rung
 nhẹ mỗi bậc. Mật độ nhớ riêng cho compact và regular.
 
 ### 7.6 Thanh dưới nổi

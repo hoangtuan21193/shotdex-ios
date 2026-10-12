@@ -232,17 +232,9 @@ struct DuplicatesScreen: View {
 
     private func estimatedHeight(_ group: DuplicateGroup, model: DuplicatesModel, metrics: DuplicateCardMetrics) -> CGFloat {
         if model.isCollapsed(group) { return 56 }
-        let captionRow = metrics.tile + AppTheme.Spacing.xs + 15
-        let body: CGFloat
-        if model.strictness == .series {
-            let perRow = metrics.copyColumns + 2
-            let rows = CGFloat((group.count + perRow - 1) / perRow)
-            body = rows * captionRow + (rows - 1) * AppTheme.Spacing.sm
-        } else {
-            let copies = group.count - 1
-            let rows = CGFloat((copies + metrics.copyColumns - 1) / metrics.copyColumns)
-            body = max(metrics.keeper + 44, rows * captionRow + (rows - 1) * AppTheme.Spacing.sm)
-        }
+        let body = model.strictness == .series
+            ? metrics.seriesHeight(count: group.count)
+            : metrics.gridHeight(copyCount: group.count - 1)
         return 58 + body + AppTheme.Spacing.md + 44 + AppTheme.Spacing.md
     }
 
@@ -628,9 +620,9 @@ private struct DuplicatesHeaderBand: View {
 
 // MARK: - Decision card
 
-/// One group as a decision: keeper big on the left with "Keep" and its
-/// reasons, the copies beside it each with what it lacks, and the three
-/// one-tap actions. A series has no keeper — its frames sit in one grid in
+/// One group as a decision: the keeper over 2×2 cells with "Keep", its
+/// reasons and its sizes on the photo, the copies square in the cells beside
+/// and below it, and the three one-tap actions. A series has no keeper — its frames sit in one grid in
 /// capture order (FS-06.06 §6).
 private struct DuplicateDecisionCard: View {
     let group: DuplicateGroup
@@ -644,12 +636,9 @@ private struct DuplicateDecisionCard: View {
                 .padding(.bottom, AppTheme.Spacing.sm)
 
             if let keeper {
-                HStack(alignment: .top, spacing: DuplicateCardMetrics.keeperGap) {
-                    keeperColumn(keeper)
-                    copiesGrid(group.members.filter { $0.assetId != keeper.assetId }, columns: metrics.copyColumns)
-                }
+                keeperGrid(keeper, copies: group.members.filter { $0.assetId != keeper.assetId })
             } else {
-                copiesGrid(group.members, columns: metrics.copyColumns + 2)
+                seriesGrid(group.members)
             }
 
             notices
@@ -694,28 +683,35 @@ private struct DuplicateDecisionCard: View {
         return parts.joined(separator: " · ")
     }
 
-    private func keeperColumn(_ keeper: HashedPhoto) -> some View {
-        let reasons = model.reasons(for: group)
-        return VStack(alignment: .leading, spacing: AppTheme.Spacing.xs) {
+    /// The keeper over 2×2 cells at the top left, the copies in the cells
+    /// beside and below it — every copy square, the card filled (board
+    /// `PH_DuplicatesLargeGroup`). Sizes and reasons ride on the photos.
+    private func keeperGrid(_ keeper: HashedPhoto, copies: [HashedPhoto]) -> some View {
+        let origins = metrics.copyOrigins(count: copies.count)
+        return ZStack(alignment: .topLeading) {
             tile(keeper, side: metrics.keeper, radius: AppTheme.Radius.md, isKeeper: true)
-            Text(facts(keeper))
-                .font(.caption.weight(.medium))
-                .monospacedDigit()
-                .lineLimit(1)
-            if !reasons.isEmpty {
-                HStack(spacing: AppTheme.Spacing.xs) {
-                    ForEach(reasons, id: \.self) { reason in
-                        Text(reason.title)
-                            .font(.caption2.weight(.semibold))
-                            .foregroundStyle(.secondary)
-                            .padding(.horizontal, AppTheme.Spacing.sm)
-                            .frame(height: 20)
-                            .background(Color(.secondarySystemFill), in: Capsule())
-                    }
-                }
+            ForEach(Array(copies.enumerated()), id: \.element.id) { index, member in
+                tile(member, side: metrics.tile, radius: AppTheme.Radius.sm, isKeeper: false)
+                    .offset(x: origins[index].x, y: origins[index].y)
             }
         }
-        .frame(width: metrics.keeper, alignment: .leading)
+        .frame(height: metrics.gridHeight(copyCount: copies.count), alignment: .topLeading)
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    /// A series has no keeper: its frames in one grid of square cells, in
+    /// capture order, each with its seconds after the first.
+    private func seriesGrid(_ members: [HashedPhoto]) -> some View {
+        LazyVGrid(
+            columns: Array(repeating: GridItem(.fixed(metrics.tile), spacing: DuplicateCardMetrics.copyGap, alignment: .topLeading),
+                           count: metrics.gridColumns),
+            alignment: .leading,
+            spacing: DuplicateCardMetrics.copyGap
+        ) {
+            ForEach(members) { member in
+                tile(member, side: metrics.tile, radius: AppTheme.Radius.sm, isKeeper: false)
+            }
+        }
     }
 
     private func facts(_ member: HashedPhoto) -> String {
@@ -727,24 +723,15 @@ private struct DuplicateDecisionCard: View {
         return parts.isEmpty ? "—" : parts.joined(separator: " · ")
     }
 
-    private func copiesGrid(_ members: [HashedPhoto], columns: Int) -> some View {
-        LazyVGrid(
-            columns: Array(repeating: GridItem(.fixed(metrics.tile), spacing: DuplicateCardMetrics.copyGap, alignment: .topLeading), count: columns),
-            alignment: .leading,
-            spacing: AppTheme.Spacing.sm
-        ) {
-            ForEach(members) { member in
-                VStack(alignment: .leading, spacing: AppTheme.Spacing.xs) {
-                    tile(member, side: metrics.tile, radius: AppTheme.Radius.sm, isKeeper: false)
-                    Text(caption(member))
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .monospacedDigit()
-                        .lineLimit(1)
-                        .frame(width: metrics.tile, alignment: .leading)
-                }
-            }
+    /// Pixel size over file size, for the label inside a photo.
+    private func factLines(_ member: HashedPhoto) -> [String] {
+        if model.strictness == .series { return [caption(member)] }
+        var lines: [String] = []
+        if let dimensions = DuplicateReview.dimensions(member) { lines.append(dimensions) }
+        if let size = member.fileSize {
+            lines.append(DuplicatesScreen.byteFormatter.string(fromByteCount: Int64(size)))
         }
+        return lines
     }
 
     /// Under a copy: what it lacks next to the keeper. Under a series frame:
@@ -766,7 +753,9 @@ private struct DuplicateDecisionCard: View {
             side: side,
             radius: radius,
             isMarked: isMarked,
-            showsKeep: isKeeper && !isMarked
+            showsKeep: isKeeper && !isMarked,
+            factLines: factLines(member),
+            chips: isKeeper ? model.reasons(for: group).map(\.title) : []
         )
         .onTapGesture {
             withAnimation(AppTheme.Motion.standard) {
@@ -989,6 +978,11 @@ private struct DuplicateThumbnail: View {
     let isMarked: Bool
     let showsKeep: Bool
     var showsMarkBadge = true
+    /// Pixel size and file size (or a series frame's seconds), on the photo
+    /// rather than under it (board `PH_DuplicatesLargeGroup`).
+    var factLines: [String] = []
+    /// The keeper's reasons — Edited, RAW, Favorite — top left on the photo.
+    var chips: [String] = []
 
     @State private var image: UIImage?
     @State private var requestId: PHImageRequestID?
@@ -1026,17 +1020,52 @@ private struct DuplicateThumbnail: View {
                         .padding(side > 120 ? AppTheme.Spacing.sm : AppTheme.Spacing.xs)
                 }
             }
-            .overlay(alignment: .bottomLeading) {
-                if showsKeep {
-                    Label("Keep", systemImage: "checkmark")
-                        .font(.footnote.weight(.semibold))
-                        .foregroundStyle(.white)
-                        .labelStyle(KeepBadgeLabelStyle())
-                        .padding(.horizontal, AppTheme.Spacing.sm)
-                        .frame(height: 24)
-                        .background(Color.black.opacity(0.55), in: Capsule())
-                        .padding(AppTheme.Spacing.sm)
+            .overlay(alignment: .topLeading) {
+                if !chips.isEmpty {
+                    HStack(spacing: AppTheme.Spacing.xs) {
+                        ForEach(chips, id: \.self) { chip in
+                            Text(chip)
+                                .font(.caption2.weight(.semibold))
+                                .foregroundStyle(.white)
+                                .padding(.horizontal, 7)
+                                .frame(height: 20)
+                                .background(Color.black.opacity(0.55), in: Capsule())
+                        }
+                    }
+                    .padding(AppTheme.Spacing.sm)
                 }
+            }
+            .overlay(alignment: .bottomLeading) {
+                HStack(alignment: .bottom, spacing: 6) {
+                    if showsKeep {
+                        Label("Keep", systemImage: "checkmark")
+                            .font(.footnote.weight(.semibold))
+                            .foregroundStyle(.white)
+                            .labelStyle(KeepBadgeLabelStyle())
+                            .padding(.horizontal, AppTheme.Spacing.sm)
+                            .frame(height: 24)
+                            .background(Color.black.opacity(0.55), in: Capsule())
+                    }
+                    if !factLines.isEmpty {
+                        VStack(alignment: .leading, spacing: 0) {
+                            ForEach(Array(factLines.enumerated()), id: \.offset) { index, line in
+                                Text(line)
+                                    .fontWeight(index == 0 ? .semibold : .regular)
+                                    .opacity(index == 0 ? 1 : 0.85)
+                            }
+                        }
+                        .font(.system(size: 11))
+                        .monospacedDigit()
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.8)
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 5)
+                        .padding(.vertical, 2)
+                        .background(Color.black.opacity(0.55), in: RoundedRectangle(cornerRadius: 6, style: .continuous))
+                    }
+                }
+                .padding(side > 120 ? AppTheme.Spacing.sm : 5)
+                .accessibilityHidden(true)
             }
             .contentShape(Rectangle())
             .onAppear(perform: loadThumbnail)

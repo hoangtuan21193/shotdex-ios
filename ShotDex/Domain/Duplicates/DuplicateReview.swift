@@ -193,13 +193,13 @@ enum DuplicateReview {
     }
 }
 
-/// Geometry of the decision card (FS-06.06 §7): the keeper spans two copy
-/// tiles plus one gap, the copies fill `copyColumns` columns beside it.
-/// Spacing is on the DESIGN.md scale — 4 between copies, 8 between the keeper
-/// and the copies.
+/// Geometry of the decision card (FS-06.06 §7, board `PH_DuplicatesLargeGroup`):
+/// one grid of `copyColumns + 2` square cells, 4pt apart. The keeper spans
+/// 2×2 cells — each side twice a copy — at the top left; the copies fill the
+/// cells to its right, then the rows below it, left to right, always square.
+/// A big group fills the card instead of leaving the keeper alone in a column.
 struct DuplicateCardMetrics: Equatable {
     static let copyGap: CGFloat = 4
-    static let keeperGap: CGFloat = 8
     static let cardPadding: CGFloat = 12
     static let compactColumns = 2
     static let regularColumns = 3
@@ -217,11 +217,52 @@ struct DuplicateCardMetrics: Equatable {
     ///   - copyColumns: copies per row, the density the user pinched to.
     init(innerWidth: CGFloat, copyColumns: Int) {
         let columns = max(1, copyColumns)
-        let usable = innerWidth - Self.keeperGap - Self.copyGap * CGFloat(columns - 1)
-        let tile = max(24, (usable / CGFloat(columns + 2)).rounded(.down))
+        let cells = columns + 2
+        let usable = innerWidth - Self.copyGap * CGFloat(cells - 1)
+        let tile = max(24, (usable / CGFloat(cells)).rounded(.down))
         self.tile = tile
         self.keeper = tile * 2 + Self.copyGap
         self.copyColumns = columns
+    }
+
+    /// Cells across the card's grid: the keeper's two plus the copy columns.
+    var gridColumns: Int { copyColumns + 2 }
+
+    /// Top-left corner of each copy, in order, relative to the keeper's.
+    /// Beside the keeper first (`copyColumns` wide, two rows), then full rows
+    /// under it.
+    func copyOrigins(count: Int) -> [CGPoint] {
+        let step = tile + Self.copyGap
+        let besideCount = min(count, copyColumns * 2)
+        var origins: [CGPoint] = []
+        origins.reserveCapacity(count)
+        for index in 0..<besideCount {
+            origins.append(CGPoint(
+                x: keeper + Self.copyGap + CGFloat(index % copyColumns) * step,
+                y: CGFloat(index / copyColumns) * step
+            ))
+        }
+        for index in besideCount..<max(besideCount, count) {
+            let below = index - besideCount
+            origins.append(CGPoint(
+                x: CGFloat(below % gridColumns) * step,
+                y: keeper + Self.copyGap + CGFloat(below / gridColumns) * step
+            ))
+        }
+        return origins
+    }
+
+    /// Height of the keeper and its copies together.
+    func gridHeight(copyCount: Int) -> CGFloat {
+        let below = max(0, copyCount - copyColumns * 2)
+        let rows = (below + gridColumns - 1) / gridColumns
+        return keeper + CGFloat(rows) * (tile + Self.copyGap)
+    }
+
+    /// Height of a keeperless grid (a series) of `count` cells.
+    func seriesHeight(count: Int) -> CGFloat {
+        let rows = max(1, (count + gridColumns - 1) / gridColumns)
+        return CGFloat(rows) * tile + CGFloat(rows - 1) * Self.copyGap
     }
 
     /// Card columns for a content width: one on compact, as many ≥ 400pt

@@ -119,4 +119,24 @@ struct DuplicateReviewTests {
         let ipad = DuplicateCardMetrics(innerWidth: 437 - 24, copyColumns: 3)
         #expect(ipad.tile == 79)
     }
+
+    /// Board `PH_DuplicatesLargeGroup`: keeper 2×2 cells, copies beside it
+    /// then in full rows below, every copy square.
+    @Test func aBigGroupFillsTheCardUnderTheKeeper() {
+        let metrics = DuplicateCardMetrics(innerWidth: 346, copyColumns: 2)
+        #expect(metrics.keeper == metrics.tile * 2 + DuplicateCardMetrics.copyGap)
+        let origins = metrics.copyOrigins(count: 7)
+        let step = metrics.tile + DuplicateCardMetrics.copyGap
+        // Four beside the keeper, two rows of two.
+        #expect(origins[0] == CGPoint(x: metrics.keeper + 4, y: 0))
+        #expect(origins[3] == CGPoint(x: metrics.keeper + 4 + step, y: step))
+        // Then a full-width row under it, from the left edge.
+        #expect(origins[4] == CGPoint(x: 0, y: metrics.keeper + 4))
+        #expect(origins[6] == CGPoint(x: 2 * step, y: metrics.keeper + 4))
+        #expect(metrics.gridHeight(copyCount: 7) == metrics.keeper + step)
+        // Three copies stay beside the keeper: no row below.
+        #expect(metrics.gridHeight(copyCount: 3) == metrics.keeper)
+        // Nothing spills past the card.
+        #expect(origins.allSatisfy { $0.x + metrics.tile <= 346 })
+    }
 }
