@@ -237,30 +237,26 @@ actor ServerUploadSession {
             }
         }
 
-        try await client.createDirectory(directory)
-        let part = ServerUploadPath.partPath(for: destination)
+        let writer = VerifiedRemoteWrite(client: client)
         do {
             onEvent(.phase(index: index, .uploading))
-            try await client.upload(local, to: part, progress: progressSink(base: bytesDone))
+            try await writer.uploadPart(local, for: destination, progress: progressSink(base: bytesDone))
             bytesDone += size
             report()
 
             onEvent(.phase(index: index, .verifying))
-            let remoteHash = try await client.sha256(of: part, progress: progressSink(base: bytesDone))
+            let remoteHash = try await writer.readBackSHA256(for: destination, progress: progressSink(base: bytesDone))
             bytesDone += size
             report()
             try Task.checkCancellation()
 
             guard remoteHash == localHash else {
-                await removeQuietly(part)
+                await writer.discardPart(for: destination)
                 return .failed(String(localized: "The copy on the server didn't match the original.", comment: "Upload to Server: checksum read back from the server differs"))
             }
-            if replacesExisting {
-                try await client.remove(destination)
-            }
-            try await client.move(part, to: destination)
+            try await writer.moveIntoPlace(destination, replacing: replacesExisting)
         } catch {
-            await removeQuietly(part)
+            await writer.discardPart(for: destination)
             throw error
         }
 
@@ -280,13 +276,6 @@ actor ServerUploadSession {
             byteCount: bytes,
             sha256: sha256
         ))
-    }
-
-    /// Clean-up runs even when the batch was cancelled: a cancelled task's
-    /// own awaits may throw at once, and the part must still go.
-    private func removeQuietly(_ path: String) async {
-        let client = client
-        await Self.detached { try? await client.remove(path) }
     }
 
     private static func detached(_ work: @escaping @Sendable () async -> Void) async {
