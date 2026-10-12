@@ -755,7 +755,8 @@ private struct DuplicateDecisionCard: View {
             isMarked: isMarked,
             showsKeep: isKeeper && !isMarked,
             factLines: factLines(member),
-            chips: isKeeper ? model.reasons(for: group).map(\.title) : []
+            chips: isKeeper ? model.reasons(for: group).map(\.title) : [],
+            isKeeper: isKeeper
         )
         .onTapGesture {
             withAnimation(AppTheme.Motion.standard) {
@@ -983,6 +984,7 @@ private struct DuplicateThumbnail: View {
     var factLines: [String] = []
     /// The keeper's reasons — Edited, RAW, Favorite — top left on the photo.
     var chips: [String] = []
+    var isKeeper = false
 
     @State private var image: UIImage?
     @State private var requestId: PHImageRequestID?
@@ -1073,17 +1075,26 @@ private struct DuplicateThumbnail: View {
             .onDisappear(perform: cancelThumbnail)
     }
 
+    /// Asks again whenever the tile grows — a copy promoted to keeper goes
+    /// from one cell to 2x2, and its small image would otherwise stay,
+    /// scaled up and soft. Not gated on a request in flight: PhotoKit often
+    /// answers the degraded pass synchronously, before the id is stored.
     private func loadThumbnail() {
-        guard let asset, side > requestedSide + 1 || image == nil, requestId == nil else { return }
-        requestedSide = side
-        let pixels = side * ActiveDisplay.scale
+        guard let asset, side > requestedSide + 1 || image == nil else { return }
+        cancelThumbnail()
+        let size = side
+        requestedSide = size
+        let pixels = size * ActiveDisplay.scale
         requestId = photoLibrary.requestThumbnail(
             for: asset,
             targetSize: CGSize(width: pixels, height: pixels),
-            allowNetwork: false
+            // The keeper is the photo the decision rests on: fetch it from
+            // iCloud when only a proxy is on the device.
+            allowNetwork: isKeeper
         ) { result in
-            if let result { image = result }
-            requestId = nil
+            // A late answer to a smaller request must not replace a sharper one.
+            guard size == requestedSide, let result else { return }
+            image = result
         }
     }
 
