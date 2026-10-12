@@ -365,23 +365,25 @@ struct AlbumsScreen: View {
                     .padding(.top, 4)
                 }
 
-                // Only once there is more than the Photos library: a
-                // Photos-only library reads as it always has.
-                if dependencies.sources.rows.count > 1 {
-                    SourcesGroup()
-                }
-
                 heroRow
 
                 ForEach(dependencies.collectionsLayout.visibleOrder) { section in
                     sectionView(section)
                 }
 
+                // Last, under Utilities: where the photos live is set up
+                // once and checked now and then, not browsed every visit.
+                // Only once there is more than the Photos library: a
+                // Photos-only library reads as it always has.
+                if dependencies.sources.rows.count > 1 {
+                    SourcesGroup()
+                }
+
                 if #unavailable(iOS 26.0) {
                     Color.clear.frame(height: 90)
                 }
             }
-            // The last section is Utilities, and the scroll view's bottom
+            // The last section is Sources (or Utilities), and the scroll view's bottom
             // inset stops exactly at the floating tab bar — so its tokens sat
             // right against it. Two section gaps of air below the last row;
             // one was still read as touching.

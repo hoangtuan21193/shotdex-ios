@@ -63,7 +63,7 @@ album của ShotDex chứa ảnh mọi nguồn ([05 §6](05-data.md)).
 
 - Server trên iPhone và Duo: connection là nguồn như iPad; duyệt rồi **Import to Library** của
   [FS-17](../FS-17-import-from-server/README.md) không còn ở thiết bị nào. Upload ([FS-15](../FS-15-server-upload/README.md)) giữ nguyên.
-- Chỗ nhóm **Sources** hiện trên iPhone và Duo ngoài (không có sidebar) chốt khi vẽ board; hành vi không đổi theo bố cục.
+- iPhone (và Duo ngoài): nhóm **Sources** là nhóm **cuối** của tab Collections, dưới Utilities (người dùng 2026-10-12 — đặt một lần, xem thỉnh thoảng; `AlbumsScreen`, board `PH_Sources`); hành vi không đổi theo bố cục.
 
 ## 4. Tài liệu phải sửa theo (khi FS-19 được duyệt)
 

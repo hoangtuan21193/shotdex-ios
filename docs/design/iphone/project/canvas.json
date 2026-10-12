@@ -618,7 +618,7 @@
     },
     "PH_Collections.dc.html": {
       "h": 874,
-      "title": "iPhone · Collections: nhóm Sources đầu tab, hero On This Day 180, cover Smart Albums/My Albums 132, Utilities có Hidden",
+      "title": "iPhone · Collections: hero On This Day 180, cover Smart Albums/My Albums 132, Utilities có Backup và Hidden, nhóm Sources ở cuối dưới Utilities (user 12/10)",
       "w": 402,
       "x": 4820,
       "y": 560
@@ -842,7 +842,7 @@
     },
     "PH_Sources.dc.html": {
       "h": 874,
-      "title": "iPhone · Nguồn: nhóm Sources đầu tab Collections (Photos, 2026 Japan, T7 offline, NAS Home, thẻ EOS_DIGITAL), + Add Sour",
+      "title": "iPhone · Nguồn: nhóm Sources ở cuối tab Collections, dưới Utilities (user 12/10) — Photos, 2026 Japan, T7 offline, NAS Home, thẻ EOS_DIGITAL; + Add Source",
       "w": 402,
       "x": 20244,
       "y": 560
@@ -961,6 +961,30 @@
       "w": 402,
       "x": 18736,
       "y": 2534
+    },
+    "PH_Backup.dc.html": {
+      "h": 874,
+      "radius": 44,
+      "title": "iPhone · Backup (Utilities): mỗi job một thẻ nguồn → đích; đang chạy + Pause, bị iOS dừng → Paused + Resume từ file cuối, xong → Up to Date — đề xuất 12/10, code chưa có",
+      "w": 402,
+      "x": 26072,
+      "y": 560
+    },
+    "PH_BackupNew.dc.html": {
+      "h": 874,
+      "radius": 44,
+      "title": "iPhone · New Backup: chọn Source, Destination (connection + folder, Date Folders), What to Copy, When (Wi‑Fi, sạc) — đề xuất 12/10",
+      "w": 402,
+      "x": 26534,
+      "y": 560
+    },
+    "PH_BackupRunning.dc.html": {
+      "h": 874,
+      "radius": 44,
+      "title": "iPhone · Backup đang chạy: %, Pause/Stop, file đang tải iCloud/đang up, tổng, file lỗi; chạy nền, resume theo sổ từng file — đề xuất 12/10",
+      "w": 402,
+      "x": 26996,
+      "y": 560
     }
   },
   "createdOnFiles": {
@@ -1053,6 +1077,9 @@
     "PH_VideoTrim.dc.html",
     "PH_Share.dc.html",
     "PH_Collections.dc.html",
+    "PH_Backup.dc.html",
+    "PH_BackupNew.dc.html",
+    "PH_BackupRunning.dc.html",
     "PH_AlbumDetail.dc.html",
     "PH_SmartAlbum.dc.html",
     "PH_SmartAlbumEditor.dc.html",
