@@ -58,6 +58,13 @@ Accent cũng là **tint của cả app** (người dùng 2026-10-12): `ShotDexAp
 cho mọi `UIWindow`, nên nút, link, công tắc (track bật), picker, menu hệ thống đều màu accent, không còn xanh iOS hay
 xanh lá. Hành động phá huỷ vẫn đỏ qua `role: .destructive`. Không đặt lại `.tint(.blue)`/màu xanh ở màn nào.
 
+**Một màn, một nút accent** (người dùng 2026-10-12: "một màn hình không nên có 2 button cùng màu accent"). Nền accent
+(đặc hoặc nhạt kiểu `.bordered`) chỉ dành cho **một** hành động chính của màn: Done, Save, Start, Choose “…”. Trên iOS 26,
+nút `.confirmationAction`/`.borderedProminent` ở toolbar đã là nút đó. Mọi thứ khác bấm được trên cùng màn không mang nền
+accent: chip/segment/tab đang chọn dùng kiểu trung tính (nền card + bóng hoặc `.tint(.primary)`, chữ đậm), nút phụ dùng
+`.bordered` `.tint(.secondary)` hoặc kính. Chữ/icon màu accent (link, `Choose…`, dấu ✓) vẫn được, vì không có nền. Không
+tính là nút: công tắc bật, badge chọn ảnh trong lưới, chart, vòng tiến độ.
+
 Không dùng `Color.accentColor`, không dùng `.orange`, không hardcode `#EB9526`. Trong `ButtonStyle` phải truyền accent vào qua init (xem `CompressionChoiceStyle`) vì `@Environment` không resolve trong `makeBody`.
 
 ### 3.2 Bảng màu tầng A/B/C

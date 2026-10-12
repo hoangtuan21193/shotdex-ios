@@ -1,0 +1,24 @@
+{
+ "steps": [
+  {"action": "launch"},
+  {"action": "wait", "seconds": 6},
+  {"action": "tap", "label": "Collections", "type": "button"},
+  {"action": "wait", "seconds": 2},
+  {"action": "scrollTo", "label": "Backup"},
+  {"action": "tap", "label": "Backup"},
+  {"action": "wait", "seconds": 2},
+  {"action": "tap", "label": "New Backup", "type": "button"},
+  {"action": "wait", "seconds": 2},
+  {"action": "tap", "label": "Organize"},
+  {"action": "wait", "seconds": 2},
+  {"action": "dump", "name": "01-organize", "type": "button"},
+  {"action": "tap", "label": "Day, ", "type": "button"},
+  {"action": "wait", "seconds": 1},
+  {"action": "tap", "label": "Custom…"},
+  {"action": "wait", "seconds": 2},
+  {"action": "swipe", "x": 0.5, "y": 0.8, "direction": "up", "distance": 0.5},
+  {"action": "wait", "seconds": 1},
+  {"action": "screenshot", "name": "02-custom-day"},
+  {"action": "dump", "name": "02-custom-day", "type": "button"}
+ ]
+}

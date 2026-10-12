@@ -264,18 +264,24 @@ struct BackupCustomDateScreen: View {
                 }
             }
             Section {
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: AppTheme.Spacing.sm) {
-                        ForEach(quickSeparators, id: \.1) { label, value in
-                            Button(label) {
-                                format.wrappedValue.separator = value
-                                typedSeparator = value
-                            }
-                            .buttonStyle(.bordered)
-                            .tint(format.wrappedValue.separator == value ? accent : .secondary)
-                        }
+                // A segmented row, like Year and Month above: the pick is
+                // shown the neutral way, never with an accent fill
+                // (DESIGN.md §3.1). A typed separator selects no segment.
+                Picker(selection: Binding(
+                    get: { format.wrappedValue.separator },
+                    set: { value in
+                        format.wrappedValue.separator = value
+                        typedSeparator = value
                     }
+                )) {
+                    ForEach(quickSeparators, id: \.1) { label, value in
+                        Text(label).tag(value)
+                    }
+                } label: {
+                    Text(String(localized: "Quick Separators", comment: "Custom date: segmented picks for common separators"))
                 }
+                .pickerStyle(.segmented)
+                .labelsHidden()
                 TextField(String(localized: "Separator", comment: "Custom date: type any separator"), text: $typedSeparator)
                     .autocorrectionDisabled()
                     .textInputAutocapitalization(.never)
