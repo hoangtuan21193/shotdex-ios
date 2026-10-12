@@ -47,16 +47,16 @@ class Component extends DCLogic {
   renderVals() {
     const LIGHT = { bg:'#FFFFFF', grouped:'#F2F2F7', card:'#FFFFFF', label:'#000000', label2:'#6C6C70', label3:'#8E8E93',
       sep:'#C6C6C8', fill:'#E9E9EB', fill2:'#F2F2F7', cell2:'#F2F2F7', glass:'rgba(255,255,255,0.78)', glassStroke:'rgba(0,0,0,0.08)',
-      glassShadow:'0 4px 18px rgba(0,0,0,0.12)', tint:'#007AFF', red:'#FF3B30', green:'#34C759', orange:'#FF9500',
+      glassShadow:'0 4px 18px rgba(0,0,0,0.12)', tint:'#C6730E', red:'#FF3B30', green:'#34C759', orange:'#FF9500',
       accent:'#C6730E', accentSoft:'rgba(198,115,14,0.12)', accentLine:'rgba(198,115,14,0.55)', dim:'rgba(0,0,0,0.35)',
       sheet:'#FFFFFF', sheetGrouped:'#F2F2F7', onAccent:'#FFFFFF', alert:'rgba(255,255,255,0.94)', alertStroke:'rgba(0,0,0,0.06)',
-      alertBtn:'rgba(120,120,128,0.16)', tintSoft:'rgba(0,122,255,0.10)', ctl:'rgba(120,120,128,0.12)', segSel:'#FFFFFF', track:'rgba(120,120,128,0.20)' };
+      alertBtn:'rgba(120,120,128,0.16)', tintSoft:'rgba(198,115,14,0.10)', ctl:'rgba(120,120,128,0.12)', segSel:'#FFFFFF', track:'rgba(120,120,128,0.20)' };
     const DARK = { bg:'#000000', grouped:'#000000', card:'#1C1C1E', label:'#FFFFFF', label2:'#98989F', label3:'#6C6C70',
       sep:'#38383A', fill:'#2C2C2E', fill2:'#1C1C1E', cell2:'#1C1C1E', glass:'rgba(44,44,46,0.78)', glassStroke:'rgba(255,255,255,0.10)',
-      glassShadow:'0 4px 18px rgba(0,0,0,0.5)', tint:'#0A84FF', red:'#FF453A', green:'#30D158', orange:'#FF9F0A',
+      glassShadow:'0 4px 18px rgba(0,0,0,0.5)', tint:'#EB9526', red:'#FF453A', green:'#30D158', orange:'#FF9F0A',
       accent:'#EB9526', accentSoft:'rgba(235,149,38,0.20)', accentLine:'rgba(235,149,38,0.60)', dim:'rgba(0,0,0,0.55)',
       sheet:'#1C1C1E', sheetGrouped:'#000000', onAccent:'#000000', alert:'rgba(44,44,46,0.94)', alertStroke:'rgba(255,255,255,0.08)',
-      alertBtn:'rgba(120,120,128,0.32)', tintSoft:'rgba(10,132,255,0.22)', ctl:'rgba(120,120,128,0.24)', segSel:'#636366', track:'rgba(120,120,128,0.36)' };
+      alertBtn:'rgba(120,120,128,0.32)', tintSoft:'rgba(235,149,38,0.22)', ctl:'rgba(120,120,128,0.24)', segSel:'#636366', track:'rgba(120,120,128,0.36)' };
     const t = this.props.dark ? DARK : LIGHT;
     return { t, tt: settingsTileTints(!!this.props.dark) };
   }
