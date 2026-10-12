@@ -21,7 +21,8 @@ ngoài `DC_Backup…` (cùng 5 bước), lối vào `DI_Collections` / `DC_Colle
 | 01 | [Job và Organize](01-jobs-and-organize.md) | danh sách job, tạo/sửa job, nguồn, đích, What to Copy, Organize, tên file, trùng tên |
 | 02 | [Chạy và theo dõi](02-running-and-watching.md) | theo dõi liên tục, nền iOS 26 / trước 26, Wi‑Fi, iCloud, dừng/chạy tiếp, trạng thái hiển thị |
 | 03 | [Dữ liệu](03-data.md) | bảng job, sổ từng file, mốc thay đổi, dùng lại bảng FS-15/FS-19 |
-| 04 | [Tiêu chí nghiệm thu](04-acceptance-criteria.md) | AC-1…AC-30 |
+| 04 | [Tiêu chí nghiệm thu](04-acceptance-criteria.md) | AC-1…AC-39 |
+| 05 | [Không chép trùng giữa các máy](05-duplicates-across-devices.md) | so SHA-256 với mọi file trong folder đích, sổ chung trên NAS, file có sẵn từ trước, phần mở rộng tải nền |
 
 ## 1. Người dùng cần gì
 
@@ -37,6 +38,7 @@ ngoài `DC_Backup…` (cùng 5 bước), lối vào `DI_Collections` / `DC_Colle
 - Bản gốc đầy đủ (ảnh, RAW, video), tải từ iCloud khi cần; tuỳ chọn thêm bản đã sửa.
 - Theo dõi liên tục, chạy nền trong giới hạn iOS, sổ từng file sống qua kill/khởi động lại/Clear Local Metadata Index.
 - Organize ở đích: mức folder, kiểu tên từng mức, Custom ngày, chỗ đặt Videos, tên file, trùng tên giữ cả hai.
+- Không chép trùng: nội dung đã có ở bất kỳ đâu trong folder đích (máy khác chép, hay có sẵn) thì bỏ qua (05).
 
 **Cố ý không có:**
 - Xoá ở nguồn hay ở đích, đồng bộ hai chiều, mirror (file xoá ở nguồn vẫn nằm ở đích) — *vì Backup chỉ chép; giải phóng

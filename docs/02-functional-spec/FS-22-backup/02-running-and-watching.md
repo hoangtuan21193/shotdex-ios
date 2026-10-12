@@ -15,7 +15,7 @@ nếu điều kiện (Wi‑Fi, sạc, đích với tới được) cho phép, v�
 | Nền | lượt làm mới nền ngắn (§3) so từ mốc | lượt làm mới nền quét nguồn server; thư mục Files/ổ ngoài: không quét được ở nền |
 | Back Up Now | so toàn bộ nguồn với sổ | quét toàn bộ rồi so |
 
-- "So" = danh sách mục của nguồn trừ các mục đã có trong sổ của job (`uploaded` hoặc `found`). Một truy vấn, không đọc đích.
+- "So" = danh sách mục của nguồn trừ các mục đã có trong sổ của job (`uploaded`, `found` hoặc `duplicate`). Một truy vấn, không đọc đích.
 - Mốc thay đổi của Photos hết hạn hay không đọc được → so toàn bộ, không báo lỗi. *Vì mốc chỉ để nhanh, sổ mới là thật.*
 - Mục mới đang được ghi (cỡ file còn đổi) chờ đứng yên 2 s như FS-19.01 §5.
 - Mục đã chép rồi bị sửa (ngày sửa/cỡ đổi): bản gốc Photos không chép lại; bản sửa (khi bật) và file FS-19 đổi nội dung
@@ -27,7 +27,8 @@ nếu điều kiện (Wi‑Fi, sạc, đích với tới được) cho phép, v�
 ## 2. Chép một file
 
 Theo đúng FS-15.02 §4: tải bản gốc vào thư mục tạm (iCloud nếu cần, theo luồng) → dò trùng tên + cỡ ở folder đích
-([01 §5](01-jobs-and-organize.md#5-tên-file-và-trùng-tên)) → ghi `<tên>.shotdex-part` → đọc lại, so SHA-256 → đổi tên
+([01 §5](01-jobs-and-organize.md#5-tên-file-và-trùng-tên)) → so nội dung với mọi file đã có trong folder đích, trùng thì
+bỏ qua ([05 §4](05-duplicates-across-devices.md#4-chép-một-file--thêm-bước-so-nội-dung)) → ghi `<tên>.shotdex-part` → đọc lại, so SHA-256 → đổi tên
 thật → ghi sổ trong cùng một transaction với dòng lịch sử upload FS-15 → xoá file tạm.
 
 - **Không làm đầy máy** (người dùng 2026-10-12): bản gốc đầy đủ tải về thư mục tạm, đẩy lên, kiểm SHA-256, rồi **xoá
@@ -88,6 +89,7 @@ Khi hàng đợi còn > 20 file, 5/5 ghi "Leave ShotDex open to finish faster.";
 
 | Trạng thái (1/5 dòng 1) | Dòng 2 | Nút | 5/5 |
 |---|---|---|---|
+| `Checking NAS · 12,408 files` (liệt kê đích, [05 §3](05-duplicates-across-devices.md#3-file-có-sẵn-trên-nas-không-do-shotdex-chép)) | `before the first copy` · `daily check` | — | câu + đếm |
 | `Watching · Up to Date` | `4,118 items · checked 2 min ago` | — | vòng 100%, "Up to date. New photos back up as they appear." |
 | `Backing Up · 34%` (lượt đầu, sổ rỗng lúc bắt đầu) | `1,204 of 3,580 · 18.4 of 52.1 GB · about 40 min left` | Pause | như board 5/5 |
 | `3 New · Uploading` (lượt sau) | `1 of 3 · 48 MB of 1.4 GB` | Pause | như board, tiêu đề vòng `3 new` |

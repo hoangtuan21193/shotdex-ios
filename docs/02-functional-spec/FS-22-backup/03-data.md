@@ -12,13 +12,20 @@ Metadata Index xoá; sổ là thứ duy nhất quyết định "đã chép chưa
 |---|---|---|
 | Job backup | một job | id · nguồn (Photos hoặc id nguồn FS-19) · id connection FS-15 · folder đích · Organize (mức, kiểu Year/Month/Day, Custom, chỗ Videos) · tên file · What to Copy · Include Edited · Only on Wi‑Fi · Only While Charging · Keep Screen On · thứ tự · tạo lúc |
 | Trạng thái job | trạng thái chạy của một job | id job · mốc thay đổi Photos · lần so cuối · trạng thái + lý do + số (cho dòng `Paused …`) · lượt đầu đã xong chưa |
-| Sổ backup | một file của một mục đã xử lý | id job · khoá mục · loại tài nguyên (gốc, RAW, video đi kèm, bản sửa) · dấu nguồn (cỡ + ngày sửa) · đường dẫn ở đích · số byte · SHA-256 (rỗng khi `found`) · kết quả `uploaded` / `found` / `failed` · số lần thử · lỗi cuối · lúc ghi |
+| Sổ backup | một file của một mục đã xử lý | id job · khoá mục · loại tài nguyên (gốc, RAW, video đi kèm, bản sửa) · dấu nguồn (cỡ + ngày sửa) · đường dẫn ở đích · số byte · SHA-256 (rỗng khi `found`) · kết quả `uploaded` / `found` / `duplicate` / `failed` · số lần thử · lỗi cuối · lúc ghi |
+
+| Nội dung ở đích | một file đang có trong folder đích của job (bản sao cục bộ, [05 §2](05-duplicates-across-devices.md#2-sổ-chung-trên-nas)) | id job · đường dẫn tương đối · cỡ · ngày sửa ở đích · SHA-256 (rỗng khi chưa băm) · từ đâu (`listed` / `index`) · lúc liệt kê/đọc |
+| Đoạn sổ chung đã đọc | một file `.jsonl` trong `.shotdex/backup-index/` đã gộp vào bảng trên | id job · tên đoạn · cỡ · lúc đọc |
 
 - Khoá mục: Photos → id ảnh của Photos; FS-19 → id bản sao trong bảng bản sao. Duy nhất theo (job, khoá mục, loại
   tài nguyên, dấu nguồn).
 - Mỗi file `uploaded` **của job nguồn Photos** cũng thêm một dòng vào bảng lịch sử upload FS-15 trong cùng transaction —
   để Photo Detail hiện **Uploaded to Server** và Free Up Space (FS-15.02c) tính được. `found` không thêm (không kiểm
   SHA-256); job nguồn FS-19 không thêm (lịch sử FS-15 tính theo ảnh Photos, bản sao FS-19 đã có chỗ của nó).
+- `duplicate` ghi đường dẫn file **đã có** ở đích, SHA-256 của nó, không có byte nào được đẩy; với job nguồn Photos cũng
+  thêm một dòng lịch sử upload FS-15 trỏ vào file đó (nội dung đã khớp SHA-256).
+- Sổ chung trên NAS (`.shotdex/backup-index/`) là nguồn thật của "đích có gì"; hai bảng *Nội dung ở đích* và *Đoạn sổ
+  chung đã đọc* chỉ là bản sao cho nhanh — mất thì đọc lại từ NAS. Mã máy ở Keychain, không ở database.
 - File đã chép xong xoá các dòng `failed` cũ (dấu nguồn khác) của chính nó.
 - Settings không đọc được cả khối → job đó dùng mặc định; các job khác vẫn tải.
 - Xoá job: xoá trạng thái + sổ của job (khoá ngoại xoá theo). Dòng lịch sử upload FS-15 giữ nguyên.
