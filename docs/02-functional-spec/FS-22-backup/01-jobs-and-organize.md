@@ -15,6 +15,9 @@ hay đang chờ gì.
   (quét lại nguồn ngay) · **Delete Job** (xác nhận; không xoá file nào ở đích, sổ của job xoá theo).
 - Rỗng: một câu "Back up a whole library to your NAS." + nút **New Backup**. Chưa có connection FS-15 nào → nút thành
   **Add a Server**, mở form FS-15.01.
+- iPad (regular width): chạm thẻ = **chọn**, chi tiết job (nội dung 5/5) hiện ở cột phải; đầu cột có **Back Up Now** và
+  **Edit**; Delete Job ở menu nhấn giữ. Duo trong: hai cột, chạm thẻ vẫn mở 5/5 như iPhone.
+- Thư mục đích mặc định theo tên loại máy: `Backup/iPhone`, `Backup/iPad`.
 - Dòng chú thích cuối màn giữ câu của board: chép bản gốc đầy đủ, file đã có ở đích bỏ qua, dừng thì làm tiếp.
 
 ## 2. New Backup / Edit (2/5)

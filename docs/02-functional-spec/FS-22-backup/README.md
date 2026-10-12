@@ -10,7 +10,9 @@ Nguồn: [intent 2026-10-12-backup](../../_intents/2026-10-12-backup.md) (accept
 
 Board (iPhone, `docs/design/iphone/project/`, luồng 1→5): `PH_Backup` (1/5) · `PH_BackupNew` (2/5) ·
 `PH_BackupOrganize` (3/5) · `PH_BackupCustomDate` (4/5) · `PH_BackupRunning` (5/5); lối vào `PH_Collections`.
-iPad (`IP_Backup*`), Duo (`DI_Backup*`, `DC_Backup*`): vẽ trước khi code (Q-B3). Mac: ngoài phạm vi FS-22.
+iPad (`docs/design/ipad/project/`): `IP_Backup` · `IP_BackupNew` · `IP_BackupOrganize` · `IP_BackupCustomDate` ·
+`IP_BackupRunning`, lối vào hàng **Backup** đầu Utilities ở sidebar. Duo (`docs/design/duo/project/`): trong `DI_Backup…`,
+ngoài `DC_Backup…` (cùng 5 bước), lối vào `DI_Collections` / `DC_Collections`. Mac: ngoài phạm vi FS-22.
 
 ## Các phần
 

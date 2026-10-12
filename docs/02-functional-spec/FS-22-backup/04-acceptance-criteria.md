@@ -41,5 +41,6 @@ Server giả: SMB (impacket) và WebDAV (wsgidav) ở 127.0.0.1 như FS-15. Ản
 
 - Toàn bộ AC-1…AC-28 — chưa có code.
 - AC-17 lượt dừng của hệ thống không gây được trên sim: chứng minh bằng test giả lập lời dừng, không bằng ảnh.
-- iPad, Duo trong/ngoài: board phải vẽ trước khi code (Q-B3, 2026-10-12); AC bố cục từng thiết bị thêm khi board xong. Mac ngoài phạm vi FS-22.
+- Bố cục iPad và Duo trong/ngoài: board đã vẽ (2026-10-12); AC-25 áp cho `IP_Backup`, `DI_Backup`, `DC_Backup` như `PH_Backup`,
+  chứng minh bằng design-parity từng thiết bị. Mac ngoài phạm vi FS-22.
 - AC-27 phần mở rộng có thể không được iOS gọi trên sim: nếu vậy chứng minh bằng test giả lập lời gọi, ghi rõ.
