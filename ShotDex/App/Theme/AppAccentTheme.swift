@@ -5,8 +5,8 @@ import UIKit
 /// is no accent setting.
 ///
 /// It is also the app's tint (user, 2026-10-12): `ShotDexApp` sets it on the
-/// root view and on every window, so standard buttons, links, toggles and menus
-/// use it instead of the iOS blue; destructive actions keep red through their
+/// root view and on every window, so standard buttons, links, switches and menus
+/// use it instead of the iOS blue (and the switches' green); destructive actions keep red through their
 /// role. Views that draw an accent themselves read `\.appAccent`, or
 /// `AppAccent.color` / `.uiColor` where the environment cannot be read.
 enum AppAccent {
