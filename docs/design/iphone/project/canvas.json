@@ -989,9 +989,17 @@
     "PH_BackupOrganize.dc.html": {
       "h": 874,
       "radius": 44,
-      "title": "iPhone · Backup › Organize: Folders (Year, Year/Month, Year/Month/Day, Year/Date, Album, One Folder — ví dụ dưới mỗi dòng), File Names (Original, Date and Time, Date and Original), trùng tên khác file → Keep Both — đề xuất 12/10 theo PhotoSync/Synology/Lightroom",
+      "title": "iPhone · Backup › Organize (user 12/10): Preview cây folder; Folder Names: Year, Month (menu mở: 10 · 2025-10 · Oct · October · 10月 · Tháng 10), Day; Folder Levels Year › Month › Day … — tên folder không bao giờ có /, mỗi lựa chọn là chính ví dụ, không token",
       "w": 402,
       "x": 27458,
+      "y": 560
+    },
+    "PH_BackupDayFormat.dc.html": {
+      "h": 874,
+      "radius": 44,
+      "title": "iPhone · Backup › Organize, menu Day mở: 2025-10-12 · 2025.10.12 · 2025_10_12 · 20251012 · 12",
+      "w": 402,
+      "x": 27920,
       "y": 560
     }
   },
@@ -1089,6 +1097,7 @@
     "PH_BackupNew.dc.html",
     "PH_BackupRunning.dc.html",
     "PH_BackupOrganize.dc.html",
+    "PH_BackupDayFormat.dc.html",
     "PH_AlbumDetail.dc.html",
     "PH_SmartAlbum.dc.html",
     "PH_SmartAlbumEditor.dc.html",
