@@ -163,15 +163,17 @@ private struct PanoramaChoiceStyle: ButtonStyle {
 
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .foregroundStyle(isSelected ? Color.black : .white)
+            .foregroundStyle(.white)
             .padding(.vertical, AppTheme.Spacing.sm)
+            // Neutral when chosen, as Resize's chips: no accent fill beside
+            // the screen's Save (DESIGN.md §3.1).
             .background(
-                isSelected ? EditorTheme.accent : EditorTheme.control,
+                isSelected ? Color.white.opacity(0.18) : EditorTheme.control,
                 in: RoundedRectangle.app(AppTheme.Radius.md)
             )
             .overlay {
                 RoundedRectangle.app(AppTheme.Radius.md)
-                    .stroke(isSelected ? EditorTheme.accent : EditorTheme.hairline, lineWidth: 1)
+                    .stroke(isSelected ? Color.white : EditorTheme.hairline, lineWidth: 1)
             }
             .opacity(configuration.isPressed ? 0.7 : 1)
             .hoverEffect(.highlight)

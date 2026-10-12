@@ -242,7 +242,7 @@ private struct CollageAspectChipStyle: ButtonStyle {
             .font(.system(size: 10.5, weight: .semibold))
             .textCase(.uppercase)
             .multilineTextAlignment(.center)
-            .foregroundStyle(isSelected ? .black : .white)
+            .foregroundStyle(.white)
             .padding(.horizontal, AppTheme.Spacing.md)
             .frame(height: CollageMetrics.aspectChipHeight)
             // The chip stays 28pt — that is the band's look — and the target
@@ -255,7 +255,9 @@ private struct CollageAspectChipStyle: ButtonStyle {
             .frame(minWidth: CollageMetrics.aspectChipMinWidth)
             .background(
                 RoundedRectangle.app(AppTheme.Radius.sm)
-                    .fill(isSelected ? EditorTheme.accent : Color.white.opacity(0.08))
+                    // Neutral when chosen: Export is the screen's one accent
+                    // button (DESIGN.md §3.1).
+                    .fill(isSelected ? Color.white.opacity(0.24) : Color.white.opacity(0.08))
             )
             .opacity(configuration.isPressed ? 0.7 : 1)
     }

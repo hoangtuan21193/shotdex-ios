@@ -306,11 +306,13 @@ struct CollageSegmentPicker<Item: Hashable>: View {
                 } label: {
                     Text(label(item))
                         .font(.system(size: 12, weight: .semibold))
-                        .foregroundStyle(selection == item ? .black : .white)
+                        .foregroundStyle(.white)
                         .padding(.horizontal, AppTheme.Spacing.md)
                         .frame(height: 28)
+                        // Neutral, not the accent: Save to Photos is the one
+                        // accent button on this screen (DESIGN.md §3.1).
                         .background(
-                            selection == item ? EditorTheme.accent : Color.clear,
+                            selection == item ? Color.white.opacity(0.24) : Color.clear,
                             in: Capsule()
                         )
                 }

@@ -181,7 +181,7 @@ struct WatermarkScreen: View {
         } label: {
             VStack(spacing: 2) {
                 Text(preset.name)
-                    .font(.system(size: 14, weight: .medium))
+                    .font(.system(size: 14, weight: selected ? .semibold : .medium))
                     .foregroundStyle(selected ? .white : .white.opacity(0.85))
                 Text(WatermarkCopy.chipDetail(preset, availability: availability))
                     .font(.system(size: 11))
@@ -189,7 +189,7 @@ struct WatermarkScreen: View {
             .padding(.horizontal, 14)
             .frame(minHeight: 48)
         }
-        .buttonStyle(CompressionChoiceStyle(selected: selected, accent: accent))
+        .buttonStyle(CompressionChoiceStyle(selected: selected))
         .disabled(!availability.isSelectable)
         .opacity(availability.isSelectable ? 1 : 0.45)
         .accessibilityLabel(WatermarkScreen.presetLabel(preset, availability))
@@ -216,9 +216,9 @@ struct WatermarkScreen: View {
                         } label: {
                             ZStack {
                                 RoundedRectangle(cornerRadius: radius, style: .continuous)
-                                    .fill(selected ? accent.opacity(0.22) : EditorTheme.control)
+                                    .fill(selected ? Color.white.opacity(0.18) : EditorTheme.control)
                                 RoundedRectangle(cornerRadius: selected ? 3 : 3, style: .continuous)
-                                    .fill(selected ? accent : EditorTheme.dimText)
+                                    .fill(selected ? Color.white : EditorTheme.dimText)
                                     .frame(width: selected ? 12 : 6, height: selected ? 12 : 6)
                             }
                             .frame(width: cell.width, height: cell.height)
@@ -670,9 +670,9 @@ private struct WatermarkInspector: View {
         } label: {
             ZStack {
                 RoundedRectangle.app(AppTheme.Radius.md)
-                    .fill(selected ? accent.opacity(0.22) : EditorTheme.control)
+                    .fill(selected ? Color.white.opacity(0.18) : EditorTheme.control)
                 RoundedRectangle(cornerRadius: 3, style: .continuous)
-                    .fill(selected ? accent : EditorTheme.dimText)
+                    .fill(selected ? Color.white : EditorTheme.dimText)
                     .frame(width: selected ? 14 : 6, height: selected ? 14 : 6)
             }
             .frame(width: size.width, height: size.height)

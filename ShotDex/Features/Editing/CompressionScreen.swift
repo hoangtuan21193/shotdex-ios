@@ -227,7 +227,7 @@ struct CompressionScreen: View {
                         } label: {
                             VStack(spacing: AppTheme.Spacing.xs) {
                                 Text(preset.name)
-                                    .font(.subheadline.weight(.medium))
+                                    .font(.subheadline.weight(controller.selectedPresetID == preset.id ? .semibold : .medium))
                                 Text(presetDetail(preset))
                                     .font(.caption2)
                                     .foregroundStyle(EditorTheme.secondaryText)
@@ -237,8 +237,7 @@ struct CompressionScreen: View {
                         }
                         .buttonStyle(
                             CompressionChoiceStyle(
-                                selected: controller.selectedPresetID == preset.id,
-                                accent: accent
+                                selected: controller.selectedPresetID == preset.id
                             )
                         )
                     }
@@ -554,6 +553,8 @@ struct CompressionScreen: View {
                 Text("Retry").frame(maxWidth: .infinity)
             }
             .buttonStyle(.bordered)
+            // Neutral beside Continue, the one accent button (DESIGN.md §3.1).
+            .tint(state.continueCount > 0 ? Color.white : nil)
             Button("Cancel", role: .cancel) { download.choose(.cancel) }
         }
         .tint(accent)
@@ -867,25 +868,25 @@ private struct CompressionSummary: View {
     }
 }
 
+/// A chosen chip is neutral — a lifted fill and a white ring — not the
+/// accent: the screen's Save/Resize button is its one accent button
+/// (DESIGN.md §3.1).
 struct CompressionChoiceStyle: ButtonStyle {
     let selected: Bool
-    /// Passed in rather than read from the environment: `makeBody` is not a view
-    /// body, so `@Environment` in a `ButtonStyle` never resolves.
-    let accent: Color
 
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .foregroundStyle(selected ? Color.white : EditorTheme.secondaryText)
             .background(
                 selected
-                    ? accent.opacity(configuration.isPressed ? 0.75 : 1)
+                    ? Color.white.opacity(configuration.isPressed ? 0.12 : 0.18)
                     : EditorTheme.control,
                 in: RoundedRectangle.app(AppTheme.Radius.md)
             )
             .overlay {
                 RoundedRectangle.app(AppTheme.Radius.md)
                     .stroke(
-                        selected ? accent : EditorTheme.hairline,
+                        selected ? Color.white : EditorTheme.hairline,
                         lineWidth: 1
                     )
             }

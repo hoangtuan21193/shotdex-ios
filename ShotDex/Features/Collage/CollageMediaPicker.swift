@@ -50,11 +50,13 @@ struct CollageMediaPicker: View {
                     } label: {
                         Text(item.title(selectedCount: model.photos.count))
                             .font(.system(size: 13, weight: .semibold))
-                            .foregroundStyle(tab == item ? .black : .white)
+                            .foregroundStyle(.white)
                             .padding(.horizontal, AppTheme.Spacing.md)
                             .frame(height: AppTheme.Size.pillHeightLight)
+                            // Neutral when chosen: Add photo is the one accent
+                            // button (DESIGN.md §3.1).
                             .background(
-                                Capsule().fill(tab == item ? EditorTheme.accent : Color.white.opacity(0.08))
+                                Capsule().fill(tab == item ? Color.white.opacity(0.24) : Color.white.opacity(0.08))
                             )
                     }
                     .buttonStyle(.plain)
