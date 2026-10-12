@@ -114,6 +114,42 @@ struct BrowserFixture {
         #expect(model.canChoose)
     }
 
+    /// Choosing walks the tree: ‹ is the folder above, whatever the visit
+    /// order; folders rename, the one on screen too, and a share does not.
+    @Test func chooseModeGoesUpAndRenamesFolders() async throws {
+        let fixture = try BrowserFixture()
+        for folder in ["photos/Backup/2025", "photos/Trips"] { fixture.client.addDirectory(folder) }
+        fixture.client.put("photos/Backup/a.CR3", Data([1]))
+        let model = fixture.model(start: "photos/Backup", mode: .chooseFolder)
+        await model.current.load()
+
+        #expect(model.parentPath == "photos")
+        model.goUp()
+        #expect(model.path == "photos")
+        #expect(!model.canRenameCurrentFolder)
+        model.goUp()
+        #expect(model.path == "")
+        #expect(model.parentPath == nil)
+
+        model.open(folder: "photos")
+        await model.current.load()
+        #expect(model.canRename(.folder("Trips")))
+        #expect(!model.canRename(.photo(ServerPhoto(files: [RemoteEntry(name: "a.CR3", isDirectory: false, size: 1, modified: nil)]))))
+        #expect(await model.rename(.folder("Trips"), to: "Travel"))
+        #expect(try await fixture.client.directoryExists("photos/Travel"))
+
+        model.open(folder: "Backup")
+        #expect(model.canRenameCurrentFolder)
+        #expect(!(await model.renameCurrentFolder(to: "Travel")))
+        #expect(model.editError != nil)
+        model.editError = nil
+        #expect(await model.renameCurrentFolder(to: "Archive"))
+        #expect(model.path == "photos/Archive")
+        #expect(try await fixture.client.directoryExists("photos/Archive/2025"))
+        #expect(!(try await fixture.client.directoryExists("photos/Backup")))
+        #expect(model.parentPath == "photos")
+    }
+
     /// FS-15 AC-23: a refused login shows the reason; Try Again dials again.
     @Test func failureShowsReasonAndRetries() async throws {
         let fixture = try BrowserFixture()

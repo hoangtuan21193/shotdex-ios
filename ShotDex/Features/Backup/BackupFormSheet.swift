@@ -69,6 +69,8 @@ struct BackupFormSheet: View {
                         self.path = []
                     } open: { child in
                         self.path.append(.sourceFolder(child))
+                    } close: {
+                        self.path = []
                     }
                 case .serverFolder(let route):
                     ServerBrowserScreen(model: route.model) { chosen in

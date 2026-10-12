@@ -154,6 +154,14 @@ final class ServerBrowserModel {
         history.open(path)
     }
 
+    /// Choosing a folder walks the tree: ‹ opens the folder above, not the
+    /// last visit, and ✕ leaves the picker (FS-17.01 §5). Nil at the top.
+    var parentPath: String? { path.isEmpty ? nil : ancestors.first }
+
+    func goUp() {
+        if let parentPath { go(to: parentPath) }
+    }
+
     /// False at the first visit: the screen is left instead.
     func goBack() -> Bool {
         leaveSelection()
@@ -209,6 +217,21 @@ final class ServerBrowserModel {
 
     /// Rename and Delete: browsing only, never a share at an SMB root.
     var canEdit: Bool { mode == .browse && !isAtSMBRoot }
+
+    /// Choosing a folder still renames folders (FS-17.01 §5) — never files,
+    /// which are dimmed there.
+    func canRename(_ item: ServerBrowserItem) -> Bool {
+        if canEdit { return true }
+        guard mode == .chooseFolder, !isAtSMBRoot, case .folder = item else { return false }
+        return true
+    }
+
+    /// The folder on screen can be renamed while choosing — not a top
+    /// folder, and not an SMB share, which only the computer can rename.
+    var canRenameCurrentFolder: Bool {
+        guard mode == .chooseFolder, !path.isEmpty else { return false }
+        return !(server.transferProtocol == .smb && ancestors.count == 1)
+    }
 
     var canCreateFolder: Bool { !isAtSMBRoot }
 
@@ -281,7 +304,7 @@ final class ServerBrowserModel {
     /// Both histories follow the new names (FS-17.01 §4b).
     @discardableResult
     func rename(_ item: ServerBrowserItem, to typed: String) async -> Bool {
-        guard canEdit, let base = RemoteFolderListing.validatedName(typed) else { return false }
+        guard canRename(item), let base = RemoteFolderListing.validatedName(typed) else { return false }
         let moves: [(from: String, to: String)] = item.names.map { name in
             let ext = (name as NSString).pathExtension
             let newName: String = switch item {
@@ -291,7 +314,7 @@ final class ServerBrowserModel {
             return (name, newName)
         }
         guard moves.contains(where: { $0.from != $0.to }) else { return true }
-        let taken = Set(takenNames().map { $0.lowercased() }).subtracting(item.names.map { $0.lowercased() })
+        let taken = Set(takenNames(in: current).map { $0.lowercased() }).subtracting(item.names.map { $0.lowercased() })
         if moves.contains(where: { taken.contains($0.to.lowercased()) }) {
             editError = String(localized: "An item named “\(base)” already exists.", comment: "Server browser: Rename to a name already in the folder")
             return false
@@ -314,6 +337,37 @@ final class ServerBrowserModel {
             }
         }
         await model.refresh()
+        return true
+    }
+
+    /// Renames the folder on screen and stays in it under its new name.
+    @discardableResult
+    func renameCurrentFolder(to typed: String) async -> Bool {
+        guard canRenameCurrentFolder, let parent = parentPath,
+              let name = RemoteFolderListing.validatedName(typed) else { return false }
+        let source = path
+        let destination = ServerUploadPath.join(parent, name)
+        guard destination != source else { return true }
+        let parentModel = folderModel(for: parent)
+        if parentModel.listing != .loaded { await parentModel.load() }
+        let taken = Set(takenNames(in: parentModel).map { $0.lowercased() })
+            .subtracting([ServerUploadPath.lastComponent(of: source).lowercased()])
+        if taken.contains(name.lowercased()) {
+            editError = String(localized: "An item named “\(name)” already exists.", comment: "Server browser: Rename to a name already in the folder")
+            return false
+        }
+        isWorking = true
+        defer { isWorking = false }
+        do {
+            try await session.perform { client in try await client.move(source, to: destination) }
+            try? fileHistory?.move(source, to: destination, on: server)
+        } catch {
+            editError = Self.message(for: error)
+            return false
+        }
+        dropFolderModels(under: source)
+        history.open(destination)
+        await parentModel.refresh()
         return true
     }
 
@@ -349,8 +403,8 @@ final class ServerBrowserModel {
         await model.refresh()
     }
 
-    private func takenNames() -> [String] {
-        let contents = current.contents
+    private func takenNames(in folder: ServerFolderModel) -> [String] {
+        let contents = folder.contents
         return contents.folders + contents.photos.flatMap { $0.files.map(\.name) } + contents.others.map(\.name)
     }
 

@@ -189,8 +189,11 @@ viện; chọn thêm album nằm trong sheet (FS-17.02 §1).
 
 Cùng màn §2, mở từ sheet upload (FS-15.02 §2a) và từ form connection (FS-15.04 §3, §5):
 
-- Ảnh và file hiện **mờ**, có thumbnail, không mở, không chọn; folder mở được. Không có Select, không Rename/Delete.
-  ⋯ còn New Folder, Icons/List, Sort By, View Options.
+- Ảnh và file hiện **mờ**, có thumbnail, không mở, không chọn; folder mở được. Không có Select, không Delete.
+  **Rename** có cho folder (menu chạm giữ). ⋯ còn New Folder, **Rename Folder** (folder đang mở; không có ở gốc và ở
+  share SMB), Icons/List, Sort By, View Options. Đổi tên folder đang mở thì vẫn ở trong nó, dưới tên mới.
 - Thanh dưới: nút lớn **Choose “<tên folder>”** (gốc SFTP: "Choose Home"). Ở gốc SMB: mờ, kèm câu "Open one of the
   shared folders first."
-- ‹ ở đầu lịch sử quay về màn gọi mà không đổi gì.
+- Toolbar: ‹ trái **lên folder cha** (theo cây, không theo lịch sử như §2a; mờ ở gốc), không có ›. Phải: ⋯ rồi **✕**
+  quay về màn gọi mà không đổi gì (đổi 2026-10-12, người dùng: "back phải về folder trước, close riêng"). Menu tiêu đề
+  vẫn nhảy lên tổ tiên.

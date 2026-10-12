@@ -2,7 +2,8 @@ import SwiftUI
 
 /// Picks the folder of a folder, drive or server source to back up
 /// (FS-22.01 §2) — from the copies the FS-19 scan recorded, so it works
-/// while the drive is unplugged too.
+/// while the drive is unplugged too. ‹ is the folder above (each folder is
+/// pushed); ✕ goes back to the form without choosing.
 struct BackupSourceFolderScreen: View {
     let sourceId: String
     /// Relative to the source; "" = its top.
@@ -10,6 +11,7 @@ struct BackupSourceFolderScreen: View {
     let sourceName: String
     var choose: (String) -> Void
     var open: (String) -> Void
+    var close: () -> Void
 
     @Environment(AppDependencies.self) private var dependencies
 
@@ -45,5 +47,13 @@ struct BackupSourceFolderScreen: View {
         }
         .navigationTitle(folder.isEmpty ? sourceName : (folder as NSString).lastPathComponent)
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Button(action: close) {
+                    Image(systemName: "xmark")
+                }
+                .accessibilityLabel("Close")
+            }
+        }
     }
 }

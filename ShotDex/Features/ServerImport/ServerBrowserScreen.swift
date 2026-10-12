@@ -23,6 +23,8 @@ struct ServerBrowserScreen: View {
     @State private var viewerCommand: (command: PhotoCommand, photo: ServerPhoto)?
     @State private var isNamingFolder = false
     @State private var renaming: ServerBrowserItem?
+    /// Rename Folder in ⋯ while choosing: the folder on screen.
+    @State private var isRenamingCurrentFolder = false
     @State private var typedName = ""
     @State private var deleting: [ServerBrowserItem]?
 
@@ -103,6 +105,17 @@ struct ServerBrowserScreen: View {
                 } else {
                     Text("The extension stays as it is.", comment: "Server browser: Rename alert for a file")
                 }
+            }
+            .alert("Rename Folder", isPresented: $isRenamingCurrentFolder) {
+                TextField("Name", text: $typedName)
+                    .textInputAutocapitalization(.never)
+                    .autocorrectionDisabled()
+                Button("Rename") {
+                    let name = typedName
+                    Task { await model.renameCurrentFolder(to: name) }
+                }
+                .disabled(RemoteFolderListing.validatedName(typedName) == nil)
+                Button("Cancel", role: .cancel) {}
             }
             .alert(deleteTitle, isPresented: Binding(get: { deleting != nil }, set: { if !$0 { deleting = nil } }), presenting: deleting) { items in
                 Button("Delete", role: .destructive) {
@@ -309,13 +322,15 @@ struct ServerBrowserScreen: View {
             case .file:
                 EmptyView()
             }
-            if model.canEdit {
+            if model.canRename(item) {
                 Button {
                     typedName = item.baseName
                     renaming = item
                 } label: {
                     Label("Rename", systemImage: "pencil")
                 }
+            }
+            if model.canEdit {
                 Button(role: .destructive) {
                     deleting = [item]
                 } label: {
@@ -399,6 +414,36 @@ struct ServerBrowserScreen: View {
                 Button("Done") { folder.isSelecting = false }
                     .fontWeight(.semibold)
             }
+        } else if model.mode == .chooseFolder {
+            // Choosing walks the tree: ‹ is the folder above, ✕ leaves
+            // without choosing (FS-17.01 §5).
+            ToolbarItem(placement: .topBarLeading) {
+                Button {
+                    model.goUp()
+                } label: {
+                    Image(systemName: "chevron.backward")
+                }
+                .accessibilityLabel(String(localized: "Enclosing Folder", comment: "Server folder picker: open the folder above"))
+                .disabled(model.parentPath == nil)
+            }
+            ToolbarItem(placement: .topBarTrailing) {
+                moreMenu
+            }
+            if actionsInToolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button(chooseTitle) { onChoose?(model.path) }
+                        .buttonStyle(.borderedProminent)
+                        .disabled(!model.canChoose)
+                }
+            }
+            ToolbarItem(placement: .topBarTrailing) {
+                Button {
+                    dismiss()
+                } label: {
+                    Image(systemName: "xmark")
+                }
+                .accessibilityLabel("Close")
+            }
         } else {
             ToolbarItemGroup(placement: .topBarLeading) {
                 Button {
@@ -417,13 +462,6 @@ struct ServerBrowserScreen: View {
             }
             ToolbarItem(placement: .topBarTrailing) {
                 moreMenu
-            }
-            if actionsInToolbar, model.mode == .chooseFolder {
-                ToolbarItem(placement: .confirmationAction) {
-                    Button(chooseTitle) { onChoose?(model.path) }
-                        .buttonStyle(.borderedProminent)
-                        .disabled(!model.canChoose)
-                }
             }
         }
     }
@@ -491,6 +529,15 @@ struct ServerBrowserScreen: View {
                     Label("New Folder", systemImage: "folder.badge.plus")
                 }
                 .disabled(!model.canCreateFolder || model.isWorking)
+                if model.canRenameCurrentFolder {
+                    Button {
+                        typedName = model.title
+                        isRenamingCurrentFolder = true
+                    } label: {
+                        Label("Rename Folder", systemImage: "pencil")
+                    }
+                    .disabled(model.isWorking)
+                }
                 if model.canAddShortcut(at: model.path) {
                     shortcutButton(for: model.path)
                 }
