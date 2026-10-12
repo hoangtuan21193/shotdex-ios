@@ -1001,6 +1001,22 @@
       "w": 402,
       "x": 27920,
       "y": 560
+    },
+    "PH_BackupMediaSplit.dc.html": {
+      "h": 874,
+      "radius": 44,
+      "title": "iPhone · Backup › Organize, menu Photos and Videos mở: Together · Apart at the Top · Apart in Each Year · Apart in Each Month (chọn; Preview: 2025 › Oct › Videos › 2025.10.12) · Apart in Each Day (user 12/10)",
+      "w": 402,
+      "x": 28382,
+      "y": 560
+    },
+    "PH_BackupCustomDate.dc.html": {
+      "h": 874,
+      "radius": 44,
+      "title": "iPhone · Backup › Day › Custom…: ví dụ sống; Order (Y M D · D M Y · M D Y); Parts (2025/25, 10/Oct/October, 12/Day 12); Separator gõ tự do + chip None - . _ Space ·; ký tự NAS cấm bị chặn (user 12/10)",
+      "w": 402,
+      "x": 28844,
+      "y": 560
     }
   },
   "createdOnFiles": {
@@ -1098,6 +1114,8 @@
     "PH_BackupRunning.dc.html",
     "PH_BackupOrganize.dc.html",
     "PH_BackupDayFormat.dc.html",
+    "PH_BackupMediaSplit.dc.html",
+    "PH_BackupCustomDate.dc.html",
     "PH_AlbumDetail.dc.html",
     "PH_SmartAlbum.dc.html",
     "PH_SmartAlbumEditor.dc.html",
