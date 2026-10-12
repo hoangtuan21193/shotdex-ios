@@ -65,7 +65,7 @@ accent: chip/segment/tab đang chọn dùng kiểu trung tính (nền card + bó
 `.bordered` `.tint(.secondary)` hoặc kính. Chữ/icon màu accent (link, `Choose…`, dấu ✓) vẫn được, vì không có nền. Không
 tính là nút: công tắc bật, badge chọn ảnh trong lưới, chart, vòng tiến độ.
 
-Không dùng `Color.accentColor`, không dùng `.orange`, không hardcode `#EB9526`. Trong `ButtonStyle` phải truyền accent vào qua init (xem `CompressionChoiceStyle`) vì `@Environment` không resolve trong `makeBody`.
+Không dùng `Color.accentColor`, không dùng `.orange`, không hardcode `#EB9526`. Trong `ButtonStyle` cần accent thì truyền vào qua init, vì `@Environment` không resolve trong `makeBody`.
 
 ### 3.2 Bảng màu tầng A/B/C
 
