@@ -203,6 +203,41 @@
       "x": 6006,
       "y": 1609
     },
+    "DC_Backup.dc.html": {
+      "h": 678,
+      "title": "Duo màn ngoài · Backup 1/5 — 4 thẻ job trong 382pt, rail 84 (FS-22)",
+      "w": 466,
+      "x": 27300,
+      "y": 1609
+    },
+    "DC_BackupCustomDate.dc.html": {
+      "h": 678,
+      "title": "Duo màn ngoài · Backup 4/5 — Day Folder Name",
+      "w": 466,
+      "x": 28938,
+      "y": 1609
+    },
+    "DC_BackupNew.dc.html": {
+      "h": 678,
+      "title": "Duo màn ngoài · Backup 2/5 — sheet New Backup 382pt, cuộn",
+      "w": 466,
+      "x": 27846,
+      "y": 1609
+    },
+    "DC_BackupOrganize.dc.html": {
+      "h": 678,
+      "title": "Duo màn ngoài · Backup 3/5 — Organize: Preview rồi Folders",
+      "w": 466,
+      "x": 28392,
+      "y": 1609
+    },
+    "DC_BackupRunning.dc.html": {
+      "h": 678,
+      "title": "Duo màn ngoài · Backup 5/5 — đang chạy 34%, Pause + Watching; tweak ios18",
+      "w": 466,
+      "x": 29484,
+      "y": 1609
+    },
     "DC_CameraDatabase.dc.html": {
       "h": 678,
       "title": "Duo màn ngoài · Unknown Cameras: danh sách máy chưa biết sensor",
@@ -873,6 +908,41 @@
       "title": "Duo mở · Album: lưới 7 cột trong 867pt, Filter + Select, rail tab",
       "w": 951,
       "x": 12372,
+      "y": 560
+    },
+    "DI_Backup.dc.html": {
+      "h": 669,
+      "title": "Duo mở · Backup 1/5 — job hai cột: 3 New · Uploading, Paused, Watching · Up to Date, Waiting for Wi‑Fi (FS-22)",
+      "w": 951,
+      "x": 54643,
+      "y": 560
+    },
+    "DI_BackupCustomDate.dc.html": {
+      "h": 669,
+      "title": "Duo mở · Backup 4/5 — Day Folder Name: Preview | Order, Year, Month, Day, Separator",
+      "w": 951,
+      "x": 57736,
+      "y": 560
+    },
+    "DI_BackupNew.dc.html": {
+      "h": 669,
+      "title": "Duo mở · Backup 2/5 — New Backup: Source/Destination/Organize | What to Copy/When, không cuộn",
+      "w": 951,
+      "x": 55674,
+      "y": 560
+    },
+    "DI_BackupOrganize.dc.html": {
+      "h": 669,
+      "title": "Duo mở · Backup 3/5 — Organize: Preview cây | Folders, Photos and Videos, File Names",
+      "w": 951,
+      "x": 56705,
+      "y": 560
+    },
+    "DI_BackupRunning.dc.html": {
+      "h": 669,
+      "title": "Duo mở · Backup 5/5 — đang chạy 34%: Pause + dòng Watching | tổng, file lỗi; tweak ios18",
+      "w": 951,
+      "x": 58767,
       "y": 560
     },
     "DI_CameraDatabase.dc.html": {
@@ -1766,7 +1836,17 @@
     "DC_MoreMenus.dc.html",
     "DC_MoreMenus2.dc.html",
     "TX_DC_TextPanel.dc.html",
-    "TX_DI_TextPanel.dc.html"
+    "TX_DI_TextPanel.dc.html",
+    "DI_Backup.dc.html",
+    "DC_Backup.dc.html",
+    "DI_BackupNew.dc.html",
+    "DC_BackupNew.dc.html",
+    "DI_BackupOrganize.dc.html",
+    "DC_BackupOrganize.dc.html",
+    "DI_BackupCustomDate.dc.html",
+    "DC_BackupCustomDate.dc.html",
+    "DI_BackupRunning.dc.html",
+    "DC_BackupRunning.dc.html"
   ],
   "pages": [],
   "title": "ShotDex · iPhone Duo"
