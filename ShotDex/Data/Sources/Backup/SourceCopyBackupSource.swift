@@ -9,44 +9,65 @@ struct SourceCopyBackupSource: BackupSourceReading {
     let roots: FolderSourceRoots
 
     func items(for job: BackupJob, context: BackupSourceContext) async throws -> [BackupSourceItem] {
-        let source = try await database.reader.read { db in
-            try Row.fetchOne(db, sql: "SELECT kind, status FROM sources WHERE id = ?", arguments: [job.sourceId])
+        // Values, not `Row`s, leave the read: a GRDB row is not Sendable.
+        let kind = try await database.reader.read { db -> String? in
+            try String.fetchOne(db, sql: "SELECT kind FROM sources WHERE id = ?", arguments: [job.sourceId])
         }
-        guard let source else { throw BackupSourceError.offline }
-        let kind: String = source["kind"]
+        guard let kind else { throw BackupSourceError.offline }
         if kind != "server", roots.root(job.sourceId) == nil { throw BackupSourceError.offline }
 
-        let rows = try await database.reader.read { db in
+        let rows = try await database.reader.read { db -> [CopyRow] in
             try Row.fetchAll(db, sql: """
                 SELECT c.id, c.relativePath, c.pairedPath, c.size, c.modifiedAt, m.creationDate, m.mediaType
                 FROM photo_copies c LEFT JOIN photo_metadata m ON m.assetId = c.photoId
                 WHERE c.sourceId = ? AND c.missingSince IS NULL AND c.isCloudPlaceholder = 0
                   AND c.relativePath IS NOT NULL
                 ORDER BY m.creationDate, c.relativePath
-                """, arguments: [job.sourceId])
+                """, arguments: [job.sourceId]).map(CopyRow.init)
         }
         return rows.compactMap { row -> BackupSourceItem? in
-            let path: String = row["relativePath"]
-            let isVideo = (row["mediaType"] as Int?) == 2
+            let path = row.relativePath
+            let isVideo = row.mediaType == 2
             switch job.settings.content {
             case .photosOnly where isVideo, .videosOnly where !isVideo: return nil
             default: break
             }
-            let size: Int64 = row["size"] ?? 0
-            let modified: Int = row["modifiedAt"] ?? 0
+            let size = row.size ?? 0
+            let modified = row.modifiedAt ?? 0
             var files = [Self.file(path: path, size: size, modified: modified)]
             // The JPEG twin of a RAW pair rides with its RAW (FS-19.01 §3).
-            if let twin: String = row["pairedPath"] {
+            if let twin = row.pairedPath {
                 files.append(Self.file(path: twin, size: 0, modified: modified))
             }
-            let created: Int? = row["creationDate"]
+            let created = row.creationDate
             let date = Date(timeIntervalSince1970: TimeInterval(created ?? modified))
             let folder = (path as NSString).deletingLastPathComponent
             return BackupSourceItem(
-                itemKey: row["id"], date: date, isVideo: isVideo,
+                itemKey: row.id, date: date, isVideo: isVideo,
                 album: folder.isEmpty ? nil : (folder as NSString).lastPathComponent,
                 files: files
             )
+        }
+    }
+
+    /// One recorded copy, read out of its `Row` inside the database read.
+    private struct CopyRow: Sendable {
+        let id: String
+        let relativePath: String
+        let pairedPath: String?
+        let size: Int64?
+        let modifiedAt: Int?
+        let creationDate: Int?
+        let mediaType: Int?
+
+        init(_ row: Row) {
+            id = row["id"]
+            relativePath = row["relativePath"]
+            pairedPath = row["pairedPath"]
+            size = row["size"]
+            modifiedAt = row["modifiedAt"]
+            creationDate = row["creationDate"]
+            mediaType = row["mediaType"]
         }
     }
 
@@ -75,12 +96,13 @@ struct SourceCopyBackupExporter: AssetFileExporting {
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         let local = directory.appendingPathComponent("\(UUID().uuidString)-\(file.filename)")
 
-        let source = try await database.reader.read { db in
+        let source = try await database.reader.read { db -> (kind: String, connectionId: String?)? in
             try Row.fetchOne(db, sql: "SELECT kind, connectionId FROM sources WHERE id = ?", arguments: [sourceId])
+                .map { (kind: $0["kind"], connectionId: $0["connectionId"]) }
         }
         guard let source else { throw BackupSourceError.offline }
-        if (source["kind"] as String) == "server" {
-            guard let connectionId: String = source["connectionId"],
+        if source.kind == "server" {
+            guard let connectionId = source.connectionId,
                   let server = try servers.fetch(id: connectionId) else { throw BackupSourceError.offline }
             let client = RemoteFileClientFactory.make(for: server, password: servers.password(for: connectionId) ?? "")
             try await client.connect()
