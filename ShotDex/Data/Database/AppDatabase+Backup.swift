@@ -57,5 +57,12 @@ extension AppDatabase {
             }
             try db.create(index: "backup_ledger_job_outcome", on: "backup_ledger", columns: ["jobId", "outcome"])
         }
+
+        // FS-22.01 §2: an FS-19 source backs up one folder inside it.
+        migrator.registerMigration("v34-backupSourceFolder") { db in
+            try db.alter(table: "backup_jobs") { t in
+                t.add(column: "sourceFolder", .text).notNull().defaults(to: "")
+            }
+        }
     }
 }

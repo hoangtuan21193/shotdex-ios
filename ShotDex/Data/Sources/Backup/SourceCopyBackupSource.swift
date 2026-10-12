@@ -22,8 +22,9 @@ struct SourceCopyBackupSource: BackupSourceReading {
                 FROM photo_copies c LEFT JOIN photo_metadata m ON m.assetId = c.photoId
                 WHERE c.sourceId = ? AND c.missingSince IS NULL AND c.isCloudPlaceholder = 0
                   AND c.relativePath IS NOT NULL
+                  AND (? = '' OR c.relativePath LIKE ? ESCAPE '\\')
                 ORDER BY m.creationDate, c.relativePath
-                """, arguments: [job.sourceId]).map(CopyRow.init)
+                """, arguments: [job.sourceId, job.sourceFolder, Self.likePrefix(job.sourceFolder)]).map(CopyRow.init)
         }
         return rows.compactMap { row -> BackupSourceItem? in
             let path = row.relativePath
@@ -69,6 +70,32 @@ struct SourceCopyBackupSource: BackupSourceReading {
             creationDate = row["creationDate"]
             mediaType = row["mediaType"]
         }
+    }
+
+    /// `Trips/2026%` with LIKE's own characters escaped.
+    static func likePrefix(_ folder: String) -> String {
+        let escaped = folder.replacingOccurrences(of: "\\", with: "\\\\")
+            .replacingOccurrences(of: "%", with: "\\%").replacingOccurrences(of: "_", with: "\\_")
+        return escaped + "/%"
+    }
+
+    /// Folders directly inside `folder` of the source, from its recorded
+    /// copies — the source-folder picker (FS-22.01 §2).
+    static func subfolders(of folder: String, sourceId: String, database: AppDatabase) -> [String] {
+        let paths = (try? database.reader.read { db in
+            try String.fetchAll(db, sql: """
+                SELECT relativePath FROM photo_copies
+                WHERE sourceId = ? AND missingSince IS NULL AND relativePath IS NOT NULL
+                  AND (? = '' OR relativePath LIKE ? ESCAPE '\\')
+                """, arguments: [sourceId, folder, likePrefix(folder)])
+        }) ?? []
+        let prefix = folder.isEmpty ? "" : folder + "/"
+        var names = Set<String>()
+        for path in paths {
+            let rest = path.dropFirst(prefix.count)
+            if let slash = rest.firstIndex(of: "/") { names.insert(String(rest[..<slash])) }
+        }
+        return names.sorted { $0.localizedStandardCompare($1) == .orderedAscending }
     }
 
     /// The key carries the path so the exporter can find the file again.

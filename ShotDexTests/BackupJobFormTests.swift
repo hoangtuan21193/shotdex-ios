@@ -19,15 +19,16 @@ import Testing
         let (model, _, nas) = try makeModel()
         #expect(model.sourceId == PhotoLibrarySource.id)
         #expect(model.connectionId == nas.id)
-        #expect(model.folder.hasPrefix("Backup/"))
+        // No default folder: the user browses the server and chooses one.
+        #expect(model.folder == nil)
+        #expect(!model.canStart)
         #expect(model.settings.onlyOnWiFi)
         #expect(!model.settings.includesEditedVersions)
-        #expect(model.canStart)
 
-        model.folder = ""
-        #expect(!model.canStart)
-        model.folder = "Backup/iPhone"
-        model.connectionId = nil
+        model.folder = "Photos/Backup"
+        #expect(model.canStart)
+        model.choose(connection: "other")
+        #expect(model.folder == nil)
         #expect(!model.canStart)
     }
 
@@ -43,5 +44,21 @@ import Testing
         #expect(again.save() == nil)
         #expect(again.duplicateError)
         #expect(try store.jobs().count == 1)
+    }
+
+    /// A folder or drive source asks which folder inside it; Photos does not.
+    @Test func folderSourceNeedsItsFolder() throws {
+        let (model, store, nas) = try makeModel()
+        model.folder = "Archive"
+        model.choose(source: "folder-1")
+        #expect(!model.canStart)
+        model.sourceFolder = "Trips/2026"
+        #expect(model.canStart)
+        let job = try #require(model.save())
+        #expect(job.sourceFolder == "Trips/2026")
+        #expect(try store.job(id: job.id)?.sourceFolder == "Trips/2026")
+        model.choose(source: PhotoLibrarySource.id)
+        #expect(model.sourceFolder == nil)
+        _ = nas
     }
 }

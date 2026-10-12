@@ -12,6 +12,9 @@ struct BackupJob: Codable, Hashable, Sendable, Identifiable {
     var connectionId: String
     /// Folder on the connection, relative to its root, `/`-separated.
     var folder: String
+    /// For an FS-19 source, the folder inside it that is backed up, relative
+    /// to the source; empty = the whole source. Unused for Photos.
+    var sourceFolder: String = ""
     var settings: BackupSettings
     /// Position in the job list; the order jobs run in (FS-22.02 §2).
     var sortOrder: Int
@@ -22,6 +25,7 @@ struct BackupJob: Codable, Hashable, Sendable, Identifiable {
         sourceId: String,
         connectionId: String,
         folder: String,
+        sourceFolder: String = "",
         settings: BackupSettings = BackupSettings(),
         sortOrder: Int = 0,
         createdAt: Int = Int(Date().timeIntervalSince1970)
@@ -30,6 +34,7 @@ struct BackupJob: Codable, Hashable, Sendable, Identifiable {
         self.sourceId = sourceId
         self.connectionId = connectionId
         self.folder = folder
+        self.sourceFolder = sourceFolder
         self.settings = settings
         self.sortOrder = sortOrder
         self.createdAt = createdAt
@@ -46,6 +51,7 @@ extension BackupJob: FetchableRecord, PersistableRecord {
         sourceId = row["sourceId"]
         connectionId = row["connectionId"]
         folder = row["folder"]
+        sourceFolder = row["sourceFolder"] ?? ""
         let json: Data? = (row["settings"] as String?).map { Data($0.utf8) } ?? row["settings"]
         settings = json.flatMap { try? JSONDecoder().decode(BackupSettings.self, from: $0) } ?? BackupSettings()
         sortOrder = row["sortOrder"]

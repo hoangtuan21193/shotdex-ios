@@ -15,6 +15,7 @@ struct BackupFormSheet: View {
         case customMonth
         case customDay
         case serverFolder(FolderPickerRoute)
+        case sourceFolder(String)
     }
 
     var body: some View {
@@ -61,6 +62,13 @@ struct BackupFormSheet: View {
                     BackupCustomDateScreen(organize: $model.settings.organize, part: .month, previewRoot: previewRoot)
                 case .customDay:
                     BackupCustomDateScreen(organize: $model.settings.organize, part: .day, previewRoot: previewRoot)
+                case .sourceFolder(let path):
+                    BackupSourceFolderScreen(sourceId: model.sourceId ?? "", folder: path, sourceName: model.source?.name ?? "") { chosen in
+                        model.sourceFolder = chosen
+                        self.path = []
+                    } open: { child in
+                        self.path.append(.sourceFolder(child))
+                    }
                 case .serverFolder(let route):
                     ServerBrowserScreen(model: route.model) { chosen in
                         path = []
@@ -73,7 +81,7 @@ struct BackupFormSheet: View {
     }
 
     private var previewRoot: String {
-        String(localized: "\(BackupDevice.kindName)  ·  the backup folder on \(model.connection?.name ?? "")", comment: "Organize preview: the root line of the folder tree")
+        String(localized: "\(model.folder.map { $0.isEmpty ? "/" : $0 } ?? String(localized: "Backup folder", comment: "Organize preview: root when no folder is chosen yet"))  ·  on \(model.connection?.name ?? "")", comment: "Organize preview: the root line of the folder tree")
     }
 
     // MARK: Sections
@@ -82,7 +90,7 @@ struct BackupFormSheet: View {
         Section(String(localized: "Source", comment: "Backup form section")) {
             ForEach(model.sources) { option in
                 Button {
-                    model.sourceId = option.id
+                    model.choose(source: option.id)
                 } label: {
                     HStack(spacing: AppTheme.Spacing.md) {
                         Label(option.name, systemImage: option.systemImage)
@@ -102,6 +110,24 @@ struct BackupFormSheet: View {
                 .disabled(model.isEditing && model.sourceId != option.id)
                 .accessibilityAddTraits(model.sourceId == option.id ? .isSelected : [])
             }
+            if !model.isPhotosSource, model.sourceId != nil {
+                NavigationLink(value: Route.sourceFolder("")) {
+                    LabeledContent(String(localized: "Folder", comment: "Backup form row: which folder of the source is backed up")) {
+                        chooseValue(model.sourceFolder.map { $0.isEmpty ? String(localized: "Whole Source", comment: "Backup form: the entire folder or drive source") : $0 })
+                    }
+                }
+            }
+        }
+    }
+
+    /// The chosen value, or a tinted "Choose…" while nothing is chosen.
+    @ViewBuilder
+    private func chooseValue(_ value: String?) -> some View {
+        if let value {
+            Text(value).lineLimit(1).truncationMode(.head)
+        } else {
+            // The rows tint themselves .primary; the accent is set outright.
+            Text(String(localized: "Choose…", comment: "Backup form: nothing chosen yet")).foregroundStyle(Color.accentColor)
         }
     }
 
@@ -133,9 +159,7 @@ struct BackupFormSheet: View {
                 } label: {
                     LabeledContent(String(localized: "Folder", comment: "Backup form row: folder on the server")) {
                         HStack(spacing: AppTheme.Spacing.xs) {
-                            Text(model.folder.isEmpty ? "/" : model.folder)
-                                .lineLimit(1)
-                                .truncationMode(.head)
+                            chooseValue(model.folder.map { $0.isEmpty ? "/" : $0 })
                             Image(systemName: "chevron.right")
                                 .font(.footnote.weight(.semibold))
                                 .foregroundStyle(.tertiary)
@@ -161,7 +185,7 @@ struct BackupFormSheet: View {
         } header: {
             Text(String(localized: "Folders on \(model.connection?.name ?? "")", comment: "Backup form section header"))
         } footer: {
-            Text(String(localized: "\(BackupOrganizeText.sampleTree(model.settings.organize)). Tap Organize to change the folders, the names and where videos go.", comment: "Backup form footer: an example path"))
+            Text(String(localized: "\(BackupOrganizeText.sampleTree(model.settings.organize)). Tap Organize to change the folders, the names and where videos and RAW files go.", comment: "Backup form footer: an example path"))
         }
     }
 
@@ -191,9 +215,13 @@ struct BackupFormSheet: View {
     }
 
     private var whenSection: some View {
-        Section(String(localized: "When", comment: "Backup form section")) {
+        Section {
             Toggle(String(localized: "Only on Wi‑Fi", comment: "Backup form switch"), isOn: $model.settings.onlyOnWiFi)
             Toggle(String(localized: "Only While Charging", comment: "Backup form switch"), isOn: $model.settings.onlyWhileCharging)
+        } header: {
+            Text(String(localized: "Automatic Backup", comment: "Backup form section: the job keeps running on its own"))
+        } footer: {
+            Text(String(localized: "Not a one-time copy: after the first backup, every new photo and video is copied to the server by itself. You don't need to start it again.", comment: "Backup form footer: explains continuous backup"))
         }
     }
 
@@ -203,7 +231,7 @@ struct BackupFormSheet: View {
             for: server, password: dependencies.fileServers.password(for: server.id) ?? ""
         ))
         let dependencies = dependencies
-        let picker = ServerBrowserModel(session: session, start: model.folder.isEmpty ? server.folder : model.folder, mode: .chooseFolder) { folder in
+        let picker = ServerBrowserModel(session: session, start: model.folder ?? server.folder, mode: .chooseFolder) { folder in
             ServerFolderModel(
                 session: session, folder: folder, cache: dependencies.serverThumbnails,
                 downloads: dependencies.serverDownloads,
@@ -238,10 +266,10 @@ enum BackupOrganizeText {
         return organize.levels == .noFolders ? levels(organize.levels) : "\(levels(organize.levels)) · \(videos)"
     }
 
-    /// `Videos › 2025 › Oct › 2025.10.12 › IMG_8812.MOV`.
+    /// `2025 › Oct › 2025.10.12 › IMG_8812.HEIC` — where a photo lands.
     static func sampleTree(_ organize: BackupOrganize) -> String {
         let planner = BackupPathPlanner(organize: organize, names: names)
-        let input = BackupPlacementInput(date: sampleDate, isVideo: true, originalFilename: sampleVideo, album: String(localized: "Trip", comment: "Organize preview: sample album name"))
+        let input = BackupPlacementInput(date: sampleDate, isVideo: false, originalFilename: "IMG_8812.HEIC", album: String(localized: "Trip", comment: "Organize preview: sample album name"))
         return (planner.folders(for: input) + [planner.fileName(for: input)]).joined(separator: " › ")
     }
 

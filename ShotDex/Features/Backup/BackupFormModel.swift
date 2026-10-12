@@ -32,7 +32,12 @@ final class BackupFormModel {
 
     var sourceId: String?
     var connectionId: String?
-    var folder: String = ""
+    /// Folder on the connection; nil until the user has browsed and chosen
+    /// one — there is no default (FS-22.01 §2).
+    var folder: String?
+    /// Folder inside an FS-19 source; nil until chosen, "" = the whole
+    /// source. Not asked for the Photos library.
+    var sourceFolder: String?
     var settings = BackupSettings()
     /// "This backup already exists." after Start, when it does.
     var duplicateError = false
@@ -51,11 +56,11 @@ final class BackupFormModel {
             sourceId = editing.sourceId
             connectionId = editing.connectionId
             folder = editing.folder
+            sourceFolder = editing.sourceFolder
             settings = editing.settings
         } else {
             sourceId = PhotoLibrarySource.id
             connectionId = (try? servers.mostRecentlyUsed())?.id ?? connections.first?.id
-            folder = defaultFolder
         }
     }
 
@@ -81,18 +86,25 @@ final class BackupFormModel {
     var connection: FileServer? { connections.first { $0.id == connectionId } }
     var source: SourceOption? { sources.first { $0.id == sourceId } }
 
-    /// Start stays off until source, connection and folder are set.
-    var canStart: Bool { sourceId != nil && connection != nil && !folder.trimmingCharacters(in: .whitespaces).isEmpty }
+    var isPhotosSource: Bool { sourceId == PhotoLibrarySource.id }
 
-    /// `Backup/iPhone` inside the connection's Folder.
-    var defaultFolder: String {
-        ServerUploadPath.join(connection?.folder ?? "", "Backup/\(BackupDevice.kindName)")
+    /// Start stays off until the source (and, for a folder or server source,
+    /// the folder inside it), the connection and its folder are all chosen.
+    var canStart: Bool {
+        sourceId != nil && connection != nil && folder != nil && (isPhotosSource || sourceFolder != nil)
     }
 
+    func choose(source id: String) {
+        guard id != sourceId else { return }
+        sourceId = id
+        sourceFolder = nil
+    }
+
+    /// Another connection means another folder tree: choose again.
     func choose(connection id: String) {
-        let wasDefault = folder == defaultFolder
+        guard id != connectionId else { return }
         connectionId = id
-        if wasDefault || folder.isEmpty { folder = defaultFolder }
+        folder = nil
     }
 
     /// `23,904 items · 18,210 not backed up yet · about 412 GB`.
@@ -134,8 +146,9 @@ final class BackupFormModel {
 
     /// Saves the job; returns it, or nil when the same backup already exists.
     func save() -> BackupJob? {
-        guard let sourceId, let connectionId, canStart else { return nil }
-        let folder = folder.trimmingCharacters(in: CharacterSet(charactersIn: "/ "))
+        guard let sourceId, let connectionId, let chosen = folder, canStart else { return nil }
+        let folder = chosen.trimmingCharacters(in: CharacterSet(charactersIn: "/ "))
+        let sourceFolder = isPhotosSource ? "" : (sourceFolder ?? "")
         if let existing = try? store.existingJob(sourceId: sourceId, connectionId: connectionId, folder: folder),
            existing.id != editing?.id {
             duplicateError = true
@@ -143,11 +156,12 @@ final class BackupFormModel {
         }
         if var job = editing {
             job.folder = folder
+            job.sourceFolder = sourceFolder
             job.settings = settings
             try? store.update(job)
             return job
         }
-        let job = BackupJob(sourceId: sourceId, connectionId: connectionId, folder: folder, settings: settings)
+        let job = BackupJob(sourceId: sourceId, connectionId: connectionId, folder: folder, sourceFolder: sourceFolder, settings: settings)
         do {
             try store.add(job)
         } catch {

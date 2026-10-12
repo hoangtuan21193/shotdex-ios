@@ -24,17 +24,17 @@ hay đang chờ gì.
 
 | Nhóm | Hàng | Luật |
 |---|---|---|
-| Source | Photos Library · từng nguồn FS-19 | một nguồn một job; nguồn offline hiện `Offline`, vẫn chọn được |
-| Destination | Connection · Folder | connection FS-15; Folder mở màn duyệt FS-15.02 §2a; mặc định `Backup/<tên máy>` |
+| Source | Photos Library · từng nguồn FS-19 · **Folder** (chỉ nguồn FS-19) | một nguồn một job; nguồn offline hiện `Offline`, vẫn chọn được. Nguồn FS-19 phải chọn thư mục bên trong (Back Up the Whole Source hoặc một thư mục con), danh sách lấy từ bản sao FS-19 đã quét nên chọn được cả khi ổ rút |
+| Destination | Connection · Folder | connection FS-15; Folder mở màn duyệt FS-15.02 §2a. **Không có thư mục mặc định** (người dùng 12/10): hiện `Choose…` tới khi duyệt và chọn; đổi connection thì chọn lại |
 | Organize | một dòng tóm tắt + ví dụ đường dẫn | mở 3/5 |
 | What to Copy | Photos & Videos · Photos Only · Videos Only | mặc định Photos & Videos |
 | | Include Edited Versions | mặc định tắt (Q4); bật → thêm bản sửa cạnh bản gốc ([§5](#5-tên-file-và-trùng-tên)) |
-| When | Only on Wi‑Fi | mặc định **bật** (quyết định 2026-10-12) |
+| Automatic Backup | Only on Wi‑Fi | mặc định **bật** (quyết định 2026-10-12). Chân mục nói rõ không phải chép một lần: sau lượt đầu, ảnh/video mới tự lên server |
 | | Only While Charging | mặc định tắt |
 
 - Dòng tóm tắt dưới What to Copy: `<số mục> items · <chưa có trong sổ> not backed up yet · about <GB>` — đếm từ sổ của
   job, không đọc đích. Job mới: "not backed up yet" = tổng.
-- **Start** mờ khi thiếu nguồn, connection hay folder. Start → lưu job, về 1/5, job bắt đầu ngay ([02](02-running-and-watching.md)).
+- **Start** mờ khi thiếu nguồn, thư mục trong nguồn (nguồn FS-19), connection hay folder đích. Start → lưu job, về 1/5, job bắt đầu ngay ([02](02-running-and-watching.md)).
 - Một nguồn + một đích + một folder chỉ có một job; trùng → Start báo "This backup already exists." và trỏ tới job đó.
 - Edit đổi Organize, tên file hay folder đích: file đã chép **không** bị dời; file mới theo luật mới. Câu dưới nút Save
   nói điều đó. Đổi nguồn hay connection = job mới (hai hàng đó khoá khi Edit).

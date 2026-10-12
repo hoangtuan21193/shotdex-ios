@@ -151,6 +151,30 @@
    "seconds": 1
   },
   {
+   "action": "swipe",
+   "x": 0.5,
+   "y": 0.3,
+   "direction": "down",
+   "distance": 0.6
+  },
+  {
+   "action": "tap",
+   "label": "Folder, Choose…"
+  },
+  {
+   "action": "wait",
+   "seconds": 4
+  },
+  {
+   "action": "tap",
+   "label": "Choose “",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
    "action": "tap",
    "label": "Start Backup",
    "type": "button"

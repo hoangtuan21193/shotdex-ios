@@ -1,0 +1,24 @@
+{
+ "steps": [
+  {"action": "launch"},
+  {"action": "wait", "seconds": 6},
+  {"action": "tap", "label": "Collections", "type": "button"},
+  {"action": "wait", "seconds": 2},
+  {"action": "scrollTo", "label": "Backup"},
+  {"action": "tap", "label": "Backup"},
+  {"action": "wait", "seconds": 2},
+  {"action": "tap", "label": "New Backup", "type": "button"},
+  {"action": "wait", "seconds": 2},
+  {"action": "screenshot", "name": "97-form-choose"},
+  {"action": "dump", "name": "97-form-choose", "type": "button"},
+  {"action": "tap", "label": "Folder, Choose…"},
+  {"action": "wait", "seconds": 4},
+  {"action": "screenshot", "name": "98-browse"},
+  {"action": "dump", "name": "98-browse", "type": "button"},
+  {"action": "back"},
+  {"action": "wait", "seconds": 1},
+  {"action": "swipe", "x": 0.5, "y": 0.8, "direction": "up", "distance": 0.6},
+  {"action": "wait", "seconds": 1},
+  {"action": "screenshot", "name": "99-form-bottom"}
+ ]
+}

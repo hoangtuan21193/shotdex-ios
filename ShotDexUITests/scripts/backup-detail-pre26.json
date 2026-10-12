@@ -39,6 +39,23 @@
   },
   {
    "action": "tap",
+   "label": "Folder, Choose…"
+  },
+  {
+   "action": "wait",
+   "seconds": 4
+  },
+  {
+   "action": "tap",
+   "label": "Choose “",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "tap",
    "label": "Start Backup",
    "type": "button"
   },
