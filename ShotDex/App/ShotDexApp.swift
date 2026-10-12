@@ -22,6 +22,7 @@ struct ShotDexApp: App {
         dependencies.serverUploadIndex.loadIfNeeded()
         dependencies.unsupportedRAWIndex.loadIfNeeded()
         dependencies.fileServerCatalog.reload()
+        dependencies.backupCoordinator.startWatching(photoLibrary: dependencies.photoLibrary)
     }
 
     var body: some Scene {
@@ -49,6 +50,8 @@ struct ShotDexApp: App {
                         // Files added to a folder source while ShotDex was
                         // away: read now, no Re-index (FS-19.01 §5).
                         Task { await dependencies.sources.readAll() }
+                        // Backups catch up on what arrived while away (FS-22.02 §1).
+                        dependencies.backupCoordinator.appBecameActive()
                     }
                 }
                 // A tapped Spotlight result arrives as a user activity rather

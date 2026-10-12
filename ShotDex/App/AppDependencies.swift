@@ -140,6 +140,8 @@ final class AppDependencies {
     let serverUploads: ServerUploadStore
     /// Backup jobs and their ledger (FS-22).
     let backups: BackupStore
+    /// Keeps every backup job watching its source (FS-22.02).
+    let backupCoordinator: BackupCoordinator
     /// The set of uploaded asset ids the grid badge reads, kept in memory.
     let serverUploadIndex: ServerUploadIndex
     /// The photos whose RAW this iOS build can't read (FS-03.04b §3), kept
@@ -502,7 +504,11 @@ final class AppDependencies {
         self.fileServerCatalog = FileServerCatalog(store: fileServers)
         let serverUploads = ServerUploadStore(database: database)
         self.serverUploads = serverUploads
-        self.backups = BackupStore(database: database)
+        let backups = BackupStore(database: database)
+        self.backups = backups
+        self.backupCoordinator = BackupCoordinator(store: backups, environment: .live(
+            database: database, store: backups, servers: fileServers, roots: folderRoots
+        ))
         self.serverUploadIndex = ServerUploadIndex(store: serverUploads)
         self.serverDownloads = ServerDownloadStore(database: database)
         self.serverFileHistory = ServerFileHistory(database: database)

@@ -13,6 +13,10 @@ struct BackupEnvironment: Sendable {
     var photosChange: @Sendable (Data?) -> (changed: Bool, token: Data?)
     /// How long library changes are gathered before a run (FS-22.02 §1).
     var settle: Duration = .seconds(5)
+    /// Monitors of the backup's own whose changes wake waiting jobs; nil in
+    /// tests.
+    var network: NetworkMonitor?
+    var power: PowerMonitor?
 }
 
 /// Keeps every backup watching its source (FS-22.02): turns library changes,
@@ -21,7 +25,7 @@ struct BackupEnvironment: Sendable {
 @MainActor @Observable
 final class BackupCoordinator {
     private let store: BackupStore
-    private let environment: BackupEnvironment
+    let environment: BackupEnvironment
 
     private(set) var jobs: [BackupJob] = []
     private(set) var states: [String: BackupJobState] = [:]
