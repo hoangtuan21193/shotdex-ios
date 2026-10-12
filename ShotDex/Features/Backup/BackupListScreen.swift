@@ -49,6 +49,7 @@ struct BackupListScreen: View {
                 coordinator.jobsChanged(start: job.id)
                 selectedJobId = job.id
             }
+            .modifier(BackupSheetSizing())
         }
         .sheet(item: $editingServer) { server in
             NavigationStack { FileServerFormScreen(draft: FileServerDraft(server: server)) }
@@ -200,17 +201,30 @@ struct BackupJobCard: View {
     var perform: (BackupStatusText.Action) -> Void
 
     @Environment(AppDependencies.self) private var dependencies
+    @Environment(\.horizontalSizeClass) private var sizeClass
 
     var body: some View {
         let info = BackupJobInfo(job: job, dependencies: dependencies)
         let status = info.status
         VStack(alignment: .leading, spacing: AppTheme.Spacing.sm) {
             HStack(spacing: AppTheme.Spacing.sm) {
-                Image(systemName: info.sourceImage).foregroundStyle(.secondary)
-                Text(info.sourceName).lineLimit(1)
-                Image(systemName: "arrow.right").font(.caption.weight(.semibold)).foregroundStyle(.tertiary)
-                Image(systemName: "server.rack").foregroundStyle(.secondary)
-                Text(info.connectionName).lineLimit(1)
+                // One line where it fits; on the Duo cover the destination
+                // drops to its own line rather than cutting either name.
+                ViewThatFits(in: .horizontal) {
+                    HStack(spacing: AppTheme.Spacing.sm) {
+                        Label(info.sourceName, systemImage: info.sourceImage).fixedSize()
+                        Image(systemName: "arrow.right").font(.caption.weight(.semibold)).foregroundStyle(.tertiary)
+                        Label(info.connectionName, systemImage: "server.rack").fixedSize()
+                    }
+                    VStack(alignment: .leading, spacing: 2) {
+                        Label(info.sourceName, systemImage: info.sourceImage).lineLimit(1)
+                        HStack(spacing: AppTheme.Spacing.xs) {
+                            Image(systemName: "arrow.turn.down.right").font(.caption.weight(.semibold)).foregroundStyle(.tertiary)
+                            Label(info.connectionName, systemImage: "server.rack").lineLimit(1)
+                        }
+                    }
+                }
+                .labelStyle(BackupTitleLabelStyle())
                 Spacer(minLength: 0)
                 Image(systemName: "chevron.right").font(.footnote.weight(.semibold)).foregroundStyle(.tertiary)
             }
@@ -234,9 +248,16 @@ struct BackupJobCard: View {
                 }
                 Spacer(minLength: 0)
                 if let action = status.action {
-                    Button(action.title) { perform(action) }
-                        .buttonStyle(.bordered)
-                        .buttonBorderShape(.capsule)
+                    Button {
+                        perform(action)
+                    } label: {
+                        Text(action.title).frame(minHeight: AppTheme.Size.minTouch - 14)
+                    }
+                    .buttonStyle(.bordered)
+                    .buttonBorderShape(.capsule)
+                    // 44pt to the finger everywhere; drawn that big where there is room.
+                    .controlSize(sizeClass == .regular ? .large : .regular)
+                    .contentShape(Capsule().inset(by: -6))
                 }
             }
         }
@@ -314,6 +335,28 @@ extension BackupStatusText.Action {
         case .retry: String(localized: "Retry", comment: "Backup: try again")
         case .openSettings: String(localized: "Open Settings", comment: "Backup: open the Settings app")
         case .editServer: String(localized: "Edit Server", comment: "Backup: fix the connection")
+        }
+    }
+}
+
+/// Icon in secondary, name in primary — the card title's two names.
+private struct BackupTitleLabelStyle: LabelStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        HStack(spacing: AppTheme.Spacing.sm) {
+            configuration.icon.foregroundStyle(.secondary)
+            configuration.title
+        }
+    }
+}
+
+/// On iPad the form gets a page-sized sheet so Organize shows without
+/// scrolling; phones keep the full-height sheet.
+private struct BackupSheetSizing: ViewModifier {
+    func body(content: Content) -> some View {
+        if #available(iOS 18.0, *) {
+            content.presentationSizing(.page)
+        } else {
+            content.presentationDetents([.large])
         }
     }
 }

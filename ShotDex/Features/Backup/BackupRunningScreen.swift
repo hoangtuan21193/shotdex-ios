@@ -98,20 +98,34 @@ struct BackupRunningScreen: View {
                     .buttonStyle(.bordered)
                 }
             }
-            HStack(alignment: .firstTextBaseline, spacing: AppTheme.Spacing.sm) {
-                Text(state.status == .uploading && progress?.isFirstRun == false
-                     ? String(localized: "\(progress?.total ?? 0) new", comment: "Backup detail: new files being copied")
-                     : "\(percent)%")
-                    .font(.largeTitle.weight(.bold))
-                    .monospacedDigit()
-                Text(status.title == String(localized: "Watching · Up to Date", comment: "Backup card: the job is current and watches for new photos")
-                     ? String(localized: "Up to date in \(job.folder)", comment: "Backup detail: nothing left to copy")
-                     : String(localized: "Backing up to \(job.folder)", comment: "Backup detail: where files go"))
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
+            if state.status == .uploading || state.status == .watching {
+                HStack(alignment: .firstTextBaseline, spacing: AppTheme.Spacing.sm) {
+                    Text(state.status == .uploading && progress?.isFirstRun == false
+                         ? String(localized: "\(progress?.total ?? 0) new", comment: "Backup detail: new files being copied")
+                         : "\(percent)%")
+                        .font(.largeTitle.weight(.bold))
+                        .monospacedDigit()
+                    Text(state.status == .watching
+                         ? String(localized: "Up to date in \(job.folder)", comment: "Backup detail: nothing left to copy")
+                         : String(localized: "Backing up to \(job.folder)", comment: "Backup detail: where files go"))
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                }
+            } else {
+                // Waiting, paused or stopped: the same words as the card.
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(status.title)
+                        .font(.title2.weight(.bold))
+                        .foregroundStyle(status.tone.color == .secondary ? Color.primary : status.tone.color)
+                    Text(status.detail)
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                }
             }
-            ProgressView(value: status.fraction ?? (state.status == .watching ? 1 : 0))
+            if state.status == .uploading || state.status == .watching || status.fraction != nil {
+                ProgressView(value: status.fraction ?? (state.status == .watching ? 1 : 0))
+            }
             if let action = status.action {
                 Button {
                     switch action {
@@ -129,7 +143,7 @@ struct BackupRunningScreen: View {
                 .buttonStyle(.bordered)
                 .buttonBorderShape(.capsule)
             }
-            if state.status != .pausedByUser {
+            if state.status == .watching || state.status == .uploading {
                 Label {
                     Text(String(localized: "Watching · new photos back up as they appear", comment: "Backup detail: the job keeps watching its source"))
                         .foregroundStyle(.secondary)
