@@ -60,8 +60,8 @@ Board: `PH_Statistics` · `IP_Statistics` · `DI_Statistics` · `DC_Statistics` 
   **Conditions** nhúng **bộ dựng điều kiện dùng chung** · mục **Date Range** · **xem trước sống** ở cuối,
   vẽ bằng dữ liệu thật của bản nháp. Xem trước **không** dời lên đầu lượt này.
 - **Sheet Date Range xếp tháng theo bề rộng** (2026-10-12): tháng hẹp nhất 210pt (7 ngày × 30pt), cách nhau 24,
-  lề 16 — iPhone và cover Duo một cột (hàng thứ chung ở trên, ngày cao 36); iPad form sheet 2 tháng một hàng;
-  Duo inner 4 tháng một hàng. Từ 2 cột trở lên mỗi tháng có hàng thứ riêng, ngày cao 32 để hai hàng tháng vừa
+  lề 16 — iPhone và cover Duo một cột (hàng thứ chung ở trên, ngày cao 36); form sheet trên iPad và Duo inner
+  (~650pt, chồng lên New Chart) 2 tháng một hàng, thấy 4 tháng cùng lúc. Từ 2 cột trở lên mỗi tháng có hàng thứ riêng, ngày cao 32 để hai hàng tháng vừa
   669pt. Tháng hiện tại luôn đóng hàng cuối (ô trống chèn trước tháng cũ nhất). `DateRangeMonthLayout`.
   Board: `PH_DateRange` · `IP_DateRange` · `DI_DateRange` · `DC_DateRange`.
 - **Tên để trống vẫn lưu được** (C2): Save bật khi cấu hình hợp lệ (loại cần trục X thì đã chọn trục X, phép
