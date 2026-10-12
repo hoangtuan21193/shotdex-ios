@@ -32,6 +32,21 @@ final class BackupCoordinator {
     /// Live numbers of the job running now, and the last numbers of others.
     private(set) var progress: [String: BackupProgress] = [:]
     private(set) var runningJobId: String?
+    /// Items backed up per job — the "4,118 items" of the status line.
+    private(set) var backedUpItems: [String: Int] = [:]
+    /// Bytes per second of the run going now, for "about N min left".
+    private(set) var bytesPerSecond: [String: Double] = [:]
+    @ObservationIgnored private var runStartedAt: Date?
+    /// A run the user started — iOS 26 may let it go on after they leave
+    /// (FS-22.02 §3). Set by the background service.
+    @ObservationIgnored var onUserStart: ((String) -> Void)?
+    /// Keep Screen On before iOS 26 (FS-22.02 §3); nil in tests.
+    @ObservationIgnored var screen: (any ScreenHolding)?
+    /// True before iOS 26, where Keep Screen On applies; tests set it.
+    @ObservationIgnored var usesKeepScreenOn: Bool = {
+        if #available(iOS 26.0, *) { false } else { true }
+    }()
+    @ObservationIgnored private var isHoldingScreen = false
 
     @ObservationIgnored private var queue: [(id: String, retriesExhausted: Bool)] = []
     @ObservationIgnored private var loop: Task<Void, Never>?
@@ -50,6 +65,19 @@ final class BackupCoordinator {
         var states: [String: BackupJobState] = [:]
         for job in jobs { states[job.id] = (try? store.state(jobId: job.id)) ?? BackupJobState(jobId: job.id) }
         self.states = states
+        var counts: [String: Int] = [:]
+        for job in jobs { counts[job.id] = (try? store.handledItemCount(jobId: job.id)) ?? 0 }
+        backedUpItems = counts
+    }
+
+    /// The jobs list changed (added, edited, deleted): pick it up and let a
+    /// new job start at once.
+    func jobsChanged(start jobId: String? = nil) {
+        reload()
+        if let jobId {
+            enqueue([jobId])
+            onUserStart?(jobId)
+        }
     }
 
     // MARK: - Triggers
@@ -94,6 +122,7 @@ final class BackupCoordinator {
     func backUpNow(_ jobId: String) {
         clearPause(jobId)
         enqueue([jobId])
+        onUserStart?(jobId)
     }
 
     /// Retry: also tries files past the attempt limit, and a server that
@@ -101,6 +130,7 @@ final class BackupCoordinator {
     func retry(_ jobId: String) {
         clearPause(jobId)
         enqueue([jobId], retriesExhausted: true)
+        onUserStart?(jobId)
     }
 
     /// Pause: stops the file in flight and stops watching until Resume
@@ -117,6 +147,7 @@ final class BackupCoordinator {
     func resume(_ jobId: String) {
         clearPause(jobId)
         enqueue([jobId])
+        onUserStart?(jobId)
     }
 
     /// iOS is ending the background time: stop where we are; the job keeps
@@ -135,6 +166,18 @@ final class BackupCoordinator {
     var isIdle: Bool { loop == nil }
 
     // MARK: - Running
+
+    /// Keep Screen On switched while a run goes.
+    func keepScreenOnChanged(_ jobId: String, on: Bool) {
+        if let index = jobs.firstIndex(where: { $0.id == jobId }) { jobs[index].settings.keepsScreenOn = on }
+        if runningJobId == jobId { holdScreen(usesKeepScreenOn && on) }
+    }
+
+    private func holdScreen(_ hold: Bool) {
+        guard hold != isHoldingScreen else { return }
+        isHoldingScreen = hold
+        if hold { screen?.beginHold() } else { screen?.endHold() }
+    }
 
     private func clearPause(_ jobId: String) {
         guard let state = states[jobId], state.status == .pausedByUser || state.status == .pausedBySystem else { return }
@@ -174,19 +217,28 @@ final class BackupCoordinator {
             return
         }
         runningJobId = jobId
+        holdScreen(usesKeepScreenOn && job.settings.keepsScreenOn)
+        runStartedAt = Date()
+        bytesPerSecond[jobId] = nil
         stopReason = nil
         let task = Task { await runner.run() }
         current = task
         let result = await task.value
         current = nil
         runningJobId = nil
+        holdScreen(false)
         progress[jobId] = result.progress
         finish(jobId, result: result, token: token)
+        backedUpItems[jobId] = (try? store.handledItemCount(jobId: jobId)) ?? backedUpItems[jobId]
     }
 
     private func receive(_ live: BackupProgress, jobId: String) {
         guard runningJobId == jobId else { return }
         progress[jobId] = live
+        if let started = runStartedAt, live.bytesDone > 0 {
+            let elapsed = Date().timeIntervalSince(started)
+            if elapsed > 5 { bytesPerSecond[jobId] = Double(live.bytesDone) / elapsed }
+        }
         if live.total > live.done, states[jobId]?.status != .uploading {
             update(jobId) { $0.status = .uploading }
         }

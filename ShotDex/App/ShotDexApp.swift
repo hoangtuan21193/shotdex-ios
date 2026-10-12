@@ -15,6 +15,7 @@ struct ShotDexApp: App {
         _dependencies = State(initialValue: dependencies)
         // BGTaskScheduler requires registration before launch finishes.
         dependencies.backgroundIndex.register()
+        dependencies.backupBackground.register()
         // Same requirement: a notification tap that launched the app is
         // delivered to nobody unless the delegate is already in place.
         dependencies.onThisDayNotifications.registerDelegate()
@@ -37,6 +38,7 @@ struct ShotDexApp: App {
                 .onChange(of: scenePhase) { _, phase in
                     if phase == .background {
                         dependencies.backgroundIndex.scheduleContinuationIfNeeded()
+                        dependencies.backupBackground.appDidEnterBackground()
                     }
                     if phase == .active {
                         // Widgets ask for things while the app is away — an

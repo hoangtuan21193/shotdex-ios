@@ -24,9 +24,9 @@ Server giả: SMB (impacket) và WebDAV (wsgidav) ở 127.0.0.1 như FS-15. Ản
 | AC-14 | server giả tắt giữa file 5/10 | đang chạy | file 1–4 trong sổ, file 5 không; trạng thái `Can't Reach <tên>`; bật server + Retry → chép 5–10 | `BackupRunnerTests.unreachableThenRetry` |
 | AC-15 | 1 ảnh iCloud tải hỏng ở 3 lượt đầu | 4 lượt chạy | sổ `failed`, lỗi cuối có câu; 5/5 hiện `1 File Not Copied`; Retry chạy lại đúng file đó | `BackupRunnerTests.failedItemRetriedThreeTimesThenListed` |
 | AC-16 | đang chạy file 5/10 | bấm Pause | dừng ≤ 2 s, `.shotdex-part` file 5 bị xoá; thêm ảnh mới không làm job chạy; Resume → chép 5–10 | `BackupWatcherTests.pauseStopsWatchingUntilResume` |
-| AC-17 | iOS 26.5, Start với 40 file | rời app | có đúng 1 yêu cầu tác vụ xử lý tiếp tục; hệ thống dừng → `Paused` + "iOS stopped ShotDex at N of 40" | ⚠️ chưa có — `BackupBackgroundTests.continuedTaskOnUserStart` |
-| AC-18 | iOS 18.6, đang chạy, Keep Screen On bật | rời app / chạy xong / Pause | màn được tự khoá lại ở cả ba lối; lượt nền dài được xin khi rời app | ⚠️ chưa có — `BackupBackgroundTests.pre26KeepsScreenAndSchedules` |
-| AC-19 | 2 mã tác vụ nền mới | build | cả 2 có trong Info.plist; được đăng ký trước khi app khởi động xong | ⚠️ chưa có — `BackupBackgroundTests.identifiersRegistered` |
+| AC-17 | iOS 26.5, Start với 40 file | rời app | có đúng 1 yêu cầu tác vụ xử lý tiếp tục; hệ thống dừng → `Paused` + "iOS stopped ShotDex at N of 40" | `BackupBackgroundTests.continuedTaskOnUserStart` (phía app) + ⚠️ chưa có giao diện hệ thống |
+| AC-18 | iOS 18.6, đang chạy, Keep Screen On bật | rời app / chạy xong / Pause | màn được tự khoá lại ở cả ba lối; lượt nền dài được xin khi rời app | `BackupBackgroundTests.pre26KeepsScreenAndSchedules` |
+| AC-19 | 2 mã tác vụ nền mới | build | cả 2 có trong Info.plist; được đăng ký trước khi app khởi động xong | `BackupBackgroundTests.identifiersRegistered` |
 | AC-20 | sổ 4.118 dòng | Clear Local Metadata Index rồi index lại | sổ vẫn 4.118 dòng; lượt so kế 0 byte đẩy | `BackupStoreTests.ledgerSurvivesIndexClear` |
 | AC-21 | sổ 55.000 dòng, nguồn 55.000 mục + 3 mới | lượt so | trả đúng 3 mục, ≤ 3 s trên iPhone 17 sim | `BackupStoreTests.diffAt55kIsOneQuery` |
 | AC-22 | quyền `.limited`, 120 ảnh được cho | Start | chép 120 ảnh; dòng 2 có `Limited Access`; quyền bị từ chối → `No Photos Access` + Open Settings | `BackupSourceTests.limitedAccessCopiesVisibleOnly` (từ chối + chỉ chép mục nguồn liệt kê) + ⚠️ chưa có ảnh sim `.limited` |
@@ -35,6 +35,7 @@ Server giả: SMB (impacket) và WebDAV (wsgidav) ở 127.0.0.1 như FS-15. Ản
 | AC-25 | 1/5 có 4 job ở 4 trạng thái (Up to Date, Uploading, Waiting for Wi‑Fi, Paused) | chụp sáng + tối | khớp board `PH_Backup` (Tools/design-board compare ≤ 2pt); VoiceOver đọc tên + trạng thái + tiến độ mỗi thẻ | ⚠️ chưa có — `scripts/backup-states.json` + design-parity |
 | AC-27 | iOS 26.5, quyền đầy đủ, job Photos → WebDAV giả | thêm 2 ảnh khi app đã đóng, rồi mở app | phần mở rộng đã PUT 2 file `.shotdex-part`; lượt mở app kiểm SHA-256, đổi tên thật, sổ 2 dòng `uploaded`; 0 file đẩy lại | ⚠️ chưa có — `BackupUploadExtensionTests.partFilesVerifiedOnNextRun` + `scripts/backup-webdav-extension.json` |
 | AC-28 | job duy nhất Photos → WebDAV bị xoá, hoặc quyền xuống `.limited` | thao tác | phần mở rộng tải nền bị tắt | ⚠️ chưa có — `BackupUploadExtensionTests.disabledWithoutWebDAVJobOrFullAccess` |
+| AC-29 | 5 ảnh, thư mục tạm còn 1 file sót của lượt bị giết; lần hai máy trống chỉ hơn 2 GB 1 KB | chạy | trong lượt không lúc nào quá 1 file trong thư mục tạm, hết lượt thư mục rỗng (file sót bị xoá); lần hai `Waiting for Storage`, 0 byte đẩy | `BackupRunnerTests.originalsNeverPileUpOnDevice` + `BackupRunnerTests.waitsWhenTheNextFileWouldFillTheDevice` |
 | AC-26 | cùng nguồn + connection + folder đã có job | Start | báo "This backup already exists." và không tạo job thứ hai | ⚠️ chưa có — `BackupJobFormTests.duplicateJobRefused` |
 
 ## 2. Chưa chứng minh được

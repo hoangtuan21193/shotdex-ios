@@ -131,7 +131,7 @@ import Testing
     @Test func pauseStopsWatchingUntilResume() async throws {
         let f = try BackupFixture(photos: 10, bytes: 64)
         let photos = FakePhotos()
-        let slow = SlowExporter(base: FakeAssetExporter(contents: f.contents), delay: .milliseconds(200))
+        let slow = SlowExporter(base: FakeAssetExporter(contents: f.contents), delay: .milliseconds(500))
         let c = coordinator(f, photos: photos, exporter: slow)
         c.backUpNow(f.job.id)
         while (c.progress[f.job.id]?.done ?? 0) < 4 { try await Task.sleep(for: .milliseconds(10)) }
@@ -160,7 +160,7 @@ import Testing
     /// for "iOS stopped ShotDex at N of M".
     @Test func systemStopKeepsWatching() async throws {
         let f = try BackupFixture(photos: 6, bytes: 64)
-        let slow = SlowExporter(base: FakeAssetExporter(contents: f.contents), delay: .milliseconds(100))
+        let slow = SlowExporter(base: FakeAssetExporter(contents: f.contents), delay: .milliseconds(500))
         let c = coordinator(f, exporter: slow)
         c.backUpNow(f.job.id)
         while (c.progress[f.job.id]?.done ?? 0) < 2 { try await Task.sleep(for: .milliseconds(10)) }

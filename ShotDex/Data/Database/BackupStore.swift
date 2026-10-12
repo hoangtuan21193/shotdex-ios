@@ -82,6 +82,26 @@ struct BackupStore: Sendable {
         }
     }
 
+    /// How many items have at least one file uploaded or found.
+    func handledItemCount(jobId: String) throws -> Int {
+        try database.reader.read { db in
+            try Int.fetchOne(db, sql: """
+                SELECT COUNT(DISTINCT itemKey) FROM backup_ledger WHERE jobId = ? AND outcome IN ('uploaded', 'found')
+                """, arguments: [jobId]) ?? 0
+        }
+    }
+
+    /// Files backed up, newest first — the Backed-Up Files list.
+    func handledEntries(jobId: String, limit: Int = 500) throws -> [BackupLedgerEntry] {
+        try database.reader.read { db in
+            try BackupLedgerEntry
+                .filter(Column("jobId") == jobId && [BackupLedgerEntry.Outcome.uploaded.rawValue, BackupLedgerEntry.Outcome.found.rawValue].contains(Column("outcome")))
+                .order(Column("recordedAt").desc, Column("id").desc)
+                .limit(limit)
+                .fetchAll(db)
+        }
+    }
+
     /// Items with at least one file uploaded or found.
     func handledItemKeys(jobId: String) throws -> Set<String> {
         try database.reader.read { db in

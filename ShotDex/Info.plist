@@ -5,6 +5,9 @@
 	<key>BGTaskSchedulerPermittedIdentifiers</key>
 	<array>
 		<string>com.hoangtuan.shotdex.index</string>
+		<string>com.hoangtuan.shotdex.backup.refresh</string>
+		<string>com.hoangtuan.shotdex.backup</string>
+		<string>com.hoangtuan.shotdex.backup.continued</string>
 	</array>
 	<key>CFBundleURLTypes</key>
 	<array>
@@ -49,6 +52,7 @@
 	</array>
 	<key>UIBackgroundModes</key>
 	<array>
+		<string>fetch</string>
 		<string>processing</string>
 	</array>
 	<key>UILaunchScreen</key>
