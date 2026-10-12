@@ -63,7 +63,10 @@ xanh lá. Hành động phá huỷ vẫn đỏ qua `role: .destructive`. Không 
 nút `.confirmationAction`/`.borderedProminent` ở toolbar đã là nút đó. Mọi thứ khác bấm được trên cùng màn không mang nền
 accent: chip/segment/tab đang chọn dùng kiểu trung tính (nền card + bóng hoặc `.tint(.primary)`, chữ đậm), nút phụ dùng
 `.bordered` `.tint(.secondary)` hoặc kính. Chữ/icon màu accent (link, `Choose…`, dấu ✓) vẫn được, vì không có nền. Không
-tính là nút: công tắc bật, badge chọn ảnh trong lưới, chart, vòng tiến độ.
+tính là nút: công tắc bật, badge chọn ảnh trong lưới, chart, vòng tiến độ. Người dùng chốt giữ amber (2026-10-13): ngày
+đầu/cuối đang chọn trong lịch Date Range (như lịch iOS), dòng menu đang trỏ và dòng đang chọn trong bảng trên Mac
+(MAC_STYLE), và nền amber nhạt chỉ để trang trí, không bấm được (ô icon Empty Library/Onboarding/Ingest, bong bóng chat của
+người dùng và pill trạng thái ở Support, vùng thả Set Aside của Collage).
 
 Không dùng `Color.accentColor`, không dùng `.orange`, không hardcode `#EB9526`. Trong `ButtonStyle` cần accent thì truyền vào qua init, vì `@Environment` không resolve trong `makeBody`.
 

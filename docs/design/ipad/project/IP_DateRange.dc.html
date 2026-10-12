@@ -79,7 +79,7 @@ input{font-family:inherit}
 <sc-for list="{{mo.days}}" as="d" hint-placeholder-count="35">
 <div style="position:relative;display:flex;align-items:center;justify-content:center">
 <div style="position:absolute;left:{{d.bl}};right:{{d.br}};top:3px;bottom:3px;background:{{d.band}}"></div>
-<button aria-label="{{d.aria}}" disabled="{{d.dis}}" style="position:relative;width:36px;height:36px;border-radius:18px;border:none;background:{{d.bg}};box-shadow:{{d.sh}};color:{{d.fg}};font-size:17px;font-weight:{{d.fw}};font-variant-numeric:tabular-nums">{{d.n}}</button>
+<button aria-label="{{d.aria}}" disabled="{{d.dis}}" style="position:relative;width:36px;height:36px;border-radius:18px;border:none;background:{{d.bg}};color:{{d.fg}};font-size:17px;font-weight:{{d.fw}};font-variant-numeric:tabular-nums">{{d.n}}</button>
 </div>
 </sc-for>
 </div>
@@ -213,12 +213,12 @@ function edges(dark){ return { edge: dark?'rgba(28,28,30,0.85)':'rgba(255,255,25
 const MONTHS=['January','February','March','April','May','June','July','August','September','October','November','December'];
 function month(t, y, m, first, len){
   const days=[]; const key=(mm,dd)=>mm*100+dd; const A=key(7,23), B=key(8,12), TODAY=key(9,4);
-  for(let i=0;i<first;i++) days.push({n:'',aria:'',dis:true,bg:'transparent',sh:'none',fg:t.label,fw:'400',band:'transparent',bl:'0',br:'0'});
+  for(let i=0;i<first;i++) days.push({n:'',aria:'',dis:true,bg:'transparent',fg:t.label,fw:'400',band:'transparent',bl:'0',br:'0'});
   for(let d=1; d<=len; d++){
     const k=key(m,d); const inR=k>=A&&k<=B; const end=(k===A||k===B); const fut=k>TODAY; const dow=(first+d-1)%7;
     days.push({n:String(d), aria:MONTHS[m]+' '+d+(end?(k===A?', range start':', range end'):(inR?', in range':''))+(k===TODAY?', today':''), dis:fut,
-      bg:end?t.segOn:'transparent', sh:end?'0 1px 3px rgba(0,0,0,0.15)':'none', fg:end?t.label:(fut?t.label3:(k===TODAY?t.accentText:t.label)), fw:(end||k===TODAY)?'600':'400',
-      band:inR?t.fill:'transparent', bl:(k===A||dow===0||d===1)?'50%':'0', br:(k===B||dow===6||d===len)?'50%':'0'});
+      bg:end?t.accentFill:'transparent', fg:end?t.onAccentFill:(fut?t.label3:(k===TODAY?t.accentText:t.label)), fw:(end||k===TODAY)?'600':'400',
+      band:inR?t.accentSoft:'transparent', bl:(k===A||dow===0||d===1)?'50%':'0', br:(k===B||dow===6||d===len)?'50%':'0'});
   }
   return {title:MONTHS[m]+' '+y, days};
 }
