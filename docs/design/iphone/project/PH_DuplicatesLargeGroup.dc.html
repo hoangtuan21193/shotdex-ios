@@ -42,29 +42,27 @@ const DARK = { bg:'#000000', grouped:'#000000', card:'#1C1C1E', label:'#FFFFFF',
   glassShadow:'0 4px 18px rgba(0,0,0,0.5)', tint:'#0A84FF', red:'#FF453A', green:'#30D158', orange:'#FF9F0A',
   accent:'#EB9526', dim:'rgba(0,0,0,0.55)', sheet:'#1C1C1E', onAccent:'#000000' };
 // Large-group card: the Keep photo spans 2×2 cells of a C-column grid — each side twice a delete tile
-// (user, 12/10: "gấp 2 thôi"). The deletes fill the cells to its right, then full rows below; a short
-// last row stretches to the card width. Pick the C with the biggest delete tiles that leaves no empty cell.
+// (user, 12/10: "gấp 2 thôi"). Delete tiles are always square grid cells, never stretched (user, 12/10):
+// they fill the cells to the Keep's right, then rows below, left to right. Pick the C that leaves the
+// fewest empty cells, then the biggest tiles.
 const GAP = 4;
 function layoutGroup(n, left, top, width) {
   let best = null;
   const K = 2;
   for (const C of [4, 5, 6]) {
-    const u = (width - GAP * (C - 1)) / C, S = K * u + (K - 1) * GAP, cells = [];
-    const side = Math.min(n, (C - K) * K), rc = C - K;
-    const rRows = Math.ceil(side / rc);
-    if (side && rRows < K) continue;                       // right of the Keep must be full height
+    const u = (width - GAP * (C - 1)) / C, S = K * u + (K - 1) * GAP, rc = C - K, cells = [];
+    const side = Math.min(n, rc * K);
     for (let i = 0; i < side; i++) {
-      const r = Math.floor(i / rc), inRow = Math.min(rc, side - r * rc);
-      const w = (rc * u + (rc - 1) * GAP - GAP * (inRow - 1)) / inRow, c = i - r * rc;
-      cells.push({ x: left + S + GAP + c * (w + GAP), y: top + r * (u + GAP), w, h: u });
+      const r = Math.floor(i / rc), c = i % rc;
+      cells.push({ x: left + S + GAP + c * (u + GAP), y: top + r * (u + GAP), w: u, h: u });
     }
     for (let i = side; i < n; i++) {
-      const j = i - side, r = Math.floor(j / C), inRow = Math.min(C, n - side - r * C), c = j - r * C;
-      const w = (width - GAP * (inRow - 1)) / inRow;
-      cells.push({ x: left + c * (w + GAP), y: top + S + GAP + r * (u + GAP), w, h: u });
+      const j = i - side, r = Math.floor(j / C), c = j % C;
+      cells.push({ x: left + c * (u + GAP), y: top + S + GAP + r * (u + GAP), w: u, h: u });
     }
+    const below = n - side, empty = (rc * K - side) + (below ? (C - below % C) % C : 0);
     const h = cells.reduce((m, q) => Math.max(m, q.y + q.h), top + S) - top;
-    if (!best || u > best.u || (u === best.u && S > best.S)) best = { u, S, cells, h };
+    if (!best || empty < best.empty || (empty === best.empty && u > best.u)) best = { u, S, cells, h, empty };
   }
   return best;
 }
