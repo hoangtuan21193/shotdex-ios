@@ -129,7 +129,10 @@ struct PhotoDetailScreen: View {
     /// away from every app but Photos, so ShotDex can write the flag and then
     /// never see the photo again to undo it. That is exactly the case Apple's
     /// own guidance reserves an alert for.
-    @State private var hideConfirmationAssetId: String?
+    @State private var pendingHide: PendingHide?
+    /// The Hide rows for the photo on screen (FS-19.04 §3), read on each
+    /// page change rather than on every redraw.
+    @State private var hideCommands: [HideCommand] = [.hide]
     @State private var editorTarget: PhotoDetailActionTarget?
     /// A file photo's copy open in the editor (FS-19.02 §3).
     @State private var fileEditorTarget: FileCopyPhoto?
@@ -483,8 +486,12 @@ struct PhotoDetailScreen: View {
             }
         }
         .viewerAlerts(
-            hideAssetId: $hideConfirmationAssetId,
-            onHide: { dependencies.viewerAssetActions.toggleHidden(ids: [$0]) }
+            pendingHide: $pendingHide,
+            onHide: { pending in
+                dependencies.viewerAssetActions.hide(pending.command, ids: [pending.id])
+                // Hidden photos leave every grid, this pager included.
+                afterSourceDeletion([pending.id])
+            }
         )
         .onChange(of: currentIndex) { _, newIndex in
             dependencies.indexInteractionGate.touch()
@@ -589,6 +596,7 @@ struct PhotoDetailScreen: View {
             ? try? CopyReachabilityQueries(database: dependencies.database).reachability(photoId: assetId)
             : nil
         fileEditURL = currentAsset == nil ? photoLibrary.filePhotoURL(assetId) : nil
+        hideCommands = dependencies.viewerAssetActions.hideCommands(ids: [assetId])
         updateFilename(assetId: assetId)
         probeOriginal()
         publishHandoffActivity()
@@ -979,10 +987,16 @@ struct PhotoDetailScreen: View {
             }
 
             Section {
-                Button(role: .destructive) {
-                    hideConfirmationAssetId = id
-                } label: {
-                    Label("Hide", systemImage: "eye.slash")
+                ForEach(hideCommands, id: \.title) { command in
+                    Button(role: .destructive) {
+                        pendingHide = PendingHide(
+                            id: id,
+                            command: command,
+                            staysInPhotos: command == .hideInShotDexOnly || (command == .hide && currentAsset == nil)
+                        )
+                    } label: {
+                        Label(command.title, systemImage: "eye.slash")
+                    }
                 }
             }
         } label: {
@@ -3288,28 +3302,43 @@ private final class PhotoPageHost: UIHostingController<AnyView> {
 /// and the type-checker gives up on a view this size.
 private extension View {
     func viewerAlerts(
-        hideAssetId: Binding<String?>,
-        onHide: @escaping (String) -> Void
+        pendingHide: Binding<PendingHide?>,
+        onHide: @escaping (PendingHide) -> Void
     ) -> some View {
         self
-            // Hiding is one-way from inside this app: iOS 16 took the hidden
-            // album away from every app but Photos, so ShotDex can set the
-            // flag and then never see the photo again to undo it — the case
-            // Apple reserves an alert for.
+            // Hiding in Photos is one-way from inside this app: iOS 16 took
+            // the hidden album away from every app but Photos, so ShotDex can
+            // set the flag and then never see the photo again to undo it —
+            // the case Apple reserves an alert for. Hidden in ShotDex only
+            // comes back from Collections › Hidden.
             .alert(
                 "Hide this photo?",
                 isPresented: Binding(
-                    get: { hideAssetId.wrappedValue != nil },
-                    set: { if !$0 { hideAssetId.wrappedValue = nil } }
-                )
-            ) {
-                Button("Cancel", role: .cancel) { hideAssetId.wrappedValue = nil }
+                    get: { pendingHide.wrappedValue != nil },
+                    set: { if !$0 { pendingHide.wrappedValue = nil } }
+                ),
+                presenting: pendingHide.wrappedValue
+            ) { pending in
+                Button("Cancel", role: .cancel) { pendingHide.wrappedValue = nil }
                 Button("Hide", role: .destructive) {
-                    if let id = hideAssetId.wrappedValue { onHide(id) }
-                    hideAssetId.wrappedValue = nil
+                    onHide(pending)
+                    pendingHide.wrappedValue = nil
                 }
-            } message: {
-                Text("It moves to the Hidden album in Photos. ShotDex can't show hidden photos, so you'll need the Photos app to unhide it.")
+            } message: { pending in
+                if pending.staysInPhotos {
+                    Text("It leaves the library, search, albums and Statistics in ShotDex. Unhide it in Collections › Hidden.")
+                } else {
+                    Text("It moves to the Hidden album in Photos. ShotDex can't show hidden photos, so you'll need the Photos app to unhide it.")
+                }
             }
     }
+}
+
+/// A Hide waiting on the viewer's confirmation (FS-19.04 §3).
+struct PendingHide: Equatable {
+    let id: String
+    let command: HideCommand
+    /// Hidden by ShotDex alone — the photo stays in the Photos app, and
+    /// comes back from Collections › Hidden.
+    let staysInPhotos: Bool
 }

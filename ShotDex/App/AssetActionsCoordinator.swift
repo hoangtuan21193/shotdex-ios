@@ -125,6 +125,29 @@ final class AssetActionsCoordinator {
 
     // MARK: Hide
 
+    /// Hide by where a photo lives (FS-19.04 §3); nil in previews, which
+    /// keep the Photos-only toggle. Set by the composition root.
+    @ObservationIgnored var hideService: HideService?
+    /// Tells the grids that ShotDex hid photos — no PhotoKit change comes
+    /// for a copy flag.
+    @ObservationIgnored var onHiddenInShotDex: (() -> Void)?
+
+    /// The Hide rows for a selection: plain Hide, or Hide in Photos and Hide
+    /// in ShotDex Only once any photo is in Photos and somewhere else.
+    func hideCommands(ids: [String]) -> [HideCommand] {
+        guard let hideService, !ids.isEmpty else { return [.hide] }
+        return (try? hideService.commands(for: ids)) ?? [.hide]
+    }
+
+    func hide(_ command: HideCommand, ids: [String]) {
+        guard let hideService else { return toggleHidden(ids: ids) }
+        perform {
+            try await hideService.run(command, photoIds: ids)
+            self.onHiddenInShotDex?()
+            self.toastMessage = ids.count == 1 ? "Photo Hidden" : "\(ids.count) Photos Hidden"
+        }
+    }
+
     func areAllHidden(ids: [String]) -> Bool {
         let assets = PhotoLibraryService.fetchAssets(ids: ids)
         return !assets.isEmpty && assets.allSatisfy(\.isHidden)

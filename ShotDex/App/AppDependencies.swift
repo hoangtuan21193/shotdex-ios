@@ -77,6 +77,14 @@ final class AppDependencies {
     /// the root's sheet wins by tearing the cover down. Only one viewer exists
     /// at a time, so one extra instance covers it.
     let viewerAssetActions: AssetActionsCoordinator
+    /// Runs Hide, Hide in Photos and Hide in ShotDex Only (FS-19.04 §3).
+    var hideService: HideService {
+        let photoLibrary = photoLibrary
+        return HideService(database: database) { ids in
+            try await photoLibrary.setHidden(true, for: PhotoLibraryService.fetchAssets(ids: ids))
+        }
+    }
+
     /// A coordinator of its own for one window's root. See `assetActions`.
     func makeAssetActions() -> AssetActionsCoordinator {
         let actions = AssetActionsCoordinator(
@@ -86,6 +94,8 @@ final class AppDependencies {
             originalDownloads: originalDownloads
         )
         actions.photoMarks = photoMarks
+        actions.hideService = hideService
+        actions.onHiddenInShotDex = { [sources] in sources.photosDeleted() }
         return actions
     }
 
@@ -503,6 +513,11 @@ final class AppDependencies {
         self.serverSources = serverSources
         let sources = SourcesModel(database: database, runner: folderSources, servers: serverSources, photoLibrary: photoLibrary)
         self.sources = sources
+        // Hide by where a photo lives (FS-19.04 §3), for every surface's menu.
+        for actions in [assetActions, viewerAssetActions] {
+            actions.hideService = hideService
+            actions.onHiddenInShotDex = { [sources] in sources.photosDeleted() }
+        }
         photoLibrary.fileThumbnails.reload(database)
         let openCopies = OpenCopyQueries(database: database)
         photoLibrary.filePhotoURL = { [folderRoots] id in

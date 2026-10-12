@@ -73,6 +73,10 @@ chuột phải, ⋯ của chế độ chọn và menu **Photo** trên Mac (một
 - "Hide" trơn chỉ có khi ảnh nằm ở **một** nơi — không có gì để chọn. Nhiều ảnh: hai dòng hiện khi ≥ 1 ảnh trong lựa chọn
   có cả hai loại bản sao; Hide in Photos áp phần Photos cho ảnh có bản Photos, ảnh chỉ file/NAS thì ShotDex ẩn.
   `copy-consistency` duyệt bộ chữ.
+  Code: `AssetActionsCoordinator.hideCommands(ids:)` / `hide(_:ids:)` qua `HideService` (chia lô 500 id) — viewer ⋯,
+  menu nhấn giữ (`PhotoTileContextMenu`), ⋯ chọn nhiều (`SelectionBarViews`). Hộp xác nhận ở viewer: Hide in ShotDex
+  Only và Hide của ảnh chỉ-file nói "Unhide it in Collections › Hidden"; Hide in Photos / Hide của ảnh Photos giữ câu
+  album Hidden của Photos. Ảnh ẩn rời viewer như khi xoá. Board iPhone `PH39_ViewerMenuSources`.
 - Hide trong màn duyệt một nguồn NAS (và phần NAS của lệnh xoá Reject, §1–§2) chỉ đánh dấu **bản sao ở nguồn đó** — không
   đổi.
 - Ảnh **ẩn khi và chỉ khi mọi bản sao của nó ẩn** ([05 §3](05-data.md)); ảnh còn bản sao

@@ -8,24 +8,36 @@ struct HideService: Sendable {
     /// Puts these Photos assets in Photos' Hidden album.
     let hideInPhotos: @Sendable ([String]) async throws -> Void
 
-    /// Where each photo has copies, for `HideCommandPlan`.
+    /// Where each photo has copies, for `HideCommandPlan`. In chunks: a
+    /// selection can be the whole library, past SQLite's argument limit.
     func photos(_ photoIds: [String]) throws -> [HideCommandPlan.Photo] {
-        guard !photoIds.isEmpty else { return [] }
-        let kinds = try database.reader.read { db in
-            try Row.fetchAll(db, sql: """
-                SELECT photoId, MAX(kind = 'photos') AS photos, MAX(kind != 'photos') AS other FROM photo_copies
-                WHERE photoId IN (\(databaseQuestionMarks(count: photoIds.count))) AND missingSince IS NULL
-                GROUP BY photoId
-                """, arguments: StatementArguments(photoIds))
+        var result: [HideCommandPlan.Photo] = []
+        for chunk in photoIds.chunked(into: Self.chunkSize) {
+            let kinds = try database.reader.read { db in
+                try Row.fetchAll(db, sql: """
+                    SELECT photoId, MAX(kind = 'photos') AS photos, MAX(kind != 'photos') AS other FROM photo_copies
+                    WHERE photoId IN (\(databaseQuestionMarks(count: chunk.count))) AND missingSince IS NULL
+                    GROUP BY photoId
+                    """, arguments: StatementArguments(Array(chunk)))
+            }
+            result += kinds.map { HideCommandPlan.Photo(hasPhotosCopy: $0["photos"], hasOtherCopy: $0["other"]) }
         }
-        return kinds.map { HideCommandPlan.Photo(hasPhotosCopy: $0["photos"], hasOtherCopy: $0["other"]) }
+        return result
     }
 
     func commands(for photoIds: [String]) throws -> [HideCommand] {
         HideCommandPlan.commands(for: try photos(photoIds))
     }
 
+    private static let chunkSize = 500
+
     func run(_ command: HideCommand, photoIds: [String]) async throws {
+        for chunk in photoIds.chunked(into: Self.chunkSize) {
+            try await run(command, chunk: Array(chunk))
+        }
+    }
+
+    private func run(_ command: HideCommand, chunk photoIds: [String]) async throws {
         let assets = try await database.reader.read { db in
             try String.fetchAll(db, sql: """
                 SELECT photoKitId FROM photo_copies
@@ -42,5 +54,11 @@ struct HideService: Sendable {
             if !assets.isEmpty { try await hideInPhotos(assets) }
             try HiddenCopyStore(database: database).hide(photoIds: photoIds)
         }
+    }
+}
+
+private extension Array {
+    func chunked(into size: Int) -> [ArraySlice<Element>] {
+        stride(from: 0, to: count, by: size).map { self[$0..<Swift.min($0 + size, count)] }
     }
 }

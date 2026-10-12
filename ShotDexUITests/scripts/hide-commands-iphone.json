@@ -1,0 +1,25 @@
+{
+  "steps": [
+    { "action": "launch" },
+    { "action": "wait", "seconds": 6 },
+    { "action": "swipe", "x": 0.5, "y": 0.35, "direction": "down", "distance": 0.5 },
+    { "action": "swipe", "x": 0.5, "y": 0.35, "direction": "down", "distance": 0.5 },
+    { "action": "wait", "seconds": 2 },
+    { "action": "tap", "x": 0.5, "y": 0.5 },
+    { "action": "wait", "seconds": 2 },
+    { "action": "tap", "label": "More actions", "type": "button" },
+    { "action": "wait", "seconds": 1.5 },
+    { "action": "screenshot", "name": "01-menu-mixed" },
+    { "action": "dump", "name": "01-menu-mixed" },
+    { "action": "tap", "label": "Hide in ShotDex Only", "type": "button" },
+    { "action": "wait", "seconds": 1.5 },
+    { "action": "screenshot", "name": "02-confirm" },
+    { "action": "tap", "label": "Hide", "type": "button" },
+    { "action": "wait", "seconds": 2 },
+    { "action": "screenshot", "name": "03-next-photo" },
+    { "action": "tap", "label": "More actions", "type": "button" },
+    { "action": "wait", "seconds": 1.5 },
+    { "action": "screenshot", "name": "04-menu-file-only" },
+    { "action": "dump", "name": "04-menu-file-only" }
+  ]
+}

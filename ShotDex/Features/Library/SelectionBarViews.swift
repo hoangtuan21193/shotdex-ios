@@ -385,16 +385,24 @@ private extension SelectionToolbarItems {
     var destructiveActions: some View {
         Section {
             if let actions = model.assetActions {
-                let allHidden = model.isSelectionAllHidden
-                Button(role: allHidden ? nil : .destructive) {
-                    actions.toggleHidden(ids: model.selectedIds)
-                } label: {
-                    Label(
-                        allHidden ? "Unhide" : "Hide",
-                        systemImage: allHidden ? "eye" : "eye.slash"
-                    )
+                if model.isSelectionAllHidden {
+                    Button {
+                        actions.toggleHidden(ids: model.selectedIds)
+                    } label: {
+                        Label("Unhide", systemImage: "eye")
+                    }
+                    .disabled(model.selectionCount < 1)
+                } else {
+                    // Hide by where the photos live (FS-19.04 §3).
+                    ForEach(actions.hideCommands(ids: model.selectedIds), id: \.title) { command in
+                        Button(role: .destructive) {
+                            actions.hide(command, ids: model.selectedIds)
+                        } label: {
+                            Label(command.title, systemImage: "eye.slash")
+                        }
+                        .disabled(model.selectionCount < 1)
+                    }
                 }
-                .disabled(model.selectionCount < 1)
             }
             if let onRemoveFromAlbum = model.onRemoveFromAlbum {
                 Button(role: .destructive, action: onRemoveFromAlbum) {

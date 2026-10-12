@@ -95,13 +95,17 @@ struct PhotoTileContextMenu {
                 ) { _ in onShowInLibrary() }
             )
         }
-        destructive.append(
-            UIAction(
-                title: "Hide",
-                image: UIImage(systemName: "eye.slash"),
-                attributes: .destructive
-            ) { _ in actions.toggleHidden(ids: [assetId]) }
-        )
+        // Hide by where the photo lives (FS-19.04 §3): one row, or Hide in
+        // Photos and Hide in ShotDex Only for a photo in both.
+        for command in actions.hideCommands(ids: [assetId]) {
+            destructive.append(
+                UIAction(
+                    title: command.title,
+                    image: UIImage(systemName: "eye.slash"),
+                    attributes: .destructive
+                ) { _ in actions.hide(command, ids: [assetId]) }
+            )
+        }
         if let onRemoveFromAlbum {
             destructive.append(
                 UIAction(

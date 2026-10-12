@@ -953,6 +953,14 @@
       "w": 402,
       "x": 18274,
       "y": 2534
+    },
+    "PH39_ViewerMenuSources.dc.html": {
+      "h": 874,
+      "radius": 44,
+      "title": "iPhone · Viewer ⋯ — ảnh ở Photos và NAS/thư mục: hai dòng Hide in Photos · Hide in ShotDex Only thay Hide (FS-19 AC-73); ảnh một nơi giữ Hide như PH28",
+      "w": 402,
+      "x": 18736,
+      "y": 2534
     }
   },
   "createdOnFiles": {
@@ -1114,6 +1122,7 @@
     "PH36_ExportSummary.dc.html",
     "PH37_ShareWatermark.dc.html",
     "PH38_EditFileCopy.dc.html",
+    "PH39_ViewerMenuSources.dc.html",
     "P1_Main.dc.html",
     "P2_ClipSelected.dc.html",
     "P3_TextOverlay.dc.html",
