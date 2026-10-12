@@ -94,16 +94,17 @@ struct BackupFixture {
         workDirectory = FileManager.default.temporaryDirectory.appendingPathComponent("ShotDexBackup-test-\(UUID().uuidString)", isDirectory: true)
     }
 
-    static func item(_ n: Int, name: String, isVideo: Bool = false, bytes: Int = 4_000, seed: Int? = nil, edited: String? = nil) -> (BackupSourceItem, [String: Data]) {
+    static func item(_ n: Int, name: String, isVideo: Bool = false, bytes: Int = 4_000, seed: Int? = nil, edited: String? = nil, editedBytes: Int? = nil) -> (BackupSourceItem, [String: Data]) {
         var files: [BackupSourceFile] = []
         var contents: [String: Data] = [:]
         let original = AssetUploadFile(key: "1:\(name)", filename: name, isRAW: false, role: .original, estimatedBytes: Int64(bytes))
         files.append(BackupSourceFile(file: original, sourceStamp: "\(bytes):1"))
         contents[FakeAssetExporter.key("A\(n)", original.key)] = payload(seed ?? n, bytes: bytes)
         if let edited {
-            let file = AssetUploadFile(key: "7:FullSizeRender.JPG", filename: edited, isRAW: false, role: .edited, estimatedBytes: Int64(bytes))
-            files.append(BackupSourceFile(file: file, sourceStamp: "\(bytes):\(seed ?? 2)"))
-            contents[FakeAssetExporter.key("A\(n)", file.key)] = payload((seed ?? n) + 10_000, bytes: bytes)
+            let size = editedBytes ?? bytes
+            let file = AssetUploadFile(key: "7:FullSizeRender.JPG", filename: edited, isRAW: false, role: .edited, estimatedBytes: Int64(size))
+            files.append(BackupSourceFile(file: file, sourceStamp: "\(size):\(seed ?? 2)"))
+            contents[FakeAssetExporter.key("A\(n)", file.key)] = payload((seed ?? n) + 10_000, bytes: size)
         }
         return (BackupSourceItem(itemKey: "A\(n)", date: taken, isVideo: isVideo, album: nil, files: files), contents)
     }
