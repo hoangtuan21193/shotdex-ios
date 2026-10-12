@@ -24,11 +24,15 @@ struct ShotDexApp: App {
         dependencies.unsupportedRAWIndex.loadIfNeeded()
         dependencies.fileServerCatalog.reload()
         dependencies.backupCoordinator.startWatching(photoLibrary: dependencies.photoLibrary)
+        // UIKit-presented controls (alerts, menus, share sheets) take the
+        // window's tint; SwiftUI controls take `.tint` below.
+        UIWindow.appearance().tintColor = AppAccent.uiColor
     }
 
     var body: some Scene {
         WindowGroup {
             RootTabView()
+                .tint(AppAccent.color)
                 .environment(dependencies)
                 .environment(dependencies.photoLibrary)
                 .environment(dependencies.serverUploadIndex)

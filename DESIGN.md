@@ -54,6 +54,10 @@ Một nguồn cho hình học, hai bảng cho màu. Không nhân đôi bảng m�
 EditorTheme.accent                              // static token trong editor
 ```
 
+Accent cũng là **tint của cả app** (người dùng 2026-10-12): `ShotDexApp` đặt `.tint(AppAccent.color)` ở gốc và `tintColor`
+cho mọi `UIWindow`, nên nút, link, toggle, picker, menu hệ thống đều màu accent, không còn xanh iOS. Hành động phá huỷ
+vẫn đỏ qua `role: .destructive`. Không đặt lại `.tint(.blue)`/màu xanh ở màn nào.
+
 Không dùng `Color.accentColor`, không dùng `.orange`, không hardcode `#EB9526`. Trong `ButtonStyle` phải truyền accent vào qua init (xem `CompressionChoiceStyle`) vì `@Environment` không resolve trong `makeBody`.
 
 ### 3.2 Bảng màu tầng A/B/C

@@ -202,6 +202,7 @@ struct BackupJobCard: View {
 
     @Environment(AppDependencies.self) private var dependencies
     @Environment(\.horizontalSizeClass) private var sizeClass
+    @Environment(\.appAccent) private var accent
 
     var body: some View {
         let info = BackupJobInfo(job: job, dependencies: dependencies)
@@ -265,7 +266,7 @@ struct BackupJobCard: View {
         .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle.app(AppTheme.Radius.lg))
         .overlay {
             if isSelected {
-                RoundedRectangle.app(AppTheme.Radius.lg).strokeBorder(Color.accentColor, lineWidth: 2)
+                RoundedRectangle.app(AppTheme.Radius.lg).strokeBorder(accent, lineWidth: 2)
             }
         }
         .contentShape(RoundedRectangle.app(AppTheme.Radius.lg))

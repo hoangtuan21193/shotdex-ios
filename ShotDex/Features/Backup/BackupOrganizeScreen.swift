@@ -215,6 +215,7 @@ struct BackupCustomDateScreen: View {
     let previewRoot: String
 
     @State private var typedSeparator = ""
+    @Environment(\.appAccent) private var accent
     private var names: BackupDateName { BackupOrganizeText.names }
     private let sample = BackupOrganizeText.sampleDate
     private let quickSeparators: [(String, String)] = [
@@ -271,7 +272,7 @@ struct BackupCustomDateScreen: View {
                                 typedSeparator = value
                             }
                             .buttonStyle(.bordered)
-                            .tint(format.wrappedValue.separator == value ? .accentColor : .secondary)
+                            .tint(format.wrappedValue.separator == value ? accent : .secondary)
                         }
                     }
                 }

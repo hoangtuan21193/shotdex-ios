@@ -4,11 +4,11 @@ import UIKit
 /// The app's accent colour: the amber of the sun in the app icon. Fixed — there
 /// is no accent setting.
 ///
-/// It is not the app's tint either: standard controls (navigation bars, menus,
-/// sheets, toggles) keep the iOS default. This colour is only for what ShotDex
-/// draws itself — grid selection badges, the editor's active states, charts —
-/// reachable as `\.appAccent` in SwiftUI or `AppAccent.color` / `.uiColor` from
-/// the places that cannot read the environment.
+/// It is also the app's tint (user, 2026-10-12): `ShotDexApp` sets it on the
+/// root view and on every window, so standard buttons, links, toggles and menus
+/// use it instead of the iOS blue; destructive actions keep red through their
+/// role. Views that draw an accent themselves read `\.appAccent`, or
+/// `AppAccent.color` / `.uiColor` where the environment cannot be read.
 enum AppAccent {
     /// The icon's sun is `#EB9526`. That value on white is too pale to read as a
     /// control colour, so light mode gets a deeper mix of it and dark mode the

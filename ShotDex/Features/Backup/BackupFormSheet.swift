@@ -8,6 +8,7 @@ struct BackupFormSheet: View {
 
     @Environment(\.dismiss) private var dismiss
     @Environment(AppDependencies.self) private var dependencies
+    @Environment(\.appAccent) private var accent
     @State private var path: [Route] = []
 
     enum Route: Hashable {
@@ -102,7 +103,7 @@ struct BackupFormSheet: View {
                             .foregroundStyle(.secondary)
                             .monospacedDigit()
                         Image(systemName: "checkmark")
-                            .foregroundStyle(.tint)
+                            .foregroundStyle(accent)
                             .opacity(model.sourceId == option.id ? 1 : 0)
                     }
                 }
@@ -127,7 +128,7 @@ struct BackupFormSheet: View {
             Text(value).lineLimit(1).truncationMode(.head)
         } else {
             // The rows tint themselves .primary; the accent is set outright.
-            Text(String(localized: "Choose…", comment: "Backup form: nothing chosen yet")).foregroundStyle(Color.accentColor)
+            Text(String(localized: "Choose…", comment: "Backup form: nothing chosen yet")).foregroundStyle(accent)
         }
     }
 
@@ -199,7 +200,7 @@ struct BackupFormSheet: View {
                         Text(BackupOrganizeText.content(content))
                         Spacer()
                         Image(systemName: "checkmark")
-                            .foregroundStyle(.tint)
+                            .foregroundStyle(accent)
                             .opacity(model.settings.content == content ? 1 : 0)
                     }
                 }
