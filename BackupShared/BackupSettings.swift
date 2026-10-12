@@ -51,6 +51,9 @@ struct BackupOrganize: Codable, Hashable, Sendable {
     var customMonth = BackupCustomDate(parts: [.year, .month])
     var customDay = BackupCustomDate()
     var videoPlacement: VideoPlacement = .apartAtTop
+    /// Where RAW files go — the same choices as videos; "in each day" puts a
+    /// RAW folder inside the photos' own day folder (FS-22.01 §4).
+    var rawPlacement: VideoPlacement = .together
     var fileNames: FileNames = .original
 
     init() {}
@@ -65,6 +68,7 @@ struct BackupOrganize: Codable, Hashable, Sendable {
         customMonth = (try? c.decode(BackupCustomDate.self, forKey: .customMonth)) ?? fallback.customMonth
         customDay = (try? c.decode(BackupCustomDate.self, forKey: .customDay)) ?? fallback.customDay
         videoPlacement = (try? c.decode(VideoPlacement.self, forKey: .videoPlacement)) ?? fallback.videoPlacement
+        rawPlacement = (try? c.decode(VideoPlacement.self, forKey: .rawPlacement)) ?? fallback.rawPlacement
         fileNames = (try? c.decode(FileNames.self, forKey: .fileNames)) ?? fallback.fileNames
     }
 }

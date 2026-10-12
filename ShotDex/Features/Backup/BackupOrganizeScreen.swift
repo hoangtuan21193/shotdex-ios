@@ -39,12 +39,21 @@ struct BackupOrganizeScreen: View {
                 Text(String(localized: "From the date each item was taken. Each menu lists its names as examples; Custom… at the end of Month and Day sets your own order and separator.", comment: "Organize footer"))
             }
 
-            Section(String(localized: "Photos and Videos", comment: "Organize section: where videos go")) {
+            Section {
                 Picker(String(localized: "Videos", comment: "Organize row: where videos go"), selection: $settings.organize.videoPlacement) {
                     ForEach(BackupPathPlanner.videoPlacements(for: organize.levels), id: \.self) {
                         Text(BackupOrganizeText.videos($0)).tag($0)
                     }
                 }
+                Picker(String(localized: "RAW Files", comment: "Organize row: where RAW files go"), selection: $settings.organize.rawPlacement) {
+                    ForEach(BackupPathPlanner.videoPlacements(for: organize.levels), id: \.self) {
+                        Text(BackupOrganizeText.videos($0)).tag($0)
+                    }
+                }
+            } header: {
+                Text(String(localized: "Photos, RAW and Videos", comment: "Organize section: where videos and RAW files go"))
+            } footer: {
+                Text(String(localized: "Apart in Each Day puts the RAW folder inside the photos' own day folder.", comment: "Organize footer: what the RAW placement means"))
             }
 
             Section(String(localized: "File Names", comment: "Organize section")) {
@@ -59,9 +68,9 @@ struct BackupOrganizeScreen: View {
         .navigationTitle(String(localized: "Organize", comment: "Organize screen title"))
         .navigationBarTitleDisplayMode(.inline)
         .onChange(of: organize.levels) { _, levels in
-            if !BackupPathPlanner.videoPlacements(for: levels).contains(organize.videoPlacement) {
-                settings.organize.videoPlacement = .apartAtTop
-            }
+            let offered = BackupPathPlanner.videoPlacements(for: levels)
+            if !offered.contains(organize.videoPlacement) { settings.organize.videoPlacement = .apartAtTop }
+            if !offered.contains(organize.rawPlacement) { settings.organize.rawPlacement = .apartAtTop }
         }
     }
 
@@ -122,36 +131,80 @@ struct BackupOrganizeScreen: View {
     }
 }
 
-/// The folder tree a sample video lands in, one indented line per level.
+/// Where a sample photo, its RAW and a video land, merged into one folder
+/// tree — every rule of Organize visible at once (FS-22.01 §3–§4).
 struct BackupFolderPreview: View {
     let root: String
     let organize: BackupOrganize
 
     var body: some View {
-        let planner = BackupPathPlanner(organize: organize, names: BackupOrganizeText.names)
-        let input = BackupPlacementInput(date: BackupOrganizeText.sampleDate, isVideo: true, originalFilename: BackupOrganizeText.sampleVideo,
-                                         album: String(localized: "Trip", comment: "Organize preview: sample album name"))
-        let folders = planner.folders(for: input)
+        let rows = BackupPreviewTree.rows(organize: organize)
         VStack(alignment: .leading, spacing: AppTheme.Spacing.xs) {
             Text(root)
                 .font(.footnote)
                 .foregroundStyle(.secondary)
-            ForEach(Array(folders.enumerated()), id: \.offset) { index, name in
+            ForEach(Array(rows.enumerated()), id: \.offset) { _, row in
                 HStack(spacing: AppTheme.Spacing.sm) {
-                    Image(systemName: "folder").foregroundStyle(.tint)
-                    Text(name)
+                    Image(systemName: row.symbol)
+                        .foregroundStyle(row.isFolder ? AnyShapeStyle(.tint) : AnyShapeStyle(.secondary))
+                    Text(row.name)
+                        .foregroundStyle(row.isFolder ? .primary : .secondary)
                 }
-                .padding(.leading, CGFloat(index) * AppTheme.Spacing.lg)
+                .padding(.leading, CGFloat(row.depth) * AppTheme.Spacing.lg)
             }
-            HStack(spacing: AppTheme.Spacing.sm) {
-                Image(systemName: "video")
-                Text(planner.fileName(for: input))
-            }
-            .padding(.leading, CGFloat(folders.count) * AppTheme.Spacing.lg)
-            .foregroundStyle(.secondary)
         }
         .font(.subheadline)
         .accessibilityElement(children: .combine)
+    }
+}
+
+/// The merged tree behind the preview: folders first, then files, in the
+/// order the paths reach them.
+enum BackupPreviewTree {
+    struct Row: Equatable {
+        var name: String
+        var depth: Int
+        var isFolder: Bool
+        var symbol: String
+    }
+
+    static let samples: [(BackupPlacementInput, String)] = [
+        (BackupPlacementInput(date: BackupOrganizeText.sampleDate, isVideo: false, originalFilename: "IMG_8812.HEIC",
+                              album: String(localized: "Trip", comment: "Organize preview: sample album name")), "photo"),
+        (BackupPlacementInput(date: BackupOrganizeText.sampleDate, isVideo: false, originalFilename: "IMG_8812.CR3", isRAW: true,
+                              album: String(localized: "Trip", comment: "Organize preview: sample album name")), "camera.aperture"),
+        (BackupPlacementInput(date: BackupOrganizeText.sampleDate, isVideo: true, originalFilename: BackupOrganizeText.sampleVideo,
+                              album: String(localized: "Trip", comment: "Organize preview: sample album name")), "video"),
+    ]
+
+    static func rows(organize: BackupOrganize) -> [Row] {
+        let planner = BackupPathPlanner(organize: organize, names: BackupOrganizeText.names)
+        final class Node {
+            var children: [(String, Node)] = []
+            var files: [(String, String)] = []
+            func child(_ name: String) -> Node {
+                if let found = children.first(where: { $0.0 == name }) { return found.1 }
+                let node = Node()
+                children.append((name, node))
+                return node
+            }
+        }
+        let root = Node()
+        for (input, symbol) in samples {
+            var node = root
+            for folder in planner.folders(for: input) { node = node.child(folder) }
+            node.files.append((planner.fileName(for: input), symbol))
+        }
+        var rows: [Row] = []
+        func walk(_ node: Node, depth: Int) {
+            for (name, symbol) in node.files { rows.append(Row(name: name, depth: depth, isFolder: false, symbol: symbol)) }
+            for (name, child) in node.children {
+                rows.append(Row(name: name, depth: depth, isFolder: true, symbol: "folder"))
+                walk(child, depth: depth + 1)
+            }
+        }
+        walk(root, depth: 0)
+        return rows
     }
 }
 

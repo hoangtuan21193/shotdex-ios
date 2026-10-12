@@ -9,6 +9,8 @@ struct BackupPlacementInput: Sendable {
     var originalFilename: String
     /// The edited render of an item rather than its original (FS-22.01 §5).
     var isEditedVersion = false
+    /// A camera RAW file (CR3, ARW, DNG…) — may go to its own folder.
+    var isRAW = false
     /// The album (Photos) or subfolder (FS-19) the Album level files it under;
     /// nil = not in one.
     var album: String?
@@ -21,6 +23,7 @@ struct BackupPathPlanner: Sendable {
     var names: BackupDateName
 
     static let videosFolder = "Videos"
+    static let rawFolder = "RAW"
     static let unfiledFolder = "Unfiled"
 
     /// Video placements the Organize menu offers for `levels` (FS-22.01 §4).
@@ -53,15 +56,19 @@ struct BackupPathPlanner: Sendable {
         }
         levels = levels.map { (BackupDateName.safeFolderName($0.name), $0.videosAfter) }
 
-        guard input.isVideo, organize.videoPlacement != .together else { return levels.map(\.name) }
+        let apart: (folder: String, placement: BackupOrganize.VideoPlacement)? =
+            input.isVideo ? (Self.videosFolder, organize.videoPlacement)
+            : input.isRAW && !input.isEditedVersion ? (Self.rawFolder, organize.rawPlacement)
+            : nil
+        guard let apart, apart.placement != .together else { return levels.map(\.name) }
         // A placement the levels do not offer falls back to the top.
-        let placement = Self.videoPlacements(for: organize.levels).contains(organize.videoPlacement)
-            ? organize.videoPlacement : .apartAtTop
-        if placement == .apartAtTop { return [Self.videosFolder] + levels.map(\.name) }
+        let placement = Self.videoPlacements(for: organize.levels).contains(apart.placement)
+            ? apart.placement : .apartAtTop
+        if placement == .apartAtTop { return [apart.folder] + levels.map(\.name) }
         var result: [String] = []
         for level in levels {
             result.append(level.name)
-            if level.videosAfter == placement { result.append(Self.videosFolder) }
+            if level.videosAfter == placement { result.append(apart.folder) }
         }
         return result
     }

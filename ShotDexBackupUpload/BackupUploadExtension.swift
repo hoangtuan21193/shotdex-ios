@@ -2,6 +2,7 @@ import ExtensionFoundation
 import Foundation
 import os
 import Photos
+import UniformTypeIdentifiers
 
 /// Photos wakes this extension when new photos arrive, even with ShotDex
 /// closed (FS-22.02 §3c). For every Photos → WebDAV backup it asks Photos to
@@ -53,7 +54,8 @@ struct BackupUploadExtension: PHBackgroundResourceUploadExtension {
                         return
                     }
                     let input = BackupPlacementInput(
-                        date: asset.creationDate ?? Date(), isVideo: isVideo, originalFilename: resource.originalFilename
+                        date: asset.creationDate ?? Date(), isVideo: isVideo, originalFilename: resource.originalFilename,
+                        isRAW: UTType(resource.uniformTypeIdentifier)?.conforms(to: .rawImage) ?? false
                     )
                     let relative = planner.relativePath(for: input)
                     for folder in BackupUploadRequests.folders(for: relative, job: job) where !created.contains(folder) {

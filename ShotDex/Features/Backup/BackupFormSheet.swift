@@ -218,7 +218,7 @@ struct BackupFormSheet: View {
 enum BackupOrganizeText {
     /// The sample the menus and the preview are drawn from.
     static let sampleDate = Date(timeIntervalSince1970: 1_760_277_807)
-    static let sampleVideo = "IMG_8812.MOV"
+    static let sampleVideo = "IMG_8813.MOV"
 
     static var names: BackupDateName { BackupDateName() }
 

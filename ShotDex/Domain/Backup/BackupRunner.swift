@@ -264,7 +264,8 @@ actor BackupRunner {
             }
         }
         let input = BackupPlacementInput(
-            date: item.date, isVideo: item.isVideo, originalFilename: name, isEditedVersion: isEdited, album: item.album
+            date: item.date, isVideo: item.isVideo, originalFilename: name, isEditedVersion: isEdited,
+            isRAW: file.file.isRAW, album: item.album
         )
         return ServerUploadPath.join(job.folder, planner.relativePath(for: input))
     }

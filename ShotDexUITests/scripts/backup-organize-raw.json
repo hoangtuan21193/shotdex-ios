@@ -1,0 +1,26 @@
+{
+ "steps": [
+  {"action": "launch"},
+  {"action": "wait", "seconds": 6},
+  {"action": "tap", "label": "Collections", "type": "button"},
+  {"action": "wait", "seconds": 2},
+  {"action": "scrollTo", "label": "Backup"},
+  {"action": "tap", "label": "Backup"},
+  {"action": "wait", "seconds": 2},
+  {"action": "tap", "label": "New Backup", "type": "button"},
+  {"action": "wait", "seconds": 2},
+  {"action": "tap", "label": "Organize"},
+  {"action": "wait", "seconds": 2},
+  {"action": "swipe", "x": 0.5, "y": 0.8, "direction": "up", "distance": 0.4},
+  {"action": "wait", "seconds": 1},
+  {"action": "tap", "label": "RAW Files, ", "type": "button"},
+  {"action": "wait", "seconds": 1},
+  {"action": "screenshot", "name": "95-raw-menu"},
+  {"action": "tap", "label": "Apart in Each Day"},
+  {"action": "wait", "seconds": 1},
+  {"action": "swipe", "x": 0.5, "y": 0.3, "direction": "down", "distance": 0.5},
+  {"action": "wait", "seconds": 1},
+  {"action": "screenshot", "name": "96-preview-raw"},
+  {"action": "dump", "name": "96-preview-raw"}
+ ]
+}

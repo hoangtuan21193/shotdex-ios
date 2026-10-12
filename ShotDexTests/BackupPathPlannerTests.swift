@@ -122,4 +122,29 @@ import Testing
         #expect(planner().fileName(for: edited) == "IMG_5_edited.JPG")
         #expect(planner { $0.fileNames = .dateAndTime }.fileName(for: edited) == "2025-10-12 14.03.27_edited.JPG")
     }
+
+    /// RAW files take the same placements as videos: at the top, or a RAW
+    /// folder inside each year, month or the photos' own day folder.
+    @Test func rawFolderPlacements() {
+        var raw = photo("IMG_1.CR3")
+        raw.isRAW = true
+        #expect(planner().relativePath(for: raw) == "2025/Oct/2025.10.12/IMG_1.CR3")
+        #expect(planner { $0.rawPlacement = .apartAtTop }.relativePath(for: raw) == "RAW/2025/Oct/2025.10.12/IMG_1.CR3")
+        #expect(planner { $0.rawPlacement = .apartInMonth }.relativePath(for: raw) == "2025/Oct/RAW/2025.10.12/IMG_1.CR3")
+        #expect(planner { $0.rawPlacement = .apartInDay }.relativePath(for: raw) == "2025/Oct/2025.10.12/RAW/IMG_1.CR3")
+        // The JPEG of the pair stays with the photos.
+        #expect(planner { $0.rawPlacement = .apartInDay }.relativePath(for: photo("IMG_1.JPG")) == "2025/Oct/2025.10.12/IMG_1.JPG")
+    }
+
+    /// The Organize preview merges a photo, its RAW and a video into one tree.
+    @Test @MainActor func previewTreeShowsPhotoRawAndVideo() {
+        var organize = BackupOrganize()
+        organize.rawPlacement = .apartInDay
+        let rows = BackupPreviewTree.rows(organize: organize)
+        let names = rows.map(\.name)
+        #expect(names.contains("IMG_8812.CR3"))
+        #expect(names.contains("RAW"))
+        #expect(names.contains("Videos"))
+        #expect(rows.filter { !$0.isFolder }.count == 3)
+    }
 }

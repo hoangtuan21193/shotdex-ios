@@ -59,7 +59,7 @@ Ngày lấy từ ngày chụp (EXIF, không có thì ngày tạo trong Photos / 
 | Day | `2025-10-12` · `2025.10.12` · `2025_10_12` · `20251012` · `12` · Custom… |
 
 - Tên tháng chữ theo **ngôn ngữ app**, không theo locale máy NAS. Tên folder không bao giờ chứa `/`.
-- **Preview** trên cùng vẽ cây thật từ một mục mẫu của nguồn (video nếu có), đổi ngay khi chọn.
+- **Preview** trên cùng đổi ngay khi chọn (§4).
 
 ## 4. Custom ngày (4/5) và Photos and Videos
 
@@ -67,9 +67,12 @@ Ngày lấy từ ngày chụp (EXIF, không có thì ngày tạo trong Photos / 
   None · `-` · `.` · `_` · Space, hoặc gõ tự do (`" - "`, `年`).
 - Ký tự `/ \ : * ? " < > |` bị chặn ngay khi gõ, câu chú thích của board giải thích. Separator rỗng + các phần toàn số
   vẫn hợp lệ (`20251012`). Done mờ khi tên ví dụ rỗng.
-- **Photos and Videos**: Together · Apart at the Top (`Videos/2025/Oct/…`) · Apart in Each Year · in Each Month · in Each
-  Day (`2025/Videos/…`, `2025/Oct/Videos/…`, `…/2025.10.12/Videos/`). Mục chỉ có ở Levels đang chọn; No Folders chỉ
-  có Together · Apart at the Top.
+- **Videos** và **RAW Files** (người dùng 12/10), mỗi cái chọn riêng: Together · Apart at the Top (`Videos/2025/Oct/…`,
+  `RAW/2025/…`) · Apart in Each Year · in Each Month · in Each Day (`2025/Videos/…`, `…/2025.10.12/RAW/`). RAW in Each Day
+  = thư mục RAW nằm **trong thư mục ngày của ảnh**. JPEG của cặp RAW+JPEG ở lại với ảnh; bản sửa không vào thư mục RAW.
+  Mục chỉ có ở Levels đang chọn; No Folders và Album chỉ có Together · Apart at the Top. Mặc định Videos Apart at the
+  Top, RAW Together.
+- **Preview** vẽ cây gộp của 3 file mẫu: ảnh (`IMG_8812.HEIC`), RAW của nó (`IMG_8812.CR3`) và một video (`IMG_8813.MOV`).
 
 ## 5. Tên file và trùng tên
 
