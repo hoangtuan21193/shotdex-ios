@@ -965,7 +965,7 @@
     "PH_Backup.dc.html": {
       "h": 874,
       "radius": 44,
-      "title": "iPhone · Backup (Utilities): mỗi job một thẻ nguồn → đích; đang chạy + Pause, bị iOS dừng → Paused + Resume từ file cuối, xong → Up to Date — đề xuất 12/10, code chưa có",
+      "title": "Backup 1/5 · danh sách job (Utilities › Backup): thẻ nguồn → đích; đang chạy + Pause, bị iOS dừng → Paused + Resume, xong → Up to Date; + = 2/5 — đề xuất 12/10, code chưa có",
       "w": 402,
       "x": 26072,
       "y": 560
@@ -973,7 +973,7 @@
     "PH_BackupNew.dc.html": {
       "h": 874,
       "radius": 44,
-      "title": "iPhone · New Backup: Source, Destination (connection + folder), Organize (Folders Year/Month, Photos và Videos tách folder, File Names; đường ví dụ), What to Copy, When (Wi‑Fi, sạc) — đề xuất 12/10",
+      "title": "Backup 2/5 · New Backup: Source, Destination, dòng Organize (mở 3/5), What to Copy, When",
       "w": 402,
       "x": 26534,
       "y": 560
@@ -981,41 +981,25 @@
     "PH_BackupRunning.dc.html": {
       "h": 874,
       "radius": 44,
-      "title": "iPhone · Backup đang chạy: %, Pause/Stop, file đang tải iCloud/đang up, tổng, file lỗi; chạy nền, resume theo sổ từng file — đề xuất 12/10",
+      "title": "Backup 5/5 · job đang chạy (chạm thẻ ở 1/5): %, Pause/Stop, file đang tải iCloud / đang up, tổng, file lỗi; resume theo sổ từng file",
       "w": 402,
-      "x": 26996,
+      "x": 27920,
       "y": 560
     },
     "PH_BackupOrganize.dc.html": {
       "h": 874,
       "radius": 44,
-      "title": "iPhone · Backup › Organize (user 12/10): Preview cây folder; Folder Names: Year, Month (menu mở: 10 · 2025-10 · Oct · October · 10月 · Tháng 10), Day; Folder Levels Year › Month › Day … — tên folder không bao giờ có /, mỗi lựa chọn là chính ví dụ, không token",
+      "title": "Backup 3/5 · Organize: cây Preview; Folders (Levels, Year, Month, Day — menu ví dụ, Custom… mở 4/5); Photos and Videos (Together · Apart at the Top · Apart in Each Year/Month/Day); File Names; trùng tên → Keep Both",
       "w": 402,
-      "x": 27458,
-      "y": 560
-    },
-    "PH_BackupDayFormat.dc.html": {
-      "h": 874,
-      "radius": 44,
-      "title": "iPhone · Backup › Organize, menu Day mở: 2025-10-12 · 2025.10.12 · 2025_10_12 · 20251012 · 12",
-      "w": 402,
-      "x": 27920,
-      "y": 560
-    },
-    "PH_BackupMediaSplit.dc.html": {
-      "h": 874,
-      "radius": 44,
-      "title": "iPhone · Backup › Organize, menu Photos and Videos mở: Together · Apart at the Top · Apart in Each Year · Apart in Each Month (chọn; Preview: 2025 › Oct › Videos › 2025.10.12) · Apart in Each Day (user 12/10)",
-      "w": 402,
-      "x": 28382,
+      "x": 26996,
       "y": 560
     },
     "PH_BackupCustomDate.dc.html": {
       "h": 874,
       "radius": 44,
-      "title": "iPhone · Backup › Day › Custom…: cây Preview như Organize ở trên; một thẻ: Order (menu), Year 2025/25, Month 10/Oct/October, Day 12/Day 12, Separator ô gõ + một hàng chọn nhanh; ký tự NAS cấm bị chặn (user 12/10, gọn lại)",
+      "title": "Backup 4/5 · Day › Custom…: cây Preview; Order, Year, Month, Day, Separator gõ tự do + chọn nhanh; ký tự NAS cấm bị chặn",
       "w": 402,
-      "x": 28844,
+      "x": 27458,
       "y": 560
     }
   },
@@ -1111,11 +1095,9 @@
     "PH_Collections.dc.html",
     "PH_Backup.dc.html",
     "PH_BackupNew.dc.html",
-    "PH_BackupRunning.dc.html",
     "PH_BackupOrganize.dc.html",
-    "PH_BackupDayFormat.dc.html",
-    "PH_BackupMediaSplit.dc.html",
     "PH_BackupCustomDate.dc.html",
+    "PH_BackupRunning.dc.html",
     "PH_AlbumDetail.dc.html",
     "PH_SmartAlbum.dc.html",
     "PH_SmartAlbumEditor.dc.html",
