@@ -133,7 +133,7 @@ class Component extends DCLogic {
       fill:'none', color:t.label2 }));
     const flag=(name,tip)=>({name,tip,on:'false',bg:'transparent',shadow:'none'});
     // On every photo: solid chip. On some: dashed chip with a count; × removes it from all three.
-    const kw=(name,n)=>({ name, partial:n<3, count:n+'/3', bg:n<3?'transparent':t.accentSoft,
+    const kw=(name,n)=>({ name, partial:n<3, count:n+'/3', bg:n<3?'transparent':t.fill,
       border:n<3?('1px dashed '+t.label3):'none', tip:n<3?('On '+n+' of 3 photos'):'On all 3 photos',
       label:name+(n<3?', on '+n+' of 3 photos':', on all 3 photos') });
     const ex=(k,v)=>({k,v,c:v==='Mixed'?t.label2:t.label});

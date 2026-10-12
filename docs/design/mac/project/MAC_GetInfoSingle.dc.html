@@ -47,7 +47,7 @@ input{font-family:inherit}
 <div style="position:absolute;left:16px;top:214px;width:80px;height:28px;display:flex;align-items:center;justify-content:flex-end">Keywords</div>
 <div aria-label="Keywords" style="position:absolute;left:108px;right:16px;top:214px;min-height:28px;box-sizing:border-box;border-radius:8px;border:1px solid {{t.sep}};padding:3px;display:flex;flex-wrap:wrap;gap:4px">
 <sc-for list="{{keywords}}" as="k" hint-placeholder-count="4">
-<div style="height:20px;border-radius:10px;background:{{t.accentSoft}};color:{{t.label}};display:flex;align-items:center;gap:3px;padding:0 3px 0 7px;font-size:12px">{{k}}<button aria-label="Remove Keyword {{k}}" style="width:14px;height:14px;border:none;background:none;color:{{t.label2}};display:flex;align-items:center;justify-content:center"><svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M6 6l12 12 M18 6L6 18"></path></svg></button></div>
+<div style="height:20px;border-radius:10px;background:{{t.fill}};color:{{t.label}};display:flex;align-items:center;gap:3px;padding:0 3px 0 7px;font-size:12px">{{k}}<button aria-label="Remove Keyword {{k}}" style="width:14px;height:14px;border:none;background:none;color:{{t.label2}};display:flex;align-items:center;justify-content:center"><svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M6 6l12 12 M18 6L6 18"></path></svg></button></div>
 </sc-for>
 <input aria-label="Add Keyword" placeholder="Add Keyword" style="flex:1;min-width:80px;height:20px;border:none;background:none;outline:none;font-size:12px;color:{{t.label}};padding:0 4px">
 </div>

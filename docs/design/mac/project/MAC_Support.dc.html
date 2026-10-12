@@ -66,7 +66,7 @@ input{font-family:inherit}
 <div style="height:24px;display:flex;align-items:center;padding:0 8px;font-size:11px;font-weight:600;color:{{t.label2}}">What People Asked For</div>
 <sc-for list="{{asks}}" as="a" hint-placeholder-count="5"><div style="height:28px;border-radius:8px;display:flex;align-items:center;gap:6px;padding:0 4px 0 8px">
 <span style="flex:1;min-width:0;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{a.title}}</span>
-<button aria-label="{{a.aria}}" aria-pressed="{{a.voted}}" style="flex:none;height:20px;border-radius:10px;border:none;background:{{a.bg}};color:{{a.fg}};display:flex;align-items:center;gap:3px;padding:0 7px;font-size:11px;font-weight:600;font-variant-numeric:tabular-nums"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V6 M6.5 11.5L12 6l5.5 5.5"></path></svg>{{a.votes}}</button>
+<button aria-label="{{a.aria}}" aria-pressed="{{a.voted}}" style="flex:none;height:20px;border-radius:10px;border:none;background:{{a.bg}};box-shadow:{{a.shadow}};color:{{a.fg}};display:flex;align-items:center;gap:3px;padding:0 7px;font-size:11px;font-weight:600;font-variant-numeric:tabular-nums"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V6 M6.5 11.5L12 6l5.5 5.5"></path></svg>{{a.votes}}</button>
 </div></sc-for>
 </div>
 </div>
@@ -281,7 +281,7 @@ class Component extends DCLogic {
       { title:'Filter Smart Albums by lens focal range', sub:'Planned · last week', unread:null, bg:'transparent' },
       { title:'Statistics lists iPhone 16 Pro twice', sub:'Shipped · 3 weeks ago', unread:null, bg:'transparent' } ];
     const A = (title, votes, voted) => ({ title, votes, voted: voted ? 'true' : 'false',
-      aria: voted ? 'Remove your vote' : 'Vote for this request', bg: voted ? t.accentFill : t.fill, fg: voted ? t.onAccentFill : t.label });
+      aria: voted ? 'Remove your vote' : 'Vote for this request', bg: voted ? t.content : t.fill, shadow: voted ? '0 1px 3px rgba(0,0,0,0.15)' : 'none', fg: t.label });
     const asks = [ A('Luminance range masks', '412', true), A('Sync edits between Mac and iPhone', '368', false),
       A('RAW + JPEG pairs as one photo', '291', true), A('Contact sheet as PDF', '147', false), A('Map of every photo', '96', false) ];
     const thread = [
