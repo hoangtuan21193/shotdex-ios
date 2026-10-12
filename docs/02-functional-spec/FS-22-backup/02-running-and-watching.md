@@ -63,7 +63,9 @@ thật → ghi sổ trong cùng một transaction với dòng lịch sử upload
 - Việc hỏng: lượt kế của app chép lại bằng đường thường (§2), không thử lại trong phần mở rộng quá 1 lần.
 - Organize, Only on Wi‑Fi, Only While Charging áp như đường thường. Mật khẩu WebDAV đọc qua nhóm Keychain chung
   app + phần mở rộng; phần mở rộng không mở database ghi, chỉ đọc bảng job (trần bộ nhớ extension, EX-01).
-- Trạng thái 1/5 khi phần mở rộng đang đẩy: `3 New · Uploading in Background`.
+- Phần mở rộng đặt thư mục WebDAV (MKCOL) trước khi xin PUT, vì Photos chỉ gửi PUT. Lần đầu được gọi cho một job: bắt
+  đầu từ lúc đó — phần đã có trong thư viện do app chép. Việc xong (thành công hay hỏng) được xác nhận để giải phóng hạn mức.
+- File phần mở rộng đã đẩy hiện như mọi file đã chép sau lượt app kế; 1/5 không có trạng thái riêng cho nó.
 
 **§3d. Chép bù không do người dùng bấm** (Q-B2, đã chấp nhận): lượt so lúc mở app không xin được tác vụ xử lý tiếp tục.
 Khi hàng đợi còn > 20 file, 5/5 ghi "Leave ShotDex open to finish faster."; **Back Up Now** vẫn xin được.

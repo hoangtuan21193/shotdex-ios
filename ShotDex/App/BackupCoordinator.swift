@@ -40,6 +40,8 @@ final class BackupCoordinator {
     /// A run the user started — iOS 26 may let it go on after they leave
     /// (FS-22.02 §3). Set by the background service.
     @ObservationIgnored var onUserStart: ((String) -> Void)?
+    /// The job list was read again — the upload extension's config follows it.
+    @ObservationIgnored var onJobsReloaded: (([BackupJob]) -> Void)?
     /// Keep Screen On before iOS 26 (FS-22.02 §3); nil in tests.
     @ObservationIgnored var screen: (any ScreenHolding)?
     /// True before iOS 26, where Keep Screen On applies; tests set it.
@@ -68,6 +70,7 @@ final class BackupCoordinator {
         var counts: [String: Int] = [:]
         for job in jobs { counts[job.id] = (try? store.handledItemCount(jobId: job.id)) ?? 0 }
         backedUpItems = counts
+        onJobsReloaded?(jobs)
     }
 
     /// The jobs list changed (added, edited, deleted): pick it up and let a

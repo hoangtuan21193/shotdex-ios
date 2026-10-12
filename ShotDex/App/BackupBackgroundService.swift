@@ -21,6 +21,8 @@ final class BackupBackgroundService {
         self.servers = servers
         coordinator.onUserStart = { [weak self] jobId in self?.userStartedRun(jobId) }
         coordinator.screen = ScreenAwakeCoordinator.shared
+        coordinator.onJobsReloaded = { jobs in BackupUploadExtensionSync.apply(jobs: jobs, servers: servers) }
+        BackupUploadExtensionSync.apply(jobs: coordinator.jobs, servers: servers)
     }
 
     /// Before launch finishes (BGTaskScheduler rule) — see `ShotDexApp.init`.

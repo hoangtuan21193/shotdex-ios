@@ -298,6 +298,13 @@ actor BackupRunner {
         let localHash = try FileChecksum.sha256(of: local)
         let writer = VerifiedRemoteWrite(client: client)
         var matched = false
+        // The Photos background-upload extension may already have sent this
+        // file under its part name (FS-22.02 §3c): check it instead of
+        // sending it again.
+        let partName = (ServerUploadPath.lastComponent(of: destination) + ServerUploadPath.partSuffix).lowercased()
+        if listing[partName] == size {
+            matched = (try? await writer.readBackSHA256(for: destination, progress: { _ in })) == localHash
+        }
         do {
             // A mismatch is tried once more before the file counts as failed.
             for _ in 0..<2 where !matched {
