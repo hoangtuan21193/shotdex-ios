@@ -8,11 +8,15 @@ struct ServerUploadStore: Sendable {
     let database: AppDatabase
 
     func record(_ upload: ServerUploadRecord) throws {
-        try database.writer.write { db in
-            var row = upload
-            try row.insert(db)
-            try UploadIntoSource.record(db, upload)
-        }
+        try database.writer.write { db in try Self.insert(upload, in: db) }
+    }
+
+    /// The history row plus its FS-19 copy, inside the caller's transaction —
+    /// Backup writes it together with its ledger row (FS-22.03 §1).
+    static func insert(_ upload: ServerUploadRecord, in db: Database) throws {
+        var row = upload
+        try row.insert(db)
+        try UploadIntoSource.record(db, upload)
     }
 
     /// Server sources that keep all of `assetIds` in ShotDex once they are

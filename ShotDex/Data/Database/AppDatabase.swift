@@ -663,6 +663,7 @@ final class AppDatabase: Sendable {
         registerPhotoSources(&migrator)
         registerMissingCopies(&migrator)
         registerCloudPlaceholders(&migrator)
+        registerBackup(&migrator)
 
         return migrator
     }

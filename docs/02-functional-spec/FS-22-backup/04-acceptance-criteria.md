@@ -27,8 +27,8 @@ Server giả: SMB (impacket) và WebDAV (wsgidav) ở 127.0.0.1 như FS-15. Ản
 | AC-17 | iOS 26.5, Start với 40 file | rời app | có đúng 1 yêu cầu tác vụ xử lý tiếp tục; hệ thống dừng → `Paused` + "iOS stopped ShotDex at N of 40" | ⚠️ chưa có — `BackupBackgroundTests.continuedTaskOnUserStart` |
 | AC-18 | iOS 18.6, đang chạy, Keep Screen On bật | rời app / chạy xong / Pause | màn được tự khoá lại ở cả ba lối; lượt nền dài được xin khi rời app | ⚠️ chưa có — `BackupBackgroundTests.pre26KeepsScreenAndSchedules` |
 | AC-19 | 2 mã tác vụ nền mới | build | cả 2 có trong Info.plist; được đăng ký trước khi app khởi động xong | ⚠️ chưa có — `BackupBackgroundTests.identifiersRegistered` |
-| AC-20 | sổ 4.118 dòng | Clear Local Metadata Index rồi index lại | sổ vẫn 4.118 dòng; lượt so kế 0 byte đẩy | ⚠️ chưa có — `BackupStoreTests.ledgerSurvivesIndexClear` |
-| AC-21 | sổ 55.000 dòng, nguồn 55.000 mục + 3 mới | lượt so | trả đúng 3 mục, ≤ 3 s trên iPhone 17 sim | ⚠️ chưa có — `BackupStoreTests.diffAt55kIsOneQuery` |
+| AC-20 | sổ 4.118 dòng | Clear Local Metadata Index rồi index lại | sổ vẫn 4.118 dòng; lượt so kế 0 byte đẩy | `BackupStoreTests.ledgerSurvivesIndexClear` |
+| AC-21 | sổ 55.000 dòng, nguồn 55.000 mục + 3 mới | lượt so | trả đúng 3 mục, ≤ 3 s trên iPhone 17 sim | `BackupStoreTests.diffAt55kIsOneQuery` |
 | AC-22 | quyền `.limited`, 120 ảnh được cho | Start | chép 120 ảnh; dòng 2 có `Limited Access`; quyền bị từ chối → `No Photos Access` + Open Settings | ⚠️ chưa có — `BackupRunnerTests.limitedAccessCopiesVisibleOnly` |
 | AC-23 | nguồn FS-19 thư mục 20 RAW, ổ rút ra giữa lượt | đang chạy | `Source Offline`; cắm lại + mở app → chép phần còn lại | ⚠️ chưa có — `BackupRunnerTests.folderSourceOfflineThenResume` |
 | AC-24 | Include Edited bật, 1 ảnh đã sửa trong Photos | chạy | đích có `IMG_5.HEIC` và `IMG_5_edited.JPG`; sửa lại ảnh → lượt sau thêm `IMG_5_edited (2).JPG`, gốc không chép lại | ⚠️ chưa có — `BackupRunnerTests.editedVersionAddedBesideOriginal` |
@@ -39,7 +39,7 @@ Server giả: SMB (impacket) và WebDAV (wsgidav) ở 127.0.0.1 như FS-15. Ản
 
 ## 2. Chưa chứng minh được
 
-- Toàn bộ AC-1…AC-28 — chưa có code.
+- Mọi AC trừ AC-20, AC-21 — chưa có code.
 - AC-17 lượt dừng của hệ thống không gây được trên sim: chứng minh bằng test giả lập lời dừng, không bằng ảnh.
 - Bố cục iPad và Duo trong/ngoài: board đã vẽ (2026-10-12); AC-25 áp cho `IP_Backup`, `DI_Backup`, `DC_Backup` như `PH_Backup`,
   chứng minh bằng design-parity từng thiết bị. Mac ngoài phạm vi FS-22.
