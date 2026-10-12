@@ -147,6 +147,9 @@ final class AppDependencies {
     let photoMarksStore: PhotoMarksStore
     /// The same marks in memory, and the one place they are written.
     let photoMarks: PhotoMarks
+    /// Bursts straight from PhotoKit, for the Bursts tab and the frame
+    /// picker (FS-02.05, FS-06.06 §7b). Made on first use.
+    @ObservationIgnored private(set) lazy var bursts: any BurstLibrary = PhotoKitBurstLibrary.makeForApp()
     /// iOS 27's first launch: pending stars into Photos, once (FS-01.12 §5).
     let ratingMigration: RatingMigrationPass
     /// Writes ShotDex's properties into Photos (iOS 27): stars, caption,

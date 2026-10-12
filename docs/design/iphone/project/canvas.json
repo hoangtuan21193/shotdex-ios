@@ -1008,6 +1008,22 @@
       "w": 402,
       "x": 8676,
       "y": 560
+    },
+    "PH_DuplicatesBursts.dc.html": {
+      "h": 874,
+      "title": "iPhone · Duplicates tab Bursts: 4 tab, hàng bìa · số khung · ngày · gợi ý của Photos, \"3 bursts\" — khớp code 12/10",
+      "w": 402,
+      "x": 28884,
+      "y": 560,
+      "radius": 44
+    },
+    "PH_BurstFrames.dc.html": {
+      "h": 874,
+      "title": "iPhone · Chọn khung burst (tầng D): ✕ · Frame 7 of 24 · Keep Only Suggested, khung lớn + tick, dải 44, Delete 22 Photos — khớp code 12/10",
+      "w": 402,
+      "x": 29366,
+      "y": 560,
+      "radius": 44
     }
   },
   "createdOnFiles": {
@@ -1221,7 +1237,9 @@
     "PH_LibraryMore.dc.html",
     "PH_ViewerMore.dc.html",
     "F5_P_SaveLook.dc.html",
-    "TX_P_TextPanel.dc.html"
+    "TX_P_TextPanel.dc.html",
+    "PH_DuplicatesBursts.dc.html",
+    "PH_BurstFrames.dc.html"
   ],
   "pages": [],
   "title": "ShotDex · iPhone"

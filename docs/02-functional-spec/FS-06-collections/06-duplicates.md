@@ -49,7 +49,7 @@ Tiến độ `Scanning N of M` + **Cancel**; một lượt tại một thời đ
 
 Mức đang dùng được nhớ lại (mặc định Similar), và dải chọn dựng từ **danh sách đầy đủ** nên thêm một mức
 không thể quên cập nhật giao diện. Dải chọn còn có tab thứ tư **Bursts** (§7b) — không phải một mức trùng.
-⚠️ Bursts chưa có trong code và chưa vẽ trên board v2 (board chỉ có 3 mức) — làm ở /plan của ui-review-1002.
+Bursts có trong code từ 2026-10-12 (`Features/Bursts/`, nguồn `Data/Sources/BurstLibrary.swift`), board `PH_DuplicatesBursts`, `IP_DuplicatesBursts`, `DI_DuplicatesBursts`.
 
 ## 5. Gom nhóm
 
@@ -183,7 +183,7 @@ Merge, dấu xoá, glyph, quét, trạng thái đang index, màn rộng và Comp
 
 | # | Cho | Khi | Thì | Chứng minh bằng |
 |---|---|---|---|---|
-| AC-B1 | thư viện có 3 burst (24, 10, 5 khung), burst 24 khung được Photos gợi ý 2 khung, và 1 loạt Series không phải burst | mở Duplicates, chọn tab Bursts | dải chọn ghi Exact · Similar · Series · Bursts; 3 hàng mới nhất trước, mỗi hàng có bìa, số khung, ngày; hàng 24 khung ghi *2 suggested by Photos*, hai hàng kia *No suggestion*; loạt Series không có trong tab | ⚠️ chưa có — sim chưa có burst |
-| AC-B2 | như AC-B1 | chạm hàng 24 khung | màn chọn khung mở với 24 khung của đúng burst đó | ⚠️ chưa có |
-| AC-B3 | burst 5 khung, giữ 1 khung, xoá 4 | quay lại tab Bursts | hàng của burst đó biến mất; tóm tắt đổi từ *3 bursts* thành *2 bursts* | ⚠️ chưa có |
-| AC-B4 | thư viện không có burst nào | mở tab Bursts | màn rỗng *No Bursts*; không có nút Rescan | ⚠️ chưa có |
+| AC-B1 | thư viện có 3 burst (24, 10, 5 khung), burst 24 khung được Photos gợi ý 2 khung, và 1 loạt Series không phải burst | mở Duplicates, chọn tab Bursts | dải chọn ghi Exact · Similar · Series · Bursts; 3 hàng mới nhất trước, mỗi hàng có bìa, số khung, ngày; hàng 24 khung ghi *2 suggested by Photos*, hai hàng kia *No suggestion*; loạt Series không có trong tab | `BurstModelTests.deletingAllButOneDropsTheBurstFromTheTab` (thứ tự, số gợi ý), `BurstSelectionTests.burstRowsAreNewestFirstAndSayTheirCounts`; sim với `-ShotDexFakeBursts`: 4 tab, hàng có bìa/số khung/ngày/gợi ý · ❓ burst thật cần máy thật |
+| AC-B2 | như AC-B1 | chạm hàng 24 khung | màn chọn khung mở với 24 khung của đúng burst đó | route `bursts-iphone`: chạm hàng 6 khung → màn chọn khung `Frame 1 of 6` (burst giả) |
+| AC-B3 | burst 5 khung, giữ 1 khung, xoá 4 | quay lại tab Bursts | hàng của burst đó biến mất; tóm tắt đổi từ *3 bursts* thành *2 bursts* | `BurstModelTests.deletingAllButOneDropsTheBurstFromTheTab`; route `bursts-iphone2`: giữ 1/2, xoá → hàng biến mất, *1 burst* |
+| AC-B4 | thư viện không có burst nào | mở tab Bursts | màn rỗng *No Bursts*; không có nút Rescan | `BurstModelTests.noBurstsListsNothing`; view: *No Bursts*, không Rescan/Merge (⋯ ẩn ở tab này) |

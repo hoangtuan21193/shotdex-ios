@@ -29,6 +29,8 @@ struct DuplicatesScreen: View {
     @State private var isPinching = false
     @State private var hudVisible = false
     @State private var hudTask: Task<Void, Never>?
+    @State private var burstList: BurstListModel?
+    @State private var openBurst: BurstFramesRequest?
 
     private var isRegular: Bool { horizontalSizeClass == .regular }
 
@@ -60,9 +62,15 @@ struct DuplicatesScreen: View {
     @ViewBuilder
     private func content(_ model: DuplicatesModel) -> some View {
         @Bindable var model = model
-        let hasMarks = model.markedCount > 0
+        let hasMarks = model.markedCount > 0 && !model.showsBursts
         ScrollView {
-            cardList(model)
+            Group {
+                if model.showsBursts, let burstList {
+                    BurstListView(model: burstList, openBurst: $openBurst)
+                } else {
+                    cardList(model)
+                }
+            }
                 .padding(.horizontal, AppTheme.Size.screenMargin)
                 .padding(.top, AppTheme.Spacing.md)
                 .padding(.bottom, hasMarks ? 96 : AppTheme.Spacing.lg)
@@ -73,7 +81,7 @@ struct DuplicatesScreen: View {
         .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { containerWidth = $0 }
         .simultaneousGesture(pinch)
         .safeAreaInset(edge: .top, spacing: 0) {
-            DuplicatesHeaderBand(model: model, isRegular: isRegular)
+            DuplicatesHeaderBand(model: model, burstCount: burstList?.listed.count, isRegular: isRegular)
         }
         .overlay(alignment: .top) {
             if hudVisible {
@@ -105,35 +113,21 @@ struct DuplicatesScreen: View {
         .task(id: photoLibrary.assetChangeToken) {
             guard photoLibrary.authorizationState.canReadLibrary else { return }
             model.refreshPendingCount()
+            if model.showsBursts { await burstList?.reload() }
+        }
+        .task(id: model.showsBursts) {
+            guard model.showsBursts, photoLibrary.authorizationState.canReadLibrary else { return }
+            if burstList == nil { burstList = BurstListModel(library: dependencies.bursts) }
+            await burstList?.reload()
+        }
+        .fullScreenCover(item: $openBurst) { request in
+            BurstFramesScreen(request: request)
+                .environment(dependencies)
+                .environment(photoLibrary)
         }
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
-                Menu {
-                    Button {
-                        model.startScan()
-                    } label: {
-                        Label("Rescan", systemImage: "arrow.clockwise")
-                    }
-                    .disabled(model.isBusy)
-                    if model.canMerge {
-                        Button {
-                            model.isConfirmingMerge = true
-                        } label: {
-                            Label(mergeTitle(model), systemImage: "arrow.trianglehead.merge")
-                        }
-                        .disabled(model.isBusy)
-                    }
-                    Button {
-                        withAnimation(AppTheme.Motion.standard) { model.clearAllMarks() }
-                    } label: {
-                        Label("Clear Selection", systemImage: "xmark.circle")
-                    }
-                    .disabled(model.markedCount == 0 && model.reviewedCount == 0)
-                } label: {
-                    Image(systemName: "ellipsis")
-                }
-                .tint(.primary)
-                .accessibilityLabel("More")
+                if !model.showsBursts { moreMenu(model) }
             }
         }
         .fullScreenCover(item: $model.comparePresentation, onDismiss: model.didCloseCompare) { presentation in
@@ -143,37 +137,38 @@ struct DuplicatesScreen: View {
                 compareRequest: presentation.request
             )
         }
-        .alert(mergeAlertTitle(model), isPresented: $model.isConfirmingMerge) {
-            Button("Merge") { Task { await model.mergeAll() } }
-            Button("Cancel", role: .cancel) {}
-        } message: {
-            Text(mergeAlertMessage(model))
-        }
-        .alert(
-            model.notice?.title ?? "",
-            isPresented: Binding(
-                get: { model.notice != nil },
-                set: { if !$0 { model.notice = nil } }
-            ),
-            presenting: model.notice
-        ) { _ in
-            Button("OK", role: .cancel) {}
-        } message: { notice in
-            Text(notice.message)
-        }
-        .alert(
-            "Duplicates Error",
-            isPresented: Binding(
-                get: { model.errorMessage != nil },
-                set: { if !$0 { model.errorMessage = nil } }
-            )
-        ) {
-            Button("OK", role: .cancel) {}
-        } message: {
-            Text(model.errorMessage ?? "")
-        }
+        .modifier(DuplicatesAlerts(model: model, mergeTitle: mergeAlertTitle(model), mergeMessage: mergeAlertMessage(model)))
         .animation(AppTheme.Motion.standard, value: hasMarks)
         .animation(AppTheme.Motion.standard, value: hudVisible)
+    }
+
+    private func moreMenu(_ model: DuplicatesModel) -> some View {
+        Menu {
+            Button {
+                model.startScan()
+            } label: {
+                Label("Rescan", systemImage: "arrow.clockwise")
+            }
+            .disabled(model.isBusy)
+            if model.canMerge {
+                Button {
+                    model.isConfirmingMerge = true
+                } label: {
+                    Label(mergeTitle(model), systemImage: "arrow.trianglehead.merge")
+                }
+                .disabled(model.isBusy)
+            }
+            Button {
+                withAnimation(AppTheme.Motion.standard) { model.clearAllMarks() }
+            } label: {
+                Label("Clear Selection", systemImage: "xmark.circle")
+            }
+            .disabled(model.markedCount == 0 && model.reviewedCount == 0)
+        } label: {
+            Image(systemName: "ellipsis")
+        }
+        .tint(.primary)
+        .accessibilityLabel("More")
     }
 
     // MARK: Cards
@@ -430,17 +425,34 @@ struct DuplicatesScreen: View {
 /// progress, last scan and Rescan. Cards scroll beneath it.
 private struct DuplicatesHeaderBand: View {
     @Bindable var model: DuplicatesModel
+    /// Bursts listed in the Bursts tab, once read.
+    let burstCount: Int?
     let isRegular: Bool
 
     var body: some View {
         Group {
-            if isRegular {
+            if model.showsBursts {
+                // Bursts: the tabs and how many bursts — no sort, no scan,
+                // no progress (§7b).
+                HStack(spacing: AppTheme.Spacing.md) {
+                    strictnessPicker.frame(maxWidth: isRegular ? 420 : .infinity)
+                    if let burstCount {
+                        Text(BurstSummary.countTitle(burstCount))
+                            .font(.footnote.weight(.semibold))
+                            .monospacedDigit()
+                            .foregroundStyle(.secondary)
+                            .fixedSize()
+                    }
+                    if isRegular { Spacer(minLength: 0) }
+                }
+                .frame(minHeight: 44)
+            } else if isRegular {
                 // One row when it fits (iPad landscape, the board); iPad
                 // portrait and the Duo inner put the scan line under the
                 // progress instead of truncating it.
                 ViewThatFits(in: .horizontal) {
                     HStack(spacing: AppTheme.Spacing.md) {
-                        strictnessPicker.frame(width: 330)
+                        strictnessPicker.frame(width: 420)
                         sortMenu
                         progress.frame(width: 400)
                         Spacer(minLength: AppTheme.Spacing.md)
@@ -450,7 +462,7 @@ private struct DuplicatesHeaderBand: View {
                         }
                     }
                     HStack(spacing: AppTheme.Spacing.md) {
-                        strictnessPicker.frame(width: 300)
+                        strictnessPicker.frame(width: 400)
                         sortMenu
                         VStack(alignment: .leading, spacing: AppTheme.Spacing.xs) {
                             progress
@@ -484,10 +496,23 @@ private struct DuplicatesHeaderBand: View {
         .overlay(alignment: .bottom) { Divider() }
     }
 
+    /// Exact · Similar · Series · Bursts. The first three are strictnesses
+    /// of one scan; Bursts is its own list (§7b).
     private var strictnessPicker: some View {
-        Picker("Match", selection: $model.strictness) {
-            ForEach(DuplicateStrictness.allCases) { strictness in
-                Text(strictness.title).tag(strictness)
+        Picker("Match", selection: Binding<DuplicatesTab>(
+            get: { model.showsBursts ? .bursts : .match(model.strictness) },
+            set: { tab in
+                switch tab {
+                case .bursts:
+                    model.showsBursts = true
+                case .match(let strictness):
+                    model.showsBursts = false
+                    model.strictness = strictness
+                }
+            }
+        )) {
+            ForEach(DuplicatesTab.allCases, id: \.self) { tab in
+                Text(tab.title).tag(tab)
             }
         }
         .pickerStyle(.segmented)
@@ -1046,6 +1071,61 @@ private struct KeepBadgeLabelStyle: LabelStyle {
         HStack(spacing: AppTheme.Spacing.xs) {
             configuration.icon.font(.caption.weight(.bold))
             configuration.title
+        }
+    }
+}
+
+/// The screen's alerts, out of `content` so the type checker keeps up.
+private struct DuplicatesAlerts: ViewModifier {
+    @Bindable var model: DuplicatesModel
+    let mergeTitle: String
+    let mergeMessage: String
+
+    func body(content: Content) -> some View {
+        content
+            .alert(mergeTitle, isPresented: $model.isConfirmingMerge) {
+            Button("Merge") { Task { await model.mergeAll() } }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text(mergeMessage)
+        }
+            .alert(
+            model.notice?.title ?? "",
+            isPresented: Binding(
+                get: { model.notice != nil },
+                set: { if !$0 { model.notice = nil } }
+            ),
+            presenting: model.notice
+        ) { _ in
+            Button("OK", role: .cancel) {}
+        } message: { notice in
+            Text(notice.message)
+        }
+            .alert(
+            "Duplicates Error",
+            isPresented: Binding(
+                get: { model.errorMessage != nil },
+                set: { if !$0 { model.errorMessage = nil } }
+            )
+        ) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text(model.errorMessage ?? "")
+        }
+    }
+}
+
+/// The Duplicates screen's four tabs.
+enum DuplicatesTab: Hashable, CaseIterable {
+    case match(DuplicateStrictness)
+    case bursts
+
+    static var allCases: [DuplicatesTab] { DuplicateStrictness.allCases.map { .match($0) } + [.bursts] }
+
+    var title: String {
+        switch self {
+        case .match(let strictness): strictness.title
+        case .bursts: String(localized: "Bursts", comment: "Duplicates tab: real bursts from Photos")
         }
     }
 }

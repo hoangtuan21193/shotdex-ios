@@ -960,6 +960,20 @@
    "w": 1376,
    "x": 80080,
    "y": 560
+  },
+  "IP_DuplicatesBursts.dc.html": {
+   "h": 1032,
+   "title": "iPad · Duplicates tab Bursts: hàng thành lưới 3 cột ≥ 340pt — khớp code 12/10",
+   "w": 1376,
+   "x": 81536,
+   "y": 560
+  },
+  "IP_BurstFrames.dc.html": {
+   "h": 1032,
+   "title": "iPad · Chọn khung burst: dải 72 ô 60, Delete 22 Photos 340 — khớp code 12/10",
+   "w": 1376,
+   "x": 82992,
+   "y": 560
   }
  },
  "order": [
@@ -1094,7 +1108,9 @@
   "IP_BackupNew.dc.html",
   "IP_BackupOrganize.dc.html",
   "IP_BackupCustomDate.dc.html",
-  "IP_BackupRunning.dc.html"
+  "IP_BackupRunning.dc.html",
+  "IP_DuplicatesBursts.dc.html",
+  "IP_BurstFrames.dc.html"
  ],
  "notes": {
   "sec_app": {

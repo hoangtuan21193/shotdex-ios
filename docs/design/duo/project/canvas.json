@@ -1500,6 +1500,27 @@
       "w": 951,
       "h": 669,
       "title": "Duo mở · Text: cột Text — Add Text, Auto Captions, Fonts You Used (2026-10-11)"
+    },
+    "DI_DuplicatesBursts.dc.html": {
+      "h": 669,
+      "title": "Duo trong · Duplicates tab Bursts: 2 cột — theo hình học code, chưa chụp (sim Duo khởi động gập)",
+      "w": 951,
+      "x": 59798,
+      "y": 560
+    },
+    "DI_BurstFrames.dc.html": {
+      "h": 669,
+      "title": "Duo trong · Chọn khung burst: dải 56 ô 44 — theo hình học code, chưa chụp",
+      "w": 951,
+      "x": 60829,
+      "y": 560
+    },
+    "DC_BurstFrames.dc.html": {
+      "h": 678,
+      "title": "Duo ngoài · Chọn khung burst: mọi thứ trong 382pt trái rail 84, thanh trên cách đỉnh 28 khỏi góc bo",
+      "w": 466,
+      "x": 30030,
+      "y": 1609
     }
   },
   "createdOnFiles": {
@@ -1846,7 +1867,10 @@
     "DI_BackupCustomDate.dc.html",
     "DC_BackupCustomDate.dc.html",
     "DI_BackupRunning.dc.html",
-    "DC_BackupRunning.dc.html"
+    "DC_BackupRunning.dc.html",
+    "DI_DuplicatesBursts.dc.html",
+    "DI_BurstFrames.dc.html",
+    "DC_BurstFrames.dc.html"
   ],
   "pages": [],
   "title": "ShotDex · iPhone Duo"

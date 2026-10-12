@@ -112,9 +112,8 @@ struct PhotoDetailScreen: View {
     /// so text selection never steals the pinch and swipe gestures.
     @State private var isLiveTextActive = false
     @State private var slideshow: SlideshowPresentation?
-    /// Frames of the burst the current photo belongs to. Reuses the slideshow
-    /// payload type: both are "a run of asset ids plus where to start".
-    @State private var burstList: SlideshowPresentation?
+    /// The burst frame picker for the photo on screen (FS-02.05).
+    @State private var burstFrames: BurstFramesRequest?
     @State private var trimTarget: VideoTrimPresentation?
     @State private var panoramaTarget: PanoramaPresentation?
     /// The Handoff offer for the photo on screen, and the lookup that builds
@@ -382,17 +381,10 @@ struct PhotoDetailScreen: View {
         .appBannerHost(dependencies.banner, bottomInset: 120)
         .cullPresenter($cullRequest)
         .fileExportPresenter($fileExportRequest)
-        .sheet(item: $burstList) { presentation in
-            // Neither the root nor this viewer can present over this sheet,
-            // so its tile menu gets a coordinator and host of its own.
-            AssetActionScope(dependencies: dependencies) {
-                NavigationStack {
-                    PhotoListScreen(
-                        title: String(localized: "Burst"),
-                        subtitle: "\(presentation.assetIds.count) frames",
-                        assetIds: presentation.assetIds
-                    )
-                }
+        .fullScreenCover(item: $burstFrames) { request in
+            BurstFramesScreen(request: request) { kept in
+                // Stand on the first frame kept once the source has it.
+                if let first = kept.first { pendingSavedAssetID = first; revealSavedAssetIfNeeded() }
             }
             .environment(dependencies)
             .environment(photoLibrary)
@@ -971,11 +963,14 @@ struct PhotoDetailScreen: View {
                         Label("View Panorama", systemImage: "pano")
                     }
                 }
-                if currentAsset?.burstIdentifier != nil {
+                if let id = currentMetadata?.assetId, let burstId = dependencies.bursts.burstId(of: id) {
+                    // Replaces Show All Frames: the picker shows every frame
+                    // too, and can keep some and delete the rest (FS-02.05 §3).
                     Button {
-                        showBurst()
+                        burstFrames = BurstFramesRequest(burstId: burstId, startFrameId: id)
                     } label: {
-                        Label("Show All Frames", systemImage: "square.stack.3d.down.right")
+                        Label(String(localized: "Select Frames…", comment: "Viewer menu: open the burst frame picker"),
+                              systemImage: "square.stack.3d.down.right")
                     }
                 }
                 Button {
@@ -1015,19 +1010,6 @@ struct PhotoDetailScreen: View {
     private func recordCurrentAsViewed() {
         guard let id = model.photoId(at: currentIndex) else { return }
         dependencies.recentActivity.recordViewed(id)
-    }
-
-    /// Opens every frame of the burst this photo belongs to. The grid only
-    /// ever shows the representative, so without this the other frames are
-    /// invisible in the app.
-    private func showBurst() {
-        guard let asset = currentAsset else { return }
-        let members = PhotoLibraryService.burstMembers(of: asset)
-        guard members.count > 1 else { return }
-        burstList = SlideshowPresentation(
-            assetIds: members.map(\.localIdentifier),
-            startIndex: 0
-        )
     }
 
     /// Plays the whole run the viewer is browsing, starting from the photo on

@@ -1,7 +1,7 @@
 # FS-02.05 — Chọn khung trong burst
 
-`FS-02.05` · tier D · `Features/Library/PhotoDetailScreen.swift` · `Data/Sources/PhotoLibraryService+Assets.swift`
-· `Features/Library/CompareScreen.swift` · nguồn intent [user-wishes-research](../../_intents/2026-09-30-user-wishes-research.md)
+`FS-02.05` · tier D · `Features/Bursts/` · `Domain/Bursts/BurstSelection.swift` · `Data/Sources/BurstLibrary.swift`
+· test `BurstSelectionTests`, `BurstModelTests` · nguồn intent [user-wishes-research](../../_intents/2026-09-30-user-wishes-research.md)
 mục 12 · cập nhật 2026-10-01
 
 **Một câu:** từ tab Bursts của Duplicates hoặc từ một ảnh burst trong viewer, lướt mọi khung trên một màn kiểu
@@ -33,7 +33,7 @@ xoá những khung còn lại.
   ra thành ảnh độc lập (đường Duplicate có sẵn), rồi khung gốc đó đi cùng lệnh xoá.
   - Cái giá của đường chép: tải bản gốc iCloud, mất album và chỉnh sửa của khung đó.
   - Vì khung giữ mà biến khỏi lưới là mất ảnh trong mắt người dùng — tệ hơn mất album.
-- Chưa có số đo §9 thì không chạy `/plan`.
+- Chưa có số đo §9: code 2026-10-12 chỉ làm đường chính (xoá khung không giữ); đường chép chờ số đo trên máy thật (người dùng chọn làm trước, 2026-10-12).
 
 ## 3. Phạm vi
 
@@ -74,7 +74,7 @@ Luật của màn:
 - **Phải giữ ít nhất một khung:** chưa giữ khung nào thì nút tắt, và dòng phụ là "Keep at least one frame. To
   delete the whole burst, use Delete in the viewer."
 
-Board: chưa có board màn chọn khung trên canvas ShotDex App Screens — vẽ `PH_`/`IP_`/`DI_`/`DC_` trước khi code.
+Board: `PH_BurstFrames`, `IP_BurstFrames`, `DI_BurstFrames`, `DC_BurstFrames` (2026-10-12).
 
 ## 5. Gợi ý khung
 
@@ -113,21 +113,21 @@ Board: chưa có board màn chọn khung trên canvas ShotDex App Screens — v�
 
 | # | Cho | Khi | Thì | Chứng minh bằng |
 |---|---|---|---|---|
-| AC-1 | ảnh A thuộc burst 24 khung, app thấy đủ 24; ảnh B không phải burst | mở ⋯ của A rồi của B | A có mục Select Frames… và không có Show All Frames; B không có mục nào cho burst | ⚠️ chưa có |
-| AC-2 | burst 24 khung, Photos gợi ý khung 7 và 15 | mở Select Frames… trên iPhone, iPad, Duo trong, Duo ngoài | cả 4 máy: một khung lớn + dải 24 thumbnail theo thứ tự chụp; khung 7 và 15 mang nhãn Suggested; 0 khung được giữ; nút Delete tắt với dòng "Keep at least one frame…"; có Keep Only Suggested | ⚠️ chưa có |
-| AC-3 | như AC-2 | bấm Keep Only Suggested | khung 7 và 15 có tick, 22 khung kia không; nút ghi "Delete 22 Photos" | ⚠️ chưa có |
-| AC-4 | khung 7 và 15 được giữ | bấm Delete rồi xác nhận trong hộp thoại hệ thống | lệnh xoá mang đúng 22 id; mở lại Select Frames… thấy 2 khung; lưới không còn ô nào trỏ tới khung đã xoá | ⚠️ chưa có |
-| AC-5 | khung 7 và 15 được giữ | bấm Cancel trong hộp thoại hệ thống | 0 ảnh bị xoá, khung 7 và 15 vẫn có tick | ⚠️ chưa có |
-| AC-6 | màn đang ở khung 3, chưa giữ khung nào | chạm khung lớn, rồi chạm lại | lần 1: khung 3 có tick ở khung lớn và thumbnail, nút ghi "Delete 23 Photos"; lần 2: tick mất, nút tắt | ⚠️ chưa có |
-| AC-7 | burst 24 khung, Photos không gợi ý khung nào | mở Select Frames… | không khung nào mang nhãn Suggested; không có Keep Only Suggested; 0 yêu cầu ảnh ngoài thumbnail và khung lớn | ⚠️ chưa có |
+| AC-1 | ảnh A thuộc burst 24 khung, app thấy đủ 24; ảnh B không phải burst | mở ⋯ của A rồi của B | A có mục Select Frames… và không có Show All Frames; B không có mục nào cho burst | code: ⋯ **Select Frames…** thay Show All Frames, chỉ khi ảnh thuộc burst · ❓ cần burst thật |
+| AC-2 | burst 24 khung, Photos gợi ý khung 7 và 15 | mở Select Frames… trên iPhone, iPad, Duo trong, Duo ngoài | cả 4 máy: một khung lớn + dải 24 thumbnail theo thứ tự chụp; khung 7 và 15 mang nhãn Suggested; 0 khung được giữ; nút Delete tắt với dòng "Keep at least one frame…"; có Keep Only Suggested | `BurstSelectionTests.nothingIsKeptOnOpen`; ảnh chụp iPhone (burst giả) |
+| AC-3 | như AC-2 | bấm Keep Only Suggested | khung 7 và 15 có tick, 22 khung kia không; nút ghi "Delete 22 Photos" | `BurstSelectionTests.keepOnlySuggestedDeletesTheOtherTwentyTwo` |
+| AC-4 | khung 7 và 15 được giữ | bấm Delete rồi xác nhận trong hộp thoại hệ thống | lệnh xoá mang đúng 22 id; mở lại Select Frames… thấy 2 khung; lưới không còn ô nào trỏ tới khung đã xoá | `BurstModelTests.deletingAllButOneDropsTheBurstFromTheTab` (lệnh xoá mang đúng id không giữ) |
+| AC-5 | khung 7 và 15 được giữ | bấm Cancel trong hộp thoại hệ thống | 0 ảnh bị xoá, khung 7 và 15 vẫn có tick | `BurstModelTests.cancelKeepsTheTicks` |
+| AC-6 | màn đang ở khung 3, chưa giữ khung nào | chạm khung lớn, rồi chạm lại | lần 1: khung 3 có tick ở khung lớn và thumbnail, nút ghi "Delete 23 Photos"; lần 2: tick mất, nút tắt | `BurstSelectionTests.tappingTheBigFrameTogglesTheKeep`; route iPhone: chạm khung lớn → tick, *Delete 5 Photos* |
+| AC-7 | burst 24 khung, Photos không gợi ý khung nào | mở Select Frames… | không khung nào mang nhãn Suggested; không có Keep Only Suggested; 0 yêu cầu ảnh ngoài thumbnail và khung lớn | `BurstSelectionTests.noSuggestionsMeansNoKeepOnlySuggested` |
 | AC-8 | burst 24 khung, 6 khung chỉ có trên iCloud, máy mất mạng | giữ 18 khung còn lại, xoá | lệnh xoá 6 khung chạy mà không tải gì, 0 yêu cầu mạng | ⚠️ chưa có |
-| AC-9 | quyền `.limited`, burst 24 khung, người dùng mới chia sẻ 3 | mở Select Frames… | thấy 3 khung và câu "ShotDex can see 3 frames…"; lệnh xoá chỉ mang id trong 3 khung đó. Chia sẻ 1 khung thì không có mục ⋯ | ⚠️ chưa có |
-| AC-10 | khung 7 và 15 được giữ, lệnh xoá trả lỗi (giả lập) | bấm Delete | 0 khung mất, tick giữ nguyên, có lỗi và nút Try Again | ⚠️ chưa có |
+| AC-9 | quyền `.limited`, burst 24 khung, người dùng mới chia sẻ 3 | mở Select Frames… | thấy 3 khung và câu "ShotDex can see 3 frames…"; lệnh xoá chỉ mang id trong 3 khung đó. Chia sẻ 1 khung thì không có mục ⋯ | `BurstModelTests.limitedAccessSaysHowManyFramesItSees` |
+| AC-10 | khung 7 và 15 được giữ, lệnh xoá trả lỗi (giả lập) | bấm Delete | 0 khung mất, tick giữ nguyên, có lỗi và nút Try Again | `BurstModelTests.aFailedDeleteKeepsEverything` (banner Try Again) |
 | AC-11 | giữ khung 7 và 15, cả hai **không** phải khung đại diện | xoá 22 khung còn lại, về Library | lưới có ô cho **cả** khung 7 và khung 15 (giữ trong burst, hoặc bản chép nếu §9 đo ra bị ẩn); không ô nào trỏ tới khung đã xoá | ⚠️ chưa có — cần máy thật |
 | AC-12 | vừa xoá xong 22 khung | nhìn banner | banner nói 22 frames ở Recently Deleted, cứu được trong Photos 30 ngày; không có nút Undo | ⚠️ chưa có |
 | AC-13 | (Q1) màn chọn khung mở trên iPhone 402×874, Duo trong 951×669 và Duo ngoài 466×678, đã giữ 2 khung | bấm nút đóng ở trái thanh trên | trước khi bấm nút thấy trên cả 3 máy, trên Duo ngoài nằm ngoài rail 84pt; màn đóng, 0 ảnh bị xoá, 0 hộp thoại hệ thống | ⚠️ chưa có |
 
-**Chưa chứng minh được:** AC-1 → AC-13. Simulator chưa có burst nào (PHOTOS_PARITY B8).
+**Chưa chứng minh được:** AC-1 trên burst thật, AC-8 (iCloud, mất mạng), AC-11 (cần máy thật, §9), AC-12 (banner chưa chụp), AC-13 (Duo). Simulator không có burst thật — `-ShotDexFakeBursts` (DEBUG) dựng burst từ ảnh thường.
 
 ## 9. Rủi ro và phần phải đo trước `/plan`
 

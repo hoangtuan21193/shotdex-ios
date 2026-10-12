@@ -52,6 +52,9 @@ final class DuplicatesModel {
     private(set) var traits: [String: DuplicateMemberTraits] = [:]
     private var traitsRequested: Set<String> = []
     var comparePresentation: DuplicateComparePresentation?
+    /// The fourth tab, Bursts (FS-06.06 §7b) — not a match strictness: it
+    /// lists real bursts from PhotoKit and needs no scan.
+    var showsBursts = false
     /// The comparison on screen, kept past its dismissal for `didCloseCompare`.
     @ObservationIgnored private var openCompare: DuplicateComparePresentation?
     var errorMessage: String?
