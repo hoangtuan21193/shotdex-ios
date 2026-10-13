@@ -301,12 +301,20 @@ actor BackupRunner {
             progress.bytesDone += size
             return
         }
+        // The same bytes anywhere in the destination folder — another
+        // phone's copy, a file put there by hand: nothing is sent (FS-22.05 §4).
+        let localHash = try FileChecksum.sha256(of: local)
+        if let existing = try await destinationFile(matching: localHash, size: size) {
+            try recordDuplicate(planned, of: existing, sha256: localHash, bytes: size)
+            progress.bytesDone += size
+            return
+        }
+
         // Same name, different file: keep both, never overwrite, never ask.
         let destination = listing[name.lowercased()] == nil
             ? planned.remotePath
             : ServerUploadPath.join(folder, ServerUploadPath.nextFreeName(for: name, existing: Set(listing.keys)))
 
-        let localHash = try FileChecksum.sha256(of: local)
         let writer = VerifiedRemoteWrite(client: client)
         var matched = false
         // The Photos background-upload extension may already have sent this
@@ -339,11 +347,16 @@ actor BackupRunner {
 
         listings[folder, default: [:]][ServerUploadPath.lastComponent(of: destination).lowercased()] = size
         progress.bytesDone += size
+        // Known at once, so a second copy of these bytes later in this same
+        // run is a duplicate too.
+        try store.saveDestinationFile(BackupDestinationFile(
+            jobId: job.id, path: relativePath(destination), size: size, sha256: localHash, origin: .own, needsPublish: true
+        ))
         try store.record(
             BackupLedgerEntry(
                 jobId: job.id, itemKey: planned.key.itemKey, resourceKey: planned.key.resourceKey,
                 sourceStamp: planned.key.sourceStamp, remotePath: destination, byteCount: size,
-                sha256: localHash, outcome: .uploaded
+                sha256: localHash, outcome: .uploaded, localName: planned.file.file.filename
             ),
             // The FS-15 history is keyed on Photos assets; an FS-19 copy has
             // its own record of where it lives.
@@ -367,8 +380,44 @@ actor BackupRunner {
     private func recordFound(_ planned: Planned, remotePath: String, bytes: Int64) throws {
         try store.record(BackupLedgerEntry(
             jobId: job.id, itemKey: planned.key.itemKey, resourceKey: planned.key.resourceKey,
-            sourceStamp: planned.key.sourceStamp, remotePath: remotePath, byteCount: bytes, outcome: .found
+            sourceStamp: planned.key.sourceStamp, remotePath: remotePath, byteCount: bytes, outcome: .found,
+            localName: planned.file.file.filename
         ))
+    }
+
+    // MARK: - Duplicates (FS-22.05)
+
+    /// The server path of a file in the destination folder holding exactly
+    /// these bytes, if this device knows of one.
+    private func destinationFile(matching sha256: String, size: Int64) async throws -> String? {
+        for candidate in try store.destinationFiles(jobId: job.id, sha256: sha256) where candidate.size == size {
+            return ServerUploadPath.join(job.folder, candidate.path)
+        }
+        return nil
+    }
+
+    private func recordDuplicate(_ planned: Planned, of existing: String, sha256: String, bytes: Int64) throws {
+        try store.record(
+            BackupLedgerEntry(
+                jobId: job.id, itemKey: planned.key.itemKey, resourceKey: planned.key.resourceKey,
+                sourceStamp: planned.key.sourceStamp, remotePath: existing, byteCount: bytes,
+                sha256: sha256, outcome: .duplicate, localName: planned.file.file.filename
+            ),
+            // The bytes matched by SHA-256, so the photo is on the server as
+            // surely as one this job sent: Free Up Space may count it.
+            upload: job.sourceId == PhotoLibrarySource.id ? ServerUploadRecord(
+                assetId: planned.item.itemKey, fileKey: planned.file.file.key,
+                serverId: destination.connectionId, serverName: destination.connectionName,
+                remotePath: existing, byteCount: bytes, sha256: sha256
+            ) : nil
+        )
+    }
+
+    /// A server path as the shared index writes it: relative to the job's folder.
+    private func relativePath(_ remotePath: String) -> String {
+        let folder = job.folder.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
+        guard !folder.isEmpty, remotePath.hasPrefix(folder + "/") else { return remotePath }
+        return String(remotePath.dropFirst(folder.count + 1))
     }
 
     private func recordFailure(_ planned: Planned, _ error: Error) {

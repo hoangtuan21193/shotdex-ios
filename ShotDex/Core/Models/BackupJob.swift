@@ -78,6 +78,8 @@ struct BackupJobState: Codable, Hashable, Sendable {
     /// True once a run finished with the ledger empty at its start — later
     /// runs read "N New" instead of "Backing Up" (FS-22.02 §5).
     var hasFinishedFirstRun = false
+    /// When the destination tree was last listed (FS-22.05 §3); nil = never.
+    var lastTreeScanAt: Int?
 
     init(jobId: String) {
         self.jobId = jobId
@@ -98,6 +100,9 @@ struct BackupLedgerEntry: Codable, Hashable, Sendable {
         case found
         /// Not copied; retried on later runs.
         case failed
+        /// The same bytes are already somewhere in the destination folder —
+        /// `remotePath` is that file (FS-22.05 §4).
+        case duplicate
     }
 
     var id: Int64?
@@ -116,6 +121,8 @@ struct BackupLedgerEntry: Codable, Hashable, Sendable {
     var attempts: Int
     var lastError: String?
     var recordedAt: Int
+    /// The file's name on this device.
+    var localName: String?
 
     init(
         id: Int64? = nil,
@@ -129,7 +136,8 @@ struct BackupLedgerEntry: Codable, Hashable, Sendable {
         outcome: Outcome,
         attempts: Int = 1,
         lastError: String? = nil,
-        recordedAt: Int = Int(Date().timeIntervalSince1970)
+        recordedAt: Int = Int(Date().timeIntervalSince1970),
+        localName: String? = nil
     ) {
         self.id = id
         self.jobId = jobId
@@ -143,6 +151,7 @@ struct BackupLedgerEntry: Codable, Hashable, Sendable {
         self.attempts = attempts
         self.lastError = lastError
         self.recordedAt = recordedAt
+        self.localName = localName
     }
 
     /// What a source file is matched on: the item, which of its files, and
@@ -165,4 +174,32 @@ struct BackupFileKey: Hashable, Sendable {
     var itemKey: String
     var resourceKey: String
     var sourceStamp: String
+}
+
+/// One file in a job's destination folder, as far as this device knows
+/// (FS-22.05 §2): listed there, read from the shared index, or written here.
+struct BackupDestinationFile: Codable, Hashable, Sendable {
+    enum Origin: String, Codable, Sendable {
+        /// Seen by listing the destination tree.
+        case listed
+        /// Read from another device's (or an earlier install's) index segment.
+        case index
+        /// Written by this device.
+        case own
+    }
+
+    var jobId: String
+    /// Relative to the job's folder.
+    var path: String
+    var size: Int64
+    /// Modification time at the destination, seconds; nil = not known.
+    var modified: Int?
+    var sha256: String?
+    var origin: Origin
+    var needsPublish = false
+    var seenAt = Int(Date().timeIntervalSince1970)
+}
+
+extension BackupDestinationFile: FetchableRecord, PersistableRecord {
+    static let databaseTableName = "backup_destination_files"
 }

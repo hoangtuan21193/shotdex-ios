@@ -1,6 +1,6 @@
 # FS-22.05 — Không chép trùng giữa các máy
 
-`FS-22.05` · board `PH_Backup` (1/6, trạng thái `Checking NAS`) · `PH_BackupRunning` (6/6, dòng **Already on NAS**) ·
+`FS-22.05` · board `PH_Backup` (1/6, trạng thái `Checking <connection>`) · `PH_BackupRunning` (6/6, dòng **Already on <connection>**) ·
 `PH_BackupNew` (2/6, chú thích dưới Folder) · đề xuất `ShotDex/Domain/Backup/BackupContentIndex.swift`,
 `BackupShared/BackupIndexFile.swift` · cập nhật 2026-10-13
 
@@ -37,7 +37,7 @@ không … ảnh trùng nhưng ở khác thư mục … cái này quan trọng t
 ## 3. File có sẵn trên NAS (không do ShotDex chép)
 
 - **Lúc tạo job** (và khi đổi folder đích): liệt kê cả cây folder đích một lần — chỉ **tên + cỡ + ngày sửa**, không đọc
-  nội dung. Trạng thái 1/6: `Checking NAS · 12,408 files` (đếm lên), chưa chép file nào trong lúc này.
+  nội dung. Trạng thái 1/6: `Checking NAS Home · 12,408 files` (tên connection, đếm lên), chưa chép file nào trong lúc này.
 - **Không băm cả NAS.** Một file ở NAS chỉ được đọc để băm khi có một file sắp chép có **cùng cỡ** với nó mà nó chưa có
   SHA-256. Kết quả băm ghi vào sổ chung (§2) để máy khác khỏi đọc lại. *Vì 500 GB qua Wi‑Fi là vài giờ; hai file khác
   nhau mà trùng cỡ đến từng byte là hiếm.*
@@ -66,8 +66,11 @@ Chen vào giữa FS-22.02 §2, sau khi bản gốc đã nằm ở thư mục t�
 
 ## 5. Hiển thị
 
-- 1/6: `Checking NAS · 12,408 files` lúc liệt kê (§3). Dòng 2: `before the first copy` lần đầu, `daily check` các lần sau.
-- 6/6: dưới **Backed Up** thêm dòng **Already on NAS · 312** — chạm mở danh sách: tên file ở máy → đường dẫn đã có ở đích.
+- 1/6: `Checking NAS Home · 12,408 files` lúc liệt kê (§3). Dòng 2: `before the first copy` lần đầu, `daily check` các lần sau.
+- 6/6: dưới **Backed Up** thêm dòng **Already on NAS Home · 312** (chỉ khi có ít nhất 1) — chạm mở danh sách: tên file ở
+  máy → đường dẫn đã có ở đích.
+- Chữ dùng **tên connection** như mọi trạng thái khác (`Can't Reach NAS Home`), vì đích có thể là folder Files chứ không
+  phải NAS (người dùng 2026-10-13).
 - Tổng ở 6/6 và đếm "N items" ở 1/6 tính cả `duplicate` là đã xong.
 - Không báo lỗi, không hỏi người dùng khi bỏ qua một file trùng.
 

@@ -41,12 +41,12 @@ Server giả: SMB (impacket) và WebDAV (wsgidav) ở 127.0.0.1 như FS-15. Ản
 | AC-31 | máy A đã chép `2025/Oct/2025.10.12/IMG_4410.HEIC` (3,2 MB) vào `Family`; máy B có cùng ảnh, byte giống hệt, tên `IMG_9001.HEIC`, job cũng vào `Family` | lượt chạy của B | B không đẩy byte nào; sổ B ghi `duplicate` → `2025/Oct/2025.10.12/IMG_4410.HEIC`; đích vẫn 1 file | ⚠️ chưa có |
 | AC-32 | như AC-31 nhưng file của A nằm ở `Albums/Trip/IMG_4410.HEIC` (A xếp theo album, B theo ngày) | lượt chạy của B | vẫn bỏ qua, sổ trỏ `Albums/Trip/IMG_4410.HEIC`; không tạo `2025/Oct/…` cho ảnh đó | ⚠️ chưa có |
 | AC-33 | đích có `X.HEIC` 3.145.728 byte; máy có ảnh khác nội dung nhưng đúng 3.145.728 byte | lượt chạy | ảnh được đẩy lên (SHA khác); `X.HEIC` được đọc để băm đúng một lần, SHA ghi vào sổ chung | ⚠️ chưa có |
-| AC-34 | `Family` có sẵn 8.000 file không do ShotDex chép, 3 file trùng cỡ với 3 ảnh sắp chép (2 trùng nội dung, 1 không) | tạo job rồi chạy | trạng thái `Checking NAS · 8,000 files` trước lần chép đầu; chỉ 3 file đó bị đọc từ NAS; 2 ảnh `duplicate`, 1 ảnh `uploaded` | ⚠️ chưa có |
+| AC-34 | `Family` có sẵn 8.000 file không do ShotDex chép, 3 file trùng cỡ với 3 ảnh sắp chép (2 trùng nội dung, 1 không) | tạo job rồi chạy | trạng thái `Checking NAS Home · 8,000 files` trước lần chép đầu; chỉ 3 file đó bị đọc từ NAS; 2 ảnh `duplicate`, 1 ảnh `uploaded` | ⚠️ chưa có |
 | AC-35 | sổ chung ghi `a/IMG_1.HEIC` có SHA trùng ảnh sắp chép, nhưng người dùng đã xoá file đó trên NAS | lượt chạy | ảnh được đẩy lên lại; dòng cũ bị bỏ khỏi bản sao cục bộ | ⚠️ chưa có |
 | AC-36 | phần mở rộng tải nền đã PUT `IMG_7.HEIC.shotdex-part` mà nội dung đã có ở `b/IMG_7.HEIC` | mở app | part bị xoá, không đổi tên thật; sổ ghi `duplicate` → `b/IMG_7.HEIC` | ⚠️ chưa có |
-| AC-37 | thư viện có 2 ảnh byte giống hệt (Duplicate trong Photos), đích rỗng | lượt chạy | 1 file lên, ảnh kia `duplicate` trỏ file vừa lên | ⚠️ chưa có |
+| AC-37 | thư viện có 2 ảnh byte giống hệt (Duplicate trong Photos), đích rỗng | lượt chạy | 1 file lên, ảnh kia `duplicate` trỏ file vừa lên | `BackupDuplicateTests.identicalItemsInOneLibraryCopyOnce` + `BackupStoreTests.duplicateCountsAsHandled` |
 | AC-38 | máy C cài mới, job vào `Family` đã có sổ chung 55.000 dòng của A và B | tạo job rồi chạy | đọc sổ chung ≤ 5 s; 0 file ở NAS bị đọc lại để băm nếu đã có SHA trong sổ; tra một SHA trong 55.000 dòng ≤ 10 ms | ⚠️ chưa có |
-| AC-39 | job có 312 file `duplicate` | mở 6/6 | dòng **Already on NAS · 312**; chạm → danh sách tên ở máy → đường dẫn ở đích; tổng ở 1/6 tính cả 312 là đã xong | ⚠️ chưa có |
+| AC-39 | job có 312 file `duplicate` | mở 6/6 | dòng **Already on NAS Home · 312**; chạm → danh sách tên ở máy → đường dẫn ở đích; tổng ở 1/6 tính cả 312 là đã xong | ⚠️ chưa có |
 
 ## 2. Chưa chứng minh được
 

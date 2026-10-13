@@ -48,7 +48,7 @@ extension AppDatabase {
                 t.column("remotePath", .text)
                 t.column("byteCount", .integer)
                 t.column("sha256", .text)
-                // uploaded · found · failed
+                // uploaded · found · failed (· duplicate, v35)
                 t.column("outcome", .text).notNull()
                 t.column("attempts", .integer).notNull()
                 t.column("lastError", .text)
@@ -62,6 +62,50 @@ extension AppDatabase {
         migrator.registerMigration("v34-backupSourceFolder") { db in
             try db.alter(table: "backup_jobs") { t in
                 t.add(column: "sourceFolder", .text).notNull().defaults(to: "")
+            }
+        }
+
+        // FS-22.05: what the destination folder holds, so a photo already
+        // there — from another phone, or put there by hand — is not copied
+        // again. A local copy of the shared index on the NAS: losing it costs
+        // a re-read, never a photo.
+        migrator.registerMigration("v35-backupDestinationIndex") { db in
+            try db.create(table: "backup_destination_files") { t in
+                t.column("jobId", .text).notNull()
+                    .references("backup_jobs", onDelete: .cascade)
+                // Relative to the job's folder, as the shared index writes it.
+                t.column("path", .text).notNull()
+                t.column("size", .integer).notNull()
+                // At the destination; nil = not known yet.
+                t.column("modified", .integer)
+                // nil = not hashed yet.
+                t.column("sha256", .text)
+                // listed · index · own
+                t.column("origin", .text).notNull()
+                // This device knows something the shared index does not yet.
+                t.column("needsPublish", .boolean).notNull().defaults(to: false)
+                t.column("seenAt", .integer).notNull()
+                t.primaryKey(["jobId", "path"])
+            }
+            try db.create(index: "backup_destination_files_sha", on: "backup_destination_files", columns: ["jobId", "sha256"])
+            try db.create(index: "backup_destination_files_size", on: "backup_destination_files", columns: ["jobId", "size"])
+
+            try db.create(table: "backup_index_segments") { t in
+                t.column("jobId", .text).notNull()
+                    .references("backup_jobs", onDelete: .cascade)
+                t.column("name", .text).notNull()
+                t.column("size", .integer).notNull()
+                t.column("readAt", .integer).notNull()
+                t.primaryKey(["jobId", "name"])
+            }
+
+            try db.alter(table: "backup_ledger") { t in
+                // The file's name on this device — a duplicate's remotePath
+                // is the other file's.
+                t.add(column: "localName", .text)
+            }
+            try db.alter(table: "backup_job_state") { t in
+                t.add(column: "lastTreeScanAt", .integer)
             }
         }
     }

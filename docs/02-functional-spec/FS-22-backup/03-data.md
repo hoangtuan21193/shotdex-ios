@@ -11,10 +11,10 @@ Metadata Index xoá; sổ là thứ duy nhất quyết định "đã chép chưa
 | Bảng | Một dòng là | Cột chính |
 |---|---|---|
 | Job backup | một job | id · nguồn (Photos hoặc id nguồn FS-19) · id connection FS-15 · folder đích · Organize (mức, kiểu Year/Month/Day, Custom, chỗ Videos) · tên file · What to Copy · Include Edited · Only on Wi‑Fi · Only While Charging · Keep Screen On · thứ tự · tạo lúc |
-| Trạng thái job | trạng thái chạy của một job | id job · mốc thay đổi Photos · lần so cuối · trạng thái + lý do + số (cho dòng `Paused …`) · lượt đầu đã xong chưa |
-| Sổ backup | một file của một mục đã xử lý | id job · khoá mục · loại tài nguyên (gốc, RAW, video đi kèm, bản sửa) · dấu nguồn (cỡ + ngày sửa) · đường dẫn ở đích · số byte · SHA-256 (rỗng khi `found`) · kết quả `uploaded` / `found` / `duplicate` / `failed` · số lần thử · lỗi cuối · lúc ghi |
+| Trạng thái job | trạng thái chạy của một job | id job · mốc thay đổi Photos · lần so cuối · trạng thái + lý do + số (cho dòng `Paused …`) · lượt đầu đã xong chưa · lần liệt kê cây đích cuối |
+| Sổ backup | một file của một mục đã xử lý | id job · khoá mục · loại tài nguyên (gốc, RAW, video đi kèm, bản sửa) · dấu nguồn (cỡ + ngày sửa) · đường dẫn ở đích · số byte · SHA-256 (rỗng khi `found`) · kết quả `uploaded` / `found` / `duplicate` / `failed` · số lần thử · lỗi cuối · lúc ghi · tên file ở máy (với `duplicate`, đường dẫn là của file đã có) |
 
-| Nội dung ở đích | một file đang có trong folder đích của job (bản sao cục bộ, [05 §2](05-duplicates-across-devices.md#2-sổ-chung-trên-nas)) | id job · đường dẫn tương đối · cỡ · ngày sửa ở đích · SHA-256 (rỗng khi chưa băm) · từ đâu (`listed` / `index`) · lúc liệt kê/đọc |
+| Nội dung ở đích | một file đang có trong folder đích của job (bản sao cục bộ, [05 §2](05-duplicates-across-devices.md#2-sổ-chung-trên-nas)) | id job · đường dẫn tương đối · cỡ · ngày sửa ở đích · SHA-256 (rỗng khi chưa băm) · từ đâu (`listed` / `index` / `own`) · chưa ghi vào sổ chung · lúc liệt kê/đọc |
 | Đoạn sổ chung đã đọc | một file `.jsonl` trong `.shotdex/backup-index/` đã gộp vào bảng trên | id job · tên đoạn · cỡ · lúc đọc |
 
 - Khoá mục: Photos → id ảnh của Photos; FS-19 → id bản sao trong bảng bản sao. Duy nhất theo (job, khoá mục, loại
@@ -34,7 +34,8 @@ Metadata Index xoá; sổ là thứ duy nhất quyết định "đã chép chưa
 
 ## 2. Luật
 
-- Clear Local Metadata Index, đọc lại index, khởi động lại: ba bảng trên **không đổi một dòng**.
+- Clear Local Metadata Index, đọc lại index, khởi động lại: các bảng trên **không đổi một dòng**.
+- Đổi folder đích (hoặc connection) của job: xoá *Nội dung ở đích* và *Đoạn sổ chung đã đọc* của job, lượt sau liệt kê lại.
 - So nguồn với sổ: một truy vấn theo job trả tập khoá mục đã có; 55.000 mục ≤ 3 s (README §3).
 - Đổi Organize/tên file/folder đích: không sửa sổ; mục đã có trong sổ không chép lại.
 - Mật khẩu vẫn ở Keychain theo connection FS-15; bảng job chỉ giữ id connection.

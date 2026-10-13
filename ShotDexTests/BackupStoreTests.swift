@@ -166,4 +166,46 @@ import Testing
         try f.store.record(BackupLedgerEntry(jobId: f.job.id, itemKey: "A1", resourceKey: "r", sourceStamp: "2", remotePath: "p", byteCount: 2, sha256: "s", outcome: .uploaded))
         #expect(try f.store.failedEntries(jobId: f.job.id).isEmpty)
     }
+
+    /// FS-22.05: a `duplicate` counts as done — never planned again, counted
+    /// in "N items" — and gets its FS-15 history row; the Backed-Up Files
+    /// list keeps to files this job wrote or found by name.
+    @Test func duplicateCountsAsHandled() throws {
+        let f = try makeFixture()
+        let row = BackupLedgerEntry(
+            jobId: f.job.id, itemKey: "A1", resourceKey: "r", sourceStamp: "1", remotePath: "Backup/iPhone/IMG_9.HEIC",
+            byteCount: 10, sha256: "s", outcome: .duplicate, localName: "IMG_1.HEIC"
+        )
+        try f.store.record(row, upload: ServerUploadRecord(
+            assetId: "A1", fileKey: "r", serverId: f.nas.id, serverName: "NAS Home",
+            remotePath: "Backup/iPhone/IMG_9.HEIC", byteCount: 10, sha256: "s"
+        ))
+        let key = BackupFileKey(itemKey: "A1", resourceKey: "r", sourceStamp: "1")
+        #expect(try f.store.pending([key], jobId: f.job.id).isEmpty)
+        #expect(try f.store.handledItemCount(jobId: f.job.id) == 1)
+        #expect(try f.store.duplicateCount(jobId: f.job.id) == 1)
+        #expect(try f.store.duplicateEntries(jobId: f.job.id).map(\.localName) == ["IMG_1.HEIC"])
+        #expect(try f.store.handledEntries(jobId: f.job.id).isEmpty)
+        #expect(try ServerUploadStore(database: f.database).uploadedAssetIds() == ["A1"])
+    }
+
+    /// FS-22.05 §3: a new destination folder is a new tree — what was known
+    /// of the old one goes, and the next run lists the new one.
+    @Test func newFolderForgetsTheOldTree() throws {
+        let f = try makeFixture()
+        try f.store.saveDestinationFile(BackupDestinationFile(jobId: f.job.id, path: "a.HEIC", size: 1, sha256: "x", origin: .listed))
+        var state = try f.store.state(jobId: f.job.id)
+        state.lastTreeScanAt = 100
+        try f.store.save(state)
+
+        var renamed = f.job
+        renamed.settings.includesEditedVersions.toggle()
+        try f.store.update(renamed)
+        #expect(try f.store.destinationFileCount(jobId: f.job.id) == 1)
+
+        renamed.folder = "Family"
+        try f.store.update(renamed)
+        #expect(try f.store.destinationFileCount(jobId: f.job.id) == 0)
+        #expect(try f.store.state(jobId: f.job.id).lastTreeScanAt == nil)
+    }
 }
