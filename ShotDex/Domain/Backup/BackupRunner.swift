@@ -388,10 +388,14 @@ actor BackupRunner {
     // MARK: - Duplicates (FS-22.05)
 
     /// The server path of a file in the destination folder holding exactly
-    /// these bytes, if this device knows of one.
+    /// these bytes. What this device knows may be old — someone deleted or
+    /// replaced the file on the NAS — so each candidate is asked for first,
+    /// and one that is gone or has another size is forgotten.
     private func destinationFile(matching sha256: String, size: Int64) async throws -> String? {
-        for candidate in try store.destinationFiles(jobId: job.id, sha256: sha256) where candidate.size == size {
-            return ServerUploadPath.join(job.folder, candidate.path)
+        for candidate in try store.destinationFiles(jobId: job.id, sha256: sha256) {
+            let path = ServerUploadPath.join(job.folder, candidate.path)
+            if candidate.size == size, try await client.fileSize(at: path) == size { return path }
+            try store.removeDestinationFile(jobId: job.id, path: candidate.path)
         }
         return nil
     }

@@ -37,4 +37,24 @@ import Testing
         // Nothing is left for the next run.
         #expect(await f.runner().run().progress.total == 0)
     }
+
+    /// AC-35: what this device knew says `a/IMG_1.HEIC` holds these bytes,
+    /// but someone deleted it on the NAS — the photo goes up again and the
+    /// stale row is forgotten.
+    @Test func deletedOnNASIsSentAgain() async throws {
+        let f = try BackupFixture(photos: 1)
+        let bytes = try #require(f.contents.values.first)
+        try f.store.saveDestinationFile(BackupDestinationFile(
+            jobId: f.job.id, path: "a/IMG_1.HEIC", size: Int64(bytes.count), sha256: BackupFixture.sha(bytes), origin: .index
+        ))
+
+        let result = await f.runner().run()
+
+        #expect(result.stop == .finished)
+        #expect(f.client.uploadCount == 1)
+        #expect(f.remoteFiles["Backup/iPhone/IMG_0.HEIC"] == bytes)
+        let row = try #require(try f.store.handledEntries(jobId: f.job.id).first)
+        #expect(row.outcome == .uploaded)
+        #expect(try f.store.destinationFiles(jobId: f.job.id, sha256: BackupFixture.sha(bytes)).map(\.path) == ["IMG_0.HEIC"])
+    }
 }
