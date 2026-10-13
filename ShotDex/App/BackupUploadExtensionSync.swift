@@ -6,21 +6,28 @@ import Photos
 /// Photos access, with the jobs and their sign-ins handed over through the
 /// App Group.
 enum BackupUploadExtensionSync {
-    /// The jobs the extension may serve.
-    static func config(jobs: [BackupJob], servers: [FileServer]) -> BackupUploadConfig {
+    /// The jobs the extension may serve. The extension cannot look a
+    /// `.local` name up first, so it gets the address the name last had —
+    /// which works at home and over a VPN from another app (FS-15.04 §7).
+    static func config(jobs: [BackupJob], servers: [FileServer], addresses: any ServerAddressBook = DefaultsServerAddressBook()) -> BackupUploadConfig {
         var config = BackupUploadConfig()
         for job in jobs where job.sourceId == PhotoLibrarySource.id {
             guard let server = servers.first(where: { $0.id == job.connectionId }), server.transferProtocol == .webdav else { continue }
             let scheme = server.usesTLS ? "https" : "http"
             config.jobs.append(BackupUploadConfig.Job(
                 jobId: job.id,
-                baseURL: "\(scheme)://\(server.host):\(server.port)",
+                baseURL: "\(scheme)://\(dialledHost(server, addresses: addresses)):\(server.port)",
                 folder: job.folder,
                 settings: job.settings,
                 account: server.id
             ))
         }
         return config
+    }
+
+    private static func dialledHost(_ server: FileServer, addresses: any ServerAddressBook) -> String {
+        guard LocalHostRoute.isMulticastDNS(server.host), let known = addresses.address(for: server.id) else { return server.host }
+        return known
     }
 
     /// On only with full access — Photos refuses the extension otherwise.

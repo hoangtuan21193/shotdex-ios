@@ -1,7 +1,8 @@
 # FS-15.04 — Tự tìm server trong mạng, Connect As
 
 `FS-15.04` · `Data/Sources/FileServer/LocalServerBrowser.swift` · `Domain/ServerUpload/DiscoveredServer.swift`
-· `Features/ServerUpload/FileServerFormScreen.swift` · cập nhật 2026-09-27
+· `Features/ServerUpload/FileServerFormScreen.swift` · `Domain/ServerUpload/LocalHostRoute.swift`
+· `Data/Sources/FileServer/RoutedRemoteFileClient.swift` · cập nhật 2026-10-13
 
 **Một câu:** mở Add Connection là hệ thống hỏi quyền Local Network, form liệt kê các máy đang chia sẻ file trong
 cùng mạng; chạm một máy là đăng nhập ngay tại đó (Connect As), rồi chọn folder bằng màn duyệt.
@@ -107,3 +108,19 @@ cấp entitlement multicast. Người dùng chốt 2026-09-27: **quét unicast**
 - Không đọc tên Wi-Fi (cần quyền vị trí).
 - Không gửi gì ra ngoài mạng nội bộ; tìm máy không phải một ngoại lệ mới của NF-03.
 - Server qua internet: không tìm được, nhập tay. Windows tìm qua quét cổng 445 (§4b).
+
+## 7. Ra ngoài, qua VPN của app khác
+
+Người dùng (2026-10-13) dùng một app VPN riêng để nối iPhone về mạng nhà; ShotDex không có VPN riêng (intent
+[in-app-vpn](../../_intents/2026-10-13-in-app-vpn.md) đã bỏ). ShotDex chỉ cần tới được server nội bộ khi VPN đó bật.
+
+- Server nhập bằng địa chỉ IP (`192.168.1.20`) hay tên DNS thường: đi qua VPN như mọi app khác, không cần gì thêm.
+- Server có tên **`.local`** (tìm thấy bằng Bonjour ở §2, hoặc gõ tay): tên này chỉ dò được trong mạng nhà, VPN không
+  mang mDNS. Mỗi lần tên dò ra (ở nhà), ShotDex nhớ địa chỉ IPv4 của nó; lần sau tên không dò ra trong 2 s thì gọi thẳng
+  địa chỉ đã nhớ. Áp dụng ở mọi chỗ dùng connection: Test Connection, duyệt, Upload, Backup, nguồn server FS-19.
+- Địa chỉ đã nhớ nằm trong App Group (không phải database), nên phần mở rộng tải nền của Backup (FS-22.02 §3) cũng
+  dùng nó: phần mở rộng không dò tên trước được, nên được giao luôn địa chỉ đã nhớ.
+- Chưa từng nối ở nhà lần nào (chưa nhớ địa chỉ) → báo lỗi không tới được như cũ.
+- Mạng nhà đổi địa chỉ NAS (DHCP) → lần đầu về nhà tên dò ra địa chỉ mới, ghi đè địa chỉ cũ.
+- Backup qua 4G + VPN vẫn theo **Only on Wi‑Fi**: bật thì chờ Wi‑Fi như FS-22.02 §5.
+
