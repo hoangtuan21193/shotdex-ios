@@ -1605,6 +1605,20 @@
       "w": 466,
       "x": 32638,
       "y": 1609
+    },
+    "DI_MovieAudio.dc.html": {
+      "h": 669,
+      "title": "Duo trong · Bảng âm thanh: bảng phải 372 trên phim đang chạy, 5 track (✓ đang phát, nhãn Default), Audio Sync, dòng đường ra — FS-23.02 §3b, đề xuất 14/10, code chưa có",
+      "w": 951,
+      "x": 70108,
+      "y": 560
+    },
+    "DC_MovieAudio.dc.html": {
+      "h": 466,
+      "title": "Duo ngoài · Bảng âm thanh: sheet nửa cao 233 trong view xoay, 2 cột (3 + 2 track, Audio Sync, dòng đường ra), tránh lỗ camera — FS-23.02 §3b, đề xuất 14/10, code chưa có",
+      "w": 678,
+      "x": 33184,
+      "y": 1609
     }
   },
   "createdOnFiles": {
@@ -1962,11 +1976,13 @@
     "DI_MovieSubtitleAdd.dc.html",
     "DI_SettingsAI.dc.html",
     "DI_SettingsAIProvider.dc.html",
+    "DI_MovieAudio.dc.html",
     "DC_BurstFrames.dc.html",
     "DC_Movies.dc.html",
     "DC_MoviePlayer.dc.html",
     "DC_MovieSubtitles.dc.html",
-    "DC_SettingsAI.dc.html"
+    "DC_SettingsAI.dc.html",
+    "DC_MovieAudio.dc.html"
   ],
   "pages": [],
   "title": "ShotDex · iPhone Duo"

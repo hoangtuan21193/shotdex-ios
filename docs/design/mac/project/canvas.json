@@ -546,6 +546,14 @@
    "title": "Mac · Sheet Add Subtitle to… (Share/AirDrop hoặc thả .srt lên Movies): phim trùng tên lên đầu — FS-23.03 §5, đề xuất 14/10, code chưa có",
    "radius": 16
   },
+  "MAC_MovieAudio.dc.html": {
+   "x": 24060,
+   "y": 5410,
+   "w": 1440,
+   "h": 900,
+   "title": "Mac · Bảng âm thanh 360 bên phải player: mọi track (ngôn ngữ · codec · kênh, Default, ✓ đang phát), Audio Sync, đường ra; nút Audio trên HUD đang bật — FS-23.02 §3b, đề xuất 14/10, code chưa có",
+   "radius": 16
+  },
   "MAC_SettingsAI.dc.html": {
    "x": 8680,
    "y": 6710,
@@ -632,7 +640,8 @@
   "MAC_MovieTranslate.dc.html",
   "MAC_MovieSubtitleAdd.dc.html",
   "MAC_SettingsAI.dc.html",
-  "MAC_SettingsAIProvider.dc.html"
+  "MAC_SettingsAIProvider.dc.html",
+  "MAC_MovieAudio.dc.html"
  ],
  "notes": {
   "row_lib": {

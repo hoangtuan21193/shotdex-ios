@@ -47,6 +47,10 @@ Phim test: clip tổng hợp 2–5 phút (khung test pattern, tiếng sine — *
 | AC-35 | Duo ngoài | mở Movies | danh sách, chạm phát được; không có +, Delete, Rename; gập/mở giữ phim, giờ ± 1 s, phụ đề | ⚠️ chưa có — Duo |
 | AC-36 | iPhone 17 26.5 + iPhone 16 18.6, sáng + tối | Movies, player, bảng phụ đề, Find, Translate | cùng nút, cùng hành động ở hai nhánh; khớp board ≤ 2 pt (`Tools/design-board compare`) | ⚠️ chưa có — board chưa vẽ |
 | AC-37 | VoiceOver bật, player | quét các nút | đọc `Subtitles: English and Vietnamese`, `Audio: English AC3 5.1`, thanh tua bước 10 s | ⚠️ chưa có |
+| AC-39 | MKV 5 track: EN TrueHD 7.1 (Default), EN AC3 5.1, EN Commentary AAC Stereo, VI AAC Stereo, JA AC3 5.1 | mở bảng Audio | 5 hàng đúng thứ tự file, mỗi hàng ngôn ngữ · tên · codec · kênh, `Default` ở hàng 1, ✓ ở track đang phát | ⚠️ chưa có (`MovieAudioTrackLabelTests.fiveTracks`) |
+| AC-40 | Audio Languages = Tiếng Việt, English; phim mới có EN + VI | mở phim lần đầu | phát track VI; Audio Languages = Original → phát track `Default` | ⚠️ chưa có (`MovieTrackChoiceTests.preferredAudioLanguage`) |
+| AC-41 | tiếng sớm 0,30 s | Audio Sync −0,30 s | độ lệch đo được giữa tiếng và hình ≤ 0,05 s; mở lại phim giữ −0,30 s | ⚠️ chưa có (`MoviePlaybackModelTests.audioSyncPersists` + đo trên máy) |
+| AC-42 | track 7.1, đường ra tai nghe stereo | phát | có tiếng đủ kênh trộn xuống stereo; dòng chân `Playing as stereo on …` | ⚠️ chưa có — cần máy thật |
 | AC-38 | Mac | Space, ←, F, ⌘W | phát/dừng, lùi 10 s, toàn màn, đóng | ⚠️ chưa có — app Mac chưa có code |
 
 **Chưa chứng minh được:** tất cả — chưa có code. AC-34 cần máy thật; AC-35 cần Duo; AC-38 chờ app Mac (FS-18).

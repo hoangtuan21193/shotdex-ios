@@ -1014,21 +1014,28 @@
    "h": 1032,
    "title": "iPad · Movies · Share/AirDrop file .srt → form sheet Add Subtitle to…: chọn phim, phim trùng tên lên đầu — FS-23.03 §5, đề xuất 14/10, code chưa có",
    "w": 1376,
-   "x": 91728,
+   "x": 93184,
    "y": 560
   },
   "IP_SettingsAI.dc.html": {
    "h": 1032,
    "title": "iPad · Settings › AI (mục thứ 10, sau Playback): Use For (dịch phụ đề, AI Search), On This Device, Providers + Add Provider… — FS-08.07, đề xuất 14/10, code chưa có",
    "w": 1376,
-   "x": 93184,
+   "x": 94640,
    "y": 560
   },
   "IP_SettingsAIProvider.dc.html": {
    "h": 1032,
    "title": "iPad · Settings › AI › Claude: form sheet 700, tên, API key (chỉ 4 ký tự cuối), model, Test → Working · 0.8 s, Delete Provider — FS-08.07 §3, đề xuất 14/10, code chưa có",
    "w": 1376,
-   "x": 94640,
+   "x": 96096,
+   "y": 560
+  },
+  "IP_MovieAudio.dc.html": {
+   "h": 1032,
+   "title": "iPad · Bảng âm thanh 400 bên phải trên phim đang chạy (cùng vật chứa với bảng phụ đề): 5 track, ✓ track đang phát, nhãn Default, Audio Sync − 0.00 s +, dòng chân đường ra — FS-23.02 §3b, đề xuất 14/10, code chưa có",
+   "w": 1376,
+   "x": 91728,
    "y": 560
   }
  },
@@ -1172,6 +1179,7 @@
   "IP_MoviePlayer.dc.html",
   "IP_MovieSubtitles.dc.html",
   "IP_MovieTranslate.dc.html",
+  "IP_MovieAudio.dc.html",
   "IP_MovieSubtitleAdd.dc.html",
   "IP_SettingsAI.dc.html",
   "IP_SettingsAIProvider.dc.html"

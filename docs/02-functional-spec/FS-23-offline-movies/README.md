@@ -10,9 +10,9 @@ phụ đề sang thứ tiếng khác bằng AI trước khi lên máy bay.
 Nguồn: [intent 2026-10-14-offline-movies](../../_intents/2026-10-14-offline-movies.md) (accepted, Q1–Q13 đã trả lời).
 
 Board (vẽ 2026-10-14, sáng + tối): iPhone `PH_Movies` (1/5) · `PH_MoviesAdd` (2/5) · `PH_MoviePlayer` (3/5, ngang) ·
-`PH_MovieSubtitles` (4/5) · `PH_MovieTranslate` (5/5) · `PH_MovieSubtitleAdd` (Share › chọn phim) · `PH_SettingsAI` ·
+`PH_MovieSubtitles` (4/5) · `PH_MovieTranslate` (5/5) · `PH_MovieAudio` (bảng âm thanh) · `PH_MovieSubtitleAdd` (Share › chọn phim) · `PH_SettingsAI` ·
 `PH_SettingsAIProvider`; iPad `IP_…` cùng bộ; Duo trong `DI_…` cùng bộ, Duo ngoài `DC_Movies` · `DC_MoviePlayer` ·
-`DC_MovieSubtitles` · `DC_SettingsAI`; Mac `MAC_…` cùng bộ (Settings là tab AI). Lối vào: ô/hàng **Movies** sau Video
+`DC_MovieSubtitles` · `DC_MovieAudio` · `DC_SettingsAI`; Mac `MAC_…` cùng bộ (Settings là tab AI). Lối vào: ô/hàng **Movies** sau Video
 Projects trên `*_Collections` và sidebar iPad/Mac; hàng **AI** trên `*_Settings`.
 
 ## Các phần
@@ -20,11 +20,11 @@ Projects trên `*_Collections` và sidebar iPad/Mac; hàng **AI** trên `*_Setti
 | # | Phần | Trả lời |
 |---|---|---|
 | 01 | [Kho phim và đưa phim vào](01-library-and-import.md) | lối vào, danh sách, nguồn (server, Files, Share/AirDrop), tải, dung lượng, xoá |
-| 02 | [Player](02-player.md) | engine VLCKit, định dạng, transport, track âm thanh, nhớ chỗ xem, thiết bị |
+| 02 | [Player](02-player.md) | engine VLCKit, định dạng, transport, bảng âm thanh (track, Audio Sync, ngôn ngữ ưu tiên), nhớ chỗ xem, thiết bị |
 | 03 | [Phụ đề](03-subtitles.md) | track có sẵn, nhập file, Share/AirDrop, hai phụ đề, vị trí, cỡ chữ, lệch giờ; không tìm trên mạng |
 | 04 | [Dịch phụ đề bằng AI](04-ai-translation.md) | chọn nhà cung cấp, chia đoạn, chạy dở, lưu bản dịch |
 | 05 | [Dữ liệu](05-data.md) | thư mục kho, bảng phim, bảng phụ đề, Keychain |
-| 06 | [Tiêu chí nghiệm thu](06-acceptance-criteria.md) | AC-1…AC-38 |
+| 06 | [Tiêu chí nghiệm thu](06-acceptance-criteria.md) | AC-1…AC-42 |
 
 Mục AI trong Settings (dùng chung với AI Search) là FS riêng: [FS-08.07](../FS-08-settings/07-ai-providers.md).
 
@@ -38,7 +38,8 @@ Mục AI trong Settings (dùng chung với AI Search) là FS riêng: [FS-08.07](
 
 **Có:**
 - Kho phim trong thư mục riêng của app, đánh dấu không sao lưu; nguồn: connection FS-15, app Files, Share sheet/AirDrop.
-- Phát MP4, MOV, M4V, MKV, WebM, FLV, AVI, WMV, MPEG-TS; chọn track âm thanh; nhớ chỗ đang xem.
+- Phát MP4, MOV, M4V, MKV, WebM, FLV, AVI, WMV, MPEG-TS; chọn track âm thanh như Infuse (ngôn ngữ, codec, kênh,
+  Audio Sync, ngôn ngữ ưu tiên); nhớ chỗ đang xem.
 - Phụ đề: track trong file, file SRT/ASS/SSA/VTT/zip người dùng tự tải rồi đưa vào; tối đa 2 phụ đề cùng lúc.
 - Dịch một phụ đề sang ngôn ngữ khác bằng AI người dùng chọn (FS-08.07), lưu thành phụ đề thứ hai.
 

@@ -24,12 +24,12 @@ Không cột nào trong `photo_metadata`; không khoá ngoại (luật BD-02).
 
 | Bảng | Giữ gì |
 |---|---|
-| Phim | id · tên hiện · tên file gốc · cỡ byte · mã băm 64 bit · thời lượng · nguồn (connection + đường dẫn, hoặc Files, hoặc Share) · trạng thái (đang chép / sẵn sàng / không phát được / mất file) · byte đã chép · ngày thêm · lần xem cuối · vị trí xem · đã xem xong · tốc độ · track âm thanh chọn |
+| Phim | id · tên hiện · tên file gốc · cỡ byte · mã băm 64 bit · thời lượng · nguồn (connection + đường dẫn, hoặc Files, hoặc Share) · trạng thái (đang chép / sẵn sàng / không phát được / mất file) · byte đã chép · ngày thêm · lần xem cuối · vị trí xem · đã xem xong · tốc độ · track âm thanh chọn · lệch tiếng (Audio Sync) |
 | Phụ đề phim | id · id phim · ngôn ngữ · nguồn (trong file / cạnh phim / nhập / chia sẻ / dịch + nhà cung cấp + id phụ đề gốc) · định dạng · mã chữ · tên file · lệch giờ |
 | Lựa chọn phụ đề | id phim · phụ đề chính · phụ đề phụ · vị trí · cỡ, màu mỗi dòng |
 | Việc dịch dở | id phim · phụ đề From · ngôn ngữ To · nhà cung cấp · số cue đã xong · file kết quả dở |
 
-- Cài đặt chung (Subtitle Languages, cỡ/màu/vị trí mặc định) ở kho cài đặt mặc định, như các mục Playback khác.
+- Cài đặt chung (Subtitle Languages, Audio Languages, cỡ/màu/vị trí mặc định) ở kho cài đặt mặc định, như các mục Playback khác.
 - Nhà cung cấp AI (tên, loại, địa chỉ, model) ở bảng của [FS-08.07](../FS-08-settings/07-ai-providers.md) §4; key ở Keychain.
 
 ## 3. Mã băm

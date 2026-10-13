@@ -43,13 +43,28 @@ Giữ đúng bộ của FS-02.02 §3–§4 (cụm giữa + kính hai hàng, gi�
 | hàng 2 (44 pt mỗi nút) | tốc độ · **Audio** · **Subtitles** (CC) · Fit/Fill · khoá chạm |
 
 - Tốc độ: 0.5 · 0.75 · 1 · 1.25 · 1.5 · 2×; nhớ theo từng phim.
-- **Audio**: menu các track của file (`English · AC3 5.1`, `Tiếng Việt · AAC 2.0`); chọn → đổi không dừng phim;
-  nhớ theo từng phim. Một track thì nút mờ.
+- **Audio**: mở bảng âm thanh (§3b). Phim chỉ có một track thì nút vẫn mở được (còn Audio Sync).
 - **Subtitles**: mở bảng phụ đề (03 §2).
 - **Fit/Fill**: vừa khung (có viền đen) ↔ lấp khung (cắt mép); pinch ra/vào làm cùng việc.
 - **Khoá chạm**: chạm màn chỉ hiện nút mở khoá — để trên máy bay chạm nhầm không tua. Mac không có (không có chạm).
 - Cử chỉ: chạm bật/tắt chrome; chạm đúp nửa trái/phải = −10 s/+10 s; kéo thanh tua có ảnh khung xem trước khi
   engine cung cấp được, không thì chỉ giờ.
+
+## 3b. Bảng âm thanh
+
+Cùng vật chứa với bảng phụ đề (03 §2): ngang = bảng phải 372pt, dọc = sheet nửa màn; phim vẫn chạy.
+
+- Danh sách **mọi track âm thanh** của file. Mỗi hàng: ngôn ngữ (tên bằng chính thứ tiếng đó) · tên track nếu file có
+  (`Commentary`, `Director's Cut`) · codec · số kênh (`Stereo`, `5.1`, `7.1`) · nhãn `Default` cho track file đặt
+  mặc định. Track đang phát có dấu ✓.
+- Chạm một hàng → đổi track **không dừng phim**, giờ không lùi; không đóng bảng (để nghe thử).
+- **Audio Sync**: −5,00…+5,00 s, bước 0,05 s, nghe thấy ngay; nhớ theo từng phim.
+- Dòng chân: đường ra hiện tại (`Playing as stereo on AirPods Pro`, `5.1 on HomePod`) — track nhiều kênh hơn
+  đường ra thì được trộn xuống, không lỗi. Codec máy không giải được (hiếm) → hàng mờ + `Not supported on this
+  device`.
+- Phim mới: chọn track có ngôn ngữ đầu tiên trong **Audio Languages** (Settings › Playback, mặc định `Original` =
+  track `Default` của file); không khớp → track `Default`. Track chọn nhớ theo từng phim.
+- Cố ý không có: file âm thanh rời bên ngoài, tăng giọng nói / chế độ ban đêm — *làm sau nếu cần.*
 
 ## 4. Hướng màn và thiết bị
 
