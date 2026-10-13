@@ -63,7 +63,7 @@ import Testing
             BackupRunner(
                 job: job, destination: BackupDestination(connectionId: nas.id, connectionName: nas.name),
                 client: client, store: store, source: SourceCopyBackupSource(database: database, roots: roots),
-                exporter: exporter, workDirectory: work
+                exporter: exporter, workDirectory: work, deviceId: "PHONE-A"
             )
         }
         let exporter = SourceCopyBackupExporter(database: database, roots: roots, servers: servers, sourceId: sourceId)

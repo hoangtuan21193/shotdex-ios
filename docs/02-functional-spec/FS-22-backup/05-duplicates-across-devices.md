@@ -31,6 +31,13 @@ không … ảnh trùng nhưng ở khác thư mục … cái này quan trọng t
 - Đầu mỗi lượt: đọc các đoạn chưa đọc (theo tên), gộp vào bản sao cục bộ (03 §1, bảng **Nội dung ở đích**). Đọc lại toàn
   bộ khi bản sao cục bộ mất (cài lại app, đổi máy).
 - Mã máy: một UUID tạo lần đầu, lưu trong Keychain của app — cài lại app trên cùng máy vẫn giữ.
+- Tên đoạn: `<mã máy>-000001.jsonl`, số kế = số lớn nhất của máy đó đang có trong folder + 1 (cài lại vẫn đếm tiếp).
+  Ghi qua file part rồi đọc lại SHA-256 rồi đổi tên, nên máy khác không bao giờ đọc nửa đoạn.
+- Ghi lúc nào: cuối lượt khi còn kết nối (xong, hoặc dừng vì Wi‑Fi/sạc/chỗ trống). Pause hay mất mạng thì những gì đã biết
+  nằm chờ trong database, lượt sau ghi — kể cả lượt không có ảnh mới (khi đó nối NAS chỉ để ghi đoạn đó).
+- Đọc sổ chung chỉ ở lượt có file cần chép, sau khi liệt kê cây (§3).
+- Dòng sổ chỉ gắn SHA cho file đã liệt kê khi cỡ khớp (và ngày sửa khớp, khi cả hai biết); file chưa liệt kê thì nhận là
+  có, nhưng vẫn hỏi lại NAS trước khi tính là trùng (§4 bước 3).
 - Folder `.shotdex` ẩn với Backup: không liệt kê, không băm, không tính vào "found".
 - Lỗi đọc sổ chung (file hỏng, dòng lạ): bỏ dòng đó, không dừng job. Lỗi ghi: thử lại lượt sau; file vẫn được chép.
 

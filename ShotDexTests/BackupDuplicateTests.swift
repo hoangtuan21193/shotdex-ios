@@ -107,7 +107,7 @@ import Testing
     /// AC-33: `X.HEIC` at the destination is 3,145,728 bytes, as are two
     /// photos with other contents. Both go up; `X.HEIC` is read to hash it
     /// exactly once — the second photo and the next run use the kept hash,
-    /// which waits to be written to the shared index.
+    /// which is also written to the shared index.
     @Test func sameSizeDifferentContentIsHashedOnce() async throws {
         var f = try BackupFixture(photos: 0)
         let size = 3_145_728
@@ -125,7 +125,10 @@ import Testing
         #expect(f.client.sha256Paths.filter { $0 == "Backup/iPhone/X.HEIC" }.count == 1)
         let known = try f.store.destinationFiles(jobId: f.job.id, sha256: BackupFixture.sha(x))
         #expect(known.map(\.path) == ["X.HEIC"])
-        #expect(known.first?.needsPublish == true)
+        // …and written to the shared index for the other devices.
+        let segment = try #require(f.client.files["Backup/iPhone/.shotdex/backup-index/PHONE-A-000001.jsonl"])
+        #expect(BackupContentIndex.decode(segment).contains { $0.path == "X.HEIC" && $0.sha256 == BackupFixture.sha(x) })
+        #expect(try f.store.unpublishedDestinationFiles(jobId: f.job.id).isEmpty)
 
         let (c, dc) = BackupFixture.item(2, name: "IMG_2.HEIC", bytes: size)
         f.source.add([c])

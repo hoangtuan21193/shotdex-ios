@@ -278,4 +278,63 @@ struct BackupStore: Sendable {
             try db.execute(sql: "UPDATE backup_job_state SET lastTreeScanAt = ? WHERE jobId = ?", arguments: [now, jobId])
         }
     }
+
+    // MARK: Shared index (FS-22.05 §2)
+
+    /// Segments of the shared index already taken in, with the size each had.
+    func readSegments(jobId: String) throws -> [String: Int64] {
+        try database.reader.read { db in
+            var sizes: [String: Int64] = [:]
+            let rows = try Row.fetchCursor(db, sql: "SELECT name, size FROM backup_index_segments WHERE jobId = ?", arguments: [jobId])
+            while let row = try rows.next() { sizes[row[0]] = row[1] }
+            return sizes
+        }
+    }
+
+    /// Takes in one segment's lines, in one transaction, and remembers the
+    /// segment as read.
+    func mergeIndex(_ lines: [BackupContentIndex.Line], jobId: String, segment: String, size: Int64, at now: Int = Int(Date().timeIntervalSince1970)) throws {
+        try database.writer.write { db in
+            for line in lines {
+                let existing = try BackupDestinationFile.fetchOne(db, key: ["jobId": jobId, "path": line.path])
+                if let row = BackupContentIndex.merged(line, into: existing, jobId: jobId, now: now) { try row.save(db) }
+            }
+            try db.execute(sql: """
+                INSERT OR REPLACE INTO backup_index_segments (jobId, name, size, readAt) VALUES (?, ?, ?, ?)
+                """, arguments: [jobId, segment, size, now])
+        }
+    }
+
+    /// Hashes this device knows that the shared index does not yet.
+    func unpublishedDestinationFiles(jobId: String) throws -> [BackupDestinationFile] {
+        try database.reader.read { db in
+            try BackupDestinationFile
+                .filter(Column("jobId") == jobId && Column("needsPublish") == true && Column("sha256") != nil)
+                .order(Column("path"))
+                .fetchAll(db)
+        }
+    }
+
+    func hasUnpublishedDestinationFiles(jobId: String) throws -> Bool {
+        try database.reader.read { db in
+            try BackupDestinationFile
+                .filter(Column("jobId") == jobId && Column("needsPublish") == true && Column("sha256") != nil)
+                .fetchCount(db) > 0
+        }
+    }
+
+    /// These rows are in the segment just written; that segment is this
+    /// device's own and is not read back.
+    func markPublished(_ files: [BackupDestinationFile], jobId: String, segment: String, size: Int64, at now: Int = Int(Date().timeIntervalSince1970)) throws {
+        try database.writer.write { db in
+            for file in files {
+                try db.execute(sql: """
+                    UPDATE backup_destination_files SET needsPublish = 0 WHERE jobId = ? AND path = ? AND sha256 = ?
+                    """, arguments: [jobId, file.path, file.sha256])
+            }
+            try db.execute(sql: """
+                INSERT OR REPLACE INTO backup_index_segments (jobId, name, size, readAt) VALUES (?, ?, ?, ?)
+                """, arguments: [jobId, segment, size, now])
+        }
+    }
 }

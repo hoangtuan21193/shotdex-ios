@@ -34,6 +34,7 @@ extension BackupEnvironment {
                     source: source,
                     exporter: exporter,
                     workDirectory: workDirectory,
+                    deviceId: BackupDeviceIdentity.current(),
                     retriesExhausted: retriesExhausted,
                     freeBytes: { Self.freeBytes() },
                     gate: { Self.blockingCondition(settings, network: network, power: power) },

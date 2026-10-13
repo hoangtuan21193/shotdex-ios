@@ -56,15 +56,24 @@ final class FlakyAssetExporter: AssetFileExporting, @unchecked Sendable {
 struct BackupFixture {
     let database: AppDatabase
     let store: BackupStore
-    let client = InMemoryRemoteFileClient()
+    let client: InMemoryRemoteFileClient
     let source: FakeBackupSource
+    /// The phone this fixture plays in the shared index.
+    let deviceId: String
     var contents: [String: Data]
     var job: BackupJob
     let workDirectory: URL
 
     static let taken = Date(timeIntervalSince1970: 1_760_277_807)
 
-    init(photos: Int, videos: Int = 0, bytes: Int = 4_000, organize: BackupOrganize? = nil) throws {
+    /// `client` shared between two fixtures plays two phones backing up to
+    /// one NAS.
+    init(
+        photos: Int, videos: Int = 0, bytes: Int = 4_000, organize: BackupOrganize? = nil,
+        folder: String = "Backup/iPhone", client: InMemoryRemoteFileClient = InMemoryRemoteFileClient(), deviceId: String = "PHONE-A"
+    ) throws {
+        self.client = client
+        self.deviceId = deviceId
         database = try AppDatabase.makeEmpty()
         let servers = FileServerStore(database: database, passwords: InMemoryPasswordStore())
         let nas = FileServer(id: "S1", name: "NAS Home", transferProtocol: .webdav, host: "127.0.0.1", username: "me")
@@ -77,7 +86,7 @@ struct BackupFixture {
             o.videoPlacement = .together
             return o
         }()
-        job = BackupJob(sourceId: PhotoLibrarySource.id, connectionId: nas.id, folder: "Backup/iPhone", settings: settings)
+        job = BackupJob(sourceId: PhotoLibrarySource.id, connectionId: nas.id, folder: folder, settings: settings)
         try store.add(job)
 
         var items: [BackupSourceItem] = []
@@ -94,7 +103,7 @@ struct BackupFixture {
         workDirectory = FileManager.default.temporaryDirectory.appendingPathComponent("ShotDexBackup-test-\(UUID().uuidString)", isDirectory: true)
     }
 
-    static func item(_ n: Int, name: String, isVideo: Bool = false, bytes: Int = 4_000, seed: Int? = nil, edited: String? = nil, editedBytes: Int? = nil) -> (BackupSourceItem, [String: Data]) {
+    static func item(_ n: Int, name: String, isVideo: Bool = false, bytes: Int = 4_000, seed: Int? = nil, edited: String? = nil, editedBytes: Int? = nil, album: String? = nil) -> (BackupSourceItem, [String: Data]) {
         var files: [BackupSourceFile] = []
         var contents: [String: Data] = [:]
         let original = AssetUploadFile(key: "1:\(name)", filename: name, isRAW: false, role: .original, estimatedBytes: Int64(bytes))
@@ -106,7 +115,7 @@ struct BackupFixture {
             files.append(BackupSourceFile(file: file, sourceStamp: "\(size):\(seed ?? 2)"))
             contents[FakeAssetExporter.key("A\(n)", file.key)] = payload((seed ?? n) + 10_000, bytes: size)
         }
-        return (BackupSourceItem(itemKey: "A\(n)", date: taken, isVideo: isVideo, album: nil, files: files), contents)
+        return (BackupSourceItem(itemKey: "A\(n)", date: taken, isVideo: isVideo, album: album, files: files), contents)
     }
 
     static func payload(_ n: Int, bytes: Int) -> Data {
@@ -133,6 +142,7 @@ struct BackupFixture {
             exporter: exporter ?? FakeAssetExporter(contents: contents),
             names: BackupDateName(calendar: calendar, locale: Locale(identifier: "en_US")),
             workDirectory: workDirectory,
+            deviceId: deviceId,
             retriesExhausted: retriesExhausted,
             freeBytes: freeBytes,
             gate: gate,
@@ -140,8 +150,10 @@ struct BackupFixture {
         )
     }
 
-    /// Files at the destination that are not part files.
-    var remoteFiles: [String: Data] { client.files.filter { !$0.key.hasSuffix(ServerUploadPath.partSuffix) } }
+    /// Files at the destination that are not part files or the shared index.
+    var remoteFiles: [String: Data] {
+        client.files.filter { !$0.key.hasSuffix(ServerUploadPath.partSuffix) && !$0.key.contains("/.shotdex/") }
+    }
     var partFiles: [String] { client.files.keys.filter { $0.hasSuffix(ServerUploadPath.partSuffix) } }
 
     static func sha(_ data: Data) -> String {

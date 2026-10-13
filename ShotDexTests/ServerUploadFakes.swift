@@ -17,6 +17,9 @@ final class InMemoryRemoteFileClient: RemoteFileClient, @unchecked Sendable {
     /// test cancels the batch.
     var onUpload: (@Sendable (Int) -> Void)?
     private(set) var uploadCount = 0
+    /// Segments of the Backup shared index (`.shotdex/`) written — kept out
+    /// of `uploadCount`, which counts the user's files.
+    private(set) var indexUploadCount = 0
 
     var files: [String: Data] { lock.withLock { storage } }
 
@@ -83,6 +86,11 @@ final class InMemoryRemoteFileClient: RemoteFileClient, @unchecked Sendable {
     }
 
     func upload(_ localURL: URL, to path: String, progress: @escaping @Sendable (Int64) -> Void) async throws {
+        if path.contains("/\(BackupContentIndex.folder)/") {
+            lock.withLock { indexUploadCount += 1 }
+            try put(path, Data(contentsOf: localURL))
+            return
+        }
         let number = lock.withLock { uploadCount += 1; return uploadCount }
         onUpload?(number)
         try Task.checkCancellation()

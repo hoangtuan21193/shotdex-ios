@@ -113,6 +113,8 @@ actor BackupRunner {
     private let exporter: any AssetFileExporting
     private let planner: BackupPathPlanner
     private let workDirectory: URL
+    /// This device's name in the shared index (FS-22.05 §2).
+    private let deviceId: String
     /// Checked before every file: Wi‑Fi, charging, free space. Non-nil stops
     /// the run with that status (FS-22.02 §4).
     private let gate: @Sendable () async -> BackupJobState.Status?
@@ -142,6 +144,7 @@ actor BackupRunner {
         exporter: any AssetFileExporting,
         names: BackupDateName = BackupDateName(),
         workDirectory: URL,
+        deviceId: String,
         retriesExhausted: Bool = false,
         freeBytes: @escaping @Sendable () -> Int64? = { nil },
         gate: @escaping @Sendable () async -> BackupJobState.Status? = { nil },
@@ -155,6 +158,7 @@ actor BackupRunner {
         self.exporter = exporter
         self.planner = BackupPathPlanner(organize: job.settings.organize, names: names)
         self.workDirectory = workDirectory
+        self.deviceId = deviceId
         self.retriesExhausted = retriesExhausted
         self.freeBytes = freeBytes
         self.gate = gate
@@ -206,7 +210,10 @@ actor BackupRunner {
         progress.total = pending.count
         progress.bytesTotal = pending.reduce(0) { $0 + max(0, $1.file.file.estimatedBytes) }
         onProgress(progress)
-        guard !pending.isEmpty else { return BackupRunResult(stop: .finished, progress: progress) }
+        guard !pending.isEmpty else {
+            await publishLeftovers()
+            return BackupRunResult(stop: .finished, progress: progress)
+        }
 
         // Whatever a killed run left in the work folder goes first: only one
         // file is ever on the device at a time.
@@ -220,24 +227,38 @@ actor BackupRunner {
 
         do {
             try await listDestinationIfDue()
+            try await readSharedIndex()
         } catch {
             return BackupRunResult(stop: Self.stop(for: error), progress: progress)
         }
 
+        let stop = await copyAll(pending)
+        switch stop {
+        case .finished, .blocked(.waitingForWiFi), .blocked(.waitingToCharge), .blocked(.waitingForStorage):
+            // Still connected: tell the other devices what this run learned.
+            // Otherwise the next run does (the rows wait in the database).
+            try? await publishSharedIndex()
+        default:
+            break
+        }
+        return BackupRunResult(stop: stop, progress: progress)
+    }
+
+    private func copyAll(_ pending: [Planned]) async -> BackupRunResult.Stop {
         for planned in pending {
-            if Task.isCancelled { return BackupRunResult(stop: .cancelled, progress: progress) }
-            if let blocked = await gate() { return BackupRunResult(stop: .blocked(blocked), progress: progress) }
+            if Task.isCancelled { return .cancelled }
+            if let blocked = await gate() { return .blocked(blocked) }
             do {
                 try await copy(planned)
             } catch is CancellationError {
-                return BackupRunResult(stop: .cancelled, progress: progress)
+                return .cancelled
             } catch BackupSourceError.offline {
                 // The drive went away mid-run: the file is not the problem.
-                return BackupRunResult(stop: .blocked(.sourceOffline), progress: progress)
+                return .blocked(.sourceOffline)
             } catch BackupRunError.noRoom {
-                return BackupRunResult(stop: .blocked(.waitingForStorage), progress: progress)
+                return .blocked(.waitingForStorage)
             } catch let error as RemoteFileError where error.stopsBatch {
-                return BackupRunResult(stop: Self.stop(for: error), progress: progress)
+                return Self.stop(for: error)
             } catch {
                 recordFailure(planned, error)
             }
@@ -246,7 +267,7 @@ actor BackupRunner {
             progress.phase = nil
             onProgress(progress)
         }
-        return BackupRunResult(stop: .finished, progress: progress)
+        return .finished
     }
 
     // MARK: - Planning
@@ -424,6 +445,89 @@ actor BackupRunner {
         treeListedAt = at
         progress.phase = nil
         onProgress(progress)
+    }
+
+    private var indexFolder: String { ServerUploadPath.join(job.folder, BackupContentIndex.folder) }
+
+    /// Takes in the segments of the shared index this device has not read
+    /// (FS-22.05 §2). A segment that cannot be read is left for the next run;
+    /// the job goes on.
+    private func readSharedIndex() async throws {
+        let entries: [RemoteEntry]
+        do {
+            entries = try await client.entries(in: indexFolder)
+        } catch let error as RemoteFileError where error.stopsBatch {
+            throw error
+        } catch {
+            return
+        }
+        let read = try store.readSegments(jobId: job.id)
+        let unread = entries.filter {
+            !$0.isDirectory && BackupContentIndex.parseSegment($0.name) != nil && read[$0.name] != $0.size
+        }
+        guard !unread.isEmpty else { return }
+        try FileManager.default.createDirectory(at: workDirectory, withIntermediateDirectories: true)
+        for entry in unread.sorted(by: { $0.name < $1.name }) {
+            try Task.checkCancellation()
+            let local = workDirectory.appendingPathComponent("index-\(UUID().uuidString).jsonl")
+            defer { try? FileManager.default.removeItem(at: local) }
+            do {
+                try await client.download(ServerUploadPath.join(indexFolder, entry.name), to: local, progress: { _ in })
+            } catch let error as RemoteFileError where error.stopsBatch {
+                throw error
+            } catch is CancellationError {
+                throw CancellationError()
+            } catch {
+                continue
+            }
+            let lines = BackupContentIndex.decode((try? Data(contentsOf: local)) ?? Data())
+            try store.mergeIndex(lines, jobId: job.id, segment: entry.name, size: entry.size)
+        }
+    }
+
+    /// Writes what this device learned — files it sent, files it hashed — as
+    /// a new segment of its own: a part file first, read back, then renamed,
+    /// so another device never reads half of it.
+    private func publishSharedIndex() async throws {
+        let rows = try store.unpublishedDestinationFiles(jobId: job.id)
+        guard !rows.isEmpty else { return }
+        let existing = (try? await client.entries(in: indexFolder).map(\.name)) ?? []
+        let name = BackupContentIndex.segmentName(device: deviceId, number: BackupContentIndex.nextNumber(device: deviceId, existing: existing))
+        let now = Int(Date().timeIntervalSince1970)
+        let data = BackupContentIndex.encode(rows.compactMap { row in
+            row.sha256.map { BackupContentIndex.Line(path: row.path, size: row.size, modified: row.modified, sha256: $0, device: deviceId, recordedAt: now) }
+        })
+        try FileManager.default.createDirectory(at: workDirectory, withIntermediateDirectories: true)
+        let local = workDirectory.appendingPathComponent(name)
+        try data.write(to: local)
+        defer { try? FileManager.default.removeItem(at: local) }
+        let target = ServerUploadPath.join(indexFolder, name)
+        let writer = VerifiedRemoteWrite(client: client)
+        do {
+            try await writer.uploadPart(local, for: target, progress: { _ in })
+            guard try await writer.readBackSHA256(for: target, progress: { _ in }) == FileChecksum.sha256(of: local) else {
+                await writer.discardPart(for: target)
+                return
+            }
+            try await writer.moveIntoPlace(target, replacing: false)
+        } catch {
+            await writer.discardPart(for: target)
+            throw error
+        }
+        try store.markPublished(rows, jobId: job.id, segment: name, size: Int64(data.count))
+    }
+
+    /// A run with nothing to copy still writes what an earlier, interrupted
+    /// run learned — once, when there is something.
+    private func publishLeftovers() async {
+        guard (try? store.hasUnpublishedDestinationFiles(jobId: job.id)) == true else { return }
+        do {
+            try await client.connect()
+        } catch {
+            return
+        }
+        try? await publishSharedIndex()
+        await client.disconnect()
     }
 
     /// The server path of a file in the destination folder holding exactly
