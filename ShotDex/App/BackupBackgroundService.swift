@@ -103,9 +103,10 @@ final class BackupBackgroundService {
                 completion.finish(success: false)
             }
         }
-        coordinator.appBecameActive()
+        let comparing = coordinator.appBecameActive()
         coordinator.sourcesTick()
         Task { @MainActor in
+            await comparing.value
             await coordinator.waitUntilIdle()
             then()
             completion.finish(success: true)

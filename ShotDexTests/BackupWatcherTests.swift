@@ -35,13 +35,34 @@ import Testing
         await c.waitUntilIdle()
     }
 
+    /// Coming forward never asks Photos on the main thread: on a busy Photos
+    /// daemon that call blocks, and the app froze for minutes at launch.
+    @Test func foregroundCheckRunsOffTheMainThread() async throws {
+        let f = try BackupFixture(photos: 2)
+        let c = coordinator(f)
+        await c.appBecameActive().value
+        await c.waitUntilIdle()
+        let onMain = MainThreadProbe()
+        let probing = BackupCoordinator(store: f.store, environment: BackupEnvironment(
+            makeRunner: { _, retries, onProgress in f.runner(retriesExhausted: retries, onProgress: onProgress) },
+            photosChange: { token in
+                onMain.record(Thread.isMainThread)
+                return (false, token)
+            },
+            settle: .milliseconds(50)
+        ))
+        await probing.appBecameActive().value
+        #expect(onMain.calls > 0)
+        #expect(onMain.sawMain == false)
+    }
+
     /// AC-10: a job up to date sees 3 photos appear — it uploads them and
     /// goes back to Watching · Up to Date.
     @Test func libraryChangeQueuesNewItems() async throws {
         let f = try BackupFixture(photos: 2)
         let photos = FakePhotos()
         let c = coordinator(f, photos: photos)
-        c.appBecameActive()
+        await c.appBecameActive().value
         await c.waitUntilIdle()
         #expect(c.states[f.job.id]?.status == .watching)
 
@@ -81,7 +102,7 @@ import Testing
         var f = try BackupFixture(photos: 4)
         let photos = FakePhotos()
         let c = coordinator(f, photos: photos)
-        c.appBecameActive()
+        await c.appBecameActive().value
         await c.waitUntilIdle()
         let uploads = f.client.uploadCount
 
@@ -93,14 +114,14 @@ import Testing
         photos.change()
 
         let back = coordinator(f, photos: photos)
-        back.appBecameActive()
+        await back.appBecameActive().value
         await back.waitUntilIdle()
         #expect(f.client.uploadCount == uploads + 2)
         #expect(back.states[f.job.id]?.status == .watching)
 
         // Forward again with nothing new: the token says so, no run.
         let quiet = coordinator(f, photos: photos)
-        quiet.appBecameActive()
+        await quiet.appBecameActive().value
         #expect(quiet.isIdle)
     }
 
@@ -110,7 +131,7 @@ import Testing
         var f = try BackupFixture(photos: 3)
         let photos = FakePhotos()
         let c = coordinator(f, photos: photos)
-        c.appBecameActive()
+        await c.appBecameActive().value
         await c.waitUntilIdle()
 
         let (n, dn) = BackupFixture.item(60, name: "LATE.HEIC")
@@ -119,7 +140,7 @@ import Testing
         photos.tokenIsBroken = true
 
         let back = coordinator(f, photos: photos)
-        back.appBecameActive()
+        await back.appBecameActive().value
         await back.waitUntilIdle()
         #expect(back.progress[f.job.id]?.total == 1)
         #expect(f.remoteFiles.count == 4)
@@ -182,4 +203,13 @@ struct SlowExporter: AssetFileExporting {
         try await Task.sleep(for: delay)
         return try await base.export(assetId: assetId, file: file, into: directory)
     }
+}
+
+private final class MainThreadProbe: @unchecked Sendable {
+    private let lock = NSLock()
+    private var count = 0
+    private var main = false
+    var calls: Int { lock.withLock { count } }
+    var sawMain: Bool { lock.withLock { main } }
+    func record(_ isMain: Bool) { lock.withLock { count += 1; main = main || isMain } }
 }

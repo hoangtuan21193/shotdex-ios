@@ -91,16 +91,29 @@ final class BackupCoordinator {
 
     /// The app came forward or launched: every job compares its source now.
     /// A Photos job whose change token says nothing changed since its last
-    /// finished run is skipped.
-    func appBecameActive() {
+    /// finished run is skipped. Asking Photos about the token happens off the
+    /// main thread — on a busy Photos daemon it blocks, and on the main
+    /// thread that froze the app at launch. The returned task ends once the
+    /// jobs are queued.
+    @discardableResult
+    func appBecameActive() -> Task<Void, Never> {
         reload()
-        let ids = jobs.filter { job in
+        let checks: [(id: String, token: Data?, needsCheck: Bool)] = jobs.map { job in
             guard job.sourceId == PhotoLibrarySource.id, let state = states[job.id], state.status == .watching,
-                  state.hasFinishedFirstRun else { return true }
-            let change = environment.photosChange(state.changeToken)
-            return change.changed
-        }.map(\.id)
-        enqueue(ids)
+                  state.hasFinishedFirstRun else { return (job.id, nil, false) }
+            return (job.id, state.changeToken, true)
+        }
+        let photosChange = environment.photosChange
+        return Task { [weak self] in
+            var ids: [String] = []
+            for check in checks {
+                guard check.needsCheck else { ids.append(check.id); continue }
+                let token = check.token
+                let changed = await Task.detached(priority: .userInitiated) { photosChange(token).changed }.value
+                if changed { ids.append(check.id) }
+            }
+            self?.enqueue(ids)
+        }
     }
 
     /// Photos reported a change: gather for a few seconds, then run the
@@ -216,7 +229,10 @@ final class BackupCoordinator {
 
     private func run(_ job: BackupJob, retriesExhausted: Bool) async {
         let jobId = job.id
-        let token = job.sourceId == PhotoLibrarySource.id ? environment.photosChange(nil).token : nil
+        let photosChange = environment.photosChange
+        let token = job.sourceId == PhotoLibrarySource.id
+            ? await Task.detached(priority: .userInitiated) { photosChange(nil).token }.value
+            : nil
         guard let runner = environment.makeRunner(job, retriesExhausted, { [weak self] progress in
             Task { @MainActor in self?.receive(progress, jobId: jobId) }
         }) else {
