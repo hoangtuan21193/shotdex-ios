@@ -54,7 +54,11 @@ struct BackupDestination: Sendable {
 
 /// What the screens see while a run goes (FS-22.02 §5).
 struct BackupProgress: Equatable, Sendable {
-    enum Phase: Equatable, Sendable { case downloading, uploading, verifying }
+    enum Phase: Equatable, Sendable {
+        /// Listing the destination tree before copying (FS-22.05 §3).
+        case checkingDestination
+        case downloading, uploading, verifying
+    }
 
     var done = 0
     var total = 0
@@ -66,6 +70,8 @@ struct BackupProgress: Equatable, Sendable {
     var currentFile: String?
     var phase: Phase?
     var failed = 0
+    /// Files found so far while `checkingDestination`.
+    var listedCount = 0
 }
 
 struct BackupRunResult: Equatable, Sendable {
@@ -85,6 +91,8 @@ struct BackupRunResult: Equatable, Sendable {
     /// When the source was listed — the next run's "changed since" mark, so an
     /// edit made during this run is not missed.
     var listedAt = Date()
+    /// When this run listed the destination tree; nil = it did not.
+    var treeListedAt: Int?
 }
 
 /// Runs one pass of one job: lists the source, subtracts the ledger, and
@@ -116,8 +124,12 @@ actor BackupRunner {
     private let freeBytes: @Sendable () -> Int64?
     /// What stays free while a file sits in the work folder.
     static let minimumFreeBytes: Int64 = 2 * 1024 * 1024 * 1024
+    /// How old a listing of the destination tree may get before a run with
+    /// something to copy lists it again (FS-22.05 §3).
+    static let treeListingLifetime: TimeInterval = 24 * 60 * 60
 
     private var progress = BackupProgress()
+    private var treeListedAt: Int?
     /// Folder → lowercased name → size, listed once per folder per run.
     private var listings: [String: [String: Int64]] = [:]
 
@@ -161,6 +173,7 @@ actor BackupRunner {
         let listedAt = Date()
         var result = await pass()
         result.listedAt = listedAt
+        result.treeListedAt = treeListedAt
         return result
     }
 
@@ -204,6 +217,12 @@ actor BackupRunner {
             return BackupRunResult(stop: Self.stop(for: error), progress: progress)
         }
         defer { Task.detached { [client] in await client.disconnect() } }
+
+        do {
+            try await listDestinationIfDue()
+        } catch {
+            return BackupRunResult(stop: Self.stop(for: error), progress: progress)
+        }
 
         for planned in pending {
             if Task.isCancelled { return BackupRunResult(stop: .cancelled, progress: progress) }
@@ -387,6 +406,26 @@ actor BackupRunner {
 
     // MARK: - Duplicates (FS-22.05)
 
+    /// Lists the whole destination tree when it never was, or not in the last
+    /// day — only names and sizes; nothing is read (FS-22.05 §3).
+    private func listDestinationIfDue() async throws {
+        let now = Date()
+        if let last = try store.state(jobId: job.id).lastTreeScanAt,
+           now.timeIntervalSince1970 - TimeInterval(last) < Self.treeListingLifetime { return }
+        progress.phase = .checkingDestination
+        progress.listedCount = 0
+        onProgress(progress)
+        let files = try await BackupDestinationScan.list(client, folder: job.folder) { count in
+            progress.listedCount = count
+            onProgress(progress)
+        }
+        let at = Int(now.timeIntervalSince1970)
+        try store.applyListing(files, jobId: job.id, at: at)
+        treeListedAt = at
+        progress.phase = nil
+        onProgress(progress)
+    }
+
     /// The server path of a file in the destination folder holding exactly
     /// these bytes. What this device knows may be old — someone deleted or
     /// replaced the file on the NAS — so each candidate is asked for first,
@@ -396,6 +435,32 @@ actor BackupRunner {
             let path = ServerUploadPath.join(job.folder, candidate.path)
             if candidate.size == size, try await client.fileSize(at: path) == size { return path }
             try store.removeDestinationFile(jobId: job.id, path: candidate.path)
+        }
+        // Files nobody has hashed are read only when their size is exactly
+        // this one's — two different photos rarely agree to the byte — and
+        // each is read once: its hash is kept for every later photo and,
+        // through the shared index, for the other devices (FS-22.05 §3).
+        for candidate in try store.unhashedDestinationFiles(jobId: job.id, size: size) {
+            let path = ServerUploadPath.join(job.folder, candidate.path)
+            let hash: String
+            do {
+                progress.phase = .verifying
+                onProgress(progress)
+                hash = try await client.sha256(of: path, progress: { _ in })
+            } catch let error as RemoteFileError where error.stopsBatch {
+                throw error
+            } catch is CancellationError {
+                throw CancellationError()
+            } catch {
+                // Gone since the listing, or unreadable: not a match.
+                try store.removeDestinationFile(jobId: job.id, path: candidate.path)
+                continue
+            }
+            var hashed = candidate
+            hashed.sha256 = hash
+            hashed.needsPublish = true
+            try store.saveDestinationFile(hashed)
+            if hash == sha256 { return path }
         }
         return nil
     }

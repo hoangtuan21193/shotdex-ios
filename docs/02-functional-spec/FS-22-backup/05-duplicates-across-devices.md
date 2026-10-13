@@ -43,6 +43,9 @@ không … ảnh trùng nhưng ở khác thư mục … cái này quan trọng t
   nhau mà trùng cỡ đến từng byte là hiếm.*
 - Liệt kê lại cả cây **mỗi ngày một lần** (khi có lượt chạy), để bắt file người khác thêm bằng công cụ khác. Lượt liệt kê
   lại chạy nền như lượt chép, theo cùng điều kiện Wi‑Fi/sạc.
+- Chỉ liệt kê khi lượt có file cần chép: không có gì mới thì không nối NAS chỉ để liệt kê. Bỏ qua mục ẩn (tên bắt đầu
+  bằng `.`, gồm `.shotdex/`, `.DS_Store`, `._*`) và file `.shotdex-part`.
+- Lần liệt kê mới: file không còn thì quên; file đổi cỡ (hoặc đổi ngày sửa, khi đã biết ngày) thì bỏ SHA cũ.
 
 ## 4. Chép một file — thêm bước so nội dung
 

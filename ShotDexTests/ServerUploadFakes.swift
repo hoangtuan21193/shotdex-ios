@@ -98,7 +98,12 @@ final class InMemoryRemoteFileClient: RemoteFileClient, @unchecked Sendable {
         progress(Int64(data.count))
     }
 
+    /// Every path `sha256(of:)` read, in order — how a test proves a file on
+    /// the server was read exactly once.
+    private(set) var sha256Paths: [String] = []
+
     func sha256(of path: String, progress: @escaping @Sendable (Int64) -> Void) async throws -> String {
+        lock.withLock { sha256Paths.append(path) }
         guard var data = lock.withLock({ storage[path] }) else { throw RemoteFileError.other("missing \(path)") }
         let original = String(path.dropLast(ServerUploadPath.partSuffix.count))
         if corruptReadBack.contains(path) || corruptReadBack.contains(original), !data.isEmpty {

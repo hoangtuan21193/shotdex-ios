@@ -43,4 +43,22 @@ import Testing
         #expect(text(.signInFailed).action == .editServer)
         #expect(text(.destinationFull).title == "NAS Home Is Full")
     }
+
+    /// FS-22.05 §5: while the destination tree is listed, the card counts the
+    /// files found, named after the connection.
+    @Test func checkingDestination() {
+        var progress = BackupProgress(done: 0, total: 3, isFirstRun: true)
+        progress.phase = .checkingDestination
+        progress.listedCount = 8_000
+        let first = text(.uploading, progress: progress)
+        #expect(first.title == "Checking NAS Home · 8,000 files")
+        #expect(first.detail == "before the first copy")
+        #expect(first.action == .pause)
+
+        var state = BackupJobState(jobId: "J")
+        state.status = .uploading
+        state.hasFinishedFirstRun = true
+        let daily = BackupStatusText.make(.init(state: state, progress: progress, backedUpItems: 1, connectionName: "NAS Home", sourceName: ""))
+        #expect(daily.detail == "daily check")
+    }
 }

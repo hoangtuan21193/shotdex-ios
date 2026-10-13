@@ -247,4 +247,35 @@ struct BackupStore: Sendable {
             try BackupDestinationFile.deleteOne(db, key: ["jobId": jobId, "path": path])
         }
     }
+
+    /// Takes in a fresh listing of the destination tree (FS-22.05 §3): files
+    /// no longer there are forgotten, new ones are added unhashed, and a
+    /// known file keeps its SHA-256 only while its size — and its date, once
+    /// known — is unchanged. Records when the tree was listed.
+    func applyListing(_ files: [BackupDestinationScan.File], jobId: String, at now: Int = Int(Date().timeIntervalSince1970)) throws {
+        try database.writer.write { db in
+            var known: [String: BackupDestinationFile] = [:]
+            for row in try BackupDestinationFile.filter(Column("jobId") == jobId).fetchAll(db) { known[row.path] = row }
+            for file in files {
+                let modified = file.modified.map { Int($0.timeIntervalSince1970) }
+                if var row = known.removeValue(forKey: file.path) {
+                    let changed = row.size != file.size || (row.modified != nil && modified != nil && row.modified != modified)
+                    if changed {
+                        row.sha256 = nil
+                        row.needsPublish = false
+                    }
+                    row.size = file.size
+                    row.modified = modified ?? row.modified
+                    row.seenAt = now
+                    try row.update(db)
+                } else {
+                    try BackupDestinationFile(jobId: jobId, path: file.path, size: file.size, modified: modified, origin: .listed, seenAt: now).insert(db)
+                }
+            }
+            for path in known.keys {
+                try BackupDestinationFile.deleteOne(db, key: ["jobId": jobId, "path": path])
+            }
+            try db.execute(sql: "UPDATE backup_job_state SET lastTreeScanAt = ? WHERE jobId = ?", arguments: [now, jobId])
+        }
+    }
 }

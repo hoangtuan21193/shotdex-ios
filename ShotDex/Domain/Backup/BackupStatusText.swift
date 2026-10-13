@@ -40,6 +40,17 @@ struct BackupStatusText: Equatable, Sendable {
 
         case .uploading:
             let p = input.progress ?? BackupProgress(done: state.statusDone ?? 0, total: state.statusTotal ?? 0)
+            if p.phase == .checkingDestination {
+                // Nothing is copied while the destination tree is listed
+                // (FS-22.05 §3, §5).
+                return BackupStatusText(
+                    title: String(localized: "Checking \(input.connectionName) · \(p.listedCount.formatted()) files", comment: "Backup card: listing what the destination folder already holds, e.g. 'Checking NAS Home · 12,408 files'"),
+                    detail: state.hasFinishedFirstRun
+                        ? String(localized: "daily check", comment: "Backup card: the destination is listed again once a day")
+                        : String(localized: "before the first copy", comment: "Backup card: the destination is listed before anything is copied"),
+                    tone: .active, action: .pause
+                )
+            }
             let fraction = p.total > 0 ? Double(p.done) / Double(p.total) : 0
             let bytes = "\(p.bytesDone.formatted(.byteCount(style: .file))) of \(p.bytesTotal.formatted(.byteCount(style: .file)))"
             if p.isFirstRun {

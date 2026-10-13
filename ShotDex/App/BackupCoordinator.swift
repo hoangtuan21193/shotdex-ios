@@ -273,6 +273,8 @@ final class BackupCoordinator {
     private func finish(_ jobId: String, result: BackupRunResult, token: Data?) {
         let now = Int(Date().timeIntervalSince1970)
         update(jobId) { state in
+            // The runner wrote it; keep this cached copy from saving it back.
+            if let listed = result.treeListedAt { state.lastTreeScanAt = listed }
             state.statusDone = result.progress.done
             state.statusTotal = result.progress.total
             switch result.stop {
