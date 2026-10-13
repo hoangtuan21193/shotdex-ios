@@ -25,7 +25,7 @@
 thoại, trong khi Settings của chính iPadOS ở đúng bề rộng đó đang chạy hai cột. Đổi lại, iPad chia đôi màn
 (688pt) cũng vào hai cột — cũng đúng điều hệ thống làm.
 
-## 3. Cột mục — 9 mục
+## 3. Cột mục — 10 mục
 
 | # | Mục | Gom mục nào của bố cục hẹp |
 |---|---|---|
@@ -34,6 +34,7 @@ thoại, trong khi Settings của chính iPadOS ở đúng bề rộng đó đan
 | 3 | Widgets | Widgets |
 | 4 | Display | Thumbnail Metadata + Statistics (Show Insights, [FS-07.02 §6](../FS-07-statistics/02-insights.md)) |
 | 5 | Playback | Playback |
+| 5b | AI | AI ([07](07-ai-providers.md)) |
 | 6 | People and Pets | Subject Scan |
 | 7 | Sharing and Export | Sharing + Export |
 | 8 | Camera Database | Camera Database |
@@ -42,7 +43,7 @@ thoại, trong khi Settings của chính iPadOS ở đúng bề rộng đó đan
 - Mọi hàng mục có **ô biểu tượng màu theo nhóm** và một dòng giá trị, ở cả hai bố cục ([01b §2](01b-rows-and-root.md)).
 - Library Size và Privacy **không** là mục riêng: cái đầu là hai hàng số đọc xong là thôi, cái sau là một
   đoạn giải thích cộng một nút phá huỷ — cả hai nằm cuối **Photo Library**.
-- Chín mục gom lại để **vừa một màn 669pt** (màn trong Duo) mà không phải cuộn.
+- Mười mục; trên màn 669pt (Duo trong) cột mục **cuộn một hàng** — chấp nhận từ 2026-10-14 khi thêm AI.
 
 ## 4. Số đo
 

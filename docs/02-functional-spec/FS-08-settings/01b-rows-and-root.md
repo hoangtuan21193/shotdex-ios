@@ -26,6 +26,7 @@ các nhóm mà **mỗi hàng nói giá trị hiện tại của nó**, không ph
 | Library and viewing | Sources (FS-19, board `PH_SettingsSources`) | quyền + điều kiện index ("Full Access · indexing on Wi-Fi only") |
 | | Display | các thông số hiện trên ô lưới ("ISO, aperture, focal length, file type") |
 | | Playback | "Autoplay on · Full HDR off" |
+| | AI | "Subtitles: Claude · Search: Apple Intelligence" / "Not set up" ([07](07-ai-providers.md)) |
 | | People and Pets | "41,870 of 55,231 photos scanned" |
 | | Camera Database | "6 cameras need a sensor format" / "Every camera is known" |
 | Sharing and export | Metadata When Sharing | mức mặc định + "each share can change it" |

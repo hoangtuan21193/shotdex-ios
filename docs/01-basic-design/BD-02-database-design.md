@@ -84,6 +84,8 @@ Có chỉ mục trên: tên máy và tên ống kính đã chuẩn hoá · ISO �
 | Keyword Photos (gương) | id ảnh · keyword đúng cách viết · khoá gấp hoa-thường · khoá gấp hoa-thường + dấu — một dòng mỗi (ảnh, keyword); chỉ mục trên hai khoá ([FS-02.07 §8](../02-functional-spec/FS-02-photo-detail/07-caption-and-keywords.md)) |
 | Caption Photos (gương) | id ảnh · caption · bản gấp hoa-thường + dấu để tìm |
 | Trạng thái lượt đọc gương | id ảnh cuối của lượt đọc đầy · lúc đọc xong (rỗng = cần đọc đầy) |
+| Phim, phụ đề phim, lựa chọn phụ đề, việc dịch dở | kho Movies ngoài Photos (`v36-movies`, [FS-23.05](../02-functional-spec/FS-23-offline-movies/05-data.md)) |
+| Nhà cung cấp AI | loại · tên · địa chỉ · model ([FS-08.07 §4](../02-functional-spec/FS-08-settings/07-ai-providers.md)); key ở Keychain |
 
 - Dấu vân tay có **ngày sửa lúc tính**: lệch với ngày sửa hiện tại thì tính lại (ảnh vừa được chỉnh). Video
   không có dòng.

@@ -1,0 +1,67 @@
+# FS-23.02 — Player
+
+`FS-23.02` · tier C (chrome kính trên nền phim đen) · board `PH_MoviePlayer` (3/5) — chưa vẽ · cập nhật 2026-10-14
+
+**Một câu:** phát phim toàn màn bằng VLCKit, cùng bộ từ và cùng transport với video trong Photos (FS-02.02), thêm
+track âm thanh, phụ đề, chỗ đang xem.
+
+## 1. Engine
+
+- **VLCKit** cho mọi phim trong kho (intent câu 2). FS-02.02 §1 "không thêm thư viện player" thu lại thành luật
+  cho **video trong Photos**; video trong Photos vẫn đi AVPlayer.
+- Phụ đề **không để VLCKit vẽ**: ShotDex đọc phụ đề và tự vẽ lớp chữ khớp giờ của player (03 §4). Vì thế phụ đề
+  đôi, vị trí, cỡ chữ làm được với mọi bản VLCKit. Ngoại lệ: phụ đề **dạng ảnh** (PGS, VobSub) chỉ VLCKit vẽ được,
+  nên chỉ hiện được **một** và đúng chỗ file đặt (03 §3).
+- Giải mã phần cứng (VideoToolbox) cho H.264/HEVC; codec khác giải bằng CPU.
+- Bản: **VLCKit 4.0 alpha** (4.0.0a25, 30/9/2026; người dùng chốt 2026-10-14) — gói SPM chính thức, có PiP trên
+  iOS và macOS. Ghim đúng bản, bọc sau một lớp Data để đổi được; xét lại bản ổn định trước khi phát hành.
+- Cỡ app thêm: chưa đo (gói SPM 922 MB là mọi nền tảng + simulator). Đo bằng báo cáo App Thinning — AC-28.
+
+## 2. Mở và trạng thái
+
+| Trạng thái | Hiển thị |
+|---|---|
+| đang mở | nền đen, vòng quay sau 350 ms (như FS-02.02 §2) |
+| sẵn sàng | khung hình đầu đã vẽ, chrome hiện 3 s rồi mờ đi |
+| lỗi | thẻ cảnh báo `Can't Play This Movie` + lý do một dòng (`The video format HEVC 12-bit isn't supported.`) + **Close** |
+
+- Mở toàn màn (không phải sheet): kéo xuống không đóng; đóng bằng ✕ trên trái hoặc Esc / ⌘W.
+- **Chỗ đang xem**: đã xem > 1 phút và < 95% → mở tại chỗ đó, nhãn `Resumed at 47:12 · Start Over` trong 5 s.
+  Vị trí ghi mỗi 10 s, lúc dừng, lúc đóng, lúc rời app.
+- Đang phát thì màn không tự tắt; dừng hoặc đóng thì trả lại hẹn giờ tắt màn của hệ thống.
+- Phát phim không gọi mạng nào (chế độ máy bay không đổi gì).
+
+## 3. Transport
+
+Giữ đúng bộ của FS-02.02 §3–§4 (cụm giữa + kính hai hàng, giờ đơn cách, một hẹn giờ ẩn 3 s, mờ chứ không chèn).
+
+| Chỗ | Nội dung |
+|---|---|
+| trên | ✕ · tên phim (một dòng, cắt giữa) · nút PiP |
+| giữa | −10 s / phát-dừng / +10 s, 56 / 68 / 56 pt |
+| hàng 1 | phát-dừng · đã qua · thanh tua · còn lại |
+| hàng 2 (44 pt mỗi nút) | tốc độ · **Audio** · **Subtitles** (CC) · Fit/Fill · khoá chạm |
+
+- Tốc độ: 0.5 · 0.75 · 1 · 1.25 · 1.5 · 2×; nhớ theo từng phim.
+- **Audio**: menu các track của file (`English · AC3 5.1`, `Tiếng Việt · AAC 2.0`); chọn → đổi không dừng phim;
+  nhớ theo từng phim. Một track thì nút mờ.
+- **Subtitles**: mở bảng phụ đề (03 §2).
+- **Fit/Fill**: vừa khung (có viền đen) ↔ lấp khung (cắt mép); pinch ra/vào làm cùng việc.
+- **Khoá chạm**: chạm màn chỉ hiện nút mở khoá — để trên máy bay chạm nhầm không tua.
+- Cử chỉ: chạm bật/tắt chrome; chạm đúp nửa trái/phải = −10 s/+10 s; kéo thanh tua có ảnh khung xem trước khi
+  engine cung cấp được, không thì chỉ giờ.
+
+## 4. Hướng màn và thiết bị
+
+- iPhone: khung phim xoay 90° trong giao diện khi máy dọc mà phim ngang — đúng cách FS-02.02 §8, không gọi API xoay.
+- iPad, Duo trong: phim lấp cửa sổ, cả dọc lẫn ngang; Split View/Stage Manager co theo cửa sổ.
+- Duo ngoài (466×678, rail 84pt): **chỉ phát**. Movies hiện danh sách, chạm để phát; không có **+**, Delete, Rename.
+  Gập/mở máy giữa lúc phát: giữ phim, vị trí, phụ đề.
+- Mac: cửa sổ player riêng; Space phát/dừng, ←/→ 10 s, F toàn màn, ⌘W đóng. Bàn phím iPad dùng cùng phím.
+- Rời app khi đang phát: sang PiP nếu người dùng đã bật PiP tự động của hệ thống, không thì dừng (không phát nền tiếng).
+
+## 5. Truy cập
+
+- Mọi nút có nhãn VoiceOver (`Subtitles: English and Vietnamese`, `Audio: English AC3 5.1`); thanh tua là
+  control điều chỉnh được, mỗi bước 10 s.
+- Chữ phụ đề theo cỡ chữ người dùng chọn trong bảng phụ đề, không theo Dynamic Type (đè lên hình).

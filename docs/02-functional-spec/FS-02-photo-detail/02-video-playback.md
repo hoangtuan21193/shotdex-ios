@@ -8,8 +8,8 @@ một khung đen im lặng.
 
 ## 1. Quy tắc
 
-- **Giữ khung phát của hệ thống, không thêm thư viện player.** Các engine ngoài nhắm streaming và codec lạ,
-  thêm 20–70 MB vào app, và mất đường lấy video của thư viện ảnh.
+- **Video trong Photos: giữ khung phát của hệ thống, không thêm thư viện player.** Các engine ngoài nhắm codec lạ,
+  và mất đường lấy video của thư viện ảnh. Phim trong kho Movies là ngoại lệ, đi VLCKit ([FS-23.02](../FS-23-offline-movies/02-player.md)).
 - **"Sẵn sàng" nghĩa là item đã sẵn sàng *và* lớp hình đã có gì để vẽ** — không phải "player khác rỗng".
 - **Chỉ trang đang hiện mới tải video.**
 - **Cụm nút giữa khung và panel dưới là MỘT bộ control** — cùng ẩn, cùng hiện.

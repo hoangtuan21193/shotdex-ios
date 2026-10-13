@@ -5,9 +5,9 @@
 | Tác giả | Hoang Tuan (lời người dùng), Claude soạn |
 | Ngày | 2026-10-14 |
 | Trạng thái | accepted — người dùng 2026-10-14 |
-| Tiến độ | **chưa làm** (2026-10-14) — chưa có spec |
+| Tiến độ | **chưa làm** (2026-10-14) — spec FS-23 (38 AC) + FS-08.07 (9 AC), mọi ⚠️ đã chốt; board chưa vẽ |
 | Nguồn | phản hồi người dùng 2026-10-14 |
-| Spec sinh ra từ đây | (điền khi sang Design) |
+| Spec sinh ra từ đây | [FS-23](../02-functional-spec/FS-23-offline-movies/README.md) · [FS-08.07](../02-functional-spec/FS-08-settings/07-ai-providers.md) |
 
 ## Problem — vấn đề
 
@@ -128,11 +128,14 @@ dùng AI để generate subtitle thứ 2 sang một ngôn ngữ khác … cho ch
 8. **Thiết bị** → **iPhone · iPad · Duo · Mac** trong đợt này. Lưu ý: app Mac (FS-18…21) mới có spec, chưa có code —
    phim/ảnh offline trên Mac đứng sau phần nền của app Mac. VLCKit có bản macOS.
 
-9. **Mục AI dùng chung cho AI Search** → **có.** AI Search (`AISearchTranslator.swift`, hôm nay cố định Foundation
+9. **Mục AI dùng chung cho AI Search** → **có**, nhưng ở bước spec người dùng chốt thêm: AI Search **không dùng
+   cloud** (vốn từ gửi đi có tên địa điểm) — chỉ Apple Intelligence hoặc máy chủ trong nhà. AI Search (`AISearchTranslator.swift`, hôm nay cố định Foundation
    Models) cũng chọn nhà cung cấp từ mục AI trong Settings: Foundation Models, Apple Translation không áp dụng (không
    phải LLM), LLM máy chủ nhà, API key cloud.
 10. **Ảnh offline** → **tách intent riêng** (`offline-photos`), viết sau. Intent này không làm chip ảnh.
-11. **Nguồn phụ đề, không bắt người dùng đăng nhập** → **dùng các nguồn không cần tài khoản người dùng**:
+11. **Nguồn phụ đề** → **đổi ở bước spec (2026-10-14): bỏ tìm phụ đề trên mạng**; người dùng tự tải file phụ đề
+    rồi đưa vào ShotDex (Files, Share/AirDrop, cạnh phim). Lý do: điều khoản OpenSubtitles và SubDL chỉ cho dùng
+    không đăng nhập khi app trả phí hằng tháng. Câu trả lời cũ, giữ để biết vì sao đổi: **dùng các nguồn không cần tài khoản người dùng**:
     OpenSubtitles.com chạy bằng key của app, không đăng nhập (lượt tải ẩn danh bị giới hạn theo IP), cộng nguồn khác
     cũng chỉ cần key của app (SubDL, Podnapisi) để bù lượt. Kết quả gộp vào một danh sách để chọn như Infuse.
     Ghi chú: Infuse không hỏi tài khoản vì Firecore có thoả thuận riêng với OpenSubtitles; API công khai không có sẵn

@@ -52,7 +52,9 @@ Ví dụ: `Fukuoka` · `f > 1.2` · `ISO trên 3200` · `trước 2020` · `nhan
 
 ## 4. Model trên iOS 26
 
-Dùng model ngôn ngữ chạy trên máy của hệ thống.
+Dùng nhà cung cấp ở hàng **AI Search** của Settings › AI ([FS-08.07 §5](../FS-08-settings/07-ai-providers.md#5-ai-search)) — mặc định
+model ngôn ngữ chạy trên máy của hệ thống; máy chủ trong nhà có hạn 8 s; **không dùng cloud** (vốn từ
+gồm tên địa điểm).
 
 - Chỉ chạy khi model **có sẵn và hỗ trợ ngôn ngữ đang dùng**, hạn **2 giây**, và **chỉ khi bộ phân tích
   không hiểu hết** — hỏi model để đọc lại `85mm` chỉ thêm độ trễ.

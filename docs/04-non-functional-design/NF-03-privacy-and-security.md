@@ -2,7 +2,7 @@
 
 `NF-03` · `ShotDex/Features/Support/` · `PrivacyInfo.xcprivacy` · cập nhật 2026-10-03
 
-**Một câu:** cam kết xử lý cục bộ, hai ngoại lệ, và luật metadata khi chia sẻ hay xuất.
+**Một câu:** cam kết xử lý cục bộ, ba ngoại lệ, và luật metadata khi chia sẻ hay xuất.
 
 ## 1. Quy tắc
 
@@ -46,6 +46,19 @@ Danh tính là **khoá chứng thực của bản cài** — gỡ app là mất.
 - Upload **không** gỡ vị trí (lựa chọn metadata của FS-08.06 là luật của chia sẻ và xuất): đây là bản lưu trữ của chính người
   dùng, gỡ toạ độ là làm hỏng bản gốc.
 
+## 2c. Ngoại lệ thứ ba — AI do người dùng chọn
+
+Người dùng tự thêm một nhà cung cấp AI ngoài máy ([FS-08.07](../02-functional-spec/FS-08-settings/07-ai-providers.md))
+và tự chọn nó cho một việc.
+
+| Gửi đi | Không gửi |
+|---|---|
+| dịch phụ đề ([FS-23.04](../02-functional-spec/FS-23-offline-movies/04-ai-translation.md)): chữ phụ đề, tên phim, hai ngôn ngữ — tới cloud hoặc máy chủ trong nhà | file phim, tên file, đường dẫn, ảnh, metadata ảnh |
+| AI Search: câu tìm + vốn từ thư viện — **chỉ** tới máy chủ trong nhà | bất cứ gì tới cloud |
+
+- Yêu cầu đi thẳng từ máy tới dịch vụ bằng key của người dùng; ShotDex không có máy chủ ở giữa.
+- Key ở Keychain, chỉ trên máy này; không vào database, log, thông báo lỗi.
+
 ## 3. Metadata khi chia sẻ và xuất
 
 Đặc tả đầy đủ, kèm tiêu chí nghiệm thu: [FS-08.06](../02-functional-spec/FS-08-settings/06-share-metadata-privacy.md).
@@ -84,8 +97,8 @@ Danh tính là **khoá chứng thực của bản cài** — gỡ app là mất.
 | App | dùng **kho cài đặt** (chỉ kho mặc định, không dùng kho theo nhóm — dữ liệu chia sẻ với widget đi qua **file trong thư mục chung**, không qua kho cài đặt) và **đọc ngày của file** ở hai chỗ: nhạc người dùng nhập, và thư mục người dùng chọn khi nhập ảnh. Mỗi mục khai kèm **mã lý do** tương ứng |
 | Bốn target còn lại | không dùng API nào thuộc diện phải khai lý do — bản khai rỗng |
 
-- Mọi target đều khai **không theo dõi người dùng** và **không thu thập dữ liệu**: trong mã không có lời gọi
-  mạng nào, không có thư viện phân tích hay báo lỗi nào, và việc nhận diện người/thú chạy **hoàn toàn trên máy**.
+- Mọi target đều khai **không theo dõi người dùng** và **không thu thập dữ liệu**: lời gọi mạng chỉ có ở các
+  ngoại lệ §2–§2c và tới server/dịch vụ người dùng tự cài, không có thư viện phân tích hay báo lỗi nào, và việc nhận diện người/thú chạy **hoàn toàn trên máy**.
 - **Nhận dạng giọng nói chỉ chạy trên máy** (phụ đề Video Studio, [FS-12.14](../02-functional-spec/FS-12-video-studio/14-captions.md)):
   không có model trên máy thì không chạy, không bao giờ rơi sang máy chủ.
 - Trình build tự đưa bản khai vào phần tài nguyên — đã kiểm bản build ra: **cả 5 bản khai nằm đúng chỗ**

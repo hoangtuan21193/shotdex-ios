@@ -45,13 +45,13 @@ docs/
 │                             BD-04 ngôn ngữ thiết kế · BD-05 quy tắc nghiệp vụ
 ├── 02-functional-spec/       FS-01 Library (14) · FS-02 Photo Detail (7) · FS-03 Editor (19)
 │                             FS-04 Màu (3) · FS-05 Markup (4) · FS-06 Collections (10)
-│                             FS-07 Statistics (3) · FS-08 Settings (6) · FS-09 Onboarding
+│                             FS-07 Statistics (3) · FS-08 Settings (7) · FS-09 Onboarding
 │                             FS-10 Import (đã bỏ) · FS-11 Collage (2) · FS-12 Video Studio (25) · FS-13 Support
 │                             FS-14 Panorama (2) · FS-15 Upload lên file server (5)
 │                             FS-16 Kernel render bằng Metal · FS-17 Tải, sửa ảnh từ file server (6)
 │                             FS-18 App Mac (9) · FS-19 Nguồn ảnh: thư mục, ổ ngoài, server (8)
 │                             FS-20 Nhập từ thẻ nhớ (2) · FS-21 iPad kiểu Mac (7)
-│                             FS-22 Backup lên ổ mạng (4)
+│                             FS-22 Backup lên ổ mạng (4) · FS-23 Phim offline + phụ đề (6)
 ├── 03-extensions-and-integrations/  EX-01 Kit · EX-02 Widget · EX-03 Share · EX-04 Shortcuts · EX-05 Edit action
 ├── 04-non-functional-design/ NF-01 hiệu năng · NF-02 bộ nhớ · NF-03 riêng tư
 │                             NF-04 trạng thái lỗi · NF-05 thiết bị · NF-06 truy cập & ngôn ngữ
