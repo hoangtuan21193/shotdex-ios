@@ -9,9 +9,11 @@ phụ đề sang thứ tiếng khác bằng AI trước khi lên máy bay.
 
 Nguồn: [intent 2026-10-14-offline-movies](../../_intents/2026-10-14-offline-movies.md) (accepted, Q1–Q13 đã trả lời).
 
-Board: **chưa có.** Phải vẽ trước `/plan` (luật design đi cùng code): iPhone `PH_Movies` (1/5 danh sách) ·
-`PH_MoviesAdd` (2/5) · `PH_MoviePlayer` (3/5) · `PH_MovieSubtitles` (4/5 bảng phụ đề) · `PH_MovieTranslate` (5/5)
-· `PH_MovieSubtitleAdd` (Share › chọn phim); iPad `IP_…`, Duo `DI_…`/`DC_…`, Mac `MAC_…` cùng bộ; Settings `*_SettingsAI`.
+Board (vẽ 2026-10-14, sáng + tối): iPhone `PH_Movies` (1/5) · `PH_MoviesAdd` (2/5) · `PH_MoviePlayer` (3/5, ngang) ·
+`PH_MovieSubtitles` (4/5) · `PH_MovieTranslate` (5/5) · `PH_MovieSubtitleAdd` (Share › chọn phim) · `PH_SettingsAI` ·
+`PH_SettingsAIProvider`; iPad `IP_…` cùng bộ; Duo trong `DI_…` cùng bộ, Duo ngoài `DC_Movies` · `DC_MoviePlayer` ·
+`DC_MovieSubtitles` · `DC_SettingsAI`; Mac `MAC_…` cùng bộ (Settings là tab AI). Lối vào: ô/hàng **Movies** sau Video
+Projects trên `*_Collections` và sidebar iPad/Mac; hàng **AI** trên `*_Settings`.
 
 ## Các phần
 

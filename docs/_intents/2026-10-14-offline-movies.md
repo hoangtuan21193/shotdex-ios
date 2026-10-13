@@ -5,7 +5,7 @@
 | Tác giả | Hoang Tuan (lời người dùng), Claude soạn |
 | Ngày | 2026-10-14 |
 | Trạng thái | accepted — người dùng 2026-10-14 |
-| Tiến độ | **chưa làm** (2026-10-14) — spec FS-23 (38 AC) + FS-08.07 (9 AC), mọi ⚠️ đã chốt; board chưa vẽ |
+| Tiến độ | **chưa làm** (2026-10-14) — spec FS-23 (38 AC) + FS-08.07 (9 AC), mọi ⚠️ đã chốt; board đã vẽ trên 4 canvas (14/10) |
 | Nguồn | phản hồi người dùng 2026-10-14 |
 | Spec sinh ra từ đây | [FS-23](../02-functional-spec/FS-23-offline-movies/README.md) · [FS-08.07](../02-functional-spec/FS-08-settings/07-ai-providers.md) |
 

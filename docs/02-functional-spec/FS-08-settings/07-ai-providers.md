@@ -11,9 +11,11 @@ Nguồn: [intent 2026-10-14-offline-movies](../../_intents/2026-10-14-offline-mo
 
 ## 1. Chỗ đặt
 
-- Bố cục hẹp: hàng **AI** trong nhóm Library and viewing, sau Playback; dòng giá trị `Subtitles: Claude ·
-  Search: Apple Intelligence` / `Not set up`.
+- Bố cục hẹp: hàng **AI** trong nhóm Library and viewing, sau Playback; dòng giá trị `Claude · Apple Intelligence`
+  (dịch phụ đề · AI Search, theo thứ tự hai hàng của trang AI) / `Not set up`.
 - Bố cục rộng: mục thứ 10 trong cột mục, sau Playback.
+- Mac: cửa sổ Settings không có Playback; tab **AI** đứng sau General (General · AI · Sources · Editing · Servers ·
+  Cameras).
 - Luật cũ "9 mục vừa 669pt" (01 §3) bỏ: người dùng chốt 2026-10-14 thêm mục 10; trên Duo trong cột mục cuộn
   một hàng. Sửa 01 §3 theo.
 

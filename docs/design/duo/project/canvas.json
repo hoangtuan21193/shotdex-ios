@@ -268,7 +268,7 @@
     },
     "DC_Collections.dc.html": {
       "h": 678,
-      "title": "Duo màn ngoài · Collections: hero 180, Smart Albums và My Albums cover 132, rail tab",
+      "title": "Duo màn ngoài · Collections: hero 180, Smart Albums và My Albums cover 132, rail tab; Utilities thêm Movies sau Video Projects (FS-23, 14/10)",
       "w": 466,
       "x": 5460,
       "y": 1609
@@ -458,7 +458,7 @@
     },
     "DC_Settings.dc.html": {
       "h": 678,
-      "title": "Duo màn ngoài · Cài đặt kiểu Mochi trong 382pt: thẻ Your library, hàng Sources \"Photos, 3 folders, 1 server\"",
+      "title": "Duo màn ngoài · Cài đặt kiểu Mochi trong 382pt: thẻ Your library, hàng Sources \"Photos, 3 folders, 1 server\"; hàng AI sau Playback \"Claude · Apple Intelligence\" (FS-23, 14/10)",
       "w": 466,
       "x": 13650,
       "y": 1609
@@ -975,7 +975,7 @@
     },
     "DI_Collections.dc.html": {
       "h": 669,
-      "title": "Duo mở · Collections: hero On This Day 260 + hàng cover Smart Albums 192, rail tab bên phải",
+      "title": "Duo mở · Collections: hero On This Day 260 + hàng cover Smart Albums 192, rail tab bên phải; Utilities thêm Movies sau Video Projects (FS-23, 14/10)",
       "w": 951,
       "x": 11341,
       "y": 560
@@ -1171,7 +1171,7 @@
     },
     "DI_Settings.dc.html": {
       "h": 669,
-      "title": "Duo mở · Cài đặt split view: sidebar ô icon 28 + pane Sources (5 nguồn, Add Folder or Drive…, Connect to Server…)",
+      "title": "Duo mở · Cài đặt split view: sidebar ô icon 28 + pane Sources (5 nguồn, Add Folder or Drive…, Connect to Server…); sidebar thêm mục 10 AI sau Playback, cột cuộn 1 hàng (FS-23, 14/10)",
       "w": 951,
       "x": 26806,
       "y": 560
@@ -1520,6 +1520,90 @@
       "title": "Duo ngoài · Chọn khung burst: mọi thứ trong 382pt trái rail 84, thanh trên cách đỉnh 28 khỏi góc bo",
       "w": 466,
       "x": 30030,
+      "y": 1609
+    },
+    "DI_Movies.dc.html": {
+      "h": 669,
+      "title": "Duo trong · Movies 1/5: 2 cột như Video Projects, cùng 5 phim/trạng thái iPhone (đang chép + ✕, lỗi + Retry, đã xem), dòng dung lượng, rail tab — FS-23.01, đề xuất 14/10, code chưa có",
+      "w": 951,
+      "x": 61860,
+      "y": 560
+    },
+    "DI_MoviesAdd.dc.html": {
+      "h": 669,
+      "title": "Duo trong · Movies 2/5: Choose Movies sheet toàn cửa sổ như Add Connection; nút Add 2 Movies · 9.3 GB ghim trên phải — FS-23.01 §3, đề xuất 14/10, code chưa có",
+      "w": 951,
+      "x": 62891,
+      "y": 560
+    },
+    "DI_MoviePlayer.dc.html": {
+      "h": 669,
+      "title": "Duo trong · Movies 3/5: player 951×669, khung 16:9 951×535, transport FS-02.02 (kính 775) + Audio · Subtitles · Fit · Khoá; hai phụ đề 27/23; tweak chrome — FS-23.02, đề xuất 14/10, code chưa có",
+      "w": 951,
+      "x": 63922,
+      "y": 560
+    },
+    "DI_MovieSubtitles.dc.html": {
+      "h": 669,
+      "title": "Duo trong · Movies 4/5: bảng phụ đề 372 bên phải trên phim đang chạy, phụ đề dồn vào phần hình còn thấy — FS-23.03 §2, đề xuất 14/10, code chưa có",
+      "w": 951,
+      "x": 64953,
+      "y": 560
+    },
+    "DI_MovieTranslate.dc.html": {
+      "h": 669,
+      "title": "Duo trong · Movies 5/5: Translate trong bảng phải; tweak running = 412/1,380 + Cancel — FS-23.04, đề xuất 14/10, code chưa có",
+      "w": 951,
+      "x": 65984,
+      "y": 560
+    },
+    "DI_MovieSubtitleAdd.dc.html": {
+      "h": 669,
+      "title": "Duo trong · Share file .srt → Add Subtitle to…: sheet toàn cửa sổ, phim trùng tên đánh dấu — FS-23.03 §5, đề xuất 14/10, code chưa có",
+      "w": 951,
+      "x": 67015,
+      "y": 560
+    },
+    "DI_SettingsAI.dc.html": {
+      "h": 669,
+      "title": "Duo trong · Settings › AI: mục thứ 10 trong sidebar (cuộn 1 hàng), pane Use For · On This Device · Providers — FS-08.07, đề xuất 14/10, code chưa có",
+      "w": 951,
+      "x": 68046,
+      "y": 560
+    },
+    "DI_SettingsAIProvider.dc.html": {
+      "h": 669,
+      "title": "Duo trong · Settings › AI › Claude: pane form Name · API Key · Model, Test → Working · 0.8 s, Delete Provider — FS-08.07 §3, đề xuất 14/10, code chưa có",
+      "w": 951,
+      "x": 69077,
+      "y": 560
+    },
+    "DC_Movies.dc.html": {
+      "h": 678,
+      "title": "Duo ngoài · Movies: chỉ phát — cùng 5 hàng, không + / không ⋯ (Select, Delete, Rename), rail tab — FS-23.01, đề xuất 14/10, code chưa có",
+      "w": 466,
+      "x": 30576,
+      "y": 1609
+    },
+    "DC_MoviePlayer.dc.html": {
+      "h": 466,
+      "title": "Duo ngoài · Player xoay 90° trong UI (FS-02.02 §8), vẽ ngang 678×466: 16:9 678×381 lấp đúng cột 382, rail 84 thành dải dưới giữ kính transport, tránh lỗ camera; tweak chrome — FS-23.02, đề xuất 14/10, code chưa có",
+      "w": 678,
+      "x": 31122,
+      "y": 1609
+    },
+    "DC_MovieSubtitles.dc.html": {
+      "h": 466,
+      "title": "Duo ngoài · Bảng phụ đề: sheet nửa cao (233) trong view xoay, 2 cột, phim chạy phía trên + phụ đề dồn lên phần hình còn thấy — FS-23.03 §2, đề xuất 14/10, code chưa có",
+      "w": 678,
+      "x": 31880,
+      "y": 1609
+    },
+    "DC_SettingsAI.dc.html": {
+      "h": 678,
+      "title": "Duo ngoài · Settings › AI trong 382pt: Use For, On This Device, Providers + Add Provider… — FS-08.07, đề xuất 14/10, code chưa có",
+      "w": 466,
+      "x": 32638,
       "y": 1609
     }
   },
@@ -1870,7 +1954,19 @@
     "DC_BackupRunning.dc.html",
     "DI_DuplicatesBursts.dc.html",
     "DI_BurstFrames.dc.html",
-    "DC_BurstFrames.dc.html"
+    "DI_Movies.dc.html",
+    "DI_MoviesAdd.dc.html",
+    "DI_MoviePlayer.dc.html",
+    "DI_MovieSubtitles.dc.html",
+    "DI_MovieTranslate.dc.html",
+    "DI_MovieSubtitleAdd.dc.html",
+    "DI_SettingsAI.dc.html",
+    "DI_SettingsAIProvider.dc.html",
+    "DC_BurstFrames.dc.html",
+    "DC_Movies.dc.html",
+    "DC_MoviePlayer.dc.html",
+    "DC_MovieSubtitles.dc.html",
+    "DC_SettingsAI.dc.html"
   ],
   "pages": [],
   "title": "ShotDex · iPhone Duo"

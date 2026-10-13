@@ -125,7 +125,7 @@ function sidebar(t, o){
     {hasTitle:false, note:'', rows:[row('All Photos',I.all),row('Favorites',I.fav),row('Videos',I.video),row('RAW',I.raw),row('Recently Added',I.recent)]},
     {hasTitle:true, title:'Sources', addable:true, addLabel:'Add Source', note:'No sources yet', rows:[]},
     {hasTitle:true, title:'Collections', addable:true, addLabel:'New Album', note:'', rows:[row('On This Day',I.onthisday),row('Albums',I.album,'',{chev:true})]},
-    {hasTitle:true, title:'Utilities', addable:false, note:'', rows:[row('Statistics',I.stats),row('Places',I.places),row('Trips',I.trips),row('Duplicates',I.dup),row('Collages',I.collage),row('Video Projects',I.film),row('On Server',I.onserver)]}
+    {hasTitle:true, title:'Utilities', addable:false, note:'', rows:[row('Statistics',I.stats),row('Places',I.places),row('Trips',I.trips),row('Duplicates',I.dup),row('Collages',I.collage),row('Video Projects',I.film),row('Movies','M3 5h18v14H3z M10 9l5 3-5 3z'),row('On Server',I.onserver)]}
   ];
   const t7 = o.offline ? row('T7 RAW Archive',I.drive,'',{off:true}) : row('T7 RAW Archive',I.drive,'26,107',{eject:true});
   const sources=[row('Photos Library',I.library,'23,904'),row('2026 Japan',I.folder,'4,118'),t7,row('NAS Home',I.server,'1,102')];
@@ -134,7 +134,7 @@ function sidebar(t, o){
     {hasTitle:false, note:'', rows:[row('All Photos',I.all,o.allCount||'55,231'),row('Favorites',I.fav,'1,862'),row('Videos',I.video,'1,204'),row('RAW',I.raw,'31,540'),row('Recently Added',I.recent)]},
     {hasTitle:true, title:'Sources', addable:true, addLabel:'Add Source', note:'', rows:sources},
     {hasTitle:true, title:'Collections', addable:true, addLabel:'New Album', note:'', rows:[row('On This Day',I.onthisday),row('Albums',I.album,'38',{chev:true}),row('Night ISO 3200+',I.smart,'2,411'),row('85mm Portraits',I.smart,'986')]},
-    {hasTitle:true, title:'Utilities', addable:false, note:'', rows:[row('Statistics',I.stats),row('Places',I.places),row('Trips',I.trips,'12'),row('Duplicates',I.dup,'53'),row('Collages',I.collage,'12'),row('Video Projects',I.film,'7'),row('On Server',I.onserver,'712')]}
+    {hasTitle:true, title:'Utilities', addable:false, note:'', rows:[row('Statistics',I.stats),row('Places',I.places),row('Trips',I.trips,'12'),row('Duplicates',I.dup,'53'),row('Collages',I.collage,'12'),row('Video Projects',I.film,'7'),row('Movies','M3 5h18v14H3z M10 9l5 3-5 3z','5'),row('On Server',I.onserver,'712')]}
   ];
 }
 const IDLE_FOOT = {idle:true, busy:false, label:'Up to date · indexed 2 min ago', pct:'0%'};

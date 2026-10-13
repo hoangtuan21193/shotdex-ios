@@ -47,7 +47,7 @@ Giữ đúng bộ của FS-02.02 §3–§4 (cụm giữa + kính hai hàng, gi�
   nhớ theo từng phim. Một track thì nút mờ.
 - **Subtitles**: mở bảng phụ đề (03 §2).
 - **Fit/Fill**: vừa khung (có viền đen) ↔ lấp khung (cắt mép); pinch ra/vào làm cùng việc.
-- **Khoá chạm**: chạm màn chỉ hiện nút mở khoá — để trên máy bay chạm nhầm không tua.
+- **Khoá chạm**: chạm màn chỉ hiện nút mở khoá — để trên máy bay chạm nhầm không tua. Mac không có (không có chạm).
 - Cử chỉ: chạm bật/tắt chrome; chạm đúp nửa trái/phải = −10 s/+10 s; kéo thanh tua có ảnh khung xem trước khi
   engine cung cấp được, không thì chỉ giờ.
 
@@ -55,9 +55,12 @@ Giữ đúng bộ của FS-02.02 §3–§4 (cụm giữa + kính hai hàng, gi�
 
 - iPhone: khung phim xoay 90° trong giao diện khi máy dọc mà phim ngang — đúng cách FS-02.02 §8, không gọi API xoay.
 - iPad, Duo trong: phim lấp cửa sổ, cả dọc lẫn ngang; Split View/Stage Manager co theo cửa sổ.
-- Duo ngoài (466×678, rail 84pt): **chỉ phát**. Movies hiện danh sách, chạm để phát; không có **+**, Delete, Rename.
+- Duo ngoài (466×678, rail 84pt): **chỉ phát**. Movies hiện danh sách, chạm để phát; không có **+**, ⋯, Delete, Rename
+  (Stop Copying và Retry vẫn có). Player xoay 90° như iPhone: phim 678×381 lấp cột 382pt, rail thành dải transport;
+  bảng phụ đề là nửa dưới của khung đã xoay (233pt).
   Gập/mở máy giữa lúc phát: giữ phim, vị trí, phụ đề.
-- Mac: cửa sổ player riêng; Space phát/dừng, ←/→ 10 s, F toàn màn, ⌘W đóng. Bàn phím iPad dùng cùng phím.
+- Mac: cửa sổ player riêng; transport là thanh kính hiện khi rê chuột, −10/phát/+10 nằm trong thanh, không nút tròn
+  nổi trên hình (MAC_STYLE); Space phát/dừng, ←/→ 10 s, F toàn màn, ⌘W đóng. Bàn phím iPad dùng cùng phím.
 - Rời app khi đang phát: sang PiP nếu người dùng đã bật PiP tự động của hệ thống, không thì dừng (không phát nền tiếng).
 
 ## 5. Truy cập

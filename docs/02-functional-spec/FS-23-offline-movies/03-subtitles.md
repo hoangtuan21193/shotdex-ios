@@ -19,8 +19,8 @@
 
 ## 2. Bảng phụ đề
 
-Mở từ nút **Subtitles** của player (sheet nửa màn, phim vẫn chạy phía trên để thấy ngay thay đổi) hoặc giữ lâu
-một phim › Subtitles….
+Mở từ nút **Subtitles** của player — máy ngang: bảng bên phải rộng 372pt, phim vẫn chạy và phụ đề dồn vào phần
+hình còn thấy; máy dọc: sheet nửa màn — hoặc giữ lâu một phim › Subtitles….
 
 - Hai dòng **Primary** và **Secondary**, mỗi dòng một menu: Off · mọi phụ đề ở §1. Secondary mặc định Off.
 - Hai nút: **Import File…** (§5) · **Translate…** (04, mờ khi chưa có phụ đề chữ nào).

@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>iPhone · AI Provider</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0}
+button{font-family:inherit}
+.ell{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tn{font-variant-numeric:tabular-nums}
+</style>
+</helmet>
+<div style="width: 402px; height: 874px; position: relative; overflow: hidden; background: {{t.grouped}}; color: {{t.label}}; font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', system-ui, sans-serif">
+<button style="position:absolute;left:16px;top:62px;height:44px;padding:0 16px;border-radius:22px;border:1px solid {{t.glassStroke}};background:{{t.glass}};box-shadow:{{t.glassShadow}};color:{{t.label}};font-size:17px">Cancel</button><div style="position:absolute;left:70px;right:70px;text-align:center;top:62px;height:44px;line-height:44px;font-size:17px;font-weight:600" class="ell">Claude</div><button style="position:absolute;right:16px;top:62px;height:44px;padding:0 18px;border-radius:22px;border:0;background:{{t.accent}};color:{{t.onAccent}};font-size:17px;font-weight:600">Save</button><div style="position:absolute;left:16px;right:16px;top:132px;border-radius:12px;background:{{t.card}};overflow:hidden"><div style="display:flex;align-items:center;gap:12px;min-height:52px;padding:0 16px"><span style="flex:none;width:84px;font-size:17px">Name</span><span class="ell" style="flex:1;min-width:0;font-size:17px;color:{{t.label2}};">Claude</span></div><div style="height:0.5px;margin-left:16px;background:{{t.sep}}"></div><div style="display:flex;align-items:center;gap:12px;min-height:52px;padding:0 16px"><span style="flex:none;width:84px;font-size:17px">API Key</span><span class="ell" style="flex:1;min-width:0;font-size:17px;color:{{t.label2}};letter-spacing:1px;">••••••••••••••••7Qx2</span></div><div style="height:0.5px;margin-left:16px;background:{{t.sep}}"></div><div style="display:flex;align-items:center;gap:12px;min-height:52px;padding:0 16px"><span style="flex:none;width:84px;font-size:17px">Model</span><span class="ell" style="flex:1;min-width:0;font-size:17px;color:{{t.label}};">Claude Sonnet ⌄</span></div></div><div style="position:absolute;left:32px;right:32px;top:300px;font-size:13px;line-height:18px;color:{{t.label2}}">Paste a key from console.anthropic.com. ShotDex keeps it in this device's Keychain and never shows it again.</div><div style="position:absolute;left:16px;right:16px;top:384px;border-radius:12px;background:{{t.card}};overflow:hidden"><div style="display:flex;align-items:center;gap:12px;min-height:52px;padding:0 16px"><span style="flex:1;font-size:17px;color:{{t.accent}}">Test</span><span style="display:flex;align-items:center;gap:6px;font-size:15px;color:{{t.green}}" class="tn"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7"></path></svg>Working · 0.8 s</span></div></div><div style="position:absolute;left:32px;right:32px;top:444px;font-size:13px;line-height:18px;color:{{t.label2}}">Test sends one short line to Anthropic.</div><button style="position:absolute;left:16px;right:16px;top:508px;height:52px;border:0;border-radius:12px;background:{{t.card}};color:{{t.red}};font-size:17px">Delete Provider</button>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"dark": {"editor": "boolean", "default": false}, "$preview": {"width": 402, "height": 874}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const LIGHT = {"bg": "#FFFFFF", "grouped": "#F2F2F7", "card": "#FFFFFF", "label": "#000000", "label2": "#6C6C70", "label3": "#8E8E93", "sep": "#C6C6C8", "fill": "#E9E9EB", "fill2": "#F2F2F7", "glass": "rgba(255,255,255,0.78)", "glassStroke": "rgba(0,0,0,0.08)", "glassShadow": "0 4px 18px rgba(0,0,0,0.12)", "tint": "#C6730E", "red": "#FF3B30", "green": "#34C759", "orange": "#FF9500", "accent": "#C6730E", "dim": "rgba(0,0,0,0.35)", "sheet": "#FFFFFF", "onAccent": "#FFFFFF", "track": "rgba(120,120,128,0.20)", "badge": "rgba(0,0,0,0.06)", "purpleBg": "rgba(175,82,222,0.14)", "purpleFg": "#8944AB", "blueBg": "rgba(0,122,255,0.14)", "blueFg": "#0040DD", "grayBg": "rgba(142,142,147,0.14)", "grayFg": "#6C6C70", "tealBg": "rgba(48,176,199,0.14)", "tealFg": "#008299"};
+    const DARK = {"bg": "#000000", "grouped": "#000000", "card": "#1C1C1E", "label": "#FFFFFF", "label2": "#98989F", "label3": "#6C6C70", "sep": "#38383A", "fill": "#2C2C2E", "fill2": "#1C1C1E", "glass": "rgba(44,44,46,0.78)", "glassStroke": "rgba(255,255,255,0.10)", "glassShadow": "0 4px 18px rgba(0,0,0,0.5)", "tint": "#EB9526", "red": "#FF453A", "green": "#30D158", "orange": "#FF9F0A", "accent": "#EB9526", "dim": "rgba(0,0,0,0.55)", "sheet": "#1C1C1E", "onAccent": "#000000", "track": "rgba(120,120,128,0.36)", "badge": "rgba(255,255,255,0.12)", "purpleBg": "rgba(191,90,242,0.24)", "purpleFg": "#DA8FFF", "blueBg": "rgba(10,132,255,0.24)", "blueFg": "#409CFF", "grayBg": "rgba(152,152,159,0.24)", "grayFg": "#AEAEB2", "tealBg": "rgba(64,200,224,0.24)", "tealFg": "#5DE6FF"};
+    const t = this.props.dark ? DARK : LIGHT;
+    const p = {"glass": "rgba(30,30,32,0.72)", "glassStroke": "rgba(255,255,255,0.12)", "label": "#FFFFFF", "label2": "rgba(255,255,255,0.62)", "label3": "rgba(255,255,255,0.38)", "track": "rgba(255,255,255,0.22)", "fill": "rgba(255,255,255,0.14)", "sel": "rgba(255,255,255,0.20)", "panel": "rgba(28,28,30,0.94)", "sep": "rgba(255,255,255,0.12)", "accent": "#EB9526", "onAccent": "#000000", "sub1": "#FFFFFF", "sub2": "#FFD60A", "green": "#30D158"};
+    const D = {};
+    const P = this.props;
+    const E = {};
+    return Object.assign({ t, p }, D, E, typeof X === 'undefined' ? {} : X);
+  }
+}
+</script>
+</body>
+</html>

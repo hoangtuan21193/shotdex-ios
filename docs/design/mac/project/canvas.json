@@ -191,7 +191,7 @@
    "y": 2810,
    "w": 720,
    "h": 640,
-   "title": "Mac · Cài đặt › Cameras: bảng máy 720, popup Sensor Format sửa tại chỗ",
+   "title": "Mac · Cài đặt › Cameras: bảng máy 720, popup Sensor Format sửa tại chỗ; tab AI mới sau General (FS-23, 14/10)",
    "radius": 16
   },
   "MAC_Edit.dc.html": {
@@ -351,7 +351,7 @@
    "y": 6710,
    "w": 720,
    "h": 640,
-   "title": "Mac · Cài đặt › Chung",
+   "title": "Mac · Cài đặt › Chung; tab AI mới sau General (FS-23, 14/10)",
    "radius": 16
   },
   "MAC_SettingsSources.dc.html": {
@@ -359,7 +359,7 @@
    "y": 6710,
    "w": 720,
    "h": 640,
-   "title": "Mac · Cài đặt › Sources: quyền Photos, thư mục offline / cần cấp lại quyền",
+   "title": "Mac · Cài đặt › Sources: quyền Photos, thư mục offline / cần cấp lại quyền; tab AI mới sau General (FS-23, 14/10)",
    "radius": 16
   },
   "MAC_SettingsEditing.dc.html": {
@@ -367,7 +367,7 @@
    "y": 6710,
    "w": 720,
    "h": 640,
-   "title": "Mac · Cài đặt › Sửa và xuất: RAW+JPEG, mặc định xuất, bảng preset",
+   "title": "Mac · Cài đặt › Sửa và xuất: RAW+JPEG, mặc định xuất, bảng preset; tab AI mới sau General (FS-23, 14/10)",
    "radius": 16
   },
   "MAC_SettingsServers.dc.html": {
@@ -375,7 +375,7 @@
    "y": 6710,
    "w": 720,
    "h": 640,
-   "title": "Mac · Cài đặt › Server: bảng kết nối + trạng thái",
+   "title": "Mac · Cài đặt › Server: bảng kết nối + trạng thái; tab AI mới sau General (FS-23, 14/10)",
    "radius": 16
   },
   "MAC_ServerForm.dc.html": {
@@ -383,7 +383,7 @@
    "y": 6710,
    "w": 720,
    "h": 640,
-   "title": "Mac · Sheet Add Connection 520: chọn server lân cận, form, Test Connection",
+   "title": "Mac · Sheet Add Connection 520: chọn server lân cận, form, Test Connection; tab AI mới sau General (FS-23, 14/10)",
    "radius": 16
   },
   "MAC_ServerBrowser.dc.html": {
@@ -495,7 +495,71 @@
    "y": 6710,
    "w": 720,
    "h": 640,
-   "title": "Mac · Cài đặt › Sources cuộn xuống: Previews (cache chung, trần 25 GB, Clear Cache…) và Index",
+   "title": "Mac · Cài đặt › Sources cuộn xuống: Previews (cache chung, trần 25 GB, Clear Cache…) và Index; tab AI mới sau General (FS-23, 14/10)",
+   "radius": 16
+  },
+  "MAC_Movies.dc.html": {
+   "x": 14940,
+   "y": 5410,
+   "w": 1440,
+   "h": 900,
+   "title": "Mac · Movies — Utilities › Movies: lưới thẻ 16:9, đang chép + Stop, lỗi + Retry, đã xem; ô thả file từ Finder; Add Movies › From a Server… / From Finder… (tweak menu) — FS-23.01, đề xuất 14/10, code chưa có",
+   "radius": 16
+  },
+  "MAC_MoviesAdd.dc.html": {
+   "x": 16460,
+   "y": 5410,
+   "w": 1440,
+   "h": 900,
+   "title": "Mac · Sheet Choose Movies trên NAS Home: bảng chỉ thư mục + file phim, phụ đề cùng tên đi theo, Add 2 Movies · 9.3 GB — FS-23.01 §3, đề xuất 14/10, code chưa có",
+   "radius": 16
+  },
+  "MAC_MoviePlayer.dc.html": {
+   "x": 17980,
+   "y": 5410,
+   "w": 1440,
+   "h": 900,
+   "title": "Mac · Cửa sổ player: HUD kính hiện khi rê chuột (Space, ←/→ 10 s, F, ⌘W), hai phụ đề nâng trên HUD; tweak chrome tắt → phụ đề hạ — FS-23.02, đề xuất 14/10, code chưa có",
+   "radius": 16
+  },
+  "MAC_MovieSubtitles.dc.html": {
+   "x": 19500,
+   "y": 5410,
+   "w": 1440,
+   "h": 900,
+   "title": "Mac · Inspector phụ đề 360 bên phải player: Primary/Secondary, 3 vị trí, cỡ/màu/lệch giờ, Import File… · Translate…, thả file phụ đề — FS-23.03 §2, đề xuất 14/10, code chưa có",
+   "radius": 16
+  },
+  "MAC_MovieTranslate.dc.html": {
+   "x": 21020,
+   "y": 5410,
+   "w": 1440,
+   "h": 900,
+   "title": "Mac · Translate trong inspector: From · To · Using, gửi đi đâu; tweak running = 412/1,380 + Cancel — FS-23.04, đề xuất 14/10, code chưa có",
+   "radius": 16
+  },
+  "MAC_MovieSubtitleAdd.dc.html": {
+   "x": 22540,
+   "y": 5410,
+   "w": 1440,
+   "h": 900,
+   "title": "Mac · Sheet Add Subtitle to… (Share/AirDrop hoặc thả .srt lên Movies): phim trùng tên lên đầu — FS-23.03 §5, đề xuất 14/10, code chưa có",
+   "radius": 16
+  },
+  "MAC_SettingsAI.dc.html": {
+   "x": 8680,
+   "y": 6710,
+   "w": 720,
+   "h": 640,
+   "title": "Mac · Cài đặt › AI (tab mới sau General): Use For, On This Mac, bảng Providers — FS-08.07, đề xuất 14/10, code chưa có",
+   "radius": 16
+  },
+  "MAC_SettingsAIProvider.dc.html": {
+   "x": 9480,
+   "y": 6710,
+   "w": 720,
+   "h": 640,
+   "title": "Mac · Sheet nhà cung cấp Claude: tên, key (4 ký tự cuối), model, Test → Working · 0.8 s, Delete Provider… — FS-08.07 §3, đề xuất 14/10, code chưa có",
    "radius": 16
   }
  },
@@ -560,7 +624,15 @@
   "MAC_Hidden.dc.html",
   "MAC_DeleteCopies.dc.html",
   "MAC_GetInfoSingle.dc.html",
-  "MAC_SettingsSourcesCache.dc.html"
+  "MAC_SettingsSourcesCache.dc.html",
+  "MAC_Movies.dc.html",
+  "MAC_MoviesAdd.dc.html",
+  "MAC_MoviePlayer.dc.html",
+  "MAC_MovieSubtitles.dc.html",
+  "MAC_MovieTranslate.dc.html",
+  "MAC_MovieSubtitleAdd.dc.html",
+  "MAC_SettingsAI.dc.html",
+  "MAC_SettingsAIProvider.dc.html"
  ],
  "notes": {
   "row_lib": {

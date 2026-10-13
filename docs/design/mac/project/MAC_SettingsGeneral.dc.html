@@ -20,7 +20,7 @@ input{font-family:inherit}
 <div style="position:absolute;left:16px;top:16px;display:flex;gap:8px"><div style="width:12px;height:12px;border-radius:6px;background:#FF5F57;box-shadow:inset 0 0 0 0.5px rgba(0,0,0,0.2)"></div><div aria-hidden="true" style="width:12px;height:12px;border-radius:6px;background:{{S.lightOff}};box-shadow:inset 0 0 0 0.5px rgba(0,0,0,0.12)"></div><div aria-hidden="true" style="width:12px;height:12px;border-radius:6px;background:{{S.lightOff}};box-shadow:inset 0 0 0 0.5px rgba(0,0,0,0.12)"></div></div>
 <div style="position:absolute;left:0;right:0;top:12px;text-align:center;font-size:13px;font-weight:600;line-height:20px;color:{{t.label}}">{{paneTitle}}</div>
 <div role="tablist" aria-label="Settings panes" style="position:absolute;left:0;right:0;top:34px;display:flex;justify-content:center;gap:4px">
-<sc-for list="{{panes}}" as="p" hint-placeholder-count="5"><button role="tab" aria-selected="{{p.sel}}" aria-label="{{p.name}}" style="width:76px;height:44px;border-radius:8px;border:none;background:{{p.bg}};display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;color:{{p.fg}}"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="{{p.d}}"></path></svg><span style="font-size:11px;line-height:13px;color:{{p.lc}}">{{p.name}}</span></button></sc-for>
+<sc-for list="{{panes}}" as="p" hint-placeholder-count="6"><button role="tab" aria-selected="{{p.sel}}" aria-label="{{p.name}}" style="width:76px;height:44px;border-radius:8px;border:none;background:{{p.bg}};display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;color:{{p.fg}}"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="{{p.d}}"></path></svg><span style="font-size:11px;line-height:13px;color:{{p.lc}}">{{p.name}}</span></button></sc-for>
 </div>
 </div>
 <!-- PANE (scrolls; overlay scroller at the right edge shows position) -->
@@ -105,6 +105,7 @@ const I = {
   dup:'M8 8h12v12H8z M4 16V4h12',
   collage:'M4 4h16v16H4z M12 4v16 M12 12h8',
   film:'M4 4h16v16H4z M8 4v16 M16 4v16 M4 9h4 M4 15h4 M16 9h4 M16 15h4',
+  movies:'M3 5h18v14H3z M10 9l5 3-5 3z',
   onserver:'M7 18h10a4 4 0 0 0 .6-7.95A6 6 0 0 0 6.2 9.2 4.5 4.5 0 0 0 7 18z M12 16v-5 M9.5 13.5L12 11l2.5 2.5',
   camera:'M4 8h3l2-3h6l2 3h3v11H4z M12 10.5a3.5 3.5 0 1 0 0.01 0z',
   lens:'M12 3a9 9 0 1 0 0.01 0z M12 7.5a4.5 4.5 0 1 0 0.01 0z',
@@ -148,7 +149,7 @@ function sidebar(t, o){
     {hasTitle:false, rows:[row('All Photos',I.all,o.allCount||'55,231'),row('Favorites',I.fav,'1,862'),row('Videos',I.video,'1,204'),row('RAW',I.raw,'31,540'),row('Recently Added',I.recent)]},
     {hasTitle:true, title:'Sources', addable:true, addLabel:'Add Source', rows:sources},
     {hasTitle:true, title:'Collections', addable:true, addLabel:'New Album', rows:[row('On This Day',I.onthisday),row('Albums',I.album,'38',{chev:true}),row('Night ISO 3200+',I.smart,'2,411'),row('85mm Portraits',I.smart,'986')]},
-    {hasTitle:true, title:'Utilities', addable:false, rows:[row('Statistics',I.stats),row('Places',I.places),row('Trips',I.trips,'12'),row('Duplicates',I.dup,'53'),row('Collages',I.collage,'12'),row('Video Projects',I.film,'7'),row('On Server',I.onserver,'712')]}
+    {hasTitle:true, title:'Utilities', addable:false, rows:[row('Statistics',I.stats),row('Places',I.places),row('Trips',I.trips,'12'),row('Duplicates',I.dup,'53'),row('Collages',I.collage,'12'),row('Video Projects',I.film,'7'),row('Movies',I.movies,'5'),row('On Server',I.onserver,'712')]}
   ];
 }
 const IDLE_FOOT = {idle:true, busy:false, label:'Up to date · indexed 2 min ago', pct:'0%'};
@@ -249,7 +250,7 @@ function ui(dark){
       { rows: (s.rows || []).map((r, i) => Object.assign(r, { sepTop: i > 0 })) }));
   return { t, S, seg, btn, chk, sw, status, row, sections };
 }
-const PANES = [['General', X.gear], ['Sources', I.library], ['Editing', X.sliders], ['Servers', I.server], ['Cameras', X.camera]];
+const PANES = [['General', X.gear], ['AI', 'M11 3.5l1.6 4.4 4.4 1.6-4.4 1.6L11 15.5l-1.6-4.4L5 9.5l4.4-1.6z M18 14l.8 2.2 2.2.8-2.2.8L18 20l-.8-2.2-2.2-.8 2.2-.8z'], ['Sources', I.library], ['Editing', X.sliders], ['Servers', I.server], ['Cameras', X.camera]];
 function panes(t, active){
   return PANES.map(p => ({ name:p[0], d:p[1], sel: p[0]===active ? 'true' : 'false',
     bg: p[0]===active ? t.rowSel : 'transparent', fg: p[0]===active ? t.accent : t.label2, lc: p[0]===active ? t.label : t.label2 }));
