@@ -104,6 +104,36 @@ import Testing
         #expect(f.client.uploadCount == 1)
     }
 
+    /// AC-33: `X.HEIC` at the destination is 3,145,728 bytes, as are two
+    /// photos with other contents. Both go up; `X.HEIC` is read to hash it
+    /// exactly once — the second photo and the next run use the kept hash,
+    /// which waits to be written to the shared index.
+    @Test func sameSizeDifferentContentIsHashedOnce() async throws {
+        var f = try BackupFixture(photos: 0)
+        let size = 3_145_728
+        let (a, da) = BackupFixture.item(0, name: "IMG_0.HEIC", bytes: size)
+        let (b, db) = BackupFixture.item(1, name: "IMG_1.HEIC", bytes: size)
+        f.source.replace([a, b])
+        f.contents = da.merging(db) { $1 }
+        let x = Data(repeating: 0xAB, count: size)
+        f.client.put("Backup/iPhone/X.HEIC", x)
+
+        let result = await f.runner().run()
+
+        #expect(result.stop == .finished)
+        #expect(f.client.uploadCount == 2)
+        #expect(f.client.sha256Paths.filter { $0 == "Backup/iPhone/X.HEIC" }.count == 1)
+        let known = try f.store.destinationFiles(jobId: f.job.id, sha256: BackupFixture.sha(x))
+        #expect(known.map(\.path) == ["X.HEIC"])
+        #expect(known.first?.needsPublish == true)
+
+        let (c, dc) = BackupFixture.item(2, name: "IMG_2.HEIC", bytes: size)
+        f.source.add([c])
+        f.contents.merge(dc) { $1 }
+        _ = await f.runner().run()
+        #expect(f.client.sha256Paths.filter { $0 == "Backup/iPhone/X.HEIC" }.count == 1)
+    }
+
     /// FS-22.05 §3: the tree is listed again only once it is a day old — a
     /// file someone adds by hand is seen by the next daily check.
     @Test func scanRepeatsAfterADay() async throws {
