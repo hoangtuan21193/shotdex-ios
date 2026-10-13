@@ -345,6 +345,12 @@ actor BackupRunner {
         // phone's copy, a file put there by hand: nothing is sent (FS-22.05 §4).
         let localHash = try FileChecksum.sha256(of: local)
         if let existing = try await destinationFile(matching: localHash, size: size) {
+            // The background-upload extension may have sent it anyway — it
+            // cannot hash first (FS-22.05 §4). That part is ShotDex's own
+            // unfinished write, not the user's photo: it goes.
+            if listing[(name + ServerUploadPath.partSuffix).lowercased()] != nil {
+                await VerifiedRemoteWrite(client: client).discardPart(for: planned.remotePath)
+            }
             try recordDuplicate(planned, of: existing, sha256: localHash, bytes: size)
             progress.bytesDone += size
             return

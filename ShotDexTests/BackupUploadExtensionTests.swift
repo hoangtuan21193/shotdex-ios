@@ -36,6 +36,27 @@ import Testing
         #expect(f.remoteFiles["Backup/iPhone/IMG_0.HEIC"] == f.contents.values.first)
     }
 
+    /// AC-36: the extension sent `IMG_7.HEIC.shotdex-part`, but those bytes
+    /// are already at `b/IMG_7.HEIC`. The next run deletes the part, makes
+    /// no `IMG_7.HEIC`, and records a `duplicate` of `b/IMG_7.HEIC`.
+    @Test func duplicatePartIsRemoved() async throws {
+        var f = try BackupFixture(photos: 0)
+        let (item, data) = BackupFixture.item(7, name: "IMG_7.HEIC")
+        f.source.replace([item])
+        f.contents = data
+        let bytes = try #require(data.values.first)
+        f.client.put("Backup/iPhone/b/IMG_7.HEIC", bytes)
+        f.client.put("Backup/iPhone/IMG_7.HEIC.shotdex-part", bytes)
+
+        #expect(await f.runner().run().stop == .finished)
+
+        #expect(f.partFiles.isEmpty)
+        #expect(f.client.removed.contains("Backup/iPhone/IMG_7.HEIC.shotdex-part"))
+        #expect(Array(f.remoteFiles.keys) == ["Backup/iPhone/b/IMG_7.HEIC"])
+        let row = try #require(try f.store.duplicateEntries(jobId: f.job.id).first)
+        #expect(row.remotePath == "Backup/iPhone/b/IMG_7.HEIC")
+    }
+
     /// AC-28: only Photos → WebDAV jobs are handed over, and the extension
     /// is on only with one of them and full access.
     @Test func disabledWithoutWebDAVJobOrFullAccess() {
