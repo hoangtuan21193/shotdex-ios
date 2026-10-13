@@ -95,4 +95,60 @@ import Testing
         #expect(lines.allSatisfy { $0.device == "PHONE-B" })
         #expect(BackupContentIndex.nextNumber(device: "PHONE-A", existing: segments.map { ServerUploadPath.lastComponent(of: $0) }) == 2)
     }
+
+    /// AC-38: a new phone C joins `Family`, whose index holds 55,000 lines
+    /// from A and B. Reading it takes ≤ 5 s, no NAS file is read to hash it
+    /// (every one has a hash in the index), and looking a hash up among
+    /// 55,000 rows takes ≤ 10 ms.
+    @Test func fiftyFiveThousandLinesReadFast() async throws {
+        let nas = InMemoryRemoteFileClient()
+        var lines: (a: [BackupContentIndex.Line], b: [BackupContentIndex.Line]) = ([], [])
+        var hashes: [String] = []
+        var twin = Data()
+        for n in 0..<55_000 {
+            let path = "\(n % 55)/F_\(n).JPG"
+            var data = Data(repeating: UInt8(n % 251), count: 10 + n % 1_000)
+            data.replaceSubrange(0..<4, with: withUnsafeBytes(of: UInt32(n).bigEndian) { Data($0) })
+            nas.put("Family/" + path, data)
+            let line = BackupContentIndex.Line(path: path, size: Int64(data.count), modified: nil, sha256: BackupFixture.sha(data), device: n < 30_000 ? "A" : "B", recordedAt: 1)
+            if n < 30_000 { lines.a.append(line) } else { lines.b.append(line) }
+            hashes.append(line.sha256)
+            if n == 12_345 { twin = data }
+        }
+        nas.put("Family/.shotdex/backup-index/A-000001.jsonl", BackupContentIndex.encode(lines.a))
+        nas.put("Family/.shotdex/backup-index/B-000001.jsonl", BackupContentIndex.encode(lines.b))
+
+        var c = try BackupFixture(photos: 0, organize: BackupOrganize(), folder: "Family", client: nas, deviceId: "C")
+        // One photo with the bytes of F_12345, one new photo whose size many
+        // NAS files share.
+        let (same, _) = BackupFixture.item(0, name: "IMG_1.JPG", bytes: twin.count)
+        let (new, newData) = BackupFixture.item(1, name: "IMG_2.JPG", bytes: 400, seed: 999_999)
+        c.source.replace([same, new])
+        c.contents = newData
+        c.contents[FakeAssetExporter.key("A0", "1:IMG_1.JPG")] = twin
+
+        #expect(await c.runner().run().stop == .finished)
+        #expect(nas.sha256Paths.filter { !$0.hasSuffix(ServerUploadPath.partSuffix) }.isEmpty)
+        #expect(try c.store.duplicateEntries(jobId: c.job.id).first?.remotePath == "Family/\(12_345 % 55)/F_12345.JPG")
+        #expect(nas.uploadCount == 1)
+
+        // Reading the index alone, as a run does after listing the tree.
+        let d = try BackupFixture(photos: 0, organize: BackupOrganize(), folder: "Family", client: nas, deviceId: "D")
+        try d.store.applyListing(try await BackupDestinationScan.list(nas, folder: "Family"), jobId: d.job.id)
+        let clock = ContinuousClock()
+        let reading = try clock.measure {
+            for name in ["A-000001.jsonl", "B-000001.jsonl"] {
+                let data = try #require(nas.files["Family/.shotdex/backup-index/\(name)"])
+                try d.store.mergeIndex(BackupContentIndex.decode(data), jobId: d.job.id, segment: name, size: Int64(data.count))
+            }
+        }
+        #expect(reading <= .seconds(5))
+
+        let lookups = clock.measure {
+            for n in stride(from: 0, to: 55_000, by: 550) {
+                #expect((try? d.store.destinationFiles(jobId: d.job.id, sha256: hashes[n]).count) == 1)
+            }
+        }
+        #expect(lookups / 100 <= .milliseconds(10))
+    }
 }

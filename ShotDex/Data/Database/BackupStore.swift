@@ -213,23 +213,24 @@ struct BackupStore: Sendable {
 
     /// Files at the destination known to hold these bytes.
     func destinationFiles(jobId: String, sha256: String) throws -> [BackupDestinationFile] {
+        // Sorted here, not in SQL: an ORDER BY path makes SQLite walk the
+        // primary key over the whole job instead of the hash index.
         try database.reader.read { db in
-            try BackupDestinationFile
-                .filter(Column("jobId") == jobId && Column("sha256") == sha256)
-                .order(Column("path"))
-                .fetchAll(db)
-        }
+            try BackupDestinationFile.fetchAll(db, sql: """
+                SELECT * FROM backup_destination_files INDEXED BY backup_destination_files_sha WHERE jobId = ? AND sha256 = ?
+                """, arguments: [jobId, sha256])
+        }.sorted { $0.path < $1.path }
     }
 
     /// Files at the destination of exactly this size whose bytes nobody has
     /// hashed yet.
     func unhashedDestinationFiles(jobId: String, size: Int64) throws -> [BackupDestinationFile] {
         try database.reader.read { db in
-            try BackupDestinationFile
-                .filter(Column("jobId") == jobId && Column("size") == size && Column("sha256") == nil)
-                .order(Column("path"))
-                .fetchAll(db)
-        }
+            try BackupDestinationFile.fetchAll(db, sql: """
+                SELECT * FROM backup_destination_files INDEXED BY backup_destination_files_size
+                WHERE jobId = ? AND size = ? AND sha256 IS NULL
+                """, arguments: [jobId, size])
+        }.sorted { $0.path < $1.path }
     }
 
     func destinationFileCount(jobId: String) throws -> Int {
@@ -252,29 +253,41 @@ struct BackupStore: Sendable {
     /// no longer there are forgotten, new ones are added unhashed, and a
     /// known file keeps its SHA-256 only while its size — and its date, once
     /// known — is unchanged. Records when the tree was listed.
+    ///
+    /// Plain cached statements, not records: a tree is tens of thousands of
+    /// rows (FS-22.05 AC-38).
     func applyListing(_ files: [BackupDestinationScan.File], jobId: String, at now: Int = Int(Date().timeIntervalSince1970)) throws {
         try database.writer.write { db in
-            var known: [String: BackupDestinationFile] = [:]
-            for row in try BackupDestinationFile.filter(Column("jobId") == jobId).fetchAll(db) { known[row.path] = row }
+            var known: [String: (size: Int64, modified: Int?)] = [:]
+            let rows = try Row.fetchCursor(db, sql: "SELECT path, size, modified FROM backup_destination_files WHERE jobId = ?", arguments: [jobId])
+            while let row = try rows.next() { known[row[0]] = (row[1], row[2]) }
+
+            let insert = try db.cachedStatement(sql: """
+                INSERT INTO backup_destination_files (jobId, path, size, modified, sha256, origin, needsPublish, seenAt)
+                VALUES (?, ?, ?, ?, NULL, 'listed', 0, ?)
+                """)
+            let keep = try db.cachedStatement(sql: """
+                UPDATE backup_destination_files SET modified = COALESCE(?, modified), seenAt = ? WHERE jobId = ? AND path = ?
+                """)
+            let changed = try db.cachedStatement(sql: """
+                UPDATE backup_destination_files SET size = ?, modified = ?, sha256 = NULL, needsPublish = 0, seenAt = ?
+                WHERE jobId = ? AND path = ?
+                """)
             for file in files {
                 let modified = file.modified.map { Int($0.timeIntervalSince1970) }
-                if var row = known.removeValue(forKey: file.path) {
-                    let changed = row.size != file.size || (row.modified != nil && modified != nil && row.modified != modified)
-                    if changed {
-                        row.sha256 = nil
-                        row.needsPublish = false
+                if let old = known.removeValue(forKey: file.path) {
+                    let differs = old.size != file.size || (old.modified != nil && modified != nil && old.modified != modified)
+                    if differs {
+                        try changed.execute(arguments: [file.size, modified, now, jobId, file.path])
+                    } else {
+                        try keep.execute(arguments: [modified, now, jobId, file.path])
                     }
-                    row.size = file.size
-                    row.modified = modified ?? row.modified
-                    row.seenAt = now
-                    try row.update(db)
                 } else {
-                    try BackupDestinationFile(jobId: jobId, path: file.path, size: file.size, modified: modified, origin: .listed, seenAt: now).insert(db)
+                    try insert.execute(arguments: [jobId, file.path, file.size, modified, now])
                 }
             }
-            for path in known.keys {
-                try BackupDestinationFile.deleteOne(db, key: ["jobId": jobId, "path": path])
-            }
+            let forget = try db.cachedStatement(sql: "DELETE FROM backup_destination_files WHERE jobId = ? AND path = ?")
+            for path in known.keys { try forget.execute(arguments: [jobId, path]) }
             try db.execute(sql: "UPDATE backup_job_state SET lastTreeScanAt = ? WHERE jobId = ?", arguments: [now, jobId])
         }
     }
@@ -295,9 +308,24 @@ struct BackupStore: Sendable {
     /// segment as read.
     func mergeIndex(_ lines: [BackupContentIndex.Line], jobId: String, segment: String, size: Int64, at now: Int = Int(Date().timeIntervalSince1970)) throws {
         try database.writer.write { db in
+            let find = try db.cachedStatement(sql: """
+                SELECT size, modified, sha256, origin, needsPublish, seenAt FROM backup_destination_files WHERE jobId = ? AND path = ?
+                """)
+            let save = try db.cachedStatement(sql: """
+                INSERT OR REPLACE INTO backup_destination_files (jobId, path, size, modified, sha256, origin, needsPublish, seenAt)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                """)
             for line in lines {
-                let existing = try BackupDestinationFile.fetchOne(db, key: ["jobId": jobId, "path": line.path])
-                if let row = BackupContentIndex.merged(line, into: existing, jobId: jobId, now: now) { try row.save(db) }
+                let existing = try Row.fetchOne(find, arguments: [jobId, line.path]).map { row in
+                    BackupDestinationFile(
+                        jobId: jobId, path: line.path, size: row[0], modified: row[1], sha256: row[2],
+                        origin: BackupDestinationFile.Origin(rawValue: row[3]) ?? .listed, needsPublish: row[4], seenAt: row[5]
+                    )
+                }
+                guard let file = BackupContentIndex.merged(line, into: existing, jobId: jobId, now: now) else { continue }
+                try save.execute(arguments: [
+                    jobId, file.path, file.size, file.modified, file.sha256, file.origin.rawValue, file.needsPublish, file.seenAt,
+                ])
             }
             try db.execute(sql: """
                 INSERT OR REPLACE INTO backup_index_segments (jobId, name, size, readAt) VALUES (?, ?, ?, ?)
