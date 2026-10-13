@@ -1,8 +1,9 @@
 import SwiftUI
 
-/// One job in detail (FS-22.02 §5, board `PH_BackupRunning` 5/5): progress,
-/// Pause, the watching line, the file in flight, totals, files not copied and
-/// the backed-up files. On iPad it is the right-hand pane of the list.
+/// One job in detail (FS-22.02 §5, board `PH_BackupRunning` 6/6): progress,
+/// Pause, the watching line, the file in flight, totals, photos already at
+/// the destination (FS-22.05 §5), files not copied and the backed-up files.
+/// On iPad it is the right-hand pane of the list.
 struct BackupRunningScreen: View {
     let jobId: String
     var isEmbedded = false
@@ -27,6 +28,7 @@ struct BackupRunningScreen: View {
         let state = coordinator.states[job.id] ?? BackupJobState(jobId: job.id)
         let progress = coordinator.runningJobId == job.id ? coordinator.progress[job.id] : nil
         let failed = (try? dependencies.backups.failedEntries(jobId: job.id)) ?? []
+        let duplicates = (try? dependencies.backups.duplicateCount(jobId: job.id)) ?? 0
         return List {
             Section {
                 header(job, info: info, state: state, progress: progress)
@@ -48,6 +50,15 @@ struct BackupRunningScreen: View {
             }
             Section {
                 totals(state: state, progress: progress, backedUp: coordinator.backedUpItems[job.id] ?? 0)
+                if duplicates > 0 {
+                    NavigationLink {
+                        BackupDuplicatesScreen(jobId: job.id, connectionName: info.connectionName)
+                    } label: {
+                        LabeledContent(String(localized: "Already on \(info.connectionName)", comment: "Backup detail row: photos skipped because the same file is already at the destination, e.g. 'Already on NAS Home'"),
+                                       value: duplicates.formatted())
+                            .monospacedDigit()
+                    }
+                }
             }
             Section {
                 if !failed.isEmpty {
@@ -228,6 +239,37 @@ struct BackupFailedFilesScreen: View {
             }
         }
         .navigationTitle(String(localized: "Files Not Copied", comment: "Screen title"))
+    }
+}
+
+/// Photos not copied because the same file was already in the destination
+/// folder — from another phone or put there earlier — with where it is
+/// (FS-22.05 §5).
+struct BackupDuplicatesScreen: View {
+    let jobId: String
+    let connectionName: String
+    @Environment(AppDependencies.self) private var dependencies
+
+    var body: some View {
+        let entries = (try? dependencies.backups.duplicateEntries(jobId: jobId)) ?? []
+        List {
+            Section {
+                ForEach(entries, id: \.id) { entry in
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(entry.localName ?? ((entry.remotePath ?? "") as NSString).lastPathComponent)
+                        Text(entry.remotePath ?? "").font(.footnote).foregroundStyle(.secondary).lineLimit(1).truncationMode(.head)
+                    }
+                }
+            } footer: {
+                Text(String(localized: "The same file is already in this folder, so these weren't copied again.", comment: "Already on list footer"))
+            }
+        }
+        .overlay {
+            if entries.isEmpty {
+                ContentUnavailableView(String(localized: "Nothing Skipped", comment: "Already on list empty state"), systemImage: "doc.on.doc")
+            }
+        }
+        .navigationTitle(String(localized: "Already on \(connectionName)", comment: "Screen title: photos already at the destination, e.g. 'Already on NAS Home'"))
     }
 }
 

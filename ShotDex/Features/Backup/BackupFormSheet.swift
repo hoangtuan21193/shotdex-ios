@@ -135,7 +135,7 @@ struct BackupFormSheet: View {
     }
 
     private var destinationSection: some View {
-        Section(String(localized: "Destination", comment: "Backup form section")) {
+        Section {
             if model.connections.isEmpty {
                 NavigationLink {
                     FileServerFormScreen(draft: FileServerDraft()) { saved in
@@ -172,6 +172,11 @@ struct BackupFormSheet: View {
                 .tint(.primary)
                 .disabled(model.connection == nil)
             }
+        } header: {
+            Text(String(localized: "Destination", comment: "Backup form section"))
+        } footer: {
+            // FS-22.05 §1: duplicates are matched across the whole folder.
+            Text(String(localized: "Photos already in this folder — from another iPhone or copied earlier — are skipped.", comment: "Backup form: footer under the destination folder"))
         }
     }
 

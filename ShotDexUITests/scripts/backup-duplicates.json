@@ -1,0 +1,72 @@
+{
+ "steps": [
+  {
+   "action": "launch"
+  },
+  {
+   "action": "wait",
+   "seconds": 6
+  },
+  {
+   "action": "tap",
+   "label": "Collections",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "scrollTo",
+   "label": "Backup"
+  },
+  {
+   "action": "tap",
+   "label": "Backup"
+  },
+  {
+   "action": "wait",
+   "seconds": 40
+  },
+  {
+   "action": "screenshot",
+   "name": "01-list"
+  },
+  {
+   "action": "dump",
+   "name": "01-list"
+  },
+  {
+   "action": "tap",
+   "label": "Photos Library → NAS Home"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "screenshot",
+   "name": "02-detail"
+  },
+  {
+   "action": "dump",
+   "name": "02-detail"
+  },
+  {
+   "action": "tap",
+   "label": "Already on NAS Home"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "screenshot",
+   "name": "03-already-on"
+  },
+  {
+   "action": "dump",
+   "name": "03-already-on"
+  }
+ ]
+}

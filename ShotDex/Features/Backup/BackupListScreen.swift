@@ -162,7 +162,7 @@ struct BackupListScreen: View {
     }
 
     private func footnote(selectable: Bool) -> String {
-        let base = String(localized: "Each backup watches its source and copies new photos and videos as they appear — full-size originals, downloaded from iCloud first when needed. Files already on the destination are skipped, so a stopped backup picks up where it left off.", comment: "Backup screen footnote")
+        let base = String(localized: "Each backup watches its source and copies new photos and videos as they appear — full-size originals, downloaded from iCloud first when needed. Photos already in the destination folder — copied by another phone or by hand — are skipped, and a stopped backup picks up where it left off.", comment: "Backup screen footnote")
         return selectable
             ? base + " " + String(localized: "Long-press a backup to edit, back up now or delete it.", comment: "Backup footnote on iPad: where the job actions are")
             : base
