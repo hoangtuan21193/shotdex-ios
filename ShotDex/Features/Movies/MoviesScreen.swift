@@ -276,11 +276,13 @@ struct MoviesScreen: View {
                 case .file(let url):
                     let engine = VLCMoviePlayer(input: .file(url))
                     let loader = MovieSubtitleLoader(files: dependencies.movieDownloads.files)
-                    playing = PlayingMovie(model: playerModel(movie, engine: engine, loader: loader), view: engine.view)
+                    let embedded = embeddedSubtitles(movie, isLocal: true, url: url) { try FileByteSource(url: url) }
+                    playing = PlayingMovie(model: playerModel(movie, engine: engine, loader: loader, embedded: embedded), view: engine.view)
                 case .stream(let stream, let fileName, let close):
                     let engine = VLCMoviePlayer(input: .stream(stream, fileName: fileName))
                     let loader = MovieSubtitleLoader(files: dependencies.movieDownloads.files) { try await stream.fetchFile($0) }
-                    let model = playerModel(movie, engine: engine, loader: loader) { Task { await close() } }
+                    let embedded = embeddedSubtitles(movie, isLocal: false, url: nil) { stream }
+                    let model = playerModel(movie, engine: engine, loader: loader, embedded: embedded) { Task { await close() } }
                     playing = PlayingMovie(model: model, view: engine.view)
                 }
             } catch {
@@ -289,7 +291,22 @@ struct MoviesScreen: View {
         }
     }
 
-    private func playerModel(_ movie: Movie, engine: VLCMoviePlayer, loader: MovieSubtitleLoader, onClose: @escaping () -> Void = {}) -> MoviePlayerModel {
+    /// Subtitles inside the file (FS-23.03 §3): read off the device, or by
+    /// Cues over the stream.
+    private func embeddedSubtitles(
+        _ movie: Movie, isLocal: Bool, url: URL?, source: @escaping @Sendable () throws -> any MovieByteSource
+    ) -> @Sendable () async -> [EmbeddedSubtitleExtractor.Found] {
+        let extractor = EmbeddedSubtitleExtractor(store: dependencies.movies, files: dependencies.movieDownloads.files)
+        return {
+            guard let bytes = try? source() else { return [] }
+            return await extractor.extract(movie: movie, source: bytes, isLocal: isLocal, localURL: url)
+        }
+    }
+
+    private func playerModel(
+        _ movie: Movie, engine: VLCMoviePlayer, loader: MovieSubtitleLoader,
+        embedded: (@Sendable () async -> [EmbeddedSubtitleExtractor.Found])? = nil, onClose: @escaping () -> Void = {}
+    ) -> MoviePlayerModel {
         MoviePlayerModel(
             movie: movie,
             player: engine,
@@ -300,6 +317,7 @@ struct MoviesScreen: View {
             defaultSubtitleStyle: MovieSubtitleStyle.decode(UserDefaults.standard.string(forKey: SettingsKeys.movieSubtitleStyle) ?? "{}"),
             rememberStyle: { UserDefaults.standard.set($0.json, forKey: SettingsKeys.movieSubtitleStyle) },
             sourceIsFiles: sourceIsFiles(movie),
+            embeddedSubtitles: embedded,
             onClose: onClose
         )
     }

@@ -7,7 +7,7 @@ import os
 /// there while the server answers is how it expects a stream to behave —
 /// and seeks through `NSStreamFileCurrentOffsetKey`. Nothing is written to
 /// the device (AC-3), no port is opened, and VLC never sees a password.
-final class RemoteMovieStream: InputStream, @unchecked Sendable {
+final class RemoteMovieStream: InputStream, MovieByteSource, @unchecked Sendable {
     struct Stats: Sendable, Equatable {
         var bytesFetched: Int64 = 0
         var fetches = 0
@@ -93,6 +93,20 @@ final class RemoteMovieStream: InputStream, @unchecked Sendable {
         data.copyBytes(to: out, count: data.count)
         state.withLock { $0.position = position + Int64(data.count) }
         return data.count
+    }
+
+    /// A range of the movie for the subtitle reader (FS-23.03 §3), in turn
+    /// with VLC's own reads; not counted in `stats`.
+    func read(offset: Int64, length: Int) async throws -> Data {
+        await gate.enter()
+        do {
+            let data = try await client.readRange(path, offset: offset, length: length)
+            await gate.leave()
+            return data
+        } catch {
+            await gate.leave()
+            throw error
+        }
     }
 
     /// A small file beside the movie (a sidecar subtitle), read over the

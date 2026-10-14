@@ -41,6 +41,11 @@ protocol MoviePlaying: AnyObject {
     func seek(toMs: Int64)
     func selectAudioTrack(id: String)
     func togglePictureInPicture()
+    /// Lets the engine draw one of the file's own subtitle tracks — by its
+    /// place among them — for the ones ShotDex cannot read (picture
+    /// subtitles; a streamed track without Cues, AC-55). nil: none; ShotDex
+    /// draws subtitles itself.
+    func showEmbeddedSubtitle(at index: Int?)
     /// Stops and lets go of the file or stream.
     func close()
 }

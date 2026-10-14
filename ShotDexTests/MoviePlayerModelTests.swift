@@ -29,6 +29,8 @@ import Testing
     }
     func selectAudioTrack(id: String) { report { $0.selectedAudioTrackId = id } }
     func togglePictureInPicture() { report { $0.isPictureInPictureActive.toggle() } }
+    private(set) var embeddedSubtitleIndex: Int?
+    func showEmbeddedSubtitle(at index: Int?) { embeddedSubtitleIndex = index }
     func close() { isClosed = true }
 
     /// Changes something and tells the model, as VLC's delegate does.

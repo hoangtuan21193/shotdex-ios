@@ -80,7 +80,8 @@ struct MovieTracksPanel: View {
                 set: { id in Task { await model.selectSubtitle(id.isEmpty ? nil : id, for: line) } }
             )) {
                 Text(String(localized: "Off", comment: "Movie player panel: no subtitle on this line")).tag("")
-                ForEach(model.subtitles) { subtitle in
+                // Only text ShotDex can draw goes second (AC-55).
+                ForEach(model.subtitles.filter { line == .primary || model.hasText($0) }) { subtitle in
                     Text(model.subtitleTitle(subtitle)).tag(subtitle.id)
                 }
             }

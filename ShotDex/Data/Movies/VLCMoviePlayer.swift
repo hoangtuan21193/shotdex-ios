@@ -21,6 +21,8 @@ final class VLCMoviePlayer: NSObject, MoviePlaying {
     private let log = ErrorLog()
     private var hasPlayed = false
     private var knownDefault: String?
+    /// The file's subtitle track VLC draws, by place; nil = none.
+    private var embeddedSubtitleIndex: Int?
 
     private(set) var state: MoviePlaybackState = .opening
     private(set) var timeMs: Int64 = 0
@@ -103,6 +105,20 @@ final class VLCMoviePlayer: NSObject, MoviePlaying {
     }
 
     var canPictureInPicture: Bool { pictureInPicture != nil }
+
+    func showEmbeddedSubtitle(at index: Int?) {
+        embeddedSubtitleIndex = index
+        applyEmbeddedSubtitle()
+    }
+
+    private func applyEmbeddedSubtitle() {
+        let tracks = player.textTracks
+        if let index = embeddedSubtitleIndex, tracks.indices.contains(index) {
+            tracks[index].isSelectedExclusively = true
+        } else {
+            player.deselectAllTextTracks()
+        }
+    }
 
     func togglePictureInPicture() {
         if isPictureInPictureActive {
@@ -207,6 +223,9 @@ extension VLCMoviePlayer: VLCMediaPlayerDelegate {
         case .opening:
             state = .opening
         case .playing:
+            // VLC picks the file's default subtitle on its own; ShotDex
+            // draws subtitles, so it shows only what was asked for.
+            if !hasPlayed { applyEmbeddedSubtitle() }
             hasPlayed = true
             if knownDefault == nil { knownDefault = player.audioTracks.first(where: \.isSelected)?.trackId }
             state = .playing

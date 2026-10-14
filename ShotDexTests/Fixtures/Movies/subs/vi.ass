@@ -1,0 +1,31 @@
+[Script Info]
+ScriptType: v4.00+
+PlayResX: 640
+PlayResY: 360
+
+[V4+ Styles]
+Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
+Style: Default,Arial,20,&H00FFFFFF,&H000000FF,&H00000000,&H00000000,0,0,0,0,100,100,0,0,1,1,0,2,10,10,10,1
+
+[Events]
+Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
+Dialogue: 0,0:00:00.70,0:00:01.90,Default,,0,0,0,,Dòng tiếng Việt 1
+Dialogue: 0,0:00:02.70,0:00:03.90,Default,,0,0,0,,Dòng tiếng Việt 2
+Dialogue: 0,0:00:04.70,0:00:05.90,Default,,0,0,0,,Dòng tiếng Việt 3
+Dialogue: 0,0:00:06.70,0:00:07.90,Default,,0,0,0,,{\an8}Dòng tiếng Việt 4
+Dialogue: 0,0:00:08.70,0:00:09.90,Default,,0,0,0,,{\i1}Dòng tiếng Việt 5{\i0}
+Dialogue: 0,0:00:10.70,0:00:11.90,Default,,0,0,0,,Dòng tiếng Việt 6
+Dialogue: 0,0:00:12.70,0:00:13.90,Default,,0,0,0,,Dòng tiếng Việt 7
+Dialogue: 0,0:00:14.70,0:00:15.90,Default,,0,0,0,,Dòng tiếng Việt 8
+Dialogue: 0,0:00:16.70,0:00:17.90,Default,,0,0,0,,Dòng tiếng Việt 9
+Dialogue: 0,0:00:18.70,0:00:19.90,Default,,0,0,0,,Dòng tiếng Việt 10
+Dialogue: 0,0:00:20.70,0:00:21.90,Default,,0,0,0,,Dòng tiếng Việt 11
+Dialogue: 0,0:00:22.70,0:00:23.90,Default,,0,0,0,,Dòng tiếng Việt 12
+Dialogue: 0,0:00:24.70,0:00:25.90,Default,,0,0,0,,Dòng tiếng Việt 13
+Dialogue: 0,0:00:26.70,0:00:27.90,Default,,0,0,0,,Dòng tiếng Việt 14
+Dialogue: 0,0:00:28.70,0:00:29.90,Default,,0,0,0,,Dòng tiếng Việt 15
+Dialogue: 0,0:00:30.70,0:00:31.90,Default,,0,0,0,,Dòng tiếng Việt 16
+Dialogue: 0,0:00:32.70,0:00:33.90,Default,,0,0,0,,Dòng tiếng Việt 17
+Dialogue: 0,0:00:34.70,0:00:35.90,Default,,0,0,0,,Dòng tiếng Việt 18
+Dialogue: 0,0:00:36.70,0:00:37.90,Default,,0,0,0,,Dòng tiếng Việt 19
+Dialogue: 0,0:00:38.70,0:00:39.90,Default,,0,0,0,,Dòng tiếng Việt 20

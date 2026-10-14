@@ -58,6 +58,13 @@ final class MoviePlayerModel {
     private let subtitleLanguages: [String]
     private let subtitleLoader: MovieSubtitleLoader?
     private let rememberStyle: (MovieSubtitleStyle) -> Void
+    /// Pulls the file's own subtitle tracks out (FS-23.03 §3).
+    private let embeddedSubtitles: (@Sendable () async -> [EmbeddedSubtitleExtractor.Found])?
+    /// Text read out of the movie file, by subtitle id.
+    @ObservationIgnored private var embeddedDocuments: [String: SubtitleDocument] = [:]
+    /// In-file subtitles only VLC can draw, by id → their place in the file.
+    private(set) var engineSubtitles: [String: Int] = [:]
+    private let isFirstOpen: Bool
     /// The source is a Files folder: sidecars read `From Files` (03 §1).
     let sourceIsFiles: Bool
     /// When the movie time last moved — buffering reports alone do not
@@ -81,6 +88,7 @@ final class MoviePlayerModel {
         defaultSubtitleStyle: MovieSubtitleStyle = MovieSubtitleStyle(),
         rememberStyle: @escaping (MovieSubtitleStyle) -> Void = { _ in },
         sourceIsFiles: Bool = false,
+        embeddedSubtitles: (@Sendable () async -> [EmbeddedSubtitleExtractor.Found])? = nil,
         onClose: @escaping () -> Void = {}
     ) {
         self.movie = movie
@@ -91,8 +99,10 @@ final class MoviePlayerModel {
         self.subtitleLoader = subtitleLoader
         self.rememberStyle = rememberStyle
         self.sourceIsFiles = sourceIsFiles
+        self.embeddedSubtitles = embeddedSubtitles
         self.onClose = onClose
         let choice = (try? store?.subtitleChoice(movieId: movie.id)) ?? nil
+        isFirstOpen = choice == nil
         subtitleChoice = choice ?? MovieSubtitleChoice(movieId: movie.id)
         subtitleStyle = choice.map { MovieSubtitleStyle.decode($0.style) } ?? defaultSubtitleStyle
         audioDelayMs = min(max(movie.audioDelayMs, -Self.audioDelayLimitMs), Self.audioDelayLimitMs)
@@ -358,19 +368,56 @@ final class MoviePlayerModel {
     /// the first time starts with the first Subtitle Language it has (§2).
     func loadSubtitles() async {
         subtitles = (try? store?.subtitles(movieId: movie.id)) ?? []
-        if (try? store?.subtitleChoice(movieId: movie.id)) == nil,
-           let first = MovieTrackChoice.primarySubtitle(subtitles, language: \.language, preferredLanguages: subtitleLanguages) {
-            subtitleChoice.primaryId = first.id
-            saveChoice()
-        }
+        chooseFirstSubtitleIfNew()
         primaryTimeline = await timeline(for: subtitleChoice.primaryId)
         secondaryTimeline = await timeline(for: subtitleChoice.secondaryId)
+        applyEngineSubtitle()
+
+        // The file's own tracks take longer (a stream reads its index over
+        // the network, AC-53): they join the menus when ready.
+        guard let embeddedSubtitles else { return }
+        let found = await embeddedSubtitles()
+        guard !found.isEmpty else { return }
+        for item in found {
+            if let document = item.document {
+                embeddedDocuments[item.subtitle.id] = document
+                engineSubtitles[item.subtitle.id] = nil
+            } else {
+                engineSubtitles[item.subtitle.id] = item.order
+            }
+        }
+        subtitles = (try? store?.subtitles(movieId: movie.id)) ?? subtitles
+        chooseFirstSubtitleIfNew()
+        if primaryTimeline == nil { primaryTimeline = await timeline(for: subtitleChoice.primaryId) }
+        if secondaryTimeline == nil { secondaryTimeline = await timeline(for: subtitleChoice.secondaryId) }
+        applyEngineSubtitle()
+    }
+
+    /// A movie opened the first time starts with the first Subtitle
+    /// Language it has (§2) — once the in-file tracks are known too.
+    private func chooseFirstSubtitleIfNew() {
+        guard isFirstOpen, subtitleChoice.primaryId == nil,
+              let first = MovieTrackChoice.primarySubtitle(subtitles, language: \.language, preferredLanguages: subtitleLanguages) else { return }
+        subtitleChoice.primaryId = first.id
+        saveChoice()
+    }
+
+    /// The primary is one only VLC can draw: hand it to VLC; else VLC draws
+    /// none.
+    private func applyEngineSubtitle() {
+        player.showEmbeddedSubtitle(at: subtitleChoice.primaryId.flatMap { engineSubtitles[$0] })
+    }
+
+    /// May be a Secondary or be translated: ShotDex has its text.
+    func hasText(_ subtitle: MovieSubtitle) -> Bool {
+        engineSubtitles[subtitle.id] == nil
     }
 
     enum SubtitleLine { case primary, secondary }
 
     func subtitleTitle(_ subtitle: MovieSubtitle) -> String {
-        MovieSubtitleLabel.title(subtitle, fromFiles: sourceIsFiles)
+        guard !hasText(subtitle) else { return MovieSubtitleLabel.title(subtitle, fromFiles: sourceIsFiles) }
+        return "\(MovieSubtitleLabel.language(subtitle)) · " + String(localized: "In File (Download to use as Secondary or translate)", comment: "Subtitle origin: a track in a streamed movie that only the player can draw (AC-55)")
     }
 
     func subtitle(id: String?) -> MovieSubtitle? {
@@ -384,6 +431,7 @@ final class MoviePlayerModel {
         case .secondary: subtitleChoice.secondaryId = id
         }
         saveChoice()
+        if line == .primary { applyEngineSubtitle() }
         let timeline = await timeline(for: id)
         switch line {
         case .primary: primaryTimeline = timeline
@@ -451,7 +499,11 @@ final class MoviePlayerModel {
     }
 
     private func timeline(for id: String?) async -> SubtitleTimeline? {
-        guard let id, let subtitle = subtitles.first(where: { $0.id == id }), let loader = subtitleLoader,
+        guard let id, let subtitle = subtitles.first(where: { $0.id == id }) else { return nil }
+        if let document = embeddedDocuments[id] {
+            return SubtitleTimeline(document: document, delayMs: Int64(subtitle.offsetMs))
+        }
+        guard let loader = subtitleLoader,
               let document = try? await loader.document(for: subtitle) else { return nil }
         return SubtitleTimeline(document: document, delayMs: Int64(subtitle.offsetMs))
     }
