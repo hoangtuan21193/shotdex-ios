@@ -10,8 +10,9 @@ Quyết định: [planboard movies-library](../../../.planboard/movies-library/D
 
 ## 1. Lối vào
 
-- Collections › Utilities: ô **Movies** sau Video Projects, dòng giá trị `128 · 3 on iPhone`. Ghim được; không ẩn
-  được (FS-06.01 §6). iPad/Mac: hàng **Movies** trong Utilities của sidebar. Biểu tượng khác `film` (Video Studio).
+- Collections › Utilities: ô **Movies** (`play.rectangle`, khác `film` của Video Studio) sau Video Projects. Như mọi ô
+  Utilities, số đếm không vẽ mà VoiceOver đọc: `128 movies, 3 on this iPhone`. Ghim được (ô ghim có dòng phụ đó);
+  không ẩn được (FS-06.01 §6). iPad dùng cùng băng Utilities (không có sidebar Collections); Mac theo FS-18.
 
 ## 2. Nguồn
 

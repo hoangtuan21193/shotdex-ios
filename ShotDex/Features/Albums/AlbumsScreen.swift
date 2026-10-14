@@ -42,6 +42,8 @@ struct AlbumsScreen: View {
     @State private var enteredName = ""
     /// Photos ShotDex has hidden; the Hidden row shows only above zero.
     @State private var hiddenCount = 0
+    /// Spoken on the Movies row (FS-23.01 §1): all movies, and those on this device.
+    @State private var movieCounts: (total: Int, onDevice: Int) = (0, 0)
     @State private var deletionRequest: DeletionRequest?
 
     /// A pending "type a name" alert — creating an album or renaming one.
@@ -222,6 +224,9 @@ struct AlbumsScreen: View {
         }
         .navigationDestination(for: TripsDestination.self) { _ in
             TripsScreen()
+        }
+        .navigationDestination(for: MoviesDestination.self) { _ in
+            MoviesScreen()
         }
         .navigationDestination(for: CreationsDestination.self) { destination in
             CreationsScreen(kind: destination.kind)
@@ -415,7 +420,7 @@ struct AlbumsScreen: View {
     private var pinnedUtilities: [CollectionPinStore.Target] {
         dependencies.collectionPins.pinned.filter { target in
             switch target {
-            case .places, .trips, .duplicates: true
+            case .places, .trips, .duplicates, .movies: true
             default: false
             }
         }
@@ -676,6 +681,18 @@ extension AlbumsScreen {
             }
             .buttonStyle(.plain)
 
+            // FS-23.01 §1: films kept outside Photos — streamed from home or
+            // downloaded for the plane. Not `film` (Video Studio has it).
+            NavigationLink(value: MoviesDestination()) {
+                CollectionListRow(
+                    title: String(localized: "Movies", comment: "Utilities row: the movie library (FS-23)"),
+                    systemImage: "play.rectangle",
+                    spokenDetail: MoviesCountText.spoken(movieCounts)
+                )
+            }
+            .buttonStyle(.plain)
+            .contextMenu { pinButton(.movies) }
+
             // Always there (FS-17.05 §1), empty or not: the doors to photos
             // kept elsewhere. "Local Network" and "Cloud", not "On …": the
             // 190pt Utilities card cut "On Local Network" to "On Local Networ".
@@ -771,12 +788,13 @@ extension AlbumsScreen {
     /// system utility albums come and go, and the packing has to count what
     /// is actually there.
     private var utilityEntryCount: Int {
-        6 + model.utilityAlbums.count + (dependencies.serverUploadIndex.assetIds.isEmpty ? 0 : 1)
+        7 + model.utilityAlbums.count + (dependencies.serverUploadIndex.assetIds.isEmpty ? 0 : 1)
             + (hiddenCount > 0 ? 1 : 0)
     }
 
     private func refreshHiddenCount() {
         hiddenCount = (try? HiddenCopyStore(database: dependencies.database).hiddenCount()) ?? 0
+        movieCounts = MovieLibraryQuery.counts((try? dependencies.movies.movies()) ?? [])
     }
 
     /// How many rows the band stacks before it starts scrolling sideways.
@@ -983,6 +1001,16 @@ extension AlbumsScreen {
             }
             .buttonStyle(.plain)
             .contextMenu { pinButton(.duplicates) }
+        case .movies:
+            NavigationLink(value: MoviesDestination()) {
+                UtilityToken(
+                    title: String(localized: "Movies", comment: "Utilities row: the movie library (FS-23)"),
+                    subtitle: MoviesCountText.spoken(movieCounts),
+                    systemImage: "play.rectangle"
+                )
+            }
+            .buttonStyle(.plain)
+            .contextMenu { pinButton(.movies) }
         default:
             EmptyView()
         }

@@ -140,6 +140,10 @@ final class AppDependencies {
     let serverUploads: ServerUploadStore
     /// Backup jobs and their ledger (FS-22).
     let backups: BackupStore
+    /// The Movies library (FS-23).
+    let movies: MovieStore
+    /// Translation and AI Search providers the user added (FS-08.07).
+    let aiProviders: AIProviderStore
     /// Keeps every backup job watching its source (FS-22.02).
     let backupCoordinator: BackupCoordinator
     /// Backup's background time (FS-22.02 §3).
@@ -508,6 +512,8 @@ final class AppDependencies {
         self.serverUploads = serverUploads
         let backups = BackupStore(database: database)
         self.backups = backups
+        self.movies = MovieStore(database: database, plexTokens: KeychainPasswordStore(service: KeychainPasswordStore.plexTokens))
+        self.aiProviders = AIProviderStore(database: database, keys: KeychainPasswordStore(service: KeychainPasswordStore.aiProviderKeys))
         let backupCoordinator = BackupCoordinator(store: backups, environment: .live(
             database: database, store: backups, servers: fileServers, roots: folderRoots
         ))

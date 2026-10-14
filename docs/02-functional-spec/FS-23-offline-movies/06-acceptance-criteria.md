@@ -10,7 +10,7 @@ Phim test: clip tổng hợp 2–5 phút (khung test pattern, tiếng sine — *
 
 | # | Cho | Khi | Thì | Chứng minh bằng |
 |---|---|---|---|---|
-| AC-1 | Collections, chưa có nguồn phim | mở Utilities › Movies | ô **Movies** sau Video Projects, giá trị `0`; màn `No Movies` + **Add a Source** | ⚠️ chưa có (`scripts/movies-flow.json`) |
+| AC-1 | Collections, chưa có nguồn phim | mở Utilities › Movies | ô **Movies** sau Video Projects, giá trị `0`; màn `No Movies` + **Add a Source** | ✅ `scripts/movies-flow.json` (iPhone 17 26.5, 14/10: nhãn `Movies, 0 movies, 0 on this iPhone`, ảnh 01–03) |
 | AC-2 | WebDAV giả có `/Movies` với 3 phim (`Dune.Part.Two.2024.2160p.x265.mkv` + `.en.srt` + `.vi.srt`, `Perfect.Days.2023.1080p.mkv`, `Past.Lives.2023.mp4`) | + › Add a Source… › Folder › chọn `/Movies` | ≤ 10 s Grid có 3 poster `Dune Part Two · 2024`, `Perfect Days · 2023`, `Past Lives · 2023`, không dấu ✓ (Stream); Dune có 2 phụ đề From Server | ⚠️ chưa có (`MovieLibraryScanTests.folderSourceListsMovies`) |
 | AC-3 | AC-2, phim Stream 310 MB | chạm Dune | phát ≤ 3 s; 30 s đầu đọc từ server < 10% cỡ file (không chép cả phim); không file nào mới trong `Movies/` | ⚠️ chưa có (`MovieStreamTests.streamsWithoutCopy` + log server) |
 | AC-4 | AC-2 | menu Dune › Download to iPhone | thanh cam chạy theo tiến độ; xong → dấu ✓; file trong `Movies/<id>/` đúng cỡ; bộ lọc **On This iPhone** chỉ còn Dune | ⚠️ chưa có (`MovieDownloadTests.downloadMarksOnDevice`) |
