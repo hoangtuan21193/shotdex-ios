@@ -9,7 +9,8 @@ lựa chọn phụ đề trong bảng riêng; API key ở Keychain.
 
 | Thư mục (trong vùng dữ liệu app) | Chứa | Sao lưu iCloud |
 |---|---|---|
-| `Movies/<id>/` | file phim giữ tên gốc · phụ đề (`<id-phụ-đề>.srt/.ass/.vtt`) · khung hình 16:9 | không (đánh dấu cả thư mục) |
+| `Movies/<id>/` | phim **đã tải** giữ tên gốc · phụ đề (`<id-phụ-đề>.srt/.ass/.vtt`) · poster, ảnh nền | không (đánh dấu cả thư mục) |
+| `Caches/MovieArt/` | poster + khung hình của phim **Stream** (cache, xoá được, tải lại khi cần) | không |
 | `Movies/.incoming/` | file đang chép (`.part`) | không |
 
 - Không đặt trong Caches: hệ thống được phép xoá Caches khi máy đầy, mà phim là thứ người dùng tự chép vào.
@@ -19,12 +20,13 @@ lựa chọn phụ đề trong bảng riêng; API key ở Keychain.
 
 ## 2. Bảng
 
-Migration kế tiếp `v36-movies`. Bốn bảng mới, đăng ký vào bảng vệ tinh của [BD-02](../../01-basic-design/BD-02-database-design.md) §3.
+Migration kế tiếp `v36-movies`. Năm bảng mới, đăng ký vào bảng vệ tinh của [BD-02](../../01-basic-design/BD-02-database-design.md) §3.
 Không cột nào trong `photo_metadata`; không khoá ngoại (luật BD-02).
 
 | Bảng | Giữ gì |
 |---|---|
-| Phim | id · tên hiện · tên file gốc · cỡ byte · mã băm 64 bit · thời lượng · nguồn (connection + đường dẫn, hoặc Files, hoặc Share) · trạng thái (đang chép / sẵn sàng / không phát được / mất file) · byte đã chép · ngày thêm · lần xem cuối · vị trí xem · đã xem xong · tốc độ · track âm thanh chọn · lệch tiếng (Audio Sync) |
+| Nguồn phim | id · loại (thư mục / Plex) · connection FS-15 + đường dẫn, hoặc máy chủ Plex (id máy, địa chỉ, thư viện chọn) · lần quét cuối · trạng thái tới được. Token Plex ở Keychain theo id nguồn |
+| Phim | id · id nguồn (rỗng = chép thẳng) · đường dẫn hoặc id phim Plex · tên hiện · năm · tên file gốc · cỡ byte · mã băm 64 bit · thời lượng · thông tin Plex (mô tả, thể loại) · trạng thái (stream / đang tải / trên máy / không phát được / mất file) · byte đã tải · ngày thêm · lần xem cuối · vị trí xem · đã xem xong · tốc độ · track âm thanh chọn · lệch tiếng (Audio Sync) |
 | Phụ đề phim | id · id phim · ngôn ngữ · nguồn (trong file / cạnh phim / nhập / chia sẻ / dịch + nhà cung cấp + id phụ đề gốc) · định dạng · mã chữ · tên file · lệch giờ |
 | Lựa chọn phụ đề | id phim · phụ đề chính · phụ đề phụ · vị trí · cỡ, màu mỗi dòng |
 | Việc dịch dở | id phim · phụ đề From · ngôn ngữ To · nhà cung cấp · số cue đã xong · file kết quả dở |
@@ -40,10 +42,11 @@ Không cột nào trong `photo_metadata`; không khoá ngoại (luật BD-02).
 
 ## 4. Riêng tư và bản khai
 
-Chỉ một loại dữ liệu lần đầu rời máy, theo thao tác của người dùng:
+Dữ liệu rời máy chỉ theo thao tác của người dùng, tới dịch vụ người dùng tự cài:
 
 | Thao tác | Gửi tới | Gửi gì |
 |---|---|---|
+| Add a Source › Plex, stream, Download, đồng bộ chỗ xem | plex.tv (đăng nhập, danh sách máy chủ) và máy chủ Plex của người dùng | token, yêu cầu đọc thư viện/file, chỗ đang xem |
 | Translate bằng cloud hoặc máy chủ nhà | nhà cung cấp người dùng đã cài | chữ phụ đề, tên phim, hai ngôn ngữ |
 | AI Search bằng máy chủ nhà | máy trong mạng nhà của người dùng | câu tìm + vốn từ thư viện (AI Search không dùng cloud — FS-08.07 §5) |
 

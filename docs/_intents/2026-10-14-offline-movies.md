@@ -5,7 +5,7 @@
 | Tác giả | Hoang Tuan (lời người dùng), Claude soạn |
 | Ngày | 2026-10-14 |
 | Trạng thái | accepted — người dùng 2026-10-14 |
-| Tiến độ | **chưa làm** (2026-10-14) — spec FS-23 (42 AC) + FS-08.07 (9 AC), mọi ⚠️ đã chốt; board đã vẽ trên 4 canvas (14/10) |
+| Tiến độ | **chưa làm** (2026-10-14) — spec FS-23 (52 AC) + FS-08.07 (9 AC), mọi ⚠️ đã chốt; board đã vẽ trên 4 canvas (14/10) |
 | Nguồn | phản hồi người dùng 2026-10-14 |
 | Spec sinh ra từ đây | [FS-23](../02-functional-spec/FS-23-offline-movies/README.md) · [FS-08.07](../02-functional-spec/FS-08-settings/07-ai-providers.md) |
 
@@ -44,7 +44,7 @@ dùng AI để generate subtitle thứ 2 sang một ngôn ngữ khác … cho ch
 1. **Kho phim riêng trong ShotDex**, nằm ngoài thư viện Photos: không lên iCloud Photos, không nằm trong bản sao lưu
    iCloud của máy, không vào Library/Statistics/Duplicates/Backup. Thấy rõ mỗi phim chiếm bao nhiêu chỗ và còn trống bao
    nhiêu; xoá được.
-2. **Đưa phim vào** từ những nơi người dùng đã có: server/NAS đã nối trong ShotDex (FS-15/FS-17), app Files, Share
+2. **Đưa phim vào** (đổi 14/10: thư viện nhiều nguồn có stream + Plex — xem cuối mục Open questions) từ những nơi người dùng đã có: server/NAS đã nối trong ShotDex (FS-15/FS-17), app Files, Share
    sheet / AirDrop. Phim lớn tải lâu thì thấy tiến độ, tải dở được tiếp, không chiếm hết bộ nhớ máy.
 3. **Mở được phim như Infuse**: MP4, MOV, M4V, MKV, FLV, AVI, WMV, WebM… cùng các track âm thanh và phụ đề nằm sẵn
    trong file; chọn track âm thanh; nhớ chỗ đang xem; xem được khi máy bay ở chế độ máy bay.
@@ -142,6 +142,19 @@ dùng AI để generate subtitle thứ 2 sang một ngôn ngữ khác … cho ch
     đường đó.
 12. **AI tạo sub từ tiếng trong phim** → **không trong đợt này.**
 13. **Một intent** → **một intent, spec tách nhiều FS**: kho + player, phụ đề (tìm/đôi/dịch), mục AI trong Settings.
+
+Đổi phạm vi ở bước Design (người dùng, comment trên canvas 2026-10-14; chốt qua planboard
+`.planboard/movies-library/`, 9 quyết định):
+
+- **Movies là thư viện chung của mọi nguồn**, như Infuse: thư mục NAS/Files và máy chủ **Plex** trong mạng nhà là
+  nguồn; ở nhà bấm là **stream**, phim cần mang đi thì **Download**. Phim có trên máy mang dấu ✓, có bộ lọc
+  "On This iPhone"; xa nhà thì phim stream hiện mờ. *Vì:* spec cũ chỉ chép-rồi-xem, người dùng tưởng là stream và
+  muốn cả hai, nhìn vào biết ngay phim nào xem được offline.
+- **Plex**: đăng nhập tài khoản Plex của người dùng bằng mã plex.tv/link; stream bản gốc; tải bản gốc kèm poster, năm,
+  mô tả để xem offline; đồng bộ chỗ đang xem với Plex.
+- **Grid poster dọc** (tên + năm) mặc định, List trong ⋯; **search** và **sort**. Poster phim NAS lấy từ ảnh có sẵn
+  (poster.jpg, ảnh nhúng), thiếu thì khung hình — không gọi dịch vụ ngoài.
+- **Gọn lại**: một bảng "Audio & Subtitles"; + chỉ còn Add a Source… / Add Movie Files…; việc của từng phim vào menu.
 
 Claude kiểm trước khi viết spec (không chờ người dùng):
 

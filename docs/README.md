@@ -51,7 +51,7 @@ docs/
 │                             FS-16 Kernel render bằng Metal · FS-17 Tải, sửa ảnh từ file server (6)
 │                             FS-18 App Mac (9) · FS-19 Nguồn ảnh: thư mục, ổ ngoài, server (8)
 │                             FS-20 Nhập từ thẻ nhớ (2) · FS-21 iPad kiểu Mac (7)
-│                             FS-22 Backup lên ổ mạng (4) · FS-23 Phim offline + phụ đề (6)
+│                             FS-22 Backup lên ổ mạng (4) · FS-23 Thư viện phim: NAS, Plex, offline, phụ đề (7)
 ├── 03-extensions-and-integrations/  EX-01 Kit · EX-02 Widget · EX-03 Share · EX-04 Shortcuts · EX-05 Edit action
 ├── 04-non-functional-design/ NF-01 hiệu năng · NF-02 bộ nhớ · NF-03 riêng tư
 │                             NF-04 trạng thái lỗi · NF-05 thiết bị · NF-06 truy cập & ngôn ngữ

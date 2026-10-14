@@ -10,21 +10,21 @@ Phim test: clip tổng hợp 2–5 phút (khung test pattern, tiếng sine — *
 
 | # | Cho | Khi | Thì | Chứng minh bằng |
 |---|---|---|---|---|
-| AC-1 | Collections, kho rỗng | mở Utilities | ô **Movies** đứng sau Video Projects, giá trị `0`; chạm → `No Movies` + **Add Movies** | ⚠️ chưa có (`scripts/movies-flow.json`) |
-| AC-2 | WebDAV giả có `Dune.2024.2160p.x265.mkv` (310 MB) + `Dune.2024.2160p.x265.en.srt` + `.vi.srt` | From a Server… › chọn file › Add 1 Movie | kho có 1 phim tên `Dune (2024)`, cỡ khớp byte, 2 phụ đề `English · From Server`, `Tiếng Việt · From Server`; Primary = ngôn ngữ đầu của Subtitle Languages | ⚠️ chưa có (`MovieImportTests.sidecarSubtitlesComeAlong`) |
-| AC-3 | trình duyệt FS-17 thường, thư mục có 3 ảnh + 1 `.mkv` | giữ lâu `.mkv` | menu có **Add to Movies**; ở duyệt ảnh, `.mkv` không mở bằng chạm như ảnh (FS-17.01 giữ nguyên) | ⚠️ chưa có |
-| AC-4 | Files có `clip.flv` | From Files… chọn | file được **sao chép** vào `Movies/<id>/`; bản trong Files còn nguyên | ⚠️ chưa có (`MovieImportTests.filesPickerCopies`) |
-| AC-5 | Share sheet của app Files với `clip.webm` | chọn ShotDex | Movies mở tại `clip`; hệ thống không đưa ra extension chia sẻ ảnh | ⚠️ chưa có |
-| AC-6 | kho đã có `clip.mp4` | thêm lại đúng file đó từ server khác | `Already in Movies`, 0 byte chép | ⚠️ chưa có (`MovieImportTests.sameHashNotCopiedTwice`) |
-| AC-7 | máy trống 3,5 GB, phim 3,2 GB | Add | `Not enough space on this device — about 0.7 GB needed.`; 0 byte chép; hàng đợi dừng | ⚠️ chưa có (`MovieImportTests.needsSizePlusOneGB`) |
-| AC-8 | đang chép phim 3,2 GB, tới 1,1 GB thì tắt server giả | bật lại server, Retry | `Can't Reach …` lúc tắt; chép tiếp từ 1,1 GB, tổng byte đọc từ server ≤ 3,2 GB + 1 MB | ⚠️ chưa có (`MovieCopyTests.resumesFromBytesOnDisk`) |
-| AC-9 | đang chép, app bị giết | mở lại | hàng tiếp tục chép từ byte đã có; không còn `.part` mồ côi | ⚠️ chưa có (`MovieCopyTests.resumesAfterKill`) |
-| AC-10 | 2 phim trong kho | đọc thuộc tính thư mục kho + thư viện Photos | `Movies/` đánh dấu không sao lưu; số tài sản trong Photos không đổi trước/sau khi thêm | ⚠️ chưa có (`MovieStoreTests.excludedFromBackup`) |
-| AC-11 | phim 310 MB có 3 phụ đề, 1 bản dịch | Delete › Delete | thư mục `Movies/<id>` không còn; 4 dòng phụ đề xoá; dung lượng trống tăng ≥ 310 MB; file trên server còn | ⚠️ chưa có |
+| AC-1 | Collections, chưa có nguồn phim | mở Utilities › Movies | ô **Movies** sau Video Projects, giá trị `0`; màn `No Movies` + **Add a Source** | ⚠️ chưa có (`scripts/movies-flow.json`) |
+| AC-2 | WebDAV giả có `/Movies` với 3 phim (`Dune.Part.Two.2024.2160p.x265.mkv` + `.en.srt` + `.vi.srt`, `Perfect.Days.2023.1080p.mkv`, `Past.Lives.2023.mp4`) | + › Add a Source… › Folder › chọn `/Movies` | ≤ 10 s Grid có 3 poster `Dune Part Two · 2024`, `Perfect Days · 2023`, `Past Lives · 2023`, không dấu ✓ (Stream); Dune có 2 phụ đề From Server | ⚠️ chưa có (`MovieLibraryScanTests.folderSourceListsMovies`) |
+| AC-3 | AC-2, phim Stream 310 MB | chạm Dune | phát ≤ 3 s; 30 s đầu đọc từ server < 10% cỡ file (không chép cả phim); không file nào mới trong `Movies/` | ⚠️ chưa có (`MovieStreamTests.streamsWithoutCopy` + log server) |
+| AC-4 | AC-2 | menu Dune › Download to iPhone | thanh cam chạy theo tiến độ; xong → dấu ✓; file trong `Movies/<id>/` đúng cỡ; bộ lọc **On This iPhone** chỉ còn Dune | ⚠️ chưa có (`MovieDownloadTests.downloadMarksOnDevice`) |
+| AC-5 | AC-4 xong, tắt server giả | mở Movies | Perfect Days, Past Lives mờ; chạm → `Not available offline. Connect to NAS Home to play.`; Dune sáng và phát | ⚠️ chưa có (`scripts/movies-offline.json`) |
+| AC-6 | Files có `clip.flv`; Share sheet của Files với `clip.webm` | + › Add Movie Files… chọn `clip.flv`; Share › ShotDex với `clip.webm` | cả hai được **sao chép** vào máy, có dấu ✓; bản trong Files còn nguyên; Share mở Movies tại `clip` | ⚠️ chưa có (`MovieImportTests.addFilesCopies`) |
+| AC-7 | máy trống 3,5 GB, phim Stream 3,2 GB | Download to iPhone | `Not enough space on this device — about 0.7 GB needed.`; 0 byte tải; hàng đợi dừng | ⚠️ chưa có (`MovieDownloadTests.needsSizePlusOneGB`) |
+| AC-8 | đang tải phim 3,2 GB, tới 1,1 GB thì tắt server giả | bật lại server, Retry Download | dòng đỏ `Download paused — NAS Home unreachable` lúc tắt; tải tiếp từ 1,1 GB, tổng byte đọc ≤ 3,2 GB + 1 MB | ⚠️ chưa có (`MovieDownloadTests.resumesFromBytesOnDisk`) |
+| AC-9 | đang tải, app bị giết | mở lại | tải tiếp từ byte đã có; không còn `.part` mồ côi | ⚠️ chưa có (`MovieDownloadTests.resumesAfterKill`) |
+| AC-10 | 2 phim đã tải | đọc thuộc tính thư mục + thư viện Photos | `Movies/` không sao lưu; số tài sản Photos không đổi | ⚠️ chưa có (`MovieStoreTests.excludedFromBackup`) |
+| AC-11 | Dune đã tải, xem tới 47:12, có 1 bản dịch | Remove Download › Remove | file trong máy xoá, dung lượng trống tăng ≥ 310 MB; poster về Stream, vẫn mở tại 47:12, bản dịch còn; file trên server còn | ⚠️ chưa có (`MovieDownloadTests.removeDownloadKeepsProgress`) |
 | AC-12 | clip mỗi loại mp4, m4v, mov, mkv, webm, flv, avi, wmv, ts | phát mỗi clip 5 s | cả 9 tới `sẵn sàng`, giờ đã qua ≥ 4 s, có tiếng | ⚠️ chưa có (`scripts/movies-formats.json`) |
 | AC-13 | file `.mkv` hỏng phần đầu | phát | `Can't Play This Movie` + một dòng lý do + Close; không nháy đen im lặng | ⚠️ chưa có |
 | AC-14 | phim 2:00:00 đã xem tới 47:12 | mở lại | phát từ 47:12 ± 1 s; nhãn `Resumed at 47:12 · Start Over` 5 s; Start Over → 0:00 | ⚠️ chưa có (`MoviePlaybackModelTests.resumeAndStartOver`) |
-| AC-15 | MKV 2 track âm thanh (EN AC3 5.1, VI AAC) | Audio › Tiếng Việt | đổi track không dừng phim (giờ không lùi); mở lại phim vẫn track VI | ⚠️ chưa có |
+| AC-15 | MKV 2 track âm thanh (EN AC3 5.1, VI AAC) | Audio & Subtitles › Tiếng Việt | đổi track không dừng phim (giờ không lùi); mở lại phim vẫn track VI | ⚠️ chưa có |
 | AC-16 | khoá chạm bật | chạm đúp nửa phải | giờ không đổi; chỉ hiện nút mở khoá | ⚠️ chưa có |
 | AC-17 | chế độ máy bay (sim: mạng tắt) | phát 60 s | 0 yêu cầu mạng từ app trong 60 s | ⚠️ chưa có (`scripts/movies-offline.json` + log mạng) |
 | AC-18 | Primary EN, Secondary VI, cả 3 vị trí | chụp ở 00:01:05 (cue cả hai cùng hiện) | Top/Bottom: VI trên đỉnh khung; Secondary Above: VI cách EN 8 pt phía trên; Secondary Below: ngược lại; không đè nhau | ⚠️ chưa có (`SubtitleLayoutTests.threePositions` + ảnh) |
@@ -36,7 +36,7 @@ Phim test: clip tổng hợp 2–5 phút (khung test pattern, tiếng sine — *
 | AC-24 | file 310 MB biết trước mã băm | tính mã băm | đúng 16 hex mong đợi; đọc ≤ 128 KB | ⚠️ chưa có (`MovieHashTests.matchesReference`) |
 | AC-25 | app Files có `Dune.vi.srt`, kho có `Dune (2024)` và 3 phim khác | Share › ShotDex | sheet `Add Subtitle to…`, `Dune (2024)` được đánh dấu khớp tên; chọn → phim có `Tiếng Việt · Shared` | ⚠️ chưa có |
 | AC-26 | `subs.zip` chứa `a.en.srt`, `b.vi.ass`, `readme.txt` | Import File… | gắn 2 phụ đề EN, VI; `readme.txt` bỏ; zip chỉ có `.txt` → `No subtitles in this file.` | ⚠️ chưa có (`SubtitleImportTests.zipTakesSubtitlesOnly`) |
-| AC-27 | toàn bộ luồng Movies (thêm, phát, phụ đề, dịch trên máy) | ghi log mạng | 0 yêu cầu tới dịch vụ phụ đề nào; yêu cầu mạng chỉ tới server FS-15 và nhà cung cấp AI đã chọn | ⚠️ chưa có |
+| AC-27 | toàn bộ luồng Movies (thêm, phát, phụ đề, dịch trên máy) | ghi log mạng | 0 yêu cầu tới dịch vụ phụ đề nào; yêu cầu mạng chỉ tới server FS-15, máy chủ Plex/plex.tv và nhà cung cấp AI đã chọn | ⚠️ chưa có |
 | AC-28 | build Release | báo cáo App Thinning cho iPhone 17 | ghi cỡ thêm của VLCKit vào 02 §1 (thay "chưa đo") | ⚠️ chưa có |
 | AC-29 | SRT 1.380 cue, AI giả trả đúng số cue | Translate | 1.380 cue, giờ bắt đầu/kết thúc từng cue bằng bản gốc; Secondary tự bật | ⚠️ chưa có (`SubtitleTranslatorTests.keepsTimingAndCount`) |
 | AC-30 | AI giả trả thiếu 1 cue ở khối 3 | Translate | khối 3 thử lại 1 lần rồi dịch từng cue; kết quả vẫn 1.380 cue | ⚠️ chưa có (`SubtitleTranslatorTests.wrongCountFallsBackPerCue`) |
@@ -45,12 +45,22 @@ Phim test: clip tổng hợp 2–5 phút (khung test pattern, tiếng sine — *
 | AC-33 | Using = Claude | nhìn sheet | dòng "… will be sent to Anthropic."; key không xuất hiện trong log khi gọi | ⚠️ chưa có |
 | AC-34 | iPhone thật iOS 18+, gói EN→VI đã tải, máy bay | Translate bằng Apple Translation 200 cue | xong không mạng; 200 cue tiếng Việt | ⚠️ chưa có — cần máy thật (không chạy trên Simulator) |
 | AC-35 | Duo ngoài | mở Movies | danh sách, chạm phát được; không có +, Delete, Rename; gập/mở giữ phim, giờ ± 1 s, phụ đề | ⚠️ chưa có — Duo |
-| AC-36 | iPhone 17 26.5 + iPhone 16 18.6, sáng + tối | Movies, player, bảng phụ đề, Find, Translate | cùng nút, cùng hành động ở hai nhánh; khớp board ≤ 2 pt (`Tools/design-board compare`) | ⚠️ chưa có — board chưa vẽ |
-| AC-37 | VoiceOver bật, player | quét các nút | đọc `Subtitles: English and Vietnamese`, `Audio: English AC3 5.1`, thanh tua bước 10 s | ⚠️ chưa có |
+| AC-36 | iPhone 17 26.5 + iPhone 16 18.6, sáng + tối | Movies Grid + List, player, bảng Audio & Subtitles, Translate, Sign In to Plex | cùng nút, cùng hành động ở hai nhánh; khớp board ≤ 2 pt (`Tools/design-board compare`) | ⚠️ chưa có — board chưa vẽ |
+| AC-37 | VoiceOver bật, player | quét các nút | đọc `Audio and Subtitles: English AC3 5.1, English and Vietnamese subtitles`, poster đọc tên · năm · `Downloaded`/`Streams from NAS Home`, thanh tua bước 10 s | ⚠️ chưa có |
 | AC-39 | MKV 5 track: EN TrueHD 7.1 (Default), EN AC3 5.1, EN Commentary AAC Stereo, VI AAC Stereo, JA AC3 5.1 | mở bảng Audio | 5 hàng đúng thứ tự file, mỗi hàng ngôn ngữ · tên · codec · kênh, `Default` ở hàng 1, ✓ ở track đang phát | ⚠️ chưa có (`MovieAudioTrackLabelTests.fiveTracks`) |
 | AC-40 | Audio Languages = Tiếng Việt, English; phim mới có EN + VI | mở phim lần đầu | phát track VI; Audio Languages = Original → phát track `Default` | ⚠️ chưa có (`MovieTrackChoiceTests.preferredAudioLanguage`) |
 | AC-41 | tiếng sớm 0,30 s | Audio Sync −0,30 s | độ lệch đo được giữa tiếng và hình ≤ 0,05 s; mở lại phim giữ −0,30 s | ⚠️ chưa có (`MoviePlaybackModelTests.audioSyncPersists` + đo trên máy) |
 | AC-42 | track 7.1, đường ra tai nghe stereo | phát | có tiếng đủ kênh trộn xuống stereo; dòng chân `Playing as stereo on …` | ⚠️ chưa có — cần máy thật |
+| AC-43 | thư mục có `A/poster.jpg`, `B.mkv` có ảnh bìa nhúng, `C.mp4` không ảnh | quét | A dùng poster.jpg, B dùng ảnh nhúng, C dùng khung hình ở 10%; tên + năm đọc đúng từ tên file | ⚠️ chưa có (`MoviePosterResolverTests.order`) |
+| AC-44 | 128 phim, chế độ máy bay | Search `dune 2024` | 1 kết quả `Dune Part Two`; tìm theo tên file `x265` cũng ra | ⚠️ chưa có (`MovieSearchTests.titleYearFileName`) |
+| AC-45 | 5 phim năm khác nhau | ⋯ › Sort › Title / Year / Recently Watched | thứ tự đúng từng kiểu; mặc định Recently Added | ⚠️ chưa có (`MovieSortTests.allOrders`) |
+| AC-46 | Grid | ⋯ › List, đóng mở lại Movies | vẫn List; List hiện thời lượng · cỡ · nguồn hoặc `On iPhone` | ⚠️ chưa có |
+| AC-47 | plex.tv giả cấp mã `K7Q2`, 2 máy chủ (1 trong mạng) | Add a Source… › Plex Server, nhập mã ở trang giả | màn hiện `K7Q2`; xong → danh sách máy chủ, máy trong mạng lên đầu `On this network`; Add → phim Plex vào Grid với poster + năm của Plex; token chỉ ở Keychain | ⚠️ chưa có (`PlexSignInTests.pinFlow`) |
+| AC-48 | máy chủ Plex giả có phim + `.vi.srt` rời | chạm phim | phát bản gốc (không yêu cầu chuyển mã nào tới server); bảng Audio & Subtitles có `Tiếng Việt · From Plex` | ⚠️ chưa có (`PlexStreamTests.directPlay`) |
+| AC-49 | phim Plex 18,4 GB giả | Download to iPhone rồi bật chế độ máy bay | menu hiện `18.4 GB` trước khi tải; offline Grid vẫn có poster, năm; menu có mô tả, thể loại | ⚠️ chưa có (`PlexDownloadTests.metadataOffline`) |
+| AC-50 | phim Plex xem trên server tới 30:00; trên máy xem offline tới 52:10 | mở phim / về mạng nhà | mở tại 30:00 khi online; sau khi xem offline, lần tới được server gửi 52:10 lên | ⚠️ chưa có (`PlexTimelineTests.twoWayAndOfflineQueue`) |
+| AC-51 | token Plex bị thu hồi (server giả trả 401) | mở Movies | phim Plex stream mờ, Settings › Sources `Sign in to Plex again`; phim Plex đã tải vẫn phát | ⚠️ chưa có (`PlexSignInTests.revokedToken`) |
+| AC-52 | player | nhìn hàng 2 transport, mở bảng | một nút **Audio & Subtitles**; bảng: Audio (track + Audio Sync) trên, Subtitles dưới; Translate… và Import File… trong menu dòng Secondary | ⚠️ chưa có (board `*_MovieTracks` + `scripts/movies-player.json`) |
 | AC-38 | Mac | Space, ←, F, ⌘W | phát/dừng, lùi 10 s, toàn màn, đóng | ⚠️ chưa có — app Mac chưa có code |
 
 **Chưa chứng minh được:** tất cả — chưa có code. AC-34 cần máy thật; AC-35 cần Duo; AC-38 chờ app Mac (FS-18).

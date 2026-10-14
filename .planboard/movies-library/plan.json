@@ -1,0 +1,426 @@
+{
+  "title": "Movies: offline, stream, Plex, poster",
+  "context": "Comment của bạn trên canvas: màn Movies dễ hiểu nhầm là stream từ NAS; cần biết rõ phim nào xem offline được, phim nào cần mạng; thêm Plex trong mạng nhà (stream và tải về kèm thông tin phim); gọn lại cho dễ dùng; thêm Grid poster kiểu Infuse (tên + năm), search và sort.\nHôm nay spec FS-23 chỉ có một kiểu: chép phim vào máy rồi xem. Board này hỏi những gì bạn sẽ thấy; phần kỹ thuật Claude đã tự chọn ở trang cuối.\nKhông bấm gì = đồng ý lựa chọn Claude đánh dấu.",
+  "pages": [
+    {
+      "id": "offline",
+      "title": "Phim trên máy và phim stream",
+      "intro": "Movies chứa những phim nào, và nhìn vào là biết phim nào xem được trên máy bay.",
+      "decisions": [
+        {
+          "id": "D1",
+          "title": "Màn Movies là thư viện chung của mọi nguồn, hay chỉ phim đã tải về máy?",
+          "importance": "critical",
+          "image": "d1.svg",
+          "why": "Chỉ phim đã tải thì muốn xem phim trên NAS phải chép về trước, kể cả khi đang ở nhà. Thư viện chung thì ở nhà bấm là xem, tải về chỉ khi sắp đi xa.",
+          "proposal": "Thư viện chung như Infuse: thêm một thư mục NAS hoặc một máy chủ Plex làm nguồn, mọi phim trong đó hiện ra; ở nhà bấm là stream, phim nào cần mang đi thì bấm Download.",
+          "options": [
+            {
+              "id": "library",
+              "label": "Thư viện chung, stream hoặc tải về",
+              "pros": [
+                "Ở nhà xem ngay không cần chép",
+                "Giống Infuse, quen tay",
+                "Chỉ tốn dung lượng cho phim mang đi"
+              ],
+              "cons": [
+                "Phải phân biệt rõ phim nào cần mạng (câu D2)",
+                "Việc làm nhiều hơn"
+              ],
+              "effort": "L",
+              "recommended": true
+            },
+            {
+              "id": "offline-only",
+              "label": "Chỉ phim đã tải về máy (như spec hiện tại)",
+              "pros": [
+                "Đơn giản, mọi phim đều xem được offline"
+              ],
+              "cons": [
+                "Ở nhà cũng phải chép trước khi xem",
+                "Không có stream"
+              ],
+              "effort": "S"
+            }
+          ],
+          "tech": "Nguồn phim = thư mục trên connection FS-15 (SMB/SFTP/WebDAV/Files) hoặc máy chủ Plex. Quét thư mục lấy file phim (không đọc nội dung, chỉ tên + cỡ), lưu danh mục trong bảng phim kèm trạng thái: chỉ stream / đang tải / có trên máy. VLCKit phát thẳng qua URL smb:// / http(s) của nguồn.",
+          "tasks": [
+            "Viết lại FS-23.01 thành thư viện nhiều nguồn — docs/02-functional-spec/FS-23-offline-movies/01-library-and-import.md",
+            "Cập nhật intent: thêm stream + Plex — docs/_intents/2026-10-14-offline-movies.md"
+          ]
+        },
+        {
+          "id": "D2",
+          "title": "Nhìn vào poster, làm sao biết phim nào xem được khi không có mạng?",
+          "importance": "important",
+          "image": "d2.svg",
+          "why": "Không có dấu rõ thì lên máy bay mới phát hiện phim mình định xem chỉ stream được.",
+          "proposal": "Phim có trên máy: dấu ✓ tròn tối ở góc poster. Đang tải: thanh cam dưới poster. Không dấu = cần mạng. Thêm bộ lọc \"On This iPhone\" ở đầu màn để chỉ xem phim mang theo được.",
+          "options": [
+            {
+              "id": "badge-filter",
+              "label": "Dấu ✓ trên poster + bộ lọc On This iPhone",
+              "pros": [
+                "Một màn, liếc là biết",
+                "Trước chuyến bay bấm bộ lọc là thấy đủ"
+              ],
+              "cons": [
+                "Dấu nhỏ, phải nhìn kỹ góc poster"
+              ],
+              "effort": "S",
+              "recommended": true
+            },
+            {
+              "id": "two-sections",
+              "label": "Chia hai nhóm: On This iPhone ở trên, Streaming ở dưới",
+              "pros": [
+                "Không thể nhầm"
+              ],
+              "cons": [
+                "Phim cùng bộ bị tách hai nơi",
+                "Sort và search khó hiểu hơn"
+              ],
+              "effort": "S"
+            }
+          ],
+          "tech": "Trạng thái lấy từ bảng phim (file cục bộ tồn tại + cỡ đúng). VoiceOver đọc thêm \"Downloaded\" / \"Streams from NAS Home\".",
+          "tasks": [
+            "Dấu trên poster + bộ lọc — FS-23.01 §2, board *_Movies"
+          ]
+        },
+        {
+          "id": "D3",
+          "title": "Đang ở ngoài, không tới được NAS/Plex: phim stream hiện thế nào?",
+          "importance": "important",
+          "image": "d3.svg",
+          "why": "Ẩn đi thì thư viện như mất nửa phim; hiện bình thường thì bấm vào mới biết không xem được.",
+          "proposal": "Vẫn hiện nhưng mờ; chạm vào báo \"Not available offline. Connect to NAS Home to play.\" Phim có trên máy vẫn sáng.",
+          "options": [
+            {
+              "id": "dim",
+              "label": "Hiện mờ, chạm thì báo",
+              "pros": [
+                "Không ai tưởng mất phim",
+                "Biết ngay phim nào xem được"
+              ],
+              "cons": [
+                "Màn có poster không bấm xem được"
+              ],
+              "effort": "S",
+              "recommended": true
+            },
+            {
+              "id": "hide",
+              "label": "Ẩn cho tới khi về mạng nhà",
+              "pros": [
+                "Chỉ thấy phim xem được"
+              ],
+              "cons": [
+                "Thư viện co lại bất ngờ",
+                "Không nhớ mình có phim gì để tải lần sau"
+              ],
+              "effort": "S"
+            }
+          ],
+          "tech": "Kiểm nguồn tới được khi mở Movies và khi đổi mạng (NWPathMonitor + thử kết nối nhẹ như FS-15.04).",
+          "tasks": [
+            "Trạng thái nguồn không tới được — FS-23.01 §2"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "plex",
+      "title": "Plex trong mạng nhà",
+      "intro": "Kết nối Plex thế nào và tải phim Plex về ra sao.",
+      "decisions": [
+        {
+          "id": "D4",
+          "title": "Kết nối máy chủ Plex bằng cách nào?",
+          "importance": "important",
+          "image": "d4.svg",
+          "why": "Plex chỉ cho đọc thư viện khi có tài khoản của bạn hoặc một mã bí mật của máy chủ. Gõ mã bí mật bằng tay thì rất khó tìm.",
+          "proposal": "Đăng nhập tài khoản Plex của bạn bằng mã 4 ký tự (mở plex.tv/link trên máy khác, gõ mã) — giống Infuse và Apple TV; sau đó chọn máy chủ trong nhà. Đây là tài khoản Plex của chính bạn, không phải tài khoản ShotDex.",
+          "options": [
+            {
+              "id": "pin",
+              "label": "Đăng nhập Plex bằng mã (plex.tv/link)",
+              "pros": [
+                "Dễ, không phải tìm gì",
+                "Tự thấy mọi máy chủ của bạn"
+              ],
+              "cons": [
+                "Cần có tài khoản Plex (ai dùng Plex đều có)"
+              ],
+              "effort": "M",
+              "recommended": true
+            },
+            {
+              "id": "manual",
+              "label": "Gõ địa chỉ máy chủ + token",
+              "pros": [
+                "Không qua plex.tv"
+              ],
+              "cons": [
+                "Token phải tự tìm trong Plex Web, rất khó"
+              ],
+              "effort": "S"
+            }
+          ],
+          "tech": "PIN flow của plex.tv (POST /api/v2/pins → người dùng nhập ở plex.tv/link → lấy authToken), danh sách máy chủ từ /api/v2/resources, ưu tiên kết nối local. Token ở Keychain như key AI. Không gửi gì của ShotDex lên Plex ngoài yêu cầu đọc thư viện.",
+          "tasks": [
+            "Kết nối Plex — FS-23 phần mới (Plex), FS-08 Settings › Sources"
+          ]
+        },
+        {
+          "id": "D5",
+          "title": "Tải phim Plex về máy: chỉ bản gốc, hay cho chọn chất lượng nhỏ hơn?",
+          "importance": "important",
+          "image": "d5.svg",
+          "why": "Bản gốc 4K có thể 15–60 GB, iPhone 128 GB chứa được vài phim. Bản nén nhỏ hơn nhưng máy chủ phải nén lâu và cần Plex Pass.",
+          "proposal": "Bản đầu chỉ tải bản gốc — nhanh, nét, không cần Plex Pass; luôn báo dung lượng trước khi tải. Chọn chất lượng để sau.",
+          "options": [
+            {
+              "id": "original",
+              "label": "Chỉ bản gốc",
+              "pros": [
+                "Tải nhanh, đúng file trên máy chủ",
+                "Không cần Plex Pass"
+              ],
+              "cons": [
+                "Phim 4K rất nặng"
+              ],
+              "effort": "S",
+              "recommended": true
+            },
+            {
+              "id": "quality",
+              "label": "Cho chọn Original / 1080p / 720p",
+              "pros": [
+                "Mang được nhiều phim hơn"
+              ],
+              "cons": [
+                "Cần Plex Pass",
+                "Máy chủ phải nén, chậm",
+                "Nhiều việc hơn"
+              ],
+              "effort": "L"
+            }
+          ],
+          "tech": "Bản gốc: tải part file qua HTTP có Range (chạy tiếp được như FS-23.01 §4). Chọn chất lượng = Plex download/transcode queue, chỉ có với Plex Pass.",
+          "tasks": [
+            "Tải bản gốc từ Plex — FS-23 phần Plex"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "look",
+      "title": "Poster, Grid, search",
+      "intro": "Màn Movies trông thế nào.",
+      "decisions": [
+        {
+          "id": "D6",
+          "title": "Phim trên NAS (không qua Plex) lấy poster, tên, năm ở đâu?",
+          "importance": "important",
+          "image": "d6.svg",
+          "why": "Phim từ Plex đã có sẵn poster và năm. Phim để thẳng trên NAS thì không có, Grid sẽ toàn ô xám nếu không lấy ở đâu.",
+          "proposal": "Dùng ảnh có sẵn: poster.jpg / folder.jpg cạnh phim, hoặc ảnh bìa nhúng trong file MKV/MP4; không có thì dùng một khung hình của phim. Tên và năm đọc từ tên file. Không gọi dịch vụ ngoài.",
+          "options": [
+            {
+              "id": "local-art",
+              "label": "Ảnh có sẵn cạnh phim / trong file, thiếu thì khung hình",
+              "pros": [
+                "Không cần mạng, không tài khoản, không phí",
+                "Thư mục sắp bằng Radarr/Kodi thường có sẵn poster.jpg"
+              ],
+              "cons": [
+                "Thư mục không có poster thì Grid là khung hình, kém đẹp hơn Infuse"
+              ],
+              "effort": "M",
+              "recommended": true
+            },
+            {
+              "id": "tmdb",
+              "label": "Tự tải poster từ TMDB theo tên phim",
+              "pros": [
+                "Đẹp như Infuse, có cả mô tả, diễn viên"
+              ],
+              "cons": [
+                "Cần mạng lúc quét thư viện",
+                "Dùng trong app bán ra phải xin phép dịch vụ đó (giống chuyện phụ đề)",
+                "Đoán sai phim thì phải sửa tay"
+              ],
+              "effort": "L"
+            }
+          ],
+          "tech": "Thứ tự: poster.jpg|folder.jpg|<tên phim>-poster.jpg → attachment cover trong MKV / covr trong MP4 → khung hình ở 10% thời lượng. Metadata Plex (poster, năm, summary) cache vào thư mục phim khi tải về để offline vẫn đủ.",
+          "tasks": [
+            "Thứ tự lấy poster — FS-23.05 §1"
+          ]
+        },
+        {
+          "id": "D7",
+          "title": "Màn Movies mặc định là Grid poster hay List?",
+          "importance": "minor",
+          "image": "d7.svg",
+          "why": "Grid đẹp và nhiều phim một màn; List hiện được cỡ file, thời lượng, phụ đề — hữu ích lúc dọn dung lượng.",
+          "proposal": "Mặc định Grid poster dọc 2:3, dưới là tên + năm; đổi sang List trong menu ⋯ (nhớ lựa chọn). Search ở đầu màn; sort trong ⋯: Recently Added, Title, Year, Recently Watched.",
+          "options": [
+            {
+              "id": "grid",
+              "label": "Grid mặc định, List trong ⋯",
+              "pros": [
+                "Giống Infuse",
+                "Thấy nhiều phim một lúc"
+              ],
+              "cons": [
+                "Phải chuyển List mới thấy cỡ file"
+              ],
+              "effort": "S",
+              "recommended": true
+            },
+            {
+              "id": "list",
+              "label": "List mặc định, Grid trong ⋯",
+              "pros": [
+                "Thấy ngay dung lượng"
+              ],
+              "cons": [
+                "Kém giống Infuse, ít phim một màn"
+              ],
+              "effort": "S"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "simpler",
+      "title": "Gọn lại",
+      "intro": "Bớt nút, gom chức năng vào đúng chỗ.",
+      "decisions": [
+        {
+          "id": "D8",
+          "title": "Gộp Audio và Subtitles thành một bảng?",
+          "importance": "important",
+          "image": "d8.svg",
+          "why": "Hai nút cạnh nhau trên thanh điều khiển làm player rối; người dùng thường đổi cả tiếng lẫn phụ đề một lượt.",
+          "proposal": "Một nút \"Audio & Subtitles\", một bảng: phần Audio (danh sách track, Audio Sync) ở trên, phần Subtitles (Primary, Secondary, vị trí, kiểu) ở dưới; Translate… và Import File… nằm trong menu của dòng Secondary.",
+          "options": [
+            {
+              "id": "merge",
+              "label": "Một nút, một bảng",
+              "pros": [
+                "Thanh điều khiển bớt một nút",
+                "Đổi tiếng và phụ đề một chỗ"
+              ],
+              "cons": [
+                "Bảng dài hơn, trên iPhone ngang phải cuộn"
+              ],
+              "effort": "S",
+              "recommended": true
+            },
+            {
+              "id": "keep",
+              "label": "Giữ hai nút, hai bảng",
+              "pros": [
+                "Mỗi bảng ngắn, không cuộn"
+              ],
+              "cons": [
+                "Thêm nút trên player"
+              ],
+              "effort": "S"
+            }
+          ],
+          "tasks": [
+            "Gộp bảng, sửa board *_MovieAudio + *_MovieSubtitles thành *_MovieTracks — docs/design/*/project/"
+          ]
+        },
+        {
+          "id": "D9",
+          "title": "Nút + và menu của từng phim gồm những gì?",
+          "importance": "important",
+          "image": "d9.svg",
+          "why": "Hiện tại + có From a Server / From Files, Retry và Delete nằm ngay trên hàng — nhiều nút, dễ bấm nhầm.",
+          "proposal": "+ chỉ còn hai mục: Add a Source… (thư mục NAS/Files hoặc Plex) và Add Movie Files… (chép thẳng file vào máy). Mọi việc của một phim nằm trong menu giữ lâu / ⋯: Download to iPhone hoặc Remove Download, Mark as Watched, Audio & Subtitles…, Retry khi lỗi. Quản lý nguồn ở Settings › Sources như ảnh.",
+          "options": [
+            {
+              "id": "menu",
+              "label": "+ hai mục, việc của phim vào menu",
+              "pros": [
+                "Màn sạch, chỉ còn poster",
+                "Nguồn phim quản lý cùng chỗ với nguồn ảnh"
+              ],
+              "cons": [
+                "Retry phải mở menu (vẫn có chữ đỏ báo lỗi trên poster)"
+              ],
+              "effort": "M",
+              "recommended": true
+            },
+            {
+              "id": "inline",
+              "label": "Giữ nút Retry/Download trên poster",
+              "pros": [
+                "Một chạm"
+              ],
+              "cons": [
+                "Poster rối, nhiều nút nhỏ"
+              ],
+              "effort": "S"
+            }
+          ],
+          "tasks": [
+            "Menu + và menu phim — FS-23.01 §2–3, board *_Movies"
+          ]
+        }
+      ]
+    }
+  ],
+  "auto": [
+    {
+      "id": "A1",
+      "title": "Stream từ NAS",
+      "choice": "Phát thẳng file trên NAS qua mạng nhà, không chép tạm cả phim; tua tới đâu đọc tới đó.",
+      "why": "Bạn chỉ thấy phim phát ngay.",
+      "tech": "VLCKit mở URL smb:// / sftp:// / https:// WebDAV với thông tin đăng nhập từ Keychain của connection FS-15."
+    },
+    {
+      "id": "A2",
+      "title": "Tải về máy",
+      "choice": "Dùng lại cơ chế chép đã có trong spec: kiểm chỗ trống (cỡ + 1 GB), chép tiếp từ chỗ dở, không vào Photos, không lên iCloud.",
+      "why": "Đã chốt ở spec trước."
+    },
+    {
+      "id": "A3",
+      "title": "Chỗ đang xem và đã xem với Plex",
+      "choice": "Phim từ Plex: chỗ đang xem và dấu đã xem đồng bộ hai chiều với Plex khi có mạng; xem offline thì ghi lại, về nhà gửi lên.",
+      "why": "Giống Infuse; xem dở trên TV nhà thì mở iPhone xem tiếp.",
+      "tech": "Plex timeline/scrobble API; hàng đợi cục bộ khi offline."
+    },
+    {
+      "id": "A4",
+      "title": "Thông tin phim Plex khi tải về",
+      "choice": "Tải kèm poster, ảnh nền, năm, mô tả, thể loại; offline vẫn hiện đủ.",
+      "why": "Bạn đã yêu cầu."
+    },
+    {
+      "id": "A5",
+      "title": "Search",
+      "choice": "Ô search ở đầu màn Movies, tìm theo tên phim, năm, tên file; chạy cả khi offline.",
+      "why": "Chỉ có một cách hợp lý."
+    },
+    {
+      "id": "A6",
+      "title": "Phụ đề từ Plex",
+      "choice": "Phụ đề Plex có sẵn (file .srt cạnh phim trên máy chủ) được tải kèm khi Download, và dùng được khi stream.",
+      "why": "Đi theo mô hình phụ đề đã chốt."
+    },
+    {
+      "id": "A7",
+      "title": "Mac, iPad, Duo",
+      "choice": "Cùng mô hình thư viện; vẽ lại board của 4 thiết bị sau khi chốt.",
+      "why": "Luật design đi cùng code."
+    }
+  ]
+}

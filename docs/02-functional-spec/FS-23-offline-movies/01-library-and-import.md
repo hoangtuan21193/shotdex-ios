@@ -1,70 +1,71 @@
-# FS-23.01 — Kho phim và đưa phim vào
+# FS-23.01 — Thư viện phim: nguồn, stream, tải về
 
-`FS-23.01` · tier A · board `PH_Movies` (1/5), `PH_MoviesAdd` (2/5) — chưa vẽ · cập nhật 2026-10-14
+`FS-23.01` · tier B (Grid) / A (List) · board `PH_Movies` (1/5), `PH_MoviesAdd` (2/5) · cập nhật 2026-10-14
 
-**Một câu:** một danh sách phim nằm trong máy, thêm từ server/Files/Share sheet, mỗi phim thấy cỡ, tiến độ chép,
-chỗ đã xem, phụ đề có sẵn; xoá là trả lại dung lượng.
+**Một câu:** Movies là thư viện chung của mọi nguồn phim — thư mục trên NAS/Files, máy chủ Plex trong nhà, file chép
+thẳng vào máy; ở nhà chạm là xem (stream), phim cần mang đi thì Download, nhìn poster là biết phim nào xem được
+khi không có mạng.
+
+Quyết định: [planboard movies-library](../../../.planboard/movies-library/DECISIONS.md) D1–D3, D6, D7, D9.
 
 ## 1. Lối vào
 
-- Collections › Utilities thêm ô **Movies**, đứng sau Video Projects; dòng giá trị `4 · 12.3 GB`. Ghim được
-  (`utility:` như các tiện ích khác); không ẩn được (luật Utilities, FS-06.01 §6).
-- iPad và Mac: hàng **Movies** trong nhóm Utilities của sidebar (FS-21.01, FS-18.01). Duo ngoài: ô giống iPhone.
-- Biểu tượng: một SF Symbol **khác `film`** (`film` đã là Video Studio, DESIGN.md) — chọn ở board.
-- Intent ghi "chip Movies trong Albums"; Collections không có hàng chip, nên người dùng chốt (2026-10-14) **ô
-  Utilities**, không thêm thành phần mới.
+- Collections › Utilities: ô **Movies** sau Video Projects, dòng giá trị `128 · 3 on iPhone`. Ghim được; không ẩn
+  được (FS-06.01 §6). iPad/Mac: hàng **Movies** trong Utilities của sidebar. Biểu tượng khác `film` (Video Studio).
 
-## 2. Danh sách
+## 2. Nguồn
 
-| Trạng thái | Điều kiện | Hiển thị |
+| Nguồn | Thêm ở | Phim vào thư viện |
 |---|---|---|
-| rỗng | chưa có phim | `No Movies` · "Copy movies from a server or Files to watch them without a connection." · nút **Add Movies** |
-| đang chép | ≥ 1 phim đang vào | hàng đó có thanh tiến độ, `Copying 2.1 of 4.7 GB · 3 min left`, nút ✕ |
-| bình thường | | hàng phim (dưới) |
-| lỗi chép | server mất, file hỏng | hàng giữ phần đã chép, dòng `Can't Reach NAS Home` + **Retry**; không xoá gì tự động |
+| Thư mục trên connection FS-15 (SMB, SFTP, WebDAV) hoặc thư mục Files | + › Add a Source… › Folder | mọi file phim trong thư mục và thư mục con, quét lại khi mở Movies |
+| Máy chủ Plex | + › Add a Source… › Plex | mọi phim/tập trong thư viện Movies và TV của máy chủ ([07](07-plex.md)) |
+| File chép thẳng | + › Add Movie Files… (Files), Share sheet / AirDrop | chép ngay vào máy, coi như đã Download |
 
-- Hàng phim: khung hình 16:9 lấy ở 10% thời lượng (r-sm) · tên · `1:58:20 · 4.7 GB` · ngôn ngữ phụ đề đã có
-  (`EN · VI`) · thanh đã xem dưới khung hình. Xem ≥ 95% → `Watched`, thanh ẩn.
-- Tên hiện ra đọc từ tên file: bỏ phần đuôi kỹ thuật (độ phân giải, codec, nhóm phát hành), giữ tên + năm, hoặc
-  tên + `S01E04`. Người dùng sửa được (Rename); tên file trên đĩa không đổi.
-- Đầu danh sách: `4 Movies · 12.3 GB · 48 GB Free on This Device`.
-- Sắp xếp (menu ⋯): Recently Added (mặc định) · Title · Recently Watched. Select → Delete hàng loạt.
-- Giữ lâu một hàng: Play · Subtitles… · Rename · Delete (cuối, đỏ). Chạm hàng → phát (02).
+- Nguồn liệt kê và gỡ ở **Settings › Sources** (cùng chỗ nguồn ảnh FS-19), nhóm "Movie Sources". Gỡ nguồn: phim
+  stream của nó biến khỏi Movies; phim đã Download ở lại trên máy.
+- Loại file nhận: mp4, m4v, mov, mkv, webm, flv, avi, wmv, ts, m2ts. Phụ đề cùng tên cạnh phim đi theo (03 §5).
+- Quét chỉ đọc tên + cỡ, không đọc nội dung; 1.000 file ≤ 10 s trên NAS gigabit.
 
-## 3. Đưa phim vào
+## 3. Ba trạng thái của một phim
 
-Nút **+** (hoặc Add Movies) mở menu **From a Server…** · **From Files…**. Share sheet/AirDrop đi đường riêng.
+| Trạng thái | Trên poster | Chạm |
+|---|---|---|
+| **Trên máy** | dấu ✓ tròn tối góc trên phải | phát từ máy, cả khi chế độ máy bay |
+| **Đang tải** | thanh cam dưới poster theo tiến độ | phát (stream nếu tới được nguồn, không thì phần đã tải) |
+| **Stream** | không dấu | phát qua mạng nhà; nguồn không tới được → poster mờ, chạm báo `Not available offline. Connect to NAS Home to play.` |
 
-| Nguồn | Cách |
-|---|---|
-| Server FS-15 | mở trình duyệt FS-17.01 ở chế độ **chọn phim**: chỉ thư mục và file phim hiện, chọn nhiều, nút `Add N Movies` |
-| Server, đang duyệt bình thường | giữ lâu một file phim → **Add to Movies**; Select → thanh dưới có **Add to Movies** |
-| Files | bảng chọn tài liệu của hệ thống, chỉ loại phim, chọn nhiều, luôn **sao chép** vào kho |
-| Share sheet / AirDrop | app khai các loại file phim nên hiện trong hàng app của Share sheet và trong "Open with" của AirDrop; hệ thống đưa bản sao, ShotDex chuyển vào kho rồi mở Movies tại phim đó |
+- Lỗi tải: dòng đỏ dưới tên (`Download paused — NAS Home unreachable`); Retry trong menu phim.
 
-- FS-17.01 hôm nay **ẩn video** (chỉ liệt kê ảnh). Đổi: ở chế độ chọn phim và trong menu giữ lâu, file phim được
-  hiện và chọn được; duyệt ảnh bình thường vẫn như cũ.
-- Extension chia sẻ hiện có **không** đổi (chỉ ảnh, không vùng chia sẻ với app — NF-03 §1).
-- **Phụ đề cạnh phim**: file `.srt/.ass/.ssa/.vtt` cùng tên gốc trong cùng thư mục (`Movie.srt`, `Movie.en.srt`,
-  `Movie.vi.forced.srt`) được chép theo; ngôn ngữ đọc từ đuôi tên, không có thì đoán từ nội dung.
-- Loại file nhận: mp4, m4v, mov, mkv, webm, flv, avi, wmv, ts, m2ts. Loại khác → `ShotDex can't play this file type.`
-- Cùng file (cỡ + mã băm 64 bit trùng) đã trong kho → `Already in Movies` và không chép lần hai.
+## 4. Màn Movies
 
-## 4. Chép
+- **Grid** mặc định: poster dọc 2:3, dưới là tên (1 dòng) + năm; iPhone 3 cột, iPad/Mac/Duo trong theo bề rộng
+  (thêm cột, không phóng to). **List** trong ⋯: khung 16:9 · tên (năm) · thời lượng · cỡ · nguồn hoặc `On iPhone` ·
+  ngôn ngữ phụ đề. Lựa chọn Grid/List nhớ lại.
+- Đầu màn: ô **Search** (tên, năm, tên file; chạy offline) và hàng lọc **All · On This iPhone · Unwatched**.
+  Chữ theo thiết bị: `On This iPad`, `On This Mac`, `Download to iPad`… (mọi chỗ ghi "iPhone" trong spec này).
+- ⋯: Grid/List · Sort (**Recently Added** mặc định · Title · Year · Recently Watched) · Select.
+- Dòng phụ dưới tiêu đề: `128 movies · 3 on this iPhone`; dung lượng (`21.4 GB · 48 GB free`) ở cuối danh sách khi cuộn hết.
+- Poster: Plex → poster của Plex; thư mục → `poster.jpg`/`folder.jpg`/`<tên>-poster.jpg` cạnh phim, ảnh bìa nhúng
+  trong MKV/MP4, thiếu thì khung hình ở 10% thời lượng. Tên + năm: Plex, không thì đọc từ tên file
+  (`Dune.Part.Two.2024.2160p…` → `Dune Part Two` · `2024`); `S01E04` cho tập phim. Rename sửa được tên hiện.
+- Rỗng: `No Movies` · "Add a folder on your NAS or a Plex server, or copy movie files to this iPhone." · **Add a Source**.
 
-- Một phim một lúc, theo hàng đợi; chép theo khối 1 MB vào file tạm cạnh kho, đổi tên thật khi đủ byte.
-- Trước mỗi phim: cỡ file + 1 GB phải còn trống. Thiếu → `Not enough space on this device — about 3.2 GB needed.`,
-  phim đó không bắt đầu, hàng đợi dừng.
-- Mất server giữa chừng → giữ phần đã chép; Retry hoặc mở lại app **chép tiếp từ byte đã có**, không chép lại.
-- Rời app: iOS 26 xin tác vụ xử lý tiếp tục như Backup (FS-22.02 §3), tiến độ hiện ở giao diện của hệ thống;
-  trước iOS 26 chép tới khi hệ thống dừng app, mở lại thì chạy tiếp.
-- Xong một phim: kiểm cỡ đúng bằng nguồn, tính mã băm, lấy khung hình, đọc thời lượng + danh sách track. Phim
-  không đọc được → hàng `Can't Play This File` + Delete; không tự xoá.
-- Kho nằm trong vùng dữ liệu của app, **đánh dấu không sao lưu**; không hiện trong app Files; không qua Photos.
+## 5. Nút + và menu phim
 
-## 5. Xoá và dung lượng
+- **+**: `Add a Source…` (Folder on a Server or Files · Plex Server) · `Add Movie Files…`. Không còn gì khác.
+- Menu phim (giữ lâu, hoặc ⋯ trên poster khi rê chuột ở Mac/iPad): **Play** · **Download to iPhone** /
+  **Remove Download** · **Mark as Watched/Unwatched** · **Audio & Subtitles…** · **Rename** · **Retry Download**
+  (chỉ khi lỗi) · **Remove from Movies** (chỉ phim chép thẳng; xoá file khỏi máy, alert 2 nút).
+- Select (⋯): chọn nhiều → Download · Remove Download · Mark as Watched.
 
-- Delete hỏi bằng alert 2 nút: `Delete “Dune Part Two”?` · "This removes the movie and its subtitles from this
-  device and frees 4.7 GB." · **Delete** / Cancel. Không có Undo — file đã xoá.
-- Xoá phim xoá luôn phụ đề tải về và bản dịch của nó; không đụng file gốc trên server/Files.
-- Hết bộ nhớ hệ thống không bao giờ làm ShotDex tự xoá phim (NF-02: chỉ xoá cache của ShotDex).
+## 6. Tải về (Download)
+
+- Một phim một lúc theo hàng đợi; khối 1 MB vào `.part`, đổi tên khi đủ byte; trước mỗi phim cần cỡ + 1 GB trống,
+  thiếu → `Not enough space on this device — about 3.2 GB needed.`, không bắt đầu.
+- Mất nguồn giữa chừng → giữ phần đã tải, chạy tiếp từ byte đã có khi tới lại được. Rời app: iOS 26 xin tác vụ xử
+  lý tiếp tục như Backup (FS-22.02 §3); trước 26 chạy tiếp khi mở lại app.
+- Tải kèm: phụ đề cạnh phim, poster/thông tin (Plex: poster, ảnh nền, năm, mô tả, thể loại).
+- Kho trong vùng dữ liệu của app, **không sao lưu**, không qua Photos, không hiện trong Files.
+- **Remove Download**: alert 2 nút `Remove Download?` · "The movie stays on NAS Home. This frees 6.1 GB." · Remove /
+  Cancel; phim quay về Stream, giữ chỗ đang xem; phụ đề đã dịch giữ lại (nhỏ, khó làm lại).
+- Hết bộ nhớ hệ thống không bao giờ làm ShotDex tự xoá phim đã tải (NF-02).

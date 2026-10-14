@@ -503,7 +503,7 @@
    "y": 5410,
    "w": 1440,
    "h": 900,
-   "title": "Mac · Movies — Utilities › Movies: lưới thẻ 16:9, đang chép + Stop, lỗi + Retry, đã xem; ô thả file từ Finder; Add Movies › From a Server… / From Finder… (tweak menu) — FS-23.01, đề xuất 14/10, code chưa có",
+   "title": "Mac · Movies — thư viện chung (NAS, Plex, trên máy): Grid poster 2:3 tên + năm, 7 cột; ✓ = trên máy, thanh cam = đang tải, đỏ = tải dừng, không dấu = stream; All · On This Mac · Unwatched, Grid/List + Sort, Search, + (Add a Source… / Add Movie Files…); tweak list / away / menu (chuột phải Perfect Days) / addMenu — FS-23.01, planboard 14/10",
    "radius": 16
   },
   "MAC_MoviesAdd.dc.html": {
@@ -511,7 +511,7 @@
    "y": 5410,
    "w": 1440,
    "h": 900,
-   "title": "Mac · Sheet Choose Movies trên NAS Home: bảng chỉ thư mục + file phim, phụ đề cùng tên đi theo, Add 2 Movies · 9.3 GB — FS-23.01 §3, đề xuất 14/10, code chưa có",
+   "title": "Mac · Sheet Add a Source: Folder (NAS Home, Office SFTP, Choose Folder in Finder…) hoặc Media Server (Plex Server) — FS-23.01 §2, planboard 14/10",
    "radius": 16
   },
   "MAC_MoviePlayer.dc.html": {
@@ -519,15 +519,15 @@
    "y": 5410,
    "w": 1440,
    "h": 900,
-   "title": "Mac · Cửa sổ player: HUD kính hiện khi rê chuột (Space, ←/→ 10 s, F, ⌘W), hai phụ đề nâng trên HUD; tweak chrome tắt → phụ đề hạ — FS-23.02, đề xuất 14/10, code chưa có",
+   "title": "Mac · Cửa sổ player: HUD kính khi rê chuột (Space, ←/→ 10 s, F, ⌘W), một nút Audio & Subtitles; hai phụ đề nâng trên HUD; tweak chrome tắt → phụ đề hạ — FS-23.02, planboard 14/10",
    "radius": 16
   },
-  "MAC_MovieSubtitles.dc.html": {
+  "MAC_MovieTracks.dc.html": {
    "x": 19500,
    "y": 5410,
    "w": 1440,
    "h": 900,
-   "title": "Mac · Inspector phụ đề 360 bên phải player: Primary/Secondary, 3 vị trí, cỡ/màu/lệch giờ, Import File… · Translate…, thả file phụ đề — FS-23.03 §2, đề xuất 14/10, code chưa có",
+   "title": "Mac · Inspector Audio & Subtitles 360 bên phải player: Audio (5 track, Default, ✓, Audio Sync, đường ra) rồi Subtitles (Primary, Secondary, vị trí, kiểu, thả file); tweak secmenu = menu Secondary có Translate…/Import File… — FS-23.02 §3b, 03 §2, planboard 14/10",
    "radius": 16
   },
   "MAC_MovieTranslate.dc.html": {
@@ -535,7 +535,7 @@
    "y": 5410,
    "w": 1440,
    "h": 900,
-   "title": "Mac · Translate trong inspector: From · To · Using, gửi đi đâu; tweak running = 412/1,380 + Cancel — FS-23.04, đề xuất 14/10, code chưa có",
+   "title": "Mac · Translate trong inspector (← Audio and Subtitles): From · To · Using, gửi đi đâu; tweak running = 412/1,380 + Cancel — FS-23.04, planboard 14/10",
    "radius": 16
   },
   "MAC_MovieSubtitleAdd.dc.html": {
@@ -543,15 +543,15 @@
    "y": 5410,
    "w": 1440,
    "h": 900,
-   "title": "Mac · Sheet Add Subtitle to… (Share/AirDrop hoặc thả .srt lên Movies): phim trùng tên lên đầu — FS-23.03 §5, đề xuất 14/10, code chưa có",
+   "title": "Mac · Sheet Add Subtitle to… (Share/AirDrop hoặc thả .srt lên Movies): phim trùng tên lên đầu — FS-23.03 §5, planboard 14/10",
    "radius": 16
   },
-  "MAC_MovieAudio.dc.html": {
+  "MAC_PlexSignIn.dc.html": {
    "x": 24060,
    "y": 5410,
    "w": 1440,
    "h": 900,
-   "title": "Mac · Bảng âm thanh 360 bên phải player: mọi track (ngôn ngữ · codec · kênh, Default, ✓ đang phát), Audio Sync, đường ra; nút Audio trên HUD đang bật — FS-23.02 §3b, đề xuất 14/10, code chưa có",
+   "title": "Mac · Sheet Sign In to Plex: mã K7Q2 ở plex.tv/link, Open plex.tv/link — FS-23.07 §1, planboard 14/10",
    "radius": 16
   },
   "MAC_SettingsAI.dc.html": {
@@ -636,12 +636,12 @@
   "MAC_Movies.dc.html",
   "MAC_MoviesAdd.dc.html",
   "MAC_MoviePlayer.dc.html",
-  "MAC_MovieSubtitles.dc.html",
+  "MAC_MovieTracks.dc.html",
   "MAC_MovieTranslate.dc.html",
   "MAC_MovieSubtitleAdd.dc.html",
   "MAC_SettingsAI.dc.html",
   "MAC_SettingsAIProvider.dc.html",
-  "MAC_MovieAudio.dc.html"
+  "MAC_PlexSignIn.dc.html"
  ],
  "notes": {
   "row_lib": {

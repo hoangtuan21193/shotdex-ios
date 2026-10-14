@@ -46,7 +46,7 @@ Danh tính là **khoá chứng thực của bản cài** — gỡ app là mất.
 - Upload **không** gỡ vị trí (lựa chọn metadata của FS-08.06 là luật của chia sẻ và xuất): đây là bản lưu trữ của chính người
   dùng, gỡ toạ độ là làm hỏng bản gốc.
 
-## 2c. Ngoại lệ thứ ba — AI do người dùng chọn
+## 2c. Ngoại lệ thứ ba — AI và Plex do người dùng chọn
 
 Người dùng tự thêm một nhà cung cấp AI ngoài máy ([FS-08.07](../02-functional-spec/FS-08-settings/07-ai-providers.md))
 và tự chọn nó cho một việc.
@@ -55,6 +55,7 @@ và tự chọn nó cho một việc.
 |---|---|
 | dịch phụ đề ([FS-23.04](../02-functional-spec/FS-23-offline-movies/04-ai-translation.md)): chữ phụ đề, tên phim, hai ngôn ngữ — tới cloud hoặc máy chủ trong nhà | file phim, tên file, đường dẫn, ảnh, metadata ảnh |
 | AI Search: câu tìm + vốn từ thư viện — **chỉ** tới máy chủ trong nhà | bất cứ gì tới cloud |
+| Plex ([FS-23.07](../02-functional-spec/FS-23-offline-movies/07-plex.md)): đăng nhập qua plex.tv, đọc thư viện/file và đồng bộ chỗ xem với máy chủ Plex của người dùng | ảnh, metadata ảnh, phim không phải từ Plex |
 
 - Yêu cầu đi thẳng từ máy tới dịch vụ bằng key của người dùng; ShotDex không có máy chủ ở giữa.
 - Key ở Keychain, chỉ trên máy này; không vào database, log, thông báo lỗi.

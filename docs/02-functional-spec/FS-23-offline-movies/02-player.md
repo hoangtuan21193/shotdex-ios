@@ -40,19 +40,19 @@ Giữ đúng bộ của FS-02.02 §3–§4 (cụm giữa + kính hai hàng, gi�
 | trên | ✕ · tên phim (một dòng, cắt giữa) · nút PiP |
 | giữa | −10 s / phát-dừng / +10 s, 56 / 68 / 56 pt |
 | hàng 1 | phát-dừng · đã qua · thanh tua · còn lại |
-| hàng 2 (44 pt mỗi nút) | tốc độ · **Audio** · **Subtitles** (CC) · Fit/Fill · khoá chạm |
+| hàng 2 (44 pt mỗi nút) | tốc độ · **Audio & Subtitles** · Fit/Fill · khoá chạm |
 
 - Tốc độ: 0.5 · 0.75 · 1 · 1.25 · 1.5 · 2×; nhớ theo từng phim.
-- **Audio**: mở bảng âm thanh (§3b). Phim chỉ có một track thì nút vẫn mở được (còn Audio Sync).
-- **Subtitles**: mở bảng phụ đề (03 §2).
+- **Audio & Subtitles**: mở **một** bảng (§3b) — phần Audio ở trên, phần Subtitles (03 §2) ở dưới (planboard D8).
 - **Fit/Fill**: vừa khung (có viền đen) ↔ lấp khung (cắt mép); pinch ra/vào làm cùng việc.
 - **Khoá chạm**: chạm màn chỉ hiện nút mở khoá — để trên máy bay chạm nhầm không tua. Mac không có (không có chạm).
 - Cử chỉ: chạm bật/tắt chrome; chạm đúp nửa trái/phải = −10 s/+10 s; kéo thanh tua có ảnh khung xem trước khi
   engine cung cấp được, không thì chỉ giờ.
 
-## 3b. Bảng âm thanh
+## 3b. Bảng Audio & Subtitles — phần Audio
 
-Cùng vật chứa với bảng phụ đề (03 §2): ngang = bảng phải 372pt, dọc = sheet nửa màn; phim vẫn chạy.
+Một bảng cho cả tiếng và phụ đề: máy ngang = bảng phải 372pt (cuộn), dọc = sheet nửa màn; phim vẫn chạy. Mở cả từ
+menu phim › Audio & Subtitles…. Phần Audio trước, phần Subtitles sau (03 §2).
 
 - Danh sách **mọi track âm thanh** của file. Mỗi hàng: ngôn ngữ (tên bằng chính thứ tiếng đó) · tên track nếu file có
   (`Commentary`, `Director's Cut`) · codec · số kênh (`Stereo`, `5.1`, `7.1`) · nhãn `Default` cho track file đặt
@@ -80,6 +80,6 @@ Cùng vật chứa với bảng phụ đề (03 §2): ngang = bảng phải 372p
 
 ## 5. Truy cập
 
-- Mọi nút có nhãn VoiceOver (`Subtitles: English and Vietnamese`, `Audio: English AC3 5.1`); thanh tua là
+- Mọi nút có nhãn VoiceOver (`Audio and Subtitles: English AC3 5.1, English and Vietnamese subtitles`); thanh tua là
   control điều chỉnh được, mỗi bước 10 s.
 - Chữ phụ đề theo cỡ chữ người dùng chọn trong bảng phụ đề, không theo Dynamic Type (đè lên hình).

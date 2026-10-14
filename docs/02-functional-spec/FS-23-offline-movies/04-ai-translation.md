@@ -7,7 +7,7 @@ từng mốc giờ, làm xong trước khi lên máy bay và giữ lại để x
 
 ## 1. Sheet Translate
 
-Mở từ nút **Translate…** của bảng phụ đề (03 §2).
+Mở từ menu dòng **Secondary** trong bảng Audio & Subtitles (03 §2) › Translate….
 
 | Ô | Mặc định | Ghi chú |
 |---|---|---|

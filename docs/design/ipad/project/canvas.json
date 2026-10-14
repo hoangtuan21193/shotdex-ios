@@ -977,42 +977,35 @@
   },
   "IP_Movies.dc.html": {
    "h": 1032,
-   "title": "iPad · Movies 1/5 · Utilities › Movies trong sidebar: lưới thẻ 16:9 ba cột như Video Projects; thẻ đang chép (thanh + Stop), lỗi + Retry, đã xem; dòng đầu số phim · dung lượng · còn trống; ⋯ và + trên toolbar — FS-23.01, đề xuất 14/10, code chưa có",
+   "title": "iPad · Movies 1/5 · thư viện chung (NAS, Plex, trên máy): Grid poster 2:3 bảy cột, tên + năm, ✓ = trên iPad, thanh cam = đang tải, đỏ = tải dừng, không dấu = stream; Search, All · On This iPad · Unwatched; ⋯ và +; tweak list (bảng có thời lượng · cỡ · phụ đề) / away (xa nhà, phim stream mờ 42%) / menu (menu phim Perfect Days) — FS-23.01, planboard 14/10",
    "w": 1376,
    "x": 84448,
    "y": 560
   },
   "IP_MoviesAdd.dc.html": {
    "h": 1032,
-   "title": "iPad · Movies 2/5 · + › From a Server…: form sheet 700×640 chọn phim trên NAS Home (chỉ thư mục và file phim), phụ đề cùng tên đi theo, Add 2 Movies · 9.3 GB — FS-23.01 §3, đề xuất 14/10, code chưa có",
+   "title": "iPad · Movies 2/5 · + › Add a Source…: form sheet 700, Folder (NAS Home, Office SFTP, Files) hoặc Media Server (Plex Server), hai dòng chân — FS-23.01 §2, planboard 14/10",
    "w": 1376,
    "x": 85904,
    "y": 560
   },
   "IP_MoviePlayer.dc.html": {
    "h": 1032,
-   "title": "iPad · Movies 3/5 · Player toàn màn: phim 16:9 có viền đen, transport như FS-02.02 (✕ · tên · PiP, −10/phát/+10, kính hai hàng nằm trong viền đen) + Audio · Subtitles · Fit · Khoá; hai phụ đề, phụ vàng ở trên; tweak chrome — FS-23.02, đề xuất 14/10, code chưa có",
+   "title": "iPad · Movies 3/5 · Player toàn màn: phim 16:9 có viền đen, transport như FS-02.02 (✕ · tên · PiP, −10/phát/+10, kính hai hàng trong viền đen) + một nút Audio & Subtitles (thay Audio + CC) · Fit · Khoá; hai phụ đề, phụ vàng ở trên; tweak chrome — FS-23.02, planboard 14/10",
    "w": 1376,
    "x": 87360,
    "y": 560
   },
-  "IP_MovieSubtitles.dc.html": {
-   "h": 1032,
-   "title": "iPad · Movies 4/5 · Bảng phụ đề 400 bên phải trên phim đang chạy: Primary, Secondary, 3 vị trí, kiểu từng dòng, Import File… · Translate…; phụ đề dồn vào phần hình còn thấy — FS-23.03 §2, đề xuất 14/10, code chưa có",
-   "w": 1376,
-   "x": 88816,
-   "y": 560
-  },
   "IP_MovieTranslate.dc.html": {
    "h": 1032,
-   "title": "iPad · Movies 5/5 · Translate trong bảng phải: From · To · Using, dòng nói rõ gửi đi đâu; tweak running = đang dịch 412/1,380 + Cancel — FS-23.04, đề xuất 14/10, code chưa có",
+   "title": "iPad · Movies 5/5 · Translate trong bảng phải (quay về Audio and Subtitles): From · To · Using, dòng nói rõ gửi đi đâu; tweak running = đang dịch 412/1,380 + Cancel — FS-23.04, planboard 14/10",
    "w": 1376,
    "x": 90272,
    "y": 560
   },
   "IP_MovieSubtitleAdd.dc.html": {
    "h": 1032,
-   "title": "iPad · Movies · Share/AirDrop file .srt → form sheet Add Subtitle to…: chọn phim, phim trùng tên lên đầu — FS-23.03 §5, đề xuất 14/10, code chưa có",
+   "title": "iPad · Movies · Share/AirDrop file .srt → form sheet Add Subtitle to…: chọn phim, phim trùng tên lên đầu — FS-23.03 §5, planboard 14/10",
    "w": 1376,
    "x": 93184,
    "y": 560
@@ -1031,9 +1024,16 @@
    "x": 96096,
    "y": 560
   },
-  "IP_MovieAudio.dc.html": {
+  "IP_MovieTracks.dc.html": {
    "h": 1032,
-   "title": "iPad · Bảng âm thanh 400 bên phải trên phim đang chạy (cùng vật chứa với bảng phụ đề): 5 track, ✓ track đang phát, nhãn Default, Audio Sync − 0.00 s +, dòng chân đường ra — FS-23.02 §3b, đề xuất 14/10, code chưa có",
+   "title": "iPad · Movies 4/5 · Audio & Subtitles một bảng 400 bên phải trên phim đang chạy: Audio (5 track, ✓, Default, Audio Sync, đường ra) rồi Subtitles (Primary, Secondary, Position, kiểu); vừa hết không cần cuộn; tweak secmenu = menu dòng Secondary có Translate…/Import File… — FS-23.02 §3b, 03 §2, planboard 14/10",
+   "w": 1376,
+   "x": 88816,
+   "y": 560
+  },
+  "IP_PlexSignIn.dc.html": {
+   "h": 1032,
+   "title": "iPad · Movies · Sign In to Plex: form sheet 700, mã K7Q2 ở plex.tv/link, Open plex.tv/link — FS-23.07 §1, planboard 14/10",
    "w": 1376,
    "x": 91728,
    "y": 560
@@ -1177,9 +1177,9 @@
   "IP_Movies.dc.html",
   "IP_MoviesAdd.dc.html",
   "IP_MoviePlayer.dc.html",
-  "IP_MovieSubtitles.dc.html",
+  "IP_MovieTracks.dc.html",
   "IP_MovieTranslate.dc.html",
-  "IP_MovieAudio.dc.html",
+  "IP_PlexSignIn.dc.html",
   "IP_MovieSubtitleAdd.dc.html",
   "IP_SettingsAI.dc.html",
   "IP_SettingsAIProvider.dc.html"
