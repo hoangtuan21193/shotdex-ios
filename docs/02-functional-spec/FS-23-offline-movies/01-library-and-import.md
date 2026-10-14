@@ -43,7 +43,9 @@ Quyết định: [planboard movies-library](../../../.planboard/movies-library/D
   ngôn ngữ phụ đề. Lựa chọn Grid/List nhớ lại.
 - Đầu màn: ô **Search** (tên, năm, tên file; chạy offline) và hàng lọc **All · On This iPhone · Unwatched**.
   Chữ theo thiết bị: `On This iPad`, `On This Mac`, `Download to iPad`… (mọi chỗ ghi "iPhone" trong spec này).
-- ⋯: Grid/List · Sort (**Recently Added** mặc định · Title · Year · Recently Watched) · Select.
+- ⋯: Grid/List · Sort (**Recently Added** mặc định · Title · Year · Recently Watched) · Select. Year: mới trước, không năm
+  xuống cuối; Recently Watched: chưa xem bao giờ xuống cuối; Title: đọc số như người (Film 9 trước Film 10), tập theo
+  mùa/tập. Search: mọi từ phải khớp, bỏ hoa-thường và dấu (`do thi` tìm ra `Đô Thị`), tìm cả `S02E04`.
 - Dòng phụ dưới tiêu đề: `128 movies · 3 on this iPhone`; dung lượng (`21.4 GB · 48 GB free`) ở cuối danh sách khi cuộn hết.
 - Poster: Plex → poster của Plex; thư mục → `<tên>-poster.jpg`, rồi `poster.jpg`/`folder.jpg` (chỉ khi thư mục có đúng một phim) cạnh phim, ảnh bìa nhúng
   trong MP4; thiếu thì **ô chữ** (nền màu theo tên, ghi tên + năm). Khung hình thật (10% thời lượng) và ảnh bìa
