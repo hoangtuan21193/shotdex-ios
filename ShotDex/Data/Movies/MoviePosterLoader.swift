@@ -84,6 +84,9 @@ actor MoviePosterLoader {
     }
 
     private func fetch(_ movie: Movie) async -> Data? {
+        if let sourceId = movie.sourceId, let source = try? movies.source(id: sourceId), source.kind == .plex {
+            return await fetchFromPlex(movie, source: source)
+        }
         guard let sourceId = movie.sourceId, let source = try? movies.source(id: sourceId),
               source.kind == .folder, let connectionId = source.connectionId,
               let (client, gate) = await connection(connectionId) else { return nil }
@@ -103,6 +106,19 @@ actor MoviePosterLoader {
             }
         }
         return nil
+    }
+
+    /// Plex's 480×720 poster (S3 §4), the token in a header.
+    private func fetchFromPlex(_ movie: Movie, source: MovieSource) async -> Data? {
+        guard let path = movie.posterPath, let base = source.plexAddress.flatMap(URL.init(string:)),
+              let token = movies.plexToken(for: source.id),
+              let url = URL(string: path, relativeTo: base) else { return nil }
+        var request = URLRequest(url: url)
+        request.timeoutInterval = 15
+        PlexClient().authorize(&request, token: token)
+        guard let (data, response) = try? await URLSession.shared.data(for: request),
+              (response as? HTTPURLResponse)?.statusCode == 200, data.count <= Self.maxImageBytes else { return nil }
+        return data
     }
 
     private func connection(_ id: String) async -> (any RemoteFileClient, AsyncGate)? {
