@@ -158,6 +158,9 @@ final class WebDAVFileClient: NSObject, RemoteFileClient, URLSessionDelegate, UR
         return file.offset
     }
 
+    /// Plain HTTP requests: any number at once.
+    var allowsConcurrentReads: Bool { true }
+
     func readRange(_ path: String, offset: Int64, length: Int) async throws -> Data {
         var get = request("GET", url(path))
         get.setValue("bytes=\(offset)-\(offset + Int64(length) - 1)", forHTTPHeaderField: "Range")

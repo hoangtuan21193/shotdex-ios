@@ -150,7 +150,7 @@ import Testing
         let model = MoviePlayerModel(
             movie: movie, player: engine, store: store, subtitleLanguages: ["en"],
             subtitleLoader: MovieSubtitleLoader(files: files),
-            embeddedSubtitles: { await extractor.extract(movie: movie, source: stream, isLocal: false, localURL: nil) }
+            embeddedSubtitles: { listed in await extractor.extract(movie: movie, source: stream, isLocal: false, localURL: nil, listed: listed) }
         )
         return (model, engine, store)
     }
@@ -181,5 +181,88 @@ import Testing
         #expect(engine.embeddedSubtitleIndex == 0)
         await model.selectSubtitle(nil, for: .primary)
         #expect(engine.embeddedSubtitleIndex == nil)
+    }
+
+    /// A home network answers each read in tens of milliseconds and a long
+    /// movie has a thousand lines: the blocks the Cues name are fetched
+    /// several at a time, and the text is the same as one by one.
+    @Test func cueBlocksFetchedInParallel() async throws {
+        let slow = SlowSource(inner: try source("mm-zlib.mkv"), delay: .milliseconds(15), width: 8)
+        let reader = MatroskaSubtitleReader(source: slow)
+        let tracks = try await reader.readTracks()
+        let result = try await reader.extract(Set(tracks.map(\.number)), walkWithoutCues: false)
+        let srt = try #require(tracks.first { $0.format == .srt })
+        same(SubtitleParser.parse(try #require(result.texts[srt.number]), format: .srt), try original("en.srt", .srt))
+        #expect(slow.mostInFlight > 1)
+        #expect(slow.mostInFlight <= 8)
+    }
+
+    /// The tracks reach the menus as soon as the header is read — before
+    /// their text, which VLC draws until it arrives.
+    @Test func tracksListedBeforeTheirText() async throws {
+        let data = try Data(contentsOf: Self.folder.appending(path: "mm-zlib.mkv"))
+        let nas = InMemoryRemoteFileClient()
+        nas.put("Movies/Film.mkv", data)
+        let stream = RemoteMovieStream(client: nas, path: "Movies/Film.mkv", size: Int64(data.count))
+        let store = MovieStore(database: try AppDatabase.makeEmpty(), plexTokens: InMemoryPasswordStore())
+        let files = MovieFileStore(root: FileManager.default.temporaryDirectory.appending(path: "embedded-\(UUID().uuidString)"))
+        let movie = Movie(sourceId: nil, title: "Film", originalFileName: "Film.mkv", byteCount: Int64(data.count), state: .stream, addedAt: 0)
+        try store.add(movie)
+        let early = Box<[EmbeddedSubtitleExtractor.Found]>([])
+
+        let found = await EmbeddedSubtitleExtractor(store: store, files: files)
+            .extract(movie: movie, source: stream, isLocal: false, localURL: nil) { early.value = $0 }
+
+        #expect(early.value.count == 2)
+        #expect(early.value.allSatisfy { $0.isReading && $0.document == nil })
+        #expect(found.allSatisfy { !$0.isReading && $0.document != nil })
+        #expect(early.value.map(\.subtitle.id) == found.map(\.subtitle.id))
+    }
+
+    /// While the text is read the track says so, and VLC draws it.
+    @Test func readingTrackIsDrawnByVLC() async throws {
+        let (model, engine, _) = try streamedModel("mm-zlib.mkv")
+        let english = Box<String?>(nil)
+        model.onEmbeddedListed = {
+            english.value = model.subtitles.first { $0.language == "en" }.map(model.subtitleTitle)
+            #expect(engine.embeddedSubtitleIndex != nil)
+        }
+        await model.loadSubtitles()
+        #expect(english.value == "English · In File (Reading…)")
+        #expect(engine.embeddedSubtitleIndex == nil)
+    }
+}
+
+private final class Box<Value>: @unchecked Sendable {
+    var value: Value
+    init(_ value: Value) { self.value = value }
+}
+
+/// A source that answers after `delay` and counts reads in flight.
+private final class SlowSource: MovieByteSource, @unchecked Sendable {
+    let inner: FileByteSource
+    let delay: Duration
+    let width: Int
+    private let lock = NSLock()
+    private var inFlight = 0
+    private(set) var mostInFlight = 0
+
+    init(inner: FileByteSource, delay: Duration, width: Int) {
+        self.inner = inner
+        self.delay = delay
+        self.width = width
+    }
+
+    var size: Int64 { inner.size }
+    var concurrentReads: Int { width }
+
+    func read(offset: Int64, length: Int) async throws -> Data {
+        lock.withLock {
+            inFlight += 1
+            mostInFlight = max(mostInFlight, inFlight)
+        }
+        try await Task.sleep(for: delay)
+        defer { lock.withLock { inFlight -= 1 } }
+        return try await inner.read(offset: offset, length: length)
     }
 }

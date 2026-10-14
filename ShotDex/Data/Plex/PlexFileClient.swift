@@ -43,6 +43,9 @@ final class PlexFileClient: RemoteFileClient, @unchecked Sendable {
         return http.expectedContentLength > 0 ? http.expectedContentLength : nil
     }
 
+    /// Plain HTTP requests: any number at once.
+    var allowsConcurrentReads: Bool { true }
+
     func readRange(_ path: String, offset: Int64, length: Int) async throws -> Data {
         guard length > 0 else { return Data() }
         var request = request(path)

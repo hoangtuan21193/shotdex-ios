@@ -2,6 +2,10 @@ import CoreGraphics
 import Foundation
 import Observation
 
+/// Reads the movie file's own subtitle tracks; the closure it is handed
+/// gets them once listed, before their text (FS-23.03 §3).
+typealias EmbeddedSubtitles = @Sendable (_ listed: @escaping @Sendable ([EmbeddedSubtitleExtractor.Found]) async -> Void) async -> [EmbeddedSubtitleExtractor.Found]
+
 /// One playback (FS-23.02): mirrors the engine's state for the screen and
 /// owns the transport — chrome, touch lock, skips, speed (§3).
 @MainActor
@@ -65,11 +69,14 @@ final class MoviePlayerModel {
     private let subtitleLoader: MovieSubtitleLoader?
     private let rememberStyle: (MovieSubtitleStyle) -> Void
     /// Pulls the file's own subtitle tracks out (FS-23.03 §3).
-    private let embeddedSubtitles: (@Sendable () async -> [EmbeddedSubtitleExtractor.Found])?
+    private let embeddedSubtitles: EmbeddedSubtitles?
     /// Text read out of the movie file, by subtitle id.
     @ObservationIgnored private var embeddedDocuments: [String: SubtitleDocument] = [:]
     /// In-file subtitles only VLC can draw, by id → their place in the file.
     private(set) var engineSubtitles: [String: Int] = [:]
+    /// In-file subtitles whose text is still being read: VLC draws them
+    /// meanwhile.
+    private(set) var readingSubtitles: Set<String> = []
     private let isFirstOpen: Bool
     private let subtitleImporter: (@Sendable ([URL]) throws -> SubtitleImporter.Result)?
     /// Translate (FS-23.04): the app-wide runs, and how to reach a provider.
@@ -104,7 +111,7 @@ final class MoviePlayerModel {
         defaultSubtitleStyle: MovieSubtitleStyle = MovieSubtitleStyle(),
         rememberStyle: @escaping (MovieSubtitleStyle) -> Void = { _ in },
         sourceIsFiles: Bool = false,
-        embeddedSubtitles: (@Sendable () async -> [EmbeddedSubtitleExtractor.Found])? = nil,
+        embeddedSubtitles: EmbeddedSubtitles? = nil,
         subtitleImporter: (@Sendable ([URL]) throws -> SubtitleImporter.Result)? = nil,
         translations: MovieTranslations? = nil,
         translationService: TranslationService? = nil,
@@ -410,7 +417,20 @@ final class MoviePlayerModel {
         // The file's own tracks take longer (a stream reads its index over
         // the network, AC-53): they join the menus when ready.
         guard let embeddedSubtitles else { return }
-        let found = await embeddedSubtitles()
+        // The tracks are listed as soon as the header is read; their text
+        // follows.
+        let found = await embeddedSubtitles { [weak self] listed in
+            await self?.takeEmbedded(listed)
+            await self?.onEmbeddedListed?()
+        }
+        guard !found.isEmpty else { return }
+        await takeEmbedded(found)
+    }
+
+    /// For tests: the moment the tracks are listed, before their text.
+    @ObservationIgnored var onEmbeddedListed: (() -> Void)?
+
+    private func takeEmbedded(_ found: [EmbeddedSubtitleExtractor.Found]) async {
         guard !found.isEmpty else { return }
         for item in found {
             if let document = item.document {
@@ -419,6 +439,7 @@ final class MoviePlayerModel {
             } else {
                 engineSubtitles[item.subtitle.id] = item.order
             }
+            if item.isReading { readingSubtitles.insert(item.subtitle.id) } else { readingSubtitles.remove(item.subtitle.id) }
         }
         subtitles = (try? store?.subtitles(movieId: movie.id)) ?? subtitles
         chooseFirstSubtitleIfNew()
@@ -524,6 +545,9 @@ final class MoviePlayerModel {
         guard !hasText(subtitle) else {
             let provider = subtitle.translationProviderId.flatMap { translationService?.name(of: $0) }
             return MovieSubtitleLabel.title(subtitle, fromFiles: sourceIsFiles, providerName: provider)
+        }
+        if readingSubtitles.contains(subtitle.id) {
+            return "\(MovieSubtitleLabel.language(subtitle)) · " + String(localized: "In File (Reading…)", comment: "Subtitle origin: a track in the movie file whose text is still being read; the player draws it meanwhile")
         }
         return "\(MovieSubtitleLabel.language(subtitle)) · " + String(localized: "In File (Download to use as Secondary or translate)", comment: "Subtitle origin: a track in a streamed movie that only the player can draw (AC-55)")
     }

@@ -379,17 +379,17 @@ struct MoviesScreen: View {
     /// Cues over the stream.
     private func embeddedSubtitles(
         _ movie: Movie, isLocal: Bool, url: URL?, source: @escaping @Sendable () throws -> any MovieByteSource
-    ) -> @Sendable () async -> [EmbeddedSubtitleExtractor.Found] {
+    ) -> EmbeddedSubtitles {
         let extractor = EmbeddedSubtitleExtractor(store: dependencies.movies, files: dependencies.movieDownloads.files)
-        return {
+        return { listed in
             guard let bytes = try? source() else { return [] }
-            return await extractor.extract(movie: movie, source: bytes, isLocal: isLocal, localURL: url)
+            return await extractor.extract(movie: movie, source: bytes, isLocal: isLocal, localURL: url, listed: listed)
         }
     }
 
     private func playerModel(
         _ movie: Movie, engine: VLCMoviePlayer, loader: MovieSubtitleLoader,
-        embedded: (@Sendable () async -> [EmbeddedSubtitleExtractor.Found])? = nil, onClose: @escaping () -> Void = {}
+        embedded: EmbeddedSubtitles? = nil, onClose: @escaping () -> Void = {}
     ) -> MoviePlayerModel {
         MoviePlayerModel(
             movie: movie,

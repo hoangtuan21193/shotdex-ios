@@ -47,8 +47,10 @@ vào phần hình còn thấy; máy dọc: sheet nửa màn.
   track SRT/ASS/WebVTT ra file phụ đề của mình, dùng được làm Primary, Secondary và để dịch.
   - Phim **trên máy** (đã Download hoặc chép thẳng): trích ngay khi tải xong.
   - Phim **đang stream**: trích qua bảng chỉ mục (Cues) của file — chỉ đọc các khối phụ đề (~0,5 MB cho phim 3 giờ),
-    chạy nền lần đầu phát hoặc lần đầu mở bảng Audio & Subtitles, giữ lại như phụ đề đã tải. Trong lúc trích, track đó
-    chỉ làm Primary (VLCKit vẽ).
+    chạy nền lần đầu phát hoặc lần đầu mở bảng Audio & Subtitles, giữ lại như phụ đề đã tải. Các track **có trong menu
+    ngay khi đọc xong đầu file** (vài KB); trong lúc trích, track đó ghi `In File (Reading…)` và chỉ làm Primary
+    (VLCKit vẽ). Mỗi dòng phụ đề là một lần đọc nhỏ (phim dài ~1.000 lần): qua HTTP (Plex, WebDAV) và trên máy đọc
+    8 lần cùng lúc, qua SMB/SFTP một lần một (kết nối chỉ làm một việc một lúc).
   - File **không có chỉ mục** cho track đó, hoặc trích quá 15 s: như phim stream trước đây — VLCKit vẽ, chỉ Primary,
     không đôi, không dịch, menu ghi `In File (Download to use as Secondary or translate)`; Download xong thì trích.
   - MP4/M4V/MOV có track chữ (mov_text): đọc bằng AVFoundation khi phim trên máy; stream thì chỉ Primary như trên.

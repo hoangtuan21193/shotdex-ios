@@ -10,6 +10,9 @@ import Foundation
 /// unit test against an in-memory server; the SMB and SFTP clients are thin
 /// adapters over their libraries.
 protocol RemoteFileClient: AnyObject, Sendable {
+    /// Several `readRange` calls may run at once (HTTP); false for a
+    /// connection that does one request at a time (SMB, SFTP).
+    var allowsConcurrentReads: Bool { get }
     func connect() async throws
     func disconnect() async
     /// Size of the file at `path`, nil when nothing is there.
@@ -72,6 +75,8 @@ protocol RemoteFileClient: AnyObject, Sendable {
 }
 
 extension RemoteFileClient {
+    var allowsConcurrentReads: Bool { false }
+
     /// Through `readRange`, `ResumableFile.chunkSize` at a time. Clients
     /// that can keep one read open for the rest of the file override it.
     @discardableResult

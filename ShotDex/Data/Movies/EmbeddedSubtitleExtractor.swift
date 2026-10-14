@@ -5,6 +5,7 @@ import Foundation
 struct FileByteSource: MovieByteSource {
     let url: URL
     let size: Int64
+    var concurrentReads: Int { 8 }
 
     init(url: URL) throws {
         self.url = url
@@ -35,12 +36,20 @@ struct EmbeddedSubtitleExtractor: Sendable {
         var document: SubtitleDocument?
         /// Its place among the file's subtitle tracks, which is VLC's order.
         var order: Int
+        /// Listed before its text is read (the index of a streamed movie
+        /// takes a while): VLC draws it until then.
+        var isReading = false
     }
 
-    func extract(movie: Movie, source: any MovieByteSource, isLocal: Bool, localURL: URL?) async -> [Found] {
+    /// - Parameter listed: the tracks as soon as the file's header is read,
+    ///   before their text — so the menus have them at once.
+    func extract(
+        movie: Movie, source: any MovieByteSource, isLocal: Bool, localURL: URL?,
+        listed: @Sendable ([Found]) async -> Void = { _ in }
+    ) async -> [Found] {
         let ext = (movie.originalFileName as NSString).pathExtension.lowercased()
         if ["mkv", "mk3d", "webm"].contains(ext) {
-            return (try? await matroska(movie: movie, source: source, isLocal: isLocal)) ?? []
+            return (try? await matroska(movie: movie, source: source, isLocal: isLocal, listed: listed)) ?? []
         }
         if ["mp4", "m4v", "mov"].contains(ext), let localURL {
             return (try? await movText(movie: movie, url: localURL)) ?? []
@@ -48,7 +57,7 @@ struct EmbeddedSubtitleExtractor: Sendable {
         return []
     }
 
-    private func matroska(movie: Movie, source: any MovieByteSource, isLocal: Bool) async throws -> [Found] {
+    private func matroska(movie: Movie, source: any MovieByteSource, isLocal: Bool, listed: @Sendable ([Found]) async -> Void) async throws -> [Found] {
         let reader = MatroskaSubtitleReader(source: source)
         let tracks = try await reader.readTracks()
         guard !tracks.isEmpty else { return [] }
@@ -59,14 +68,28 @@ struct EmbeddedSubtitleExtractor: Sendable {
             guard let row = existing.first(where: { $0.inFileTrack == Int(track.number) }) else { return true }
             return row.fileName.isEmpty
         }.map(\.number))
-        let extraction = try await reader.extract(pending, walkWithoutCues: isLocal)
 
-        var found: [Found] = []
+        var early: [Found] = []
         for (order, track) in tracks.enumerated() {
             var row = existing.first { $0.inFileTrack == Int(track.number) }
                 ?? MovieSubtitle(movieId: movie.id, language: MovieLanguage.code(track.language) ?? track.language, origin: .inFile, format: .srt, fileName: "")
             row.inFileTrack = Int(track.number)
             row.format = MovieSubtitle.Format(rawValue: track.format?.rawValue ?? "srt") ?? .srt
+            var document: SubtitleDocument?
+            if !row.fileName.isEmpty, let format = track.format,
+               let data = try? Data(contentsOf: files.directory(for: movie.id).appending(path: row.fileName)) {
+                document = SubtitleParser.parse(String(decoding: data, as: UTF8.self), format: format)
+            }
+            try store.saveSubtitle(row)
+            early.append(Found(subtitle: row, document: document, order: order, isReading: pending.contains(track.number)))
+        }
+        if !pending.isEmpty { await listed(early) }
+
+        let extraction = try await reader.extract(pending, walkWithoutCues: isLocal)
+
+        var found: [Found] = []
+        for (order, track) in tracks.enumerated() {
+            var row = early[order].subtitle
             var document: SubtitleDocument?
             if let text = extraction.texts[track.number], let format = track.format {
                 document = SubtitleParser.parse(text, format: format)
@@ -74,9 +97,8 @@ struct EmbeddedSubtitleExtractor: Sendable {
                     row.fileName = try files.write(Data(text.utf8), named: "infile-\(track.number).\(row.format.rawValue)", for: movie.id)
                     row.encoding = "utf-8"
                 }
-            } else if !row.fileName.isEmpty, let format = track.format,
-                      let data = try? Data(contentsOf: files.directory(for: movie.id).appending(path: row.fileName)) {
-                document = SubtitleParser.parse(String(decoding: data, as: UTF8.self), format: format)
+            } else {
+                document = early[order].document
             }
             try store.saveSubtitle(row)
             found.append(Found(subtitle: row, document: document, order: order))

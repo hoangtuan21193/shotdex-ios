@@ -5,7 +5,14 @@ import Foundation
 /// read range by range (FS-23.03 §3).
 protocol MovieByteSource: Sendable {
     var size: Int64 { get }
+    /// Reads that may be in flight at once: 1 over a connection that does
+    /// one thing at a time (SMB, SFTP), more over HTTP or on the device.
+    var concurrentReads: Int { get }
     func read(offset: Int64, length: Int) async throws -> Data
+}
+
+extension MovieByteSource {
+    var concurrentReads: Int { 1 }
 }
 
 /// A subtitle track inside a Matroska file.
@@ -164,6 +171,17 @@ final class MatroskaSubtitleReader {
         return (head, Array(bytes.dropFirst(idLength + sizeLength)))
     }
 
+    /// The header in `bytes`, read at `position`.
+    private static func header(_ bytes: [UInt8], at position: Int64) -> Header? {
+        guard let (id, idLength, _) = vint(bytes[...], keepMarker: true),
+              bytes.count > idLength,
+              let (size, sizeLength, unknown) = vint(bytes[idLength...], keepMarker: false) else { return nil }
+        return Header(
+            id: UInt32(truncatingIfNeeded: id), size: unknown ? nil : Int64(size), start: position,
+            dataStart: position + Int64(idLength + sizeLength)
+        )
+    }
+
     /// An element's whole data, reusing what the header read brought.
     private func body(_ head: Header, prefetched: [UInt8] = []) async throws -> [UInt8] {
         let size = Int(head.size ?? 0)
@@ -286,14 +304,17 @@ final class MatroskaSubtitleReader {
 
     // MARK: Cues
 
-    /// The tracks it found index entries for.
+    /// The tracks it found index entries for. The index is read first; the
+    /// blocks it names are then fetched `source.concurrentReads` at a time
+    /// (a long movie has a thousand subtitle lines, each its own read — one
+    /// after another over a home network that is minutes) and taken in the
+    /// index's order.
     private func readByCues(_ wanted: Set<UInt64>) async throws -> Set<UInt64> {
         guard let at = seeks[ID.cues], let (head, prefetched) = try await header(at: at), head.id == ID.cues else { return [] }
-        var covered = Set<UInt64>()
-        var clusterData: [Int64: Int64] = [:]
+        var entries: [CueEntry] = []
         for (id, point) in Self.children(try await body(head, prefetched: prefetched)) where id == ID.cuePoint {
             var time: Int64 = 0
-            var entries: [(track: UInt64, cluster: Int64, relative: Int64?, duration: Int64?)] = []
+            var positions: [(track: UInt64, cluster: Int64, relative: Int64?, duration: Int64?)] = []
             for (pointId, value) in Self.children(point) {
                 if pointId == ID.cueTime { time = Int64(Self.uint(value)) }
                 guard pointId == ID.cueTrackPositions else { continue }
@@ -310,38 +331,97 @@ final class MatroskaSubtitleReader {
                     default: break
                     }
                 }
-                if cluster >= 0 { entries.append((track, cluster, relative, duration)) }
+                if cluster >= 0 { positions.append((track, cluster, relative, duration)) }
             }
-            for entry in entries where wanted.contains(entry.track) {
-                covered.insert(entry.track)
-                let clusterStart = segmentData + entry.cluster
-                guard let relative = entry.relative else {
-                    // No block offset: read that Cluster for this track.
-                    if let (cluster, _) = try await header(at: clusterStart), cluster.id == ID.cluster {
-                        try await walkCluster(cluster, tracks: [entry.track])
-                    }
-                    continue
+            for position in positions where wanted.contains(position.track) {
+                entries.append(CueEntry(
+                    track: position.track, clusterStart: segmentData + position.cluster,
+                    relative: position.relative, time: time, duration: position.duration
+                ))
+            }
+        }
+        let covered = Set(entries.map(\.track))
+
+        // Where each Cluster's data starts, then each block: fetched in parallel.
+        let clusterStarts = Array(Set(entries.filter { $0.relative != nil }.map(\.clusterStart)))
+        let clusterHeads = try await fetch(clusterStarts.map { ($0, 16) })
+        var clusterData: [Int64: Int64] = [:]
+        for (position, bytes) in zip(clusterStarts, clusterHeads) {
+            if let head = Self.header(bytes, at: position), head.id == ID.cluster { clusterData[position] = head.dataStart }
+        }
+        let located = entries.compactMap { entry -> (CueEntry, Int64)? in
+            guard let relative = entry.relative, let dataStart = clusterData[entry.clusterStart] else { return nil }
+            return (entry, dataStart + relative)
+        }
+        let blocks = try await fetch(located.map { ($0.1, 512) })
+
+        var blockAt: [Int: [UInt8]] = [:]
+        for (index, bytes) in blocks.enumerated() { blockAt[index] = bytes }
+        var next = 0
+        for entry in entries {
+            guard entry.relative != nil else {
+                // No block offset: read that Cluster for this track.
+                if let (cluster, _) = try await header(at: entry.clusterStart), cluster.id == ID.cluster {
+                    try await walkCluster(cluster, tracks: [entry.track])
                 }
-                if clusterData[clusterStart] == nil {
-                    guard let (cluster, _) = try await header(at: clusterStart), cluster.id == ID.cluster else { continue }
-                    clusterData[clusterStart] = cluster.dataStart
-                }
-                guard let dataStart = clusterData[clusterStart],
-                      let (block, rest) = try await header(at: dataStart + relative, prefetch: 512) else { continue }
-                let before = events[entry.track]?.count ?? 0
-                // CueTime is the block's own time: no Cluster Timecode read.
-                switch block.id {
-                case ID.blockGroup: takeGroup(try await body(block, prefetched: rest), startNs: time * scale)
-                case ID.simpleBlock: take(block: try await body(block, prefetched: rest), startNs: time * scale, durationNs: nil)
-                default: break
-                }
-                if let duration = entry.duration, let count = events[entry.track]?.count, count > before,
-                   events[entry.track]?[before].durationNs == nil {
-                    events[entry.track]?[before].durationNs = duration * scale
-                }
+                continue
+            }
+            guard next < located.count, located[next].0 == entry else { continue }
+            let position = located[next].1
+            let bytes = blockAt[next] ?? []
+            next += 1
+            guard let block = Self.header(bytes, at: position) else { continue }
+            let rest = Array(bytes.dropFirst(Int(block.dataStart - position)))
+            let before = events[entry.track]?.count ?? 0
+            // CueTime is the block's own time: no Cluster Timecode read.
+            switch block.id {
+            case ID.blockGroup: takeGroup(try await body(block, prefetched: rest), startNs: entry.time * scale)
+            case ID.simpleBlock: take(block: try await body(block, prefetched: rest), startNs: entry.time * scale, durationNs: nil)
+            default: break
+            }
+            if let duration = entry.duration, let count = events[entry.track]?.count, count > before,
+               events[entry.track]?[before].durationNs == nil {
+                events[entry.track]?[before].durationNs = duration * scale
             }
         }
         return covered
+    }
+
+    private struct CueEntry: Equatable {
+        var track: UInt64
+        var clusterStart: Int64
+        var relative: Int64?
+        var time: Int64
+        var duration: Int64?
+    }
+
+    /// Many small reads, `source.concurrentReads` in flight, in the order asked.
+    private func fetch(_ ranges: [(offset: Int64, length: Int)]) async throws -> [[UInt8]] {
+        let source = source
+        let size = source.size
+        let width = max(1, source.concurrentReads)
+        var results = [[UInt8]](repeating: [], count: ranges.count)
+        try await withThrowingTaskGroup(of: (Int, [UInt8]).self) { group in
+            var started = 0
+            func startNext() {
+                guard started < ranges.count else { return }
+                let index = started
+                let (offset, length) = ranges[index]
+                started += 1
+                group.addTask {
+                    let count = Int(max(0, min(Int64(length), size - offset)))
+                    guard count > 0 else { return (index, []) }
+                    return (index, [UInt8](try await source.read(offset: offset, length: count)))
+                }
+            }
+            for _ in 0..<width { startNext() }
+            while let (index, bytes) = try await group.next() {
+                results[index] = bytes
+                startNext()
+            }
+        }
+        bytesRead += Int64(results.reduce(0) { $0 + $1.count })
+        return results
     }
 
     // MARK: Walk

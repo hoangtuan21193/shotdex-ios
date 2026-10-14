@@ -97,7 +97,11 @@ final class RemoteMovieStream: InputStream, MovieByteSource, @unchecked Sendable
 
     /// A range of the movie for the subtitle reader (FS-23.03 §3), in turn
     /// with VLC's own reads; not counted in `stats`.
+    /// Over HTTP the subtitle index's reads run beside the player's.
+    var concurrentReads: Int { client.allowsConcurrentReads ? 8 : 1 }
+
     func read(offset: Int64, length: Int) async throws -> Data {
+        if client.allowsConcurrentReads { return try await client.readRange(path, offset: offset, length: length) }
         await gate.enter()
         do {
             let data = try await client.readRange(path, offset: offset, length: length)
