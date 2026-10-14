@@ -263,28 +263,44 @@ final class WebDAVFileClient: NSObject, RemoteFileClient, URLSessionDelegate, UR
         }
     }
 
+    /// A GET for `path` from byte `offset` — for a background session that
+    /// cannot go through this client (FS-23.01 §6, movie downloads).
+    func downloadRequest(_ path: String, from offset: Int64) -> URLRequest {
+        var get = request("GET", url(path))
+        if offset > 0 { get.setValue("bytes=\(offset)-", forHTTPHeaderField: "Range") }
+        return get
+    }
+
     // MARK: Trust
 
     func urlSession(_ session: URLSession, didReceive challenge: URLAuthenticationChallenge) async
         -> (URLSession.AuthChallengeDisposition, URLCredential?) {
+        let (disposition, rejection) = Self.trust(challenge, server: server)
+        if let rejection { lock.withLock { trustRejection = rejection } }
+        return disposition
+    }
+
+    /// The server-trust answer for a connection's saved identity: a real
+    /// certificate passes, a self-signed one passes only if it is the one
+    /// the user trusted. Shared with the movie background session.
+    static func trust(_ challenge: URLAuthenticationChallenge, server: FileServer)
+        -> ((URLSession.AuthChallengeDisposition, URLCredential?), RemoteFileError?) {
         guard challenge.protectionSpace.authenticationMethod == NSURLAuthenticationMethodServerTrust,
               let trust = challenge.protectionSpace.serverTrust
-        else { return (.performDefaultHandling, nil) }
+        else { return ((.performDefaultHandling, nil), nil) }
         // The system trusts it (a real certificate): nothing to ask.
-        if SecTrustEvaluateWithError(trust, nil) { return (.useCredential, URLCredential(trust: trust)) }
+        if SecTrustEvaluateWithError(trust, nil) { return ((.useCredential, URLCredential(trust: trust)), nil) }
         guard let leaf = (SecTrustCopyCertificateChain(trust) as? [SecCertificate])?.first else {
-            return (.cancelAuthenticationChallenge, nil)
+            return ((.cancelAuthenticationChallenge, nil), nil)
         }
         let offered = TLSCertificateTrust.fingerprint(ofCertificate: SecCertificateCopyData(leaf) as Data)
         switch HostKeyTrust.evaluate(offered: offered, saved: server.trustedFingerprint) {
         case .trusted:
-            return (.useCredential, URLCredential(trust: trust))
+            return ((.useCredential, URLCredential(trust: trust)), nil)
         case .untrusted(let fingerprint):
-            lock.withLock { trustRejection = .hostKeyUntrusted(fingerprint: fingerprint) }
-            return (.cancelAuthenticationChallenge, nil)
+            return ((.cancelAuthenticationChallenge, nil), .hostKeyUntrusted(fingerprint: fingerprint))
         case .changed(let fingerprint):
-            lock.withLock { trustRejection = .hostKeyChanged(host: server.host, fingerprint: fingerprint) }
-            return (.cancelAuthenticationChallenge, nil)
+            return ((.cancelAuthenticationChallenge, nil), .hostKeyChanged(host: server.host, fingerprint: fingerprint))
         }
     }
 

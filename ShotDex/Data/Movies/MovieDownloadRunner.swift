@@ -5,7 +5,13 @@ import Observation
 /// into `Movies/.incoming/<id>.part`, picking up at the bytes already
 /// there, then checked against the source's size and moved to
 /// `Movies/<id>/`. Subtitles beside the movie and its poster come along.
-/// Plex and the background session join in plan tasks 12 and 32.
+///
+/// Two ways to fetch (user decision 2026-10-14, AC-54): a connection with a
+/// background session (WebDAV; Plex in plan task 32) hands the transfer to
+/// iOS, which carries on with the device locked; SMB, SFTP and Files read
+/// through the app's own client, so they need the app open — on iOS 26 a
+/// continued-processing task buys time (`MovieBackgroundService`), and a
+/// download the system stops picks up where it was when the app is back.
 @MainActor
 @Observable
 final class MovieDownloadRunner {
@@ -14,6 +20,9 @@ final class MovieDownloadRunner {
         var client: @Sendable (MovieSource) async throws -> any RemoteFileClient
         /// Bytes free for important use on the device.
         var freeSpace: @Sendable () -> Int64
+        /// The request a background session should send for this movie from
+        /// this byte, or nil when its source can't use one.
+        var backgroundRequest: @Sendable (MovieSource, Movie, Int64) -> URLRequest? = { _, _, _ in nil }
         /// How often progress is written to the database (the bar itself
         /// moves on every chunk).
         var saveInterval: Duration = .seconds(2)
@@ -26,20 +35,38 @@ final class MovieDownloadRunner {
     let files: MovieFileStore
     private let environment: Environment
     private let art: MoviePosterLoader?
+    private let transfer: MovieBackgroundTransfer?
 
     private var queue: [String] = []
     private var worker: Task<Void, Never>?
     private(set) var current: String?
+    /// The running download is in iOS's hands, not the app's.
+    private(set) var currentIsBackground = false
     /// Live bytes on disk per movie, for the bar between database writes.
     private(set) var liveBytes: [String: Int64] = [:]
     /// Bumped whenever a movie's state changes, so screens reload.
     private(set) var revision = 0
+    private var waiting: [String: CheckedContinuation<Error?, Never>] = [:]
+    /// The current download is being stopped for the system, not by the
+    /// user: it stays "downloading" and resumes when the app is back.
+    private var isPausingForSystem = false
 
-    init(store: MovieStore, files: MovieFileStore, environment: Environment, art: MoviePosterLoader? = nil) {
+    /// Called when a download the app fetches itself starts (for the iOS 26
+    /// continued-processing task).
+    var onForegroundDownloadStarted: ((Movie) -> Void)?
+
+    init(store: MovieStore, files: MovieFileStore, environment: Environment, art: MoviePosterLoader? = nil, transfer: MovieBackgroundTransfer? = nil) {
         self.store = store
         self.files = files
         self.environment = environment
         self.art = art
+        self.transfer = transfer
+        transfer?.onProgress = { [weak self] movieId, bytes in
+            Task { @MainActor in self?.liveBytes[movieId] = bytes }
+        }
+        transfer?.onFinish = { [weak self] movieId, error in
+            Task { @MainActor in self?.transferFinished(movieId, error: error) }
+        }
     }
 
     /// Download to iPhone.
@@ -58,35 +85,60 @@ final class MovieDownloadRunner {
     /// unless the caller removes it.
     func cancel(_ movieId: String) {
         queue.removeAll { $0 == movieId }
-        if current == movieId { worker?.cancel() }
+        guard current == movieId else { return }
+        if currentIsBackground { transfer?.cancel(movieId: movieId) } else { worker?.cancel() }
     }
 
-    /// At launch: downloads that were running or waiting carry on, the
-    /// sweep clears what no row explains (FS-23.05 §1).
-    func resumeInterrupted() {
-        try? files.prepare()
-        let movies = (try? store.movies()) ?? []
-        for id in files.sweep(movies: movies) {
-            try? store.setState(id: id, .missing)
-        }
-        let waiting = movies
-            .filter { ($0.state == .downloading || $0.state == .queued) && $0.downloadError == nil }
-            .sorted { ($0.state == .downloading ? 0 : 1, $0.addedAt) < ($1.state == .downloading ? 0 : 1, $1.addedAt) }
-        for movie in waiting where !queue.contains(movie.id) { queue.append(movie.id) }
-        revision += 1
-        runIfIdle()
+    /// The app is about to be suspended with no time granted: stop the
+    /// download the app is reading itself at a clean point. A background
+    /// transfer is left to iOS.
+    func pauseForSystem() {
+        guard current != nil, !currentIsBackground else { return }
+        isPausingForSystem = true
+        worker?.cancel()
     }
+
+    /// At launch and when the app is back: downloads that were running or
+    /// waiting carry on, the sweep clears what no row explains (FS-23.05 §1).
+    /// Transfers iOS is still fetching are left alone.
+    @discardableResult
+    func resumeInterrupted() -> Task<Void, Never> {
+        Task {
+            let active = await transfer?.activeMovieIds() ?? []
+            try? files.prepare()
+            let movies = (try? store.movies()) ?? []
+            if worker == nil {
+                for id in files.sweep(movies: movies.filter { !active.contains($0.id) }) where !active.contains(id) {
+                    try? store.setState(id: id, .missing)
+                }
+            }
+            let waitingRows = movies
+                .filter { ($0.state == .downloading || $0.state == .queued) && $0.downloadError == nil && !active.contains($0.id) }
+                .sorted { ($0.state == .downloading ? 0 : 1, $0.addedAt) < ($1.state == .downloading ? 0 : 1, $1.addedAt) }
+            for movie in waitingRows where !queue.contains(movie.id) && current != movie.id { queue.append(movie.id) }
+            revision += 1
+            runIfIdle()
+        }
+    }
+
+    func movie(_ id: String) throws -> Movie? { try store.movie(id: id) }
 
     /// Bytes to show for `movie` now.
     func bytes(for movie: Movie) -> Int64 {
         liveBytes[movie.id] ?? movie.downloadedBytes
     }
 
+    /// Whether a movie from this source keeps downloading with the app
+    /// closed (FS-23.01 §6) — the row says "Keep ShotDex open" otherwise.
+    func downloadsInBackground(_ source: MovieSource, _ movie: Movie) -> Bool {
+        transfer != nil && environment.backgroundRequest(source, movie, 0) != nil
+    }
+
     /// Waits for the queue to empty — for tests.
     func waitUntilIdle() async {
-        while let worker {
-            await worker.value
-            if self.worker == worker { break }
+        while let running = worker {
+            await running.value
+            if worker == running { break }
         }
     }
 
@@ -98,6 +150,7 @@ final class MovieDownloadRunner {
                 if !keepGoing { break }
             }
             self?.current = nil
+            self?.currentIsBackground = false
             self?.worker = nil
         }
     }
@@ -110,10 +163,11 @@ final class MovieDownloadRunner {
     }
 
     /// One movie. false = stop the queue (no space: the next one would not
-    /// fit either).
+    /// fit either; or the app is being suspended).
     private func run(_ movieId: String) async -> Bool {
         defer {
             liveBytes[movieId] = nil
+            currentIsBackground = false
             revision += 1
         }
         guard let movie = try? store.movie(id: movieId), movie.state != .onDevice else { return true }
@@ -136,32 +190,91 @@ final class MovieDownloadRunner {
         }
         try? store.setState(id: movieId, .downloading, downloadedBytes: have, error: nil)
         revision += 1
+        try? files.prepare()
+
+        if let transfer, let request = environment.backgroundRequest(source, movie, have) {
+            currentIsBackground = true
+            let error = await withCheckedContinuation { continuation in
+                waiting[movieId] = continuation
+                transfer.start(movieId: movieId, request: request, offset: have)
+            }
+            await complete(movieId, error: error)
+            return true
+        }
+
+        onForegroundDownloadStarted?(movie)
         let saver = ProgressSaver(store: store, movieId: movieId, interval: environment.saveInterval)
         do {
-            try files.prepare()
             let client = try await environment.client(source)
             let reached = try await client.resumeDownload(path, to: files.partFile(for: movieId)) { [weak self] bytes in
                 saver.offer(bytes)
                 Task { @MainActor in self?.liveBytes[movieId] = bytes }
             }
-            guard reached == movie.byteCount else {
-                files.removePart(for: movieId)
-                fail(movie, String(localized: "The downloaded file doesn't match the one on \(movie.sourceName ?? source.name).", comment: "Movie download error: wrong size"))
-                await client.disconnect()
-                return true
-            }
-            let name = try files.finish(movieId, as: movie.originalFileName)
-            try store.setLocalFileName(name.lastPathComponent, id: movieId)
-            await fetchSubtitles(for: movie, client: client)
+            await finalize(movie, source: source, reached: reached, client: client)
             await client.disconnect()
-            await keepPoster(movieId)
-            try store.setState(id: movieId, .onDevice, downloadedBytes: reached, error: nil)
         } catch is CancellationError {
-            try? store.setState(id: movieId, .stream, downloadedBytes: files.partSize(for: movieId), error: nil)
+            settleCancelled(movieId)
+            if isPausingForSystem {
+                isPausingForSystem = false
+                return false
+            }
         } catch {
             try? store.setState(id: movieId, .downloading, downloadedBytes: files.partSize(for: movieId), error: Self.message(error, source: movie.sourceName ?? source.name))
         }
         return true
+    }
+
+    /// A background transfer ended — for the download waiting on it, or one
+    /// started before the app was quit and relaunched by iOS.
+    private func transferFinished(_ movieId: String, error: Error?) {
+        if let continuation = waiting.removeValue(forKey: movieId) {
+            continuation.resume(returning: error)
+        } else {
+            Task { await complete(movieId, error: error) }
+        }
+    }
+
+    private func complete(_ movieId: String, error: Error?) async {
+        guard let movie = try? store.movie(id: movieId), let sourceId = movie.sourceId,
+              let source = try? store.source(id: sourceId) else { return }
+        liveBytes[movieId] = nil
+        defer { revision += 1 }
+        if error is CancellationError {
+            settleCancelled(movieId)
+            return
+        }
+        if let error {
+            try? store.setState(id: movieId, .downloading, downloadedBytes: files.partSize(for: movieId), error: Self.message(error, source: movie.sourceName ?? source.name))
+            return
+        }
+        let client = try? await environment.client(source)
+        await finalize(movie, source: source, reached: files.partSize(for: movieId), client: client)
+        await client?.disconnect()
+    }
+
+    /// Size check, then into `Movies/<id>/` with its subtitles and poster.
+    private func finalize(_ movie: Movie, source: MovieSource, reached: Int64, client: (any RemoteFileClient)?) async {
+        guard reached == movie.byteCount else {
+            files.removePart(for: movie.id)
+            fail(movie, String(localized: "The downloaded file doesn't match the one on \(movie.sourceName ?? source.name).", comment: "Movie download error: wrong size"))
+            return
+        }
+        do {
+            let file = try files.finish(movie.id, as: movie.originalFileName)
+            try store.setLocalFileName(file.lastPathComponent, id: movie.id)
+            if let client { await fetchSubtitles(for: movie, client: client) }
+            await keepPoster(movie.id)
+            try store.setState(id: movie.id, .onDevice, downloadedBytes: reached, error: nil)
+        } catch {
+            fail(movie, error.localizedDescription)
+        }
+    }
+
+    /// Stopped by the user (back to Stream, the part kept for later) or by
+    /// the system (still downloading, carries on when the app is back).
+    private func settleCancelled(_ movieId: String) {
+        let state: Movie.State = isPausingForSystem ? .downloading : .stream
+        try? store.setState(id: movieId, state, downloadedBytes: files.partSize(for: movieId), error: nil)
     }
 
     private func fail(_ movie: Movie, _ message: String) {

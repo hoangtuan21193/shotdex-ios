@@ -250,3 +250,45 @@ extension WebDAVFileClientTests {
         #expect(try Data(contentsOf: local) == movie)
     }
 }
+
+/// FS-23.01 §6, AC-54 (logic): a WebDAV movie downloads through a URL
+/// session task iOS can carry on with — asked from the bytes already in the
+/// part, appended, checked and filed. The device-lock half needs a phone.
+extension WebDAVFileClientTests {
+    @MainActor
+    @Test func movieDownloadsThroughBackgroundSession() async throws {
+        StubWebDAVProtocol.reset()
+        let movie = Data((0..<2_000_000).map { UInt8($0 % 239) })
+        StubWebDAVProtocol.lock.withLock { StubWebDAVProtocol.files["Films/Dune.mkv"] = movie; StubWebDAVProtocol.folders.insert("Films") }
+        let server = FileServer(name: "DAV", transferProtocol: .webdav, host: "dav.test", username: "me", share: "base")
+        let configuration = URLSessionConfiguration.ephemeral
+        configuration.protocolClasses = [StubWebDAVProtocol.self]
+
+        let store = MovieStore(database: try AppDatabase.makeEmpty(), plexTokens: InMemoryPasswordStore())
+        let files = MovieFileStore(root: FileManager.default.temporaryDirectory.appending(path: "movies-\(UUID().uuidString)"))
+        let source = MovieSource(kind: .folder, name: "DAV", folder: "Films")
+        try store.saveSource(source)
+        let row = Movie(sourceId: source.id, sourceName: "DAV", remotePath: "Films/Dune.mkv", title: "Dune", originalFileName: "Dune.mkv", byteCount: Int64(movie.count), state: .stream)
+        try store.add(row)
+        try files.prepare()
+        try movie.prefix(700_000).write(to: files.partFile(for: row.id))
+
+        let transfer = MovieBackgroundTransfer(files: files, server: { _ in server }, configuration: configuration)
+        let runner = MovieDownloadRunner(store: store, files: files, environment: .init(
+            client: { _ in throw RemoteFileError.connectionLost },  // subtitles only; none here
+            freeSpace: { 100_000_000_000 },
+            backgroundRequest: { _, movie, offset in
+                WebDAVFileClient(server: server, password: "pw", configuration: configuration).downloadRequest(movie.remotePath ?? "", from: offset)
+            }
+        ), transfer: transfer)
+
+        runner.download(row.id)
+        await runner.waitUntilIdle()
+
+        let after = try #require(try store.movie(id: row.id))
+        #expect(after.state == .onDevice)
+        #expect(try Data(contentsOf: try #require(files.file(for: after))) == movie)
+        #expect(StubWebDAVProtocol.lock.withLock { StubWebDAVProtocol.rangesAsked } == ["bytes=700000-"])
+        #expect(runner.downloadsInBackground(source, row))
+    }
+}

@@ -116,7 +116,7 @@ import Testing
 
         // A new launch: same database and folders, a fresh runner.
         let relaunch = try makeFixture(files: first.files, store: first.store, nas: first.nas)
-        relaunch.runner.resumeInterrupted()
+        await relaunch.runner.resumeInterrupted().value
         await relaunch.runner.waitUntilIdle()
 
         #expect(try relaunch.store.movie(id: arrival.id)?.state == .onDevice)
@@ -142,7 +142,7 @@ import Testing
         await f.runner.waitUntilIdle()
         try FileManager.default.removeItem(at: f.files.directory(for: up.id))
 
-        f.runner.resumeInterrupted()
+        await f.runner.resumeInterrupted().value
 
         #expect(try f.store.movie(id: up.id)?.state == .missing)
     }

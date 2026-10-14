@@ -14,6 +14,7 @@ final class MoviesModel {
     private let store: MovieStore
 
     private(set) var movies: [Movie] = []
+    private(set) var sources: [String: MovieSource] = [:]
     private(set) var isLoaded = false
     var query = MovieLibraryQuery()
 
@@ -27,6 +28,7 @@ final class MoviesModel {
 
     func load() {
         movies = (try? store.movies()) ?? []
+        sources = Dictionary(((try? store.sources()) ?? []).map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
         isLoaded = true
     }
 

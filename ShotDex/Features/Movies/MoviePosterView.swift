@@ -35,6 +35,8 @@ struct MovieGridCell: View {
 /// One movie in List (board `PH_Movies`, List tweak).
 struct MovieListRow: View {
     let movie: Movie
+    /// Its download needs the app open (SMB, SFTP, Files — FS-23.01 §6).
+    var keepsAppOpen = false
 
     var body: some View {
         HStack(spacing: AppTheme.Spacing.md) {
@@ -45,7 +47,7 @@ struct MovieListRow: View {
                 Text(MovieRowText.titleWithYear(movie))
                     .font(.callout.weight(.semibold))
                     .lineLimit(1)
-                Text(MovieRowText.detail(movie))
+                Text(MovieRowText.detail(movie, keepsAppOpen: keepsAppOpen))
                     .font(.footnote)
                     .monospacedDigit()
                     .foregroundStyle(movie.downloadError == nil ? AnyShapeStyle(.secondary) : AnyShapeStyle(Color.red))
@@ -184,14 +186,16 @@ enum MovieRowText {
     }
 
     /// List: where it plays from, how long, how big — or the download.
-    static func detail(_ movie: Movie) -> String {
+    static func detail(_ movie: Movie, keepsAppOpen: Bool = false) -> String {
         if let error = movie.downloadError { return error }
         let size = movie.byteCount.formatted(.byteCount(style: .file))
         switch movie.state {
         case .downloading, .queued:
             let percent = Int((downloadProgress(movie) ?? 0) * 100)
             let done = movie.downloadedBytes.formatted(.byteCount(style: .file))
-            return String(localized: "Downloading \(percent)% · \(done) of \(size)", comment: "Movie list row: a download in progress")
+            let line = String(localized: "Downloading \(percent)% · \(done) of \(size)", comment: "Movie list row: a download in progress")
+            guard keepsAppOpen else { return line }
+            return line + " · " + String(localized: "Keep ShotDex open to finish", comment: "Movie list row: this download stops when ShotDex is closed")
         case .onDevice:
             return [MoviesCountText.onDeviceShort(), duration(movie), size].compactMap { $0 }.joined(separator: " · ")
         case .missing:

@@ -87,7 +87,7 @@ struct MoviesScreen: View {
                 } else {
                     LazyVStack(spacing: 8) {
                         ForEach(shown) { movie in
-                            MovieListRow(movie: movie)
+                            MovieListRow(movie: movie, keepsAppOpen: model.sources[movie.sourceId ?? ""].map { !downloads.downloadsInBackground($0, movie) } ?? false)
                                 .padding(.horizontal, 12)
                                 .frame(height: 64)
                                 .background(Color(.secondarySystemBackground), in: RoundedRectangle(cornerRadius: AppTheme.Radius.md, style: .continuous))

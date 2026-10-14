@@ -150,6 +150,8 @@ final class AppDependencies {
     let movieArt: MoviePosterLoader
     /// Download to iPhone (FS-23.01 §6).
     let movieDownloads: MovieDownloadRunner
+    /// Movie downloads and the app's lifecycle (FS-23.01 §6, AC-54).
+    let movieBackground: MovieBackgroundService
     /// Keeps every backup job watching its source (FS-22.02).
     let backupCoordinator: BackupCoordinator
     /// Backup's background time (FS-22.02 §3).
@@ -524,7 +526,12 @@ final class AppDependencies {
         self.movieSync = MovieSourceSync(movies: movies, servers: fileServers)
         let movieArt = MoviePosterLoader(movies: movies, servers: fileServers)
         self.movieArt = movieArt
-        self.movieDownloads = MovieDownloadRunner(
+        let movieTransfer = MovieBackgroundTransfer(files: .standard) { [movies, fileServers] movieId in
+            guard let source = try? movies.movie(id: movieId)?.sourceId.flatMap({ try movies.source(id: $0) }),
+                  let connection = source.connectionId else { return nil }
+            return try? fileServers.fetch(id: connection)
+        }
+        let movieDownloads = MovieDownloadRunner(
             store: movies, files: .standard,
             environment: .init(
                 client: { [fileServers] source in
@@ -539,10 +546,21 @@ final class AppDependencies {
                     let home = URL(fileURLWithPath: NSHomeDirectory())
                     return (try? home.resourceValues(forKeys: [.volumeAvailableCapacityForImportantUsageKey]))?
                         .volumeAvailableCapacityForImportantUsage ?? 0
+                },
+                // WebDAV is plain HTTP: iOS can carry it on with the device
+                // locked (user decision 2026-10-14). SMB/SFTP/Files cannot.
+                backgroundRequest: { [fileServers] source, movie, offset in
+                    guard let id = source.connectionId, let server = try? fileServers.fetch(id: id),
+                          server.transferProtocol == .webdav, let path = movie.remotePath else { return nil }
+                    return WebDAVFileClient(server: server, password: fileServers.password(for: id) ?? "")
+                        .downloadRequest(path, from: offset)
                 }
             ),
-            art: movieArt
+            art: movieArt,
+            transfer: movieTransfer
         )
+        self.movieDownloads = movieDownloads
+        self.movieBackground = MovieBackgroundService(runner: movieDownloads)
         let backupCoordinator = BackupCoordinator(store: backups, environment: .live(
             database: database, store: backups, servers: fileServers, roots: folderRoots
         ))

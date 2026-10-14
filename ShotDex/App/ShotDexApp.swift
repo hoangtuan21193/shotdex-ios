@@ -6,6 +6,7 @@ import SwiftUI
 struct ShotDexApp: App {
     @State private var dependencies: AppDependencies
     @Environment(\.scenePhase) private var scenePhase
+    @UIApplicationDelegateAdaptor(ShotDexAppDelegate.self) private var appDelegate
     init() {
         // Before anything opens a session of its own: whatever is left under
         // /tmp from a run that was force-quit or killed is ours and is dead.
@@ -16,6 +17,7 @@ struct ShotDexApp: App {
         // BGTaskScheduler requires registration before launch finishes.
         dependencies.backgroundIndex.register()
         dependencies.backupBackground.register()
+        dependencies.movieBackground.register()
         // Same requirement: a notification tap that launched the app is
         // delivered to nobody unless the delegate is already in place.
         dependencies.onThisDayNotifications.registerDelegate()
@@ -46,6 +48,7 @@ struct ShotDexApp: App {
                     if phase == .background {
                         dependencies.backgroundIndex.scheduleContinuationIfNeeded()
                         dependencies.backupBackground.appDidEnterBackground()
+                        dependencies.movieBackground.appDidEnterBackground()
                     }
                     if phase == .active {
                         // Widgets ask for things while the app is away — an
@@ -61,6 +64,8 @@ struct ShotDexApp: App {
                         Task { await dependencies.sources.readAll() }
                         // Backups catch up on what arrived while away (FS-22.02 §1).
                         dependencies.backupCoordinator.appBecameActive()
+                        // Movie downloads stopped when the app left (FS-23.01 §6).
+                        dependencies.movieBackground.appBecameActive()
                     }
                 }
                 // A tapped Spotlight result arrives as a user activity rather
