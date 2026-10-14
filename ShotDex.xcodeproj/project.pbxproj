@@ -407,6 +407,7 @@
 				DD0001142D00000100000001 /* Embed Frameworks */,
 				0E765CBA3010E674001A134A /* Embed Foundation Extensions */,
 				BA0004102D00000100000001 /* Embed ExtensionKit Extensions */,
+				C51000052D00000100000001 /* VLCKit Privacy Manifest */,
 			);
 			buildRules = (
 			);
@@ -743,6 +744,31 @@
 		};
 /* End PBXResourcesBuildPhase section */
 
+/* Begin PBXShellScriptBuildPhase section */
+		C51000052D00000100000001 /* VLCKit Privacy Manifest */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+				"$(SRCROOT)/Tools/privacy/VLCKit.PrivacyInfo.xcprivacy",
+				"$(TARGET_BUILD_DIR)/$(FRAMEWORKS_FOLDER_PATH)/VLCKit.framework/VLCKit",
+			);
+			name = "VLCKit Privacy Manifest";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+				"$(TARGET_BUILD_DIR)/$(FRAMEWORKS_FOLDER_PATH)/VLCKit.framework/PrivacyInfo.xcprivacy",
+				"$(TARGET_BUILD_DIR)/$(FRAMEWORKS_FOLDER_PATH)/VLCKit.framework/_CodeSignature/CodeResources",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "set -e\nFRAMEWORK=\"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/VLCKit.framework\"\n[ -d \"$FRAMEWORK\" ] || exit 0\ncp \"${SRCROOT}/Tools/privacy/VLCKit.PrivacyInfo.xcprivacy\" \"$FRAMEWORK/PrivacyInfo.xcprivacy\"\nif [ \"${CODE_SIGNING_ALLOWED}\" = \"YES\" ] && [ -n \"${EXPANDED_CODE_SIGN_IDENTITY}\" ]; then\n  codesign --force --sign \"${EXPANDED_CODE_SIGN_IDENTITY}\" --preserve-metadata=identifier,entitlements \"$FRAMEWORK\"\nfi\n";
+		};
+/* End PBXShellScriptBuildPhase section */
+
 /* Begin PBXSourcesBuildPhase section */
 		AA0000082D00000100000001 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
@@ -979,6 +1005,7 @@
 		AA00000E2D00000100000001 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = ShotDex/ShotDex.entitlements;
 				CODE_SIGN_STYLE = Automatic;
@@ -1012,6 +1039,7 @@
 		AA00000F2D00000100000001 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = "ShotDex/ShotDex-AppAttest.entitlements";
 				CODE_SIGN_STYLE = Automatic;

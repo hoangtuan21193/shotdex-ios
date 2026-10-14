@@ -1,0 +1,15 @@
+{
+ "steps": [
+  {"action": "launch"},
+  {"action": "wait", "seconds": 5},
+  {"action": "tap", "label": "Settings"},
+  {"action": "wait", "seconds": 2},
+  {"action": "scrollTo", "label": "Camera Database"},
+  {"action": "tap", "label": "Camera Database"},
+  {"action": "wait", "seconds": 1.5},
+  {"action": "scrollTo", "label": "VLCKit"},
+  {"action": "wait", "seconds": 1},
+  {"action": "screenshot", "name": "01-acknowledgements"},
+  {"action": "dump", "name": "01-acknowledgements"}
+ ]
+}

@@ -1234,8 +1234,9 @@ struct SettingsScreen: View {
 
     // MARK: Privacy
 
-    /// Credit for the data ShotDex ships with. Lensfun's licence (CC-BY-SA)
-    /// asks for it; GRDB's (MIT) asks for the notice to travel with the app.
+    /// Credit for the data and libraries ShotDex ships with. Lensfun's
+    /// licence (CC-BY-SA) asks for it; GRDB's (MIT) asks for the notice to
+    /// travel with the app; VLCKit's (LGPL) for the notice and the source.
     private var acknowledgementsSection: some View {
         Section {
             VStack(alignment: .leading, spacing: 2) {
@@ -1252,6 +1253,17 @@ struct SettingsScreen: View {
                     .font(.footnote)
                     .foregroundStyle(.secondary)
             }
+            // LGPL 2.1 (FS-23.02 §1): the notice, and where the source is.
+            // VLCKit ships as its own dynamic framework, unmodified, so it
+            // can be replaced.
+            VStack(alignment: .leading, spacing: 2) {
+                Text("VLCKit")
+                Text("Movie playback by VideoLAN and the VLC authors. GNU LGPL 2.1; used unmodified as a separate library.")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+            }
+            Link("code.videolan.org/videolan/VLCKit", destination: URL(string: "https://code.videolan.org/videolan/VLCKit")!)
+                .font(.footnote)
         } header: {
             SettingsSectionHeader(LocalizedStringResource("Acknowledgements", comment: "Settings → Camera Database: section header over the data credits"))
         }
