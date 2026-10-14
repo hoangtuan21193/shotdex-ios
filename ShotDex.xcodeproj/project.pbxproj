@@ -1005,7 +1005,6 @@
 		AA00000E2D00000100000001 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = ShotDex/ShotDex.entitlements;
 				CODE_SIGN_STYLE = Automatic;
@@ -1013,6 +1012,7 @@
 				DEVELOPMENT_ASSET_PATHS = "";
 				DEVELOPMENT_TEAM = MF2ESUE9HV;
 				ENABLE_PREVIEWS = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = ShotDex/Info.plist;
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "ShotDex reads your photos' camera, lens and exposure metadata to build your statistics, and saves the edits, favourites, albums and videos you make back to your library. Your photos stay on this device; only a rounded location goes to Apple's map service, to name the place a shot was taken.";
@@ -1039,7 +1039,6 @@
 		AA00000F2D00000100000001 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = "ShotDex/ShotDex-AppAttest.entitlements";
 				CODE_SIGN_STYLE = Automatic;
@@ -1047,6 +1046,7 @@
 				DEVELOPMENT_ASSET_PATHS = "";
 				DEVELOPMENT_TEAM = MF2ESUE9HV;
 				ENABLE_PREVIEWS = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = ShotDex/Info.plist;
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "ShotDex reads your photos' camera, lens and exposure metadata to build your statistics, and saves the edits, favourites, albums and videos you make back to your library. Your photos stay on this device; only a rounded location goes to Apple's map service, to name the place a shot was taken.";
