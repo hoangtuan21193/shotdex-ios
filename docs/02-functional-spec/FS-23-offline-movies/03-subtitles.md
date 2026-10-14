@@ -39,8 +39,9 @@ vào phần hình còn thấy; máy dọc: sheet nửa màn.
 
 - Chữ: SRT, ASS/SSA, WebVTT. Giữ nghiêng, đậm, xuống dòng; bỏ hiệu ứng, font, toạ độ của ASS — trừ dòng ASS
   đặt ở đỉnh khung thì giữ ở đỉnh.
-- Mã chữ tự nhận (UTF-8, UTF-16, Windows-1258, Windows-1252, GB18030, Shift-JIS…); sai thì ⋯ › **Encoding** chọn
-  tay, nhớ theo phụ đề.
+- Mã chữ tự nhận (UTF-8, UTF-16, Windows-1258, Windows-1252, GB18030, Shift-JIS…): BOM trước, rồi UTF-8, rồi bảng mã quen
+  của ngôn ngữ phụ đề (lấy từ tên file `.vi.srt`), rồi bộ dò của hệ thống; chữ luôn ở dạng dựng sẵn (Windows-1258 tách
+  dấu thanh). Sai thì ⋯ › **Encoding** chọn tay, nhớ theo phụ đề.
 - **Track chữ trong file** (người dùng chốt 14/10, sửa sau spike S2 cùng ngày): ShotDex tự đọc cấu trúc MKV/WebM, trích
   track SRT/ASS/WebVTT ra file phụ đề của mình, dùng được làm Primary, Secondary và để dịch.
   - Phim **trên máy** (đã Download hoặc chép thẳng): trích ngay khi tải xong.

@@ -30,8 +30,8 @@ Phim test: clip tổng hợp 2–5 phút (khung test pattern, tiếng sine — *
 | AC-18 | Primary EN, Secondary VI, cả 3 vị trí | chụp ở 00:01:05 (cue cả hai cùng hiện) | Top/Bottom: VI trên đỉnh khung; Secondary Above: VI cách EN 8 pt phía trên; Secondary Below: ngược lại; không đè nhau | ⚠️ chưa có (`SubtitleLayoutTests.threePositions` + ảnh) |
 | AC-19 | chrome đang hiện, hai phụ đề cùng đáy | chụp | đáy cụm phụ đề ≥ 8 pt trên mép trên kính transport; chrome ẩn → cụm hạ về | ⚠️ chưa có |
 | AC-20 | phụ đề sớm 2,0 s | Sync +2,0 s | cue `00:01:05,000` hiện ở giờ phim 00:01:07,0 ± 0,1 s; mở lại phim giữ +2,0 | ⚠️ chưa có (`SubtitleTimelineTests.delayShiftsCues`) |
-| AC-21 | SRT tiếng Việt mã Windows-1258 | nhập | chữ có dấu đọc đúng (`Xin chào`), không ký tự lạ | ⚠️ chưa có (`SubtitleDecoderTests.vietnameseWindows1258`) |
-| AC-22 | ASS có `{\i1}`, `{\pos(…)}`, `{\an8}` | vẽ | nghiêng giữ, `pos` bỏ, dòng `an8` ở đỉnh khung | ⚠️ chưa có (`SubtitleParserTests.assKeepsItalicAndTop`) |
+| AC-21 | SRT tiếng Việt mã Windows-1258 | nhập | chữ có dấu đọc đúng (`Xin chào`), không ký tự lạ | ⚠️ một nửa: giải mã `SubtitleDecoderTests.vietnameseWindows1258` ✅ (gợi ý ngôn ngữ từ tên file `.vi.srt`); luồng nhập chờ task 25 |
+| AC-22 | ASS có `{\i1}`, `{\pos(…)}`, `{\an8}` | vẽ | nghiêng giữ, `pos` bỏ, dòng `an8` ở đỉnh khung | ⚠️ một nửa: đọc `SubtitleParserTests.assKeepsItalicAndTop` ✅; vẽ ở đỉnh khung chờ task 22 |
 | AC-23 | MKV có track PGS + SRT tiếng Việt ngoài | Primary PGS, Secondary VI | cả hai hiện; Translate… không liệt kê PGS ở From | ⚠️ chưa có |
 | AC-24 | file 310 MB biết trước mã băm | tính mã băm | đúng 16 hex mong đợi; đọc ≤ 128 KB | ✅ `MovieHashTests.matchesReference` (giá trị chuẩn từ bản Python độc lập) |
 | AC-25 | app Files có `Dune.vi.srt`, kho có `Dune (2024)` và 3 phim khác | Share › ShotDex | sheet `Add Subtitle to…`, `Dune (2024)` được đánh dấu khớp tên; chọn → phim có `Tiếng Việt · Shared` | ⚠️ chưa có |
