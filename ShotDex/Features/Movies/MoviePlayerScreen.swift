@@ -9,35 +9,33 @@ struct MoviePlayerScreen: View {
     let videoView: UIView
     @Environment(\.dismiss) private var dismiss
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    @Environment(\.scenePhase) private var scenePhase
     @State private var showsSpinner = false
 
     var body: some View {
-        ZStack {
-            Color.black.ignoresSafeArea()
-            VideoSurface(view: videoView).ignoresSafeArea()
-            touchLayer
-            if let reason = model.failureReason {
-                failureCard(reason)
-            } else {
-                if showsSpinner {
-                    TimelineView(.periodic(from: .now, by: 0.5)) { context in
-                        if model.needsSpinner(at: context.date) {
-                            ProgressView().tint(.white).controlSize(.large)
-                        }
-                    }
-                    .allowsHitTesting(false)
-                }
-                if model.isChromeVisible, !model.isLocked {
-                    chrome.transition(.opacity)
-                }
-                if model.isLocked, model.showsUnlock {
-                    unlockButton.transition(.opacity)
-                }
-            }
+        // Measured inside the safe area so the insets are known; the stage
+        // then covers the whole screen and pads its chrome by hand, since a
+        // turned stage cannot use the system's insets.
+        GeometryReader { proxy in
+            let insets = proxy.safeAreaInsets
+            let screen = CGSize(
+                width: proxy.size.width + insets.leading + insets.trailing,
+                height: proxy.size.height + insets.top + insets.bottom
+            )
+            let layout = MoviePlayerLayout(
+                size: screen,
+                safeArea: insets,
+                isCompactWidth: horizontalSizeClass == .compact,
+                isLandscapePicture: model.isLandscapePicture
+            )
+            stage(insets: layout.chromeInsets)
+                .ignoresSafeArea()
+                .frame(width: layout.stageSize.width, height: layout.stageSize.height)
+                .rotationEffect(.degrees(layout.isRotated ? 90 : 0))
+                .position(x: screen.width / 2 - insets.leading, y: screen.height / 2 - insets.top)
         }
-        .overlay(alignment: .top) {
-            if model.isFailed { topBar }
-        }
+        .background(Color.black.ignoresSafeArea())
         .animation(reduceMotion ? nil : .easeInOut(duration: 0.2), value: model.isChromeVisible)
         .animation(reduceMotion ? nil : .easeInOut(duration: 0.2), value: model.showsUnlock)
         .statusBarHidden()
@@ -52,8 +50,49 @@ struct MoviePlayerScreen: View {
             guard !Task.isCancelled else { return }
             model.hideAfterIdle()
         }
-        .onDisappear { model.close() }
+        // The screen stays on while the movie plays, and only then (§2).
+        .onChange(of: model.isPlaying, initial: true) { _, playing in
+            UIApplication.shared.isIdleTimerDisabled = playing
+        }
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .background { model.enterBackground() }
+        }
+        .onDisappear {
+            UIApplication.shared.isIdleTimerDisabled = false
+            model.close()
+        }
         .accessibilityElement(children: .contain)
+    }
+
+    private func stage(insets: EdgeInsets) -> some View {
+        ZStack {
+            Color.black
+            VideoSurface(view: videoView)
+            touchLayer
+            if let reason = model.failureReason {
+                failureCard(reason)
+                VStack {
+                    topBar
+                    Spacer(minLength: 0)
+                }
+                .padding(insets)
+            } else {
+                if showsSpinner {
+                    TimelineView(.periodic(from: .now, by: 0.5)) { context in
+                        if model.needsSpinner(at: context.date) {
+                            ProgressView().tint(.white).controlSize(.large)
+                        }
+                    }
+                    .allowsHitTesting(false)
+                }
+                if model.isChromeVisible, !model.isLocked {
+                    chrome(insets: insets).transition(.opacity)
+                }
+                if model.isLocked, model.showsUnlock {
+                    unlockButton.padding(insets).transition(.opacity)
+                }
+            }
+        }
     }
 
     /// Taps on the picture: one toggles the chrome, two skip by half.
@@ -68,19 +107,27 @@ struct MoviePlayerScreen: View {
                         }
                         .exclusively(before: SpatialTapGesture(count: 1).onEnded { _ in model.tapPicture() })
                 )
+                // Pinch out fills the frame, pinch in fits the picture (§3).
+                .simultaneousGesture(
+                    MagnifyGesture().onEnded { value in
+                        guard !model.isLocked else { return }
+                        if value.magnification > 1.1 { model.setFill(true) }
+                        if value.magnification < 0.9 { model.setFill(false) }
+                    }
+                )
         }
-        .ignoresSafeArea()
         .accessibilityHidden(true)
     }
 
-    private var chrome: some View {
+    private func chrome(insets: EdgeInsets) -> some View {
         ZStack {
             centerCluster
             VStack(spacing: 0) {
-                topBar.padding(.top, AppTheme.Spacing.md)
+                topBar
                 Spacer(minLength: 0)
-                panel.padding(.bottom, AppTheme.Spacing.lg)
+                panel
             }
+            .padding(insets)
         }
     }
 
@@ -101,9 +148,18 @@ struct MoviePlayerScreen: View {
                 }
                 .keyboardShortcut(.cancelAction)
                 Spacer(minLength: 0)
+                if model.canPictureInPicture, !model.isFailed {
+                    roundButton(
+                        model.isPictureInPictureActive ? "pip.exit" : "pip.enter",
+                        size: 44,
+                        glyph: 18,
+                        label: String(localized: "Picture in Picture", comment: "Movie player: PiP button")
+                    ) {
+                        model.togglePictureInPicture()
+                    }
+                }
             }
         }
-        .padding(.horizontal, AppTheme.Spacing.md)
     }
 
     // MARK: Centre cluster
@@ -151,7 +207,6 @@ struct MoviePlayerScreen: View {
         .frame(maxWidth: 750)
         .editorGlass(cornerRadius: 22)
         .environment(\.colorScheme, .dark)
-        .padding(.horizontal, AppTheme.Spacing.md)
     }
 
     private var timelineRow: some View {
@@ -207,8 +262,8 @@ struct MoviePlayerScreen: View {
         .frame(height: 44)
     }
 
-    /// Speed and the touch lock; Audio & Subtitles (task 21) and Fit/Fill
-    /// (task 19) take their places between them.
+    /// Speed, Fit/Fill and the touch lock; Audio & Subtitles (task 21) goes
+    /// in after speed.
     private var controlsRow: some View {
         HStack(spacing: 32) {
             Menu {
@@ -228,6 +283,21 @@ struct MoviePlayerScreen: View {
                     .contentShape(Rectangle())
             }
             .accessibilityLabel(String(localized: "Playback Speed \(MoviePlayerText.rate(model.rate))", comment: "Movie player: speed button, with the current speed"))
+
+            Button {
+                model.setFill(!model.fillsFrame)
+            } label: {
+                Image(systemName: model.fillsFrame ? "arrow.down.right.and.arrow.up.left" : "arrow.up.left.and.arrow.down.right")
+                    .font(.system(size: 18, weight: .semibold))
+                    .frame(width: 44, height: 44)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .foregroundStyle(.white)
+            // Names what the picture is doing now; the button flips it.
+            .accessibilityLabel(model.fillsFrame
+                ? String(localized: "Fill", comment: "Movie player: picture fills the frame, edges cropped")
+                : String(localized: "Fit", comment: "Movie player: whole picture fits, black bars"))
 
             Button {
                 model.lock()

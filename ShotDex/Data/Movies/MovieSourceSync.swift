@@ -48,7 +48,7 @@ final class MovieSourceSync {
     }
 
     /// The part a test drives with an in-memory server.
-    nonisolated static func scan(_ source: MovieSource, client: any RemoteFileClient, store: MovieStore) async throws -> MovieStore.ScanMerge {
+    @discardableResult nonisolated static func scan(_ source: MovieSource, client: any RemoteFileClient, store: MovieStore) async throws -> MovieStore.ScanMerge {
         do {
             try await client.connect()
         } catch {

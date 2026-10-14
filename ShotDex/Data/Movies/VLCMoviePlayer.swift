@@ -14,7 +14,8 @@ final class VLCMoviePlayer: NSObject, MoviePlaying {
         case stream(InputStream, fileName: String)
     }
 
-    let view = UIView()
+    let view: UIView
+    private let drawable: MovieDrawableView
     private let player: VLCMediaPlayer
     private let library: VLCLibrary
     private let log = ErrorLog()
@@ -24,16 +25,34 @@ final class VLCMoviePlayer: NSObject, MoviePlaying {
     private(set) var state: MoviePlaybackState = .opening
     private(set) var timeMs: Int64 = 0
     private(set) var durationMs: Int64 = 0
+    private(set) var isPictureInPictureActive = false
+    private var pictureInPicture: (any VLCPictureInPictureWindowControlling)?
     var onChange: (() -> Void)?
 
     init(input: Input) {
         library = VLCLibrary(options: [])
         player = VLCMediaPlayer(library: library)
+        drawable = MovieDrawableView(controls: PictureInPictureControls(player: player))
+        view = drawable
         super.init()
         view.backgroundColor = .black
         library.loggers = [log]
         player.delegate = self
-        player.drawable = view
+        drawable.onReady = { [weak self] window in
+            MainActor.assumeIsolatedOrHop {
+                guard let self else { return }
+                window.stateChangeEventHandler = { [weak self] isStarted in
+                    MainActor.assumeIsolatedOrHop {
+                        self?.isPictureInPictureActive = isStarted
+                        self?.onChange?()
+                    }
+                }
+                self.pictureInPicture = window
+                self.onChange?()
+            }
+        }
+        player.drawable = drawable
+        player.videoFitMode = .smaller
         player.timeChangeUpdateInterval = 0.25
         let media: VLCMedia?
         switch input {
@@ -72,6 +91,23 @@ final class VLCMoviePlayer: NSObject, MoviePlaying {
         }
     }
 
+    var videoSize: CGSize { player.videoSize }
+
+    var fillsFrame: Bool {
+        get { player.videoFitMode == .larger }
+        set { player.videoFitMode = newValue ? .larger : .smaller }
+    }
+
+    var canPictureInPicture: Bool { pictureInPicture != nil }
+
+    func togglePictureInPicture() {
+        if isPictureInPictureActive {
+            pictureInPicture?.stopPictureInPicture()
+        } else {
+            pictureInPicture?.startPictureInPicture()
+        }
+    }
+
     var selectedAudioTrackId: String? {
         player.audioTracks.first(where: \.isSelected)?.trackId
     }
@@ -103,6 +139,8 @@ final class VLCMoviePlayer: NSObject, MoviePlaying {
     }
 
     func close() {
+        if isPictureInPictureActive { pictureInPicture?.stopPictureInPicture() }
+        pictureInPicture = nil
         player.stop()
         player.delegate = nil
         player.media = nil
@@ -124,7 +162,10 @@ final class VLCMoviePlayer: NSObject, MoviePlaying {
 
 extension VLCMoviePlayer: VLCMediaPlayerDelegate {
     nonisolated func mediaPlayerStateChanged(_ newState: VLCMediaPlayerState) {
-        MainActor.assumeIsolatedOrHop { self.apply(newState) }
+        MainActor.assumeIsolatedOrHop {
+            self.apply(newState)
+            self.pictureInPicture?.invalidatePlaybackState()
+        }
     }
 
     nonisolated func mediaPlayerTimeChanged(_ notification: Notification) {
@@ -177,6 +218,48 @@ extension VLCMoviePlayer: VLCMediaPlayerDelegate {
         }
         onChange?()
     }
+}
+
+/// The view VLC draws into, and the hook its picture-in-picture uses: VLCKit
+/// builds the PiP window itself once the drawable offers controls.
+private final class MovieDrawableView: UIView, VLCPictureInPictureDrawable {
+    private let controls: PictureInPictureControls
+    var onReady: ((any VLCPictureInPictureWindowControlling) -> Void)?
+
+    init(controls: PictureInPictureControls) {
+        self.controls = controls
+        super.init(frame: .zero)
+    }
+
+    required init?(coder: NSCoder) { nil }
+
+    func mediaController() -> (any VLCPictureInPictureMediaControlling)! { controls }
+
+    func pictureInPictureReady() -> (((any VLCPictureInPictureWindowControlling)?) -> Void)! {
+        { [weak self] window in
+            guard let window else { return }
+            self?.onReady?(window)
+        }
+    }
+}
+
+/// Play, pause and ±10 s from the PiP window. VLC calls these on its own
+/// threads; `VLCMediaPlayer` is safe to drive from any of them.
+private final class PictureInPictureControls: NSObject, VLCPictureInPictureMediaControlling, @unchecked Sendable {
+    private weak var player: VLCMediaPlayer?
+
+    init(player: VLCMediaPlayer) { self.player = player }
+
+    func play() { player?.play() }
+    func pause() { player?.pause() }
+    func seek(by offset: Int64, completion: (() -> Void)!) {
+        if let player { player.time = VLCTime(int: Int32(clamping: Int64(player.time.intValue) + offset)) }
+        completion?()
+    }
+    func mediaLength() -> Int64 { Int64(player?.media?.length.intValue ?? 0) }
+    func mediaTime() -> Int64 { Int64(player?.time.intValue ?? 0) }
+    func isMediaSeekable() -> Bool { player?.isSeekable ?? false }
+    func isMediaPlaying() -> Bool { player?.isPlaying ?? false }
 }
 
 /// VLC's error lines, kept for the one-line reason (FS-23.02 §2). Passwords

@@ -25,6 +25,14 @@ protocol MoviePlaying: AnyObject {
     var selectedAudioTrackId: String? { get }
     /// Audio Sync (FS-23.02 §3b), milliseconds; positive = audio later.
     var audioDelayMs: Int { get set }
+    /// Picture size in pixels; zero until the first frame is decoded.
+    var videoSize: CGSize { get }
+    /// Fill (§3): crop the edges to fill the frame instead of fitting the
+    /// whole picture with black bars.
+    var fillsFrame: Bool { get set }
+    /// The engine's picture-in-picture window is ready to start.
+    var canPictureInPicture: Bool { get }
+    var isPictureInPictureActive: Bool { get }
     /// Anything above changed.
     var onChange: (() -> Void)? { get set }
 
@@ -32,6 +40,7 @@ protocol MoviePlaying: AnyObject {
     func pause()
     func seek(toMs: Int64)
     func selectAudioTrack(id: String)
+    func togglePictureInPicture()
     /// Stops and lets go of the file or stream.
     func close()
 }

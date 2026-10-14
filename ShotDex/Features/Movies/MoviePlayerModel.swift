@@ -1,3 +1,4 @@
+import CoreGraphics
 import Foundation
 import Observation
 
@@ -18,6 +19,10 @@ final class MoviePlayerModel {
     private(set) var audioTracks: [MovieAudioTrack] = []
     private(set) var selectedAudioTrackId: String?
     private(set) var rate: Double
+    private(set) var videoSize: CGSize = .zero
+    private(set) var fillsFrame = false
+    private(set) var canPictureInPicture = false
+    private(set) var isPictureInPictureActive = false
 
     private(set) var isChromeVisible = true
     /// Touch lock (§3): taps only bring up the unlock button.
@@ -61,7 +66,14 @@ final class MoviePlayerModel {
     /// What the elapsed label and the scrubber show.
     var displayMs: Int64 { scrubMs ?? timeMs }
 
+    /// The picture is wider than tall — or not decoded yet, where a movie
+    /// almost always is (§4: the phone turns the frame for it).
+    var isLandscapePicture: Bool {
+        videoSize.width <= 0 || videoSize.width >= videoSize.height
+    }
+
     func start() {
+        VideoAudioSession.activate()
         if rate != 1 { player.rate = rate }
         player.play()
     }
@@ -151,6 +163,26 @@ final class MoviePlayerModel {
         isChromeVisible = false
     }
 
+    /// Fit ↔ Fill (§3): the button, and a pinch out or in.
+    func setFill(_ fills: Bool) {
+        touched()
+        guard fills != fillsFrame else { return }
+        player.fillsFrame = fills
+        fillsFrame = fills
+    }
+
+    func togglePictureInPicture() {
+        touched()
+        player.togglePictureInPicture()
+    }
+
+    /// Leaving the app (§4): the movie carries on only in picture in
+    /// picture; there is no background audio.
+    func enterBackground() {
+        guard !isPictureInPictureActive, isPlaying else { return }
+        player.pause()
+    }
+
     /// Speed, remembered per movie (§3).
     func setRate(_ newRate: Double) {
         touched()
@@ -166,6 +198,7 @@ final class MoviePlayerModel {
 
     func close() {
         player.close()
+        VideoAudioSession.deactivate()
         onClose()
     }
 
@@ -175,6 +208,10 @@ final class MoviePlayerModel {
         timeMs = player.timeMs
         if player.durationMs > 0 { durationMs = player.durationMs }
         audioTracks = player.audioTracks
+        if player.videoSize != videoSize { videoSize = player.videoSize }
+        fillsFrame = player.fillsFrame
+        canPictureInPicture = player.canPictureInPicture
+        isPictureInPictureActive = player.isPictureInPictureActive
         selectedAudioTrackId = player.selectedAudioTrackId
     }
 }

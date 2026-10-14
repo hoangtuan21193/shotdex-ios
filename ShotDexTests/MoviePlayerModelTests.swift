@@ -1,4 +1,5 @@
 import Foundation
+import SwiftUI
 import Testing
 @testable import ShotDex
 
@@ -12,6 +13,10 @@ import Testing
     var audioTracks: [MovieAudioTrack] = []
     var selectedAudioTrackId: String?
     var audioDelayMs = 0
+    var videoSize: CGSize = .zero
+    var fillsFrame = false
+    var canPictureInPicture = false
+    var isPictureInPictureActive = false
     var onChange: (() -> Void)?
     private(set) var seeks: [Int64] = []
     private(set) var isClosed = false
@@ -23,6 +28,7 @@ import Testing
         report { $0.timeMs = ms }
     }
     func selectAudioTrack(id: String) { report { $0.selectedAudioTrackId = id } }
+    func togglePictureInPicture() { report { $0.isPictureInPictureActive.toggle() } }
     func close() { isClosed = true }
 
     /// Changes something and tells the model, as VLC's delegate does.
@@ -131,5 +137,43 @@ import Testing
         #expect(MoviePlayerText.remaining(0, of: 0) == "")
         #expect(MoviePlayerText.rate(1.25) == "1.25\u{00D7}")
         #expect(MoviePlayerText.rate(1) == "1\u{00D7}")
+    }
+
+    /// Fit ↔ Fill reaches the engine; a locked pinch is ignored by the
+    /// screen, the button path is the model's.
+    @Test func fillTogglesTheEngine() {
+        let (model, engine) = playing()
+        model.setFill(true)
+        #expect(engine.fillsFrame)
+        #expect(model.fillsFrame)
+        model.setFill(false)
+        #expect(!engine.fillsFrame)
+    }
+
+    /// Leaving the app pauses, unless picture in picture carries the movie.
+    @Test func backgroundPausesUnlessPictureInPicture() {
+        let (model, engine) = playing()
+        model.enterBackground()
+        #expect(engine.state == .paused)
+
+        engine.play()
+        engine.togglePictureInPicture()
+        model.enterBackground()
+        #expect(engine.state == .playing)
+    }
+
+    /// FS-23.02 §4: a phone held upright turns the stage for a wide movie;
+    /// the iPad, a tall movie and a landscape window do not.
+    @Test func phoneTurnsTheStageForWideMovies() {
+        let island = EdgeInsets(top: 62, leading: 0, bottom: 34, trailing: 0)
+        let phone = MoviePlayerLayout(size: CGSize(width: 402, height: 874), safeArea: island, isCompactWidth: true, isLandscapePicture: true)
+        #expect(phone.isRotated)
+        #expect(phone.stageSize == CGSize(width: 874, height: 402))
+        #expect(phone.chromeInsets.leading == 62)
+        #expect(phone.chromeInsets.trailing == 62)
+
+        #expect(!MoviePlayerLayout(size: CGSize(width: 402, height: 874), safeArea: island, isCompactWidth: true, isLandscapePicture: false).isRotated)
+        #expect(!MoviePlayerLayout(size: CGSize(width: 1032, height: 1376), safeArea: EdgeInsets(), isCompactWidth: false, isLandscapePicture: true).isRotated)
+        #expect(!MoviePlayerLayout(size: CGSize(width: 874, height: 402), safeArea: EdgeInsets(), isCompactWidth: true, isLandscapePicture: true).isRotated)
     }
 }
