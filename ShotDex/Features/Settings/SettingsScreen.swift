@@ -235,6 +235,8 @@ struct SettingsScreen: View {
             FileServerListScreen()
         case .support:
             supportScreen
+        case .ai:
+            SettingsAIScreen()
         default:
             groupedList(destination.groups)
                 .navigationTitle(destination.title)
@@ -394,6 +396,8 @@ struct SettingsScreen: View {
         switch item {
         case .support:
             supportScreen
+        case .ai:
+            SettingsAIScreen()
         default:
             groupedList(item.groups)
                 .navigationTitle(item.title)
@@ -503,6 +507,7 @@ struct SettingsScreen: View {
         case .display: displaySection(showsHeader: showsHeader)
         case .statistics: statisticsSection(showsHeader: showsHeader)
         case .playback: playbackSection(showsHeader: showsHeader)
+        case .ai: aiSection
         case .subjectScan: subjectScanSection(showsHeader: showsHeader)
         case .libraryStorage: storageSection(showsHeader: showsHeader)
         case .sharing: sharingSection(showsHeader: showsHeader)
@@ -1036,6 +1041,33 @@ struct SettingsScreen: View {
         }
     }
 
+    /// Only reached from a search result: the AI item opens its screen
+    /// directly.
+    private var aiSection: some View {
+        Section {
+            NavigationLink {
+                SettingsAIScreen()
+            } label: {
+                rowLabel(.ai, value: aiSummary)
+            }
+            .settingsRow(.ai)
+        }
+    }
+
+    /// `Claude · Apple Intelligence` — subtitle translation · AI Search, the
+    /// two rows' order (FS-08.07 §1); `Not set up` when neither is chosen.
+    private var aiSummary: String {
+        let providers = (try? dependencies.aiProviders.providers()) ?? []
+        let onDevice = OnDeviceAI.choices
+        let defaults = UserDefaults.standard
+        let translation = AIChoice.translation(stored: defaults.string(forKey: SettingsKeys.aiSubtitleTranslation), providers: providers, onDevice: onDevice)
+        let search = AIChoice.search(stored: defaults.string(forKey: SettingsKeys.aiSearch), providers: providers, onDevice: onDevice)
+        return SettingsSummary.ai(
+            translation: translation == .askEachTime ? nil : AIChoiceTitle.title(translation, providers: providers),
+            search: search == .off ? nil : AIChoiceTitle.title(search, providers: providers)
+        )
+    }
+
     private func playbackSection(showsHeader: Bool) -> some View {
         Section {
             Toggle(isOn: $autoplayVideos) { rowLabel(.autoplayVideos) }.settingsRow(.autoplayVideos)
@@ -1269,6 +1301,8 @@ struct SettingsScreen: View {
             )
         case .playback:
             SettingsSummary.playback(autoplaysVideos: autoplayVideos, viewsFullHDR: viewFullHDR)
+        case .ai:
+            aiSummary
         case .subjectScan:
             SettingsSummary.subjectScan(
                 scanned: dependencies.subjectScan.scannedCount,
@@ -1320,7 +1354,7 @@ struct SettingsScreen: View {
                 isDenied: notificationAuthorization == .denied,
                 time: reminderTimeText
             )
-        case .display, .playback, .sharingAndExport, .support:
+        case .display, .playback, .ai, .sharingAndExport, .support:
             nil
         }
     }

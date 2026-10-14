@@ -1,7 +1,7 @@
 # FS-08.07 — AI: chọn ai làm việc AI cho ShotDex
 
-`FS-08.07` · tier A · mã: chưa có (đề xuất `ShotDex/Features/Settings/AI/`, `ShotDex/Data/AI/`) · board
-`*_SettingsAI`, `*_SettingsAIProvider` — chưa vẽ · cập nhật 2026-10-14
+`FS-08.07` · tier A · mã: `ShotDex/Features/Settings/AI/`, `ShotDex/Data/AI/`, `ShotDex/Domain/AI/` · board
+`PH_SettingsAI`, `PH_SettingsAIProvider` · cập nhật 2026-10-14
 
 **Một câu:** Settings › **AI** liệt kê những AI ShotDex dùng được — trên máy, máy chủ trong nhà, dịch vụ cloud bằng
 API key của người dùng (chỉ cho dịch phụ đề) — và chọn cái nào lo **dịch phụ đề** ([FS-23.04](../FS-23-offline-movies/04-ai-translation.md))
@@ -68,12 +68,12 @@ FS-01.03 §4 đổi: model là nhà cung cấp ở hàng **AI Search**, không c
 
 | # | Cho | Khi | Thì | Chứng minh bằng |
 |---|---|---|---|---|
-| AC-1 | iOS 26.5 sim (không Apple Intelligence), chưa thêm gì | mở Settings › AI | 2 hàng chọn: Subtitle Translation `Ask Each Time`, AI Search `Off`; On This Device chỉ có Apple Translation | ⚠️ chưa có (`scripts/settings-ai.json`) |
-| AC-2 | form Claude, key `sk-ant-test…7Qx2` | Save | key nằm trong Keychain dưới id nhà cung cấp; bảng không có cột/giá trị nào chứa key; hàng hiện `Key ends in 7Qx2` | ⚠️ một nửa: phần dữ liệu `AIProviderStoreTests.keyOnlyInKeychain` ✅; form + hàng `Key ends in` chưa có |
-| AC-3 | máy chủ giả chuẩn OpenAI ở 127.0.0.1:11434 trả 2 model | chọn Home Server, nhập địa chỉ | menu model có đúng 2 model; Test → `Working` | ⚠️ chưa có (`AIProviderClientTests.listsModelsFromLocalServer`) |
-| AC-4 | máy chủ giả trả 401 | Test | `The service rejected the API key.`; Save hỏi lại trước khi lưu | ⚠️ chưa có |
-| AC-5 | 1 nhà cung cấp Claude đang được chọn cho Subtitle Translation | xoá nó | Keychain không còn key; hàng Subtitle Translation về `Ask Each Time` | ⚠️ một nửa: `AIProviderStoreTests.deleteRemovesKey` ✅; hàng về mặc định chưa có |
+| AC-1 | iOS 26.5 sim (không Apple Intelligence), chưa thêm gì | mở Settings › AI | 2 hàng chọn: Subtitle Translation `Ask Each Time`, AI Search `Off`; On This Device chỉ có Apple Translation | ✅ iOS 18.6 `build/ui-drive/settings-ai-18` (Subtitle Translation `Ask Each Time`, AI Search `Off`, On This Device chỉ Apple Translation) + `AIProviderClientTests.choices`; sim 26.5 có Apple Intelligence `Ready` nên AI Search mặc định là nó (`scripts/settings-ai.json` 01) |
+| AC-2 | form Claude, key `sk-ant-test…7Qx2` | Save | key nằm trong Keychain dưới id nhà cung cấp; bảng không có cột/giá trị nào chứa key; hàng hiện `Key ends in 7Qx2` | ✅ `AIProviderStoreTests.keyOnlyInKeychain` + `scripts/settings-ai.json` 05 (form, ô key bí mật, hàng `gpt-test · Key ends in 7Qx2`; chụp bằng nhà cung cấp tương thích OpenAI trỏ về máy chủ giả trên máy để không gửi key giả ra dịch vụ thật) |
+| AC-3 | máy chủ giả chuẩn OpenAI ở 127.0.0.1:11434 trả 2 model | chọn Home Server, nhập địa chỉ | menu model có đúng 2 model; Test → `Working` | ✅ `AIProviderClientTests.listsModelsFromLocalServer` + `scripts/settings-ai.json` 02 (máy chủ giả 127.0.0.1:11434 trả 2 model, menu Model, Test `Working`) |
+| AC-4 | máy chủ giả trả 401 | Test | `The service rejected the API key.`; Save hỏi lại trước khi lưu | ✅ `AIProviderClientTests.rejectedKeySaysSo` + `scripts/settings-ai.json` 03–04 (401 → `The service rejected the API key.`; Save hỏi `The test didn't work. Save anyway?`) |
+| AC-5 | 1 nhà cung cấp Claude đang được chọn cho Subtitle Translation | xoá nó | Keychain không còn key; hàng Subtitle Translation về `Ask Each Time` | ✅ `AIProviderStoreTests.deleteRemovesKey` + `AIProviderClientTests.choices` (lựa chọn trỏ tới nhà cung cấp đã xoá về mặc định) + `scripts/settings-ai.json` 06 (xoá từ form, hai hàng biến mất) |
 | AC-6 | AI Search = máy chủ giả trả lời sau 9 s, câu `ảnh hoàng hôn 85mm` | áp tìm | sau 8 s dùng kết quả bộ phân tích, không hộp lỗi | ⚠️ chưa có (`SearchServiceTests.networkModelTimesOutToParser`) |
-| AC-7 | đã cài 1 Claude + 1 máy chủ trong nhà | mở menu AI Search | chỉ có Apple Intelligence (nếu máy có), máy chủ trong nhà, Off — không có Claude | ⚠️ chưa có |
+| AC-7 | đã cài 1 Claude + 1 máy chủ trong nhà | mở menu AI Search | chỉ có Apple Intelligence (nếu máy có), máy chủ trong nhà, Off — không có Claude | 🟡 logic ✅ `AIProviderClientTests.choices` (menu AI Search chỉ Apple Intelligence, máy chủ trong nhà, Off); ảnh menu chờ task 27 |
 | AC-8 | Duo trong 951×669, bố cục rộng | mở Settings | đủ 10 mục; cuộn cột mục tới Support và chạm được | ⚠️ chưa có |
-| AC-9 | iPhone 17 + iOS 18.6 sim | mở Settings › AI | cả hai nhánh iOS cùng hàng, cùng nút | ⚠️ chưa có |
+| AC-9 | iPhone 17 + iOS 18.6 sim | mở Settings › AI | cả hai nhánh iOS cùng hàng, cùng nút | ✅ cùng hàng, cùng nút trên 26.5 (`settings-ai.json` 01) và 18.6 (`settings-ai-18` 01); khác duy nhất là hàng Apple Intelligence chỉ có ở máy hỗ trợ |

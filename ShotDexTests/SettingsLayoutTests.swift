@@ -22,19 +22,19 @@ struct SettingsLayoutTests {
 
     // MARK: the two orders and the mapping between them
 
-    /// Nine sidebar items cover all fifteen groups, and no group is shown twice.
+    /// Ten sidebar items (AI joined, FS-08.07 §1) cover all sixteen groups, and no group is shown twice.
     @Test func bothLayoutsCoverEverySection() {
         let mapped = SettingsSection.allCases.flatMap(\.groups)
         #expect(Set(mapped) == Set(SettingsGroup.allCases))
         #expect(mapped.count == SettingsGroup.allCases.count)
-        #expect(SettingsSection.allCases.count == 9)
-        #expect(SettingsGroup.allCases.count == 15)
+        #expect(SettingsSection.allCases.count == 10)
+        #expect(SettingsGroup.allCases.count == 16)
     }
 
     /// The sidebar reads in the order of the four headings (FS-08.01b §1).
     @Test func sidebarOrderFollowsTheHeadings() {
         #expect(SettingsSection.allCases == [
-            .photoLibrary, .display, .playback, .subjectScan, .cameraDatabase,
+            .photoLibrary, .display, .playback, .ai, .subjectScan, .cameraDatabase,
             .sharingAndExport,
             .widgets, .notifications,
             .support,
@@ -44,11 +44,11 @@ struct SettingsLayoutTests {
 
     // MARK: The compact root (FS-08.01b §1)
 
-    /// Four headings, eleven rows, in the table's order — Sharing and Export
+    /// Four headings, twelve rows, in the table's order — Sharing and Export
     /// split into its three settings.
     @Test func compactRootRowsMatchTheSpecTable() {
         #expect(SettingsCategory.libraryAndViewing.destinations == [
-            .photoLibrary, .display, .playback, .subjectScan, .cameraDatabase,
+            .photoLibrary, .display, .playback, .ai, .subjectScan, .cameraDatabase,
         ])
         #expect(SettingsCategory.sharingAndExport.destinations == [
             .metadataWhenSharing, .resizePresets, .fileServers,
@@ -78,10 +78,10 @@ struct SettingsLayoutTests {
         #expect(Set(rootGroups) == Set(SettingsGroup.allCases))
     }
 
-    /// Three rows open a screen of their own instead of a page of rows.
+    /// Four rows open a screen of their own instead of a page of rows.
     @Test func rootRowsThatOpenAScreenDirectly() {
         let direct = SettingsDestination.allCases.filter { !$0.drawsRows }
-        #expect(direct == [.resizePresets, .fileServers, .support])
+        #expect(direct == [.ai, .resizePresets, .fileServers, .support])
     }
 
     /// Every root row has a symbol, and no two root rows share one.
@@ -125,8 +125,8 @@ struct SettingsLayoutTests {
         #expect(SettingsSection.photoLibrary.groups == [.sources, .photoLibrary, .libraryStorage, .privacy])
         // Display holds Thumbnail Metadata and Statistics (Show Insights, FS-07.02 §6).
         #expect(SettingsSection.display.groups == [.display, .statistics])
-        // File Servers joins them rather than taking a tenth item: nine is what
-        // fits the Duo's 669pt without scrolling (FS-15.01 §1).
+        // File Servers joins them rather than taking an item of its own; AI
+        // took the tenth (FS-08.07 §1), so the Duo's item column scrolls.
         #expect(SettingsSection.sharingAndExport.groups == [.sharing, .export, .fileServers])
     }
 

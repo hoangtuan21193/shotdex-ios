@@ -12,6 +12,8 @@ enum SettingsSection: String, CaseIterable, Identifiable, Hashable, Sendable {
     case photoLibrary
     case display
     case playback
+    /// Settings › AI (FS-08.07): the tenth item, after Playback.
+    case ai
     case subjectScan
     case cameraDatabase
     case sharingAndExport
@@ -34,6 +36,7 @@ enum SettingsSection: String, CaseIterable, Identifiable, Hashable, Sendable {
         case .widgets: "Widgets"
         case .display: "Display"
         case .playback: "Playback"
+        case .ai: "AI"
         case .subjectScan: "People and Pets"
         case .sharingAndExport: "Sharing and Export"
         case .cameraDatabase: "Camera Database"
@@ -50,6 +53,7 @@ enum SettingsSection: String, CaseIterable, Identifiable, Hashable, Sendable {
         case .widgets: "square.grid.2x2"
         case .display: "text.below.photo"
         case .playback: "play.rectangle"
+        case .ai: "sparkles"
         // Not a magnifying glass: the search field sits four rows above, and two
         // magnifiers in one sidebar read as two searches.
         case .subjectScan: "person.2"
@@ -66,6 +70,7 @@ enum SettingsSection: String, CaseIterable, Identifiable, Hashable, Sendable {
         case .photoLibrary: .blue
         case .display: .indigo
         case .playback: .pink
+        case .ai: .purple
         case .subjectScan: .teal
         case .cameraDatabase: .brown
         case .sharingAndExport: .green
@@ -78,7 +83,7 @@ enum SettingsSection: String, CaseIterable, Identifiable, Hashable, Sendable {
     /// The heading the item sits under, in both layouts.
     var category: SettingsCategory {
         switch self {
-        case .photoLibrary, .display, .playback, .subjectScan, .cameraDatabase: .libraryAndViewing
+        case .photoLibrary, .display, .playback, .ai, .subjectScan, .cameraDatabase: .libraryAndViewing
         case .sharingAndExport: .sharingAndExport
         case .widgets, .notifications: .widgetsAndNotifications
         case .support: .help
@@ -105,6 +110,7 @@ enum SettingsSection: String, CaseIterable, Identifiable, Hashable, Sendable {
         case .widgets: [.widgets]
         case .display: [.display, .statistics]
         case .playback: [.playback]
+        case .ai: [.ai]
         case .subjectScan: [.subjectScan]
         case .sharingAndExport: [.sharing, .export, .fileServers]
         case .cameraDatabase: [.cameraDatabase]
@@ -115,7 +121,7 @@ enum SettingsSection: String, CaseIterable, Identifiable, Hashable, Sendable {
     /// Whether the item's pane is a list of rows a search result can scroll
     /// to. Support's pane is the support screen itself, which has none of the
     /// rows the index names.
-    var drawsRows: Bool { self != .support }
+    var drawsRows: Bool { self != .support && self != .ai }
 }
 
 /// The four headings of Settings, in sentence case (FS-08.01b §1).
@@ -157,6 +163,7 @@ enum SettingsDestination: String, CaseIterable, Identifiable, Hashable, Sendable
     case photoLibrary
     case display
     case playback
+    case ai
     case subjectScan
     case cameraDatabase
     case metadataWhenSharing
@@ -173,6 +180,7 @@ enum SettingsDestination: String, CaseIterable, Identifiable, Hashable, Sendable
         case .photoLibrary: .photoLibrary
         case .display: .display
         case .playback: .playback
+        case .ai: .ai
         case .subjectScan: .subjectScan
         case .cameraDatabase: .cameraDatabase
         case .metadataWhenSharing, .resizePresets, .fileServers: .sharingAndExport
@@ -228,7 +236,7 @@ enum SettingsDestination: String, CaseIterable, Identifiable, Hashable, Sendable
     /// and Support is the support screen.
     var drawsRows: Bool {
         switch self {
-        case .resizePresets, .fileServers, .support: false
+        case .resizePresets, .fileServers, .support, .ai: false
         default: true
         }
     }
@@ -256,6 +264,8 @@ enum SettingsGroup: String, CaseIterable, Identifiable, Hashable, Sendable {
     /// sidebar's Display item.
     case statistics
     case playback
+    /// Settings › AI — the AI screen itself (FS-08.07).
+    case ai
     case subjectScan
     case libraryStorage
     case sharing

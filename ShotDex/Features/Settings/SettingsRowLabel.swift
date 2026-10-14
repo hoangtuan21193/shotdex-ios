@@ -64,6 +64,9 @@ enum SettingsRowLabel: String, CaseIterable, Identifiable, Hashable, Sendable {
     case audioLanguages
     case subtitleLanguages
 
+    // AI
+    case ai
+
     // People and Pets
     case scanned
     case findPeopleAndPets
@@ -133,6 +136,7 @@ enum SettingsRowLabel: String, CaseIterable, Identifiable, Hashable, Sendable {
         case .viewFullHDR: "View Full HDR"
         case .audioLanguages: "Audio Languages"
         case .subtitleLanguages: "Subtitle Languages"
+        case .ai: "AI"
         case .scanned: "Scanned"
         case .findPeopleAndPets: "Find People and Pets"
         case .scanAgain: "Scan Again"
@@ -175,6 +179,8 @@ enum SettingsRowLabel: String, CaseIterable, Identifiable, Hashable, Sendable {
             .statistics
         case .autoplayVideos, .viewFullHDR, .audioLanguages, .subtitleLanguages:
             .playback
+        case .ai:
+            .ai
         case .scanned, .findPeopleAndPets, .scanAgain, .clearScanResults:
             .subjectScan
         case .photosAndVideos, .measured:
@@ -226,6 +232,7 @@ enum SettingsRowLabel: String, CaseIterable, Identifiable, Hashable, Sendable {
         case .viewFullHDR: "sun.max"
         case .audioLanguages: "speaker.wave.2"
         case .subtitleLanguages: "captions.bubble"
+        case .ai: "sparkles"
         case .scanned: "person.2"
         case .findPeopleAndPets: "viewfinder"
         case .scanAgain: "arrow.clockwise"
@@ -281,6 +288,7 @@ enum SettingsRowLabel: String, CaseIterable, Identifiable, Hashable, Sendable {
         case .metadataWhenSharing: ["location", "GPS", "EXIF", "privacy"]
         case .watermarkWhenSharing: ["signature", "logo", "credit", "copyright"]
         case .showInsights: ["Statistics"]
+        case .ai: ["Claude", "ChatGPT", "OpenAI", "Gemini", "Grok", "OpenRouter", "Ollama", "LM Studio", "API key", "translate"]
         default: []
         }
     }

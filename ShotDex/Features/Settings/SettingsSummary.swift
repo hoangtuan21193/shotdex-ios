@@ -152,6 +152,13 @@ enum SettingsSummary {
     }
 
     /// "Studio NAS, MacBook Pro and 2 more" — the first two names, then a count.
+    /// Settings › AI's root value: who translates · who helps search.
+    static func ai(translation: String?, search: String?) -> String {
+        let parts = [translation, search].compactMap { $0 }
+        guard !parts.isEmpty else { return String(localized: "Not set up", comment: "Settings › AI value: nothing chosen") }
+        return parts.joined(separator: " · ")
+    }
+
     static func fileServers(names: [String]) -> String {
         switch names.count {
         case 0:

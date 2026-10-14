@@ -1,0 +1,191 @@
+{
+ "steps": [
+  {
+   "action": "launch"
+  },
+  {
+   "action": "wait",
+   "seconds": 5
+  },
+  {
+   "action": "tap",
+   "label": "Settings"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "scrollTo",
+   "label": "AI"
+  },
+  {
+   "action": "tap",
+   "label": "AI"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "screenshot",
+   "name": "01-ai"
+  },
+  {
+   "action": "dump",
+   "name": "01-ai"
+  },
+  {
+   "action": "tap",
+   "label": "Add Provider…"
+  },
+  {
+   "action": "tap",
+   "label": "Home Server"
+  },
+  {
+   "action": "typeText",
+   "label": "Name",
+   "text": "Mac Studio",
+   "type": "textField"
+  },
+  {
+   "action": "typeText",
+   "label": "Address",
+   "text": "127.0.0.1:11434",
+   "type": "textField"
+  },
+  {
+   "action": "wait",
+   "seconds": 2.5
+  },
+  {
+   "action": "tap",
+   "label": "Test"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "screenshot",
+   "name": "02-home-server"
+  },
+  {
+   "action": "dump",
+   "name": "02-home-server"
+  },
+  {
+   "action": "tap",
+   "label": "Save"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "tap",
+   "label": "Add Provider…"
+  },
+  {
+   "action": "tap",
+   "label": "Other OpenAI-Compatible"
+  },
+  {
+   "action": "typeText",
+   "label": "Name",
+   "text": "Proxy",
+   "type": "textField"
+  },
+  {
+   "action": "typeText",
+   "label": "Address",
+   "text": "http://127.0.0.1:11435",
+   "type": "textField"
+  },
+  {
+   "action": "typeText",
+   "label": "API Key",
+   "text": "sk-test-0000-7Qx2",
+   "type": "secureTextField"
+  },
+  {
+   "action": "typeText",
+   "label": "Model",
+   "text": "gpt-test",
+   "type": "textField"
+  },
+  {
+   "action": "tap",
+   "label": "Test"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "screenshot",
+   "name": "03-rejected"
+  },
+  {
+   "action": "tap",
+   "label": "Save"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "screenshot",
+   "name": "04-save-anyway"
+  },
+  {
+   "action": "tap",
+   "label": "Save Anyway"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "screenshot",
+   "name": "05-providers"
+  },
+  {
+   "action": "dump",
+   "name": "05-providers"
+  },
+  {
+   "action": "tap",
+   "label": "Proxy"
+  },
+  {
+   "action": "tap",
+   "label": "Delete Provider"
+  },
+  {
+   "action": "tap",
+   "label": "Delete"
+  },
+  {
+   "action": "tap",
+   "label": "Mac Studio"
+  },
+  {
+   "action": "tap",
+   "label": "Delete Provider"
+  },
+  {
+   "action": "tap",
+   "label": "Delete"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "dump",
+   "name": "06-cleaned"
+  }
+ ]
+}
