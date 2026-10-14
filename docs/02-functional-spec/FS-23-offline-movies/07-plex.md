@@ -13,19 +13,28 @@ Quyết định: [planboard movies-library](../../../.planboard/movies-library/D
   device and enter this code." · nút **Open plex.tv/link** (mở Safari trên máy này) · Cancel. Mã hết hạn → tự lấy mã mới.
 - Đăng nhập xong → danh sách máy chủ của tài khoản, máy chủ trong mạng nhà lên đầu, kèm `On this network`; chọn
   một → chọn thư viện (mặc định mọi thư viện Movies và TV Shows) → **Add**.
-- Đây là tài khoản Plex của người dùng, không phải tài khoản ShotDex. Token ở Keychain, chỉ trên máy này.
+- Đây là tài khoản Plex của người dùng, không phải tài khoản ShotDex. Token ở Keychain, chỉ trên máy này. Máy chủ của
+  người khác chia sẻ dùng `accessToken` riêng của máy chủ đó (plex.tv cấp trong danh sách máy chủ).
 - Gỡ: Settings › Sources › Plex › **Sign Out** — xoá token, phim stream biến khỏi Movies, phim đã tải ở lại.
 
 ## 2. Stream
 
 - Phát **bản gốc** (direct play) qua mạng nhà; không nhờ Plex chuyển mã. Ưu tiên địa chỉ trong mạng nhà; chỉ có địa
   chỉ ngoài Internet thì vẫn phát nếu tới được (qua Plex relay hay VPN của người dùng).
+- **Chọn đường** (spike S3): thử cùng lúc mọi đường plex.tv đưa, đường trong mạng nhà trước, lấy đường trả lời đầu tiên;
+  nhớ đường đó cho lần sau. Trong nhà: `https://…plex.direct` (chứng chỉ thật, hệ thống tự tin), không được thì
+  `http://<IP LAN>:32400` khi máy chủ cho phép. Không dựa vào cờ `publicAddressMatches` để đoán "đang ở nhà" — đo thật thì
+  nó báo sai. Relay là đường cuối: chậm và chập chờn.
+- Byte phim đi qua cùng đường đọc của ShotDex như phim trên NAS (02 §1), token nằm trong header — VLC không thấy token.
+- **Phim có nhiều bản** (người dùng chốt 14/10): chạm là phát bản nét nhất.
 - Phụ đề rời của Plex (file `.srt`… cạnh phim trên máy chủ) có trong bảng Audio & Subtitles như phụ đề cạnh phim.
 
 ## 3. Tải về
 
 - Menu phim › Download to iPhone tải **bản gốc**; trước khi tải hiện cỡ (`18.4 GB`) trong menu; thiếu chỗ → như
   01 §6. Chọn chất lượng nhỏ hơn: không có trong bản này (cần Plex Pass và máy chủ chuyển mã).
+- Phim có nhiều bản: Download to iPhone mở danh sách các bản, mỗi dòng độ phân giải + cỡ (`4K · 54.3 GB`,
+  `1080p · 8.1 GB`), nét nhất ở trên; phim một bản thì như trên (người dùng chốt 14/10).
 - Tải kèm: poster, ảnh nền, năm, mô tả, thể loại, thời lượng, phụ đề rời — offline vẫn đủ trên Grid và trong menu.
 
 ## 4. Đồng bộ với Plex
