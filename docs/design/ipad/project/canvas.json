@@ -1182,6 +1182,7 @@
   "IP_DuplicatesBursts.dc.html",
   "IP_BurstFrames.dc.html",
   "IP_Movies.dc.html",
+  "IP_MovieDetail.dc.html",
   "IP_MoviesAdd.dc.html",
   "IP_MoviePlayer.dc.html",
   "IP_MovieTracks.dc.html",

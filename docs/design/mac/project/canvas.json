@@ -642,6 +642,7 @@
   "MAC_GetInfoSingle.dc.html",
   "MAC_SettingsSourcesCache.dc.html",
   "MAC_Movies.dc.html",
+  "MAC_MovieDetail.dc.html",
   "MAC_MoviesAdd.dc.html",
   "MAC_MoviePlayer.dc.html",
   "MAC_MovieTracks.dc.html",

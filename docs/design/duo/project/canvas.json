@@ -1976,6 +1976,7 @@
     "DI_DuplicatesBursts.dc.html",
     "DI_BurstFrames.dc.html",
     "DI_Movies.dc.html",
+    "DI_MovieDetail.dc.html",
     "DI_MoviesAdd.dc.html",
     "DI_MoviePlayer.dc.html",
     "DI_MovieTracks.dc.html",
@@ -1986,6 +1987,7 @@
     "DI_PlexSignIn.dc.html",
     "DC_BurstFrames.dc.html",
     "DC_Movies.dc.html",
+    "DC_MovieDetail.dc.html",
     "DC_MoviePlayer.dc.html",
     "DC_MovieTracks.dc.html",
     "DC_SettingsAI.dc.html"
