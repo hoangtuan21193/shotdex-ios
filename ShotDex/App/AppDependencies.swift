@@ -150,6 +150,8 @@ final class AppDependencies {
     let movieArt: MoviePosterLoader
     /// Download to iPhone (FS-23.01 §6).
     let movieDownloads: MovieDownloadRunner
+    /// Subtitle translations in progress (FS-23.04), app-wide.
+    let movieTranslations: MovieTranslations
     /// Movie downloads and the app's lifecycle (FS-23.01 §6, AC-54).
     let movieBackground: MovieBackgroundService
     /// Keeps every backup job watching its source (FS-22.02).
@@ -577,6 +579,7 @@ final class AppDependencies {
             transfer: movieTransfer
         )
         self.movieDownloads = movieDownloads
+        self.movieTranslations = MovieTranslations(store: movies, files: movieDownloads.files)
         self.movieBackground = MovieBackgroundService(runner: movieDownloads)
         let backupCoordinator = BackupCoordinator(store: backups, environment: .live(
             database: database, store: backups, servers: fileServers, roots: folderRoots

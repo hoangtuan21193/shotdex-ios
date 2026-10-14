@@ -1,6 +1,6 @@
 # FS-23.04 — Dịch phụ đề bằng AI
 
-`FS-23.04` · tier A (sheet) · board `PH_MovieTranslate` (5/5) — chưa vẽ · cập nhật 2026-10-14
+`FS-23.04` · trang trong bảng Audio & Subtitles · board `PH_MovieTranslate` (5/5) · mã `MovieTranslatePage`, `MovieTranslations`, `SubtitleTranslator`, `TranslationService` · cập nhật 2026-10-15
 
 **Một câu:** từ một phụ đề chữ đã có, tạo phụ đề thứ hai bằng ngôn ngữ khác với AI người dùng chọn, giữ nguyên
 từng mốc giờ, làm xong trước khi lên máy bay và giữ lại để xem offline.
@@ -25,7 +25,9 @@ Mở từ menu dòng **Secondary** trong bảng Audio & Subtitles (03 §2) › T
 
 ## 2. Chạy
 
-- Tiến độ trong sheet và trên hàng phim: `Translating 412 of 1,380 lines` + **Cancel**. Đóng sheet không dừng việc.
+- Tiến độ trong trang Translate: `Translating 412 of 1,380 lines` + **Cancel**. Đóng bảng hay đóng player không dừng việc
+  (việc dịch thuộc cả app). Riêng **Apple Translation** chạy trong phiên của chính trang đó, nên đóng bảng là dừng (giữ phần
+  đã xong). Tiến độ trên hàng phim trong danh sách: chưa làm.
 - Chia theo cue, không theo câu: mỗi lượt gửi một khối cue có đánh số + 5 cue trước làm ngữ cảnh (không dịch lại).
   Khối: 40 cue cho máy chủ nhà và cloud; 30 cue cho Apple Intelligence (cửa sổ 4.096 token, mỗi khối một phiên mới);
   Apple Translation dịch theo lô.

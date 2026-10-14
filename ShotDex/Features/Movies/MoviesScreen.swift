@@ -354,6 +354,8 @@ struct MoviesScreen: View {
             subtitleImporter: { [store = dependencies.movies, files = dependencies.movieDownloads.files] urls in
                 try SubtitleImporter(store: store, files: files).importFiles(urls, into: movie.id, origin: .imported)
             },
+            translations: dependencies.movieTranslations,
+            translationService: TranslationService(providers: dependencies.aiProviders),
             onClose: onClose
         )
     }

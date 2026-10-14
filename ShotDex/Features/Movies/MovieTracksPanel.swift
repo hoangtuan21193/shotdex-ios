@@ -15,6 +15,7 @@ struct MovieTracksPanel: View {
     enum Page: Equatable {
         case choose(MoviePlayerModel.SubtitleLine)
         case position
+        case translate
         case style(MoviePlayerModel.SubtitleLine)
     }
 
@@ -29,6 +30,8 @@ struct MovieTracksPanel: View {
                 subtitleChoices(line)
             case .position:
                 positionChoices
+            case .translate:
+                MovieTranslatePage(model: model) { page = nil }
             case nil:
                 trackList
             }
@@ -126,6 +129,22 @@ struct MovieTracksPanel: View {
                         Task { await model.selectSubtitle(subtitle.id, for: line) }
                         page = nil
                     }
+                }
+                if line == .secondary, model.translationService != nil {
+                    Divider().overlay(EditorTheme.glassStroke).padding(.leading, AppTheme.Spacing.lg)
+                    Button {
+                        page = .translate
+                    } label: {
+                        Label(String(localized: "Translate…", comment: "Movie player panel: make a second subtitle with AI"), systemImage: "translate")
+                            .font(.subheadline)
+                            .padding(.horizontal, AppTheme.Spacing.lg)
+                            .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    // Picture subtitles and streamed tracks VLC draws have no text.
+                    .disabled(model.translatableSubtitles.isEmpty)
+                    .opacity(model.translatableSubtitles.isEmpty ? 0.4 : 1)
                 }
                 if line == .secondary, model.canImportSubtitles {
                     Divider().overlay(EditorTheme.glassStroke).padding(.leading, AppTheme.Spacing.lg)

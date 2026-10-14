@@ -68,6 +68,11 @@ final class MoviePlayerModel {
     private(set) var engineSubtitles: [String: Int] = [:]
     private let isFirstOpen: Bool
     private let subtitleImporter: (@Sendable ([URL]) throws -> SubtitleImporter.Result)?
+    /// Translate (FS-23.04): the app-wide runs, and how to reach a provider.
+    let translations: MovieTranslations?
+    let translationService: TranslationService?
+    /// Translate… opened Settings › AI (`Set Up AI`, a refused key).
+    var showsAISettings = false
     /// Import File… from the Secondary menu opened the document picker.
     var isPickingSubtitleFiles = false
     private(set) var subtitleImportFailure: String?
@@ -97,6 +102,8 @@ final class MoviePlayerModel {
         sourceIsFiles: Bool = false,
         embeddedSubtitles: (@Sendable () async -> [EmbeddedSubtitleExtractor.Found])? = nil,
         subtitleImporter: (@Sendable ([URL]) throws -> SubtitleImporter.Result)? = nil,
+        translations: MovieTranslations? = nil,
+        translationService: TranslationService? = nil,
         onClose: @escaping () -> Void = {}
     ) {
         self.movie = movie
@@ -109,6 +116,8 @@ final class MoviePlayerModel {
         self.sourceIsFiles = sourceIsFiles
         self.embeddedSubtitles = embeddedSubtitles
         self.subtitleImporter = subtitleImporter
+        self.translations = translations
+        self.translationService = translationService
         self.onClose = onClose
         let choice = (try? store?.subtitleChoice(movieId: movie.id)) ?? nil
         isFirstOpen = choice == nil
@@ -450,12 +459,67 @@ final class MoviePlayerModel {
         }
     }
 
+    // MARK: Translate (FS-23.04)
+
+    /// Text subtitles that can be translated from.
+    var translatableSubtitles: [MovieSubtitle] { subtitles.filter(hasText) }
+
+    var translationRun: MovieTranslations.Run? { translations?.runs[movie.id] }
+
+    /// The words of a subtitle, for Translate.
+    func document(for id: String) async -> SubtitleDocument? {
+        await timeline(for: id)?.document
+    }
+
+    func startTranslation(fromId: String, toLanguage: String, using: AIChoice, engine given: (any SubtitleTranslationEngine)? = nil) async {
+        guard let translations, let service = translationService,
+              let from = subtitles.first(where: { $0.id == fromId }),
+              let document = await document(for: fromId),
+              let engine = given ?? service.engine(for: using) else { return }
+        service.rememberUsing(using)
+        translations.start(
+            movie: movie, from: from, document: document, toLanguage: toLanguage,
+            using: using, serviceName: service.serviceName(of: using), engine: engine
+        )
+    }
+
+    func cancelTranslation() {
+        translations?.cancel(movieId: movie.id)
+    }
+
+    /// Apple Translation's run lives as long as the view holding its
+    /// session: wait here, and stop with it.
+    func runHeldTranslation(fromId: String, toLanguage: String, engine: any SubtitleTranslationEngine) async {
+        await startTranslation(fromId: fromId, toLanguage: toLanguage, using: .appleTranslation, engine: engine)
+        while case .running? = translationRun?.state {
+            do {
+                try await Task.sleep(for: .milliseconds(250))
+            } catch {
+                cancelTranslation()
+                return
+            }
+        }
+    }
+
+    /// A finished translation joins the menus and, with the Secondary
+    /// off, becomes it (§3).
+    func adoptTranslation(_ subtitleId: String) async {
+        subtitles = (try? store?.subtitles(movieId: movie.id)) ?? subtitles
+        if subtitleChoice.secondaryId == nil {
+            await selectSubtitle(subtitleId, for: .secondary)
+        }
+        translations?.clear(movieId: movie.id)
+    }
+
     func dismissSubtitleImportFailure() {
         subtitleImportFailure = nil
     }
 
     func subtitleTitle(_ subtitle: MovieSubtitle) -> String {
-        guard !hasText(subtitle) else { return MovieSubtitleLabel.title(subtitle, fromFiles: sourceIsFiles) }
+        guard !hasText(subtitle) else {
+            let provider = subtitle.translationProviderId.flatMap { translationService?.name(of: $0) }
+            return MovieSubtitleLabel.title(subtitle, fromFiles: sourceIsFiles, providerName: provider)
+        }
         return "\(MovieSubtitleLabel.language(subtitle)) · " + String(localized: "In File (Download to use as Secondary or translate)", comment: "Subtitle origin: a track in a streamed movie that only the player can draw (AC-55)")
     }
 

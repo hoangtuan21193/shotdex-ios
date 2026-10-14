@@ -69,6 +69,20 @@ struct MoviePlayerScreen: View {
         .onChange(of: scenePhase) { _, phase in
             if phase == .background { model.enterBackground() }
         }
+        .sheet(isPresented: Binding(get: { model.showsAISettings }, set: { model.showsAISettings = $0 })) {
+            NavigationStack {
+                SettingsAIScreen()
+                    .toolbar {
+                        ToolbarItem(placement: .confirmationAction) {
+                            Button(String(localized: "Done", comment: "Settings › AI from the player: close")) { model.showsAISettings = false }
+                        }
+                    }
+            }
+        }
+        // A finished translation joins the menus (FS-23.04 §3).
+        .onChange(of: model.translationRun?.state) { _, state in
+            if case .finished(let id)? = state { Task { await model.adoptTranslation(id) } }
+        }
         .fileImporter(
             isPresented: Binding(get: { model.isPickingSubtitleFiles }, set: { model.isPickingSubtitleFiles = $0 }),
             allowedContentTypes: Self.subtitleTypes,

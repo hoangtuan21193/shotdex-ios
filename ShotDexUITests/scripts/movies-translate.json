@@ -1,0 +1,29 @@
+{
+ "steps": [
+  {"action": "launch"},
+  {"action": "wait", "seconds": 6},
+  {"action": "tap", "label": "Collections", "type": "button"},
+  {"action": "wait", "seconds": 2},
+  {"action": "scrollTo", "label": "Utilities"},
+  {"action": "swipe", "x": 0.75, "y": 0.66, "direction": "left", "distance": 0.6},
+  {"action": "wait", "seconds": 1},
+  {"action": "tap", "label": "Movies, "},
+  {"action": "wait", "seconds": 8},
+  {"action": "tap", "label": "Interstellar"},
+  {"action": "wait", "seconds": 4},
+  {"action": "tap", "x": 0.5, "y": 0.2},
+  {"action": "tap", "label": "Audio and Subtitles"},
+  {"action": "tap", "label": "Secondary"},
+  {"action": "tap", "label": "Translate…"},
+  {"action": "wait", "seconds": 1},
+  {"action": "screenshot", "name": "01-translate"},
+  {"action": "dump", "name": "01-translate"},
+  {"action": "tap", "label": "Translate", "type": "button"},
+  {"action": "wait", "seconds": 4},
+  {"action": "screenshot", "name": "02-done"},
+  {"action": "tap", "label": "Audio and Subtitles"},
+  {"action": "wait", "seconds": 1},
+  {"action": "screenshot", "name": "03-panel"},
+  {"action": "dump", "name": "03-panel"}
+ ]
+}

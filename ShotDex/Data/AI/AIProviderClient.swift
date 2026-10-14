@@ -11,6 +11,8 @@ struct AIProviderClient: Sendable {
 
     enum Failure: LocalizedError, Equatable {
         case rejectedKey
+        /// 429: too many requests just now.
+        case rateLimited
         case unreachable(String)
         /// The service's own words.
         case service(String)
@@ -20,6 +22,8 @@ struct AIProviderClient: Sendable {
             switch self {
             case .rejectedKey:
                 String(localized: "The service rejected the API key.", comment: "AI provider error: 401/403")
+            case .rateLimited:
+                String(localized: "The service is busy. Try again in a minute.", comment: "AI provider error: 429")
             case .unreachable(let name):
                 String(localized: "ShotDex couldn't reach \(name).", comment: "AI provider error: no connection, e.g. ShotDex couldn't reach Mac Studio.")
             case .service(let message):
@@ -150,6 +154,7 @@ struct AIProviderClient: Sendable {
         switch http.statusCode {
         case 200..<300: return data
         case 401, 403: throw Failure.rejectedKey
+        case 429: throw Failure.rateLimited
         default: throw Failure.service(Self.serviceMessage(data) ?? HTTPURLResponse.localizedString(forStatusCode: http.statusCode).capitalized)
         }
     }
