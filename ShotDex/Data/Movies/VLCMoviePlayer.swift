@@ -172,10 +172,12 @@ final class VLCMoviePlayer: NSObject, MoviePlaying {
         // Off the main thread: VLC's stop waits for its own threads, which
         // call back onto the main thread — stopping from there can lock both
         // up when the device is busy (seen in the full test run).
-        let player = player
+        // VLCMediaPlayer predates Sendable; it is only touched here once
+        // the delegate is gone and nothing else holds it.
+        let stopping = StoppingPlayer(player: player)
         DispatchQueue.global(qos: .userInitiated).async {
-            player.stop()
-            player.media = nil
+            stopping.player.stop()
+            stopping.player.media = nil
         }
     }
 
@@ -324,4 +326,9 @@ private extension MainActor {
             Task { @MainActor in body() }
         }
     }
+}
+
+/// Hands the player to the queue that stops it (`close()`).
+private struct StoppingPlayer: @unchecked Sendable {
+    let player: VLCMediaPlayer
 }
