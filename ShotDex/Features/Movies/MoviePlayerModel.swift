@@ -17,9 +17,13 @@ final class MoviePlayerModel {
     /// mean the picture stopped.
     private var lastProgress = Date()
 
-    init(movie: Movie, player: any MoviePlaying) {
+    /// Lets go of the stream's connection (FS-23.01 §3).
+    private let onClose: () -> Void
+
+    init(movie: Movie, player: any MoviePlaying, onClose: @escaping () -> Void = {}) {
         self.movie = movie
         self.player = player
+        self.onClose = onClose
         durationMs = movie.durationMs ?? 0
         player.onChange = { [weak self] in self?.sync() }
         sync()
@@ -51,7 +55,10 @@ final class MoviePlayerModel {
         if state == .playing || state == .buffering { player.pause() } else { player.play() }
     }
 
-    func close() { player.close() }
+    func close() {
+        player.close()
+        onClose()
+    }
 
     private func sync() {
         state = player.state

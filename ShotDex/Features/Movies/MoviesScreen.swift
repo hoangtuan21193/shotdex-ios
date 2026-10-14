@@ -266,12 +266,25 @@ struct MoviesScreen: View {
         play(movie)
     }
 
-    /// Play (FS-23.02 §1): a movie on the device from its file; streaming
-    /// joins in plan task 17.
+    /// Play (FS-23.02 §1): from the file when the movie is on the device,
+    /// else streamed from its source over the saved connection (AC-3).
     private func play(_ movie: Movie) {
-        guard movie.isOnDevice, let file = dependencies.movieDownloads.files.file(for: movie) else { return }
-        let engine = VLCMoviePlayer(input: .file(file))
-        playing = PlayingMovie(model: MoviePlayerModel(movie: movie, player: engine), view: engine.view)
+        let opener = MoviePlaybackOpener(store: dependencies.movies, servers: dependencies.fileServers, files: dependencies.movieDownloads.files)
+        Task {
+            do {
+                switch try await opener.open(movie) {
+                case .file(let url):
+                    let engine = VLCMoviePlayer(input: .file(url))
+                    playing = PlayingMovie(model: MoviePlayerModel(movie: movie, player: engine), view: engine.view)
+                case .stream(let stream, let fileName, let close):
+                    let engine = VLCMoviePlayer(input: .stream(stream, fileName: fileName))
+                    let model = MoviePlayerModel(movie: movie, player: engine) { Task { await close() } }
+                    playing = PlayingMovie(model: model, view: engine.view)
+                }
+            } catch {
+                awayFrom = movie.sourceName ?? ""
+            }
+        }
     }
 
     private func selected(_ model: MoviesModel) -> [Movie] {
