@@ -15,7 +15,13 @@ track âm thanh, phụ đề, chỗ đang xem.
 - Giải mã phần cứng (VideoToolbox) cho H.264/HEVC; codec khác giải bằng CPU.
 - Bản: **VLCKit 4.0 alpha** (4.0.0a25, 30/9/2026; người dùng chốt 2026-10-14) — gói SPM chính thức, có PiP trên
   iOS và macOS. Ghim đúng bản, bọc sau một lớp Data để đổi được; xét lại bản ổn định trước khi phát hành.
-- Cỡ app thêm: chưa đo (gói SPM 922 MB là mọi nền tảng + simulator). Đo bằng báo cáo App Thinning — AC-28.
+- Cỡ app thêm (đo thô ở spike S1, 14/10): **+44 MB** khi cài (framework động 43 MB), **~19 MB** khi tải về; gói SPM
+  922 MB là mọi nền tảng + simulator, không vào app. Số chính thức lấy từ báo cáo App Thinning — AC-28.
+- **Phim trên NAS**: VLC không tự mở `smb://`/`sftp://`/`https://`. ShotDex đọc file bằng chính kết nối FS-15 (mật khẩu
+  Keychain, host key và chứng chỉ người dùng đã tin) và đưa byte cho VLC qua một luồng tua được; VLC không thấy mật
+  khẩu, không có hộp thoại riêng. MKV/WebM mở với Cues được tin để tua qua mạng ~3 s (không thì VLC giải mã lại từ đầu);
+  Cues hỏng thì mở lại kiểu thường. Plex dùng URL HTTP của Plex (07 §2). Spike:
+  [2026-10-14-fs23-s1-vlckit-spike](../../_intents/2026-10-14-fs23-s1-vlckit-spike.md).
 
 ## 2. Mở và trạng thái
 

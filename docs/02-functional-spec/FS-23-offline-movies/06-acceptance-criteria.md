@@ -37,7 +37,7 @@ Phim test: clip tổng hợp 2–5 phút (khung test pattern, tiếng sine — *
 | AC-25 | app Files có `Dune.vi.srt`, kho có `Dune (2024)` và 3 phim khác | Share › ShotDex | sheet `Add Subtitle to…`, `Dune (2024)` được đánh dấu khớp tên; chọn → phim có `Tiếng Việt · Shared` | ⚠️ chưa có |
 | AC-26 | `subs.zip` chứa `a.en.srt`, `b.vi.ass`, `readme.txt` | Import File… | gắn 2 phụ đề EN, VI; `readme.txt` bỏ; zip chỉ có `.txt` → `No subtitles in this file.` | ⚠️ chưa có (`SubtitleImportTests.zipTakesSubtitlesOnly`) |
 | AC-27 | toàn bộ luồng Movies (thêm, phát, phụ đề, dịch trên máy) | ghi log mạng | 0 yêu cầu tới dịch vụ phụ đề nào; yêu cầu mạng chỉ tới server FS-15, máy chủ Plex/plex.tv và nhà cung cấp AI đã chọn | ⚠️ chưa có |
-| AC-28 | build Release | báo cáo App Thinning cho iPhone 17 | ghi cỡ thêm của VLCKit vào 02 §1 (thay "chưa đo") | ⚠️ chưa có |
+| AC-28 | build Release | báo cáo App Thinning cho iPhone 17 | ghi cỡ thêm của VLCKit vào 02 §1 (thay "chưa đo") | ⚠️ đo thô ở spike S1 (+44 MB cài, ~19 MB nén); chưa có báo cáo App Thinning |
 | AC-29 | SRT 1.380 cue, AI giả trả đúng số cue | Translate | 1.380 cue, giờ bắt đầu/kết thúc từng cue bằng bản gốc; Secondary tự bật | ⚠️ chưa có (`SubtitleTranslatorTests.keepsTimingAndCount`) |
 | AC-30 | AI giả trả thiếu 1 cue ở khối 3 | Translate | khối 3 thử lại 1 lần rồi dịch từng cue; kết quả vẫn 1.380 cue | ⚠️ chưa có (`SubtitleTranslatorTests.wrongCountFallsBackPerCue`) |
 | AC-31 | đang dịch 412/1.380 | Cancel, mở lại Translate cùng lựa chọn | `Continue (412 of 1,380)`; chỉ gửi các khối từ cue 413 | ⚠️ chưa có (`SubtitleTranslatorTests.resumesAfterCancel`) |
