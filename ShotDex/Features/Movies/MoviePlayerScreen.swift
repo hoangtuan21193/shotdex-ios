@@ -1,29 +1,45 @@
 import SwiftUI
 
-/// Full-screen playback (FS-23.02 §2): black, a spinner only after 350 ms,
-/// and a card that says why when a movie can't play. Transport, tracks and
-/// subtitles join in plan tasks 18–23.
+/// Full-screen playback (FS-23.02 §2–3): black, a spinner only after 350 ms,
+/// a card that says why when a movie can't play, and the transport — top bar,
+/// the −10/play/+10 cluster over the picture and a two-row glass panel, all
+/// fading together after 3 s of play. Board `PH_MoviePlayer`.
 struct MoviePlayerScreen: View {
     @State var model: MoviePlayerModel
     let videoView: UIView
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var showsSpinner = false
 
     var body: some View {
         ZStack {
             Color.black.ignoresSafeArea()
             VideoSurface(view: videoView).ignoresSafeArea()
+            touchLayer
             if let reason = model.failureReason {
                 failureCard(reason)
-            } else if showsSpinner {
-                TimelineView(.periodic(from: .now, by: 0.5)) { context in
-                    if model.needsSpinner(at: context.date) {
-                        ProgressView().tint(.white).controlSize(.large)
+            } else {
+                if showsSpinner {
+                    TimelineView(.periodic(from: .now, by: 0.5)) { context in
+                        if model.needsSpinner(at: context.date) {
+                            ProgressView().tint(.white).controlSize(.large)
+                        }
                     }
+                    .allowsHitTesting(false)
+                }
+                if model.isChromeVisible, !model.isLocked {
+                    chrome.transition(.opacity)
+                }
+                if model.isLocked, model.showsUnlock {
+                    unlockButton.transition(.opacity)
                 }
             }
         }
-        .overlay(alignment: .top) { topBar }
+        .overlay(alignment: .top) {
+            if model.isFailed { topBar }
+        }
+        .animation(reduceMotion ? nil : .easeInOut(duration: 0.2), value: model.isChromeVisible)
+        .animation(reduceMotion ? nil : .easeInOut(duration: 0.2), value: model.showsUnlock)
         .statusBarHidden()
         .persistentSystemOverlays(.hidden)
         .task {
@@ -31,34 +47,233 @@ struct MoviePlayerScreen: View {
             try? await Task.sleep(for: .milliseconds(350))
             showsSpinner = true
         }
+        .task(id: model.interaction) {
+            try? await Task.sleep(for: .seconds(3))
+            guard !Task.isCancelled else { return }
+            model.hideAfterIdle()
+        }
         .onDisappear { model.close() }
         .accessibilityElement(children: .contain)
     }
 
-    private var topBar: some View {
-        HStack(spacing: AppTheme.Spacing.md) {
-            Button {
-                dismiss()
-            } label: {
-                Image(systemName: "xmark")
-                    .font(.body.weight(.semibold))
-                    .frame(width: 44, height: 44)
+    /// Taps on the picture: one toggles the chrome, two skip by half.
+    private var touchLayer: some View {
+        GeometryReader { proxy in
+            Color.clear
+                .contentShape(Rectangle())
+                .gesture(
+                    SpatialTapGesture(count: 2)
+                        .onEnded { value in
+                            model.doubleTap(isLeading: value.location.x < proxy.size.width / 2)
+                        }
+                        .exclusively(before: SpatialTapGesture(count: 1).onEnded { _ in model.tapPicture() })
+                )
+        }
+        .ignoresSafeArea()
+        .accessibilityHidden(true)
+    }
+
+    private var chrome: some View {
+        ZStack {
+            centerCluster
+            VStack(spacing: 0) {
+                topBar.padding(.top, AppTheme.Spacing.md)
+                Spacer(minLength: 0)
+                panel.padding(.bottom, AppTheme.Spacing.lg)
             }
-            .tint(.white)
-            .accessibilityLabel(String(localized: "Close", comment: "Movie player: close"))
+        }
+    }
+
+    // MARK: Top bar
+
+    private var topBar: some View {
+        ZStack {
             Text(model.movie.displayTitle)
                 .font(.headline)
                 .foregroundStyle(.white)
                 .lineLimit(1)
                 .truncationMode(.middle)
-            Spacer(minLength: 0)
-            Text(MoviePlayerText.position(model.timeMs, of: model.durationMs))
-                .font(.footnote.monospacedDigit())
-                .foregroundStyle(.white.opacity(0.8))
-                .accessibilityLabel(String(localized: "Position", comment: "Movie player: VoiceOver name of the time label"))
-                .accessibilityValue(MoviePlayerText.position(model.timeMs, of: model.durationMs))
+                .shadow(color: .black.opacity(0.6), radius: 3, y: 1)
+                .padding(.horizontal, 60)
+            HStack {
+                roundButton("xmark", size: 44, glyph: 16, label: String(localized: "Close", comment: "Movie player: close")) {
+                    dismiss()
+                }
+                .keyboardShortcut(.cancelAction)
+                Spacer(minLength: 0)
+            }
         }
         .padding(.horizontal, AppTheme.Spacing.md)
+    }
+
+    // MARK: Centre cluster
+
+    private var centerCluster: some View {
+        HStack(spacing: 38) {
+            roundButton("gobackward.10", size: 56, glyph: 22, label: String(localized: "Back 10 Seconds", comment: "Movie player: skip back")) {
+                model.skip(by: -MoviePlayerModel.skipMs)
+            }
+            roundButton(model.isPlaying ? "pause.fill" : "play.fill", size: 68, glyph: 26, label: playLabel) {
+                model.togglePlay()
+            }
+            .keyboardShortcut(.space, modifiers: [])
+            roundButton("goforward.10", size: 56, glyph: 22, label: String(localized: "Forward 10 Seconds", comment: "Movie player: skip forward")) {
+                model.skip(by: MoviePlayerModel.skipMs)
+            }
+        }
+        .background {
+            Button("") { model.skip(by: -MoviePlayerModel.skipMs) }
+                .keyboardShortcut(.leftArrow, modifiers: [])
+                .opacity(0)
+                .accessibilityHidden(true)
+            Button("") { model.skip(by: MoviePlayerModel.skipMs) }
+                .keyboardShortcut(.rightArrow, modifiers: [])
+                .opacity(0)
+                .accessibilityHidden(true)
+        }
+    }
+
+    private var playLabel: String {
+        model.isPlaying
+            ? String(localized: "Pause", comment: "Movie player: pause")
+            : String(localized: "Play", comment: "Movie player: play")
+    }
+
+    // MARK: Panel
+
+    private var panel: some View {
+        VStack(spacing: 4) {
+            timelineRow
+            controlsRow
+        }
+        .padding(.horizontal, 6)
+        .padding(.vertical, 4)
+        .frame(maxWidth: 750)
+        .editorGlass(cornerRadius: 22)
+        .environment(\.colorScheme, .dark)
+        .padding(.horizontal, AppTheme.Spacing.md)
+    }
+
+    private var timelineRow: some View {
+        HStack(spacing: 4) {
+            Button {
+                model.togglePlay()
+            } label: {
+                Image(systemName: model.isPlaying ? "pause.fill" : "play.fill")
+                    .font(.system(size: 18, weight: .semibold))
+                    .frame(width: 44, height: 44)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .foregroundStyle(.white)
+            .accessibilityLabel(playLabel)
+
+            Text(MoviePlayerText.clock(model.displayMs, longest: model.durationMs))
+                .font(.footnote.monospacedDigit())
+                .foregroundStyle(.white)
+                .frame(minWidth: 52, alignment: .leading)
+                .accessibilityHidden(true)
+
+            Slider(
+                value: Binding(
+                    get: { Double(model.displayMs) / 1000 },
+                    set: { model.scrub(toMs: Int64($0 * 1000)) }
+                ),
+                in: 0...VideoTransportMath.timelineUpperBound(
+                    duration: Double(model.durationMs) / 1000,
+                    current: Double(model.timeMs) / 1000,
+                    scrub: Double(model.displayMs) / 1000
+                ),
+                onEditingChanged: { editing in if !editing { model.endScrub() } }
+            )
+            .tint(.white)
+            .accessibilityLabel(String(localized: "Position", comment: "Movie player: VoiceOver name of the scrubber"))
+            .accessibilityValue(MoviePlayerText.spokenPosition(model.displayMs, of: model.durationMs))
+            .accessibilityAdjustableAction { direction in
+                switch direction {
+                case .increment: model.skip(by: MoviePlayerModel.skipMs)
+                case .decrement: model.skip(by: -MoviePlayerModel.skipMs)
+                @unknown default: break
+                }
+            }
+
+            Text(MoviePlayerText.remaining(model.displayMs, of: model.durationMs))
+                .font(.footnote.monospacedDigit())
+                .foregroundStyle(.white.opacity(0.62))
+                .frame(minWidth: 62, alignment: .trailing)
+                .padding(.trailing, 6)
+                .accessibilityHidden(true)
+        }
+        .frame(height: 44)
+    }
+
+    /// Speed and the touch lock; Audio & Subtitles (task 21) and Fit/Fill
+    /// (task 19) take their places between them.
+    private var controlsRow: some View {
+        HStack(spacing: 32) {
+            Menu {
+                Picker(String(localized: "Playback Speed", comment: "Movie player: speed menu"), selection: Binding(
+                    get: { model.rate },
+                    set: { model.setRate($0) }
+                )) {
+                    ForEach(MoviePlayerModel.rates, id: \.self) { rate in
+                        Text(MoviePlayerText.rate(rate)).tag(rate)
+                    }
+                }
+            } label: {
+                Text(MoviePlayerText.rate(model.rate))
+                    .font(.system(size: 15, weight: .semibold).monospacedDigit())
+                    .foregroundStyle(.white)
+                    .frame(width: 44, height: 44)
+                    .contentShape(Rectangle())
+            }
+            .accessibilityLabel(String(localized: "Playback Speed \(MoviePlayerText.rate(model.rate))", comment: "Movie player: speed button, with the current speed"))
+
+            Button {
+                model.lock()
+            } label: {
+                Image(systemName: "lock")
+                    .font(.system(size: 18, weight: .semibold))
+                    .frame(width: 44, height: 44)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .foregroundStyle(.white)
+            .accessibilityLabel(String(localized: "Lock Controls", comment: "Movie player: touch lock"))
+        }
+        .frame(height: 44)
+    }
+
+    private var unlockButton: some View {
+        VStack {
+            Spacer(minLength: 0)
+            Button {
+                model.unlock()
+            } label: {
+                Label(String(localized: "Unlock Controls", comment: "Movie player: leave the touch lock"), systemImage: "lock.open")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, AppTheme.Spacing.lg)
+                    .frame(minHeight: 44)
+                    .editorGlass(Capsule())
+                    .contentShape(Capsule())
+            }
+            .buttonStyle(.plain)
+            .padding(.bottom, AppTheme.Spacing.xl)
+        }
+    }
+
+    private func roundButton(_ systemImage: String, size: CGFloat, glyph: CGFloat, label: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Image(systemName: systemImage)
+                .font(.system(size: glyph, weight: .semibold))
+                .foregroundStyle(.white)
+                .frame(width: size, height: size)
+                .editorGlass(Circle())
+                .contentShape(Circle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(label)
     }
 
     private func failureCard(_ reason: String) -> some View {
@@ -91,11 +306,34 @@ private struct VideoSurface: UIViewRepresentable {
 }
 
 enum MoviePlayerText {
+    /// `47:12`, or `1:47:12` once the movie runs an hour.
+    static func clock(_ ms: Int64, longest total: Int64) -> String {
+        let pattern: Duration.TimeFormatStyle.Pattern = max(ms, total) >= 3_600_000 ? .hourMinuteSecond : .minuteSecond
+        return Duration.milliseconds(max(0, ms)).formatted(.time(pattern: pattern))
+    }
+
+    /// `−1:59:00`; blank while the length is unknown.
+    static func remaining(_ ms: Int64, of total: Int64) -> String {
+        guard total > 0 else { return "" }
+        return "\u{2212}" + clock(max(0, total - ms), longest: total)
+    }
+
     /// `47:12 / 2:04:01`.
     static func position(_ ms: Int64, of total: Int64) -> String {
-        let pattern: Duration.TimeFormatStyle.Pattern = total >= 3_600_000 ? .hourMinuteSecond : .minuteSecond
-        let now = Duration.milliseconds(ms).formatted(.time(pattern: pattern))
+        guard total > 0 else { return clock(ms, longest: 0) }
+        return "\(clock(ms, longest: total)) / \(clock(total, longest: total))"
+    }
+
+    /// `47 minutes 12 seconds of 2 hours 4 minutes`.
+    static func spokenPosition(_ ms: Int64, of total: Int64) -> String {
+        let now = Duration.milliseconds(max(0, ms)).formatted(.units(allowed: [.hours, .minutes, .seconds], width: .wide))
         guard total > 0 else { return now }
-        return "\(now) / \(Duration.milliseconds(total).formatted(.time(pattern: pattern)))"
+        let length = Duration.milliseconds(total).formatted(.units(allowed: [.hours, .minutes], width: .wide))
+        return String(localized: "\(now) of \(length)", comment: "Movie player: VoiceOver value of the scrubber, e.g. 47 minutes 12 seconds of 2 hours 4 minutes")
+    }
+
+    /// `1×`, `1.25×`.
+    static func rate(_ rate: Double) -> String {
+        rate.formatted(.number.precision(.fractionLength(0...2))) + "\u{00D7}"
     }
 }

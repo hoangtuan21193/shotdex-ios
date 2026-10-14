@@ -25,7 +25,7 @@ Phim test: clip tổng hợp 2–5 phút (khung test pattern, tiếng sine — *
 | AC-13 | file `.mkv` hỏng phần đầu | phát | `Can't Play This Movie` + một dòng lý do + Close; không nháy đen im lặng | ✅ `MoviePlayerFormatsTests.damagedFileSaysWhy` + `scripts/movies-play.json` 02 (`Can't Play This Movie` + lý do + Close) |
 | AC-14 | phim 2:00:00 đã xem tới 47:12 | mở lại | phát từ 47:12 ± 1 s; nhãn `Resumed at 47:12 · Start Over` 5 s; Start Over → 0:00 | ⚠️ chưa có (`MoviePlaybackModelTests.resumeAndStartOver`) |
 | AC-15 | MKV 2 track âm thanh (EN AC3 5.1, VI AAC) | Audio & Subtitles › Tiếng Việt | đổi track không dừng phim (giờ không lùi); mở lại phim vẫn track VI | ⚠️ chưa có |
-| AC-16 | khoá chạm bật | chạm đúp nửa phải | giờ không đổi; chỉ hiện nút mở khoá | ⚠️ chưa có |
+| AC-16 | khoá chạm bật | chạm đúp nửa phải | giờ không đổi; chỉ hiện nút mở khoá | ✅ `MoviePlayerModelTests.touchLockSwallowsDoubleTap` + `lockedTapShowsOnlyUnlock` + `scripts/movies-player.json` (05: khoá + chạm đúp giữ `10 seconds`, ảnh 04 chỉ còn `Unlock Controls`; 06: mở khoá + chạm đúp ra `20 seconds`) |
 | AC-17 | chế độ máy bay (sim: mạng tắt) | phát 60 s | 0 yêu cầu mạng từ app trong 60 s | ⚠️ chưa có (`scripts/movies-offline.json` + log mạng) |
 | AC-18 | Primary EN, Secondary VI, cả 3 vị trí | chụp ở 00:01:05 (cue cả hai cùng hiện) | Top/Bottom: VI trên đỉnh khung; Secondary Above: VI cách EN 8 pt phía trên; Secondary Below: ngược lại; không đè nhau | ⚠️ một nửa: bố cục `SubtitleLayoutTests.threePositions` ✅; ảnh chờ task 22 |
 | AC-19 | chrome đang hiện, hai phụ đề cùng đáy | chụp | đáy cụm phụ đề ≥ 8 pt trên mép trên kính transport; chrome ẩn → cụm hạ về | ⚠️ một nửa: `SubtitleLayoutTests.liftsAboveChrome` ✅; ảnh chờ task 22 |

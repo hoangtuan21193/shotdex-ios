@@ -1,0 +1,31 @@
+{
+ "steps": [
+  {"action": "launch"},
+  {"action": "wait", "seconds": 6},
+  {"action": "tap", "label": "Collections", "type": "button"},
+  {"action": "wait", "seconds": 2},
+  {"action": "scrollTo", "label": "Utilities"},
+  {"action": "swipe", "x": 0.75, "y": 0.66, "direction": "left", "distance": 0.6},
+  {"action": "wait", "seconds": 1},
+  {"action": "tap", "label": "Movies, "},
+  {"action": "wait", "seconds": 8},
+  {"action": "tap", "label": "Interstellar"},
+  {"action": "wait", "seconds": 1},
+  {"action": "tap", "label": "Pause"},
+  {"action": "screenshot", "name": "01-paused"},
+  {"action": "dump", "name": "01-paused"},
+  {"action": "tap", "label": "Play"},
+  {"action": "wait", "seconds": 5},
+  {"action": "screenshot", "name": "02-faded"},
+  {"action": "tap", "x": 0.5, "y": 0.3},
+  {"action": "tap", "label": "Pause"},
+  {"action": "dump", "name": "03-before-lock"},
+  {"action": "tap", "label": "Lock Controls"},
+  {"action": "doubleTap", "x": 0.8, "y": 0.3},
+  {"action": "screenshot", "name": "04-locked"},
+  {"action": "tap", "label": "Unlock Controls"},
+  {"action": "dump", "name": "05-unlocked"},
+  {"action": "doubleTap", "x": 0.8, "y": 0.3},
+  {"action": "dump", "name": "06-skipped"}
+ ]
+}
