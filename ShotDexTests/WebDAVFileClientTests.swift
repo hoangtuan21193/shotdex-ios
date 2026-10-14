@@ -328,6 +328,7 @@ extension WebDAVFileClientTests {
         for _ in 0..<200 where try store.movie(id: row.id)?.state != .onDevice {
             try await Task.sleep(for: .milliseconds(25))
         }
+        await runner.waitUntilIdle()
 
         let after = try #require(try store.movie(id: row.id))
         #expect(after.state == .onDevice)
