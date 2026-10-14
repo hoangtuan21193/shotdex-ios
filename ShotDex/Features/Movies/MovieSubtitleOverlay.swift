@@ -8,11 +8,21 @@ struct MovieSubtitleOverlay: View {
     let model: MoviePlayerModel
     /// Top edge of the transport glass in stage coordinates, while it shows.
     let chromeTop: CGFloat?
+    /// Bottom edge of the top bar, while it shows.
+    var chromeBottom: CGFloat?
+    /// Stage edges the Audio & Subtitles panel covers: the subtitles move
+    /// into the picture still in view (03 §2).
+    var covered = EdgeInsets()
 
     var body: some View {
         GeometryReader { proxy in
-            let bounds = CGRect(origin: .zero, size: proxy.size)
-            let frame = Self.movieFrame(videoSize: model.videoSize, in: bounds, fills: model.fillsFrame)
+            let stage = CGRect(origin: .zero, size: proxy.size)
+            let frame = Self.movieFrame(videoSize: model.videoSize, in: stage, fills: model.fillsFrame)
+            let bounds = CGRect(
+                x: covered.leading, y: covered.top,
+                width: max(1, stage.width - covered.leading - covered.trailing),
+                height: max(1, stage.height - covered.top - covered.bottom)
+            )
             // Paused, the clock stands still; a seek or a sync change still
             // redraws through the observed values read here.
             let _ = (model.timeMs, model.primaryTimeline?.delayMs, model.secondaryTimeline?.delayMs)
@@ -20,7 +30,7 @@ struct MovieSubtitleOverlay: View {
                 let time = model.subtitleTimeMs(at: MoviePlayerModel.hostTime)
                 let primary = model.primaryTimeline?.cues(atMs: time) ?? []
                 let secondary = model.secondaryTimeline?.cues(atMs: time) ?? []
-                DualSubtitleStack(position: model.subtitleStyle.position, frame: frame, bounds: bounds, chromeTop: chromeTop) {
+                DualSubtitleStack(position: model.subtitleStyle.position, frame: frame, bounds: bounds, chromeTop: chromeTop, chromeBottom: chromeBottom) {
                     if !primary.isEmpty {
                         SubtitleBlock(cues: primary, line: model.subtitleStyle.primary, frameHeight: frame.height)
                             .layoutValue(key: SubtitleRole.self, value: .init(isPrimary: true, wantsTop: primary.contains { $0.placement == .top }))
@@ -65,9 +75,10 @@ private struct DualSubtitleStack: Layout {
     let frame: CGRect
     let bounds: CGRect
     let chromeTop: CGFloat?
+    let chromeBottom: CGFloat?
 
     func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
-        bounds.size
+        proposal.replacingUnspecifiedDimensions()
     }
 
     func placeSubviews(in rect: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
@@ -82,7 +93,7 @@ private struct DualSubtitleStack: Layout {
         }
         let placement = DualSubtitleLayout.place(
             primary: primary?.1, secondary: secondary?.1, position: position,
-            frame: frame, bounds: bounds, chromeTop: chromeTop
+            frame: frame, bounds: bounds, chromeTop: chromeTop, chromeBottom: chromeBottom
         )
         for (entry, placed) in [(primary, placement.primary), (secondary, placement.secondary)] {
             guard let (subview, _) = entry, let placed else { continue }

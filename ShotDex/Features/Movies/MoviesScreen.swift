@@ -297,8 +297,17 @@ struct MoviesScreen: View {
             audioLanguages: MovieLanguagesScreen.current(.audio),
             subtitleLanguages: MovieLanguagesScreen.current(.subtitles),
             subtitleLoader: loader,
+            defaultSubtitleStyle: MovieSubtitleStyle.decode(UserDefaults.standard.string(forKey: SettingsKeys.movieSubtitleStyle) ?? "{}"),
+            rememberStyle: { UserDefaults.standard.set($0.json, forKey: SettingsKeys.movieSubtitleStyle) },
+            sourceIsFiles: sourceIsFiles(movie),
             onClose: onClose
         )
+    }
+
+    private func sourceIsFiles(_ movie: Movie) -> Bool {
+        guard let sourceId = movie.sourceId, let source = try? dependencies.movies.source(id: sourceId),
+              let connectionId = source.connectionId else { return false }
+        return (try? dependencies.fileServers.fetch(id: connectionId))??.transferProtocol == .files
     }
 
     private func selected(_ model: MoviesModel) -> [Movie] {

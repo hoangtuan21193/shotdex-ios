@@ -104,4 +104,65 @@ import Testing
         #expect(style.secondary == MovieSubtitleStyle().secondary)
         #expect(MovieSubtitleStyle.decode(style.json) == style)
     }
+
+    /// AC-20: Sync +2.0 s from the panel moves the cue at once and holds
+    /// when the movie opens again.
+    @Test func panelSyncHoldsOnReopen() async throws {
+        let f = try fixture()
+        let player = model(f)
+        await player.loadSubtitles()
+        #expect(player.subtitleChoice.primaryId == f.english.id)
+        for _ in 0..<20 { player.setSubtitleSync(player.subtitleSyncMs(for: .primary) + 100, for: .primary) }
+        #expect(player.subtitleSyncMs(for: .primary) == 2_000)
+        #expect(player.primaryTimeline?.cues(atMs: 66_900).isEmpty == true)
+        #expect(player.primaryTimeline?.cues(atMs: 67_000).isEmpty == false)
+
+        let reopened = model(f)
+        await reopened.loadSubtitles()
+        #expect(reopened.subtitleSyncMs(for: .primary) == 2_000)
+        #expect(reopened.primaryTimeline?.cues(atMs: 66_900).isEmpty == true)
+        player.setSubtitleSync(50_000, for: .primary)
+        #expect(player.subtitleSyncMs(for: .primary) == 10_000)
+    }
+
+    /// Secondary from its menu, Position and style are kept per movie; the
+    /// newest style becomes the default for a movie opened the first time.
+    @Test func choicesAndStyleAreRemembered() async throws {
+        let f = try fixture()
+        var remembered: MovieSubtitleStyle?
+        let player = MoviePlayerModel(
+            movie: f.movie, player: FakeMoviePlayer(), store: f.store, subtitleLanguages: ["en"],
+            subtitleLoader: MovieSubtitleLoader(files: f.files), rememberStyle: { remembered = $0 }
+        )
+        await player.loadSubtitles()
+        await player.selectSubtitle(f.vietnamese.id, for: .secondary)
+        #expect(player.secondaryTimeline?.cues(atMs: 65_500).first?.plainText == "Chúng ta phải đi ngay.")
+        player.setSubtitlePosition(.primaryBottomSecondaryTop)
+        player.setSubtitleScale(1.2, for: .secondary)
+        player.setSubtitleColor(.cyan, for: .secondary)
+        #expect(remembered?.secondary == MovieSubtitleStyle.Line(scale: 1.2, color: .cyan))
+
+        let reopened = model(f)
+        await reopened.loadSubtitles()
+        #expect(reopened.subtitleChoice.secondaryId == f.vietnamese.id)
+        #expect(reopened.subtitleStyle.position == .primaryBottomSecondaryTop)
+        #expect(reopened.subtitleStyle.secondary.color == .cyan)
+
+        await reopened.selectSubtitle(nil, for: .secondary)
+        #expect(reopened.secondaryTimeline == nil)
+
+        let other = try fixture()
+        let fresh = MoviePlayerModel(movie: other.movie, player: FakeMoviePlayer(), store: other.store, defaultSubtitleStyle: try #require(remembered))
+        #expect(fresh.subtitleStyle.secondary.color == .cyan)
+    }
+
+    @Test func subtitleLabels() {
+        let sidecar = MovieSubtitle(movieId: "m", language: "eng", origin: .sidecar, format: .srt, fileName: "")
+        #expect(MovieSubtitleLabel.title(sidecar) == "English · From Server")
+        #expect(MovieSubtitleLabel.title(sidecar, fromFiles: true) == "English · From Files")
+        let translated = MovieSubtitle(movieId: "m", language: "vi", origin: .translated, format: .srt, fileName: "")
+        #expect(MovieSubtitleLabel.title(translated, providerName: "Claude") == "Tiếng Việt · Translated (Claude)")
+        #expect(MovieSubtitleLabel.style(MovieSubtitleStyle().secondary, offsetMs: 400) == "85% · Yellow · +0.4 s")
+        #expect(MovieSubtitleLabel.sync(-2_000) == "\u{2212}2.0 s")
+    }
 }

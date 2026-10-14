@@ -57,6 +57,9 @@ enum SettingsKeys {
     /// device language + English); empty = none.
     static let movieAudioLanguages = "playback.movieAudioLanguages"
     static let movieSubtitleLanguages = "playback.movieSubtitleLanguages"
+    /// The latest subtitle size, color and position, as JSON: a movie opened
+    /// the first time starts with it (FS-23.03 §2).
+    static let movieSubtitleStyle = "playback.movieSubtitleStyle"
 
     /// How much metadata a photo takes with it when it leaves the app — a
     /// `MetadataLevel` raw value (FS-08.06 §4). The default for every way out:

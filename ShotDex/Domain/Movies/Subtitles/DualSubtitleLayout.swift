@@ -46,15 +46,18 @@ enum DualSubtitleLayout {
     ///     `bounds`).
     ///   - bounds: the view.
     ///   - chromeTop: the top edge of the transport glass while it shows.
+    ///   - chromeBottom: the bottom edge of the top bar (✕, title) while
+    ///     it shows — a subtitle at the top goes below it.
     static func place(
         primary: Block?, secondary: Block?, position: DualSubtitlePosition,
-        frame: CGRect, bounds: CGRect, chromeTop: CGFloat? = nil
+        frame: CGRect, bounds: CGRect, chromeTop: CGFloat? = nil, chromeBottom: CGFloat? = nil
     ) -> Placement {
         let area = area(frame: frame, bounds: bounds)
         let inset = area.height * edgeInset
         var floor = area.maxY - inset
         if let chromeTop { floor = min(floor, chromeTop - gap) }
-        let ceiling = area.minY + inset
+        var ceiling = area.minY + inset
+        if let chromeBottom { ceiling = max(ceiling, chromeBottom + gap) }
 
         // Which block goes to the top region, which to the bottom stack.
         var top: [(Bool, Block)] = []  // (isPrimary, block), first = highest

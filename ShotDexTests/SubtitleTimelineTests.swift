@@ -161,6 +161,14 @@ private func cue(_ start: Int64, _ end: Int64, _ text: String, top: Bool = false
         #expect(try #require(down.primary).maxY > lifted.maxY)
     }
 
+    /// A subtitle at the top stays below the top bar while it shows.
+    @Test func topLineClearsTopBar() throws {
+        let up = DualSubtitleLayout.place(primary: en, secondary: vi, position: .primaryBottomSecondaryTop, frame: frame, bounds: bounds, chromeTop: 300, chromeBottom: 60)
+        #expect(try #require(up.secondary).minY >= 68)
+        let down = DualSubtitleLayout.place(primary: en, secondary: vi, position: .primaryBottomSecondaryTop, frame: frame, bounds: bounds)
+        #expect(try #require(down.secondary).minY < 30)
+    }
+
     /// Fill crops the frame: lines stay inside what is on screen.
     @Test func fillUsesVisiblePart() throws {
         let filled = CGRect(x: 0, y: -45, width: 874, height: 492)

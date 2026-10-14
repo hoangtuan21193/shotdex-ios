@@ -57,6 +57,9 @@ final class MoviePlayerModel {
     private let audioLanguages: [String]
     private let subtitleLanguages: [String]
     private let subtitleLoader: MovieSubtitleLoader?
+    private let rememberStyle: (MovieSubtitleStyle) -> Void
+    /// The source is a Files folder: sidecars read `From Files` (03 §1).
+    let sourceIsFiles: Bool
     /// When the movie time last moved — buffering reports alone do not
     /// mean the picture stopped.
     private var lastProgress = Date()
@@ -75,6 +78,9 @@ final class MoviePlayerModel {
         audioLanguages: [String] = [],
         subtitleLanguages: [String] = [],
         subtitleLoader: MovieSubtitleLoader? = nil,
+        defaultSubtitleStyle: MovieSubtitleStyle = MovieSubtitleStyle(),
+        rememberStyle: @escaping (MovieSubtitleStyle) -> Void = { _ in },
+        sourceIsFiles: Bool = false,
         onClose: @escaping () -> Void = {}
     ) {
         self.movie = movie
@@ -83,10 +89,12 @@ final class MoviePlayerModel {
         self.audioLanguages = audioLanguages
         self.subtitleLanguages = subtitleLanguages
         self.subtitleLoader = subtitleLoader
+        self.rememberStyle = rememberStyle
+        self.sourceIsFiles = sourceIsFiles
         self.onClose = onClose
         let choice = (try? store?.subtitleChoice(movieId: movie.id)) ?? nil
         subtitleChoice = choice ?? MovieSubtitleChoice(movieId: movie.id)
-        subtitleStyle = MovieSubtitleStyle.decode(choice?.style ?? "{}")
+        subtitleStyle = choice.map { MovieSubtitleStyle.decode($0.style) } ?? defaultSubtitleStyle
         audioDelayMs = min(max(movie.audioDelayMs, -Self.audioDelayLimitMs), Self.audioDelayLimitMs)
         durationMs = movie.durationMs ?? 0
         rate = Self.rates.contains(movie.playbackRate) ? movie.playbackRate : 1
@@ -353,10 +361,93 @@ final class MoviePlayerModel {
         if (try? store?.subtitleChoice(movieId: movie.id)) == nil,
            let first = MovieTrackChoice.primarySubtitle(subtitles, language: \.language, preferredLanguages: subtitleLanguages) {
             subtitleChoice.primaryId = first.id
-            try? store?.saveSubtitleChoice(subtitleChoice)
+            saveChoice()
         }
         primaryTimeline = await timeline(for: subtitleChoice.primaryId)
         secondaryTimeline = await timeline(for: subtitleChoice.secondaryId)
+    }
+
+    enum SubtitleLine { case primary, secondary }
+
+    func subtitleTitle(_ subtitle: MovieSubtitle) -> String {
+        MovieSubtitleLabel.title(subtitle, fromFiles: sourceIsFiles)
+    }
+
+    func subtitle(id: String?) -> MovieSubtitle? {
+        id.flatMap { id in subtitles.first { $0.id == id } }
+    }
+
+    /// Primary or Secondary from its menu (§2); nil = Off.
+    func selectSubtitle(_ id: String?, for line: SubtitleLine) async {
+        switch line {
+        case .primary: subtitleChoice.primaryId = id
+        case .secondary: subtitleChoice.secondaryId = id
+        }
+        saveChoice()
+        let timeline = await timeline(for: id)
+        switch line {
+        case .primary: primaryTimeline = timeline
+        case .secondary: secondaryTimeline = timeline
+        }
+    }
+
+    func setSubtitlePosition(_ position: DualSubtitlePosition) {
+        subtitleStyle.position = position
+        saveStyle()
+    }
+
+    func setSubtitleScale(_ scale: Double, for line: SubtitleLine) {
+        let clamped = min(max(scale, MovieSubtitleStyle.Line.scaleRange.lowerBound), MovieSubtitleStyle.Line.scaleRange.upperBound)
+        switch line {
+        case .primary: subtitleStyle.primary.scale = clamped
+        case .secondary: subtitleStyle.secondary.scale = clamped
+        }
+        saveStyle()
+    }
+
+    func setSubtitleColor(_ color: MovieSubtitleStyle.Color, for line: SubtitleLine) {
+        switch line {
+        case .primary: subtitleStyle.primary.color = color
+        case .secondary: subtitleStyle.secondary.color = color
+        }
+        saveStyle()
+    }
+
+    static let subtitleSyncLimitMs = 10_000
+
+    /// Sync (§2): −10…+10 s in 0.1 s steps, seen at once, kept on the
+    /// subtitle so it holds next time.
+    func setSubtitleSync(_ ms: Int, for line: SubtitleLine) {
+        let id = line == .primary ? subtitleChoice.primaryId : subtitleChoice.secondaryId
+        guard let id, let index = subtitles.firstIndex(where: { $0.id == id }) else { return }
+        let clamped = min(max(ms, -Self.subtitleSyncLimitMs), Self.subtitleSyncLimitMs)
+        subtitles[index].offsetMs = clamped
+        try? store?.saveSubtitle(subtitles[index])
+        switch line {
+        case .primary: primaryTimeline?.delayMs = Int64(clamped)
+        case .secondary: secondaryTimeline?.delayMs = Int64(clamped)
+        }
+        // Both lines may show the same subtitle.
+        if subtitleChoice.primaryId == subtitleChoice.secondaryId {
+            primaryTimeline?.delayMs = Int64(clamped)
+            secondaryTimeline?.delayMs = Int64(clamped)
+        }
+    }
+
+    func subtitleSyncMs(for line: SubtitleLine) -> Int {
+        subtitle(id: line == .primary ? subtitleChoice.primaryId : subtitleChoice.secondaryId)?.offsetMs ?? 0
+    }
+
+    private func saveChoice() {
+        subtitleChoice.style = subtitleStyle.json
+        try? store?.saveSubtitleChoice(subtitleChoice)
+    }
+
+    /// Per movie, and the newest becomes the default for movies opened
+    /// the first time (§2).
+    private func saveStyle() {
+        saveChoice()
+        rememberStyle(subtitleStyle)
     }
 
     private func timeline(for id: String?) async -> SubtitleTimeline? {

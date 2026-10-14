@@ -82,7 +82,12 @@ struct MoviePlayerScreen: View {
             VideoSurface(view: videoView)
             touchLayer
             if !model.isFailed {
-                MovieSubtitleOverlay(model: model, chromeTop: subtitleFloor(layout: layout))
+                MovieSubtitleOverlay(
+                    model: model,
+                    chromeTop: subtitleFloor(layout: layout),
+                    chromeBottom: subtitleFloor(layout: layout).map { _ in layout.chromeInsets.top + 44 },
+                    covered: panelCover(layout: layout)
+                )
             }
             if let reason = model.failureReason {
                 failureCard(reason)
@@ -369,6 +374,15 @@ struct MoviePlayerScreen: View {
     private func subtitleFloor(layout: MoviePlayerLayout) -> CGFloat? {
         guard model.isChromeVisible, !model.isLocked, !model.isTracksPanelOpen else { return nil }
         return layout.stageSize.height - layout.chromeInsets.bottom - Self.panelHeight
+    }
+
+    /// What the open panel hides of the stage, for the subtitles.
+    private func panelCover(layout: MoviePlayerLayout) -> EdgeInsets {
+        guard model.isTracksPanelOpen else { return EdgeInsets() }
+        if layout.stageSize.width > layout.stageSize.height {
+            return EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: layout.chromeInsets.trailing + 370)
+        }
+        return EdgeInsets(top: 0, leading: 0, bottom: layout.chromeInsets.bottom + layout.stageSize.height / 2, trailing: 0)
     }
 
     /// A column on the right of a wide stage (board `PH_MovieTracks`: 370 pt,

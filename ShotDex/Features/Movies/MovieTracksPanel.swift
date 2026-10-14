@@ -7,11 +7,26 @@ import SwiftUI
 /// the Subtitles part joins in plan task 23.
 struct MovieTracksPanel: View {
     let model: MoviePlayerModel
+    /// A Style row opened: size, color and sync for that line.
+    @State private var editing: MoviePlayerModel.SubtitleLine?
 
     var body: some View {
         VStack(spacing: 0) {
             header
             Divider().overlay(EditorTheme.glassStroke)
+            if let editing {
+                MovieSubtitleStyleEditor(model: model, line: editing) { self.editing = nil }
+            } else {
+                trackList
+            }
+        }
+        .foregroundStyle(.white)
+        .background(EditorTheme.panel.opacity(0.94), in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 22, style: .continuous).strokeBorder(EditorTheme.glassStroke, lineWidth: 1))
+        .environment(\.colorScheme, .dark)
+    }
+
+    private var trackList: some View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 0) {
                     sectionHeader(String(localized: "Audio", comment: "Movie player panel: section over the audio tracks"))
@@ -30,14 +45,101 @@ struct MovieTracksPanel: View {
                         .font(.caption)
                         .foregroundStyle(EditorTheme.secondaryText)
                         .padding(.horizontal, AppTheme.Spacing.lg)
-                        .padding(.bottom, AppTheme.Spacing.md)
+                        .padding(.bottom, AppTheme.Spacing.xs)
+
+                    sectionHeader(String(localized: "Subtitles", comment: "Movie player panel: section over the subtitle rows"))
+                    subtitleMenuRow(.primary)
+                    subtitleMenuRow(.secondary)
+                    if model.subtitleChoice.secondaryId != nil {
+                        positionRow
+                    }
+                    styleRow(.primary)
+                    if model.subtitleChoice.secondaryId != nil {
+                        styleRow(.secondary)
+                    }
+                }
+                .padding(.bottom, AppTheme.Spacing.md)
+            }
+    }
+
+    // MARK: Subtitles (FS-23.03 §2)
+
+    private func lineName(_ line: MoviePlayerModel.SubtitleLine) -> String {
+        switch line {
+        case .primary: String(localized: "Primary", comment: "Movie player panel: the main subtitle")
+        case .secondary: String(localized: "Secondary", comment: "Movie player panel: the second subtitle")
+        }
+    }
+
+    private func subtitleMenuRow(_ line: MoviePlayerModel.SubtitleLine) -> some View {
+        let selectedId = line == .primary ? model.subtitleChoice.primaryId : model.subtitleChoice.secondaryId
+        let value = model.subtitle(id: selectedId).map(model.subtitleTitle) ?? String(localized: "Off", comment: "Movie player panel: no subtitle on this line")
+        return Menu {
+            Picker(lineName(line), selection: Binding(
+                get: { selectedId ?? "" },
+                set: { id in Task { await model.selectSubtitle(id.isEmpty ? nil : id, for: line) } }
+            )) {
+                Text(String(localized: "Off", comment: "Movie player panel: no subtitle on this line")).tag("")
+                ForEach(model.subtitles) { subtitle in
+                    Text(model.subtitleTitle(subtitle)).tag(subtitle.id)
                 }
             }
+        } label: {
+            valueRow(lineName(line), value: value)
         }
-        .foregroundStyle(.white)
-        .background(EditorTheme.panel.opacity(0.94), in: RoundedRectangle(cornerRadius: 22, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: 22, style: .continuous).strokeBorder(EditorTheme.glassStroke, lineWidth: 1))
-        .environment(\.colorScheme, .dark)
+        .accessibilityLabel(lineName(line))
+        .accessibilityValue(value)
+    }
+
+    private var positionRow: some View {
+        let title = String(localized: "Position", comment: "Movie player panel: where the two subtitles sit")
+        let value = MovieSubtitleLabel.positionValue(model.subtitleStyle.position)
+        return Menu {
+            Picker(title, selection: Binding(
+                get: { model.subtitleStyle.position },
+                set: { model.setSubtitlePosition($0) }
+            )) {
+                ForEach(DualSubtitlePosition.allCases, id: \.self) { position in
+                    Text(MovieSubtitleLabel.position(position)).tag(position)
+                }
+            }
+        } label: {
+            valueRow(title, value: value)
+        }
+        .accessibilityLabel(title)
+        .accessibilityValue(value)
+    }
+
+    private func styleRow(_ line: MoviePlayerModel.SubtitleLine) -> some View {
+        let title = line == .primary
+            ? String(localized: "Primary Style", comment: "Movie player panel: size, color and sync of the main subtitle")
+            : String(localized: "Secondary Style", comment: "Movie player panel: size, color and sync of the second subtitle")
+        let value = MovieSubtitleLabel.style(line == .primary ? model.subtitleStyle.primary : model.subtitleStyle.secondary, offsetMs: model.subtitleSyncMs(for: line))
+        return Button {
+            editing = line
+        } label: {
+            valueRow(title, value: value)
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(title)
+        .accessibilityValue(value)
+    }
+
+    private func valueRow(_ title: String, value: String) -> some View {
+        HStack(spacing: AppTheme.Spacing.sm) {
+            Text(title)
+                .font(.subheadline)
+                .foregroundStyle(.white)
+            Spacer(minLength: AppTheme.Spacing.sm)
+            Text(value)
+                .font(.subheadline)
+                .foregroundStyle(EditorTheme.secondaryText)
+                .lineLimit(1)
+                .truncationMode(.middle)
+        }
+        .padding(.horizontal, AppTheme.Spacing.lg)
+        .frame(height: 44)
+        .contentShape(Rectangle())
     }
 
     private var header: some View {
@@ -187,5 +289,126 @@ enum MovieTracksText {
         let detail = MovieAudioTrackLabel.detail(track)
         let title = MovieAudioTrackLabel.title(track, position: position)
         return detail.isEmpty ? title : "\(title) \(detail)"
+    }
+}
+
+/// Primary Style / Secondary Style (FS-23.03 §2): size 50–200 %, one of the
+/// four subtitle colors, Sync −10…+10 s — every change shows at once.
+private struct MovieSubtitleStyleEditor: View {
+    let model: MoviePlayerModel
+    let line: MoviePlayerModel.SubtitleLine
+    let onBack: () -> Void
+
+    private var style: MovieSubtitleStyle.Line {
+        line == .primary ? model.subtitleStyle.primary : model.subtitleStyle.secondary
+    }
+
+    private var title: String {
+        line == .primary
+            ? String(localized: "Primary Style", comment: "Movie player panel: size, color and sync of the main subtitle")
+            : String(localized: "Secondary Style", comment: "Movie player panel: size, color and sync of the second subtitle")
+    }
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 0) {
+                Button(action: onBack) {
+                    Label(title, systemImage: "chevron.left")
+                        .font(.subheadline.weight(.semibold))
+                        .padding(.horizontal, AppTheme.Spacing.lg)
+                        .frame(height: 44)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(String(localized: "Back", comment: "Movie player panel: leave the style page"))
+
+                stepperRow(
+                    String(localized: "Size", comment: "Subtitle style: text size"),
+                    value: style.scale.formatted(.percent.precision(.fractionLength(0))),
+                    earlier: String(localized: "Smaller", comment: "Subtitle style: size down"),
+                    later: String(localized: "Larger", comment: "Subtitle style: size up")
+                ) { step in
+                    model.setSubtitleScale(((style.scale * 10).rounded() + Double(step)) / 10, for: line)
+                }
+
+                colorRow
+
+                stepperRow(
+                    String(localized: "Sync", comment: "Subtitle style: shift the subtitle against the picture"),
+                    value: MovieSubtitleLabel.sync(model.subtitleSyncMs(for: line)),
+                    earlier: String(localized: "Earlier", comment: "Subtitle Sync: subtitle earlier"),
+                    later: String(localized: "Later", comment: "Subtitle Sync: subtitle later")
+                ) { step in
+                    model.setSubtitleSync(model.subtitleSyncMs(for: line) + step * 100, for: line)
+                }
+            }
+            .padding(.bottom, AppTheme.Spacing.md)
+        }
+    }
+
+    private var colorRow: some View {
+        HStack(spacing: AppTheme.Spacing.sm) {
+            Text(String(localized: "Color", comment: "Subtitle style: text color"))
+                .font(.subheadline)
+            Spacer(minLength: 0)
+            ForEach(MovieSubtitleStyle.Color.allCases, id: \.self) { color in
+                Button {
+                    model.setSubtitleColor(color, for: line)
+                } label: {
+                    Circle()
+                        .fill(color.swatch)
+                        .frame(width: 26, height: 26)
+                        .overlay(Circle().strokeBorder(.white, lineWidth: style.color == color ? 2 : 0).padding(-4))
+                        .frame(width: 44, height: 44)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(MovieSubtitleLabel.colorName(color))
+                .accessibilityAddTraits(style.color == color ? [.isButton, .isSelected] : .isButton)
+            }
+        }
+        .padding(.leading, AppTheme.Spacing.lg)
+        .padding(.trailing, AppTheme.Spacing.sm)
+        .frame(height: 48)
+    }
+
+    private func stepperRow(_ title: String, value: String, earlier: String, later: String, step: @escaping (Int) -> Void) -> some View {
+        HStack(spacing: AppTheme.Spacing.sm) {
+            Text(title)
+                .font(.subheadline)
+            Spacer(minLength: 0)
+            stepButton("minus", label: earlier) { step(-1) }
+            Text(value)
+                .font(.subheadline.monospacedDigit())
+                .frame(width: 58)
+                .accessibilityHidden(true)
+            stepButton("plus", label: later) { step(1) }
+        }
+        .padding(.horizontal, AppTheme.Spacing.lg)
+        .frame(height: 44)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(title)
+        .accessibilityValue(value)
+        .accessibilityAdjustableAction { direction in
+            switch direction {
+            case .increment: step(1)
+            case .decrement: step(-1)
+            @unknown default: break
+            }
+        }
+    }
+
+    private func stepButton(_ systemImage: String, label: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Image(systemName: systemImage)
+                .font(.footnote.weight(.semibold))
+                .frame(width: 34, height: 28)
+                .background(EditorTheme.control, in: Capsule())
+                .frame(width: 44, height: 44)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(label)
+        .buttonRepeatBehavior(.enabled)
     }
 }
