@@ -50,7 +50,8 @@ Giữ đúng bộ của FS-02.02 §3–§4 (cụm giữa + kính hai hàng, gi�
 | hàng 1 | phát-dừng · đã qua · thanh tua · còn lại |
 | hàng 2 (44 pt mỗi nút) | tốc độ · **Audio & Subtitles** · Fit/Fill · khoá chạm |
 
-- Tốc độ: 0.5 · 0.75 · 1 · 1.25 · 1.5 · 2×; nhớ theo từng phim.
+- Tốc độ: 0.5 · 0.75 · 1 · 1.25 · 1.5 · 2×; nhớ theo từng phim. Chạm nút tốc độ mở một dải 6 lựa chọn ngay trên kính
+  transport, vẽ trong sân khấu (không dùng menu hệ thống vì sân khấu có thể đang xoay 90°, §4).
 - **Audio & Subtitles**: mở **một** bảng (§3b) — phần Audio ở trên, phần Subtitles (03 §2) ở dưới (planboard D8).
 - **Fit/Fill**: vừa khung (có viền đen) ↔ lấp khung (cắt mép); pinch ra/vào làm cùng việc.
 - **Khoá chạm**: chạm màn chỉ hiện nút mở khoá — để trên máy bay chạm nhầm không tua. Mac không có (không có chạm).

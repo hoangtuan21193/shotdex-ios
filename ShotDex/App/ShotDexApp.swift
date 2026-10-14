@@ -104,6 +104,13 @@ struct ShotDexApp: App {
                         IntentRouter.shared.request(.movies)
                         return
                     }
+                    // A subtitle shared or AirDropped in: Movies asks which
+                    // movie it belongs to (FS-23.03 §5).
+                    if url.isFileURL, SubtitleFileName.isSubtitle(url.lastPathComponent) {
+                        IntentRouter.shared.pendingMovieSubtitles = [url]
+                        IntentRouter.shared.request(.movies)
+                        return
+                    }
                     // A look opened from AirDrop, Files, Messages or Mail.
                     if url.isFileURL {
                         Task { await dependencies.lookInbox.receive(url) }

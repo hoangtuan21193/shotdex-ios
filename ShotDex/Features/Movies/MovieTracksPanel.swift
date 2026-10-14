@@ -7,16 +7,29 @@ import SwiftUI
 /// the Subtitles part joins in plan task 23.
 struct MovieTracksPanel: View {
     let model: MoviePlayerModel
-    /// A Style row opened: size, color and sync for that line.
-    @State private var editing: MoviePlayerModel.SubtitleLine?
+    /// A row opened as a page of the panel. Pages, not system menus: on an
+    /// upright phone the stage is turned, and a system menu would come up
+    /// sideways to the viewer.
+    @State private var page: Page?
+
+    enum Page: Equatable {
+        case choose(MoviePlayerModel.SubtitleLine)
+        case position
+        case style(MoviePlayerModel.SubtitleLine)
+    }
 
     var body: some View {
         VStack(spacing: 0) {
             header
             Divider().overlay(EditorTheme.glassStroke)
-            if let editing {
-                MovieSubtitleStyleEditor(model: model, line: editing) { self.editing = nil }
-            } else {
+            switch page {
+            case .style(let line):
+                MovieSubtitleStyleEditor(model: model, line: line) { page = nil }
+            case .choose(let line):
+                subtitleChoices(line)
+            case .position:
+                positionChoices
+            case nil:
                 trackList
             }
         }
@@ -74,20 +87,12 @@ struct MovieTracksPanel: View {
     private func subtitleMenuRow(_ line: MoviePlayerModel.SubtitleLine) -> some View {
         let selectedId = line == .primary ? model.subtitleChoice.primaryId : model.subtitleChoice.secondaryId
         let value = model.subtitle(id: selectedId).map(model.subtitleTitle) ?? String(localized: "Off", comment: "Movie player panel: no subtitle on this line")
-        return Menu {
-            Picker(lineName(line), selection: Binding(
-                get: { selectedId ?? "" },
-                set: { id in Task { await model.selectSubtitle(id.isEmpty ? nil : id, for: line) } }
-            )) {
-                Text(String(localized: "Off", comment: "Movie player panel: no subtitle on this line")).tag("")
-                // Only text ShotDex can draw goes second (AC-55).
-                ForEach(model.subtitles.filter { line == .primary || model.hasText($0) }) { subtitle in
-                    Text(model.subtitleTitle(subtitle)).tag(subtitle.id)
-                }
-            }
+        return Button {
+            page = .choose(line)
         } label: {
             valueRow(lineName(line), value: value)
         }
+        .buttonStyle(.plain)
         .accessibilityLabel(lineName(line))
         .accessibilityValue(value)
     }
@@ -95,20 +100,99 @@ struct MovieTracksPanel: View {
     private var positionRow: some View {
         let title = String(localized: "Position", comment: "Movie player panel: where the two subtitles sit")
         let value = MovieSubtitleLabel.positionValue(model.subtitleStyle.position)
-        return Menu {
-            Picker(title, selection: Binding(
-                get: { model.subtitleStyle.position },
-                set: { model.setSubtitlePosition($0) }
-            )) {
-                ForEach(DualSubtitlePosition.allCases, id: \.self) { position in
-                    Text(MovieSubtitleLabel.position(position)).tag(position)
-                }
-            }
+        return Button {
+            page = .position
         } label: {
             valueRow(title, value: value)
         }
+        .buttonStyle(.plain)
         .accessibilityLabel(title)
         .accessibilityValue(value)
+    }
+
+    /// Off, every subtitle, and — for the Secondary — Import File… (§2).
+    private func subtitleChoices(_ line: MoviePlayerModel.SubtitleLine) -> some View {
+        let selectedId = line == .primary ? model.subtitleChoice.primaryId : model.subtitleChoice.secondaryId
+        let choices = model.subtitles.filter { line == .primary || model.hasText($0) }
+        return ScrollView {
+            VStack(alignment: .leading, spacing: 0) {
+                backRow(lineName(line))
+                choiceRow(String(localized: "Off", comment: "Movie player panel: no subtitle on this line"), isSelected: selectedId == nil) {
+                    Task { await model.selectSubtitle(nil, for: line) }
+                    page = nil
+                }
+                ForEach(choices) { subtitle in
+                    choiceRow(model.subtitleTitle(subtitle), isSelected: selectedId == subtitle.id) {
+                        Task { await model.selectSubtitle(subtitle.id, for: line) }
+                        page = nil
+                    }
+                }
+                if line == .secondary, model.canImportSubtitles {
+                    Divider().overlay(EditorTheme.glassStroke).padding(.leading, AppTheme.Spacing.lg)
+                    Button {
+                        page = nil
+                        model.isPickingSubtitleFiles = true
+                    } label: {
+                        Label(String(localized: "Import File…", comment: "Movie player panel: add subtitle files from Files"), systemImage: "square.and.arrow.down")
+                            .font(.subheadline)
+                            .padding(.horizontal, AppTheme.Spacing.lg)
+                            .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .padding(.bottom, AppTheme.Spacing.md)
+        }
+    }
+
+    private var positionChoices: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 0) {
+                backRow(String(localized: "Position", comment: "Movie player panel: where the two subtitles sit"))
+                ForEach(DualSubtitlePosition.allCases, id: \.self) { position in
+                    choiceRow(MovieSubtitleLabel.position(position), isSelected: model.subtitleStyle.position == position) {
+                        model.setSubtitlePosition(position)
+                        page = nil
+                    }
+                }
+            }
+            .padding(.bottom, AppTheme.Spacing.md)
+        }
+    }
+
+    private func backRow(_ title: String) -> some View {
+        Button {
+            page = nil
+        } label: {
+            Label(title, systemImage: "chevron.left")
+                .font(.subheadline.weight(.semibold))
+                .padding(.horizontal, AppTheme.Spacing.lg)
+                .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(String(localized: "Back", comment: "Movie player panel: leave a page"))
+    }
+
+    private func choiceRow(_ title: String, isSelected: Bool, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            HStack(spacing: AppTheme.Spacing.sm) {
+                Image(systemName: "checkmark")
+                    .font(.footnote.weight(.semibold))
+                    .opacity(isSelected ? 1 : 0)
+                    .frame(width: 15)
+                Text(title)
+                    .font(.subheadline.weight(isSelected ? .semibold : .regular))
+                    .lineLimit(2)
+                Spacer(minLength: 0)
+            }
+            .padding(.horizontal, AppTheme.Spacing.lg)
+            .frame(minHeight: 44)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityAddTraits(isSelected ? [.isButton, .isSelected] : .isButton)
     }
 
     private func styleRow(_ line: MoviePlayerModel.SubtitleLine) -> some View {
@@ -117,7 +201,7 @@ struct MovieTracksPanel: View {
             : String(localized: "Secondary Style", comment: "Movie player panel: size, color and sync of the second subtitle")
         let value = MovieSubtitleLabel.style(line == .primary ? model.subtitleStyle.primary : model.subtitleStyle.secondary, offsetMs: model.subtitleSyncMs(for: line))
         return Button {
-            editing = line
+            page = .style(line)
         } label: {
             valueRow(title, value: value)
         }

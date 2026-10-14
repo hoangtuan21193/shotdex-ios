@@ -1,0 +1,76 @@
+{
+ "steps": [
+  {
+   "action": "launch"
+  },
+  {
+   "action": "wait",
+   "seconds": 6
+  },
+  {
+   "action": "tap",
+   "label": "Collections",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "scrollTo",
+   "label": "Utilities"
+  },
+  {
+   "action": "swipe",
+   "x": 0.75,
+   "y": 0.66,
+   "direction": "left",
+   "distance": 0.6
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "tap",
+   "label": "Movies, "
+  },
+  {
+   "action": "wait",
+   "seconds": 8
+  },
+  {
+   "action": "tap",
+   "label": "Sicario"
+  },
+  {
+   "action": "wait",
+   "seconds": 5
+  },
+  {
+   "action": "tap",
+   "x": 0.5,
+   "y": 0.2
+  },
+  {
+   "action": "tap",
+   "label": "Playback Speed"
+  },
+  {
+   "action": "wait",
+   "seconds": 0.5
+  },
+  {
+   "action": "screenshot",
+   "name": "02-speed"
+  },
+  {
+   "action": "tap",
+   "label": "1.5×"
+  },
+  {
+   "action": "dump",
+   "name": "03-speed-set"
+  }
+ ]
+}

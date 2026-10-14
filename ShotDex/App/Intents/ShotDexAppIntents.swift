@@ -34,6 +34,10 @@ final class IntentRouter {
     /// Set by an intent, consumed once by the root view.
     var pending: Request?
 
+    /// Subtitle files shared or AirDropped in, waiting for Movies to ask
+    /// which movie they belong to (FS-23.03 §5).
+    var pendingMovieSubtitles: [URL] = []
+
     private init() {}
 
     func request(_ request: Request) {

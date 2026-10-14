@@ -21,6 +21,9 @@ struct MoviesScreen: View {
     @State private var removingCopied: Movie?
     @State private var importFailure: String?
     @State private var playing: PlayingMovie?
+    /// Subtitle files shared in, waiting for their movie (FS-23.03 §5).
+    @State private var sharedSubtitles: [URL] = []
+    @State private var subtitleFailure: String?
 
     /// A movie open in the player, with its engine.
     struct PlayingMovie: Identifiable {
@@ -69,6 +72,28 @@ struct MoviesScreen: View {
         .fullScreenCover(item: $playing, onDismiss: { model?.load() }) { playing in
             MoviePlayerScreen(model: playing.model, videoView: playing.view)
         }
+        .onChange(of: IntentRouter.shared.pendingMovieSubtitles, initial: true) { _, urls in
+            guard !urls.isEmpty else { return }
+            sharedSubtitles = urls
+            IntentRouter.shared.pendingMovieSubtitles = []
+        }
+        .sheet(isPresented: Binding(get: { !sharedSubtitles.isEmpty }, set: { if !$0 { finishSharedSubtitles() } })) {
+            AddSubtitleSheet(urls: sharedSubtitles, movies: (try? dependencies.movies.movies()) ?? []) { movie in
+                do {
+                    _ = try SubtitleImporter(store: dependencies.movies, files: dependencies.movieDownloads.files)
+                        .importFiles(sharedSubtitles, into: movie.id, origin: .shared)
+                } catch {
+                    subtitleFailure = error.localizedDescription
+                }
+            }
+        }
+        .alert(
+            String(localized: "Couldn't Add the Subtitle", comment: "A shared subtitle could not be added"),
+            isPresented: Binding(get: { subtitleFailure != nil }, set: { if !$0 { subtitleFailure = nil } }),
+            presenting: subtitleFailure
+        ) { _ in
+            Button("OK", role: .cancel) {}
+        } message: { Text($0) }
         .fileImporter(isPresented: $isImporting, allowedContentTypes: Self.importTypes, allowsMultipleSelection: true) { result in
             guard case .success(let urls) = result else { return }
             do {
@@ -237,6 +262,14 @@ struct MoviesScreen: View {
     }
 
     /// Movie files (and subtitles to go with them) for Add Movie Files….
+    /// The Inbox copies the system made of shared files go once handled.
+    private func finishSharedSubtitles() {
+        for url in sharedSubtitles where url.path.contains("/Inbox/") {
+            try? FileManager.default.removeItem(at: url)
+        }
+        sharedSubtitles = []
+    }
+
     static let importTypes: [UTType] = [.movie, .video, .mpeg4Movie, .quickTimeMovie, .avi, .mpeg2TransportStream]
         + ["mkv", "webm", "flv", "wmv", "m2ts", "ts", "srt", "ass", "ssa", "vtt"].compactMap { UTType(filenameExtension: $0) }
 
@@ -318,6 +351,9 @@ struct MoviesScreen: View {
             rememberStyle: { UserDefaults.standard.set($0.json, forKey: SettingsKeys.movieSubtitleStyle) },
             sourceIsFiles: sourceIsFiles(movie),
             embeddedSubtitles: embedded,
+            subtitleImporter: { [store = dependencies.movies, files = dependencies.movieDownloads.files] urls in
+                try SubtitleImporter(store: store, files: files).importFiles(urls, into: movie.id, origin: .imported)
+            },
             onClose: onClose
         )
     }

@@ -1,0 +1,11 @@
+{
+ "steps": [
+  {"action": "activate"},
+  {"action": "wait", "seconds": 2},
+  {"action": "screenshot", "name": "01-add-subtitle"},
+  {"action": "dump", "name": "01-add-subtitle"},
+  {"action": "tap", "label": "Interstellar (2014)"},
+  {"action": "wait", "seconds": 2},
+  {"action": "screenshot", "name": "02-added"}
+ ]
+}

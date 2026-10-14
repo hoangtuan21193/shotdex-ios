@@ -22,8 +22,9 @@
 Là phần dưới của bảng **Audio & Subtitles** (02 §3b) — máy ngang: bảng bên phải 372pt, phim vẫn chạy và phụ đề dồn
 vào phần hình còn thấy; máy dọc: sheet nửa màn.
 
-- Hai dòng **Primary** và **Secondary**, mỗi dòng một menu: Off · mọi phụ đề ở §1. Secondary mặc định Off.
-- Menu của dòng Secondary có thêm **Translate…** (04, mờ khi chưa có phụ đề chữ nào) và **Import File…** (§5) —
+- Hai dòng **Primary** và **Secondary**, chạm mở một trang trong bảng (không phải menu hệ thống — trên iPhone dọc
+  sân khấu đã xoay 90°, menu hệ thống sẽ hiện nằm ngang so với người xem): Off · mọi phụ đề ở §1. Secondary mặc định Off.
+- Trang của dòng Secondary có thêm **Translate…** (04, mờ khi chưa có phụ đề chữ nào) và **Import File…** (§5) —
   không còn hai nút riêng.
 - **Position** (chỉ hiện khi Secondary bật): `Primary Bottom, Secondary Top` · `Both Bottom, Secondary Above`
   *(mặc định)* · `Both Bottom, Secondary Below`.

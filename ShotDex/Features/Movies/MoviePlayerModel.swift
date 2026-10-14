@@ -22,6 +22,8 @@ final class MoviePlayerModel {
     private(set) var audioDelayMs: Int
     /// The Audio & Subtitles panel (§3b); the movie keeps playing under it.
     private(set) var isTracksPanelOpen = false
+    /// The speed choices above the transport (§3).
+    private(set) var isChoosingRate = false
 
     // Subtitles (FS-23.03)
     private(set) var subtitles: [MovieSubtitle] = []
@@ -65,6 +67,11 @@ final class MoviePlayerModel {
     /// In-file subtitles only VLC can draw, by id → their place in the file.
     private(set) var engineSubtitles: [String: Int] = [:]
     private let isFirstOpen: Bool
+    private let subtitleImporter: (@Sendable ([URL]) throws -> SubtitleImporter.Result)?
+    /// Import File… from the Secondary menu opened the document picker.
+    var isPickingSubtitleFiles = false
+    private(set) var subtitleImportFailure: String?
+    var canImportSubtitles: Bool { subtitleImporter != nil }
     /// The source is a Files folder: sidecars read `From Files` (03 §1).
     let sourceIsFiles: Bool
     /// When the movie time last moved — buffering reports alone do not
@@ -89,6 +96,7 @@ final class MoviePlayerModel {
         rememberStyle: @escaping (MovieSubtitleStyle) -> Void = { _ in },
         sourceIsFiles: Bool = false,
         embeddedSubtitles: (@Sendable () async -> [EmbeddedSubtitleExtractor.Found])? = nil,
+        subtitleImporter: (@Sendable ([URL]) throws -> SubtitleImporter.Result)? = nil,
         onClose: @escaping () -> Void = {}
     ) {
         self.movie = movie
@@ -100,6 +108,7 @@ final class MoviePlayerModel {
         self.rememberStyle = rememberStyle
         self.sourceIsFiles = sourceIsFiles
         self.embeddedSubtitles = embeddedSubtitles
+        self.subtitleImporter = subtitleImporter
         self.onClose = onClose
         let choice = (try? store?.subtitleChoice(movieId: movie.id)) ?? nil
         isFirstOpen = choice == nil
@@ -177,6 +186,11 @@ final class MoviePlayerModel {
     /// One tap on the picture: chrome on/off, or — locked — the unlock
     /// button and nothing else.
     func tapPicture() {
+        if isChoosingRate {
+            isChoosingRate = false
+            interaction += 1
+            return
+        }
         if isTracksPanelOpen {
             closeTracksPanel()
             return
@@ -243,7 +257,7 @@ final class MoviePlayerModel {
     /// chrome too while the movie plays (a paused movie keeps its controls).
     func hideAfterIdle() {
         showsUnlock = false
-        guard isPlaying, scrubMs == nil else { return }
+        guard isPlaying, scrubMs == nil, !isChoosingRate else { return }
         isChromeVisible = false
     }
 
@@ -316,7 +330,13 @@ final class MoviePlayerModel {
     }
 
     /// Speed, remembered per movie (§3).
+    func toggleRateChoices() {
+        touched()
+        isChoosingRate.toggle()
+    }
+
     func setRate(_ newRate: Double) {
+        isChoosingRate = false
         touched()
         rate = newRate
         player.rate = newRate
@@ -414,6 +434,25 @@ final class MoviePlayerModel {
     }
 
     enum SubtitleLine { case primary, secondary }
+
+    /// Files picked with Import File… (§5): added to this movie, and the
+    /// first new one shown as Secondary — where the menu was opened.
+    func importSubtitles(_ urls: [URL]) async {
+        guard let subtitleImporter else { return }
+        do {
+            let result = try subtitleImporter(urls)
+            subtitles = (try? store?.subtitles(movieId: movie.id)) ?? subtitles
+            if let first = result.added.first {
+                await selectSubtitle(first.id, for: .secondary)
+            }
+        } catch {
+            subtitleImportFailure = error.localizedDescription
+        }
+    }
+
+    func dismissSubtitleImportFailure() {
+        subtitleImportFailure = nil
+    }
 
     func subtitleTitle(_ subtitle: MovieSubtitle) -> String {
         guard !hasText(subtitle) else { return MovieSubtitleLabel.title(subtitle, fromFiles: sourceIsFiles) }

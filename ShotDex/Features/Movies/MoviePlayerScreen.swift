@@ -1,4 +1,5 @@
 import SwiftUI
+import UniformTypeIdentifiers
 
 /// Full-screen playback (FS-23.02 §2–3): black, a spinner only after 350 ms,
 /// a card that says why when a movie can't play, and the transport — top bar,
@@ -68,6 +69,21 @@ struct MoviePlayerScreen: View {
         .onChange(of: scenePhase) { _, phase in
             if phase == .background { model.enterBackground() }
         }
+        .fileImporter(
+            isPresented: Binding(get: { model.isPickingSubtitleFiles }, set: { model.isPickingSubtitleFiles = $0 }),
+            allowedContentTypes: Self.subtitleTypes,
+            allowsMultipleSelection: true
+        ) { result in
+            guard case .success(let urls) = result else { return }
+            Task { await model.importSubtitles(urls) }
+        }
+        .alert(
+            String(localized: "Couldn't Add the Subtitle", comment: "Import File… failed"),
+            isPresented: Binding(get: { model.subtitleImportFailure != nil }, set: { if !$0 { model.dismissSubtitleImportFailure() } }),
+            presenting: model.subtitleImportFailure
+        ) { _ in
+            Button("OK", role: .cancel) {}
+        } message: { Text($0) }
         .onDisappear {
             UIApplication.shared.isIdleTimerDisabled = false
             model.close()
@@ -153,9 +169,12 @@ struct MoviePlayerScreen: View {
             // Board PH_MoviePlayer: the cluster sits 45 pt above the middle,
             // clear of the panel's two rows.
             centerCluster.offset(y: -45)
-            VStack(spacing: 0) {
+            VStack(spacing: AppTheme.Spacing.sm) {
                 topBar
                 Spacer(minLength: 0)
+                if model.isChoosingRate {
+                    rateChoices.transition(.opacity)
+                }
                 panel
             }
             .padding(insets)
@@ -304,25 +323,47 @@ struct MoviePlayerScreen: View {
         .frame(height: 44)
     }
 
+    /// The six speeds, drawn in the stage rather than as a system menu: on
+    /// an upright phone the stage is turned and a menu would come up
+    /// sideways.
+    private var rateChoices: some View {
+        HStack(spacing: 2) {
+            ForEach(MoviePlayerModel.rates, id: \.self) { rate in
+                let isSelected = rate == model.rate
+                Button {
+                    model.setRate(rate)
+                } label: {
+                    Text(MoviePlayerText.rate(rate))
+                        .font(.subheadline.weight(.semibold).monospacedDigit())
+                        .foregroundStyle(isSelected ? .black : .white)
+                        .frame(minWidth: 52, minHeight: 44)
+                        .background(isSelected ? Color.white : .clear, in: Capsule())
+                        .contentShape(Capsule())
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(MoviePlayerText.rate(rate))
+                .accessibilityAddTraits(isSelected ? [.isButton, .isSelected] : .isButton)
+            }
+        }
+        .padding(4)
+        .editorGlass(Capsule())
+        .environment(\.colorScheme, .dark)
+    }
+
     /// Speed, Audio & Subtitles, Fit/Fill and the touch lock.
     private var controlsRow: some View {
         HStack(spacing: 32) {
-            Menu {
-                Picker(String(localized: "Playback Speed", comment: "Movie player: speed menu"), selection: Binding(
-                    get: { model.rate },
-                    set: { model.setRate($0) }
-                )) {
-                    ForEach(MoviePlayerModel.rates, id: \.self) { rate in
-                        Text(MoviePlayerText.rate(rate)).tag(rate)
-                    }
-                }
+            Button {
+                model.toggleRateChoices()
             } label: {
                 Text(MoviePlayerText.rate(model.rate))
                     .font(.system(size: 15, weight: .semibold).monospacedDigit())
                     .foregroundStyle(.white)
                     .frame(width: 44, height: 44)
+                    .background(model.isChoosingRate ? Color.white.opacity(0.2) : .clear, in: Circle())
                     .contentShape(Rectangle())
             }
+            .buttonStyle(.plain)
             .accessibilityLabel(String(localized: "Playback Speed \(MoviePlayerText.rate(model.rate))", comment: "Movie player: speed button, with the current speed"))
 
             Button {
@@ -366,6 +407,9 @@ struct MoviePlayerScreen: View {
         }
         .frame(height: 44)
     }
+
+    /// Import File… (FS-23.03 §5): srt, ass, ssa, vtt and zip.
+    static let subtitleTypes: [UTType] = ["srt", "ass", "ssa", "vtt"].compactMap { UTType(filenameExtension: $0) } + [.zip]
 
     /// Panel height: two 44 pt rows, 4 between, 4 above and below.
     static let panelHeight: CGFloat = 100
