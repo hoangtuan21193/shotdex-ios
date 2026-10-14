@@ -9,7 +9,7 @@ lựa chọn phụ đề trong bảng riêng; API key ở Keychain.
 
 | Thư mục (trong vùng dữ liệu app) | Chứa | Sao lưu iCloud |
 |---|---|---|
-| `Movies/<id>/` | phim **đã tải** giữ tên gốc · phụ đề (`<id-phụ-đề>.srt/.ass/.vtt`) · poster, ảnh nền | không (đánh dấu cả thư mục) |
+| `Movies/<id>/` (trong Application Support — không Documents vì không hiện trong Files, không Caches vì hệ thống được xoá) | phim **đã tải** giữ tên gốc · phụ đề (`<id-phụ-đề>.srt/.ass/.vtt`) · `poster.jpg` | không (đánh dấu cả thư mục `Movies/`) |
 | `Caches/MovieArt/` | poster + khung hình của phim **Stream** (cache, xoá được, tải lại khi cần) | không |
 | `Movies/.incoming/` | file đang chép (`.part`) | không |
 

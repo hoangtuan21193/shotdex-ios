@@ -17,6 +17,8 @@ struct MovieGridCell: View {
             Text(movie.displayTitle)
                 .font(.footnote.weight(.semibold))
                 .lineLimit(1)
+                // A word smaller before half a word: "Blade Runner 2049".
+                .minimumScaleFactor(0.85)
                 .padding(.top, 6)
             Text(MovieRowText.caption(movie))
                 .font(.caption)
@@ -41,7 +43,7 @@ struct MovieListRow: View {
                 .clipShape(RoundedRectangle(cornerRadius: 5, style: .continuous))
             VStack(alignment: .leading, spacing: 2) {
                 Text(MovieRowText.titleWithYear(movie))
-                    .font(.body.weight(.semibold))
+                    .font(.callout.weight(.semibold))
                     .lineLimit(1)
                 Text(MovieRowText.detail(movie))
                     .font(.footnote)

@@ -20,7 +20,7 @@ struct AddMovieSourceSheet: View {
                             row(
                                 title: server.name,
                                 detail: String(localized: "\(server.transferProtocol.title) · Choose a folder", comment: "Add a Source: a connection row; the protocol, then what tapping does"),
-                                systemImage: "server.rack"
+                                systemImage: "server.rack", tint: .blue
                             )
                         }
                     }
@@ -28,7 +28,7 @@ struct AddMovieSourceSheet: View {
                         row(
                             title: String(localized: "Files", comment: "Add a Source: folders from the Files app"),
                             detail: String(localized: "iCloud Drive, external drives", comment: "Add a Source: what the Files row reaches"),
-                            systemImage: "folder"
+                            systemImage: "folder", tint: .gray
                         )
                     }
                 } header: {
@@ -42,7 +42,7 @@ struct AddMovieSourceSheet: View {
                     row(
                         title: String(localized: "Plex Server", comment: "Add a Source: a Plex Media Server"),
                         detail: String(localized: "Sign in with your Plex account", comment: "Add a Source: what the Plex row asks for"),
-                        systemImage: "play.tv"
+                        systemImage: "play.fill", tint: .purple
                     )
                 } header: {
                     Text(String(localized: "Media Server", comment: "Add a Source: section of media servers"))
@@ -148,15 +148,20 @@ struct AddMovieSourceSheet: View {
         }
     }
 
-    private func row(title: String, detail: String, systemImage: String) -> some View {
+    /// Tile, name and what tapping does, with a chevron: every row leads
+    /// somewhere (board `PH_MoviesAdd`).
+    private func row(title: String, detail: String, systemImage: String, tint: SettingsTint) -> some View {
         HStack(spacing: AppTheme.Spacing.md) {
-            Image(systemName: systemImage)
-                .foregroundStyle(.secondary)
-                .frame(width: 28)
+            SettingsTileIcon(systemImage: systemImage, tint: tint)
             VStack(alignment: .leading, spacing: 2) {
                 Text(title)
                 Text(detail).font(.subheadline).foregroundStyle(.secondary)
             }
+            Spacer(minLength: 0)
+            Image(systemName: "chevron.right")
+                .font(.footnote.weight(.semibold))
+                .foregroundStyle(.tertiary)
+                .accessibilityHidden(true)
         }
         .contentShape(Rectangle())
         .accessibilityElement(children: .combine)

@@ -168,8 +168,13 @@ final class InMemoryRemoteFileClient: RemoteFileClient, @unchecked Sendable {
     /// How many directory listings were asked for.
     private(set) var listingCount = 0
 
+    /// After this many range reads, every read fails as if the server went
+    /// away (nil = never) — a NAS switched off mid-download.
+    var failRangeReadsAfter: Int?
+
     func readRange(_ path: String, offset: Int64, length: Int) async throws -> Data {
         try lock.withLock {
+            if let limit = failRangeReadsAfter, rangeReadPaths.count >= limit { throw RemoteFileError.unreachable(host: "nas.local") }
             rangeReadPaths.append(path)
             guard let data = storage[path] else { throw RemoteFileError.other("missing \(path)") }
             let start = min(Int(offset), data.count)

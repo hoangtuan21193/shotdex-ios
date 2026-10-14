@@ -148,6 +148,8 @@ final class AppDependencies {
     let movieSync: MovieSourceSync
     /// Movie posters, cached in Caches/MovieArt (FS-23.01 §4).
     let movieArt: MoviePosterLoader
+    /// Download to iPhone (FS-23.01 §6).
+    let movieDownloads: MovieDownloadRunner
     /// Keeps every backup job watching its source (FS-22.02).
     let backupCoordinator: BackupCoordinator
     /// Backup's background time (FS-22.02 §3).
@@ -520,7 +522,27 @@ final class AppDependencies {
         self.movies = movies
         self.aiProviders = AIProviderStore(database: database, keys: KeychainPasswordStore(service: KeychainPasswordStore.aiProviderKeys))
         self.movieSync = MovieSourceSync(movies: movies, servers: fileServers)
-        self.movieArt = MoviePosterLoader(movies: movies, servers: fileServers)
+        let movieArt = MoviePosterLoader(movies: movies, servers: fileServers)
+        self.movieArt = movieArt
+        self.movieDownloads = MovieDownloadRunner(
+            store: movies, files: .standard,
+            environment: .init(
+                client: { [fileServers] source in
+                    guard let id = source.connectionId, let server = try fileServers.fetch(id: id) else {
+                        throw RemoteFileError.folderMissing(source.name)
+                    }
+                    let client = RemoteFileClientFactory.make(for: server, password: fileServers.password(for: id) ?? "")
+                    try await client.connect()
+                    return client
+                },
+                freeSpace: {
+                    let home = URL(fileURLWithPath: NSHomeDirectory())
+                    return (try? home.resourceValues(forKeys: [.volumeAvailableCapacityForImportantUsageKey]))?
+                        .volumeAvailableCapacityForImportantUsage ?? 0
+                }
+            ),
+            art: movieArt
+        )
         let backupCoordinator = BackupCoordinator(store: backups, environment: .live(
             database: database, store: backups, servers: fileServers, roots: folderRoots
         ))

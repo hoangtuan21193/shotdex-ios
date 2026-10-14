@@ -28,10 +28,12 @@ struct MoviesScreen: View {
         .navigationBarTitleDisplayMode(.inline)
         .moviesSubtitle(model.flatMap { MoviesCountText.subtitle($0.counts) })
         .toolbar {
-            ToolbarItemGroup(placement: .topBarTrailing) {
-                if model?.isEmpty == false { viewMenu }
-                addMenu
+            if model?.isEmpty == false {
+                ToolbarItem(placement: .topBarTrailing) { viewMenu }
+                // Two round buttons as on `PH_Movies`, not one shared capsule.
+                if #available(iOS 26.0, *) { ToolbarSpacer(.fixed, placement: .topBarTrailing) }
             }
+            ToolbarItem(placement: .topBarTrailing) { addMenu }
         }
         .task {
             let model = model ?? MoviesModel(store: dependencies.movies)
@@ -43,6 +45,7 @@ struct MoviesScreen: View {
             model.load()
         }
         .onChange(of: sort) { _, sort in model?.query.sort = sort }
+        .onChange(of: dependencies.movieDownloads.revision) { model?.load() }
         .sheet(isPresented: $isAddingSource, onDismiss: { model?.load() }) {
             AddMovieSourceSheet()
         }
@@ -60,7 +63,12 @@ struct MoviesScreen: View {
     @ViewBuilder
     private func library(_ model: MoviesModel) -> some View {
         @Bindable var model = model
-        let shown = model.shown
+        let downloads = dependencies.movieDownloads
+        let shown = model.shown.map { movie in
+            var live = movie
+            live.downloadedBytes = downloads.bytes(for: movie)
+            return live
+        }
         ScrollView {
             VStack(alignment: .leading, spacing: AppTheme.Spacing.md) {
                 if #unavailable(iOS 26.0), let subtitle = MoviesCountText.subtitle(model.counts) {
@@ -165,6 +173,15 @@ struct MoviesScreen: View {
     /// FS-23.01 §5. Play, Download, Audio & Subtitles join with their tasks.
     @ViewBuilder
     private func movieMenu(_ movie: Movie, model: MoviesModel) -> some View {
+        if movie.downloadError != nil, movie.sourceId != nil {
+            Button { dependencies.movieDownloads.retry(movie.id) } label: {
+                Label(String(localized: "Retry Download", comment: "Movie menu: try a stopped download again"), systemImage: "arrow.clockwise")
+            }
+        } else if movie.state == .stream, movie.sourceId != nil {
+            Button { dependencies.movieDownloads.download(movie.id) } label: {
+                Label("\(MoviesCountText.downloadTo()) · \(movie.byteCount.formatted(.byteCount(style: .file)))", systemImage: "arrow.down.circle")
+            }
+        }
         if movie.isWatched {
             Button { model.setWatched(false, movie) } label: {
                 Label(String(localized: "Mark as Unwatched", comment: "Movie menu"), systemImage: "eye.slash")

@@ -1,0 +1,25 @@
+{
+ "steps": [
+  {"action": "launch"},
+  {"action": "wait", "seconds": 6},
+  {"action": "tap", "label": "Collections", "type": "button"},
+  {"action": "wait", "seconds": 2},
+  {"action": "scrollTo", "label": "Utilities"},
+  {"action": "swipe", "x": 0.75, "y": 0.66, "direction": "left", "distance": 0.6},
+  {"action": "wait", "seconds": 1},
+  {"action": "tap", "label": "Movies, "},
+  {"action": "wait", "seconds": 6},
+  {"action": "longPress", "label": "Heat", "seconds": 1.5},
+  {"action": "wait", "seconds": 2},
+  {"action": "screenshot", "name": "01-menu"},
+  {"action": "dump", "name": "01-menu", "type": "button"},
+  {"action": "tap", "label": "Download to iPhone"},
+  {"action": "wait", "seconds": 4},
+  {"action": "screenshot", "name": "02-downloaded"},
+  {"action": "dump", "name": "02-downloaded"},
+  {"action": "tap", "label": "On This iPhone", "type": "button"},
+  {"action": "wait", "seconds": 2},
+  {"action": "screenshot", "name": "03-on-this-iphone"},
+  {"action": "dump", "name": "03-on-this-iphone"}
+ ]
+}

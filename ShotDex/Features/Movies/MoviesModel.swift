@@ -93,6 +93,15 @@ enum MoviesCountText {
         }
     }
 
+    /// Movie menu: `Download to iPhone` (FS-23.01 §5).
+    static func downloadTo(_ device: Device = .current) -> String {
+        switch device {
+        case .iPhone: String(localized: "Download to iPhone", comment: "Movie menu: keep this movie on the iPhone")
+        case .iPad: String(localized: "Download to iPad", comment: "Movie menu: keep this movie on the iPad")
+        case .mac: String(localized: "Download to Mac", comment: "Movie menu: keep this movie on the Mac")
+        }
+    }
+
     /// The List row's "where": `On iPhone`.
     static func onDeviceShort(_ device: Device = .current) -> String {
         switch device {

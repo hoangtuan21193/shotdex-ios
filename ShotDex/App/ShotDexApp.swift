@@ -24,6 +24,9 @@ struct ShotDexApp: App {
         dependencies.unsupportedRAWIndex.loadIfNeeded()
         dependencies.fileServerCatalog.reload()
         dependencies.backupCoordinator.startWatching(photoLibrary: dependencies.photoLibrary)
+        // FS-23.01 §6: downloads stopped by a quit carry on; the launch
+        // sweep clears leftovers (FS-23.05 §1).
+        dependencies.movieDownloads.resumeInterrupted()
         // UIKit-presented controls (alerts, menus, share sheets) take the
         // window's tint; SwiftUI controls take `.tint` below.
         UIWindow.appearance().tintColor = AppAccent.uiColor
