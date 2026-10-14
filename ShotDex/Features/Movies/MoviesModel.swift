@@ -29,6 +29,22 @@ final class MoviesModel {
         movies = (try? store.movies()) ?? []
         isLoaded = true
     }
+
+    func rename(_ movie: Movie, to title: String) {
+        try? store.rename(id: movie.id, to: title)
+        load()
+    }
+
+    func setWatched(_ isWatched: Bool, _ movie: Movie) {
+        try? store.setWatched(isWatched, ids: [movie.id])
+        load()
+    }
+}
+
+/// Grid or List, remembered (FS-23.01 §4).
+enum MoviesLayout: String, CaseIterable, Sendable {
+    case grid
+    case list
 }
 
 /// The words that name this device (`On This iPhone`, `3 on this iPad`) —
@@ -74,6 +90,15 @@ enum MoviesCountText {
         case .iPhone: String(localized: "On This iPhone", comment: "Movies filter: movies stored on this iPhone")
         case .iPad: String(localized: "On This iPad", comment: "Movies filter: movies stored on this iPad")
         case .mac: String(localized: "On This Mac", comment: "Movies filter: movies stored on this Mac")
+        }
+    }
+
+    /// The List row's "where": `On iPhone`.
+    static func onDeviceShort(_ device: Device = .current) -> String {
+        switch device {
+        case .iPhone: String(localized: "On iPhone", comment: "Movie list row: stored on this iPhone")
+        case .iPad: String(localized: "On iPad", comment: "Movie list row: stored on this iPad")
+        case .mac: String(localized: "On Mac", comment: "Movie list row: stored on this Mac")
         }
     }
 

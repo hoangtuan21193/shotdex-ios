@@ -63,7 +63,8 @@ enum MoviePosterResolver {
     }
 
     /// Stable across launches (unlike `hashValue`), so a tile keeps its
-    /// color: FNV-1a over the folded title.
+    /// color: FNV-1a over the folded title, high bits — FNV's low bits barely
+    /// move between titles that differ only early on.
     static func colorIndex(for title: String, palette: Int) -> Int {
         guard palette > 0 else { return 0 }
         var hash: UInt64 = 0xcbf2_9ce4_8422_2325
@@ -71,6 +72,6 @@ enum MoviePosterResolver {
             hash ^= UInt64(byte)
             hash &*= 0x100_0000_01b3
         }
-        return Int(hash % UInt64(palette))
+        return Int((hash >> 40) % UInt64(palette))
     }
 }

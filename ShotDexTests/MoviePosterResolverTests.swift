@@ -44,7 +44,9 @@ import Testing
         #expect(first == MoviePosterResolver.colorIndex(for: "perfect days", palette: 8))
         #expect((0..<8).contains(first))
         #expect(MoviePosterResolver.colorIndex(for: "Perfect Days", palette: 8) == first)
-        let spread = Set(["Dune", "Heat", "Arrival", "Past Lives", "Perfect Days", "Alien", "Up", "Her"].map { MoviePosterResolver.colorIndex(for: $0, palette: 8) })
-        #expect(spread.count >= 4)
+        // The first library on a test NAS had four of six tiles orange.
+        let spread = Set(["Arrival", "Blade Runner 2049", "Dune Part Two", "Past Lives", "Perfect Days", "Severance", "Heat"]
+            .map { MoviePosterResolver.colorIndex(for: $0, palette: 8) })
+        #expect(spread.count >= 5)
     }
 }

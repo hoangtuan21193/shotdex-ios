@@ -146,6 +146,8 @@ final class AppDependencies {
     let aiProviders: AIProviderStore
     /// Lists Movies' folder sources (FS-23.01 §2).
     let movieSync: MovieSourceSync
+    /// Movie posters, cached in Caches/MovieArt (FS-23.01 §4).
+    let movieArt: MoviePosterLoader
     /// Keeps every backup job watching its source (FS-22.02).
     let backupCoordinator: BackupCoordinator
     /// Backup's background time (FS-22.02 §3).
@@ -518,6 +520,7 @@ final class AppDependencies {
         self.movies = movies
         self.aiProviders = AIProviderStore(database: database, keys: KeychainPasswordStore(service: KeychainPasswordStore.aiProviderKeys))
         self.movieSync = MovieSourceSync(movies: movies, servers: fileServers)
+        self.movieArt = MoviePosterLoader(movies: movies, servers: fileServers)
         let backupCoordinator = BackupCoordinator(store: backups, environment: .live(
             database: database, store: backups, servers: fileServers, roots: folderRoots
         ))

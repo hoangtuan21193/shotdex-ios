@@ -43,8 +43,8 @@ Quyết định: [planboard movies-library](../../../.planboard/movies-library/D
 ## 4. Màn Movies
 
 - **Grid** mặc định: poster dọc 2:3, dưới là tên (1 dòng) + năm; iPhone 3 cột, iPad/Mac/Duo trong theo bề rộng
-  (thêm cột, không phóng to). **List** trong ⋯: khung 16:9 · tên (năm) · thời lượng · cỡ · nguồn hoặc `On iPhone` ·
-  ngôn ngữ phụ đề. Lựa chọn Grid/List nhớ lại.
+  (thêm cột, không phóng to). **List** trong ⋯: poster nhỏ 2:3 · tên (năm) · nguồn hoặc `On iPhone` · thời lượng (khi đã biết) · cỡ
+  (board `PH_Movies`, tweak List); ngôn ngữ phụ đề chưa có ở hàng (chỉ trong bảng Audio & Subtitles). Lựa chọn Grid/List nhớ lại.
 - Đầu màn: ô **Search** (tên, năm, tên file; chạy offline) và hàng lọc **All · On This iPhone · Unwatched**.
   Chữ theo thiết bị: `On This iPad`, `On This Mac`, `Download to iPad`… (mọi chỗ ghi "iPhone" trong spec này).
 - ⋯: Grid/List · Sort (**Recently Added** mặc định · Title · Year · Recently Watched) · Select. Year: mới trước, không năm
