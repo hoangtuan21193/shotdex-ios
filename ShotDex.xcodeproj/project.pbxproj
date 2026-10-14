@@ -13,6 +13,7 @@
 		AA00001A2D00000100000001 /* DequeModule in Frameworks */ = {isa = PBXBuildFile; productRef = AA00001B2D00000100000001 /* DequeModule */; };
 		BA0004012D00000100000001 /* ShotDexBackupUpload.appex in Embed ExtensionKit Extensions */ = {isa = PBXBuildFile; fileRef = BA0004022D00000100000001 /* ShotDexBackupUpload.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		BB0001012D00000100000001 /* ShotDexWidget.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = BB0001022D00000100000001 /* ShotDexWidget.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		C51000012D00000100000001 /* VLCKit in Frameworks */ = {isa = PBXBuildFile; productRef = C51000022D00000100000001 /* VLCKit */; };
 		CC0001012D00000100000001 /* ShotDexShare.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = CC0001022D00000100000001 /* ShotDexShare.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		DD0001012D00000100000001 /* ShotDexKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = DD0001022D00000100000001 /* ShotDexKit.framework */; };
 		DD0001042D00000100000001 /* ShotDexKit.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = DD0001022D00000100000001 /* ShotDexKit.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
@@ -275,6 +276,7 @@
 				AA0000132D00000100000001 /* SMBClient in Frameworks */,
 				AA0000162D00000100000001 /* Citadel in Frameworks */,
 				AA00001A2D00000100000001 /* DequeModule in Frameworks */,
+				C51000012D00000100000001 /* VLCKit in Frameworks */,
 				DD0001012D00000100000001 /* ShotDexKit.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -428,6 +430,7 @@
 				AA0000142D00000100000001 /* SMBClient */,
 				AA0000172D00000100000001 /* Citadel */,
 				AA00001B2D00000100000001 /* DequeModule */,
+				C51000022D00000100000001 /* VLCKit */,
 			);
 			productName = ShotDex;
 			productReference = AA0000052D00000100000001 /* ShotDex.app */;
@@ -654,6 +657,7 @@
 				AA0000152D00000100000001 /* XCRemoteSwiftPackageReference "SMBClient" */,
 				AA0000182D00000100000001 /* XCRemoteSwiftPackageReference "Citadel" */,
 				AA0000192D00000100000001 /* XCRemoteSwiftPackageReference "swift-collections" */,
+				C51000032D00000100000001 /* XCRemoteSwiftPackageReference "vlckit" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = AA0000042D00000100000001 /* Products */;
@@ -1605,6 +1609,14 @@
 				minimumVersion = 1.3.0;
 			};
 		};
+		C51000032D00000100000001 /* XCRemoteSwiftPackageReference "vlckit" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/videolan/vlckit";
+			requirement = {
+				kind = exactVersion;
+				version = "4.0.0-a25";
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -1627,6 +1639,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = AA0000192D00000100000001 /* XCRemoteSwiftPackageReference "swift-collections" */;
 			productName = DequeModule;
+		};
+		C51000022D00000100000001 /* VLCKit */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = C51000032D00000100000001 /* XCRemoteSwiftPackageReference "vlckit" */;
+			productName = VLCKit;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

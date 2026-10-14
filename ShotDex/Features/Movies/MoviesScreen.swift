@@ -20,6 +20,14 @@ struct MoviesScreen: View {
     @State private var isImporting = false
     @State private var removingCopied: Movie?
     @State private var importFailure: String?
+    @State private var playing: PlayingMovie?
+
+    /// A movie open in the player, with its engine.
+    struct PlayingMovie: Identifiable {
+        let model: MoviePlayerModel
+        let view: UIView
+        var id: String { model.movie.id }
+    }
 
     var body: some View {
         Group {
@@ -57,6 +65,9 @@ struct MoviesScreen: View {
         .onChange(of: dependencies.movieDownloads.revision) { model?.load() }
         .sheet(isPresented: $isAddingSource, onDismiss: { model?.load() }) {
             AddMovieSourceSheet()
+        }
+        .fullScreenCover(item: $playing, onDismiss: { model?.load() }) { playing in
+            MoviePlayerScreen(model: playing.model, videoView: playing.view)
         }
         .fileImporter(isPresented: $isImporting, allowedContentTypes: Self.importTypes, allowsMultipleSelection: true) { result in
             guard case .success(let urls) = result else { return }
@@ -252,7 +263,15 @@ struct MoviesScreen: View {
             awayFrom = movie.sourceName ?? ""
             return
         }
-        // Play arrives with the player (plan task 16).
+        play(movie)
+    }
+
+    /// Play (FS-23.02 §1): a movie on the device from its file; streaming
+    /// joins in plan task 17.
+    private func play(_ movie: Movie) {
+        guard movie.isOnDevice, let file = dependencies.movieDownloads.files.file(for: movie) else { return }
+        let engine = VLCMoviePlayer(input: .file(file))
+        playing = PlayingMovie(model: MoviePlayerModel(movie: movie, player: engine), view: engine.view)
     }
 
     private func selected(_ model: MoviesModel) -> [Movie] {

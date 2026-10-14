@@ -21,8 +21,8 @@ Phim test: clip tổng hợp 2–5 phút (khung test pattern, tiếng sine — *
 | AC-9 | đang tải, app bị giết | mở lại | tải tiếp từ byte đã có; không còn `.part` mồ côi | ✅ `MovieDownloadTests.resumesAfterKill` |
 | AC-10 | 2 phim đã tải | đọc thuộc tính thư mục + thư viện Photos | `Movies/` không sao lưu; số tài sản Photos không đổi | ⚠️ một nửa: `MovieDownloadTests.excludedFromBackup` ✅ (thư mục); "số tài sản Photos không đổi" chưa đo (code không gọi PhotoKit) |
 | AC-11 | Dune đã tải, xem tới 47:12, có 1 bản dịch | Remove Download › Remove | file trong máy xoá, dung lượng trống tăng ≥ 310 MB; poster về Stream, vẫn mở tại 47:12, bản dịch còn; file trên server còn | ✅ `MovieDownloadTests.removeDownloadKeepsProgress` + `scripts/movies-remove.json` (hộp hỏi 2 nút, ✓ mất) |
-| AC-12 | clip mỗi loại mp4, m4v, mov, mkv, webm, flv, avi, wmv, ts | phát mỗi clip 5 s | cả 9 tới `sẵn sàng`, giờ đã qua ≥ 4 s, có tiếng | ⚠️ chưa có (`scripts/movies-formats.json`) |
-| AC-13 | file `.mkv` hỏng phần đầu | phát | `Can't Play This Movie` + một dòng lý do + Close; không nháy đen im lặng | ⚠️ chưa có |
+| AC-12 | clip mỗi loại mp4, m4v, mov, mkv, webm, flv, avi, wmv, ts | phát mỗi clip 5 s | cả 9 tới `sẵn sàng`, giờ đã qua ≥ 4 s, có tiếng | ✅ `MoviePlayerFormatsTests.playsEveryContainer` (9 clip thật qua VLCKit trong app host: tới ≥ 4 s, có track tiếng) + `scripts/movies-play.json` 01 |
+| AC-13 | file `.mkv` hỏng phần đầu | phát | `Can't Play This Movie` + một dòng lý do + Close; không nháy đen im lặng | ✅ `MoviePlayerFormatsTests.damagedFileSaysWhy` + `scripts/movies-play.json` 02 (`Can't Play This Movie` + lý do + Close) |
 | AC-14 | phim 2:00:00 đã xem tới 47:12 | mở lại | phát từ 47:12 ± 1 s; nhãn `Resumed at 47:12 · Start Over` 5 s; Start Over → 0:00 | ⚠️ chưa có (`MoviePlaybackModelTests.resumeAndStartOver`) |
 | AC-15 | MKV 2 track âm thanh (EN AC3 5.1, VI AAC) | Audio & Subtitles › Tiếng Việt | đổi track không dừng phim (giờ không lùi); mở lại phim vẫn track VI | ⚠️ chưa có |
 | AC-16 | khoá chạm bật | chạm đúp nửa phải | giờ không đổi; chỉ hiện nút mở khoá | ⚠️ chưa có |
