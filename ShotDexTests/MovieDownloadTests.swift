@@ -99,7 +99,8 @@ import Testing
 
         #expect(try f.store.movie(id: heat.id)?.state == .onDevice)
         #expect(f.nas.bytesRead <= 10_000_000 + 1_048_576)
-        #expect(try Data(contentsOf: try #require(f.files.file(for: try movie(f, "Heat.mkv")))) == Self.bytes(10_000_000))
+        let heatFile = try #require(f.files.file(for: try movie(f, "Heat.mkv")))
+        #expect(try Data(contentsOf: heatFile) == Self.bytes(10_000_000))
     }
 
     /// AC-9: the app was killed mid-download; at launch it carries on from
@@ -145,5 +146,36 @@ import Testing
         await f.runner.resumeInterrupted().value
 
         #expect(try f.store.movie(id: up.id)?.state == .missing)
+    }
+
+    /// AC-11: Dune downloaded, watched to 47:12, one translation: Remove
+    /// Download frees the file, keeps the place and the translation.
+    @Test func removeDownloadKeepsProgress() async throws {
+        let f = try makeFixture()
+        f.nas.put("Movies/Dune.mkv", Self.bytes(3_000_000))
+        f.nas.put("Movies/Dune.en.srt", Data("1\n00:00:01,000 --> 00:00:02,000\nhi\n".utf8))
+        try await MovieSourceSync.scan(f.source, client: f.nas, store: f.store)
+        let dune = try movie(f, "Dune.mkv")
+        f.runner.download(dune.id)
+        await f.runner.waitUntilIdle()
+        try f.store.recordPosition(id: dune.id, positionMs: 2_832_000)
+        let english = try #require(try f.store.subtitles(movieId: dune.id).first)
+        let translated = try f.files.write(Data("vi".utf8), named: "vi-translated.srt", for: dune.id)
+        try f.store.saveSubtitle(MovieSubtitle(movieId: dune.id, language: "vi", origin: .translated, translatedFromId: english.id, format: .srt, fileName: translated))
+        let downloaded = try #require(try f.store.movie(id: dune.id))
+        let file = try #require(f.files.file(for: downloaded))
+
+        f.runner.removeDownload(downloaded)
+
+        #expect(!FileManager.default.fileExists(atPath: file.path))
+        let after = try #require(try f.store.movie(id: dune.id))
+        #expect(after.state == .stream)
+        #expect(after.positionMs == 2_832_000)
+        #expect(after.localFileName == nil)
+        let subtitles = try f.store.subtitles(movieId: dune.id)
+        #expect(subtitles.first { $0.origin == .sidecar }?.fileName == "")
+        #expect(subtitles.contains { $0.origin == .translated })
+        #expect(FileManager.default.fileExists(atPath: f.files.directory(for: dune.id).appending(path: translated).path))
+        #expect(f.nas.files["Movies/Dune.mkv"] != nil)
     }
 }

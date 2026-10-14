@@ -280,6 +280,28 @@ struct MovieStore: Sendable {
         }
     }
 
+    /// Remove Download (FS-23.01 §6): back to Stream with where it stopped,
+    /// watched and every choice kept. Subtitles fetched from the source go
+    /// back to fetch-on-use; the user's own (imported, translated, in-file)
+    /// stay. Returns the subtitle files the caller may delete.
+    @discardableResult
+    func removeDownload(id: String) throws -> [String] {
+        try database.writer.write { db in
+            try db.execute(
+                sql: "UPDATE movies SET state = ?, downloadedBytes = 0, downloadError = NULL, localFileName = NULL WHERE id = ?",
+                arguments: [Movie.State.stream.rawValue, id]
+            )
+            let fetched = try MovieSubtitle
+                .filter(Column("movieId") == id && Column("remotePath") != nil && Column("fileName") != "")
+                .fetchAll(db)
+            for var subtitle in fetched {
+                subtitle.fileName = ""
+                try subtitle.update(db)
+            }
+            return fetched.map(\.fileName)
+        }
+    }
+
     /// The download or copy finished under this name in `Movies/<id>/`.
     func setLocalFileName(_ name: String, id: String) throws {
         try database.writer.write { db in

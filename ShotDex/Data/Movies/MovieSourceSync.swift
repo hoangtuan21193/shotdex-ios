@@ -21,12 +21,9 @@ final class MovieSourceSync {
     @discardableResult
     func addFolder(_ folder: String, on server: FileServer) async throws -> MovieStore.ScanMerge {
         let normalized = ServerUploadPath.normalizedFolder(folder)
-        let last = ServerUploadPath.lastComponent(of: normalized)
-        let source = MovieSource(
-            kind: .folder,
-            name: last.isEmpty ? server.name : String(localized: "\(last) on \(server.name)", comment: "Movies source name: a folder on a connection"),
-            connectionId: server.id, folder: normalized
-        )
+        // Named after the connection: rows and alerts say where a movie
+        // lives ("NAS Home · 2:04:01", "The movie stays on NAS Home").
+        let source = MovieSource(kind: .folder, name: server.name, connectionId: server.id, folder: normalized)
         try movies.saveSource(source)
         return try await refresh(source)
     }

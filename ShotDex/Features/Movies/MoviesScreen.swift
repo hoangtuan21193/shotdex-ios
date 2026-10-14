@@ -11,6 +11,9 @@ struct MoviesScreen: View {
     @State private var isAddingSource = false
     @State private var renaming: Movie?
     @State private var typedTitle = ""
+    @State private var removingDownloads: [Movie] = []
+    @State private var isSelecting = false
+    @State private var selection: Set<String> = []
 
     var body: some View {
         Group {
@@ -49,6 +52,20 @@ struct MoviesScreen: View {
         .sheet(isPresented: $isAddingSource, onDismiss: { model?.load() }) {
             AddMovieSourceSheet()
         }
+        .alert(
+            String(localized: "Remove Download?", comment: "Remove Download alert title"),
+            isPresented: Binding(get: { !removingDownloads.isEmpty }, set: { if !$0 { removingDownloads = [] } })
+        ) {
+            Button(String(localized: "Remove", comment: "Remove Download alert: confirm"), role: .destructive) {
+                for movie in removingDownloads { dependencies.movieDownloads.removeDownload(movie) }
+                removingDownloads = []
+                isSelecting = false
+                selection = []
+            }
+            Button(String(localized: "Cancel", comment: "Remove Download alert: keep the download"), role: .cancel) {}
+        } message: {
+            Text(removeDownloadMessage)
+        }
         .alert(String(localized: "Rename", comment: "Movie menu: rename alert title"), isPresented: Binding(get: { renaming != nil }, set: { if !$0 { renaming = nil } })) {
             TextField(String(localized: "Name", comment: "Rename movie: field"), text: $typedTitle)
             Button(String(localized: "Cancel", comment: "Rename movie: cancel"), role: .cancel) {}
@@ -81,7 +98,11 @@ struct MoviesScreen: View {
                 } else if layout == .grid {
                     LazyVGrid(columns: [GridItem(.adaptive(minimum: 105, maximum: 160), spacing: 12, alignment: .top)], spacing: 16) {
                         ForEach(shown) { movie in
-                            MovieGridCell(movie: movie).contextMenu { movieMenu(movie, model: model) }
+                            MovieGridCell(movie: movie)
+                                .overlay(alignment: .topLeading) { selectionMark(movie) }
+                                .contentShape(Rectangle())
+                                .onTapGesture { tapped(movie) }
+                                .contextMenu { if !isSelecting { movieMenu(movie, model: model) } }
                         }
                     }
                 } else {
@@ -91,7 +112,10 @@ struct MoviesScreen: View {
                                 .padding(.horizontal, 12)
                                 .frame(height: 64)
                                 .background(Color(.secondarySystemBackground), in: RoundedRectangle(cornerRadius: AppTheme.Radius.md, style: .continuous))
-                                .contextMenu { movieMenu(movie, model: model) }
+                                .overlay(alignment: .trailing) { selectionMark(movie).padding(.trailing, 12) }
+                                .contentShape(Rectangle())
+                                .onTapGesture { tapped(movie) }
+                                .contextMenu { if !isSelecting { movieMenu(movie, model: model) } }
                         }
                     }
                 }
@@ -146,9 +170,92 @@ struct MoviesScreen: View {
 
     // MARK: Menus
 
+    /// "The movie stays on NAS Home. This frees 6.1 GB."
+    private var removeDownloadMessage: String {
+        let freed = removingDownloads.reduce(Int64(0)) { $0 + max($1.byteCount, $1.downloadedBytes) }.formatted(.byteCount(style: .file))
+        let sources = Set(removingDownloads.compactMap(\.sourceName))
+        if sources.count == 1, let name = sources.first {
+            return String(localized: "The movie stays on \(name). This frees \(freed).", comment: "Remove Download alert message")
+        }
+        return String(localized: "The movies stay on their sources. This frees \(freed).", comment: "Remove Download alert message, several sources")
+    }
+
+    // MARK: Select
+
+    @ViewBuilder
+    private func selectionMark(_ movie: Movie) -> some View {
+        if isSelecting {
+            Image(systemName: selection.contains(movie.id) ? "checkmark.circle.fill" : "circle")
+                .font(.title3)
+                .symbolRenderingMode(.palette)
+                .foregroundStyle(.white, selection.contains(movie.id) ? AppAccent.color : Color.black.opacity(0.35))
+                .padding(6)
+                .accessibilityHidden(true)
+        }
+    }
+
+    private func tapped(_ movie: Movie) {
+        guard isSelecting else { return }  // Play arrives with the player (plan task 16).
+        if selection.contains(movie.id) { selection.remove(movie.id) } else { selection.insert(movie.id) }
+    }
+
+    private func selected(_ model: MoviesModel) -> [Movie] {
+        model.movies.filter { selection.contains($0.id) }
+    }
+
+    /// ⋯ while selecting: what can be done to the chosen movies (FS-23.01 §5).
+    @ViewBuilder
+    private func selectionActions(_ model: MoviesModel) -> some View {
+        let chosen = selected(model)
+        let downloadable = chosen.filter { $0.state == .stream && $0.sourceId != nil }
+        let downloaded = chosen.filter { ($0.isOnDevice || $0.state == .downloading || $0.state == .queued) && $0.sourceId != nil }
+        Button {
+            for movie in downloadable { dependencies.movieDownloads.download(movie.id) }
+            isSelecting = false
+            selection = []
+        } label: {
+            Label(MoviesCountText.downloadTo(), systemImage: "arrow.down.circle")
+        }
+        .disabled(downloadable.isEmpty)
+        Button(role: .destructive) {
+            removingDownloads = downloaded
+        } label: {
+            Label(String(localized: "Remove Download", comment: "Movie menu: delete the copy on this device"), systemImage: "arrow.uturn.backward.circle")
+        }
+        .disabled(downloaded.isEmpty)
+        Button {
+            for movie in chosen { model.setWatched(true, movie) }
+            isSelecting = false
+            selection = []
+        } label: {
+            Label(String(localized: "Mark as Watched", comment: "Movie menu"), systemImage: "eye")
+        }
+        .disabled(chosen.isEmpty)
+    }
+
     /// ⋯: Grid/List and Sort (FS-23.01 §4).
     private var viewMenu: some View {
         Menu {
+            if isSelecting, let model {
+                selectionActions(model)
+                Divider()
+                Button(String(localized: "Done", comment: "Movies: leave Select")) {
+                    isSelecting = false
+                    selection = []
+                }
+            } else {
+                viewMenuItems
+            }
+        } label: {
+            Image(systemName: "ellipsis")
+        }
+        .tint(.primary)
+        .accessibilityLabel(String(localized: "View, Sort and Select", comment: "Movies: the ⋯ button"))
+    }
+
+    @ViewBuilder
+    private var viewMenuItems: some View {
+        Group {
             Picker(selection: $layout) {
                 Label(String(localized: "Grid", comment: "Movies view: posters"), systemImage: "square.grid.3x2").tag(MoviesLayout.grid)
                 Label(String(localized: "List", comment: "Movies view: rows"), systemImage: "list.bullet").tag(MoviesLayout.list)
@@ -163,11 +270,12 @@ struct MoviesScreen: View {
                 Label(String(localized: "Sort", comment: "Movies ⋯ menu: sort submenu"), systemImage: "arrow.up.arrow.down")
             }
             .pickerStyle(.menu)
-        } label: {
-            Image(systemName: "ellipsis")
+            Button {
+                isSelecting = true
+            } label: {
+                Label(String(localized: "Select", comment: "Movies ⋯ menu: choose several movies"), systemImage: "checkmark.circle")
+            }
         }
-        .tint(.primary)
-        .accessibilityLabel(String(localized: "View, Sort and Select", comment: "Movies: the ⋯ button"))
     }
 
     /// FS-23.01 §5. Play, Download, Audio & Subtitles join with their tasks.
@@ -180,6 +288,11 @@ struct MoviesScreen: View {
         } else if movie.state == .stream, movie.sourceId != nil {
             Button { dependencies.movieDownloads.download(movie.id) } label: {
                 Label("\(MoviesCountText.downloadTo()) · \(movie.byteCount.formatted(.byteCount(style: .file)))", systemImage: "arrow.down.circle")
+            }
+        }
+        if movie.sourceId != nil, movie.isOnDevice || movie.state == .downloading || movie.state == .queued {
+            Button(role: .destructive) { removingDownloads = [movie] } label: {
+                Label(String(localized: "Remove Download", comment: "Movie menu: delete the copy on this device"), systemImage: "arrow.uturn.backward.circle")
             }
         }
         if movie.isWatched {

@@ -89,6 +89,22 @@ final class MovieDownloadRunner {
         if currentIsBackground { transfer?.cancel(movieId: movieId) } else { worker?.cancel() }
     }
 
+    /// Remove Download (FS-23.01 §6, AC-11): the file and any part go, the
+    /// movie streams again from where it stopped; subtitles the user made
+    /// stay on the device.
+    func removeDownload(_ movie: Movie) {
+        cancel(movie.id)
+        if let file = files.file(for: movie) { try? FileManager.default.removeItem(at: file) }
+        files.removePart(for: movie.id)
+        let fetched = (try? store.removeDownload(id: movie.id)) ?? []
+        for name in fetched where !name.isEmpty {
+            try? FileManager.default.removeItem(at: files.directory(for: movie.id).appending(path: name))
+        }
+        try? FileManager.default.removeItem(at: files.directory(for: movie.id).appending(path: "poster.jpg"))
+        liveBytes[movie.id] = nil
+        revision += 1
+    }
+
     /// The app is about to be suspended with no time granted: stop the
     /// download the app is reading itself at a clean point. A background
     /// transfer is left to iOS.
