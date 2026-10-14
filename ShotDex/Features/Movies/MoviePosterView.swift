@@ -11,11 +11,15 @@ struct MovieGridCell: View {
 
     /// Board `PH_Movies`, `away` tweak.
     static let awayOpacity = 0.42
+    /// Board `PH_Movies`: the poster of a movie still downloading — on the
+    /// way, not yet playable offline. The bar under it stays bright.
+    static let downloadingOpacity = 0.5
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             MoviePoster(movie: movie)
                 .aspectRatio(2.0 / 3.0, contentMode: .fit)
+                .opacity(movie.isDownloading ? Self.downloadingOpacity : 1)
                 .overlay(alignment: .topTrailing) { if movie.isOnDevice { MovieOnDeviceBadge().padding(6) } }
                 .overlay(alignment: .bottom) { MovieDownloadBar(movie: movie) }
                 .clipShape(RoundedRectangle(cornerRadius: AppTheme.Radius.sm, style: .continuous))
@@ -49,6 +53,7 @@ struct MovieListRow: View {
         HStack(spacing: AppTheme.Spacing.md) {
             MoviePoster(movie: movie, compact: true)
                 .frame(width: 36, height: 54)
+                .opacity(movie.isDownloading ? MovieGridCell.downloadingOpacity : 1)
                 .clipShape(RoundedRectangle(cornerRadius: 5, style: .continuous))
             VStack(alignment: .leading, spacing: 2) {
                 Text(MovieRowText.titleWithYear(movie))
@@ -190,6 +195,10 @@ enum MovieRowText {
     /// Under the poster: the year, or what the download is doing.
     static func caption(_ movie: Movie) -> String {
         if movie.downloadError != nil { return String(localized: "Download paused", comment: "Movie grid: a download that stopped") }
+        if movie.isDownloading {
+            guard movie.downloadedBytes > 0 else { return String(localized: "Waiting…", comment: "Movie grid: a download queued or about to start") }
+            return String(localized: "Downloading \(Int((downloadProgress(movie) ?? 0) * 100))%", comment: "Movie grid caption and VoiceOver: download progress")
+        }
         return yearOrEpisode(movie) ?? ""
     }
 
@@ -199,6 +208,9 @@ enum MovieRowText {
         let size = movie.byteCount.formatted(.byteCount(style: .file))
         switch movie.state {
         case .downloading, .queued:
+            if movie.downloadedBytes == 0 {
+                return String(localized: "Waiting to download · \(size)", comment: "Movie list row: a download queued or about to start")
+            }
             let percent = Int((downloadProgress(movie) ?? 0) * 100)
             let done = movie.downloadedBytes.formatted(.byteCount(style: .file))
             let line = String(localized: "Downloading \(percent)% · \(done) of \(size)", comment: "Movie list row: a download in progress")
@@ -225,7 +237,7 @@ enum MovieRowText {
         switch movie.state {
         case .onDevice: parts.append(String(localized: "Downloaded", comment: "Movie VoiceOver: on this device"))
         case .downloading, .queued:
-            parts.append(String(localized: "Downloading \(Int((downloadProgress(movie) ?? 0) * 100))%", comment: "Movie VoiceOver: download progress"))
+            parts.append(String(localized: "Downloading \(Int((downloadProgress(movie) ?? 0) * 100))%", comment: "Movie grid caption and VoiceOver: download progress"))
         case .missing: parts.append(String(localized: "File missing", comment: "Movie VoiceOver"))
         case .stream, .unplayable:
             if let name = movie.sourceName {

@@ -38,7 +38,7 @@ Quyết định: [planboard movies-library](../../../.planboard/movies-library/D
 | Trạng thái | Trên poster | Chạm |
 |---|---|---|
 | **Trên máy** | dấu ✓ tròn tối góc trên phải | phát từ máy, cả khi chế độ máy bay |
-| **Đang tải** | thanh cam dưới poster theo tiến độ | phát (stream nếu tới được nguồn, không thì phần đã tải) |
+| **Đang tải** | poster mờ (50 %) + thanh cam dưới poster theo tiến độ; dưới tên `Waiting…` rồi `Downloading 45%` — hiện ngay khi chạm Download (phim Plex: trước khi server trả lời danh sách bản) | phát (stream nếu tới được nguồn, không thì phần đã tải) |
 | **Stream** | không dấu | phát qua mạng nhà; nguồn không tới được → poster mờ, chạm báo `Not available offline. Connect to NAS Home to play.` |
 
 - Lỗi tải: dòng đỏ dưới tên (`Download paused — NAS Home unreachable`); Retry trong menu phim.
@@ -48,7 +48,7 @@ Quyết định: [planboard movies-library](../../../.planboard/movies-library/D
 - **Grid** mặc định: poster dọc 2:3, dưới là tên (1 dòng) + năm; iPhone 3 cột, iPad/Mac/Duo trong theo bề rộng
   (thêm cột, không phóng to). **List** trong ⋯: poster nhỏ 2:3 · tên (năm) · nguồn hoặc `On iPhone` · thời lượng (khi đã biết) · cỡ
   (board `PH_Movies`, tweak List); ngôn ngữ phụ đề chưa có ở hàng (chỉ trong bảng Audio & Subtitles). Lựa chọn Grid/List nhớ lại.
-- Đầu màn: ô **Search** (tên, năm, tên file; chạy offline) và hàng lọc **All · On This iPhone · Unwatched**.
+- Đầu màn: ô **Search** (tên, năm, tên file; chạy offline) và hàng lọc **All · On This iPhone · Unwatched**. On This iPhone gồm cả phim đang tải hoặc chờ tải (mờ, có tiến độ) — bấm Download xong là thấy nó ở đó.
   Chữ theo thiết bị: `On This iPad`, `On This Mac`, `Download to iPad`… (mọi chỗ ghi "iPhone" trong spec này).
 - ⋯: Grid/List · Sort (**Recently Added** mặc định · Title · Year · Recently Watched) · Select. Year: mới trước, không năm
   xuống cuối; Recently Watched: chưa xem bao giờ xuống cuối; Title: đọc số như người (Film 9 trước Film 10), tập theo
@@ -77,6 +77,9 @@ Quyết định: [planboard movies-library](../../../.planboard/movies-library/D
 - Rời app / khoá máy (người dùng chốt 14/10): **Plex và WebDAV tải nền** bằng kiểu tải nền của iOS, khoá máy vẫn chạy.
   **SMB, SFTP, Files chỉ chạy khi ShotDex mở** (iOS 26: thêm tác vụ xử lý tiếp tục như FS-22.02 §3); hàng đang tải
   ghi `Keep ShotDex open to finish`; mở lại app thì chạy tiếp từ byte đã có.
+- Vuốt bỏ app (force quit): iOS huỷ tải nền và báo lúc app mở lại — phim vẫn **Đang tải**, chạy tiếp từ chỗ iOS
+  giữ (chỉ giữ trong bộ nhớ, vì nó chứa yêu cầu kèm token Plex), không thì từ byte trong `.part`; không về Stream,
+  không tải lại từ 0. Bị hệ thống giết thì iOS tự tải tiếp; lúc mở lại, dọn rác không đụng `.part` của phim iOS còn tải.
 - Tải kèm: phụ đề cạnh phim, poster/thông tin (Plex: poster, ảnh nền, năm, mô tả, thể loại).
 - Kho trong vùng dữ liệu của app, **không sao lưu**, không qua Photos, không hiện trong Files.
 - **Remove Download**: alert 2 nút `Remove Download?` · "The movie stays on NAS Home. This frees 6.1 GB." · Remove /

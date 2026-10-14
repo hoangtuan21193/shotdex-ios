@@ -6,7 +6,7 @@ import Foundation
 struct MovieLibraryQuery: Equatable, Sendable {
     enum Filter: String, CaseIterable, Sendable {
         case all
-        /// Plays with no network.
+        /// Plays with no network — and the downloads on their way.
         case onDevice
         case unwatched
     }
@@ -28,7 +28,7 @@ struct MovieLibraryQuery: Equatable, Sendable {
             guard !movie.isHidden else { return false }
             switch filter {
             case .all: break
-            case .onDevice: guard movie.isOnDevice else { return false }
+            case .onDevice: guard movie.isOnDevice || movie.isDownloading else { return false }
             case .unwatched: guard !movie.isWatched else { return false }
             }
             guard !tokens.isEmpty else { return true }

@@ -16,6 +16,17 @@ final class MovieBackgroundTransfer: NSObject, URLSessionDownloadDelegate, @unch
     private let lock = NSLock()
     private var failures: [Int: Error] = [:]
     private var _session: URLSession?
+    /// The task this process started last per movie: only its outcome
+    /// reaches the runner. A task from before a relaunch (none here) reports
+    /// too; one replaced by a newer task does not.
+    private var started: [String: Int] = [:]
+    /// Tasks cancelled because an older transfer took over: they say nothing.
+    private var superseded: Set<Int> = []
+    /// What iOS kept of a stopped transfer — after a force quit it arrives
+    /// with the next launch — so the next try carries on from there instead
+    /// of from the part. Memory only: it holds the request, and a Plex
+    /// request carries the token (never on disk).
+    private var resumeData: [String: (offset: Int64, data: Data)] = [:]
 
     /// Bytes in the part now, per movie.
     var onProgress: (@Sendable (String, Int64) -> Void)?
@@ -38,9 +49,17 @@ final class MovieBackgroundTransfer: NSObject, URLSessionDownloadDelegate, @unch
     private var session: URLSession { lock.withLock { _session! } }
 
     func start(movieId: String, request: URLRequest, offset: Int64) {
-        let task = session.downloadTask(with: request)
+        let kept = lock.withLock { resumeData.removeValue(forKey: movieId) }
+        let task = kept.flatMap { $0.offset == offset ? session.downloadTask(withResumeData: $0.data) : nil }
+            ?? session.downloadTask(with: request)
         task.taskDescription = "\(movieId)|\(offset)"
+        lock.withLock { started[movieId] = task.taskIdentifier }
         task.resume()
+    }
+
+    /// Whether a stopped transfer of this movie can carry on where it was.
+    func canResume(movieId: String, offset: Int64) -> Bool {
+        lock.withLock { resumeData[movieId]?.offset == offset }
     }
 
     /// Movies iOS is still fetching — not to be started twice at launch.
@@ -49,6 +68,7 @@ final class MovieBackgroundTransfer: NSObject, URLSessionDownloadDelegate, @unch
     }
 
     func cancel(movieId: String) {
+        lock.withLock { _ = resumeData.removeValue(forKey: movieId) }
         session.getAllTasks { tasks in
             for task in tasks where Self.parse(task.taskDescription)?.movieId == movieId { task.cancel() }
         }
@@ -64,6 +84,12 @@ final class MovieBackgroundTransfer: NSObject, URLSessionDownloadDelegate, @unch
     func urlSession(_ session: URLSession, downloadTask: URLSessionDownloadTask, didWriteData bytesWritten: Int64, totalBytesWritten: Int64, totalBytesExpectedToWrite: Int64) {
         guard let (movieId, offset) = Self.parse(downloadTask.taskDescription) else { return }
         onProgress?(movieId, offset + totalBytesWritten)
+    }
+
+    /// A transfer carried on from what iOS kept: the bar starts where it was.
+    func urlSession(_ session: URLSession, downloadTask: URLSessionDownloadTask, didResumeAtOffset fileOffset: Int64, expectedTotalBytes: Int64) {
+        guard let (movieId, offset) = Self.parse(downloadTask.taskDescription) else { return }
+        onProgress?(movieId, offset + fileOffset)
     }
 
     /// Runs before `location` is deleted: the bytes go into the part here.
@@ -92,9 +118,51 @@ final class MovieBackgroundTransfer: NSObject, URLSessionDownloadDelegate, @unch
     }
 
     func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: Error?) {
-        guard let (movieId, _) = Self.parse(task.taskDescription) else { return }
+        guard let (movieId, offset) = Self.parse(task.taskDescription) else { return }
+        let kept = (error as NSError?)?.userInfo[NSURLSessionDownloadTaskResumeData] as? Data
         let failure = lock.withLock { failures.removeValue(forKey: task.taskIdentifier) }
-        onFinish?(movieId, failure ?? error.map(Self.mapped))
+        enum Outcome { case report, ignore, takeOver(Int) }
+        let outcome: Outcome = lock.withLock {
+            if superseded.remove(task.taskIdentifier) != nil { return .ignore }
+            switch started[movieId] {
+            case task.taskIdentifier?:
+                started[movieId] = nil
+                if let kept { resumeData[movieId] = (offset, kept) }
+                return .report
+            case nil:
+                // From before a relaunch (a force quit cancels it): what iOS
+                // kept is used by the try the runner starts for it.
+                if let kept { resumeData[movieId] = (offset, kept) }
+                return .report
+            case let newer?:
+                // The launch already restarted this movie from the part
+                // before this old transfer reported; what it kept is further
+                // along, so it takes over.
+                guard let kept else { return .ignore }
+                resumeData[movieId] = (offset, kept)
+                return .takeOver(newer)
+            }
+        }
+        switch outcome {
+        case .report:
+            onFinish?(movieId, failure ?? error.map(Self.mapped))
+        case .ignore:
+            break
+        case .takeOver(let newer):
+            session.getAllTasks { [weak self] tasks in
+                guard let self, let fresh = tasks.first(where: { $0.taskIdentifier == newer }),
+                      Self.parse(fresh.taskDescription)?.offset == offset,
+                      let data = lock.withLock({ self.resumeData.removeValue(forKey: movieId) })?.data else { return }
+                let resumed = session.downloadTask(withResumeData: data)
+                resumed.taskDescription = fresh.taskDescription
+                lock.withLock {
+                    self.started[movieId] = resumed.taskIdentifier
+                    self.superseded.insert(fresh.taskIdentifier)
+                }
+                fresh.cancel()
+                resumed.resume()
+            }
+        }
     }
 
     func urlSession(_ session: URLSession, task: URLSessionTask, didReceive challenge: URLAuthenticationChallenge) async

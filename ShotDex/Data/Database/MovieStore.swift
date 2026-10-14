@@ -310,6 +310,17 @@ struct MovieStore: Sendable {
         }
     }
 
+    /// Bytes fetched so far, only while the movie is still downloading — a
+    /// late progress report never undoes a finished or stopped download.
+    func setDownloadProgress(id: String, bytes: Int64) throws {
+        try database.writer.write { db in
+            try db.execute(
+                sql: "UPDATE movies SET downloadedBytes = ? WHERE id = ? AND state IN (?, ?)",
+                arguments: [bytes, id, Movie.State.downloading.rawValue, Movie.State.queued.rawValue]
+            )
+        }
+    }
+
     /// Remove Download (FS-23.01 §6): back to Stream with where it stopped,
     /// watched and every choice kept. Subtitles fetched from the source go
     /// back to fetch-on-use; the user's own (imported, translated, in-file)

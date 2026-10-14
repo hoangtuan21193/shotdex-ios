@@ -211,6 +211,10 @@ struct Movie: Codable, Identifiable, Hashable, Sendable {
     /// Playable with no network.
     var isOnDevice: Bool { state == .onDevice }
 
+    /// Queued or downloading: shown under On This iPhone, dimmed, until it
+    /// is there.
+    var isDownloading: Bool { state == .downloading || state == .queued }
+
     /// The file is, or is becoming, the user's copy — a scan must not
     /// rewrite its name or size.
     var holdsLocalFile: Bool {

@@ -291,4 +291,47 @@ extension WebDAVFileClientTests {
         #expect(StubWebDAVProtocol.lock.withLock { StubWebDAVProtocol.rangesAsked } == ["bytes=700000-"])
         #expect(runner.downloadsInBackground(source, row))
     }
+
+    /// The user quit ShotDex from the app switcher mid-download: iOS cancels
+    /// the transfer and says so at the next launch. The movie stays
+    /// downloading and carries on from the part — not back to Stream, not
+    /// from byte 0.
+    @MainActor
+    @Test func forceQuitTransferCarriesOn() async throws {
+        StubWebDAVProtocol.reset()
+        let movie = Data((0..<2_000_000).map { UInt8($0 % 241) })
+        StubWebDAVProtocol.lock.withLock { StubWebDAVProtocol.files["Films/Heat.mkv"] = movie; StubWebDAVProtocol.folders.insert("Films") }
+        let server = FileServer(name: "DAV", transferProtocol: .webdav, host: "dav.test", username: "me", share: "base")
+        let configuration = URLSessionConfiguration.ephemeral
+        configuration.protocolClasses = [StubWebDAVProtocol.self]
+
+        let store = MovieStore(database: try AppDatabase.makeEmpty(), plexTokens: InMemoryPasswordStore())
+        let files = MovieFileStore(root: FileManager.default.temporaryDirectory.appending(path: "movies-\(UUID().uuidString)"))
+        let source = MovieSource(kind: .folder, name: "DAV", folder: "Films")
+        try store.saveSource(source)
+        let row = Movie(sourceId: source.id, sourceName: "DAV", remotePath: "Films/Heat.mkv", title: "Heat", originalFileName: "Heat.mkv", byteCount: Int64(movie.count), state: .downloading)
+        try store.add(row)
+        try files.prepare()
+        try movie.prefix(900_000).write(to: files.partFile(for: row.id))
+
+        // The new launch: the old transfer reports cancelled before anything else.
+        let transfer = MovieBackgroundTransfer(files: files, server: { _ in server }, configuration: configuration)
+        let runner = MovieDownloadRunner(store: store, files: files, environment: .init(
+            client: { _ in throw RemoteFileError.connectionLost },
+            freeSpace: { 100_000_000_000 },
+            backgroundRequest: { _, movie, offset in
+                WebDAVFileClient(server: server, password: "pw", configuration: configuration).downloadRequest(movie.remotePath ?? "", from: offset)
+            }
+        ), transfer: transfer)
+        transfer.onFinish?(row.id, CancellationError())
+
+        for _ in 0..<200 where try store.movie(id: row.id)?.state != .onDevice {
+            try await Task.sleep(for: .milliseconds(25))
+        }
+
+        let after = try #require(try store.movie(id: row.id))
+        #expect(after.state == .onDevice)
+        #expect(try Data(contentsOf: try #require(files.file(for: after))) == movie)
+        #expect(StubWebDAVProtocol.lock.withLock { StubWebDAVProtocol.rangesAsked } == ["bytes=900000-"])
+    }
 }

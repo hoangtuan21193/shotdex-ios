@@ -49,7 +49,8 @@ private func movie(
         let library = [movie("A", state: .onDevice), movie("B", watched: true), movie("C", state: .downloading), hidden, orphanDownload]
 
         #expect(Set(MovieLibraryQuery().apply(library).map(\.title)) == ["A", "B", "C", "Kept"])
-        #expect(Set(MovieLibraryQuery(filter: .onDevice).apply(library).map(\.title)) == ["A", "Kept"])
+        // A download on its way is under On This iPhone too (dimmed there).
+        #expect(Set(MovieLibraryQuery(filter: .onDevice).apply(library).map(\.title)) == ["A", "C", "Kept"])
         #expect(Set(MovieLibraryQuery(filter: .unwatched).apply(library).map(\.title)) == ["A", "C", "Kept"])
         #expect(MovieLibraryQuery.counts(library) == (4, 2))
     }

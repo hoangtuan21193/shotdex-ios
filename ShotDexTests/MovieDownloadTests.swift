@@ -178,4 +178,37 @@ import Testing
         #expect(FileManager.default.fileExists(atPath: f.files.directory(for: dune.id).appending(path: translated).path))
         #expect(f.nas.files["Movies/Dune.mkv"] != nil)
     }
+
+    /// Download to iPhone on a Plex movie shows as waiting before its
+    /// server answers; Cancel on the version question puts it back.
+    @Test func preparingShowsAtOnce() throws {
+        let f = try makeFixture()
+        let heat = Movie(sourceId: f.source.id, remotePath: "Movies/Heat.mkv", title: "Heat", originalFileName: "Heat.mkv", byteCount: 10, state: .stream)
+        try f.store.add(heat)
+        let before = f.runner.revision
+
+        f.runner.prepare(heat.id)
+
+        #expect(try f.store.movie(id: heat.id)?.state == .queued)
+        #expect(f.runner.revision > before)
+        #expect(MovieLibraryQuery(filter: .onDevice).apply(try f.store.movies()).map(\.id) == [heat.id])
+
+        f.runner.cancelPreparing(heat.id)
+
+        #expect(try f.store.movie(id: heat.id)?.state == .stream)
+    }
+
+    /// A late progress report never undoes a finished download.
+    @Test func progressOnlyWhileDownloading() throws {
+        let f = try makeFixture()
+        let heat = Movie(sourceId: f.source.id, remotePath: "Movies/Heat.mkv", title: "Heat", originalFileName: "Heat.mkv", byteCount: 10, state: .downloading)
+        try f.store.add(heat)
+
+        try f.store.setDownloadProgress(id: heat.id, bytes: 4)
+        #expect(try f.store.movie(id: heat.id)?.downloadedBytes == 4)
+
+        try f.store.setState(id: heat.id, .onDevice, downloadedBytes: 10)
+        try f.store.setDownloadProgress(id: heat.id, bytes: 6)
+        #expect(try f.store.movie(id: heat.id)?.downloadedBytes == 10)
+    }
 }

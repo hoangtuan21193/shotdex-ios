@@ -85,7 +85,11 @@ struct MoviesScreen: View {
         }
         .confirmationDialog(
             String(localized: "Download Which Version?", comment: "Plex movie with several versions: pick one to download"),
-            isPresented: Binding(get: { choosingVersion != nil }, set: { if !$0 { choosingVersion = nil } }),
+            isPresented: Binding(get: { choosingVersion != nil }, set: {
+                guard !$0, let choice = choosingVersion else { return }
+                choosingVersion = nil
+                dependencies.movieDownloads.cancelPreparing(choice.movie.id)
+            }),
             titleVisibility: .visible,
             presenting: choosingVersion
         ) { choice in
@@ -297,6 +301,7 @@ struct MoviesScreen: View {
             return
         }
         let preparer = PlexDownloadPreparer(store: dependencies.movies)
+        dependencies.movieDownloads.prepare(movie.id)
         Task {
             let versions = (try? await preparer.versions(of: movie)) ?? []
             if versions.count > 1 {

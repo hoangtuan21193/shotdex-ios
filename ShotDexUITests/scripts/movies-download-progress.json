@@ -1,0 +1,187 @@
+{
+ "steps": [
+  {
+   "action": "launch"
+  },
+  {
+   "action": "wait",
+   "seconds": 6
+  },
+  {
+   "action": "tap",
+   "label": "Collections",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "scrollTo",
+   "label": "Utilities"
+  },
+  {
+   "action": "swipe",
+   "x": 0.75,
+   "y": 0.66,
+   "direction": "left",
+   "distance": 0.35
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "tap",
+   "label": "Movies, "
+  },
+  {
+   "action": "wait",
+   "seconds": 5
+  },
+  {
+   "action": "longPress",
+   "label": "Dune: Part Two",
+   "seconds": 1.2
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "tap",
+   "label": "Download to iPhone"
+  },
+  {
+   "action": "wait",
+   "seconds": 0.5
+  },
+  {
+   "action": "screenshot",
+   "name": "01-waiting"
+  },
+  {
+   "action": "dump",
+   "name": "01-waiting"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "tap",
+   "label": "1080p"
+  },
+  {
+   "action": "wait",
+   "seconds": 8
+  },
+  {
+   "action": "tap",
+   "label": "On This iPhone"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "screenshot",
+   "name": "02-on-this-iphone"
+  },
+  {
+   "action": "dump",
+   "name": "02-on-this-iphone"
+  },
+  {
+   "action": "tap",
+   "label": "View, Sort and Select"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "tap",
+   "label": "List"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "screenshot",
+   "name": "03-list"
+  },
+  {
+   "action": "dump",
+   "name": "03-list"
+  },
+  {
+   "action": "launch"
+  },
+  {
+   "action": "wait",
+   "seconds": 6
+  },
+  {
+   "action": "tap",
+   "label": "Collections",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "scrollTo",
+   "label": "Utilities"
+  },
+  {
+   "action": "swipe",
+   "x": 0.75,
+   "y": 0.66,
+   "direction": "left",
+   "distance": 0.35
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "tap",
+   "label": "Movies, "
+  },
+  {
+   "action": "wait",
+   "seconds": 4
+  },
+  {
+   "action": "screenshot",
+   "name": "04-after-relaunch"
+  },
+  {
+   "action": "dump",
+   "name": "04-after-relaunch"
+  },
+  {
+   "action": "wait",
+   "seconds": 40
+  },
+  {
+   "action": "screenshot",
+   "name": "05-done"
+  },
+  {
+   "action": "dump",
+   "name": "05-done"
+  }
+ ]
+}
