@@ -5,7 +5,7 @@
 | Tác giả | Hoang Tuan (lời người dùng), Claude soạn |
 | Ngày | 2026-10-14 |
 | Trạng thái | accepted — người dùng 2026-10-14 |
-| Tiến độ | **đang làm** (2026-10-14) — plan [2026-10-14-fs23-movies](../_plans/2026-10-14-fs23-movies.md) đã duyệt, spike S1 **đi** ([báo cáo](2026-10-14-fs23-s1-vlckit-spike.md)), S2 **đi** ([báo cáo](2026-10-14-fs23-s2-mkv-subtitles-spike.md)), S3 **đi** ([báo cáo](2026-10-14-fs23-s3-plex-spike.md)); hết spike; task 33/36 xong (29 cần máy thật), 32/56 AC xanh (AC-1, 4, 7, 8, 9, 11, 12, 13, 14, 15, 16, 18, 19, 20, 24, 25, 26, 29, 30, 31, 33, 39, 40, 44, 45, 46, 47, 48, 49, 50, 52, 56; AC-2, 3, 5, 6, 10, 21, 22, 32, 41, 43, 51, 53, 54, 55 một phần); 3 spike + 36 task; spec FS-23 (56 AC) + FS-08.07 (9 AC; 8 xanh: AC-1–7, 9) |
+| Tiến độ | **đang làm** (2026-10-14) — plan [2026-10-14-fs23-movies](../_plans/2026-10-14-fs23-movies.md) đã duyệt, spike S1 **đi** ([báo cáo](2026-10-14-fs23-s1-vlckit-spike.md)), S2 **đi** ([báo cáo](2026-10-14-fs23-s2-mkv-subtitles-spike.md)), S3 **đi** ([báo cáo](2026-10-14-fs23-s3-plex-spike.md)); hết spike; task 34/36 xong (29 cần máy thật), 34/56 AC xanh (AC-1, 4, 7, 8, 9, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 24, 25, 26, 27, 29, 30, 31, 33, 39, 40, 44, 45, 46, 47, 48, 49, 50, 52, 56; AC-2, 3, 5, 6, 10, 21, 22, 32, 41, 43, 51, 53, 54, 55 một phần); 3 spike + 36 task; spec FS-23 (56 AC) + FS-08.07 (9 AC; 8 xanh: AC-1–7, 9) |
 | Nguồn | phản hồi người dùng 2026-10-14 |
 | Spec sinh ra từ đây | [FS-23](../02-functional-spec/FS-23-offline-movies/README.md) · [FS-08.07](../02-functional-spec/FS-08-settings/07-ai-providers.md) |
 
