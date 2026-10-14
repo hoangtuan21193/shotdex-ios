@@ -35,9 +35,9 @@ import UIKit
         func removeEmptyDirectory(_ path: String) async throws {}
     }
 
-    /// Reads happen off the main thread, as VLC's input thread does.
+    /// Reads happen on a thread of their own, as VLC's input thread does.
     private func read(_ stream: RemoteMovieStream, count: Int) async -> Data {
-        await Task.detached {
+        await onOwnThread {
             var out = Data()
             var buffer = [UInt8](repeating: 0, count: 32_768)
             while out.count < count {
@@ -46,7 +46,7 @@ import UIKit
                 out.append(buffer, count: n)
             }
             return out
-        }.value
+        }
     }
 
     /// Only what was read is fetched: 1 MB of a 100 MB movie costs one

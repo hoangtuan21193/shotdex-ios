@@ -181,8 +181,10 @@ final class PlexStubProtocol: URLProtocol, @unchecked Sendable {
         #expect(fileName == "Dune.Part.Two.2024.mkv")
         #expect(stream.size == 54_300_000_000)
         stream.open()
-        var buffer = [UInt8](repeating: 0, count: 4_096)
-        let read = await Task.detached { stream.read(&buffer, maxLength: 4_096) }.value
+        let read = await onOwnThread {
+            var buffer = [UInt8](repeating: 0, count: 4_096)
+            return stream.read(&buffer, maxLength: 4_096)
+        }
         #expect(read == 4_096)
         let partRequests = PlexStubProtocol.requests.filter { $0.url?.path.hasPrefix("/library/parts/") == true }
         #expect(partRequests.allSatisfy { $0.url?.path == "/library/parts/4k/file.mkv" })
