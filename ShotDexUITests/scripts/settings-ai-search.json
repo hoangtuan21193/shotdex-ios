@@ -1,0 +1,55 @@
+{
+ "steps": [
+  {
+   "action": "launch"
+  },
+  {
+   "action": "wait",
+   "seconds": 5
+  },
+  {
+   "action": "tap",
+   "label": "Settings"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "scrollTo",
+   "label": "AI"
+  },
+  {
+   "action": "tap",
+   "label": "AI"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "screenshot",
+   "name": "01-ai"
+  },
+  {
+   "action": "dump",
+   "name": "01-ai"
+  },
+  {
+   "action": "tap",
+   "label": "AI Search"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "screenshot",
+   "name": "02-search-menu"
+  },
+  {
+   "action": "dump",
+   "name": "02-search-menu"
+  }
+ ]
+}

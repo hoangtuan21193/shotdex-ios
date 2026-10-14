@@ -50,4 +50,51 @@ struct SearchServiceTests {
         let intent = SearchIntentParser.parse(#"keyword:"golden hour""#, readsKeywords: true)
         #expect(try await LibraryQueries(database: database).count(matching: intent.query) == 1)
     }
+
+    // MARK: AI Search model (FS-08.07 §5)
+
+    /// A model that answers late, or never in time.
+    private struct SlowModel: SearchModel {
+        var delay: Duration
+        var timeout: Duration
+        func translate(_ query: String, vocabulary: FilterSuggestionCatalog) async -> [SmartAlbumRule]? {
+            try? await Task.sleep(for: delay)
+            return [SmartAlbumRule(field: .anyText, op: .contains, text: "model")]
+        }
+    }
+
+    private func service(_ model: (any SearchModel)?) throws -> SearchService {
+        let database = try AppDatabase.makeEmpty()
+        let defaults = UserDefaults(suiteName: "search-\(UUID().uuidString)")!
+        return SearchService(
+            filterSuggestions: FilterSuggestionCache(libraryQueries: LibraryQueries(database: database)),
+            recentSearches: RecentSearchStore(defaults: defaults),
+            model: { model }
+        )
+    }
+
+    /// AC-6: a model that is still thinking when its time is up is
+    /// dropped; the parser's reading is applied, with no error.
+    @Test func networkModelTimesOutToParser() async throws {
+        let late = try service(SlowModel(delay: .seconds(3), timeout: .milliseconds(200)))
+        let started = Date()
+        let resolution = await late.resolve("ảnh hoàng hôn 85mm")
+        #expect(Date().timeIntervalSince(started) < 1.5)
+        #expect(!resolution.usedModel)
+        #expect(resolution.query.rules.contains { $0.field == .focalLength || $0.field == .lens })
+
+        let quick = try service(SlowModel(delay: .milliseconds(10), timeout: .seconds(2)))
+        let answered = await quick.resolve("ảnh hoàng hôn 85mm")
+        #expect(answered.usedModel)
+    }
+
+    /// AC-7: a cloud provider never becomes the AI Search model, even if a
+    /// stored choice names one; a home server does.
+    @Test func cloudProviderNeverUsed() {
+        let claude = AIProvider(id: "c1", kind: .claude, name: "Claude", model: "m")
+        let home = AIProvider(id: "h1", kind: .homeServer, name: "Mac Studio", address: "http://10.0.0.2:11434", model: "qwen3:14b")
+        #expect(SearchModelFactory.make(choice: .provider("c1"), providers: [claude, home], key: { _ in "k" }) { nil } == nil)
+        #expect(SearchModelFactory.make(choice: .provider("h1"), providers: [claude, home], key: { _ in nil }) { nil } is HomeServerSearchModel)
+        #expect(SearchModelFactory.make(choice: .off, providers: [claude, home], key: { _ in nil }) { nil } == nil)
+    }
 }

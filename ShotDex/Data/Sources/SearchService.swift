@@ -35,37 +35,46 @@ final class SearchService {
     /// being remembered, and both surfaces read one list.
     let recentSearches: RecentSearchStore
 
-    /// Whether this device can read a sentence. Read once — it is a hardware and
-    /// settings property, not something that changes while the user types.
-    let supportsNaturalLanguage: Bool
+    /// The model the AI Search row names (FS-08.07 §5), asked fresh each
+    /// time so a change in Settings applies to the next search. nil: Off,
+    /// or nothing on the device or at home can do it.
+    private let model: @MainActor () -> (any SearchModel)?
 
-    private var translatorStorage: AnyObject?
+    /// Whether a sentence can be read now.
+    var supportsNaturalLanguage: Bool { model() != nil }
 
-    init(filterSuggestions: FilterSuggestionCache, recentSearches: RecentSearchStore) {
+    init(
+        filterSuggestions: FilterSuggestionCache,
+        recentSearches: RecentSearchStore,
+        model: @escaping @MainActor () -> (any SearchModel)? = { nil }
+    ) {
         self.filterSuggestions = filterSuggestions
         self.recentSearches = recentSearches
-        if #available(iOS 26.0, *) {
-            supportsNaturalLanguage = AISearchTranslator.isAvailable()
-            if supportsNaturalLanguage {
-                translatorStorage = AISearchTranslator()
-            }
-        } else {
-            supportsNaturalLanguage = false
-        }
-    }
-
-    @available(iOS 26.0, *)
-    private var translator: AISearchTranslator? {
-        translatorStorage as? AISearchTranslator
+        self.model = model
     }
 
     /// Loads the model in the background when the search screen opens, so the first
     /// query does not pay for it.
     func prepare() {
-        guard supportsNaturalLanguage, #available(iOS 26.0, *), let translator else { return }
+        guard let model = model() else { return }
         Task {
             let vocabulary = await filterSuggestions.load()
-            await translator.prewarm(vocabulary: vocabulary)
+            await model.prewarm(vocabulary: vocabulary)
+        }
+    }
+
+    /// The model's rules, or nil once its time is up — the parser's answer
+    /// then stands and nothing says a model was tried (§5).
+    static func ask(_ model: any SearchModel, _ query: String, vocabulary: FilterSuggestionCatalog) async -> [SmartAlbumRule]? {
+        await withTaskGroup(of: [SmartAlbumRule]?.self) { group in
+            group.addTask { await model.translate(query, vocabulary: vocabulary) }
+            group.addTask {
+                try? await Task.sleep(for: model.timeout)
+                return nil
+            }
+            let first = await group.next() ?? nil
+            group.cancelAll()
+            return first
         }
     }
 
@@ -125,8 +134,8 @@ final class SearchService {
             return Resolution(query: parsed.query, searchText: nil)
         }
 
-        if supportsNaturalLanguage, #available(iOS 26.0, *), let translator,
-           let rules = await translator.translate(trimmed, vocabulary: vocabulary),
+        if let model = model(),
+           let rules = await Self.ask(model, trimmed, vocabulary: vocabulary),
            !rules.isEmpty {
             return Resolution(
                 query: SmartAlbumQuery(matchMode: .all, rules: rules),

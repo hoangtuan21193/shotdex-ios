@@ -275,9 +275,26 @@ final class AppDependencies {
         self.placeIndexPass = PlaceIndexPass(store: placeStore, geocoder: placeGeocoding)
         let recentSearches = RecentSearchStore()
         self.recentSearches = recentSearches
+        let aiProviders = AIProviderStore(database: database, keys: KeychainPasswordStore(service: KeychainPasswordStore.aiProviderKeys))
+        // One Apple Intelligence session for the app's life, made only on a
+        // device that has it.
+        let appleSearch: (any SearchModel)? = {
+            if #available(iOS 26.0, *), AISearchTranslator.isAvailable() {
+                return AppleIntelligenceSearchModel(translator: AISearchTranslator())
+            }
+            return nil
+        }()
         self.searchService = SearchService(
             filterSuggestions: filterSuggestions,
-            recentSearches: recentSearches
+            recentSearches: recentSearches,
+            model: {
+                let providers = (try? aiProviders.providers()) ?? []
+                let choice = AIChoice.search(
+                    stored: UserDefaults.standard.string(forKey: SettingsKeys.aiSearch),
+                    providers: providers, onDevice: OnDeviceAI.choices
+                )
+                return SearchModelFactory.make(choice: choice, providers: providers, key: aiProviders.key(for:)) { appleSearch }
+            }
         )
         self.compressionPresets = CompressionPresetStore()
         let overlayImages = OverlayImageStore()
@@ -522,7 +539,7 @@ final class AppDependencies {
         self.backups = backups
         let movies = MovieStore(database: database, plexTokens: KeychainPasswordStore(service: KeychainPasswordStore.plexTokens))
         self.movies = movies
-        self.aiProviders = AIProviderStore(database: database, keys: KeychainPasswordStore(service: KeychainPasswordStore.aiProviderKeys))
+        self.aiProviders = aiProviders
         self.movieSync = MovieSourceSync(movies: movies, servers: fileServers)
         let movieArt = MoviePosterLoader(movies: movies, servers: fileServers)
         self.movieArt = movieArt

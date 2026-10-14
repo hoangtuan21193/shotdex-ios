@@ -147,4 +147,18 @@ final class AIStubProtocol: URLProtocol, @unchecked Sendable {
         #expect(SettingsSummary.ai(translation: "Claude", search: "Apple Intelligence") == "Claude · Apple Intelligence")
         #expect(SettingsSummary.ai(translation: nil, search: nil) == "Not set up")
     }
+
+    /// AI Search (FS-08.07 §5): a home server's JSON answer becomes the same rules Apple
+    /// Intelligence's would.
+    @Test func homeServerAnswerBecomesRules() async throws {
+        AIStubProtocol.handler = { _ in
+            let content = "```json\n{\"conditions\":[{\"field\":\"focal\",\"comparison\":\"is\",\"text\":\"\",\"value\":85,\"upperValue\":0}]}\n```"
+            return (200, try! JSONSerialization.data(withJSONObject: ["choices": [["message": ["content": content]]]]))
+        }
+        let home = AIProvider(kind: .homeServer, name: "Mac Studio", address: "http://127.0.0.1:11434", model: "qwen3:14b")
+        let model = HomeServerSearchModel(provider: home, key: nil, client: AIProviderClient(session: AIStubProtocol.session()))
+        let rules = try #require(await model.translate("sunset at 85mm", vocabulary: FilterSuggestionCatalog()))
+        #expect(rules.count == 1)
+        #expect(SearchModelPrompt.conditions(fromJSON: "no json here") == nil)
+    }
 }
