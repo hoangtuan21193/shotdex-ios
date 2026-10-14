@@ -5,7 +5,7 @@
 | Tác giả | Hoang Tuan (lời người dùng), Claude soạn |
 | Ngày | 2026-10-14 |
 | Trạng thái | accepted — người dùng 2026-10-14 |
-| Tiến độ | **đang làm** (2026-10-14) — plan [2026-10-14-fs23-movies](../_plans/2026-10-14-fs23-movies.md) đã duyệt, spike S1 **đi** ([báo cáo](2026-10-14-fs23-s1-vlckit-spike.md)), còn S2, S3; 3 spike + 36 task; spec FS-23 (54 AC) + FS-08.07 (9 AC) |
+| Tiến độ | **đang làm** (2026-10-14) — plan [2026-10-14-fs23-movies](../_plans/2026-10-14-fs23-movies.md) đã duyệt, spike S1 **đi** ([báo cáo](2026-10-14-fs23-s1-vlckit-spike.md)), S2 **đi** ([báo cáo](2026-10-14-fs23-s2-mkv-subtitles-spike.md)), còn S3; 3 spike + 36 task; spec FS-23 (55 AC) + FS-08.07 (9 AC) |
 | Nguồn | phản hồi người dùng 2026-10-14 |
 | Spec sinh ra từ đây | [FS-23](../02-functional-spec/FS-23-offline-movies/README.md) · [FS-08.07](../02-functional-spec/FS-08-settings/07-ai-providers.md) |
 

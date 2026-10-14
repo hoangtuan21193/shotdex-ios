@@ -25,7 +25,7 @@ Projects trên `*_Collections` và sidebar iPad/Mac; hàng **AI** trên `*_Setti
 | 03 | [Phụ đề](03-subtitles.md) | track có sẵn, nhập file, Share/AirDrop, hai phụ đề, vị trí, cỡ chữ, lệch giờ; không tìm trên mạng |
 | 04 | [Dịch phụ đề bằng AI](04-ai-translation.md) | chọn nhà cung cấp, chia đoạn, chạy dở, lưu bản dịch |
 | 05 | [Dữ liệu](05-data.md) | thư mục kho, bảng phim, bảng phụ đề, Keychain |
-| 06 | [Tiêu chí nghiệm thu](06-acceptance-criteria.md) | AC-1…AC-54 |
+| 06 | [Tiêu chí nghiệm thu](06-acceptance-criteria.md) | AC-1…AC-55 |
 | 07 | [Plex](07-plex.md) | đăng nhập bằng mã, stream bản gốc, tải kèm thông tin phim, đồng bộ chỗ xem |
 
 Mục AI trong Settings (dùng chung với AI Search) là FS riêng: [FS-08.07](../FS-08-settings/07-ai-providers.md).
