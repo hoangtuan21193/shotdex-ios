@@ -1,0 +1,225 @@
+{
+  "title": "Movies: trang chi tiết phim (kiểu Infuse)",
+  "context": "Bạn muốn chạm vào phim thì không phát ngay mà mở trang chi tiết như Infuse: chọn phụ đề, audio, xem tiếp hay xem từ đầu, nút Download.\nBản iPhone đã vẽ ở canvas (board PH_MovieDetail). Chốt xong mấy câu dưới, tôi vẽ tiếp iPad, Duo, Mac rồi code.",
+  "pages": [
+    {
+      "id": "layout",
+      "title": "Trang chi tiết trông thế nào",
+      "intro": "Bố cục và các nút chính trên iPhone.",
+      "decisions": [
+        {
+          "id": "D1",
+          "title": "Đầu trang: ảnh nền lớn kiểu Infuse, hay poster to ở giữa?",
+          "importance": "important",
+          "why": "Ảnh nền lớn đẹp khi phim có ảnh nền (Plex), nhưng phim từ NAS thường chỉ có poster; poster giữa thì gọn hơn nhưng tốn chiều cao, đẩy phụ đề/audio xuống dưới thanh tab.",
+          "proposal": "Ảnh nền lớn phía trên mờ dần xuống, poster nhỏ bên trái, tên + năm + thời lượng + nguồn bên phải. Phim không có ảnh nền thì dùng poster làm nền, làm mờ.",
+          "options": [
+            {
+              "id": "backdrop",
+              "label": "Ảnh nền + poster nhỏ (như Infuse)",
+              "image": "a.png",
+              "pros": [
+                "Giống Infuse",
+                "Đủ chỗ cho Audio, Subtitles, Version trên một màn"
+              ],
+              "cons": [
+                "Phim không có ảnh nền thì nền là poster làm mờ"
+              ],
+              "effort": "M",
+              "recommended": true
+            },
+            {
+              "id": "poster",
+              "label": "Poster to ở giữa, không ảnh nền",
+              "image": "v1b.png",
+              "pros": [
+                "Đơn giản, đẹp với mọi phim"
+              ],
+              "cons": [
+                "Thông tin ít chỗ hơn (thể loại, nguồn dồn một dòng)"
+              ],
+              "effort": "S"
+            }
+          ],
+          "tech": "Plex: art (backdrop) qua /photo/:/transcode như poster; folder: poster làm mờ (blur 40). MovieDetailScreen push trong NavigationStack của Movies."
+        },
+        {
+          "id": "D2",
+          "title": "Phim đang xem dở: hai nút Resume và From Beginning, hay một nút Play?",
+          "importance": "important",
+          "why": "Một nút thì gọn, nhưng muốn xem lại từ đầu phải giữ lâu (khó tìm). Hai nút thì rõ, tốn thêm một hàng.",
+          "proposal": "Nút cam to 'Resume · 47:12' có thanh đã xem + 'còn 1:58:48'; dưới là 'From Beginning' và 'Download' nửa bề rộng. Phim chưa xem: một nút 'Play', Download chiếm cả hàng dưới.",
+          "options": [
+            {
+              "id": "two",
+              "label": "Resume to + From Beginning",
+              "image": "a.png",
+              "pros": [
+                "Thấy ngay cả hai cách",
+                "Giống Infuse, Apple TV"
+              ],
+              "cons": [
+                "Thêm một hàng nút"
+              ],
+              "effort": "S",
+              "recommended": true
+            },
+            {
+              "id": "one",
+              "label": "Một nút Play (giữ lâu để chọn từ đầu)",
+              "image": "v2b.png",
+              "pros": [
+                "Gọn"
+              ],
+              "cons": [
+                "Xem lại từ đầu bị giấu"
+              ],
+              "effort": "S"
+            }
+          ]
+        },
+        {
+          "id": "D3",
+          "title": "Chọn Audio, Subtitles (và bản 4K/1080p của Plex) ngay ở trang chi tiết?",
+          "importance": "important",
+          "image": "a-dark.png",
+          "why": "Có thì chọn xong mới bấm Play, vào phim là đúng ngay; không có thì phải vào phim rồi mới mở bảng Audio & Subtitles.",
+          "proposal": "Có: ba hàng Audio · Subtitles · Version. Chạm Audio/Subtitles mở đúng bảng Audio & Subtitles của player (cùng Primary/Secondary, Translate…, Import File…). Version chỉ hiện với phim Plex nhiều bản.",
+          "options": [
+            {
+              "id": "rows",
+              "label": "Có ba hàng, mở cùng bảng của player",
+              "pros": [
+                "Một chỗ chọn, giống trong player",
+                "Lựa chọn nhớ theo phim như hiện nay"
+              ],
+              "cons": [
+                "Audio của phim chưa mở lần nào chỉ biết khi đọc được đầu file (vài giây với phim stream)"
+              ],
+              "effort": "M",
+              "recommended": true
+            },
+            {
+              "id": "none",
+              "label": "Không, chỉ chọn trong player",
+              "pros": [
+                "Ít việc"
+              ],
+              "cons": [
+                "Không giống Infuse như bạn muốn"
+              ],
+              "effort": "S"
+            }
+          ],
+          "tech": "Audio: Plex metadata streams (streamType 2); MKV: đọc Tracks bằng MatroskaSubtitleReader mở rộng cho audio (vài KB); MP4: AVAsset. Chọn lưu vào movies.audioTrackId / movie_subtitle_choices như player."
+        }
+      ]
+    },
+    {
+      "id": "behaviour",
+      "title": "Chạm, giữ lâu và màn ngoài Duo",
+      "intro": "Những chỗ khác đổi theo trang chi tiết.",
+      "decisions": [
+        {
+          "id": "D4",
+          "title": "Giữ lâu poster trong lưới vẫn mở menu nhanh như hôm nay?",
+          "importance": "important",
+          "image": "d4.svg",
+          "why": "Bỏ menu thì muốn tải 1 phim phải vào trang chi tiết; giữ thì có hai đường cho cùng việc.",
+          "proposal": "Giữ menu nhanh (Download, Mark as Watched, Rename…) và thêm Play ở đầu menu; chạm thường thì mở trang chi tiết.",
+          "options": [
+            {
+              "id": "keep",
+              "label": "Giữ menu nhanh, thêm Play ở đầu",
+              "pros": [
+                "Nhanh cho người quen",
+                "Giống Photos/Infuse"
+              ],
+              "cons": [
+                "Hai đường cho một việc"
+              ],
+              "effort": "S",
+              "recommended": true
+            },
+            {
+              "id": "drop",
+              "label": "Bỏ, mọi thứ trong trang chi tiết",
+              "pros": [
+                "Một chỗ duy nhất"
+              ],
+              "cons": [
+                "Chậm hơn khi tải nhiều phim (vẫn còn Select)"
+              ],
+              "effort": "S"
+            }
+          ]
+        },
+        {
+          "id": "D5",
+          "title": "Màn ngoài Duo (gập máy): chạm phim mở trang chi tiết rút gọn hay phát luôn?",
+          "importance": "minor",
+          "image": "d5.svg",
+          "why": "Màn ngoài nhỏ (466×678, có thanh 84pt); hôm nay chạm là phát.",
+          "proposal": "Trang chi tiết rút gọn: Resume / From Beginning, Audio · Subtitles; không Download/Remove/Rename (như lưới màn ngoài chỉ để xem).",
+          "options": [
+            {
+              "id": "compact",
+              "label": "Trang rút gọn",
+              "pros": [
+                "Vẫn chọn được phụ đề, xem từ đầu"
+              ],
+              "cons": [
+                "Thêm một bước trước khi xem"
+              ],
+              "effort": "S",
+              "recommended": true
+            },
+            {
+              "id": "play",
+              "label": "Phát luôn như cũ",
+              "pros": [
+                "Nhanh"
+              ],
+              "cons": [
+                "Khác iPhone/màn trong"
+              ],
+              "effort": "S"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "auto": [
+    {
+      "id": "A1",
+      "title": "Mở trang chi tiết",
+      "choice": "Đẩy vào cùng ngăn điều hướng của Movies (nút Back về lưới, giữ vị trí cuộn); thanh tab vẫn hiện.",
+      "why": "Giống mọi màn trong Collections."
+    },
+    {
+      "id": "A2",
+      "title": "Nút ⋯ trên trang chi tiết",
+      "choice": "Mark as Watched/Unwatched, Rename, Remove Download (hoặc Remove from Movies với phim chép thẳng), Retry Download khi lỗi.",
+      "why": "Đúng các mục menu phim đã có."
+    },
+    {
+      "id": "A3",
+      "title": "Nút Download trên trang",
+      "choice": "Download → 'Downloading 45%' có thanh tiến độ trong nút → '✓ On iPhone'; chạm khi đang tải hoặc đã tải hỏi Remove Download (alert hiện có).",
+      "why": "Cùng luồng tải đã sửa hôm nay."
+    },
+    {
+      "id": "A4",
+      "title": "Thông tin phim",
+      "choice": "Plex: tóm tắt, thể loại, năm, thời lượng, độ phân giải. Phim từ NAS/Files: tên + năm từ tên file, thời lượng khi đã mở, cỡ file — không tra mạng.",
+      "why": "Không thêm dịch vụ metadata online (ngoài phạm vi FS-23)."
+    },
+    {
+      "id": "A5",
+      "title": "iPad, Duo màn trong, Mac",
+      "choice": "Hai cột: ảnh nền ngang cả màn, poster + thông tin + nút bên trái, Audio/Subtitles/Version + tóm tắt bên phải; vẽ lên canvas từng thiết bị sau khi chốt bản iPhone.",
+      "why": "Theo luật màn rộng: thêm nội dung, không phóng to."
+    }
+  ]
+}
