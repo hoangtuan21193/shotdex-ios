@@ -187,8 +187,9 @@ final class MovieDownloadRunner {
             revision += 1
         }
         guard let movie = try? store.movie(id: movieId), movie.state != .onDevice else { return true }
+        // A Plex movie downloads the version chosen for it (FS-23.07 §3).
         guard let sourceId = movie.sourceId, let source = try? store.source(id: sourceId),
-              let path = movie.remotePath else {
+              let path = movie.plexRatingKey != nil ? movie.plexPartKey : movie.remotePath else {
             fail(movie, String(localized: "This movie has no source to download from.", comment: "Movie download error"))
             return true
         }

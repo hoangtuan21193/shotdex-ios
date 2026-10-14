@@ -32,6 +32,13 @@ struct MovieStore: Sendable {
         plexTokens.password(for: sourceId)
     }
 
+    /// The Plex version to download (AC-56): its part and size.
+    func setPlexVersion(id: String, partKey: String, byteCount: Int64) throws {
+        try database.writer.write { db in
+            try db.execute(sql: "UPDATE movies SET plexPartKey = ?, byteCount = ? WHERE id = ?", arguments: [partKey, byteCount, id])
+        }
+    }
+
     /// Plex refused the token, or a new sign-in fixed it (AC-51).
     func setNeedsSignIn(_ needsSignIn: Bool, sourceId: String) throws {
         try database.writer.write { db in

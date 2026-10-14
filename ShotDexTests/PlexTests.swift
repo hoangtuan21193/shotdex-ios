@@ -74,9 +74,12 @@ final class PlexStubProtocol: URLProtocol, @unchecked Sendable {
         }
     }
 
+    /// Downloads need the listed size to be the bytes served.
+    nonisolated(unsafe) static var servedSizes = false
+
     static func dune(withStreams: Bool) -> [String: Any] {
         func part(_ key: String, size: Int64) -> [String: Any] {
-            var part: [String: Any] = ["key": key, "size": size, "container": "mkv", "file": "/media/Dune.Part.Two.2024.mkv"]
+            var part: [String: Any] = ["key": key, "size": servedSizes ? Int64(movieBytes.count) : size, "container": "mkv", "file": "/media/Dune.Part.Two.2024.mkv"]
             if withStreams {
                 part["Stream"] = [["streamType": 3, "key": "/library/streams/77", "languageCode": "vie", "codec": "srt"]]
             }
@@ -192,5 +195,48 @@ final class PlexStubProtocol: URLProtocol, @unchecked Sendable {
         let item = try #require(PlexClient.item(Self.dune(withStreams: false)))
         #expect(item.versions.map(\.label) == ["4K · \(Int64(54_300_000_000).formatted(.byteCount(style: .file)))", "1080p · \(Int64(8_100_000_000).formatted(.byteCount(style: .file)))"])
         #expect(item.versions.first?.partKey == "/library/parts/4k/file.mkv")
+    }
+
+    /// AC-49, AC-56: Download offers the versions, takes only the one
+    /// picked, and the movie keeps Plex's year, summary, genres and its
+    /// subtitle file on the device.
+    @Test func downloadChosenVersionWithMetadata() async throws {
+        Self.servedSizes = true
+        defer { Self.servedSizes = false }
+        installFake()
+        let client = PlexStubProtocol.client()
+        let movies = try store()
+        let files = MovieFileStore(root: FileManager.default.temporaryDirectory.appending(path: "plex-dl-\(UUID().uuidString)"))
+        try files.prepare()
+        let source = MovieSource(kind: .plex, name: "Mac Studio", plexMachineId: "home", plexAddress: "http://plex.home:32400")
+        try movies.saveSource(source, plexToken: "home-token")
+        await PlexLibrarySync(store: movies, client: client).refresh(source)
+        let dune = try #require(try movies.movies().first)
+
+        let preparer = PlexDownloadPreparer(store: movies, client: client)
+        let versions = try await preparer.versions(of: dune)
+        #expect(versions.count == 2)
+        let hd = try #require(versions.last)
+        try preparer.choose(hd, for: dune)
+
+        let runner = MovieDownloadRunner(store: movies, files: files, environment: .init(
+            client: { _ in PlexFileClient(base: URL(string: "http://plex.home:32400")!, token: "home-token", session: client.session, client: client) },
+            freeSpace: { .max }
+        ))
+        PlexStubProtocol.requests = []
+        runner.download(dune.id)
+        await runner.waitUntilIdle()
+
+        let saved = try #require(try movies.movie(id: dune.id))
+        #expect(saved.state == .onDevice)
+        #expect(saved.year == 2024)
+        #expect(saved.summary == "Paul Atreides unites with the Fremen.")
+        #expect(saved.genres == "Science Fiction, Adventure")
+        let file = try #require(files.file(for: saved))
+        #expect(try Data(contentsOf: file) == Self.movieBytes)
+        let parts = PlexStubProtocol.requests.compactMap(\.url?.path).filter { $0.hasPrefix("/library/parts/") }
+        #expect(!parts.isEmpty && parts.allSatisfy { $0 == "/library/parts/hd/file.mkv" })
+        let subtitle = try #require(try movies.subtitles(movieId: dune.id).first { $0.origin == .plex })
+        #expect(!subtitle.fileName.isEmpty)
     }
 }

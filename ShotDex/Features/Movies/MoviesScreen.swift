@@ -24,6 +24,8 @@ struct MoviesScreen: View {
     /// Subtitle files shared in, waiting for their movie (FS-23.03 §5).
     @State private var sharedSubtitles: [URL] = []
     @State private var subtitleFailure: String?
+    /// A Plex movie with several versions: which one to download (AC-56).
+    @State private var choosingVersion: (movie: Movie, versions: [PlexClient.Version])?
 
     /// A movie open in the player, with its engine.
     struct PlayingMovie: Identifiable {
@@ -71,6 +73,20 @@ struct MoviesScreen: View {
         }
         .fullScreenCover(item: $playing, onDismiss: { model?.load() }) { playing in
             MoviePlayerScreen(model: playing.model, videoView: playing.view)
+        }
+        .confirmationDialog(
+            String(localized: "Download Which Version?", comment: "Plex movie with several versions: pick one to download"),
+            isPresented: Binding(get: { choosingVersion != nil }, set: { if !$0 { choosingVersion = nil } }),
+            titleVisibility: .visible,
+            presenting: choosingVersion
+        ) { choice in
+            ForEach(Array(choice.versions.enumerated()), id: \.offset) { _, version in
+                Button(version.label) {
+                    try? PlexDownloadPreparer(store: dependencies.movies).choose(version, for: choice.movie)
+                    dependencies.movieDownloads.download(choice.movie.id)
+                }
+            }
+            Button(String(localized: "Cancel", comment: "Plex versions: download nothing"), role: .cancel) {}
         }
         .onChange(of: IntentRouter.shared.pendingMovieSubtitles, initial: true) { _, urls in
             guard !urls.isEmpty else { return }
@@ -262,6 +278,25 @@ struct MoviesScreen: View {
     }
 
     /// Movie files (and subtitles to go with them) for Add Movie Files….
+    /// Download to iPhone. A Plex movie first learns its versions; with more
+    /// than one the user picks (FS-23.07 §3, AC-56).
+    private func startDownload(_ movie: Movie) {
+        guard movie.plexRatingKey != nil else {
+            dependencies.movieDownloads.download(movie.id)
+            return
+        }
+        let preparer = PlexDownloadPreparer(store: dependencies.movies)
+        Task {
+            let versions = (try? await preparer.versions(of: movie)) ?? []
+            if versions.count > 1 {
+                choosingVersion = (movie, versions)
+            } else {
+                if let only = versions.first { try? preparer.choose(only, for: movie) }
+                dependencies.movieDownloads.download(movie.id)
+            }
+        }
+    }
+
     /// The Inbox copies the system made of shared files go once handled.
     private func finishSharedSubtitles() {
         for url in sharedSubtitles where url.path.contains("/Inbox/") {
@@ -448,12 +483,19 @@ struct MoviesScreen: View {
     /// FS-23.01 §5. Play, Download, Audio & Subtitles join with their tasks.
     @ViewBuilder
     private func movieMenu(_ movie: Movie, model: MoviesModel) -> some View {
+        // What the movie is, from its source — still there offline (AC-49).
+        if movie.genres != nil || movie.summary != nil {
+            Section {
+                if let genres = movie.genres { Text(genres) }
+                if let summary = movie.summary, !summary.isEmpty { Text(summary) }
+            }
+        }
         if movie.downloadError != nil, movie.sourceId != nil {
             Button { dependencies.movieDownloads.retry(movie.id) } label: {
                 Label(String(localized: "Retry Download", comment: "Movie menu: try a stopped download again"), systemImage: "arrow.clockwise")
             }
         } else if movie.state == .stream, movie.sourceId != nil {
-            Button { dependencies.movieDownloads.download(movie.id) } label: {
+            Button { startDownload(movie) } label: {
                 Label("\(MoviesCountText.downloadTo()) · \(movie.byteCount.formatted(.byteCount(style: .file)))", systemImage: "arrow.down.circle")
             }
         }

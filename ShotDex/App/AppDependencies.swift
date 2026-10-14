@@ -553,7 +553,14 @@ final class AppDependencies {
         let movieDownloads = MovieDownloadRunner(
             store: movies, files: .standard,
             environment: .init(
-                client: { [fileServers] source in
+                client: { [fileServers, movies] source in
+                    if source.kind == .plex {
+                        guard let token = movies.plexToken(for: source.id),
+                              let base = try await PlexLibrarySync(store: movies).baseURL(for: source, token: token) else {
+                            throw RemoteFileError.unreachable(host: source.name)
+                        }
+                        return PlexFileClient(base: base, token: token)
+                    }
                     guard let id = source.connectionId, let server = try fileServers.fetch(id: id) else {
                         throw RemoteFileError.folderMissing(source.name)
                     }
@@ -568,7 +575,16 @@ final class AppDependencies {
                 },
                 // WebDAV is plain HTTP: iOS can carry it on with the device
                 // locked (user decision 2026-10-14). SMB/SFTP/Files cannot.
-                backgroundRequest: { [fileServers] source, movie, offset in
+                backgroundRequest: { [fileServers, movies] source, movie, offset in
+                    // Plex is plain HTTP too: the token rides in the request's
+                    // headers, never the URL (FS-23.07 §3, AC-54).
+                    if source.kind == .plex {
+                        guard let base = source.plexAddress.flatMap(URL.init(string:)), let token = movies.plexToken(for: source.id),
+                              let part = movie.plexPartKey else { return nil }
+                        var request = PlexFileClient(base: base, token: token).request(part)
+                        if offset > 0 { request.setValue("bytes=\(offset)-", forHTTPHeaderField: "Range") }
+                        return request
+                    }
                     guard let id = source.connectionId, let server = try? fileServers.fetch(id: id),
                           server.transferProtocol == .webdav, let path = movie.remotePath else { return nil }
                     return WebDAVFileClient(server: server, password: fileServers.password(for: id) ?? "")
