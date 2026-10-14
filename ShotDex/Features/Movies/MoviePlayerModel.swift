@@ -32,6 +32,13 @@ final class MoviePlayerModel {
     private(set) var interaction = 0
     /// Scrubber held: the chrome stays up and the label follows the finger.
     private(set) var scrubMs: Int64?
+    /// `Resumed at 47:12 · Start Over`, for 5 s after opening (§2).
+    private(set) var resumedAtMs: Int64?
+    /// Where to go once the engine plays — VLC drops a seek made earlier.
+    private var pendingResumeMs: Int64?
+    private var lastSavedMs: Int64 = 0
+    private var hasMarkedWatched = false
+    private var hasStoredDuration = false
     /// When the movie time last moved — buffering reports alone do not
     /// mean the picture stopped.
     private var lastProgress = Date()
@@ -47,6 +54,7 @@ final class MoviePlayerModel {
         self.onClose = onClose
         durationMs = movie.durationMs ?? 0
         rate = Self.rates.contains(movie.playbackRate) ? movie.playbackRate : 1
+        pendingResumeMs = MoviePlaybackPosition.resumeMs(saved: movie.positionMs, durationMs: movie.durationMs ?? 0)
         player.onChange = { [weak self] in self?.sync() }
         sync()
     }
@@ -90,7 +98,23 @@ final class MoviePlayerModel {
 
     func togglePlay() {
         touched()
-        if isPlaying { player.pause() } else { player.play() }
+        if isPlaying {
+            player.pause()
+            savePosition()
+        } else {
+            player.play()
+        }
+    }
+
+    /// From the top, from the resume label.
+    func startOver() {
+        resumedAtMs = nil
+        seek(toMs: 0)
+        savePosition()
+    }
+
+    func dismissResumeNotice() {
+        resumedAtMs = nil
     }
 
     // MARK: Gestures (§3)
@@ -179,6 +203,7 @@ final class MoviePlayerModel {
     /// Leaving the app (§4): the movie carries on only in picture in
     /// picture; there is no background audio.
     func enterBackground() {
+        savePosition()
         guard !isPictureInPictureActive, isPlaying else { return }
         player.pause()
     }
@@ -197,6 +222,7 @@ final class MoviePlayerModel {
     }
 
     func close() {
+        savePosition()
         player.close()
         VideoAudioSession.deactivate()
         onClose()
@@ -213,5 +239,48 @@ final class MoviePlayerModel {
         canPictureInPicture = player.canPictureInPicture
         isPictureInPictureActive = player.isPictureInPictureActive
         selectedAudioTrackId = player.selectedAudioTrackId
+        followPlayback()
+    }
+
+    // MARK: Position (§2)
+
+    private func followPlayback() {
+        if state == .playing, let target = pendingResumeMs {
+            pendingResumeMs = nil
+            if MoviePlaybackPosition.resumeMs(saved: target, durationMs: durationMs) != nil {
+                player.seek(toMs: target)
+                timeMs = target
+                lastSavedMs = target
+                resumedAtMs = target
+            }
+        }
+        if durationMs > 0, durationMs != (movie.durationMs ?? 0), !hasStoredDuration {
+            hasStoredDuration = true
+            try? store?.setDuration(durationMs, id: movie.id)
+        }
+        if state == .ended {
+            markWatched()
+        } else if isPlaying, abs(timeMs - lastSavedMs) >= MoviePlaybackPosition.saveIntervalMs {
+            savePosition()
+        }
+    }
+
+    /// Every 10 s while playing, on pause, on close and when leaving the
+    /// app. From 95% on the movie is watched and starts from the top next
+    /// time.
+    private func savePosition() {
+        guard pendingResumeMs == nil, !hasMarkedWatched else { return }
+        if MoviePlaybackPosition.isWatched(positionMs: timeMs, durationMs: durationMs) {
+            markWatched()
+            return
+        }
+        lastSavedMs = timeMs
+        try? store?.recordPosition(id: movie.id, positionMs: timeMs)
+    }
+
+    private func markWatched() {
+        guard !hasMarkedWatched else { return }
+        hasMarkedWatched = true
+        try? store?.setWatched(true, ids: [movie.id])
     }
 }

@@ -34,6 +34,8 @@ track âm thanh, phụ đề, chỗ đang xem.
 - Mở toàn màn (không phải sheet): kéo xuống không đóng; đóng bằng ✕ trên trái hoặc Esc / ⌘W.
 - **Chỗ đang xem**: đã xem > 1 phút và < 95% → mở tại chỗ đó, nhãn `Resumed at 47:12 · Start Over` trong 5 s.
   Vị trí ghi mỗi 10 s, lúc dừng, lúc đóng, lúc rời app.
+  Tới 95% hoặc hết phim → đánh dấu **đã xem** (mất khỏi lọc Unwatched), lần sau mở từ đầu. Độ dài player đọc được
+  ghi lại cho phim mà lúc quét chưa biết độ dài (MKV, AVI…).
 - Đang phát thì màn không tự tắt; dừng hoặc đóng thì trả lại hẹn giờ tắt màn của hệ thống.
 - Phát phim không gọi mạng nào (chế độ máy bay không đổi gì).
 

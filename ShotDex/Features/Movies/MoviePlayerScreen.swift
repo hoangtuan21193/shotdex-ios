@@ -45,6 +45,13 @@ struct MoviePlayerScreen: View {
             try? await Task.sleep(for: .milliseconds(350))
             showsSpinner = true
         }
+        .task(id: model.resumedAtMs) {
+            guard model.resumedAtMs != nil else { return }
+            try? await Task.sleep(for: .seconds(5))
+            guard !Task.isCancelled else { return }
+            model.dismissResumeNotice()
+        }
+        .animation(reduceMotion ? nil : .easeInOut(duration: 0.2), value: model.resumedAtMs)
         .task(id: model.interaction) {
             try? await Task.sleep(for: .seconds(3))
             guard !Task.isCancelled else { return }
@@ -90,6 +97,12 @@ struct MoviePlayerScreen: View {
                 }
                 if model.isLocked, model.showsUnlock {
                     unlockButton.padding(insets).transition(.opacity)
+                }
+                if let resumedAt = model.resumedAtMs, !model.isLocked {
+                    resumeNotice(resumedAt)
+                        .padding(insets)
+                        .padding(.top, 56)
+                        .transition(.opacity)
                 }
             }
         }
@@ -312,6 +325,31 @@ struct MoviePlayerScreen: View {
             .accessibilityLabel(String(localized: "Lock Controls", comment: "Movie player: touch lock"))
         }
         .frame(height: 44)
+    }
+
+    /// `Resumed at 47:12 · Start Over` (§2): one line, the second half is
+    /// the button.
+    private func resumeNotice(_ ms: Int64) -> some View {
+        VStack {
+            HStack(spacing: AppTheme.Spacing.sm) {
+                Text(String(localized: "Resumed at \(MoviePlayerText.clock(ms, longest: model.durationMs))", comment: "Movie player: the movie reopened where it was left, e.g. Resumed at 47:12"))
+                    .foregroundStyle(.white.opacity(0.8))
+                Text(verbatim: "·")
+                    .foregroundStyle(.white.opacity(0.5))
+                    .accessibilityHidden(true)
+                Button(String(localized: "Start Over", comment: "Movie player: play the movie from the beginning")) {
+                    model.startOver()
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle(.white)
+                .fontWeight(.semibold)
+            }
+            .font(.subheadline.monospacedDigit())
+            .padding(.horizontal, AppTheme.Spacing.lg)
+            .frame(minHeight: 44)
+            .editorGlass(Capsule())
+            Spacer(minLength: 0)
+        }
     }
 
     private var unlockButton: some View {

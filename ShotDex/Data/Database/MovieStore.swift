@@ -359,6 +359,14 @@ struct MovieStore: Sendable {
         }
     }
 
+    /// The length the player found, for the resume rule and the list
+    /// (a scan only knows it for MP4 and Plex).
+    func setDuration(_ durationMs: Int64, id: String) throws {
+        try database.writer.write { db in
+            try db.execute(sql: "UPDATE movies SET durationMs = ? WHERE id = ?", arguments: [durationMs, id])
+        }
+    }
+
     /// Plex movies whose position or watched mark the server has not heard.
     func pendingPlexSync(sourceId: String) throws -> [Movie] {
         try database.reader.read { db in

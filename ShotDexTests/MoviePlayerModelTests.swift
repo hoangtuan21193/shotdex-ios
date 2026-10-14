@@ -176,4 +176,77 @@ import Testing
         #expect(!MoviePlayerLayout(size: CGSize(width: 1032, height: 1376), safeArea: EdgeInsets(), isCompactWidth: false, isLandscapePicture: true).isRotated)
         #expect(!MoviePlayerLayout(size: CGSize(width: 874, height: 402), safeArea: EdgeInsets(), isCompactWidth: true, isLandscapePicture: true).isRotated)
     }
+
+    private func stored(positionMs: Int64 = 0, durationMs: Int64? = 7_200_000) throws -> (MovieStore, Movie) {
+        let store = MovieStore(database: try AppDatabase.makeEmpty(), plexTokens: InMemoryPasswordStore())
+        let movie = Movie(sourceId: nil, title: "Dune", originalFileName: "Dune.mkv", byteCount: 1_000, durationMs: durationMs, state: .onDevice, addedAt: 0, positionMs: positionMs)
+        try store.add(movie)
+        return (store, movie)
+    }
+
+    /// AC-14: a 2:00:00 movie left at 47:12 opens there with the label;
+    /// Start Over goes to 0:00.
+    @Test func resumeAndStartOver() throws {
+        let (store, movie) = try stored(positionMs: 2_832_000)
+        let engine = FakeMoviePlayer()
+        engine.durationMs = 7_200_000
+        let model = MoviePlayerModel(movie: movie, player: engine, store: store)
+        model.start()
+        #expect(engine.seeks == [2_832_000])
+        #expect(model.timeMs == 2_832_000)
+        #expect(model.resumedAtMs == 2_832_000)
+
+        model.startOver()
+        #expect(engine.seeks.last == 0)
+        #expect(model.resumedAtMs == nil)
+        #expect(try store.movies().first?.positionMs == 0)
+    }
+
+    /// Under a minute, or past 95%, the movie starts from the top.
+    @Test func resumeOnlyBetweenAMinuteAnd95Percent() {
+        #expect(MoviePlaybackPosition.resumeMs(saved: 59_000, durationMs: 7_200_000) == nil)
+        #expect(MoviePlaybackPosition.resumeMs(saved: 61_000, durationMs: 7_200_000) == 61_000)
+        #expect(MoviePlaybackPosition.resumeMs(saved: 6_840_000, durationMs: 7_200_000) == nil)
+        #expect(MoviePlaybackPosition.resumeMs(saved: 6_839_000, durationMs: 7_200_000) == 6_839_000)
+        #expect(MoviePlaybackPosition.resumeMs(saved: 600_000, durationMs: 0) == 600_000)
+    }
+
+    /// The place is written every 10 s of play, on pause and on close —
+    /// and never the 0:00 before the resume seek.
+    @Test func positionIsSavedAsItPlays() throws {
+        let (store, movie) = try stored(positionMs: 600_000)
+        let engine = FakeMoviePlayer()
+        engine.durationMs = 7_200_000
+        let model = MoviePlayerModel(movie: movie, player: engine, store: store)
+        #expect(try store.movies().first?.positionMs == 600_000)
+        model.start()
+        engine.report { $0.timeMs = 605_000 }
+        #expect(try store.movies().first?.positionMs == 600_000)
+        engine.report { $0.timeMs = 610_000 }
+        #expect(try store.movies().first?.positionMs == 610_000)
+        engine.report { $0.timeMs = 612_000 }
+        model.togglePlay()
+        #expect(try store.movies().first?.positionMs == 612_000)
+        engine.report { $0.timeMs = 613_500 }
+        model.close()
+        #expect(try store.movies().first?.positionMs == 613_500)
+        #expect(engine.isClosed)
+    }
+
+    /// Closing past 95% marks the movie watched and next time starts at 0.
+    @Test func closingInTheCreditsMarksWatched() throws {
+        let (store, movie) = try stored(durationMs: nil)
+        let engine = FakeMoviePlayer()
+        let model = MoviePlayerModel(movie: movie, player: engine, store: store)
+        model.start()
+        engine.report {
+            $0.durationMs = 7_200_000
+            $0.timeMs = 6_900_000
+        }
+        model.close()
+        let saved = try #require(try store.movies().first)
+        #expect(saved.isWatched)
+        #expect(saved.positionMs == 0)
+        #expect(saved.durationMs == 7_200_000)
+    }
 }
