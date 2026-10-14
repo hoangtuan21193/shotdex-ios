@@ -108,7 +108,7 @@ struct AddSubtitleSheet: View {
             }
             Spacer(minLength: 0)
         }
-        .frame(height: 40)
+        .frame(minHeight: 40)
         .contentShape(Rectangle())
     }
 }

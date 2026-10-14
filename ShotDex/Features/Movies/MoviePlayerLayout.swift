@@ -20,7 +20,12 @@ struct MoviePlayerLayout: Equatable {
             // Both sides take the larger inset so the title stays centred
             // (board PH_MoviePlayer: 62 on an iPhone 17).
             let side = max(safeArea.top, safeArea.bottom)
-            chromeInsets = EdgeInsets(top: AppTheme.Spacing.lg, leading: side, bottom: AppTheme.Spacing.xl, trailing: side)
+            // The screen's trailing edge is the stage's top, its leading edge
+            // the stage's bottom — the Duo cover's 84 pt rail lands on top.
+            chromeInsets = EdgeInsets(
+                top: max(AppTheme.Spacing.lg, safeArea.trailing), leading: side,
+                bottom: max(AppTheme.Spacing.xl, safeArea.leading), trailing: side
+            )
         } else {
             stageSize = size
             // With the status bar hidden an iPad reports no top inset;

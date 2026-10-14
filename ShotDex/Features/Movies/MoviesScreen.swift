@@ -26,6 +26,10 @@ struct MoviesScreen: View {
     @State private var subtitleFailure: String?
     /// A Plex movie with several versions: which one to download (AC-56).
     @State private var choosingVersion: (movie: Movie, versions: [PlexClient.Version])?
+    /// The Duo's cover screen (FS-23.02 §4): play only — no +, Delete or
+    /// Rename. Told apart from a phone by the 84 pt rail in its trailing
+    /// safe area, as the editor does.
+    @State private var isDuoCover = false
 
     /// A movie open in the player, with its engine.
     struct PlayingMovie: Identifiable {
@@ -50,13 +54,18 @@ struct MoviesScreen: View {
         .navigationBarTitleDisplayMode(.inline)
         .moviesSubtitle(model.flatMap { MoviesCountText.subtitle($0.counts) })
         .toolbar {
-            if model?.isEmpty == false {
+            if model?.isEmpty == false, !isDuoCover {
                 ToolbarItem(placement: .topBarTrailing) { viewMenu }
                 // Two round buttons as on `PH_Movies`, not one shared capsule.
                 if #available(iOS 26.0, *) { ToolbarSpacer(.fixed, placement: .topBarTrailing) }
             }
-            ToolbarItem(placement: .topBarTrailing) { addMenu }
+            if !isDuoCover {
+                ToolbarItem(placement: .topBarTrailing) { addMenu }
+            }
         }
+        .onGeometryChange(for: Bool.self) { proxy in
+            EditorLayoutMetrics.usesDuoCoverColumn(isWide: false, windowTrailingInset: proxy.safeAreaInsets.trailing)
+        } action: { isDuoCover = $0 }
         .task {
             let model = model ?? MoviesModel(store: dependencies.movies)
             model.query.sort = sort
@@ -199,6 +208,7 @@ struct MoviesScreen: View {
                                 .overlay(alignment: .topLeading) { selectionMark(movie) }
                                 .contentShape(Rectangle())
                                 .onTapGesture { tapped(movie) }
+                                .accessibilityAddTraits(isSelecting && selection.contains(movie.id) ? .isSelected : [])
                                 .contextMenu { if !isSelecting { movieMenu(movie, model: model) } }
                         }
                     }
@@ -207,11 +217,12 @@ struct MoviesScreen: View {
                         ForEach(shown) { movie in
                             MovieListRow(movie: movie, keepsAppOpen: model.sources[movie.sourceId ?? ""].map { !downloads.downloadsInBackground($0, movie) } ?? false, isAway: model.isAway(movie))
                                 .padding(.horizontal, 12)
-                                .frame(height: 64)
+                                .frame(minHeight: 64)
                                 .background(Color(.secondarySystemBackground), in: RoundedRectangle(cornerRadius: AppTheme.Radius.md, style: .continuous))
                                 .overlay(alignment: .trailing) { selectionMark(movie).padding(.trailing, 12) }
                                 .contentShape(Rectangle())
                                 .onTapGesture { tapped(movie) }
+                                .accessibilityAddTraits(isSelecting && selection.contains(movie.id) ? .isSelected : [])
                                 .contextMenu { if !isSelecting { movieMenu(movie, model: model) } }
                         }
                     }
@@ -499,12 +510,12 @@ struct MoviesScreen: View {
                 Label("\(MoviesCountText.downloadTo()) · \(movie.byteCount.formatted(.byteCount(style: .file)))", systemImage: "arrow.down.circle")
             }
         }
-        if movie.sourceId != nil, movie.isOnDevice || movie.state == .downloading || movie.state == .queued {
+        if !isDuoCover, movie.sourceId != nil, movie.isOnDevice || movie.state == .downloading || movie.state == .queued {
             Button(role: .destructive) { removingDownloads = [movie] } label: {
                 Label(String(localized: "Remove Download", comment: "Movie menu: delete the copy on this device"), systemImage: "arrow.uturn.backward.circle")
             }
         }
-        if movie.sourceId == nil, movie.isOnDevice || movie.state == .missing {
+        if !isDuoCover, movie.sourceId == nil, movie.isOnDevice || movie.state == .missing {
             Button(role: .destructive) { removingCopied = movie } label: {
                 Label(String(localized: "Remove from Movies", comment: "Movie menu: delete a copied-in movie"), systemImage: "trash")
             }
@@ -518,11 +529,13 @@ struct MoviesScreen: View {
                 Label(String(localized: "Mark as Watched", comment: "Movie menu"), systemImage: "eye")
             }
         }
-        Button {
-            typedTitle = movie.displayTitle
-            renaming = movie
-        } label: {
-            Label(String(localized: "Rename", comment: "Movie menu"), systemImage: "pencil")
+        if !isDuoCover {
+            Button {
+                typedTitle = movie.displayTitle
+                renaming = movie
+            } label: {
+                Label(String(localized: "Rename", comment: "Movie menu"), systemImage: "pencil")
+            }
         }
     }
 

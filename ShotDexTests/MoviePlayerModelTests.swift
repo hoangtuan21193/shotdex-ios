@@ -345,4 +345,17 @@ import Testing
         #expect(MovieAudioTrackLabel.codecName("trhd") == "TrueHD")
         #expect(MovieAudioTrackLabel.codecName("s16l") == "PCM")
     }
+
+    /// VoiceOver: the controls never fade, and a lock keeps its unlock
+    /// button up — there is no picture tap to bring either back.
+    @Test func assistiveTechKeepsControls() {
+        let (model, _) = playing()
+        model.keepsControlsVisible = true
+        model.hideAfterIdle()
+        #expect(model.isChromeVisible)
+        model.lock()
+        #expect(model.showsUnlock)
+        model.hideAfterIdle()
+        #expect(model.showsUnlock)
+    }
 }

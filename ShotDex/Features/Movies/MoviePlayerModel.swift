@@ -44,6 +44,10 @@ final class MoviePlayerModel {
     /// Touch lock (§3): taps only bring up the unlock button.
     private(set) var isLocked = false
     private(set) var showsUnlock = false
+    /// VoiceOver or Switch Control is on: the controls never fade and the
+    /// unlock button stays up, since there is no picture tap to bring them
+    /// back.
+    var keepsControlsVisible = false
     /// Bumped on every touch; the screen restarts its 3 s hide timer on it.
     private(set) var interaction = 0
     /// Scrubber held: the chrome stays up and the label follows the finger.
@@ -251,7 +255,7 @@ final class MoviePlayerModel {
     func lock() {
         isLocked = true
         isChromeVisible = false
-        showsUnlock = false
+        showsUnlock = keepsControlsVisible
         interaction += 1
     }
 
@@ -265,6 +269,7 @@ final class MoviePlayerModel {
     /// The 3 s timer ran out with no touch: the unlock button goes, and the
     /// chrome too while the movie plays (a paused movie keeps its controls).
     func hideAfterIdle() {
+        guard !keepsControlsVisible else { return }
         showsUnlock = false
         guard isPlaying, scrubMs == nil, !isChoosingRate else { return }
         isChromeVisible = false

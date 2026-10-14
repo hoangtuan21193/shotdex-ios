@@ -10,6 +10,9 @@ Sources: `hig-components` (two passes), `device-layout` (iPhone 17 + iPad Pro 13
 
 ## Should fix
 
+- [ ] `MoviePlayerScreen.swift` clock labels, `MovieTracksPanel.swift` / `MovieTranslatePage.swift` fixed 36–56 pt row heights — clip at accessibility text sizes; use `minHeight` with `@ScaledMetric` _(a11y-voiceover, FS-23)_
+- [ ] `MoviesScreen.swift` filter chips — a non-scrolling HStack at 32 pt overflows at accessibility sizes; wrap in a horizontal ScrollView _(a11y-voiceover, FS-23)_
+- [ ] `MoviesScreen.swift` grid `minimum: 105` and one-line titles truncate for low-vision users; scale with `@ScaledMetric` or switch to the list at accessibility sizes _(a11y-voiceover, FS-23)_
 - [x] `SettingsScreen.swift:284` — `Clear Results` deleted the subject scan with no confirmation _(hig-components)_
 - [x] `SettingsSheet.swift` — Settings sheet had no Done button _(hig-components)_
 - [x] `SelectionBarViews.swift:169` — Compare and Edit merge into one glass pill on iOS 26 without a `ToolbarSpacer` _(hig-components)_

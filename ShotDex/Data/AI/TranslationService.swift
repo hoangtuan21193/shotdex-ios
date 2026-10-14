@@ -5,7 +5,8 @@ import Foundation
 /// the words go.
 struct TranslationService: Sendable {
     let providers: AIProviderStore
-    var defaults: UserDefaults = .standard
+    /// UserDefaults is thread-safe; it is just not marked Sendable.
+    nonisolated(unsafe) var defaults: UserDefaults = .standard
     var onDevice: AIChoice.OnDevice = OnDeviceAI.choices
 
     static let lastUsingKey = "ai.lastTranslationUsing"

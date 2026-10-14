@@ -191,7 +191,7 @@ struct MovieTracksPanel: View {
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .accessibilityLabel(String(localized: "Back", comment: "Movie player panel: leave a page"))
+        .accessibilityLabel(String(localized: "Back to Audio and Subtitles", comment: "Movie player panel: leave a page"))
     }
 
     private func choiceRow(_ title: String, isSelected: Bool, action: @escaping () -> Void) -> some View {
@@ -424,7 +424,7 @@ private struct MovieSubtitleStyleEditor: View {
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
-                .accessibilityLabel(String(localized: "Back", comment: "Movie player panel: leave the style page"))
+                .accessibilityLabel(String(localized: "Back to Audio and Subtitles", comment: "Movie player panel: leave the style page"))
 
                 stepperRow(
                     String(localized: "Size", comment: "Subtitle style: text size"),

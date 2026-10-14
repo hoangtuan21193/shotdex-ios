@@ -12,6 +12,8 @@ struct MoviePlayerScreen: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @Environment(\.scenePhase) private var scenePhase
+    @Environment(\.accessibilityVoiceOverEnabled) private var voiceOver
+    @Environment(\.accessibilitySwitchControlEnabled) private var switchControl
     @State private var showsSpinner = false
 
     var body: some View {
@@ -51,7 +53,8 @@ struct MoviePlayerScreen: View {
             showsSpinner = true
         }
         .task(id: model.resumedAtMs) {
-            guard model.resumedAtMs != nil else { return }
+            // VoiceOver needs longer than 5 s to reach Start Over.
+            guard model.resumedAtMs != nil, !voiceOver else { return }
             try? await Task.sleep(for: .seconds(5))
             guard !Task.isCancelled else { return }
             model.dismissResumeNotice()
@@ -61,6 +64,9 @@ struct MoviePlayerScreen: View {
             try? await Task.sleep(for: .seconds(3))
             guard !Task.isCancelled else { return }
             model.hideAfterIdle()
+        }
+        .onChange(of: voiceOver || switchControl, initial: true) { _, assisted in
+            model.keepsControlsVisible = assisted
         }
         // The screen stays on while the movie plays, and only then (§2).
         .onChange(of: model.isPlaying, initial: true) { _, playing in
@@ -184,7 +190,8 @@ struct MoviePlayerScreen: View {
             // clear of the panel's two rows.
             centerCluster.offset(y: -45)
             VStack(spacing: AppTheme.Spacing.sm) {
-                topBar
+                // VoiceOver: Close and the title before the cluster.
+                topBar.accessibilitySortPriority(2)
                 Spacer(minLength: 0)
                 if model.isChoosingRate {
                     rateChoices.transition(.opacity)
@@ -221,6 +228,9 @@ struct MoviePlayerScreen: View {
                     ) {
                         model.togglePictureInPicture()
                     }
+                    .accessibilityValue(model.isPictureInPictureActive
+                        ? String(localized: "On", comment: "Movie player: picture in picture is on")
+                        : String(localized: "Off", comment: "Movie player: picture in picture is off"))
                 }
             }
         }
@@ -253,12 +263,26 @@ struct MoviePlayerScreen: View {
         }
     }
 
-    /// `Audio and Subtitles: English AC3 5.1` (§5).
+    /// `Audio and Subtitles: English AC3 5.1, English and Vietnamese
+    /// subtitles` (§5, AC-37).
     private var tracksLabel: String {
         let name = String(localized: "Audio and Subtitles", comment: "Movie player: the button that opens the Audio & Subtitles panel")
-        let index = model.audioTracks.firstIndex { $0.id == model.selectedAudioTrackId }
-        guard let index, let audio = MovieTracksText.summary(model.audioTracks[index], position: index + 1) else { return name }
-        return "\(name): \(audio)"
+        var parts: [String] = []
+        if let index = model.audioTracks.firstIndex(where: { $0.id == model.selectedAudioTrackId }),
+           let audio = MovieTracksText.summary(model.audioTracks[index], position: index + 1) {
+            parts.append(audio)
+        }
+        let languages = [model.subtitleChoice.primaryId, model.subtitleChoice.secondaryId]
+            .compactMap { model.subtitle(id: $0) }
+            // Read in the interface's language: "Vietnamese", not "Tiếng Việt".
+            .map { subtitle in
+                MovieLanguage.code(subtitle.language).flatMap { Locale.current.localizedString(forLanguageCode: $0) }
+                    ?? MovieSubtitleLabel.language(subtitle)
+            }
+        parts.append(languages.isEmpty
+            ? String(localized: "subtitles off", comment: "Movie player: VoiceOver, no subtitle on")
+            : String(localized: "\(languages.formatted(.list(type: .and))) subtitles", comment: "Movie player: VoiceOver, e.g. English and Vietnamese subtitles"))
+        return "\(name): \(parts.joined(separator: ", "))"
     }
 
     private var playLabel: String {
@@ -294,13 +318,14 @@ struct MoviePlayerScreen: View {
             }
             .buttonStyle(.plain)
             .foregroundStyle(.white)
-            .accessibilityLabel(playLabel)
+            // The cluster's Play is the one VoiceOver reads.
+            .accessibilityHidden(true)
             .padding(.trailing, AppTheme.Spacing.xs)
 
             Text(MoviePlayerText.clock(model.displayMs, longest: model.durationMs))
                 .font(.footnote.monospacedDigit())
                 .foregroundStyle(.white)
-                .frame(width: 64, alignment: .leading)
+                .frame(minWidth: 64, alignment: .leading)
                 .accessibilityHidden(true)
 
             Slider(
@@ -330,7 +355,7 @@ struct MoviePlayerScreen: View {
             Text(MoviePlayerText.remaining(model.displayMs, of: model.durationMs))
                 .font(.footnote.monospacedDigit())
                 .foregroundStyle(.white.opacity(0.62))
-                .frame(width: 70, alignment: .trailing)
+                .frame(minWidth: 70, alignment: .trailing)
                 .padding(.trailing, 6)
                 .accessibilityHidden(true)
         }
@@ -402,8 +427,8 @@ struct MoviePlayerScreen: View {
             }
             .buttonStyle(.plain)
             .foregroundStyle(.white)
-            // Names what the picture is doing now; the button flips it.
-            .accessibilityLabel(model.fillsFrame
+            .accessibilityLabel(String(localized: "Picture Size", comment: "Movie player: Fit/Fill button"))
+            .accessibilityValue(model.fillsFrame
                 ? String(localized: "Fill", comment: "Movie player: picture fills the frame, edges cropped")
                 : String(localized: "Fit", comment: "Movie player: whole picture fits, black bars"))
 
@@ -453,6 +478,7 @@ struct MoviePlayerScreen: View {
                 Spacer(minLength: 0)
                 MovieTracksPanel(model: model)
                     .frame(width: 370)
+                    .accessibilityAddTraits(.isModal)
             }
             .padding(.top, AppTheme.Spacing.md)
             .padding(.bottom, insets.bottom)
@@ -462,6 +488,7 @@ struct MoviePlayerScreen: View {
                 Spacer(minLength: 0)
                 MovieTracksPanel(model: model)
                     .frame(maxWidth: 560)
+                    .accessibilityAddTraits(.isModal)
                     .frame(height: layout.stageSize.height / 2)
             }
             .padding(.bottom, insets.bottom)
