@@ -18,7 +18,7 @@ struct MovieAudioTrack: Equatable, Identifiable, Sendable {
 }
 
 /// The row text of the Audio panel: `Tiếng Việt` over
-/// `Commentary · AAC · Stereo`.
+/// `Commentary · AAC Stereo`.
 enum MovieAudioTrackLabel {
     /// The language in that language (`Tiếng Việt`, `日本語`), or
     /// `Track 3` when the file does not say.
@@ -34,25 +34,30 @@ enum MovieAudioTrackLabel {
            MovieLanguage.code(name) == nil || MovieLanguage.code(name) != MovieLanguage.code(track.language) {
             parts.append(name)
         }
-        if let codec = track.codec.map(codecName), !codec.isEmpty { parts.append(codec) }
-        if let channels = track.channels.map(channelName) { parts.append(channels) }
+        // `AC3 5.1` reads as one fact (board PH_MovieTracks); the name is
+        // a separate one.
+        let format = [track.codec.map(codecName), track.channels.map(channelName)]
+            .compactMap { $0 }
+            .filter { !$0.isEmpty }
+            .joined(separator: " ")
+        if !format.isEmpty { parts.append(format) }
         return parts.joined(separator: " · ")
     }
 
     static func codecName(_ codec: String) -> String {
         switch codec.lowercased().trimmingCharacters(in: .whitespaces) {
-        case "truehd", "mlp": "TrueHD"
+        case "truehd", "mlp", "trhd": "TrueHD"
         case "ac3", "a52", "ac-3": "AC3"
         case "eac3", "e-ac3", "ec-3", "ec3": "E-AC3"
         case "dts", "dca": "DTS"
         case "dts-hd", "dtshd", "dts-hd ma": "DTS-HD"
         case "aac", "mp4a": "AAC"
         case "opus": "Opus"
-        case "vorbis": "Vorbis"
+        case "vorbis", "vorb": "Vorbis"
         case "flac": "FLAC"
         case "mp3", "mpga", "mp2": "MP3"
         case "alac": "ALAC"
-        case let pcm where pcm.hasPrefix("pcm") || pcm == "lpcm" || pcm == "araw": "PCM"
+        case let pcm where pcm.hasPrefix("pcm") || ["lpcm", "araw", "s16l", "s16b", "s24l", "s24b", "s32l", "f32l", "f64l", "twos", "sowt"].contains(pcm): "PCM"
         case let other: other.uppercased()
         }
     }

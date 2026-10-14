@@ -46,4 +46,44 @@ import UIKit
         engine.close()
         engine.view.removeFromSuperview()
     }
+
+    /// AC-15: switching to the second audio track keeps the picture and the
+    /// clock going — from a file and through a source stream.
+    @Test(arguments: [false, true])
+    func switchesAudioWhilePlaying(streamed: Bool) async throws {
+        let url = Self.folder.appending(path: "two-audio.mkv")
+        let input: VLCMoviePlayer.Input
+        if streamed {
+            let data = try Data(contentsOf: url)
+            let nas = InMemoryRemoteFileClient()
+            nas.put("Movies/two-audio.mkv", data)
+            input = .stream(RemoteMovieStream(client: nas, path: "Movies/two-audio.mkv", size: Int64(data.count)), fileName: "two-audio.mkv")
+        } else {
+            input = .file(url)
+        }
+        let engine = VLCMoviePlayer(input: input)
+        engine.view.frame = CGRect(x: 0, y: 0, width: 160, height: 90)
+        UIApplication.shared.connectedScenes.compactMap { ($0 as? UIWindowScene)?.keyWindow }.first?.addSubview(engine.view)
+        defer {
+            engine.close()
+            engine.view.removeFromSuperview()
+        }
+        engine.play()
+        var deadline = Date().addingTimeInterval(8)
+        while Date() < deadline, engine.timeMs < 1_500 || engine.audioTracks.count < 2 {
+            try await Task.sleep(for: .milliseconds(100))
+        }
+        #expect(engine.audioTracks.count == 2)
+        let second = try #require(engine.audioTracks.last)
+        let before = engine.timeMs
+        engine.selectAudioTrack(id: second.id)
+        deadline = Date().addingTimeInterval(4)
+        while Date() < deadline, engine.timeMs < before + 2_000, engine.state != .ended {
+            try await Task.sleep(for: .milliseconds(100))
+        }
+        #expect(engine.state == .playing || engine.state == .buffering, "state \(engine.state)")
+        #expect(engine.timeMs >= before + 2_000, "clock \(before) → \(engine.timeMs)")
+        #expect(engine.selectedAudioTrackId == second.id)
+        #expect(engine.audioTracks.count == 2)
+    }
 }

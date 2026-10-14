@@ -275,10 +275,10 @@ struct MoviesScreen: View {
                 switch try await opener.open(movie) {
                 case .file(let url):
                     let engine = VLCMoviePlayer(input: .file(url))
-                    playing = PlayingMovie(model: MoviePlayerModel(movie: movie, player: engine, store: dependencies.movies), view: engine.view)
+                    playing = PlayingMovie(model: MoviePlayerModel(movie: movie, player: engine, store: dependencies.movies, audioLanguages: MovieLanguagesScreen.current(.audio)), view: engine.view)
                 case .stream(let stream, let fileName, let close):
                     let engine = VLCMoviePlayer(input: .stream(stream, fileName: fileName))
-                    let model = MoviePlayerModel(movie: movie, player: engine, store: dependencies.movies) { Task { await close() } }
+                    let model = MoviePlayerModel(movie: movie, player: engine, store: dependencies.movies, audioLanguages: MovieLanguagesScreen.current(.audio)) { Task { await close() } }
                     playing = PlayingMovie(model: model, view: engine.view)
                 }
             } catch {

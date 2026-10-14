@@ -52,6 +52,11 @@ enum SettingsKeys {
     static let autoplayVideos = "playback.autoplayVideos"
     /// Whether the viewer renders HDR photos at their full brightness.
     static let viewFullHDR = "display.viewFullHDR"
+    /// Movies (FS-23.02 §3b, 03 §2): language codes in order, comma
+    /// separated. Unwritten = the default (audio: Original; subtitles: the
+    /// device language + English); empty = none.
+    static let movieAudioLanguages = "playback.movieAudioLanguages"
+    static let movieSubtitleLanguages = "playback.movieSubtitleLanguages"
 
     /// How much metadata a photo takes with it when it leaves the app — a
     /// `MetadataLevel` raw value (FS-08.06 §4). The default for every way out:

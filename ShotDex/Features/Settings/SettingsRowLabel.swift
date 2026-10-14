@@ -61,6 +61,8 @@ enum SettingsRowLabel: String, CaseIterable, Identifiable, Hashable, Sendable {
     // Playback
     case autoplayVideos
     case viewFullHDR
+    case audioLanguages
+    case subtitleLanguages
 
     // People and Pets
     case scanned
@@ -129,6 +131,8 @@ enum SettingsRowLabel: String, CaseIterable, Identifiable, Hashable, Sendable {
         case .showInsights: "Show Insights"
         case .autoplayVideos: "Autoplay Videos"
         case .viewFullHDR: "View Full HDR"
+        case .audioLanguages: "Audio Languages"
+        case .subtitleLanguages: "Subtitle Languages"
         case .scanned: "Scanned"
         case .findPeopleAndPets: "Find People and Pets"
         case .scanAgain: "Scan Again"
@@ -169,7 +173,7 @@ enum SettingsRowLabel: String, CaseIterable, Identifiable, Hashable, Sendable {
             .display
         case .showInsights:
             .statistics
-        case .autoplayVideos, .viewFullHDR:
+        case .autoplayVideos, .viewFullHDR, .audioLanguages, .subtitleLanguages:
             .playback
         case .scanned, .findPeopleAndPets, .scanAgain, .clearScanResults:
             .subjectScan
@@ -220,6 +224,8 @@ enum SettingsRowLabel: String, CaseIterable, Identifiable, Hashable, Sendable {
         case .showInsights: "lightbulb"
         case .autoplayVideos: "play.circle"
         case .viewFullHDR: "sun.max"
+        case .audioLanguages: "speaker.wave.2"
+        case .subtitleLanguages: "captions.bubble"
         case .scanned: "person.2"
         case .findPeopleAndPets: "viewfinder"
         case .scanAgain: "arrow.clockwise"

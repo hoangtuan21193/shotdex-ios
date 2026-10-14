@@ -249,4 +249,98 @@ import Testing
         #expect(saved.positionMs == 0)
         #expect(saved.durationMs == 7_200_000)
     }
+
+    private func twoTracks() -> [MovieAudioTrack] {
+        [
+            MovieAudioTrack(id: "audio/0", language: "eng", name: nil, codec: "ac3", channels: 6, isDefault: true),
+            MovieAudioTrack(id: "audio/1", language: "vie", name: nil, codec: "aac", channels: 2, isDefault: false),
+        ]
+    }
+
+    /// AC-15: switching to Vietnamese neither stops the movie nor moves the
+    /// clock back; reopening keeps Vietnamese.
+    @Test func audioSwitchKeepsPlayingAndIsRemembered() throws {
+        let (store, movie) = try stored()
+        let engine = FakeMoviePlayer()
+        engine.audioTracks = twoTracks()
+        engine.selectedAudioTrackId = "audio/0"
+        let model = MoviePlayerModel(movie: movie, player: engine, store: store)
+        model.start()
+        engine.report { $0.timeMs = 300_000 }
+        model.openTracksPanel()
+        model.selectAudio(id: "audio/1")
+        #expect(engine.selectedAudioTrackId == "audio/1")
+        #expect(engine.state == .playing)
+        #expect(engine.seeks.isEmpty)
+        #expect(model.timeMs == 300_000)
+        #expect(model.isTracksPanelOpen)
+
+        let saved = try #require(try store.movies().first)
+        #expect(saved.audioTrackId == "audio/1")
+        let reopened = FakeMoviePlayer()
+        reopened.audioTracks = twoTracks()
+        reopened.selectedAudioTrackId = "audio/0"
+        MoviePlayerModel(movie: saved, player: reopened, store: store, audioLanguages: ["en"]).start()
+        #expect(reopened.selectedAudioTrackId == "audio/1")
+    }
+
+    /// AC-40: a first open plays the first Audio Language the movie has;
+    /// Original plays the file's default.
+    @Test func firstOpenFollowsAudioLanguages() throws {
+        let (store, movie) = try stored()
+        let engine = FakeMoviePlayer()
+        engine.audioTracks = twoTracks()
+        engine.selectedAudioTrackId = "audio/0"
+        MoviePlayerModel(movie: movie, player: engine, store: store, audioLanguages: ["vi", "en"]).start()
+        #expect(engine.selectedAudioTrackId == "audio/1")
+
+        let original = FakeMoviePlayer()
+        original.audioTracks = twoTracks()
+        original.selectedAudioTrackId = "audio/0"
+        MoviePlayerModel(movie: movie, player: original, store: store, audioLanguages: MovieLanguagePreferences.audio(nil)).start()
+        #expect(original.selectedAudioTrackId == "audio/0")
+    }
+
+    /// AC-41 (logic): Audio Sync moves in 0.05 s steps within ±5 s, reaches
+    /// the engine and comes back on reopening.
+    @Test func audioSyncPersists() throws {
+        let (store, movie) = try stored()
+        let engine = FakeMoviePlayer()
+        let model = MoviePlayerModel(movie: movie, player: engine, store: store)
+        model.start()
+        for _ in 0..<6 { model.nudgeAudioDelay(by: -1) }
+        #expect(model.audioDelayMs == -300)
+        #expect(engine.audioDelayMs == -300)
+        model.setAudioDelay(ms: 9_000)
+        #expect(model.audioDelayMs == 5_000)
+        model.setAudioDelay(ms: -300)
+
+        let saved = try #require(try store.movies().first)
+        let reopened = FakeMoviePlayer()
+        MoviePlayerModel(movie: saved, player: reopened, store: store).start()
+        #expect(reopened.audioDelayMs == -300)
+        #expect(MovieTracksText.delay(-300) == "\u{2212}0.30 s")
+        #expect(MovieTracksText.delay(0) == "0.00 s")
+    }
+
+    /// Settings defaults: audio Original, subtitles the device language
+    /// then English; an emptied list stays empty.
+    @Test func languagePreferenceDefaults() {
+        #expect(MovieLanguagePreferences.audio(nil).isEmpty)
+        #expect(MovieLanguagePreferences.subtitles(nil, deviceLanguage: "vi") == ["vi", "en"])
+        #expect(MovieLanguagePreferences.subtitles(nil, deviceLanguage: "en") == ["en"])
+        #expect(MovieLanguagePreferences.subtitles("", deviceLanguage: "vi").isEmpty)
+        #expect(MovieLanguagePreferences.audio("vie,eng,vi") == ["vi", "en"])
+        #expect(MovieLanguagePreferences.encode(["vi", "en"]) == "vi,en")
+    }
+
+    /// VLC hands codecs over as FourCCs packed first byte lowest.
+    @Test func fourCCBecomesAShortCodecName() {
+        #expect(VLCMoviePlayer.fourCC(0x6134_706d) == "mp4a")
+        #expect(VLCMoviePlayer.fourCC(0x2032_3561) == "a52")
+        #expect(VLCMoviePlayer.fourCC(0) == nil)
+        #expect(MovieAudioTrackLabel.codecName("a52") == "AC3")
+        #expect(MovieAudioTrackLabel.codecName("trhd") == "TrueHD")
+        #expect(MovieAudioTrackLabel.codecName("s16l") == "PCM")
+    }
 }

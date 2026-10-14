@@ -1,0 +1,55 @@
+{
+ "steps": [
+  {
+   "action": "launch"
+  },
+  {
+   "action": "wait",
+   "seconds": 5
+  },
+  {
+   "action": "tap",
+   "label": "Settings"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "scrollTo",
+   "label": "Playback"
+  },
+  {
+   "action": "tap",
+   "label": "Playback"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "screenshot",
+   "name": "01-playback"
+  },
+  {
+   "action": "tap",
+   "label": "Audio Languages"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "tap",
+   "label": "Add 한국어"
+  },
+  {
+   "action": "screenshot",
+   "name": "02-audio-languages"
+  },
+  {
+   "action": "dump",
+   "name": "02-audio-languages"
+  }
+ ]
+}

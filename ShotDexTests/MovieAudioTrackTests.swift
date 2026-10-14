@@ -18,11 +18,11 @@ import Testing
             [MovieAudioTrackLabel.title(track, position: index + 1), MovieAudioTrackLabel.detail(track)]
         }
         #expect(rows == [
-            ["English", "TrueHD · 7.1"],
-            ["English", "AC3 · 5.1"],
-            ["English", "Commentary · AAC · Stereo"],
-            ["Tiếng Việt", "AAC · Stereo"],
-            ["日本語", "AC3 · 5.1"],
+            ["English", "TrueHD 7.1"],
+            ["English", "AC3 5.1"],
+            ["English", "Commentary · AAC Stereo"],
+            ["Tiếng Việt", "AAC Stereo"],
+            ["日本語", "AC3 5.1"],
         ])
         #expect(tracks.filter(\.isDefault).map(\.id) == ["a1"])
     }
@@ -30,7 +30,7 @@ import Testing
     @Test func unknownLanguageUsesPosition() {
         let track = MovieAudioTrack(id: "x", language: "und", name: nil, codec: "flac", channels: 1, isDefault: false)
         #expect(MovieAudioTrackLabel.title(track, position: 3) == "Track 3")
-        #expect(MovieAudioTrackLabel.detail(track) == "FLAC · Mono")
+        #expect(MovieAudioTrackLabel.detail(track) == "FLAC Mono")
     }
 
     @Test func languageCodes() {

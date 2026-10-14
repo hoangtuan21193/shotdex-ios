@@ -1040,12 +1040,30 @@ struct SettingsScreen: View {
         Section {
             Toggle(isOn: $autoplayVideos) { rowLabel(.autoplayVideos) }.settingsRow(.autoplayVideos)
             Toggle(isOn: $viewFullHDR) { rowLabel(.viewFullHDR) }.settingsRow(.viewFullHDR)
+            NavigationLink {
+                MovieLanguagesScreen(kind: .audio)
+            } label: {
+                rowLabel(.audioLanguages, value: MovieLanguagePreferences.summary(
+                    MovieLanguagesScreen.current(.audio),
+                    fallback: String(localized: "Original", comment: "Settings → Audio Languages value: the file's default track")
+                ))
+            }
+            .settingsRow(.audioLanguages)
+            NavigationLink {
+                MovieLanguagesScreen(kind: .subtitles)
+            } label: {
+                rowLabel(.subtitleLanguages, value: MovieLanguagePreferences.summary(
+                    MovieLanguagesScreen.current(.subtitles),
+                    fallback: String(localized: "None", comment: "Settings → Subtitle Languages value: subtitles start off")
+                ))
+            }
+            .settingsRow(.subtitleLanguages)
         } header: {
             if showsHeader {
                 SettingsSectionHeader(SettingsSection.playback.title)
             }
         } footer: {
-            Text("When autoplay is off, a video waits for you to press play. Looping is a button on the player itself. Full HDR shows high-range photos at their real brightness, which makes everything around them look darker.")
+            Text("When autoplay is off, a video waits for you to press play. Looping is a button on the player itself. Full HDR shows high-range photos at their real brightness, which makes everything around them look darker. Audio and Subtitle Languages choose the tracks a movie starts with.")
         }
     }
 

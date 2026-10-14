@@ -29,7 +29,7 @@ struct MoviePlayerScreen: View {
                 isCompactWidth: horizontalSizeClass == .compact,
                 isLandscapePicture: model.isLandscapePicture
             )
-            stage(insets: layout.chromeInsets)
+            stage(layout: layout)
                 .ignoresSafeArea()
                 .frame(width: layout.stageSize.width, height: layout.stageSize.height)
                 .rotationEffect(.degrees(layout.isRotated ? 90 : 0))
@@ -38,6 +38,7 @@ struct MoviePlayerScreen: View {
         .background(Color.black.ignoresSafeArea())
         .animation(reduceMotion ? nil : .easeInOut(duration: 0.2), value: model.isChromeVisible)
         .animation(reduceMotion ? nil : .easeInOut(duration: 0.2), value: model.showsUnlock)
+        .animation(reduceMotion ? nil : .easeInOut(duration: 0.2), value: model.isTracksPanelOpen)
         .statusBarHidden()
         .persistentSystemOverlays(.hidden)
         .task {
@@ -71,8 +72,9 @@ struct MoviePlayerScreen: View {
         .accessibilityElement(children: .contain)
     }
 
-    private func stage(insets: EdgeInsets) -> some View {
-        ZStack {
+    private func stage(layout: MoviePlayerLayout) -> some View {
+        let insets = layout.chromeInsets
+        return ZStack {
             Color.black
             VideoSurface(view: videoView)
             touchLayer
@@ -97,6 +99,9 @@ struct MoviePlayerScreen: View {
                 }
                 if model.isLocked, model.showsUnlock {
                     unlockButton.padding(insets).transition(.opacity)
+                }
+                if model.isTracksPanelOpen {
+                    tracksPanel(layout: layout).transition(.opacity)
                 }
                 if let resumedAt = model.resumedAtMs, !model.isLocked {
                     resumeNotice(resumedAt)
@@ -134,7 +139,9 @@ struct MoviePlayerScreen: View {
 
     private func chrome(insets: EdgeInsets) -> some View {
         ZStack {
-            centerCluster
+            // Board PH_MoviePlayer: the cluster sits 45 pt above the middle,
+            // clear of the panel's two rows.
+            centerCluster.offset(y: -45)
             VStack(spacing: 0) {
                 topBar
                 Spacer(minLength: 0)
@@ -202,6 +209,14 @@ struct MoviePlayerScreen: View {
         }
     }
 
+    /// `Audio and Subtitles: English AC3 5.1` (§5).
+    private var tracksLabel: String {
+        let name = String(localized: "Audio and Subtitles", comment: "Movie player: the button that opens the Audio & Subtitles panel")
+        let index = model.audioTracks.firstIndex { $0.id == model.selectedAudioTrackId }
+        guard let index, let audio = MovieTracksText.summary(model.audioTracks[index], position: index + 1) else { return name }
+        return "\(name): \(audio)"
+    }
+
     private var playLabel: String {
         model.isPlaying
             ? String(localized: "Pause", comment: "Movie player: pause")
@@ -222,8 +237,9 @@ struct MoviePlayerScreen: View {
         .environment(\.colorScheme, .dark)
     }
 
+    /// Board PH_MoviePlayer: play 44 · elapsed 64 · scrubber · remaining 70.
     private var timelineRow: some View {
-        HStack(spacing: 4) {
+        HStack(spacing: 0) {
             Button {
                 model.togglePlay()
             } label: {
@@ -235,11 +251,12 @@ struct MoviePlayerScreen: View {
             .buttonStyle(.plain)
             .foregroundStyle(.white)
             .accessibilityLabel(playLabel)
+            .padding(.trailing, AppTheme.Spacing.xs)
 
             Text(MoviePlayerText.clock(model.displayMs, longest: model.durationMs))
                 .font(.footnote.monospacedDigit())
                 .foregroundStyle(.white)
-                .frame(minWidth: 52, alignment: .leading)
+                .frame(width: 64, alignment: .leading)
                 .accessibilityHidden(true)
 
             Slider(
@@ -264,19 +281,19 @@ struct MoviePlayerScreen: View {
                 @unknown default: break
                 }
             }
+            .padding(.trailing, 2)
 
             Text(MoviePlayerText.remaining(model.displayMs, of: model.durationMs))
                 .font(.footnote.monospacedDigit())
                 .foregroundStyle(.white.opacity(0.62))
-                .frame(minWidth: 62, alignment: .trailing)
+                .frame(width: 70, alignment: .trailing)
                 .padding(.trailing, 6)
                 .accessibilityHidden(true)
         }
         .frame(height: 44)
     }
 
-    /// Speed, Fit/Fill and the touch lock; Audio & Subtitles (task 21) goes
-    /// in after speed.
+    /// Speed, Audio & Subtitles, Fit/Fill and the touch lock.
     private var controlsRow: some View {
         HStack(spacing: 32) {
             Menu {
@@ -296,6 +313,18 @@ struct MoviePlayerScreen: View {
                     .contentShape(Rectangle())
             }
             .accessibilityLabel(String(localized: "Playback Speed \(MoviePlayerText.rate(model.rate))", comment: "Movie player: speed button, with the current speed"))
+
+            Button {
+                model.openTracksPanel()
+            } label: {
+                Image(systemName: "captions.bubble")
+                    .font(.system(size: 18, weight: .semibold))
+                    .frame(width: 44, height: 44)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .foregroundStyle(.white)
+            .accessibilityLabel(tracksLabel)
 
             Button {
                 model.setFill(!model.fillsFrame)
@@ -325,6 +354,32 @@ struct MoviePlayerScreen: View {
             .accessibilityLabel(String(localized: "Lock Controls", comment: "Movie player: touch lock"))
         }
         .frame(height: 44)
+    }
+
+    /// A column on the right of a wide stage (board `PH_MovieTracks`: 370 pt,
+    /// 12 from the top), the lower half of a tall one (§3b).
+    @ViewBuilder
+    private func tracksPanel(layout: MoviePlayerLayout) -> some View {
+        let insets = layout.chromeInsets
+        if layout.stageSize.width > layout.stageSize.height {
+            HStack {
+                Spacer(minLength: 0)
+                MovieTracksPanel(model: model)
+                    .frame(width: 370)
+            }
+            .padding(.top, AppTheme.Spacing.md)
+            .padding(.bottom, insets.bottom)
+            .padding(.trailing, insets.trailing)
+        } else {
+            VStack {
+                Spacer(minLength: 0)
+                MovieTracksPanel(model: model)
+                    .frame(maxWidth: 560)
+                    .frame(height: layout.stageSize.height / 2)
+            }
+            .padding(.bottom, insets.bottom)
+            .padding(.horizontal, insets.leading)
+        }
     }
 
     /// `Resumed at 47:12 · Start Over` (§2): one line, the second half is

@@ -83,8 +83,12 @@ final class VLCMoviePlayer: NSObject, MoviePlaying {
             MovieAudioTrack(
                 id: track.trackId,
                 language: track.language,
-                name: track.trackDescription ?? (track.trackName.isEmpty ? nil : track.trackName),
-                codec: track.codecName(),
+                // The file's own title; `trackName` is VLC's "Track 4 -
+                // [Vietnamese]", which the row says better by itself.
+                name: track.trackDescription,
+                // FourCC (`mp4a`, `a52 `) — `codecName()` is VLC's long
+                // "MPEG AAC Audio".
+                codec: Self.fourCC(track.codec),
                 channels: track.audio.map { Int($0.channelsNumber) },
                 isDefault: track.trackId == knownDefault
             )
@@ -106,6 +110,13 @@ final class VLCMoviePlayer: NSObject, MoviePlaying {
         } else {
             pictureInPicture?.startPictureInPicture()
         }
+    }
+
+    /// VLC packs a FourCC first byte lowest.
+    nonisolated static func fourCC(_ value: UInt32) -> String? {
+        guard value != 0 else { return nil }
+        let bytes = (0..<4).map { UInt8((value >> ($0 * 8)) & 0xFF) }
+        return String(bytes: bytes, encoding: .ascii)?.trimmingCharacters(in: .whitespaces)
     }
 
     var selectedAudioTrackId: String? {

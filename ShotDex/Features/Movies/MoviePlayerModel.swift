@@ -18,6 +18,10 @@ final class MoviePlayerModel {
     private(set) var durationMs: Int64 = 0
     private(set) var audioTracks: [MovieAudioTrack] = []
     private(set) var selectedAudioTrackId: String?
+    /// Audio Sync (§3b), −5000…+5000 ms; positive = sound later.
+    private(set) var audioDelayMs: Int
+    /// The Audio & Subtitles panel (§3b); the movie keeps playing under it.
+    private(set) var isTracksPanelOpen = false
     private(set) var rate: Double
     private(set) var videoSize: CGSize = .zero
     private(set) var fillsFrame = false
@@ -39,6 +43,8 @@ final class MoviePlayerModel {
     private var lastSavedMs: Int64 = 0
     private var hasMarkedWatched = false
     private var hasStoredDuration = false
+    private var hasChosenAudio = false
+    private let audioLanguages: [String]
     /// When the movie time last moved — buffering reports alone do not
     /// mean the picture stopped.
     private var lastProgress = Date()
@@ -47,11 +53,22 @@ final class MoviePlayerModel {
     private let onClose: () -> Void
     private let store: MovieStore?
 
-    init(movie: Movie, player: any MoviePlaying, store: MovieStore? = nil, onClose: @escaping () -> Void = {}) {
+    static let audioDelayLimitMs = 5_000
+    static let audioDelayStepMs = 50
+
+    init(
+        movie: Movie,
+        player: any MoviePlaying,
+        store: MovieStore? = nil,
+        audioLanguages: [String] = [],
+        onClose: @escaping () -> Void = {}
+    ) {
         self.movie = movie
         self.player = player
         self.store = store
+        self.audioLanguages = audioLanguages
         self.onClose = onClose
+        audioDelayMs = min(max(movie.audioDelayMs, -Self.audioDelayLimitMs), Self.audioDelayLimitMs)
         durationMs = movie.durationMs ?? 0
         rate = Self.rates.contains(movie.playbackRate) ? movie.playbackRate : 1
         pendingResumeMs = MoviePlaybackPosition.resumeMs(saved: movie.positionMs, durationMs: movie.durationMs ?? 0)
@@ -83,6 +100,7 @@ final class MoviePlayerModel {
     func start() {
         VideoAudioSession.activate()
         if rate != 1 { player.rate = rate }
+        if audioDelayMs != 0 { player.audioDelayMs = audioDelayMs }
         player.play()
     }
 
@@ -122,6 +140,10 @@ final class MoviePlayerModel {
     /// One tap on the picture: chrome on/off, or — locked — the unlock
     /// button and nothing else.
     func tapPicture() {
+        if isTracksPanelOpen {
+            closeTracksPanel()
+            return
+        }
         if isLocked {
             showsUnlock.toggle()
         } else {
@@ -208,6 +230,53 @@ final class MoviePlayerModel {
         player.pause()
     }
 
+    // MARK: Audio & Subtitles (§3b)
+
+    func openTracksPanel() {
+        isTracksPanelOpen = true
+        isChromeVisible = false
+    }
+
+    func closeTracksPanel() {
+        isTracksPanelOpen = false
+        touched()
+    }
+
+    /// Switches without stopping: the clock carries on (AC-15). The panel
+    /// stays open so the user can listen.
+    func selectAudio(id: String) {
+        guard id != selectedAudioTrackId else { return }
+        player.selectAudioTrack(id: id)
+        selectedAudioTrackId = id
+        saveAudio()
+    }
+
+    func setAudioDelay(ms: Int) {
+        let clamped = min(max(ms, -Self.audioDelayLimitMs), Self.audioDelayLimitMs)
+        audioDelayMs = clamped
+        player.audioDelayMs = clamped
+        saveAudio()
+    }
+
+    func nudgeAudioDelay(by steps: Int) {
+        setAudioDelay(ms: audioDelayMs + steps * Self.audioDelayStepMs)
+    }
+
+    private func saveAudio() {
+        try? store?.setAudio(id: movie.id, trackId: selectedAudioTrackId, delayMs: audioDelayMs)
+    }
+
+    /// First time the tracks are known: the one picked for this movie, else
+    /// the first Audio Language it has, else the file's default (§3b).
+    private func chooseAudioOnce() {
+        guard !hasChosenAudio, !audioTracks.isEmpty else { return }
+        hasChosenAudio = true
+        guard let choice = MovieTrackChoice.audioTrack(audioTracks, preferredLanguages: audioLanguages, remembered: movie.audioTrackId),
+              choice.id != selectedAudioTrackId else { return }
+        player.selectAudioTrack(id: choice.id)
+        selectedAudioTrackId = choice.id
+    }
+
     /// Speed, remembered per movie (§3).
     func setRate(_ newRate: Double) {
         touched()
@@ -245,6 +314,7 @@ final class MoviePlayerModel {
     // MARK: Position (§2)
 
     private func followPlayback() {
+        if state == .playing { chooseAudioOnce() }
         if state == .playing, let target = pendingResumeMs {
             pendingResumeMs = nil
             if MoviePlaybackPosition.resumeMs(saved: target, durationMs: durationMs) != nil {
