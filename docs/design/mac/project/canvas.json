@@ -507,7 +507,7 @@
    "radius": 16
   },
   "MAC_MoviesAdd.dc.html": {
-   "x": 16460,
+   "x": 17980,
    "y": 5410,
    "w": 1440,
    "h": 900,
@@ -515,7 +515,7 @@
    "radius": 16
   },
   "MAC_MoviePlayer.dc.html": {
-   "x": 17980,
+   "x": 19500,
    "y": 5410,
    "w": 1440,
    "h": 900,
@@ -523,7 +523,7 @@
    "radius": 16
   },
   "MAC_MovieTracks.dc.html": {
-   "x": 19500,
+   "x": 21020,
    "y": 5410,
    "w": 1440,
    "h": 900,
@@ -531,7 +531,7 @@
    "radius": 16
   },
   "MAC_MovieTranslate.dc.html": {
-   "x": 21020,
+   "x": 22540,
    "y": 5410,
    "w": 1440,
    "h": 900,
@@ -539,7 +539,7 @@
    "radius": 16
   },
   "MAC_MovieSubtitleAdd.dc.html": {
-   "x": 22540,
+   "x": 24060,
    "y": 5410,
    "w": 1440,
    "h": 900,
@@ -547,7 +547,7 @@
    "radius": 16
   },
   "MAC_PlexSignIn.dc.html": {
-   "x": 24060,
+   "x": 25580,
    "y": 5410,
    "w": 1440,
    "h": 900,
@@ -568,6 +568,14 @@
    "w": 720,
    "h": 640,
    "title": "Mac · Sheet nhà cung cấp Claude: tên, key (4 ký tự cuối), model, Test → Working · 0.8 s, Delete Provider… — FS-08.07 §3, đề xuất 14/10, code chưa có",
+   "radius": 16
+  },
+  "MAC_MovieDetail.dc.html": {
+   "h": 900,
+   "title": "Trang chi tiết phim (FS-23.08) — toolbar Back · tên phim · ⋯; hai cột — 15/10",
+   "w": 1440,
+   "x": 16460,
+   "y": 5410,
    "radius": 16
   }
  },

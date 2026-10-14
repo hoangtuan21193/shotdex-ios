@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Mac · Movie Detail</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0}
+button{font-family:inherit;padding:0;margin:0;cursor:default}
+input{font-family:inherit}
+</style>
+</helmet>
+<div style="width: 1440px; height: 900px; position: relative; overflow: hidden; border-radius: 16px; background: {{t.content}}; color: {{t.label}}; font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', system-ui, sans-serif; font-size: 13px">
+<div style="position:absolute;left:244px;right:0;top:0;bottom:28px;overflow:hidden">
+<div role="img" aria-label="Backdrop" style="position:absolute;left:0;top:0;width:1196px;height:400px;background:linear-gradient(160deg,#2B2440 0%,#7C4A5E 35%,#E28C5A 65%,#4A2A1A 100%)"></div>
+<div style="position:absolute;left:0;top:200px;width:1196px;height:202px;background:linear-gradient(180deg,rgba(0,0,0,0) 0%,{{t.content}} 100%)"></div>
+<div role="img" aria-label="Poster" style="position:absolute;left:32px;top:150px;width:160px;height:240px;border-radius:8px;background:linear-gradient(170deg,#2B2440 0%,#7C4A5E 40%,#E28C5A 70%,#4A2A1A 100%);box-shadow:0 8px 24px rgba(0,0,0,0.35)"></div>
+<div style="position:absolute;left:208px;right:744px;top:290px;font-size:22px;font-weight:700;line-height:26px">Dune: Part Two</div>
+<div class="ell tn" style="position:absolute;left:208px;right:744px;top:322px;font-size:12px;line-height:16px;color:{{t.label2}}">2024 · 2:46:00 · 4K</div>
+<div class="ell tn" style="position:absolute;left:208px;right:744px;top:340px;font-size:12px;line-height:16px;color:{{t.label2}}">Science Fiction, Adventure</div>
+<div class="ell tn" style="position:absolute;left:208px;right:744px;top:358px;font-size:12px;line-height:16px;color:{{t.label2}}">Mac Studio · 6.1 GB</div>
+<div style="display:{{resumeOn}}"><button aria-label="Resume from 47:12" style="position:absolute;left:32px;top:420px;width:420px;height:32px;border:0;border-radius:16px;background:{{t.accent}};color:{{t.onAccent}};font-size:13px;font-weight:600;display:flex;align-items:center;justify-content:center;gap:8px"><svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4.5v15l12.5-7.5z" fill="currentColor"></path></svg><span class="tn">Resume · 47:12</span></button><div style="position:absolute;left:32px;top:462px;width:324px;height:4px;border-radius:2px;background:{{t.track}}"></div><div style="position:absolute;left:32px;top:462px;width:90px;height:4px;border-radius:2px;background:{{t.accent}}"></div><div class="tn" style="position:absolute;left:364px;width:88px;top:456px;font-size:12px;line-height:16px;text-align:right;color:{{t.label2}}">1:58:48 left</div></div>
+<div style="display:{{freshOn}}"><button aria-label="Play" style="position:absolute;left:32px;top:420px;width:420px;height:32px;border:0;border-radius:16px;background:{{t.accent}};color:{{t.onAccent}};font-size:13px;font-weight:600;display:flex;align-items:center;justify-content:center;gap:8px"><svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4.5v15l12.5-7.5z" fill="currentColor"></path></svg><span>Play</span></button></div>
+<button aria-label="Play from Beginning" style="position:absolute;top:484px;height:28px;border:0;border-radius:14px;background:{{t.fill}};color:{{t.label}};font-size:13px;font-weight:600;align-items:center;justify-content:center;gap:6px;overflow:hidden;left:32px;width:204px;display:{{halfL}}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12a8 8 0 1 0 2.4-5.7"></path><path d="M4 4v4.5h4.5"></path></svg><span>From Beginning</span></button>
+<button aria-label="Download to Mac, 6.1 GB" style="position:absolute;top:484px;height:28px;border:0;border-radius:14px;background:{{t.fill}};color:{{t.label}};font-size:13px;font-weight:600;align-items:center;justify-content:center;gap:6px;overflow:hidden;left:{{dlLeft}};width:{{dlWidth}};display:{{dlIdle}}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11"></path><path d="M7 10.5l5 5 5-5"></path><path d="M5 20h14"></path></svg><span>Download</span></button>
+<button aria-label="Downloading 45%" style="position:absolute;top:484px;height:28px;border:0;border-radius:14px;background:{{t.fill}};color:{{t.label}};font-size:13px;font-weight:600;align-items:center;justify-content:center;gap:6px;overflow:hidden;left:{{dlLeft}};width:{{dlWidth}};display:{{dlRun}}"><span style="position:absolute;left:0;top:0;bottom:0;width:45%;background:{{t.track}}"></span><span class="tn" style="position:relative">Downloading 45%</span></button>
+<button aria-label="On Mac" style="position:absolute;top:484px;height:28px;border:0;border-radius:14px;background:{{t.fill}};color:{{t.label}};font-size:13px;font-weight:600;align-items:center;justify-content:center;gap:6px;overflow:hidden;left:{{dlLeft}};width:{{dlWidth}};display:{{dlDone}}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7"></path></svg><span>On Mac</span></button>
+<div style="position:absolute;left:500px;width:480px;top:420px;font-size:13px;line-height:18px;max-height:108px;overflow:hidden">Paul Atreides unites with Chani and the Fremen while on a path of revenge against the conspirators who destroyed his family. Facing a choice between the love of his life and the fate of the universe, he endeavors to prevent a terrible future only he can foresee.</div>
+<div style="position:absolute;left:500px;width:480px;top:548px;height:84px;border-radius:10px;background:{{t.fill2}}"></div>
+<button aria-label="Audio, English · TrueHD 7.1" style="position:absolute;left:500px;width:480px;top:548px;height:28px;padding:0 12px;box-sizing:border-box;border:0;background:transparent;display:flex;align-items:center;gap:8px;color:{{t.label}};font-size:13px;text-align:left"><span style="flex:none">Audio</span><span class="ell" style="flex:1;min-width:0;text-align:right;color:{{t.label2}}">English · TrueHD 7.1</span><span style="flex:none;color:{{t.label3}};display:flex"><svg width="8" height="13" viewBox="0 0 8 13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1.5 1.5l5 5-5 5"></path></svg></span></button>
+<div style="position:absolute;left:512px;width:468px;top:575.5px;height:0.5px;background:{{t.sep}}"></div>
+<button aria-label="Subtitles, Tiếng Việt + English" style="position:absolute;left:500px;width:480px;top:576px;height:28px;padding:0 12px;box-sizing:border-box;border:0;background:transparent;display:flex;align-items:center;gap:8px;color:{{t.label}};font-size:13px;text-align:left"><span style="flex:none">Subtitles</span><span class="ell" style="flex:1;min-width:0;text-align:right;color:{{t.label2}}">Tiếng Việt + English</span><span style="flex:none;color:{{t.label3}};display:flex"><svg width="8" height="13" viewBox="0 0 8 13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1.5 1.5l5 5-5 5"></path></svg></span></button>
+<div style="position:absolute;left:512px;width:468px;top:603.5px;height:0.5px;background:{{t.sep}}"></div>
+<button aria-label="Version, 4K · 54.3 GB" style="position:absolute;left:500px;width:480px;top:604px;height:28px;padding:0 12px;box-sizing:border-box;border:0;background:transparent;display:flex;align-items:center;gap:8px;color:{{t.label}};font-size:13px;text-align:left"><span style="flex:none">Version</span><span class="ell" style="flex:1;min-width:0;text-align:right;color:{{t.label2}}">4K · 54.3 GB</span><span style="flex:none;color:{{t.label3}};display:flex"><svg width="8" height="13" viewBox="0 0 8 13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1.5 1.5l5 5-5 5"></path></svg></span></button>
+</div><div style="position:absolute;left:256px;right:16px;top:8px;height:44px;display:flex;align-items:center;gap:12px"><div style="height:36px;border-radius:18px;background:{{t.glass}};border:1px solid {{t.glassStroke}};box-shadow:{{t.glassShadow}};backdrop-filter:blur(24px) saturate(1.6);-webkit-backdrop-filter:blur(24px) saturate(1.6);display:flex;align-items:center;padding:0 2px;box-sizing:border-box;flex:none;"><button aria-label="Back" title="Back (⌘[)" style="width:34px;height:30px;border:none;background:none;display:flex;align-items:center;justify-content:center;color:{{t.label}}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" style="flex:none;"><path d="M15 6l-6 6 6 6"></path></svg></button><button aria-label="Forward" title="Forward (⌘])" disabled style="width:34px;height:30px;border:none;background:none;display:flex;align-items:center;justify-content:center;color:{{t.label3}}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" style="flex:none;"><path d="M9 6l6 6-6 6"></path></svg></button></div><div style="display:flex;flex-direction:column;gap:1px;min-width:0"><div style="font-size:15px;font-weight:600;line-height:18px;white-space:nowrap;color:{{t.label}}">Dune: Part Two</div></div><div style="flex:1"></div><div style="height:36px;border-radius:18px;background:{{t.glass}};border:1px solid {{t.glassStroke}};box-shadow:{{t.glassShadow}};display:flex;align-items:center;padding:0 2px;box-sizing:border-box;flex:none"><button aria-label="More" style="width:34px;height:30px;border:none;background:none;display:flex;align-items:center;justify-content:center;color:{{t.label}}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h.01M12 12h.01M19 12h.01"></path></svg></button></div></div><!-- SIDEBAR: canonical (Library · Sources · Collections · Utilities), floating glass panel -->
+<nav aria-label="Sidebar" style="position:absolute;left:8px;top:8px;bottom:8px;width:228px;border-radius:18px;background:{{t.sidebar}};border:1px solid {{t.glassStroke}};box-shadow:{{t.sidebarShadow}};backdrop-filter:blur(30px) saturate(1.8);-webkit-backdrop-filter:blur(30px) saturate(1.8);box-sizing:border-box;overflow:hidden">
+<div style="position:absolute;left:14px;top:16px;display:flex;gap:8px">
+<div style="width:12px;height:12px;border-radius:6px;background:#FF5F57;box-shadow:inset 0 0 0 0.5px rgba(0,0,0,0.2)"></div>
+<div style="width:12px;height:12px;border-radius:6px;background:#FEBC2E;box-shadow:inset 0 0 0 0.5px rgba(0,0,0,0.2)"></div>
+<div style="width:12px;height:12px;border-radius:6px;background:#28C840;box-shadow:inset 0 0 0 0.5px rgba(0,0,0,0.2)"></div>
+</div>
+<button aria-label="Hide Sidebar" style="position:absolute;right:10px;top:9px;width:28px;height:28px;border-radius:8px;border:none;background:none;display:flex;align-items:center;justify-content:center;color:{{t.label2}}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16v14H4z M9 5v14"></path></svg></button>
+<div style="position:absolute;left:8px;right:8px;top:48px;bottom:60px;display:flex;flex-direction:column;gap:12px;overflow:hidden">
+<sc-for list="{{groups}}" as="g" hint-placeholder-count="4">
+<div style="display:flex;flex-direction:column;gap:0">
+<sc-if value="{{g.hasTitle}}" hint-placeholder-val="{{true}}"><div style="height:24px;display:flex;align-items:center;justify-content:space-between;padding:0 8px;font-size:11px;font-weight:600;color:{{t.label2}}"><span>{{g.title}}</span><sc-if value="{{g.addable}}" hint-placeholder-val="{{false}}"><button aria-label="{{g.addLabel}}" style="width:20px;height:20px;border:none;background:none;color:{{t.label2}};display:flex;align-items:center;justify-content:center"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14 M5 12h14"></path></svg></button></sc-if></div></sc-if>
+<sc-for list="{{g.rows}}" as="r" hint-placeholder-count="4">
+<div role="treeitem" aria-selected="{{r.selA}}" style="height:28px;border-radius:8px;background:{{r.bg}};display:flex;align-items:center;gap:8px;padding:0 8px">
+<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex:none;color:{{r.iconColor}}"><path d="{{r.d}}"></path></svg>
+<span style="flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:13px;color:{{r.textColor}}">{{r.name}}</span>
+<sc-if value="{{r.chev}}" hint-placeholder-val="{{false}}"><button aria-label="Show Albums" aria-expanded="false" style="width:16px;height:16px;border:none;background:none;color:{{t.label2}};display:flex;align-items:center;justify-content:center"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"></path></svg></button></sc-if>
+<sc-if value="{{r.offline}}" hint-placeholder-val="{{false}}"><span style="height:16px;padding:0 6px;border-radius:8px;background:{{t.fill}};font-size:10px;font-weight:600;line-height:16px;color:{{t.label2}}">Offline</span></sc-if>
+<sc-if value="{{r.progress}}" hint-placeholder-val="{{false}}"><svg role="img" aria-label="{{r.progLabel}}" width="14" height="14" viewBox="0 0 24 24" style="flex:none"><circle cx="12" cy="12" r="9" fill="none" stroke="{{t.track}}" stroke-width="3"></circle><circle cx="12" cy="12" r="9" fill="none" stroke="{{t.accent}}" stroke-width="3" stroke-dasharray="{{r.dash}}" stroke-linecap="round" transform="rotate(-90 12 12)"></circle></svg></sc-if>
+<sc-if value="{{r.access}}" hint-placeholder-val="{{false}}"><svg role="img" aria-label="Needs access" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="{{t.orange}}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="M12 4l9 16H3z M12 10v4 M12 17h.01"></path></svg></sc-if>
+<sc-if value="{{r.eject}}" hint-placeholder-val="{{false}}"><button aria-label="Eject {{r.name}}" style="width:18px;height:18px;border:none;background:none;color:{{t.label2}};display:flex;align-items:center;justify-content:center"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 6l6 7H6z M6 17h12"></path></svg></button></sc-if>
+<span style="font-size:11px;color:{{t.label2}};font-variant-numeric:tabular-nums">{{r.count}}</span>
+</div>
+</sc-for>
+</div>
+</sc-for>
+</div>
+<!-- Sidebar foot: idle status; progress only on boards about a running task -->
+<sc-if value="{{foot.idle}}" hint-placeholder-val="{{true}}"><div role="status" style="position:absolute;left:16px;right:16px;bottom:16px;height:28px;display:flex;align-items:center;gap:6px;font-size:11px;color:{{t.label2}}"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg><span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{foot.label}}</span></div></sc-if>
+<sc-if value="{{foot.busy}}" hint-placeholder-val="{{false}}"><div role="status" style="position:absolute;left:8px;right:8px;bottom:8px;height:44px;border-radius:10px;background:{{t.fill}};display:flex;flex-direction:column;justify-content:center;gap:6px;padding:0 10px;box-sizing:border-box">
+<div style="display:flex;justify-content:space-between;font-size:11px"><span style="color:{{t.label}};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{foot.label}}</span><span style="color:{{t.label2}};font-variant-numeric:tabular-nums">{{foot.pct}}</span></div>
+<div style="height:4px;border-radius:2px;background:{{t.track}}"><div style="width:{{foot.pct}};height:4px;border-radius:2px;background:{{t.accent}}"></div></div>
+</div></sc-if>
+</nav>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"dark": {"editor": "boolean", "default": false}, "fresh": {"editor": "boolean", "default": false}, "downloading": {"editor": "boolean", "default": false}, "onDevice": {"editor": "boolean", "default": false}, "$preview": {"width": 1440, "height": 900}}'>
+const LIGHT = { content:'#FFFFFF', label:'rgba(0,0,0,0.88)', label2:'rgba(0,0,0,0.56)', label3:'rgba(0,0,0,0.28)',
+  sep:'rgba(0,0,0,0.10)', fill:'rgba(0,0,0,0.05)', fill2:'#F2F2F4', pressed:'rgba(0,0,0,0.09)', track:'rgba(0,0,0,0.10)',
+  glass:'rgba(255,255,255,0.72)', glassStroke:'rgba(0,0,0,0.08)', glassShadow:'0 2px 10px rgba(0,0,0,0.10)',
+  sidebar:'rgba(244,244,247,0.86)', sidebarShadow:'0 8px 28px rgba(0,0,0,0.12)', rowSel:'rgba(0,0,0,0.08)',
+  accent:'#C6730E', onAccent:'#FFFFFF', red:'#FF3B30', green:'#34C759', orange:'#FF9500',
+  accentFill:'#A35E0A', onAccentFill:'#FFFFFF', accentText:'#A35E0A', accentSoft:'rgba(198,115,14,0.14)', focusRing:'rgba(198,115,14,0.45)',
+  menu:'rgba(246,246,248,0.97)', menuShadow:'0 10px 30px rgba(0,0,0,0.22)',
+  sheet:'#F6F6F8', sheetShadow:'0 24px 60px rgba(0,0,0,0.28)', scrim:'rgba(0,0,0,0.18)', rowAlt:'rgba(0,0,0,0.03)',
+  field:'#FFFFFF', redText:'#C4001A', greenText:'#1F7A35', orangeText:'#9A5200',
+  segOn:'#FFFFFF', segShadow:'0 1px 2px rgba(0,0,0,0.18)', checkboxStroke:'rgba(0,0,0,0.25)' };
+const DARK = { content:'#1C1C1E', label:'rgba(255,255,255,0.90)', label2:'rgba(255,255,255,0.58)', label3:'rgba(255,255,255,0.28)',
+  sep:'rgba(255,255,255,0.10)', fill:'rgba(255,255,255,0.07)', fill2:'#2C2C2E', pressed:'rgba(255,255,255,0.12)', track:'rgba(255,255,255,0.14)',
+  glass:'rgba(50,50,54,0.72)', glassStroke:'rgba(255,255,255,0.10)', glassShadow:'0 2px 12px rgba(0,0,0,0.45)',
+  sidebar:'rgba(38,38,42,0.86)', sidebarShadow:'0 8px 28px rgba(0,0,0,0.5)', rowSel:'rgba(255,255,255,0.10)',
+  accent:'#EB9526', onAccent:'#000000', red:'#FF453A', green:'#30D158', orange:'#FF9F0A',
+  accentFill:'#EB9526', onAccentFill:'#000000', accentText:'#EB9526', accentSoft:'rgba(235,149,38,0.18)', focusRing:'rgba(235,149,38,0.50)',
+  menu:'rgba(40,40,44,0.97)', menuShadow:'0 10px 30px rgba(0,0,0,0.22)',
+  sheet:'#2A2A2D', sheetShadow:'0 24px 60px rgba(0,0,0,0.60)', scrim:'rgba(0,0,0,0.35)', rowAlt:'rgba(255,255,255,0.04)',
+  field:'#1C1C1E', redText:'#FF6961', greenText:'#30D158', orangeText:'#FFB340',
+  segOn:'rgba(255,255,255,0.20)', segShadow:'0 1px 2px rgba(0,0,0,0.30)', checkboxStroke:'rgba(255,255,255,0.30)' };
+const LX = { badge:'rgba(0,0,0,0.58)', dim:'rgba(0,0,0,0.28)', trackBorder:'rgba(0,0,0,0.10)', raised:'#FFFFFF', sliderTrack:'rgba(0,0,0,0.10)', divider:'rgba(0,0,0,0.10)' };
+const DX = { badge:'rgba(0,0,0,0.58)', dim:'rgba(255,255,255,0.28)', trackBorder:'rgba(255,255,255,0.10)', raised:'rgba(255,255,255,0.20)', sliderTrack:'rgba(255,255,255,0.14)', divider:'rgba(255,255,255,0.10)' };
+Object.assign(LIGHT, LX); Object.assign(DARK, DX);
+const I = {
+  all:'M4 5h16v14H4z M4 15l4.5-4 3.5 3 2.5-2 5.5 4.5',
+  fav:'M12 20s-7.5-4.6-7.5-10A4.3 4.3 0 0 1 12 7.2 4.3 4.3 0 0 1 19.5 10C19.5 15.4 12 20 12 20z',
+  video:'M3 7h12v10H3z M15 10.5l6-3v9l-6-3',
+  raw:'M12 3a9 9 0 1 0 0.01 0z M9.5 3.4l2.5 8.6 M20.6 9.6L12 12 M14.5 20.6L12 12 M3.4 14.4L12 12',
+  recent:'M12 3a9 9 0 1 0 0.01 0z M12 7v5l3.5 2',
+  library:'M7 7h13v12H7z M4 16V4h13',
+  folder:'M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z',
+  drive:'M3 14h18v5H3z M3 14l3-9h12l3 9 M17 16.5h.01',
+  server:'M4 4h16v6H4z M4 14h16v6H4z M8 7h.01 M8 17h.01',
+  onthisday:'M4 6h16v14H4z M4 10h16 M8 3v5 M16 3v5 M9 15l2 2 4-4',
+  album:'M4 9h16v11H4z M6.5 6h11 M9 3h6',
+  smart:'M4 9h16v11H4z M6.5 6h11 M9 3h6 M12 12v5 M9.5 14.5h5',
+  stats:'M3 20h18 M6.5 16.5v-5 M11.5 16.5V6 M16.5 16.5v-8',
+  places:'M9 4L3 6v14l6-2 6 2 6-2V4l-6 2z M9 4v14 M15 6v14',
+  trips:'M12 21s-6-5.5-6-11a6 6 0 0 1 12 0c0 5.5-6 11-6 11z M12 8.5v.01',
+  dup:'M8 8h12v12H8z M4 16V4h12',
+  collage:'M4 4h16v16H4z M12 4v16 M12 12h8',
+  film:'M4 4h16v16H4z M8 4v16 M16 4v16 M4 9h4 M4 15h4 M16 9h4 M16 15h4',
+  movies:'M3 5h18v14H3z M10 9l5 3-5 3z',
+  onserver:'M7 18h10a4 4 0 0 0 .6-7.95A6 6 0 0 0 6.2 9.2 4.5 4.5 0 0 0 7 18z M12 16v-5 M9.5 13.5L12 11l2.5 2.5',
+  camera:'M4 8h3l2-3h6l2 3h3v11H4z M12 10.5a3.5 3.5 0 1 0 0.01 0z',
+  lens:'M12 3a9 9 0 1 0 0.01 0z M12 7.5a4.5 4.5 0 1 0 0.01 0z',
+  clock:'M12 3a9 9 0 1 0 0.01 0z M12 7v5l3.5 2',
+  search:'M10.5 4a6.5 6.5 0 1 0 0 13a6.5 6.5 0 1 0 0-13z M15.5 15.5L20.5 20.5',
+  sliders:'M4 7h10 M18 7h2 M4 17h4 M12 17h8 M14 5v4 M8 15v4',
+  photo:'M4 5h16v14H4z M4 15l4.5-4 3.5 3 2.5-2 5.5 4.5 M15.5 8.5h.01'
+};
+// Canonical sidebar (consistency §1). o.sel = selected row name; o.offline unplugs T7; o.newFolder adds Client Shoots 2026 indexing.
+function sidebar(t, o){
+  o=o||{};
+  const row=(name,d,count,x)=>{x=x||{};const s=(o.sel===name);const dim=!!(x.off||x.access);
+    return {name,d,count:(x.off||x.prog||x.access)?'':(count||''),eject:!!x.eject,chev:!!x.chev,selA:s?'true':'false',
+      bg:s?t.rowSel:'transparent', iconColor:dim?t.label2:t.accent, textColor:dim?t.label2:t.label,
+      offline:!!x.off, progress:!!x.prog, progLabel:x.progLabel||'', dash:x.dash||'0 100', access:!!x.access};};
+  const t7 = o.offline ? row('T7 RAW Archive',I.drive,'',{off:true}) : row('T7 RAW Archive',I.drive,'26,107',{eject:true});
+  const sources=[row('Photos Library',I.library,'23,904'),row('2026 Japan',I.folder,'4,118'),t7,row('NAS Home',I.server,'1,102')];
+  if(o.newFolder) sources.push(row('Client Shoots 2026',I.folder,'',{prog:true,dash:'18.7 100',progLabel:'Adding, 33 percent'}));
+  return [
+    {hasTitle:false, rows:[row('All Photos',I.all,o.allCount||'55,231'),row('Favorites',I.fav,'1,862'),row('Videos',I.video,'1,204'),row('RAW',I.raw,'31,540'),row('Recently Added',I.recent)]},
+    {hasTitle:true, title:'Sources', addable:true, addLabel:'Add Source', rows:sources},
+    {hasTitle:true, title:'Collections', addable:true, addLabel:'New Album', rows:[row('On This Day',I.onthisday),row('Albums',I.album,'38',{chev:true}),row('Night ISO 3200+',I.smart,'2,411'),row('85mm Portraits',I.smart,'986')]},
+    {hasTitle:true, title:'Utilities', addable:false, rows:[row('Statistics',I.stats),row('Places',I.places),row('Trips',I.trips,'12'),row('Duplicates',I.dup,'53'),row('Collages',I.collage,'12'),row('Video Projects',I.film,'7'),row('Movies',I.movies,'128'),row('On Server',I.onserver,'712')]}
+  ];
+}
+const IDLE_FOOT = {idle:true, busy:false, label:'Up to date · indexed 2 min ago', pct:'0%'};
+
+
+
+class Component extends DCLogic {
+  renderVals() {
+    const dark=!!this.props.dark; const t = dark ? DARK : LIGHT;
+    const groups=sidebar(t,{sel:'Movies'});
+    const ed = { edge: dark?'rgba(28,28,30,0.85)':'rgba(255,255,255,0.85)', edgeClear: dark?'rgba(28,28,30,0)':'rgba(255,255,255,0)' };
+    const P = this.props; const L = !!P.list;
+    const v = { gridOn: L ? 'none' : 'block', listOn: L ? 'block' : 'none', gridBg: L ? 'transparent' : t.pressed, listBg: L ? t.pressed : 'transparent',
+      dimSt: P.away ? '0.42' : '1', menuOn: P.menu ? 'block' : 'none', ringOn: P.menu ? 'block' : 'none', addOn: P.addMenu ? 'block' : 'none' };
+    const E = { resumeOn: this.props.fresh ? 'none' : 'block', freshOn: this.props.fresh ? 'block' : 'none', dlIdle: (this.props.downloading || this.props.onDevice) ? 'none' : 'flex', dlRun: this.props.downloading ? 'flex' : 'none', dlDone: this.props.onDevice ? 'flex' : 'none', halfL: this.props.fresh ? 'none' : 'flex', dlLeft: this.props.fresh ? '32px' : '248px', dlWidth: this.props.fresh ? '420px' : '204px' };
+    return Object.assign(E, { t, groups, foot:IDLE_FOOT }, ed, v);
+  }
+}
+</script>
+</body>
+</html>

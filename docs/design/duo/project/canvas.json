@@ -1533,42 +1533,42 @@
       "h": 669,
       "title": "Duo trong · Movies 2/5 · + › Add a Source…: sheet toàn cửa sổ, Folder (NAS Home, Office SFTP, Files) hoặc Plex Server — FS-23.01 §2, planboard 14/10",
       "w": 951,
-      "x": 62891,
+      "x": 63922,
       "y": 560
     },
     "DI_MoviePlayer.dc.html": {
       "h": 669,
       "title": "Duo trong · Movies 3/5: player 951×669, khung 16:9 951×535, transport FS-02.02 (kính 775) + một nút Audio & Subtitles · Fit · Khoá; hai phụ đề 27/23; tweak chrome — FS-23.02, planboard 14/10",
       "w": 951,
-      "x": 63922,
+      "x": 64953,
       "y": 560
     },
     "DI_MovieTranslate.dc.html": {
       "h": 669,
       "title": "Duo trong · Movies 5/5: Translate trong bảng phải, nút lùi về Audio and Subtitles; tweak running = 412/1,380 + Cancel — FS-23.04, planboard 14/10",
       "w": 951,
-      "x": 65984,
+      "x": 67015,
       "y": 560
     },
     "DI_MovieSubtitleAdd.dc.html": {
       "h": 669,
       "title": "Duo trong · Share file .srt → Add Subtitle to…: sheet toàn cửa sổ, phim trùng tên đánh dấu — FS-23.03 §5, đề xuất 14/10, code chưa có",
       "w": 951,
-      "x": 67015,
+      "x": 68046,
       "y": 560
     },
     "DI_SettingsAI.dc.html": {
       "h": 669,
       "title": "Duo trong · Settings › AI: mục thứ 10 trong sidebar (cuộn 1 hàng), pane Use For · On This Device · Providers — FS-08.07, đề xuất 14/10, code chưa có",
       "w": 951,
-      "x": 68046,
+      "x": 69077,
       "y": 560
     },
     "DI_SettingsAIProvider.dc.html": {
       "h": 669,
       "title": "Duo trong · Settings › AI › Claude: pane form Name · API Key · Model, Test → Working · 0.8 s, Delete Provider — FS-08.07 §3, đề xuất 14/10, code chưa có",
       "w": 951,
-      "x": 69077,
+      "x": 70108,
       "y": 560
     },
     "DC_Movies.dc.html": {
@@ -1582,36 +1582,50 @@
       "h": 466,
       "title": "Duo ngoài · Player xoay 90° trong UI (FS-02.02 §8), vẽ ngang 678×466: 16:9 678×381 lấp đúng cột 382, rail 84 thành dải dưới giữ kính transport (một nút Audio & Subtitles), tránh lỗ camera; tweak chrome — FS-23.02, planboard 14/10",
       "w": 678,
-      "x": 31122,
+      "x": 31668,
       "y": 1609
     },
     "DC_SettingsAI.dc.html": {
       "h": 678,
       "title": "Duo ngoài · Settings › AI trong 382pt: Use For, On This Device, Providers + Add Provider… — FS-08.07, đề xuất 14/10, code chưa có",
       "w": 466,
-      "x": 32638,
+      "x": 33184,
       "y": 1609
     },
     "DI_MovieTracks.dc.html": {
       "h": 669,
       "title": "Duo trong · Movies 4/5 · Audio & Subtitles một bảng 372 bên phải: Audio (5 track, Audio Sync) + Subtitles (Primary, Secondary, Position, 2 kiểu) vừa 632pt không cần cuộn; phụ đề dồn vào phần hình còn thấy; tweak secmenu = menu Secondary có Translate…/Import File… — FS-23.02 §3b, 03 §2, planboard 14/10",
       "w": 951,
-      "x": 64953,
+      "x": 65984,
       "y": 560
     },
     "DC_MovieTracks.dc.html": {
       "h": 466,
       "title": "Duo ngoài · Audio & Subtitles: sheet nửa cao 233 trong view xoay, Audio trái / Subtitles phải, mỗi cột cuộn (mờ dần ở đáy); tweak secmenu = menu Secondary mở lên trên hình — FS-23.02 §3b, 03 §2, planboard 14/10",
       "w": 678,
-      "x": 31880,
+      "x": 32426,
       "y": 1609
     },
     "DI_PlexSignIn.dc.html": {
       "h": 669,
       "title": "Duo trong · Sign In to Plex: mã K7Q2 ở plex.tv/link, Open plex.tv/link, cột giữa 481 — FS-23.07 §1, planboard 14/10",
       "w": 951,
-      "x": 70108,
+      "x": 71139,
       "y": 560
+    },
+    "DI_MovieDetail.dc.html": {
+      "h": 669,
+      "title": "Trang chi tiết phim màn trong (FS-23.08) — hai cột trong 866 pt trước thanh 84 — 15/10",
+      "w": 951,
+      "x": 62891,
+      "y": 560
+    },
+    "DC_MovieDetail.dc.html": {
+      "h": 678,
+      "title": "Trang chi tiết rút gọn màn ngoài (FS-23.08 §5) — Resume / From Beginning, Audio · Subtitles; không Download, ⋯ — 15/10",
+      "w": 466,
+      "x": 31122,
+      "y": 1609
     }
   },
   "createdOnFiles": {

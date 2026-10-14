@@ -12,7 +12,7 @@ Nguồn: [intent 2026-10-14-offline-movies](../../_intents/2026-10-14-offline-mo
 
 Board (vẽ 2026-10-14, sáng + tối): iPhone `PH_Movies` (1/5) · `PH_MoviesAdd` (2/5) · `PH_MoviePlayer` (3/5, ngang) ·
 `PH_MovieTracks` (4/5, Audio & Subtitles) · `PH_MovieTranslate` (5/5) · `PH_PlexSignIn` · `PH_MovieSubtitleAdd` (Share › chọn phim) · `PH_SettingsAI` ·
-`PH_SettingsAIProvider`; iPad `IP_…` cùng bộ; Duo trong `DI_…` cùng bộ, Duo ngoài `DC_Movies` · `DC_MoviePlayer` ·
+`PH_SettingsAIProvider` · `PH_MovieDetail` (15/10); iPad `IP_…` cùng bộ; Duo trong `DI_…` cùng bộ, Duo ngoài `DC_Movies` · `DC_MoviePlayer` ·
 `DC_MovieTracks` · `DC_SettingsAI`; Mac `MAC_…` cùng bộ (Settings là tab AI). Lối vào: ô/hàng **Movies** sau Video
 Projects trên `*_Collections` và sidebar iPad/Mac; hàng **AI** trên `*_Settings`.
 
@@ -25,8 +25,9 @@ Projects trên `*_Collections` và sidebar iPad/Mac; hàng **AI** trên `*_Setti
 | 03 | [Phụ đề](03-subtitles.md) | track có sẵn, nhập file, Share/AirDrop, hai phụ đề, vị trí, cỡ chữ, lệch giờ; không tìm trên mạng |
 | 04 | [Dịch phụ đề bằng AI](04-ai-translation.md) | chọn nhà cung cấp, chia đoạn, chạy dở, lưu bản dịch |
 | 05 | [Dữ liệu](05-data.md) | thư mục kho, bảng phim, bảng phụ đề, Keychain |
-| 06 | [Tiêu chí nghiệm thu](06-acceptance-criteria.md) | AC-1…AC-56 |
+| 06 | [Tiêu chí nghiệm thu](06-acceptance-criteria.md) | AC-1…AC-66 |
 | 07 | [Plex](07-plex.md) | đăng nhập bằng mã, stream bản gốc, tải kèm thông tin phim, đồng bộ chỗ xem |
+| 08 | [Trang chi tiết phim](08-movie-detail.md) | chạm phim mở trang kiểu Infuse: Resume / From Beginning, Download, Audio · Subtitles · Version |
 
 Mục AI trong Settings (dùng chung với AI Search) là FS riêng: [FS-08.07](../FS-08-settings/07-ai-providers.md).
 

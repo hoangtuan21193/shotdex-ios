@@ -63,6 +63,7 @@ Quyết định: [planboard movies-library](../../../.planboard/movies-library/D
 ## 5. Nút + và menu phim
 
 - **+**: `Add a Source…` (Folder on a Server or Files · Plex Server) · `Add Movie Files…`. Không còn gì khác.
+- **Chạm** phim mở trang chi tiết ([08](08-movie-detail.md)), không phát ngay (15/10).
 - Menu phim (giữ lâu, hoặc ⋯ trên poster khi rê chuột ở Mac/iPad): **Play** · **Download to iPhone** /
   **Remove Download** · **Mark as Watched/Unwatched** · **Audio & Subtitles…** · **Rename** · **Retry Download**
   (chỉ khi lỗi) · **Remove from Movies** (chỉ phim chép thẳng; xoá file khỏi máy, alert 2 nút).
