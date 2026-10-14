@@ -55,6 +55,33 @@ actor MoviePosterLoader {
         return image
     }
 
+    /// The movie page's wide background (FS-23.08 §2): Plex's `art`,
+    /// cached beside the poster, or kept with a downloaded movie. nil: the
+    /// page blurs the poster instead.
+    func backdrop(for movie: Movie, maxPixelSize: Int) async -> CGImage? {
+        let kept = MovieFileStore.standard.directory(for: movie.id).appending(path: "art.jpg")
+        if let image = Self.thumbnail(at: kept, maxPixelSize: maxPixelSize) { return image }
+        guard let path = movie.artPath else { return nil }
+        let file = artFile(for: movie.id)
+        let stamp = directory.appending(path: "\(movie.id)-art.id")
+        if (try? String(contentsOf: stamp, encoding: .utf8)) == path,
+           let image = Self.thumbnail(at: file, maxPixelSize: maxPixelSize) { return image }
+        guard !nothing.contains("art:" + path),
+              let sourceId = movie.sourceId, let source = try? movies.source(id: sourceId), source.kind == .plex,
+              let bytes = await fetchFromPlex(path, source: source) else {
+            nothing.insert("art:" + path)
+            return nil
+        }
+        try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        try? bytes.write(to: file, options: .atomic)
+        try? path.write(to: stamp, atomically: true, encoding: .utf8)
+        return Self.thumbnail(at: file, maxPixelSize: maxPixelSize)
+    }
+
+    func artFile(for movieId: String) -> URL {
+        directory.appending(path: "\(movieId)-art.jpg")
+    }
+
     /// A rescan found a new poster, or the user wants another try.
     func forget(_ movieId: String) {
         nothing = nothing.filter { !$0.hasPrefix(movieId + "-") }
@@ -85,7 +112,8 @@ actor MoviePosterLoader {
 
     private func fetch(_ movie: Movie) async -> Data? {
         if let sourceId = movie.sourceId, let source = try? movies.source(id: sourceId), source.kind == .plex {
-            return await fetchFromPlex(movie, source: source)
+            guard let path = movie.posterPath else { return nil }
+            return await fetchFromPlex(path, source: source)
         }
         guard let sourceId = movie.sourceId, let source = try? movies.source(id: sourceId),
               source.kind == .folder, let connectionId = source.connectionId,
@@ -109,8 +137,8 @@ actor MoviePosterLoader {
     }
 
     /// Plex's 480×720 poster (S3 §4), the token in a header.
-    private func fetchFromPlex(_ movie: Movie, source: MovieSource) async -> Data? {
-        guard let path = movie.posterPath, let base = source.plexAddress.flatMap(URL.init(string:)),
+    private func fetchFromPlex(_ path: String, source: MovieSource) async -> Data? {
+        guard let base = source.plexAddress.flatMap(URL.init(string:)),
               let token = movies.plexToken(for: source.id),
               let url = URL(string: path, relativeTo: base) else { return nil }
         var request = URLRequest(url: url)

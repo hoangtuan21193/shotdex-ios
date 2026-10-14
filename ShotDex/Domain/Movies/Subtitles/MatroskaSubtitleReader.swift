@@ -64,6 +64,9 @@ final class MatroskaSubtitleReader {
     private var scale: Int64 = 1_000_000
     private var seeks: [UInt32: Int64] = [:]
     private(set) var tracks: [MatroskaSubtitleTrack] = []
+    /// The audio tracks, in file order, `file:0`, `file:1`… — what the
+    /// movie page lists before anything plays (FS-23.08 §4).
+    private(set) var audioTracks: [MovieAudioTrack] = []
     private var compression: [UInt64: (algorithm: UInt64, settings: [UInt8])] = [:]
     private var codecPrivate: [UInt64: [UInt8]] = [:]
     private var events: [UInt64: [Event]] = [:]
@@ -143,6 +146,7 @@ final class MatroskaSubtitleReader {
         static let seek: UInt32 = 0x4DBB, seekID: UInt32 = 0x53AB, seekPosition: UInt32 = 0x53AC
         static let info: UInt32 = 0x1549_A966, timecodeScale: UInt32 = 0x2AD7B1
         static let tracks: UInt32 = 0x1654_AE6B, trackEntry: UInt32 = 0xAE, trackNumber: UInt32 = 0xD7, trackType: UInt32 = 0x83
+        static let audio: UInt32 = 0xE1, channels: UInt32 = 0x9F, flagDefault: UInt32 = 0x88
         static let codecID: UInt32 = 0x86, language: UInt32 = 0x22B59C, languageBCP47: UInt32 = 0x22B59D, name: UInt32 = 0x536E
         static let codecPrivate: UInt32 = 0x63A2, contentEncodings: UInt32 = 0x6D80, contentCompression: UInt32 = 0x5034
         static let compressionAlgorithm: UInt32 = 0x4254, compressionSettings: UInt32 = 0x4255
@@ -268,8 +272,13 @@ final class MatroskaSubtitleReader {
             var hasBCP47 = false
             var privateData: [UInt8]?
             var entryCompression: (algorithm: UInt64, settings: [UInt8])?
+            var channels: Int?
+            var isDefault = true
             for (childId, value) in Self.children(entry) {
                 switch childId {
+                case ID.audio:
+                    for (key, field) in Self.children(value) where key == ID.channels { channels = Int(Self.uint(field)) }
+                case ID.flagDefault: isDefault = Self.uint(value) != 0
                 case ID.trackNumber: number = Self.uint(value)
                 case ID.trackType: type = Self.uint(value)
                 case ID.codecID: track.codec = String(decoding: value, as: UTF8.self)
@@ -294,12 +303,31 @@ final class MatroskaSubtitleReader {
                 default: break
                 }
             }
+            if type == 0x02 {
+                audioTracks.append(MovieAudioTrack(
+                    id: MovieAudioTrack.fileId(audioTracks.count),
+                    language: track.language, name: track.name.isEmpty ? nil : track.name,
+                    codec: Self.audioCodec(track.codec), channels: channels, isDefault: isDefault
+                ))
+                continue
+            }
             guard type == 0x11 else { continue }
             track.number = number
             codecPrivate[number] = privateData
             compression[number] = entryCompression
             tracks.append(track)
         }
+    }
+
+    /// `A_TRUEHD` → `truehd`, the short names `MovieAudioTrackLabel` knows.
+    static func audioCodec(_ codecID: String) -> String? {
+        let id = codecID.uppercased()
+        let known: [(String, String)] = [
+            ("A_TRUEHD", "truehd"), ("A_EAC3", "eac3"), ("A_AC3", "ac3"), ("A_DTS", "dts"), ("A_AAC", "aac"),
+            ("A_OPUS", "opus"), ("A_FLAC", "flac"), ("A_VORBIS", "vorbis"), ("A_MPEG/L3", "mp3"), ("A_MPEG/L2", "mp2"),
+            ("A_ALAC", "alac"), ("A_PCM", "pcm"),
+        ]
+        return known.first { id.hasPrefix($0.0) }?.1 ?? (id.isEmpty ? nil : String(id.dropFirst(2)).lowercased())
     }
 
     // MARK: Cues

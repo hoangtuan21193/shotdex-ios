@@ -335,8 +335,11 @@ final class MoviePlayerModel {
         setAudioDelay(ms: audioDelayMs + steps * Self.audioDelayStepMs)
     }
 
+    /// Kept by its place in the file, so the movie page can show and set it
+    /// before anything plays (FS-23.08 §4).
     private func saveAudio() {
-        try? store?.setAudio(id: movie.id, trackId: selectedAudioTrackId, delayMs: audioDelayMs)
+        let index = audioTracks.firstIndex { $0.id == selectedAudioTrackId }
+        try? store?.setAudio(id: movie.id, trackId: index.map(MovieAudioTrack.fileId) ?? selectedAudioTrackId, delayMs: audioDelayMs)
     }
 
     /// First time the tracks are known: the one picked for this movie, else

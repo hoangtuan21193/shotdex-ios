@@ -21,6 +21,8 @@ struct MoviesScreen: View {
     @State private var removingCopied: Movie?
     @State private var importFailure: String?
     @State private var playing: PlayingMovie?
+    /// The movie page a tap opened (FS-23.08 §1).
+    @State private var detail: MovieDetailDestination?
     /// Subtitle files shared in, waiting for their movie (FS-23.03 §5).
     @State private var sharedSubtitles: [URL] = []
     @State private var subtitleFailure: String?
@@ -30,13 +32,6 @@ struct MoviesScreen: View {
     /// Rename. Told apart from a phone by the 84 pt rail in its trailing
     /// safe area, as the editor does.
     @State private var isDuoCover = false
-
-    /// A movie open in the player, with its engine.
-    struct PlayingMovie: Identifiable {
-        let model: MoviePlayerModel
-        let view: UIView
-        var id: String { model.movie.id }
-    }
 
     var body: some View {
         Group {
@@ -80,6 +75,10 @@ struct MoviesScreen: View {
         .sheet(isPresented: $isAddingSource, onDismiss: { model?.load() }) {
             AddMovieSourceSheet()
         }
+        .navigationDestination(item: $detail) { destination in
+            MovieDetailScreen(movieId: destination.movieId)
+        }
+        .onChange(of: detail) { _, shown in if shown == nil { model?.load() } }
         .fullScreenCover(item: $playing, onDismiss: { model?.load() }) { playing in
             MoviePlayerScreen(model: playing.model, videoView: playing.view)
         }
@@ -283,9 +282,11 @@ struct MoviesScreen: View {
     // MARK: Menus
 
     /// "The movie stays on NAS Home. This frees 6.1 GB."
-    private var removeDownloadMessage: String {
-        let freed = removingDownloads.reduce(Int64(0)) { $0 + max($1.byteCount, $1.downloadedBytes) }.formatted(.byteCount(style: .file))
-        let sources = Set(removingDownloads.compactMap(\.sourceName))
+    private var removeDownloadMessage: String { Self.removeDownloadMessage(removingDownloads) }
+
+    static func removeDownloadMessage(_ movies: [Movie]) -> String {
+        let freed = movies.reduce(Int64(0)) { $0 + max($1.byteCount, $1.downloadedBytes) }.formatted(.byteCount(style: .file))
+        let sources = Set(movies.compactMap(\.sourceName))
         if sources.count == 1, let name = sources.first {
             return String(localized: "The movie stays on \(name). This frees \(freed).", comment: "Remove Download alert message")
         }
@@ -343,78 +344,21 @@ struct MoviesScreen: View {
             if selection.contains(movie.id) { selection.remove(movie.id) } else { selection.insert(movie.id) }
             return
         }
-        if let model, model.isAway(movie) {
-            awayFrom = movie.sourceName ?? ""
-            return
-        }
-        play(movie)
+        // The page, not the player (FS-23.08 §1) — a movie out of reach
+        // too: its page still shows what it is.
+        detail = MovieDetailDestination(movieId: movie.id)
     }
 
     /// Play (FS-23.02 §1): from the file when the movie is on the device,
     /// else streamed from its source over the saved connection (AC-3).
-    private func play(_ movie: Movie) {
-        let opener = MoviePlaybackOpener(store: dependencies.movies, servers: dependencies.fileServers, files: dependencies.movieDownloads.files)
+    private func play(_ movie: Movie, fromStart: Bool = false) {
         Task {
             do {
-                switch try await opener.open(movie) {
-                case .file(let url):
-                    let engine = VLCMoviePlayer(input: .file(url))
-                    let loader = MovieSubtitleLoader(files: dependencies.movieDownloads.files)
-                    let embedded = embeddedSubtitles(movie, isLocal: true, url: url) { try FileByteSource(url: url) }
-                    playing = PlayingMovie(model: playerModel(movie, engine: engine, loader: loader, embedded: embedded), view: engine.view)
-                case .stream(let stream, let fileName, let close):
-                    let engine = VLCMoviePlayer(input: .stream(stream, fileName: fileName))
-                    let loader = MovieSubtitleLoader(files: dependencies.movieDownloads.files) { try await stream.fetchFile($0) }
-                    let embedded = embeddedSubtitles(movie, isLocal: false, url: nil) { stream }
-                    let model = playerModel(movie, engine: engine, loader: loader, embedded: embedded) { Task { await close() } }
-                    playing = PlayingMovie(model: model, view: engine.view)
-                }
+                playing = try await MoviePlayback(dependencies: dependencies).open(movie, fromStart: fromStart)
             } catch {
                 awayFrom = movie.sourceName ?? ""
             }
         }
-    }
-
-    /// Subtitles inside the file (FS-23.03 §3): read off the device, or by
-    /// Cues over the stream.
-    private func embeddedSubtitles(
-        _ movie: Movie, isLocal: Bool, url: URL?, source: @escaping @Sendable () throws -> any MovieByteSource
-    ) -> EmbeddedSubtitles {
-        let extractor = EmbeddedSubtitleExtractor(store: dependencies.movies, files: dependencies.movieDownloads.files)
-        return { listed in
-            guard let bytes = try? source() else { return [] }
-            return await extractor.extract(movie: movie, source: bytes, isLocal: isLocal, localURL: url, listed: listed)
-        }
-    }
-
-    private func playerModel(
-        _ movie: Movie, engine: VLCMoviePlayer, loader: MovieSubtitleLoader,
-        embedded: EmbeddedSubtitles? = nil, onClose: @escaping () -> Void = {}
-    ) -> MoviePlayerModel {
-        MoviePlayerModel(
-            movie: movie,
-            player: engine,
-            store: dependencies.movies,
-            audioLanguages: MovieLanguagesScreen.current(.audio),
-            subtitleLanguages: MovieLanguagesScreen.current(.subtitles),
-            subtitleLoader: loader,
-            defaultSubtitleStyle: MovieSubtitleStyle.decode(UserDefaults.standard.string(forKey: SettingsKeys.movieSubtitleStyle) ?? "{}"),
-            rememberStyle: { UserDefaults.standard.set($0.json, forKey: SettingsKeys.movieSubtitleStyle) },
-            sourceIsFiles: sourceIsFiles(movie),
-            embeddedSubtitles: embedded,
-            subtitleImporter: { [store = dependencies.movies, files = dependencies.movieDownloads.files] urls in
-                try SubtitleImporter(store: store, files: files).importFiles(urls, into: movie.id, origin: .imported)
-            },
-            translations: dependencies.movieTranslations,
-            translationService: TranslationService(providers: dependencies.aiProviders),
-            onClose: onClose
-        )
-    }
-
-    private func sourceIsFiles(_ movie: Movie) -> Bool {
-        guard let sourceId = movie.sourceId, let source = try? dependencies.movies.source(id: sourceId),
-              let connectionId = source.connectionId else { return false }
-        return (try? dependencies.fileServers.fetch(id: connectionId))??.transferProtocol == .files
     }
 
     private func selected(_ model: MoviesModel) -> [Movie] {
@@ -499,6 +443,12 @@ struct MoviesScreen: View {
     /// FS-23.01 §5. Play, Download, Audio & Subtitles join with their tasks.
     @ViewBuilder
     private func movieMenu(_ movie: Movie, model: MoviesModel) -> some View {
+        // D4: the quick menu keeps everything, with Play first.
+        Button {
+            if model.isAway(movie) { awayFrom = movie.sourceName ?? "" } else { play(movie) }
+        } label: {
+            Label(String(localized: "Play", comment: "Movie menu: play the movie"), systemImage: "play.fill")
+        }
         // What the movie is, from its source — still there offline (AC-49).
         if movie.genres != nil || movie.summary != nil {
             Section {

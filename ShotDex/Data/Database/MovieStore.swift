@@ -150,7 +150,7 @@ struct MovieStore: Sendable {
                         title: file.title, year: file.year, season: file.season, episode: file.episode,
                         originalFileName: file.originalFileName, byteCount: file.byteCount,
                         durationMs: file.durationMs, summary: file.summary, genres: file.genres,
-                        posterPath: file.posterPath, state: .stream, addedAt: now
+                        posterPath: file.posterPath, artPath: file.artPath, state: .stream, addedAt: now
                     )
                     try movie.insert(db)
                     try Self.syncSidecars(movieId: movie.id, file.subtitles, now: now, db: db)
@@ -181,12 +181,14 @@ struct MovieStore: Sendable {
         row.summary = file.summary ?? row.summary
         row.genres = file.genres ?? row.genres
         row.posterPath = file.posterPath
+        row.artPath = file.artPath ?? row.artPath
         row.sourceName = source.name
         row.plexMachineId = source.plexMachineId ?? row.plexMachineId
         row.removedFromSourceAt = nil
         if !row.holdsLocalFile {
             row.originalFileName = file.originalFileName
-            row.byteCount = file.byteCount
+            // A Plex version the user chose keeps its own size (FS-23.08 §4).
+            if row.plexPartKey == nil { row.byteCount = file.byteCount }
         }
         guard row != movie else { return false }
         try row.update(db)

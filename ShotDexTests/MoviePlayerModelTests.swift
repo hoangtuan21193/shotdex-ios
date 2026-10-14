@@ -278,7 +278,8 @@ import Testing
         #expect(model.isTracksPanelOpen)
 
         let saved = try #require(try store.movies().first)
-        #expect(saved.audioTrackId == "audio/1")
+        // By its place in the file: the movie page reads the same (FS-23.08 §4).
+        #expect(saved.audioTrackId == "file:1")
         let reopened = FakeMoviePlayer()
         reopened.audioTracks = twoTracks()
         reopened.selectedAudioTrackId = "audio/0"

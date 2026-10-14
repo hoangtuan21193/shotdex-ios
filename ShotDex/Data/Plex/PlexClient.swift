@@ -165,6 +165,8 @@ struct PlexClient: Sendable {
         var genres: [String]
         var durationMs: Int64?
         var thumb: String?
+        /// The wide background picture (FS-23.08 §2).
+        var art: String? = nil
         var viewOffsetMs: Int64?
         var viewCount: Int
         var lastViewedAt: Int?
@@ -180,6 +182,8 @@ struct PlexClient: Sendable {
         var container: String?
         var partKey: String
         var file: String
+        /// Its audio streams in file order, `file:0`… (FS-23.08 §4).
+        var audioTracks: [MovieAudioTrack] = []
 
         /// `4K · 54.3 GB`, `1080p · 8.1 GB`.
         var label: String {
@@ -234,10 +238,21 @@ struct PlexClient: Sendable {
         let media = json["Media"] as? [[String: Any]] ?? []
         let versions = media.compactMap { medium -> Version? in
             guard let part = (medium["Part"] as? [[String: Any]])?.first, let key = part["key"] as? String else { return nil }
+            let audio = (part["Stream"] as? [[String: Any]] ?? []).filter { ($0["streamType"] as? Int) == 2 }
             return Version(
                 height: medium["height"] as? Int, resolution: (medium["videoResolution"] as? String),
                 size: (part["size"] as? NSNumber)?.int64Value ?? 0, container: part["container"] as? String,
-                partKey: key, file: part["file"] as? String ?? ""
+                partKey: key, file: part["file"] as? String ?? "",
+                audioTracks: audio.enumerated().map { index, stream in
+                    MovieAudioTrack(
+                        id: MovieAudioTrack.fileId(index),
+                        language: stream["languageCode"] as? String,
+                        name: stream["title"] as? String,
+                        codec: stream["codec"] as? String,
+                        channels: stream["channels"] as? Int,
+                        isDefault: stream["default"] as? Bool ?? (index == 0)
+                    )
+                }
             )
         }
         .sorted { ($0.height ?? 0, $0.size) > ($1.height ?? 0, $1.size) }
@@ -255,6 +270,7 @@ struct PlexClient: Sendable {
             genres: (json["Genre"] as? [[String: Any]] ?? []).compactMap { $0["tag"] as? String },
             durationMs: (json["duration"] as? NSNumber)?.int64Value,
             thumb: json["thumb"] as? String,
+            art: json["art"] as? String,
             viewOffsetMs: (json["viewOffset"] as? NSNumber)?.int64Value,
             viewCount: json["viewCount"] as? Int ?? 0,
             lastViewedAt: json["lastViewedAt"] as? Int,
@@ -272,6 +288,17 @@ struct PlexClient: Sendable {
             URLQueryItem(name: "url", value: thumb),
         ]
         return components.string ?? thumb
+    }
+
+    /// The movie page's background: 1280×720 from the transcoder.
+    static func artPath(_ art: String) -> String {
+        var components = URLComponents()
+        components.path = "/photo/:/transcode"
+        components.queryItems = [
+            URLQueryItem(name: "width", value: "1280"), URLQueryItem(name: "height", value: "720"),
+            URLQueryItem(name: "url", value: art),
+        ]
+        return components.string ?? art
     }
 
     // MARK: Watch position (§4)

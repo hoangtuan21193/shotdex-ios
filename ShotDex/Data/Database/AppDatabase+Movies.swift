@@ -159,5 +159,12 @@ extension AppDatabase {
                 t.add(column: "needsSignIn", .boolean).notNull().defaults(to: false)
             }
         }
+
+        /// FS-23.08 §2: the movie page's wide background (Plex `art`).
+        migrator.registerMigration("v38-movies-art") { db in
+            try db.alter(table: "movies") { t in
+                t.add(column: "artPath", .text)
+            }
+        }
     }
 }

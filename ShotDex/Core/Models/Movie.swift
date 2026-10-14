@@ -118,6 +118,8 @@ struct Movie: Codable, Identifiable, Hashable, Sendable {
     /// Folder: the poster image next to the movie (path on the
     /// connection); Plex: the thumb path. nil = the resolver's later steps.
     var posterPath: String?
+    /// Plex: the wide background picture for the movie page (FS-23.08 §2).
+    var artPath: String?
     var state: State
     var downloadedBytes: Int64
     /// Why the last download stopped, as the row shows it.
@@ -158,6 +160,7 @@ struct Movie: Codable, Identifiable, Hashable, Sendable {
         summary: String? = nil,
         genres: String? = nil,
         posterPath: String? = nil,
+        artPath: String? = nil,
         state: State,
         downloadedBytes: Int64 = 0,
         downloadError: String? = nil,
@@ -191,6 +194,7 @@ struct Movie: Codable, Identifiable, Hashable, Sendable {
         self.summary = summary
         self.genres = genres
         self.posterPath = posterPath
+        self.artPath = artPath
         self.state = state
         self.downloadedBytes = downloadedBytes
         self.downloadError = downloadError
@@ -389,6 +393,7 @@ struct ScannedMovie: Hashable, Sendable {
     var summary: String?
     var genres: String?
     var posterPath: String?
+    var artPath: String?
     /// Subtitle files next to the movie (`Dune.en.srt`).
     var subtitles: [ScannedSubtitle]
 
@@ -405,6 +410,7 @@ struct ScannedMovie: Hashable, Sendable {
         summary: String? = nil,
         genres: String? = nil,
         posterPath: String? = nil,
+        artPath: String? = nil,
         subtitles: [ScannedSubtitle] = []
     ) {
         self.remotePath = remotePath
@@ -419,6 +425,7 @@ struct ScannedMovie: Hashable, Sendable {
         self.summary = summary
         self.genres = genres
         self.posterPath = posterPath
+        self.artPath = artPath
         self.subtitles = subtitles
     }
 

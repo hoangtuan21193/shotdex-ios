@@ -78,7 +78,8 @@ struct PlexLibrarySync: Sendable {
                 ? "\(item.title).\(best.container ?? "mkv")" : (best.file as NSString).lastPathComponent,
             byteCount: best.size, durationMs: item.durationMs, summary: item.summary,
             genres: item.genres.isEmpty ? nil : item.genres.joined(separator: ", "),
-            posterPath: item.thumb.map(PlexClient.posterPath)
+            posterPath: item.thumb.map(PlexClient.posterPath),
+            artPath: item.art.map(PlexClient.artPath)
         )
     }
 

@@ -15,6 +15,16 @@ struct MovieAudioTrack: Equatable, Identifiable, Sendable {
     var isDefault: Bool
     /// The device has no decoder for it (rare): shown dimmed.
     var isSupported = true
+
+    /// A track named by its place among the file's audio tracks — how a
+    /// choice made before playing is kept (FS-23.08 §4); the engine's own
+    /// ids are only known once the file is open.
+    static func fileId(_ index: Int) -> String { "file:\(index)" }
+
+    static func fileIndex(_ id: String?) -> Int? {
+        guard let id, id.hasPrefix("file:") else { return nil }
+        return Int(id.dropFirst(5))
+    }
 }
 
 /// The row text of the Audio panel: `Tiếng Việt` over
@@ -85,6 +95,7 @@ enum MovieTrackChoice {
     /// else the first.
     static func audioTrack(_ tracks: [MovieAudioTrack], preferredLanguages: [String], remembered: String?) -> MovieAudioTrack? {
         if let remembered, let track = tracks.first(where: { $0.id == remembered }) { return track }
+        if let index = MovieAudioTrack.fileIndex(remembered), tracks.indices.contains(index) { return tracks[index] }
         let playable = tracks.filter(\.isSupported)
         let pool = playable.isEmpty ? tracks : playable
         for preference in preferredLanguages {

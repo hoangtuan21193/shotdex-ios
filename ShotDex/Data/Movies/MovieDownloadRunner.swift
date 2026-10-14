@@ -131,6 +131,7 @@ final class MovieDownloadRunner {
             try? FileManager.default.removeItem(at: files.directory(for: movie.id).appending(path: name))
         }
         try? FileManager.default.removeItem(at: files.directory(for: movie.id).appending(path: "poster.jpg"))
+        try? FileManager.default.removeItem(at: files.directory(for: movie.id).appending(path: "art.jpg"))
         liveBytes[movie.id] = nil
         revision += 1
     }
@@ -380,9 +381,13 @@ final class MovieDownloadRunner {
     /// The poster seen in the grid stays with the movie offline.
     private func keepPoster(_ movieId: String) async {
         guard let art else { return }
-        let cached = await art.cachedFile(for: movieId)
-        guard let data = try? Data(contentsOf: cached) else { return }
-        _ = try? files.write(data, named: "poster.jpg", for: movieId)
+        if let data = try? Data(contentsOf: await art.cachedFile(for: movieId)) {
+            _ = try? files.write(data, named: "poster.jpg", for: movieId)
+        }
+        // The movie page's background too (FS-23.08 §2).
+        if let data = try? Data(contentsOf: await art.artFile(for: movieId)) {
+            _ = try? files.write(data, named: "art.jpg", for: movieId)
+        }
     }
 }
 

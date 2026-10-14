@@ -48,4 +48,11 @@ protocol MoviePlaying: AnyObject {
     func showEmbeddedSubtitle(at index: Int?)
     /// Stops and lets go of the file or stream.
     func close()
+    /// The audio tracks are what the file has. false only for the movie
+    /// page's stand-in before it has read them (FS-23.08 §4).
+    var knowsTracks: Bool { get }
+}
+
+extension MoviePlaying {
+    var knowsTracks: Bool { true }
 }
