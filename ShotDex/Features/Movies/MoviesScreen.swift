@@ -1,4 +1,5 @@
 import SwiftUI
+import UniformTypeIdentifiers
 
 /// The Movies library (FS-23.01 §4, board `PH_Movies`): one library over
 /// every source — NAS folders, Plex, files copied in.
@@ -16,6 +17,9 @@ struct MoviesScreen: View {
     @State private var selection: Set<String> = []
     /// The source a dimmed movie needs (FS-23.01 §3).
     @State private var awayFrom: String?
+    @State private var isImporting = false
+    @State private var removingCopied: Movie?
+    @State private var importFailure: String?
 
     var body: some View {
         Group {
@@ -53,6 +57,36 @@ struct MoviesScreen: View {
         .onChange(of: dependencies.movieDownloads.revision) { model?.load() }
         .sheet(isPresented: $isAddingSource, onDismiss: { model?.load() }) {
             AddMovieSourceSheet()
+        }
+        .fileImporter(isPresented: $isImporting, allowedContentTypes: Self.importTypes, allowsMultipleSelection: true) { result in
+            guard case .success(let urls) = result else { return }
+            do {
+                _ = try MovieImporter(store: dependencies.movies, files: dependencies.movieDownloads.files).importFiles(urls)
+            } catch {
+                importFailure = error.localizedDescription
+            }
+            model?.load()
+        }
+        .alert(
+            String(localized: "Couldn't Add the Movie", comment: "Add Movie Files failed"),
+            isPresented: Binding(get: { importFailure != nil }, set: { if !$0 { importFailure = nil } }),
+            presenting: importFailure
+        ) { _ in
+            Button("OK", role: .cancel) {}
+        } message: { Text($0) }
+        .alert(
+            String(localized: "Remove from Movies?", comment: "Remove a copied-in movie: alert title"),
+            isPresented: Binding(get: { removingCopied != nil }, set: { if !$0 { removingCopied = nil } }),
+            presenting: removingCopied
+        ) { movie in
+            Button(String(localized: "Remove", comment: "Remove from Movies: confirm"), role: .destructive) {
+                dependencies.movieDownloads.files.removeAll(for: movie.id)
+                try? dependencies.movies.delete(id: movie.id)
+                model?.load()
+            }
+            Button(String(localized: "Cancel", comment: "Remove from Movies: keep it"), role: .cancel) {}
+        } message: { movie in
+            Text(String(localized: "\(movie.displayTitle) will be deleted from this device. This frees \(movie.byteCount.formatted(.byteCount(style: .file))).", comment: "Remove from Movies alert message"))
         }
         .alert(
             String(localized: "Not available offline.", comment: "Tapped a movie whose source is out of reach"),
@@ -191,6 +225,10 @@ struct MoviesScreen: View {
         return String(localized: "The movies stay on their sources. This frees \(freed).", comment: "Remove Download alert message, several sources")
     }
 
+    /// Movie files (and subtitles to go with them) for Add Movie Files….
+    static let importTypes: [UTType] = [.movie, .video, .mpeg4Movie, .quickTimeMovie, .avi, .mpeg2TransportStream]
+        + ["mkv", "webm", "flv", "wmv", "m2ts", "ts", "srt", "ass", "ssa", "vtt"].compactMap { UTType(filenameExtension: $0) }
+
     // MARK: Select
 
     @ViewBuilder
@@ -313,6 +351,11 @@ struct MoviesScreen: View {
                 Label(String(localized: "Remove Download", comment: "Movie menu: delete the copy on this device"), systemImage: "arrow.uturn.backward.circle")
             }
         }
+        if movie.sourceId == nil, movie.isOnDevice || movie.state == .missing {
+            Button(role: .destructive) { removingCopied = movie } label: {
+                Label(String(localized: "Remove from Movies", comment: "Movie menu: delete a copied-in movie"), systemImage: "trash")
+            }
+        }
         if movie.isWatched {
             Button { model.setWatched(false, movie) } label: {
                 Label(String(localized: "Mark as Unwatched", comment: "Movie menu"), systemImage: "eye.slash")
@@ -338,10 +381,9 @@ struct MoviesScreen: View {
             } label: {
                 Label(String(localized: "Add a Source…", comment: "Movies + menu: add a NAS folder or a Plex server"), systemImage: "externaldrive.connected.to.line.below")
             }
-            Button {} label: {
+            Button { isImporting = true } label: {
                 Label(String(localized: "Add Movie Files…", comment: "Movies + menu: copy movie files onto this device"), systemImage: "doc.badge.plus")
             }
-            .disabled(true)
         } label: {
             Image(systemName: "plus")
         }

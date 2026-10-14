@@ -95,6 +95,15 @@ struct ShotDexApp: App {
                 // widget process and parsed by the same type here, so the two
                 // cannot drift apart.
                 .onOpenURL { url in
+                    // A movie shared or AirDropped in: copied into Movies
+                    // (FS-23.01 §2), the Inbox copy removed, Movies opened.
+                    if url.isFileURL, MovieFileName.isMovie(url.lastPathComponent) {
+                        let importer = MovieImporter(store: dependencies.movies, files: dependencies.movieDownloads.files)
+                        _ = try? importer.importFiles([url])
+                        if url.path.contains("/Inbox/") { try? FileManager.default.removeItem(at: url) }
+                        IntentRouter.shared.request(.movies)
+                        return
+                    }
                     // A look opened from AirDrop, Files, Messages or Mail.
                     if url.isFileURL {
                         Task { await dependencies.lookInbox.receive(url) }

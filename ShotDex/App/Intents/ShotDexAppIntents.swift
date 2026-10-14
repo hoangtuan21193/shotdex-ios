@@ -25,6 +25,8 @@ final class IntentRouter {
         case photo(assetId: String, opensEditor: Bool = false)
         /// The On This Day screen for one day, from a tapped widget.
         case onThisDay(date: Date)
+        /// Movies, after a movie was shared or AirDropped in (FS-23.01 §2).
+        case movies
     }
 
     static let shared = IntentRouter()

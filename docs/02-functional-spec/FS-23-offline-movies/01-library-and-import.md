@@ -25,6 +25,8 @@ Quyết định: [planboard movies-library](../../../.planboard/movies-library/D
 - Nguồn liệt kê và gỡ ở **Settings › Sources** (cùng chỗ nguồn ảnh FS-19), nhóm "Movie Sources". Gỡ nguồn: phim
   stream của nó biến khỏi Movies; phim đã Download ở lại trên máy.
 - Loại file nhận: mp4, m4v, mov, mkv, webm, flv, avi, wmv, ts, m2ts. Phụ đề cùng tên cạnh phim đi theo (03 §5).
+- Add Movie Files… / Share / AirDrop **chép** file (bản gốc giữ nguyên); phim đã có (cùng mã băm) không chép lần hai;
+  Share/AirDrop xong mở Movies (phim mới nhất đứng đầu theo Recently Added).
 - Quét chỉ đọc tên + cỡ, không đọc nội dung; 1.000 file ≤ 10 s trên NAS gigabit. Đi sâu tối đa 8 tầng; bỏ thư mục
   ẩn và thư mục rác của NAS (`@eaDir`, `#recycle`, `$RECYCLE.BIN`, `#snapshot`). Phụ đề cạnh phim chỉ ghi đường dẫn,
   tải khi cần; một thư mục con không trả lời thì lượt quét không ẩn gì; thư mục gốc không trả lời thì nguồn là
