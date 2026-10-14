@@ -55,6 +55,8 @@ extension AppDatabase {
                 t.column("durationMs", .integer)
                 t.column("summary", .text)
                 t.column("genres", .text)
+                // Folder: an image next to the movie; Plex: its thumb path.
+                t.column("posterPath", .text)
                 // stream · queued · downloading · onDevice · unplayable · missing
                 t.column("state", .text).notNull()
                 t.column("downloadedBytes", .integer).notNull().defaults(to: 0)
@@ -96,6 +98,8 @@ extension AppDatabase {
                 // inFile · sidecar · imported · shared · plex · translated
                 t.column("origin", .text).notNull()
                 t.column("inFileTrack", .integer)
+                // Sidecar or Plex: where it lives on the source until fetched.
+                t.column("remotePath", .text)
                 t.column("translatedFromId", .text)
                 t.column("translationProviderId", .text)
                 t.column("format", .text).notNull()

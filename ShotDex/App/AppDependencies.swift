@@ -144,6 +144,8 @@ final class AppDependencies {
     let movies: MovieStore
     /// Translation and AI Search providers the user added (FS-08.07).
     let aiProviders: AIProviderStore
+    /// Lists Movies' folder sources (FS-23.01 §2).
+    let movieSync: MovieSourceSync
     /// Keeps every backup job watching its source (FS-22.02).
     let backupCoordinator: BackupCoordinator
     /// Backup's background time (FS-22.02 §3).
@@ -512,8 +514,10 @@ final class AppDependencies {
         self.serverUploads = serverUploads
         let backups = BackupStore(database: database)
         self.backups = backups
-        self.movies = MovieStore(database: database, plexTokens: KeychainPasswordStore(service: KeychainPasswordStore.plexTokens))
+        let movies = MovieStore(database: database, plexTokens: KeychainPasswordStore(service: KeychainPasswordStore.plexTokens))
+        self.movies = movies
         self.aiProviders = AIProviderStore(database: database, keys: KeychainPasswordStore(service: KeychainPasswordStore.aiProviderKeys))
+        self.movieSync = MovieSourceSync(movies: movies, servers: fileServers)
         let backupCoordinator = BackupCoordinator(store: backups, environment: .live(
             database: database, store: backups, servers: fileServers, roots: folderRoots
         ))

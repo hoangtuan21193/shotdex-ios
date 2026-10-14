@@ -5,7 +5,7 @@
 | Tác giả | Hoang Tuan (lời người dùng), Claude soạn |
 | Ngày | 2026-10-14 |
 | Trạng thái | accepted — người dùng 2026-10-14 |
-| Tiến độ | **đang làm** (2026-10-14) — plan [2026-10-14-fs23-movies](../_plans/2026-10-14-fs23-movies.md) đã duyệt, spike S1 **đi** ([báo cáo](2026-10-14-fs23-s1-vlckit-spike.md)), S2 **đi** ([báo cáo](2026-10-14-fs23-s2-mkv-subtitles-spike.md)), S3 **đi** ([báo cáo](2026-10-14-fs23-s3-plex-spike.md)); hết spike; task 8/36 xong, 4/56 AC xanh (AC-1, 24, 44, 45; AC-18–22, 39, 40 một nửa); 3 spike + 36 task; spec FS-23 (56 AC) + FS-08.07 (9 AC) |
+| Tiến độ | **đang làm** (2026-10-14) — plan [2026-10-14-fs23-movies](../_plans/2026-10-14-fs23-movies.md) đã duyệt, spike S1 **đi** ([báo cáo](2026-10-14-fs23-s1-vlckit-spike.md)), S2 **đi** ([báo cáo](2026-10-14-fs23-s2-mkv-subtitles-spike.md)), S3 **đi** ([báo cáo](2026-10-14-fs23-s3-plex-spike.md)); hết spike; task 9/36 xong, 4/56 AC xanh (AC-1, 24, 44, 45; AC-2, 18–22, 39, 40, 43 một nửa); 3 spike + 36 task; spec FS-23 (56 AC) + FS-08.07 (9 AC) |
 | Nguồn | phản hồi người dùng 2026-10-14 |
 | Spec sinh ra từ đây | [FS-23](../02-functional-spec/FS-23-offline-movies/README.md) · [FS-08.07](../02-functional-spec/FS-08-settings/07-ai-providers.md) |
 

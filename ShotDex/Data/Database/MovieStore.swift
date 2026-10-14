@@ -99,6 +99,7 @@ struct MovieStore: Sendable {
                 if let movie = byKey[file.key] {
                     unclaimed[movie.id] = nil
                     if try Self.refresh(movie, from: file, source: source, db: db) { merge.updated += 1 }
+                    try Self.syncSidecars(movieId: movie.id, file.subtitles, now: now, db: db)
                 } else {
                     newFiles.append(file)
                 }
@@ -118,6 +119,7 @@ struct MovieStore: Sendable {
                     movie.plexRatingKey = file.plexRatingKey
                     try movie.update(db)
                     _ = try Self.refresh(movie, from: file, source: source, db: db)
+                    try Self.syncSidecars(movieId: movie.id, file.subtitles, now: now, db: db)
                     merge.adopted += 1
                 } else {
                     let movie = Movie(
@@ -127,9 +129,10 @@ struct MovieStore: Sendable {
                         title: file.title, year: file.year, season: file.season, episode: file.episode,
                         originalFileName: file.originalFileName, byteCount: file.byteCount,
                         durationMs: file.durationMs, summary: file.summary, genres: file.genres,
-                        state: .stream, addedAt: now
+                        posterPath: file.posterPath, state: .stream, addedAt: now
                     )
                     try movie.insert(db)
+                    try Self.syncSidecars(movieId: movie.id, file.subtitles, now: now, db: db)
                     merge.added += 1
                 }
             }
@@ -156,6 +159,7 @@ struct MovieStore: Sendable {
         row.durationMs = file.durationMs ?? row.durationMs
         row.summary = file.summary ?? row.summary
         row.genres = file.genres ?? row.genres
+        row.posterPath = file.posterPath
         row.sourceName = source.name
         row.plexMachineId = source.plexMachineId ?? row.plexMachineId
         row.removedFromSourceAt = nil
@@ -166,6 +170,27 @@ struct MovieStore: Sendable {
         guard row != movie else { return false }
         try row.update(db)
         return true
+    }
+
+    /// The subtitle files beside a movie on its source, as subtitle rows
+    /// that fetch on first use: new ones added, gone ones dropped. Rows the
+    /// user made (imported, translated, in-file) are not touched.
+    private static func syncSidecars(movieId: String, _ found: [ScannedSubtitle], now: Int, db: Database) throws {
+        let sourceOrigins = [MovieSubtitle.Origin.sidecar.rawValue, MovieSubtitle.Origin.plex.rawValue]
+        let existing = try MovieSubtitle
+            .filter(Column("movieId") == movieId && sourceOrigins.contains(Column("origin")))
+            .fetchAll(db)
+        let listed = Set(found.map(\.remotePath))
+        for row in existing where !listed.contains(row.remotePath ?? "") {
+            _ = try row.delete(db)
+        }
+        let have = Set(existing.compactMap(\.remotePath))
+        for subtitle in found where !have.contains(subtitle.remotePath) {
+            try MovieSubtitle(
+                movieId: movieId, language: subtitle.language, origin: subtitle.origin, remotePath: subtitle.remotePath,
+                format: subtitle.format, fileName: "", addedAt: now
+            ).insert(db)
+        }
     }
 
     /// A downloaded movie whose source was removed, now listed again by the

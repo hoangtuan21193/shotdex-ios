@@ -148,6 +148,7 @@ final class InMemoryRemoteFileClient: RemoteFileClient, @unchecked Sendable {
     func entries(in directory: String) async throws -> [RemoteEntry] {
         lock.withLock { listingCount += 1 }
         if let entriesError { throw entriesError }
+        if let error = lock.withLock({ entriesErrorPaths[directory] }) { throw error }
         return lock.withLock {
             let files = storage.filter { ServerUploadPath.parent(of: $0.key) == directory }.map { path, data in
                 RemoteEntry(name: ServerUploadPath.lastComponent(of: path), isDirectory: false, size: Int64(data.count), modified: modified[path])
@@ -158,6 +159,9 @@ final class InMemoryRemoteFileClient: RemoteFileClient, @unchecked Sendable {
             return files + folders
         }
     }
+
+    /// Listings that fail, by folder — a NAS subfolder that times out.
+    var entriesErrorPaths: [String: RemoteFileError] = [:]
 
     /// Every path `readRange` was asked for, in order.
     private(set) var rangeReadPaths: [String] = []

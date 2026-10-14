@@ -32,6 +32,9 @@ struct MoviesScreen: View {
             let model = model ?? MoviesModel(store: dependencies.movies)
             self.model = model
             model.load()
+            // FS-23.01 §2: sources are listed again each time Movies opens.
+            await dependencies.movieSync.refreshAll()
+            model.load()
         }
         .sheet(isPresented: $isAddingSource, onDismiss: { model?.load() }) {
             AddMovieSourceSheet()

@@ -111,6 +111,9 @@ struct Movie: Codable, Identifiable, Hashable, Sendable {
     var summary: String?
     /// JSON array of genre names (Plex).
     var genres: String?
+    /// Folder: the poster image next to the movie (path on the
+    /// connection); Plex: the thumb path. nil = the resolver's later steps.
+    var posterPath: String?
     var state: State
     var downloadedBytes: Int64
     /// Why the last download stopped, as the row shows it.
@@ -150,6 +153,7 @@ struct Movie: Codable, Identifiable, Hashable, Sendable {
         durationMs: Int64? = nil,
         summary: String? = nil,
         genres: String? = nil,
+        posterPath: String? = nil,
         state: State,
         downloadedBytes: Int64 = 0,
         downloadError: String? = nil,
@@ -182,6 +186,7 @@ struct Movie: Codable, Identifiable, Hashable, Sendable {
         self.durationMs = durationMs
         self.summary = summary
         self.genres = genres
+        self.posterPath = posterPath
         self.state = state
         self.downloadedBytes = downloadedBytes
         self.downloadError = downloadError
@@ -248,6 +253,9 @@ struct MovieSubtitle: Codable, Identifiable, Hashable, Sendable {
     var origin: Origin
     /// In-file: the Matroska track number it came from.
     var inFileTrack: Int?
+    /// Sidecar or Plex: the file on the source; `fileName` is empty until
+    /// it has been fetched into `Movies/<movieId>/`.
+    var remotePath: String?
     /// Translated: the subtitle it was made from, and by whom.
     var translatedFromId: String?
     var translationProviderId: String?
@@ -265,6 +273,7 @@ struct MovieSubtitle: Codable, Identifiable, Hashable, Sendable {
         language: String?,
         origin: Origin,
         inFileTrack: Int? = nil,
+        remotePath: String? = nil,
         translatedFromId: String? = nil,
         translationProviderId: String? = nil,
         format: Format,
@@ -278,6 +287,7 @@ struct MovieSubtitle: Codable, Identifiable, Hashable, Sendable {
         self.language = language
         self.origin = origin
         self.inFileTrack = inFileTrack
+        self.remotePath = remotePath
         self.translatedFromId = translatedFromId
         self.translationProviderId = translationProviderId
         self.format = format
@@ -370,6 +380,9 @@ struct ScannedMovie: Hashable, Sendable {
     var durationMs: Int64?
     var summary: String?
     var genres: String?
+    var posterPath: String?
+    /// Subtitle files next to the movie (`Dune.en.srt`).
+    var subtitles: [ScannedSubtitle]
 
     init(
         remotePath: String? = nil,
@@ -382,7 +395,9 @@ struct ScannedMovie: Hashable, Sendable {
         byteCount: Int64,
         durationMs: Int64? = nil,
         summary: String? = nil,
-        genres: String? = nil
+        genres: String? = nil,
+        posterPath: String? = nil,
+        subtitles: [ScannedSubtitle] = []
     ) {
         self.remotePath = remotePath
         self.plexRatingKey = plexRatingKey
@@ -395,8 +410,19 @@ struct ScannedMovie: Hashable, Sendable {
         self.durationMs = durationMs
         self.summary = summary
         self.genres = genres
+        self.posterPath = posterPath
+        self.subtitles = subtitles
     }
 
     /// The source's own key for the file.
     var key: String { plexRatingKey ?? remotePath ?? originalFileName }
+}
+
+/// A subtitle file a scan found beside a movie.
+struct ScannedSubtitle: Hashable, Sendable {
+    var remotePath: String
+    var language: String?
+    var format: MovieSubtitle.Format
+    /// `.sidecar` for a folder source, `.plex` for a Plex sidecar.
+    var origin: MovieSubtitle.Origin = .sidecar
 }
