@@ -404,6 +404,22 @@ struct MovieStore: Sendable {
         }
     }
 
+    /// Plex's own watch state (FS-23.07 §4), taken where it is newer than
+    /// what this device recorded and this device owes Plex nothing — when
+    /// both changed, the latest viewing wins: this device's is sent first.
+    func applyPlexProgress(sourceId: String, _ progress: [(ratingKey: String, positionMs: Int64, isWatched: Bool, viewedAt: Int?)]) throws {
+        try database.writer.write { db in
+            for item in progress {
+                guard var movie = try Movie.filter(Column("sourceId") == sourceId && Column("plexRatingKey") == item.ratingKey).fetchOne(db),
+                      !movie.plexSyncPending, let viewedAt = item.viewedAt, viewedAt > (movie.lastPlayedAt ?? 0) else { continue }
+                movie.positionMs = item.isWatched ? 0 : item.positionMs
+                movie.isWatched = item.isWatched
+                movie.lastPlayedAt = viewedAt
+                try movie.update(db)
+            }
+        }
+    }
+
     /// Clears the flag only where nothing changed since the snapshot sent —
     /// a position recorded while the request was in flight still owes.
     func markPlexSynced(_ sent: [Movie]) throws {

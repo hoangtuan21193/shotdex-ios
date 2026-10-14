@@ -41,15 +41,23 @@ struct PlexLibrarySync: Sendable {
                 try? store.setReachable(false, sourceId: source.id)
                 return MovieStore.ScanMerge()
             }
+            // What was watched here while away goes up first (§4).
+            await pushProgress(source: source, base: base, token: token)
             let chosen = Set((try? JSONDecoder().decode([String].self, from: Data(source.plexLibraries.utf8))) ?? [])
             let libraries = try await client.libraries(server: base, token: token).filter { chosen.isEmpty || chosen.contains($0.key) }
-            var found: [ScannedMovie] = []
+            var items: [PlexClient.Item] = []
             for library in libraries {
-                found += try await client.items(server: base, token: token, library: library).compactMap(Self.scanned)
+                items += try await client.items(server: base, token: token, library: library)
             }
+            let found = items.compactMap(Self.scanned)
             try? store.setNeedsSignIn(false, sourceId: source.id)
             try? store.setReachable(true, sourceId: source.id)
-            return (try? store.mergeScan(sourceId: source.id, found: found, isComplete: true)) ?? MovieStore.ScanMerge()
+            let merge = (try? store.mergeScan(sourceId: source.id, found: found, isComplete: true)) ?? MovieStore.ScanMerge()
+            // …then what was watched elsewhere comes down.
+            try? store.applyPlexProgress(sourceId: source.id, items.map {
+                ($0.ratingKey, $0.viewOffsetMs ?? 0, $0.viewCount > 0 && ($0.viewOffsetMs ?? 0) == 0, $0.lastViewedAt)
+            })
+            return merge
         } catch PlexClient.Failure.signedOut {
             try? store.setNeedsSignIn(true, sourceId: source.id)
             try? store.setReachable(false, sourceId: source.id)
@@ -72,5 +80,30 @@ struct PlexLibrarySync: Sendable {
             genres: item.genres.isEmpty ? nil : item.genres.joined(separator: ", "),
             posterPath: item.thumb.map(PlexClient.posterPath)
         )
+    }
+
+    /// Positions and watched marks recorded on this device that Plex has
+    /// not heard yet — offline viewing included (AC-50). A mark that fails
+    /// to send stays owed.
+    func pushProgress(source: MovieSource, base: URL, token: String) async {
+        guard let owed = try? store.pendingPlexSync(sourceId: source.id), !owed.isEmpty else { return }
+        var sent: [Movie] = []
+        for movie in owed {
+            guard let key = movie.plexRatingKey else { continue }
+            do {
+                if movie.isWatched {
+                    try await client.setWatched(true, server: base, token: token, ratingKey: key)
+                } else if movie.positionMs == 0 {
+                    // Marked unwatched here.
+                    try await client.setWatched(false, server: base, token: token, ratingKey: key)
+                } else {
+                    try await client.reportPosition(server: base, token: token, ratingKey: key, timeMs: movie.positionMs, durationMs: movie.durationMs ?? 0)
+                }
+                sent.append(movie)
+            } catch {
+                continue
+            }
+        }
+        try? store.markPlexSynced(sent)
     }
 }

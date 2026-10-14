@@ -39,6 +39,8 @@ final class PlexStubProtocol: URLProtocol, @unchecked Sendable {
         PlexStubProtocol.handler = { request in
             let path = request.url?.path ?? ""
             let token = request.value(forHTTPHeaderField: "X-Plex-Token")
+            if Self.serverDown, request.url?.host == "plex.home" { return (503, [:], Data()) }
+            if path == "/:/timeline" || path == "/:/scrobble" || path == "/:/unscrobble" { return (200, [:], Data()) }
             if revoked, token != nil { return (401, [:], Data()) }
             switch path {
             case "/api/v2/pins": return (201, [:], self.json(["id": 42, "code": "K7Q2", "expiresIn": 900]))
@@ -76,6 +78,9 @@ final class PlexStubProtocol: URLProtocol, @unchecked Sendable {
 
     /// Downloads need the listed size to be the bytes served.
     nonisolated(unsafe) static var servedSizes = false
+    /// Where Dune stands on the server, and when it was last watched there.
+    nonisolated(unsafe) static var serverProgress: (offset: Int, viewedAt: Int)?
+    nonisolated(unsafe) static var serverDown = false
 
     static func dune(withStreams: Bool) -> [String: Any] {
         func part(_ key: String, size: Int64) -> [String: Any] {
@@ -89,6 +94,7 @@ final class PlexStubProtocol: URLProtocol, @unchecked Sendable {
             "ratingKey": "101", "type": "movie", "title": "Dune: Part Two", "year": 2024,
             "summary": "Paul Atreides unites with the Fremen.", "duration": 9_960_000, "thumb": "/library/metadata/101/thumb/1",
             "Genre": [["tag": "Science Fiction"], ["tag": "Adventure"]],
+            "viewOffset": serverProgress?.offset ?? 0, "lastViewedAt": serverProgress?.viewedAt as Any, "viewCount": 0,
             "Media": [
                 ["height": 1080, "videoResolution": "1080", "Part": [part("/library/parts/hd/file.mkv", size: 8_100_000_000)]],
                 ["height": 2160, "videoResolution": "4k", "Part": [part("/library/parts/4k/file.mkv", size: 54_300_000_000)]],
@@ -238,5 +244,43 @@ final class PlexStubProtocol: URLProtocol, @unchecked Sendable {
         #expect(!parts.isEmpty && parts.allSatisfy { $0 == "/library/parts/hd/file.mkv" })
         let subtitle = try #require(try movies.subtitles(movieId: dune.id).first { $0.origin == .plex })
         #expect(!subtitle.fileName.isEmpty)
+    }
+
+    /// AC-50: 30:00 watched on the TV opens here at 30:00; 52:10 watched
+    /// here offline goes up the first time the server answers again.
+    @Test func twoWayAndOfflineQueue() async throws {
+        let now = Int(Date().timeIntervalSince1970)
+        Self.serverProgress = (1_800_000, now - 60)
+        defer { Self.serverProgress = nil; Self.serverDown = false }
+        installFake()
+        let client = PlexStubProtocol.client()
+        let movies = try store()
+        let source = MovieSource(kind: .plex, name: "Mac Studio", plexMachineId: "home", plexAddress: "http://plex.home:32400")
+        try movies.saveSource(source, plexToken: "home-token")
+        let sync = PlexLibrarySync(store: movies, client: client)
+        await sync.refresh(source)
+        var dune = try #require(try movies.movies().first)
+        #expect(dune.positionMs == 1_800_000)
+        #expect(MoviePlaybackPosition.resumeMs(saved: dune.positionMs, durationMs: dune.durationMs ?? 0) == 1_800_000)
+
+        // On the plane: the server is gone, the place is recorded here.
+        Self.serverDown = true
+        try movies.recordPosition(id: dune.id, positionMs: 3_130_000, at: Date())
+        await sync.refresh(try #require(try movies.source(id: source.id)))
+        dune = try #require(try movies.movie(id: dune.id))
+        #expect(dune.plexSyncPending)
+        #expect(dune.positionMs == 3_130_000)
+
+        // Home again: 52:10 goes up, and the server's older 30:00 does not
+        // come back down over it.
+        Self.serverDown = false
+        PlexStubProtocol.requests = []
+        await sync.refresh(try #require(try movies.source(id: source.id)))
+        let timeline = try #require(PlexStubProtocol.requests.first { $0.url?.path == "/:/timeline" })
+        #expect(timeline.url?.query?.contains("time=3130000") == true)
+        #expect(timeline.url?.query?.contains("X-Plex-Token") != true)
+        dune = try #require(try movies.movie(id: dune.id))
+        #expect(!dune.plexSyncPending)
+        #expect(dune.positionMs == 3_130_000)
     }
 }
