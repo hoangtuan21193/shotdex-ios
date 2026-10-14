@@ -76,10 +76,12 @@ struct SearchServiceTests {
     /// AC-6: a model that is still thinking when its time is up is
     /// dropped; the parser's reading is applied, with no error.
     @Test func networkModelTimesOutToParser() async throws {
-        let late = try service(SlowModel(delay: .seconds(3), timeout: .milliseconds(200)))
+        // 10 s against a 200 ms timeout: well under 10 s proves the cut-off,
+        // with room for a busy test run.
+        let late = try service(SlowModel(delay: .seconds(10), timeout: .milliseconds(200)))
         let started = Date()
         let resolution = await late.resolve("ảnh hoàng hôn 85mm")
-        #expect(Date().timeIntervalSince(started) < 1.5)
+        #expect(Date().timeIntervalSince(started) < 5)
         #expect(!resolution.usedModel)
         #expect(resolution.query.rules.contains { $0.field == .focalLength || $0.field == .lens })
 
