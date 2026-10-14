@@ -51,7 +51,7 @@ Phim test: clip tổng hợp 2–5 phút (khung test pattern, tiếng sine — *
 | AC-40 | Audio Languages = Tiếng Việt, English; phim mới có EN + VI | mở phim lần đầu | phát track VI; Audio Languages = Original → phát track `Default` | ⚠️ chưa có (`MovieTrackChoiceTests.preferredAudioLanguage`) |
 | AC-41 | tiếng sớm 0,30 s | Audio Sync −0,30 s | độ lệch đo được giữa tiếng và hình ≤ 0,05 s; mở lại phim giữ −0,30 s | ⚠️ chưa có (`MoviePlaybackModelTests.audioSyncPersists` + đo trên máy) |
 | AC-42 | track 7.1, đường ra tai nghe stereo | phát | có tiếng đủ kênh trộn xuống stereo; dòng chân `Playing as stereo on …` | ⚠️ chưa có — cần máy thật |
-| AC-43 | thư mục có `A/poster.jpg`, `B.mkv` có ảnh bìa nhúng, `C.mp4` không ảnh | quét | A dùng poster.jpg, B dùng ảnh nhúng, C dùng khung hình ở 10%; tên + năm đọc đúng từ tên file | ⚠️ chưa có (`MoviePosterResolverTests.order`) |
+| AC-43 | thư mục có `A/poster.jpg`, `B.mp4` có ảnh bìa nhúng, `C.mkv` không ảnh (Stream) | quét, rồi Download C | A dùng poster.jpg, B ảnh nhúng, C ô chữ `C · năm`; quét không mở file C; tải xong C có khung hình 10% | ⚠️ chưa có (`MoviePosterResolverTests.order` + `MovieLibraryScanTests.scanNeverOpensFiles`) |
 | AC-44 | 128 phim, chế độ máy bay | Search `dune 2024` | 1 kết quả `Dune Part Two`; tìm theo tên file `x265` cũng ra | ⚠️ chưa có (`MovieSearchTests.titleYearFileName`) |
 | AC-45 | 5 phim năm khác nhau | ⋯ › Sort › Title / Year / Recently Watched | thứ tự đúng từng kiểu; mặc định Recently Added | ⚠️ chưa có (`MovieSortTests.allOrders`) |
 | AC-46 | Grid | ⋯ › List, đóng mở lại Movies | vẫn List; List hiện thời lượng · cỡ · nguồn hoặc `On iPhone` | ⚠️ chưa có |
@@ -61,6 +61,8 @@ Phim test: clip tổng hợp 2–5 phút (khung test pattern, tiếng sine — *
 | AC-50 | phim Plex xem trên server tới 30:00; trên máy xem offline tới 52:10 | mở phim / về mạng nhà | mở tại 30:00 khi online; sau khi xem offline, lần tới được server gửi 52:10 lên | ⚠️ chưa có (`PlexTimelineTests.twoWayAndOfflineQueue`) |
 | AC-51 | token Plex bị thu hồi (server giả trả 401) | mở Movies | phim Plex stream mờ, Settings › Sources `Sign in to Plex again`; phim Plex đã tải vẫn phát | ⚠️ chưa có (`PlexSignInTests.revokedToken`) |
 | AC-52 | player | nhìn hàng 2 transport, mở bảng | một nút **Audio & Subtitles**; bảng: Audio (track + Audio Sync) trên, Subtitles dưới; Translate… và Import File… trong menu dòng Secondary | ⚠️ chưa có (board `*_MovieTracks` + `scripts/movies-player.json`) |
+| AC-53 | MKV có track chữ EN trong file; bản Stream rồi bản đã Download | mở bảng Audio & Subtitles mỗi lần | Stream: `English · In File` chỉ ở Primary, Translate mờ cho nó; Download: có ở Primary và Secondary, Translate… dịch được | ⚠️ chưa có (`EmbeddedSubtitleExtractTests` + spike S2) |
+| AC-54 | tải 2 phim: một từ Plex giả, một từ SMB giả | khoá máy 10 phút | Plex vẫn tải (tác vụ tải nền của hệ thống); SMB dừng, hàng ghi `Keep ShotDex open to finish`, mở app thì tiếp từ byte đã có | ⚠️ chưa có — máy thật (sim không khoá máy thật) |
 | AC-38 | Mac | Space, ←, F, ⌘W | phát/dừng, lùi 10 s, toàn màn, đóng | ⚠️ chưa có — app Mac chưa có code |
 
 **Chưa chứng minh được:** tất cả — chưa có code. AC-34 cần máy thật; AC-35 cần Duo; AC-38 chờ app Mac (FS-18).

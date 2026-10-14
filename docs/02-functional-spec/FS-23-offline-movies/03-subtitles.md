@@ -41,8 +41,10 @@ vào phần hình còn thấy; máy dọc: sheet nửa màn.
   đặt ở đỉnh khung thì giữ ở đỉnh.
 - Mã chữ tự nhận (UTF-8, UTF-16, Windows-1258, Windows-1252, GB18030, Shift-JIS…); sai thì ⋯ › **Encoding** chọn
   tay, nhớ theo phụ đề.
-- **Track chữ trong file**: trích ra file phụ đề lúc chép xong (01 §4) để ShotDex vẽ và dịch được. Trích không được
-  → VLCKit vẽ track đó, nó chỉ làm được Primary, không dịch được. *Cần spike ở `/plan`.*
+- **Track chữ trong file** (người dùng chốt 14/10): phim **trên máy** (đã Download hoặc chép thẳng) → trích ra file
+  phụ đề ngay khi tải xong, dùng được làm Primary, Secondary và để dịch. Phim **đang stream** → không trích (phải đọc
+  cả file qua mạng); track đó do VLCKit vẽ, chỉ làm được Primary, không đôi, không dịch — menu ghi `In File (Download
+  to use as Secondary or translate)`.
 - **Track ảnh** (PGS, VobSub): VLCKit vẽ, đúng chỗ file đặt, không đổi cỡ/màu; chỉ làm được Primary, Secondary vẫn
   là phụ đề chữ của ShotDex. Không dịch được (cần OCR — ngoài phạm vi).
 

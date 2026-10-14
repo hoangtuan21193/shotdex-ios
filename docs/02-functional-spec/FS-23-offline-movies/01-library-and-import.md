@@ -46,7 +46,8 @@ Quyết định: [planboard movies-library](../../../.planboard/movies-library/D
 - ⋯: Grid/List · Sort (**Recently Added** mặc định · Title · Year · Recently Watched) · Select.
 - Dòng phụ dưới tiêu đề: `128 movies · 3 on this iPhone`; dung lượng (`21.4 GB · 48 GB free`) ở cuối danh sách khi cuộn hết.
 - Poster: Plex → poster của Plex; thư mục → `poster.jpg`/`folder.jpg`/`<tên>-poster.jpg` cạnh phim, ảnh bìa nhúng
-  trong MKV/MP4, thiếu thì khung hình ở 10% thời lượng. Tên + năm: Plex, không thì đọc từ tên file
+  trong MP4; thiếu thì **ô chữ** (nền màu theo tên, ghi tên + năm). Khung hình thật (10% thời lượng) và ảnh bìa
+  nhúng trong MKV chỉ lấy khi phim đã được mở hoặc đã tải — quét không mở từng phim qua mạng (người dùng chốt 14/10). Tên + năm: Plex, không thì đọc từ tên file
   (`Dune.Part.Two.2024.2160p…` → `Dune Part Two` · `2024`); `S01E04` cho tập phim. Rename sửa được tên hiện.
 - Rỗng: `No Movies` · "Add a folder on your NAS or a Plex server, or copy movie files to this iPhone." · **Add a Source**.
 
@@ -62,8 +63,11 @@ Quyết định: [planboard movies-library](../../../.planboard/movies-library/D
 
 - Một phim một lúc theo hàng đợi; khối 1 MB vào `.part`, đổi tên khi đủ byte; trước mỗi phim cần cỡ + 1 GB trống,
   thiếu → `Not enough space on this device — about 3.2 GB needed.`, không bắt đầu.
-- Mất nguồn giữa chừng → giữ phần đã tải, chạy tiếp từ byte đã có khi tới lại được. Rời app: iOS 26 xin tác vụ xử
-  lý tiếp tục như Backup (FS-22.02 §3); trước 26 chạy tiếp khi mở lại app.
+- Mất nguồn giữa chừng → giữ phần đã tải, chạy tiếp từ byte đã có khi tới lại được. Không kiểm SHA-256 (phim quá
+  lớn); kiểm cỡ khớp nguồn.
+- Rời app / khoá máy (người dùng chốt 14/10): **Plex và WebDAV tải nền** bằng kiểu tải nền của iOS, khoá máy vẫn chạy.
+  **SMB, SFTP, Files chỉ chạy khi ShotDex mở** (iOS 26: thêm tác vụ xử lý tiếp tục như FS-22.02 §3); hàng đang tải
+  ghi `Keep ShotDex open to finish`; mở lại app thì chạy tiếp từ byte đã có.
 - Tải kèm: phụ đề cạnh phim, poster/thông tin (Plex: poster, ảnh nền, năm, mô tả, thể loại).
 - Kho trong vùng dữ liệu của app, **không sao lưu**, không qua Photos, không hiện trong Files.
 - **Remove Download**: alert 2 nút `Remove Download?` · "The movie stays on NAS Home. This frees 6.1 GB." · Remove /
