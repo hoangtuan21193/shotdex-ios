@@ -12,8 +12,19 @@ protocol ServerPasswordStoring: Sendable {
 /// Generic-password items in the app's Keychain, one per server id,
 /// readable only while the device is unlocked on this device (never synced
 /// or restored to another phone: a backup is not where a NAS password goes).
+///
+/// One service per kind of secret: file-server passwords, Plex tokens
+/// (FS-23.07) and AI provider keys (FS-08.07 §4) never share a namespace.
 struct KeychainPasswordStore: ServerPasswordStoring {
-    private let service = "com.hoangtuan.shotdex.file-server"
+    static let fileServers = "com.hoangtuan.shotdex.file-server"
+    static let plexTokens = "com.hoangtuan.shotdex.plex"
+    static let aiProviderKeys = "com.hoangtuan.shotdex.ai-provider"
+
+    private let service: String
+
+    init(service: String = KeychainPasswordStore.fileServers) {
+        self.service = service
+    }
 
     private func query(_ serverId: String) -> [String: Any] {
         [

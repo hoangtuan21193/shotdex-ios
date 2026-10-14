@@ -35,6 +35,8 @@ Mở từ menu dòng **Secondary** trong bảng Audio & Subtitles (03 §2) › T
   cue → thử lại khối đó một lần, vẫn sai thì dịch từng cue của khối.
 - Cancel hoặc app bị dừng → giữ các khối đã xong; mở lại Translate cùng From/To/Using → `Continue (412 of 1,380)`.
 - Rời app: iOS 26 xin tác vụ xử lý tiếp tục; trước 26 dừng khi hệ thống dừng app, mở lại thì tiếp.
+- Nhà cung cấp của việc dịch dở đã bị xoá: không báo lỗi; mở lại sheet Translate với các cue đã dịch giữ nguyên, chọn
+  nhà cung cấp khác thì dịch tiếp từ cue chưa xong.
 
 ## 3. Kết quả
 

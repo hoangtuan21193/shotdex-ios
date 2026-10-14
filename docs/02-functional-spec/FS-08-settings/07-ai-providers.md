@@ -69,10 +69,10 @@ FS-01.03 §4 đổi: model là nhà cung cấp ở hàng **AI Search**, không c
 | # | Cho | Khi | Thì | Chứng minh bằng |
 |---|---|---|---|---|
 | AC-1 | iOS 26.5 sim (không Apple Intelligence), chưa thêm gì | mở Settings › AI | 2 hàng chọn: Subtitle Translation `Ask Each Time`, AI Search `Off`; On This Device chỉ có Apple Translation | ⚠️ chưa có (`scripts/settings-ai.json`) |
-| AC-2 | form Claude, key `sk-ant-test…7Qx2` | Save | key nằm trong Keychain dưới id nhà cung cấp; bảng không có cột/giá trị nào chứa key; hàng hiện `Key ends in 7Qx2` | ⚠️ chưa có (`AIProviderStoreTests.keyOnlyInKeychain`) |
+| AC-2 | form Claude, key `sk-ant-test…7Qx2` | Save | key nằm trong Keychain dưới id nhà cung cấp; bảng không có cột/giá trị nào chứa key; hàng hiện `Key ends in 7Qx2` | ⚠️ một nửa: phần dữ liệu `AIProviderStoreTests.keyOnlyInKeychain` ✅; form + hàng `Key ends in` chưa có |
 | AC-3 | máy chủ giả chuẩn OpenAI ở 127.0.0.1:11434 trả 2 model | chọn Home Server, nhập địa chỉ | menu model có đúng 2 model; Test → `Working` | ⚠️ chưa có (`AIProviderClientTests.listsModelsFromLocalServer`) |
 | AC-4 | máy chủ giả trả 401 | Test | `The service rejected the API key.`; Save hỏi lại trước khi lưu | ⚠️ chưa có |
-| AC-5 | 1 nhà cung cấp Claude đang được chọn cho Subtitle Translation | xoá nó | Keychain không còn key; hàng Subtitle Translation về `Ask Each Time` | ⚠️ chưa có |
+| AC-5 | 1 nhà cung cấp Claude đang được chọn cho Subtitle Translation | xoá nó | Keychain không còn key; hàng Subtitle Translation về `Ask Each Time` | ⚠️ một nửa: `AIProviderStoreTests.deleteRemovesKey` ✅; hàng về mặc định chưa có |
 | AC-6 | AI Search = máy chủ giả trả lời sau 9 s, câu `ảnh hoàng hôn 85mm` | áp tìm | sau 8 s dùng kết quả bộ phân tích, không hộp lỗi | ⚠️ chưa có (`SearchServiceTests.networkModelTimesOutToParser`) |
 | AC-7 | đã cài 1 Claude + 1 máy chủ trong nhà | mở menu AI Search | chỉ có Apple Intelligence (nếu máy có), máy chủ trong nhà, Off — không có Claude | ⚠️ chưa có |
 | AC-8 | Duo trong 951×669, bố cục rộng | mở Settings | đủ 10 mục; cuộn cột mục tới Support và chạm được | ⚠️ chưa có |
