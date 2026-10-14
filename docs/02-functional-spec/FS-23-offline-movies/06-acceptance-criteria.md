@@ -33,7 +33,7 @@ Phim test: clip tổng hợp 2–5 phút (khung test pattern, tiếng sine — *
 | AC-21 | SRT tiếng Việt mã Windows-1258 | nhập | chữ có dấu đọc đúng (`Xin chào`), không ký tự lạ | ⚠️ chưa có (`SubtitleDecoderTests.vietnameseWindows1258`) |
 | AC-22 | ASS có `{\i1}`, `{\pos(…)}`, `{\an8}` | vẽ | nghiêng giữ, `pos` bỏ, dòng `an8` ở đỉnh khung | ⚠️ chưa có (`SubtitleParserTests.assKeepsItalicAndTop`) |
 | AC-23 | MKV có track PGS + SRT tiếng Việt ngoài | Primary PGS, Secondary VI | cả hai hiện; Translate… không liệt kê PGS ở From | ⚠️ chưa có |
-| AC-24 | file 310 MB biết trước mã băm | tính mã băm | đúng 16 hex mong đợi; đọc ≤ 128 KB | ⚠️ chưa có (`MovieHashTests.matchesReference`) |
+| AC-24 | file 310 MB biết trước mã băm | tính mã băm | đúng 16 hex mong đợi; đọc ≤ 128 KB | ✅ `MovieHashTests.matchesReference` (giá trị chuẩn từ bản Python độc lập) |
 | AC-25 | app Files có `Dune.vi.srt`, kho có `Dune (2024)` và 3 phim khác | Share › ShotDex | sheet `Add Subtitle to…`, `Dune (2024)` được đánh dấu khớp tên; chọn → phim có `Tiếng Việt · Shared` | ⚠️ chưa có |
 | AC-26 | `subs.zip` chứa `a.en.srt`, `b.vi.ass`, `readme.txt` | Import File… | gắn 2 phụ đề EN, VI; `readme.txt` bỏ; zip chỉ có `.txt` → `No subtitles in this file.` | ⚠️ chưa có (`SubtitleImportTests.zipTakesSubtitlesOnly`) |
 | AC-27 | toàn bộ luồng Movies (thêm, phát, phụ đề, dịch trên máy) | ghi log mạng | 0 yêu cầu tới dịch vụ phụ đề nào; yêu cầu mạng chỉ tới server FS-15, máy chủ Plex/plex.tv và nhà cung cấp AI đã chọn | ⚠️ chưa có |
@@ -51,7 +51,7 @@ Phim test: clip tổng hợp 2–5 phút (khung test pattern, tiếng sine — *
 | AC-40 | Audio Languages = Tiếng Việt, English; phim mới có EN + VI | mở phim lần đầu | phát track VI; Audio Languages = Original → phát track `Default` | ⚠️ chưa có (`MovieTrackChoiceTests.preferredAudioLanguage`) |
 | AC-41 | tiếng sớm 0,30 s | Audio Sync −0,30 s | độ lệch đo được giữa tiếng và hình ≤ 0,05 s; mở lại phim giữ −0,30 s | ⚠️ chưa có (`MoviePlaybackModelTests.audioSyncPersists` + đo trên máy) |
 | AC-42 | track 7.1, đường ra tai nghe stereo | phát | có tiếng đủ kênh trộn xuống stereo; dòng chân `Playing as stereo on …` | ⚠️ chưa có — cần máy thật |
-| AC-43 | thư mục có `A/poster.jpg`, `B.mp4` có ảnh bìa nhúng, `C.mkv` không ảnh (Stream) | quét, rồi Download C | A dùng poster.jpg, B ảnh nhúng, C ô chữ `C · năm`; quét không mở file C; tải xong C có khung hình 10% | ⚠️ chưa có (`MoviePosterResolverTests.order` + `MovieLibraryScanTests.scanNeverOpensFiles`) |
+| AC-43 | thư mục có `A/poster.jpg`, `B.mp4` có ảnh bìa nhúng, `C.mkv` không ảnh (Stream) | quét, rồi Download C | A dùng poster.jpg, B ảnh nhúng, C ô chữ `C · năm`; quét không mở file C; tải xong C có khung hình 10% | ⚠️ một nửa: thứ tự `MoviePosterResolverTests.order` ✅; quét không mở C + khung hình 10% sau khi tải chưa có (`MovieLibraryScanTests.scanNeverOpensFiles`) |
 | AC-44 | 128 phim, chế độ máy bay | Search `dune 2024` | 1 kết quả `Dune Part Two`; tìm theo tên file `x265` cũng ra | ⚠️ chưa có (`MovieSearchTests.titleYearFileName`) |
 | AC-45 | 5 phim năm khác nhau | ⋯ › Sort › Title / Year / Recently Watched | thứ tự đúng từng kiểu; mặc định Recently Added | ⚠️ chưa có (`MovieSortTests.allOrders`) |
 | AC-46 | Grid | ⋯ › List, đóng mở lại Movies | vẫn List; List hiện thời lượng · cỡ · nguồn hoặc `On iPhone` | ⚠️ chưa có |

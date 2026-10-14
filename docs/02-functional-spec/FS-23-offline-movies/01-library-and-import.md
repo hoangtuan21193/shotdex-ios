@@ -45,7 +45,7 @@ Quyết định: [planboard movies-library](../../../.planboard/movies-library/D
   Chữ theo thiết bị: `On This iPad`, `On This Mac`, `Download to iPad`… (mọi chỗ ghi "iPhone" trong spec này).
 - ⋯: Grid/List · Sort (**Recently Added** mặc định · Title · Year · Recently Watched) · Select.
 - Dòng phụ dưới tiêu đề: `128 movies · 3 on this iPhone`; dung lượng (`21.4 GB · 48 GB free`) ở cuối danh sách khi cuộn hết.
-- Poster: Plex → poster của Plex; thư mục → `poster.jpg`/`folder.jpg`/`<tên>-poster.jpg` cạnh phim, ảnh bìa nhúng
+- Poster: Plex → poster của Plex; thư mục → `<tên>-poster.jpg`, rồi `poster.jpg`/`folder.jpg` (chỉ khi thư mục có đúng một phim) cạnh phim, ảnh bìa nhúng
   trong MP4; thiếu thì **ô chữ** (nền màu theo tên, ghi tên + năm). Khung hình thật (10% thời lượng) và ảnh bìa
   nhúng trong MKV chỉ lấy khi phim đã được mở hoặc đã tải — quét không mở từng phim qua mạng (người dùng chốt 14/10). Tên + năm: Plex, không thì đọc từ tên file
   (`Dune.Part.Two.2024.2160p…` → `Dune Part Two` · `2024`); `S01E04` cho tập phim. Rename sửa được tên hiện.
