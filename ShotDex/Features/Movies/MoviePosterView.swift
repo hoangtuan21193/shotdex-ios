@@ -5,7 +5,12 @@ import SwiftUI
 /// year under it.
 struct MovieGridCell: View {
     let movie: Movie
+    /// Its source is out of reach (FS-23.01 §3).
+    var isAway = false
     @Environment(AppDependencies.self) private var dependencies
+
+    /// Board `PH_Movies`, `away` tweak.
+    static let awayOpacity = 0.42
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -26,8 +31,9 @@ struct MovieGridCell: View {
                 .foregroundStyle(movie.downloadError == nil ? AnyShapeStyle(.secondary) : AnyShapeStyle(Color.red))
                 .lineLimit(1)
         }
+        .opacity(isAway ? Self.awayOpacity : 1)
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel(MovieRowText.spoken(movie))
+        .accessibilityLabel(MovieRowText.spoken(movie, isAway: isAway))
         .accessibilityAddTraits(.isButton)
     }
 }
@@ -37,6 +43,7 @@ struct MovieListRow: View {
     let movie: Movie
     /// Its download needs the app open (SMB, SFTP, Files — FS-23.01 §6).
     var keepsAppOpen = false
+    var isAway = false
 
     var body: some View {
         HStack(spacing: AppTheme.Spacing.md) {
@@ -61,8 +68,9 @@ struct MovieListRow: View {
                     .accessibilityHidden(true)
             }
         }
+        .opacity(isAway ? MovieGridCell.awayOpacity : 1)
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel(MovieRowText.spoken(movie))
+        .accessibilityLabel(MovieRowText.spoken(movie, isAway: isAway))
         .accessibilityAddTraits(.isButton)
     }
 }
@@ -211,7 +219,7 @@ enum MovieRowText {
     }
 
     /// VoiceOver: `Dune: Part Two, 2024, Downloaded`.
-    static func spoken(_ movie: Movie) -> String {
+    static func spoken(_ movie: Movie, isAway: Bool = false) -> String {
         var parts = [movie.displayTitle]
         if let caption = yearOrEpisode(movie) { parts.append(caption) }
         switch movie.state {
@@ -225,6 +233,7 @@ enum MovieRowText {
             }
         }
         if movie.downloadError != nil { parts.append(String(localized: "Download paused", comment: "Movie VoiceOver")) }
+        if isAway { parts.append(String(localized: "Not available offline", comment: "Movie VoiceOver: its source is out of reach")) }
         return parts.joined(separator: ", ")
     }
 }

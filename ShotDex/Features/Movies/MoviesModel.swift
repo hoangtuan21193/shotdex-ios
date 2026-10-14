@@ -32,6 +32,13 @@ final class MoviesModel {
         isLoaded = true
     }
 
+    /// FS-23.01 §3: streams from a source that is out of reach — dimmed,
+    /// and a tap says so instead of trying.
+    func isAway(_ movie: Movie) -> Bool {
+        guard !movie.isOnDevice, let sourceId = movie.sourceId else { return false }
+        return sources[sourceId]?.isReachable == false
+    }
+
     func rename(_ movie: Movie, to title: String) {
         try? store.rename(id: movie.id, to: title)
         load()

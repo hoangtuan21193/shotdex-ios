@@ -14,6 +14,8 @@ struct MoviesScreen: View {
     @State private var removingDownloads: [Movie] = []
     @State private var isSelecting = false
     @State private var selection: Set<String> = []
+    /// The source a dimmed movie needs (FS-23.01 §3).
+    @State private var awayFrom: String?
 
     var body: some View {
         Group {
@@ -51,6 +53,15 @@ struct MoviesScreen: View {
         .onChange(of: dependencies.movieDownloads.revision) { model?.load() }
         .sheet(isPresented: $isAddingSource, onDismiss: { model?.load() }) {
             AddMovieSourceSheet()
+        }
+        .alert(
+            String(localized: "Not available offline.", comment: "Tapped a movie whose source is out of reach"),
+            isPresented: Binding(get: { awayFrom != nil }, set: { if !$0 { awayFrom = nil } }),
+            presenting: awayFrom
+        ) { _ in
+            Button("OK", role: .cancel) {}
+        } message: { name in
+            Text(String(localized: "Connect to \(name) to play.", comment: "Tapped a movie whose source is out of reach: what to do"))
         }
         .alert(
             String(localized: "Remove Download?", comment: "Remove Download alert title"),
@@ -98,7 +109,7 @@ struct MoviesScreen: View {
                 } else if layout == .grid {
                     LazyVGrid(columns: [GridItem(.adaptive(minimum: 105, maximum: 160), spacing: 12, alignment: .top)], spacing: 16) {
                         ForEach(shown) { movie in
-                            MovieGridCell(movie: movie)
+                            MovieGridCell(movie: movie, isAway: model.isAway(movie))
                                 .overlay(alignment: .topLeading) { selectionMark(movie) }
                                 .contentShape(Rectangle())
                                 .onTapGesture { tapped(movie) }
@@ -108,7 +119,7 @@ struct MoviesScreen: View {
                 } else {
                     LazyVStack(spacing: 8) {
                         ForEach(shown) { movie in
-                            MovieListRow(movie: movie, keepsAppOpen: model.sources[movie.sourceId ?? ""].map { !downloads.downloadsInBackground($0, movie) } ?? false)
+                            MovieListRow(movie: movie, keepsAppOpen: model.sources[movie.sourceId ?? ""].map { !downloads.downloadsInBackground($0, movie) } ?? false, isAway: model.isAway(movie))
                                 .padding(.horizontal, 12)
                                 .frame(height: 64)
                                 .background(Color(.secondarySystemBackground), in: RoundedRectangle(cornerRadius: AppTheme.Radius.md, style: .continuous))
@@ -195,8 +206,15 @@ struct MoviesScreen: View {
     }
 
     private func tapped(_ movie: Movie) {
-        guard isSelecting else { return }  // Play arrives with the player (plan task 16).
-        if selection.contains(movie.id) { selection.remove(movie.id) } else { selection.insert(movie.id) }
+        if isSelecting {
+            if selection.contains(movie.id) { selection.remove(movie.id) } else { selection.insert(movie.id) }
+            return
+        }
+        if let model, model.isAway(movie) {
+            awayFrom = movie.sourceName ?? ""
+            return
+        }
+        // Play arrives with the player (plan task 16).
     }
 
     private func selected(_ model: MoviesModel) -> [Movie] {
