@@ -42,6 +42,9 @@ struct MoviePlayerScreen: View {
         .statusBarHidden()
         .persistentSystemOverlays(.hidden)
         .task {
+            await model.loadSubtitles()
+        }
+        .task {
             model.start()
             try? await Task.sleep(for: .milliseconds(350))
             showsSpinner = true
@@ -78,6 +81,9 @@ struct MoviePlayerScreen: View {
             Color.black
             VideoSurface(view: videoView)
             touchLayer
+            if !model.isFailed {
+                MovieSubtitleOverlay(model: model, chromeTop: subtitleFloor(layout: layout))
+            }
             if let reason = model.failureReason {
                 failureCard(reason)
                 VStack {
@@ -354,6 +360,15 @@ struct MoviePlayerScreen: View {
             .accessibilityLabel(String(localized: "Lock Controls", comment: "Movie player: touch lock"))
         }
         .frame(height: 44)
+    }
+
+    /// Panel height: two 44 pt rows, 4 between, 4 above and below.
+    static let panelHeight: CGFloat = 100
+
+    /// Subtitles rise above the transport glass while it shows (§4).
+    private func subtitleFloor(layout: MoviePlayerLayout) -> CGFloat? {
+        guard model.isChromeVisible, !model.isLocked, !model.isTracksPanelOpen else { return nil }
+        return layout.stageSize.height - layout.chromeInsets.bottom - Self.panelHeight
     }
 
     /// A column on the right of a wide stage (board `PH_MovieTracks`: 370 pt,

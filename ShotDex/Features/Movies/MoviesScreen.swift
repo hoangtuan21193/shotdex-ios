@@ -275,16 +275,30 @@ struct MoviesScreen: View {
                 switch try await opener.open(movie) {
                 case .file(let url):
                     let engine = VLCMoviePlayer(input: .file(url))
-                    playing = PlayingMovie(model: MoviePlayerModel(movie: movie, player: engine, store: dependencies.movies, audioLanguages: MovieLanguagesScreen.current(.audio)), view: engine.view)
+                    let loader = MovieSubtitleLoader(files: dependencies.movieDownloads.files)
+                    playing = PlayingMovie(model: playerModel(movie, engine: engine, loader: loader), view: engine.view)
                 case .stream(let stream, let fileName, let close):
                     let engine = VLCMoviePlayer(input: .stream(stream, fileName: fileName))
-                    let model = MoviePlayerModel(movie: movie, player: engine, store: dependencies.movies, audioLanguages: MovieLanguagesScreen.current(.audio)) { Task { await close() } }
+                    let loader = MovieSubtitleLoader(files: dependencies.movieDownloads.files) { try await stream.fetchFile($0) }
+                    let model = playerModel(movie, engine: engine, loader: loader) { Task { await close() } }
                     playing = PlayingMovie(model: model, view: engine.view)
                 }
             } catch {
                 awayFrom = movie.sourceName ?? ""
             }
         }
+    }
+
+    private func playerModel(_ movie: Movie, engine: VLCMoviePlayer, loader: MovieSubtitleLoader, onClose: @escaping () -> Void = {}) -> MoviePlayerModel {
+        MoviePlayerModel(
+            movie: movie,
+            player: engine,
+            store: dependencies.movies,
+            audioLanguages: MovieLanguagesScreen.current(.audio),
+            subtitleLanguages: MovieLanguagesScreen.current(.subtitles),
+            subtitleLoader: loader,
+            onClose: onClose
+        )
     }
 
     private func selected(_ model: MoviesModel) -> [Movie] {

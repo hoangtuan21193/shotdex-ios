@@ -22,6 +22,16 @@ final class MoviePlayerModel {
     private(set) var audioDelayMs: Int
     /// The Audio & Subtitles panel (§3b); the movie keeps playing under it.
     private(set) var isTracksPanelOpen = false
+
+    // Subtitles (FS-23.03)
+    private(set) var subtitles: [MovieSubtitle] = []
+    private(set) var subtitleChoice: MovieSubtitleChoice
+    private(set) var subtitleStyle: MovieSubtitleStyle
+    private(set) var primaryTimeline: SubtitleTimeline?
+    private(set) var secondaryTimeline: SubtitleTimeline?
+    /// The time subtitles are drawn at: VLC's reports, run on between them
+    /// by the host clock (§4). Read every frame, so not observed.
+    @ObservationIgnored private var clock = PlaybackClock()
     private(set) var rate: Double
     private(set) var videoSize: CGSize = .zero
     private(set) var fillsFrame = false
@@ -45,6 +55,8 @@ final class MoviePlayerModel {
     private var hasStoredDuration = false
     private var hasChosenAudio = false
     private let audioLanguages: [String]
+    private let subtitleLanguages: [String]
+    private let subtitleLoader: MovieSubtitleLoader?
     /// When the movie time last moved — buffering reports alone do not
     /// mean the picture stopped.
     private var lastProgress = Date()
@@ -61,13 +73,20 @@ final class MoviePlayerModel {
         player: any MoviePlaying,
         store: MovieStore? = nil,
         audioLanguages: [String] = [],
+        subtitleLanguages: [String] = [],
+        subtitleLoader: MovieSubtitleLoader? = nil,
         onClose: @escaping () -> Void = {}
     ) {
         self.movie = movie
         self.player = player
         self.store = store
         self.audioLanguages = audioLanguages
+        self.subtitleLanguages = subtitleLanguages
+        self.subtitleLoader = subtitleLoader
         self.onClose = onClose
+        let choice = (try? store?.subtitleChoice(movieId: movie.id)) ?? nil
+        subtitleChoice = choice ?? MovieSubtitleChoice(movieId: movie.id)
+        subtitleStyle = MovieSubtitleStyle.decode(choice?.style ?? "{}")
         audioDelayMs = min(max(movie.audioDelayMs, -Self.audioDelayLimitMs), Self.audioDelayLimitMs)
         durationMs = movie.durationMs ?? 0
         rate = Self.rates.contains(movie.playbackRate) ? movie.playbackRate : 1
@@ -174,6 +193,7 @@ final class MoviePlayerModel {
         player.seek(toMs: target)
         timeMs = target
         lastProgress = Date()
+        clock.seek(to: target, at: Self.hostTime)
     }
 
     func scrub(toMs ms: Int64) {
@@ -299,7 +319,13 @@ final class MoviePlayerModel {
 
     private func sync() {
         state = player.state
-        if player.timeMs != timeMs { lastProgress = Date() }
+        let host = Self.hostTime
+        if player.timeMs != timeMs {
+            lastProgress = Date()
+            clock.report(player.timeMs, at: host)
+        }
+        clock.setRunning(state == .playing, at: host)
+        clock.setRate(player.rate, at: host)
         timeMs = player.timeMs
         if player.durationMs > 0 { durationMs = player.durationMs }
         audioTracks = player.audioTracks
@@ -309,6 +335,34 @@ final class MoviePlayerModel {
         isPictureInPictureActive = player.isPictureInPictureActive
         selectedAudioTrackId = player.selectedAudioTrackId
         followPlayback()
+    }
+
+    // MARK: Subtitles (FS-23.03)
+
+    static var hostTime: TimeInterval { ProcessInfo.processInfo.systemUptime }
+
+    /// The movie time to draw subtitles at, on the frame's host time.
+    func subtitleTimeMs(at host: TimeInterval) -> Int64 {
+        clock.timeMs(at: host)
+    }
+
+    /// Reads the movie's subtitles and the two chosen ones. A movie opened
+    /// the first time starts with the first Subtitle Language it has (§2).
+    func loadSubtitles() async {
+        subtitles = (try? store?.subtitles(movieId: movie.id)) ?? []
+        if (try? store?.subtitleChoice(movieId: movie.id)) == nil,
+           let first = MovieTrackChoice.primarySubtitle(subtitles, language: \.language, preferredLanguages: subtitleLanguages) {
+            subtitleChoice.primaryId = first.id
+            try? store?.saveSubtitleChoice(subtitleChoice)
+        }
+        primaryTimeline = await timeline(for: subtitleChoice.primaryId)
+        secondaryTimeline = await timeline(for: subtitleChoice.secondaryId)
+    }
+
+    private func timeline(for id: String?) async -> SubtitleTimeline? {
+        guard let id, let subtitle = subtitles.first(where: { $0.id == id }), let loader = subtitleLoader,
+              let document = try? await loader.document(for: subtitle) else { return nil }
+        return SubtitleTimeline(document: document, delayMs: Int64(subtitle.offsetMs))
     }
 
     // MARK: Position (§2)
@@ -322,6 +376,7 @@ final class MoviePlayerModel {
                 timeMs = target
                 lastSavedMs = target
                 resumedAtMs = target
+                clock.seek(to: target, at: Self.hostTime)
             }
         }
         if durationMs > 0, durationMs != (movie.durationMs ?? 0), !hasStoredDuration {

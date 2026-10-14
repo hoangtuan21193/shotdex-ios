@@ -95,6 +95,34 @@ final class RemoteMovieStream: InputStream, @unchecked Sendable {
         return data.count
     }
 
+    /// A small file beside the movie (a sidecar subtitle), read over the
+    /// same connection and in turn with the movie's own reads.
+    func fetchFile(_ path: String, limit: Int64 = 8 << 20) async throws -> Data {
+        await gate.enter()
+        do {
+            let data = try await readWhole(path, limit: limit)
+            await gate.leave()
+            return data
+        } catch {
+            await gate.leave()
+            throw error
+        }
+    }
+
+    private func readWhole(_ path: String, limit: Int64) async throws -> Data {
+        guard let size = try await client.fileSize(at: path) else { throw RemoteFileError.fileMissing(path) }
+        var data = Data()
+        var offset: Int64 = 0
+        let total = min(size, limit)
+        while offset < total {
+            let part = try await client.readRange(path, offset: offset, length: Int(min(Int64(chunk), total - offset)))
+            if part.isEmpty { break }
+            data.append(part)
+            offset += Int64(part.count)
+        }
+        return data
+    }
+
     /// Blocks VLC's input thread until the server answers; one request at a
     /// time on the connection.
     private func fetch(at offset: Int64) -> Data? {
