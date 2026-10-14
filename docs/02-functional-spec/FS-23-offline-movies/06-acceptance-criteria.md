@@ -27,9 +27,9 @@ Phim test: clip tổng hợp 2–5 phút (khung test pattern, tiếng sine — *
 | AC-15 | MKV 2 track âm thanh (EN AC3 5.1, VI AAC) | Audio & Subtitles › Tiếng Việt | đổi track không dừng phim (giờ không lùi); mở lại phim vẫn track VI | ⚠️ chưa có |
 | AC-16 | khoá chạm bật | chạm đúp nửa phải | giờ không đổi; chỉ hiện nút mở khoá | ⚠️ chưa có |
 | AC-17 | chế độ máy bay (sim: mạng tắt) | phát 60 s | 0 yêu cầu mạng từ app trong 60 s | ⚠️ chưa có (`scripts/movies-offline.json` + log mạng) |
-| AC-18 | Primary EN, Secondary VI, cả 3 vị trí | chụp ở 00:01:05 (cue cả hai cùng hiện) | Top/Bottom: VI trên đỉnh khung; Secondary Above: VI cách EN 8 pt phía trên; Secondary Below: ngược lại; không đè nhau | ⚠️ chưa có (`SubtitleLayoutTests.threePositions` + ảnh) |
-| AC-19 | chrome đang hiện, hai phụ đề cùng đáy | chụp | đáy cụm phụ đề ≥ 8 pt trên mép trên kính transport; chrome ẩn → cụm hạ về | ⚠️ chưa có |
-| AC-20 | phụ đề sớm 2,0 s | Sync +2,0 s | cue `00:01:05,000` hiện ở giờ phim 00:01:07,0 ± 0,1 s; mở lại phim giữ +2,0 | ⚠️ chưa có (`SubtitleTimelineTests.delayShiftsCues`) |
+| AC-18 | Primary EN, Secondary VI, cả 3 vị trí | chụp ở 00:01:05 (cue cả hai cùng hiện) | Top/Bottom: VI trên đỉnh khung; Secondary Above: VI cách EN 8 pt phía trên; Secondary Below: ngược lại; không đè nhau | ⚠️ một nửa: bố cục `SubtitleLayoutTests.threePositions` ✅; ảnh chờ task 22 |
+| AC-19 | chrome đang hiện, hai phụ đề cùng đáy | chụp | đáy cụm phụ đề ≥ 8 pt trên mép trên kính transport; chrome ẩn → cụm hạ về | ⚠️ một nửa: `SubtitleLayoutTests.liftsAboveChrome` ✅; ảnh chờ task 22 |
+| AC-20 | phụ đề sớm 2,0 s | Sync +2,0 s | cue `00:01:05,000` hiện ở giờ phim 00:01:07,0 ± 0,1 s; mở lại phim giữ +2,0 | ⚠️ một nửa: `SubtitleTimelineTests.delayShiftsCues` ✅; đo trên player (± 0,1 s) + nhớ khi mở lại chờ task 22–23 |
 | AC-21 | SRT tiếng Việt mã Windows-1258 | nhập | chữ có dấu đọc đúng (`Xin chào`), không ký tự lạ | ⚠️ một nửa: giải mã `SubtitleDecoderTests.vietnameseWindows1258` ✅ (gợi ý ngôn ngữ từ tên file `.vi.srt`); luồng nhập chờ task 25 |
 | AC-22 | ASS có `{\i1}`, `{\pos(…)}`, `{\an8}` | vẽ | nghiêng giữ, `pos` bỏ, dòng `an8` ở đỉnh khung | ⚠️ một nửa: đọc `SubtitleParserTests.assKeepsItalicAndTop` ✅; vẽ ở đỉnh khung chờ task 22 |
 | AC-23 | MKV có track PGS + SRT tiếng Việt ngoài | Primary PGS, Secondary VI | cả hai hiện; Translate… không liệt kê PGS ở From | ⚠️ chưa có |

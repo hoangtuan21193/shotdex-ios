@@ -58,7 +58,9 @@ vào phần hình còn thấy; máy dọc: sheet nửa màn.
 ## 4. Vẽ
 
 - Đặt theo **khung phim**, không theo màn: Fit thì nằm trong khung, Fill thì trong phần nhìn thấy. Bề rộng tối đa
-  90% khung; cỡ 100% = chữ cao 5% chiều cao khung.
+  90% khung; cỡ 100% = chữ cao 5% chiều cao khung; cách mép trên/dưới 4% chiều cao khung.
+- Giờ của lớp phụ đề chạy theo đồng hồ máy giữa hai lần VLC báo giờ (vài lần mỗi giây): lệch nhỏ kéo dần, không bao
+  giờ lùi khi đang phát; lệch lớn (tua) nhảy ngay.
 - Chữ có viền tối 2 px + bóng, không nền — đọc được trên cả cảnh trắng.
 - Hai phụ đề cùng đáy: cách nhau 8 pt, không bao giờ đè nhau; chrome đang hiện thì cụm đáy nâng lên trên kính
   transport, chrome ẩn thì hạ về.
