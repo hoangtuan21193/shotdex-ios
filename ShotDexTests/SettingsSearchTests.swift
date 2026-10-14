@@ -77,11 +77,12 @@ struct SettingsSearchTests {
             .notifications: 4,      // :346
             .widgets: 1,            // :413
             .display: 9,            // :429 (8) + Statistics → Show Insights (1, FS-07)
-            .playback: 2,           // :449
+            .playback: 4,           // :449 (2) + Movie Audio/Subtitle Languages (2, FS-23.02 §3b)
             .subjectScan: 4,        // :279
             .sharingAndExport: 4,   // :258 (1) + :496 (2, Watermark When Sharing FS-05.04) + File Servers (1, FS-15)
             .cameraDatabase: 2,     // :515
             .support: 1,            // :528
+            .ai: 1,                 // AI (FS-08.07): one row into its screen
         ]
         for section in SettingsSection.allCases {
             #expect(
@@ -89,7 +90,7 @@ struct SettingsSearchTests {
                 "\(section) indexes \(SettingsSearchIndex.entries(in: section).count) rows"
             )
         }
-        #expect(SettingsSearchIndex.entries.count == 42)
+        #expect(SettingsSearchIndex.entries.count == 45)
     }
 
     /// One case, one entry — a copy-pasted case that forgot to change its text

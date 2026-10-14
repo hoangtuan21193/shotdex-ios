@@ -168,9 +168,15 @@ final class VLCMoviePlayer: NSObject, MoviePlaying {
     func close() {
         if isPictureInPictureActive { pictureInPicture?.stopPictureInPicture() }
         pictureInPicture = nil
-        player.stop()
         player.delegate = nil
-        player.media = nil
+        // Off the main thread: VLC's stop waits for its own threads, which
+        // call back onto the main thread — stopping from there can lock both
+        // up when the device is busy (seen in the full test run).
+        let player = player
+        DispatchQueue.global(qos: .userInitiated).async {
+            player.stop()
+            player.media = nil
+        }
     }
 
     /// The decoder or demuxer VLC complained about, in the user's words.
