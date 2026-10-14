@@ -32,6 +32,20 @@ struct MovieStore: Sendable {
         plexTokens.password(for: sourceId)
     }
 
+    /// Plex refused the token, or a new sign-in fixed it (AC-51).
+    func setNeedsSignIn(_ needsSignIn: Bool, sourceId: String) throws {
+        try database.writer.write { db in
+            try db.execute(sql: "UPDATE movie_sources SET needsSignIn = ? WHERE id = ?", arguments: [needsSignIn, sourceId])
+        }
+    }
+
+    /// The connection that answered last, tried first next time.
+    func setPlexAddress(_ address: String, sourceId: String) throws {
+        try database.writer.write { db in
+            try db.execute(sql: "UPDATE movie_sources SET plexAddress = ? WHERE id = ?", arguments: [address, sourceId])
+        }
+    }
+
     func setReachable(_ isReachable: Bool, sourceId: String) throws {
         try database.writer.write { db in
             try db.execute(sql: "UPDATE movie_sources SET isReachable = ? WHERE id = ?", arguments: [isReachable, sourceId])
@@ -172,6 +186,14 @@ struct MovieStore: Sendable {
         return true
     }
 
+    /// Plex's separate subtitle files for one movie, read when it plays
+    /// (the library listing does not carry them).
+    func syncPlexSubtitles(movieId: String, _ found: [ScannedSubtitle], at date: Date = Date()) throws {
+        try database.writer.write { db in
+            try Self.syncSidecars(movieId: movieId, found, now: Int(date.timeIntervalSince1970), db: db)
+        }
+    }
+
     /// The subtitle files beside a movie on its source, as subtitle rows
     /// that fetch on first use: new ones added, gone ones dropped. Rows the
     /// user made (imported, translated, in-file) are not touched.
@@ -184,8 +206,9 @@ struct MovieStore: Sendable {
         for row in existing where !listed.contains(row.remotePath ?? "") {
             _ = try row.delete(db)
         }
-        let have = Set(existing.compactMap(\.remotePath))
-        for subtitle in found where !have.contains(subtitle.remotePath) {
+        var have = Set(existing.compactMap(\.remotePath))
+        // `insert` also drops a file listed twice.
+        for subtitle in found where have.insert(subtitle.remotePath).inserted {
             try MovieSubtitle(
                 movieId: movieId, language: subtitle.language, origin: subtitle.origin, remotePath: subtitle.remotePath,
                 format: subtitle.format, fileName: "", addedAt: now

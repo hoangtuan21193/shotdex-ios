@@ -151,5 +151,13 @@ extension AppDatabase {
                 t.column("createdAt", .integer).notNull()
             }
         }
+
+        /// FS-23.07 §5, AC-51: a Plex source whose token was refused asks
+        /// to sign in again.
+        migrator.registerMigration("v37-movie-sources-signIn") { db in
+            try db.alter(table: "movie_sources") { t in
+                t.add(column: "needsSignIn", .boolean).notNull().defaults(to: false)
+            }
+        }
     }
 }

@@ -26,6 +26,8 @@ struct MovieSource: Codable, Identifiable, Hashable, Sendable {
     var plexLibraries: String
     var lastScannedAt: Int?
     var isReachable: Bool
+    /// Plex: the token was refused — `Sign in to Plex again` (FS-23.07 §5).
+    var needsSignIn: Bool
     var createdAt: Int
 
     init(
@@ -39,6 +41,7 @@ struct MovieSource: Codable, Identifiable, Hashable, Sendable {
         plexLibraries: String = "[]",
         lastScannedAt: Int? = nil,
         isReachable: Bool = true,
+        needsSignIn: Bool = false,
         createdAt: Int = Int(Date().timeIntervalSince1970)
     ) {
         self.id = id
@@ -51,6 +54,7 @@ struct MovieSource: Codable, Identifiable, Hashable, Sendable {
         self.plexLibraries = plexLibraries
         self.lastScannedAt = lastScannedAt
         self.isReachable = isReachable
+        self.needsSignIn = needsSignIn
         self.createdAt = createdAt
     }
 }

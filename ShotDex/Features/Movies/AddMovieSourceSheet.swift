@@ -38,12 +38,15 @@ struct AddMovieSourceSheet: View {
                 }
 
                 Section {
-                    // Plex sign-in arrives with plan task 30.
-                    row(
-                        title: String(localized: "Plex Server", comment: "Add a Source: a Plex Media Server"),
-                        detail: String(localized: "Sign in with your Plex account", comment: "Add a Source: what the Plex row asks for"),
-                        systemImage: "play.fill", tint: .purple
-                    )
+                    NavigationLink {
+                        PlexSignInScreen { dismiss() }
+                    } label: {
+                        row(
+                            title: String(localized: "Plex Server", comment: "Add a Source: a Plex Media Server"),
+                            detail: String(localized: "Sign in with your Plex account", comment: "Add a Source: what the Plex row asks for"),
+                            systemImage: "play.fill", tint: .purple
+                        )
+                    }
                 } header: {
                     Text(String(localized: "Media Server", comment: "Add a Source: section of media servers"))
                 } footer: {

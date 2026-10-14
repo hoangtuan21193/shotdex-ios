@@ -1,9 +1,9 @@
 import Foundation
 import Observation
 
-/// Keeps Movies in step with its folder sources (FS-23.01 §2): adds one,
-/// and rescans them all when Movies opens. Plex sources join in plan task
-/// 30.
+/// Keeps Movies in step with its sources (FS-23.01 §2, FS-23.07): adds one,
+/// and rescans them all when Movies opens — folders through their
+/// connection, Plex servers through `PlexLibrarySync`.
 @MainActor
 @Observable
 final class MovieSourceSync {
@@ -31,10 +31,31 @@ final class MovieSourceSync {
     /// Every folder source, one after another (one connection is one
     /// session; two sources on one NAS should not race it).
     func refreshAll() async {
-        let sources = ((try? movies.sources()) ?? []).filter { $0.kind == .folder }
-        for source in sources {
-            _ = try? await refresh(source)
+        for source in (try? movies.sources()) ?? [] {
+            switch source.kind {
+            case .folder: _ = try? await refresh(source)
+            case .plex: await refreshPlex(source)
+            }
         }
+    }
+
+    /// Saves a Plex server as a source with its token, and lists it.
+    @discardableResult
+    func addPlex(_ server: PlexClient.Server, address: URL?, libraries: [String]) async -> MovieStore.ScanMerge {
+        let encoded = (try? String(decoding: JSONEncoder().encode(libraries), as: UTF8.self)) ?? "[]"
+        let source = MovieSource(
+            kind: .plex, name: server.name, plexMachineId: server.machineId,
+            plexAddress: address?.absoluteString, plexLibraries: encoded
+        )
+        try? movies.saveSource(source, plexToken: server.accessToken)
+        return await refreshPlex(source)
+    }
+
+    @discardableResult
+    func refreshPlex(_ source: MovieSource) async -> MovieStore.ScanMerge {
+        scanning.insert(source.id)
+        defer { scanning.remove(source.id) }
+        return await PlexLibrarySync(store: movies).refresh(source)
     }
 
     @discardableResult
