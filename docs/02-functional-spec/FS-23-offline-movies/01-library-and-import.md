@@ -13,6 +13,7 @@ Quyết định: [planboard movies-library](../../../.planboard/movies-library/D
 - Collections › Utilities: ô **Movies** (`play.rectangle`, khác `film` của Video Studio) sau Video Projects. Như mọi ô
   Utilities, số đếm không vẽ mà VoiceOver đọc: `128 movies, 3 on this iPhone`. Ghim được (ô ghim có dòng phụ đó);
   không ẩn được (FS-06.01 §6). iPad dùng cùng băng Utilities (không có sidebar Collections); Mac theo FS-18.
+  Movies không cần quyền ảnh: Collections lúc chưa cho đọc ảnh vẫn có nút **Open Movies** dưới thông báo `No Access to Photos`.
 
 ## 2. Nguồn
 

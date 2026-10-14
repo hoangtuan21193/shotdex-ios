@@ -1,0 +1,131 @@
+{
+ "steps": [
+  {
+   "action": "launch"
+  },
+  {
+   "action": "wait",
+   "seconds": 6
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "tap",
+   "label": "Collections",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "tap",
+   "label": "Open Movies"
+  },
+  {
+   "action": "screenshot",
+   "name": "00-no-access"
+  },
+  {
+   "action": "wait",
+   "seconds": 8
+  },
+  {
+   "action": "tap",
+   "label": "Interstellar"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "tap",
+   "label": "Pause"
+  },
+  {
+   "action": "screenshot",
+   "name": "01-paused"
+  },
+  {
+   "action": "dump",
+   "name": "01-paused"
+  },
+  {
+   "action": "tap",
+   "label": "Play"
+  },
+  {
+   "action": "wait",
+   "seconds": 5
+  },
+  {
+   "action": "screenshot",
+   "name": "02-faded"
+  },
+  {
+   "action": "tap",
+   "x": 0.2,
+   "y": 0.5
+  },
+  {
+   "action": "tap",
+   "label": "Pause"
+  },
+  {
+   "action": "dump",
+   "name": "03-before-lock"
+  },
+  {
+   "action": "tap",
+   "label": "Lock Controls"
+  },
+  {
+   "action": "doubleTap",
+   "x": 0.85,
+   "y": 0.5
+  },
+  {
+   "action": "screenshot",
+   "name": "04-locked"
+  },
+  {
+   "action": "tap",
+   "label": "Unlock Controls"
+  },
+  {
+   "action": "dump",
+   "name": "05-unlocked"
+  },
+  {
+   "action": "doubleTap",
+   "x": 0.85,
+   "y": 0.5
+  },
+  {
+   "action": "dump",
+   "name": "06-skipped"
+  },
+  {
+   "action": "tap",
+   "label": "Fit"
+  },
+  {
+   "action": "screenshot",
+   "name": "07-fill"
+  },
+  {
+   "action": "dump",
+   "name": "07-fill"
+  }
+ ]
+}

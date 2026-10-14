@@ -23,8 +23,10 @@ struct MoviePlayerLayout: Equatable {
             chromeInsets = EdgeInsets(top: AppTheme.Spacing.lg, leading: side, bottom: AppTheme.Spacing.xl, trailing: side)
         } else {
             stageSize = size
+            // With the status bar hidden an iPad reports no top inset;
+            // the display's rounded corner still needs clearing.
             chromeInsets = EdgeInsets(
-                top: safeArea.top + AppTheme.Spacing.sm,
+                top: max(safeArea.top, AppTheme.Spacing.lg) + AppTheme.Spacing.sm,
                 leading: safeArea.leading + AppTheme.Spacing.lg,
                 bottom: safeArea.bottom + AppTheme.Spacing.sm,
                 trailing: safeArea.trailing + AppTheme.Spacing.lg

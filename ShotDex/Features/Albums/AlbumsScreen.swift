@@ -111,11 +111,18 @@ struct AlbumsScreen: View {
                 || dependencies.sources.rows.contains(where: { $0.text.kind != .photos }) {
                 albumGrid
             } else {
-                ContentUnavailableView(
-                    "No Access to Photos",
-                    systemImage: "photo.badge.exclamationmark",
-                    description: Text("Allow photo access in the Library tab to browse albums.")
-                )
+                // Movies keep their own files and need no photo access
+                // (FS-23.01 §1), so the way in stays open here.
+                ContentUnavailableView {
+                    Label("No Access to Photos", systemImage: "photo.badge.exclamationmark")
+                } description: {
+                    Text("Allow photo access in the Library tab to browse albums.")
+                } actions: {
+                    NavigationLink(value: MoviesDestination()) {
+                        Label(String(localized: "Open Movies", comment: "Collections without photo access: the Movies library still works"), systemImage: "play.rectangle")
+                    }
+                    .buttonStyle(.bordered)
+                }
             }
         }
         .toolbar {
@@ -625,96 +632,9 @@ extension AlbumsScreen {
 
     fileprivate func utilitiesSection() -> some View {
         listSection("Utilities", entryCount: utilityEntryCount) {
-            NavigationLink(value: BackupScreenDestination()) {
-                CollectionListRow(
-                    title: String(localized: "Backup", comment: "Utilities row: back a whole library up to a network drive (FS-22)"),
-                    systemImage: "clock.arrow.circlepath"
-                )
+            ForEach(UtilityRow.allCases, id: \.self) { row in
+                utilityRow(row)
             }
-            .buttonStyle(.plain)
-
-            NavigationLink(value: DuplicatesDestination()) {
-                CollectionListRow(
-                    title: String(localized: "Duplicates"),
-                    systemImage: "square.on.square",
-                    spokenDetail: duplicatesCount.map {
-                        String(
-                            localized: "\($0) groups",
-                            comment: "VoiceOver detail on the Duplicates row: how many duplicate groups the last scan found"
-                        )
-                    }
-                )
-            }
-            .buttonStyle(.plain)
-            .contextMenu { pinButton(.duplicates) }
-
-            NavigationLink(value: PlacesDestination()) {
-                CollectionListRow(title: String(localized: "Places"), systemImage: "map")
-            }
-            .buttonStyle(.plain)
-            .contextMenu { pinButton(.places) }
-
-            NavigationLink(value: TripsDestination()) {
-                CollectionListRow(title: String(localized: "Trips"), systemImage: "airplane")
-            }
-            .buttonStyle(.plain)
-            .contextMenu { pinButton(.trips) }
-
-            // What this app has made, split by the editor that made it:
-            // "Creations" as one row said nothing about what was inside, and
-            // a collage and a video are started from different places and
-            // edited by different tools. Both rows are always here, empty or
-            // not — each one is also where you start a new one.
-            NavigationLink(value: CreationsDestination(kind: .collage)) {
-                CollectionListRow(title: String(localized: "Collages"), systemImage: "square.grid.2x2")
-            }
-            .buttonStyle(.plain)
-
-            // "Video Projects", because Media Types already has a Videos
-            // album and that one means the footage the user shot. These are
-            // the things the Video Studio made and can reopen.
-            NavigationLink(value: CreationsDestination(kind: .video)) {
-                CollectionListRow(
-                    title: String(localized: "Video Projects", comment: "Utilities row: videos made in the Video Studio"),
-                    systemImage: "film"
-                )
-            }
-            .buttonStyle(.plain)
-
-            // FS-23.01 §1: films kept outside Photos — streamed from home or
-            // downloaded for the plane. Not `film` (Video Studio has it).
-            NavigationLink(value: MoviesDestination()) {
-                CollectionListRow(
-                    title: String(localized: "Movies", comment: "Utilities row: the movie library (FS-23)"),
-                    systemImage: "play.rectangle",
-                    spokenDetail: MoviesCountText.spoken(movieCounts)
-                )
-            }
-            .buttonStyle(.plain)
-            .contextMenu { pinButton(.movies) }
-
-            // Always there (FS-17.05 §1), empty or not: the doors to photos
-            // kept elsewhere. "Local Network" and "Cloud", not "On …": the
-            // 190pt Utilities card cut "On Local Network" to "On Local Networ".
-            // NAS and computers on this network, and cloud
-            // folders from the Files app — each with the uploads one row in.
-            NavigationLink(value: OnServerDestination()) {
-                CollectionListRow(
-                    title: String(localized: "Local Network", comment: "Utilities row: browse NAS drives and computers on this network"),
-                    systemImage: "server.rack",
-                    spokenDetail: String(localized: "Browse and download from NAS drives and computers on this network", comment: "VoiceOver detail on the On Local Network utilities row")
-                )
-            }
-            .buttonStyle(.plain)
-
-            NavigationLink(value: OnCloudDestination()) {
-                CollectionListRow(
-                    title: String(localized: "Cloud", comment: "Utilities row: browse Dropbox, Google Drive and other cloud folders"),
-                    systemImage: "icloud",
-                    spokenDetail: String(localized: "Browse and download from Dropbox, Google Drive and other cloud folders", comment: "VoiceOver detail on the On Cloud utilities row")
-                )
-            }
-            .buttonStyle(.plain)
 
             // Recently Deleted and Unable to Upload: library housekeeping
             // rather than browsing, so they sit with Duplicates the way
@@ -784,12 +704,117 @@ extension AlbumsScreen {
         }
     }
 
-    /// Duplicates, Places, Trips, Collages and Videos are always drawn; the
-    /// system utility albums come and go, and the packing has to count what
-    /// is actually there.
+    /// Every `UtilityRow` is always drawn; Hidden and the system utility
+    /// albums come and go, and the packing has to count what is actually
+    /// there. Counted from the same list `utilitiesSection()` draws, so adding
+    /// a row cannot leave the band packed for the old number.
     private var utilityEntryCount: Int {
-        7 + model.utilityAlbums.count + (dependencies.serverUploadIndex.assetIds.isEmpty ? 0 : 1)
-            + (hiddenCount > 0 ? 1 : 0)
+        UtilityRow.allCases.count + model.utilityAlbums.count + (hiddenCount > 0 ? 1 : 0)
+    }
+
+    @ViewBuilder
+    private func utilityRow(_ row: UtilityRow) -> some View {
+        switch row {
+        case .backup:
+            NavigationLink(value: BackupScreenDestination()) {
+                CollectionListRow(
+                    title: String(localized: "Backup", comment: "Utilities row: back a whole library up to a network drive (FS-22)"),
+                    systemImage: "clock.arrow.circlepath"
+                )
+            }
+            .buttonStyle(.plain)
+
+        case .duplicates:
+            NavigationLink(value: DuplicatesDestination()) {
+                CollectionListRow(
+                    title: String(localized: "Duplicates"),
+                    systemImage: "square.on.square",
+                    spokenDetail: duplicatesCount.map {
+                        String(
+                            localized: "\($0) groups",
+                            comment: "VoiceOver detail on the Duplicates row: how many duplicate groups the last scan found"
+                        )
+                    }
+                )
+            }
+            .buttonStyle(.plain)
+            .contextMenu { pinButton(.duplicates) }
+
+        case .places:
+            NavigationLink(value: PlacesDestination()) {
+                CollectionListRow(title: String(localized: "Places"), systemImage: "map")
+            }
+            .buttonStyle(.plain)
+            .contextMenu { pinButton(.places) }
+
+        case .trips:
+            NavigationLink(value: TripsDestination()) {
+                CollectionListRow(title: String(localized: "Trips"), systemImage: "airplane")
+            }
+            .buttonStyle(.plain)
+            .contextMenu { pinButton(.trips) }
+
+        // What this app has made, split by the editor that made it:
+        // "Creations" as one row said nothing about what was inside, and
+        // a collage and a video are started from different places and
+        // edited by different tools. Both rows are always here, empty or
+        // not — each one is also where you start a new one.
+        case .collages:
+            NavigationLink(value: CreationsDestination(kind: .collage)) {
+                CollectionListRow(title: String(localized: "Collages"), systemImage: "square.grid.2x2")
+            }
+            .buttonStyle(.plain)
+
+        // "Video Projects", because Media Types already has a Videos
+        // album and that one means the footage the user shot. These are
+        // the things the Video Studio made and can reopen.
+        case .videoProjects:
+            NavigationLink(value: CreationsDestination(kind: .video)) {
+                CollectionListRow(
+                    title: String(localized: "Video Projects", comment: "Utilities row: videos made in the Video Studio"),
+                    systemImage: "film"
+                )
+            }
+            .buttonStyle(.plain)
+
+        // FS-23.01 §1: films kept outside Photos — streamed from home or
+        // downloaded for the plane. Not `film` (Video Studio has it).
+        case .movies:
+            NavigationLink(value: MoviesDestination()) {
+                CollectionListRow(
+                    title: String(localized: "Movies", comment: "Utilities row: the movie library (FS-23)"),
+                    systemImage: "play.rectangle",
+                    spokenDetail: MoviesCountText.spoken(movieCounts)
+                )
+            }
+            .buttonStyle(.plain)
+            .contextMenu { pinButton(.movies) }
+
+        // Always there (FS-17.05 §1), empty or not: the doors to photos
+        // kept elsewhere. "Local Network" and "Cloud", not "On …": the
+        // 190pt Utilities card cut "On Local Network" to "On Local Networ".
+        // NAS and computers on this network, and cloud
+        // folders from the Files app — each with the uploads one row in.
+        case .localNetwork:
+            NavigationLink(value: OnServerDestination()) {
+                CollectionListRow(
+                    title: String(localized: "Local Network", comment: "Utilities row: browse NAS drives and computers on this network"),
+                    systemImage: "server.rack",
+                    spokenDetail: String(localized: "Browse and download from NAS drives and computers on this network", comment: "VoiceOver detail on the On Local Network utilities row")
+                )
+            }
+            .buttonStyle(.plain)
+
+        case .cloud:
+            NavigationLink(value: OnCloudDestination()) {
+                CollectionListRow(
+                    title: String(localized: "Cloud", comment: "Utilities row: browse Dropbox, Google Drive and other cloud folders"),
+                    systemImage: "icloud",
+                    spokenDetail: String(localized: "Browse and download from Dropbox, Google Drive and other cloud folders", comment: "VoiceOver detail on the On Cloud utilities row")
+                )
+            }
+            .buttonStyle(.plain)
+        }
     }
 
     private func refreshHiddenCount() {
@@ -825,6 +850,14 @@ extension AlbumsScreen {
         else { return nil }
         return count
     }
+}
+
+/// The Utilities rows drawn every time, in the order they are drawn. Hidden
+/// and the system utility albums follow them only while they have something
+/// in them. Uploads are not here: their doors are inside Local Network and
+/// Cloud.
+private enum UtilityRow: CaseIterable {
+    case backup, duplicates, places, trips, collages, videoProjects, movies, localNetwork, cloud
 }
 
 /// One full-width row in Media Types or Utilities: a small leading glyph, the
