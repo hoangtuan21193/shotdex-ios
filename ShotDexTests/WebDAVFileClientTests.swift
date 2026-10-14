@@ -9,9 +9,13 @@ final class StubWebDAVProtocol: URLProtocol, @unchecked Sendable {
     static let lock = NSLock()
     nonisolated(unsafe) static var files: [String: Data] = [:]
     nonisolated(unsafe) static var folders: Set<String> = [""]
+    /// Answers every GET with the whole file and 200, as some servers do.
+    nonisolated(unsafe) static var ignoresRange = false
+    /// The Range header of every GET, in order (nil = none).
+    nonisolated(unsafe) static var rangesAsked: [String?] = []
 
     static func reset() {
-        lock.withLock { files = [:]; folders = [""] }
+        lock.withLock { files = [:]; folders = [""]; ignoresRange = false; rangesAsked = [] }
     }
 
     override class func canInit(with request: URLRequest) -> Bool { request.url?.host == "dav.test" }
@@ -61,9 +65,11 @@ final class StubWebDAVProtocol: URLProtocol, @unchecked Sendable {
                 status = 201
             case "GET":
                 guard let data = Self.files[key] else { status = 404; break }
-                if let range = request.value(forHTTPHeaderField: "Range"),
-                   let bounds = range.split(separator: "=").last?.split(separator: "-"), bounds.count == 2,
-                   let start = Int(bounds[0]), let end = Int(bounds[1]) {
+                Self.rangesAsked.append(request.value(forHTTPHeaderField: "Range"))
+                if !Self.ignoresRange, let range = request.value(forHTTPHeaderField: "Range"),
+                   let bounds = range.split(separator: "=").last?.split(separator: "-", omittingEmptySubsequences: false), bounds.count == 2,
+                   let start = Int(bounds[0]) {
+                    let end = Int(bounds[1]) ?? data.count - 1
                     status = 206
                     body = data.subdata(in: min(start, data.count)..<min(end + 1, data.count))
                 } else {
@@ -201,5 +207,46 @@ final class StubWebDAVProtocol: URLProtocol, @unchecked Sendable {
     @Test func certificateFingerprintIsOpenSSLHex() {
         #expect(TLSCertificateTrust.fingerprint(ofCertificate: Data("abc".utf8))
             == "SHA-256 BA:78:16:BF:8F:01:CF:EA:41:41:40:DE:5D:AE:22:23:B0:03:61:A3:96:17:7A:9C:B4:10:FF:61:F2:00:15:AD")
+    }
+}
+
+/// FS-23.01 §6 over WebDAV: one `Range: bytes=<have>-` request for the rest.
+extension WebDAVFileClientTests {
+    private func partFile(holding prefix: Data) throws -> URL {
+        let url = FileManager.default.temporaryDirectory.appending(path: "dav-resume-\(UUID().uuidString).part")
+        try prefix.write(to: url)
+        return url
+    }
+
+    @Test func resumeAsksForTheRestOnly() async throws {
+        let dav = client()
+        let movie = Data((0..<3_000_000).map { UInt8($0 % 251) })
+        StubWebDAVProtocol.lock.withLock { StubWebDAVProtocol.files["Films/Dune.mkv"] = movie; StubWebDAVProtocol.folders.insert("Films") }
+        let local = try partFile(holding: movie.prefix(1_234_567))
+        defer { try? FileManager.default.removeItem(at: local) }
+
+        let reached = try await dav.resumeDownload("Films/Dune.mkv", to: local) { _ in }
+
+        #expect(reached == 3_000_000)
+        #expect(try Data(contentsOf: local) == movie)
+        #expect(StubWebDAVProtocol.lock.withLock { StubWebDAVProtocol.rangesAsked } == ["bytes=1234567-"])
+    }
+
+    /// A server that ignores Range sends the file from byte 0: the part is
+    /// started over, never appended to with the wrong bytes.
+    @Test func resumeStartsOverWhenRangeIgnored() async throws {
+        let dav = client()
+        let movie = Data((0..<2_500_000).map { UInt8($0 % 241) })
+        StubWebDAVProtocol.lock.withLock {
+            StubWebDAVProtocol.files["Dune.mkv"] = movie
+            StubWebDAVProtocol.ignoresRange = true
+        }
+        let local = try partFile(holding: movie.prefix(1_000_000))
+        defer { try? FileManager.default.removeItem(at: local) }
+
+        let reached = try await dav.resumeDownload("Dune.mkv", to: local) { _ in }
+
+        #expect(reached == 2_500_000)
+        #expect(try Data(contentsOf: local) == movie)
     }
 }

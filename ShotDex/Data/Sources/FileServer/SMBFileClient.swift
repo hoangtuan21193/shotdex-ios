@@ -264,6 +264,35 @@ final class SMBFileClient: RemoteFileClient, @unchecked Sendable {
         }
     }
 
+    /// One reader for the rest of the file, `FileChecksum.chunkSize` a read.
+    @discardableResult
+    func resumeDownload(_ path: String, to localURL: URL, progress: @escaping @Sendable (Int64) -> Void) async throws -> Int64 {
+        do {
+            let (client, rest) = try await openInShare(path)
+            let size = Int64(try await client.fileStat(path: rest).size)
+            let file = try ResumableFile(localURL, remoteSize: size)
+            defer { file.close() }
+            progress(file.offset)
+            guard file.offset < size else { return file.offset }
+            let reader = client.fileReader(path: rest)
+            defer { Task { try? await reader.close() } }
+            while file.offset < size {
+                try Task.checkCancellation()
+                let chunk = try await reader.read(offset: UInt64(file.offset), length: UInt32(FileChecksum.chunkSize))
+                guard !chunk.isEmpty else { throw RemoteFileError.connectionLost }
+                try file.append(chunk)
+                progress(file.offset)
+            }
+            return file.offset
+        } catch let error as CancellationError {
+            throw error
+        } catch let error as RemoteFileError {
+            throw error
+        } catch {
+            throw Self.map(error, host: server.host, path: path)
+        }
+    }
+
     func move(_ source: String, to destination: String) async throws {
         guard let from = SMBPath.split(source), let to = SMBPath.split(destination),
               !from.rest.isEmpty, !to.rest.isEmpty else {

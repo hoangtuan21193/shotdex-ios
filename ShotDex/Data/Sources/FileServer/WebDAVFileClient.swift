@@ -138,6 +138,26 @@ final class WebDAVFileClient: NSObject, RemoteFileClient, URLSessionDelegate, UR
         return try FileChecksum.sha256(of: localURL)
     }
 
+    /// One `Range: bytes=<have>-` request for the rest, written chunk by
+    /// chunk as it arrives. A server that ignores Range (200 for a resume)
+    /// sends the whole file again, so the part starts over.
+    @discardableResult
+    func resumeDownload(_ path: String, to localURL: URL, progress: @escaping @Sendable (Int64) -> Void) async throws -> Int64 {
+        guard let size = try await fileSize(at: path) else { throw RemoteFileError.fileMissing(path) }
+        let file = try ResumableFile(localURL, remoteSize: size)
+        defer { file.close() }
+        progress(file.offset)
+        guard file.offset < size else { return file.offset }
+        var get = request("GET", url(path))
+        get.setValue("bytes=\(file.offset)-", forHTTPHeaderField: "Range")
+        let receiver = RangeReceiver(file: file, localURL: localURL, progress: progress)
+        let response = try await perform { try await receiver.run(get, in: self.session) }
+        try check(response, path: path, allow: [200, 206])
+        if let error = receiver.writeError { throw error }
+        guard file.offset == size else { throw RemoteFileError.connectionLost }
+        return file.offset
+    }
+
     func readRange(_ path: String, offset: Int64, length: Int) async throws -> Data {
         var get = request("GET", url(path))
         get.setValue("bytes=\(offset)-\(offset + Int64(length) - 1)", forHTTPHeaderField: "Range")
@@ -301,4 +321,75 @@ private final class ProgressDelegate: NSObject, URLSessionTaskDelegate, URLSessi
     }
 
     func urlSession(_ session: URLSession, downloadTask: URLSessionDownloadTask, didFinishDownloadingTo location: URL) {}
+}
+
+/// Streams one GET into a `ResumableFile` as the bytes arrive, without
+/// holding the body in memory or walking it byte by byte.
+private final class RangeReceiver: NSObject, URLSessionDataDelegate, @unchecked Sendable {
+    private let file: ResumableFile
+    private let localURL: URL
+    private let progress: @Sendable (Int64) -> Void
+    private let lock = NSLock()
+    private var continuation: CheckedContinuation<URLResponse, Error>?
+    private var response: URLResponse?
+    private(set) var writeError: Error?
+
+    init(file: ResumableFile, localURL: URL, progress: @escaping @Sendable (Int64) -> Void) {
+        self.file = file
+        self.localURL = localURL
+        self.progress = progress
+    }
+
+    func run(_ request: URLRequest, in session: URLSession) async throws -> URLResponse {
+        let task = session.dataTask(with: request)
+        task.delegate = self
+        return try await withTaskCancellationHandler {
+            try await withCheckedThrowingContinuation { continuation in
+                lock.withLock { self.continuation = continuation }
+                task.resume()
+            }
+        } onCancel: {
+            task.cancel()
+        }
+    }
+
+    func urlSession(_ session: URLSession, dataTask: URLSessionDataTask, didReceive response: URLResponse) async -> URLSession.ResponseDisposition {
+        lock.withLock { self.response = response }
+        let status = (response as? HTTPURLResponse)?.statusCode ?? 0
+        guard status == 200 || status == 206 else { return .cancel }
+        if status == 200, file.offset > 0 {
+            do { try file.restart() } catch {
+                lock.withLock { writeError = error }
+                return .cancel
+            }
+        }
+        return .allow
+    }
+
+    func urlSession(_ session: URLSession, dataTask: URLSessionDataTask, didReceive data: Data) {
+        do {
+            try file.append(data)
+            progress(file.offset)
+        } catch {
+            lock.withLock { writeError = error }
+            dataTask.cancel()
+        }
+    }
+
+    func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: Error?) {
+        let (continuation, response, writeError) = lock.withLock {
+            defer { self.continuation = nil }
+            return (self.continuation, self.response, self.writeError)
+        }
+        let refused = (response as? HTTPURLResponse).map { !(200...299).contains($0.statusCode) } ?? false
+        // Done, or stopped on purpose (a write failed, or a status the
+        // caller turns into its own error): hand back the response.
+        if let response, error == nil || writeError != nil || refused {
+            continuation?.resume(returning: response)
+        } else if let error {
+            continuation?.resume(throwing: error)
+        } else {
+            continuation?.resume(throwing: URLError(.badServerResponse))
+        }
+    }
 }

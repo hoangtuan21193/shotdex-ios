@@ -20,6 +20,9 @@ final class SFTPFileClient: RemoteFileClient, @unchecked Sendable {
     /// SFTP writes go out in slices of this size (Citadel caps a write
     /// request at 32 000 bytes anyway); reads ask for the same.
     private static let chunk = 32_000
+    /// What a resumed download asks per read: four writes' worth, under
+    /// the size at which a read stalls.
+    private static let resumeReadSize = chunk * 4
 
     init(server: FileServer, password: String) {
         self.server = server
@@ -253,6 +256,42 @@ final class SFTPFileClient: RemoteFileClient, @unchecked Sendable {
             }
             return FileChecksum.hex(hasher.finalize())
         } catch let error as CancellationError {
+            throw error
+        } catch {
+            throw Self.map(error, host: server.host, path: path)
+        }
+    }
+
+    /// One open file for the rest, `resumeReadSize` a read — a single SFTP
+    /// read of 256 000 bytes never returns from some servers (S1 spike).
+    @discardableResult
+    func resumeDownload(_ path: String, to localURL: URL, progress: @escaping @Sendable (Int64) -> Void) async throws -> Int64 {
+        do {
+            guard let size = try await fileSize(at: path) else { throw RemoteFileError.fileMissing(path) }
+            let file = try ResumableFile(localURL, remoteSize: size)
+            defer { file.close() }
+            progress(file.offset)
+            guard file.offset < size else { return file.offset }
+            let remote = try await connected().openFile(filePath: path, flags: .read)
+            do {
+                while file.offset < size {
+                    try Task.checkCancellation()
+                    var buffer = try await remote.read(from: UInt64(file.offset), length: UInt32(Self.resumeReadSize))
+                    guard buffer.readableBytes > 0, let bytes = buffer.readBytes(length: buffer.readableBytes) else {
+                        throw RemoteFileError.connectionLost
+                    }
+                    try file.append(Data(bytes))
+                    progress(file.offset)
+                }
+                try? await remote.close()
+            } catch {
+                try? await remote.close()
+                throw error
+            }
+            return file.offset
+        } catch let error as CancellationError {
+            throw error
+        } catch let error as RemoteFileError {
             throw error
         } catch {
             throw Self.map(error, host: server.host, path: path)
