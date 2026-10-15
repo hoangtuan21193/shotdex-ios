@@ -112,7 +112,7 @@ Layered, composition root at `ShotDex/App/AppDependencies.swift` — built once 
 
 **iOS 26 vs earlier:** every screen that padded content for the old floating chrome wraps those spacers in `if #unavailable(iOS 26.0)`. When touching tab/search/toolbar UI, keep both paths working.
 
-**Tests** (`ShotDexTests/`) cover Domain + Database layers only (in-memory GRDB via `AppDatabase.makeEmpty()` / `AppDependencies.preview()`). No UI tests.
+**Tests** (`ShotDexTests/`) cover Domain + Database layers only (in-memory GRDB via `AppDatabase.makeEmpty()` / `AppDependencies.preview()`). No UI tests. The schemes' Test action caps Swift Testing at 4 tests at once (`SWT_EXPERIMENTAL_MAXIMUM_PARALLELIZATION_WIDTH`, checked by `TestParallelismTests`): `PKDrawing.image` and ImageIO HEIC encode/decode block their thread until a concurrency-pool thread is free to run their own work, so a suite that fills the pool with them hangs forever. Keep the cap below the CPU count, and run blocking framework work that a test fans out itself on its own thread (`OwnThread.swift`).
 
 ## Working rules
 
