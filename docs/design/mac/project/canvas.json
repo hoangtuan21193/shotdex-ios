@@ -1,701 +1,881 @@
 {
- "v": 3,
- "createdOnFiles": {
-  "v": 1,
-  "at": "2026-10-04T10:00:00Z"
- },
- "title": "ShotDex Mac",
- "launch": {
-  "view": "canvas"
- },
- "pages": [],
- "boards": {
-  "Main.dc.html": {
-   "x": 0,
-   "y": 0,
-   "w": 1440,
-   "h": 900,
-   "title": "Mac · Library: sidebar nguồn ảnh (Photos · thư mục · ổ ngoài · NAS), toolbar kính, lưới 7 cột",
-   "radius": 16
-  },
-  "MAC_LibrarySelected.dc.html": {
-   "x": 1520,
-   "y": 0,
-   "w": 1440,
-   "h": 900,
-   "title": "Mac · Thư viện: chọn 6 ảnh, inspector tóm tắt lựa chọn + Compare/Edit/Add to Album/Export",
-   "radius": 16
-  },
-  "MAC_LibraryList.dc.html": {
-   "x": 3040,
-   "y": 0,
-   "w": 1440,
-   "h": 900,
-   "title": "Mac · Thư viện dạng bảng: 12 cột sắp xếp được, hàng xen màu, 4 hàng chọn",
-   "radius": 16
-  },
-  "MAC_Search.dc.html": {
-   "x": 4560,
-   "y": 0,
-   "w": 1440,
-   "h": 900,
-   "title": "Mac · Tìm kiếm: token trong ô search, gợi ý, scope bar nguồn, Save as Smart Album",
-   "radius": 16
-  },
-  "MAC_FilterPopover.dc.html": {
-   "x": 6080,
-   "y": 0,
-   "w": 1440,
-   "h": 900,
-   "title": "Mac · Popover Filter and Sort 360×480: sắp xếp, cờ/sao, máy, ống, khoảng tiêu cự/ISO/khẩu; còn lại ở Advanced Filter…",
-   "radius": 16
-  },
-  "MAC_ContextMenu.dc.html": {
-   "x": 7600,
-   "y": 0,
-   "w": 1440,
-   "h": 900,
-   "title": "Mac · Menu chuột phải trên 3 ảnh: đủ lệnh + phím tắt, menu con Add to Album",
-   "radius": 16
-  },
-  "MAC_MenuBar.dc.html": {
-   "x": 9120,
-   "y": 0,
-   "w": 1716,
-   "h": 1110,
-   "title": "Mac · Menu bar đủ lệnh: ShotDex File Edit View Image Go Window Help + menu Clip khi Video Studio là cửa sổ chính",
-   "radius": 16
-  },
-  "MAC_AddSource.dc.html": {
-   "x": 10916,
-   "y": 0,
-   "w": 1440,
-   "h": 900,
-   "title": "Mac · Sheet Add a Source: Photos Library, Folder or Volume, Server",
-   "radius": 16
-  },
-  "MAC_SourceIndexing.dc.html": {
-   "x": 12436,
-   "y": 0,
-   "w": 1440,
-   "h": 900,
-   "title": "Mac · Nguồn mới đang index + ổ T7 offline (hàng mờ, ảnh xám, Locate…)",
-   "radius": 16
-  },
-  "MAC_Viewer.dc.html": {
-   "x": 0,
-   "y": 1510,
-   "w": 1440,
-   "h": 900,
-   "title": "Mac · Xem ảnh trong cửa sổ chính: Single · 2-Up · Survey, filmstrip, inspector",
-   "radius": 16
-  },
-  "MAC_ViewerFullScreen.dc.html": {
-   "x": 1520,
-   "y": 1510,
-   "w": 1440,
-   "h": 900,
-   "title": "Mac · Toàn màn hình: zoom 100%, navigator, HUD kính khi rê chuột",
-   "radius": 16
-  },
-  "MAC_GetInfo.dc.html": {
-   "x": 3040,
-   "y": 1510,
-   "w": 420,
-   "h": 640,
-   "title": "Mac · Get Info nhiều ảnh: 3 Photos, ô khác nhau ghi Mixed, keyword 2/3",
-   "radius": 16
-  },
-  "MAC_Compare.dc.html": {
-   "x": 3540,
-   "y": 1510,
-   "w": 1440,
-   "h": 900,
-   "title": "Mac · Xem ảnh chế độ 2-Up: Select | Candidate, luôn đồng bộ zoom, Move 1 Photo… (ảnh T7)",
-   "radius": 16
-  },
-  "MAC_Duplicates.dc.html": {
-   "x": 6580,
-   "y": 1510,
-   "w": 1440,
-   "h": 900,
-   "title": "Mac · Ảnh trùng: nhóm bên trái, popup Source, nhóm Exact chỉ khác đường dẫn, Merge",
-   "radius": 16
-  },
-  "MAC_Places.dc.html": {
-   "x": 8100,
-   "y": 1510,
-   "w": 1440,
-   "h": 900,
-   "title": "Mac · Địa điểm: bản đồ, cụm ảnh, inspector 300 của cụm đang chọn",
-   "radius": 16
-  },
-  "MAC_OnThisDay.dc.html": {
-   "x": 9620,
-   "y": 1510,
-   "w": 1440,
-   "h": 900,
-   "title": "Mac · On This Day: lưới theo năm (Hanoi, Banff, Kyoto), Show Trip",
-   "radius": 16
-  },
-  "MAC_Collections.dc.html": {
-   "x": 0,
-   "y": 2810,
-   "w": 1440,
-   "h": 900,
-   "title": "Mac · Album: lưới cover Smart/My Albums, kéo 3 ảnh thả lên album trên sidebar",
-   "radius": 16
-  },
-  "MAC_AlbumDetail.dc.html": {
-   "x": 1520,
-   "y": 2810,
-   "w": 1440,
-   "h": 900,
-   "title": "Mac · Chi tiết album: header, Slideshow · Share · Export · Album Info, lưới 8 cột",
-   "radius": 16
-  },
-  "MAC_SmartAlbumEditor.dc.html": {
-   "x": 3040,
-   "y": 2810,
-   "w": 1440,
-   "h": 900,
-   "title": "Mac · Sheet Smart Album 640×560: Match all/any, nhóm điều kiện lồng, danh sách cuộn",
-   "radius": 16
-  },
-  "MAC_Statistics.dc.html": {
-   "x": 4560,
-   "y": 2810,
-   "w": 1440,
-   "h": 900,
-   "title": "Mac · Thống kê: Insights, KPI, 4 cột chart, tooltip drill-down",
-   "radius": 16
-  },
-  "MAC_StatisticsCamera.dc.html": {
-   "x": 6080,
-   "y": 2810,
-   "w": 1440,
-   "h": 900,
-   "title": "Mac · Thống kê một máy (Sony α7 IV): ống, tiêu cự/khẩu/ISO, Top Rated",
-   "radius": 16
-  },
-  "MAC_ChartEditor.dc.html": {
-   "x": 7600,
-   "y": 2810,
-   "w": 1440,
-   "h": 900,
-   "title": "Mac · Sheet sửa biểu đồ 640×560: loại, Group By, Measure (Keeper Rate…), xem trước",
-   "radius": 16
-  },
-  "MAC_CameraDatabase.dc.html": {
-   "x": 9120,
-   "y": 2810,
-   "w": 720,
-   "h": 640,
-   "title": "Mac · Cài đặt › Cameras: bảng máy 720, popup Sensor Format sửa tại chỗ; tab AI mới sau General (FS-23, 14/10)",
-   "radius": 16
-  },
-  "MAC_Edit.dc.html": {
-   "x": 0,
-   "y": 4110,
-   "w": 1440,
-   "h": 900,
-   "title": "Mac · Chỉnh ảnh thư mục: tự lưu, Edited · Saved + Revert, inspector 320, filmstrip",
-   "radius": 16
-  },
-  "MAC_EditColor.dc.html": {
-   "x": 3040,
-   "y": 4110,
-   "w": 1440,
-   "h": 900,
-   "title": "Mac · Sửa ảnh — Màu: Tone Curve, Color Mixer, Point Color, Grading",
-   "radius": 16
-  },
-  "MAC_EditCrop.dc.html": {
-   "x": 4560,
-   "y": 4110,
-   "w": 1440,
-   "h": 900,
-   "title": "Mac · Sửa ảnh — Cắt & nắn: khung cắt, Aspect, Straighten, Upright, Geometry",
-   "radius": 16
-  },
-  "MAC_EditMask.dc.html": {
-   "x": 6080,
-   "y": 4110,
-   "w": 1440,
-   "h": 900,
-   "title": "Mac · Sửa ảnh — Mask: danh sách mask, lớp phủ, cọ, Add Area ▸",
-   "radius": 16
-  },
-  "MAC_EditHeal.dc.html": {
-   "x": 7600,
-   "y": 4110,
-   "w": 1440,
-   "h": 900,
-   "title": "Mac · Sửa ảnh — Heal/Clone/Red Eye, con trỏ cọ",
-   "radius": 16
-  },
-  "MAC_EditMarkup.dc.html": {
-   "x": 9120,
-   "y": 4110,
-   "w": 1440,
-   "h": 900,
-   "title": "Mac · Sửa ảnh — Markup: lớp chữ có tay nắm, công cụ thêm lớp",
-   "radius": 16
-  },
-  "MAC_EditPresets.dc.html": {
-   "x": 10640,
-   "y": 4110,
-   "w": 1440,
-   "h": 900,
-   "title": "Mac · Sửa ảnh — Preset: My Looks/Film/LUTs, Snapshots, History",
-   "radius": 16
-  },
-  "MAC_EditBatch.dc.html": {
-   "x": 12160,
-   "y": 4110,
-   "w": 1440,
-   "h": 900,
-   "title": "Mac · Sửa ảnh — Sync to N Photos: sheet chọn thông số, filmstrip chọn nhiều (viền trắng)",
-   "radius": 16
-  },
-  "MAC_Export.dc.html": {
-   "x": 13680,
-   "y": 4110,
-   "w": 1440,
-   "h": 900,
-   "title": "Mac · Lưu và xuất: sheet 640×560 cuộn, Save as Copy DSCF4127 (edited).jpg, Export Files, tên file",
-   "radius": 16
-  },
-  "MAC_Cull.dc.html": {
-   "x": 15200,
-   "y": 4110,
-   "w": 1440,
-   "h": 900,
-   "title": "Mac · Lọc ảnh: loupe + lưới sao/cờ, Move 120 Rejected… trên toolbar, công tắc Advance After",
-   "radius": 16
-  },
-  "MAC_VideoStudio.dc.html": {
-   "x": 0,
-   "y": 5410,
-   "w": 1440,
-   "h": 900,
-   "title": "Mac · Video Studio: media trái, viewer, inspector, timeline toàn ngang",
-   "radius": 16
-  },
-  "MAC_VideoClipSelected.dc.html": {
-   "x": 2780,
-   "y": 5410,
-   "w": 1440,
-   "h": 900,
-   "title": "Mac · Video Studio — chọn clip: trim kèm số đọc, inspector Clip",
-   "radius": 16
-  },
-  "MAC_VideoText.dc.html": {
-   "x": 4300,
-   "y": 5410,
-   "w": 1440,
-   "h": 900,
-   "title": "Mac · Video Studio — sửa chữ: tay nắm trên viewer, inspector chữ",
-   "radius": 16
-  },
-  "MAC_VideoExport.dc.html": {
-   "x": 5820,
-   "y": 5410,
-   "w": 1440,
-   "h": 900,
-   "title": "Mac · Xuất video: preset | Video Settings, nơi lưu, dung lượng ước tính",
-   "radius": 16
-  },
-  "MAC_VideoProjects.dc.html": {
-   "x": 7340,
-   "y": 5410,
-   "w": 1440,
-   "h": 900,
-   "title": "Mac · Video Projects: thẻ project, New Video Project, xác nhận xoá",
-   "radius": 16
-  },
-  "MAC_Collage.dc.html": {
-   "x": 8860,
-   "y": 5410,
-   "w": 1440,
-   "h": 900,
-   "title": "Mac · Collage: layout trái, canvas, khay Set Aside, inspector",
-   "radius": 16
-  },
-  "MAC_Compress.dc.html": {
-   "x": 10380,
-   "y": 5410,
-   "w": 1440,
-   "h": 900,
-   "title": "Mac · Resize: trước/sau 100%, bảng từng file 28pt, preset, lưu vào ShotDex Resized",
-   "radius": 16
-  },
-  "MAC_Merge.dc.html": {
-   "x": 11900,
-   "y": 5410,
-   "w": 1440,
-   "h": 900,
-   "title": "Mac · Combine Photos › Panorama: dải khung, preview đang căn, trạng thái không modal",
-   "radius": 16
-  },
-  "MAC_Creations.dc.html": {
-   "x": 13420,
-   "y": 5410,
-   "w": 1440,
-   "h": 900,
-   "title": "Mac · Collages: trang 12 collage theo tháng, menu chuột phải",
-   "radius": 16
-  },
-  "MAC_SettingsGeneral.dc.html": {
-   "x": 0,
-   "y": 6710,
-   "w": 720,
-   "h": 640,
-   "title": "Mac · Cài đặt › Chung; tab AI mới sau General (FS-23, 14/10)",
-   "radius": 16
-  },
-  "MAC_SettingsSources.dc.html": {
-   "x": 800,
-   "y": 6710,
-   "w": 720,
-   "h": 640,
-   "title": "Mac · Cài đặt › Sources: quyền Photos, thư mục offline / cần cấp lại quyền; tab AI mới sau General (FS-23, 14/10)",
-   "radius": 16
-  },
-  "MAC_SettingsEditing.dc.html": {
-   "x": 1600,
-   "y": 6710,
-   "w": 720,
-   "h": 640,
-   "title": "Mac · Cài đặt › Sửa và xuất: RAW+JPEG, mặc định xuất, bảng preset; tab AI mới sau General (FS-23, 14/10)",
-   "radius": 16
-  },
-  "MAC_SettingsServers.dc.html": {
-   "x": 2400,
-   "y": 6710,
-   "w": 720,
-   "h": 640,
-   "title": "Mac · Cài đặt › Server: bảng kết nối + trạng thái; tab AI mới sau General (FS-23, 14/10)",
-   "radius": 16
-  },
-  "MAC_ServerForm.dc.html": {
-   "x": 3200,
-   "y": 6710,
-   "w": 720,
-   "h": 640,
-   "title": "Mac · Sheet Add Connection 520: chọn server lân cận, form, Test Connection; tab AI mới sau General (FS-23, 14/10)",
-   "radius": 16
-  },
-  "MAC_ServerBrowser.dc.html": {
-   "x": 4000,
-   "y": 6710,
-   "w": 1440,
-   "h": 900,
-   "title": "Mac · Nguồn server NAS Home: thư mục kiểu Finder, lưới được index, Upload…",
-   "radius": 16
-  },
-  "MAC_ServerUpload.dc.html": {
-   "x": 5520,
-   "y": 6710,
-   "w": 1440,
-   "h": 900,
-   "title": "Mac · On Server: tải lên chạy trong bảng Activity, xử lý trùng tên ngay trong hàng",
-   "radius": 16
-  },
-  "MAC_Support.dc.html": {
-   "x": 7040,
-   "y": 6710,
-   "w": 760,
-   "h": 600,
-   "title": "Mac · Cửa sổ Support: báo lỗi, yêu cầu tính năng, hội thoại",
-   "radius": 16
-  },
-  "MAC_VideoStudioCompact.dc.html": {
-   "title": "Mac · Video Studio cửa sổ nhỏ nhất 1180×760: media browser và inspector thu vào nút toolbar, giữ timeline",
-   "radius": 16,
-   "y": 5410,
-   "x": 1520,
-   "w": 1180,
-   "h": 760
-  },
-  "MAC_CompareSurvey.dc.html": {
-   "title": "Mac · Xem ảnh chế độ Survey: 6 ảnh, cờ None·Pick·Reject, Delete 2 Photos trước Edit",
-   "radius": 16,
-   "y": 1510,
-   "x": 5060,
-   "w": 1440,
-   "h": 900
-  },
-  "MAC_EditPhotos.dc.html": {
-   "title": "Mac · Chỉnh ảnh thư viện Photos: Revert + Done (ghi vào Photos)",
-   "radius": 16,
-   "y": 4110,
-   "x": 1520,
-   "w": 1440,
-   "h": 900
-  },
-  "MAC_Ingest.dc.html": {
-   "title": "Mac · Nhập từ thẻ nhớ: ảnh mới / đã nhập, đích + backup, mẫu tên, preset metadata ghi .xmp",
-   "radius": 16,
-   "y": 0,
-   "x": 13956,
-   "w": 1440,
-   "h": 900
-  },
-  "MAC_IngestProgress.dc.html": {
-   "title": "Mac · Đang nhập thẻ: Recently Added đầy dần, tiến độ ở sidebar, cửa sổ Activity Copy/Verify/Backup",
-   "radius": 16,
-   "y": 0,
-   "x": 15476,
-   "w": 1440,
-   "h": 900
-  },
-  "MAC_EmptyLibrary.dc.html": {
-   "title": "Mac · Lần mở đầu: cửa sổ chính trống, 3 cách thêm nguồn + vùng thả thư mục",
-   "radius": 16,
-   "y": 0,
-   "x": 16996,
-   "w": 1440,
-   "h": 900
-  },
-  "MAC_ChartStyle.dc.html": {
-   "x": 9920,
-   "y": 2810,
-   "w": 1440,
-   "h": 900,
-   "radius": 16,
-   "title": "Mac · So sánh kiểu biểu đồ: A hiện tại (indigo gradient) · B xám + nhấn amber · C amber nhạt + đậm"
-  },
-  "MAC_Hidden.dc.html": {
-   "x": 11440,
-   "y": 2810,
-   "w": 1440,
-   "h": 900,
-   "title": "Mac · Collections › Hidden: 6 ảnh ShotDex ẩn (NAS Home), chọn 2 → Unhide 2 Photos",
-   "radius": 16
-  },
-  "MAC_DeleteCopies.dc.html": {
-   "x": 12960,
-   "y": 2810,
-   "w": 1440,
-   "h": 900,
-   "title": "Mac · Xoá từ All Photos: hộp liệt kê 3 bản sao có ô tick, chỉ tick bản T7 đang mở",
-   "radius": 16
-  },
-  "MAC_GetInfoSingle.dc.html": {
-   "x": 11140,
-   "y": 1510,
-   "w": 420,
-   "h": 640,
-   "title": "Mac · Get Info một ảnh: tiêu đề, caption, keyword, sao/cờ, ngày, vị trí + EXIF",
-   "radius": 16
-  },
-  "MAC_SettingsSourcesCache.dc.html": {
-   "x": 7880,
-   "y": 6710,
-   "w": 720,
-   "h": 640,
-   "title": "Mac · Cài đặt › Sources cuộn xuống: Previews (cache chung, trần 25 GB, Clear Cache…) và Index; tab AI mới sau General (FS-23, 14/10)",
-   "radius": 16
-  },
-  "MAC_Movies.dc.html": {
-   "x": 14940,
-   "y": 5410,
-   "w": 1440,
-   "h": 900,
-   "title": "Mac · Movies — thư viện chung (NAS, Plex, trên máy): Grid poster 2:3 tên + năm, 7 cột; ✓ = trên máy, thanh cam = đang tải, đỏ = tải dừng, không dấu = stream; All · On This Mac · Unwatched, Grid/List + Sort, Search, + (Add a Source… / Add Movie Files…); tweak list / away / menu (chuột phải Perfect Days) / addMenu — FS-23.01, planboard 14/10",
-   "radius": 16
-  },
-  "MAC_MoviesAdd.dc.html": {
-   "x": 17980,
-   "y": 5410,
-   "w": 1440,
-   "h": 900,
-   "title": "Mac · Sheet Add a Source: Folder (NAS Home, Office SFTP, Choose Folder in Finder…) hoặc Media Server (Plex Server) — FS-23.01 §2, planboard 14/10",
-   "radius": 16
-  },
-  "MAC_MoviePlayer.dc.html": {
-   "x": 19500,
-   "y": 5410,
-   "w": 1440,
-   "h": 900,
-   "title": "Mac · Cửa sổ player: HUD kính khi rê chuột (Space, ←/→ 10 s, F, ⌘W), một nút Audio & Subtitles; hai phụ đề nâng trên HUD; tweak chrome tắt → phụ đề hạ — FS-23.02, planboard 14/10",
-   "radius": 16
-  },
-  "MAC_MovieTracks.dc.html": {
-   "x": 21020,
-   "y": 5410,
-   "w": 1440,
-   "h": 900,
-   "title": "Mac · Inspector Audio & Subtitles 360 bên phải player: Audio (5 track, Default, ✓, Audio Sync, đường ra) rồi Subtitles (Primary, Secondary, vị trí, kiểu, thả file); tweak secmenu = menu Secondary có Translate…/Import File… — FS-23.02 §3b, 03 §2, planboard 14/10",
-   "radius": 16
-  },
-  "MAC_MovieTranslate.dc.html": {
-   "x": 22540,
-   "y": 5410,
-   "w": 1440,
-   "h": 900,
-   "title": "Mac · Translate trong inspector (← Audio and Subtitles): From · To · Using, gửi đi đâu; tweak running = 412/1,380 + Cancel — FS-23.04, planboard 14/10",
-   "radius": 16
-  },
-  "MAC_MovieSubtitleAdd.dc.html": {
-   "x": 24060,
-   "y": 5410,
-   "w": 1440,
-   "h": 900,
-   "title": "Mac · Sheet Add Subtitle to… (Share/AirDrop hoặc thả .srt lên Movies): phim trùng tên lên đầu — FS-23.03 §5, planboard 14/10",
-   "radius": 16
-  },
-  "MAC_PlexSignIn.dc.html": {
-   "x": 25580,
-   "y": 5410,
-   "w": 1440,
-   "h": 900,
-   "title": "Mac · Sheet Sign In to Plex: mã K7Q2 ở plex.tv/link, Open plex.tv/link — FS-23.07 §1, planboard 14/10",
-   "radius": 16
-  },
-  "MAC_SettingsAI.dc.html": {
-   "x": 8680,
-   "y": 6710,
-   "w": 720,
-   "h": 640,
-   "title": "Mac · Cài đặt › AI (tab mới sau General): Use For, On This Mac, bảng Providers — FS-08.07, đề xuất 14/10, code chưa có",
-   "radius": 16
-  },
-  "MAC_SettingsAIProvider.dc.html": {
-   "x": 9480,
-   "y": 6710,
-   "w": 720,
-   "h": 640,
-   "title": "Mac · Sheet nhà cung cấp Claude: tên, key (4 ký tự cuối), model, Test → Working · 0.8 s, Delete Provider… — FS-08.07 §3, đề xuất 14/10, code chưa có",
-   "radius": 16
-  },
-  "MAC_MovieDetail.dc.html": {
-   "h": 900,
-   "title": "Trang chi tiết phim (FS-23.08) — toolbar Back · tên phim · ⋯; hai cột — 15/10",
-   "w": 1440,
-   "x": 16460,
-   "y": 5410,
-   "radius": 16
-  }
- },
- "order": [
-  "Main.dc.html",
-  "MAC_LibrarySelected.dc.html",
-  "MAC_LibraryList.dc.html",
-  "MAC_Search.dc.html",
-  "MAC_FilterPopover.dc.html",
-  "MAC_ContextMenu.dc.html",
-  "MAC_MenuBar.dc.html",
-  "MAC_AddSource.dc.html",
-  "MAC_SourceIndexing.dc.html",
-  "MAC_Ingest.dc.html",
-  "MAC_IngestProgress.dc.html",
-  "MAC_EmptyLibrary.dc.html",
-  "MAC_Viewer.dc.html",
-  "MAC_ViewerFullScreen.dc.html",
-  "MAC_GetInfo.dc.html",
-  "MAC_Compare.dc.html",
-  "MAC_CompareSurvey.dc.html",
-  "MAC_Duplicates.dc.html",
-  "MAC_Places.dc.html",
-  "MAC_OnThisDay.dc.html",
-  "MAC_Collections.dc.html",
-  "MAC_AlbumDetail.dc.html",
-  "MAC_SmartAlbumEditor.dc.html",
-  "MAC_Statistics.dc.html",
-  "MAC_StatisticsCamera.dc.html",
-  "MAC_ChartEditor.dc.html",
-  "MAC_CameraDatabase.dc.html",
-  "MAC_ChartStyle.dc.html",
-  "MAC_Edit.dc.html",
-  "MAC_EditPhotos.dc.html",
-  "MAC_EditColor.dc.html",
-  "MAC_EditCrop.dc.html",
-  "MAC_EditMask.dc.html",
-  "MAC_EditHeal.dc.html",
-  "MAC_EditMarkup.dc.html",
-  "MAC_EditPresets.dc.html",
-  "MAC_EditBatch.dc.html",
-  "MAC_Export.dc.html",
-  "MAC_Cull.dc.html",
-  "MAC_VideoStudio.dc.html",
-  "MAC_VideoStudioCompact.dc.html",
-  "MAC_VideoClipSelected.dc.html",
-  "MAC_VideoText.dc.html",
-  "MAC_VideoExport.dc.html",
-  "MAC_VideoProjects.dc.html",
-  "MAC_Collage.dc.html",
-  "MAC_Compress.dc.html",
-  "MAC_Merge.dc.html",
-  "MAC_Creations.dc.html",
-  "MAC_SettingsGeneral.dc.html",
-  "MAC_SettingsSources.dc.html",
-  "MAC_SettingsEditing.dc.html",
-  "MAC_SettingsServers.dc.html",
-  "MAC_ServerForm.dc.html",
-  "MAC_ServerBrowser.dc.html",
-  "MAC_ServerUpload.dc.html",
-  "MAC_Support.dc.html",
-  "MAC_Hidden.dc.html",
-  "MAC_DeleteCopies.dc.html",
-  "MAC_GetInfoSingle.dc.html",
-  "MAC_SettingsSourcesCache.dc.html",
-  "MAC_Movies.dc.html",
-  "MAC_MovieDetail.dc.html",
-  "MAC_MoviesAdd.dc.html",
-  "MAC_MoviePlayer.dc.html",
-  "MAC_MovieTracks.dc.html",
-  "MAC_MovieTranslate.dc.html",
-  "MAC_MovieSubtitleAdd.dc.html",
-  "MAC_SettingsAI.dc.html",
-  "MAC_SettingsAIProvider.dc.html",
-  "MAC_PlexSignIn.dc.html"
- ],
- "notes": {
-  "row_lib": {
-   "kind": "title1",
-   "x": 0,
-   "y": -260,
-   "text": "Mac · Thư viện · tìm kiếm · nguồn ảnh",
-   "maxW": 16000
-  },
-  "row_view": {
-   "kind": "title1",
-   "x": 0,
-   "y": 1250,
-   "text": "Mac · Xem ảnh · so sánh · trùng · địa điểm",
-   "maxW": 16000
-  },
-  "row_coll": {
-   "kind": "title1",
-   "x": 0,
-   "y": 2550,
-   "text": "Mac · Album · thống kê",
-   "maxW": 16000
-  },
-  "row_edit": {
-   "kind": "title1",
-   "x": 0,
-   "y": 3850,
-   "text": "Mac · Sửa ảnh (tier D)",
-   "maxW": 16000
-  },
-  "row_video": {
-   "kind": "title1",
-   "x": 0,
-   "y": 5150,
-   "text": "Mac · Video Studio · Collage · Resize · Ghép · Creations",
-   "maxW": 16000
-  },
-  "row_set": {
-   "kind": "title1",
-   "x": 0,
-   "y": 6450,
-   "text": "Mac · Cài đặt · server · lần đầu · hỗ trợ",
-   "maxW": 16000
-  }
- },
- "designSystems": [],
- "attachments": {}
+  "v": 3,
+  "createdOnFiles": {
+    "v": 1,
+    "at": "2026-10-04T10:00:00Z"
+  },
+  "title": "ShotDex Mac",
+  "launch": {
+    "view": "canvas"
+  },
+  "pages": [],
+  "boards": {
+    "Main.dc.html": {
+      "x": 0,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "Media hub · Mac · Library: sidebar Photos · Movies · Music · Sources (số, Offline, thẻ nhớ), Now Playing ở chân",
+      "radius": 16
+    },
+    "MAC_LibrarySelected.dc.html": {
+      "x": 1520,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "Mac · Thư viện: chọn 6 ảnh, inspector tóm tắt lựa chọn + Compare/Edit/Add to Album/Export",
+      "radius": 16
+    },
+    "MAC_LibraryList.dc.html": {
+      "x": 3040,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "Mac · Thư viện dạng bảng: 12 cột sắp xếp được, hàng xen màu, 4 hàng chọn",
+      "radius": 16
+    },
+    "MAC_Search.dc.html": {
+      "x": 4560,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "Media hub · Mac · Tìm phạm vi Photos: cú pháp máy ảnh tự chuyển sang Photos, token, gợi ý, scope nguồn",
+      "radius": 16
+    },
+    "MAC_FilterPopover.dc.html": {
+      "x": 6080,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "Media hub · Mac · Popover Filter and Sort: thêm Source và Kept on Mac; còn lại ở Advanced Filter…",
+      "radius": 16
+    },
+    "MAC_ContextMenu.dc.html": {
+      "x": 7600,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "Media hub · Mac · Menu chuột phải trên 3 ảnh: thêm Keep on Mac, menu con Add to Album",
+      "radius": 16
+    },
+    "MAC_MenuBar.dc.html": {
+      "x": 9120,
+      "y": 0,
+      "w": 1716,
+      "h": 1250,
+      "title": "Media hub · Mac · Menu bar: Go theo Photos/Movies/Music, Keep on Mac, menu Controls (Space, ⌘→, ⌘←, Shuffle, Repeat ›)",
+      "radius": 16
+    },
+    "MAC_AddSource.dc.html": {
+      "x": 10916,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "Mac · Sheet Add a Source: Photos Library, Folder or Volume, Server",
+      "radius": 16
+    },
+    "MAC_SourceIndexing.dc.html": {
+      "x": 12436,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "Mac · Nguồn mới đang index + ổ T7 offline (hàng mờ, ảnh xám, Locate…)",
+      "radius": 16
+    },
+    "MAC_Viewer.dc.html": {
+      "x": 0,
+      "y": 1510,
+      "w": 1440,
+      "h": 900,
+      "title": "Mac · Xem ảnh trong cửa sổ chính: Single · 2-Up · Survey, filmstrip, inspector",
+      "radius": 16
+    },
+    "MAC_ViewerFullScreen.dc.html": {
+      "x": 1520,
+      "y": 1510,
+      "w": 1440,
+      "h": 900,
+      "title": "Mac · Toàn màn hình: zoom 100%, navigator, HUD kính khi rê chuột",
+      "radius": 16
+    },
+    "MAC_GetInfo.dc.html": {
+      "x": 3040,
+      "y": 1510,
+      "w": 420,
+      "h": 640,
+      "title": "Mac · Get Info nhiều ảnh: 3 Photos, ô khác nhau ghi Mixed, keyword 2/3",
+      "radius": 16
+    },
+    "MAC_Compare.dc.html": {
+      "x": 3540,
+      "y": 1510,
+      "w": 1440,
+      "h": 900,
+      "title": "Mac · Xem ảnh chế độ 2-Up: Select | Candidate, luôn đồng bộ zoom, Move 1 Photo… (ảnh T7)",
+      "radius": 16
+    },
+    "MAC_Duplicates.dc.html": {
+      "x": 6580,
+      "y": 1510,
+      "w": 1440,
+      "h": 900,
+      "title": "Mac · Ảnh trùng: nhóm bên trái, popup Source, nhóm Exact chỉ khác đường dẫn, Merge",
+      "radius": 16
+    },
+    "MAC_Places.dc.html": {
+      "x": 8100,
+      "y": 1510,
+      "w": 1440,
+      "h": 900,
+      "title": "Mac · Địa điểm: bản đồ, cụm ảnh, inspector 300 của cụm đang chọn",
+      "radius": 16
+    },
+    "MAC_OnThisDay.dc.html": {
+      "x": 9620,
+      "y": 1510,
+      "w": 1440,
+      "h": 900,
+      "title": "Mac · On This Day: lưới theo năm (Hanoi, Banff, Kyoto), Show Trip",
+      "radius": 16
+    },
+    "MAC_Collections.dc.html": {
+      "x": 0,
+      "y": 2810,
+      "w": 1440,
+      "h": 900,
+      "title": "Media hub · Mac · Collections: On This Day, Pinned, Albums, Media Types, Utilities, Sources 1 cột có số + thẻ nhớ",
+      "radius": 16
+    },
+    "MAC_AlbumDetail.dc.html": {
+      "x": 1520,
+      "y": 2810,
+      "w": 1440,
+      "h": 900,
+      "title": "Mac · Chi tiết album: header, Slideshow · Share · Export · Album Info, lưới 8 cột",
+      "radius": 16
+    },
+    "MAC_SmartAlbumEditor.dc.html": {
+      "x": 3040,
+      "y": 2810,
+      "w": 1440,
+      "h": 900,
+      "title": "Media hub · Mac · Sheet Smart Album: Source is NAS Home, Kept on Mac is Yes; tweak fields = menu trường",
+      "radius": 16
+    },
+    "MAC_Statistics.dc.html": {
+      "x": 4560,
+      "y": 2810,
+      "w": 1440,
+      "h": 900,
+      "title": "Media hub · Mac · Thống kê ảnh, vào từ Photos › Utilities: Insights, KPI, 4 cột chart, tooltip drill-down",
+      "radius": 16
+    },
+    "MAC_StatisticsCamera.dc.html": {
+      "x": 6080,
+      "y": 2810,
+      "w": 1440,
+      "h": 900,
+      "title": "Mac · Thống kê một máy (Sony α7 IV): ống, tiêu cự/khẩu/ISO, Top Rated",
+      "radius": 16
+    },
+    "MAC_ChartEditor.dc.html": {
+      "x": 7600,
+      "y": 2810,
+      "w": 1440,
+      "h": 900,
+      "title": "Mac · Sheet sửa biểu đồ 640×560: loại, Group By, Measure (Keeper Rate…), xem trước",
+      "radius": 16
+    },
+    "MAC_CameraDatabase.dc.html": {
+      "x": 9120,
+      "y": 2810,
+      "w": 720,
+      "h": 640,
+      "title": "Mac · Cài đặt › Cameras: bảng máy 720, popup Sensor Format sửa tại chỗ; tab AI mới sau General (FS-23, 14/10)",
+      "radius": 16
+    },
+    "MAC_Edit.dc.html": {
+      "x": 0,
+      "y": 4110,
+      "w": 1440,
+      "h": 900,
+      "title": "Mac · Chỉnh ảnh thư mục: tự lưu, Edited · Saved + Revert, inspector 320, filmstrip",
+      "radius": 16
+    },
+    "MAC_EditColor.dc.html": {
+      "x": 3040,
+      "y": 4110,
+      "w": 1440,
+      "h": 900,
+      "title": "Mac · Sửa ảnh — Màu: Tone Curve, Color Mixer, Point Color, Grading",
+      "radius": 16
+    },
+    "MAC_EditCrop.dc.html": {
+      "x": 4560,
+      "y": 4110,
+      "w": 1440,
+      "h": 900,
+      "title": "Mac · Sửa ảnh — Cắt & nắn: khung cắt, Aspect, Straighten, Upright, Geometry",
+      "radius": 16
+    },
+    "MAC_EditMask.dc.html": {
+      "x": 6080,
+      "y": 4110,
+      "w": 1440,
+      "h": 900,
+      "title": "Mac · Sửa ảnh — Mask: danh sách mask, lớp phủ, cọ, Add Area ▸",
+      "radius": 16
+    },
+    "MAC_EditHeal.dc.html": {
+      "x": 7600,
+      "y": 4110,
+      "w": 1440,
+      "h": 900,
+      "title": "Mac · Sửa ảnh — Heal/Clone/Red Eye, con trỏ cọ",
+      "radius": 16
+    },
+    "MAC_EditMarkup.dc.html": {
+      "x": 9120,
+      "y": 4110,
+      "w": 1440,
+      "h": 900,
+      "title": "Mac · Sửa ảnh — Markup: lớp chữ có tay nắm, công cụ thêm lớp",
+      "radius": 16
+    },
+    "MAC_EditPresets.dc.html": {
+      "x": 10640,
+      "y": 4110,
+      "w": 1440,
+      "h": 900,
+      "title": "Mac · Sửa ảnh — Preset: My Looks/Film/LUTs, Snapshots, History",
+      "radius": 16
+    },
+    "MAC_EditBatch.dc.html": {
+      "x": 12160,
+      "y": 4110,
+      "w": 1440,
+      "h": 900,
+      "title": "Mac · Sửa ảnh — Sync to N Photos: sheet chọn thông số, filmstrip chọn nhiều (viền trắng)",
+      "radius": 16
+    },
+    "MAC_Export.dc.html": {
+      "x": 13680,
+      "y": 4110,
+      "w": 1440,
+      "h": 900,
+      "title": "Mac · Lưu và xuất: sheet 640×560 cuộn, Save as Copy DSCF4127 (edited).jpg, Export Files, tên file",
+      "radius": 16
+    },
+    "MAC_Cull.dc.html": {
+      "x": 15200,
+      "y": 4110,
+      "w": 1440,
+      "h": 900,
+      "title": "Mac · Lọc ảnh: loupe + lưới sao/cờ, Move 120 Rejected… trên toolbar, công tắc Advance After",
+      "radius": 16
+    },
+    "MAC_VideoStudio.dc.html": {
+      "x": 0,
+      "y": 5410,
+      "w": 1440,
+      "h": 900,
+      "title": "Mac · Video Studio: media trái, viewer, inspector, timeline toàn ngang",
+      "radius": 16
+    },
+    "MAC_VideoClipSelected.dc.html": {
+      "x": 2780,
+      "y": 5410,
+      "w": 1440,
+      "h": 900,
+      "title": "Mac · Video Studio — chọn clip: trim kèm số đọc, inspector Clip",
+      "radius": 16
+    },
+    "MAC_VideoText.dc.html": {
+      "x": 4300,
+      "y": 5410,
+      "w": 1440,
+      "h": 900,
+      "title": "Mac · Video Studio — sửa chữ: tay nắm trên viewer, inspector chữ",
+      "radius": 16
+    },
+    "MAC_VideoExport.dc.html": {
+      "x": 5820,
+      "y": 5410,
+      "w": 1440,
+      "h": 900,
+      "title": "Mac · Xuất video: preset | Video Settings, nơi lưu, dung lượng ước tính",
+      "radius": 16
+    },
+    "MAC_VideoProjects.dc.html": {
+      "x": 7340,
+      "y": 5410,
+      "w": 1440,
+      "h": 900,
+      "title": "Mac · Video Projects: thẻ project, New Video Project, xác nhận xoá",
+      "radius": 16
+    },
+    "MAC_Collage.dc.html": {
+      "x": 8860,
+      "y": 5410,
+      "w": 1440,
+      "h": 900,
+      "title": "Mac · Collage: layout trái, canvas, khay Set Aside, inspector",
+      "radius": 16
+    },
+    "MAC_Compress.dc.html": {
+      "x": 10380,
+      "y": 5410,
+      "w": 1440,
+      "h": 900,
+      "title": "Mac · Resize: trước/sau 100%, bảng từng file 28pt, preset, lưu vào ShotDex Resized",
+      "radius": 16
+    },
+    "MAC_Merge.dc.html": {
+      "x": 11900,
+      "y": 5410,
+      "w": 1440,
+      "h": 900,
+      "title": "Mac · Combine Photos › Panorama: dải khung, preview đang căn, trạng thái không modal",
+      "radius": 16
+    },
+    "MAC_Creations.dc.html": {
+      "x": 13420,
+      "y": 5410,
+      "w": 1440,
+      "h": 900,
+      "title": "Mac · Collages: trang 12 collage theo tháng, menu chuột phải",
+      "radius": 16
+    },
+    "MAC_SettingsGeneral.dc.html": {
+      "x": 0,
+      "y": 6710,
+      "w": 720,
+      "h": 640,
+      "title": "Media hub · Mac · Cài đặt › General: thêm Music › Clear Listening History; tweak clear",
+      "radius": 16
+    },
+    "MAC_SettingsSources.dc.html": {
+      "x": 800,
+      "y": 6710,
+      "w": 720,
+      "h": 640,
+      "title": "Media hub · Mac · Cài đặt › Sources & Backup: nguồn ảnh/phim/nhạc (thêm Plex), Browse Local Network/Cloud",
+      "radius": 16
+    },
+    "MAC_SettingsEditing.dc.html": {
+      "x": 1600,
+      "y": 6710,
+      "w": 720,
+      "h": 640,
+      "title": "Mac · Cài đặt › Sửa và xuất: RAW+JPEG, mặc định xuất, bảng preset; tab AI mới sau General (FS-23, 14/10)",
+      "radius": 16
+    },
+    "MAC_SettingsServers.dc.html": {
+      "x": 2400,
+      "y": 6710,
+      "w": 720,
+      "h": 640,
+      "title": "Mac · Cài đặt › Server: bảng kết nối + trạng thái; tab AI mới sau General (FS-23, 14/10)",
+      "radius": 16
+    },
+    "MAC_ServerForm.dc.html": {
+      "x": 3200,
+      "y": 6710,
+      "w": 720,
+      "h": 640,
+      "title": "Mac · Sheet Add Connection 520: chọn server lân cận, form, Test Connection; tab AI mới sau General (FS-23, 14/10)",
+      "radius": 16
+    },
+    "MAC_ServerBrowser.dc.html": {
+      "x": 4000,
+      "y": 6710,
+      "w": 1440,
+      "h": 900,
+      "title": "Mac · Nguồn server NAS Home: thư mục kiểu Finder, lưới được index, Upload…",
+      "radius": 16
+    },
+    "MAC_ServerUpload.dc.html": {
+      "x": 5520,
+      "y": 6710,
+      "w": 1440,
+      "h": 900,
+      "title": "Mac · On Server: tải lên chạy trong bảng Activity, xử lý trùng tên ngay trong hàng",
+      "radius": 16
+    },
+    "MAC_Support.dc.html": {
+      "x": 7040,
+      "y": 6710,
+      "w": 760,
+      "h": 600,
+      "title": "Mac · Cửa sổ Support: báo lỗi, yêu cầu tính năng, hội thoại",
+      "radius": 16
+    },
+    "MAC_VideoStudioCompact.dc.html": {
+      "title": "Mac · Video Studio cửa sổ nhỏ nhất 1180×760: media browser và inspector thu vào nút toolbar, giữ timeline",
+      "radius": 16,
+      "y": 5410,
+      "x": 1520,
+      "w": 1180,
+      "h": 760
+    },
+    "MAC_CompareSurvey.dc.html": {
+      "title": "Mac · Xem ảnh chế độ Survey: 6 ảnh, cờ None·Pick·Reject, Delete 2 Photos trước Edit",
+      "radius": 16,
+      "y": 1510,
+      "x": 5060,
+      "w": 1440,
+      "h": 900
+    },
+    "MAC_EditPhotos.dc.html": {
+      "title": "Mac · Chỉnh ảnh thư viện Photos: Revert + Done (ghi vào Photos)",
+      "radius": 16,
+      "y": 4110,
+      "x": 1520,
+      "w": 1440,
+      "h": 900
+    },
+    "MAC_Ingest.dc.html": {
+      "title": "Mac · Nhập từ thẻ nhớ: ảnh mới / đã nhập, đích + backup, mẫu tên, preset metadata ghi .xmp",
+      "radius": 16,
+      "y": 0,
+      "x": 13956,
+      "w": 1440,
+      "h": 900
+    },
+    "MAC_IngestProgress.dc.html": {
+      "title": "Mac · Đang nhập thẻ: Recently Added đầy dần, tiến độ ở sidebar, cửa sổ Activity Copy/Verify/Backup",
+      "radius": 16,
+      "y": 0,
+      "x": 15476,
+      "w": 1440,
+      "h": 900
+    },
+    "MAC_EmptyLibrary.dc.html": {
+      "title": "Mac · Lần mở đầu: cửa sổ chính trống, 3 cách thêm nguồn + vùng thả thư mục",
+      "radius": 16,
+      "y": 0,
+      "x": 16996,
+      "w": 1440,
+      "h": 900
+    },
+    "MAC_ChartStyle.dc.html": {
+      "x": 9920,
+      "y": 2810,
+      "w": 1440,
+      "h": 900,
+      "radius": 16,
+      "title": "Mac · So sánh kiểu biểu đồ: A hiện tại (indigo gradient) · B xám + nhấn amber · C amber nhạt + đậm"
+    },
+    "MAC_Hidden.dc.html": {
+      "x": 11440,
+      "y": 2810,
+      "w": 1440,
+      "h": 900,
+      "title": "Mac · Collections › Hidden: 6 ảnh ShotDex ẩn (NAS Home), chọn 2 → Unhide 2 Photos",
+      "radius": 16
+    },
+    "MAC_DeleteCopies.dc.html": {
+      "x": 12960,
+      "y": 2810,
+      "w": 1440,
+      "h": 900,
+      "title": "Mac · Xoá từ All Photos: hộp liệt kê 3 bản sao có ô tick, chỉ tick bản T7 đang mở",
+      "radius": 16
+    },
+    "MAC_GetInfoSingle.dc.html": {
+      "x": 11140,
+      "y": 1510,
+      "w": 420,
+      "h": 640,
+      "title": "Mac · Get Info một ảnh: tiêu đề, caption, keyword, sao/cờ, ngày, vị trí + EXIF",
+      "radius": 16
+    },
+    "MAC_SettingsSourcesCache.dc.html": {
+      "x": 7880,
+      "y": 6710,
+      "w": 720,
+      "h": 640,
+      "title": "Mac · Cài đặt › Sources & Backup cuộn giữa: Previews (cache chung, trần 25 GB, Clear Cache…)",
+      "radius": 16
+    },
+    "MAC_Movies.dc.html": {
+      "x": 14940,
+      "y": 5410,
+      "w": 1440,
+      "h": 900,
+      "title": "Media hub · Mac · Movies: lưới poster, ✓ trên máy; menu chuột phải có Show As › (tweak showAs), Convert…, Extract Audio…",
+      "radius": 16
+    },
+    "MAC_MoviesAdd.dc.html": {
+      "x": 17980,
+      "y": 5410,
+      "w": 1440,
+      "h": 900,
+      "title": "Mac · Sheet Add a Source: Folder (NAS Home, Office SFTP, Choose Folder in Finder…) hoặc Media Server (Plex Server) — FS-23.01 §2, planboard 14/10",
+      "radius": 16
+    },
+    "MAC_MoviePlayer.dc.html": {
+      "x": 19500,
+      "y": 5410,
+      "w": 1440,
+      "h": 900,
+      "title": "Mac · Cửa sổ player: HUD kính khi rê chuột (Space, ←/→ 10 s, F, ⌘W), một nút Audio & Subtitles; hai phụ đề nâng trên HUD; tweak chrome tắt → phụ đề hạ — FS-23.02, planboard 14/10",
+      "radius": 16
+    },
+    "MAC_MovieTracks.dc.html": {
+      "x": 21020,
+      "y": 5410,
+      "w": 1440,
+      "h": 900,
+      "title": "Mac · Inspector Audio & Subtitles 360 bên phải player: Audio (5 track, Default, ✓, Audio Sync, đường ra) rồi Subtitles (Primary, Secondary, vị trí, kiểu, thả file); tweak secmenu = menu Secondary có Translate…/Import File… — FS-23.02 §3b, 03 §2, planboard 14/10",
+      "radius": 16
+    },
+    "MAC_MovieTranslate.dc.html": {
+      "x": 22540,
+      "y": 5410,
+      "w": 1440,
+      "h": 900,
+      "title": "Mac · Translate trong inspector (← Audio and Subtitles): From · To · Using, gửi đi đâu; tweak running = 412/1,380 + Cancel — FS-23.04, planboard 14/10",
+      "radius": 16
+    },
+    "MAC_MovieSubtitleAdd.dc.html": {
+      "x": 24060,
+      "y": 5410,
+      "w": 1440,
+      "h": 900,
+      "title": "Mac · Sheet Add Subtitle to… (Share/AirDrop hoặc thả .srt lên Movies): phim trùng tên lên đầu — FS-23.03 §5, planboard 14/10",
+      "radius": 16
+    },
+    "MAC_PlexSignIn.dc.html": {
+      "x": 25580,
+      "y": 5410,
+      "w": 1440,
+      "h": 900,
+      "title": "Mac · Sheet Sign In to Plex: mã K7Q2 ở plex.tv/link, Open plex.tv/link — FS-23.07 §1, planboard 14/10",
+      "radius": 16
+    },
+    "MAC_SettingsAI.dc.html": {
+      "x": 8680,
+      "y": 6710,
+      "w": 720,
+      "h": 640,
+      "title": "Mac · Cài đặt › AI (tab mới sau General): Use For, On This Mac, bảng Providers — FS-08.07, đề xuất 14/10, code chưa có",
+      "radius": 16
+    },
+    "MAC_SettingsAIProvider.dc.html": {
+      "x": 9480,
+      "y": 6710,
+      "w": 720,
+      "h": 640,
+      "title": "Mac · Sheet nhà cung cấp Claude: tên, key (4 ký tự cuối), model, Test → Working · 0.8 s, Delete Provider… — FS-08.07 §3, đề xuất 14/10, code chưa có",
+      "radius": 16
+    },
+    "MAC_MovieDetail.dc.html": {
+      "h": 900,
+      "title": "Trang chi tiết phim (FS-23.08) — toolbar Back · tên phim · ⋯; hai cột — 15/10",
+      "w": 1440,
+      "x": 16460,
+      "y": 5410,
+      "radius": 16
+    },
+    "MAC_SettingsSourcesBackup.dc.html": {
+      "x": 10280,
+      "y": 6710,
+      "w": 720,
+      "h": 640,
+      "title": "Media hub · Mac · Cài đặt › Sources & Backup cuộn xuống: Backup lên NAS Home, Kept on This Mac 41.2 GB, Index",
+      "radius": 16
+    },
+    "MAC_MoviesHome.dc.html": {
+      "x": 27100,
+      "y": 5410,
+      "w": 1440,
+      "h": 900,
+      "title": "Media hub · Mac · Movies › Home: gợi ý 12 video tải về, Continue Watching, kệ Movies/TV Shows/Clips, ✓ Keep on Mac",
+      "radius": 16
+    },
+    "MAC_Music.dc.html": {
+      "x": 28620,
+      "y": 5410,
+      "w": 1440,
+      "h": 900,
+      "title": "Media hub · Mac · Music › Albums: Playlists (Road Trip, Late Night Edits, From Movies), Recently Added, All Albums",
+      "radius": 16
+    },
+    "MAC_MusicStatistics.dc.html": {
+      "x": 30140,
+      "y": 5410,
+      "w": 1440,
+      "h": 900,
+      "title": "Media hub · Mac · Music › Statistics: đủ 8 thẻ (thêm Top Albums, Kept on Mac)",
+      "radius": 16
+    },
+    "MAC_SearchAll.dc.html": {
+      "x": 18516,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "Media hub · Mac · Tìm “kyoto” phạm vi All: nhóm Photos, Movies (clip, phim), Music (bài, album, nghệ sĩ)",
+      "radius": 16
+    },
+    "MAC_MoviesReview.dc.html": {
+      "x": 31660,
+      "y": 5410,
+      "w": 1440,
+      "h": 900,
+      "title": "Media hub · Mac · Review Videos: 12 video tải về → Movies; tweak copying (tiến độ ở sidebar), deleteDialog",
+      "radius": 16
+    },
+    "MAC_WatchHistory.dc.html": {
+      "x": 33180,
+      "y": 5410,
+      "w": 1440,
+      "h": 900,
+      "title": "Media hub · Mac · Movies › Watch History: Today, This Week, Earlier, Clear History…; tweak swipe, clear",
+      "radius": 16
+    },
+    "MAC_Subtitles.dc.html": {
+      "x": 34700,
+      "y": 5410,
+      "w": 1440,
+      "h": 900,
+      "title": "Media hub · Mac · Movies › Subtitles: bảng file phụ đề theo phim (9 file · 1.1 MB); tweak swipe",
+      "radius": 16
+    },
+    "MAC_TVShow.dc.html": {
+      "x": 36220,
+      "y": 5410,
+      "w": 1440,
+      "h": 900,
+      "title": "Media hub · Mac · TV Show The Bear: Resume, Keep Season 3, tập theo mùa; tweak menu có Show As ›",
+      "radius": 16
+    },
+    "MAC_Convert.dc.html": {
+      "x": 37740,
+      "y": 5410,
+      "w": 1440,
+      "h": 900,
+      "title": "Media hub · Mac · Sheet Convert: MP4 H.264/HEVC, Size, Audio, Then; tweak progress ở chân sidebar",
+      "radius": 16
+    },
+    "MAC_ExtractAudio.dc.html": {
+      "x": 39260,
+      "y": 5410,
+      "w": 1440,
+      "h": 900,
+      "title": "Media hub · Mac · Sheet Extract Audio: Track, Range, AAC/ALAC, playlist From Movies; tweak custom, progress",
+      "radius": 16
+    },
+    "MAC_NowPlaying.dc.html": {
+      "x": 40780,
+      "y": 5410,
+      "w": 480,
+      "h": 660,
+      "title": "Media hub · Mac · Cửa sổ Now Playing: bìa, tua, transport, nút toolbar, Keep on Mac; tweak menu, kept, timer, paused",
+      "radius": 16
+    },
+    "MAC_UpNext.dc.html": {
+      "x": 41340,
+      "y": 5410,
+      "w": 900,
+      "h": 660,
+      "title": "Media hub · Mac · Now Playing mở ngăn Up Next: Shuffle, Repeat All, Added by You; tweak swipe, paused",
+      "radius": 16
+    },
+    "MAC_Lyrics.dc.html": {
+      "x": 42320,
+      "y": 5410,
+      "w": 900,
+      "h": 660,
+      "title": "Media hub · Mac · Now Playing mở ngăn Lyrics (chữ giữ chỗ); tweak plain, paused",
+      "radius": 16
+    },
+    "MAC_SleepTimer.dc.html": {
+      "x": 43300,
+      "y": 5410,
+      "w": 480,
+      "h": 660,
+      "title": "Media hub · Mac · Popover Sleep Timer từ nút trăng: Off…End of Song, ✓ 30 Minutes",
+      "radius": 16
+    },
+    "MAC_MusicAlbum.dc.html": {
+      "x": 43860,
+      "y": 5410,
+      "w": 1440,
+      "h": 900,
+      "title": "Media hub · Mac · Album 22, A Million: Play, Shuffle, Keep on Mac, bảng bài; tweak menu, kept",
+      "radius": 16
+    },
+    "MAC_MusicArtist.dc.html": {
+      "x": 45380,
+      "y": 5410,
+      "w": 1440,
+      "h": 900,
+      "title": "Media hub · Mac · Nghệ sĩ Bon Iver: Top Songs, Albums",
+      "radius": 16
+    },
+    "MAC_MusicPlaylist.dc.html": {
+      "x": 46900,
+      "y": 5410,
+      "w": 1440,
+      "h": 900,
+      "title": "Media hub · Mac · Playlist Road Trip (đã giữ): tweak menu ⋯, remove “Remove from Mac?”",
+      "radius": 16
+    },
+    "MAC_KeepPhotos.dc.html": {
+      "x": 48420,
+      "y": 5410,
+      "w": 1440,
+      "h": 900,
+      "title": "Media hub · Mac · Hộp Keep 412 Photos on Mac: Originals ≈ 8.2 GB trước, Viewing Copies ≈ 0.5 GB, Cancel",
+      "radius": 16
+    },
+    "MAC_Kept.dc.html": {
+      "x": 11080,
+      "y": 6710,
+      "w": 720,
+      "h": 640,
+      "title": "Media hub · Mac · Sources & Backup › Show Kept Items: sheet Kept on Mac 41.2 GB, Remove; tweak remove",
+      "radius": 16
+    }
+  },
+  "order": [
+    "Main.dc.html",
+    "MAC_LibrarySelected.dc.html",
+    "MAC_LibraryList.dc.html",
+    "MAC_Search.dc.html",
+    "MAC_FilterPopover.dc.html",
+    "MAC_ContextMenu.dc.html",
+    "MAC_MenuBar.dc.html",
+    "MAC_AddSource.dc.html",
+    "MAC_SourceIndexing.dc.html",
+    "MAC_Ingest.dc.html",
+    "MAC_IngestProgress.dc.html",
+    "MAC_EmptyLibrary.dc.html",
+    "MAC_Viewer.dc.html",
+    "MAC_ViewerFullScreen.dc.html",
+    "MAC_GetInfo.dc.html",
+    "MAC_Compare.dc.html",
+    "MAC_CompareSurvey.dc.html",
+    "MAC_Duplicates.dc.html",
+    "MAC_Places.dc.html",
+    "MAC_OnThisDay.dc.html",
+    "MAC_Collections.dc.html",
+    "MAC_AlbumDetail.dc.html",
+    "MAC_SmartAlbumEditor.dc.html",
+    "MAC_Statistics.dc.html",
+    "MAC_StatisticsCamera.dc.html",
+    "MAC_ChartEditor.dc.html",
+    "MAC_CameraDatabase.dc.html",
+    "MAC_ChartStyle.dc.html",
+    "MAC_Edit.dc.html",
+    "MAC_EditPhotos.dc.html",
+    "MAC_EditColor.dc.html",
+    "MAC_EditCrop.dc.html",
+    "MAC_EditMask.dc.html",
+    "MAC_EditHeal.dc.html",
+    "MAC_EditMarkup.dc.html",
+    "MAC_EditPresets.dc.html",
+    "MAC_EditBatch.dc.html",
+    "MAC_Export.dc.html",
+    "MAC_Cull.dc.html",
+    "MAC_VideoStudio.dc.html",
+    "MAC_VideoStudioCompact.dc.html",
+    "MAC_VideoClipSelected.dc.html",
+    "MAC_VideoText.dc.html",
+    "MAC_VideoExport.dc.html",
+    "MAC_VideoProjects.dc.html",
+    "MAC_Collage.dc.html",
+    "MAC_Compress.dc.html",
+    "MAC_Merge.dc.html",
+    "MAC_Creations.dc.html",
+    "MAC_SettingsGeneral.dc.html",
+    "MAC_SettingsSources.dc.html",
+    "MAC_SettingsEditing.dc.html",
+    "MAC_SettingsServers.dc.html",
+    "MAC_ServerForm.dc.html",
+    "MAC_ServerBrowser.dc.html",
+    "MAC_ServerUpload.dc.html",
+    "MAC_Support.dc.html",
+    "MAC_Hidden.dc.html",
+    "MAC_DeleteCopies.dc.html",
+    "MAC_GetInfoSingle.dc.html",
+    "MAC_SettingsSourcesCache.dc.html",
+    "MAC_Movies.dc.html",
+    "MAC_MovieDetail.dc.html",
+    "MAC_MoviesAdd.dc.html",
+    "MAC_MoviePlayer.dc.html",
+    "MAC_MovieTracks.dc.html",
+    "MAC_MovieTranslate.dc.html",
+    "MAC_MovieSubtitleAdd.dc.html",
+    "MAC_SettingsAI.dc.html",
+    "MAC_SettingsAIProvider.dc.html",
+    "MAC_PlexSignIn.dc.html",
+    "MAC_SettingsSourcesBackup.dc.html",
+    "MAC_MoviesHome.dc.html",
+    "MAC_Music.dc.html",
+    "MAC_MusicStatistics.dc.html",
+    "MAC_SearchAll.dc.html",
+    "MAC_MoviesReview.dc.html",
+    "MAC_WatchHistory.dc.html",
+    "MAC_Subtitles.dc.html",
+    "MAC_TVShow.dc.html",
+    "MAC_Convert.dc.html",
+    "MAC_ExtractAudio.dc.html",
+    "MAC_NowPlaying.dc.html",
+    "MAC_UpNext.dc.html",
+    "MAC_Lyrics.dc.html",
+    "MAC_SleepTimer.dc.html",
+    "MAC_MusicAlbum.dc.html",
+    "MAC_MusicArtist.dc.html",
+    "MAC_MusicPlaylist.dc.html",
+    "MAC_KeepPhotos.dc.html",
+    "MAC_Kept.dc.html"
+  ],
+  "notes": {
+    "row_lib": {
+      "kind": "title1",
+      "x": 0,
+      "y": -260,
+      "text": "Mac · Thư viện · tìm kiếm · nguồn ảnh",
+      "maxW": 16000
+    },
+    "row_view": {
+      "kind": "title1",
+      "x": 0,
+      "y": 1250,
+      "text": "Mac · Xem ảnh · so sánh · trùng · địa điểm",
+      "maxW": 16000
+    },
+    "row_coll": {
+      "kind": "title1",
+      "x": 0,
+      "y": 2550,
+      "text": "Mac · Album · thống kê",
+      "maxW": 16000
+    },
+    "row_edit": {
+      "kind": "title1",
+      "x": 0,
+      "y": 3850,
+      "text": "Mac · Sửa ảnh (tier D)",
+      "maxW": 16000
+    },
+    "row_video": {
+      "kind": "title1",
+      "x": 0,
+      "y": 5150,
+      "text": "Mac · Video Studio · Collage · Resize · Ghép · Creations",
+      "maxW": 16000
+    },
+    "row_set": {
+      "kind": "title1",
+      "x": 0,
+      "y": 6450,
+      "text": "Mac · Cài đặt · server · lần đầu · hỗ trợ",
+      "maxW": 16000
+    }
+  },
+  "designSystems": [],
+  "attachments": {}
 }

@@ -14,13 +14,13 @@ button{font-family:inherit;padding:0;margin:0;cursor:default}
 input{font-family:inherit}
 </style>
 </helmet>
-<div style="width: 1716px; height: 1110px; position: relative; overflow: hidden; border-radius: 16px; background: {{t.content}}; color: {{t.label}}; font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', system-ui, sans-serif; font-size: 13px">
+<div style="width: 1716px; height: 1250px; position: relative; overflow: hidden; border-radius: 16px; background: {{t.content}}; color: {{t.label}}; font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', system-ui, sans-serif; font-size: 13px">
 <!-- Desktop wallpaper (plain gradient) -->
 <div style="position:absolute;inset:0;background:{{wall.bg}}"></div>
-<!-- MENU BAR: ShotDex · File · Edit · View · Image · Go · Window · Help -->
+<!-- MENU BAR: ShotDex · File · Edit · View · Image · Controls · Go · Window · Help -->
 <div role="menubar" aria-label="Menu bar" style="position:absolute;left:0;right:0;top:0;height:26px;background:{{bar.bg}};backdrop-filter:blur(30px) saturate(1.6);-webkit-backdrop-filter:blur(30px) saturate(1.6);display:flex;align-items:center;padding:0 10px;font-size:13px;color:{{bar.fg}}">
 <span aria-label="Apple menu" style="width:30px;display:flex;align-items:center;justify-content:center"><svg width="13" height="15" viewBox="0 0 24 28"><path d="M19.6 14.9c0-3.3 2.7-4.9 2.8-5-1.5-2.3-3.9-2.6-4.7-2.6-2-.2-3.9 1.2-4.9 1.2s-2.6-1.2-4.3-1.1c-2.2 0-4.2 1.3-5.3 3.2-2.3 4-.6 9.8 1.6 13 1.1 1.6 2.4 3.3 4.1 3.3 1.6-.1 2.3-1.1 4.3-1.1s2.5 1.1 4.3 1 2.8-1.6 3.9-3.2c1.2-1.8 1.7-3.6 1.8-3.7-.1 0-3.4-1.3-3.4-5z M16.4 5.3c.9-1.1 1.5-2.6 1.3-4.1-1.3.1-2.8.9-3.8 2-.8.9-1.6 2.5-1.4 4 1.5.1 2.9-.8 3.9-1.9z" fill="currentColor"></path></svg></span>
-<sc-for list="{{barItems}}" as="b" hint-placeholder-count="8"><span role="menuitem" style="height:22px;padding:0 9px;border-radius:6px;display:flex;align-items:center;font-weight:{{b.fw}}">{{b.l}}</span></sc-for>
+<sc-for list="{{barItems}}" as="b" hint-placeholder-count="9"><span role="menuitem" style="height:22px;padding:0 9px;border-radius:6px;display:flex;align-items:center;font-weight:{{b.fw}}">{{b.l}}</span></sc-for>
 <span style="flex:1"></span>
 <span style="display:flex;align-items:center;gap:14px;font-size:13px;font-variant-numeric:tabular-nums">
 <svg aria-label="Wi-Fi" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M2.5 9a14 14 0 0 1 19 0 M5.5 12.5a9.5 9.5 0 0 1 13 0 M8.8 16a4.8 4.8 0 0 1 6.4 0 M12 19.5h.01"></path></svg>
@@ -57,7 +57,7 @@ input{font-family:inherit}
 </div>
 </div>
 </x-dc>
-<script type="text/x-dc" data-dc-script data-props='{"dark":{"editor":"boolean","default":false},"$preview":{"width":1716,"height":1110}}'>
+<script type="text/x-dc" data-dc-script data-props='{"dark":{"editor":"boolean","default":false},"$preview":{"width":1716,"height":1250}}'>
 // v2 tokens (MAC_STYLE v2 rules): accentFill/onAccentFill for every filled control with text, opaque menu,
 // one sheet grey, scrim drawn above sidebar and toolbar, rowAlt zebra, field = content + 1px sep.
 const LIGHT = { content:'#FFFFFF', label:'rgba(0,0,0,0.88)', label2:'rgba(0,0,0,0.56)', label3:'rgba(0,0,0,0.28)',
@@ -136,6 +136,7 @@ function tiles(n, seed, o){
   }
   return out;
 }
+// Legacy (pre media hub, 2026-10-15): no longer drawn — the sidebar markup reads sb from hubSidebar(); kept because some renderVals still call it.
 // Canonical sidebar (consistency §1). o.sel = selected row name; o.offline unplugs T7; o.newFolder adds Client Shoots 2026 indexing.
 function sidebar(t, o){
   o=o||{};
@@ -182,13 +183,13 @@ class Component extends DCLogic {
     const wall = dark ? {bg:'linear-gradient(160deg,#1E2733 0%,#2A2430 55%,#33261E 100%)', text:'rgba(255,255,255,0.92)', shadow:'0 1px 2px rgba(0,0,0,0.6)', line:'rgba(255,255,255,0.35)'}
                       : {bg:'linear-gradient(160deg,#C5D3E2 0%,#DCD6E4 55%,#EAD9C6 100%)', text:'rgba(0,0,0,0.82)', shadow:'0 1px 1px rgba(255,255,255,0.6)', line:'rgba(0,0,0,0.30)'};
     const bar = dark ? {bg:'rgba(30,30,34,0.55)', fg:'rgba(255,255,255,0.92)'} : {bg:'rgba(255,255,255,0.50)', fg:'rgba(0,0,0,0.86)'};
-    const order=['ShotDex','File','Edit','View','Image','Go','Window','Help'];
+    const order=['ShotDex','File','Edit','View','Image','Controls','Go','Window','Help'];
     const barItems=order.map((l,i)=>({l, fw:i===0?'700':'400'}));
     const M=(arr)=>menu(t,arr);
     const mApp=M([['About ShotDex'],'-',['Settings…','⌘,'],['Services','','s'],'-',['Hide ShotDex','⌘H'],['Hide Others','⌥⌘H'],['Show All'],'-',['Quit ShotDex','⌘Q']]);
     const mFile=M([
       ['New Window'],['New Album','⌘N'],['New Album with Selection','⇧⌘N'],['New Smart Album…','⌥⌘N'],['New Video Project'],['New Chart…'],'-',
-      ['Add Folder…','⇧⌘O'],['Add Photos Library','','d'],['Connect to Server…','⌘K'],['Import from Card…'],'-',
+      ['Add Folder…','⇧⌘O'],['Add Photos Library','','d'],['Add Movie Files…'],['Add Music Files…'],['Connect to Server…','⌘K'],['Import from Card…'],'-',
       ['Open','⌘O'],['Open in New Window','⌥⌘O'],['Show in Finder','⇧⌘R'],['Reveal in Photos'],'-',
       ['Export','','s'],['Upload to Server…','⇧⌘U'],['Share','','s'],['Save Preset…'],'-',
       ['Eject “T7 RAW Archive”'],['Remove Source…'],'-',
@@ -205,24 +206,29 @@ class Component extends DCLogic {
       ['Hide Sidebar','⌃⌘S'],['Show Inspector','⌥⌘I'],['Hide Toolbar','⌥⌘T'],['Customize Toolbar…'],'-',
       ['Play Slideshow','⌥⌘S'],['Enter Full Screen','⌃⌘F']]);
     const sSort=M([['Date Taken','','c'],['Date Modified'],['Name'],['ISO'],['Focal Length'],['Aperture'],['Shutter Speed'],'-',['Newest First','','c'],['Oldest First']]);
-    const sFilter=M([['All Items','','c'],['Favorites'],['Picks'],['Rejected'],['Rating','','s'],'-',['Photos Only'],['Videos Only'],['Capture Kind','','s'],['Camera','','s'],['Lens','','s'],'-',['Advanced Filter…']]);
+    const sFilter=M([['All Items','','c'],['Favorites'],['Picks'],['Rejected'],['Rating','','s'],'-',['Photos Only'],['Videos Only'],['Capture Kind','','s'],['Camera','','s'],['Lens','','s'],['Source','','s'],['Kept on Mac'],'-',['Advanced Filter…']]);
     const mImage=M([['Edit','⌘E'],['Compare','⌥⌘C'],['Quick Look','Space'],['Get Info','⌘I'],'-',
       ['Rotate Counterclockwise','⌘R'],['Rotate Clockwise','⌥⌘R'],'-',
       ['Favorite','.'],['Rating','','s'],['Pick','P'],['Reject','X'],['Clear Flag','U'],['Start Culling Pass','⌥⌘P'],['Keywords…','⇧⌘K'],'-',
       ['Adjust Date and Time…'],['Adjust Location…'],'-',
       ['Editor','','s'],['Create','','s'],['Combine Photos','','s'],['Resize…'],'-',
       ['Keep Only This'],['Merge 12 Groups…'],['Rescan Duplicates'],['Move 120 Rejected…'],'-',
-      ['Duplicate','⌘D'],['Hide','⌘L'],['Move to Trash','⌘⌫']]);
+      ['Keep on Mac'],['Duplicate','⌘D'],['Hide','⌘L'],['Move to Trash','⌘⌫']]);
     const sRating=M([['None','0'],['★','1'],['★★','2'],['★★★','3'],['★★★★','4'],['★★★★★','5']]);
     const sEditor=M([['Adjust','A','c'],['Crop','C'],['Mask','M'],['Heal','H'],['Markup','K'],'-',
       ['Invert Mask','⇧I'],['Show Mask Overlay','O'],['Visualize Spots','Y'],'-',['Flip Horizontal'],['Flip Vertical'],'-',['New Snapshot'],'-',['Done','⌘↩']]);
     const sCreate=M([['Collage…'],['Video Project…']]);
     const sCombine=M([['Focus Stack…'],['Panorama…'],['HDR…'],['Stack Exposures…']]);
     const mGo=M([['Back','⌘['],['Forward','⌘]'],['Enclosing Album','⌘↑'],'-',
-      ['All Photos','⌥⌘1','c'],['Favorites','⌥⌘2'],['Videos','⌥⌘3'],['RAW','⌥⌘4'],['Recently Added','⌥⌘5'],'-',
-      ['On This Day'],['Albums'],'-',
-      ['Statistics','⌥⌘6'],['Places'],['Trips'],['Duplicates'],['Collages'],['Video Projects'],['On Server'],'-',['Go to Date…']]);
-    const mWindow=M([['Minimize','⌘M'],['Zoom'],['Fill'],'-',['Video Studio','⌥⌘V'],['Activity','⌥⌘0'],'-',['Bring All to Front'],'-',['All Photos','','c'],['IMG_4821.CR3 — Edit']]);
+      {h:'Photos'},['Library','⌥⌘1','c'],['Favorites','⌥⌘2'],['Videos','⌥⌘3'],['RAW','⌥⌘4'],['Recently Added','⌥⌘5'],
+      ['Collections'],['On This Day'],['Albums'],['Statistics','⌥⌘6'],['Photos Utilities','','s'],'-',
+      {h:'Movies'},['Movies','⌥⌘7'],['Movie Utilities','','s'],'-',
+      {h:'Music'},['Music','⌥⌘8'],['Playlists','','s'],['Now Playing'],'-',['Go to Date…']]);
+    const sPhotoUtil=M([['Backup'],['Duplicates'],['Places'],['Trips'],['Collages'],['Video Projects'],'-',['Local Network'],['Cloud'],'-',
+      ['Hidden'],['Unable to Upload'],['On Server'],['On This Mac']]);
+    const mWindow=M([['Minimize','⌘M'],['Zoom'],['Fill'],'-',['Video Studio','⌥⌘V'],['Activity','⌥⌘0'],'-',['Bring All to Front'],'-',['Library','','c'],['IMG_4821.CR3 — Edit']]);
+    const mControls=M([['Pause','Space'],['Next','⌘→'],['Previous','⌘←'],'-',['Shuffle'],['Repeat','','s']]);
+    const sRepeat=M([['Off'],['All','','c'],['One']]);
     const mHelp=M([['ShotDex Help'],['Search Syntax'],['Keyboard Shortcuts','⌘/'],'-',['ShotDex Support…']]);
     const vClip=M([['Split at Playhead','⌘B'],['Trim Start to Playhead','⌥['],['Trim End to Playhead','⌥]'],['Delete','⌫'],'-',
       ['Add Text','T'],['Add Music…'],['Add Sticker…'],['Add Marker','M'],'-',
@@ -232,8 +238,8 @@ class Component extends DCLogic {
       ['Zoom In','⌘+'],['Zoom Out','⌘−'],['Fit Timeline','⇧Z'],'-',['Hide Sidebar','⌃⌘S'],['Hide Inspector','⌥⌘I'],['Show Original','\\']]);
     const vFile=M([['New Video Project'],'-',['Export…','⌘E'],['Save to Photos Library'],'-',['Close','⌘W']]);
     const W=270, X=[16,298,580,862,1144], Y=36;
-    const c1=column(X[0],Y,W,[{title:'File',rows:mFile},{title:'File ▸ Export',rows:sExport,small:true},{title:'File ▸ Share',rows:sShare,small:true}]);
-    const c2=column(X[1],Y,W,[{title:'ShotDex',rows:mApp},{title:'Edit',rows:mEdit},{title:'Edit ▸ Sync Edits',rows:sSync,small:true},{title:'Help',rows:mHelp}]);
+    const c1=column(X[0],Y,W,[{title:'File',rows:mFile},{title:'File ▸ Export',rows:sExport,small:true},{title:'File ▸ Share',rows:sShare,small:true},{title:'Go ▸ Photos Utilities',rows:sPhotoUtil,small:true}]);
+    const c2=column(X[1],Y,W,[{title:'ShotDex',rows:mApp},{title:'Edit',rows:mEdit},{title:'Edit ▸ Sync Edits',rows:sSync,small:true},{title:'Help',rows:mHelp},{title:'Controls',rows:mControls},{title:'Controls ▸ Repeat',rows:sRepeat,small:true}]);
     const c3=column(X[2],Y,W,[{title:'View',rows:mView},{title:'View ▸ Sort By',rows:sSort,small:true},{title:'View ▸ Filter',rows:sFilter,small:true}]);
     const c4=column(X[3],Y,W,[{title:'Image',rows:mImage},{title:'Image ▸ Rating',rows:sRating,small:true},{title:'Image ▸ Create',rows:sCreate,small:true},{title:'Image ▸ Combine Photos',rows:sCombine,small:true}]);
     const c5=column(X[4],Y,W,[{title:'Go',rows:mGo},{title:'Window',rows:mWindow},{title:'Image ▸ Editor (editor window key)',rows:sEditor,small:true}]);
@@ -247,7 +253,7 @@ class Component extends DCLogic {
     const vsBar=['File','Edit','View','Clip','Go','Window'].map((l,i)=>({l, fw:'400', bg:l==='Clip'?t.accentFill:'transparent', fg:l==='Clip'?t.onAccentFill:bar.fg}));
     const vsNotes=['The Image menu is replaced by Clip, and ⌘E means Export… in the File menu.'];
     const panels=[].concat(c1.panels,c2.panels,c3.panels,c4.panels,c5.panels,v1.panels,v2.panels);
-    return { t, wall, bar, barItems, panels, vs, vsBar, vsNotes, H: Math.max(c3.bottom,c4.bottom,c5.bottom,vsBottom) };
+    return { t, wall, bar, barItems, panels, vs, vsBar, vsNotes, H: Math.max(c1.bottom,c3.bottom,c4.bottom,c5.bottom,vsBottom) };
   }
 }
 </script>

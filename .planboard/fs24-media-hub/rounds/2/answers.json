@@ -1,0 +1,18 @@
+{
+  "D1": {
+    "option": "pause"
+  },
+  "D5": {
+    "option": "ask"
+  },
+  "D8": {
+    "option": "smart"
+  },
+  "D9": {
+    "option": "plain"
+  },
+  "D7": {
+    "verdict": "change",
+    "comment": "luôn hỏi lúc người dùng chọn keep offlibe"
+  }
+}

@@ -1,6 +1,6 @@
 # FS-21.01 — Khung app iPad: sidebar, toolbar, inspector
 
-`FS-21.01` · gốc app + nhánh màn rộng của mọi màn · board `Main`, `IP_LibrarySelect`, `IP_MenuBar` · cập nhật 2026-10-04
+`FS-21.01` · gốc app + nhánh màn rộng của mọi màn · board `Main`, `IP_LibrarySelect`, `IP_MenuBar` · cập nhật 2026-10-16 (§2 theo FS-24)
 
 **Một câu:** một cửa sổ ba vùng — sidebar 320 trái, nội dung giữa, inspector 360 phải — với toolbar 44 ở trên,
 dựng từ sidebar và toolbar của hệ thống.
@@ -21,13 +21,23 @@ dựng từ sidebar và toolbar của hệ thống.
 
 ## 2. Sidebar
 
-| Nhóm | Hàng |
-|---|---|
-| (không tiêu đề) | All Photos · Favorites · Videos · RAW · Recently Added |
-| **Sources** `+` | từng nguồn: Photos Library, thư mục, ổ ngoài (nút Eject), server — trạng thái theo [FS-19](../FS-19-photo-sources/README.md) |
-| **Collections** `+` | On This Day · Albums › (mở ra danh sách phẳng) · các smart album |
-| **Utilities** | Statistics · Places · Trips · Duplicates · Collages · Video Projects · On Server |
+**Viết lại 2026-10-16 theo [FS-24 Media hub](../FS-24-media-hub/README.md) (A4)** — sidebar theo tab, thay bản cũ (nhóm không
+tên All Photos · Favorites · Videos · RAW · Recently Added, rồi Sources, Collections, Utilities), chưa từng có code. Nguồn đúng:
+[FS-24.01 §4](../FS-24-media-hub/01-navigation-and-shell.md), [FS-24.13 §2](../FS-24-media-hub/13-devices.md); board `Main`, `IP_Movies`, `IP_Music`.
 
+Đầu sidebar: segmented **Photos · Movies · Music** (cao 36) đổi nội dung sidebar — đổi đoạn là đổi tab, giữ hàng đang chọn và
+chỗ cuộn của từng tab. Search là ô trên toolbar (Search chung FS-24.08).
+
+| Tab | Nhóm · hàng |
+|---|---|
+| **Photos** | **Library** · **Collections** · **Pinned** (mặc định On This Day · All Photos · Favorites · Videos · RAW · Recently Added — bỏ ghim được) · **Albums** › (danh sách phẳng, có smart album) · **Utilities** (13 hàng như FS-24.03 §3: Statistics … On Server · On This iPad) · **Sources** `+` |
+| **Movies** | Home · Movies · TV Shows · Clips · **Utilities** (6) · **Sources** `+` |
+| **Music** | Home · Albums · Artists · Songs · Playlists (từng playlist) · **Utilities** (6) · **Sources** `+` |
+
+- Mỗi nhóm **Sources** chỉ liệt kê nguồn có loại media của tab đó: Photos Library, thư mục, ổ ngoài (nút Eject), server, Plex —
+  trạng thái theo [FS-19](../FS-19-photo-sources/README.md).
+- Chân sidebar: mini player (rộng hết sidebar, cao 56, bo 16) **trên** dòng trạng thái index; sidebar phủ (cửa sổ 700–1099pt)
+  thì mini player xuống đáy vùng nội dung (FS-24.13 §2, A17).
 - Hàng cao **44**, nhãn 17, icon 22 màu accent, số đếm 15 màu phụ bên phải; tiêu đề nhóm 15 đậm vừa. Tối đa 2 cấp.
 - Đầu sidebar: **Hide Sidebar** trái, **Settings** (gear) phải. Chân: trạng thái index — "Up to date · indexed
   2 min ago", đang chạy thì tiến độ ([BD-03.04](../../01-basic-design/BD-03-metadata-indexing-flow/04-progress-and-background.md)).
@@ -36,7 +46,8 @@ dựng từ sidebar và toolbar của hệ thống.
 - Chạm một hàng = đổi nội dung, không đẩy màn. Hàng đang chọn nền xám, không accent.
 - Nhận kéo-thả: ảnh thả lên một album thường → thêm vào album; thư mục từ Files thả lên Sources → thêm nguồn
   (FS-19). Smart album, Utilities, hàng Library không nhận: không sáng lên khi kéo qua.
-- `+` của Collections mở menu New Album · New Smart Album; `+` của Sources mở sheet Add a Source (FS-19).
+- `+` của Collections (hàng Collections của tab Photos) mở menu New Album · New Smart Album; `+` của Sources mở sheet Add a
+  Source (FS-19).
 
 ## 3. Toolbar
 

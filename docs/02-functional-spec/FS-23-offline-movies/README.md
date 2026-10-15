@@ -4,7 +4,7 @@
 `ShotDex/Data/Movies/`) · test: chưa có (đề xuất `ShotDexTests/Movie*Tests.swift`) · cập nhật 2026-10-14
 
 **Một câu:** Collections › Utilities › **Movies** là thư viện phim từ thư mục NAS/Files, máy chủ Plex trong nhà và file
-chép vào máy (ngoài Photos, ngoài iCloud); ở nhà stream, Download để mang đi, poster có dấu phim nào xem được
+chép vào máy (ngoài Photos, ngoài iCloud); ở nhà stream, Keep on iPhone để mang đi, poster có dấu phim nào xem được
 offline; phát mọi định dạng thường gặp kể cả MKV/FLV/AVI, nhận phụ đề người dùng tự tải, hiện hai phụ đề cùng lúc, và dịch
 phụ đề sang thứ tiếng khác bằng AI trước khi lên máy bay.
 
@@ -20,14 +20,14 @@ Projects trên `*_Collections` và sidebar iPad/Mac; hàng **AI** trên `*_Setti
 
 | # | Phần | Trả lời |
 |---|---|---|
-| 01 | [Thư viện phim](01-library-and-import.md) | nguồn (thư mục, Plex, file chép), Stream / Đang tải / Trên máy, Grid/List, search, sort, menu phim, Download |
+| 01 | [Thư viện phim](01-library-and-import.md) | nguồn (thư mục, Plex, file chép), Stream / Đang tải / Trên máy, Grid/List, search, sort, menu phim, Keep on iPhone (chữ FS-24 D6) |
 | 02 | [Player](02-player.md) | engine VLCKit, định dạng, transport, bảng âm thanh (track, Audio Sync, ngôn ngữ ưu tiên), nhớ chỗ xem, thiết bị |
 | 03 | [Phụ đề](03-subtitles.md) | track có sẵn, nhập file, Share/AirDrop, hai phụ đề, vị trí, cỡ chữ, lệch giờ; không tìm trên mạng |
 | 04 | [Dịch phụ đề bằng AI](04-ai-translation.md) | chọn nhà cung cấp, chia đoạn, chạy dở, lưu bản dịch |
 | 05 | [Dữ liệu](05-data.md) | thư mục kho, bảng phim, bảng phụ đề, Keychain |
 | 06 | [Tiêu chí nghiệm thu](06-acceptance-criteria.md) | AC-1…AC-66 |
 | 07 | [Plex](07-plex.md) | đăng nhập bằng mã, stream bản gốc, tải kèm thông tin phim, đồng bộ chỗ xem |
-| 08 | [Trang chi tiết phim](08-movie-detail.md) | chạm phim mở trang kiểu Infuse: Resume / From Beginning, Download, Audio · Subtitles · Version |
+| 08 | [Trang chi tiết phim](08-movie-detail.md) | chạm phim mở trang kiểu Infuse: Resume / From Beginning, Keep on iPhone, Audio · Subtitles · Version |
 
 Mục AI trong Settings (dùng chung với AI Search) là FS riêng: [FS-08.07](../FS-08-settings/07-ai-providers.md).
 
@@ -41,7 +41,7 @@ Mục AI trong Settings (dùng chung với AI Search) là FS riêng: [FS-08.07](
 
 **Có:**
 - Thư viện nhiều nguồn: thư mục trên connection FS-15 hoặc Files, máy chủ Plex, file chép thẳng (Files, Share/AirDrop);
-  stream khi ở nhà, Download vào thư mục riêng không sao lưu để xem offline.
+  stream khi ở nhà, Keep on iPhone vào thư mục riêng không sao lưu để xem offline.
 - Phát MP4, MOV, M4V, MKV, WebM, FLV, AVI, WMV, MPEG-TS; chọn track âm thanh như Infuse (ngôn ngữ, codec, kênh,
   Audio Sync, ngôn ngữ ưu tiên); nhớ chỗ đang xem.
 - Phụ đề: track trong file, file SRT/ASS/SSA/VTT/zip người dùng tự tải rồi đưa vào; tối đa 2 phụ đề cùng lúc.

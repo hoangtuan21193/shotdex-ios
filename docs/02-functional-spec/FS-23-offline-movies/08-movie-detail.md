@@ -19,18 +19,20 @@ Chạm một phim trong Movies không phát ngay mà mở trang chi tiết, ki�
 - Poster nhỏ 112×168 bên trái chồng lên ảnh nền; bên phải: tên (24 pt đậm, tối đa 2 dòng), `năm · thời lượng ·
   độ phân giải` (thứ nào biết), thể loại (Plex), `nguồn · cỡ file`.
 - Tóm tắt (Plex) 3 dòng, chạm để xem hết.
-- Nút ⋯ góc phải: Mark as Watched/Unwatched · Rename · Retry Download (khi lỗi) · Remove Download (hoặc
+- Nút ⋯ góc phải: Mark as Watched/Unwatched · Rename · Retry Keep (khi lỗi) · Remove from iPhone (hoặc
   Remove from Movies với phim chép thẳng). Duo ngoài không có ⋯.
 
-## 3. Nút xem và Download (D2)
+## 3. Nút xem và Keep on iPhone (D2)
+
+Chữ theo [FS-24.09](../FS-24-media-hub/09-keep-on-device.md) (D6, 2026-10-16): nút tải là **Keep on iPhone**, lệnh ngược **Remove from iPhone**.
 
 - Đang xem dở (chỗ xem hợp lệ theo 02 §5): nút cam to **Resume · 47:12**, dưới là thanh đã xem + `1:58:48 left`;
-  hàng dưới hai nút nửa bề rộng **From Beginning** và Download. Chưa xem hoặc đã xem hết: một nút **Play**,
-  Download chiếm cả hàng.
+  hàng dưới hai nút nửa bề rộng **From Beginning** và **Keep on iPhone**. Chưa xem hoặc đã xem hết: một nút **Play**,
+  Keep on iPhone chiếm cả hàng.
 - From Beginning phát từ 0:00; chỗ xem mới ghi đè chỗ cũ khi xem.
-- Download theo trạng thái (01 §3, §6): `Download` → `Downloading 45%` (thanh tiến độ trong nút) → `✓ On iPhone`.
-  Chạm khi đang tải hoặc đã tải: alert Remove Download (01 §6). Lỗi: nút ghi `Retry Download`, dòng đỏ dưới nút.
-  Phim chép thẳng: không có nút Download. Phim Plex nhiều bản: Download hỏi bản như hôm nay (AC-56).
+- Nút theo trạng thái (01 §3, §6): `Keep on iPhone` → `Keeping 45%` (thanh tiến độ trong nút) → `✓ On iPhone`.
+  Chạm khi đang tải hoặc đã tải: alert Remove from iPhone (01 §6). Lỗi: nút ghi `Retry Keep`, dòng đỏ dưới nút.
+  Phim chép thẳng: không có nút Keep. Phim Plex nhiều bản: Keep on iPhone hỏi bản như hôm nay (AC-56).
 
 ## 4. Audio · Subtitles · Version (D3)
 
@@ -41,11 +43,11 @@ Chạm một phim trong Movies không phát ngay mà mở trang chi tiết, ki�
 - Track âm thanh trước khi phát: Plex từ thông tin phim; MKV/WebM đọc đầu file (vài KB, cả khi stream); MP4/MOV
   trên máy qua AVFoundation; còn lại hàng Audio ghi `Chosen when playing`. Chọn được lưu theo **vị trí trong file**
   (track âm thanh thứ n), player khớp lại đúng track khi mở.
-- Version: chọn bản sẽ Play và Download; mặc định bản nét nhất (07 §3).
+- Version: chọn bản sẽ Play và Keep on iPhone; mặc định bản nét nhất (07 §3).
 
 ## 5. Thiết bị (A5, D5)
 
 - iPad, Duo trong, Mac: ảnh nền ngang cả màn; cột trái poster + thông tin + nút; cột phải tóm tắt + thẻ Audio/
   Subtitles/Version. Không phóng to chữ hay nút.
 - Duo ngoài (466×678, thanh 84 pt): trang rút gọn — poster, tên, Resume/Play + From Beginning, hàng Audio · Subtitles;
-  không Download, Remove, Rename, ⋯.
+  không Keep on iPhone, Remove, Rename, ⋯.

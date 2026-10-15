@@ -1,0 +1,538 @@
+{
+  "title": "FS-24 Media hub — các điểm cần chốt",
+  "context": "Spec FS-24 (app thành Photos · Movies · Music) còn 28 chỗ cần quyết. Board này chỉ hỏi 11 điều bạn sẽ thấy hoặc phải đánh đổi; 17 điều kỹ thuật Claude đã tự chọn ở trang cuối.\nMỗi câu đã chọn sẵn; đồng ý thì không cần bấm gì, xong bấm \"Gửi Claude\".",
+  "pages": [
+    {
+      "id": "play",
+      "title": "Khi đang phát",
+      "intro": "Nhạc và phim cư xử thế nào khi bạn làm việc khác.",
+      "decisions": [
+        {
+          "id": "D1",
+          "title": "Đang nghe nhạc mà mở Video Studio thì nhạc có tự dừng không?",
+          "image": "d1.svg",
+          "why": "Không dừng thì tiếng nhạc lẫn với tiếng clip đang xem trước, khó nghe để dựng video.",
+          "proposal": "Tự tạm dừng khi vào Video Studio; ra khỏi Video Studio thì bấm Play lại trên mini player.",
+          "options": [
+            {
+              "id": "pause",
+              "label": "Tự tạm dừng",
+              "pros": [
+                "Xem trước clip nghe rõ"
+              ],
+              "cons": [
+                "Phải bấm Play lại"
+              ],
+              "recommended": true,
+              "effort": "S"
+            },
+            {
+              "id": "mix",
+              "label": "Phát chung",
+              "pros": [
+                "Nhạc không bị ngắt"
+              ],
+              "cons": [
+                "Hai tiếng chồng nhau"
+              ],
+              "effort": "S"
+            }
+          ],
+          "tech": "docs/02-functional-spec/FS-24-media-hub/06-music-player.md §7 — Video Studio đặt AVAudioSession riêng.",
+          "tasks": [
+            "Chốt dòng ⚠️ CẦN QUYẾT và sửa AC liên quan — docs/02-functional-spec/FS-24-media-hub/06-music-player.md"
+          ]
+        },
+        {
+          "id": "D2",
+          "title": "Đang xem phim mà khoá máy hoặc chuyển app thì tiếng phim có chạy tiếp không?",
+          "image": "d2.svg",
+          "why": "Chạy tiếp thì nghe được như podcast nhưng dễ hao pin và lỡ đoạn phim; dừng thì giống app hiện nay.",
+          "proposal": "Thêm lựa chọn trong Settings › Playback: \"Movie Audio in Background\" — bật thì khoá máy/chuyển app phim chạy tiếp chỉ tiếng (mặc định bật, theo lựa chọn của bạn), tắt thì phim dừng như hiện nay. Picture in Picture không đổi.",
+          "options": [
+            {
+              "id": "stop",
+              "label": "Mặc định dừng, có công tắc bật",
+              "pros": [
+                "Không lỡ phim",
+                "Đúng FS-23"
+              ],
+              "cons": [
+                "Không nghe phim như radio"
+              ],
+              "effort": "S"
+            },
+            {
+              "id": "audio",
+              "label": "Mặc định chạy tiếp chỉ tiếng, có công tắc tắt",
+              "pros": [
+                "Nghe phim khi tắt màn"
+              ],
+              "cons": [
+                "Lỡ phần hình",
+                "Tốn pin"
+              ],
+              "effort": "M",
+              "recommended": true
+            }
+          ],
+          "tech": "docs/02-functional-spec/FS-24-media-hub/06-music-player.md §6, FS-23.02 §4.",
+          "tasks": [
+            "Chốt dòng ⚠️ CẦN QUYẾT và sửa AC liên quan — docs/02-functional-spec/FS-24-media-hub/06-music-player.md"
+          ],
+          "revision": {
+            "round": 2,
+            "note": "Theo ghi chú: có công tắc trong Settings › Playback để bạn chọn; mặc định là chạy tiếp chỉ tiếng như bạn chọn."
+          }
+        },
+        {
+          "id": "D3",
+          "title": "Có xin Apple quyền CarPlay ngay bây giờ không (để sau này nghe nhạc ShotDex trên xe)?",
+          "image": "d3.svg",
+          "why": "Apple duyệt quyền CarPlay mất vài tuần; xin muộn thì lúc muốn làm phải chờ.",
+          "proposal": "Xin ngay, nhưng bản đầu chưa làm CarPlay.",
+          "options": [
+            {
+              "id": "now",
+              "label": "Xin ngay, làm sau",
+              "pros": [
+                "Không phải chờ khi cần"
+              ],
+              "cons": [
+                "Thêm một việc giấy tờ"
+              ],
+              "recommended": true,
+              "effort": "S"
+            },
+            {
+              "id": "later",
+              "label": "Chưa xin",
+              "pros": [
+                "Gọn"
+              ],
+              "cons": [
+                "Chờ vài tuần khi muốn làm"
+              ],
+              "effort": "S"
+            }
+          ],
+          "tech": "docs/02-functional-spec/FS-24-media-hub/06-music-player.md §9, entitlement com.apple.developer.carplay-audio.",
+          "tasks": [
+            "Chốt dòng ⚠️ CẦN QUYẾT và sửa AC liên quan — docs/02-functional-spec/FS-24-media-hub/06-music-player.md"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "library",
+      "title": "Thư viện phim và nhạc",
+      "intro": "Định dạng, chuyển video, tên lệnh.",
+      "decisions": [
+        {
+          "id": "D4",
+          "title": "Nhạc định dạng OGG, Opus, APE có phát được ở bản đầu không?",
+          "image": "d4.svg",
+          "why": "Bỏ qua thì vài file trên NAS không hiện; phát được thì mất gapless và tốn thêm thời gian làm.",
+          "proposal": "Bỏ qua ở bản đầu, Settings ghi rõ bao nhiêu file chưa hỗ trợ. Làm sau nếu bạn thật sự có nhiều file loại này.",
+          "options": [
+            {
+              "id": "skip",
+              "label": "Bỏ qua, ghi số file",
+              "pros": [
+                "Nhanh xong",
+                "Gapless, lock screen chắc chắn"
+              ],
+              "cons": [
+                "Vài file không nghe được"
+              ],
+              "recommended": true,
+              "effort": "S"
+            },
+            {
+              "id": "vlc",
+              "label": "Phát qua bộ giải mã phim",
+              "pros": [
+                "Mọi file đều nghe được"
+              ],
+              "cons": [
+                "Không gapless",
+                "Lâu hơn"
+              ],
+              "effort": "L"
+            }
+          ],
+          "tech": "docs/02-functional-spec/FS-24-media-hub/05-music-library.md §1 — VLCKit cho audio, ngoài AVFoundation.",
+          "tasks": [
+            "Chốt dòng ⚠️ CẦN QUYẾT và sửa AC liên quan — docs/02-functional-spec/FS-24-media-hub/05-music-library.md"
+          ]
+        },
+        {
+          "id": "D5",
+          "title": "Chuyển video tải về từ Photos sang Movies xong, có xoá bản trong Photos không?",
+          "image": "d6.svg",
+          "importance": "critical",
+          "why": "Không xoá thì video nằm hai chỗ, tốn dung lượng iCloud; tự xoá thì có thể mất video bạn muốn giữ.",
+          "proposal": "Hỏi bằng hộp xoá của hệ thống \"Delete 12 videos from Photos?\"; bấm Cancel thì giữ cả hai bản.",
+          "options": [
+            {
+              "id": "ask",
+              "label": "Hỏi mỗi lần",
+              "pros": [
+                "Không mất gì ngoài ý muốn"
+              ],
+              "cons": [
+                "Thêm một bước"
+              ],
+              "recommended": true,
+              "effort": "S"
+            },
+            {
+              "id": "keep",
+              "label": "Luôn giữ cả hai",
+              "pros": [
+                "An toàn tuyệt đối"
+              ],
+              "cons": [
+                "Tốn dung lượng iCloud"
+              ],
+              "effort": "S"
+            },
+            {
+              "id": "auto",
+              "label": "Tự xoá",
+              "pros": [
+                "Gọn"
+              ],
+              "cons": [
+                "Không lấy lại sau 30 ngày"
+              ],
+              "effort": "S"
+            }
+          ],
+          "tech": "docs/02-functional-spec/FS-24-media-hub/04-movies-tab.md §3.",
+          "tasks": [
+            "Chốt dòng ⚠️ CẦN QUYẾT và sửa AC liên quan — docs/02-functional-spec/FS-24-media-hub/04-movies-tab.md"
+          ]
+        },
+        {
+          "id": "D6",
+          "title": "Lệnh bỏ bản đã giữ trên máy gọi là gì?",
+          "image": "d7.svg",
+          "importance": "minor",
+          "why": "Tên lệch nhau giữa ảnh, phim, nhạc làm người dùng không chắc bấm vào có mất file gốc không.",
+          "proposal": "\"Remove from iPhone\" (Remove from iPad / Mac trên thiết bị khác), đối xứng với Keep on iPhone.",
+          "options": [
+            {
+              "id": "remove",
+              "label": "Remove from iPhone",
+              "pros": [
+                "Đối xứng với Keep",
+                "Rõ là chỉ xoá bản trên máy"
+              ],
+              "cons": [
+                "Đổi chữ cũ của Movies"
+              ],
+              "recommended": true,
+              "effort": "S"
+            },
+            {
+              "id": "download",
+              "label": "Remove Download",
+              "pros": [
+                "Giữ chữ cũ của Movies"
+              ],
+              "cons": [
+                "Lệch với Keep"
+              ],
+              "effort": "S"
+            }
+          ],
+          "tech": "docs/02-functional-spec/FS-24-media-hub/09-keep-on-device.md §1.",
+          "tasks": [
+            "Chốt dòng ⚠️ CẦN QUYẾT và sửa AC liên quan — docs/02-functional-spec/FS-24-media-hub/09-keep-on-device.md"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "keep",
+      "title": "Giữ ảnh trên máy",
+      "intro": "Ảnh của thư viện Photos khi muốn xem offline.",
+      "decisions": [
+        {
+          "id": "D7",
+          "title": "Giữ ảnh của thư viện Photos (iCloud) trên máy thì giữ bản nào?",
+          "image": "d8.svg",
+          "importance": "critical",
+          "why": "Bản gốc tốn gấp 10–30 lần dung lượng; bản xem nhẹ nhưng không sửa hay xuất ảnh gốc được khi mất mạng.",
+          "proposal": "Thêm lựa chọn trong Settings › Sources & Backup › Kept on iPhone: \"Keep Photos Library items as\" Originals / Viewing Copy (2732 px). Mặc định Originals như bạn chọn; dòng bên dưới ghi dung lượng ước tính cho mỗi lựa chọn.",
+          "options": [
+            {
+              "id": "view",
+              "label": "Mặc định bản xem, có thể đổi sang bản gốc",
+              "pros": [
+                "Nhẹ",
+                "Xem đẹp"
+              ],
+              "cons": [
+                "Không sửa, không xuất bản gốc khi offline"
+              ],
+              "effort": "M"
+            },
+            {
+              "id": "orig",
+              "label": "Mặc định bản gốc, có thể đổi sang bản xem",
+              "pros": [
+                "Sửa, xuất được offline"
+              ],
+              "cons": [
+                "Rất tốn chỗ"
+              ],
+              "effort": "M",
+              "recommended": true
+            }
+          ],
+          "tech": "docs/02-functional-spec/FS-24-media-hub/09-keep-on-device.md §2 — PhotoKit không ghim bản gốc; app phải tự chép.",
+          "tasks": [
+            "Chốt dòng ⚠️ CẦN QUYẾT và sửa AC liên quan — docs/02-functional-spec/FS-24-media-hub/09-keep-on-device.md"
+          ],
+          "revision": {
+            "round": 2,
+            "note": "Theo ghi chú: có lựa chọn trong Settings để bạn đổi; mặc định giữ bản gốc như bạn chọn, kèm dung lượng ước tính."
+          }
+        },
+        {
+          "id": "D8",
+          "title": "Có cho dùng \"nguồn\" và \"đã giữ trên máy\" làm luật của Smart Album không?",
+          "image": "d13.svg",
+          "why": "Chỉ có bộ lọc tạm thì mỗi lần muốn xem \"ảnh đã giữ trên NAS Home\" phải lọc lại.",
+          "proposal": "Có: Source và Kept dùng được cả trong bộ lọc tạm lẫn làm luật Smart Album.",
+          "options": [
+            {
+              "id": "filter",
+              "label": "Chỉ bộ lọc tạm",
+              "pros": [
+                "Ít việc"
+              ],
+              "cons": [
+                "Phải lọc lại mỗi lần"
+              ],
+              "effort": "S"
+            },
+            {
+              "id": "smart",
+              "label": "Cả Smart Album",
+              "pros": [
+                "Lưu được, tự cập nhật"
+              ],
+              "cons": [
+                "Thêm việc trong trình tạo Smart Album"
+              ],
+              "effort": "M",
+              "recommended": true
+            }
+          ],
+          "tech": "docs/02-functional-spec/FS-24-media-hub/03-photos-tab.md §2, FS-06.08 rule builder.",
+          "tasks": [
+            "Chốt dòng ⚠️ CẦN QUYẾT và sửa AC liên quan — docs/02-functional-spec/FS-24-media-hub/03-photos-tab.md"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "stats",
+      "title": "Thống kê",
+      "intro": "Ô Statistics và màn thống kê nhạc.",
+      "decisions": [
+        {
+          "id": "D9",
+          "title": "Ô Statistics trong Utilities có hiện một con số tóm tắt không?",
+          "image": "d14.svg",
+          "why": "Có số thì thấy ngay body dùng nhiều nhất, nhưng ô đó cao hơn các ô khác; không số thì lưới đều nhưng Statistics chìm giữa 13 ô.",
+          "proposal": "Ô Statistics như mọi ô, không con số; lưới đều.",
+          "options": [
+            {
+              "id": "sum",
+              "label": "Có dòng tóm tắt",
+              "pros": [
+                "Thấy ngay thói quen chụp"
+              ],
+              "cons": [
+                "Lưới không đều"
+              ],
+              "effort": "S"
+            },
+            {
+              "id": "plain",
+              "label": "Như mọi ô",
+              "pros": [
+                "Lưới đều"
+              ],
+              "cons": [
+                "Statistics dễ bị bỏ qua"
+              ],
+              "effort": "S",
+              "recommended": true
+            }
+          ],
+          "tech": "docs/02-functional-spec/FS-24-media-hub/03-photos-tab.md §3 — ô 64pt thay 52pt.",
+          "tasks": [
+            "Chốt dòng ⚠️ CẦN QUYẾT và sửa AC liên quan — docs/02-functional-spec/FS-24-media-hub/03-photos-tab.md"
+          ]
+        },
+        {
+          "id": "D10",
+          "title": "Màn Music Statistics trên iPhone có đủ 8 thẻ như iPad không?",
+          "image": "d9.svg",
+          "why": "Thiếu thẻ trên iPhone là trái luật \"phone có mọi chức năng của iPad\"; đủ thì trang dài hơn.",
+          "proposal": "Đủ 8 thẻ, cuộn dọc; vẽ thêm 3 thẻ còn thiếu.",
+          "options": [
+            {
+              "id": "eight",
+              "label": "Đủ 8 thẻ",
+              "pros": [
+                "Giống iPad"
+              ],
+              "cons": [
+                "Trang dài"
+              ],
+              "recommended": true,
+              "effort": "S"
+            },
+            {
+              "id": "five",
+              "label": "Giữ 5 thẻ",
+              "pros": [
+                "Gọn"
+              ],
+              "cons": [
+                "Thiếu so với iPad"
+              ],
+              "effort": "S"
+            }
+          ],
+          "tech": "docs/02-functional-spec/FS-24-media-hub/07-music-statistics.md §2, NF-05.",
+          "tasks": [
+            "Chốt dòng ⚠️ CẦN QUYẾT và sửa AC liên quan — docs/02-functional-spec/FS-24-media-hub/07-music-statistics.md"
+          ]
+        },
+        {
+          "id": "D11",
+          "title": "Có nút xoá lịch sử nghe nhạc không, đặt ở đâu?",
+          "image": "d10.svg",
+          "importance": "minor",
+          "why": "Không có nút thì Recently Played và thống kê giữ mãi những gì bạn đã nghe.",
+          "proposal": "Có: Settings › Playback › \"Clear Listening History…\", hỏi lại trước khi xoá.",
+          "tech": "docs/02-functional-spec/FS-24-media-hub/07-music-statistics.md §3; bảng lịch sử nghe riêng (12-data.md).",
+          "tasks": [
+            "Chốt dòng ⚠️ CẦN QUYẾT và sửa AC liên quan — docs/02-functional-spec/FS-24-media-hub/07-music-statistics.md"
+          ]
+        }
+      ]
+    }
+  ],
+  "auto": [
+    {
+      "id": "A1",
+      "title": "Khoảng trống đáy màn trên iOS cũ khi có mini player",
+      "choice": "Thêm một khoảng mới 164pt cạnh khoảng 100pt hiện có.",
+      "tech": "01 §2, bottomChromeClearance."
+    },
+    {
+      "id": "A2",
+      "title": "Mini player trên iOS 26 ở màn con",
+      "choice": "Ẩn khi vào màn con, đúng luật \"chỉ ở màn gốc\".",
+      "tech": "01 §2, tabViewBottomAccessory hiện ở mọi màn có tab bar."
+    },
+    {
+      "id": "A3",
+      "title": "Mini player là component mới",
+      "choice": "Thêm vào bộ quy tắc thiết kế: cao 56 (iPhone, iPad), 52 (Duo).",
+      "tech": "01 §3, DESIGN §9."
+    },
+    {
+      "id": "A4",
+      "title": "Sidebar iPad trong FS-21 cũ",
+      "choice": "Sửa FS-21.01 §2 theo sidebar mới trong cùng commit spec.",
+      "tech": "01 §4."
+    },
+    {
+      "id": "A5",
+      "title": "Chiều cao màn trong Duo (669pt) có mini player",
+      "choice": "Chấp nhận, còn dư ≥74pt theo board.",
+      "tech": "01 §4, NF-05 §4."
+    },
+    {
+      "id": "A6",
+      "title": "Menu phát nhạc trên Mac",
+      "choice": "Thêm menu Controls (Play/Pause, Next, Previous, Shuffle, Repeat) và vẽ lại board menu bar.",
+      "tech": "01 §5."
+    },
+    {
+      "id": "A7",
+      "title": "Lưới Utilities khác luật DESIGN §13",
+      "choice": "Sửa DESIGN theo board: lưới 2 cột icon + tên.",
+      "tech": "03 §3."
+    },
+    {
+      "id": "A8",
+      "title": "Sửa loại phim sai (clip có năm trong tên)",
+      "choice": "Thêm Show As › Movie · TV Show · Clip vào menu của phim.",
+      "tech": "04 §3."
+    },
+    {
+      "id": "A9",
+      "title": "Đọc tag và ảnh bìa FLAC",
+      "choice": "Tự đọc khối metadata FLAC, chứng minh bằng spike S-M1.",
+      "tech": "05 §2."
+    },
+    {
+      "id": "A10",
+      "title": "Phát nhạc từ NAS",
+      "choice": "Spike S-M2 trước; dự phòng là chép tạm hoặc chỉ phát bản đã giữ.",
+      "tech": "06 §1, AVAssetResourceLoader."
+    },
+    {
+      "id": "A11",
+      "title": "Board còn thiếu (Now Playing, Up Next, Lyrics, Sleep Timer, trang album/nghệ sĩ/playlist, Convert, Extract Audio, Review videos…)",
+      "choice": "Vẽ trên cả 4 canvas trước khi /plan.",
+      "tech": "06 §8, 11 §2, README \"boards còn thiếu\"."
+    },
+    {
+      "id": "A12",
+      "title": "Icon Keep on iPhone",
+      "choice": "arrow.down.to.line, đã giữ = checkmark.circle.fill (không trùng icon Lưu về Photos).",
+      "tech": "09 §3, DESIGN §8."
+    },
+    {
+      "id": "A13",
+      "title": "Convert / Extract Audio từ MKV, AVI",
+      "choice": "Giải mã bằng bộ giải mã phim đang có, mã hoá bằng AVFoundation; spike S-M3 trước.",
+      "tech": "10 §1."
+    },
+    {
+      "id": "A14",
+      "title": "Nhóm Metadata, Drives, Cache trên trang Sources & Backup của iPhone/Duo",
+      "choice": "Vẽ thêm.",
+      "tech": "11 §2."
+    },
+    {
+      "id": "A15",
+      "title": "Bảng nguồn ảnh, phim, nhạc",
+      "choice": "Ba bảng riêng, trang Sources gộp theo kết nối.",
+      "tech": "12 §2."
+    },
+    {
+      "id": "A16",
+      "title": "Câu chữ NF-03 về Plex music",
+      "choice": "Sửa NF-03 §2c trong commit spec.",
+      "tech": "12 §4."
+    },
+    {
+      "id": "A17",
+      "title": "Mini player khi sidebar iPad phủ lên nội dung (700–1099pt)",
+      "choice": "Đặt ở đáy vùng nội dung.",
+      "tech": "13 §2."
+    }
+  ]
+}

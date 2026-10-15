@@ -45,14 +45,14 @@ vào phần hình còn thấy; máy dọc: sheet nửa màn.
   dấu thanh). Sai thì ⋯ › **Encoding** chọn tay, nhớ theo phụ đề.
 - **Track chữ trong file** (người dùng chốt 14/10, sửa sau spike S2 cùng ngày): ShotDex tự đọc cấu trúc MKV/WebM, trích
   track SRT/ASS/WebVTT ra file phụ đề của mình, dùng được làm Primary, Secondary và để dịch.
-  - Phim **trên máy** (đã Download hoặc chép thẳng): trích ngay khi tải xong.
+  - Phim **trên máy** (đã Keep hoặc chép thẳng): trích ngay khi tải xong.
   - Phim **đang stream**: trích qua bảng chỉ mục (Cues) của file — chỉ đọc các khối phụ đề (~0,5 MB cho phim 3 giờ),
     chạy nền lần đầu phát hoặc lần đầu mở bảng Audio & Subtitles, giữ lại như phụ đề đã tải. Các track **có trong menu
     ngay khi đọc xong đầu file** (vài KB); trong lúc trích, track đó ghi `In File (Reading…)` và chỉ làm Primary
     (VLCKit vẽ). Mỗi dòng phụ đề là một lần đọc nhỏ (phim dài ~1.000 lần): qua HTTP (Plex, WebDAV) và trên máy đọc
     8 lần cùng lúc, qua SMB/SFTP một lần một (kết nối chỉ làm một việc một lúc).
   - File **không có chỉ mục** cho track đó, hoặc trích quá 15 s: như phim stream trước đây — VLCKit vẽ, chỉ Primary,
-    không đôi, không dịch, menu ghi `In File (Download to use as Secondary or translate)`; Download xong thì trích.
+    không đôi, không dịch, menu ghi `In File (Keep on iPhone to use as Secondary or translate)`; Keep xong thì trích (chữ theo FS-24.09, D6).
   - MP4/M4V/MOV có track chữ (mov_text): đọc bằng AVFoundation khi phim trên máy; stream thì chỉ Primary như trên.
   - Spike: [2026-10-14-fs23-s2-mkv-subtitles-spike](../../_intents/2026-10-14-fs23-s2-mkv-subtitles-spike.md).
 - **Track ảnh** (PGS, VobSub): VLCKit vẽ, đúng chỗ file đặt, không đổi cỡ/màu; chỉ làm được Primary, Secondary vẫn

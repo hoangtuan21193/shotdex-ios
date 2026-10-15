@@ -12,28 +12,28 @@
  "boards": {
   "IP_Onboarding.dc.html": {
    "h": 1032,
-   "title": "iPad · Lần đầu mở: cửa sổ rỗng, thẻ chào, Continue; sidebar thêm Movies sau Video Projects (FS-23, 14/10)",
+   "title": "iPad · Lần đầu mở: cửa sổ rỗng, thẻ chào, Continue · media hub 15/10: sidebar Photos · Movies · Music + Search, Now Playing ở chân",
    "w": 1376,
    "x": 0,
    "y": 560
   },
   "IP_LibrarySelect.dc.html": {
    "h": 1032,
-   "title": "iPad · Chọn ảnh: inspector 360 cho 5 ảnh, Compare/Edit trên toolbar, menu ⋯ mở, Done thay Select; sidebar thêm Movies sau Video Projects (FS-23, 14/10)",
+   "title": "iPad · Chọn ảnh: inspector 360 cho 5 ảnh, menu ⋯ có Keep on iPad, Done thay Select · media hub 15/10: sidebar Photos · Movies · Music + Search, Now Playing ở chân",
    "w": 1376,
    "x": 2912,
    "y": 560
   },
   "IP_Search.dc.html": {
    "h": 1032,
-   "title": "iPad · Search: token Brand Sony · Focal 85mm, popover gợi ý, thanh phạm vi nguồn; sidebar thêm Movies sau Video Projects (FS-23, 14/10)",
+   "title": "Media hub · Search “kyoto”: Search In All · Photos · Movies · Music, kết quả nhóm; tweak photoSyntax, recents",
    "w": 1376,
    "x": 13104,
    "y": 560
   },
   "IP_AdvancedSearch.dc.html": {
    "h": 1032,
-   "title": "iPad · Advanced Search: form sheet 700 trên Library mờ; sidebar thêm Movies sau Video Projects (FS-23, 14/10)",
+   "title": "iPad · Advanced Search: form sheet 700 trên Library mờ · media hub 15/10: sidebar Photos · Movies · Music + Search, Now Playing ở chân",
    "w": 1376,
    "x": 14560,
    "y": 560
@@ -68,70 +68,70 @@
   },
   "IP_Share.dc.html": {
    "h": 1032,
-   "title": "iPad · Share: popover từ nút Share, Share With/Without Location; sidebar thêm Movies sau Video Projects (FS-23, 14/10)",
+   "title": "iPad · Share: popover từ nút Share, Share With/Without Location · media hub 15/10: sidebar Photos · Movies · Music + Search, Now Playing ở chân",
    "w": 1376,
    "x": 23296,
    "y": 560
   },
   "IP_Collections.dc.html": {
    "h": 1032,
-   "title": "iPad · Album: On This Day, Smart/My Albums, Media Types, Utilities; Utilities thêm Movies sau Video Projects, ô sau dời một chỗ (FS-23, 14/10)",
+   "title": "Media hub · iPad Collections: On This Day, Albums, Media Types, Utilities 5 cột +On Server, Sources số/Offline/thẻ nhớ",
    "w": 1376,
    "x": 24752,
    "y": 560
   },
   "IP_AlbumDetail.dc.html": {
    "h": 1032,
-   "title": "iPad · Chi tiết album Iceland 2026: header, lưới 7 cột; sidebar thêm Movies sau Video Projects (FS-23, 14/10)",
+   "title": "iPad · Chi tiết album Iceland 2026: header, lưới 7 cột · media hub 15/10: sidebar Photos · Movies · Music + Search, Now Playing ở chân",
    "w": 1376,
    "x": 26208,
    "y": 560
   },
   "IP_SmartAlbum.dc.html": {
    "h": 1032,
-   "title": "iPad · Smart album: header điều kiện, Edit Smart Album, lưới; sidebar thêm Movies sau Video Projects (FS-23, 14/10)",
+   "title": "iPad · Smart album: header điều kiện, Edit Smart Album, lưới · media hub 15/10: sidebar Photos · Movies · Music + Search, Now Playing ở chân",
    "w": 1376,
    "x": 27664,
    "y": 560
   },
   "IP_SmartAlbumEditor.dc.html": {
    "h": 1032,
-   "title": "iPad · Sheet sửa smart album 700×640; sidebar thêm Movies sau Video Projects (FS-23, 14/10)",
+   "title": "iPad · Sheet sửa smart album 700×770: thêm điều kiện Source is NAS Home, Kept on iPad is Yes; tweak fields",
    "w": 1376,
    "x": 29120,
    "y": 560
   },
   "IP_OnThisDay.dc.html": {
    "h": 1032,
-   "title": "iPad · On This Day: Kyoto theo năm, Show Trip; sidebar thêm Movies sau Video Projects (FS-23, 14/10)",
+   "title": "iPad · On This Day: Kyoto theo năm, Show Trip · media hub 15/10: sidebar Photos · Movies · Music + Search, Now Playing ở chân",
    "w": 1376,
    "x": 30576,
    "y": 560
   },
   "IP_Places.dc.html": {
    "h": 1032,
-   "title": "iPad · Địa điểm: bản đồ Kansai, inspector 360 của cụm; sidebar thêm Movies sau Video Projects (FS-23, 14/10)",
+   "title": "iPad · Địa điểm: bản đồ Kansai, inspector 360 của cụm · media hub 15/10: sidebar Photos · Movies · Music + Search, Now Playing ở chân",
    "w": 1376,
    "x": 32032,
    "y": 560
   },
   "IP_Trips.dc.html": {
    "h": 1032,
-   "title": "iPad · Trips: thẻ cover 3 cột; sidebar thêm Movies sau Video Projects (FS-23, 14/10)",
+   "title": "iPad · Trips: thẻ cover 3 cột · media hub 15/10: sidebar Photos · Movies · Music + Search, Now Playing ở chân",
    "w": 1376,
    "x": 33488,
    "y": 560
   },
   "IP_Duplicates.dc.html": {
    "h": 1032,
-   "title": "iPad · Ảnh trùng: danh sách nhóm 360 + chi tiết nhóm; sidebar thêm Movies sau Video Projects (FS-23, 14/10)",
+   "title": "iPad · Ảnh trùng: danh sách nhóm 360 + chi tiết nhóm · media hub 15/10: sidebar Photos · Movies · Music + Search, Now Playing ở chân",
    "w": 1376,
    "x": 34944,
    "y": 560
   },
   "IP_Creations.dc.html": {
    "h": 1032,
-   "title": "iPad · Collages: 12 collage theo tháng, menu giữ lâu; sidebar thêm Movies sau Video Projects (FS-23, 14/10)",
+   "title": "iPad · Collages: 12 collage theo tháng, menu giữ lâu · media hub 15/10: sidebar Photos · Movies · Music + Search, Now Playing ở chân",
    "w": 1376,
    "x": 36400,
    "y": 560
@@ -159,98 +159,98 @@
   },
   "IP_Statistics.dc.html": {
    "h": 1032,
-   "title": "iPad · Thống kê (biểu đồ kiểu C): Insights, KPI, chart cột amber; sidebar thêm Movies sau Video Projects (FS-23, 14/10)",
+   "title": "iPad · Thống kê ảnh (biểu đồ kiểu C), mở từ Photos › Utilities › Statistics; Insights, KPI, chart cột amber · media hub 15/10: sidebar Photos · Movies · Music + Search, Now Playing ở chân",
    "w": 1376,
    "x": 42224,
    "y": 560
   },
   "IP_ChartEditor.dc.html": {
    "h": 1032,
-   "title": "iPad · Sheet sửa biểu đồ 700×640, xem trước sống; sidebar thêm Movies sau Video Projects (FS-23, 14/10)",
+   "title": "iPad · Sheet sửa biểu đồ 700×640, xem trước sống · media hub 15/10: sidebar Photos · Movies · Music + Search, Now Playing ở chân",
    "w": 1376,
    "x": 43680,
    "y": 560
   },
   "IP_DateRange.dc.html": {
    "h": 1032,
-   "title": "iPad · Date Range: sheet chồng trên Edit Chart, hai tháng một hàng; sidebar thêm Movies sau Video Projects (FS-23, 14/10)",
+   "title": "iPad · Date Range: sheet chồng trên Edit Chart, hai tháng một hàng · media hub 15/10: sidebar Photos · Movies · Music + Search, Now Playing ở chân",
    "w": 1376,
    "x": 45136,
    "y": 560
   },
   "IP_Settings.dc.html": {
-   "h": 1032,
-   "title": "iPad · Cài đặt: sidebar kính 320, pane Sources; mục AI sau Playback (FS-08.07, 14/10)",
+   "h": 1800,
+   "title": "Media hub · iPad Settings › Sources & Backup: nguồn, Browse, Backup, Kept, Metadata, Drives and Indexing, Previews",
    "w": 1376,
    "x": 46592,
    "y": 560
   },
   "IP_WidgetSettings.dc.html": {
    "h": 1032,
-   "title": "iPad · Sửa widget: xem trước trái, tuỳ chọn hai cột",
+   "title": "iPad · Sửa widget: xem trước trái, tuỳ chọn hai cột · mục Sources đổi thành Sources & Backup (15/10)",
    "w": 1376,
    "x": 48048,
    "y": 560
   },
   "IP_CompressionPresets.dc.html": {
    "h": 1032,
-   "title": "iPad · Resize Presets: Built-In / Custom",
+   "title": "iPad · Resize Presets: Built-In / Custom · mục Sources đổi thành Sources & Backup (15/10)",
    "w": 1376,
    "x": 49504,
    "y": 560
   },
   "IP_CameraDatabase.dc.html": {
    "h": 1032,
-   "title": "iPad · Settings › Camera Database: bảng máy, 6 máy chưa rõ ở trên",
+   "title": "iPad · Settings › Camera Database: bảng máy, 6 máy chưa rõ ở trên · mục Sources đổi thành Sources & Backup (15/10)",
    "w": 1376,
    "x": 50960,
    "y": 560
   },
   "IP_Support.dc.html": {
    "h": 1032,
-   "title": "iPad · Support: báo lỗi, yêu cầu tính năng, bình chọn",
+   "title": "iPad · Support: báo lỗi, yêu cầu tính năng, bình chọn · mục Sources đổi thành Sources & Backup (15/10)",
    "w": 1376,
    "x": 52416,
    "y": 560
   },
   "IP_SupportThread.dc.html": {
    "h": 1032,
-   "title": "iPad · Support thread: hội thoại, Send Reply",
+   "title": "iPad · Support thread: hội thoại, Send Reply · mục Sources đổi thành Sources & Backup (15/10)",
    "w": 1376,
    "x": 53872,
    "y": 560
   },
   "IP_ServerList.dc.html": {
    "h": 1032,
-   "title": "iPad · File Servers: bảng kết nối, Add Connection",
+   "title": "iPad · File Servers: bảng kết nối, Add Connection · mục Sources đổi thành Sources & Backup (15/10)",
    "w": 1376,
    "x": 55328,
    "y": 560
   },
   "IP_ServerForm.dc.html": {
    "h": 1032,
-   "title": "iPad · Sheet Add Connection 700×640",
+   "title": "iPad · Sheet Add Connection 700×640 · mục Sources đổi thành Sources & Backup (15/10)",
    "w": 1376,
    "x": 56784,
    "y": 560
   },
   "IP_ServerBrowser.dc.html": {
    "h": 1032,
-   "title": "iPad · Duyệt NAS Home: lưới 7 cột, folder trước ảnh, In Library; sidebar thêm Movies sau Video Projects (FS-23, 14/10)",
+   "title": "iPad · Duyệt NAS Home: lưới 7 cột, folder trước ảnh, In Library · media hub 15/10: sidebar Photos · Movies · Music + Search, Now Playing ở chân",
    "w": 1376,
    "x": 58240,
    "y": 560
   },
   "IP_ServerUpload.dc.html": {
    "h": 1032,
-   "title": "iPad · Sheet Upload to Server cho 12 ảnh; sidebar thêm Movies sau Video Projects (FS-23, 14/10)",
+   "title": "iPad · Sheet Upload to Server cho 12 ảnh · media hub 15/10: sidebar Photos · Movies · Music + Search, Now Playing ở chân",
    "w": 1376,
    "x": 59696,
    "y": 560
   },
   "IP_UploadedToServer.dc.html": {
    "h": 1032,
-   "title": "iPad · On Server: Free Up Space, Where They Are; sidebar thêm Movies sau Video Projects (FS-23, 14/10)",
+   "title": "iPad · On Server: Free Up Space, Where They Are · media hub 15/10: sidebar Photos · Movies · Music + Search, Now Playing ở chân",
    "w": 1376,
    "x": 61152,
    "y": 560
@@ -278,14 +278,14 @@
   },
   "IP_VideoProjects.dc.html": {
    "h": 1032,
-   "title": "iPad · Video Projects: 7 dự án, New Video Project; sidebar thêm Movies sau Video Projects (FS-23, 14/10)",
+   "title": "iPad · Video Projects: 7 dự án, New Video Project · media hub 15/10: sidebar Photos · Movies · Music + Search, Now Playing ở chân",
    "w": 1376,
    "x": 66976,
    "y": 560
   },
   "IP_VideoProjectsDelete.dc.html": {
    "h": 1032,
-   "title": "iPad · Video Projects: hộp xác nhận Delete Draft; sidebar thêm Movies sau Video Projects (FS-23, 14/10)",
+   "title": "iPad · Video Projects: hộp xác nhận Delete Draft · media hub 15/10: sidebar Photos · Movies · Music + Search, Now Playing ở chân",
    "w": 1376,
    "x": 68432,
    "y": 560
@@ -502,14 +502,14 @@
   },
   "IP16_GridRatings.dc.html": {
    "h": 1032,
-   "title": "iPad ngang · Lưới có sao/cờ; sidebar thêm Movies sau Video Projects (FS-23, 14/10)",
+   "title": "iPad ngang · Lưới có sao/cờ · media hub 15/10: sidebar Photos · Movies · Music + Search, Now Playing ở chân",
    "w": 1376,
    "x": 22300,
    "y": 2692
   },
   "IP17_GridRejected.dc.html": {
    "h": 1032,
-   "title": "iPad ngang · Lọc Rejected, Delete 120…; sidebar thêm Movies sau Video Projects (FS-23, 14/10)",
+   "title": "iPad ngang · Lọc Rejected, Delete 120… · media hub 15/10: sidebar Photos · Movies · Music + Search, Now Playing ở chân",
    "w": 1376,
    "x": 23756,
    "y": 2692
@@ -544,7 +544,7 @@
   },
   "IP21_BulkKeywords.dc.html": {
    "h": 1032,
-   "title": "iPad ngang · Caption & Keywords nhiều ảnh; sidebar thêm Movies sau Video Projects (FS-23, 14/10)",
+   "title": "iPad ngang · Caption & Keywords nhiều ảnh · media hub 15/10: sidebar Photos · Movies · Music + Search, Now Playing ở chân",
    "w": 1376,
    "x": 29580,
    "y": 2692
@@ -572,14 +572,14 @@
   },
   "IP23_Export.dc.html": {
    "h": 1032,
-   "title": "iPad ngang · Sheet Export 700×640; sidebar thêm Movies sau Video Projects (FS-23, 14/10)",
+   "title": "iPad ngang · Sheet Export 700×640 · media hub 15/10: sidebar Photos · Movies · Music + Search, Now Playing ở chân",
    "w": 1376,
    "x": 32492,
    "y": 2692
   },
   "IP24_FileName.dc.html": {
    "h": 1032,
-   "title": "iPad ngang · File Name trong Export; sidebar thêm Movies sau Video Projects (FS-23, 14/10)",
+   "title": "iPad ngang · File Name trong Export · media hub 15/10: sidebar Photos · Movies · Music + Search, Now Playing ở chân",
    "w": 1376,
    "x": 33948,
    "y": 2692
@@ -816,7 +816,7 @@
   },
   "Main.dc.html": {
    "h": 1032,
-   "title": "iPad · Library: sidebar kính 320, toolbar kính 44, lưới 7 cột có dòng EXIF, Select là nút chữ; sidebar thêm Movies sau Video Projects (FS-23, 14/10)",
+   "title": "iPad · Library: sidebar cuộn, Pinned mặc định (All Photos, Favorites, Videos, RAW, Recently Added), Utilities, Sources",
    "w": 1376,
    "x": 1456,
    "y": 560
@@ -826,14 +826,14 @@
    "y": 560,
    "w": 1376,
    "h": 1032,
-   "title": "iPad · Danh sách: bảng hàng 44, sắp theo Date, cột tick khi chọn; sidebar thêm Movies sau Video Projects (FS-23, 14/10)"
+   "title": "iPad · Danh sách: bảng hàng 44, sắp theo Date, cột tick khi chọn · media hub 15/10: sidebar Photos · Movies · Music + Search, Now Playing ở chân"
   },
   "IP_MenuBar.dc.html": {
    "x": 5824,
    "y": 560,
    "w": 1376,
    "h": 1032,
-   "title": "iPad · Thanh menu iPadOS 26 (có bàn phím): menu ShotDex kèm phím tắt; sidebar thêm Movies sau Video Projects (FS-23, 14/10)"
+   "title": "iPad · Thanh menu iPadOS 26: Go theo tab Photos · Movies · Music, View › Source/Kept on iPad, Image › Keep on iPad, Window › Now Playing · media hub 15/10: sidebar Photos · Movies · Music + Search, Now Playing ở chân"
   },
   "IP_CompareSurvey.dc.html": {
    "x": 20384,
@@ -847,49 +847,49 @@
    "y": 560,
    "w": 1376,
    "h": 1032,
-   "title": "iPad · Thêm nguồn: Photos Library · Folder or Drive · Server; sidebar thêm Movies sau Video Projects (FS-23, 14/10)"
+   "title": "iPad · Thêm nguồn: Photos Library · Folder or Drive · Server · media hub 15/10: sidebar Photos · Movies · Music + Search, Now Playing ở chân"
   },
   "IP_SourceIndexing.dc.html": {
    "x": 8736,
    "y": 560,
    "w": 1376,
    "h": 1032,
-   "title": "iPad · Nguồn đang lập chỉ mục + ổ T7 offline; sidebar thêm Movies sau Video Projects (FS-23, 14/10)"
+   "title": "iPad · Nguồn đang lập chỉ mục + ổ T7 offline · media hub 15/10: sidebar Photos · Movies · Music + Search, Now Playing ở chân"
   },
   "IP_Ingest.dc.html": {
    "x": 10192,
    "y": 560,
    "w": 1376,
    "h": 1032,
-   "title": "iPad · Nhập từ thẻ nhớ: đích + backup, tên file, metadata .xmp; sidebar thêm Movies sau Video Projects (FS-23, 14/10)"
+   "title": "iPad · Nhập từ thẻ nhớ: đích + backup, tên file, metadata .xmp · media hub 15/10: sidebar Photos · Movies · Music + Search, Now Playing ở chân"
   },
   "IP_EmptyLibrary.dc.html": {
    "x": 11648,
    "y": 560,
    "w": 1376,
    "h": 1032,
-   "title": "iPad · Thư viện trống: 3 cách thêm nguồn, kéo thư mục từ Files; sidebar thêm Movies sau Video Projects (FS-23, 14/10)"
+   "title": "iPad · Thư viện trống: 3 cách thêm nguồn, kéo thư mục từ Files · media hub 15/10: sidebar Photos · Movies · Music + Search, Now Playing ở chân"
   },
   "IP_Hidden.dc.html": {
    "x": 69888,
    "y": 560,
    "w": 1376,
    "h": 1032,
-   "title": "iPad · Hidden: 6 Hidden Photos, chọn 2 → Unhide 2 Photos; sidebar thêm Movies sau Video Projects (FS-23, 14/10)"
+   "title": "iPad · Hidden: 6 Hidden Photos, chọn 2 → Unhide 2 Photos · media hub 15/10: sidebar Photos · Movies · Music + Search, Now Playing ở chân"
   },
   "IP_DeleteCopies.dc.html": {
    "x": 71344,
    "y": 560,
    "w": 1376,
    "h": 1032,
-   "title": "iPad · Xoá từ All Photos: hộp liệt kê bản sao có ô tick, chỉ tick bản đang mở; sidebar thêm Movies sau Video Projects (FS-23, 14/10)"
+   "title": "iPad · Xoá từ All Photos: hộp liệt kê bản sao có ô tick, chỉ tick bản đang mở · media hub 15/10: sidebar Photos · Movies · Music + Search, Now Playing ở chân"
   },
   "IP_DeletePermanent.dc.html": {
    "x": 72800,
    "y": 560,
    "w": 1376,
    "h": 1032,
-   "title": "iPad · Hộp đỏ thứ hai: Delete 2 Photos Permanently? (T7 RAW Archive không có Thùng rác); sidebar thêm Movies sau Video Projects (FS-23, 14/10)"
+   "title": "iPad · Hộp đỏ thứ hai: Delete 2 Photos Permanently? (T7 RAW Archive không có Thùng rác) · media hub 15/10: sidebar Photos · Movies · Music + Search, Now Playing ở chân"
   },
   "IPP21_Collage.dc.html": {
    "x": 22700,
@@ -928,35 +928,35 @@
   },
   "IP_Backup.dc.html": {
    "h": 1032,
-   "title": "iPad · Backup 1/5 · danh sách job bên trái (4 trạng thái như iPhone), job đang chọn bên phải ở trạng thái 3 New; New Backup trên toolbar = 2/5 — đề xuất 12/10, code chưa có; sidebar thêm Movies sau Video Projects (FS-23, 14/10)",
+   "title": "iPad · Backup 1/5 · danh sách job bên trái (4 trạng thái như iPhone), job đang chọn bên phải ở trạng thái 3 New; New Backup trên toolbar = 2/5 — đề xuất 12/10, code chưa có · media hub 15/10: sidebar Photos · Movies · Music + Search, Now Playing ở chân",
    "w": 1376,
    "x": 74256,
    "y": 560
   },
   "IP_BackupNew.dc.html": {
    "h": 1032,
-   "title": "iPad · Backup 2/5 · form sheet New Backup 700×640: 3 ô Source, Connection, Folder, Organize (mở 3/5), What to Copy, When; sidebar thêm Movies sau Video Projects (FS-23, 14/10)",
+   "title": "iPad · Backup 2/5 · form sheet New Backup 700×640: 3 ô Source, Connection, Folder, Organize (mở 3/5), What to Copy, When · media hub 15/10: sidebar Photos · Movies · Music + Search, Now Playing ở chân",
    "w": 1376,
    "x": 75712,
    "y": 560
   },
   "IP_BackupOrganize.dc.html": {
    "h": 1032,
-   "title": "iPad · Backup 3/5 · Organize trong sheet: cột Preview cạnh Folders (Levels, Year, Month, Day), Photos and Videos, File Names, Keep Both; sidebar thêm Movies sau Video Projects (FS-23, 14/10)",
+   "title": "iPad · Backup 3/5 · Organize trong sheet: cột Preview cạnh Folders (Levels, Year, Month, Day), Photos and Videos, File Names, Keep Both · media hub 15/10: sidebar Photos · Movies · Music + Search, Now Playing ở chân",
    "w": 1376,
    "x": 77168,
    "y": 560
   },
   "IP_BackupCustomDate.dc.html": {
    "h": 1032,
-   "title": "iPad · Backup 4/5 · Day › Custom… trong sheet: Preview; Order, Year, Month, Day, Separator gõ tự do + chọn nhanh; sidebar thêm Movies sau Video Projects (FS-23, 14/10)",
+   "title": "iPad · Backup 4/5 · Day › Custom… trong sheet: Preview; Order, Year, Month, Day, Separator gõ tự do + chọn nhanh · media hub 15/10: sidebar Photos · Movies · Music + Search, Now Playing ở chân",
    "w": 1376,
    "x": 78624,
    "y": 560
   },
   "IP_BackupRunning.dc.html": {
    "h": 1032,
-   "title": "iPad · Backup 5/5 · job đang chạy lượt đầu 34% ở pane phải: Pause (không Stop), dòng Watching, file đang chạy, tổng, file lỗi; tweak ios18 = Keep Screen On; sidebar thêm Movies sau Video Projects (FS-23, 14/10)",
+   "title": "iPad · Backup 5/5 · job đang chạy lượt đầu 34% ở pane phải: Pause (không Stop), dòng Watching, file đang chạy, tổng, file lỗi; tweak ios18 = Keep Screen On · media hub 15/10: sidebar Photos · Movies · Music + Search, Now Playing ở chân",
    "w": 1376,
    "x": 80080,
    "y": 560
@@ -977,14 +977,14 @@
   },
   "IP_Movies.dc.html": {
    "h": 1032,
-   "title": "iPad · Movies 1/5 · thư viện chung (NAS, Plex, trên máy): Grid poster 2:3 bảy cột, tên + năm, ✓ = trên iPad, thanh cam = đang tải, đỏ = tải dừng, không dấu = stream; Search, All · On This iPad · Unwatched; ⋯ và +; tweak list (bảng có thời lượng · cỡ · phụ đề) / away (xa nhà, phim stream mờ 42%) / menu (menu phim Perfect Days) — FS-23.01, planboard 14/10",
+   "title": "Media hub · iPad tab Movies (1/5): kệ, Utilities, Sources; tweak menu ⋯, item (Show As ›, Convert…), showAs",
    "w": 1376,
    "x": 84448,
    "y": 560
   },
   "IP_MoviesAdd.dc.html": {
    "h": 1032,
-   "title": "iPad · Movies 2/5 · + › Add a Source…: form sheet 700, Folder (NAS Home, Office SFTP, Files) hoặc Media Server (Plex Server), hai dòng chân — FS-23.01 §2, planboard 14/10",
+   "title": "iPad · Movies 2/5 · + › Add a Source…: form sheet 700, Folder (NAS Home, Office SFTP, Files) hoặc Media Server (Plex Server), hai dòng chân — FS-23.01 §2, planboard 14/10 · media hub 15/10: sidebar Photos · Movies · Music + Search, Now Playing ở chân",
    "w": 1376,
    "x": 87360,
    "y": 560
@@ -1005,21 +1005,21 @@
   },
   "IP_MovieSubtitleAdd.dc.html": {
    "h": 1032,
-   "title": "iPad · Movies · Share/AirDrop file .srt → form sheet Add Subtitle to…: chọn phim, phim trùng tên lên đầu — FS-23.03 §5, planboard 14/10",
+   "title": "iPad · Movies · Share/AirDrop file .srt → form sheet Add Subtitle to…: chọn phim, phim trùng tên lên đầu — FS-23.03 §5, planboard 14/10 · media hub 15/10: sidebar Photos · Movies · Music + Search, Now Playing ở chân",
    "w": 1376,
    "x": 94640,
    "y": 560
   },
   "IP_SettingsAI.dc.html": {
    "h": 1032,
-   "title": "iPad · Settings › AI (mục thứ 10, sau Playback): Use For (dịch phụ đề, AI Search), On This Device, Providers + Add Provider… — FS-08.07, đề xuất 14/10, code chưa có",
+   "title": "iPad · Settings › AI (mục thứ 10, sau Playback): Use For (dịch phụ đề, AI Search), On This Device, Providers + Add Provider… — FS-08.07, đề xuất 14/10, code chưa có · mục Sources đổi thành Sources & Backup (15/10)",
    "w": 1376,
    "x": 96096,
    "y": 560
   },
   "IP_SettingsAIProvider.dc.html": {
    "h": 1032,
-   "title": "iPad · Settings › AI › Claude: form sheet 700, tên, API key (chỉ 4 ký tự cuối), model, Test → Working · 0.8 s, Delete Provider — FS-08.07 §3, đề xuất 14/10, code chưa có",
+   "title": "iPad · Settings › AI › Claude: form sheet 700, tên, API key (chỉ 4 ký tự cuối), model, Test → Working · 0.8 s, Delete Provider — FS-08.07 §3, đề xuất 14/10, code chưa có · mục Sources đổi thành Sources & Backup (15/10)",
    "w": 1376,
    "x": 97552,
    "y": 560
@@ -1033,16 +1033,142 @@
   },
   "IP_PlexSignIn.dc.html": {
    "h": 1032,
-   "title": "iPad · Movies · Sign In to Plex: form sheet 700, mã K7Q2 ở plex.tv/link, Open plex.tv/link — FS-23.07 §1, planboard 14/10",
+   "title": "iPad · Movies · Sign In to Plex: form sheet 700, mã K7Q2 ở plex.tv/link, Open plex.tv/link — FS-23.07 §1, planboard 14/10 · media hub 15/10: sidebar Photos · Movies · Music + Search, Now Playing ở chân",
    "w": 1376,
    "x": 93184,
    "y": 560
   },
   "IP_MovieDetail.dc.html": {
    "h": 1032,
-   "title": "Trang chi tiết phim (FS-23.08) — hai cột: poster + nút trái, tóm tắt + Audio · Subtitles · Version phải — 15/10",
+   "title": "Trang chi tiết phim (FS-23.08) — hai cột: poster + nút trái, tóm tắt + Audio · Subtitles · Version phải — 15/10 · media hub 15/10: sidebar Photos · Movies · Music + Search, Now Playing ở chân",
    "w": 1376,
    "x": 85904,
+   "y": 560
+  },
+  "IP_Music.dc.html": {
+   "h": 1032,
+   "title": "Media hub · iPad tab Music: Playlists (Road Trip, Late Night Edits, From Movies), Utilities, Sources, Recently Added 2 hàng",
+   "w": 1376,
+   "x": 99008,
+   "y": 560
+  },
+  "IP_MusicStats.dc.html": {
+   "h": 1032,
+   "title": "Media hub · iPad Music › Statistics: 214 h, 3 cột thẻ (artist, format, nguồn, bài, album, kept), theo tháng",
+   "w": 1376,
+   "x": 100464,
+   "y": 560
+  },
+  "IP_NowPlaying.dc.html": {
+   "h": 1032,
+   "title": "Media hub · iPad Now Playing: sheet 1040×720, bìa trái, điều khiển phải; tweak menu ⋯, kept, timer, paused",
+   "w": 1376,
+   "x": 101920,
+   "y": 560
+  },
+  "IP_UpNext.dc.html": {
+   "h": 1032,
+   "title": "Media hub · iPad Up Next: sheet Now Playing, cột trái player gọn, phải hàng đợi Added by You + Playing from; tweak swipe",
+   "w": 1376,
+   "x": 103376,
+   "y": 560
+  },
+  "IP_Lyrics.dc.html": {
+   "h": 1032,
+   "title": "Media hub · iPad Lyrics: sheet Now Playing, lời chạy theo giờ bên phải (chữ giữ chỗ); tweak plain",
+   "w": 1376,
+   "x": 104832,
+   "y": 560
+  },
+  "IP_SleepTimer.dc.html": {
+   "h": 1032,
+   "title": "Media hub · iPad Sleep Timer: popover từ nút trăng trên Now Playing, Off…End of Song, 30 Minutes chọn",
+   "w": 1376,
+   "x": 106288,
+   "y": 560
+  },
+  "IP_MusicAlbum.dc.html": {
+   "h": 1032,
+   "title": "Media hub · iPad trang album 22, A Million: bìa + Play/Shuffle, Keep on iPad trên toolbar; tweak menu bài, kept",
+   "w": 1376,
+   "x": 107744,
+   "y": 560
+  },
+  "IP_MusicArtist.dc.html": {
+   "h": 1032,
+   "title": "Media hub · iPad trang nghệ sĩ Bon Iver: ảnh lớn + Play, Top Songs trái, Albums phải",
+   "w": 1376,
+   "x": 109200,
+   "y": 560
+  },
+  "IP_MusicPlaylist.dc.html": {
+   "h": 1032,
+   "title": "Media hub · iPad trang playlist Road Trip (kept): menu ⋯ Remove from iPad; tweak menu, remove",
+   "w": 1376,
+   "x": 110656,
+   "y": 560
+  },
+  "IP_MoviesReview.dc.html": {
+   "h": 1032,
+   "title": "Media hub · iPad Review Videos: form sheet 700, 12 video tải về → Movies; tweak copying, deleteDialog",
+   "w": 1376,
+   "x": 112112,
+   "y": 560
+  },
+  "IP_WatchHistory.dc.html": {
+   "h": 1032,
+   "title": "Media hub · iPad Movies › Watch History: Today / This Week / Earlier; tweak swipe, clear",
+   "w": 1376,
+   "x": 113568,
+   "y": 560
+  },
+  "IP_Subtitles.dc.html": {
+   "h": 1032,
+   "title": "Media hub · iPad Movies › Subtitles: file phụ đề theo phim, 9 files · 1.1 MB; tweak swipe Delete",
+   "w": 1376,
+   "x": 115024,
+   "y": 560
+  },
+  "IP_TVShow.dc.html": {
+   "h": 1032,
+   "title": "Media hub · iPad trang TV Show The Bear: Resume, Keep Season 3, tập 2 cột; tweak menu (Show As ›)",
+   "w": 1376,
+   "x": 116480,
+   "y": 560
+  },
+  "IP_Convert.dc.html": {
+   "h": 1032,
+   "title": "Media hub · iPad Convert: form sheet 700 trên trang phim, MP4 H.264/HEVC, cỡ, audio, Then; tweak progress",
+   "w": 1376,
+   "x": 117936,
+   "y": 560
+  },
+  "IP_ExtractAudio.dc.html": {
+   "h": 1032,
+   "title": "Media hub · iPad Extract Audio: form sheet 700, AAC/ALAC, playlist From Movies; tweak custom, progress",
+   "w": 1376,
+   "x": 119392,
+   "y": 560
+  },
+  "IP_SettingsPlayback.dc.html": {
+   "h": 1032,
+   "title": "Media hub · iPad Settings › Playback: Movie Audio in Background (bật), Clear Listening History…; tweak clear",
+   "w": 1376,
+   "x": 120848,
+   "y": 560
+  },
+  "IP_KeepPhotos.dc.html": {
+   "h": 1032,
+   "title": "Media hub · iPad Keep 412 Photos on iPad: popover từ ⋯ khi chọn ảnh, Originals đầu, Viewing Copies, Cancel",
+   "w": 1376,
+   "x": 122304,
+   "y": 560
+  },
+  "IP_Kept.dc.html": {
+   "h": 1240,
+   "title": "Media hub · iPad Kept on iPad (Sources & Backup): 41.2 GB, ảnh/phim/nhạc, Remove; tweak remove",
+   "w": 1376,
+   "x": 123760,
    "y": 560
   }
  },
@@ -1190,7 +1316,25 @@
   "IP_PlexSignIn.dc.html",
   "IP_MovieSubtitleAdd.dc.html",
   "IP_SettingsAI.dc.html",
-  "IP_SettingsAIProvider.dc.html"
+  "IP_SettingsAIProvider.dc.html",
+  "IP_Music.dc.html",
+  "IP_MusicStats.dc.html",
+  "IP_NowPlaying.dc.html",
+  "IP_UpNext.dc.html",
+  "IP_Lyrics.dc.html",
+  "IP_SleepTimer.dc.html",
+  "IP_MusicAlbum.dc.html",
+  "IP_MusicArtist.dc.html",
+  "IP_MusicPlaylist.dc.html",
+  "IP_MoviesReview.dc.html",
+  "IP_WatchHistory.dc.html",
+  "IP_Subtitles.dc.html",
+  "IP_TVShow.dc.html",
+  "IP_Convert.dc.html",
+  "IP_ExtractAudio.dc.html",
+  "IP_SettingsPlayback.dc.html",
+  "IP_KeepPhotos.dc.html",
+  "IP_Kept.dc.html"
  ],
  "notes": {
   "sec_app": {

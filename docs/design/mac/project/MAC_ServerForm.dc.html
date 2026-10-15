@@ -20,7 +20,7 @@ input{font-family:inherit}
 <div style="position:absolute;left:16px;top:16px;display:flex;gap:8px"><div style="width:12px;height:12px;border-radius:6px;background:#FF5F57;box-shadow:inset 0 0 0 0.5px rgba(0,0,0,0.2)"></div><div aria-hidden="true" style="width:12px;height:12px;border-radius:6px;background:{{S.lightOff}};box-shadow:inset 0 0 0 0.5px rgba(0,0,0,0.12)"></div><div aria-hidden="true" style="width:12px;height:12px;border-radius:6px;background:{{S.lightOff}};box-shadow:inset 0 0 0 0.5px rgba(0,0,0,0.12)"></div></div>
 <div style="position:absolute;left:0;right:0;top:12px;text-align:center;font-size:13px;font-weight:600;line-height:20px;color:{{t.label}}">{{paneTitle}}</div>
 <div role="tablist" aria-label="Settings panes" style="position:absolute;left:0;right:0;top:34px;display:flex;justify-content:center;gap:4px">
-<sc-for list="{{panes}}" as="p" hint-placeholder-count="6"><button role="tab" aria-selected="{{p.sel}}" aria-label="{{p.name}}" style="width:76px;height:44px;border-radius:8px;border:none;background:{{p.bg}};display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;color:{{p.fg}}"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="{{p.d}}"></path></svg><span style="font-size:11px;line-height:13px;color:{{p.lc}}">{{p.name}}</span></button></sc-for>
+<sc-for list="{{panes}}" as="p" hint-placeholder-count="6"><button role="tab" aria-selected="{{p.sel}}" aria-label="{{p.name}}" style="min-width:76px;padding:0 8px;box-sizing:border-box;white-space:nowrap;height:44px;border-radius:8px;border:none;background:{{p.bg}};display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;color:{{p.fg}}"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="{{p.d}}"></path></svg><span style="font-size:11px;line-height:13px;color:{{p.lc}}">{{p.name}}</span></button></sc-for>
 </div>
 </div>
 <!-- PANE (scrolls; overlay scroller at the right edge shows position) -->
@@ -195,6 +195,7 @@ function tiles(n, seed, o){
   }
   return out;
 }
+// Legacy (pre media hub, 2026-10-15): no longer drawn — the sidebar markup reads sb from hubSidebar(); kept because some renderVals still call it.
 // Canonical sidebar (consistency §1). o.sel = selected row name; o.offline unplugs T7; o.newFolder adds Client Shoots 2026 indexing.
 function sidebar(t, o){
   o=o||{};
@@ -310,7 +311,7 @@ function ui(dark){
       { rows: (s.rows || []).map((r, i) => Object.assign(r, { sepTop: i > 0 })) }));
   return { t, S, seg, btn, chk, sw, status, row, sections };
 }
-const PANES = [['General', X.gear], ['AI', 'M11 3.5l1.6 4.4 4.4 1.6-4.4 1.6L11 15.5l-1.6-4.4L5 9.5l4.4-1.6z M18 14l.8 2.2 2.2.8-2.2.8L18 20l-.8-2.2-2.2-.8 2.2-.8z'], ['Sources', I.library], ['Editing', X.sliders], ['Servers', I.server], ['Cameras', X.camera]];
+const PANES = [['General', X.gear], ['AI', 'M11 3.5l1.6 4.4 4.4 1.6-4.4 1.6L11 15.5l-1.6-4.4L5 9.5l4.4-1.6z M18 14l.8 2.2 2.2.8-2.2.8L18 20l-.8-2.2-2.2-.8 2.2-.8z'], ['Sources & Backup', I.library], ['Editing', X.sliders], ['Servers', I.server], ['Cameras', X.camera]];
 function panes(t, active){
   return PANES.map(p => ({ name:p[0], d:p[1], sel: p[0]===active ? 'true' : 'false',
     bg: p[0]===active ? t.rowSel : 'transparent', fg: p[0]===active ? t.accent : t.label2, lc: p[0]===active ? t.label : t.label2 }));

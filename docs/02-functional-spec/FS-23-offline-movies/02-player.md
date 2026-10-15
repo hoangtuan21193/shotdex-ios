@@ -1,6 +1,6 @@
 # FS-23.02 — Player
 
-`FS-23.02` · tier C (chrome kính trên nền phim đen) · board `PH_MoviePlayer` (3/5) — chưa vẽ · cập nhật 2026-10-14
+`FS-23.02` · tier C (chrome kính trên nền phim đen) · board `PH_MoviePlayer` (3/5) — chưa vẽ · cập nhật 2026-10-16 (§4 rời app: FS-24 D2)
 
 **Một câu:** phát phim toàn màn bằng VLCKit, cùng bộ từ và cùng transport với video trong Photos (FS-02.02), thêm
 track âm thanh, phụ đề, chỗ đang xem.
@@ -85,7 +85,10 @@ menu phim › Audio & Subtitles…. Phần Audio trước, phần Subtitles sau 
   Gập/mở máy giữa lúc phát: giữ phim, vị trí, phụ đề.
 - Mac: cửa sổ player riêng; transport là thanh kính hiện khi rê chuột, −10/phát/+10 nằm trong thanh, không nút tròn
   nổi trên hình (MAC_STYLE); Space phát/dừng, ←/→ 10 s, F toàn màn, ⌘W đóng. Bàn phím iPad dùng cùng phím.
-- Rời app khi đang phát: sang PiP nếu người dùng đã bật PiP tự động của hệ thống, không thì dừng (không phát nền tiếng).
+- Rời app khi đang phát: sang PiP nếu người dùng đã bật PiP tự động của hệ thống (không đổi). Không PiP thì theo công tắc
+  Settings › Playback › **Movie Audio in Background** (mặc định **bật**, chốt 2026-10-16, FS-24 D2): bật → phim chạy tiếp
+  **chỉ tiếng** khi khoá máy/chuyển app, có Now Playing trên lock screen; tắt → dừng như trước. Đặc tả và AC:
+  [FS-24.06 §6](../FS-24-media-hub/06-music-player.md), [FS-24.14d](../FS-24-media-hub/14d-acceptance-criteria.md) AC-102…107.
 
 ## 5. Truy cập
 

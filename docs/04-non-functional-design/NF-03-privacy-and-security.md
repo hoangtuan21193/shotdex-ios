@@ -1,6 +1,6 @@
 # NF-03 — Quyền riêng tư và bảo mật
 
-`NF-03` · `ShotDex/Features/Support/` · `PrivacyInfo.xcprivacy` · cập nhật 2026-10-03
+`NF-03` · `ShotDex/Features/Support/` · `PrivacyInfo.xcprivacy` · cập nhật 2026-10-16 (§2c Plex nhạc, FS-24)
 
 **Một câu:** cam kết xử lý cục bộ, ba ngoại lệ, và luật metadata khi chia sẻ hay xuất.
 
@@ -55,7 +55,7 @@ và tự chọn nó cho một việc.
 |---|---|
 | dịch phụ đề ([FS-23.04](../02-functional-spec/FS-23-offline-movies/04-ai-translation.md)): chữ phụ đề, tên phim, hai ngôn ngữ — tới cloud hoặc máy chủ trong nhà | file phim, tên file, đường dẫn, ảnh, metadata ảnh |
 | AI Search: câu tìm + vốn từ thư viện — **chỉ** tới máy chủ trong nhà | bất cứ gì tới cloud |
-| Plex ([FS-23.07](../02-functional-spec/FS-23-offline-movies/07-plex.md)): đăng nhập qua plex.tv, đọc thư viện/file và đồng bộ chỗ xem với máy chủ Plex của người dùng | ảnh, metadata ảnh, phim không phải từ Plex |
+| Plex ([FS-23.07](../02-functional-spec/FS-23-offline-movies/07-plex.md), nhạc từ 2026-10-16: [FS-24.05](../02-functional-spec/FS-24-media-hub/05-music-library.md)): đăng nhập qua plex.tv, đọc thư viện/file **Movies, TV Shows và Music** và đồng bộ chỗ xem phim với máy chủ Plex của người dùng | ảnh, metadata ảnh, phim và nhạc không phải từ Plex, lượt nghe, playlist (không đồng bộ lên Plex — [FS-24.12 §4](../02-functional-spec/FS-24-media-hub/12-data.md)) |
 
 - Yêu cầu đi thẳng từ máy tới dịch vụ bằng key của người dùng; ShotDex không có máy chủ ở giữa.
 - Key ở Keychain, chỉ trên máy này; không vào database, log, thông báo lỗi.

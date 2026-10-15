@@ -6,6 +6,11 @@ Phim test: clip tổng hợp 2–5 phút (khung test pattern, tiếng sine — *
 định dạng, lưu ngoài repo như RAW fixtures; một clip 3,2 GB cho đường dài. Server giả: WebDAV (wsgidav) và SMB
 (impacket) ở 127.0.0.1 như FS-15. AI giả: máy chủ HTTP cục bộ chuẩn OpenAI trả JSON ghi sẵn.
 
+**2026-10-16 — FS-24 (D6, D2):** chữ `Download to iPhone`, `Remove Download`, `Retry Download`, `Downloading`, `Download paused —`
+trong các AC dưới là chữ của code hiện tại; spec đã đổi thành `Keep on iPhone`, `Remove from iPhone`, `Retry Keep`, `Keeping`,
+`Paused ·` ([FS-24.09](../FS-24-media-hub/09-keep-on-device.md)). AC giữ nguyên số và cột chứng minh; khi code đổi chữ, FS-24
+AC-19 và AC-128 chạy lại các script này với chữ mới. Phim rời app không PiP: FS-24 AC-102…107 (công tắc Movie Audio in Background).
+
 ## 1. Bảng
 
 | # | Cho | Khi | Thì | Chứng minh bằng |

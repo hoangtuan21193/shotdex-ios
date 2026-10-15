@@ -53,7 +53,7 @@ Dữ liệu rời máy chỉ theo thao tác của người dùng, tới dịch v
 
 | Thao tác | Gửi tới | Gửi gì |
 |---|---|---|
-| Add a Source › Plex, stream, Download, đồng bộ chỗ xem | plex.tv (đăng nhập, danh sách máy chủ) và máy chủ Plex của người dùng | token, yêu cầu đọc thư viện/file, chỗ đang xem |
+| Add a Source › Plex, stream, Keep on iPhone, đồng bộ chỗ xem | plex.tv (đăng nhập, danh sách máy chủ) và máy chủ Plex của người dùng | token, yêu cầu đọc thư viện/file, chỗ đang xem |
 | Translate bằng cloud hoặc máy chủ nhà | nhà cung cấp người dùng đã cài | chữ phụ đề, tên phim, hai ngôn ngữ |
 | AI Search bằng máy chủ nhà | máy trong mạng nhà của người dùng | câu tìm + vốn từ thư viện (AI Search không dùng cloud — FS-08.07 §5) |
 

@@ -7,77 +7,77 @@
       "title": "Duo màn ngoài · Mask chưa có gì — 14 loại vùng lưới 4 cột, cuộn trong panel",
       "w": 466,
       "x": 5374,
-      "y": 5847
+      "y": 8147
     },
     "DC11_NewLayer.dc.html": {
       "h": 678,
       "title": "Duo màn ngoài · Markup chưa có lớp — 11 loại lớp lưới 4 cột",
       "w": 466,
       "x": 5920,
-      "y": 5847
+      "y": 8147
     },
     "DC12_Save.dc.html": {
       "h": 678,
       "title": "Duo màn ngoài · Save — Save Edit theo code 1/10: Format; SAVE COPY có menu Metadata 3 mức; Save Changes giữ hết",
       "w": 466,
       "x": 6466,
-      "y": 5847
+      "y": 8147
     },
     "DC13_HDR.dc.html": {
       "h": 678,
       "title": "Duo màn ngoài · HDR — panel trong 382pt, rail 84pt chỉ có camera và giờ. Đo từ app 2026-10-02",
       "w": 466,
       "x": 7012,
-      "y": 5847
+      "y": 8147
     },
     "DC14_EditWhich.dc.html": {
       "h": 678,
       "title": "Duo màn ngoài · Sửa ảnh RAW + JPEG — action sheet “Edit which version?” trong vùng 382, Edit RAW mờ; theo code 1/10",
       "w": 466,
       "x": 7558,
-      "y": 5847
+      "y": 8147
     },
     "DC15_Cull.dc.html": {
       "h": 678,
       "title": "Duo ngoài · Cull — hàng 340 trong 382pt, ngoài rail 84 — khớp code 3/10",
       "w": 466,
       "x": 8104,
-      "y": 5847
+      "y": 8147
     },
     "DC16_InfoKeywords.dc.html": {
       "h": 678,
       "title": "Duo ngoài · Photo Info — sheet trong 382pt; Caption + keyword trên Location — đề xuất 2/10, code chưa có",
       "w": 466,
       "x": 8650,
-      "y": 5847
+      "y": 8147
     },
     "DC17_BulkKeywords.dc.html": {
       "h": 678,
       "title": "Duo ngoài · Caption & Keywords — Add · On These Photos (12 of 30, ⊖) · Caption — đề xuất 2/10, code chưa có",
       "w": 466,
       "x": 9196,
-      "y": 5847
+      "y": 8147
     },
     "DC18_Watermark.dc.html": {
       "h": 678,
       "title": "Duo ngoài · Watermark — xem trước 382×240, điều khiển cuộn dưới — đề xuất 2/10, code chưa có",
       "w": 466,
       "x": 9742,
-      "y": 5847
+      "y": 8147
     },
     "DC19_Export.dc.html": {
       "h": 678,
       "title": "Duo ngoài · Export… — Destination · Export · Watermark · File Names + footer — đề xuất 2/10, code chưa có",
       "w": 466,
       "x": 10288,
-      "y": 5847
+      "y": 8147
     },
     "DC1_Edit.dc.html": {
       "h": 678,
       "title": "Duo màn ngoài · Edit — băng: Back | Undo · Redo | History…Recall | histogram; công cụ và Save trong dải 84",
       "w": 466,
       "x": 460,
-      "y": 5847
+      "y": 8147
     },
     "DC1_Main.dc.html": {
       "h": 678,
@@ -85,14 +85,14 @@
       "title": "Duo màn ngoài · Màn chính — hàng trên chỉ Back · Undo · Redo; 5 công cụ thành cột trong dải 84 — theo spec 3/10",
       "w": 466,
       "x": 0,
-      "y": 9236
+      "y": 11536
     },
     "DC20_FileName.dc.html": {
       "h": 678,
       "title": "Duo ngoài · File Name — 3 mẫu sẵn, Custom: ô 44, chip token 32, ví dụ — đề xuất 2/10, code chưa có",
       "w": 466,
       "x": 10834,
-      "y": 5847
+      "y": 8147
     },
     "DC2_ClipSelected.dc.html": {
       "h": 678,
@@ -100,7 +100,7 @@
       "title": "Duo màn ngoài · Chọn clip — hàng trên Back · Undo · Redo; video không Duration; dải 84: ✕ / ✓ — theo spec 3/10",
       "w": 466,
       "x": 546,
-      "y": 9236
+      "y": 11536
     },
     "DC2_Collapsed.dc.html": {
       "h": 678,
@@ -108,14 +108,14 @@
       "title": "Duo màn ngoài · Panel thu gọn — panel 78 (566–644), timeline 300–566 có tay nắm; ✕ 504 · ✓ 556 — theo spec 3/10",
       "w": 466,
       "x": 7098,
-      "y": 9236
+      "y": 11536
     },
     "DC2_Presets.dc.html": {
       "h": 678,
       "title": "Duo màn ngoài · Presets",
       "w": 466,
       "x": 1006,
-      "y": 5847
+      "y": 8147
     },
     "DC3_TextOverlay.dc.html": {
       "h": 678,
@@ -123,21 +123,21 @@
       "title": "Duo màn ngoài · Sửa chữ — lệnh chữ đầu panel; hàng trên Back · Undo · Redo; dải 84: ✕ trên ✓ — theo spec 3/10",
       "w": 466,
       "x": 1092,
-      "y": 9236
+      "y": 11536
     },
     "DC3_Transform.dc.html": {
       "h": 678,
       "title": "Duo màn ngoài · Transform — thước góc xoay 350 trên ảnh, ✕ trên ✓ ở chân dải 84; băng trên chỉ có nút",
       "w": 466,
       "x": 1552,
-      "y": 5847
+      "y": 8147
     },
     "DC4_Mask.dc.html": {
       "h": 678,
       "title": "Duo màn ngoài · Mask — hàng cọ trong panel; ✕ / ✓ dọc ở chân dải phải, Save ẩn khi đang trong công cụ",
       "w": 466,
       "x": 2098,
-      "y": 5847
+      "y": 8147
     },
     "DC4_Music.dc.html": {
       "h": 678,
@@ -145,189 +145,189 @@
       "title": "Duo màn ngoài · Chọn nhạc — chỉ “Video sound” (không Master), Files + My Music; hàng trên 3 nút — theo spec 3/10",
       "w": 466,
       "x": 1638,
-      "y": 9236
+      "y": 11536
     },
     "DC5_Heal.dc.html": {
       "h": 678,
       "title": "Duo màn ngoài · Heal",
       "w": 466,
       "x": 2644,
-      "y": 5847
+      "y": 8147
     },
     "DC6_Markup.dc.html": {
       "h": 678,
       "title": "Duo màn ngoài · Markup",
       "w": 466,
       "x": 3190,
-      "y": 5847
+      "y": 8147
     },
     "DC7_Batch.dc.html": {
       "h": 678,
       "title": "Duo màn ngoài · Nhiều ảnh — filmstrip 56 dưới ảnh, panel giữ 270",
       "w": 466,
       "x": 3736,
-      "y": 5847
+      "y": 8147
     },
     "DC8_Curve.dc.html": {
       "h": 678,
       "title": "Duo màn ngoài · Curve — đồ thị 145 + cột kênh bên phải trong panel 270, công cụ vẫn ở dải 84",
       "w": 466,
       "x": 4282,
-      "y": 5847
+      "y": 8147
     },
     "DC9_MyLooks.dc.html": {
       "h": 678,
       "title": "Duo màn ngoài · Presets › My Looks — Save Current · Import XMP Preset đầu lưới 3 cột",
       "w": 466,
       "x": 4828,
-      "y": 5847
+      "y": 8147
     },
     "DC_AddSource.dc.html": {
       "h": 678,
       "title": "Duo màn ngoài · Add a Source: 3 lựa chọn, Choose Folder…",
       "w": 466,
       "x": 22932,
-      "y": 1609
+      "y": 2809
     },
     "DC_AdvancedSearch.dc.html": {
       "h": 678,
       "title": "Duo màn ngoài · Advanced Search: sheet large trong 382pt, rail hệ thống vẫn hiện",
       "w": 466,
       "x": 2184,
-      "y": 1609
+      "y": 2809
     },
     "DC_AlbumDetail.dc.html": {
       "h": 678,
       "title": "Duo màn ngoài · Album: lưới 3 cột, tên + ngày, Filter + Select",
       "w": 466,
       "x": 6006,
-      "y": 1609
+      "y": 2809
     },
     "DC_Backup.dc.html": {
       "h": 678,
       "title": "Duo màn ngoài · Backup 1/5 — 4 thẻ job trong 382pt, rail 84 (FS-22)",
       "w": 466,
       "x": 27300,
-      "y": 1609
+      "y": 2809
     },
     "DC_BackupCustomDate.dc.html": {
       "h": 678,
       "title": "Duo màn ngoài · Backup 4/5 — Day Folder Name",
       "w": 466,
       "x": 28938,
-      "y": 1609
+      "y": 2809
     },
     "DC_BackupNew.dc.html": {
       "h": 678,
       "title": "Duo màn ngoài · Backup 2/5 — sheet New Backup 382pt, cuộn",
       "w": 466,
       "x": 27846,
-      "y": 1609
+      "y": 2809
     },
     "DC_BackupOrganize.dc.html": {
       "h": 678,
       "title": "Duo màn ngoài · Backup 3/5 — Organize: Preview rồi Folders",
       "w": 466,
       "x": 28392,
-      "y": 1609
+      "y": 2809
     },
     "DC_BackupRunning.dc.html": {
       "h": 678,
       "title": "Duo màn ngoài · Backup 5/5 — đang chạy 34%, Pause + Watching; tweak ios18",
       "w": 466,
       "x": 29484,
-      "y": 1609
+      "y": 2809
     },
     "DC_CameraDatabase.dc.html": {
       "h": 678,
       "title": "Duo màn ngoài · Unknown Cameras: danh sách máy chưa biết sensor",
       "w": 466,
       "x": 15288,
-      "y": 1609
+      "y": 2809
     },
     "DC_ChartEditor.dc.html": {
       "h": 678,
       "title": "Duo màn ngoài · Edit Chart: X = Year, chọn Columns; Donut/Bars bị tắt kèm chú thích",
       "w": 466,
       "x": 12558,
-      "y": 1609
+      "y": 2809
     },
     "DC_Collage.dc.html": {
       "h": 678,
       "title": "Duo màn ngoài · Collage: bỏ nhãn đếm, Export góc trên phải",
       "w": 466,
       "x": 10374,
-      "y": 1609
+      "y": 2809
     },
     "DC_CollageExport.dc.html": {
       "h": 678,
       "title": "Duo màn ngoài · Xuất collage: Save cùng hàng với Collage",
       "w": 466,
       "x": 10920,
-      "y": 1609
+      "y": 2809
     },
     "DC_Collections.dc.html": {
-      "h": 678,
-      "title": "Duo màn ngoài · Collections: hero 180, Smart Albums và My Albums cover 132, rail tab; Utilities thêm Movies sau Video Projects (FS-23, 14/10)",
+      "h": 2078,
+      "title": "Media hub · Collections ngoài: hàng 3 ô, Media Types cuộn ngang, Utilities 2 cột +On Server, Sources số/Offline/thẻ nhớ",
       "w": 466,
       "x": 5460,
-      "y": 1609
+      "y": 2809
     },
     "DC_Compare.dc.html": {
       "h": 678,
       "title": "Duo màn ngoài · Viewer Compare xếp chồng trong 382pt, Hide 1 Photo (NAS)",
       "w": 466,
       "x": 3822,
-      "y": 1609
+      "y": 2809
     },
     "DC_Compress.dc.html": {
       "h": 678,
       "title": "Duo màn ngoài · Resize: Resize cùng hàng với Collage",
       "w": 466,
       "x": 11466,
-      "y": 1609
+      "y": 2809
     },
     "DC_CompressionPresets.dc.html": {
       "h": 678,
       "title": "Duo màn ngoài · Resize Presets: Built-in và Custom trong 382pt",
       "w": 466,
       "x": 14742,
-      "y": 1609
+      "y": 2809
     },
     "DC_Creations.dc.html": {
       "h": 678,
       "title": "Duo màn ngoài · Collages: danh sách một cột thẻ collage, nút +, rail hệ thống",
       "w": 466,
       "x": 9828,
-      "y": 1609
+      "y": 2809
     },
     "DC_DateRange.dc.html": {
       "h": 678,
       "title": "Duo màn ngoài · sheet Date Range chồng lên Edit Chart, dải chọn và tóm tắt",
       "w": 466,
       "x": 13104,
-      "y": 1609
+      "y": 2809
     },
     "DC_DeletePermanent.dc.html": {
       "h": 678,
       "title": "Duo màn ngoài · Hộp đỏ thứ hai: Delete 12 Photos Permanently?",
       "w": 466,
       "x": 25116,
-      "y": 1609
+      "y": 2809
     },
     "DC_Duplicates.dc.html": {
       "h": 678,
       "title": "Duo màn ngoài · Duplicates: thẻ quyết định một cột 350pt, nhóm đã duyệt thu gọn, sắp xếp Most space first",
       "w": 466,
       "x": 9282,
-      "y": 1609
+      "y": 2809
     },
     "DC_EmptyLibrary.dc.html": {
       "h": 678,
       "title": "Duo màn ngoài · Thư viện trống: 3 cách thêm nguồn",
       "w": 466,
       "x": 25662,
-      "y": 1609
+      "y": 2809
     },
     "DC_Export.dc.html": {
       "h": 678,
@@ -335,322 +335,322 @@
       "title": "Duo màn ngoài · Đang xuất — preset mờ + tiến độ 62%; Cancel ở dải 84 (y 556), công cụ mờ — theo plan 3/10",
       "w": 466,
       "x": 7644,
-      "y": 9236
+      "y": 11536
     },
     "DC_FocusStack.dc.html": {
       "h": 678,
       "title": "Duo màn ngoài · Focus Stack: Save cùng hàng với Collage",
       "w": 466,
       "x": 19656,
-      "y": 1609
+      "y": 2809
     },
     "DC_Hidden.dc.html": {
       "h": 678,
       "title": "Duo màn ngoài · Collections › Hidden: 6 Hidden Photos",
       "w": 466,
       "x": 24570,
-      "y": 1609
+      "y": 2809
     },
     "DC_Ingest.dc.html": {
       "h": 678,
       "title": "Duo màn ngoài · Nhập từ thẻ: lưới tick, thanh tóm tắt, Import 811 Photos",
       "w": 466,
       "x": 24024,
-      "y": 1609
+      "y": 2809
     },
     "DC_Library.dc.html": {
       "h": 678,
-      "title": "Duo màn ngoài · Library: lưới 3 cột trong 382pt, rail tab của hệ thống",
+      "title": "Media hub · Photos › Library màn ngoài: Library | Collections dưới mũ, mini player ở đáy; tweak menu Filter",
       "w": 466,
       "x": 546,
-      "y": 1609
+      "y": 2809
     },
     "DC_LibrarySelect.dc.html": {
       "h": 678,
       "title": "Duo màn ngoài · Chọn ảnh: menu ⋯ cuộn được, rail hệ thống không có tab",
       "w": 466,
       "x": 1092,
-      "y": 1609
+      "y": 2809
     },
     "DC_Metadata.dc.html": {
       "h": 678,
       "title": "Duo màn ngoài · Photo Info sheet large trong 382pt: bản đồ, Camera & Lens, Exposure",
       "w": 466,
       "x": 3276,
-      "y": 1609
+      "y": 2809
     },
     "DC_MoreMenus.dc.html": {
       "h": 678,
       "title": "Duo màn ngoài · Menu ⋯ Viewer đầy đủ, trong x ≤ 366",
       "w": 466,
       "x": 26208,
-      "y": 1609
+      "y": 2809
     },
     "DC_MoreMenus2.dc.html": {
       "h": 678,
       "title": "Duo màn ngoài · Menu ⋯ mới: Library, Duplicates, Statistics",
       "w": 466,
       "x": 26754,
-      "y": 1609
+      "y": 2809
     },
     "DC_OnThisDay.dc.html": {
       "h": 678,
       "title": "Duo màn ngoài · On This Day: 3 cột, header \"2025 · 1 year ago\" kính",
       "w": 466,
       "x": 7644,
-      "y": 1609
+      "y": 2809
     },
     "DC_Onboarding.dc.html": {
       "h": 678,
       "title": "Duo màn ngoài · Onboarding: nội dung cuộn, lời hứa cuối bị cắt trên nút Continue",
       "w": 466,
       "x": 0,
-      "y": 1609
+      "y": 2809
     },
     "DC_Panorama.dc.html": {
       "h": 678,
       "title": "Duo màn ngoài · Panorama: Save cùng hàng với Collage",
       "w": 466,
       "x": 20748,
-      "y": 1609
+      "y": 2809
     },
     "DC_Places.dc.html": {
       "h": 678,
       "title": "Duo màn ngoài · Places: bản đồ 382pt, ghim cụm ảnh + số, rail hệ thống 84pt",
       "w": 466,
       "x": 8190,
-      "y": 1609
+      "y": 2809
     },
     "DC_Search.dc.html": {
       "h": 678,
-      "title": "Duo màn ngoài · Search: Recents, một capsule, ô tìm và bàn phím ở đáy",
+      "title": "Media hub · Search màn ngoài “kyoto”: All · Photos · Movies · Music, kết quả nhóm; tweak photoSyntax, recents",
       "w": 466,
       "x": 1638,
-      "y": 1609
+      "y": 2809
     },
     "DC_ServerBrowser.dc.html": {
       "h": 678,
       "title": "Duo màn ngoài · NAS Home là nguồn được index: 3 cột, Rescan",
       "w": 466,
       "x": 18018,
-      "y": 1609
+      "y": 2809
     },
     "DC_ServerForm.dc.html": {
       "h": 678,
       "title": "Duo màn ngoài · Sheet Add Connection: máy tìm thấy trong mạng và các trường đăng nhập",
       "w": 466,
       "x": 17472,
-      "y": 1609
+      "y": 2809
     },
     "DC_ServerList.dc.html": {
       "h": 678,
       "title": "Duo màn ngoài · File Servers: kết nối đã lưu, dải phải để trống (toàn màn hình)",
       "w": 466,
       "x": 16926,
-      "y": 1609
+      "y": 2809
     },
     "DC_ServerUpload.dc.html": {
       "h": 678,
       "title": "Duo màn ngoài · Sheet Upload to Server trên Library đang chọn, tóm tắt 12 ảnh ~486 MB",
       "w": 466,
       "x": 18564,
-      "y": 1609
+      "y": 2809
     },
     "DC_Settings.dc.html": {
       "h": 678,
-      "title": "Duo màn ngoài · Cài đặt kiểu Mochi trong 382pt: thẻ Your library, hàng Sources \"Photos, 3 folders, 1 server\"; hàng AI sau Playback \"Claude · Apple Intelligence\" (FS-23, 14/10)",
+      "title": "Duo ngoài · Cài đặt kiểu Mochi 382pt: thẻ Your library, hàng Sources & Backup \"Photos, 3 folders, 1 server\", hàng AI",
       "w": 466,
       "x": 13650,
-      "y": 1609
+      "y": 2809
     },
     "DC_SettingsSources.dc.html": {
       "h": 678,
-      "title": "Duo màn ngoài · Cài đặt › Sources cuộn: Previews, Cache Size Limit 5 GB",
+      "title": "Duo màn ngoài · Cài đặt › Sources & Backup cuộn: Previews, Cache Size Limit 5 GB",
       "w": 466,
       "x": 23478,
-      "y": 1609
+      "y": 2809
     },
     "DC_Share.dc.html": {
       "h": 678,
       "title": "Duo màn ngoài · Share sheet medium trong 382pt, rail tab mờ bên phải",
       "w": 466,
       "x": 4914,
-      "y": 1609
+      "y": 2809
     },
     "DC_SmartAlbum.dc.html": {
       "h": 678,
       "title": "Duo màn ngoài · Smart album: thanh điều kiện cuộn ngang + lưới 3 cột",
       "w": 466,
       "x": 6552,
-      "y": 1609
+      "y": 2809
     },
     "DC_SmartAlbumEditor.dc.html": {
-      "h": 678,
+      "h": 1078,
       "title": "Duo màn ngoài · Sheet Edit Smart Album large, điều kiện cuộn dưới mép",
       "w": 466,
       "x": 7098,
-      "y": 1609
+      "y": 2809
     },
     "DC_Sources.dc.html": {
       "h": 678,
       "title": "Duo màn ngoài · Nguồn: danh sách 6 hàng trong 350pt",
       "w": 466,
       "x": 22386,
-      "y": 1609
+      "y": 2809
     },
     "DC_StackExposures.dc.html": {
       "h": 678,
       "title": "Duo màn ngoài · Stack Exposures: Save cùng hàng với Collage",
       "w": 466,
       "x": 20202,
-      "y": 1609
+      "y": 2809
     },
     "DC_Statistics.dc.html": {
       "h": 678,
-      "title": "Duo màn ngoài · Thống kê: nút Cột/Đường cho Năm, Tháng, Tiêu cự; Tròn/Thanh cho xếp hạng",
+      "title": "Media hub · Statistics màn ngoài: vào từ Photos › Utilities, Back thay ⚙, rail Photos; nút Cột/Đường, Tròn/Thanh giữ",
       "w": 466,
       "x": 12012,
-      "y": 1609
+      "y": 2809
     },
     "DC_Support.dc.html": {
       "h": 678,
       "title": "Duo màn ngoài · Support toàn màn (Settings cover), thư và bình chọn yêu cầu",
       "w": 466,
       "x": 15834,
-      "y": 1609
+      "y": 2809
     },
     "DC_SupportThread.dc.html": {
       "h": 678,
       "title": "Duo màn ngoài · Support thread: nội dung lỗi, Conversation, ô trả lời",
       "w": 466,
       "x": 16380,
-      "y": 1609
+      "y": 2809
     },
     "DC_Trips.dc.html": {
       "h": 678,
       "title": "Duo màn ngoài · Trips: thẻ cover 350×160, rail hệ thống bên phải",
       "w": 466,
       "x": 8736,
-      "y": 1609
+      "y": 2809
     },
     "DC_UploadedToServer.dc.html": {
       "h": 678,
       "title": "Duo màn ngoài · Uploaded to Server: Where They Are + All Uploaded Photos",
       "w": 466,
       "x": 19110,
-      "y": 1609
+      "y": 2809
     },
     "DC_VideoProjects.dc.html": {
       "h": 678,
       "title": "Duo màn ngoài · Video Projects một cột trong 382pt: nháp Draft + Edited 5 min ago lẫn bản đã xuất — theo spec 3/10",
       "w": 466,
       "x": 21294,
-      "y": 1609
+      "y": 2809
     },
     "DC_VideoProjectsDelete.dc.html": {
       "h": 678,
       "title": "Duo màn ngoài · Delete Draft?: alert giữa vùng 382pt, rail hệ thống không mờ — theo spec 3/10",
       "w": 466,
       "x": 21840,
-      "y": 1609
+      "y": 2809
     },
     "DC_VideoTrim.dc.html": {
       "h": 678,
       "title": "Duo màn ngoài · Cắt video: Save cùng hàng với Collage",
       "w": 466,
       "x": 4368,
-      "y": 1609
+      "y": 2809
     },
     "DC_Viewer.dc.html": {
       "h": 678,
       "title": "Duo màn ngoài · Viewer theo sáng/tối: chrome trong 382pt",
       "w": 466,
       "x": 2730,
-      "y": 1609
+      "y": 2809
     },
     "DC_WidgetSettings.dc.html": {
       "h": 678,
       "title": "Duo màn ngoài · Sửa widget: preview 329pt ghim trên, Background và Time and Date",
       "w": 466,
       "x": 14196,
-      "y": 1609
+      "y": 2809
     },
     "DI10_NewMask.dc.html": {
       "h": 669,
       "title": "Duo mở ra · ngang · Mask chưa có gì — 14 loại vùng lưới 3 cột, không cuộn",
       "w": 951,
       "x": 9739,
-      "y": 3387
+      "y": 5687
     },
     "DI11_NewLayer.dc.html": {
       "h": 669,
       "title": "Duo mở ra · ngang · Markup chưa có lớp — 11 loại lớp lưới 3 cột",
       "w": 951,
       "x": 10770,
-      "y": 3387
+      "y": 5687
     },
     "DI12_Save.dc.html": {
       "h": 669,
       "title": "Duo mở ra · ngang · Save — Save Edit theo code 1/10: Format; SAVE COPY có menu Metadata 3 mức; Save Changes giữ hết",
       "w": 951,
       "x": 11801,
-      "y": 3387
+      "y": 5687
     },
     "DI13_EditWhich.dc.html": {
       "h": 669,
       "title": "Duo mở ra · ngang · Sửa ảnh RAW + JPEG — popover “Edit which version?” trên thanh tác vụ, Edit RAW mờ; theo code 1/10",
       "w": 951,
       "x": 12832,
-      "y": 3387
+      "y": 5687
     },
     "DI14_Cull.dc.html": {
       "h": 669,
       "title": "Duo ngang · Cull — ảnh cao ~480, hàng 340, filmstrip 56 — khớp code 3/10",
       "w": 951,
       "x": 13863,
-      "y": 3387
+      "y": 5687
     },
     "DI15_InfoKeywords.dc.html": {
       "h": 669,
       "title": "Duo ngang · Photo Info — Caption + keyword (capsule ×, + Add Keyword) trên Location — đề xuất 2/10, code chưa có",
       "w": 951,
       "x": 14894,
-      "y": 3387
+      "y": 5687
     },
     "DI16_BulkKeywords.dc.html": {
       "h": 669,
       "title": "Duo ngang · Caption & Keywords — Add · On These Photos (12 of 30, ⊖) · Caption — đề xuất 2/10, code chưa có",
       "w": 951,
       "x": 15925,
-      "y": 3387
+      "y": 5687
     },
     "DI17_Watermark.dc.html": {
       "h": 669,
       "title": "Duo ngang · Watermark — xem trước bên trái, cột 320 bên phải, cuộn dọc — đề xuất 2/10, code chưa có",
       "w": 951,
       "x": 16956,
-      "y": 3387
+      "y": 5687
     },
     "DI18_Export.dc.html": {
       "h": 669,
       "title": "Duo ngang · Export… — Destination · Export · Watermark · File Names + footer — đề xuất 2/10, code chưa có",
       "w": 951,
       "x": 17987,
-      "y": 3387
+      "y": 5687
     },
     "DI19_FileName.dc.html": {
       "h": 669,
       "title": "Duo ngang · File Name — 3 mẫu sẵn, Custom: ô 44, chip token 32, ví dụ — đề xuất 2/10, code chưa có",
       "w": 951,
       "x": 19018,
-      "y": 3387
+      "y": 5687
     },
     "DI1_Edit.dc.html": {
       "h": 669,
       "title": "Duo mở ra · ngang · Edit — như iPad: histogram 236×80 ở góc cột 260; History…Recall · Compare · Save ở băng trên",
       "w": 951,
       "x": 460,
-      "y": 3387
+      "y": 5687
     },
     "DI1_Main.dc.html": {
       "h": 669,
@@ -658,7 +658,7 @@
       "title": "Duo màn trong · Màn chính — khung 684×385 + cột 264; timeline 188 với cột badge 100 (Lock · Mute) — theo plan 3/10",
       "w": 951,
       "x": 0,
-      "y": 8147
+      "y": 10447
     },
     "DI2_ClipSelected.dc.html": {
       "h": 669,
@@ -666,14 +666,14 @@
       "title": "Duo màn trong · Chọn clip — Look trước Delete, tay nắm mép clip, không Duration; đáy ✕ · Clip 2 · ✓ — theo plan 3/10",
       "w": 951,
       "x": 1031,
-      "y": 8147
+      "y": 10447
     },
     "DI2_Presets.dc.html": {
       "h": 669,
       "title": "Duo mở ra · ngang · Presets",
       "w": 951,
       "x": 1491,
-      "y": 3387
+      "y": 5687
     },
     "DI3_TextOverlay.dc.html": {
       "h": 669,
@@ -681,21 +681,21 @@
       "title": "Duo màn trong · Sửa chữ — lệnh chữ đầu cột phải (Style đang mở); góc phải hàng đáy ✕ · GOLDEN HOUR · ✓ — theo plan 3/10",
       "w": 951,
       "x": 2062,
-      "y": 8147
+      "y": 10447
     },
     "DI3_Transform.dc.html": {
       "h": 669,
       "title": "Duo mở ra · ngang · Transform — khung cắt, thước và Rotate/Flip nằm trên ảnh; cột 260 chỉ để chỉnh chính xác",
       "w": 951,
       "x": 2522,
-      "y": 3387
+      "y": 5687
     },
     "DI4_Mask.dc.html": {
       "h": 669,
       "title": "Duo mở ra · ngang · Mask — thanh cọ nổi bản gọn (Size là nút, kéo ngang để đổi) vì màn chỉ cao 669",
       "w": 951,
       "x": 3553,
-      "y": 3387
+      "y": 5687
     },
     "DI4_Music.dc.html": {
       "h": 669,
@@ -703,14 +703,14 @@
       "title": "Duo màn trong · Nhạc — “Video sound” trên cùng rồi chooser trong cột phải; cột badge 100 — theo plan 3/10",
       "w": 951,
       "x": 3093,
-      "y": 8147
+      "y": 10447
     },
     "DI5_Heal.dc.html": {
       "h": 669,
       "title": "Duo mở ra · ngang · Heal",
       "w": 951,
       "x": 4584,
-      "y": 3387
+      "y": 5687
     },
     "DI5_RatioBackground.dc.html": {
       "h": 669,
@@ -718,7 +718,7 @@
       "title": "Duo màn trong · Video Settings · Fit — Ratio rồi Background (Color); khung 9:16 217×385; cột badge 100 — theo plan 3/10",
       "w": 951,
       "x": 4124,
-      "y": 8147
+      "y": 10447
     },
     "DI6_Export.dc.html": {
       "h": 669,
@@ -726,168 +726,168 @@
       "title": "Duo màn trong · Đang xuất — cột phải mờ + tiến độ 62%; Cancel Export thay nút cài đặt + Export — theo plan 3/10",
       "w": 951,
       "x": 5155,
-      "y": 8147
+      "y": 10447
     },
     "DI6_Markup.dc.html": {
       "h": 669,
       "title": "Duo mở ra · ngang · Markup",
       "w": 951,
       "x": 5615,
-      "y": 3387
+      "y": 5687
     },
     "DI7_Batch.dc.html": {
       "h": 669,
       "title": "Duo mở ra · ngang · Nhiều ảnh — filmstrip 72 dưới ảnh",
       "w": 951,
       "x": 6646,
-      "y": 3387
+      "y": 5687
     },
     "DI8_Curve.dc.html": {
       "h": 669,
       "title": "Duo mở ra · ngang · Curve — đồ thị 228 hết cột 260, kênh 2×2; màn chỉ cao 669 nên COLOR bắt đầu ngay dưới",
       "w": 951,
       "x": 7677,
-      "y": 3387
+      "y": 5687
     },
     "DI9_MyLooks.dc.html": {
       "h": 669,
       "title": "Duo mở ra · ngang · Presets › My Looks — Save Current · Import XMP Preset đầu lưới 2 cột",
       "w": 951,
       "x": 8708,
-      "y": 3387
+      "y": 5687
     },
     "DIP10_NewMask.dc.html": {
       "h": 951,
       "title": "Duo mở ra · dọc · Mask chưa có gì — 14 loại vùng lưới 5 cột, không cuộn",
       "w": 669,
       "x": 7201,
-      "y": 4476
+      "y": 6776
     },
     "DIP11_NewLayer.dc.html": {
       "h": 951,
       "title": "Duo mở ra · dọc · Markup chưa có lớp — 11 loại lớp lưới 5 cột",
       "w": 669,
       "x": 7950,
-      "y": 4476
+      "y": 6776
     },
     "DIP12_Save.dc.html": {
       "h": 951,
       "title": "Duo mở ra · dọc · Save — Save Edit theo code 1/10: Format; SAVE COPY có menu Metadata 3 mức; Save Changes giữ hết",
       "w": 669,
       "x": 8699,
-      "y": 4476
+      "y": 6776
     },
     "DIP13_EditWhich.dc.html": {
       "h": 951,
       "title": "Duo mở ra · dọc · Sửa ảnh RAW + JPEG — popover “Edit which version?” trên thanh tác vụ, Edit RAW mờ; theo code 1/10",
       "w": 669,
       "x": 9448,
-      "y": 4476
+      "y": 6776
     },
     "DIP14_Cull.dc.html": {
       "h": 951,
       "title": "Duo dọc · Cull — thanh trên 52, hàng 340, filmstrip 56 — khớp code 3/10",
       "w": 669,
       "x": 10197,
-      "y": 4476
+      "y": 6776
     },
     "DIP15_InfoKeywords.dc.html": {
       "h": 951,
       "title": "Duo dọc · Photo Info — Caption + keyword (capsule ×, + Add Keyword) trên Location — đề xuất 2/10, code chưa có",
       "w": 669,
       "x": 10946,
-      "y": 4476
+      "y": 6776
     },
     "DIP16_BulkKeywords.dc.html": {
       "h": 951,
       "title": "Duo dọc · Caption & Keywords — Add · On These Photos (12 of 30, ⊖) · Caption — đề xuất 2/10, code chưa có",
       "w": 669,
       "x": 11695,
-      "y": 4476
+      "y": 6776
     },
     "DIP17_Watermark.dc.html": {
       "h": 951,
       "title": "Duo dọc · Watermark — xem trước 400 trên, điều khiển cuộn dưới — đề xuất 2/10, code chưa có",
       "w": 669,
       "x": 12444,
-      "y": 4476
+      "y": 6776
     },
     "DIP18_Export.dc.html": {
       "h": 951,
       "title": "Duo dọc · Export… — Destination · Export · Watermark · File Names + footer — đề xuất 2/10, code chưa có",
       "w": 669,
       "x": 13193,
-      "y": 4476
+      "y": 6776
     },
     "DIP19_FileName.dc.html": {
       "h": 951,
       "title": "Duo dọc · File Name — 3 mẫu sẵn, Custom: ô 44, chip token 32, ví dụ — đề xuất 2/10, code chưa có",
       "w": 669,
       "x": 13942,
-      "y": 4476
+      "y": 6776
     },
     "DIP1_Edit.dc.html": {
       "h": 951,
       "title": "Duo mở ra · dọc (669 × 951) · Edit — panel dưới 400; 4 nút History…Recall nằm trong băng trên, ảnh cao thêm 44",
       "w": 669,
       "x": 460,
-      "y": 4476
+      "y": 6776
     },
     "DIP2_Mask.dc.html": {
       "h": 951,
       "title": "Duo mở ra · dọc · Mask — thanh cọ nổi mép trái ảnh",
       "w": 669,
       "x": 1209,
-      "y": 4476
+      "y": 6776
     },
     "DIP3_Presets.dc.html": {
       "h": 951,
       "title": "Duo mở ra · dọc · Presets — panel dưới 400, lưới 5 cột",
       "w": 669,
       "x": 1958,
-      "y": 4476
+      "y": 6776
     },
     "DIP4_Transform.dc.html": {
       "h": 951,
       "title": "Duo mở ra · dọc · Transform — khung cắt + thước trên ảnh, ✕ · ✓ ở băng trên; panel giữ Crop · Straighten · Upright",
       "w": 669,
       "x": 2707,
-      "y": 4476
+      "y": 6776
     },
     "DIP5_Heal.dc.html": {
       "h": 951,
       "title": "Duo mở ra · dọc · Heal — thanh nổi bản gọn mép trái ảnh, danh sách điểm trong panel",
       "w": 669,
       "x": 3456,
-      "y": 4476
+      "y": 6776
     },
     "DIP6_Markup.dc.html": {
       "h": 951,
       "title": "Duo mở ra · dọc · Markup — lớp chữ nghiêng 12°, chip “12°” cạnh núm xoay; hàng B · I · U | căn lề | Size px",
       "w": 669,
       "x": 4205,
-      "y": 4476
+      "y": 6776
     },
     "DIP7_Batch.dc.html": {
       "h": 951,
       "title": "Duo mở ra · dọc · Nhiều ảnh — filmstrip 64 giữa ảnh và panel, Sync ở cuối dải",
       "w": 669,
       "x": 4954,
-      "y": 4476
+      "y": 6776
     },
     "DIP8_Curve.dc.html": {
       "h": 951,
       "title": "Duo mở ra · dọc · Curve — đồ thị 200 cạnh cột kênh, Point | Region, trong panel 400",
       "w": 669,
       "x": 5703,
-      "y": 4476
+      "y": 6776
     },
     "DIP9_MyLooks.dc.html": {
       "h": 951,
       "title": "Duo mở ra · dọc · Presets › My Looks — Save Current · Import XMP Preset đầu lưới 5 cột",
       "w": 669,
       "x": 6452,
-      "y": 4476
+      "y": 6776
     },
     "DI_AddSource.dc.html": {
       "h": 669,
@@ -974,8 +974,8 @@
       "y": 560
     },
     "DI_Collections.dc.html": {
-      "h": 669,
-      "title": "Duo mở · Collections: hero On This Day 260 + hàng cover Smart Albums 192, rail tab bên phải; Utilities thêm Movies sau Video Projects (FS-23, 14/10)",
+      "h": 1905,
+      "title": "Media hub · Collections trong: hero, Pinned, Albums, Media Types, Utilities 4 cột +On Server, Sources số/Offline/thẻ nhớ",
       "w": 951,
       "x": 11341,
       "y": 560
@@ -1136,7 +1136,7 @@
     },
     "DI_Search.dc.html": {
       "h": 669,
-      "title": "Duo mở · Search: ô tìm trên toolbar, bàn phím che nửa dưới thẻ Recents",
+      "title": "Media hub · Search màn trong “kyoto”: All · Photos · Movies · Music, kết quả nhóm; tweak photoSyntax, recents",
       "w": 951,
       "x": 3093,
       "y": 560
@@ -1171,14 +1171,14 @@
     },
     "DI_Settings.dc.html": {
       "h": 669,
-      "title": "Duo mở · Cài đặt split view: sidebar ô icon 28 + pane Sources (5 nguồn, Add Folder or Drive…, Connect to Server…); sidebar thêm mục 10 AI sau Playback, cột cuộn 1 hàng (FS-23, 14/10)",
+      "title": "Duo mở · Cài đặt split view: sidebar icon 28 + pane Sources & Backup (5 nguồn, Add Folder or Drive…), mục AI",
       "w": 951,
       "x": 26806,
       "y": 560
     },
     "DI_SettingsSources.dc.html": {
       "h": 669,
-      "title": "Duo mở · Cài đặt › Sources cuộn: Drives and Indexing, Previews (Cache Size Limit 5 GB)",
+      "title": "Duo mở · Cài đặt › Sources & Backup cuộn: Drives and Indexing, Previews (Cache Size Limit 5 GB)",
       "w": 951,
       "x": 45364,
       "y": 560
@@ -1198,7 +1198,7 @@
       "y": 560
     },
     "DI_SmartAlbumEditor.dc.html": {
-      "h": 669,
+      "h": 1040,
       "title": "Duo mở · Edit Smart Album thành toàn màn (compact height bỏ detent)",
       "w": 951,
       "x": 14434,
@@ -1220,7 +1220,7 @@
     },
     "DI_Statistics.dc.html": {
       "h": 669,
-      "title": "Duo mở · Thống kê: nút đổi kiểu 28pt trên mọi thẻ biểu đồ, ô số KPI không có",
+      "title": "Media hub · Statistics màn trong: vào từ Photos › Collections › Utilities, nút Back, rail Photos; biểu đồ giữ nguyên",
       "w": 951,
       "x": 23713,
       "y": 560
@@ -1294,7 +1294,7 @@
       "title": "Video Settings — nút tỉ lệ trong dải 84 mở panel gọn; canvas 9:16 121×215; ~30 MB — theo spec 3/10",
       "w": 466,
       "x": 5460,
-      "y": 9236
+      "y": 11536
     },
     "ES_DI_ExportSettings.dc.html": {
       "h": 669,
@@ -1302,7 +1302,7 @@
       "title": "Video Settings — cột phải 264; khung đổi ngay sang 9:16 217×385 (Fill); dòng LUT; ~30 MB; cột badge 100 — theo plan 3/10",
       "w": 951,
       "x": 15465,
-      "y": 8147
+      "y": 10447
     },
     "F1_DC_MultiSelect.dc.html": {
       "h": 678,
@@ -1310,7 +1310,7 @@
       "title": "Chọn nhiều clip — timeline 240 thu 18 pt/s; panel lô 104: hàng lệnh + Speed; dải 84: ✕ / ✓ ở chân — theo spec 3/10",
       "w": 466,
       "x": 2184,
-      "y": 9236
+      "y": 11536
     },
     "F1_DI_Reorder.dc.html": {
       "h": 669,
@@ -1318,7 +1318,7 @@
       "title": "Kéo đổi thứ tự — 2 clip nhấc thành chồng “2”, vạch chèn 0:03.0; lệnh lô đầu cột phải; đáy phải ✕ — theo plan 3/10",
       "w": 951,
       "x": 6186,
-      "y": 8147
+      "y": 10447
     },
     "F2_DC_Beats.dc.html": {
       "h": 678,
@@ -1326,7 +1326,7 @@
       "title": "Nhịp nhạc — 96 BPM · 30 nhịp trên A1, Snap to beats, Every Beat / Bar, Cut Clips to Beat — theo spec 3/10",
       "w": 466,
       "x": 2730,
-      "y": 9236
+      "y": 11536
     },
     "F2_DI_CutToBeat.dc.html": {
       "h": 669,
@@ -1334,7 +1334,7 @@
       "title": "Cut to Beat — mũi tên vàng tới ô nhịp gần nhất; lệnh nhạc đầu cột phải; góc phải hàng đáy ✕ — theo plan 3/10",
       "w": 951,
       "x": 7217,
-      "y": 8147
+      "y": 10447
     },
     "F3_DC_Ducking.dc.html": {
       "h": 678,
@@ -1342,7 +1342,7 @@
       "title": "Tự hạ nhạc — đồ thị 354×78 cả phim (tiếng người xanh, mức nhạc trắng) + Amount −12 dB · Duck in — theo spec 3/10",
       "w": 466,
       "x": 3276,
-      "y": 9236
+      "y": 11536
     },
     "F3_DI_Ducking.dc.html": {
       "h": 669,
@@ -1350,7 +1350,7 @@
       "title": "Tự hạ nhạc — Voice trên V1, A1 lõm −12 dB; lệnh nhạc đầu cột phải; góc phải hàng đáy ✕ — theo plan 3/10",
       "w": 951,
       "x": 8248,
-      "y": 8147
+      "y": 10447
     },
     "F4_DC_Captions.dc.html": {
       "h": 678,
@@ -1358,7 +1358,7 @@
       "title": "Phụ đề tự động — lệnh phụ đề đầu panel, khối sửa được; vạch tổng quan #5E9CFF; dải 84: ✕ / ✓ — theo spec 3/10",
       "w": 466,
       "x": 3822,
-      "y": 9236
+      "y": 11536
     },
     "F4_DI_Captions.dc.html": {
       "h": 669,
@@ -1366,7 +1366,7 @@
       "title": "Sửa phụ đề — 12 khối, lane C1; lệnh phụ đề đầu cột phải (Style đang mở); góc phải hàng đáy ✕ — theo plan 3/10",
       "w": 951,
       "x": 9279,
-      "y": 8147
+      "y": 10447
     },
     "F5_DC_ClipLook.dc.html": {
       "h": 678,
@@ -1374,7 +1374,7 @@
       "title": "Look riêng cho clip (Duo ngoài) — ô Look ở hàng lệnh; panel: LOOK FOR THIS CLIP, This Clip, dải ô 60 — theo spec 3/10",
       "w": 466,
       "x": 6552,
-      "y": 9236
+      "y": 11536
     },
     "F5_DC_Looks.dc.html": {
       "h": 678,
@@ -1382,7 +1382,7 @@
       "title": "Look (cả video) — chip Filter · Adjust · Color, dải 5 ô 60 + Amount — theo spec 3/10",
       "w": 466,
       "x": 4368,
-      "y": 9236
+      "y": 11536
     },
     "F5_DI_ClipLook.dc.html": {
       "h": 669,
@@ -1390,7 +1390,7 @@
       "title": "Look riêng cho clip (Duo trong) — ô Look ở hàng lệnh; cột phải: LOOK FOR THIS CLIP, This Clip, lưới 3×2 — theo plan 3/10",
       "w": 951,
       "x": 17527,
-      "y": 8147
+      "y": 10447
     },
     "F5_DI_Looks.dc.html": {
       "h": 669,
@@ -1398,7 +1398,7 @@
       "title": "Look (cả video) — chip Filter · Adjust · Color ở cột phải, lưới 3×2 ô 66; Look sáng ở hàng đáy — theo plan 3/10",
       "w": 951,
       "x": 10310,
-      "y": 8147
+      "y": 10447
     },
     "F6_DC_Keyboard.dc.html": {
       "h": 678,
@@ -1406,7 +1406,7 @@
       "title": "Phím tắt (Duo ngoài) — danh sách dạng iPhone trong 334–644, 12 dòng 32; khung 382×215 giữ — theo spec 3/10",
       "w": 466,
       "x": 9282,
-      "y": 9236
+      "y": 11536
     },
     "F6_DC_PreciseTrim.dc.html": {
       "h": 678,
@@ -1414,7 +1414,7 @@
       "title": "Trim từng khung (Duo ngoài) — timeline 334–644, kính Ø124, pill 248×48 ở (67, 582); ✕ / ✓ — theo spec 3/10",
       "w": 466,
       "x": 8736,
-      "y": 9236
+      "y": 11536
     },
     "F6_DI_Keyboard.dc.html": {
       "h": 669,
@@ -1422,7 +1422,7 @@
       "title": "Phím tắt khi cắm bàn phím — sheet 640×300 hai cột, 12 nhóm phím (J/K/L, ⌘B, I/O, ⌥[ ⌥] …) — theo plan 3/10",
       "w": 951,
       "x": 12372,
-      "y": 8147
+      "y": 10447
     },
     "F6_DI_TouchTrim.dc.html": {
       "h": 669,
@@ -1430,7 +1430,7 @@
       "title": "Trim từng khung bằng ngón — kính lúp Ø140; dưới hàng lệnh Speed · Volume rồi PRECISION; cột badge 100 — theo plan 3/10",
       "w": 951,
       "x": 11341,
-      "y": 8147
+      "y": 10447
     },
     "F7_DC_BeforeAfter.dc.html": {
       "h": 678,
@@ -1438,7 +1438,7 @@
       "title": "Trước / sau (Duo ngoài) — nút so sánh ở header panel Look, Split trên khung 382×215 — theo spec 3/10",
       "w": 466,
       "x": 8190,
-      "y": 9236
+      "y": 11536
     },
     "F7_DI_BeforeAfter.dc.html": {
       "h": 669,
@@ -1446,7 +1446,7 @@
       "title": "Trước / sau cạnh nhau — 2 khung 330×186; nút so sánh (bật = trắng, glyph đen) thay Show original — theo plan 3/10",
       "w": 951,
       "x": 13403,
-      "y": 8147
+      "y": 10447
     },
     "F8_DC_ExportPresets.dc.html": {
       "h": 678,
@@ -1454,7 +1454,7 @@
       "title": "Preset xuất (Sẵn sàng) — 5 preset, dòng LUT, “Export in the rail…”; Export ở dải 84 y 556 — theo plan 3/10",
       "w": 466,
       "x": 4914,
-      "y": 9236
+      "y": 11536
     },
     "F8_DI_ExportPresets.dc.html": {
       "h": 669,
@@ -1462,7 +1462,7 @@
       "title": "Preset xuất (Sẵn sàng) — 5 preset một dòng; dòng LUT cuối cột; cột badge 100 — theo plan 3/10",
       "w": 951,
       "x": 14434,
-      "y": 8147
+      "y": 10447
     },
     "MP_DC_Media.dc.html": {
       "h": 678,
@@ -1470,7 +1470,7 @@
       "title": "Media — tab … · Select · 🔍; thư viện 4 cột ô vuông dưới lát timeline 146; dải 84: ✕ / ✓ — theo spec 3/10",
       "w": 466,
       "x": 6006,
-      "y": 9236
+      "y": 11536
     },
     "MP_DI_Media.dc.html": {
       "h": 669,
@@ -1478,25 +1478,25 @@
       "title": "Media — cột phải 3 cột; hàng tab cuộn ngang, Select · 🔍 ở cuối, mép phải mờ 24; “×2”; cột badge 100 — theo plan 3/10",
       "w": 951,
       "x": 16496,
-      "y": 8147
+      "y": 10447
     },
     "Main.dc.html": {
       "h": 669,
-      "title": "Duo mở · Library: lưới 9 cột trong 867pt, rail tab dọc bên phải",
+      "title": "Media hub · Photos › Library màn trong: ⚙ + ngày, Library | Collections, rail Photos · Movies · Music; tweak menu Filter",
       "w": 951,
       "x": 1031,
       "y": 560
     },
     "TX_DC_TextPanel.dc.html": {
       "x": 9828,
-      "y": 9236,
+      "y": 11536,
       "w": 466,
       "h": 678,
       "title": "Duo gập · Text: panel Text — Add Text, Auto Captions, Fonts You Used (2026-10-11)"
     },
     "TX_DI_TextPanel.dc.html": {
       "x": 18558,
-      "y": 8147,
+      "y": 10447,
       "w": 951,
       "h": 669,
       "title": "Duo mở · Text: cột Text — Add Text, Auto Captions, Fonts You Used (2026-10-11)"
@@ -1520,11 +1520,11 @@
       "title": "Duo ngoài · Chọn khung burst: mọi thứ trong 382pt trái rail 84, thanh trên cách đỉnh 28 khỏi góc bo",
       "w": 466,
       "x": 30030,
-      "y": 1609
+      "y": 2809
     },
     "DI_Movies.dc.html": {
       "h": 669,
-      "title": "Duo trong · Movies 1/5 · thư viện chung (NAS, Plex, trên máy): Grid poster 2:3 7 cột 109 (nhiều cột hơn, không to hơn), ✓ = trên máy, thanh cam = đang tải, đỏ = Download paused, không dấu = stream; Search + All · On This iPhone · Unwatched chung một hàng; ⋯ và +; tweak list (2 cột) / away / menu — FS-23.01, planboard 14/10",
+      "title": "Media hub · Movies › See All màn trong (FS-23.01): poster 7 cột, ✓/tải/paused, back về tab Movies; tweak list/away/menu",
       "w": 951,
       "x": 61860,
       "y": 560
@@ -1573,24 +1573,24 @@
     },
     "DC_Movies.dc.html": {
       "h": 678,
-      "title": "Duo ngoài · Movies (chỉ phát): Grid 3 cột trong 382pt, không +, ⋯ chỉ View/Sort (không Select); Search + All · On This iPhone · Unwatched; tweak away — FS-23.01, planboard 14/10",
+      "title": "Media hub · Movies › See All màn ngoài (FS-23.01): Grid 3 cột, back về tab Movies, ⋯ chỉ View/Sort; tweak away",
       "w": 466,
       "x": 30576,
-      "y": 1609
+      "y": 2809
     },
     "DC_MoviePlayer.dc.html": {
       "h": 466,
       "title": "Duo ngoài · Player xoay 90° trong UI (FS-02.02 §8), vẽ ngang 678×466: 16:9 678×381 lấp đúng cột 382, rail 84 thành dải dưới giữ kính transport (một nút Audio & Subtitles), tránh lỗ camera; tweak chrome — FS-23.02, planboard 14/10",
       "w": 678,
       "x": 31668,
-      "y": 1609
+      "y": 2809
     },
     "DC_SettingsAI.dc.html": {
       "h": 678,
       "title": "Duo ngoài · Settings › AI trong 382pt: Use For, On This Device, Providers + Add Provider… — FS-08.07, đề xuất 14/10, code chưa có",
       "w": 466,
       "x": 33184,
-      "y": 1609
+      "y": 2809
     },
     "DI_MovieTracks.dc.html": {
       "h": 669,
@@ -1604,7 +1604,7 @@
       "title": "Duo ngoài · Audio & Subtitles: sheet nửa cao 233 trong view xoay, Audio trái / Subtitles phải, mỗi cột cuộn (mờ dần ở đáy); tweak secmenu = menu Secondary mở lên trên hình — FS-23.02 §3b, 03 §2, planboard 14/10",
       "w": 678,
       "x": 32426,
-      "y": 1609
+      "y": 2809
     },
     "DI_PlexSignIn.dc.html": {
       "h": 669,
@@ -1625,7 +1625,280 @@
       "title": "Trang chi tiết rút gọn màn ngoài (FS-23.08 §5) — Resume / From Beginning, Audio · Subtitles; không Download, ⋯ — 15/10",
       "w": 466,
       "x": 31122,
-      "y": 1609
+      "y": 2809
+    },
+    "DI_MoviesHome.dc.html": {
+      "h": 1458,
+      "title": "Media hub · Tab Movies màn trong: Search + chip một hàng, Review, Continue Watching, Movies, TV Shows, Clips, Utilities",
+      "w": 951,
+      "x": 72170,
+      "y": 560
+    },
+    "DI_Music.dc.html": {
+      "h": 836,
+      "title": "Media hub · Tab Music màn trong: Search + chip, Playlists 3 cột, Recently Added 6 album, Utilities, Sources; mini player",
+      "w": 951,
+      "x": 73201,
+      "y": 560
+    },
+    "DI_MusicStats.dc.html": {
+      "h": 896,
+      "title": "Media hub · Music › Statistics màn trong: KPI + 8 thẻ hai cột, By month cả bề ngang",
+      "w": 951,
+      "x": 74232,
+      "y": 560
+    },
+    "DI_SourcesBackup.dc.html": {
+      "h": 1000,
+      "title": "Media hub · Settings › Sources & Backup màn trong: hai cột + Metadata, Drives and Indexing, Previews",
+      "w": 951,
+      "x": 75263,
+      "y": 560
+    },
+    "DC_MoviesHome.dc.html": {
+      "h": 1581,
+      "title": "Media hub · Tab Movies màn ngoài: chip hai hàng, poster 3, thẻ 2 cột, Utilities, Sources; không + (cover chỉ phát)",
+      "w": 466,
+      "x": 33730,
+      "y": 2809
+    },
+    "DC_Music.dc.html": {
+      "h": 1265,
+      "title": "Media hub · Tab Music màn ngoài: Playlists danh sách, album 3 cột, Utilities 2 cột, Sources; ⋯ không +",
+      "w": 466,
+      "x": 34276,
+      "y": 2809
+    },
+    "DC_MusicStats.dc.html": {
+      "h": 1281,
+      "title": "Media hub · Music › Statistics màn ngoài: KPI + 8 thẻ xếp dọc trong 382pt, cuộn",
+      "w": 466,
+      "x": 34822,
+      "y": 2809
+    },
+    "DC_SourcesBackup.dc.html": {
+      "h": 1674,
+      "title": "Media hub · Settings › Sources & Backup màn ngoài: + Metadata, Drives and Indexing, Previews",
+      "w": 466,
+      "x": 35368,
+      "y": 2809
+    },
+    "DI_NowPlaying.dc.html": {
+      "h": 669,
+      "title": "Media hub · Now Playing màn trong: bìa trái, Up Next mặc định phải; tweak menu, kept, timer, paused, swipe",
+      "w": 951,
+      "x": 76294,
+      "y": 560
+    },
+    "DI_Lyrics.dc.html": {
+      "h": 669,
+      "title": "Media hub · Lyrics màn trong: cột phải đổi sang lời (chữ giữ chỗ, có giờ), nút Lyrics sáng; tweak plain, paused",
+      "w": 951,
+      "x": 77325,
+      "y": 560
+    },
+    "DI_SleepTimer.dc.html": {
+      "h": 669,
+      "title": "Media hub · Sleep Timer màn trong: popover trên nút hẹn giờ, Off…End of Song, 30 Minutes ✓",
+      "w": 951,
+      "x": 78356,
+      "y": 560
+    },
+    "DI_MusicAlbum.dc.html": {
+      "h": 669,
+      "title": "Media hub · Trang album màn trong: bìa + Play/Shuffle trái, 10 bài phải; tweak menu bài, kept",
+      "w": 951,
+      "x": 79387,
+      "y": 560
+    },
+    "DI_MusicArtist.dc.html": {
+      "h": 669,
+      "title": "Media hub · Trang nghệ sĩ màn trong: banner 867, Top Songs trái, Albums phải",
+      "w": 951,
+      "x": 80418,
+      "y": 560
+    },
+    "DI_MusicPlaylist.dc.html": {
+      "h": 669,
+      "title": "Media hub · Trang playlist màn trong: bìa ghép trái, bài phải; tweak menu (Remove from iPhone), alert remove",
+      "w": 951,
+      "x": 81449,
+      "y": 560
+    },
+    "DI_MoviesReview.dc.html": {
+      "h": 669,
+      "title": "Media hub · Review Videos màn trong: sheet toàn màn, nút Move trái, 7 video phải; tweak copying, deleteDialog",
+      "w": 951,
+      "x": 82480,
+      "y": 560
+    },
+    "DI_WatchHistory.dc.html": {
+      "h": 669,
+      "title": "Media hub · Watch History màn trong: Today/This Week trái, Earlier phải; tweak swipe, clear",
+      "w": 951,
+      "x": 83511,
+      "y": 560
+    },
+    "DI_Subtitles.dc.html": {
+      "h": 669,
+      "title": "Media hub · Subtitles màn trong: nhóm theo phim hai cột, 9 files · 1.1 MB; tweak swipe Delete",
+      "w": 951,
+      "x": 84542,
+      "y": 560
+    },
+    "DI_TVShow.dc.html": {
+      "h": 669,
+      "title": "Media hub · Trang TV Show màn trong: poster + Resume/Keep Season 3/chip mùa trái, 7 tập phải; tweak menu",
+      "w": 951,
+      "x": 85573,
+      "y": 560
+    },
+    "DI_Convert.dc.html": {
+      "h": 669,
+      "title": "Media hub · Convert màn trong: sheet toàn màn hai cột (Format/Size | Audio/Then); tweak progress",
+      "w": 951,
+      "x": 86604,
+      "y": 560
+    },
+    "DI_ExtractAudio.dc.html": {
+      "h": 669,
+      "title": "Media hub · Extract Audio màn trong: Track/Range trái, Format/Save As phải; tweak custom, progress",
+      "w": 951,
+      "x": 87635,
+      "y": 560
+    },
+    "DI_SettingsPlayback.dc.html": {
+      "h": 669,
+      "title": "Media hub · Settings › Playback màn trong: Movie Audio in Background bật, Clear Listening History…; tweak clear",
+      "w": 951,
+      "x": 88666,
+      "y": 560
+    },
+    "DI_KeepPhotos.dc.html": {
+      "h": 669,
+      "title": "Media hub · Keep 412 Photos on iPhone màn trong: form giữa màn trên lưới chọn, Originals đầu",
+      "w": 951,
+      "x": 89697,
+      "y": 560
+    },
+    "DI_Kept.dc.html": {
+      "h": 669,
+      "title": "Media hub · Kept on iPhone màn trong: pane Settings hai cột, Remove từng mục; tweak remove",
+      "w": 951,
+      "x": 90728,
+      "y": 560
+    },
+    "DC_NowPlaying.dc.html": {
+      "h": 678,
+      "title": "Media hub · Now Playing màn ngoài: player gọn trong 382, dải 84 trống; tweak menu, kept, timer, paused",
+      "w": 466,
+      "x": 35914,
+      "y": 2809
+    },
+    "DC_UpNext.dc.html": {
+      "h": 678,
+      "title": "Media hub · Up Next màn ngoài: đầu gọn, Shuffle/Repeat, hàng đợi; tweak swipe, paused",
+      "w": 466,
+      "x": 36460,
+      "y": 2809
+    },
+    "DC_Lyrics.dc.html": {
+      "h": 678,
+      "title": "Media hub · Lyrics màn ngoài: lời chữ giữ chỗ; tweak plain, paused",
+      "w": 466,
+      "x": 37006,
+      "y": 2809
+    },
+    "DC_SleepTimer.dc.html": {
+      "h": 678,
+      "title": "Media hub · Sleep Timer màn ngoài: sheet trong 382 trên Now Playing",
+      "w": 466,
+      "x": 37552,
+      "y": 2809
+    },
+    "DC_MusicAlbum.dc.html": {
+      "h": 1050,
+      "title": "Media hub · Trang album màn ngoài: một cột, 10 bài; tweak menu, kept",
+      "w": 466,
+      "x": 38098,
+      "y": 2809
+    },
+    "DC_MusicArtist.dc.html": {
+      "h": 900,
+      "title": "Media hub · Trang nghệ sĩ màn ngoài: banner, Top Songs, Albums 3 ô",
+      "w": 466,
+      "x": 38644,
+      "y": 2809
+    },
+    "DC_MusicPlaylist.dc.html": {
+      "h": 1050,
+      "title": "Media hub · Trang playlist màn ngoài: 10 bài; tweak menu, remove",
+      "w": 466,
+      "x": 39190,
+      "y": 2809
+    },
+    "DC_MoviesReview.dc.html": {
+      "h": 678,
+      "title": "Media hub · Review Videos màn ngoài: sheet 382, 5 video, Move ở chân; tweak copying, deleteDialog",
+      "w": 466,
+      "x": 39736,
+      "y": 2809
+    },
+    "DC_WatchHistory.dc.html": {
+      "h": 755,
+      "title": "Media hub · Watch History màn ngoài: Today, This Week, Earlier; tweak swipe, clear",
+      "w": 466,
+      "x": 40282,
+      "y": 2809
+    },
+    "DC_Subtitles.dc.html": {
+      "h": 720,
+      "title": "Media hub · Subtitles màn ngoài: nhóm theo phim một cột; tweak swipe",
+      "w": 466,
+      "x": 40828,
+      "y": 2809
+    },
+    "DC_TVShow.dc.html": {
+      "h": 1202,
+      "title": "Media hub · Trang TV Show màn ngoài: backdrop, Resume, Keep Season 3, 7 tập; tweak menu",
+      "w": 466,
+      "x": 41374,
+      "y": 2809
+    },
+    "DC_Convert.dc.html": {
+      "h": 850,
+      "title": "Media hub · Convert màn ngoài: sheet 382 vẽ hết chiều dài cuộn; tweak progress",
+      "w": 466,
+      "x": 41920,
+      "y": 2809
+    },
+    "DC_ExtractAudio.dc.html": {
+      "h": 866,
+      "title": "Media hub · Extract Audio màn ngoài: sheet 382; tweak custom, progress",
+      "w": 466,
+      "x": 42466,
+      "y": 2809
+    },
+    "DC_SettingsPlayback.dc.html": {
+      "h": 678,
+      "title": "Media hub · Settings › Playback màn ngoài: toàn màn 382; tweak clear",
+      "w": 466,
+      "x": 43012,
+      "y": 2809
+    },
+    "DC_KeepPhotos.dc.html": {
+      "h": 678,
+      "title": "Media hub · Keep 412 Photos on iPhone màn ngoài: sheet đáy trong 382 trên lưới chọn",
+      "w": 466,
+      "x": 43558,
+      "y": 2809
+    },
+    "DC_Kept.dc.html": {
+      "h": 1132,
+      "title": "Media hub · Kept on iPhone màn ngoài: tổng dung lượng, Photos/Movies/Music, Remove; tweak remove",
+      "w": 466,
+      "x": 44104,
+      "y": 2809
     }
   },
   "createdOnFiles": {
@@ -1643,7 +1916,7 @@
       "text": "iPhone Duo màn ngoài · 466×678",
       "w": 240,
       "x": 0,
-      "y": 1349
+      "y": 2549
     },
     "app_row_DI": {
       "kind": "title1",
@@ -1659,7 +1932,7 @@
       "text": "Đã đo trên simulator: chạm trong dải 84pt tới app khi ẩn status bar. Chỉ lỗ camera (y 29–66) và góc bo dưới y 612 là không dùng được: mũ dải 72, công cụ từ y 80, Save nằm trên y 612. Bố cục vẫn là đề xuất, chưa có trong code. 30/9: hàng nút dưới băng còn 4 (History · Reset · Revert · Recall). Copy / Paste Edits bỏ khỏi editor: chép chỉnh sửa giữa các ảnh là việc của thư viện (Paste Edits ở thanh chọn, Copy / Paste ở ⋯ của màn xem ảnh như Photos); trong editor đã có Sync (nhiều ảnh) và Recall. Trong công cụ (Transform, Mask, Heal, Markup, Mask mới, lớp mới): ✕ và ✓ rời băng trên, xếp dọc ở chân dải 84 — ✕ (đĩa kính tối 44) ở y 508–552, ✓ (đĩa trắng 44) ở y 560–604 thay chỗ Save; Save ẩn tới khi ra khỏi công cụ; băng trên còn Back · Undo · Redo · tên công cụ · histogram. (Góp ý ghi “bên trái” nhưng màn ngoài chỉ có dải 84 bên phải.) 30/9: nút băng trên và 4 nút History…Recall dưới băng đều là nút tròn kính tối 34, chỉ icon. Lớp chữ: một hàng B · I · U | căn lề | Size − 200 px + thay hàng B/I/căn lề và slider Size. Lớp đang chọn trên ảnh (đề xuất 30/9, code chưa đổi) — một kiểu cho mọi thiết bị: khung trắng liền 1,5pt có bóng mờ tối, cách chữ 6pt; 4 chấm tròn trắng 10pt ở góc; núm xoay 24pt trên cần 16pt ở giữa cạnh trên. Kéo góc = phóng to/thu nhỏ đều quanh tâm lớp (tính theo khoảng cách tâm→ngón tay nên đúng cả khi chữ đang nghiêng); kéo núm = xoay quanh tâm, hít ở 0/90/180/270 kèm rung nhẹ, có chip độ. Chấm và núm nằm NGOÀI chữ nên không che chú thích nhỏ (lý do núm 22pt cũ bị bỏ); phép tính theo tâm sửa lỗi kéo góc sai hướng khi chữ nghiêng. Không dùng màu accent. Tay nắm ẩn khi đang kéo thân lớp; hai ngón vẫn phóng/xoay được. Cỡ chữ hiện bằng px của ảnh đang sửa (“200 px” = 5% cạnh ngắn 4000px); lưu vẫn là tỉ lệ cạnh ngắn để crop/resize giữ tỉ lệ; −/+ bước 1% cạnh ngắn, chạm số để gõ px. “% cạnh ngắn” là ngôn ngữ của renderer, px là thứ người chụp đọc khi xuất ảnh. 30/9 (tiếp): Duo không có Dynamic Island nên History · Reset · Revert · Recall lên hẳn băng trên, ngay trái histogram; bỏ hàng dưới băng, ảnh cao thêm 44 (356). Băng: Back 16 | Undo 62 · Redo 101 | History 147 · Reset 186 · Revert 225 · Recall 264 | histogram 310–356 (pill 46 giữ nguyên) = 340 trong 350pt. Không còn tên màn/công cụ trên băng (cả trong công cụ) — ô công cụ sáng trong dải và nhãn VoiceOver của nó nói tên; ✕/✓ vẫn ở chân dải. Không có nút Compare: so sánh bằng giữ lâu trên ảnh, như iPhone. 30/9: đồ thị Curve có histogram của kênh đang chọn mờ phía sau lưới (RGB = xám độ sáng, opacity 0.22), giống hệt iPhone. 30/9 — Transform: thao tác trực tiếp trên ảnh, panel chỉ để chỉnh chính xác. Khung cắt trắng 1,5pt có bóng mờ, góc chữ L 3pt (cạnh 20) + vạch giữa cạnh kiểu Photos: kéo góc/cạnh = cắt, kéo bên trong = dời ảnh, lưới 1/3 khi kéo. Thước vạch dưới đáy vùng ảnh (nền tối 44pt, vạch giữa + số độ): vuốt ngang xoay ±45°, hít ở 0 kèm rung, chạm số để về 0; khi xoay lưới 1/3 đổi thành lưới mịn 8×8 và ảnh tự phóng cho không lộ góc. Xoay hai ngón trên ảnh cũng xoay (cùng giá trị). Rotate 90° và Flip là hai nút kính 34 ở góc trên-trái vùng ảnh, ngoài khung cắt. Panel giữ Aspect, Upright và slider Geometry để chỉnh chính xác. Code chưa đổi. Màn ngoài: thước rộng 350 vừa khung 382. 30/9 (sửa): thước trên ảnh = góc xoay, không còn chip Straighten · Vertical · Horizontal; phối cảnh dọc/ngang ở panel (Upright, slider Geometry); slider Angle trong panel bỏ vì trùng thước. 1/10 (theo code): Save Edit bỏ công tắc Include Metadata — phần SAVE COPY có menu Metadata (All Metadata · No Location · No Metadata, mặc định theo Settings) + Save Copy; Save Changes luôn giữ ngày, vị trí và metadata. Cặp RAW + JPEG hỏi “Edit which version?” trước khi mở editor (Edit RAW mờ khi iOS chưa đọc được RAW). RAW iOS chưa đọc được: alert “Can't Edit This RAW” (OK; Skip khi sửa nhiều ảnh; thêm Share Original với DNG).",
       "w": 380,
       "x": 0,
-      "y": 5847
+      "y": 8147
     },
     "editor_note_duol": {
       "fill": "blue",
@@ -1667,7 +1940,7 @@
       "text": "Đề xuất, chưa có trong code. 5 bảng cuối thêm 30/9 cho đủ bộ màn như hàng iPhone. 30/9: History · Reset · Revert · Recall lên băng trên cạnh Compare; histogram giữ nguyên, 50pt trả cho danh sách vì màn chỉ cao 669. Copy / Paste Edits bỏ khỏi editor: chép chỉnh sửa giữa các ảnh là việc của thư viện (Paste Edits ở thanh chọn, Copy / Paste ở ⋯ của màn xem ảnh như Photos); trong editor đã có Sync (nhiều ảnh) và Recall. 30/9 (UX): một băng, một kiểu nút — mọi nút trên băng là nút tròn kính tối chỉ icon, 40 vì cả băng Duo ngang vốn 40; nút có chữ trông quan trọng hơn nút không chữ và làm cụm dài ~440pt; giống iPhone, Video Studio, Photos/Lightroom. Tên nằm ở nhãn VoiceOver. Thứ tự: Back | Undo · Redo | … | History · Reset · Revert · Recall | Compare | Save; 12 giữa nhóm, 5 trong nhóm. Icon: History = đồng hồ có mũi tên vòng, Reset = mũi tên ngược chiều kim đồng hồ, Revert = khung ảnh có mũi tên quay lại, Recall = đũa phép lấp lánh. Lớp chữ: một hàng B · I · U | căn lề | Size − 200 px + thay hàng B/I/căn lề và slider Size. Cột 260: căn lề thu thành một nút xoay vòng, Size còn 92. Lớp đang chọn trên ảnh (đề xuất 30/9, code chưa đổi) — một kiểu cho mọi thiết bị: khung trắng liền 1,5pt có bóng mờ tối, cách chữ 6pt; 4 chấm tròn trắng 10pt ở góc; núm xoay 24pt trên cần 16pt ở giữa cạnh trên. Kéo góc = phóng to/thu nhỏ đều quanh tâm lớp (tính theo khoảng cách tâm→ngón tay nên đúng cả khi chữ đang nghiêng); kéo núm = xoay quanh tâm, hít ở 0/90/180/270 kèm rung nhẹ, có chip độ. Chấm và núm nằm NGOÀI chữ nên không che chú thích nhỏ (lý do núm 22pt cũ bị bỏ); phép tính theo tâm sửa lỗi kéo góc sai hướng khi chữ nghiêng. Không dùng màu accent. Tay nắm ẩn khi đang kéo thân lớp; hai ngón vẫn phóng/xoay được. Cỡ chữ hiện bằng px của ảnh đang sửa (“200 px” = 5% cạnh ngắn 4000px); lưu vẫn là tỉ lệ cạnh ngắn để crop/resize giữ tỉ lệ; −/+ bước 1% cạnh ngắn, chạm số để gõ px. “% cạnh ngắn” là ngôn ngữ của renderer, px là thứ người chụp đọc khi xuất ảnh. 30/9 (tiếp): như iPad — Save (đĩa cam 40, icon export) ra cuối băng trên sau Compare, luôn hiện kể cả trong công cụ; histogram chiếm góc trên cột: 236 × 80 (120 của iPad theo tỉ lệ màn 669), đầu cột cao 103 thay vì 69 (+34pt), danh sách ngắn đi 34pt và cuộn. 30/9: slider Temp (xanh → vàng), Tint (xanh lá → tím), Vibrance / Saturation (xám → đủ màu) có track màu giống hệt iPhone (code), ở cả Edit lẫn Mask; các slider khác giữ trung tính. 30/9: đồ thị Curve có histogram của kênh đang chọn mờ phía sau lưới (RGB = xám độ sáng, opacity 0.22), giống hệt iPhone. 30/9 — Transform: thao tác trực tiếp trên ảnh, panel chỉ để chỉnh chính xác. Khung cắt trắng 1,5pt có bóng mờ, góc chữ L 3pt (cạnh 20) + vạch giữa cạnh kiểu Photos: kéo góc/cạnh = cắt, kéo bên trong = dời ảnh, lưới 1/3 khi kéo. Thước vạch dưới đáy vùng ảnh (nền tối 44pt, vạch giữa + số độ): vuốt ngang xoay ±45°, hít ở 0 kèm rung, chạm số để về 0; khi xoay lưới 1/3 đổi thành lưới mịn 8×8 và ảnh tự phóng cho không lộ góc. Xoay hai ngón trên ảnh cũng xoay (cùng giá trị). Rotate 90° và Flip là hai nút kính 34 ở góc trên-trái vùng ảnh, ngoài khung cắt. Panel giữ Aspect, Upright và slider Geometry để chỉnh chính xác. Code chưa đổi. 30/9 (sửa): thước trên ảnh = góc xoay, không còn chip Straighten · Vertical · Horizontal; phối cảnh dọc/ngang ở panel (Upright, slider Geometry); slider Angle trong panel bỏ vì trùng thước. 1/10 (theo code): Save Edit bỏ công tắc Include Metadata — phần SAVE COPY có menu Metadata (All Metadata · No Location · No Metadata, mặc định theo Settings) + Save Copy; Save Changes luôn giữ ngày, vị trí và metadata. Cặp RAW + JPEG hỏi “Edit which version?” trước khi mở editor (Edit RAW mờ khi iOS chưa đọc được RAW). RAW iOS chưa đọc được: alert “Can't Edit This RAW” (OK; Skip khi sửa nhiều ảnh; thêm Share Original với DNG).",
       "w": 380,
       "x": 0,
-      "y": 3387
+      "y": 5687
     },
     "editor_note_duop": {
       "fill": "blue",
@@ -1675,7 +1948,7 @@
       "text": "Đề xuất, chưa có trong code. Thêm 30/9: Presets · Transform · Heal · Markup · Nhiều ảnh và 5 màn như hàng iPhone. 30/9: Duo không có Dynamic Island nên 4 nút History · Reset · Revert · Recall vào thẳng băng trên (giữa tiêu đề và histogram); bỏ hàng riêng, ảnh cao thêm 44. Copy / Paste Edits bỏ khỏi editor: chép chỉnh sửa giữa các ảnh là việc của thư viện (Paste Edits ở thanh chọn, Copy / Paste ở ⋯ của màn xem ảnh như Photos); trong editor đã có Sync (nhiều ảnh) và Recall. 30/9 (UX): một băng, một kiểu nút — mọi nút trên băng là nút tròn kính tối chỉ icon, 34 (✕ kính, ✓ đĩa trắng khi trong công cụ); nút có chữ trông quan trọng hơn nút không chữ và làm cụm dài ~440pt; giống iPhone, Video Studio, Photos/Lightroom. Tên nằm ở nhãn VoiceOver. Thứ tự: Back | Undo · Redo | … | History · Reset · Revert · Recall | Compare | Save; 12 giữa nhóm, 5 trong nhóm. Icon: History = đồng hồ có mũi tên vòng, Reset = mũi tên ngược chiều kim đồng hồ, Revert = khung ảnh có mũi tên quay lại, Recall = đũa phép lấp lánh. Lớp chữ: một hàng B · I · U | căn lề | Size − 200 px + thay hàng B/I/căn lề và slider Size. Lớp đang chọn trên ảnh (đề xuất 30/9, code chưa đổi) — một kiểu cho mọi thiết bị: khung trắng liền 1,5pt có bóng mờ tối, cách chữ 6pt; 4 chấm tròn trắng 10pt ở góc; núm xoay 24pt trên cần 16pt ở giữa cạnh trên. Kéo góc = phóng to/thu nhỏ đều quanh tâm lớp (tính theo khoảng cách tâm→ngón tay nên đúng cả khi chữ đang nghiêng); kéo núm = xoay quanh tâm, hít ở 0/90/180/270 kèm rung nhẹ, có chip độ. Chấm và núm nằm NGOÀI chữ nên không che chú thích nhỏ (lý do núm 22pt cũ bị bỏ); phép tính theo tâm sửa lỗi kéo góc sai hướng khi chữ nghiêng. Không dùng màu accent. Tay nắm ẩn khi đang kéo thân lớp; hai ngón vẫn phóng/xoay được. Cỡ chữ hiện bằng px của ảnh đang sửa (“200 px” = 5% cạnh ngắn 4000px); lưu vẫn là tỉ lệ cạnh ngắn để crop/resize giữ tỉ lệ; −/+ bước 1% cạnh ngắn, chạm số để gõ px. “% cạnh ngắn” là ngôn ngữ của renderer, px là thứ người chụp đọc khi xuất ảnh. 30/9: slider Temp (xanh → vàng), Tint (xanh lá → tím), Vibrance / Saturation (xám → đủ màu) có track màu giống hệt iPhone (code), ở cả Edit lẫn Mask; các slider khác giữ trung tính. 30/9: đồ thị Curve có histogram của kênh đang chọn mờ phía sau lưới (RGB = xám độ sáng, opacity 0.22), giống hệt iPhone. 30/9 — Transform: thao tác trực tiếp trên ảnh, panel chỉ để chỉnh chính xác. Khung cắt trắng 1,5pt có bóng mờ, góc chữ L 3pt (cạnh 20) + vạch giữa cạnh kiểu Photos: kéo góc/cạnh = cắt, kéo bên trong = dời ảnh, lưới 1/3 khi kéo. Thước vạch dưới đáy vùng ảnh (nền tối 44pt, vạch giữa + số độ): vuốt ngang xoay ±45°, hít ở 0 kèm rung, chạm số để về 0; khi xoay lưới 1/3 đổi thành lưới mịn 8×8 và ảnh tự phóng cho không lộ góc. Xoay hai ngón trên ảnh cũng xoay (cùng giá trị). Rotate 90° và Flip là hai nút kính 34 ở góc trên-trái vùng ảnh, ngoài khung cắt. Panel giữ Aspect, Upright và slider Geometry để chỉnh chính xác. Code chưa đổi. 30/9 (sửa): thước trên ảnh = góc xoay, không còn chip Straighten · Vertical · Horizontal; phối cảnh dọc/ngang ở panel (Upright, slider Geometry); slider Angle trong panel bỏ vì trùng thước. 1/10 (theo code): Save Edit bỏ công tắc Include Metadata — phần SAVE COPY có menu Metadata (All Metadata · No Location · No Metadata, mặc định theo Settings) + Save Copy; Save Changes luôn giữ ngày, vị trí và metadata. Cặp RAW + JPEG hỏi “Edit which version?” trước khi mở editor (Edit RAW mờ khi iOS chưa đọc được RAW). RAW iOS chưa đọc được: alert “Can't Edit This RAW” (OK; Skip khi sửa nhiều ảnh; thêm Share Original với DNG).",
       "w": 380,
       "x": 0,
-      "y": 4476
+      "y": 6776
     },
     "editor_row_cover": {
       "kind": "title1",
@@ -1683,7 +1956,7 @@
       "text": "iPhone Duo gập · màn ngoài 466 × 678 — công cụ, Save và ✕ / ✓ trong dải 84pt — đề xuất, chưa có trong code",
       "w": 240,
       "x": 460,
-      "y": 5547
+      "y": 7847
     },
     "editor_row_duol": {
       "kind": "title1",
@@ -1691,7 +1964,7 @@
       "text": "iPhone Duo mở ra · màn trong ngang 951 × 669 — cột 260, công cụ ở chân cột — đề xuất, chưa có trong code",
       "w": 240,
       "x": 460,
-      "y": 3087
+      "y": 5387
     },
     "editor_row_duop": {
       "kind": "title1",
@@ -1699,7 +1972,7 @@
       "text": "iPhone Duo mở ra · màn trong dọc 669 × 951 — panel dưới 400, công cụ hàng cuối — đề xuất, chưa có trong code — chỉ editor xoay sang dọc trên Duo trong (2026-10-01)",
       "w": 240,
       "x": 460,
-      "y": 4176
+      "y": 6476
     },
     "sec_app": {
       "kind": "title1",
@@ -1717,7 +1990,7 @@
       "text": "Sửa ảnh",
       "w": 240,
       "x": 0,
-      "y": 2787
+      "y": 5087
     },
     "sec_video": {
       "kind": "title1",
@@ -1726,7 +1999,7 @@
       "text": "Video Studio",
       "w": 240,
       "x": 0,
-      "y": 7547
+      "y": 9847
     },
     "video_r_duo_in": {
       "kind": "title1",
@@ -1734,7 +2007,7 @@
       "text": "iPhone Duo mở — màn trong · 951 × 669 — thanh dưới = thêm vào timeline; cả video = Look và Video Settings; chọn item: đáy = ✕ / tên / ✓; Media = thư viện trong panel, kéo vào timeline",
       "w": 240,
       "x": 0,
-      "y": 7847
+      "y": 10147
     },
     "video_r_duo_in_n": {
       "fill": "orange",
@@ -1743,7 +2016,7 @@
       "text": "Thanh dưới = thêm vào timeline (Media · Text · Sticker · Music · Look); cả video = Look và Video Settings. Chọn item: đáy = ✕ / tên / ✓ như editor ảnh; lệnh của item là hàng đầu panel. Media = thư viện ngay trong panel, kéo vào timeline; tab In Video + dấu ✓ (hoặc “×2”) cho ảnh/video đang dùng (chạm = chèn ở playhead, Select → Add). Kéo bắt đầu từ lưới trong UIScrollView nên phải đi qua UIKit pan — cử chỉ SwiftUI chết trong UIScrollView (bẫy đã biết). Duo màn trong: chiều cao là thứ thiếu. 385 (khung) + 40 (transport) + 188 (timeline) + 56 (hàng đáy) = 669. Khung bị giới hạn theo chiều cao nên 264 bên phải là miễn phí → inspector ở đó. Công cụ thêm ở hàng đáy; khi chọn item góc phải hàng đáy thành ✕ · tên · ✓, lệnh của item là hàng đầu cột phải, cách góc bo 40. Cuối hàng: 9 màn đề xuất — kéo đổi thứ tự, Cut to Beat, tự hạ nhạc, phụ đề, look ảnh, trim từng khung bằng ngón, phím tắt, trước/sau 2×330×186, preset xuất. Nút “16:9 · 1080p · 30 fps ▾” trên băng mở Video Settings trước khi xuất (màn cuối hàng).\n\nTHEO SPEC 3/10: clip video không có Duration (thời lượng nằm ở dòng phụ “6.2s · video”); ảnh và khung freeze giữ Duration 0.5–10. Không có Master — âm gốc cả project là “Video sound” đầu panel Music; Quick Adjust = Speed · Duration (chỉ ảnh) · Video sound. Tên “Video Settings” ở mọi nơi; MB theo ~10 Mbps ở 1080p30 (24 s ≈ ~30 MB). Export không còn hàng Quality: dòng tóm tắt “0:24 · 16:9 · 30 fps · ~30 MB” mở Video Settings; LUT mất → “1 look is missing its LUT and exports without it.” ngay trên nút xuất. Media: Recents · Albums · In Video · 6 · Select · 🔍, ô lưới vuông, “×2” thay ✓ khi dùng ở 2 chỗ, “Manage Access…”. Clip đang chọn có tay nắm mép 12pt #57BFD1; vạch phụ đề / voice trên dải tổng quan #5E9CFF (cyan chỉ ở khối đang chọn). Trước/sau trên iPhone, Duo: bật = nền trắng glyph đen. Hàng tab Media cuộn ngang, Select · 🔍 ở cuối, mép phải mờ 24pt. Nút so sánh giữ ≥ 0.3 s vẫn là xem bản gốc. Export: chạm lần một mở cột Export Video, chạm lần hai đúng chỗ đó (829, 622) mới xuất. THEO PLAN 3/10: Sẵn sàng xuất = các board F8_* (dòng LUT “1 look is missing its LUT and exports without it.” ngay trên nút xuất); IL5_Export · IP_Export · DI6_Export · DC_Export = Đang xuất (preset mờ, “Exporting… 62%”, Cancel Export ở chỗ nút xuất, ✕ ẩn); P7_Export giữ. Clip gọi theo số trên timeline (“Clip 2”, “Photo 4”), không tên địa điểm. Back không hỏi “Discard this video?” — nháp tự lưu (FS-12.18). Timeline: cột badge 100 = lề 6 · badge 26 · 4 · Lock 28 · 4 · Mute 28 · 4 (lane chữ chỉ Lock), vùng chạm 32 × cao lane; phần lane hẹp đi 36pt.",
       "w": 460,
       "x": 18598,
-      "y": 8147
+      "y": 10447
     },
     "video_r_duo_out": {
       "kind": "title1",
@@ -1751,7 +2024,7 @@
       "text": "iPhone Duo gập — màn ngoài · 466 × 678 (382 dùng được + rail 84) — thanh dưới = thêm vào timeline; cả video = Look và Video Settings; chọn item: đáy = ✕ / tên / ✓; Media = thư viện trong panel, kéo vào timeline",
       "w": 240,
       "x": 0,
-      "y": 8936
+      "y": 11236
     },
     "video_r_duo_out_n": {
       "fill": "orange",
@@ -1760,7 +2033,7 @@
       "text": "Thanh dưới = thêm vào timeline (Media · Text · Sticker · Music · Look); cả video = Look và Video Settings. Chọn item: đáy = ✕ / tên / ✓ như editor ảnh; lệnh của item là hàng đầu panel. Media = thư viện ngay trong panel, kéo vào timeline; tab In Video + dấu ✓ (hoặc “×2”) cho ảnh/video đang dùng (chạm = chèn ở playhead, Select → Add). Kéo bắt đầu từ lưới trong UIScrollView nên phải đi qua UIKit pan — cử chỉ SwiftUI chết trong UIScrollView (bẫy đã biết). Duo màn ngoài: nội dung 382 × 678, CÔNG CỤ ĐƯA VÀO DẢI SAFE AREA 84 bên phải (x 382–466) — đã đo trên simulator: chạm trong dải 84pt tới app khi ẩn status bar (camera y 29–66). Dải: nắp gạch y 0–72 (lỗ camera x 400–437 · y 29–66 và góc bo trên, không đặt nút); 5 ô 64×56 (icon + chữ 9.5) từ y 80 tới 360, không cuộn — cột ngắn đi 140 so với 10 công cụ cũ; Video Settings (hình tỉ lệ) tròn 44 ở y 504–548, Export tròn cam 44 ở y 556–600, trên chỗ góc bo dưới bắt đầu (~612); 34 dưới cùng là inset home. Chọn thứ gì: 5 công cụ mờ đi, ✕ ở 504–548 và ✓ ở 556–600 (Export ẩn); lệnh của item là hàng đầu panel. Nội dung lấy lại 136 của hàng công cụ + hàng Export: khung 382×215 · transport 40 · timeline 208 → 344; panel khi chọn 334–644 (272 → 304). Cuối hàng: 6 màn đề xuất gọn và Video Settings.\n\nTHEO SPEC 3/10: clip video không có Duration (thời lượng nằm ở dòng phụ “6.2s · video”); ảnh và khung freeze giữ Duration 0.5–10. Không có Master — âm gốc cả project là “Video sound” đầu panel Music; Quick Adjust = Speed · Duration (chỉ ảnh) · Video sound. Tên “Video Settings” ở mọi nơi; MB theo ~10 Mbps ở 1080p30 (24 s ≈ ~30 MB). Export không còn hàng Quality: dòng tóm tắt “0:24 · 16:9 · 30 fps · ~30 MB” mở Video Settings; LUT mất → “1 look is missing its LUT and exports without it.” ngay trên nút xuất. Media: Recents · Albums · In Video · 6 · Select · 🔍, ô lưới vuông, “×2” thay ✓ khi dùng ở 2 chỗ, “Manage Access…”. Clip đang chọn có tay nắm mép 12pt #57BFD1; vạch phụ đề / voice trên dải tổng quan #5E9CFF (cyan chỉ ở khối đang chọn). Trước/sau trên iPhone, Duo: bật = nền trắng glyph đen. Hàng trên chỉ Back · Undo · Redo (không ⋯ — ⋯ của transport đã đủ; không Show original). Thu panel chọn còn 78 ở 566–644, timeline 300–566 có tay nắm (DC2_Collapsed). Thêm DC_Export (chạm lần hai vào Export y 556), F7_DC_BeforeAfter (so sánh ở header panel Look), F6_DC_PreciseTrim (panel ẩn, pill 248×48 ở (67, 582), ✕ 504 / ✓ 556, Export ẩn), F6_DC_Keyboard (danh sách trong 334–644). THEO PLAN 3/10: Sẵn sàng xuất = các board F8_* (dòng LUT “1 look is missing its LUT and exports without it.” ngay trên nút xuất); IL5_Export · IP_Export · DI6_Export · DC_Export = Đang xuất (preset mờ, “Exporting… 62%”, Cancel Export ở chỗ nút xuất, ✕ ẩn); P7_Export giữ. Clip gọi theo số trên timeline (“Clip 2”, “Photo 4”), không tên địa điểm. Back không hỏi “Discard this video?” — nháp tự lưu (FS-12.18).",
       "w": 460,
       "x": 9868,
-      "y": 9236
+      "y": 11536
     }
   },
   "order": [
@@ -1985,12 +2258,51 @@
     "DI_SettingsAI.dc.html",
     "DI_SettingsAIProvider.dc.html",
     "DI_PlexSignIn.dc.html",
+    "DI_MoviesHome.dc.html",
+    "DI_Music.dc.html",
+    "DI_MusicStats.dc.html",
+    "DI_SourcesBackup.dc.html",
     "DC_BurstFrames.dc.html",
     "DC_Movies.dc.html",
     "DC_MovieDetail.dc.html",
     "DC_MoviePlayer.dc.html",
     "DC_MovieTracks.dc.html",
-    "DC_SettingsAI.dc.html"
+    "DC_SettingsAI.dc.html",
+    "DC_MoviesHome.dc.html",
+    "DC_Music.dc.html",
+    "DC_MusicStats.dc.html",
+    "DC_SourcesBackup.dc.html",
+    "DI_NowPlaying.dc.html",
+    "DI_Lyrics.dc.html",
+    "DI_SleepTimer.dc.html",
+    "DI_MusicAlbum.dc.html",
+    "DI_MusicArtist.dc.html",
+    "DI_MusicPlaylist.dc.html",
+    "DI_MoviesReview.dc.html",
+    "DI_WatchHistory.dc.html",
+    "DI_Subtitles.dc.html",
+    "DI_TVShow.dc.html",
+    "DI_Convert.dc.html",
+    "DI_ExtractAudio.dc.html",
+    "DI_SettingsPlayback.dc.html",
+    "DI_KeepPhotos.dc.html",
+    "DI_Kept.dc.html",
+    "DC_NowPlaying.dc.html",
+    "DC_UpNext.dc.html",
+    "DC_Lyrics.dc.html",
+    "DC_SleepTimer.dc.html",
+    "DC_MusicAlbum.dc.html",
+    "DC_MusicArtist.dc.html",
+    "DC_MusicPlaylist.dc.html",
+    "DC_MoviesReview.dc.html",
+    "DC_WatchHistory.dc.html",
+    "DC_Subtitles.dc.html",
+    "DC_TVShow.dc.html",
+    "DC_Convert.dc.html",
+    "DC_ExtractAudio.dc.html",
+    "DC_SettingsPlayback.dc.html",
+    "DC_KeepPhotos.dc.html",
+    "DC_Kept.dc.html"
   ],
   "pages": [],
   "title": "ShotDex · iPhone Duo"

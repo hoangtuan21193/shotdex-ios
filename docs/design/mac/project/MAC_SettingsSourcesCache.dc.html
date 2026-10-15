@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<title>Mac · Settings · Sources · Cache</title>
+<title>Mac · Settings · Sources &amp; Backup · Cache</title>
 <script src="./support.js"></script>
 </head>
 <body>
@@ -20,12 +20,12 @@ input{font-family:inherit}
 <div style="position:absolute;left:16px;top:16px;display:flex;gap:8px"><div style="width:12px;height:12px;border-radius:6px;background:#FF5F57;box-shadow:inset 0 0 0 0.5px rgba(0,0,0,0.2)"></div><div aria-hidden="true" style="width:12px;height:12px;border-radius:6px;background:{{S.lightOff}};box-shadow:inset 0 0 0 0.5px rgba(0,0,0,0.12)"></div><div aria-hidden="true" style="width:12px;height:12px;border-radius:6px;background:{{S.lightOff}};box-shadow:inset 0 0 0 0.5px rgba(0,0,0,0.12)"></div></div>
 <div style="position:absolute;left:0;right:0;top:12px;text-align:center;font-size:13px;font-weight:600;line-height:20px;color:{{t.label}}">{{paneTitle}}</div>
 <div role="tablist" aria-label="Settings panes" style="position:absolute;left:0;right:0;top:34px;display:flex;justify-content:center;gap:4px">
-<sc-for list="{{panes}}" as="p" hint-placeholder-count="6"><button role="tab" aria-selected="{{p.sel}}" aria-label="{{p.name}}" style="width:76px;height:44px;border-radius:8px;border:none;background:{{p.bg}};display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;color:{{p.fg}}"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="{{p.d}}"></path></svg><span style="font-size:11px;line-height:13px;color:{{p.lc}}">{{p.name}}</span></button></sc-for>
+<sc-for list="{{panes}}" as="p" hint-placeholder-count="6"><button role="tab" aria-selected="{{p.sel}}" aria-label="{{p.name}}" style="min-width:76px;padding:0 8px;box-sizing:border-box;white-space:nowrap;height:44px;border-radius:8px;border:none;background:{{p.bg}};display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;color:{{p.fg}}"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="{{p.d}}"></path></svg><span style="font-size:11px;line-height:13px;color:{{p.lc}}">{{p.name}}</span></button></sc-for>
 </div>
 </div>
-<!-- PANE scrolled to the bottom: Previews (one capped cache for every source) and Index; the top of the pane is MAC_SettingsSources -->
+<!-- PANE scrolled to Previews (one capped cache for every source) and Index; the top of the pane is MAC_SettingsSources -->
 <div style="position:absolute;left:0;right:0;top:85px;bottom:0;overflow:hidden">
-<div data-pane-content style="margin-top:-670px;padding:18px 24px;box-sizing:border-box;display:flex;flex-direction:column;gap:16px">
+<div data-pane-content style="margin-top:-850px;padding:18px 24px;box-sizing:border-box;display:flex;flex-direction:column;gap:16px">
 <sc-for list="{{folders}}" as="s" hint-placeholder-count="3">
 <div style="display:flex;flex-direction:column;gap:6px">
 <sc-if value="{{s.title}}" hint-placeholder-val="{{true}}"><div style="display:flex;align-items:baseline;justify-content:space-between;padding:0 4px"><span style="font-size:13px;font-weight:600;line-height:16px;color:{{t.label}}">{{s.title}}</span><sc-if value="{{s.aside}}" hint-placeholder-val="{{false}}"><span style="font-size:11px;color:{{t.label2}};font-variant-numeric:tabular-nums">{{s.aside}}</span></sc-if></div></sc-if>
@@ -107,7 +107,7 @@ input{font-family:inherit}
 </sc-for>
 </div>
 </div>
-<div aria-hidden="true" style="position:absolute;right:3px;top:352px;width:7px;height:282px;border-radius:4px;background:{{S.scroller}}"></div>
+<div aria-hidden="true" style="position:absolute;right:3px;top:300px;width:7px;height:236px;border-radius:4px;background:{{S.scroller}}"></div>
 </div>
 </x-dc>
 <script type="text/x-dc" data-dc-script data-props='{"dark":{"editor":"boolean","default":false},"$preview":{"width":720,"height":640}}'>
@@ -187,6 +187,7 @@ function tiles(n, seed, o){
   }
   return out;
 }
+// Legacy (pre media hub, 2026-10-15): no longer drawn — the sidebar markup reads sb from hubSidebar(); kept because some renderVals still call it.
 // Canonical sidebar (consistency §1). o.sel = selected row name; o.offline unplugs T7; o.newFolder adds Client Shoots 2026 indexing.
 function sidebar(t, o){
   o=o||{};
@@ -302,7 +303,7 @@ function ui(dark){
       { rows: (s.rows || []).map((r, i) => Object.assign(r, { sepTop: i > 0 })) }));
   return { t, S, seg, btn, chk, sw, status, row, sections };
 }
-const PANES = [['General', X.gear], ['AI', 'M11 3.5l1.6 4.4 4.4 1.6-4.4 1.6L11 15.5l-1.6-4.4L5 9.5l4.4-1.6z M18 14l.8 2.2 2.2.8-2.2.8L18 20l-.8-2.2-2.2-.8 2.2-.8z'], ['Sources', I.library], ['Editing', X.sliders], ['Servers', I.server], ['Cameras', X.camera]];
+const PANES = [['General', X.gear], ['AI', 'M11 3.5l1.6 4.4 4.4 1.6-4.4 1.6L11 15.5l-1.6-4.4L5 9.5l4.4-1.6z M18 14l.8 2.2 2.2.8-2.2.8L18 20l-.8-2.2-2.2-.8 2.2-.8z'], ['Sources & Backup', I.library], ['Editing', X.sliders], ['Servers', I.server], ['Cameras', X.camera]];
 function panes(t, active){
   return PANES.map(p => ({ name:p[0], d:p[1], sel: p[0]===active ? 'true' : 'false',
     bg: p[0]===active ? t.rowSel : 'transparent', fg: p[0]===active ? t.accent : t.label2, lc: p[0]===active ? t.label : t.label2 }));
@@ -318,7 +319,7 @@ class Component extends DCLogic {
     const ri = (n, dis) => btn('Re-index', 'bordered', {aria:'Re-index ' + n, disabled:!!dis});
     const rm = (n) => btn('Remove…', 'bordered', {aria:'Remove ' + n});
     const folders = sections([
-      { title:'Photo Sources', aside:'55,231 items', rows:[
+      { title:'Sources', aside:'55,231 photos · 204 movies · 2,840 songs', rows:[
         src({ label:'Photos Library', tag:'Photos', icon:I.library, iconBg:TILE.pink,
               sub:'System Photo Library · 23,904 items', btns:[btn('Manage Access…')] }, status('ok', 'Full Access')),
         src({ label:'2026 Japan', tag:'This Mac', icon:I.folder, iconBg:TILE.blue,
@@ -328,14 +329,21 @@ class Component extends DCLogic {
               sub:'/Volumes/T7/RAW · Samsung T7 · 26,107 items', btns:[ri('T7 RAW Archive'), rm('T7 RAW Archive')] },
               status('ok', 'Connected · indexed 2 min ago')),
         src({ label:'NAS Home', tag:'Server', icon:I.server, iconBg:TILE.indigo,
-              sub:'smb://nas-home.local/photos · 1,102 items · thumbnails cached', btns:[ri('NAS Home'), rm('NAS Home')] },
+              sub:'smb://nas-home.local · photos, movies, music · 1,102 photos', btns:[ri('NAS Home'), rm('NAS Home')] },
               status('ok', 'Connected over SMB · indexed 5 min ago')),
+        src({ label:'Plex — Living Room', tag:'Plex', icon:'M8 4l6 8-6 8 M13 4l6 8-6 8', iconBg:TILE.gray,
+              sub:'Mac Studio (Plex Media Server) · movies, music · 87 movies · 860 songs', btns:[btn('Sign Out…', 'bordered', {aria:'Sign Out of Plex — Living Room'}), rm('Plex — Living Room')] },
+              status('ok', 'Signed in · updated 4 min ago')),
         src({ label:'Client Shoots 2026', tag:'This Mac', icon:I.folder, iconBg:TILE.blue,
               sub:'~/Pictures/Client Shoots 2026 · Macintosh HD · not read yet',
               btns:[btn('Grant Access…', 'default', {aria:'Grant Access to Client Shoots 2026'}), rm('Client Shoots 2026')] },
               status('err', 'ShotDex needs permission to read this folder.')),
         row({ label:'Drop a folder here or onto the sidebar', labelColor:t.label2, h:'44px', btns:[btn('Add Folder…'), btn('Connect to Server…')] })
-      ], foot:'Folders, drives and servers are indexed in place. ShotDex never edits file contents; ratings and keywords go to .xmp sidecars.' }
+      ], foot:'Photos, movies and music stay where they are. Nothing is copied or moved. ShotDex never edits file contents; ratings and keywords go to .xmp sidecars.' },
+      { title:'Browse', rows:[
+        row({ label:'Local Network', sub:'SMB, WebDAV and SFTP shares and Plex servers this Mac can see · 3 found', h:'44px', btns:[btn('Browse…', 'bordered', {aria:'Browse Local Network'})] }),
+        row({ label:'Cloud', sub:'iCloud Drive and the cloud folders in Finder', h:'44px', btns:[btn('Browse…', 'bordered', {aria:'Browse Cloud'})] })
+      ]}
     ]);
     const behaviour = sections([
       { title:'Metadata', rows:[
@@ -357,6 +365,14 @@ class Component extends DCLogic {
       ], foot:'One cache for every source: folders, drives and servers. It lives in Application Support and is left out of Time Machine backups. Limit: 2, 5, 10, 25 or 50 GB.' }
     ]);
     const library = sections([
+      { title:'Backup', rows:[
+        row({ label:'Back Up to NAS Home', sub:'Photos Library and 2026 Japan · last run today 2:14 AM · 312 new photos', h:'44px', btns:[btn('Back Up Now'), btn('Options…', 'bordered', {aria:'Backup Options'})] }),
+        row(Object.assign({ label:'Back Up Automatically', sub:'Every night while this Mac is on power and NAS Home is reachable' }, sw(true), { h:'44px' }))
+      ], foot:'Music and movies are not backed up; they already live on your sources.' },
+      { title:'Kept on This Mac', rows:[
+        row({ label:'41.2 GB on Macintosh HD', sub:'3 albums · 6 movies · 1 playlist · 48 GB free', h:'44px', btns:[btn('Show Kept Items', 'bordered', {aria:'Show Kept Items'})] }),
+        row({ label:'When Space Runs Low', popup:'Ask Before Removing', popupW:'230px' })
+      ], foot:'Keep on Mac copies a photo, album, movie, clip or playlist here so it plays and opens without its source.' },
       { title:'Index', rows:[
         row({ label:'55,231 items · 54,027 photos · 1,204 videos', sub:'412.6 GB · up to date · indexed 2 min ago', h:'44px', btns:[btn('Re-index Library')] }),
         row({ label:'Camera Database', sub:'6 cameras need a sensor format', h:'44px', btns:[btn('Review…', 'bordered', {aria:'Review Unknown Cameras'})] }),
@@ -364,7 +380,7 @@ class Component extends DCLogic {
       ]}
     ]);
 
-    return { t, S, panes: panes(t, 'Sources'), paneTitle: 'Sources', folders, behaviour, library };
+    return { t, S, panes: panes(t, 'Sources & Backup'), paneTitle: 'Sources & Backup', folders, behaviour, library };
   }
 }
 </script>
