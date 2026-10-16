@@ -6,10 +6,6 @@ Máy: iPad Pro 13" iOS 26.5 (mặc định) và iOS 18.6 khi AC ghi. Thư viện
 album "Iceland 2026" 212 ảnh, smart album "Night ISO 3200+" 2,411 ảnh; ảnh test không có mặt người.
 Ảnh chụp bằng `Tools/sim-shot` (bắt buộc sau bước xoay). iPhone: iPhone 17 iOS 26.5 khi AC ghi.
 
-**2026-10-16:** §2 sidebar đã viết lại theo [FS-24](../FS-24-media-hub/README.md) (A4). Nhóm và hàng sidebar trong AC-1, AC-2,
-AC-29 và bộ tab của AC-20 đọc theo sidebar theo tab của FS-24 (Photos · Movies · Music; tab bar compact Photos · Movies ·
-Music + Search); phần số đo (320, 44, toolbar) giữ nguyên. AC theo nhóm mới: FS-24 AC-93, AC-94, AC-133.
-
 ## 1. Khung, sidebar, toolbar
 
 | # | Cho | Khi | Thì | Chứng minh bằng |

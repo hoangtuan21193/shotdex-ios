@@ -242,7 +242,7 @@ function ui(dark){
       { rows: (s.rows || []).map((r, i) => Object.assign(r, { sepTop: i > 0 })) }));
   return { t, S, seg, btn, chk, sw, status, row, sections };
 }
-const PANES = [['General', X.gear], ['Sources & Backup', I.library], ['Editing', X.sliders], ['Servers', I.server], ['Cameras', X.camera]];
+const PANES = [['General', X.gear], ['Sources', I.library], ['Editing', X.sliders], ['Servers', I.server], ['Cameras', X.camera]];
 function panes(t, active){
   return PANES.map(p => ({ name:p[0], d:p[1], sel: p[0]===active ? 'true' : 'false',
     bg: p[0]===active ? t.rowSel : 'transparent', fg: p[0]===active ? t.accent : t.label2, lc: p[0]===active ? t.label : t.label2 }));

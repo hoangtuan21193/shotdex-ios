@@ -47,11 +47,6 @@ Mật độ lưới **không phải công tắc** — chỉ có một dòng chú
   English): danh sách ngôn ngữ có thứ tự cho phim mở lần đầu ([FS-23.02](../FS-23-offline-movies/02-player.md) §3b,
   [FS-23.03](../FS-23-offline-movies/03-subtitles.md) §2). Màn con: phần **In Order** (kéo đổi thứ tự, vuốt xoá) trên
   phần **Add**; Audio có thêm hàng `Original`.
-- **Movie Audio in Background** (2026-10-16, [FS-24.06 §6](../FS-24-media-hub/06-music-player.md) D2), **mặc định bật**: bật thì
-  khoá máy/chuyển app khi phim đang phát (không PiP) phim chạy tiếp chỉ tiếng; tắt thì phim dừng như FS-23.02 §4. PiP không đổi.
-  Mac không có hàng này.
-- **Clear Listening History…** (2026-10-16, [FS-24.07 §3](../FS-24-media-hub/07-music-statistics.md) D11): hàng phá huỷ, hỏi lại
-  bằng alert trước khi xoá lượt nghe; mờ khi chưa có lượt nghe nào. Mac: tab General (chưa có trên board `MAC_*`).
 
 ## 4. Sharing
 

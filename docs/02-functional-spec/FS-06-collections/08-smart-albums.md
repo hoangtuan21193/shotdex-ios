@@ -1,7 +1,7 @@
 # FS-06.08 — Smart Album
 
 `FS-06.08` · `Core/Models/SmartAlbumQuery.swift` · `Data/Database/SmartAlbumStore.swift`
-· `Features/Albums/SmartAlbumEditorSheet.swift` · bảng `smart_albums` · cập nhật 2026-10-16 (trường Source, Kept — FS-24 D8)
+· `Features/Albums/SmartAlbumEditorSheet.swift` · bảng `smart_albums` · cập nhật 2026-10-02
 
 **Một câu:** một bộ lọc có tên, lưu lại được — **không phải** smart album của hệ thống, vì hệ thống không
 cho app tạo smart album có điều kiện riêng.
@@ -31,8 +31,6 @@ trường, phép so sánh và giá trị. Loại trường quyết định phép
 | **ngày** | ngày chụp | **đúng ngày** (mặc định) · **trong tháng** · trong N ngày qua · trước · sau · trong khoảng · **is missing** | "đúng ngày" khớp **trọn ngày theo lịch địa phương** nên đúng cả ngày đổi giờ; "trong tháng" khớp trọn một tháng + năm theo lịch địa phương, ô nhập chọn tháng và năm; "N ngày qua" so với thời điểm hiện tại nên luôn sống |
 | **favorite** | favorite | — | một dải chọn Favorite / Not favorite |
 | **vị trí** | vị trí | — | dải chọn **Has Location / No Location**, theo toạ độ, không theo tên địa điểm (S5) |
-| **nguồn** (2026-10-16) | Source | là · không là | giá trị là một nguồn có ảnh (Photos, thư mục, ổ, server — [FS-19](../FS-19-photo-sources/README.md)); khớp ảnh **có bản sao** ở nguồn đó, cùng truy vấn với Source › của menu Filter ([FS-24.03 §2](../FS-24-media-hub/03-photos-tab.md)). Lưu **id bền** của nguồn, không lưu tên: đổi tên không hỏng album; nguồn đã gỡ → chip `NAS Home (removed)`, khớp 0 ảnh, album vẫn mở |
-| **đã Keep** (2026-10-16) | Kept on iPhone (`on iPad`, `on Mac`) | — | dải chọn **Kept / Not Kept**, theo bảng thứ đã Keep ([FS-24.09](../FS-24-media-hub/09-keep-on-device.md)); tính sống như mọi trường — Keep thêm / Remove from iPhone thì album đổi ở lần mở kế |
 | **sao** | sao | là · ít nhất · nhiều nhất | ô chọn 0–5, 0 = *Unrated*; "ít nhất" chỉ nhận 1–5 (ít nhất 0 là cả thư viện). Sao hiện hành theo [FS-01.12 §4](../FS-01-library/12-rating-and-flags.md) |
 | **keyword** (iOS 27) | keyword | có · không có · có keyword bất kỳ · không có keyword nào | hai phép sau không cần giá trị; ô nhập gợi ý keyword của thư viện, nhiều ảnh nhất trước; khớp không phân biệt hoa thường và dấu, trên gương keyword ([FS-02.07 §7](../FS-02-photo-detail/07-caption-and-keywords.md)) |
 | **caption** (iOS 27) | caption | chứa · không chứa | trên gương caption, gấp hoa thường + dấu như cột địa điểm |
@@ -47,8 +45,7 @@ tập phép** ([FS-01.05b §2](../FS-01-library/05b-gear-menu-missing-data-and-s
 - **Địa điểm *is missing*** khớp ảnh chưa có địa chỉ, **gồm cả ảnh có toạ độ mà lượt tra địa chỉ chưa tới**. Dòng
   điều kiện ghi chú thích thấy được *"Includes photos not yet looked up."* (K3).
 - Không có *is missing*: tên file, định dạng, loại media, favorite, vị trí (đã có No Location), khổ cảm biến (đã
-  có *Unknown*), sao và cờ (*Unrated* / *Unflagged* là giá trị), nguồn (mọi ảnh có ít nhất một nguồn), đã Keep (*Not Kept*
-  là giá trị).
+  có *Unknown*), sao và cờ (*Unrated* / *Unflagged* là giá trị).
 - Danh sách phép dựng từ **loại trường** cộng một danh sách loại trừ; kiểm bằng cách lặp qua mọi trường.
 - Tiêu cự: *is missing* theo công tắc đang chọn — *tương đương* rỗng khi máy chưa biết cảm biến dù có tiêu cự thật.
 - Ảnh vừa được Adjust Date / Adjust Location rời album *is missing* / *No Location* ngay lần mở kế, vì album tính sống.
@@ -130,7 +127,7 @@ chuyển sang điều kiện (chế độ khớp tất cả), để album lưu t
 
 Phần cũ (§1, §2 trừ *is missing* / vị trí, §4–§5) **chưa có AC** — xem [README — Việc còn nợ](../../README.md#6-việc-còn-nợ).
 Điều kiện *trong tháng*: [FS-07.03](../FS-07-statistics/03-acceptance-criteria.md) AC-18. Điều kiện *sao* và *cờ*:
-[FS-01.12](../FS-01-library/12-rating-and-flags.md) AC-8. Trường *nguồn* và *đã Keep*: [FS-24.14d](../FS-24-media-hub/14d-acceptance-criteria.md) AC-118…121.
+[FS-01.12](../FS-01-library/12-rating-and-flags.md) AC-8.
 
 | # | Cho | Khi | Thì | Chứng minh bằng |
 |---|---|---|---|---|
@@ -139,7 +136,7 @@ Phần cũ (§1, §2 trừ *is missing* / vị trí, §4–§5) **chưa có AC**
 | AC-3 | (S4) như AC-2 | gõ 3 ký tự vào ô giá trị trong 200ms | đúng 1 câu đếm chạy, bắt đầu ≥ 300ms sau phím cuối; dòng đếm đổi một lần | ⚠️ chưa có |
 | AC-4 | (S4) Duo inner 951×669, sheet có tên + 3 điều kiện | mở sheet | tiêu đề + dòng đếm, tên, hàng media/khớp, 3 điều kiện và Add Condition thấy trọn không cần cuộn | ⚠️ chưa có — `DI_SmartAlbumEditor` |
 | AC-5 | (S5) 100 ảnh, 30 không có ống kính | thêm *Lens is missing*, Save tên "No Lens" | dòng đếm *Matches 30 photos*; album mở ra 30 ảnh | ⚠️ chưa có — đề xuất `SmartAlbumMissingRuleTests` |
-| AC-6 | (S5) mọi trường của bộ dựng | mở menu phép của từng trường | hãng máy, thân máy, ống kính, ISO, khẩu, tốc độ, tiêu cự, ngày chụp, khung giờ, địa điểm có *is missing* là mục cuối; tên file, định dạng, loại media, favorite, vị trí, khổ cảm biến, sao, cờ, nguồn, đã Keep (FS-24 D8) không có | ⚠️ chưa có — test lặp qua mọi trường |
+| AC-6 | (S5) mọi trường của bộ dựng | mở menu phép của từng trường | hãng máy, thân máy, ống kính, ISO, khẩu, tốc độ, tiêu cự, ngày chụp, khung giờ, địa điểm có *is missing* là mục cuối; tên file, định dạng, loại media, favorite, vị trí, khổ cảm biến, sao, cờ không có | ⚠️ chưa có — test lặp qua mọi trường |
 | AC-7 | (S5) 100 ảnh, 40 không toạ độ | chọn vị trí *No Location*, rồi *Has Location* | lần lượt *Matches 40 photos*, *Matches 60 photos* | ⚠️ chưa có |
 | AC-8 | (S5) album *No Location* 40 ảnh | Adjust Location 5 ảnh của nó trong viewer, đóng viewer | album còn 35 ảnh, tile ở Collections ghi 35 | ⚠️ chưa có |
 | AC-9 | (S5) khớp bất kỳ: *Lens is missing* (30 ảnh) hoặc *ISO is missing* (20 ảnh, 10 trùng) | xem dòng đếm | *Matches 40 photos* | ⚠️ chưa có |

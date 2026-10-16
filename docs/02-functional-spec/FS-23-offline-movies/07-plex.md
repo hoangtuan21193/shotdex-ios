@@ -31,9 +31,9 @@ Quyết định: [planboard movies-library](../../../.planboard/movies-library/D
 
 ## 3. Tải về
 
-- Menu phim › Keep on iPhone tải **bản gốc**; trước khi tải hiện cỡ (`18.4 GB`) trong menu; thiếu chỗ → như
+- Menu phim › Download to iPhone tải **bản gốc**; trước khi tải hiện cỡ (`18.4 GB`) trong menu; thiếu chỗ → như
   01 §6. Chọn chất lượng nhỏ hơn: không có trong bản này (cần Plex Pass và máy chủ chuyển mã).
-- Phim có nhiều bản: Keep on iPhone mở danh sách các bản, mỗi dòng độ phân giải + cỡ (`4K · 54.3 GB`,
+- Phim có nhiều bản: Download to iPhone mở danh sách các bản, mỗi dòng độ phân giải + cỡ (`4K · 54.3 GB`,
   `1080p · 8.1 GB`), nét nhất ở trên; phim một bản thì như trên (người dùng chốt 14/10).
 - Tải kèm: poster, ảnh nền, năm, mô tả, thể loại, thời lượng, phụ đề rời — offline vẫn đủ trên Grid và trong menu.
 
@@ -41,7 +41,7 @@ Quyết định: [planboard movies-library](../../../.planboard/movies-library/D
 
 - Chỗ đang xem và dấu đã xem đồng bộ **hai chiều** khi tới được máy chủ: xem dở trên TV mở iPhone xem tiếp, và ngược lại.
 - Xem offline: ghi lại trên máy, gửi lên khi tới lại được máy chủ; trùng thì lấy lần xem mới nhất.
-- Phim bị xoá trên Plex: bản đã tải ở lại, nhãn `Removed from Plex`, Remove from iPhone vẫn dùng được (chữ theo FS-24.09, D6).
+- Phim bị xoá trên Plex: bản đã tải ở lại, nhãn `Removed from Plex`, Remove Download vẫn dùng được.
 
 ## 5. Lỗi
 

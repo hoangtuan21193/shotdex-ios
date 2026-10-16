@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>iPhone · Library Filter and View Menu</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0}
+button{font-family:inherit;padding:0;margin:0;cursor:default}
+input{font-family:inherit}
+</style>
+</helmet>
+<div style="width: 402px; height: 874px; position: relative; overflow: hidden; background: {{t.bg}}; color: {{t.label}}; font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', system-ui, sans-serif">
+<div style="position:absolute;left:0;width:402px;bottom:152px;display:grid;grid-template-columns:repeat(3, minmax(0, 1fr));gap:2px">
+<sc-for list="{{tiles}}" as="p" hint-placeholder-count="12"><div style="position:relative;aspect-ratio:1/1;overflow:hidden;background:{{t.fill2}}">
+<div style="position:absolute;inset:0;background:{{p.bg}};opacity:{{p.op}}"></div>
+<div style="position:absolute;left:4px;top:4px;height:16px;padding:0 5px;border-radius:4px;background:rgba(0,0,0,0.58);color:#FFFFFF;font-size:9px;font-weight:700;line-height:16px">{{p.ft}}</div>
+<sc-if value="{{p.isVideo}}" hint-placeholder-val="{{false}}"><div style="position:absolute;right:4px;top:4px;height:16px;padding:0 5px;border-radius:8px;background:rgba(0,0,0,0.45);color:#FFFFFF;font-size:10px;font-weight:600;line-height:16px;font-variant-numeric:tabular-nums">{{p.dur}}</div></sc-if>
+<sc-if value="{{p.hasMeta}}" hint-placeholder-val="{{true}}"><div style="position:absolute;left:0;right:0;bottom:0;height:24px;background:linear-gradient(180deg,rgba(0,0,0,0) 0%,rgba(0,0,0,0.55) 100%)"></div><div style="position:absolute;left:6px;right:6px;bottom:4px;color:#FFFFFF;font-size:10px;font-weight:500;line-height:13px;white-space:nowrap;overflow:hidden;font-variant-numeric:tabular-nums">{{p.meta}}</div></sc-if>
+<sc-if value="{{p.hasStatus}}" hint-placeholder-val="{{false}}"><div style="position:absolute;left:5px;bottom:{{p.statusBottom}};display:flex;gap:3px;color:#FFFFFF">
+<sc-if value="{{p.fav}}" hint-placeholder-val="{{false}}"><svg width="11" height="11" viewBox="0 0 24 24" style="display:block"><path d="M12 21s-8.5-5.1-8.5-11.4A4.8 4.8 0 0 1 12 6.4a4.8 4.8 0 0 1 8.5 3.2C20.5 15.9 12 21 12 21z" fill="#FFFFFF"></path></svg></sc-if>
+<sc-if value="{{p.live}}" hint-placeholder-val="{{false}}"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2" style="display:block"><circle cx="12" cy="12" r="3"></circle><circle cx="12" cy="12" r="6.5" stroke-dasharray="2 2"></circle><circle cx="12" cy="12" r="10"></circle></svg></sc-if>
+</div></sc-if>
+<sc-if value="{{p.sel}}" hint-placeholder-val="{{false}}"><div style="position:absolute;inset:0;border:3px solid {{p.acc}}"></div><svg width="22" height="22" viewBox="0 0 24 24" style="position:absolute;right:4px;bottom:4px;display:block"><circle cx="12" cy="12" r="11" fill="{{p.acc}}"></circle><path d="M7 12.4l3.3 3.3L17 9" fill="none" stroke="#FFFFFF" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"></path></svg></sc-if>
+<sc-if value="{{p.unsel}}" hint-placeholder-val="{{false}}"><svg width="22" height="22" viewBox="0 0 24 24" style="position:absolute;right:4px;bottom:4px;display:block"><circle cx="12" cy="12" r="10" fill="rgba(0,0,0,0.12)" stroke="#FFFFFF" stroke-width="1.8"></circle></svg></sc-if>
+</div></sc-for>
+</div>
+<div style="position:absolute;left:0;width:402px;top:722px;height:48px;display:flex;align-items:center;justify-content:center;font-size:12px;color:{{t.label3}};font-variant-numeric: tabular-nums;">54,027 Photos, 1,204 Videos</div>
+<div style="position:absolute;left:0;top:0px;width:402px;height:130px;background:linear-gradient(180deg,{{edgeTop}} 0%,{{edgeClear}} 100%);pointer-events:none"></div>
+<div style="position:absolute;left:0;bottom:0px;width:402px;height:110px;background:linear-gradient(0deg,{{edgeTop}} 0%,{{edgeClear}} 100%);pointer-events:none"></div>
+<div style="position:absolute;left:20px;top:778px;width:290px;height:62px;border-radius:31px;background: {{t.glass}}; border: 1px solid {{t.glassStroke}}; box-shadow: {{t.glassShadow}}; backdrop-filter: blur(24px) saturate(1.6); -webkit-backdrop-filter: blur(24px) saturate(1.6);display:flex;align-items:center;padding:0 4px;box-sizing:border-box">
+<button aria-label="Library" style="flex:1;height:54px;border-radius:27px;border:none;background:{{t.fill}};display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;color:{{t.tint}}"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="display:block;color:{{t.tint}}"><rect x="6" y="7" width="15" height="12" rx="2"></rect><path d="M3 15V6a2 2 0 0 1 2-2h12"></path><path d="M8.5 16.5l3-3.5 2.2 2.4 1.8-1.8 2.5 2.9"></path></svg><span style="font-size:10px;font-weight:500">Library</span></button>
+<button aria-label="Collections" style="flex:1;height:54px;border-radius:27px;border:none;background:none;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;color:{{t.label}}"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="display:block;color:{{t.label}}"><rect x="4" y="9" width="16" height="11" rx="2"></rect><path d="M6.5 6h11M9 3h6"></path></svg><span style="font-size:10px;font-weight:500">Collections</span></button>
+<button aria-label="Statistics" style="flex:1;height:54px;border-radius:27px;border:none;background:none;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;color:{{t.label}}"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="display:block;color:{{t.label}}"><path d="M3 20h18M6.5 16.5v-5M11.5 16.5V6M16.5 16.5v-8"></path></svg><span style="font-size:10px;font-weight:500">Statistics</span></button>
+</div>
+<button aria-label="Search" style="position:absolute;left:320px;top:778px;width:62px;height:62px;border-radius:31px;background: {{t.glass}}; border: 1px solid {{t.glassStroke}}; box-shadow: {{t.glassShadow}}; backdrop-filter: blur(24px) saturate(1.6); -webkit-backdrop-filter: blur(24px) saturate(1.6);display:flex;align-items:center;justify-content:center"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="display:block;color:{{t.label}}"><circle cx="10.5" cy="10.5" r="6.5"></circle><path d="M15.5 15.5L20.5 20.5"></path></svg></button>
+<button aria-label="Settings" style="position:absolute;left:16px;top:62px;width:44px;height:44px;border-radius:22px;background: {{t.glass}}; border: 1px solid {{t.glassStroke}}; box-shadow: {{t.glassShadow}}; backdrop-filter: blur(24px) saturate(1.6); -webkit-backdrop-filter: blur(24px) saturate(1.6);display:flex;align-items:center;justify-content:center;color:{{t.label}}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="display:block;color:{{t.label}}"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg></button>
+<div style="position:absolute;left:68px;top:73px;width:176px;height:22px;text-align:center;font-size:17px;font-weight:600;line-height:22px;white-space:nowrap;font-variant-numeric: tabular-nums;">October 4, 2026</div>
+<button aria-label="Filter and sort" aria-expanded="true" style="position:absolute;left:252px;top:62px;width:44px;height:44px;border-radius:22px;background: {{t.pressedGlass}}; border: 1px solid {{t.glassStroke}}; box-shadow: {{t.glassShadow}}; backdrop-filter: blur(24px) saturate(1.6); -webkit-backdrop-filter: blur(24px) saturate(1.6);display:flex;align-items:center;justify-content:center;color:{{t.label}}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="display:block;color:{{t.label}}"><path d="M4 7h16M7 12h10M10 17h4"></path></svg></button>
+<button style="position:absolute;right:16px;top:62px;width:78px;height:44px;border-radius:22px;background: {{t.glass}}; border: 1px solid {{t.glassStroke}}; box-shadow: {{t.glassShadow}}; backdrop-filter: blur(24px) saturate(1.6); -webkit-backdrop-filter: blur(24px) saturate(1.6);font-size:17px;font-weight:500;color:{{t.label}};">Select</button>
+<!-- LIBRARY MENU (FS-21.01b §5, FS-21.03 §4 → FS-01.02): the Library has no ⋯ — its one menu is Filter and sort, so the two
+     commands the iPad toolbar has and the phone lacked join it in a View group at the top: Grid / List (List = the
+     sortable column table of IP_LibraryList, one row per photo) and Go to Date… (date picker, scrolls the grid there).
+     Below, unchanged (PhotoFilterMenu.swift): Sort By ▸, Aspect Ratio Grid, the Filter section, Advanced Filter….
+     Library board otherwise = Main.dc.html. -->
+<div role="menu" aria-label="Filter and sort" style="position:absolute;right:16px;top:114px;width:262px;overflow:hidden;border-radius:24px;background:{{t.menu}};border:1px solid {{t.glassStroke}};box-shadow:{{t.glassShadow}};backdrop-filter:blur(24px) saturate(1.6);-webkit-backdrop-filter:blur(24px) saturate(1.6);padding:6px 0;box-sizing:border-box">
+<sc-for list="{{menu}}" as="m" hint-placeholder-count="14"><sc-if value="{{m.sep}}" hint-placeholder-val="{{false}}"><div style="height:8px;background:{{t.fill}};opacity:0.7;margin:4px 0"></div></sc-if><sc-if value="{{m.head}}" hint-placeholder-val="{{false}}"><div style="height:28px;display:flex;align-items:flex-end;padding:0 18px 4px;box-sizing:border-box;font-size:13px;color:{{t.label2}}">{{m.l}}</div></sc-if><sc-if value="{{m.item}}" hint-placeholder-val="{{true}}"><button role="{{m.role}}" aria-checked="{{m.on}}" style="width:100%;height:44px;display:flex;align-items:center;gap:14px;padding:0 16px 0 18px;box-sizing:border-box;background:none;border:none;color:{{t.label}};font-size:17px;text-align:left;white-space:nowrap"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="display:block;flex:none"><path d="{{m.d}}"></path></svg><span style="flex:1">{{m.l}}</span><span style="font-size:15px;font-weight:600;color:{{t.label}}">{{m.check}}</span><sc-if value="{{m.sub}}" hint-placeholder-val="{{false}}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="display:block;color:{{t.label3}}"><path d="M9.5 6l6 6-6 6"></path></svg></sc-if></button></sc-if></sc-for>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"dark":{"editor":"boolean","default":false},"$preview":{"width":402,"height":874}}'>
+
+const LIGHT = { bg:'#FFFFFF', grouped:'#F2F2F7', card:'#FFFFFF', label:'#000000', label2:'#6C6C70', label3:'#8E8E93',
+  sep:'#C6C6C8', fill:'#E9E9EB', fill2:'#F2F2F7', glass:'rgba(255,255,255,0.78)', glassStroke:'rgba(0,0,0,0.08)',
+  glassShadow:'0 4px 18px rgba(0,0,0,0.12)', tint:'#C6730E', red:'#FF3B30', green:'#34C759', orange:'#FF9500',
+  accent:'#C6730E', dim:'rgba(0,0,0,0.35)', sheet:'#FFFFFF', onAccent:'#FFFFFF' };
+const DARK = { bg:'#000000', grouped:'#000000', card:'#1C1C1E', label:'#FFFFFF', label2:'#98989F', label3:'#6C6C70',
+  sep:'#38383A', fill:'#2C2C2E', fill2:'#1C1C1E', glass:'rgba(44,44,46,0.78)', glassStroke:'rgba(255,255,255,0.10)',
+  glassShadow:'0 4px 18px rgba(0,0,0,0.5)', tint:'#EB9526', red:'#FF453A', green:'#30D158', orange:'#FF9F0A',
+  accent:'#EB9526', dim:'rgba(0,0,0,0.55)', sheet:'#1C1C1E', onAccent:'#000000' };
+const SKIES=[['#5B7FA6','#E8C39E'],['#2E4A6B','#9FB8C9'],['#7A5C8E','#F2A774'],['#3D6B5A','#C9D6A3'],['#8AA9C1','#F4E1C1'],
+ ['#1F3A4D','#D98C5F'],['#4F6D7A','#DDE2C6'],['#6B4E3D','#E2B07A'],['#355C7D','#C06C84'],['#2B5876','#4E4376'],['#A3B18A','#344E41'],['#D4A373','#606C38']];
+const tile=(i)=>{const s=SKIES[i%SKIES.length];return 'linear-gradient(180deg,'+s[0]+' 0%,'+s[1]+' 58%,#2F3B2F 58%,#1E271E 100%)';};
+const META=['ISO 400 · 85mm · f/1.8','ISO 100 · 24mm · f/8','ISO 3200 · 35mm · f/1.4','ISO 200 · 70mm · f/2.8',
+ 'ISO 800 · 50mm · f/2','ISO 125 · 16mm · f/11','ISO 640 · 135mm · f/1.8','ISO 1600 · 23mm · f/2','ISO 250 · 56mm · f/1.2'];
+const FT=['HEIC','RAW','JPG','RAW','HEIC','RAW','JPG','HEIC','RAW'];
+const DUR=['0:42','1:08','0:17','2:31'];
+function makeTiles(n, o){
+  const out=[]; const sel=o.selected||[];
+  for(let i=0;i<n;i++){
+    const isVideo = (i%11)===4;
+    const s = sel.indexOf(i)>=0;
+    const fav = !isVideo && (i%7)===2;
+    const live = !isVideo && (i%9)===5;
+    const hasMeta = !!o.meta && !isVideo;
+    out.push({ bg: tile(i*5+3), op: s?0.82:1, ft: isVideo?'MOV':FT[i%FT.length], isVideo, dur: '▶ '+DUR[i%DUR.length],
+      hasMeta, meta: META[i%META.length], fav, live, hasStatus: fav||live,
+      statusBottom: hasMeta?'20px':'4px', selecting: !!o.selecting, sel: s, unsel: !!o.selecting && !s, acc: o.t.accent });
+  }
+  return out;
+}
+const KEYROWS=[['q','w','e','r','t','y','u','i','o','p'],['a','s','d','f','g','h','j','k','l'],['z','x','c','v','b','n','m']];
+const keyRows=()=>KEYROWS.map(r=>({keys:r.map(k=>({k}))}));
+// Menu rows: '-' band, {h:'Header'}, or [label, glyph, flags]; flags: c checked, s submenu.
+const MENU=[
+  ['Grid','M4 4h7v7H4z M13 4h7v7h-7z M4 13h7v7H4z M13 13h7v7h-7z','c'],
+  ['List','M8 6h12 M8 12h12 M8 18h12 M4 6h.01 M4 12h.01 M4 18h.01'],
+  ['Go to Date…','M3.5 5h17v15h-17z M3.5 10h17 M8 3v4 M16 3v4 M8 14h3v3H8z'],
+  '-',
+  ['Sort By','M7 4v16 M3.5 7.5L7 4l3.5 3.5 M17 20V4 M13.5 16.5L17 20l3.5-3.5','s'],
+  ['Aspect Ratio Grid','M3.5 5h7v6h-7z M13 5h7.5v14H13z M3.5 13h7v6h-7z'],
+  '-',
+  {h:'Filter'},
+  ['All Items','M3.5 3.5h17v17h-17z M3.5 9.2h17 M3.5 14.8h17 M9.2 3.5v17 M14.8 3.5v17','c'],
+  ['Favorites','M12 20s-7.5-4.6-7.5-10.2A4.3 4.3 0 0 1 12 7a4.3 4.3 0 0 1 7.5 2.8C19.5 15.4 12 20 12 20z'],
+  ['Picks','M5 21V4 M5 4h11l-2 4 2 4H5'],
+  ['Rejected','M6 6l12 12 M18 6L6 18'],
+  ['Rating','M12 3l2.8 6 6.2.6-4.8 4.2 1.4 6.2-5.6-3.2-5.6 3.2 1.4-6.2L3 9.6 9.2 9z','s'],
+  ['Photos Only','M3.5 5h17v14h-17z M3.5 15l4.5-4 3.5 3 2.5-2 5.5 4.5'],
+  ['Videos Only','M3 7h12v10H3z M15 10.5l6-3.5v10l-6-3.5z'],
+  ['Capture Kind','M4 8l8-4 8 4-8 4z M4 12l8 4 8-4 M4 16l8 4 8-4','s'],
+  ['Advanced Filter…','M4 6.5h9M17 6.5h3M4 12h3M11 12h9M4 17.5h11M19 17.5h1 M15 4.5v4 M9 10v4 M17 15.5v4']
+];
+function menuRow(x){
+  if(x==='-') return {sep:true, head:false, item:false};
+  if(x && x.h) return {sep:false, head:true, item:false, l:x.h};
+  const f=x[2]||''; const c=f.indexOf('c')>=0;
+  return {sep:false, head:false, item:true, l:x[0], d:x[1], sub:f.indexOf('s')>=0, check:c?'✓':'', on:c?'true':'false',
+    role:(x[0]==='Grid'||x[0]==='List'||f.indexOf('c')>=0||['Favorites','Picks','Rejected','Photos Only','Videos Only'].indexOf(x[0])>=0)?'menuitemradio':'menuitem'};
+}
+class Component extends DCLogic {
+  renderVals() {
+    const t = this.props.dark ? DARK : LIGHT;
+    return { t: Object.assign({}, t, { pressedGlass: this.props.dark ? 'rgba(99,99,102,0.85)' : 'rgba(220,220,224,0.9)', menu: this.props.dark ? 'rgba(44,44,46,0.94)' : 'rgba(250,250,252,0.94)' }), menu: MENU.map(menuRow), edgeTop: this.props.dark ? 'rgba(0,0,0,0.72)' : 'rgba(255,255,255,0.72)', edgeClear: this.props.dark ? 'rgba(0,0,0,0)' : 'rgba(255,255,255,0)', tiles: makeTiles(18, { meta: true, t }) };
+  }
+}
+</script>
+</body>
+</html>

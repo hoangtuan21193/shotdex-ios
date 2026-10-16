@@ -25,7 +25,7 @@ Nguồn: [intent Mac](../../_intents/2026-10-04-macos-app.md) · [intent iPad](.
 Board: Mac `MAC_AddSource` · `MAC_SourceIndexing` · `MAC_SettingsSources` · `MAC_SettingsServers` · `MAC_ServerBrowser`
 · `MAC_Duplicates` · `MAC_Cull` · `MAC_EmptyLibrary` · `MAC_GetInfo` (`docs/design/mac/project/`). iPad `IP_AddSource` ·
 `IP_SourceIndexing` · `IP_Settings` · `IP_ServerList` · `IP_ServerForm` · `IP_ServerBrowser` (`docs/design/ipad/project/`).
-iPhone `PH_Collections` (nhóm Sources) · `PH_AddSource` · `PH_SettingsSources` · `PH_ServerList` · `PH_ServerForm` · `PH_ServerBrowser` ·
+iPhone `PH_Sources` · `PH_AddSource` · `PH_SettingsSources` · `PH_ServerList` · `PH_ServerForm` · `PH_ServerBrowser` ·
 `PH_Hidden` · `PH_DeleteCopies` · `PH_DeletePermanent` (`docs/design/iphone/project/`); Duo cùng bộ tên `DI_*` (trong) và
 `DC_*` (ngoài) (`docs/design/duo/project/`); iPad thêm `IP_Hidden` · `IP_DeleteCopies` · `IP_DeletePermanent`; Mac
 `MAC_Hidden` · `MAC_DeleteCopies` (vẽ 2026-10-04).
