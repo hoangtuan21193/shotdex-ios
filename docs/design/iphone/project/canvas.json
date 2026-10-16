@@ -698,7 +698,7 @@
     },
     "PH_Collections.dc.html": {
       "h": 874,
-      "title": "iPhone · Collections: hero On This Day 180, cover Smart Albums/My Albums 132, Utilities có Backup và Hidden, nhóm Sources ở cuối dưới Utilities (user 12/10); Utilities thêm Movies sau Video Projects (FS-23, 14/10)",
+      "title": "iPhone · Collections: hero On This Day 180, cover Smart Albums/My Albums 132, Utilities có Backup và Hidden, nhóm Sources ở cuối dưới Utilities (user 12/10)",
       "w": 402,
       "x": 4820,
       "y": 560
@@ -837,62 +837,6 @@
       "x": 2892,
       "y": 560
     },
-    "PH_MovieDetail.dc.html": {
-      "h": 874,
-      "radius": 44,
-      "title": "Trang chi tiết phim (FS-23.08) — ảnh nền + poster, Resume · 47:12 / From Beginning / Download, Audio · Subtitles · Version; tweak fresh / downloading / onDevice — 15/10",
-      "w": 402,
-      "x": 30792,
-      "y": 560
-    },
-    "PH_MoviePlayer.dc.html": {
-      "h": 402,
-      "radius": 44,
-      "title": "Movies 3/5 · Player ngang: transport như FS-02.02 + Audio & Subtitles · Fit · Khoá; hai phụ đề cùng đáy, phụ ở trên; tweak chrome tắt → phụ đề hạ — FS-23.02",
-      "w": 874,
-      "x": 31756,
-      "y": 560
-    },
-    "PH_MovieSubtitleAdd.dc.html": {
-      "h": 874,
-      "radius": 44,
-      "title": "Movies · Share/AirDrop file .srt → Add Subtitle to…: chọn phim, phim trùng tên lên đầu — FS-23.03 §5",
-      "w": 402,
-      "x": 34618,
-      "y": 560
-    },
-    "PH_MovieTracks.dc.html": {
-      "h": 402,
-      "radius": 44,
-      "title": "Movies 4/5 · Audio & Subtitles một bảng: Audio (5 track, Audio Sync) rồi Subtitles (Primary, Secondary + Translate…/Import File… trong menu, vị trí, kiểu); tweak subtitles = cuộn xuống — FS-23.02 §3b, 03 §2",
-      "w": 874,
-      "x": 32710,
-      "y": 560
-    },
-    "PH_MovieTranslate.dc.html": {
-      "h": 402,
-      "radius": 44,
-      "title": "Movies 5/5 · Translate: From · To · Using, dòng nói rõ gửi đi đâu; tweak running = đang dịch 412/1,380 + Cancel — FS-23.04",
-      "w": 874,
-      "x": 33664,
-      "y": 560
-    },
-    "PH_Movies.dc.html": {
-      "h": 874,
-      "radius": 44,
-      "title": "Movies 1/5 · thư viện chung (NAS, Plex, trên máy): Grid poster tên + năm, ✓ = trên máy, thanh cam = đang tải, không dấu = stream; Search, All · On This iPhone · Unwatched; tweak list / away (xa nhà, phim stream mờ) / menu (menu phim) — FS-23.01, planboard 14/10",
-      "w": 402,
-      "x": 30310,
-      "y": 560
-    },
-    "PH_MoviesAdd.dc.html": {
-      "h": 874,
-      "radius": 44,
-      "title": "Movies 2/5 · + › Add a Source…: Folder (NAS Home, Office SFTP, Files) hoặc Plex Server — FS-23.01 §2",
-      "w": 402,
-      "x": 31274,
-      "y": 560
-    },
     "PH_OnThisDay.dc.html": {
       "h": 874,
       "title": "iPhone · On This Day (October 2): nhóm theo năm, header kính dính, mới nhất ở đáy",
@@ -919,14 +863,6 @@
       "title": "iPhone · Places: bản đồ phẳng, ghim cụm ảnh 52pt có số đếm, nút Back, tab bar nổi (Collections)",
       "w": 402,
       "x": 7230,
-      "y": 560
-    },
-    "PH_PlexSignIn.dc.html": {
-      "h": 874,
-      "radius": 44,
-      "title": "Movies · Sign In to Plex: mã K7Q2 ở plex.tv/link, Open plex.tv/link — FS-23.07 §1",
-      "w": 402,
-      "x": 36064,
       "y": 560
     },
     "PH_Search.dc.html": {
@@ -974,7 +910,7 @@
     "PH_SettingsAI.dc.html": {
       "h": 874,
       "radius": 44,
-      "title": "Settings › AI: Use For (dịch phụ đề, AI Search), On This Device, Providers + Add Provider… — FS-08.07, đề xuất 14/10",
+      "title": "Settings › AI: Use For (AI Search), On This Device, Providers + Add Provider… — FS-08.07, đề xuất 14/10",
       "w": 402,
       "x": 35100,
       "y": 560
@@ -1329,16 +1265,8 @@
     "TX_P_TextPanel.dc.html",
     "PH_DuplicatesBursts.dc.html",
     "PH_BurstFrames.dc.html",
-    "PH_Movies.dc.html",
-    "PH_MoviesAdd.dc.html",
-    "PH_MoviePlayer.dc.html",
-    "PH_MovieTranslate.dc.html",
-    "PH_MovieSubtitleAdd.dc.html",
     "PH_SettingsAI.dc.html",
-    "PH_SettingsAIProvider.dc.html",
-    "PH_PlexSignIn.dc.html",
-    "PH_MovieTracks.dc.html",
-    "PH_MovieDetail.dc.html"
+    "PH_SettingsAIProvider.dc.html"
   ],
   "pages": [],
   "title": "ShotDex · iPhone"
