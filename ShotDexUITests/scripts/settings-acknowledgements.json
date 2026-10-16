@@ -7,7 +7,7 @@
   {"action": "scrollTo", "label": "Camera Database"},
   {"action": "tap", "label": "Camera Database"},
   {"action": "wait", "seconds": 1.5},
-  {"action": "scrollTo", "label": "VLCKit"},
+  {"action": "scrollTo", "label": "GRDB.swift"},
   {"action": "wait", "seconds": 1},
   {"action": "screenshot", "name": "01-acknowledgements"},
   {"action": "dump", "name": "01-acknowledgements"}

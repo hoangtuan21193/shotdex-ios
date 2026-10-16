@@ -116,6 +116,48 @@ struct DatabaseTests {
         #expect(flags["unindexed"] == Bool?.none)
     }
 
+    /// Movies moved to the Movik app (2026-10-16): a database that ran the
+    /// movie migrations loses those tables and nothing else. Migrated with
+    /// the app's own migrator, erase-on-change and all — an unknown or edited
+    /// migration would make GRDB wipe the database, photo rows included.
+    @Test func v39DropsTheMovieTablesAndKeepsEverythingElse() throws {
+        let queue = try DatabaseQueue()
+        var old = AppDatabase.migrator
+        old.eraseDatabaseOnSchemaChange = false
+        try old.migrate(queue, upTo: "v38-movies-art")
+
+        try queue.write { db in
+            try db.execute(sql: """
+                INSERT INTO photo_metadata (assetId, mediaType, isFavorite, indexedAt, exifStatus)
+                VALUES ('kept-photo', ?, 0, 0, 'indexed')
+                """, arguments: [MediaKind.photo.storedValue])
+            try db.execute(sql: """
+                INSERT INTO ai_providers (id, kind, name, address, model, createdAt)
+                VALUES ('h1', 'homeServer', 'Mac Studio', 'http://10.0.0.2:11434', 'qwen3', 0)
+                """)
+            try db.execute(sql: """
+                INSERT INTO movie_sources (id, kind, name, folder, plexLibraries, createdAt)
+                VALUES ('s1', 'folder', 'NAS', 'Films', '[]', 0)
+                """)
+            try db.execute(sql: """
+                INSERT INTO movies (id, sourceId, title, originalFileName, byteCount, state, addedAt)
+                VALUES ('m1', 's1', 'Dune', 'Dune.mkv', 1, 'stream', 0)
+                """)
+        }
+
+        try AppDatabase.migrator.migrate(queue)
+
+        let movieTables = ["movie_sources", "movies", "movie_subtitles", "movie_subtitle_choices", "movie_translation_jobs"]
+        let left = try queue.read { db in try movieTables.filter { try db.tableExists($0) } }
+        let photos = try queue.read { db in try String.fetchAll(db, sql: "SELECT assetId FROM photo_metadata") }
+        let providers = try queue.read { db in try String.fetchAll(db, sql: "SELECT id FROM ai_providers") }
+        let last = try queue.read { db in try AppDatabase.migrator.completedMigrations(db).last }
+        #expect(left.isEmpty)
+        #expect(photos == ["kept-photo"])
+        #expect(providers == ["h1"])
+        #expect(last == "v39-dropMovies")
+    }
+
     /// FS-15 AC-46: the SMB share folds into every path of that connection;
     /// other protocols keep theirs.
     @Test func v23FoldsShareIntoFolder() throws {

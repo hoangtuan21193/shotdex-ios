@@ -131,21 +131,18 @@ final class AIStubProtocol: URLProtocol, @unchecked Sendable {
     @Test func choices() {
         let claude = AIProvider(id: "c1", kind: .claude, name: "Claude", model: "m")
         let home = AIProvider(id: "h1", kind: .homeServer, name: "Mac Studio", address: "http://10.0.0.2:11434", model: "m")
-        let simulator = AIChoice.OnDevice(appleTranslation: true, appleIntelligence: false)
-        #expect(AIChoice.translation(stored: nil, providers: [], onDevice: simulator) == .askEachTime)
+        let simulator = AIChoice.OnDevice(appleIntelligence: false)
         #expect(AIChoice.search(stored: nil, providers: [], onDevice: simulator) == .off)
-        #expect(AIChoice.search(stored: nil, providers: [], onDevice: .init(appleTranslation: true, appleIntelligence: true)) == .appleIntelligence)
+        #expect(AIChoice.search(stored: nil, providers: [], onDevice: .init(appleIntelligence: true)) == .appleIntelligence)
 
-        #expect(AIChoice.searchOptions(providers: [claude, home], onDevice: .init(appleTranslation: true, appleIntelligence: true))
+        #expect(AIChoice.searchOptions(providers: [claude, home], onDevice: .init(appleIntelligence: true))
             == [.appleIntelligence, .provider("h1"), .off])
-        #expect(AIChoice.translationOptions(providers: [claude, home], onDevice: simulator)
-            == [.askEachTime, .appleTranslation, .provider("c1"), .provider("h1")])
 
-        #expect(AIChoice.translation(stored: "provider:c1", providers: [claude], onDevice: simulator) == .provider("c1"))
-        #expect(AIChoice.translation(stored: "provider:c1", providers: [], onDevice: simulator) == .askEachTime)
+        #expect(AIChoice.search(stored: "provider:h1", providers: [home], onDevice: simulator) == .provider("h1"))
+        #expect(AIChoice.search(stored: "provider:h1", providers: [], onDevice: simulator) == .off)
         #expect(AIChoice.search(stored: "provider:c1", providers: [claude], onDevice: simulator) == .off)
-        #expect(SettingsSummary.ai(translation: "Claude", search: "Apple Intelligence") == "Claude · Apple Intelligence")
-        #expect(SettingsSummary.ai(translation: nil, search: nil) == "Not set up")
+        #expect(SettingsSummary.ai(search: "Apple Intelligence") == "Apple Intelligence")
+        #expect(SettingsSummary.ai(search: nil) == "Not set up")
     }
 
     /// AI Search (FS-08.07 §5): a home server's JSON answer becomes the same rules Apple
