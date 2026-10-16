@@ -103,12 +103,6 @@ Chỉ dùng token trong `ChartPalette`; không tự chọn màu series. Hai trư
 - **Nhiều chuỗi / donut**: `ChartPalette.colors` theo thứ tự, accent đứng đầu, không quay vòng — chuỗi thứ 7 trở đi gộp vào "Other". Bảng màu đã qua bộ kiểm mù màu và độ tách trên nền sáng lẫn tối; ≥ 2 chuỗi luôn có legend, chữ không bao giờ mang màu series.
 
 
-### 3.5 Phụ đề phim (Movies player, FS-23.03)
-
-Màu chữ phụ đề là **lựa chọn nội dung** của người xem, không phải token giao diện: đúng bốn màu White `#FFFFFF` ·
-Yellow `#FFD60A` · Light Gray `#CCCCCC` · Cyan `#5AC8FA` (`MovieSubtitleStyle.Color.swatch`), mặc định chính White,
-phụ Yellow. Chữ semibold, viền tối 2 px + bóng, không nền; cỡ 100% = 5% chiều cao khung phim. Không dùng bốn màu
-này cho chrome, và không dùng accent cho phụ đề.
 ---
 
 ## 5. Bo góc (radius scale)

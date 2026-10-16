@@ -92,7 +92,7 @@ menu ⋯. Hệ quả đã chấp nhận: trên một thư viện **chưa index x
 mục cạnh nó do PhotoKit cấp đã có số.
 
 **Utilities** = Places · Trips · Duplicates (kèm số nhóm của lần gom cuối, **số nhiều dịch đúng trong bộ
-chuỗi**) · **Collages** · **Video Projects** · **Movies** (phim offline ngoài Photos, [FS-23](../FS-23-offline-movies/README.md)) · **On Server** (luôn hiện; mở ra danh sách connection để duyệt và tải ảnh về —
+chuỗi**) · **Collages** · **Video Projects** · **On Server** (luôn hiện; mở ra danh sách connection để duyệt và tải ảnh về —
 [FS-17.01](../FS-17-import-from-server/01-browse.md) — và hàng ảnh đã upload, [FS-15.02 §8](../FS-15-server-upload/02-upload-flow.md)) · và các smart album nhóm tiện ích (hiện chỉ
 Unable to Upload) · **Hidden** cuối cùng, chỉ khi ShotDex đang ẩn ≥ 1 ảnh: lưới các ảnh ShotDex đã ẩn,
 chọn → **Unhide N Photos** ở chỗ nút Delete ([FS-19.04 §3](../FS-19-photo-sources/04-deleting-and-duplicates.md), board `PH_Hidden`).

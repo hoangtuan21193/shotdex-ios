@@ -43,10 +43,6 @@ Mật độ lưới **không phải công tắc** — chỉ có một dòng chú
   một khung HDR đứng cạnh chrome tiêu chuẩn làm chrome trông xám, và trên vài màn hình thì chói.
 - **Autoplay Videos**, mặc định bật. Tắt thì video chờ bấm play. **Dừng khi rời trang không phải một tuỳ
   chọn** — trang đã trôi đi thì luôn phải dừng. Lặp lại vẫn là nút trên chính player, không đưa vào đây.
-- **Audio Languages** (mặc định `Original` = track file đặt mặc định) và **Subtitle Languages** (mặc định ngôn ngữ máy +
-  English): danh sách ngôn ngữ có thứ tự cho phim mở lần đầu ([FS-23.02](../FS-23-offline-movies/02-player.md) §3b,
-  [FS-23.03](../FS-23-offline-movies/03-subtitles.md) §2). Màn con: phần **In Order** (kéo đổi thứ tự, vuốt xoá) trên
-  phần **Add**; Audio có thêm hàng `Original`.
 
 ## 4. Sharing
 

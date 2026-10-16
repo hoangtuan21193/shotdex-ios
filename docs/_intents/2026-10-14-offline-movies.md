@@ -5,7 +5,7 @@
 | Tác giả | Hoang Tuan (lời người dùng), Claude soạn |
 | Ngày | 2026-10-14 |
 | Trạng thái | accepted — người dùng 2026-10-14 |
-| Tiến độ | **gần xong** (2026-10-15) — plan [2026-10-14-fs23-movies](../_plans/2026-10-14-fs23-movies.md) đã duyệt, spike S1 **đi** ([báo cáo](2026-10-14-fs23-s1-vlckit-spike.md)), S2 **đi** ([báo cáo](2026-10-14-fs23-s2-mkv-subtitles-spike.md)), S3 **đi** ([báo cáo](2026-10-14-fs23-s3-plex-spike.md)); hết spike; 36/36 task đã commit (29 cần máy thật), 41/66 AC xanh (15/10 thêm: download hiện ngay + sống qua force quit AC-57 xanh, AC-58 một phần; sub nhúng Plex thật; trang chi tiết FS-23.08 AC-59, 60, 61, 63 xanh, AC-62, 64, 65, 66 một phần); 178 test của 25 suite FS-23 xanh 15/10; full suite treo ở test vẽ/xuất ảnh (PencilKit, CMPhoto — có từ 1/10, không thuộc FS-23), nên Tools/gate chưa xanh (AC-1, 4, 7, 8, 9, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 24, 25, 26, 27, 29, 30, 31, 33, 36, 37, 39, 40, 44, 45, 46, 47, 48, 49, 50, 52, 56; AC-2, 3, 5, 6, 10, 21, 22, 32, 35, 41, 43, 51, 53, 54, 55 một phần); 3 spike + 36 task; spec FS-23 (56 AC) + FS-08.07 (9 AC; 8 xanh: AC-1–7, 9) |
+| Tiến độ | **chuyển sang Movik** (2026-10-16) — người dùng chốt ShotDex chỉ là app ảnh; Movies (FS-23) chép sang app riêng Movik, repo `movik-ios`, và gỡ hẳn khỏi ShotDex (code, test, Info.plist, VLCKit, docs FS-23, board phim; bảng phim xoá bằng `v39-dropMovies`). Phần AI Search của FS-08.07 ở lại ShotDex. File này giữ làm hồ sơ. Trước đó (2026-10-15): 36/36 task đã commit, 41/66 AC xanh |
 | Nguồn | phản hồi người dùng 2026-10-14 |
 | Spec sinh ra từ đây | [FS-23](../02-functional-spec/FS-23-offline-movies/README.md) · [FS-08.07](../02-functional-spec/FS-08-settings/07-ai-providers.md) |
 

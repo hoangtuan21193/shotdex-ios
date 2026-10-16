@@ -17,7 +17,7 @@ compact và bố cục hai cột của hệ thống ở regular.
 | 03 | [Các section còn lại](03-other-sections.md) | Notifications · Display · Playback · Sharing · Export · Camera Database · Privacy · Library Size |
 | 04 | [Photo Widget designs](04-photo-widget-designs.md) | danh sách design, preview kéo-pinch, thành phần, màu Smart |
 | 05 | [Tiêu chí nghiệm thu](05-acceptance-criteria.md) | 19 AC của bố cục + search, 5 AC widget trên cửa sổ thấp, và cái nào chưa chứng minh |
-| 07 | [AI](07-ai-providers.md) | nhà cung cấp AI (trên máy, máy chủ nhà, cloud bằng key người dùng), chọn cho dịch phụ đề FS-23 và AI Search, key ở Keychain, 9 AC |
+| 07 | [AI](07-ai-providers.md) | AI cho AI Search: Apple Intelligence trên máy hoặc máy chủ trong nhà (Ollama, LM Studio), key ở Keychain |
 | 06 | [Metadata khi chia sẻ và xuất](06-share-metadata-privacy.md) | 3 mức All / No Location / No Metadata, một mặc định Settings cho mọi lối ra, hai dòng đổi mức trong share sheet, video đi nguyên bản, 26 AC |
 
 ## Quy tắc
