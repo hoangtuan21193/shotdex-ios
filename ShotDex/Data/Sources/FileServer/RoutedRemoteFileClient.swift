@@ -66,9 +66,6 @@ final class RoutedRemoteFileClient: RemoteFileClient, @unchecked Sendable {
     func download(_ path: String, to localURL: URL, progress: @escaping @Sendable (Int64) -> Void) async throws -> String {
         try await client().download(path, to: localURL, progress: progress)
     }
-    func resumeDownload(_ path: String, to localURL: URL, progress: @escaping @Sendable (Int64) -> Void) async throws -> Int64 {
-        try await client().resumeDownload(path, to: localURL, progress: progress)
-    }
     func move(_ source: String, to destination: String) async throws { try await client().move(source, to: destination) }
     func remove(_ path: String) async throws { try await client().remove(path) }
     func removeEmptyDirectory(_ path: String) async throws { try await client().removeEmptyDirectory(path) }

@@ -161,9 +161,6 @@ final class AppNavigation {
         case .trips:
             albumsPath = NavigationPath([TripsDestination()])
             selectedTab = .albums
-        case .movies:
-            albumsPath = NavigationPath([MoviesDestination()])
-            selectedTab = .albums
         case .photo(let assetId, let opensEditor):
             openPhoto(assetId: assetId, opensEditor: opensEditor)
         case .onThisDay(let date):

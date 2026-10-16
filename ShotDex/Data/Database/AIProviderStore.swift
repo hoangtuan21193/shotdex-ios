@@ -64,3 +64,14 @@ struct AIProviderStore: Sendable {
         return String(key.suffix(4))
     }
 }
+
+/// Masks secrets in text that is stored or shown — a pasted address can
+/// carry a key (FS-08.07 §4: keys never reach the database, logs or error
+/// messages).
+enum SecretRedaction {
+    nonisolated(unsafe) private static let parameter = #/(?i)((?:token|access_token|api[_-]?key|key)=)[^&\s"']+/#
+
+    static func redact(_ text: String) -> String {
+        text.replacing(parameter) { match in "\(match.1)•••" }
+    }
+}

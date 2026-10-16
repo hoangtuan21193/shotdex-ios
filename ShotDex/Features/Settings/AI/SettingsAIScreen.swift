@@ -1,11 +1,9 @@
 import SwiftUI
 
-/// Settings › AI (FS-08.07 §3, board `PH_SettingsAI`): who translates
-/// subtitles and who helps search, what the device has built in, and the
-/// providers the user added with their own keys.
+/// Settings › AI (FS-08.07 §3, board `PH_SettingsAI`): who helps search,
+/// what the device has built in, and the home servers the user added.
 struct SettingsAIScreen: View {
     @Environment(AppDependencies.self) private var dependencies
-    @AppStorage(SettingsKeys.aiSubtitleTranslation) private var translationStored = ""
     @AppStorage(SettingsKeys.aiSearch) private var searchStored = ""
     @State private var providers: [AIProvider] = []
     @State private var isAdding = false
@@ -15,14 +13,6 @@ struct SettingsAIScreen: View {
     var body: some View {
         List {
             Section {
-                Picker(selection: translationBinding) {
-                    ForEach(AIChoice.translationOptions(providers: providers, onDevice: onDevice), id: \.self) { choice in
-                        Text(title(choice)).tag(choice)
-                    }
-                } label: {
-                    useRow(String(localized: "Subtitle Translation", comment: "Settings › AI: who translates subtitles"), systemImage: "translate")
-                }
-                .settingsRowInsets()
                 Picker(selection: searchBinding) {
                     ForEach(AIChoice.searchOptions(providers: providers, onDevice: onDevice), id: \.self) { choice in
                         Text(title(choice)).tag(choice)
@@ -32,22 +22,14 @@ struct SettingsAIScreen: View {
                 }
                 .settingsRowInsets()
             } header: {
-                Text(String(localized: "Use For", comment: "Settings › AI: header over the two choices"))
+                Text(String(localized: "Use For", comment: "Settings › AI: header over the choice"))
             } footer: {
                 Text(String(localized: "AI Search uses only this device or a computer on your home network.", comment: "Settings › AI footer under Use For"))
             }
             .pickerStyle(.navigationLink)
 
-            Section(String(localized: "On This Device", comment: "Settings › AI: header over the built-in AI")) {
-                if OnDeviceAI.hasAppleTranslation {
-                    SettingsTileRowLabel(
-                        title: String(localized: "Apple Translation", comment: "Built-in translation"),
-                        value: String(localized: "Languages download when first used", comment: "Settings › AI: Apple Translation status"),
-                        systemImage: "character.book.closed", tint: .gray
-                    )
-                    .settingsRowInsets()
-                }
-                if let status = intelligenceStatus {
+            if let status = intelligenceStatus {
+                Section(String(localized: "On This Device", comment: "Settings › AI: header over the built-in AI")) {
                     SettingsTileRowLabel(
                         title: String(localized: "Apple Intelligence", comment: "Built-in AI"),
                         value: status, systemImage: "cpu", tint: .gray
@@ -91,27 +73,22 @@ struct SettingsAIScreen: View {
             } header: {
                 Text(String(localized: "Providers", comment: "Settings › AI: header over the added services"))
             } footer: {
-                Text(String(localized: "Requests go straight from this device to the service with your key. ShotDex has no server in between.", comment: "Settings › AI footer under Providers"))
+                Text(String(localized: "Ollama or LM Studio on a computer at home. Searches go straight from this device to it; ShotDex has no server in between.", comment: "Settings › AI footer under Providers"))
             }
         }
         .navigationTitle(String(localized: "AI", comment: "Settings › AI title"))
         .navigationBarTitleDisplayMode(.inline)
         .onAppear(perform: reload)
         .sheet(isPresented: $isAdding, onDismiss: reload) {
-            AIProviderKindPicker()
+            NavigationStack {
+                AIProviderForm(kind: .homeServer, existing: nil) { isAdding = false }
+            }
         }
         .sheet(item: $editing, onDismiss: reload) { provider in
             NavigationStack {
                 AIProviderForm(kind: provider.kind, existing: provider) { editing = nil }
             }
         }
-    }
-
-    private var translationBinding: Binding<AIChoice> {
-        Binding(
-            get: { AIChoice.translation(stored: translationStored, providers: providers, onDevice: onDevice) },
-            set: { translationStored = $0.stored }
-        )
     }
 
     private var searchBinding: Binding<AIChoice> {
@@ -169,9 +146,7 @@ struct SettingsAIScreen: View {
 enum AIChoiceTitle {
     static func title(_ choice: AIChoice, providers: [AIProvider]) -> String {
         switch choice {
-        case .askEachTime: String(localized: "Ask Each Time", comment: "AI choice: the Translate sheet asks")
         case .off: String(localized: "Off", comment: "AI choice: AI Search off")
-        case .appleTranslation: String(localized: "Apple Translation", comment: "Built-in translation")
         case .appleIntelligence: String(localized: "Apple Intelligence", comment: "Built-in AI")
         case .provider(let id): providers.first { $0.id == id }?.name ?? id
         }
@@ -186,37 +161,6 @@ enum AIChoiceTitle {
         case .grok: "Grok"
         case .gemini: "Gemini"
         case .openAICompatible: String(localized: "Other OpenAI-Compatible", comment: "AI provider kind: any other service speaking the OpenAI API")
-        }
-    }
-}
-
-/// Add Provider…: which kind of service, then its form.
-private struct AIProviderKindPicker: View {
-    @Environment(\.dismiss) private var dismiss
-
-    var body: some View {
-        NavigationStack {
-            List {
-                Section {
-                    NavigationLink(AIChoiceTitle.kindName(.homeServer)) { AIProviderForm(kind: .homeServer, existing: nil) { dismiss() } }
-                } footer: {
-                    Text(String(localized: "Ollama or LM Studio on a computer at home. Works for subtitles and AI Search.", comment: "Add Provider: home server footer"))
-                }
-                Section {
-                    ForEach([AIProvider.Kind.claude, .chatGPT, .openRouter, .grok, .gemini, .openAICompatible], id: \.self) { kind in
-                        NavigationLink(AIChoiceTitle.kindName(kind)) { AIProviderForm(kind: kind, existing: nil) { dismiss() } }
-                    }
-                } footer: {
-                    Text(String(localized: "Cloud services translate subtitles with your own API key. They are never used for AI Search.", comment: "Add Provider: cloud footer"))
-                }
-            }
-            .navigationTitle(String(localized: "Add Provider", comment: "Add Provider sheet title"))
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button(String(localized: "Cancel", comment: "Add Provider: close")) { dismiss() }
-                }
-            }
         }
     }
 }

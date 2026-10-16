@@ -664,7 +664,7 @@ final class AppDatabase: Sendable {
         registerMissingCopies(&migrator)
         registerCloudPlaceholders(&migrator)
         registerBackup(&migrator)
-        registerMovies(&migrator)
+        registerRetiredMovies(&migrator)
 
         return migrator
     }

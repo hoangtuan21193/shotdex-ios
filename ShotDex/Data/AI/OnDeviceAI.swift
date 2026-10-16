@@ -3,8 +3,8 @@ import Foundation
 import FoundationModels
 #endif
 
-/// The AI built into the device (FS-08.07 §2): Apple Translation from
-/// iOS 18, Apple Intelligence where the device supports it and it is on.
+/// The AI built into the device (FS-08.07 §2): Apple Intelligence where the
+/// device supports it and it is on.
 enum OnDeviceAI {
     enum IntelligenceStatus: Equatable, Sendable {
         case ready
@@ -12,11 +12,6 @@ enum OnDeviceAI {
         case downloading
         /// The device or OS cannot run it: not listed.
         case unsupported
-    }
-
-    static var hasAppleTranslation: Bool {
-        if #available(iOS 18.0, *) { return true }
-        return false
     }
 
     static var intelligence: IntelligenceStatus {
@@ -34,6 +29,6 @@ enum OnDeviceAI {
     }
 
     static var choices: AIChoice.OnDevice {
-        AIChoice.OnDevice(appleTranslation: hasAppleTranslation, appleIntelligence: intelligence == .ready)
+        AIChoice.OnDevice(appleIntelligence: intelligence == .ready)
     }
 }

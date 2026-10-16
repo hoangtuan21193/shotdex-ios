@@ -151,14 +151,12 @@ enum SettingsSummary {
         return joined(builtInText, String(localized: "\(custom) custom", comment: "Settings, Resize Presets value: number of presets the user made"))
     }
 
-    /// "Studio NAS, MacBook Pro and 2 more" — the first two names, then a count.
-    /// Settings › AI's root value: who translates · who helps search.
-    static func ai(translation: String?, search: String?) -> String {
-        let parts = [translation, search].compactMap { $0 }
-        guard !parts.isEmpty else { return String(localized: "Not set up", comment: "Settings › AI value: nothing chosen") }
-        return parts.joined(separator: " · ")
+    /// Settings › AI's root value: who helps search.
+    static func ai(search: String?) -> String {
+        search ?? String(localized: "Not set up", comment: "Settings › AI value: nothing chosen")
     }
 
+    /// "Studio NAS, MacBook Pro and 2 more" — the first two names, then a count.
     static func fileServers(names: [String]) -> String {
         switch names.count {
         case 0:

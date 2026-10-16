@@ -17,7 +17,6 @@ final class CollectionPinStore {
         case places
         case trips
         case duplicates
-        case movies
 
         var token: String {
             switch self {
@@ -26,7 +25,6 @@ final class CollectionPinStore {
             case .places: "utility:places"
             case .trips: "utility:trips"
             case .duplicates: "utility:duplicates"
-            case .movies: "utility:movies"
             }
         }
 
@@ -40,7 +38,6 @@ final class CollectionPinStore {
             case ("utility", "places"): self = .places
             case ("utility", "trips"): self = .trips
             case ("utility", "duplicates"): self = .duplicates
-            case ("utility", "movies"): self = .movies
             default: return nil
             }
         }

@@ -57,7 +57,7 @@ enum SearchModelFactory {
         case .provider(let id):
             guard let provider = providers.first(where: { $0.id == id }), provider.kind.servesAISearch else { return nil }
             return HomeServerSearchModel(provider: provider, key: key(provider.id))
-        case .off, .askEachTime, .appleTranslation:
+        case .off:
             return nil
         }
     }

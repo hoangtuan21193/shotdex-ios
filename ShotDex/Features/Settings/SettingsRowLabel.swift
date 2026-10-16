@@ -61,8 +61,6 @@ enum SettingsRowLabel: String, CaseIterable, Identifiable, Hashable, Sendable {
     // Playback
     case autoplayVideos
     case viewFullHDR
-    case audioLanguages
-    case subtitleLanguages
 
     // AI
     case ai
@@ -134,8 +132,6 @@ enum SettingsRowLabel: String, CaseIterable, Identifiable, Hashable, Sendable {
         case .showInsights: "Show Insights"
         case .autoplayVideos: "Autoplay Videos"
         case .viewFullHDR: "View Full HDR"
-        case .audioLanguages: "Audio Languages"
-        case .subtitleLanguages: "Subtitle Languages"
         case .ai: "AI"
         case .scanned: "Scanned"
         case .findPeopleAndPets: "Find People and Pets"
@@ -177,7 +173,7 @@ enum SettingsRowLabel: String, CaseIterable, Identifiable, Hashable, Sendable {
             .display
         case .showInsights:
             .statistics
-        case .autoplayVideos, .viewFullHDR, .audioLanguages, .subtitleLanguages:
+        case .autoplayVideos, .viewFullHDR:
             .playback
         case .ai:
             .ai
@@ -230,8 +226,6 @@ enum SettingsRowLabel: String, CaseIterable, Identifiable, Hashable, Sendable {
         case .showInsights: "lightbulb"
         case .autoplayVideos: "play.circle"
         case .viewFullHDR: "sun.max"
-        case .audioLanguages: "speaker.wave.2"
-        case .subtitleLanguages: "captions.bubble"
         case .ai: "sparkles"
         case .scanned: "person.2"
         case .findPeopleAndPets: "viewfinder"
@@ -288,7 +282,7 @@ enum SettingsRowLabel: String, CaseIterable, Identifiable, Hashable, Sendable {
         case .metadataWhenSharing: ["location", "GPS", "EXIF", "privacy"]
         case .watermarkWhenSharing: ["signature", "logo", "credit", "copyright"]
         case .showInsights: ["Statistics"]
-        case .ai: ["Claude", "ChatGPT", "OpenAI", "Gemini", "Grok", "OpenRouter", "Ollama", "LM Studio", "API key", "translate"]
+        case .ai: ["Ollama", "LM Studio", "home server", "AI Search", "Apple Intelligence"]
         default: []
         }
     }

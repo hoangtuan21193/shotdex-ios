@@ -13,11 +13,10 @@ protocol ServerPasswordStoring: Sendable {
 /// readable only while the device is unlocked on this device (never synced
 /// or restored to another phone: a backup is not where a NAS password goes).
 ///
-/// One service per kind of secret: file-server passwords, Plex tokens
-/// (FS-23.07) and AI provider keys (FS-08.07 §4) never share a namespace.
+/// One service per kind of secret: file-server passwords and AI provider
+/// keys (FS-08.07 §4) never share a namespace.
 struct KeychainPasswordStore: ServerPasswordStoring {
     static let fileServers = "com.hoangtuan.shotdex.file-server"
-    static let plexTokens = "com.hoangtuan.shotdex.plex"
     static let aiProviderKeys = "com.hoangtuan.shotdex.ai-provider"
 
     private let service: String

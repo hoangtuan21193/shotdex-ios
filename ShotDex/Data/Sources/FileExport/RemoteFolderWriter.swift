@@ -72,7 +72,7 @@ struct RemoteFolderWriter: ExportDestinationWriter {
         case .serverFull: return FileExportFailure.full
         case .unreachable, .connectionLost, .authenticationFailed, .localNetworkDenied, .hostKeyChanged, .hostKeyUntrusted, .folderMissing:
             return FileExportFailure.disconnected
-        case .fileMissing, .other: return error
+        case .other: return error
         }
     }
 }

@@ -2,20 +2,21 @@ import Foundation
 import GRDB
 
 extension AppDatabase {
-    /// FS-23.05 §2 and FS-08.07 §4: the Movies library and the AI providers.
-    /// Nothing here touches `photo_metadata`, so a re-index or Clear Local
-    /// Metadata Index leaves all of it alone.
+    /// The Movies library (FS-23) moved to its own app, Movik, on
+    /// 2026-10-16; ShotDex is a photo app. Its three migrations stay here
+    /// **verbatim**, followed by one that drops what they made:
     ///
-    /// Links stay inside these tables: subtitles, the subtitle choice and
-    /// unfinished translations go with their movie. A downloaded movie
-    /// outlives its source (the id goes null) because the copy is the
-    /// user's; a trigger deletes the source's streamed movies first, so
-    /// removing a source — directly, or through the FS-15 connection it sits
-    /// on — never leaves a row with nothing to play from.
+    /// - Unregistering `v36…v38` would leave identifiers in
+    ///   `grdb_migrations` the migrator does not know, and in DEBUG
+    ///   (`eraseDatabaseOnSchemaChange`) GRDB 7 then erases the whole
+    ///   database — smart albums, backup, file servers and all.
+    /// - Editing their bodies does the same: DEBUG compares the schema a
+    ///   fresh run produces with the one on disk.
     ///
-    /// Do not edit once shipped to a device: DEBUG builds erase the database
-    /// when a registered migration changes. A later change is a new migration.
-    static func registerMovies(_ migrator: inout DatabaseMigrator) {
+    /// So a fresh database creates the movie tables and drops them a step
+    /// later, and a database that has them loses only them.
+    /// `ai_providers` (created in `v36`, FS-08.07 §4) is AI Search's and stays.
+    static func registerRetiredMovies(_ migrator: inout DatabaseMigrator) {
         migrator.registerMigration("v36-movies") { db in
             try db.create(table: "movie_sources") { t in
                 t.primaryKey("id", .text)
@@ -164,6 +165,15 @@ extension AppDatabase {
         migrator.registerMigration("v38-movies-art") { db in
             try db.alter(table: "movies") { t in
                 t.add(column: "artPath", .text)
+            }
+        }
+
+        /// Movies left ShotDex (2026-10-16): drop its tables, children first.
+        /// Dropping `movie_sources` takes its cleanup trigger with it; the
+        /// implicit DELETE of a DROP TABLE fires no trigger.
+        migrator.registerMigration("v39-dropMovies") { db in
+            for table in ["movie_translation_jobs", "movie_subtitle_choices", "movie_subtitles", "movies", "movie_sources"] {
+                try db.drop(table: table)
             }
         }
     }

@@ -10,9 +10,6 @@ import Foundation
 /// unit test against an in-memory server; the SMB and SFTP clients are thin
 /// adapters over their libraries.
 protocol RemoteFileClient: AnyObject, Sendable {
-    /// Several `readRange` calls may run at once (HTTP); false for a
-    /// connection that does one request at a time (SMB, SFTP).
-    var allowsConcurrentReads: Bool { get }
     func connect() async throws
     func disconnect() async
     /// Size of the file at `path`, nil when nothing is there.
@@ -42,14 +39,6 @@ protocol RemoteFileClient: AnyObject, Sendable {
     /// the download to the library checks it (FS-17.02 §2).
     @discardableResult
     func download(_ path: String, to localURL: URL, progress: @escaping @Sendable (Int64) -> Void) async throws -> String
-    /// Brings `localURL` up to the remote file by appending from the bytes
-    /// already there — a movie download picks up where it stopped
-    /// (FS-23.01 §6). No hash: a film is too big to read twice; the caller
-    /// checks the size. A local file longer than the remote one (it changed
-    /// on the server) starts over. Returns the size reached; `progress`
-    /// receives bytes on disk.
-    @discardableResult
-    func resumeDownload(_ path: String, to localURL: URL, progress: @escaping @Sendable (Int64) -> Void) async throws -> Int64
     /// Renames a file or folder within the server. The destination must not
     /// exist.
     func move(_ source: String, to destination: String) async throws
@@ -75,27 +64,6 @@ protocol RemoteFileClient: AnyObject, Sendable {
 }
 
 extension RemoteFileClient {
-    var allowsConcurrentReads: Bool { false }
-
-    /// Through `readRange`, `ResumableFile.chunkSize` at a time. Clients
-    /// that can keep one read open for the rest of the file override it.
-    @discardableResult
-    func resumeDownload(_ path: String, to localURL: URL, progress: @escaping @Sendable (Int64) -> Void) async throws -> Int64 {
-        guard let size = try await fileSize(at: path) else { throw RemoteFileError.fileMissing(path) }
-        let file = try ResumableFile(localURL, remoteSize: size)
-        defer { file.close() }
-        progress(file.offset)
-        while file.offset < size {
-            try Task.checkCancellation()
-            let want = Int(min(Int64(ResumableFile.chunkSize), size - file.offset))
-            let chunk = try await readRange(path, offset: file.offset, length: want)
-            guard !chunk.isEmpty else { throw RemoteFileError.connectionLost }
-            try file.append(chunk)
-            progress(file.offset)
-        }
-        return file.offset
-    }
-
     func storageSpace(at path: String) async throws -> StorageSpace? { nil }
     var peeksWithSystemThumbnails: Bool { false }
     func systemThumbnail(at path: String, maxPixelSize: Int) async -> CGImage? { nil }
@@ -129,8 +97,6 @@ enum RemoteFileError: Error, Equatable, Sendable, LocalizedError {
     case hostKeyUntrusted(fingerprint: String)
     /// SFTP: the saved key and the one offered differ.
     case hostKeyChanged(host: String, fingerprint: String)
-    /// A file the caller expected is gone from the server.
-    case fileMissing(String)
     case other(String)
 
     /// Failures that will fail every later file too, so the batch stops
@@ -140,7 +106,7 @@ enum RemoteFileError: Error, Equatable, Sendable, LocalizedError {
         case .unreachable, .authenticationFailed, .connectionLost, .serverFull,
              .localNetworkDenied, .hostKeyUntrusted, .hostKeyChanged:
             true
-        case .folderMissing, .fileMissing, .permissionDenied, .other:
+        case .folderMissing, .permissionDenied, .other:
             false
         }
     }
@@ -151,8 +117,6 @@ enum RemoteFileError: Error, Equatable, Sendable, LocalizedError {
             String(localized: "Can't reach \(host). Check that it's on and on the same network.", comment: "File server error")
         case .authenticationFailed:
             String(localized: "The username or password was rejected.", comment: "File server error")
-        case .fileMissing(let path):
-            String(localized: "The file \(path) is no longer on the server.", comment: "File server error")
         case .folderMissing(let path):
             String(localized: "The folder \(path) doesn't exist on the server.", comment: "File server error")
         case .permissionDenied(let path):
@@ -192,42 +156,5 @@ enum FileChecksum {
 
     static func hex(_ digest: SHA256.Digest) -> String {
         digest.map { String(format: "%02x", $0) }.joined()
-    }
-}
-
-/// The local half of a resumable download: opened for appending at its
-/// current end, so the remote read starts at `offset`.
-final class ResumableFile {
-    /// Per request where the protocol has no long read of its own.
-    static let chunkSize = 4 << 20
-
-    private let handle: FileHandle
-    private(set) var offset: Int64
-
-    init(_ url: URL, remoteSize: Int64) throws {
-        if !FileManager.default.fileExists(atPath: url.path) {
-            FileManager.default.createFile(atPath: url.path, contents: nil)
-        }
-        handle = try FileHandle(forWritingTo: url)
-        offset = Int64(try handle.seekToEnd())
-        if offset > remoteSize {
-            try handle.truncate(atOffset: 0)
-            offset = 0
-        }
-    }
-
-    /// The server sent the file from byte 0 after all.
-    func restart() throws {
-        try handle.truncate(atOffset: 0)
-        offset = 0
-    }
-
-    func append(_ data: Data) throws {
-        try handle.write(contentsOf: data)
-        offset += Int64(data.count)
-    }
-
-    func close() {
-        try? handle.close()
     }
 }

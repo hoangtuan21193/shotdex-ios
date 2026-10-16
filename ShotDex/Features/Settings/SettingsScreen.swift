@@ -1054,48 +1054,24 @@ struct SettingsScreen: View {
         }
     }
 
-    /// `Claude · Apple Intelligence` — subtitle translation · AI Search, the
-    /// two rows' order (FS-08.07 §1); `Not set up` when neither is chosen.
+    /// `Apple Intelligence` — who helps AI Search (FS-08.07 §1); `Not set
+    /// up` when it is off.
     private var aiSummary: String {
         let providers = (try? dependencies.aiProviders.providers()) ?? []
-        let onDevice = OnDeviceAI.choices
-        let defaults = UserDefaults.standard
-        let translation = AIChoice.translation(stored: defaults.string(forKey: SettingsKeys.aiSubtitleTranslation), providers: providers, onDevice: onDevice)
-        let search = AIChoice.search(stored: defaults.string(forKey: SettingsKeys.aiSearch), providers: providers, onDevice: onDevice)
-        return SettingsSummary.ai(
-            translation: translation == .askEachTime ? nil : AIChoiceTitle.title(translation, providers: providers),
-            search: search == .off ? nil : AIChoiceTitle.title(search, providers: providers)
-        )
+        let search = AIChoice.search(stored: UserDefaults.standard.string(forKey: SettingsKeys.aiSearch), providers: providers, onDevice: OnDeviceAI.choices)
+        return SettingsSummary.ai(search: search == .off ? nil : AIChoiceTitle.title(search, providers: providers))
     }
 
     private func playbackSection(showsHeader: Bool) -> some View {
         Section {
             Toggle(isOn: $autoplayVideos) { rowLabel(.autoplayVideos) }.settingsRow(.autoplayVideos)
             Toggle(isOn: $viewFullHDR) { rowLabel(.viewFullHDR) }.settingsRow(.viewFullHDR)
-            NavigationLink {
-                MovieLanguagesScreen(kind: .audio)
-            } label: {
-                rowLabel(.audioLanguages, value: MovieLanguagePreferences.summary(
-                    MovieLanguagesScreen.current(.audio),
-                    fallback: String(localized: "Original", comment: "Settings → Audio Languages value: the file's default track")
-                ))
-            }
-            .settingsRow(.audioLanguages)
-            NavigationLink {
-                MovieLanguagesScreen(kind: .subtitles)
-            } label: {
-                rowLabel(.subtitleLanguages, value: MovieLanguagePreferences.summary(
-                    MovieLanguagesScreen.current(.subtitles),
-                    fallback: String(localized: "None", comment: "Settings → Subtitle Languages value: subtitles start off")
-                ))
-            }
-            .settingsRow(.subtitleLanguages)
         } header: {
             if showsHeader {
                 SettingsSectionHeader(SettingsSection.playback.title)
             }
         } footer: {
-            Text("When autoplay is off, a video waits for you to press play. Looping is a button on the player itself. Full HDR shows high-range photos at their real brightness, which makes everything around them look darker. Audio and Subtitle Languages choose the tracks a movie starts with.")
+            Text("When autoplay is off, a video waits for you to press play. Looping is a button on the player itself. Full HDR shows high-range photos at their real brightness, which makes everything around them look darker.")
         }
     }
 
@@ -1236,7 +1212,7 @@ struct SettingsScreen: View {
 
     /// Credit for the data and libraries ShotDex ships with. Lensfun's
     /// licence (CC-BY-SA) asks for it; GRDB's (MIT) asks for the notice to
-    /// travel with the app; VLCKit's (LGPL) for the notice and the source.
+    /// travel with the app.
     private var acknowledgementsSection: some View {
         Section {
             VStack(alignment: .leading, spacing: 2) {
@@ -1253,17 +1229,6 @@ struct SettingsScreen: View {
                     .font(.footnote)
                     .foregroundStyle(.secondary)
             }
-            // LGPL 2.1 (FS-23.02 §1): the notice, and where the source is.
-            // VLCKit ships as its own dynamic framework, unmodified, so it
-            // can be replaced.
-            VStack(alignment: .leading, spacing: 2) {
-                Text("VLCKit")
-                Text("Movie playback by VideoLAN and the VLC authors. GNU LGPL 2.1; used unmodified as a separate library.")
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
-            }
-            Link("code.videolan.org/videolan/VLCKit", destination: URL(string: "https://code.videolan.org/videolan/VLCKit")!)
-                .font(.footnote)
         } header: {
             SettingsSectionHeader(LocalizedStringResource("Acknowledgements", comment: "Settings → Camera Database: section header over the data credits"))
         }
