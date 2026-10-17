@@ -122,155 +122,176 @@
    "x": 33488,
    "y": 560
   },
-  "IP_Duplicates.dc.html": {
+  "IP_DuplicatesSummary.dc.html": {
    "h": 1032,
-   "title": "iPad · Ảnh trùng: danh sách nhóm 360 + chi tiết nhóm",
+   "title": "iPad · Ảnh trùng v3: màn tóm tắt — Quick clean + Choose yourself cạnh nhau (khối 720 giữa vùng nội dung), thẻ Source frames — FS-06.06 §7.2, AC-W2, 17/10 code chưa có",
    "w": 1376,
    "x": 34944,
+   "y": 560
+  },
+  "IP_Duplicates.dc.html": {
+   "h": 1032,
+   "title": "iPad · Ảnh trùng v3: danh sách (ẩn sidebar) 3 cột 437 — hàng lọc theo loại, Easiest first, thẻ v3 (vòng 26/44, chip lý do, chú thích 2 dòng), Same moment 51 thu gọn Show all 51, thẻ Bracket Merge to HDR (không đỏ), thanh 37 selected · 210 MB + Delete 37 — FS-06.06 §7.3–7.5, 06b §3–4, 17/10 code chưa có",
+   "w": 1376,
+   "x": 36400,
+   "y": 560
+  },
+  "IP_DuplicatesViewer.dc.html": {
+   "h": 1032,
+   "title": "iPad · Ảnh trùng v3: xem to trong nhóm (tầng D) — vuốt qua 5 ảnh của nhóm, Keep this / Don’t remove, thông số + điểm — FS-06.06 §7.6, 17/10 code chưa có",
+   "w": 1376,
+   "x": 37856,
+   "y": 560
+  },
+  "IP_BurstFrames.dc.html": {
+   "h": 1032,
+   "title": "iPad · Chọn khung dùng chung v3 (tầng D): chế độ Survey 6 khung (zoom khoá chung) + Single, dải phim 56 chấm đỏ khung yếu, Zoom to face, Keep 3, remove 21 + Done, không X — FS-06.06 §8, 17/10 code chưa có",
+   "w": 1376,
+   "x": 39312,
    "y": 560
   },
   "IP_Creations.dc.html": {
    "h": 1032,
    "title": "iPad · Collages: 12 collage theo tháng, menu giữ lâu",
    "w": 1376,
-   "x": 36400,
+   "x": 40768,
    "y": 560
   },
   "IP_Collage.dc.html": {
    "h": 1032,
    "title": "iPad · Collage (tầng D): khay Set Aside, Before and After, ⋯ Discard, inspector 360",
    "w": 1376,
-   "x": 37856,
+   "x": 42224,
    "y": 560
   },
   "IP_CollageExport.dc.html": {
    "h": 1032,
    "title": "iPad · Xuất collage: xem trước + inspector, Share… / Save to Photos",
    "w": 1376,
-   "x": 39312,
+   "x": 43680,
    "y": 560
   },
   "IP_Compress.dc.html": {
    "h": 1032,
    "title": "iPad · Resize (tầng D): xem trước, inspector, Resize 8 Photos and Delete Originals",
    "w": 1376,
-   "x": 40768,
+   "x": 45136,
    "y": 560
   },
   "IP_Statistics.dc.html": {
    "h": 1032,
    "title": "iPad · Thống kê (biểu đồ kiểu C): Insights, KPI, chart cột amber",
    "w": 1376,
-   "x": 42224,
+   "x": 46592,
    "y": 560
   },
   "IP_ChartEditor.dc.html": {
    "h": 1032,
    "title": "iPad · Sheet sửa biểu đồ 700×640, xem trước sống",
    "w": 1376,
-   "x": 43680,
+   "x": 48048,
    "y": 560
   },
   "IP_DateRange.dc.html": {
    "h": 1032,
    "title": "iPad · Date Range: sheet chồng trên Edit Chart, hai tháng một hàng",
    "w": 1376,
-   "x": 45136,
+   "x": 49504,
    "y": 560
   },
   "IP_Settings.dc.html": {
    "h": 1032,
    "title": "iPad · Cài đặt: sidebar kính 320, pane Sources; mục AI sau Playback (FS-08.07, 14/10)",
    "w": 1376,
-   "x": 46592,
+   "x": 50960,
    "y": 560
   },
   "IP_WidgetSettings.dc.html": {
    "h": 1032,
    "title": "iPad · Sửa widget: xem trước trái, tuỳ chọn hai cột",
    "w": 1376,
-   "x": 48048,
+   "x": 52416,
    "y": 560
   },
   "IP_CompressionPresets.dc.html": {
    "h": 1032,
    "title": "iPad · Resize Presets: Built-In / Custom",
    "w": 1376,
-   "x": 49504,
+   "x": 53872,
    "y": 560
   },
   "IP_CameraDatabase.dc.html": {
    "h": 1032,
    "title": "iPad · Settings › Camera Database: bảng máy, 6 máy chưa rõ ở trên",
    "w": 1376,
-   "x": 50960,
+   "x": 55328,
    "y": 560
   },
   "IP_Support.dc.html": {
    "h": 1032,
    "title": "iPad · Support: báo lỗi, yêu cầu tính năng, bình chọn",
    "w": 1376,
-   "x": 52416,
+   "x": 56784,
    "y": 560
   },
   "IP_SupportThread.dc.html": {
    "h": 1032,
    "title": "iPad · Support thread: hội thoại, Send Reply",
    "w": 1376,
-   "x": 53872,
+   "x": 58240,
    "y": 560
   },
   "IP_ServerList.dc.html": {
    "h": 1032,
    "title": "iPad · File Servers: bảng kết nối, Add Connection",
    "w": 1376,
-   "x": 55328,
+   "x": 59696,
    "y": 560
   },
   "IP_ServerForm.dc.html": {
    "h": 1032,
    "title": "iPad · Sheet Add Connection 700×640",
    "w": 1376,
-   "x": 56784,
+   "x": 61152,
    "y": 560
   },
   "IP_ServerBrowser.dc.html": {
    "h": 1032,
    "title": "iPad · Duyệt NAS Home: lưới 7 cột, folder trước ảnh, In Library",
    "w": 1376,
-   "x": 58240,
+   "x": 62608,
    "y": 560
   },
   "IP_ServerUpload.dc.html": {
    "h": 1032,
    "title": "iPad · Sheet Upload to Server cho 12 ảnh",
    "w": 1376,
-   "x": 59696,
+   "x": 64064,
    "y": 560
   },
   "IP_UploadedToServer.dc.html": {
    "h": 1032,
    "title": "iPad · On Server: Free Up Space, Where They Are",
    "w": 1376,
-   "x": 61152,
+   "x": 65520,
    "y": 560
   },
   "IP_FocusStack.dc.html": {
-   "x": 62608,
+   "x": 66976,
    "y": 560,
    "w": 1376,
    "h": 1032,
    "title": "iPad · Combine Photos › Focus Stack"
   },
   "IP_StackExposures.dc.html": {
-   "x": 64064,
+   "x": 68432,
    "y": 560,
    "w": 1376,
    "h": 1032,
    "title": "iPad · Combine Photos › Stack Exposures"
   },
   "IP_Panorama.dc.html": {
-   "x": 65520,
+   "x": 69888,
    "y": 560,
    "w": 1376,
    "h": 1032,
@@ -280,14 +301,14 @@
    "h": 1032,
    "title": "iPad · Video Projects: 7 dự án, New Video Project",
    "w": 1376,
-   "x": 66976,
+   "x": 71344,
    "y": 560
   },
   "IP_VideoProjectsDelete.dc.html": {
    "h": 1032,
    "title": "iPad · Video Projects: hộp xác nhận Delete Draft",
    "w": 1376,
-   "x": 68432,
+   "x": 72800,
    "y": 560
   },
   "IP1_Edit.dc.html": {
@@ -871,21 +892,21 @@
    "title": "iPad · Thư viện trống: 3 cách thêm nguồn, kéo thư mục từ Files"
   },
   "IP_Hidden.dc.html": {
-   "x": 69888,
+   "x": 74256,
    "y": 560,
    "w": 1376,
    "h": 1032,
    "title": "iPad · Hidden: 6 Hidden Photos, chọn 2 → Unhide 2 Photos"
   },
   "IP_DeleteCopies.dc.html": {
-   "x": 71344,
+   "x": 75712,
    "y": 560,
    "w": 1376,
    "h": 1032,
    "title": "iPad · Xoá từ All Photos: hộp liệt kê bản sao có ô tick, chỉ tick bản đang mở"
   },
   "IP_DeletePermanent.dc.html": {
-   "x": 72800,
+   "x": 77168,
    "y": 560,
    "w": 1376,
    "h": 1032,
@@ -930,49 +951,35 @@
    "h": 1032,
    "title": "iPad · Backup 1/5 · danh sách job bên trái (4 trạng thái như iPhone), job đang chọn bên phải ở trạng thái 3 New; New Backup trên toolbar = 2/5 — đề xuất 12/10, code chưa có",
    "w": 1376,
-   "x": 74256,
+   "x": 78624,
    "y": 560
   },
   "IP_BackupNew.dc.html": {
    "h": 1032,
    "title": "iPad · Backup 2/5 · form sheet New Backup 700×640: 3 ô Source, Connection, Folder, Organize (mở 3/5), What to Copy, When",
    "w": 1376,
-   "x": 75712,
+   "x": 80080,
    "y": 560
   },
   "IP_BackupOrganize.dc.html": {
    "h": 1032,
    "title": "iPad · Backup 3/5 · Organize trong sheet: cột Preview cạnh Folders (Levels, Year, Month, Day), Photos and Videos, File Names, Keep Both",
    "w": 1376,
-   "x": 77168,
+   "x": 81536,
    "y": 560
   },
   "IP_BackupCustomDate.dc.html": {
    "h": 1032,
    "title": "iPad · Backup 4/5 · Day › Custom… trong sheet: Preview; Order, Year, Month, Day, Separator gõ tự do + chọn nhanh",
    "w": 1376,
-   "x": 78624,
+   "x": 82992,
    "y": 560
   },
   "IP_BackupRunning.dc.html": {
    "h": 1032,
    "title": "iPad · Backup 5/5 · job đang chạy lượt đầu 34% ở pane phải: Pause (không Stop), dòng Watching, file đang chạy, tổng, file lỗi; tweak ios18 = Keep Screen On",
    "w": 1376,
-   "x": 80080,
-   "y": 560
-  },
-  "IP_DuplicatesBursts.dc.html": {
-   "h": 1032,
-   "title": "iPad · Duplicates tab Bursts: hàng thành lưới 3 cột ≥ 340pt — khớp code 12/10",
-   "w": 1376,
-   "x": 81536,
-   "y": 560
-  },
-  "IP_BurstFrames.dc.html": {
-   "h": 1032,
-   "title": "iPad · Chọn khung burst: dải 72 ô 60, Delete 22 Photos 340 — khớp code 12/10",
-   "w": 1376,
-   "x": 82992,
+   "x": 84448,
    "y": 560
   },
   "IP_SettingsAI.dc.html": {
@@ -1015,7 +1022,10 @@
   "IP_OnThisDay.dc.html",
   "IP_Places.dc.html",
   "IP_Trips.dc.html",
+  "IP_DuplicatesSummary.dc.html",
   "IP_Duplicates.dc.html",
+  "IP_DuplicatesViewer.dc.html",
+  "IP_BurstFrames.dc.html",
   "IP_Creations.dc.html",
   "IP_Collage.dc.html",
   "IP_CollageExport.dc.html",
@@ -1123,8 +1133,6 @@
   "IP_BackupOrganize.dc.html",
   "IP_BackupCustomDate.dc.html",
   "IP_BackupRunning.dc.html",
-  "IP_DuplicatesBursts.dc.html",
-  "IP_BurstFrames.dc.html",
   "IP_SettingsAI.dc.html",
   "IP_SettingsAIProvider.dc.html"
  ],
