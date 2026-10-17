@@ -22,12 +22,9 @@ struct CardImportStore: Sendable {
         var photoId: String?
         var backupPath: String?
         var importedAt: Int64
-
-        mutating func didInsert(_ inserted: InsertionSuccess) { id = inserted.rowID }
     }
 
     func record(_ row: Row) throws {
-        var row = row
         try database.writer.write { db in try row.insert(db) }
     }
 
