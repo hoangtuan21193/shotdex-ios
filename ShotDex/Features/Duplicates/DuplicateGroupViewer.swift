@@ -167,6 +167,9 @@ private struct DuplicateViewerPage: View {
                 }
             }
             .onAppear { load(side: max(proxy.size.width, proxy.size.height)) }
+            // A paged TabView can lay a page out at zero size first; load
+            // once it has a real one, or the page spins forever.
+            .onChange(of: proxy.size) { _, size in load(side: max(size.width, size.height)) }
         }
         .onDisappear {
             if let requestId { photoLibrary.cancelThumbnailRequest(requestId) }
@@ -175,7 +178,7 @@ private struct DuplicateViewerPage: View {
     }
 
     private func load(side: CGFloat) {
-        guard let asset, image == nil, side > 0 else { return }
+        guard let asset, image == nil, requestId == nil, side > 0 else { return }
         let pixels = side * ActiveDisplay.scale
         requestId = photoLibrary.requestThumbnail(
             for: asset, targetSize: CGSize(width: pixels, height: pixels), contentMode: .aspectFit, allowNetwork: true
