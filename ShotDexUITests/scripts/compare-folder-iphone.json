@@ -1,0 +1,17 @@
+{
+ "steps": [
+  {"action": "launch", "arguments": ["-ShotDexSeedFolderSource", "CloudTest"]},
+  {"action": "wait", "seconds": 7},
+  {"action": "tap", "label": "Select photos", "type": "button"},
+  {"action": "wait", "seconds": 1.5},
+  {"action": "tap", "x": 0.17, "y": 0.25},
+  {"action": "tap", "x": 0.5, "y": 0.25},
+  {"action": "wait", "seconds": 1},
+  {"action": "screenshot", "name": "00-selected"},
+  {"action": "tap", "label": "Compare", "type": "button"},
+  {"action": "wait", "seconds": 3},
+  {"action": "screenshot", "name": "01-compare"},
+  {"action": "dump", "name": "01-compare"},
+  {"action": "wait", "seconds": 2}
+ ]
+}
