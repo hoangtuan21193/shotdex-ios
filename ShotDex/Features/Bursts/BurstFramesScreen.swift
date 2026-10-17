@@ -24,6 +24,12 @@ struct BurstFramesScreen: View {
     @State private var synchronizer = CompareScrollSynchronizer()
     /// Which face Zoom to face went to last; the next tap moves on (§8).
     @State private var faceTaps = 0
+    /// iPad: 2–6 frames side by side, zoomed together (Compare's Survey).
+    @State private var isSurvey = false
+
+    /// Survey is an iPad mode: a phone has no room for two frames worth judging.
+    private var offersSurvey: Bool { UIDevice.current.userInterfaceIdiom == .pad }
+    static let surveyCount = 6
 
     static let filmstripCell: CGFloat = 56
 
@@ -86,7 +92,10 @@ struct BurstFramesScreen: View {
                         .padding()
                     Spacer()
                 case .ready:
-                    if isWide {
+                    if isSurvey {
+                        surveyGrid(model)
+                        filmstrip(model, vertical: false)
+                    } else if isWide {
                         // Duo inner (951×669) and landscape iPad: the strip
                         // runs down the right edge so the frame keeps the
                         // whole height (§8, board `DI_BurstFrames`).
@@ -122,6 +131,15 @@ struct BurstFramesScreen: View {
                 .foregroundStyle(.white)
                 .lineLimit(1)
                 .frame(maxWidth: .infinity, alignment: model.selection.hasSuggestions ? .leading : .center)
+            if offersSurvey {
+                Picker(String(localized: "View", comment: "Frame picker: one frame or several"), selection: $isSurvey) {
+                    Text(String(localized: "Single", comment: "Frame picker: one big frame")).tag(false)
+                    Text(String(localized: "Survey", comment: "Frame picker: several frames side by side")).tag(true)
+                }
+                .pickerStyle(.segmented)
+                .fixedSize()
+                .colorScheme(.dark)
+            }
             if let currentId, let face = model.faceRect(for: currentId) {
                 glassButton(String(localized: "Zoom to face", comment: "Frame picker: zoom the big frame onto the largest face")) {
                     zoomToFace(face, model: model)
@@ -258,6 +276,59 @@ struct BurstFramesScreen: View {
         }
         .frame(width: size, height: size)
         .shadow(color: .black.opacity(0.4), radius: 2)
+    }
+
+    // MARK: Survey
+
+    /// Up to six frames from the one in view, every pane on the same
+    /// synchronizer: zoom one and they all zoom to the same spot (AC-F4).
+    /// A tap makes a pane the current frame; each has its keep button.
+    private func surveyGrid(_ model: BurstFramesModel) -> some View {
+        let selection = model.selection
+        let start = min(selection.currentIndex, max(0, selection.count - Self.surveyCount))
+        let frames = Array(selection.frames.dropFirst(start).prefix(Self.surveyCount))
+        let columns = frames.count <= 2 ? frames.count : (frames.count <= 4 ? 2 : 3)
+        return GeometryReader { proxy in
+            let rows = Int(ceil(Double(frames.count) / Double(max(columns, 1))))
+            let cell = CGSize(width: (proxy.size.width - CGFloat(columns - 1) * 4) / CGFloat(max(columns, 1)),
+                              height: (proxy.size.height - CGFloat(rows - 1) * 4) / CGFloat(max(rows, 1)))
+            LazyVGrid(columns: Array(repeating: GridItem(.fixed(cell.width), spacing: 4), count: max(columns, 1)), spacing: 4) {
+                ForEach(Array(frames.enumerated()), id: \.element.id) { offset, frame in
+                    let index = start + offset
+                    let isKept = selection.isKept(frame.id)
+                    BurstBigFrame(asset: model.asset(for: frame.id), photoLibrary: photoLibrary,
+                                  synchronizer: synchronizer, paneIndex: offset, onSwipe: { _ in },
+                                  onTap: { model.show(index) })
+                        .frame(width: cell.width, height: cell.height)
+                        .overlay {
+                            if index == selection.currentIndex {
+                                Rectangle().strokeBorder(accent, lineWidth: 2).allowsHitTesting(false)
+                            }
+                        }
+                        .overlay(alignment: .topLeading) {
+                            HStack(spacing: AppTheme.Spacing.xs) {
+                                ForEach(model.chips(for: frame.id), id: \.self) { chip($0, fill: .black.opacity(0.55), text: .white) }
+                            }
+                            .padding(AppTheme.Spacing.sm)
+                            .allowsHitTesting(false)
+                        }
+                        .overlay(alignment: .bottomTrailing) {
+                            Button {
+                                model.show(index)
+                                model.toggleKeepCurrent()
+                            } label: {
+                                keepBadge(isKept: isKept, size: 30).frame(width: 44, height: 44).contentShape(Rectangle())
+                            }
+                            .buttonStyle(.plain)
+                            .padding(AppTheme.Spacing.sm)
+                        }
+                        .clipped()
+                        .accessibilityElement(children: .contain)
+                        .accessibilityLabel(selection.accessibilityLabel(at: index))
+                }
+            }
+        }
+        .padding(.horizontal, AppTheme.Spacing.sm)
     }
 
     // MARK: Filmstrip
@@ -402,13 +473,15 @@ private struct BurstBigFrame: View {
     let asset: PHAsset?
     let photoLibrary: PhotoLibraryService
     let synchronizer: CompareScrollSynchronizer
+    var paneIndex = 0
     let onSwipe: (CullGesturePolicy.Swipe) -> Void
+    var onTap: (() -> Void)?
     @State private var image: UIImage?
 
     var body: some View {
         ZStack {
             if let image {
-                ZoomableImageView(image: image, sync: synchronizer, paneIndex: 0, onSwipe: onSwipe)
+                ZoomableImageView(image: image, sync: synchronizer, paneIndex: paneIndex, onSingleTap: onTap, onSwipe: onSwipe)
             } else {
                 ProgressView().tint(.white)
             }
