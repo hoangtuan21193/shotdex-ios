@@ -87,7 +87,7 @@ bảng phím Editor chung, mật độ lưới màn rộng, sidebar).
 | AC-49 | ✅ một phần (S2 đã có từ dbdf74e2: `ExportColorSpace`, popup iOS; nửa Mac ở M49) | `FileExportColorSpaceTests.everyChoiceWritesItsProfile` | `FileExportRunner.swift:93`, `FileExportPlan` | S2 | — |
 | AC-50 | ❌ (logic ✅) | Cancel/Stop iOS đã có test (`FileExportCancelTests`) | `FileExportRunner`, `FileExportProgress` | M51 | M49 (sheet Mac) |
 | AC-51 | ❌ (logic ✅) | đích đầy iOS: `FileExportFailure.swift`, `FileExportFailureTests` | như trên | M52 | M51 |
-| AC-52 | ❌ | đánh số " (2)" đã có (`FileExportPlan.swift:166-170`); không có hậu tố " (edited)"; Save Copy iOS ra asset Photos (`PhotoEditingService.swift:337`) — nửa Photos khớp | `FileExportPlan` đánh số, `saveCopy` | S4 | ⏳ FS-19 (ghi cạnh file gốc) |
+| AC-52 | ✅ một phần (S4 xong: `OutputNaming`, `EditedCopyWriter`, menu ✓ ảnh thư mục iOS; nửa Mac ở M51) | `OutputNamingTests` | `FileExportPlan.firstFreeNumber`, `saveCopy` | S4 | — |
 | AC-53 | ❌ | Combine lưu vào Photos (`PhotoLibraryService.swift:994, 1051`) | `PanoramaStitchService`, `PhotoStackRenderer` (kit) | M54 | ⏳ FS-19 |
 
 ## 04 — Các màn còn lại

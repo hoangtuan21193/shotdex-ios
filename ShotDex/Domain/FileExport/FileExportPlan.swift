@@ -134,6 +134,14 @@ struct FileExportPlan: Sendable, Equatable {
     /// - Parameters:
     ///   - renderExtension: `jpg` or `heic` for the render of a photo.
     ///   - existing: the names already in each folder, read once.
+    /// Keep Both's counter: " (2)", " (3)"… — the first number whose names
+    /// are free. Shared with Save as Copy's `(edited)` names (FS-18 03 §5).
+    static func firstFreeNumber(isTaken: (Int) -> Bool) -> Int {
+        var number = 2
+        while isTaken(number) { number += 1 }
+        return number
+    }
+
     static func make(
         items: [FileExportItem],
         mode: FileExportMode,
@@ -180,9 +188,8 @@ struct FileExportPlan: Sendable, Equatable {
             // Two photos of the batch never share a name, whatever the
             // policy: a run never writes over a file it has just written.
             if clashesInBatch || (clashesInFolder && policy == .keepBoth) {
-                var number = 2
-                while names(number).contains(where: { there.contains($0.lowercased()) || mine.contains($0.lowercased()) }) {
-                    number += 1
+                let number = Self.firstFreeNumber { number in
+                    names(number).contains { there.contains($0.lowercased()) || mine.contains($0.lowercased()) }
                 }
                 chosen = names(number)
             } else if clashesInFolder {

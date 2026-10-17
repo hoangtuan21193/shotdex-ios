@@ -3138,6 +3138,13 @@ struct PhotoEditorScreen: View {
             : String(localized: "Original", comment: "Editor toolbar: a file photo with no edits")
         return Menu {
             Text("Saved as you edit. The file itself never changes.")
+            Button {
+                saveFileCopy()
+            } label: {
+                Label(String(localized: "Save as Copy", comment: "Editor: write the edited photo as a new file beside the original"),
+                      systemImage: "plus.square.on.square")
+            }
+            .disabled(!isEdited || controller.isSaving)
             Button(role: .destructive) {
                 isRevertConfirmationPresented = true
             } label: {
@@ -3165,6 +3172,17 @@ struct PhotoEditorScreen: View {
         .disabled(controller.isLoading)
         .hoverEffect(.lift)
         .accessibilityLabel(status)
+    }
+
+    /// `‹name› (edited).jpg` next to the file; the banner names it.
+    private func saveFileCopy() {
+        guard let file = origin.fileCopy, let controller else { return }
+        flushAutosave()
+        Task {
+            guard let name = await controller.saveFileCopy(of: file.url) else { return }
+            dependencies.banner.show(String(localized: "Saved \(name) next to the original.",
+                                            comment: "Editor banner after Save as Copy on a file photo"))
+        }
     }
 
     /// Writes a file copy's recipe once the edit has settled for half a
@@ -3856,11 +3874,11 @@ private struct PhotoEditorSaveSheet: View {
                             if controller.savedAssetID != nil { onFinished() }
                         }
                     } label: {
-                        Label("Save Copy", systemImage: "plus.square.on.square")
+                        Label("Save as Copy", systemImage: "plus.square.on.square")
                     }
                     .disabled(format == nil)
                 } header: {
-                    Text("Save Copy")
+                    Text("Save as Copy")
                 } footer: {
                     Text("A new still photo with the metadata you choose. No Location also leaves the copy's place empty in Photos; No Metadata dates it today.")
                 }

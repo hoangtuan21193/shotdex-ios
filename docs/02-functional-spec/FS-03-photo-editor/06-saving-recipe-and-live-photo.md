@@ -18,15 +18,20 @@ Photos.
 - Ảnh từ server (FS-17.06) không có recipe gắn vào ảnh: editor mở trên bản tạm, nút lưu là **Export…** và
   recipe mất khi xuất xong hoặc Discard.
 
-## 2. Save Copy và Save Changes
+## 2. Save as Copy và Save Changes
 
-| | Save Copy | Save Changes |
+| | Save as Copy | Save Changes |
 |---|---|---|
 | Kết quả | asset **mới**, ảnh tĩnh, full resolution, chất lượng tối đa | ghi đè bản render của chính asset đó, giữ nguyên id |
 | Tên file | basename gốc + `_SHOTDEX_EDITED_N` (N tăng riêng theo từng ảnh nguồn) | — |
 | Recipe | copy mới **cũng mang recipe** nên mở lại sửa tiếp được | nằm trong adjustment data |
 | Album | mở từ album cho phép thêm thì copy được thêm lại album đó | — |
 | Live Photo | **chỉ ra ảnh tĩnh** | giữ chuyển động |
+
+**Ảnh thư mục, ổ, NAS** (FS-19) không có Save Changes — recipe tự lưu khi sửa, file gốc không bao giờ bị ghi. Menu
+dấu ✓ có **Save as Copy**: render một lần, ghi **`‹tên› (edited).jpg`** (HEIC giữ HEIC) **cạnh file gốc**; trùng tên
+thì `‹tên› (edited) (2).jpg`, (3)… — cùng bộ đếm Keep Both của Export Files. Ghi dưới tên tạm ẩn rồi mới đổi tên, nên
+lỗi giữa chừng không để lại nửa file; banner báo tên file mới (FS-18 03 §5, test `OutputNamingTests`).
 
 Save Copy còn lưu id của ảnh nguồn, nên một bản JPEG/HEIC vẫn dựng lại được từ RAW/JPEG gốc bất biến và
 tái hiện đúng các slider RAW; nguồn không còn trên máy thì rơi về chính file của bản copy. **Id và recipe

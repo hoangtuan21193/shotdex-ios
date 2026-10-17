@@ -3347,6 +3347,21 @@ final class PhotoEditorController {
         }
     }
 
+    /// Save as Copy for a file photo (FS-18 03 §5): `‹name› (edited).jpg`
+    /// beside the original. Returns the new file's name, nil on failure
+    /// (the error is in `errorMessage`).
+    func saveFileCopy(of original: URL, format: PhotoOutputFormat = .preserve) async -> String? {
+        isSaving = true
+        errorMessage = nil
+        defer { isSaving = false }
+        do {
+            return try await EditedCopyWriter().write(renderReady(recipe), of: original, format: format).lastPathComponent
+        } catch {
+            errorMessage = error.localizedDescription
+            return nil
+        }
+    }
+
     func saveChanges(format: PhotoOutputFormat) async {
         guard let session, let loadedSource else { return }
         isSaving = true
