@@ -2,11 +2,10 @@ import Foundation
 import Testing
 @testable import ShotDex
 
-/// The `series` mode: runs of frames of one moment, found by capture time as
-/// well as likeness. The cases that matter are the ones the other two modes
-/// are built to throw away — frames that are deliberately *not* copies of each
-/// other — and the ones a time-chained walk gets wrong if it is written
-/// carelessly.
+/// The Same moment kind: runs of frames of one moment, found by capture time
+/// as well as likeness. The cases that matter are the ones look-alikes are
+/// built to throw away — frames that are deliberately *not* copies of each
+/// other — and the ones a time-chained walk gets wrong if written carelessly.
 struct DuplicateSeriesTests {
 
     private let base = 1_700_000_000
@@ -29,7 +28,7 @@ struct DuplicateSeriesTests {
     }
 
     private func groups(_ photos: [HashedPhoto]) -> [DuplicateGroup] {
-        DuplicateGrouper.groups(from: photos, strictness: .series)
+        DuplicateGrouper.groups(from: photos).filter { $0.kind == .sameMoment }
     }
 
     @Test func framesShotSecondsApartAreOneSeries() {
@@ -42,11 +41,11 @@ struct DuplicateSeriesTests {
         #expect(result[0].members.map(\.assetId) == ["a", "b", "c"])
     }
 
-    /// The point of the mode: the pose changed, so the frames are not copies.
-    /// `similar` is built to reject exactly this, and must keep doing so.
+    /// The point of the kind: the pose changed, so the frames are not copies.
+    /// Look-alikes are built to reject exactly this, and must keep doing so.
     @Test func aPoseChangeStaysASeriesButIsNotADuplicate() {
-        // Each step is 14 bits: past `similarMaxDistance`, inside
-        // `seriesMaxDistance`. That band is the mode's whole reason to exist.
+        // Each step is 14 bits: past `lookAlikeMaxDistance`, inside
+        // `seriesMaxDistance`. That band is the kind's whole reason to exist.
         let photos = [
             photo("a", bits: 0x0000_0000_0000_0000, secondsIn: 0),
             photo("b", bits: 0x0000_0000_0000_3FFF, secondsIn: 5),
@@ -54,11 +53,11 @@ struct DuplicateSeriesTests {
         ]
         for (left, right) in [(photos[0], photos[1]), (photos[1], photos[2])] {
             let distance = (left.hash.bits ^ right.hash.bits).nonzeroBitCount
-            #expect(distance > DuplicateStrictness.similarMaxDistance)
-            #expect(distance <= DuplicateStrictness.seriesMaxDistance)
+            #expect(distance > DuplicateGrouper.lookAlikeMaxDistance)
+            #expect(distance <= DuplicateGrouper.seriesMaxDistance)
         }
         #expect(groups(photos).count == 1)
-        #expect(DuplicateGrouper.groups(from: photos, strictness: .similar).isEmpty)
+        #expect(!DuplicateGrouper.groups(from: photos).contains { $0.kind == .lookAlikes })
     }
 
     /// Each step is compared with the frame before it, not with the first one,
@@ -66,7 +65,7 @@ struct DuplicateSeriesTests {
     @Test func aSeriesMayDriftFurtherThanOneStepAllows() {
         let first: UInt64 = 0
         let last: UInt64 = 0x0000_0000_00FF_FFFF
-        #expect((first ^ last).nonzeroBitCount > DuplicateStrictness.seriesMaxDistance)
+        #expect((first ^ last).nonzeroBitCount > DuplicateGrouper.seriesMaxDistance)
 
         let result = groups([
             photo("a", bits: first, secondsIn: 0),
@@ -94,7 +93,7 @@ struct DuplicateSeriesTests {
 
     /// Exactly the window is still the same run; one second past it is not.
     @Test func theGapBoundaryIsInclusive() {
-        let gap = DuplicateStrictness.seriesMaxGap
+        let gap = DuplicateGrouper.seriesMaxGap
         #expect(groups([
             photo("a", secondsIn: 0),
             photo("b", secondsIn: gap),
@@ -110,13 +109,13 @@ struct DuplicateSeriesTests {
     /// Two frames close together happen all day; only a real run is listed.
     @Test func aPairIsNotASeries() {
         #expect(groups([photo("a", secondsIn: 0), photo("b", secondsIn: 3)]).isEmpty)
-        #expect(DuplicateStrictness.series.minimumGroupSize == 3)
+        #expect(DuplicateGrouper.seriesMinCount == 3)
     }
 
     /// Same second, unrelated picture: time alone must not chain them.
     @Test func likenessStillHasToHold() {
         let unrelated: UInt64 = 0xAAAA_AAAA_AAAA_AAAA
-        #expect((0 ^ unrelated).nonzeroBitCount > DuplicateStrictness.seriesMaxDistance)
+        #expect((0 ^ unrelated).nonzeroBitCount > DuplicateGrouper.seriesMaxDistance)
         #expect(groups([
             photo("a", bits: 0, secondsIn: 0),
             photo("b", bits: unrelated, secondsIn: 1),
@@ -124,10 +123,9 @@ struct DuplicateSeriesTests {
         ]).isEmpty)
     }
 
-    /// A series is read in the order it was shot — the whole subject is what
-    /// changed between one frame and the next. Duplicate modes lead with the
-    /// copy worth keeping instead, and that difference must survive.
-    @Test func membersAreInCaptureOrderNotBestFirst() {
+    /// A run is stored in the order it was shot; the card puts the keeper
+    /// first and leaves the rest in capture order (plan §8.2).
+    @Test func sameMomentIsStoredInCaptureOrder() {
         let result = groups([
             photo("late", secondsIn: 10, size: 90_000_000),
             photo("early", secondsIn: 0, size: 1_000),

@@ -90,14 +90,14 @@ struct DuplicateReviewTests {
     }
 
     @Test func sortOrdersBySpaceThenDate() {
-        let old = DuplicateGroup(members: [photo("o1", size: 1, created: 100), photo("o2", size: 9_000, created: 100)])
-        let new = DuplicateGroup(members: [photo("n1", size: 1, created: 900), photo("n2", size: 10, created: 900)])
+        let old = DuplicateGroup(members: [photo("o1", size: 1, created: 100), photo("o2", size: 9_000, created: 100)], kind: .lookAlikes)
+        let new = DuplicateGroup(members: [photo("n1", size: 1, created: 900), photo("n2", size: 10, created: 900)], kind: .lookAlikes)
         let free: (DuplicateGroup) -> Int = { group in
             group.members.compactMap(\.fileSize).reduce(0, +) - (group.members.compactMap(\.fileSize).max() ?? 0)
         }
         #expect(DuplicateReview.sorted([new, old], by: .oldest, freeBytes: free).map(\.id) == ["o1", "n1"])
         #expect(DuplicateReview.sorted([old, new], by: .newest, freeBytes: free).map(\.id) == ["n1", "o1"])
-        let bigFree = DuplicateGroup(members: [photo("x1", size: 9_000, created: 50), photo("x2", size: 9_000, created: 50)])
+        let bigFree = DuplicateGroup(members: [photo("x1", size: 9_000, created: 50), photo("x2", size: 9_000, created: 50)], kind: .lookAlikes)
         #expect(DuplicateReview.sorted([new, bigFree], by: .mostSpace, freeBytes: free).map(\.id) == ["x1", "n1"])
     }
 

@@ -122,9 +122,9 @@ enum SettingsKeys {
     /// JSON-encoded user collage presets (frame + style, no text).
     static let collagePresets = "collage.presets"
 
-    /// `DuplicateStrictness` raw value the Duplicates screen groups with.
-    /// Unwritten means `.similar`.
-    static let duplicateStrictness = "duplicates.strictness"
+    /// `DuplicateKind` raw value the Duplicates list is filtered to.
+    /// Unwritten (or empty) means All.
+    static let duplicateKindFilter = "duplicates.kindFilter"
 
     /// `DuplicateSort` raw value of the group list. Unwritten means `.mostSpace`.
     static let duplicateSort = "duplicates.sort"

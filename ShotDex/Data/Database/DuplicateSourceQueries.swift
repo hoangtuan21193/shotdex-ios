@@ -12,27 +12,27 @@ struct DuplicateSourceQueries: Sendable {
         let group: DuplicateGroup
     }
 
-    /// The sources the popup offers: those with a scan of `strictness` or a
-    /// photo with two copies inside them, Photos Library first.
-    func sources(strictness: DuplicateStrictness) throws -> [(id: String, name: String)] {
+    /// The sources the popup offers: those with a scan or a photo with two
+    /// copies inside them, Photos Library first.
+    func sources() throws -> [(id: String, name: String)] {
         try database.reader.read { db in
             try Row.fetchAll(db, sql: """
                 SELECT s.id, s.name FROM sources s
-                WHERE EXISTS (SELECT 1 FROM duplicate_scan_state d WHERE d.sourceId = s.id AND d.strictness = ?)
+                WHERE EXISTS (SELECT 1 FROM duplicate_scan_state d WHERE d.sourceId = s.id)
                    OR EXISTS (SELECT 1 FROM photo_copies c WHERE c.sourceId = s.id AND c.missingSince IS NULL AND c.isHidden = 0
                               GROUP BY c.photoId HAVING COUNT(*) > 1)
                 ORDER BY s.kind != 'photos', s.createdAt, s.id
-                """, arguments: [strictness.rawValue]).map { (id: $0["id"], name: $0["name"]) }
+                """).map { (id: $0["id"], name: $0["name"]) }
         }
     }
 
     /// The cached groups of one source, or of all of them (`sourceId` nil),
     /// each tagged with the source it belongs to.
-    func groups(strictness: DuplicateStrictness, sourceId: String?) throws -> [SourceGroup] {
-        let ids = try sourceId.map { [$0] } ?? sources(strictness: strictness).map(\.id)
+    func groups(sourceId: String?) throws -> [SourceGroup] {
+        let ids = try sourceId.map { [$0] } ?? sources().map(\.id)
         let store = PerceptualHashStore(database: database)
         return try ids.flatMap { id in
-            (try store.cachedGroups(strictness: strictness, sourceId: id) ?? []).map { SourceGroup(sourceId: id, group: $0) }
+            (try store.cachedGroups(sourceId: id) ?? []).map { SourceGroup(sourceId: id, group: $0) }
         }
     }
 

@@ -44,5 +44,26 @@ extension AppDatabase {
                 t.column("scoredAt", .integer).notNull()
             }
         }
+
+        // v3 groups once into kinds instead of three strictness levels
+        // (FS-06.06 §4): one row per photo per source, tagged with its kind.
+        // The cache is a scan result — rebuilt by the next scan, not moved.
+        migrator.registerMigration("v41-duplicateKinds") { db in
+            try db.drop(table: "duplicate_groups")
+            try db.drop(table: "duplicate_scan_state")
+            try db.create(table: "duplicate_groups") { t in
+                t.column("sourceId", .text).notNull().defaults(to: PhotoLibrarySource.id)
+                t.column("groupId", .text).notNull()
+                t.column("assetId", .text).notNull()
+                t.column("kind", .text).notNull()
+                t.primaryKey(["sourceId", "assetId"])
+            }
+            try db.create(index: "idx_duplicate_groups_group", on: "duplicate_groups", columns: ["sourceId", "groupId"])
+            try db.create(table: "duplicate_scan_state") { t in
+                t.primaryKey("sourceId", .text)
+                t.column("scannedAt", .integer).notNull()
+                t.column("groupCount", .integer).notNull()
+            }
+        }
     }
 }

@@ -131,34 +131,34 @@ struct DuplicateGroupCacheTests {
         try store.upsert(["a", "b", "c", "d"].map {
             PerceptualHashRecord(assetId: $0, hash: PerceptualHash(bits: 1), modificationDate: 1_700_000_000, computedAt: 1)
         })
-        #expect(try store.cachedGroups(strictness: .similar) == nil)
-        #expect(try store.scanState(strictness: .similar) == nil)
+        #expect(try store.cachedGroups() == nil)
+        #expect(try store.scanState() == nil)
 
         let groups = [
-            DuplicateGroup(members: [hashed("a", bits: 1, size: 20), hashed("b", bits: 1, size: 10)]),
-            DuplicateGroup(members: [hashed("c", bits: 1), hashed("d", bits: 1)]),
+            DuplicateGroup(members: [hashed("a", bits: 1, size: 20), hashed("b", bits: 1, size: 10)], kind: .lookAlikes),
+            DuplicateGroup(members: [hashed("c", bits: 1), hashed("d", bits: 1)], kind: .copies),
         ]
         let scannedAt = Date(timeIntervalSince1970: 1_800_000_000)
-        try store.replaceGroups(groups, strictness: .similar, scannedAt: scannedAt)
+        try store.replaceGroups(groups, scannedAt: scannedAt)
 
-        let cached = try #require(try store.cachedGroups(strictness: .similar))
+        let cached = try #require(try store.cachedGroups())
         #expect(cached.count == 2)
         #expect(Set(cached.flatMap { $0.members.map(\.assetId) }) == ["a", "b", "c", "d"])
+        // The kind round-trips with the group.
+        #expect(Set(cached.map { "\($0.kind)" + $0.members.map(\.assetId).sorted().joined() }) == ["lookAlikesab", "copiescd"])
         // Facts come from photo_metadata at read time, not from the cache.
         #expect(cached.flatMap(\.members).allSatisfy { $0.fileSize == 10_000_000 })
-        #expect(try store.scanState(strictness: .similar) == DuplicateScanState(strictness: .similar, scannedAt: scannedAt, groupCount: 2))
-        // The other strictness is untouched.
-        #expect(try store.cachedGroups(strictness: .exact) == nil)
+        #expect(try store.scanState() == DuplicateScanState(scannedAt: scannedAt, groupCount: 2))
 
         // Deleting one member of a pair dissolves that group; the other stays.
         try store.removeFromGroups(assetIds: ["c"])
-        let afterDelete = try #require(try store.cachedGroups(strictness: .similar))
+        let afterDelete = try #require(try store.cachedGroups())
         #expect(afterDelete.count == 1)
         #expect(Set(afterDelete[0].members.map(\.assetId)) == ["a", "b"])
 
         // Replacing with an empty grouping leaves a state but no groups.
-        try store.replaceGroups([], strictness: .similar, scannedAt: scannedAt)
-        #expect(try store.cachedGroups(strictness: .similar) == [])
+        try store.replaceGroups([], scannedAt: scannedAt)
+        #expect(try store.cachedGroups() == [])
     }
 
     @Test func pendingCountMatchesWorkList() throws {

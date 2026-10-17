@@ -81,17 +81,17 @@ import Testing
         try hashes.upsert((ids.0 + ids.1).map { PerceptualHashRecord(assetId: $0, hash: PerceptualHash(bits: 7), modificationDate: 1, computedAt: 1) })
         func group(_ members: [String]) -> DuplicateGroup {
             DuplicateGroup(members: members.map { HashedPhoto(assetId: $0, hash: PerceptualHash(bits: 7), width: 6000, height: 4000,
-                                                              fileSize: nil, creationDate: nil, isFavorite: false) })
+                                                              fileSize: nil, creationDate: nil, isFavorite: false) }, kind: .copies)
         }
-        try hashes.replaceGroups([group(ids.0)], strictness: .similar, scannedAt: Date(), sourceId: t7)
-        try hashes.replaceGroups([group(ids.1)], strictness: .similar, scannedAt: Date())
+        try hashes.replaceGroups([group(ids.0)], scannedAt: Date(), sourceId: t7)
+        try hashes.replaceGroups([group(ids.1)], scannedAt: Date())
 
         let queries = DuplicateSourceQueries(database: database)
-        #expect(try queries.sources(strictness: .similar).map(\.name) == ["Photos Library", "T7"])
-        let onlyT7 = try queries.groups(strictness: .similar, sourceId: t7)
+        #expect(try queries.sources().map(\.name) == ["Photos Library", "T7"])
+        let onlyT7 = try queries.groups(sourceId: t7)
         #expect(onlyT7.map(\.sourceId) == [t7])
         #expect(Set(onlyT7[0].group.members.map(\.assetId)) == Set(ids.0))
-        let all = try queries.groups(strictness: .similar, sourceId: nil)
+        let all = try queries.groups(sourceId: nil)
         #expect(all.map(\.sourceId) == [PhotoLibrarySource.id, t7])
         #expect(DuplicateSourceQueries.allSources == "All Sources")
     }

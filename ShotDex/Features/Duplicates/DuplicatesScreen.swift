@@ -5,7 +5,7 @@ import SwiftUI
 struct DuplicatesDestination: Hashable {}
 
 /// Duplicates utility (tier A, DESIGN.md §2; FS-06.06 §7). A pinned band —
-/// strictness, sort, how many groups are reviewed, the last scan and Rescan —
+/// kind filter, sort, how many groups are reviewed, the last scan and Rescan —
 /// over a list of **decision cards**: the suggested keeper big with "Keep" and
 /// why, the copies beside it each saying what it lacks, and one-tap Mark the
 /// other N · Keep all · Compare. A decided group folds to one line. Marks
@@ -175,7 +175,7 @@ struct DuplicatesScreen: View {
 
     @ViewBuilder
     private func cardList(_ model: DuplicatesModel) -> some View {
-        if model.groups.isEmpty {
+        if model.sortedGroups.isEmpty {
             emptyState(model)
                 .frame(maxWidth: .infinity)
                 .padding(.top, AppTheme.Spacing.xxl)
@@ -232,9 +232,7 @@ struct DuplicatesScreen: View {
 
     private func estimatedHeight(_ group: DuplicateGroup, model: DuplicatesModel, metrics: DuplicateCardMetrics) -> CGFloat {
         if model.isCollapsed(group) { return 56 }
-        let body = model.strictness == .series
-            ? metrics.seriesHeight(count: group.count)
-            : metrics.gridHeight(copyCount: group.count - 1)
+        let body = metrics.gridHeight(copyCount: group.count - 1)
         return 58 + body + AppTheme.Spacing.md + 44 + AppTheme.Spacing.md
     }
 
@@ -357,11 +355,10 @@ struct DuplicatesScreen: View {
 
     private func emptyDescription(_ model: DuplicatesModel) -> String {
         let scanned = model.coverage.hashedPhotos
-        return switch model.strictness {
-        case .exact: "No exact duplicates among \(scanned) photos."
-        case .similar: "No similar duplicates among \(scanned) photos."
-        case .series: "No runs of \(DuplicateStrictness.seriesMinCount) or more frames of one moment among \(scanned) photos."
+        if let kind = model.kindFilter {
+            return String(localized: "No \(kind.title) among \(scanned) photos.", comment: "Duplicates: empty list filtered to one kind")
         }
+        return String(localized: "No duplicates among \(scanned) photos.", comment: "Duplicates: empty list")
     }
 
     @ViewBuilder
@@ -391,7 +388,7 @@ struct DuplicatesScreen: View {
             }
         } else {
             ContentUnavailableView(
-                model.strictness == .series ? "No Series" : "No Duplicates",
+                "No Duplicates",
                 systemImage: "checkmark.circle",
                 description: Text(emptyDescription(model))
             )
@@ -413,7 +410,7 @@ struct DuplicatesScreen: View {
 
 // MARK: - Header band
 
-/// The pinned band under the navigation bar: strictness, sort, review
+/// The pinned band under the navigation bar: kind filter, sort, review
 /// progress, last scan and Rescan. Cards scroll beneath it.
 private struct DuplicatesHeaderBand: View {
     @Bindable var model: DuplicatesModel
@@ -427,7 +424,7 @@ private struct DuplicatesHeaderBand: View {
                 // Bursts: the tabs and how many bursts — no sort, no scan,
                 // no progress (§7b).
                 HStack(spacing: AppTheme.Spacing.md) {
-                    strictnessPicker.frame(maxWidth: isRegular ? 420 : .infinity)
+                    kindPicker.frame(maxWidth: isRegular ? 420 : .infinity)
                     if let burstCount {
                         Text(BurstSummary.countTitle(burstCount))
                             .font(.footnote.weight(.semibold))
@@ -444,7 +441,7 @@ private struct DuplicatesHeaderBand: View {
                 // progress instead of truncating it.
                 ViewThatFits(in: .horizontal) {
                     HStack(spacing: AppTheme.Spacing.md) {
-                        strictnessPicker.frame(width: 420)
+                        kindPicker.frame(width: 420)
                         sortMenu
                         progress.frame(width: 400)
                         Spacer(minLength: AppTheme.Spacing.md)
@@ -454,7 +451,7 @@ private struct DuplicatesHeaderBand: View {
                         }
                     }
                     HStack(spacing: AppTheme.Spacing.md) {
-                        strictnessPicker.frame(width: 400)
+                        kindPicker.frame(width: 400)
                         sortMenu
                         VStack(alignment: .leading, spacing: AppTheme.Spacing.xs) {
                             progress
@@ -468,7 +465,7 @@ private struct DuplicatesHeaderBand: View {
             } else {
                 VStack(alignment: .leading, spacing: AppTheme.Spacing.sm) {
                     HStack(spacing: AppTheme.Spacing.sm) {
-                        strictnessPicker
+                        kindPicker
                         sortMenu
                     }
                     HStack(alignment: .center, spacing: AppTheme.Spacing.sm) {
@@ -488,22 +485,25 @@ private struct DuplicatesHeaderBand: View {
         .overlay(alignment: .bottom) { Divider() }
     }
 
-    /// Exact · Similar · Series · Bursts. The first three are strictnesses
-    /// of one scan; Bursts is its own list (§7b).
-    private var strictnessPicker: some View {
+    /// All · the kinds present · Bursts. Bursts is its own list until the
+    /// shared frame picker replaces it (plan task 20).
+    private var kindPicker: some View {
         Picker("Match", selection: Binding<DuplicatesTab>(
-            get: { model.showsBursts ? .bursts : .match(model.strictness) },
+            get: { model.showsBursts ? .bursts : model.kindFilter.map(DuplicatesTab.kind) ?? .all },
             set: { tab in
                 switch tab {
                 case .bursts:
                     model.showsBursts = true
-                case .match(let strictness):
+                case .all:
                     model.showsBursts = false
-                    model.strictness = strictness
+                    model.kindFilter = nil
+                case .kind(let kind):
+                    model.showsBursts = false
+                    model.kindFilter = kind
                 }
             }
         )) {
-            ForEach(DuplicatesTab.allCases, id: \.self) { tab in
+            ForEach([DuplicatesTab.all] + model.presentKinds.map(DuplicatesTab.kind) + [.bursts], id: \.self) { tab in
                 Text(tab.title).tag(tab)
             }
         }
@@ -569,9 +569,6 @@ private struct DuplicatesHeaderBand: View {
     private var reviewedText: String {
         let total = model.groups.count
         let done = model.reviewedCount
-        if model.strictness == .series {
-            return String(localized: "Reviewed \(done) of \(total) series", comment: "Duplicates header, Series")
-        }
         return total == 1
             ? String(localized: "Reviewed \(done) of 1 group", comment: "Duplicates header, one group")
             : String(localized: "Reviewed \(done) of \(total) groups", comment: "Duplicates header")
@@ -579,7 +576,7 @@ private struct DuplicatesHeaderBand: View {
 
     private var freeText: String {
         let bytes = model.totalFreeBytes
-        guard model.strictness != .series, bytes > 0 else { return "" }
+        guard bytes > 0 else { return "" }
         let size = DuplicatesScreen.byteFormatter.string(fromByteCount: Int64(bytes))
         return " · " + String(localized: "~\(size) to free", comment: "Duplicates header: space freed by keeping one per group")
     }
@@ -622,8 +619,8 @@ private struct DuplicatesHeaderBand: View {
 
 /// One group as a decision: the keeper over 2×2 cells with "Keep", its
 /// reasons and its sizes on the photo, the copies square in the cells beside
-/// and below it, and the three one-tap actions. A series has no keeper — its frames sit in one grid in
-/// capture order (FS-06.06 §6).
+/// and below it, and the three one-tap actions. A same-moment run puts its
+/// keeper first and the rest in capture order (FS-06.06 §7.4).
 private struct DuplicateDecisionCard: View {
     let group: DuplicateGroup
     let model: DuplicatesModel
@@ -636,9 +633,8 @@ private struct DuplicateDecisionCard: View {
                 .padding(.bottom, AppTheme.Spacing.sm)
 
             if let keeper {
+                // Same moment: the keeper first, the rest in capture order.
                 keeperGrid(keeper, copies: group.members.filter { $0.assetId != keeper.assetId })
-            } else {
-                seriesGrid(group.members)
             }
 
             notices
@@ -675,7 +671,7 @@ private struct DuplicateDecisionCard: View {
     private var subtitle: String {
         var parts: [String] = []
         if let date = DuplicatesScreen.dateText(group) { parts.append(date) }
-        if model.strictness == .exact {
+        if group.kind == .copies {
             parts.append(String(localized: "Identical files", comment: "Duplicates card, Exact: the copies are the same file"))
         } else if let span = DuplicateReview.spanText(group.members) {
             parts.append(span)
@@ -699,21 +695,6 @@ private struct DuplicateDecisionCard: View {
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
-    /// A series has no keeper: its frames in one grid of square cells, in
-    /// capture order, each with its seconds after the first.
-    private func seriesGrid(_ members: [HashedPhoto]) -> some View {
-        LazyVGrid(
-            columns: Array(repeating: GridItem(.fixed(metrics.tile), spacing: DuplicateCardMetrics.copyGap, alignment: .topLeading),
-                           count: metrics.gridColumns),
-            alignment: .leading,
-            spacing: DuplicateCardMetrics.copyGap
-        ) {
-            ForEach(members) { member in
-                tile(member, side: metrics.tile, radius: AppTheme.Radius.sm, isKeeper: false)
-            }
-        }
-    }
-
     private func facts(_ member: HashedPhoto) -> String {
         var parts: [String] = []
         if let dimensions = DuplicateReview.dimensions(member) { parts.append(dimensions) }
@@ -725,7 +706,7 @@ private struct DuplicateDecisionCard: View {
 
     /// Pixel size over file size, for the label inside a photo.
     private func factLines(_ member: HashedPhoto) -> [String] {
-        if model.strictness == .series { return [caption(member)] }
+        if group.kind == .sameMoment { return [caption(member)] }
         var lines: [String] = []
         if let dimensions = DuplicateReview.dimensions(member) { lines.append(dimensions) }
         if let size = member.fileSize {
@@ -737,7 +718,7 @@ private struct DuplicateDecisionCard: View {
     /// Under a copy: what it lacks next to the keeper. Under a series frame:
     /// seconds after the first frame.
     private func caption(_ member: HashedPhoto) -> String {
-        if model.strictness == .series {
+        if group.kind == .sameMoment {
             let first = group.members.compactMap(\.creationDate).min()
             guard let first, let date = member.creationDate else { return "—" }
             return "+\(date - first) s"
@@ -1155,16 +1136,16 @@ private struct DuplicatesAlerts: ViewModifier {
     }
 }
 
-/// The Duplicates screen's four tabs.
-enum DuplicatesTab: Hashable, CaseIterable {
-    case match(DuplicateStrictness)
+/// The Duplicates list's filter: All, one kind, or the Bursts list.
+enum DuplicatesTab: Hashable {
+    case all
+    case kind(DuplicateKind)
     case bursts
-
-    static var allCases: [DuplicatesTab] { DuplicateStrictness.allCases.map { .match($0) } + [.bursts] }
 
     var title: String {
         switch self {
-        case .match(let strictness): strictness.title
+        case .all: String(localized: "All", comment: "Duplicates filter: every kind of group")
+        case .kind(let kind): kind.title
         case .bursts: String(localized: "Bursts", comment: "Duplicates tab: real bursts from Photos")
         }
     }

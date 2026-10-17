@@ -62,7 +62,7 @@ struct PerceptualHashTests {
         let vertical = try #require(Self.gradientImage(width: 90, height: 80, vertical: true))
         let a = try #require(DifferenceHash.hash(of: horizontal))
         let b = try #require(DifferenceHash.hash(of: vertical))
-        #expect(a.hammingDistance(to: b) > DuplicateStrictness.similarMaxDistance)
+        #expect(a.hammingDistance(to: b) > DuplicateGrouper.lookAlikeMaxDistance)
     }
 
     /// Gray gradient, dark on the left (or top) to light on the right (or bottom).

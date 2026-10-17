@@ -2,7 +2,10 @@ import Foundation
 import Testing
 @testable import ShotDex
 
+/// FS-06.06 §4 — one grouping pass, every photo in at most one kind.
 struct DuplicateGrouperTests {
+
+    private let base = 1_700_000_000
 
     private func photo(
         _ id: String,
@@ -11,7 +14,10 @@ struct DuplicateGrouperTests {
         height: Int? = 4000,
         size: Int? = 10_000_000,
         created: Int? = 1_700_000_000,
-        favorite: Bool = false
+        favorite: Bool = false,
+        focal: Double? = nil,
+        camera: Bool = true,
+        screenshot: Bool = false
     ) -> HashedPhoto {
         HashedPhoto(
             assetId: id,
@@ -20,105 +26,149 @@ struct DuplicateGrouperTests {
             height: height,
             fileSize: size,
             creationDate: created,
-            isFavorite: favorite
+            isFavorite: favorite,
+            focalLength: focal,
+            isScreenshot: screenshot,
+            hasCameraEXIF: camera
         )
+    }
+
+    private func kinds(_ groups: [DuplicateGroup]) -> [Set<String>: DuplicateKind] {
+        Dictionary(uniqueKeysWithValues: groups.map { (Set($0.members.map(\.assetId)), $0.kind) })
     }
 
     @Test func singletonsAreNotGroups() {
-        let groups = DuplicateGrouper.groups(
-            from: [photo("a", bits: 1), photo("b", bits: 0xFFFF_FFFF)],
-            strictness: .similar
-        )
+        let groups = DuplicateGrouper.groups(from: [photo("a", bits: 1), photo("b", bits: 0xFFFF_FFFF)])
         #expect(groups.isEmpty)
     }
 
-    /// Named modes rather than `allCases`: `.series` answers a different
-    /// question and deliberately does not group a pair (see
-    /// `DuplicateSeriesTests`), so sweeping every case here would assert the
-    /// wrong thing about it.
-    @Test func identicalHashesGroupInBothDuplicateModes() {
-        // "c" is 32 bits away from the pair — far outside the similar threshold.
-        let photos = [photo("a", bits: 42), photo("b", bits: 42), photo("c", bits: 42 ^ 0xFFFF_FFFF_0000_0000)]
-        for strictness in [DuplicateStrictness.exact, .similar] {
-            let groups = DuplicateGrouper.groups(from: photos, strictness: strictness)
-            #expect(groups.count == 1)
-            #expect(Set(groups[0].members.map(\.assetId)) == ["a", "b"])
-        }
+    /// AC-G1: copies, a smaller re-save and a run of one moment, each in
+    /// exactly one group of the right kind.
+    @Test func everyPhotoLandsInExactlyOneKind() {
+        let hashA: UInt64 = 0x0123_4567_89AB_CDEF
+        let hashG: UInt64 = 0xFEDC_BA98_7654_3210
+        let photos = [
+            photo("A", bits: hashA, width: 4032, height: 3024, created: base),
+            photo("B", bits: hashA, width: 4032, height: 3024, created: base),
+            // 3 bits off, a third the size, sent through a messenger: no camera
+            // EXIF, dated the day it arrived.
+            photo("C", bits: hashA ^ 0b111, width: 1600, height: 1200, size: 400_000, created: base + 86_400 * 30, camera: false),
+            photo("G", bits: hashG, width: 3000, height: 2000, created: base + 5000),
+            photo("H", bits: hashG, width: 3000, height: 2000, created: base + 5000),
+            // Each step 12–15 bits, 2 s apart.
+            photo("D", bits: 0x0, created: base + 9000),
+            photo("E", bits: 0xFFF, created: base + 9002),
+            photo("F", bits: 0xFFF ^ 0x7FFF_0000, created: base + 9004),
+        ]
+        let groups = DuplicateGrouper.groups(from: photos)
+        #expect(kinds(groups) == [
+            ["A", "B", "C"]: .smallerCopies,
+            ["G", "H"]: .copies,
+            ["D", "E", "F"]: .sameMoment,
+        ])
+        let all = groups.flatMap { $0.members.map(\.assetId) }
+        #expect(all.count == Set(all).count)
     }
 
-    @Test func exactModeSeparatesDifferentDimensions() {
-        let photos = [photo("a", bits: 42), photo("b", bits: 42, width: 2000, height: 1333)]
-        #expect(DuplicateGrouper.groups(from: photos, strictness: .exact).isEmpty)
-        #expect(DuplicateGrouper.groups(from: photos, strictness: .similar).count == 1)
-    }
-
-    @Test func similarModeGroupsWithinThreshold() {
-        let base: UInt64 = 0x0123_4567_89AB_CDEF
-        // Flip 10 bits spread across bytes — within threshold.
-        let tenBitsAway = base ^ 0x0101_0101_0101_0303
-        // Flip 11 *other* bits — outside, and 21 bits from `tenBitsAway` so
-        // it cannot chain in through "b".
-        let elevenBitsAway = base ^ 0x0202_0202_0202_0C1C
-        #expect((base ^ tenBitsAway).nonzeroBitCount == 10)
-        #expect((base ^ elevenBitsAway).nonzeroBitCount == 11)
-        #expect((tenBitsAway ^ elevenBitsAway).nonzeroBitCount == 21)
-
-        let groups = DuplicateGrouper.groups(
-            from: [photo("a", bits: base), photo("b", bits: tenBitsAway), photo("c", bits: elevenBitsAway)],
-            strictness: .similar
-        )
+    /// AC-G2: a tripod run — one hash, one size, 3 s apart — is twenty moments,
+    /// not twenty copies.
+    @Test func tripodSequenceIsNotCopies() {
+        let photos = (0..<20).map { photo("t\($0)", bits: 42, created: base + $0 * 3) }
+        let groups = DuplicateGrouper.groups(from: photos)
         #expect(groups.count == 1)
-        #expect(Set(groups[0].members.map(\.assetId)) == ["a", "b"])
-        #expect(DuplicateGrouper.groups(
-            from: [photo("a", bits: base), photo("b", bits: tenBitsAway)],
-            strictness: .exact
-        ).isEmpty)
+        #expect(groups[0].kind == .sameMoment)
+        #expect(groups[0].count == 20)
+    }
+
+    /// AC-G3: the same scene at 24mm and 35mm is two framings.
+    @Test func differentFocalLengthNeverGroups() {
+        let photos = [
+            photo("wide", bits: 0, created: base, focal: 24),
+            photo("normal", bits: 0b1111, created: base + 600, focal: 35),
+        ]
+        #expect(DuplicateGrouper.groups(from: photos).isEmpty)
+        // Within 10% still groups.
+        let close = [
+            photo("a", bits: 0, created: base, focal: 50),
+            photo("b", bits: 0b1111, created: base + 600, focal: 52),
+        ]
+        #expect(DuplicateGrouper.groups(from: close).count == 1)
+    }
+
+    @Test func sameHashOtherSecondIsALookAlike() {
+        let photos = [photo("a", bits: 42, created: base), photo("b", bits: 42, created: base + 3600)]
+        let groups = DuplicateGrouper.groups(from: photos)
+        #expect(groups.map(\.kind) == [.lookAlikes])
+    }
+
+    @Test func smallerCopyWithCameraEXIFNeedsTheSameSecond() {
+        let big = photo("big", bits: 7, created: base)
+        let sameSecond = photo("export", bits: 7, width: 2048, height: 1365, created: base)
+        let otherDay = photo("other", bits: 7, width: 2048, height: 1365, created: base + 86_400)
+        #expect(DuplicateGrouper.groups(from: [big, sameSecond]).map(\.kind) == [.smallerCopies])
+        #expect(DuplicateGrouper.groups(from: [big, otherDay]).map(\.kind) == [.lookAlikes])
+    }
+
+    @Test func allScreenshotGroupIsScreenshots() {
+        let photos = [
+            photo("s1", bits: 9, created: base, screenshot: true),
+            photo("s2", bits: 9, created: base + 60, screenshot: true),
+        ]
+        #expect(DuplicateGrouper.groups(from: photos).map(\.kind) == [.screenshots])
+    }
+
+    @Test func burstFramesAreOneMoment() {
+        let photos = [
+            photo("f1", bits: 0, created: base),
+            photo("f2", bits: 0xFFFF_FFFF_0000_0000, created: base),
+        ]
+        let groups = DuplicateGrouper.groups(from: photos, bursts: ["f1": "B", "f2": "B"])
+        #expect(groups.map(\.kind) == [.sameMoment])
     }
 
     @Test func nearMatchesChainIntoOneGroup() {
         // a~b and b~c but a and c are 20 bits apart: one connected component.
-        let a: UInt64 = 0
-        let b: UInt64 = 0x03FF          // 10 bits
-        let c: UInt64 = 0xF_FFFF        // 20 bits
-        #expect((a ^ c).nonzeroBitCount == 20)
-        let groups = DuplicateGrouper.groups(
-            from: [photo("a", bits: a), photo("b", bits: b), photo("c", bits: c)],
-            strictness: .similar
-        )
+        let groups = DuplicateGrouper.groups(from: [
+            photo("a", bits: 0, created: base),
+            photo("b", bits: 0x03FF, created: base + 3600),
+            photo("c", bits: 0xF_FFFF, created: base + 7200),
+        ])
         #expect(groups.count == 1)
         #expect(groups[0].count == 3)
+        #expect(groups[0].kind == .lookAlikes)
     }
 
-    @Test func membersAreOrderedBestFirst() {
+    /// Plan §8.1: one keeper rule — the grouper hands members over in the
+    /// order `DuplicateReview.keeper` would pick them (favourite, bigger
+    /// file, more pixels), then the oldest.
+    @Test func groupOrderUsesTheKeeperRule() {
         let photos = [
-            photo("small", bits: 1, width: 2000, height: 1333, size: 1_000_000),
-            photo("lighter", bits: 1, size: 8_000_000, created: 1_700_000_100),
-            photo("favorite", bits: 1, size: 8_000_000, created: 1_700_000_100, favorite: true),
-            photo("heavy", bits: 1, size: 12_000_000, created: 1_700_000_200),
-            photo("older", bits: 1, size: 8_000_000, created: 1_600_000_000),
+            photo("lighter", bits: 1, size: 8_000_000, created: base + 100),
+            photo("favorite", bits: 1, size: 8_000_000, created: base + 200, favorite: true),
+            photo("heavy", bits: 1, size: 12_000_000, created: base + 300),
+            photo("older", bits: 1, size: 8_000_000, created: base),
         ]
-        let groups = DuplicateGrouper.groups(from: photos, strictness: .exact)
-        // Exact mode keys on dimensions too, so "small" stays out.
+        let groups = DuplicateGrouper.groups(from: photos)
         #expect(groups.count == 1)
-        #expect(groups[0].members.map(\.assetId) == ["heavy", "favorite", "older", "lighter"])
-        #expect(groups[0].reclaimableBytes == 24_000_000)
+        #expect(groups[0].members.map(\.assetId) == ["favorite", "heavy", "older", "lighter"])
+        #expect(groups[0].members[0].assetId == DuplicateReview.keeper(of: photos, traits: [:])?.assetId)
     }
 
     @Test func groupsAreOrderedNewestFirst() {
         let photos = [
             photo("old1", bits: 1, created: 100), photo("old2", bits: 1, created: 200),
-            photo("new1", bits: 0xFFFF_0000, created: 900), photo("new2", bits: 0xFFFF_0000, created: 800),
+            photo("new1", bits: 0xFFFF_0000, created: 9000), photo("new2", bits: 0xFFFF_0000, created: 8000),
         ]
-        let groups = DuplicateGrouper.groups(from: photos, strictness: .similar)
+        let groups = DuplicateGrouper.groups(from: photos)
         #expect(groups.map(\.id) == ["new2", "old1"])
     }
 
     @Test func manyIdenticalHashesStayCheap() {
-        // 5 000 blank frames plus one near neighbour: the near search runs over
-        // distinct hashes only, so this must finish quickly and group everything.
-        var photos = (0..<5000).map { photo("blank\($0)", bits: 0) }
-        photos.append(photo("near", bits: 0b111))
-        let groups = DuplicateGrouper.groups(from: photos, strictness: .similar)
+        // 5 000 blank frames an hour apart plus one near neighbour: the near
+        // search runs over distinct hashes only, so this must finish quickly.
+        var photos = (0..<5000).map { photo("blank\($0)", bits: 0, created: base + $0 * 3600) }
+        photos.append(photo("near", bits: 0b111, created: base - 3600))
+        let groups = DuplicateGrouper.groups(from: photos)
         #expect(groups.count == 1)
         #expect(groups[0].count == 5001)
     }

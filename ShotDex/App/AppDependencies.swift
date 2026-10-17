@@ -51,9 +51,9 @@ final class AppDependencies {
     let onThisDayNotifications: OnThisDayNotificationService
     let perceptualHashStore: PerceptualHashStore
     let duplicateScanPipeline: DuplicateScanPipeline
-    /// Marks and decisions on the Duplicates screen, alive until the app is
-    /// killed (FS-06.06b §1).
-    let duplicateReview = DuplicateReviewSession()
+    /// Marks and decisions on the Duplicates screen, kept on disk until the
+    /// user deletes or undoes them (FS-06.06b §1).
+    let duplicateReview: DuplicateReviewSession
     /// The opt-in people-and-pets pass. Never started by the app itself —
     /// see `SubjectScanPipeline`.
     let subjectScan: SubjectScanModel
@@ -335,6 +335,7 @@ final class AppDependencies {
         self.powerStatus = PowerMonitor()
         let perceptualHashStore = PerceptualHashStore(database: database)
         self.perceptualHashStore = perceptualHashStore
+        self.duplicateReview = DuplicateReviewSession(store: DuplicateReviewStore(database: database))
         self.duplicateScanPipeline = DuplicateScanPipeline(
             store: perceptualHashStore,
             reader: PerceptualHashReader()

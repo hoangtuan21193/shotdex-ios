@@ -64,7 +64,10 @@ enum DuplicateReview {
         return best
     }
 
-    private static func ranks(
+    /// The file rule D3: edited, then favourite, then bigger file, then more
+    /// pixels. One rule for the keeper on the card and the order the grouper
+    /// hands members over in (plan §8.1).
+    static func ranks(
         _ left: HashedPhoto,
         above right: HashedPhoto,
         traits: [String: DuplicateMemberTraits]
@@ -257,12 +260,6 @@ struct DuplicateCardMetrics: Equatable {
         let below = max(0, copyCount - copyColumns * 2)
         let rows = (below + gridColumns - 1) / gridColumns
         return keeper + CGFloat(rows) * (tile + Self.copyGap)
-    }
-
-    /// Height of a keeperless grid (a series) of `count` cells.
-    func seriesHeight(count: Int) -> CGFloat {
-        let rows = max(1, (count + gridColumns - 1) / gridColumns)
-        return CGFloat(rows) * tile + CGFloat(rows - 1) * Self.copyGap
     }
 
     /// Card columns for a content width: one on compact, as many ≥ 400pt

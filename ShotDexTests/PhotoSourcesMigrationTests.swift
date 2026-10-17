@@ -58,7 +58,8 @@ import Testing
             // Cached duplicate groups are a scan result: rebuilt per source.
             #expect(try Int.fetchOne(db, sql: "SELECT COUNT(*) FROM duplicate_groups") == 0)
             #expect(try db.columns(in: "duplicate_groups").map(\.name).contains("sourceId"))
-            #expect(try db.primaryKey("duplicate_scan_state").columns == ["strictness", "sourceId"])
+            // v41-duplicateKinds keys the cache by source alone (FS-06.06 §4).
+            #expect(try db.primaryKey("duplicate_scan_state").columns == ["sourceId"])
 
             for table in ["sources", "photos", "photo_copies", "content_hashes", "photo_aliases", "photo_recipes",
                           "photo_user_marks", "photo_user_keyword", "pending_sidecar", "shotdex_albums", "shotdex_album_members"] {
