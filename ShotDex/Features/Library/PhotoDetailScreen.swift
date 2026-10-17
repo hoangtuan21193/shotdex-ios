@@ -382,10 +382,10 @@ struct PhotoDetailScreen: View {
         .cullPresenter($cullRequest)
         .fileExportPresenter($fileExportRequest)
         .fullScreenCover(item: $burstFrames) { request in
-            BurstFramesScreen(request: request) { kept in
+            BurstFramesScreen(request: request, onDeleted: { kept in
                 // Stand on the first frame kept once the source has it.
                 if let first = kept.first { pendingSavedAssetID = first; revealSavedAssetIfNeeded() }
-            }
+            })
             .environment(dependencies)
             .environment(photoLibrary)
         }
@@ -969,7 +969,7 @@ struct PhotoDetailScreen: View {
                     Button {
                         burstFrames = BurstFramesRequest(burstId: burstId, startFrameId: id)
                     } label: {
-                        Label(String(localized: "Select Frames…", comment: "Viewer menu: open the burst frame picker"),
+                        Label(String(localized: "Choose Frames…", comment: "Viewer menu: open the frame picker on this burst"),
                               systemImage: "square.stack.3d.down.right")
                     }
                 }

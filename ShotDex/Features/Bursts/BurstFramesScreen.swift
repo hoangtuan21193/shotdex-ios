@@ -1,14 +1,19 @@
 import Photos
 import SwiftUI
 
-/// The burst frame picker (FS-02.05 §4), tier D: one big frame and a strip
-/// of every frame at the bottom, like Photos' own. A tap on the big frame
-/// keeps it or takes the keep back; the red button deletes the frames **not**
-/// kept, through the system's dialog.
+/// The shared frame picker (FS-06.06 §8, FS-02.05 §4; board `PH_BurstFrames`),
+/// tier D: one run of frames of one moment — a PhotoKit burst, a Same moment
+/// group, a focus stack. The big frame takes every point of height the
+/// chrome leaves; zoom and pan carry over to the next frame, so eyes are
+/// compared at the same spot; a 56pt filmstrip marks weak frames with a red
+/// dot. The keep button sits at the frame's bottom right, Done and the red
+/// "Keep 3, remove 21" in the thumb zone; swipe down closes — there is no X.
 struct BurstFramesScreen: View {
     let request: BurstFramesRequest
-    /// Told what was kept after a delete, so the viewer can stand on it.
+    /// Told what was kept after a delete, so the caller can stand on it.
     var onDeleted: (([String]) -> Void)?
+    /// Done: the frames kept now. A Duplicates group turns them into marks.
+    var onDone: (([String]) -> Void)?
 
     @Environment(\.dismiss) private var dismiss
     @Environment(AppDependencies.self) private var dependencies
@@ -16,6 +21,11 @@ struct BurstFramesScreen: View {
     @Environment(\.appAccent) private var accent
 
     @State private var model: BurstFramesModel?
+    @State private var synchronizer = CompareScrollSynchronizer()
+    /// Which face Zoom to face went to last; the next tap moves on (§8).
+    @State private var faceTaps = 0
+
+    static let filmstripCell: CGFloat = 56
 
     var body: some View {
         ZStack {
@@ -30,11 +40,10 @@ struct BurstFramesScreen: View {
         .statusBarHidden()
         .task {
             guard model == nil else { return }
-            let library = dependencies.bursts
             let photoLibrary = photoLibrary
             let made = BurstFramesModel(
                 request: request,
-                library: library,
+                library: dependencies.bursts,
                 isLimited: photoLibrary.authorizationState == .limited,
                 banner: dependencies.banner,
                 deleteAssets: { ids in
@@ -49,7 +58,7 @@ struct BurstFramesScreen: View {
     @ViewBuilder
     private func content(_ model: BurstFramesModel) -> some View {
         GeometryReader { proxy in
-            let layout = CullLayout.forSize(proxy.size)
+            let isWide = proxy.size.width > proxy.size.height && proxy.size.width >= 700
             VStack(spacing: 0) {
                 topBar(model)
                     // The Duo's cover keeps no status bar above the app: start
@@ -77,9 +86,19 @@ struct BurstFramesScreen: View {
                         .padding()
                     Spacer()
                 case .ready:
-                    bigFrame(model)
-                    filmstrip(model, layout: layout)
-                    deleteArea(model)
+                    if isWide {
+                        // Duo inner (951×669) and landscape iPad: the strip
+                        // runs down the right edge so the frame keeps the
+                        // whole height (§8, board `DI_BurstFrames`).
+                        HStack(spacing: 0) {
+                            bigFrame(model)
+                            filmstrip(model, vertical: true)
+                        }
+                    } else {
+                        bigFrame(model)
+                        filmstrip(model, vertical: false)
+                    }
+                    bottomBar(model)
                 }
             }
         }
@@ -88,49 +107,54 @@ struct BurstFramesScreen: View {
 
     // MARK: Top bar
 
-    /// ✕ · `Frame 3 of 24` · Keep Only Suggested — in one row, so a long
-    /// button never runs over the counter.
+    /// Keep Only Suggested (a burst) · title · Zoom to face.
     private func topBar(_ model: BurstFramesModel) -> some View {
-        HStack(spacing: AppTheme.Spacing.md) {
-            Button { dismiss() } label: {
-                Image(systemName: "xmark")
-                    .font(.system(size: 17, weight: .semibold))
-                    .foregroundStyle(.white)
-                    .frame(width: CullLayout.control, height: CullLayout.control)
-                    .editorGlass(Circle())
-                    .contentShape(Circle())
+        let currentId = model.selection.current?.id
+        return HStack(spacing: AppTheme.Spacing.md) {
+            if model.selection.hasSuggestions {
+                glassButton(String(localized: "Keep Only Suggested", comment: "Burst frame picker: keep exactly the frames Photos suggested")) {
+                    model.keepOnlySuggested()
+                }
             }
-            .buttonStyle(.plain)
-            .keyboardShortcut(.escape, modifiers: [])
-            .accessibilityLabel(MarkCopy.close)
-            Text(model.selection.count > 0 ? model.selection.title : "")
+            Text(model.selection.count > 0 ? (request.title.map { "\($0) · \(model.selection.currentIndex + 1)/\(model.selection.count)" } ?? model.selection.title) : "")
                 .font(.headline)
                 .monospacedDigit()
                 .foregroundStyle(.white)
                 .lineLimit(1)
                 .frame(maxWidth: .infinity, alignment: model.selection.hasSuggestions ? .leading : .center)
-            if model.selection.hasSuggestions {
-                Button {
-                    model.keepOnlySuggested()
-                } label: {
-                    Text("Keep Only Suggested", comment: "Burst frame picker: keep exactly the frames Photos suggested")
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(.white)
-                        .lineLimit(1)
-                        .padding(.horizontal, AppTheme.Spacing.md)
-                        .frame(height: CullLayout.control)
-                        .editorGlass(Capsule())
-                        .contentShape(Capsule())
+            if let currentId, let face = model.faceRect(for: currentId) {
+                glassButton(String(localized: "Zoom to face", comment: "Frame picker: zoom the big frame onto the largest face")) {
+                    zoomToFace(face, model: model)
                 }
-                .buttonStyle(.plain)
-                .fixedSize()
-            } else {
-                Color.clear.frame(width: CullLayout.control, height: CullLayout.control)
             }
         }
         .padding(.horizontal, CullLayout.edgeInset)
         .frame(height: CullLayout.topBarHeight)
         .padding(.bottom, AppTheme.Spacing.sm)
+    }
+
+    private func glassButton(_ title: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Text(title)
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(.white)
+                .lineLimit(1)
+                .padding(.horizontal, AppTheme.Spacing.md)
+                .frame(height: CullLayout.control)
+                .editorGlass(Capsule())
+                .contentShape(Capsule())
+        }
+        .buttonStyle(.plain)
+        .fixedSize()
+    }
+
+    /// The face at about 100%: one pixel of the photo per pixel of screen.
+    private func zoomToFace(_ face: CGRect, model: BurstFramesModel) {
+        guard let id = model.selection.current?.id, let asset = model.asset(for: id) else { return }
+        let fitWidth = max(1, UIScreen.main.bounds.width) * ActiveDisplay.scale
+        let scale = max(2, min(5, CGFloat(asset.pixelWidth) / fitWidth))
+        synchronizer.zoom(frameAt: 0, toNormalized: face, scale: scale)
+        faceTaps += 1
     }
 
     // MARK: Big frame
@@ -141,34 +165,52 @@ struct BurstFramesScreen: View {
         let isKept = frame.map { selection.isKept($0.id) } ?? false
         return ZStack {
             if let frame {
-                BurstBigFrame(asset: model.asset(for: frame.id), photoLibrary: photoLibrary)
-                    .id(frame.id)
+                BurstBigFrame(
+                    asset: model.asset(for: frame.id),
+                    photoLibrary: photoLibrary,
+                    synchronizer: synchronizer,
+                    onSwipe: { swipe in
+                        switch swipe {
+                        case .left: model.next()
+                        case .right: model.previous()
+                        case .down: close(model)
+                        case .up: break
+                        }
+                    }
+                )
+                // A new scroll view per frame: the synchronizer replays the
+                // last zoom and pan onto it, so the next frame opens in step.
+                .id(frame.id)
             }
         }
-        // The labels and the tick sit on the photo, not in the letterbox.
-        .aspectRatio(aspectRatio(of: frame.flatMap { model.asset(for: $0.id) }), contentMode: .fit)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .overlay(alignment: .topLeading) {
             if let frame {
                 HStack(spacing: AppTheme.Spacing.xs) {
                     if frame.isSuggested { chip(BurstSelection.suggestedTitle, fill: accent, text: .black) }
                     if frame.isPickedInPhotos { chip(BurstSelection.pickedInPhotosTitle, fill: .white.opacity(0.22), text: .white) }
+                    ForEach(model.chips(for: frame.id), id: \.self) { title in
+                        chip(title, fill: .black.opacity(0.55), text: .white)
+                    }
                 }
                 .padding(CullLayout.edgeInset)
+                .allowsHitTesting(false)
             }
         }
         .overlay(alignment: .bottomTrailing) {
-            keepBadge(isKept: isKept, size: 30)
-                .padding(CullLayout.edgeInset)
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .contentShape(Rectangle())
-        .onTapGesture { model.toggleKeepCurrent() }
-        .gesture(
-            DragGesture(minimumDistance: 30).onEnded { value in
-                guard abs(value.translation.width) > abs(value.translation.height) else { return }
-                if value.translation.width < 0 { model.next() } else { model.previous() }
+            Button {
+                model.toggleKeepCurrent()
+            } label: {
+                keepBadge(isKept: isKept, size: 30)
+                    .frame(width: 44, height: 44)
+                    .contentShape(Rectangle())
             }
-        )
+            .buttonStyle(.plain)
+            .padding(CullLayout.edgeInset)
+            .accessibilityLabel(isKept
+                ? String(localized: "Don't keep", comment: "Frame picker: take the keep back")
+                : String(localized: "Keep", comment: "Frame picker: keep this frame"))
+        }
         .contextMenu {
             if let frame {
                 Button {
@@ -178,25 +220,18 @@ struct BurstFramesScreen: View {
                 }
             }
         }
-        .accessibilityElement(children: .ignore)
+        .accessibilityElement(children: .contain)
         .accessibilityLabel(selection.accessibilityLabel(at: selection.currentIndex))
-        .accessibilityAddTraits(isKept ? [.isButton, .isSelected] : .isButton)
-        .accessibilityAction { model.toggleKeepCurrent() }
         .accessibilityAction(named: Text(Self.keepOnlyTitle)) {
             if let frame { model.keepOnly(frame.id) }
         }
         .sensoryFeedback(.selection, trigger: selection.keptIds)
     }
 
-    private func aspectRatio(of asset: PHAsset?) -> CGFloat {
-        guard let asset, asset.pixelWidth > 0, asset.pixelHeight > 0 else { return 1.5 }
-        return CGFloat(asset.pixelWidth) / CGFloat(asset.pixelHeight)
-    }
-
     static let cornerClearance: CGFloat = 24
 
     static var keepOnlyTitle: String {
-        String(localized: "Keep Only This", comment: "Burst frame picker: keep this frame and no other")
+        String(localized: "Keep just this one", comment: "Frame picker: keep this frame and no other")
     }
 
     private func chip(_ title: String, fill: Color, text: Color) -> some View {
@@ -223,49 +258,58 @@ struct BurstFramesScreen: View {
         }
         .frame(width: size, height: size)
         .shadow(color: .black.opacity(0.4), radius: 2)
-        .allowsHitTesting(false)
     }
 
     // MARK: Filmstrip
 
-    private func filmstrip(_ model: BurstFramesModel, layout: CullLayout) -> some View {
+    private func filmstrip(_ model: BurstFramesModel, vertical: Bool) -> some View {
         let selection = model.selection
+        let cell = Self.filmstripCell
         return ScrollViewReader { reader in
-            ScrollView(.horizontal) {
-                LazyHStack(spacing: 4) {
-                    ForEach(Array(selection.frames.enumerated()), id: \.element.id) { index, frame in
-                        Button {
-                            model.show(index)
-                        } label: {
-                            CullThumbnail(asset: model.asset(for: frame.id), photoLibrary: photoLibrary, side: layout.filmstripCell)
-                                .frame(width: layout.filmstripCell, height: layout.filmstripCell)
-                                .overlay(alignment: .bottomTrailing) {
-                                    if selection.isKept(frame.id) {
-                                        keepBadge(isKept: true, size: 16).padding(2)
-                                    }
+            ScrollView(vertical ? .vertical : .horizontal) {
+                let cells = ForEach(Array(selection.frames.enumerated()), id: \.element.id) { index, frame in
+                    Button {
+                        model.show(index)
+                    } label: {
+                        CullThumbnail(asset: model.asset(for: frame.id), photoLibrary: photoLibrary, side: cell)
+                            .frame(width: cell, height: cell)
+                            .overlay(alignment: .bottomTrailing) {
+                                if selection.isKept(frame.id) {
+                                    keepBadge(isKept: true, size: 16).padding(2)
                                 }
-                                .overlay(alignment: .topLeading) {
-                                    if frame.isSuggested {
-                                        Circle().fill(accent).frame(width: 6, height: 6).padding(3)
-                                    }
+                            }
+                            .overlay(alignment: .topLeading) {
+                                if frame.isSuggested {
+                                    Circle().fill(accent).frame(width: 6, height: 6).padding(3)
                                 }
-                                .overlay {
-                                    if index == selection.currentIndex {
-                                        Rectangle().strokeBorder(.white, lineWidth: 2)
-                                    }
+                            }
+                            .overlay(alignment: .topTrailing) {
+                                // A weak frame (Eyes closed, Soft) — not "will go".
+                                if model.isWeak(frame.id) {
+                                    Circle().fill(Color.red).frame(width: 6, height: 6).padding(3)
                                 }
-                                .clipped()
-                        }
-                        .buttonStyle(.plain)
-                        .id(frame.id)
-                        .accessibilityLabel(selection.accessibilityLabel(at: index))
-                        .accessibilityAddTraits(index == selection.currentIndex ? [.isSelected, .isButton] : .isButton)
+                            }
+                            .overlay {
+                                if index == selection.currentIndex {
+                                    Rectangle().strokeBorder(accent, lineWidth: 2)
+                                }
+                            }
+                            .clipped()
                     }
+                    .buttonStyle(.plain)
+                    .id(frame.id)
+                    .accessibilityLabel(selection.accessibilityLabel(at: index)
+                        + (model.isWeak(frame.id) ? ", " + String(localized: "weak", comment: "VoiceOver: a frame the scores found weak") : ""))
+                    .accessibilityAddTraits(index == selection.currentIndex ? [.isSelected, .isButton] : .isButton)
                 }
-                .padding(.horizontal, CullLayout.edgeInset)
+                if vertical {
+                    LazyVStack(spacing: 4) { cells }.padding(.vertical, AppTheme.Spacing.sm)
+                } else {
+                    LazyHStack(spacing: 4) { cells }.padding(.horizontal, CullLayout.edgeInset)
+                }
             }
             .scrollIndicators(.hidden)
-            .frame(height: layout.filmstripHeight)
+            .frame(width: vertical ? 72 : nil, height: vertical ? nil : cell + AppTheme.Spacing.sm * 2)
             .onChange(of: selection.currentIndex) { _, _ in
                 guard let id = selection.current?.id else { return }
                 withAnimation(AppTheme.Motion.standard) { reader.scrollTo(id, anchor: .center) }
@@ -275,27 +319,46 @@ struct BurstFramesScreen: View {
         .accessibilityLabel(MarkCopy.filmstrip)
     }
 
-    // MARK: Delete
+    // MARK: Bottom
 
-    private func deleteArea(_ model: BurstFramesModel) -> some View {
+    /// Done · Keep 3, remove 21 — both in the thumb zone (A6).
+    private func bottomBar(_ model: BurstFramesModel) -> some View {
         let selection = model.selection
         return VStack(spacing: AppTheme.Spacing.sm) {
-            Button {
-                Task { await delete(model) }
-            } label: {
-                Label(selection.deleteTitle, systemImage: "trash")
-                    .font(.headline)
-                    .monospacedDigit()
-                    .foregroundStyle(.white)
-                    .frame(maxWidth: CullLayout.controlRowWidth)
-                    .frame(height: 48)
-                    .background(Capsule().fill(Color.red))
-                    .contentShape(Capsule())
+            HStack(spacing: AppTheme.Spacing.md) {
+                Button {
+                    close(model)
+                } label: {
+                    Text(String(localized: "Done", comment: "Frame picker: close, keeping the picks as the group's marks"))
+                        .font(.headline)
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, AppTheme.Spacing.xl)
+                        .frame(height: 48)
+                        .editorGlass(Capsule())
+                        .contentShape(Capsule())
+                }
+                .buttonStyle(.plain)
+                .keyboardShortcut(.escape, modifiers: [])
+                Button {
+                    Task { await delete(model) }
+                } label: {
+                    Text(selection.deleteTitle)
+                        .font(.headline)
+                        .monospacedDigit()
+                        .foregroundStyle(.white)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.8)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 48)
+                        .background(Capsule().fill(Color.red))
+                        .contentShape(Capsule())
+                }
+                .buttonStyle(.plain)
+                .disabled(!selection.canDelete || model.isDeleting)
+                .opacity(selection.canDelete ? 1 : 0.35)
+                .keyboardShortcut(.delete, modifiers: .command)
             }
-            .buttonStyle(.plain)
-            .disabled(!selection.canDelete || model.isDeleting)
-            .opacity(selection.canDelete ? 1 : 0.35)
-            .keyboardShortcut(.delete, modifiers: .command)
+            .frame(maxWidth: CullLayout.controlRowWidth + 120)
             Text(selection.deleteFootnote)
                 .font(.caption)
                 .foregroundStyle(EditorTheme.secondaryText)
@@ -303,8 +366,13 @@ struct BurstFramesScreen: View {
                 .fixedSize(horizontal: false, vertical: true)
         }
         .padding(.horizontal, CullLayout.edgeInset)
-        .padding(.top, AppTheme.Spacing.md)
+        .padding(.top, AppTheme.Spacing.sm)
         .padding(.bottom, AppTheme.Spacing.md)
+    }
+
+    private func close(_ model: BurstFramesModel) {
+        onDone?(model.keptIds)
+        dismiss()
     }
 
     private func delete(_ model: BurstFramesModel) async {
@@ -328,17 +396,19 @@ struct BurstFramesScreen: View {
     }
 }
 
-/// The big frame's image: the best local rendition first, then the
-/// screen-sized one.
+/// The big frame: zoomable, in step with the frames before it. The best
+/// local rendition first, then the screen-sized one.
 private struct BurstBigFrame: View {
     let asset: PHAsset?
     let photoLibrary: PhotoLibraryService
+    let synchronizer: CompareScrollSynchronizer
+    let onSwipe: (CullGesturePolicy.Swipe) -> Void
     @State private var image: UIImage?
 
     var body: some View {
         ZStack {
             if let image {
-                Image(uiImage: image).resizable().scaledToFit()
+                ZoomableImageView(image: image, sync: synchronizer, paneIndex: 0, onSwipe: onSwipe)
             } else {
                 ProgressView().tint(.white)
             }

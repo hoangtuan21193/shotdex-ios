@@ -15,8 +15,9 @@ struct BurstSelectionTests {
         let selection = BurstSelection(frames: frames(24, suggested: [7, 15]))
         #expect(selection.keptIds.isEmpty)
         #expect(!selection.canDelete)
-        #expect(selection.deleteTitle == "Delete")
-        #expect(selection.deleteFootnote.hasPrefix("Keep at least one frame."))
+        // FS-06.06 §8 / AC-F3: the red button dims and says what to do.
+        #expect(selection.deleteTitle == "Keep picks, remove the rest")
+        #expect(selection.deleteFootnote == "Choose at least one frame to keep")
         #expect(selection.hasSuggestions)
     }
 
@@ -26,7 +27,7 @@ struct BurstSelectionTests {
         selection.keepOnlySuggested()
         #expect(selection.keptIds == ["f7", "f15"])
         #expect(selection.deleteIds.count == 22)
-        #expect(selection.deleteTitle == "Delete 22 Photos")
+        #expect(selection.deleteTitle == "Keep 2, remove 22")
         #expect(!selection.deleteIds.contains("f7"))
     }
 
@@ -36,7 +37,7 @@ struct BurstSelectionTests {
         selection.show(2)
         selection.toggleKeepCurrent()
         #expect(selection.isKept("f3"))
-        #expect(selection.deleteTitle == "Delete 23 Photos")
+        #expect(selection.deleteTitle == "Keep 1, remove 23")
         selection.toggleKeepCurrent()
         #expect(!selection.canDelete)
     }
@@ -189,5 +190,24 @@ struct BurstModelTests {
         await list.reload()
         #expect(list.listed.isEmpty)
         #expect(list.phase == .ready)
+    }
+}
+
+/// FS-06.06 §8 — the picker opened on a Duplicates group keeps its unmarked
+/// frames, and Done hands the keeps back.
+@MainActor
+struct SharedFramePickerTests {
+    @Test func groupMarksBecomeKeeps() {
+        var selection = BurstSelection(frames: (1...5).map { BurstFrame(id: "f\($0)", isSuggested: false, isPickedInPhotos: false) })
+        selection.keep(["f2", "f4", "not-a-frame"])
+        #expect(selection.keptIds == ["f2", "f4"])
+        #expect(selection.deleteTitle == "Keep 2, remove 3")
+    }
+
+    @Test func requestFromFramesIsNotABurst() {
+        let request = BurstFramesRequest(frames: ["a", "b", "c"], startFrameId: "b")
+        #expect(request.burstId == nil)
+        #expect(request.source == .frames(["a", "b", "c"]))
+        #expect(BurstFramesRequest(burstId: "x").burstId == "x")
     }
 }

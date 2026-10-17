@@ -73,9 +73,6 @@ final class DuplicatesModel {
     @ObservationIgnored private var scoringReadExposure = false
     private var traitsRequested: Set<String> = []
     var comparePresentation: DuplicateComparePresentation?
-    /// The Bursts tab (FS-06.06 §7b) — not a kind of group: it
-    /// lists real bursts from PhotoKit and needs no scan.
-    var showsBursts = false
     /// The comparison on screen, kept past its dismissal for `didCloseCompare`.
     @ObservationIgnored private var openCompare: DuplicateComparePresentation?
     var errorMessage: String?
@@ -222,7 +219,11 @@ final class DuplicatesModel {
            let member = group.members.first(where: { $0.assetId == picked }) {
             return member
         }
-        return DuplicateReview.keeper(of: group.members, traits: traits, scores: scores)
+        // A regroup can hand a group marks made elsewhere: never suggest
+        // keeping a photo the user marked while an unmarked one is there.
+        let unmarked = group.members.filter { !session.isMarked($0.assetId) }
+        let pool = unmarked.isEmpty ? group.members : unmarked
+        return DuplicateReview.keeper(of: pool, traits: traits, scores: scores)
     }
 
     /// Bytes freed by keeping only the keeper. `nil` for a bracket or focus
@@ -446,6 +447,7 @@ final class DuplicatesModel {
             guard let self, !Task.isCancelled, let result else { return }
             self.hasLoadedOnce = true
             self.apply(result)
+            await self.mergeBursts()
             if result.groups == nil, result.coverage.hashedPhotos > 0 {
                 // Hashes exist but were never grouped (a scan from before
                 // kinds) — grouping is cheap, do it now.
@@ -756,7 +758,95 @@ final class DuplicatesModel {
     }
 
     func openViewer(_ assetId: String, in group: DuplicateGroup) {
-        viewer = DuplicateViewerPresentation(groupId: group.id, startId: assetId)
+        // A run is judged frame against frame: Same moment and source sets
+        // open the frame picker at that frame (§7.6).
+        if group.kind == .sameMoment || group.sourceSet != nil {
+            openFrames(group, at: assetId)
+        } else {
+            viewer = DuplicateViewerPresentation(groupId: group.id, startId: assetId)
+        }
+    }
+
+    // MARK: Frame picker
+
+    /// The shared frame picker on screen (§8).
+    var framePicker: BurstFramesRequest?
+
+    /// Opens the frame picker on `group`, keeping its unmarked frames when
+    /// some are marked — the picker's keeps **are** the group's marks.
+    func openFrames(_ group: DuplicateGroup, at assetId: String? = nil) {
+        let ids = group.members.map(\.assetId)
+        var request = BurstFramesRequest(frames: ids, startFrameId: assetId ?? keeper(of: group)?.assetId)
+        let marked = group.memberIds.intersection(session.marks)
+        if !marked.isEmpty { request.initiallyKept = group.memberIds.subtracting(marked) }
+        let sharpest = group.members.compactMap { scores[$0.assetId]?.sharpness }.max()
+        let scored = DuplicateReview.isScored(group.members, scores)
+        for member in group.members {
+            guard let score = scores[member.assetId] else { continue }
+            if let face = score.faceRect { request.faceRects[member.assetId] = face }
+            let soft = scored && (sharpest ?? 0) > 0 && (score.sharpness ?? 0) <= (sharpest ?? 0) * DuplicateQuality.softRatio
+            if score.hasEyesClosed || soft { request.weakFrameIds.insert(member.assetId) }
+            var chips: [String] = []
+            if score.hasEyesClosed { chips.append(String(localized: "Eyes closed", comment: "Duplicates: caption — someone in this photo has their eyes closed")) }
+            if soft { chips.append(String(localized: "Soft", comment: "Duplicates: caption — this photo is noticeably less sharp than the sharpest")) }
+            if scored, chips.isEmpty, score.sharpness == sharpest {
+                chips.append(String(localized: "Sharpest", comment: "Duplicates: reason chip — the kept photo is the sharpest of the group"))
+            }
+            request.chips[member.assetId] = chips
+        }
+        request.title = group.sourceSet?.title ?? group.kind.title
+        framePicker = request
+    }
+
+    /// Back from the frame picker. Done: the keeps become the group's marks
+    /// (nothing kept → marks unchanged). A delete: the frames are gone.
+    func didChooseFrames(_ request: BurstFramesRequest, kept: [String], deleted: Bool) {
+        guard case .frames(let ids) = request.source else { return }
+        if deleted {
+            // The picker already said where the frames went.
+            didDelete(ids: Set(ids).subtracting(kept))
+        } else if !kept.isEmpty {
+            session.setMarks(of: ids, to: Set(ids).subtracting(kept))
+        }
+    }
+
+    // MARK: Bursts
+
+    /// PhotoKit bursts are Same moment groups (§4): read once per load, their
+    /// frames taken out of any other group so a photo is in one place only.
+    func mergeBursts() async {
+        let library = dependencies.bursts
+        var burstGroups: [DuplicateGroup] = []
+        // Frames the index knows keep their file size and facts.
+        let known = Dictionary(groups.flatMap(\.members).map { ($0.assetId, $0) }, uniquingKeysWith: { first, _ in first })
+        for row in await library.bursts() {
+            let frames = await library.frames(ofBurst: row.id)
+            let members: [HashedPhoto] = frames.compactMap { frame in
+                guard let asset = library.asset(for: frame.id) else { return nil }
+                assetsById[frame.id] = asset
+                if let photo = known[frame.id] { return photo }
+                return HashedPhoto(
+                    assetId: frame.id, hash: PerceptualHash(bits: 0),
+                    width: asset.pixelWidth, height: asset.pixelHeight, fileSize: nil,
+                    creationDate: asset.creationDate.map { Int($0.timeIntervalSince1970) },
+                    isFavorite: asset.isFavorite
+                )
+            }
+            guard members.count >= 2 else { continue }
+            burstGroups.append(DuplicateGroup(members: members, kind: .sameMoment))
+        }
+        guard !burstGroups.isEmpty else { return }
+        let taken = Set(burstGroups.flatMap { $0.members.map(\.assetId) })
+        let others = groups.compactMap { group -> DuplicateGroup? in
+            let rest = group.members.filter { !taken.contains($0.assetId) }
+            return rest.count > 1 ? DuplicateGroup(members: rest, kind: group.kind, sourceSet: group.sourceSet) : nil
+        }
+        groups = others + burstGroups.filter { !isHidden($0) }
+    }
+
+    private func isHidden(_ group: DuplicateGroup) -> Bool {
+        if case .hidden = session.dismissal(of: group.memberIds) { return true }
+        return false
     }
 
     func clearMarks(in group: DuplicateGroup) {

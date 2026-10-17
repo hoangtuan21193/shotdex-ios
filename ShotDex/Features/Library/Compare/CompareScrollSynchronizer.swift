@@ -105,6 +105,20 @@ final class CompareScrollSynchronizer {
         scrollView.zoom(to: rect, animated: animated)
     }
 
+    /// Zooms frame `index` onto `rect`, given as a share of the photo with a
+    /// top-left origin — Zoom to face in the frame picker (FS-06.06 §8).
+    /// The other frames, and frames built later, follow.
+    func zoom(frameAt index: Int, toNormalized rect: CGRect, scale: CGFloat, animated: Bool = true) {
+        guard let scrollView = scrollViews[index]?.view,
+              let content = scrollView.delegate?.viewForZooming?(in: scrollView) else { return }
+        let clamped = min(max(scale, scrollView.minimumZoomScale), scrollView.maximumZoomScale)
+        let size = CGSize(width: content.bounds.width / clamped, height: content.bounds.height / clamped)
+        let center = CGPoint(x: content.bounds.minX + rect.midX * content.bounds.width,
+                             y: content.bounds.minY + rect.midY * content.bounds.height)
+        scrollView.zoom(to: CGRect(x: center.x - size.width / 2, y: center.y - size.height / 2,
+                                   width: size.width, height: size.height), animated: animated)
+    }
+
     /// Maps an offset between frames proportionally to their content sizes,
     /// so photos with different aspect ratios stay on the same relative spot.
     private static func normalizedOffset(from source: UIScrollView, to target: UIScrollView) -> CGPoint {

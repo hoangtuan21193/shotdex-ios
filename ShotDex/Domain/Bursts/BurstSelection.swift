@@ -63,6 +63,12 @@ struct BurstSelection: Equatable, Sendable {
         keptIds = Set(frames.filter(\.isSuggested).map(\.id))
     }
 
+    /// The keeps the picker opens with — a Duplicates group's unmarked
+    /// frames once the user has marked some (FS-06.06 §8).
+    mutating func keep(_ ids: Set<String>) {
+        keptIds = ids.intersection(frames.map(\.id))
+    }
+
     /// Keep Only This, from the big frame's menu.
     mutating func keepOnly(_ id: String) {
         guard frames.contains(where: { $0.id == id }) else { return }
@@ -91,23 +97,20 @@ struct BurstSelection: Equatable, Sendable {
         )
     }
 
-    /// `Delete 22 Photos`, or `Delete` while nothing can go.
+    /// `Keep 3, remove 21` — the count in the words (FS-06.06 §8) — or
+    /// `Keep picks, remove the rest` while nothing is kept.
     var deleteTitle: String {
-        let count = deleteIds.count
         guard canDelete else {
-            return String(localized: "Delete", comment: "Burst frame picker: the delete button while no frame is kept")
+            return String(localized: "Keep picks, remove the rest", comment: "Frame picker: the red button while no frame is kept")
         }
-        return String(localized: "Delete \(count) Photos", table: MarkCopy.table,
-                      comment: "Compare: deletes every Rejected photo in the comparison (plural)")
+        return String(localized: "Keep \(keptIds.count), remove \(deleteIds.count)",
+                      comment: "Frame picker: keep the picked frames and move the others to Recently Deleted")
     }
 
-    /// The line under the delete button.
+    /// The line under the red button.
     var deleteFootnote: String {
         keptIds.isEmpty
-            ? String(
-                localized: "Keep at least one frame. To delete the whole burst, use Delete in the viewer.",
-                comment: "Burst frame picker: why Delete is off with no frame kept"
-            )
+            ? String(localized: "Choose at least one frame to keep", comment: "Frame picker: why the red button is off")
             : String(localized: "Photos move to Recently Deleted.", comment: "Burst frame picker: where deleted frames go")
     }
 

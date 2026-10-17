@@ -12,6 +12,8 @@ Photos, chạm chọn khung giữ, và đưa phần còn lại vào Recently Del
 > "Cố ý không có" về chấm mắt và chấm độ nét (§3) **bị đảo** bởi quyết định D1 — app tự chấm, xem FS-06.06 §6. Luật PhotoKit
 > (§2) và đường xoá/đường chép (§2, §9) giữ nguyên.
 
+> **v3 (2026-10-17):** màn chọn khung là màn dùng chung của FS-06.06 §8; lối viewer ghi *Choose Frames…*; tab Bursts đã bỏ — burst là nhóm Same moment.
+
 ## 1. Người dùng cần gì
 
 Một pha chạy chụp burst ra 24 khung, người chụp cần 1–2 tấm. Hôm nay ⋯ → Show All Frames chỉ mở danh sách

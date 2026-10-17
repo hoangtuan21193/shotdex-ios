@@ -73,7 +73,7 @@ struct DuplicateSourceSetCard: View {
             .buttonStyle(.bordered)
             if !isBracket, let first = group.members.first {
                 Button(String(localized: "Choose frames", comment: "Duplicates card: pick which frames of the run to keep")) {
-                    model.openViewer(first.assetId, in: group)
+                    model.openFrames(group, at: first.assetId)
                 }
                 .buttonStyle(.bordered)
                 .tint(.secondary)

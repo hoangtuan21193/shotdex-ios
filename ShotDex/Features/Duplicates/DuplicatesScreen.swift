@@ -36,8 +36,6 @@ struct DuplicatesScreen: View {
     @State private var isPinching = false
     @State private var hudVisible = false
     @State private var hudTask: Task<Void, Never>?
-    @State private var burstList: BurstListModel?
-    @State private var openBurst: BurstFramesRequest?
     @State private var showsList = false
     @State private var showsQuickClean = false
     @State private var showsIgnored = false
@@ -81,13 +79,11 @@ struct DuplicatesScreen: View {
     @ViewBuilder
     private func content(_ model: DuplicatesModel) -> some View {
         @Bindable var model = model
-        let hasMarks = model.markedCount > 0 && !model.showsBursts
+        let hasMarks = model.markedCount > 0
         ScrollView {
             Group {
                 if page == .summary {
                     summaryBody(model)
-                } else if model.showsBursts, let burstList {
-                    BurstListView(model: burstList, openBurst: $openBurst)
                 } else {
                     cardList(model)
                 }
@@ -112,7 +108,7 @@ struct DuplicatesScreen: View {
                         .background(.bar)
                 }
                 if showsBand {
-                    DuplicatesHeaderBand(model: model, burstCount: burstList?.listed.count, isRegular: isRegular)
+                    DuplicatesHeaderBand(model: model, isRegular: isRegular)
                 }
             }
         }
@@ -151,12 +147,6 @@ struct DuplicatesScreen: View {
         .task(id: photoLibrary.assetChangeToken) {
             guard photoLibrary.authorizationState.canReadLibrary else { return }
             model.refreshPendingCount()
-            if model.showsBursts { await burstList?.reload() }
-        }
-        .task(id: model.showsBursts) {
-            guard model.showsBursts, photoLibrary.authorizationState.canReadLibrary else { return }
-            if burstList == nil { burstList = BurstListModel(library: dependencies.bursts) }
-            await burstList?.reload()
         }
         .navigationDestination(isPresented: $showsList) {
             DuplicatesScreen(page: .list, sharedModel: model)
@@ -172,14 +162,18 @@ struct DuplicatesScreen: View {
             DuplicateGroupViewer(model: model, presentation: presentation)
                 .environment(photoLibrary)
         }
-        .fullScreenCover(item: $openBurst) { request in
-            BurstFramesScreen(request: request)
-                .environment(dependencies)
-                .environment(photoLibrary)
+        .fullScreenCover(item: $model.framePicker) { request in
+            BurstFramesScreen(
+                request: request,
+                onDeleted: { kept in model.didChooseFrames(request, kept: kept, deleted: true) },
+                onDone: { kept in model.didChooseFrames(request, kept: kept, deleted: false) }
+            )
+            .environment(dependencies)
+            .environment(photoLibrary)
         }
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
-                if !model.showsBursts { moreMenu(model) }
+                moreMenu(model)
             }
         }
         .fullScreenCover(item: $model.comparePresentation, onDismiss: model.didCloseCompare) { presentation in
@@ -244,7 +238,6 @@ struct DuplicatesScreen: View {
                 isRegular: isRegular,
                 open: { filter in
                     model.filter = filter
-                    model.showsBursts = false
                     showsList = true
                 },
                 reviewQuickClean: { showsQuickClean = true }
@@ -512,22 +505,12 @@ struct DuplicatesScreen: View {
 /// progress, last scan and Rescan. Cards scroll beneath it.
 private struct DuplicatesHeaderBand: View {
     @Bindable var model: DuplicatesModel
-    /// Bursts listed in the Bursts tab, once read.
-    let burstCount: Int?
     let isRegular: Bool
 
     var body: some View {
         VStack(alignment: .leading, spacing: AppTheme.Spacing.sm) {
             filterRow
-            if model.showsBursts {
-                if let burstCount {
-                    Text(BurstSummary.countTitle(burstCount))
-                        .font(.footnote.weight(.semibold))
-                        .monospacedDigit()
-                        .foregroundStyle(.secondary)
-                        .padding(.horizontal, AppTheme.Size.screenMargin)
-                }
-            } else {
+            Group {
                 HStack(alignment: .center, spacing: AppTheme.Spacing.md) {
                     progress.frame(maxWidth: isRegular ? 420 : .infinity, alignment: .leading)
                     if isRegular { Spacer(minLength: 0) }
@@ -550,21 +533,16 @@ private struct DuplicatesHeaderBand: View {
         .overlay(alignment: .bottom) { Divider() }
     }
 
-    /// One pill per filter that has something, plus Bursts until the shared
-    /// frame picker absorbs it (plan task 20). Each pill is as wide as its own
+    /// One pill per filter that has something; a PhotoKit burst is a Same
+    /// moment group now (§4). Each pill is as wide as its own
     /// bold label, so choosing one never moves the others (A6, AC-L1).
     private var filterRow: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: AppTheme.Spacing.sm) {
                 ForEach(model.presentFilters, id: \.self) { filter in
-                    pill(filter.title, count: model.groupCount(filter),
-                         isSelected: !model.showsBursts && model.filter == filter) {
-                        model.showsBursts = false
+                    pill(filter.title, count: model.groupCount(filter), isSelected: model.filter == filter) {
                         model.filter = filter
                     }
-                }
-                pill(DuplicatesTab.bursts.title, count: burstCount, isSelected: model.showsBursts) {
-                    model.showsBursts = true
                 }
             }
             .padding(.horizontal, AppTheme.Size.screenMargin)
@@ -935,7 +913,13 @@ private struct DuplicateDecisionCard: View {
         let marked = model.markedCount(in: group)
         let keptAll = model.isKeptAll(group)
         return HStack(spacing: AppTheme.Spacing.sm) {
-            if marked > 0 {
+            if group.kind == .sameMoment {
+                // A run is chosen frame by frame, not wiped in one tap (§7.4).
+                pill(String(localized: "Choose frames", comment: "Duplicates card: pick which frames of the run to keep"),
+                     color: .accentColor) {
+                    model.openFrames(group)
+                }
+            } else if marked > 0 {
                 pill(String(localized: "Unmark", comment: "Duplicates card: clear this group's marks"), color: .primary) {
                     model.unmark(group)
                 }
@@ -1292,16 +1276,3 @@ private struct DuplicatesAlerts: ViewModifier {
     }
 }
 
-/// The Duplicates list's filter, or the Bursts list until the shared frame
-/// picker replaces it (plan task 20).
-enum DuplicatesTab: Hashable {
-    case filter(DuplicatesFilter)
-    case bursts
-
-    var title: String {
-        switch self {
-        case .filter(let filter): filter.title
-        case .bursts: String(localized: "Bursts", comment: "Duplicates tab: real bursts from Photos")
-        }
-    }
-}

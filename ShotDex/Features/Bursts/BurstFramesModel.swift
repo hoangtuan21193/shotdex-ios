@@ -1,12 +1,48 @@
+import CoreGraphics
 import Foundation
 import Observation
 import Photos
 
-/// What opens the frame picker: a burst, and the frame to show first.
+/// What opens the frame picker (FS-06.06 §8): a PhotoKit burst, or any run
+/// of photos of one moment — a Same moment group, a focus stack — and the
+/// frame to show first.
 struct BurstFramesRequest: Identifiable, Equatable {
-    var id: String { burstId }
-    let burstId: String
+    enum Source: Equatable {
+        case burst(String)
+        case frames([String])
+    }
+
+    let id: String
+    let source: Source
     var startFrameId: String?
+    /// Frames kept on open: a group's unmarked frames once some are marked.
+    var initiallyKept: Set<String> = []
+    /// Frames the scoring pass found weak (Eyes closed, Soft): a red dot.
+    var weakFrameIds: Set<String> = []
+    /// What the scores say on each frame, for the big frame's chips.
+    var chips: [String: [String]] = [:]
+    /// Largest face per frame, normalized, top-left origin — Zoom to face.
+    var faceRects: [String: CGRect] = [:]
+    /// "Same moment · 24 frames" instead of the frame counter, when set.
+    var title: String?
+
+    init(burstId: String, startFrameId: String? = nil) {
+        self.id = burstId
+        self.source = .burst(burstId)
+        self.startFrameId = startFrameId
+    }
+
+    init(frames: [String], startFrameId: String?) {
+        self.id = frames.first ?? UUID().uuidString
+        self.source = .frames(frames)
+        self.startFrameId = startFrameId
+    }
+
+    /// Kept for the burst callers that only ever passed a burst.
+    var burstId: String? {
+        if case .burst(let id) = source { return id }
+        return nil
+    }
 }
 
 /// The frame picker's model (FS-02.05): loads one burst's frames, holds
@@ -43,14 +79,34 @@ final class BurstFramesModel {
         self.deleteAssets = deleteAssets
     }
 
+    /// Assets of a `.frames` request, which no burst fetch knows.
+    @ObservationIgnored private var frameAssets: [String: PHAsset] = [:]
+
     func load() async {
-        let frames = await library.frames(ofBurst: request.burstId)
+        let frames: [BurstFrame]
+        switch request.source {
+        case .burst(let id):
+            frames = await library.frames(ofBurst: id)
+        case .frames(let ids):
+            let assets = PhotoLibraryService.fetchAssets(ids: ids)
+            frameAssets = Dictionary(uniqueKeysWithValues: assets.map { ($0.localIdentifier, $0) })
+            frames = ids.filter { frameAssets[$0] != nil }
+                .map { BurstFrame(id: $0, isSuggested: false, isPickedInPhotos: false) }
+        }
         selection = BurstSelection(frames: frames)
+        selection.keep(request.initiallyKept)
         if let start = request.startFrameId { selection.show(id: start) }
         phase = frames.count >= 2 ? .ready : .empty
     }
 
-    func asset(for id: String) -> PHAsset? { library.asset(for: id) }
+    func asset(for id: String) -> PHAsset? { frameAssets[id] ?? library.asset(for: id) }
+
+    func isWeak(_ id: String) -> Bool { request.weakFrameIds.contains(id) }
+    func chips(for id: String) -> [String] { request.chips[id] ?? [] }
+    func faceRect(for id: String) -> CGRect? { request.faceRects[id] }
+
+    /// The frames kept now, in capture order — what Done hands back.
+    var keptIds: [String] { selection.frames.map(\.id).filter(selection.isKept) }
 
     func show(_ index: Int) { selection.show(index) }
     func toggleKeepCurrent() { selection.toggleKeepCurrent() }
@@ -62,7 +118,7 @@ final class BurstFramesModel {
 
     /// `ShotDex can see 3 frames of this burst. …`
     var limitedNote: String? {
-        guard isLimited else { return nil }
+        guard isLimited, request.burstId != nil else { return nil }
         return String(
             localized: "ShotDex can see \(selection.count) frames of this burst. Frames you haven't shared stay as they are.",
             comment: "Burst frame picker under limited photo access"
@@ -92,7 +148,7 @@ final class BurstFramesModel {
             }
             return .failed
         }
-        let kept = selection.frames.map(\.id).filter(selection.isKept)
+        let kept = keptIds
         selection.remove(Set(ids))
         // No Undo: the app cannot read Recently Deleted.
         banner?.show(Self.moved(ids.count))
