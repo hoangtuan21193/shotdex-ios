@@ -791,7 +791,15 @@ private struct DuplicateDecisionCard: View {
                 .font(.footnote)
                 .foregroundStyle(.red)
                 .padding(.top, AppTheme.Spacing.sm)
-        } else if model.blockedGroupId == group.id {
+        } else if model.markedCount(in: group) == 0, let removal = model.removal(in: group),
+                  let kept = DuplicateProtection.keptLine(removal.kept, namingAlbums: false) {
+            // A2: Remove the other N leaves these alone; say so before the tap.
+            Text(kept)
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+                .padding(.top, AppTheme.Spacing.sm)
+        }
+        if model.blockedGroupId == group.id {
             Label("Keep at least one photo in this group.", systemImage: "exclamationmark.circle")
                 .font(.footnote)
                 .foregroundStyle(.secondary)
@@ -808,15 +816,17 @@ private struct DuplicateDecisionCard: View {
                 pill(String(localized: "Unmark", comment: "Duplicates card: clear this group's marks"), color: .primary) {
                     model.unmark(group)
                 }
-            } else if keeper != nil {
-                let others = group.count - 1
+            } else if let removal = model.removal(in: group), !removal.remove.isEmpty {
+                let others = removal.remove.count
                 pill(others == 1
-                     ? String(localized: "Mark the other one", comment: "Duplicates card: mark every photo but the kept one")
-                     : String(localized: "Mark the other \(others)", comment: "Duplicates card: mark every photo but the kept one"),
+                     ? String(localized: "Remove the other one", comment: "Duplicates card: mark every photo but the kept one")
+                     : String(localized: "Remove the other \(others)", comment: "Duplicates card: mark every photo but the kept one"),
                      color: .red) {
                     model.markOthers(in: group)
                 }
-                .accessibilityLabel(others == 1 ? "Mark the other photo for deletion" : "Mark the other \(others) photos for deletion")
+                .accessibilityLabel(others == 1
+                    ? String(localized: "Mark the other photo for removal", comment: "VoiceOver: Remove the other one")
+                    : String(localized: "Mark the other \(others) photos for removal", comment: "VoiceOver: Remove the other N"))
             }
             pill(keptAll
                  ? String(localized: "Keeping all", comment: "Duplicates card: the group is kept whole; tap to undo")

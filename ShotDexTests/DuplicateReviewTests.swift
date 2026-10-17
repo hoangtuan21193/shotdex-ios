@@ -227,4 +227,41 @@ struct DuplicateReviewTests {
         #expect(DuplicateReview.keeper(of: [a, b], traits: [:], scores: scores)?.assetId == "a")
         #expect(!DuplicateReview.reasons(keeper: a, members: [a, b], traits: [:], scores: scores).contains(.eyesOpen))
     }
+
+    /// AC-M6: Remove the other … skips a favorite and an album photo.
+    @Test func removeOtherSkipsProtected() {
+        let members = [photo("K", size: 9), photo("C1", size: 1, favorite: true), photo("C2", size: 1), photo("C3", size: 1)]
+        let traits: [String: DuplicateMemberTraits] = ["C2": .init(albums: ["Client"])]
+        let removal = DuplicateRemoval.plan(members: members, keeper: members[0], traits: traits)
+        #expect(removal.remove == ["C3"])
+        #expect(DuplicateProtection.keptLine(removal.kept, namingAlbums: false) == "2 kept: favorite, in album")
+    }
+
+    /// AC-S2 (domain): 212 groups, 230 removable photos of which 3 are
+    /// protected; 5 unticked groups hold 6 more — 221 get marked.
+    @Test func quickCleanNeverPicksProtectedPhotos() {
+        var groups: [DuplicateGroup] = []
+        var traits: [String: DuplicateMemberTraits] = [:]
+        // 194 pairs (194 copies) + 18 triples (36 copies) = 212 groups, 230 copies.
+        for index in 0..<212 {
+            let copies = index < 194 ? 1 : 2
+            let members = [photo("k\(index)", size: 9)] + (0..<copies).map { photo("c\(index)-\($0)", size: 1) }
+            groups.append(DuplicateGroup(members: members, kind: .copies))
+        }
+        // Three protected copies, each in a triple, so their groups stay.
+        traits["c194-0"] = .init(isFavorite: true)
+        traits["c195-0"] = .init(isEdited: true)
+        traits["c196-0"] = .init(albums: ["Client"])
+        let items = QuickClean.items(groups: groups, keeper: { $0.members[0] }, traits: traits)
+        #expect(items.count == 212)
+        #expect(items.flatMap(\.removal.remove).count == 227)
+        // Untick five groups holding six other copies: one triple, four pairs.
+        let unticked: Set<String> = ["k197", "k5", "k6", "k7", "k8"]
+        let selected = QuickClean.selection(items, excluding: unticked)
+        #expect(selected.count == 230 - 6 - 3)
+        #expect(!selected.contains("c194-0") && !selected.contains("c195-0") && !selected.contains("c196-0"))
+        let row = groups[196]
+        let removal = DuplicateRemoval.plan(members: row.members, keeper: row.members[0], traits: traits)
+        #expect(DuplicateProtection.keptLine(removal.kept, namingAlbums: true) == "1 kept: in album Client")
+    }
 }

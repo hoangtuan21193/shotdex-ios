@@ -231,11 +231,17 @@ final class DuplicatesModel {
         session.setCollapsed(group.memberIds, false)
     }
 
-    /// "Mark the other N": every member but the keeper, then fold the card.
+    /// What Remove the other N would mark: every member but the keeper,
+    /// minus favorites, edits and album photos (A2).
+    func removal(in group: DuplicateGroup) -> DuplicateRemoval? {
+        guard let keeper = keeper(of: group) else { return nil }
+        return DuplicateRemoval.plan(members: group.members, keeper: keeper, traits: traits)
+    }
+
+    /// "Remove the other N": marks what `removal(in:)` names, then folds.
     func markOthers(in group: DuplicateGroup) {
-        guard let keeper = keeper(of: group) else { return }
-        session.setMarks(of: group.members.map(\.assetId),
-                         to: group.memberIds.subtracting([keeper.assetId]))
+        guard let removal = removal(in: group), !removal.remove.isEmpty else { return }
+        session.setMarks(of: group.members.map(\.assetId), to: Set(removal.remove))
         session.setKeptAll(group.memberIds, false)
         session.setCollapsed(group.memberIds, true)
     }
