@@ -32,9 +32,9 @@ dùng được là khuôn của Export to Files (07b) và FS-15/17.
 | AC-1 | ❌ | không màn, không lịch sử; khuôn "đã có" duy nhất là `ServerDownloadStore.knownFiles` (`Data/Database/ServerDownloadStore.swift:26-46`) theo đường dẫn server | bảng `card_imports` + `CardImportStore.match(name, bytes, date)`; `IngestCatalog` đếm New/Imported; `IngestScreen` header + segmented + lưới |
 | AC-2 | ❌ | — | `IngestSelection` (tick/bỏ tick, tổng byte theo mọi file của ô); nút `Import N Photos` |
 | AC-3 | ❌ | — | `IngestCatalog.days` thu gọn ngày đủ Imported thành một dòng |
-| AC-4 | ❌ | tên + Date Folders có ở E1/E2 nhưng chỉ cho asset Photos; không token `Original Number`/`Text`; E3 không đọc lại SHA | `IngestPlan` (bọc E1, Keep Both cứng) + `IngestRunner` + bước verify trong writer (khuôn E4) |
+| AC-4 | ✅ (2026-10-18) | `Domain/Ingest/IngestRunner.swift`, `IngestPlan.swift` (`IngestFolderTemplate`), `CardReader.swift`; `LocalFolderWriter.writeVerified` (K2) | task 4 xong |
 | AC-5 | ❌ | không có bộ ghi `.xmp` sidecar (chỉ `LookXMPWriter` cho preset, `Domain/Editing/LookExchange/LookXMPWriter.swift`) | dùng bộ ghi sidecar của FS-19 (Creator, Copyright, Keywords, ngày chụp) |
-| AC-6 | ⚠️ nửa danh mục (2026-10-18) | `Domain/Ingest/CardCatalog.swift` qua `PairingRule.units` (thêm đuôi `hif`) | task 2 xong; tên đích ở task 4 |
+| AC-6 | ✅ (2026-10-18) | `CardCatalog` + `IngestRunner` | task 2, 4 |
 | AC-7 | ❌ | luật đúng đã có và đã test cho Export: E1 `:180-185`, `FileExportPlanTests.keepBothNumbersAgainstFolderAndBatch` | `IngestPlan` gọi E1 với `.keepBoth`, không bao giờ Replace/Skip; test mới với `…_0001.cr3` có sẵn |
 | AC-8 | ❌ | E10 có trạng thái *Not connected* cho folder Export | `IngestReadiness` (Domain) trả lý do mờ nút; hàng Backup + footer |
 | AC-9 | ❌ | — | lỗi ổ backup là lỗi **phụ**: bản chính chạy tiếp, ghi `backupPath` trống; **Back Up Remaining** |

@@ -87,7 +87,8 @@ Mac: inspector 300pt bên phải. iPad ngang: inspector 360pt; iPad dọc: sheet
 1. **Trước byte đầu:** tính toàn bộ tên của mẻ; kiểm chỗ trống ở đích và backup (tổng byte của mẻ).
 2. Mỗi file: chép theo khối ≤ 1 MB vào tên tạm `.shotdex-part`, đọc lại, so SHA-256 với bản trên thẻ, rồi mới
    đổi sang tên thật (khuôn FS-15.02 §4). *Khác 07b §6 (không đọc lại) vì thẻ là bản duy nhất.*
-3. Ghi `.xmp` cạnh file: preset metadata + ngày chụp. SHA-256 của bước 2 là hash nội dung cho nguồn (D4).
+3. Ghi `.xmp` cạnh file: preset metadata + ngày chụp. SHA-256 **cả file** của bước 2 dùng để kiểm và ghi lịch sử nhập;
+   hash nội dung của nguồn (FS-19.02 §1, phần ảnh) băm từ **cùng các khối** đọc lúc chép, không đọc thẻ lần hai (D4, plan Q4).
 4. Backup: chép cùng tên, cùng kiểm, sau bản chính của **cùng file**.
 5. Bước 2–3 xong là ảnh vào nguồn, lưới cập nhật giữa mẻ. Mọi bản chính **và** backup đã kiểm → nhả thẻ (nếu bật),
    banner `Imported 811 photos. EOS_DIGITAL ejected.`

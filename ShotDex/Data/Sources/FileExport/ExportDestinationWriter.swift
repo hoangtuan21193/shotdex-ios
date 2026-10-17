@@ -42,6 +42,9 @@ struct LocalFolderWriter: ExportDestinationWriter {
     var watchdog: Duration = .seconds(2)
     /// The rename itself; a test hands in one that hangs.
     var rename: (@Sendable (_ part: URL, _ directory: URL, _ name: String, _ replacing: Bool) throws -> String)?
+    /// Reads a written part back for its SHA-256 (card import, FS-20 §7.2);
+    /// a test hands in one that returns other bytes.
+    var readBack: @Sendable (URL) throws -> String = { try FileChecksum.sha256(of: $0) }
 
     init(root: URL) {
         self.root = root
@@ -91,6 +94,17 @@ struct LocalFolderWriter: ExportDestinationWriter {
         replacing: Bool,
         produce: @Sendable (URL) async throws -> Void
     ) async throws -> ExportWrittenFile {
+        try await write(name: name, in: folder, replacing: replacing, produce: { try await produce($0); return nil })
+    }
+
+    /// `produce` may return the SHA-256 of what it wrote; the part is then
+    /// read back and must match before it gets its name (FS-20 plan K2).
+    private func write(
+        name: String,
+        in folder: String,
+        replacing: Bool,
+        produce: @Sendable (URL) async throws -> String?
+    ) async throws -> ExportWrittenFile {
         let directory = url(of: folder)
         let part = directory.appendingPathComponent(name + ServerUploadPath.partSuffix)
         // The destination's own steps: the folder, an empty part file.
@@ -104,8 +118,9 @@ struct LocalFolderWriter: ExportDestinationWriter {
         } catch {
             throw destinationFailure(error)
         }
+        let expected: String?
         do {
-            try await produce(part)
+            expected = try await produce(part)
             try Task.checkCancellation()
         } catch {
             try? fileManager.removeItem(at: part)
@@ -113,6 +128,19 @@ struct LocalFolderWriter: ExportDestinationWriter {
             if !fileManager.fileExists(atPath: root.path) { throw FileExportFailure.disconnected }
             if let failure = FileExportFailure.classify(error), failure == .full || failure == .tooLargeForDrive { throw failure }
             throw error
+        }
+        if let expected {
+            let written: String
+            do {
+                written = try readBack(part)
+            } catch {
+                try? fileManager.removeItem(at: part)
+                throw destinationFailure(error)
+            }
+            guard written == expected else {
+                try? fileManager.removeItem(at: part)
+                throw IngestFailure.checksumMismatch
+            }
         }
         do {
             try Self.checkComplete(part)
@@ -193,6 +221,17 @@ struct LocalFolderWriter: ExportDestinationWriter {
         }
         if let error = coordinationError ?? moveError { throw error }
         return finalName
+    }
+}
+
+extension LocalFolderWriter: IngestDestination {
+    func writeVerified(name: String, in folder: String,
+                       produce: @Sendable (URL) async throws -> String) async throws -> ExportWrittenFile {
+        try await write(name: name, in: folder, replacing: false, produce: { try await produce($0) })
+    }
+
+    func remove(_ path: String) async {
+        try? FileManager.default.removeItem(at: root.appendingPathComponent(path))
     }
 }
 

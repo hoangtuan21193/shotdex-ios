@@ -143,7 +143,8 @@ struct FileExportPlan: Sendable, Equatable {
         includesLivePhotoVideo: Bool,
         renderExtension: (FileExportItem) -> String,
         existing: [String: Set<String>],
-        timeZone: TimeZone = .current
+        timeZone: TimeZone = .current,
+        folderFor: ((FileExportItem) -> String)? = nil
     ) -> FileExportPlan {
         let ordered = ordered(items)
         let width = FileNameTemplate.sequenceWidth(count: ordered.count)
@@ -152,7 +153,8 @@ struct FileExportPlan: Sendable, Equatable {
         var entries: [Entry] = []
         for (index, item) in ordered.enumerated() {
             let sequence = index + 1
-            let folder = folder(for: item, dateFolders: dateFolders, timeZone: timeZone)
+            // Card import names its own folders (FS-20 §6, `RAW/{year}/{date}`).
+            let folder = folderFor?(item) ?? folder(for: item, dateFolders: dateFolders, timeZone: timeZone)
             let base = template.baseName(for: item.nameValues, sequence: sequence, sequenceWidth: width, timeZone: timeZone)
             let sources = sources(of: item, mode: mode, includesLivePhotoVideo: includesLivePhotoVideo)
             // A video keeps the extension of its original, whichever version
