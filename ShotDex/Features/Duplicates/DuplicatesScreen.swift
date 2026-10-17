@@ -34,6 +34,15 @@ struct DuplicatesScreen: View {
 
     private var isRegular: Bool { horizontalSizeClass == .regular }
 
+    /// A5: say how much of the library the screen can see.
+    private func permissionAccess(_ model: DuplicatesModel) -> DuplicatesPermissionBanner.Access? {
+        switch photoLibrary.authorizationState {
+        case .limited: .limited(visible: model.coverage.indexedPhotos)
+        case .denied, .restricted: .denied
+        default: nil
+        }
+    }
+
     private var copyColumns: Int {
         get { isRegular ? regularColumns : compactColumns }
         nonmutating set {
@@ -81,7 +90,17 @@ struct DuplicatesScreen: View {
         .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { containerWidth = $0 }
         .simultaneousGesture(pinch)
         .safeAreaInset(edge: .top, spacing: 0) {
-            DuplicatesHeaderBand(model: model, burstCount: burstList?.listed.count, isRegular: isRegular)
+            VStack(spacing: 0) {
+                if let access = permissionAccess(model) {
+                    DuplicatesPermissionBanner(access: access)
+                        .padding(.horizontal, AppTheme.Size.screenMargin)
+                        .padding(.vertical, AppTheme.Spacing.sm)
+                        .frame(maxWidth: .infinity)
+                        .background(.bar)
+                }
+                DuplicatesHeaderBand(model: model, burstCount: burstList?.listed.count, isRegular: isRegular,
+                                     canCheck: photoLibrary.authorizationState.canReadLibrary)
+            }
         }
         .overlay(alignment: .top) {
             if hudVisible {
@@ -368,7 +387,13 @@ struct DuplicatesScreen: View {
 
     @ViewBuilder
     private func emptyState(_ model: DuplicatesModel) -> some View {
-        if model.isScanning {
+        if !photoLibrary.authorizationState.canReadLibrary {
+            // The banner above says why and links to Settings; no scan runs.
+            ContentUnavailableView(
+                String(localized: "No Access to Photos", comment: "Duplicates empty state when Photos access is denied"),
+                systemImage: "eye.slash"
+            )
+        } else if model.isScanning {
             EmptyView()
         } else if model.phase == .grouping {
             ProgressView("Grouping duplicates…")
@@ -422,6 +447,8 @@ private struct DuplicatesHeaderBand: View {
     /// Bursts listed in the Bursts tab, once read.
     let burstCount: Int?
     let isRegular: Bool
+    /// Photos access allows a scan; denied greys Check Again (A5).
+    var canCheck = true
 
     var body: some View {
         Group {
@@ -632,8 +659,10 @@ private struct DuplicatesHeaderBand: View {
         }
         .buttonStyle(.plain)
         .foregroundStyle(.tint)
-        .disabled(model.isBusy)
-        .accessibilityLabel("Rescan")
+        .disabled(model.isBusy || !canCheck)
+        .accessibilityLabel(String(localized: "Check Again", comment: "Duplicates: scan the library again"))
+        .accessibilityHint(canCheck ? "" : String(localized: "Allow access to your photos in Settings first.",
+                                                  comment: "Duplicates: why Check Again is unavailable"))
     }
 }
 
