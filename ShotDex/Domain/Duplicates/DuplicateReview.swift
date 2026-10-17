@@ -286,7 +286,8 @@ enum DuplicateReview {
         members.reduce(0) { $0 + ($1.assetId == keeper.assetId ? 0 : ($1.fileSize ?? 0)) }
     }
 
-    /// "4 s apart", "3 min apart", "2 h apart" — first to last capture. `nil`
+    /// "within 4 seconds", "within 3 minutes", "within 2 hours", "3 days
+    /// apart" — first to last capture (FS-06.06 §11). `nil`
     /// when fewer than two members carry a date, or all share one second.
     static func spanText(_ members: [HashedPhoto]) -> String? {
         let dates = members.compactMap(\.creationDate)
@@ -296,11 +297,11 @@ enum DuplicateReview {
         case ..<1:
             return nil
         case ..<60:
-            return String(localized: "\(seconds) s apart", comment: "Duplicates: seconds between the first and last photo of a group")
+            return String(localized: "within \(seconds) seconds", comment: "Duplicates: seconds between the first and last photo of a group")
         case ..<3600:
-            return String(localized: "\(seconds / 60) min apart", comment: "Duplicates: minutes between the first and last photo of a group")
+            return String(localized: "within \(seconds / 60 + (seconds % 60 > 0 ? 1 : 0)) minutes", comment: "Duplicates: minutes between the first and last photo of a group")
         case ..<86_400:
-            return String(localized: "\(seconds / 3600) h apart", comment: "Duplicates: hours between the first and last photo of a group")
+            return String(localized: "within \(seconds / 3600 + (seconds % 3600 > 0 ? 1 : 0)) hours", comment: "Duplicates: hours between the first and last photo of a group")
         default:
             return String(localized: "\(seconds / 86_400) days apart", comment: "Duplicates: days between the first and last photo of a group")
         }

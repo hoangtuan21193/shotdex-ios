@@ -129,9 +129,9 @@ struct DuplicateReviewTests {
 
     @Test func spanReadsSecondsMinutesHoursDays() {
         let base = 1_700_000_000
-        #expect(DuplicateReview.spanText([photo("a", created: base), photo("b", created: base + 4)]) == "4 s apart")
-        #expect(DuplicateReview.spanText([photo("a", created: base), photo("b", created: base + 180)]) == "3 min apart")
-        #expect(DuplicateReview.spanText([photo("a", created: base), photo("b", created: base + 7200)]) == "2 h apart")
+        #expect(DuplicateReview.spanText([photo("a", created: base), photo("b", created: base + 4)]) == "within 4 seconds")
+        #expect(DuplicateReview.spanText([photo("a", created: base), photo("b", created: base + 180)]) == "within 3 minutes")
+        #expect(DuplicateReview.spanText([photo("a", created: base), photo("b", created: base + 7200)]) == "within 2 hours")
         #expect(DuplicateReview.spanText([photo("a", created: base), photo("b", created: base + 3 * 86_400)]) == "3 days apart")
         #expect(DuplicateReview.spanText([photo("a", created: base), photo("b", created: nil)]) == nil)
         #expect(DuplicateReview.spanText([photo("a", created: base), photo("b", created: base)]) == nil)

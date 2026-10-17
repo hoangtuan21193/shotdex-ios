@@ -65,8 +65,10 @@ struct DuplicatesSummaryView: View {
         card {
             VStack(alignment: .leading, spacing: AppTheme.Spacing.sm) {
                 eyebrow(String(localized: "Quick clean", comment: "Duplicates summary: card title"))
-                Text(String(localized: "\(summary.quickCleanGroups.formatted()) copies · \(bytes(summary.quickCleanBytes))",
-                            comment: "Duplicates summary: Quick clean groups and size"))
+                Text(summary.quickCleanGroups == 1
+                     ? String(localized: "1 copy · \(bytes(summary.quickCleanBytes))", comment: "Duplicates summary: Quick clean groups and size")
+                     : String(localized: "\(summary.quickCleanGroups.formatted()) copies · \(bytes(summary.quickCleanBytes))",
+                              comment: "Duplicates summary: Quick clean groups and size"))
                     .font(.title2.weight(.bold))
                     .monospacedDigit()
                 Text(String(localized: "Exact copies and smaller re-shares. Your favorites, edits and album photos are never included.",
@@ -95,8 +97,10 @@ struct DuplicatesSummaryView: View {
                 HStack(alignment: .center) {
                     VStack(alignment: .leading, spacing: AppTheme.Spacing.xs) {
                         eyebrow(String(localized: "Choose yourself", comment: "Duplicates summary: card title"))
-                        Text(String(localized: "\(summary.chooseGroups.formatted()) groups · \(bytes(summary.chooseBytes))",
-                                    comment: "Duplicates summary: groups that need a choice and their size"))
+                        Text(summary.chooseGroups == 1
+                             ? String(localized: "1 group · \(bytes(summary.chooseBytes))", comment: "Duplicates summary: groups that need a choice and their size")
+                             : String(localized: "\(summary.chooseGroups.formatted()) groups · \(bytes(summary.chooseBytes))",
+                                      comment: "Duplicates summary: groups that need a choice and their size"))
                             .font(.title2.weight(.bold))
                             .monospacedDigit()
                     }

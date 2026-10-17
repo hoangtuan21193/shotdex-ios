@@ -670,6 +670,21 @@ final class DuplicatesModel {
         session.setKeptAll(group.memberIds, false)
     }
 
+    /// Keep this, from the viewer (AC-C3): the photo becomes the group's
+    /// keeper and loses any mark; the old keeper becomes a copy. Nothing
+    /// else is marked — that is Keep just this one.
+    func keepThis(_ assetId: String, in group: DuplicateGroup) {
+        session.setKeeper(assetId, groupMembers: group.members.map(\.assetId))
+        session.setMarked([assetId], false)
+    }
+
+    /// The viewer on screen (§7.6).
+    var viewer: DuplicateViewerPresentation?
+
+    func openViewer(_ assetId: String, in group: DuplicateGroup) {
+        viewer = DuplicateViewerPresentation(groupId: group.id, startId: assetId)
+    }
+
     func clearMarks(in group: DuplicateGroup) {
         session.setMarked(group.members.map(\.assetId), false)
     }

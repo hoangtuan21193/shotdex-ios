@@ -163,6 +163,10 @@ struct DuplicatesScreen: View {
         .sheet(isPresented: $showsQuickClean) {
             DuplicatesQuickCleanSheet(model: model)
         }
+        .sheet(item: $model.viewer) { presentation in
+            DuplicateGroupViewer(model: model, presentation: presentation)
+                .environment(photoLibrary)
+        }
         .fullScreenCover(item: $openBurst) { request in
             BurstFramesScreen(request: request)
                 .environment(dependencies)
@@ -636,12 +640,12 @@ private struct DuplicatesHeaderBand: View {
         }
     }
 
+    /// "Reviewed 4 of 312" — short enough to leave room for the free space
+    /// and the sort menu on a phone (board `PH_Duplicates`).
     private var reviewedText: String {
-        let total = model.groups.count
-        let done = model.reviewedCount
-        return total == 1
-            ? String(localized: "Reviewed \(done) of 1 group", comment: "Duplicates header, one group")
-            : String(localized: "Reviewed \(done) of \(total) groups", comment: "Duplicates header")
+        let total = model.groups.filter(model.filter.includes).count
+        let done = model.groups.filter { model.filter.includes($0) && model.isReviewed($0) }.count
+        return String(localized: "Reviewed \(done) of \(total)", comment: "Duplicates header: groups decided out of the groups shown")
     }
 
     private var freeText: String {
@@ -705,7 +709,8 @@ private struct DuplicateDecisionCard: View {
     private func header(keeper: HashedPhoto?) -> some View {
         VStack(alignment: .leading, spacing: 1) {
             HStack(alignment: .firstTextBaseline) {
-                Text(group.count == 1 ? "1 photo" : "\(group.count) photos")
+                Text(group.sourceSet?.title
+                     ?? String(localized: "\(group.kind.title) · \(group.count) photos", comment: "Duplicates card title: kind and size of the group"))
                     .font(.subheadline.weight(.semibold))
                 Spacer()
                 if let free = model.freeBytes(of: group), free > 0 {
@@ -737,7 +742,7 @@ private struct DuplicateDecisionCard: View {
         var parts: [String] = []
         if let date = DuplicatesScreen.dateText(group) { parts.append(date) }
         if group.kind == .copies {
-            parts.append(String(localized: "Identical files", comment: "Duplicates card, Exact: the copies are the same file"))
+            parts.append(String(localized: "Identical files", comment: "Duplicates card, Copies: the copies are the same file"))
         } else if let span = DuplicateReview.spanText(group.members) {
             parts.append(span)
         }
@@ -784,26 +789,31 @@ private struct DuplicateDecisionCard: View {
             radius: radius,
             isMarked: isMarked,
             showsKeep: isKeeper && !isMarked,
+            onToggleMark: {
+                withAnimation(AppTheme.Motion.standard) { _ = model.toggleMark(member.assetId, in: group) }
+            },
             factLines: captionLines(member, isKeeper: isKeeper),
             chips: isKeeper ? keeperChips : [],
             isKeeper: isKeeper
         )
-        .onTapGesture {
-            withAnimation(AppTheme.Motion.standard) {
-                _ = model.toggleMark(member.assetId, in: group)
-            }
-        }
+        // D7: a tap looks, the ring marks.
+        .onTapGesture { model.openViewer(member.assetId, in: group) }
+        .sensoryFeedback(.selection, trigger: isMarked)
         .sensoryFeedback(.warning, trigger: model.blockedGroupId == group.id) { _, blocked in blocked }
         .contextMenu {
             Button {
                 withAnimation(AppTheme.Motion.standard) { model.keepOnly(member.assetId, in: group) }
             } label: {
-                Label("Keep Only This", systemImage: "checkmark.circle")
+                Label(String(localized: "Keep just this one", comment: "Duplicates tile menu: keep this photo, mark the rest"),
+                      systemImage: "checkmark.circle")
             }
             Button {
                 withAnimation(AppTheme.Motion.standard) { _ = model.toggleMark(member.assetId, in: group) }
             } label: {
-                Label(isMarked ? "Unmark" : "Mark for Deletion", systemImage: isMarked ? "trash.slash" : "trash")
+                Label(isMarked
+                      ? String(localized: "Don't remove", comment: "Duplicates tile menu: take the mark away")
+                      : String(localized: "Remove", comment: "Duplicates tile menu: mark for removal"),
+                      systemImage: isMarked ? "trash.slash" : "trash")
             }
             .disabled(!isMarked && isLast)
             if model.canCompare(group) {
@@ -817,6 +827,12 @@ private struct DuplicateDecisionCard: View {
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(accessibilityLabel(member, isKeeper: isKeeper, isMarked: isMarked))
         .accessibilityAddTraits(isMarked ? [.isButton, .isSelected] : .isButton)
+        .accessibilityAction { model.openViewer(member.assetId, in: group) }
+        .accessibilityAction(named: isMarked
+                             ? String(localized: "Don't remove", comment: "VoiceOver action on a tile")
+                             : String(localized: "Remove", comment: "VoiceOver action on a tile")) {
+            _ = model.toggleMark(member.assetId, in: group)
+        }
     }
 
     private func accessibilityLabel(_ member: HashedPhoto, isKeeper: Bool, isMarked: Bool) -> String {
@@ -1019,6 +1035,9 @@ private struct DuplicateThumbnail: View {
     let isMarked: Bool
     let showsKeep: Bool
     var showsMarkBadge = true
+    /// The ring's action. Its hit area is 44pt even though it draws 26pt
+    /// (AC-C2); the rest of the tile belongs to the tap that opens the viewer.
+    var onToggleMark: (() -> Void)?
     /// Pixel size and file size (or a series frame's seconds), on the photo
     /// rather than under it (board `PH_DuplicatesLargeGroup`).
     var factLines: [String] = []
@@ -1054,12 +1073,22 @@ private struct DuplicateThumbnail: View {
             }
             .overlay(alignment: .topTrailing) {
                 if showsMarkBadge {
-                    Image(systemName: isMarked ? "trash.circle.fill" : "circle")
+                    let ring = Image(systemName: isMarked ? "trash.circle.fill" : "circle")
                         .symbolRenderingMode(isMarked ? .palette : .monochrome)
                         .foregroundStyle(.white, .red)
-                        .font(.system(size: 22))
+                        .font(.system(size: 26))
                         .shadow(color: .black.opacity(0.35), radius: 2)
-                        .padding(side > 120 ? AppTheme.Spacing.sm : AppTheme.Spacing.xs)
+                        .frame(width: 44, height: 44)
+                        .contentShape(Rectangle())
+                    if let onToggleMark {
+                        Button(action: onToggleMark) { ring }
+                            .buttonStyle(.plain)
+                            .accessibilityLabel(isMarked
+                                ? String(localized: "Don't remove", comment: "VoiceOver: the ring on a marked tile")
+                                : String(localized: "Remove", comment: "VoiceOver: the ring on a tile"))
+                    } else {
+                        ring.accessibilityHidden(true)
+                    }
                 }
             }
             .overlay(alignment: .topLeading) {
@@ -1097,9 +1126,8 @@ private struct DuplicateThumbnail: View {
                             }
                         }
                         .font(.system(size: 11))
-                        .monospacedDigit()
                         .lineLimit(1)
-                        .minimumScaleFactor(0.8)
+                        .truncationMode(.tail)
                         .foregroundStyle(.white)
                         .padding(.horizontal, 5)
                         .padding(.vertical, 2)
