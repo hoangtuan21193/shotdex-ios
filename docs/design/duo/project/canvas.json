@@ -317,9 +317,9 @@
     },
     "DC_Duplicates.dc.html": {
       "h": 678,
-      "title": "Duo ngoài · Duplicates danh sách (v3): 1 cột 350, hàng lọc cuộn ngang, Compare thành nút icon (chữ không vừa 326), nhóm 24 thu gọn; thẻ Bracket xem DI_Duplicates; chạm ảnh mở Compare của nhóm (pinch zoom chung) — đề xuất 17/10",
+      "title": "Duo ngoài · Duplicates mở ra là danh sách ngay, dải Quick clean đầu danh sách + Review…; (v3): 1 cột 350, hàng lọc cuộn ngang, Compare thành nút icon (chữ không vừa 326), nhóm 24 thu gọn; thẻ Bracket xem DI_Duplicates; chạm ảnh mở Compare của nhóm (pinch zoom chung) — đề xuất 17/10",
       "w": 466,
-      "x": 9828,
+      "x": 9282,
       "y": 1609
     },
     "DC_EmptyLibrary.dc.html": {
@@ -1038,9 +1038,9 @@
     },
     "DI_Duplicates.dc.html": {
       "h": 669,
-      "title": "Duo trong · Duplicates danh sách (v3 §7.3–7.5): hàng lọc theo loại không cuộn, 2 cột 410, thẻ 2 bản sao/hàng (ô 93), vòng 26/chạm 44, chip lý do, nhóm 24 thu gọn “Show all 24”, thẻ Bracket (Merge to HDR, không đỏ), thanh “37 selected · 210 MB ›” + Delete 37 — đề xuất 17/10",
+      "title": "Duo trong · Duplicates mở ra là danh sách ngay, dải Quick clean 720 giữa màn + Review…; (v3 §7.3–7.5): hàng lọc theo loại không cuộn, 2 cột 410, thẻ 2 bản sao/hàng (ô 93), vòng 26/chạm 44, chip lý do, nhóm 24 thu gọn “Show all 24”, thẻ Bracket (Merge to HDR, không đỏ), thanh “37 selected · 210 MB ›” + Delete 37 — đề xuất 17/10",
       "w": 951,
-      "x": 20620,
+      "x": 19589,
       "y": 560
     },
     "DI_EmptyLibrary.dc.html": {
@@ -1536,20 +1536,6 @@
       "x": 33730,
       "y": 1609
     },
-    "DI_DuplicatesSummary.dc.html": {
-      "h": 669,
-      "w": 951,
-      "x": 19589,
-      "y": 560,
-      "title": "Duo trong · Duplicates tóm tắt (v3, FS-06.06 §7.2): ~GB to free, Quick clean + Choose yourself cạnh nhau tối đa 720, Source frames — đề xuất 17/10, code chưa có"
-    },
-    "DC_DuplicatesSummary.dc.html": {
-      "h": 678,
-      "w": 466,
-      "x": 9282,
-      "y": 1609,
-      "title": "Duo ngoài · Duplicates tóm tắt (v3 §7.2): xếp dọc trong 350 trái rail 84 — đề xuất 17/10, code chưa có"
-    },
     "DI_ViewerCloudDownload.dc.html": {
       "h": 669,
       "title": "Duo mở · Viewer — mở file chỉ có trên iCloud Drive (như code iPhone): trang đen, chỉ nút Close, giữa: glyph, tên file, \"Downloading from iCloud Drive…\", thanh trắng 220, \"29 kB of 58 kB\", Cancel (FS-19.01b §4, AC-15/16). Cancel → \"Only in iCloud Drive\" + nút Download; tải xong → viewer thường",
@@ -1720,7 +1706,6 @@
     "DI_OnThisDay.dc.html",
     "DI_Places.dc.html",
     "DI_Trips.dc.html",
-    "DI_DuplicatesSummary.dc.html",
     "DI_DuplicatesCompare.dc.html",
     "DI_Duplicates.dc.html",
     "DI_BurstFrames.dc.html",
@@ -1759,7 +1744,6 @@
     "DC_OnThisDay.dc.html",
     "DC_Places.dc.html",
     "DC_Trips.dc.html",
-    "DC_DuplicatesSummary.dc.html",
     "DC_Duplicates.dc.html",
     "DC_BurstFrames.dc.html",
     "DC_Creations.dc.html",

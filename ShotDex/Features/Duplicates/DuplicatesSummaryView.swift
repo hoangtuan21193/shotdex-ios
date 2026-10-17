@@ -1,183 +1,48 @@
 import Photos
 import SwiftUI
 
-/// The first thing Duplicates shows (FS-06.06 §7.2, board `PH_DuplicatesSummary`):
-/// how much could go, the safe part to clean in one go, the part that needs
-/// the user's eye, and the source frames that are not junk at all.
+/// Quick clean over the Duplicates list (FS-06.06 §7.2, board
+/// `PH_Duplicates`): the exact copies and smaller re-shares nobody has
+/// decided yet, and one button that previews them before anything is marked.
 /// **Review…** is the screen's one accent-filled button (DESIGN.md §4).
-struct DuplicatesSummaryView: View {
+/// Gone once every copies group is decided.
+struct DuplicatesQuickCleanBand: View {
     let model: DuplicatesModel
-    let isRegular: Bool
-    /// Opens the list on a filter.
-    let open: (DuplicatesFilter) -> Void
-    /// Opens the Quick clean sheet.
-    let reviewQuickClean: () -> Void
+    let review: () -> Void
 
     var body: some View {
-        let summary = model.summary
-        VStack(alignment: .leading, spacing: AppTheme.Spacing.md) {
-            header(summary)
-            if model.isScanning { DuplicatesScanProgress(model: model) }
-            if isRegular {
-                HStack(alignment: .top, spacing: AppTheme.Spacing.lg) {
-                    if !summary.quickClean.isEmpty { quickCleanCard(summary) }
-                    if !summary.chooseYourself.isEmpty { chooseCard(summary) }
-                }
-            } else {
-                if !summary.quickClean.isEmpty { quickCleanCard(summary) }
-                if !summary.chooseYourself.isEmpty { chooseCard(summary) }
-            }
-            if summary.hasSourceFrames { sourceFramesCard(summary) }
-        }
-        // AC-W2: one centered 720pt block on a wide screen.
-        .frame(maxWidth: isRegular ? 720 : .infinity, alignment: .leading)
-        .frame(maxWidth: .infinity)
-    }
-
-    private func header(_ summary: DuplicatesSummary) -> some View {
-        VStack(alignment: .leading, spacing: AppTheme.Spacing.xs) {
-            Text(String(localized: "~\(DuplicatesScreen.byteFormatter.string(fromByteCount: Int64(summary.freeBytes))) to free",
-                        comment: "Duplicates summary title: space keeping one per group would free"))
-                .font(.largeTitle.weight(.bold))
-                .monospacedDigit()
-            Text(subtitle(summary))
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-                .monospacedDigit()
-        }
-        .padding(.top, AppTheme.Spacing.sm)
-        .accessibilityElement(children: .combine)
-        .accessibilityAddTraits(.isHeader)
-    }
-
-    private func subtitle(_ summary: DuplicatesSummary) -> String {
-        let groups = summary.groupCount == 1
-            ? String(localized: "1 group", comment: "Duplicates summary subtitle")
-            : String(localized: "\(summary.groupCount.formatted()) groups", comment: "Duplicates summary subtitle")
-        guard let checked = model.scanState?.scannedAt else { return groups }
-        return groups + " · " + String(localized: "checked \(checked.formatted(.relative(presentation: .named)))",
-                                       comment: "Duplicates summary subtitle: when the library was last checked")
-    }
-
-    // MARK: Cards
-
-    private func quickCleanCard(_ summary: DuplicatesSummary) -> some View {
-        card {
-            VStack(alignment: .leading, spacing: AppTheme.Spacing.sm) {
-                eyebrow(String(localized: "Quick clean", comment: "Duplicates summary: card title"))
-                Text(summary.quickCleanGroups == 1
-                     ? String(localized: "1 copy · \(bytes(summary.quickCleanBytes))", comment: "Duplicates summary: Quick clean groups and size")
-                     : String(localized: "\(summary.quickCleanGroups.formatted()) copies · \(bytes(summary.quickCleanBytes))",
-                              comment: "Duplicates summary: Quick clean groups and size"))
-                    .font(.title2.weight(.bold))
+        let pending = model.pendingQuickClean
+        HStack(alignment: .center, spacing: AppTheme.Spacing.md) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(String(localized: "Quick clean", comment: "Duplicates list: band over the cards"))
+                    .font(.footnote.weight(.semibold))
+                    .foregroundStyle(.secondary)
+                Text(pending.copies == 1
+                     ? String(localized: "1 copy · \(bytes(pending.bytes))", comment: "Duplicates Quick clean band: copies to remove and their size")
+                     : String(localized: "\(pending.copies.formatted()) copies · \(bytes(pending.bytes))",
+                              comment: "Duplicates Quick clean band: copies to remove and their size"))
+                    .font(.headline)
                     .monospacedDigit()
-                Text(String(localized: "Exact copies and smaller re-shares. Your favorites, edits and album photos are never included.",
-                            comment: "Duplicates summary: what Quick clean removes and what it never touches"))
-                    .font(.subheadline)
+                Text(String(localized: "Exact copies and smaller re-shares. Favorites, edits and album photos stay.",
+                            comment: "Duplicates Quick clean band: what it removes and what it never touches"))
+                    .font(.footnote)
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
-                rows(summary.quickClean)
-                Button(action: reviewQuickClean) {
-                    Text(String(localized: "Review \(summary.quickCleanGroups.formatted())…",
-                                comment: "Duplicates summary: opens the Quick clean preview; the screen's one accent button"))
-                        .font(.headline)
-                        .frame(maxWidth: .infinity, minHeight: 34)
-                }
-                .buttonStyle(.borderedProminent)
-                .buttonBorderShape(.roundedRectangle(radius: AppTheme.Radius.md))
-                .controlSize(.large)
-                .disabled(model.isBusy)
             }
-        }
-    }
-
-    private func chooseCard(_ summary: DuplicatesSummary) -> some View {
-        card {
-            VStack(alignment: .leading, spacing: AppTheme.Spacing.sm) {
-                HStack(alignment: .center) {
-                    VStack(alignment: .leading, spacing: AppTheme.Spacing.xs) {
-                        eyebrow(String(localized: "Choose yourself", comment: "Duplicates summary: card title"))
-                        Text(summary.chooseGroups == 1
-                             ? String(localized: "1 group · \(bytes(summary.chooseBytes))", comment: "Duplicates summary: groups that need a choice and their size")
-                             : String(localized: "\(summary.chooseGroups.formatted()) groups · \(bytes(summary.chooseBytes))",
-                                      comment: "Duplicates summary: groups that need a choice and their size"))
-                            .font(.title2.weight(.bold))
-                            .monospacedDigit()
-                    }
-                    Spacer(minLength: AppTheme.Spacing.sm)
-                    Button(String(localized: "Start", comment: "Duplicates summary: open the groups that need a choice")) {
-                        open(.all)
-                    }
-                    .buttonStyle(.bordered)
-                    .tint(.secondary)
-                    .foregroundStyle(.primary)
-                    .controlSize(.regular)
-                    .frame(minHeight: 44)
-                }
-                rows(summary.chooseYourself)
-            }
-        }
-    }
-
-    private func sourceFramesCard(_ summary: DuplicatesSummary) -> some View {
-        card {
-            HStack {
-                VStack(alignment: .leading, spacing: AppTheme.Spacing.xs) {
-                    eyebrow(String(localized: "Source frames", comment: "Duplicates summary: brackets and focus stacks"))
-                    Text(summary.sourceFramesText)
-                        .font(.headline)
-                        .monospacedDigit()
-                }
-                Spacer(minLength: AppTheme.Spacing.sm)
-                Button(String(localized: "Show", comment: "Duplicates summary: list the brackets and focus stacks")) {
-                    open(.sourceFrames)
-                }
-                .buttonStyle(.bordered)
-                .tint(.secondary)
-                .foregroundStyle(.primary)
-                .frame(minHeight: 44)
-            }
-        }
-    }
-
-    private func rows(_ rows: [DuplicatesSummary.Row]) -> some View {
-        VStack(spacing: 0) {
-            ForEach(Array(rows.enumerated()), id: \.element.id) { index, row in
-                if index > 0 { Divider().padding(.leading, 44) }
-                Button {
-                    open(.kind(row.kind))
-                } label: {
-                    HStack(spacing: AppTheme.Spacing.md) {
-                        DuplicatesKindThumbnail(asset: model.firstAsset(of: row.kind))
-                        Text(row.kind.title)
-                            .foregroundStyle(.primary)
-                        Spacer(minLength: AppTheme.Spacing.sm)
-                        Text("\(row.groups.formatted()) · \(bytes(row.bytes))")
-                            .foregroundStyle(.secondary)
-                            .monospacedDigit()
-                        Image(systemName: "chevron.right")
-                            .font(.footnote.weight(.semibold))
-                            .foregroundStyle(.tertiary)
-                    }
-                    .frame(minHeight: 44)
-                    .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
-            }
-        }
-    }
-
-    private func card(@ViewBuilder _ content: () -> some View) -> some View {
-        content()
-            .padding(AppTheme.Spacing.lg)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle.app(AppTheme.Radius.lg))
-    }
-
-    private func eyebrow(_ text: String) -> some View {
-        Text(text)
-            .font(.footnote.weight(.semibold))
-            .foregroundStyle(.secondary)
+            Button(action: review) {
+                Text(String(localized: "Review…", comment: "Duplicates Quick clean band: opens the preview; the screen's one accent button"))
+                    .font(.headline)
+                    .frame(minHeight: 34)
+            }
+            .buttonStyle(.borderedProminent)
+            .buttonBorderShape(.capsule)
+            .disabled(model.isBusy)
+        }
+        .padding(AppTheme.Spacing.md)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle.app(AppTheme.Radius.lg))
+        .accessibilityElement(children: .contain)
     }
 
     private func bytes(_ count: Int) -> String {
@@ -219,8 +84,7 @@ private struct DuplicatesKindThumbnail: View {
     }
 }
 
-/// "Scanning 1,200 of 38,000 · 40 found so far" with Cancel (A4) — the
-/// summary's copy of the list band's progress row.
+/// "Scanning 1,200 of 38,000 · 40 found so far" with Cancel (A4).
 struct DuplicatesScanProgress: View {
     let model: DuplicatesModel
 

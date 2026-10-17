@@ -117,7 +117,7 @@ cạnh dài, cùng chính sách mạng như dấu vân tay. Mỗi ảnh ra:
 
 ## 7. Màn hình (v3)
 
-Board: `PH_Duplicates` · `PH_DuplicatesSummary` · `PH_DuplicatesLargeGroup` · `PH_DuplicatesPinched` · `PH_BurstFrames`
+Board: `PH_Duplicates` · `PH_DuplicatesLargeGroup` · `PH_DuplicatesPinched` · `PH_BurstFrames`
 và bản `IP_` · `DI_` · `DC_` tương ứng (vẽ lại 2026-10-17; `PH_DuplicatesBursts` bị bỏ cùng tab Bursts). Tier A cho danh
 sách, tier D cho màn chọn khung. Màn rộng, Duo: [06b §4](06b-duplicates-marks-merge-delete.md).
 
@@ -125,28 +125,29 @@ sách, tier D cho màn chọn khung. Màn rộng, Duo: [06b §4](06b-duplicates-
 
 - Dòng **Duplicates** ở Collections ▸ Utilities ghi phụ đề *"~4.2 GB to free"* (từ cache; chưa từng quét: *"Not checked
   yet"*). Con số không tính bộ nguyên liệu.
-- Lối từ viewer (⋯ ▸ **Choose Frames…** trên ảnh burst) mở thẳng màn chọn khung (§8), không qua tóm tắt.
+- Lối từ viewer (⋯ ▸ **Choose Frames…** trên ảnh burst) mở thẳng màn chọn khung (§8), không qua danh sách.
 
-### 7.2 Màn tóm tắt (D2)
+### 7.2 Dải Quick clean (D2, sửa 2026-10-18)
 
-Mở Duplicates là màn tóm tắt (khi đã có kết quả quét), không phải danh sách thẻ:
+Mở Duplicates là **danh sách thẻ ngay** (§7.3) — không còn màn tóm tắt riêng (người dùng 2026-10-18 trên canvas: màn tóm
+tắt chỉ thêm một bước). Tổng "~GB to free" đã có ở hàng 2 của dải trên; lối tắt dọn nhanh thu thành một dải ở đầu danh sách:
 
-- Tiêu đề lớn *"~4.2 GB to free"*, dòng phụ *"312 groups · checked 2 min ago"*.
-- Thẻ **Quick clean** (nền `.secondarySystemGroupedBackground`, `r-lg`): *"212 copies · 1.2 GB"* + dòng *"Exact copies and
-  smaller re-shares. Your favorites, edits and album photos are never included."* + nút **Review 212…** — đây là **nút
-  accent duy nhất** của màn ([DESIGN.md §4](../../../DESIGN.md)).
-- Thẻ **Choose yourself**: *"100 groups · 3.0 GB"* + đếm theo loại (Look-alikes 48 · Same moment 40 · Screenshots 12) + nút
-  **Start** kiểu `.bordered` `.tint(.secondary)`.
-- Thẻ **Source frames** khi có bộ nguyên liệu: *"6 brackets · 2 focus stacks"* + **Show**. Không có GB.
-- **Review 212…** mở sheet **xem trước**: danh sách nhóm Quick clean (mỗi dòng: bản giữ + số bản sẽ xoá + MB), bỏ tick từng
+- Dải **Quick clean** (nền `.secondarySystemGroupedBackground`, `r-lg`, đệm 12; regular width tối đa 720pt giữa màn), là ô
+  đầu tiên trong vùng cuộn, trên thẻ nhóm đầu: nhãn *"Quick clean"*, dòng đậm *"212 copies · 1.2 GB"* (số **bản sao** sẽ
+  xoá của các nhóm Copies / Smaller copies **chưa quyết**, và MB), dòng phụ *"Exact copies and smaller re-shares. Favorites,
+  edits and album photos stay."*; bên phải nút viên **Review…** — **nút accent duy nhất** của màn
+  ([DESIGN.md §4](../../../DESIGN.md)).
+- Dải chỉ hiện khi còn nhóm bản sao chưa quyết, không đang quét, và bộ lọc là **All**, **Copies** hoặc **Smaller copies**.
+  Chọn hết qua Quick clean, hoặc quyết từng nhóm bản sao → dải biến mất.
+- **Review…** mở sheet **xem trước**: danh sách nhóm Quick clean (mỗi dòng: bản giữ + số bản sẽ xoá + MB), bỏ tick từng
   nhóm được, nút chân sheet **Select 205 photos** (số theo tick). Chạm nút → các bản sao mang dấu, sheet đóng, thanh xoá
   hiện (06b §3). **Chưa xoá gì.**
 - Ảnh favorite / đã chỉnh / trong album người dùng tạo: nhóm có bản sao như vậy vẫn ở Quick clean nhưng bản đó **không**
   được chọn và dòng ghi *"1 kept: in album Mai & Huy"*.
-- Chưa từng quét: màn tóm tắt thay bằng tiến độ quét (§3); kết quả hiện dần vào hai thẻ.
+- Chưa từng quét: dải trên hiện tiến độ quét (§3); thẻ hiện dần vào danh sách.
 - Không có nhóm nào: màn rỗng *"No Duplicates"* + *"Checked 2 min ago"* + nút **Check Again**.
 
-### 7.3 Danh sách (Choose yourself, Show, hoặc lọc)
+### 7.3 Danh sách
 
 - Dải trên đóng băng (nền `.bar`): **hàng lọc** dạng viên cuộn ngang, bề rộng mỗi viên cố định theo chữ dài nhất của nó
   (A6): **All · Copies · Smaller copies · Look-alikes · Same moment · Screenshots · Source frames**, mỗi viên kèm số nhóm;
@@ -291,17 +292,17 @@ fixture: tự sinh (mảng màu, chữ, nhiễu, mờ Gaussian); riêng AC-Q4 d�
 | AC-G1 | (D4) A,B (cùng hash, 4032×3024, cùng giây); C (lệch 3 bit với A, 1600×1200, thiếu ngày EXIF); G,H (cùng hash, 3000×2000, cùng giây, khác cảnh); D,E,F (cách nhau 2 s, lệch 12–15 bit) | gom nhóm | {A,B,C} một nhóm Smaller copies; {G,H} Copies; {D,E,F} Same moment; không ảnh nào ở hai nhóm | `DuplicateGrouperTests.everyPhotoLandsInExactlyOneKind` ✅ |
 | AC-G2 | (D4) 20 ảnh cùng hash, cùng kích thước, chụp cách nhau 3 s (tripod) | gom nhóm | **không** có nhóm Copies; 20 ảnh là một nhóm Same moment | `DuplicateGrouperTests.tripodSequenceIsNotCopies` ✅ |
 | AC-G3 | (D4) hai ảnh lệch 4 bit, tiêu cự 24mm và 35mm | gom nhóm | không nhóm nào chứa cả hai | `DuplicateGrouperTests.differentFocalLengthNeverGroups` ✅ |
-| AC-G4 | (D5) 5 khung cách nhau 0.3 s, cùng 50mm, bù sáng −2/−1/0/+1/+2 | gom nhóm, mở danh sách | nhóm là Bracket: thẻ *Bracket · 5 frames · ±2 EV*, có *Merge to HDR* và *Not duplicates*, không có nút đỏ; "~GB to free" ở dải trên và màn tóm tắt không tính 5 khung | `DuplicateSourceSetTests.bracketIsSourceFrames` ✅ + ảnh sim `duplicates-v3-source.json` ⚠️ chưa có |
+| AC-G4 | (D5) 5 khung cách nhau 0.3 s, cùng 50mm, bù sáng −2/−1/0/+1/+2 | gom nhóm, mở danh sách | nhóm là Bracket: thẻ *Bracket · 5 frames · ±2 EV*, có *Merge to HDR* và *Not duplicates*, không có nút đỏ; "~GB to free" ở dải trên không tính 5 khung | `DuplicateSourceSetTests.bracketIsSourceFrames` ✅ + ảnh sim `duplicates-v3-source.json` ⚠️ chưa có |
 | AC-G5 | (D5) như AC-G4 | chạm *Merge to HDR* | màn HDR (FS-01.11) mở với đúng 5 id; huỷ ở đó → thẻ Bracket không đổi, 0 dấu | ⚠️ chưa có — route `duplicates-v3-source.json` |
 | AC-Q1 | (D1) nhóm Look-alikes 3 ảnh tự sinh cùng nội dung: P nét, Q mờ Gaussian σ=3, R mờ σ=1.5; Q là file lớn nhất | chấm xong, mở thẻ | bản giữ là P với chip *Sharpest*; Q có chú thích *Soft*; không chip nào ghi *Biggest file* | `DuplicateQualityTests.sharpestBeatsBiggestFile` ✅ |
 | AC-Q2 | (D1) như AC-Q1 nhưng chưa chấm (đang *Checking sharpness…*) | mở thẻ | bản giữ theo D3 (Q), chip *Biggest file*; không chỗ nào có *Sharpest* | `DuplicateReviewTests.unscoredGroupSaysBiggestFile` ✅ |
 | AC-Q3 | (D1) ảnh có 4% điểm ảnh 255 và bản giữ 0.2% | mở thẻ | ảnh đó có chú thích *Blown highlights* | `DuplicateQualityTests.clippingCaption` ✅ |
 | AC-Q4 | (D1) bộ fixture 20 khung có người (ảnh tải từ nguồn giấy phép mở, xem §12), 3 khung mắt nhắm | chấm xong, mở màn chọn khung | 3 khung có chấm đỏ trên dải phim và chip *Eyes closed*; bản giữ đề xuất có *Eyes open* | `DuplicateQualityTests.eyesClosedOnLicensedFaceFixtures` (bỏ qua khi thiếu fixture) + `DuplicateReviewTests.eyesClosedRanksBelowEyesOpen` (điểm giả lập) ✅; fixture ⚠️ chưa có |
 | AC-Q5 | (D1, NF-01) 1.000 ảnh trong nhóm, đang chấm | người dùng cuộn danh sách / chạm Cancel | pass chấm nhường khi cuộn (không khung nào > 16 ms do pass này); Cancel dừng trong ≤ 0.5 s, điểm đã chấm được giữ | `DuplicateQualityPassTests.cancelKeepsWhatWasScored` ✅ (huỷ ≤ 0.5 s, điểm giữ); nhường khi cuộn ⚠️ chưa có — Instruments trên máy thật |
-| AC-S1 | (D2) cache: 212 nhóm Copies/Smaller copies (1.2 GB), 100 nhóm cần chọn (3.0 GB), 6 bracket | mở Duplicates | màn tóm tắt: *~4.2 GB to free*, thẻ *Quick clean 212 copies · 1.2 GB*, thẻ *Choose yourself 100 groups · 3.0 GB*, thẻ *Source frames 6 brackets*; đúng một nút nền accent (*Review 212…*); 0 dấu | route `duplicates-v3-card.json` (iPhone) + `duplicates-v3-frames-ipad.json` (iPad) ✅: *~X to free*, thẻ theo dữ liệu sim, một nút accent |
-| AC-S2 | (D2, A2) như AC-S1; 212 nhóm Quick clean có 230 bản có thể xoá, 3 bản trong đó là favorite / đã chỉnh / trong album "Client" | *Review 212…* → bỏ tick 5 nhóm (chứa 6 bản khác) → *Select …* | nút chân sheet ghi *Select 221 photos* (230 − 6 − 3 ảnh A2); sau khi chạm: đúng 221 ảnh mang dấu, 3 ảnh A2 không mang dấu, dòng của chúng ghi *1 kept: favorite* / *edited* / *in album Client*; chưa ảnh nào vào Recently Deleted | `DuplicateReviewTests.quickCleanNeverPicksProtectedPhotos` ✅ + route ⚠️ chưa có |
-| AC-S3 | (D2) như AC-S1 | *Review 212…* → Cancel | 0 dấu, không thanh xoá | ⚠️ chưa có |
-| AC-L1 | (D4, A6) danh sách có Copies 3, Look-alikes 5, Same moment 2, không Screenshot | mở *Choose yourself* | hàng lọc *All · Copies · Look-alikes · Same moment* (không Screenshots); chạm từng viên thì các viên còn lại không đổi vị trí x (±1pt) | ⚠️ chưa có — dump `duplicates-v3-filter.json` |
+| AC-S1 | (D2, sửa 2026-10-18) cache: nhóm Smaller copies 51 ảnh (342.2 MB), 1 nhóm Look-alikes, 0 dấu | mở Duplicates | danh sách thẻ hiện ngay, không màn trung gian; ô đầu là dải *Quick clean · 50 copies · 342.2 MB* + *Review…* (nút nền accent duy nhất); chọn hết qua *Review…* → dải biến mất | ảnh sim iPhone 17 26.5, 2026-10-18 ✅ (mở ra là danh sách + dải; *Review…* → sheet *Select 50 photos* → 50 dấu, dải biến mất) |
+| AC-S2 | (D2, A2) như AC-S1; 212 nhóm Quick clean có 230 bản có thể xoá, 3 bản trong đó là favorite / đã chỉnh / trong album "Client" | *Review…* → bỏ tick 5 nhóm (chứa 6 bản khác) → *Select …* | nút chân sheet ghi *Select 221 photos* (230 − 6 − 3 ảnh A2); sau khi chạm: đúng 221 ảnh mang dấu, 3 ảnh A2 không mang dấu, dòng của chúng ghi *1 kept: favorite* / *edited* / *in album Client*; chưa ảnh nào vào Recently Deleted | `DuplicateReviewTests.quickCleanNeverPicksProtectedPhotos` ✅ + route ⚠️ chưa có |
+| AC-S3 | (D2) như AC-S1 | *Review…* → Cancel | 0 dấu, không thanh xoá | ⚠️ chưa có |
+| AC-L1 | (D4, A6) danh sách có Copies 3, Look-alikes 5, Same moment 2, không Screenshot | mở Duplicates | hàng lọc *All · Copies · Look-alikes · Same moment* (không Screenshots); chạm từng viên thì các viên còn lại không đổi vị trí x (±1pt) | ⚠️ chưa có — dump `duplicates-v3-filter.json` |
 | AC-L2 | (A7) 3 nhóm với khoảng cách điểm 0.6 / 0.1 / 0.3 | sort *Easiest first* | thứ tự 0.6, 0.3, 0.1; Back rồi vào lại vẫn *Easiest first* | `DuplicateReviewTests.easiestFirstOrdersByScoreGap` ✅ (mặc định khi chưa chọn, nhớ qua `duplicates.sort`) |
 | AC-C1 | (D7) thẻ 5 ảnh chưa dấu | chạm giữa một bản sao | màn so sánh nhóm mở, ảnh đó ở pane đầu; pinch pane 1 thì pane 2 zoom theo; mỗi pane chỉ một nút *Remove*; 0 dấu | route sim 2026-10-17 ✅ iPhone (*Smaller copies · 51 photos*, pinch → cả hai pane phóng to, *Remove* → viền đỏ) + iPad (lưới 2×3, ảnh chạm *5/12* ở ô đầu) |
 | AC-C2 | (D7) như AC-C1 | chạm vòng góc trên phải của một bản sao | ảnh đó mang dấu, thanh xoá *1 marked*; vùng chạm vòng ≥ 44×44pt trong dump | ⚠️ chưa có |

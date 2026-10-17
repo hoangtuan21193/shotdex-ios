@@ -9,7 +9,6 @@
     { "action": "wait", "seconds": 10 },
     { "action": "screenshot", "name": "01-summary" },
     { "action": "dump", "name": "01-summary" },
-    { "action": "tap", "label": "Start" },
     { "action": "wait", "seconds": 4 },
     { "action": "screenshot", "name": "02-list" },
     { "action": "dump", "name": "02-list" },

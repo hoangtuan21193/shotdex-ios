@@ -7,7 +7,7 @@
 sắp xoá, và ảnh được giữ nhận lại những gì bản bị xoá đang có. Phần đầu (quét, loại nhóm, chấm điểm, màn hình):
 [FS-06.06](06-duplicates.md).
 
-Board: `PH_Duplicates` · `PH_DuplicatesSummary` · `PH_DuplicatesPinched` · `IP_*` · `DI_*` · `DC_*` (v3, 2026-10-17).
+Board: `PH_Duplicates` · `PH_DuplicatesPinched` · `IP_*` · `DI_*` · `DC_*` (v3, 2026-10-17).
 
 ## 1. Dấu xoá
 
@@ -61,25 +61,25 @@ v2 có ⋯ ▸ *Merge N Groups…* ghi favorite/toạ độ/ngày vào Photos **
     days"* + nút **Open Photos** (mở app Photos); rung `.success`;
   - nhóm cập nhật tại chỗ, nhóm còn một ảnh biến mất, dòng của ảnh đã xoá khỏi cache và `duplicate_review`;
   - **không có Undo**: app bên thứ ba không khôi phục được từ Recently Deleted; thông báo nói ảnh nằm đâu thay vì hứa.
-- **Hết nhóm** ở một loại: màn tóm tắt / hàng lọc cập nhật; hết mọi nhóm → *"All reviewed · 1.4 GB freed today"* + gợi ý loại
+- **Hết nhóm** ở một loại: hàng lọc cập nhật; hết mọi nhóm → *"All reviewed · 1.4 GB freed today"* + gợi ý loại
   còn nhóm (nếu có).
 
 ## 4. Màn rộng và Duo
 
 - Danh sách: regular width giữ v2 — cột co giãn tối thiểu 400pt, khe 16, xếp gạch (Z2): iPad ngang 3 cột 437pt, dọc 2 cột
   492pt, Duo trong (835 sau rail) 2 cột ~410pt. Compact (iPhone, Duo ngoài): một cột.
-- **Màn tóm tắt**: regular width hai thẻ Quick clean / Choose yourself **cạnh nhau**, tối đa 720pt giữa màn; compact xếp dọc.
+- **Dải Quick clean** (FS-06.06 §7.2): regular width tối đa 720pt giữa màn, trên các cột thẻ; compact trải hết bề ngang.
 - Hàng lọc: regular width hiện đủ các viên không cuộn; compact cuộn ngang.
 - Thanh dưới: regular là cụm giữa màn; compact trải hết bề ngang nội dung.
 - Sheet *Selected*: regular là form sheet 720pt; compact là sheet `large`.
-- **Duo màn ngoài** (466×678, rail 84 bên phải): **đủ chức năng như iPhone** (người dùng 2026-10-17) — tóm tắt, danh sách,
+- **Duo màn ngoài** (466×678, rail 84 bên phải): **đủ chức năng như iPhone** (người dùng 2026-10-17) — danh sách,
   thẻ, viewer nhóm, màn chọn khung (FS-06.06 §8). Bề ngang nội dung 350pt (16 mỗi bên trong 382).
 
 ## 5. Tiêu chí nghiệm thu
 
 | # | Cho | Khi | Thì | Chứng minh bằng |
 |---|---|---|---|---|
-| AC-M1 | (D12) 6 ảnh mang dấu trong 4 nhóm | tắt hẳn app (kill), mở lại Duplicates ▸ Choose yourself | vẫn 6 ô mang dấu; thanh dưới *6 selected* + *Delete 6* | `DuplicateReviewStoreTests.marksSurviveRelaunch` ✅ + route `duplicates-v3-persist.json` ✅ (50 dấu còn sau khi app bị tắt và mở lại, iPhone 17 26.5) |
+| AC-M1 | (D12) 6 ảnh mang dấu trong 4 nhóm | tắt hẳn app (kill), mở lại Duplicates | vẫn 6 ô mang dấu; thanh dưới *6 selected* + *Delete 6* | `DuplicateReviewStoreTests.marksSurviveRelaunch` ✅ + route `duplicates-v3-persist.json` ✅ (50 dấu còn sau khi app bị tắt và mở lại, iPhone 17 26.5) |
 | AC-M2 | (D12) như AC-M1, 1 trong 6 ảnh bị xoá bằng app Photos | quay lại Duplicates | *5 selected* + *Delete 5*; MB không tính ảnh đã mất; dòng của ảnh đó không còn trong `duplicate_review` | `DuplicateReviewStoreTests.deletedPhotoDropsItsMark` ✅ |
 | AC-M3 | (D12) Keep all trên nhóm A, bản giữ người dùng chọn ở nhóm B | kill app, mở lại | A vẫn thu gọn *Keeping all 2*; B vẫn có bản giữ người dùng chọn | `DuplicateReviewStoreTests.keepAllAndKeeperOverrideSurviveRelaunch` ✅ |
 | AC-M4 | (giữ v2) nhóm 3 ảnh, 2 đã đánh dấu | chạm vòng của ô thứ 3 | ô không mang dấu; *Keep at least one photo in this group.*; *Delete 2* không đổi; giữ lâu ô đó thì Remove mờ | ⚠️ chưa có |
@@ -94,5 +94,5 @@ v2 có ⋯ ▸ *Merge N Groups…* ghi favorite/toạ độ/ngày vào Photos **
 | AC-D7 | (D11) quyền `.limited`, album "Client" ngoài tập đã chọn | như AC-D5 | C vào Recently Deleted; K không vào "Client"; thông báo thêm *Albums couldn't be updated for 1 photo* | code: album không lấy được → *Albums couldn't be updated for N photos*; sim `.limited` ⚠️ chưa có |
 | AC-D8 | (D11) xoá hết nhóm của mọi loại | xoá xong | *All reviewed · X freed today* | code (*All reviewed · X freed today* + viên loại còn nhóm); sim ⚠️ chưa có (phải xoá hết nhóm) |
 | AC-W1 | (Z2, giữ v2) 6 nhóm, 2 dấu; iOS 26.5 và 18.6 | mở danh sách trên iPad 1376×1032, 1032×1376, Duo trong 951×669 | 3 cột 437pt / 2 cột 492pt / 2 cột ~410pt (±1pt); thanh dưới cụm giữa; tab bar ẩn (cả pre-26) | iPad 13 dọc: cột 492pt ✅ (route `duplicates-v3-frames-ipad.json`); ngang 437pt, Duo trong, iOS 18.6 ⚠️ chưa đo |
-| AC-W2 | (D2) có kết quả quét | mở Duplicates trên iPad ngang | hai thẻ Quick clean / Choose yourself cạnh nhau, khối ≤ 720pt giữa màn | route `duplicates-v3-frames-ipad.json` ✅ (iPad 13 dọc: khối 720pt giữa màn); ngang ⚠️ chưa chụp |
-| AC-W3 | (người dùng 2026-10-17) Duo màn ngoài 466×678 | đi hết tóm tắt → danh sách → thẻ → màn chọn khung → xoá | mọi nút nằm trong 382pt bên trái rail; vùng chạm ≥ 44pt; không nút nào trong 40pt quanh góc bo trên | ⚠️ chưa có — `DC_Duplicates*`, `Tools/sim-shot … cover` |
+| AC-W2 | (D2, sửa 2026-10-18) có nhóm bản sao chưa quyết | mở Duplicates trên iPad ngang | dải Quick clean ≤ 720pt giữa màn, trên các cột thẻ | ⚠️ chưa chụp |
+| AC-W3 | (người dùng 2026-10-17) Duo màn ngoài 466×678 | đi hết danh sách → thẻ → màn chọn khung → xoá | mọi nút nằm trong 382pt bên trái rail; vùng chạm ≥ 44pt; không nút nào trong 40pt quanh góc bo trên | ⚠️ chưa có — `DC_Duplicates*`, `Tools/sim-shot … cover` |

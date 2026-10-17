@@ -32,10 +32,6 @@
       "seconds": 10
     },
     {
-      "action": "tap",
-      "label": "Start"
-    },
-    {
       "action": "wait",
       "seconds": 4
     },

@@ -1,17 +1,82 @@
 {
   "steps": [
-    { "action": "launch" },
-    { "action": "wait", "seconds": 6 },
-    { "action": "tap", "label": "Collections", "type": "button" },
-    { "action": "wait", "seconds": 3 },
-    { "action": "scrollTo", "label": "Duplicates" },
-    { "action": "tap", "label": "Duplicates" },
-    { "action": "wait", "seconds": 12 },
-    { "action": "screenshot", "name": "01-list" },
-    { "action": "dump", "name": "01-list" },
-    { "action": "swipe", "x": 0.5, "y": 0.7, "direction": "up", "distance": 0.4 },
-    { "action": "wait", "seconds": 3 },
-    { "action": "screenshot", "name": "02-scrolled" },
-    { "action": "dump", "name": "02-scrolled" }
+    {
+      "action": "launch"
+    },
+    {
+      "action": "wait",
+      "seconds": 6
+    },
+    {
+      "action": "tap",
+      "label": "Collections",
+      "type": "button"
+    },
+    {
+      "action": "wait",
+      "seconds": 3
+    },
+    {
+      "action": "scrollTo",
+      "label": "Duplicates"
+    },
+    {
+      "action": "tap",
+      "label": "Duplicates"
+    },
+    {
+      "action": "wait",
+      "seconds": 12
+    },
+    {
+      "action": "screenshot",
+      "name": "01-list"
+    },
+    {
+      "action": "dump",
+      "name": "01-list"
+    },
+    {
+      "action": "swipe",
+      "x": 0.5,
+      "y": 0.7,
+      "direction": "up",
+      "distance": 0.4
+    },
+    {
+      "action": "wait",
+      "seconds": 3
+    },
+    {
+      "action": "screenshot",
+      "name": "02-scrolled"
+    },
+    {
+      "action": "dump",
+      "name": "02-scrolled"
+    },
+    {
+      "action": "swipe",
+      "x": 0.5,
+      "y": 0.4,
+      "direction": "down",
+      "distance": 0.4
+    },
+    {
+      "action": "wait",
+      "seconds": 2
+    },
+    {
+      "action": "tap",
+      "label": "Review\u2026"
+    },
+    {
+      "action": "wait",
+      "seconds": 4
+    },
+    {
+      "action": "screenshot",
+      "name": "03-quick-clean"
+    }
   ]
 }

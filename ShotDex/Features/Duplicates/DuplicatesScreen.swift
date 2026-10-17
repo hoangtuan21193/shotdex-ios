@@ -12,13 +12,6 @@ struct DuplicatesDestination: Hashable {}
 /// gather in a floating bar with Delete. Pinch changes copies per row.
 /// Nothing is marked until the user taps, and nothing rescans unless asked.
 struct DuplicatesScreen: View {
-    /// The summary opens first (§7.2); the list is pushed from it and shares
-    /// its model, so marks, scores and the scan carry across.
-    enum Page { case summary, list }
-
-    var page: Page = .summary
-    var sharedModel: DuplicatesModel?
-
     @Environment(AppDependencies.self) private var dependencies
     @Environment(PhotoLibraryService.self) private var photoLibrary
     @Environment(AppNavigation.self) private var navigation
@@ -36,7 +29,6 @@ struct DuplicatesScreen: View {
     @State private var isPinching = false
     @State private var hudVisible = false
     @State private var hudTask: Task<Void, Never>?
-    @State private var showsList = false
     @State private var showsQuickClean = false
     @State private var showsIgnored = false
     @State private var showsSelected = false
@@ -73,7 +65,7 @@ struct DuplicatesScreen: View {
         .navigationTitle("Duplicates")
         .navigationBarTitleDisplayMode(.inline)
         .task {
-            if model == nil { model = sharedModel ?? DuplicatesModel(dependencies: dependencies) }
+            if model == nil { model = DuplicatesModel(dependencies: dependencies) }
         }
     }
 
@@ -82,13 +74,7 @@ struct DuplicatesScreen: View {
         @Bindable var model = model
         let hasMarks = model.markedCount > 0
         ScrollView {
-            Group {
-                if page == .summary {
-                    summaryBody(model)
-                } else {
-                    cardList(model)
-                }
-            }
+            cardList(model)
                 .padding(.horizontal, AppTheme.Size.screenMargin)
                 .padding(.top, AppTheme.Spacing.md)
                 .padding(.bottom, hasMarks ? 96 : AppTheme.Spacing.lg)
@@ -100,7 +86,6 @@ struct DuplicatesScreen: View {
         .simultaneousGesture(pinch)
         .safeAreaInset(edge: .top, spacing: 0) {
             VStack(spacing: 0) {
-                let showsBand = page == .list
                 if let access = permissionAccess(model) {
                     DuplicatesPermissionBanner(access: access)
                         .padding(.horizontal, AppTheme.Size.screenMargin)
@@ -108,9 +93,7 @@ struct DuplicatesScreen: View {
                         .frame(maxWidth: .infinity)
                         .background(.bar)
                 }
-                if showsBand {
-                    DuplicatesHeaderBand(model: model, isRegular: isRegular)
-                }
+                DuplicatesHeaderBand(model: model, isRegular: isRegular)
             }
         }
         .overlay(alignment: .top) {
@@ -148,9 +131,6 @@ struct DuplicatesScreen: View {
         .task(id: photoLibrary.assetChangeToken) {
             guard photoLibrary.authorizationState.canReadLibrary else { return }
             model.refreshPendingCount()
-        }
-        .navigationDestination(isPresented: $showsList) {
-            DuplicatesScreen(page: .list, sharedModel: model)
         }
         .sheet(isPresented: $showsQuickClean) {
             DuplicatesQuickCleanSheet(model: model)
@@ -215,27 +195,6 @@ struct DuplicatesScreen: View {
         .accessibilityLabel(String(localized: "More", comment: "VoiceOver: the Duplicates ⋯ menu"))
     }
 
-    // MARK: Summary
-
-    @ViewBuilder
-    private func summaryBody(_ model: DuplicatesModel) -> some View {
-        if model.groups.isEmpty, !model.isScanning {
-            emptyState(model)
-                .frame(maxWidth: .infinity)
-                .padding(.top, AppTheme.Spacing.xxl)
-        } else {
-            DuplicatesSummaryView(
-                model: model,
-                isRegular: isRegular,
-                open: { filter in
-                    model.filter = filter
-                    showsList = true
-                },
-                reviewQuickClean: { showsQuickClean = true }
-            )
-        }
-    }
-
     // MARK: Cards
 
     @ViewBuilder
@@ -245,24 +204,46 @@ struct DuplicatesScreen: View {
                 .frame(maxWidth: .infinity)
                 .padding(.top, AppTheme.Spacing.xxl)
         } else {
-            let contentWidth = max(0, containerWidth - AppTheme.Size.screenMargin * 2)
-            let columnCount = DuplicateCardMetrics.cardColumns(contentWidth: contentWidth, isRegular: isRegular)
-            let cardWidth = DuplicateCardMetrics.cardWidth(contentWidth: contentWidth, columns: columnCount)
-            let metrics = DuplicateCardMetrics(
-                innerWidth: cardWidth - DuplicateCardMetrics.cardPadding * 2,
-                copyColumns: copyColumns
-            )
-            let columns = distribute(model.sortedGroups, into: columnCount, model: model, metrics: metrics)
-            HStack(alignment: .top, spacing: DuplicateCardMetrics.cardSpacing) {
-                ForEach(columns.indices, id: \.self) { index in
-                    LazyVStack(spacing: AppTheme.Spacing.md) {
-                        ForEach(columns[index]) { group in
-                            groupView(group, model: model, metrics: metrics)
-                                .id(group.id)
-                        }
-                    }
-                    .frame(width: columnCount > 1 ? cardWidth : nil)
+            VStack(spacing: AppTheme.Spacing.md) {
+                if showsQuickCleanBand(model) {
+                    DuplicatesQuickCleanBand(model: model) { showsQuickClean = true }
+                        .frame(maxWidth: isRegular ? 720 : .infinity)
+                        .transition(.opacity)
                 }
+                cards(model)
+            }
+        }
+    }
+
+    /// The band rides the list while copies are undecided and the filter
+    /// could show them.
+    private func showsQuickCleanBand(_ model: DuplicatesModel) -> Bool {
+        guard !model.isScanning, model.pendingQuickClean.copies > 0 else { return false }
+        switch model.filter {
+        case .all: return true
+        case .kind(let kind): return kind.isCopy
+        case .sourceFrames: return false
+        }
+    }
+
+    private func cards(_ model: DuplicatesModel) -> some View {
+        let contentWidth = max(0, containerWidth - AppTheme.Size.screenMargin * 2)
+        let columnCount = DuplicateCardMetrics.cardColumns(contentWidth: contentWidth, isRegular: isRegular)
+        let cardWidth = DuplicateCardMetrics.cardWidth(contentWidth: contentWidth, columns: columnCount)
+        let metrics = DuplicateCardMetrics(
+            innerWidth: cardWidth - DuplicateCardMetrics.cardPadding * 2,
+            copyColumns: copyColumns
+        )
+        let columns = distribute(model.sortedGroups, into: columnCount, model: model, metrics: metrics)
+        return HStack(alignment: .top, spacing: DuplicateCardMetrics.cardSpacing) {
+            ForEach(columns.indices, id: \.self) { index in
+                LazyVStack(spacing: AppTheme.Spacing.md) {
+                    ForEach(columns[index]) { group in
+                        groupView(group, model: model, metrics: metrics)
+                            .id(group.id)
+                    }
+                }
+                .frame(width: columnCount > 1 ? cardWidth : nil)
             }
         }
     }

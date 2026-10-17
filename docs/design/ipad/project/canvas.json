@@ -122,18 +122,11 @@
    "x": 34944,
    "y": 560
   },
-  "IP_DuplicatesSummary.dc.html": {
-   "h": 1032,
-   "title": "iPad · Ảnh trùng v3: màn tóm tắt — Quick clean + Choose yourself cạnh nhau (khối 720 giữa vùng nội dung), thẻ Source frames — FS-06.06 §7.2, AC-W2, 17/10 code chưa có",
-   "w": 1376,
-   "x": 36400,
-   "y": 560
-  },
   "IP_Duplicates.dc.html": {
    "h": 1032,
-   "title": "iPad · Ảnh trùng v3: danh sách (ẩn sidebar) 3 cột 437 — hàng lọc theo loại, Easiest first, thẻ v3 (vòng 26/44, chip lý do, chú thích 2 dòng), Same moment 51 thu gọn Show all 51, thẻ Bracket Merge to HDR (không đỏ), thanh 37 selected · 210 MB + Delete 37 — FS-06.06 §7.3–7.5, 06b §3–4, 17/10 code chưa có",
+   "title": "iPad · Ảnh trùng v3: mở ra là danh sách ngay (không màn tóm tắt), dải Quick clean 720 giữa màn trên 3 cột + Review…; (ẩn sidebar) 3 cột 437 — hàng lọc theo loại, Easiest first, thẻ v3 (vòng 26/44, chip lý do, chú thích 2 dòng), Same moment 51 thu gọn Show all 51, thẻ Bracket Merge to HDR (không đỏ), thanh 37 selected · 210 MB + Delete 37 — FS-06.06 §7.3–7.5, 06b §3–4, 17/10 code chưa có",
    "w": 1376,
-   "x": 37856,
+   "x": 36400,
    "y": 560
   },
   "IP_BurstFrames.dc.html": {
@@ -1030,7 +1023,6 @@
   "IP_OnThisDay.dc.html",
   "IP_Places.dc.html",
   "IP_Trips.dc.html",
-  "IP_DuplicatesSummary.dc.html",
   "IP_DuplicatesCompare.dc.html",
   "IP_Duplicates.dc.html",
   "IP_BurstFrames.dc.html",

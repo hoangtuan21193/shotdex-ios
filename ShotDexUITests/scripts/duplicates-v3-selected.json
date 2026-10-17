@@ -7,7 +7,6 @@
     { "action": "scrollTo", "label": "Duplicates" },
     { "action": "tap", "label": "Duplicates" },
     { "action": "wait", "seconds": 10 },
-    { "action": "tap", "label": "Start" },
     { "action": "wait", "seconds": 4 },
     { "action": "screenshot", "name": "01-bar" },
     { "action": "dump", "name": "01-bar" },

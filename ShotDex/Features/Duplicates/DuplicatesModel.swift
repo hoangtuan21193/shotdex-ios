@@ -195,18 +195,16 @@ final class DuplicatesModel {
 
     func groupCount(_ filter: DuplicatesFilter) -> Int { groups.filter(filter.includes).count }
 
-    // MARK: Summary
+    // MARK: Quick clean
 
-    /// The keeper of the newest group of `kind`, for the summary row's thumbnail.
-    func firstAsset(of kind: DuplicateKind) -> PHAsset? {
-        guard let group = groups.first(where: { $0.kind == kind && $0.sourceSet == nil }),
-              let keeper = keeper(of: group) else { return nil }
-        return assetsById[keeper.assetId]
-    }
-
-    /// The numbers on the summary screen (§7.2).
-    var summary: DuplicatesSummary {
-        DuplicatesSummary(groups: groups) { self.freeBytes(of: $0) ?? 0 }
+    /// Copies groups nobody has decided yet, and what they would free: the
+    /// Quick clean band over the list (§7.2) shows while this is not zero.
+    var pendingQuickClean: (copies: Int, bytes: Int) {
+        groups.reduce(into: (copies: 0, bytes: 0)) { total, group in
+            guard group.kind.isCopy, group.sourceSet == nil, !isReviewed(group) else { return }
+            total.copies += group.count - 1
+            total.bytes += freeBytes(of: group) ?? 0
+        }
     }
 
     /// The Quick clean sheet's rows, once every copy's favorite / edit /
