@@ -163,10 +163,6 @@ struct DuplicatesScreen: View {
                 .environment(photoLibrary)
         }
         .photoStackCover($model.stackPresentation, onSaved: { _ in model.loadCache() })
-        .sheet(item: $model.viewer) { presentation in
-            DuplicateGroupViewer(model: model, presentation: presentation)
-                .environment(photoLibrary)
-        }
         .fullScreenCover(item: $model.framePicker) { request in
             BurstFramesScreen(
                 request: request,
@@ -828,7 +824,7 @@ private struct DuplicateDecisionCard: View {
             isKeeper: isKeeper
         )
         // D7: a tap looks, the ring marks.
-        .onTapGesture { model.openViewer(member.assetId, in: group) }
+        .onTapGesture { model.compare(group, from: member.assetId) }
         .sensoryFeedback(.selection, trigger: isMarked)
         .sensoryFeedback(.warning, trigger: model.blockedGroupId == group.id) { _, blocked in blocked }
         .contextMenu {
@@ -858,7 +854,7 @@ private struct DuplicateDecisionCard: View {
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(accessibilityLabel(member, isKeeper: isKeeper, isMarked: isMarked))
         .accessibilityAddTraits(isMarked ? [.isButton, .isSelected] : .isButton)
-        .accessibilityAction { model.openViewer(member.assetId, in: group) }
+        .accessibilityAction { model.compare(group, from: member.assetId) }
         .accessibilityAction(named: isMarked
                              ? String(localized: "Don't remove", comment: "VoiceOver action on a tile")
                              : String(localized: "Remove", comment: "VoiceOver action on a tile")) {
@@ -1104,7 +1100,7 @@ struct DuplicateThumbnail: View {
     let showsKeep: Bool
     var showsMarkBadge = true
     /// The ring's action. Its hit area is 44pt even though it draws 26pt
-    /// (AC-C2); the rest of the tile belongs to the tap that opens the viewer.
+    /// (AC-C2); the rest of the tile belongs to the tap that opens Compare.
     var onToggleMark: (() -> Void)?
     /// Pixel size and file size (or a series frame's seconds), on the photo
     /// rather than under it (board `PH_DuplicatesLargeGroup`).
@@ -1220,17 +1216,30 @@ struct DuplicateThumbnail: View {
         cancelThumbnail()
         let size = side
         requestedSide = size
+        request(asset, size: size, allowNetwork: false)
+    }
+
+    /// Local first; a final answer that is only the Optimize Storage proxy
+    /// asks iCloud for the real pixels — a soft tile cannot be judged
+    /// against its neighbour. The network pass waits for a free slot.
+    private func request(_ asset: PHAsset, size: CGFloat, allowNetwork: Bool, attempt: Int = 0) {
         let pixels = size * ActiveDisplay.scale
         requestId = photoLibrary.requestThumbnail(
             for: asset,
             targetSize: CGSize(width: pixels, height: pixels),
-            // The keeper is the photo the decision rests on: fetch it from
-            // iCloud when only a proxy is on the device.
-            allowNetwork: isKeeper
-        ) { result in
+            allowNetwork: allowNetwork
+        ) { result, delivery in
             // A late answer to a smaller request must not replace a sharper one.
-            guard size == requestedSide, let result else { return }
-            image = result
+            guard size == requestedSide else { return }
+            if let result { image = result }
+            guard !delivery.isDegraded, !delivery.isSharp, attempt < 5 else { return }
+            if result != nil, allowNetwork { return }
+            // Local proxy only, or the network gate was full: try iCloud.
+            Task { @MainActor in
+                if allowNetwork || result == nil { try? await Task.sleep(for: .seconds(1)) }
+                guard size == requestedSide, requestId != nil else { return }
+                request(asset, size: size, allowNetwork: true, attempt: attempt + 1)
+            }
         }
     }
 

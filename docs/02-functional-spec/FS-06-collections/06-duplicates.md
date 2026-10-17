@@ -173,7 +173,7 @@ Thẻ bo `r-lg`, đệm 12:
   - thông số chụp chỉ khi **khác nhau trong nhóm**: *−2 EV*, *35mm*, *1/60 s*.
   - Không có gì để nói → không có chú thích (ô sạch). Pixel và MB chỉ ở màn xem to.
   - Chữ **không đỏ** (đỏ chỉ nghĩa là "ảnh sẽ mất").
-- **Chạm ảnh = mở to** (D7): mở viewer của nhóm (§7.6). **Vòng 26pt ở góc trên phải (vùng chạm 44)** = đánh dấu / bỏ dấu:
+- **Chạm ảnh = mở to** (D7): mở Compare của nhóm tại ảnh đó (§7.6). **Vòng 26pt ở góc trên phải (vùng chạm 44)** = đánh dấu / bỏ dấu:
   có dấu thì đĩa thùng rác trắng trên đỏ, viền đỏ 3pt, ảnh mờ còn 45% (như v2).
 - Menu giữ lâu: **Keep just this one** · **Remove** / **Don't remove** · **Compare**.
 - Chân thẻ: **Remove the other 8** (đỏ; không đánh dấu ảnh A2 — khi có, nút ghi *"Remove the other 6"* và dưới thẻ *"2 kept:
@@ -198,9 +198,12 @@ Như §7.4 nhưng: đầu thẻ *"Bracket · 5 frames · ±2 EV"*; dưới mỗi
 
 ### 7.6 Xem to trong nhóm
 
-Chạm một ảnh trong thẻ → viewer tier D của **riêng nhóm đó**: vuốt ngang qua các ảnh của nhóm, pinch zoom, dưới đáy
-**Keep this** (đổi bản giữ của nhóm sang ảnh này, rồi về thẻ) · **Remove** / **Don't remove** · thông số (kích thước, MB, nguồn,
-điểm §6). Vuốt xuống để đóng. Với Same moment / bộ nguyên liệu, chạm mở thẳng màn chọn khung (§8) tại khung đó.
+Chạm một ảnh trong thẻ → **Compare** của cả nhóm ([FS-01.08c](../FS-01-library/08c-compare-viewer-mode.md)), ảnh vừa chạm là
+**Select**. Pinch một khung thì mọi khung zoom và pan theo (để xác nhận ảnh nào nét): iPhone xếp Select trên Candidate, bước qua
+các Candidate giữ nguyên mức zoom; iPad/Duo trong có thêm Survey hiện cả nhóm. Đánh dấu bằng cờ Reject của Compare (dấu của nhóm
+thành Reject khi mở; cổng "giữ ít nhất một" đi theo). Áp dụng cho **mọi** loại nhóm, kể cả Same moment / bộ nguyên liệu — màn
+chọn khung (§8) mở bằng nút **Choose frames**. (Người dùng 2026-10-17: viewer từng ảnh với *Keep this* bị bỏ — không zoom chung
+được thì không xác nhận được.)
 
 ## 8. Màn chọn khung dùng chung (D8)
 
@@ -298,9 +301,9 @@ fixture: tự sinh (mảng màu, chữ, nhiễu, mờ Gaussian); riêng AC-Q4 d�
 | AC-S3 | (D2) như AC-S1 | *Review 212…* → Cancel | 0 dấu, không thanh xoá | ⚠️ chưa có |
 | AC-L1 | (D4, A6) danh sách có Copies 3, Look-alikes 5, Same moment 2, không Screenshot | mở *Choose yourself* | hàng lọc *All · Copies · Look-alikes · Same moment* (không Screenshots); chạm từng viên thì các viên còn lại không đổi vị trí x (±1pt) | ⚠️ chưa có — dump `duplicates-v3-filter.json` |
 | AC-L2 | (A7) 3 nhóm với khoảng cách điểm 0.6 / 0.1 / 0.3 | sort *Easiest first* | thứ tự 0.6, 0.3, 0.1; Back rồi vào lại vẫn *Easiest first* | `DuplicateReviewTests.easiestFirstOrdersByScoreGap` ✅ (mặc định khi chưa chọn, nhớ qua `duplicates.sort`) |
-| AC-C1 | (D7) thẻ 5 ảnh chưa dấu | chạm giữa một bản sao | viewer của nhóm mở tại ảnh đó; 0 dấu | route `duplicates-v3-card.json` ✅ (chạm ô → viewer nhóm *1 of 51*, 0 dấu) |
+| AC-C1 | (D7) thẻ 5 ảnh chưa dấu | chạm giữa một bản sao | Compare của nhóm mở, ảnh đó là Select; pinch Select 3× thì Candidate cũng zoom (cùng %); 0 dấu | route sim 2026-10-17 ✅ (chạm ô → *51 Photos*, Select = NOISE_001; pinch → cả hai pane *133%*) |
 | AC-C2 | (D7) như AC-C1 | chạm vòng góc trên phải của một bản sao | ảnh đó mang dấu, thanh xoá *1 marked*; vùng chạm vòng ≥ 44×44pt trong dump | ⚠️ chưa có |
-| AC-C3 | (D7) viewer nhóm mở ở bản sao X | chạm *Keep this* | về thẻ, X là bản giữ (2×2) với nhãn Keep; bản giữ cũ thành bản sao | ⚠️ chưa có |
+| AC-C3 | — | — | **bỏ** 2026-10-17: viewer từng ảnh (*Keep this*) thay bằng Compare (AC-C1); đổi bản giữ = menu *Keep just this one* | — |
 | AC-C4 | (D9) nhóm 52 ảnh, iPhone 17 | mở danh sách | thẻ cao ≤ 1 màn hình: bản giữ + 1 hàng + *Show all 51*; *Remove the other 51*, *Keep all*, *Compare* nằm trong viewport khi bản giữ ở giữa màn | route `duplicates-v3-large.json` ✅ (51 ảnh: bản giữ + 4 bản sao + *Show all 50*, nút chân ngay dưới; iPhone 17 26.5) |
 | AC-C5 | (D9) thẻ 9 ảnh | chạm *Remove the other 8* | 8 ô viền đỏ hiện ≥ 0.5 s trước khi thẻ thu thành *Keeping 1 · deleting 8*; thẻ kế không nhảy quá 1pt so với trước khi thu (đo vị trí) | ⚠️ chưa có |
 | AC-C6 | (D10) nhóm: K gốc 6240px; C1 bản WhatsApp 1600px thiếu EXIF; C2 bản xuất Lightroom 2048px (Software=Lightroom); C3 trong album "Client" | mở thẻ | C2 là **bản giữ** (bản xuất đã chỉnh); K có *Not edited*; C1 *Smaller copy* / *WhatsApp*; C3 dòng 2 *In album: Client*; không ô nào có chữ dạng `6240×4160` | `DuplicateReviewTests.exportOfAnEditIsTheKeeper`, `.captionSaysWhatTheCopyLacksInWords` ✅ |

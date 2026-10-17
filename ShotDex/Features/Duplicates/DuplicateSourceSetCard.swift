@@ -54,12 +54,12 @@ struct DuplicateSourceSetCard: View {
             },
             factLines: DuplicateReview.settings(of: member, members: group.members).map { [$0] } ?? []
         )
-        .onTapGesture { model.openViewer(member.assetId, in: group) }
+        .onTapGesture { model.compare(group, from: member.assetId) }
         .sensoryFeedback(.selection, trigger: isMarked)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(DuplicateReview.settings(of: member, members: group.members) ?? group.sourceSet?.title ?? "")
         .accessibilityAddTraits(isMarked ? [.isButton, .isSelected] : .isButton)
-        .accessibilityAction { model.openViewer(member.assetId, in: group) }
+        .accessibilityAction { model.compare(group, from: member.assetId) }
         .accessibilityAction(named: isMarked
                              ? String(localized: "Don't remove", comment: "VoiceOver action on a tile")
                              : String(localized: "Remove", comment: "VoiceOver action on a tile")) {

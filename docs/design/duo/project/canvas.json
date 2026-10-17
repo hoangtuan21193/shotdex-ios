@@ -317,7 +317,7 @@
     },
     "DC_Duplicates.dc.html": {
       "h": 678,
-      "title": "Duo ngoài · Duplicates danh sách (v3): 1 cột 350, hàng lọc cuộn ngang, Compare thành nút icon (chữ không vừa 326), nhóm 24 thu gọn; thẻ Bracket xem DI_Duplicates; viewer nhóm như iPhone PH_ — đề xuất 17/10",
+      "title": "Duo ngoài · Duplicates danh sách (v3): 1 cột 350, hàng lọc cuộn ngang, Compare thành nút icon (chữ không vừa 326), nhóm 24 thu gọn; thẻ Bracket xem DI_Duplicates; chạm ảnh mở Compare của nhóm (pinch zoom chung) — đề xuất 17/10",
       "w": 466,
       "x": 9828,
       "y": 1609
@@ -1543,13 +1543,6 @@
       "y": 560,
       "title": "Duo trong · Duplicates tóm tắt (v3, FS-06.06 §7.2): ~GB to free, Quick clean + Choose yourself cạnh nhau tối đa 720, Source frames — đề xuất 17/10, code chưa có"
     },
-    "DI_DuplicatesViewer.dc.html": {
-      "h": 669,
-      "w": 951,
-      "x": 20620,
-      "y": 560,
-      "title": "Duo trong · Xem to trong nhóm (v3 §7.6, tier D): vuốt ngang trong nhóm, Keep this / Remove, thông số + điểm, vuốt xuống để đóng — đề xuất 17/10"
-    },
     "DC_DuplicatesSummary.dc.html": {
       "h": 678,
       "w": 466,
@@ -1714,7 +1707,6 @@
     "DI_Trips.dc.html",
     "DI_DuplicatesSummary.dc.html",
     "DI_Duplicates.dc.html",
-    "DI_DuplicatesViewer.dc.html",
     "DI_BurstFrames.dc.html",
     "DI_Creations.dc.html",
     "DI_Collage.dc.html",

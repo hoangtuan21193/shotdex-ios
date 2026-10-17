@@ -663,7 +663,7 @@
     "PH_BurstFrames.dc.html": {
       "h": 874,
       "radius": 44,
-      "title": "iPhone · Duplicates 6/6 · Màn chọn khung dùng chung (§8, tầng D): khung lớn 536pt, dải phim 56pt (chấm đỏ = khung yếu, tick = đã chọn), Zoom to face, nút chọn 44 góc dưới phải, Done · Keep 3, remove 21; không có X, vuốt xuống để đóng. Dùng cho burst, Same moment, focus stack, viewer ⋯ Choose Frames…",
+      "title": "iPhone · Duplicates 5/5 · Màn chọn khung dùng chung (§8, tầng D): khung lớn 536pt, dải phim 56pt (chấm đỏ = khung yếu, tick = đã chọn), Zoom to face, nút chọn 44 góc dưới phải, Done · Keep 3, remove 21; không có X, vuốt xuống để đóng. Dùng cho burst, Same moment, focus stack, viewer ⋯ Choose Frames…",
       "w": 402,
       "x": 10604,
       "y": 560
@@ -754,21 +754,21 @@
     },
     "PH_Duplicates.dc.html": {
       "h": 874,
-      "title": "iPhone · Duplicates 2/6 · Danh sách v3 (§7.3–7.4, 06b §3): hàng lọc theo loại All · Copies · Smaller copies · Look-alikes · Same moment · Screenshots · Source frames, Reviewed 4 of 312 + Easiest first ▾ (Most space · Newest · Oldest); ⋯ = Check Again · Ignored (3) · Clear Selection. Thẻ: chạm ảnh mở viewer nhóm, vòng 26 (vùng chạm 44) đánh dấu, chip lý do trên bản giữ, chú thích 2 dòng trên bản sao; thanh dưới 37 selected · 210 MB › + Delete 37. Viên kính mở sheet \"37 Selected\"; xoá xong: thông báo 5 s \"37 photos moved to Recently Deleted\" + Open Photos",
+      "title": "iPhone · Duplicates 2/5 · Danh sách v3 (§7.3–7.4, 06b §3): hàng lọc theo loại All · Copies · Smaller copies · Look-alikes · Same moment · Screenshots · Source frames, Reviewed 4 of 312 + Easiest first ▾ (Most space · Newest · Oldest); ⋯ = Check Again · Ignored (3) · Clear Selection. Thẻ: chạm ảnh mở Compare của nhóm (pinch zoom chung), vòng 26 (vùng chạm 44) đánh dấu, chip lý do trên bản giữ, chú thích 2 dòng trên bản sao; thanh dưới 37 selected · 210 MB › + Delete 37. Viên kính mở sheet \"37 Selected\"; xoá xong: thông báo 5 s \"37 photos moved to Recently Deleted\" + Open Photos",
       "w": 402,
       "x": 8676,
       "y": 560
     },
     "PH_DuplicatesLargeGroup.dc.html": {
       "h": 874,
-      "title": "iPhone · Duplicates 3/6 · Same moment 51 ảnh thu gọn (≥12: bản giữ 2×2 trước, rồi theo thứ tự chụp, Show all 51), chân thẻ Choose frames · Keep all · Compare; thẻ Bracket ±2 EV: một lưới theo thứ tự chụp, Merge to HDR · Not duplicates, không nút đỏ. Focus stack cùng dáng: \"Focus stack? · 24 frames\", Focus Stack · Choose frames · Not duplicates",
+      "title": "iPhone · Duplicates 3/5 · Same moment 51 ảnh thu gọn (≥12: bản giữ 2×2 trước, rồi theo thứ tự chụp, Show all 51), chân thẻ Choose frames · Keep all · Compare; thẻ Bracket ±2 EV: một lưới theo thứ tự chụp, Merge to HDR · Not duplicates, không nút đỏ. Focus stack cùng dáng: \"Focus stack? · 24 frames\", Focus Stack · Choose frames · Not duplicates",
       "w": 402,
       "x": 9158,
       "y": 560
     },
     "PH_DuplicatesPinched.dc.html": {
       "h": 874,
-      "title": "iPhone · Duplicates 4/6 · Sau khi chụm: 3 bản sao mỗi hàng (lưới 5 cột, bản giữ 2×2 nhỏ theo), HUD \"3 per row\"; chú thích bị cắt ở ô 66pt là chấp nhận được",
+      "title": "iPhone · Duplicates 4/5 · Sau khi chụm: 3 bản sao mỗi hàng (lưới 5 cột, bản giữ 2×2 nhỏ theo), HUD \"3 per row\"; chú thích bị cắt ở ô 66pt là chấp nhận được",
       "w": 402,
       "x": 9640,
       "y": 560
@@ -1043,17 +1043,9 @@
     },
     "PH_DuplicatesSummary.dc.html": {
       "h": 874,
-      "title": "iPhone · Duplicates 1/6 · Tóm tắt v3 (FS-06.06 §7.2): ~4.2 GB to free, thẻ Quick clean (Copies + Smaller copies, nút accent duy nhất Review 212…), Choose yourself theo loại + Start, Source frames + Show. Review 212… mở sheet xem trước (không vẽ board riêng): mỗi dòng bản giữ + số bản sẽ xoá + MB, bỏ tick từng nhóm, dòng \"1 kept: in album …\", chân sheet Select 205 photos — chỉ đánh dấu, chưa xoá",
+      "title": "iPhone · Duplicates 1/5 · Tóm tắt v3 (FS-06.06 §7.2): ~4.2 GB to free, thẻ Quick clean (Copies + Smaller copies, nút accent duy nhất Review 212…), Choose yourself theo loại + Start, Source frames + Show. Review 212… mở sheet xem trước (không vẽ board riêng): mỗi dòng bản giữ + số bản sẽ xoá + MB, bỏ tick từng nhóm, dòng \"1 kept: in album …\", chân sheet Select 205 photos — chỉ đánh dấu, chưa xoá",
       "w": 402,
       "x": 8194,
-      "y": 560
-    },
-    "PH_DuplicatesViewer.dc.html": {
-      "h": 874,
-      "radius": 44,
-      "title": "iPhone · Duplicates 5/6 · Xem to trong nhóm (§7.6, tầng D): vuốt ngang qua 5 ảnh của nhóm, pinch zoom, thông số + điểm, Keep this · Remove (Don't remove khi đã đánh dấu), vuốt xuống để đóng. Same moment / bộ nguyên liệu mở thẳng 6/6",
-      "w": 402,
-      "x": 10122,
       "y": 560
     }
   },
@@ -1163,7 +1155,6 @@
     "PH_Duplicates.dc.html",
     "PH_DuplicatesLargeGroup.dc.html",
     "PH_DuplicatesPinched.dc.html",
-    "PH_DuplicatesViewer.dc.html",
     "PH_BurstFrames.dc.html",
     "PH_Creations.dc.html",
     "PH_Collage.dc.html",

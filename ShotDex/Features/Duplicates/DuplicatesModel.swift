@@ -730,16 +730,6 @@ final class DuplicatesModel {
         session.setKeptAll(group.memberIds, false)
     }
 
-    /// Keep this, from the viewer (AC-C3): the photo becomes the group's
-    /// keeper and loses any mark; the old keeper becomes a copy. Nothing
-    /// else is marked — that is Keep just this one.
-    func keepThis(_ assetId: String, in group: DuplicateGroup) {
-        session.setKeeper(assetId, groupMembers: group.members.map(\.assetId))
-        session.setMarked([assetId], false)
-    }
-
-    /// The viewer on screen (§7.6).
-    var viewer: DuplicateViewerPresentation?
     /// Merge to HDR / Focus Stack on a source set (§5, AC-G5).
     var stackPresentation: PhotoStackPresentation?
 
@@ -779,16 +769,6 @@ final class DuplicatesModel {
     func hasNewPhotoSinceDismissal(_ group: DuplicateGroup) -> Bool {
         if case .newPhotoSince = session.dismissal(of: group.memberIds) { return true }
         return false
-    }
-
-    func openViewer(_ assetId: String, in group: DuplicateGroup) {
-        // A run is judged frame against frame: Same moment and source sets
-        // open the frame picker at that frame (§7.6).
-        if group.kind == .sameMoment || group.sourceSet != nil {
-            openFrames(group, at: assetId)
-        } else {
-            viewer = DuplicateViewerPresentation(groupId: group.id, startId: assetId)
-        }
     }
 
     // MARK: Frame picker
@@ -895,9 +875,12 @@ final class DuplicatesModel {
 
     /// Opens the group in the viewer's Compare (FS-01.08c §7). Reject there
     /// is the real flag; the keep-one gate rides along with the group.
-    func compare(_ group: DuplicateGroup) {
+    /// A tap on a tile opens here too, with that photo as Select: every
+    /// photo of the group pinches together (§7.6).
+    func compare(_ group: DuplicateGroup, from assetId: String? = nil) {
         guard canCompare(group) else { return }
-        let ids = group.members.map(\.assetId).filter { assetsById[$0] != nil }
+        var ids = group.members.map(\.assetId).filter { assetsById[$0] != nil }
+        if let assetId, let index = ids.firstIndex(of: assetId) { ids.insert(ids.remove(at: index), at: 0) }
         let source = PhotoListModel(assetIds: ids, dependencies: dependencies)
         source.load()
         guard var request = CompareRequest(selection: ids, source: source, duplicateGroup: ids) else { return }
