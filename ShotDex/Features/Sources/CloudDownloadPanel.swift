@@ -40,11 +40,9 @@ final class CloudDownloadModel {
                 }
                 self?.file = file
                 self?.phase = .downloading(fraction: nil)
+                let sink = ProgressSink(model: self)
                 let outcome = try await runner.download(file, with: downloader) { fraction in
-                    Task { @MainActor [weak self] in
-                        guard let self, case .downloading = self.phase else { return }
-                        self.phase = .downloading(fraction: fraction)
-                    }
+                    Task { @MainActor in sink.model?.progressed(fraction) }
                 }
                 switch outcome {
                 case .downloaded:
@@ -68,6 +66,17 @@ final class CloudDownloadModel {
 
     func cancel() {
         task?.cancel()
+    }
+
+    /// The downloader reports from its own thread; the model is held weakly
+    /// so a page that went away is not kept alive by its download.
+    private struct ProgressSink: Sendable {
+        weak var model: CloudDownloadModel?
+    }
+
+    private func progressed(_ fraction: Double?) {
+        guard case .downloading = phase else { return }
+        phase = .downloading(fraction: fraction)
     }
 
     private func finish(_ onDone: @MainActor () -> Void) {
