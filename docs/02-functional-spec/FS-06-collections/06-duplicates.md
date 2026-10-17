@@ -245,7 +245,8 @@ nằm trong `photo_metadata`.
 | `duplicate_quality` *(mới)* | id ảnh, ngày sửa, điểm nét, điểm mắt + độ tin cậy, % cháy/bệt, khung khuôn mặt chuẩn hoá, bù sáng EXIF, cờ "bản xuất" | kết quả quét đắt tiền |
 | `duplicate_review` *(mới)* | dấu xoá theo id ảnh; nhóm Keep all; bản giữ người dùng chọn; Not duplicates (tập id thành viên) | dữ liệu người dùng |
 
-- Dọn: dòng của ảnh đã biến khỏi thư viện bị xoá ở lượt dọn đầu mỗi lượt quét và khi PhotoKit báo xoá.
+- Dọn: dòng của một ảnh bị xoá khi PhotoKit báo ảnh đó đã xoá. `duplicate_review` **không** bị quét đối chiếu với
+  `photo_metadata` (rỗng sau Clear Index, thiếu khi đang index hay `.limited`); Clear Index giữ nó, xoá `duplicate_quality`.
 - Decode khoan dung: một dòng hỏng không làm mất cả danh sách dấu.
 
 ## 11. Chữ trên màn (A3, tiếng Anh Mỹ)

@@ -165,6 +165,14 @@ struct MetadataStore: Sendable {
             let gone = ids.filter { !kept.contains($0) }
             try PhotoMetadata.deleteAll(db, keys: gone)
             try PhotoKeywordStore.delete(db, ids: gone)
+            // A gone photo's Duplicates marks and scores go with it: a mark on
+            // a photo that is not there must never be counted or deleted
+            // again (FS-06.06b §1).
+            if !gone.isEmpty {
+                let marks = databaseQuestionMarks(count: gone.count)
+                try db.execute(sql: "DELETE FROM duplicate_review WHERE assetId IN (\(marks))", arguments: StatementArguments(gone))
+                try db.execute(sql: "DELETE FROM duplicate_quality WHERE assetId IN (\(marks))", arguments: StatementArguments(gone))
+            }
         }
     }
 
@@ -411,6 +419,9 @@ struct MetadataStore: Sendable {
             // The caption/keyword mirror is a copy of Photos and is read again;
             // stars and flags (user data) stay.
             try PhotoKeywordStore.deleteAll(db)
+            // Duplicates scores are a scan result and are measured again;
+            // Duplicates marks (user data) stay.
+            try db.execute(sql: "DELETE FROM duplicate_quality")
             var state = try IndexState.fetchOne(db, key: IndexState.singletonId) ?? .initial
             state.cursorAssetId = nil
             state.lastIndexedAt = nil

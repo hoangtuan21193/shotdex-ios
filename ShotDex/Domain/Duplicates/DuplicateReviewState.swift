@@ -26,6 +26,7 @@ struct DuplicateReviewState: Equatable, Sendable {
     }
 
     func dismissal(of members: Set<String>) -> Dismissal? {
+        guard !members.isEmpty else { return nil }
         var resurfaced: Dismissal?
         for set in notDuplicates {
             if members.isSubset(of: set.members) { return .hidden(setId: set.id) }
@@ -37,11 +38,11 @@ struct DuplicateReviewState: Equatable, Sendable {
     }
 
     func isKeptAll(_ members: Set<String>) -> Bool {
-        keptAll.contains { members.isSubset(of: $0.members) }
+        !members.isEmpty && keptAll.contains { members.isSubset(of: $0.members) }
     }
 
     func isCollapsed(_ members: Set<String>) -> Bool {
-        collapsed.contains { members.isSubset(of: $0.members) }
+        !members.isEmpty && collapsed.contains { members.isSubset(of: $0.members) }
     }
 
     /// The member the user picked to keep, if any.

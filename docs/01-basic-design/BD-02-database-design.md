@@ -123,7 +123,9 @@ Có chỉ mục trên: tên máy và tên ống kính đã chuẩn hoá · ISO �
   nên dòng gương của ảnh không còn index (hay không chia sẻ dưới `.limited`) không bao giờ lộ ra.
 - **Duyệt ảnh trùng là dữ liệu người dùng** nhưng gắn với ảnh còn trong thư viện: dấu và bản giữ theo **id ảnh**; Keep all,
   thu gọn, Not duplicates theo **tập id ảnh** (một dòng mỗi thành viên, chung id tập) để sống qua lượt gom lại cấp id
-  nhóm mới. Ảnh rời thư viện → dòng của nó bị dọn đầu lượt quét và khi PhotoKit báo xoá. Vai trò lạ (bản sau ghi) bị bỏ
+  nhóm mới. Dòng chỉ bị dọn khi PhotoKit báo ảnh bị xoá (cùng transaction với dòng metadata) — **không** quét đối chiếu với
+  `photo_metadata`, vì bảng đó rỗng sau Clear Index và thiếu trong lúc index lần đầu hay dưới `.limited`. Clear Index giữ
+  bảng duyệt, xoá bảng chất lượng (đo lại được). Vai trò lạ (bản sau ghi) bị bỏ
   qua khi đọc, không làm hỏng cả danh sách.
 - Mở màn ảnh trùng **chỉ đọc hai bảng cache** rồi ghép với dữ kiện hiện tại — **không** tính lại dấu vân
   tay, **không** gom lại nhóm.

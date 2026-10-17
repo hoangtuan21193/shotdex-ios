@@ -107,7 +107,7 @@ struct DuplicateReviewStore: Sendable {
 
     // MARK: Cleanup
 
-    /// Forgets photos that were deleted — here or in Photos. Every role: a
+    /// Forgets photos PhotoKit reported deleted — here or in Photos. Every role: a
     /// mark on a gone photo must never be counted or deleted again.
     func forget(assetIds: some Collection<String>) throws {
         let ids = Array(Set(assetIds))
@@ -122,15 +122,10 @@ struct DuplicateReviewStore: Sendable {
         }
     }
 
-    /// Rows for photos that left the library (their `photo_metadata` row is
-    /// gone). Runs first in every scan. Returns how many went.
-    @discardableResult
-    func pruneOrphans() throws -> Int {
-        try database.writer.write { db in
-            try db.execute(sql: "DELETE FROM duplicate_review WHERE assetId NOT IN (SELECT assetId FROM photo_metadata)")
-            return db.changesCount
-        }
-    }
+    // No sweep against `photo_metadata` on purpose: that table is empty
+    // after Clear Index and partial during a first index or under `.limited`
+    // access, and these rows cannot be rebuilt. Rows go only when PhotoKit
+    // reports the photo deleted (`forget`, `MetadataStore.deleteAssets`).
 
     // MARK: Private
 

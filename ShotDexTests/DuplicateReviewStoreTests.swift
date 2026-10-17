@@ -57,15 +57,28 @@ struct DuplicateReviewStoreTests {
         try store.setMarked(["a", "b"], true)
         try store.addSet(.keepAll, members: ["b", "c"])
 
-        // Deleted in Photos: the index loses the row, the next scan prunes.
+        // Deleted in Photos: the library-change path drops the index row.
         try metadata.deleteAssets(ids: ["a"])
-        try store.pruneOrphans()
-        // Deleted here: PhotoKit reports it, the model forgets it at once.
+        // Deleted here: the model forgets it at once.
         try store.forget(assetIds: ["b"])
 
         let state = try store.load()
         #expect(state.marks.isEmpty)
         #expect(state.keptAll.map(\.members) == [["c"]])
+    }
+
+    /// Clear Index empties `photo_metadata`; the user's work must not go with it.
+    @Test func clearIndexKeepsReviewRows() throws {
+        let database = try AppDatabase.makeEmpty()
+        let metadata = MetadataStore(database: database)
+        for id in ["a", "b"] { try metadata.upsert(photo(id)) }
+        let store = DuplicateReviewStore(database: database)
+        try store.setMarked(["a"], true)
+        try store.setKeeper("b", groupMembers: ["a", "b"])
+        try metadata.deleteAll()
+        let state = try store.load()
+        #expect(state.marks == ["a"])
+        #expect(state.keepers == ["b"])
     }
 
     @Test func keepAllAndKeeperOverrideSurviveRelaunch() throws {
