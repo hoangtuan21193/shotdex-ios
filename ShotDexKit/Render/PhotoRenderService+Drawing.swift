@@ -2,7 +2,11 @@ import CoreGraphics
 import CoreImage
 import Foundation
 import PencilKit
+#if canImport(UIKit)
 import UIKit
+#else
+import AppKit
+#endif
 
 /// Rasterized drawing layers, keyed by the drawing's data plus the render size.
 ///
@@ -81,7 +85,7 @@ extension PhotoRenderService {
         // what keeps the marks sharp on a full-resolution export instead of
         // upscaling a bitmap.
         guard let image = DrawingLayerCache.shared.image(forKey: key, build: {
-            pkDrawing.image(from: bounds, scale: scale).cgImage
+            pkDrawing.cgImage(from: bounds, scale: scale)
         }) else { return nil }
 
         // Canvas y runs down from the top; the overlay bitmap's runs up.
@@ -152,7 +156,7 @@ extension PhotoRenderService {
         }
         for band in bands {
             autoreleasepool {
-                guard let image = pkDrawing.image(from: band, scale: scale).cgImage else { return }
+                guard let image = pkDrawing.cgImage(from: band, scale: scale) else { return }
                 // Canvas y runs down from the top; the overlay bitmap's runs up.
                 context.draw(image, in: CGRect(
                     x: band.minX * scale,
@@ -162,5 +166,17 @@ extension PhotoRenderService {
                 ))
             }
         }
+    }
+}
+
+private extension PKDrawing {
+    /// The drawing rasterized at `scale` — `image(from:scale:)` hands back a
+    /// `UIImage` on iOS and an `NSImage` on macOS.
+    func cgImage(from rect: CGRect, scale: CGFloat) -> CGImage? {
+        #if canImport(UIKit)
+        image(from: rect, scale: scale).cgImage
+        #else
+        image(from: rect, scale: scale).cgImage(forProposedRect: nil, context: nil, hints: nil)
+        #endif
     }
 }

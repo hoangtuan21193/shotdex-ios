@@ -10,8 +10,9 @@ tính năng qua Mac App Store, trong sandbox.
 - **Native macOS SwiftUI** — không Catalyst, không "Designed for iPad" (người dùng chốt 2026-10-04).
 - Dùng chung nguyên: `ShotDexKit` (render, recipe, kernel Metal [FS-16](../FS-16-metal-kernels.md)), `Domain` (logic thuần).
 - Dùng chung có sửa: `Data` — GRDB, ImageIO, PhotoKit đều có trên macOS; thêm nguồn thư mục/server theo FS-19.
-- Viết riêng: lớp view Mac. Đo trên code hôm nay: **67** file app `import UIKit`, **25** file bọc view UIKit,
-  PencilKit ở **3** file. Model trạng thái dùng lại được khi nó không chạm UIKit.
+- Viết riêng: lớp view Mac. Đo 2026-10-04 (spike plan FS-18 §2): **70** file app `import UIKit` (+ 1 file kit,
+  + 3 extension), **127** file dùng kiểu `UI*`, **26** file bọc view UIKit, PencilKit ở **3** file app + **1** file kit.
+  Kit đã build cho macOS (arm64, macOS 15) từ P1. Model trạng thái dùng lại được khi nó không chạm UIKit.
 - Mỗi app một gốc ghép phụ thuộc, dựng từ cùng các mảnh ([BD-01](../../01-basic-design/BD-01-system-architecture.md) §1).
 - **Spike trước mọi màn** (PLAN 3.1): build Kit + Domain + Data cho macOS, đếm lỗi, đưa con số vào `/plan`.
 - Không thêm dependency ngoài GRDB và hai thư viện server đã có của [FS-15](../FS-15-server-upload/README.md) §3.
