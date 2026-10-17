@@ -265,7 +265,12 @@ final class PhotoLibraryService: NSObject {
     /// Fetches specific assets by local identifier, preserving request order.
     nonisolated static func fetchAssets(ids: [String]) -> [PHAsset] {
         guard !ids.isEmpty else { return [] }
-        let result = PHAsset.fetchAssets(withLocalIdentifiers: ids, options: nil)
+        // A burst's other frames are left out of a fetch by default, even
+        // when asked for by id — the Duplicates frame picker then saw one
+        // frame of a 2-frame burst and showed its empty state.
+        let options = PHFetchOptions()
+        options.includeAllBurstAssets = true
+        let result = PHAsset.fetchAssets(withLocalIdentifiers: ids, options: options)
         var byId: [String: PHAsset] = [:]
         result.enumerateObjects { asset, _, _ in
             byId[asset.localIdentifier] = asset

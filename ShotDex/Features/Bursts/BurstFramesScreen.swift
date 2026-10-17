@@ -97,6 +97,19 @@ struct BurstFramesScreen: View {
                         .foregroundStyle(EditorTheme.secondaryText)
                         .multilineTextAlignment(.center)
                         .padding()
+                    Button {
+                        dismiss()
+                    } label: {
+                        Text(String(localized: "Close", comment: "Frame picker: leave the empty state"))
+                            .font(.headline)
+                            .foregroundStyle(.white)
+                            .padding(.horizontal, AppTheme.Spacing.xl)
+                            .frame(height: 48)
+                            .editorGlass(Capsule())
+                            .contentShape(Capsule())
+                    }
+                    .buttonStyle(.plain)
+                    .keyboardShortcut(.escape, modifiers: [])
                     Spacer()
                 case .ready:
                     if isSurvey {
