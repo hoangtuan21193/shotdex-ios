@@ -111,8 +111,7 @@ struct DuplicatesScreen: View {
                         .background(.bar)
                 }
                 if showsBand {
-                    DuplicatesHeaderBand(model: model, burstCount: burstList?.listed.count, isRegular: isRegular,
-                                         canCheck: photoLibrary.authorizationState.canReadLibrary)
+                    DuplicatesHeaderBand(model: model, burstCount: burstList?.listed.count, isRegular: isRegular)
                 }
             }
         }
@@ -191,9 +190,9 @@ struct DuplicatesScreen: View {
             Button {
                 model.startScan()
             } label: {
-                Label("Rescan", systemImage: "arrow.clockwise")
+                Label(String(localized: "Check Again", comment: "Duplicates ⋯: scan the library again"), systemImage: "arrow.clockwise")
             }
-            .disabled(model.isBusy)
+            .disabled(model.isBusy || !photoLibrary.authorizationState.canReadLibrary)
             if model.canMerge {
                 Button {
                     model.isConfirmingMerge = true
@@ -493,97 +492,95 @@ private struct DuplicatesHeaderBand: View {
     /// Bursts listed in the Bursts tab, once read.
     let burstCount: Int?
     let isRegular: Bool
-    /// Photos access allows a scan; denied greys Check Again (A5).
-    var canCheck = true
 
     var body: some View {
-        Group {
+        VStack(alignment: .leading, spacing: AppTheme.Spacing.sm) {
+            filterRow
             if model.showsBursts {
-                // Bursts: the tabs and how many bursts — no sort, no scan,
-                // no progress (§7b).
-                HStack(spacing: AppTheme.Spacing.md) {
-                    kindPicker.frame(maxWidth: isRegular ? 420 : .infinity)
-                    if let burstCount {
-                        Text(BurstSummary.countTitle(burstCount))
-                            .font(.footnote.weight(.semibold))
-                            .monospacedDigit()
-                            .foregroundStyle(.secondary)
-                            .fixedSize()
-                    }
-                    if isRegular { Spacer(minLength: 0) }
-                }
-                .frame(minHeight: 44)
-            } else if isRegular {
-                // One row when it fits (iPad landscape, the board); iPad
-                // portrait and the Duo inner put the scan line under the
-                // progress instead of truncating it.
-                ViewThatFits(in: .horizontal) {
-                    HStack(spacing: AppTheme.Spacing.md) {
-                        kindPicker.frame(width: 420)
-                        sortMenu
-                        progress.frame(width: 400)
-                        Spacer(minLength: AppTheme.Spacing.md)
-                        if !model.isScanning {
-                            statusLine.fixedSize()
-                            rescanButton
-                        }
-                    }
-                    HStack(spacing: AppTheme.Spacing.md) {
-                        kindPicker.frame(width: 400)
-                        sortMenu
-                        VStack(alignment: .leading, spacing: AppTheme.Spacing.xs) {
-                            progress
-                            if !model.isScanning { statusLine }
-                        }
-                        .frame(maxWidth: 420)
-                        Spacer(minLength: 0)
-                        if !model.isScanning { rescanButton }
-                    }
+                if let burstCount {
+                    Text(BurstSummary.countTitle(burstCount))
+                        .font(.footnote.weight(.semibold))
+                        .monospacedDigit()
+                        .foregroundStyle(.secondary)
+                        .padding(.horizontal, AppTheme.Size.screenMargin)
                 }
             } else {
-                VStack(alignment: .leading, spacing: AppTheme.Spacing.sm) {
-                    HStack(spacing: AppTheme.Spacing.sm) {
-                        kindPicker
-                        sortMenu
-                    }
-                    HStack(alignment: .center, spacing: AppTheme.Spacing.sm) {
-                        VStack(alignment: .leading, spacing: AppTheme.Spacing.xs) {
-                            progress
-                            if !model.isScanning { statusLine }
-                        }
-                        if !model.isScanning { rescanButton }
-                    }
+                HStack(alignment: .center, spacing: AppTheme.Spacing.md) {
+                    progress.frame(maxWidth: isRegular ? 420 : .infinity, alignment: .leading)
+                    if isRegular { Spacer(minLength: 0) }
+                    if !model.isScanning { sortMenu }
+                }
+                .padding(.horizontal, AppTheme.Size.screenMargin)
+                if !model.isScanning, let status = statusText {
+                    Text(status)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .monospacedDigit()
+                        .lineLimit(1)
+                        .padding(.horizontal, AppTheme.Size.screenMargin)
                 }
             }
         }
-        .padding(.horizontal, AppTheme.Size.screenMargin)
         .padding(.vertical, AppTheme.Spacing.sm)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(.bar)
         .overlay(alignment: .bottom) { Divider() }
     }
 
-    /// All · the kinds present · Bursts. Bursts is its own list until the
-    /// shared frame picker replaces it (plan task 20).
-    private var kindPicker: some View {
-        Picker("Match", selection: Binding<DuplicatesTab>(
-            get: { model.showsBursts ? .bursts : .filter(model.filter) },
-            set: { tab in
-                switch tab {
-                case .bursts:
+    /// One pill per filter that has something, plus Bursts until the shared
+    /// frame picker absorbs it (plan task 20). Each pill is as wide as its own
+    /// bold label, so choosing one never moves the others (A6, AC-L1).
+    private var filterRow: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: AppTheme.Spacing.sm) {
+                ForEach(model.presentFilters, id: \.self) { filter in
+                    pill(filter.title, count: model.groupCount(filter),
+                         isSelected: !model.showsBursts && model.filter == filter) {
+                        model.showsBursts = false
+                        model.filter = filter
+                    }
+                }
+                pill(DuplicatesTab.bursts.title, count: burstCount, isSelected: model.showsBursts) {
                     model.showsBursts = true
-                case .filter(let filter):
-                    model.showsBursts = false
-                    model.filter = filter
                 }
             }
-        )) {
-            ForEach(model.presentFilters.map(DuplicatesTab.filter) + [.bursts], id: \.self) { tab in
-                Text(tab.title).tag(tab)
+            .padding(.horizontal, AppTheme.Size.screenMargin)
+        }
+        .scrollClipDisabled()
+        .disabled(model.isBusy && !model.isScanning)
+    }
+
+    private func pill(_ title: String, count: Int?, isSelected: Bool, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            ZStack {
+                // The bold layout reserves the width either way.
+                label(title, count: count, bold: true).hidden()
+                label(title, count: count, bold: isSelected)
+            }
+            .padding(.horizontal, AppTheme.Spacing.md)
+            .frame(height: 34)
+            .background(isSelected ? Color(.systemBackground) : Color(.secondarySystemFill), in: Capsule())
+            .overlay {
+                if isSelected { Capsule().strokeBorder(Color(.separator), lineWidth: 0.5) }
+            }
+            .frame(minHeight: 44)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(count.map { "\(title), \($0)" } ?? title)
+        .accessibilityAddTraits(isSelected ? .isSelected : [])
+    }
+
+    private func label(_ title: String, count: Int?, bold: Bool) -> some View {
+        HStack(spacing: AppTheme.Spacing.xs) {
+            Text(title).fontWeight(bold ? .semibold : .regular).foregroundStyle(.primary)
+            if let count {
+                Text(count.formatted()).foregroundStyle(.secondary).monospacedDigit()
             }
         }
-        .pickerStyle(.segmented)
-        .disabled(model.isBusy)
+        .font(.subheadline)
+        .lineLimit(1)
+        .fixedSize()
     }
 
     private var sortMenu: some View {
@@ -614,7 +611,7 @@ private struct DuplicatesHeaderBand: View {
         if case .scanning(let scan) = model.phase {
             VStack(alignment: .leading, spacing: AppTheme.Spacing.xs) {
                 HStack {
-                    Text(scanningText(scan))
+                    Text(DuplicatesScanProgress.text(scan, found: model.groups.count))
                         .font(.footnote.weight(.semibold))
                         .monospacedDigit()
                     Spacer()
@@ -639,19 +636,6 @@ private struct DuplicatesHeaderBand: View {
         }
     }
 
-    /// "Scanning 1,200 of 38,000 · 40 found so far" (A4).
-    private func scanningText(_ scan: DuplicateScanProgress) -> String {
-        guard scan.total > 0 else {
-            return String(localized: "Preparing scan…", comment: "Duplicates header: before the first batch")
-        }
-        let scanning = String(localized: "Scanning \(scan.processed.formatted()) of \(scan.total.formatted())",
-                              comment: "Duplicates header: scan progress")
-        let found = model.groups.count
-        guard found > 0 else { return scanning }
-        return scanning + " · " + String(localized: "\(found.formatted()) found so far",
-                                         comment: "Duplicates header: groups already found while scanning")
-    }
-
     private var reviewedText: String {
         let total = model.groups.count
         let done = model.reviewedCount
@@ -667,45 +651,23 @@ private struct DuplicatesHeaderBand: View {
         return " · " + String(localized: "~\(size) to free", comment: "Duplicates header: space freed by keeping one per group")
     }
 
-    @ViewBuilder
-    private var statusLine: some View {
-        if let scanState = model.scanState {
-            let scanned = String(localized: "Checked \(scanState.scannedAt.formatted(.relative(presentation: .named)))",
-                                 comment: "Duplicates header: when the last scan ran")
-            let pending: String = if !model.canUseNetwork, model.cloudOnlyCount > 0 {
-                // A4: say why they were skipped and when they will be read.
-                String(localized: "\(model.cloudOnlyCount.formatted()) photos only in iCloud — will check on Wi-Fi",
-                       comment: "Duplicates header: photos whose thumbnails need the network")
-            } else if model.pendingCount == 0 {
-                String(localized: "Library up to date", comment: "Duplicates header: nothing new to scan")
-            } else {
-                String(localized: "\(model.pendingCount.formatted()) photos not checked yet", comment: "Duplicates header: photos a rescan would cover")
-            }
-            Text("\(scanned) · \(pending)")
-                .font(.caption)
-                .foregroundStyle(.secondary)
-                .monospacedDigit()
-                .lineLimit(1)
+    /// "Checked 2 min ago · 148 photos only in iCloud — will check on Wi-Fi";
+    /// the band shows it only when something waits (A4).
+    private var statusText: String? {
+        guard let scanState = model.scanState else { return nil }
+        let pending: String
+        if !model.canUseNetwork, model.cloudOnlyCount > 0 {
+            pending = String(localized: "\(model.cloudOnlyCount.formatted()) photos only in iCloud — will check on Wi-Fi",
+                             comment: "Duplicates header: photos whose thumbnails need the network")
+        } else if model.pendingCount > 0 {
+            pending = String(localized: "\(model.pendingCount.formatted()) photos not checked yet",
+                             comment: "Duplicates header: photos a rescan would cover")
+        } else {
+            return nil
         }
-    }
-
-    private var rescanButton: some View {
-        Button {
-            model.startScan()
-        } label: {
-            Image(systemName: "arrow.clockwise")
-                .font(.body.weight(.medium))
-                .frame(width: 32, height: 32)
-                .background(Color(.secondarySystemFill), in: Circle())
-                .frame(width: 44, height: 44)
-                .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-        .foregroundStyle(.tint)
-        .disabled(model.isBusy || !canCheck)
-        .accessibilityLabel(String(localized: "Check Again", comment: "Duplicates: scan the library again"))
-        .accessibilityHint(canCheck ? "" : String(localized: "Allow access to your photos in Settings first.",
-                                                  comment: "Duplicates: why Check Again is unavailable"))
+        let checked = String(localized: "Checked \(scanState.scannedAt.formatted(.relative(presentation: .named)))",
+                             comment: "Duplicates header: when the last scan ran")
+        return "\(checked) · \(pending)"
     }
 }
 
