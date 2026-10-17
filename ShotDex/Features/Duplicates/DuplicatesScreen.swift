@@ -188,7 +188,8 @@ struct DuplicatesScreen: View {
                 compareRequest: presentation.request
             )
         }
-        .modifier(DuplicatesAlerts(model: model, mergeTitle: mergeAlertTitle(model), mergeMessage: mergeAlertMessage(model)))
+        .modifier(DuplicatesAlerts(model: model))
+        .sensoryFeedback(.success, trigger: model.deleteSuccessCount)
         .animation(AppTheme.Motion.standard, value: hasMarks)
         .animation(AppTheme.Motion.standard, value: hudVisible)
     }
@@ -201,14 +202,6 @@ struct DuplicatesScreen: View {
                 Label(String(localized: "Check Again", comment: "Duplicates ⋯: scan the library again"), systemImage: "arrow.clockwise")
             }
             .disabled(model.isBusy || !photoLibrary.authorizationState.canReadLibrary)
-            if model.canMerge {
-                Button {
-                    model.isConfirmingMerge = true
-                } label: {
-                    Label(mergeTitle(model), systemImage: "arrow.trianglehead.merge")
-                }
-                .disabled(model.isBusy)
-            }
             Button {
                 showsIgnored = true
             } label: {
@@ -425,30 +418,6 @@ struct DuplicatesScreen: View {
         }
     }
 
-    // MARK: Merge alert
-
-    private func mergeTitle(_ model: DuplicatesModel) -> String {
-        let groups = model.groups.count
-        return groups == 1
-            ? String(localized: "Merge 1 Group…", comment: "Duplicates ⋯ menu, Exact only")
-            : String(localized: "Merge \(groups) Groups…", comment: "Duplicates ⋯ menu, Exact only")
-    }
-
-    private func mergeAlertTitle(_ model: DuplicatesModel) -> String {
-        let groups = model.groups.count
-        return groups == 1
-            ? String(localized: "Merge 1 Group?", comment: "Duplicates: merge confirmation title")
-            : String(localized: "Merge \(groups) Groups?", comment: "Duplicates: merge confirmation title")
-    }
-
-    private func mergeAlertMessage(_ model: DuplicatesModel) -> String {
-        let marked = model.duplicatePhotoCount - model.groups.count
-        return String(
-            localized: "Keeps one copy in each group and marks \(marked) photos for deletion. The kept copy takes the favorite, location and earliest date of its copies — saved to Photos now. Nothing is deleted until you tap Delete.",
-            comment: "Duplicates: merge confirmation message"
-        )
-    }
-
     // MARK: Empty
 
     private func emptyDescription(_ model: DuplicatesModel) -> String {
@@ -479,6 +448,22 @@ struct DuplicatesScreen: View {
                 systemImage: "photo.on.rectangle.angled",
                 description: Text("Photos in your library show up here once ShotDex has read them.")
             )
+        } else if model.freedToday > 0, model.sortedGroups.isEmpty {
+            // AC-D8: the list ran out because the user cleared it.
+            ContentUnavailableView {
+                Label(String(localized: "All reviewed", comment: "Duplicates: nothing left to decide"), systemImage: "checkmark.seal")
+            } description: {
+                Text(String(localized: "\(DuplicatesScreen.byteFormatter.string(fromByteCount: Int64(model.freedToday))) freed today",
+                            comment: "Duplicates: space deleted from Duplicates today"))
+            } actions: {
+                ForEach(model.presentFilters.filter { $0 != .all && $0 != model.filter }, id: \.self) { filter in
+                    Button(String(localized: "Show \(filter.title) (\(model.groupCount(filter)))",
+                                  comment: "Duplicates All reviewed: a kind that still has groups")) {
+                        model.filter = filter
+                    }
+                    .buttonStyle(.bordered)
+                }
+            }
         } else if model.hasNeverScanned {
             ContentUnavailableView {
                 Label("Not Scanned Yet", systemImage: "square.on.square")
@@ -1256,17 +1241,9 @@ struct KeepBadgeLabelStyle: LabelStyle {
 /// The screen's alerts, out of `content` so the type checker keeps up.
 private struct DuplicatesAlerts: ViewModifier {
     @Bindable var model: DuplicatesModel
-    let mergeTitle: String
-    let mergeMessage: String
 
     func body(content: Content) -> some View {
         content
-            .alert(mergeTitle, isPresented: $model.isConfirmingMerge) {
-            Button("Merge") { Task { await model.mergeAll() } }
-            Button("Cancel", role: .cancel) {}
-        } message: {
-            Text(mergeMessage)
-        }
             .alert(
             model.notice?.title ?? "",
             isPresented: Binding(

@@ -42,7 +42,7 @@ v2 có ⋯ ▸ *Merge N Groups…* ghi favorite/toạ độ/ngày vào Photos **
   đầu tiên, dấu được giữ.
   **Chưa đo** PhotoKit có huỷ cả khối khi người dùng bấm Don't Allow không. Nếu không nguyên tử: **xoá trước, thừa hưởng
   sau** khi xoá thành công (người dùng 2026-10-17) — huỷ xoá thì không gì đổi; thừa hưởng lỗi thì alert, ảnh đã xoá vẫn
-  nằm trong Recently Deleted. Đo ở bước Build, ghi kết quả vào đây.
+  nằm trong Recently Deleted. **Build 2026-10-17:** không đo được trên simulator (hộp hệ thống chỉ cho trả lời, không cho nhìn khối thay đổi bên trong), nên code dùng thứ tự an toàn: **xoá trước, thừa hưởng sau** (`DuplicatesModel.delete(ids:)`). Đo trên máy thật vẫn còn mở.
 - Quyền `.limited` mà bản giữ hoặc album nằm ngoài tập đã chọn: nhóm đó **không** thừa hưởng phần không ghi được, phần
   còn lại vẫn chạy; sau khi xoá, thông báo thêm dòng *"Albums couldn't be updated for 2 photos"*.
 
@@ -87,12 +87,12 @@ v2 có ⋯ ▸ *Merge N Groups…* ghi favorite/toạ độ/ngày vào Photos **
 | AC-M6 | (A2) nhóm 4 ảnh: K bản giữ, C1 favorite, C2 trong album "Client", C3 thường | chạm *Remove the other …* | nút ghi *Remove the other 1*; chỉ C3 mang dấu; dưới thẻ *2 kept: favorite, in album* | `DuplicateReviewTests.removeOtherSkipsProtected` ✅ |
 | AC-D1 | (D11) 37 ảnh mang dấu, 2 trong album "Client" | nhìn thanh dưới | *37 selected · 210 MB ›* / *2 are in albums · kept photo joins them* / *Delete 37* | route `duplicates-v3-selected.json` ✅ (*50 selected · 342.2 MB ›* / *Delete 50*; dòng album chưa có dữ liệu sim) |
 | AC-D2 | (D11) như AC-D1 | chạm viên kính, bỏ dấu 2 ảnh trong sheet | sheet và viên đỏ cùng ghi *Delete 35*; đóng sheet → thẻ của 2 ảnh đó không còn dấu | route `duplicates-v3-selected.json` ✅ mở sheet *50 Selected* + *Delete 50*; bỏ dấu trong sheet ⚠️ chưa chụp |
-| AC-D3 | (D11) như AC-D2 | *Delete 35* → xác nhận hệ thống | hộp hệ thống nói 35 ảnh; đúng 35 ảnh vào Recently Deleted; thông báo *35 photos moved to Recently Deleted* + MB + *Open Photos* trong ≥ 4 s; rung success | ⚠️ chưa có — route `duplicates-v3-delete.json` + đếm Recently Deleted bằng `PHAssetCollection` smart album trên sim |
-| AC-D4 | (D11) như AC-D1 | *Delete 37* → Don't Allow | 37 ảnh vẫn mang dấu; không album nào đổi; không thông báo | ⚠️ chưa có |
-| AC-D5 | (D11) nhóm Copies {K không favorite, không album; C favorite, trong album "Client", có toạ độ, ngày sớm hơn} | đánh dấu C, Delete, xác nhận | K favorite, trong "Client", có toạ độ của C, ngày của C; C trong Recently Deleted | ⚠️ chưa có — test trên sim với album tự tạo |
-| AC-D6 | (D11) nhóm Look-alikes cùng dữ liệu như AC-D5 | như AC-D5 | K favorite, trong "Client", có toạ độ; **ngày của K không đổi** | ⚠️ chưa có |
-| AC-D7 | (D11) quyền `.limited`, album "Client" ngoài tập đã chọn | như AC-D5 | C vào Recently Deleted; K không vào "Client"; thông báo thêm *Albums couldn't be updated for 1 photo* | ⚠️ chưa có |
-| AC-D8 | (D11) xoá hết nhóm của mọi loại | xoá xong | *All reviewed · X freed today* | ⚠️ chưa có |
+| AC-D3 | (D11) như AC-D2 | *Delete 35* → xác nhận hệ thống | hộp hệ thống nói 35 ảnh; đúng 35 ảnh vào Recently Deleted; thông báo *35 photos moved to Recently Deleted* + MB + *Open Photos* trong ≥ 4 s; rung success | route `duplicates-v3-delete.json` ✅ (*Delete 1* → Delete → *1 photo moved to Recently Deleted* / *116.3 MB freed · kept for 30 days* + *Open Photos*, nhóm 9→8); rung success theo code |
+| AC-D4 | (D11) như AC-D1 | *Delete 37* → Don't Allow | 37 ảnh vẫn mang dấu; không album nào đổi; không thông báo | route `duplicates-v3-delete.json` ✅ (Don’t Allow → *1 selected*, ảnh vẫn mang dấu) |
+| AC-D5 | (D11) nhóm Copies {K không favorite, không album; C favorite, trong album "Client", có toạ độ, ngày sớm hơn} | đánh dấu C, Delete, xác nhận | K favorite, trong "Client", có toạ độ của C, ngày của C; C trong Recently Deleted | `DuplicateInheritanceTests.copiesKeeperTakesAlbumFavoriteAndDate` ✅ (kế hoạch); ghi Photos trên sim với album tự tạo ⚠️ chưa có |
+| AC-D6 | (D11) nhóm Look-alikes cùng dữ liệu như AC-D5 | như AC-D5 | K favorite, trong "Client", có toạ độ; **ngày của K không đổi** | `DuplicateInheritanceTests.lookAlikeKeeperKeepsItsDate` ✅ (kế hoạch); sim ⚠️ chưa có |
+| AC-D7 | (D11) quyền `.limited`, album "Client" ngoài tập đã chọn | như AC-D5 | C vào Recently Deleted; K không vào "Client"; thông báo thêm *Albums couldn't be updated for 1 photo* | code: album không lấy được → *Albums couldn't be updated for N photos*; sim `.limited` ⚠️ chưa có |
+| AC-D8 | (D11) xoá hết nhóm của mọi loại | xoá xong | *All reviewed · X freed today* | code (*All reviewed · X freed today* + viên loại còn nhóm); sim ⚠️ chưa có (phải xoá hết nhóm) |
 | AC-W1 | (Z2, giữ v2) 6 nhóm, 2 dấu; iOS 26.5 và 18.6 | mở danh sách trên iPad 1376×1032, 1032×1376, Duo trong 951×669 | 3 cột 437pt / 2 cột 492pt / 2 cột ~410pt (±1pt); thanh dưới cụm giữa; tab bar ẩn (cả pre-26) | ⚠️ chưa có — `Tools/design-board compare` trên `IP_Duplicates`, `DI_Duplicates` |
 | AC-W2 | (D2) có kết quả quét | mở Duplicates trên iPad ngang | hai thẻ Quick clean / Choose yourself cạnh nhau, khối ≤ 720pt giữa màn | ⚠️ chưa có — `IP_DuplicatesSummary` |
 | AC-W3 | (người dùng 2026-10-17) Duo màn ngoài 466×678 | đi hết tóm tắt → danh sách → thẻ → màn chọn khung → xoá | mọi nút nằm trong 382pt bên trái rail; vùng chạm ≥ 44pt; không nút nào trong 40pt quanh góc bo trên | ⚠️ chưa có — `DC_Duplicates*`, `Tools/sim-shot … cover` |

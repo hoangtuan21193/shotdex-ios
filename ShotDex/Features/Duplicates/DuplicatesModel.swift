@@ -1,3 +1,4 @@
+import CoreLocation
 import Foundation
 import Photos
 import SwiftUI
@@ -79,9 +80,9 @@ final class DuplicatesModel {
     /// Title + message of the alert raised when Merge could not write some
     /// groups, or Delete would empty a group.
     var notice: DuplicateNotice?
-    var isConfirmingMerge = false
     var isDeleting = false
-    private(set) var isMerging = false
+    /// Bumped after each delete that went through, for the success haptic.
+    private(set) var deleteSuccessCount = 0
     /// Group whose last unmarked photo the user just tried to mark; the card
     /// shows "Keep at least one photo in this group." for a moment.
     private(set) var blockedGroupId: String?
@@ -123,7 +124,7 @@ final class DuplicatesModel {
         return false
     }
 
-    var isBusy: Bool { phase != .idle || isDeleting || isMerging }
+    var isBusy: Bool { phase != .idle || isDeleting }
 
     /// The library has never been scanned.
     var hasNeverScanned: Bool { scanState == nil && hasLoadedOnce && phase == .idle }
@@ -391,13 +392,15 @@ final class DuplicatesModel {
 
     /// Titles of the albums the user made that hold `asset` — not smart
     /// albums, not shared ones the user cannot edit.
-    nonisolated private static func userAlbums(containing asset: PHAsset) -> [String] {
+    nonisolated private static func userAlbums(containing asset: PHAsset) -> [(id: String, title: String)] {
         let albums = PHAssetCollection.fetchAssetCollectionsContaining(asset, with: .album, options: nil)
-        var titles: [String] = []
+        var found: [(id: String, title: String)] = []
         albums.enumerateObjects { album, _, _ in
-            if album.assetCollectionSubtype == .albumRegular, let title = album.localizedTitle { titles.append(title) }
+            if album.assetCollectionSubtype == .albumRegular, let title = album.localizedTitle {
+                found.append((album.localIdentifier, title))
+            }
         }
-        return titles.sorted()
+        return found.sorted { $0.title < $1.title }
     }
 
     nonisolated private static func readTraits(_ assets: [PHAsset]) -> [String: DuplicateMemberTraits] {
@@ -407,12 +410,14 @@ final class DuplicatesModel {
             let hasRAW = resources.contains { resource in
                 UTType(resource.uniformTypeIdentifier)?.conforms(to: .rawImage) == true
             }
+            let albums = userAlbums(containing: asset)
             result[asset.localIdentifier] = DuplicateMemberTraits(
                 isEdited: resources.contains { $0.type == .adjustmentData },
                 hasRAW: hasRAW,
                 isLive: asset.mediaSubtypes.contains(.photoLive),
                 isFavorite: asset.isFavorite,
-                albums: userAlbums(containing: asset)
+                albums: albums.map(\.title),
+                albumIds: albums.map(\.id)
             )
         }
         return result
@@ -878,91 +883,6 @@ final class DuplicatesModel {
         }
     }
 
-    // MARK: Merge
-
-    /// Merge is only offered on Copies: a look-alike or a frame of a moment
-    /// is not the same picture, and copying a date across would be wrong.
-    /// (v2 path; task 23 replaces it with inheritance at delete time.)
-    var canMerge: Bool { groups.contains { $0.kind == .copies } }
-
-    /// Folds every Exact group down to one photo, the way Photos' own Merge
-    /// does: the keeper (D3) inherits anything its copies have and it lacks —
-    /// the favourite flag, a location, the earliest capture date — and only
-    /// once that is saved are the rest marked. A group whose write fails is
-    /// left unmarked, the others go on, and one alert names the failures.
-    func mergeAll() async {
-        guard canMerge, !isBusy else { return }
-        isMerging = true
-        defer { isMerging = false }
-        let groups = self.groups.filter { $0.kind == .copies }
-        await loadAllTraits(groups)
-        var failures: [Error] = []
-        for group in groups {
-            guard let keeper = DuplicateReview.keeper(of: group.members, traits: traits),
-                  let keeperAsset = assetsById[keeper.assetId]
-            else { continue }
-            let others = group.members
-                .filter { $0.assetId != keeper.assetId }
-                .compactMap { assetsById[$0.assetId] }
-            do {
-                try await adoptMetadata(into: keeperAsset, from: others)
-            } catch {
-                failures.append(error)
-                continue
-            }
-            session.setKeeper(keeper.assetId, groupMembers: group.members.map(\.assetId))
-            markOthers(in: group)
-        }
-        if let first = failures.first {
-            let count = failures.count
-            notice = DuplicateNotice(
-                title: count == 1
-                    ? String(localized: "Couldn't Merge 1 Group", comment: "Duplicates: Merge failed for one group")
-                    : String(localized: "Couldn't Merge \(count) Groups", comment: "Duplicates: Merge failed for several groups"),
-                message: first.localizedDescription + " "
-                    + String(localized: "Their photos are not marked.", comment: "Duplicates: after a failed merge, nothing in the failed groups is marked")
-            )
-        }
-    }
-
-    /// Gives `keeper` the facts its duplicates have and it does not. Throws
-    /// when Photos refuses the change, so the caller leaves that group alone.
-    private func adoptMetadata(into keeper: PHAsset, from others: [PHAsset]) async throws {
-        let shouldFavorite = !keeper.isFavorite && others.contains { $0.isFavorite }
-        let adoptedLocation = keeper.location == nil
-            ? others.compactMap(\.location).first
-            : nil
-        // Earliest wins: a re-saved copy carries the date it was re-saved, and
-        // the original moment is the one worth keeping.
-        let earliest = ([keeper] + others).compactMap(\.creationDate).min()
-        let adoptedDate = earliest.flatMap { $0 < (keeper.creationDate ?? .distantFuture) ? $0 : nil }
-
-        guard shouldFavorite || adoptedLocation != nil || adoptedDate != nil else { return }
-        try await PHPhotoLibrary.shared().performChanges {
-            let request = PHAssetChangeRequest(for: keeper)
-            if shouldFavorite { request.isFavorite = true }
-            if let adoptedLocation { request.location = adoptedLocation }
-            if let adoptedDate { request.creationDate = adoptedDate }
-        }
-        if shouldFavorite {
-            try? dependencies.metadataStore.updateFavorite(
-                assetId: keeper.localIdentifier, isFavorite: true
-            )
-        }
-        if let adoptedLocation {
-            try? dependencies.metadataStore.updateLocation(
-                assetIds: [keeper.localIdentifier],
-                latitude: adoptedLocation.coordinate.latitude,
-                longitude: adoptedLocation.coordinate.longitude
-            )
-        }
-        if let adoptedDate {
-            try? dependencies.metadataStore.updateCreationDate(
-                assetIds: [keeper.localIdentifier], date: adoptedDate
-            )
-        }
-    }
-
     func markedCount(in group: DuplicateGroup) -> Int {
         group.members.filter { session.marks.contains($0.assetId) }.count
     }
@@ -1033,21 +953,134 @@ final class DuplicatesModel {
     /// The Compare screen only ever shows one group, so its Delete button must
     /// act on that group alone — otherwise a mark left in another group would
     /// be swept up by a button whose count never mentioned it.
+    ///
+    /// One system dialog. Then each group's kept photo takes what its deleted
+    /// copies had (06b §2) — **after** the delete went through, so a Don't
+    /// Allow changes nothing at all (PhotoKit's atomicity across the dialog is
+    /// unmeasured; this is the order the user chose for that case). Then the
+    /// banner says where the photos went.
     func delete(ids: Set<String>) async -> Bool {
         let assets = ids.compactMap { assetsById[$0] }
         guard !assets.isEmpty, !isDeleting else { return false }
         isDeleting = true
         defer { isDeleting = false }
+        let affected = groups.filter { !$0.memberIds.isDisjoint(with: ids) }
+        await loadAllTraits(affected)
+        let plans = DuplicateInheritance.plan(groups: affected, deleting: ids, traits: traits)
+        let donors = Dictionary(uniqueKeysWithValues: assets.map { ($0.localIdentifier, $0) })
+        let keepers = Dictionary(uniqueKeysWithValues: plans.compactMap { plan in
+            assetsById[plan.keeperId].map { (plan.keeperId, $0) }
+        })
+        let bytes = groups.flatMap(\.members).filter { ids.contains($0.assetId) }.reduce(0) { $0 + ($1.fileSize ?? 0) }
         do {
             try await photoLibrary.deleteAssets(assets)
         } catch let error as PHPhotosError where error.code == .userCancelled {
             return false
         } catch {
-            errorMessage = error.localizedDescription
+            notice = DuplicateNotice(
+                title: String(localized: "Couldn't Delete \(assets.count) Photos", comment: "Duplicates: the system delete failed"),
+                message: error.localizedDescription + " "
+                    + String(localized: "Nothing was deleted; your selection is kept.", comment: "Duplicates: after a failed delete")
+            )
             return false
         }
         didDelete(ids: ids)
+        recordFreed(bytes)
+        let missedAlbums = await inherit(plans, keepers: keepers, donors: donors)
+        showDeletedBanner(count: assets.count, bytes: bytes, missedAlbums: missedAlbums)
+        deleteSuccessCount += 1
         return true
+    }
+
+    /// Writes the plans in one change block; returns how many photos' albums
+    /// could not be updated (an album outside a limited selection, a refusal).
+    private func inherit(
+        _ plans: [DuplicateInheritance],
+        keepers: [String: PHAsset],
+        donors: [String: PHAsset]
+    ) async -> Int {
+        let work = plans.filter { !$0.isEmpty && keepers[$0.keeperId] != nil }
+        guard !work.isEmpty else { return 0 }
+        var missed = 0
+        var writes: [(PHAsset, DuplicateInheritance, CLLocation?, Date?, [PHAssetCollection])] = []
+        for plan in work {
+            guard let keeper = keepers[plan.keeperId] else { continue }
+            let givers = plan.donorIds.compactMap { donors[$0] }
+            let location = keeper.location == nil ? givers.compactMap(\.location).first : nil
+            let earliest = plan.takesEarliestDate ? givers.compactMap(\.creationDate).min() : nil
+            let date = earliest.flatMap { $0 < (keeper.creationDate ?? .distantFuture) ? $0 : nil }
+            let found = PHAssetCollection.fetchAssetCollections(withLocalIdentifiers: plan.albumIds, options: nil)
+            var albums: [PHAssetCollection] = []
+            found.enumerateObjects { album, _, _ in albums.append(album) }
+            if albums.count < plan.albumIds.count { missed += 1 }
+            writes.append((keeper, plan, location, date, albums))
+        }
+        do {
+            try await PHPhotoLibrary.shared().performChanges {
+                for (keeper, plan, location, date, albums) in writes {
+                    if plan.favorite || location != nil || date != nil {
+                        let request = PHAssetChangeRequest(for: keeper)
+                        if plan.favorite { request.isFavorite = true }
+                        if let location { request.location = location }
+                        if let date { request.creationDate = date }
+                    }
+                    for album in albums {
+                        PHAssetCollectionChangeRequest(for: album)?.addAssets([keeper] as NSArray)
+                    }
+                }
+            }
+        } catch {
+            return writes.filter { !$0.1.albumIds.isEmpty }.count + missed
+        }
+        for (keeper, plan, location, date, _) in writes {
+            let id = keeper.localIdentifier
+            if plan.favorite { try? dependencies.metadataStore.updateFavorite(assetId: id, isFavorite: true) }
+            if let location {
+                try? dependencies.metadataStore.updateLocation(
+                    assetIds: [id], latitude: location.coordinate.latitude, longitude: location.coordinate.longitude)
+            }
+            if let date { try? dependencies.metadataStore.updateCreationDate(assetIds: [id], date: date) }
+            traits[id] = nil
+            traitsRequested.remove(id)
+        }
+        return missed
+    }
+
+    /// Bytes deleted from Duplicates today, for "All reviewed · 1.4 GB freed
+    /// today" (06b §3). Kept per calendar day in user defaults.
+    var freedToday: Int {
+        let stored = UserDefaults.standard.dictionary(forKey: SettingsKeys.duplicateFreedToday)
+        guard stored?["day"] as? String == Self.today else { return 0 }
+        return stored?["bytes"] as? Int ?? 0
+    }
+
+    private func recordFreed(_ bytes: Int) {
+        UserDefaults.standard.set(["day": Self.today, "bytes": freedToday + bytes], forKey: SettingsKeys.duplicateFreedToday)
+    }
+
+    private static var today: String {
+        Date().formatted(.iso8601.year().month().day())
+    }
+
+    /// "37 photos moved to Recently Deleted · 210 MB freed · kept for 30
+    /// days" + Open Photos (06b §3). No Undo: an app cannot read Recently
+    /// Deleted back.
+    private func showDeletedBanner(count: Int, bytes: Int, missedAlbums: Int) {
+        let size = DuplicatesScreen.byteFormatter.string(fromByteCount: Int64(bytes))
+        var text = count == 1
+            ? String(localized: "1 photo moved to Recently Deleted", comment: "Duplicates: banner after deleting")
+            : String(localized: "\(count) photos moved to Recently Deleted", comment: "Duplicates: banner after deleting")
+        if bytes > 0 {
+            text += "\n" + String(localized: "\(size) freed · kept for 30 days", comment: "Duplicates: banner after deleting, space and how long Photos keeps them")
+        }
+        if missedAlbums > 0 {
+            text += "\n" + (missedAlbums == 1
+                ? String(localized: "Albums couldn't be updated for 1 photo", comment: "Duplicates: banner, inheritance could not write an album")
+                : String(localized: "Albums couldn't be updated for \(missedAlbums) photos", comment: "Duplicates: banner, inheritance could not write an album"))
+        }
+        dependencies.banner.show(text, actionTitle: String(localized: "Open Photos", comment: "Duplicates banner: open the Photos app")) {
+            if let url = URL(string: "photos-redirect://") { UIApplication.shared.open(url) }
+        }
     }
 
     /// Prunes photos that are gone — deleted here or from Compare — from the

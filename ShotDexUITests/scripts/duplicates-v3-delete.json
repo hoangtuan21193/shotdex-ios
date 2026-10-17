@@ -1,0 +1,132 @@
+{
+  "steps": [
+    {
+      "action": "launch",
+      "arguments": [
+        "-ShotDexStickyBanner"
+      ]
+    },
+    {
+      "action": "wait",
+      "seconds": 6
+    },
+    {
+      "action": "tap",
+      "label": "Collections",
+      "type": "button"
+    },
+    {
+      "action": "wait",
+      "seconds": 3
+    },
+    {
+      "action": "scrollTo",
+      "label": "Duplicates"
+    },
+    {
+      "action": "tap",
+      "label": "Duplicates"
+    },
+    {
+      "action": "wait",
+      "seconds": 10
+    },
+    {
+      "action": "tap",
+      "label": "Start"
+    },
+    {
+      "action": "wait",
+      "seconds": 4
+    },
+    {
+      "action": "wait",
+      "seconds": 3
+    },
+    {
+      "action": "screenshot",
+      "name": "01-cleared"
+    },
+    {
+      "action": "dump",
+      "name": "01-cleared"
+    },
+    {
+      "action": "tap",
+      "label": "Look-alikes, 1"
+    },
+    {
+      "action": "wait",
+      "seconds": 3
+    },
+    {
+      "action": "screenshot",
+      "name": "02-lookalikes"
+    },
+    {
+      "action": "tap",
+      "x": 0.652,
+      "y": 0.353
+    },
+    {
+      "action": "wait",
+      "seconds": 2
+    },
+    {
+      "action": "screenshot",
+      "name": "03-one-marked"
+    },
+    {
+      "action": "dump",
+      "name": "03-one-marked"
+    },
+    {
+      "action": "tap",
+      "label": "Delete 1 photo"
+    },
+    {
+      "action": "wait",
+      "seconds": 3
+    },
+    {
+      "action": "screenshot",
+      "name": "04-system-dialog"
+    },
+    {
+      "action": "systemTap",
+      "label": "Don\u2019t Allow"
+    },
+    {
+      "action": "wait",
+      "seconds": 3
+    },
+    {
+      "action": "screenshot",
+      "name": "05-still-marked"
+    },
+    {
+      "action": "tap",
+      "label": "Delete 1 photo"
+    },
+    {
+      "action": "wait",
+      "seconds": 3
+    },
+    {
+      "action": "systemTap",
+      "label": "Delete"
+    },
+    {
+      "action": "wait",
+      "seconds": 3
+    },
+    {
+      "action": "screenshot",
+      "name": "06-banner"
+    },
+    {
+      "action": "dump",
+      "name": "06-banner"
+    }
+  ]
+}

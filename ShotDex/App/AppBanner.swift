@@ -137,7 +137,10 @@ struct ActionToast: View {
         HStack(spacing: AppTheme.Spacing.sm) {
             Text(text)
                 .font(.subheadline.weight(.medium))
-                .lineLimit(2)
+                // Four: a delete's banner says what went, what it freed and
+                // where it is (FS-06.06b §3) without cutting a word.
+                .lineLimit(4)
+                .fixedSize(horizontal: false, vertical: true)
             if let actionTitle {
                 Divider()
                     .frame(height: 18)

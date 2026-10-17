@@ -12,6 +12,8 @@ struct DuplicateMemberTraits: Hashable, Sendable {
     var isFavorite = false
     /// Albums the user made that hold this photo, by title.
     var albums: [String] = []
+    /// The same albums' identifiers, for the kept photo to join them.
+    var albumIds: [String] = []
 }
 
 /// Order of the group list (FS-06.06 §7.3).

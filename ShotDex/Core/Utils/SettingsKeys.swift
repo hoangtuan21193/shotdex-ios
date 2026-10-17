@@ -140,6 +140,8 @@ enum SettingsKeys {
     /// Bytes keeping one per group would free, as of the last load — the
     /// "~X GB to free" under Duplicates in Collections (FS-06.06 §7.1).
     static let duplicateFreeBytes = "duplicates.lastFreeBytes"
+    /// `["day": "2026-10-17", "bytes": Int]` — what Duplicates deleted today.
+    static let duplicateFreedToday = "duplicates.freedToday"
 
     /// JSON-encoded user looks — the presets saved from an edit and applied to
     /// other photos. Look-only recipes, so they are small.
