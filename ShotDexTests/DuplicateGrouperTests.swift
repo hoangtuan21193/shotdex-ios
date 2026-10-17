@@ -173,3 +173,54 @@ struct DuplicateGrouperTests {
         #expect(groups[0].count == 5001)
     }
 }
+
+/// FS-06.06 §5 — brackets and focus stacks are raw material, not junk.
+struct DuplicateSourceSetTests {
+
+    private let base = 1_700_000_000
+
+    private func frame(_ id: String, bits: UInt64 = 0, at second: Int, ev: Double?, focal: Double = 50) -> HashedPhoto {
+        HashedPhoto(assetId: id, hash: PerceptualHash(bits: bits), width: 6000, height: 4000, fileSize: 10_000_000,
+                    creationDate: base + second, isFavorite: false, focalLength: focal, exposureBias: ev)
+    }
+
+    /// AC-G4: five frames 0.3 s apart (same second here), −2…+2 EV.
+    @Test func bracketIsSourceFrames() {
+        let frames = [-2.0, -1, 0, 1, 2].enumerated().map { frame("f\($0.offset)", at: 0, ev: $0.element) }
+        let groups = DuplicateGrouper.groups(from: frames)
+        #expect(groups.count == 1)
+        let set = try? #require(groups[0].sourceSet)
+        #expect(set?.kind == .bracket)
+        #expect(set?.title == "Bracket · 5 frames · ±2 EV")
+        // Read in capture order, like a run.
+        #expect(groups[0].members.map(\.assetId) == ["f0", "f1", "f2", "f3", "f4"])
+    }
+
+    @Test func missingExposureIsNotABracket() {
+        let frames = [frame("a", at: 0, ev: -2), frame("b", at: 0, ev: nil), frame("c", at: 0, ev: 2)]
+        #expect(DuplicateSourceSet.detect(frames) == nil)
+    }
+
+    @Test func unevenStepsAreNotABracket() {
+        let frames = [frame("a", at: 0, ev: -2), frame("b", at: 1, ev: 0), frame("c", at: 2, ev: 0.5)]
+        #expect(DuplicateSourceSet.detect(frames) == nil)
+    }
+
+    /// AC-C7's case: −1/0/+1 but 40 s apart is not a bracket.
+    @Test func slowFramesAreNotABracket() {
+        let frames = [frame("a", at: 0, ev: -1), frame("b", at: 40, ev: 0), frame("c", at: 80, ev: 1)]
+        #expect(DuplicateSourceSet.detect(frames) == nil)
+    }
+
+    @Test func focusStackNeedsTenFrames() {
+        let ten = (0..<10).map { frame("s\($0)", bits: UInt64(1) << UInt64($0 % 4), at: $0 / 2, ev: 0) }
+        #expect(DuplicateSourceSet.detect(ten)?.kind == .focusStack)
+        #expect(DuplicateSourceSet.detect(ten)?.title == "Focus stack? · 10 frames")
+        #expect(DuplicateSourceSet.detect(Array(ten.prefix(9))) == nil)
+    }
+
+    @Test func asymmetricRangeReadsFromTo() {
+        let frames = [frame("a", at: 0, ev: -1), frame("b", at: 0, ev: 0), frame("c", at: 1, ev: 1), frame("d", at: 1, ev: 2)]
+        #expect(DuplicateSourceSet.detect(frames)?.evText == "−1 to +2 EV")
+    }
+}

@@ -763,7 +763,9 @@ struct ExifReader: Sendable {
             exposureTimeSeconds: positiveDouble(exif[kCGImagePropertyExifExposureTime]),
             focalLength: positiveDouble(exif[kCGImagePropertyExifFocalLength]),
             focalLengthIn35mm: positiveDouble(exif[kCGImagePropertyExifFocalLenIn35mmFilm]),
-            hasPanoramaTag: source.map(PanoramaXMP.isStitchedPanorama) ?? false
+            hasPanoramaTag: source.map(PanoramaXMP.isStitchedPanorama) ?? false,
+            exposureBias: (exif[kCGImagePropertyExifExposureBiasValue] as? NSNumber)?.doubleValue,
+            software: (tiff[kCGImagePropertyTIFFSoftware] as? String).flatMap { $0.isEmpty ? nil : $0 }
         )
     }
 

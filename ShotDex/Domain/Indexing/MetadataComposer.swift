@@ -15,6 +15,12 @@ struct RawExif: Equatable, Sendable {
     /// value — it rides here because it comes from the same read of the same
     /// file, and nothing else opens that file.
     var hasPanoramaTag: Bool = false
+    /// Exposure compensation in EV. Read for Duplicates only (bracket
+    /// detection, FS-06.06 §5) — never written to `photo_metadata`.
+    var exposureBias: Double? = nil
+    /// TIFF Software — "Adobe Lightroom", "Snapseed". Duplicates only, to
+    /// tell an export of an edit from a plain smaller copy (§7.4).
+    var software: String? = nil
 
     static let empty = RawExif()
 
@@ -28,7 +34,9 @@ struct RawExif: Equatable, Sendable {
         exposureTimeSeconds: Double? = nil,
         focalLength: Double? = nil,
         focalLengthIn35mm: Double? = nil,
-        hasPanoramaTag: Bool = false
+        hasPanoramaTag: Bool = false,
+        exposureBias: Double? = nil,
+        software: String? = nil
     ) {
         self.make = make
         self.model = model
@@ -40,6 +48,8 @@ struct RawExif: Equatable, Sendable {
         self.focalLength = focalLength
         self.focalLengthIn35mm = focalLengthIn35mm
         self.hasPanoramaTag = hasPanoramaTag
+        self.exposureBias = exposureBias
+        self.software = software
     }
 
     /// Whether the read found **no EXIF**. The panorama tag is deliberately not

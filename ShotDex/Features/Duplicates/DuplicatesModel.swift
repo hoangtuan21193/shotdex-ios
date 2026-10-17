@@ -164,9 +164,10 @@ final class DuplicatesModel {
         return DuplicateReview.keeper(of: group.members, traits: traits)
     }
 
-    /// Bytes freed by keeping only the keeper.
+    /// Bytes freed by keeping only the keeper. `nil` for a bracket or focus
+    /// stack: raw material never counts toward "~GB to free" (§5).
     func freeBytes(of group: DuplicateGroup) -> Int? {
-        guard let keeper = keeper(of: group) else { return nil }
+        guard group.sourceSet == nil, let keeper = keeper(of: group) else { return nil }
         return DuplicateReview.freeBytes(members: group.members, keeper: keeper)
     }
 
@@ -360,7 +361,7 @@ final class DuplicatesModel {
         // groups that fall to one member vanish.
         self.groups = groups.compactMap { group in
             let present = group.members.filter { snapshot.assetsById[$0.assetId] != nil }
-            return present.count > 1 ? DuplicateGroup(members: present, kind: group.kind) : nil
+            return present.count > 1 ? DuplicateGroup(members: present, kind: group.kind, sourceSet: group.sourceSet) : nil
         }
         assetsById = snapshot.assetsById
         coverage = snapshot.coverage
@@ -690,7 +691,9 @@ final class DuplicatesModel {
         }
         groups = groups.compactMap { group in
             let remaining = group.members.filter { !ids.contains($0.assetId) }
-            return remaining.count > 1 ? DuplicateGroup(members: remaining, kind: group.kind) : nil
+            return remaining.count > 1
+                ? DuplicateGroup(members: remaining, kind: group.kind, sourceSet: DuplicateSourceSet.detect(remaining))
+                : nil
         }
         session.forget(ids)
         UserDefaults.standard.set(groups.count, forKey: SettingsKeys.duplicateGroupCount)

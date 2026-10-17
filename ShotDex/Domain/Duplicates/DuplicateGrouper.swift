@@ -18,6 +18,11 @@ struct HashedPhoto: Hashable, Sendable, Identifiable {
     /// The file carries a camera's EXIF (a camera model). A copy sent through
     /// WhatsApp or Zalo has it stripped, and its date is the day it arrived.
     var hasCameraEXIF = true
+    /// Exposure compensation in EV, from the scoring pass's EXIF read
+    /// (`duplicate_quality`). `nil` until read, or when the file has none.
+    var exposureBias: Double? = nil
+    /// TIFF Software of the file, from the same read.
+    var software: String? = nil
 
     var id: String { assetId }
 
@@ -76,6 +81,8 @@ struct DuplicateGroup: Identifiable, Equatable, Sendable {
     var id: String { members[0].assetId }
     var members: [HashedPhoto]
     var kind: DuplicateKind
+    /// A bracket or focus stack: material for a merge, not junk (§5).
+    var sourceSet: DuplicateSourceSet? = nil
 
     var count: Int { members.count }
     var memberIds: Set<String> { Set(members.map(\.assetId)) }
@@ -224,7 +231,8 @@ enum DuplicateGrouper {
     }
 
     /// Turns member sets into ordered groups: sets under two members
-    /// dropped, an all-screenshot set relabelled, members ordered the way
+    /// dropped, an all-screenshot set relabelled, brackets and focus stacks
+    /// recognised (§5), members ordered the way
     /// their kind is read, groups newest first. Shared by the grouping pass
     /// and by the cache read-back, so a cached group reads like a fresh one.
     static func assemble(_ memberSets: [(DuplicateKind, [HashedPhoto])]) -> [DuplicateGroup] {
@@ -232,8 +240,11 @@ enum DuplicateGrouper {
             .filter { $0.1.count >= 2 }
             .map { kind, members in
                 let kind = members.allSatisfy(\.isScreenshot) ? .screenshots : kind
-                let order: (HashedPhoto, HashedPhoto) -> Bool = kind == .sameMoment ? oldestFirst : bestFirst
-                return DuplicateGroup(members: members.sorted(by: order), kind: kind)
+                let sourceSet = DuplicateSourceSet.detect(members)
+                // A run and a source set are read in the order they were shot.
+                let order: (HashedPhoto, HashedPhoto) -> Bool =
+                    kind == .sameMoment || sourceSet != nil ? oldestFirst : bestFirst
+                return DuplicateGroup(members: members.sorted(by: order), kind: kind, sourceSet: sourceSet)
             }
             .sorted(by: groupOrder)
     }
