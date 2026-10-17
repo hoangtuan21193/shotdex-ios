@@ -84,7 +84,7 @@ bảng phím Editor chung, mật độ lưới màn rộng, sidebar).
 | AC-46 | ❌ | Revert iOS cho ảnh Photos | — | M45 | ⏳ FS-19 |
 | AC-47 | ❌ | không có offline | — | M46 | ⏳ FS-19 |
 | AC-48 | ❌ | `EditorSyncScope` chỉ `.look`/`.everything` (`EditClipboard.swift:72-92`) — không tick theo nhóm | `EditClipboard`, `EditorSyncScope.apply` | S3 | — |
-| AC-49 | ❌ | `FileExportSettings` không có trường không gian màu (`FileExportOptions.swift:30-43`) | `FileExportRunner.swift:93`, `FileExportPlan` | S2 | — |
+| AC-49 | ✅ một phần (S2 đã có từ dbdf74e2: `ExportColorSpace`, popup iOS; nửa Mac ở M49) | `FileExportColorSpaceTests.everyChoiceWritesItsProfile` | `FileExportRunner.swift:93`, `FileExportPlan` | S2 | — |
 | AC-50 | ❌ (logic ✅) | Cancel/Stop iOS đã có test (`FileExportCancelTests`) | `FileExportRunner`, `FileExportProgress` | M51 | M49 (sheet Mac) |
 | AC-51 | ❌ (logic ✅) | đích đầy iOS: `FileExportFailure.swift`, `FileExportFailureTests` | như trên | M52 | M51 |
 | AC-52 | ❌ | đánh số " (2)" đã có (`FileExportPlan.swift:166-170`); không có hậu tố " (edited)"; Save Copy iOS ra asset Photos (`PhotoEditingService.swift:337`) — nửa Photos khớp | `FileExportPlan` đánh số, `saveCopy` | S4 | ⏳ FS-19 (ghi cạnh file gốc) |
