@@ -288,12 +288,40 @@ final class DuplicatesModel {
         return DuplicateRemoval.plan(members: group.members, keeper: keeper, traits: traits)
     }
 
-    /// "Remove the other N": marks what `removal(in:)` names, then folds.
+    /// A group this big shows its keeper, the copies beside it and "Show
+    /// all N" until the user opens it (D9).
+    static let largeGroupThreshold = 12
+    /// Large groups opened with Show all — once per visit to the screen.
+    private(set) var expandedLargeGroups: Set<String> = []
+
+    func isFolded(_ group: DuplicateGroup) -> Bool {
+        group.count >= Self.largeGroupThreshold && !expandedLargeGroups.contains(group.id)
+    }
+
+    func showAll(_ group: DuplicateGroup) {
+        expandedLargeGroups.insert(group.id)
+    }
+
+    /// How long the red frames of a shortcut stay on screen before the card
+    /// folds — long enough to see what was marked (D9, AC-C5).
+    static let foldDelay: Duration = .milliseconds(600)
+
+    /// "Remove the other N": marks what `removal(in:)` names, then folds
+    /// after `foldDelay`.
     func markOthers(in group: DuplicateGroup) {
         guard let removal = removal(in: group), !removal.remove.isEmpty else { return }
         session.setMarks(of: group.members.map(\.assetId), to: Set(removal.remove))
         session.setKeptAll(group.memberIds, false)
-        session.setCollapsed(group.memberIds, true)
+        foldLater(group)
+    }
+
+    private func foldLater(_ group: DuplicateGroup) {
+        let members = group.memberIds
+        Task { [weak self] in
+            try? await Task.sleep(for: Self.foldDelay)
+            guard let self, self.isReviewed(group) else { return }
+            withAnimation(AppTheme.Motion.standard) { self.session.setCollapsed(members, true) }
+        }
     }
 
     /// "Unmark": drops every mark in the group, and the group is open again.
@@ -312,7 +340,7 @@ final class DuplicatesModel {
         } else {
             clearMarks(in: group)
             session.setKeptAll(members, true)
-            session.setCollapsed(members, true)
+            foldLater(group)
         }
     }
 

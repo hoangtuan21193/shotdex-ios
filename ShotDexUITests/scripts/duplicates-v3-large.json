@@ -1,0 +1,20 @@
+{
+  "steps": [
+    { "action": "launch" },
+    { "action": "wait", "seconds": 6 },
+    { "action": "tap", "label": "Collections", "type": "button" },
+    { "action": "wait", "seconds": 3 },
+    { "action": "scrollTo", "label": "Duplicates" },
+    { "action": "tap", "label": "Duplicates" },
+    { "action": "wait", "seconds": 8 },
+    { "action": "tap", "label": "Start" },
+    { "action": "wait", "seconds": 4 },
+    { "action": "screenshot", "name": "01-folded" },
+    { "action": "dump", "name": "01-folded" },
+    { "action": "tap", "label": "Remove the other" },
+    { "action": "screenshot", "name": "02-marked" },
+    { "action": "wait", "seconds": 2 },
+    { "action": "screenshot", "name": "03-collapsed" },
+    { "action": "dump", "name": "03-collapsed" }
+  ]
+}

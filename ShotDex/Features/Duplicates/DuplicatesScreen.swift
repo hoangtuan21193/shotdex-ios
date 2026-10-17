@@ -301,7 +301,8 @@ struct DuplicatesScreen: View {
 
     private func estimatedHeight(_ group: DuplicateGroup, model: DuplicatesModel, metrics: DuplicateCardMetrics) -> CGFloat {
         if model.isCollapsed(group) { return 56 }
-        let body = metrics.gridHeight(copyCount: group.count - 1)
+        let shown = model.isFolded(group) ? min(group.count - 1, metrics.copyColumns * 2) : group.count - 1
+        let body = metrics.gridHeight(copyCount: shown) + (model.isFolded(group) ? 52 : 0)
         return 58 + body + AppTheme.Spacing.md + 44 + AppTheme.Spacing.md
     }
 
@@ -685,6 +686,8 @@ private struct DuplicateDecisionCard: View {
     let group: DuplicateGroup
     let model: DuplicatesModel
     let metrics: DuplicateCardMetrics
+    /// Bumped by Remove the other N / Keep all, for a light impact (§7.4).
+    @State private var shortcutTaps = 0
 
     var body: some View {
         let keeper = model.keeper(of: group)
@@ -694,7 +697,24 @@ private struct DuplicateDecisionCard: View {
 
             if let keeper {
                 // Same moment: the keeper first, the rest in capture order.
-                keeperGrid(keeper, copies: group.members.filter { $0.assetId != keeper.assetId })
+                let copies = group.members.filter { $0.assetId != keeper.assetId }
+                let isFolded = model.isFolded(group)
+                keeperGrid(keeper, copies: isFolded ? Array(copies.prefix(metrics.copyColumns * 2)) : copies)
+                if isFolded {
+                    // D9: a 52-photo burst would be four screens of tiles.
+                    Button {
+                        withAnimation(AppTheme.Motion.standard) { model.showAll(group) }
+                    } label: {
+                        Text(String(localized: "Show all \(copies.count)", comment: "Duplicates card: open every photo of a large group"))
+                            .font(.subheadline.weight(.medium))
+                            .frame(maxWidth: .infinity, minHeight: 36)
+                            .background(Color(.secondarySystemFill), in: Capsule())
+                            .frame(minHeight: 44)
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .padding(.top, AppTheme.Spacing.sm)
+                }
             }
 
             notices
@@ -704,6 +724,7 @@ private struct DuplicateDecisionCard: View {
         .padding(DuplicateCardMetrics.cardPadding)
         .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle.app(AppTheme.Radius.lg))
         .onAppear { model.loadTraits(for: group) }
+        .sensoryFeedback(.impact(weight: .light), trigger: shortcutTaps)
     }
 
     private func header(keeper: HashedPhoto?) -> some View {
@@ -875,7 +896,16 @@ private struct DuplicateDecisionCard: View {
         }
     }
 
+    /// Remove the other N · Keep all · Compare. When a long count leaves no
+    /// room, Compare drops to its icon before any word is cut.
     private func actions(keeper: HashedPhoto?) -> some View {
+        ViewThatFits(in: .horizontal) {
+            actionRow(compactCompare: false)
+            actionRow(compactCompare: true)
+        }
+    }
+
+    private func actionRow(compactCompare: Bool) -> some View {
         let marked = model.markedCount(in: group)
         let keptAll = model.isKeptAll(group)
         return HStack(spacing: AppTheme.Spacing.sm) {
@@ -890,10 +920,8 @@ private struct DuplicateDecisionCard: View {
                      : String(localized: "Remove the other \(others)", comment: "Duplicates card: mark every photo but the kept one"),
                      color: .red) {
                     model.markOthers(in: group)
+                    shortcutTaps += 1
                 }
-                .accessibilityLabel(others == 1
-                    ? String(localized: "Mark the other photo for removal", comment: "VoiceOver: Remove the other one")
-                    : String(localized: "Mark the other \(others) photos for removal", comment: "VoiceOver: Remove the other N"))
             }
             pill(keptAll
                  ? String(localized: "Keeping all", comment: "Duplicates card: the group is kept whole; tap to undo")
@@ -901,14 +929,20 @@ private struct DuplicateDecisionCard: View {
                  color: .accentColor,
                  systemImage: keptAll ? "checkmark" : nil) {
                 model.toggleKeepAll(group)
+                shortcutTaps += 1
             }
             Spacer(minLength: 0)
             if model.canCompare(group) {
-                pill(String(localized: "Compare", comment: "Duplicates card: open the group side by side"), color: .accentColor) {
-                    model.compare(group)
+                let title = String(localized: "Compare", comment: "Duplicates card: open the group side by side")
+                if compactCompare {
+                    pill("", color: .accentColor, systemImage: "rectangle.split.2x1") { model.compare(group) }
+                        .accessibilityLabel(title)
+                } else {
+                    pill(title, color: .accentColor) { model.compare(group) }
                 }
             }
         }
+        .fixedSize(horizontal: !compactCompare, vertical: false)
     }
 
     private func pill(_ title: String, color: Color, systemImage: String? = nil, action: @escaping () -> Void) -> some View {
@@ -917,7 +951,7 @@ private struct DuplicateDecisionCard: View {
         } label: {
             HStack(spacing: AppTheme.Spacing.xs) {
                 if let systemImage { Image(systemName: systemImage).font(.footnote.weight(.bold)) }
-                Text(title)
+                if !title.isEmpty { Text(title) }
             }
             .font(.subheadline.weight(.medium))
             .foregroundStyle(color)
