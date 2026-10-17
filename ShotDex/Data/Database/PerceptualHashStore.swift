@@ -258,6 +258,17 @@ struct PerceptualHashStore: Sendable {
         )
     }
 
+    /// Photos whose thumbnail could not be read — in practice iCloud-only
+    /// with the network off for scanning (FS-06.06 §3, A4).
+    func unreadableCount() throws -> Int {
+        try database.reader.read { db in
+            try Int.fetchOne(db, sql: """
+                SELECT COUNT(*) FROM perceptual_hash h JOIN photo_metadata p ON p.assetId = h.assetId
+                WHERE h.hash IS NULL AND p.mediaType = ?
+                """, arguments: [MediaKind.photo.storedValue]) ?? 0
+        }
+    }
+
     func coverage() throws -> PerceptualHashCoverage {
         try database.reader.read { db in
             let hashed = try Int.fetchOne(

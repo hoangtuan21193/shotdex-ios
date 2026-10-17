@@ -315,4 +315,4 @@ fixture: tự sinh (mảng màu, chữ, nhiễu, mờ Gaussian); riêng AC-Q4 d�
 | AC-P1 | (A5) quyền `.limited`, thấy 1.240 ảnh | mở Duplicates | banner *ShotDex can see 1,240 of your photos* + *Settings* | ⚠️ chưa có |
 | AC-P2 | (A5) quyền bị từ chối | mở Duplicates | banner *ShotDex can't see your photos* + *Settings*; *Check Again* mờ kèm lý do; không lượt quét nào chạy | ⚠️ chưa có |
 | AC-P3 | (A4) quét 38.000 ảnh, sau lô đầu đã có 40 nhóm | nhìn màn trong lúc quét | *Scanning 1,200 of 38,000 · 40 found so far*; 40 nhóm đã mở được; *Cancel* màu accent | ⚠️ chưa có |
-| AC-P4 | (A4) máy tắt mạng, 148 ảnh chỉ có trên iCloud | quét xong | dòng *148 photos only in iCloud — will check on Wi-Fi*; không yêu cầu mạng nào | ⚠️ chưa có |
+| AC-P4 | (A4) máy tắt mạng, 148 ảnh chỉ có trên iCloud | quét xong | dòng *148 photos only in iCloud — will check on Wi-Fi*; không yêu cầu mạng nào | `PerceptualHashStoreTests.unreadableThumbnailsAreCounted` ✅ (số đếm); ảnh sim ⚠️ chưa có |

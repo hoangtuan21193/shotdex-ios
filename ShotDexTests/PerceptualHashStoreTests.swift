@@ -101,6 +101,18 @@ struct PerceptualHashStoreTests {
         try hashes.delete(assetIds: ["kept"])
         #expect(try hashes.hashedPhotos().isEmpty)
     }
+
+    /// A4: thumbnails that could not be read are counted for the iCloud line.
+    @Test func unreadableThumbnailsAreCounted() throws {
+        let (metadata, hashes) = try makeStores()
+        for record in [makeRecord("cloud1"), makeRecord("cloud2"), makeRecord("local")] { try metadata.upsert(record) }
+        try hashes.upsert([
+            PerceptualHashRecord(assetId: "cloud1", hash: nil, modificationDate: 1_700_000_000, computedAt: 1),
+            PerceptualHashRecord(assetId: "cloud2", hash: nil, modificationDate: 1_700_000_000, computedAt: 1),
+            PerceptualHashRecord(assetId: "local", hash: PerceptualHash(bits: 3), modificationDate: 1_700_000_000, computedAt: 1),
+        ])
+        #expect(try hashes.unreadableCount() == 2)
+    }
 }
 
 struct DuplicateGroupCacheTests {

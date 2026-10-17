@@ -45,6 +45,16 @@ final class DuplicatesModel {
     private(set) var scanState: DuplicateScanState?
     /// Photos the next scan would hash — new or edited since the last one.
     private(set) var pendingCount = 0
+    /// Photos whose thumbnail could not be read: only in iCloud while the
+    /// network is off for scanning (A4).
+    private(set) var cloudOnlyCount = 0
+    /// Whether this run may use the network — the iCloud line says "will
+    /// check on Wi-Fi" only when it may not.
+    var canUseNetwork: Bool { allowNetworkForScanning }
+    /// Groups found so far while a scan runs (A4): regrouped from the hashes
+    /// written so far every few seconds, shown at once, cached at the end.
+    @ObservationIgnored private var lastInterimGrouping = ContinuousClock.now
+    @ObservationIgnored private var interimTask: Task<Void, Never>?
     /// The user's marks and decisions; lives in `AppDependencies` so it
     /// outlasts this model (FS-06.06b §1).
     let session: DuplicateReviewSession
@@ -363,7 +373,8 @@ final class DuplicatesModel {
                     coverage: (try? store.coverage()) ?? PerceptualHashCoverage(hashedPhotos: 0, indexedPhotos: 0),
                     scanState: try? store.scanState(),
                     pendingCount: (try? store.pendingCount(retryingFailed: retryingFailed)) ?? 0,
-                    scores: (try? qualityStore.scores(for: ids)) ?? [:]
+                    scores: (try? qualityStore.scores(for: ids)) ?? [:],
+                    cloudOnlyCount: (try? store.unreadableCount()) ?? 0
                 )
             }.value
             guard let self, !Task.isCancelled, let result else { return }
@@ -396,6 +407,7 @@ final class DuplicatesModel {
         var scanState: DuplicateScanState?
         var pendingCount: Int
         var scores: [String: DuplicateQualityScore] = [:]
+        var cloudOnlyCount = 0
     }
 
     private func apply(_ snapshot: CacheSnapshot) {
@@ -411,6 +423,7 @@ final class DuplicatesModel {
         scanState = snapshot.scanState
         pendingCount = snapshot.pendingCount
         scores = snapshot.scores
+        cloudOnlyCount = snapshot.cloudOnlyCount
         // Marks are not cut on reload (§1): marks are per photo, and a regroup
         // that moves a photo keeps its mark.
         UserDefaults.standard.set(self.groups.count, forKey: SettingsKeys.duplicateGroupCount)
@@ -447,6 +460,7 @@ final class DuplicatesModel {
             Task { @MainActor in
                 guard let self, self.isScanning else { return }
                 self.phase = .scanning(progress)
+                self.groupSoFar()
             }
         }
         scanTask = Task { [weak self] in
@@ -458,6 +472,8 @@ final class DuplicatesModel {
                     self.phase = .idle
                     return
                 }
+                self.interimTask?.cancel()
+                self.interimTask = nil
                 await self.regroupAndCache()
                 self.loadCache()
             } catch {
@@ -470,7 +486,36 @@ final class DuplicatesModel {
 
     func cancelScan() {
         scanTask?.cancel()
+        interimTask?.cancel()
         stopScoring()
+    }
+
+    /// Regroups what is hashed so far, at most every 3 s, so groups show and
+    /// open while the scan runs ("40 found so far"). The cache is written
+    /// once, when the scan ends.
+    private func groupSoFar() {
+        guard interimTask == nil, ContinuousClock.now - lastInterimGrouping >= .seconds(3) else { return }
+        lastInterimGrouping = .now
+        let store = dependencies.perceptualHashStore
+        interimTask = Task { [weak self] in
+            let snapshot = await Task.detached(priority: .utility) { () -> CacheSnapshot? in
+                guard let photos = try? store.hashedPhotos() else { return nil }
+                let groups = DuplicateGrouper.groups(from: photos)
+                let assets = PhotoLibraryService.fetchAssets(ids: groups.flatMap { $0.members.map(\.assetId) })
+                return CacheSnapshot(groups: groups,
+                                     assetsById: Dictionary(uniqueKeysWithValues: assets.map { ($0.localIdentifier, $0) }),
+                                     coverage: PerceptualHashCoverage(hashedPhotos: photos.count, indexedPhotos: 0),
+                                     scanState: nil, pendingCount: 0)
+            }.value
+            guard let self else { return }
+            self.interimTask = nil
+            guard let snapshot, self.isScanning, !Task.isCancelled else { return }
+            self.groups = (snapshot.groups ?? []).compactMap { group in
+                let present = group.members.filter { snapshot.assetsById[$0.assetId] != nil }
+                return present.count > 1 ? DuplicateGroup(members: present, kind: group.kind, sourceSet: group.sourceSet) : nil
+            }
+            self.assetsById.merge(snapshot.assetsById) { _, new in new }
+        }
     }
 
     // MARK: Scoring

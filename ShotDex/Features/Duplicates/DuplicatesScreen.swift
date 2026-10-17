@@ -544,9 +544,7 @@ private struct DuplicatesHeaderBand: View {
         if case .scanning(let scan) = model.phase {
             VStack(alignment: .leading, spacing: AppTheme.Spacing.xs) {
                 HStack {
-                    Text(scan.total > 0
-                         ? "Scanning \(scan.processed) of \(scan.total)"
-                         : "Preparing scan…")
+                    Text(scanningText(scan))
                         .font(.footnote.weight(.semibold))
                         .monospacedDigit()
                     Spacer()
@@ -571,6 +569,19 @@ private struct DuplicatesHeaderBand: View {
         }
     }
 
+    /// "Scanning 1,200 of 38,000 · 40 found so far" (A4).
+    private func scanningText(_ scan: DuplicateScanProgress) -> String {
+        guard scan.total > 0 else {
+            return String(localized: "Preparing scan…", comment: "Duplicates header: before the first batch")
+        }
+        let scanning = String(localized: "Scanning \(scan.processed.formatted()) of \(scan.total.formatted())",
+                              comment: "Duplicates header: scan progress")
+        let found = model.groups.count
+        guard found > 0 else { return scanning }
+        return scanning + " · " + String(localized: "\(found.formatted()) found so far",
+                                         comment: "Duplicates header: groups already found while scanning")
+    }
+
     private var reviewedText: String {
         let total = model.groups.count
         let done = model.reviewedCount
@@ -589,11 +600,17 @@ private struct DuplicatesHeaderBand: View {
     @ViewBuilder
     private var statusLine: some View {
         if let scanState = model.scanState {
-            let scanned = String(localized: "Scanned \(scanState.scannedAt.formatted(.relative(presentation: .named)))",
+            let scanned = String(localized: "Checked \(scanState.scannedAt.formatted(.relative(presentation: .named)))",
                                  comment: "Duplicates header: when the last scan ran")
-            let pending = model.pendingCount == 0
-                ? String(localized: "Library up to date", comment: "Duplicates header: nothing new to scan")
-                : String(localized: "\(model.pendingCount) photos not scanned yet", comment: "Duplicates header: photos a rescan would cover")
+            let pending: String = if !model.canUseNetwork, model.cloudOnlyCount > 0 {
+                // A4: say why they were skipped and when they will be read.
+                String(localized: "\(model.cloudOnlyCount.formatted()) photos only in iCloud — will check on Wi-Fi",
+                       comment: "Duplicates header: photos whose thumbnails need the network")
+            } else if model.pendingCount == 0 {
+                String(localized: "Library up to date", comment: "Duplicates header: nothing new to scan")
+            } else {
+                String(localized: "\(model.pendingCount.formatted()) photos not checked yet", comment: "Duplicates header: photos a rescan would cover")
+            }
             Text("\(scanned) · \(pending)")
                 .font(.caption)
                 .foregroundStyle(.secondary)
