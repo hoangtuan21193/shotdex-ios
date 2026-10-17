@@ -988,6 +988,13 @@
    "w": 1376,
    "x": 97552,
    "y": 560
+  },
+  "IP_DuplicatesCompare.dc.html": {
+   "h": 1032,
+   "w": 1376,
+   "x": 37856,
+   "y": 560,
+   "title": "iPad · Ảnh trùng v3: so sánh nhóm (tầng D) — tới 6 ảnh, số cột chọn để ảnh to nhất, pinch một ảnh là cả lưới zoom theo, vuốt ngang một ô để đổi ảnh, mỗi ô một nút thùng rác — FS-06.06 §7.6"
   }
  },
  "order": [
@@ -1017,6 +1024,7 @@
   "IP_Trips.dc.html",
   "IP_DuplicatesSummary.dc.html",
   "IP_Duplicates.dc.html",
+  "IP_DuplicatesCompare.dc.html",
   "IP_BurstFrames.dc.html",
   "IP_Creations.dc.html",
   "IP_Collage.dc.html",

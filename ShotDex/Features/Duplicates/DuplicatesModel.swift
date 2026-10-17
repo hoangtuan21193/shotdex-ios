@@ -12,12 +12,12 @@ struct DuplicateNotice: Identifiable {
     let message: String
 }
 
-/// Payload for the viewer opened in Compare on a duplicate group (DESIGN.md
-/// §10.5 — the item carries its data, the cover never reads state back).
-struct DuplicateComparePresentation: Identifiable {
+/// Which group the side-by-side opens on, and which photo goes first
+/// (FS-06.06 §7.6).
+struct DuplicateComparePresentation: Identifiable, Equatable {
     let id = UUID()
-    let source: PhotoListModel
-    let request: CompareRequest
+    let groupId: String
+    let startId: String
 }
 
 /// Drives the Duplicates screen. Opening the screen reads the **cached**
@@ -74,8 +74,6 @@ final class DuplicatesModel {
     @ObservationIgnored private var scoringReadExposure = false
     private var traitsRequested: Set<String> = []
     var comparePresentation: DuplicateComparePresentation?
-    /// The comparison on screen, kept past its dismissal for `didCloseCompare`.
-    @ObservationIgnored private var openCompare: DuplicateComparePresentation?
     var errorMessage: String?
     /// Title + message of the alert raised when Merge could not write some
     /// groups, or Delete would empty a group.
@@ -873,41 +871,12 @@ final class DuplicatesModel {
         group.count >= CompareSession.minimumCount
     }
 
-    /// Opens the group in the viewer's Compare (FS-01.08c §7). Reject there
-    /// is the real flag; the keep-one gate rides along with the group.
-    /// A tap on a tile opens here too, with that photo as Select: every
-    /// photo of the group pinches together (§7.6).
+    /// Opens the group side by side, `assetId` first: every photo pinches
+    /// together, and a pane's trash button is the tile's mark (§7.6).
     func compare(_ group: DuplicateGroup, from assetId: String? = nil) {
         guard canCompare(group) else { return }
-        var ids = group.members.map(\.assetId).filter { assetsById[$0] != nil }
-        if let assetId, let index = ids.firstIndex(of: assetId) { ids.insert(ids.remove(at: index), at: 0) }
-        let source = PhotoListModel(assetIds: ids, dependencies: dependencies)
-        source.load()
-        guard var request = CompareRequest(selection: ids, source: source, duplicateGroup: ids) else { return }
-        request.onDeleted = { [weak self] gone in self?.didDelete(ids: gone) }
-        // Compare speaks only in flags (plan K2): this group's marks become
-        // Reject before it opens, so the frames show what the tiles showed.
-        let marked = ids.filter { session.isMarked($0) && dependencies.photoMarks.flag(for: $0) != .reject }
-        Task {
-            if !marked.isEmpty { _ = await dependencies.photoMarks.setFlag(.reject, ids: marked) }
-            let presentation = DuplicateComparePresentation(source: source, request: request)
-            openCompare = presentation
-            comparePresentation = presentation
-        }
-    }
-
-    /// Back from Compare: the group's tiles take what its flags say now — a
-    /// Reject set there marks the tile, one taken back unmarks it
-    /// (FS-01.08c AC-17).
-    func didCloseCompare() {
-        guard let presentation = openCompare else { return }
-        openCompare = nil
-        let ids = presentation.request.ids.filter { assetsById[$0] != nil }
-        let rejected = ids.filter { dependencies.photoMarks.flag(for: $0) == .reject }
-        session.setMarks(of: ids, to: Set(rejected))
-        if let group = groups.first(where: { $0.members.contains { ids.contains($0.assetId) } }), !rejected.isEmpty {
-            session.setKeptAll(group.memberIds, false)
-        }
+        let start = assetId ?? keeper(of: group)?.assetId ?? group.members[0].assetId
+        comparePresentation = DuplicateComparePresentation(groupId: group.id, startId: start)
     }
 
     // MARK: Delete

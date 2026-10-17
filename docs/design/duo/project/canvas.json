@@ -1549,6 +1549,13 @@
       "x": 9282,
       "y": 1609,
       "title": "Duo ngoài · Duplicates tóm tắt (v3 §7.2): xếp dọc trong 350 trái rail 84 — đề xuất 17/10, code chưa có"
+    },
+    "DI_DuplicatesCompare.dc.html": {
+      "h": 669,
+      "w": 951,
+      "x": 20620,
+      "y": 560,
+      "title": "Duo trong · So sánh nhóm (v3 §7.6, tầng D): lưới tới 6 ảnh zoom chung, vuốt ngang đổi ảnh, mỗi ô một nút thùng rác; màn ngoài dùng bản iPhone (2 ảnh xếp chồng)"
     }
   },
   "createdOnFiles": {
@@ -1707,6 +1714,7 @@
     "DI_Trips.dc.html",
     "DI_DuplicatesSummary.dc.html",
     "DI_Duplicates.dc.html",
+    "DI_DuplicatesCompare.dc.html",
     "DI_BurstFrames.dc.html",
     "DI_Creations.dc.html",
     "DI_Collage.dc.html",

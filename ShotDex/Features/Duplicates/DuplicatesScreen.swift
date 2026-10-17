@@ -177,12 +177,9 @@ struct DuplicatesScreen: View {
                 moreMenu(model)
             }
         }
-        .fullScreenCover(item: $model.comparePresentation, onDismiss: model.didCloseCompare) { presentation in
-            PhotoDetailScreen(
-                model: presentation.source,
-                currentIndex: presentation.request.startIndex,
-                compareRequest: presentation.request
-            )
+        .fullScreenCover(item: $model.comparePresentation) { presentation in
+            DuplicatesCompareScreen(model: model, presentation: presentation)
+                .environment(photoLibrary)
         }
         .modifier(DuplicatesAlerts(model: model))
         .sensoryFeedback(.success, trigger: model.deleteSuccessCount)

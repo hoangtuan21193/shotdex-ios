@@ -1047,6 +1047,14 @@
       "w": 402,
       "x": 8194,
       "y": 560
+    },
+    "PH_DuplicatesCompare.dc.html": {
+      "h": 874,
+      "radius": 44,
+      "w": 402,
+      "x": 10122,
+      "y": 560,
+      "title": "iPhone · Duplicates 5/5 · So sánh nhóm (§7.6, tầng D): chạm ảnh trên thẻ mở ở đây, ảnh vừa chạm ở trên; 2 ảnh xếp chồng, pinch một ảnh là cả hai zoom cùng chỗ; vuốt ngang một ảnh để thay ảnh khác của nhóm; mỗi ảnh chỉ một nút thùng rác (= dấu của ô, viền đỏ); X hoặc vuốt xuống để đóng. Không cờ, không sao."
     }
   },
   "createdOnFiles": {
@@ -1155,6 +1163,7 @@
     "PH_Duplicates.dc.html",
     "PH_DuplicatesLargeGroup.dc.html",
     "PH_DuplicatesPinched.dc.html",
+    "PH_DuplicatesCompare.dc.html",
     "PH_BurstFrames.dc.html",
     "PH_Creations.dc.html",
     "PH_Collage.dc.html",

@@ -489,7 +489,7 @@ struct BurstFramesScreen: View {
 
 /// The big frame: zoomable, in step with the frames before it. The best
 /// local rendition first, then the screen-sized one.
-private struct BurstBigFrame: View {
+struct BurstBigFrame: View {
     let asset: PHAsset?
     let photoLibrary: PhotoLibraryService
     let synchronizer: CompareScrollSynchronizer
