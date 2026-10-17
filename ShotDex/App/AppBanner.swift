@@ -106,7 +106,10 @@ private struct AppBannerHost: ViewModifier {
                     .padding(.bottom, bottomInset)
                     .transition(.move(edge: .bottom).combined(with: .opacity))
                     .task(id: banner.id) {
-                        try? await Task.sleep(for: banner.duration)
+                        // A host that stops drawing (another surface came
+                        // up over it) cancels this; the banner moves to the
+                        // new top host and starts its time again there.
+                        do { try await Task.sleep(for: banner.duration) } catch { return }
                         withAnimation(AppTheme.Motion.standard) { model.expire(banner.id) }
                     }
                 }
