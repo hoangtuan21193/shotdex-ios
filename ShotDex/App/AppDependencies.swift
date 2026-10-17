@@ -51,6 +51,9 @@ final class AppDependencies {
     let onThisDayNotifications: OnThisDayNotificationService
     let perceptualHashStore: PerceptualHashStore
     let duplicateScanPipeline: DuplicateScanPipeline
+    /// Scores grouped photos for Duplicates (FS-06.06 §6); yields to a
+    /// person looking at a photo, like the index.
+    let duplicateQualityPass: DuplicateQualityPass
     /// Marks and decisions on the Duplicates screen, kept on disk until the
     /// user deletes or undoes them (FS-06.06b §1).
     let duplicateReview: DuplicateReviewSession
@@ -336,6 +339,11 @@ final class AppDependencies {
         let perceptualHashStore = PerceptualHashStore(database: database)
         self.perceptualHashStore = perceptualHashStore
         self.duplicateReview = DuplicateReviewSession(store: DuplicateReviewStore(database: database))
+        self.duplicateQualityPass = DuplicateQualityPass(
+            store: DuplicateQualityStore(database: database),
+            reader: DuplicateQualityReader(),
+            shouldPause: { indexInteractionGate.shouldPauseIndexing }
+        )
         self.duplicateScanPipeline = DuplicateScanPipeline(
             store: perceptualHashStore,
             reader: PerceptualHashReader()

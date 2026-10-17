@@ -104,11 +104,16 @@ struct DuplicatesScreen: View {
         }
         .toolbar(hasMarks ? .hidden : .automatic, for: .tabBar)
         .onChange(of: hasMarks) { navigation.hidesTabBar = hasMarks }
-        .onDisappear { navigation.hidesTabBar = false }
+        .onDisappear {
+            navigation.hidesTabBar = false
+            model.stopScoring()
+        }
         .sensoryFeedback(.selection, trigger: copyColumns)
         .task {
             guard photoLibrary.authorizationState.canReadLibrary else { return }
             model.loadIfNeeded()
+            // Back from a pushed screen: carry on scoring.
+            model.startScoring()
         }
         .task(id: photoLibrary.assetChangeToken) {
             guard photoLibrary.authorizationState.canReadLibrary else { return }
@@ -668,6 +673,15 @@ private struct DuplicateDecisionCard: View {
         }
     }
 
+    /// The keeper's reasons, or "Checking sharpness…" while the pass has not
+    /// reached this group (§3 step 5).
+    private var keeperChips: [String] {
+        if model.isChecking(group) {
+            return [String(localized: "Checking sharpness…", comment: "Duplicates: chip on the kept photo while the group is being scored")]
+        }
+        return model.reasons(for: group).map(\.title)
+    }
+
     private var subtitle: String {
         var parts: [String] = []
         if let date = DuplicatesScreen.dateText(group) { parts.append(date) }
@@ -736,7 +750,7 @@ private struct DuplicateDecisionCard: View {
             isMarked: isMarked,
             showsKeep: isKeeper && !isMarked,
             factLines: factLines(member),
-            chips: isKeeper ? model.reasons(for: group).map(\.title) : [],
+            chips: isKeeper ? keeperChips : [],
             isKeeper: isKeeper
         )
         .onTapGesture {

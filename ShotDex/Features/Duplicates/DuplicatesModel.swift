@@ -52,6 +52,12 @@ final class DuplicatesModel {
     private(set) var traits: [String: DuplicateMemberTraits] = [:]
     /// What the scoring pass measured, per member (FS-06.06 §6).
     private(set) var scores: [String: DuplicateQualityScore] = [:]
+    /// The scoring pass's progress while it runs; `nil` when idle.
+    private(set) var scoring: DuplicateScoringProgress?
+    @ObservationIgnored private var scoringTask: Task<Void, Never>?
+    /// Exposure read by the pass since the last cache read: a regroup-free
+    /// reload picks up brackets once the pass ends.
+    @ObservationIgnored private var scoringReadExposure = false
     private var traitsRequested: Set<String> = []
     var comparePresentation: DuplicateComparePresentation?
     /// The Bursts tab (FS-06.06 §7b) — not a kind of group: it
@@ -349,6 +355,8 @@ final class DuplicatesModel {
             self.phase = .idle
             if autoScanIfNeverScanned, result.scanState == nil, result.coverage.hashedPhotos == 0 {
                 self.startScan()
+            } else {
+                self.startScoring()
             }
         }
     }
@@ -400,6 +408,7 @@ final class DuplicatesModel {
     func startScan() {
         guard scanTask == nil, !isDeleting else { return }
         loadTask?.cancel()
+        stopScoring()
         let pipeline = dependencies.duplicateScanPipeline
         let allowNetwork = allowNetworkForScanning
         phase = .scanning(DuplicateScanProgress(processed: 0, total: 0))
@@ -433,6 +442,50 @@ final class DuplicatesModel {
 
     func cancelScan() {
         scanTask?.cancel()
+        stopScoring()
+    }
+
+    // MARK: Scoring
+
+    /// The group is waiting for the pass: its chip reads "Checking
+    /// sharpness…" instead of a reason (§3 step 5).
+    func isChecking(_ group: DuplicateGroup) -> Bool {
+        scoring != nil && group.kind != .screenshots && !DuplicateReview.isScored(group.members, scores)
+    }
+
+    /// Scores grouped photos that lack a score. Each batch lands in the
+    /// cards at once; when the pass ends, the cache is read again so
+    /// brackets the new exposure readings reveal show as source sets.
+    func startScoring() {
+        guard scoringTask == nil, !groups.isEmpty else { return }
+        let pass = dependencies.duplicateQualityPass
+        let groups = self.groups
+        let allowNetwork = allowNetworkForScanning
+        scoring = DuplicateScoringProgress(processed: 0, total: 0)
+        let report: @Sendable ([DuplicateQualityRecord], DuplicateScoringProgress) -> Void = { [weak self] records, progress in
+            Task { @MainActor in
+                guard let self, self.scoringTask != nil else { return }
+                for record in records { self.scores[record.assetId] = record.score }
+                if records.contains(where: { $0.exposureBias != nil }) { self.scoringReadExposure = true }
+                self.scoring = progress
+            }
+        }
+        scoringTask = Task { [weak self] in
+            try? await pass.run(groups: groups, allowNetwork: allowNetwork, onBatch: report)
+            guard let self else { return }
+            let reload = self.scoringReadExposure && !Task.isCancelled
+            self.scoringTask = nil
+            self.scoring = nil
+            self.scoringReadExposure = false
+            if reload { self.loadCache() }
+        }
+    }
+
+    /// Leaving the screen or cancelling: what was scored is kept (AC-Q5).
+    func stopScoring() {
+        scoringTask?.cancel()
+        scoringTask = nil
+        scoring = nil
     }
 
     /// Same policy as indexing (`LibraryModel.allowNetworkForIndexing`): an

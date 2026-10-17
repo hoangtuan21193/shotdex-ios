@@ -1,4 +1,6 @@
+import CoreGraphics
 import Foundation
+import os
 import Testing
 @testable import ShotDex
 
@@ -135,5 +137,68 @@ struct DuplicateQualityStoreTests {
         try hashes.upsert([PerceptualHashRecord(assetId: "a", hash: PerceptualHash(bits: 1), modificationDate: 100, computedAt: 1)])
         #expect(try hashes.hashedPhotos().first?.exposureBias == -2)
         #expect(try hashes.hashedPhotos().first?.software == "Adobe Lightroom")
+    }
+}
+
+/// FS-06.06 §3 step 5, AC-Q5 (logic half): only grouped photos, never
+/// screenshots, and a cancel keeps what was scored.
+struct DuplicateQualityPassTests {
+    private struct Stub: DuplicateQualityReading {
+        let seen: OSAllocatedUnfairLock<[String]>
+        let delay: Duration
+        func measure(assetId: String, allowNetwork: Bool) async -> DuplicateQualityRecord? {
+            try? await Task.sleep(for: delay)
+            seen.withLock { $0.append(assetId) }
+            return DuplicateQualityRecord(assetId: assetId, modificationDate: 1, score: .init(sharpness: 10), scoredAt: 1)
+        }
+    }
+
+    private func database(_ ids: [String]) throws -> AppDatabase {
+        let database = try AppDatabase.makeEmpty()
+        try database.writer.write { db in
+            for id in ids {
+                try db.execute(sql: "INSERT INTO photo_metadata (assetId, mediaType, isFavorite, indexedAt, exifStatus, modificationDate) VALUES (?, 1, 0, 1, 'indexed', 1)",
+                               arguments: [id])
+            }
+        }
+        return database
+    }
+
+    private func group(_ ids: [String], _ kind: DuplicateKind) -> DuplicateGroup {
+        DuplicateGroup(members: ids.map { HashedPhoto(assetId: $0, hash: PerceptualHash(bits: 0), width: 1, height: 1,
+                                                      fileSize: 1, creationDate: 1, isFavorite: false) }, kind: kind)
+    }
+
+    @Test func scoresGroupedPhotosButNotScreenshots() async throws {
+        let database = try database(["a", "b", "s1", "s2"])
+        let seen = OSAllocatedUnfairLock<[String]>(initialState: [])
+        let pass = DuplicateQualityPass(store: DuplicateQualityStore(database: database),
+                                        reader: Stub(seen: seen, delay: .zero), shouldPause: { false })
+        try await pass.run(groups: [group(["a", "b"], .lookAlikes), group(["s1", "s2"], .screenshots)],
+                           allowNetwork: false) { _, _ in }
+        #expect(Set(seen.withLock { $0 }) == ["a", "b"])
+        // A second run has nothing left to do.
+        try await pass.run(groups: [group(["a", "b"], .lookAlikes)], allowNetwork: false) { _, _ in }
+        #expect(seen.withLock { $0 }.count == 2)
+    }
+
+    @Test func cancelKeepsWhatWasScored() async throws {
+        let ids = (0..<60).map { "p\($0)" }
+        let database = try database(ids)
+        let seen = OSAllocatedUnfairLock<[String]>(initialState: [])
+        let store = DuplicateQualityStore(database: database)
+        let pass = DuplicateQualityPass(store: store, reader: Stub(seen: seen, delay: .milliseconds(5)), shouldPause: { false })
+        let task = Task {
+            try await pass.run(groups: [group(ids, .sameMoment)], allowNetwork: false) { _, _ in }
+        }
+        try await Task.sleep(for: .milliseconds(150))
+        let cancelledAt = ContinuousClock.now
+        task.cancel()
+        _ = await task.result
+        #expect(ContinuousClock.now - cancelledAt < .milliseconds(500))
+        let scored = try store.scores(for: ids).count
+        #expect(scored > 0)
+        #expect(scored < ids.count)
+        #expect(scored == seen.withLock { $0 }.count)
     }
 }
