@@ -39,6 +39,7 @@ struct DuplicatesScreen: View {
     @State private var showsList = false
     @State private var showsQuickClean = false
     @State private var showsIgnored = false
+    @State private var showsSelected = false
 
     private var isRegular: Bool { horizontalSizeClass == .regular }
 
@@ -156,6 +157,10 @@ struct DuplicatesScreen: View {
         }
         .sheet(isPresented: $showsIgnored) {
             DuplicatesIgnoredSheet(model: model)
+        }
+        .sheet(isPresented: $showsSelected) {
+            DuplicatesSelectedSheet(model: model)
+                .environment(photoLibrary)
         }
         .photoStackCover($model.stackPresentation, onSaved: { _ in model.loadCache() })
         .sheet(item: $model.viewer) { presentation in
@@ -361,20 +366,32 @@ struct DuplicatesScreen: View {
     private func deleteBar(_ model: DuplicatesModel) -> some View {
         let count = model.markedCount
         let bytes = DuplicatesScreen.byteFormatter.string(fromByteCount: Int64(model.markedBytes))
+        let inAlbums = model.markedInAlbumsCount
         return HStack(spacing: AppTheme.Spacing.sm) {
-            VStack(alignment: .leading, spacing: 0) {
-                Text("\(count) marked · \(bytes)", comment: "Duplicates: floating bar, number of marked photos and their size")
-                    .font(.subheadline.weight(.semibold))
-                    .monospacedDigit()
-                Text("Recently Deleted for 30 days", comment: "Duplicates: floating bar, where deleted photos go")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+            // The pill opens the list of what will go (06b §3).
+            Button {
+                showsSelected = true
+            } label: {
+                VStack(alignment: .leading, spacing: 0) {
+                    Text("\(count) selected · \(bytes) ›", comment: "Duplicates: floating bar, number of marked photos and their size; opens the list")
+                        .font(.subheadline.weight(.semibold))
+                        .monospacedDigit()
+                        .foregroundStyle(.primary)
+                    Text(inAlbums > 0
+                         ? String(localized: "\(inAlbums) are in albums · kept photo joins them", comment: "Duplicates: floating bar, marked photos that are in albums")
+                         : String(localized: "Recently Deleted keeps them 30 days", comment: "Duplicates: floating bar, where deleted photos go"))
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .minimumScaleFactor(0.85)
+                }
+                .lineLimit(1)
+                .padding(.horizontal, AppTheme.Spacing.lg)
+                .frame(maxWidth: isRegular ? nil : .infinity, minHeight: 48, alignment: .leading)
+                .glassBackground(Capsule())
+                .contentShape(Capsule())
             }
-            .lineLimit(1)
-            .padding(.horizontal, AppTheme.Spacing.lg)
-            .frame(maxWidth: isRegular ? nil : .infinity, minHeight: 48, alignment: .leading)
-            .glassBackground(Capsule())
-            .accessibilityElement(children: .combine)
+            .buttonStyle(.plain)
+            .accessibilityHint(String(localized: "Shows the photos that will be deleted", comment: "VoiceOver hint on the Duplicates selection pill"))
 
             Button {
                 Task { await model.deleteMarked() }

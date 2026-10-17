@@ -157,6 +157,22 @@ final class DuplicatesModel {
 
     var markedCount: Int { scopedMarks.count }
 
+    /// Marked photos in an album the user made: the kept photo will join
+    /// those albums (06b §2–§3).
+    var markedInAlbumsCount: Int {
+        scopedMarks.filter { !(traits[$0]?.albums.isEmpty ?? true) }.count
+    }
+
+    /// Groups holding a mark, in list order, for the Selected sheet (06b §3).
+    var groupsWithMarks: [DuplicateGroup] {
+        let marks = session.marks
+        return sortedGroupsAll.filter { $0.members.contains { marks.contains($0.assetId) } }
+    }
+
+    private var sortedGroupsAll: [DuplicateGroup] {
+        DuplicateReview.sorted(groups, by: sort, freeBytes: { self.freeBytes(of: $0) ?? 0 })
+    }
+
     // MARK: Review
 
     /// Groups of the kind the filter shows, in the order the sort menu asks for.
