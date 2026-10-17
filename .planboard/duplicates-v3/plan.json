@@ -1,0 +1,181 @@
+{
+  "title": "Duplicates v3 — giúp người chụp biết giữ ảnh nào",
+  "context": "Bạn muốn làm màn Duplicates tốt hơn hẳn vì đây là tính năng quan trọng.\n7 agent đã review: 3 người dùng giả lập (Linh chụp cưới, Minh phụ huynh đầy bộ nhớ, An chụp phong cảnh), 2 chuyên gia UX (một đọc code, một chạy app trên iPhone 17), khảo sát 13 app (Apple Photos, Gemini, Remo, Slidebox, Google Photos, Lightroom, Aftershoot, Narrative, FilterPixel…) và ý kiến người dùng trên App Store, diễn đàn.\nĐiểm chung của tất cả: app không giúp trả lời câu hỏi chính, \"ảnh nào tốt hơn\". Ảnh giữ lại được chọn theo file lớn nhất, chạm vào ảnh là đánh dấu xoá, lựa chọn mất khi app bị tắt, bracket HDR bị coi là rác.\nĐã chọn sẵn mỗi câu; đồng ý thì không cần bấm.",
+  "pages": [
+    {
+      "id": "suggest",
+      "title": "Gợi ý ảnh nên giữ",
+      "intro": "App dựa vào đâu để gợi ý, và gợi ý được làm gì.",
+      "decisions": [
+        {
+          "id": "D1",
+          "title": "App gợi ý ảnh nên giữ dựa vào đâu?",
+          "importance": "critical",
+          "image": "d1.svg",
+          "why": "Hôm nay ảnh giữ lại là file lớn nhất. Với 25 khung chụp liên tiếp, file lớn nhất có thể là khung cô dâu nhắm mắt; với bracket, đó là khung cháy sáng. Cả 3 người dùng giả lập đều nói không tin gợi ý này.",
+          "proposal": "Đo chất lượng ảnh trên máy: độ nét, mắt mở/nhắm, cháy sáng. Ảnh giữ có nhãn lý do (\"Nét nhất · mắt mở\"), mỗi bản còn lại ghi điểm yếu. Bản sao giống hệt vẫn ưu tiên bản đã sửa / yêu thích / gốc lớn hơn.",
+          "options": [
+            { "id": "quality", "label": "Theo chất lượng ảnh, có ghi lý do", "pros": ["Trả lời đúng câu hỏi \"ảnh nào tốt hơn\"", "Giống các app chọn ảnh chuyên nghiệp", "Lý do hiện ra nên người dùng kiểm được"], "cons": ["Quét lâu hơn (chỉ đo ảnh đã vào nhóm, không đo cả thư viện)", "Đo mắt sai đôi khi; vẫn chỉ là gợi ý"], "effort": "L", "recommended": true },
+            { "id": "file", "label": "Giữ theo file, chỉ nói thật \"file lớn nhất\"", "pros": ["Gần như không tốn công"], "cons": ["Vẫn không giúp chọn khung chụp liên tiếp", "Người chụp phải tự soi từng ô 83pt"], "effort": "S" }
+          ],
+          "tech": "Vision VNDetectFaceCaptureQualityRequest + landmarks (eye openness) chỉ trên member của group; sharpness = variance of Laplacian trên thumbnail 512px (CIFilter/Metal hoặc vImage); clipping = % pixel ≥ 250/≤ 5 từ histogram. Lưu điểm vào bảng riêng cạnh hash (không trong photo_metadata). Thứ hạng: Exact giữ D3 (edited→favorite→size→pixels); Similar/Same moment dùng quality score trước size. DuplicateReview.swift:56-81, reasons :33-45.",
+          "tasks": ["Bảng điểm chất lượng + migration — Data/Database/AppDatabase.swift", "Đo điểm cho member nhóm sau khi gom — Domain/Duplicates/DuplicateScanPipeline.swift", "Thứ hạng + lý do + điểm yếu — Domain/Duplicates/DuplicateReview.swift", "Test trên ảnh không có mặt người (fixture tự sinh) — ShotDexTests/DuplicateReviewTests.swift"]
+        },
+        {
+          "id": "D2",
+          "title": "Mở Duplicates ra, màn đầu tiên trông thế nào?",
+          "importance": "important",
+          "image": "d2.svg",
+          "why": "Hôm nay mở ra là ngay một danh sách 600 thẻ; muốn dọn nhanh phải bấm từng nhóm. Minh bỏ cuộc vì không biết bắt đầu từ đâu, Linh trên tàu 40 phút chỉ dọn được 15 nhóm.",
+          "proposal": "Màn tóm tắt chia hai phần: \"Dọn nhanh, an toàn\" (bản sao giống hệt + bản nhỏ hơn: gửi qua Zalo, ảnh xuất cỡ nhỏ) với một nút chọn hết sau khi xem trước; và \"Cần bạn chọn\" (gần giống, cùng khoảnh khắc) để duyệt từng nhóm.",
+          "options": [
+            { "id": "summary", "label": "Màn tóm tắt hai phần + dọn nhanh có xem trước", "pros": ["Lấy lại dung lượng trong vài chạm mà không rủi ro", "Việc khó tách riêng, không làm mệt"], "cons": ["Thêm một màn trước danh sách"], "effort": "M", "recommended": true },
+            { "id": "bulk-only", "label": "Giữ danh sách như cũ, thêm nút \"Nhận mọi gợi ý\" trong menu ⋯", "pros": ["Ít thay đổi"], "cons": ["Nút ẩn, người dùng thường không thấy", "Dễ áp gợi ý lên cả nhóm gần giống"], "effort": "S" },
+            { "id": "auto-mark", "label": "Đánh dấu sẵn mọi nhóm như Gemini", "pros": ["Nhanh nhất"], "cons": ["Người dùng than nhiều nhất về đúng điều này: xoá nhầm", "Đi ngược quy tắc app không tự chọn"], "effort": "S" }
+          ],
+          "tech": "Hero trên DuplicatesScreen; \"safe\" = Exact + Smaller copy (same hash, kém pixel/bytes, cùng hoặc thiếu EXIF date). Xem trước là sheet liệt kê group + tổng GB, xác nhận mới mark. Ảnh favorite / edited / trong album (trừ album hệ thống) không bao giờ vào nhóm tự chọn.",
+          "tasks": ["Màn tóm tắt + sheet xem trước — Features/Duplicates/DuplicatesScreen.swift", "Phân loại safe vs judgement — Domain/Duplicates/DuplicateGrouper.swift", "Dòng Collections hiện \"~X GB to free\" — Features/Albums/AlbumsScreen.swift"]
+        }
+      ]
+    },
+    {
+      "id": "groups",
+      "title": "Cách chia nhóm",
+      "intro": "Ảnh được xếp vào loại nào, và bộ ảnh nguyên liệu (bracket, focus stack) xử lý ra sao.",
+      "decisions": [
+        {
+          "id": "D4",
+          "title": "Bốn tab Exact · Similar · Series · Bursts đổi thành gì?",
+          "importance": "important",
+          "image": "d4.svg",
+          "why": "Minh không phân biệt được bốn tab. Cùng một cụm ảnh nằm cả ở Similar lẫn Series, với hai bộ lựa chọn riêng. Ảnh chụp liên tiếp của máy Sony không vào được Bursts.",
+          "proposal": "Một danh sách với hàng lọc theo loại: All · Copies · Smaller copies · Look-alikes · Same moment (thêm Screenshots nếu có). Mỗi cụm chỉ ở một loại. Burst iPhone và chụp liên tiếp từ máy ảnh đều vào Same moment, mở cùng một màn chọn khung.",
+          "options": [
+            { "id": "filter", "label": "Một danh sách + hàng lọc theo loại", "pros": ["Một chỗ, một thanh Delete", "Không còn cụm nằm ở hai tab"], "cons": ["Phải viết lại cách gom nhóm theo loại"], "effort": "L", "recommended": true },
+            { "id": "rename", "label": "Giữ 4 tab, chỉ đổi tên cho dễ hiểu", "pros": ["Ít việc"], "cons": ["Vẫn trùng cụm giữa các tab", "Burst máy ảnh vẫn không có màn chọn khung"], "effort": "S" }
+          ],
+          "tech": "Bỏ strictness picker (DuplicatesScreen.swift:1158-1170). Grouper chạy một lần, mỗi member gán vào đúng một kind theo ưu tiên: Copy (hash 0 + cùng kích thước hoặc file hash) → Smaller copy → Same moment (chuỗi ≤ 2s/ảnh) → Look-alike (≤10 bit). Bursts PhotoKit đổ vào Same moment, BurstFramesScreen thành màn chọn khung chung.",
+          "tasks": ["Gom một lần, gán kind — Domain/Duplicates/DuplicateGrouper.swift", "Hàng lọc + đếm/GB mỗi loại — Features/Duplicates/DuplicatesScreen.swift", "Gộp Bursts vào Same moment — Features/Bursts/BurstListView.swift", "Cập nhật spec — docs/02-functional-spec/FS-06-collections/06-duplicates.md"]
+        },
+        {
+          "id": "D5",
+          "title": "Bracket HDR, focus stack, ảnh để nối panorama: có còn là \"trùng\" không?",
+          "importance": "critical",
+          "image": "d5.svg",
+          "why": "Hôm nay bracket 5 khung ±2 EV nằm ở Exact, được gợi ý giữ khung +2 EV cháy sáng và có nút Merge xoá 4 khung còn lại. Với người chụp phong cảnh đó là xoá nguyên liệu.",
+          "proposal": "Nhận ra từ thông tin chụp (EV, tiêu cự, khoảng cách lấy nét, thời điểm). Hiện thành thẻ riêng \"Bracket\" / \"Focus stack\" / \"Panorama set\" với nút Merge to HDR / Panorama và \"Not duplicates\"; không nút xoá đỏ, không tính vào GB giải phóng. Khác tiêu cự > 10% thì không gộp.",
+          "options": [
+            { "id": "detect-offer", "label": "Nhận ra, hiện thẻ riêng với nút ghép", "pros": ["Biến rác thành việc có ích (HDR, Panorama đã có trong app)", "Không bao giờ xoá nhầm nguyên liệu"], "cons": ["Cần đọc thêm EXIF khi quét"], "effort": "M", "recommended": true },
+            { "id": "exclude", "label": "Loại hẳn khỏi Duplicates", "pros": ["Đơn giản"], "cons": ["Bộ bracket chụp hỏng vẫn chiếm chỗ mà không ai nhắc"], "effort": "S" }
+          ],
+          "tech": "HashedPhoto thêm exposureBias, focalLength, focusDistance, captureSecond (đã có trong photo_metadata, join khi gom). Bracket: cùng chuỗi thời gian, EV khác ≥ 0.7 theo bước đều. Copy đòi cùng giây chụp hoặc file hash. Nút Merge to HDR mở FS-01.11 với ids; Panorama mở FS-14.",
+          "tasks": ["EXIF vào HashedPhoto + luật bracket/stack — Domain/Duplicates/DuplicateGrouper.swift", "Thẻ bộ nguyên liệu + nút ghép — Features/Duplicates/DuplicatesScreen.swift"]
+        }
+      ]
+    },
+    {
+      "id": "card",
+      "title": "Trong một nhóm",
+      "intro": "Chạm, so sánh, nhóm lớn và chữ trên mỗi ảnh.",
+      "decisions": [
+        {
+          "id": "D7",
+          "title": "Chạm vào một ảnh trong nhóm thì làm gì?",
+          "importance": "important",
+          "image": "d7.svg",
+          "why": "Hôm nay chạm là đánh dấu xoá. Minh và Linh đều muốn chạm để xem to, và bị bất ngờ khi ảnh chuyển đỏ.",
+          "proposal": "Chạm giữa ảnh: mở to, vuốt qua lại trong nhóm, có nút \"Keep this\". Đánh dấu bằng vòng tròn 44pt ở góc ảnh.",
+          "options": [
+            { "id": "open", "label": "Chạm = mở to; vòng tròn góc = đánh dấu", "pros": ["Đúng thói quen Photos", "Hết đánh dấu nhầm"], "cons": ["Đánh dấu từng ảnh cần nhắm vào góc"], "effort": "S", "recommended": true },
+            { "id": "mark", "label": "Giữ chạm = đánh dấu", "pros": ["Đánh dấu nhanh"], "cons": ["Xem kỹ phải nhấn giữ, ít ai biết"], "effort": "S" }
+          ],
+          "tech": "DuplicatesScreen.swift:761 tile onTapGesture; Keep Only This hiện ở :767-775 (context menu) chuyển thành nút trong viewer.",
+          "tasks": ["Tile: tap mở viewer, vòng tròn 44pt đánh dấu — Features/Duplicates/DuplicatesScreen.swift"]
+        },
+        {
+          "id": "D8",
+          "title": "So sánh các khung gần giống nhau trên iPhone thế nào?",
+          "importance": "critical",
+          "image": "d8.svg",
+          "why": "Ô 83pt không đủ để thấy mắt nhắm hay hụt nét. Compare hôm nay chỉ hai khung chồng nhau, vuốt 24 lần; màn chọn burst có dải phim 44pt và hơn nửa màn hình đen.",
+          "proposal": "Một màn chọn khung chung cho mọi cụm cùng khoảnh khắc: khung lớn + dải phim, zoom giữ nguyên chỗ khi vuốt sang khung khác, nút \"Zoom to face\", chấm đỏ trên dải phim cho khung mắt nhắm/mờ, Giữ/Bỏ từng khung rồi \"Keep picks, remove the rest\". Nút đóng và hành động ở dưới, vuốt xuống để đóng.",
+          "options": [
+            { "id": "loupe", "label": "Khung lớn + dải phim, zoom đồng bộ", "pros": ["Vừa iPhone một tay", "Giống các app chọn ảnh chuyên nghiệp"], "cons": ["Chỉ thấy một khung lớn một lúc"], "effort": "M", "recommended": true },
+            { "id": "loupe-survey", "label": "Như trên + lưới 4 khung zoom cùng lúc", "pros": ["So 4 khung cùng lúc như Survey trên iPad"], "cons": ["Mỗi khung chỉ ~190pt trên iPhone", "Gấp đôi công"], "effort": "L" }
+          ],
+          "tech": "Mở rộng Features/Bursts/BurstFramesScreen.swift thành FramePicker dùng chung (input: [assetId]); zoom state chung giữ normalized rect; face rect từ Vision lưu cùng điểm D1. Close → bottom bar + interactive dismiss.",
+          "tasks": ["Màn chọn khung chung + zoom đồng bộ — Features/Bursts/BurstFramesScreen.swift", "Zoom to face từ face rect — Features/Bursts/BurstFramesModel.swift", "Board mới trên canvas iPhone/iPad/Duo — docs/design/*/project/"]
+        },
+        {
+          "id": "D9",
+          "title": "Nhóm rất lớn (52 ảnh) hiện thế nào?",
+          "importance": "minor",
+          "image": "d9.svg",
+          "why": "Nhóm 52 ảnh dài ~2.5 màn hình; lúc nhìn ảnh giữ thì nút Mark/Compare đã trôi ra ngoài.",
+          "proposal": "Từ 12 ảnh trở lên: hiện ảnh giữ + một hàng, rồi \"Show all 51\". Đánh dấu xong giữ viền đỏ ~0.6 giây và rung nhẹ rồi mới gập.",
+          "tech": "DuplicateCardMetrics (DuplicateReview.swift:218-260), actions DuplicatesScreen.swift:827-856, fold animation :860; sensoryFeedback trên toggle / Mark the other / Keep all / delete xong.",
+          "tasks": ["Gập nhóm lớn + giữ trạng thái trước khi gập + haptic — Features/Duplicates/DuplicatesScreen.swift"]
+        },
+        {
+          "id": "D10",
+          "title": "Dưới mỗi ảnh ghi chữ gì?",
+          "importance": "important",
+          "image": "d10.svg",
+          "why": "Hôm nay ghi \"4032×3024 / 2.1 MB\", không ai hiểu. Dòng \"bản này thiếu gì\" (Not edited, JPEG only) có sẵn nhưng chỉ trình đọc màn hình đọc được. Linh suýt xoá ảnh xuất Lightroom đã giao khách.",
+          "proposal": "Ghi điều khác biệt bằng lời: \"Smaller copy · WhatsApp\", \"Not edited\", \"Export of DSC01234\", \"Eyes closed\", \"In album: Mai & Huy\". Thông số chụp chỉ hiện trường nào khác nhau trong nhóm (vd \"−2 EV\", \"35mm\"). Pixel và MB lùi vào màn xem to.",
+          "options": [
+            { "id": "words", "label": "Khác biệt bằng lời + thông số khác nhau", "pros": ["Cả người mới lẫn dân chuyên đều đọc được", "Thấy ngay bản nào đã giao khách"], "cons": ["Chữ dài hơn trên ô nhỏ (tối đa 2 dòng)"], "effort": "M", "recommended": true },
+            { "id": "exif", "label": "Hiện đủ thông số chụp trên mọi ô", "pros": ["Dân chuyên thích"], "cons": ["Rối với người thường, ô 83pt không đủ chỗ"], "effort": "S" }
+          ],
+          "tech": "difference() DuplicateReview.swift:113-131 hiện ra visual; nhận ảnh xuất: cùng hash, không có PhotoKit edit nhưng có Software=Lightroom hoặc tên file -Edit/khác originalFilename; nguồn WhatsApp/Zalo theo kích thước chuẩn + thiếu EXIF. Album membership qua PHAssetCollection fetch cho member nhóm.",
+          "tasks": ["Nhãn khác biệt + export/album — Domain/Duplicates/DuplicateReview.swift", "factLines → caption 2 dòng — Features/Duplicates/DuplicatesScreen.swift"]
+        }
+      ]
+    },
+    {
+      "id": "safety",
+      "title": "Xoá và an toàn",
+      "intro": "Lựa chọn có được giữ lại, và xoá xong người dùng thấy gì.",
+      "decisions": [
+        {
+          "id": "D11",
+          "title": "Trước và sau khi bấm Delete, người dùng thấy gì?",
+          "importance": "critical",
+          "image": "d11.svg",
+          "why": "Hôm nay xoá xong các thẻ biến mất, không một lời nào; Minh hoảng và không biết ảnh đi đâu. Người dùng các app khác than nhất về việc số ảnh bị xoá khác số đã chọn.",
+          "proposal": "Trước: chạm \"37 selected ›\" để xem và bỏ chọn từng ảnh; thanh ghi \"2 are in albums · kept photo joins them\". Sau: thông báo \"37 photos moved to Recently Deleted · 210 MB freed · kept 30 days\" với nút Open Photos. Ảnh giữ lại nhận album, yêu thích, vị trí của các bản bị xoá.",
+          "options": [
+            { "id": "review-banner", "label": "Xem trước danh sách + thông báo sau khi xoá", "pros": ["Nói thật ảnh nằm đâu", "Không còn album bị mất ảnh âm thầm"], "cons": ["Không có Undo thật (iOS không cho app nào lấy lại ảnh từ Recently Deleted)"], "effort": "M", "recommended": true },
+            { "id": "trash", "label": "Thùng rác riêng trong app, xoá thật khi bấm Empty", "pros": ["Có Undo trong app như Slidebox"], "cons": ["Hai thùng rác (app + Photos) dễ rối", "Ảnh vẫn chiếm chỗ tới khi Empty"], "effort": "L" }
+          ],
+          "tech": "PhotoKit không có API khôi phục từ Recently Deleted; photos-redirect:// mở Photos (không deep link vào album đó). Merge album: PHAssetCollectionChangeRequest.addAssets cho keeper vào mọi album thường mà copy đang ở, chạy trong cùng performChanges trước deleteAssets. Pill DuplicatesScreen.swift:283-296 thành nút mở sheet.",
+          "tasks": ["Sheet danh sách ảnh sắp xoá — Features/Duplicates/DuplicatesScreen.swift", "Keeper nhận album + favorite + vị trí, rồi xoá — Features/Duplicates/DuplicatesModel.swift:683-713", "Thông báo sau khi xoá + haptic success — Features/Duplicates/DuplicatesScreen.swift"]
+        },
+        {
+          "id": "D12",
+          "title": "Đang chọn dở mà app bị tắt, lựa chọn có còn không?",
+          "importance": "important",
+          "image": "d12.svg",
+          "why": "Hôm nay lựa chọn chỉ sống trong phiên; chuyển sang trả lời tin nhắn, iOS tắt app là mất cả giờ chọn. Quyết định cũ (4/10) là \"mất khi tắt app\".",
+          "proposal": "Lưu trên máy: ảnh đã chọn, nhóm đã duyệt, \"Keep all\" và \"Not duplicates\" còn nguyên tới khi xoá hoặc bỏ chọn. Ảnh đã bị xoá ở nơi khác thì tự rơi khỏi danh sách.",
+          "options": [
+            { "id": "persist", "label": "Lưu lại cho tới khi xoá hoặc bỏ chọn", "pros": ["Làm được nhiều đợt ngắn", "\"Not duplicates\" không hiện lại sau mỗi lần quét"], "cons": ["Đổi quyết định 4/10"], "effort": "M", "recommended": true },
+            { "id": "session", "label": "Giữ như cũ: mất khi tắt app", "pros": ["Không có lựa chọn cũ lẩn khuất"], "cons": ["Người dùng mất công, bỏ cuộc"], "effort": "S" }
+          ],
+          "tech": "Bảng user-owned riêng (duplicate_marks, duplicate_dismissals keyed by sorted member ids hash), không dùng photo_metadata. DuplicateReviewSession đọc/ghi qua store; dọn id không còn tồn tại khi PhotoKit change.",
+          "tasks": ["Bảng + store cho marks/keep all/not duplicates — Data/Database/", "DuplicateReviewSession dùng store — Features/Duplicates/DuplicateReviewSession.swift", "Sửa 06b §1 D2 — docs/02-functional-spec/FS-06-collections/06b-duplicates-marks-merge-delete.md"]
+        }
+      ]
+    }
+  ],
+  "auto": [
+    { "id": "A1", "title": "Nút \"Not duplicates\" trên mỗi nhóm", "choice": "Có, kèm danh sách \"Ignored\" trong menu ⋯ để khôi phục.", "why": "Người dùng mọi app đều đòi; không có lựa chọn nào khác hợp lý." },
+    { "id": "A2", "title": "Ảnh yêu thích, đã sửa, nằm trong album", "choice": "Không bao giờ được chọn xoá sẵn; phải tự bấm.", "why": "Gemini làm vậy; rẻ và chặn đúng nỗi sợ lớn nhất." },
+    { "id": "A3", "title": "Đổi chữ trên màn hình sang từ dễ hiểu (tiếng Anh Mỹ)", "choice": "Mark the other N → Remove the other N; Rescan → Check again; Keep Only This → Keep just this one; Largest → Biggest file; Merge N Groups → Clean up N copies; tên loại theo D4.", "why": "Minh không hiểu các từ hiện tại; app vẫn tiếng Anh như mọi màn khác." },
+    { "id": "A4", "title": "Quét", "choice": "Kết quả hiện dần trong lúc quét (\"found 40 so far\"); dòng \"148 photos only in iCloud — will check on Wi-Fi\" thay cho \"not scanned yet\".", "why": "Không đổi quyết định nào, chỉ bớt chờ." },
+    { "id": "A5", "title": "Quyền truy cập ảnh bị giới hạn hoặc từ chối", "choice": "Banner trên đầu với nút mở Settings; nút quét tắt kèm lý do.", "why": "Hôm nay bấm Scan có thể không làm gì." },
+    { "id": "A6", "title": "Các lỗi nhỏ do agent chạy sim tìm thấy", "choice": "Thanh chọn loại không đổi bề rộng; vòng chọn khung 44pt; nút đóng Compare xuống dưới; header gọn còn một dòng trạng thái.", "why": "Sửa đo được, không cần hỏi." },
+    { "id": "A7", "title": "Thứ tự sắp xếp", "choice": "Thêm \"Easiest first\" (chắc chắn nhất trước) làm mặc định trong phần Cần bạn chọn; giữ Most space first.", "why": "Linh muốn làm việc dễ trước khi chỉ có ít phút." },
+    { "id": "A8", "title": "Quy trình", "choice": "Sau khi chốt: /intent → cập nhật FS-06.06/06b với tiêu chí nghiệm thu → vẽ lại board PH/IP/DI Duplicates trên canvas → code từng phần → /verify.", "why": "Theo docs/PROCESS.md và quy tắc design đi cùng code." }
+  ]
+}

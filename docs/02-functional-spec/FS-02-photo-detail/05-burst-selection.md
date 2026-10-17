@@ -7,6 +7,11 @@ mục 12 · cập nhật 2026-10-01
 **Một câu:** từ tab Bursts của Duplicates hoặc từ một ảnh burst trong viewer, lướt mọi khung trên một màn kiểu
 Photos, chạm chọn khung giữ, và đưa phần còn lại vào Recently Deleted bằng **một** lần xác nhận của hệ thống.
 
+> **v3 (2026-10-17):** phần màn hình (§4) và lối vào tab Bursts được thay bằng màn chọn khung dùng chung của
+> [FS-06.06 §8](../FS-06-collections/06-duplicates.md); burst giờ là một nhóm *Same moment* trong Duplicates. Hai dòng
+> "Cố ý không có" về chấm mắt và chấm độ nét (§3) **bị đảo** bởi quyết định D1 — app tự chấm, xem FS-06.06 §6. Luật PhotoKit
+> (§2) và đường xoá/đường chép (§2, §9) giữ nguyên.
+
 ## 1. Người dùng cần gì
 
 Một pha chạy chụp burst ra 24 khung, người chụp cần 1–2 tấm. Hôm nay ⋯ → Show All Frames chỉ mở danh sách

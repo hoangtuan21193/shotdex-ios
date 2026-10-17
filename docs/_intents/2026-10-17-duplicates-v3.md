@@ -5,9 +5,9 @@
 | Tác giả | Hoang Tuan + Claude |
 | Ngày | 2026-10-17 |
 | Trạng thái | accepted (2026-10-17) |
-| Tiến độ | **chưa làm** (2026-10-17) — chưa có spec |
+| Tiến độ | **chưa làm** (2026-10-17) — spec FS-06.06 + 06b v3, 50 AC (33 + 17) |
 | Nguồn | phản hồi người dùng ("một trong những tính năng quan trọng") + review 7 agent: 3 persona, 2 UX, khảo sát 13 app, ý kiến người dùng app khác |
-| Spec sinh ra từ đây | (điền khi sang Design) — dự kiến viết lại FS-06.06 + 06b |
+| Spec sinh ra từ đây | [FS-06.06](../02-functional-spec/FS-06-collections/06-duplicates.md) + [FS-06.06b](../02-functional-spec/FS-06-collections/06b-duplicates-marks-merge-delete.md) (v3); ghi chú đảo phạm vi ở [FS-02.05](../02-functional-spec/FS-02-photo-detail/05-burst-selection.md) |
 
 Quyết định hướng đi đã chốt trên planboard (1 vòng, cả 10 mặc định được đồng ý):
 `.planboard/duplicates-v3/DECISIONS.md`, thứ tự việc ở `.planboard/duplicates-v3/PLAN.md`.

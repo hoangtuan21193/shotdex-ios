@@ -1,106 +1,98 @@
-# FS-06.06b — Duplicates: dấu xoá, Merge, Delete, màn rộng
+# FS-06.06b — Duplicates: dấu xoá, xoá, thừa hưởng, màn rộng
 
-`FS-06.06b` · `Features/Duplicates/DuplicatesModel.swift` · `DuplicateReviewSession` · `DuplicatesScreen` · cập nhật 2026-10-04
+`FS-06.06b` · `Features/Duplicates/DuplicatesModel.swift` · `DuplicateReviewSession` · `DuplicateReviewStore` · `DuplicatesScreen`
+· cập nhật 2026-10-17 (v3)
 
-**Một câu:** công sức đánh dấu không mất vì đổi tab, không nhóm nào bị xoá hết bản, và không gì được ghi vào
-Photos trước khi người dùng xác nhận. Phần đầu (hash, ba mức, màn hình): [FS-06.06](06-duplicates.md).
+**Một câu:** công sức chọn không mất kể cả khi app bị tắt, không nhóm nào bị xoá hết bản, người dùng thấy đúng những gì
+sắp xoá, và ảnh được giữ nhận lại những gì bản bị xoá đang có. Phần đầu (quét, loại nhóm, chấm điểm, màn hình):
+[FS-06.06](06-duplicates.md).
 
-Board: `PH_Duplicates` · `PH_DuplicatesPinched` · `IP_Duplicates` · `DI_Duplicates` · `DC_Duplicates` (v2).
+Board: `PH_Duplicates` · `PH_DuplicatesSummary` · `PH_DuplicatesPinched` · `IP_*` · `DI_*` · `DC_*` (v3, 2026-10-17).
 
 ## 1. Dấu xoá
 
-- **Dấu sống trong bộ nhớ suốt phiên app** (D2): qua đổi mức, Back rồi vào lại, đổi tab, app ra nền rồi về. Mất
-  khi app bị tắt hẳn (kể cả hệ thống tắt lúc nền). **Không ghi xuống đĩa.** Cùng sống như vậy: nhóm đã Keep all, nhóm
-  đã thu gọn, bản giữ người dùng chọn bằng Keep Only This (`DuplicateReviewSession`, giữ ở `AppDependencies`).
-- Nạp lại cache **không cắt** dấu. Dấu của ảnh đã biến khỏi thư viện chỉ bị bỏ lúc đếm và lúc xoá.
-- Thanh dưới đếm và xoá **chỉ dấu thuộc các nhóm của mức đang xem**; dấu ở mức khác vẫn giữ nguyên sau khi
-  xoá. *Vì con số trên nút phải khớp đúng những ô đang thấy.*
-- **Chặn đánh dấu ô cuối cùng** của một nhóm: chạm ô chưa đánh dấu duy nhất còn lại thì ô không đổi, máy rung
-  cảnh báo, dưới thẻ hiện *"Keep at least one photo in this group."* trong 3 s; mục Mark for Deletion của ô đó mờ.
-  *Mark the other N* không bao giờ đánh dấu bản giữ, nên không chạm cổng này.
-- Một ảnh có thể nằm trong nhóm của hai mức, nên dấu đặt ở mức kia có thể làm đầy một nhóm ở mức này. Thẻ đó
-  ghi *"All copies marked — nothing will be kept"*; bấm Delete thì hiện alert nói số nhóm như vậy, **không** mở
-  hộp xoá của hệ thống, không xoá ảnh nào.
-- Compare mở từ Duplicates giữ cùng cổng chặn: nút **Reject** của ảnh chưa Reject cuối cùng mờ, bấm thì rung cảnh báo +
-  *"Keep at least one photo in this group."* (FS-01.08c AC-15). Reject ở đó là cờ thật của FS-01.12: mở Compare thì dấu
-  của nhóm thành Reject, đóng lại thì ô của nhóm theo cờ — Reject = đã đánh dấu, bỏ Reject = bỏ dấu (plan K2).
+- **Dấu được lưu trên máy** (D12, thay D2 của v2 ngày 2026-10-04): sống qua Back, đổi tab, app ra nền **và app bị tắt**,
+  tới khi người dùng xoá hoặc bỏ dấu. Cùng sống như vậy: nhóm Keep all, bản giữ người dùng chọn (Keep this / Keep just
+  this one), nhóm đã thu gọn, Not duplicates. Bảng `duplicate_review` ([FS-06.06 §10](06-duplicates.md)); không ghi vào
+  `photo_metadata`.
+- Ảnh bị xoá ở nơi khác (app Photos) thì dấu của nó **tự rơi** khi PhotoKit báo, và không bao giờ được đếm hay xoá.
+- Check Again (gom lại) **không cắt** dấu: dấu theo id ảnh, không theo nhóm.
+- v3 không còn ba mức nên **một ảnh chỉ ở một nhóm**; thanh xoá đếm **mọi** dấu, ở mọi loại. Hàng lọc đang chọn chỉ đổi
+  thẻ nào hiện, không đổi số trên nút. Viên kính ghi *"37 selected · 210 MB"* và chạm được (§3).
+- **Chặn đánh dấu ô cuối cùng** của một nhóm (giữ v2): ô không đổi, rung cảnh báo, dưới thẻ *"Keep at least one photo in
+  this group."* 3 s; mục Remove của ô đó mờ. Màn chọn khung và Compare giữ cùng cổng.
+- **Ảnh được bảo vệ** (favorite, đã chỉnh, trong album người dùng tạo — [FS-06.06 §1](06-duplicates.md)): Remove the other N
+  và Quick clean bỏ qua chúng; người dùng tự chạm vòng thì được đánh dấu như ảnh khác.
 
-## 2. Merge
+## 2. Thừa hưởng (thay Merge của v2)
 
-- **Merge chỉ có ở Exact** (D1). Ở Similar, Series và Bursts menu ⋯ **không có** mục này (ẩn, không mờ).
-  *Vì ở Similar/Series bản giữ không cùng khoảnh khắc với bản sao, chép ngày chụp sang là sai.*
-- Mục menu ghi *"Merge N Groups…"* (N = số nhóm Exact). Chạm → **alert hai nút** (không dùng action sheet: iOS 26
-  ẩn Cancel ở đó): tiêu đề *"Merge N Groups?"*, lời *"Keeps one copy in each group and marks M photos for
-  deletion. The kept copy takes the favorite, location and earliest date of its copies — saved to Photos now.
-  Nothing is deleted until you tap Delete."* · **Merge** · **Cancel**. Cancel: không ghi, không đánh dấu.
-- **Bản giữ** (D3): bản **đã chỉnh** → bản **favorite** → **file lớn hơn** → **nhiều pixel hơn**. Trước khi chọn,
-  app đọc cờ đã chỉnh của mọi ảnh trong các nhóm Exact; lúc đọc và lúc ghi, dải chọn, Rescan, Merge, Delete mờ.
-- Bản giữ **thừa hưởng** thứ nó thiếu: cờ favorite, toạ độ, **ngày chụp sớm nhất** (bản lưu lại mang ngày lúc lưu
-  lại). Theo từng nhóm: ghi vào Photos xong **mới** đánh dấu các bản còn lại.
-  *Vì hỏng giữa chừng phải để lại thư viện còn trùng, không để lại bản giữ mất dữ liệu.*
-- **Lỗi không bị nuốt**: nhóm ghi hỏng thì không bị đánh dấu, các nhóm khác chạy tiếp; xong hiện alert *"Couldn't
-  Merge K Groups"* với lý do của lỗi đầu tiên và câu *"Their photos are not marked."* Ca thường gặp: quyền
-  `.limited` mà bản giữ nằm ngoài tập đã chọn.
-- Merge xong mỗi nhóm thành công: bản giữ (D3) thành bản giữ của thẻ, các bản kia mang dấu, thẻ **thu gọn** ("Keeping 1 ·
-  deleting N", FS-06.06 §7.4).
-- Clear Selection (⋯) bỏ dấu và quyết định của mức đang xem, **không** hoàn tác phần đã ghi vào Photos — alert đã nói
-  "saved to Photos now".
-- Ngoài ba thứ thừa hưởng, **không có bước hợp nhất album hay metadata nào khác**. "Nằm trong album nào" chưa làm.
+v2 có ⋯ ▸ *Merge N Groups…* ghi favorite/toạ độ/ngày vào Photos **ngay** khi bấm, trước khi xoá. v3 bỏ mục đó: Quick clean
+([FS-06.06 §7.2](06-duplicates.md)) thay phần "đánh dấu cả loạt", và việc thừa hưởng chuyển vào **chính lần xoá** (D11):
 
-## 3. Delete
+- Khi xoá, với mỗi nhóm có bản bị xoá, **bản giữ** của nhóm (bản không mang dấu đứng đầu theo thứ hạng) nhận:
+  - **album**: được thêm vào mọi album người dùng tạo mà một bản bị xoá đang ở (album thông minh, album hệ thống, album
+    chia sẻ: bỏ qua);
+  - **favorite**: bật nếu một bản bị xoá là favorite;
+  - **toạ độ**: nếu bản giữ không có và một bản bị xoá có;
+  - **ngày chụp sớm nhất**: **chỉ ở Copies và Smaller copies** (cùng khoảnh khắc thật); Look-alikes / Same moment không
+    chép ngày.
+- Nhóm còn ≥ 2 bản không mang dấu: không có "bản giữ" duy nhất → không thừa hưởng gì (người dùng đang giữ nhiều khung).
+- Thừa hưởng và xoá đi **trong cùng một khối thay đổi** của thư viện, sau **một** hộp xác nhận của hệ thống: người dùng huỷ
+  → không có gì được ghi, không album nào đổi. Hỏng → không gì đổi, alert *"Couldn't delete N photos"* + lý do của lỗi
+  đầu tiên, dấu được giữ.
+  **Chưa đo** PhotoKit có huỷ cả khối khi người dùng bấm Don't Allow không. Nếu không nguyên tử: **xoá trước, thừa hưởng
+  sau** khi xoá thành công (người dùng 2026-10-17) — huỷ xoá thì không gì đổi; thừa hưởng lỗi thì alert, ảnh đã xoá vẫn
+  nằm trong Recently Deleted. Đo ở bước Build, ghi kết quả vào đây.
+- Quyền `.limited` mà bản giữ hoặc album nằm ngoài tập đã chọn: nhóm đó **không** thừa hưởng phần không ghi được, phần
+  còn lại vẫn chạy; sau khi xoá, thông báo thêm dòng *"Albums couldn't be updated for 2 photos"*.
 
-- Thanh dưới nổi (FS-06.06 §7.6): viên kính *"N marked · X MB"* / *"Recently Deleted for 30 days"* + viên đỏ cao 48
-  *"Delete N"* (VoiceOver: "Delete N photos").
-- Hệ thống hỏi xác nhận; huỷ thì **giữ dấu**. Xong thì xoá dòng dữ liệu tương ứng, cập nhật nhóm tại chỗ (nhóm
-  còn một ảnh thì biến mất) và cập nhật số nhóm đã lưu. Phạm vi và cổng chặn: §1.
+## 3. Xoá (D11)
 
-## 4. Màn rộng
+- **Thanh dưới nổi** (giữ hình học v2: viên kính + viên đỏ cao 48, tab bar ẩn khi có dấu):
+  - viên kính dòng 1 *"37 selected · 210 MB ›"*, dòng 2 khi có: *"2 are in albums · kept photo joins them"*, ngược lại
+    *"Recently Deleted keeps them 30 days"*;
+  - viên đỏ *"Delete 37"* (VoiceOver: "Delete 37 photos").
+- **Chạm viên kính** → sheet *"37 Selected"*: lưới ảnh sắp xoá nhóm theo nhóm, mỗi ảnh có vòng để bỏ dấu; đầu mỗi nhóm
+  là bản giữ nhỏ + *"keeps 1"*. Chân sheet **Delete 37** (cùng hành động với viên đỏ). Số trên viên đỏ, trong sheet và
+  trong hộp xác nhận của hệ thống **luôn bằng nhau** (người dùng app khác than đúng chỗ này).
+- Chạm Delete → hộp xác nhận của hệ thống; huỷ → **giữ dấu**, không gì đổi.
+- Xong:
+  - thông báo nổi ở đáy 5 s (thay thanh xoá): *"37 photos moved to Recently Deleted"* / *"210 MB freed · kept for 30
+    days"* + nút **Open Photos** (mở app Photos); rung `.success`;
+  - nhóm cập nhật tại chỗ, nhóm còn một ảnh biến mất, dòng của ảnh đã xoá khỏi cache và `duplicate_review`;
+  - **không có Undo**: app bên thứ ba không khôi phục được từ Recently Deleted; thông báo nói ảnh nằm đâu thay vì hứa.
+- **Hết nhóm** ở một loại: màn tóm tắt / hàng lọc cập nhật; hết mọi nhóm → *"All reviewed · 1.4 GB freed today"* + gợi ý loại
+  còn nhóm (nếu có).
 
-- Regular width: thẻ xếp **cột co giãn, tối thiểu 400pt**, khe 16, kiểu **xếp gạch** (mỗi thẻ vào cột đang ngắn nhất
-  theo thứ tự sắp xếp, nên dòng đã thu gọn không để lỗ bên cạnh thẻ đầy) (Z2). Bề rộng nội dung 1344 (iPad ngang) → 3
-  cột 437pt; 1000 (iPad dọc) → 2 cột 492pt; 835 (Duo inner, sau rail 84) → 2 cột ~410pt.
-- Compact (iPhone, Duo cover): một cột.
-- Bản sao mỗi hàng mặc định 3 ở regular, 2 ở compact; pinch đổi (FS-06.06 §7.5).
-- Thanh dưới: regular là một cụm đứng giữa (viên kính vừa chữ + Delete), compact trải hết bề ngang nội dung. Thanh dưới
-  nằm trên tab bar? Không — tab bar ẩn khi có dấu, ở cả iOS 26 và tab bar tự vẽ trước 26.
+## 4. Màn rộng và Duo
+
+- Danh sách: regular width giữ v2 — cột co giãn tối thiểu 400pt, khe 16, xếp gạch (Z2): iPad ngang 3 cột 437pt, dọc 2 cột
+  492pt, Duo trong (835 sau rail) 2 cột ~410pt. Compact (iPhone, Duo ngoài): một cột.
+- **Màn tóm tắt**: regular width hai thẻ Quick clean / Choose yourself **cạnh nhau**, tối đa 720pt giữa màn; compact xếp dọc.
+- Hàng lọc: regular width hiện đủ các viên không cuộn; compact cuộn ngang.
+- Thanh dưới: regular là cụm giữa màn; compact trải hết bề ngang nội dung.
+- Sheet *Selected*: regular là form sheet 720pt; compact là sheet `large`.
+- **Duo màn ngoài** (466×678, rail 84 bên phải): **đủ chức năng như iPhone** (người dùng 2026-10-17) — tóm tắt, danh sách,
+  thẻ, viewer nhóm, màn chọn khung (FS-06.06 §8). Bề ngang nội dung 350pt (16 mỗi bên trong 382).
 
 ## 5. Tiêu chí nghiệm thu
 
 | # | Cho | Khi | Thì | Chứng minh bằng |
 |---|---|---|---|---|
-| AC-1 | (D1) cache có 12 nhóm Exact, 30 nhóm Similar, 8 Series | mở ⋯ lần lượt ở Exact, Similar, Series, Bursts | Exact có *Merge 12 Groups…*; ba mức kia không có mục Merge nào (kể cả mờ) | ⚠️ chưa có — đề xuất script `duplicates-merge.json` |
-| AC-2 | (D1) như AC-1, ở Exact; 12 bản giữ có favorite/toạ độ/ngày ghi lại trước | chạm *Merge 12 Groups…* | alert *Merge 12 Groups?* với lời ở §2, nút Merge + Cancel; favorite, toạ độ, ngày của 12 bản giữ trong Photos chưa đổi | ⚠️ chưa có |
-| AC-3 | (D1) alert của AC-2 đang mở | chạm Cancel | 0 ảnh được đánh dấu, không có thanh dưới; 12 bản giữ không đổi gì trong Photos | ⚠️ chưa có |
-| AC-4 | (D1) nhóm Exact {A 4,1 MB, không favorite, không toạ độ, ngày 2024-05-02; B 3,9 MB, favorite, có toạ độ, ngày 2024-05-01}, không bản nào đã chỉnh | Merge → chạm Merge trong alert | A được giữ: favorite bật, toạ độ của B, ngày 2024-05-01; B mang dấu; thẻ thu gọn *Keeping 1 · deleting 1*; thanh dưới *Delete 1*; chưa ảnh nào vào Recently Deleted | ⚠️ chưa có |
-| AC-5 | (D3) nhóm {A đã chỉnh 3,2 MB; B favorite 4,0 MB; C 4,5 MB}; biến thể 2: A không chỉnh; biến thể 3: thêm B không favorite | chọn bản giữ | lần lượt giữ A, rồi B, rồi C | `DuplicateReviewTests.keeperIsEditedThenFavoriteThenLargerFile` ✅ |
-| AC-6 | (D1) quyền `.limited`, 12 nhóm Exact, bản giữ của 1 nhóm nằm ngoài tập đã chọn | Merge → Merge | 11 nhóm mang dấu, nhóm kia không; alert *Couldn't Merge 1 Group* có lý do và *Their photos are not marked.* | ⚠️ chưa có |
-| AC-7 | (D2) Similar, 6 ảnh đánh dấu trong 4 nhóm | chuyển sang Exact rồi về Similar | vẫn 6 ô mang dấu, thanh dưới *6 marked* + *Delete 6* | ⚠️ chưa có |
-| AC-8 | (D2) như AC-7 | Back về Collections, sang tab Library, cho app ra nền 30 s, vào lại Duplicates | vẫn 6 ô mang dấu ở Similar | ⚠️ chưa có |
-| AC-9 | (D2) như AC-7 | tắt hẳn app rồi mở lại Duplicates | 0 dấu, không có thanh dưới | ⚠️ chưa có |
-| AC-10 | (D2) như AC-7, 1 trong 6 ảnh bị xoá bằng app Photos | quay lại Duplicates | thanh dưới *5 marked* + *Delete 5*; MB không tính ảnh đã mất | ⚠️ chưa có |
-| AC-11 | (D2) nhóm 3 ảnh, 2 đã đánh dấu | chạm ô thứ 3 | ô không mang dấu; dưới thẻ hiện *Keep at least one photo in this group.*; thanh dưới vẫn *Delete 2*; giữ lâu ô đó thì Mark for Deletion mờ | ⚠️ chưa có |
-| AC-12 | (D2) A, B cùng nhóm Exact và cùng một nhóm Similar 3 ảnh; ở Similar đánh dấu A, B | chuyển sang Exact, chạm Delete | thẻ Exact ghi *All copies marked — nothing will be kept*; alert nói 1 nhóm; hộp xoá hệ thống không mở; 0 ảnh bị xoá | ⚠️ chưa có |
-| AC-13 | (D3) nhóm 3 ảnh: A favorite + đã chỉnh, B RAW+JPEG, C Live Photo | mở thẻ | A có tim + glyph đã chỉnh, B có RAW, C có Live; glyph cao 12pt, ba ô cùng hàng thẳng đáy; VoiceOver của A đọc "favorite, edited" | ⚠️ chưa có |
-| AC-14 | (D3) như AC-13, máy tắt mạng, A chỉ có trên iCloud (Optimize Storage) | mở thẻ | glyph của A giống AC-13; không có yêu cầu mạng nào | ⚠️ chưa có |
-| AC-15 | (Q8) lượt quét đang ở *Scanning 400 of 1000* | nhìn thanh tiến độ, rồi chạm Cancel | Cancel màu accent, không đỏ; thanh biến mất, dòng trạng thái *600 photos not scanned yet.* | ⚠️ chưa có |
-| AC-16 | (F2) index đang chạy ở 34% | mở Duplicates | dưới dải chọn có *Still reading photo info · 34%*; không chỗ nào có chữ *Index your library* | ⚠️ chưa có |
-| AC-17 | (F2) như AC-16, màn đang mở | index chạy xong | dòng tiến độ biến mất; số ảnh chưa quét cập nhật mà không cần rời màn | ⚠️ chưa có |
-| AC-18 | (Z2) 6 nhóm, 2 ảnh mang dấu; iOS 26.5 và 18.6 | mở Duplicates trên iPad 1376×1032, 1032×1376, Duo inner 951×669 | thẻ ra 3 cột 437pt / 2 cột 492pt / 2 cột ~410pt (±1pt), 3 bản sao mỗi hàng; thanh dưới là cụm giữa màn; tab bar ẩn (cả tab bar tự vẽ pre-26) | ⚠️ chưa có — đề xuất `Tools/design-board compare` trên `IP_Duplicates`, `DI_Duplicates` |
-| AC-19 | (Z2) như AC-18 | mở trên iPhone 402×874 và Duo cover 466×678 | thẻ một cột, 2 bản sao mỗi hàng; thanh dưới trải hết bề ngang nội dung (370pt / 350pt) | ⚠️ chưa có — `PH_Duplicates`, `DC_Duplicates` |
-| AC-20 | (D2) ở Similar đánh dấu 6 ảnh, 2 trong số đó cũng nằm trong nhóm Exact | chuyển sang Exact, chạm Delete, xác nhận hộp xoá của hệ thống | thanh dưới trước khi xoá ghi *Delete 2*; đúng 2 ảnh vào Recently Deleted; về Similar còn 4 ô mang dấu, *Delete 4* | ⚠️ chưa có |
-| AC-21 | (V2, Q2) nhóm Similar 4 ảnh mở trong Compare, 1 khung mang dấu | chạm nút đỏ, xác nhận | Compare ở lại với 3 khung; về Duplicates thẻ còn 3 ảnh. Biến thể quyền `.limited`, ảnh ngoài tập đã chọn: Compare tự hiện alert lỗi, khung còn dấu, 0 ảnh bị xoá | ⚠️ chưa có |
-
-### Thẻ quyết định v2 (FS-06.06 §7)
-
-| # | Cho | Khi | Thì | Chứng minh bằng |
-|---|---|---|---|---|
-| AC-V1 | nhóm Similar 5 ảnh: K đã chỉnh + RAW 18,9 MB; bản sao không chỉnh / JPEG / 3120×2080 / 1920×1280 | mở Duplicates trên iPhone 17 | K lớn bên trái có *Keep*, chip *Edited* · *RAW*; bản sao ghi *Not edited*, *JPEG only*, *3120×2080*, *1920×1280*; đầu thẻ *5 photos* · *~X MB to free* | `DuplicateReviewTests.reasonsOnlyNameWhatTheCopiesLack`, `.differenceSaysWhatTheCopyLacksFirst` ✅ + ảnh ⚠️ chưa có (sim không có ảnh đã chỉnh+RAW) |
-| AC-V2 | thẻ 5 ảnh chưa dấu | chạm *Mark the other 4* | 4 bản sao mang dấu, bản giữ không; thẻ thu thành dòng 56pt *Keeping 1 · deleting 4*; dải trên *Reviewed 1 of N groups*; thanh dưới *4 marked* + *Delete 4* | ⚠️ chưa có — ảnh `duplicates-v2` |
-| AC-V3 | dòng thu gọn của AC-V2 | chạm dòng | thẻ mở lại, nút trái đọc *Unmark*; chạm *Unmark* → 0 dấu, thanh dưới biến mất, *Reviewed 0 of N* | ⚠️ chưa có |
-| AC-V4 | thẻ 2 ảnh | chạm *Keep all* | thẻ thu thành *Keeping all 2* · *nothing to delete*; không có dấu nào; *Reviewed* tăng 1 | ⚠️ chưa có |
-| AC-V5 | 12 nhóm, sort *Most space first* | đổi sang *Oldest first*, Back, vào lại | thẻ đầu là nhóm có ảnh mới nhất cũ nhất; menu vẫn *Oldest first* | `DuplicateReviewTests.sortOrdersBySpaceThenDate` ✅ (thứ tự) + ảnh ⚠️ chưa có |
-| AC-V6 | iPhone, 2 bản sao mỗi hàng | pinch chụm vào một bậc | 3 bản sao mỗi hàng, HUD *3 per row* hiện rồi tắt sau 1 s; Back rồi vào lại vẫn 3 | `DuplicateReviewTests.cardMetricsMatchTheBoards` ✅ (hình học) + thao tác ⚠️ chưa có (sim không pinch được bằng ui-drive) |
-| AC-V7 | nhóm Series 4 khung | mở mức Series | không có *Keep*, chip, *Mark the other*, *~MB to free*; 4 khung một lưới, caption *+0 s* … | ⚠️ chưa có |
-| AC-V8 | danh sách cuộn xuống 2000pt | nhìn dải trên | dải chọn, sắp xếp, *Reviewed*, Rescan vẫn ở trên cùng, thẻ cuộn bên dưới | ⚠️ chưa có |
-| AC-V9 | 2 ảnh mang dấu, iOS 26.5 | nhìn đáy màn | tab bar ẩn; viên đỏ *Delete 2* cao 48; bỏ hết dấu → tab bar hiện lại | ⚠️ chưa có |
-
+| AC-M1 | (D12) 6 ảnh mang dấu trong 4 nhóm | tắt hẳn app (kill), mở lại Duplicates ▸ Choose yourself | vẫn 6 ô mang dấu; thanh dưới *6 selected* + *Delete 6* | `DuplicateReviewStoreTests.marksSurviveRelaunch` + route `duplicates-v3-persist.json` (bước terminate/launch) ⚠️ chưa có |
+| AC-M2 | (D12) như AC-M1, 1 trong 6 ảnh bị xoá bằng app Photos | quay lại Duplicates | *5 selected* + *Delete 5*; MB không tính ảnh đã mất; dòng của ảnh đó không còn trong `duplicate_review` | `DuplicateReviewStoreTests.deletedPhotoDropsItsMark` ⚠️ chưa có |
+| AC-M3 | (D12) Keep all trên nhóm A, bản giữ người dùng chọn ở nhóm B | kill app, mở lại | A vẫn thu gọn *Keeping all 2*; B vẫn có bản giữ người dùng chọn | `DuplicateReviewStoreTests.keepAllAndKeeperOverrideSurviveRelaunch` ⚠️ chưa có |
+| AC-M4 | (giữ v2) nhóm 3 ảnh, 2 đã đánh dấu | chạm vòng của ô thứ 3 | ô không mang dấu; *Keep at least one photo in this group.*; *Delete 2* không đổi; giữ lâu ô đó thì Remove mờ | ⚠️ chưa có |
+| AC-M5 | (D4) dấu: 3 ở Copies, 2 ở Look-alikes | hàng lọc chọn Look-alikes | thanh dưới vẫn *5 selected* + *Delete 5* (đếm mọi dấu) | ⚠️ chưa có |
+| AC-M6 | (A2) nhóm 4 ảnh: K bản giữ, C1 favorite, C2 trong album "Client", C3 thường | chạm *Remove the other …* | nút ghi *Remove the other 1*; chỉ C3 mang dấu; dưới thẻ *2 kept: favorite, in album* | `DuplicateReviewTests.removeOtherSkipsProtected` ⚠️ chưa có |
+| AC-D1 | (D11) 37 ảnh mang dấu, 2 trong album "Client" | nhìn thanh dưới | *37 selected · 210 MB ›* / *2 are in albums · kept photo joins them* / *Delete 37* | ⚠️ chưa có |
+| AC-D2 | (D11) như AC-D1 | chạm viên kính, bỏ dấu 2 ảnh trong sheet | sheet và viên đỏ cùng ghi *Delete 35*; đóng sheet → thẻ của 2 ảnh đó không còn dấu | ⚠️ chưa có |
+| AC-D3 | (D11) như AC-D2 | *Delete 35* → xác nhận hệ thống | hộp hệ thống nói 35 ảnh; đúng 35 ảnh vào Recently Deleted; thông báo *35 photos moved to Recently Deleted* + MB + *Open Photos* trong ≥ 4 s; rung success | ⚠️ chưa có — route `duplicates-v3-delete.json` + đếm Recently Deleted bằng `PHAssetCollection` smart album trên sim |
+| AC-D4 | (D11) như AC-D1 | *Delete 37* → Don't Allow | 37 ảnh vẫn mang dấu; không album nào đổi; không thông báo | ⚠️ chưa có |
+| AC-D5 | (D11) nhóm Copies {K không favorite, không album; C favorite, trong album "Client", có toạ độ, ngày sớm hơn} | đánh dấu C, Delete, xác nhận | K favorite, trong "Client", có toạ độ của C, ngày của C; C trong Recently Deleted | ⚠️ chưa có — test trên sim với album tự tạo |
+| AC-D6 | (D11) nhóm Look-alikes cùng dữ liệu như AC-D5 | như AC-D5 | K favorite, trong "Client", có toạ độ; **ngày của K không đổi** | ⚠️ chưa có |
+| AC-D7 | (D11) quyền `.limited`, album "Client" ngoài tập đã chọn | như AC-D5 | C vào Recently Deleted; K không vào "Client"; thông báo thêm *Albums couldn't be updated for 1 photo* | ⚠️ chưa có |
+| AC-D8 | (D11) xoá hết nhóm của mọi loại | xoá xong | *All reviewed · X freed today* | ⚠️ chưa có |
+| AC-W1 | (Z2, giữ v2) 6 nhóm, 2 dấu; iOS 26.5 và 18.6 | mở danh sách trên iPad 1376×1032, 1032×1376, Duo trong 951×669 | 3 cột 437pt / 2 cột 492pt / 2 cột ~410pt (±1pt); thanh dưới cụm giữa; tab bar ẩn (cả pre-26) | ⚠️ chưa có — `Tools/design-board compare` trên `IP_Duplicates`, `DI_Duplicates` |
+| AC-W2 | (D2) có kết quả quét | mở Duplicates trên iPad ngang | hai thẻ Quick clean / Choose yourself cạnh nhau, khối ≤ 720pt giữa màn | ⚠️ chưa có — `IP_DuplicatesSummary` |
+| AC-W3 | (người dùng 2026-10-17) Duo màn ngoài 466×678 | đi hết tóm tắt → danh sách → thẻ → màn chọn khung → xoá | mọi nút nằm trong 382pt bên trái rail; vùng chạm ≥ 44pt; không nút nào trong 40pt quanh góc bo trên | ⚠️ chưa có — `DC_Duplicates*`, `Tools/sim-shot … cover` |
