@@ -87,3 +87,78 @@ actor EventLog {
     private(set) var events: [IngestEvent] = []
     func append(_ event: IngestEvent) { events.append(event) }
 }
+
+/// A card that fails on a chosen file: pulled out there, or slow.
+struct FaultyCardReader: CardReader {
+    let inner: FolderCardReader
+    var disconnectsAt: String?
+    /// A pause per chunk, to stop mid-file.
+    var chunkDelay: Duration = .zero
+    var name: String { inner.name }
+
+    func list() async throws -> [CardFile] { try await inner.list() }
+
+    func read(_ path: String, chunkSize: Int, _ body: (Data) throws -> Void) async throws {
+        if let disconnectsAt, path.hasSuffix(disconnectsAt) { throw IngestFailure.cardDisconnected }
+        if chunkDelay == .zero {
+            try await inner.read(path, chunkSize: chunkSize, body)
+            return
+        }
+        // Small chunks with a pause between them: a long file to stop in.
+        let data = try Data(contentsOf: inner.root.appendingPathComponent(path))
+        var offset = 0
+        while offset < data.count {
+            try Task.checkCancellation()
+            try await Task.sleep(for: chunkDelay)
+            let end = min(offset + 64 * 1024, data.count)
+            try body(data.subdata(in: offset..<end))
+            offset = end
+        }
+    }
+}
+
+/// A destination that refuses from its `failsFrom`-th write on.
+final class FailingDestination: IngestDestination, @unchecked Sendable {
+    let inner: LocalFolderWriter
+    let failsFrom: Int
+    let failure: IngestFailure
+    private let lock = NSLock()
+    private var writes = 0
+
+    init(_ inner: LocalFolderWriter, failsFrom: Int, failure: IngestFailure) {
+        self.inner = inner
+        self.failsFrom = failsFrom
+        self.failure = failure
+    }
+
+    func existingNames(in folder: String) async throws -> Set<String> { try await inner.existingNames(in: folder) }
+    func freeBytes() async -> Int64? { await inner.freeBytes() }
+    func sweepLeftoverParts(in folder: String) async { await inner.sweepLeftoverParts(in: folder) }
+    func remove(_ path: String) async { await inner.remove(path) }
+
+    func writeVerified(name: String, in folder: String, produce: @Sendable (URL) async throws -> String) async throws -> ExportWrittenFile {
+        let count = lock.withLock { writes += 1; return writes }
+        if count >= failsFrom { throw failure }
+        return try await inner.writeVerified(name: name, in: folder, produce: produce)
+    }
+}
+
+extension IngestFixture {
+    /// Ten photos `IMG_0001.JPG`…`IMG_0010.JPG`, a minute apart.
+    func addTen(bytes: Int = 200_000) throws {
+        for n in 1...10 {
+            try add(String(format: "DCIM/100CANON/IMG_%04d.JPG", n), bytes: bytes,
+                    date: IngestRunnerTests.shot.addingTimeInterval(Double(n) * 60))
+        }
+    }
+
+    func runner(reader: any CardReader, plan: FileExportPlan, primary: any IngestDestination,
+                backup: (any IngestDestination)? = nil) -> IngestRunner {
+        IngestRunner(card: reader, plan: plan, primary: IngestTarget(destination: primary, name: "T7 RAW Archive"),
+                     backup: backup.map { IngestTarget(destination: $0, name: "LaCie Backup") })
+    }
+
+    func parts() throws -> [String] {
+        try (destinationFiles() + destinationFiles(in: backup)).filter { $0.hasSuffix(ServerUploadPath.partSuffix) }
+    }
+}

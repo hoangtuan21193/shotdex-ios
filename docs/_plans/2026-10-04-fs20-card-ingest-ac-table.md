@@ -35,14 +35,14 @@ dùng được là khuôn của Export to Files (07b) và FS-15/17.
 | AC-4 | ✅ (2026-10-18) | `Domain/Ingest/IngestRunner.swift`, `IngestPlan.swift` (`IngestFolderTemplate`), `CardReader.swift`; `LocalFolderWriter.writeVerified` (K2) | task 4 xong |
 | AC-5 | ❌ | không có bộ ghi `.xmp` sidecar (chỉ `LookXMPWriter` cho preset, `Domain/Editing/LookExchange/LookXMPWriter.swift`) | dùng bộ ghi sidecar của FS-19 (Creator, Copyright, Keywords, ngày chụp) |
 | AC-6 | ✅ (2026-10-18) | `CardCatalog` + `IngestRunner` | task 2, 4 |
-| AC-7 | ❌ | luật đúng đã có và đã test cho Export: E1 `:180-185`, `FileExportPlanTests.keepBothNumbersAgainstFolderAndBatch` | `IngestPlan` gọi E1 với `.keepBoth`, không bao giờ Replace/Skip; test mới với `…_0001.cr3` có sẵn |
-| AC-8 | ❌ | E10 có trạng thái *Not connected* cho folder Export | `IngestReadiness` (Domain) trả lý do mờ nút; hàng Backup + footer |
-| AC-9 | ❌ | — | lỗi ổ backup là lỗi **phụ**: bản chính chạy tiếp, ghi `backupPath` trống; **Back Up Remaining** |
-| AC-10 | ❌ | E3/E6 phân loại rút ổ **đích**; không có gì cho **nguồn** bị rút | `CardReadFailure.disconnected` dừng mẻ ≤ 2 s (watchdog như E3 `:149-163`), xoá part; Import Remaining |
-| AC-11 | ❌ | E12 có phép kiểm, câu chữ là của Export | `IngestReadiness` dùng E12; câu *Needs 24.6 GB, 12.0 GB free on T7.* |
-| AC-12 | ❌ | E6 `.full` dừng mẻ cho Export | dùng lại E6 trong `IngestRunner`; câu của FS-20 §8 |
-| AC-13 | ❌ | E4 lệch SHA = file lỗi, không chép lại | runner: lệch → chép lại 1 lần từ thẻ → còn lệch = lỗi một file, part xoá, **Retry Failed**, cờ "không nhả" |
-| AC-14 | ❌ | E7 dừng ở ranh giới asset; E3 xoá part khi `produce` ném | dừng **giữa khối 1 MB** (`Task.checkCancellation` mỗi khối), câu *Stop importing?…* |
+| AC-7 | ✅ (2026-10-18) | `IngestRunner` + `IngestPlan` (Keep Both cứng) | task 5 |
+| AC-8 | ⚠️ logic | `IngestReadiness.backupNotConnected` | task 11 |
+| AC-9 | ⚠️ logic | backup rút → `backupIncomplete`; `run(only:copiesPrimary:false)` | task 12 |
+| AC-10 | ⚠️ logic | `.cardDisconnected` dừng mẻ; `run(only:)` = Import Remaining | task 8; watchdog đọc thẻ treo (R4) chưa có |
+| AC-11 | ⚠️ logic | `IngestReadiness` | task 10 |
+| AC-12 | ⚠️ logic | `IngestSummary.Ending.destinationFailed`, `IngestCopy.endingMessage` | task 7 |
+| AC-13 | ⚠️ logic (2026-10-18) | `IngestRunner.copyFile` thử lại 1 lần; `LocalFolderWriter.readBack` | task 6; Retry Failed UI task 13 |
+| AC-14 | ⚠️ logic | huỷ Task = Stop, kiểm mỗi khối | task 9 |
 | AC-15 | ❌ | — | mỗi file kiểm xong ghi một dòng lịch sử **ngay** (không cuối mẻ) → mở lại thấy 200 Imported |
 | AC-16 | ❌ | — | trạng thái rỗng New + **Show All** |
 | AC-17 | ❌ | không có sidebar/Activity (FS-18/FS-21 chưa làm) | runner không chặn UI; đăng ký file vào nguồn FS-19 sau mỗi file; chân sidebar `Importing from … N%` |
