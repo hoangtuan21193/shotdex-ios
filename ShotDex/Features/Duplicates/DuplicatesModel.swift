@@ -55,6 +55,9 @@ final class DuplicatesModel {
     /// The scoring pass's progress while it runs; `nil` when idle.
     private(set) var scoring: DuplicateScoringProgress?
     @ObservationIgnored private var scoringTask: Task<Void, Never>?
+    /// Which `startScoring` the running task belongs to: an older task that
+    /// finishes late must not clear a newer one's state.
+    @ObservationIgnored private var scoringGeneration = 0
     /// Exposure read by the pass since the last cache read: a regroup-free
     /// reload picks up brackets once the pass ends.
     @ObservationIgnored private var scoringReadExposure = false
@@ -369,11 +372,15 @@ final class DuplicatesModel {
             if autoScanIfNeverScanned, result.scanState == nil, result.coverage.hashedPhotos == 0 {
                 self.startScan()
             } else {
+                // The groups may have changed under a running pass.
+                self.stopScoring()
                 self.startScoring()
             }
         }
     }
 
+    /// Built on a detached task and handed to the main actor once, never
+    /// touched again off it: `PHAsset` is immutable, just not marked Sendable.
     private struct CacheSnapshot: @unchecked Sendable {
         var groups: [DuplicateGroup]?
         var assetsById: [String: PHAsset]
@@ -471,21 +478,24 @@ final class DuplicatesModel {
     /// brackets the new exposure readings reveal show as source sets.
     func startScoring() {
         guard scoringTask == nil, !groups.isEmpty else { return }
+        scoringGeneration += 1
+        let token = scoringGeneration
         let pass = dependencies.duplicateQualityPass
         let groups = self.groups
         let allowNetwork = allowNetworkForScanning
         scoring = DuplicateScoringProgress(processed: 0, total: 0)
         let report: @Sendable ([DuplicateQualityRecord], DuplicateScoringProgress) -> Void = { [weak self] records, progress in
             Task { @MainActor in
-                guard let self, self.scoringTask != nil else { return }
+                guard let self, self.scoringGeneration == token else { return }
+                // Scores land even after a stop: they are on disk already.
                 for record in records { self.scores[record.assetId] = record.score }
                 if records.contains(where: { $0.exposureBias != nil }) { self.scoringReadExposure = true }
-                self.scoring = progress
+                if self.scoringTask != nil { self.scoring = progress }
             }
         }
         scoringTask = Task { [weak self] in
             try? await pass.run(groups: groups, allowNetwork: allowNetwork, onBatch: report)
-            guard let self else { return }
+            guard let self, self.scoringGeneration == token else { return }
             let reload = self.scoringReadExposure && !Task.isCancelled
             self.scoringTask = nil
             self.scoring = nil

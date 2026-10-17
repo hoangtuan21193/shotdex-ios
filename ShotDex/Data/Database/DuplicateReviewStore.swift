@@ -47,6 +47,17 @@ struct DuplicateReviewStore: Sendable {
         try setPerPhoto(.mark, assetIds, marked, at: date)
     }
 
+    /// Marks exactly `marked` among `members`, in one transaction — a kill
+    /// in the middle never leaves half of a Remove the other N.
+    func replaceMarks(of members: some Collection<String>, with marked: Set<String>, at date: Date = Date()) throws {
+        let all = Array(Set(members))
+        guard !all.isEmpty else { return }
+        try database.writer.write { db in
+            try deletePerPhoto(db, .mark, all.filter { !marked.contains($0) })
+            try insertPerPhoto(db, .mark, all.filter(marked.contains), at: date)
+        }
+    }
+
     /// Makes `keeper` the kept photo of its group: any other member's keeper
     /// pick goes, so a group never has two.
     func setKeeper(_ keeper: String, groupMembers: some Collection<String>, at date: Date = Date()) throws {
@@ -65,9 +76,11 @@ struct DuplicateReviewStore: Sendable {
 
     /// Records `members` under `role` as one set and returns its id.
     @discardableResult
-    func addSet(_ role: DuplicateReviewRole, members: some Collection<String>, at date: Date = Date()) throws -> String {
+    func addSet(
+        _ role: DuplicateReviewRole, members: some Collection<String>, id setId: String = UUID().uuidString,
+        at date: Date = Date()
+    ) throws -> String {
         precondition(!role.isPerPhoto, "\(role) is stored per photo")
-        let setId = UUID().uuidString
         let stamp = Int(date.timeIntervalSince1970)
         try database.writer.write { db in
             for assetId in Set(members) {

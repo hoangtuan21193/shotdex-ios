@@ -1,5 +1,6 @@
 import CoreGraphics
 import Foundation
+import os
 import Photos
 import UIKit
 import Vision
@@ -38,15 +39,23 @@ struct DuplicateQualityReader: DuplicateQualityReading {
     }
 
     /// Luma measures plus faces. Runs off the main actor; no pixels kept.
+    /// Drained per photo: a pool thread does not empty its autorelease pool
+    /// between iterations of a long task, and Vision's results are autoreleased.
     static func score(_ image: CGImage) -> DuplicateQualityScore {
-        let width = image.width, height = image.height
+        autoreleasepool { measure(image) }
+    }
+
+    private static func measure(_ image: CGImage) -> DuplicateQualityScore {
+        // `.fast` resizing may hand back more than asked; never decode past 512.
+        let scale = min(1, Double(DuplicateQuality.thumbnailEdge) / Double(max(image.width, image.height)))
+        let width = max(1, Int(Double(image.width) * scale)), height = max(1, Int(Double(image.height) * scale))
         var luma = [UInt8](repeating: 0, count: width * height)
         let drawn = luma.withUnsafeMutableBytes { buffer -> Bool in
             guard let context = CGContext(
                 data: buffer.baseAddress, width: width, height: height, bitsPerComponent: 8,
                 bytesPerRow: width, space: CGColorSpaceCreateDeviceGray(), bitmapInfo: CGImageAlphaInfo.none.rawValue
             ) else { return false }
-            context.interpolationQuality = .none
+            context.interpolationQuality = .medium
             context.draw(image, in: CGRect(x: 0, y: 0, width: width, height: height))
             return true
         }
@@ -100,20 +109,51 @@ struct DuplicateQualityReader: DuplicateQualityReading {
         return Double((maxY - minY) / (maxX - minX))
     }
 
+    /// An iCloud original may take minutes; the pass gives up on a photo
+    /// after this and retries it on a later run.
+    static let renditionTimeout: Duration = .seconds(20)
+
+    /// The 512px rendition. Cancelling the task cancels the PhotoKit request,
+    /// and a request that never calls back resumes with `nil` at the timeout.
     private static func rendition(for asset: PHAsset, allowNetwork: Bool) async -> UIImage? {
-        await withCheckedContinuation { continuation in
-            let options = PHImageRequestOptions()
-            // One callback, so the continuation resumes exactly once.
-            options.deliveryMode = .highQualityFormat
-            options.resizeMode = .fast
-            options.isNetworkAccessAllowed = allowNetwork
-            options.version = .current
-            let edge = CGFloat(DuplicateQuality.thumbnailEdge)
-            PHImageManager.default().requestImage(
-                for: asset, targetSize: CGSize(width: edge, height: edge), contentMode: .aspectFit, options: options
-            ) { image, _ in
-                continuation.resume(returning: image)
+        let requestId = OSAllocatedUnfairLock<PHImageRequestID?>(initialState: nil)
+        let resumed = OSAllocatedUnfairLock(initialState: false)
+        return await withTaskCancellationHandler {
+            await withCheckedContinuation { (continuation: CheckedContinuation<UIImage?, Never>) in
+                func finish(_ image: UIImage?) {
+                    let first = resumed.withLock { done -> Bool in
+                        defer { done = true }
+                        return !done
+                    }
+                    if first { continuation.resume(returning: image) }
+                }
+                let options = PHImageRequestOptions()
+                // One final callback; cancel and error arrive through it too.
+                options.deliveryMode = .highQualityFormat
+                options.resizeMode = .fast
+                options.isNetworkAccessAllowed = allowNetwork
+                options.version = .current
+                let edge = CGFloat(DuplicateQuality.thumbnailEdge)
+                let id = PHImageManager.default().requestImage(
+                    for: asset, targetSize: CGSize(width: edge, height: edge), contentMode: .aspectFit, options: options
+                ) { image, info in
+                    if (info?[PHImageResultIsDegradedKey] as? Bool) == true { return }
+                    finish(image)
+                }
+                requestId.withLock { $0 = id }
+                if Task.isCancelled {
+                    PHImageManager.default().cancelImageRequest(id)
+                    finish(nil)
+                    return
+                }
+                Task {
+                    try? await Task.sleep(for: renditionTimeout)
+                    PHImageManager.default().cancelImageRequest(id)
+                    finish(nil)
+                }
             }
+        } onCancel: {
+            if let id = requestId.withLock({ $0 }) { PHImageManager.default().cancelImageRequest(id) }
         }
     }
 }
@@ -134,6 +174,8 @@ actor DuplicateQualityPass {
     private let reader: any DuplicateQualityReading
     private let shouldPause: @Sendable () -> Bool
     private var isRunning = false
+    /// Bumped by each `run`; an older run waiting for its turn gives up.
+    private var generation = 0
 
     init(store: DuplicateQualityStore, reader: any DuplicateQualityReading, shouldPause: @escaping @Sendable () -> Bool) {
         self.store = store
@@ -149,7 +191,14 @@ actor DuplicateQualityPass {
         allowNetwork: Bool,
         onBatch: @escaping @Sendable ([DuplicateQualityRecord], DuplicateScoringProgress) -> Void
     ) async throws {
-        guard !isRunning else { return }
+        // Queue behind a cancelled run still finishing its photo, rather than
+        // refusing — leaving and re-entering the screen restarts the pass.
+        generation += 1
+        let mine = generation
+        while isRunning {
+            try? await Task.sleep(for: .milliseconds(50))
+            if Task.isCancelled || generation != mine { return }
+        }
         isRunning = true
         defer { isRunning = false }
         try store.pruneOrphans()

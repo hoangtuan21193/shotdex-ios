@@ -189,7 +189,7 @@ struct DuplicateSourceSetTests {
         let frames = [-2.0, -1, 0, 1, 2].enumerated().map { frame("f\($0.offset)", at: 0, ev: $0.element) }
         let groups = DuplicateGrouper.groups(from: frames)
         #expect(groups.count == 1)
-        let set = try? #require(groups[0].sourceSet)
+        let set = groups[0].sourceSet
         #expect(set?.kind == .bracket)
         #expect(set?.title == "Bracket · 5 frames · ±2 EV")
         // Read in capture order, like a run.

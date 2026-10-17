@@ -135,4 +135,24 @@ struct DuplicateReviewStoreTests {
         try store.setMarked(["a"], true)
         #expect(try store.load().marks == ["a"])
     }
+
+    /// The session updates at once and writes in order behind the scenes;
+    /// a fresh session (a relaunch) reads back exactly what the user did.
+    @MainActor @Test func sessionWritesThroughInOrder() throws {
+        let database = try AppDatabase.makeEmpty()
+        let session = DuplicateReviewSession(store: DuplicateReviewStore(database: database))
+        session.setMarks(of: ["a", "b", "c"], to: ["b", "c"])
+        session.setKeeper("a", groupMembers: ["a", "b", "c"])
+        session.setKeptAll(["x", "y"], true)
+        session.setMarked(["c"], false)
+        session.dismiss(["p", "q"])
+        #expect(session.marks == ["b"])
+        session.flushWrites()
+
+        let relaunched = DuplicateReviewSession(store: DuplicateReviewStore(database: database))
+        #expect(relaunched.marks == ["b"])
+        #expect(relaunched.keeper(among: ["a", "b", "c"]) == "a")
+        #expect(relaunched.isKeptAll(["x", "y"]))
+        #expect(relaunched.notDuplicates.map(\.id) == session.notDuplicates.map(\.id))
+    }
 }

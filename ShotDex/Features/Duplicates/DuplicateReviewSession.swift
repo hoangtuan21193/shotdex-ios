@@ -1,23 +1,51 @@
 import Foundation
 import Observation
+import os
 
 /// The user's work on the Duplicates screen (FS-06.06b §1): marks, keeper
 /// picks, Keep all, folded groups and Not duplicates. Kept on disk in
 /// `duplicate_review`, so it survives Back, other tabs, the background **and
 /// the app being killed** — until the user deletes or undoes it.
 ///
-/// Every change writes through to the store at once (a handful of rows); the
-/// screen reads the in-memory copy. Owned by `AppDependencies`, not by the
-/// screen's model, because the model is rebuilt every time the screen opens.
+/// The screen reads the in-memory copy, which changes at once; every change
+/// is written to the store **in order on a background queue**, so a tap
+/// never waits for the database writer the indexer is busy with. Owned by
+/// `AppDependencies`, not by the screen's model, because the model is
+/// rebuilt every time the screen opens.
 @MainActor
 @Observable
 final class DuplicateReviewSession {
     private(set) var state: DuplicateReviewState
     @ObservationIgnored private let store: DuplicateReviewStore?
+    @ObservationIgnored private let writes = DispatchQueue(label: "duplicates.review.writes", qos: .userInitiated)
+    nonisolated private static let log = Logger(subsystem: "com.hoangtuan.shotdex", category: "duplicates")
 
+    /// Reads the table once at launch: a few hundred rows, one indexed read.
     init(store: DuplicateReviewStore?) {
         self.store = store
-        self.state = (try? store?.load()) ?? DuplicateReviewState()
+        do {
+            self.state = try store?.load() ?? DuplicateReviewState()
+        } catch {
+            Self.log.error("Duplicates review read failed: \(error.localizedDescription, privacy: .public)")
+            self.state = DuplicateReviewState()
+        }
+    }
+
+    /// Waits for every queued write — for tests, and before a kill would matter.
+    func flushWrites() {
+        writes.sync {}
+    }
+
+    /// Runs a store write after every earlier one. A failure is logged —
+    /// the screen keeps what the user did; it is the next launch that would
+    /// miss it.
+    private func persist(_ work: @escaping @Sendable (DuplicateReviewStore) throws -> Void) {
+        guard let store else { return }
+        writes.async {
+            do { try work(store) } catch {
+                Self.log.error("Duplicates review write failed: \(error.localizedDescription, privacy: .public)")
+            }
+        }
     }
 
     var marks: Set<String> { state.marks }
@@ -29,14 +57,17 @@ final class DuplicateReviewSession {
         let changed = marked ? ids.subtracting(state.marks) : ids.intersection(state.marks)
         guard !changed.isEmpty else { return }
         if marked { state.marks.formUnion(changed) } else { state.marks.subtract(changed) }
-        try? store?.setMarked(changed, marked)
+        persist { try $0.setMarked(changed, marked) }
     }
 
-    /// Replaces the marks of `members` with exactly `marked`.
+    /// Replaces the marks of `members` with exactly `marked`, as one write.
     func setMarks(of members: some Collection<String>, to marked: Set<String>) {
         let all = Set(members)
-        setMarked(all.subtracting(marked), false)
-        setMarked(marked.intersection(all), true)
+        let wanted = marked.intersection(all)
+        guard state.marks.intersection(all) != wanted else { return }
+        state.marks.subtract(all)
+        state.marks.formUnion(wanted)
+        persist { try $0.replaceMarks(of: all, with: wanted) }
     }
 
     // MARK: Keeper
@@ -47,7 +78,7 @@ final class DuplicateReviewSession {
         guard state.keeper(among: groupMembers) != keeper else { return }
         state.keepers.subtract(groupMembers)
         state.keepers.insert(keeper)
-        try? store?.setKeeper(keeper, groupMembers: groupMembers)
+        persist { try $0.setKeeper(keeper, groupMembers: groupMembers) }
     }
 
     // MARK: Sets
@@ -71,7 +102,7 @@ final class DuplicateReviewSession {
     /// Show again, from ⋯ ▸ Ignored.
     func undismiss(setId: String) {
         state.notDuplicates.removeAll { $0.id == setId }
-        try? store?.removeSet(.notDuplicates, id: setId)
+        persist { try $0.removeSet(.notDuplicates, id: setId) }
     }
 
     // MARK: Cleanup
@@ -89,7 +120,7 @@ final class DuplicateReviewSession {
                 return set.members.isEmpty ? nil : set
             }
         }
-        try? store?.forget(assetIds: ids)
+        persist { try $0.forget(assetIds: ids) }
     }
 
     // MARK: Private
@@ -98,8 +129,10 @@ final class DuplicateReviewSession {
         guard !members.isEmpty else { return }
         if on {
             guard !contains(role, members) else { return }
-            let id = (try? store?.addSet(role, members: members)) ?? UUID().uuidString
+            // The id is minted here so memory and disk agree on it.
+            let id = UUID().uuidString
             append(role, DuplicateReviewSet(id: id, members: members, createdAt: Date()))
+            persist { try $0.addSet(role, members: members, id: id) }
         } else {
             dropSets(role, containingAnyOf: members)
         }
@@ -131,6 +164,6 @@ final class DuplicateReviewSession {
         case .notDuplicates: state.notDuplicates = state.notDuplicates.filter(keep)
         case .mark, .keeper: return
         }
-        try? store?.removeSets(role, containingAnyOf: members)
+        persist { try $0.removeSets(role, containingAnyOf: members) }
     }
 }
