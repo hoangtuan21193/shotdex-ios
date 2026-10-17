@@ -390,6 +390,39 @@ extension StatisticsQueries {
                 dimension: dimension, metric: metric, seriesSplit: nil,
                 filter: filter, scope: scope, topSeries: 0
             )
+        case .cyclic:
+            return try cyclicData(dimension: dimension, metric: metric, filter: filter, scope: scope)
+        }
+    }
+
+    /// Hour of day / weekday: `strftime` over the capture time in local time
+    /// (the clock the Date axes read), every bucket present — an empty hour
+    /// is a zero bar, not a missing one.
+    private func cyclicData(
+        dimension: ChartDimension,
+        metric: ChartMetric,
+        filter: SmartAlbumQuery,
+        scope: StatsDateScope
+    ) throws -> [ChartDatum] {
+        guard let format = dimension.strftimeFormat, let keys = dimension.cyclicKeys else { return [] }
+        let (aggExpr, aggNotNull) = metricExpression(metric)
+        var conditions = ["creationDate IS NOT NULL"]
+        if let aggNotNull { conditions.append(aggNotNull) }
+        let (fsConditions, fsValues) = filterAndScope(filter, scope)
+        conditions.append(contentsOf: fsConditions)
+        let sql = """
+            SELECT strftime('\(format)', creationDate, 'unixepoch', 'localtime') AS bucket, \(aggExpr) AS value
+            FROM photo_metadata
+            \(Self.whereSQL(conditions))
+            GROUP BY bucket
+            """
+        let found = try database.reader.read { db in
+            try Row.fetchAll(db, sql: sql, arguments: StatementArguments(fsValues)).reduce(into: [String: Double]()) { result, row in
+                if let bucket: String = row["bucket"] { result[bucket] = row["value"] ?? 0 }
+            }
+        }
+        return keys.map { key in
+            ChartDatum(label: dimension.label(forKey: key), value: found[key] ?? 0)
         }
     }
 

@@ -96,7 +96,7 @@ bảng phím Editor chung, mật độ lưới màn rộng, sidebar).
 |---|---|---|---|---|---|
 | AC-54 | ❌ | `StatisticsQueries.swift:6` đếm theo dòng `photo_metadata` (một dòng mỗi asset) | `StatisticsQueries` | S10 | ⏳ FS-19 (id ảnh + bảng bản sao) |
 | AC-55 | ❌ | không có điều kiện Source | `ChartSpec`, `ChartStore` | S11 | ⏳ FS-19 |
-| AC-56 | ❌ | `ChartDimension` không có trục giờ/thứ (`ChartSpec.swift:167-184`) | `StatisticsQueries` (SQL `strftime`) | S1 | — |
+| AC-56 | ✅ một phần (S1 xong: trục `hourOfDay`/`weekday`, cột đứng iOS; nửa Mac ở M32) | `ChartDashboardTests.hourAndWeekdayBins` | `StatisticsQueries` (SQL `strftime`) | S1 | — |
 | AC-57 | ❌ (logic ✅) | drill-down iOS: `AppNavigation.swift:45, 132` `pendingLibraryFilter` | `AppNavigation` (biên dịch macOS 0 lỗi) | M33 | S1 |
 | AC-58 | ❌ | Statistics iOS có popup khoảng ngày ở trang máy (FS-07) | `StatisticsModel` (0 lỗi macOS) | M32 | — |
 | AC-59 | ❌ | Settings iOS là split view có ô tìm (FS-08.01) | các store settings (`SettingsKeys`, `FileExportSettingsStore` …) | M36 | ⏳ FS-19 (pane Sources) |

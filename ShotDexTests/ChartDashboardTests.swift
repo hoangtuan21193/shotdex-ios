@@ -191,6 +191,29 @@ struct ChartDashboardTests {
         #expect(!ChartDimension.cameraLensPair.splitsSeries)
     }
 
+    /// FS-18 AC-56 / FS-07.01 §2: 24 photos on Monday, Sep 28, 2026, one
+    /// each hour in local time — Time of Day has 24 bars of 1, Weekday puts
+    /// all 24 on Mon and draws the other six days as zero, Monday first.
+    @Test func hourAndWeekdayBins() throws {
+        let database = try AppDatabase.makeEmpty()
+        let statisticsQueries = StatisticsQueries(database: database)
+        let midnight = try #require(Calendar.current.date(from: DateComponents(year: 2026, month: 9, day: 28)))
+        try MetadataStore(database: database).saveBatch((0..<24).map { hour in
+            makeRecord(assetId: "h\(hour)", creation: Int(midnight.timeIntervalSince1970) + hour * 3600 + 120)
+        }, cursorAssetId: nil)
+
+        let hours = try statisticsQueries.chartData(for: ChartSpec(title: "Time of Day", kind: .bar, dimension: .hourOfDay), scope: .allTime)
+        #expect(hours.map(\.label) == (0..<24).map(String.init))
+        #expect(hours.allSatisfy { $0.value == 1 })
+
+        let days = try statisticsQueries.chartData(for: ChartSpec(title: "Photos by Weekday", kind: .bar, dimension: .weekday), scope: .allTime)
+        let symbols = Calendar.current.shortWeekdaySymbols
+        #expect(days.map(\.label) == Array(symbols[1...]) + [symbols[0]])
+        #expect(days.map(\.value) == [24, 0, 0, 0, 0, 0, 0])
+        #expect(ChartKind.bar.allowedDimensions.contains(.hourOfDay))
+        #expect(!ChartKind.line.allowedDimensions.contains(.weekday))
+    }
+
     /// Slow Shutter: the share of photos slower than 1/equivalent focal
     /// length, rows missing either input outside the denominator.
     @Test func slowShutterShareMetric() throws {

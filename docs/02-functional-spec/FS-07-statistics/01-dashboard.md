@@ -23,7 +23,7 @@ Loại biểu đồ · **trục X** (nhóm theo) · **trục Y** (đo cái gì) 
 | Thành phần | Giá trị |
 |---|---|
 | Loại | cột ngang · vành khuyên · đường theo thời gian · **một con số** |
-| Trục X | nhóm rời rạc (thân máy, hãng, ống kính, **cặp thân máy + ống**, khổ cảm biến, favorite) · nhóm theo dải số (ISO, khẩu, tốc độ, tiêu cự thật, tiêu cự tương đương) · theo thời gian (ngày, tháng, năm) |
+| Trục X | nhóm rời rạc (thân máy, hãng, ống kính, **cặp thân máy + ống**, khổ cảm biến, favorite) · nhóm theo dải số (ISO, khẩu, tốc độ, tiêu cự thật, tiêu cự tương đương) · theo thời gian (ngày, tháng, năm) · **theo chu kỳ**: giờ trong ngày (0–23), thứ trong tuần (Mon…Sun) |
 | Trục Y | **số ảnh** (mặc định) + trung bình / trung vị / tổng / nhỏ nhất / lớn nhất trên một trường số + **tỉ lệ chụp chậm hơn 1/tiêu cự tương đương** |
 
 - Mỗi loại biểu đồ **tự khai** trục X và phép đo nào hợp lệ với nó — cùng một khuôn với chỗ khai phép so
@@ -32,6 +32,10 @@ Loại biểu đồ · **trục X** (nhóm theo) · **trục Y** (đo cái gì) 
   bảng hợp lệ chặn ngay ở giao diện.
 - Nhóm theo dải số **dùng lại đúng các mốc chia** mà bộ lọc của Library đang dùng. Lọc theo định dạng file
   thì **hoãn** vì chưa có cột riêng.
+- **Giờ trong ngày** và **thứ trong tuần** (mọi thiết bị, FS-18 04 §2) chỉ đi với **cột**: vẽ cột đứng theo thứ tự
+  đồng hồ, **đủ** 24 giờ / 7 ngày kể cả nhóm 0 ảnh, tuần bắt đầu Thứ Hai. Tính trên thời điểm chụp đổi sang **múi giờ
+  hiện tại của máy** — như trục ngày/tháng/năm; giờ địa phương lúc chụp (FS-01.03b §1) chưa có cột riêng. Bấm cột chưa
+  mở Library (chưa có bộ lọc giờ/thứ — FS-18 AC-57). Test `ChartDashboardTests.hourAndWeekdayBins`.
 - Mỗi trục X ứng với **một cột cố định** và một cách dựng bộ lọc để **bấm vào là mở Library đã lọc sẵn**.
 
 ## 3. Lưu trữ

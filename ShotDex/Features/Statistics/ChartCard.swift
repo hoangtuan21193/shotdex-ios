@@ -47,7 +47,7 @@ struct ChartContentView: View {
         } else {
             switch spec.kind {
             case .kpi: kpiBody
-            case .bar: barBody
+            case .bar: spec.dimension?.axisKind == .cyclic ? AnyView(cyclicBody) : AnyView(barBody)
             case .donut: donutBody
             case .line: lineBody
             }
@@ -98,6 +98,32 @@ struct ChartContentView: View {
 
             drillRows
         }
+    }
+
+    // MARK: Hour / weekday
+
+    /// Every hour or weekday as an upright column in clock order — the axis
+    /// is the point, so no bucket is dropped, sorted or listed below.
+    private var cyclicBody: some View {
+        let largest = known.map(\.value).max()
+        let isHours = spec.dimension == .hourOfDay
+        return Chart(known) { datum in
+            BarMark(
+                x: .value("Bucket", datum.label),
+                y: .value("Value", datum.value)
+            )
+            .foregroundStyle(datum.value == largest && datum.value > 0 ? ChartPalette.emphasis : ChartPalette.quiet)
+            .cornerRadius(2)
+        }
+        .chartXAxis {
+            AxisMarks(values: isHours ? known.map(\.label).enumerated().filter { $0.offset % 6 == 0 }.map(\.element) : known.map(\.label)) {
+                AxisValueLabel()
+            }
+        }
+        .chartYAxis { AxisMarks(position: .leading) }
+        .frame(height: 160)
+        .padding(.vertical, 4)
+        .accessibilityLabel("\(spec.title) column chart")
     }
 
     // MARK: Donut

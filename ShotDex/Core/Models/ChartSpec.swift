@@ -130,7 +130,7 @@ enum ChartKind: String, Codable, CaseIterable, Identifiable, Sendable {
     var allowedDimensions: [ChartDimension] {
         switch self {
         case .bar:
-            ChartDimension.allCases.filter { $0.axisKind == .categorical || $0.axisKind == .binned }
+            ChartDimension.allCases.filter { $0.axisKind == .categorical || $0.axisKind == .binned || $0.axisKind == .cyclic }
         case .donut:
             ChartDimension.allCases.filter { $0.axisKind == .categorical }
         case .line:
@@ -159,6 +159,9 @@ enum ChartAxisKind: Sendable {
     case categorical
     case binned
     case temporal
+    /// Hour of the day or day of the week: a fixed set of buckets, every one
+    /// drawn even when empty, in clock order.
+    case cyclic
 }
 
 /// A photo attribute the X-axis groups by. Each case maps to a **hardcoded**
@@ -184,6 +187,9 @@ enum ChartDimension: String, Codable, CaseIterable, Identifiable, Sendable {
     case dateDay
     case dateMonth
     case dateYear
+    // Cyclic — every photo folded onto one day or one week (FS-07.01 §2)
+    case hourOfDay
+    case weekday
 
     var id: String { rawValue }
 
@@ -203,6 +209,8 @@ enum ChartDimension: String, Codable, CaseIterable, Identifiable, Sendable {
         case .dateDay: "Date (by day)"
         case .dateMonth: "Date (by month)"
         case .dateYear: "Date (by year)"
+        case .hourOfDay: "Time of Day"
+        case .weekday: "Weekday"
         }
     }
 
@@ -211,6 +219,7 @@ enum ChartDimension: String, Codable, CaseIterable, Identifiable, Sendable {
         case .cameraBody, .cameraBrand, .lens, .sensorFormat, .favorite, .cameraLensPair: .categorical
         case .iso, .aperture, .shutter, .focalActual, .focalEquivalent: .binned
         case .dateDay, .dateMonth, .dateYear: .temporal
+        case .hourOfDay, .weekday: .cyclic
         }
     }
 
@@ -228,7 +237,7 @@ enum ChartDimension: String, Codable, CaseIterable, Identifiable, Sendable {
         case .shutter: "shutterSpeedSeconds"
         case .focalActual: "focalLength"
         case .focalEquivalent: "equivalentFocalLength"
-        case .dateDay, .dateMonth, .dateYear: "creationDate"
+        case .dateDay, .dateMonth, .dateYear, .hourOfDay, .weekday: "creationDate"
         }
     }
 
@@ -285,12 +294,27 @@ enum ChartDimension: String, Codable, CaseIterable, Identifiable, Sendable {
         }
     }
 
-    /// `strftime` format for a `.temporal` dimension (nil otherwise).
+    /// Every bucket key of a `.cyclic` dimension, in the order drawn: 00…23,
+    /// and Monday…Sunday as SQLite's `%w` numbers them (0 = Sunday).
+    var cyclicKeys: [String]? {
+        switch self {
+        case .hourOfDay: (0..<24).map { String(format: "%02d", $0) }
+        case .weekday: ["1", "2", "3", "4", "5", "6", "0"]
+        default: nil
+        }
+    }
+
+    /// Short weekday names indexed like `%w` (0 = Sunday).
+    static var weekdaySymbols: [String] { Calendar.current.shortWeekdaySymbols }
+
+    /// `strftime` format for a `.temporal` or `.cyclic` dimension (nil otherwise).
     var strftimeFormat: String? {
         switch self {
         case .dateDay: "%Y-%m-%d"
         case .dateMonth: "%Y-%m"
         case .dateYear: "%Y"
+        case .hourOfDay: "%H"
+        case .weekday: "%w"
         default: nil
         }
     }
@@ -301,6 +325,10 @@ enum ChartDimension: String, Codable, CaseIterable, Identifiable, Sendable {
         case .favorite: key == "1" ? "Favorite" : "Not favorite"
         case .cameraLensPair:
             Self.pairNames(fromKey: key).map { "\($0.body) · \($0.lens)" } ?? key
+        case .hourOfDay:
+            Int(key).map(String.init) ?? key
+        case .weekday:
+            Int(key).flatMap { Self.weekdaySymbols.indices.contains($0) ? Self.weekdaySymbols[$0] : nil } ?? key
         default: key
         }
     }
@@ -344,6 +372,9 @@ enum ChartDimension: String, Codable, CaseIterable, Identifiable, Sendable {
             default: break
             }
         case .dateDay, .dateMonth, .dateYear:
+            return nil
+        case .hourOfDay, .weekday:
+            // The Library has no clock-hour or weekday filter yet (AC-57).
             return nil
         }
         return criteria
