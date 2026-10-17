@@ -608,9 +608,12 @@ final class DuplicatesModel {
             guard let snapshot, self.isScanning, !Task.isCancelled else { return }
             self.groups = (snapshot.groups ?? []).compactMap { group in
                 let present = group.members.filter { snapshot.assetsById[$0.assetId] != nil }
-                return present.count > 1 ? DuplicateGroup(members: present, kind: group.kind, sourceSet: group.sourceSet) : nil
+                guard present.count > 1 else { return nil }
+                let kept = DuplicateGroup(members: present, kind: group.kind, sourceSet: group.sourceSet)
+                return self.isHidden(kept) ? nil : kept
             }
             self.assetsById.merge(snapshot.assetsById) { _, new in new }
+            await self.mergeBursts()
         }
     }
 
@@ -819,16 +822,13 @@ final class DuplicatesModel {
         framePicker = request
     }
 
-    /// Back from the frame picker. Done: the keeps become the group's marks
-    /// (nothing kept → marks unchanged). A delete: the frames are gone.
-    func didChooseFrames(_ request: BurstFramesRequest, kept: [String], deleted: Bool) {
-        guard case .frames(let ids) = request.source else { return }
-        if deleted {
-            // The picker already said where the frames went.
-            didDelete(ids: Set(ids).subtracting(kept))
-        } else if !kept.isEmpty {
-            session.setMarks(of: ids, to: Set(ids).subtracting(kept))
-        }
+    /// Done in the frame picker: the keeps become the group's marks (nothing
+    /// kept → marks unchanged). Its delete runs `delete(ids:)` directly, so
+    /// the kept frame inherits like any other keeper.
+    func didChooseFrames(_ request: BurstFramesRequest, kept: [String]) {
+        guard case .frames(let ids) = request.source, !kept.isEmpty else { return }
+        let present = ids.filter { assetsById[$0] != nil }
+        session.setMarks(of: present, to: Set(present).subtracting(kept))
     }
 
     // MARK: Bursts
@@ -971,7 +971,10 @@ final class DuplicatesModel {
         let keepers = Dictionary(uniqueKeysWithValues: plans.compactMap { plan in
             assetsById[plan.keeperId].map { (plan.keeperId, $0) }
         })
-        let bytes = groups.flatMap(\.members).filter { ids.contains($0.assetId) }.reduce(0) { $0 + ($1.fileSize ?? 0) }
+        let goingMembers = groups.flatMap(\.members).filter { ids.contains($0.assetId) }
+        // A frame the index never read has no size: say nothing rather than
+        // a number that is too low.
+        let bytes = goingMembers.contains { $0.fileSize == nil } ? 0 : goingMembers.reduce(0) { $0 + ($1.fileSize ?? 0) }
         do {
             try await photoLibrary.deleteAssets(assets)
         } catch let error as PHPhotosError where error.code == .userCancelled {
@@ -1003,8 +1006,13 @@ final class DuplicatesModel {
         guard !work.isEmpty else { return 0 }
         var missed = 0
         var writes: [(PHAsset, DuplicateInheritance, CLLocation?, Date?, [PHAssetCollection])] = []
+        // Facts read now, not when the cards appeared: the user may have
+        // changed a favorite or an album in Photos since.
+        let fresh = Dictionary(uniqueKeysWithValues: PhotoLibraryService.fetchAssets(ids: work.map(\.keeperId)).map { ($0.localIdentifier, $0) })
         for plan in work {
-            guard let keeper = keepers[plan.keeperId] else { continue }
+            guard let keeper = fresh[plan.keeperId] ?? keepers[plan.keeperId] else { continue }
+            var plan = plan
+            if keeper.isFavorite { plan.favorite = false }
             let givers = plan.donorIds.compactMap { donors[$0] }
             let location = keeper.location == nil ? givers.compactMap(\.location).first : nil
             let earliest = plan.takesEarliestDate ? givers.compactMap(\.creationDate).min() : nil
@@ -1015,9 +1023,14 @@ final class DuplicatesModel {
             if albums.count < plan.albumIds.count { missed += 1 }
             writes.append((keeper, plan, location, date, albums))
         }
-        do {
-            try await PHPhotoLibrary.shared().performChanges {
-                for (keeper, plan, location, date, albums) in writes {
+        // One block per keeper: an album the app may no longer edit must not
+        // sink every other keeper's favorite and location with it.
+        var written: [(PHAsset, DuplicateInheritance, CLLocation?, Date?, [PHAssetCollection])] = []
+        for write in writes {
+            let (keeper, plan, location, date, albums) = write
+            do {
+                var refused = false
+                try await PHPhotoLibrary.shared().performChanges {
                     if plan.favorite || location != nil || date != nil {
                         let request = PHAssetChangeRequest(for: keeper)
                         if plan.favorite { request.isFavorite = true }
@@ -1025,13 +1038,20 @@ final class DuplicatesModel {
                         if let date { request.creationDate = date }
                     }
                     for album in albums {
-                        PHAssetCollectionChangeRequest(for: album)?.addAssets([keeper] as NSArray)
+                        if let request = PHAssetCollectionChangeRequest(for: album) {
+                            request.addAssets([keeper] as NSArray)
+                        } else {
+                            refused = true
+                        }
                     }
                 }
+                if refused, albums.count == plan.albumIds.count { missed += 1 }
+                written.append(write)
+            } catch {
+                missed += 1
             }
-        } catch {
-            return writes.filter { !$0.1.albumIds.isEmpty }.count + missed
         }
+        writes = written
         for (keeper, plan, location, date, _) in writes {
             let id = keeper.localIdentifier
             if plan.favorite { try? dependencies.metadataStore.updateFavorite(assetId: id, isFavorite: true) }
@@ -1075,8 +1095,10 @@ final class DuplicatesModel {
         }
         if missedAlbums > 0 {
             text += "\n" + (missedAlbums == 1
-                ? String(localized: "Albums couldn't be updated for 1 photo", comment: "Duplicates: banner, inheritance could not write an album")
-                : String(localized: "Albums couldn't be updated for \(missedAlbums) photos", comment: "Duplicates: banner, inheritance could not write an album"))
+                ? String(localized: "1 kept photo couldn't take its copies' albums or favorite",
+                         comment: "Duplicates: banner, inheritance could not be written for one kept photo")
+                : String(localized: "\(missedAlbums) kept photos couldn't take their copies' albums or favorite",
+                         comment: "Duplicates: banner, inheritance could not be written for several kept photos"))
         }
         dependencies.banner.show(text, actionTitle: String(localized: "Open Photos", comment: "Duplicates banner: open the Photos app")) {
             if let url = URL(string: "photos-redirect://") { UIApplication.shared.open(url) }

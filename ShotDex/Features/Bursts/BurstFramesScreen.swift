@@ -14,6 +14,9 @@ struct BurstFramesScreen: View {
     var onDeleted: (([String]) -> Void)?
     /// Done: the frames kept now. A Duplicates group turns them into marks.
     var onDone: (([String]) -> Void)?
+    /// A Duplicates group's own delete (inheritance, banner); `nil` for a
+    /// burst opened from the viewer.
+    var groupDelete: (([String]) async -> Bool)?
 
     @Environment(\.dismiss) private var dismiss
     @Environment(AppDependencies.self) private var dependencies
@@ -52,8 +55,12 @@ struct BurstFramesScreen: View {
                 library: dependencies.bursts,
                 isLimited: photoLibrary.authorizationState == .limited,
                 banner: dependencies.banner,
+                groupDelete: groupDelete,
                 deleteAssets: { ids in
-                    try await photoLibrary.deleteAssets(PhotoLibraryService.fetchAssets(ids: ids))
+                    let assets = PhotoLibraryService.fetchAssets(ids: ids)
+                    guard !assets.isEmpty else { return 0 }
+                    try await photoLibrary.deleteAssets(assets)
+                    return assets.count
                 }
             )
             model = made

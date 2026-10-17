@@ -126,6 +126,7 @@ struct BurstModelTests {
             deleteAssets: { ids in
                 asked.append(ids)
                 library.bursts["small"]?.removeAll { ids.contains($0.id) }
+                return ids.count
             }
         )
         await picker.load()
@@ -178,7 +179,7 @@ struct BurstModelTests {
         let library = MemoryBurstLibrary(bursts: ["big": frames("b", 3)])
         let picker = BurstFramesModel(
             request: BurstFramesRequest(burstId: "big"), library: library, isLimited: true, banner: nil,
-            deleteAssets: { _ in }
+            deleteAssets: { _ in 0 }
         )
         await picker.load()
         #expect(picker.limitedNote?.hasPrefix("ShotDex can see 3 frames of this burst.") == true)
@@ -211,3 +212,39 @@ struct SharedFramePickerTests {
         #expect(BurstFramesRequest(burstId: "x").burstId == "x")
     }
 }
+
+/// A group's picker deletes through the group (inheritance, banner); a
+/// delete PhotoKit could not reach is not reported as done.
+@MainActor
+struct FramePickerDeleteTests {
+    private func frames(_ count: Int) -> [BurstFrame] {
+        (1...count).map { BurstFrame(id: "f\($0)", isSuggested: false, isPickedInPhotos: false) }
+    }
+
+    @Test func groupDeleteRunsInsteadOfPhotoKit() async {
+        var handed: [String] = []
+        var photoKitCalled = false
+        let picker = BurstFramesModel(
+            request: BurstFramesRequest(burstId: "b"), library: MemoryBurstLibrary(bursts: ["b": frames(3)]),
+            isLimited: false, banner: nil,
+            groupDelete: { ids in handed = ids; return true },
+            deleteAssets: { _ in photoKitCalled = true; return 0 }
+        )
+        await picker.load()
+        picker.keepOnly("f1")
+        #expect(await picker.deleteUnkept() == .deleted(kept: ["f1"]))
+        #expect(handed == ["f2", "f3"])
+        #expect(!photoKitCalled)
+    }
+
+    @Test func nothingReachableIsAFailureNotASuccess() async {
+        let picker = BurstFramesModel(
+            request: BurstFramesRequest(burstId: "b"), library: MemoryBurstLibrary(bursts: ["b": frames(3)]),
+            isLimited: true, banner: nil, deleteAssets: { _ in 0 }
+        )
+        await picker.load()
+        picker.keepOnly("f1")
+        #expect(await picker.deleteUnkept() == .failed)
+    }
+}
+

@@ -23,7 +23,8 @@ struct DuplicateQualityReader: DuplicateQualityReading {
     func measure(_ asset: PHAsset, allowNetwork: Bool) async -> DuplicateQualityRecord {
         async let exif = ExifReader().readExifFromLocalDerivative(for: asset)
         var score = DuplicateQualityScore(sharpness: nil)
-        if let image = await Self.rendition(for: asset, allowNetwork: allowNetwork), let cgImage = image.cgImage {
+        if let image = await Self.rendition(for: asset, allowNetwork: allowNetwork), let cgImage = image.cgImage,
+           !Self.isProxy(cgImage, of: asset) {
             score = Self.score(cgImage)
         }
         var raw: RawExif?
@@ -36,6 +37,15 @@ struct DuplicateQualityReader: DuplicateQualityReading {
             software: raw?.software,
             scoredAt: Int(Date().timeIntervalSince1970)
         )
+    }
+
+    /// Optimize Storage leaves a small proxy on the device that PhotoKit hands
+    /// over as final: scoring it against a full rendition of a sibling would
+    /// rank on resolution, not on the shot. Unread instead; a networked run
+    /// tries again.
+    static func isProxy(_ image: CGImage, of asset: PHAsset) -> Bool {
+        let want = min(Double(DuplicateQuality.thumbnailEdge), Double(max(asset.pixelWidth, asset.pixelHeight)))
+        return Double(max(image.width, image.height)) < want * 0.9
     }
 
     /// Luma measures plus faces. Runs off the main actor; no pixels kept.
@@ -118,6 +128,7 @@ struct DuplicateQualityReader: DuplicateQualityReading {
     private static func rendition(for asset: PHAsset, allowNetwork: Bool) async -> UIImage? {
         let requestId = OSAllocatedUnfairLock<PHImageRequestID?>(initialState: nil)
         let resumed = OSAllocatedUnfairLock(initialState: false)
+        let timeout = OSAllocatedUnfairLock<Task<Void, Never>?>(initialState: nil)
         return await withTaskCancellationHandler {
             await withCheckedContinuation { (continuation: CheckedContinuation<UIImage?, Never>) in
                 func finish(_ image: UIImage?) {
@@ -125,7 +136,10 @@ struct DuplicateQualityReader: DuplicateQualityReading {
                         defer { done = true }
                         return !done
                     }
-                    if first { continuation.resume(returning: image) }
+                    if first {
+                        timeout.withLock { $0?.cancel() }
+                        continuation.resume(returning: image)
+                    }
                 }
                 let options = PHImageRequestOptions()
                 // One final callback; cancel and error arrive through it too.
@@ -146,11 +160,13 @@ struct DuplicateQualityReader: DuplicateQualityReading {
                     finish(nil)
                     return
                 }
-                Task {
+                let sleeper = Task {
                     try? await Task.sleep(for: renditionTimeout)
+                    guard !Task.isCancelled else { return }
                     PHImageManager.default().cancelImageRequest(id)
                     finish(nil)
                 }
+                timeout.withLock { $0 = sleeper }
             }
         } onCancel: {
             if let id = requestId.withLock({ $0 }) { PHImageManager.default().cancelImageRequest(id) }
@@ -216,9 +232,11 @@ actor DuplicateQualityPass {
                     if Task.isCancelled { break }
                 }
                 if Task.isCancelled { break }
-                if let record = await reader.measure(assetId: assetId, allowNetwork: allowNetwork) {
-                    records.append(record)
-                }
+                let record = await reader.measure(assetId: assetId, allowNetwork: allowNetwork)
+                // Cancelled mid-request: the empty answer is not a verdict on
+                // the photo, so nothing is written for it.
+                if Task.isCancelled { break }
+                if let record { records.append(record) }
             }
             try store.upsert(records)
             processed += records.count

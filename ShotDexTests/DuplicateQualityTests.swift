@@ -199,6 +199,8 @@ struct DuplicateQualityPassTests {
         let scored = try store.scores(for: ids).count
         #expect(scored > 0)
         #expect(scored < ids.count)
-        #expect(scored == seen.withLock { $0 }.count)
+        // The photo in flight when the cancel came is not written: its empty
+        // answer is no verdict on the photo (photokit-guard review).
+        #expect((0...1).contains(seen.withLock { $0 }.count - scored))
     }
 }

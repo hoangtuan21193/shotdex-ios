@@ -170,8 +170,8 @@ struct DuplicatesScreen: View {
         .fullScreenCover(item: $model.framePicker) { request in
             BurstFramesScreen(
                 request: request,
-                onDeleted: { kept in model.didChooseFrames(request, kept: kept, deleted: true) },
-                onDone: { kept in model.didChooseFrames(request, kept: kept, deleted: false) }
+                onDone: { kept in model.didChooseFrames(request, kept: kept) },
+                groupDelete: { ids in await model.delete(ids: Set(ids)) }
             )
             .environment(dependencies)
             .environment(photoLibrary)
@@ -663,8 +663,10 @@ private struct DuplicatesHeaderBand: View {
             pending = String(localized: "\(model.cloudOnlyCount.formatted()) photos only in iCloud — will check on Wi-Fi",
                              comment: "Duplicates header: photos whose thumbnails need the network")
         } else if model.pendingCount > 0 {
-            pending = String(localized: "\(model.pendingCount.formatted()) photos not checked yet",
-                             comment: "Duplicates header: photos a rescan would cover")
+            pending = model.pendingCount == 1
+                ? String(localized: "1 photo not checked yet", comment: "Duplicates header: photos a rescan would cover")
+                : String(localized: "\(model.pendingCount.formatted()) photos not checked yet",
+                         comment: "Duplicates header: photos a rescan would cover")
         } else {
             return nil
         }

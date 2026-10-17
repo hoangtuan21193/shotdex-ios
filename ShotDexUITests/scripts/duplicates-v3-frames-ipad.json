@@ -8,7 +8,15 @@
     },
     {
       "action": "wait",
-      "seconds": 6
+      "seconds": 5
+    },
+    {
+      "action": "wait",
+      "seconds": 2
+    },
+    {
+      "action": "wait",
+      "seconds": 20
     },
     {
       "action": "tap",

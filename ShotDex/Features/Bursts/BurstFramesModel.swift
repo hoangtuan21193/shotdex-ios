@@ -62,7 +62,11 @@ final class BurstFramesModel {
 
     @ObservationIgnored let request: BurstFramesRequest
     @ObservationIgnored private let library: any BurstLibrary
-    @ObservationIgnored private let deleteAssets: ([String]) async throws -> Void
+    /// Deletes the ids it can still reach and returns how many that was.
+    @ObservationIgnored private let deleteAssets: ([String]) async throws -> Int
+    /// Set when a Duplicates group opened the picker: its delete runs the
+    /// group's own path — inheritance, banner — and says whether it went.
+    @ObservationIgnored private let groupDelete: (([String]) async -> Bool)?
     @ObservationIgnored private let banner: AppBannerModel?
 
     init(
@@ -70,12 +74,14 @@ final class BurstFramesModel {
         library: any BurstLibrary,
         isLimited: Bool,
         banner: AppBannerModel?,
-        deleteAssets: @escaping ([String]) async throws -> Void
+        groupDelete: (([String]) async -> Bool)? = nil,
+        deleteAssets: @escaping ([String]) async throws -> Int
     ) {
         self.request = request
         self.library = library
         self.isLimited = isLimited
         self.banner = banner
+        self.groupDelete = groupDelete
         self.deleteAssets = deleteAssets
     }
 
@@ -138,8 +144,15 @@ final class BurstFramesModel {
         guard selection.canDelete, !isDeleting else { return .cancelled }
         isDeleting = true
         defer { isDeleting = false }
+        if let groupDelete {
+            guard await groupDelete(ids) else { return .cancelled }
+            let kept = keptIds
+            selection.remove(Set(ids))
+            return .deleted(kept: kept)
+        }
+        let deleted: Int
         do {
-            try await deleteAssets(ids)
+            deleted = try await deleteAssets(ids)
         } catch let error as PHPhotosError where error.code == .userCancelled {
             return .cancelled
         } catch {
@@ -148,10 +161,15 @@ final class BurstFramesModel {
             }
             return .failed
         }
+        guard deleted > 0 else {
+            banner?.show(Self.deleteFailed)
+            return .failed
+        }
         let kept = keptIds
         selection.remove(Set(ids))
-        // No Undo: the app cannot read Recently Deleted.
-        banner?.show(Self.moved(ids.count))
+        // No Undo: the app cannot read Recently Deleted. Only what PhotoKit
+        // was handed is counted — a frame outside a limited selection is not.
+        banner?.show(Self.moved(deleted))
         return .deleted(kept: kept)
     }
 
