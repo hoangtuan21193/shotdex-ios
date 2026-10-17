@@ -8,6 +8,7 @@
 		<string>com.hoangtuan.shotdex.backup.refresh</string>
 		<string>com.hoangtuan.shotdex.backup</string>
 		<string>com.hoangtuan.shotdex.backup.continued</string>
+		<string>com.hoangtuan.shotdex.ingest.continued</string>
 	</array>
 	<key>CFBundleURLTypes</key>
 	<array>

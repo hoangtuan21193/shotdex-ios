@@ -211,6 +211,8 @@ final class AppDependencies {
     let cards = CardStore()
     /// The card import running, wherever the user is (FS-20 §7).
     let ingest = IngestCenter()
+    /// iOS 26's continued processing for a card import (FS-20 AC-26).
+    @ObservationIgnored lazy var ingestBackground = IngestBackgroundService(center: ingest)
 
     init(database: AppDatabase, photoLibrary: PhotoLibraryService) {
         let metadataStore = MetadataStore(database: database)

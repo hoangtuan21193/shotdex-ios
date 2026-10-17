@@ -45,7 +45,7 @@ dùng được là khuôn của Export to Files (07b) và FS-15/17.
 | AC-14 | ⚠️ logic | huỷ Task = Stop, kiểm mỗi khối | task 9 |
 | AC-15 | ✅ | `IngestRecorder` ghi từng file | task 19 |
 | AC-16 | ⚠️ | `IngestScreen` trạng thái rỗng | task 16; ảnh màn rỗng |
-| AC-17 | ❌ | không có sidebar/Activity (FS-18/FS-21 chưa làm) | runner không chặn UI; đăng ký file vào nguồn FS-19 sau mỗi file; chân sidebar `Importing from … N%` |
+| AC-17 | ⚠️ (2026-10-18) | đọc lại nguồn đích mỗi ≤ 10 s (`IngestModel.readSourceIfDue`) | task 25 phần iPhone; iPad/Mac chờ FS-21/18 |
 | AC-18 | ⚠️ logic | `IngestSummary.canEject`, `IngestCopy.finishedBanner`, banner ở `IngestModel.finish` | task 22; ICC eject chưa có |
 | AC-19 | ⚠️ iPhone | `CardStore`, `SourcesGroup.cardRow` | task 23 phần iPhone |
 | AC-20 | ❌ | khuôn bookmark nhớ lại có ở E10 | `CardBookmarkStore` (nhận lại thẻ theo volume UUID), **Choose Card…** |
@@ -54,6 +54,6 @@ dùng được là khuôn của Export to Files (07b) và FS-15/17.
 | AC-23 | ⚠️ nửa danh mục (2026-10-18) | `CardCatalog.items`: WAV theo ô ảnh, MP4/MOV ô `.video`, `isListed` bỏ ẩn + MISC, chỉ giữ ảnh/RAW/video/WAV | task 3 xong; mẻ thật ở task 4, thời lượng video ở task 13 |
 | AC-24 | ✅ | `SidecarWriter.write` tĩnh | task 21 |
 | AC-25 | ✅ nửa Export (2026-10-18) | `FileNameChip.all` + `FileNameTokenGrid` (`Features/FileExport/FileNameTokenGrid.swift`), token `originalNumber`, `seq`→`sequence`, mẫu "Date + Camera + Sequence" | task 1 xong; nửa Import ở task 13 |
-| AC-26 | ❌ | E11 | bộ chạy nền chung `ContinuedProcessingRun` (iOS 26) + nhánh trước 26 = Stop + Import Remaining |
+| AC-26 | ⚠️ logic | `App/IngestBackgroundService.swift`, `IngestBackgroundPolicy` | task 26 |
 | AC-27 | ❌ | — | bố cục iPhone/Duo ngoài theo `PH_Ingest`, `DC_Ingest`; Duo ngoài chừa rail 84 |
 | AC-28 | ✅ (2026-10-18) | `IngestRunner.pause/resume`, panel tiến độ | task 28 |

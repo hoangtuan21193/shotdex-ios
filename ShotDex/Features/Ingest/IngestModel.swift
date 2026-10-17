@@ -47,6 +47,7 @@ final class IngestModel {
     /// What the background hash found, by card path (AC-22).
     @ObservationIgnored private var hashed: [String: IngestStatus.Hashed] = [:]
     @ObservationIgnored private var hashTask: Task<Void, Never>?
+    @ObservationIgnored var onUserStart: (@MainActor (IngestModel) -> Void)?
 
     init(card: RememberedCard, root: URL, dependencies: AppDependencies) {
         self.card = card
@@ -239,6 +240,7 @@ final class IngestModel {
     private func run(ids: Set<String>, freshPlan: Bool, copiesPrimary: Bool = true) {
         guard let destinationRoot, let destination else { return }
         phase = .running
+        onUserStart?(self)
         isPaused = false
         progress = IngestProgress(total: ids.count)
         let reader = self.reader
@@ -353,10 +355,14 @@ extension IngestSelection {
 @Observable
 final class IngestCenter {
     private(set) var models: [String: IngestModel] = [:]
+    /// A run the user started: the background service asks iOS 26 to let
+    /// it carry on after the app leaves (AC-26).
+    @ObservationIgnored var onUserStart: (@MainActor (IngestModel) -> Void)?
 
     func model(for card: RememberedCard, root: URL, dependencies: AppDependencies) -> IngestModel {
         if let existing = models[card.id] { return existing }
         let model = IngestModel(card: card, root: root, dependencies: dependencies)
+        model.onUserStart = { [weak self] in self?.onUserStart?($0) }
         models[card.id] = model
         return model
     }

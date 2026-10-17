@@ -16,6 +16,7 @@ struct ShotDexApp: App {
         // BGTaskScheduler requires registration before launch finishes.
         dependencies.backgroundIndex.register()
         dependencies.backupBackground.register()
+        dependencies.ingestBackground.register()
         // Same requirement: a notification tap that launched the app is
         // delivered to nobody unless the delegate is already in place.
         dependencies.onThisDayNotifications.registerDelegate()
@@ -43,6 +44,7 @@ struct ShotDexApp: App {
                     if phase == .background {
                         dependencies.backgroundIndex.scheduleContinuationIfNeeded()
                         dependencies.backupBackground.appDidEnterBackground()
+                        dependencies.ingestBackground.appDidEnterBackground()
                     }
                     if phase == .active {
                         // Widgets ask for things while the app is away — an

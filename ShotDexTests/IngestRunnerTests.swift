@@ -1,4 +1,5 @@
 import Foundation
+import GRDB
 import Testing
 @testable import ShotDex
 
@@ -218,6 +219,45 @@ extension IngestRunnerTests {
         var failed = summary
         failed.failed["x"] = .checksumMismatch
         #expect(!failed.canEject(backupEnabled: true))
+    }
+}
+
+extension IngestRunnerTests {
+    /// AC-17: photos join the destination source while the batch runs —
+    /// the source is read mid-run, a part file is never a photo, and no
+    /// file is registered twice.
+    @Test func registersEachFileMidBatch() async throws {
+        let card = try IngestFixture()
+        defer { card.cleanUp() }
+        // Every file different, so none merges with another.
+        for n in 1...6 {
+            let jpeg = try MetadataFixture.encode(.jpeg, options: MetadataFixture.Options(width: 120 + n))
+            let url = card.card.appendingPathComponent(String(format: "DCIM/100CANON/IMG_%04d.JPG", n))
+            try FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
+            try jpeg.write(to: url)
+        }
+        let database = try AppDatabase.makeEmpty()
+        let sources = FolderSourceRunner(database: database, metadataStore: MetadataStore(database: database), thumbnails: nil)
+        let sourceId = try SourceStore(database: database).addFolder(name: "T7", bookmark: try card.destination.bookmarkData(),
+                                                                    includesSubfolders: true, pairsRawAndJpeg: true)
+        let slow = FaultyCardReader(inner: card.reader(), chunkDelay: .milliseconds(20))
+        let plan = try await card.plan(slow)
+        let midRun = ReadBackCounter()
+        let runner = IngestRunner(card: slow, plan: plan,
+                                  primary: IngestTarget(destination: LocalFolderWriter(root: card.destination), name: "T7"),
+                                  onEvent: { event in
+                                      guard case .imported = event else { return }
+                                      _ = try? await sources.read(sourceId: sourceId)
+                                      midRun.increment()
+                                  })
+        let summary = await runner.run()
+        #expect(summary.imported.count == 6)
+        #expect(midRun.value == 6)
+        let paths = try await database.reader.read { db in
+            try String.fetchAll(db, sql: "SELECT relativePath FROM photo_copies WHERE sourceId = ? ORDER BY relativePath", arguments: [sourceId])
+        }
+        #expect(paths == (1...6).map { String(format: "IMG_%04d.JPG", $0) })
+        #expect(try await database.reader.read { db in try Int.fetchOne(db, sql: "SELECT COUNT(*) FROM photo_metadata") } == 6)
     }
 }
 
