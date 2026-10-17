@@ -64,7 +64,7 @@ bảng phím Editor chung, mật độ lưới màn rộng, sidebar).
 | AC-31 | ❌ | iOS lưới phẳng; nhóm theo ngày đã có ở Domain `PhotoGridSections.swift:6, 74` (dùng cho On This Day/album) | `PhotoGridSections`, `PhotoGridSectionBuilder` (FS-21 task 38: dòng có nơi + số) | M11 | ⏳ FS-21 task 38 |
 | AC-32 | ❌ | iOS chọn bằng chế độ Select + `SwipeSelection` (Domain) | `SwipeSelection` cho kéo khung | M12 | K3 |
 | AC-33 | ❌ | iOS không có bảng | `LibraryModel` sắp xếp + `LibraryQueries` | M13 | — |
-| AC-34 | ✅ một phần | parser: `SearchParserTests.combinedQuery` khoá "Canon 85mm f/1.8 ISO 400"; **chưa** có ca đúng câu AC; phạm vi nguồn ❌ | `SearchParser`, `SearchIntentParser` | A1 (test khoá parser) + M14 (token + phạm vi) | ⏳ FS-19 (điều kiện nguồn) |
+| AC-34 | ✅ một phần | parser: `SearchParserTests.combinedQuery` khoá "Canon 85mm f/1.8 ISO 400"; **A1 xong** — `SearchParserTests.macSampleQuery` khoá đúng câu AC; phạm vi nguồn ❌ | `SearchParser`, `SearchIntentParser` | A1 (test khoá parser) + M14 (token + phạm vi) | ⏳ FS-19 (điều kiện nguồn) |
 | AC-35 | ❌ | iOS lọc qua sheet/chip (`LibraryModel`) | `FilterCriteria`, dòng "212 of 55,231" của `LibraryModel` | M15 | — |
 | AC-36 | ❌ | iOS inspector 360 trong Viewer (FS-02.03b) | `PhotoInfoPanelSummary` (Domain) | M23 | M22 |
 | AC-37 | ❌ | iOS có `InfoCaptionKeywordModel` + `PhotoKeywordStore.swift:13` (GRDB, quan sát được) | hai model cùng đọc một store — quan sát chung | M30 | M28 |

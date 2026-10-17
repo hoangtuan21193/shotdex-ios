@@ -3,6 +3,14 @@ import Testing
 
 struct SearchParserTests {
 
+    /// FS-18 AC-34: the Mac search field's sample query, word for word.
+    @Test func macSampleQuery() {
+        let parsed = SearchParser.parse("Canon R6 85mm ISO 3200")
+        #expect(parsed.freeTextTerms == ["Canon", "R6"])
+        #expect(parsed.focalLength == 85)
+        #expect(parsed.iso == 3200)
+    }
+
     @Test func recognizesISO() {
         #expect(SearchParser.parse("ISO 3200").iso == 3200)
         #expect(SearchParser.parse("iso3200").iso == 3200)
