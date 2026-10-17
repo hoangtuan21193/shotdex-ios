@@ -101,6 +101,8 @@ enum SettingsKeys {
     static let ingestCards = "ingest.cards"
     /// Card import choices: destination, folders, names, metadata, Eject (FS-20 §6).
     static let ingestSettings = "ingest.settings"
+    /// The Sync sheet's ticks, as `EditorSyncGroups` JSON (FS-03.09b §2).
+    static let editorSyncGroups = "editor.sync.groups"
 
     /// Per-source counters used by `_SHOTDEX_EDITED_N` and
     /// `_SHOTDEX_COMPRESSED_N` output filenames.

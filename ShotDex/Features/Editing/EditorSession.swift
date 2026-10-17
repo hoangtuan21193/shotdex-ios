@@ -121,7 +121,7 @@ final class EditorSession {
     /// Lightroom's Sync Settings: hand this recipe to every *other* photo in the
     /// run. The photo it came from is left alone — it already has it, and writing
     /// it back would replace the live controller's state behind its back.
-    func syncToAll(_ recipe: PhotoEditRecipe, from photo: PhotoEditOrigin, scope: EditorSyncScope) {
+    func syncToAll(_ recipe: PhotoEditRecipe, from photo: PhotoEditOrigin, scope: EditorSyncGroups) {
         for other in photos where other.id != photo.id {
             let base = drafts[other.id] ?? .identity
             store(scope.apply(recipe, onto: base), for: other)
@@ -183,7 +183,7 @@ final class EditorSession {
     var isAutoSyncing = false
     /// What `scope` an Auto Sync propagation uses — the last scope the user
     /// picked from the Sync menu.
-    var autoSyncScope: EditorSyncScope = .look
+    var autoSyncScope: EditorSyncGroups = .look
 
     /// The frame pinned beside the canvas to match against — Lightroom's
     /// Reference View. Nil when nothing is pinned.

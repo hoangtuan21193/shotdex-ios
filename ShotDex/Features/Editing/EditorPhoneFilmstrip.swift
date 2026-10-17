@@ -108,11 +108,11 @@ struct EditorPhoneFilmstrip: View {
         VStack(spacing: 2) {
             Menu {
                 Button(action: sync.syncLook) {
-                    Text("Sync Look to \(photosText)")
+                    Text("Sync Look to \(photosText)…")
                     Text("Tone, color, curve and look")
                 }
                 .disabled(!sync.canSync)
-                Button("Sync Everything to \(photosText)", action: sync.syncEverything)
+                Button("Sync Everything to \(photosText)…", action: sync.syncEverything)
                     .disabled(!sync.canSync)
                 Button(action: sync.applyPrevious) {
                     Label("Apply Previous", systemImage: "arrow.uturn.left.square")

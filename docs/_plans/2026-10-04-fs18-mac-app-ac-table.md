@@ -83,7 +83,7 @@ bảng phím Editor chung, mật độ lưới màn rộng, sidebar).
 | AC-45 | ❌ | iOS hỏi "Discard" khi rời (FS-03.13a) — Mac tự Done (đã chốt, FS-03.13a sửa theo) | như AC-44 | M43 | — |
 | AC-46 | ❌ | Revert iOS cho ảnh Photos | — | M45 | ⏳ FS-19 |
 | AC-47 | ❌ | không có offline | — | M46 | ⏳ FS-19 |
-| AC-48 | ❌ | `EditorSyncScope` chỉ `.look`/`.everything` (`EditClipboard.swift:72-92`) — không tick theo nhóm | `EditClipboard`, `EditorSyncScope.apply` | S3 | — |
+| AC-48 | ✅ một phần (S3 xong: `EditorSyncGroups` 21 nhóm, sheet iOS; nửa Mac ở M48) | `EditorSyncGroupsTests` | `EditClipboard`, `EditorSyncScope.apply` | S3 | — |
 | AC-49 | ✅ một phần (S2 đã có từ dbdf74e2: `ExportColorSpace`, popup iOS; nửa Mac ở M49) | `FileExportColorSpaceTests.everyChoiceWritesItsProfile` | `FileExportRunner.swift:93`, `FileExportPlan` | S2 | — |
 | AC-50 | ❌ (logic ✅) | Cancel/Stop iOS đã có test (`FileExportCancelTests`) | `FileExportRunner`, `FileExportProgress` | M51 | M49 (sheet Mac) |
 | AC-51 | ❌ (logic ✅) | đích đầy iOS: `FileExportFailure.swift`, `FileExportFailureTests` | như trên | M52 | M51 |

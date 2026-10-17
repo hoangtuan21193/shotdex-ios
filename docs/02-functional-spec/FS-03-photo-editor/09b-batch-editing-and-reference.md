@@ -57,12 +57,22 @@ Bố cục màn rộng: [FS-03.09](09-wide-screen-and-batch-editing.md).
 
 ## 3. Sync
 
-⋯ → **Sync to N Photos**, hai mức:
+⋯ → **Sync to N Photos** ▸ **Sync Look…** / **Sync Everything…** mở sheet **"Sync to N Photos"** — mọi thiết bị
+(FS-18 03 §3, board `MAC_EditBatch`). Mỗi nhóm một ô tick (`EditorSyncGroups`), hai cột:
 
-| Mức | Chép gì |
-|---|---|
-| **Sync Look** | tone · màu · curve · film look — đúng lát cắt của Copy Edits |
-| **Sync Everything** | thêm crop, mask, markup |
+| Cột | Nhóm | Mặc định |
+|---|---|---|
+| **The Look** | Look · Light · Tone Curve · White Balance and Presence · Black and White · Color Mixer · Point Color · Grading · Effects · Lens Blur · Detail · Optics · Geometry · Upright Mode · Calibration | bật |
+| **This Frame Only** | Crop and Straighten · Masks · Heal and Clone Spots · Red Eye · Markup Layers · Upright Guides | tắt, kèm câu giải thích |
+
+- Sync Look… mở với **bộ tick đã nhớ** lần trước (chưa có thì The Look); Sync Everything… mở với mọi nhóm. Nút
+  Check All / Check None; Sync mờ khi không tick nhóm nào.
+- Bộ tick vừa dùng được nhớ (`editor.sync.groups`, giải mã khoan dung) và là mức của Auto Sync và Apply Previous.
+- **Ống kính (lens profile) không bao giờ đi theo** — ảnh kia có thể từ ống khác (FS-03.16 §4); nhóm Optics chỉ
+  mang các thanh chỉnh quang học. Upright Mode đi như một chế độ, giải lại trên từng ảnh; Upright Guides mang cả
+  đường dẫn.
+- Tick hết = đúng Sync Everything; cột The Look trừ Lens Blur = đúng lát cắt Copy Edits (test
+  `EditorSyncGroupsTests`).
 
 Bản đầu bê nguyên recipe, tức dán crop 4:5 và mask khuôn mặt của một tấm chân dung lên 39 tấm phong cảnh —
 đúng thứ Copy Edits cố tình từ chối ([FS-03.10](10-copy-paste-edits.md)).

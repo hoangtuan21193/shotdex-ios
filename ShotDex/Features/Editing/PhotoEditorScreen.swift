@@ -94,6 +94,7 @@ struct PhotoEditorScreen: View {
 
     @State private var controller: PhotoEditorController?
     @State private var session: EditorSession?
+    @State private var syncSheet: EditorSyncRequest?
 
     /// Whether leaving now would throw work away — the photo on the canvas
     /// **or** any other photo in the run.
@@ -309,6 +310,11 @@ struct PhotoEditorScreen: View {
             Button("OK") { dismiss() }
         } message: {
             Text("Photos doesn't support HEIC as the edited version of this photo, so ShotDex saved a maximum-quality JPEG instead.")
+        }
+        .sheet(item: $syncSheet) { request in
+            EditorSyncSheet(ticks: request.ticks, photoCount: max(0, (session?.photos.count ?? 1) - 1)) { ticks in
+                sync(ticks)
+            }
         }
         .sheet(isPresented: $isFontPickerPresented) {
             if let controller {
@@ -663,11 +669,19 @@ struct PhotoEditorScreen: View {
     /// Lightroom's Sync Settings: this photo's edit onto every other photo in
     /// the run. They are applied as drafts, so nothing is written until each
     /// photo is saved.
+    /// Sync Look… / Sync Everything…: the sheet of ticks, starting from the
+    /// remembered ticks for Sync Look and from every group for Everything.
     private func syncEditsToAll(_ scope: EditorSyncScope) {
-        guard let session, let controller, let current = session.current else { return }
+        guard let controller else { return }
         controller.commitCropSession()
-        session.autoSyncScope = scope
-        session.syncToAll(controller.recipe, from: current, scope: scope)
+        syncSheet = EditorSyncRequest(ticks: scope == .everything ? .everything : EditorSyncSheet.rememberedTicks())
+    }
+
+    private func sync(_ ticks: EditorSyncGroups) {
+        guard let session, let controller, let current = session.current else { return }
+        EditorSyncSheet.remember(ticks)
+        session.autoSyncScope = ticks
+        session.syncToAll(controller.recipe, from: current, scope: ticks)
     }
 
     /// Applies the previous photo's edit to this one — Lightroom's `Previous`,
@@ -2842,12 +2856,12 @@ struct PhotoEditorScreen: View {
                 Button {
                     syncEditsToAll(.look)
                 } label: {
-                    Label("Sync Look", systemImage: "paintpalette")
+                    Label("Sync Look…", systemImage: "paintpalette")
                 }
                 Button {
                     syncEditsToAll(.everything)
                 } label: {
-                    Label("Sync Everything", systemImage: "square.on.square.dashed")
+                    Label("Sync Everything…", systemImage: "square.on.square.dashed")
                 }
             }
             .disabled(controller.recipe.isIdentity)
