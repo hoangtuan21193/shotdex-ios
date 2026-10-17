@@ -80,6 +80,9 @@ final class LibraryModel {
     /// Videos among `items`, counted once per replacement rather than on
     /// every body evaluation — the grid footer reads it while scrolling.
     private(set) var videoCount = 0
+    /// Cloud placeholders among `items` (FS-19.01b §4): the grid footer adds
+    /// "N in the cloud", and the photo count leaves them out.
+    private(set) var cloudPlaceholderCount = 0
     /// Bumped whenever the content is replaced (filter/sort change, index
     /// run, retap). The screen re-ids its ScrollView off it so
     /// `defaultScrollAnchor(.bottom)` re-applies without a long-distance
@@ -350,10 +353,16 @@ final class LibraryModel {
                 } else if let advancedQuery, !advancedQuery.isEmpty {
                     let rows = try await libraryQueries.gridItems(matching: advancedQuery, sort: sort)
                     guard let self, !Task.isCancelled else { return }
+                    self.cloudPlaceholderCount = 0
                     self.applyLoadedRows(rows)
                 } else {
-                    let rows = try await libraryQueries.gridItems(matching: criteria, sort: sort)
+                    var rows = try await libraryQueries.gridItems(matching: criteria, sort: sort)
+                    // Files only in the cloud show in the whole library, never
+                    // in a filtered grid: they have no EXIF to match on.
+                    let cloud = criteria.isEmpty ? try await libraryQueries.cloudPlaceholderItems() : []
+                    rows = Self.merging(cloud, into: rows, sort: sort)
                     guard let self, !Task.isCancelled else { return }
+                    self.cloudPlaceholderCount = cloud.count
                     self.applyLoadedRows(rows)
                 }
             } catch is CancellationError {
@@ -368,6 +377,37 @@ final class LibraryModel {
                 self.isLoading = false
             }
         }
+    }
+
+    /// Cloud placeholders placed among indexed rows by the file's date under
+    /// a date sort, and after them under a metric sort — they have no value
+    /// to sort on, the way a photo with no ISO sorts last.
+    nonisolated static func merging(_ cloud: [LibraryGridItem], into rows: [LibraryGridItem], sort: SortOption) -> [LibraryGridItem] {
+        guard !cloud.isEmpty else { return rows }
+        guard sort == .dateTakenNewest || sort == .dateTakenOldest else { return rows + cloud }
+        let newestFirst = sort == .dateTakenNewest
+        let sortedCloud = cloud.sorted { a, b in
+            switch (a.creationDate, b.creationDate) {
+            case let (x?, y?): newestFirst ? x > y : x < y
+            case (_?, nil): true
+            default: false
+            }
+        }
+        var merged: [LibraryGridItem] = []
+        merged.reserveCapacity(rows.count + cloud.count)
+        var i = 0, j = 0
+        while i < rows.count, j < sortedCloud.count {
+            // A row with no date sorts last; a cloud file goes before it.
+            let goesFirst: Bool = switch (sortedCloud[j].creationDate, rows[i].creationDate) {
+            case let (c?, r?): newestFirst ? c > r : c < r
+            case (_?, nil): true
+            default: false
+            }
+            if goesFirst { merged.append(sortedCloud[j]); j += 1 } else { merged.append(rows[i]); i += 1 }
+        }
+        merged += rows[i...]
+        merged += sortedCloud[j...]
+        return merged
     }
 
     /// Publishes freshly loaded rows to the grid, choosing between an

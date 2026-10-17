@@ -595,7 +595,7 @@
       "h": 874,
       "title": "iPhone · Sheet Add a Source: Photos Library · Folder or Drive · Server, dòng thẻ nhớ, Choose Folder…",
       "w": 402,
-      "x": 22654,
+      "x": 23136,
       "y": 560
     },
     "PH_AdvancedSearch.dc.html": {
@@ -609,7 +609,7 @@
       "h": 874,
       "title": "iPhone · Album Iceland 2026: lưới 3 cột, tên + ngày, nút Filter và Select",
       "w": 402,
-      "x": 5302,
+      "x": 5784,
       "y": 560
     },
     "PH_Backup.dc.html": {
@@ -617,7 +617,7 @@
       "radius": 44,
       "title": "Backup 1/6 · danh sách job (Utilities › Backup): thẻ nguồn → đích; đang chạy + Pause, bị iOS dừng → Paused + Resume, xong → Up to Date; + = 2/6 — đề xuất 12/10, code chưa có",
       "w": 402,
-      "x": 28000,
+      "x": 28482,
       "y": 560
     },
     "PH_BackupCustomDate.dc.html": {
@@ -625,7 +625,7 @@
       "radius": 44,
       "title": "Backup 5/6 · Day › Custom…: cây Preview; Order, Year, Month, Day, Separator gõ tự do + chọn nhanh; ký tự NAS cấm bị chặn",
       "w": 402,
-      "x": 29848,
+      "x": 30330,
       "y": 560
     },
     "PH_BackupFolder.dc.html": {
@@ -633,7 +633,7 @@
       "radius": 44,
       "title": "Backup 3/6 · Choose Folder (Folder › Choose… ở 2/6): ‹ lên folder cha (mờ ở gốc), ✕ về form không đổi gì; ⋯ New Folder · Rename Folder; chạm giữ folder: Rename; ảnh mờ",
       "w": 402,
-      "x": 28924,
+      "x": 29406,
       "y": 560
     },
     "PH_BackupNew.dc.html": {
@@ -641,7 +641,7 @@
       "radius": 44,
       "title": "Backup 2/6 · New Backup: Source, Destination, dòng Organize (mở 4/6), What to Copy, When",
       "w": 402,
-      "x": 28462,
+      "x": 28944,
       "y": 560
     },
     "PH_BackupOrganize.dc.html": {
@@ -649,7 +649,7 @@
       "radius": 44,
       "title": "Backup 4/6 · Organize: cây Preview; Folders (Levels, Year, Month, Day — menu ví dụ, Custom… mở 5/6); Photos and Videos (Together · Apart at the Top · Apart in Each Year/Month/Day); File Names; trùng tên → Keep Both",
       "w": 402,
-      "x": 29386,
+      "x": 29868,
       "y": 560
     },
     "PH_BackupRunning.dc.html": {
@@ -657,7 +657,7 @@
       "radius": 44,
       "title": "Backup 6/6 · job đang chạy (chạm thẻ ở 1/6): %, Pause/Stop, file đang tải iCloud / đang up, tổng, file lỗi; resume theo sổ từng file",
       "w": 402,
-      "x": 30310,
+      "x": 30792,
       "y": 560
     },
     "PH_BurstFrames.dc.html": {
@@ -665,154 +665,154 @@
       "radius": 44,
       "title": "iPhone · Duplicates 5/5 · Màn chọn khung dùng chung (§8, tầng D): khung lớn 536pt, dải phim 56pt (chấm đỏ = khung yếu, tick = đã chọn), Zoom to face, nút chọn 44 góc dưới phải, Done · Keep 3, remove 21; không có X, vuốt xuống để đóng. Dùng cho burst, Same moment, focus stack, viewer ⋯ Choose Frames…",
       "w": 402,
-      "x": 10604,
+      "x": 11086,
       "y": 560
     },
     "PH_CameraDatabase.dc.html": {
       "h": 874,
       "title": "iPhone · Unknown Cameras: máy ảnh chưa có trong sensor database, chạm để chọn sensor",
       "w": 402,
-      "x": 15906,
+      "x": 16388,
       "y": 560
     },
     "PH_ChartEditor.dc.html": {
       "h": 874,
       "title": "iPhone · Edit Chart: X = Year, chọn Columns; Donut/Bars bị tắt, xem trước ngay dưới",
       "w": 402,
-      "x": 13496,
+      "x": 13978,
       "y": 560
     },
     "PH_Collage.dc.html": {
       "h": 874,
       "title": "iPhone · Collage: bỏ nhãn đếm, Export bên phải Dynamic Island",
       "w": 402,
-      "x": 11568,
+      "x": 12050,
       "y": 560
     },
     "PH_CollageExport.dc.html": {
       "h": 874,
       "title": "iPhone · Xuất collage: Back và Save ngang Dynamic Island",
       "w": 402,
-      "x": 12050,
+      "x": 12532,
       "y": 560
     },
     "PH_Collections.dc.html": {
       "h": 874,
       "title": "iPhone · Collections: hero On This Day 180, cover Smart Albums/My Albums 132, Utilities có Backup và Hidden, nhóm Sources ở cuối dưới Utilities (user 12/10)",
       "w": 402,
-      "x": 4820,
+      "x": 5302,
       "y": 560
     },
     "PH_Compare.dc.html": {
       "h": 874,
       "title": "iPhone · Viewer Compare: 2 ảnh xếp chồng, luôn đồng bộ zoom, Reject · ★ · Pick, Move 1 Photo… (tweak NAS: Hide 1 Photo)",
       "w": 402,
-      "x": 3374,
+      "x": 3856,
       "y": 560
     },
     "PH_Compress.dc.html": {
       "h": 874,
       "title": "iPhone · Resize: Cancel và Resize ngang Dynamic Island, bỏ tiêu đề",
       "w": 402,
-      "x": 12532,
+      "x": 13014,
       "y": 560
     },
     "PH_CompressionPresets.dc.html": {
       "h": 874,
       "title": "iPhone · Resize Presets: 4 preset có sẵn, 3 preset tuỳ chỉnh, nút Add Preset",
       "w": 402,
-      "x": 15424,
+      "x": 15906,
       "y": 560
     },
     "PH_Creations.dc.html": {
       "h": 874,
       "title": "iPhone · Collages: thẻ một cột, cover collage 64pt, ngày giờ + số ảnh, nút +",
       "w": 402,
-      "x": 11086,
+      "x": 11568,
       "y": 560
     },
     "PH_DateRange.dc.html": {
       "h": 874,
       "title": "iPhone · sheet Date Range chồng lên Edit Chart: lịch tháng, chọn 23/8–12/9, Cancel / Apply",
       "w": 402,
-      "x": 13978,
+      "x": 14460,
       "y": 560
     },
     "PH_DeleteCopies.dc.html": {
       "h": 874,
       "title": "iPhone · Sheet Move 1 Photo?: 4 bản sao có ô đánh dấu, chỉ bật bản đang mở",
       "w": 402,
-      "x": 25546,
+      "x": 26028,
       "y": 560
     },
     "PH_DeletePermanent.dc.html": {
       "h": 874,
       "title": "iPhone · Hộp đỏ thứ hai: Delete 3 Photos Permanently? (T7 không có Thùng rác)",
       "w": 402,
-      "x": 25064,
+      "x": 25546,
       "y": 560
     },
     "PH_Duplicates.dc.html": {
       "h": 874,
       "title": "iPhone · Duplicates 2/5 · Danh sách v3 (§7.3–7.4, 06b §3): hàng lọc theo loại All · Copies · Smaller copies · Look-alikes · Same moment · Screenshots · Source frames, Reviewed 4 of 312 + Easiest first ▾ (Most space · Newest · Oldest); ⋯ = Check Again · Ignored (3) · Clear Selection. Thẻ: chạm ảnh mở Compare của nhóm (pinch zoom chung), vòng 26 (vùng chạm 44) đánh dấu, chip lý do trên bản giữ, chú thích 2 dòng trên bản sao; thanh dưới 37 selected · 210 MB › + Delete 37. Viên kính mở sheet \"37 Selected\"; xoá xong: thông báo 5 s \"37 photos moved to Recently Deleted\" + Open Photos",
       "w": 402,
-      "x": 8676,
+      "x": 9158,
       "y": 560
     },
     "PH_DuplicatesLargeGroup.dc.html": {
       "h": 874,
       "title": "iPhone · Duplicates 3/5 · Same moment 51 ảnh thu gọn (≥12: bản giữ 2×2 trước, rồi theo thứ tự chụp, Show all 51), chân thẻ Choose frames · Keep all · Compare; thẻ Bracket ±2 EV: một lưới theo thứ tự chụp, Merge to HDR · Not duplicates, không nút đỏ. Focus stack cùng dáng: \"Focus stack? · 24 frames\", Focus Stack · Choose frames · Not duplicates",
       "w": 402,
-      "x": 9158,
+      "x": 9640,
       "y": 560
     },
     "PH_DuplicatesPinched.dc.html": {
       "h": 874,
       "title": "iPhone · Duplicates 4/5 · Sau khi chụm: 3 bản sao mỗi hàng (lưới 5 cột, bản giữ 2×2 nhỏ theo), HUD \"3 per row\"; chú thích bị cắt ở ô 66pt là chấp nhận được",
       "w": 402,
-      "x": 9640,
+      "x": 10122,
       "y": 560
     },
     "PH_EmptyLibrary.dc.html": {
       "h": 874,
       "title": "iPhone · Thư viện trống: 3 thẻ Photos Library / Folder or Drive / Server, dòng thẻ nhớ",
       "w": 402,
-      "x": 26028,
+      "x": 26510,
       "y": 560
     },
     "PH_FocusStack.dc.html": {
       "h": 874,
       "title": "iPhone · Focus Stack: Cancel và Save ngang Dynamic Island",
       "w": 402,
-      "x": 19762,
+      "x": 20244,
       "y": 560
     },
     "PH_Hidden.dc.html": {
       "h": 874,
       "title": "iPhone · Collections › Hidden: 6 Hidden Photos, chọn 2 → Unhide 2 Photos",
       "w": 402,
-      "x": 24582,
+      "x": 25064,
       "y": 560
     },
     "PH_Ingest.dc.html": {
       "h": 874,
       "title": "iPhone · Nhập từ thẻ: New 812, lưới 4 cột có tick, sheet đích/tên/metadata, Import 811 Photos",
       "w": 402,
-      "x": 23618,
+      "x": 24100,
       "y": 560
     },
     "PH_IngestProgress.dc.html": {
       "h": 874,
       "title": "iPhone · Đang nhập: Copy · Verify · Backup, Pause, Stop Import…",
       "w": 402,
-      "x": 24100,
+      "x": 24582,
       "y": 560
     },
     "PH_LibraryMore.dc.html": {
       "h": 874,
       "title": "iPhone · Menu Filter and sort thêm nhóm View: Grid / List, Go to Date…",
       "w": 402,
-      "x": 26510,
+      "x": 26992,
       "y": 560
     },
     "PH_LibrarySelect.dc.html": {
@@ -826,14 +826,14 @@
       "h": 874,
       "title": "iPhone · Photo Info (sheet large, kéo lên): bản đồ, Camera & Lens, Exposure, 35mm eq.",
       "w": 402,
-      "x": 2892,
+      "x": 3374,
       "y": 560
     },
     "PH_OnThisDay.dc.html": {
       "h": 874,
       "title": "iPhone · On This Day (October 2): nhóm theo năm, header kính dính, mới nhất ở đáy",
       "w": 402,
-      "x": 6748,
+      "x": 7230,
       "y": 560
     },
     "PH_Onboarding.dc.html": {
@@ -847,14 +847,14 @@
       "h": 874,
       "title": "iPhone · Panorama: Cancel và Save ngang Dynamic Island",
       "w": 402,
-      "x": 20726,
+      "x": 21208,
       "y": 560
     },
     "PH_Places.dc.html": {
       "h": 874,
       "title": "iPhone · Places: bản đồ phẳng, ghim cụm ảnh 52pt có số đếm, nút Back, tab bar nổi (Collections)",
       "w": 402,
-      "x": 7230,
+      "x": 7712,
       "y": 560
     },
     "PH_Search.dc.html": {
@@ -868,35 +868,35 @@
       "h": 874,
       "title": "iPhone · NAS Home › Kyoto là nguồn được index: không còn In Library/Import, ⋯ có Save to Photos, Hide thay Delete",
       "w": 402,
-      "x": 18316,
+      "x": 18798,
       "y": 560
     },
     "PH_ServerForm.dc.html": {
       "h": 874,
       "title": "iPhone · Sheet Add Connection: máy tìm thấy trong mạng (laptop/NAS/Mac/PC) + form SMB",
       "w": 402,
-      "x": 17834,
+      "x": 18316,
       "y": 560
     },
     "PH_ServerList.dc.html": {
       "h": 874,
       "title": "iPhone · Cài đặt › File Servers: danh sách kết nối đã lưu (tên + thư mục), nút + Add Connection",
       "w": 402,
-      "x": 17352,
+      "x": 17834,
       "y": 560
     },
     "PH_ServerUpload.dc.html": {
       "h": 874,
       "title": "iPhone · Sheet Upload to Server (bước chuẩn bị): kết nối, thư mục, Date Folders, loại file",
       "w": 402,
-      "x": 18798,
+      "x": 19280,
       "y": 560
     },
     "PH_Settings.dc.html": {
       "h": 874,
       "title": "iPhone · Cài đặt kiểu Mochi: thẻ Your library, mục Sources \"4 sources · T7 RAW Archive offline\", 4 nhóm hàng; hàng AI sau Playback (FS-08.07, 14/10)",
       "w": 402,
-      "x": 14460,
+      "x": 14942,
       "y": 560
     },
     "PH_SettingsAI.dc.html": {
@@ -904,7 +904,7 @@
       "radius": 44,
       "title": "Settings › AI: Use For (AI Search), On This Device, Providers + Add Provider… — FS-08.07, đề xuất 14/10",
       "w": 402,
-      "x": 35582,
+      "x": 36064,
       "y": 560
     },
     "PH_SettingsAIProvider.dc.html": {
@@ -912,105 +912,105 @@
       "radius": 44,
       "title": "Settings › AI › Claude: tên, API key (chỉ 4 ký tự cuối), model, Test → Working · 0.8 s, Delete Provider — FS-08.07 §3",
       "w": 402,
-      "x": 36064,
+      "x": 36546,
       "y": 560
     },
     "PH_SettingsSources.dc.html": {
       "h": 874,
       "title": "iPhone · Cài đặt › Sources: 5 nguồn, Add Folder or Drive… / Connect to Server…, Cache Size Limit mặc định 5 GB",
       "w": 402,
-      "x": 23136,
+      "x": 23618,
       "y": 560
     },
     "PH_Share.dc.html": {
       "h": 874,
       "title": "iPhone · Share sheet trên Library: header Metadata removed, 2 hàng mức metadata",
       "w": 402,
-      "x": 4338,
+      "x": 4820,
       "y": 560
     },
     "PH_SmartAlbum.dc.html": {
       "h": 874,
       "title": "iPhone · Smart album Telephoto Sony: thanh điều kiện (1,284 photos, Match all) trên lưới",
       "w": 402,
-      "x": 5784,
+      "x": 6266,
       "y": 560
     },
     "PH_SmartAlbumEditor.dc.html": {
       "h": 874,
       "title": "iPhone · Sheet Edit Smart Album: Name, Media Type, Match, 3 điều kiện (Camera, Focal, ISO)",
       "w": 402,
-      "x": 6266,
+      "x": 6748,
       "y": 560
     },
     "PH_Sources.dc.html": {
       "h": 874,
       "title": "iPhone · Nguồn: nhóm Sources ở cuối tab Collections, dưới Utilities (user 12/10) — Photos, 2026 Japan, T7 offline, NAS Home, thẻ EOS_DIGITAL; + Add Source",
       "w": 402,
-      "x": 22172,
+      "x": 22654,
       "y": 560
     },
     "PH_StackExposures.dc.html": {
       "h": 874,
       "title": "iPhone · Stack Exposures: Cancel và Save ngang Dynamic Island",
       "w": 402,
-      "x": 20244,
+      "x": 20726,
       "y": 560
     },
     "PH_Statistics.dc.html": {
       "h": 874,
       "title": "iPhone · Thống kê: mọi thẻ biểu đồ có nút Cột/Đường hoặc Tròn/Thanh; Năm=Cột, Tháng=Đường",
       "w": 402,
-      "x": 13014,
+      "x": 13496,
       "y": 560
     },
     "PH_Support.dc.html": {
       "h": 874,
       "title": "iPhone · Support (đẩy từ Settings): Report a Bug, Your Messages, What People Asked For",
       "w": 402,
-      "x": 16388,
+      "x": 16870,
       "y": 560
     },
     "PH_SupportThread.dc.html": {
       "h": 874,
       "title": "iPhone · Support thread (chọn màn thread, không phải compose): Bug, Conversation, Send Reply",
       "w": 402,
-      "x": 16870,
+      "x": 17352,
       "y": 560
     },
     "PH_Trips.dc.html": {
       "h": 874,
       "title": "iPhone · Trips: thẻ cover rộng 160pt, tên nơi + khoảng ngày · số ảnh trên cover",
       "w": 402,
-      "x": 7712,
+      "x": 8194,
       "y": 560
     },
     "PH_UploadedToServer.dc.html": {
       "h": 874,
       "title": "iPhone · Uploaded to Server: Where They Are theo kết nối/thư mục + All Uploaded Photos",
       "w": 402,
-      "x": 19280,
+      "x": 19762,
       "y": 560
     },
     "PH_VideoProjects.dc.html": {
       "h": 874,
       "title": "iPhone · Video Projects: nháp lẫn bản đã xuất một danh sách, nhãn Draft, Edited 5 min ago, bìa clip đầu — theo spec 3/10",
       "w": 402,
-      "x": 21208,
+      "x": 21690,
       "y": 560
     },
     "PH_VideoProjectsDelete.dc.html": {
       "h": 874,
       "title": "iPhone · Delete Draft?: alert 2 nút Cancel / Delete đỏ trên Video Projects mờ — theo spec 3/10",
       "w": 402,
-      "x": 21690,
+      "x": 22172,
       "y": 560
     },
     "PH_VideoTrim.dc.html": {
       "h": 874,
       "title": "iPhone · Cắt video: Cancel và Save ngang Dynamic Island",
       "w": 402,
-      "x": 3856,
+      "x": 4338,
       "y": 560
     },
     "PH_Viewer.dc.html": {
@@ -1024,14 +1024,14 @@
       "h": 874,
       "title": "iPhone · Menu ⋯ Viewer thêm Rotate Counterclockwise / Clockwise, Print…",
       "w": 402,
-      "x": 26992,
+      "x": 27474,
       "y": 560
     },
     "PH_WidgetSettings.dc.html": {
       "h": 874,
       "title": "iPhone · Sửa widget: preview Medium ghim trên, chip Photo/Time/Date/Weather, tuỳ chọn dưới",
       "w": 402,
-      "x": 14942,
+      "x": 15424,
       "y": 560
     },
     "TX_P_TextPanel.dc.html": {
@@ -1045,7 +1045,15 @@
       "h": 874,
       "title": "iPhone · Duplicates 1/5 · Tóm tắt v3 (FS-06.06 §7.2): ~4.2 GB to free, thẻ Quick clean (Copies + Smaller copies, nút accent duy nhất Review 212…), Choose yourself theo loại + Start, Source frames + Show. Review 212… mở sheet xem trước (không vẽ board riêng): mỗi dòng bản giữ + số bản sẽ xoá + MB, bỏ tick từng nhóm, dòng \"1 kept: in album …\", chân sheet Select 205 photos — chỉ đánh dấu, chưa xoá",
       "w": 402,
-      "x": 8194,
+      "x": 8676,
+      "y": 560
+    },
+    "PH40_ViewerCloudDownload.dc.html": {
+      "h": 874,
+      "radius": 44,
+      "title": "iPhone · Viewer — mở file chỉ có trên iCloud Drive (như code): trang đen, chỉ nút Close, giữa: glyph, tên file, \"Downloading from iCloud Drive…\", thanh trắng 220, \"29 kB of 58 kB\", Cancel (FS-19.01b §4, AC-15/16). Cancel → \"Only in iCloud Drive\" + nút Download; tải xong → viewer thường (capsule info + toolbar)",
+      "w": 402,
+      "x": 2892,
       "y": 560
     },
     "PH_DuplicatesCompare.dc.html": {
@@ -1142,6 +1150,7 @@
     "PH_Search.dc.html",
     "PH_AdvancedSearch.dc.html",
     "PH_Viewer.dc.html",
+    "PH40_ViewerCloudDownload.dc.html",
     "PH_Metadata.dc.html",
     "PH_Compare.dc.html",
     "PH_VideoTrim.dc.html",
@@ -1162,8 +1171,8 @@
     "PH_DuplicatesSummary.dc.html",
     "PH_Duplicates.dc.html",
     "PH_DuplicatesLargeGroup.dc.html",
-    "PH_DuplicatesPinched.dc.html",
     "PH_DuplicatesCompare.dc.html",
+    "PH_DuplicatesPinched.dc.html",
     "PH_BurstFrames.dc.html",
     "PH_Creations.dc.html",
     "PH_Collage.dc.html",

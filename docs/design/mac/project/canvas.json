@@ -99,7 +99,7 @@
    "radius": 16
   },
   "MAC_GetInfo.dc.html": {
-   "x": 3040,
+   "x": 4560,
    "y": 1510,
    "w": 420,
    "h": 640,
@@ -107,7 +107,7 @@
    "radius": 16
   },
   "MAC_Compare.dc.html": {
-   "x": 3540,
+   "x": 5060,
    "y": 1510,
    "w": 1440,
    "h": 900,
@@ -115,7 +115,7 @@
    "radius": 16
   },
   "MAC_DuplicatesSummary.dc.html": {
-   "x": 6580,
+   "x": 8100,
    "y": 1510,
    "w": 1440,
    "h": 900,
@@ -123,7 +123,7 @@
    "radius": 16
   },
   "MAC_Duplicates.dc.html": {
-   "x": 8100,
+   "x": 9620,
    "y": 1510,
    "w": 1440,
    "h": 900,
@@ -131,7 +131,7 @@
    "radius": 16
   },
   "MAC_BurstFrames.dc.html": {
-   "x": 9620,
+   "x": 11140,
    "y": 1510,
    "w": 1440,
    "h": 900,
@@ -139,7 +139,7 @@
    "radius": 16
   },
   "MAC_Places.dc.html": {
-   "x": 11140,
+   "x": 12660,
    "y": 1510,
    "w": 1440,
    "h": 900,
@@ -147,7 +147,7 @@
    "radius": 16
   },
   "MAC_OnThisDay.dc.html": {
-   "x": 12660,
+   "x": 14180,
    "y": 1510,
    "w": 1440,
    "h": 900,
@@ -438,7 +438,7 @@
    "title": "Mac · Xem ảnh chế độ Survey: 6 ảnh, cờ None·Pick·Reject, Delete 2 Photos trước Edit",
    "radius": 16,
    "y": 1510,
-   "x": 5060,
+   "x": 6580,
    "w": 1440,
    "h": 900
   },
@@ -499,7 +499,7 @@
    "radius": 16
   },
   "MAC_GetInfoSingle.dc.html": {
-   "x": 14180,
+   "x": 15700,
    "y": 1510,
    "w": 420,
    "h": 640,
@@ -529,6 +529,14 @@
    "h": 640,
    "title": "Mac · Sheet nhà cung cấp Claude: tên, key (4 ký tự cuối), model, Test → Working · 0.8 s, Delete Provider… — FS-08.07 §3, đề xuất 14/10, code chưa có",
    "radius": 16
+  },
+  "MAC_ViewerCloudDownload.dc.html": {
+   "title": "Mac · Xem ảnh — mở một file chỉ có trên iCloud Drive (nguồn thư mục): đang tải đúng file đó, thanh 40%, Cancel; Share/Edit/Info mờ tới khi tải xong (FS-19.01b §4, AC-15/16). Cancel → panel còn nút Download; tải xong → trang thành ảnh thường",
+   "w": 1440,
+   "h": 900,
+   "radius": 16,
+   "x": 3040,
+   "y": 1510
   }
  },
  "order": [
@@ -546,6 +554,7 @@
   "MAC_EmptyLibrary.dc.html",
   "MAC_Viewer.dc.html",
   "MAC_ViewerFullScreen.dc.html",
+  "MAC_ViewerCloudDownload.dc.html",
   "MAC_GetInfo.dc.html",
   "MAC_Compare.dc.html",
   "MAC_CompareSurvey.dc.html",

@@ -735,7 +735,8 @@ struct LibraryScreen: View {
             // last row and the tab bar, so the grid does not end flush against
             // the chrome. With a query active it doubles as the match count.
             trailingFooterText: countFooter(
-                photos: model.matchCount - model.videoCount, videos: model.videoCount
+                photos: model.matchCount - model.videoCount - model.cloudPlaceholderCount, videos: model.videoCount,
+                inCloud: model.cloudPlaceholderCount
             ),
             lazyMetadataProvider: { assetId in
                 await model.lazyBadgeItem(assetId: assetId)
@@ -762,8 +763,9 @@ struct LibraryScreen: View {
         .sensoryFeedback(.selection, trigger: selectedIds.count)
     }
 
-    /// "1,234 Photos, 56 Videos" — either half drops out when it is zero.
-    private func countFooter(photos: Int, videos: Int) -> String {
+    /// "1,234 Photos, 56 Videos · 40 in the cloud" — either half drops out
+    /// when it is zero, and the cloud part when nothing is only in the cloud.
+    private func countFooter(photos: Int, videos: Int, inCloud: Int = 0) -> String {
         var parts: [String] = []
         if photos > 0 || videos == 0 {
             parts.append("\(photos.formatted()) \(photos == 1 ? "Photo" : "Photos")")
@@ -771,7 +773,10 @@ struct LibraryScreen: View {
         if videos > 0 {
             parts.append("\(videos.formatted()) \(videos == 1 ? "Video" : "Videos")")
         }
-        return parts.joined(separator: ", ")
+        let counts = parts.joined(separator: ", ")
+        guard inCloud > 0 else { return counts }
+        return counts + " · " + String(localized: "\(inCloud.formatted()) in the cloud",
+                                        comment: "Library footer: files of a folder source that are only in iCloud Drive or another cloud, not downloaded")
     }
 
     @ViewBuilder

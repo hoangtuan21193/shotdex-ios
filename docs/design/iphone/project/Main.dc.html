@@ -17,8 +17,9 @@ input{font-family:inherit}
 <div style="width: 402px; height: 874px; position: relative; overflow: hidden; background: {{t.bg}}; color: {{t.label}}; font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', system-ui, sans-serif">
 <div style="position:absolute;left:0;width:402px;bottom:152px;display:grid;grid-template-columns:repeat(3, minmax(0, 1fr));gap:2px">
 <sc-for list="{{tiles}}" as="p" hint-placeholder-count="12"><div style="position:relative;aspect-ratio:1/1;overflow:hidden;background:{{t.fill2}}">
-<div style="position:absolute;inset:0;background:{{p.bg}};opacity:{{p.op}}"></div>
-<div style="position:absolute;left:4px;top:4px;height:16px;padding:0 5px;border-radius:4px;background:rgba(0,0,0,0.58);color:#FFFFFF;font-size:9px;font-weight:700;line-height:16px">{{p.ft}}</div>
+<sc-if value="{{p.photo}}" hint-placeholder-val="{{true}}"><div style="position:absolute;inset:0;background:{{p.bg}};opacity:{{p.op}}"></div>
+<div style="position:absolute;left:4px;top:4px;height:16px;padding:0 5px;border-radius:4px;background:rgba(0,0,0,0.58);color:#FFFFFF;font-size:9px;font-weight:700;line-height:16px">{{p.ft}}</div></sc-if>
+<sc-if value="{{p.cloud}}" hint-placeholder-val="{{false}}"><div role="img" aria-label="{{p.ax}}" style="position:absolute;inset:0;background:{{t.fill}}"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="position:absolute;left:50%;top:50%;margin:-15px 0 0 -11px;display:block;color:{{t.label2}}"><path d="M7.5 18.5h9.8a3.7 3.7 0 0 0 .4-7.4 5.3 5.3 0 0 0-10.2-1.2A4.3 4.3 0 0 0 7.5 18.5z"/><path d="M12 10.6v5.4M9.8 13.9l2.2 2.2 2.2-2.2"/></svg><div aria-hidden="true" style="position:absolute;left:4px;right:4px;bottom:4px;font-size:11px;line-height:13px;text-align:center;color:{{t.label2}};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{p.name}}</div></div></sc-if>
 <sc-if value="{{p.isVideo}}" hint-placeholder-val="{{false}}"><div style="position:absolute;right:4px;top:4px;height:16px;padding:0 5px;border-radius:8px;background:rgba(0,0,0,0.45);color:#FFFFFF;font-size:10px;font-weight:600;line-height:16px;font-variant-numeric:tabular-nums">{{p.dur}}</div></sc-if>
 <sc-if value="{{p.hasMeta}}" hint-placeholder-val="{{true}}"><div style="position:absolute;left:0;right:0;bottom:0;height:24px;background:linear-gradient(180deg,rgba(0,0,0,0) 0%,rgba(0,0,0,0.55) 100%)"></div><div style="position:absolute;left:6px;right:6px;bottom:4px;color:#FFFFFF;font-size:10px;font-weight:500;line-height:13px;white-space:nowrap;overflow:hidden;font-variant-numeric:tabular-nums">{{p.meta}}</div></sc-if>
 <sc-if value="{{p.hasStatus}}" hint-placeholder-val="{{false}}"><div style="position:absolute;left:5px;bottom:{{p.statusBottom}};display:flex;gap:3px;color:#FFFFFF">
@@ -29,7 +30,7 @@ input{font-family:inherit}
 <sc-if value="{{p.unsel}}" hint-placeholder-val="{{false}}"><svg width="22" height="22" viewBox="0 0 24 24" style="position:absolute;right:4px;bottom:4px;display:block"><circle cx="12" cy="12" r="10" fill="rgba(0,0,0,0.12)" stroke="#FFFFFF" stroke-width="1.8"></circle></svg></sc-if>
 </div></sc-for>
 </div>
-<div style="position:absolute;left:0;width:402px;top:722px;height:48px;display:flex;align-items:center;justify-content:center;font-size:12px;color:{{t.label3}};font-variant-numeric: tabular-nums;">54,027 Photos, 1,204 Videos</div>
+<div style="position:absolute;left:0;width:402px;top:722px;height:48px;display:flex;align-items:center;justify-content:center;font-size:12px;color:{{t.label3}};font-variant-numeric: tabular-nums;">54,027 Photos, 1,204 Videos · 3 in the cloud</div>
 <div style="position:absolute;left:0;top:0px;width:402px;height:130px;background:linear-gradient(180deg,{{edgeTop}} 0%,{{edgeClear}} 100%);pointer-events:none"></div>
 <div style="position:absolute;left:0;bottom:0px;width:402px;height:110px;background:linear-gradient(0deg,{{edgeTop}} 0%,{{edgeClear}} 100%);pointer-events:none"></div>
 <div style="position:absolute;left:20px;top:778px;width:290px;height:62px;border-radius:31px;background: {{t.glass}}; border: 1px solid {{t.glassStroke}}; box-shadow: {{t.glassShadow}}; backdrop-filter: blur(24px) saturate(1.6); -webkit-backdrop-filter: blur(24px) saturate(1.6);display:flex;align-items:center;padding:0 4px;box-sizing:border-box">
@@ -61,15 +62,20 @@ const META=['ISO 400 · 85mm · f/1.8','ISO 100 · 24mm · f/8','ISO 3200 · 35m
  'ISO 800 · 50mm · f/2','ISO 125 · 16mm · f/11','ISO 640 · 135mm · f/1.8','ISO 1600 · 23mm · f/2','ISO 250 · 56mm · f/1.2'];
 const FT=['HEIC','RAW','JPG','RAW','HEIC','RAW','JPG','HEIC','RAW'];
 const DUR=['0:42','1:08','0:17','2:31'];
+const CLOUD_NAMES=['IMG_4120.JPG','IMG_4121.JPG','IMG_4123.JPG'];
 function makeTiles(n, o){
   const out=[]; const sel=o.selected||[];
   for(let i=0;i<n;i++){
-    const isVideo = (i%11)===4;
+    // FS-19.01b §4: an iCloud Drive placeholder in a folder source — no bytes, so no thumbnail, no EXIF overlay.
+    const ci = (o.cloud||[]).indexOf(i); const cloud = ci>=0;
+    const isVideo = !cloud && (i%11)===4;
     const s = sel.indexOf(i)>=0;
-    const fav = !isVideo && (i%7)===2;
-    const live = !isVideo && (i%9)===5;
-    const hasMeta = !!o.meta && !isVideo;
+    const fav = !cloud && !isVideo && (i%7)===2;
+    const live = !cloud && !isVideo && (i%9)===5;
+    const hasMeta = !cloud && !!o.meta && !isVideo;
+    const name = CLOUD_NAMES[Math.max(ci,0)%CLOUD_NAMES.length];
     out.push({ bg: tile(i*5+3), op: s?0.82:1, ft: isVideo?'MOV':FT[i%FT.length], isVideo, dur: '▶ '+DUR[i%DUR.length],
+      photo: !cloud, cloud, name, ax: name+', in iCloud, not downloaded',
       hasMeta, meta: META[i%META.length], fav, live, hasStatus: fav||live,
       statusBottom: hasMeta?'20px':'4px', selecting: !!o.selecting, sel: s, unsel: !!o.selecting && !s, acc: o.t.accent });
   }
@@ -80,7 +86,7 @@ const keyRows=()=>KEYROWS.map(r=>({keys:r.map(k=>({k}))}));
 class Component extends DCLogic {
   renderVals() {
     const t = this.props.dark ? DARK : LIGHT;
-    return { t, edgeTop: this.props.dark ? 'rgba(0,0,0,0.72)' : 'rgba(255,255,255,0.72)', edgeClear: this.props.dark ? 'rgba(0,0,0,0)' : 'rgba(255,255,255,0)', tiles: makeTiles(18, { meta: true, t }) };
+    return { t, edgeTop: this.props.dark ? 'rgba(0,0,0,0.72)' : 'rgba(255,255,255,0.72)', edgeClear: this.props.dark ? 'rgba(0,0,0,0)' : 'rgba(255,255,255,0)', tiles: makeTiles(18, { meta: true, t, cloud: [13,15,16] }) };
   }
 }
 </script>

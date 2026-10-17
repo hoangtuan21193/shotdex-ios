@@ -9,6 +9,9 @@ final class FileThumbnailIndex: @unchecked Sendable {
     let thumbnails: FolderThumbnails
     private let lock = NSLock()
     private var copyByPhoto: [String: String] = [:]
+    /// Photos whose only copies are cloud placeholders (FS-19.01b §4): the
+    /// tile draws the cloud glyph and the file's name instead of a picture.
+    private var cloudOnly: Set<String> = []
     private let images = NSCache<NSString, UIImage>()
 
     init(thumbnails: FolderThumbnails = .standard) {
@@ -32,7 +35,21 @@ final class FileThumbnailIndex: @unchecked Sendable {
             && FileManager.default.fileExists(atPath: thumbnails.url(copyId: copy).path) {
             map[photo] = copy
         }
-        lock.withLock { copyByPhoto = map }
+        let placeholders = (try? database.reader.read { db in
+            try String.fetchSet(db, sql: """
+                SELECT c.photoId FROM photo_copies c
+                WHERE c.isCloudPlaceholder = 1 AND c.missingSince IS NULL
+                  AND NOT EXISTS (SELECT 1 FROM photo_copies o WHERE o.photoId = c.photoId AND o.isCloudPlaceholder = 0 AND o.missingSince IS NULL)
+                """)
+        }) ?? []
+        lock.withLock {
+            copyByPhoto = map
+            cloudOnly = placeholders
+        }
+    }
+
+    func isCloudPlaceholder(_ photoId: String) -> Bool {
+        lock.withLock { cloudOnly.contains(photoId) }
     }
 
     func hasThumbnail(for photoId: String) -> Bool {

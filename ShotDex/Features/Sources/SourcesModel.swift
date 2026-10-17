@@ -110,6 +110,13 @@ final class SourcesModel {
         load()
     }
 
+    /// A file opened from the cloud is down and read (FS-19.01b §4): the
+    /// grid swaps its cloud tile for the photo, the rows recount.
+    func cloudFileDownloaded() {
+        readCount += 1
+        load()
+    }
+
     /// Rescan in a server source's browser, or Try Again on its row.
     func rescanServer(sourceId: String) async {
         if let summary = await servers.rescan(sourceId: sourceId), summary.photos > 0 { readCount += 1 }

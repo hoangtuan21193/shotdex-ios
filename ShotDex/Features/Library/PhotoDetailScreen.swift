@@ -317,6 +317,10 @@ struct PhotoDetailScreen: View {
                                         .padding(.horizontal, AppTheme.Spacing.md)
                                 }
                             }
+                        } else {
+                            // No row yet (a cloud file downloading): Close
+                            // stays in its corner.
+                            Spacer(minLength: 0)
                         }
                     }
                     .padding(.trailing, modePickerWidth)
@@ -677,6 +681,12 @@ struct PhotoDetailScreen: View {
     /// deferred full-resolution image download. Skips rows already fully
     /// indexed, and applies the refreshed row only if the user hasn't paged away.
     private func refreshRowMetadata(index: Int) {
+        // A cloud file just downloaded and read (FS-19.01b §4): it has a row
+        // now, so the page gets its info, actions and file like any other.
+        if currentMetadata == nil, currentAsset == nil, let id = model.photoId(at: index), model.metadata(for: id) != nil {
+            refreshCurrentPhoto()
+            return
+        }
         guard currentMetadata?.resolvedExifStatus != .indexed,
               let assetId = model.photoId(at: index)
         else { return }
@@ -2341,6 +2351,9 @@ struct PhotoDetailPage: View {
 
     @State private var image: UIImage?
     @State private var imageQuality: ImageQuality = .none
+    /// A file only in the cloud (FS-19.01b §4): the page downloads it, then
+    /// shows it.
+    @State private var isCloudPlaceholder = false
     /// Owns the player, its readiness state machine and the PhotoKit video
     /// request. Created per page identity, torn down on disappear.
     @State private var videoModel = VideoPlaybackModel()
@@ -2388,7 +2401,13 @@ struct PhotoDetailPage: View {
 
     var body: some View {
         Group {
-            if isVideo {
+            if isCloudPlaceholder, let id = source.photoId(at: index) {
+                CloudDownloadPanel(photoId: id, filename: nil, isActive: loadState.isActive) {
+                    isCloudPlaceholder = false
+                    loadFilePhoto(id)
+                    onMetadataRefresh?(index)
+                }
+            } else if isVideo {
                 // Rendered for every phase, not only once a player exists: the
                 // model owns the downloading / buffering / failed states,
                 // which is what replaced the old permanently-black screen.
@@ -2559,7 +2578,11 @@ struct PhotoDetailPage: View {
     private func load() {
         guard let assetId = source.photoId(at: index) else { return }
         guard let asset = source.asset(for: assetId) else {
-            loadFilePhoto(assetId)
+            if photoLibrary.fileThumbnails.isCloudPlaceholder(assetId) {
+                isCloudPlaceholder = true
+            } else {
+                loadFilePhoto(assetId)
+            }
             return
         }
         self.asset = asset

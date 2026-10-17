@@ -41,6 +41,7 @@ input{font-family:inherit}
 <span style="flex:1;min-width:0;text-align:right;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{p.meta}}</span>
 </div>
 </sc-if>
+<sc-if value="{{p.cloud}}" hint-placeholder-val="{{false}}"><div style="position:absolute;inset:0;background:{{t.fill}}"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="position:absolute;left:50%;top:50%;margin:-15px 0 0 -11px;display:block;color:{{t.label2}}"><path d="M7.5 18.5h9.8a3.7 3.7 0 0 0 .4-7.4 5.3 5.3 0 0 0-10.2-1.2A4.3 4.3 0 0 0 7.5 18.5z"></path><path d="M12 10.6v5.4M9.8 13.9l2.2 2.2 2.2-2.2"></path></svg><div aria-hidden="true" style="position:absolute;left:6px;right:6px;bottom:5px;font-size:11px;line-height:13px;text-align:center;color:{{t.label2}};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{p.name}}</div></div></sc-if>
 <sc-if value="{{p.pending}}" hint-placeholder-val="{{false}}"><div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:{{t.label3}}"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16v14H4z M4 15l4.5-4 3.5 3 2.5-2 5.5 4.5 M15.5 8.5h.01"></path></svg></div></sc-if>
 <sc-if value="{{p.sel}}" hint-placeholder-val="{{false}}"><div style="position:absolute;inset:0;border:3px solid {{t.accent}}"></div></sc-if>
 <sc-if value="{{p.checked}}" hint-placeholder-val="{{false}}"><svg role="img" aria-label="Selected" width="24" height="24" viewBox="0 0 24 24" style="position:absolute;right:6px;bottom:5px;display:block"><circle cx="12" cy="12" r="11" fill="{{t.accentFill}}" stroke="#FFFFFF" stroke-width="1.5"></circle><path d="M7 12.4l3.3 3.3L17 9" fill="none" stroke="{{t.onAccentFill}}" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"></path></svg></sc-if>
@@ -55,7 +56,7 @@ input{font-family:inherit}
 <div style="position:absolute;left:328px;right:0px;top:0;height:84px;background:linear-gradient(180deg,{{edge}} 0%,{{edgeClear}} 100%);pointer-events:none"></div>
 <!-- TOOLBAR: title · [Grid|List | Filter and Sort] · [Share|Show Inspector] · search · Select (text, touch needs it) -->
 <div style="position:absolute;left:344px;right:16px;top:24px;height:44px;display:flex;align-items:center;gap:12px">
-<div style="display:flex;flex-direction:column;gap:1px;min-width:0;flex:none"><div style="display:flex;align-items:center;gap:8px"><span style="font-size:20px;font-weight:600;line-height:24px;white-space:nowrap">All Photos</span></div><div style="font-size:13px;color:{{t.label2}};line-height:16px;white-space:nowrap;font-variant-numeric:tabular-nums">54,027 photos · 1,204 videos</div></div>
+<div style="display:flex;flex-direction:column;gap:1px;min-width:0;flex:none"><div style="display:flex;align-items:center;gap:8px"><span style="font-size:20px;font-weight:600;line-height:24px;white-space:nowrap">All Photos</span></div><div style="font-size:13px;color:{{t.label2}};line-height:16px;white-space:nowrap;font-variant-numeric:tabular-nums">54,027 photos · 1,204 videos · 3 in the cloud</div></div>
 <div style="flex:1"></div>
 <div style="height:44px;border-radius:22px;background:{{t.glass}};border:1px solid {{t.glassStroke}};box-shadow:{{t.glassShadow}};backdrop-filter:blur(24px) saturate(1.6);-webkit-backdrop-filter:blur(24px) saturate(1.6);display:flex;align-items:center;padding:0 2px;box-sizing:border-box;flex:none;color:{{t.label}}"><button aria-label="Grid" aria-pressed="true" style="width:44px;height:40px;border-radius:20px;border:none;background:{{t.pressed}};display:flex;align-items:center;justify-content:center;color:{{t.label}}"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h7v7H4z M13 4h7v7h-7z M4 13h7v7H4z M13 13h7v7h-7z"></path></svg></button><button aria-label="List" aria-pressed="false" style="width:44px;height:40px;border-radius:20px;border:none;background:none;display:flex;align-items:center;justify-content:center;color:{{t.label}}"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6h11 M9 12h11 M9 18h11 M4.5 6h.01 M4.5 12h.01 M4.5 18h.01"></path></svg></button><span aria-hidden="true" style="width:1px;height:22px;background:{{t.sep}};margin:0 4px;flex:none"></span><button aria-label="Filter and Sort" style="width:44px;height:40px;border-radius:20px;border:none;background:none;display:flex;align-items:center;justify-content:center;color:{{t.label}}"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16 M7 12h10 M10 17h4"></path></svg></button></div>
 <div style="height:44px;border-radius:22px;background:{{t.glass}};border:1px solid {{t.glassStroke}};box-shadow:{{t.glassShadow}};backdrop-filter:blur(24px) saturate(1.6);-webkit-backdrop-filter:blur(24px) saturate(1.6);display:flex;align-items:center;padding:0 2px;box-sizing:border-box;flex:none;color:{{t.label}}"><button aria-label="Share" style="width:44px;height:40px;border-radius:20px;border:none;background:none;display:flex;align-items:center;justify-content:center;color:{{t.label}}"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12 M8 7l4-4 4 4 M5 12v8h14v-8"></path></svg></button><button aria-label="Show Inspector" aria-pressed="false" style="width:44px;height:40px;border-radius:20px;border:none;background:none;display:flex;align-items:center;justify-content:center;color:{{t.label}}"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16v14H4z M15 5v14"></path></svg></button></div>
@@ -159,10 +160,13 @@ function markFor(k, isVideo){
   return { r: RATES[k%RATES.length], f: isVideo?'':((k%7)===3?'p':((k%11)===8?'x':'')), fav: (k%9)===5 };
 }
 // o.sel = ring indices; o.selecting = Select mode (check circles); o.live marks Live Photos (iPad has them, the Mac grid does not draw them)
+const CLOUD_NAMES=['IMG_4120.JPG','IMG_4121.JPG','IMG_4123.JPG'];
 function tiles(n, seed, o){
   o=o||{}; const out=[];
   for(let i=0;i<n;i++){
-    const k=i+seed; const isVideo=!o.noVideo && (k%11)===4;
+    // FS-19.01b §4: o.cloud = indices that are iCloud Drive placeholders in a folder source (no bytes: no thumbnail, no EXIF overlay).
+    const ci=(o.cloud||[]).indexOf(i); const cloud=ci>=0; const name=CLOUD_NAMES[Math.max(ci,0)%CLOUD_NAMES.length];
+    const k=i+seed; const isVideo=!cloud && !o.noVideo && (k%11)===4;
     const pending=(o.pendingFrom!=null && i>=o.pendingFrom); const off=!!o.offline;
     const meta=o.meta?o.meta[k%o.meta.length]:META[k%META.length];
     const mk=(o.marks && o.marks[i])?o.marks[i]:markFor(k,isVideo);
@@ -173,8 +177,8 @@ function tiles(n, seed, o){
     out.push({ bg: tile(k*5+3), ft, isVideo, dur: DUR[k%DUR.length],
       meta: isVideo?'4K · 24 fps':meta, sel, checked: selecting&&sel, unchecked: selecting&&!sel, metaRight: selecting?'36px':'6px', offline: off,
       op: mk.f==='x'?'0.45':'1', pick: mk.f==='p', rej: mk.f==='x', fav: !!mk.fav, rated: mk.r>0, stars: String(mk.r), live,
-      loaded: !pending, pending,
-      label: pending?'Photo, loading':((isVideo?'Video':'Photo')+', '+(isVideo?'4K':meta)+(words.length?', '+words.join(', '):'')+(off?', offline':'')+(sel?', selected':'')) });
+      loaded: !pending && !cloud, pending, cloud, name,
+      label: cloud?(name+', in iCloud, not downloaded'):pending?'Photo, loading':((isVideo?'Video':'Photo')+', '+(isVideo?'4K':meta)+(words.length?', '+words.join(', '):'')+(off?', offline':'')+(sel?', selected':'')) });
   }
   return out;
 }
@@ -223,7 +227,7 @@ class Component extends DCLogic {
     const dark=!!this.props.dark; const t = dark ? DARK : LIGHT;
     const groups=sidebar(t,{sel:'All Photos'});
     const sections=[
-      {title:'Monday, September 28', place:'Kyoto', count:'48 photos', tiles:tiles(14,0,{})},
+      {title:'Monday, September 28', place:'Kyoto', count:'48 photos', tiles:tiles(14,0,{cloud:[1,3,4]})},
       {title:'Sunday, September 27', place:'Nara', count:'112 photos', tiles:tiles(28,14,{})}
     ];
     const e=edges(dark);

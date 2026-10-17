@@ -135,6 +135,29 @@ struct LibraryQueries: Sendable {
     }
 
     /// Number of photos matching the criteria (for the filter tokens bar).
+    /// Files only in the cloud (FS-19.01b §4) as grid rows: the name and the
+    /// file's date, nothing else — no EXIF until the user opens one. Only
+    /// the unfiltered grid shows them; filters and Statistics never count
+    /// them, because they read `photo_metadata`, which these have no row in.
+    func cloudPlaceholderItems() async throws -> [LibraryGridItem] {
+        try await database.reader.read { db in
+            try Row.fetchAll(db, sql: """
+                SELECT c.photoId, MIN(c.modifiedAt) AS modifiedAt, MIN(c.relativePath) AS relativePath
+                FROM photo_copies c
+                WHERE c.isCloudPlaceholder = 1 AND c.missingSince IS NULL AND c.isHidden = 0
+                  AND NOT EXISTS (SELECT 1 FROM photo_metadata m WHERE m.assetId = c.photoId)
+                GROUP BY c.photoId
+                """).map { row in
+                let path: String? = row["relativePath"]
+                return LibraryGridItem(
+                    assetId: row["photoId"], creationDate: row["modifiedAt"], mediaType: 1, // PHAssetMediaType.image
+                    originalFilename: path.map { ($0 as NSString).lastPathComponent },
+                    iso: nil, aperture: nil, shutterSpeedDisplay: nil, focalLength: nil, equivalentFocalLength: nil,
+                    width: nil, height: nil, fileSize: nil)
+            }
+        }
+    }
+
     /// True once any photo has a copy that is not a Photos asset — the grid
     /// can no longer be drawn from PhotoKit alone.
     func hasPhotosOutsidePhotos() throws -> Bool {

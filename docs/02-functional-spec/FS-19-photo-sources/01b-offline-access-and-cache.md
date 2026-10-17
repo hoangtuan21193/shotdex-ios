@@ -59,7 +59,7 @@ chưa tải về máy.
 - Lượt index **không bao giờ** làm hệ thống tải file về. Đọc thử mà thấy là chỗ giữ chỗ → bỏ qua phần đọc nội dung.
 - Thứ biết được không cần tải: tên, kích thước, ngày sửa, và thumbnail nếu app cung cấp tự trả (như [FS-17.05 §3](../FS-17-import-from-server/05-cloud-folders.md)).
 - Không có byte thì không có hash, không có EXIF. Chỗ giữ chỗ hiện thành **ô có glyph cloud** (tên, ngày sửa, thumbnail
-  nếu có), **không** vào bộ lọc thông số và **không** đếm trong Statistics tới khi tải. Tiêu đề lưới thêm "412 in the cloud".
+  nếu có), **không** vào bộ lọc thông số và **không** đếm trong Statistics tới khi tải. Dòng đếm của lưới thêm "· 412 in the cloud" (chân lưới trên iPhone/Duo; dòng phụ thanh công cụ trên iPad/Mac).
 - Mở một chỗ giữ chỗ = người dùng chủ động → tải **đúng file đó**, có tiến độ và Cancel.
 - Hàng nguồn có lệnh **Download 412 Files (9.8 GB)…**, hỏi trước khi tải, nói rõ dung lượng; hết chỗ thì không bắt đầu.
 

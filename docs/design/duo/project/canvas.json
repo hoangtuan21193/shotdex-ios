@@ -893,7 +893,7 @@
       "h": 669,
       "title": "Duo mở · Add a Source: Photos Library · Folder or Drive · Server, Choose Folder…",
       "w": 951,
-      "x": 47426,
+      "x": 48457,
       "y": 560
     },
     "DI_AdvancedSearch.dc.html": {
@@ -907,175 +907,175 @@
       "h": 669,
       "title": "Duo mở · Album: lưới 7 cột trong 867pt, Filter + Select, rail tab",
       "w": 951,
-      "x": 12372,
+      "x": 13403,
       "y": 560
     },
     "DI_Backup.dc.html": {
       "h": 669,
       "title": "Duo mở · Backup 1/5 — job hai cột: 3 New · Uploading, Paused, Watching · Up to Date, Waiting for Wi‑Fi (FS-22)",
       "w": 951,
-      "x": 57736,
+      "x": 58767,
       "y": 560
     },
     "DI_BackupCustomDate.dc.html": {
       "h": 669,
       "title": "Duo mở · Backup 4/5 — Day Folder Name: Preview | Order, Year, Month, Day, Separator",
       "w": 951,
-      "x": 60829,
+      "x": 61860,
       "y": 560
     },
     "DI_BackupNew.dc.html": {
       "h": 669,
       "title": "Duo mở · Backup 2/5 — New Backup: Source/Destination/Organize | What to Copy/When, không cuộn",
       "w": 951,
-      "x": 58767,
+      "x": 59798,
       "y": 560
     },
     "DI_BackupOrganize.dc.html": {
       "h": 669,
       "title": "Duo mở · Backup 3/5 — Organize: Preview cây | Folders, Photos and Videos, File Names",
       "w": 951,
-      "x": 59798,
+      "x": 60829,
       "y": 560
     },
     "DI_BackupRunning.dc.html": {
       "h": 669,
       "title": "Duo mở · Backup 5/5 — đang chạy 34%: Pause + dòng Watching | tổng, file lỗi; tweak ios18",
       "w": 951,
-      "x": 61860,
+      "x": 62891,
       "y": 560
     },
     "DI_CameraDatabase.dc.html": {
       "h": 669,
       "title": "Duo mở · Unknown Cameras trong pane chi tiết, sidebar mới chọn Camera Database",
       "w": 951,
-      "x": 32992,
+      "x": 34023,
       "y": 560
     },
     "DI_ChartEditor.dc.html": {
       "h": 669,
       "title": "Duo mở · Edit Chart: form bên trái, xem trước donut bên phải; X = Camera",
       "w": 951,
-      "x": 27837,
+      "x": 28868,
       "y": 560
     },
     "DI_Collage.dc.html": {
       "h": 669,
       "title": "Duo mở · Collage: bỏ nhãn đếm, Export trên cột inspector",
       "w": 951,
-      "x": 23713,
+      "x": 24744,
       "y": 560
     },
     "DI_CollageExport.dc.html": {
       "h": 669,
       "title": "Duo mở · Xuất collage: Save cùng hàng với Collage",
       "w": 951,
-      "x": 24744,
+      "x": 25775,
       "y": 560
     },
     "DI_Collections.dc.html": {
       "h": 669,
       "title": "Duo mở · Collections: hero On This Day 260 + hàng cover Smart Albums 192, rail tab bên phải",
       "w": 951,
-      "x": 11341,
+      "x": 12372,
       "y": 560
     },
     "DI_Compare.dc.html": {
       "h": 669,
       "title": "Duo mở · Viewer 2-Up: luôn đồng bộ zoom, Reject · ★ · Pick, Delete 1 Photo",
       "w": 951,
-      "x": 7217,
+      "x": 8248,
       "y": 560
     },
     "DI_CompareSurvey.dc.html": {
       "h": 669,
       "title": "Duo mở · Viewer Survey: 6 ảnh 3×2, Rejected mờ, Move 2 Photos… (2026 Japan)",
       "w": 951,
-      "x": 8248,
+      "x": 9279,
       "y": 560
     },
     "DI_Compress.dc.html": {
       "h": 669,
       "title": "Duo mở · Resize: Resize cùng hàng với Collage",
       "w": 951,
-      "x": 25775,
+      "x": 26806,
       "y": 560
     },
     "DI_CompressionPresets.dc.html": {
       "h": 669,
       "title": "Duo mở · Resize Presets trong pane chi tiết, sidebar mới chọn Sharing and Export",
       "w": 951,
-      "x": 31961,
+      "x": 32992,
       "y": 560
     },
     "DI_Creations.dc.html": {
       "h": 669,
       "title": "Duo mở · Collages: lưới 2 cột thẻ cover + ngày + số ảnh, rail tab bên phải",
       "w": 951,
-      "x": 22682,
+      "x": 23713,
       "y": 560
     },
     "DI_DateRange.dc.html": {
       "h": 669,
       "title": "Duo mở · Date Range: form sheet chồng lên New Chart, 2 tháng một hàng, thấy 4 tháng (7–10/2026), ngày tương lai mờ",
       "w": 951,
-      "x": 28868,
+      "x": 29899,
       "y": 560
     },
     "DI_DeleteCopies.dc.html": {
       "h": 669,
       "title": "Duo mở · Xoá từ All Photos: Move 1 Photo?, 3 bản sao có ô tick, chỉ tick bản đang mở",
       "w": 951,
-      "x": 53612,
+      "x": 54643,
       "y": 560
     },
     "DI_DeletePermanent.dc.html": {
       "h": 669,
       "title": "Duo mở · Hộp đỏ thứ hai: Delete 12 Photos Permanently? (T7 không có Thùng rác)",
       "w": 951,
-      "x": 52581,
+      "x": 53612,
       "y": 560
     },
     "DI_Duplicates.dc.html": {
       "h": 669,
       "title": "Duo trong · Duplicates danh sách (v3 §7.3–7.5): hàng lọc theo loại không cuộn, 2 cột 410, thẻ 2 bản sao/hàng (ô 93), vòng 26/chạm 44, chip lý do, nhóm 24 thu gọn “Show all 24”, thẻ Bracket (Merge to HDR, không đỏ), thanh “37 selected · 210 MB ›” + Delete 37 — đề xuất 17/10",
       "w": 951,
-      "x": 19589,
+      "x": 20620,
       "y": 560
     },
     "DI_EmptyLibrary.dc.html": {
       "h": 669,
       "title": "Duo mở · Thư viện trống: 3 cách thêm nguồn, vùng kéo thả, dòng thẻ nhớ",
       "w": 951,
-      "x": 54643,
+      "x": 55674,
       "y": 560
     },
     "DI_FocusStack.dc.html": {
       "h": 669,
       "title": "Duo mở · Focus Stack: Save cùng hàng với Collage",
       "w": 951,
-      "x": 41240,
+      "x": 42271,
       "y": 560
     },
     "DI_Hidden.dc.html": {
       "h": 669,
       "title": "Duo mở · Collections › Hidden: 6 Hidden Photos",
       "w": 951,
-      "x": 51550,
+      "x": 52581,
       "y": 560
     },
     "DI_Ingest.dc.html": {
       "h": 669,
       "title": "Duo mở · Nhập từ thẻ: All/New, nhóm theo ngày, ô tick/Imported, Options, Import 811 Photos",
       "w": 951,
-      "x": 49488,
+      "x": 50519,
       "y": 560
     },
     "DI_IngestProgress.dc.html": {
       "h": 669,
       "title": "Duo mở · Đang nhập 51%: Copy/Verify/Backup, Pause, Stop Import…",
       "w": 951,
-      "x": 50519,
+      "x": 51550,
       "y": 560
     },
     "DI_LibrarySelect.dc.html": {
@@ -1089,28 +1089,28 @@
       "h": 669,
       "title": "Duo mở · Photo Info full màn (chiều cao compact bỏ detent): Location, Camera, Exposure",
       "w": 951,
-      "x": 6186,
+      "x": 7217,
       "y": 560
     },
     "DI_MoreMenus.dc.html": {
       "h": 669,
       "title": "Duo mở · Menu ⋯ mới: Library (Grid/List, Go to Date…) và Viewer (Rotate, Print…)",
       "w": 951,
-      "x": 55674,
+      "x": 56705,
       "y": 560
     },
     "DI_MoreMenus2.dc.html": {
       "h": 669,
       "title": "Duo mở · Menu ⋯ mới: Duplicates (Keep All 5 Photos) và thẻ Statistics (Donut/Bars)",
       "w": 951,
-      "x": 56705,
+      "x": 57736,
       "y": 560
     },
     "DI_OnThisDay.dc.html": {
       "h": 669,
       "title": "Duo mở · On This Day: 7 cột, header năm dạng capsule kính, rail tab",
       "w": 951,
-      "x": 15465,
+      "x": 16496,
       "y": 560
     },
     "DI_Onboarding.dc.html": {
@@ -1124,14 +1124,14 @@
       "h": 669,
       "title": "Duo mở · Panorama: Save cùng hàng với Collage",
       "w": 951,
-      "x": 43302,
+      "x": 44333,
       "y": 560
     },
     "DI_Places.dc.html": {
       "h": 669,
       "title": "Duo mở · Places: bản đồ 867pt với 11 cụm ảnh, rail tab dọc bên phải",
       "w": 951,
-      "x": 16496,
+      "x": 17527,
       "y": 560
     },
     "DI_Search.dc.html": {
@@ -1145,133 +1145,133 @@
       "h": 669,
       "title": "Duo mở · NAS Home là nguồn được index: lưới 7 cột, Rescan, Upload, không còn In Library",
       "w": 951,
-      "x": 38147,
+      "x": 39178,
       "y": 560
     },
     "DI_ServerForm.dc.html": {
       "h": 669,
       "title": "Duo mở · Add Connection toàn màn: Servers Found, Protocol/Host/Port, Folder, Test",
       "w": 951,
-      "x": 37116,
+      "x": 38147,
       "y": 560
     },
     "DI_ServerList.dc.html": {
       "h": 669,
       "title": "Duo mở · File Servers: kết nối đã lưu ở pane, sidebar mới chọn Sharing and Export",
       "w": 951,
-      "x": 36085,
+      "x": 37116,
       "y": 560
     },
     "DI_ServerUpload.dc.html": {
       "h": 669,
       "title": "Duo mở · Upload to Server toàn màn: Connection, Folder, Date Folders, Files",
       "w": 951,
-      "x": 39178,
+      "x": 40209,
       "y": 560
     },
     "DI_Settings.dc.html": {
       "h": 669,
       "title": "Duo mở · Cài đặt split view: sidebar ô icon 28 + pane Sources (5 nguồn, Add Folder or Drive…, Connect to Server…); sidebar thêm mục 10 AI sau Playback, cột cuộn 1 hàng (FS-23, 14/10)",
       "w": 951,
-      "x": 29899,
+      "x": 30930,
       "y": 560
     },
     "DI_SettingsSources.dc.html": {
       "h": 669,
       "title": "Duo mở · Cài đặt › Sources cuộn: Drives and Indexing, Previews (Cache Size Limit 5 GB)",
       "w": 951,
-      "x": 48457,
+      "x": 49488,
       "y": 560
     },
     "DI_Share.dc.html": {
       "h": 669,
       "title": "Duo mở · Share sheet full màn: header, 8 ứng dụng, danh sách hành động",
       "w": 951,
-      "x": 10310,
+      "x": 11341,
       "y": 560
     },
     "DI_SmartAlbum.dc.html": {
       "h": 669,
       "title": "Duo mở · Smart album: thanh điều kiện + lưới 7 cột, rail tab",
       "w": 951,
-      "x": 13403,
+      "x": 14434,
       "y": 560
     },
     "DI_SmartAlbumEditor.dc.html": {
       "h": 669,
       "title": "Duo mở · Edit Smart Album thành toàn màn (compact height bỏ detent)",
       "w": 951,
-      "x": 14434,
+      "x": 15465,
       "y": 560
     },
     "DI_Sources.dc.html": {
       "h": 669,
       "title": "Duo mở · Nguồn: nhóm Sources đầu tab Collections, 6 thẻ (Photos, thư mục, T7 offline, NAS, cần quyền, thẻ EOS_DIGITAL),",
       "w": 951,
-      "x": 46395,
+      "x": 47426,
       "y": 560
     },
     "DI_StackExposures.dc.html": {
       "h": 669,
       "title": "Duo mở · Stack Exposures: Save cùng hàng với Collage",
       "w": 951,
-      "x": 42271,
+      "x": 43302,
       "y": 560
     },
     "DI_Statistics.dc.html": {
       "h": 669,
       "title": "Duo mở · Thống kê: nút đổi kiểu 28pt trên mọi thẻ biểu đồ, ô số KPI không có",
       "w": 951,
-      "x": 26806,
+      "x": 27837,
       "y": 560
     },
     "DI_Support.dc.html": {
       "h": 669,
       "title": "Duo mở · Settings split view: sidebar mới chọn Support, danh sách Support ở pane 631pt",
       "w": 951,
-      "x": 34023,
+      "x": 35054,
       "y": 560
     },
     "DI_SupportThread.dc.html": {
       "h": 669,
       "title": "Duo mở · Support thread trong split view, sidebar mới chọn Support",
       "w": 951,
-      "x": 35054,
+      "x": 36085,
       "y": 560
     },
     "DI_Trips.dc.html": {
       "h": 669,
       "title": "Duo mở · Trips: thẻ cover 835×160 xếp dọc, rail tab bên phải",
       "w": 951,
-      "x": 17527,
+      "x": 18558,
       "y": 560
     },
     "DI_UploadedToServer.dc.html": {
       "h": 669,
       "title": "Duo mở · Uploaded to Server: thư mục server và số ảnh, rail tab bên phải",
       "w": 951,
-      "x": 40209,
+      "x": 41240,
       "y": 560
     },
     "DI_VideoProjects.dc.html": {
       "h": 669,
       "title": "Duo mở · Video Projects 2 cột: nháp có nhãn Draft + Edited 5 min ago lẫn bản đã xuất, rail tab — theo spec 3/10",
       "w": 951,
-      "x": 44333,
+      "x": 45364,
       "y": 560
     },
     "DI_VideoProjectsDelete.dc.html": {
       "h": 669,
       "title": "Duo mở · Delete Draft?: alert 2 nút Cancel / Delete đỏ trên Video Projects mờ — theo spec 3/10",
       "w": 951,
-      "x": 45364,
+      "x": 46395,
       "y": 560
     },
     "DI_VideoTrim.dc.html": {
       "h": 669,
       "title": "Duo mở · Cắt video: Save cùng hàng với Collage",
       "w": 951,
-      "x": 9279,
+      "x": 10310,
       "y": 560
     },
     "DI_Viewer.dc.html": {
@@ -1285,7 +1285,7 @@
       "h": 669,
       "title": "Duo mở · Sửa widget: preview ghim trên, sidebar mới (ô icon) chọn Widgets",
       "w": 951,
-      "x": 30930,
+      "x": 31961,
       "y": 560
     },
     "ES_DC_ExportSettings.dc.html": {
@@ -1505,7 +1505,7 @@
       "h": 669,
       "title": "Duo trong · Màn chọn khung dùng chung (v3 §8): khung lớn hết chiều cao, dải phim DỌC 72 bên phải (ô 56), chấm đỏ khung yếu, Zoom to face, vòng giữ 44, “Keep 3, remove 21” + Done ở đáy, không X — đề xuất 17/10",
       "w": 951,
-      "x": 21651,
+      "x": 22682,
       "y": 560
     },
     "DC_BurstFrames.dc.html": {
@@ -1519,14 +1519,14 @@
       "h": 669,
       "title": "Duo trong · Settings › AI: mục thứ 10 trong sidebar (cuộn 1 hàng), pane Use For · On This Device · Providers — FS-08.07, đề xuất 14/10, code chưa có",
       "w": 951,
-      "x": 70108,
+      "x": 71139,
       "y": 560
     },
     "DI_SettingsAIProvider.dc.html": {
       "h": 669,
       "title": "Duo trong · Settings › AI › Claude: pane form Name · API Key · Model, Test → Working · 0.8 s, Delete Provider — FS-08.07 §3, đề xuất 14/10, code chưa có",
       "w": 951,
-      "x": 71139,
+      "x": 72170,
       "y": 560
     },
     "DC_SettingsAI.dc.html": {
@@ -1539,7 +1539,7 @@
     "DI_DuplicatesSummary.dc.html": {
       "h": 669,
       "w": 951,
-      "x": 18558,
+      "x": 19589,
       "y": 560,
       "title": "Duo trong · Duplicates tóm tắt (v3, FS-06.06 §7.2): ~GB to free, Quick clean + Choose yourself cạnh nhau tối đa 720, Source frames — đề xuất 17/10, code chưa có"
     },
@@ -1549,6 +1549,13 @@
       "x": 9282,
       "y": 1609,
       "title": "Duo ngoài · Duplicates tóm tắt (v3 §7.2): xếp dọc trong 350 trái rail 84 — đề xuất 17/10, code chưa có"
+    },
+    "DI_ViewerCloudDownload.dc.html": {
+      "h": 669,
+      "title": "Duo mở · Viewer — mở file chỉ có trên iCloud Drive (như code iPhone): trang đen, chỉ nút Close, giữa: glyph, tên file, \"Downloading from iCloud Drive…\", thanh trắng 220, \"29 kB of 58 kB\", Cancel (FS-19.01b §4, AC-15/16). Cancel → \"Only in iCloud Drive\" + nút Download; tải xong → viewer thường",
+      "w": 951,
+      "x": 6186,
+      "y": 560
     },
     "DI_DuplicatesCompare.dc.html": {
       "h": 669,
@@ -1700,6 +1707,7 @@
     "DI_Search.dc.html",
     "DI_AdvancedSearch.dc.html",
     "DI_Viewer.dc.html",
+    "DI_ViewerCloudDownload.dc.html",
     "DI_Metadata.dc.html",
     "DI_Compare.dc.html",
     "DI_CompareSurvey.dc.html",
@@ -1713,8 +1721,8 @@
     "DI_Places.dc.html",
     "DI_Trips.dc.html",
     "DI_DuplicatesSummary.dc.html",
-    "DI_Duplicates.dc.html",
     "DI_DuplicatesCompare.dc.html",
+    "DI_Duplicates.dc.html",
     "DI_BurstFrames.dc.html",
     "DI_Creations.dc.html",
     "DI_Collage.dc.html",

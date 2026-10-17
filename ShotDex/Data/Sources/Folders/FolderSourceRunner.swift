@@ -1,4 +1,5 @@
 import Foundation
+import GRDB
 
 /// Adds folder and drive sources and reads them (FS-19.01 §1, §4): one read
 /// at a time, off the main actor, inside the folder's security scope. After
@@ -49,6 +50,72 @@ actor FolderSourceRunner {
             .index(sourceId: sourceId, root: root, includesSubfolders: source.includesSubfolders, pairsRawAndJpeg: source.pairsRawAndJpeg)
         _ = try IdentityMergePass(database: database) { [root] id, path in id == sourceId ? root.appendingPathComponent(path) : nil }.run()
         return summary
+    }
+
+    /// A photo the grid shows with the cloud glyph: the file its placeholder
+    /// stands for, and how big it is when that is known without a download.
+    struct CloudFile: Equatable, Sendable {
+        let sourceId: String
+        let relativePath: String
+        let size: Int64?
+        var filename: String { (relativePath as NSString).lastPathComponent }
+    }
+
+    enum DownloadOutcome: Equatable, Sendable {
+        /// On the device and read: the photo has its EXIF, hash and tile.
+        case downloaded
+        /// The source cannot be opened (unplugged, access lost).
+        case unavailable
+        /// Not started: the file and 1 GB of headroom do not fit.
+        case notEnoughSpace(short: Int64)
+    }
+
+    /// The placeholder copy of `photoId`, or nil when it has none — a photo
+    /// with any downloaded copy opens from that one.
+    func cloudFile(photoId: String) throws -> CloudFile? {
+        let row = try database.reader.read { db in
+            try Row.fetchOne(db, sql: """
+                SELECT c.sourceId, c.relativePath FROM photo_copies c
+                WHERE c.photoId = ? AND c.isCloudPlaceholder = 1 AND c.missingSince IS NULL AND c.relativePath IS NOT NULL
+                  AND NOT EXISTS (SELECT 1 FROM photo_copies o WHERE o.photoId = c.photoId AND o.isCloudPlaceholder = 0 AND o.missingSince IS NULL)
+                LIMIT 1
+                """, arguments: [photoId])
+        }
+        guard let row else { return nil }
+        let sourceId: String = row["sourceId"]
+        let relativePath: String = row["relativePath"]
+        var size: Int64?
+        if case .available(let root) = try FolderSourceAccess(database: database).open(sourceId: sourceId) {
+            let isAccessing = root.startAccessingSecurityScopedResource()
+            defer { if isAccessing { root.stopAccessingSecurityScopedResource() } }
+            size = CloudPlaceholder.size(of: root.appendingPathComponent(relativePath))
+        }
+        return CloudFile(sourceId: sourceId, relativePath: relativePath, size: size)
+    }
+
+    /// Opening a cloud placeholder (FS-19.01b §4): the user asked for this
+    /// one file, so exactly it is downloaded — space checked first — and its
+    /// source read again, which turns the placeholder into a full photo with
+    /// the same id. Cancelling the task stops the download.
+    func download(
+        _ file: CloudFile,
+        with downloader: any CloudFileDownloading,
+        freeBytes: @Sendable (URL) -> Int64? = { DiskSpace.availableBytes(for: $0) },
+        progress: @escaping @Sendable (Double?) -> Void
+    ) async throws -> DownloadOutcome {
+        guard case .available(let root) = try FolderSourceAccess(database: database).open(sourceId: file.sourceId) else {
+            return .unavailable
+        }
+        let isAccessing = root.startAccessingSecurityScopedResource()
+        defer { if isAccessing { root.stopAccessingSecurityScopedResource() } }
+        if let size = file.size, let short = DeviceSpaceCheck.shortfall(for: size, free: freeBytes(root)) {
+            return .notEnoughSpace(short: short)
+        }
+        try await downloader.download(root.appendingPathComponent(file.relativePath), progress: progress)
+        // A read already running would skip this one and leave the glyph.
+        while reading != nil { try await Task.sleep(for: .milliseconds(200)) }
+        _ = try read(sourceId: file.sourceId)
+        return .downloaded
     }
 
     /// Every folder and drive source, in the order they were added — at

@@ -35,7 +35,7 @@ Nền chung cho mọi dòng ❌ dưới đây (khỏi chép lại):
 | AC-13 bookmark hết hạn → Needs access, ảnh ở lại | ❌ | chưa có nguồn; client Files của FS-17 **bỏ qua** `isStale` (`Data/Sources/FileServer/FilesFolderClient.swift:26-27`), bookmark tạo **không** `.withSecurityScope` (`Features/ServerImport/OnCloudScreen.swift:185`); mẫu gia hạn đúng có ở `Data/Sources/FileExport/ExportFolderStore.swift:83-98` | B16 — tái dùng mẫu của `ExportFolderStore`, không mẫu của `FilesFolderClient` |
 | AC-14 Grant Access → cùng id, ★ giữ | ❌ | — | B17 |
 | AC-15 iCloud Drive 40 chỗ giữ chỗ → 0 byte tải | ❌ | không kiểm `ubiquitousItemDownloadingStatus`; `FilesFolderClient` đọc qua `NSFileCoordinator` — thứ **tải** file cloud về (`FilesFolderClient.swift:5-9`, `:69-86`) | B11 — **không** đọc nguồn thư mục qua `FilesFolderClient` |
-| AC-16 mở chỗ giữ chỗ → tải 1 file, tiến độ + Cancel | ❌ | — | F5 (ảnh chụp tay) |
+| AC-16 mở chỗ giữ chỗ → tải 1 file, tiến độ + Cancel | ✅ (2026-10-17) | `FolderSourceRunner.download` + `CloudFileDownload.swift` (`UbiquitousFileDownloader`, DEBUG `SimulatedCloudDownloader`), `Features/Sources/CloudDownloadPanel.swift`, `PhotoDetailPage` nhánh `isCloudPlaceholder`; ô lưới `PhotoGridCell.applyCloudPlaceholder`, `LibraryQueries.cloudPlaceholderItems` | F5 xong |
 | AC-17 ổ cache đầy → metadata đủ, 0 preview, dòng báo | ❌ | — | B12 |
 | AC-45 thư mục nằm trong/chứa nguồn → từ chối | ❌ | — | B2 (`SourceOverlap`, thuần) |
 | AC-46 Hide Its Photos → lưới −26.057, 50 ở lại | ❌ | — | B13 |

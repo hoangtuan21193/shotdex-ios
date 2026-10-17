@@ -2029,6 +2029,11 @@ final class PhotoGridCell: UICollectionViewCell {
     private let statusBadges = UIStackView()
     private let selectionBorder = UIView()
     private let selectionBadge = UIImageView()
+    /// A file only in the cloud (FS-19.01b §4): no picture until the user
+    /// opens it, so the tile shows the cloud glyph and the file's name.
+    private let cloudGlyph = UIImageView(image: UIImage(systemName: "icloud.and.arrow.down"))
+    private let cloudName = UILabel()
+    private var accessibilityCloudName: String?
 
     private var requestId: PHImageRequestID?
     private var requestedAssetId: String?
@@ -2121,6 +2126,18 @@ final class PhotoGridCell: UICollectionViewCell {
         selectionBadge.backgroundColor = .clear
         contentView.addSubview(selectionBadge)
 
+        cloudGlyph.preferredSymbolConfiguration = .init(pointSize: 22, weight: .regular)
+        cloudGlyph.tintColor = .secondaryLabel
+        cloudGlyph.contentMode = .center
+        cloudGlyph.isHidden = true
+        contentView.insertSubview(cloudGlyph, aboveSubview: imageView)
+        cloudName.font = .preferredFont(forTextStyle: .caption2)
+        cloudName.textColor = .secondaryLabel
+        cloudName.textAlignment = .center
+        cloudName.lineBreakMode = .byTruncatingMiddle
+        cloudName.isHidden = true
+        contentView.insertSubview(cloudName, aboveSubview: cloudGlyph)
+
         contentView.clipsToBounds = true
     }
 
@@ -2131,6 +2148,8 @@ final class PhotoGridCell: UICollectionViewCell {
         super.layoutSubviews()
         imageView.frame = contentView.bounds
         selectionBorder.frame = contentView.bounds
+        cloudGlyph.frame = contentView.bounds
+        cloudName.frame = CGRect(x: 4, y: contentView.bounds.height - 18, width: contentView.bounds.width - 8, height: 14)
         let labelHeight: CGFloat = 20
         metadataLabel.frame = CGRect(
             x: 6, y: contentView.bounds.height - labelHeight + 1,
@@ -2223,19 +2242,21 @@ final class PhotoGridCell: UICollectionViewCell {
         configuredAssetId = item.assetId
         badgeFetchTask?.cancel()
         badgeFetchTask = nil
+        let isCloudPlaceholder = photoLibrary.fileThumbnails.isCloudPlaceholder(item.assetId)
+        applyCloudPlaceholder(isCloudPlaceholder ? (item.originalFilename ?? "") : nil, showsName: cellWidth >= 60)
 
-        let showsBadge = cellWidth >= Self.metadataMinCellWidth
+        let showsBadge = cellWidth >= Self.metadataMinCellWidth && !isCloudPlaceholder
         let line = showsBadge ? Self.metadataLine(for: item, options: displayOptions) : nil
         applyBadge(line: line)
         accessibilityMediaLabel = item.mediaType == 2 ? "Video" : "Photo"
         applyFileTypeBadge(
-            displayOptions.showsFileTypeBadge ? item.fileTypeBadgeText : nil
+            displayOptions.showsFileTypeBadge && !isCloudPlaceholder ? item.fileTypeBadgeText : nil
         )
 
         // Item is missing exposure or source filename fields — typically a
         // tile the index run hasn't reached (or has filled since this list
         // loaded). Ask for a fresh row and update just this cell when it arrives.
-        if let lazyMetadataProvider,
+        if let lazyMetadataProvider, !isCloudPlaceholder,
            Self.needsLazyMetadata(item, options: displayOptions, showsMetadataLine: showsBadge) {
             let assetId = item.assetId
             badgeFetchTask = Task { [weak self] in
@@ -2403,6 +2424,15 @@ final class PhotoGridCell: UICollectionViewCell {
         view.layer.shadowOffset = .zero
     }
 
+    private func applyCloudPlaceholder(_ name: String?, showsName: Bool) {
+        cloudGlyph.isHidden = name == nil
+        cloudName.isHidden = name == nil || !showsName
+        cloudName.text = name
+        accessibilityCloudName = name
+        if name != nil { fileTypeBadge.isHidden = true }
+        updateAccessibilityLabel()
+    }
+
     private func applyFileTypeBadge(_ text: String?) {
         fileTypeBadge.text = text
         fileTypeBadge.isHidden = text == nil
@@ -2421,6 +2451,11 @@ final class PhotoGridCell: UICollectionViewCell {
             accessibilityUploaded ? String(localized: "Uploaded to server", comment: "VoiceOver: grid tile of a photo with a copy on a file server") : nil,
             accessibilityMarks,
         ]
+        if let accessibilityCloudName {
+            accessibilityLabel = String(localized: "\(accessibilityCloudName), in iCloud, not downloaded",
+                                        comment: "VoiceOver: grid tile of a folder file that is only in the cloud; the argument is its file name")
+            return
+        }
         accessibilityLabel = components.compactMap { $0 }.joined(separator: ", ")
     }
 
