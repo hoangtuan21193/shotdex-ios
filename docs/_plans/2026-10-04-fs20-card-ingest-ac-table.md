@@ -51,7 +51,7 @@ dùng được là khuôn của Export to Files (07b) và FS-15/17.
 | AC-20 | ❌ | khuôn bookmark nhớ lại có ở E10 | `CardBookmarkStore` (nhận lại thẻ theo volume UUID), **Choose Card…** |
 | AC-21 | ❌ | — | trạng thái lấy thêm "bản sao đích còn không" từ bảng Bản sao FS-19 |
 | AC-22 | ❌ | — | `CardHashPass` nền (SHA-256 cả file + hash nội dung FS-19) tinh chỉnh trạng thái |
-| AC-23 | ❌ | E8 đẩy WAV/MP4/THM vào `others` | `CardCatalog`: WAV theo ô ảnh cùng tên gốc, MP4/MOV ô riêng, bỏ THM/MISC/ẩn/file danh mục |
+| AC-23 | ⚠️ nửa danh mục (2026-10-18) | `CardCatalog.items`: WAV theo ô ảnh, MP4/MOV ô `.video`, `isListed` bỏ ẩn + MISC, chỉ giữ ảnh/RAW/video/WAV | task 3 xong; mẻ thật ở task 4, thời lượng video ở task 13 |
 | AC-24 | ❌ | công tắc XMP chưa có (FS-19.02 §5) | lượt nhập luôn ghi `.xmp`; không đổi công tắc |
 | AC-25 | ✅ nửa Export (2026-10-18) | `FileNameChip.all` + `FileNameTokenGrid` (`Features/FileExport/FileNameTokenGrid.swift`), token `originalNumber`, `seq`→`sequence`, mẫu "Date + Camera + Sequence" | task 1 xong; nửa Import ở task 13 |
 | AC-26 | ❌ | E11 | bộ chạy nền chung `ContinuedProcessingRun` (iOS 26) + nhánh trước 26 = Stop + Import Remaining |
