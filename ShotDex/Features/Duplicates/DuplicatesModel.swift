@@ -184,13 +184,14 @@ final class DuplicatesModel {
         return DuplicateReview.reasons(keeper: keeper, members: group.members, traits: traits, scores: scores)
     }
 
-    func difference(of member: HashedPhoto, in group: DuplicateGroup) -> String {
-        guard let keeper = keeper(of: group) else {
-            return DuplicateReview.dimensions(member) ?? "—"
+    /// Up to two lines inside a copy: what it lacks, where it is from, what
+    /// was shot differently (§7.4). Empty for the keeper.
+    func caption(of member: HashedPhoto, in group: DuplicateGroup) -> [String] {
+        guard let keeper = keeper(of: group), keeper.assetId != member.assetId else { return [] }
+        if group.sourceSet != nil {
+            return DuplicateReview.settings(of: member, members: group.members).map { [$0] } ?? []
         }
-        let sharpest = group.members.compactMap { scores[$0.assetId]?.sharpness }.max()
-        return DuplicateReview.difference(of: member, from: keeper, traits: traits, scores: scores,
-                                          groupSharpest: DuplicateReview.isScored(group.members, scores) ? sharpest : nil)
+        return DuplicateReview.caption(of: member, keeper: keeper, members: group.members, traits: traits, scores: scores)
     }
 
     func traits(of assetId: String) -> DuplicateMemberTraits {
@@ -284,6 +285,17 @@ final class DuplicatesModel {
         traits.merge(read) { _, new in new }
     }
 
+    /// Titles of the albums the user made that hold `asset` — not smart
+    /// albums, not shared ones the user cannot edit.
+    nonisolated private static func userAlbums(containing asset: PHAsset) -> [String] {
+        let albums = PHAssetCollection.fetchAssetCollectionsContaining(asset, with: .album, options: nil)
+        var titles: [String] = []
+        albums.enumerateObjects { album, _, _ in
+            if album.assetCollectionSubtype == .albumRegular, let title = album.localizedTitle { titles.append(title) }
+        }
+        return titles.sorted()
+    }
+
     nonisolated private static func readTraits(_ assets: [PHAsset]) -> [String: DuplicateMemberTraits] {
         var result: [String: DuplicateMemberTraits] = [:]
         for asset in assets {
@@ -295,7 +307,8 @@ final class DuplicatesModel {
                 isEdited: resources.contains { $0.type == .adjustmentData },
                 hasRAW: hasRAW,
                 isLive: asset.mediaSubtypes.contains(.photoLive),
-                isFavorite: asset.isFavorite
+                isFavorite: asset.isFavorite,
+                albums: userAlbums(containing: asset)
             )
         }
         return result

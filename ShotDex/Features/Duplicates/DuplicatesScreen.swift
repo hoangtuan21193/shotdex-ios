@@ -718,26 +718,10 @@ private struct DuplicateDecisionCard: View {
         return parts.isEmpty ? "—" : parts.joined(separator: " · ")
     }
 
-    /// Pixel size over file size, for the label inside a photo.
-    private func factLines(_ member: HashedPhoto) -> [String] {
-        if group.kind == .sameMoment { return [caption(member)] }
-        var lines: [String] = []
-        if let dimensions = DuplicateReview.dimensions(member) { lines.append(dimensions) }
-        if let size = member.fileSize {
-            lines.append(DuplicatesScreen.byteFormatter.string(fromByteCount: Int64(size)))
-        }
-        return lines
-    }
-
-    /// Under a copy: what it lacks next to the keeper. Under a series frame:
-    /// seconds after the first frame.
-    private func caption(_ member: HashedPhoto) -> String {
-        if group.kind == .sameMoment {
-            let first = group.members.compactMap(\.creationDate).min()
-            guard let first, let date = member.creationDate else { return "—" }
-            return "+\(date - first) s"
-        }
-        return model.difference(of: member, in: group)
+    /// The caption inside a copy (§7.4): plain words, at most two lines,
+    /// none on the keeper — its chips speak for it.
+    private func captionLines(_ member: HashedPhoto, isKeeper: Bool) -> [String] {
+        isKeeper ? [] : model.caption(of: member, in: group)
     }
 
     private func tile(_ member: HashedPhoto, side: CGFloat, radius: CGFloat, isKeeper: Bool) -> some View {
@@ -749,7 +733,7 @@ private struct DuplicateDecisionCard: View {
             radius: radius,
             isMarked: isMarked,
             showsKeep: isKeeper && !isMarked,
-            factLines: factLines(member),
+            factLines: captionLines(member, isKeeper: isKeeper),
             chips: isKeeper ? keeperChips : [],
             isKeeper: isKeeper
         )
@@ -793,7 +777,7 @@ private struct DuplicateDecisionCard: View {
         if traits.isEdited { parts.append(String(localized: "edited")) }
         if traits.hasRAW { parts.append(String(localized: "RAW")) }
         if traits.isLive { parts.append(String(localized: "Live Photo")) }
-        if !isKeeper { parts.append(caption(member)) }
+        if !isKeeper { parts += model.caption(of: member, in: group) }
         parts.append(isMarked
                      ? String(localized: "marked for deletion")
                      : String(localized: "not marked"))

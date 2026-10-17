@@ -23,6 +23,19 @@ struct HashedPhoto: Hashable, Sendable, Identifiable {
     var exposureBias: Double? = nil
     /// TIFF Software of the file, from the same read.
     var software: String? = nil
+    var originalFilename: String? = nil
+    /// "1/60 s" — for the caption when shutter speeds differ in a group.
+    var shutterDisplay: String? = nil
+
+    /// Software that writes an *edit*: a file it saved is an export of an
+    /// edit, which counts as edited when picking the keeper (FS-06.06 §7.4).
+    static let editorSoftware = ["lightroom", "photoshop", "capture one", "snapseed", "darkroom", "vsco",
+                                 "pixelmator", "affinity", "dxo", "luminar", "on1", "afterlight", "shotdex"]
+
+    var isExportOfEdit: Bool {
+        guard let software = software?.lowercased() else { return false }
+        return Self.editorSoftware.contains { software.contains($0) }
+    }
 
     var id: String { assetId }
 

@@ -54,24 +54,72 @@ struct DuplicateReviewTests {
         #expect(reasons == [.raw, .biggestFile])
     }
 
-    @Test func differenceSaysWhatTheCopyLacksFirst() {
+    /// AC-C6: an export of an edit is the keeper; every other copy says in
+    /// words what it lacks and where it lives — never "6240×4160".
+    @Test func exportOfAnEditIsTheKeeper() {
+        var original = photo("K", width: 6240, height: 4160, size: 24_000_000)
+        original.originalFilename = "DSC01234.ARW"
+        var whatsapp = photo("C1", width: 1600, height: 1067, size: 300_000)
+        whatsapp.originalFilename = "IMG-20260101-WA0007.jpg"
+        whatsapp.hasCameraEXIF = false
+        var export = photo("C2", width: 2048, height: 1365, size: 1_200_000)
+        export.software = "Adobe Photoshop Lightroom Classic 14.0"
+        let inAlbum = photo("C3", width: 6240, height: 4160, size: 23_000_000)
+        let members = [original, whatsapp, export, inAlbum]
+        let traits: [String: DuplicateMemberTraits] = ["C3": .init(albums: ["Client"])]
+
+        let keeper = DuplicateReview.keeper(of: members, traits: traits)
+        #expect(keeper?.assetId == "C2")
+        func caption(_ copy: HashedPhoto) -> [String] {
+            DuplicateReview.caption(of: copy, keeper: export, members: members, traits: traits)
+        }
+        #expect(caption(original) == ["Not edited"])
+        #expect(caption(whatsapp) == ["Not edited", "WhatsApp"])
+        #expect(caption(inAlbum) == ["Not edited", "In album: Client"])
+        for copy in [original, whatsapp, inAlbum] {
+            #expect(!caption(copy).joined().contains("×"))
+        }
+    }
+
+    @Test func captionSaysWhatTheCopyLacksInWords() {
         let keeper = photo("k")
         let traits: [String: DuplicateMemberTraits] = [
-            "k": .init(isEdited: true, hasRAW: true, isLive: true, isFavorite: true),
-            "e": .init(isEdited: false, hasRAW: true, isLive: true, isFavorite: true),
-            "r": .init(isEdited: true, hasRAW: false, isLive: true, isFavorite: true),
-            "f": .init(isEdited: true, hasRAW: true, isLive: true, isFavorite: false),
-            "l": .init(isEdited: true, hasRAW: true, isLive: false, isFavorite: true),
-            "d": .init(isEdited: true, hasRAW: true, isLive: true, isFavorite: true),
+            "k": .init(isEdited: true, hasRAW: true, isLive: true),
+            "e": .init(isEdited: false, hasRAW: true, isLive: true),
+            "r": .init(isEdited: true, hasRAW: false, isLive: true),
+            "l": .init(isEdited: true, hasRAW: true, isLive: false),
+            "f": .init(isEdited: true, hasRAW: true, isLive: true, isFavorite: true),
+            "d": .init(isEdited: true, hasRAW: true, isLive: true),
         ]
-        func diff(_ id: String, width: Int = 6000, height: Int = 4000) -> String {
-            DuplicateReview.difference(of: photo(id, width: width, height: height), from: keeper, traits: traits)
+        func caption(_ id: String, width: Int = 6000, height: Int = 4000) -> [String] {
+            let copy = photo(id, width: width, height: height)
+            return DuplicateReview.caption(of: copy, keeper: keeper, members: [keeper, copy], traits: traits)
         }
-        #expect(diff("e") == "Not edited")
-        #expect(diff("r") == "JPEG only")
-        #expect(diff("f") == "Not favorite")
-        #expect(diff("l") == "Still photo")
-        #expect(diff("d", width: 3120, height: 2080) == "3120×2080")
+        #expect(caption("e") == ["Not edited"])
+        #expect(caption("r") == ["JPEG only"])
+        #expect(caption("l") == ["Still photo"])
+        #expect(caption("f") == ["Favorite"])
+        #expect(caption("d", width: 3000, height: 2000) == ["Smaller copy"])
+        // Nothing worth saying: a clean tile.
+        #expect(caption("d") == [])
+    }
+
+    /// AC-C7: −1 / 0 / +1 EV 40 s apart — not a bracket, but each copy says
+    /// how it was shot differently; what all share is not said.
+    @Test func settingsThatDifferAreNamed() {
+        func shot(_ id: String, ev: Double) -> HashedPhoto {
+            var photo = photo(id)
+            photo.exposureBias = ev
+            photo.focalLength = 35
+            photo.shutterDisplay = "1/60s"
+            return photo
+        }
+        let members = [shot("a", ev: -1), shot("b", ev: 0), shot("c", ev: 1)]
+        #expect(DuplicateReview.settings(of: members[0], members: members) == "−1 EV")
+        #expect(DuplicateReview.settings(of: members[2], members: members) == "+1 EV")
+        var slow = members[2]
+        slow.shutterDisplay = "1/15s"
+        #expect(DuplicateReview.settings(of: slow, members: [members[0], slow]) == "+1 EV · 1/15 s")
     }
 
     @Test func freeBytesLeaveTheKeeperOut() {
@@ -165,7 +213,7 @@ struct DuplicateReviewTests {
         let members = [closed, open]
         #expect(DuplicateReview.keeper(of: members, traits: [:], scores: scores)?.assetId == "open")
         #expect(DuplicateReview.reasons(keeper: open, members: members, traits: [:], scores: scores).first == .eyesOpen)
-        #expect(DuplicateReview.difference(of: closed, from: open, traits: [:], scores: scores) == "Eyes closed")
+        #expect(DuplicateReview.weakness(of: closed, keeper: open, traits: [:], scores: scores, groupSharpest: nil) == "Eyes closed")
     }
 
     /// Below the confidence bar nothing is said about eyes.

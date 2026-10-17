@@ -10,6 +10,8 @@ struct DuplicateMemberTraits: Hashable, Sendable {
     var hasRAW = false
     var isLive = false
     var isFavorite = false
+    /// Albums the user made that hold this photo, by title.
+    var albums: [String] = []
 }
 
 /// Order of the group list (FS-06.06 §7.3).
@@ -90,7 +92,10 @@ enum DuplicateReview {
     ) -> Bool {
         let leftTraits = traits[left.assetId] ?? DuplicateMemberTraits(isFavorite: left.isFavorite)
         let rightTraits = traits[right.assetId] ?? DuplicateMemberTraits(isFavorite: right.isFavorite)
-        if leftTraits.isEdited != rightTraits.isEdited { return leftTraits.isEdited }
+        // An export from Lightroom & co. is an edit someone delivered (§7.4).
+        let leftEdited = leftTraits.isEdited || left.isExportOfEdit
+        let rightEdited = rightTraits.isEdited || right.isExportOfEdit
+        if leftEdited != rightEdited { return leftEdited }
         let leftFavorite = leftTraits.isFavorite || left.isFavorite
         let rightFavorite = rightTraits.isFavorite || right.isFavorite
         if leftFavorite != rightFavorite { return leftFavorite }
@@ -126,7 +131,8 @@ enum DuplicateReview {
                 reasons.append(.sharpest)
             }
         }
-        if mine.isEdited, others.contains(where: { !trait($0).isEdited }) { reasons.append(.edited) }
+        if mine.isEdited || keeper.isExportOfEdit,
+           others.contains(where: { !trait($0).isEdited && !$0.isExportOfEdit }) { reasons.append(.edited) }
         if mine.hasRAW, others.contains(where: { !trait($0).hasRAW }) { reasons.append(.raw) }
         if mine.isFavorite || keeper.isFavorite,
            others.contains(where: { !trait($0).isFavorite && !$0.isFavorite }) {
@@ -143,33 +149,101 @@ enum DuplicateReview {
         return Array(reasons.prefix(limit))
     }
 
-    /// One line under a copy saying what it lacks next to the keeper — the
-    /// thing a thumbnail cannot show. Falls back to the copy's dimensions.
-    static func difference(
+    /// The caption inside a copy (§7.4, D10): at most two lines of plain
+    /// words — what it lacks next to the keeper, then where it came from or
+    /// where it lives, then the shot settings that differ in the group. No
+    /// pixel counts, no MB: those are for the viewer. Empty when there is
+    /// nothing worth saying.
+    static func caption(
         of copy: HashedPhoto,
-        from keeper: HashedPhoto,
+        keeper: HashedPhoto,
+        members: [HashedPhoto],
         traits: [String: DuplicateMemberTraits],
-        scores: [String: DuplicateQualityScore] = [:],
-        groupSharpest: Double? = nil
-    ) -> String {
+        scores: [String: DuplicateQualityScore] = [:]
+    ) -> [String] {
+        let sharpest = isScored(members, scores) ? members.compactMap { scores[$0.assetId]?.sharpness }.max() : nil
+        let lines = [
+            weakness(of: copy, keeper: keeper, traits: traits, scores: scores, groupSharpest: sharpest),
+            origin(of: copy, keeper: keeper, traits: traits),
+            settings(of: copy, members: members),
+        ]
+        return Array(lines.compactMap { $0 }.prefix(2))
+    }
+
+    /// Line 1: what this copy loses to the keeper, most telling first.
+    static func weakness(
+        of copy: HashedPhoto,
+        keeper: HashedPhoto,
+        traits: [String: DuplicateMemberTraits],
+        scores: [String: DuplicateQualityScore],
+        groupSharpest: Double?
+    ) -> String? {
         if let measured = qualityCaption(of: copy, keeper: keeper, scores: scores, groupSharpest: groupSharpest) {
             return measured
         }
+        if let mine = copy.longEdge, let kept = keeper.longEdge,
+           Double(mine) <= Double(kept) * DuplicateGrouper.smallerEdgeRatio {
+            return String(localized: "Smaller copy", comment: "Duplicates: caption — this copy has fewer pixels than the kept photo")
+        }
         let mine = traits[copy.assetId] ?? DuplicateMemberTraits(isFavorite: copy.isFavorite)
         let kept = traits[keeper.assetId] ?? DuplicateMemberTraits(isFavorite: keeper.isFavorite)
-        if kept.isEdited, !mine.isEdited {
+        if kept.isEdited || keeper.isExportOfEdit, !mine.isEdited, !copy.isExportOfEdit {
             return String(localized: "Not edited", comment: "Duplicates: a copy lacks the keeper's edit")
         }
         if kept.hasRAW, !mine.hasRAW {
             return String(localized: "JPEG only", comment: "Duplicates: a copy has no RAW file, unlike the keeper")
         }
-        if kept.isFavorite || keeper.isFavorite, !(mine.isFavorite || copy.isFavorite) {
-            return String(localized: "Not favorite", comment: "Duplicates: a copy is not a favorite, unlike the keeper")
-        }
         if kept.isLive, !mine.isLive {
             return String(localized: "Still photo", comment: "Duplicates: a copy is not a Live Photo, unlike the keeper")
         }
-        return dimensions(copy) ?? "—"
+        return nil
+    }
+
+    /// Line 2: where the copy came from or where it lives.
+    static func origin(of copy: HashedPhoto, keeper: HashedPhoto, traits: [String: DuplicateMemberTraits]) -> String? {
+        if let messenger = messenger(of: copy) { return messenger }
+        if copy.isExportOfEdit, let name = keeper.originalFilename.map(stem), !name.isEmpty {
+            return String(localized: "Export of \(name)", comment: "Duplicates: caption — this copy is an export of the named original")
+        }
+        let mine = traits[copy.assetId] ?? DuplicateMemberTraits(isFavorite: copy.isFavorite)
+        if let album = mine.albums.first {
+            return String(localized: "In album: \(album)", comment: "Duplicates: caption — this copy is in one of the user's albums")
+        }
+        if mine.isFavorite || copy.isFavorite {
+            return String(localized: "Favorite", comment: "Duplicates: caption — this copy is a favorite")
+        }
+        return nil
+    }
+
+    /// The messenger a re-saved copy came through, read off the file name
+    /// the app gave it ("IMG-20260101-WA0007.jpg").
+    static func messenger(of photo: HashedPhoto) -> String? {
+        guard let name = photo.originalFilename?.uppercased() else { return nil }
+        if name.contains("-WA") { return "WhatsApp" }
+        if name.contains("ZALO") { return "Zalo" }
+        if name.hasPrefix("TELEGRAM") || name.hasPrefix("PHOTO_") { return "Telegram" }
+        if name.hasPrefix("RECEIVED_") || name.contains("MESSENGER") { return "Messenger" }
+        return nil
+    }
+
+    /// Settings that differ inside the group, this copy's values: "−2 EV ·
+    /// 35mm · 1/60 s". A setting all members share says nothing.
+    static func settings(of copy: HashedPhoto, members: [HashedPhoto]) -> String? {
+        var parts: [String] = []
+        if let ev = copy.exposureBias, Set(members.map { $0.exposureBias.map { ($0 * 10).rounded() } }).count > 1 {
+            parts.append("\(DuplicateSourceSet.signedEV(ev)) EV")
+        }
+        if let focal = copy.focalLength, Set(members.map { $0.focalLength.map { $0.rounded() } }).count > 1 {
+            parts.append("\(Int(focal.rounded()))mm")
+        }
+        if let shutter = copy.shutterDisplay, Set(members.map(\.shutterDisplay)).count > 1 {
+            parts.append(shutter.hasSuffix("s") ? "\(shutter.dropLast()) s" : shutter)
+        }
+        return parts.isEmpty ? nil : parts.joined(separator: " · ")
+    }
+
+    private static func stem(_ filename: String) -> String {
+        (filename as NSString).deletingPathExtension
     }
 
     /// What the scores say is wrong with `copy`: *Eyes closed*, *Soft*,

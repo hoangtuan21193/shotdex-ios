@@ -114,7 +114,7 @@ struct PerceptualHashStore: Sendable {
             try Row.fetchAll(
                 db,
                 sql: """
-                    SELECT p.assetId, h.hash, p.width, p.height, p.fileSize, p.creationDate, p.isFavorite, p.modificationDate, p.focalLength, p.mediaSubtypes, p.cameraModel, q.exposureBias, q.software, q.exposureBias, q.software
+                    SELECT p.assetId, h.hash, p.width, p.height, p.fileSize, p.creationDate, p.isFavorite, p.modificationDate, p.focalLength, p.mediaSubtypes, p.cameraModel, p.originalFilename, p.shutterSpeedDisplay, q.exposureBias, q.software, q.exposureBias, q.software
                     FROM perceptual_hash h
                     JOIN photo_metadata p ON p.assetId = h.assetId
                     LEFT JOIN duplicate_quality q ON q.assetId = h.assetId
@@ -202,7 +202,7 @@ struct PerceptualHashStore: Sendable {
                 db,
                 sql: """
                     SELECT g.groupId, g.kind, p.assetId, h.hash, p.width, p.height, p.fileSize, p.creationDate, p.isFavorite,
-                           p.modificationDate, p.focalLength, p.mediaSubtypes, p.cameraModel, q.exposureBias, q.software
+                           p.modificationDate, p.focalLength, p.mediaSubtypes, p.cameraModel, p.originalFilename, p.shutterSpeedDisplay, q.exposureBias, q.software
                     FROM duplicate_groups g
                     JOIN photo_metadata p ON p.assetId = g.assetId
                     JOIN perceptual_hash h ON h.assetId = g.assetId
@@ -252,7 +252,9 @@ struct PerceptualHashStore: Sendable {
             isScreenshot: subtypes.map { $0 & Int(PHAssetMediaSubtype.photoScreenshot.rawValue) != 0 } ?? false,
             hasCameraEXIF: !(cameraModel ?? "").isEmpty,
             exposureBias: row["exposureBias"],
-            software: row["software"]
+            software: row["software"],
+            originalFilename: row["originalFilename"],
+            shutterDisplay: row["shutterSpeedDisplay"]
         )
     }
 

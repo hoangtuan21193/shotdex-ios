@@ -73,7 +73,7 @@ struct DuplicateQualityTests {
         #expect(reasons.contains(.sharpest))
         #expect(!reasons.contains(.biggestFile))
         let sharpest = scores.values.compactMap(\.sharpness).max()
-        #expect(DuplicateReview.difference(of: q, from: p, traits: [:], scores: scores, groupSharpest: sharpest) == "Soft")
+        #expect(DuplicateReview.weakness(of: q, keeper: p, traits: [:], scores: scores, groupSharpest: sharpest) == "Soft")
     }
 
     /// AC-Q3: 4% of pixels at 255 against a keeper at 0.2%.
@@ -91,7 +91,7 @@ struct DuplicateQualityTests {
         let k = photo("K", size: 1), b = photo("B", size: 1)
         // Same sharpness by construction is not guaranteed; pin the caption
         // rule on clipping by passing the keeper's own sharpness as the best.
-        let caption = DuplicateReview.difference(of: b, from: k, traits: [:], scores: scores,
+        let caption = DuplicateReview.weakness(of: b, keeper: k, traits: [:], scores: scores,
                                                  groupSharpest: scores["B"]?.sharpness)
         #expect(caption == "Blown highlights")
     }
