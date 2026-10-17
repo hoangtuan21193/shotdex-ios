@@ -122,8 +122,7 @@ enum SettingsKeys {
     /// JSON-encoded user collage presets (frame + style, no text).
     static let collagePresets = "collage.presets"
 
-    /// `DuplicateKind` raw value the Duplicates list is filtered to.
-    /// Unwritten (or empty) means All.
+    /// `DuplicatesFilter` of the Duplicates list. Unwritten (or empty) means All.
     static let duplicateKindFilter = "duplicates.kindFilter"
 
     /// `DuplicateSort` raw value of the group list. Unwritten means `.easiestFirst`.
@@ -138,6 +137,9 @@ enum SettingsKeys {
     /// Group count of the last duplicate grouping, so the Collections tab token
     /// can show it without loading every hash. Unwritten means never scanned.
     static let duplicateGroupCount = "duplicates.lastGroupCount"
+    /// Bytes keeping one per group would free, as of the last load — the
+    /// "~X GB to free" under Duplicates in Collections (FS-06.06 §7.1).
+    static let duplicateFreeBytes = "duplicates.lastFreeBytes"
 
     /// JSON-encoded user looks — the presets saved from an edit and applied to
     /// other photos. Look-only recipes, so they are small.

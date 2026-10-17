@@ -1171,9 +1171,11 @@ struct UtilityToken: View {
     }
 }
 
-/// The Duplicates tile, whose second line is the group count of the last scan.
+/// The Duplicates tile, whose second line is what the last scan could free
+/// (FS-06.06 §7.1) — or the group count when nothing is to free.
 struct DuplicatesToken: View {
     @AppStorage(SettingsKeys.duplicateGroupCount) private var groupCount: Int?
+    @AppStorage(SettingsKeys.duplicateFreeBytes) private var freeBytes: Int?
 
     var body: some View {
         UtilityToken(title: String(localized: "Duplicates"), subtitle: subtitle, systemImage: "square.on.square")
@@ -1185,6 +1187,11 @@ struct DuplicatesToken: View {
                 localized: "Scan library",
                 comment: "Duplicates tile subtitle before the first scan"
             )
+        }
+        if let freeBytes, freeBytes > 0 {
+            let size = ByteCountFormatter.string(fromByteCount: Int64(freeBytes), countStyle: .file)
+            return String(localized: "~\(size) to free",
+                          comment: "Detail on the Duplicates row in Collections: space keeping one per group would free")
         }
         return String(
             localized: "\(groupCount) groups",

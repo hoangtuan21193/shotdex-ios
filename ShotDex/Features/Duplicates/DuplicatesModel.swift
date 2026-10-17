@@ -100,12 +100,12 @@ final class DuplicatesModel {
         }
     }
 
-    /// The kind the list is filtered to; `nil` is All. Filtering changes
-    /// which cards show, never the marks or the Delete count (06b §1).
-    var kindFilter: DuplicateKind? {
+    /// What the list shows. Filtering changes which cards show, never the
+    /// marks or the Delete count (06b §1).
+    var filter: DuplicatesFilter {
         didSet {
-            guard kindFilter != oldValue else { return }
-            UserDefaults.standard.set(kindFilter?.rawValue ?? "", forKey: SettingsKeys.duplicateKindFilter)
+            guard filter != oldValue else { return }
+            UserDefaults.standard.set(filter.storedValue, forKey: SettingsKeys.duplicateKindFilter)
         }
     }
 
@@ -116,8 +116,7 @@ final class DuplicatesModel {
     init(dependencies: AppDependencies) {
         self.dependencies = dependencies
         self.session = dependencies.duplicateReview
-        let stored = UserDefaults.standard.string(forKey: SettingsKeys.duplicateKindFilter)
-        self.kindFilter = stored.flatMap(DuplicateKind.init(rawValue:))
+        self.filter = DuplicatesFilter(stored: UserDefaults.standard.string(forKey: SettingsKeys.duplicateKindFilter))
         let storedSort = UserDefaults.standard.string(forKey: SettingsKeys.duplicateSort)
         self.sort = storedSort.flatMap(DuplicateSort.init(rawValue:)) ?? .easiestFirst
     }
@@ -165,7 +164,7 @@ final class DuplicatesModel {
 
     /// Groups of the kind the filter shows, in the order the sort menu asks for.
     var sortedGroups: [DuplicateGroup] {
-        let shown = kindFilter.map { kind in groups.filter { $0.kind == kind } } ?? groups
+        let shown = groups.filter(filter.includes)
         return DuplicateReview.sorted(shown, by: sort, freeBytes: { self.freeBytes(of: $0) ?? 0 }) { group in
             self.keeper(of: group).map { DuplicateReview.scoreGap(group, keeper: $0, scores: self.scores) } ?? 0
         }
@@ -173,8 +172,47 @@ final class DuplicatesModel {
 
     /// Kinds that have at least one group, in filter-row order.
     var presentKinds: [DuplicateKind] {
-        let kinds = Set(groups.map(\.kind))
+        let kinds = Set(groups.filter { $0.sourceSet == nil }.map(\.kind))
         return DuplicateKind.allCases.filter(kinds.contains)
+    }
+
+    /// Filters that would show something, in filter-row order (§7.3).
+    var presentFilters: [DuplicatesFilter] {
+        [.all] + presentKinds.map(DuplicatesFilter.kind) + (groups.contains { $0.sourceSet != nil } ? [.sourceFrames] : [])
+    }
+
+    func groupCount(_ filter: DuplicatesFilter) -> Int { groups.filter(filter.includes).count }
+
+    // MARK: Summary
+
+    /// The keeper of the newest group of `kind`, for the summary row's thumbnail.
+    func firstAsset(of kind: DuplicateKind) -> PHAsset? {
+        guard let group = groups.first(where: { $0.kind == kind && $0.sourceSet == nil }),
+              let keeper = keeper(of: group) else { return nil }
+        return assetsById[keeper.assetId]
+    }
+
+    /// The numbers on the summary screen (§7.2).
+    var summary: DuplicatesSummary {
+        DuplicatesSummary(groups: groups) { self.freeBytes(of: $0) ?? 0 }
+    }
+
+    /// The Quick clean sheet's rows, once every copy's favorite / edit /
+    /// album is known — a protected photo must never be ticked (A2).
+    func quickCleanItems() async -> [QuickCleanItem] {
+        let copies = groups.filter { $0.kind.isCopy && $0.sourceSet == nil }
+        await loadAllTraits(copies)
+        return QuickClean.items(groups: copies, keeper: { self.keeper(of: $0) }, traits: traits)
+    }
+
+    /// Select N photos: the ticked rows' copies get marked. Nothing is
+    /// deleted; the Delete bar takes it from here (§7.2).
+    func applyQuickClean(_ items: [QuickCleanItem], excluding unticked: Set<String>) {
+        for item in items where !unticked.contains(item.groupId) {
+            guard let group = groups.first(where: { $0.id == item.groupId }) else { continue }
+            session.setMarks(of: group.members.map(\.assetId), to: Set(item.removal.remove))
+            session.setKeptAll(group.memberIds, false)
+        }
     }
 
     /// The member the card puts big with "Keep": the user's pick, else the
@@ -427,6 +465,7 @@ final class DuplicatesModel {
         // Marks are not cut on reload (§1): marks are per photo, and a regroup
         // that moves a photo keeps its mark.
         UserDefaults.standard.set(self.groups.count, forKey: SettingsKeys.duplicateGroupCount)
+        UserDefaults.standard.set(totalFreeBytes, forKey: SettingsKeys.duplicateFreeBytes)
     }
 
     /// Cheap refresh after the library changed: how many photos a rescan
@@ -834,5 +873,6 @@ final class DuplicatesModel {
         }
         session.forget(ids)
         UserDefaults.standard.set(groups.count, forKey: SettingsKeys.duplicateGroupCount)
+        UserDefaults.standard.set(totalFreeBytes, forKey: SettingsKeys.duplicateFreeBytes)
     }
 }

@@ -12,6 +12,13 @@ struct DuplicatesDestination: Hashable {}
 /// gather in a floating bar with Delete. Pinch changes copies per row.
 /// Nothing is marked until the user taps, and nothing rescans unless asked.
 struct DuplicatesScreen: View {
+    /// The summary opens first (§7.2); the list is pushed from it and shares
+    /// its model, so marks, scores and the scan carry across.
+    enum Page { case summary, list }
+
+    var page: Page = .summary
+    var sharedModel: DuplicatesModel?
+
     @Environment(AppDependencies.self) private var dependencies
     @Environment(PhotoLibraryService.self) private var photoLibrary
     @Environment(AppNavigation.self) private var navigation
@@ -31,6 +38,8 @@ struct DuplicatesScreen: View {
     @State private var hudTask: Task<Void, Never>?
     @State private var burstList: BurstListModel?
     @State private var openBurst: BurstFramesRequest?
+    @State private var showsList = false
+    @State private var showsQuickClean = false
 
     private var isRegular: Bool { horizontalSizeClass == .regular }
 
@@ -64,7 +73,7 @@ struct DuplicatesScreen: View {
         .navigationTitle("Duplicates")
         .navigationBarTitleDisplayMode(.inline)
         .task {
-            if model == nil { model = DuplicatesModel(dependencies: dependencies) }
+            if model == nil { model = sharedModel ?? DuplicatesModel(dependencies: dependencies) }
         }
     }
 
@@ -74,7 +83,9 @@ struct DuplicatesScreen: View {
         let hasMarks = model.markedCount > 0 && !model.showsBursts
         ScrollView {
             Group {
-                if model.showsBursts, let burstList {
+                if page == .summary {
+                    summaryBody(model)
+                } else if model.showsBursts, let burstList {
                     BurstListView(model: burstList, openBurst: $openBurst)
                 } else {
                     cardList(model)
@@ -91,6 +102,7 @@ struct DuplicatesScreen: View {
         .simultaneousGesture(pinch)
         .safeAreaInset(edge: .top, spacing: 0) {
             VStack(spacing: 0) {
+                let showsBand = page == .list
                 if let access = permissionAccess(model) {
                     DuplicatesPermissionBanner(access: access)
                         .padding(.horizontal, AppTheme.Size.screenMargin)
@@ -98,8 +110,10 @@ struct DuplicatesScreen: View {
                         .frame(maxWidth: .infinity)
                         .background(.bar)
                 }
-                DuplicatesHeaderBand(model: model, burstCount: burstList?.listed.count, isRegular: isRegular,
-                                     canCheck: photoLibrary.authorizationState.canReadLibrary)
+                if showsBand {
+                    DuplicatesHeaderBand(model: model, burstCount: burstList?.listed.count, isRegular: isRegular,
+                                         canCheck: photoLibrary.authorizationState.canReadLibrary)
+                }
             }
         }
         .overlay(alignment: .top) {
@@ -143,6 +157,12 @@ struct DuplicatesScreen: View {
             guard model.showsBursts, photoLibrary.authorizationState.canReadLibrary else { return }
             if burstList == nil { burstList = BurstListModel(library: dependencies.bursts) }
             await burstList?.reload()
+        }
+        .navigationDestination(isPresented: $showsList) {
+            DuplicatesScreen(page: .list, sharedModel: model)
+        }
+        .sheet(isPresented: $showsQuickClean) {
+            DuplicatesQuickCleanSheet(model: model)
         }
         .fullScreenCover(item: $openBurst) { request in
             BurstFramesScreen(request: request)
@@ -193,6 +213,28 @@ struct DuplicatesScreen: View {
         }
         .tint(.primary)
         .accessibilityLabel("More")
+    }
+
+    // MARK: Summary
+
+    @ViewBuilder
+    private func summaryBody(_ model: DuplicatesModel) -> some View {
+        if model.groups.isEmpty, !model.isScanning {
+            emptyState(model)
+                .frame(maxWidth: .infinity)
+                .padding(.top, AppTheme.Spacing.xxl)
+        } else {
+            DuplicatesSummaryView(
+                model: model,
+                isRegular: isRegular,
+                open: { filter in
+                    model.filter = filter
+                    model.showsBursts = false
+                    showsList = true
+                },
+                reviewQuickClean: { showsQuickClean = true }
+            )
+        }
     }
 
     // MARK: Cards
@@ -379,8 +421,8 @@ struct DuplicatesScreen: View {
 
     private func emptyDescription(_ model: DuplicatesModel) -> String {
         let scanned = model.coverage.hashedPhotos
-        if let kind = model.kindFilter {
-            return String(localized: "No \(kind.title) among \(scanned) photos.", comment: "Duplicates: empty list filtered to one kind")
+        if model.filter != .all {
+            return String(localized: "No \(model.filter.title) among \(scanned) photos.", comment: "Duplicates: empty list filtered to one kind")
         }
         return String(localized: "No duplicates among \(scanned) photos.", comment: "Duplicates: empty list")
     }
@@ -417,11 +459,15 @@ struct DuplicatesScreen: View {
                 .buttonStyle(.borderedProminent)
             }
         } else {
-            ContentUnavailableView(
-                "No Duplicates",
-                systemImage: "checkmark.circle",
-                description: Text(emptyDescription(model))
-            )
+            ContentUnavailableView {
+                Label(String(localized: "No Duplicates", comment: "Duplicates: nothing found"), systemImage: "checkmark.circle")
+            } description: {
+                Text(emptyDescription(model))
+            } actions: {
+                Button(String(localized: "Check Again", comment: "Duplicates: scan the library again")) { model.startScan() }
+                    .buttonStyle(.bordered)
+                    .disabled(model.isBusy)
+            }
         }
     }
 
@@ -521,21 +567,18 @@ private struct DuplicatesHeaderBand: View {
     /// shared frame picker replaces it (plan task 20).
     private var kindPicker: some View {
         Picker("Match", selection: Binding<DuplicatesTab>(
-            get: { model.showsBursts ? .bursts : model.kindFilter.map(DuplicatesTab.kind) ?? .all },
+            get: { model.showsBursts ? .bursts : .filter(model.filter) },
             set: { tab in
                 switch tab {
                 case .bursts:
                     model.showsBursts = true
-                case .all:
+                case .filter(let filter):
                     model.showsBursts = false
-                    model.kindFilter = nil
-                case .kind(let kind):
-                    model.showsBursts = false
-                    model.kindFilter = kind
+                    model.filter = filter
                 }
             }
         )) {
-            ForEach([DuplicatesTab.all] + model.presentKinds.map(DuplicatesTab.kind) + [.bursts], id: \.self) { tab in
+            ForEach(model.presentFilters.map(DuplicatesTab.filter) + [.bursts], id: \.self) { tab in
                 Text(tab.title).tag(tab)
             }
         }
@@ -1190,16 +1233,15 @@ private struct DuplicatesAlerts: ViewModifier {
     }
 }
 
-/// The Duplicates list's filter: All, one kind, or the Bursts list.
+/// The Duplicates list's filter, or the Bursts list until the shared frame
+/// picker replaces it (plan task 20).
 enum DuplicatesTab: Hashable {
-    case all
-    case kind(DuplicateKind)
+    case filter(DuplicatesFilter)
     case bursts
 
     var title: String {
         switch self {
-        case .all: String(localized: "All", comment: "Duplicates filter: every kind of group")
-        case .kind(let kind): kind.title
+        case .filter(let filter): filter.title
         case .bursts: String(localized: "Bursts", comment: "Duplicates tab: real bursts from Photos")
         }
     }
