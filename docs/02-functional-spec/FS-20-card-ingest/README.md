@@ -97,6 +97,8 @@ Mac: inspector 300pt bên phải. iPad ngang: inspector 360pt; iPad dọc: sheet
   (07b §6 Keep Both); so không phân biệt hoa thường.
 - **Tiến độ không chặn màn.** Chân sidebar `Importing from EOS_DIGITAL 51%`, nguồn đích có vòng quay. Mac: panel **Window ›
   Activity** (⌥⌘0) — thanh Copy · Verify · Backup, file và trạng thái, **Pause**, **Stop Import…**; iPad: chạm chân sidebar.
+- **Pause** (mọi thiết bị): file đang chép đi hết chép → kiểm → đổi tên, rồi mẻ chờ; **Resume** chép tiếp từ file kế
+  (AC-28). Pause không nhả thẻ, không xoá gì.
 - **Stop Import…** hỏi *"Stop importing? Photos already imported stay in “T7 RAW Archive”."* → dừng ≤ 1 s, xoá
   tên tạm; không nhả thẻ.
 - **App ra nền giữa mẻ** (iPad, iPhone, Duo): iOS/iPadOS 26 xin hệ thống chạy tiếp như việc người dùng khởi động —

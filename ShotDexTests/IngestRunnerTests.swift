@@ -175,6 +175,52 @@ import Testing
     }
 }
 
+extension IngestRunnerTests {
+    /// AC-28: Pause lets the file in hand finish — copy, verify, rename —
+    /// then waits; Resume carries on from the next one; nothing is copied
+    /// twice and no part is left while paused.
+    @Test func pauseFinishesCurrentFileThenResumes() async throws {
+        let card = try IngestFixture()
+        defer { card.cleanUp() }
+        try card.addTen(bytes: 320_000)
+        let slow = FaultyCardReader(inner: card.reader(), chunkDelay: .milliseconds(30))
+        let plan = try await card.plan(slow)
+        let runner = card.runner(reader: slow, plan: plan, primary: LocalFolderWriter(root: card.destination))
+        let task = Task { await runner.run() }
+        try await Task.sleep(for: .milliseconds(400))
+        await runner.pause()
+        try await Task.sleep(for: .milliseconds(600))
+        let whilePaused = try card.destinationFiles()
+        #expect(!whilePaused.isEmpty && whilePaused.count < 10)
+        #expect(try card.parts().isEmpty)
+        try await Task.sleep(for: .milliseconds(500))
+        #expect(try card.destinationFiles() == whilePaused)
+        await runner.resume()
+        let summary = await task.value
+        #expect(summary.ending == .finished)
+        #expect(summary.imported.count == 10)
+        #expect(try card.destinationFiles().count == 10)
+    }
+
+    /// AC-18: every copy verified, backup included, no failure — the card
+    /// may go, and the banner says so; any failure keeps it.
+    @Test func ejectsOnlyWhenClean() async throws {
+        let card = try IngestFixture()
+        defer { card.cleanUp() }
+        try card.addTen()
+        let (summary, _) = try await card.importAll(backupWriter: LocalFolderWriter(root: card.backup))
+        #expect(summary.canEject(backupEnabled: true))
+        #expect(summary.backedUp.count == 10)
+        #expect(IngestCopy.finishedBanner(count: 10, card: "EOS_DIGITAL", ejected: true, canRemove: false)
+                == "Imported 10 photos. EOS_DIGITAL ejected.")
+        #expect(IngestCopy.finishedBanner(count: 10, card: "EOS_DIGITAL", ejected: false, canRemove: true)
+                == "Imported 10 photos. You can remove EOS_DIGITAL now.")
+        var failed = summary
+        failed.failed["x"] = .checksumMismatch
+        #expect(!failed.canEject(backupEnabled: true))
+    }
+}
+
 /// FS-20 §7.3, AC-5, AC-15, AC-24: what a verified file leaves behind.
 @Suite struct IngestRecorderTests {
     private func run(_ card: IngestFixture, metadata: IngestMetadataPreset, database: AppDatabase,
