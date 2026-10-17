@@ -1,0 +1,107 @@
+{
+ "steps": [
+  {
+   "action": "launch",
+   "arguments": [
+    "-ShotDexSeedCard",
+    "EOS_DIGITAL",
+    "-ShotDexSeedFolderSource",
+    "CloudTest",
+    "-ShotDexSlowIngest"
+   ]
+  },
+  {
+   "action": "wait",
+   "seconds": 6
+  },
+  {
+   "action": "tap",
+   "label": "Collections",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "scrollTo",
+   "label": "EOS_DIGITAL, Memory card"
+  },
+  {
+   "action": "screenshot",
+   "name": "00-sources"
+  },
+  {
+   "action": "tap",
+   "label": "EOS_DIGITAL, Memory card"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "screenshot",
+   "name": "01-import"
+  },
+  {
+   "action": "dump",
+   "name": "01-import"
+  },
+  {
+   "action": "tap",
+   "label": "IMG_5884.CR3"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "screenshot",
+   "name": "02-untick"
+  },
+  {
+   "action": "tap",
+   "label": "Import 4 Photos"
+  },
+  {
+   "action": "wait",
+   "seconds": 0.8
+  },
+  {
+   "action": "screenshot",
+   "name": "03-running"
+  },
+  {
+   "action": "dump",
+   "name": "03-running"
+  },
+  {
+   "action": "wait",
+   "seconds": 8
+  },
+  {
+   "action": "screenshot",
+   "name": "04-done"
+  },
+  {
+   "action": "dump",
+   "name": "04-done"
+  },
+  {
+   "action": "tap",
+   "label": "All 8"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "screenshot",
+   "name": "05-all"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  }
+ ]
+}

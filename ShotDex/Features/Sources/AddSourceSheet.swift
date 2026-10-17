@@ -11,6 +11,7 @@ struct AddSourceSheet: View {
     @State private var isPickingFolder = false
     @State private var kind: Kind = .folder
     @State private var isShowingServers = false
+    @State private var isPickingCard = false
 
     enum Kind { case folder, server }
 
@@ -69,12 +70,19 @@ struct AddSourceSheet: View {
                             Text("Connect a card reader or the camera over USB-C; the card shows under Sources.", comment: "Add a Source: memory card hint")
                                 .font(.footnote)
                                 .foregroundStyle(Color(.secondaryLabel))
+                            // A card in Files is chosen once; plugged in again
+                            // it is known by its volume (FS-20 AC-20).
+                            Button(String(localized: "Choose Card…", comment: "Add a Source: pick a memory card in Files once")) {
+                                isPickingCard = true
+                            }
+                            .font(.footnote.weight(.semibold))
+                            .padding(.top, AppTheme.Spacing.xs)
                         }
                     }
                     .padding(AppTheme.Spacing.md)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .overlay(RoundedRectangle.app(AppTheme.Radius.xl).strokeBorder(Color(.separator), lineWidth: 1))
-                    .accessibilityElement(children: .combine)
+                    .accessibilityElement(children: .contain)
                 }
                 .padding(AppTheme.Size.screenMargin)
             }
@@ -116,6 +124,11 @@ struct AddSourceSheet: View {
             }
             .navigationDestination(isPresented: $isShowingServers) {
                 FileServerListScreen()
+            }
+            .fileImporter(isPresented: $isPickingCard, allowedContentTypes: [.folder]) { result in
+                guard case .success(let url) = result else { return }
+                _ = try? dependencies.cards.remember(url)
+                dismiss()
             }
             .fileImporter(isPresented: $isPickingFolder, allowedContentTypes: [.folder]) { result in
                 guard case .success(let url) = result else { return }

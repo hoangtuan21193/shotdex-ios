@@ -160,6 +160,18 @@ Một ảnh là một **id** với các **bản sao** ở các **nguồn** (thư
 - Lượt index ghi Ảnh + Bản sao Photos cùng dòng metadata (`INSERT OR IGNORE`, chỉ làm mới lần thấy cuối); ảnh bị
   xoá khỏi Photos mất **bản sao**, dòng Ảnh ở lại giữ dữ liệu người dùng (luật mồ côi 30 ngày, FS-19.05 §5).
 
+## 3c. Lịch sử nhập thẻ (`v42-cardImports`, [FS-20 §9](../02-functional-spec/FS-20-card-ingest/README.md))
+
+- `card_imports`: một dòng mỗi **file** đã chép và đọc lại khớp — thẻ (`cardId` = volume UUID hoặc id máy ảnh,
+  `cardName`), đường dẫn gốc trên thẻ, tên gốc, byte, giờ chụp (ngày của file trên thẻ, giây), SHA-256 cả file,
+  nguồn đích + đường dẫn trong nguồn, `photoId` (có thể trống), `backupPath` (trống tới khi bản backup kiểm xong),
+  lúc nhập.
+- Dữ liệu người dùng, không dựng lại được: **bảng riêng, không khoá ngoại**; Clear Local Metadata Index và dọn
+  mồ côi 30 ngày không đụng tới (test `IngestStatusTests.historySurvivesClearAndPurge`).
+- "Đã nhập" = khớp (tên, byte, giờ chụp) **và** bản ở đích còn: nguồn bị gỡ hoặc bản sao bị đánh dấu mất → nhập
+  lại được; nguồn chỉ đang rút → vẫn đã nhập.
+- Chỉ mục: (tên gốc, byte, giờ chụp) cho màn Import; (thẻ, đường dẫn gốc) cho ghi backup.
+
 ## 4. Gỡ một tính năng thì phải dọn cả truy vấn đã lưu
 
 Bất kỳ thay đổi nào **bỏ một trường điều kiện** đều phải viết lại phần truy vấn đã lưu của smart album.

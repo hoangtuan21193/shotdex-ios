@@ -207,6 +207,10 @@ final class AppDependencies {
     let serverSources: ServerSourceRefresh
     /// Every source's row in Settings › Sources and the Sources group.
     let sources: SourcesModel
+    /// Memory cards shown once, and which are plugged in (FS-20 §4).
+    let cards = CardStore()
+    /// The card import running, wherever the user is (FS-20 §7).
+    let ingest = IngestCenter()
 
     init(database: AppDatabase, photoLibrary: PhotoLibraryService) {
         let metadataStore = MetadataStore(database: database)

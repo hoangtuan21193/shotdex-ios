@@ -97,6 +97,10 @@ enum SettingsKeys {
     /// JSON-encoded folders Export… wrote to: bookmarks and the recents list
     /// (FS-03.07b §4).
     static let fileExportFolders = "export.files.folders"
+    /// Memory cards shown once, by bookmark (FS-20 §4).
+    static let ingestCards = "ingest.cards"
+    /// Card import choices: destination, folders, names, metadata, Eject (FS-20 §6).
+    static let ingestSettings = "ingest.settings"
 
     /// Per-source counters used by `_SHOTDEX_EDITED_N` and
     /// `_SHOTDEX_COMPRESSED_N` output filenames.

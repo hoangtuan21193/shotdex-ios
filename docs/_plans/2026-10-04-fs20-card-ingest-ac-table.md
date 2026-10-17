@@ -29,11 +29,11 @@ dùng được là khuôn của Export to Files (07b) và FS-15/17.
 
 | AC | Trạng thái | Bằng chứng | Việc |
 |---|---|---|---|
-| AC-1 | ❌ | không màn, không lịch sử; khuôn "đã có" duy nhất là `ServerDownloadStore.knownFiles` (`Data/Database/ServerDownloadStore.swift:26-46`) theo đường dẫn server | bảng `card_imports` + `CardImportStore.match(name, bytes, date)`; `IngestCatalog` đếm New/Imported; `IngestScreen` header + segmented + lưới |
-| AC-2 | ❌ | — | `IngestSelection` (tick/bỏ tick, tổng byte theo mọi file của ô); nút `Import N Photos` |
-| AC-3 | ❌ | — | `IngestCatalog.days` thu gọn ngày đủ Imported thành một dòng |
+| AC-1 | ✅ (2026-10-18) | `CardImportStore`, `IngestStatus`, `IngestScreen` | task 13 |
+| AC-2 | ✅ | `IngestSelection` | task 14 |
+| AC-3 | ✅ | `IngestStatus.days` | task 15 |
 | AC-4 | ✅ (2026-10-18) | `Domain/Ingest/IngestRunner.swift`, `IngestPlan.swift` (`IngestFolderTemplate`), `CardReader.swift`; `LocalFolderWriter.writeVerified` (K2) | task 4 xong |
-| AC-5 | ❌ | không có bộ ghi `.xmp` sidecar (chỉ `LookXMPWriter` cho preset, `Domain/Editing/LookExchange/LookXMPWriter.swift`) | dùng bộ ghi sidecar của FS-19 (Creator, Copyright, Keywords, ngày chụp) |
+| AC-5 | ✅ | `IngestRecorder` + `XMPPatch` creator/rights/createDate | task 20 |
 | AC-6 | ✅ (2026-10-18) | `CardCatalog` + `IngestRunner` | task 2, 4 |
 | AC-7 | ✅ (2026-10-18) | `IngestRunner` + `IngestPlan` (Keep Both cứng) | task 5 |
 | AC-8 | ⚠️ logic | `IngestReadiness.backupNotConnected` | task 11 |
@@ -43,16 +43,16 @@ dùng được là khuôn của Export to Files (07b) và FS-15/17.
 | AC-12 | ⚠️ logic | `IngestSummary.Ending.destinationFailed`, `IngestCopy.endingMessage` | task 7 |
 | AC-13 | ⚠️ logic (2026-10-18) | `IngestRunner.copyFile` thử lại 1 lần; `LocalFolderWriter.readBack` | task 6; Retry Failed UI task 13 |
 | AC-14 | ⚠️ logic | huỷ Task = Stop, kiểm mỗi khối | task 9 |
-| AC-15 | ❌ | — | mỗi file kiểm xong ghi một dòng lịch sử **ngay** (không cuối mẻ) → mở lại thấy 200 Imported |
-| AC-16 | ❌ | — | trạng thái rỗng New + **Show All** |
+| AC-15 | ✅ | `IngestRecorder` ghi từng file | task 19 |
+| AC-16 | ⚠️ | `IngestScreen` trạng thái rỗng | task 16; ảnh màn rỗng |
 | AC-17 | ❌ | không có sidebar/Activity (FS-18/FS-21 chưa làm) | runner không chặn UI; đăng ký file vào nguồn FS-19 sau mỗi file; chân sidebar `Importing from … N%` |
 | AC-18 | ❓ | — | **vì sao ❓:** iOS không có API công khai nhả một ổ mở qua Files/bookmark; chỉ thiết bị ImageCaptureCore có `requestEject`. Đặc tả chưa nói iOS làm gì khi thẻ chỉ tới qua bookmark → câu Q3 |
-| AC-19 | ❌ | không có nhóm Sources ở đâu (iPhone: Collections chưa có mục Sources; iPad sidebar = FS-21; Mac = FS-18) | `CardBrowser` (ICC + bookmark) → hàng thẻ trong nhóm Sources do FS-19/21/18 dựng |
+| AC-19 | ⚠️ iPhone | `CardStore`, `SourcesGroup.cardRow` | task 23 phần iPhone |
 | AC-20 | ❌ | khuôn bookmark nhớ lại có ở E10 | `CardBookmarkStore` (nhận lại thẻ theo volume UUID), **Choose Card…** |
-| AC-21 | ❌ | — | trạng thái lấy thêm "bản sao đích còn không" từ bảng Bản sao FS-19 |
-| AC-22 | ❌ | — | `CardHashPass` nền (SHA-256 cả file + hash nội dung FS-19) tinh chỉnh trạng thái |
+| AC-21 | ✅ | `CardImportStore.isCopyGone` | task 17 |
+| AC-22 | ✅ | `CardHashPass` | task 18 |
 | AC-23 | ⚠️ nửa danh mục (2026-10-18) | `CardCatalog.items`: WAV theo ô ảnh, MP4/MOV ô `.video`, `isListed` bỏ ẩn + MISC, chỉ giữ ảnh/RAW/video/WAV | task 3 xong; mẻ thật ở task 4, thời lượng video ở task 13 |
-| AC-24 | ❌ | công tắc XMP chưa có (FS-19.02 §5) | lượt nhập luôn ghi `.xmp`; không đổi công tắc |
+| AC-24 | ✅ | `SidecarWriter.write` tĩnh | task 21 |
 | AC-25 | ✅ nửa Export (2026-10-18) | `FileNameChip.all` + `FileNameTokenGrid` (`Features/FileExport/FileNameTokenGrid.swift`), token `originalNumber`, `seq`→`sequence`, mẫu "Date + Camera + Sequence" | task 1 xong; nửa Import ở task 13 |
 | AC-26 | ❌ | E11 | bộ chạy nền chung `ContinuedProcessingRun` (iOS 26) + nhánh trước 26 = Stop + Import Remaining |
 | AC-27 | ❌ | — | bố cục iPhone/Duo ngoài theo `PH_Ingest`, `DC_Ingest`; Duo ngoài chừa rail 84 |

@@ -19,6 +19,12 @@ struct XMPPatch: Equatable, Sendable {
     var title: Field<String> = .keep
     /// `dc:description`, the default-language entry.
     var caption: Field<String> = .keep
+    /// `dc:creator`, one name (card import presets, FS-20 §6).
+    var creator: Field<String> = .keep
+    /// `dc:rights`, the default-language entry.
+    var rights: Field<String> = .keep
+    /// `xmp:CreateDate`, ISO 8601.
+    var createDate: Field<String> = .keep
     /// Simple properties in ShotDex's namespace, by local name (`Rating`,
     /// `Flag`, `Favorite`, `Recipe`) — fields other apps skip.
     var shotdex: [String: Field<String>] = [:]
@@ -61,7 +67,20 @@ enum XMPPatcher {
             }
         case .set, .remove: remove(&text, namespace: dublinCoreNamespace, name: "subject")
         }
-        for (name, field) in [("title", patch.title), ("description", patch.caption)] {
+        switch patch.creator {
+        case .keep: break
+        case .set(let name):
+            setElement(&text, namespace: dublinCoreNamespace, prefix: "dc", name: "creator") { prefix, indent in
+                container("rdf:Seq", items: ["<rdf:li>\(escaped(name))</rdf:li>"], element: "\(prefix):creator", indent: indent)
+            }
+        case .remove: remove(&text, namespace: dublinCoreNamespace, name: "creator")
+        }
+        switch patch.createDate {
+        case .keep: break
+        case .set(let date): setSimple(&text, namespace: xmpNamespace, prefix: "xmp", name: "CreateDate", value: date)
+        case .remove: remove(&text, namespace: xmpNamespace, name: "CreateDate")
+        }
+        for (name, field) in [("title", patch.title), ("description", patch.caption), ("rights", patch.rights)] {
             switch field {
             case .keep: break
             case .set(let value):

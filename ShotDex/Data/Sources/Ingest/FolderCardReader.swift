@@ -6,6 +6,9 @@ import Foundation
 struct FolderCardReader: CardReader {
     let root: URL
     let name: String
+    /// A pause before each chunk; zero but for a DEBUG run that wants time
+    /// to photograph its progress.
+    var pace: Duration = .zero
 
     init(root: URL, name: String? = nil) {
         self.root = root
@@ -52,6 +55,7 @@ struct FolderCardReader: CardReader {
                 throw isConnected ? IngestFailure.unreadable : IngestFailure.cardDisconnected
             }
             guard let data, !data.isEmpty else { return }
+            if pace > .zero { try await Task.sleep(for: pace) }
             try body(data)
         }
     }

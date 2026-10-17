@@ -1,9 +1,9 @@
 # FS-20 — Nhập từ thẻ nhớ (mọi thiết bị)
 
-`FS-20` · tier B (lưới thẻ) + inspector · `Features/Ingest/` (chưa có) · test `ShotDexTests/Ingest*Tests.swift` (chưa có)
+`FS-20` · tier B (lưới thẻ) + inspector · `Features/Ingest/`, `Domain/Ingest/`, `Data/Sources/Ingest/` · test `ShotDexTests/Ingest*Tests.swift`, `CardCatalogTests`, `CardHashPassTests`
 · cập nhật 2026-10-04 · nguồn: intent [Mac](../../_intents/2026-10-04-macos-app.md) (D8) và
-[iPad](../../_intents/2026-10-04-ipad-mac-style.md) · board `MAC_Ingest`, `MAC_IngestProgress`, `IP_Ingest`;
-`PH_Ingest`, `DI_Ingest`, `DC_Ingest` chưa vẽ
+[iPad](../../_intents/2026-10-04-ipad-mac-style.md) · board `MAC_Ingest`, `MAC_IngestProgress`, `IP_Ingest`, `IPP_Ingest`,
+`PH_Ingest`, `PH_IngestProgress`, `DI_Ingest`, `DI_IngestProgress`, `DC_Ingest`
 
 **Một câu:** cắm thẻ (hoặc máy ảnh) → ShotDex liệt kê ảnh mới trên thẻ, bỏ qua ảnh đã nhập → chép vào một
 thư mục nguồn (và một ổ backup), đặt tên theo mẫu, ghi metadata vào sidecar `.xmp`, kiểm từng bản chép, rồi

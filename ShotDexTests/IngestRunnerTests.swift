@@ -175,9 +175,118 @@ import Testing
     }
 }
 
+/// FS-20 §7.3, AC-5, AC-15, AC-24: what a verified file leaves behind.
+@Suite struct IngestRecorderTests {
+    private func run(_ card: IngestFixture, metadata: IngestMetadataPreset, database: AppDatabase,
+                     stopAfter: Int? = nil) async throws -> IngestSummary {
+        let reader = card.reader()
+        let items = CardCatalog.items(try await reader.list())
+        let plan = try await card.plan(reader)
+        let recorder = IngestRecorder(database: database, cardId: "EOS", cardName: "EOS_DIGITAL", sourceId: "src",
+                                      destinationRoot: card.destination, metadata: metadata,
+                                      items: Dictionary(uniqueKeysWithValues: items.map { ($0.id, $0) }))
+        let counter = ReadBackCounter()
+        var runnerBox: IngestRunner?
+        let runner = IngestRunner(card: reader, plan: plan,
+                                  primary: IngestTarget(destination: LocalFolderWriter(root: card.destination), name: "T7"),
+                                  onEvent: { event in
+                                      recorder.handle(event)
+                                      if case .imported = event { counter.increment() }
+                                  })
+        runnerBox = runner
+        guard let stopAfter else { return await runner.run() }
+        let task = Task { await runnerBox!.run() }
+        while counter.value < stopAfter { try await Task.sleep(for: .milliseconds(5)) }
+        task.cancel()
+        return await task.value
+    }
+
+    /// AC-5: Creator, Copyright and two keywords in a `.xmp` beside each of
+    /// three photos; the photos themselves are byte for byte the card's.
+    @Test func writesSidecarWithPreset() async throws {
+        let card = try IngestFixture()
+        defer { card.cleanUp() }
+        for n in 1...3 {
+            try card.add("DCIM/100CANON/IMG_000\(n).JPG", bytes: 50_000, date: IngestRunnerTests.shot)
+        }
+        let preset = IngestMetadataPreset(name: "Kyoto", creator: "Linh Pham", copyright: "© 2026 Linh Pham", keywords: ["Kyoto", "autumn"])
+        let summary = try await run(card, metadata: preset, database: try AppDatabase.makeEmpty())
+        #expect(summary.imported.count == 3)
+        for n in 1...3 {
+            let xmp = try String(contentsOf: card.destination.appendingPathComponent("IMG_000\(n).xmp"), encoding: .utf8)
+            #expect(xmp.contains("Linh Pham"))
+            #expect(xmp.contains("© 2026 Linh Pham"))
+            #expect(xmp.contains("<rdf:li>Kyoto</rdf:li>") && xmp.contains("<rdf:li>autumn</rdf:li>"))
+            #expect(xmp.contains("xmp:CreateDate"))
+            #expect(try card.sha("IMG_000\(n).JPG", onDestination: true) == card.sha("DCIM/100CANON/IMG_000\(n).JPG", onDestination: false))
+        }
+    }
+
+    /// AC-24: the sidecar switch in Settings off — the import still writes
+    /// its three, and nothing else in the destination gets one. The
+    /// recorder never reads the switch (it writes through the static
+    /// `SidecarWriter.write`, not the switch-gated queue), so the test does
+    /// not flip the shared setting under the suites running beside it.
+    @Test func sidecarIgnoresGlobalSwitch() async throws {
+        #expect(SidecarSetting.isOn(UserDefaults(suiteName: "ingest-\(UUID().uuidString)")!.withSidecarsOff()) == false)
+        let card = try IngestFixture()
+        defer { card.cleanUp() }
+        for n in 1...3 { try card.add("DCIM/100CANON/IMG_000\(n).JPG", bytes: 50_000, date: IngestRunnerTests.shot) }
+        try Data("earlier photo".utf8).write(to: card.destination.appendingPathComponent("OLD_0001.JPG"))
+        _ = try await run(card, metadata: IngestMetadataPreset(creator: "Linh Pham"), database: try AppDatabase.makeEmpty())
+        let sidecars = try card.destinationFiles().filter { $0.hasSuffix(".xmp") }
+        #expect(sidecars == ["IMG_0001.xmp", "IMG_0002.xmp", "IMG_0003.xmp"])
+    }
+
+    /// AC-15: each file's history row is written as it is verified, so a
+    /// run stopped after two photos opens again with those two imported.
+    @Test func historyWrittenPerFile() async throws {
+        let card = try IngestFixture()
+        defer { card.cleanUp() }
+        for n in 1...10 {
+            try card.add(String(format: "DCIM/100CANON/IMG_%04d.JPG", n), bytes: 400_000,
+                         date: IngestRunnerTests.shot.addingTimeInterval(Double(n)))
+        }
+        let database = try AppDatabase.makeEmpty()
+        let sourceId = try SourceStore(database: database).addFolder(name: "T7", bookmark: Data(), includesSubfolders: true, pairsRawAndJpeg: true)
+        let card2 = card
+        let items = CardCatalog.items(try await card2.reader().list())
+        let recorder = IngestRecorder(database: database, cardId: "EOS", cardName: "EOS_DIGITAL", sourceId: sourceId,
+                                      destinationRoot: card.destination, metadata: IngestMetadataPreset(),
+                                      items: Dictionary(uniqueKeysWithValues: items.map { ($0.id, $0) }))
+        let slow = FaultyCardReader(inner: card.reader(), chunkDelay: .milliseconds(40))
+        let plan = try await card.plan(slow)
+        let counter = ReadBackCounter()
+        let runner = IngestRunner(card: slow, plan: plan, primary: IngestTarget(destination: LocalFolderWriter(root: card.destination), name: "T7"),
+                                  onEvent: { event in
+                                      recorder.handle(event)
+                                      if case .imported = event { counter.increment() }
+                                  })
+        let task = Task { await runner.run() }
+        while counter.value < 2 { try await Task.sleep(for: .milliseconds(5)) }
+        task.cancel()
+        let summary = await task.value
+        let done = summary.imported.count
+        #expect(done >= 2 && done < 10)
+        let matches = try CardImportStore(database: database).matches(for: items.map(\.primary)) { _, path in
+            FileManager.default.fileExists(atPath: card.destination.appendingPathComponent(path).path)
+        }
+        let imported = items.filter { IngestStatus.isImported($0, matches: matches) }
+        #expect(imported.count == done)
+        #expect(items.count - imported.count == 10 - done)
+    }
+}
+
 final class ReadBackCounter: @unchecked Sendable {
     private let lock = NSLock()
     private var count = 0
     func increment() { lock.withLock { count += 1 } }
     var value: Int { lock.withLock { count } }
+}
+
+private extension UserDefaults {
+    func withSidecarsOff() -> UserDefaults {
+        set(false, forKey: SettingsKeys.readsAndWritesSidecars)
+        return self
+    }
 }
