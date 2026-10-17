@@ -19,6 +19,20 @@ struct PerceptualHash: Hashable, Sendable, Codable {
     func hammingDistance(to other: PerceptualHash) -> Int {
         (bits ^ other.bits).nonzeroBitCount
     }
+
+    /// Fewer set (or unset) bits than this and the picture has too little
+    /// left-to-right structure for a near match to mean anything.
+    static let lowDetailBits = 10
+
+    /// A flat or nearly flat frame — a blank, a smooth gradient, sensor
+    /// noise, a rendition that came back empty. Its hash is a handful of bits
+    /// either side of all-zero or all-one, so any two of them sit within the
+    /// look-alike distance of each other however different the photos are.
+    /// Such a hash may still prove an exact copy; it never proves a near one.
+    var isLowDetail: Bool {
+        let set = bits.nonzeroBitCount
+        return set < Self.lowDetailBits || set > Self.bitCount - Self.lowDetailBits
+    }
 }
 
 /// The dHash algorithm on raw grayscale samples, kept free of PhotoKit so the

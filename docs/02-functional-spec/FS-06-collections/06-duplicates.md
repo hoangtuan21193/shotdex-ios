@@ -66,6 +66,10 @@ v3 bỏ ba "mức" độ chặt (Exact · Similar · Series) và tab Bursts. **G
   không vào loại sau; nhóm còn < 2 ảnh sau khi rút bị bỏ.
 - Hai ảnh **khác tiêu cự > 10%** (EXIF `focalLength`) không bao giờ cùng nhóm — cùng cảnh 24mm và 35mm là hai khung hình,
   không phải bản sao (persona An).
+- **Ảnh ít chi tiết** (dấu vân tay có < 10 bit 1 hoặc < 10 bit 0: khung trắng/đen, gradient mịn, ảnh nhiễu, bản dựng
+  hỏng) chỉ khớp **bản sao đúng** (Copies, và Smaller copies khi cùng giây chụp) — không bao giờ "lệch ≤ 10 bit". Hai
+  dấu vân tay như vậy luôn gần nhau dù ảnh khác hẳn; trước đây chuỗi "bản nhỏ thiếu EXIF" nối 52 ảnh không liên quan
+  thành một nhóm Smaller copies (test `DuplicateGrouperTests.lowDetailHashesNeverNearMatch`).
 - Copies đòi cùng giây chụp vì một chuỗi tripod (góc phố, 20 khung) có dấu vân tay bằng nhau nhưng là 20 khoảnh khắc khác
   nhau; v2 gộp chúng vào Exact và đề nghị Merge.
 - Burst của máy ảnh (Sony 10 fps) và burst iPhone giờ cùng một loại, cùng một màn chọn khung (§8).

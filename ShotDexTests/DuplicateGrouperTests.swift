@@ -6,6 +6,10 @@ import Testing
 struct DuplicateGrouperTests {
 
     private let base = 1_700_000_000
+    /// Fixtures name hashes by their *difference* from a textured picture:
+    /// XOR keeps every distance, and keeps `bits: 0` from reading as a flat
+    /// frame (`PerceptualHash.isLowDetail`).
+    static let textured: UInt64 = 0x5555_5555_5555_5555
 
     private func photo(
         _ id: String,
@@ -17,11 +21,12 @@ struct DuplicateGrouperTests {
         favorite: Bool = false,
         focal: Double? = nil,
         camera: Bool = true,
-        screenshot: Bool = false
+        screenshot: Bool = false,
+        raw: Bool = false
     ) -> HashedPhoto {
         HashedPhoto(
             assetId: id,
-            hash: PerceptualHash(bits: bits),
+            hash: PerceptualHash(bits: raw ? bits : bits ^ Self.textured),
             width: width,
             height: height,
             fileSize: size,
@@ -126,6 +131,25 @@ struct DuplicateGrouperTests {
         #expect(groups.map(\.kind) == [.sameMoment])
     }
 
+    /// A flat frame hashes to a few bits, so every flat frame is "near"
+    /// every other: unrelated pictures, sizes and years apart, chained into
+    /// one Smaller copies group. Low-detail hashes match only exact copies.
+    @Test func lowDetailHashesNeverNearMatch() {
+        let flat: [UInt64] = [0, 0x8000_2040_4004_0288, 0x1002_0804_0000_0212, 0x0000_0024_0008_8900, 0x0208_4000_0000_0000]
+        let photos = flat.enumerated().map { index, bits in
+            photo("p\(index)", bits: bits, width: 4000 - index * 900, height: 3000 - index * 600,
+                  created: base + index * 86_400 * 200, camera: false, raw: true)
+        } + [photo("same0", bits: 0, width: 4000, height: 3000, created: base, camera: false, raw: true)]
+        let groups = DuplicateGrouper.groups(from: photos)
+        #expect(kinds(groups) == [["p0", "same0"]: .copies])
+        #expect(PerceptualHash(bits: Self.textured).isLowDetail == false)
+        // Two different gradients saved in the same second: same flat hash,
+        // same size, other bytes — not copies.
+        let gradients = [photo("g1", bits: 0, size: 300_000, raw: true), photo("g2", bits: 0, size: 310_000, raw: true)]
+        #expect(DuplicateGrouper.groups(from: gradients).isEmpty)
+        #expect(PerceptualHash(bits: ~UInt64(0x40)).isLowDetail)
+    }
+
     @Test func nearMatchesChainIntoOneGroup() {
         // a~b and b~c but a and c are 20 bits apart: one connected component.
         let groups = DuplicateGrouper.groups(from: [
@@ -180,7 +204,7 @@ struct DuplicateSourceSetTests {
     private let base = 1_700_000_000
 
     private func frame(_ id: String, bits: UInt64 = 0, at second: Int, ev: Double?, focal: Double = 50) -> HashedPhoto {
-        HashedPhoto(assetId: id, hash: PerceptualHash(bits: bits), width: 6000, height: 4000, fileSize: 10_000_000,
+        HashedPhoto(assetId: id, hash: PerceptualHash(bits: bits ^ DuplicateGrouperTests.textured), width: 6000, height: 4000, fileSize: 10_000_000,
                     creationDate: base + second, isFavorite: false, focalLength: focal, exposureBias: ev)
     }
 

@@ -971,7 +971,9 @@ private struct DuplicateDecisionCard: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .disabled(model.isBusy)
+        // Marks are kept by photo, so a scan or regroup running under the
+        // cards does not stop a decision — only a delete in flight does.
+        .disabled(model.isDeleting)
     }
 }
 

@@ -146,7 +146,10 @@ enum DuplicateGrouper {
         for (index, photo) in photos.enumerated() {
             photosByHash[photo.hash.bits, default: []].append(index)
         }
-        let nearPairs = nearHashPairs(Array(photosByHash.keys), maxDistance: lookAlikeMaxDistance)
+        // A low-detail hash is near every other low-detail hash: it may
+        // only match itself, and only as an exact copy.
+        let nearPairs = nearHashPairs(photosByHash.keys.filter { !PerceptualHash(bits: $0).isLowDetail },
+                                      maxDistance: lookAlikeMaxDistance)
         var taken = Set<Int>()
         var sets: [(DuplicateKind, [Int])] = []
 
@@ -154,12 +157,16 @@ enum DuplicateGrouper {
         // size, same second) and "smaller copy" (≤ 10 bits, long edge ≤ 75%,
         // same second or the small one has lost its camera EXIF).
         var copies = UnionFind(count: photos.count)
-        for indices in photosByHash.values where indices.count > 1 {
+        for (hash, indices) in photosByHash where indices.count > 1 {
+            // Twelve gradients saved in one second share a flat hash, a size
+            // and a second; only the byte count still tells them apart.
+            let isLowDetail = PerceptualHash(bits: hash).isLowDetail
             var first: [CopyKey: Int] = [:]
             for index in indices {
                 let photo = photos[index]
                 guard let second = photo.captureSecond else { continue }
-                let key = CopyKey(width: photo.width, height: photo.height, second: second)
+                let key = CopyKey(width: photo.width, height: photo.height, second: second,
+                                  fileSize: isLowDetail ? photo.fileSize : nil)
                 if let lead = first[key] {
                     if focalCompatible(photos[lead], photo) { copies.union(lead, index) }
                 } else {
@@ -169,7 +176,7 @@ enum DuplicateGrouper {
         }
         for (left, right) in nearPairs + photosByHash.keys.map({ ($0, $0) }) {
             let pool = left == right ? photosByHash[left]! : photosByHash[left]! + photosByHash[right]!
-            linkSmallerCopies(pool, photos: photos, into: &copies)
+            linkSmallerCopies(pool, photos: photos, sameSecondOnly: PerceptualHash(bits: left).isLowDetail, into: &copies)
         }
         for members in copies.components() where members.count > 1 {
             let sizes = Set(members.map { SizeKey(width: photos[$0].width, height: photos[$0].height) })
@@ -194,7 +201,7 @@ enum DuplicateGrouper {
         // 3 — Look-alikes among what is left.
         var alike = UnionFind(count: photos.count)
         func free(_ hash: UInt64) -> [Int] { photosByHash[hash]!.filter { !taken.contains($0) } }
-        for hash in photosByHash.keys {
+        for hash in photosByHash.keys where !PerceptualHash(bits: hash).isLowDetail {
             linkCompatible(free(hash), photos: photos, into: &alike)
         }
         for (left, right) in nearPairs {
@@ -290,6 +297,8 @@ enum DuplicateGrouper {
         var width: Int?
         var height: Int?
         var second: Int
+        /// Set only for a low-detail hash.
+        var fileSize: Int?
     }
 
     private struct SizeKey: Hashable {
@@ -298,7 +307,10 @@ enum DuplicateGrouper {
     }
 
     /// Links each smaller photo of `pool` to a bigger one it is a re-save of.
-    private static func linkSmallerCopies(_ pool: [Int], photos: [HashedPhoto], into sets: inout UnionFind) {
+    /// - Parameter sameSecondOnly: the pool's hash is low detail, so even a
+    ///   photo with no camera EXIF needs the bigger one's capture second.
+    private static func linkSmallerCopies(_ pool: [Int], photos: [HashedPhoto], sameSecondOnly: Bool,
+                                          into sets: inout UnionFind) {
         let sized = pool.filter { photos[$0].longEdge != nil }
         let edges = Set(sized.map { photos[$0].longEdge! })
         guard edges.count > 1 else { return }
@@ -307,7 +319,7 @@ enum DuplicateGrouper {
             let edge = Double(photo.longEdge!)
             let bigger = sized.filter { edge <= Double(photos[$0].longEdge!) * smallerEdgeRatio
                 && focalCompatible(photos[$0], photo) }
-            let match = photo.hasCameraEXIF
+            let match = photo.hasCameraEXIF || sameSecondOnly
                 ? bigger.first { photos[$0].captureSecond != nil && photos[$0].captureSecond == photo.captureSecond }
                 : bigger.first
             if let match { sets.union(small, match) }

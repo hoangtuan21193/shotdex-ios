@@ -93,6 +93,6 @@ struct DuplicateSourceSetCard: View {
         .font(.subheadline.weight(.medium))
         .controlSize(.regular)
         .frame(minHeight: 44)
-        .disabled(model.isBusy)
+        .disabled(model.isDeleting)
     }
 }
