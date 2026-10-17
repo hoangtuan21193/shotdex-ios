@@ -40,6 +40,7 @@ struct DuplicatesScreen: View {
     @State private var openBurst: BurstFramesRequest?
     @State private var showsList = false
     @State private var showsQuickClean = false
+    @State private var showsIgnored = false
 
     private var isRegular: Bool { horizontalSizeClass == .regular }
 
@@ -163,6 +164,9 @@ struct DuplicatesScreen: View {
         .sheet(isPresented: $showsQuickClean) {
             DuplicatesQuickCleanSheet(model: model)
         }
+        .sheet(isPresented: $showsIgnored) {
+            DuplicatesIgnoredSheet(model: model)
+        }
         .photoStackCover($model.stackPresentation, onSaved: { _ in model.loadCache() })
         .sheet(item: $model.viewer) { presentation in
             DuplicateGroupViewer(model: model, presentation: presentation)
@@ -206,6 +210,13 @@ struct DuplicatesScreen: View {
                 }
                 .disabled(model.isBusy)
             }
+            Button {
+                showsIgnored = true
+            } label: {
+                Label(String(localized: "Ignored (\(model.ignoredGroups.count))", comment: "Duplicates ⋯: groups marked Not duplicates"),
+                      systemImage: "eye.slash")
+            }
+            .disabled(model.ignoredGroups.isEmpty)
             Button {
                 withAnimation(AppTheme.Motion.standard) { model.clearAllMarks() }
             } label: {
@@ -894,6 +905,14 @@ private struct DuplicateDecisionCard: View {
                 .foregroundStyle(.secondary)
                 .padding(.top, AppTheme.Spacing.sm)
         }
+        if model.hasNewPhotoSinceDismissal(group) {
+            Label(String(localized: "New photo since you marked these as not duplicates",
+                         comment: "Duplicates card: a group the user dismissed is back because a photo joined it"),
+                  systemImage: "plus.circle")
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+                .padding(.top, AppTheme.Spacing.sm)
+        }
         if model.blockedGroupId == group.id {
             Label("Keep at least one photo in this group.", systemImage: "exclamationmark.circle")
                 .font(.footnote)
@@ -937,6 +956,15 @@ private struct DuplicateDecisionCard: View {
                  systemImage: keptAll ? "checkmark" : nil) {
                 model.toggleKeepAll(group)
                 shortcutTaps += 1
+            }
+            // Hold Keep all → Not duplicates: never show this group again (§7.4).
+            .contextMenu {
+                Button {
+                    withAnimation(AppTheme.Motion.standard) { model.dismiss(group) }
+                } label: {
+                    Label(String(localized: "Not duplicates", comment: "Duplicates card: these photos are not duplicates; never show them again"),
+                          systemImage: "eye.slash")
+                }
             }
             Spacer(minLength: 0)
             if model.canCompare(group) {

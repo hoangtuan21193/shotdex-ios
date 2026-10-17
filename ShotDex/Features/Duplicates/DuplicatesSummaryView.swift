@@ -343,3 +343,46 @@ struct DuplicatesQuickCleanSheet: View {
         .background(.bar)
     }
 }
+
+/// ⋯ ▸ Ignored (§9): every group the user said is not duplicates, each
+/// with Show again.
+struct DuplicatesIgnoredSheet: View {
+    let model: DuplicatesModel
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        NavigationStack {
+            List(model.ignoredGroups) { group in
+                HStack(spacing: AppTheme.Spacing.md) {
+                    DuplicatesKindThumbnail(asset: model.assetsById[group.id])
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(group.sourceSet?.title ?? String(localized: "\(group.kind.title) · \(group.count) photos",
+                                                              comment: "Duplicates card title: kind and size of the group"))
+                        if let date = DuplicatesScreen.dateText(group) {
+                            Text(date).font(.footnote).foregroundStyle(.secondary)
+                        }
+                    }
+                    Spacer(minLength: AppTheme.Spacing.sm)
+                    Button(String(localized: "Show again", comment: "Duplicates Ignored: put the group back in the list")) {
+                        model.undismiss(group)
+                    }
+                    .buttonStyle(.bordered)
+                }
+                .frame(minHeight: 44)
+            }
+            .overlay {
+                if model.ignoredGroups.isEmpty {
+                    ContentUnavailableView(String(localized: "Nothing Ignored", comment: "Duplicates Ignored: empty"),
+                                           systemImage: "eye")
+                }
+            }
+            .navigationTitle(String(localized: "Ignored", comment: "Duplicates: sheet of groups marked Not duplicates"))
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button(String(localized: "Done", comment: "Close the Ignored sheet")) { dismiss() }
+                }
+            }
+        }
+    }
+}

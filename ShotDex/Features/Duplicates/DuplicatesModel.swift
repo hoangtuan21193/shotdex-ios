@@ -480,9 +480,15 @@ final class DuplicatesModel {
         let groups = snapshot.groups ?? []
         // Members whose PHAsset is gone (deleted outside the app) drop out;
         // groups that fall to one member vanish.
-        self.groups = groups.compactMap { group in
+        let present = groups.compactMap { group -> DuplicateGroup? in
             let present = group.members.filter { snapshot.assetsById[$0.assetId] != nil }
             return present.count > 1 ? DuplicateGroup(members: present, kind: group.kind, sourceSet: group.sourceSet) : nil
+        }
+        // Not duplicates (§9): hidden for good, unless a new photo joined.
+        ignoredGroups = present.filter { if case .hidden = session.dismissal(of: $0.memberIds) { true } else { false } }
+        self.groups = present.filter { group in
+            if case .hidden = session.dismissal(of: group.memberIds) { return false }
+            return true
         }
         assetsById = snapshot.assetsById
         coverage = snapshot.coverage
@@ -722,12 +728,31 @@ final class DuplicatesModel {
         stackPresentation = PhotoStackPresentation(assets: assets, purpose: set.kind == .bracket ? .hdr : .focusStack)
     }
 
+    /// Groups the user said are not duplicates, for ⋯ ▸ Ignored (§9).
+    private(set) var ignoredGroups: [DuplicateGroup] = []
+
     /// Not duplicates (§9): the group leaves the list and every count, for
     /// good — until a new photo joins it.
     func dismiss(_ group: DuplicateGroup) {
         clearMarks(in: group)
         session.dismiss(group.memberIds)
         groups.removeAll { $0.id == group.id }
+        ignoredGroups.append(group)
+    }
+
+    /// Show again, from Ignored: the group is back in the list as it was.
+    func undismiss(_ group: DuplicateGroup) {
+        for set in session.notDuplicates where !set.members.isDisjoint(with: group.memberIds) {
+            session.undismiss(setId: set.id)
+        }
+        ignoredGroups.removeAll { $0.id == group.id }
+        groups.append(group)
+    }
+
+    /// A group shown again because a photo joined it after Not duplicates.
+    func hasNewPhotoSinceDismissal(_ group: DuplicateGroup) -> Bool {
+        if case .newPhotoSince = session.dismissal(of: group.memberIds) { return true }
+        return false
     }
 
     func openViewer(_ assetId: String, in group: DuplicateGroup) {

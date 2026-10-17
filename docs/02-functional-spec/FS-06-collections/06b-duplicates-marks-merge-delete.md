@@ -79,7 +79,7 @@ v2 có ⋯ ▸ *Merge N Groups…* ghi favorite/toạ độ/ngày vào Photos **
 
 | # | Cho | Khi | Thì | Chứng minh bằng |
 |---|---|---|---|---|
-| AC-M1 | (D12) 6 ảnh mang dấu trong 4 nhóm | tắt hẳn app (kill), mở lại Duplicates ▸ Choose yourself | vẫn 6 ô mang dấu; thanh dưới *6 selected* + *Delete 6* | `DuplicateReviewStoreTests.marksSurviveRelaunch` ✅ + route `duplicates-v3-persist.json` (bước terminate/launch) ⚠️ chưa có |
+| AC-M1 | (D12) 6 ảnh mang dấu trong 4 nhóm | tắt hẳn app (kill), mở lại Duplicates ▸ Choose yourself | vẫn 6 ô mang dấu; thanh dưới *6 selected* + *Delete 6* | `DuplicateReviewStoreTests.marksSurviveRelaunch` ✅ + route `duplicates-v3-persist.json` ✅ (50 dấu còn sau khi app bị tắt và mở lại, iPhone 17 26.5) |
 | AC-M2 | (D12) như AC-M1, 1 trong 6 ảnh bị xoá bằng app Photos | quay lại Duplicates | *5 selected* + *Delete 5*; MB không tính ảnh đã mất; dòng của ảnh đó không còn trong `duplicate_review` | `DuplicateReviewStoreTests.deletedPhotoDropsItsMark` ✅ |
 | AC-M3 | (D12) Keep all trên nhóm A, bản giữ người dùng chọn ở nhóm B | kill app, mở lại | A vẫn thu gọn *Keeping all 2*; B vẫn có bản giữ người dùng chọn | `DuplicateReviewStoreTests.keepAllAndKeeperOverrideSurviveRelaunch` ✅ |
 | AC-M4 | (giữ v2) nhóm 3 ảnh, 2 đã đánh dấu | chạm vòng của ô thứ 3 | ô không mang dấu; *Keep at least one photo in this group.*; *Delete 2* không đổi; giữ lâu ô đó thì Remove mờ | ⚠️ chưa có |

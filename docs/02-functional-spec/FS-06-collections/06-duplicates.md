@@ -310,8 +310,8 @@ fixture: tự sinh (mảng màu, chữ, nhiễu, mờ Gaussian); riêng AC-Q4 d�
 | AC-F3 | (D8) chưa chọn khung nào | nhìn đáy màn | nút đỏ mờ + *Choose at least one frame to keep*; không có nút X ở 1/3 trên màn | ⚠️ chưa có |
 | AC-F4 | (D8) iPad 1376×1032 | mở màn chọn khung, bật Survey 4 khung, zoom | 4 khung cùng zoom/vùng | ⚠️ chưa có |
 | AC-F5 | (D8) burst PhotoKit 6 khung (`-ShotDexFakeBursts`) | mở từ viewer ⋯ ▸ *Choose Frames…* | cùng màn chọn khung như từ Duplicates | ⚠️ chưa có |
-| AC-N1 | (A1) nhóm Look-alikes 2 ảnh | *Not duplicates* → tắt app → mở → *Check Again* | nhóm không hiện; ⋯ ▸ *Ignored (1)* có nhóm đó; *Show again* → nhóm về danh sách | `DuplicateReviewStoreTests.dismissalSurvivesRegroup` ⚠️ chưa có |
-| AC-N2 | (A1) như AC-N1, sau đó thêm ảnh thứ 3 giống hai ảnh kia | *Check Again* | nhóm hiện lại 3 ảnh với dòng *New photo since you marked these as not duplicates*; 0 dấu | ⚠️ chưa có |
+| AC-N1 | (A1) nhóm Look-alikes 2 ảnh | *Not duplicates* → tắt app → mở → *Check Again* | nhóm không hiện; ⋯ ▸ *Ignored (1)* có nhóm đó; *Show again* → nhóm về danh sách | `DuplicateReviewStoreTests.dismissalSurvivesRegroup` ✅ + route `duplicates-v3-persist.json` ✅ (tắt app → Ignored (1) → Show again) |
+| AC-N2 | (A1) như AC-N1, sau đó thêm ảnh thứ 3 giống hai ảnh kia | *Check Again* | nhóm hiện lại 3 ảnh với dòng *New photo since you marked these as not duplicates*; 0 dấu | `DuplicateReviewStoreTests.dismissalSurvivesRegroup` ✅ (luật `newPhotoSince`); ảnh sim ⚠️ chưa có |
 | AC-P1 | (A5) quyền `.limited`, thấy 1.240 ảnh | mở Duplicates | banner *ShotDex can see 1,240 of your photos* + *Settings* | ⚠️ chưa có |
 | AC-P2 | (A5) quyền bị từ chối | mở Duplicates | banner *ShotDex can't see your photos* + *Settings*; *Check Again* mờ kèm lý do; không lượt quét nào chạy | ⚠️ chưa có |
 | AC-P3 | (A4) quét 38.000 ảnh, sau lô đầu đã có 40 nhóm | nhìn màn trong lúc quét | *Scanning 1,200 of 38,000 · 40 found so far*; 40 nhóm đã mở được; *Cancel* màu accent | ⚠️ chưa có |
