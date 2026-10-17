@@ -264,4 +264,24 @@ struct DuplicateReviewTests {
         let removal = DuplicateRemoval.plan(members: row.members, keeper: row.members[0], traits: traits)
         #expect(DuplicateProtection.keptLine(removal.kept, namingAlbums: true) == "1 kept: in album Client")
     }
+
+    /// AC-L2: gaps 0.6 / 0.1 / 0.3 sort 0.6, 0.3, 0.1.
+    @Test func easiestFirstOrdersByScoreGap() {
+        func group(_ id: String) -> DuplicateGroup {
+            DuplicateGroup(members: [photo(id + "1"), photo(id + "2")], kind: .lookAlikes)
+        }
+        let gaps = ["a1": 0.6, "b1": 0.1, "c1": 0.3]
+        let sorted = DuplicateReview.sorted([group("a"), group("b"), group("c")], by: .easiestFirst,
+                                            freeBytes: { _ in 0 }, scoreGap: { gaps[$0.id] ?? 0 })
+        #expect(sorted.map(\.id) == ["a1", "c1", "b1"])
+    }
+
+    @Test func scoreGapReadsTheMeasures() {
+        let a = photo("a"), b = photo("b")
+        let group = DuplicateGroup(members: [a, b], kind: .lookAlikes)
+        let sharpVsSoft: [String: DuplicateQualityScore] = ["a": .init(sharpness: 1000), "b": .init(sharpness: 400)]
+        #expect(abs(DuplicateReview.scoreGap(group, keeper: a, scores: sharpVsSoft) - 0.24) < 0.001)
+        #expect(DuplicateReview.scoreGap(group, keeper: a, scores: [:]) == 0)
+        #expect(DuplicateReview.scoreGap(DuplicateGroup(members: [a, b], kind: .copies), keeper: a, scores: [:]) == 1)
+    }
 }

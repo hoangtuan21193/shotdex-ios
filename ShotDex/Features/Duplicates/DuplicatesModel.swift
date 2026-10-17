@@ -109,7 +109,7 @@ final class DuplicatesModel {
         let stored = UserDefaults.standard.string(forKey: SettingsKeys.duplicateKindFilter)
         self.kindFilter = stored.flatMap(DuplicateKind.init(rawValue:))
         let storedSort = UserDefaults.standard.string(forKey: SettingsKeys.duplicateSort)
-        self.sort = storedSort.flatMap(DuplicateSort.init(rawValue:)) ?? .mostSpace
+        self.sort = storedSort.flatMap(DuplicateSort.init(rawValue:)) ?? .easiestFirst
     }
 
     var isScanning: Bool {
@@ -156,7 +156,9 @@ final class DuplicatesModel {
     /// Groups of the kind the filter shows, in the order the sort menu asks for.
     var sortedGroups: [DuplicateGroup] {
         let shown = kindFilter.map { kind in groups.filter { $0.kind == kind } } ?? groups
-        return DuplicateReview.sorted(shown, by: sort) { self.freeBytes(of: $0) ?? 0 }
+        return DuplicateReview.sorted(shown, by: sort, freeBytes: { self.freeBytes(of: $0) ?? 0 }) { group in
+            self.keeper(of: group).map { DuplicateReview.scoreGap(group, keeper: $0, scores: self.scores) } ?? 0
+        }
     }
 
     /// Kinds that have at least one group, in filter-row order.

@@ -126,7 +126,7 @@ enum SettingsKeys {
     /// Unwritten (or empty) means All.
     static let duplicateKindFilter = "duplicates.kindFilter"
 
-    /// `DuplicateSort` raw value of the group list. Unwritten means `.mostSpace`.
+    /// `DuplicateSort` raw value of the group list. Unwritten means `.easiestFirst`.
     static let duplicateSort = "duplicates.sort"
 
     /// Copies per row on a Duplicates card, as the user pinched it — one per

@@ -16,6 +16,9 @@ struct DuplicateMemberTraits: Hashable, Sendable {
 
 /// Order of the group list (FS-06.06 §7.3).
 enum DuplicateSort: String, CaseIterable, Identifiable, Sendable {
+    /// The surest suggestions first: the widest score gap between the
+    /// keeper and the next best (A7).
+    case easiestFirst
     case mostSpace
     case newest
     case oldest
@@ -24,6 +27,7 @@ enum DuplicateSort: String, CaseIterable, Identifiable, Sendable {
 
     var title: String {
         switch self {
+        case .easiestFirst: String(localized: "Easiest first", comment: "Duplicates sort order: groups where the suggestion is surest first")
         case .mostSpace: String(localized: "Most space first", comment: "Duplicates sort order: groups that free the most space first")
         case .newest: String(localized: "Newest first", comment: "Duplicates sort order")
         case .oldest: String(localized: "Oldest first", comment: "Duplicates sort order")
@@ -307,12 +311,45 @@ enum DuplicateReview {
         group.members.compactMap(\.creationDate).max() ?? 0
     }
 
+    /// One number per scored photo, 0…1: open eyes weigh most, then
+    /// sharpness relative to the group's sharpest, then little clipping.
+    static func qualityValue(_ score: DuplicateQualityScore, groupSharpest: Double) -> Double {
+        let eyes = score.hasEyesClosed ? 0.0 : 1.0
+        let sharp = groupSharpest > 0 ? (score.sharpness ?? 0) / groupSharpest : 0
+        let clip = 1 - min(1, (score.highlightClip + score.shadowClip) * 10)
+        return eyes * 0.5 + sharp * 0.4 + clip * 0.1
+    }
+
+    /// How sure the suggestion is: the keeper's quality value minus the
+    /// best other member's. Copies are as sure as it gets (1); a group not
+    /// fully scored is not sure at all (0).
+    static func scoreGap(
+        _ group: DuplicateGroup,
+        keeper: HashedPhoto,
+        scores: [String: DuplicateQualityScore]
+    ) -> Double {
+        if group.kind.isCopy { return 1 }
+        guard isScored(group.members, scores) else { return 0 }
+        let sharpest = group.members.compactMap { scores[$0.assetId]?.sharpness }.max() ?? 0
+        let kept = qualityValue(scores[keeper.assetId]!, groupSharpest: sharpest)
+        let next = group.members.filter { $0.assetId != keeper.assetId }
+            .map { qualityValue(scores[$0.assetId]!, groupSharpest: sharpest) }.max() ?? 0
+        return max(0, kept - next)
+    }
+
     static func sorted(
         _ groups: [DuplicateGroup],
         by sort: DuplicateSort,
-        freeBytes: (DuplicateGroup) -> Int
+        freeBytes: (DuplicateGroup) -> Int,
+        scoreGap: (DuplicateGroup) -> Double = { _ in 0 }
     ) -> [DuplicateGroup] {
         switch sort {
+        case .easiestFirst:
+            let keyed = groups.map { ($0, scoreGap($0)) }
+            return keyed.enumerated().sorted { left, right in
+                if left.element.1 != right.element.1 { return left.element.1 > right.element.1 }
+                return left.offset < right.offset
+            }.map(\.element.0)
         case .mostSpace:
             let keyed = groups.map { ($0, freeBytes($0)) }
             return keyed.enumerated().sorted { left, right in
