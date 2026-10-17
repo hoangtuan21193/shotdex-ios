@@ -1,3 +1,4 @@
+import ImageIO
 import AVKit
 import Photos
 import SwiftUI
@@ -382,7 +383,10 @@ struct ComparePane: View {
     // MARK: Loading
 
     private func load() {
-        guard let asset = model.asset(for: id) else { return }
+        guard let asset = model.asset(for: id) else {
+            loadFilePhoto()
+            return
+        }
         if asset.mediaType == .video {
             isVideo = true
             loadVideo(asset)
@@ -404,6 +408,34 @@ struct ComparePane: View {
                 avPlayer.isMuted = true
                 player = avPlayer
             }
+        }
+    }
+
+    /// A photo only in a folder, on a drive or on a server (FS-19.02 §3):
+    /// its cached tile at once, then its file read by ImageIO at the cell's
+    /// size — the embedded preview of a RAW when it is big enough, never a
+    /// full decode, as the viewer does.
+    private func loadFilePhoto() {
+        guard image == nil else { return }
+        let id = self.id
+        if let tile = photoLibrary.fileThumbnails.image(for: id) { image = tile }
+        let resolve = photoLibrary.filePhotoURL
+        let longSide = Int(isSurvey
+            ? max(frame.photo.width, frame.photo.height) * displayScale
+            : max(ActiveDisplay.pixelSize().width, ActiveDisplay.pixelSize().height))
+        Task {
+            let loaded = await Task.detached(priority: .userInitiated) { () -> UIImage? in
+                guard let url = resolve(id),
+                      let source = CGImageSourceCreateWithURL(url as CFURL, [kCGImageSourceShouldCache: false] as CFDictionary),
+                      let cgImage = CGImageSourceCreateThumbnailAtIndex(source, 0, [
+                          kCGImageSourceCreateThumbnailFromImageAlways: true,
+                          kCGImageSourceCreateThumbnailWithTransform: true,
+                          kCGImageSourceThumbnailMaxPixelSize: max(longSide, 1),
+                      ] as CFDictionary)
+                else { return nil }
+                return UIImage(cgImage: cgImage)
+            }.value
+            if let loaded { image = loaded }
         }
     }
 

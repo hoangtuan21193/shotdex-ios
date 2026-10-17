@@ -20,6 +20,9 @@ struct CompareStage: View {
     @Environment(UnsupportedRAWIndex.self) private var unsupportedRAWIndex: UnsupportedRAWIndex?
     @Environment(\.displayScale) private var displayScale
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    /// Rejected photos that reach a folder, a drive or a server, waiting on
+    /// the ShotDex confirmation (FS-19.04 §2, 08c AC-13 AC-23 AC-24).
+    @State private var sourceDeletion: DeletionTargetQueries.Request?
 
     private var isCompact: Bool { windowClass.isCompact }
     /// iPad: the commands sit in the top bar. Everywhere else they sit in a
@@ -50,6 +53,10 @@ struct CompareStage: View {
         .overlay(alignment: .top) { blockedBanner }
         .sensoryFeedback(.warning, trigger: model.blockedToken)
         .animation(reduceMotion ? nil : AppTheme.Motion.standard, value: model.session)
+        .sourceDeletion($sourceDeletion) { removed, _ in
+            if !removed.isEmpty { dependencies.sources.photosDeleted() }
+            go(model.removedThroughSources(removed))
+        }
     }
 
     // MARK: Top bar
@@ -403,7 +410,15 @@ struct CompareStage: View {
 
     private func deleteRejected() async {
         let result = await model.deleteRejected()
-        switch result.next {
+        if let request = result.sourceRequest {
+            sourceDeletion = request
+            return
+        }
+        go(result.next)
+    }
+
+    private func go(_ next: CompareSession.AfterDeletion?) {
+        switch next {
         case .single(let id):
             onSingle(id)
         case .grid:

@@ -52,6 +52,9 @@ final class CompareModel {
     @ObservationIgnored private var namesById: [String: String] = [:]
     @ObservationIgnored private let marks: PhotoMarks?
     @ObservationIgnored private let deleter: RejectedDeleter
+    /// The deletion through the photos' sources when any Rejected one has a
+    /// copy outside Photos (FS-19.04 §2); nil keeps the PhotoKit path.
+    @ObservationIgnored private let sourceRequest: @MainActor ([String]) -> DeletionTargetQueries.Request?
     @ObservationIgnored let duplicateGroup: [String]?
     /// Told which photos a Delete N removed — Duplicates prunes its groups.
     @ObservationIgnored var onDeleted: ((Set<String>) -> Void)?
@@ -65,11 +68,13 @@ final class CompareModel {
         deleter: RejectedDeleter,
         assets: [String: PHAsset],
         metadata: [String: PhotoMetadata],
-        duplicateGroup: [String]? = nil
+        duplicateGroup: [String]? = nil,
+        sourceRequest: @escaping @MainActor ([String]) -> DeletionTargetQueries.Request? = { _ in nil }
     ) {
         self.session = session
         self.marks = marks
         self.deleter = deleter
+        self.sourceRequest = sourceRequest
         self.assetsById = assets
         self.metadataById = metadata
         self.duplicateGroup = duplicateGroup
@@ -100,7 +105,12 @@ final class CompareModel {
             deleter: .live(photoLibrary: dependencies.photoLibrary, banner: dependencies.banner),
             assets: assets,
             metadata: rows,
-            duplicateGroup: duplicateGroup
+            duplicateGroup: duplicateGroup,
+            sourceRequest: { ids in
+                let roots = dependencies.folderRoots
+                return try? DeletionTargetQueries(database: dependencies.database, hasTrash: { roots.hasTrash($0) })
+                    .request(photoIds: ids, selection: .rejected)
+            }
         )
     }
 
@@ -248,9 +258,13 @@ final class CompareModel {
 
     // MARK: Delete N
 
-    struct DeleteResult: Equatable {
+    struct DeleteResult {
         let outcome: RejectedDeleter.Outcome
         let next: CompareSession.AfterDeletion?
+        /// The Rejected photos reach a folder, a drive or a server: the
+        /// ShotDex confirmation runs first (`SourceDeletionFlow`), then
+        /// `removedThroughSources(_:)`.
+        var sourceRequest: DeletionTargetQueries.Request?
     }
 
     /// Deletes the Rejected photos of this comparison through the system's
@@ -259,6 +273,9 @@ final class CompareModel {
     func deleteRejected() async -> DeleteResult {
         let ids = rejectedIds
         guard !ids.isEmpty, !isDeleting else { return DeleteResult(outcome: .cancelled, next: nil) }
+        if let request = sourceRequest(ids) {
+            return DeleteResult(outcome: .cancelled, next: nil, sourceRequest: request)
+        }
         isDeleting = true
         defer { isDeleting = false }
         let outcome = await deleter.delete(ids)
@@ -268,6 +285,15 @@ final class CompareModel {
         onDeleted?(gone)
         let next = session.afterDeletion(gone: gone)
         return DeleteResult(outcome: outcome, next: next)
+    }
+
+    /// After the source deletion ran: the photos it took out leave the
+    /// comparison the way a Photos deletion's do; Cancel removes none.
+    func removedThroughSources(_ gone: Set<String>) -> CompareSession.AfterDeletion? {
+        guard !gone.isEmpty else { return nil }
+        lastDeletion = gone
+        onDeleted?(gone)
+        return session.afterDeletion(gone: gone)
     }
 
     /// The photos the last Delete N removed, once.
@@ -280,8 +306,12 @@ final class CompareModel {
 
     /// The photo's original size, for 100%.
     func pixelSize(for id: String) -> CGSize {
-        guard let asset = assetsById[id], asset.pixelWidth > 0, asset.pixelHeight > 0 else { return .zero }
-        return CGSize(width: asset.pixelWidth, height: asset.pixelHeight)
+        if let asset = assetsById[id], asset.pixelWidth > 0, asset.pixelHeight > 0 {
+            return CGSize(width: asset.pixelWidth, height: asset.pixelHeight)
+        }
+        // A file photo: the size its EXIF gave the index.
+        guard let row = metadataById[id], let width = row.width, let height = row.height, width > 0, height > 0 else { return .zero }
+        return CGSize(width: width, height: height)
     }
 
     /// The farthest a frame may zoom: past 100% of the largest original, or
