@@ -65,6 +65,8 @@ Có chỉ mục trên: tên máy và tên ống kính đã chuẩn hoá · ISO �
 | Dấu vân tay ảnh | id ảnh · dấu vân tay 64 bit (rỗng = chưa lấy được ảnh) · ngày sửa lúc tính · thời điểm tính |
 | Nhóm ảnh trùng | một dòng cho mỗi ảnh trong mỗi nhóm, theo từng mức so trùng **và từng nguồn** (`v30-photoSources`, FS-19.04 §4) |
 | Trạng thái quét trùng | mức so trùng · nguồn · lần quét cuối · số nhóm |
+| Chất lượng ảnh trùng | id ảnh · ngày sửa lúc chấm · độ nét · mắt mở + độ tin cậy · % cháy / bệt · khung khuôn mặt chuẩn hoá · bù sáng EXIF · Software · lúc chấm (`v40-duplicatesV3`, [FS-06.06 §6](../02-functional-spec/FS-06-collections/06-duplicates.md)) — kết quả quét đắt tiền, chỉ cho ảnh đã vào nhóm |
+| Duyệt ảnh trùng | vai trò (dấu xoá · bản giữ · Keep all · thu gọn · Not duplicates) · id tập · id ảnh · lúc ghi (`v40-duplicatesV3`, [FS-06.06b §1](../02-functional-spec/FS-06-collections/06b-duplicates-marks-merge-delete.md)) — **dữ liệu người dùng** |
 | Kết quả quét chủ thể | id ảnh · số khuôn mặt · số chó mèo · thời điểm quét |
 | Gán cảm biến thủ công | những máy người dùng tự chỉ định |
 | Trạng thái index | điểm chạy tiếp · lần index cuối · mốc thay đổi của thư viện |
@@ -119,6 +121,10 @@ Có chỉ mục trên: tên máy và tên ống kính đã chuẩn hoá · ISO �
   index **không bao giờ** ghi chúng (upsert dòng metadata không đụng), nên index lại toàn bộ giữ nguyên gương. Không
   khoá ngoại: một `REPLACE` của lượt index sẽ kéo cả gương đi. Mọi truy vấn tới người dùng đều JOIN dòng metadata,
   nên dòng gương của ảnh không còn index (hay không chia sẻ dưới `.limited`) không bao giờ lộ ra.
+- **Duyệt ảnh trùng là dữ liệu người dùng** nhưng gắn với ảnh còn trong thư viện: dấu và bản giữ theo **id ảnh**; Keep all,
+  thu gọn, Not duplicates theo **tập id ảnh** (một dòng mỗi thành viên, chung id tập) để sống qua lượt gom lại cấp id
+  nhóm mới. Ảnh rời thư viện → dòng của nó bị dọn đầu lượt quét và khi PhotoKit báo xoá. Vai trò lạ (bản sau ghi) bị bỏ
+  qua khi đọc, không làm hỏng cả danh sách.
 - Mở màn ảnh trùng **chỉ đọc hai bảng cache** rồi ghép với dữ kiện hiện tại — **không** tính lại dấu vân
   tay, **không** gom lại nhóm.
 
