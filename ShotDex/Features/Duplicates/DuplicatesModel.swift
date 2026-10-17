@@ -708,6 +708,27 @@ final class DuplicatesModel {
 
     /// The viewer on screen (§7.6).
     var viewer: DuplicateViewerPresentation?
+    /// Merge to HDR / Focus Stack on a source set (§5, AC-G5).
+    var stackPresentation: PhotoStackPresentation?
+
+    /// Opens the merge a source set is material for, on exactly its frames
+    /// in capture order. Nothing is marked; cancelling there leaves the card
+    /// as it was.
+    func merge(_ group: DuplicateGroup) {
+        guard let set = group.sourceSet else { return }
+        let ids = group.members.map(\.assetId)
+        let assets = ids.compactMap { assetsById[$0] }
+        guard assets.count >= CombinePurpose.minimumPhotoCount else { return }
+        stackPresentation = PhotoStackPresentation(assets: assets, purpose: set.kind == .bracket ? .hdr : .focusStack)
+    }
+
+    /// Not duplicates (§9): the group leaves the list and every count, for
+    /// good — until a new photo joins it.
+    func dismiss(_ group: DuplicateGroup) {
+        clearMarks(in: group)
+        session.dismiss(group.memberIds)
+        groups.removeAll { $0.id == group.id }
+    }
 
     func openViewer(_ assetId: String, in group: DuplicateGroup) {
         viewer = DuplicateViewerPresentation(groupId: group.id, startId: assetId)

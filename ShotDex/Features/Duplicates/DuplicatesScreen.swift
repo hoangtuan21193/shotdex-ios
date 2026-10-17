@@ -163,6 +163,7 @@ struct DuplicatesScreen: View {
         .sheet(isPresented: $showsQuickClean) {
             DuplicatesQuickCleanSheet(model: model)
         }
+        .photoStackCover($model.stackPresentation, onSaved: { _ in model.loadCache() })
         .sheet(item: $model.viewer) { presentation in
             DuplicateGroupViewer(model: model, presentation: presentation)
                 .environment(photoLibrary)
@@ -275,6 +276,8 @@ struct DuplicatesScreen: View {
     private func groupView(_ group: DuplicateGroup, model: DuplicatesModel, metrics: DuplicateCardMetrics) -> some View {
         if model.isCollapsed(group) {
             DuplicateCollapsedRow(group: group, model: model)
+        } else if group.sourceSet != nil {
+            DuplicateSourceSetCard(group: group, model: model, metrics: metrics)
         } else {
             DuplicateDecisionCard(group: group, model: model, metrics: metrics)
         }
@@ -301,6 +304,10 @@ struct DuplicatesScreen: View {
 
     private func estimatedHeight(_ group: DuplicateGroup, model: DuplicatesModel, metrics: DuplicateCardMetrics) -> CGFloat {
         if model.isCollapsed(group) { return 56 }
+        if group.sourceSet != nil {
+            let rows = (group.count + metrics.gridColumns - 1) / metrics.gridColumns
+            return 58 + CGFloat(rows) * (metrics.tile + DuplicateCardMetrics.copyGap) + 44 + AppTheme.Spacing.md * 2
+        }
         let shown = model.isFolded(group) ? min(group.count - 1, metrics.copyColumns * 2) : group.count - 1
         let body = metrics.gridHeight(copyCount: shown) + (model.isFolded(group) ? 52 : 0)
         return 58 + body + AppTheme.Spacing.md + 44 + AppTheme.Spacing.md
@@ -1060,7 +1067,7 @@ private struct DuplicateCollapsedRow: View {
 /// Square thumbnail. Marked = trash disc white-on-red, 3pt red edge, image at
 /// 45% (red is destructive, apart from the grid's accent "selected" tick);
 /// unmarked = an empty white ring. The keeper carries a "Keep" badge.
-private struct DuplicateThumbnail: View {
+struct DuplicateThumbnail: View {
     @Environment(PhotoLibraryService.self) private var photoLibrary
 
     let asset: PHAsset?
@@ -1208,7 +1215,7 @@ private struct DuplicateThumbnail: View {
     }
 }
 
-private struct KeepBadgeLabelStyle: LabelStyle {
+struct KeepBadgeLabelStyle: LabelStyle {
     func makeBody(configuration: Configuration) -> some View {
         HStack(spacing: AppTheme.Spacing.xs) {
             configuration.icon.font(.caption.weight(.bold))
