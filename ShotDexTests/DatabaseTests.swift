@@ -151,11 +151,13 @@ struct DatabaseTests {
         let left = try queue.read { db in try movieTables.filter { try db.tableExists($0) } }
         let photos = try queue.read { db in try String.fetchAll(db, sql: "SELECT assetId FROM photo_metadata") }
         let providers = try queue.read { db in try String.fetchAll(db, sql: "SELECT id FROM ai_providers") }
-        let last = try queue.read { db in try AppDatabase.migrator.completedMigrations(db).last }
+        let completed = try queue.read { db in try AppDatabase.migrator.completedMigrations(db) }
         #expect(left.isEmpty)
         #expect(photos == ["kept-photo"])
         #expect(providers == ["h1"])
-        #expect(last == "v39-dropMovies")
+        // v39 ran, and every migration after it (v40+, Duplicates v3) too.
+        #expect(completed.contains("v39-dropMovies"))
+        #expect(completed.last == AppDatabase.migrator.migrations.last)
     }
 
     /// FS-15 AC-46: the SMB share folds into every path of that connection;

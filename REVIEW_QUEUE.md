@@ -10,6 +10,13 @@ Sources: `hig-components` (two passes), `device-layout` (iPhone 17 + iPad Pro 13
 
 ## Should fix
 
+- [ ] **Mac Duplicates v3 code** — boards `MAC_DuplicatesSummary`, `MAC_Duplicates`, `MAC_BurstFrames` are drawn (canvas Mac, commit `160b3868`); no Mac code yet. Open choices from the board pass: sentence case vs MAC_STYLE title case on buttons; frame picker follows the Viewer (not tier D); Keep = `P` _(plan 2026-10-17-fs0606-duplicates-v3 §8.3)_
+- [ ] `DuplicatesModel.mergeBursts` — one `frames(ofBurst:)` fetch per burst on every `loadCache()`; cache by `assetChangeToken` and fetch in one detached pass; `PhotoKitBurstLibrary.assetsById` never pruned _(photokit-guard, FS-06.06 §4)_
+- [ ] `DuplicatesModel.readTraits` — favorite/album traits read once per screen visit; inheritance re-reads the keeper but not donors' albums; Delete waits on `loadAllTraits` with no visible progress for 200+ groups _(photokit-guard)_
+- [ ] `ExifReader.readExifFromLocalDerivative` in the scoring pass — measure peak memory on a device with RAW/48 MP originals (`.fastFormat` may hand back full-size data) _(photokit-guard, FS-06.06 §12)_
+- [ ] Duplicates v3 strings are not yet in `Localizable.xcstrings` — the uncommitted catalog diff in the tree predates this work (re-adds Movies strings) and was left alone; sync the catalog from Xcode and review with `localization` _(FS-06.06 §11)_
+- [ ] Duplicates v3 on the **Duo** (inner vertical strip, cover full) unverified on a simulator: granting photo access on a 27.x simulator risks a permanently denied device; needs the user's go-ahead or a granted Duo _(AC-W3, AC-F4 Duo)_
+
 - [ ] `MoviePlayerScreen.swift` clock labels, `MovieTracksPanel.swift` / `MovieTranslatePage.swift` fixed 36–56 pt row heights — clip at accessibility text sizes; use `minHeight` with `@ScaledMetric` _(a11y-voiceover, FS-23)_
 - [ ] `MoviesScreen.swift` filter chips — a non-scrolling HStack at 32 pt overflows at accessibility sizes; wrap in a horizontal ScrollView _(a11y-voiceover, FS-23)_
 - [ ] `MoviesScreen.swift` grid `minimum: 105` and one-line titles truncate for low-vision users; scale with `@ScaledMetric` or switch to the list at accessibility sizes _(a11y-voiceover, FS-23)_

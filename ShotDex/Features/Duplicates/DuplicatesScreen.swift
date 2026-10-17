@@ -212,14 +212,14 @@ struct DuplicatesScreen: View {
             Button {
                 withAnimation(AppTheme.Motion.standard) { model.clearAllMarks() }
             } label: {
-                Label("Clear Selection", systemImage: "xmark.circle")
+                Label(String(localized: "Clear Selection", comment: "Duplicates ⋯: take every mark and decision away"), systemImage: "xmark.circle")
             }
             .disabled(model.markedCount == 0 && model.reviewedCount == 0)
         } label: {
             Image(systemName: "ellipsis")
         }
         .tint(.primary)
-        .accessibilityLabel("More")
+        .accessibilityLabel(String(localized: "More", comment: "VoiceOver: the Duplicates ⋯ menu"))
     }
 
     // MARK: Summary
@@ -403,7 +403,9 @@ struct DuplicatesScreen: View {
             }
             .buttonStyle(.plain)
             .disabled(model.isBusy)
-            .accessibilityLabel(count == 1 ? "Delete 1 photo" : "Delete \(count) photos")
+            .accessibilityLabel(count == 1
+                ? String(localized: "Delete 1 photo", comment: "VoiceOver: the Delete button")
+                : String(localized: "Delete \(count) photos", comment: "VoiceOver: the Delete button"))
         }
         .padding(.horizontal, AppTheme.Size.screenMargin)
         .padding(.bottom, AppTheme.Spacing.sm)
@@ -422,6 +424,9 @@ struct DuplicatesScreen: View {
 
     private func emptyDescription(_ model: DuplicatesModel) -> String {
         let scanned = model.coverage.hashedPhotos
+        if scanned == 1 {
+            return String(localized: "Nothing to compare with one photo.", comment: "Duplicates: empty list, one photo checked")
+        }
         if model.filter != .all {
             return String(localized: "No \(model.filter.title) among \(scanned) photos.", comment: "Duplicates: empty list filtered to one kind")
         }
@@ -466,11 +471,11 @@ struct DuplicatesScreen: View {
             }
         } else if model.hasNeverScanned {
             ContentUnavailableView {
-                Label("Not Scanned Yet", systemImage: "square.on.square")
+                Label(String(localized: "Not Checked Yet", comment: "Duplicates: the library was never checked"), systemImage: "square.on.square")
             } description: {
-                Text("Scan your library once; the results are kept and you rescan whenever you like.")
+                Text(String(localized: "Check your library once. The results are saved, and you can check again any time.", comment: "Duplicates: before the first check"))
             } actions: {
-                Button("Scan Library") {
+                Button(String(localized: "Check Library", comment: "Duplicates: run the first check")) {
                     model.startScan()
                 }
                 .buttonStyle(.borderedProminent)
@@ -561,7 +566,8 @@ private struct DuplicatesHeaderBand: View {
                 label(title, count: count, bold: isSelected)
             }
             .padding(.horizontal, AppTheme.Spacing.md)
-            .frame(height: 34)
+            .padding(.vertical, AppTheme.Spacing.xs)
+            .frame(minHeight: 34)
             .background(isSelected ? Color(.systemBackground) : Color(.secondarySystemFill), in: Capsule())
             .overlay {
                 if isSelected { Capsule().strokeBorder(Color(.separator), lineWidth: 0.5) }
@@ -606,7 +612,8 @@ private struct DuplicatesHeaderBand: View {
             .background(Color(.secondarySystemFill), in: Capsule())
         }
         .fixedSize()
-        .accessibilityLabel("Sort groups: \(model.sort.title)")
+        .accessibilityLabel(String(localized: "Sort groups", comment: "VoiceOver: the Duplicates sort menu"))
+        .accessibilityValue(model.sort.title)
     }
 
     @ViewBuilder
@@ -634,7 +641,8 @@ private struct DuplicatesHeaderBand: View {
                     .lineLimit(1)
                 ProgressView(value: Double(model.reviewedCount), total: Double(max(1, model.groups.count)))
                     .tint(.green)
-                    .accessibilityLabel("Groups reviewed")
+                    .accessibilityLabel(String(localized: "Groups reviewed", comment: "VoiceOver: the review progress bar"))
+                    .accessibilityValue(reviewedText)
             }
         }
     }
@@ -660,8 +668,10 @@ private struct DuplicatesHeaderBand: View {
         guard let scanState = model.scanState else { return nil }
         let pending: String
         if !model.canUseNetwork, model.cloudOnlyCount > 0 {
-            pending = String(localized: "\(model.cloudOnlyCount.formatted()) photos only in iCloud — will check on Wi-Fi",
-                             comment: "Duplicates header: photos whose thumbnails need the network")
+            pending = model.cloudOnlyCount == 1
+                ? String(localized: "1 photo only in iCloud — will check on Wi-Fi", comment: "Duplicates header: photos whose thumbnails need the network")
+                : String(localized: "\(model.cloudOnlyCount.formatted()) photos only in iCloud — will check on Wi-Fi",
+                         comment: "Duplicates header: photos whose thumbnails need the network")
         } else if model.pendingCount > 0 {
             pending = model.pendingCount == 1
                 ? String(localized: "1 photo not checked yet", comment: "Duplicates header: photos a rescan would cover")
@@ -858,7 +868,7 @@ private struct DuplicateDecisionCard: View {
 
     private func accessibilityLabel(_ member: HashedPhoto, isKeeper: Bool, isMarked: Bool) -> String {
         var parts: [String] = []
-        if isKeeper { parts.append(String(localized: "Suggested keep", comment: "VoiceOver: the photo the Duplicates card suggests keeping")) }
+        if isKeeper { parts.append(String(localized: "Suggested to keep", comment: "VoiceOver: the photo the Duplicates card suggests keeping")) }
         parts.append(facts(member))
         let traits = model.traits(of: member.assetId)
         if traits.isFavorite { parts.append(String(localized: "favorite")) }
@@ -867,15 +877,15 @@ private struct DuplicateDecisionCard: View {
         if traits.isLive { parts.append(String(localized: "Live Photo")) }
         if !isKeeper { parts += model.caption(of: member, in: group) }
         parts.append(isMarked
-                     ? String(localized: "marked for deletion")
-                     : String(localized: "not marked"))
+                     ? String(localized: "will be removed", comment: "VoiceOver: a tile marked for removal")
+                     : String(localized: "won't be removed", comment: "VoiceOver: a tile not marked"))
         return parts.joined(separator: ", ")
     }
 
     @ViewBuilder
     private var notices: some View {
         if model.isFullyMarked(group) {
-            Label("All copies marked — nothing will be kept", systemImage: "exclamationmark.triangle.fill")
+            Label(String(localized: "Every photo is set to be removed — keep at least one", comment: "Duplicates card: a group would lose every photo"), systemImage: "exclamationmark.triangle.fill")
                 .font(.footnote)
                 .foregroundStyle(.red)
                 .padding(.top, AppTheme.Spacing.sm)
@@ -888,7 +898,7 @@ private struct DuplicateDecisionCard: View {
                 .padding(.top, AppTheme.Spacing.sm)
         }
         if model.hasNewPhotoSinceDismissal(group) {
-            Label(String(localized: "New photo since you marked these as not duplicates",
+            Label(String(localized: "New photo since you chose Not duplicates",
                          comment: "Duplicates card: a group the user dismissed is back because a photo joined it"),
                   systemImage: "plus.circle")
                 .font(.footnote)
@@ -924,7 +934,7 @@ private struct DuplicateDecisionCard: View {
                     model.openFrames(group)
                 }
             } else if marked > 0 {
-                pill(String(localized: "Unmark", comment: "Duplicates card: clear this group's marks"), color: .primary) {
+                pill(String(localized: "Don't remove", comment: "Duplicates card: take every mark in this group away"), color: .primary) {
                     model.unmark(group)
                 }
             } else if let removal = model.removal(in: group), !removal.remove.isEmpty {
@@ -980,7 +990,8 @@ private struct DuplicateDecisionCard: View {
             .foregroundStyle(color)
             .lineLimit(1)
             .padding(.horizontal, AppTheme.Spacing.md)
-            .frame(height: 34)
+            .padding(.vertical, AppTheme.Spacing.xs)
+            .frame(minHeight: 34)
             .background(Color(.secondarySystemFill), in: Capsule())
             .frame(minHeight: 44)
             .contentShape(Rectangle())

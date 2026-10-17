@@ -52,7 +52,7 @@ struct DuplicatesSelectedSheet: View {
                     .foregroundStyle(.secondary)
             }
             LazyVGrid(columns: [GridItem(.adaptive(minimum: tile, maximum: tile), spacing: 4)], alignment: .leading, spacing: 4) {
-                ForEach(marked) { member in
+                ForEach(Array(marked.enumerated()), id: \.element.id) { index, member in
                     DuplicateThumbnail(
                         asset: model.assetsById[member.assetId], side: tile, radius: AppTheme.Radius.sm,
                         isMarked: true, showsKeep: false,
@@ -60,6 +60,13 @@ struct DuplicatesSelectedSheet: View {
                             withAnimation(AppTheme.Motion.standard) { _ = model.toggleMark(member.assetId, in: group) }
                         }
                     )
+                    .accessibilityElement(children: .ignore)
+                    .accessibilityLabel(String(localized: "Photo \(index + 1) of \(marked.count), \(group.sourceSet?.title ?? group.kind.title)",
+                                               comment: "VoiceOver: a marked photo in the Selected sheet"))
+                    .accessibilityAddTraits(.isSelected)
+                    .accessibilityAction(named: String(localized: "Don't remove", comment: "VoiceOver action: take the mark away")) {
+                        withAnimation(AppTheme.Motion.standard) { _ = model.toggleMark(member.assetId, in: group) }
+                    }
                 }
             }
         }
@@ -81,7 +88,9 @@ struct DuplicatesSelectedSheet: View {
         .controlSize(.large)
         .buttonBorderShape(.roundedRectangle(radius: AppTheme.Radius.md))
         .disabled(count == 0 || model.isBusy)
-        .accessibilityLabel(count == 1 ? "Delete 1 photo" : "Delete \(count) photos")
+        .accessibilityLabel(count == 1
+            ? String(localized: "Delete 1 photo", comment: "VoiceOver: the Delete button")
+            : String(localized: "Delete \(count) photos", comment: "VoiceOver: the Delete button"))
         .padding(.horizontal, AppTheme.Size.screenMargin)
         .padding(.vertical, AppTheme.Spacing.sm)
         .background(.bar)

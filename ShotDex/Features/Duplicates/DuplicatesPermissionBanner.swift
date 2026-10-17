@@ -37,7 +37,9 @@ struct DuplicatesPermissionBanner: View {
         .padding(.horizontal, AppTheme.Spacing.md)
         .padding(.vertical, AppTheme.Spacing.sm)
         .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle.app(AppTheme.Radius.md))
-        .accessibilityElement(children: .combine)
+        // `.contain`: the Settings button must stay its own element — it is
+        // the only way out of the denied state.
+        .accessibilityElement(children: .contain)
     }
 
     private var title: String {

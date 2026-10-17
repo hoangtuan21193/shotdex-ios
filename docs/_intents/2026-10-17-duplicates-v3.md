@@ -5,7 +5,7 @@
 | Tác giả | Hoang Tuan + Claude |
 | Ngày | 2026-10-17 |
 | Trạng thái | accepted (2026-10-17) |
-| Tiến độ | **đang làm** (2026-10-17) — task 25/27 (board 4 canvas, store, session trên đĩa, loại nhóm + veto tiêu cự, bracket/focus stack, độ nét/cháy sáng, pass chấm Vision, chú thích bằng lời, ảnh được bảo vệ, Easiest first, quét hiện dần + dòng iCloud, banner quyền, màn tóm tắt + Quick clean, hàng lọc viên, thẻ v3 + viewer nhóm, nhóm lớn gập, thẻ bracket/focus stack, Not duplicates + Ignored, màn chọn khung chung (bỏ tab Bursts), Survey iPad, thanh dưới + sheet Selected, xoá + thừa hưởng + thông báo, All reviewed; task 7 spike máy thật còn treo), 12/50 AC xanh + AC-G4, AC-Q5 phần logic (plan [2026-10-17-fs0606-duplicates-v3](../_plans/2026-10-17-fs0606-duplicates-v3.md)) |
+| Tiến độ | **gần xong** (2026-10-17) — 26/27 task (còn task 7: spike trên iPhone thật + fixture khuôn mặt), 21/50 AC đủ chứng minh, 13 một phần, 16 chưa (cần dữ liệu sim: bracket EXIF, album, `.limited`, Duo); full suite xanh; còn lại ở `REVIEW_QUEUE.md` (plan [2026-10-17-fs0606-duplicates-v3](../_plans/2026-10-17-fs0606-duplicates-v3.md)) |
 | Nguồn | phản hồi người dùng ("một trong những tính năng quan trọng") + review 7 agent: 3 persona, 2 UX, khảo sát 13 app, ý kiến người dùng app khác |
 | Spec sinh ra từ đây | [FS-06.06](../02-functional-spec/FS-06-collections/06-duplicates.md) + [FS-06.06b](../02-functional-spec/FS-06-collections/06b-duplicates-marks-merge-delete.md) (v3); ghi chú đảo phạm vi ở [FS-02.05](../02-functional-spec/FS-02-photo-detail/05-burst-selection.md) |
 

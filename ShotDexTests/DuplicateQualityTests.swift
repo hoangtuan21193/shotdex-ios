@@ -188,10 +188,15 @@ struct DuplicateQualityPassTests {
         let seen = OSAllocatedUnfairLock<[String]>(initialState: [])
         let store = DuplicateQualityStore(database: database)
         let pass = DuplicateQualityPass(store: store, reader: Stub(seen: seen, delay: .milliseconds(5)), shouldPause: { false })
+        let batches = OSAllocatedUnfairLock(initialState: 0)
         let task = Task {
-            try await pass.run(groups: [group(ids, .sameMoment)], allowNetwork: false) { _, _ in }
+            try await pass.run(groups: [group(ids, .sameMoment)], allowNetwork: false) { _, _ in
+                batches.withLock { $0 += 1 }
+            }
         }
-        try await Task.sleep(for: .milliseconds(150))
+        // Cancel once the first batch is on disk, mid-way through the second.
+        while batches.withLock({ $0 }) == 0 { try await Task.sleep(for: .milliseconds(5)) }
+        try await Task.sleep(for: .milliseconds(30))
         let cancelledAt = ContinuousClock.now
         task.cancel()
         _ = await task.result

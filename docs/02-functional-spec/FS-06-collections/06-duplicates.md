@@ -298,7 +298,7 @@ fixture: tự sinh (mảng màu, chữ, nhiễu, mờ Gaussian); riêng AC-Q4 d�
 | AC-S3 | (D2) như AC-S1 | *Review 212…* → Cancel | 0 dấu, không thanh xoá | ⚠️ chưa có |
 | AC-L1 | (D4, A6) danh sách có Copies 3, Look-alikes 5, Same moment 2, không Screenshot | mở *Choose yourself* | hàng lọc *All · Copies · Look-alikes · Same moment* (không Screenshots); chạm từng viên thì các viên còn lại không đổi vị trí x (±1pt) | ⚠️ chưa có — dump `duplicates-v3-filter.json` |
 | AC-L2 | (A7) 3 nhóm với khoảng cách điểm 0.6 / 0.1 / 0.3 | sort *Easiest first* | thứ tự 0.6, 0.3, 0.1; Back rồi vào lại vẫn *Easiest first* | `DuplicateReviewTests.easiestFirstOrdersByScoreGap` ✅ (mặc định khi chưa chọn, nhớ qua `duplicates.sort`) |
-| AC-C1 | (D7) thẻ 5 ảnh chưa dấu | chạm giữa một bản sao | viewer của nhóm mở tại ảnh đó; 0 dấu | ⚠️ chưa có |
+| AC-C1 | (D7) thẻ 5 ảnh chưa dấu | chạm giữa một bản sao | viewer của nhóm mở tại ảnh đó; 0 dấu | route `duplicates-v3-card.json` ✅ (chạm ô → viewer nhóm *1 of 51*, 0 dấu) |
 | AC-C2 | (D7) như AC-C1 | chạm vòng góc trên phải của một bản sao | ảnh đó mang dấu, thanh xoá *1 marked*; vùng chạm vòng ≥ 44×44pt trong dump | ⚠️ chưa có |
 | AC-C3 | (D7) viewer nhóm mở ở bản sao X | chạm *Keep this* | về thẻ, X là bản giữ (2×2) với nhãn Keep; bản giữ cũ thành bản sao | ⚠️ chưa có |
 | AC-C4 | (D9) nhóm 52 ảnh, iPhone 17 | mở danh sách | thẻ cao ≤ 1 màn hình: bản giữ + 1 hàng + *Show all 51*; *Remove the other 51*, *Keep all*, *Compare* nằm trong viewport khi bản giữ ở giữa màn | route `duplicates-v3-large.json` ✅ (51 ảnh: bản giữ + 4 bản sao + *Show all 50*, nút chân ngay dưới; iPhone 17 26.5) |
@@ -314,5 +314,5 @@ fixture: tự sinh (mảng màu, chữ, nhiễu, mờ Gaussian); riêng AC-Q4 d�
 | AC-N2 | (A1) như AC-N1, sau đó thêm ảnh thứ 3 giống hai ảnh kia | *Check Again* | nhóm hiện lại 3 ảnh với dòng *New photo since you marked these as not duplicates*; 0 dấu | `DuplicateReviewStoreTests.dismissalSurvivesRegroup` ✅ (luật `newPhotoSince`); ảnh sim ⚠️ chưa có |
 | AC-P1 | (A5) quyền `.limited`, thấy 1.240 ảnh | mở Duplicates | banner *ShotDex can see 1,240 of your photos* + *Settings* | ⚠️ chưa có |
 | AC-P2 | (A5) quyền bị từ chối | mở Duplicates | banner *ShotDex can't see your photos* + *Settings*; *Check Again* mờ kèm lý do; không lượt quét nào chạy | ⚠️ chưa có |
-| AC-P3 | (A4) quét 38.000 ảnh, sau lô đầu đã có 40 nhóm | nhìn màn trong lúc quét | *Scanning 1,200 of 38,000 · 40 found so far*; 40 nhóm đã mở được; *Cancel* màu accent | ⚠️ chưa có |
+| AC-P3 | (A4) quét 38.000 ảnh, sau lô đầu đã có 40 nhóm | nhìn màn trong lúc quét | *Checking 1,200 of 38,000 · 40 found so far*; 40 nhóm đã mở được; *Cancel* màu accent | ⚠️ chưa có |
 | AC-P4 | (A4) máy tắt mạng, 148 ảnh chỉ có trên iCloud | quét xong | dòng *148 photos only in iCloud — will check on Wi-Fi*; không yêu cầu mạng nào | `PerceptualHashStoreTests.unreadableThumbnailsAreCounted` ✅ (số đếm); ảnh sim ⚠️ chưa có |

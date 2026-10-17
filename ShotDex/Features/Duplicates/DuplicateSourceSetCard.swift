@@ -60,6 +60,11 @@ struct DuplicateSourceSetCard: View {
         .accessibilityLabel(DuplicateReview.settings(of: member, members: group.members) ?? group.sourceSet?.title ?? "")
         .accessibilityAddTraits(isMarked ? [.isButton, .isSelected] : .isButton)
         .accessibilityAction { model.openViewer(member.assetId, in: group) }
+        .accessibilityAction(named: isMarked
+                             ? String(localized: "Don't remove", comment: "VoiceOver action on a tile")
+                             : String(localized: "Remove", comment: "VoiceOver action on a tile")) {
+            _ = model.toggleMark(member.assetId, in: group)
+        }
     }
 
     private var actions: some View {

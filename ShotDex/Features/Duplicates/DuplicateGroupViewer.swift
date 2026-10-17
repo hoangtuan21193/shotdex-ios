@@ -71,6 +71,14 @@ struct DuplicateGroupViewer: View {
         }
         .padding(.top, AppTheme.Spacing.xl)
         .accessibilityElement(children: .combine)
+        // Swipe up / down moves through the group; the pages are images
+        // VoiceOver cannot page on its own.
+        .accessibilityAdjustableAction { direction in
+            guard let index = group.members.firstIndex(where: { $0.assetId == currentId }) else { return }
+            let next = direction == .increment ? index + 1 : index - 1
+            if group.members.indices.contains(next) { currentId = group.members[next].assetId }
+        }
+        .accessibilityValue(group.members.first { $0.assetId == currentId }.map(facts) ?? "")
     }
 
     /// The keeper's reasons on the keeper, a copy's caption on a copy.

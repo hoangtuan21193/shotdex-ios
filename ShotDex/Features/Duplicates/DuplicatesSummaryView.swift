@@ -243,10 +243,10 @@ struct DuplicatesScanProgress: View {
 
     static func text(_ scan: DuplicateScanProgress, found: Int) -> String {
         guard scan.total > 0 else {
-            return String(localized: "Preparing scan…", comment: "Duplicates header: before the first batch")
+            return String(localized: "Getting ready…", comment: "Duplicates header: before the first batch of the check")
         }
-        let scanning = String(localized: "Scanning \(scan.processed.formatted()) of \(scan.total.formatted())",
-                              comment: "Duplicates header: scan progress")
+        let scanning = String(localized: "Checking \(scan.processed.formatted()) of \(scan.total.formatted())",
+                              comment: "Duplicates header: check progress")
         guard found > 0 else { return scanning }
         return scanning + " · " + String(localized: "\(found.formatted()) found so far",
                                          comment: "Duplicates header: groups already found while scanning")

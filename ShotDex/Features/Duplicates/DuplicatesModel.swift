@@ -939,9 +939,9 @@ final class DuplicatesModel {
         guard full.isEmpty else {
             notice = DuplicateNotice(
                 title: full.count == 1
-                    ? String(localized: "1 Group Has Every Copy Marked", comment: "Duplicates: Delete blocked because a group would lose every photo")
-                    : String(localized: "\(full.count) Groups Have Every Copy Marked", comment: "Duplicates: Delete blocked because groups would lose every photo"),
-                message: String(localized: "Nothing would be kept from them. Unmark at least one photo in each, then delete.", comment: "Duplicates: how to get past the every-copy-marked block")
+                    ? String(localized: "1 Group Would Lose Every Photo", comment: "Duplicates: Delete blocked because a group would lose every photo")
+                    : String(localized: "\(full.count) Groups Would Lose Every Photo", comment: "Duplicates: Delete blocked because groups would lose every photo"),
+                message: String(localized: "Keep at least one photo in each group, then delete again.", comment: "Duplicates: how to get past the every-photo-marked block")
             )
             return false
         }
@@ -981,7 +981,9 @@ final class DuplicatesModel {
             return false
         } catch {
             notice = DuplicateNotice(
-                title: String(localized: "Couldn't Delete \(assets.count) Photos", comment: "Duplicates: the system delete failed"),
+                title: assets.count == 1
+                    ? String(localized: "Couldn't Delete 1 Photo", comment: "Duplicates: the system delete failed")
+                    : String(localized: "Couldn't Delete \(assets.count) Photos", comment: "Duplicates: the system delete failed"),
                 message: error.localizedDescription + " "
                     + String(localized: "Nothing was deleted; your selection is kept.", comment: "Duplicates: after a failed delete")
             )
