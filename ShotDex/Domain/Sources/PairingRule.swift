@@ -1,11 +1,12 @@
 import Foundation
 
 /// One photo from a RAW and its rendered twin (FS-19.01 §3, FS-17.01 §2b):
-/// a RAW and a JPEG/JPG/HEIC/HEIF with the same base name, case-insensitive,
+/// a RAW and a JPEG/JPG/HEIC/HEIF (Canon writes HEIF as `.HIF`, FS-20 AC-6)
+/// with the same base name, case-insensitive,
 /// in the same folder, are one photo whose original is the RAW. Anything
 /// else in the group — two RAWs, two JPEGs — stays a photo of its own.
 enum PairingRule {
-    static let renderedTwinExtensions: Set<String> = ["jpg", "jpeg", "heic", "heif"]
+    static let renderedTwinExtensions: Set<String> = ["jpg", "jpeg", "heic", "heif", "hif"]
 
     static func isRaw(_ name: String) -> Bool {
         FileTypeBadge.text(forExtension: (name as NSString).pathExtension) == "RAW"

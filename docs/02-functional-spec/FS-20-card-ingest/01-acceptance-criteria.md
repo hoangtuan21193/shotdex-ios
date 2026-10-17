@@ -9,7 +9,7 @@ Thuộc [FS-20 Nhập từ thẻ nhớ](README.md). Mục số trong cột Cho/K
 | AC-3 | ngày 27/9 có 228 ảnh, cả 228 đã nhập | mở màn | ngày đó là 1 dòng thu gọn `228 already imported`, 0 ô | ⚠️ chưa có |
 | AC-4 | ảnh `IMG_6123.CR3` chụp 2026-10-03; Folders Year/Date; mẫu Date_`Kyoto`_Original Number | Import | file đích `RAW/2026/2026-10-03/2026-10-03_Kyoto_6123.CR3`; SHA-256 = bản trên thẻ | ⚠️ chưa có |
 | AC-5 | preset Creator `Linh Pham`, Copyright `© 2026 Linh Pham`, Keywords Kyoto, autumn | Import 3 ảnh | mỗi ảnh có `.xmp` cạnh file mang Creator, Copyright và 2 keyword; SHA-256 của file ảnh không đổi | ⚠️ chưa có |
-| AC-6 | cặp `IMG_0042.CR3` + `IMG_0042.JPG` | Import | 1 ô trên lưới; 2 file đích cùng tên, khác đuôi | ⚠️ chưa có |
+| AC-6 | cặp `IMG_0042.CR3` + `IMG_0042.JPG` | Import | 1 ô trên lưới; 2 file đích cùng tên, khác đuôi | ⚠️ nửa danh mục: `CardCatalogTests.pairIsOneTile` (CR3+JPG và CR3+HIF một ô), `.sameNameInTwoDCIMFoldersIsTwoTiles`; nửa "2 file đích cùng tên" chờ `IngestRunner` (task 4) |
 | AC-7 | đích đã có `2026-10-03_Kyoto_0001.cr3`; mẻ có 2 ảnh ra cùng tên (đếm số máy quay vòng) | Import | `…_0001 (2).CR3` và `…_0001 (3).CR3`; SHA-256 file có sẵn không đổi | ⚠️ chưa có |
 | AC-8 | backup bật, LaCie không cắm | mở màn | hàng Backup *Not connected*, footer nêu tên ổ, Import mờ | ⚠️ chưa có |
 | AC-9 | mẻ 811 ảnh, backup bật, Eject bật | rút LaCie ở ảnh ~357 | bản chính chạy hết 811; thẻ không nhả; tổng kết *Backup incomplete — 357 of 811.* + Back Up Remaining; cắm lại → chạy 454 còn lại | ⚠️ chưa có |

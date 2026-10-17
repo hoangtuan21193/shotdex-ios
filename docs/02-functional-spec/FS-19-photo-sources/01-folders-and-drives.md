@@ -39,7 +39,7 @@ theo ngày chụp ngay khi đọc, và theo dõi thư mục để file mới t�
 
 ## 3. Ghép RAW + JPEG
 
-- File RAW và JPEG/JPG/HEIC/HEIF **cùng tên gốc** (không phân biệt hoa thường) **trong cùng thư mục** → **một ảnh**,
+- File RAW và JPEG/JPG/HEIC/HEIF (cả `.HIF` của Canon) **cùng tên gốc** (không phân biệt hoa thường) **trong cùng thư mục** → **một ảnh**,
   nhãn `RAW+JPG` / `RAW+HEIC` như [FS-17.01 §2b](../FS-17-import-from-server/01-browse.md).
 - RAW là bản gốc (editor mở RAW); JPEG cho thumbnail và preview khi RAW chưa giải được.
 - Một sidecar cho cả cặp (`<tên gốc>.xmp`, [02 §5](02-identity-and-sidecars.md)). Danh tính của cặp lấy theo file RAW.
