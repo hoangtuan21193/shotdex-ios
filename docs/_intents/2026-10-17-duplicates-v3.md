@@ -5,7 +5,7 @@
 | Tác giả | Hoang Tuan + Claude |
 | Ngày | 2026-10-17 |
 | Trạng thái | accepted (2026-10-17) |
-| Tiến độ | **chưa làm** (2026-10-17) — spec FS-06.06 + 06b v3, 50 AC (33 + 17) |
+| Tiến độ | **chưa làm** (2026-10-17) — plan [2026-10-17-fs0606-duplicates-v3](../_plans/2026-10-17-fs0606-duplicates-v3.md) chờ duyệt, 27 task (board + 26) |
 | Nguồn | phản hồi người dùng ("một trong những tính năng quan trọng") + review 7 agent: 3 persona, 2 UX, khảo sát 13 app, ý kiến người dùng app khác |
 | Spec sinh ra từ đây | [FS-06.06](../02-functional-spec/FS-06-collections/06-duplicates.md) + [FS-06.06b](../02-functional-spec/FS-06-collections/06b-duplicates-marks-merge-delete.md) (v3); ghi chú đảo phạm vi ở [FS-02.05](../02-functional-spec/FS-02-photo-detail/05-burst-selection.md) |
 

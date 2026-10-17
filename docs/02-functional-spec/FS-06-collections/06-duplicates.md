@@ -180,6 +180,8 @@ Thẻ bo `r-lg`, đệm 12:
   favorite, in album"*) · **Keep all** · **Not duplicates** (trong menu của Keep all: chạm Keep all = giữ cả phiên này; giữ lâu
   → *Not duplicates* = không bao giờ hiện lại) · **Compare** dồn phải.
   - Same moment và focus stack: nút trái là **Choose frames** (mở §8) thay cho Remove the other.
+  - Same moment: bản giữ đề xuất 2×2 ở đầu, các khung còn lại theo **thứ tự chụp** (người dùng 2026-10-17) — một loạt
+    sắp theo điểm không còn đọc được như một loạt. Thứ tự "tốt nhất" ở mọi loại khác dùng **một** hàm: D3 + điểm (§6).
 - **Nhóm lớn** (D9): từ **12 ảnh** trở lên, thẻ chỉ hiện bản giữ + **một hàng** bản sao, rồi viên **Show all 51**; chạm mở cả
   lưới (một lần, nhớ suốt màn). Nút chân thẻ luôn nằm ngay dưới phần đang hiện.
 - **Thu gọn** (v2 §7.4) sau Remove the other / Keep all: viền đỏ của các ô vừa đánh dấu **giữ 0.6 s**, rung nhẹ, rồi mới thu
