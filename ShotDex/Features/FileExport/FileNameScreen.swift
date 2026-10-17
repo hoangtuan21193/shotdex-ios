@@ -7,7 +7,9 @@ struct FileNameScreen: View {
     @Bindable var model: FileExportModel
     @FocusState private var isCustomFocused: Bool
 
-    private let tokens: [FileNameTemplate.Token] = [.original, .date, .time, .camera, .lens, .seq]
+    /// The Text chip's word, to select in the custom field (iOS 18 and
+    /// later) so it can be typed over (FS-20 AC-25).
+    @State private var wordToSelect: Range<String.Index>?
 
     var body: some View {
         Form {
@@ -37,11 +39,7 @@ struct FileNameScreen: View {
 
             Section {
                 HStack {
-                    TextField(ExportCopy.custom, text: $model.customTemplate)
-                        .font(.body.monospaced())
-                        .textInputAutocapitalization(.never)
-                        .autocorrectionDisabled()
-                        .submitLabel(.done)
+                    CustomTemplateField(text: $model.customTemplate, wordToSelect: $wordToSelect)
                         .focused($isCustomFocused)
                     if model.usesCustomTemplate {
                         Image(systemName: "checkmark").fontWeight(.semibold).foregroundStyle(.tint)
@@ -50,24 +48,10 @@ struct FileNameScreen: View {
                 }
                 .accessibilityAddTraits(model.usesCustomTemplate ? .isSelected : [])
 
-                LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: AppTheme.Spacing.sm), count: 3),
-                          spacing: AppTheme.Spacing.sm) {
-                    ForEach(tokens, id: \.self) { token in
-                        Button {
-                            model.insert(token)
-                        } label: {
-                            Label(ExportCopy.tokenTitle(token), systemImage: "plus")
-                                .labelStyle(TokenChipLabelStyle())
-                                .frame(maxWidth: .infinity, minHeight: FileNameMetrics.chipHeight)
-                                // Neutral, the look of `.bordered` + `.tint(.secondary)`
-                                // without its 12pt side padding (three to a row
-                                // wraps "Original Name" otherwise): Export is the
-                                // sheet's one accent button (DESIGN.md §3.1).
-                                .background(Color(.secondarySystemFill), in: Capsule())
-                        }
-                        .buttonStyle(.plain)
-                        .foregroundStyle(.secondary)
-                        .accessibilityLabel(ExportCopy.insertToken(token))
+                FileNameTokenGrid { chip in
+                    if let typed = model.insert(chip) {
+                        isCustomFocused = true
+                        wordToSelect = typed
                     }
                 }
                 .padding(.vertical, AppTheme.Spacing.xs)
@@ -94,18 +78,51 @@ struct FileNameScreen: View {
     }
 }
 
-/// `+ Date` on one line, or two when the column is narrow.
-private struct TokenChipLabelStyle: LabelStyle {
-    func makeBody(configuration: Configuration) -> some View {
-        HStack(spacing: AppTheme.Spacing.xs) {
-            configuration.icon.font(.caption.weight(.semibold))
-            configuration.title.font(.subheadline).lineLimit(2).multilineTextAlignment(.center)
+/// The custom template field. From iOS 18 it can select a range, which is how
+/// the Text chip's word arrives ready to type over; before that the word is
+/// appended unselected.
+private struct CustomTemplateField: View {
+    @Binding var text: String
+    @Binding var wordToSelect: Range<String.Index>?
+
+    var body: some View {
+        if #available(iOS 18.0, *) {
+            SelectableTemplateField(text: $text, wordToSelect: $wordToSelect)
+        } else {
+            TextField(ExportCopy.custom, text: $text)
+                .templateFieldStyle()
         }
-        .padding(.horizontal, AppTheme.Spacing.sm)
     }
 }
 
-/// From `PH34_FileName`: chips 32pt tall, three to a row.
-enum FileNameMetrics {
-    static let chipHeight: CGFloat = AppTheme.Size.pillHeightLight
+@available(iOS 18.0, *)
+private struct SelectableTemplateField: View {
+    @Binding var text: String
+    @Binding var wordToSelect: Range<String.Index>?
+    @State private var selection: TextSelection?
+
+    var body: some View {
+        TextField(ExportCopy.custom, text: $text, selection: $selection)
+            .templateFieldStyle()
+            .onChange(of: wordToSelect) { _, range in
+                guard let range else { return }
+                wordToSelect = nil
+                // After the field has taken focus: a selection set in the
+                // same pass is replaced by the caret focus puts at the end.
+                Task { @MainActor in
+                    try? await Task.sleep(for: .milliseconds(100))
+                    guard range.upperBound <= text.endIndex else { return }
+                    selection = TextSelection(range: range)
+                }
+            }
+    }
+}
+
+private extension View {
+    func templateFieldStyle() -> some View {
+        font(.body.monospaced())
+            .textInputAutocapitalization(.never)
+            .autocorrectionDisabled()
+            .submitLabel(.done)
+    }
 }

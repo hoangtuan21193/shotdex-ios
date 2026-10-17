@@ -53,6 +53,6 @@ dùng được là khuôn của Export to Files (07b) và FS-15/17.
 | AC-22 | ❌ | — | `CardHashPass` nền (SHA-256 cả file + hash nội dung FS-19) tinh chỉnh trạng thái |
 | AC-23 | ❌ | E8 đẩy WAV/MP4/THM vào `others` | `CardCatalog`: WAV theo ô ảnh cùng tên gốc, MP4/MOV ô riêng, bỏ THM/MISC/ẩn/file danh mục |
 | AC-24 | ❌ | công tắc XMP chưa có (FS-19.02 §5) | lượt nhập luôn ghi `.xmp`; không đổi công tắc |
-| AC-25 | ⚠️ | `Features/FileExport/FileNameScreen.swift:10` có 6 chip; `Domain/FileExport/ExportCopy.swift:115-124` gọi `{seq}` là **Number**; `:144` mẫu "Date + Camera + Number" | đã chốt (SPEC-DECISIONS FS-20, gói 5 điểm): một bộ 8 chip chung, Number → Sequence. Còn hỏi Q1 (chip **Text** ở ô chữ Export) |
+| AC-25 | ✅ nửa Export (2026-10-18) | `FileNameChip.all` + `FileNameTokenGrid` (`Features/FileExport/FileNameTokenGrid.swift`), token `originalNumber`, `seq`→`sequence`, mẫu "Date + Camera + Sequence" | task 1 xong; nửa Import ở task 13 |
 | AC-26 | ❌ | E11 | bộ chạy nền chung `ContinuedProcessingRun` (iOS 26) + nhánh trước 26 = Stop + Import Remaining |
 | AC-27 | ❌ | — | bố cục iPhone/Duo ngoài theo `PH_Ingest`, `DC_Ingest`; Duo ngoài chừa rail 84 |

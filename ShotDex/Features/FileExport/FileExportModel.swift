@@ -255,10 +255,13 @@ final class FileExportModel: Identifiable {
         }
     }
 
-    /// A token chip: appended to the custom template, which becomes the one
-    /// in use.
-    func insert(_ token: FileNameTemplate.Token) {
-        customTemplate += token.placeholder
+    /// A chip: appended to the custom template, which becomes the one in
+    /// use. Returns where the Text chip's word sits, to select it.
+    @discardableResult
+    func insert(_ chip: FileNameChip) -> Range<String.Index>? {
+        let result = chip.appended(to: customTemplate)
+        customTemplate = result.pattern
+        return result.typedRange
     }
 
     var usesCustomTemplate: Bool { !template.isBuiltIn }

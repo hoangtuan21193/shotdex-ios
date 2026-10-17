@@ -43,7 +43,7 @@ chờ phiên đó commit.
 | FS-02.01b §2 | `.` = Favorite; ← → lùi-tiến một khung trên video đang dừng |
 | FS-03.04, FS-03.07b | bỏ luật "không chọn không gian màu": popup Original/sRGB/P3/Adobe RGB mọi thiết bị |
 | FS-03.06 §2 | bản sao tên `<tên> (edited).jpg`, trùng thêm ` (2)`; nút iOS đổi thành **Save as Copy** |
-| FS-03.07b §5, 07c | một bộ token tên chung với nhập thẻ: Original Name · Original Number · Date · Time · Camera · Lens · Sequence · Text (Number → Sequence) |
+| FS-03.07b §5, 07c | một bộ token tên chung với nhập thẻ: Original Name · Original Number · Date · Time · Camera · Lens · Sequence · Text (Number → Sequence) **đã áp 2026-10-18** (FS-20 task 1) |
 | FS-03.09b | ô Sync theo nhóm khi Paste Settings |
 | FS-03.13a | Mac tự Done khi rời ảnh Photos, không hỏi bỏ thay đổi |
 | FS-03.14b | lệnh Import Lightroom Edits |

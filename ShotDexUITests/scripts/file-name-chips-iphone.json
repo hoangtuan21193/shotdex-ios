@@ -1,0 +1,117 @@
+{
+ "steps": [
+  {
+   "action": "launch",
+   "arguments": [
+    "-ShotDexExportFolder",
+    "Exports"
+   ]
+  },
+  {
+   "action": "wait",
+   "seconds": 8
+  },
+  {
+   "action": "tap",
+   "label": "Library",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "tap",
+   "label": "Select photos",
+   "type": "button"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "screenshot",
+   "name": "00-selecting"
+  },
+  {
+   "action": "tap",
+   "x": 0.17,
+   "y": 0.25
+  },
+  {
+   "action": "tap",
+   "x": 0.5,
+   "y": 0.25
+  },
+  {
+   "action": "tap",
+   "label": "More selection actions"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "tap",
+   "label": "Export\u2026"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  },
+  {
+   "action": "tap",
+   "label": "Current Version"
+  },
+  {
+   "action": "wait",
+   "seconds": 1
+  },
+  {
+   "action": "screenshot",
+   "name": "01-sheet"
+  },
+  {
+   "action": "dump",
+   "name": "01-sheet",
+   "type": "button"
+  },
+  {
+   "action": "tap",
+   "label": "Name"
+  },
+  {
+   "action": "wait",
+   "seconds": 2
+  },
+  {
+   "action": "screenshot",
+   "name": "02-file-name"
+  },
+  {
+   "action": "dump",
+   "name": "02-file-name",
+   "type": "button"
+  },
+  {
+   "action": "tap",
+   "label": "Insert Text"
+  },
+  {
+   "action": "wait",
+   "seconds": 1.5
+  },
+  {
+   "action": "screenshot",
+   "name": "03-text-chip"
+  },
+  {
+   "action": "dump",
+   "name": "03-text-chip"
+  },
+  {
+   "action": "wait",
+   "seconds": 3
+  }
+ ]
+}

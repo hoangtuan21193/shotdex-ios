@@ -112,20 +112,23 @@ Sheet là **một Form**: iPhone detent large 402pt; iPad canh giữa, rộng t�
 | Token | Ra | Khi thiếu |
 |---|---|---|
 | `{original}` | tên gốc không đuôi: `DSCF1000` | không bao giờ thiếu |
+| `{originalNumber}` | chữ số cuối tên gốc: `IMG_6123` → `6123`, `DSCF0042` → `0042` | bỏ token khi tên không tận cùng bằng số |
 | `{date}` · `{time}` | ngày chụp `2026-09-20` · giờ `170512`, theo giờ máy | rơi về ngày tạo asset |
 | `{camera}` · `{lens}` | model như chip lọc: `X-T5`, `EOS R6 Mark II` · lens như chip lọc | bỏ token (dưới bảng) |
-| `{seq}` | số thứ tự trong mẻ, đệm 3 chữ số (`001`); mẻ ≥ 1000 ảnh thì 4 | không bao giờ thiếu |
+| `{sequence}` | số thứ tự trong mẻ, đệm 3 chữ số (`001`); mẻ ≥ 1000 ảnh thì 4 | không bao giờ thiếu |
 
-- Mặc định `{original}`. Mẫu dựng sẵn: *Original Name* `{original}` · *Date + Camera + Number* `{date}_{camera}_{seq}`
+- Mặc định `{original}`. Mẫu dựng sẵn: *Original Name* `{original}` · *Date + Camera + Sequence* `{date}_{camera}_{sequence}`
   · *Date + Original Name* `{date}_{original}`. Mẫu tự gõ được nhớ (§3).
 - **Màn File Name** (đẩy từ hàng Name, có Back):
   - section mẫu dựng sẵn: 3 hàng, dấu ✓ ở mẫu đang dùng;
-  - section **Custom**: ô chữ 44pt, lưới chip token 2 hàng (Original Name · Date · Time · Camera · Lens · Number,
-    cao 32pt), dòng ví dụ. Gõ vào Custom thì ✓ chuyển sang Custom.
+  - section **Custom**: ô chữ 44pt, lưới 8 chip, 3 một hàng (Original Name · Original Number · Date · Time · Camera · Lens ·
+    Sequence · Text, cao 32pt; chữ dài xuống hai dòng) — **cùng một danh sách với inspector nhập thẻ** (FS-20 AC-25,
+    `FileNameChip.all`). Chip **Text** không phải token: thêm `_Text` (bỏ `_` khi mẫu trống hoặc đã tận cùng bằng dấu
+    nối), chữ `Text` được bôi chọn để gõ đè (iOS 18 trở lên; iOS 17 chỉ thêm), dòng ví dụ. Gõ vào Custom thì ✓ chuyển sang Custom.
 - Dòng ví dụ dùng **ảnh đầu tiên của mẻ**: `2026-09-20_X-T5_001.jpg`, đổi ngay khi gõ.
-- Token thiếu giá trị thì bị bỏ, kéo theo dấu nối thừa: `{date}_{camera}_{seq}` của ảnh chụp màn hình ra
+- Token thiếu giá trị thì bị bỏ, kéo theo dấu nối thừa: `{date}_{camera}_{sequence}` của ảnh chụp màn hình ra
   `2026-09-21_003.jpg`, không ra `2026-09-21__003.jpg`.
-- `{seq}` đánh theo **ảnh**, không theo file; thứ tự theo ngày chụp rồi tên gốc. Cặp RAW+JPEG và Live Photo dùng chung một
+- `{sequence}` đánh theo **ảnh**, không theo file; thứ tự theo ngày chụp rồi tên gốc. Cặp RAW+JPEG và Live Photo dùng chung một
   tên, khác đuôi: `2026-09-20_X-T5_001.RAF` + `.JPG`.
 - Ký tự ổ exFAT/FAT không nhận (`" * / : < > ? \ |`, ký tự điều khiển) thành `-`; bỏ `.` ở đầu; tên dài quá 200
   ký tự thì cắt. Vì SSD thường format exFAT, một luật cho mọi đích.

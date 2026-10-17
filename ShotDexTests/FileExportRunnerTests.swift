@@ -21,14 +21,14 @@ import ShotDexKit
         ]
     }
 
-    /// AC-7: Unmodified Original with `{date}_{seq}` and Live Photo Video on
+    /// AC-7: Unmodified Original with `{date}_{sequence}` and Live Photo Video on
     /// — five files, the pair and the Live Photo sharing a name, original
     /// extensions as they were, every byte equal to the original.
     @Test func unmodifiedCopiesEveryOriginalByteForByte() async throws {
         let fixture = ExportFixture()
         defer { fixture.cleanUp() }
         let items = try ac7Items(fixture)
-        let plan = try fixture.plan(items, mode: .unmodifiedOriginal, template: FileNameTemplate("{date}_{seq}"))
+        let plan = try fixture.plan(items, mode: .unmodifiedOriginal, template: FileNameTemplate("{date}_{sequence}"))
 
         let report = await fixture.runner().run(FileExportJob(plan: plan, mode: .unmodifiedOriginal))
 
@@ -53,7 +53,7 @@ import ShotDexKit
         let fixture = ExportFixture()
         defer { fixture.cleanUp() }
         let items = try ac7Items(fixture)
-        let plan = try fixture.plan(items, mode: .unmodifiedOriginal, template: FileNameTemplate("{date}_{seq}"), livePhotoVideo: false)
+        let plan = try fixture.plan(items, mode: .unmodifiedOriginal, template: FileNameTemplate("{date}_{sequence}"), livePhotoVideo: false)
 
         _ = await fixture.runner().run(FileExportJob(plan: plan, mode: .unmodifiedOriginal))
 

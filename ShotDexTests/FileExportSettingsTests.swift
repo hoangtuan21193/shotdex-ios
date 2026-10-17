@@ -32,7 +32,7 @@ import ShotDexKit
 
         first.settings.dateFolders = true
         first.choosePreset(Self.client.id)
-        first.settings.nameTemplate = FileNameTemplate.dateCameraNumber.pattern
+        first.settings.nameTemplate = FileNameTemplate.dateCameraSequence.pattern
         first.settings.conflictPolicy = .skip
         first.settings.includesLivePhotoVideo = false
         first.mode = .unmodifiedOriginal
@@ -47,7 +47,7 @@ import ShotDexKit
         #expect(second.settings.format == .jpeg)
         #expect(second.settings.quality == 0.9)
         #expect(second.settings.colorSpace == .original)
-        #expect(second.template == .dateCameraNumber)
+        #expect(second.template == .dateCameraSequence)
         #expect(second.settings.conflictPolicy == .skip)
         #expect(!second.settings.includesLivePhotoVideo)
         // Metadata starts at the Settings level, Version at Edited.

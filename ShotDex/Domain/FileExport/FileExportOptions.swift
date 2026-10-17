@@ -62,7 +62,7 @@ struct FileExportSettings: Codable, Equatable, Sendable {
     /// The file name template, in tokens (FS-03.07b §5).
     var nameTemplate = FileNameTemplate.originalName.pattern
     /// What was last typed under Custom, kept while a built-in is in use.
-    var customNameTemplate = FileNameTemplate.dateCameraNumber.pattern
+    var customNameTemplate = FileNameTemplate.dateCameraSequence.pattern
     var conflictPolicy: FileExportConflictPolicy = .keepBoth
     var includesLivePhotoVideo = true
 

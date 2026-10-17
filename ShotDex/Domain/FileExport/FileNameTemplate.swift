@@ -11,11 +11,12 @@ struct FileNameValues: Sendable, Equatable {
     var lens: String?
 }
 
-/// A file name template — `{date}_{camera}_{seq}` — and how it becomes a
-/// name (FS-03.07b §5). Pure, so every rule is a unit test.
+/// A file name template — `{date}_{camera}_{sequence}` — and how it becomes
+/// a name (FS-03.07b §5). Export and card import share it (FS-20 AC-25).
+/// Pure, so every rule is a unit test.
 struct FileNameTemplate: Sendable, Equatable, Hashable {
     enum Token: String, CaseIterable, Sendable {
-        case original, date, time, camera, lens, seq
+        case original, originalNumber, date, time, camera, lens, sequence
 
         var placeholder: String { "{\(rawValue)}" }
     }
@@ -25,10 +26,10 @@ struct FileNameTemplate: Sendable, Equatable, Hashable {
     init(_ pattern: String) { self.pattern = pattern }
 
     static let originalName = FileNameTemplate("{original}")
-    static let dateCameraNumber = FileNameTemplate("{date}_{camera}_{seq}")
+    static let dateCameraSequence = FileNameTemplate("{date}_{camera}_{sequence}")
     static let dateOriginal = FileNameTemplate("{date}_{original}")
     /// The three the File Name screen lists above Custom, in order.
-    static let builtIns: [FileNameTemplate] = [.originalName, .dateCameraNumber, .dateOriginal]
+    static let builtIns: [FileNameTemplate] = [.originalName, .dateCameraSequence, .dateOriginal]
 
     /// Longest name before the extension; exFAT allows 255 UTF-16 units and
     /// Keep Both may still add ` (12)`.
@@ -43,7 +44,7 @@ struct FileNameTemplate: Sendable, Equatable, Hashable {
     /// A template with nothing in it can't name a file; Export dims.
     var isUsable: Bool { !pattern.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
 
-    /// `{seq}` is three digits, four from a batch of 1,000, and so on.
+    /// `{sequence}` is three digits, four from a batch of 1,000, and so on.
     static func sequenceWidth(count: Int) -> Int { max(3, String(max(0, count)).count) }
 
     private enum Segment: Equatable {
@@ -75,7 +76,7 @@ struct FileNameTemplate: Sendable, Equatable, Hashable {
 
     /// The name before its extension, cleaned for any drive. A token with no
     /// value is left out with one separator beside it, so a screenshot's
-    /// `{date}_{camera}_{seq}` is `2026-09-21_003`, never `2026-09-21__003`.
+    /// `{date}_{camera}_{sequence}` is `2026-09-21_003`, never `2026-09-21__003`.
     /// A template that leaves nothing names the file after its original.
     func baseName(
         for values: FileNameValues,
@@ -122,12 +123,19 @@ struct FileNameTemplate: Sendable, Equatable, Hashable {
     private func value(of token: Token, _ values: FileNameValues, sequence: Int, width: Int, timeZone: TimeZone) -> String? {
         switch token {
         case .original: values.original
+        case .originalNumber: Self.trailingDigits(of: values.original)
         case .date: Self.format(values.captureDate, "yyyy-MM-dd", timeZone)
         case .time: Self.format(values.captureDate, "HHmmss", timeZone)
         case .camera: values.camera.flatMap { $0.isEmpty ? nil : $0 }
         case .lens: values.lens.flatMap { $0.isEmpty ? nil : $0 }
-        case .seq: String(repeating: "0", count: max(0, width - String(sequence).count)) + String(sequence)
+        case .sequence: String(repeating: "0", count: max(0, width - String(sequence).count)) + String(sequence)
         }
+    }
+
+    /// `6123` from `IMG_6123`; nil when the name does not end in a digit.
+    static func trailingDigits(of name: String) -> String? {
+        let digits = name.reversed().prefix { $0.isASCII && $0.isNumber }
+        return digits.isEmpty ? nil : String(digits.reversed())
     }
 
     static func format(_ date: Date, _ pattern: String, _ timeZone: TimeZone) -> String {
@@ -150,5 +158,36 @@ struct FileNameTemplate: Sendable, Equatable, Hashable {
         result = String(result.drop { $0 == "." })
         if result.count > maximumLength { result = String(result.prefix(maximumLength)) }
         return result
+    }
+}
+
+/// One chip of the token grid. Export's File Name screen and Import's
+/// inspector read the same eight from here (FS-20 AC-25), so the two can
+/// never offer different words for one thing.
+enum FileNameChip: Hashable, Sendable {
+    case token(FileNameTemplate.Token)
+    /// Plain words of the user's own, not a token: the chip adds `_Text`
+    /// with the word marked for typing over.
+    case text
+
+    static let all: [FileNameChip] = [
+        .token(.original), .token(.originalNumber), .token(.date), .token(.time),
+        .token(.camera), .token(.lens), .token(.sequence), .text,
+    ]
+
+    static let textWord = "Text"
+
+    /// `pattern` with this chip added at the end, and — for Text — where the
+    /// word to type over sits in it.
+    func appended(to pattern: String) -> (pattern: String, typedRange: Range<String.Index>?) {
+        switch self {
+        case .token(let token):
+            return (pattern + token.placeholder, nil)
+        case .text:
+            let needsSeparator = !(pattern.isEmpty || pattern.last.map(FileNameTemplate.separators.contains) == true)
+            let result = pattern + (needsSeparator ? "_" : "") + Self.textWord
+            let start = result.index(result.endIndex, offsetBy: -Self.textWord.count)
+            return (result, start..<result.endIndex)
+        }
     }
 }

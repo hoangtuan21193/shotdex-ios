@@ -12,7 +12,7 @@ import ShotDexKit
                               camera: camera, kind: .photo, files: [file], pixelWidth: 300, pixelHeight: 200)
     }
 
-    /// AC-3: `{date}_{camera}_{seq}` on photo A (X-T5, 17:05), an X-T5 frame
+    /// AC-3: `{date}_{camera}_{sequence}` on photo A (X-T5, 17:05), an X-T5 frame
     /// at 17:06 and a screenshot of the next day — and the folder holds those
     /// three names after a Current Version JPEG export.
     @Test func dateCameraSeqDropsMissingTokens() async throws {
@@ -23,7 +23,7 @@ import ShotDexKit
             try photo("b", "DSCF1001.JPG", minutes: 6, camera: "X-T5", fixture: fixture),
             try photo("a", "DSCF1000.JPG", minutes: 5, camera: "X-T5", fixture: fixture),
         ]
-        let plan = try fixture.plan(items, mode: .currentVersion, template: .dateCameraNumber)
+        let plan = try fixture.plan(items, mode: .currentVersion, template: .dateCameraSequence)
 
         #expect(plan.entries.flatMap { $0.outputs.map(\.name) } == [
             "2026-09-20_X-T5_001.jpg", "2026-09-20_X-T5_002.jpg", "2026-09-21_003.jpg",
@@ -50,11 +50,11 @@ import ShotDexKit
             settingsStore: FileExportSettingsStore(defaults: defaults),
             folders: ExportFolderStore(defaults: defaults)
         )
-        model.chooseTemplate(.dateCameraNumber)
+        model.chooseTemplate(.dateCameraSequence)
         model.settings.format = .jpeg
         #expect(model.exampleName == "2026-09-20_X-T5_001.jpg")
         // Typing into Custom changes it at once, and Custom takes the ✓.
-        model.customTemplate = "{date}_Hoi-An_{seq}"
+        model.customTemplate = "{date}_Hoi-An_{sequence}"
         #expect(model.exampleName == "2026-09-20_Hoi-An_001.jpg")
         #expect(model.usesCustomTemplate)
         // Same as Original keeps a HEIC a HEIC.

@@ -62,7 +62,7 @@ struct FileExportItem: Sendable, Hashable, Identifiable {
 }
 
 /// Every name of a batch, worked out before the first byte (FS-03.07b §5–6):
-/// the order, `{seq}`, Date Folders, and what clashes with what is already in
+/// the order, `{sequence}`, Date Folders, and what clashes with what is already in
 /// the folder — read once, compared case-insensitively. Kept for the whole
 /// run, so Export Remaining writes exactly the names planned.
 struct FileExportPlan: Sendable, Equatable {

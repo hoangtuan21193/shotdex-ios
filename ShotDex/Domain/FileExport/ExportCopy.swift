@@ -125,17 +125,25 @@ enum ExportCopy {
     static func tokenTitle(_ token: FileNameTemplate.Token) -> String {
         switch token {
         case .original: String(localized: "Original Name", table: table, comment: "File name token chip")
+        case .originalNumber: String(localized: "Original Number", table: table, comment: "File name token chip: the digits that end the original name, 6123 from IMG_6123")
         case .date: String(localized: "Date", table: table, comment: "File name token chip")
         case .time: String(localized: "Time", table: table, comment: "File name token chip")
         case .camera: String(localized: "Camera", table: table, comment: "File name token chip")
         case .lens: String(localized: "Lens", table: table, comment: "File name token chip")
-        case .seq: String(localized: "Number", table: table, comment: "File name token chip")
+        case .sequence: String(localized: "Sequence", table: table, comment: "File name token chip: 001, 002… through the batch")
+        }
+    }
+
+    static func chipTitle(_ chip: FileNameChip) -> String {
+        switch chip {
+        case .token(let token): tokenTitle(token)
+        case .text: String(localized: "Text", table: table, comment: "File name chip: adds words of your own")
         }
     }
 
     /// VoiceOver: `Insert Date`.
-    static func insertToken(_ token: FileNameTemplate.Token) -> String {
-        String(localized: "Insert \(tokenTitle(token))", table: table, comment: "File name token chip, VoiceOver label")
+    static func insertChip(_ chip: FileNameChip) -> String {
+        String(localized: "Insert \(chipTitle(chip))", table: table, comment: "File name token chip, VoiceOver label")
     }
 
     static func missingTokenFooter(_ example: String?) -> String {
@@ -151,7 +159,7 @@ enum ExportCopy {
     static func templateTitle(_ template: FileNameTemplate) -> String {
         switch template {
         case .originalName: String(localized: "Original Name", table: table, comment: "File name template")
-        case .dateCameraNumber: String(localized: "Date + Camera + Number", table: table, comment: "File name template")
+        case .dateCameraSequence: String(localized: "Date + Camera + Sequence", table: table, comment: "File name template")
         case .dateOriginal: String(localized: "Date + Original Name", table: table, comment: "File name template")
         default: String(localized: "Custom", table: table, comment: "File name template typed by the user")
         }

@@ -31,7 +31,7 @@ extension FileExportRunnerTests {
             items.append(FileExportItem(id: "p\(index)", filename: "IMG_\(index).JPG", captureDate: ExportFixture.date(minutes: index),
                                         kind: .photo, files: [file]))
         }
-        let plan = try fixture.plan(items, mode: .unmodifiedOriginal, template: FileNameTemplate("{seq}"))
+        let plan = try fixture.plan(items, mode: .unmodifiedOriginal, template: FileNameTemplate("{sequence}"))
         let job = FileExportJob(plan: plan, mode: .unmodifiedOriginal)
         let box = CancelBox()
         let runner = fixture.runner { event in

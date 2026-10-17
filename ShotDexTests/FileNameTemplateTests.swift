@@ -20,24 +20,24 @@ import Testing
         #expect(name("{time}") == "170512")
         #expect(name("{camera}") == "X-T5")
         #expect(name("{lens}") == "XF16-55mmF2.8 R LM WR")
-        #expect(name("{seq}", sequence: 7) == "007")
-        #expect(name("{date}_{camera}_{seq}", sequence: 12) == "2026-09-20_X-T5_012")
+        #expect(name("{sequence}", sequence: 7) == "007")
+        #expect(name("{date}_{camera}_{sequence}", sequence: 12) == "2026-09-20_X-T5_012")
         #expect(name("Trip {date} {original}") == "Trip 2026-09-20 DSCF1000")
         // Not a token: kept as typed, minus what a drive refuses.
         #expect(name("{foo}_{original}") == "{foo}_DSCF1000")
     }
 
-    /// A screenshot has no camera: `{date}_{camera}_{seq}` is
+    /// A screenshot has no camera: `{date}_{camera}_{sequence}` is
     /// `2026-09-21_003`, never `2026-09-21__003`.
     @Test func missingTokenTakesItsSeparator() {
         var screenshot = Self.values
         screenshot.camera = nil
         screenshot.lens = ""
-        #expect(name("{date}_{camera}_{seq}", screenshot, sequence: 3) == "2026-09-20_003")
+        #expect(name("{date}_{camera}_{sequence}", screenshot, sequence: 3) == "2026-09-20_003")
         #expect(name("{camera}_{date}", screenshot) == "2026-09-20")
-        #expect(name("{date}_{camera}_{lens}_{seq}", screenshot, sequence: 3) == "2026-09-20_003")
+        #expect(name("{date}_{camera}_{lens}_{sequence}", screenshot, sequence: 3) == "2026-09-20_003")
         #expect(name("{date}_{camera}", screenshot) == "2026-09-20")
-        #expect(name("{date}_Hoi-An_{camera}_{seq}", screenshot, sequence: 1) == "2026-09-20_Hoi-An_001")
+        #expect(name("{date}_Hoi-An_{camera}_{sequence}", screenshot, sequence: 1) == "2026-09-20_Hoi-An_001")
         // Nothing left: the original name.
         #expect(name("{camera}", screenshot) == "DSCF1000")
     }
@@ -56,17 +56,37 @@ import Testing
         #expect(name("{camera}", slashed) == "EOS R6-II")
     }
 
-    /// `{seq}` is three digits up to 999, four from 1,000.
+    /// `{sequence}` is three digits up to 999, four from 1,000.
     @Test func sequenceWidthGrowsAtAThousand() {
         #expect(FileNameTemplate.sequenceWidth(count: 999) == 3)
         #expect(FileNameTemplate.sequenceWidth(count: 1_000) == 4)
-        #expect(name("{seq}", sequence: 1, width: FileNameTemplate.sequenceWidth(count: 1_000)) == "0001")
-        #expect(name("{seq}", sequence: 1_000, width: 4) == "1000")
+        #expect(name("{sequence}", sequence: 1, width: FileNameTemplate.sequenceWidth(count: 1_000)) == "0001")
+        #expect(name("{sequence}", sequence: 1_000, width: 4) == "1000")
     }
 
     @Test func emptyTemplateIsNotUsable() {
         #expect(!FileNameTemplate("  ").isUsable)
         #expect(FileNameTemplate.originalName.isUsable)
-        #expect(FileNameTemplate.builtIns.map(\.pattern) == ["{original}", "{date}_{camera}_{seq}", "{date}_{original}"])
+        #expect(FileNameTemplate.builtIns.map(\.pattern) == ["{original}", "{date}_{camera}_{sequence}", "{date}_{original}"])
+    }
+
+    /// FS-20 AC-25: `{originalNumber}` is the digits that end the original
+    /// name — `IMG_6123` gives `6123` — and drops out like any token with no
+    /// value when the name ends in a letter.
+    @Test func originalNumberTakesTrailingDigits() {
+        var values = Self.values
+        values.original = "IMG_6123"
+        #expect(name("{originalNumber}", values) == "6123")
+        #expect(name("{date}_{originalNumber}", values) == "2026-09-20_6123")
+        values.original = "DSCF0042"
+        #expect(name("{originalNumber}", values) == "0042")
+        values.original = "Panorama"
+        #expect(name("{date}_{originalNumber}", values) == "2026-09-20")
+    }
+
+    /// `{sequence}` keeps the batch's width wherever it sits.
+    @Test func sequenceKeepsWidth() {
+        #expect(name("{sequence}_{original}", sequence: 42) == "042_DSCF1000")
+        #expect(name("{original}-{sequence}", sequence: 42, width: 4) == "DSCF1000-0042")
     }
 }
