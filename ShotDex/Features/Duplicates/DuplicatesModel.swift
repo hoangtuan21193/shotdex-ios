@@ -50,6 +50,8 @@ final class DuplicatesModel {
     let session: DuplicateReviewSession
     /// Edited / RAW / Live / favourite per member, read per card as it appears.
     private(set) var traits: [String: DuplicateMemberTraits] = [:]
+    /// What the scoring pass measured, per member (FS-06.06 §6).
+    private(set) var scores: [String: DuplicateQualityScore] = [:]
     private var traitsRequested: Set<String> = []
     var comparePresentation: DuplicateComparePresentation?
     /// The Bursts tab (FS-06.06 §7b) — not a kind of group: it
@@ -161,7 +163,7 @@ final class DuplicatesModel {
            let member = group.members.first(where: { $0.assetId == picked }) {
             return member
         }
-        return DuplicateReview.keeper(of: group.members, traits: traits)
+        return DuplicateReview.keeper(of: group.members, traits: traits, scores: scores)
     }
 
     /// Bytes freed by keeping only the keeper. `nil` for a bracket or focus
@@ -173,14 +175,16 @@ final class DuplicatesModel {
 
     func reasons(for group: DuplicateGroup) -> [DuplicateKeepReason] {
         guard let keeper = keeper(of: group) else { return [] }
-        return DuplicateReview.reasons(keeper: keeper, members: group.members, traits: traits)
+        return DuplicateReview.reasons(keeper: keeper, members: group.members, traits: traits, scores: scores)
     }
 
     func difference(of member: HashedPhoto, in group: DuplicateGroup) -> String {
         guard let keeper = keeper(of: group) else {
             return DuplicateReview.dimensions(member) ?? "—"
         }
-        return DuplicateReview.difference(of: member, from: keeper, traits: traits)
+        let sharpest = group.members.compactMap { scores[$0.assetId]?.sharpness }.max()
+        return DuplicateReview.difference(of: member, from: keeper, traits: traits, scores: scores,
+                                          groupSharpest: DuplicateReview.isScored(group.members, scores) ? sharpest : nil)
     }
 
     func traits(of assetId: String) -> DuplicateMemberTraits {
@@ -306,6 +310,7 @@ final class DuplicatesModel {
         loadTask?.cancel()
         phase = .loading
         let store = dependencies.perceptualHashStore
+        let qualityStore = DuplicateQualityStore(database: dependencies.database)
         let retryingFailed = allowNetworkForScanning
         loadTask = Task { [weak self] in
             let result = await Task.detached(priority: .userInitiated) { () -> CacheSnapshot? in
@@ -327,7 +332,8 @@ final class DuplicatesModel {
                     assetsById: Dictionary(uniqueKeysWithValues: assets.map { ($0.localIdentifier, $0) }),
                     coverage: (try? store.coverage()) ?? PerceptualHashCoverage(hashedPhotos: 0, indexedPhotos: 0),
                     scanState: try? store.scanState(),
-                    pendingCount: (try? store.pendingCount(retryingFailed: retryingFailed)) ?? 0
+                    pendingCount: (try? store.pendingCount(retryingFailed: retryingFailed)) ?? 0,
+                    scores: (try? qualityStore.scores(for: ids)) ?? [:]
                 )
             }.value
             guard let self, !Task.isCancelled, let result else { return }
@@ -353,6 +359,7 @@ final class DuplicatesModel {
         var coverage: PerceptualHashCoverage
         var scanState: DuplicateScanState?
         var pendingCount: Int
+        var scores: [String: DuplicateQualityScore] = [:]
     }
 
     private func apply(_ snapshot: CacheSnapshot) {
@@ -367,6 +374,7 @@ final class DuplicatesModel {
         coverage = snapshot.coverage
         scanState = snapshot.scanState
         pendingCount = snapshot.pendingCount
+        scores = snapshot.scores
         // Marks are not cut on reload (§1): marks are per photo, and a regroup
         // that moves a photo keeps its mark.
         UserDefaults.standard.set(self.groups.count, forKey: SettingsKeys.duplicateGroupCount)

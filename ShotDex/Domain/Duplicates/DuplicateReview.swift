@@ -12,7 +12,7 @@ struct DuplicateMemberTraits: Hashable, Sendable {
     var isFavorite = false
 }
 
-/// Order of the group list (FS-06.06 §7, v2 header "Most space first ▾").
+/// Order of the group list (FS-06.06 §7.3).
 enum DuplicateSort: String, CaseIterable, Identifiable, Sendable {
     case mostSpace
     case newest
@@ -29,17 +29,21 @@ enum DuplicateSort: String, CaseIterable, Identifiable, Sendable {
     }
 }
 
-/// Why the suggested keeper was suggested — the chips under it on the card.
+/// Why the suggested keeper was suggested — the chips on it. Measured
+/// reasons come first; with nothing measured, the file reason is named for
+/// what it is ("Biggest file"), never "best" (§1).
 enum DuplicateKeepReason: Hashable, Sendable {
-    case edited, raw, favorite, live, largest
+    case eyesOpen, sharpest, edited, raw, favorite, live, biggestFile
 
     var title: String {
         switch self {
+        case .eyesOpen: String(localized: "Eyes open", comment: "Duplicates: reason chip — the kept photo has eyes open where another has them closed")
+        case .sharpest: String(localized: "Sharpest", comment: "Duplicates: reason chip — the kept photo is the sharpest of the group")
         case .edited: String(localized: "Edited", comment: "Duplicates: reason chip under the suggested keeper")
         case .raw: String(localized: "RAW", comment: "Duplicates: reason chip under the suggested keeper")
         case .favorite: String(localized: "Favorite", comment: "Duplicates: reason chip under the suggested keeper")
         case .live: String(localized: "Live", comment: "Duplicates: reason chip under the suggested keeper")
-        case .largest: String(localized: "Largest", comment: "Duplicates: reason chip under the suggested keeper")
+        case .biggestFile: String(localized: "Biggest file", comment: "Duplicates: reason chip — the kept photo is the biggest file, nothing was measured")
         }
     }
 }
@@ -49,19 +53,31 @@ enum DuplicateKeepReason: Hashable, Sendable {
 /// no UI — the screen feeds it hash rows plus traits.
 enum DuplicateReview {
 
-    /// The member the card suggests keeping (D3): the **edited** one, then the
-    /// **favourite**, then the **bigger file**, then **more pixels**. An edit
-    /// or a heart is work the user did; file size and pixels are proxies for
-    /// "least re-compressed". Ties keep the grouper's order.
+    /// The member the card suggests keeping. When **every** member is scored
+    /// (§6): no closed eyes, then sharper, then less clipping; whatever the
+    /// scores leave tied, and every group not fully scored, goes by the file
+    /// rule D3 — the **edited** one, then the **favourite**, then the **bigger
+    /// file**, then **more pixels**. Ties keep the grouper's order.
     static func keeper(
         of members: [HashedPhoto],
-        traits: [String: DuplicateMemberTraits]
+        traits: [String: DuplicateMemberTraits],
+        scores: [String: DuplicateQualityScore] = [:]
     ) -> HashedPhoto? {
         guard var best = members.first else { return nil }
-        for member in members.dropFirst() where ranks(member, above: best, traits: traits) {
-            best = member
+        let scored = isScored(members, scores)
+        for member in members.dropFirst() {
+            if scored, let verdict = DuplicateQuality.better(scores[member.assetId]!, than: scores[best.assetId]!) {
+                if verdict { best = member }
+            } else if ranks(member, above: best, traits: traits) {
+                best = member
+            }
         }
         return best
+    }
+
+    /// Every member has a measured score.
+    static func isScored(_ members: [HashedPhoto], _ scores: [String: DuplicateQualityScore]) -> Bool {
+        !members.isEmpty && members.allSatisfy { scores[$0.assetId]?.isScored == true }
     }
 
     /// The file rule D3: edited, then favourite, then bigger file, then more
@@ -90,6 +106,7 @@ enum DuplicateReview {
         keeper: HashedPhoto,
         members: [HashedPhoto],
         traits: [String: DuplicateMemberTraits],
+        scores: [String: DuplicateQualityScore] = [:],
         limit: Int = 2
     ) -> [DuplicateKeepReason] {
         let others = members.filter { $0.assetId != keeper.assetId }
@@ -99,6 +116,16 @@ enum DuplicateReview {
             traits[member.assetId] ?? DuplicateMemberTraits()
         }
         var reasons: [DuplicateKeepReason] = []
+        if isScored(members, scores), let kept = scores[keeper.assetId] {
+            if kept.hasTrustedEyes, !kept.hasEyesClosed, others.contains(where: { scores[$0.assetId]?.hasEyesClosed == true }) {
+                reasons.append(.eyesOpen)
+            }
+            let sharpness = kept.sharpness ?? 0
+            if sharpness > 0, others.allSatisfy({ (scores[$0.assetId]?.sharpness ?? 0) < sharpness }),
+               others.contains(where: { (scores[$0.assetId]?.sharpness ?? 0) < sharpness * DuplicateQuality.sharpnessTieRatio }) {
+                reasons.append(.sharpest)
+            }
+        }
         if mine.isEdited, others.contains(where: { !trait($0).isEdited }) { reasons.append(.edited) }
         if mine.hasRAW, others.contains(where: { !trait($0).hasRAW }) { reasons.append(.raw) }
         if mine.isFavorite || keeper.isFavorite,
@@ -106,8 +133,13 @@ enum DuplicateReview {
             reasons.append(.favorite)
         }
         if mine.isLive, others.contains(where: { !trait($0).isLive }) { reasons.append(.live) }
+        // "Biggest file" only when nothing was measured: a sharpest keeper
+        // that also happens to be the biggest file is kept for its sharpness.
         let size = keeper.fileSize ?? 0
-        if size > 0, others.allSatisfy({ ($0.fileSize ?? 0) < size }) { reasons.append(.largest) }
+        if !reasons.contains(.sharpest), !reasons.contains(.eyesOpen),
+           size > 0, others.allSatisfy({ ($0.fileSize ?? 0) < size }) {
+            reasons.append(.biggestFile)
+        }
         return Array(reasons.prefix(limit))
     }
 
@@ -116,8 +148,13 @@ enum DuplicateReview {
     static func difference(
         of copy: HashedPhoto,
         from keeper: HashedPhoto,
-        traits: [String: DuplicateMemberTraits]
+        traits: [String: DuplicateMemberTraits],
+        scores: [String: DuplicateQualityScore] = [:],
+        groupSharpest: Double? = nil
     ) -> String {
+        if let measured = qualityCaption(of: copy, keeper: keeper, scores: scores, groupSharpest: groupSharpest) {
+            return measured
+        }
         let mine = traits[copy.assetId] ?? DuplicateMemberTraits(isFavorite: copy.isFavorite)
         let kept = traits[keeper.assetId] ?? DuplicateMemberTraits(isFavorite: keeper.isFavorite)
         if kept.isEdited, !mine.isEdited {
@@ -133,6 +170,32 @@ enum DuplicateReview {
             return String(localized: "Still photo", comment: "Duplicates: a copy is not a Live Photo, unlike the keeper")
         }
         return dimensions(copy) ?? "—"
+    }
+
+    /// What the scores say is wrong with `copy`: *Eyes closed*, *Soft*,
+    /// *Blown highlights*, *Too dark* — in that order (§6).
+    static func qualityCaption(
+        of copy: HashedPhoto,
+        keeper: HashedPhoto,
+        scores: [String: DuplicateQualityScore],
+        groupSharpest: Double?
+    ) -> String? {
+        guard let mine = scores[copy.assetId], mine.isScored else { return nil }
+        let kept = scores[keeper.assetId]
+        if mine.hasEyesClosed {
+            return String(localized: "Eyes closed", comment: "Duplicates: caption — someone in this photo has their eyes closed")
+        }
+        if let best = groupSharpest ?? kept?.sharpness, let sharpness = mine.sharpness,
+           best > 0, sharpness <= best * DuplicateQuality.softRatio {
+            return String(localized: "Soft", comment: "Duplicates: caption — this photo is noticeably less sharp than the sharpest")
+        }
+        if let kept, mine.highlightClip > DuplicateQuality.clipCaption, kept.highlightClip <= DuplicateQuality.clipKeeperMax {
+            return String(localized: "Blown highlights", comment: "Duplicates: caption — bright parts of this photo are clipped to white")
+        }
+        if let kept, mine.shadowClip > DuplicateQuality.clipCaption, kept.shadowClip <= DuplicateQuality.clipKeeperMax {
+            return String(localized: "Too dark", comment: "Duplicates: caption — dark parts of this photo are crushed to black")
+        }
+        return nil
     }
 
     static func dimensions(_ photo: HashedPhoto) -> String? {

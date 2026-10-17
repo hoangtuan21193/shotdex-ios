@@ -2,7 +2,7 @@ import Foundation
 import Testing
 @testable import ShotDex
 
-/// The v2 decision card's rules (FS-06.06 §7, FS-06.06b AC-5, AC-D1…D6).
+/// The decision card's rules (FS-06.06 §6–§7, FS-06.06b).
 struct DuplicateReviewTests {
 
     private func photo(
@@ -51,7 +51,7 @@ struct DuplicateReviewTests {
             "c": .init(isEdited: true, hasRAW: false),
         ]
         let reasons = DuplicateReview.reasons(keeper: keeper, members: [keeper, copy], traits: traits)
-        #expect(reasons == [.raw, .largest])
+        #expect(reasons == [.raw, .biggestFile])
     }
 
     @Test func differenceSaysWhatTheCopyLacksFirst() {
@@ -138,5 +138,45 @@ struct DuplicateReviewTests {
         #expect(metrics.gridHeight(copyCount: 3) == metrics.keeper)
         // Nothing spills past the card.
         #expect(origins.allSatisfy { $0.x + metrics.tile <= 346 })
+    }
+
+    /// AC-Q2: not scored yet → the file rule, and the chip says so honestly.
+    @Test func unscoredGroupSaysBiggestFile() {
+        let sharp = photo("P", size: 3_000_000)
+        let blurred = photo("Q", size: 5_000_000)
+        let members = [sharp, blurred]
+        // P is scored, Q is not: the group is not fully scored.
+        let scores: [String: DuplicateQualityScore] = ["P": .init(sharpness: 900)]
+        let keeper = DuplicateReview.keeper(of: members, traits: [:], scores: scores)
+        #expect(keeper?.assetId == "Q")
+        let reasons = DuplicateReview.reasons(keeper: blurred, members: members, traits: [:], scores: scores)
+        #expect(reasons == [.biggestFile])
+        #expect(!reasons.contains(.sharpest))
+    }
+
+    /// AC-Q4 (simulated scores): closed eyes lose to open ones before sharpness.
+    @Test func eyesClosedRanksBelowEyesOpen() {
+        let closed = photo("closed", size: 9_000_000)
+        let open = photo("open", size: 1_000_000)
+        let scores: [String: DuplicateQualityScore] = [
+            "closed": .init(sharpness: 1200, eyesOpen: 0.05, eyeConfidence: 0.95),
+            "open": .init(sharpness: 800, eyesOpen: 0.9, eyeConfidence: 0.95),
+        ]
+        let members = [closed, open]
+        #expect(DuplicateReview.keeper(of: members, traits: [:], scores: scores)?.assetId == "open")
+        #expect(DuplicateReview.reasons(keeper: open, members: members, traits: [:], scores: scores).first == .eyesOpen)
+        #expect(DuplicateReview.difference(of: closed, from: open, traits: [:], scores: scores) == "Eyes closed")
+    }
+
+    /// Below the confidence bar nothing is said about eyes.
+    @Test func unsureEyesSayNothing() {
+        let a = photo("a", size: 9_000_000)
+        let b = photo("b", size: 1_000_000)
+        let scores: [String: DuplicateQualityScore] = [
+            "a": .init(sharpness: 1000, eyesOpen: 0.05, eyeConfidence: 0.4),
+            "b": .init(sharpness: 1000, eyesOpen: 0.9, eyeConfidence: 0.4),
+        ]
+        #expect(DuplicateReview.keeper(of: [a, b], traits: [:], scores: scores)?.assetId == "a")
+        #expect(!DuplicateReview.reasons(keeper: a, members: [a, b], traits: [:], scores: scores).contains(.eyesOpen))
     }
 }
