@@ -360,6 +360,7 @@ struct PhotoDetailScreen: View {
         .onPreferenceChange(SafeAreaBottomKey.self) { safeAreaBottom = $0 }
         .onPreferenceChange(SafeAreaTopKey.self) { safeAreaTop = $0 }
         .onPreferenceChange(ChromeHeightKey.self) { bottomChromeHeight = $0 }
+        .background { arrowKeys }
         .offset(y: max(0, dragOffset.height))
         .scaleEffect(dismissScale)
         .compareHost(
@@ -782,6 +783,13 @@ struct PhotoDetailScreen: View {
                     // the app. They hang off the buttons so the shortcut and the
                     // tap always run the same code.
                     .keyboardShortcut("f", modifiers: [])
+                    .background {
+                        // "." is Favorite too, on every device (FS-02.01b §2).
+                        Button("Favorite") { viewerKey(.period, metadata: metadata) }
+                            .keyboardShortcut(".", modifiers: [])
+                            .opacity(0)
+                            .accessibilityHidden(true)
+                    }
                     actionBarCenterButton(
                         systemImage: "info.circle",
                         accessibilityLabel: "Info"
@@ -1102,6 +1110,39 @@ struct PhotoDetailScreen: View {
         }
         .buttonStyle(.plain)
         .accessibilityLabel(accessibilityLabel)
+    }
+
+    /// ← → and "." through the one rule every device shares (`ViewerKeyMap`).
+    private func viewerKey(_ key: ViewerKeyMap.Key, metadata: PhotoMetadata? = nil) {
+        switch ViewerKeyMap.action(for: key, isVideo: isCurrentVideo, isPlaying: isCurrentVideoPlaying) {
+        case .toggleFavorite:
+            guard let metadata else { return }
+            showVideoChrome()
+            toggleFavorite(metadata)
+        case .stepFrame(let delta):
+            showVideoChrome()
+            NotificationCenter.default.post(name: .viewerStepFrame, object: nil, userInfo: ["delta": delta])
+        case .page(let delta):
+            // At the first or last item an arrow does nothing.
+            let index = currentIndex + delta
+            guard index >= 0, model.photoId(at: index) != nil else { return }
+            currentIndex = index
+            reseatToken += 1
+            refreshCurrentPhoto()
+        }
+    }
+
+    /// Hidden buttons for ← →: keys still run while the chrome is hidden
+    /// (zoomed in, a video playing past three seconds).
+    private var arrowKeys: some View {
+        ZStack {
+            Button("Previous") { viewerKey(.left) }
+                .keyboardShortcut(.leftArrow, modifiers: [])
+            Button("Next") { viewerKey(.right) }
+                .keyboardShortcut(.rightArrow, modifiers: [])
+        }
+        .opacity(0)
+        .accessibilityHidden(true)
     }
 
     private func handleVideoPlaybackChange(_ playing: Bool) {
@@ -1672,6 +1713,12 @@ private struct DetailVideoPlayer: View {
                 model.pause()
             }
         }
+        // ← → on a paused video, sent by the viewer's key rule.
+        .onReceive(NotificationCenter.default.publisher(for: .viewerStepFrame)) { note in
+            guard isActive, let delta = note.userInfo?["delta"] as? Int else { return }
+            onInteraction()
+            model.stepFrame(by: delta)
+        }
         .onChange(of: isChromeVisible) { _, visible in
             if !visible {
                 hasLeftOpeningAutoplay = true
@@ -1786,21 +1833,6 @@ private struct DetailVideoPlayer: View {
             ) {
                 handleSkip(isLeading: false)
             }
-        }
-        .background {
-            Button("Step back one frame") {
-                onInteraction()
-                model.stepFrame(by: -1)
-            }
-            .keyboardShortcut(.leftArrow, modifiers: [])
-            .opacity(0)
-
-            Button("Step forward one frame") {
-                onInteraction()
-                model.stepFrame(by: 1)
-            }
-            .keyboardShortcut(.rightArrow, modifiers: [])
-            .opacity(0)
         }
     }
 
@@ -3346,4 +3378,9 @@ struct PendingHide: Equatable {
     /// Hidden by ShotDex alone — the photo stays in the Photos app, and
     /// comes back from Collections › Hidden.
     let staysInPhotos: Bool
+}
+
+extension Notification.Name {
+    /// The viewer's ← → on a paused video: step the active page's player.
+    static let viewerStepFrame = Notification.Name("ShotDexViewerStepFrame")
 }

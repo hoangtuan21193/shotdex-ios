@@ -29,17 +29,17 @@ Board: không đổi bố cục; không cần sửa board.
 | Phím | Kết quả |
 |---|---|
 | Esc | đóng viewer, như nút X — cùng luật §1 |
-| → / ← | ảnh sau / ảnh trước, như vuốt ngang: đặt lại mức phóng, tắt Live Text; ở ảnh cuối / đầu thì không làm gì |
-| `.` / `,` | video đang dừng: tiến / lùi một khung |
-| F · I · Delete · ⌘S | favorite · Info · xoá · share, như nút cùng chức năng (đã có) |
+| → / ← | ảnh sau / ảnh trước, như vuốt ngang: đặt lại mức phóng, tắt Live Text; ở ảnh cuối / đầu thì không làm gì. **Video đang dừng: tiến / lùi một khung** |
+| `.` · F | favorite (bật/tắt), như nút tim — `.` như Photos cho Mac |
+| I · Delete · ⌘S | Info · xoá · share, như nút cùng chức năng (đã có) |
 
 - Phím chạy **cả khi chrome đang ẩn** (đang phóng, video đang phát quá 3 giây). *Vì chrome ẩn đúng lúc phóng —
   phím gắn vào nút đang ẩn là phím chết.*
 - Có một lớp đang mở trên viewer (sheet Photo Info, menu ⋯, hộp thoại xoá) thì Esc đóng **lớp đó trước**,
   viewer ở lại. Cột Photo Info ở màn rộng ([03b](03b-info-inspector.md)) không phải một lớp: Esc đóng viewer.
-- Video đang phát: → / ← lật trang như ảnh, video dừng.
-- → / ← **luôn lật trang**, cả khi video đang dừng (K8). Video đang dừng thì **`.` / `,`** tiến / lùi một khung,
-  như hai nút Frame ([02](02-video-playback.md) §9); video đang phát thì hai phím này không làm gì.
+- **Một luật mọi thiết bị** (chốt 2026-10-04, FS-18 01b §3, `ViewerKeyMap`): video **đang dừng** thì → / ← tiến /
+  lùi một khung, như hai nút Frame ([02](02-video-playback.md) §9), vẫn trang đó; video **đang phát** thì → / ← lật
+  trang như ảnh, video dừng. `,` không gán. Thay luật K8 cũ (→ / ← luôn lật trang, `.` `,` bước khung).
 - Không có ⌘A, ⌘F.
 - iOS 26 và trước 26 giống nhau: viewer không rẽ nhánh cho phím.
 
@@ -61,7 +61,7 @@ Board: không đổi (phím không có hình).
 | AC-10 | (Z5) iPad dọc 1032×1376, sheet Photo Info đang mở | bấm Esc | sheet đóng, viewer còn ở cùng ảnh; bấm Esc lần nữa thì viewer đóng | ⚠️ chưa có |
 | AC-11 | (Z5) video 30 s đang phát ở 12 s, chrome đã ẩn | bấm → | trang sau hiện, video trang cũ dừng | ⚠️ chưa có |
 | AC-12 | (Z5) như AC-7 trên iPad iOS 18.6 | bấm →, rồi Esc | cùng kết quả như trên iOS 26.5 | ⚠️ chưa có |
-| AC-13 | (K8) video 30 s đang dừng ở 12,00 s, trang 5 của 10 | bấm → | trang 6 hiện; video trang 5 vẫn dừng, không tiến khung nào | ⚠️ chưa có |
-| AC-14 | (K8) video 30 fps đang dừng ở khung 360 | bấm `.` rồi `,` hai lần | khung 361 rồi khung 359; vẫn trang đó, vẫn dừng | ⚠️ chưa có |
-| AC-15 | (K8) video đang phát | bấm `.` | không tiến khung, video phát tiếp | ⚠️ chưa có |
+| AC-13 | video 30 s đang **phát**, trang 5 của 10 | bấm → | trang 6 hiện; video trang 5 dừng | ✅ `ViewerKeyMapTests.arrowsStepAPausedVideoAndPageOtherwise` (luật); lật trang bằng → trên ảnh: ui-drive iPhone 17 26.5 (`Oct 15 7:21` → `Oct 15 8:09` → ← về). ⚠️ video thật trên sim chưa có |
+| AC-14 | video 30 fps đang dừng ở khung 360 | bấm → rồi ← hai lần | khung 361 rồi khung 359; vẫn trang đó, vẫn dừng | ✅ luật `ViewerKeyMapTests`; ⚠️ chạy trên video thật chưa có (sim không có video) |
+| AC-15 | ảnh hoặc video, chưa Favorite | bấm `.` | Favorite bật, như nút tim; video không tiến khung | ✅ `ViewerKeyMapTests.periodIsFavoriteEverywhere`; ui-drive: nút tim đổi "Favorite" → "Unfavorite" sau `.` |
 | AC-16 | (K7) Trips: chuyến 200 ảnh; Places: một ghim 80 ảnh; album mở từ Collections 300 ảnh; Uploaded to Server 150 ảnh — mỗi nơi mở ô đầu rồi lật 30 trang | bấm X | ở cả bốn, ô của ảnh thứ 31 thấy trọn giữa thanh trên và thanh dưới | ⚠️ chưa có |

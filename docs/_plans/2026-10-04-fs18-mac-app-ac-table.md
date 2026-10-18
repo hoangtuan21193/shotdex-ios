@@ -47,7 +47,7 @@ bảng phím Editor chung, mật độ lưới màn rộng, sidebar).
 | AC-19 | ❌ | ⌘E của Video Studio iOS là Export (`VideoStudioScreen.swift:635`) — khớp ý | `CommandCatalog` + menu Clip của FS-12.17b | M58 | M57 |
 | AC-20 | ❌ | xoay chỉ có trong Editor (`PhotoEditorController.swift:2474`); không lệnh xoay từ lưới; **không dùng `UndoManager` ở đâu** (grep 0) | `PhotoEditRecipe` crop/rotate trong kit | M21 | K6 |
 | AC-21 | ✅ một phần (S6 xong: thẻ Cull + viên iOS đọc `MixedDeletionPlan.commandName`; toolbar Mac ở M39) | `MixedDeletionPlanTests` | `MixedDeletionPlan` | S6 + M39 | — |
-| AC-22 | ⚠️ | iOS: ← → **bước khung khi video dừng** (`PhotoDetailScreen.swift:1669-1680`), F = Favorite (`:706`), không có phím "." — khớp luật Mac, **ngược** FS-02.01b §2 (K8) | `VideoPlaybackModel.stepFrame` | S8 (iOS, theo câu trả lời Q1) + M24 (Mac) — 2 commit | Q1 |
+| AC-22 | ✅ một phần (S8 xong: `ViewerKeyMap`, Viewer iOS "." = Favorite, ← → bước khung khi dừng; nửa Mac ở M24) | `ViewerKeyMapTests` | `PhotoDetailScreen` | S8 + M24 | — |
 | AC-23 | ⚠️ᴰ | iPad: ⌘C/⌘V chép-dán edit, ⌘0, ⌘\\ (`PhotoEditorScreen.swift:392-403`) — SPEC-DECISIONS: một bảng chung ⇧⌘C/⇧⌘V, `\`, Z | — (bảng mới `EditorKeyMap`, Domain) | S9 (bảng + iPad binding + test) + M47 (Mac) | sau FS-21 task 29 (cùng DESIGN §10.3) |
 | AC-24 | ❌ | menu nhấn giữ iOS: `PhotoMarkMenus.swift` (bộ con Rating/Flag) | `PhotoMarkMenus` nội dung, `AssetActionsCoordinator.swift:100` (lỗi macOS: UIKit) | M16 | T1 |
 | AC-25 | ❌ | không có trạng thái offline | — | M17 | ⏳ FS-19 |

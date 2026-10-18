@@ -61,7 +61,7 @@ phần theo ngữ cảnh.
 - **Z là phím phóng ở mọi bề mặt xem** (Viewer, toàn màn, Compare, Cull). Space không bao giờ là phóng.
 
 - **"." luôn là Favorite** trên Mac, như Photos cho Mac. Video đang dừng: **← →** lùi/tiến một khung; video đang phát:
-  ← → lật trang như iOS. "," không gán. *Chốt 2026-10-04:* khác FS-02.01b §2 (iOS: ". ," bước khung, ← → luôn lật trang).
+  ← → lật trang. "," không gán. Cùng một luật trên iPhone, iPad, Duo ([FS-02.01b](../FS-02-photo-detail/01b-closing-and-keyboard.md) §2, `ViewerKeyMap`).
 - **Một bảng phím Editor** cho Mac và iPad có bàn phím (FS-21): dòng Editor ở trên. iPad bỏ ⌘C/⌘V, ⌘\\, ⌘0 của
   DESIGN.md §10.3; fit ⇄ 100% là Z như mọi bề mặt xem.
 
