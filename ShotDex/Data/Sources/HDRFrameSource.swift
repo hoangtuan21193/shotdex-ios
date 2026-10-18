@@ -41,7 +41,7 @@ enum HDRFrameSource {
                 try await write(resource: raw, to: url)
                 return frameFile(at: url)
             }
-            guard let data = await PhotoStackModel.originalData(for: asset) else { return nil }
+            guard let data = await PhotoLibraryService.originalImageData(for: asset) else { return nil }
             let url = folder.appendingPathComponent(String(format: "hdr-%04d", index))
             try data.write(to: url)
             return frameFile(at: url)

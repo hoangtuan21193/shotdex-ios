@@ -594,14 +594,6 @@ extension PhotoStackModel {
 
     /// The original file's bytes, for the full-resolution pass at save time.
     static func originalData(for asset: PHAsset) async -> Data? {
-        await withCheckedContinuation { continuation in
-            let options = PHImageRequestOptions()
-            options.isNetworkAccessAllowed = true
-            options.deliveryMode = .highQualityFormat
-            options.isSynchronous = false
-            PHImageManager.default().requestImageDataAndOrientation(for: asset, options: options) { data, _, _, _ in
-                continuation.resume(returning: data)
-            }
-        }
+        await PhotoLibraryService.originalImageData(for: asset)
     }
 }
