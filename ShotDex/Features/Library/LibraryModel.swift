@@ -62,7 +62,7 @@ final class LibraryModel {
     private let placeIndexPass: PlaceIndexPass
     private let keywordMirror: ExtendedMetadataMirrorPass?
     private let unsupportedRAWIndex: UnsupportedRAWIndex
-    private let backgroundIndex: BackgroundIndexService
+    private let backgroundIndex: any IndexRunAssertion
     private let photoLibrary: PhotoLibraryService
     private let networkStatus: NetworkMonitor
     private let powerStatus: PowerMonitor
@@ -238,7 +238,7 @@ final class LibraryModel {
     /// Photos keywords in the library with their photo counts (iOS 27).
     private(set) var availableKeywords: [KeywordCount] = []
 
-    init(dependencies: AppDependencies) {
+    init(dependencies: any LibraryServices) {
         self.libraryQueries = dependencies.libraryQueries
         self.filterSuggestions = dependencies.filterSuggestions
         self.metadataStore = dependencies.metadataStore
@@ -246,7 +246,7 @@ final class LibraryModel {
         self.placeIndexPass = dependencies.placeIndexPass
         self.keywordMirror = dependencies.keywordMirror
         self.unsupportedRAWIndex = dependencies.unsupportedRAWIndex
-        self.backgroundIndex = dependencies.backgroundIndex
+        self.backgroundIndex = dependencies.indexRunAssertion
         self.photoLibrary = dependencies.photoLibrary
         self.networkStatus = dependencies.networkStatus
         self.powerStatus = dependencies.powerStatus
@@ -270,6 +270,7 @@ final class LibraryModel {
         }
         // Under memory pressure the PHAsset chunks are the one cache we
         // hold; visible tiles re-fetch their chunk on the next request.
+        #if canImport(UIKit)
         memoryWarningObserver = NotificationCenter.default.addObserver(
             forName: UIApplication.didReceiveMemoryWarningNotification,
             object: nil,
@@ -279,6 +280,7 @@ final class LibraryModel {
                 self?.assetCache.removeAll()
             }
         }
+        #endif
         // Pause/resume iCloud streaming as the network path flips between
         // Wi-Fi and (unpermitted) cellular.
         networkStatus.setPathChangeHandler { [weak self] _, _ in

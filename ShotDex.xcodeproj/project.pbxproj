@@ -378,7 +378,6 @@
 				Features/Library/Cull/CullScreen.swift,
 				Features/Library/Cull/CullSummaryCard.swift,
 				Features/Library/FilterTokenBar.swift,
-				Features/Library/LibraryModel.swift,
 				Features/Library/LibraryScreen.swift,
 				Features/Library/LivePhotoPlayerView.swift,
 				Features/Library/MetadataPanel.swift,

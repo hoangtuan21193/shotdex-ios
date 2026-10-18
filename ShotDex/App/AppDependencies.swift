@@ -705,3 +705,7 @@ final class AppDependencies {
         return AppDependencies(database: database, photoLibrary: PhotoLibraryService())
     }
 }
+
+extension AppDependencies: LibraryServices {
+    var indexRunAssertion: any IndexRunAssertion { backgroundIndex }
+}

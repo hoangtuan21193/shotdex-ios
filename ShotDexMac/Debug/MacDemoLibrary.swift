@@ -1,0 +1,79 @@
+#if DEBUG
+import CoreGraphics
+import Foundation
+import ImageIO
+
+/// `-ShotDexDemoLibrary`: the window over an in-memory library of landscape
+/// pictures — the macOS desktop pictures — instead of the user's Photos.
+/// What screenshots and the board comparison run on: no PhotoKit prompt,
+/// the same days and EXIF every time, and never a photo of a person
+/// (the user's own library has them; tests and screenshots must not).
+enum MacDemoLibrary {
+    static let argument = "-ShotDexDemoLibrary"
+
+    static var isOn: Bool { ProcessInfo.processInfo.arguments.contains(argument) }
+
+    /// Days as on board `Main`: Monday Sep 28 (48), Sunday Sep 27 (112),
+    /// then shorter days back through September.
+    static let days: [(month: Int, day: Int, count: Int)] = [(9, 28, 48), (9, 27, 112), (9, 26, 21), (9, 24, 9), (9, 21, 36)]
+
+    @MainActor
+    static func dependencies() -> MacDependencies {
+        let database = (try? AppDatabase.makeEmpty()) ?? { fatalError("Cannot create database") }()
+        let dependencies = MacDependencies(database: database, photoLibrary: PhotoLibraryService())
+        try? dependencies.metadataStore.saveBatch(rows(), cursorAssetId: nil)
+        return dependencies
+    }
+
+    static func rows() -> [PhotoMetadata] {
+        let lenses: [(camera: String, lens: String, focal: Double, aperture: Double, iso: Int)] = [
+            ("ILCE-7M4", "FE 85mm F1.8", 85, 1.8, 400), ("EOS R6m2", "RF35mm F1.8 MACRO IS STM", 35, 1.4, 3200),
+            ("X-T5", "XF16mmF2.8 R WR", 16, 11, 125), ("ILCE-7M4", "FE 24mm F1.4 GM", 24, 8, 100),
+            ("X-T5", "XF56mmF1.2 R WR", 56, 1.2, 250), ("EOS R6m2", "RF70-200mm F2.8 L IS USM", 135, 1.8, 640),
+            ("ILCE-7M4", "FE 50mm F1.2 GM", 50, 2, 800), ("X-T5", "XF23mmF1.4 R LM WR", 23, 2, 1600),
+        ]
+        let formats = ["HEIC", "RAF", "JPG", "ARW", "HEIC", "CR3", "JPG"]
+        var rows: [PhotoMetadata] = []
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = .current
+        for (dayIndex, day) in days.enumerated() {
+            let start = calendar.date(from: DateComponents(year: 2026, month: day.month, day: day.day, hour: 18))!
+            for n in 0..<day.count {
+                let shot = lenses[(n + dayIndex) % lenses.count]
+                let id = "demo-\(dayIndex)-\(n)"
+                let ext = formats[(n + dayIndex * 3) % formats.count]
+                rows.append(PhotoMetadata(
+                    assetId: id, creationDate: Int(start.timeIntervalSince1970) - n * 90, modificationDate: nil, mediaType: 1,
+                    cameraManufacturer: nil, cameraModel: shot.camera, normalizedCameraModel: shot.camera,
+                    normalizedCameraManufacturer: nil, lensManufacturer: nil, lensModel: shot.lens, normalizedLensModel: shot.lens,
+                    originalFilename: String(format: "DSC%05d.%@", 4100 + n, ext), iso: shot.iso, aperture: shot.aperture,
+                    shutterSpeedSeconds: 1 / 250, shutterSpeedDisplay: "1/250", focalLength: shot.focal, focalLengthIn35mm: nil,
+                    calculatedEquivalentFocalLength: nil, equivalentFocalLength: shot.focal, sensorFormat: nil, cropFactor: nil,
+                    width: 6000, height: 4000, fileSize: 24_000_000, latitude: nil, longitude: nil, isFavorite: n % 11 == 3,
+                    indexedAt: 1, exifStatus: ExifStatus.indexed.rawValue
+                ))
+            }
+        }
+        return rows
+    }
+
+    /// Landscape desktop pictures, decoded once, cycled over the tiles.
+    private static let pictures: [CGImage] = {
+        let folder = URL(fileURLWithPath: "/System/Library/Desktop Pictures/.thumbnails", isDirectory: true)
+        let names = ["Big Sur Coastline", "Catalina Rock", "Big Sur Mountains", "Catalina Coast", "Big Sur Waters Edge",
+                     "Catalina Evening", "Big Sur Horizon", "Catalina Shoreline", "Big Sur Road", "Catalina Clouds",
+                     "Big Sur Shore Rocks", "Catalina Sunset", "Big Sur Aerial", "Catalina Silhouette"]
+        return names.compactMap { name in
+            let url = folder.appendingPathComponent(name + ".heic")
+            return CGImageSourceCreateWithURL(url as CFURL, nil).flatMap { CGImageSourceCreateImageAtIndex($0, 0, nil) }
+        }
+    }()
+
+    static func picture(for assetId: String) -> CGImage? {
+        guard !pictures.isEmpty else { return nil }
+        let index = abs(assetId.hashValue == 0 ? 0 : Int(assetId.split(separator: "-").last.flatMap { Int($0) } ?? 0))
+        let day = Int(assetId.split(separator: "-").dropFirst().first.flatMap { Int($0) } ?? 0)
+        return pictures[(index + day * 5) % pictures.count]
+    }
+}
+#endif

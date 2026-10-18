@@ -2,3 +2,4 @@
 # line, relative to ShotDex/. Empty for now: AppDependencies pulls in ~30
 # iOS-only services (BGTask, widgets, Spotlight), so the Mac composes its own
 # root from the shared data layer (FS-18 T1).
+Features/Library/LibraryModel.swift

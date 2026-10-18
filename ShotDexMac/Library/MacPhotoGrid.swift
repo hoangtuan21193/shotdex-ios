@@ -1,0 +1,254 @@
+import AppKit
+import Photos
+import SwiftUI
+
+/// The Library grid on the Mac (board `Main`, FS-18 K3): an
+/// `NSCollectionView` of square tiles in day sections, newest day first,
+/// seven columns at 1440 wide. The rows come from the shared `LibraryModel`.
+struct MacPhotoGrid: NSViewRepresentable {
+    let items: [LibraryGridItem]
+    let photoLibrary: PhotoLibraryService
+    let asset: (String) -> PHAsset?
+    /// A picture by asset id, for a library that is not Photos (the demo).
+    var picture: ((String) -> CGImage?)? = nil
+
+    func makeCoordinator() -> Coordinator { Coordinator() }
+
+    func makeNSView(context: Context) -> NSScrollView {
+        let layout = NSCollectionViewFlowLayout()
+        layout.minimumInteritemSpacing = MacGridMetrics.spacing
+        layout.minimumLineSpacing = MacGridMetrics.spacing
+        layout.sectionInset = NSEdgeInsets(top: 0, left: MacGridMetrics.sideInset, bottom: MacGridMetrics.sectionGap,
+                                           right: MacGridMetrics.sideInset)
+        layout.headerReferenceSize = NSSize(width: 0, height: MacGridMetrics.headerHeight)
+        let collection = NSCollectionView()
+        collection.collectionViewLayout = layout
+        collection.isSelectable = true
+        collection.allowsMultipleSelection = true
+        collection.backgroundColors = [.clear]
+        collection.register(MacPhotoTile.self, forItemWithIdentifier: MacPhotoTile.identifier)
+        collection.register(MacDayHeader.self, forSupplementaryViewOfKind: NSCollectionView.elementKindSectionHeader,
+                            withIdentifier: MacDayHeader.identifier)
+        collection.dataSource = context.coordinator
+        collection.delegate = context.coordinator
+        context.coordinator.collection = collection
+        let scroll = NSScrollView()
+        scroll.documentView = collection
+        scroll.hasVerticalScroller = true
+        scroll.drawsBackground = false
+        scroll.automaticallyAdjustsContentInsets = true
+        return scroll
+    }
+
+    func updateNSView(_ scroll: NSScrollView, context: Context) {
+        let coordinator = context.coordinator
+        coordinator.photoLibrary = photoLibrary
+        coordinator.asset = asset
+        coordinator.picture = picture
+        coordinator.update(items)
+    }
+
+    @MainActor
+    final class Coordinator: NSObject, NSCollectionViewDataSource, NSCollectionViewDelegateFlowLayout {
+        weak var collection: NSCollectionView?
+        var photoLibrary: PhotoLibraryService?
+        var asset: (String) -> PHAsset? = { _ in nil }
+        var picture: ((String) -> CGImage?)?
+        private var rows: [LibraryGridItem] = []
+        private var sections: [PhotoGridSection] = []
+
+        func update(_ items: [LibraryGridItem]) {
+            // The model keeps the newest at the end (the iOS grid anchors at
+            // the bottom); the Mac reads top-down, newest day first.
+            let newestFirst = Array(items.reversed())
+            guard newestFirst.map(\.assetId) != rows.map(\.assetId) else { return }
+            rows = newestFirst
+            sections = PhotoGridSectionBuilder.sections(creationDates: rows.map(\.creationDateValue), granularity: .day)
+            collection?.reloadData()
+        }
+
+        func numberOfSections(in collectionView: NSCollectionView) -> Int { sections.count }
+
+        func collectionView(_ collectionView: NSCollectionView, numberOfItemsInSection section: Int) -> Int {
+            sections[section].range.count
+        }
+
+        func collectionView(_ collectionView: NSCollectionView, itemForRepresentedObjectAt indexPath: IndexPath) -> NSCollectionViewItem {
+            let tile = collectionView.makeItem(withIdentifier: MacPhotoTile.identifier, for: indexPath) as! MacPhotoTile
+            let row = rows[sections[indexPath.section].range.lowerBound + indexPath.item]
+            tile.show(row, asset: asset(row.assetId), picture: picture?(row.assetId), photoLibrary: photoLibrary,
+                      side: (collectionView.collectionViewLayout as? NSCollectionViewFlowLayout)?.itemSize.width ?? 160)
+            return tile
+        }
+
+        func collectionView(_ collectionView: NSCollectionView, viewForSupplementaryElementOfKind kind: NSCollectionView.SupplementaryElementKind,
+                            at indexPath: IndexPath) -> NSView {
+            let header = collectionView.makeSupplementaryView(ofKind: kind, withIdentifier: MacDayHeader.identifier, for: indexPath) as! MacDayHeader
+            let section = sections[indexPath.section]
+            header.show(section, count: section.range.count)
+            return header
+        }
+
+        func collectionView(_ collectionView: NSCollectionView, layout collectionViewLayout: NSCollectionViewLayout,
+                            sizeForItemAt indexPath: IndexPath) -> NSSize {
+            let side = MacGridMetrics.tileSide(contentWidth: collectionView.bounds.width)
+            return NSSize(width: side, height: side)
+        }
+    }
+}
+
+/// Grid numbers from board `Main` and FS-18 AC-30: seven columns of ~165pt at
+/// 1440, 2pt gaps, 16pt from the content's edges.
+enum MacGridMetrics {
+    static let columns = 7
+    static let spacing: CGFloat = 2
+    static let sideInset: CGFloat = 16
+    static let headerHeight: CGFloat = 44
+    static let sectionGap: CGFloat = 12
+
+    static func tileSide(contentWidth: CGFloat) -> CGFloat {
+        let usable = contentWidth - sideInset * 2 - spacing * CGFloat(columns - 1)
+        return max(80, floor(usable / CGFloat(columns)))
+    }
+}
+
+/// One tile: the photo filled square, its format top-left, EXIF bottom-right
+/// over a shade (board `Main`).
+final class MacPhotoTile: NSCollectionViewItem {
+    static let identifier = NSUserInterfaceItemIdentifier("MacPhotoTile")
+    private let photo = NSView()
+    private let badge = NSTextField(labelWithString: "")
+    private let exif = NSTextField(labelWithString: "")
+    private let shade = CAGradientLayer()
+    private var requestId: PHImageRequestID?
+    private weak var photoLibrary: PhotoLibraryService?
+    private var assetId: String?
+
+    override func loadView() {
+        view = NSView()
+        view.wantsLayer = true
+        photo.wantsLayer = true
+        photo.layer?.contentsGravity = .resizeAspectFill
+        photo.layer?.masksToBounds = true
+        photo.layer?.backgroundColor = NSColor.quaternaryLabelColor.cgColor
+        shade.colors = [NSColor.clear.cgColor, NSColor.black.withAlphaComponent(0.45).cgColor]
+        photo.layer?.addSublayer(shade)
+        badge.font = .systemFont(ofSize: 10, weight: .bold)
+        badge.textColor = .white
+        badge.drawsBackground = true
+        badge.backgroundColor = NSColor.black.withAlphaComponent(0.55)
+        badge.wantsLayer = true
+        badge.layer?.cornerRadius = 4
+        exif.font = .monospacedDigitSystemFont(ofSize: 11, weight: .semibold)
+        exif.textColor = .white
+        exif.alignment = .right
+        for subview in [photo, badge, exif] {
+            subview.translatesAutoresizingMaskIntoConstraints = false
+            view.addSubview(subview)
+        }
+        NSLayoutConstraint.activate([
+            photo.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            photo.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            photo.topAnchor.constraint(equalTo: view.topAnchor),
+            photo.bottomAnchor.constraint(equalTo: view.bottomAnchor),
+            badge.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 8),
+            badge.topAnchor.constraint(equalTo: view.topAnchor, constant: 8),
+            exif.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -8),
+            exif.bottomAnchor.constraint(equalTo: view.bottomAnchor, constant: -6),
+            exif.leadingAnchor.constraint(greaterThanOrEqualTo: view.leadingAnchor, constant: 8),
+        ])
+    }
+
+    override func viewDidLayout() {
+        super.viewDidLayout()
+        let height = view.bounds.height
+        shade.frame = CGRect(x: 0, y: 0, width: view.bounds.width, height: height * 0.4)
+    }
+
+    override var isSelected: Bool {
+        didSet {
+            view.layer?.borderWidth = isSelected ? 3 : 0
+            view.layer?.borderColor = NSColor(MacTheme.accent).cgColor
+        }
+    }
+
+    func show(_ row: LibraryGridItem, asset: PHAsset?, picture: CGImage?, photoLibrary: PhotoLibraryService?, side: CGFloat) {
+        // A reused tile drops a late result by its asset id, below.
+        requestId = nil
+        photo.layer?.contents = nil
+        assetId = row.assetId
+        self.photoLibrary = photoLibrary
+        let format = MacPhotoTile.format(of: row.originalFilename)
+        badge.stringValue = format.map { " \($0) " } ?? ""
+        badge.isHidden = format == nil
+        exif.stringValue = MacPhotoTile.exifLine(row)
+        view.setAccessibilityLabel(row.originalFilename ?? "Photo")
+        if let picture {
+            photo.layer?.contents = picture
+            return
+        }
+        guard let asset, let photoLibrary else { return }
+        let scale = view.window?.backingScaleFactor ?? 2
+        let pixels = CGSize(width: side * scale, height: side * scale)
+        let id = row.assetId
+        requestId = photoLibrary.requestThumbnail(for: asset, targetSize: pixels, allowNetwork: false) { [weak self] image, _ in
+            guard let self, self.assetId == id, let image else { return }
+            self.photo.layer?.contents = image.cgImage
+        }
+    }
+
+    /// `HEIC`, `RAW`, `JPG`, `MOV` — the extension, RAW formats as one word.
+    static func format(of filename: String?) -> String? {
+        guard let ext = filename.map({ ($0 as NSString).pathExtension.uppercased() }), !ext.isEmpty else { return nil }
+        let raw: Set<String> = ["ARW", "CR2", "CR3", "NEF", "RAF", "ORF", "RW2", "DNG", "PEF", "SRW"]
+        if raw.contains(ext) { return "RAW" }
+        return ext == "JPEG" ? "JPG" : ext
+    }
+
+    /// `ISO 400 · 85mm · f/1.8`.
+    static func exifLine(_ row: LibraryGridItem) -> String {
+        var parts: [String] = []
+        if let iso = row.iso { parts.append("ISO \(iso)") }
+        if let focal = row.focalLength { parts.append("\(Int(focal.rounded()))mm") }
+        if let aperture = row.aperture {
+            parts.append("f/" + (aperture == aperture.rounded() ? String(Int(aperture)) : String(format: "%.1f", aperture)))
+        }
+        return parts.joined(separator: " · ")
+    }
+}
+
+/// "Monday, September 28" over the day's photos, count on the right.
+final class MacDayHeader: NSView, NSCollectionViewElement {
+    static let identifier = NSUserInterfaceItemIdentifier("MacDayHeader")
+    private let title = NSTextField(labelWithString: "")
+    private let count = NSTextField(labelWithString: "")
+
+    override init(frame: NSRect) {
+        super.init(frame: frame)
+        title.font = .systemFont(ofSize: 15, weight: .semibold)
+        count.font = .monospacedDigitSystemFont(ofSize: 12, weight: .regular)
+        count.textColor = .secondaryLabelColor
+        for label in [title, count] {
+            label.translatesAutoresizingMaskIntoConstraints = false
+            addSubview(label)
+        }
+        NSLayoutConstraint.activate([
+            title.leadingAnchor.constraint(equalTo: leadingAnchor, constant: MacGridMetrics.sideInset + 4),
+            title.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -8),
+            count.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -MacGridMetrics.sideInset),
+            count.firstBaselineAnchor.constraint(equalTo: title.firstBaselineAnchor),
+        ])
+    }
+
+    required init?(coder: NSCoder) { fatalError("init(coder:) is not used") }
+
+    func show(_ section: PhotoGridSection, count photos: Int) {
+        switch section.kind {
+        case .date(let date): title.stringValue = date.formatted(.dateTime.weekday(.wide).month(.wide).day())
+        case .undated: title.stringValue = String(localized: "No Date", comment: "Mac grid: header of photos with no capture date")
+        }
+        count.stringValue = photos == 1
+            ? String(localized: "1 photo", comment: "Mac grid: day header count")
+            : String(localized: "\(photos) photos", comment: "Mac grid: day header count")
+    }
+}

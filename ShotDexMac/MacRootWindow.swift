@@ -1,92 +1,119 @@
 import SwiftUI
 
-/// The Library window (board `Main`): sources, collections and utilities in
-/// the sidebar; the selected place in the content.
+/// The Library window (board `Main`, FS-18 01 §1): sidebar 228 with
+/// Library, Sources, Collections and Utilities; a toolbar of capsule groups
+/// over the content; the grid under it.
 struct MacRootWindow: View {
+    @Environment(MacDependencies.self) private var dependencies
     @State private var selection: MacSidebarItem? = .allPhotos
+    @State private var library: LibraryModel?
+    @State private var searchText = ""
+    @State private var showsInspector = false
+    @State private var viewMode = MacViewMode.grid
 
     var body: some View {
         NavigationSplitView {
-            List(selection: $selection) {
-                Section {
-                    ForEach(MacSidebarItem.library) { row($0) }
-                }
-                Section(String(localized: "Sources", comment: "Mac sidebar group")) {
-                    row(.photosLibrary)
-                }
-                Section(String(localized: "Collections", comment: "Mac sidebar group")) {
-                    ForEach(MacSidebarItem.collections) { row($0) }
-                }
-                Section(String(localized: "Utilities", comment: "Mac sidebar group")) {
-                    ForEach(MacSidebarItem.utilities) { row($0) }
-                }
-            }
-            .navigationSplitViewColumnWidth(MacWindowMetrics.sidebarWidth)
+            MacSidebar(selection: $selection, library: library, sources: (try? dependencies.sources.sources()) ?? [])
+                .navigationSplitViewColumnWidth(MacWindowMetrics.sidebarWidth)
         } detail: {
-            Text(selection?.title ?? "")
-                .font(.title2)
-                .foregroundStyle(.secondary)
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            content
                 .navigationTitle(selection?.title ?? "ShotDex")
+                .navigationSubtitle(subtitle)
+                .toolbar { toolbar }
+                .searchable(text: $searchText, placement: .toolbar,
+                            prompt: Text("Canon R6 85mm ISO 3200", comment: "Mac search field placeholder: a sample query"))
+                .inspector(isPresented: $showsInspector) {
+                    Text("Info", comment: "Mac inspector placeholder")
+                        .foregroundStyle(.secondary)
+                        .inspectorColumnWidth(MacWindowMetrics.inspectorWidth)
+                }
         }
         .tint(MacTheme.accent)
+        .task { await start() }
     }
 
-    private func row(_ item: MacSidebarItem) -> some View {
-        Label(item.title, systemImage: item.systemImage).tag(item)
+    @ViewBuilder
+    private var content: some View {
+        if let library, !library.items.isEmpty {
+            MacPhotoGrid(items: library.items, photoLibrary: dependencies.photoLibrary, asset: { library.asset(for: $0) },
+                         picture: Self.demoPicture)
+        } else if dependencies.photoLibrary.authorizationState == .denied {
+            ContentUnavailableView(String(localized: "No Access to Photos", comment: "Mac library: Photos access denied"),
+                                   systemImage: "photo.on.rectangle",
+                                   description: Text("Allow ShotDex in System Settings › Privacy & Security › Photos.",
+                                                     comment: "Mac library: how to grant Photos access"))
+        } else {
+            ProgressView().frame(maxWidth: .infinity, maxHeight: .infinity)
+        }
+    }
+
+    /// "54,027 photos · 1,204 videos".
+    private var subtitle: String {
+        guard let library else { return "" }
+        let videos = library.videoCount
+        let photos = library.items.count - videos
+        var parts = [photos == 1 ? String(localized: "1 photo", comment: "Mac toolbar subtitle")
+                                 : String(localized: "\(photos.formatted()) photos", comment: "Mac toolbar subtitle")]
+        if videos > 0 {
+            parts.append(videos == 1 ? String(localized: "1 video", comment: "Mac toolbar subtitle")
+                                     : String(localized: "\(videos.formatted()) videos", comment: "Mac toolbar subtitle"))
+        }
+        return parts.joined(separator: " · ")
+    }
+
+    @ToolbarContentBuilder
+    private var toolbar: some ToolbarContent {
+        ToolbarItemGroup(placement: .navigation) {
+            Button { } label: { Label(String(localized: "Back", comment: "Mac toolbar"), systemImage: "chevron.left") }
+                .disabled(true)
+            Button { } label: { Label(String(localized: "Forward", comment: "Mac toolbar"), systemImage: "chevron.right") }
+                .disabled(true)
+        }
+        ToolbarItemGroup(placement: .primaryAction) {
+            Picker(selection: $viewMode) {
+                Label(String(localized: "Grid", comment: "Mac toolbar view mode"), systemImage: "square.grid.2x2").tag(MacViewMode.grid)
+                Label(String(localized: "List", comment: "Mac toolbar view mode"), systemImage: "list.bullet").tag(MacViewMode.list)
+            } label: {
+                Text("View", comment: "Mac toolbar view mode picker")
+            }
+            .pickerStyle(.segmented)
+            Button { } label: {
+                Label(String(localized: "Filter", comment: "Mac toolbar"), systemImage: "line.3.horizontal.decrease")
+            }
+        }
+        ToolbarItemGroup(placement: .primaryAction) {
+            Button { } label: { Label(String(localized: "Share", comment: "Mac toolbar"), systemImage: "square.and.arrow.up") }
+            Button { showsInspector.toggle() } label: {
+                Label(String(localized: "Show Inspector", comment: "Mac toolbar"), systemImage: "sidebar.right")
+            }
+        }
+    }
+
+    private func start() async {
+        if library == nil { library = LibraryModel(dependencies: dependencies) }
+        #if DEBUG
+        if MacDemoLibrary.isOn {
+            library?.loadIfNeeded()
+            return
+        }
+        #endif
+        if dependencies.photoLibrary.authorizationState == .notDetermined {
+            await dependencies.photoLibrary.requestAuthorization()
+        }
+        guard dependencies.photoLibrary.authorizationState.canReadLibrary, let library else { return }
+        library.loadIfNeeded()
+        library.startIndexing()
     }
 }
 
-/// The sidebar's places (board `Main`).
-enum MacSidebarItem: String, Hashable, Identifiable {
-    case allPhotos, favorites, videos, raw, recentlyAdded
-    case photosLibrary
-    case onThisDay, albums
-    case places, trips, statistics, duplicates, collages, videoProjects, onServer
+enum MacViewMode: Hashable { case grid, list }
 
-    var id: String { rawValue }
-
-    static let library: [MacSidebarItem] = [.allPhotos, .favorites, .videos, .raw, .recentlyAdded]
-    static let collections: [MacSidebarItem] = [.onThisDay, .albums]
-    static let utilities: [MacSidebarItem] = [.places, .trips, .statistics, .duplicates, .collages, .videoProjects, .onServer]
-
-    var title: String {
-        switch self {
-        case .allPhotos: String(localized: "All Photos", comment: "Mac sidebar")
-        case .favorites: String(localized: "Favorites", comment: "Mac sidebar")
-        case .videos: String(localized: "Videos", comment: "Mac sidebar")
-        case .raw: String(localized: "RAW", comment: "Mac sidebar")
-        case .recentlyAdded: String(localized: "Recently Added", comment: "Mac sidebar")
-        case .photosLibrary: String(localized: "Photos Library", comment: "Mac sidebar source")
-        case .onThisDay: String(localized: "On This Day", comment: "Mac sidebar")
-        case .albums: String(localized: "Albums", comment: "Mac sidebar")
-        case .places: String(localized: "Places", comment: "Mac sidebar")
-        case .trips: String(localized: "Trips", comment: "Mac sidebar")
-        case .statistics: String(localized: "Statistics", comment: "Mac sidebar")
-        case .duplicates: String(localized: "Duplicates", comment: "Mac sidebar")
-        case .collages: String(localized: "Collages", comment: "Mac sidebar")
-        case .videoProjects: String(localized: "Video Projects", comment: "Mac sidebar")
-        case .onServer: String(localized: "On Server", comment: "Mac sidebar")
-        }
-    }
-
-    var systemImage: String {
-        switch self {
-        case .allPhotos: "photo.on.rectangle"
-        case .favorites: "heart"
-        case .videos: "video"
-        case .raw: "camera.aperture"
-        case .recentlyAdded: "clock"
-        case .photosLibrary: "photo.stack"
-        case .onThisDay: "calendar"
-        case .albums: "rectangle.stack"
-        case .places: "map"
-        case .trips: "mappin.and.ellipse"
-        case .statistics: "chart.bar"
-        case .duplicates: "square.on.square"
-        case .collages: "square.grid.2x2"
-        case .videoProjects: "film"
-        case .onServer: "externaldrive.connected.to.line.below"
-        }
+extension MacRootWindow {
+    /// The demo library's pictures; nil outside it.
+    static var demoPicture: ((String) -> CGImage?)? {
+        #if DEBUG
+        if MacDemoLibrary.isOn { return MacDemoLibrary.picture(for:) }
+        #endif
+        return nil
     }
 }

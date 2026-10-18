@@ -1,19 +1,23 @@
 #!/bin/zsh
-# Screenshot one window of a running Mac app, by owner name (default ShotDex).
-#   Tools/mac-shot out.png [AppName] [--no-shadow]
-# Finds the app's frontmost on-screen window with CGWindowList and hands its
-# id to `screencapture -l`, so the frame is the window only, at 2x.
+# Screenshot the ShotDexMac build's front window.
+#   Tools/mac-shot out.png [pid]
+# Picks the window by process id — by default the app running from
+# build/mac — never by name: the iOS app running on the Mac ("Designed for
+# iPad") is also called ShotDex and shows the user's real library.
+# Needs Screen Recording for the host app (System Settings › Privacy &
+# Security); `-ShotDexSnapshot` in a Debug build is the fallback without it.
 set -e
-out=${1:?usage: Tools/mac-shot out.png [AppName]}
-app=${2:-ShotDex}
-id=$(swift - "$app" <<'SWIFT'
+out=${1:?usage: Tools/mac-shot out.png [pid]}
+pid=${2:-$(pgrep -f "build/mac/Build/Products/[^/]*/ShotDex.app/Contents/MacOS/ShotDex" | head -1)}
+[ -n "$pid" ] || { echo "ShotDexMac is not running (build/mac)" >&2; exit 1; }
+id=$(swift - "$pid" <<'SWIFT'
 import CoreGraphics
-let app = CommandLine.arguments[1]
+let pid = Int(CommandLine.arguments[1]) ?? -1
 let list = CGWindowListCopyWindowInfo([.optionOnScreenOnly, .excludeDesktopElements], kCGNullWindowID) as? [[String: Any]] ?? []
-let windows = list.filter { ($0[kCGWindowOwnerName as String] as? String) == app && ($0[kCGWindowLayer as String] as? Int) == 0 }
+let windows = list.filter { ($0[kCGWindowOwnerPID as String] as? Int) == pid && ($0[kCGWindowLayer as String] as? Int) == 0 }
 if let id = windows.first?[kCGWindowNumber as String] as? Int { print(id) }
 SWIFT
 )
-[ -n "$id" ] || { echo "no on-screen window of $app" >&2; exit 1; }
+[ -n "$id" ] || { echo "no on-screen window for pid $pid" >&2; exit 1; }
 screencapture -x -o -l "$id" "$out"
 echo "$out"

@@ -176,3 +176,5 @@ final class BackgroundIndexService {
         assertionId = .invalid
     }
 }
+
+extension BackgroundIndexService: IndexRunAssertion {}
