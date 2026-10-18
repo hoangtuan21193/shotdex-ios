@@ -94,8 +94,8 @@ bảng phím Editor chung, mật độ lưới màn rộng, sidebar).
 
 | AC | TT | Code hôm nay | Tái dùng | Task | Chờ |
 |---|---|---|---|---|---|
-| AC-54 | ❌ | `StatisticsQueries.swift:6` đếm theo dòng `photo_metadata` (một dòng mỗi asset) | `StatisticsQueries` | S10 | ⏳ FS-19 (id ảnh + bảng bản sao) |
-| AC-55 | ❌ | không có điều kiện Source | `ChartSpec`, `ChartStore` | S11 | ⏳ FS-19 |
+| AC-54 | ✅ một phần (S10 có từ FS-19: `StatisticsQueries.sourceId`, đếm một lần theo id; màn Mac ở M33) | `StatisticsSourceTests.countsOncePerSource` | `StatisticsQueries` | S10 | — |
+| AC-55 | ✅ một phần (S11 xong: `RuleField.source`, thẻ có điều kiện Source bỏ qua popup; tên nguồn trên thẻ + popup ở M33) | `StatisticsSourceTests.cardConditionWinsOverPopup` | `SmartAlbumSQLBuilder`, `StatisticsQueries` | S11 | — |
 | AC-56 | ✅ một phần (S1 xong: trục `hourOfDay`/`weekday`, cột đứng iOS; nửa Mac ở M32) | `ChartDashboardTests.hourAndWeekdayBins` | `StatisticsQueries` (SQL `strftime`) | S1 | — |
 | AC-57 | ❌ (logic ✅) | drill-down iOS: `AppNavigation.swift:45, 132` `pendingLibraryFilter` | `AppNavigation` (biên dịch macOS 0 lỗi) | M33 | S1 |
 | AC-58 | ❌ | Statistics iOS có popup khoảng ngày ở trang máy (FS-07) | `StatisticsModel` (0 lỗi macOS) | M32 | — |

@@ -64,6 +64,10 @@ enum RuleField: String, Codable, CaseIterable, Identifiable, Sendable {
     /// and (iOS 27) caption and keyword (FS-02.07 §7). Not offered in the
     /// builder; it only comes from the search field.
     case anyText
+    /// Where a copy of the photo lives — a source's id (FS-19.04 §5). A
+    /// Statistics card that names one keeps it whatever the screen's Source
+    /// popup says (FS-18 04 §2).
+    case source
 
     var id: String { rawValue }
 
@@ -87,6 +91,7 @@ enum RuleField: String, Codable, CaseIterable, Identifiable, Sendable {
         case .flag: MarkCopy.flag
         case .keyword: String(localized: "Keyword", table: KeywordCopy.table, comment: "Rule field: a Photos keyword")
         case .caption: String(localized: "Caption", table: KeywordCopy.table, comment: "Rule field: the Photos caption")
+        case .source: String(localized: "Source", comment: "Rule field: the photo library, folder, drive or server a copy lives in")
         case .anyText: String(localized: "Text", table: KeywordCopy.table, comment: "Rule field: words searched across camera, lens, filename, caption and keywords")
         }
     }
@@ -94,7 +99,7 @@ enum RuleField: String, Codable, CaseIterable, Identifiable, Sendable {
     var kind: RuleFieldKind {
         switch self {
         case .cameraBrand, .cameraBody, .lens, .filename, .place, .anyText: .text
-        case .sensorFormat, .fileType, .mediaType, .flag: .choice
+        case .sensorFormat, .fileType, .mediaType, .flag, .source: .choice
         case .iso, .aperture, .shutter, .focalLength: .number
         case .dateTaken: .date
         case .favorite: .favorite
@@ -473,5 +478,12 @@ private struct LossyRule: Decodable {
 
     init(from decoder: Decoder) throws {
         rule = try? SmartAlbumRule(from: decoder)
+    }
+}
+
+extension SmartAlbumQuery {
+    /// The source a condition pins, if one does (`Source is …`).
+    var pinnedSourceId: String? {
+        rules.first { $0.field == .source && $0.op == .isExactly && !$0.text.isEmpty }?.text
     }
 }

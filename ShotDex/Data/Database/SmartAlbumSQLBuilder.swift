@@ -97,6 +97,15 @@ enum SmartAlbumSQLBuilder {
                 case .isNot: return ("NOT \(matching)", [])
                 default: return nil
                 }
+            case .source:
+                // A copy there that is present and not hidden (FS-19.04 §5).
+                guard !rule.text.isEmpty else { return nil }
+                let copies = "assetId IN (SELECT photoId FROM photo_copies WHERE sourceId = ? AND missingSince IS NULL AND isHidden = 0)"
+                switch rule.op {
+                case .isExactly: return (copies, [rule.text])
+                case .isNot: return ("NOT \(copies)", [rule.text])
+                default: return nil
+                }
             default:
                 return nil
             }

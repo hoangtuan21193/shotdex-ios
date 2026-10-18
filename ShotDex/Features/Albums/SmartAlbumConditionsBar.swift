@@ -232,6 +232,7 @@ extension SmartAlbumRule {
         case .keyword: "keyword"
         case .caption: "caption"
         case .anyText: "text"
+        case .source: "source"
         }
     }
 

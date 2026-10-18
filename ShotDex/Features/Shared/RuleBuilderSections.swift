@@ -16,6 +16,7 @@ struct RuleBuilderSections: View {
     /// Absent in previews and tests; then the Keyword field suggests nothing.
     @Environment(AppDependencies.self) private var dependencies: AppDependencies?
     @State private var keywords: [String] = []
+    @State private var sources: [(value: String, label: String)] = []
 
     /// Photo-vs-video as a scope control instead of a condition row. Backed by a
     /// single `.mediaType` rule so it compiles through the same SQL builder as
@@ -85,6 +86,7 @@ struct RuleBuilderSections: View {
                     lenses: lenses,
                     places: places,
                     keywords: keywords,
+                    sources: sources,
                     onDelete: { query.rules.removeAll { $0.id == rule.id } }
                 )
             }
@@ -103,6 +105,11 @@ struct RuleBuilderSections: View {
         } footer: {
             if let matchCount {
                 Text("Matches \(matchCount) photo.")
+            }
+        }
+        .task {
+            if let database = dependencies?.database {
+                sources = ((try? SourceStore(database: database).sources()) ?? []).map { ($0.id, $0.name) }
             }
         }
         .task {

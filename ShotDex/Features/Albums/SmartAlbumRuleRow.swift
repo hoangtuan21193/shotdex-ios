@@ -13,6 +13,9 @@ struct SmartAlbumRuleRow: View {
     /// Photos keywords, most photos first (iOS 27) — the Keyword field's
     /// suggestions (FS-02.07 §7).
     var keywords: [String] = []
+    /// The Source field's choices, (id, name) — read by the builder, since
+    /// sources change and the other choice sets do not.
+    var sources: [(value: String, label: String)] = []
     /// Removes this condition from the parent list.
     var onDelete: () -> Void
 
@@ -164,7 +167,7 @@ struct SmartAlbumRuleRow: View {
 
     private var choiceEditor: some View {
         Menu {
-            ForEach(rule.field.choiceValues, id: \.value) { choice in
+            ForEach(choices, id: \.value) { choice in
                 Button(choice.label) { rule.text = choice.value }
             }
         } label: {
@@ -347,7 +350,11 @@ struct SmartAlbumRuleRow: View {
     }
 
     private var choiceLabel: String {
-        rule.field.choiceValues.first { $0.value == rule.text }?.label ?? "Choose…"
+        choices.first { $0.value == rule.text }?.label ?? "Choose…"
+    }
+
+    private var choices: [(value: String, label: String)] {
+        rule.field == .source ? sources : rule.field.choiceValues
     }
 
     /// Autocomplete source values for the current text field.

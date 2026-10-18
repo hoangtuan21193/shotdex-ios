@@ -435,7 +435,9 @@ extension StatisticsQueries {
         _ filter: SmartAlbumQuery,
         _ scope: StatsDateScope
     ) -> (conditions: [String], values: [DatabaseValueConvertible]) {
-        var conditions: [String] = [visible]
+        // A card that names its own Source keeps it; the popup narrows only
+        // the cards that do not (FS-18 04 §2, AC-55).
+        var conditions: [String] = [filter.pinnedSourceId == nil ? visible : PhotoVisibility.condition]
         var values: [DatabaseValueConvertible] = []
         let (filterSQL, filterValues) = SmartAlbumSQLBuilder.predicate(for: filter)
         if !filterSQL.isEmpty {
