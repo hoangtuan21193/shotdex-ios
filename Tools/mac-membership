@@ -6,7 +6,9 @@ every file there builds for the Mac unless it is listed in the target's
 membership exceptions — and Xcode honours file paths there, not folders.
 This lists every file under the iOS-only folders (App/, Features/) plus the
 iOS bundle files, and the extra paths in Tools/mac-membership.extra (one per
-line: shared files that still need an iOS-only API, until P3/P4 fix them).
+line: shared files that still need an iOS-only API) — and keeps the files
+listed in Tools/mac-membership.shared (files under App/ or Features/ the
+Mac reuses as they are: the composition root, @Observable screen models).
 
     Tools/mac-membership          rewrite the exception set
     Tools/mac-membership --check  exit 1 if it is out of date
@@ -32,6 +34,12 @@ def wanted():
                 if f.startswith('.'):
                     continue
                 out.add(os.path.relpath(os.path.join(dirpath, f), base))
+    shared = os.path.join(ROOT, 'Tools/mac-membership.shared')
+    if os.path.exists(shared):
+        for line in open(shared):
+            line = line.split('#')[0].strip()
+            if line:
+                out.discard(line)
     extra = os.path.join(ROOT, 'Tools/mac-membership.extra')
     if os.path.exists(extra):
         for line in open(extra):
