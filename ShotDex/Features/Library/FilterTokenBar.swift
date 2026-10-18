@@ -174,7 +174,9 @@ struct FilterTokenBar: View {
 
     /// 32pt red pill in a 44pt target, pinned beside Clear.
     private func deletePill(_ count: Int) -> some View {
-        Button {
+        // One read per draw: the verb and the spoken name come from it.
+        let plan = rejectedPlan
+        return Button {
             let ids = rejectedIds
             guard let dependencies, !ids.isEmpty else { return }
             let roots = dependencies.folderRoots
@@ -188,7 +190,7 @@ struct FilterTokenBar: View {
             HStack(spacing: 6) {
                 Image(systemName: "trash")
                     .font(.system(size: 12, weight: .semibold))
-                Text(MarkCopy.deletePill(count))
+                Text(MarkCopy.deletePill(count, verb: plan?.verb ?? .delete))
                     .font(.footnote.weight(.semibold))
                     .monospacedDigit()
             }
@@ -200,7 +202,14 @@ struct FilterTokenBar: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .accessibilityLabel(MarkCopy.deletePillAccessibility(count))
+        .accessibilityLabel(plan?.commandName ?? MarkCopy.deletePillAccessibility(count))
+    }
+
+    private var rejectedPlan: MixedDeletionPlan? {
+        guard let dependencies else { return nil }
+        let roots = dependencies.folderRoots
+        return try? DeletionTargetQueries(database: dependencies.database, hasTrash: { roots.hasTrash($0) })
+            .plan(photoIds: rejectedIds, selection: .rejected)
     }
 
     /// One active condition as a removable chip. Shared with the smart

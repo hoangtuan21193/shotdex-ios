@@ -46,7 +46,7 @@ bảng phím Editor chung, mật độ lưới màn rộng, sidebar).
 | AC-18 | ❌ | không có | `CommandCatalog` | M6 | M5 |
 | AC-19 | ❌ | ⌘E của Video Studio iOS là Export (`VideoStudioScreen.swift:635`) — khớp ý | `CommandCatalog` + menu Clip của FS-12.17b | M58 | M57 |
 | AC-20 | ❌ | xoay chỉ có trong Editor (`PhotoEditorController.swift:2474`); không lệnh xoay từ lưới; **không dùng `UndoManager` ở đâu** (grep 0) | `PhotoEditRecipe` crop/rotate trong kit | M21 | K6 |
-| AC-21 | ⚠️ᴰ | `MarkCopy.swift:153` chỉ có "Delete N Rejected…"; `RejectedDeleter.swift:20-38` chỉ PhotoKit | `MarkCopy`, `RejectedDeletion.swift:7` | S6 (tên theo đích, mọi thiết bị) + M39 (toolbar Cull Mac) — 2 commit | ⏳ FS-19 (đích từng bản sao) |
+| AC-21 | ✅ một phần (S6 xong: thẻ Cull + viên iOS đọc `MixedDeletionPlan.commandName`; toolbar Mac ở M39) | `MixedDeletionPlanTests` | `MixedDeletionPlan` | S6 + M39 | — |
 | AC-22 | ⚠️ | iOS: ← → **bước khung khi video dừng** (`PhotoDetailScreen.swift:1669-1680`), F = Favorite (`:706`), không có phím "." — khớp luật Mac, **ngược** FS-02.01b §2 (K8) | `VideoPlaybackModel.stepFrame` | S8 (iOS, theo câu trả lời Q1) + M24 (Mac) — 2 commit | Q1 |
 | AC-23 | ⚠️ᴰ | iPad: ⌘C/⌘V chép-dán edit, ⌘0, ⌘\\ (`PhotoEditorScreen.swift:392-403`) — SPEC-DECISIONS: một bảng chung ⇧⌘C/⇧⌘V, `\`, Z | — (bảng mới `EditorKeyMap`, Domain) | S9 (bảng + iPad binding + test) + M47 (Mac) | sau FS-21 task 29 (cùng DESIGN §10.3) |
 | AC-24 | ❌ | menu nhấn giữ iOS: `PhotoMarkMenus.swift` (bộ con Rating/Flag) | `PhotoMarkMenus` nội dung, `AssetActionsCoordinator.swift:100` (lỗi macOS: UIKit) | M16 | T1 |
@@ -70,7 +70,7 @@ bảng phím Editor chung, mật độ lưới màn rộng, sidebar).
 | AC-37 | ❌ | iOS có `InfoCaptionKeywordModel` + `PhotoKeywordStore.swift:13` (GRDB, quan sát được) | hai model cùng đọc một store — quan sát chung | M30 | M28 |
 | AC-38 | ❌ | Cull iOS không có dải phím ẩn được | `CullSession.swift:6` | M37 | — |
 | AC-39 | ❌ | không có offline | `CullSession` | M38 | ⏳ FS-19 |
-| AC-40 | ❌ | `RejectedDeleter.swift:20-38` gửi hết vào Recently Deleted | `RejectedDeletion.swift:7` (lọc chỉ Rejected) | S5 | ⏳ FS-19 |
+| AC-40 | ✅ một phần (S5 có từ FS-19: `MixedDeletionPlan` + `SourceDeletionFlow`; nút Mac ở M40) | `MixedDeletionPlanTests.messageCountsByDestination` | `DeletionTargetQueries` | S5 | — |
 | AC-41 | ❌ | không có panel tiện ích | `PhotoInfoPanelSummary` | M28 | M22 |
 | AC-42 | ❌ | caption/keyword nhiều ảnh có `CaptionKeywordBatchPlan.swift:39` (+ test); không có "Mixed" cho sao/Creator | `CaptionKeywordBatchPlan` | M29 | ⏳ FS-19 (Creator/Copyright vào sidecar) |
 
@@ -101,7 +101,7 @@ bảng phím Editor chung, mật độ lưới màn rộng, sidebar).
 | AC-58 | ❌ | Statistics iOS có popup khoảng ngày ở trang máy (FS-07) | `StatisticsModel` (0 lỗi macOS) | M32 | — |
 | AC-59 | ❌ | Settings iOS là split view có ô tìm (FS-08.01) | các store settings (`SettingsKeys`, `FileExportSettingsStore` …) | M36 | ⏳ FS-19 (pane Sources) |
 | AC-60 | ❌ (logic ✅) | album trong folder Photos đã liệt kê phẳng: `AlbumsModel.swift:387-397` | `AlbumsModel` (0 lỗi macOS) | M31 | — |
-| AC-61 | ❌ | Resize xoá gốc chỉ qua PhotoKit (`CompressionController.swift:19, 48`) | `CompressionController` | S7 | ⏳ FS-19 |
+| AC-61 | ⏳ (S7: lời xác nhận chia đích là `MixedDeletionPlan.message` có sẵn — 3 Recently Deleted / 4 Thùng rác / 1 ẩn; Resize iOS chỉ nhận asset Photos nên không có đích nào khác để chia — phần chạy và test ở M55 khi Resize Mac nhận ảnh thư mục) | `MixedDeletionPlanTests` | `MixedDeletionPlan`, `CompressionController` | S7 → M55 | — |
 
 ## 05 — Nền tảng
 

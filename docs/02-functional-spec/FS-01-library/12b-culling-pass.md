@@ -40,6 +40,11 @@ ngay, theo luật lưu của [FS-01.12 §4–5](12-rating-and-flags.md).
 
 ## 3. Delete Rejected
 
+- **Tên lệnh theo đích** (FS-19.04 §2, FS-18 AC-21, mọi thiết bị): có file vào Thùng rác → **Move N Rejected…**;
+  chỉ ảnh Photos hoặc file trên ổ không có Thùng rác → **Delete N Rejected…**; toàn ảnh trên server →
+  **Hide N Rejected…**. Thẻ cuối lượt và viên trên thanh điều kiện (**Move N** · **Delete N** · **Hide N**) đọc cùng
+  `MixedDeletionPlan`. Có ảnh không phải Photos thì hộp xác nhận của ShotDex đếm theo đích (FS-19.04); chỉ Photos thì
+  hộp thoại hệ thống như dưới.
 - Dùng lệnh xoá của hệ thống. Hộp thoại "Delete 120 Photos?" của hệ thống **là** bước xác nhận
   ([FS-02.04 §1](../FS-02-photo-detail/04-actions-and-extras.md)). App không dựng hộp thoại riêng.
 - Phạm vi là **ảnh Rejected trong tập đang xem**: tập của lượt lọc, hoặc đúng các ảnh lưới đang hiện. Không bao

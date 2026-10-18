@@ -1,10 +1,11 @@
 import SwiftUI
 
 /// The card at the end of the pass (FS-01.12b §2, board `PH24`): what the
-/// pass decided, and the three ways on — Delete N Rejected… (red),
-/// Review Unflagged, Done.
+/// pass decided, and the three ways on — Move / Delete / Hide N Rejected…
+/// (red, named after where they go), Review Unflagged, Done.
 struct CullSummaryCard: View {
     let summary: CullSummary
+    var deleteTitle: String? = nil
     /// Nil where the pass cannot delete (nothing hosts the deletion).
     let onDeleteRejected: (() -> Void)?
     let onReviewUnflagged: () -> Void
@@ -38,7 +39,7 @@ struct CullSummaryCard: View {
                     // than shown dead: no Rejected, no Delete; nothing
                     // unflagged, no Review.
                     if summary.rejected > 0, let onDeleteRejected {
-                        cardButton(MarkCopy.deleteRejected(summary.rejected), systemImage: "trash",
+                        cardButton(deleteTitle ?? MarkCopy.deleteRejected(summary.rejected), systemImage: "trash",
                                    foreground: EditorTheme.timelineDestructive,
                                    background: Color.red.opacity(0.16), action: onDeleteRejected)
                     }

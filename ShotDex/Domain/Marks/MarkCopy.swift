@@ -179,6 +179,14 @@ enum MarkCopy {
     static func deletePill(_ count: Int, locale: Locale = .current) -> String {
         String(localized: "Delete \(count)", table: table, locale: locale, comment: "Conditions bar: delete the Rejected photos shown (count)")
     }
+    /// The pill after where the Rejected go (FS-19.04 §2): Move 120 · Hide 6.
+    static func deletePill(_ count: Int, verb: MixedDeletionPlan.Verb, locale: Locale = .current) -> String {
+        switch verb {
+        case .move: String(localized: "Move \(count)", table: table, locale: locale, comment: "Conditions bar: move the Rejected photos shown to the Trash (count)")
+        case .delete: deletePill(count, locale: locale)
+        case .hide: String(localized: "Hide \(count)", table: table, locale: locale, comment: "Conditions bar: hide the Rejected photos shown, all on a server (count)")
+        }
+    }
     static func deletePillAccessibility(_ count: Int, locale: Locale = .current) -> String {
         String(localized: "Delete \(count) Rejected photos", table: table, locale: locale, comment: "VoiceOver: the conditions bar's Delete Rejected pill (plural)")
     }

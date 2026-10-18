@@ -40,6 +40,9 @@ import Testing
 
         #expect(plan.count == 120)
         #expect(plan.commandName == "Move 120 Rejected…")
+        // AC-21: the command is named after where the photos go.
+        #expect(try queries.plan(photoIds: Array(ids[84..<114]), selection: .rejected).commandName == "Delete 30 Rejected…")
+        #expect(try queries.plan(photoIds: Array(ids[114...]), selection: .rejected).commandName == "Hide 6 Rejected…")
         #expect(plan.needsConfirmation)
         #expect(!plan.needsPermanentConfirmation)
         #expect(plan.title == "Move 120 rejected photos?")

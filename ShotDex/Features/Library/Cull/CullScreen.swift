@@ -13,6 +13,9 @@ struct CullScreen: View {
     /// Delete N Rejected…: the system's deletion, its dialog the only
     /// confirmation (FS-01.12b §3).
     var deleteRejectedPhotos: (([String]) async -> Void)?
+    /// The command's name, after where the Rejected go: Move N Rejected…,
+    /// Delete N Rejected…, Hide N Rejected… (FS-01.12b §3, FS-19.04 §2).
+    var deleteRejectedTitle: (([String]) -> String)?
 
     private func deleteRejected() {
         let ids = model.rejectedIds
@@ -34,6 +37,7 @@ struct CullScreen: View {
                 if model.isSummaryPresented {
                     CullSummaryCard(
                         summary: model.summary,
+                        deleteTitle: deleteRejectedTitle?(model.rejectedIds) ?? MarkCopy.deleteRejected(model.summary.rejected),
                         onDeleteRejected: deleteRejectedPhotos == nil ? nil : deleteRejected,
                         onReviewUnflagged: { model.reviewUnflagged() },
                         onDone: { dismiss() }
@@ -335,6 +339,11 @@ struct CullHost: View {
                         }
                         let deleter = RejectedDeleter.live(photoLibrary: dependencies.photoLibrary, banner: dependencies.banner)
                         if case .deleted = await deleter.delete(ids) { model.removeDeleted(ids) }
+                    },
+                    deleteRejectedTitle: { ids in
+                        let roots = dependencies.folderRoots
+                        return (try? DeletionTargetQueries(database: dependencies.database, hasTrash: { roots.hasTrash($0) })
+                            .plan(photoIds: ids, selection: .rejected).commandName) ?? MarkCopy.deleteRejected(ids.count)
                     }
                 )
             } else {
