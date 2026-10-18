@@ -54,7 +54,7 @@ extension PhotoPropertyWriting {
     }
 }
 
-@available(iOS 27, *)
+@available(iOS 27, macOS 27, *)
 struct PhotoKitPropertyWriter: PhotoPropertyWriting {
     func setRatings(_ ratings: [String: Int]) async throws -> PropertyWriteResult {
         guard !ratings.isEmpty else { return .empty }

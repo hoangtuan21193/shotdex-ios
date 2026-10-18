@@ -1,0 +1,54 @@
+#!/usr/bin/env python3
+"""Regenerate which files of ShotDex/ the Mac target leaves out (FS-18 K1).
+
+The ShotDexMac target shares the ShotDex/ folder (a synchronized group), so
+every file there builds for the Mac unless it is listed in the target's
+membership exceptions — and Xcode honours file paths there, not folders.
+This lists every file under the iOS-only folders (App/, Features/) plus the
+iOS bundle files, and the extra paths in Tools/mac-membership.extra (one per
+line: shared files that still need an iOS-only API, until P3/P4 fix them).
+
+    Tools/mac-membership          rewrite the exception set
+    Tools/mac-membership --check  exit 1 if it is out of date
+"""
+import os, re, sys
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+P = os.path.join(ROOT, 'ShotDex.xcodeproj/project.pbxproj')
+EXC = 'FA0000402D00000100000001'
+IOS_ONLY = ['App', 'Features']
+FILES = ['Assets.xcassets', 'Info.plist', 'PrivacyInfo.xcprivacy', 'ShotDex-AppAttest.entitlements', 'ShotDex.entitlements']
+
+def wanted():
+    out = set(FILES)
+    base = os.path.join(ROOT, 'ShotDex')
+    for folder in IOS_ONLY:
+        for dirpath, dirnames, filenames in os.walk(os.path.join(base, folder)):
+            # A bundle-like folder (asset catalog, xcstrings) is one member.
+            keep = [d for d in dirnames if '.' in d]
+            for d in keep:
+                out.add(os.path.relpath(os.path.join(dirpath, d), base))
+            dirnames[:] = [d for d in dirnames if '.' not in d]
+            for f in filenames:
+                if f.startswith('.'):
+                    continue
+                out.add(os.path.relpath(os.path.join(dirpath, f), base))
+    extra = os.path.join(ROOT, 'Tools/mac-membership.extra')
+    if os.path.exists(extra):
+        for line in open(extra):
+            line = line.split('#')[0].strip()
+            if line:
+                out.add(line)
+    return sorted(out)
+
+def quote(p):
+    return p if re.fullmatch(r'[A-Za-z0-9_./]+', p) else '"' + p.replace('"', '\\"') + '"'
+
+s = open(P).read()
+m = re.search(EXC + r' /\* [^*]+\*/ = \{\s*isa = PBXFileSystemSynchronizedBuildFileExceptionSet;\s*membershipExceptions = \((.*?)\);', s, re.S)
+assert m, 'Mac exception set not found'
+body = ''.join('\t\t\t\t%s,\n' % quote(p) for p in wanted())
+new = s[:m.start(1)] + '\n' + body + '\t\t\t' + s[m.end(1):]
+if '--check' in sys.argv:
+    sys.exit(0 if new == s else 1)
+open(P, 'w').write(new)
+print('%d files left out of ShotDexMac' % len(wanted()))

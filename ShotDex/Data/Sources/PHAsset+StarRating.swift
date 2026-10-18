@@ -6,7 +6,7 @@ extension PHAsset {
     /// (FS-01.12 §4). An in-memory property, free per grid cell, like
     /// `isFavorite`.
     var photosStarRating: Int? {
-        if #available(iOS 27, *) {
+        if #available(iOS 27, macOS 27, *) {
             return rating.rawValue
         }
         return nil

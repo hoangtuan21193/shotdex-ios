@@ -17,7 +17,7 @@ import FoundationModels
 /// `GeneratedSearchRule`, and `SearchIntentMapper` decides what, if anything, that
 /// becomes. That boundary is the reason a hallucinated field or a nonsense number
 /// costs nothing.
-@available(iOS 26.0, *)
+@available(iOS 26.0, macOS 26.0, *)
 actor AISearchTranslator {
     /// How long a query may wait on the model before the parser's answer is used
     /// instead. A search box has to feel immediate; two seconds is already the

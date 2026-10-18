@@ -1,6 +1,10 @@
 import DeviceCheck
 import Foundation
+#if canImport(UIKit)
 import UIKit
+#else
+import AppKit
+#endif
 
 /// What went wrong, in words a photographer can act on.
 enum SupportError: LocalizedError {
@@ -113,7 +117,12 @@ struct SupportDiagnostics: Encodable, Sendable {
         let bundle = Bundle.main
         appVersion = bundle.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "0"
         buildNumber = bundle.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "0"
+        #if canImport(UIKit)
         osVersion = UIDevice.current.systemVersion
+        #else
+        let version = ProcessInfo.processInfo.operatingSystemVersion
+        osVersion = "\(version.majorVersion).\(version.minorVersion).\(version.patchVersion)"
+        #endif
         deviceModel = Self.hardwareModel
         locale = Locale.current.identifier
         self.libraryCount = libraryCount.map(Self.blurred)
@@ -214,7 +223,14 @@ actor SupportService {
     /// TestFlight ships a sandbox receipt; the App Store ships a real one. This
     /// is the only signal a Release build has to tell the two apart.
     static var isTestFlightBuild: Bool {
+        #if os(macOS)
+        // The receipt URL is deprecated on the Mac; its replacement,
+        // AppTransaction.environment, is async. Until the Mac portal path
+        // is wired (FS-18 Support), a Mac build talks to the live portal.
+        false
+        #else
         Bundle.main.appStoreReceiptURL?.lastPathComponent == "sandboxReceipt"
+        #endif
     }
 
     /// Whether this build could reach the portal at all. It is optimistic:

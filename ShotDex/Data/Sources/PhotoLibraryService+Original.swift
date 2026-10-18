@@ -1,6 +1,10 @@
 import ImageIO
 import Photos
+#if canImport(UIKit)
 import UIKit
+#else
+import AppKit
+#endif
 
 extension PhotoLibraryService {
 
@@ -26,7 +30,7 @@ extension PhotoLibraryService {
     func requestOriginalImage(
         for asset: PHAsset,
         targetSize: CGSize,
-        completion: @escaping (UIImage?) -> Void
+        completion: @escaping (PlatformImage?) -> Void
     ) -> PHImageRequestID {
         let options = PHImageRequestOptions()
         options.version = .original
@@ -58,7 +62,7 @@ extension PhotoLibraryService {
     private nonisolated static func downsampledImage(
         data: Data,
         pixelBudget: CGFloat
-    ) -> UIImage? {
+    ) -> PlatformImage? {
         let maximumEdge = max(320, sqrt(max(pixelBudget, 1)))
         guard let source = CGImageSourceCreateWithData(data as CFData, [
             kCGImageSourceShouldCache: false,
@@ -69,6 +73,22 @@ extension PhotoLibraryService {
             kCGImageSourceShouldCacheImmediately: true,
             kCGImageSourceThumbnailMaxPixelSize: maximumEdge,
         ] as CFDictionary) else { return nil }
-        return UIImage(cgImage: cgImage)
+        return PlatformImage(cgImage: cgImage)
+    }
+}
+
+extension PhotoLibraryService {
+    /// The original file's bytes, network allowed — the full-resolution pass
+    /// a save or a merge reads.
+    nonisolated static func originalImageData(for asset: PHAsset) async -> Data? {
+        await withCheckedContinuation { continuation in
+            let options = PHImageRequestOptions()
+            options.isNetworkAccessAllowed = true
+            options.deliveryMode = .highQualityFormat
+            options.isSynchronous = false
+            PHImageManager.default().requestImageDataAndOrientation(for: asset, options: options) { data, _, _, _ in
+                continuation.resume(returning: data)
+            }
+        }
     }
 }

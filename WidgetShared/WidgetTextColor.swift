@@ -90,7 +90,12 @@ extension Font {
         isBold: Bool,
         usesMonospacedDigits: Bool
     ) -> Font {
-        if !postScriptName.isEmpty, let font = UIFont(name: postScriptName, size: size) {
+        #if canImport(UIKit)
+        let named = UIFont(name: postScriptName, size: size)
+        #else
+        let named = NSFont(name: postScriptName, size: size)
+        #endif
+        if !postScriptName.isEmpty, let font = named {
             return Font(font)
         }
         var font = Font.system(

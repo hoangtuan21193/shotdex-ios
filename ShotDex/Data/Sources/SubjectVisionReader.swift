@@ -1,6 +1,10 @@
 import Foundation
 import Photos
+#if canImport(UIKit)
 import UIKit
+#else
+import AppKit
+#endif
 import Vision
 
 /// What one photo was found to contain.
@@ -64,7 +68,7 @@ struct SubjectVisionReader: SubjectVisionReading {
         )
     }
 
-    private static func rendition(for asset: PHAsset, allowNetwork: Bool) async -> UIImage? {
+    private static func rendition(for asset: PHAsset, allowNetwork: Bool) async -> PlatformImage? {
         await withCheckedContinuation { continuation in
             let options = PHImageRequestOptions()
             // One callback, never a degraded-then-final pair, so the

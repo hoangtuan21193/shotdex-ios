@@ -1,6 +1,10 @@
 import Foundation
 import GRDB
+#if canImport(UIKit)
 import UIKit
+#else
+import AppKit
+#endif
 
 /// Grid thumbnails of photos that are not in Photos (FS-19.01b §5): which
 /// cached file stands for each photo, kept in memory so a cell never asks
@@ -12,7 +16,7 @@ final class FileThumbnailIndex: @unchecked Sendable {
     /// Photos whose only copies are cloud placeholders (FS-19.01b §4): the
     /// tile draws the cloud glyph and the file's name instead of a picture.
     private var cloudOnly: Set<String> = []
-    private let images = NSCache<NSString, UIImage>()
+    private let images = NSCache<NSString, PlatformImage>()
 
     init(thumbnails: FolderThumbnails = .standard) {
         self.thumbnails = thumbnails
@@ -57,10 +61,14 @@ final class FileThumbnailIndex: @unchecked Sendable {
     }
 
     /// The cached image, decoded once; nil when the photo has none yet.
-    func image(for photoId: String) -> UIImage? {
+    func image(for photoId: String) -> PlatformImage? {
         guard let copy = lock.withLock({ copyByPhoto[photoId] }) else { return nil }
         if let cached = images.object(forKey: copy as NSString) { return cached }
-        guard let image = UIImage(contentsOfFile: thumbnails.url(copyId: copy).path)?.preparingForDisplay() else { return nil }
+        #if canImport(UIKit)
+        guard let image = PlatformImage(contentsOfFile: thumbnails.url(copyId: copy).path)?.preparingForDisplay() else { return nil }
+        #else
+        guard let image = PlatformImage(contentsOfFile: thumbnails.url(copyId: copy).path) else { return nil }
+        #endif
         images.setObject(image, forKey: copy as NSString)
         return image
     }

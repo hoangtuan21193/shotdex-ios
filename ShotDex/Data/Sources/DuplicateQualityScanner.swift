@@ -2,7 +2,11 @@ import CoreGraphics
 import Foundation
 import os
 import Photos
+#if canImport(UIKit)
 import UIKit
+#else
+import AppKit
+#endif
 import Vision
 
 /// Measures one grouped photo for the scoring pass (FS-06.06 §5–§6): a 512px
@@ -125,13 +129,13 @@ struct DuplicateQualityReader: DuplicateQualityReading {
 
     /// The 512px rendition. Cancelling the task cancels the PhotoKit request,
     /// and a request that never calls back resumes with `nil` at the timeout.
-    private static func rendition(for asset: PHAsset, allowNetwork: Bool) async -> UIImage? {
+    private static func rendition(for asset: PHAsset, allowNetwork: Bool) async -> PlatformImage? {
         let requestId = OSAllocatedUnfairLock<PHImageRequestID?>(initialState: nil)
         let resumed = OSAllocatedUnfairLock(initialState: false)
         let timeout = OSAllocatedUnfairLock<Task<Void, Never>?>(initialState: nil)
         return await withTaskCancellationHandler {
-            await withCheckedContinuation { (continuation: CheckedContinuation<UIImage?, Never>) in
-                func finish(_ image: UIImage?) {
+            await withCheckedContinuation { (continuation: CheckedContinuation<PlatformImage?, Never>) in
+                func finish(_ image: PlatformImage?) {
                     let first = resumed.withLock { done -> Bool in
                         defer { done = true }
                         return !done

@@ -109,7 +109,7 @@ final class PhotoMarks {
     /// The marks an album's Photos fetch filters by.
     var filterSnapshot: MarkFilterSnapshot {
         var photosHoldsRatings = false
-        if #available(iOS 27, *) { photosHoldsRatings = true }
+        if #available(iOS 27, macOS 27, *) { photosHoldsRatings = true }
         return MarkFilterSnapshot(flags: flags, pendingRatings: pendingRatings, photosHoldsRatings: photosHoldsRatings)
     }
 

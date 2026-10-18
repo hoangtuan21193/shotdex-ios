@@ -14,7 +14,7 @@ extension SearchModel {
     func prewarm(vocabulary: FilterSuggestionCatalog) async {}
 }
 
-@available(iOS 26.0, *)
+@available(iOS 26.0, macOS 26.0, *)
 struct AppleIntelligenceSearchModel: SearchModel {
     let translator: AISearchTranslator
     var timeout: Duration { .seconds(2) }

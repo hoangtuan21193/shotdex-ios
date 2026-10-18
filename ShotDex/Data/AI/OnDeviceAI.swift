@@ -16,7 +16,7 @@ enum OnDeviceAI {
 
     static var intelligence: IntelligenceStatus {
         #if canImport(FoundationModels)
-        if #available(iOS 26.0, *) {
+        if #available(iOS 26.0, macOS 26.0, *) {
             switch SystemLanguageModel.default.availability {
             case .available: return .ready
             case .unavailable(.appleIntelligenceNotEnabled): return .notEnabled

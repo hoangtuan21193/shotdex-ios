@@ -3,7 +3,11 @@ import Foundation
 import ImageIO
 import Photos
 import PhotosUI
+#if canImport(UIKit)
 import UIKit
+#else
+import AppKit
+#endif
 import os
 
 /// The app's view of photo library authorization.
@@ -103,8 +107,8 @@ final class PhotoLibraryService: NSObject {
     /// gets the exact final callback immediately. Keep a small decoded-image
     /// cache so revisits and pager neighbours paint sharp on their first frame.
     @ObservationIgnored
-    private let detailImageCache: NSCache<NSString, UIImage> = {
-        let cache = NSCache<NSString, UIImage>()
+    private let detailImageCache: NSCache<NSString, PlatformImage> = {
+        let cache = NSCache<NSString, PlatformImage>()
         cache.countLimit = 12
         cache.totalCostLimit = 160 * 1_024 * 1_024
         return cache
@@ -118,8 +122,8 @@ final class PhotoLibraryService: NSObject {
     /// its exact rendition here paints sharp synchronously and skips the
     /// request entirely. Sized for a dense screenful plus prefetch headroom.
     @ObservationIgnored
-    private let gridThumbnailCache: NSCache<NSString, UIImage> = {
-        let cache = NSCache<NSString, UIImage>()
+    private let gridThumbnailCache: NSCache<NSString, PlatformImage> = {
+        let cache = NSCache<NSString, PlatformImage>()
         cache.countLimit = 400
         cache.totalCostLimit = 48 * 1_024 * 1_024
         return cache
@@ -128,8 +132,8 @@ final class PhotoLibraryService: NSObject {
     /// from grid/detail caches: scrolling or paging must not evict the
     /// On This Day cover that was warmed during app launch.
     @ObservationIgnored
-    private let albumCoverImageCache: NSCache<NSString, UIImage> = {
-        let cache = NSCache<NSString, UIImage>()
+    private let albumCoverImageCache: NSCache<NSString, PlatformImage> = {
+        let cache = NSCache<NSString, PlatformImage>()
         cache.countLimit = 8
         cache.totalCostLimit = 48 * 1_024 * 1_024
         return cache
@@ -201,6 +205,7 @@ final class PhotoLibraryService: NSObject {
         }
     }
 
+    #if canImport(UIKit)
     /// Presents the limited-library picker (Limited access → Manage).
     func presentLimitedLibraryPicker() {
         guard let scene = UIApplication.shared.connectedScenes
@@ -216,6 +221,11 @@ final class PhotoLibraryService: NSObject {
         }
         PHPhotoLibrary.shared().presentLimitedLibraryPicker(from: presenter)
     }
+    #else
+    /// The Mac has no limited-library picker: access is all or nothing, set
+    /// in System Settings › Privacy & Security › Photos.
+    func presentLimitedLibraryPicker() {}
+    #endif
 
     // MARK: Fetching
 
@@ -313,7 +323,7 @@ final class PhotoLibraryService: NSObject {
         contentMode: PHImageContentMode = .aspectFill,
         resizeMode: PHImageRequestOptionsResizeMode = .exact,
         allowNetwork: Bool = true,
-        completion: @escaping (UIImage?, ThumbnailDelivery) -> Void
+        completion: @escaping (PlatformImage?, ThumbnailDelivery) -> Void
     ) -> PHImageRequestID {
         // A network pass is only started when few are already running. On a
         // library kept in iCloud, a screenful of Optimize-Storage proxies used
@@ -463,7 +473,7 @@ final class PhotoLibraryService: NSObject {
         targetSize: CGSize,
         contentMode: PHImageContentMode = .aspectFill,
         allowNetwork: Bool = true,
-        completion: @escaping (UIImage?) -> Void
+        completion: @escaping (PlatformImage?) -> Void
     ) -> PHImageRequestID {
         requestThumbnail(
             for: asset,
@@ -478,7 +488,7 @@ final class PhotoLibraryService: NSObject {
     /// cropped to the target, so only the shorter side is comparable there;
     /// aspect-fit reuses the detail viewer's check.
     private nonisolated static func hasThumbnailResolution(
-        _ image: UIImage,
+        _ image: PlatformImage,
         for asset: PHAsset,
         targetSize: CGSize,
         contentMode: PHImageContentMode
@@ -496,7 +506,7 @@ final class PhotoLibraryService: NSObject {
     /// The sharp rendition for this exact cell size, when one was already
     /// delivered. Lets a cell paint on its first frame instead of clearing to
     /// grey and waiting for an opportunistic preview.
-    func cachedThumbnail(for assetId: String, width: CGFloat) -> UIImage? {
+    func cachedThumbnail(for assetId: String, width: CGFloat) -> PlatformImage? {
         gridThumbnailCache.object(forKey: Self.gridThumbnailKey(assetId, width: width))
     }
 
@@ -519,7 +529,7 @@ final class PhotoLibraryService: NSObject {
         for asset: PHAsset,
         targetSize: CGSize,
         allowNetwork: Bool = true,
-        completion: @escaping (UIImage?) -> Void
+        completion: @escaping (PlatformImage?) -> Void
     ) -> PHImageRequestID {
         let cacheKey = albumCoverCacheKey(for: asset, targetSize: targetSize)
         if let cached = albumCoverImageCache.object(forKey: cacheKey) {
@@ -564,7 +574,7 @@ final class PhotoLibraryService: NSObject {
     /// when it is smaller than the requested hero. It can still be displayed
     /// as a temporary fallback, but must not poison the sharp-cover cache.
     private nonisolated static func hasAlbumCoverResolution(
-        _ image: UIImage,
+        _ image: PlatformImage,
         for asset: PHAsset,
         targetSize: CGSize
     ) -> Bool {
@@ -595,7 +605,7 @@ final class PhotoLibraryService: NSObject {
         targetSize: CGSize,
         allowNetwork: Bool = true,
         progress: @escaping (Double) -> Void,
-        completion: @escaping (UIImage?, Bool) -> Void
+        completion: @escaping (PlatformImage?, Bool) -> Void
     ) -> PHImageRequestID {
         let cacheKey = detailCacheKey(
             for: asset,
@@ -681,7 +691,7 @@ final class PhotoLibraryService: NSObject {
         for asset: PHAsset,
         targetSize: CGSize,
         contentMode: PHImageContentMode = .aspectFit,
-        completion: @escaping (UIImage?) -> Void
+        completion: @escaping (PlatformImage?) -> Void
     ) -> PHImageRequestID {
         let cacheKey = detailCacheKey(
             for: asset,
@@ -724,7 +734,7 @@ final class PhotoLibraryService: NSObject {
     func requestLocalOriginalScreenImage(
         for asset: PHAsset,
         targetSize: CGSize,
-        completion: @escaping (UIImage?) -> Void
+        completion: @escaping (PlatformImage?) -> Void
     ) -> PHImageRequestID {
         let cacheKey = detailCacheKey(
             for: asset,
@@ -864,7 +874,7 @@ final class PhotoLibraryService: NSObject {
     private nonisolated static func downsampleImageData(
         _ data: Data,
         maxPixelSize: CGFloat
-    ) -> UIImage? {
+    ) -> PlatformImage? {
         let sourceOptions = [kCGImageSourceShouldCache: false] as CFDictionary
         guard let source = CGImageSourceCreateWithData(data as CFData, sourceOptions) else {
             return nil
@@ -880,11 +890,11 @@ final class PhotoLibraryService: NSObject {
             0,
             thumbnailOptions as CFDictionary
         ) else { return nil }
-        return UIImage(cgImage: cgImage)
+        return PlatformImage(cgImage: cgImage)
     }
 
     private nonisolated static func hasDisplayResolution(
-        _ image: UIImage,
+        _ image: PlatformImage,
         for asset: PHAsset,
         targetSize: CGSize
     ) -> Bool {

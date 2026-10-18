@@ -1,6 +1,10 @@
 import Foundation
 import Photos
+#if canImport(UIKit)
 import UIKit
+#else
+import AppKit
+#endif
 
 /// Produces the perceptual hash of a photo. A protocol so the scan pipeline
 /// can be driven by a stub in tests.
@@ -26,7 +30,7 @@ struct PerceptualHashReader: PerceptualHashReading {
         return DifferenceHash.hash(of: cgImage)
     }
 
-    private static func rendition(for asset: PHAsset, allowNetwork: Bool) async -> UIImage? {
+    private static func rendition(for asset: PHAsset, allowNetwork: Bool) async -> PlatformImage? {
         await withCheckedContinuation { continuation in
             let options = PHImageRequestOptions()
             // One callback, never a degraded-then-final pair, so the

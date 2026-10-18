@@ -1,7 +1,11 @@
 import Foundation
 import ImageIO
 import Photos
+#if canImport(UIKit)
 import UIKit
+#else
+import AppKit
+#endif
 
 /// What Collage, Combine Photos and the Video Studio read from a server
 /// original already on this device (FS-17.06 §5b) — the file-side twin of the
@@ -17,9 +21,9 @@ enum PhotoOriginFile {
     }
 
     /// `image(at:maxPixelSize:)` off the main thread.
-    static func loadImage(at url: URL, maxPixelSize: Int) async -> UIImage? {
+    static func loadImage(at url: URL, maxPixelSize: Int) async -> PlatformImage? {
         await Task.detached(priority: .userInitiated) {
-            image(at: url, maxPixelSize: maxPixelSize).map { UIImage(cgImage: $0) }
+            image(at: url, maxPixelSize: maxPixelSize).map { PlatformImage(cgImage: $0) }
         }.value
     }
 

@@ -10,7 +10,7 @@ import Foundation
 /// to `isAvailable`, so a test walks both branches on any simulator.
 enum ExtendedMetadataSupport {
     static var isAvailable: Bool {
-        if #available(iOS 27, *) { return true }
+        if #available(iOS 27, macOS 27, *) { return true }
         return false
     }
 }

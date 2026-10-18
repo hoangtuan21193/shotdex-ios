@@ -2,7 +2,11 @@ import CoreImage
 import Foundation
 import os
 import CoreText
+#if canImport(UIKit)
 import UIKit
+#else
+import AppKit
+#endif
 
 /// Draws one caption line (FS-12.14 §5): white bold text — with a shadow
 /// (Clean), on a dark plate (Box, Word by Word) or with a black outline
@@ -18,8 +22,8 @@ enum VideoCaptionRenderer {
         let textHeight: CGFloat
     }
 
-    static func font(size: CGFloat) -> UIFont {
-        UIFont.systemFont(ofSize: size, weight: .bold)
+    static func font(size: CGFloat) -> PlatformFont {
+        PlatformFont.systemFont(ofSize: size, weight: .bold)
     }
 
     /// The font size whose ink — the top of an "h" to the bottom of a "g"
@@ -76,6 +80,7 @@ enum VideoCaptionRenderer {
     static func image(_ text: String, visibleWords: Int = .max, lane: VideoCaptionLane, typeset: Typeset, scale: CGFloat = 1) -> CGImage? {
         let size = CGSize(width: typeset.plate.width * scale, height: typeset.plate.height * scale)
         guard size.width >= 1, size.height >= 1 else { return nil }
+        #if canImport(UIKit)
         let format = UIGraphicsImageRendererFormat.preferred()
         format.scale = 1
         format.opaque = false
@@ -102,12 +107,34 @@ enum VideoCaptionRenderer {
             attributed.draw(at: origin)
         }
         return image.cgImage
+        #else
+        return PlatformDrawing.image(size: size) { cg in
+            cg.scaleBy(x: scale, y: scale)
+            let bounds = CGRect(origin: .zero, size: typeset.plate.size)
+            if lane.style == .box || lane.style == .wordByWord {
+                let radius = typeset.textHeight * CaptionLayout.boxCornerRadius
+                NSColor.black.withAlphaComponent(CaptionLayout.boxOpacity).setFill()
+                NSBezierPath(roundedRect: bounds, xRadius: radius, yRadius: radius).fill()
+            }
+            let font = font(size: typeset.fontSize)
+            let attributed = attributedLine(text, visibleWords: lane.style == .wordByWord ? visibleWords : .max, font: font, lane: lane)
+            let lineHeight = font.capHeight + abs(font.descender)
+            // Baseline so the ink is centred in the plate: cap height above,
+            // the descender below.
+            let baseline = (bounds.height - lineHeight) / 2 + font.capHeight
+            let origin = CGPoint(x: (bounds.width - attributed.size().width) / 2, y: baseline - font.ascender)
+            if lane.style == .clean {
+                cg.setShadow(offset: CGSize(width: 0, height: typeset.textHeight * 0.04), blur: typeset.textHeight * 0.18, color: NSColor.black.withAlphaComponent(0.75).cgColor)
+            }
+            attributed.draw(at: origin)
+        }
+        #endif
     }
 
-    private static func attributedLine(_ text: String, visibleWords: Int, font: UIFont, lane: VideoCaptionLane) -> NSAttributedString {
-        var attributes: [NSAttributedString.Key: Any] = [.font: font, .foregroundColor: UIColor.white]
+    private static func attributedLine(_ text: String, visibleWords: Int, font: PlatformFont, lane: VideoCaptionLane) -> NSAttributedString {
+        var attributes: [NSAttributedString.Key: Any] = [.font: font, .foregroundColor: PlatformColor.white]
         if lane.style == .outline {
-            attributes[.strokeColor] = UIColor.black
+            attributes[.strokeColor] = PlatformColor.black
             attributes[.strokeWidth] = -9.0
         }
         guard visibleWords != .max else { return NSAttributedString(string: text, attributes: attributes) }
@@ -115,7 +142,7 @@ enum VideoCaptionRenderer {
         let words = text.split(separator: " ", omittingEmptySubsequences: false)
         for (index, word) in words.enumerated() {
             var wordAttributes = attributes
-            if index >= visibleWords { wordAttributes[.foregroundColor] = UIColor.clear }
+            if index >= visibleWords { wordAttributes[.foregroundColor] = PlatformColor.clear }
             result.append(NSAttributedString(string: (index == 0 ? "" : " ") + word, attributes: wordAttributes))
         }
         return result

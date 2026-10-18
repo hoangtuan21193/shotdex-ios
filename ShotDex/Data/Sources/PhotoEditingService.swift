@@ -4,7 +4,11 @@ import ImageIO
 import os
 import Photos
 import UniformTypeIdentifiers
+#if canImport(UIKit)
 import UIKit
+#else
+import AppKit
+#endif
 import ShotDexKit
 
 struct PhotoEditSourceOption: Identifiable {
@@ -917,7 +921,7 @@ final class PhotoEditingService {
     }
 
     private func contentType(for input: PHContentEditingInput) -> UTType? {
-        if #available(iOS 26.0, *) {
+        if #available(iOS 26.0, macOS 26.0, *) {
             return input.contentType
         }
         return input.uniformTypeIdentifier.flatMap(UTType.init)

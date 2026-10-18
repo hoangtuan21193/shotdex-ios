@@ -1,7 +1,11 @@
 import AVFoundation
 import CoreImage
 import Photos
+#if canImport(UIKit)
 import UIKit
+#else
+import AppKit
+#endif
 import ShotDexKit
 
 /// The per-frame render settings shared by every instruction of one build.

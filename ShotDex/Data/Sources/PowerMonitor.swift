@@ -1,5 +1,10 @@
 import Foundation
+#if canImport(UIKit)
 import UIKit
+#else
+import AppKit
+import IOKit.ps
+#endif
 import os
 
 /// Watches the device power state so index runs can react to Low Power Mode and
@@ -21,8 +26,10 @@ final class PowerMonitor: Sendable {
     private let tokens = OSAllocatedUnfairLock<[NSObjectProtocol]>(initialState: [])
 
     init() {
+        #if canImport(UIKit)
         // Battery state stays `.unknown` until monitoring is enabled.
         UIDevice.current.isBatteryMonitoringEnabled = true
+        #endif
         lowPower.withLock { $0 = ProcessInfo.processInfo.isLowPowerModeEnabled }
         charging.withLock { $0 = Self.isChargingNow() }
 
@@ -34,6 +41,7 @@ final class PowerMonitor: Sendable {
         ) { [weak self] _ in
             self?.refresh()
         }
+        #if canImport(UIKit)
         let batteryToken = center.addObserver(
             forName: UIDevice.batteryStateDidChangeNotification,
             object: nil,
@@ -42,6 +50,9 @@ final class PowerMonitor: Sendable {
             self?.refresh()
         }
         tokens.withLock { $0 = [powerToken, batteryToken] }
+        #else
+        tokens.withLock { $0 = [powerToken] }
+        #endif
     }
 
     /// Registers the single power-change observer (the library model).
@@ -70,10 +81,17 @@ final class PowerMonitor: Sendable {
     }
 
     private static func isChargingNow() -> Bool {
+        #if canImport(UIKit)
         switch UIDevice.current.batteryState {
         case .charging, .full: true
         default: false
         }
+        #else
+        // A Mac on its adapter — or a desktop, which has no battery at all.
+        let info = IOPSCopyPowerSourcesInfo()?.takeRetainedValue()
+        let source = info.flatMap { IOPSGetProvidingPowerSourceType($0)?.takeUnretainedValue() as String? }
+        return source != kIOPSBatteryPowerValue
+        #endif
     }
 
     deinit {

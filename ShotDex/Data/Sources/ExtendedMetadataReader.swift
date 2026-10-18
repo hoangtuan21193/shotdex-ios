@@ -12,7 +12,7 @@ protocol ExtendedMetadataReading: Sendable {
     func read(ids: [String]) -> [String: CaptionKeywords]
 }
 
-@available(iOS 27, *)
+@available(iOS 27, macOS 27, *)
 struct PhotoKitExtendedMetadataReader: ExtendedMetadataReading {
     func read(ids: [String]) -> [String: CaptionKeywords] {
         guard !ids.isEmpty else { return [:] }

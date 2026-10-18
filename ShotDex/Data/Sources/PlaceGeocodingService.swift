@@ -138,7 +138,7 @@ actor PlaceGeocodingService {
         await waitForTurn()
         let location = CLLocation(latitude: latitude, longitude: longitude)
         let outcome: Outcome
-        if #available(iOS 26.0, *) {
+        if #available(iOS 26.0, macOS 26.0, *) {
             outcome = await modernLookup(location: location, locale: locale)
         } else {
             outcome = await legacyLookup(location: location, locale: locale)
@@ -163,7 +163,7 @@ actor PlaceGeocodingService {
         nextRequestAt = Date().addingTimeInterval(Self.requestInterval.seconds)
     }
 
-    @available(iOS 26.0, *)
+    @available(iOS 26.0, macOS 26.0, *)
     private func modernLookup(location: CLLocation, locale: Locale) async -> Outcome {
         guard let request = MKReverseGeocodingRequest(location: location) else {
             return .empty

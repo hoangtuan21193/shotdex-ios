@@ -1,4 +1,8 @@
+#if canImport(UIKit)
 import UIKit
+#else
+import AppKit
+#endif
 
 /// The display and the window the app is actually on.
 ///
@@ -8,6 +12,7 @@ import UIKit
 /// differ in size *and* scale). Everything that needs a pixel scale, a
 /// window-sized image request or the display brightness reads it here, so the
 /// app follows its window across folds, poses and Split View.
+#if canImport(UIKit)
 enum ActiveDisplay {
     /// The foreground-active window scene, falling back to any connected one —
     /// sizes are sometimes wanted while the app is not frontmost (prewarming).
@@ -51,3 +56,21 @@ enum ActiveDisplay {
         return CGSize(width: size.width * scale, height: size.height * scale)
     }
 }
+#else
+/// The Mac: the key window and its screen.
+enum ActiveDisplay {
+    @MainActor
+    static var scale: CGFloat { NSApp?.keyWindow?.backingScaleFactor ?? NSScreen.main?.backingScaleFactor ?? 2 }
+
+    @MainActor
+    static var size: CGSize {
+        NSApp?.keyWindow?.contentLayoutRect.size ?? NSScreen.main?.frame.size ?? CGSize(width: 1440, height: 900)
+    }
+
+    @MainActor
+    static func pixelSize(scaleCap: CGFloat = .greatestFiniteMagnitude) -> CGSize {
+        let scale = min(scale, scaleCap)
+        return CGSize(width: size.width * scale, height: size.height * scale)
+    }
+}
+#endif

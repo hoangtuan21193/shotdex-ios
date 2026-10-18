@@ -1,7 +1,11 @@
 import CoreGraphics
 import CoreText
 import Foundation
+#if canImport(UIKit)
 import UIKit
+#else
+import AppKit
+#endif
 import ShotDexKit
 
 /// Draws a finished collage into one bitmap. Mostly Core Graphics — rounded-rect
@@ -16,7 +20,7 @@ enum CollageCompositor {
 
     /// Polaroid caption ink — the `#4A443C` from `CollageTheme` (kept as a
     /// literal here so the Domain renderer needn't depend on the Features theme).
-    private static let captionInk = UIColor(red: 0x4A / 255, green: 0x44 / 255, blue: 0x3C / 255, alpha: 1)
+    private static let captionInk = PlatformColor(red: 0x4A / 255, green: 0x44 / 255, blue: 0x3C / 255, alpha: 1)
     private static let ciContext = CIContext(options: [.useSoftwareRenderer: false])
 
     static func render(
@@ -95,7 +99,7 @@ enum CollageCompositor {
             context.clip(to: full)
             context.draw(blurred, in: rect)
             context.restoreGState()
-            context.setFillColor(UIColor(white: 0, alpha: recipe.backgroundDarken).cgColor)
+            context.setFillColor(PlatformColor(white: 0, alpha: recipe.backgroundDarken).cgColor)
             context.fill(full)
         } else {
             context.setFillColor(TextOverlayLayout.cgColor(recipe.background))
@@ -163,10 +167,10 @@ enum CollageCompositor {
         context.setShadow(
             offset: CGSize(width: 0, height: -min(canvas.width, canvas.height) * 0.002),
             blur: min(canvas.width, canvas.height) * 0.01,
-            color: UIColor(white: 0, alpha: 0.22).cgColor
+            color: PlatformColor(white: 0, alpha: 0.22).cgColor
         )
         context.addPath(roundedPath(plate, radius: plateRadius))
-        context.setFillColor(UIColor.white.cgColor)
+        context.setFillColor(PlatformColor.white.cgColor)
         context.fillPath()
         context.restoreGState()
 
@@ -218,7 +222,7 @@ enum CollageCompositor {
 
     private static func drawCaption(_ text: String, in rect: CGRect, context: CGContext, canvas: CGSize) {
         let fontSize = min(rect.height * 0.55, min(canvas.width, canvas.height) * 0.03)
-        let font = UIFont(name: "Georgia", size: fontSize) ?? UIFont.systemFont(ofSize: fontSize)
+        let font = PlatformFont(name: "Georgia", size: fontSize) ?? PlatformFont.systemFont(ofSize: fontSize)
         let paragraph = NSMutableParagraphStyle()
         paragraph.alignment = .center
         paragraph.lineBreakMode = .byTruncatingTail
