@@ -1,0 +1,19 @@
+#!/bin/zsh
+# Screenshot one window of a running Mac app, by owner name (default ShotDex).
+#   Tools/mac-shot out.png [AppName] [--no-shadow]
+# Finds the app's frontmost on-screen window with CGWindowList and hands its
+# id to `screencapture -l`, so the frame is the window only, at 2x.
+set -e
+out=${1:?usage: Tools/mac-shot out.png [AppName]}
+app=${2:-ShotDex}
+id=$(swift - "$app" <<'SWIFT'
+import CoreGraphics
+let app = CommandLine.arguments[1]
+let list = CGWindowListCopyWindowInfo([.optionOnScreenOnly, .excludeDesktopElements], kCGNullWindowID) as? [[String: Any]] ?? []
+let windows = list.filter { ($0[kCGWindowOwnerName as String] as? String) == app && ($0[kCGWindowLayer as String] as? Int) == 0 }
+if let id = windows.first?[kCGWindowNumber as String] as? Int { print(id) }
+SWIFT
+)
+[ -n "$id" ] || { echo "no on-screen window of $app" >&2; exit 1; }
+screencapture -x -o -l "$id" "$out"
+echo "$out"
