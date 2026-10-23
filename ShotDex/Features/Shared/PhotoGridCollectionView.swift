@@ -2018,6 +2018,11 @@ final class PhotoGridCell: UICollectionViewCell {
 
     /// Cells narrower than this hide the metadata line.
     private static var metadataMinCellWidth: CGFloat { 90 }
+    /// The metadata line's font, shared with the fit measurement in
+    /// `metadataLine(for:options:fittingWidth:)`.
+    private static let metadataFont = UIFont.systemFont(ofSize: 10, weight: .medium)
+    /// Horizontal inset of the metadata line on each side of the cell.
+    private static var metadataInset: CGFloat { 6 }
 
     private let imageView = UIImageView()
     private let gradient = CAGradientLayer()
@@ -2092,7 +2097,7 @@ final class PhotoGridCell: UICollectionViewCell {
         ]
         contentView.layer.addSublayer(gradient)
 
-        metadataLabel.font = .systemFont(ofSize: 10, weight: .medium)
+        metadataLabel.font = Self.metadataFont
         metadataLabel.textColor = .white
         contentView.addSubview(metadataLabel)
 
@@ -2152,8 +2157,8 @@ final class PhotoGridCell: UICollectionViewCell {
         cloudName.frame = CGRect(x: 4, y: contentView.bounds.height - 18, width: contentView.bounds.width - 8, height: 14)
         let labelHeight: CGFloat = 20
         metadataLabel.frame = CGRect(
-            x: 6, y: contentView.bounds.height - labelHeight + 1,
-            width: contentView.bounds.width - 12, height: labelHeight - 5
+            x: Self.metadataInset, y: contentView.bounds.height - labelHeight + 1,
+            width: contentView.bounds.width - Self.metadataInset * 2, height: labelHeight - 5
         )
         CATransaction.begin()
         CATransaction.setDisableActions(true)
@@ -2246,7 +2251,8 @@ final class PhotoGridCell: UICollectionViewCell {
         applyCloudPlaceholder(isCloudPlaceholder ? (item.originalFilename ?? "") : nil, showsName: cellWidth >= 60)
 
         let showsBadge = cellWidth >= Self.metadataMinCellWidth && !isCloudPlaceholder
-        let line = showsBadge ? Self.metadataLine(for: item, options: displayOptions) : nil
+        let lineWidth = cellWidth - Self.metadataInset * 2
+        let line = showsBadge ? Self.metadataLine(for: item, options: displayOptions, fittingWidth: lineWidth) : nil
         applyBadge(line: line)
         accessibilityMediaLabel = item.mediaType == 2 ? "Video" : "Photo"
         applyFileTypeBadge(
@@ -2264,7 +2270,7 @@ final class PhotoGridCell: UICollectionViewCell {
                 guard let self, !Task.isCancelled,
                       self.configuredAssetId == assetId else { return }
                 if showsBadge {
-                    self.applyBadge(line: Self.metadataLine(for: fetched, options: displayOptions))
+                    self.applyBadge(line: Self.metadataLine(for: fetched, options: displayOptions, fittingWidth: lineWidth))
                 }
                 self.applyFileTypeBadge(
                     displayOptions.showsFileTypeBadge ? fetched.fileTypeBadgeText : nil
@@ -2584,20 +2590,31 @@ final class PhotoGridCell: UICollectionViewCell {
     }
 
     /// Only real values — never placeholders like `ISO -- · --mm`.
+    ///
+    /// Trailing fields drop off whole until the line fits `width`, so a tile
+    /// shows `ISO 400 · 35mm` rather than `ISO 400 · 35m…` — a cut value reads
+    /// as a wrong one. The first field always stays; if even that is too long
+    /// the label truncates it as before.
     private static func metadataLine(
-        for item: some PhotoGridDisplayable, options: GridMetadataDisplayOptions
+        for item: some PhotoGridDisplayable, options: GridMetadataDisplayOptions, fittingWidth width: CGFloat
     ) -> String? {
         let focalValue = options.showsEquivalentFocalLength
             ? (item.equivalentFocalLength ?? item.focalLength)
             : item.focalLength
-        return MetadataFormatter.metadataLine([
+        var fragments: [String] = [
             options.showsISO ? item.iso.flatMap(MetadataFormatter.iso) : nil,
             options.showsFocal ? focalValue.flatMap(MetadataFormatter.focalLength) : nil,
             options.showsAperture ? item.aperture.flatMap(MetadataFormatter.aperture) : nil,
             options.showsShutter ? item.shutterSpeedDisplay : nil,
             options.showsMegapixels ? item.megapixels.flatMap(MetadataFormatter.megapixels) : nil,
             options.showsFileSize ? item.fileSize.flatMap(MetadataFormatter.fileSize) : nil,
-        ])
+        ].compactMap { $0 }
+        while fragments.count > 1,
+              let line = MetadataFormatter.metadataLine(fragments),
+              (line as NSString).size(withAttributes: [.font: metadataFont]).width > width {
+            fragments.removeLast()
+        }
+        return MetadataFormatter.metadataLine(fragments)
     }
 
     /// Whether the visible cell needs one lazy row refresh. A data check, not
