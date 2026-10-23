@@ -23,6 +23,9 @@ struct LibraryScreen: View {
     /// Multi-select mode: uncapped selection of asset ids kept in pick
     /// order (Compare panes follow it); ids survive grid reloads.
     @State private var isSelecting = false
+    /// The Duo's inner display, where the system stands the toolbar up in its
+    /// trailing rail. Only icon items move there, so `Select` is drawn as one.
+    @State private var isDuoInner = false
     @State private var selectedIds: [String] = []
     @State private var compareRequest: CompareRequest?
     @State private var compressionPresentation: CompressionPresentation?
@@ -104,6 +107,17 @@ struct LibraryScreen: View {
             }
         }
         .toolbar { toolbarContent }
+        .onGeometryChange(for: Bool.self) { proxy in
+            let insets = proxy.safeAreaInsets
+            let window = VideoStudioWindowClass.windowSize(
+                content: proxy.size,
+                top: insets.top,
+                bottom: insets.bottom,
+                leading: insets.leading,
+                trailing: insets.trailing
+            )
+            return VideoStudioWindowClass.resolve(window: window, trailingInset: insets.trailing) == .duoInner
+        } action: { isDuoInner = $0 }
         // Selection keeps the navigation bar: its ⋯ and × live there (Photos
         // does the same), so the title, the date under it and the grid's pinned
         // date header never shift when selection starts. Only the tab bar hides,
@@ -1171,9 +1185,17 @@ struct LibraryScreen: View {
             }
             ToolbarItem(placement: .topBarTrailing) {
                 if model != nil {
-                    // Spelled out, like Photos.
-                    Button("Select") {
+                    // Spelled out, like Photos — except on the Duo's inner
+                    // display, whose vertical toolbar takes icon items only: a
+                    // word stays behind in the horizontal row on its own.
+                    Button {
                         isSelecting = true
+                    } label: {
+                        if isDuoInner {
+                            Label("Select", systemImage: "checkmark.circle")
+                        } else {
+                            Text("Select")
+                        }
                     }
                     .tint(.primary)
                     .accessibilityLabel("Select photos")
