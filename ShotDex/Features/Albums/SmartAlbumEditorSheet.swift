@@ -59,7 +59,9 @@ struct SmartAlbumEditorSheet: View {
 
     var body: some View {
         NavigationStack {
-            List {
+            // Wide: name and scope on a 320pt leading column, the conditions
+            // beside them (board `DI_SmartAlbumEditor`).
+            AdaptiveFormColumns(leadingWidth: 320) {
                 Section {
                     TextField("Smart Album Name", text: $name)
                 } header: {
@@ -71,15 +73,10 @@ struct SmartAlbumEditorSheet: View {
                     }
                 }
 
-                RuleBuilderSections(
-                    query: $query,
-                    brands: availableBrands,
-                    bodies: availableBodies,
-                    lenses: availableLenses,
-                    matchCount: matchCount
-                )
+                rules(.scope)
+            } trailing: {
+                rules(.conditions)
             }
-            .listStyle(.insetGrouped)
             .navigationTitle(existing == nil ? "New Smart Album" : "Edit Smart Album")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -95,6 +92,17 @@ struct SmartAlbumEditorSheet: View {
         }
         .task { await prepare() }
         .task(id: query) { await recomputeCount(for: query) }
+    }
+
+    private func rules(_ parts: RuleBuilderSections.Parts) -> some View {
+        RuleBuilderSections(
+            query: $query,
+            brands: availableBrands,
+            bodies: availableBodies,
+            lenses: availableLenses,
+            matchCount: matchCount,
+            parts: parts
+        )
     }
 
     /// Loads autocomplete suggestion sources and the initial match count.

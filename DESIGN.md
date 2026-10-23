@@ -265,6 +265,8 @@ Nguyên tắc chung cho regular width (iPad, màn trong iPhone Duo 867pt): **mà
 
 **Lưới ảnh.** `GridDensity.columns(forDensity:width:isRegularWidth:)` quy đổi density đã lưu theo bề rộng thật rồi siết thêm `regularTileScale = 0.7`, trần cột `resolvedColumnRange = 1...20` (density mà pinch chạm tới vẫn là `columnRange = 1...8`). Density 3 ra 9 cột ở iPad 11" dọc, 13 cột khi xoay ngang, 9 cột ở màn trong Duo — ô ảnh giữ khoảng 85–105pt ở mọi bề rộng.
 
+**Form, sheet và công cụ ≥ 860pt** (2026-10-24). Màn trong Duo là regular width nhưng thấp 669pt, nên UIKit bung mọi sheet ra toàn màn 951pt — một cột form kéo dài 951pt là toàn hàng trống. Từ `WideLayout.minimumWidth = 860` (đo trên chính view, không lấy size class — form sheet iPad 704pt vẫn một cột): form tách hai cột section bằng `AdaptiveFormColumns` (Upload to Server, Add Connection; Advanced Search và Edit Smart Album có cột trái 320 cho phạm vi, phải là Conditions); Photo Info ba cột (nơi/lúc · máy/phơi sáng/chụp · file và phần còn lại); Resize, Focus Stack, Stack Exposures để ảnh bên trái, panel 340 bên phải (Resize ghim nút xuất dưới panel); Uploaded to Server thành lưới thẻ thư mục ba ảnh (`GridItem(.adaptive(minimum: 240))`). Dưới 860 mọi màn giữ nguyên bản điện thoại. Board: `DI_*` trên canvas Duo.
+
 ### 10.1d Cover là nội dung, nên cover được phép to ra (2026-09-20)
 
 Ngoại lệ có phạm vi của §10.1c. Một phần tử **chỉ** được to lên theo cửa sổ khi **đủ cả ba**:

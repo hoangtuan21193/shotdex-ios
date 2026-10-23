@@ -25,6 +25,7 @@ struct CompressionScreen: View {
     @State private var controller: CompressionController?
     @State private var isCancelConfirmationPresented = false
     @State private var watermarkModel: WatermarkModel?
+    @State private var width: CGFloat = 0
 
     private var stage: some View {
         ZStack {
@@ -32,6 +33,7 @@ struct CompressionScreen: View {
             Group {
                 if let controller {
                     content(controller)
+                        .measureWidth(into: $width)
                 } else {
                     ProgressView("Preparing original…")
                         .tint(.white)
@@ -141,6 +143,30 @@ struct CompressionScreen: View {
                     dismiss()
                 }
             }
+        } else if width >= WideLayout.minimumWidth {
+            // Wide (the Duo's inner display, an iPad): the photo fills the
+            // leading side and the controls are an inspector beside it, with
+            // the export button pinned under them (board `DI_Compress`) —
+            // not a 700pt form column with black either side of it.
+            HStack(spacing: 0) {
+                preview(controller, height: nil)
+                    .padding(AppTheme.Spacing.xl)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                VStack(spacing: 0) {
+                    ScrollView {
+                        controls(controller)
+                            .padding(AppTheme.Spacing.lg)
+                    }
+                    exportButton(controller)
+                        .padding(AppTheme.Spacing.lg)
+                }
+                .frame(width: Self.inspectorWidth)
+                .background(EditorTheme.panelSolid)
+                .overlay(alignment: .leading) {
+                    Rectangle().fill(EditorTheme.hairline).frame(width: 1)
+                }
+            }
+            .disabled(controller.isExporting)
         } else {
             ScrollView {
                 formBody(controller)
@@ -157,22 +183,36 @@ struct CompressionScreen: View {
         }
     }
 
-    @ViewBuilder
-    private func formBody(_ controller: CompressionController) -> some View {
-        let previewHeight: CGFloat = assets.count == 1 ? 320 : 250
-        VStack(spacing: AppTheme.Spacing.lg) {
-            if assets.count == 1 {
-                CompressionPreview(controller: controller)
-                    .frame(height: previewHeight)
-            } else {
-                CompressionGallery(
-                    assets: assets,
-                    photoLibrary: dependencies.photoLibrary,
-                    stamp: { controller.watermarkStamp(for: $0) }
-                )
-                .frame(height: previewHeight)
-            }
+    /// The wide layout's inspector.
+    private static let inspectorWidth: CGFloat = 340
 
+    private func formBody(_ controller: CompressionController) -> some View {
+        VStack(spacing: AppTheme.Spacing.lg) {
+            preview(controller, height: assets.count == 1 ? 320 : 250)
+            controls(controller)
+            exportButton(controller)
+        }
+    }
+
+    /// The one photo, or the batch's gallery. `height` nil fills what the
+    /// wide layout gives it.
+    @ViewBuilder
+    private func preview(_ controller: CompressionController, height: CGFloat?) -> some View {
+        if assets.count == 1 {
+            CompressionPreview(controller: controller)
+                .frame(height: height)
+        } else {
+            CompressionGallery(
+                assets: assets,
+                photoLibrary: dependencies.photoLibrary,
+                stamp: { controller.watermarkStamp(for: $0) }
+            )
+            .frame(height: height)
+        }
+    }
+
+    private func controls(_ controller: CompressionController) -> some View {
+        VStack(spacing: AppTheme.Spacing.lg) {
             presetSection(controller)
             qualitySection(controller)
             formatSection(controller)
@@ -189,8 +229,6 @@ struct CompressionScreen: View {
                 .foregroundStyle(EditorTheme.dimText)
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
-
-            exportButton(controller)
         }
     }
 
@@ -219,32 +257,49 @@ struct CompressionScreen: View {
     private func presetSection(_ controller: CompressionController) -> some View {
         VStack(alignment: .leading, spacing: AppTheme.Spacing.sm) {
             CompressionGroupLabel(text: "Size")
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: AppTheme.Spacing.sm) {
-                    ForEach(controller.presets) { preset in
-                        Button {
-                            controller.choosePreset(preset.id)
-                        } label: {
-                            VStack(spacing: AppTheme.Spacing.xs) {
-                                Text(preset.name)
-                                    .font(.subheadline.weight(controller.selectedPresetID == preset.id ? .semibold : .medium))
-                                Text(presetDetail(preset))
-                                    .font(.caption2)
-                                    .foregroundStyle(EditorTheme.secondaryText)
-                            }
-                            .padding(.horizontal, AppTheme.Spacing.md)
-                            .frame(minHeight: 48)
-                        }
-                        .buttonStyle(
-                            CompressionChoiceStyle(
-                                selected: controller.selectedPresetID == preset.id
-                            )
-                        )
+            // In the wide layout's 340pt inspector a scrolling row hides half
+            // the presets past its edge; two columns show them all.
+            if isWide {
+                LazyVGrid(
+                    columns: Array(repeating: GridItem(.flexible(), spacing: AppTheme.Spacing.sm), count: 2),
+                    spacing: AppTheme.Spacing.sm
+                ) {
+                    presetButtons(controller, fillsWidth: true)
+                }
+            } else {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: AppTheme.Spacing.sm) {
+                        presetButtons(controller, fillsWidth: false)
                     }
                 }
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private var isWide: Bool { width >= WideLayout.minimumWidth }
+
+    private func presetButtons(_ controller: CompressionController, fillsWidth: Bool) -> some View {
+        ForEach(controller.presets) { preset in
+            Button {
+                controller.choosePreset(preset.id)
+            } label: {
+                VStack(spacing: AppTheme.Spacing.xs) {
+                    Text(preset.name)
+                        .font(.subheadline.weight(controller.selectedPresetID == preset.id ? .semibold : .medium))
+                    Text(presetDetail(preset))
+                        .font(.caption2)
+                        .foregroundStyle(EditorTheme.secondaryText)
+                }
+                .padding(.horizontal, AppTheme.Spacing.md)
+                .frame(maxWidth: fillsWidth ? .infinity : nil, minHeight: 48)
+            }
+            .buttonStyle(
+                CompressionChoiceStyle(
+                    selected: controller.selectedPresetID == preset.id
+                )
+            )
+        }
     }
 
     private func qualitySection(_ controller: CompressionController) -> some View {

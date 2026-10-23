@@ -19,6 +19,7 @@ struct MetadataPanel: View {
     @State private var isReadingRawMetadata = false
     @State private var shutterCountState: ShutterCountState = .hidden
     @State private var isShutterNoteExpanded = false
+    @State private var width: CGFloat = 0
 
     private enum ShutterCountState {
         case hidden
@@ -51,58 +52,124 @@ struct MetadataPanel: View {
         }
     }
 
+    /// One list on a phone. From `WideLayout.minimumWidth`
+    /// up — the Duo's inner display, where the sheet is the whole screen —
+    /// three columns, so everything but raw metadata fits without scrolling
+    /// (board `DI_Metadata`): where and when; camera, exposure and capture
+    /// settings; the file and the rest.
     private func usefulMetadataList(_ report: AssetMetadataReport) -> some View {
-        List {
-            // iOS 27: Photos' own caption and keywords, first, editable
-            // (FS-02.07 §4). Below 27 there is nothing to read or write, and
-            // the file's keywords stay in Rights & Description.
-            if ExtendedMetadataSupport.isAvailable, let service = dependencies?.captionKeywords,
-               let assetId = asset?.localIdentifier {
-                CaptionKeywordSection(assetId: assetId, service: service)
-                    .id(assetId)
-            }
-
-            if let location = report.location {
-                PhotoLocationSection(location: location, assetId: asset?.localIdentifier)
-            } else {
-                PhotoLocationUnavailableSection()
-            }
-
-            ForEach(report.usefulSections.filter { $0.title != "Location" }) { section in
-                Section {
-                    CompactMetadataGrid(rows: section.rows)
-                } header: {
-                    Label(section.title, systemImage: icon(for: section.title))
-                }
-            }
-
-            shutterCountSection
-
-            serverUploadsSection
-
-            Section {
-                NavigationLink {
-                    RawMetadataView(sections: report.rawSections)
-                } label: {
-                    HStack {
-                        Label("Show All Raw Metadata", systemImage: "list.bullet.rectangle.portrait")
-                        Spacer()
-                        if isReadingRawMetadata {
-                            ProgressView()
-                                .controlSize(.small)
-                        }
+        Group {
+            if width >= WideLayout.minimumWidth {
+                HStack(alignment: .top, spacing: 0) {
+                    metadataColumn(isFirst: true) {
+                        captionAndLocation(report)
+                        metadataSections(report, in: .whereAndWhen)
+                    }
+                    metadataColumn {
+                        metadataSections(report, in: .camera)
+                    }
+                    metadataColumn(isLast: true) {
+                        metadataSections(report, in: .file)
+                        trailingSections(report)
                     }
                 }
-                .disabled(isReadingRawMetadata)
-            } footer: {
-                if isReadingRawMetadata {
-                    Text("Indexed photo info is ready. Detailed raw metadata is still being read in the background.")
-                } else {
-                    Text("Includes identifiers, serial numbers, internal Exif/TIFF values, resources, and vendor-specific binary blocks.")
+                .background(Color(.systemGroupedBackground))
+            } else {
+                List {
+                    captionAndLocation(report)
+                    metadataSections(report, in: nil)
+                    trailingSections(report)
                 }
+                .listStyle(.insetGrouped)
             }
         }
-        .listStyle(.insetGrouped)
+        .measureWidth(into: $width)
+    }
+
+    /// Which wide-layout column a curated section goes in.
+    private enum MetadataColumn {
+        case whereAndWhen, camera, file
+
+        init(sectionTitle: String) {
+            switch sectionTitle {
+            case "Date", "Rights & Description": self = .whereAndWhen
+            case "Camera & Lens", "Exposure", "Capture Settings": self = .camera
+            default: self = .file
+            }
+        }
+    }
+
+    private func metadataColumn<Content: View>(
+        isFirst: Bool = false,
+        isLast: Bool = false,
+        @ViewBuilder content: () -> Content
+    ) -> some View {
+        List { content() }
+            .listStyle(.insetGrouped)
+            .contentMargins(.leading, isFirst ? AppTheme.Spacing.xl : AppTheme.Spacing.sm, for: .scrollContent)
+            .contentMargins(.trailing, isLast ? AppTheme.Spacing.xl : AppTheme.Spacing.sm, for: .scrollContent)
+            .frame(maxWidth: .infinity)
+    }
+
+    @ViewBuilder
+    private func captionAndLocation(_ report: AssetMetadataReport) -> some View {
+        // iOS 27: Photos' own caption and keywords, first, editable
+        // (FS-02.07 §4). Below 27 there is nothing to read or write, and
+        // the file's keywords stay in Rights & Description.
+        if ExtendedMetadataSupport.isAvailable, let service = dependencies?.captionKeywords,
+           let assetId = asset?.localIdentifier {
+            CaptionKeywordSection(assetId: assetId, service: service)
+                .id(assetId)
+        }
+
+        if let location = report.location {
+            PhotoLocationSection(location: location, assetId: asset?.localIdentifier)
+        } else {
+            PhotoLocationUnavailableSection()
+        }
+    }
+
+    /// The curated sections, all of them (`column` nil) or one wide column's.
+    private func metadataSections(_ report: AssetMetadataReport, in column: MetadataColumn?) -> some View {
+        let sections = report.usefulSections.filter {
+            $0.title != "Location" && (column == nil || MetadataColumn(sectionTitle: $0.title) == column)
+        }
+        return ForEach(sections) { section in
+            Section {
+                CompactMetadataGrid(rows: section.rows)
+            } header: {
+                Label(section.title, systemImage: icon(for: section.title))
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func trailingSections(_ report: AssetMetadataReport) -> some View {
+        shutterCountSection
+
+        serverUploadsSection
+
+        Section {
+            NavigationLink {
+                RawMetadataView(sections: report.rawSections)
+            } label: {
+                HStack {
+                    Label("Show All Raw Metadata", systemImage: "list.bullet.rectangle.portrait")
+                    Spacer()
+                    if isReadingRawMetadata {
+                        ProgressView()
+                            .controlSize(.small)
+                    }
+                }
+            }
+            .disabled(isReadingRawMetadata)
+        } footer: {
+            if isReadingRawMetadata {
+                Text("Indexed photo info is ready. Detailed raw metadata is still being read in the background.")
+            } else {
+                Text("Includes identifiers, serial numbers, internal Exif/TIFF values, resources, and vendor-specific binary blocks.")
+            }
+        }
     }
 
     /// Where copies of this photo are (FS-15.02 §8): one line per server,

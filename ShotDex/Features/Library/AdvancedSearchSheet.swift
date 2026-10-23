@@ -25,6 +25,7 @@ struct AdvancedSearchSheet: View {
     @State private var matchCount: Int?
     @State private var isSaveAsAlbumPresented = false
     @State private var suggestions = FilterSuggestionCatalog(brands: [], bodies: [], lenses: [], places: [])
+    @State private var width: CGFloat = 0
 
     init(
         initialQuery: SmartAlbumQuery?,
@@ -75,28 +76,17 @@ struct AdvancedSearchSheet: View {
 
     var body: some View {
         NavigationStack {
-            List {
-                RuleBuilderSections(
-                    query: $query,
-                    brands: suggestions.brands,
-                    bodies: suggestions.bodies,
-                    lenses: suggestions.lenses,
-                    places: suggestions.places,
-                    matchCount: matchCount
-                )
-
-                if allowsSaveAsSmartAlbum {
-                    Section {
-                        Button {
-                            isSaveAsAlbumPresented = true
-                        } label: {
-                            Label("Save as Smart Album", systemImage: "plus.rectangle.on.rectangle")
-                        }
-                        .disabled(!canApply)
-                    }
-                }
+            // Wide: scope and Save on a 320pt leading column, the
+            // conditions beside them (board `DI_AdvancedSearch`). Narrow, the
+            // order is scope, conditions, Save.
+            AdaptiveFormColumns(leadingWidth: 320) {
+                rules(.scope)
+                if isWide { saveAsAlbumSection }
+            } trailing: {
+                rules(.conditions)
+                if !isWide { saveAsAlbumSection }
             }
-            .listStyle(.insetGrouped)
+            .measureWidth(into: $width)
             .navigationTitle("Advanced Search")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -125,6 +115,34 @@ struct AdvancedSearchSheet: View {
             suggestions = await dependencies.filterSuggestions.load()
         }
         .task(id: query) { await recomputeCount(for: query) }
+    }
+
+    private var isWide: Bool { width >= WideLayout.minimumWidth }
+
+    private func rules(_ parts: RuleBuilderSections.Parts) -> some View {
+        RuleBuilderSections(
+            query: $query,
+            brands: suggestions.brands,
+            bodies: suggestions.bodies,
+            lenses: suggestions.lenses,
+            places: suggestions.places,
+            matchCount: matchCount,
+            parts: parts
+        )
+    }
+
+    @ViewBuilder
+    private var saveAsAlbumSection: some View {
+        if allowsSaveAsSmartAlbum {
+            Section {
+                Button {
+                    isSaveAsAlbumPresented = true
+                } label: {
+                    Label("Save as Smart Album", systemImage: "plus.rectangle.on.rectangle")
+                }
+                .disabled(!canApply)
+            }
+        }
     }
 
     private func apply() {

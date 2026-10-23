@@ -13,6 +13,9 @@ struct RuleBuilderSections: View {
     var places: [String] = []
     /// Live count of matching photos; nil hides the footer.
     var matchCount: Int?
+    /// Which sections to draw. A wide sheet puts the scope (media type and
+    /// match mode) in one column and the conditions in the other.
+    var parts: Parts = .all
     /// Absent in previews and tests; then the Keyword field suggests nothing.
     @Environment(AppDependencies.self) private var dependencies: AppDependencies?
     @State private var keywords: [String] = []
@@ -44,7 +47,17 @@ struct RuleBuilderSections: View {
         Array($query.rules).filter { $0.wrappedValue.field != .mediaType }
     }
 
+    enum Parts {
+        case all, scope, conditions
+    }
+
     var body: some View {
+        if parts != .conditions { scopeSections }
+        if parts != .scope { conditionsSection }
+    }
+
+    @ViewBuilder
+    private var scopeSections: some View {
         Section {
             Picker("Media Type", selection: mediaKind) {
                 Text("All").tag(MediaKind?.none)
@@ -73,7 +86,9 @@ struct RuleBuilderSections: View {
                 .font(.footnote)
                 .foregroundStyle(.secondary)
         }
+    }
 
+    private var conditionsSection: some View {
         Section {
             // The media-type rule has its own control above, so it is filtered
             // out of the rows rather than skipped inside the `ForEach` — swipe

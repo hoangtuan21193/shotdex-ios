@@ -88,12 +88,70 @@ struct FileServerFormScreen: View {
         }
     }
 
+    /// Add as Source, Add to Collections and Test Connection.
+    @ViewBuilder
+    private var optionsSections: some View {
+        Section {
+            Toggle(isOn: $addsAsSource) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Add as Source", comment: "Connection form: index this server's Folder like a folder")
+                    Text("Indexed like a folder and listed under Sources", comment: "Connection form: what Add as Source does")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
+            Toggle(isOn: $addsTile) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Add to Collections")
+                    Text(ConnectionSaver.tileExplanation)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
+        }
+        Section {
+            Button {
+                runTest()
+            } label: {
+                HStack {
+                    Text("Test Connection")
+                    Spacer()
+                    testIndicator
+                }
+            }
+            .disabled(!draft.canSave || test == .running)
+            if let message = testMessage {
+                Text(message)
+                    .font(.footnote)
+                    .foregroundStyle(test == .passed || test == .signedIn ? Color.secondary : Color.red)
+            }
+            if case .failed(.localNetworkDenied) = test {
+                Button("Open Settings") {
+                    if let url = URL(string: UIApplication.openSettingsURLString) { openURL(url) }
+                }
+            }
+            if case .failed(.hostKeyChanged) = test {
+                Button("Forget Saved Key", role: .destructive) { forgetKey() }
+            }
+        } footer: {
+            if let fingerprint = draft.server.trustedFingerprint, draft.server.hasTrustedIdentity {
+                Text("Trusted key \(fingerprint)")
+                    .font(.caption.monospaced())
+            }
+        }
+    }
+
     var body: some View {
         NavigationStack(path: $path) {
-            Form {
+            // Wide (the Duo's inner display): servers found, the two toggles
+            // and Test on the leading side, the fields on the trailing one
+            // (board `DI_ServerForm`).
+            AdaptiveFormColumns {
                 if let discovery {
                     foundServersSection(discovery)
                 }
+                optionsSections
+            } trailing: {
                 // Every field says what it is on the left, the way Settings
                 // does: a placeholder alone is gone the moment you type, and
                 // "Photos" in an empty box reads as a value, not a hint.
@@ -136,54 +194,6 @@ struct FileServerFormScreen: View {
                     folderRow
                 } footer: {
                     Text(folderFooter)
-                }
-                Section {
-                    Toggle(isOn: $addsAsSource) {
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text("Add as Source", comment: "Connection form: index this server's Folder like a folder")
-                            Text("Indexed like a folder and listed under Sources", comment: "Connection form: what Add as Source does")
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                        }
-                    }
-                    Toggle(isOn: $addsTile) {
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text("Add to Collections")
-                            Text(ConnectionSaver.tileExplanation)
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                        }
-                    }
-                }
-                Section {
-                    Button {
-                        runTest()
-                    } label: {
-                        HStack {
-                            Text("Test Connection")
-                            Spacer()
-                            testIndicator
-                        }
-                    }
-                    .disabled(!draft.canSave || test == .running)
-                    if let message = testMessage {
-                        Text(message)
-                            .font(.footnote)
-                            .foregroundStyle(test == .passed || test == .signedIn ? Color.secondary : Color.red)
-                    }
-                    if case .failed(.localNetworkDenied) = test {
-                        Button("Open Settings") {
-                            if let url = URL(string: UIApplication.openSettingsURLString) { openURL(url) }
-                        }
-                    }
-                    if case .failed(.hostKeyChanged) = test {
-                        Button("Forget Saved Key", role: .destructive) { forgetKey() }
-                    }
-                } footer: {
-                    if let fingerprint = draft.server.trustedFingerprint, draft.server.hasTrustedIdentity {
-                        Text("Trusted key \(fingerprint)")
-                            .font(.caption.monospaced())
-                    }
                 }
             }
             .navigationTitle(draft.isNew ? "Add Connection" : "Edit Connection")

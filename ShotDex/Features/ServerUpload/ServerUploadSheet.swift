@@ -132,8 +132,10 @@ struct ServerUploadSheet: View {
 
     // MARK: Prepare
 
+    /// Where the files go on the leading side, which files on the trailing
+    /// one once the sheet is wide enough (board `DI_ServerUpload`).
     private var prepareForm: some View {
-        Form {
+        AdaptiveFormColumns {
             Section {
                 if model.servers.isEmpty {
                     Button("Add Connection…") { isAddingServer = true }
@@ -160,6 +162,7 @@ struct ServerUploadSheet: View {
                          : String(localized: "Photos go straight into this folder.", comment: "Upload to Server: Date Folders off"))
                 }
             }
+        } trailing: {
             Section {
                 Picker("Files", selection: $model.fileKind) {
                     ForEach(ServerUploadFileKind.allCases) { Text($0.title).tag($0) }

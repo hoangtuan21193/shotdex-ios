@@ -52,6 +52,10 @@ struct PhotoStackScreen: View {
     @State private var isConfirmingDiscard = false
     /// Save on an HDR merge asks JPEG or HEIC first (FS-01.11 §6).
     @State private var isChoosingFormat = false
+    @State private var width: CGFloat = 0
+
+    /// The wide layout's inspector, as wide as Resize's.
+    private static let inspectorWidth: CGFloat = 340
 
     var body: some View {
         ZStack {
@@ -80,9 +84,28 @@ struct PhotoStackScreen: View {
         @Bindable var model = model
         VStack(spacing: 0) {
             topBar(model)
-            stage(model)
-            panel(model)
+            // Wide (the Duo's inner display, an iPad): the panel is an
+            // inspector beside the photo, not a slab under it — on the Duo's
+            // 669pt it took a third of the height from a landscape preview
+            // (boards `DI_FocusStack`, `DI_StackExposures`).
+            if width >= WideLayout.minimumWidth {
+                HStack(spacing: 0) {
+                    stage(model)
+                    ScrollView {
+                        panel(model)
+                    }
+                    .frame(width: Self.inspectorWidth)
+                    .background(EditorTheme.panelSolid)
+                    .overlay(alignment: .leading) {
+                        Rectangle().fill(EditorTheme.panelTopHairline).frame(width: 1)
+                    }
+                }
+            } else {
+                stage(model)
+                panel(model)
+            }
         }
+        .measureWidth(into: $width)
         .onChange(of: model.savedAssetID) { _, id in
             if let id {
                 onSaved(id)
