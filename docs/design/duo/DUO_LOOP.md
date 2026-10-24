@@ -17,6 +17,7 @@ Duo canvas <https://claude.ai/artifact/N91F3p5AZWgSQiMWVtZYrL>. One commit per s
 - Canvas: `Artifact read` the board path before editing (publish is refused otherwise); edit in `docs/design/duo/project/`, render light + `--dark`, `Tools/design-board compare`, publish with `root` = `docs/design/duo`.
 - Commit: other sessions leave uncommitted edits in the same files — stage only your own hunks (`git diff <file> > p; keep your @@ hunks; git apply --cached --recount`), then plain `git commit`. Record the hash in the row. **Before committing, read `git diff --cached --stat`**: other sessions stage their own changes in the shared index (row 14a swept another session's staged deletion into its commit and had to be redone) — take any foreign path back out with `git reset -q HEAD -- <path>` and restage it after.
 - Tests: run only the test classes that cover the code this pass touched (`-only-testing:`), never the full suite — it takes too long and its build locks `build/sim` against the Stop hook (user, 2026-10-25).
+- **Paused 2026-10-25 at row 20** (user): the shared Duo sim was covered by another session's app (`Sill`). Resume at row 20 — screenshot, `duo-ux-review`, redraw `DI1_Edit` / `DIP1_Edit` — before taking row 21.
 - End of pass: schedule the next wakeup. Do **not** clear the session — clearing it also dropped the pending wakeup and stopped the loop after row 6 (2026-10-24).
 
 Status: `todo` · `doing` · `done` · `blocked` (needs a decision beyond a layout fix — reason in Findings).
