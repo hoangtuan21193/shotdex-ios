@@ -43,6 +43,11 @@ struct SearchSuggestionsScreen: View {
     /// how many capsules there is room for — see `suggestionLimit`.
     @State private var headerBlockHeight: CGFloat = 0
     @State private var availableHeight: CGFloat = 0
+    /// The Duo's inner display, or anything at least `WideLayout.minimumWidth`
+    /// across: the capsules run in rows instead of a column there — five one
+    /// per line left 650pt empty beside them. The window class, not the width
+    /// alone, because the inner display's own insets leave it under 860.
+    @State private var isWide = false
 
     /// Field placeholder.
     static let prompt = "Search your library…"
@@ -60,6 +65,18 @@ struct SearchSuggestionsScreen: View {
 
     var body: some View {
         content
+        .onGeometryChange(for: Bool.self) { proxy in
+            let insets = proxy.safeAreaInsets
+            let window = VideoStudioWindowClass.windowSize(
+                content: proxy.size,
+                top: insets.top,
+                bottom: insets.bottom,
+                leading: insets.leading,
+                trailing: insets.trailing
+            )
+            return proxy.size.width >= WideLayout.minimumWidth
+                || VideoStudioWindowClass.resolve(window: window, trailingInset: insets.trailing) == .duoInner
+        } action: { isWide = $0 }
         .task(id: query) {
             interpretation = await interpretationCapsule()
         }
@@ -198,7 +215,10 @@ struct SearchSuggestionsScreen: View {
     // MARK: Suggestions
 
     private var capsuleStack: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        let layout = isWide
+            ? AnyLayout(KeywordFlowLayout(spacing: 8))
+            : AnyLayout(VStackLayout(alignment: .leading, spacing: 8))
+        return layout {
             ForEach(suggestions, id: \.self) { suggestion in
                 capsule(suggestion) { apply(suggestion) }
             }
@@ -254,6 +274,9 @@ struct SearchSuggestionsScreen: View {
     /// like five. Never fewer than one: an empty stack over the field looks like
     /// the screen failed to load.
     private var suggestionLimit: Int {
+        // In rows, five capsules take two lines at most: the column's height
+        // arithmetic does not apply.
+        if isWide { return Self.maximumSuggestions }
         guard availableHeight > 0, headerBlockHeight > 0 else {
             return Self.maximumSuggestions
         }
