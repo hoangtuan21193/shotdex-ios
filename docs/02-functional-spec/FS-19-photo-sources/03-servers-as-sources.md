@@ -25,7 +25,7 @@ lấy từ preview nhúng, bản gốc chỉ tải khi mở, sửa hay xuất (D
 - Mỗi file: đọc **256 KB đầu** (đọc theo dải) → EXIF + preview nhúng → thumbnail 400px, theo đúng thang thử của
   [FS-17.01 §3](../FS-17-import-from-server/01-browse.md) (CR3 tách hộp preview, RAF theo con trỏ, tối đa 1 MB với RAW khác).
 - **Hash nhanh** trong lượt này (3 lần đọc dải 64 KB, [02 §1](02-identity-and-sidecars.md)); hash đầy đủ ở nền sau đó,
-  tải từng file rồi bỏ byte — **chỉ** file có hash nhanh trùng một bản sao khác ([07 §5](07-on-server-check.md)). NAS 1.102 ảnh ~33 GB: ~5 phút ở gigabit, hàng giờ qua Wi-Fi chậm.
+  tải từng file rồi bỏ byte — trừ kiểm "có trên server" của [07 §5](07-on-server-check.md), đọc trọn chỉ file cùng cỡ với một file gốc Photos. NAS 1.102 ảnh ~33 GB: ~5 phút ở gigabit, hàng giờ qua Wi-Fi chậm.
 - **Một lệnh tới server một lúc** mỗi connection (phiên SMB không an toàn khi chạy song song — FS-17.01 §3).
 - Sidecar `.xmp` cạnh file trên share được đọc trong cùng lượt ([02 §4](02-identity-and-sidecars.md)).
 - Mạng: theo job Backup của connection (Only on Wi‑Fi / Only While Charging); không có job thì chỉ Wi‑Fi

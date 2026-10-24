@@ -21,8 +21,8 @@ Nguồn: [intent Mac](../../_intents/2026-10-04-macos-app.md) · [intent iPad](.
 | 04 | [Xoá, ẩn, ảnh trùng, thống kê](04-deleting-and-duplicates.md) | D6 xoá theo nơi chứa, ảnh nhiều bản sao, nơi không Thùng rác, Hide in Photos · Hide in ShotDex Only, mục Hidden, D7 Duplicates, đếm một lần |
 | 05 | [Dữ liệu](05-data.md) | id ảnh, bảng bản sao/hash/recipe/bí danh, luật gộp và tách, dọn 30 ngày, test phải có |
 | 06 | [Tiêu chí nghiệm thu](06-acceptance-criteria.md) | AC-1…AC-73 |
-| 07 | [Ảnh Photos đã có trên server chưa](07-on-server-check.md) | khớp theo hash mọi file gốc, băm Photos ở nền, Folder trong điều kiện Source, chưa kiểm, kiểm lại trước khi xoá |
-| 07b | [07 — spike và AC](07b-on-server-check-ac.md) | S1–S4 trên máy thật, AC-74…AC-95 |
+| 07 | [Ảnh Photos đã có trên server chưa](07-on-server-check.md) | SHA-256 cả file từng file gốc (cả bản sửa), lấy lại SHA của Backup, lọc theo cỡ, Folder trong điều kiện Source, chưa kiểm, kiểm lại trước khi xoá; hai đợt |
+| 07b | [07 — spike và AC](07b-on-server-check-ac.md) | S1–S4 trên máy thật, AC-74…AC-106 |
 
 Board: Mac `MAC_AddSource` · `MAC_SourceIndexing` · `MAC_SettingsSources` · `MAC_SettingsServers` · `MAC_ServerBrowser`
 · `MAC_Duplicates` · `MAC_Cull` · `MAC_EmptyLibrary` · `MAC_GetInfo` (`docs/design/mac/project/`). iPad `IP_AddSource` ·

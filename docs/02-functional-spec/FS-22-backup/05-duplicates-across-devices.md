@@ -66,7 +66,7 @@ Chen vào giữa FS-22.02 §2, sau khi bản gốc đã nằm ở thư mục t�
    cục bộ, đi tiếp.
 4. Không có SHA khớp nhưng có file ở đích **cùng cỡ chưa băm** → đọc và băm những file đó (§3), rồi tra lại bước 3.
 5. Vẫn không trùng → đẩy lên như FS-22.02 §2; xong thì thêm dòng vào sổ chung của máy này. Đích nằm trong một nguồn server
-   (FS-19) → ghi luôn bản sao server kèm hash danh tính băm từ file tạm ([FS-19.07 §6](../FS-19-photo-sources/07-on-server-check.md)).
+   (FS-19) → ghi luôn bản sao server kèm SHA-256 của file tạm ([FS-19.07 §6](../FS-19-photo-sources/07-on-server-check.md)).
 6. Xoá file tạm — như cũ, trên máy không bao giờ quá 1 file.
 
 - Trong cùng một lượt, file vừa chép vào bản sao cục bộ ngay, nên hai mục giống hệt trong cùng thư viện chỉ chép một lần.

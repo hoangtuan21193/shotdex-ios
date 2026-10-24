@@ -4,98 +4,105 @@
 `Data/Sources/FileServer/ServerSourceIndexer.swift`, `Data/Database/SmartAlbumSQLBuilder.swift`,
 `Data/Sources/Folders/DeletionService.swift` · AC + spike: [07b](07b-on-server-check-ac.md) · cập nhật 2026-10-25
 
-**Một câu:** ShotDex biết chắc từng ảnh/video trong Photos có bản giống hệt trên một folder của nguồn server hay chưa —
-kể cả khi file bị script ngoài dời, đổi tên — kiểm cả thư viện ở nền, làm tiếp được, và kiểm lại NAS trước khi xoá.
+**Một câu:** ShotDex biết chắc từng ảnh/video trong Photos có bản **giống hệt từng byte** trên một folder của nguồn
+server hay chưa — kể cả file do công cụ khác chép, hay bị script dời, đổi tên — và kiểm lại NAS trước khi xoá.
 
-Nguồn: [intent 2026-10-24-smart-album-on-nas](../../_intents/2026-10-24-smart-album-on-nas.md) (accepted) · trả lời
-người dùng 2026-10-25: dựa trên nguồn FS-19 · ảnh chỉ có trên NAS vẫn hiện trong Library · chọn folder ngay trong điều
-kiện · một dấu lưới nghĩa là "đang có trên server".
+Nguồn: [intent 2026-10-24-smart-album-on-nas](../../_intents/2026-10-24-smart-album-on-nas.md) · người dùng 2026-10-25:
+dựa trên nguồn FS-19 · Folder trong điều kiện · một dấu lưới · N1, N2 · sau phản biện: SHA-256 cả file, lọc theo cỡ,
+ảnh đã sửa cần bản sửa trên NAS, hai đợt, có *Delete Anyway* khi NAS tắt.
 
 ## 1. Người dùng cần gì
 
-- iCloud đầy; bản gốc đã nằm trên NAS (Backup FS-22, script gộp của người dùng dời file sang `Shared/`).
-- Cần một album "ảnh trên máy này đã có trên `NAS › iCloud Photo/Shared`" để xoá khỏi Photos mà chắc chắn không mất gì.
-- Hàng chục nghìn mục, hàng trăm GB: kiểm phải tự chạy, chạy nền, dừng ở đâu làm tiếp ở đó.
+- iCloud đầy; bản gốc nằm trên NAS — do Backup FS-22, do script gộp của người dùng, hay chép bằng công cụ khác.
+- Cần album "ảnh trên máy này đã có trên `NAS › iCloud Photo/Shared`" để xoá khỏi Photos mà không mất gì.
+- Hàng chục nghìn mục: kiểm phải tự chạy, dừng ở đâu làm tiếp ở đó, và tải từ iCloud càng ít càng tốt.
 
-## 2. Phạm vi
+## 2. Phạm vi và hai đợt
 
-**Có:** băm ảnh Photos (gồm video, Live Photo, RAW+JPEG) chạy nền · băm đầy đủ file server khi có ứng viên · điều kiện
-Source có Folder · trạng thái "chưa kiểm" · tiến độ · kiểm lại server trước khi xoá · dấu lưới + Photo Info theo hiện trạng.
+| Đợt | Có |
+|---|---|
+| 1 — xoá được an toàn | hash theo từng file gốc · lấy lại SHA của Backup · lọc theo cỡ · kiểm khi app ở trước mặt · Folder trong Source · chưa kiểm · dòng tiến độ · cổng xoá ở smart album, Free Up Space, Library |
+| 2 — sau khi đo S3 | chạy nền · ghép Live Photo trên nguồn thư mục/server (ảnh + MOV cùng tên gốc trong một folder là một Live Photo) · dấu lưới theo hiện trạng · Photo Info On Server · cổng xoá ở mọi lối còn lại · gộp Photos ↔ server để hiển thị |
 
 **Cố ý không có:**
-- Tìm/gộp ảnh trùng giữa các folder, dời hay xoá file trên NAS — *vì* script của người dùng làm (intent).
-- So ảnh đã nén lại (Messages, Zalo) với bản gốc — *vì* byte khác; Duplicates FS-06.06 lo phần giống hình.
-- Đưa ảnh từ NAS về Photos — intent riêng `2026-10-24-restore-from-nas-to-album`.
+- Tìm/gộp ảnh trùng, dời hay xoá file trên NAS — *vì* script của người dùng làm (intent).
+- Bản cùng điểm ảnh nhưng metadata khác (app khác nhúng XMP), bản nén lại — **không** tính là có. *Vì* cỡ khác nên không
+  lọc được, bắt nó phải tải cả thư viện; và xoá theo nó có thể mất ngày chụp, GPS. Duplicates FS-06.06 lo phần giống hình.
+- File hash do script ghi sẵn trên NAS — để sau; đợt 1 ShotDex tự đọc ứng viên.
+- Đưa ảnh từ NAS về Photos — intent `2026-10-24-restore-from-nas-to-album`.
 
-## 3. Khớp bằng nội dung
+## 3. Khớp
 
-- Dùng hash danh tính của FS-19 (SHA-256 phần dữ liệu ảnh, [02 §1](02-identity-and-sidecars.md)). Video và file lạ:
-  theo luật của bộ băm đó. *Vì* một hệ hash duy nhất; Backup ghi thêm hash này (§6) nên không đọc lại NAS.
-- Một mục Photos **có trên folder F của server S** khi **mỗi file gốc** của nó có một file trong F (mọi tầng con) cùng
-  hash đầy đủ: ảnh · RAW của RAW+JPEG · video đi kèm Live Photo · video. Bản sửa không tính.
-- Thiếu một file (Live Photo chỉ có HEIC trên NAS) → **không** có trên F.
-- Đổi tên, dời trong cùng nguồn: hash giữ danh tính ([02 §2](02-identity-and-sidecars.md)); không băm lại file đã biết.
+- **Hash:** SHA-256 của **cả file**, cho từng file gốc — cùng loại hash Backup đã ghi. Khác một byte là khác.
+- Một mục Photos **có trên folder F của nguồn S** khi mỗi file sau có một file trong F (mọi tầng con) cùng SHA-256:
+  ảnh · RAW của RAW+JPEG · video đi kèm Live Photo · video · và, nếu mục **đã sửa** trong Photos, **bản sửa** (ảnh, video).
+- Mục đã sửa mà bản sửa chưa có trên NAS → **không** có trên F; tiến độ và hộp xoá gọi tên: *"Edited — edit not on NAS
+  Home"*. Bản sửa lên NAS khi job Backup bật **Include Edited Versions** (FS-22.01 §2).
+- Kiểm **không phụ thuộc** việc gộp ảnh của FS-19 (§02): đọc thẳng bảng hash theo file. Gộp chỉ để hiển thị (đợt 2), và
+  không bao giờ ghi sidecar lên NAS vì một lần kiểm.
 
-## 4. Băm phía Photos
+## 4. Hash phía Photos
 
-- Chạy khi có ít nhất một nguồn server. Lấy mọi mục Photos chưa có hash đầy đủ cho đủ file gốc, mới nhất trước.
-- Bản gốc chỉ ở iCloud: tải về **thư mục tạm, một file một lúc**, băm theo khối 1 MB, xoá ngay. Không bao giờ giữ cả bản
-  gốc trong RAM; video đọc luồng ([NF-02](../../04-non-functional-design/NF-02-memory-and-resources.md)).
-- Máy còn trống − cỡ file < 2 GB → chờ, trạng thái `Waiting for space` (luật FS-22).
-- Mỗi mục băm xong ghi ngay vào database → bị dừng ở đâu làm tiếp ở mục kế; mục đang dở băm lại từ đầu.
-- Quyền `.limited`: chỉ băm mục được cấp; dòng tiến độ thêm "Only photos ShotDex can access are checked."
+- **Đã có từ Backup:** sổ Backup có SHA-256 từng file gốc nó đã chép, theo dấu nguồn. Dấu nguồn còn khớp → dùng luôn,
+  không tải. Đây là phần lớn thư viện của người dùng có Backup.
+- **Chưa có:** cỡ từng file gốc lấy từ Photos không cần tải. Chỉ mục có **ít nhất một file trên NAS cùng cỡ** mới được tải
+  bản gốc để băm; mục không có ứng viên nào thì đã biết là *không có*, không tải.
+- Tải: thư mục tạm, **một file một lúc**, băm theo khối 1 MB, xoá ngay; không giữ cả file trong RAM; video đọc luồng.
+- Còn trống − cỡ file < 2 GB → chờ, `Waiting for space` (luật FS-22).
+- Mỗi file băm xong ghi ngay → bị dừng ở đâu làm tiếp ở file kế. Mục mới nhất trước. Đọc hỏng → ghi lỗi, đi tiếp, lượt sau
+  mới thử lại — mục hỏng không chặn hàng.
+- `.limited`: chỉ mục được cấp; dòng tiến độ thêm "Only photos ShotDex can access are checked."
 
-## 5. Băm phía server
+## 5. Hash phía server
 
-- Liệt kê lại cây (tên, cỡ, ngày sửa): **mỗi lần app về trước mặt**, khi server về lại, khi bấm Rescan. Một lượt đang chạy
-  thì lần về trước mặt kế không mở lượt mới.
-- Hash nhanh như FS-19.03 §2. Hash đầy đủ **chỉ** cho file server có hash nhanh trùng một file gốc Photos — không băm
-  cả NAS. *Vì* 500 GB qua Wi‑Fi là nhiều giờ, và file không có ứng viên thì không đổi kết quả.
-- Một lệnh tới server một lúc mỗi connection; Backup và kiểm dùng chung hàng đợi đó, Backup đi trước.
+- Liệt kê cây (tên, cỡ, ngày sửa): **mỗi lần app về trước mặt**, khi server về lại, khi bấm Rescan; một lượt đang chạy thì
+  không mở lượt mới.
+- **Ứng viên** = file có cỡ bằng cỡ một file gốc Photos chưa khớp. Chỉ ứng viên được đọc trọn (tải ra file tạm rồi băm).
+  Kết quả nhớ theo đường dẫn + cỡ + ngày sửa; file dời/đổi tên nối bằng hash nhanh + cỡ, không băm lại.
+- **Backup ghi sẵn:** Backup đẩy file vào folder nằm trong nguồn → ghi luôn hash của file đó cho bản sao server. Ảnh vừa
+  backup có trên F ngay, không đọc lại NAS.
+- Mỗi connection **một lệnh một lúc**, dùng chung với Backup và Upload; Backup đi trước; kiểm nhả khoá giữa các file và
+  không giữ khoá trong lúc tải iCloud.
 
-## 6. Backup ghi sẵn
-
-- Backup (FS-22) đẩy một file vào folder nằm trong một nguồn server → ghi luôn bản sao server **có hash đầy đủ** (băm từ
-  file tạm đang có trên máy). Ảnh vừa backup có trên F ngay, không đọc lại NAS.
-
-## 7. Khi nào chạy
+## 6. Khi nào chạy
 
 | Việc | Điều kiện |
 |---|---|
-| Liệt kê, hash nhanh, hash đầy đủ phía server; tải bản gốc iCloud để băm | connection có job Backup → Only on Wi‑Fi / Only While Charging của job đó; không có job → chỉ Wi‑Fi, không cần sạc |
-| Nền | tác vụ xử lý nền + tác vụ tiếp tục của iOS 26, dùng chung khung chạy nền của Backup (FS-22.02 §3) |
-| Mở app | chạy tiếp ngay khi về trước mặt |
+| Liệt kê, băm phía server; tải iCloud để băm | job Backup của connection: Only on Wi‑Fi / Only While Charging, nhiều job thì **khắt nhất**; không có job → chỉ Wi‑Fi. **Use Cellular Data for Indexing** chỉ còn cho index Photos |
+| Đợt 1 | khi app ở trước mặt; về trước mặt thì chạy tiếp |
+| Đợt 2 | thêm tác vụ nền (xử lý nền + tác vụ tiếp tục iOS 26), sau khi S3 cho số |
 
-Chốt N1 (người dùng 2026-10-25): **Use Cellular Data for Indexing** chỉ còn áp cho index Photos; mọi việc với server
-theo bảng trên (sửa FS-19.03 §2).
+## 7. Smart album
 
-## 8. Smart album
+- Điều kiện **Source** với nguồn thư mục/server có dòng **Folder** — trống = cả nguồn; chọn bằng màn duyệt folder
+  FS-15.02 §2a. Chip chỉ đọc ghi **tên** nguồn: `Source: NAS Home › Shared`.
+- **is**: có trên folder theo §3. **is not**: đã kiểm xong và thiếu ít nhất một file.
+- **Chưa kiểm xong** (một file gốc chưa có hash mà NAS có ứng viên cùng cỡ chưa băm): không vào **is** lẫn **is not**.
+- Thanh điều kiện: `Checking · 12,408 of 54,920 · 38 GB to download`; lý do chờ (`Waiting for Wi‑Fi`, `Waiting for space`,
+  `NAS Home isn't reachable`, `Open ShotDex to continue` ở đợt 1); xong thì `Checked 3 min ago`.
 
-- Điều kiện **Source** với nguồn server/thư mục có thêm dòng **Folder** — trống = cả nguồn; chọn bằng màn duyệt folder
-  FS-15.02 §2a, bắt đầu ở Folder của connection. Chip chỉ đọc: `Source: NAS Home › Shared`.
-- **is**: có trên folder theo §3. **is not**: mục Photos đã kiểm xong mà thiếu ít nhất một file gốc trên folder.
-- **Chưa kiểm xong** (thiếu hash một file gốc, hoặc server có ứng viên chưa băm đầy đủ): không vào **is** lẫn **is not**.
-- Album có điều kiện Source-server: dòng trên thanh điều kiện `Checking · 12,408 of 54,920 · 38 GB to download`, lý do
-  chờ nếu có (`Waiting for Wi‑Fi`, `Waiting for space`, `NAS Home isn't reachable`); xong thì `Checked 3 min ago`.
+## 8. Dấu lưới và Photo Info (đợt 2)
 
-## 9. Dấu lưới và Photo Info
+- Glyph "trên server" của FS-15.02c giữ hình, đổi nghĩa: mục có trên ít nhất một nguồn server theo §3. Tới khi đợt 2
+  xong, glyph giữ nghĩa cũ (lịch sử upload). VoiceOver "On server".
+- Photo Info: mục **On Server** — mỗi file khớp một dòng `NAS Home` + đường dẫn; mục Uploaded to Server giữ nguyên.
 
-- Glyph "trên server" của FS-15.02c giữ hình, **đổi nghĩa**: mục có trên ít nhất một nguồn server theo §3 (không còn
-  theo lịch sử upload). VoiceOver "On server".
-- Photo Info: mục **On Server** — mỗi bản sao một dòng `NAS Home`, dưới là đường dẫn; mục lịch sử **Uploaded to Server**
-  giữ nguyên.
+## 9. Xoá
 
-## 10. Xoá
+- **Dựa vào server** = mục đang có trên ít nhất một folder server theo §3. Chỉ những mục đó qua bước kiểm; mục khác xoá
+  như cũ.
+- Ngay trước khi gọi Photos: hỏi server từng file đã khớp — còn đúng đường dẫn, đúng cỡ, đúng ngày sửa. Lệch đường dẫn →
+  tìm lại bằng hash nhanh + cỡ trong cùng nguồn trước khi coi là mất. Không băm lại lúc xoá.
+- File mất hay đổi → mục đó **không** bị xoá; alert sau lượt: "2 photos weren't deleted — they're no longer on NAS Home."
+- Server không với tới → alert "Can't reach NAS Home" + "ShotDex couldn't check that these are still on NAS Home." ·
+  **Delete Anyway** (đỏ) · **Cancel**. Mục không dựa vào server trong cùng lượt vẫn xoá.
+- Xoá bản Photos **không bao giờ** ẩn hay đụng bản server; mục còn trong Library qua bản NAS.
+- Hộp xác nhận thêm: "They move to Recently Deleted. iCloud space is freed after Recently Deleted is emptied."
+- Đợt 1 nối cổng vào xoá ở smart album, Free Up Space, chọn-rồi-xoá ở Library; một test chặn mọi lời gọi xoá PhotoKit
+  mới nằm ngoài cổng. Đợt 2 nối mọi lối còn lại (N2: mọi lối xoá).
+- Ngoài phạm vi: file trên NAS hỏng âm thầm sau khi đã băm.
 
-- Xoá bản Photos của một mục mà nó **dựa vào** bản server (mọi lối xoá, không riêng album này): ngay trước khi gọi Photos,
-  hỏi server từng file đã khớp còn đúng đường dẫn, đúng cỡ không.
-- File mất → mục đó **không** bị xoá; alert sau lượt: "2 photos weren't deleted — they're no longer on NAS Home." +
-  danh sách. Server không với tới → không xoá mục nào dựa vào nó: "Can't reach NAS Home. Nothing was deleted."
-- Hộp xác nhận thêm câu: "They move to Recently Deleted. iCloud space is freed after Recently Deleted is emptied."
-- Chốt N2 (người dùng 2026-10-25): kiểm lại ở **mọi** lối xoá — Library, album, Free Up Space, Delete Rejected. *Vì*
-  câu "They stay in ShotDex from NAS Home" của 03 §8 phải đúng.
+## 10. Board
 
-## 11. Board
-
-Chưa vẽ: dòng Folder trong `PH_/IP_/DI_/DC_SmartAlbumEditor`; dòng Checking trên `PH_SmartAlbum` và bản iPad/Duo; mục
-On Server trong Photo Info; alert §10. Vẽ trước khi code (luật design-đi-cùng-code).
+Chưa vẽ: dòng Folder trong `PH_/IP_/DI_/DC_SmartAlbumEditor`; dòng tiến độ trên `*_SmartAlbum`; alert sau xoá và alert
+*Delete Anyway* (`*_DeleteCopies`); mục On Server trong Photo Info (đợt 2). Vẽ trước khi code.
