@@ -16,6 +16,7 @@ struct OnThisDayScreen: View {
     @Environment(\.assetActions) private var assetActions
     @Environment(PhotoLibraryService.self) private var photoLibrary
     @Environment(AppNavigation.self) private var navigation
+    @Environment(\.isDuoInner) private var isDuoInner
 
     @State private var model: OnThisDayModel?
     @State private var viewerTarget: PhotoViewerTarget?
@@ -363,6 +364,8 @@ struct OnThisDayScreen: View {
 
     // MARK: Date picker
 
+    static let duoInnerPickerHeight: CGFloat = 480
+
     private var datePickerSheet: some View {
         NavigationStack {
             VStack {
@@ -393,7 +396,10 @@ struct OnThisDayScreen: View {
                 }
             }
         }
-        .presentationDetents([.medium])
+        // The graphical calendar needs ~460pt with the bar; a medium detent on
+        // the Duo's 669pt inner display cut off the last week, today included.
+        // A fitted height rather than `.large`, which fills the screen for one month.
+        .presentationDetents(isDuoInner ? [.height(Self.duoInnerPickerHeight)] : [.medium])
         .presentationDragIndicator(.visible)
     }
 
