@@ -1,0 +1,53 @@
+{
+  "steps": [
+    {
+      "action": "launch"
+    },
+    {
+      "action": "wait",
+      "seconds": 8
+    },
+    {
+      "action": "tap",
+      "label": "Photo, file type",
+      "type": "cell",
+      "index": 2
+    },
+    {
+      "action": "wait",
+      "seconds": 4
+    },
+    {
+      "action": "tap",
+      "label": "Info"
+    },
+    {
+      "action": "wait",
+      "seconds": 4
+    },
+    {
+      "action": "dump",
+      "name": "DI_Metadata"
+    },
+    {
+      "action": "wait",
+      "seconds": 45
+    },
+    {
+      "action": "tap",
+      "label": "Add Keyword"
+    },
+    {
+      "action": "wait",
+      "seconds": 3
+    },
+    {
+      "action": "dump",
+      "name": "DI15_InfoKeywords"
+    },
+    {
+      "action": "wait",
+      "seconds": 40
+    }
+  ]
+}

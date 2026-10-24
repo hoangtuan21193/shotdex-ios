@@ -394,7 +394,10 @@ struct PhotoDetailScreen: View {
                 asset: currentAsset,
                 indexedMetadata: currentMetadata
             )
-                .presentationDetents([.medium, .large])
+                // The Duo's inner display is 669pt tall: the medium detent is
+                // 385pt there and shows the caption and the top of the map,
+                // never a single camera or exposure value.
+                .presentationDetents(isDuoInner ? [.large] : [.medium, .large])
                 .presentationDragIndicator(.visible)
         }
         .unsupportedRAWAlert($unsupportedRAWMessage, shareOriginal: shareCurrentOriginal)

@@ -6,7 +6,7 @@ look for defects, run `duo-ux-review` against the HIG pages it fetches, fix,
 re-shoot, then update the matching board in `project/` and publish it to the
 Duo canvas <https://claude.ai/artifact/N91F3p5AZWgSQiMWVtZYrL>. One commit per screen.
 
-**How a pass runs (the session is cleared between passes, so this is the memory):**
+**How a pass runs (read this first every pass — it is the memory):**
 - Device: simulator "Compare Duo" `307B259D-86F8-443A-A974-0BCBC07DCC2B` (iOS 27, shared — never erase it). Build:
   `xcodebuild -project ShotDex.xcodeproj -scheme ShotDex -destination "id=<udid>" -derivedDataPath build/sim build`.
   A build for the iOS 27 sim does not run on iOS 18.6 (`libswiftCompatibilitySpan.dylib` missing) — rebuild with that sim's id to check iPhone.
@@ -16,7 +16,7 @@ Duo canvas <https://claude.ai/artifact/N91F3p5AZWgSQiMWVtZYrL>. One commit per s
 - Review: `duo-ux-review` agent, told to fetch HIG pages via `/tutorials/data/design/human-interface-guidelines/<page>.json` (HTML comes back empty); the Duo page is `designing-for-iphone-duo`.
 - Canvas: `Artifact read` the board path before editing (publish is refused otherwise); edit in `docs/design/duo/project/`, render light + `--dark`, `Tools/design-board compare`, publish with `root` = `docs/design/duo`.
 - Commit: other sessions leave uncommitted edits in the same files — stage only your own hunks (`git diff <file> > p; keep your @@ hunks; git apply --cached --recount`), then plain `git commit`. Record the hash in the row.
-- End of pass: schedule the next wakeup, then clear the session (user rule, 2026-10-24).
+- End of pass: schedule the next wakeup. Do **not** clear the session — clearing it also dropped the pending wakeup and stopped the loop after row 6 (2026-10-24).
 
 Status: `todo` · `doing` · `done` · `blocked` (needs a decision beyond a layout fix — reason in Findings).
 
@@ -32,7 +32,7 @@ Status: `todo` · `doing` · `done` · `blocked` (needs a decision beyond a layo
 | 4 | Date range | `DI_DateRange` | todo | Only reachable from the chart editor (`ChartEditorSheet` → `DateRangePickerSheet`) — check it with row 13. | |
 | 5 | Empty library / Onboarding | `DI_EmptyLibrary`, `DI_Onboarding` | todo (last) | Needs an empty library or a fresh install — wipes data on the shared Duo simulator, so it goes last. | |
 | 6 | Viewer | `DI_Viewer` | done (2026-10-24) | Fixed: in landscape the inner display's safe area starts at y 0 (status bar is in the rail), so the top row sat at y 8 and the Close circle was tangent to the ~66pt top-left corner curve. On `.duoInner` the viewer's top row, the Single/2-Up/Survey picker, the zoomed download ring and Compare's top bar now start at `CompareLayout.duoInnerTopInset` = 32 (~15pt clear of the curve). Board: mode picker added, info capsule 576 wide (it stops at the picker), Delete and the action pill inside the 84pt rail as DESIGN.md §10.1b says. Not a leak: the Library controls in the dump sit under a `fullScreenCover`, which takes them out of VoiceOver. Checked: Duo inner viewer + 2-Up. `DI_ViewerCloudDownload` not reachable here (no iCloud placeholder on the sim). | 44465e3b |
-| 7 | Metadata / Info keywords | `DI_Metadata`, `DI15_InfoKeywords` | todo | | |
+| 7 | Metadata / Info keywords | `DI_Metadata`, `DI15_InfoKeywords` | blocked — needs your decision (3b) | Measured: Photo Info is the same ~652pt form sheet as row 3b (x 149–802), so the three-column layout of `DI_Metadata` (`MetadataPanel` ≥ `WideLayout.minimumWidth`) never draws; and the two boards disagree — `DI_Metadata` is full-screen, `DI15_InfoKeywords` a 540pt sheet. Fixed now (holds under either 3b answer): the sheet opened at the medium detent, 385pt (y 276–661) on the 669pt display — caption, keywords and the top of the map, not one camera or exposure value; on `.duoInner` it now opens large only. Even at large, Camera & Lens starts at y≈610 under the map — the case for 3b's bigger layout. Add Keyword turns into an inline field (184,189 122×34) as the board draws. Boards not changed: which one is right is the 3b decision. Checked: Duo inner, Info open, Add Keyword tapped. | |
 | 8 | Collections (Albums) | `DI_Collections` | todo | | |
 | 9 | Album detail | `DI_AlbumDetail` | todo | | |
 | 10 | Smart album + editor | `DI_SmartAlbum`, `DI_SmartAlbumEditor` | todo | | |
