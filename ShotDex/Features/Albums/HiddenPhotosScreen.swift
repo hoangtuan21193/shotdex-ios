@@ -26,10 +26,11 @@ struct HiddenPhotosScreen: View {
             .navigationTitle(isSelecting ? "" : title)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
+                // Always in the principal slot, like an album's title: the
+                // plain inline title sat at the leading edge on the Duo's inner
+                // display while every other grid centres its own.
                 ToolbarItem(placement: .principal) {
-                    if isSelecting {
-                        GridNavigationTitle(title: title, subtitle: selectedCaption)
-                    }
+                    GridNavigationTitle(title: title, subtitle: isSelecting ? selectedCaption : nil)
                 }
                 if isSelecting, let selectionModel = selectionBarModel() {
                     SelectionToolbarItems(model: selectionModel)
