@@ -1144,7 +1144,10 @@ struct LibraryScreen: View {
         // unbroken, so it gets the one spot the eye already checks for
         // "where am I".
         ToolbarItem(placement: .principal) {
-            if let visibleDate, !isSelecting {
+            // Stays while selecting on the Duo's inner display: every other
+            // item is in the rail there, so without the date the bar's row
+            // would empty and the grid would jump up when selection starts.
+            if let visibleDate, !isSelecting || isDuoInner {
                 Text(visibleDate)
                     .font(.headline)
                     .monospacedDigit()
@@ -1176,7 +1179,7 @@ struct LibraryScreen: View {
         }
         if isSelecting, let selectionModel = selectionBarModel() {
             // ⋯ joins the filter's capsule; the item itself puts × on its own.
-            SelectionToolbarItems(model: selectionModel)
+            SelectionToolbarItems(model: selectionModel, usesIconItems: isDuoInner)
         }
         // Select gets its own Liquid Glass capsule, split off from the filter.
         if !isSelecting {

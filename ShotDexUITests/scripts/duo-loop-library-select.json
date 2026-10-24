@@ -1,0 +1,14 @@
+{
+  "steps": [
+    { "action": "launch" },
+    { "action": "wait", "seconds": 8 },
+    { "action": "tap", "label": "Select photos" },
+    { "action": "wait", "seconds": 3 },
+    { "action": "tap", "label": "Photo, file type", "type": "cell", "index": 1 },
+    { "action": "tap", "label": "Photo, file type", "type": "cell", "index": 3 },
+    { "action": "tap", "label": "Photo, file type", "type": "cell", "index": 10 },
+    { "action": "wait", "seconds": 2 },
+    { "action": "dump", "name": "DI_LibrarySelect" },
+    { "action": "wait", "seconds": 60 }
+  ]
+}

@@ -187,6 +187,10 @@ struct SelectionCountCaption: View {
 /// stay put when selection starts.
 struct SelectionToolbarItems: ToolbarContent {
     let model: SelectionBarModel
+    /// Compare and Edit as icons, for the Duo's inner display: its vertical
+    /// toolbar takes icon items only, so words stay behind in a row of their
+    /// own while Filter, ⋯ and × stand in the rail.
+    var usesIconItems = false
 
     private var hasMenu: Bool {
         model.onCollage != nil || model.onVideo != nil || model.onCompress != nil || model.onCombine != nil
@@ -201,9 +205,15 @@ struct SelectionToolbarItems: ToolbarContent {
         // slot the Settings gear vacates when selection starts, spelled out.
         ToolbarItem(placement: .topBarLeading) {
             if let onCompare = model.onCompare {
-                Button("Compare", action: onCompare)
-                    .tint(.primary)
-                    .disabled(model.selectionCount < CompareSession.minimumCount)
+                Button(action: onCompare) {
+                    if usesIconItems {
+                        Label("Compare", systemImage: "rectangle.split.2x1")
+                    } else {
+                        Text("Compare")
+                    }
+                }
+                .tint(.primary)
+                .disabled(model.selectionCount < CompareSession.minimumCount)
             }
         }
         // Two text labels side by side merge into one glass pill on iOS 26,
@@ -217,9 +227,15 @@ struct SelectionToolbarItems: ToolbarContent {
         // for the things that are not.
         ToolbarItem(placement: .topBarLeading) {
             if let onEdit = model.onEdit {
-                Button(PhotoCommand.edit.title, action: onEdit)
-                    .tint(.primary)
-                    .disabled(model.imageSelectionCount < 1)
+                Button(action: onEdit) {
+                    if usesIconItems {
+                        PhotoCommand.edit.label
+                    } else {
+                        Text(PhotoCommand.edit.title)
+                    }
+                }
+                .tint(.primary)
+                .disabled(model.imageSelectionCount < 1)
             }
         }
         ToolbarItem(placement: .topBarTrailing) {

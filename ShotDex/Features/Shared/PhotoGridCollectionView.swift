@@ -2019,10 +2019,13 @@ final class PhotoGridCell: UICollectionViewCell {
     /// Cells narrower than this hide the metadata line.
     private static var metadataMinCellWidth: CGFloat { 90 }
     /// The metadata line's font, shared with the fit measurement in
-    /// `metadataLine(for:options:fittingWidth:)`.
+    /// `fittedMetadataLine(_:width:)`.
     private static let metadataFont = UIFont.systemFont(ofSize: 10, weight: .medium)
     /// Horizontal inset of the metadata line on each side of the cell.
     private static var metadataInset: CGFloat { 6 }
+    /// What the metadata line gives up on its trailing side while selecting:
+    /// the selection circle sits on the same baseline, 26pt in from the edge.
+    private static var selectionBadgeClearance: CGFloat { 24 }
 
     private let imageView = UIImageView()
     private let gradient = CAGradientLayer()
@@ -2071,6 +2074,11 @@ final class PhotoGridCell: UICollectionViewCell {
     private var isSelectedForDim = false
     private static let rejectedImageAlpha: CGFloat = 0.45
     private var accessibilityMetadataLine: String?
+    /// The metadata values the line is fitted from, kept so the line can be
+    /// refitted when the selection circle comes and goes.
+    private var metadataFragments: [String] = []
+    private var metadataCellWidth: CGFloat = 0
+    private var showsSelectionBadge = false
     private var accessibilityFileType: String?
 
     override init(frame: CGRect) {
@@ -2158,7 +2166,8 @@ final class PhotoGridCell: UICollectionViewCell {
         let labelHeight: CGFloat = 20
         metadataLabel.frame = CGRect(
             x: Self.metadataInset, y: contentView.bounds.height - labelHeight + 1,
-            width: contentView.bounds.width - Self.metadataInset * 2, height: labelHeight - 5
+            width: Self.metadataLineWidth(cellWidth: contentView.bounds.width, isSelecting: showsSelectionBadge),
+            height: labelHeight - 5
         )
         CATransaction.begin()
         CATransaction.setDisableActions(true)
@@ -2251,9 +2260,9 @@ final class PhotoGridCell: UICollectionViewCell {
         applyCloudPlaceholder(isCloudPlaceholder ? (item.originalFilename ?? "") : nil, showsName: cellWidth >= 60)
 
         let showsBadge = cellWidth >= Self.metadataMinCellWidth && !isCloudPlaceholder
-        let lineWidth = cellWidth - Self.metadataInset * 2
-        let line = showsBadge ? Self.metadataLine(for: item, options: displayOptions, fittingWidth: lineWidth) : nil
-        applyBadge(line: line)
+        metadataCellWidth = cellWidth
+        showsSelectionBadge = isSelecting
+        applyBadge(fragments: showsBadge ? Self.metadataFragments(for: item, options: displayOptions) : [])
         accessibilityMediaLabel = item.mediaType == 2 ? "Video" : "Photo"
         applyFileTypeBadge(
             displayOptions.showsFileTypeBadge && !isCloudPlaceholder ? item.fileTypeBadgeText : nil
@@ -2270,7 +2279,7 @@ final class PhotoGridCell: UICollectionViewCell {
                 guard let self, !Task.isCancelled,
                       self.configuredAssetId == assetId else { return }
                 if showsBadge {
-                    self.applyBadge(line: Self.metadataLine(for: fetched, options: displayOptions, fittingWidth: lineWidth))
+                    self.applyBadge(fragments: Self.metadataFragments(for: fetched, options: displayOptions))
                 }
                 self.applyFileTypeBadge(
                     displayOptions.showsFileTypeBadge ? fetched.fileTypeBadgeText : nil
@@ -2298,12 +2307,23 @@ final class PhotoGridCell: UICollectionViewCell {
     /// Lightweight swipe-select update. Deliberately leaves the thumbnail,
     /// metadata task and video badge untouched.
     func updateSelection(isSelecting: Bool, isSelected: Bool) {
+        if showsSelectionBadge != isSelecting {
+            showsSelectionBadge = isSelecting
+            refitMetadataLine()
+            setNeedsLayout()
+        }
         selectionBorder.isHidden = !(isSelecting && isSelected)
         selectionBadge.isHidden = !isSelecting
         // Selected thumbnail dims slightly, iOS Photos style, so the accent
         // border and check read clearly over it.
         isSelectedForDim = isSelecting && isSelected
         applyImageAlpha()
+        // The check is drawn, so VoiceOver needs it said.
+        if isSelecting && isSelected {
+            accessibilityTraits.insert(.selected)
+        } else {
+            accessibilityTraits.remove(.selected)
+        }
         let base = UIImage.SymbolConfiguration(pointSize: 18, weight: .semibold)
         if isSelected {
             // White check on an accent-filled disc, iOS Photos style. Palette:
@@ -2328,12 +2348,24 @@ final class PhotoGridCell: UICollectionViewCell {
 
     /// Single write point for the metadata overlay (sync configure and the
     /// async lazy fill), so label, gradient, and accessibility stay in step.
-    private func applyBadge(line: String?) {
+    /// VoiceOver reads every value; only the drawn line is fitted.
+    private func applyBadge(fragments: [String]) {
+        metadataFragments = fragments
+        accessibilityMetadataLine = MetadataFormatter.metadataLine(fragments)
+        refitMetadataLine()
+        updateAccessibilityLabel()
+    }
+
+    private func refitMetadataLine() {
+        let width = Self.metadataLineWidth(cellWidth: metadataCellWidth, isSelecting: showsSelectionBadge)
+        let line = Self.fittedMetadataLine(metadataFragments, width: width)
         metadataLabel.text = line
         metadataLabel.isHidden = line == nil
         gradient.isHidden = line == nil
-        accessibilityMetadataLine = line
-        updateAccessibilityLabel()
+    }
+
+    private static func metadataLineWidth(cellWidth: CGFloat, isSelecting: Bool) -> CGFloat {
+        cellWidth - metadataInset * 2 - (isSelecting ? selectionBadgeClearance : 0)
     }
 
     /// Status glyphs for one asset. Everything here reads a property PhotoKit
@@ -2590,18 +2622,13 @@ final class PhotoGridCell: UICollectionViewCell {
     }
 
     /// Only real values — never placeholders like `ISO -- · --mm`.
-    ///
-    /// Trailing fields drop off whole until the line fits `width`, so a tile
-    /// shows `ISO 400 · 35mm` rather than `ISO 400 · 35m…` — a cut value reads
-    /// as a wrong one. The first field always stays; if even that is too long
-    /// the label truncates it as before.
-    private static func metadataLine(
-        for item: some PhotoGridDisplayable, options: GridMetadataDisplayOptions, fittingWidth width: CGFloat
-    ) -> String? {
+    private static func metadataFragments(
+        for item: some PhotoGridDisplayable, options: GridMetadataDisplayOptions
+    ) -> [String] {
         let focalValue = options.showsEquivalentFocalLength
             ? (item.equivalentFocalLength ?? item.focalLength)
             : item.focalLength
-        var fragments: [String] = [
+        return [
             options.showsISO ? item.iso.flatMap(MetadataFormatter.iso) : nil,
             options.showsFocal ? focalValue.flatMap(MetadataFormatter.focalLength) : nil,
             options.showsAperture ? item.aperture.flatMap(MetadataFormatter.aperture) : nil,
@@ -2609,6 +2636,14 @@ final class PhotoGridCell: UICollectionViewCell {
             options.showsMegapixels ? item.megapixels.flatMap(MetadataFormatter.megapixels) : nil,
             options.showsFileSize ? item.fileSize.flatMap(MetadataFormatter.fileSize) : nil,
         ].compactMap { $0 }
+    }
+
+    /// Trailing fields drop off whole until the line fits `width`, so a tile
+    /// shows `ISO 400 · 35mm` rather than `ISO 400 · 35m…` — a cut value reads
+    /// as a wrong one. The first field always stays; if even that is too long
+    /// the label truncates it as before.
+    private static func fittedMetadataLine(_ fragments: [String], width: CGFloat) -> String? {
+        var fragments = fragments
         while fragments.count > 1,
               let line = MetadataFormatter.metadataLine(fragments),
               (line as NSString).size(withAttributes: [.font: metadataFont]).width > width {
