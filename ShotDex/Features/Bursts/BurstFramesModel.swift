@@ -4,7 +4,7 @@ import Observation
 import Photos
 
 /// What opens the frame picker (FS-06.06 §8): a PhotoKit burst, or any run
-/// of photos of one moment — a Same moment group, a focus stack — and the
+/// of photos of one moment — a Burst group, a focus stack — and the
 /// frame to show first.
 struct BurstFramesRequest: Identifiable, Equatable {
     enum Source: Equatable {
@@ -23,7 +23,7 @@ struct BurstFramesRequest: Identifiable, Equatable {
     var chips: [String: [String]] = [:]
     /// Largest face per frame, normalized, top-left origin — Zoom to face.
     var faceRects: [String: CGRect] = [:]
-    /// "Same moment · 24 frames" instead of the frame counter, when set.
+    /// "Burst · 24 frames" instead of the frame counter, when set.
     var title: String?
 
     init(burstId: String, startFrameId: String? = nil) {

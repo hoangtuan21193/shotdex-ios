@@ -1,0 +1,28 @@
+{
+  "steps": [
+    { "action": "launch" },
+    { "action": "wait", "seconds": 8 },
+    { "action": "tap", "label": "Utilities", "type": "button" },
+    { "action": "wait", "seconds": 3 },
+    { "action": "tap", "label": "Duplicates" },
+    { "action": "wait", "seconds": 12 },
+    { "action": "screenshot", "name": "01-exact" },
+    { "action": "dump", "name": "01-exact" },
+    { "action": "tap", "label": "Similar" },
+    { "action": "wait", "seconds": 4 },
+    { "action": "screenshot", "name": "02-similar" },
+    { "action": "dump", "name": "02-similar" },
+    { "action": "tap", "label": "Remove", "type": "button", "index": 0 },
+    { "action": "wait", "seconds": 2 },
+    { "action": "screenshot", "name": "03-keeper-marked" },
+    { "action": "dump", "name": "03-keeper-marked" },
+    { "action": "tap", "label": "Don't remove", "type": "button", "index": 0 },
+    { "action": "wait", "seconds": 2 },
+    { "action": "screenshot", "name": "04-keeper-unmarked" },
+    { "action": "dump", "name": "04-keeper-unmarked" },
+    { "action": "tap", "label": "Burst" },
+    { "action": "wait", "seconds": 4 },
+    { "action": "screenshot", "name": "05-burst" },
+    { "action": "dump", "name": "05-burst" }
+  ]
+}

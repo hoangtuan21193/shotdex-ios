@@ -28,7 +28,7 @@ struct DuplicateSeriesTests {
     }
 
     private func groups(_ photos: [HashedPhoto]) -> [DuplicateGroup] {
-        DuplicateGrouper.groups(from: photos).filter { $0.kind == .sameMoment }
+        DuplicateGrouper.groups(from: photos).filter { $0.kind == .burst }
     }
 
     @Test func framesShotSecondsApartAreOneSeries() {
@@ -57,7 +57,7 @@ struct DuplicateSeriesTests {
             #expect(distance <= DuplicateGrouper.seriesMaxDistance)
         }
         #expect(groups(photos).count == 1)
-        #expect(!DuplicateGrouper.groups(from: photos).contains { $0.kind == .lookAlikes })
+        #expect(!DuplicateGrouper.groups(from: photos).contains { $0.kind == .similar })
     }
 
     /// Each step is compared with the frame before it, not with the first one,

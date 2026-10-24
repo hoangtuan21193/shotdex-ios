@@ -2,7 +2,7 @@ import Photos
 import SwiftUI
 
 /// The shared frame picker (FS-06.06 §8, FS-02.05 §4; board `PH_BurstFrames`),
-/// tier D: one run of frames of one moment — a PhotoKit burst, a Same moment
+/// tier D: one run of frames of one moment — a PhotoKit burst, a Burst
 /// group, a focus stack. The big frame takes every point of height the
 /// chrome leaves; zoom and pan carry over to the next frame, so eyes are
 /// compared at the same spot; a 56pt filmstrip marks weak frames with a red
@@ -496,12 +496,13 @@ struct BurstBigFrame: View {
     var paneIndex = 0
     let onSwipe: (CullGesturePolicy.Swipe) -> Void
     var onTap: (() -> Void)?
+    var onHoldChange: ((Bool) -> Void)?
     @State private var image: UIImage?
 
     var body: some View {
         ZStack {
             if let image {
-                ZoomableImageView(image: image, sync: synchronizer, paneIndex: paneIndex, onSingleTap: onTap, onSwipe: onSwipe)
+                ZoomableImageView(image: image, sync: synchronizer, paneIndex: paneIndex, onHoldChange: onHoldChange, onSingleTap: onTap, onSwipe: onSwipe)
             } else {
                 ProgressView().tint(.white)
             }

@@ -14,8 +14,7 @@ struct CompareModelTests {
 
     private func makeModel(
         ids: [String] = ["a", "b", "c"],
-        log: DeletionLog = DeletionLog(),
-        duplicateGroup: [String]? = nil
+        log: DeletionLog = DeletionLog()
     ) throws -> (CompareModel, PhotoMarks) {
         let marks = PhotoMarks(store: PhotoMarksStore(database: try AppDatabase.makeEmpty()))
         let deleter = RejectedDeleter(
@@ -30,8 +29,7 @@ struct CompareModelTests {
             marks: marks,
             deleter: deleter,
             assets: [:],
-            metadata: [:],
-            duplicateGroup: duplicateGroup
+            metadata: [:]
         )
         return (model, marks)
     }
@@ -94,13 +92,12 @@ struct CompareModelTests {
         #expect(gone == ["b", "c"])
     }
 
-    /// AC-15: the last photo of a Duplicates group cannot take Reject.
-    @Test func theGroupsLastPhotoRefusesReject() async throws {
-        let (model, marks) = try makeModel(ids: ["a", "b"], duplicateGroup: ["a", "b"])
+    /// AC-15: every photo of a comparison can take Reject, the last too.
+    @Test func everyPhotoCanTakeReject() async throws {
+        let (model, marks) = try makeModel(ids: ["a", "b"])
         await model.setFlag(.reject, for: "a")
         await model.setFlag(.reject, for: "b")
-        #expect(marks.flag(for: "b") == nil)
-        #expect(model.blockedMessage == "Keep at least one photo in this group.")
-        #expect(!model.canReject("b"))
+        #expect(marks.flag(for: "a") == .reject)
+        #expect(marks.flag(for: "b") == .reject)
     }
 }

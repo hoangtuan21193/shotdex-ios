@@ -19,8 +19,10 @@ Board: `PH_Duplicates` · `PH_DuplicatesPinched` · `IP_*` · `DI_*` · `DC_*` (
 - Check Again (gom lại) **không cắt** dấu: dấu theo id ảnh, không theo nhóm.
 - v3 không còn ba mức nên **một ảnh chỉ ở một nhóm**; thanh xoá đếm **mọi** dấu, ở mọi loại. Hàng lọc đang chọn chỉ đổi
   thẻ nào hiện, không đổi số trên nút. Viên kính ghi *"37 selected · 210 MB"* và chạm được (§3).
-- **Chặn đánh dấu ô cuối cùng** của một nhóm (giữ v2): ô không đổi, rung cảnh báo, dưới thẻ *"Keep at least one photo in
-  this group."* 3 s; mục Remove của ô đó mờ. Màn chọn khung và Compare giữ cùng cổng.
+- **Đánh dấu được cả nhóm** (người dùng 2026-10-24, bỏ cổng "Keep at least one photo" của v2): ảnh Keep nhận dấu như
+  mọi ảnh khác, kể cả khi nó là ảnh cuối chưa đánh dấu; Delete xoá cả nhóm, không chặn, không cảnh báo riêng (hộp thoại
+  xoá của hệ thống là bước xác nhận). Nhóm đã đánh dấu hết vẫn đặt một ảnh vào ô lớn (đỏ, không nhãn Keep). Compare mở từ
+  Duplicates cũng cho Delete/Reject ảnh cuối.
 - **Ảnh được bảo vệ** (favorite, đã chỉnh, trong album người dùng tạo — [FS-06.06 §1](06-duplicates.md)): Remove the other N
   và Quick clean bỏ qua chúng; người dùng tự chạm vòng thì được đánh dấu như ảnh khác.
 
@@ -34,7 +36,7 @@ v2 có ⋯ ▸ *Merge N Groups…* ghi favorite/toạ độ/ngày vào Photos **
     chia sẻ: bỏ qua);
   - **favorite**: bật nếu một bản bị xoá là favorite;
   - **toạ độ**: nếu bản giữ không có và một bản bị xoá có;
-  - **ngày chụp sớm nhất**: **chỉ ở Copies và Smaller copies** (cùng khoảnh khắc thật); Look-alikes / Same moment không
+  - **ngày chụp sớm nhất**: **chỉ ở Exact** (cùng khoảnh khắc thật; từ 2026-10-21 nhóm có bản nhỏ là Similar nên không còn kế thừa ngày); Similar / Burst không
     chép ngày.
 - Nhóm còn ≥ 2 bản không mang dấu: không có "bản giữ" duy nhất → không thừa hưởng gì (người dùng đang giữ nhiều khung).
 - Thừa hưởng và xoá đi **trong cùng một khối thay đổi** của thư viện, sau **một** hộp xác nhận của hệ thống: người dùng huỷ
@@ -82,15 +84,15 @@ v2 có ⋯ ▸ *Merge N Groups…* ghi favorite/toạ độ/ngày vào Photos **
 | AC-M1 | (D12) 6 ảnh mang dấu trong 4 nhóm | tắt hẳn app (kill), mở lại Duplicates | vẫn 6 ô mang dấu; thanh dưới *6 selected* + *Delete 6* | `DuplicateReviewStoreTests.marksSurviveRelaunch` ✅ + route `duplicates-v3-persist.json` ✅ (50 dấu còn sau khi app bị tắt và mở lại, iPhone 17 26.5) |
 | AC-M2 | (D12) như AC-M1, 1 trong 6 ảnh bị xoá bằng app Photos | quay lại Duplicates | *5 selected* + *Delete 5*; MB không tính ảnh đã mất; dòng của ảnh đó không còn trong `duplicate_review` | `DuplicateReviewStoreTests.deletedPhotoDropsItsMark` ✅ |
 | AC-M3 | (D12) Keep all trên nhóm A, bản giữ người dùng chọn ở nhóm B | kill app, mở lại | A vẫn thu gọn *Keeping all 2*; B vẫn có bản giữ người dùng chọn | `DuplicateReviewStoreTests.keepAllAndKeeperOverrideSurviveRelaunch` ✅ |
-| AC-M4 | (giữ v2) nhóm 3 ảnh, 2 đã đánh dấu | chạm vòng của ô thứ 3 | ô không mang dấu; *Keep at least one photo in this group.*; *Delete 2* không đổi; giữ lâu ô đó thì Remove mờ | ⚠️ chưa có |
-| AC-M5 | (D4) dấu: 3 ở Copies, 2 ở Look-alikes | hàng lọc chọn Look-alikes | thanh dưới vẫn *5 selected* + *Delete 5* (đếm mọi dấu) | ⚠️ chưa có |
-| AC-M6 | (A2) nhóm 4 ảnh: K bản giữ, C1 favorite, C2 trong album "Client", C3 thường | chạm *Remove the other …* | nút ghi *Remove the other 1*; chỉ C3 mang dấu; dưới thẻ *2 kept: favorite, in album* | `DuplicateReviewTests.removeOtherSkipsProtected` ✅ |
+| AC-M4 | nhóm 2 ảnh, ảnh copy đã đánh dấu | chạm vòng của ảnh Keep | ảnh Keep mang dấu; nút thành *Delete 2*; bấm Delete thì hộp thoại hệ thống hiện, không có cảnh báo "Would Lose Every Photo" | `DuplicateReviewStoreTests.everyPhotoOfAGroupCanBeMarked`; `ShotDexUITests/scripts/duplicates-mark-keeper.json` |
+| AC-M5 | (D4) dấu: 3 ở Exact, 2 ở Similar | hàng lọc chọn Similar | thanh dưới vẫn *5 selected* + *Delete 5* (đếm mọi dấu) | ⚠️ chưa có |
+| AC-M6 | **Bỏ 2026-10-21** (thẻ không còn nút *Remove the other N*; dấu bảo vệ A2 vẫn áp cho Quick clean — xem AC-S*). (A2) nhóm 4 ảnh: K bản giữ, C1 favorite, C2 trong album "Client", C3 thường | chạm *Remove the other …* | nút ghi *Remove the other 1*; chỉ C3 mang dấu; dưới thẻ *2 kept: favorite, in album* | `DuplicateReviewTests.removeOtherSkipsProtected` ✅ |
 | AC-D1 | (D11) 37 ảnh mang dấu, 2 trong album "Client" | nhìn thanh dưới | *37 selected · 210 MB ›* / *2 are in albums · kept photo joins them* / *Delete 37* | route `duplicates-v3-selected.json` ✅ (*50 selected · 342.2 MB ›* / *Delete 50*; dòng album chưa có dữ liệu sim) |
 | AC-D2 | (D11) như AC-D1 | chạm viên kính, bỏ dấu 2 ảnh trong sheet | sheet và viên đỏ cùng ghi *Delete 35*; đóng sheet → thẻ của 2 ảnh đó không còn dấu | route `duplicates-v3-selected.json` ✅ mở sheet *50 Selected* + *Delete 50*; bỏ dấu trong sheet ⚠️ chưa chụp |
 | AC-D3 | (D11) như AC-D2 | *Delete 35* → xác nhận hệ thống | hộp hệ thống nói 35 ảnh; đúng 35 ảnh vào Recently Deleted; thông báo *35 photos moved to Recently Deleted* + MB + *Open Photos* trong ≥ 4 s; rung success | route `duplicates-v3-delete.json` ✅ (*Delete 1* → Delete → *1 photo moved to Recently Deleted* / *116.3 MB freed · kept for 30 days* + *Open Photos*, nhóm 9→8); rung success theo code |
 | AC-D4 | (D11) như AC-D1 | *Delete 37* → Don't Allow | 37 ảnh vẫn mang dấu; không album nào đổi; không thông báo | route `duplicates-v3-delete.json` ✅ (Don’t Allow → *1 selected*, ảnh vẫn mang dấu) |
-| AC-D5 | (D11) nhóm Copies {K không favorite, không album; C favorite, trong album "Client", có toạ độ, ngày sớm hơn} | đánh dấu C, Delete, xác nhận | K favorite, trong "Client", có toạ độ của C, ngày của C; C trong Recently Deleted | `DuplicateInheritanceTests.copiesKeeperTakesAlbumFavoriteAndDate` ✅ (kế hoạch); ghi Photos trên sim với album tự tạo ⚠️ chưa có |
-| AC-D6 | (D11) nhóm Look-alikes cùng dữ liệu như AC-D5 | như AC-D5 | K favorite, trong "Client", có toạ độ; **ngày của K không đổi** | `DuplicateInheritanceTests.lookAlikeKeeperKeepsItsDate` ✅ (kế hoạch); sim ⚠️ chưa có |
+| AC-D5 | (D11) nhóm Exact {K không favorite, không album; C favorite, trong album "Client", có toạ độ, ngày sớm hơn} | đánh dấu C, Delete, xác nhận | K favorite, trong "Client", có toạ độ của C, ngày của C; C trong Recently Deleted | `DuplicateInheritanceTests.copiesKeeperTakesAlbumFavoriteAndDate` ✅ (kế hoạch); ghi Photos trên sim với album tự tạo ⚠️ chưa có |
+| AC-D6 | (D11) nhóm Similar cùng dữ liệu như AC-D5 | như AC-D5 | K favorite, trong "Client", có toạ độ; **ngày của K không đổi** | `DuplicateInheritanceTests.lookAlikeKeeperKeepsItsDate` ✅ (kế hoạch); sim ⚠️ chưa có |
 | AC-D7 | (D11) quyền `.limited`, album "Client" ngoài tập đã chọn | như AC-D5 | C vào Recently Deleted; K không vào "Client"; thông báo thêm *Albums couldn't be updated for 1 photo* | code: album không lấy được → *Albums couldn't be updated for N photos*; sim `.limited` ⚠️ chưa có |
 | AC-D8 | (D11) xoá hết nhóm của mọi loại | xoá xong | *All reviewed · X freed today* | code (*All reviewed · X freed today* + viên loại còn nhóm); sim ⚠️ chưa có (phải xoá hết nhóm) |
 | AC-W1 | (Z2, giữ v2) 6 nhóm, 2 dấu; iOS 26.5 và 18.6 | mở danh sách trên iPad 1376×1032, 1032×1376, Duo trong 951×669 | 3 cột 437pt / 2 cột 492pt / 2 cột ~410pt (±1pt); thanh dưới cụm giữa; tab bar ẩn (cả pre-26) | iPad 13 dọc: cột 492pt ✅ (route `duplicates-v3-frames-ipad.json`); ngang 437pt, Duo trong, iOS 18.6 ⚠️ chưa đo |

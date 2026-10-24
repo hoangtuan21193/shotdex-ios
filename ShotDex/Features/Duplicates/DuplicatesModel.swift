@@ -5,7 +5,7 @@ import SwiftUI
 import UniformTypeIdentifiers
 
 /// An alert the Duplicates screen owes the user: a merge that failed for some
-/// groups, or a Delete that would have emptied a group.
+/// groups, or a Delete the system refused.
 struct DuplicateNotice: Identifiable {
     let id = UUID()
     let title: String
@@ -39,7 +39,10 @@ final class DuplicatesModel {
     private var photoLibrary: PhotoLibraryService { dependencies.photoLibrary }
 
     private(set) var phase: Phase = .loading
-    private(set) var groups: [DuplicateGroup] = []
+    private(set) var groups: [DuplicateGroup] = [] {
+        didSet { groupsVersion &+= 1 }
+    }
+    @ObservationIgnored private var groupsVersion = 0
     private(set) var assetsById: [String: PHAsset] = [:]
     private(set) var coverage = PerceptualHashCoverage(hashedPhotos: 0, indexedPhotos: 0)
     /// Last grouping; `nil` until the first scan.
@@ -62,7 +65,11 @@ final class DuplicatesModel {
     /// Edited / RAW / Live / favourite per member, read per card as it appears.
     private(set) var traits: [String: DuplicateMemberTraits] = [:]
     /// What the scoring pass measured, per member (FS-06.06 §6).
-    private(set) var scores: [String: DuplicateQualityScore] = [:]
+    private(set) var scores: [String: DuplicateQualityScore] = [:] {
+        didSet { scoresVersion &+= 1 }
+    }
+    @ObservationIgnored private var scoresVersion = 0
+    @ObservationIgnored private var sortedGroupsCache: (key: SortedGroupsKey, groups: [DuplicateGroup])?
     /// The scoring pass's progress while it runs; `nil` when idle.
     private(set) var scoring: DuplicateScoringProgress?
     @ObservationIgnored private var scoringTask: Task<Void, Never>?
@@ -72,19 +79,18 @@ final class DuplicatesModel {
     /// Exposure read by the pass since the last cache read: a regroup-free
     /// reload picks up brackets once the pass ends.
     @ObservationIgnored private var scoringReadExposure = false
-    private var traitsRequested: Set<String> = []
+    @ObservationIgnored private var traitsRequested: Set<String> = []
+    /// Members whose traits the next flush reads (`loadTraits(for:)`).
+    @ObservationIgnored private var traitsQueue: [PHAsset] = []
+    @ObservationIgnored private var traitsFlush: Task<Void, Never>?
     var comparePresentation: DuplicateComparePresentation?
     var errorMessage: String?
     /// Title + message of the alert raised when Merge could not write some
-    /// groups, or Delete would empty a group.
+    /// groups, or the system refused a Delete.
     var notice: DuplicateNotice?
     var isDeleting = false
     /// Bumped after each delete that went through, for the success haptic.
     private(set) var deleteSuccessCount = 0
-    /// Group whose last unmarked photo the user just tried to mark; the card
-    /// shows "Keep at least one photo in this group." for a moment.
-    private(set) var blockedGroupId: String?
-    private var blockedResetTask: Task<Void, Never>?
 
     /// Asset ids marked for deletion — what Compare binds to.
     var markedForDeletion: Set<String> { session.marks }
@@ -98,10 +104,20 @@ final class DuplicatesModel {
 
     /// What the list shows. Filtering changes which cards show, never the
     /// marks or the Delete count (06b §1).
+    /// There is no All: one kind always shows. A remembered kind that has
+    /// no group left falls back to the first one that has.
     var filter: DuplicatesFilter {
+        get {
+            let present = presentFilters
+            return present.isEmpty || present.contains(chosenFilter) ? chosenFilter : present[0]
+        }
+        set { chosenFilter = newValue }
+    }
+
+    private var chosenFilter: DuplicatesFilter {
         didSet {
-            guard filter != oldValue else { return }
-            UserDefaults.standard.set(filter.storedValue, forKey: SettingsKeys.duplicateKindFilter)
+            guard chosenFilter != oldValue else { return }
+            UserDefaults.standard.set(chosenFilter.storedValue, forKey: SettingsKeys.duplicateKindFilter)
         }
     }
 
@@ -112,7 +128,7 @@ final class DuplicatesModel {
     init(dependencies: AppDependencies) {
         self.dependencies = dependencies
         self.session = dependencies.duplicateReview
-        self.filter = DuplicatesFilter(stored: UserDefaults.standard.string(forKey: SettingsKeys.duplicateKindFilter))
+        self.chosenFilter = DuplicatesFilter(stored: UserDefaults.standard.string(forKey: SettingsKeys.duplicateKindFilter))
         let storedSort = UserDefaults.standard.string(forKey: SettingsKeys.duplicateSort)
         self.sort = storedSort.flatMap(DuplicateSort.init(rawValue:)) ?? .easiestFirst
     }
@@ -175,22 +191,41 @@ final class DuplicatesModel {
     // MARK: Review
 
     /// Groups of the kind the filter shows, in the order the sort menu asks for.
+    ///
+    /// Sorted once per change of the groups, the scores, the filter or the
+    /// sort — not per trait read or mark: cards load their traits as they
+    /// scroll in, and re-sorting every group (a keeper pick each) on each of
+    /// those made the list stutter and the cards jump under the finger.
     var sortedGroups: [DuplicateGroup] {
+        // Read so the list keeps observing them; the cache key does the rest.
+        _ = groups.count
+        _ = scores.count
+        let key = SortedGroupsKey(groups: groupsVersion, scores: scoresVersion, filter: filter, sort: sort)
+        if let cache = sortedGroupsCache, cache.key == key { return cache.groups }
         let shown = groups.filter(filter.includes)
-        return DuplicateReview.sorted(shown, by: sort, freeBytes: { self.freeBytes(of: $0) ?? 0 }) { group in
+        let sorted = DuplicateReview.sorted(shown, by: sort, freeBytes: { self.freeBytes(of: $0) ?? 0 }) { group in
             self.keeper(of: group).map { DuplicateReview.scoreGap(group, keeper: $0, scores: self.scores) } ?? 0
         }
+        sortedGroupsCache = (key, sorted)
+        return sorted
+    }
+
+    private struct SortedGroupsKey: Equatable {
+        var groups: Int
+        var scores: Int
+        var filter: DuplicatesFilter
+        var sort: DuplicateSort
     }
 
     /// Kinds that have at least one group, in filter-row order.
     var presentKinds: [DuplicateKind] {
-        let kinds = Set(groups.filter { $0.sourceSet == nil }.map(\.kind))
+        let kinds = Set(groups.map(\.kind))
         return DuplicateKind.allCases.filter(kinds.contains)
     }
 
     /// Filters that would show something, in filter-row order (§7.3).
     var presentFilters: [DuplicatesFilter] {
-        [.all] + presentKinds.map(DuplicatesFilter.kind) + (groups.contains { $0.sourceSet != nil } ? [.sourceFrames] : [])
+        presentKinds.map(DuplicatesFilter.kind)
     }
 
     func groupCount(_ filter: DuplicatesFilter) -> Int { groups.filter(filter.includes).count }
@@ -246,19 +281,30 @@ final class DuplicatesModel {
         return DuplicateReview.freeBytes(members: group.members, keeper: keeper)
     }
 
-    func reasons(for group: DuplicateGroup) -> [DuplicateKeepReason] {
-        guard let keeper = keeper(of: group) else { return [] }
+    func reasons(for group: DuplicateGroup, keeper: HashedPhoto? = nil) -> [DuplicateKeepReason] {
+        guard let keeper = keeper ?? self.keeper(of: group) else { return [] }
         return DuplicateReview.reasons(keeper: keeper, members: group.members, traits: traits, scores: scores)
     }
 
     /// Up to two lines inside a copy: what it lacks, where it is from, what
     /// was shot differently (§7.4). Empty for the keeper.
-    func caption(of member: HashedPhoto, in group: DuplicateGroup) -> [String] {
-        guard let keeper = keeper(of: group), keeper.assetId != member.assetId else { return [] }
+    /// - Parameter keeper: `keeper(of: group)` when the caller has it already.
+    func caption(of member: HashedPhoto, in group: DuplicateGroup, keeper: HashedPhoto? = nil) -> [String] {
+        guard let keeper = keeper ?? self.keeper(of: group), keeper.assetId != member.assetId else { return [] }
         if group.sourceSet != nil {
             return DuplicateReview.settings(of: member, members: group.members).map { [$0] } ?? []
         }
         return DuplicateReview.caption(of: member, keeper: keeper, members: group.members, traits: traits, scores: scores)
+    }
+
+    /// What sets `member` apart from `other` (Softer, Eyes closed, Smaller…),
+    /// for the compare screen, where the photo in pane A plays the keeper.
+    func caption(of member: HashedPhoto, comparedWith other: HashedPhoto, in group: DuplicateGroup) -> [String] {
+        guard member.assetId != other.assetId else { return [] }
+        if group.sourceSet != nil {
+            return DuplicateReview.settings(of: member, members: group.members).map { [$0] } ?? []
+        }
+        return DuplicateReview.caption(of: member, keeper: other, members: group.members, traits: traits, scores: scores)
     }
 
     func traits(of assetId: String) -> DuplicateMemberTraits {
@@ -285,12 +331,6 @@ final class DuplicatesModel {
         groups.reduce(0) { $0 + (freeBytes(of: $1) ?? 0) }
     }
 
-    /// Every member of the group carries a mark — possible when marks made
-    /// before a regroup fill a group of this one (§1).
-    func isFullyMarked(_ group: DuplicateGroup) -> Bool {
-        group.members.allSatisfy { session.marks.contains($0.assetId) }
-    }
-
     func expand(_ group: DuplicateGroup) {
         session.setCollapsed(group.memberIds, false)
     }
@@ -300,20 +340,6 @@ final class DuplicatesModel {
     func removal(in group: DuplicateGroup) -> DuplicateRemoval? {
         guard let keeper = keeper(of: group) else { return nil }
         return DuplicateRemoval.plan(members: group.members, keeper: keeper, traits: traits)
-    }
-
-    /// A group this big shows its keeper, the copies beside it and "Show
-    /// all N" until the user opens it (D9).
-    static let largeGroupThreshold = 12
-    /// Large groups opened with Show all — once per visit to the screen.
-    private(set) var expandedLargeGroups: Set<String> = []
-
-    func isFolded(_ group: DuplicateGroup) -> Bool {
-        group.count >= Self.largeGroupThreshold && !expandedLargeGroups.contains(group.id)
-    }
-
-    func showAll(_ group: DuplicateGroup) {
-        expandedLargeGroups.insert(group.id)
     }
 
     /// How long the red frames of a shortcut stay on screen before the card
@@ -364,12 +390,21 @@ final class DuplicatesModel {
         let missing = group.members.map(\.assetId).filter { !traitsRequested.contains($0) }
         guard !missing.isEmpty else { return }
         traitsRequested.formUnion(missing)
-        let assets = missing.compactMap { assetsById[$0] }
-        Task { [weak self] in
+        traitsQueue += missing.compactMap { assetsById[$0] }
+        guard traitsFlush == nil else { return }
+        // Cards appear one after another while the list scrolls: one read and
+        // one merge per burst of them, so every visible card redraws once,
+        // not once per card that scrolled in.
+        traitsFlush = Task { [weak self] in
+            try? await Task.sleep(for: .milliseconds(150))
+            guard let self else { return }
+            let assets = self.traitsQueue
+            self.traitsQueue = []
+            self.traitsFlush = nil
             let read = await Task.detached(priority: .userInitiated) {
                 Self.readTraits(assets)
             }.value
-            self?.traits.merge(read) { _, new in new }
+            self.traits.merge(read) { _, new in new }
         }
     }
 
@@ -504,7 +539,6 @@ final class DuplicatesModel {
             return present.count > 1 ? DuplicateGroup(members: present, kind: group.kind, sourceSet: group.sourceSet) : nil
         }
         // Not duplicates (§9): hidden for good, unless a new photo joined.
-        ignoredGroups = present.filter { if case .hidden = session.dismissal(of: $0.memberIds) { true } else { false } }
         self.groups = present.filter { group in
             if case .hidden = session.dismissal(of: group.memberIds) { return false }
             return true
@@ -618,7 +652,7 @@ final class DuplicatesModel {
     /// The group is waiting for the pass: its chip reads "Checking
     /// sharpness…" instead of a reason (§3 step 5).
     func isChecking(_ group: DuplicateGroup) -> Bool {
-        scoring != nil && group.kind != .screenshots && !DuplicateReview.isScored(group.members, scores)
+        scoring != nil && !group.members.allSatisfy(\.isScreenshot) && !DuplicateReview.isScored(group.members, scores)
     }
 
     /// Scores grouped photos that lack a score. Each batch lands in the
@@ -682,39 +716,16 @@ final class DuplicatesModel {
         markedForDeletion.contains(assetId)
     }
 
-    /// Whether marking `assetId` would leave its group with nothing to keep.
-    func isLastUnmarked(_ assetId: String, in group: DuplicateGroup) -> Bool {
-        !session.isMarked(assetId)
-            && group.members.allSatisfy { $0.assetId == assetId || session.isMarked($0.assetId) }
-    }
-
-    /// Marks or unmarks one tile. Returns `false` — and changes nothing — when
-    /// the tile is the group's last unmarked photo (§1): a group is never
-    /// marked whole from this screen.
-    @discardableResult
-    func toggleMark(_ assetId: String, in group: DuplicateGroup) -> Bool {
+    /// Marks or unmarks one tile. Every photo of a group can be marked —
+    /// the whole group goes when the user wants it gone (2026-10-24).
+    func toggleMark(_ assetId: String, in group: DuplicateGroup) {
         if session.isMarked(assetId) {
             session.setMarked([assetId], false)
             if markedCount(in: group) == 0 { session.setCollapsed(group.memberIds, false) }
-            return true
-        }
-        guard !isLastUnmarked(assetId, in: group) else {
-            showBlocked(group)
-            return false
+            return
         }
         session.setMarked([assetId], true)
         session.setKeptAll(group.memberIds, false)
-        return true
-    }
-
-    private func showBlocked(_ group: DuplicateGroup) {
-        blockedGroupId = group.id
-        blockedResetTask?.cancel()
-        blockedResetTask = Task { [weak self] in
-            try? await Task.sleep(for: .seconds(3))
-            guard !Task.isCancelled else { return }
-            self?.blockedGroupId = nil
-        }
     }
 
     /// Keep Only This: the picked member becomes the group's keeper and every
@@ -740,25 +751,12 @@ final class DuplicatesModel {
         stackPresentation = PhotoStackPresentation(assets: assets, purpose: set.kind == .bracket ? .hdr : .focusStack)
     }
 
-    /// Groups the user said are not duplicates, for ⋯ ▸ Ignored (§9).
-    private(set) var ignoredGroups: [DuplicateGroup] = []
-
     /// Not duplicates (§9): the group leaves the list and every count, for
     /// good — until a new photo joins it.
     func dismiss(_ group: DuplicateGroup) {
         clearMarks(in: group)
         session.dismiss(group.memberIds)
         groups.removeAll { $0.id == group.id }
-        ignoredGroups.append(group)
-    }
-
-    /// Show again, from Ignored: the group is back in the list as it was.
-    func undismiss(_ group: DuplicateGroup) {
-        for set in session.notDuplicates where !set.members.isDisjoint(with: group.memberIds) {
-            session.undismiss(setId: set.id)
-        }
-        ignoredGroups.removeAll { $0.id == group.id }
-        groups.append(group)
     }
 
     /// A group shown again because a photo joined it after Not duplicates.
@@ -809,7 +807,7 @@ final class DuplicatesModel {
 
     // MARK: Bursts
 
-    /// PhotoKit bursts are Same moment groups (§4): read once per load, their
+    /// PhotoKit bursts are Burst groups (§4): read once per load, their
     /// frames taken out of any other group so a photo is in one place only.
     func mergeBursts() async {
         let library = dependencies.bursts
@@ -830,7 +828,7 @@ final class DuplicatesModel {
                 )
             }
             guard members.count >= 2 else { continue }
-            burstGroups.append(DuplicateGroup(members: members, kind: .sameMoment))
+            burstGroups.append(DuplicateGroup(members: members, kind: .burst))
         }
         guard !burstGroups.isEmpty else { return }
         let taken = Set(burstGroups.flatMap { $0.members.map(\.assetId) })
@@ -848,15 +846,6 @@ final class DuplicatesModel {
 
     func clearMarks(in group: DuplicateGroup) {
         session.setMarked(group.members.map(\.assetId), false)
-    }
-
-    /// Clear Selection in ⋯: every mark and decision in the list.
-    func clearAllMarks() {
-        for group in groups {
-            clearMarks(in: group)
-            session.setKeptAll(group.memberIds, false)
-            session.setCollapsed(group.memberIds, false)
-        }
     }
 
     func markedCount(in group: DuplicateGroup) -> Int {
@@ -885,17 +874,7 @@ final class DuplicatesModel {
     /// the marks. Returns whether anything was deleted.
     @discardableResult
     func deleteMarked() async -> Bool {
-        let full = groups.filter(isFullyMarked)
-        guard full.isEmpty else {
-            notice = DuplicateNotice(
-                title: full.count == 1
-                    ? String(localized: "1 Group Would Lose Every Photo", comment: "Duplicates: Delete blocked because a group would lose every photo")
-                    : String(localized: "\(full.count) Groups Would Lose Every Photo", comment: "Duplicates: Delete blocked because groups would lose every photo"),
-                message: String(localized: "Keep at least one photo in each group, then delete again.", comment: "Duplicates: how to get past the every-photo-marked block")
-            )
-            return false
-        }
-        return await delete(ids: scopedMarks)
+        await delete(ids: scopedMarks)
     }
 
     /// Deletes a subset of the marks and leaves the rest marked.

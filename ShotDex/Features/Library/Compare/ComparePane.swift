@@ -310,7 +310,6 @@ struct ComparePane: View {
             starWidth: starWidth,
             starGlyph: starWidth < CullLayout.control ? 17 : CullLayout.starGlyph,
             spacing: spacing,
-            canReject: model.canReject(id),
             photoName: model.name(for: id),
             onRate: { stars in Task { await model.setRating(stars, for: id) } },
             onFlag: { flag in Task { await model.setFlag(flag, for: id) } }
@@ -345,7 +344,6 @@ struct ComparePane: View {
     private var flagSegmented: some View {
         PhotoFlagSegmented(
             flag: marks.flag,
-            canReject: model.canReject(id),
             photoName: model.name(for: id),
             onFlag: { flag in Task { await model.setFlag(flag, for: id) } }
         )

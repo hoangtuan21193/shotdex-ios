@@ -11,7 +11,7 @@ struct DuplicateInheritanceTests {
 
     /// AC-D5 (plan): K takes C's album and favorite; Copies take the date.
     @Test func copiesKeeperTakesAlbumFavoriteAndDate() {
-        let group = DuplicateGroup(members: [photo("K"), photo("C", created: 1_600_000_000, favorite: true)], kind: .copies)
+        let group = DuplicateGroup(members: [photo("K"), photo("C", created: 1_600_000_000, favorite: true)], kind: .exact)
         let traits: [String: DuplicateMemberTraits] = [
             "C": .init(isFavorite: true, albums: ["Client"], albumIds: ["album-client"]),
         ]
@@ -22,19 +22,19 @@ struct DuplicateInheritanceTests {
 
     /// AC-D6 (plan): a look-alike keeps its own date.
     @Test func lookAlikeKeeperKeepsItsDate() {
-        let group = DuplicateGroup(members: [photo("K"), photo("C", favorite: true)], kind: .lookAlikes)
+        let group = DuplicateGroup(members: [photo("K"), photo("C", favorite: true)], kind: .similar)
         let plan = DuplicateInheritance.plan(groups: [group], deleting: ["C"], traits: [:]).first
         #expect(plan?.takesEarliestDate == false)
         #expect(plan?.favorite == true)
     }
 
     @Test func twoKeptPhotosInheritNothing() {
-        let group = DuplicateGroup(members: [photo("A"), photo("B"), photo("C", favorite: true)], kind: .sameMoment)
+        let group = DuplicateGroup(members: [photo("A"), photo("B"), photo("C", favorite: true)], kind: .burst)
         #expect(DuplicateInheritance.plan(groups: [group], deleting: ["C"], traits: [:]).isEmpty)
     }
 
     @Test func albumTheKeeperIsAlreadyInIsNotAddedTwice() {
-        let group = DuplicateGroup(members: [photo("K"), photo("C")], kind: .copies)
+        let group = DuplicateGroup(members: [photo("K"), photo("C")], kind: .exact)
         let traits: [String: DuplicateMemberTraits] = [
             "K": .init(albums: ["Client"], albumIds: ["a1"]),
             "C": .init(albums: ["Client", "Trip"], albumIds: ["a1", "a2"]),

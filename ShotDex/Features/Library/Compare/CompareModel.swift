@@ -10,20 +10,16 @@ struct CompareRequest: Identifiable {
     let ids: [String]
     /// The viewer's page for the Select photo, so Single lands on it.
     let startIndex: Int
-    /// The Duplicates group the photos are from: the keep-one gate applies
-    /// to Reject (§7, AC-15).
-    var duplicateGroup: [String]?
     /// Told which photos a Delete N removed — Duplicates prunes its groups.
     var onDeleted: ((Set<String>) -> Void)?
 
     /// From a selection. Nil below two photos — the Compare button is dimmed
     /// there, so this is the guard behind it.
     @MainActor
-    init?(selection: [String], source: any PhotoBrowsingSource, duplicateGroup: [String]? = nil) {
+    init?(selection: [String], source: any PhotoBrowsingSource) {
         guard let session = CompareSession(selection: selection) else { return nil }
         ids = session.ids
         startIndex = source.index(of: session.selectId) ?? 0
-        self.duplicateGroup = duplicateGroup
     }
 }
 
@@ -41,10 +37,6 @@ final class CompareModel {
     /// The zoom the frames are at; 1 is Fit.
     private(set) var zoomScale: CGFloat = 1
     private(set) var isDeleting = false
-    /// "Keep at least one photo in this group." while it shows.
-    private(set) var blockedMessage: String?
-    /// Bumped by a gate refusal, for the warning haptic.
-    private(set) var blockedToken = 0
 
     @ObservationIgnored let sync = CompareScrollSynchronizer()
     @ObservationIgnored private(set) var assetsById: [String: PHAsset]
@@ -55,10 +47,8 @@ final class CompareModel {
     /// The deletion through the photos' sources when any Rejected one has a
     /// copy outside Photos (FS-19.04 §2); nil keeps the PhotoKit path.
     @ObservationIgnored private let sourceRequest: @MainActor ([String]) -> DeletionTargetQueries.Request?
-    @ObservationIgnored let duplicateGroup: [String]?
     /// Told which photos a Delete N removed — Duplicates prunes its groups.
     @ObservationIgnored var onDeleted: ((Set<String>) -> Void)?
-    @ObservationIgnored private var blockedResetTask: Task<Void, Never>?
     /// What the last Delete N removed, until the host has read it.
     @ObservationIgnored private var lastDeletion: Set<String>?
 
@@ -68,7 +58,6 @@ final class CompareModel {
         deleter: RejectedDeleter,
         assets: [String: PHAsset],
         metadata: [String: PhotoMetadata],
-        duplicateGroup: [String]? = nil,
         sourceRequest: @escaping @MainActor ([String]) -> DeletionTargetQueries.Request? = { _ in nil }
     ) {
         self.session = session
@@ -77,20 +66,18 @@ final class CompareModel {
         self.sourceRequest = sourceRequest
         self.assetsById = assets
         self.metadataById = metadata
-        self.duplicateGroup = duplicateGroup
         sync.onZoomChange = { [weak self] scale in self?.zoomScale = scale }
     }
 
     /// The app's model for a request: rows and assets read once for the
     /// compared photos only.
     static func live(request: CompareRequest, dependencies: AppDependencies, marks: PhotoMarks?) -> CompareModel? {
-        live(session: CompareSession(selection: request.ids), duplicateGroup: request.duplicateGroup,
+        live(session: CompareSession(selection: request.ids),
              dependencies: dependencies, marks: marks)
     }
 
     static func live(
         session: CompareSession?,
-        duplicateGroup: [String]? = nil,
         dependencies: AppDependencies,
         marks: PhotoMarks?
     ) -> CompareModel? {
@@ -105,7 +92,6 @@ final class CompareModel {
             deleter: .live(photoLibrary: dependencies.photoLibrary, banner: dependencies.banner),
             assets: assets,
             metadata: rows,
-            duplicateGroup: duplicateGroup,
             sourceRequest: { ids in
                 let roots = dependencies.folderRoots
                 return try? DeletionTargetQueries(database: dependencies.database, hasTrash: { roots.hasTrash($0) })
@@ -201,19 +187,8 @@ final class CompareModel {
 
     // MARK: Flags and stars
 
-    /// Whether `id` may take Reject — false only for the last photo of a
-    /// Duplicates group that is not Rejected yet (§7, AC-15).
-    func canReject(_ id: String) -> Bool {
-        guard let duplicateGroup else { return true }
-        return DuplicateKeepGate.canMark(id, in: duplicateGroup) { flag(for: $0) == .reject }
-    }
-
     func setFlag(_ flag: PhotoFlag?, for id: String) async {
         guard let marks else { return }
-        if flag == .reject, !canReject(id) {
-            showBlocked()
-            return
-        }
         UIImpactFeedbackGenerator(style: .light).impactOccurred()
         _ = await marks.setFlag(flag, ids: [id])
     }
@@ -233,27 +208,12 @@ final class CompareModel {
     }
 
     /// Keep Only This (§5): Reject every other photo, take Reject off this
-    /// one. In a Duplicates group that is exactly the keep-one rule, so the
-    /// gate never refuses it.
+    /// one.
     func keepOnly(_ id: String) async {
         guard let marks else { return }
         let change = session.keepOnly(id, flag: flag(for:))
         if !change.reject.isEmpty { _ = await marks.setFlag(.reject, ids: change.reject) }
         if !change.unreject.isEmpty { _ = await marks.setFlag(nil, ids: change.unreject) }
-    }
-
-    private func showBlocked() {
-        blockedMessage = String(
-            localized: "Keep at least one photo in this group.",
-            comment: "Compare from Duplicates: refusing to Reject the group's last photo"
-        )
-        blockedToken += 1
-        blockedResetTask?.cancel()
-        blockedResetTask = Task { [weak self] in
-            try? await Task.sleep(for: .seconds(3))
-            guard !Task.isCancelled else { return }
-            self?.blockedMessage = nil
-        }
     }
 
     // MARK: Delete N

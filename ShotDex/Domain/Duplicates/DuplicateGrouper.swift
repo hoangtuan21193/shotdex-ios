@@ -55,40 +55,37 @@ struct HashedPhoto: Hashable, Sendable, Identifiable {
 }
 
 /// What kind of near-identical set a group is (FS-06.06 §4). Grouping runs
-/// once and every photo lands in at most one kind — v3 replaced the three
-/// Exact · Similar · Series levels and the Bursts tab with this.
+/// once and every photo lands in at most one kind. Three kinds, one filter
+/// pill each (decided 2026-10-21): the old Copies / Smaller copies /
+/// Look-alikes / Same moment / Screenshots row was too many.
 enum DuplicateKind: String, CaseIterable, Sendable, Identifiable {
-    /// Same picture, same pixel size, same capture second.
-    case copies
-    /// Copies plus at least one smaller re-save of them (WhatsApp, an export).
-    case smallerCopies
-    /// Frames of one moment: a burst, or a run shot seconds apart.
-    case sameMoment
-    /// Near the same picture, none of the above.
-    case lookAlikes
-    /// Every member is a screenshot.
-    case screenshots
+    /// The same pixels saved twice: same hash, same size, same capture
+    /// second, file sizes within 1%. Removing one loses nothing.
+    case exact
+    /// Near the same picture — a look-alike, or a smaller re-save of one
+    /// (WhatsApp, an export): worth a look before anything goes.
+    case similar
+    /// Frames of one moment: a PhotoKit burst, or a run shot seconds apart.
+    case burst
 
     var id: String { rawValue }
 
     var title: String {
         switch self {
-        case .copies: String(localized: "Copies", comment: "Duplicates: kind of group — identical copies")
-        case .smallerCopies: String(localized: "Smaller copies", comment: "Duplicates: kind of group — copies with smaller re-saves")
-        case .sameMoment: String(localized: "Same moment", comment: "Duplicates: kind of group — frames shot seconds apart")
-        case .lookAlikes: String(localized: "Look-alikes", comment: "Duplicates: kind of group — near-identical photos")
-        case .screenshots: String(localized: "Screenshots", comment: "Duplicates: kind of group — screenshots")
+        case .exact: String(localized: "Exact", comment: "Duplicates: kind of group — identical copies of one photo")
+        case .similar: String(localized: "Similar", comment: "Duplicates: kind of group — near-identical photos or smaller re-saves")
+        case .burst: String(localized: "Burst", comment: "Duplicates: kind of group — frames shot seconds apart")
         }
     }
 
-    /// Copies and smaller copies are the same picture: removing them loses
-    /// nothing, so they are what Quick clean offers (§7.2).
-    var isCopy: Bool { self == .copies || self == .smallerCopies }
+    /// Exact copies are the same picture: removing them loses nothing, so
+    /// they are what Quick clean offers (§7.2).
+    var isCopy: Bool { self == .exact }
 }
 
 /// A set of photos judged to be the same picture or the same moment.
-/// Copies, smaller copies, look-alikes and screenshots are ordered best
-/// first by the keeper rule; a same-moment run in the order it was shot.
+/// Exact and similar groups are ordered best first by the keeper rule; a
+/// burst in the order it was shot.
 struct DuplicateGroup: Identifiable, Equatable, Sendable {
     /// Stable across regroups as long as the same member leads the group.
     var id: String { members[0].assetId }
@@ -137,6 +134,16 @@ enum DuplicateGrouper {
     static let smallerEdgeRatio = 0.75
     /// Focal lengths further apart than this are two framings, not copies.
     static let focalTolerance = 0.10
+    /// A smaller re-save is the same pixels scaled: a resize and a re-encode
+    /// cost 2–6 bits, so anything further is another picture.
+    static let smallerCopyMaxDistance = 6
+    /// Width ÷ height may differ by this share and still be one picture. The
+    /// hash is taken on a squashed 9×8 thumbnail, so a portrait and a
+    /// landscape of unrelated scenes can land a few bits apart.
+    static let aspectTolerance = 0.02
+    /// Two saves of the same pixels differ in metadata by a few kilobytes at
+    /// most; a re-encode at another quality is further than 1% off.
+    static let exactSizeTolerance = 0.01
 
     /// - Parameter bursts: PhotoKit burst id per asset id — frames of a burst
     ///   always form a same-moment group.
@@ -153,24 +160,28 @@ enum DuplicateGrouper {
         var taken = Set<Int>()
         var sets: [(DuplicateKind, [Int])] = []
 
-        // 1 — Copies and smaller copies: components of "copy" (same hash, same
-        // size, same second) and "smaller copy" (≤ 10 bits, long edge ≤ 75%,
-        // same second or the small one has lost its camera EXIF).
+        // 1 — Exact copies (same hash, same pixel size, same second, same
+        // file name, file sizes within 1%), joined by any smaller re-save of them (≤ 6 bits,
+        // same shape, long edge ≤ 75%, same second or the small one has lost
+        // its camera EXIF). A set with a smaller member is Similar: only a
+        // set of identical saves is Exact.
         var copies = UnionFind(count: photos.count)
         for (hash, indices) in photosByHash where indices.count > 1 {
             // Twelve gradients saved in one second share a flat hash, a size
             // and a second; only the byte count still tells them apart.
             let isLowDetail = PerceptualHash(bits: hash).isLowDetail
-            var first: [CopyKey: Int] = [:]
+            var leads: [CopyKey: [Int]] = [:]
             for index in indices {
                 let photo = photos[index]
                 guard let second = photo.captureSecond else { continue }
-                let key = CopyKey(width: photo.width, height: photo.height, second: second,
-                                  fileSize: isLowDetail ? photo.fileSize : nil)
-                if let lead = first[key] {
-                    if focalCompatible(photos[lead], photo) { copies.union(lead, index) }
+                let key = CopyKey(width: photo.width, height: photo.height, second: second)
+                if let lead = leads[key]?.first(where: {
+                    sameFileSize(photos[$0], photo, exactly: isLowDetail) && focalCompatible(photos[$0], photo)
+                        && sameOriginal(photos[$0], photo)
+                }) {
+                    copies.union(lead, index)
                 } else {
-                    first[key] = index
+                    leads[key, default: []].append(index)
                 }
             }
         }
@@ -180,25 +191,25 @@ enum DuplicateGrouper {
         }
         for members in copies.components() where members.count > 1 {
             let sizes = Set(members.map { SizeKey(width: photos[$0].width, height: photos[$0].height) })
-            sets.append((sizes.count > 1 ? .smallerCopies : .copies, members))
+            sets.append((sizes.count > 1 ? .similar : .exact, members))
             taken.formUnion(members)
         }
 
-        // 2 — Same moment: bursts, then runs shot seconds apart.
+        // 2 — Burst: PhotoKit bursts, then runs shot seconds apart.
         var byBurst: [String: [Int]] = [:]
         for index in photos.indices where !taken.contains(index) {
             if let burst = bursts[photos[index].assetId] { byBurst[burst, default: []].append(index) }
         }
         for members in byBurst.values where members.count > 1 {
-            sets.append((.sameMoment, members))
+            sets.append((.burst, members))
             taken.formUnion(members)
         }
         for run in seriesRuns(photos.indices.filter { !taken.contains($0) }, photos: photos) {
-            sets.append((.sameMoment, run))
+            sets.append((.burst, run))
             taken.formUnion(run)
         }
 
-        // 3 — Look-alikes among what is left.
+        // 3 — Similar: look-alikes among what is left.
         var alike = UnionFind(count: photos.count)
         func free(_ hash: UInt64) -> [Int] { photosByHash[hash]!.filter { !taken.contains($0) } }
         for hash in photosByHash.keys where !PerceptualHash(bits: hash).isLowDetail {
@@ -212,8 +223,10 @@ enum DuplicateGrouper {
                 }
             }
         }
-        for members in alike.components() where members.count > 1 && !taken.contains(members[0]) {
-            sets.append((.lookAlikes, members))
+        for component in alike.components() where component.count > 1 && !taken.contains(component[0]) {
+            for members in leaderClusters(component, photos: photos) where members.count > 1 {
+                sets.append((.similar, members))
+            }
         }
 
         return assemble(sets.map { kind, members in (kind, members.map { photos[$0] }) })
@@ -251,7 +264,7 @@ enum DuplicateGrouper {
     }
 
     /// Turns member sets into ordered groups: sets under two members
-    /// dropped, an all-screenshot set relabelled, brackets and focus stacks
+    /// dropped, brackets and focus stacks
     /// recognised (§5), members ordered the way
     /// their kind is read, groups newest first. Shared by the grouping pass
     /// and by the cache read-back, so a cached group reads like a fresh one.
@@ -259,11 +272,13 @@ enum DuplicateGrouper {
         memberSets
             .filter { $0.1.count >= 2 }
             .map { kind, members in
-                let kind = members.allSatisfy(\.isScreenshot) ? .screenshots : kind
                 let sourceSet = DuplicateSourceSet.detect(members)
+                // A bracket or focus stack is frames shot in a row: it
+                // shows under Burst (2026-10-21, Source frames gone).
+                let kind: DuplicateKind = sourceSet != nil ? .burst : kind
                 // A run and a source set are read in the order they were shot.
                 let order: (HashedPhoto, HashedPhoto) -> Bool =
-                    kind == .sameMoment || sourceSet != nil ? oldestFirst : bestFirst
+                    kind == .burst || sourceSet != nil ? oldestFirst : bestFirst
                 return DuplicateGroup(members: members.sorted(by: order), kind: kind, sourceSet: sourceSet)
             }
             .sorted(by: groupOrder)
@@ -291,14 +306,95 @@ enum DuplicateGrouper {
         return abs(left - right) / max(left, right) <= focalTolerance
     }
 
+    /// A crop or a rotation is another picture, not a copy. Unknown size
+    /// vetoes nothing.
+    static func aspectCompatible(_ a: HashedPhoto, _ b: HashedPhoto) -> Bool {
+        guard let aw = a.width, let ah = a.height, let bw = b.width, let bh = b.height,
+              aw > 0, ah > 0, bw > 0, bh > 0 else { return true }
+        let left = Double(aw) / Double(ah), right = Double(bw) / Double(bh)
+        return abs(left - right) / max(left, right) <= aspectTolerance
+    }
+
+    /// Splits a chained component so every member is within
+    /// `lookAlikeMaxDistance` of its cluster's first photo. Union-find alone
+    /// lets A~B~C~D pull D into A's group though the two share nothing.
+    static func leaderClusters(_ component: [Int], photos: [HashedPhoto]) -> [[Int]] {
+        var clusters: [[Int]] = []
+        for index in component {
+            let photo = photos[index]
+            if let slot = clusters.firstIndex(where: { cluster in
+                let leader = photos[cluster[0]]
+                return (leader.hash.bits ^ photo.hash.bits).nonzeroBitCount <= lookAlikeMaxDistance
+                    && focalCompatible(leader, photo) && aspectCompatible(leader, photo)
+            }) {
+                clusters[slot].append(index)
+            } else {
+                clusters.append([index])
+            }
+        }
+        return clusters
+    }
+
     // MARK: Private
 
     private struct CopyKey: Hashable {
         var width: Int?
         var height: Int?
         var second: Int
-        /// Set only for a low-detail hash.
-        var fileSize: Int?
+    }
+
+    /// Byte counts within `exactSizeTolerance` — or equal, for a low-detail
+    /// hash, where the byte count is the only thing left to tell two flat
+    /// frames apart. An unknown size vetoes nothing.
+    private static func sameFileSize(_ a: HashedPhoto, _ b: HashedPhoto, exactly: Bool) -> Bool {
+        guard let left = a.fileSize, let right = b.fileSize, left > 0, right > 0 else {
+            return !exactly || a.fileSize == b.fileSize
+        }
+        if exactly { return left == right }
+        return Double(abs(left - right)) / Double(max(left, right)) <= exactSizeTolerance
+    }
+
+    /// Two frames a camera shoots in one second at 10–30 fps share a hash, a
+    /// pixel size and a second, and their byte counts are a fraction of a
+    /// percent apart (HAT_1079 and HAT_1080: 0.14%) — only the file name
+    /// still tells them apart. A copy keeps its name or gains a copy suffix
+    /// ("IMG_1 2", "IMG_1 (1)", "IMG_1-2", "IMG_1 copy"). With a name
+    /// missing, only an equal byte count proves a copy.
+    static func sameOriginal(_ a: HashedPhoto, _ b: HashedPhoto) -> Bool {
+        guard let left = a.originalFilename, let right = b.originalFilename else {
+            return a.fileSize != nil && a.fileSize == b.fileSize
+        }
+        return copyStem(left) == copyStem(right)
+    }
+
+    /// The file name without extension, case or the suffixes a copy gains.
+    /// `_2` is not one of them: phones number burst frames that way.
+    static func copyStem(_ filename: String) -> String {
+        var stem = Substring(filename.lowercased())
+        if let dot = stem.lastIndex(of: "."), dot != stem.startIndex { stem = stem[..<dot] }
+        while let trimmed = droppingCopySuffix(stem) { stem = trimmed }
+        return String(stem)
+    }
+
+    private static func isDigit(_ character: Character) -> Bool {
+        character.isASCII && character.isNumber
+    }
+
+    private static func droppingCopySuffix(_ stem: Substring) -> Substring? {
+        for marker in [" copy", "-copy", "_copy"] where stem.hasSuffix(marker) && stem.count > marker.count {
+            return stem.dropLast(marker.count)
+        }
+        // " (1)"
+        if stem.hasSuffix(")"), let open = stem.lastIndex(of: "("), open > stem.startIndex {
+            let digits = stem[stem.index(after: open)..<stem.index(before: stem.endIndex)]
+            let before = stem.index(before: open)
+            if !digits.isEmpty, digits.allSatisfy(isDigit), stem[before] == " " { return stem[..<before] }
+        }
+        // " 2", "-2": one or two digits.
+        let digits = stem.reversed().prefix(while: isDigit).count
+        guard (1...2).contains(digits), stem.count > digits + 1 else { return nil }
+        let separator = stem.index(stem.endIndex, offsetBy: -digits - 1)
+        return stem[separator] == " " || stem[separator] == "-" ? stem[..<separator] : nil
     }
 
     private struct SizeKey: Hashable {
@@ -318,7 +414,8 @@ enum DuplicateGrouper {
             let photo = photos[small]
             let edge = Double(photo.longEdge!)
             let bigger = sized.filter { edge <= Double(photos[$0].longEdge!) * smallerEdgeRatio
-                && focalCompatible(photos[$0], photo) }
+                && focalCompatible(photos[$0], photo) && aspectCompatible(photos[$0], photo)
+                && (photos[$0].hash.bits ^ photo.hash.bits).nonzeroBitCount <= smallerCopyMaxDistance }
             let match = photo.hasCameraEXIF || sameSecondOnly
                 ? bigger.first { photos[$0].captureSecond != nil && photos[$0].captureSecond == photo.captureSecond }
                 : bigger.first

@@ -168,14 +168,3 @@ struct ViewerModeTests {
         #expect(ViewerMode.twoUp.title(isCompact: false) == "2-Up")
     }
 }
-
-struct DuplicateKeepGateTests {
-    /// AC-15: the last photo of a group not marked cannot be marked.
-    @Test func theLastUnrejectedPhotoCannotBeRejected() {
-        let rejected: Set<String> = ["a"]
-        #expect(!DuplicateKeepGate.canMark("b", in: ["a", "b"], isMarked: rejected.contains))
-        #expect(DuplicateKeepGate.canMark("b", in: ["a", "b", "c"], isMarked: rejected.contains))
-        // Taking a mark back is always allowed.
-        #expect(DuplicateKeepGate.canMark("a", in: ["a", "b"], isMarked: rejected.contains))
-    }
-}

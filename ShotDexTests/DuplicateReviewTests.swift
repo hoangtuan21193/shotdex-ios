@@ -138,14 +138,14 @@ struct DuplicateReviewTests {
     }
 
     @Test func sortOrdersBySpaceThenDate() {
-        let old = DuplicateGroup(members: [photo("o1", size: 1, created: 100), photo("o2", size: 9_000, created: 100)], kind: .lookAlikes)
-        let new = DuplicateGroup(members: [photo("n1", size: 1, created: 900), photo("n2", size: 10, created: 900)], kind: .lookAlikes)
+        let old = DuplicateGroup(members: [photo("o1", size: 1, created: 100), photo("o2", size: 9_000, created: 100)], kind: .similar)
+        let new = DuplicateGroup(members: [photo("n1", size: 1, created: 900), photo("n2", size: 10, created: 900)], kind: .similar)
         let free: (DuplicateGroup) -> Int = { group in
             group.members.compactMap(\.fileSize).reduce(0, +) - (group.members.compactMap(\.fileSize).max() ?? 0)
         }
         #expect(DuplicateReview.sorted([new, old], by: .oldest, freeBytes: free).map(\.id) == ["o1", "n1"])
         #expect(DuplicateReview.sorted([old, new], by: .newest, freeBytes: free).map(\.id) == ["n1", "o1"])
-        let bigFree = DuplicateGroup(members: [photo("x1", size: 9_000, created: 50), photo("x2", size: 9_000, created: 50)], kind: .lookAlikes)
+        let bigFree = DuplicateGroup(members: [photo("x1", size: 9_000, created: 50), photo("x2", size: 9_000, created: 50)], kind: .similar)
         #expect(DuplicateReview.sorted([new, bigFree], by: .mostSpace, freeBytes: free).map(\.id) == ["x1", "n1"])
     }
 
@@ -246,7 +246,7 @@ struct DuplicateReviewTests {
         for index in 0..<212 {
             let copies = index < 194 ? 1 : 2
             let members = [photo("k\(index)", size: 9)] + (0..<copies).map { photo("c\(index)-\($0)", size: 1) }
-            groups.append(DuplicateGroup(members: members, kind: .copies))
+            groups.append(DuplicateGroup(members: members, kind: .exact))
         }
         // Three protected copies, each in a triple, so their groups stay.
         traits["c194-0"] = .init(isFavorite: true)
@@ -268,7 +268,7 @@ struct DuplicateReviewTests {
     /// AC-L2: gaps 0.6 / 0.1 / 0.3 sort 0.6, 0.3, 0.1.
     @Test func easiestFirstOrdersByScoreGap() {
         func group(_ id: String) -> DuplicateGroup {
-            DuplicateGroup(members: [photo(id + "1"), photo(id + "2")], kind: .lookAlikes)
+            DuplicateGroup(members: [photo(id + "1"), photo(id + "2")], kind: .similar)
         }
         let gaps = ["a1": 0.6, "b1": 0.1, "c1": 0.3]
         let sorted = DuplicateReview.sorted([group("a"), group("b"), group("c")], by: .easiestFirst,
@@ -278,10 +278,10 @@ struct DuplicateReviewTests {
 
     @Test func scoreGapReadsTheMeasures() {
         let a = photo("a"), b = photo("b")
-        let group = DuplicateGroup(members: [a, b], kind: .lookAlikes)
+        let group = DuplicateGroup(members: [a, b], kind: .similar)
         let sharpVsSoft: [String: DuplicateQualityScore] = ["a": .init(sharpness: 1000), "b": .init(sharpness: 400)]
         #expect(abs(DuplicateReview.scoreGap(group, keeper: a, scores: sharpVsSoft) - 0.24) < 0.001)
         #expect(DuplicateReview.scoreGap(group, keeper: a, scores: [:]) == 0)
-        #expect(DuplicateReview.scoreGap(DuplicateGroup(members: [a, b], kind: .copies), keeper: a, scores: [:]) == 1)
+        #expect(DuplicateReview.scoreGap(DuplicateGroup(members: [a, b], kind: .exact), keeper: a, scores: [:]) == 1)
     }
 }

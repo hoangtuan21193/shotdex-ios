@@ -164,9 +164,10 @@ struct DuplicateQualityPassTests {
         return database
     }
 
-    private func group(_ ids: [String], _ kind: DuplicateKind) -> DuplicateGroup {
+    private func group(_ ids: [String], _ kind: DuplicateKind, screenshots: Bool = false) -> DuplicateGroup {
         DuplicateGroup(members: ids.map { HashedPhoto(assetId: $0, hash: PerceptualHash(bits: 0), width: 1, height: 1,
-                                                      fileSize: 1, creationDate: 1, isFavorite: false) }, kind: kind)
+                                                      fileSize: 1, creationDate: 1, isFavorite: false,
+                                                      isScreenshot: screenshots) }, kind: kind)
     }
 
     @Test func scoresGroupedPhotosButNotScreenshots() async throws {
@@ -174,11 +175,11 @@ struct DuplicateQualityPassTests {
         let seen = OSAllocatedUnfairLock<[String]>(initialState: [])
         let pass = DuplicateQualityPass(store: DuplicateQualityStore(database: database),
                                         reader: Stub(seen: seen, delay: .zero), shouldPause: { false })
-        try await pass.run(groups: [group(["a", "b"], .lookAlikes), group(["s1", "s2"], .screenshots)],
+        try await pass.run(groups: [group(["a", "b"], .similar), group(["s1", "s2"], .similar, screenshots: true)],
                            allowNetwork: false) { _, _ in }
         #expect(Set(seen.withLock { $0 }) == ["a", "b"])
         // A second run has nothing left to do.
-        try await pass.run(groups: [group(["a", "b"], .lookAlikes)], allowNetwork: false) { _, _ in }
+        try await pass.run(groups: [group(["a", "b"], .similar)], allowNetwork: false) { _, _ in }
         #expect(seen.withLock { $0 }.count == 2)
     }
 
@@ -190,7 +191,7 @@ struct DuplicateQualityPassTests {
         let pass = DuplicateQualityPass(store: store, reader: Stub(seen: seen, delay: .milliseconds(5)), shouldPause: { false })
         let batches = OSAllocatedUnfairLock(initialState: 0)
         let task = Task {
-            try await pass.run(groups: [group(ids, .sameMoment)], allowNetwork: false) { _, _ in
+            try await pass.run(groups: [group(ids, .burst)], allowNetwork: false) { _, _ in
                 batches.withLock { $0 += 1 }
             }
         }

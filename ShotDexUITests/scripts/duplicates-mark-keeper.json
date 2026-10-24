@@ -1,0 +1,30 @@
+{
+  "steps": [
+    { "action": "launch" },
+    { "action": "wait", "seconds": 6 },
+    { "action": "tap", "label": "Utilities", "type": "button" },
+    { "action": "wait", "seconds": 3 },
+    { "action": "scrollTo", "label": "Duplicates" },
+    { "action": "tap", "label": "Duplicates" },
+    { "action": "wait", "seconds": 14 },
+    { "action": "screenshot", "name": "01-list" },
+    { "action": "dump", "name": "01-list" },
+    { "action": "longPress", "label": "Suggested to keep", "seconds": 1.2 },
+    { "action": "wait", "seconds": 2 },
+    { "action": "tap", "label": "Keep just this one" },
+    { "action": "wait", "seconds": 2 },
+    { "action": "screenshot", "name": "02-keep-only" },
+    { "action": "dump", "name": "02-keep-only" },
+    { "action": "tap", "label": "Suggested to keep", "x": 0.87, "y": 0.13 },
+    { "action": "wait", "seconds": 2 },
+    { "action": "screenshot", "name": "03-whole-group" },
+    { "action": "dump", "name": "03-whole-group" },
+    { "action": "tap", "label": "Delete", "type": "button" },
+    { "action": "wait", "seconds": 3 },
+    { "action": "screenshot", "name": "04-system-dialog" },
+    { "action": "systemTap", "label": "Don’t Allow" },
+    { "action": "wait", "seconds": 3 },
+    { "action": "screenshot", "name": "05-still-marked" },
+    { "action": "dump", "name": "05-still-marked" }
+  ]
+}

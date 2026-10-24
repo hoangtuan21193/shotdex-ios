@@ -54,8 +54,6 @@ struct CompareStage: View {
         }
         .background(Color(.systemBackground).ignoresSafeArea())
         .background { keyButtons }
-        .overlay(alignment: .top) { blockedBanner }
-        .sensoryFeedback(.warning, trigger: model.blockedToken)
         .animation(reduceMotion ? nil : AppTheme.Motion.standard, value: model.session)
         .sourceDeletion($sourceDeletion) { removed, _ in
             if !removed.isEmpty { dependencies.sources.photosDeleted() }
@@ -462,21 +460,5 @@ struct CompareStage: View {
         .opacity(0)
         .frame(width: 0, height: 0)
         .accessibilityHidden(true)
-    }
-
-    // MARK: Gate
-
-    @ViewBuilder private var blockedBanner: some View {
-        if let message = model.blockedMessage {
-            Text(message)
-                .font(.subheadline.weight(.medium))
-                .foregroundStyle(.primary)
-                .padding(.horizontal, AppTheme.Spacing.lg)
-                .padding(.vertical, AppTheme.Spacing.md)
-                .glassBackground(Capsule())
-                .padding(.top, 72)
-                .transition(.opacity)
-                .accessibilityAddTraits(.isStaticText)
-        }
     }
 }

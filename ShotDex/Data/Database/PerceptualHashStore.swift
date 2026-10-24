@@ -216,7 +216,7 @@ struct PerceptualHashStore: Sendable {
             for row in rows {
                 // A kind this build does not know regroups as a look-alike
                 // rather than dropping the group.
-                let kind = DuplicateKind(rawValue: row["kind"]) ?? .lookAlikes
+                let kind = DuplicateKind(rawValue: row["kind"]) ?? .similar
                 membersByGroup[row["groupId"], default: (kind, [])].members.append(Self.hashedPhoto(row))
             }
             return DuplicateGrouper.assemble(membersByGroup.values.map { ($0.kind, $0.members) })

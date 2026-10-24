@@ -7,8 +7,8 @@ struct DuplicatesDestination: Hashable {}
 /// Duplicates utility (tier A, DESIGN.md §2; FS-06.06 §7). A pinned band —
 /// kind filter, sort, how many groups are reviewed, the last scan and Rescan —
 /// over a list of **decision cards**: the suggested keeper big with "Keep" and
-/// why, the copies beside it each saying what it lacks, and one-tap Mark the
-/// other N · Keep all · Compare. A decided group folds to one line. Marks
+/// why, the copies beside it each saying what it lacks; a hold on a photo
+/// offers Keep all and Not duplicates. A decided group folds to one line. Marks
 /// gather in a floating bar with Delete. Pinch changes copies per row.
 /// Nothing is marked until the user taps, and nothing rescans unless asked.
 struct DuplicatesScreen: View {
@@ -30,7 +30,6 @@ struct DuplicatesScreen: View {
     @State private var hudVisible = false
     @State private var hudTask: Task<Void, Never>?
     @State private var showsQuickClean = false
-    @State private var showsIgnored = false
     @State private var showsSelected = false
 
     private var isRegular: Bool { horizontalSizeClass == .regular }
@@ -135,9 +134,6 @@ struct DuplicatesScreen: View {
         .sheet(isPresented: $showsQuickClean) {
             DuplicatesQuickCleanSheet(model: model)
         }
-        .sheet(isPresented: $showsIgnored) {
-            DuplicatesIgnoredSheet(model: model)
-        }
         .sheet(isPresented: $showsSelected) {
             DuplicatesSelectedSheet(model: model)
                 .environment(photoLibrary)
@@ -153,8 +149,17 @@ struct DuplicatesScreen: View {
             .environment(photoLibrary)
         }
         .toolbar {
+            // Sort, then Check Again — the only two controls up top (user,
+            // 2026-10-22: no ⋯, no Ignored, no Clear Selection), each its own
+            // glass button, not one shared capsule (user, 2026-10-23).
             ToolbarItem(placement: .topBarTrailing) {
-                moreMenu(model)
+                sortMenu(model)
+            }
+            if #available(iOS 26.0, *) {
+                ToolbarSpacer(.fixed, placement: .topBarTrailing)
+            }
+            ToolbarItem(placement: .topBarTrailing) {
+                rescanButton(model)
             }
         }
         .fullScreenCover(item: $model.comparePresentation) { presentation in
@@ -167,32 +172,32 @@ struct DuplicatesScreen: View {
         .animation(AppTheme.Motion.standard, value: hudVisible)
     }
 
-    private func moreMenu(_ model: DuplicatesModel) -> some View {
-        Menu {
-            Button {
-                model.startScan()
-            } label: {
-                Label(String(localized: "Check Again", comment: "Duplicates ⋯: scan the library again"), systemImage: "arrow.clockwise")
+    private func sortMenu(_ model: DuplicatesModel) -> some View {
+        @Bindable var model = model
+        return Menu {
+            Picker("Sort", selection: $model.sort) {
+                ForEach(DuplicateSort.allCases) { sort in
+                    Text(sort.title).tag(sort)
+                }
             }
-            .disabled(model.isBusy || !photoLibrary.authorizationState.canReadLibrary)
-            Button {
-                showsIgnored = true
-            } label: {
-                Label(String(localized: "Ignored (\(model.ignoredGroups.count))", comment: "Duplicates ⋯: groups marked Not duplicates"),
-                      systemImage: "eye.slash")
-            }
-            .disabled(model.ignoredGroups.isEmpty)
-            Button {
-                withAnimation(AppTheme.Motion.standard) { model.clearAllMarks() }
-            } label: {
-                Label(String(localized: "Clear Selection", comment: "Duplicates ⋯: take every mark and decision away"), systemImage: "xmark.circle")
-            }
-            .disabled(model.markedCount == 0 && model.reviewedCount == 0)
         } label: {
-            Image(systemName: "ellipsis")
+            Image(systemName: "arrow.up.arrow.down")
         }
         .tint(.primary)
-        .accessibilityLabel(String(localized: "More", comment: "VoiceOver: the Duplicates ⋯ menu"))
+        .disabled(model.isScanning)
+        .accessibilityLabel(String(localized: "Sort groups", comment: "VoiceOver: the Duplicates sort menu"))
+        .accessibilityValue(model.sort.title)
+    }
+
+    private func rescanButton(_ model: DuplicatesModel) -> some View {
+        Button {
+            model.startScan()
+        } label: {
+            Image(systemName: "arrow.clockwise")
+        }
+        .tint(.primary)
+        .disabled(model.isBusy || !photoLibrary.authorizationState.canReadLibrary)
+        .accessibilityLabel(String(localized: "Check Again", comment: "Duplicates toolbar: scan the library again"))
     }
 
     // MARK: Cards
@@ -220,9 +225,7 @@ struct DuplicatesScreen: View {
     private func showsQuickCleanBand(_ model: DuplicatesModel) -> Bool {
         guard !model.isScanning, model.pendingQuickClean.copies > 0 else { return false }
         switch model.filter {
-        case .all: return true
         case .kind(let kind): return kind.isCopy
-        case .sourceFrames: return false
         }
     }
 
@@ -282,11 +285,10 @@ struct DuplicatesScreen: View {
         if model.isCollapsed(group) { return 56 }
         if group.sourceSet != nil {
             let rows = (group.count + metrics.gridColumns - 1) / metrics.gridColumns
-            return 58 + CGFloat(rows) * (metrics.tile + DuplicateCardMetrics.copyGap) + 44 + AppTheme.Spacing.md * 2
+            return CGFloat(rows) * (metrics.tile + DuplicateCardMetrics.copyGap) + AppTheme.Spacing.md
         }
-        let shown = model.isFolded(group) ? min(group.count - 1, metrics.copyColumns * 2) : group.count - 1
-        let body = metrics.gridHeight(copyCount: shown) + (model.isFolded(group) ? 52 : 0)
-        return 58 + body + AppTheme.Spacing.md + 44 + AppTheme.Spacing.md
+        let body = metrics.gridHeight(copyCount: group.count - 1)
+        return body + AppTheme.Spacing.md
     }
 
     // MARK: Pinch
@@ -401,9 +403,6 @@ struct DuplicatesScreen: View {
         if scanned == 1 {
             return String(localized: "Nothing to compare with one photo.", comment: "Duplicates: empty list, one photo checked")
         }
-        if model.filter != .all {
-            return String(localized: "No \(model.filter.title) among \(scanned) photos.", comment: "Duplicates: empty list filtered to one kind")
-        }
         return String(localized: "No duplicates among \(scanned) photos.", comment: "Duplicates: empty list")
     }
 
@@ -435,7 +434,7 @@ struct DuplicatesScreen: View {
                 Text(String(localized: "\(DuplicatesScreen.byteFormatter.string(fromByteCount: Int64(model.freedToday))) freed today",
                             comment: "Duplicates: space deleted from Duplicates today"))
             } actions: {
-                ForEach(model.presentFilters.filter { $0 != .all && $0 != model.filter }, id: \.self) { filter in
+                ForEach(model.presentFilters.filter { $0 != model.filter }, id: \.self) { filter in
                     Button(String(localized: "Show \(filter.title) (\(model.groupCount(filter)))",
                                   comment: "Duplicates All reviewed: a kind that still has groups")) {
                         model.filter = filter
@@ -482,8 +481,9 @@ struct DuplicatesScreen: View {
 
 // MARK: - Header band
 
-/// The pinned band under the navigation bar: kind filter, sort, review
-/// progress, last scan and Rescan. Cards scroll beneath it.
+/// The pinned band under the navigation bar: kind filter, scan progress
+/// and what is still unchecked. Sort and Check Again sit in the navigation
+/// bar. Cards scroll beneath it.
 private struct DuplicatesHeaderBand: View {
     @Bindable var model: DuplicatesModel
     let isRegular: Bool
@@ -492,13 +492,11 @@ private struct DuplicatesHeaderBand: View {
         VStack(alignment: .leading, spacing: AppTheme.Spacing.sm) {
             filterRow
             Group {
-                HStack(alignment: .center, spacing: AppTheme.Spacing.md) {
-                    progress.frame(maxWidth: isRegular ? 420 : .infinity, alignment: .leading)
-                    if isRegular { Spacer(minLength: 0) }
-                    if !model.isScanning { sortMenu }
-                }
-                .padding(.horizontal, AppTheme.Size.screenMargin)
-                if !model.isScanning, let status = statusText {
+                if model.isScanning {
+                    progress
+                        .frame(maxWidth: isRegular ? 420 : .infinity, alignment: .leading)
+                        .padding(.horizontal, AppTheme.Size.screenMargin)
+                } else if let status = statusText {
                     Text(status)
                         .font(.caption)
                         .foregroundStyle(.secondary)
@@ -514,80 +512,23 @@ private struct DuplicatesHeaderBand: View {
         .overlay(alignment: .bottom) { Divider() }
     }
 
-    /// One pill per filter that has something; a PhotoKit burst is a Same
-    /// moment group now (§4). Each pill is as wide as its own
-    /// bold label, so choosing one never moves the others (A6, AC-L1).
+    /// One segment per filter that has something — Exact · Similar · Burst,
+    /// no All (§7.3); a PhotoKit burst is a Burst group (§4). A segmented
+    /// control, not pills (user, 2026-10-22): always exactly one is chosen.
     private var filterRow: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: AppTheme.Spacing.sm) {
-                ForEach(model.presentFilters, id: \.self) { filter in
-                    pill(filter.title, count: model.groupCount(filter), isSelected: model.filter == filter) {
-                        model.filter = filter
-                    }
-                }
+        Picker("Kind", selection: $model.filter) {
+            ForEach(model.presentFilters, id: \.self) { filter in
+                Text("\(filter.title) \(model.groupCount(filter).formatted())")
+                    .monospacedDigit()
+                    .accessibilityLabel("\(filter.title), \(model.groupCount(filter))")
+                    .tag(filter)
             }
-            .padding(.horizontal, AppTheme.Size.screenMargin)
         }
-        .scrollClipDisabled()
+        .pickerStyle(.segmented)
+        .labelsHidden()
+        .frame(maxWidth: isRegular ? 420 : .infinity)
+        .padding(.horizontal, AppTheme.Size.screenMargin)
         .disabled(model.isBusy && !model.isScanning)
-    }
-
-    private func pill(_ title: String, count: Int?, isSelected: Bool, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            ZStack {
-                // The bold layout reserves the width either way.
-                label(title, count: count, bold: true).hidden()
-                label(title, count: count, bold: isSelected)
-            }
-            .padding(.horizontal, AppTheme.Spacing.md)
-            .padding(.vertical, AppTheme.Spacing.xs)
-            .frame(minHeight: 34)
-            .background(isSelected ? Color(.systemBackground) : Color(.secondarySystemFill), in: Capsule())
-            .overlay {
-                if isSelected { Capsule().strokeBorder(Color(.separator), lineWidth: 0.5) }
-            }
-            .frame(minHeight: 44)
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel(count.map { "\(title), \($0)" } ?? title)
-        .accessibilityAddTraits(isSelected ? .isSelected : [])
-    }
-
-    private func label(_ title: String, count: Int?, bold: Bool) -> some View {
-        HStack(spacing: AppTheme.Spacing.xs) {
-            Text(title).fontWeight(bold ? .semibold : .regular).foregroundStyle(.primary)
-            if let count {
-                Text(count.formatted()).foregroundStyle(.secondary).monospacedDigit()
-            }
-        }
-        .font(.subheadline)
-        .lineLimit(1)
-        .fixedSize()
-    }
-
-    private var sortMenu: some View {
-        Menu {
-            Picker("Sort", selection: $model.sort) {
-                ForEach(DuplicateSort.allCases) { sort in
-                    Text(sort.title).tag(sort)
-                }
-            }
-        } label: {
-            HStack(spacing: AppTheme.Spacing.xs) {
-                Text(model.sort.title)
-                Image(systemName: "chevron.down")
-                    .font(.caption2.weight(.bold))
-            }
-            .font(.footnote.weight(.semibold))
-            .lineLimit(1)
-            .padding(.horizontal, AppTheme.Spacing.md)
-            .frame(height: 32)
-            .background(Color(.secondarySystemFill), in: Capsule())
-        }
-        .fixedSize()
-        .accessibilityLabel(String(localized: "Sort groups", comment: "VoiceOver: the Duplicates sort menu"))
-        .accessibilityValue(model.sort.title)
     }
 
     @ViewBuilder
@@ -607,33 +548,8 @@ private struct DuplicatesHeaderBand: View {
                 }
                 ProgressView(value: scan.fraction)
             }
-        } else if !model.groups.isEmpty {
-            VStack(alignment: .leading, spacing: AppTheme.Spacing.xs) {
-                (Text(reviewedText).fontWeight(.semibold) + Text(freeText).foregroundStyle(.secondary))
-                    .font(.footnote)
-                    .monospacedDigit()
-                    .lineLimit(1)
-                ProgressView(value: Double(model.reviewedCount), total: Double(max(1, model.groups.count)))
-                    .tint(.green)
-                    .accessibilityLabel(String(localized: "Groups reviewed", comment: "VoiceOver: the review progress bar"))
-                    .accessibilityValue(reviewedText)
-            }
         }
-    }
-
-    /// "Reviewed 4 of 312" — short enough to leave room for the free space
-    /// and the sort menu on a phone (board `PH_Duplicates`).
-    private var reviewedText: String {
-        let total = model.groups.filter(model.filter.includes).count
-        let done = model.groups.filter { model.filter.includes($0) && model.isReviewed($0) }.count
-        return String(localized: "Reviewed \(done) of \(total)", comment: "Duplicates header: groups decided out of the groups shown")
-    }
-
-    private var freeText: String {
-        let bytes = model.totalFreeBytes
-        guard bytes > 0 else { return "" }
-        let size = DuplicatesScreen.byteFormatter.string(fromByteCount: Int64(bytes))
-        return " · " + String(localized: "~\(size) to free", comment: "Duplicates header: space freed by keeping one per group")
+        // No "~4.2 GB to free" and no "Reviewed x of y" (user, 2026-10-22).
     }
 
     /// "Checked 2 min ago · 148 photos only in iCloud — will check on Wi-Fi";
@@ -664,105 +580,77 @@ private struct DuplicatesHeaderBand: View {
 
 /// One group as a decision: the keeper over 2×2 cells with "Keep", its
 /// reasons and its sizes on the photo, the copies square in the cells beside
-/// and below it, and the three one-tap actions. A same-moment run puts its
-/// keeper first and the rest in capture order (FS-06.06 §7.4).
+/// and below it. No button row (2026-10-21): the ring marks, a tap opens
+/// Compare (Choose frames on a burst), a hold offers Keep all and Not
+/// duplicates. A burst puts its keeper first and the rest in capture order
+/// (FS-06.06 §7.4).
 private struct DuplicateDecisionCard: View {
     let group: DuplicateGroup
     let model: DuplicatesModel
     let metrics: DuplicateCardMetrics
-    /// Bumped by Remove the other N / Keep all, for a light impact (§7.4).
-    @State private var shortcutTaps = 0
+    /// The photo the user just marked from the big slot. Marking the
+    /// suggested keeper makes the model suggest another one; without this
+    /// the marked photo would leave the slot at once (into a cell, or out of
+    /// sight in a folded group) and the ring would look dead.
+    @State private var pinnedSlotId: String?
 
     var body: some View {
         let keeper = model.keeper(of: group)
+        let slot = slotMember(keeper: keeper)
+        // Only photos and the words on them (2026-10-21): no title, no
+        // "to free", no notes, and every photo shown — no Show all.
         VStack(alignment: .leading, spacing: 0) {
-            header(keeper: keeper)
-                .padding(.bottom, AppTheme.Spacing.sm)
-
-            if let keeper {
-                // Same moment: the keeper first, the rest in capture order.
-                let copies = group.members.filter { $0.assetId != keeper.assetId }
-                let isFolded = model.isFolded(group)
-                keeperGrid(keeper, copies: isFolded ? Array(copies.prefix(metrics.copyColumns * 2)) : copies)
-                if isFolded {
-                    // D9: a 52-photo burst would be four screens of tiles.
-                    Button {
-                        withAnimation(AppTheme.Motion.standard) { model.showAll(group) }
-                    } label: {
-                        Text(String(localized: "Show all \(copies.count)", comment: "Duplicates card: open every photo of a large group"))
-                            .font(.subheadline.weight(.medium))
-                            .frame(maxWidth: .infinity, minHeight: 36)
-                            .background(Color(.secondarySystemFill), in: Capsule())
-                            .frame(minHeight: 44)
-                            .contentShape(Rectangle())
-                    }
-                    .buttonStyle(.plain)
-                    .padding(.top, AppTheme.Spacing.sm)
-                }
+            if let slot {
+                // Burst: the keeper first, the rest in capture order.
+                keeperGrid(slot, keeper: keeper,
+                           copies: group.members.filter { $0.assetId != slot.assetId })
             }
-
-            notices
-            actions(keeper: keeper)
-                .padding(.top, AppTheme.Spacing.sm)
         }
         .padding(DuplicateCardMetrics.cardPadding)
         .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle.app(AppTheme.Radius.lg))
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel(String(localized: "\(group.sourceSet?.title ?? group.kind.title), \(group.count) photos",
+                                   comment: "VoiceOver: a Duplicates card, which shows no title on screen"))
         .onAppear { model.loadTraits(for: group) }
-        .sensoryFeedback(.impact(weight: .light), trigger: shortcutTaps)
     }
 
-    private func header(keeper: HashedPhoto?) -> some View {
-        VStack(alignment: .leading, spacing: 1) {
-            HStack(alignment: .firstTextBaseline) {
-                Text(group.sourceSet?.title
-                     ?? String(localized: "\(group.kind.title) · \(group.count) photos", comment: "Duplicates card title: kind and size of the group"))
-                    .font(.subheadline.weight(.semibold))
-                Spacer()
-                if let free = model.freeBytes(of: group), free > 0 {
-                    Text("~\(DuplicatesScreen.byteFormatter.string(fromByteCount: Int64(free))) to free",
-                         comment: "Duplicates card: space freed by keeping only the kept photo")
-                        .font(.footnote.weight(.medium))
-                        .foregroundStyle(.secondary)
-                }
-            }
-            .monospacedDigit()
-            Text(subtitle)
-                .font(.footnote)
-                .foregroundStyle(.secondary)
-                .monospacedDigit()
-                .lineLimit(1)
+    /// The big slot holds the keeper, unless the user marked the photo in
+    /// it — that one stays put, red, until it is unmarked.
+    private func slotMember(keeper: HashedPhoto?) -> HashedPhoto? {
+        if let pinnedSlotId, model.isMarked(pinnedSlotId),
+           let pinned = group.members.first(where: { $0.assetId == pinnedSlotId }) {
+            return pinned
         }
+        return keeper
+    }
+
+    private func toggleMark(_ member: HashedPhoto, inSlot: Bool) {
+        if inSlot, !model.isMarked(member.assetId) { pinnedSlotId = member.assetId }
+        withAnimation(AppTheme.Motion.standard) { model.toggleMark(member.assetId, in: group) }
+        if !model.isMarked(member.assetId), pinnedSlotId == member.assetId { pinnedSlotId = nil }
     }
 
     /// The keeper's reasons, or "Checking sharpness…" while the pass has not
     /// reached this group (§3 step 5).
-    private var keeperChips: [String] {
+    private func keeperChips(_ keeper: HashedPhoto?) -> [String] {
         if model.isChecking(group) {
             return [String(localized: "Checking sharpness…", comment: "Duplicates: chip on the kept photo while the group is being scored")]
         }
-        return model.reasons(for: group).map(\.title)
-    }
-
-    private var subtitle: String {
-        var parts: [String] = []
-        if let date = DuplicatesScreen.dateText(group) { parts.append(date) }
-        if group.kind == .copies {
-            parts.append(String(localized: "Identical files", comment: "Duplicates card, Copies: the copies are the same file"))
-        } else if let span = DuplicateReview.spanText(group.members) {
-            parts.append(span)
-        }
-        return parts.joined(separator: " · ")
+        return model.reasons(for: group, keeper: keeper).map(\.title)
     }
 
     /// The keeper over 2×2 cells at the top left, the copies in the cells
     /// beside and below it — every copy square, the card filled (board
     /// `PH_DuplicatesLargeGroup`). Sizes and reasons ride on the photos.
-    private func keeperGrid(_ keeper: HashedPhoto, copies: [HashedPhoto]) -> some View {
+    /// - Parameter keeper: picked once per card — every caption is worded
+    ///   against it, and picking it again per tile cost a group's worth of
+    ///   scoring per tile on each redraw.
+    private func keeperGrid(_ slot: HashedPhoto, keeper: HashedPhoto?, copies: [HashedPhoto]) -> some View {
         let origins = metrics.copyOrigins(count: copies.count)
         return ZStack(alignment: .topLeading) {
-            tile(keeper, side: metrics.keeper, radius: AppTheme.Radius.md, isKeeper: true)
+            tile(slot, side: metrics.keeper, radius: AppTheme.Radius.md, inSlot: true, keeper: keeper)
             ForEach(Array(copies.enumerated()), id: \.element.id) { index, member in
-                tile(member, side: metrics.tile, radius: AppTheme.Radius.sm, isKeeper: false)
+                tile(member, side: metrics.tile, radius: AppTheme.Radius.sm, inSlot: false, keeper: keeper)
                     .offset(x: origins[index].x, y: origins[index].y)
             }
         }
@@ -781,46 +669,44 @@ private struct DuplicateDecisionCard: View {
 
     /// The caption inside a copy (§7.4): plain words, at most two lines,
     /// none on the keeper — its chips speak for it.
-    private func captionLines(_ member: HashedPhoto, isKeeper: Bool) -> [String] {
-        isKeeper ? [] : model.caption(of: member, in: group)
+    private func captionLines(_ member: HashedPhoto, keeper: HashedPhoto?) -> [String] {
+        member.assetId == keeper?.assetId ? [] : model.caption(of: member, in: group, keeper: keeper)
     }
 
-    private func tile(_ member: HashedPhoto, side: CGFloat, radius: CGFloat, isKeeper: Bool) -> some View {
+    private func tile(_ member: HashedPhoto, side: CGFloat, radius: CGFloat, inSlot: Bool, keeper: HashedPhoto?) -> some View {
+        let isKeeper = member.assetId == keeper?.assetId
         let isMarked = model.isMarked(member.assetId)
-        let isLast = model.isLastUnmarked(member.assetId, in: group)
         return DuplicateThumbnail(
             asset: model.assetsById[member.assetId],
             side: side,
             radius: radius,
             isMarked: isMarked,
             showsKeep: isKeeper && !isMarked,
-            onToggleMark: {
-                withAnimation(AppTheme.Motion.standard) { _ = model.toggleMark(member.assetId, in: group) }
-            },
-            factLines: captionLines(member, isKeeper: isKeeper),
-            chips: isKeeper ? keeperChips : [],
+            onToggleMark: { toggleMark(member, inSlot: inSlot) },
+            factLines: captionLines(member, keeper: keeper),
+            chips: inSlot && isKeeper ? keeperChips(keeper) : [],
             isKeeper: isKeeper
         )
-        // D7: a tap looks, the ring marks.
-        .onTapGesture { model.compare(group, from: member.assetId) }
+        // D7: a tap looks, the ring marks. A burst is looked at frame by
+        // frame (2026-10-21: the card has no button row any more).
+        .onTapGesture { open(member) }
         .sensoryFeedback(.selection, trigger: isMarked)
-        .sensoryFeedback(.warning, trigger: model.blockedGroupId == group.id) { _, blocked in blocked }
         .contextMenu {
             Button {
+                pinnedSlotId = nil
                 withAnimation(AppTheme.Motion.standard) { model.keepOnly(member.assetId, in: group) }
             } label: {
                 Label(String(localized: "Keep just this one", comment: "Duplicates tile menu: keep this photo, mark the rest"),
                       systemImage: "checkmark.circle")
             }
             Button {
-                withAnimation(AppTheme.Motion.standard) { _ = model.toggleMark(member.assetId, in: group) }
+                toggleMark(member, inSlot: inSlot)
             } label: {
                 Label(isMarked
                       ? String(localized: "Don't remove", comment: "Duplicates tile menu: take the mark away")
                       : String(localized: "Remove", comment: "Duplicates tile menu: mark for removal"),
                       systemImage: isMarked ? "trash.slash" : "trash")
             }
-            .disabled(!isMarked && isLast)
             if model.canCompare(group) {
                 Button {
                     model.compare(group)
@@ -828,19 +714,46 @@ private struct DuplicateDecisionCard: View {
                     Label("Compare", systemImage: "rectangle.split.2x1")
                 }
             }
+            Divider()
+            // Keep all and Not duplicates left the card's button row for
+            // this menu (2026-10-21).
+            let keptAll = model.isKeptAll(group)
+            Button {
+                withAnimation(AppTheme.Motion.standard) { model.toggleKeepAll(group) }
+            } label: {
+                Label(keptAll
+                      ? String(localized: "Keeping all", comment: "Duplicates tile menu: the group is kept whole; tap to undo")
+                      : String(localized: "Keep all", comment: "Duplicates tile menu: keep every photo of the group"),
+                      systemImage: keptAll ? "checkmark" : "checkmark.circle.badge.plus")
+            }
+            Button {
+                withAnimation(AppTheme.Motion.standard) { model.dismiss(group) }
+            } label: {
+                Label(String(localized: "Not duplicates", comment: "Duplicates card: these photos are not duplicates; never show them again"),
+                      systemImage: "eye.slash")
+            }
         }
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel(accessibilityLabel(member, isKeeper: isKeeper, isMarked: isMarked))
+        .accessibilityLabel(accessibilityLabel(member, keeper: keeper, isMarked: isMarked))
         .accessibilityAddTraits(isMarked ? [.isButton, .isSelected] : .isButton)
-        .accessibilityAction { model.compare(group, from: member.assetId) }
+        .accessibilityAction { open(member) }
         .accessibilityAction(named: isMarked
                              ? String(localized: "Don't remove", comment: "VoiceOver action on a tile")
                              : String(localized: "Remove", comment: "VoiceOver action on a tile")) {
-            _ = model.toggleMark(member.assetId, in: group)
+            toggleMark(member, inSlot: inSlot)
         }
     }
 
-    private func accessibilityLabel(_ member: HashedPhoto, isKeeper: Bool, isMarked: Bool) -> String {
+    private func open(_ member: HashedPhoto) {
+        if group.kind == .burst {
+            model.openFrames(group, at: member.assetId)
+        } else {
+            model.compare(group, from: member.assetId)
+        }
+    }
+
+    private func accessibilityLabel(_ member: HashedPhoto, keeper: HashedPhoto?, isMarked: Bool) -> String {
+        let isKeeper = member.assetId == keeper?.assetId
         var parts: [String] = []
         if isKeeper { parts.append(String(localized: "Suggested to keep", comment: "VoiceOver: the photo the Duplicates card suggests keeping")) }
         parts.append(facts(member))
@@ -849,131 +762,11 @@ private struct DuplicateDecisionCard: View {
         if traits.isEdited { parts.append(String(localized: "edited")) }
         if traits.hasRAW { parts.append(String(localized: "RAW")) }
         if traits.isLive { parts.append(String(localized: "Live Photo")) }
-        if !isKeeper { parts += model.caption(of: member, in: group) }
+        if !isKeeper { parts += model.caption(of: member, in: group, keeper: keeper) }
         parts.append(isMarked
                      ? String(localized: "will be removed", comment: "VoiceOver: a tile marked for removal")
                      : String(localized: "won't be removed", comment: "VoiceOver: a tile not marked"))
         return parts.joined(separator: ", ")
-    }
-
-    @ViewBuilder
-    private var notices: some View {
-        if model.isFullyMarked(group) {
-            Label(String(localized: "Every photo is set to be removed — keep at least one", comment: "Duplicates card: a group would lose every photo"), systemImage: "exclamationmark.triangle.fill")
-                .font(.footnote)
-                .foregroundStyle(.red)
-                .padding(.top, AppTheme.Spacing.sm)
-        } else if model.markedCount(in: group) == 0, let removal = model.removal(in: group),
-                  let kept = DuplicateProtection.keptLine(removal.kept, namingAlbums: false) {
-            // A2: Remove the other N leaves these alone; say so before the tap.
-            Text(kept)
-                .font(.footnote)
-                .foregroundStyle(.secondary)
-                .padding(.top, AppTheme.Spacing.sm)
-        }
-        if model.hasNewPhotoSinceDismissal(group) {
-            Label(String(localized: "New photo since you chose Not duplicates",
-                         comment: "Duplicates card: a group the user dismissed is back because a photo joined it"),
-                  systemImage: "plus.circle")
-                .font(.footnote)
-                .foregroundStyle(.secondary)
-                .padding(.top, AppTheme.Spacing.sm)
-        }
-        if model.blockedGroupId == group.id {
-            Label("Keep at least one photo in this group.", systemImage: "exclamationmark.circle")
-                .font(.footnote)
-                .foregroundStyle(.secondary)
-                .padding(.top, AppTheme.Spacing.sm)
-                .transition(.opacity)
-        }
-    }
-
-    /// Remove the other N · Keep all · Compare. When a long count leaves no
-    /// room, Compare drops to its icon before any word is cut.
-    private func actions(keeper: HashedPhoto?) -> some View {
-        ViewThatFits(in: .horizontal) {
-            actionRow(compactCompare: false)
-            actionRow(compactCompare: true)
-        }
-    }
-
-    private func actionRow(compactCompare: Bool) -> some View {
-        let marked = model.markedCount(in: group)
-        let keptAll = model.isKeptAll(group)
-        return HStack(spacing: AppTheme.Spacing.sm) {
-            if group.kind == .sameMoment {
-                // A run is chosen frame by frame, not wiped in one tap (§7.4).
-                pill(String(localized: "Choose frames", comment: "Duplicates card: pick which frames of the run to keep"),
-                     color: .accentColor) {
-                    model.openFrames(group)
-                }
-            } else if marked > 0 {
-                pill(String(localized: "Don't remove", comment: "Duplicates card: take every mark in this group away"), color: .primary) {
-                    model.unmark(group)
-                }
-            } else if let removal = model.removal(in: group), !removal.remove.isEmpty {
-                let others = removal.remove.count
-                pill(others == 1
-                     ? String(localized: "Remove the other one", comment: "Duplicates card: mark every photo but the kept one")
-                     : String(localized: "Remove the other \(others)", comment: "Duplicates card: mark every photo but the kept one"),
-                     color: .red) {
-                    model.markOthers(in: group)
-                    shortcutTaps += 1
-                }
-            }
-            pill(keptAll
-                 ? String(localized: "Keeping all", comment: "Duplicates card: the group is kept whole; tap to undo")
-                 : String(localized: "Keep all", comment: "Duplicates card: keep every photo of the group"),
-                 color: .accentColor,
-                 systemImage: keptAll ? "checkmark" : nil) {
-                model.toggleKeepAll(group)
-                shortcutTaps += 1
-            }
-            // Hold Keep all → Not duplicates: never show this group again (§7.4).
-            .contextMenu {
-                Button {
-                    withAnimation(AppTheme.Motion.standard) { model.dismiss(group) }
-                } label: {
-                    Label(String(localized: "Not duplicates", comment: "Duplicates card: these photos are not duplicates; never show them again"),
-                          systemImage: "eye.slash")
-                }
-            }
-            Spacer(minLength: 0)
-            if model.canCompare(group) {
-                let title = String(localized: "Compare", comment: "Duplicates card: open the group side by side")
-                if compactCompare {
-                    pill("", color: .accentColor, systemImage: "rectangle.split.2x1") { model.compare(group) }
-                        .accessibilityLabel(title)
-                } else {
-                    pill(title, color: .accentColor) { model.compare(group) }
-                }
-            }
-        }
-        .fixedSize(horizontal: !compactCompare, vertical: false)
-    }
-
-    private func pill(_ title: String, color: Color, systemImage: String? = nil, action: @escaping () -> Void) -> some View {
-        Button {
-            withAnimation(AppTheme.Motion.standard) { action() }
-        } label: {
-            HStack(spacing: AppTheme.Spacing.xs) {
-                if let systemImage { Image(systemName: systemImage).font(.footnote.weight(.bold)) }
-                if !title.isEmpty { Text(title) }
-            }
-            .font(.subheadline.weight(.medium))
-            .foregroundStyle(color)
-            .lineLimit(1)
-            .padding(.horizontal, AppTheme.Spacing.md)
-            .padding(.vertical, AppTheme.Spacing.xs)
-            .frame(minHeight: 34)
-            .background(Color(.secondarySystemFill), in: Capsule())
-            .frame(minHeight: 44)
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-        // Marks are kept by photo, so a scan or regroup running under the
-        // cards does not stop a decision — only a delete in flight does.
-        .disabled(model.isDeleting)
     }
 }
 

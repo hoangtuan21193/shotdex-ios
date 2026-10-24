@@ -155,4 +155,29 @@ struct DuplicateReviewStoreTests {
         #expect(relaunched.isKeptAll(["x", "y"]))
         #expect(relaunched.notDuplicates.map(\.id) == session.notDuplicates.map(\.id))
     }
+
+    /// The keeper takes a mark like any other photo: a group can be marked
+    /// whole, and the card still has a photo to put in the big slot
+    /// (user, 2026-10-24 — the keep-one gate is gone).
+    @MainActor @Test func everyPhotoOfAGroupCanBeMarked() {
+        let model = DuplicatesModel(dependencies: AppDependencies.preview())
+        let hashed = { (id: String) in
+            HashedPhoto(assetId: id, hash: PerceptualHash(bits: 1), width: 6000, height: 4000,
+                        fileSize: 10_000_000, creationDate: 1_700_000_000, isFavorite: false)
+        }
+        let group = DuplicateGroup(members: [hashed("dup-a"), hashed("dup-b")], kind: .similar)
+        model.clearMarks(in: group)
+        let keeper = model.keeper(of: group)!.assetId
+        let copy = group.members.first { $0.assetId != keeper }!.assetId
+        model.toggleMark(copy, in: group)
+        model.toggleMark(keeper, in: group)
+        #expect(model.isMarked(keeper))
+        #expect(model.isMarked(copy))
+        #expect(model.markedCount(in: group) == 2)
+        #expect(model.keeper(of: group) != nil)
+        // And back: unmarking still works one tile at a time.
+        model.toggleMark(keeper, in: group)
+        #expect(!model.isMarked(keeper))
+        model.toggleMark(copy, in: group)
+    }
 }

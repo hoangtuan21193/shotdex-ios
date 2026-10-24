@@ -81,7 +81,7 @@ import Testing
         try hashes.upsert((ids.0 + ids.1).map { PerceptualHashRecord(assetId: $0, hash: PerceptualHash(bits: 7), modificationDate: 1, computedAt: 1) })
         func group(_ members: [String]) -> DuplicateGroup {
             DuplicateGroup(members: members.map { HashedPhoto(assetId: $0, hash: PerceptualHash(bits: 7), width: 6000, height: 4000,
-                                                              fileSize: nil, creationDate: nil, isFavorite: false) }, kind: .copies)
+                                                              fileSize: nil, creationDate: nil, isFavorite: false) }, kind: .exact)
         }
         try hashes.replaceGroups([group(ids.0)], scannedAt: Date(), sourceId: t7)
         try hashes.replaceGroups([group(ids.1)], scannedAt: Date())

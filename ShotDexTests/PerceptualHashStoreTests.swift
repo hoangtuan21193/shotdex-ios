@@ -147,8 +147,8 @@ struct DuplicateGroupCacheTests {
         #expect(try store.scanState() == nil)
 
         let groups = [
-            DuplicateGroup(members: [hashed("a", bits: 1, size: 20), hashed("b", bits: 1, size: 10)], kind: .lookAlikes),
-            DuplicateGroup(members: [hashed("c", bits: 1), hashed("d", bits: 1)], kind: .copies),
+            DuplicateGroup(members: [hashed("a", bits: 1, size: 20), hashed("b", bits: 1, size: 10)], kind: .similar),
+            DuplicateGroup(members: [hashed("c", bits: 1), hashed("d", bits: 1)], kind: .exact),
         ]
         let scannedAt = Date(timeIntervalSince1970: 1_800_000_000)
         try store.replaceGroups(groups, scannedAt: scannedAt)

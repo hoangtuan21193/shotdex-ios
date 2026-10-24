@@ -40,7 +40,7 @@ struct DuplicatesSelectedSheet: View {
         let keeper = model.keeper(of: group)
         return VStack(alignment: .leading, spacing: AppTheme.Spacing.sm) {
             HStack(spacing: AppTheme.Spacing.sm) {
-                if let keeper {
+                if let keeper, !model.isMarked(keeper.assetId) {
                     DuplicateThumbnail(asset: model.assetsById[keeper.assetId], side: 32, radius: AppTheme.Radius.sm,
                                        isMarked: false, showsKeep: false, showsMarkBadge: false)
                         .accessibilityHidden(true)
@@ -57,7 +57,7 @@ struct DuplicatesSelectedSheet: View {
                         asset: model.assetsById[member.assetId], side: tile, radius: AppTheme.Radius.sm,
                         isMarked: true, showsKeep: false,
                         onToggleMark: {
-                            withAnimation(AppTheme.Motion.standard) { _ = model.toggleMark(member.assetId, in: group) }
+                            withAnimation(AppTheme.Motion.standard) { model.toggleMark(member.assetId, in: group) }
                         }
                     )
                     .accessibilityElement(children: .ignore)
@@ -65,7 +65,7 @@ struct DuplicatesSelectedSheet: View {
                                                comment: "VoiceOver: a marked photo in the Selected sheet"))
                     .accessibilityAddTraits(.isSelected)
                     .accessibilityAction(named: String(localized: "Don't remove", comment: "VoiceOver action: take the mark away")) {
-                        withAnimation(AppTheme.Motion.standard) { _ = model.toggleMark(member.assetId, in: group) }
+                        withAnimation(AppTheme.Motion.standard) { model.toggleMark(member.assetId, in: group) }
                     }
                 }
             }

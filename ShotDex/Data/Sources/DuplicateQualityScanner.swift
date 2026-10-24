@@ -222,7 +222,7 @@ actor DuplicateQualityPass {
         isRunning = true
         defer { isRunning = false }
         try store.pruneOrphans()
-        let ids = groups.filter { $0.kind != .screenshots }.flatMap { $0.members.map(\.assetId) }
+        let ids = groups.filter { !$0.members.allSatisfy(\.isScreenshot) }.flatMap { $0.members.map(\.assetId) }
         let pending = try store.pendingAssetIds(among: ids, retryingFailed: allowNetwork)
         var processed = 0
         for start in stride(from: 0, to: pending.count, by: Self.batchSize) {

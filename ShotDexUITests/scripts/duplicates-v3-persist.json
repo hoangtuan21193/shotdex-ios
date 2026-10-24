@@ -23,16 +23,8 @@
     { "action": "tap", "label": "Duplicates" },
     { "action": "wait", "seconds": 8 },
     { "action": "screenshot", "name": "04-relaunched-summary" },
-    { "action": "tap", "label": "More" },
-    { "action": "wait", "seconds": 2 },
-    { "action": "screenshot", "name": "05-more" },
-    { "action": "tap", "label": "Ignored (1)" },
-    { "action": "wait", "seconds": 2 },
-    { "action": "screenshot", "name": "06-ignored" },
-    { "action": "tap", "label": "Show again" },
-    { "action": "wait", "seconds": 1 },
-    { "action": "tap", "label": "Done" },
-    { "action": "wait", "seconds": 2 },
-    { "action": "screenshot", "name": "07-back" }
+    { "action": "tap", "label": "Check Again" },
+    { "action": "wait", "seconds": 10 },
+    { "action": "screenshot", "name": "05-after-check-again" }
   ]
 }

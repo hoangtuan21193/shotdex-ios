@@ -2,7 +2,7 @@ import Photos
 import SwiftUI
 
 /// Quick clean over the Duplicates list (FS-06.06 §7.2, board
-/// `PH_Duplicates`): the exact copies and smaller re-shares nobody has
+/// `PH_Duplicates`): the identical copies nobody has
 /// decided yet, and one button that previews them before anything is marked.
 /// **Review…** is the screen's one accent-filled button (DESIGN.md §4).
 /// Gone once every copies group is decided.
@@ -23,7 +23,7 @@ struct DuplicatesQuickCleanBand: View {
                               comment: "Duplicates Quick clean band: copies to remove and their size"))
                     .font(.headline)
                     .monospacedDigit()
-                Text(String(localized: "Exact copies and smaller re-shares. Favorites, edits and album photos stay.",
+                Text(String(localized: "Identical copies. Favorites, edits and album photos stay.",
                             comment: "Duplicates Quick clean band: what it removes and what it never touches"))
                     .font(.footnote)
                     .foregroundStyle(.secondary)
@@ -205,48 +205,5 @@ struct DuplicatesQuickCleanSheet: View {
         .padding(.horizontal, AppTheme.Size.screenMargin)
         .padding(.vertical, AppTheme.Spacing.sm)
         .background(.bar)
-    }
-}
-
-/// ⋯ ▸ Ignored (§9): every group the user said is not duplicates, each
-/// with Show again.
-struct DuplicatesIgnoredSheet: View {
-    let model: DuplicatesModel
-    @Environment(\.dismiss) private var dismiss
-
-    var body: some View {
-        NavigationStack {
-            List(model.ignoredGroups) { group in
-                HStack(spacing: AppTheme.Spacing.md) {
-                    DuplicatesKindThumbnail(asset: model.assetsById[group.id])
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(group.sourceSet?.title ?? String(localized: "\(group.kind.title) · \(group.count) photos",
-                                                              comment: "Duplicates card title: kind and size of the group"))
-                        if let date = DuplicatesScreen.dateText(group) {
-                            Text(date).font(.footnote).foregroundStyle(.secondary)
-                        }
-                    }
-                    Spacer(minLength: AppTheme.Spacing.sm)
-                    Button(String(localized: "Show again", comment: "Duplicates Ignored: put the group back in the list")) {
-                        model.undismiss(group)
-                    }
-                    .buttonStyle(.bordered)
-                }
-                .frame(minHeight: 44)
-            }
-            .overlay {
-                if model.ignoredGroups.isEmpty {
-                    ContentUnavailableView(String(localized: "Nothing Ignored", comment: "Duplicates Ignored: empty"),
-                                           systemImage: "eye")
-                }
-            }
-            .navigationTitle(String(localized: "Ignored", comment: "Duplicates: sheet of groups marked Not duplicates"))
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .confirmationAction) {
-                    Button(String(localized: "Done", comment: "Close the Ignored sheet")) { dismiss() }
-                }
-            }
-        }
     }
 }
