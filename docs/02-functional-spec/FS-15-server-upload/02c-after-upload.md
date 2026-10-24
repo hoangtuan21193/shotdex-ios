@@ -14,7 +14,8 @@ một hàng nói rõ bao nhiêu ảnh, bao nhiêu GB.
   lưới ảnh của nơi đó (không có nút làm video). Ảnh lên hai nơi có ở cả hai. Hàng cuối **All Uploaded Photos** → lưới
   mọi ảnh. Tên lấy theo connection hiện tại (đã đổi tên thì theo tên mới). Hàng chỉ hiện khi có ít nhất một ảnh.
   Màn không có menu ⋯ — việc xoá nằm ở hàng Free Up Space (§2).
-- **Dấu trên lưới**: glyph nhỏ ở góc dưới-trái ô, trên mọi lưới. Nhãn VoiceOver "Uploaded to server".
+- **Dấu trên lưới**: glyph nhỏ ở góc dưới-trái ô, trên mọi lưới — nghĩa là **đang có trên một nguồn server** theo hash,
+  không theo lịch sử upload ([FS-19.07 §9](../FS-19-photo-sources/07-on-server-check.md)). Nhãn VoiceOver "On server".
 - **Photo Info**: mỗi nơi (server + folder) một dòng: tên server, dưới là folder, bên phải ngày; mới nhất trước.
 - Ảnh bị xoá khỏi thư viện → dòng lịch sử **ở lại** (bảng giữ bằng chứng); nó chỉ không còn hiện ở đâu.
 

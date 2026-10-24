@@ -5,9 +5,9 @@
 | Tác giả | Hoang Tuan (người dùng) · Claude soạn |
 | Ngày | 2026-10-24 |
 | Trạng thái | accepted (2026-10-25) |
-| Tiến độ | **chưa làm** (2026-10-24) — chưa có spec |
+| Tiến độ | **chưa làm** (2026-10-25) — spec FS-19.07, 22 AC + 4 spike |
 | Nguồn | phản hồi người dùng (2026-10-24, review giải pháp "ảnh gia đình" trong phiên) |
-| Spec sinh ra từ đây | (điền khi sang Design) |
+| Spec sinh ra từ đây | [FS-19.07](../02-functional-spec/FS-19-photo-sources/07-on-server-check.md) · [07b](../02-functional-spec/FS-19-photo-sources/07b-on-server-check-ac.md) |
 
 ## Bối cảnh
 
@@ -33,8 +33,9 @@ mà vẫn chắc chắn không mất ảnh.
 - Backup (FS-22) biết file **nó** đã chép lên đâu, nhưng script của người dùng sẽ dời và đổi tên file trên NAS
   (`Tuấn/…` → `Shared/…`). Sổ Backup lúc đó chỉ sai chỗ: nó nói "đã ở `Tuấn/2025/…`", NAS không còn file đó ở đấy.
 - Ảnh có thể lên NAS bằng con đường khác ShotDex (máy kia chép, script gộp, chép tay) — ShotDex không biết.
-- Smart album hôm nay chỉ lọc theo metadata ảnh (`ShotDex/Core/Models/SmartAlbumQuery.swift`, `SmartAlbumRule`), không
-  có điều kiện nào về server/NAS.
+- Smart album có điều kiện **Source** (FS-19), nhưng chỉ theo cả nguồn, và ảnh Photos chưa bao giờ được băm (bước băm
+  có code nhưng chưa nối) nên ảnh Photos không gộp được với file NAS — điều kiện đó chưa trả lời được câu hỏi này
+  (sửa 2026-10-25 khi viết spec; bản đầu ghi nhầm là không có điều kiện nào về server).
 - Free Up Space (FS-15.02c) chỉ tính theo lịch sử upload của chính máy, không theo hiện trạng NAS.
 - Số lượng lớn: hàng chục nghìn ảnh, hàng trăm GB. Kiểm một lượt mất hàng giờ qua Wi‑Fi; iOS sẽ dừng app giữa chừng
   nhiều lần. Kiểm lại từ đầu mỗi lần là không dùng được.

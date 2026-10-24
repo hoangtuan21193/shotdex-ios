@@ -7,6 +7,7 @@
 - Cột "Chứng minh" ghi **tên đề xuất**; mọi dòng là `⚠️ chưa có`. Test đơn vị chạy trên database trong bộ nhớ và một thư
   mục tạm dựng sẵn file mẫu (RAW mẫu CC0 ở `~/Library/Caches/ShotDexFixtures/raw`, **không ảnh có mặt người**).
 - Mac **chưa có driver UI** (`Tools/ui-drive` chỉ chạy simulator iOS) — AC màn hình trên Mac ghi "ảnh chụp tay" tới khi có.
+- AC-74…AC-95 (ảnh Photos đã có trên server chưa) nằm ở [07b](07b-on-server-check-ac.md).
 - Số AC cố định, không đánh lại; AC thêm sau đáp án 2026-10-04 mang số 45–63, sau review dữ liệu 64–68, và nằm trong bảng của phần nó; AC-69…72 để dành cho các tiêu chí plan FS-19 đề xuất (thêm cùng task của plan), AC-73 thêm theo planboard mac-ipad-v2 Q1 (Hide in Photos / Hide in ShotDex Only).
 
 ## Thư mục và ổ ([01](01-folders-and-drives.md), [01b](01b-offline-access-and-cache.md))

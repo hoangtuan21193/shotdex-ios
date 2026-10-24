@@ -25,16 +25,16 @@ lấy từ preview nhúng, bản gốc chỉ tải khi mở, sửa hay xuất (D
 - Mỗi file: đọc **256 KB đầu** (đọc theo dải) → EXIF + preview nhúng → thumbnail 400px, theo đúng thang thử của
   [FS-17.01 §3](../FS-17-import-from-server/01-browse.md) (CR3 tách hộp preview, RAF theo con trỏ, tối đa 1 MB với RAW khác).
 - **Hash nhanh** trong lượt này (3 lần đọc dải 64 KB, [02 §1](02-identity-and-sidecars.md)); hash đầy đủ ở nền sau đó,
-  tải từng file rồi bỏ byte. NAS 1.102 ảnh ~33 GB: ~5 phút ở gigabit, hàng giờ qua Wi-Fi chậm.
+  tải từng file rồi bỏ byte — **chỉ** file có hash nhanh trùng một bản sao khác ([07 §5](07-on-server-check.md)). NAS 1.102 ảnh ~33 GB: ~5 phút ở gigabit, hàng giờ qua Wi-Fi chậm.
 - **Một lệnh tới server một lúc** mỗi connection (phiên SMB không an toàn khi chạy song song — FS-17.01 §3).
 - Sidecar `.xmp` cạnh file trên share được đọc trong cùng lượt ([02 §4](02-identity-and-sidecars.md)).
-- Mạng: theo luật index ([BD-03.03 §2](../../01-basic-design/BD-03-metadata-indexing-flow/03-network-thermal-and-gate.md)) —
-  iPad có SIM, iPhone, Duo chỉ dùng dữ liệu di động khi bật **Use Cellular Data for Indexing**.
+- Mạng: theo job Backup của connection (Only on Wi‑Fi / Only While Charging); không có job thì chỉ Wi‑Fi
+  ([07 §7](07-on-server-check.md)). **Use Cellular Data for Indexing** chỉ áp cho index Photos.
 
 ## 3. Thấy thay đổi trên server
 
 - SMB/SFTP/WebDAV không báo thay đổi đáng tin, nên ShotDex **so lại danh sách** (kích thước + ngày sửa):
-  khi mở app · khi server từ "Not reachable" về lại · khi bấm **Rescan** (toolbar màn duyệt, board `MAC_ServerBrowser`).
+  **mỗi lần app về trước mặt** ([07 §5](07-on-server-check.md)) · khi server từ "Not reachable" về lại · khi bấm **Rescan** (toolbar màn duyệt, board `MAC_ServerBrowser`).
 - **Không** quét theo giờ khi app đang mở — chỉ ba lúc trên. *Vì* mỗi lượt so là một lệnh liệt kê cả cây trên NAS.
 - File đổi tên/chuyển trên server: hash giữ danh tính như [02 §2](02-identity-and-sidecars.md).
 
