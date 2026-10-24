@@ -6,6 +6,18 @@ look for defects, run `duo-ux-review` against the HIG pages it fetches, fix,
 re-shoot, then update the matching board in `project/` and publish it to the
 Duo canvas <https://claude.ai/artifact/N91F3p5AZWgSQiMWVtZYrL>. One commit per screen.
 
+**How a pass runs (the session is cleared between passes, so this is the memory):**
+- Device: simulator "Compare Duo" `307B259D-86F8-443A-A974-0BCBC07DCC2B` (iOS 27, shared — never erase it). Build:
+  `xcodebuild -project ShotDex.xcodeproj -scheme ShotDex -destination "id=<udid>" -derivedDataPath build/sim build`.
+  A build for the iOS 27 sim does not run on iOS 18.6 (`libswiftCompatibilitySpan.dylib` missing) — rebuild with that sim's id to check iPhone.
+- Disk: `df` under-reports (Time Machine snapshots); the real free space is `volumeAvailableCapacityForImportantUsage` (swift -e one-liner). Stop only if that is < 25 GB.
+- Capture: write `ShotDexUITests/scripts/duo-loop-<screen>.json` (launch → taps → `dump` → long `wait`), run `Tools/ui-drive <udid> <script> build/duo-loop/drive-NN` while a background loop takes `Tools/sim-shot <udid> build/duo-loop/burst-NN/sNN.png inner` every 15s; the ~1.4 MB frames are the app, ~5 MB ones the home screen (delete those after). Downscale with `sips -Z 1400` (1.472 px/pt) to look.
+- Duo inner facts found so far: the window class is `.duoInner` (`VideoStudioWindowClass.resolve` via `onGeometryChange`, see `LibraryScreen`); content is < 860pt wide, so `WideLayout.minimumWidth` alone misses it; the vertical toolbar rail only takes **icon** items; the safe area top is 0 in landscape and the top corners are ~66pt — keep controls at y ≥ 32 near them (`CompareLayout.duoInnerTopInset`); a plain `.sheet` is a ~652pt form sheet; the Search tab reads as compact.
+- Review: `duo-ux-review` agent, told to fetch HIG pages via `/tutorials/data/design/human-interface-guidelines/<page>.json` (HTML comes back empty); the Duo page is `designing-for-iphone-duo`.
+- Canvas: `Artifact read` the board path before editing (publish is refused otherwise); edit in `docs/design/duo/project/`, render light + `--dark`, `Tools/design-board compare`, publish with `root` = `docs/design/duo`.
+- Commit: other sessions leave uncommitted edits in the same files — stage only your own hunks (`git diff <file> > p; keep your @@ hunks; git apply --cached --recount`), then plain `git commit`. Record the hash in the row.
+- End of pass: schedule the next wakeup, then clear the session (user rule, 2026-10-24).
+
 Status: `todo` · `doing` · `done` · `blocked` (needs a decision beyond a layout fix — reason in Findings).
 
 | # | Screen | Board(s) | Status | Findings | Commit |
@@ -19,7 +31,7 @@ Status: `todo` · `doing` · `done` · `blocked` (needs a decision beyond a layo
 | 3c | Search — Recents at 951pt | `DI_Search` | blocked — needs your decision | Predicted from code, not seen: 3 flexible square cards ≈ 295pt each — cut by the keyboard and "bigger, not more". Fix needs a count: cap cards near 140–160pt and show more than `SearchRecentsModel.maximumCards = 3` when wide. | |
 | 4 | Date range | `DI_DateRange` | todo | Only reachable from the chart editor (`ChartEditorSheet` → `DateRangePickerSheet`) — check it with row 13. | |
 | 5 | Empty library / Onboarding | `DI_EmptyLibrary`, `DI_Onboarding` | todo (last) | Needs an empty library or a fresh install — wipes data on the shared Duo simulator, so it goes last. | |
-| 6 | Viewer | `DI_Viewer` | done (2026-10-24) | Fixed: in landscape the inner display's safe area starts at y 0 (status bar is in the rail), so the top row sat at y 8 and the Close circle was tangent to the ~66pt top-left corner curve. On `.duoInner` the viewer's top row, the Single/2-Up/Survey picker, the zoomed download ring and Compare's top bar now start at `CompareLayout.duoInnerTopInset` = 32 (~15pt clear of the curve). Board: mode picker added, info capsule 576 wide (it stops at the picker), Delete and the action pill inside the 84pt rail as DESIGN.md §10.1b says. Not a leak: the Library controls in the dump sit under a `fullScreenCover`, which takes them out of VoiceOver. Checked: Duo inner viewer + 2-Up. `DI_ViewerCloudDownload` not reachable here (no iCloud placeholder on the sim). | |
+| 6 | Viewer | `DI_Viewer` | done (2026-10-24) | Fixed: in landscape the inner display's safe area starts at y 0 (status bar is in the rail), so the top row sat at y 8 and the Close circle was tangent to the ~66pt top-left corner curve. On `.duoInner` the viewer's top row, the Single/2-Up/Survey picker, the zoomed download ring and Compare's top bar now start at `CompareLayout.duoInnerTopInset` = 32 (~15pt clear of the curve). Board: mode picker added, info capsule 576 wide (it stops at the picker), Delete and the action pill inside the 84pt rail as DESIGN.md §10.1b says. Not a leak: the Library controls in the dump sit under a `fullScreenCover`, which takes them out of VoiceOver. Checked: Duo inner viewer + 2-Up. `DI_ViewerCloudDownload` not reachable here (no iCloud placeholder on the sim). | 44465e3b |
 | 7 | Metadata / Info keywords | `DI_Metadata`, `DI15_InfoKeywords` | todo | | |
 | 8 | Collections (Albums) | `DI_Collections` | todo | | |
 | 9 | Album detail | `DI_AlbumDetail` | todo | | |
