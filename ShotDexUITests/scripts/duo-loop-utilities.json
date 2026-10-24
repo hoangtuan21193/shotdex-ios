@@ -1,0 +1,10 @@
+{
+  "steps": [
+    { "action": "launch" },
+    { "action": "wait", "seconds": 8 },
+    { "action": "tap", "label": "Utilities" },
+    { "action": "wait", "seconds": 4 },
+    { "action": "dump", "name": "DI_Utilities" },
+    { "action": "wait", "seconds": 40 }
+  ]
+}
