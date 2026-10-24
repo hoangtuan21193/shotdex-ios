@@ -7,6 +7,8 @@
 </head>
 <body>
 <x-dc>
+<!-- FS-19.07 §9 (2026-10-25): when the checked copy is the Photos copy and the photo has a copy on a server source, the note under the list adds "They move to Recently Deleted. iCloud space is freed after Recently Deleted is emptied." Right before Photos is called, ShotDex asks the server for each matched file (path, size, modification date). Results are standard system alerts, not drawn: "2 photos weren't deleted — they're no longer on NAS Home." (OK) and, when the server can't be reached, "Can't reach NAS Home" / "ShotDex couldn't check that these are still on NAS Home." with Delete Anyway (destructive) and Cancel. The NAS copy is never hidden by this delete. -->
+
 <helmet>
 <style>
 body{margin:0}

@@ -104,5 +104,6 @@ dựa trên nguồn FS-19 · Folder trong điều kiện · một dấu lưới 
 
 ## 10. Board
 
-Chưa vẽ: dòng Folder trong `PH_/IP_/DI_/DC_SmartAlbumEditor`; dòng tiến độ trên `*_SmartAlbum`; alert sau xoá và alert
-*Delete Anyway* (`*_DeleteCopies`); mục On Server trong Photo Info (đợt 2). Vẽ trước khi code.
+Dòng Folder: `PH_/IP_/DI_/DC_SmartAlbumEditor` · dòng tiến độ + chip Source: `PH_/IP_/DI_/DC_SmartAlbum` (vẽ
+2026-10-25). Alert sau xoá và alert *Delete Anyway* là alert hệ thống, không vẽ — chữ ghi trong comment của
+`PH_/IP_/DI_DeleteCopies`. Mục On Server trong Photo Info vẽ ở đợt 2.
