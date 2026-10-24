@@ -1,0 +1,12 @@
+{
+  "steps": [
+    { "action": "launch" },
+    { "action": "wait", "seconds": 8 },
+    { "action": "tap", "label": "Photo, file type", "type": "cell", "index": 2 },
+    { "action": "wait", "seconds": 4 },
+    { "action": "tap", "label": "Edit" },
+    { "action": "wait", "seconds": 6 },
+    { "action": "dump", "name": "DI1_Edit" },
+    { "action": "wait", "seconds": 50 }
+  ]
+}

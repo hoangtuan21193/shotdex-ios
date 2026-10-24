@@ -19,6 +19,7 @@ struct PhotoEditorScreen: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(AppDependencies.self) private var dependencies
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    @Environment(\.isDuoInner) private var isDuoInner
 
     let origin: PhotoEditOrigin
     /// Every photo opened together, when the editor was entered from a multi-photo
@@ -843,8 +844,11 @@ struct PhotoEditorScreen: View {
                         // The editor claims the safe areas, so the bar has to
                         // carry the top one itself — `max` would tuck the
                         // Back/Save row under an iPad Split View's clock. 52 is
-                        // the 44pt row with 4pt of air above and below it.
-                        bandHeight: 52 + proxy.safeAreaInsets.top,
+                        // the 44pt row with 4pt of air above and below it. The
+                        // Duo's inner display has no top safe area but ~66pt
+                        // corner curves, which took Back and Save at y 4.
+                        bandHeight: wideCommandRowTop(safeTop: proxy.safeAreaInsets.top) + 48,
+                        commandRowTop: wideCommandRowTop(safeTop: proxy.safeAreaInsets.top),
                         safeArea: proxy.safeAreaInsets,
                         canvasWidth: proxy.size.width,
                         canvasHeight: proxy.size.height
@@ -1181,9 +1185,16 @@ struct PhotoEditorScreen: View {
     /// gets height — a 246pt panel takes a third of an iPad's short side. Back
     /// and Save move up into the band so they stay reachable with the sidebar
     /// collapsed.
+    /// Where the wide band's row of discs starts: under the top safe area, and
+    /// on the Duo's inner display clear of its corner curves.
+    private func wideCommandRowTop(safeTop: CGFloat) -> CGFloat {
+        max(safeTop + AppTheme.Spacing.xs, isDuoInner ? CompareLayout.duoInnerTopInset : 0)
+    }
+
     private func wideBody(
         _ controller: PhotoEditorController,
         bandHeight: CGFloat,
+        commandRowTop: CGFloat,
         safeArea: EdgeInsets,
         canvasWidth: CGFloat,
         canvasHeight: CGFloat
@@ -1227,7 +1238,7 @@ struct PhotoEditorScreen: View {
                     // undo disc 800pt away from the slider the hand is holding
                     // is the measured cost of not mirroring this.
                     mirrored: sidebarEdge == .leading,
-                    topInset: safeArea.top + AppTheme.Spacing.xs
+                    topInset: commandRowTop
                 )
                 .transition(.opacity)
 
