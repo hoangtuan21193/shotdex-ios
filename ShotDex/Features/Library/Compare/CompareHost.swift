@@ -55,7 +55,7 @@ struct CompareHost: ViewModifier {
                 if showsChrome, !isComparing, let windowClass {
                     singleModePicker(windowClass)
                         .padding(.trailing, CompareLayout.margin)
-                        .padding(.top, AppTheme.Spacing.sm)
+                        .padding(.top, windowClass == .duoInner ? CompareLayout.duoInnerTopInset : AppTheme.Spacing.sm)
                 }
             }
             .background {

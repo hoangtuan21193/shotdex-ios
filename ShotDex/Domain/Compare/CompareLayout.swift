@@ -11,6 +11,12 @@ import CoreGraphics
 enum CompareLayout {
     /// The stage's side margin.
     static let margin: CGFloat = 16
+    /// How far the viewer's top row (Close, the info capsule, the mode picker)
+    /// sits below the top of the Duo's inner display. In landscape the status
+    /// bar is in the side rail, so the safe area starts at 0 and the usual 8pt
+    /// left the Close circle tangent to the ~66pt corner curve; 32 clears it by
+    /// ~15pt, as `DI_Viewer` draws it.
+    static let duoInnerTopInset: CGFloat = 32
     /// Between the two frames of a side-by-side 2-Up, on every display.
     static let sideBySideGap: CGFloat = 16
 

@@ -32,7 +32,11 @@ struct CompareStage: View {
     /// in the display's ~37pt corner curve: it starts 28pt down, as
     /// `DC_Compare` draws it.
     private var topInset: CGFloat {
-        windowClass == .duoCover ? 28 : AppTheme.Spacing.sm
+        switch windowClass {
+        case .duoCover: 28
+        case .duoInner: CompareLayout.duoInnerTopInset
+        default: AppTheme.Spacing.sm
+        }
     }
 
     private var modes: [ViewerMode] { ViewerMode.available(for: windowClass, isComparing: true) }

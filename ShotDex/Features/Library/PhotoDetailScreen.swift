@@ -123,6 +123,9 @@ struct PhotoDetailScreen: View {
     /// area, so the video inset must clear this gap too, not just the panel.
     @State private var safeAreaBottom: CGFloat = 0
     @State private var safeAreaTop: CGFloat = 0
+    /// The Duo's inner display, whose top corners the chrome has to clear —
+    /// see `CompareLayout.duoInnerTopInset`.
+    @State private var isDuoInner = false
     /// Measured width of the info panel's content frame. The summary lines are
     /// fitted to it, so the panel never truncates a value mid-word. Measured
     /// once via `measureWidth` rather than a per-frame GeometryReader — the
@@ -273,7 +276,7 @@ struct PhotoDetailScreen: View {
                     }
                     .padding(.trailing, modePickerWidth)
                     .padding(.horizontal)
-                    .padding(.top, 8)
+                    .padding(.top, chromeTopInset)
                     Spacer()
                     if let metadata = currentMetadata {
                         actionBar(metadata)
@@ -294,6 +297,17 @@ struct PhotoDetailScreen: View {
         // original: the ring alone, top-right, until it arrives (FS-02.06
         // AC-2). No number; VoiceOver reads the percent.
         .overlay(alignment: .topTrailing) { zoomedDownloadCorner }
+        .onGeometryChange(for: Bool.self) { proxy in
+            let insets = proxy.safeAreaInsets
+            let window = VideoStudioWindowClass.windowSize(
+                content: proxy.size,
+                top: insets.top,
+                bottom: insets.bottom,
+                leading: insets.leading,
+                trailing: insets.trailing
+            )
+            return VideoStudioWindowClass.resolve(window: window, trailingInset: insets.trailing) == .duoInner
+        } action: { isDuoInner = $0 }
         .background(
             // A GeometryReader that ignores the safe area reports the inset it
             // covers — how we read the home-indicator gap without disturbing the
@@ -678,10 +692,12 @@ struct PhotoDetailScreen: View {
                 EmptyView()
             }
         }
-        .padding(.top, 8)
+        .padding(.top, chromeTopInset)
         .padding(.trailing, 20)
         .allowsHitTesting(false)
     }
+
+    private var chromeTopInset: CGFloat { isDuoInner ? CompareLayout.duoInnerTopInset : 8 }
 
     private var showsViewerChrome: Bool {
         !isComparing
