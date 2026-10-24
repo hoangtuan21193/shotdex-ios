@@ -1,0 +1,14 @@
+{
+  "steps": [
+    { "action": "launch" },
+    { "action": "wait", "seconds": 8 },
+    { "action": "tap", "label": "Photo, file type", "type": "cell", "index": 2 },
+    { "action": "wait", "seconds": 4 },
+    { "action": "tap", "label": "More actions" },
+    { "action": "wait", "seconds": 2 },
+    { "action": "tap", "label": "Cull From Here" },
+    { "action": "wait", "seconds": 5 },
+    { "action": "dump", "name": "DI14_Cull" },
+    { "action": "wait", "seconds": 45 }
+  ]
+}

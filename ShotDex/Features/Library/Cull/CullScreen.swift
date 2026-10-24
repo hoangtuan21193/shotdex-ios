@@ -10,6 +10,9 @@ struct CullScreen: View {
     @State var model: CullModel
     let photoLibrary: PhotoLibraryService
     @Environment(\.dismiss) private var dismiss
+    /// The Duo's inner display, whose top corners Close and Undo have to
+    /// clear — see `CompareLayout.duoInnerTopInset`.
+    @Environment(\.isDuoInner) private var isDuoInner
     /// Delete N Rejected…: the system's deletion, its dialog the only
     /// confirmation (FS-01.12b §3).
     var deleteRejectedPhotos: (([String]) async -> Void)?
@@ -119,6 +122,9 @@ struct CullScreen: View {
             .padding(.horizontal, CullLayout.edgeInset)
         }
         .frame(height: CullLayout.topBarHeight)
+        // The buttons sit centred in the bar; on the Duo's inner display the
+        // bar moves down until their top edge is at the inset.
+        .padding(.top, isDuoInner ? CompareLayout.duoInnerTopInset - (CullLayout.topBarHeight - CullLayout.control) / 2 : 0)
     }
 
     private var exifLine: some View {
