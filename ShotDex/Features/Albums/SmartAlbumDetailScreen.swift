@@ -642,12 +642,7 @@ struct SmartAlbumDetailScreen: View {
             }
             ToolbarItem(placement: .topBarTrailing) {
                 if model?.items.isEmpty == false {
-                    // Spelled out, like Photos.
-                    Button("Select") {
-                        isSelecting = true
-                    }
-                    .tint(.primary)
-                    .accessibilityLabel("Select photos")
+                    SelectPhotosButton { isSelecting = true }
                 }
             }
         }

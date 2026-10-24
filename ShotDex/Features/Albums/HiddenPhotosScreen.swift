@@ -35,9 +35,7 @@ struct HiddenPhotosScreen: View {
                     SelectionToolbarItems(model: selectionModel)
                 } else if model?.items.isEmpty == false {
                     ToolbarItem(placement: .topBarTrailing) {
-                        Button("Select") { isSelecting = true }
-                            .tint(.primary)
-                            .accessibilityLabel("Select photos")
+                        SelectPhotosButton { isSelecting = true }
                     }
                 }
             }

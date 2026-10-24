@@ -30,3 +30,57 @@ struct GridNavigationTitle: View {
         .accessibilityElement(children: .combine)
     }
 }
+
+extension EnvironmentValues {
+    /// The window is the Duo's inner display (`VideoStudioWindowClass.duoInner`),
+    /// set once at the root by `resolvesDuoInner()`.
+    @Entry var isDuoInner = false
+}
+
+extension View {
+    /// Works out once, for every screen below, whether the window is the
+    /// Duo's inner display.
+    func resolvesDuoInner() -> some View {
+        modifier(DuoInnerResolver())
+    }
+}
+
+private struct DuoInnerResolver: ViewModifier {
+    @State private var isDuoInner = false
+
+    func body(content: Content) -> some View {
+        content
+            .environment(\.isDuoInner, isDuoInner)
+            .onGeometryChange(for: Bool.self) { proxy in
+                let insets = proxy.safeAreaInsets
+                let window = VideoStudioWindowClass.windowSize(
+                    content: proxy.size,
+                    top: insets.top,
+                    bottom: insets.bottom,
+                    leading: insets.leading,
+                    trailing: insets.trailing
+                )
+                return VideoStudioWindowClass.resolve(window: window, trailingInset: insets.trailing) == .duoInner
+            } action: { isDuoInner = $0 }
+    }
+}
+
+/// A grid screen's Select button. Spelled out, like Photos — except on the
+/// Duo's inner display, whose vertical toolbar takes icon items only: a word
+/// stays behind in the horizontal row on its own (DUO_LOOP row 1a).
+struct SelectPhotosButton: View {
+    @Environment(\.isDuoInner) private var isDuoInner
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            if isDuoInner {
+                Label("Select", systemImage: "checkmark.circle")
+            } else {
+                Text("Select")
+            }
+        }
+        .tint(.primary)
+        .accessibilityLabel("Select photos")
+    }
+}

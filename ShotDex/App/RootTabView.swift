@@ -146,8 +146,10 @@ struct RootTabView: View {
             OnboardingScreen()
         } else if #available(iOS 26.0, *) {
             withSceneRestoration(nativeTabView)
+                .resolvesDuoInner()
         } else {
             withSceneRestoration(legacyTabView)
+                .resolvesDuoInner()
         }
     }
 

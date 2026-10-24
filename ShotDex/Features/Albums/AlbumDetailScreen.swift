@@ -692,12 +692,7 @@ struct AlbumDetailScreen: View {
             }
             ToolbarItem(placement: .topBarTrailing) {
                 if model?.photos.isEmpty == false {
-                    // Spelled out, like Photos.
-                    Button("Select") {
-                        isSelecting = true
-                    }
-                    .tint(.primary)
-                    .accessibilityLabel("Select photos")
+                    SelectPhotosButton { isSelecting = true }
                 }
             }
         }
