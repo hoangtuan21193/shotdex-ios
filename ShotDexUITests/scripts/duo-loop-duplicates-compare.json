@@ -1,0 +1,20 @@
+{
+  "steps": [
+    { "action": "launch" },
+    { "action": "wait", "seconds": 8 },
+    { "action": "tap", "label": "Utilities" },
+    { "action": "wait", "seconds": 3 },
+    { "action": "tap", "label": "Duplicates", "type": "button" },
+    { "action": "wait", "seconds": 6 },
+    { "action": "tap", "label": "Suggested to keep", "type": "button", "index": 0 },
+    { "action": "wait", "seconds": 5 },
+    { "action": "dump", "name": "DI_DuplicatesCompare" },
+    { "action": "wait", "seconds": 45 },
+    { "action": "tap", "label": "Close" },
+    { "action": "wait", "seconds": 3 },
+    { "action": "tap", "label": "1 selected", "type": "button" },
+    { "action": "wait", "seconds": 4 },
+    { "action": "dump", "name": "DI_DeleteCopies" },
+    { "action": "wait", "seconds": 45 }
+  ]
+}

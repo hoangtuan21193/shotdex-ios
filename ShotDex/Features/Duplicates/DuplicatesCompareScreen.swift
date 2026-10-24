@@ -12,6 +12,9 @@ struct DuplicatesCompareScreen: View {
     let presentation: DuplicateComparePresentation
     @Environment(PhotoLibraryService.self) private var photoLibrary
     @Environment(\.dismiss) private var dismiss
+    /// The Duo's inner display, whose top corners the close button has to
+    /// clear — see `CompareLayout.duoInnerTopInset`.
+    @Environment(\.isDuoInner) private var isDuoInner
     @State private var synchronizer = CompareScrollSynchronizer()
     /// Photos put into a pane by a swipe; a pane not in here shows its
     /// default from `ordered`.
@@ -72,7 +75,7 @@ struct DuplicatesCompareScreen: View {
             Color.clear.frame(width: 44, height: 44)
         }
         .padding(.horizontal, CullLayout.edgeInset)
-        .padding(.top, AppTheme.Spacing.sm)
+        .padding(.top, isDuoInner ? CompareLayout.duoInnerTopInset : AppTheme.Spacing.sm)
     }
 
     // MARK: Panes
