@@ -35,10 +35,9 @@
 ## 3. Viewer — `IP_Viewer`, `IP_Metadata`, `IP18_ViewerRating`, `IP19_ViewerMenu`, `IP_Share`, `IPP16_InfoKeywords`
 
 - Mở **trong cửa sổ**: sidebar ẩn, Back về lưới đúng chỗ cuộn và lựa chọn. Vuốt ngang vẫn lật ảnh, pinch phóng.
-- Toolbar: Show Sidebar · Back · tên file + nhãn định dạng, dòng phụ ngày · "12 of 112" · `[Single · 2-Up · Survey]`
-  (FS-01.08c) · `[Zoom · Favorite · Rotate Counterclockwise · Share · Delete · ⋯]` · Hide Inspector · **Edit**.
-- 2-Up và Survey luôn đồng bộ phóng và kéo, không có nút Sync Zoom and Pan; segmented cờ None/Pick/Reject cao **44**
-  ở Compare và inspector (FS-01.08c).
+- Toolbar: Show Sidebar · Back · tên file + nhãn định dạng, dòng phụ ngày · "12 of 112"
+  · `[Zoom · Favorite · Rotate Counterclockwise · Share · Delete · ⋯]` · Hide Inspector · **Edit**.
+- Single · 2-Up · Survey đã bỏ 2026-10-24; Compare từ chế độ chọn là màn A/B của Duplicates ([FS-01.08](../FS-01-library/08-compare.md)).
 - Filmstrip cao 100 ở đáy vùng ảnh, ô 64, ô hiện tại viền amber; chạm ô để nhảy.
 - Inspector 360 (thay cột Photo Info): Rating and Flag (5 sao 44 · None/Pick/Reject) · Histogram · Caption and
   Keywords · Camera and Lens (+ 4 ô ISO/Focal/Aperture/Shutter) · Location (bản đồ) · File (Source, Original, Dimensions)

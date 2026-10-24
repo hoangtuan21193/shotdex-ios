@@ -37,7 +37,7 @@ chờ phiên đó commit.
 
 | Tài liệu | Sửa |
 |---|---|
-| FS-01 `08-compare.md` §1–§7 | Compare là chế độ Viewer (08c); Duplicates ghi cờ thật, giữ cổng "Keep at least one" |
+| FS-01 `08-compare.md` §1–§7 | ~~Compare là chế độ Viewer (08c)~~ — bỏ 2026-10-24; 08 viết lại: màn A/B của Duplicates |
 | FS-01.12 §3/§4/§7 | ghi `.xmp` và đọc rating máy ảnh áp cho ảnh file; bảng cờ dùng chung mọi ảnh |
 | FS-01.12b | công tắc **Advance After**; tên lệnh xoá theo đích (Move/Delete/Hide N Rejected…) |
 | FS-02.01b §2 | `.` = Favorite; ← → lùi-tiến một khung trên video đang dừng |
@@ -68,7 +68,7 @@ chờ phiên đó commit.
 
 | Canvas | Board |
 |---|---|
-| Mac | `MAC_Compare(Survey)` Delete N trên toolbar, bỏ Sync Zoom; `MAC_Duplicates` nhóm Exact chỉ hiện đường dẫn; `MAC_SettingsSources` bỏ Backup Source; `MAC_Cull` dời nút Move N Rejected…; `MAC_GetInfo` nhiều ảnh; ◀ trên `MAC_Collage`/`MAC_Compress`/`MAC_Merge`; `MAC_MenuBar` dòng Image |
+| Mac | ~~`MAC_Compare(Survey)`~~ (xoá 2026-10-24); `MAC_Duplicates` nhóm Exact chỉ hiện đường dẫn; `MAC_SettingsSources` bỏ Backup Source; `MAC_Cull` dời nút Move N Rejected…; `MAC_GetInfo` nhiều ảnh; ◀ trên `MAC_Collage`/`MAC_Compress`/`MAC_Merge`; `MAC_MenuBar` dòng Image |
 | iPad | xem FS-21 §3 phần board; thêm Ingest dọc |
 | iPhone | `PH_` nguồn thư mục, server, Hidden, hộp xoá hẳn, `PH_Ingest`; ⋯ thêm lệnh; Settings Sources; Viewer sáng |
 | Duo | như iPhone cho `DI_`/`DC_`, gồm `DI_Ingest`, `DC_Ingest` |

@@ -186,11 +186,7 @@ struct LibraryScreen: View {
                 PhotoDetailScreen(model: model, currentIndex: target.startIndex)
             }
         }
-        .fullScreenCover(item: $compareRequest, onDismiss: stopSelecting) { request in
-            if let model {
-                PhotoDetailScreen(model: model, currentIndex: request.startIndex, compareRequest: request)
-            }
-        }
+        .selectionCompare($compareRequest, onDismiss: stopSelecting)
         .multiEditCover($multiEditPresentation, sourceAlbum: nil, onDismiss: stopSelecting)
         .pasteEditsSheet($pasteEditsPresentation, onDismiss: stopSelecting)
         .photoStackCover($stackPresentation, onSaved: { assetID in
@@ -605,7 +601,7 @@ struct LibraryScreen: View {
             onCollage: { presentCollage(model) },
             onVideo: { presentVideoStudio(model) },
             onCompare: {
-                compareRequest = CompareRequest(selection: selectedIds, source: model)
+                compareRequest = CompareRequest(selection: selectedIds)
             },
             onCompress: { presentCompression(model) },
             onEdit: { presentMultiEdit(model) },

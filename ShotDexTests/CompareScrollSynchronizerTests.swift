@@ -3,7 +3,7 @@ import UIKit
 @testable import ShotDex
 
 /// Zoom and pan stay in step across every frame of a comparison, with no
-/// switch to turn that off (FS-01.08c AC-16, 08 §5). Real `UIScrollView`s,
+/// switch to turn that off (FS-01.08 §3). Real `UIScrollView`s,
 /// because the synchronizer only ever talks to UIKit.
 @MainActor
 struct CompareScrollSynchronizerTests {

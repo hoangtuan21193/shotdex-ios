@@ -170,8 +170,9 @@ photos, not Creations entries (FS-06.01b) · Duplicates has no "Keep Both" (FS s
   Viewer is NOT tier D: its image area uses the window background (no dark well).
 - **Viewer and Editor open inside the main window** (Return opens, Esc/Back returns to the grid at the same scroll
   and selection; sidebar hides). "Open in New Window" ⌥⌘O is the option. No second-display viewer.
-- **Compare is a mode of the Viewer**: segmented Single · 2-Up · Survey in the Viewer toolbar, P/X flags, Z zoom,
-  synced zoom. No separate Compare window, no key legend band. Cull keeps its key strip with a Hide button.
+- **Compare is the Duplicates A/B screen** (2026-10-24; the Viewer's Single · 2-Up · Survey is gone on every device):
+  two panes, Keep | Delete per photo, synced zoom, Delete N on the top bar — FS-01.08. Cull keeps its key strip with a
+  Hide button.
 - **Saving edits**: folder/NAS photos autosave (toolbar shows "Edited · Saved" + Revert, no Done). Photos-library
   photos have Done + Revert (Done writes to Photos). Export has no "Save Edit" segment.
 - **Metadata**: ratings, flags, keywords, title, caption are read from and written to `.xmp` sidecars next to the

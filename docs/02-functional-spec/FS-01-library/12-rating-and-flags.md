@@ -33,7 +33,7 @@ việc này bằng P/X và 1–5. Trên ShotDex hôm nay phải mở Compare the
 - Cờ trong Photos — Photos không có khái niệm này. Cờ nằm trên máy này, **không** đồng bộ iCloud.
 - Pick tự bật favorite — người dùng chốt hai thứ độc lập.
 - Nhãn màu kiểu Lightroom — không ai đòi. Thêm vào là trục thứ tư.
-- ~~Cờ trong Compare~~ — có từ 2026-10-12: Compare đặt cờ thật, Reject = đánh dấu xoá ([FS-01.08c](08c-compare-viewer-mode.md)).
+- ~~Cờ trong Compare~~ — có từ 2026-10-12, bỏ 2026-10-24 cùng chế độ so sánh của Viewer: Compare giờ chỉ Keep | Delete trong màn, không đặt cờ ([FS-01.08](08-compare.md)).
 - Câu tìm kiếm kiểu "ảnh 5 sao" — v1 dùng bộ lọc. Parser thêm sau, không đổi dữ liệu.
 - Ghi sao vào **file ảnh** (XMP nhúng) — app không ghi đè file gốc. Ảnh file (thư mục, ổ, server) có sao, cờ, keyword ghi
   ra **sidecar `.xmp`** cạnh mọi bản sao online, trễ 1 giây sau thay đổi cuối ([FS-19.02 §5](../FS-19-photo-sources/02-identity-and-sidecars.md));

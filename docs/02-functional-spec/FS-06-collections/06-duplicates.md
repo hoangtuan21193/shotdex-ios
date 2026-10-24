@@ -224,7 +224,7 @@ theo người dùng: màn cũ không rõ ô nào là ảnh giữ, không thấy 
 - Ô B ghi bằng chip vàng điểm **khác A** (*Softer*, *Eyes closed*, *Smaller*…), không ghi kích thước · MB.
 - **Filmstrip** ở đáy (56pt, iPad 64pt): cả nhóm, ✓ trắng = giữ, chấm đỏ = xoá (mờ đi), ảnh đang ở ô nào có khung trắng + chữ A/B.
 - **Giữ ngón tay** trên một ô: ô đó tạm hiện ảnh của ô kia, cùng mức zoom; thả ra thì về. **Pinch một ô thì cả hai zoom và pan theo.**
-- X hoặc vuốt xuống để đóng. Compare của thư viện (FS-01.08c) giữ nguyên cho việc chọn ảnh, Duplicates không dùng nó. Áp dụng cho
+- X hoặc vuốt xuống để đóng. Từ 2026-10-24 đây cũng là màn Compare của thư viện khi chọn ảnh ([FS-01.08](../FS-01-library/08-compare.md)) — cùng `PhotoCompareScreen`, nguồn chọn ảnh thêm nút Delete N; nguồn Duplicates không có. Áp dụng cho
   **mọi** loại nhóm; màn chọn khung (§8) mở bằng cách chạm ảnh ở thẻ Burst.
 
 ## 8. Màn chọn khung dùng chung (D8)
@@ -243,7 +243,7 @@ Thay phần màn hình của FS-02.05 §4; luật xoá burst của FS-02.05 §2 
   lựa chọn làm dấu của nhóm). Không chọn gì: nút đỏ mờ với dòng *"Choose at least one frame to keep"*. Nút đóng nằm ở
   đáy, vuốt xuống để đóng (A6); không có nút X ở góc trên trái.
 - Lựa chọn trong màn này **là** dấu của nhóm (06b §1): đóng màn thì thẻ hiện đúng các khung đã đánh dấu.
-- **iPad**: thêm chế độ **Survey** dùng lại từ Compare ([FS-01.08c](../FS-01-library/08c-compare-viewer-mode.md)): 2–6 khung
+- **iPad**: thêm chế độ **Survey** riêng của màn này (Survey của Viewer đã bỏ 2026-10-24): 2–6 khung
   cùng lúc, zoom đồng bộ giữa các ô. iPhone không có Survey.
 - **Duo**: màn trong và màn ngoài đều có đủ màn chọn khung (người dùng 2026-10-17). Màn ngoài: khung lớn trong 382×678
   (sau rail 84), dải phim 48pt.

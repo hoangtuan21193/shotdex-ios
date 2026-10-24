@@ -54,11 +54,7 @@ struct AlbumDetailScreen: View {
                 PhotoDetailScreen(model: model, currentIndex: target.startIndex)
             }
         }
-        .fullScreenCover(item: $compareRequest, onDismiss: stopSelecting) { request in
-            if let model {
-                PhotoDetailScreen(model: model, currentIndex: request.startIndex, compareRequest: request)
-            }
-        }
+        .selectionCompare($compareRequest, onDismiss: stopSelecting)
         .multiEditCover($multiEditPresentation, sourceAlbum: model?.sourceAlbum, onDismiss: stopSelecting)
         .fullScreenCover(item: $compressionPresentation, onDismiss: stopSelecting) { presentation in
             CompressionScreen(
@@ -542,7 +538,7 @@ struct AlbumDetailScreen: View {
             onCollage: { presentCollage(model) },
             onVideo: { presentVideoStudio(model) },
             onCompare: {
-                compareRequest = CompareRequest(selection: selectedIds, source: model)
+                compareRequest = CompareRequest(selection: selectedIds)
             },
             onCompress: { presentCompression(model) },
             onEdit: { presentMultiEdit(model) },

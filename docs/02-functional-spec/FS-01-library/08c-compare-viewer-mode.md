@@ -1,5 +1,8 @@
 # FS-01.08c — Compare là một chế độ của Viewer (mọi thiết bị)
 
+> **ĐÃ BỎ 2026-10-24** ([intent](../../_intents/2026-10-24-drop-viewer-compare-modes.md)): Single · 2-Up · Survey bị gỡ khỏi Viewer trên mọi thiết bị, code và board đã xoá. Compare từ chế độ chọn giờ là màn A/B của Duplicates — xem [FS-01.08](08-compare.md). Phần dưới chỉ còn là lịch sử.
+
+
 `FS-01.08c` · tier B (theo sáng/tối như Viewer, **không** tầng D) · `Features/Library/Compare/` · `Domain/Compare/`
 · test `CompareLayoutTests`, `CompareSessionTests`, `CompareModelTests` · cập nhật 2026-10-12 · nguồn: D15 ([DECISIONS](../../../.planboard/macos-app/DECISIONS.md)),
 intent [iPad](../../_intents/2026-10-04-ipad-mac-style.md) · board `MAC_Compare(Survey)`, `IP_Compare(Survey)`,
@@ -87,7 +90,7 @@ phóng, cắm Pick/Reject từng ảnh; **Reject = đánh dấu xoá**, và mộ
 
 - Chế độ chọn → **Compare** (≥ 2 mục, không trần trên): ảnh chọn đầu là Select, thứ tự = thứ tự chọn; mở ở 2-Up
   (iPhone/Duo ngoài: Compare).
-- Từ Duplicates: như 08 §2, giữ cổng *"Keep at least one photo in this group."* trên nút Reject của ảnh cuối.
+- Từ Duplicates: như 08 §2 — không còn cổng "Keep at least one photo"; Reject được cả ảnh cuối (2026-10-24).
 - Reject trong Compare mở từ Duplicates ghi **cờ thật** của FS-01.12 — còn sau khi rời nhóm, lưới và bộ lọc Rejected thấy.
 - **Màn rộng** (iPad, Duo trong, Mac): Viewer mở từ một ảnh (không chọn) rồi bấm 2-Up: Select = ảnh đang xem,
   **Candidate = ảnh kế trong lưới**.
@@ -124,7 +127,7 @@ phóng, cắm Pick/Reject từng ảnh; **Reject = đánh dấu xoá**, và mộ
 | AC-12 | Mac, 3 ảnh của nguồn thư mục `2026 Japan`, 1 Reject | Delete → *Move 1 Photo to the Trash?* → Move | file và `.xmp` của nó ở Thùng rác; nguồn còn 2 ảnh trong lưới | ⚠️ chưa có |
 | AC-13 | 3 ảnh của nguồn NAS, 1 Reject | Delete → *Hide 1 Photo?* → Hide | ảnh mất khỏi lưới ShotDex; file trên NAS có cùng SHA-256 như trước | ✅ logic: `CompareSourcesTests.nasPhotosAreHidden` (Delete N trong Compare với ảnh NAS → *Hide 2 photos?* qua `SourceDeletionFlow`, PhotoKit không bị hỏi; ẩn không đụng file — FS-19 AC-43); ảnh chụp chưa có |
 | AC-14 | Duo trong, Survey 6 ảnh, ô 4 đang làm việc | gập máy | Duo ngoài mở Compare xếp chồng, Select = ảnh 4; mọi control trong x ≤ 366 | ⚠️ chưa có (không có lệnh gập trên sim) |
-| AC-15 | Duplicates nhóm 2 ảnh, ảnh 1 Reject | bấm Reject trên ảnh 2 | ảnh 2 không đổi; rung cảnh báo + *Keep at least one photo in this group.* | `DuplicateKeepGateTests`, `CompareModelTests.theGroupsLastPhotoRefusesReject` |
+| AC-15 | nhóm 2 ảnh, ảnh 1 Reject | bấm Reject trên ảnh 2 | ảnh 2 mang Reject; không cảnh báo (cổng bỏ 2026-10-24) | `CompareModelTests.everyPhotoCanTakeReject` |
 | AC-16 | iPad và Mac, 2-Up | đọc toolbar; pinch khung Select lên 100% | 0 nút *Sync Zoom and Pan*; cả hai khung 100% | `CompareScrollSynchronizerTests` (không có công tắc trong code) |
 | AC-17 | Duplicates nhóm 3 ảnh, mở Compare | Reject ảnh 2 → đóng Compare và Duplicates | lưới: ảnh 2 mờ 45% có cờ Reject; bộ lọc Rejected chứa nó | route `cmp-dup`: Reject trong Compare → đóng → ô Duplicates đã đánh dấu; cờ là `photo_flag` thật (lưới mờ 45 % theo FS-01.12) |
 | AC-18 | Mac, Survey 6 ảnh, 2 Reject | đọc toolbar; bấm `⌘⌫`; chuột phải khung 1 | **Delete 2 Photos** ngay trước Edit; `⌘⌫` mở cùng hộp xác nhận; menu chuột phải và menu Photo có **Keep Only This** | ⚠️ chưa có |

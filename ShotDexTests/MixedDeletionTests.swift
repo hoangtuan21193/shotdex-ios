@@ -66,7 +66,7 @@ import Testing
     /// AC-41: the dialog of AC-40, Move, then Cancel in the system's Photos
     /// dialog. Only the Photos part stays — still there, still Rejected; the
     /// folder files already went to the Trash and the NAS photo is hidden
-    /// (board mac-ipad-v2 A7, FS-01.08c §6).
+    /// (board mac-ipad-v2 A7, FS-19.04 §2).
     @Test func photosCancelKeepsPhotosPart() async throws {
         let library = try Self.library()
         defer { try? FileManager.default.removeItem(at: library.root.deletingLastPathComponent()) }

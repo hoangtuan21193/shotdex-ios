@@ -268,14 +268,14 @@
     },
     "DC_Collections.dc.html": {
       "h": 678,
-      "title": "Duo màn ngoài · Collections: hero 180, Smart Albums và My Albums cover 132, rail tab",
+      "title": "Duo màn ngoài · Collections: hero 180, Smart Albums và My Albums cover 132, rail tab (công cụ sang tab Utilities 20/10)",
       "w": 466,
       "x": 5460,
       "y": 1609
     },
     "DC_Compare.dc.html": {
       "h": 678,
-      "title": "Duo màn ngoài · Viewer Compare xếp chồng trong 382pt, Hide 1 Photo (NAS)",
+      "title": "Duo màn ngoài · Compare: PH_Compare thu vào 382pt cạnh rail (chưa đo — sim không mở được màn ngoài)",
       "w": 466,
       "x": 3822,
       "y": 1609
@@ -317,7 +317,7 @@
     },
     "DC_Duplicates.dc.html": {
       "h": 678,
-      "title": "Duo ngoài · Duplicates mở ra là danh sách ngay, dải Quick clean đầu danh sách + Review…; (v3): 1 cột 350, hàng lọc cuộn ngang, Compare thành nút icon (chữ không vừa 326), nhóm 24 thu gọn; thẻ Bracket xem DI_Duplicates; chạm ảnh mở Compare của nhóm (pinch zoom chung) — đề xuất 17/10",
+      "title": "Duo ngoài · Duplicates mở ra là danh sách ngay, dải Quick clean đầu danh sách + Review…; (v3): 1 cột 350, hàng lọc cuộn ngang, thẻ không còn hàng nút dưới (Keep all · Not duplicates ở menu nhấn giữ ảnh), thẻ chỉ có ảnh, luôn hiện đủ ảnh; chạm ảnh mở Compare của nhóm (pinch zoom chung) — đề xuất 17/10",
       "w": 466,
       "x": 9282,
       "y": 1609
@@ -346,7 +346,7 @@
     },
     "DC_Hidden.dc.html": {
       "h": 678,
-      "title": "Duo màn ngoài · Collections › Hidden: 6 Hidden Photos",
+      "title": "Duo màn ngoài · Utilities › Hidden: 6 Hidden Photos",
       "w": 466,
       "x": 25662,
       "y": 1609
@@ -412,13 +412,6 @@
       "title": "Duo màn ngoài · Panorama: Save cùng hàng với Collage",
       "w": 466,
       "x": 21840,
-      "y": 1609
-    },
-    "DC_Places.dc.html": {
-      "h": 678,
-      "title": "Duo màn ngoài · Places: bản đồ 382pt, ghim cụm ảnh + số, rail hệ thống 84pt",
-      "w": 466,
-      "x": 8190,
       "y": 1609
     },
     "DC_Search.dc.html": {
@@ -524,13 +517,6 @@
       "title": "Duo màn ngoài · Support thread: nội dung lỗi, Conversation, ô trả lời",
       "w": 466,
       "x": 17472,
-      "y": 1609
-    },
-    "DC_Trips.dc.html": {
-      "h": 678,
-      "title": "Duo màn ngoài · Trips: thẻ cover 350×160, rail hệ thống bên phải",
-      "w": 466,
-      "x": 8736,
       "y": 1609
     },
     "DC_UploadedToServer.dc.html": {
@@ -975,23 +961,16 @@
     },
     "DI_Collections.dc.html": {
       "h": 669,
-      "title": "Duo mở · Collections: hero On This Day 260 + hàng cover Smart Albums 192, rail tab bên phải",
+      "title": "Duo mở · Collections: hero On This Day 260 + hàng cover Smart Albums 192, rail tab bên phải (công cụ sang tab Utilities 20/10)",
       "w": 951,
       "x": 12372,
       "y": 560
     },
     "DI_Compare.dc.html": {
       "h": 669,
-      "title": "Duo mở · Viewer 2-Up: luôn đồng bộ zoom, Reject · ★ · Pick, Delete 1 Photo",
+      "title": "Duo mở · Compare (chọn ≥2 ảnh): màn A/B của Duplicates, Keep | Delete, Delete 1 trên thanh trên (đo trên sim 2026-10-24)",
       "w": 951,
       "x": 8248,
-      "y": 560
-    },
-    "DI_CompareSurvey.dc.html": {
-      "h": 669,
-      "title": "Duo mở · Viewer Survey: 6 ảnh 3×2, Rejected mờ, Move 2 Photos… (2026 Japan)",
-      "w": 951,
-      "x": 9279,
       "y": 560
     },
     "DI_Compress.dc.html": {
@@ -1038,7 +1017,7 @@
     },
     "DI_Duplicates.dc.html": {
       "h": 669,
-      "title": "Duo trong · Duplicates mở ra là danh sách ngay, dải Quick clean 720 giữa màn + Review…; (v3 §7.3–7.5): hàng lọc theo loại không cuộn, 2 cột 410, thẻ 2 bản sao/hàng (ô 93), vòng 26/chạm 44, chip lý do, nhóm 24 thu gọn “Show all 24”, thẻ Bracket (Merge to HDR, không đỏ), thanh “37 selected · 210 MB ›” + Delete 37 — đề xuất 17/10",
+      "title": "Duo trong · Duplicates mở ra là danh sách ngay, dải Quick clean 720 giữa màn + Review…; (v3 §7.3–7.5): hàng lọc theo loại không cuộn, 2 cột 410, thẻ 2 bản sao/hàng (ô 93), vòng 26/chạm 44, chip lý do, thẻ chỉ có ảnh, luôn hiện đủ ảnh, chỉ thẻ Exact (bracket/focus stack là nhóm Burst), thẻ không còn hàng nút dưới (Keep all · Not duplicates ở menu nhấn giữ ảnh), thanh “37 selected · 210 MB ›” + Delete 37 — đề xuất 17/10",
       "w": 951,
       "x": 19589,
       "y": 560
@@ -1059,7 +1038,7 @@
     },
     "DI_Hidden.dc.html": {
       "h": 669,
-      "title": "Duo mở · Collections › Hidden: 6 Hidden Photos",
+      "title": "Duo mở · Utilities › Hidden: 6 Hidden Photos",
       "w": 951,
       "x": 52581,
       "y": 560
@@ -1125,13 +1104,6 @@
       "title": "Duo mở · Panorama: Save cùng hàng với Collage",
       "w": 951,
       "x": 44333,
-      "y": 560
-    },
-    "DI_Places.dc.html": {
-      "h": 669,
-      "title": "Duo mở · Places: bản đồ 867pt với 11 cụm ảnh, rail tab dọc bên phải",
-      "w": 951,
-      "x": 17527,
       "y": 560
     },
     "DI_Search.dc.html": {
@@ -1237,13 +1209,6 @@
       "title": "Duo mở · Support thread trong split view, sidebar mới chọn Support",
       "w": 951,
       "x": 36085,
-      "y": 560
-    },
-    "DI_Trips.dc.html": {
-      "h": 669,
-      "title": "Duo mở · Trips: thẻ cover 835×160 xếp dọc, rail tab bên phải",
-      "w": 951,
-      "x": 18558,
       "y": 560
     },
     "DI_UploadedToServer.dc.html": {
@@ -1549,6 +1514,48 @@
       "x": 20620,
       "y": 560,
       "title": "Duo trong · So sánh nhóm (v3 §7.6, tầng D): lưới tới 6 ảnh zoom chung, vuốt ngang đổi ảnh, mỗi ô một nút thùng rác; màn ngoài dùng bản iPhone (2 ảnh xếp chồng)"
+    },
+    "DI_Utilities.dc.html": {
+      "h": 669,
+      "title": "Duo mở · tab Utilities (24/10): card Statistics trên đầu (Photos · Cameras · Lenses + cột 12 tháng, tháng nhiều nhất màu accent; chạm mở Statistics) · Library · Create (Collages, Video Projects, Focus Stack, Panorama, HDR, Stack Exposures) · Elsewhere; Explore, Places, Trips đã gỡ",
+      "w": 951,
+      "x": 73221,
+      "y": 560
+    },
+    "DI_OnThisIPhone.dc.html": {
+      "h": 669,
+      "title": "Duo mở · Utilities › On This iPhone: thẻ dung lượng + tải, chip album, lưới 7 cột ảnh/video đã giữ",
+      "w": 951,
+      "x": 74272,
+      "y": 560
+    },
+    "DI_KeepOnIPhone.dc.html": {
+      "h": 669,
+      "title": "Duo mở · Keep on This iPhone: form sheet 652×551 (đo trên sim 21/10) — Viewing Copies/Originals, Keep New Photos Added Later",
+      "w": 951,
+      "x": 75323,
+      "y": 560
+    },
+    "DC_Utilities.dc.html": {
+      "h": 678,
+      "title": "Duo màn ngoài · tab Utilities (24/10): card Statistics trên đầu (Photos · Cameras · Lenses + cột 12 tháng, tháng nhiều nhất màu accent; chạm mở Statistics) · Library · Create (Collages, Video Projects, Focus Stack, Panorama, HDR, Stack Exposures) · Elsewhere; Explore, Places, Trips đã gỡ",
+      "w": 466,
+      "x": 34276,
+      "y": 1609
+    },
+    "DC_OnThisIPhone.dc.html": {
+      "h": 678,
+      "title": "Duo màn ngoài · Utilities › On This iPhone: thẻ dung lượng, chip album cuộn ngang, lưới 3 cột",
+      "w": 466,
+      "x": 34822,
+      "y": 1609
+    },
+    "DC_KeepOnIPhone.dc.html": {
+      "h": 678,
+      "title": "Duo màn ngoài · Keep on This iPhone: sheet detent 590 trong 382pt",
+      "w": 466,
+      "x": 35368,
+      "y": 1609
     }
   },
   "createdOnFiles": {
@@ -1696,7 +1703,6 @@
     "DI_ViewerCloudDownload.dc.html",
     "DI_Metadata.dc.html",
     "DI_Compare.dc.html",
-    "DI_CompareSurvey.dc.html",
     "DI_VideoTrim.dc.html",
     "DI_Share.dc.html",
     "DI_Collections.dc.html",
@@ -1704,8 +1710,6 @@
     "DI_SmartAlbum.dc.html",
     "DI_SmartAlbumEditor.dc.html",
     "DI_OnThisDay.dc.html",
-    "DI_Places.dc.html",
-    "DI_Trips.dc.html",
     "DI_DuplicatesCompare.dc.html",
     "DI_Duplicates.dc.html",
     "DI_BurstFrames.dc.html",
@@ -1742,8 +1746,6 @@
     "DC_SmartAlbum.dc.html",
     "DC_SmartAlbumEditor.dc.html",
     "DC_OnThisDay.dc.html",
-    "DC_Places.dc.html",
-    "DC_Trips.dc.html",
     "DC_Duplicates.dc.html",
     "DC_BurstFrames.dc.html",
     "DC_Creations.dc.html",
@@ -1902,7 +1904,13 @@
     "DC_BackupRunning.dc.html",
     "DI_SettingsAI.dc.html",
     "DI_SettingsAIProvider.dc.html",
-    "DC_SettingsAI.dc.html"
+    "DC_SettingsAI.dc.html",
+    "DI_Utilities.dc.html",
+    "DI_OnThisIPhone.dc.html",
+    "DI_KeepOnIPhone.dc.html",
+    "DC_Utilities.dc.html",
+    "DC_OnThisIPhone.dc.html",
+    "DC_KeepOnIPhone.dc.html"
   ],
   "pages": [],
   "title": "ShotDex · iPhone Duo"

@@ -20,7 +20,7 @@ Luật gộp: sửa trong cùng lượt với code của AC tương ứng (docs/
 | FS-01.05b §3–§4 + AC-26 | sheet Advanced Search của hệ thống | form sheet 700×640; chạm ngoài khi có nháp vẫn hỏi Discard |
 | FS-01.06 §1–§3 | lớp phủ toàn màn, tab bar ẩn, thanh đáy | lệnh trên toolbar, inspector tóm tắt; ⌘/⇧-chạm khi chưa chọn vào chế độ chọn ([01 §5](01-shell.md)) |
 | FS-01.07 | "Tab đang mở" là trạng thái cửa sổ | hàng sidebar đang chọn + inspector mở/đóng; giữ khi đổi bố cục qua mốc 700/1100 |
-| FS-01.08 | Compare tầng D riêng | trỏ sang FS-01.08c (chế độ Viewer, segmented cờ 44, không Sync Zoom and Pan) |
+| FS-01.08 | Compare tầng D riêng | ~~trỏ sang FS-01.08c~~ — 08c bỏ 2026-10-24; Compare = màn A/B của Duplicates (FS-01.08) |
 | FS-02 README · Chrome | nút X 52 trên-trái, bảng tóm tắt ≤ 520 | toolbar Back … Edit, inspector 360 ([02 §3](02-screens.md)) |
 | FS-02.03 §3 · FS-02.03b §1–§2 | cột Photo Info 360, tiêu đề + Done, phím I | inspector không tiêu đề, đóng bằng toolbar; I và ⌥⌘I bật/tắt, ⌘I Get Info sheet |
 | FS-02.01b AC-7, AC-10, AC-12 | Esc, ←/→ trên viewer toàn màn | giữ phím, viewer trong cửa sổ, Esc về lưới |
@@ -86,5 +86,5 @@ Luật gộp: sửa trong cùng lượt với code của AC tương ứng (docs/
 | `IP_Collage` | thêm Before and After, ⋯ Discard, khay ảnh chưa đặt ở panel trái |
 | `IPP21_Collage` · `IPP22_CollageExport` · `IPP23_Compress` · `IPP24_FocusStack` | mới, 1032×1376: tầng D dọc có cột inspector 360 (Stack Exposures, Panorama dùng chung bố cục `IPP24`; HDR đã có `IPP13`) |
 | `IP_ServerBrowser` · `IP_MenuBar` | bỏ glyph "In Library" và "Import from Server… ⇧⌘I" |
-| `IP_Compare` · `IP_CompareSurvey` | bỏ Sync Zoom and Pan; segmented cờ 44 |
+| `IP_Compare` | vẽ lại 2026-10-24 thành màn A/B (cùng `IP_DuplicatesCompare`, thêm Delete N); `IP_CompareSurvey` xoá |
 | canvas iPhone, Duo | ⋯ mới ở Library, Viewer, Duplicates, Statistics; tên Adjust/Crop; Settings Sources; Viewer sáng |

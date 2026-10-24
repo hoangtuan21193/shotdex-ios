@@ -58,8 +58,7 @@ struct ZoomableImageView: UIViewRepresentable {
     /// hold is one. Off while zoomed, where a drag pans. The culling pass
     /// flags and pages with them (FS-01.12b §5).
     var onSwipe: ((CullGesturePolicy.Swipe) -> Void)?
-    /// How far a pinch may go. Compare raises it so 100% of a large original
-    /// is reachable in a small frame (FS-01.08c §3).
+    /// How far a pinch may go.
     var maximumZoomScale: CGFloat = 5
 
     func makeUIView(context: Context) -> UIScrollView {

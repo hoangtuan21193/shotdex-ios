@@ -94,11 +94,7 @@ struct OnThisDayScreen: View {
                 PhotoDetailScreen(model: model, currentIndex: target.startIndex)
             }
         }
-        .fullScreenCover(item: $compareRequest, onDismiss: stopSelecting) { request in
-            if let model {
-                PhotoDetailScreen(model: model, currentIndex: request.startIndex, compareRequest: request)
-            }
-        }
+        .selectionCompare($compareRequest, onDismiss: stopSelecting)
         .multiEditCover($multiEditPresentation, sourceAlbum: nil, onDismiss: stopSelecting)
         .panoramaMergeCover($panoramaPresentation, onSaved: { assetID in
             stopSelecting()
@@ -321,7 +317,7 @@ struct OnThisDayScreen: View {
             onDeselect: { toggleSelection(of: $0) },
             onDeselectAll: { selectedIds = [] },
             onCompare: {
-                if let model { compareRequest = CompareRequest(selection: selectedIds, source: model) }
+                compareRequest = CompareRequest(selection: selectedIds)
             },
             onCompress: presentCompression,
             onEdit: presentMultiEdit,

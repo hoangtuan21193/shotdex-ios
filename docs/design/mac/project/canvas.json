@@ -87,7 +87,7 @@
    "y": 1510,
    "w": 1440,
    "h": 900,
-   "title": "Mac · Xem ảnh trong cửa sổ chính: Single · 2-Up · Survey, filmstrip, inspector",
+   "title": "Mac · Xem ảnh trong cửa sổ chính: filmstrip, inspector (Single · 2-Up · Survey bỏ 2026-10-24)",
    "radius": 16
   },
   "MAC_ViewerFullScreen.dc.html": {
@@ -106,20 +106,12 @@
    "title": "Mac · Get Info nhiều ảnh: 3 Photos, ô khác nhau ghi Mixed, keyword 2/3",
    "radius": 16
   },
-  "MAC_Compare.dc.html": {
-   "x": 5060,
-   "y": 1510,
-   "w": 1440,
-   "h": 900,
-   "title": "Mac · Xem ảnh chế độ 2-Up: Select | Candidate, luôn đồng bộ zoom, Move 1 Photo… (ảnh T7)",
-   "radius": 16
-  },
   "MAC_Duplicates.dc.html": {
    "x": 8100,
    "y": 1510,
    "w": 1440,
    "h": 900,
-   "title": "Mac · Ảnh trùng 1/2 (v3): mở ra là danh sách ngay, dải Quick clean 720 + Review…; lọc theo loại, thẻ nhóm (bấm ảnh mở, vòng đánh dấu, lý do giữ, chú thích), Bracket, nhóm 52 thu gọn, 4 selected · Delete 4",
+   "title": "Mac · Ảnh trùng 1/2 (v3): mở ra là danh sách ngay, dải Quick clean 720 + Review…; lọc theo loại, thẻ nhóm (bấm ảnh mở, vòng đánh dấu, lý do giữ, chú thích), thẻ không còn hàng nút dưới (Keep all · Not duplicates ở menu chuột phải ảnh), thẻ chỉ có ảnh, luôn hiện đủ ảnh, 4 selected · Delete 4",
    "radius": 16
   },
   "MAC_BurstFrames.dc.html": {
@@ -130,20 +122,12 @@
    "title": "Mac · Ảnh trùng 2/2 (v3): chọn khung — Survey 4 khung zoom đồng bộ 100%, filmstrip chấm đỏ khung yếu, Keep 3, remove 21 · Done",
    "radius": 16
   },
-  "MAC_Places.dc.html": {
-   "x": 12660,
-   "y": 1510,
-   "w": 1440,
-   "h": 900,
-   "title": "Mac · Địa điểm: bản đồ, cụm ảnh, inspector 300 của cụm đang chọn",
-   "radius": 16
-  },
   "MAC_OnThisDay.dc.html": {
    "x": 14180,
    "y": 1510,
    "w": 1440,
    "h": 900,
-   "title": "Mac · On This Day: lưới theo năm (Hanoi, Banff, Kyoto), Show Trip",
+   "title": "Mac · On This Day: lưới theo năm (Hanoi, Banff, Kyoto)",
    "radius": 16
   },
   "MAC_Collections.dc.html": {
@@ -426,14 +410,6 @@
    "w": 1180,
    "h": 760
   },
-  "MAC_CompareSurvey.dc.html": {
-   "title": "Mac · Xem ảnh chế độ Survey: 6 ảnh, cờ None·Pick·Reject, Delete 2 Photos trước Edit",
-   "radius": 16,
-   "y": 1510,
-   "x": 6580,
-   "w": 1440,
-   "h": 900
-  },
   "MAC_EditPhotos.dc.html": {
    "title": "Mac · Chỉnh ảnh thư viện Photos: Revert + Done (ghi vào Photos)",
    "radius": 16,
@@ -548,11 +524,8 @@
   "MAC_ViewerFullScreen.dc.html",
   "MAC_ViewerCloudDownload.dc.html",
   "MAC_GetInfo.dc.html",
-  "MAC_Compare.dc.html",
-  "MAC_CompareSurvey.dc.html",
   "MAC_Duplicates.dc.html",
   "MAC_BurstFrames.dc.html",
-  "MAC_Places.dc.html",
   "MAC_OnThisDay.dc.html",
   "MAC_Collections.dc.html",
   "MAC_AlbumDetail.dc.html",
@@ -610,7 +583,7 @@
    "kind": "title1",
    "x": 0,
    "y": 1250,
-   "text": "Mac · Xem ảnh · so sánh · trùng · địa điểm",
+   "text": "Mac · Xem ảnh · so sánh · trùng",
    "maxW": 16000
   },
   "row_coll": {

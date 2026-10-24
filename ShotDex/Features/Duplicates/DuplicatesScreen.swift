@@ -163,7 +163,8 @@ struct DuplicatesScreen: View {
             }
         }
         .fullScreenCover(item: $model.comparePresentation) { presentation in
-            DuplicatesCompareScreen(model: model, presentation: presentation)
+            PhotoCompareScreen(source: DuplicateCompareSource(model: model, startId: presentation.startId),
+                               startId: presentation.startId)
                 .environment(photoLibrary)
         }
         .modifier(DuplicatesAlerts(model: model))

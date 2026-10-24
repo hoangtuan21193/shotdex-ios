@@ -21,8 +21,8 @@ bằng rule, chọn hàng loạt rồi làm gì đó với chúng.
 | 05b | [Camera/Lens, dữ liệu thiếu, sheet](05b-gear-menu-missing-data-and-sheet.md) | menu Camera ▸ Lens ▸, is missing + Location, bố cục và nháp Advanced Search; AC |
 | 06 | [Chọn nhiều ảnh](06-multi-select.md) | overlay toàn màn, vuốt chọn, context menu, bộ điều phối hành động ảnh |
 | 07 | [Khôi phục trạng thái](07-state-restoration.md) | cái gì là scene state, cái gì là preference |
-| 08 | [Compare](08-compare.md) | nhiều card cùng zoom — phần lớn đã thay bởi 08c |
-| 08c | [Compare là chế độ của Viewer](08c-compare-viewer-mode.md) | Single · 2-Up · Survey, cờ thật, Delete N |
+| 08 | [Compare](08-compare.md) | chọn ≥2 ảnh → màn A/B của Duplicates, Keep \| Delete, Delete N |
+| 08c | [Compare là chế độ của Viewer](08c-compare-viewer-mode.md) | **đã bỏ 2026-10-24** — lịch sử |
 | 09 | [Ghép nhiều ảnh](09-photo-stacking.md) | menu Combine Photos: Focus Stack · Panorama · Stack Exposures (Average/Lighten/Darken) |
 | 10 | [Focus Stack](10-focus-stack.md) | căn có co giãn, hai cách ghép, Radius/Smoothing, tô sửa từ một khung |
 | 11 | [HDR](11-hdr-merge.md) | loạt bù trừ sáng → một ảnh: radiance từ RAW, căn khung, khử bóng ma bốn mức, Strength |

@@ -879,9 +879,8 @@ final class DuplicatesModel {
 
     /// Deletes a subset of the marks and leaves the rest marked.
     ///
-    /// The Compare screen only ever shows one group, so its Delete button must
-    /// act on that group alone — otherwise a mark left in another group would
-    /// be swept up by a button whose count never mentioned it.
+    /// The selected sheet deletes what it lists, which may be fewer than
+    /// every mark.
     ///
     /// One system dialog. Then each group's kept photo takes what its deleted
     /// copies had (06b §2) — **after** the delete went through, so a Don't

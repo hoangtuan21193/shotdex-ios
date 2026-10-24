@@ -8,7 +8,8 @@
 
 Luật lọc, tìm, sao/cờ, Compare giữ nguyên của iOS: [FS-01.03](../FS-01-library/03-search.md),
 [FS-01.05](../FS-01-library/05-filtering-and-sorting.md), [FS-01.12](../FS-01-library/12-rating-and-flags.md),
-FS-01.08c. Phần này chỉ ghi chỗ Mac khác.
+[FS-01.08](../FS-01-library/08-compare.md) (Compare = màn A/B của Duplicates; chế độ 2-Up/Survey của Viewer đã bỏ
+2026-10-24). Phần này chỉ ghi chỗ Mac khác.
 
 ## 1. Lưới
 
@@ -58,7 +59,7 @@ FS-01.08c. Phần này chỉ ghi chỗ Mac khác.
 ## 6. Viewer trong cửa sổ (D9, D10)
 
 - Toolbar: sidebar · ◀ ▶ · tên file + huy hiệu định dạng, dòng phụ "Sunday, September 27, 2026 at 5:42 PM · 12 of 112"
-  · segmented **Single · 2-Up · Survey** (FS-01.08c) · nhóm Fit ▾ · Favorite · Rotate Counterclockwise · Share ·
+  · nhóm Fit ▾ · Favorite · Rotate Counterclockwise · Share ·
   inspector · **Edit** (nút viền, không nổi bật — Edit là điều hướng, không phải lệnh chốt).
 - Vùng ảnh nằm trên **nền cửa sổ**, không giếng tối. Filmstrip đáy, ảnh hiện tại vòng amber 2.
 - Inspector 300: Rating and Flag · Histogram · Caption and Keywords · Camera and Lens (4 ô ISO/Focal/Aperture/Shutter

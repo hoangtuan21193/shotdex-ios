@@ -1,14 +1,29 @@
 {
   "steps": [
-    { "action": "launch" },
-    { "action": "wait", "seconds": 8 },
-    { "action": "tap", "label": "Photo, file type", "type": "cell", "index": 2 },
-    { "action": "wait", "seconds": 4 },
-    { "action": "dump", "name": "DI_Viewer" },
-    { "action": "wait", "seconds": 45 },
-    { "action": "tap", "label": "2-Up" },
-    { "action": "wait", "seconds": 4 },
-    { "action": "dump", "name": "DI_Compare" },
-    { "action": "wait", "seconds": 45 }
+    {
+      "action": "launch"
+    },
+    {
+      "action": "wait",
+      "seconds": 8
+    },
+    {
+      "action": "tap",
+      "label": "Photo, file type",
+      "type": "cell",
+      "index": 2
+    },
+    {
+      "action": "wait",
+      "seconds": 4
+    },
+    {
+      "action": "dump",
+      "name": "DI_Viewer"
+    },
+    {
+      "action": "wait",
+      "seconds": 45
+    }
   ]
 }

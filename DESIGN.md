@@ -19,7 +19,7 @@ Mỗi màn hình phải khai báo rõ mình thuộc tầng nào. Không trộn h
 | **C. Glass chrome** | Thanh nổi trên ảnh: tab bar, selection bar, nút tròn, panel trạng thái | Kính mờ trong suốt | `GlassPanel`, `GlassIconButton`, `LiquidGlassTabBar`, `.glassBackground(_:)` |
 | **D. Tool (dark)** | Toàn màn hình chỉnh sửa: Photo Editor, Compress, Collage, Video Studio | `EditorTheme.background` (đen) / `panelSolid` `#0F1012` | `EditorTheme`, `.editorGlass()`, `EditorPillLabel` |
 
-**Compare là một chế độ của Viewer, không phải tầng D** (người dùng chốt 2026-10-04, mọi thiết bị): Single · 2-Up · Survey trong Viewer, theo sáng/tối như Viewer, cờ Pick/Reject từng ảnh (Reject = đánh dấu xoá). Board: `PH_Compare`, `IP_Compare`/`IP_CompareSurvey`, `DI_Compare`, `DC_Compare`, `MAC_Compare`/`MAC_CompareSurvey`. Code theo đúng điều này từ 2026-10-12 (`Features/Library/Compare/`); Viewer còn luôn tối tới FS-21 AC-52.
+**Compare là màn A/B của Duplicates, tầng D** (người dùng chốt 2026-10-24, mọi thiết bị — thay quyết định 2026-10-04): Viewer **không** có Single · 2-Up · Survey. Chọn ≥ 2 ảnh → Compare mở `PhotoCompareScreen`, cùng màn với so sánh trong Duplicates: hai ô A/B, Keep | Delete từng ảnh, dải ảnh, và **Delete N** đỏ trên thanh trên cùng (chỉ khi mở từ chế độ chọn). Board: `PH_Compare`, `IP_Compare`, `DI_Compare`, `DC_Compare` (cùng bố cục `*_DuplicatesCompare`); FS-01.08.
 
 **Collage và Video Studio thuộc tầng D**, không có ngoại lệ: cả hai thao tác trực tiếp lên pixel/khung hình nên cần nền trung tính để đánh giá màu. Kéo theo đó, bước chọn layout collage và **timeline video** phải nằm **trong màn hình** tầng D — không được tách ra thành sheet hệ thống, vì như vậy màn hình lại lai hai tầng.
 
@@ -480,7 +480,7 @@ Token của app macOS native (FS-18). Số lấy từ `docs/design/mac/MAC_STYLE
 - **Accent luôn là amber của ShotDex**, không theo accent hệ thống, không có hàng Accent Color trong Settings. Bản đậm (`accentFill`) cho mảng tô; accent thường cho nét và glyph. Tầng D: highlight menu `#EB9526` chữ đen.
 - **Luật chọn**: vòng amber (ô lưới) · nền `accentFill` (menu, hàng bảng đang focus) · nền xám `rowSel` (sidebar, bảng không focus) · vòng trắng (filmstrip/preset tầng D) · `#57BFD1` chỉ trên timeline Video Studio · đỏ = đánh dấu xoá.
 
-**Tầng D trên Mac**: cùng các công cụ của iOS, **trừ Compare** (chế độ của Viewer, §2) — Editor, Cull, Resize, Collage, Combine Photos, Video Studio. Luôn tối **kể cả chrome cửa sổ** (sidebar, toolbar kính chuyển tối), bảng màu `EditorTheme` của §3.3; accent chỉ trên lệnh chốt (Done, Export). Viewer **không** phải tầng D: vùng ảnh dùng nền cửa sổ, theo sáng/tối.
+**Tầng D trên Mac**: cùng các công cụ của iOS — Compare (§2), Editor, Cull, Resize, Collage, Combine Photos, Video Studio. Luôn tối **kể cả chrome cửa sổ** (sidebar, toolbar kính chuyển tối), bảng màu `EditorTheme` của §3.3; accent chỉ trên lệnh chốt (Done, Export). Viewer **không** phải tầng D: vùng ảnh dùng nền cửa sổ, theo sáng/tối.
 
 **Chữ**: thân 13, phụ 11–12, tiêu đề mục 15 đậm vừa, tiêu đề lớn tối đa 22 đậm; **sàn 10** ở mọi chỗ (badge, trục biểu đồ, số khung hình). Monospace chỉ cho timecode; số thay đổi dùng chữ số đều bề rộng.
 

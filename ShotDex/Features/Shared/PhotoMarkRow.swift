@@ -1,8 +1,7 @@
 import SwiftUI
 
 /// The Cull row, `[Reject 44] [★×5] [Pick 44]` — 340pt at the default sizes
-/// (FS-01.12b §5). One definition for the culling pass and for Compare's
-/// frames on iPhone and the Duo (FS-01.08c §2), so the row is learned once.
+/// (FS-01.12b §5).
 ///
 /// Pick on = accent disc + black glyph; Reject on = red disc + white glyph,
 /// the destructive "on". Tapping the flag a photo already has clears it,
@@ -22,8 +21,6 @@ struct PhotoMarkRow: View {
     var starWidth: CGFloat = CullLayout.control
     var starGlyph: CGFloat = CullLayout.starGlyph
     var spacing: CGFloat = CullLayout.controlGap
-    /// False dims Reject — Duplicates' last unflagged photo (FS-01.08c AC-15).
-    var canReject = true
     /// Photo name for VoiceOver, so two rows on one screen read apart.
     var photoName: String?
     let onRate: (Int) -> Void
@@ -34,8 +31,6 @@ struct PhotoMarkRow: View {
     var body: some View {
         HStack(spacing: spacing) {
             flagButton(.reject, isOn: marks.flag == .reject)
-                .disabled(!canReject && marks.flag != .reject)
-                .opacity(!canReject && marks.flag != .reject ? 0.3 : 1)
             HStack(spacing: 0) {
                 ForEach(1...5, id: \.self) { stars in
                     Button {
@@ -106,66 +101,6 @@ struct PhotoMarkRow: View {
             } else {
                 content
             }
-        }
-    }
-}
-
-/// None · Pick · Reject, 44pt high — the flag control under a wide Compare
-/// frame (FS-01.08c §2, AC-19). A native segmented picker: it is a standard
-/// choice of one among three, on a standard surface.
-struct PhotoFlagSegmented: View {
-    let flag: PhotoFlag?
-    var canReject = true
-    var photoName: String?
-    let onFlag: (PhotoFlag?) -> Void
-
-    private enum Choice: Hashable { case none, pick, reject }
-
-    static var noFlag: String {
-        String(
-            localized: "flag.none",
-            defaultValue: "None",
-            table: MarkCopy.table,
-            comment: "Compare flag control: neither Pick nor Reject"
-        )
-    }
-
-    var body: some View {
-        Picker(selection: Binding(
-            get: { choice(flag) },
-            set: { newValue in
-                guard newValue != .reject || canReject || flag == .reject else { return }
-                onFlag(value(newValue))
-            }
-        )) {
-            Text(Self.noFlag).tag(Choice.none)
-            Text(MarkCopy.pick).tag(Choice.pick)
-            Text(MarkCopy.reject).tag(Choice.reject)
-        } label: {
-            Text(MarkCopy.flag)
-        }
-        .pickerStyle(.segmented)
-        .controlSize(.large)
-        .frame(height: CullLayout.control)
-        .fixedSize()
-        .accessibilityLabel(photoName.map {
-            String(localized: "Flag for \($0)", comment: "VoiceOver: a compare frame's None / Pick / Reject control")
-        } ?? MarkCopy.flag)
-    }
-
-    private func choice(_ flag: PhotoFlag?) -> Choice {
-        switch flag {
-        case .pick: .pick
-        case .reject: .reject
-        case nil: .none
-        }
-    }
-
-    private func value(_ choice: Choice) -> PhotoFlag? {
-        switch choice {
-        case .none: nil
-        case .pick: .pick
-        case .reject: .reject
         }
     }
 }

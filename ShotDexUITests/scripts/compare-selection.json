@@ -1,0 +1,75 @@
+{
+  "steps": [
+    {
+      "action": "launch"
+    },
+    {
+      "action": "wait",
+      "seconds": 8
+    },
+    {
+      "action": "tap",
+      "label": "Select photos"
+    },
+    {
+      "action": "wait",
+      "seconds": 2
+    },
+    {
+      "action": "tap",
+      "label": "Photo, file type",
+      "type": "cell",
+      "index": 2
+    },
+    {
+      "action": "tap",
+      "label": "Photo, file type",
+      "type": "cell",
+      "index": 3
+    },
+    {
+      "action": "tap",
+      "label": "Photo, file type",
+      "type": "cell",
+      "index": 4
+    },
+    {
+      "action": "wait",
+      "seconds": 1
+    },
+    {
+      "action": "tap",
+      "label": "Compare"
+    },
+    {
+      "action": "wait",
+      "seconds": 5
+    },
+    {
+      "action": "dump",
+      "name": "Compare"
+    },
+    {
+      "action": "wait",
+      "seconds": 35
+    },
+    {
+      "action": "tap",
+      "label": "Delete",
+      "type": "button",
+      "index": 2
+    },
+    {
+      "action": "wait",
+      "seconds": 2
+    },
+    {
+      "action": "dump",
+      "name": "CompareMarked"
+    },
+    {
+      "action": "wait",
+      "seconds": 50
+    }
+  ]
+}
