@@ -1,0 +1,79 @@
+{
+  "steps": [
+    {
+      "action": "launch"
+    },
+    {
+      "action": "wait",
+      "seconds": 8
+    },
+    {
+      "action": "tap",
+      "label": "Collections"
+    },
+    {
+      "action": "wait",
+      "seconds": 3
+    },
+    {
+      "action": "tap",
+      "label": "New album or smart album, or customize this tab"
+    },
+    {
+      "action": "wait",
+      "seconds": 2
+    },
+    {
+      "action": "tap",
+      "label": "New Smart Album"
+    },
+    {
+      "action": "wait",
+      "seconds": 4
+    },
+    {
+      "action": "dump",
+      "name": "DI_SmartAlbumEditor"
+    },
+    {
+      "action": "typeText",
+      "label": "",
+      "type": "textField",
+      "index": 0,
+      "text": "Duo Test"
+    },
+    {
+      "action": "tap",
+      "label": "D800E"
+    },
+    {
+      "action": "wait",
+      "seconds": 2
+    },
+    {
+      "action": "tap",
+      "label": "Save"
+    },
+    {
+      "action": "wait",
+      "seconds": 4
+    },
+    {
+      "action": "tap",
+      "label": "Duo Test",
+      "type": "button"
+    },
+    {
+      "action": "wait",
+      "seconds": 5
+    },
+    {
+      "action": "dump",
+      "name": "DI_SmartAlbum"
+    },
+    {
+      "action": "wait",
+      "seconds": 45
+    }
+  ]
+}
