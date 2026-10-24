@@ -11,8 +11,13 @@ struct AlbumsScreen: View {
     /// Height of the hero, scaled here rather than inside the card.
     @ScaledMetric(relativeTo: .headline) private var heroScale = 1.0
     private var heroHeight: CGFloat {
-        CollectionsHeroMetrics.height(isRegularWidth: horizontalSizeClass == .regular) * heroScale
+        min(
+            CollectionsHeroMetrics.height(isRegularWidth: horizontalSizeClass == .regular) * heroScale,
+            CollectionsHeroMetrics.maximumHeight(visibleHeight: visibleHeight)
+        )
     }
+    /// Height of the scroll view, for the hero's cap.
+    @State private var visibleHeight: CGFloat = 0
 
     /// Gap between tiles. Wider where the tiles are, so a row of 168pt covers
     /// does not read as one striped block.
@@ -392,6 +397,7 @@ struct AlbumsScreen: View {
             // one was still read as touching.
             .padding(.bottom, AppTheme.Spacing.xxl * 2)
         }
+        .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { visibleHeight = $0 }
     }
 
     /// Every pinned album still present in the library, in pin order. Pins
@@ -1301,6 +1307,16 @@ enum CollectionsHeroMetrics {
     /// Dynamic Type by the screen, not by the card.
     static func height(isRegularWidth: Bool) -> CGFloat {
         isRegularWidth ? 260 : 180
+    }
+
+    /// The most of the visible height the hero may take, Dynamic Type
+    /// included. Regular width is not the same as tall: the Duo's inner
+    /// display is regular but 669pt, where 260 was 42% of the first screen.
+    /// Above 930pt (iPad, a tall iPhone) the cap never binds.
+    static let maximumShareOfHeight: CGFloat = 0.28
+
+    static func maximumHeight(visibleHeight: CGFloat) -> CGFloat {
+        visibleHeight > 0 ? (visibleHeight * maximumShareOfHeight).rounded() : .infinity
     }
 }
 
