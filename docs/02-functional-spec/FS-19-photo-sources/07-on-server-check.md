@@ -119,6 +119,12 @@ sau). Tải iCloud theo cổng khắt nhất của mọi connection có nguồn 
 - Đợt 1 nối cổng vào xoá ở smart album, Free Up Space, chọn-rồi-xoá ở Library; một test chặn mọi lời gọi xoá PhotoKit
   mới nằm ngoài cổng. Đợt 2 nối mọi lối còn lại (N2: mọi lối xoá).
 - Ngoài phạm vi: file trên NAS hỏng âm thầm sau khi đã băm.
+- Mã: `Data/Sources/PhotoDeletionGate.swift` (hỏi server: một lần liệt kê mỗi folder, so cỡ + ngày sửa bằng
+  `ServerCopyVerification`; file không ở đường dẫn cũ → liệt kê lại nguồn một lần rồi xét lại), `Features/Shared/
+  PhotoDeletionFlow.swift` (alert). Mục có trên hai nguồn: một nguồn trả lời đủ là xoá được. **Cancel** ở alert *Can't
+  Reach* không xoá gì cả (kể cả mục không dựa vào server) — chọn an toàn khi câu "vẫn xoá" ở trên có hai cách hiểu.
+  Hộp xác nhận (câu Recently Deleted) chỉ hiện khi lượt xoá có mục dựa vào server; Free Up Space đã có hộp riêng nên bỏ
+  qua hộp này. Hộp hệ thống của Photos vẫn hiện sau đó.
 
 ## 10. Board
 

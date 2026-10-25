@@ -15,6 +15,7 @@ struct UploadedToServerScreen: View {
     @State private var keepingSources: [String] = []
     @State private var isConfirmingDelete = false
     @State private var isDeleting = false
+    @State private var deletionFlow = PhotoDeletionFlow()
     @State private var deleteError: String?
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
 
@@ -70,6 +71,7 @@ struct UploadedToServerScreen: View {
         ) { _ in
             Button("OK", role: .cancel) {}
         } message: { Text($0) }
+        .photoDeletionPrompts(deletionFlow)
         .task { await load() }
     }
 
@@ -228,20 +230,30 @@ struct UploadedToServerScreen: View {
         .accessibilityElement(children: .combine)
     }
 
+    /// Through the gate (FS-19.07 §9): a photo also on a server source is
+    /// asked about first. This screen already confirmed, with the Recently
+    /// Deleted sentence.
     private func delete() async {
         isDeleting = true
-        defer { isDeleting = false }
-        do {
-            try await dependencies.photoLibrary.deleteAssets(PhotoLibraryService.fetchAssets(ids: deletable))
-            try? dependencies.metadataStore.deleteAssets(ids: deletable)
-            assetIds = nil
-            await load()
-        } catch {
-            let nsError = error as NSError
-            // Declining the system's confirmation is a cancel.
-            if nsError.domain == "PHPhotosErrorDomain", nsError.code == 3072 { return }
-            deleteError = error.localizedDescription
-        }
+        let photoLibrary = dependencies.photoLibrary
+        let metadataStore = dependencies.metadataStore
+        deletionFlow.delete(deletable, gate: dependencies.photoDeletionGate, confirms: false, perform: { targets in
+            try await photoLibrary.deleteAssets(PhotoLibraryService.fetchAssets(ids: targets))
+            try? metadataStore.deleteAssets(ids: targets)
+        }, finished: { result in
+            isDeleting = false
+            switch result {
+            case .success:
+                assetIds = nil
+                Task { await load() }
+            case .failure(let error):
+                let nsError = error as NSError
+                // Declining the system's confirmation is a cancel.
+                if error is CancellationError || (nsError.domain == "PHPhotosErrorDomain" && nsError.code == 3072) { return }
+                deleteError = error.localizedDescription
+            }
+        })
+        if !deletionFlow.isChecking { isDeleting = false }
     }
 }
 

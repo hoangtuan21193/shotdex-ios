@@ -53,6 +53,7 @@ struct LibraryScreen: View {
     /// handed to the grid as its top content inset (see `photoGrid`).
     @State private var topAccessoryHeight: CGFloat = 0
     @State private var isDeleting = false
+    @State private var deletionFlow = PhotoDeletionFlow()
     @State private var isDuplicating = false
     @State private var deleteErrorMessage: String?
     /// A selection that reaches a file or a server copy, waiting on the
@@ -245,6 +246,7 @@ struct LibraryScreen: View {
                 onAdded: { withAnimation { stopSelecting() } }
             )
         }
+        .photoDeletionPrompts(deletionFlow)
         .sourceDeletion($sourceDeletion) { removed, _ in
             model?.removeDeleted(ids: removed)
             if !removed.isEmpty { withAnimation { stopSelecting() } }
@@ -420,25 +422,31 @@ struct LibraryScreen: View {
 
     private func deleteSelected(_ model: LibraryModel) {
         guard !selectedIds.isEmpty else { return }
-        let ids = Set(selectedIds)
         let roots = dependencies.folderRoots
         if let request = try? DeletionTargetQueries(database: dependencies.database, hasTrash: { roots.hasTrash($0) })
             .request(photoIds: selectedIds, selection: .photos) {
             sourceDeletion = request
             return
         }
+        // Photos on a server are asked about first (FS-19.07 §9).
         isDeleting = true
-        Task {
-            defer { isDeleting = false }
-            do {
-                try await model.deleteAssets(ids: ids)
-                withAnimation { stopSelecting() }
-            } catch let error as PHPhotosError where error.code == .userCancelled {
+        deletionFlow.delete(selectedIds, gate: dependencies.photoDeletionGate, perform: { targets in
+            try await model.deleteAssets(ids: Set(targets))
+        }, finished: { result in
+            isDeleting = false
+            switch result {
+            case .success(let deleted):
+                if !deleted.isEmpty { withAnimation { stopSelecting() } }
+            case .failure(is CancellationError):
+                break
+            case .failure(let error as PHPhotosError) where error.code == .userCancelled:
                 // User dismissed the system confirm — keep the selection.
-            } catch {
+                break
+            case .failure(let error):
                 deleteErrorMessage = error.localizedDescription
             }
-        }
+        })
+        if !deletionFlow.isChecking { isDeleting = false }
     }
 
     /// Opens the share sheet at once, like Photos: nothing is downloaded

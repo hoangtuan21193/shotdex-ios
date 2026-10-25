@@ -211,6 +211,9 @@ final class AppDependencies {
     /// Whether Photos items are on the server sources (FS-19.07), checked
     /// while the app is in front.
     let onServerCheck: OnServerCheck
+    /// Every Photos deletion that relies on a server copy asks it first
+    /// (FS-19.07 §9).
+    let photoDeletionGate: PhotoDeletionGate
     /// Every source's row in Settings › Sources and the Sources group.
     let sources: SourcesModel
     /// Memory cards shown once, and which are plugged in (FS-20 §4).
@@ -580,6 +583,16 @@ final class AppDependencies {
             database: database, servers: fileServers, refresh: serverSources, connectionLock: connectionLock,
             listingChanged: { await sources.serverListingChanged() }
         ))
+        self.photoDeletionGate = PhotoDeletionGate(
+            database: database,
+            connect: { connectionId in
+                guard let server = try? fileServers.fetch(id: connectionId) else { return nil }
+                let client = LockedRemoteFileClient(RemoteFileClientFactory.make(for: server, password: fileServers.password(for: server.id) ?? ""),
+                                                    lock: connectionLock, connectionId: server.id, priority: .normal)
+                return (client, server.folder)
+            },
+            relist: { sourceId in _ = await serverSources.rescan(sourceId: sourceId) }
+        )
         // Hide by where a photo lives (FS-19.04 §3), for every surface's menu.
         for actions in [assetActions, viewerAssetActions] {
             actions.hideService = hideService

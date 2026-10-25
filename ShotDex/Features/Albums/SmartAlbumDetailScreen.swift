@@ -38,6 +38,7 @@ struct SmartAlbumDetailScreen: View {
     @State private var addToCollectionPresentation: AddToCollectionPresentation?
     @State private var swipeBaseline: [String] = []
     @State private var isDeleting = false
+    @State private var deletionFlow = PhotoDeletionFlow()
     @State private var isDuplicating = false
     @State private var deleteErrorMessage: String?
     /// A selection that reaches a file or a server copy (FS-19.04 §2).
@@ -150,6 +151,7 @@ struct SmartAlbumDetailScreen: View {
                 onAdded: { withAnimation { stopSelecting() } }
             )
         }
+        .photoDeletionPrompts(deletionFlow)
         .sourceDeletion($sourceDeletion) { removed, _ in
             model?.removeDeleted(ids: removed)
             if !removed.isEmpty { withAnimation { stopSelecting() } }
@@ -482,25 +484,31 @@ struct SmartAlbumDetailScreen: View {
 
     private func deleteSelected(_ model: SmartAlbumDetailModel) {
         guard !selectedIds.isEmpty else { return }
-        let ids = Set(selectedIds)
         let roots = dependencies.folderRoots
         if let request = try? DeletionTargetQueries(database: dependencies.database, hasTrash: { roots.hasTrash($0) })
             .request(photoIds: selectedIds, selection: .photos) {
             sourceDeletion = request
             return
         }
+        // Photos on a server are asked about first (FS-19.07 §9).
         isDeleting = true
-        Task {
-            defer { isDeleting = false }
-            do {
-                try await model.deleteAssets(ids: ids)
-                withAnimation { stopSelecting() }
-            } catch let error as PHPhotosError where error.code == .userCancelled {
+        deletionFlow.delete(selectedIds, gate: dependencies.photoDeletionGate, perform: { targets in
+            try await model.deleteAssets(ids: Set(targets))
+        }, finished: { result in
+            isDeleting = false
+            switch result {
+            case .success(let deleted):
+                if !deleted.isEmpty { withAnimation { stopSelecting() } }
+            case .failure(is CancellationError):
+                break
+            case .failure(let error as PHPhotosError) where error.code == .userCancelled:
                 // User dismissed the system confirm — keep the selection.
-            } catch {
+                break
+            case .failure(let error):
                 deleteErrorMessage = error.localizedDescription
             }
-        }
+        })
+        if !deletionFlow.isChecking { isDeleting = false }
     }
 
     // MARK: Selection bar & toolbar
