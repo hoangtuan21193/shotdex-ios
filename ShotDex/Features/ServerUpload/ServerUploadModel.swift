@@ -82,6 +82,9 @@ final class ServerUploadModel {
     private let screenHold: ScreenHolding
     private let listEntries: @Sendable ([String]) async -> [AssetUploadEntry]
     private let makeClient: (FileServer, String) -> any RemoteFileClient
+    /// The upload waits its turn on the connection; the folder browser does
+    /// not — it is the user waiting.
+    private let connectionLock: ConnectionLock?
     private let exporter: any AssetFileExporting
     private let deleteAssets: ([String]) async throws -> Void
 
@@ -104,6 +107,7 @@ final class ServerUploadModel {
         screenHold: ScreenHolding,
         listEntries: @escaping @Sendable ([String]) async -> [AssetUploadEntry],
         makeClient: @escaping (FileServer, String) -> any RemoteFileClient,
+        connectionLock: ConnectionLock? = nil,
         exporter: any AssetFileExporting,
         deleteAssets: @escaping ([String]) async throws -> Void
     ) {
@@ -115,6 +119,7 @@ final class ServerUploadModel {
         self.screenHold = screenHold
         self.listEntries = listEntries
         self.makeClient = makeClient
+        self.connectionLock = connectionLock
         self.exporter = exporter
         self.deleteAssets = deleteAssets
     }
@@ -133,12 +138,19 @@ final class ServerUploadModel {
                 await Task.detached(priority: .userInitiated) { PhotoKitOriginalExporter.entries(for: ids) }.value
             },
             makeClient: RemoteFileClientFactory.make(for:password:),
+            connectionLock: dependencies.connectionLock,
             exporter: PhotoKitOriginalExporter(),
             deleteAssets: { ids in
                 try await library.deleteAssets(PhotoLibraryService.fetchAssets(ids: ids))
                 try? metadata.deleteAssets(ids: ids)
             }
         )
+    }
+
+    private func uploadClient(_ server: FileServer, password: String) -> any RemoteFileClient {
+        let client = makeClient(server, password)
+        guard let connectionLock else { return client }
+        return LockedRemoteFileClient(client, lock: connectionLock, connectionId: server.id, priority: .normal)
     }
 
     // MARK: Prepare
@@ -236,7 +248,7 @@ final class ServerUploadModel {
             .appendingPathComponent("\(TemporaryWorkspace.serverUploadPrefix)\(UUID().uuidString)", isDirectory: true)
         let uploads = uploads
         let session = ServerUploadSession(
-            client: makeClient(server, password),
+            client: uploadClient(server, password: password),
             exporter: exporter,
             serverId: server.id,
             serverName: server.name,

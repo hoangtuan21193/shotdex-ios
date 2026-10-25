@@ -8,7 +8,8 @@ extension BackupEnvironment {
         database: AppDatabase,
         store: BackupStore,
         servers: FileServerStore,
-        roots: FolderSourceRoots
+        roots: FolderSourceRoots,
+        connectionLock: ConnectionLock
     ) -> BackupEnvironment {
         // Monitors of its own: the shared ones have a single handler slot.
         let network = NetworkMonitor()
@@ -17,7 +18,8 @@ extension BackupEnvironment {
         return BackupEnvironment(
             makeRunner: { job, retriesExhausted, onProgress in
                 guard let server = try? servers.fetch(id: job.connectionId) else { return nil }
-                let client = RemoteFileClientFactory.make(for: server, password: servers.password(for: server.id) ?? "")
+                let client = LockedRemoteFileClient(RemoteFileClientFactory.make(for: server, password: servers.password(for: server.id) ?? ""),
+                                                    lock: connectionLock, connectionId: server.id, priority: .backup)
                 let isPhotos = job.sourceId == PhotoLibrarySource.id
                 let source: any BackupSourceReading = isPhotos
                     ? PhotoKitBackupSource()

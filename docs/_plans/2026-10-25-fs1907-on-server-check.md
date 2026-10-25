@@ -5,7 +5,7 @@
 | Đặc tả | [`FS-19.07`](../02-functional-spec/FS-19-photo-sources/07-on-server-check.md) · AC + spike: [`07b`](../02-functional-spec/FS-19-photo-sources/07b-on-server-check-ac.md) |
 | Intent | [2026-10-24-smart-album-on-nas](../_intents/2026-10-24-smart-album-on-nas.md) |
 | Ngày | 2026-10-25 |
-| Trạng thái | nháp — chờ duyệt; Q1, Q2 và phản biện đã trả lời 2026-10-25 |
+| Trạng thái | đang làm — duyệt 2026-10-25; T0 (`b36d7a09`), T1 xong |
 
 ## 1. Hiểu đúng chưa
 
@@ -87,7 +87,7 @@ Một task = một commit, test đi kèm. Đợt 1 dùng được ngay sau T14.
 | # | Task | AC | Test |
 |---|---|---|---|
 | T0 | Vẽ board 3 thiết bị (sáng + tối), publish 3 canvas | AC-93 (nền) | `Tools/design-board render` |
-| T1 | Khoá một-lệnh-một-lúc mỗi connection; Backup, Upload, index dùng chung | nền cho AC-84/85 | `ConnectionLockTests.backupFirst`, `.yieldsBetweenFiles` |
+| T1 | Khoá một-lệnh-một-lúc mỗi connection; Backup, Upload, index dùng chung (màn duyệt folder không chờ khoá — người dùng đang chờ) | nền cho AC-84/85 | `ConnectionLockTests.backupFirst`, `.yieldsBetweenFiles`, `.oneCallAtATimePerConnection`, `.cancelledWaiterSkipsWork` |
 | T2 | Khoá rename server bằng test | AC-76 | `ServerSourceIndexTests.renameKeepsIdentity` |
 | T3 | Bảng hash theo file + gieo từ sổ Backup | AC-100 | `PhotosHashTests.seedsFromBackupLedger` |
 | T4 | Backup ghi hash cho bản sao server | AC-85 | `BackupRunnerTests.recordsServerCopyHash` |

@@ -139,6 +139,9 @@ final class AppDependencies {
     let support: SupportService
     /// The SMB/SFTP servers originals are uploaded to (FS-15.01).
     let fileServers: FileServerStore
+    /// One server call at a time per connection for Backup, Upload and the
+    /// server-source index (FS-19.07 §5).
+    let connectionLock: ConnectionLock
     /// Which files are verified on a server (FS-15.02 §8).
     let serverUploads: ServerUploadStore
     /// Backup jobs and their ledger (FS-22).
@@ -540,11 +543,13 @@ final class AppDependencies {
         self.fileServerCatalog = FileServerCatalog(store: fileServers)
         let serverUploads = ServerUploadStore(database: database)
         self.serverUploads = serverUploads
+        let connectionLock = ConnectionLock()
+        self.connectionLock = connectionLock
         let backups = BackupStore(database: database)
         self.backups = backups
         self.aiProviders = aiProviders
         let backupCoordinator = BackupCoordinator(store: backups, environment: .live(
-            database: database, store: backups, servers: fileServers, roots: folderRoots
+            database: database, store: backups, servers: fileServers, roots: folderRoots, connectionLock: connectionLock
         ))
         self.backupCoordinator = backupCoordinator
         self.backupBackground = BackupBackgroundService(coordinator: backupCoordinator, servers: fileServers)
@@ -560,7 +565,11 @@ final class AppDependencies {
                                                 composer: MetadataComposer(sensorLookup: SensorLookup(
                                                     records: (try? SensorDatabaseLoader().loadRecords()) ?? [],
                                                     customMappings: (try? metadataStore.customMappings()) ?? [])),
-                                                thumbnails: .standard)
+                                                thumbnails: .standard,
+                                                makeClient: { server, password in
+                                                    LockedRemoteFileClient(RemoteFileClientFactory.make(for: server, password: password),
+                                                                           lock: connectionLock, connectionId: server.id, priority: .normal)
+                                                })
         self.serverSources = serverSources
         let sources = SourcesModel(database: database, runner: folderSources, servers: serverSources, photoLibrary: photoLibrary)
         self.sources = sources
