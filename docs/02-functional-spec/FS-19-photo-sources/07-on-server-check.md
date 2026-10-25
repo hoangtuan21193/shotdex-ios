@@ -59,7 +59,8 @@ dựa trên nguồn FS-19 · Folder trong điều kiện · một dấu lưới 
   không mở lượt mới.
 - **Ứng viên** = file có cỡ bằng cỡ một file gốc Photos chưa khớp. Chỉ ứng viên được đọc trọn (tải ra file tạm rồi băm).
   Kết quả nhớ theo đường dẫn + cỡ + ngày sửa; file dời/đổi tên nối bằng hash nhanh + cỡ, không băm lại.
-- **Backup ghi sẵn:** Backup đẩy file vào folder nằm trong nguồn → ghi luôn hash của file đó cho bản sao server. Ảnh vừa
+- **Backup ghi sẵn:** Backup đẩy file vào folder nằm trong nguồn → lượt quét nguồn lấy SHA-256 trong sổ Backup (bản đã
+  đẩy và đọc lại) và sổ chung `.shotdex` (file của máy khác) cho file cùng đường dẫn + cỡ, không đọc file. Ảnh vừa
   backup có trên F ngay, không đọc lại NAS.
 - Mỗi connection **một lệnh một lúc**, dùng chung với Backup và Upload; Backup đi trước; kiểm nhả khoá giữa các file và
   không giữ khoá trong lúc tải iCloud.

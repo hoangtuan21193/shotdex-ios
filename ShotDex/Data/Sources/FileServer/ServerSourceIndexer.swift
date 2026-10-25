@@ -76,7 +76,11 @@ struct ServerSourceIndexer: Sendable {
             let existing = try await database.reader.read { db in try FileCopyWriter.existing(db, sourceId: sourceId, key: key) }
             if let existing, FileCopyWriter.isUnchanged(existing, size: file.size, modified: modified) {
                 // Same size, same date: not one byte read (FS-19.03 §3).
-                try await database.writer.write { db in try FileCopyWriter.touch(db, existing: existing, at: stamp) }
+                let (copyId, files) = (existing.id, Self.listedFiles(unit))
+                try await database.writer.write { db in
+                    try FileCopyWriter.touch(db, existing: existing, at: stamp)
+                    try CopyFileStore.saveServerFiles(db, copyId: copyId, files: files)
+                }
                 summary.unchanged += 1
                 continue
             }
@@ -118,10 +122,11 @@ struct ServerSourceIndexer: Sendable {
             let copy = FileCopyWriter.Copy(photoId: photoId, copyId: copyId, sourceId: sourceId, kind: "server",
                                            relativePath: file.relativePath, key: key, size: file.size, modified: modified,
                                            pairedPath: unit.companion?.relativePath, sidecarStamp: read.sidecar?.stamp)
-            let (hash, split) = (read.hash, splitFrom)
+            let (hash, split, files) = (read.hash, splitFrom, Self.listedFiles(unit))
             try await database.writer.write { db in
                 try FileCopyWriter.record(db, copy, hash: hash, metadata: record, marks: marks, marksAt: marksAt,
                                           splitFrom: split, at: stamp)
+                try CopyFileStore.saveServerFiles(db, copyId: copy.copyId, files: files)
             }
             if let thumbnails, !summary.previewsStoppedForSpace, let image = read.thumbnail?.image,
                thumbnails.write(image, copyId: copyId) == .noSpace {
@@ -154,6 +159,15 @@ struct ServerSourceIndexer: Sendable {
             }
         }
         return out.sorted { $0.relativePath < $1.relativePath }
+    }
+
+    /// The unit's files for the on-server check (FS-19.07 §5): the primary,
+    /// and the paired twin, whose bytes count as much.
+    private static func listedFiles(_ unit: PairingRule.Unit<FolderEnumeration.Entry>) -> [CopyFileStore.ListedFile] {
+        [("primary", unit.primary), unit.companion.map { ("companion", $0) }].compactMap { $0 }.map { key, entry in
+            CopyFileStore.ListedFile(fileKey: key, relativePath: entry.relativePath, size: entry.size,
+                                     modifiedAt: entry.modified.map { Int($0.timeIntervalSince1970) })
+        }
     }
 
     /// What one photo's reads gave.

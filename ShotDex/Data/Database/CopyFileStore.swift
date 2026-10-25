@@ -139,6 +139,101 @@ struct CopyFileStore: Sendable {
         }
     }
 
+    // MARK: - Server
+
+    /// A server file as the listing gave it.
+    struct ListedFile: Sendable {
+        var fileKey: String
+        var relativePath: String
+        var size: Int64
+        var modifiedAt: Int?
+    }
+
+    /// Writes a server copy's files from the listing, inside the indexer's
+    /// write. A file whose size and date did not change keeps its hash —
+    /// also after a move, since the copy keeps its id (FS-19.07 §5).
+    static func saveServerFiles(_ db: Database, copyId: String, files: [ListedFile]) throws {
+        for file in files {
+            let role = CopyFile.Role(fileName: (file.relativePath as NSString).lastPathComponent)
+            try db.execute(sql: """
+                INSERT INTO copy_files (copyId, fileKey, role, size, modifiedAt) VALUES (?, ?, ?, ?, ?)
+                ON CONFLICT(copyId, fileKey) DO UPDATE SET role = excluded.role, size = excluded.size,
+                    modifiedAt = excluded.modifiedAt,
+                    sha256 = CASE WHEN \(Self.sameFile) THEN sha256 END,
+                    origin = CASE WHEN \(Self.sameFile) THEN origin END,
+                    hashedAt = CASE WHEN \(Self.sameFile) THEN hashedAt END,
+                    attempts = CASE WHEN \(Self.sameFile) THEN attempts ELSE 0 END,
+                    lastError = CASE WHEN \(Self.sameFile) THEN lastError END,
+                    triedAt = CASE WHEN \(Self.sameFile) THEN triedAt END
+                """, arguments: [copyId, file.fileKey, role.rawValue, file.size, file.modifiedAt])
+        }
+        let keys = String(data: try JSONEncoder().encode(files.map(\.fileKey)), encoding: .utf8)
+        try db.execute(sql: "DELETE FROM copy_files WHERE copyId = ? AND fileKey NOT IN (SELECT value FROM json_each(?))",
+                       arguments: [copyId, keys])
+    }
+
+    private static let sameFile = "size IS excluded.size AND modifiedAt IS excluded.modifiedAt"
+
+    /// A server copy's file with no hash yet, and where it sits.
+    struct UnhashedServerFile: Sendable {
+        var copyId: String
+        var fileKey: String
+        var relativePath: String
+        var size: Int64
+    }
+
+    /// Files of the source's server copies with no hash — the primary at the
+    /// copy's path, the companion at its paired path.
+    func unhashedServerFiles(sourceId: String) throws -> [UnhashedServerFile] {
+        try database.reader.read { db in
+            try Row.fetchAll(db, sql: """
+                SELECT f.copyId, f.fileKey, f.size,
+                       CASE f.fileKey WHEN 'companion' THEN c.pairedPath ELSE c.relativePath END AS path
+                FROM copy_files f JOIN photo_copies c ON c.id = f.copyId
+                WHERE c.sourceId = ? AND c.kind = 'server' AND c.missingSince IS NULL
+                  AND f.sha256 IS NULL AND f.size IS NOT NULL
+                """, arguments: [sourceId]).compactMap { row in
+                guard let path: String = row["path"] else { return nil }
+                return UnhashedServerFile(copyId: row["copyId"], fileKey: row["fileKey"], relativePath: path, size: row["size"])
+            }
+        }
+    }
+
+    /// What Backup knows of the files it wrote on a connection — its ledger
+    /// and the destination index, which holds other phones' files too — by
+    /// path key from the server's root: size and SHA-256.
+    func backupRecords(connectionId: String) throws -> [String: (size: Int64, sha256: String)] {
+        try database.reader.read { db in
+            var out: [String: (Int64, String)] = [:]
+            for row in try Row.fetchAll(db, sql: """
+                SELECT j.folder, d.path, d.size, d.sha256 FROM backup_destination_files d
+                JOIN backup_jobs j ON j.id = d.jobId
+                WHERE j.connectionId = ? AND d.sha256 IS NOT NULL
+                """, arguments: [connectionId]) {
+                out[FolderSourceIndexer.pathKey(ServerUploadPath.join(row[0], row[1]))] = (row[2], row[3])
+            }
+            // The ledger's own uploads win: written and read back by this device.
+            for row in try Row.fetchAll(db, sql: """
+                SELECT l.remotePath, l.byteCount, l.sha256 FROM backup_ledger l
+                JOIN backup_jobs j ON j.id = l.jobId
+                WHERE j.connectionId = ? AND l.outcome = 'uploaded'
+                  AND l.remotePath IS NOT NULL AND l.byteCount IS NOT NULL AND l.sha256 IS NOT NULL
+                """, arguments: [connectionId]) {
+                out[FolderSourceIndexer.pathKey(row[0])] = (row[1], row[2])
+            }
+            return out
+        }
+    }
+
+    func saveHash(_ sha256: String, copyId: String, fileKey: String, origin: CopyFile.Origin, at now: Date = Date()) throws {
+        try database.writer.write { db in
+            try db.execute(sql: """
+                UPDATE copy_files SET sha256 = ?, origin = ?, hashedAt = ?, lastError = NULL
+                WHERE copyId = ? AND fileKey = ?
+                """, arguments: [sha256, origin.rawValue, Int(now.timeIntervalSince1970), copyId, fileKey])
+        }
+    }
+
     // MARK: - Reading
 
     func files(copyId: String) throws -> [CopyFile] {

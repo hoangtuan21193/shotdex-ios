@@ -5,7 +5,7 @@
 | Đặc tả | [`FS-19.07`](../02-functional-spec/FS-19-photo-sources/07-on-server-check.md) · AC + spike: [`07b`](../02-functional-spec/FS-19-photo-sources/07b-on-server-check-ac.md) |
 | Intent | [2026-10-24-smart-album-on-nas](../_intents/2026-10-24-smart-album-on-nas.md) |
 | Ngày | 2026-10-25 |
-| Trạng thái | đang làm — duyệt 2026-10-25; T0 (`b36d7a09`), T1 (`f95b0163`), T2 (`12c4bbfc`), T3 xong |
+| Trạng thái | đang làm — duyệt 2026-10-25; T0 (`b36d7a09`), T1 (`f95b0163`), T2 (`12c4bbfc`), T3 (`0c241bea`), T4 xong |
 
 ## 1. Hiểu đúng chưa
 
@@ -90,7 +90,7 @@ Một task = một commit, test đi kèm. Đợt 1 dùng được ngay sau T14.
 | T1 | Khoá một-lệnh-một-lúc mỗi connection; Backup, Upload, index dùng chung (màn duyệt folder không chờ khoá — người dùng đang chờ) | nền cho AC-84/85 | `ConnectionLockTests.backupFirst`, `.yieldsBetweenFiles`, `.oneCallAtATimePerConnection`, `.cancelledWaiterSkipsWork` |
 | T2 | Khoá rename server bằng test | AC-76 | `ServerSourceIndexTests.renameKeepsIdentity` |
 | T3 | Bảng hash theo file + gieo từ sổ Backup | AC-100 | `PhotosHashTests.seedsFromBackupLedger` |
-| T4 | Backup ghi hash cho bản sao server | AC-85 | `BackupRunnerTests.recordsServerCopyHash` |
+| T4 | Backup ghi hash cho bản sao server — làm bằng cách lượt quét nguồn đọc sổ Backup + sổ chung theo đường dẫn + cỡ (Backup đã ghi SHA sau khi đọc lại; không thêm lần ghi nào trong `BackupRunner`, phủ cả file máy khác) | AC-85 | `BackupRunnerTests.recordsServerCopyHash` |
 | T5 | Server: ứng viên theo cỡ, băm trọn ra file tạm, nhớ theo đường dẫn + cỡ + ngày | AC-84 | `ServerSourceIndexTests.fullHashOnlySizeCandidates` |
 | T6 | Photos: chỉ ứng viên theo cỡ, file tạm, mới nhất trước, mục hỏng không chặn, chờ chỗ trống | AC-81, 82, 83, 101 | `PhotosHashTests.*` |
 | T7 | Truy vấn đủ file gốc (cả bản sửa), không cần gộp | AC-75, 77, 78, 79, 99 | `OnServerRuleTests.*` |
