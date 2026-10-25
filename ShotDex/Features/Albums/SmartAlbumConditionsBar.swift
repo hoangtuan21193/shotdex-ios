@@ -24,6 +24,8 @@ struct SmartAlbumConditionsBar: View {
     var filterChips: [FilterChip] = []
     /// Source names by id, so a Source condition reads by name.
     var sourceNames: [String: String] = [:]
+    /// The on-server check's progress under the conditions (FS-19.07 §7).
+    var statusLines: [String] = []
     var onEditFilter: (() -> Void)?
     var onClearFilter: (() -> Void)?
 
@@ -83,6 +85,20 @@ struct SmartAlbumConditionsBar: View {
                         )
                     }
                 }
+            }
+            if !statusLines.isEmpty {
+                VStack(alignment: .leading, spacing: 2) {
+                    ForEach(statusLines, id: \.self) { line in
+                        Text(line)
+                            .lineLimit(1)
+                            .truncationMode(.tail)
+                    }
+                }
+                .font(.caption)
+                .monospacedDigit()
+                .foregroundStyle(.secondary)
+                .accessibilityElement(children: .combine)
+                .accessibilityAddTraits(.updatesFrequently)
             }
         }
         .padding(.horizontal)

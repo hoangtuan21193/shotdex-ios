@@ -91,5 +91,12 @@ enum OnServerPresenceSQL {
         JOIN photo_metadata pm ON pm.assetId = pc.photoKitId AND l.stamp IS pm.modificationDate
         """
 
-    private static let roles = "(" + requiredRoles.map { "'\($0.rawValue)'" }.joined(separator: ", ") + ")"
+    /// `('photo', 'raw', …)` — the required roles, for `IN`.
+    static let roles = list(requiredRoles)
+    /// The renders of an edit made in Photos (FS-19.07 §3).
+    static let editedRoles = list([.editedPhoto, .editedVideo, .editedPairedVideo])
+
+    private static func list(_ roles: [CopyFile.Role]) -> String {
+        "(" + roles.map { "'\($0.rawValue)'" }.joined(separator: ", ") + ")"
+    }
 }

@@ -95,6 +95,9 @@ sau). Tải iCloud theo cổng khắt nhất của mọi connection có nguồn 
   Mã: `OnServerPresenceSQL.swift`, gọi từ `SmartAlbumSQLBuilder.sourceClause`.
 - Thanh điều kiện: `Checking · 12,408 of 54,920 · 38 GB to download`; lý do chờ (`Waiting for Wi‑Fi`, `Waiting for space`,
   `NAS Home isn't reachable`, `Open ShotDex to continue` ở đợt 1); xong thì `Checked 3 min ago`.
+  Dòng thêm: `3 Edited — edit not on NAS Home` khi có mục chỉ thiếu bản sửa; `Only photos ShotDex can access are
+  checked.` khi quyền `.limited`; `Waiting to Charge` khi job bật Only While Charging. Tính cho điều kiện Source server
+  đầu tiên của album, đọc lại sau mỗi đợt băm (album tải lại theo). Mã: `OnServerProgressQueries`, `OnServerProgressLine`.
 
 ## 8. Dấu lưới và Photo Info (đợt 2)
 

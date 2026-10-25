@@ -16,6 +16,7 @@ final class SmartAlbumDetailModel {
     private let query: SmartAlbumQuery
     private let albumId: String
     private let sourceStore: SourceStore
+    private let database: AppDatabase
 
     /// Newest or oldest first, remembered per album (FS-06.01b §3). A smart
     /// album is a query, so there is no album order to offer.
@@ -41,6 +42,9 @@ final class SmartAlbumDetailModel {
     private(set) var isLoading = false
     /// Source names by id, for the Source chip (FS-19.07 §7).
     private(set) var sourceNames: [String: String] = [:]
+    /// The on-server check's line under the conditions, when a condition
+    /// is `Source is <server>` (FS-19.07 §7); empty otherwise.
+    private(set) var onServerLines: [String] = []
 
     var matchCount: Int { items.count }
 
@@ -56,6 +60,7 @@ final class SmartAlbumDetailModel {
         self.query = album.query
         self.albumId = album.id
         self.sourceStore = SourceStore(database: dependencies.database)
+        self.database = dependencies.database
         self.sortOrder = AlbumSortStore.order(for: album.id, isSmartAlbum: true)
         let assetCache = AsyncChunkedLookupCache<PHAsset>(
             chunkSize: 120,
@@ -72,6 +77,25 @@ final class SmartAlbumDetailModel {
         assetCache.onChunkLoaded = { [weak self] in
             self?.contentRefreshGeneration &+= 1
         }
+    }
+
+    /// Reads the check's progress for the album's first server Source
+    /// condition — after each batch the check runs.
+    func refreshOnServer(_ check: OnServerCheck, isLimited: Bool) async {
+        let servers = (try? sourceStore.serverConnections()) ?? [:]
+        guard let rule = query.validRules.first(where: { $0.field == .source && servers[$0.text] != nil }) else {
+            onServerLines = []
+            return
+        }
+        let queries = OnServerProgressQueries(database: database)
+        let folder = rule.folder
+        let progress = (try? await Task.detached { try queries.progress(sourceId: rule.text, folder: folder) }.value)
+            ?? OnServerProgress()
+        let wait = check.waits[rule.text] ?? (progress.checked < progress.total ? check.photosWait : nil)
+        onServerLines = OnServerProgressLine.lines(.init(
+            progress: progress, wait: wait, finishedAt: check.finishedAt,
+            sourceName: sourceNames[rule.text] ?? "", isLimited: isLimited
+        ))
     }
 
     func setSortOrder(_ order: AlbumSortOrder) async {

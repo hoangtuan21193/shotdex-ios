@@ -103,6 +103,13 @@ struct SmartAlbumDetailScreen: View {
                 await model.load()
             }
         }
+        // Each batch of the on-server check can move photos in or out of a
+        // `Source is <server>` album, and moves its progress line (FS-19.07 §7).
+        .task(id: "\(dependencies.onServerCheck.generation)-\(model != nil)") {
+            guard let model else { return }
+            await model.refreshOnServer(dependencies.onServerCheck, isLimited: photoLibrary.authorizationState == .limited)
+            if !model.onServerLines.isEmpty, !isSelecting { await model.load() }
+        }
         .fullScreenCover(item: $viewerTarget) { target in
             if let model {
                 PhotoDetailScreen(model: model, currentIndex: target.startIndex)
@@ -237,6 +244,7 @@ struct SmartAlbumDetailScreen: View {
                     unfilteredCount: filter.isActive ? model?.unfilteredCount : nil,
                     filterChips: filterChips,
                     sourceNames: model?.sourceNames ?? [:],
+                    statusLines: model?.onServerLines ?? [],
                     onEditFilter: filter.advancedQuery != nil ? { isAdvancedFilterPresented = true } : nil,
                     onClearFilter: filter.isActive ? { filter.clear() } : nil
                 )
