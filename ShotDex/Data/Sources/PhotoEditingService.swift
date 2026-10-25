@@ -96,6 +96,8 @@ struct PhotoSaveResult: Sendable {
 /// `PhotoRenderService`.
 @MainActor
 final class PhotoEditingService {
+    /// FS-19.07 §9: set by the composition root; nil in previews.
+    var deletionGate: PhotoDeletionGate?
     let renderer: PhotoRenderService
     private let indexNewAsset: (@Sendable (String) async -> Void)?
     private let publishCreatedAsset: (@MainActor @Sendable (String) -> Void)?
@@ -738,13 +740,26 @@ final class PhotoEditingService {
     /// copies and for removing originals after a successful compress.
     func deleteAssets(ids: [String]) async throws {
         guard !ids.isEmpty else { return }
+        // An original that relies on a server copy is asked about first
+        // (FS-19.07 §9); what cannot be confirmed stays.
+        var ids = ids
+        var kept: PhotoDeletionGate.Outcome?
+        if let deletionGate {
+            let outcome = await deletionGate.check(photoIds: ids)
+            if outcome.deletable.count < ids.count { kept = outcome }
+            ids = outcome.deletable
+        }
         let fetch = PHAsset.fetchAssets(withLocalIdentifiers: ids, options: nil)
         var assets: [PHAsset] = []
         fetch.enumerateObjects { asset, _, _ in assets.append(asset) }
-        guard !assets.isEmpty else { return }
+        guard !assets.isEmpty else {
+            if let kept { throw PhotoDeletionGate.Kept(outcome: kept) }
+            return
+        }
         try await PHPhotoLibrary.shared().performChanges {
             PHAssetChangeRequest.deleteAssets(assets as NSArray)
         }
+        if let kept { throw PhotoDeletionGate.Kept(outcome: kept) }
     }
 
     func estimateCompressedSize(

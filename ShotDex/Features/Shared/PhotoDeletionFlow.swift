@@ -43,8 +43,8 @@ final class PhotoDeletionFlow {
         Task {
             let outcome = await gate.check(photoIds: ids)
             isChecking = false
-            let run: ([String]) -> Void = { [weak self] targets in
-                Task { await self?.run(targets, outcome: outcome, perform: perform, finished: finished) }
+            let run: ([String]) -> Void = { targets in
+                Task { await self.run(targets, outcome: outcome, perform: perform, finished: finished) }
             }
             if let name = outcome.unreachable.keys.sorted().first {
                 prompt = Prompt(kind: .unreachable(sourceName: name), action: {

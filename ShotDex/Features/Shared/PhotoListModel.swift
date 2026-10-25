@@ -90,7 +90,7 @@ final class PhotoListModel: PhotoBrowsingSource {
 
     func deleteAsset(id: String) async throws {
         guard let asset = assetsById[id] else { return }
-        try await photoLibrary.deleteAssets([asset])
+        try await photoLibrary.deleteAssetsCheckingServer([asset])
         try? metadataStore.deleteAssets(ids: [id])
         remove(ids: [id])
     }
@@ -102,7 +102,7 @@ final class PhotoListModel: PhotoBrowsingSource {
     func deleteAssets(ids: Set<String>) async throws {
         let assets = ids.compactMap { assetsById[$0] }
         guard !assets.isEmpty else { return }
-        try await photoLibrary.deleteAssets(assets)
+        try await photoLibrary.deleteAssetsCheckingServer(assets)
         try? metadataStore.deleteAssets(ids: Array(ids))
         remove(ids: ids)
     }

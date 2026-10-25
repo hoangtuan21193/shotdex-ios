@@ -998,6 +998,22 @@ final class PhotoLibraryService: NSObject {
         await onAssetsDeleted?(assets.map(\.localIdentifier))
     }
 
+    /// FS-19.07 §9: asks the server about photos that rely on it before
+    /// they are deleted. Set once by the composition root; nil in previews.
+    @ObservationIgnored
+    var deletionGate: PhotoDeletionGate?
+
+    /// `deleteAssets` through the gate, for the entry points with no alerts
+    /// of their own: photos not on a server, or confirmed there, are
+    /// deleted; the rest are kept and reported by `PhotoDeletionGate.Kept`.
+    func deleteAssetsCheckingServer(_ assets: [PHAsset]) async throws {
+        guard let deletionGate, !assets.isEmpty else { return try await deleteAssets(assets) }
+        let outcome = await deletionGate.check(photoIds: assets.map(\.localIdentifier))
+        let allowed = Set(outcome.deletable)
+        try await deleteAssets(assets.filter { allowed.contains($0.localIdentifier) })
+        if allowed.count < assets.count { throw PhotoDeletionGate.Kept(outcome: outcome) }
+    }
+
     /// Told the ids of assets PhotoKit has just deleted at the app's request.
     /// Set once by the composition root.
     @ObservationIgnored

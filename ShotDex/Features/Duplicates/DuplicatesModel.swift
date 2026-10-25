@@ -904,7 +904,7 @@ final class DuplicatesModel {
         // a number that is too low.
         let bytes = goingMembers.contains { $0.fileSize == nil } ? 0 : goingMembers.reduce(0) { $0 + ($1.fileSize ?? 0) }
         do {
-            try await photoLibrary.deleteAssets(assets)
+            try await photoLibrary.deleteAssetsCheckingServer(assets)
         } catch let error as PHPhotosError where error.code == .userCancelled {
             return false
         } catch {

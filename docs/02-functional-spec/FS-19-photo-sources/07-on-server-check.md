@@ -123,6 +123,11 @@ sau). Tải iCloud theo cổng khắt nhất của mọi connection có nguồn 
 - Hộp xác nhận thêm: "They move to Recently Deleted. iCloud space is freed after Recently Deleted is emptied."
 - Đợt 1 nối cổng vào xoá ở smart album, Free Up Space, chọn-rồi-xoá ở Library; một test chặn mọi lời gọi xoá PhotoKit
   mới nằm ngoài cổng. Đợt 2 nối mọi lối còn lại (N2: mọi lối xoá).
+- Đợt 2 (T20, đã làm): mọi lối còn lại — viewer, album thường, On This Day, Hidden, Duplicates, Bursts, Cull (Rejected),
+  phần Photos của xoá qua nguồn, xoá bản gốc sau Compress — đi qua `PhotoLibraryService.deleteAssetsCheckingServer` (hoặc
+  hỏi cổng trực tiếp ở Compress). Các lối này không có alert riêng: mục xác nhận được (hoặc không dựa vào server) bị xoá,
+  mục còn lại **giữ lại** và lối đó báo lỗi bằng câu của `PhotoDeletionGate.Kept` ("2 photos weren't deleted — they're no
+  longer on NAS Home." / "Can't reach NAS Home, so 3 photos weren't deleted…"). *Delete Anyway* chỉ có ở ba lối đợt 1.
 - Ngoài phạm vi: file trên NAS hỏng âm thầm sau khi đã băm.
 - Mã: `Data/Sources/PhotoDeletionGate.swift` (hỏi server: một lần liệt kê mỗi folder, so cỡ + ngày sửa bằng
   `ServerCopyVerification`; file không ở đường dẫn cũ → liệt kê lại nguồn một lần rồi xét lại), `Features/Shared/

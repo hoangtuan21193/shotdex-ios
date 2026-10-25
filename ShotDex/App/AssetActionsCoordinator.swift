@@ -273,7 +273,7 @@ final class AssetActionsCoordinator {
         let assets = PhotoLibraryService.fetchAssets(ids: ids)
         guard !assets.isEmpty else { return }
         perform {
-            try await self.photoLibrary.deleteAssets(assets)
+            try await self.photoLibrary.deleteAssetsCheckingServer(assets)
         }
     }
 

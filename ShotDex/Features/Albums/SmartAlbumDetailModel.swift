@@ -161,10 +161,16 @@ final class SmartAlbumDetailModel {
 
     /// Deletes via PhotoKit (system confirm dialog), prunes the DB, and drops
     /// the rows locally. Throws `PHPhotosError.userCancelled` on cancel.
-    func deleteAssets(ids: Set<String>) async throws {
+    /// `checkingServer` false when `PhotoDeletionFlow` has already asked
+    /// the server (FS-19.07 §9).
+    func deleteAssets(ids: Set<String>, checkingServer: Bool = true) async throws {
         let assets = PhotoLibraryService.fetchAssets(ids: Array(ids))
         guard !assets.isEmpty else { return }
-        try await photoLibrary.deleteAssets(assets)
+        if checkingServer {
+            try await photoLibrary.deleteAssetsCheckingServer(assets)
+        } else {
+            try await photoLibrary.deleteAssets(assets)
+        }
         try? metadataStore.deleteAssets(ids: Array(ids))
         lastRemoval = .next(after: lastRemoval, removing: ids)
         items.removeAll { ids.contains($0.assetId) }

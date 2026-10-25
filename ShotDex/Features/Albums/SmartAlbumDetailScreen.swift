@@ -493,7 +493,7 @@ struct SmartAlbumDetailScreen: View {
         // Photos on a server are asked about first (FS-19.07 §9).
         isDeleting = true
         deletionFlow.delete(selectedIds, gate: dependencies.photoDeletionGate, perform: { targets in
-            try await model.deleteAssets(ids: Set(targets))
+            try await model.deleteAssets(ids: Set(targets), checkingServer: false)
         }, finished: { result in
             isDeleting = false
             switch result {

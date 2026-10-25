@@ -43,7 +43,7 @@ extension RejectedDeleter {
     static func live(photoLibrary: PhotoLibraryService, banner: AppBannerModel) -> RejectedDeleter {
         RejectedDeleter(
             deleteAssets: { ids in
-                try await photoLibrary.deleteAssets(PhotoLibraryService.fetchAssets(ids: ids))
+                try await photoLibrary.deleteAssetsCheckingServer(PhotoLibraryService.fetchAssets(ids: ids))
             },
             banner: banner
         )

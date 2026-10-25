@@ -220,7 +220,7 @@ final class OnThisDayModel: PhotoBrowsingSource {
     func deleteAssets(ids: Set<String>) async throws {
         let assets = ids.compactMap { assetsById[$0] }
         guard !assets.isEmpty else { return }
-        try await photoLibrary.deleteAssets(assets)
+        try await photoLibrary.deleteAssetsCheckingServer(assets)
         // PhotoKit is the source of truth; prune the DB rows right away so
         // the Library grid doesn't show stale entries until the next index run.
         try? metadataStore.deleteAssets(ids: Array(ids))

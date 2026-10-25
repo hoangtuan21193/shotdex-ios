@@ -130,9 +130,30 @@ struct PhotoDeletionGateTests {
         #expect(client.sha256Paths.count == reads)
     }
 
+    /// FS-19.07 N2 (T20): every other way to delete from Photos — viewer,
+    /// albums, On This Day, Hidden, Duplicates, Bursts, Cull, the source
+    /// deletion's Photos part — goes through the gate.
+    @Test func everyEntryPointRoutes() async throws {
+        for file in PhotoKitDeleteCallSites.gated {
+            #expect(try PhotoKitDeleteCallSites.source(file).contains("deleteAssetsCheckingServer("), "\(file) deletes without the gate")
+        }
+        for model in ["ShotDex/Features/Library/LibraryModel.swift", "ShotDex/Features/Albums/SmartAlbumDetailModel.swift"] {
+            #expect(try PhotoKitDeleteCallSites.source(model).contains("deleteAssetsCheckingServer(assets)"))
+        }
+        #expect(try PhotoKitDeleteCallSites.source("ShotDex/Data/Sources/PhotoEditingService.swift").contains("deletionGate.check(photoIds:"))
+        // What those entry points say for the photos they keep.
+        let g = try GateFixture(photos: 3)
+        try await g.client.remove("iCloud Photo/Shared/IMG_1.HEIC")
+        try await g.client.remove("iCloud Photo/Shared/IMG_2.HEIC")
+        let kept = PhotoDeletionGate.Kept(outcome: await g.gate.check(photoIds: g.ids))
+        #expect(kept.errorDescription == "2 photos weren't deleted — they're no longer on NAS Home.")
+        g.client.connectError = .unreachable(host: "nas.local")
+        let away = PhotoDeletionGate.Kept(outcome: await g.gate.check(photoIds: ["P0"]))
+        #expect(away.errorDescription == "Can't reach NAS Home, so 1 photo wasn't deleted. ShotDex couldn't check that it's still there.")
+    }
+
     /// AC-104: a PhotoKit delete added outside the known places fails here,
-    /// naming the file and line. The three phase-1 entry points go through
-    /// the gate; the rest are routed in phase 2 (T20).
+    /// naming the file and line.
     @Test func noNewDirectDeletes() throws {
         let found = try PhotoKitDeleteCallSites.scan()
         let unexpected = found.filter { site in
@@ -148,24 +169,29 @@ struct PhotoDeletionGateTests {
 
 /// Every place that asks PhotoKit to delete, read from the source tree.
 enum PhotoKitDeleteCallSites {
-    /// Files and how many calls each may hold. The first three are the
-    /// gate's `perform`; the others are entry points phase 2 routes (T20).
+    /// Files and how many direct calls each may hold: the gate's own
+    /// `perform` paths (the three screens with `PhotoDeletionFlow`), the
+    /// primitive and its gated twin, and the compress path, which asks the
+    /// gate itself. Every other entry point calls
+    /// `deleteAssetsCheckingServer` (T20).
     static let known: [String: Int] = [
         "ShotDex/Features/Library/LibraryModel.swift": 1,
         "ShotDex/Features/Albums/SmartAlbumDetailModel.swift": 1,
         "ShotDex/Features/ServerUpload/UploadedToServerScreen.swift": 1,
         "ShotDex/Data/Sources/PhotoLibraryService.swift": 1,
-        "ShotDex/App/AppDependencies.swift": 1,
-        "ShotDex/App/AssetActionsCoordinator.swift": 1,
         "ShotDex/Data/Sources/PhotoEditingService.swift": 1,
-        "ShotDex/Data/Sources/RejectedDeleter.swift": 1,
-        "ShotDex/Features/Albums/AlbumsModel.swift": 1,
-        "ShotDex/Features/Albums/HiddenPhotosModel.swift": 1,
-        "ShotDex/Features/Albums/OnThisDayModel.swift": 1,
-        "ShotDex/Features/Bursts/BurstFramesScreen.swift": 1,
-        "ShotDex/Features/Duplicates/DuplicatesModel.swift": 1,
+        // Keep Offline's screen, still being built in another change; it
+        // moves to the gated call when that lands.
         "ShotDex/Features/OnThisIPhone/OnThisIPhoneModel.swift": 1,
-        "ShotDex/Features/Shared/PhotoListModel.swift": 2,
+    ]
+
+    /// Entry points with no alerts of their own: each goes through the gate.
+    static let gated = [
+        "ShotDex/App/AssetActionsCoordinator.swift", "ShotDex/App/AppDependencies.swift",
+        "ShotDex/Features/Bursts/BurstFramesScreen.swift", "ShotDex/Features/Shared/PhotoListModel.swift",
+        "ShotDex/Features/Albums/AlbumsModel.swift", "ShotDex/Features/Albums/OnThisDayModel.swift",
+        "ShotDex/Features/Albums/HiddenPhotosModel.swift", "ShotDex/Features/Duplicates/DuplicatesModel.swift",
+        "ShotDex/Data/Sources/RejectedDeleter.swift",
     ]
 
     static var root: URL {

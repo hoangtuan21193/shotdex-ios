@@ -113,7 +113,7 @@ extension HiddenPhotosModel: PhotoBrowsingSource {
     func deleteAsset(id: String) async throws {
         let assets = PhotoLibraryService.fetchAssets(ids: [id])
         guard !assets.isEmpty else { return }
-        try await photoLibrary.deleteAssets(assets)
+        try await photoLibrary.deleteAssetsCheckingServer(assets)
         try? metadataStore.deleteAssets(ids: [id])
         drop([id])
     }

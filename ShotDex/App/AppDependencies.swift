@@ -201,7 +201,7 @@ final class AppDependencies {
         let roots = folderRoots
         return DeletionService(
             database: database,
-            deletePhotosAssets: { ids in try await photoLibrary.deleteAssets(PhotoLibraryService.fetchAssets(ids: ids)) },
+            deletePhotosAssets: { ids in try await photoLibrary.deleteAssetsCheckingServer(PhotoLibraryService.fetchAssets(ids: ids)) },
             root: { roots.root($0) }
         )
     }
@@ -598,6 +598,8 @@ final class AppDependencies {
             },
             relist: { sourceId in _ = await serverSources.rescan(sourceId: sourceId) }
         )
+        photoLibrary.deletionGate = photoDeletionGate
+        photoEditing.deletionGate = photoDeletionGate
         // Hide by where a photo lives (FS-19.04 §3), for every surface's menu.
         for actions in [assetActions, viewerAssetActions] {
             actions.hideService = hideService

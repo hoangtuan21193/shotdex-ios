@@ -31,6 +31,28 @@ struct PhotoDeletionGate: Sendable {
         var deletable: [String] { plain + verified }
     }
 
+    /// What a delete without its own alerts (every entry point but the
+    /// three with `PhotoDeletionFlow`) reports for the photos it kept.
+    struct Kept: LocalizedError, Equatable {
+        let outcome: Outcome
+
+        var errorDescription: String? {
+            if let name = outcome.unreachable.keys.sorted().first {
+                let count = outcome.unreachable.values.reduce(0) { $0 + $1.count }
+                return count == 1
+                    ? String(localized: "Can't reach \(name), so 1 photo wasn't deleted. ShotDex couldn't check that it's still there.",
+                             comment: "Delete: a photo kept because its server did not answer")
+                    : String(localized: "Can't reach \(name), so \(count) photos weren't deleted. ShotDex couldn't check that they're still there.",
+                             comment: "Delete: photos kept because their server did not answer")
+            }
+            let name = outcome.notOnServer.keys.sorted().first ?? ""
+            let count = outcome.notOnServer.values.reduce(0) { $0 + $1.count }
+            return count == 1
+                ? String(localized: "1 photo wasn't deleted — it's no longer on \(name).", comment: "Delete: a photo kept because its server copy is gone")
+                : String(localized: "\(count) photos weren't deleted — they're no longer on \(name).", comment: "Delete: photos kept because their server copies are gone")
+        }
+    }
+
     func check(photoIds: [String]) async -> Outcome {
         var outcome = Outcome()
         let relying = (try? relyingSources(photoIds: photoIds)) ?? [:]

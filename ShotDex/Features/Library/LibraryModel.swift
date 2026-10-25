@@ -1452,10 +1452,16 @@ final class LibraryModel {
     /// Deletes the given assets via PhotoKit (system shows its own confirm
     /// dialog), then syncs the local index and in-memory state.
     /// Throws `PHPhotosError.userCancelled` if the user cancels.
-    func deleteAssets(ids: Set<String>) async throws {
+    /// `checkingServer` false when `PhotoDeletionFlow` has already asked
+    /// the server (FS-19.07 §9).
+    func deleteAssets(ids: Set<String>, checkingServer: Bool = true) async throws {
         let assets = PhotoLibraryService.fetchAssets(ids: Array(ids))
         guard !assets.isEmpty else { return }
-        try await photoLibrary.deleteAssets(assets)
+        if checkingServer {
+            try await photoLibrary.deleteAssetsCheckingServer(assets)
+        } else {
+            try await photoLibrary.deleteAssets(assets)
+        }
         // PhotoKit is the source of truth; prune the DB rows right away so
         // the grid doesn't show stale entries until the next index run.
         try? metadataStore.deleteAssets(ids: Array(ids))

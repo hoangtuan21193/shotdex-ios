@@ -59,7 +59,7 @@ struct BurstFramesScreen: View {
                 deleteAssets: { ids in
                     let assets = PhotoLibraryService.fetchAssets(ids: ids)
                     guard !assets.isEmpty else { return 0 }
-                    try await photoLibrary.deleteAssets(assets)
+                    try await photoLibrary.deleteAssetsCheckingServer(assets)
                     return assets.count
                 }
             )
