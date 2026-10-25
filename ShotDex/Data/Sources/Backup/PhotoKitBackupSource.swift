@@ -41,12 +41,7 @@ struct PhotoKitBackupSource: BackupSourceReading {
             let modified = Int(asset.modificationDate?.timeIntervalSince1970 ?? 0)
             let created = Int(asset.creationDate?.timeIntervalSince1970 ?? 0)
             let files = PhotoKitOriginalExporter.uploadFiles(for: asset).map { file in
-                // An original never changes in Photos; stamping it with the
-                // asset's modification time would re-copy it after every edit.
-                // Photos does not always report a size: then the creation date
-                // stands in, never a shared "0".
-                let size = file.estimatedBytes > 0 ? "\(file.estimatedBytes)" : "c\(created)"
-                return BackupSourceFile(file: file, sourceStamp: file.role == .original ? size : "\(size):\(modified)")
+                BackupSourceFile(file: file, sourceStamp: Self.stamp(for: file, created: created, modified: modified))
             }
             guard !files.isEmpty else { continue }
             items.append(BackupSourceItem(
@@ -58,6 +53,16 @@ struct PhotoKitBackupSource: BackupSourceReading {
             ))
         }
         return items
+    }
+
+    /// What a file is matched on in the ledger. An original never changes in
+    /// Photos; stamping it with the asset's modification time would re-copy
+    /// it after every edit. Photos does not always report a size: then the
+    /// creation date stands in, never a shared "0". The on-server check
+    /// (FS-19.07 §4) stamps files the same way to reuse the ledger's hashes.
+    static func stamp(for file: AssetUploadFile, created: Int, modified: Int) -> String {
+        let size = file.estimatedBytes > 0 ? "\(file.estimatedBytes)" : "c\(created)"
+        return file.role == .original ? size : "\(size):\(modified)"
     }
 
     /// The first user album (in Photos' order) each asset is in.

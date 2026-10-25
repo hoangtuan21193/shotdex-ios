@@ -46,7 +46,7 @@ Thư viện thử không có ảnh mặt người. Server thử: WebDAV cục b�
 | AC-97 | 1 | 2 job Backup cùng connection: một *Only on Wi‑Fi*, một không | đang dùng di động | không chạy; `Waiting for Wi‑Fi` | ⚠️ chưa có — `OnServerScheduleTests.strictestJobWins` |
 | AC-98 | 1 | ảnh trong album AC-74 | xoá nó | bản NAS không bị ẩn; ảnh vẫn trong Library từ NAS Home | ⚠️ chưa có — `PhotoDeletionGateTests.serverCopyStaysVisible` |
 | AC-99 | 1 | ảnh đã sửa trong Photos; bản gốc có trên `Shared/`, bản sửa không | đếm **is**, mở dòng tiến độ | không trong **is**; ghi "Edited — edit not on NAS Home" | ⚠️ chưa có — `OnServerRuleTests.editedNeedsRender` |
-| AC-100 | 1 | 500 mục Backup đã chép, dấu nguồn còn khớp | lượt kiểm đầu | 0 lần tải iCloud cho 500 mục đó | ⚠️ chưa có — `PhotosHashTests.seedsFromBackupLedger` |
+| AC-100 | 1 | 500 mục Backup đã chép, dấu nguồn còn khớp | lượt kiểm đầu | 0 lần tải iCloud cho 500 mục đó | `PhotosHashTests.seedsFromBackupLedger` (6 mục: 4 lấy SHA từ sổ, 1 đổi dấu nguồn và 1 chưa backup thì không; phần "0 lần tải" khi có ứng viên cùng cỡ ⚠️ chờ T6) |
 | AC-101 | 1 | 100 mục chưa backup; 10 có file NAS cùng cỡ | lượt kiểm | đúng 10 lần tải; 90 mục vào **is not** | ⚠️ chưa có — `PhotosHashTests.downloadsOnlySizeCandidates` |
 | AC-102 | 1 | file khớp bị ghi đè cùng cỡ, đổi ngày sửa, sau lượt so cuối | xoá mục đó | không bị xoá; alert "no longer on NAS Home" | ⚠️ chưa có — `PhotoDeletionGateTests.modifiedDateBlocks` |
 | AC-103 | 1 | file khớp bị dời sang folder khác trong cùng nguồn sau lượt so cuối | xoá mục đó | tìm lại được bằng hash nhanh + cỡ; mục bị xoá | ⚠️ chưa có — `PhotoDeletionGateTests.reResolvesMovedFile` |

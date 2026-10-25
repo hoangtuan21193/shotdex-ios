@@ -667,6 +667,7 @@ final class AppDatabase: Sendable {
         registerRetiredMovies(&migrator)
         registerDuplicatesV3(&migrator)
         registerCardImports(&migrator)
+        registerOnServerCheck(&migrator)
 
         return migrator
     }

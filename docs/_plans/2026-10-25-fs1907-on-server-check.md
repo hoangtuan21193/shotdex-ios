@@ -5,7 +5,7 @@
 | Đặc tả | [`FS-19.07`](../02-functional-spec/FS-19-photo-sources/07-on-server-check.md) · AC + spike: [`07b`](../02-functional-spec/FS-19-photo-sources/07b-on-server-check-ac.md) |
 | Intent | [2026-10-24-smart-album-on-nas](../_intents/2026-10-24-smart-album-on-nas.md) |
 | Ngày | 2026-10-25 |
-| Trạng thái | đang làm — duyệt 2026-10-25; T0 (`b36d7a09`), T1 (`f95b0163`), T2 xong |
+| Trạng thái | đang làm — duyệt 2026-10-25; T0 (`b36d7a09`), T1 (`f95b0163`), T2 (`12c4bbfc`), T3 xong |
 
 ## 1. Hiểu đúng chưa
 

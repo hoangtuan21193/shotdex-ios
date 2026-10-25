@@ -42,6 +42,50 @@ import UniformTypeIdentifiers
         #expect(try store.photosCopiesNeedingHash(limit: 10).map(\.assetId) == ["gone"])
     }
 
+    /// FS-19.07 AC-100: assets Backup already copied, whose files still
+    /// carry the stamp the ledger recorded, get the ledger's SHA-256 for
+    /// every file — listed from PhotoKit, nothing downloaded. A file whose
+    /// stamp changed is not seeded; neither is an asset Backup never saw. A
+    /// second pass lists nothing; an asset edited since is listed again and
+    /// keeps the hash of a file that did not change.
+    @Test func seedsFromBackupLedger() async throws {
+        let f = try BackupFixture(photos: 5)
+        #expect(await f.runner().run().stop == .finished)
+        let ids = (0...5).map { "A\($0)" }
+        try MetadataStore(database: f.database).saveBatch(
+            ids.enumerated().map { PhotoMarksStoreTests.record($1, created: 1_700_000_000 + $0) }, cursorAssetId: nil)
+
+        let lists = Counter()
+        let pass = PhotosFileHashPass(store: CopyFileStore(database: f.database)) { assetId in
+            lists.add(assetId)
+            let n = Int(assetId.dropFirst())!
+            // A4 changed since its backup; A5 was never backed up.
+            let stamp = n == 4 ? "4001:1" : "4000:1"
+            return [PhotosFile(fileKey: "1:IMG_\(n).HEIC", role: .photo, size: n == 4 ? 4_001 : 4_000, stamp: stamp)]
+        }
+
+        let summary = try await pass.run()
+        #expect(summary == .init(listed: 6, seeded: 4))
+        // Newest first.
+        #expect(lists.ids == ids.reversed())
+        let store = CopyFileStore(database: f.database)
+        for n in 0...3 {
+            let file = try #require(try store.files(copyId: "photos:A\(n)").first)
+            #expect(file.sha256 == BackupFixture.sha(f.contents[FakeAssetExporter.key("A\(n)", "1:IMG_\(n).HEIC")]!))
+            #expect(file.origin == .backup)
+        }
+        #expect(try store.files(copyId: "photos:A4").first?.sha256 == nil)
+        #expect(try store.files(copyId: "photos:A5").first?.sha256 == nil)
+
+        #expect(try await pass.run() == .init(listed: 0, seeded: 0))
+
+        var edited = PhotoMarksStoreTests.record("A1", created: 1_700_000_001)
+        edited.modificationDate = 1_700_100_000
+        try MetadataStore(database: f.database).saveBatch([edited], cursorAssetId: nil)
+        #expect(try await pass.run() == .init(listed: 1, seeded: 0))
+        #expect(try store.files(copyId: "photos:A1").first?.origin == .backup)
+    }
+
     /// Files under the app's temporary and caches folders written since
     /// `start`, with their sizes — other tests may write there too, so the
     /// check looks for a file the size of an original.

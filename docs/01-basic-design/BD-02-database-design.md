@@ -141,6 +141,7 @@ Một ảnh là một **id** với các **bản sao** ở các **nguồn** (thư
 | Ảnh | id · lúc tạo · lúc thành mồ côi (rỗng khi còn bản sao) | danh tính; mọi lượt dọn neo vào đây |
 | Bản sao | id bền · id ảnh · nguồn · loại · id PhotoKit **hoặc** đường dẫn tương đối + khoá chuẩn NFC gấp hoa-thường · kích thước · ngày sửa · file ghép cặp · dấu sidecar · online (nguồn) · **mất từ** (`v31-missingCopies`: lượt đọc trọn của nguồn đang online không thấy file; rỗng = còn) · **chỗ giữ chỗ cloud** (`v32-cloudPlaceholders`: chỉ liệt kê, không đọc, không hash, không dòng metadata) · ẩn · lần thấy cuối | kết quả quét |
 | Hash | một dòng mỗi bản sao: thuật toán + phiên bản · hash nhanh · hash đầy đủ · lúc băm | kết quả quét đắt tiền |
+| File gốc (`v44-copyFiles`, [FS-19.07](../02-functional-spec/FS-19-photo-sources/07-on-server-check.md)) | một dòng mỗi (bản sao, file): khoá file (Photos: khoá tài nguyên của sổ Backup; server: `primary` / `companion`) · vai trò (ảnh, RAW, video, video Live Photo, bản sửa…) · cỡ · ngày sửa (server) · dấu nguồn (Photos) · SHA-256 cả file · nguồn hash (Backup / băm) · lần thử · lỗi cuối · lúc thử; kèm lúc liệt kê file của mỗi mục Photos (theo ngày sửa của mục) | kết quả quét đắt tiền — hàng giờ tải iCloud; Clear Local Metadata Index không xoá |
 | Bí danh | id thua → id thắng · lúc gộp | sau mỗi lần gộp |
 | Recipe | id ảnh · recipe · lúc đổi | người dùng |
 | Dấu ảnh file | id ảnh · sao, favorite, title, caption, mỗi trường kèm lúc đổi; keyword một dòng mỗi (ảnh, keyword) | người dùng |
