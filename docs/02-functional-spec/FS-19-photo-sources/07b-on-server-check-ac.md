@@ -21,11 +21,11 @@ Thư viện thử không có ảnh mặt người. Server thử: WebDAV cục b�
 | # | Đợt | Cho | Khi | Thì | Chứng minh bằng |
 |---|---|---|---|---|---|
 | AC-74 | 1 | nguồn `NAS Home` ở gốc `iCloud Photo/`; 100 mục Photos đã kiểm xong; 40 có đủ file trong `Shared/`, 25 chỉ trong `Tuấn/` | lưu album: Source is NAS Home · Folder `Shared` | *Matches 40 photos*; chip `Source: NAS Home › Shared` | ⚠️ chưa có — `OnServerRuleTests.folderScope` |
-| AC-75 | 1 | như AC-74, gộp ảnh FS-19 tắt | đổi Folder thành trống | *Matches 65 photos* | ⚠️ chưa có — `OnServerRuleTests.wholeSourceWithoutMerge` |
+| AC-75 | 1 | như AC-74, gộp ảnh FS-19 tắt | đổi Folder thành trống | *Matches 65 photos* | `OnServerRuleTests.wholeSourceWithoutMerge` (65 có / 35 không; 0 dòng gộp; ảnh riêng của NAS không tính) |
 | AC-76 | 1 | 1 ảnh trong album AC-74; script dời `Shared/2025/a.HEIC` → `Shared/x/b.HEIC` | app về trước mặt | ảnh vẫn trong album; 0 lần đọc trọn `b.HEIC` | `ServerSourceIndexTests.renameKeepsIdentity` (phần server: cùng bản sao, cùng ảnh, 0 lần đọc trọn); phần album ⚠️ chờ T8 |
-| AC-77 | 1 | Live Photo, trên `Shared/` chỉ có `IMG_1.HEIC`, thiếu `IMG_1.MOV` | đếm **is** / **is not** | không trong **is**; trong **is not** | ⚠️ chưa có — `OnServerRuleTests.livePhotoNeedsVideo` |
-| AC-78 | 1 | RAW+JPEG, cả `.ARW` và `.JPG` trên `Shared/` | đếm **is** | có trong **is** | ⚠️ chưa có — `OnServerRuleTests.rawPairBothFiles` |
-| AC-79 | 1 | trên `Shared/`: một bản JPEG nén lại và một bản cùng ảnh nhưng có XMP nhúng thêm, của hai HEIC trong Photos | đếm **is** | cả hai mục không trong **is** | ⚠️ chưa có — `OnServerRuleTests.notByteIdenticalIsNotPresent` |
+| AC-77 | 1 | Live Photo, trên `Shared/` chỉ có `IMG_1.HEIC`, thiếu `IMG_1.MOV` | đếm **is** / **is not** | không trong **is**; trong **is not** | `OnServerRuleTests.livePhotoNeedsVideo` |
+| AC-78 | 1 | RAW+JPEG, cả `.ARW` và `.JPG` trên `Shared/` | đếm **is** | có trong **is** | `OnServerRuleTests.rawPairBothFiles` (JPEG là file đi kèm của bản RAW) |
+| AC-79 | 1 | trên `Shared/`: một bản JPEG nén lại và một bản cùng ảnh nhưng có XMP nhúng thêm, của hai HEIC trong Photos | đếm **is** | cả hai mục không trong **is** | `OnServerRuleTests.notByteIdenticalIsNotPresent` |
 | AC-80 | 1 | 100 mục, 30 kiểm xong, 70 có ứng viên chưa băm | mở **is not** của Shared | 70 mục không có mặt; dòng `Checking · 30 of 100` | ⚠️ chưa có — `OnServerRuleTests.uncheckedInNeither` + `ui-drive` `on-server-album.json` |
 | AC-81 | 1 | 500/1.000 file đã băm | giết app, mở lại | lượt tiếp bắt đầu ở file 501; 0 file trong 500 bị đọc lại | `PhotosHashTests.resumesAfterKill` (20 file, dừng ở lần tải 11: lượt sau tải đúng 10 file còn lại, không file nào đã băm) |
 | AC-82 | 1 | 3 mục chỉ-iCloud có ứng viên, trống 12 GB | lượt băm | ≤ 1 file tạm mỗi lúc, xoá ngay sau khi băm; 3 mục có hash | `PhotosHashTests.oneTempFileAtATime` (thư mục tạm rỗng trước mỗi lần tải và sau lượt; 1 mục đọc hỏng ghi lỗi, không chặn 3 mục kia) · tải iCloud thật: S1 |
@@ -45,9 +45,9 @@ Thư viện thử không có ảnh mặt người. Server thử: WebDAV cục b�
 | AC-96 | 2 | folder server có `IMG_1.HEIC` + `IMG_1.MOV`, và `IMG_2.MOV` một mình | index nguồn | Library có 1 Live Photo (IMG_1) và 1 video (IMG_2) | ⚠️ chưa có — `ServerSourceIndexTests.pairsLivePhoto` |
 | AC-97 | 1 | 2 job Backup cùng connection: một *Only on Wi‑Fi*, một không | đang dùng di động | không chạy; `Waiting for Wi‑Fi` | ⚠️ chưa có — `OnServerScheduleTests.strictestJobWins` |
 | AC-98 | 1 | ảnh trong album AC-74 | xoá nó | bản NAS không bị ẩn; ảnh vẫn trong Library từ NAS Home | ⚠️ chưa có — `PhotoDeletionGateTests.serverCopyStaysVisible` |
-| AC-99 | 1 | ảnh đã sửa trong Photos; bản gốc có trên `Shared/`, bản sửa không | đếm **is**, mở dòng tiến độ | không trong **is**; ghi "Edited — edit not on NAS Home" | ⚠️ chưa có — `OnServerRuleTests.editedNeedsRender` |
+| AC-99 | 1 | ảnh đã sửa trong Photos; bản gốc có trên `Shared/`, bản sửa không | đếm **is**, mở dòng tiến độ | không trong **is**; ghi "Edited — edit not on NAS Home" | `OnServerRuleTests.editedNeedsRender` (phần **is**); dòng chữ ⚠️ chờ T11 |
 | AC-100 | 1 | 500 mục Backup đã chép, dấu nguồn còn khớp | lượt kiểm đầu | 0 lần tải iCloud cho 500 mục đó | `PhotosHashTests.seedsFromBackupLedger` (6 mục, NAS có file cùng cỡ: 4 lấy SHA từ sổ, 0 lần tải; chỉ mục chưa backup bị tải) |
-| AC-101 | 1 | 100 mục chưa backup; 10 có file NAS cùng cỡ | lượt kiểm | đúng 10 lần tải; 90 mục vào **is not** | `PhotosHashTests.downloadsOnlySizeCandidates` (đúng 10 lần tải, mới nhất trước); phần **is not** ⚠️ chờ T7 |
+| AC-101 | 1 | 100 mục chưa backup; 10 có file NAS cùng cỡ | lượt kiểm | đúng 10 lần tải; 90 mục vào **is not** | `PhotosHashTests.downloadsOnlySizeCandidates` (đúng 10 lần tải, mới nhất trước) · mục không có file cùng cỡ vào **is not**: `OnServerRuleTests.notByteIdenticalIsNotPresent` |
 | AC-102 | 1 | file khớp bị ghi đè cùng cỡ, đổi ngày sửa, sau lượt so cuối | xoá mục đó | không bị xoá; alert "no longer on NAS Home" | ⚠️ chưa có — `PhotoDeletionGateTests.modifiedDateBlocks` |
 | AC-103 | 1 | file khớp bị dời sang folder khác trong cùng nguồn sau lượt so cuối | xoá mục đó | tìm lại được bằng hash nhanh + cỡ; mục bị xoá | ⚠️ chưa có — `PhotoDeletionGateTests.reResolvesMovedFile` |
 | AC-104 | 1 | thêm một lời gọi xoá PhotoKit mới ngoài cổng (ngoài danh sách lối cũ) | chạy test | test hỏng, nêu file:dòng | ⚠️ chưa có — `PhotoDeletionGateTests.noNewDirectDeletes` |

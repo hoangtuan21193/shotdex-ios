@@ -310,6 +310,10 @@ struct SmartAlbumRule: Identifiable, Codable, Equatable, Sendable {
     var boolValue: Bool
     /// Which focal-length column `.focalLength` compares against.
     var focalMode: FocalLengthMode
+    /// `.source` on a folder or server source: the folder under the source's
+    /// root it is narrowed to, any depth (FS-19.07 §7). Nil or empty = the
+    /// whole source.
+    var folder: String?
 
     init(
         id: UUID = UUID(),
@@ -319,7 +323,8 @@ struct SmartAlbumRule: Identifiable, Codable, Equatable, Sendable {
         number: Double? = nil,
         numberUpper: Double? = nil,
         boolValue: Bool = true,
-        focalMode: FocalLengthMode = .actual
+        focalMode: FocalLengthMode = .actual,
+        folder: String? = nil
     ) {
         self.id = id
         self.field = field
@@ -329,6 +334,7 @@ struct SmartAlbumRule: Identifiable, Codable, Equatable, Sendable {
         self.numberUpper = numberUpper
         self.boolValue = boolValue
         self.focalMode = focalMode
+        self.folder = folder
     }
 
     /// Whether this rule carries enough input to produce a SQL condition.

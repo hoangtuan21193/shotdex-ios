@@ -98,14 +98,8 @@ enum SmartAlbumSQLBuilder {
                 default: return nil
                 }
             case .source:
-                // A copy there that is present and not hidden (FS-19.04 §5).
                 guard !rule.text.isEmpty else { return nil }
-                let copies = "assetId IN (SELECT photoId FROM photo_copies WHERE sourceId = ? AND missingSince IS NULL AND isHidden = 0)"
-                switch rule.op {
-                case .isExactly: return (copies, [rule.text])
-                case .isNot: return ("NOT \(copies)", [rule.text])
-                default: return nil
-                }
+                return sourceClause(rule)
             default:
                 return nil
             }
@@ -199,6 +193,35 @@ enum SmartAlbumSQLBuilder {
             default:
                 return nil
             }
+        }
+    }
+
+    /// `Source is …`, narrowed to a folder when the rule has one. A server
+    /// source asks whether the Photos item is on it, file by file
+    /// (FS-19.07 §7) — the album people delete from to free iCloud. Any other
+    /// source asks for a copy there that is present and not hidden
+    /// (FS-19.04 §5). Which one is read from `sources` in the query itself.
+    private static func sourceClause(_ rule: SmartAlbumRule) -> (sql: String, values: [DatabaseValueConvertible])? {
+        let id = rule.text
+        var copies = "assetId IN (SELECT photoId FROM photo_copies WHERE sourceId = ? AND missingSince IS NULL AND isHidden = 0"
+        var copyValues: [DatabaseValueConvertible] = [id]
+        if let prefix = OnServerPresenceSQL.folderPrefix(rule.folder) {
+            copies += " AND substr(relativePathKey, 1, ?) = ?"
+            copyValues += [prefix.unicodeScalars.count, prefix]
+        }
+        copies += ")"
+        let isServer = "(SELECT kind FROM sources WHERE id = ?) IS 'server'"
+        switch rule.op {
+        case .isExactly:
+            let (present, values) = OnServerPresenceSQL.present(sourceId: id, folder: rule.folder)
+            return ("((\(isServer) AND \(present)) OR (NOT \(isServer) AND \(copies)))",
+                    [id] + values + [id] + copyValues)
+        case .isNot:
+            let (missing, values) = OnServerPresenceSQL.missing(sourceId: id, folder: rule.folder)
+            return ("((\(isServer) AND \(missing)) OR (NOT \(isServer) AND NOT \(copies)))",
+                    [id] + values + [id] + copyValues)
+        default:
+            return nil
         }
     }
 

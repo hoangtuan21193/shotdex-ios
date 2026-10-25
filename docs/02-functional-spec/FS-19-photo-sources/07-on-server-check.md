@@ -80,6 +80,10 @@ dựa trên nguồn FS-19 · Folder trong điều kiện · một dấu lưới 
   FS-15.02 §2a. Chip chỉ đọc ghi **tên** nguồn: `Source: NAS Home › Shared`.
 - **is**: có trên folder theo §3. **is not**: đã kiểm xong và thiếu ít nhất một file.
 - **Chưa kiểm xong** (một file gốc chưa có hash mà NAS có ứng viên cùng cỡ chưa băm): không vào **is** lẫn **is not**.
+- Chỉ mục **có bản Photos** được đếm: ảnh riêng của NAS (dòng của nó trong Library) không vào album — album là danh sách
+  mục xoá được khỏi Photos. Nguồn thư mục/ổ đĩa giữ nghĩa cũ (FS-19.04 §5: có bản ở đó, đang có, không ẩn), thu hẹp theo
+  Folder. Mục đã đổi trong Photos sau lần liệt kê file cuối thì chờ liệt kê lại, không vào **is** lẫn **is not**.
+  Mã: `OnServerPresenceSQL.swift`, gọi từ `SmartAlbumSQLBuilder.sourceClause`.
 - Thanh điều kiện: `Checking · 12,408 of 54,920 · 38 GB to download`; lý do chờ (`Waiting for Wi‑Fi`, `Waiting for space`,
   `NAS Home isn't reachable`, `Open ShotDex to continue` ở đợt 1); xong thì `Checked 3 min ago`.
 
