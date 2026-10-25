@@ -269,14 +269,13 @@ import Testing
         let database = try AppDatabase.makeEmpty()
         let source = try SourceStore(database: database).addServer(name: "NAS Home", connectionId: "C1")
         let client = InMemoryRemoteFileClient()
-        var data: [Int: Data] = [:]
+        // Two files share 1,040 bytes: s40 is known, s41 is not.
+        let data = Dictionary(uniqueKeysWithValues: (0..<50).map { n in (n, Data(repeating: UInt8(n), count: n == 41 ? 1_040 : 1_000 + n)) })
+        for n in 0..<50 where n != 45 { client.put("iCloud Photo/Shared/f\(n).JPG", data[n]!) }
         try await database.writer.write { db in
             for n in 0..<50 {
-                // Two files share 1,040 bytes: s40 is known, s41 is not.
-                let size = n == 41 ? 1_040 : 1_000 + n
+                let size = data[n]!.count
                 let path = "Shared/f\(n).JPG"
-                data[n] = Data(repeating: UInt8(n), count: size)
-                if n != 45 { client.put("iCloud Photo/" + path, data[n]!) }
                 try db.execute(sql: """
                     INSERT INTO photo_copies (id, photoId, sourceId, kind, relativePath, relativePathKey, size)
                     VALUES (?, ?, ?, 'server', ?, ?, ?)

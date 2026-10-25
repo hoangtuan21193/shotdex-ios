@@ -38,14 +38,13 @@ extension BackupRunnerTests {
             try Row.fetchAll(db, sql: """
                 SELECT c.relativePath, f.sha256, f.origin FROM copy_files f JOIN photo_copies c ON c.id = f.copyId
                 WHERE c.sourceId = ?
-                """, arguments: [source])
+                """, arguments: [source]).map { (path: $0["relativePath"] as String, sha256: $0["sha256"] as String?, origin: $0["origin"] as String?) }
         }
         #expect(rows.count == 10)
         for row in rows {
-            let path: String = row["relativePath"]
-            let n = Int(path.dropFirst("iPhone/IMG_".count).dropLast(".JPG".count))!
-            #expect(row["sha256"] == BackupFixture.sha(contents[FakeAssetExporter.key("A\(n)", "1:IMG_\(n).JPG")]!))
-            #expect(row["origin"] == "backup")
+            let n = Int(row.path.dropFirst("iPhone/IMG_".count).dropLast(".JPG".count))!
+            #expect(row.sha256 == BackupFixture.sha(contents[FakeAssetExporter.key("A\(n)", "1:IMG_\(n).JPG")]!))
+            #expect(row.origin == "backup")
         }
         // Nothing left to seed on the next pass.
         #expect(try await pass.run(sourceId: source, connectionId: "S1", folder: "Backup").seeded == 0)
