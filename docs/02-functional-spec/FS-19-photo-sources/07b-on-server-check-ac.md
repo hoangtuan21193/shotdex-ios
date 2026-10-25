@@ -22,7 +22,7 @@ Thư viện thử không có ảnh mặt người. Server thử: WebDAV cục b�
 |---|---|---|---|---|---|
 | AC-74 | 1 | nguồn `NAS Home` ở gốc `iCloud Photo/`; 100 mục Photos đã kiểm xong; 40 có đủ file trong `Shared/`, 25 chỉ trong `Tuấn/` | lưu album: Source is NAS Home · Folder `Shared` | *Matches 40 photos*; chip `Source: NAS Home › Shared` | ⚠️ chưa có — `OnServerRuleTests.folderScope` |
 | AC-75 | 1 | như AC-74, gộp ảnh FS-19 tắt | đổi Folder thành trống | *Matches 65 photos* | ⚠️ chưa có — `OnServerRuleTests.wholeSourceWithoutMerge` |
-| AC-76 | 1 | 1 ảnh trong album AC-74; script dời `Shared/2025/a.HEIC` → `Shared/x/b.HEIC` | app về trước mặt | ảnh vẫn trong album; 0 lần đọc trọn `b.HEIC` | ⚠️ chưa có — `ServerSourceIndexTests.renameKeepsIdentity` |
+| AC-76 | 1 | 1 ảnh trong album AC-74; script dời `Shared/2025/a.HEIC` → `Shared/x/b.HEIC` | app về trước mặt | ảnh vẫn trong album; 0 lần đọc trọn `b.HEIC` | `ServerSourceIndexTests.renameKeepsIdentity` (phần server: cùng bản sao, cùng ảnh, 0 lần đọc trọn); phần album ⚠️ chờ T8 |
 | AC-77 | 1 | Live Photo, trên `Shared/` chỉ có `IMG_1.HEIC`, thiếu `IMG_1.MOV` | đếm **is** / **is not** | không trong **is**; trong **is not** | ⚠️ chưa có — `OnServerRuleTests.livePhotoNeedsVideo` |
 | AC-78 | 1 | RAW+JPEG, cả `.ARW` và `.JPG` trên `Shared/` | đếm **is** | có trong **is** | ⚠️ chưa có — `OnServerRuleTests.rawPairBothFiles` |
 | AC-79 | 1 | trên `Shared/`: một bản JPEG nén lại và một bản cùng ảnh nhưng có XMP nhúng thêm, của hai HEIC trong Photos | đếm **is** | cả hai mục không trong **is** | ⚠️ chưa có — `OnServerRuleTests.notByteIdenticalIsNotPresent` |

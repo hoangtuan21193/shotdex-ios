@@ -1,4 +1,5 @@
 import Foundation
+import GRDB
 import Testing
 @testable import ShotDex
 
@@ -98,6 +99,44 @@ import Testing
         #expect(Set(client.rangeReadPaths.dropFirst(readsBefore)) == Set(added))
         #expect(client.downloadCount == 0)
         #expect(try await database.reader.read { db in try Int.fetchOne(db, sql: "SELECT COUNT(*) FROM photos") } == 17)
+    }
+
+    /// FS-19.07 AC-76: a script moves and renames a file inside the source
+    /// (`Shared/2025/a.ARW` → `Shared/x/b.ARW`). The next pass keeps the same
+    /// copy and the same photo — matched by quick hash and size — and never
+    /// reads the moved file whole.
+    @Test func renameKeepsIdentity() async throws {
+        let client = InMemoryRemoteFileClient()
+        let padding = 1024 * 1024
+        client.put("iCloud Photo/Shared/2025/a.ARW", try Self.raw(padding: padding, seed: 7))
+        client.put("iCloud Photo/Shared/2025/c.ARW", try Self.raw(padding: padding, seed: 8))
+        let database = try AppDatabase.makeEmpty()
+        let source = try SourceStore(database: database).addServer(name: "NAS Home", connectionId: "C1")
+        _ = try await Self.indexer(database, client).index(sourceId: source, folder: "iCloud Photo", pairsRawAndJpeg: true)
+        func copy(_ path: String) async throws -> (id: String, photoId: String, missing: Int?)? {
+            try await database.reader.read { db in
+                try Row.fetchOne(db, sql: "SELECT id, photoId, missingSince FROM photo_copies WHERE sourceId = ? AND relativePath = ?",
+                                 arguments: [source, path]).map { ($0["id"], $0["photoId"], $0["missingSince"]) }
+            }
+        }
+        let before = try #require(try await copy("Shared/2025/a.ARW"))
+
+        // The script makes the folder and moves the file (same bytes, new name).
+        let moved = try #require(client.files["iCloud Photo/Shared/2025/a.ARW"])
+        client.put("iCloud Photo/Shared/x/b.ARW", moved)
+        try await client.remove("iCloud Photo/Shared/2025/a.ARW")
+        let bytesBefore = client.bytesRead
+        let rescan = try await Self.indexer(database, client).index(sourceId: source, folder: "iCloud Photo", pairsRawAndJpeg: true)
+
+        let after = try #require(try await copy("Shared/x/b.ARW"))
+        #expect(after.id == before.id)
+        #expect(after.photoId == before.photoId)
+        #expect(after.missing == nil)
+        #expect(try await copy("Shared/2025/a.ARW") == nil)
+        #expect(rescan.unchanged == 1)
+        #expect(client.downloadCount == 0)
+        #expect(client.bytesRead - bytesBefore <= EmbeddedPreview.firstRead + 3 * ContentHasher.sampleSize)
+        #expect(try await database.reader.read { db in try Int.fetchOne(db, sql: "SELECT COUNT(*) FROM photos") } == 2)
     }
 
     /// AC-55: NAS Home connected, the app open for hours, nothing touched.

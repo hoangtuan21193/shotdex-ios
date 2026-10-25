@@ -5,7 +5,7 @@
 | Tác giả | Hoang Tuan (người dùng) · Claude soạn |
 | Ngày | 2026-10-24 |
 | Trạng thái | accepted (2026-10-25) |
-| Tiến độ | **đang làm** (2026-10-25) — task 2/22 (T0 board, T1 khoá connection), 0/33 AC xanh; plan [2026-10-25-fs1907-on-server-check](../_plans/2026-10-25-fs1907-on-server-check.md) |
+| Tiến độ | **đang làm** (2026-10-25) — task 3/22 (T0 board, T1 khoá connection, T2 test rename), 0/33 AC xanh trọn (AC-76 xanh phần server); plan [2026-10-25-fs1907-on-server-check](../_plans/2026-10-25-fs1907-on-server-check.md) |
 | Nguồn | phản hồi người dùng (2026-10-24, review giải pháp "ảnh gia đình" trong phiên) |
 | Spec sinh ra từ đây | [FS-19.07](../02-functional-spec/FS-19-photo-sources/07-on-server-check.md) · [07b](../02-functional-spec/FS-19-photo-sources/07b-on-server-check-ac.md) |
 
