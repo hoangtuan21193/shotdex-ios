@@ -22,9 +22,9 @@ import UIKit
 /// `SwipeSelectEvent`) matches the old `DensityPhotoGrid`, so the screens'
 /// selection/compare/delete logic is unchanged.
 struct PhotoGridCollectionView<Item: PhotoGridDisplayable>: UIViewRepresentable {
-    /// Photos with a verified copy on a file server get a glyph (FS-15.02
-    /// §8). Read from the environment so no screen has to thread it through;
-    /// absent in previews, where nothing is uploaded.
+    /// Photos whose every original file is on a server source get a glyph
+    /// (FS-15.02 §8, meaning per FS-19.07 §8). Read from the environment so
+    /// no screen has to thread it through; absent in previews.
     @Environment(ServerUploadIndex.self) private var uploadIndex: ServerUploadIndex?
     /// RAWs this iOS build can't read get a warning glyph (FS-03.04b §3).
     @Environment(UnsupportedRAWIndex.self) private var unsupportedRAWIndex: UnsupportedRAWIndex?
@@ -196,8 +196,9 @@ struct PhotoGridCollectionView<Item: PhotoGridDisplayable>: UIViewRepresentable 
                 collectionView.contentOffset.y = -collectionView.adjustedContentInset.top
             }
         }
+        // On a server source now, not "was uploaded once" (FS-19.07 §8).
         let uploadsChanged = context.coordinator.updateUploaded(
-            uploadIndex?.assetIds ?? [], version: uploadIndex?.version ?? 0
+            uploadIndex?.presentIds ?? [], version: uploadIndex?.presentVersion ?? 0
         )
         let unsupportedChanged = context.coordinator.updateUnsupportedRAW(
             unsupportedRAWIndex?.assetIds ?? [], version: unsupportedRAWIndex?.version ?? 0
@@ -2486,7 +2487,7 @@ final class PhotoGridCell: UICollectionViewCell {
             accessibilityFileType.map { "file type \($0)" },
             accessibilityMetadataLine,
             accessibilityUnsupportedRAW ? String(localized: "RAW not supported by iOS", comment: "VoiceOver: grid tile of a RAW photo this iOS version can't decode") : nil,
-            accessibilityUploaded ? String(localized: "Uploaded to server", comment: "VoiceOver: grid tile of a photo with a copy on a file server") : nil,
+            accessibilityUploaded ? String(localized: "On server", comment: "VoiceOver: grid tile of a photo whose every original file is on a server source (FS-19.07 §8)") : nil,
             accessibilityMarks,
         ]
         if let accessibilityCloudName {

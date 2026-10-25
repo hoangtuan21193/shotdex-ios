@@ -8,6 +8,11 @@ import Observation
 @Observable
 final class ServerUploadIndex {
     private(set) var assetIds: Set<String> = []
+    /// Photos items on a server source now, byte for byte (FS-19.07 §8):
+    /// what the grid's "on server" glyph shows. The upload history above
+    /// still feeds Uploaded to Server and Photo Info.
+    private(set) var presentIds: Set<String> = []
+    private(set) var presentVersion = 0
     /// Bumped on every change, so the grid can tell "new set" without
     /// comparing two sets of 55k ids.
     private(set) var version = 0
@@ -32,6 +37,17 @@ final class ServerUploadIndex {
             let ids = await Task.detached(priority: .utility) { (try? store.uploadedAssetIds()) ?? [] }.value
             self.assetIds = ids
             self.version += 1
+        }
+    }
+
+    /// Reads which Photos items are on a server again — after each batch
+    /// of the on-server check.
+    func reloadPresence(_ load: @escaping @Sendable () throws -> Set<String>) {
+        Task {
+            let ids = await Task.detached(priority: .utility) { (try? load()) ?? [] }.value
+            guard ids != self.presentIds else { return }
+            self.presentIds = ids
+            self.presentVersion += 1
         }
     }
 

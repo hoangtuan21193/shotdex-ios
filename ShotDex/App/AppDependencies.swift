@@ -583,6 +583,11 @@ final class AppDependencies {
             database: database, servers: fileServers, refresh: serverSources, connectionLock: connectionLock,
             listingChanged: { await sources.serverListingChanged() }
         ))
+        // The grid's "on server" glyph follows each batch of the check.
+        let presence = OnServerProgressQueries(database: database)
+        let uploadIndex = serverUploadIndex
+        onServerCheck.onBatch = { uploadIndex.reloadPresence { try presence.presentAnywhere() } }
+        uploadIndex.reloadPresence { try presence.presentAnywhere() }
         self.photoDeletionGate = PhotoDeletionGate(
             database: database,
             connect: { connectionId in

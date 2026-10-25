@@ -105,8 +105,9 @@ sau). Tải iCloud theo cổng khắt nhất của mọi connection có nguồn 
 
 ## 8. Dấu lưới và Photo Info (đợt 2)
 
-- Glyph "trên server" của FS-15.02c giữ hình, đổi nghĩa: mục có trên ít nhất một nguồn server theo §3. Tới khi đợt 2
-  xong, glyph giữ nghĩa cũ (lịch sử upload). VoiceOver "On server".
+- Glyph "trên server" của FS-15.02c giữ hình, đổi nghĩa: mục có trên ít nhất một nguồn server theo §3 (đã làm, T18:
+  `ServerUploadIndex.presentIds`, đọc lại sau mỗi đợt kiểm). Lịch sử upload vẫn nuôi Uploaded to Server và Photo Info.
+  VoiceOver "On server".
 - Photo Info: mục **On Server** — mỗi file khớp một dòng `NAS Home` + đường dẫn; mục Uploaded to Server giữ nguyên.
 
 ## 9. Xoá

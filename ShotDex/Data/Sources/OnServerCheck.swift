@@ -48,7 +48,11 @@ final class OnServerCheck {
     /// When a pass last went through with nothing left to do.
     private(set) var finishedAt: Date?
     /// Bumped after each batch, so a screen showing progress reads again.
-    private(set) var generation = 0
+    private(set) var generation = 0 {
+        didSet { onBatch?() }
+    }
+    /// Runs after each batch — the grid's glyph reads presence again.
+    @ObservationIgnored var onBatch: (@MainActor () -> Void)?
 
     /// Between a foreground and the next background.
     private var isInFront = false

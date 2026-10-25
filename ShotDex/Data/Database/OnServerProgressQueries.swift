@@ -49,3 +49,19 @@ struct OnServerProgressQueries: Sendable {
         }
     }
 }
+
+extension OnServerProgressQueries {
+    /// Photos items on at least one server source (FS-19.07 §8) — the grid's
+    /// "on server" glyph.
+    func presentAnywhere() throws -> Set<String> {
+        let sources = try database.reader.read { db in
+            try String.fetchAll(db, sql: "SELECT id FROM sources WHERE kind = 'server'")
+        }
+        guard !sources.isEmpty else { return [] }
+        let parts = sources.map { OnServerPresenceSQL.present(sourceId: $0, folder: nil) }
+        let sql = "SELECT assetId FROM photo_metadata WHERE " + parts.map { "(\($0.sql))" }.joined(separator: " OR ")
+        return try database.reader.read { db in
+            Set(try String.fetchAll(db, sql: sql, arguments: StatementArguments(parts.flatMap(\.values))))
+        }
+    }
+}
