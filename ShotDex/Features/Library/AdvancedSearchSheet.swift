@@ -22,6 +22,7 @@ struct AdvancedSearchSheet: View {
     @Environment(\.dismiss) private var dismiss
 
     @State private var query: SmartAlbumQuery
+    @State private var folderPicker = SourceFolderPicker()
     @State private var matchCount: Int?
     @State private var isSaveAsAlbumPresented = false
     @State private var suggestions = FilterSuggestionCatalog(brands: [], bodies: [], lenses: [], places: [])
@@ -108,6 +109,7 @@ struct AdvancedSearchSheet: View {
                 )
             }
         }
+        .sourceFolderPicker(folderPicker, query: $query)
         .task {
             onPresent?()
             // Shared actor cache: the DISTINCT scans never block the sheet,

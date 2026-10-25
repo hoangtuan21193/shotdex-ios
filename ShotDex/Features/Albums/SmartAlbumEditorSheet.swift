@@ -16,6 +16,7 @@ struct SmartAlbumEditorSheet: View {
 
     @State private var name: String
     @State private var query: SmartAlbumQuery
+    @State private var folderPicker = SourceFolderPicker()
     @State private var availableBrands: [String] = []
     @State private var availableBodies: [String] = []
     @State private var availableLenses: [String] = []
@@ -90,6 +91,7 @@ struct SmartAlbumEditorSheet: View {
                 }
             }
         }
+        .sourceFolderPicker(folderPicker, query: $query)
         .task { await prepare() }
         .task(id: query) { await recomputeCount(for: query) }
     }

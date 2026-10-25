@@ -22,15 +22,8 @@ struct RuleBuilderSections: View {
     @State private var sources: [(value: String, label: String)] = []
     /// Server sources by id → their connection, for the Folder row.
     @State private var serverConnections: [String: String] = [:]
-    @State private var folderPick: FolderPick?
-
-    /// The folder browser open for one condition (FS-19.07 §7).
-    private struct FolderPick: Identifiable {
-        let id = UUID()
-        let ruleId: UUID
-        let root: String
-        let route: FolderPickerRoute
-    }
+    /// Hosts the Folder row's browser; without one the row is not offered.
+    @Environment(SourceFolderPicker.self) private var folderPicker: SourceFolderPicker?
 
     /// Photo-vs-video as a scope control instead of a condition row. Backed by a
     /// single `.mediaType` rule so it compiles through the same SQL builder as
@@ -74,7 +67,7 @@ struct RuleBuilderSections: View {
                 existingAssetIds: { PhotoKitAssetCreator.existingAssetIds($0) }
             )
         }
-        folderPick = FolderPick(ruleId: rule.id, root: server.folder, route: FolderPickerRoute(model: picker))
+        folderPicker?.pick = .init(ruleId: rule.id, root: server.folder, route: FolderPickerRoute(model: picker))
     }
 
     enum Parts {
@@ -132,7 +125,7 @@ struct RuleBuilderSections: View {
                     places: places,
                     keywords: keywords,
                     sources: sources,
-                    folderSources: Set(serverConnections.keys),
+                    folderSources: folderPicker == nil ? [] : Set(serverConnections.keys),
                     onChooseFolder: { chooseFolder(for: rule) },
                     onDelete: { query.rules.removeAll { $0.id == rule.id } }
                 )
@@ -162,30 +155,49 @@ struct RuleBuilderSections: View {
                 serverConnections = (try? store.serverConnections()) ?? [:]
             }
         }
-        .sheet(item: $folderPick) { pick in
-            NavigationStack {
-                ServerBrowserScreen(model: pick.route.model) { chosen in
-                    if let folder = SourceFolderPath.relative(chosen: chosen, root: pick.root),
-                       let index = query.rules.firstIndex(where: { $0.id == pick.ruleId }) {
-                        query.rules[index].folder = folder.isEmpty ? nil : folder
-                    }
-                    folderPick = nil
-                }
-                .toolbar {
-                    ToolbarItem(placement: .cancellationAction) {
-                        Button(String(localized: "Cancel", comment: "Smart album folder browser: close without choosing")) {
-                            folderPick = nil
-                        }
-                    }
-                }
-            }
-            .onDisappear { Task { await pick.route.model.session.close() } }
-        }
         .task {
             // The Keyword field's suggestions, from the same catalog as the
             // Add Keyword field (FS-02.07 §7).
             guard ExtendedMetadataSupport.isAvailable, let cache = dependencies?.filterSuggestions else { return }
             keywords = await cache.load().keywords.map(\.keyword)
         }
+    }
+}
+
+/// The Folder row's browser (FS-19.07 §7), presented by the sheet that
+/// hosts the rule builder: a sheet attached inside the builder's `List`
+/// section is copied onto every row, and presenting one took the whole
+/// editor down with it.
+@MainActor
+@Observable
+final class SourceFolderPicker {
+    struct Pick: Identifiable {
+        let id = UUID()
+        let ruleId: UUID
+        /// The source's root on the server — the connection's Folder.
+        let root: String
+        let route: FolderPickerRoute
+    }
+
+    var pick: Pick?
+}
+
+extension View {
+    /// Presents `picker`'s browser over this view and writes the chosen
+    /// folder into the condition, relative to the source's root.
+    func sourceFolderPicker(_ picker: SourceFolderPicker, query: Binding<SmartAlbumQuery>) -> some View {
+        environment(picker)
+            .sheet(item: Binding(get: { picker.pick }, set: { picker.pick = $0 })) { pick in
+                NavigationStack {
+                    ServerBrowserScreen(model: pick.route.model) { chosen in
+                        if let folder = SourceFolderPath.relative(chosen: chosen, root: pick.root),
+                           let index = query.wrappedValue.rules.firstIndex(where: { $0.id == pick.ruleId }) {
+                            query.wrappedValue.rules[index].folder = folder.isEmpty ? nil : folder
+                        }
+                        picker.pick = nil
+                    }
+                }
+                .onDisappear { Task { await pick.route.model.session.close() } }
+            }
     }
 }
