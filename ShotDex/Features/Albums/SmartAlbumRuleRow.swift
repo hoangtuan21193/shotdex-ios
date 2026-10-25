@@ -16,6 +16,10 @@ struct SmartAlbumRuleRow: View {
     /// The Source field's choices, (id, name) — read by the builder, since
     /// sources change and the other choice sets do not.
     var sources: [(value: String, label: String)] = []
+    /// Server sources, which narrow to a folder (FS-19.07 §7).
+    var folderSources: Set<String> = []
+    /// Opens the folder browser for the rule's source.
+    var onChooseFolder: (() -> Void)?
     /// Removes this condition from the parent list.
     var onDelete: () -> Void
 
@@ -94,6 +98,7 @@ struct SmartAlbumRuleRow: View {
         rule.numberUpper = nil
         rule.boolValue = true
         rule.focalMode = .actual
+        rule.folder = nil
         // "is on" is the default date operator; seed today so the DatePicker's
         // shown date is the committed value (rule valid, Save enabled) instead
         // of a displayed-but-nil date the user must tap to activate.
@@ -165,10 +170,48 @@ struct SmartAlbumRuleRow: View {
         }
     }
 
+    @ViewBuilder
     private var choiceEditor: some View {
+        choiceMenu
+        if rule.field == .source, folderSources.contains(rule.text), let onChooseFolder {
+            folderButton(onChooseFolder)
+        }
+    }
+
+    /// `Folder  Shared ›` — empty is the whole source (FS-19.07 §7).
+    private func folderButton(_ action: @escaping () -> Void) -> some View {
+        let folder = (rule.folder ?? "").trimmingCharacters(in: CharacterSet(charactersIn: "/ "))
+        let value = folder.isEmpty
+            ? String(localized: "All Folders", comment: "Smart album Source condition: no folder chosen, the whole source")
+            : folder
+        return Button(action: action) {
+            HStack(spacing: 6) {
+                Text(String(localized: "Folder", comment: "Smart album Source condition: the folder row"))
+                    .foregroundStyle(.secondary)
+                Spacer()
+                Text(value)
+                    .foregroundStyle(Color(.label))
+                    .lineLimit(1)
+                    .truncationMode(.head)
+                Image(systemName: "chevron.right")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.tertiary)
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 8)
+            .background(Color(.secondarySystemFill), in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(String(localized: "Folder, \(value)", comment: "VoiceOver: the smart album folder row and its value"))
+    }
+
+    private var choiceMenu: some View {
         Menu {
             ForEach(choices, id: \.value) { choice in
-                Button(choice.label) { rule.text = choice.value }
+                Button(choice.label) {
+                    if rule.text != choice.value { rule.folder = nil }
+                    rule.text = choice.value
+                }
             }
         } label: {
             HStack {

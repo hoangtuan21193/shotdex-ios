@@ -174,6 +174,8 @@ struct AdvancedSearchSheet: View {
 /// condition as a token, with Edit (reopen the builder) and Clear actions. The
 /// advanced-search counterpart to `FilterTokenBar`.
 struct AdvancedSearchBar: View {
+    @Environment(AppDependencies.self) private var dependencies: AppDependencies?
+    @State private var sourceNames: [String: String] = [:]
     let query: SmartAlbumQuery
     var onEdit: () -> Void
     var onRemoveRule: (UUID) -> Void
@@ -203,8 +205,8 @@ struct AdvancedSearchBar: View {
 
                     ForEach(rules) { rule in
                         ActiveConditionChip(
-                            label: rule.compactDisplaySummary,
-                            removalAccessibilityLabel: "Remove condition: \(rule.displaySummary)",
+                            label: rule.compactDisplaySummary(naming: sourceNames),
+                            removalAccessibilityLabel: "Remove condition: \(rule.displaySummary(naming: sourceNames))",
                             onRemove: { onRemoveRule(rule.id) }
                         )
                     }
@@ -230,5 +232,10 @@ struct AdvancedSearchBar: View {
             .layoutPriority(1)
         }
         // Floating chrome, no band — same reasoning as `FilterTokenBar`.
+        .task(id: rules.contains { $0.field == .source }) {
+            guard rules.contains(where: { $0.field == .source }), let database = dependencies?.database else { return }
+            let sources = (try? SourceStore(database: database).sources()) ?? []
+            sourceNames = Dictionary(sources.map { ($0.id, $0.name) }) { first, _ in first }
+        }
     }
 }

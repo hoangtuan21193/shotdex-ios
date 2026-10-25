@@ -19,6 +19,28 @@ extension SmartAlbumRule {
         return "\(field.displayName) \(op.displayName) \(value)"
     }
 
+    /// `displaySummary` with a source shown by its name, and its folder:
+    /// `Source is NAS Home › Shared` (FS-19.07 §7). The rule stores the
+    /// source's id, so the caller hands over the names it has.
+    func displaySummary(naming sourceNames: [String: String]) -> String {
+        guard field == .source, !text.isEmpty else { return displaySummary }
+        return "\(field.displayName) \(op.displayName) \(sourceLabel(sourceNames))"
+    }
+
+    /// `compactDisplaySummary` with a source shown by its name and folder.
+    func compactDisplaySummary(naming sourceNames: [String: String]) -> String {
+        guard field == .source, !text.isEmpty else { return compactDisplaySummary }
+        let value = sourceLabel(sourceNames)
+        return op == .isNot ? "\(compactFieldName) ≠ \(value)" : "\(compactFieldName) \(value)"
+    }
+
+    /// `NAS Home › Shared/2025` — the id when the name is not known.
+    private func sourceLabel(_ sourceNames: [String: String]) -> String {
+        let name = sourceNames[text] ?? text
+        let folder = (folder ?? "").trimmingCharacters(in: CharacterSet(charactersIn: "/ "))
+        return folder.isEmpty ? name : "\(name) › \(folder)"
+    }
+
     /// Compact result-bar wording. The rule editor and VoiceOver can keep the
     /// full natural-language summary while chips use symbols that scan quickly:
     /// `ISO 100`, `f > 1.4`, `focal 50–85mm`.

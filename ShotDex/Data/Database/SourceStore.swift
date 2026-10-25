@@ -58,6 +58,14 @@ struct SourceStore: Sendable {
     }
 
     /// The server source of a connection, if it was added as one (FS-19.03 §1).
+    /// Every server source's connection, by source id.
+    func serverConnections() throws -> [String: String] {
+        try database.reader.read { db in
+            Dictionary(try Row.fetchAll(db, sql: "SELECT id, connectionId FROM sources WHERE kind = 'server' AND connectionId IS NOT NULL")
+                .map { ($0["id"], $0["connectionId"]) }) { first, _ in first }
+        }
+    }
+
     func serverSourceId(connectionId: String) throws -> String? {
         try database.reader.read { db in
             try String.fetchOne(db, sql: "SELECT id FROM sources WHERE kind = 'server' AND connectionId = ?", arguments: [connectionId])

@@ -236,6 +236,7 @@ struct SmartAlbumDetailScreen: View {
                     matchCount: model?.matchCount ?? 0,
                     unfilteredCount: filter.isActive ? model?.unfilteredCount : nil,
                     filterChips: filterChips,
+                    sourceNames: model?.sourceNames ?? [:],
                     onEditFilter: filter.advancedQuery != nil ? { isAdvancedFilterPresented = true } : nil,
                     onClearFilter: filter.isActive ? { filter.clear() } : nil
                 )
@@ -272,8 +273,8 @@ struct SmartAlbumDetailScreen: View {
             return advanced.validRules.map { rule in
                 SmartAlbumConditionsBar.FilterChip(
                     id: rule.id.uuidString,
-                    label: rule.compactDisplaySummary,
-                    removalAccessibilityLabel: "Remove condition: \(rule.displaySummary)",
+                    label: rule.compactDisplaySummary(naming: model?.sourceNames ?? [:]),
+                    removalAccessibilityLabel: "Remove condition: \(rule.displaySummary(naming: model?.sourceNames ?? [:]))",
                     onRemove: {
                         var updated = advanced
                         updated.rules.removeAll { $0.id == rule.id }

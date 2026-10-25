@@ -28,6 +28,72 @@ struct OnServerRuleTests {
         } == 0)
     }
 
+    /// AC-74: of 100 checked items, 40 have their files under `Shared/` and
+    /// 25 only under `Tuấn/` — the folder narrows to the 40, at any depth,
+    /// and a folder whose name only starts the same does not count.
+    @Test func folderScope() async throws {
+        let f = try OnServerFixture(photos: 100)
+        for n in 0..<100 {
+            try f.photo(n, files: [("1:IMG_\(n).HEIC", .photo, 1_000 + Int64(n), "sha\(n)")])
+        }
+        for n in 0..<40 { try f.server("Shared/2025/\(n % 3)/IMG_\(n).HEIC", size: 1_000 + Int64(n), sha: "sha\(n)") }
+        for n in 40..<65 { try f.server("Tuấn/IMG_\(n).HEIC", size: 1_000 + Int64(n), sha: "sha\(n)") }
+        try f.server("Shared copy/IMG_99.HEIC", size: 1_099, sha: "sha99")
+        #expect(try await f.count(.isExactly, folder: "Shared") == 40)
+        #expect(try await f.count(.isExactly, folder: "/shared/") == 40)
+        #expect(try await f.count(.isNot, folder: "Shared") == 60)
+        #expect(try await f.count(.isExactly, folder: "Tuấn") == 25)
+        #expect(try await f.count(.isExactly, folder: "Shared/2025/1") == 13)
+    }
+
+    /// AC-80: 30 of 100 items are checked; 70 have a same-size file on the
+    /// NAS still to hash — on either side. Those 70 are in neither list.
+    @Test func uncheckedInNeither() async throws {
+        let f = try OnServerFixture(photos: 100)
+        for n in 0..<30 {
+            try f.photo(n, files: [("1:IMG_\(n).HEIC", .photo, 1_000 + Int64(n), "sha\(n)")])
+        }
+        try f.server("Shared/IMG_0.HEIC", size: 1_000, sha: "sha0")
+        for n in 30..<65 {
+            // Photos side not hashed yet; the NAS file is.
+            try f.photo(n, files: [("1:IMG_\(n).HEIC", .photo, 1_000 + Int64(n), nil)])
+            try f.server("Shared/IMG_\(n).HEIC", size: 1_000 + Int64(n), sha: "sha\(n)")
+        }
+        for n in 65..<100 {
+            // Photos side hashed; the NAS file of its size is not.
+            try f.photo(n, files: [("1:IMG_\(n).HEIC", .photo, 1_000 + Int64(n), "sha\(n)")])
+            try f.server("Shared/IMG_\(n).HEIC", size: 1_000 + Int64(n), sha: nil)
+        }
+        #expect(try await f.count(.isExactly, folder: "Shared") == 1)
+        #expect(try await f.count(.isNot, folder: "Shared") == 29)
+        // Never listed: in neither either.
+        let g = try OnServerFixture(photos: 3)
+        #expect(try await g.count(.isExactly) + g.count(.isNot) == 0)
+    }
+
+    /// AC-74: the chip reads the source by name, with its folder.
+    @Test func chipNamesSourceAndFolder() throws {
+        let rule = SmartAlbumRule(field: .source, op: .isExactly, text: "S1", folder: "Shared")
+        #expect(rule.displaySummary(naming: ["S1": "NAS Home"]) == "Source is NAS Home › Shared")
+        #expect(SmartAlbumRule(field: .source, op: .isExactly, text: "S1").displaySummary(naming: ["S1": "NAS Home"])
+                == "Source is NAS Home")
+        #expect(rule.compactDisplaySummary(naming: ["S1": "NAS Home"]) == "source NAS Home › Shared")
+        // A saved album without the folder field still decodes.
+        let old = #"{"id":"6F9619FF-8B86-D011-B42D-00C04FC964FF","field":"source","op":"isExactly","text":"S1","boolValue":true,"focalMode":"actual"}"#
+        #expect(try JSONDecoder().decode(SmartAlbumRule.self, from: Data(old.utf8)).folder == nil)
+    }
+
+    /// The folder browser answers from the server's root; the condition
+    /// keeps the folder from the source's root.
+    @Test func folderPathFromSourceRoot() {
+        #expect(SourceFolderPath.relative(chosen: "/iCloud Photo/Shared/2025", root: "iCloud Photo") == "Shared/2025")
+        #expect(SourceFolderPath.relative(chosen: "iCloud Photo", root: "/iCloud Photo/") == "")
+        #expect(SourceFolderPath.relative(chosen: "iCloud Photos/Shared", root: "iCloud Photo") == nil)
+        #expect(SourceFolderPath.relative(chosen: "Shared", root: "") == "Shared")
+        #expect(SourceFolderPath.absolute("Shared", root: "iCloud Photo") == "iCloud Photo/Shared")
+        #expect(SourceFolderPath.absolute(nil, root: "iCloud Photo") == "iCloud Photo")
+    }
+
     /// AC-77: a Live Photo whose video is not on the NAS is not there — it
     /// is in **is not**.
     @Test func livePhotoNeedsVideo() async throws {

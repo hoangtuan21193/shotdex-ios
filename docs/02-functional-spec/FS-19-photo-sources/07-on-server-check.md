@@ -76,8 +76,10 @@ dựa trên nguồn FS-19 · Folder trong điều kiện · một dấu lưới 
 
 ## 7. Smart album
 
-- Điều kiện **Source** với nguồn thư mục/server có dòng **Folder** — trống = cả nguồn; chọn bằng màn duyệt folder
-  FS-15.02 §2a. Chip chỉ đọc ghi **tên** nguồn: `Source: NAS Home › Shared`.
+- Điều kiện **Source** với nguồn server có dòng **Folder** — trống = cả nguồn (`All Folders`); chọn bằng màn duyệt
+  folder FS-15.02 §2a, mở ở folder đang chọn; folder ngoài gốc của nguồn (Folder của connection) bị bỏ qua. Đổi nguồn
+  thì xoá Folder. Nguồn thư mục/ổ đĩa chưa có dòng này (SQL đã hỗ trợ; cần màn duyệt folder cục bộ). Chip chỉ đọc ghi
+  **tên** nguồn: `Source is NAS Home › Shared` (cả ở thanh tìm nâng cao của Library).
 - **is**: có trên folder theo §3. **is not**: đã kiểm xong và thiếu ít nhất một file.
 - **Chưa kiểm xong** (một file gốc chưa có hash mà NAS có ứng viên cùng cỡ chưa băm): không vào **is** lẫn **is not**.
 - Chỉ mục **có bản Photos** được đếm: ảnh riêng của NAS (dòng của nó trong Library) không vào album — album là danh sách

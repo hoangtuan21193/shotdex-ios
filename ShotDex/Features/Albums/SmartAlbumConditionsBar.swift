@@ -22,6 +22,8 @@ struct SmartAlbumConditionsBar: View {
     /// looks on one line, so what belongs to the album and what is a passing
     /// filter can be told apart at a glance.
     var filterChips: [FilterChip] = []
+    /// Source names by id, so a Source condition reads by name.
+    var sourceNames: [String: String] = [:]
     var onEditFilter: (() -> Void)?
     var onClearFilter: (() -> Void)?
 
@@ -66,7 +68,7 @@ struct SmartAlbumConditionsBar: View {
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 8) {
                     ForEach(rules) { rule in
-                        Text(rule.displaySummary)
+                        Text(rule.displaySummary(naming: sourceNames))
                             .font(.footnote)
                             .padding(.horizontal, 10)
                             .padding(.vertical, 5)

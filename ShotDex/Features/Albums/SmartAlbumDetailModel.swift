@@ -15,6 +15,7 @@ final class SmartAlbumDetailModel {
     private let pipeline: IndexPipeline
     private let query: SmartAlbumQuery
     private let albumId: String
+    private let sourceStore: SourceStore
 
     /// Newest or oldest first, remembered per album (FS-06.01b §3). A smart
     /// album is a query, so there is no album order to offer.
@@ -38,6 +39,8 @@ final class SmartAlbumDetailModel {
     /// list so the grid animates the tiles out instead of reloading.
     private(set) var lastRemoval: PhotoGridRemoval?
     private(set) var isLoading = false
+    /// Source names by id, for the Source chip (FS-19.07 §7).
+    private(set) var sourceNames: [String: String] = [:]
 
     var matchCount: Int { items.count }
 
@@ -52,6 +55,7 @@ final class SmartAlbumDetailModel {
         self.pipeline = dependencies.indexPipeline
         self.query = album.query
         self.albumId = album.id
+        self.sourceStore = SourceStore(database: dependencies.database)
         self.sortOrder = AlbumSortStore.order(for: album.id, isSmartAlbum: true)
         let assetCache = AsyncChunkedLookupCache<PHAsset>(
             chunkSize: 120,
@@ -91,6 +95,7 @@ final class SmartAlbumDetailModel {
 
     func load() async {
         isLoading = true
+        sourceNames = Dictionary(((try? sourceStore.sources()) ?? []).map { ($0.id, $0.name) }) { first, _ in first }
         var filters: [LibraryQueries.IndexFilter] = [.query(query)]
         if let advanced = filter.advancedQuery {
             filters.append(.query(advanced))

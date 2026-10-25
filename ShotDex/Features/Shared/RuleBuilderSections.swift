@@ -20,6 +20,17 @@ struct RuleBuilderSections: View {
     @Environment(AppDependencies.self) private var dependencies: AppDependencies?
     @State private var keywords: [String] = []
     @State private var sources: [(value: String, label: String)] = []
+    /// Server sources by id → their connection, for the Folder row.
+    @State private var serverConnections: [String: String] = [:]
+    @State private var folderPick: FolderPick?
+
+    /// The folder browser open for one condition (FS-19.07 §7).
+    private struct FolderPick: Identifiable {
+        let id = UUID()
+        let ruleId: UUID
+        let root: String
+        let route: FolderPickerRoute
+    }
 
     /// Photo-vs-video as a scope control instead of a condition row. Backed by a
     /// single `.mediaType` rule so it compiles through the same SQL builder as
@@ -45,6 +56,25 @@ struct RuleBuilderSections: View {
     /// Editable bindings for the conditions shown as rows.
     private var visibleRuleBindings: [Binding<SmartAlbumRule>] {
         Array($query.rules).filter { $0.wrappedValue.field != .mediaType }
+    }
+
+    /// The connection's browser in choose-folder mode, opened at the
+    /// condition's folder; the answer is kept from the source's root.
+    private func chooseFolder(for rule: SmartAlbumRule) {
+        guard let dependencies, let connectionId = serverConnections[rule.text],
+              let server = try? dependencies.fileServers.fetch(id: connectionId) else { return }
+        let session = ServerBrowseSession(server: server, client: RemoteFileClientFactory.make(
+            for: server, password: dependencies.fileServers.password(for: server.id) ?? ""
+        ))
+        let start = SourceFolderPath.absolute(rule.folder, root: server.folder)
+        let picker = ServerBrowserModel(session: session, start: start, mode: .chooseFolder) { folder in
+            ServerFolderModel(
+                session: session, folder: folder, cache: dependencies.serverThumbnails,
+                downloads: dependencies.serverDownloads,
+                existingAssetIds: { PhotoKitAssetCreator.existingAssetIds($0) }
+            )
+        }
+        folderPick = FolderPick(ruleId: rule.id, root: server.folder, route: FolderPickerRoute(model: picker))
     }
 
     enum Parts {
@@ -102,6 +132,8 @@ struct RuleBuilderSections: View {
                     places: places,
                     keywords: keywords,
                     sources: sources,
+                    folderSources: Set(serverConnections.keys),
+                    onChooseFolder: { chooseFolder(for: rule) },
                     onDelete: { query.rules.removeAll { $0.id == rule.id } }
                 )
             }
@@ -124,8 +156,30 @@ struct RuleBuilderSections: View {
         }
         .task {
             if let database = dependencies?.database {
-                sources = ((try? SourceStore(database: database).sources()) ?? []).map { ($0.id, $0.name) }
+                let store = SourceStore(database: database)
+                let all = (try? store.sources()) ?? []
+                sources = all.map { ($0.id, $0.name) }
+                serverConnections = (try? store.serverConnections()) ?? [:]
             }
+        }
+        .sheet(item: $folderPick) { pick in
+            NavigationStack {
+                ServerBrowserScreen(model: pick.route.model) { chosen in
+                    if let folder = SourceFolderPath.relative(chosen: chosen, root: pick.root),
+                       let index = query.rules.firstIndex(where: { $0.id == pick.ruleId }) {
+                        query.rules[index].folder = folder.isEmpty ? nil : folder
+                    }
+                    folderPick = nil
+                }
+                .toolbar {
+                    ToolbarItem(placement: .cancellationAction) {
+                        Button(String(localized: "Cancel", comment: "Smart album folder browser: close without choosing")) {
+                            folderPick = nil
+                        }
+                    }
+                }
+            }
+            .onDisappear { Task { await pick.route.model.session.close() } }
         }
         .task {
             // The Keyword field's suggestions, from the same catalog as the
