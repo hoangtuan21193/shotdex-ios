@@ -4,21 +4,34 @@ import Photos
 /// The Photos side of the on-server check (FS-19.07 §4): lists each asset's
 /// original files with their sizes — no download — and takes the SHA-256
 /// Backup already recorded for every file it copied whose stamp still
-/// matches. Every listing is written as it is read, so a pass stopped
-/// anywhere goes on from the next asset.
+/// matches. Then only files with a same-size file on a server are
+/// downloaded: one temporary file at a time, hashed in 1 MB reads, deleted
+/// at once, never while less than 2 GB would stay free. Every listing and
+/// hash is written as it comes, so a pass stopped anywhere goes on from the
+/// next file; a file that fails is tried on a later pass, behind the rest.
 struct PhotosFileHashPass: Sendable {
     let store: CopyFileStore
     /// An asset's files as PhotoKit lists them; injected so tests need no
     /// library.
     let listFiles: @Sendable (_ assetId: String) async throws -> [PhotosFile]
+    /// Writes one file of the asset into the folder and returns it.
+    var download: @Sendable (_ assetId: String, _ fileKey: String, _ directory: URL) async throws -> URL = Self.liveDownloader()
+    var workDirectory = FileManager.default.temporaryDirectory.appendingPathComponent("ShotDexOnServer", isDirectory: true)
+    var freeBytes: @Sendable () -> Int64? = { DiskSpace.availableBytes() }
 
     struct Summary: Equatable, Sendable {
         var listed = 0
         var seeded = 0
+        var hashed = 0
+        var failed = 0
+        /// The next file would leave less than 2 GB free: the pass stopped
+        /// before downloading it (`Waiting for space`).
+        var waitingForSpace = false
     }
 
     /// Lists up to `limit` assets that were never listed or changed since,
-    /// newest first, then fills what Backup's ledger knows.
+    /// newest first, fills what Backup's ledger knows, then hashes up to
+    /// `limit` candidate files.
     @discardableResult
     func run(limit: Int = 200, now: Date = Date()) async throws -> Summary {
         var summary = Summary()
@@ -31,12 +44,44 @@ struct PhotosFileHashPass: Sendable {
             summary.listed += 1
         }
         summary.seeded = try store.seedFromBackupLedger(at: now)
+
+        let candidates = try store.photosCandidates(triedBefore: now, limit: limit)
+        guard !candidates.isEmpty else { return summary }
+        try FileManager.default.createDirectory(at: workDirectory, withIntermediateDirectories: true)
+        for file in candidates {
+            try Task.checkCancellation()
+            // The same rule as Backup: never fill the device (FS-22.02 §2).
+            if let free = freeBytes(), free - (file.size ?? 0) < BackupRunner.minimumFreeBytes {
+                summary.waitingForSpace = true
+                break
+            }
+            do {
+                let url = try await download(file.assetId, file.fileKey, workDirectory)
+                defer { try? FileManager.default.removeItem(at: url) }
+                let sha = try FileChecksum.sha256(of: url)
+                try store.saveHash(sha, copyId: file.copyId, fileKey: file.fileKey, origin: .hashed, at: now)
+                summary.hashed += 1
+            } catch {
+                if error is CancellationError || Task.isCancelled { throw CancellationError() }
+                try store.saveFailure(error.localizedDescription, copyId: file.copyId, fileKey: file.fileKey, at: now)
+                summary.failed += 1
+            }
+        }
         return summary
     }
 }
 
 extension PhotosFileHashPass {
     enum ListError: Error { case missingAsset }
+
+    /// One original out of Photos into the folder, streamed — fetched from
+    /// iCloud when the device holds only the Optimize Storage proxy.
+    static func liveDownloader() -> @Sendable (String, String, URL) async throws -> URL {
+        { assetId, fileKey, directory in
+            let file = AssetUploadFile(key: fileKey, filename: "original", isRAW: false, role: .original, estimatedBytes: 0)
+            return try await PhotoKitOriginalExporter().export(assetId: assetId, file: file, into: directory)
+        }
+    }
 
     /// The asset's originals and edit renders through PhotoKit — one round
     /// trip, sizes from the resource, stamped as Backup stamps them.

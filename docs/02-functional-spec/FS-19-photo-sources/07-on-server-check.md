@@ -46,7 +46,8 @@ dựa trên nguồn FS-19 · Folder trong điều kiện · một dấu lưới 
 - **Đã có từ Backup:** sổ Backup có SHA-256 từng file gốc nó đã chép, theo dấu nguồn. Dấu nguồn còn khớp → dùng luôn,
   không tải. Đây là phần lớn thư viện của người dùng có Backup.
 - **Chưa có:** cỡ từng file gốc lấy từ Photos không cần tải. Chỉ mục có **ít nhất một file trên NAS cùng cỡ** mới được tải
-  bản gốc để băm; mục không có ứng viên nào thì đã biết là *không có*, không tải.
+  bản gốc để băm; mục không có ứng viên nào thì đã biết là *không có*, không tải. Photos không báo cỡ một file (hiếm) →
+  file đó là ứng viên khi nguồn server có file nào đó.
 - Tải: thư mục tạm, **một file một lúc**, băm theo khối 1 MB, xoá ngay; không giữ cả file trong RAM; video đọc luồng.
 - Còn trống − cỡ file < 2 GB → chờ, `Waiting for space` (luật FS-22).
 - Mỗi file băm xong ghi ngay → bị dừng ở đâu làm tiếp ở file kế. Mục mới nhất trước. Đọc hỏng → ghi lỗi, đi tiếp, lượt sau

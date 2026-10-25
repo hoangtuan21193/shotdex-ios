@@ -55,6 +55,7 @@ struct CopyFile: Hashable, Sendable {
     var origin: Origin?
     var attempts = 0
     var lastError: String?
+    var triedAt: Int?
 }
 
 /// A Photos asset's file as PhotoKit lists it, before anything is read.
@@ -136,6 +137,27 @@ struct CopyFileStore: Sendable {
                 WHERE copy_files.copyId = m.copyId AND copy_files.fileKey = m.fileKey
                 """, arguments: [Int(now.timeIntervalSince1970), PhotoLibrarySource.id])
             return db.changesCount
+        }
+    }
+
+    /// A Photos file worth downloading to hash (FS-19.07 §4): no hash yet,
+    /// and a file of the same size on some server copy — without one, the
+    /// photo is already known not to be there. Photos does not always report
+    /// a size; such a file is a candidate while any server file is known.
+    /// Newest photo first; a file tried since `triedBefore` waits for the
+    /// next pass.
+    func photosCandidates(triedBefore: Date, limit: Int) throws -> [(copyId: String, assetId: String, fileKey: String, size: Int64?)] {
+        try database.reader.read { db in
+            try Row.fetchAll(db, sql: """
+                SELECT f.copyId, c.photoKitId, f.fileKey, f.size FROM copy_files f
+                JOIN photo_copies c ON c.id = f.copyId AND c.kind = 'photos' AND c.photoKitId IS NOT NULL
+                LEFT JOIN photo_metadata m ON m.assetId = c.photoKitId
+                WHERE f.sha256 IS NULL AND (f.triedAt IS NULL OR f.triedAt < ?)
+                  AND EXISTS (
+                    SELECT 1 FROM copy_files s JOIN photo_copies sc ON sc.id = s.copyId
+                    WHERE sc.kind = 'server' AND sc.missingSince IS NULL AND (f.size IS NULL OR s.size = f.size))
+                ORDER BY m.creationDate DESC, f.copyId, f.fileKey LIMIT ?
+                """, arguments: [Int(triedBefore.timeIntervalSince1970), limit]).map { ($0[0], $0[1], $0[2], $0[3]) }
         }
     }
 
@@ -284,6 +306,6 @@ struct CopyFileStore: Sendable {
         CopyFile(copyId: row["copyId"], fileKey: row["fileKey"], role: CopyFile.Role(rawValue: row["role"]) ?? .photo,
                  size: row["size"], modifiedAt: row["modifiedAt"], stamp: row["stamp"], sha256: row["sha256"],
                  origin: (row["origin"] as String?).flatMap(CopyFile.Origin.init(rawValue:)),
-                 attempts: row["attempts"], lastError: row["lastError"])
+                 attempts: row["attempts"], lastError: row["lastError"], triedAt: row["triedAt"])
     }
 }
