@@ -135,4 +135,4 @@ sau). Tải iCloud theo cổng khắt nhất của mọi connection có nguồn 
 
 Dòng Folder: `PH_/IP_/DI_/DC_SmartAlbumEditor` · dòng tiến độ + chip Source: `PH_/IP_/DI_/DC_SmartAlbum` (vẽ
 2026-10-25). Alert sau xoá và alert *Delete Anyway* là alert hệ thống, không vẽ — chữ ghi trong comment của
-`PH_/IP_/DI_DeleteCopies`. Mục On Server trong Photo Info vẽ ở đợt 2.
+`PH_/IP_/DI_DeleteCopies`. Mục On Server trong Photo Info: `PH_/IP_/DI_/DC_Metadata` (vẽ 2026-10-26, dưới Shutter Count).

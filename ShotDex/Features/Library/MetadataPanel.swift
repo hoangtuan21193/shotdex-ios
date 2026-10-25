@@ -13,6 +13,8 @@ struct MetadataPanel: View {
     @Environment(ServerUploadIndex.self) private var uploadIndex: ServerUploadIndex?
     @Environment(FileServerCatalog.self) private var catalog: FileServerCatalog?
     @Environment(AppDependencies.self) private var dependencies: AppDependencies?
+    /// The photo's files on server sources (FS-19.07 §8).
+    @State private var onServerLocations: [OnServerLocation] = []
 
     @State private var report: AssetMetadataReport?
     @State private var isLoading = true
@@ -48,6 +50,10 @@ struct MetadataPanel: View {
             .navigationBarTitleDisplayMode(.inline)
         }
         .task(id: asset?.localIdentifier) {
+            if let id = asset?.localIdentifier, let database = dependencies?.database {
+                let queries = OnServerProgressQueries(database: database)
+                onServerLocations = (try? await Task.detached(priority: .utility) { try queries.locations(photoId: id) }.value) ?? []
+            }
             await load()
         }
     }
@@ -147,6 +153,7 @@ struct MetadataPanel: View {
     private func trailingSections(_ report: AssetMetadataReport) -> some View {
         shutterCountSection
 
+        onServerSection
         serverUploadsSection
 
         Section {
@@ -168,6 +175,30 @@ struct MetadataPanel: View {
                 Text("Indexed photo info is ready. Detailed raw metadata is still being read in the background.")
             } else {
                 Text("Includes identifiers, serial numbers, internal Exif/TIFF values, resources, and vendor-specific binary blocks.")
+            }
+        }
+    }
+
+    /// Byte-identical files of this photo on a server source now
+    /// (FS-19.07 §8): one line per file — the source, then the path.
+    @ViewBuilder
+    private var onServerSection: some View {
+        if !onServerLocations.isEmpty {
+            Section {
+                ForEach(onServerLocations, id: \.self) { location in
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(location.sourceName)
+                        Text(location.path)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .lineLimit(2)
+                            .truncationMode(.middle)
+                    }
+                    .accessibilityElement(children: .combine)
+                }
+            } header: {
+                Label(String(localized: "On Server", comment: "Photo Info: section listing the photo's identical files on server sources"),
+                      systemImage: "externaldrive.fill.badge.checkmark")
             }
         }
     }
