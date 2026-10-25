@@ -17,6 +17,7 @@ struct ShotDexApp: App {
         dependencies.backgroundIndex.register()
         dependencies.backupBackground.register()
         dependencies.ingestBackground.register()
+        dependencies.onServerBackground.register()
         // Same requirement: a notification tap that launched the app is
         // delivered to nobody unless the delegate is already in place.
         dependencies.onThisDayNotifications.registerDelegate()
@@ -51,6 +52,7 @@ struct ShotDexApp: App {
                         dependencies.backupBackground.appDidEnterBackground()
                         dependencies.ingestBackground.appDidEnterBackground()
                         dependencies.onServerCheck.appDidEnterBackground()
+                        dependencies.onServerBackground.appDidEnterBackground()
                     }
                     if phase == .active {
                         // Widgets ask for things while the app is away — an

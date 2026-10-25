@@ -51,7 +51,7 @@ Thư viện thử không có ảnh mặt người. Server thử: WebDAV cục b�
 | AC-102 | 1 | file khớp bị ghi đè cùng cỡ, đổi ngày sửa, sau lượt so cuối | xoá mục đó | không bị xoá; alert "no longer on NAS Home" | `PhotoDeletionGateTests.modifiedDateBlocks` |
 | AC-103 | 1 | file khớp bị dời sang folder khác trong cùng nguồn sau lượt so cuối | xoá mục đó | tìm lại được bằng hash nhanh + cỡ; mục bị xoá | `PhotoDeletionGateTests.reResolvesMovedFile` (0 lần đọc trọn) |
 | AC-104 | 1 | thêm một lời gọi xoá PhotoKit mới ngoài cổng (ngoài danh sách lối cũ) | chạy test | test hỏng, nêu file:dòng | `PhotoDeletionGateTests.noNewDirectDeletes` (đếm lời gọi theo file; 3 lối đợt 1 phải đi qua `photoDeletionGate`) |
-| AC-105 | 2 | kiểm còn 1.000 file; app không mở | hệ thống chạy tác vụ nền | tiến độ tăng; dừng sạch khi hết hạn | ⚠️ chưa có — test giả lập tác vụ + S3 |
+| AC-105 | 2 | kiểm còn 1.000 file; app không mở | hệ thống chạy tác vụ nền | tiến độ tăng; dừng sạch khi hết hạn | `OnServerScheduleTests.backgroundSlotStopsCleanly` (tiến độ tăng 3 đợt, hết hạn thì dừng giữa hai đợt, còn việc cho lượt sau) · `OnServerBackgroundService` ghi một dòng `S3` mỗi lượt nền · số đo S3 ⚠️ cần máy thật |
 | AC-106 | 2 | gộp Photos ↔ server bật | một lượt kiểm gộp 10 ảnh | 0 lần ghi sidecar lên NAS | `PhotoIdentityMergeTests.checkMergeWritesNoSidecar` (10 ảnh gộp, 0 dòng `pending_sidecar`, id Photos giữ lại) · `.deletingMergedKeepsServerCopy` · `.partialMatchStaysApart` |
 | AC-S1…S4 | — | spike §1 | — | số đo ghi vào intent | harness `OnServerSpike` (DEBUG, `-ShotDexOnServerSpike S1/S2/S4`) chạy trên sim; số đo ⚠️ cần máy thật — bảng trong intent |
 

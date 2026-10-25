@@ -214,6 +214,8 @@ final class AppDependencies {
     /// Every Photos deletion that relies on a server copy asks it first
     /// (FS-19.07 §9).
     let photoDeletionGate: PhotoDeletionGate
+    /// The check's own background slot (FS-19.07 §6, phase 2).
+    let onServerBackground: OnServerBackgroundService
     /// Every source's row in Settings › Sources and the Sources group.
     let sources: SourcesModel
     /// Memory cards shown once, and which are plugged in (FS-20 §4).
@@ -599,6 +601,10 @@ final class AppDependencies {
             relist: { sourceId in _ = await serverSources.rescan(sourceId: sourceId) }
         )
         photoLibrary.deletionGate = photoDeletionGate
+        self.onServerBackground = OnServerBackgroundService(check: onServerCheck, needsPower: { [backups] in
+            let connections = Set(((try? SourceStore(database: database).serverConnections()) ?? [:]).values)
+            return ((try? backups.jobs()) ?? []).contains { connections.contains($0.connectionId) && $0.settings.onlyWhileCharging }
+        })
         photoEditing.deletionGate = photoDeletionGate
         // Hide by where a photo lives (FS-19.04 §3), for every surface's menu.
         for actions in [assetActions, viewerAssetActions] {

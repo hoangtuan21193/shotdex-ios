@@ -14,6 +14,8 @@ import Photos
 /// - `-ShotDexOnServerSpike S2` downloads up to 10 GB that way, then logs
 ///   free space before, right after, and on each later launch with `S2`
 ///   (run it again after 1 hour and after 24 hours).
+/// - S3 needs no argument: every background slot of the check appends
+///   one line (`OnServerBackgroundService`).
 /// - `-ShotDexOnServerSpike S4` hashes the 3 largest videos with the
 ///   streaming SHA-256 the check uses, sampling the memory footprint and
 ///   the thermal state.
@@ -152,6 +154,9 @@ enum OnServerSpike {
             return .failure(error)
         }
     }
+
+    /// A line from elsewhere in the app — the background slot (S3).
+    static func record(_ line: String) { log(line) }
 
     private static func log(_ line: String) {
         logger.notice("\(line, privacy: .public)")

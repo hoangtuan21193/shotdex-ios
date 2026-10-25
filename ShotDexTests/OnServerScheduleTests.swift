@@ -86,6 +86,29 @@ struct OnServerScheduleTests {
         #expect(check.waits == ["S1": .openApp])
         #expect(check.photosWait == .openApp)
     }
+
+    /// AC-105: with the app closed, the system's background slot runs the
+    /// check — progress grows — and when iOS ends the slot the pass stops
+    /// between batches, with work left for the next one.
+    @Test func backgroundSlotStopsCleanly() async {
+        let calls = Calls()
+        calls.workRounds = 100
+        let check = OnServerCheck(environment: calls.environment(jobs: [], expensive: false))
+        var slot: Task<Void, Never>?
+        calls.onPhotos = { if calls.counts.photos == 3 { slot?.cancel() } }
+        slot = check.startBackground()
+        await slot?.value
+        #expect(calls.counts.photos == 3)
+        #expect(check.lastPassHashed.photos == 3)
+        #expect(!check.isRunning)
+        #expect(check.hasWorkLeft)
+        // A slot already running is the one handed back.
+        calls.onPhotos = {}
+        let next = check.startBackground()
+        #expect(check.startBackground() == next)
+        next.cancel()
+        await next.value
+    }
 }
 
 /// Counts every call the check makes into the world.

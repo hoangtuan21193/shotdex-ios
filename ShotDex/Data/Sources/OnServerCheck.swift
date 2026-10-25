@@ -87,11 +87,34 @@ final class OnServerCheck {
         }
     }
 
-    /// The scene went to the background: phase 1 stops here and says so.
+    /// The scene went to the background: the foreground pass stops here;
+    /// the system's background slot takes over when it grants one.
     func appDidEnterBackground() {
         isInFront = false
         task?.cancel()
     }
+
+    /// A pass in the system's background time (FS-19.07 §6, phase 2): the
+    /// caller cancels the task when iOS says time is up, and the pass
+    /// stops between batches with everything written.
+    func startBackground() -> Task<Void, Never> {
+        if let task { return task }
+        isRunning = true
+        let started = Task { [weak self] in
+            await self?.run()
+            self?.isRunning = false
+            self?.task = nil
+        }
+        task = started
+        return started
+    }
+
+    /// Some server source, or iCloud downloads, still has work or waits.
+    var hasWorkLeft: Bool { finishedAt == nil || !waits.isEmpty || photosWait != nil }
+
+    /// Files hashed by the last pass, server and Photos side — what the
+    /// background slot reports (spike S3).
+    private(set) var lastPassHashed = (server: 0, photos: 0)
 
     /// One pass; also what tests call.
     func run(now: @escaping @Sendable () -> Date = { Date() }) async {
@@ -126,6 +149,7 @@ final class OnServerCheck {
         photosWait = OnServerSchedule.wait(for: allRules, isExpensivePath: isExpensive, isCharging: isCharging)
         generation &+= 1
 
+        lastPassHashed = (0, 0)
         // Batches until a round does nothing: a Photos hash can make a
         // server file worth reading, and the other way round.
         while !Task.isCancelled {
@@ -136,10 +160,12 @@ final class OnServerCheck {
                 if summary.stoppedBy != nil, let name = sources.first(where: { $0.id == source.id })?.name {
                     waits[source.id] = .unreachable(name)
                 }
+                lastPassHashed.server += summary.seeded + summary.hashed
                 didWork = didWork || summary.seeded + summary.hashed + summary.failed > 0
             }
             if photosWait == nil, !Task.isCancelled, let summary = try? await environment.hashPhotos(start) {
                 if summary.waitingForSpace { photosWait = .space }
+                lastPassHashed.photos += summary.seeded + summary.hashed
                 didWork = didWork || summary.listed + summary.seeded + summary.hashed + summary.failed > 0
             }
             generation &+= 1

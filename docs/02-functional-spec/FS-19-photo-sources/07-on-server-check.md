@@ -78,7 +78,7 @@ dựa trên nguồn FS-19 · Folder trong điều kiện · một dấu lưới 
 |---|---|
 | Liệt kê, băm phía server; tải iCloud để băm | job Backup của connection: Only on Wi‑Fi / Only While Charging, nhiều job thì **khắt nhất**; không có job → chỉ Wi‑Fi. **Use Cellular Data for Indexing** chỉ còn cho index Photos |
 | Đợt 1 | khi app ở trước mặt; về trước mặt thì chạy tiếp |
-| Đợt 2 | thêm tác vụ nền (xử lý nền + tác vụ tiếp tục iOS 26), sau khi S3 cho số |
+| Đợt 2 | thêm tác vụ nền riêng `com.hoangtuan.shotdex.onserver` (`OnServerBackgroundService`, BGProcessingTask: luôn cần mạng, cần sạc khi một job Backup của connection bật Only While Charging), xin mỗi lần app rời màn hình còn việc; hết hạn thì dừng giữa hai đợt. Tác vụ tiếp tục iOS 26 chưa dùng — chờ S3 |
 
 Mã: `Domain/OnServer/OnServerSchedule.swift` (cổng), `Data/Sources/OnServerCheck.swift` (một lượt: liệt kê từng nguồn mở
 cổng → từng vòng băm server rồi Photos tới khi một vòng không làm gì; cả lượt dùng một mốc giờ nên file hỏng chờ lượt
