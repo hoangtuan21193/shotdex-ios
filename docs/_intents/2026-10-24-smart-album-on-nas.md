@@ -5,7 +5,7 @@
 | Tác giả | Hoang Tuan (người dùng) · Claude soạn |
 | Ngày | 2026-10-24 |
 | Trạng thái | accepted (2026-10-25) |
-| Tiến độ | **đang làm** (2026-10-26) — task 13/22 (T0 board, T1 khoá connection, T2 test rename, T3 bảng file gốc + SHA từ sổ Backup, T4 SHA bản sao server từ sổ Backup, T5 băm server theo cỡ, T6 băm Photos theo cỡ, T7 truy vấn đủ file gốc, T8 Folder + chip tên, T9 cổng chạy + chạy khi về trước mặt, T10 liệt kê lại mỗi lần về trước mặt, T11 dòng tiến độ, T12 cổng xoá), 24/33 AC xanh trọn (AC-75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 86, 88, 89, 90, 94, 95, 97, 98, 99, 100, 101, 102, 103, 104; AC-87 đợt 1; AC-74, 93 trừ so board; AC-85 phần hash; AC-92 trừ ảnh); plan [2026-10-25-fs1907-on-server-check](../_plans/2026-10-25-fs1907-on-server-check.md) |
+| Tiến độ | **đang làm** (2026-10-26) — task 14/22 (T0 board, T1 khoá connection, T2 test rename, T3 bảng file gốc + SHA từ sổ Backup, T4 SHA bản sao server từ sổ Backup, T5 băm server theo cỡ, T6 băm Photos theo cỡ, T7 truy vấn đủ file gốc, T8 Folder + chip tên, T9 cổng chạy + chạy khi về trước mặt, T10 liệt kê lại mỗi lần về trước mặt, T11 dòng tiến độ, T12 cổng xoá, T13 harness spike), 24/33 AC xanh trọn (AC-75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 86, 88, 89, 90, 94, 95, 97, 98, 99, 100, 101, 102, 103, 104; AC-87 đợt 1; AC-74, 93 trừ so board; AC-85 phần hash; AC-92 trừ ảnh); plan [2026-10-25-fs1907-on-server-check](../_plans/2026-10-25-fs1907-on-server-check.md) |
 | Nguồn | phản hồi người dùng (2026-10-24, review giải pháp "ảnh gia đình" trong phiên) |
 | Spec sinh ra từ đây | [FS-19.07](../02-functional-spec/FS-19-photo-sources/07-on-server-check.md) · [07b](../02-functional-spec/FS-19-photo-sources/07b-on-server-check-ac.md) |
 
@@ -125,3 +125,19 @@ _Người dùng 2026-10-25: câu cần thử trên máy thật thành **spike tr
 ---
 
 _Khi được duyệt: commit riêng một commit, rồi chạy `/spec` để sang giai đoạn Design._
+
+## Số đo spike (FS-19.07b §1)
+
+Build DEBUG có sẵn harness `Data/Sources/OnServerSpike.swift` (T13). Cách chạy trên iPhone thật: Xcode → Edit Scheme →
+Run → Arguments → thêm `-ShotDexOnServerSpike S1` (hoặc `S2`, `S4`), chạy app, để yên tới dòng `end`. Số ghi ra Console
+(category `on-server-spike`) và `Documents/on-server-spike.log` (Xcode → Devices → ShotDex → Download Container).
+S2 chạy lại cùng tham số sau 1 giờ và sau 24 giờ để có dòng `S2 after … h`.
+
+| Spike | Máy / iOS | Ngày | Kết quả | Đạt? |
+|---|---|---|---|---|
+| S1 | — | — | chưa đo (cần iPhone thật, iCloud đầy, Optimize Storage) | — |
+| S2 | — | — | chưa đo | — |
+| S3 | — | — | chưa đo — đợt 2 | — |
+| S4 | — | — | chưa đo | — |
+
+Simulator (iPhone 17, iOS 26.5) chỉ chứng minh harness chạy và ghi log: `S1: 0 photos + 0 videos not on the device`.

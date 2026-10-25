@@ -26,6 +26,10 @@ struct ShotDexApp: App {
         dependencies.fileServerCatalog.reload()
         dependencies.backupCoordinator.startWatching(photoLibrary: dependencies.photoLibrary)
         dependencies.onServerCheck.appBecameActive()
+        #if DEBUG
+        // FS-19.07b §1 spikes, on a real iPhone: `-ShotDexOnServerSpike S1|S2|S4`.
+        OnServerSpike.runIfAsked()
+        #endif
         // UIKit-presented controls (alerts, menus, share sheets) take the
         // window's tint; SwiftUI controls take `.tint` below.
         UIWindow.appearance().tintColor = AppAccent.uiColor
