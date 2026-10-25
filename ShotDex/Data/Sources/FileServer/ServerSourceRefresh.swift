@@ -1,10 +1,12 @@
 import Foundation
 import GRDB
 
-/// When a server source's listing is compared again (FS-19.03 §3): once
-/// when the app opens, when its server comes back from Not reachable, and
-/// on Rescan. Never on a timer — each pass lists the whole tree on the NAS,
-/// and SMB, SFTP and WebDAV say nothing reliable about changes in between.
+/// When a server source's listing is compared again (FS-19.03 §3, FS-19.07
+/// §5): each time the app comes to the foreground — `OnServerCheck` asks,
+/// within the connection's Backup rules — when its server comes back from
+/// Not reachable, and on Rescan. Never on a timer: each pass lists the
+/// whole tree on the NAS, and SMB, SFTP and WebDAV say nothing reliable
+/// about changes in between. A pass already running is not started again.
 actor ServerSourceRefresh {
     let database: AppDatabase
     let servers: FileServerStore
@@ -12,7 +14,6 @@ actor ServerSourceRefresh {
     let thumbnails: FolderThumbnails?
     let makeClient: @Sendable (FileServer, String) -> any RemoteFileClient
 
-    private var hasRunAtLaunch = false
     /// Sources mid-pass: a second trigger while one runs is the same pass.
     private var running: Set<String> = []
 
@@ -25,12 +26,10 @@ actor ServerSourceRefresh {
         self.makeClient = makeClient
     }
 
-    /// The app opened: every server source once, however often the scene
-    /// comes back to the foreground after that.
+    /// The app came to the foreground: every server source, unless a pass
+    /// is already running for it.
     @discardableResult
-    func appLaunched() async -> [String: ServerSourceIndexer.Summary] {
-        guard !hasRunAtLaunch else { return [:] }
-        hasRunAtLaunch = true
+    func appBecameActive() async -> [String: ServerSourceIndexer.Summary] {
         var out: [String: ServerSourceIndexer.Summary] = [:]
         for sourceId in (try? serverSourceIds()) ?? [] {
             out[sourceId] = await refresh(sourceId)

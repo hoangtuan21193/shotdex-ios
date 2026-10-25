@@ -574,10 +574,12 @@ final class AppDependencies {
                                                                            lock: connectionLock, connectionId: server.id, priority: .normal)
                                                 })
         self.serverSources = serverSources
-        self.onServerCheck = OnServerCheck(environment: .live(database: database, servers: fileServers, refresh: serverSources,
-                                                               connectionLock: connectionLock))
         let sources = SourcesModel(database: database, runner: folderSources, servers: serverSources, photoLibrary: photoLibrary)
         self.sources = sources
+        self.onServerCheck = OnServerCheck(environment: .live(
+            database: database, servers: fileServers, refresh: serverSources, connectionLock: connectionLock,
+            listingChanged: { await sources.serverListingChanged() }
+        ))
         // Hide by where a photo lives (FS-19.04 §3), for every surface's menu.
         for actions in [assetActions, viewerAssetActions] {
             actions.hideService = hideService

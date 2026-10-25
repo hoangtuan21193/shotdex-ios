@@ -5,7 +5,7 @@
 | Tác giả | Hoang Tuan (người dùng) · Claude soạn |
 | Ngày | 2026-10-24 |
 | Trạng thái | accepted (2026-10-25) |
-| Tiến độ | **đang làm** (2026-10-26) — task 10/22 (T0 board, T1 khoá connection, T2 test rename, T3 bảng file gốc + SHA từ sổ Backup, T4 SHA bản sao server từ sổ Backup, T5 băm server theo cỡ, T6 băm Photos theo cỡ, T7 truy vấn đủ file gốc, T8 Folder + chip tên, T9 cổng chạy + chạy khi về trước mặt), 13/33 AC xanh trọn (AC-75, 76, 77, 78, 79, 81, 82, 84, 86, 94, 97, 100, 101; AC-74 trừ so board, AC-80 trừ dòng chữ, AC-83 trừ dòng chữ, AC-85 phần hash, AC-99 trừ dòng chữ); plan [2026-10-25-fs1907-on-server-check](../_plans/2026-10-25-fs1907-on-server-check.md) |
+| Tiến độ | **đang làm** (2026-10-26) — task 11/22 (T0 board, T1 khoá connection, T2 test rename, T3 bảng file gốc + SHA từ sổ Backup, T4 SHA bản sao server từ sổ Backup, T5 băm server theo cỡ, T6 băm Photos theo cỡ, T7 truy vấn đủ file gốc, T8 Folder + chip tên, T9 cổng chạy + chạy khi về trước mặt, T10 liệt kê lại mỗi lần về trước mặt), 13/33 AC xanh trọn (AC-75, 76, 77, 78, 79, 81, 82, 84, 86, 94, 97, 100, 101; AC-87 đợt 1, AC-74 trừ so board, AC-80 trừ dòng chữ, AC-83 trừ dòng chữ, AC-85 phần hash, AC-99 trừ dòng chữ); plan [2026-10-25-fs1907-on-server-check](../_plans/2026-10-25-fs1907-on-server-check.md) |
 | Nguồn | phản hồi người dùng (2026-10-24, review giải pháp "ảnh gia đình" trong phiên) |
 | Spec sinh ra từ đây | [FS-19.07](../02-functional-spec/FS-19-photo-sources/07-on-server-check.md) · [07b](../02-functional-spec/FS-19-photo-sources/07b-on-server-check-ac.md) |
 

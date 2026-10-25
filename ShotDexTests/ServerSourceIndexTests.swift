@@ -142,11 +142,9 @@ import Testing
         #expect(try CopyFileStore(database: database).files(copyId: after.id).map(\.sha256) == ["sha-a"])
     }
 
-    /// AC-55: NAS Home connected, the app open for hours, nothing touched.
-    /// The listing is compared once at launch — not again when the app
-    /// comes back to the foreground, not while the server stays reachable,
-    /// not on any clock. Rescan, and a server back from Not reachable, each
-    /// compare once.
+    /// FS-19.07 §5: each time the app comes to the foreground the listing
+    /// is compared again — not while it stays in front, not on any clock.
+    /// Rescan, and a server back from Not reachable, each compare once.
     @Test func noTimedRescan() async throws {
         let client = InMemoryRemoteFileClient()
         client.put("Photos/2026/Day1/DSC1.ARW", try Self.raw(padding: 1_024, seed: 1))
@@ -158,28 +156,67 @@ import Testing
         let source = try SourceStore(database: database).addServer(name: "NAS Home", connectionId: "C1")
         let refresh = ServerSourceRefresh(database: database, servers: servers, composer: Self.composer) { _, _ in client }
 
-        let launch = await refresh.appLaunched()
+        let launch = await refresh.appBecameActive()
         #expect(launch[source]?.photos == 2)
-        let afterLaunch = client.listingCount
-        #expect(afterLaunch == 3)
+        let onePass = client.listingCount
+        #expect(onePass == 3)
 
-        // Back to the foreground, server still there, time passing.
-        #expect(await refresh.appLaunched().isEmpty)
+        // Staying in front with the server still there, time passing: nothing.
         #expect(await refresh.serverReachable(sourceId: source) == nil)
         try await Task.sleep(for: .milliseconds(300))
-        #expect(client.listingCount == afterLaunch)
+        #expect(client.listingCount == onePass)
 
-        // Rescan: one pass, nothing read again.
+        // Back to the foreground: one pass, nothing read again.
         let reads = client.rangeReadPaths.count
-        #expect(await refresh.rescan(sourceId: source)?.unchanged == 2)
-        #expect(client.listingCount == afterLaunch * 2)
+        #expect(await refresh.appBecameActive()[source]?.unchanged == 2)
+        #expect(client.listingCount == onePass * 2)
         #expect(client.rangeReadPaths.count == reads)
+
+        // Rescan: one pass.
+        #expect(await refresh.rescan(sourceId: source)?.unchanged == 2)
+        #expect(client.listingCount == onePass * 3)
 
         // Server gone, then back: one pass when it returns.
         try SourceStore(database: database).setOnline(false, sourceId: source)
         #expect(await refresh.serverReachable(sourceId: source)?.unchanged == 2)
-        #expect(client.listingCount == afterLaunch * 3)
+        #expect(client.listingCount == onePass * 4)
         #expect(await refresh.serverReachable(sourceId: source) == nil)
+    }
+
+    /// AC-87 (album): a photo on `Shared/` is in **is**; the script deletes
+    /// the file; the app comes to the foreground — the check lists the
+    /// source again and the photo moves to **is not**.
+    @MainActor
+    @Test func rescanOnForeground() async throws {
+        let data = try Self.raw(padding: 4_096, seed: 7)
+        let client = InMemoryRemoteFileClient()
+        client.put("iCloud Photo/Shared/2025/c.ARW", data)
+        let f = try OnServerFixture(photos: 1)
+        let servers = FileServerStore(database: f.database, passwords: InMemoryPasswordStore())
+        try servers.save(FileServer(id: "C1", name: "NAS Home", transferProtocol: .smb, host: "nas.local", username: "u",
+                                    folder: "iCloud Photo"), password: "pw")
+        let refresh = ServerSourceRefresh(database: f.database, servers: servers, composer: Self.composer) { _, _ in client }
+        let store = CopyFileStore(database: f.database)
+        let check = OnServerCheck(environment: .init(
+            serverSources: { [(id: f.source, name: "NAS Home", connectionId: "C1")] },
+            jobRules: { _ in [] },
+            conditions: { (false, true) },
+            list: { id in await refresh.rescan(sourceId: id).map { !$0.disconnected && $0.stoppedBy == nil } ?? false },
+            hashServer: { id, connectionId, now in
+                try await ServerFileHashPass(store: store, client: client).run(sourceId: id, connectionId: connectionId,
+                                                                                folder: "iCloud Photo", now: now)
+            },
+            hashPhotos: { _ in .init() }
+        ))
+        try f.photo(0, files: [("1:c.ARW", .raw, Int64(data.count), BackupFixture.sha(data))])
+
+        await check.run()
+        #expect(try await f.count(.isExactly, folder: "Shared") == 1)
+
+        try await client.remove("iCloud Photo/Shared/2025/c.ARW")
+        await check.run()
+        #expect(try await f.count(.isExactly, folder: "Shared") == 0)
+        #expect(try await f.count(.isNot, folder: "Shared") == 1)
     }
 
     /// AC-36, source half: the NAS password was changed on the server.
@@ -197,7 +234,7 @@ import Testing
         let sources = SourceStore(database: database)
         let source = try sources.addServer(name: "NAS Home", connectionId: "C1")
         let refresh = ServerSourceRefresh(database: database, servers: servers, composer: Self.composer) { _, _ in client }
-        #expect(await refresh.appLaunched()[source]?.photos == 1)
+        #expect(await refresh.appBecameActive()[source]?.photos == 1)
 
         client.connectError = .authenticationFailed
         let connects = client.connectCount

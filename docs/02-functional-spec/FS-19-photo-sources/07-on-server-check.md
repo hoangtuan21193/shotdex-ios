@@ -58,6 +58,8 @@ dựa trên nguồn FS-19 · Folder trong điều kiện · một dấu lưới 
 
 - Liệt kê cây (tên, cỡ, ngày sửa): **mỗi lần app về trước mặt**, khi server về lại, khi bấm Rescan; một lượt đang chạy thì
   không mở lượt mới.
+  Mạng hoặc nguồn điện đổi trong lúc app ở trước mặt (Wi‑Fi tới, server về) → một lượt mới nếu chưa có lượt nào chạy.
+  Danh sách tìm thấy ảnh mới thì Library tải lại (`SourcesModel.serverListingChanged`).
 - **Ứng viên** = file có cỡ bằng cỡ một file gốc Photos chưa khớp. Chỉ ứng viên được đọc trọn (tải ra file tạm rồi băm).
   Kết quả nhớ theo đường dẫn + cỡ + ngày sửa; file dời/đổi tên nối bằng hash nhanh + cỡ, không băm lại.
 - **Backup ghi sẵn:** Backup đẩy file vào folder nằm trong nguồn → lượt quét nguồn lấy SHA-256 trong sổ Backup (bản đã

@@ -132,8 +132,14 @@ final class SourcesModel {
         // Only a read that changed something reloads the grid: a reload under
         // an open viewer would take it away.
         if await runner.readAll() { readCount += 1 }
-        // Servers: once per launch, never on a timer (FS-19.03 §3).
-        if await servers.appLaunched().values.contains(where: { $0.photos > 0 }) { readCount += 1 }
+        // Servers are listed by the on-server check, within each
+        // connection's Backup rules (FS-19.07 §6): `serverListingChanged`.
+        load()
+    }
+
+    /// A server source's listing found new or changed photos.
+    func serverListingChanged() {
+        readCount += 1
         load()
     }
 

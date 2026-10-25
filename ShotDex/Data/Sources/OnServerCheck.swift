@@ -28,6 +28,9 @@ final class OnServerCheck {
         var list: @Sendable (_ sourceId: String) async -> Bool
         var hashServer: @Sendable (_ sourceId: String, _ connectionId: String, _ now: Date) async throws -> ServerFileHashPass.Summary
         var hashPhotos: @Sendable (_ now: Date) async throws -> PhotosFileHashPass.Summary
+        /// Calls back when the network or power changes — a server may be
+        /// back, or Wi‑Fi may have come.
+        var observeConditions: @Sendable (_ changed: @escaping @Sendable () -> Void) -> Void = { _ in }
     }
 
     private let environment: Environment
@@ -44,12 +47,30 @@ final class OnServerCheck {
     /// Bumped after each batch, so a screen showing progress reads again.
     private(set) var generation = 0
 
+    /// Between a foreground and the next background.
+    private var isInFront = false
+
     init(environment: Environment) {
         self.environment = environment
+        environment.observeConditions { [weak self] in
+            Task { @MainActor in self?.conditionsChanged() }
+        }
     }
 
     /// The scene came to the foreground: a pass starts unless one runs.
     func appBecameActive() {
+        isInFront = true
+        start()
+    }
+
+    /// Wi‑Fi or power came, or the network is back: a server that was not
+    /// reachable may answer now. Only while the app is in front.
+    func conditionsChanged() {
+        guard isInFront else { return }
+        start()
+    }
+
+    private func start() {
         guard task == nil else { return }
         isRunning = true
         task = Task { [weak self] in
@@ -61,6 +82,7 @@ final class OnServerCheck {
 
     /// The scene went to the background: phase 1 stops here and says so.
     func appDidEnterBackground() {
+        isInFront = false
         task?.cancel()
     }
 
@@ -129,8 +151,9 @@ extension OnServerCheck.Environment {
     /// The real world: the FS-19 server sources, their connections' Backup
     /// jobs, the device's network and power, and the two hash passes. Every
     /// server call goes through the connection's lock, behind Backup.
+    /// `listingChanged` runs when a listing found new or changed photos.
     static func live(database: AppDatabase, servers: FileServerStore, refresh: ServerSourceRefresh,
-                     connectionLock: ConnectionLock) -> Self {
+                     connectionLock: ConnectionLock, listingChanged: @escaping @Sendable () async -> Void) -> Self {
         // Monitors of its own: the shared ones have a single handler slot.
         let network = NetworkMonitor()
         let power = PowerMonitor()
@@ -155,6 +178,7 @@ extension OnServerCheck.Environment {
             },
             list: { sourceId in
                 if let summary = await refresh.rescan(sourceId: sourceId) {
+                    if summary.photos > 0 { await listingChanged() }
                     return !summary.disconnected && summary.stoppedBy == nil
                 }
                 // Another trigger is listing it right now, or it has no
@@ -170,6 +194,10 @@ extension OnServerCheck.Environment {
             },
             hashPhotos: { now in
                 try await PhotosFileHashPass(store: store, listFiles: PhotosFileHashPass.liveLister()).run(now: now)
+            },
+            observeConditions: { changed in
+                network.setPathChangeHandler { _, _ in changed() }
+                power.setPowerChangeHandler { _, _ in changed() }
             }
         )
     }
