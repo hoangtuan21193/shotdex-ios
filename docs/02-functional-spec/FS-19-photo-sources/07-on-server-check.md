@@ -40,6 +40,10 @@ dựa trên nguồn FS-19 · Folder trong điều kiện · một dấu lưới 
   Home"*. Bản sửa lên NAS khi job Backup bật **Include Edited Versions** (FS-22.01 §2).
 - Kiểm **không phụ thuộc** việc gộp ảnh của FS-19 (§02): đọc thẳng bảng hash theo file. Gộp chỉ để hiển thị (đợt 2), và
   không bao giờ ghi sidecar lên NAS vì một lần kiểm.
+- Gộp (đợt 2, `OnServerMergePass`, chạy cuối mỗi lượt kiểm): ảnh server chỉ có bản server, mà mọi file của nó cùng SHA-256
+  với một file của một mục Photos, được gộp vào mục Photos đó — **id của Photos luôn thắng** (`PhotoMergePlan.merge
+  keeping:`), vì mọi thứ phía Photos theo id đó. Gộp không tạo dòng `pending_sidecar`. Khớp một phần (ảnh có, video Live
+  Photo khác) thì không gộp. Xoá ảnh đã gộp: bản đầu là Photos nên chạy đường xoá Photos qua cổng, bản NAS ở lại.
 
 ## 4. Hash phía Photos
 

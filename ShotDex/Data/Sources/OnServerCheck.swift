@@ -31,6 +31,9 @@ final class OnServerCheck {
         /// Calls back when the network or power changes — a server may be
         /// back, or Wi‑Fi may have come.
         var observeConditions: @Sendable (_ changed: @escaping @Sendable () -> Void) -> Void = { _ in }
+        /// Folds server photos into the Photos items they are byte for byte
+        /// (phase 2, display only); returns how many.
+        var merge: @Sendable () async throws -> Int = { 0 }
     }
 
     private let environment: Environment
@@ -138,6 +141,9 @@ final class OnServerCheck {
             generation &+= 1
             guard didWork else { break }
         }
+        if !Task.isCancelled, (try? await environment.merge()) ?? 0 > 0 {
+            generation &+= 1
+        }
         if Task.isCancelled {
             for source in openSources where waits[source.id] == nil { waits[source.id] = .openApp }
             if photosWait == nil { photosWait = .openApp }
@@ -198,6 +204,11 @@ extension OnServerCheck.Environment {
             observeConditions: { changed in
                 network.setPathChangeHandler { _, _ in changed() }
                 power.setPowerChangeHandler { _, _ in changed() }
+            },
+            merge: {
+                let merged = try OnServerMergePass(database: database).run()
+                if merged > 0 { await listingChanged() }
+                return merged
             }
         )
     }

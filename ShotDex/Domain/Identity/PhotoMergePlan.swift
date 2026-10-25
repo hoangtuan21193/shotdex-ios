@@ -43,8 +43,12 @@ enum PhotoMergePlan {
         let data: PhotoUserData
     }
 
-    static func merge(_ a: Side, _ b: Side) -> Result {
-        let (winner, loser) = (a.createdAt, a.insertionOrder, a.id) <= (b.createdAt, b.insertionOrder, b.id) ? (a, b) : (b, a)
+    /// `keeping` names the side that must survive whatever its age — a
+    /// Photos item folded with its server copy keeps the asset's id
+    /// (FS-19.07 §3), since everything Photos-side is keyed by it.
+    static func merge(_ a: Side, _ b: Side, keeping: String? = nil) -> Result {
+        let older = (a.createdAt, a.insertionOrder, a.id) <= (b.createdAt, b.insertionOrder, b.id)
+        let (winner, loser) = keeping == a.id ? (a, b) : keeping == b.id ? (b, a) : older ? (a, b) : (b, a)
         var data = PhotoUserData()
         data.rating = latest(winner.data.rating, loser.data.rating)
         data.isFavorite = latest(winner.data.isFavorite, loser.data.isFavorite)
