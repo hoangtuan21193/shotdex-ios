@@ -208,6 +208,9 @@ final class AppDependencies {
     /// Connections added as sources: compared at launch, when the server
     /// comes back, and on Rescan (FS-19.03 §3).
     let serverSources: ServerSourceRefresh
+    /// Whether Photos items are on the server sources (FS-19.07), checked
+    /// while the app is in front.
+    let onServerCheck: OnServerCheck
     /// Every source's row in Settings › Sources and the Sources group.
     let sources: SourcesModel
     /// Memory cards shown once, and which are plugged in (FS-20 §4).
@@ -571,6 +574,8 @@ final class AppDependencies {
                                                                            lock: connectionLock, connectionId: server.id, priority: .normal)
                                                 })
         self.serverSources = serverSources
+        self.onServerCheck = OnServerCheck(environment: .live(database: database, servers: fileServers, refresh: serverSources,
+                                                               connectionLock: connectionLock))
         let sources = SourcesModel(database: database, runner: folderSources, servers: serverSources, photoLibrary: photoLibrary)
         self.sources = sources
         // Hide by where a photo lives (FS-19.04 §3), for every surface's menu.

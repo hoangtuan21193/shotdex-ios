@@ -25,6 +25,7 @@ struct ShotDexApp: App {
         dependencies.unsupportedRAWIndex.loadIfNeeded()
         dependencies.fileServerCatalog.reload()
         dependencies.backupCoordinator.startWatching(photoLibrary: dependencies.photoLibrary)
+        dependencies.onServerCheck.appBecameActive()
         // UIKit-presented controls (alerts, menus, share sheets) take the
         // window's tint; SwiftUI controls take `.tint` below.
         UIWindow.appearance().tintColor = AppAccent.uiColor
@@ -45,6 +46,7 @@ struct ShotDexApp: App {
                         dependencies.backgroundIndex.scheduleContinuationIfNeeded()
                         dependencies.backupBackground.appDidEnterBackground()
                         dependencies.ingestBackground.appDidEnterBackground()
+                        dependencies.onServerCheck.appDidEnterBackground()
                     }
                     if phase == .active {
                         // Widgets ask for things while the app is away — an
@@ -60,6 +62,9 @@ struct ShotDexApp: App {
                         Task { await dependencies.sources.readAll() }
                         // Backups catch up on what arrived while away (FS-22.02 §1).
                         dependencies.backupCoordinator.appBecameActive()
+                        // Whether Photos items are on the servers, from where
+                        // the last pass stopped (FS-19.07 §6).
+                        dependencies.onServerCheck.appBecameActive()
                     }
                 }
                 // A tapped Spotlight result arrives as a user activity rather

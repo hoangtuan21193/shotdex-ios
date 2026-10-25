@@ -74,6 +74,11 @@ dựa trên nguồn FS-19 · Folder trong điều kiện · một dấu lưới 
 | Đợt 1 | khi app ở trước mặt; về trước mặt thì chạy tiếp |
 | Đợt 2 | thêm tác vụ nền (xử lý nền + tác vụ tiếp tục iOS 26), sau khi S3 cho số |
 
+Mã: `Domain/OnServer/OnServerSchedule.swift` (cổng), `Data/Sources/OnServerCheck.swift` (một lượt: liệt kê từng nguồn mở
+cổng → từng vòng băm server rồi Photos tới khi một vòng không làm gì; cả lượt dùng một mốc giờ nên file hỏng chờ lượt
+sau). Tải iCloud theo cổng khắt nhất của mọi connection có nguồn server. App xuống nền → dừng giữa hai đợt, lý do
+`Open ShotDex to continue`.
+
 ## 7. Smart album
 
 - Điều kiện **Source** với nguồn server có dòng **Folder** — trống = cả nguồn (`All Folders`); chọn bằng màn duyệt
