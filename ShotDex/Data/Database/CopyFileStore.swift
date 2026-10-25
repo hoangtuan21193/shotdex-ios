@@ -225,12 +225,49 @@ struct CopyFileStore: Sendable {
         }
     }
 
+    /// Server files worth reading whole (FS-19.07 §5): no hash yet, and the
+    /// size of a Photos file that is not matched on this source — unhashed,
+    /// or hashed with no server file of the same bytes here. A file tried
+    /// since `triedBefore` waits for the next pass.
+    func serverCandidates(sourceId: String, triedBefore: Date, limit: Int) throws -> [UnhashedServerFile] {
+        try database.reader.read { db in
+            try Row.fetchAll(db, sql: """
+                SELECT f.copyId, f.fileKey, f.size,
+                       CASE f.fileKey WHEN 'companion' THEN c.pairedPath ELSE c.relativePath END AS path
+                FROM copy_files f JOIN photo_copies c ON c.id = f.copyId
+                WHERE c.sourceId = ?1 AND c.kind = 'server' AND c.missingSince IS NULL
+                  AND f.sha256 IS NULL AND f.size IS NOT NULL AND (f.triedAt IS NULL OR f.triedAt < ?2)
+                  AND EXISTS (
+                    SELECT 1 FROM copy_files p JOIN photo_copies pc ON pc.id = p.copyId AND pc.kind = 'photos'
+                    WHERE p.size = f.size AND (p.sha256 IS NULL OR NOT EXISTS (
+                        SELECT 1 FROM copy_files s JOIN photo_copies sc ON sc.id = s.copyId
+                        WHERE s.sha256 = p.sha256 AND sc.sourceId = ?1 AND sc.kind = 'server' AND sc.missingSince IS NULL)))
+                ORDER BY c.relativePathKey, f.fileKey LIMIT ?3
+                """, arguments: [sourceId, Int(triedBefore.timeIntervalSince1970), limit]).compactMap { row in
+                guard let path: String = row["path"] else { return nil }
+                return UnhashedServerFile(copyId: row["copyId"], fileKey: row["fileKey"], relativePath: path, size: row["size"])
+            }
+        }
+    }
+
     func saveHash(_ sha256: String, copyId: String, fileKey: String, origin: CopyFile.Origin, at now: Date = Date()) throws {
+        let time = Int(now.timeIntervalSince1970)
         try database.writer.write { db in
             try db.execute(sql: """
-                UPDATE copy_files SET sha256 = ?, origin = ?, hashedAt = ?, lastError = NULL
+                UPDATE copy_files SET sha256 = ?, origin = ?, hashedAt = ?, triedAt = ?, lastError = NULL
                 WHERE copyId = ? AND fileKey = ?
-                """, arguments: [sha256, origin.rawValue, Int(now.timeIntervalSince1970), copyId, fileKey])
+                """, arguments: [sha256, origin.rawValue, time, time, copyId, fileKey])
+        }
+    }
+
+    /// A read that failed: counted, kept for the progress line, tried again
+    /// on a later pass — it never holds up the files behind it.
+    func saveFailure(_ message: String, copyId: String, fileKey: String, at now: Date = Date()) throws {
+        try database.writer.write { db in
+            try db.execute(sql: """
+                UPDATE copy_files SET attempts = attempts + 1, lastError = ?, triedAt = ?
+                WHERE copyId = ? AND fileKey = ?
+                """, arguments: [message, Int(now.timeIntervalSince1970), copyId, fileKey])
         }
     }
 

@@ -120,6 +120,8 @@ import Testing
             }
         }
         let before = try #require(try await copy("Shared/2025/a.ARW"))
+        // Its whole-file hash, once known, is not lost to the move (FS-19.07 §5).
+        try CopyFileStore(database: database).saveHash("sha-a", copyId: before.id, fileKey: "primary", origin: .hashed)
 
         // The script makes the folder and moves the file (same bytes, new name).
         let moved = try #require(client.files["iCloud Photo/Shared/2025/a.ARW"])
@@ -137,6 +139,7 @@ import Testing
         #expect(client.downloadCount == 0)
         #expect(client.bytesRead - bytesBefore <= EmbeddedPreview.firstRead + 3 * ContentHasher.sampleSize)
         #expect(try await database.reader.read { db in try Int.fetchOne(db, sql: "SELECT COUNT(*) FROM photos") } == 2)
+        #expect(try CopyFileStore(database: database).files(copyId: after.id).map(\.sha256) == ["sha-a"])
     }
 
     /// AC-55: NAS Home connected, the app open for hours, nothing touched.
@@ -254,5 +257,64 @@ import Testing
         #expect(midway.outcomes.dropFirst() == [.notAttempted, .notAttempted])
         #expect(refusedMidway.downloadCount == 2)
         #expect(refusedMidway.connectCount == 1)
+    }
+
+    /// FS-19.07 AC-84: of 50 files on the NAS, only those the size of a
+    /// Photos file not yet matched are read whole — here 4, plus one that
+    /// vanished after the listing, whose failure is recorded and does not
+    /// stop the rest. A file the size of a Photos file that is already
+    /// matched on this source is not read. The next pass reads only the
+    /// failed file again.
+    @Test func fullHashOnlySizeCandidates() async throws {
+        let database = try AppDatabase.makeEmpty()
+        let source = try SourceStore(database: database).addServer(name: "NAS Home", connectionId: "C1")
+        let client = InMemoryRemoteFileClient()
+        var data: [Int: Data] = [:]
+        try await database.writer.write { db in
+            for n in 0..<50 {
+                // Two files share 1,040 bytes: s40 is known, s41 is not.
+                let size = n == 41 ? 1_040 : 1_000 + n
+                let path = "Shared/f\(n).JPG"
+                data[n] = Data(repeating: UInt8(n), count: size)
+                if n != 45 { client.put("iCloud Photo/" + path, data[n]!) }
+                try db.execute(sql: """
+                    INSERT INTO photo_copies (id, photoId, sourceId, kind, relativePath, relativePathKey, size)
+                    VALUES (?, ?, ?, 'server', ?, ?, ?)
+                    """, arguments: ["s\(n)", "p\(n)", source, path, path.lowercased(), size])
+                try db.execute(sql: "INSERT INTO copy_files (copyId, fileKey, role, size, sha256) VALUES (?, 'primary', 'photo', ?, ?)",
+                               arguments: ["s\(n)", size, n == 40 ? "known" : nil])
+            }
+            // Photos files: four unmatched sizes, one vanished candidate, one
+            // matched by s40, one with no server file of its size.
+            let photos: [(Int, String?)] = [(1_005, nil), (1_010, nil), (1_020, "other"), (1_030, nil), (1_045, nil),
+                                            (1_040, "known"), (9_999, nil)]
+            for (k, (size, sha)) in photos.enumerated() {
+                try db.execute(sql: "INSERT INTO photo_copies (id, photoId, sourceId, kind, photoKitId) VALUES (?, ?, ?, 'photos', ?)",
+                               arguments: ["photos:P\(k)", "P\(k)", PhotoLibrarySource.id, "P\(k)"])
+                try db.execute(sql: "INSERT INTO copy_files (copyId, fileKey, role, size, stamp, sha256) VALUES (?, '1:IMG.HEIC', 'photo', ?, '', ?)",
+                               arguments: ["photos:P\(k)", size, sha])
+            }
+        }
+        let store = CopyFileStore(database: database)
+        let pass = ServerFileHashPass(store: store, client: client)
+        let now = Date(timeIntervalSince1970: 1_800_000_000)
+
+        let first = try await pass.run(sourceId: source, connectionId: "C1", folder: "iCloud Photo", now: now)
+
+        #expect(first == .init(seeded: 0, hashed: 4, failed: 1))
+        #expect(Set(client.sha256Paths) == Set([5, 10, 20, 30, 45].map { "iCloud Photo/Shared/f\($0).JPG" }))
+        for n in [5, 10, 20, 30] {
+            #expect(try store.files(copyId: "s\(n)").first?.sha256 == BackupFixture.sha(data[n]!))
+            #expect(try store.files(copyId: "s\(n)").first?.origin == .hashed)
+        }
+        let failed = try #require(try store.files(copyId: "s45").first)
+        #expect(failed.sha256 == nil)
+        #expect(failed.attempts == 1)
+        #expect(failed.lastError != nil)
+
+        let second = try await pass.run(sourceId: source, connectionId: "C1", folder: "iCloud Photo", now: now.addingTimeInterval(60))
+        #expect(second == .init(seeded: 0, hashed: 0, failed: 1))
+        #expect(client.sha256Paths.count == 6)
+        #expect(client.sha256Paths.last == "iCloud Photo/Shared/f45.JPG")
     }
 }

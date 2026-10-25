@@ -29,7 +29,7 @@ extension BackupRunnerTests {
         let indexer = ServerSourceIndexer(database: f.database, composer: ServerSourceIndexTests.composer,
                                           client: f.client, readsSidecars: false)
         #expect(try await indexer.index(sourceId: source, folder: "Backup", pairsRawAndJpeg: true).photos == 10)
-        let pass = ServerFileHashPass(store: CopyFileStore(database: f.database))
+        let pass = ServerFileHashPass(store: CopyFileStore(database: f.database), client: f.client)
         #expect(try await pass.run(sourceId: source, connectionId: "S1", folder: "Backup").seeded == 10)
 
         #expect(f.client.sha256Paths.count == hashReads)
