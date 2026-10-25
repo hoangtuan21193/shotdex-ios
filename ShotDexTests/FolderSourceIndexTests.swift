@@ -56,6 +56,27 @@ import Testing
         #expect(try Self.fingerprint(root) == before)
     }
 
+    /// FS-19.07 AC-96: in a folder source, a still and a movie with one
+    /// base name are one Live Photo; a movie alone is a video.
+    @Test func pairsLivePhoto() throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent("Live-\(UUID().uuidString)", isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        try MetadataFixture.encode(.heic, options: MetadataFixture.Options()).write(to: root.appendingPathComponent("IMG_1.HEIC"))
+        try Data(repeating: 1, count: 4_000).write(to: root.appendingPathComponent("IMG_1.MOV"))
+        try Data(repeating: 2, count: 5_000).write(to: root.appendingPathComponent("IMG_2.MOV"))
+        let database = try AppDatabase.makeEmpty()
+        let sourceId = try SourceStore(database: database).addFolder(name: "Live", bookmark: Data(), includesSubfolders: true, pairsRawAndJpeg: true)
+        let summary = try FolderSourceIndexer(database: database, composer: Self.composer)
+            .index(sourceId: sourceId, root: root, includesSubfolders: true, pairsRawAndJpeg: true)
+        #expect(summary.photos == 2)
+        let copies = try database.reader.read { db in
+            try Row.fetchAll(db, sql: "SELECT relativePath, pairedPath FROM photo_copies WHERE sourceId = ? ORDER BY relativePath", arguments: [sourceId])
+                .map { "\($0["relativePath"] as String) + \(($0["pairedPath"] as String?) ?? "-")" }
+        }
+        #expect(copies == ["IMG_1.HEIC + IMG_1.MOV", "IMG_2.MOV + -"])
+    }
+
     /// AC-3: a folder with 100 files at the top and 3 subfolders of 50 each,
     /// added with Include Subfolders off, is 100 photos. Turning it on reads
     /// exactly the 150 new files; the 100 already read are not opened again.

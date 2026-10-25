@@ -104,7 +104,7 @@ enum ServerFolderListing {
         }
 
         // The one pairing rule, shared with folder sources (FS-19.01 §3).
-        let photos = PairingRule.units(images, pairs: true, name: \.name).map { unit in
+        let photos = PairingRule.units(images, pairs: true, livePhotos: false, name: \.name).map { unit in
             unit.companion.map { ServerPhoto(files: [$0, unit.primary]) } ?? ServerPhoto(files: [unit.primary])
         }
 

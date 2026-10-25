@@ -190,8 +190,10 @@ struct ServerSourceIndexer: Sendable {
 
         var thumbnail: RemoteThumbnailResult?
         if !isVideo {
-            // Download order of a server photo: the rendered twin first.
-            let entries = ([unit.companion].compactMap { $0 } + [file]).map {
+            // Download order of a server photo: the rendered twin first. A
+            // Live Photo's movie is not a picture of it.
+            let twin = unit.companion.flatMap { FolderEnumeration.isMovie(URL(fileURLWithPath: $0.relativePath)) ? nil : $0 }
+            let entries = ([twin].compactMap { $0 } + [file]).map {
                 RemoteEntry(name: ($0.relativePath as NSString).lastPathComponent, isDirectory: false, size: $0.size, modified: $0.modified)
             }
             var thumbnailer = RemoteThumbnailer(client: client)

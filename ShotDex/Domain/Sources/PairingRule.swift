@@ -5,8 +5,18 @@ import Foundation
 /// with the same base name, case-insensitive,
 /// in the same folder, are one photo whose original is the RAW. Anything
 /// else in the group — two RAWs, two JPEGs — stays a photo of its own.
+///
+/// A Live Photo copied out of Photos (FS-19.07 §2): one still and one movie
+/// with the same base name in one folder, and no RAW, are one photo whose
+/// original is the still and whose companion is the movie. This pairing
+/// does not follow the RAW + JPEG switch — `IMG_1.HEIC` and `IMG_1.MOV`
+/// are one picture in every app that wrote them.
 enum PairingRule {
     static let renderedTwinExtensions: Set<String> = ["jpg", "jpeg", "heic", "heif", "hif"]
+
+    static func isMovie(_ name: String) -> Bool {
+        FolderEnumeration.isMovie(URL(fileURLWithPath: name))
+    }
 
     static func isRaw(_ name: String) -> Bool {
         FileTypeBadge.text(forExtension: (name as NSString).pathExtension) == "RAW"
@@ -31,9 +41,9 @@ enum PairingRule {
     /// `name` reads a file's last path component; `folder` its folder (only
     /// files in one folder pair). Order follows the input.
     static func units<File: Equatable>(
-        _ files: [File], pairs: Bool, name: (File) -> String, folder: (File) -> String = { _ in "" }
+        _ files: [File], pairs: Bool, livePhotos: Bool = true, name: (File) -> String, folder: (File) -> String = { _ in "" }
     ) -> [Unit<File>] {
-        guard pairs else { return files.map { Unit(primary: $0, companion: nil) } }
+        guard pairs || livePhotos else { return files.map { Unit(primary: $0, companion: nil) } }
         var groups: [String: [File]] = [:]
         var order: [String] = []
         for file in files {
@@ -46,9 +56,13 @@ enum PairingRule {
             let group = groups[key] ?? []
             let raws = group.filter { isRaw(name($0)) }
             let twins = group.filter { renderedTwinExtensions.contains((name($0) as NSString).pathExtension.lowercased()) }
-            if raws.count == 1, twins.count == 1 {
+            let movies = group.filter { isMovie(name($0)) }
+            if pairs, raws.count == 1, twins.count == 1 {
                 out.append(Unit(primary: raws[0], companion: twins[0]))
                 out += group.filter { $0 != raws[0] && $0 != twins[0] }.map { Unit(primary: $0, companion: nil) }
+            } else if livePhotos, raws.isEmpty, twins.count == 1, movies.count == 1 {
+                out.append(Unit(primary: twins[0], companion: movies[0]))
+                out += group.filter { $0 != twins[0] && $0 != movies[0] }.map { Unit(primary: $0, companion: nil) }
             } else {
                 out += group.map { Unit(primary: $0, companion: nil) }
             }

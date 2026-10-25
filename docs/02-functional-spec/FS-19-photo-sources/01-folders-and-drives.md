@@ -44,6 +44,9 @@ theo ngày chụp ngay khi đọc, và theo dõi thư mục để file mới t�
 - RAW là bản gốc (editor mở RAW); JPEG cho thumbnail và preview khi RAW chưa giải được.
 - Một sidecar cho cả cặp (`<tên gốc>.xmp`, [02 §5](02-identity-and-sidecars.md)). Danh tính của cặp lấy theo file RAW.
 - Tắt ghép: hai ảnh riêng. RAW giữ `<tên gốc>.xmp`; JPEG/HEIC dùng `<tên file đủ đuôi>.xmp` (ví dụ `DSC04512.JPG.xmp`).
+- **Live Photo** (FS-19.07 §2): một ảnh JPEG/HEIC và một video (`.MOV`…) cùng tên gốc trong một folder, không có RAW, là
+  một Live Photo — bản sao là ảnh, video là file đi kèm (`pairedPath`). Không theo công tắc ghép RAW + JPEG. Video đứng một
+  mình vẫn là video. Ảnh nhỏ của ảnh không đọc từ video. Nhập từ thẻ và lưới duyệt server (FS-17) chưa ghép kiểu này.
   Lightroom không đọc file thứ hai; Bridge và Capture One đọc. Rating của ảnh này không hiện trên ảnh kia.
 - Hệ quả: một JPEG đứng riêng ở nguồn khác (ví dụ trong Photos) **không** trùng danh tính với cặp — nó là ảnh khác.
 - Ảnh nhập từ thẻ ([FS-20](../FS-20-card-ingest/README.md)) vào thư mục của một nguồn theo đúng các luật trên, ngay khi chép xong.

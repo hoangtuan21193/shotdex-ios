@@ -219,6 +219,32 @@ import Testing
         #expect(try await f.count(.isNot, folder: "Shared") == 1)
     }
 
+    /// FS-19.07 AC-96: `IMG_1.HEIC` + `IMG_1.MOV` are one Live Photo whose
+    /// movie is its companion; `IMG_2.MOV` alone is a video. The pairing
+    /// holds with RAW + JPEG pairing off, and the still's thumbnail is not
+    /// read from the movie.
+    @Test func pairsLivePhoto() async throws {
+        let client = InMemoryRemoteFileClient()
+        client.put("Photos/IMG_1.HEIC", try MetadataFixture.encode(.heic, options: MetadataFixture.Options()))
+        client.put("Photos/IMG_1.MOV", Data(repeating: 1, count: 40_000))
+        client.put("Photos/IMG_2.MOV", Data(repeating: 2, count: 50_000))
+        let database = try AppDatabase.makeEmpty()
+        let source = try SourceStore(database: database).addServer(name: "NAS Home", connectionId: "C1")
+        let summary = try await Self.indexer(database, client).index(sourceId: source, folder: "Photos", pairsRawAndJpeg: false)
+        #expect(summary.photos == 2)
+        let copies = try await database.reader.read { db in
+            try Row.fetchAll(db, sql: """
+                SELECT c.relativePath, c.pairedPath, m.mediaType FROM photo_copies c JOIN photo_metadata m ON m.assetId = c.photoId
+                WHERE c.sourceId = ? ORDER BY c.relativePath
+                """, arguments: [source]).map { "\($0["relativePath"] as String) + \(($0["pairedPath"] as String?) ?? "-") \($0["mediaType"] as Int)" }
+        }
+        #expect(copies == ["IMG_1.HEIC + IMG_1.MOV \(MediaKind.photo.storedValue)", "IMG_2.MOV + - \(MediaKind.video.storedValue)"])
+        let roles = try await database.reader.read { db in
+            try String.fetchAll(db, sql: "SELECT f.fileKey || ':' || f.role FROM copy_files f JOIN photo_copies c ON c.id = f.copyId WHERE c.relativePath = 'IMG_1.HEIC' ORDER BY f.fileKey")
+        }
+        #expect(roles == ["companion:video", "primary:photo"])
+    }
+
     /// AC-36, source half: the NAS password was changed on the server.
     /// Three passes (launch, two Rescans) each stop at the login — one try,
     /// no file read, no prompt — and the row says Password rejected; the

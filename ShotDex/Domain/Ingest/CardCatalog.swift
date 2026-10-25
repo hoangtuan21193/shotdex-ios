@@ -55,7 +55,7 @@ enum CardCatalog {
                 photos.append(file)
             }
         }
-        let units = PairingRule.units(photos, pairs: true, name: \.name, folder: \.folder)
+        let units = PairingRule.units(photos, pairs: true, livePhotos: false, name: \.name, folder: \.folder)
         // A WAV with no photo of its name is not a photo: it stays on the card.
         let items = units.map { unit in
             CardItem(kind: .photo, files: [unit.primary] + (unit.companion.map { [$0] } ?? [])
