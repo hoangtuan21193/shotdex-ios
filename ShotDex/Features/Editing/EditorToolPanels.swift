@@ -383,17 +383,26 @@ struct EditorFiltersPanel: View {
                                 )
                         }
                         .buttonStyle(.plain)
+                        .headerActionHitArea()
                         .disabled(controller.recipe.isIdentity)
                     }
                     if let lookExchange {
                         Button {
                             lookExchange.isPickingFiles = true
                         } label: {
-                            Label("Import XMP Preset", systemImage: "square.and.arrow.down")
-                                .font(EditorTheme.maskSubtitle)
-                                .foregroundStyle(EditorTheme.accent)
+                            // One line: in the Duo's 308pt panel the full name
+                            // wrapped beside Save Current.
+                            ViewThatFits(in: .horizontal) {
+                                Label("Import XMP Preset", systemImage: "square.and.arrow.down")
+                                Label("Import XMP", systemImage: "square.and.arrow.down")
+                            }
+                            .lineLimit(1)
+                            .font(EditorTheme.maskSubtitle)
+                            .foregroundStyle(EditorTheme.accent)
                         }
                         .buttonStyle(.plain)
+                        .headerActionHitArea()
+                        .accessibilityLabel("Import XMP Preset")
                     }
                 }
                 .padding(.horizontal, 14)
@@ -404,7 +413,9 @@ struct EditorFiltersPanel: View {
                     // sentence there pushed the film strip off the bottom,
                     // and the header's own button already says what to do.
                     if !scrolls {
-                        Text("Save an edit here and it can be put on any other photo.")
+                        Text(controller.recipe.isIdentity
+                             ? "Edit this photo first, then save the edit here to put it on any other photo."
+                             : "Save an edit here and it can be put on any other photo.")
                             .font(EditorTheme.maskSubtitle)
                             .foregroundStyle(EditorTheme.dimText)
                             .padding(.horizontal, 14)
@@ -453,6 +464,7 @@ struct EditorFiltersPanel: View {
                             .foregroundStyle(EditorTheme.accent)
                     }
                     .buttonStyle(.plain)
+                    .headerActionHitArea()
                 }
                 .padding(.horizontal, 14)
                 .padding(.top, headerTopPadding)
@@ -613,7 +625,28 @@ struct EditorFiltersPanel: View {
     /// thumbnail cards. Opens scrolled to the active look. Swatches stream in as the
     /// controller renders each category batch; until one arrives the card draws the
     /// look's two-tone gradient stand-in.
+    @ViewBuilder
     private var presetStrip: some View {
+        if !scrolls && !isPhonePanel {
+            // The wide sidebar scrolls on its own and has height to spare — on the
+            // Duo's inner display ~190pt sat empty under a strip that hid five
+            // of nine looks past its edge. Every look in a grid instead.
+            LazyVGrid(
+                columns: [GridItem(.adaptive(minimum: tileWidth ?? 62, maximum: (tileWidth ?? 62) + 12), spacing: 8)],
+                spacing: 10
+            ) {
+                ForEach(PhotoFilter.allCases) { filter in
+                    filterCard(filter)
+                }
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 12)
+        } else {
+            presetScroller
+        }
+    }
+
+    private var presetScroller: some View {
         ScrollViewReader { scroller in
             ScrollView(.horizontal) {
                 LazyHStack(spacing: 8) {
@@ -1222,5 +1255,17 @@ struct EditorChipFlowLayout: Layout {
         }
         if !current.indices.isEmpty { rows.append(current) }
         return rows
+    }
+}
+
+private extension View {
+    /// A section header's text button is one caption line tall, 14pt — far
+    /// under a 44pt target. Grow the hit area without growing the row: the
+    /// phone's parameter zone has no line to spare.
+    func headerActionHitArea() -> some View {
+        let slack = (AppTheme.Size.minTouch - 14) / 2
+        return padding(.vertical, slack)
+            .contentShape(Rectangle())
+            .padding(.vertical, -slack)
     }
 }

@@ -109,6 +109,11 @@ simulation" của chính hãng máy.
 ## 8. Panel Presets
 
 - **Bỏ hàng chip category** — gộp cả 49 look vào **một dải cuộn ngang**, mở ra tự cuộn tới look đang chọn.
+- **Panel cạnh ảnh (iPad, Duo mở, Mac): lưới thay cho dải** — cột thích ứng 62–74pt (4 cột trong panel 308pt
+  của Duo), cuộn cùng panel. Panel này có chiều cao dư: trên Duo, dải ngang giấu 5/9 look sau mép phải trong
+  khi ~190pt bên dưới trống (2026-10-27, DUO_LOOP hàng 21). Vùng 167pt của iPhone vẫn là dải ngang.
+- Nút chữ trên tiêu đề nhóm (Save Current, Import XMP Preset, Import .cube) có vùng bấm 44pt dù dòng chỉ cao
+  14pt; trong panel hẹp "Import XMP Preset" rút còn "Import XMP" thay vì xuống dòng.
 - Trên cùng là dải chọn nguồn **Presets · My Looks · LUTs** ([FS-03.12 §4](12-phone-panel-grid.md#4-chip-và-dải-chọn)).
 - Mỗi look là **card dọc**: thumbnail 62×62 (ảnh đang sửa qua look đó) + tên dưới; chọn = vòng trắng, tên
   trắng.
