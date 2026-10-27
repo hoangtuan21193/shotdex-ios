@@ -1012,7 +1012,9 @@ struct PhotoEditorScreen: View {
                 controller.addMask(option: option)
                 controller.editSelectedMaskAdjustments()
             }
-            .presentationDetents([.medium, .large])
+            // At medium on the Duo's 669pt inner display the list showed four
+            // of its kinds and cut the fifth; a list of choices opens whole.
+            .presentationDetents(isDuoInner ? [.large] : [.medium, .large])
         }
         .sheet(isPresented: $chrome.isMaskPickerPresented) {
             EditorMaskPickerSheet(
@@ -1023,7 +1025,7 @@ struct PhotoEditorScreen: View {
                 controller.selectMask(id)
                 controller.editSelectedMaskAdjustments()
             }
-            .presentationDetents([.medium])
+            .presentationDetents(isDuoInner ? [.large] : [.medium])
         }
         .sheet(isPresented: $chrome.isHistorySheetPresented) {
             EditorHistorySheet(controller: controller)

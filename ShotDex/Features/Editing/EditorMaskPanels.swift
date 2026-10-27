@@ -64,6 +64,9 @@ struct EditorMaskListPanel: View {
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 40)
         }
+        // Squeezed by the group rows under it (the Duo's 669pt panel), the
+        // block slid up until its icon sat 3pt under New Mask.
+        .padding(.vertical, AppTheme.Spacing.lg)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 

@@ -1,0 +1,85 @@
+{
+  "steps": [
+    {
+      "action": "launch"
+    },
+    {
+      "action": "wait",
+      "seconds": 8
+    },
+    {
+      "action": "tap",
+      "label": "Photo, file type",
+      "type": "cell",
+      "index": 2
+    },
+    {
+      "action": "wait",
+      "seconds": 4
+    },
+    {
+      "action": "tap",
+      "label": "Edit"
+    },
+    {
+      "action": "wait",
+      "seconds": 6
+    },
+    {
+      "action": "tap",
+      "label": "Mask"
+    },
+    {
+      "action": "wait",
+      "seconds": 4
+    },
+    {
+      "action": "dump",
+      "name": "DI4_Mask"
+    },
+    {
+      "action": "wait",
+      "seconds": 25
+    },
+    {
+      "action": "tap",
+      "label": "New Mask"
+    },
+    {
+      "action": "wait",
+      "seconds": 3
+    },
+    {
+      "action": "dump",
+      "name": "DI10_NewMask"
+    },
+    {
+      "action": "wait",
+      "seconds": 25
+    },
+    {
+      "action": "tap",
+      "label": "Cancel"
+    },
+    {
+      "action": "wait",
+      "seconds": 2
+    },
+    {
+      "action": "tap",
+      "label": "Markup"
+    },
+    {
+      "action": "wait",
+      "seconds": 4
+    },
+    {
+      "action": "dump",
+      "name": "DI11_Markup"
+    },
+    {
+      "action": "wait",
+      "seconds": 30
+    }
+  ]
+}
