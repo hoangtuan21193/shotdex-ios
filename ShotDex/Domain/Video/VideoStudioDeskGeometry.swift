@@ -197,10 +197,12 @@ enum VideoStudioDeskGeometry {
     /// Export at the right end of the bottom row: a pill 40 tall.
     static let duoExportHeight: CGFloat = 40
     /// Back · Undo · Redo · Show original over the frame: 36pt discs on
-    /// black 55 %, 8 apart, from (16, 12).
+    /// black 55 %, 8 apart, from (24, 32). The display's top corners curve
+    /// ~66pt and its safe area starts at y 0: from (16, 12) Back's edge sat
+    /// on the curve — `CompareLayout.duoInnerTopInset` is the same 32.
     static let duoDisc: CGFloat = 36
     static let duoDiscGap: CGFloat = 8
-    static let duoDiscOrigin = CGPoint(x: 16, y: 12)
+    static let duoDiscOrigin = CGPoint(x: 24, y: 32)
     /// The bottom row's five tools: 72×50, 4 apart, from x 40.
     static let duoToolCell = CGSize(width: 72, height: 50)
     static let duoToolGap: CGFloat = 4

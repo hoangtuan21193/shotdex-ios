@@ -229,8 +229,8 @@ struct VideoStudioDeskGeometryTests {
         let lastTool = Geometry.duoToolLeading + 4 * (Geometry.duoToolCell.width + Geometry.duoToolGap)
         #expect(lastTool == 344)
         #expect(951 - Geometry.duoRowTrailingInset == 907)
-        #expect(Geometry.duoDiscFrames().first == CGRect(x: 16, y: 12, width: 36, height: 36))
-        #expect(Geometry.duoDiscFrames().last?.minX == 148)
+        #expect(Geometry.duoDiscFrames().first == CGRect(x: 24, y: 32, width: 36, height: 36))
+        #expect(Geometry.duoDiscFrames().last?.minX == 156)
     }
 
     /// FS-12.03 AC-6: selected, the right group is ✕ · name · ✓ from x 620
