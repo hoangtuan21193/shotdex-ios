@@ -20,6 +20,7 @@ struct CollagePresentation: Identifiable {
 struct CollageScreen: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(AppDependencies.self) private var dependencies
+    @Environment(\.isDuoInner) private var isDuoInner
 
     let photos: [PhotoEditOrigin]
     /// Called with the new asset id after a successful export, so the presenter
@@ -250,12 +251,18 @@ struct CollageScreen: View {
         }
     }
 
+    /// The wide layout ignores the top safe area, which is 0 on the Duo's
+    /// inner display; its ~66pt corners took Undo at y 8 and the inspector's
+    /// tabs at y 2. Both rows start below them there.
+    private var duoInnerTopInset: CGFloat { isDuoInner ? CompareLayout.duoInnerTopInset : 0 }
+
     /// The command band, the tray and the canvas — everything that is not the
     /// controls. Shared by both layouts.
     @ViewBuilder
     private func canvasColumn(_ model: CollageEditorModel, includesPanel: Bool) -> some View {
         VStack(spacing: 0) {
             CollageCommandBand(model: model)
+                .padding(.top, duoInnerTopInset)
 
             if !model.unplaced.isEmpty {
                 CollageUnplacedTray(model: model, photoLibrary: dependencies.photoLibrary)
@@ -287,6 +294,7 @@ struct CollageScreen: View {
     private func inspector(_ model: CollageEditorModel) -> some View {
         VStack(spacing: 0) {
             CollageInspectorHeader(model: model, onBack: { close(model) })
+                .padding(.top, duoInnerTopInset)
             Divider().overlay(EditorTheme.panelTopHairline)
             ScrollView {
                 panelContent(model)

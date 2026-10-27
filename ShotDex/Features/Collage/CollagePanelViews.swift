@@ -12,6 +12,7 @@ import ShotDexKit
 /// the photo counter, the aspect chip row, the template strip.
 struct CollageLayoutPanel: View {
     @Bindable var model: CollageEditorModel
+    @Environment(\.usesRegularToolChrome) private var usesRegularToolChrome
     let onSavePreset: () -> Void
     let onRenamePreset: (CollagePreset) -> Void
 
@@ -21,8 +22,16 @@ struct CollageLayoutPanel: View {
                 .frame(height: CollageMetrics.counterRowHeight)
             CollageAspectRow(model: model)
                 .frame(height: CollageMetrics.aspectRowHeight)
-            templateStrip
-                .frame(height: CollageMetrics.templateRowHeight)
+            if usesRegularToolChrome {
+                // FS-11 Z2: four columns of 66pt, scrolling with the inspector.
+                // On the Duo's inner display the strip showed four tiles and
+                // left ~360pt empty under them.
+                templateGrid
+                    .padding(.top, AppTheme.Spacing.sm)
+            } else {
+                templateStrip
+                    .frame(height: CollageMetrics.templateRowHeight)
+            }
         }
         .padding(.horizontal, AppTheme.Size.screenMargin)
     }
@@ -30,36 +39,52 @@ struct CollageLayoutPanel: View {
     private var templateStrip: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: AppTheme.Spacing.sm) {
-                // User presets lead the strip (§8), always neutral — yellow is
-                // reserved for the template actually applied.
-                ForEach(model.presets) { preset in
-                    CollagePresetChip(preset: preset)
-                        .onTapGesture { model.applyPreset(preset) }
-                        .contextMenu {
-                            Button {
-                                onRenamePreset(preset)
-                            } label: {
-                                Label(String(localized: "Rename"), systemImage: "pencil")
-                            }
-                            Button(role: .destructive) {
-                                model.deletePreset(preset.id)
-                            } label: {
-                                Label(String(localized: "Delete"), systemImage: "trash")
-                            }
-                        }
-                }
-                ForEach(model.availableTemplates) { template in
-                    Button {
-                        model.selectTemplate(template.id)
-                    } label: {
-                        CollageTemplateThumbnail(
-                            template: template,
-                            isSelected: model.recipe.templateID == template.id
-                        )
-                    }
-                    .buttonStyle(.plain)
-                }
+                templateTiles
             }
+        }
+    }
+
+    private var templateGrid: some View {
+        let column = GridItem(.fixed(CollageMetrics.inspectorTemplateCellSize), spacing: AppTheme.Spacing.sm)
+        return LazyVGrid(
+            columns: Array(repeating: column, count: CollageMetrics.inspectorTemplateColumns),
+            alignment: .leading,
+            spacing: AppTheme.Spacing.sm
+        ) {
+            templateTiles
+        }
+    }
+
+    @ViewBuilder
+    private var templateTiles: some View {
+        // User presets lead the strip (§8), always neutral — yellow is
+        // reserved for the template actually applied.
+        ForEach(model.presets) { preset in
+            CollagePresetChip(preset: preset)
+                .onTapGesture { model.applyPreset(preset) }
+                .contextMenu {
+                    Button {
+                        onRenamePreset(preset)
+                    } label: {
+                        Label(String(localized: "Rename"), systemImage: "pencil")
+                    }
+                    Button(role: .destructive) {
+                        model.deletePreset(preset.id)
+                    } label: {
+                        Label(String(localized: "Delete"), systemImage: "trash")
+                    }
+                }
+        }
+        ForEach(model.availableTemplates) { template in
+            Button {
+                model.selectTemplate(template.id)
+            } label: {
+                CollageTemplateThumbnail(
+                    template: template,
+                    isSelected: model.recipe.templateID == template.id
+                )
+            }
+            .buttonStyle(.plain)
         }
     }
 }

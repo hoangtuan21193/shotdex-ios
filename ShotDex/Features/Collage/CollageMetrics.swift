@@ -115,8 +115,12 @@ enum CollageMetrics {
     static let templateCellSize: CGFloat = 52
 
     /// Template tiles are pictures of a layout, not glyphs: on a 1032pt stage
-    /// a 52pt tile is too small to read the layout it is offering.
+    /// a 52pt tile is too small to read the layout it is offering. The side
+    /// inspector lays them four to a row in its 288pt content (FS-11 Z2).
     static func templateCellSize(isRegularWidth: Bool) -> CGFloat {
-        isRegularWidth ? 68 : templateCellSize
+        isRegularWidth ? inspectorTemplateCellSize : templateCellSize
     }
+
+    static let inspectorTemplateCellSize: CGFloat = 66
+    static let inspectorTemplateColumns = 4
 }
