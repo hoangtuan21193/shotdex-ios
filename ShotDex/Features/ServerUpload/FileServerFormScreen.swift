@@ -143,14 +143,15 @@ struct FileServerFormScreen: View {
 
     var body: some View {
         NavigationStack(path: $path) {
-            // Wide (the Duo's inner display): servers found, the two toggles
-            // and Test on the leading side, the fields on the trailing one
-            // (board `DI_ServerForm`).
+            // Wide: servers found, the two toggles and Test on the leading
+            // side, the fields on the trailing one (board `DI_ServerForm`).
+            // One column — the phone, a form sheet: servers found, the
+            // fields, then the toggles and Test, which act on what was
+            // typed (board `PH_ServerForm`).
             AdaptiveFormColumns {
                 if let discovery {
                     foundServersSection(discovery)
                 }
-                optionsSections
             } trailing: {
                 // Every field says what it is on the left, the way Settings
                 // does: a placeholder alone is gone the moment you type, and
@@ -195,6 +196,8 @@ struct FileServerFormScreen: View {
                 } footer: {
                     Text(folderFooter)
                 }
+            } closing: {
+                optionsSections
             }
             .navigationTitle(draft.isNew ? "Add Connection" : "Edit Connection")
             .navigationBarTitleDisplayMode(.inline)

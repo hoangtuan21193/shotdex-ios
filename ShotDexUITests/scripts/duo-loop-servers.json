@@ -1,0 +1,140 @@
+{
+  "steps": [
+    {
+      "action": "launch"
+    },
+    {
+      "action": "wait",
+      "seconds": 8
+    },
+    {
+      "action": "tap",
+      "label": "Collections"
+    },
+    {
+      "action": "wait",
+      "seconds": 3
+    },
+    {
+      "action": "tap",
+      "label": "Settings"
+    },
+    {
+      "action": "wait",
+      "seconds": 4
+    },
+    {
+      "action": "tap",
+      "label": "Sources"
+    },
+    {
+      "action": "wait",
+      "seconds": 3
+    },
+    {
+      "action": "tap",
+      "label": "Connect to Server\u2026"
+    },
+    {
+      "action": "wait",
+      "seconds": 4
+    },
+    {
+      "action": "dump",
+      "name": "DI_ServerList"
+    },
+    {
+      "action": "wait",
+      "seconds": 20
+    },
+    {
+      "action": "tap",
+      "label": "Add Connection",
+      "index": 0
+    },
+    {
+      "action": "wait",
+      "seconds": 4
+    },
+    {
+      "action": "dump",
+      "name": "DI_ServerForm"
+    },
+    {
+      "action": "wait",
+      "seconds": 15
+    },
+    {
+      "action": "tap",
+      "label": "Cancel"
+    },
+    {
+      "action": "wait",
+      "seconds": 2
+    },
+    {
+      "action": "tap",
+      "label": "Done"
+    },
+    {
+      "action": "wait",
+      "seconds": 3
+    },
+    {
+      "action": "tap",
+      "label": "Library"
+    },
+    {
+      "action": "wait",
+      "seconds": 3
+    },
+    {
+      "action": "tap",
+      "label": "Select photos"
+    },
+    {
+      "action": "wait",
+      "seconds": 3
+    },
+    {
+      "action": "tap",
+      "label": "Photo, file type",
+      "type": "cell",
+      "index": 1
+    },
+    {
+      "action": "tap",
+      "label": "Photo, file type",
+      "type": "cell",
+      "index": 3
+    },
+    {
+      "action": "wait",
+      "seconds": 2
+    },
+    {
+      "action": "tap",
+      "label": "More selection actions"
+    },
+    {
+      "action": "wait",
+      "seconds": 2
+    },
+    {
+      "action": "tap",
+      "label": "Upload to NAS Home"
+    },
+    {
+      "action": "wait",
+      "seconds": 5
+    },
+    {
+      "action": "dump",
+      "name": "DI_ServerUpload"
+    },
+    {
+      "action": "wait",
+      "seconds": 40
+    }
+  ]
+}

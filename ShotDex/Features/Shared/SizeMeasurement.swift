@@ -46,14 +46,18 @@ enum WideLayout {
 /// (`DESIGN.md` §10.1c: a wider screen gets more content, not longer rows).
 ///
 /// Narrower than `WideLayout.minimumWidth` it is a single `Form`, the leading
-/// sections above the trailing ones — the phone, and an iPad form sheet.
-/// Wider, each half is its own `Form` with its own scroll, 20pt from the
-/// edges and 20pt apart.
-struct AdaptiveFormColumns<Leading: View, Trailing: View>: View {
+/// sections above the trailing ones — the phone, and an iPad form sheet —
+/// and `closing` last. Wider, each half is its own `Form` with its own
+/// scroll, 20pt from the edges and 20pt apart, and `closing` ends the
+/// leading one.
+struct AdaptiveFormColumns<Leading: View, Trailing: View, Closing: View>: View {
     /// The leading column's width, margins excluded; nil splits in halves.
     var leadingWidth: CGFloat?
     @ViewBuilder var leading: () -> Leading
     @ViewBuilder var trailing: () -> Trailing
+    /// What acts on the fields — options, Test — so it follows them in one
+    /// column and sits under the leading sections in two.
+    @ViewBuilder var closing: () -> Closing
 
     @State private var width: CGFloat = 0
 
@@ -61,7 +65,10 @@ struct AdaptiveFormColumns<Leading: View, Trailing: View>: View {
         Group {
             if width >= WideLayout.minimumWidth {
                 HStack(alignment: .top, spacing: 0) {
-                    Form { leading() }
+                    Form {
+                        leading()
+                        closing()
+                    }
                         .contentMargins(.leading, AppTheme.Spacing.xl, for: .scrollContent)
                         .contentMargins(.trailing, AppTheme.Spacing.xl / 2, for: .scrollContent)
                         .frame(width: leadingWidth.map { $0 + AppTheme.Spacing.xl * 1.5 })
@@ -76,9 +83,18 @@ struct AdaptiveFormColumns<Leading: View, Trailing: View>: View {
                 Form {
                     leading()
                     trailing()
+                    closing()
                 }
             }
         }
         .measureWidth(into: $width)
+    }
+}
+
+extension AdaptiveFormColumns where Closing == EmptyView {
+    init(leadingWidth: CGFloat? = nil,
+         @ViewBuilder leading: @escaping () -> Leading,
+         @ViewBuilder trailing: @escaping () -> Trailing) {
+        self.init(leadingWidth: leadingWidth, leading: leading, trailing: trailing, closing: { EmptyView() })
     }
 }
