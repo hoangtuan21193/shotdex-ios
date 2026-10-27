@@ -1,0 +1,12 @@
+{
+  "steps": [
+    { "action": "launch" },
+    { "action": "wait", "seconds": 8 },
+    { "action": "tap", "label": "Utilities" },
+    { "action": "wait", "seconds": 3 },
+    { "action": "tap", "label": "Collages" },
+    { "action": "wait", "seconds": 4 },
+    { "action": "dump", "name": "DI_Creations" },
+    { "action": "wait", "seconds": 60 }
+  ]
+}
