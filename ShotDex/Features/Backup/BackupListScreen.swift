@@ -93,9 +93,11 @@ struct BackupListScreen: View {
                     Text(String(localized: "Add a Server", comment: "Backup: no connection yet"))
                 }
                 .buttonStyle(.borderedProminent)
+                .controlSize(.large)
             } else {
                 Button(String(localized: "New Backup", comment: "Backup: add a job")) { openForm(editing: nil) }
                     .buttonStyle(.borderedProminent)
+                    .controlSize(.large)
             }
         }
     }
@@ -109,7 +111,7 @@ struct BackupListScreen: View {
                         card(job, selectable: selectable)
                     }
                 }
-                Text(footnote(selectable: selectable))
+                Text(footnote)
                     .font(.footnote)
                     .foregroundStyle(.secondary)
                     .padding(.horizontal, AppTheme.Spacing.lg)
@@ -161,11 +163,12 @@ struct BackupListScreen: View {
         }
     }
 
-    private func footnote(selectable: Bool) -> String {
+    /// Every layout says where Edit, Back Up Now and Delete are: the long
+    /// press is their only way in, pushed on a phone or the Duo as much as
+    /// selected in the iPad split.
+    private var footnote: String {
         let base = String(localized: "Each backup watches its source and copies new photos and videos as they appear — full-size originals, downloaded from iCloud first when needed. Photos already in the destination folder — copied by another phone or by hand — are skipped, and a stopped backup picks up where it left off.", comment: "Backup screen footnote")
-        return selectable
-            ? base + " " + String(localized: "Long-press a backup to edit, back up now or delete it.", comment: "Backup footnote on iPad: where the job actions are")
-            : base
+        return base + " " + String(localized: "Long-press a backup to edit, back up now or delete it.", comment: "Backup footnote: where the job actions are")
     }
 
     private func perform(_ action: BackupStatusText.Action, job: BackupJob) {

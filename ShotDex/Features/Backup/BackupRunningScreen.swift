@@ -155,6 +155,9 @@ struct BackupRunningScreen: View {
                 }
                 .buttonStyle(.bordered)
                 .buttonBorderShape(.capsule)
+                // Pushed full width on the Duo's inner display (867pt) the
+                // capsule ran 800pt across; a phone's width is the cap.
+                .frame(maxWidth: 400)
             }
             if state.status == .watching || state.status == .uploading {
                 Label {

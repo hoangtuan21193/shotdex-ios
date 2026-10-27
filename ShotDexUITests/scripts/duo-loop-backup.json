@@ -1,0 +1,16 @@
+{
+  "steps": [
+    { "action": "launch" },
+    { "action": "wait", "seconds": 8 },
+    { "action": "tap", "label": "Utilities" },
+    { "action": "wait", "seconds": 3 },
+    { "action": "tap", "label": "Backup" },
+    { "action": "wait", "seconds": 4 },
+    { "action": "dump", "name": "DI_Backup" },
+    { "action": "wait", "seconds": 20 },
+    { "action": "tap", "label": "New Backup", "index": 0 },
+    { "action": "wait", "seconds": 4 },
+    { "action": "dump", "name": "DI_BackupNew" },
+    { "action": "wait", "seconds": 40 }
+  ]
+}
