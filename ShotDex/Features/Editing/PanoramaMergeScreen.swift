@@ -30,6 +30,7 @@ struct PanoramaMergePresentation: Identifiable {
 struct PanoramaMergeScreen: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(AppDependencies.self) private var dependencies
+    @Environment(\.isDuoInner) private var isDuoInner
     @Environment(PhotoLibraryService.self) private var photoLibrary
 
     let presentation: PanoramaMergePresentation
@@ -145,6 +146,8 @@ struct PanoramaMergeScreen: View {
             Text("Panorama")
                 .font(EditorTheme.sidebarTitle)
                 .foregroundStyle(.white)
+                .frame(minWidth: AppTheme.Size.minTouch, minHeight: AppTheme.Size.minTouch)
+                .contentShape(Rectangle())
             Spacer()
             Button(presentation.serverExport == nil
                    ? String(localized: "Save")
@@ -152,9 +155,14 @@ struct PanoramaMergeScreen: View {
                 .fontWeight(.semibold)
                 .foregroundStyle(model.canSave ? EditorTheme.accent : EditorTheme.dimText)
                 .disabled(!model.canSave)
+                .frame(minWidth: AppTheme.Size.minTouch, minHeight: AppTheme.Size.minTouch)
+                .contentShape(Rectangle())
         }
         .padding(.horizontal, AppTheme.Spacing.lg)
         .frame(height: AppTheme.Size.minTouch + AppTheme.Spacing.md)
+        // The Duo's inner display has no top safe area but ~66pt corner
+        // curves; Cancel and Save sat at y 17 in them.
+        .padding(.top, isDuoInner ? CompareLayout.duoInnerTopInset - AppTheme.Spacing.lg : 0)
     }
 
     /// The stage measures itself once and hands the picture's rectangle to

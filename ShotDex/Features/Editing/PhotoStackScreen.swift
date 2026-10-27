@@ -37,6 +37,7 @@ struct PhotoStackPresentation: Identifiable {
 struct PhotoStackScreen: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(AppDependencies.self) private var dependencies
+    @Environment(\.isDuoInner) private var isDuoInner
 
     let presentation: PhotoStackPresentation
     /// Called with the new asset's id once it is saved and indexed, just
@@ -156,6 +157,8 @@ struct PhotoStackScreen: View {
                 }
             }
                 .foregroundStyle(.white)
+                .frame(minWidth: AppTheme.Size.minTouch, minHeight: AppTheme.Size.minTouch)
+                .contentShape(Rectangle())
             Spacer()
             Text(presentation.purpose.title)
                 .font(EditorTheme.sidebarTitle)
@@ -169,9 +172,14 @@ struct PhotoStackScreen: View {
                 .fontWeight(.semibold)
                 .foregroundStyle(model.canSave ? EditorTheme.accent : EditorTheme.dimText)
                 .disabled(!model.canSave)
+                .frame(minWidth: AppTheme.Size.minTouch, minHeight: AppTheme.Size.minTouch)
+                .contentShape(Rectangle())
         }
         .padding(.horizontal, AppTheme.Spacing.lg)
         .frame(height: AppTheme.Size.minTouch + AppTheme.Spacing.md)
+        // The Duo's inner display has no top safe area but ~66pt corner
+        // curves; Cancel and Save sat at y 17 in them.
+        .padding(.top, isDuoInner ? CompareLayout.duoInnerTopInset - AppTheme.Spacing.lg : 0)
         // An alert, not a confirmation dialog: iOS 26 draws that as a popover
         // with its Cancel hidden (REVIEW_QUEUE 2026-09-19).
         .alert(String(localized: "Save As", comment: "HDR Save: alert title asking for the file format"),
