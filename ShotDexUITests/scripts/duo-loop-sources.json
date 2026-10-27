@@ -1,0 +1,17 @@
+{
+  "steps": [
+    { "action": "launch" },
+    { "action": "wait", "seconds": 8 },
+    { "action": "tap", "label": "Collections" },
+    { "action": "wait", "seconds": 3 },
+    { "action": "tap", "label": "Settings" },
+    { "action": "wait", "seconds": 4 },
+    { "action": "tap", "label": "Sources" },
+    { "action": "wait", "seconds": 4 },
+    { "action": "dump", "name": "DI_SettingsSources" },
+    { "action": "tap", "label": "Add Folder or Drive…" },
+    { "action": "wait", "seconds": 4 },
+    { "action": "dump", "name": "DI_AddSource" },
+    { "action": "wait", "seconds": 40 }
+  ]
+}

@@ -6,6 +6,7 @@ import UniformTypeIdentifiers
 struct AddSourceSheet: View {
     @Environment(AppDependencies.self) private var dependencies
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.isDuoInner) private var isDuoInner
     @State private var includesSubfolders = true
     @State private var pairsRawAndJpeg = true
     @State private var isPickingFolder = false
@@ -36,26 +37,14 @@ struct AddSourceSheet: View {
                                 .background(Color(.tertiarySystemFill), in: Capsule())
                         }
                     }
-                    card(selected: kind == .folder) {
-                        Button { kind = .folder } label: {
-                            option(title: String(localized: "Folder or Drive", comment: "Add a Source: a folder in Files or a USB-C drive"),
-                                   detail: String(localized: "A folder in Files, or a drive or SSD over USB-C, read in place. An unplugged drive’s photos stay, marked offline.", comment: "Add a Source: Folder or Drive option"),
-                                   systemImage: "folder") { radio(kind == .folder) }
-                        }
-                        .buttonStyle(.plain)
-                        if kind == .folder {
-                            Divider()
-                            Toggle(String(localized: "Include Subfolders", comment: "Add a Source: read folders inside the chosen folder"), isOn: $includesSubfolders)
-                            Toggle(String(localized: "Pair RAW + JPEG as One Photo", comment: "Add a Source: a RAW and its JPEG twin are one photo"), isOn: $pairsRawAndJpeg)
-                        }
-                    }
-                    card(selected: kind == .server) {
-                        Button { kind = .server } label: {
-                            option(title: String(localized: "Server", comment: "Add a Source: a NAS share"),
-                                   detail: String(localized: "An SMB, SFTP or WebDAV share on a NAS, indexed like a folder. Originals download when you open them.", comment: "Add a Source: Server option"),
-                                   systemImage: "server.rack") { radio(kind == .server) }
-                        }
-                        .buttonStyle(.plain)
+                    // The Duo's inner display gives a 661pt sheet: one card
+                    // above the other, the memory-card row ended under the
+                    // footer. Side by side the two kinds fit (FS-19.01 §1).
+                    if isDuoInner {
+                        HStack(alignment: .top, spacing: AppTheme.Spacing.md) { kindCards }
+                            .fixedSize(horizontal: false, vertical: true)
+                    } else {
+                        kindCards
                     }
                     // Cards arrive by themselves (FS-20): nothing to pick here.
                     HStack(alignment: .top, spacing: AppTheme.Spacing.md) {
@@ -88,28 +77,22 @@ struct AddSourceSheet: View {
             }
             .background(Color(.systemGroupedBackground))
             .safeAreaInset(edge: .bottom) {
-                VStack(spacing: AppTheme.Spacing.sm) {
-                    Text(kind == .folder
-                         ? String(localized: "Files opens next; a USB-C drive shows under Locations.", comment: "Add a Source: above Choose Folder")
-                         : String(localized: "Turn on Add as Source in the connection’s form.", comment: "Add a Source: above Connect to Server"))
-                        .font(.footnote)
-                        .foregroundStyle(Color(.secondaryLabel))
-                    Button {
-                        if kind == .folder { isPickingFolder = true } else { isShowingServers = true }
-                    } label: {
-                        Group {
-                            if kind == .folder {
-                                Text("Choose Folder…", comment: "Add a Source: opens Files to pick the folder")
-                            } else {
-                                Text("Connect to Server…", comment: "Add a Source: opens the server list")
-                            }
+                // On the Duo the caption stands beside the button, as on the
+                // board: one row instead of two.
+                Group {
+                    if isDuoInner {
+                        HStack(spacing: AppTheme.Spacing.md) {
+                            footerCaption
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                            footerButton
+                                .fixedSize()
                         }
-                        .font(.headline)
-                        .frame(maxWidth: .infinity)
+                    } else {
+                        VStack(spacing: AppTheme.Spacing.sm) {
+                            footerCaption
+                            footerButton
+                        }
                     }
-                    .buttonStyle(.borderedProminent)
-                    .controlSize(.large)
-                    .buttonBorderShape(.capsule)
                 }
                 .padding(.horizontal, AppTheme.Size.screenMargin)
                 .padding(.bottom, AppTheme.Spacing.sm)
@@ -140,6 +123,58 @@ struct AddSourceSheet: View {
         }
     }
 
+    /// Folder or Drive, then Server — stacked, or in a row on the Duo.
+    @ViewBuilder private var kindCards: some View {
+        card(selected: kind == .folder) {
+            Button { kind = .folder } label: {
+                option(title: String(localized: "Folder or Drive", comment: "Add a Source: a folder in Files or a USB-C drive"),
+                       detail: String(localized: "A folder in Files, or a drive or SSD over USB-C, read in place. An unplugged drive’s photos stay, marked offline.", comment: "Add a Source: Folder or Drive option"),
+                       systemImage: "folder") { radio(kind == .folder) }
+            }
+            .buttonStyle(.plain)
+            if kind == .folder {
+                Divider()
+                Toggle(String(localized: "Include Subfolders", comment: "Add a Source: read folders inside the chosen folder"), isOn: $includesSubfolders)
+                Toggle(String(localized: "Pair RAW + JPEG as One Photo", comment: "Add a Source: a RAW and its JPEG twin are one photo"), isOn: $pairsRawAndJpeg)
+            }
+        }
+        card(selected: kind == .server) {
+            Button { kind = .server } label: {
+                option(title: String(localized: "Server", comment: "Add a Source: a NAS share"),
+                       detail: String(localized: "An SMB, SFTP or WebDAV share on a NAS, indexed like a folder. Originals download when you open them.", comment: "Add a Source: Server option"),
+                       systemImage: "server.rack") { radio(kind == .server) }
+            }
+            .buttonStyle(.plain)
+        }
+    }
+
+    private var footerCaption: some View {
+        Text(kind == .folder
+             ? String(localized: "Files opens next; a USB-C drive shows under Locations.", comment: "Add a Source: above Choose Folder")
+             : String(localized: "Turn on Add as Source in the connection’s form.", comment: "Add a Source: above Connect to Server"))
+            .font(.footnote)
+            .foregroundStyle(Color(.secondaryLabel))
+    }
+
+    private var footerButton: some View {
+        Button {
+            if kind == .folder { isPickingFolder = true } else { isShowingServers = true }
+        } label: {
+            Group {
+                if kind == .folder {
+                    Text("Choose Folder…", comment: "Add a Source: opens Files to pick the folder")
+                } else {
+                    Text("Connect to Server…", comment: "Add a Source: opens the server list")
+                }
+            }
+            .font(.headline)
+            .frame(maxWidth: isDuoInner ? nil : .infinity)
+        }
+        .buttonStyle(.borderedProminent)
+        .controlSize(.large)
+        .buttonBorderShape(.capsule)
+    }
+
     private func radio(_ isOn: Bool) -> some View {
         Image(systemName: isOn ? "checkmark.circle.fill" : "circle")
             .font(.title2)
@@ -150,7 +185,8 @@ struct AddSourceSheet: View {
     private func card(selected: Bool = false, @ViewBuilder _ content: () -> some View) -> some View {
         VStack(alignment: .leading, spacing: AppTheme.Spacing.sm) { content() }
             .padding(AppTheme.Spacing.md)
-            .frame(maxWidth: .infinity, alignment: .leading)
+            // Full height too, so two cards in a row end level.
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
             .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle.app(AppTheme.Radius.xl))
             .overlay {
                 if selected {
