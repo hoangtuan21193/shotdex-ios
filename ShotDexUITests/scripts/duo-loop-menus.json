@@ -1,0 +1,18 @@
+{
+  "steps": [
+    { "action": "launch" },
+    { "action": "wait", "seconds": 8 },
+    { "action": "tap", "label": "Filter and sort" },
+    { "action": "wait", "seconds": 3 },
+    { "action": "dump", "name": "DI_LibraryMenu" },
+    { "action": "wait", "seconds": 25 },
+    { "action": "tap", "x": 0.4, "y": 0.9 },
+    { "action": "wait", "seconds": 2 },
+    { "action": "tap", "label": "Photo, file type", "type": "cell", "index": 2 },
+    { "action": "wait", "seconds": 4 },
+    { "action": "tap", "label": "More actions" },
+    { "action": "wait", "seconds": 3 },
+    { "action": "dump", "name": "DI_ViewerMenu" },
+    { "action": "wait", "seconds": 40 }
+  ]
+}
