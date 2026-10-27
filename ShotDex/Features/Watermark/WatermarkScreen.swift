@@ -16,6 +16,7 @@ struct WatermarkScreen: View {
     @Bindable var model: WatermarkModel
     @Environment(\.dismiss) private var dismiss
     @Environment(\.appAccent) private var accent
+    @Environment(\.isDuoInner) private var isDuoInner
 
     @State private var isTypingSize = false
     @State private var typedSize = ""
@@ -109,6 +110,10 @@ struct WatermarkScreen: View {
             .padding(.horizontal, AppTheme.Spacing.md)
         }
         .frame(height: 52)
+        // The Duo's inner display has no top safe area but ~66pt corner
+        // curves; Back and Done sat at y 6. Their 40pt row now starts at the
+        // shared inset.
+        .padding(.top, isDuoInner ? CompareLayout.duoInnerTopInset - (52 - 40) / 2 : 0)
         .background(EditorTheme.panelSolid)
         .overlay(alignment: .bottom) { Rectangle().fill(EditorTheme.hairline).frame(height: 0.5) }
     }
