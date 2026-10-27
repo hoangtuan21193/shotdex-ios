@@ -999,7 +999,10 @@ struct PhotoEditorScreen: View {
                     dismiss()
                 }
             }
-            .presentationDetents([.medium, .large])
+            // At medium on the Duo's 669pt inner display the sheet ended inside
+            // Save as Copy's footnote, with Save Changes — the main action —
+            // below the fold.
+            .presentationDetents(isDuoInner ? [.large] : [.medium, .large])
             .presentationDragIndicator(.visible)
             }
         }
