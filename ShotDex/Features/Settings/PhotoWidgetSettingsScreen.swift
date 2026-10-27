@@ -12,6 +12,7 @@ struct PhotoWidgetSettingsScreen: View {
     let designId: String
 
     @Environment(AppDependencies.self) private var dependencies
+    @Environment(\.isDuoInner) private var isDuoInner
 
     @State private var isPhotoPickerPresented = false
     @State private var isAlbumPickerPresented = false
@@ -185,23 +186,27 @@ struct PhotoWidgetSettingsScreen: View {
             )
             .frame(height: previewFamily == .large ? 280 : 158)
 
-            Picker("Widget Size", selection: $previewFamily) {
-                ForEach(PhotoWidgetPreviewFamily.allCases) { family in
-                    Text(family.title).tag(family)
+            // The Duo's inner display is 669pt tall and this header stays
+            // put over the list: size and chips share one row there, which
+            // gives the list back a row's height.
+            if isDuoInner {
+                HStack(spacing: AppTheme.Spacing.md) {
+                    sizePicker.frame(maxWidth: 220)
+                    elementChips
                 }
+            } else {
+                sizePicker.frame(maxWidth: 329)
+                elementChips
             }
-            .pickerStyle(.segmented)
-            .frame(maxWidth: 329)
-
-            // Aiming at a line of text on a 158pt preview is a poor way to
-            // choose one. These chips select the same thing without aiming,
-            // and they double as the list of what a widget is made of.
-            elementChips
 
             Text(hintText)
                 .font(.caption2)
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
+                // The list below takes every point it is offered; on the
+                // Duo's 669pt inner display that squeezed the hint to one
+                // line ending "move or resi…".
+                .fixedSize(horizontal: false, vertical: true)
         }
         .padding(.horizontal, AppTheme.Spacing.lg)
         .padding(.top, AppTheme.Spacing.md)
@@ -217,6 +222,18 @@ struct PhotoWidgetSettingsScreen: View {
     /// hidden rule because "drag moves the photo when nothing is selected" is
     /// true but invisible, and because it is how the user gets back to the
     /// picture without hunting for a gap between two lines of text.
+    private var sizePicker: some View {
+        Picker("Widget Size", selection: $previewFamily) {
+            ForEach(PhotoWidgetPreviewFamily.allCases) { family in
+                Text(family.title).tag(family)
+            }
+        }
+        .pickerStyle(.segmented)
+    }
+
+    // Aiming at a line of text on a 158pt preview is a poor way to choose
+    // one. These chips select the same thing without aiming, and they double
+    // as the list of what a widget is made of.
     private var elementChips: some View {
         // Five chips at an accessibility text size do not fit a phone's width,
         // and a clipped chip row hides the piece the user came to select.
