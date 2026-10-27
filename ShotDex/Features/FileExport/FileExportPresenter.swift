@@ -37,6 +37,7 @@ private struct FileExportPresenter: ViewModifier {
     @Binding var request: FileExportRequest?
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @Environment(\.verticalSizeClass) private var verticalSizeClass
+    @Environment(\.isDuoInner) private var isDuoInner
 
     func body(content: Content) -> some View {
         content.sheet(item: $request) { request in
@@ -46,7 +47,10 @@ private struct FileExportPresenter: ViewModifier {
 
     /// iPad (regular both ways) gets the two-column card of the Mac-style
     /// canvas; a phone — and the Duo's short inner screen — the Form.
+    /// The inner display reports regular both ways, so it is named here: its
+    /// 652pt form sheet cut the 700pt card at both edges.
     private var layout: FileExportSheet.Layout {
-        horizontalSizeClass == .regular && verticalSizeClass == .regular ? .card : .form
+        if isDuoInner { return .form }
+        return horizontalSizeClass == .regular && verticalSizeClass == .regular ? .card : .form
     }
 }
