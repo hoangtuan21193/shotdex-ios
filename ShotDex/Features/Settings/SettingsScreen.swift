@@ -10,6 +10,7 @@ struct SettingsScreen: View {
 
     @Environment(\.dismiss) private var dismiss
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    @Environment(\.isDuoInner) private var isDuoInner
     @Environment(PhotoLibraryService.self) private var photoLibrary
     @Environment(AppDependencies.self) private var dependencies
     @Environment(AppNavigation.self) private var appNavigation
@@ -340,7 +341,10 @@ struct SettingsScreen: View {
         }
         .navigationTitle("Settings")
         .navigationBarTitleDisplayMode(.large)
-        .settingsSubtitle(Self.subtitle)
+        // The Duo's inner display is too short for a large title: the bar
+        // goes inline, and the line squeezed between the title, Done and
+        // the sidebar button ended "How ShotDex reads, s…".
+        .settingsSubtitle(isDuoInner ? nil : Self.subtitle)
         .navigationSplitViewColumnWidth(
             min: AppTheme.Size.settingsSidebarWidthMin,
             ideal: AppTheme.Size.settingsSidebarWidth,
@@ -1466,8 +1470,8 @@ private extension View {
     /// The line under the large title. A navigation bar has a subtitle only
     /// from iOS 26; earlier, the list draws the line as its first row.
     @ViewBuilder
-    func settingsSubtitle(_ subtitle: Text) -> some View {
-        if #available(iOS 26.0, *) {
+    func settingsSubtitle(_ subtitle: Text?) -> some View {
+        if #available(iOS 26.0, *), let subtitle {
             navigationSubtitle(subtitle)
         } else {
             self

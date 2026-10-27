@@ -1,0 +1,20 @@
+{
+  "steps": [
+    { "action": "launch" },
+    { "action": "wait", "seconds": 8 },
+    { "action": "tap", "label": "Collections" },
+    { "action": "wait", "seconds": 3 },
+    { "action": "tap", "label": "Settings" },
+    { "action": "wait", "seconds": 4 },
+    { "action": "dump", "name": "DI_Settings" },
+    { "action": "wait", "seconds": 16 },
+    { "action": "tap", "label": "AI" },
+    { "action": "wait", "seconds": 4 },
+    { "action": "dump", "name": "DI_SettingsAI" },
+    { "action": "wait", "seconds": 16 },
+    { "action": "tap", "label": "Camera Database" },
+    { "action": "wait", "seconds": 4 },
+    { "action": "dump", "name": "DI_CameraDatabase" },
+    { "action": "wait", "seconds": 30 }
+  ]
+}
