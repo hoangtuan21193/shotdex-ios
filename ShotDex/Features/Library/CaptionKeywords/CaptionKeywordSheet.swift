@@ -57,6 +57,7 @@ struct CaptionKeywordSheet: View {
     @State var model: CaptionKeywordSheetModel
     let banner: AppBannerModel
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.isDuoInner) private var isDuoInner
     @FocusState private var isKeywordFocused: Bool
     @FocusState private var isCaptionFocused: Bool
     @State private var alert: AlertKind?
@@ -105,7 +106,9 @@ struct CaptionKeywordSheet: View {
                 }
             }
         }
-        .presentationDetents([.medium, .large])
+        // On the Duo's 669pt inner display medium just fits Add + Caption;
+        // the On These Photos section between them pushed Caption off it.
+        .presentationDetents(isDuoInner ? [.large] : [.medium, .large])
         .presentationDragIndicator(.visible)
         .interactiveDismissDisabled(model.isApplying)
         .overlay {
