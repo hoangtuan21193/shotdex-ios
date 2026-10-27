@@ -1,0 +1,58 @@
+{
+  "steps": [
+    {
+      "action": "launch"
+    },
+    {
+      "action": "wait",
+      "seconds": 8
+    },
+    {
+      "action": "tap",
+      "label": "Photo, file type",
+      "type": "cell",
+      "index": 2
+    },
+    {
+      "action": "wait",
+      "seconds": 4
+    },
+    {
+      "action": "tap",
+      "label": "Edit"
+    },
+    {
+      "action": "wait",
+      "seconds": 6
+    },
+    {
+      "action": "tap",
+      "label": "Light"
+    },
+    {
+      "action": "wait",
+      "seconds": 3
+    },
+    {
+      "action": "wait",
+      "seconds": 20
+    },
+    {
+      "action": "swipe",
+      "label": "Brightness",
+      "direction": "up"
+    },
+    {
+      "action": "wait",
+      "seconds": 3
+    },
+    {
+      "action": "dump",
+      "name": "DI8_Curve"
+    },
+    {
+      "action": "wait",
+      "seconds": 50
+    }
+  ]
+}
