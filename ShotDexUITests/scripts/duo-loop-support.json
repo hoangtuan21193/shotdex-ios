@@ -1,0 +1,14 @@
+{
+  "steps": [
+    { "action": "launch" },
+    { "action": "wait", "seconds": 8 },
+    { "action": "tap", "label": "Collections" },
+    { "action": "wait", "seconds": 3 },
+    { "action": "tap", "label": "Settings" },
+    { "action": "wait", "seconds": 4 },
+    { "action": "tap", "label": "Support", "index": 0 },
+    { "action": "wait", "seconds": 5 },
+    { "action": "dump", "name": "DI_Support" },
+    { "action": "wait", "seconds": 50 }
+  ]
+}

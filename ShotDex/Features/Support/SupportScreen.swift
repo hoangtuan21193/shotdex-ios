@@ -105,6 +105,15 @@ struct SupportScreen: View {
 
     @ViewBuilder
     private var roadmapSection: some View {
+        // Without the in-app channel an empty list can never fill, so a card
+        // saying "Requests appear once they have been read" promised
+        // something this build cannot deliver. Leave the section out.
+        if model.canUsePortal || !model.roadmap.isEmpty || model.isLoading {
+            roadmapContent
+        }
+    }
+
+    private var roadmapContent: some View {
         Section {
             if model.roadmap.isEmpty {
                 if model.isLoading && !model.hasLoadedOnce {
