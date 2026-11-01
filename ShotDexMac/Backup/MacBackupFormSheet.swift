@@ -89,8 +89,10 @@ struct MacBackupFormSheet: View {
                             VStack(alignment: .leading, spacing: 2) {
                                 Text(BackupOrganizeText.summary(model.settings.organize))
                                 Text(BackupOrganizeText.sampleTree(model.settings.organize).replacingOccurrences(of: " › ", with: "/"))
-                                    .font(.caption).foregroundStyle(.secondary).lineLimit(1).truncationMode(.middle)
+                                    .font(.caption).foregroundStyle(.secondary)
                             }
+                            .fixedSize(horizontal: false, vertical: true)
+                            .frame(maxWidth: .infinity, alignment: .leading)
                             Spacer()
                             Button(String(localized: "Organize…", comment: "Mac New Backup: open the Organize page")) { page = .organize }
                         }

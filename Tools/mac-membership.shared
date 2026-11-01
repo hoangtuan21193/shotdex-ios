@@ -5,3 +5,4 @@
 Features/Library/LibraryModel.swift
 Features/Backup/BackupFormModel.swift
 Features/Backup/BackupOrganizeText.swift
+Features/ServerUpload/ServerDiscoveryModel.swift

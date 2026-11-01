@@ -415,7 +415,6 @@
 				Features/ServerUpload/FileServerFormScreen.swift,
 				Features/ServerUpload/FileServerListScreen.swift,
 				Features/ServerUpload/SaveConnectionSheet.swift,
-				Features/ServerUpload/ServerDiscoveryModel.swift,
 				Features/ServerUpload/ServerSignIn.swift,
 				Features/ServerUpload/ServerUploadIndex.swift,
 				Features/ServerUpload/ServerUploadModel.swift,
@@ -1949,6 +1948,7 @@
 				INFOPLIST_KEY_CFBundleDisplayName = ShotDex;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.photography";
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "ShotDex reads your photos' camera, lens and exposure metadata to build your statistics, and saves the edits, favorites, albums and videos you make back to your library. Your photos stay on this Mac; only a rounded location goes to Apple's map service, to name the place a shot was taken.";
+				INFOPLIST_KEY_NSLocalNetworkUsageDescription = "ShotDex looks for file servers on your network, such as a NAS or a computer, and connects to the ones you add to upload and download your photos.";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
@@ -1980,6 +1980,7 @@
 				INFOPLIST_KEY_CFBundleDisplayName = ShotDex;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.photography";
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "ShotDex reads your photos' camera, lens and exposure metadata to build your statistics, and saves the edits, favorites, albums and videos you make back to your library. Your photos stay on this Mac; only a rounded location goes to Apple's map service, to name the place a shot was taken.";
+				INFOPLIST_KEY_NSLocalNetworkUsageDescription = "ShotDex looks for file servers on your network, such as a NAS or a computer, and connects to the ones you add to upload and download your photos.";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",

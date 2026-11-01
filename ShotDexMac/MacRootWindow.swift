@@ -12,6 +12,7 @@ struct MacRootWindow: View {
     @State private var showsBackupInspector = true
     /// File › New Backup… asked for the sheet; the Backup screen opens it.
     @State private var opensNewBackup = false
+    @State private var serverForm: MacServerFormRequest?
     @State private var viewMode = MacViewMode.grid
 
     var body: some View {
@@ -29,6 +30,14 @@ struct MacRootWindow: View {
         .tint(MacTheme.accent)
         .task { await start() }
         .onReceive(NotificationCenter.default.publisher(for: .macShowBackup)) { _ in selection = .backup }
+        .onReceive(NotificationCenter.default.publisher(for: .macAddServer)) { note in
+            serverForm = MacServerFormRequest(editing: (note.object as? String).flatMap { try? dependencies.fileServers.fetch(id: $0) })
+        }
+        .sheet(item: $serverForm) { request in
+            MacServerFormSheet(editing: request.editing) { _ in
+                NotificationCenter.default.post(name: .macServersChanged, object: nil)
+            }
+        }
         .onReceive(NotificationCenter.default.publisher(for: .macNewBackup)) { _ in
             selection = .backup
             opensNewBackup = true
@@ -118,6 +127,8 @@ struct MacRootWindow: View {
         if library == nil { library = LibraryModel(dependencies: dependencies) }
         #if DEBUG
         if MacDemoLibrary.section == "backup" { selection = .backup }
+        if MacDemoLibrary.section == "addServer" { serverForm = MacServerFormRequest() }
+        if MacDemoLibrary.section == "newBackup" { selection = .backup; opensNewBackup = true }
         if MacDemoLibrary.isOn {
             library?.loadIfNeeded()
             return
@@ -136,6 +147,12 @@ struct MacRootWindow: View {
 }
 
 enum MacViewMode: Hashable { case grid, list }
+
+/// Add a Server… or Edit Server for one connection.
+struct MacServerFormRequest: Identifiable {
+    let id = UUID()
+    var editing: FileServer?
+}
 
 extension MacRootWindow {
     /// The demo library's pictures; nil outside it.

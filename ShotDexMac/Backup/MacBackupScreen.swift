@@ -10,10 +10,13 @@ struct MacBackupScreen: View {
     @State private var selection: String?
     @State private var form: BackupFormModel?
     @State private var deleting: BackupJob?
+    /// Bumped when a connection is added, so the empty state and + redraw.
+    @State private var serversVersion = 0
 
     private var coordinator: BackupCoordinator { dependencies.backupCoordinator }
 
     var body: some View {
+        let _ = serversVersion
         Group {
             if coordinator.jobs.isEmpty {
                 empty
@@ -59,6 +62,7 @@ struct MacBackupScreen: View {
             coordinator.sourcesTick()
             if selection == nil { selection = coordinator.jobs.first?.id }
         }
+        .onReceive(NotificationCenter.default.publisher(for: .macServersChanged)) { _ in serversVersion += 1 }
         .onChange(of: opensNewBackup, initial: true) { _, opens in
             guard opens else { return }
             opensNewBackup = false
@@ -202,6 +206,8 @@ extension Notification.Name {
     static let macAddServer = Notification.Name("ShotDexMacAddServer")
     /// Go › Backup ⌥⌘B (FS-22.06 §5.1).
     static let macShowBackup = Notification.Name("ShotDexMacShowBackup")
+    /// A connection was added or edited — screens that read the list redraw.
+    static let macServersChanged = Notification.Name("ShotDexMacServersChanged")
 }
 
 /// One job (board `MAC_Backup`): the status glyph, `source → connection`,
