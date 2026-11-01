@@ -19,6 +19,13 @@ struct BackupEnvironment: Sendable {
     var power: PowerMonitor?
 }
 
+/// Something that keeps the screen from locking while it is held.
+@MainActor
+protocol ScreenHolding: AnyObject {
+    func beginHold()
+    func endHold()
+}
+
 /// Keeps every backup watching its source (FS-22.02): turns library changes,
 /// the app coming forward, the 5-minute tick, network changes and the
 /// buttons into runs, one job at a time, and owns each job's status line.

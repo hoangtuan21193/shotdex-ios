@@ -1,13 +1,6 @@
 import Foundation
 import Observation
 
-/// Something that keeps the screen from locking while it is held.
-@MainActor
-protocol ScreenHolding: AnyObject {
-    func beginHold()
-    func endHold()
-}
-
 extension ScreenAwakeCoordinator: ScreenHolding {}
 
 /// One run of the upload sheet (FS-15.02): prepare → upload → (conflict) →

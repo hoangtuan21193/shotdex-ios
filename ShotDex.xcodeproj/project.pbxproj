@@ -217,8 +217,6 @@
 				App/AssetActionsCoordinator.swift,
 				App/BackgroundIndexService.swift,
 				App/BackupBackgroundService.swift,
-				"App/BackupCoordinator+Live.swift",
-				App/BackupCoordinator.swift,
 				App/BackupUploadExtensionSync.swift,
 				App/Glass/GlassBackground.swift,
 				App/Glass/GlassIconButton.swift,
