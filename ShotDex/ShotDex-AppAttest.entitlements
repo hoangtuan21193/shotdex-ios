@@ -2,10 +2,10 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-	<!-- The Release entitlements. App Attest is a paid-membership capability:
-	     a personal team cannot create a provisioning profile that carries it,
-	     which is why the Debug configuration signs with ShotDex.entitlements
-	     instead and the app falls back to mail when it cannot attest.
+	<!-- The app's entitlements, Debug and Release. App Attest is a
+	     paid-membership capability; the team has had one since 2026-10-22, so
+	     Debug signs with it too. The app still falls back to mail when it
+	     cannot attest (simulator, a device that refuses).
 
 	     This value applies only to a build installed from Xcode, which attests
 	     against Apple's sandbox; iOS ignores it once the app ships, and

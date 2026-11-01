@@ -19,8 +19,8 @@ và mọi lưới dùng chung khác — đưa ô của **ảnh đang hiện lúc
 - Cuộn này **không** nạp lại lưới ([01](01-pager-and-image-loading.md) §7) và không xin lại thumbnail của ô đã có.
 - Với Library neo đáy: ô đích nằm trong một màn hình tính từ đáy thì lưới vẫn coi là đang neo đáy
   ([FS-01.01](../FS-01-library/01-photo-grid-and-data-source.md) §5).
-- Luật áp cho **mọi lưới dùng chung mở viewer** (K7): ngoài bốn lưới trên còn Trips, Places, album mở từ
-  Collections và Uploaded to Server.
+- Luật áp cho **mọi lưới dùng chung mở viewer** (K7): ngoài bốn lưới trên còn Hidden, Duplicates (lưới một
+  nhóm), album mở từ Collections và Uploaded to Server (Trips và Places đã gỡ 2026-10-24).
 
 Board: không đổi bố cục; không cần sửa board.
 
@@ -64,4 +64,4 @@ Board: không đổi (phím không có hình).
 | AC-13 | video 30 s đang **phát**, trang 5 của 10 | bấm → | trang 6 hiện; video trang 5 dừng | ✅ `ViewerKeyMapTests.arrowsStepAPausedVideoAndPageOtherwise` (luật); lật trang bằng → trên ảnh: ui-drive iPhone 17 26.5 (`Oct 15 7:21` → `Oct 15 8:09` → ← về). ⚠️ video thật trên sim chưa có |
 | AC-14 | video 30 fps đang dừng ở khung 360 | bấm → rồi ← hai lần | khung 361 rồi khung 359; vẫn trang đó, vẫn dừng | ✅ luật `ViewerKeyMapTests`; ⚠️ chạy trên video thật chưa có (sim không có video) |
 | AC-15 | ảnh hoặc video, chưa Favorite | bấm `.` | Favorite bật, như nút tim; video không tiến khung | ✅ `ViewerKeyMapTests.periodIsFavoriteEverywhere`; ui-drive: nút tim đổi "Favorite" → "Unfavorite" sau `.` |
-| AC-16 | (K7) Trips: chuyến 200 ảnh; Places: một ghim 80 ảnh; album mở từ Collections 300 ảnh; Uploaded to Server 150 ảnh — mỗi nơi mở ô đầu rồi lật 30 trang | bấm X | ở cả bốn, ô của ảnh thứ 31 thấy trọn giữa thanh trên và thanh dưới | ⚠️ chưa có |
+| AC-16 | (K7) Hidden: 200 ảnh đã ẩn; Duplicates: một nhóm 80 ảnh; album mở từ Collections 300 ảnh; Uploaded to Server 150 ảnh — mỗi nơi mở ô đầu rồi lật 30 trang | bấm X | ở cả bốn, ô của ảnh thứ 31 thấy trọn giữa thanh trên và thanh dưới | ⚠️ chưa có |

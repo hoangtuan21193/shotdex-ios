@@ -182,6 +182,9 @@ final class AppDependencies {
     let fileServerCatalog: FileServerCatalog
     /// Files brought down from a server (FS-17 §4).
     let serverDownloads: ServerDownloadStore
+    /// What is kept on this device for offline use (intent keep-offline).
+    let kept: KeptStore
+    let keepRunner: KeepRunner
     let serverFileHistory: ServerFileHistory
     let serverShortcuts: ServerShortcutCatalog
     /// Server photo thumbnails and capture dates on disk (FS-17 §4).
@@ -548,11 +551,11 @@ final class AppDependencies {
         self.support = SupportService()
         let fileServers = FileServerStore(database: database, passwords: KeychainPasswordStore())
         self.fileServers = fileServers
+        let connectionLock = ConnectionLock()
+        self.connectionLock = connectionLock
         self.fileServerCatalog = FileServerCatalog(store: fileServers)
         let serverUploads = ServerUploadStore(database: database)
         self.serverUploads = serverUploads
-        let connectionLock = ConnectionLock()
-        self.connectionLock = connectionLock
         let backups = BackupStore(database: database)
         self.backups = backups
         self.aiProviders = aiProviders
@@ -563,6 +566,12 @@ final class AppDependencies {
         self.backupBackground = BackupBackgroundService(coordinator: backupCoordinator, servers: fileServers)
         self.serverUploadIndex = ServerUploadIndex(store: serverUploads)
         self.serverDownloads = ServerDownloadStore(database: database)
+        let kept = KeptStore(database: database)
+        self.kept = kept
+        let keptFiles = KeptFileStore.standard
+        self.keepRunner = KeepRunner(store: kept, files: keptFiles, openCopies: OpenCopyQueries(database: database),
+                                     folderRoots: folderRoots,
+                                     serverLoader: ServerOriginalLoader(database: database, servers: fileServers))
         self.serverFileHistory = ServerFileHistory(database: database)
         self.serverShortcuts = ServerShortcutCatalog(store: ServerShortcutStore(database: database))
         PreviewCacheLocation.removeRetiredServerThumbnails()
@@ -616,6 +625,10 @@ final class AppDependencies {
         photoLibrary.filePhotoURL = { [folderRoots] id in
             guard let copy = try? openCopies.openCopy(photoId: id), copy.kind == "file", let path = copy.relativePath else { return nil }
             return folderRoots.fileURL(sourceId: copy.sourceId, relativePath: path)
+        }
+        // A kept file opens before anything is asked of PhotoKit or a server.
+        photoLibrary.keptFileURL = { id in
+            (try? kept.item(id: id)).flatMap { keptFiles.file(for: $0) }
         }
         sources.load()
     }

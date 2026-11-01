@@ -128,7 +128,7 @@ enum SettingsKeys {
     /// JSON-encoded user collage presets (frame + style, no text).
     static let collagePresets = "collage.presets"
 
-    /// `DuplicatesFilter` of the Duplicates list. Unwritten (or empty) means All.
+    /// `DuplicatesFilter` of the Duplicates list. Unwritten (or empty) means Exact.
     static let duplicateKindFilter = "duplicates.kindFilter"
 
     /// `DuplicateSort` raw value of the group list. Unwritten means `.easiestFirst`.

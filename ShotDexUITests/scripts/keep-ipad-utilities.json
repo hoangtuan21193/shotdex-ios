@@ -1,0 +1,28 @@
+{
+  "steps": [
+    { "action": "launch" },
+    { "action": "wait", "seconds": 8 },
+    { "action": "tap", "label": "Utilities", "type": "button" },
+    { "action": "wait", "seconds": 4 },
+    { "action": "screenshot", "name": "30-utilities-p" },
+    { "action": "dump", "name": "30-utilities-p" },
+    { "action": "tap", "label": "On This iPad" },
+    { "action": "wait", "seconds": 5 },
+    { "action": "screenshot", "name": "31-on-this-ipad-p" },
+    { "action": "dump", "name": "31-on-this-ipad-p" },
+    { "action": "home" },
+    { "action": "orientation", "text": "landscape" },
+    { "action": "wait", "seconds": 3 },
+    { "action": "activate" },
+    { "action": "wait", "seconds": 5 },
+    { "action": "tap", "label": "Utilities", "type": "button" },
+    { "action": "wait", "seconds": 3 },
+    { "action": "dump", "name": "32-utilities-l" },
+    { "action": "wait", "seconds": 30 },
+    { "action": "home" },
+    { "action": "orientation", "text": "landscapeRight" },
+    { "action": "wait", "seconds": 2 },
+    { "action": "orientation", "text": "portrait" },
+    { "action": "wait", "seconds": 3 }
+  ]
+}

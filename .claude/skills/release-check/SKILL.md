@@ -40,7 +40,7 @@ differs from its host. Bump both in one edit if asked; never bump only the app.
 ## 3. Entitlements and capabilities
 
 - App group `group.com.hoangtuan.shotdex` in exactly the targets that share a
-  store: the app (both `ShotDex.entitlements` and `ShotDex-AppAttest.entitlements`),
+  store: the app (`ShotDex-AppAttest.entitlements`, Debug and Release),
   the widget and `ShotDexAddLook`. `ShotDexShare` deliberately has none — it
   keeps its minimum rights (14c §4) — so a group there is a fail, not a fix.
   `for f in ShotDex/*.entitlements ShotDexWidget/*.entitlements ShotDexShare/*.entitlements ShotDexAddLook/*.entitlements; do echo "$f $(/usr/bin/grep -c group.com.hoangtuan.shotdex $f)"; done`

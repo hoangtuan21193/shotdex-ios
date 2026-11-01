@@ -1,0 +1,8 @@
+{
+  "steps": [
+    { "action": "launch" },
+    { "action": "wait", "seconds": 5 },
+    { "action": "screenshot", "name": "01-launch" },
+    { "action": "dump", "name": "01-launch" }
+  ]
+}

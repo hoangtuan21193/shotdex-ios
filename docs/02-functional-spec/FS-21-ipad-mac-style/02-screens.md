@@ -71,15 +71,16 @@
 - Một công cụ một tên ở mọi thiết bị: **Edit → Adjust**, **Transform → Crop** cả trên iPhone và Duo.
 - iPhone và Duo **giữ bố cục** FS-03.13 (dải 6 công cụ, panel 246, danh sách phẳng); nhóm gập được chỉ ở iPad.
 
-## 6. Collections — `IP_Collections`, `IP_AlbumDetail`, `IP_SmartAlbum*`, `IP_OnThisDay`, `IP_Places`, `IP_Trips`, `IP_Duplicates`, `IP_Creations`, `IP_VideoProjects*`
+## 6. Collections — `IP_Collections`, `IP_AlbumDetail`, `IP_SmartAlbum*`, `IP_OnThisDay`, `IP_Duplicates`, `IP_Creations`, `IP_VideoProjects*`
 
 - Không còn tab: hàng sidebar **Albums** mở trang album theo board (hero On This Day + Recently Viewed/Shared, Smart/My Albums,
-  Media Types, Utilities); mỗi hàng Utilities mở thẳng màn của nó. Toolbar trang album: Sort By · `+` (New Album,
+  Media Types); công cụ đã sang trang Utilities (`IP_Utilities`: card Statistics trải ngang trên cùng, dưới là Library · Create ·
+  Elsewhere thành cột độc lập, 2026-10-24) và nhóm Utilities của sidebar, mỗi hàng mở thẳng màn của nó; On This iPad (`IP_OnThisIPad`) và sheet Keep
+  (`IP_KeepOnIPad`) theo intent `2026-10-19-keep-offline`. Toolbar trang album: Sort By · `+` (New Album,
   New Smart Album, Customize).
 - Album, smart album: header + lưới như Library; Edit Smart Album là form sheet 700×640.
-- Places: bản đồ + inspector 360 của cụm đang chọn (Show in Library · New Album from Place · danh sách ảnh); nút
-  Zoom In/Out/Reset to North 44.
-- Trips: 3 cột thẻ 328×249 ở 1016pt (hôm nay 4 cột 324 ở 1344pt). Collages: lưới theo tháng, thẻ 242×224, `+` New Collage.
+- Places và Trips: đã gỡ khỏi app 2026-10-24 (board `IP_Places`, `IP_Trips` xoá theo).
+- Collages: lưới theo tháng, thẻ 242×224, `+` New Collage.
 - Duplicates: segmented Exact · Similar · Series · Bursts (kèm số nhóm) trên toolbar, Rescan, ⋯, **Delete N Photos** cuối
   phải (chữ đỏ, không tô); danh sách nhóm 360 trái + chi tiết nhóm phải, thay lưới thẻ xếp gạch.
 

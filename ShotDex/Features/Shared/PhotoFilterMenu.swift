@@ -17,6 +17,9 @@ struct PhotoFilterMenu<SortContent: View>: View {
     /// "All Items": clears every filter the screen holds.
     var onShowAllItems: () -> Void
     var onAdvancedFilter: (() -> Void)?
+    /// A last section for what the screen does with the whole set — Album
+    /// Detail's Keep on This iPhone. Nil on every other grid.
+    var setActions: AnyView? = nil
     /// The Sort By submenu's contents — a `Picker`, so the current order carries
     /// the system checkmark on every screen.
     @ViewBuilder var sortContent: SortContent
@@ -42,6 +45,9 @@ struct PhotoFilterMenu<SortContent: View>: View {
                 Toggle(isOn: $showsAspectTiles) {
                     Label("Aspect Ratio Grid", systemImage: "rectangle.3.group")
                 }
+            }
+            if let setActions {
+                Section { setActions }
             }
         } label: {
             Image(systemName: "line.3.horizontal.decrease")

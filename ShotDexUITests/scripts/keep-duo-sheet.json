@@ -1,0 +1,107 @@
+{
+  "steps": [
+    {
+      "action": "launch"
+    },
+    {
+      "action": "wait",
+      "seconds": 8
+    },
+    {
+      "action": "tap",
+      "label": "Library",
+      "type": "button"
+    },
+    {
+      "action": "wait",
+      "seconds": 4
+    },
+    {
+      "action": "tap",
+      "label": "Select photos"
+    },
+    {
+      "action": "wait",
+      "seconds": 2
+    },
+    {
+      "action": "tap",
+      "label": "Photo, file type",
+      "type": "cell",
+      "index": 3
+    },
+    {
+      "action": "wait",
+      "seconds": 2
+    },
+    {
+      "action": "tap",
+      "label": "More selection actions"
+    },
+    {
+      "action": "wait",
+      "seconds": 2
+    },
+    {
+      "action": "dump",
+      "name": "24-menu"
+    },
+    {
+      "action": "tap",
+      "label": "Keep on This iPhone\u2026"
+    },
+    {
+      "action": "wait",
+      "seconds": 4
+    },
+    {
+      "action": "dump",
+      "name": "22-keep-sheet"
+    },
+    {
+      "action": "wait",
+      "seconds": 30
+    },
+    {
+      "action": "tap",
+      "label": "Keep 1 Item"
+    },
+    {
+      "action": "wait",
+      "seconds": 4
+    },
+    {
+      "action": "tap",
+      "label": "Done selecting"
+    },
+    {
+      "action": "wait",
+      "seconds": 3
+    },
+    {
+      "action": "tap",
+      "label": "Utilities",
+      "type": "button"
+    },
+    {
+      "action": "wait",
+      "seconds": 3
+    },
+    {
+      "action": "tap",
+      "label": "On This iPhone"
+    },
+    {
+      "action": "wait",
+      "seconds": 5
+    },
+    {
+      "action": "dump",
+      "name": "23-on-this-iphone-kept"
+    },
+    {
+      "action": "wait",
+      "seconds": 30
+    }
+  ]
+}

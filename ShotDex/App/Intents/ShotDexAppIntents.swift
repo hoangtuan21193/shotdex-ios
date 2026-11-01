@@ -18,8 +18,6 @@ final class IntentRouter {
         case favorites
         case camera(String)
         case statistics
-        case places
-        case trips
         /// A photo handed over from another device, already translated into
         /// this device's own identifier.
         case photo(assetId: String, opensEditor: Bool = false)
@@ -124,30 +122,6 @@ struct ShowStatisticsIntent: AppIntent {
     }
 }
 
-struct ShowPlacesIntent: AppIntent {
-    static let title: LocalizedStringResource = "Show Places"
-    static let description = IntentDescription("Opens the map of where you have shot.")
-    static let openAppWhenRun = true
-
-    @MainActor
-    func perform() async throws -> some IntentResult {
-        IntentRouter.shared.request(.places)
-        return .result()
-    }
-}
-
-struct ShowTripsIntent: AppIntent {
-    static let title: LocalizedStringResource = "Show Trips"
-    static let description = IntentDescription("Opens the trips found in your library.")
-    static let openAppWhenRun = true
-
-    @MainActor
-    func perform() async throws -> some IntentResult {
-        IntentRouter.shared.request(.trips)
-        return .result()
-    }
-}
-
 // MARK: - Spoken phrases
 
 /// The phrases Siri and Spotlight offer without the user building a shortcut
@@ -181,24 +155,6 @@ struct ShotDexShortcuts: AppShortcutsProvider {
             ],
             shortTitle: "Statistics",
             systemImageName: "chart.bar"
-        )
-        AppShortcut(
-            intent: ShowPlacesIntent(),
-            phrases: [
-                "Show my places in \(.applicationName)",
-                "Open the map in \(.applicationName)",
-            ],
-            shortTitle: "Places",
-            systemImageName: "map"
-        )
-        AppShortcut(
-            intent: ShowTripsIntent(),
-            phrases: [
-                "Show my trips in \(.applicationName)",
-                "Open trips in \(.applicationName)",
-            ],
-            shortTitle: "Trips",
-            systemImageName: "airplane"
         )
         AppShortcut(
             intent: OpenLibraryIntent(),

@@ -201,6 +201,13 @@ final class VideoPlaybackModel {
     /// the user is looking at.
     func load() {
         guard player == nil, requestId == nil, let asset, let photoLibrary else { return }
+        // Kept on This iPhone: plays from the file here, no request at all.
+        if let kept = photoLibrary.keptFileURL(asset.localIdentifier) {
+            phase = .buffering
+            armReadinessWatchdog()
+            attach(AVPlayerItem(url: kept))
+            return
+        }
         phase = .buffering
         onDownloadProgress?(0, true)
         armReadinessWatchdog()

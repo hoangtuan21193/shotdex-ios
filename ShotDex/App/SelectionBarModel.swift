@@ -64,11 +64,17 @@ struct SelectionBarModel {
     /// The Hidden section (FS-19.04 §3): the trailing slot reads "Unhide N
     /// Photos" instead of Delete — what that screen is for.
     var onUnhide: (() -> Void)? = nil
+    /// On This iPhone: the trailing slot reads "Remove from iPhone" — the
+    /// kept copies go, the photos stay in the library.
+    var onRemoveFromDevice: (() -> Void)? = nil
 
     // ⋯ More menu (each `nil` omits its row; all `nil` hides the ⋯ button).
     var onAddToCollection: (() -> Void)? = nil
     var onExportEXIF: (() -> Void)? = nil
     var onDuplicate: (() -> Void)? = nil
+    /// Keep on This iPhone… — asks Viewing Copies or Originals, then keeps
+    /// the selection for offline use.
+    var onKeepOnDevice: (() -> Void)? = nil
     /// Sends the originals to a file server (FS-15.02), starting on the
     /// connection picked in the menu or on the Add form.
     var onUploadToServer: ((ServerUploadTarget) -> Void)? = nil

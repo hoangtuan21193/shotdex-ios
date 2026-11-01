@@ -33,14 +33,12 @@ struct CollectionsLayoutTests {
         #expect(store.visibleOrder.count == CollectionsSection.allCases.count - 1)
     }
 
-    /// Pinned is what the user explicitly asked to keep in reach, and Utilities
-    /// holds the tools. Neither may be hidden.
+    /// Pinned is what the user explicitly asked to keep in reach, so it may
+    /// not be hidden.
     @Test func someSectionsCannotBeHidden() {
         let store = makeStore()
         store.setHidden(true, for: .pinned)
-        store.setHidden(true, for: .utilities)
         #expect(!store.isHidden(.pinned))
-        #expect(!store.isHidden(.utilities))
     }
 
     @Test func resetGoesBackToTheDefault() {
@@ -57,9 +55,9 @@ struct CollectionsLayoutTests {
     /// build that removes one must not choke on the id left behind.
     @Test func anUnknownOrMissingSectionIsHandled() {
         let merged = CollectionsLayoutStore.merged(stored: [
-            "utilities", "somethingRemovedInALaterBuild", "subjects",
+            "mediaTypes", "somethingRemovedInALaterBuild", "subjects",
         ])
-        #expect(merged.first == .utilities)
+        #expect(merged.first == .mediaTypes)
         #expect(merged[1] == .subjects)
         #expect(Set(merged) == Set(CollectionsSection.allCases))
         #expect(merged.count == CollectionsSection.allCases.count)

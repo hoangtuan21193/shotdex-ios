@@ -1,7 +1,7 @@
 # FS-07 — Statistics
 
 `FS-07` · tier A · `ShotDex/Features/Statistics/` · `Data/Database/StatisticsQueries.swift` · `ChartStore`
-· test `ChartDashboardTests` · `StatsDateScopeTests` · cập nhật 2026-10-02
+· test `ChartDashboardTests` · `StatsDateScopeTests` · `StatisticsOverviewTests` · cập nhật 2026-10-24
 
 **Một câu:** tab Statistics — một thẻ **Insights** nói bằng lời thói quen chụp của người dùng, rồi bên dưới là
 dashboard biểu đồ do người dùng tự dựng; chạm vào đâu cũng mở Library lọc sẵn.
@@ -54,7 +54,29 @@ exiftool. Lần đầu mở Statistics phải trả lời ngay, bằng lời, t�
 | Truy cập | mỗi câu một phần tử VoiceOver; chữ không cắt ở cỡ accessibility ([NF-06](../../04-non-functional-design/NF-06-accessibility-and-localization.md)) |
 | Ngôn ngữ | mẫu câu trọn vẹn trong String Catalog, số nhiều bằng biến thể plural; bản `vi` chưa dịch như phần còn lại của app |
 
-## 4. Rủi ro đã biết
+## 4. Card ở tab Utilities (2026-10-24)
+
+Statistics không còn là một hàng trong nhóm Explore của tab Utilities (nhóm đó đã bỏ, Places và Trips gỡ khỏi app):
+nó là **card riêng trên cùng** tab Utilities (board `PH_Utilities`, `IP_`, `DI_`, `DC_Utilities`;
+[FS-06.01 §5b](../FS-06-collections/01-tabs-tokens-and-album-management.md)).
+
+- **Nội dung:** tiêu đề `Statistics` `.headline` + chevron; ba số **Photos · Cameras · Lenses** (`.title2` đậm,
+  mono-digit, nhãn `.caption` màu phụ); biểu đồ cột số ảnh theo **12 tháng gần nhất**, chỉ ba nhãn tháng (đầu · giữa · cuối, viết tắt 3 chữ, nằm dưới đúng cột), không trục
+  dọc. Một chuỗi nên một sắc (DESIGN.md §3.4): tháng nhiều nhất `ChartPalette.emphasis`, các tháng khác
+  `ChartPalette.quiet`.
+- **Chạm:** cả card là một nút mở dashboard Statistics (FS-07.01) — nơi liệt kê biểu đồ và thêm biểu đồ như cũ.
+- **Bố cục:** điện thoại: số trên, biểu đồ dưới. Màn rộng (≥ 2 cột nhóm): card trải hết bề ngang trên các cột, số bên
+  trái, biểu đồ bên phải — không kéo 12 cột ra cả bề ngang dưới hàng số.
+- **Dữ liệu:** `StatisticsQueries.overview(months:now:calendar:)` — số ảnh hiện (cùng điều kiện ẩn với dashboard),
+  số `normalizedCameraModel` và `normalizedLensModel` khác nhau, bỏ giá trị rỗng/NULL; đếm theo **tháng lịch giờ máy**
+  cho 12 tháng kết thúc ở tháng hiện tại, tháng không có ảnh là 0 (không bỏ trống). Chạy ngoài luồng chính, nạp lại khi
+  thư viện đổi (`assetChangeToken`); trước lần nạp đầu card giữ kích thước, chữ ở dạng placeholder.
+- **VoiceOver:** một phần tử: "Statistics", giá trị "N photos, N cameras, N lenses, Busiest month ‹tháng năm›, N
+  photos".
+- **Test:** `ShotDexTests/StatisticsOverviewTests.swift` — đếm máy/ống bỏ rỗng, 12 tháng có số 0 và không lấy ảnh
+  ngoài cửa sổ, thư viện rỗng.
+
+## 5. Rủi ro đã biết
 
 | Rủi ro | Xử lý |
 |---|---|

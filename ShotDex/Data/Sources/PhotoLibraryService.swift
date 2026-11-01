@@ -97,6 +97,11 @@ final class PhotoLibraryService: NSObject {
     @ObservationIgnored
     var filePhotoURL: @Sendable (String) -> URL? = { _ in nil }
 
+    /// The file a photo or video was kept as on this device (Keep on This
+    /// iPhone); nil when it is not kept or not here yet.
+    @ObservationIgnored
+    var keptFileURL: @Sendable (String) -> URL? = { _ in nil }
+
     @ObservationIgnored
     /// Not private: the original-image request lives in its own extension
     /// file, and it needs the same manager so its requests share the cache and

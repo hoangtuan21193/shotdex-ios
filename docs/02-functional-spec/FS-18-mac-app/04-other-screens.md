@@ -17,7 +17,7 @@ Support thành cửa sổ riêng.
   "412 photos · 18 videos · 61.4 GB"; lưới cùng engine với Library (8 cột ở 1440), Grid/List như Library.
 - Smart album: sheet **640×560**, Match all/any, nhóm điều kiện lồng, thân cuộn
   ([FS-06.08](../FS-06-collections/08-smart-albums.md)); điều kiện Source thêm theo FS-19.
-- Places: bản đồ + inspector 300 của cụm đang chọn. On This Day: lưới theo năm, Show Trip mở Trips.
+- On This Day: lưới theo năm. (Places với inspector cụm và nút Show Trip đã bỏ cùng Places/Trips, 2026-10-24.)
 - Duplicates: segmented mức khớp **Exact · Similar · Series · Bursts**, danh sách nhóm 340 bên trái, hai bản cạnh
   nhau, Rescan, **Merge N Groups…**; chỉ gom trong một nguồn (D7, FS-19,
   [FS-06.06](../FS-06-collections/06-duplicates.md)).

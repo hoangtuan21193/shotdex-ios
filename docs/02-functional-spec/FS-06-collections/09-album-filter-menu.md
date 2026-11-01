@@ -24,7 +24,7 @@ Nút Filter đã có ở Library thì phải có ở mọi lưới ảnh, và c�
 - Smart Album có thêm **Sort By** (hiện chỉ xếp mới nhất trước). Thứ tự nhớ theo từng album, như FS-06.01b §3.
 
 **Cố ý không có:**
-- On This Day, People and Pets, Trips, Duplicates — các màn này có luật riêng; người dùng yêu cầu
+- On This Day, People and Pets, Duplicates — các màn này có luật riêng; người dùng yêu cầu
   để yên.
 - Sắp theo thông số chụp (ISO, tiêu cự…) — Library cũng không đưa lên menu.
 

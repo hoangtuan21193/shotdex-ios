@@ -24,7 +24,6 @@ input{font-family:inherit}
 <div style="height:36px;display:flex;align-items:flex-end;justify-content:space-between;padding:0 4px">
 <div style="display:flex;align-items:baseline;gap:8px"><span style="font-size:15px;font-weight:600">{{y.year}}</span><span style="font-size:13px;color:{{t.label2}}">{{y.ago}} · {{y.place}}</span></div>
 <div style="display:flex;align-items:center;gap:12px">
-<sc-if value="{{y.hasTrip}}" hint-placeholder-val="{{false}}"><span style="font-size:12px;color:{{t.label2}};font-variant-numeric:tabular-nums">{{y.trip}}</span><button aria-label="{{y.tripLabel}}" style="height:22px;padding:0 6px 0 8px;border-radius:6px;border:none;background:{{t.fill}};color:{{t.label}};font-size:12px;display:flex;align-items:center;gap:4px">Show Trip<svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"></path></svg></button></sc-if>
 <span style="font-size:12px;color:{{t.label2}};font-variant-numeric:tabular-nums">{{y.count}}</span>
 </div>
 </div>
@@ -162,11 +161,11 @@ function vals(t, dark){
   const mk=(n,seed,metaOff)=>{const out=[];for(let i=0;i<n;i++){const k=i+seed;const isVideo=(k%11)===4;
     out.push({bg:tile(k*5+2),ft:isVideo?'MOV':FT[k%FT.length],isVideo,dur:DUR[k%DUR.length],meta:isVideo?'4K · 24 fps':META[(k+metaOff)%META.length],
       label:(isVideo?'Video':'Photo')+', '+(isVideo?'4K':META[(k+metaOff)%META.length])});}return out;};
-  const y=(year,ago,place,n,seed,o)=>Object.assign({year,ago,place,count:n+' photos',tiles:mk(n,seed,year%5),hasTrip:false,trip:'',tripLabel:''},o||{});
+  const y=(year,ago,place,n,seed,o)=>Object.assign({year,ago,place,count:n+' photos',tiles:mk(n,seed,year%5)},o||{});
   return { years:[
     y(2021,'5 years ago','Hanoi, Vietnam',5,31),
     y(2023,'3 years ago','Banff, Canada',7,49),
-    y(2025,'1 year ago','Kyoto, Japan',14,7,{hasTrip:true,trip:'Trip: Kyoto, Oct 1 – 7, 2025',tripLabel:'Show Trip, Kyoto, October 2025'})
+    y(2025,'1 year ago','Kyoto, Japan',14,7)
   ] };
 }
 
@@ -177,7 +176,7 @@ function sidebarGroups(t, sel){
     {hasTitle:false, rows:[row('All Photos',I.all,'55,231'),row('Favorites',I.fav,'1,862'),row('Videos',I.video,'1,204'),row('RAW',I.raw,'31,540'),row('Recently Added',I.recent)]},
     {hasTitle:true, title:'Sources', addable:true, addLabel:'Add Source', rows:[row('Photos Library',I.library,'23,904'),row('2026 Japan',I.folder,'4,118'),row('T7 RAW Archive',I.drive,'26,107',{eject:true}),row('NAS Home',I.server,'1,102')]},
     {hasTitle:true, title:'Collections', addable:true, addLabel:'New Album', rows:[row('On This Day',I.otd),row('Albums',I.album,'38',{chev:true}),row('Night ISO 3200+',I.smart,'2,411'),row('85mm Portraits',I.smart,'986')]},
-    {hasTitle:true, title:'Utilities', addable:false, rows:[row('Statistics',I.stats),row('Places',I.places),row('Trips',I.trips,'12'),row('Duplicates',I.dup,'53'),row('Collages',I.collage,'12'),row('Video Projects',I.film,'7'),row('On Server',I.onserver,'712')]}
+    {hasTitle:true, title:'Utilities', addable:false, rows:[row('Statistics',I.stats),row('Duplicates',I.dup,'53'),row('Collages',I.collage,'12'),row('Video Projects',I.film,'7'),row('On Server',I.onserver,'712')]}
   ];
 }
 

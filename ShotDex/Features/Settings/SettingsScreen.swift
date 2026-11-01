@@ -250,7 +250,7 @@ struct SettingsScreen: View {
         VStack(spacing: AppTheme.Spacing.sm) {
             Text(Self.versionLine)
                 .frame(maxWidth: .infinity)
-            Text("Albums and smart albums are in Collections; charts and gear statistics are in Statistics. Pinch the photo grid to change how many columns it shows.", comment: "Settings root footer: where the things that are not settings live")
+            Text("Albums and smart albums are in Collections; charts and gear statistics are in Collections › Utilities › Statistics. Pinch the photo grid to change how many columns it shows.", comment: "Settings root footer: where the things that are not settings live")
                 .frame(maxWidth: .infinity, alignment: .leading)
         }
         .font(.footnote)

@@ -290,7 +290,7 @@ Kéo theo:
 
 - **Tên album nằm *trong* tile**, đè lên đáy cover, không phải một dòng caption dưới tile. Caption dưới tile tốn chiều cao mỗi ô và để lại một cột chữ lơ lửng giữa hai hàng; nằm trong, cái tên thuộc về bức ảnh nó gọi tên, và chiều cao đó trả về cho chính cover (đó là chỗ 132/192 lấy thêm từ 112/168).
 - **Tối đa 2 dòng**, wrap chứ không cắt một dòng: một dòng cắt "Recently Added" làm đôi trên điện thoại; ba dòng thì che mất bức ảnh mà tile sinh ra để khoe.
-- **Không vẽ số đếm** ở tab này — không ở tile, không ở thẻ Media Types/Utilities. Một con số cạnh mọi cái tên là nhiễu trên một màn có mỗi việc "cái nào là cái nào", và màn nó mở ra vốn đã nói. **VoiceOver vẫn đọc số** (`accessibilityLabel`, `spokenDetail`): ở đó con số không tốn gì và trả lời đúng câu "có đáng mở không".
+- **Không vẽ số đếm** ở tab này — không ở tile, không ở thẻ Media Types (tab Utilities riêng thì có, §10.1e-bis). Một con số cạnh mọi cái tên là nhiễu trên một màn có mỗi việc "cái nào là cái nào", và màn nó mở ra vốn đã nói. **VoiceOver vẫn đọc số** (`accessibilityLabel`, `spokenDetail`): ở đó con số không tốn gì và trả lời đúng câu "có đáng mở không".
 - **Scrim sau chữ phải ĐO, không đặt sẵn.** Một lớp tối cố định trên mọi cover sai hai lần: nó làm bẩn tấm vốn đã tối ở đúng chỗ đó, và trên nền trời trắng thì không bao giờ đủ. `CoverTitleScrim` lấy **luma Rec.709 trung bình của dải đáy** (42% chiều cao, đúng dải chữ nằm) bằng một lần vẽ Core Graphics xuống **1 pixel**, một lần lúc cover về, và chỉ bật gradient khi trên ngưỡng **0.42**. Rec.709 chứ không phải trung bình RGB phẳng: kênh lục gánh phần lớn độ sáng cảm nhận, trung bình phẳng sẽ bảo nền trời xanh lam tối hơn thực tế. Đọc không được thì **bật scrim** — chữ không đọc được là cái hỏng nặng hơn. Chữ luôn có `shadow`, đậm hơn khi không có scrim.
 
 ### 10.1e Hàng hero trên cùng, và hai nhóm "cái app làm ra" (2026-09-20)
@@ -298,6 +298,33 @@ Kéo theo:
 - **Hero On This Day chiếm hết bề ngang và cao theo size class**: **180 (compact) → 260 (regular)** (`CollectionsHeroMetrics.height`), `@ScaledMetric` đặt ở màn chứ không ở thẻ. Đây là **lập luận riêng**, không mượn §10.1d (hero là banner đơn độc, không thoả điều kiện 2 và 3): nó đã full-bleed nên bề rộng tự lớn theo màn, và nếu **chỉ** bề rộng lớn thì ở 1032pt nó thành một **dải letterbox 150pt** — tỉ lệ ~7:1, không còn đọc ra là một bức ảnh. Chiều cao tăng là để giữ tỉ lệ ở mức xem được, và dừng ở 260 chứ không theo tỉ lệ thật, vì hero không được ăn hết màn đầu tiên. **Và không quá 28% chiều cao nhìn thấy** (`CollectionsHeroMetrics.maximumShareOfHeight`, tính cả Dynamic Type, 2026-10-24): regular không có nghĩa là cao — màn trong của Duo regular mà chỉ 669pt, 260 ở đó là 42% màn đầu; cap ra 171 (đo). Từ 930pt trở lên (iPad, iPhone) cap không chạm. Section "Recents" riêng bị bỏ.
 - **Thứ app tự làm ra thì để riêng theo công cụ, và luôn hiện**: `Collages` và `Video Projects` là hai hàng cố định trong Utilities, kể cả khi chưa có cái nào — chúng cũng là chỗ **bắt đầu** một cái mới (nút `+` trên toolbar + nút accent trong empty state), nên một hàng rỗng vẫn có việc để làm. Gộp thành một hàng "Creations" đã thử rồi bỏ: cái tên không nói trong đó có gì.
 - **Không đặt tên trùng với album hệ thống**: Media Types có album `Videos` do PhotoKit đặt tên, nghĩa là *cảnh người dùng quay*. Thứ app làm ra phải mang tên khác (`Video Projects`), vì hai hàng cùng chữ "Videos" trong một tab là hai thứ khác hẳn nhau đội cùng một cái tên.
+
+### 10.1e-bis Tab Utilities: mỗi nhóm một thẻ inset-grouped (2026-10-23)
+
+Tab Utilities (tách khỏi Collections 2026-10-20) **không** dùng thẻ một dòng của Media Types. Lưới pill xám hai thẻ
+một hàng bị người dùng chê "xấu quá": mười nút giống hệt nhau đọc ra một bức tường, tiêu đề nhóm `.title2` to hơn chính
+công cụ, nhóm lẻ để hở một ô. Thay bằng mẫu §10.1 dựng tay (để chia cột được trên màn rộng):
+
+- Nền `.systemGroupedBackground`; mỗi nhóm một thẻ `.secondarySystemGroupedBackground`, `r-lg`; tiêu đề nhóm chữ hoa
+  nhỏ `.footnote` đậm vừa `.secondary`, thụt 16, cách thẻ 8; 24 giữa hai nhóm.
+- Hàng (`UtilityRowLabel`): đệm 16 ngang / 12 dọc, tối thiểu 44; glyph `.body` `.secondary` trong cột 28 (scale theo
+  `.body`), tên `.body`, **số đếm `.secondary` mono-digit bên phải** khi công cụ có việc chờ, chevron `.footnote`
+  đậm vừa `.tertiary`; `Divider` thụt tới đầu tên (16 + 28 + 12 = 56), không có sau hàng cuối.
+- **Ở đây có vẽ số đếm**, khác §10.1d-bis: số của một công cụ trả lời "có việc gì chờ không" (12 nhóm trùng, 6 ảnh ẩn,
+  album Recently Deleted) — đó chính là lý do mở nó, giống mục Utilities của app Photos. Công cụ không có số thì không vẽ.
+- Màn rộng: **cột độc lập** như dashboard Statistics (§10.1c), thẻ rộng ≥ 300, 1…4 cột; mỗi nhóm theo thứ tự vào
+  **cột đang ít hàng nhất** (không chia vòng: Create có 6 hàng, chia vòng dồn Library + Create vào một cột và trên màn
+  trong Duo 669pt hàng cuối rơi khỏi màn trong khi nửa kia trống). Điện thoại một cột, cuộn dưới tab bar nổi.
+- **Card Statistics đứng đầu tab** (2026-10-24, thay nhóm Explore — Places và Trips đã gỡ khỏi app): cùng nền/bo với
+  thẻ nhóm, đệm 16; dòng `Statistics` `.headline` + chevron; ba số `.title2` đậm mono-digit (Photos · Cameras · Lenses)
+  với nhãn `.caption` `.secondary`; biểu đồ cột 12 tháng gần nhất cao 72 (scale theo `.caption`), một sắc theo §3.4:
+  `ChartPalette.quiet` cho mọi tháng, `emphasis` cho tháng nhiều nhất, không trục Y; **chỉ ba nhãn tháng** (đầu, giữa, cuối,
+  viết tắt 3 chữ, neo giữa cột) — nhãn dưới mọi cột làm card rối, nhãn một chữ đọc ra mã (người dùng 24/10). Màn rộng: số bên
+  trái, biểu đồ bên phải trong cùng một hàng — card rộng cả trang, không kéo 12 cột thành dải. Cả card là một
+  `NavigationLink` tới Statistics (danh sách biểu đồ + thêm biểu đồ như cũ).
+- Create kết thúc bằng bốn công cụ Combine Photos (Focus Stack · Panorama · HDR · Stack Exposures, thứ tự của menu):
+  hàng là `Button` mở bộ chọn ảnh hệ thống rồi màn của công cụ, không push màn danh sách — nên vẫn vẽ chevron như mọi
+  hàng (đều dẫn tới "thêm một bước").
 
 ### 10.1f Màn cài đặt ở regular width: `NavigationSplitView` (2026-09-21)
 

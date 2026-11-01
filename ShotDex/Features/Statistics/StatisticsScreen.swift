@@ -1,6 +1,11 @@
 import SwiftUI
 
-/// Statistics tab: a customizable dashboard of charts. Charts are
+/// Route to the Statistics dashboard, pushed from Collections › Utilities.
+/// Not a tab: gear stats are something a photographer looks at now and then,
+/// not every time the app opens.
+struct StatisticsDestination: Hashable {}
+
+/// Statistics: a customizable dashboard of charts. Charts are
 /// user-defined (type + X-axis dimension + Y-axis metric + condition filter),
 /// reorderable and editable; a first-run install is seeded with defaults.
 struct StatisticsScreen: View {
@@ -48,10 +53,9 @@ struct StatisticsScreen: View {
                 ProgressView()
             }
         }
+        .navigationTitle("Statistics")
+        .navigationBarTitleDisplayMode(.inline)
         .toolbar {
-            ToolbarItem(placement: .topBarLeading) {
-                SettingsButton()
-            }
             // Reorder first, then a spacer, so "+" sits on its own Liquid Glass
             // capsule at the trailing edge instead of sharing one with it.
             ToolbarItem(placement: .topBarTrailing) {

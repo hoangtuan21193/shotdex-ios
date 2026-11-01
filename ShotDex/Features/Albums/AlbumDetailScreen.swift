@@ -547,6 +547,7 @@ struct AlbumDetailScreen: View {
             onAddToCollection: { addToCollection(model) },
             onExportEXIF: { exportEXIF(model) },
             onDuplicate: { duplicateSelected(model) },
+            onKeepOnDevice: { [selectedIds] in navigation.keepRequest = KeepRequest(ids: selectedIds) },
             onUploadToServer: presentServerUpload.map { present in { present(selectedIds, $0) } },
             offersCaptionKeywords: true,
             offersFileExport: true,
@@ -652,7 +653,8 @@ struct AlbumDetailScreen: View {
             ),
             isShowingAllItems: !filter.isActive,
             onShowAllItems: { filter.clear() },
-            onAdvancedFilter: { isAdvancedFilterPresented = true }
+            onAdvancedFilter: { isAdvancedFilterPresented = true },
+            setActions: albumSetActions
         ) {
             Picker("Sort By", selection: Binding(
                 get: { model.sortOrder },
@@ -663,6 +665,34 @@ struct AlbumDetailScreen: View {
                         Text(order.displayName).tag(order)
                     }
                 }
+            }
+        }
+    }
+
+    /// In the filter menu rather than a ⋯ of its own: a third button cut the
+    /// album's name short in the bar.
+    private var albumSetActions: AnyView? {
+        guard case .collection(let collection) = album.kind else { return nil }
+        return AnyView(keepAlbumRow(collection))
+    }
+
+    /// Keep the whole album on this iPhone, or stop.
+    @ViewBuilder
+    private func keepAlbumRow(_ collection: PHAssetCollection) -> some View {
+        if (try? dependencies.kept.album(id: collection.localIdentifier)) != nil {
+            Button(role: .destructive) {
+                dependencies.keepRunner.removeAlbum(id: collection.localIdentifier)
+            } label: {
+                Label(String(localized: "Remove Album from \(KeepDevice.name)", comment: "Album menu: delete the kept copies of this album"), systemImage: "minus.circle")
+            }
+        } else {
+            Button {
+                navigation.keepRequest = KeepRequest(
+                    ids: KeepRunner.members(ofAlbum: collection.localIdentifier),
+                    album: .init(id: collection.localIdentifier, title: album.title)
+                )
+            } label: {
+                Label(KeepRequest.menuTitle, systemImage: "arrow.down.circle")
             }
         }
     }

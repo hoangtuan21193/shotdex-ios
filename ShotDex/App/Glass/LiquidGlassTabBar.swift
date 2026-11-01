@@ -4,19 +4,19 @@ import SwiftUI
 enum AppTab: String, CaseIterable, Identifiable {
     case library
     case albums
-    case statistics
+    case utilities
     case search
 
     var id: String { rawValue }
 
     /// Tabs shown in the legacy (pre-iOS 26) pill bar; search has its own button.
-    static let barTabs: [AppTab] = [.library, .albums, .statistics]
+    static let barTabs: [AppTab] = [.library, .albums, .utilities]
 
     var title: String {
         switch self {
         case .library: "Library"
         case .albums: "Collections"
-        case .statistics: "Statistics"
+        case .utilities: "Utilities"
         case .search: "Search"
         }
     }
@@ -25,7 +25,7 @@ enum AppTab: String, CaseIterable, Identifiable {
         switch self {
         case .library: "photo.on.rectangle"
         case .albums: "square.stack"
-        case .statistics: "chart.bar.xaxis"
+        case .utilities: "wrench.and.screwdriver"
         case .search: "magnifyingglass"
         }
     }
@@ -34,14 +34,14 @@ enum AppTab: String, CaseIterable, Identifiable {
         switch self {
         case .library: "photo.on.rectangle.fill" // no fill variant renders same
         case .albums: "square.stack.fill"
-        case .statistics: "chart.bar.xaxis"
+        case .utilities: "wrench.and.screwdriver.fill"
         case .search: "magnifyingglass"
         }
     }
 }
 
 /// Floating "Liquid Glass" pill tab bar inspired by the iOS 26 Music app:
-/// a material-blurred pill holding the four tabs, with a separate round
+/// a material-blurred pill holding the tabs, with a separate round
 /// search button beside it.
 struct LiquidGlassTabBar: View {
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize

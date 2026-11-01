@@ -4,7 +4,7 @@
 · cập nhật 2026-10-02
 
 **Một câu:** một bảng điều khiển biểu đồ **do người dùng tự dựng** — mỗi thẻ là một đặc tả biểu đồ, có
-khoảng thời gian riêng. Thẻ, ô soạn, thanh công cụ và trạng thái màn: [01b](01b-cards-editor-and-states.md).
+khoảng thời gian riêng. **Mở từ Collections ▸ Utilities ▸ Statistics** (không còn tab riêng từ 2026-10-17; Shortcut "Open statistics" đẩy đúng màn này vào tab Collections). Thẻ, ô soạn, thanh công cụ và trạng thái màn: [01b](01b-cards-editor-and-states.md).
 
 ## 1. Quy tắc
 

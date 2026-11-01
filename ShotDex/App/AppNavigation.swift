@@ -136,7 +136,11 @@ final class AppNavigation {
     /// A Shortcut, a Siri phrase or a Spotlight result asked for something.
     /// Routed here rather than performed by the intent itself, which runs
     /// without the app's dependency graph.
-    func handle(_ request: IntentRouter.Request, albumsPath: inout NavigationPath) {
+    /// Keep on This iPhone… raised from a selection or an album menu; the
+    /// root tab view hosts the sheet.
+    var keepRequest: KeepRequest?
+
+    func handle(_ request: IntentRouter.Request, albumsPath: inout NavigationPath, utilitiesPath: inout NavigationPath) {
         switch request {
         case .library:
             selectedTab = .library
@@ -154,13 +158,8 @@ final class AppNavigation {
             criteria.cameraBodyTerms = [body]
             openLibrary(with: criteria)
         case .statistics:
-            selectedTab = .statistics
-        case .places:
-            albumsPath = NavigationPath([PlacesDestination()])
-            selectedTab = .albums
-        case .trips:
-            albumsPath = NavigationPath([TripsDestination()])
-            selectedTab = .albums
+            utilitiesPath = NavigationPath([StatisticsDestination()])
+            selectedTab = .utilities
         case .photo(let assetId, let opensEditor):
             openPhoto(assetId: assetId, opensEditor: opensEditor)
         case .onThisDay(let date):

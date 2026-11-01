@@ -41,7 +41,7 @@ Nguồn: [intent](../../_intents/2026-10-04-macos-app.md) · 19 quyết định:
 | Tầng | Màn |
 |---|---|
 | A | Settings (cửa sổ riêng), Statistics, Get Info, Support, sheet dựng điều kiện, Activity |
-| B | lưới và bảng Library, album, Search, On This Day, Places, Duplicates, **Viewer** (D10: không phải tầng D) |
+| B | lưới và bảng Library, album, Search, On This Day, Duplicates, **Viewer** (D10: không phải tầng D) |
 | C | sidebar kính nổi, capsule toolbar, popover, menu — chrome kính trên nội dung tầng B |
 | D | Editor, Cull, Resize, Collage, Combine Photos, Video Studio — luôn tối, kể cả chrome cửa sổ (D10) |
 
@@ -57,7 +57,7 @@ Mỗi màn cửa sổ chính là board 1440×900; cửa sổ phụ vẽ đúng c
 | Lệnh | `MAC_MenuBar` (1716×1110) |
 | Nguồn (FS-19/20) | `MAC_AddSource` · `MAC_SourceIndexing` · `MAC_ServerBrowser` · `MAC_ServerForm` · `MAC_ServerUpload` · `MAC_Ingest` · `MAC_IngestProgress` |
 | Xem ảnh | `MAC_Viewer` · `MAC_ViewerFullScreen` · `MAC_Compare` · `MAC_CompareSurvey` · `MAC_GetInfo` (420×640) · `MAC_Cull` |
-| Collections | `MAC_Collections` · `MAC_AlbumDetail` · `MAC_SmartAlbumEditor` · `MAC_OnThisDay` · `MAC_Places` · `MAC_Duplicates` · `MAC_Creations` |
+| Collections | `MAC_Collections` · `MAC_AlbumDetail` · `MAC_SmartAlbumEditor` · `MAC_OnThisDay` · `MAC_Duplicates` · `MAC_Creations` |
 | Statistics | `MAC_Statistics` · `MAC_StatisticsCamera` · `MAC_ChartEditor` · `MAC_ChartStyle` |
 | Editor | `MAC_Edit` · `MAC_EditPhotos` · `MAC_EditColor` · `MAC_EditCrop` · `MAC_EditMask` · `MAC_EditHeal` · `MAC_EditMarkup` · `MAC_EditPresets` · `MAC_EditBatch` · `MAC_Export` |
 | Công cụ tầng D | `MAC_Compress` (Resize) · `MAC_Collage` · `MAC_Merge` (Combine Photos) |

@@ -77,7 +77,7 @@ enum MacSidebarItem: Hashable, Identifiable {
     case allPhotos, favorites, videos, raw, recentlyAdded
     case source(String)
     case onThisDay, albums
-    case places, trips, statistics, duplicates, collages, videoProjects, onServer
+    case statistics, duplicates, collages, videoProjects, onServer
 
     var id: String {
         if case .source(let id) = self { return "source-" + id }
@@ -86,7 +86,7 @@ enum MacSidebarItem: Hashable, Identifiable {
 
     static let library: [MacSidebarItem] = [.allPhotos, .favorites, .videos, .raw, .recentlyAdded]
     static let collections: [MacSidebarItem] = [.onThisDay, .albums]
-    static let utilities: [MacSidebarItem] = [.places, .trips, .statistics, .duplicates, .collages, .videoProjects, .onServer]
+    static let utilities: [MacSidebarItem] = [.statistics, .duplicates, .collages, .videoProjects, .onServer]
 
     var title: String {
         switch self {
@@ -98,8 +98,6 @@ enum MacSidebarItem: Hashable, Identifiable {
         case .source: String(localized: "Source", comment: "Mac sidebar: a photo source")
         case .onThisDay: String(localized: "On This Day", comment: "Mac sidebar")
         case .albums: String(localized: "Albums", comment: "Mac sidebar")
-        case .places: String(localized: "Places", comment: "Mac sidebar")
-        case .trips: String(localized: "Trips", comment: "Mac sidebar")
         case .statistics: String(localized: "Statistics", comment: "Mac sidebar")
         case .duplicates: String(localized: "Duplicates", comment: "Mac sidebar")
         case .collages: String(localized: "Collages", comment: "Mac sidebar")
@@ -118,8 +116,6 @@ enum MacSidebarItem: Hashable, Identifiable {
         case .source: "folder"
         case .onThisDay: "calendar"
         case .albums: "rectangle.stack"
-        case .places: "map"
-        case .trips: "mappin.and.ellipse"
         case .statistics: "chart.bar"
         case .duplicates: "square.on.square"
         case .collages: "square.grid.2x2"

@@ -1,8 +1,8 @@
 import Photos
 import SwiftUI
 
-/// A plain grid over a computed run of photos — the photos around one place,
-/// the photos of one trip, the photos in one memory.
+/// A plain grid over a computed run of photos — the photos of one person or
+/// pet, the photos in one memory.
 ///
 /// Browsing only: tap opens the viewer, long press opens the tile menu. The
 /// multi-select chrome is deliberately absent, because these lists are derived

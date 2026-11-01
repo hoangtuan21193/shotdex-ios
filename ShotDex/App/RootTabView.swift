@@ -24,6 +24,8 @@ struct RootTabView: View {
     /// Albums is the only tab pushed programmatically (a tapped "On This Day"
     /// reminder), so it is the only one that needs a bound path.
     @State private var albumsPath = NavigationPath()
+    /// Utilities is pushed by Shortcuts (Statistics).
+    @State private var utilitiesPath = NavigationPath()
 
     /// State restoration: the tab this *window* was left on. `@SceneStorage`
     /// rather than `@AppStorage` because it is per-window — on iPad two
@@ -123,7 +125,7 @@ struct RootTabView: View {
     /// even visible.
     private func drainPendingIntent(_ request: IntentRouter.Request?) {
         guard let request, scenePhase == .active else { return }
-        navigation.handle(request, albumsPath: &albumsPath)
+        navigation.handle(request, albumsPath: &albumsPath, utilitiesPath: &utilitiesPath)
         IntentRouter.shared.pending = nil
     }
 
@@ -194,10 +196,10 @@ struct RootTabView: View {
                 NavigationStack { LibraryScreen(model: libraryModel) }
             }
             Tab(AppTab.albums.title, systemImage: AppTab.albums.systemImage, value: .albums) {
-                NavigationStack(path: $albumsPath) { AlbumsScreen(model: albumsModel) }
+                NavigationStack(path: $albumsPath) { AlbumsScreen(model: albumsModel, isLibraryIndexing: libraryModel?.isIndexing ?? false) }
             }
-            Tab(AppTab.statistics.title, systemImage: AppTab.statistics.systemImage, value: .statistics) {
-                NavigationStack { StatisticsScreen(isIndexing: libraryModel?.isIndexing ?? false) }
+            Tab(AppTab.utilities.title, systemImage: AppTab.utilities.systemImage, value: .utilities) {
+                NavigationStack(path: $utilitiesPath) { UtilitiesScreen(model: albumsModel, isLibraryIndexing: libraryModel?.isIndexing ?? false) }
             }
             Tab(value: .search, role: .search) {
                 NavigationStack {
@@ -239,6 +241,7 @@ struct RootTabView: View {
         .appBannerHost(dependencies.banner, bottomInset: 120)
         .sheet(item: $uploadRequest) { ServerUploadHost(request: $0) }
         .cullPresenter($navigation.cullRequest)
+        .keepOnIPhonePresenter($navigation.keepRequest)
         .captionKeywordsPresenter($navigation.captionKeywordsRequest)
         .fileExportPresenter($navigation.fileExportRequest)
         .environment(\.presentServerUpload, PresentServerUploadAction { uploadRequest = ServerUploadRequest(assetIds: $0, target: $1) })
@@ -257,6 +260,8 @@ struct RootTabView: View {
             try? await Task.sleep(for: .milliseconds(500))
             guard !Task.isCancelled else { return }
             hasPassedInitialIndexDelay = true
+            // Kept downloads left unfinished pick up again (Keep on This iPhone).
+            dependencies.keepRunner.start()
             if scenePhase == .active {
                 autoIndex()
                 refreshOnThisDayNotifications()
@@ -343,6 +348,7 @@ struct RootTabView: View {
             .appBannerHost(dependencies.banner, bottomInset: 120)
             .sheet(item: $uploadRequest) { ServerUploadHost(request: $0) }
             .cullPresenter($navigation.cullRequest)
+            .keepOnIPhonePresenter($navigation.keepRequest)
             .captionKeywordsPresenter($navigation.captionKeywordsRequest)
             .fileExportPresenter($navigation.fileExportRequest)
             .environment(\.presentServerUpload, PresentServerUploadAction { uploadRequest = ServerUploadRequest(assetIds: $0, target: $1) })
@@ -361,6 +367,7 @@ struct RootTabView: View {
                 try? await Task.sleep(for: .milliseconds(500))
                 guard !Task.isCancelled else { return }
                 hasPassedInitialIndexDelay = true
+                dependencies.keepRunner.start()
                 if scenePhase == .active {
                     autoIndex()
                     refreshOnThisDayNotifications()
@@ -413,10 +420,10 @@ struct RootTabView: View {
                 tabStack(.library) { LibraryScreen(model: libraryModel) }
             }
             if mountedLegacyTabs.contains(.albums) {
-                tabStack(.albums, path: $albumsPath) { AlbumsScreen(model: albumsModel) }
+                tabStack(.albums, path: $albumsPath) { AlbumsScreen(model: albumsModel, isLibraryIndexing: libraryModel?.isIndexing ?? false) }
             }
-            if mountedLegacyTabs.contains(.statistics) {
-                tabStack(.statistics) { StatisticsScreen(isIndexing: libraryModel?.isIndexing ?? false) }
+            if mountedLegacyTabs.contains(.utilities) {
+                tabStack(.utilities, path: $utilitiesPath) { UtilitiesScreen(model: albumsModel, isLibraryIndexing: libraryModel?.isIndexing ?? false) }
             }
         }
     }

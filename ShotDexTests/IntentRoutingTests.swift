@@ -8,10 +8,11 @@ struct IntentRoutingTests {
 
     @Test func libraryRequestSelectsTheLibraryTab() {
         let navigation = AppNavigation()
-        navigation.selectedTab = .statistics
+        navigation.selectedTab = .albums
         var path = NavigationPath()
+        var utilities = NavigationPath()
 
-        navigation.handle(.library, albumsPath: &path)
+        navigation.handle(.library, albumsPath: &path, utilitiesPath: &utilities)
 
         #expect(navigation.selectedTab == .library)
     }
@@ -19,8 +20,9 @@ struct IntentRoutingTests {
     @Test func searchRequestHandsTheQueryToTheLibrary() {
         let navigation = AppNavigation()
         var path = NavigationPath()
+        var utilities = NavigationPath()
 
-        navigation.handle(.search("Canon 85mm"), albumsPath: &path)
+        navigation.handle(.search("Canon 85mm"), albumsPath: &path, utilitiesPath: &utilities)
 
         #expect(navigation.selectedTab == .library)
         #expect(navigation.pendingSearchQuery == "Canon 85mm")
@@ -29,8 +31,9 @@ struct IntentRoutingTests {
     @Test func favoritesRequestFiltersTheLibrary() {
         let navigation = AppNavigation()
         var path = NavigationPath()
+        var utilities = NavigationPath()
 
-        navigation.handle(.favorites, albumsPath: &path)
+        navigation.handle(.favorites, albumsPath: &path, utilitiesPath: &utilities)
 
         #expect(navigation.selectedTab == .library)
         #expect(navigation.pendingLibraryFilter?.favoritesOnly == true)
@@ -41,24 +44,25 @@ struct IntentRoutingTests {
     @Test func cameraRequestUsesAContainsTerm() {
         let navigation = AppNavigation()
         var path = NavigationPath()
+        var utilities = NavigationPath()
 
-        navigation.handle(.camera("R6"), albumsPath: &path)
+        navigation.handle(.camera("R6"), albumsPath: &path, utilitiesPath: &utilities)
 
         #expect(navigation.pendingLibraryFilter?.cameraBodyTerms == ["R6"])
         #expect(navigation.pendingLibraryFilter?.cameraBodies.isEmpty == true)
     }
 
-    @Test func placesAndTripsPushOntoTheCollectionsTab() {
+    /// Statistics lives in the Utilities tab, so a Shortcut asking for it
+    /// pushes it there.
+    @Test func statisticsRequestPushesOntoTheUtilitiesTab() {
         let navigation = AppNavigation()
         var path = NavigationPath()
+        var utilities = NavigationPath()
 
-        navigation.handle(.places, albumsPath: &path)
-        #expect(navigation.selectedTab == .albums)
-        #expect(path.count == 1)
+        navigation.handle(.statistics, albumsPath: &path, utilitiesPath: &utilities)
 
-        navigation.handle(.trips, albumsPath: &path)
-        #expect(navigation.selectedTab == .albums)
-        #expect(path.count == 1)
+        #expect(navigation.selectedTab == .utilities)
+        #expect(utilities.count == 1)
     }
 
     @Test func spotlightIdentifiersMapBackToRequests() {
@@ -77,10 +81,11 @@ struct IntentRoutingTests {
 
     @Test func handedOverPhotoOpensOnTheLibraryTab() {
         let navigation = AppNavigation()
-        navigation.selectedTab = .statistics
+        navigation.selectedTab = .albums
         var path = NavigationPath()
+        var utilities = NavigationPath()
 
-        navigation.handle(.photo(assetId: "ABC/L0/001"), albumsPath: &path)
+        navigation.handle(.photo(assetId: "ABC/L0/001"), albumsPath: &path, utilitiesPath: &utilities)
 
         #expect(navigation.selectedTab == .library)
         #expect(navigation.pendingPhotoAssetId == "ABC/L0/001")
@@ -91,10 +96,11 @@ struct IntentRoutingTests {
     @Test func handingTheSamePhotoTwiceFiresTwice() {
         let navigation = AppNavigation()
         var path = NavigationPath()
+        var utilities = NavigationPath()
 
-        navigation.handle(.photo(assetId: "same"), albumsPath: &path)
+        navigation.handle(.photo(assetId: "same"), albumsPath: &path, utilitiesPath: &utilities)
         let first = navigation.pendingPhotoToken
-        navigation.handle(.photo(assetId: "same"), albumsPath: &path)
+        navigation.handle(.photo(assetId: "same"), albumsPath: &path, utilitiesPath: &utilities)
 
         #expect(navigation.pendingPhotoToken != first)
     }

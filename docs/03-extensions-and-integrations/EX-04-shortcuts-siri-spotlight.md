@@ -15,8 +15,8 @@
 
 ## 2. Các lệnh
 
-Mở Library · Tìm ảnh (có tham số câu tìm) · Xem Favorites · Xem ảnh của một máy · Xem Statistics · Xem
-Places · Xem Trips — **tất cả đều mở app** khi chạy.
+Mở Library · Tìm ảnh (có tham số câu tìm) · Xem Favorites · Xem ảnh của một máy · Xem Statistics —
+**tất cả đều mở app** khi chạy. (Xem Places · Xem Trips đã bỏ 2026-10-24 cùng hai màn đó.)
 
 - Tham số "máy ảnh" ánh xạ sang **so khớp chứa**, không phải **so khớp đúng bằng**: tên máy người ta nói ra
   ("R6") hiếm khi trùng nguyên văn giá trị đã index.

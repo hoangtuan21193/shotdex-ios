@@ -1,9 +1,6 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
-    "Advanced SubStation Alpha Subtitle" : {
-
-    },
     "CFBundleName" : {
       "comment" : "Bundle name",
       "extractionState" : "extracted_with_value",
@@ -19,16 +16,10 @@
     "Cube LUT" : {
 
     },
-    "Flash Video" : {
-
-    },
     "Lightroom Template" : {
 
     },
     "Lightroom XMP Preset" : {
-
-    },
-    "Matroska Video" : {
 
     },
     "NSCalendarsFullAccessUsageDescription" : {
@@ -113,21 +104,6 @@
 
     },
     "ShotDex Photo Reference" : {
-
-    },
-    "SubRip Subtitle" : {
-
-    },
-    "SubStation Alpha Subtitle" : {
-
-    },
-    "WebM Video" : {
-
-    },
-    "WebVTT Subtitle" : {
-
-    },
-    "Windows Media Video" : {
 
     }
   },

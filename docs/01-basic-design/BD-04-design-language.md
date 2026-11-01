@@ -21,16 +21,16 @@ bốn tầng) nằm ở `DESIGN.md` — **không định nghĩa token ở đây*
 |---|---|
 | Điều hướng | ngăn xếp tiêu chuẩn + vuốt-để-quay-lại của hệ thống; màn gốc của tab **không** có tiêu đề, màn con thì có |
 | Tab bar | thanh nổi kiểu kính — một viên nang chứa các tab cộng một nút tìm kiếm tròn tách riêng; iOS 26 dùng hiệu ứng kính của hệ thống |
-| Ba tab | Library · Collections · Statistics |
+| Hai tab | Library · Collections (+ Search). Statistics **không phải tab** từ 2026-10-17 — một hàng trong Collections ▸ Utilities, vì ít khi xem |
 | Tìm kiếm | nút tròn trong thanh nổi, **không** nằm ở thanh trên |
-| Settings | **không phải tab** — nút bánh răng góc trên trái của cả ba tab, mở **toàn màn** kèm tiêu đề nhỏ và nút **Done** |
+| Settings | **không phải tab** — nút bánh răng góc trên trái của cả hai tab, mở **toàn màn** kèm tiêu đề nhỏ và nút **Done** |
 | Bảng lọc, bảng thông tin | bảng trượt lên có hai nấc và tay nắm kéo |
 | Sắp xếp | menu thả xuống |
 | Danh sách | kiểu nhóm có lề của hệ thống |
 | Control | công tắc, bộ chọn, dải chọn, hộp thoại |
 | Biểu tượng · chữ | bộ biểu tượng hệ thống · font hệ thống, có hỗ trợ cỡ chữ lớn |
 
-- **Trước iOS 26, chỉ dựng tab Library lúc mở app**; Collections và Statistics dựng ở lần chọn đầu tiên rồi
+- **Trước iOS 26, chỉ dựng tab Library lúc mở app**; Collections dựng ở lần chọn đầu tiên rồi
   **giữ sống** — vừa tránh việc truy vấn của tab đang ẩn tranh khung hình đầu, vừa giữ chỗ người dùng đang
   đứng.
 - **Chạm lại tab Library thì lưới nhảy về đáy** (ảnh mới nhất). Tín hiệu đi từ **cả hai** nhánh tab bar, và

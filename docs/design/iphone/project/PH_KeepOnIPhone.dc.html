@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>iPhone · Keep on This iPhone</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0}
+button{font-family:inherit}
+.a{position:absolute}
+.g{position:absolute;display:flex;align-items:center;justify-content:center;padding:0;border-radius:999px;box-sizing:border-box;cursor:default}
+button.a{background:none;border:0;padding:0}
+.tnum{font-variant-numeric:tabular-nums}
+</style>
+</helmet>
+<!-- KEEP ON THIS IPHONE (intent 2026-10-19-keep-offline, open questions 2, 4, 6): the sheet behind "Keep on This iPhone"
+     in an album's filter menu (≡), the selection bar and the viewer's ⋯ menu. Asked once per keep: Viewing Copies (default —
+     photos up to 2732 px, videos 1080p, RAW as a viewing copy) or Originals; sizes are the real total for this choice.
+     Albums get "Keep New Photos Added Later" (on). The footer says where the space comes from and that the app never
+     removes kept items. Keep is disabled with a reason when the total + headroom is more than the free space. -->
+<div style="width: 402px; height: 874px; position: relative; overflow: hidden; background: {{t.bg}}; color: {{t.label}}; font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', system-ui, sans-serif">
+<div class="a" style="left:0;top:0;width:402px;height:874px"><sc-for list="{{tiles}}" as="p" hint-placeholder-count="12"><div style="position:absolute;left:{{p.left}};top:{{p.top}};width:{{p.size}};height:{{p.size}};background:{{p.bg}}"></div></sc-for></div>
+<div class="a" style="left:0;top:0;width:402px;height:874px;background:{{t.dim}}"></div>
+
+<div class="a" style="left:0;top:284px;width:402px;height:590px;border-radius:34px 34px 0 0;background:{{s.sheetBg}}">
+<div class="a" style="left:183px;top:6px;width:36px;height:5px;border-radius:3px;background:{{t.label3}};opacity:0.5"></div>
+<button aria-label="Cancel" class="g" style="left:16px;top:16px;width:44px;height:44px;background:{{t.fill}};border:0;color:{{t.label}}"><svg viewBox="0 0 24 24" style="width:16px;height:16px;flex:none" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12 M18 6L6 18"></path></svg></button>
+<div class="a" style="left:72px;top:16px;width:258px;height:44px;display:flex;flex-direction:column;align-items:center;justify-content:center"><div style="font-size:17px;font-weight:600;line-height:21px">Keep on This iPhone</div><div class="tnum" style="font-size:12px;line-height:15px;color:{{t.label2}}">Iceland 2026 · 212 photos · 14 videos</div></div>
+
+<div class="a" style="left:32px;top:80px;font-size:13px;color:{{t.label2}};letter-spacing:0.2px">KEEP</div>
+<div class="a" style="left:16px;top:100px;width:370px;height:136px;border-radius:16px;overflow:hidden;background:{{s.cell}}">
+<sc-for list="{{opts}}" as="o" hint-placeholder-count="2"><button aria-label="{{o.label}}" style="position:absolute;left:0;top:{{o.top}};width:370px;height:68px;border:0;background:transparent;padding:0 16px;box-sizing:border-box;display:flex;align-items:center;gap:12px;text-align:left;color:{{t.label}}"><span style="flex:1;min-width:0;display:flex;flex-direction:column"><span style="font-size:17px;line-height:22px">{{o.name}}</span><span class="tnum" style="font-size:13px;line-height:18px;color:{{t.label2}}">{{o.sub}}</span></span><span class="tnum" style="font-size:15px;color:{{t.label2}};white-space:nowrap">{{o.size}}</span><span style="width:22px;display:flex;justify-content:center;color:{{t.tint}};visibility:{{o.check}}"><svg viewBox="0 0 24 24" style="width:18px;height:18px;flex:none" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg></span></button></sc-for>
+<div style="position:absolute;left:16px;right:0;top:68px;height:0.5px;background:{{t.sep}}"></div>
+</div>
+
+<div class="a" style="left:16px;top:252px;width:370px;height:52px;border-radius:16px;background:{{s.cell}};box-sizing:border-box;padding:0 16px;display:flex;align-items:center;justify-content:space-between">
+<label for="keepNew" style="font-size:17px">Keep New Photos Added Later</label>
+<span style="position:relative;width:51px;height:31px;flex:none"><input id="keepNew" type="checkbox" checked style="position:absolute;inset:0;margin:0;opacity:0;width:51px;height:31px"><span style="position:absolute;inset:0;border-radius:16px;background:{{t.green}}"></span><span style="position:absolute;top:2px;left:22px;width:27px;height:27px;border-radius:14px;background:#FFFFFF;box-shadow:0 2px 4px rgba(0,0,0,0.2)"></span></span>
+</div>
+
+<div class="a tnum" style="left:32px;top:418px;width:338px;font-size:13px;line-height:18px;color:{{t.label2}}">Uses about 1.9 GB of the 41.2 GB free on this iPhone. Kept copies open without a connection, are not uploaded to iCloud or included in your iPhone backup, and stay until you remove them in Utilities › On This iPhone.</div>
+
+<button class="a" style="left:16px;top:504px;width:370px;height:52px;border-radius:26px;background:{{t.accent}};color:{{t.onAccent}};font-size:17px;font-weight:600;display:flex;align-items:center;justify-content:center">Keep 226 Items</button>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"dark":{"editor":"boolean","default":false},"$preview":{"width":402,"height":874}}'>
+
+const LIGHT = { bg:'#FFFFFF', grouped:'#F2F2F7', card:'#FFFFFF', label:'#000000', label2:'#6C6C70', label3:'#8E8E93',
+  sep:'#C6C6C8', fill:'#E9E9EB', fill2:'#F2F2F7', glass:'rgba(255,255,255,0.78)', glassStroke:'rgba(0,0,0,0.08)',
+  glassShadow:'0 4px 18px rgba(0,0,0,0.12)', tint:'#C6730E', red:'#FF3B30', green:'#34C759', orange:'#FF9500',
+  accent:'#C6730E', dim:'rgba(0,0,0,0.35)', sheet:'#FFFFFF', onAccent:'#FFFFFF' };
+const DARK = { bg:'#000000', grouped:'#000000', card:'#1C1C1E', label:'#FFFFFF', label2:'#98989F', label3:'#6C6C70',
+  sep:'#38383A', fill:'#2C2C2E', fill2:'#1C1C1E', glass:'rgba(44,44,46,0.78)', glassStroke:'rgba(255,255,255,0.10)',
+  glassShadow:'0 4px 18px rgba(0,0,0,0.5)', tint:'#EB9526', red:'#FF453A', green:'#30D158', orange:'#FF9F0A',
+  accent:'#EB9526', dim:'rgba(0,0,0,0.55)', sheet:'#1C1C1E', onAccent:'#000000' };
+const SKIES=[['#5B7FA6','#E8C39E'],['#2E4A6B','#9FB8C9'],['#7A5C8E','#F2A774'],['#3D6B5A','#C9D6A3'],['#8AA9C1','#F4E1C1'],
+ ['#1F3A4D','#D98C5F'],['#4F6D7A','#DDE2C6'],['#6B4E3D','#E2B07A'],['#355C7D','#C06C84'],['#2B5876','#4E4376'],['#A3B18A','#344E41'],['#D4A373','#606C38']];
+function tile(i){ const s=SKIES[i%SKIES.length]; const h=46+((i*7)%22);
+  return 'linear-gradient(180deg,'+s[0]+' 0%,'+s[1]+' '+h+'%,#2F3B2F '+h+'%,#1E271E 100%)'; }
+function px(v){ return v.toFixed(2)+'px'; }
+
+class Component extends DCLogic {
+  renderVals() {
+    const dk = !!this.props.dark;
+    const t = dk ? DARK : LIGHT;
+    const s = { sheetBg: dk ? t.card : t.grouped, cell: dk ? t.fill : t.card };
+    const g=2, w=(402-g*2)/3, tiles=[];
+    for(let y=0, i=0; y<874; y+=w+g){ for(let c=0;c<3;c++,i++) tiles.push({ left:px(c*(w+g)), top:px(y), size:px(w), bg:tile(3+i) }); }
+    const opts = [
+      { name:'Viewing Copies', sub:'Photos up to 2732 px · videos 1080p', size:'1.9 GB', check:'visible', top:'0px', label:'Viewing Copies, photos up to 2732 pixels, videos 1080p, 1.9 gigabytes, selected' },
+      { name:'Originals', sub:'Full files, RAW and 4K included', size:'14.2 GB', check:'hidden', top:'68px', label:'Originals, full files, RAW and 4K included, 14.2 gigabytes' }
+    ];
+    return { t, s, tiles, opts };
+  }
+}
+</script>
+</body>
+</html>

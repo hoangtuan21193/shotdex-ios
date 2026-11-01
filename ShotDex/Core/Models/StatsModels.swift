@@ -138,3 +138,23 @@ struct StatsSummary: Equatable, Sendable {
         mostUsedSensorFormat: nil
     )
 }
+
+/// The Statistics card at the top of the Utilities tab: three counts and
+/// photos per month over the last year.
+struct StatsOverview: Equatable, Sendable {
+    struct Month: Equatable, Sendable, Identifiable {
+        /// First day of the month, local time.
+        var start: Date
+        var count: Int
+        var id: Date { start }
+    }
+
+    var photos: Int
+    var cameras: Int
+    var lenses: Int
+    /// Oldest first, every month present — an empty one is a zero bar, not
+    /// a gap that would shift the months after it.
+    var months: [Month]
+
+    static let empty = StatsOverview(photos: 0, cameras: 0, lenses: 0, months: [])
+}

@@ -1,10 +1,10 @@
 # FS-06 — Collections
 
-`FS-06` · tier A/B · `ShotDex/Features/Albums/` · `Features/Duplicates/` · `Domain/Places/`
-· `Domain/Duplicates/` · `Domain/OnThisDay/` · cập nhật 2026-09-22
+`FS-06` · tier A/B · `ShotDex/Features/Albums/` · `Features/Duplicates/` · `Domain/Duplicates/` ·
+`Domain/OnThisDay/` · cập nhật 2026-10-24 (`Domain/Places/` chỉ còn `PlaceCellKey`, `PlaceSearchText` cho tìm theo
+nơi chụp — FS-01.04)
 
-**Một câu:** tab thứ hai — album, bản đồ, chuyến đi, ảnh trùng, ngày này năm xưa, và những bộ lọc người
-dùng tự lưu.
+**Một câu:** tab thứ hai — album, ảnh trùng, ngày này năm xưa, và những bộ lọc người dùng tự lưu.
 
 ## Các phần
 
@@ -12,10 +12,10 @@ dùng tự lưu.
 |---|---|---|
 | 01 | [Bố cục tab](01-tabs-tokens-and-album-management.md) | hàng hero, tile cover, Media Types, Utilities, Customize, Pinned |
 | 01b | [Album Detail, quản lý và Creations](01b-album-management-and-creations.md) | paging, sort theo album, rename/delete, Collages + Video Projects, kéo thả |
-| 02 | [Places](02-places-map.md) | gom cụm theo lưới độ, nhãn pin |
+| 02 | Places — **đã gỡ 2026-10-24** | màn bản đồ bỏ khỏi app; tìm theo nơi chụp vẫn ở FS-01.04 |
 | 03 | [Danh sách ảnh và dựng phim](03-photo-list-and-movie-builder.md) | màn danh sách ảnh, nút film; Memories đã bỏ |
 | 04 | [People and Pets](04-people-and-pets.md) | pass Vision opt-in — chỉ đếm, không nhận diện |
-| 05 | [Trips](05-trips.md) | định nghĩa "nhà", khoảng hở, gộp chuyến |
+| 05 | Trips — **đã gỡ 2026-10-24** | màn chuyến đi bỏ khỏi app |
 | 06 | [Duplicates](06-duplicates.md) | perceptual hash, ba mức, cache, merge, xoá, tab Bursts (4 AC) |
 | 07 | [On This Day](07-on-this-day.md) | hero, màn chi tiết, reminder 7 ngày |
 | 08 | [Smart Album](08-smart-albums.md) | model rule, editor, compile SQL, tương thích ngược |

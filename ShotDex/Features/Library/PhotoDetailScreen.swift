@@ -88,6 +88,7 @@ struct PhotoDetailScreen: View {
     @Environment(PhotoMarks.self) private var photoMarks: PhotoMarks?
     /// Cull From Here (FS-01.12b §5): the viewer's list, from this photo.
     @State private var cullRequest: CullRequest?
+    @State private var keepRequest: KeepRequest?
     /// Export… of the photo on screen (FS-03.07b §3).
     @State private var fileExportRequest: FileExportRequest?
     @State private var compressionTarget: PhotoDetailActionTarget?
@@ -330,6 +331,7 @@ struct PhotoDetailScreen: View {
         .assetActionHost(dependencies.viewerAssetActions)
         .appBannerHost(dependencies.banner, bottomInset: 120)
         .cullPresenter($cullRequest)
+        .keepOnIPhonePresenter($keepRequest)
         .fileExportPresenter($fileExportRequest)
         .fullScreenCover(item: $burstFrames) { request in
             BurstFramesScreen(request: request, onDeleted: { kept in
@@ -903,6 +905,21 @@ struct PhotoDetailScreen: View {
                         Label("Adjust Location", systemImage: "mappin.and.ellipse")
                     }
                 }
+                // Keep on This iPhone: from every source, so outside the
+                // Photos-only block above.
+                if (try? dependencies.kept.item(id: id)) != nil {
+                    Button(role: .destructive) {
+                        dependencies.keepRunner.remove(ids: [id])
+                    } label: {
+                        Label(String(localized: "Remove from \(KeepDevice.name)", comment: "Viewer menu: delete this photo's kept copy"), systemImage: "minus.circle")
+                    }
+                } else {
+                    Button {
+                        keepRequest = KeepRequest(ids: [id])
+                    } label: {
+                        Label(KeepRequest.menuTitle, systemImage: "arrow.down.circle")
+                    }
+                }
                 if metadata.latitude != nil, metadata.longitude != nil {
                     Button {
                         openInMaps(metadata)
@@ -915,7 +932,7 @@ struct PhotoDetailScreen: View {
             Section {
                 // Only where it means something. Opened from the Library the
                 // photo is already in All Photos, so the row would do nothing;
-                // from an album, a trip, a memory or a search result it is the
+                // from an album, a memory or a search result it is the
                 // way back to where the photo sits among everything else.
                 if !(model is LibraryModel), let id = currentAsset?.localIdentifier {
                     Button {
@@ -2561,8 +2578,12 @@ struct PhotoDetailPage: View {
 
     private func load() {
         guard let assetId = source.photoId(at: index) else { return }
+        // Kept on This iPhone: the file here, before PhotoKit or a server is asked.
+        let keptURL = photoLibrary.keptFileURL(assetId)
         guard let asset = source.asset(for: assetId) else {
-            if photoLibrary.fileThumbnails.isCloudPlaceholder(assetId) {
+            if let keptURL {
+                loadFilePhoto(assetId, at: keptURL)
+            } else if photoLibrary.fileThumbnails.isCloudPlaceholder(assetId) {
                 isCloudPlaceholder = true
             } else {
                 loadFilePhoto(assetId)
@@ -2595,6 +2616,9 @@ struct PhotoDetailPage: View {
             if loadState.isActive {
                 videoModel.load()
             }
+        } else if let keptURL {
+            loadFilePhoto(assetId, at: keptURL)
+            onMetadataRefresh?(index)
         } else {
             scheduleLoadingIndicator()
             loadDisplayImage(asset)
@@ -2609,12 +2633,13 @@ struct PhotoDetailPage: View {
     /// A photo only in a folder or on a drive (FS-19.02 §3): its file, read
     /// at screen size by ImageIO — the embedded preview of a RAW when that is
     /// big enough, never a full decode — with the cached tile first.
-    private func loadFilePhoto(_ id: String) {
+    private func loadFilePhoto(_ id: String, at fixedURL: URL? = nil) {
         if image == nil, let tile = photoLibrary.fileThumbnails.image(for: id) {
             image = tile
             imageQuality = .thumbnail
         }
-        let resolve = photoLibrary.filePhotoURL
+        let fallback = photoLibrary.filePhotoURL
+        let resolve: @Sendable (String) -> URL? = { id in fixedURL ?? fallback(id) }
         let longSide = Int(max(targetSize.width, targetSize.height))
         Task {
             let loaded = await Task.detached(priority: .userInitiated) { () -> UIImage? in

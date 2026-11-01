@@ -36,7 +36,12 @@ struct AlbumsScreen: View {
     @State private var fallbackModel = AlbumsModel()
     private var model: AlbumsModel { injectedModel ?? fallbackModel }
 
-    init(model: AlbumsModel? = nil) {
+    /// The library index is still running — handed on to Statistics, whose
+    /// Insights card says it describes only what has been read so far.
+    private let isLibraryIndexing: Bool
+
+    init(model: AlbumsModel? = nil, isLibraryIndexing: Bool = false) {
+        self.isLibraryIndexing = isLibraryIndexing
         self.injectedModel = model
     }
 
@@ -45,8 +50,6 @@ struct AlbumsScreen: View {
     @State private var editingSmartAlbum: SmartAlbum?
     @State private var namingRequest: NamingRequest?
     @State private var enteredName = ""
-    /// Photos ShotDex has hidden; the Hidden row shows only above zero.
-    @State private var hiddenCount = 0
     @State private var deletionRequest: DeletionRequest?
 
     /// A pending "type a name" alert — creating an album or renaming one.
@@ -166,52 +169,7 @@ struct AlbumsScreen: View {
             if model.dependencies == nil { model.dependencies = dependencies }
             model.load(forChangeTokens: photoLibrary.collectionsTabTokens)
         }
-        .navigationDestination(for: AlbumItem.ID.self) { albumId in
-            if let album = model.albums.first(where: { $0.id == albumId }) {
-                AlbumDetailScreen(album: album)
-            }
-        }
-        .navigationDestination(for: OnThisDayDestination.self) { destination in
-            OnThisDayScreen(initialDate: destination.date ?? .now)
-        }
-        .navigationDestination(for: SmartAlbumDestination.self) { destination in
-            if let item = model.smartQueryAlbums.first(where: { $0.album.id == destination.id }) {
-                SmartAlbumDetailScreen(album: item.album)
-            }
-        }
-        .navigationDestination(for: HiddenPhotosDestination.self) { _ in
-            HiddenPhotosScreen()
-        }
-        .navigationDestination(for: DuplicatesDestination.self) { _ in
-            DuplicatesScreen()
-        }
-        .navigationDestination(for: BackupScreenDestination.self) { _ in
-            BackupListScreen()
-        }
-        .navigationDestination(for: PlacesDestination.self) { _ in
-            PlacesMapScreen()
-        }
-        .navigationDestination(for: UploadedToServerDestination.self) { _ in
-            UploadedToServerScreen()
-        }
-        .navigationDestination(for: OnServerDestination.self) { _ in
-            OnServerScreen()
-        }
-        .navigationDestination(for: OnCloudDestination.self) { _ in
-            OnCloudScreen()
-        }
-        .navigationDestination(for: ServerShortcutRoute.self) { route in
-            if let shortcut = dependencies.serverShortcuts.shortcuts.first(where: { $0.id == route.id }),
-               let server = dependencies.fileServerCatalog.servers.first(where: { $0.id == shortcut.serverId }) {
-                ServerBrowserHost(server: server, start: shortcut.path)
-            } else {
-                ContentUnavailableView("Folder Removed", systemImage: "folder")
-            }
-        }
-        // Again on every return: Unhide on the Hidden screen and a Hide
-        // anywhere else both change it, and neither moves a PhotoKit token.
-        .task(id: dependencies.sources.readCount) { refreshHiddenCount() }
-        .onAppear { refreshHiddenCount() }
+        .collectionsDestinations(model: model, isLibraryIndexing: isLibraryIndexing)
         .task {
             dependencies.fileServerCatalog.reload()
             dependencies.serverShortcuts.reload()
@@ -224,12 +182,6 @@ struct AlbumsScreen: View {
             Button("Cancel", role: .cancel) {}
         } message: { _ in
             Text("Only the name in Collections changes. The folder on the server keeps its name.", comment: "Rename a Network tile")
-        }
-        .navigationDestination(for: TripsDestination.self) { _ in
-            TripsScreen()
-        }
-        .navigationDestination(for: CreationsDestination.self) { destination in
-            CreationsScreen(kind: destination.kind)
         }
         .sheet(isPresented: $isCustomizePresented) {
             CustomizeCollectionsSheet(store: dependencies.collectionsLayout)
@@ -305,8 +257,6 @@ struct AlbumsScreen: View {
             }
         case .network:
             if !dependencies.serverShortcuts.shortcuts.isEmpty { networkSection() }
-        case .utilities:
-            utilitiesSection()
         }
     }
 
@@ -421,7 +371,7 @@ struct AlbumsScreen: View {
     private var pinnedUtilities: [CollectionPinStore.Target] {
         dependencies.collectionPins.pinned.filter { target in
             switch target {
-            case .places, .trips, .duplicates: true
+            case .duplicates: true
             default: false
             }
         }
@@ -624,46 +574,6 @@ extension AlbumsScreen {
         }
     }
 
-    fileprivate func utilitiesSection() -> some View {
-        listSection("Utilities", entryCount: utilityEntryCount) {
-            ForEach(UtilityRow.allCases, id: \.self) { row in
-                utilityRow(row)
-            }
-
-            // Recently Deleted and Unable to Upload: library housekeeping
-            // rather than browsing, so they sit with Duplicates the way
-            // Photos groups its own utilities.
-            // What ShotDex hid (FS-19.04 §3) — only while something is.
-            if hiddenCount > 0 {
-                NavigationLink(value: HiddenPhotosDestination()) {
-                    CollectionListRow(
-                        title: String(localized: "Hidden", comment: "Utilities row: photos ShotDex has hidden"),
-                        systemImage: "eye.slash",
-                        spokenDetail: String(
-                            localized: "\(hiddenCount) photos",
-                            comment: "VoiceOver detail on the Hidden row: how many photos ShotDex has hidden"
-                        )
-                    )
-                }
-                .buttonStyle(.plain)
-            }
-
-            ForEach(model.utilityAlbums) { album in
-                NavigationLink(value: album.id) {
-                    CollectionListRow(
-                        title: album.title,
-                        systemImage: album.symbolName ?? "wrench.and.screwdriver",
-                        spokenDetail: String(
-                            localized: "\(album.count) photos",
-                            comment: "VoiceOver detail on a Utilities album row: how many photos it holds"
-                        )
-                    )
-                }
-                .buttonStyle(.plain)
-            }
-        }
-    }
-
     /// Title, then the rows. One shape for both sections so they cannot drift
     /// apart.
     ///
@@ -698,110 +608,6 @@ extension AlbumsScreen {
         }
     }
 
-    /// Every `UtilityRow` is always drawn; Hidden and the system utility
-    /// albums come and go, and the packing has to count what is actually
-    /// there. Counted from the same list `utilitiesSection()` draws, so adding
-    /// a row cannot leave the band packed for the old number.
-    private var utilityEntryCount: Int {
-        UtilityRow.allCases.count + model.utilityAlbums.count + (hiddenCount > 0 ? 1 : 0)
-    }
-
-    @ViewBuilder
-    private func utilityRow(_ row: UtilityRow) -> some View {
-        switch row {
-        case .backup:
-            NavigationLink(value: BackupScreenDestination()) {
-                CollectionListRow(
-                    title: String(localized: "Backup", comment: "Utilities row: back a whole library up to a network drive (FS-22)"),
-                    systemImage: "clock.arrow.circlepath"
-                )
-            }
-            .buttonStyle(.plain)
-
-        case .duplicates:
-            NavigationLink(value: DuplicatesDestination()) {
-                CollectionListRow(
-                    title: String(localized: "Duplicates"),
-                    systemImage: "square.on.square",
-                    spokenDetail: duplicatesCount.map {
-                        String(
-                            localized: "\($0) groups",
-                            comment: "VoiceOver detail on the Duplicates row: how many duplicate groups the last scan found"
-                        )
-                    }
-                )
-            }
-            .buttonStyle(.plain)
-            .contextMenu { pinButton(.duplicates) }
-
-        case .places:
-            NavigationLink(value: PlacesDestination()) {
-                CollectionListRow(title: String(localized: "Places"), systemImage: "map")
-            }
-            .buttonStyle(.plain)
-            .contextMenu { pinButton(.places) }
-
-        case .trips:
-            NavigationLink(value: TripsDestination()) {
-                CollectionListRow(title: String(localized: "Trips"), systemImage: "airplane")
-            }
-            .buttonStyle(.plain)
-            .contextMenu { pinButton(.trips) }
-
-        // What this app has made, split by the editor that made it:
-        // "Creations" as one row said nothing about what was inside, and
-        // a collage and a video are started from different places and
-        // edited by different tools. Both rows are always here, empty or
-        // not — each one is also where you start a new one.
-        case .collages:
-            NavigationLink(value: CreationsDestination(kind: .collage)) {
-                CollectionListRow(title: String(localized: "Collages"), systemImage: "square.grid.2x2")
-            }
-            .buttonStyle(.plain)
-
-        // "Video Projects", because Media Types already has a Videos
-        // album and that one means the footage the user shot. These are
-        // the things the Video Studio made and can reopen.
-        case .videoProjects:
-            NavigationLink(value: CreationsDestination(kind: .video)) {
-                CollectionListRow(
-                    title: String(localized: "Video Projects", comment: "Utilities row: videos made in the Video Studio"),
-                    systemImage: "film"
-                )
-            }
-            .buttonStyle(.plain)
-
-        // Always there (FS-17.05 §1), empty or not: the doors to photos
-        // kept elsewhere. "Local Network" and "Cloud", not "On …": the
-        // 190pt Utilities card cut "On Local Network" to "On Local Networ".
-        // NAS and computers on this network, and cloud
-        // folders from the Files app — each with the uploads one row in.
-        case .localNetwork:
-            NavigationLink(value: OnServerDestination()) {
-                CollectionListRow(
-                    title: String(localized: "Local Network", comment: "Utilities row: browse NAS drives and computers on this network"),
-                    systemImage: "server.rack",
-                    spokenDetail: String(localized: "Browse and download from NAS drives and computers on this network", comment: "VoiceOver detail on the On Local Network utilities row")
-                )
-            }
-            .buttonStyle(.plain)
-
-        case .cloud:
-            NavigationLink(value: OnCloudDestination()) {
-                CollectionListRow(
-                    title: String(localized: "Cloud", comment: "Utilities row: browse Dropbox, Google Drive and other cloud folders"),
-                    systemImage: "icloud",
-                    spokenDetail: String(localized: "Browse and download from Dropbox, Google Drive and other cloud folders", comment: "VoiceOver detail on the On Cloud utilities row")
-                )
-            }
-            .buttonStyle(.plain)
-        }
-    }
-
-    private func refreshHiddenCount() {
-        hiddenCount = (try? HiddenCopyStore(database: dependencies.database).hiddenCount()) ?? 0
-    }
-
     /// How many rows the band stacks before it starts scrolling sideways.
     ///
     /// Driven by how many cards are actually *visible* — about two at 190pt
@@ -816,28 +622,6 @@ extension AlbumsScreen {
         return max(1, min(3, (count + visibleColumns - 1) / visibleColumns))
     }
 
-    /// How many duplicate groups the last scan found, as a bare number.
-    ///
-    /// The word used to be here — "2 groups" — and it does not fit: a 190pt
-    /// card holds "Duplicates" and a short detail, and measured on an iPhone
-    /// the name came out as "Duplica… 2 groups". Every other card in these
-    /// two bands shows a bare count beside the name, so this one does too,
-    /// and the word survives where it costs nothing: the VoiceOver label and
-    /// the screen it opens.
-    private var duplicatesCount: Int? {
-        guard let count = UserDefaults.standard.object(forKey: SettingsKeys.duplicateGroupCount) as? Int,
-              count > 0
-        else { return nil }
-        return count
-    }
-}
-
-/// The Utilities rows drawn every time, in the order they are drawn. Hidden
-/// and the system utility albums follow them only while they have something
-/// in them. Uploads are not here: their doors are inside Local Network and
-/// Cloud.
-private enum UtilityRow: CaseIterable {
-    case backup, duplicates, places, trips, collages, videoProjects, localNetwork, cloud
 }
 
 /// One full-width row in Media Types or Utilities: a small leading glyph, the
@@ -996,18 +780,6 @@ extension AlbumsScreen {
     @ViewBuilder
     fileprivate func pinnedUtilityLink(_ target: CollectionPinStore.Target) -> some View {
         switch target {
-        case .places:
-            NavigationLink(value: PlacesDestination()) {
-                UtilityToken(title: "Places", subtitle: "Browse on a map", systemImage: "map")
-            }
-            .buttonStyle(.plain)
-            .contextMenu { pinButton(.places) }
-        case .trips:
-            NavigationLink(value: TripsDestination()) {
-                UtilityToken(title: "Trips", subtitle: "Days spent away", systemImage: "airplane")
-            }
-            .buttonStyle(.plain)
-            .contextMenu { pinButton(.trips) }
         case .duplicates:
             NavigationLink(value: DuplicatesDestination()) {
                 DuplicatesToken()
@@ -1158,8 +930,8 @@ struct SmartAlbumToken: View {
     }
 }
 
-/// A tile for something that has no cover photo of its own — Places, Trips,
-/// Duplicates, Recently Viewed. Same tile, a glyph in the cover well.
+/// A tile for something that has no cover photo of its own — Duplicates,
+/// Recently Viewed. Same tile, a glyph in the cover well.
 struct UtilityToken: View {
     let title: String
     let subtitle: String

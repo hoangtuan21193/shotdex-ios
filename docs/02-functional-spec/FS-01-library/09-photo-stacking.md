@@ -30,6 +30,10 @@
 | 3 | **HDR** | ghép loạt bù trừ sáng thành một ảnh | [FS-01.11](11-hdr-merge.md) | Merges a bracketed series into one photo that keeps the highlights and the shadows. |
 | 4 | **Stack Exposures** | ghép nhiều lần bấm một khung cảnh | bộ chọn bên dưới | theo mode đang chọn |
 
+Ngoài menu con của thanh chọn, bốn dòng này cũng nằm cuối nhóm **Create** của tab Utilities (2026-10-24,
+[FS-06 §5b](../FS-06-collections/01-tabs-tokens-and-album-management.md)), để bắt đầu ghép mà không phải chọn ảnh
+trong lưới trước: chạm → bộ chọn ảnh hệ thống → ≥ 2 ảnh mở cùng màn ở trên.
+
 Bộ chọn trong màn Stack Exposures, **mặc định `Average`**:
 
 | Mode | Bên dưới | Câu giải thích (một dòng dưới bộ chọn) |

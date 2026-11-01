@@ -2,7 +2,7 @@
 
 > **Tiến độ đêm 2026-09-19** — mỗi mục dưới đây đều build pass, chạy thật trên simulator và có ảnh chụp màn hình kiểm chứng, commit riêng trên `main`.
 >
-> Xong: **Lưới liền mạch + ngày ở title, lưới nhiều cột và dashboard 2–3 cột cho iPad/Duo** · **C6 photo editing extension + tách framework ShotDexKit** · Customize tab Collections · Memory → phim · Share bỏ vị trí · Sort trong album · Copy/Paste edits · Giữ tay xem bản gốc · Show in All Photos · Handoff · Dynamic Type cho token Collections · Viewer panorama · Depth Blur ảnh Portrait · Kéo thả ảnh · Markup shapes + kính lúp · Trim video trong viewer + nút tua khung · People & Pets (pass Vision opt-in) · hành động PhotoKit (ngày/vị trí/ẩn/favorite) · context menu trên tile · Media Types · ngày ở title + thanh cuộn ngày · badge trạng thái · menu ⋯ trong viewer · Live Text · Live Photo + Save as Video · Slideshow · Places · Trips · App Intents + Spotlight · Widget · Share Extension · iPad · quản lý album/folder · Settings (autoplay, HDR, dung lượng) · Auto Enhance + Revert · Merge duplicates.
+> Xong: **Lưới liền mạch + ngày ở title, lưới nhiều cột và dashboard 2–3 cột cho iPad/Duo** · **C6 photo editing extension + tách framework ShotDexKit** · Customize tab Collections · Memory → phim · Share bỏ vị trí · Sort trong album · Copy/Paste edits · Giữ tay xem bản gốc · Show in All Photos · Handoff · Dynamic Type cho token Collections · Viewer panorama · Depth Blur ảnh Portrait · Kéo thả ảnh · Markup shapes + kính lúp · Trim video trong viewer + nút tua khung · People & Pets (pass Vision opt-in) · hành động PhotoKit (ngày/vị trí/ẩn/favorite) · context menu trên tile · Media Types · ngày ở title + thanh cuộn ngày · badge trạng thái · menu ⋯ trong viewer · Live Text · Live Photo + Save as Video · Slideshow · Places · Trips (cả hai gỡ 2026-10-24) · App Intents + Spotlight · Widget · Share Extension · iPad · quản lý album/folder · Settings (autoplay, HDR, dung lượng) · Auto Enhance + Revert · Merge duplicates.
 >
 > Vướng, cần bạn quyết hoặc cần máy thật: xem mục "Cần quyết định" ở cuối file.
 
@@ -56,7 +56,7 @@ Khảo sát gốc: 122 mục — 27 CÓ, 44 MỘT PHẦN, 51 KHÔNG.
 
 ## Phase C — Hệ thống
 
-- [x] C1 App Intents + Shortcuts + Siri — 7 intent (Library / Search / Favorites / Camera / Statistics / Places / Trips) + `AppShortcutsProvider` với câu thoại; đã thấy trong app Shortcuts. **Lưu ý**: bấm chạy trong Shortcuts trên Simulator báo "Unable to run App Shortcut" — hạn chế của Simulator, phần định tuyến có unit test riêng
+- [x] C1 App Intents + Shortcuts + Siri — 5 intent (Library / Search / Favorites / Camera / Statistics; Places / Trips bỏ 2026-10-24) + `AppShortcutsProvider` với câu thoại; đã thấy trong app Shortcuts. **Lưu ý**: bấm chạy trong Shortcuts trên Simulator báo "Unable to run App Shortcut" — hạn chế của Simulator, phần định tuyến có unit test riêng
 - [x] C2 CoreSpotlight — index **bộ sưu tập** (smart album, thân máy, ống kính), **không** index từng ảnh; chạm kết quả mở app đúng chỗ qua `NSUserActivity`
 - [x] C3 Widget — target `ShotDexWidget`: **On This Day** (small/medium/large/lock) và bốn widget vẽ trên ảnh người dùng chọn — **Clock**, **Calendar**, **Weather**, **Time, Date and Weather** (small/medium/large). Mọi thứ đọc từ App Group `group.com.hoangtuan.shotdex`; **widget không đụng thư viện ảnh, lịch, mạng hay vị trí**. Widget "Your Gear" đã bỏ (2026-09-20). Đã đặt lên màn hình chính và xác nhận bằng dữ liệu thật
 - [x] C4 Share Extension — target `ShotDexShare` ("Save to ShotDex"), nhận ảnh từ app khác (tối đa 40), xin quyền `.addOnly`, lưu vào thư viện; đã test từ share sheet của app Photos
@@ -67,8 +67,8 @@ Khảo sát gốc: 122 mục — 27 CÓ, 44 MỘT PHẦN, 51 KHÔNG.
 
 ## Phase D — Tự dựng phần Apple Intelligence
 
-- [x] D1 Places — token trong Utilities, bản đồ gom cụm theo ô lưới độ (co giãn theo mức zoom), pin có thumbnail + số lượng + tên địa điểm đã geocode; chạm cụm mở lưới ảnh có khoảng ngày
-- [x] D2 Trips — token trong Utilities, gom các đợt ảnh liên tục cách "nhà" > 80km; thẻ ảnh bìa + tên nơi + khoảng ngày; có unit test (5 ca)
+- [-] D1 Places — **gỡ khỏi app 2026-10-24** (người dùng: không cần). Trước đó: token trong Utilities, bản đồ gom cụm theo ô lưới độ (co giãn theo mức zoom), pin có thumbnail + số lượng + tên địa điểm đã geocode; chạm cụm mở lưới ảnh có khoảng ngày
+- [-] D2 Trips — **gỡ khỏi app 2026-10-24** (người dùng: không cần). Trước đó: token trong Utilities, gom các đợt ảnh liên tục cách "nhà" > 80km; thẻ ảnh bìa + tên nơi + khoảng ngày; có unit test (5 ca)
 - [~] D3 Memories — hàng thẻ trên tab Collections, gom từ tín hiệu app đã có: chuyến đi, từng năm đã trọn, nơi hay quay lại. **Cố ý không bắt chước Memories của Apple** (không có face/scene model); chạm mở lưới ảnh. **Dựng thành phim**: xong — nút film trên `PhotoListScreen` mở Video Studio với đúng thứ tự đang hiện, tối đa 60 clip
 - [~] D4 People & Pets: pass quét Vision riêng, opt-in trong Settings — **có** collection People / Pets (đếm mặt + chó/mèo), **không có** nhận diện từng người hay đặt tên: Vision không public request face-embedding nào
 - [x] D5 Live Text on-demand trong viewer — `ImageAnalysisInteraction`, chỉ phân tích khi bật từ menu, tự tắt khi lật sang ảnh khác

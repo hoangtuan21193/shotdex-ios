@@ -103,7 +103,7 @@ Review reports: `review/hig.md`, `review/pro.md`, `review/consistency.md`, `revi
 
 ## Canonical sidebar (every main-window board)
 Exactly the drawing in `review/consistency.md` §1 "Canonical sidebar": groups (Library, no header) · **Sources**
-`[+]` · **Collections** `[+]` (On This Day, Albums ›, smart albums) · **Utilities** (Statistics, Places, Trips 12,
+`[+]` · **Collections** `[+]` (On This Day, Albums ›, smart albums) · **Utilities** (Statistics,
 Duplicates 53, Collages 12, Video Projects 7, On Server 712). No "Memories", no "Tools", no "Creations", no
 "Uploaded to Server", no "Client Proofs" (use **Client Shoots 2026** when a 5th source is needed). Albums row
 always has a disclosure chevron; expanded = flat list, no folders. Source row states drawn one way each (§1 rules).
@@ -158,7 +158,7 @@ commands/buttons, sentence case for descriptions. Camera names as in `ShotDex/Re
 is a Monday. 12-hour clock. On This Day = Kyoto. Totals: 55,231 items = 54,027 photos + 1,204 videos.
 
 ## Follow the spec (board decisions reverted)
-No Memories screen (On This Day + Trips per FS-06.07/06.05) · no per-clip Framing in Video (FS-12.10) · merges are
+No Memories screen (On This Day per FS-06.07; Trips removed 2026-10-24) · no per-clip Framing in Video (FS-12.10) · merges are
 photos, not Creations entries (FS-06.01b) · Duplicates has no "Keep Both" (FS spec) · no colour labels in Cull.
 
 ---

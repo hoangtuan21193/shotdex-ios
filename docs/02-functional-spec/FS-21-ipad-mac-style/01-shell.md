@@ -26,7 +26,7 @@ dựng từ sidebar và toolbar của hệ thống.
 | (không tiêu đề) | All Photos · Favorites · Videos · RAW · Recently Added |
 | **Sources** `+` | từng nguồn: Photos Library, thư mục, ổ ngoài (nút Eject), server — trạng thái theo [FS-19](../FS-19-photo-sources/README.md) |
 | **Collections** `+` | On This Day · Albums › (mở ra danh sách phẳng) · các smart album |
-| **Utilities** | Statistics · Places · Trips · Duplicates · Collages · Video Projects · On Server |
+| **Utilities** | On This iPad · Statistics · Duplicates · Collages · Video Projects · On Server — bấm tiêu đề nhóm mở trang Utilities: card Statistics trên cùng, rồi Library · Create · Elsewhere (`IP_Utilities`, 2026-10-24; Places và Trips đã gỡ khỏi app) |
 
 - Hàng cao **44**, nhãn 17, icon 22 màu accent, số đếm 15 màu phụ bên phải; tiêu đề nhóm 15 đậm vừa. Tối đa 2 cấp.
 - Đầu sidebar: **Hide Sidebar** trái, **Settings** (gear) phải. Chân: trạng thái index — "Up to date · indexed
@@ -49,8 +49,8 @@ dựng từ sidebar và toolbar của hệ thống.
 
 ## 4. Inspector
 
-- Chỗ cho "thông tin của thứ đang chọn": ảnh (Viewer), lựa chọn nhiều ảnh (Library), cụm bản đồ (Places), tuỳ
-  chọn của công cụ (Collage, Resize, Export, Combine). Không có tiêu đề "Photo Info" và Done — đóng bằng nút toolbar.
+- Chỗ cho "thông tin của thứ đang chọn": ảnh (Viewer), lựa chọn nhiều ảnh (Library), tuỳ chọn của
+  công cụ (Collage, Resize, Export, Combine). Không có tiêu đề "Photo Info" và Done — đóng bằng nút toolbar.
 - Hàng 44, nhãn 17, giá trị 15, slider núm 28. Mở inspector ở Library: lưới bớt một cột theo mật độ đã lưu — ở mật
   độ mặc định 7 → 6 ([01b §1](01b-windows-and-access.md) về số cột).
 - Nhớ mở/đóng **theo từng màn**, như luật nhớ lần cuối của Photo Info ([FS-02.03b](../FS-02-photo-detail/03b-info-inspector.md) §2).

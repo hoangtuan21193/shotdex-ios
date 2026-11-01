@@ -553,6 +553,7 @@ struct SmartAlbumDetailScreen: View {
             onAddToCollection: { addToCollection(model) },
             onExportEXIF: { exportEXIF(model) },
             onDuplicate: { duplicateSelected(model) },
+            onKeepOnDevice: { [selectedIds] in navigation.keepRequest = KeepRequest(ids: selectedIds) },
             onUploadToServer: presentServerUpload.map { present in { present(selectedIds, $0) } },
             offersCaptionKeywords: true,
             offersFileExport: true,

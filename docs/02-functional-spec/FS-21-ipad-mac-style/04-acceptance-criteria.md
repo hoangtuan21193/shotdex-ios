@@ -10,7 +10,7 @@ album "Iceland 2026" 212 ảnh, smart album "Night ISO 3200+" 2,411 ảnh; ảnh
 
 | # | Cho | Khi | Thì | Chứng minh bằng |
 |---|---|---|---|---|
-| AC-1 | ngang 1376×1032, thư viện mẫu | mở app | không tab bar; sidebar x 8–328 (320), mỗi hàng cao 44; toolbar từ y 24 cao 44; 4 nhóm: 5 hàng Library, Sources, Collections, 7 hàng Utilities | ⚠️ chưa có — `design-parity` `Main` (đề xuất `fs21-shell.json`) |
+| AC-1 | ngang 1376×1032, thư viện mẫu | mở app | không tab bar; sidebar x 8–328 (320), mỗi hàng cao 44; toolbar từ y 24 cao 44; 4 nhóm: 5 hàng Library, Sources, Collections, 8 hàng Utilities (On This iPad đứng đầu) | ⚠️ chưa có — `design-parity` `Main` (đề xuất `fs21-shell.json`) |
 | AC-2 | như AC-1, đang ở All Photos | chạm hàng Statistics | nội dung là Statistics, không có Back; sidebar không đổi, hàng Statistics mang trạng thái chọn | ⚠️ chưa có (`fs21-shell.json`) |
 | AC-3 | như AC-1 | chạm Hide Sidebar | sidebar biến mất, mép trái nội dung ≤ 16pt, toolbar có Show Sidebar; chạm nó → sidebar về x 8–328 | ⚠️ chưa có |
 | AC-4 | Library, mật độ mặc định, inspector đóng, lưới 7 cột | chạm Show Inspector | inspector rộng 360 ±1 bám mép phải (x 1016); lưới nằm trọn trong x 344–1000, 6 cột; đóng lại → 7 cột | ⚠️ chưa có |
@@ -73,7 +73,7 @@ album "Iceland 2026" 212 ảnh, smart album "Night ISO 3200+" 2,411 ảnh; ảnh
 | AC-34 | Editor ngang, Exposure +0,65 | chạm Save | sheet Save Edit rộng 600 giữa màn có Save Changes · Save Copy; chưa chọn thì ảnh gốc không đổi | ⚠️ chưa có — `IP12_Save` |
 | AC-35 | Editor dọc | mở editor | inspector vẫn là cột bên phải, không sheet; PASS `IPP1_Edit` | ⚠️ chưa có |
 | AC-36 | Settings, chế độ sáng và tối | chạm gear | Settings chiếm cửa sổ, sidebar 320 có Done; ảnh 0 pixel amber; công tắc bật màu xanh hệ thống | ⚠️ chưa có — `design-parity` `IP_Settings` |
-| AC-37 | Settings mở từ hàng Trips | chạm Done | về Trips, cùng chỗ cuộn | ⚠️ chưa có |
+| AC-37 | Settings mở từ hàng Duplicates | chạm Done | về Duplicates, cùng chỗ cuộn | ⚠️ chưa có |
 | AC-38 | danh sách lệnh ⋯ chọn nhiều, menu ngữ cảnh ô, ⋯ Viewer, menu bar | dựng cho bố cục iPad và iPhone | hai bên cùng một tập, trừ đúng 2 ngoại lệ New Window và Activity | ⚠️ chưa có — test thuần |
 | AC-39 | Resize 8 ảnh, Delete Originals tắt | gạt Delete Originals | nút toolbar đổi ngay "Resize 8 Photos" → "Resize 8 Photos and Delete Originals", thấy không cuộn | ⚠️ chưa có — `IP_Compress` |
 | AC-40 | Xuất collage ngang | mở Export | Share… và Save to Photos trên toolbar; không nút nào ghim đáy; inspector 360 | ⚠️ chưa có — `IP_CollageExport` |

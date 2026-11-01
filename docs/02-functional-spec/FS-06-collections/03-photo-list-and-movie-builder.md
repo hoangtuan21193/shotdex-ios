@@ -17,21 +17,22 @@ Hình dạng lưới **thứ ba**, bên cạnh album PhotoKit và truy vấn đ�
 
 - Giữ **đúng thứ tự caller truyền vào** — một chuyến đi chạy xuôi thời gian.
 - model của nó conform giao thức nguồn ảnh của viewer nên mở thẳng được viewer.
-- Dùng cho Places, Trips, People and Pets.
+- Dùng cho People and Pets (Places và Trips từng dùng, đã gỡ 2026-10-24).
 
 ## 3. Memories — đã bỏ (2026-09-27)
 
 Tab Collections từng có hàng thẻ **Memories** (3 chuyến đi mới nhất, 3 năm đã trọn, 2 nơi hay quay lại,
 dựng bằng `MemoryBuilder`). Bỏ vì:
 
-- **Trùng lặp**: chuyến đi và nơi đã có token Trips / Places trong Utilities; thẻ năm chỉ là một bộ lọc ngày.
+- **Trùng lặp**: chuyến đi và nơi khi đó đã có token Trips / Places trong Utilities (cả hai đã gỡ 2026-10-24); thẻ
+  năm chỉ là một bộ lọc ngày.
 - **Sai với app cho photographer**: nguồn là ảnh có GPS, nên thẻ năm gần như chỉ gồm ảnh iPhone — ảnh máy
   ảnh rời không GPS bị bỏ, số "N photos" thấp hơn thật.
 - **Tên hứa điều app không làm được**: người dùng iOS thấy "Memories" chờ một cuốn phim tự chạy. Memories của
   Apple dựng từ nhận diện mặt, phân loại cảnh, model curation và nhạc có bản quyền; PhotoKit không có API public
   đọc chúng hay phim của chúng. Một bản nhái yếu sẽ ra những bộ sưu tập người dùng không đoán được.
 
-Đừng thêm lại dưới tên khác nếu nó vẫn chỉ là Trips + Places + một năm.
+Đừng thêm lại dưới tên khác nếu nó vẫn chỉ là chuyến đi + nơi chụp + một năm.
 
 ## 4. Nút dựng phim
 

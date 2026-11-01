@@ -50,7 +50,7 @@ Họ vẫn cầm máy bằng tay: mọi thứ chạm được, không gì đòi 
 | Thanh tab nổi Library · Collections · Statistics + tab Search | **sidebar 320** (Library · Sources · Collections · Utilities); Search là ô trên toolbar |
 | Nav bar trong suốt, không tiêu đề; gear trái, Filter + Select phải | toolbar: tiêu đề 20 + dòng phụ 13, cụm viên kính 44, Select là nút chữ cuối phải |
 | Chọn nhiều: thanh đáy Share · đếm · Delete | lệnh lên toolbar; inspector tóm tắt lựa chọn |
-| Photo Info: cột 360 trong Viewer, nền tối | inspector 360 ở Library, Viewer, Places, Collage, Resize, Export… |
+| Photo Info: cột 360 trong Viewer, nền tối | inspector 360 ở Library, Viewer, Collage, Resize, Export… |
 | Viewer: pager toàn màn, nút X 52 | Viewer trong cửa sổ, Back, Single · 2-Up · Survey, filmstrip 100 |
 | Editor: cột 280, băng đĩa nổi, dải 6 công cụ ở chân cột | toolbar Adjust · Crop · Mask · Heal · Markup, inspector 360, Presets ở sidebar, filmstrip |
 | Collage/Resize/Collage Export: cột 320/400, nút chính ghim đáy | inspector 360, nút chính trên toolbar |
@@ -64,7 +64,7 @@ Họ vẫn cầm máy bằng tay: mọi thứ chạm được, không gì đòi 
 | Khung | `Main`, `IP_LibrarySelect`, `IP_LibraryList`, `IP_MenuBar`, `IP_Share` |
 | Nguồn | `IP_AddSource`, `IP_SourceIndexing`, `IP_Ingest`, `IP_EmptyLibrary`, `IP_Onboarding` |
 | Tìm, xem | `IP_Search`, `IP_AdvancedSearch`, `IP_Viewer`, `IP_Metadata`, `IP_Compare`, `IP_CompareSurvey`, `IP_VideoTrim` |
-| Collections | `IP_Collections`, `IP_AlbumDetail`, `IP_SmartAlbum`, `IP_SmartAlbumEditor`, `IP_OnThisDay`, `IP_Places`, `IP_Trips`, `IP_Duplicates`, `IP_Creations`, `IP_VideoProjects`, `IP_VideoProjectsDelete` |
+| Collections | `IP_Collections`, `IP_AlbumDetail`, `IP_SmartAlbum`, `IP_SmartAlbumEditor`, `IP_OnThisDay`, `IP_Duplicates`, `IP_Creations`, `IP_VideoProjects`, `IP_VideoProjectsDelete` |
 | Thống kê | `IP_Statistics`, `IP_ChartEditor`, `IP_DateRange` |
 | Settings | `IP_Settings`, `IP_WidgetSettings`, `IP_CompressionPresets`, `IP_CameraDatabase`, `IP_Support`, `IP_SupportThread`, `IP_ServerList`, `IP_ServerForm` |
 | Server | `IP_ServerBrowser`, `IP_ServerUpload`, `IP_UploadedToServer` |

@@ -40,8 +40,8 @@ tính năng qua Mac App Store, trong sandbox.
 
 ## 3. Một lần phát hành đủ tính năng (D2)
 
-- Bản 1.0 có mọi màn của FS-18, FS-19, FS-20, cộng Video Studio, server, Collage, Combine Photos, Resize, Duplicates,
-  Places. Không ẩn tính năng sau cờ, không "coming soon".
+- Bản 1.0 có mọi màn của FS-18, FS-19, FS-20, cộng Video Studio, server, Collage, Combine Photos, Resize,
+  Duplicates. Không ẩn tính năng sau cờ, không "coming soon".
 - Thứ tự làm do `/plan` chốt; tiêu chí phát hành là mọi AC ở [06](06-acceptance-criteria.md) và các FS kia có chứng minh.
 
 ## 4. Recipe và dữ liệu

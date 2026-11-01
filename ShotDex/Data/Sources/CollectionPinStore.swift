@@ -14,16 +14,12 @@ final class CollectionPinStore {
     enum Target: Hashable {
         case album(String)
         case smartAlbum(String)
-        case places
-        case trips
         case duplicates
 
         var token: String {
             switch self {
             case .album(let id): "album:\(id)"
             case .smartAlbum(let id): "smart:\(id)"
-            case .places: "utility:places"
-            case .trips: "utility:trips"
             case .duplicates: "utility:duplicates"
             }
         }
@@ -35,8 +31,8 @@ final class CollectionPinStore {
             switch (kind, value) {
             case ("album", let id): self = .album(id)
             case ("smart", let id): self = .smartAlbum(id)
-            case ("utility", "places"): self = .places
-            case ("utility", "trips"): self = .trips
+            // "utility:places" and "utility:trips" (removed 2026-10-24) fall
+            // through to nil and drop out on the next save.
             case ("utility", "duplicates"): self = .duplicates
             default: return nil
             }

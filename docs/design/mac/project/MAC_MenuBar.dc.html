@@ -149,7 +149,7 @@ function sidebar(t, o){
     {hasTitle:false, rows:[row('All Photos',I.all,o.allCount||'55,231'),row('Favorites',I.fav,'1,862'),row('Videos',I.video,'1,204'),row('RAW',I.raw,'31,540'),row('Recently Added',I.recent)]},
     {hasTitle:true, title:'Sources', addable:true, addLabel:'Add Source', rows:sources},
     {hasTitle:true, title:'Collections', addable:true, addLabel:'New Album', rows:[row('On This Day',I.onthisday),row('Albums',I.album,'38',{chev:true}),row('Night ISO 3200+',I.smart,'2,411'),row('85mm Portraits',I.smart,'986')]},
-    {hasTitle:true, title:'Utilities', addable:false, rows:[row('Statistics',I.stats),row('Places',I.places),row('Trips',I.trips,'12'),row('Duplicates',I.dup,'53'),row('Collages',I.collage,'12'),row('Video Projects',I.film,'7'),row('On Server',I.onserver,'712')]}
+    {hasTitle:true, title:'Utilities', addable:false, rows:[row('Statistics',I.stats),row('Duplicates',I.dup,'53'),row('Collages',I.collage,'12'),row('Video Projects',I.film,'7'),row('On Server',I.onserver,'712')]}
   ];
 }
 const IDLE_FOOT = {idle:true, busy:false, label:'Up to date · indexed 2 min ago', pct:'0%'};
@@ -220,7 +220,7 @@ class Component extends DCLogic {
     const mGo=M([['Back','⌘['],['Forward','⌘]'],['Enclosing Album','⌘↑'],'-',
       ['All Photos','⌥⌘1','c'],['Favorites','⌥⌘2'],['Videos','⌥⌘3'],['RAW','⌥⌘4'],['Recently Added','⌥⌘5'],'-',
       ['On This Day'],['Albums'],'-',
-      ['Statistics','⌥⌘6'],['Places'],['Trips'],['Duplicates'],['Collages'],['Video Projects'],['On Server'],'-',['Go to Date…']]);
+      ['Statistics','⌥⌘6'],['Duplicates'],['Collages'],['Video Projects'],['On Server'],'-',['Go to Date…']]);
     const mWindow=M([['Minimize','⌘M'],['Zoom'],['Fill'],'-',['Video Studio','⌥⌘V'],['Activity','⌥⌘0'],'-',['Bring All to Front'],'-',['All Photos','','c'],['IMG_4821.CR3 — Edit']]);
     const mHelp=M([['ShotDex Help'],['Search Syntax'],['Keyboard Shortcuts','⌘/'],'-',['ShotDex Support…']]);
     const vClip=M([['Split at Playhead','⌘B'],['Trim Start to Playhead','⌥['],['Trim End to Playhead','⌥]'],['Delete','⌫'],'-',

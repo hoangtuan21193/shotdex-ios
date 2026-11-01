@@ -27,7 +27,7 @@ style C, one prominent toolbar action, no destructive prominent action, 10px tex
 | Keyboard | ⌘ shortcuts exist (iPadOS menu bar when a keyboard is attached) — one board `IP_MenuBar` shows the iPadOS 26 menu bar (pulled down) with ShotDex menus; no keyboard legends on other boards |
 | Hover | never required; pointer hover may add highlights only |
 | Sheets | form sheets ≤ **700×640**, centered, dimming scrim; popovers ≤ 400×560 with arrow |
-| Tab bar | **gone** — the sidebar replaces Library/Collections/Statistics tabs; Search is the toolbar search field |
+| Tab bar | **gone** — the sidebar replaces Library/Collections tabs (Statistics lives under Collections › Utilities since 2026-10-17); Search is the toolbar search field |
 
 ## Rules for this round
 - **Replace boards in place, same file names** (`IP_Library` is now `Main`; keep every other name) so specs that

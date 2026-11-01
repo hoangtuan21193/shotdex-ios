@@ -20,9 +20,9 @@
 		EE0002012D00000100000001 /* ShotDexEditAction.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = EE0002022D00000100000001 /* ShotDexEditAction.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		EF0003012D00000100000001 /* ShotDexAddLook.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = EF0003022D00000100000001 /* ShotDexAddLook.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		FA00000C2D00000100000001 /* GRDB in Frameworks */ = {isa = PBXBuildFile; productRef = FA00000B2D00000100000001 /* GRDB */; };
-		FA0000142D00000100000001 /* DequeModule in Frameworks */ = {isa = PBXBuildFile; productRef = FA0000132D00000100000001 /* DequeModule */; };
 		FA00000D2D00000100000001 /* ShotDexKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = DD0001022D00000100000001 /* ShotDexKit.framework */; };
 		FA00000E2D00000100000001 /* ShotDexKit.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = DD0001022D00000100000001 /* ShotDexKit.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		FA0000142D00000100000001 /* DequeModule in Frameworks */ = {isa = PBXBuildFile; productRef = FA0000132D00000100000001 /* DequeModule */; };
 		FA0000422D00000100000001 /* SMBClient in Frameworks */ = {isa = PBXBuildFile; productRef = FA0000412D00000100000001 /* SMBClient */; };
 		FA0000442D00000100000001 /* Citadel in Frameworks */ = {isa = PBXBuildFile; productRef = FA0000432D00000100000001 /* Citadel */; };
 /* End PBXBuildFile section */
@@ -84,19 +84,19 @@
 			remoteGlobalIDString = EF00030A2D00000100000001;
 			remoteInfo = ShotDexAddLook;
 		};
-		FF0001032D00000100000001 /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = AA00000A2D00000100000001 /* Project object */;
-			proxyType = 1;
-			remoteGlobalIDString = AA0000062D00000100000001;
-			remoteInfo = ShotDex;
-		};
 		FA00000F2D00000100000001 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = AA00000A2D00000100000001 /* Project object */;
 			proxyType = 1;
 			remoteGlobalIDString = DD0001102D00000100000001;
 			remoteInfo = ShotDexKit;
+		};
+		FF0001032D00000100000001 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = AA00000A2D00000100000001 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = AA0000062D00000100000001;
+			remoteInfo = ShotDex;
 		};
 /* End PBXContainerItemProxy section */
 
@@ -161,8 +161,8 @@
 		DD0001022D00000100000001 /* ShotDexKit.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = ShotDexKit.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		EE0002022D00000100000001 /* ShotDexEditAction.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = ShotDexEditAction.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		EF0003022D00000100000001 /* ShotDexAddLook.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = ShotDexAddLook.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		FA0000022D00000100000001 /* ShotDex.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ShotDex.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		FF0001022D00000100000001 /* ShotDexUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ShotDexUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
-		FA0000022D00000100000001 /* ShotDexMac.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ShotDexMac.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -217,8 +217,8 @@
 				App/AssetActionsCoordinator.swift,
 				App/BackgroundIndexService.swift,
 				App/BackupBackgroundService.swift,
-				"App/BackupCoordinator+Live.swift",
 				App/BackupCoordinator.swift,
+				"App/BackupCoordinator+Live.swift",
 				App/BackupUploadExtensionSync.swift,
 				App/Glass/GlassBackground.swift,
 				App/Glass/GlassIconButton.swift,
@@ -254,6 +254,7 @@
 				Features/Albums/AlbumDropTarget.swift,
 				Features/Albums/AlbumsModel.swift,
 				Features/Albums/AlbumsScreen.swift,
+				Features/Albums/CollectionsDestinations.swift,
 				Features/Albums/CollectionsLayoutStore.swift,
 				Features/Albums/CustomizeCollectionsSheet.swift,
 				Features/Albums/HiddenPhotosModel.swift,
@@ -335,6 +336,7 @@
 				Features/Editing/EditorToolBar.swift,
 				Features/Editing/EditorToolPanels.swift,
 				Features/Editing/EditorTransformPanel.swift,
+				Features/Editing/EditSourcePrompt.swift,
 				Features/Editing/HDRMergeSession.swift,
 				Features/Editing/LookExchangeModel.swift,
 				Features/Editing/LookExportSheet.swift,
@@ -390,8 +392,10 @@
 				Features/Library/ZoomableImageView.swift,
 				Features/Library/ZoomableVideoView.swift,
 				Features/Onboarding/OnboardingScreen.swift,
-				Features/Places/PlacesMapScreen.swift,
-				Features/Places/TripsScreen.swift,
+				Features/OnThisIPhone/KeepOnIPhoneSheet.swift,
+				Features/OnThisIPhone/KeepRunner.swift,
+				Features/OnThisIPhone/OnThisIPhoneModel.swift,
+				Features/OnThisIPhone/OnThisIPhoneScreen.swift,
 				Features/ServerImport/NetworkShortcutTile.swift,
 				Features/ServerImport/OnCloudScreen.swift,
 				Features/ServerImport/OnServerScreen.swift,
@@ -491,6 +495,8 @@
 				Features/Support/SupportModel.swift,
 				Features/Support/SupportScreen.swift,
 				Features/Support/SupportThreadScreen.swift,
+				Features/Utilities/StatisticsOverviewCard.swift,
+				Features/Utilities/UtilitiesScreen.swift,
 				Features/VideoStudio/VideoAudioEnvelope.swift,
 				Features/VideoStudio/VideoAudioMeterColumn.swift,
 				Features/VideoStudio/VideoBeatSlider.swift,
@@ -547,6 +553,7 @@
 				Features/VideoStudio/VideoStudioDuoBottomRow.swift,
 				Features/VideoStudio/VideoStudioDuoCoverRail.swift,
 				Features/VideoStudio/VideoStudioMetrics.swift,
+				Features/VideoStudio/VideoStudioModel.swift,
 				"Features/VideoStudio/VideoStudioModel+Captions.swift",
 				"Features/VideoStudio/VideoStudioModel+Ducking.swift",
 				"Features/VideoStudio/VideoStudioModel+ExportPresets.swift",
@@ -554,9 +561,8 @@
 				"Features/VideoStudio/VideoStudioModel+InOut.swift",
 				"Features/VideoStudio/VideoStudioModel+SaveLook.swift",
 				"Features/VideoStudio/VideoStudioModel+Skim.swift",
-				Features/VideoStudio/VideoStudioModel.swift,
-				"Features/VideoStudio/VideoStudioScreen+Desk.swift",
 				Features/VideoStudio/VideoStudioScreen.swift,
+				"Features/VideoStudio/VideoStudioScreen+Desk.swift",
 				Features/VideoStudio/VideoStudioSheetHost.swift,
 				Features/VideoStudio/VideoStudioToolbar.swift,
 				Features/VideoStudio/VideoStudioTools.swift,
@@ -574,7 +580,6 @@
 				Features/Watermark/WatermarkScreen.swift,
 				Info.plist,
 				PrivacyInfo.xcprivacy,
-				"ShotDex-AppAttest.entitlements",
 			);
 			target = FA0000032D00000100000001 /* ShotDexMac */;
 		};
@@ -655,14 +660,14 @@
 			path = LookInboxShared;
 			sourceTree = "<group>";
 		};
-		FF0001052D00000100000001 /* ShotDexUITests */ = {
-			isa = PBXFileSystemSynchronizedRootGroup;
-			path = ShotDexUITests;
-			sourceTree = "<group>";
-		};
 		FA0000012D00000100000001 /* ShotDexMac */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = ShotDexMac;
+			sourceTree = "<group>";
+		};
+		FF0001052D00000100000001 /* ShotDexUITests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = ShotDexUITests;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -730,13 +735,6 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		FF0001092D00000100000001 /* Frameworks */ = {
-			isa = PBXFrameworksBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 		FA0000052D00000100000001 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -746,6 +744,13 @@
 				FA0000422D00000100000001 /* SMBClient in Frameworks */,
 				FA0000442D00000100000001 /* Citadel in Frameworks */,
 				FA00000D2D00000100000001 /* ShotDexKit.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		FF0001092D00000100000001 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -794,7 +799,7 @@
 		AA0000042D00000100000001 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				FA0000022D00000100000001 /* ShotDexMac.app */,
+				FA0000022D00000100000001 /* ShotDex.app */,
 				AA0000052D00000100000001 /* ShotDex.app */,
 				BB0001022D00000100000001 /* ShotDexWidget.appex */,
 				CC0001022D00000100000001 /* ShotDexShare.appex */,
@@ -1007,6 +1012,38 @@
 			productReference = EF0003022D00000100000001 /* ShotDexAddLook.appex */;
 			productType = "com.apple.product-type.app-extension";
 		};
+		FA0000032D00000100000001 /* ShotDexMac */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = FA0000082D00000100000001 /* Build configuration list for PBXNativeTarget "ShotDexMac" */;
+			buildPhases = (
+				FA0000042D00000100000001 /* Sources */,
+				FA0000052D00000100000001 /* Frameworks */,
+				FA0000062D00000100000001 /* Resources */,
+				FA0000072D00000100000001 /* Embed Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				FA0000102D00000100000001 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				AA0000012D00000100000001 /* ShotDex */,
+				AB0001052D00000100000001 /* WidgetShared */,
+				BA00040E2D00000100000001 /* BackupShared */,
+				EF00030E2D00000100000001 /* LookInboxShared */,
+				FA0000012D00000100000001 /* ShotDexMac */,
+			);
+			name = ShotDexMac;
+			packageProductDependencies = (
+				FA00000B2D00000100000001 /* GRDB */,
+				FA0000132D00000100000001 /* DequeModule */,
+				FA0000412D00000100000001 /* SMBClient */,
+				FA0000432D00000100000001 /* Citadel */,
+			);
+			productName = ShotDexMac;
+			productReference = FA0000022D00000100000001 /* ShotDex.app */;
+			productType = "com.apple.product-type.application";
+		};
 		FF0001102D00000100000001 /* ShotDexUITests */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = FF0001112D00000100000001 /* Build configuration list for PBXNativeTarget "ShotDexUITests" */;
@@ -1029,38 +1066,6 @@
 			productName = ShotDexUITests;
 			productReference = FF0001022D00000100000001 /* ShotDexUITests.xctest */;
 			productType = "com.apple.product-type.bundle.ui-testing";
-		};
-		FA0000032D00000100000001 /* ShotDexMac */ = {
-			isa = PBXNativeTarget;
-			buildConfigurationList = FA0000082D00000100000001 /* Build configuration list for PBXNativeTarget "ShotDexMac" */;
-			buildPhases = (
-				FA0000042D00000100000001 /* Sources */,
-				FA0000052D00000100000001 /* Frameworks */,
-				FA0000062D00000100000001 /* Resources */,
-				FA0000072D00000100000001 /* Embed Frameworks */,
-			);
-			buildRules = (
-			);
-			dependencies = (
-				FA0000102D00000100000001 /* PBXTargetDependency */,
-			);
-			fileSystemSynchronizedGroups = (
-				FA0000012D00000100000001 /* ShotDexMac */,
-				AA0000012D00000100000001 /* ShotDex */,
-				AB0001052D00000100000001 /* WidgetShared */,
-				BA00040E2D00000100000001 /* BackupShared */,
-				EF00030E2D00000100000001 /* LookInboxShared */,
-			);
-			name = ShotDexMac;
-			packageProductDependencies = (
-				FA00000B2D00000100000001 /* GRDB */,
-				FA0000132D00000100000001 /* DequeModule */,
-				FA0000412D00000100000001 /* SMBClient */,
-				FA0000432D00000100000001 /* Citadel */,
-			);
-			productName = ShotDexMac;
-			productReference = FA0000022D00000100000001 /* ShotDexMac.app */;
-			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */
 
@@ -1178,14 +1183,14 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		FF00010A2D00000100000001 /* Resources */ = {
+		FA0000062D00000100000001 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		FA0000062D00000100000001 /* Resources */ = {
+		FF00010A2D00000100000001 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -1251,14 +1256,14 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		FF0001082D00000100000001 /* Sources */ = {
+		FA0000042D00000100000001 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		FA0000042D00000100000001 /* Sources */ = {
+		FF0001082D00000100000001 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -1308,15 +1313,15 @@
 			target = EF00030A2D00000100000001 /* ShotDexAddLook */;
 			targetProxy = EF0003032D00000100000001 /* PBXContainerItemProxy */;
 		};
-		FF0001062D00000100000001 /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			target = AA0000062D00000100000001 /* ShotDex */;
-			targetProxy = FF0001032D00000100000001 /* PBXContainerItemProxy */;
-		};
 		FA0000102D00000100000001 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			target = DD0001102D00000100000001 /* ShotDexKit */;
 			targetProxy = FA00000F2D00000100000001 /* PBXContainerItemProxy */;
+		};
+		FF0001062D00000100000001 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = AA0000062D00000100000001 /* ShotDex */;
+			targetProxy = FF0001032D00000100000001 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -1478,6 +1483,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = "ShotDex/ShotDex-AppAttest.entitlements";
+				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_ASSET_PATHS = "";
@@ -1501,6 +1507,7 @@
 				MTL_FAST_MATH = NO;
 				PRODUCT_BUNDLE_IDENTIFIER = com.hoangtuan.shotdex;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE_SPECIFIER = "";
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
@@ -1926,40 +1933,6 @@
 			};
 			name = Release;
 		};
-		FF0001122D00000100000001 /* Debug */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
-				GENERATE_INFOPLIST_FILE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
-				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.hoangtuan.shotdex.uitests;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SWIFT_EMIT_LOC_STRINGS = NO;
-				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
-				TEST_TARGET_NAME = ShotDex;
-			};
-			name = Debug;
-		};
-		FF0001132D00000100000001 /* Release */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
-				GENERATE_INFOPLIST_FILE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
-				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.hoangtuan.shotdex.uitests;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SWIFT_EMIT_LOC_STRINGS = NO;
-				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
-				TEST_TARGET_NAME = ShotDex;
-			};
-			name = Release;
-		};
 		FA0000092D00000100000001 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -1984,8 +1957,8 @@
 				PRODUCT_BUNDLE_IDENTIFIER = com.hoangtuan.shotdex;
 				PRODUCT_NAME = ShotDex;
 				SDKROOT = macosx;
-				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 5.0;
 			};
@@ -2017,6 +1990,40 @@
 				SDKROOT = macosx;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+		FF0001122D00000100000001 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.hoangtuan.shotdex.uitests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = ShotDex;
+			};
+			name = Debug;
+		};
+		FF0001132D00000100000001 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.hoangtuan.shotdex.uitests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = ShotDex;
 			};
 			name = Release;
 		};
@@ -2104,20 +2111,20 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		FF0001112D00000100000001 /* Build configuration list for PBXNativeTarget "ShotDexUITests" */ = {
-			isa = XCConfigurationList;
-			buildConfigurations = (
-				FF0001122D00000100000001 /* Debug */,
-				FF0001132D00000100000001 /* Release */,
-			);
-			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Release;
-		};
 		FA0000082D00000100000001 /* Build configuration list for PBXNativeTarget "ShotDexMac" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				FA0000092D00000100000001 /* Debug */,
 				FA00000A2D00000100000001 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		FF0001112D00000100000001 /* Build configuration list for PBXNativeTarget "ShotDexUITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				FF0001122D00000100000001 /* Debug */,
+				FF0001132D00000100000001 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

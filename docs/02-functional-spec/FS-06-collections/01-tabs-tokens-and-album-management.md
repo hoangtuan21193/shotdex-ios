@@ -23,7 +23,11 @@ Quản lý album, Creations, sắp xếp và kéo thả: [FS-06.01b](01b-album-m
 2. **Pinned**
 3. People and Pets · Smart Albums · My Albums · Shared Albums (tile cover)
 4. **Media Types**
-5. **Utilities**
+5. **Sources** (khi có hơn một nguồn)
+
+**Utilities không còn ở tab này** (2026-10-20, intent [keep-offline](../../_intents/2026-10-19-keep-offline.md)):
+công cụ thành **tab riêng bên phải Collections** — tab bar là Library · Collections · Utilities · Search, trên cả
+iOS 26 (`Tab`) lẫn thanh pill trước 26. Xem §5b.
 
 Nút **"+"** đứng riêng ở góc trên-phải (để có viên kính riêng trên iOS 26) và là một menu:
 New Album / New Smart Album / **Customize**.
@@ -63,9 +67,9 @@ lên đáy cover** (tối đa 2 dòng), **một hàng cuộn ngang**.
 **Smart Albums** là một mục duy nhất: smart album **do người dùng tạo** (glyph cái phễu khi chưa có cover)
 đứng trước, rồi tới smart album **hệ thống** gợi ý (Recently Added, Favorites).
 
-## 5. Media Types và Utilities
+## 5. Media Types (và Utilities, nay ở tab riêng — §5b)
 
-Hai mục cuối tab, **hàng full-width cao đúng một dòng chữ (52pt)**: glyph 28pt màu accent · tên · số ở cuối
+Hai mục kiểu hàng, **hàng full-width cao đúng một dòng chữ (52pt)**: glyph 28pt màu accent · tên · số ở cuối
 · mũi tên. Media Types đứng **ngay trên** Utilities, đúng cách Photos của iOS 26 xếp.
 
 - **Vì sao là hàng, không phải tile**: đây là điểm đến chọn từ một danh sách biết trước. Tile tiêu một thẻ
@@ -91,7 +95,7 @@ Nó vẫn đứng nguyên chỗ cũ trong hàng Media Types, vẫn mở ra màn 
 menu ⋯. Hệ quả đã chấp nhận: trên một thư viện **chưa index xong** mục này rỗng, nên bị ẩn, trong khi các
 mục cạnh nó do PhotoKit cấp đã có số.
 
-**Utilities** = Places · Trips · Duplicates (kèm số nhóm của lần gom cuối, **số nhiều dịch đúng trong bộ
+**Utilities** = **Statistics** (card trên đầu tab Utilities từ 2026-10-24, mở dashboard [FS-07](../FS-07-statistics/README.md)) · Duplicates (kèm số nhóm của lần gom cuối, **số nhiều dịch đúng trong bộ
 chuỗi**) · **Collages** · **Video Projects** · **On Server** (luôn hiện; mở ra danh sách connection để duyệt và tải ảnh về —
 [FS-17.01](../FS-17-import-from-server/01-browse.md) — và hàng ảnh đã upload, [FS-15.02 §8](../FS-15-server-upload/02-upload-flow.md)) · và các smart album nhóm tiện ích (hiện chỉ
 Unable to Upload) · **Hidden** cuối cùng, chỉ khi ShotDex đang ẩn ≥ 1 ảnh: lưới các ảnh ShotDex đã ẩn,
@@ -103,12 +107,47 @@ tự ẩn; từ iOS 16 hệ thống không cho app bên thứ ba đọc ảnh
 API** — bảng phân loại album của hệ thống không có mục nào cho nó, và cũng không có đường mở Photos ở album
 đó.
 
+## 5b. Tab Utilities
+
+Board `PH_Utilities` (+ `IP_`, `DI_`, `DC_Utilities`). Công cụ một chạm từ tab bar, không còn nằm dưới mọi hàng
+album. Trên cùng là **card Statistics** (2026-10-24): ba số Photos · Cameras · Lenses và biểu đồ cột số ảnh 12 tháng
+gần nhất (một màu accent, tháng nhiều nhất đậm, còn lại accent nhạt), chạm cả card mở dashboard Statistics — nơi liệt
+kê và thêm biểu đồ ([FS-07 §Card ở tab Utilities](../FS-07-statistics/README.md)); màn rộng thì số bên trái, biểu đồ bên
+phải, card trải hết bề ngang trên các cột. Dưới card là ba nhóm theo việc công cụ làm; **mỗi nhóm một thẻ inset-grouped** trên nền grouped (vẽ lại 2026-10-23 —
+lưới pill xám hai thẻ một hàng trước đó "xấu quá": mười nút giống hệt nhau, tiêu đề nhóm to hơn công cụ, nhóm lẻ để
+hở một ô). Tiêu đề nhóm chữ hoa nhỏ `.footnote` đậm vừa màu phụ; hàng ≥ 44pt: glyph `.secondary` trong cột 28, tên
+`.body`, **số đếm bên phải** khi công cụ có việc chờ (nhóm Duplicates, ảnh Hidden, số ảnh của album tiện ích), chevron;
+đường kẻ thụt tới tên. Điện thoại một cột, cuộn dưới tab bar nổi; màn rộng chia cột độc lập rộng ≥ 300 (1…4 cột,
+mỗi nhóm theo thứ tự vào cột đang ít hàng nhất — iPad 13" dọc 3 cột, màn trong Duo 2 cột):
+
+- **Library**: Backup · **On This iPhone** (ảnh/video giữ trên máy để xem offline, board `PH_OnThisIPhone`) ·
+  Duplicates · Hidden (chỉ khi ShotDex đang ẩn ≥ 1 ảnh) · các smart album nhóm tiện ích (Unable to Upload).
+- **Create**: Collages · Video Projects · Focus Stack · Panorama · HDR · Stack Exposures (2026-10-24). Bốn dòng sau
+  là các công cụ Combine Photos ([FS-01.09](../FS-01-library/09-photo-stacking.md) §2), cùng thứ tự với menu: chạm →
+  bộ chọn ảnh của hệ thống (chỉ ảnh) → đủ ≥ 2 ảnh thì mở đúng màn của công cụ, ít hơn thì alert *Choose at least 2
+  photos* (Choose Photos · Cancel). Save xong chuyển sang Library và mở ảnh mới, như khi gọi từ album.
+- **Elsewhere**: Local Network · Cloud.
+
+Nhóm **Explore** (Places · Trips · Statistics) đã bỏ 2026-10-24: Statistics thành card ở trên, **Places và Trips gỡ
+hẳn khỏi app** (màn, ghim Collections, Shortcut, hàng sidebar Mac). Giữ lâu Duplicates → **Pin to Collections** (vẫn
+ghim lên đầu Collections; ghim Places/Trips cũ tự rơi vì token không còn đọc được). Shortcut / Siri cho Statistics đẩy
+màn đó lên ngăn xếp của tab Utilities. Mục Customize của Collections không còn dòng Utilities.
+
+**Keep on This iPhone** (intent keep-offline, người dùng duyệt 2026-10-20 — spec đầy đủ chưa viết): menu ⋯ của
+thanh chọn (Library, album, smart album), menu lọc ≡ của album PhotoKit (giữ cả album, kèm *Keep New Photos
+Added Later*) và ⋯ của viewer mở sheet `PH_KeepOnIPhone`: **Viewing Copies** (ảnh 2732px HEIC, video 1080p —
+mặc định) hoặc **Originals**, kèm dung lượng ước tính và chỗ trống; thiếu chỗ (tính cả 1 GB dư) thì nút tắt.
+Bản giữ nằm ở `Application Support/Kept/`, ngoài backup iCloud, không vào thư viện Photos; app không bao giờ tự
+xoá — chỉ người dùng (Remove from iPhone / Remove All). Bảng `kept_items`, `kept_albums` (migration
+`v43-keptItems`), không đụng `photo_metadata`. Viewer và trình phát video mở file giữ trước khi hỏi PhotoKit hay
+server.
+
 ## 6. Customize và Pinned
 
 - **Customize** (trong menu `+`): chạm một dòng để **hiện/ẩn** một mục, nút **Edit** để kéo đổi thứ tự, và
   **Reset to Default Order** khi đã tuỳ biến.
-- **Pinned và Utilities không ẩn được**: Pinned là thứ người dùng đã tự tay bảo "giữ trong tầm với", còn
-  Utilities là công cụ — app mà giấu được công cụ của chính nó là một bài toán hỗ trợ.
+- **Pinned không ẩn được**: Pinned là thứ người dùng đã tự tay bảo "giữ trong tầm với". (Utilities từng ở đây
+  và cũng không ẩn được; nay là tab riêng.)
 - Mỗi dòng là **một nút trải hết hàng, không phải một công tắc**: công tắc đặt trong một danh sách kéo được
   **không nhận được chạm**. Cũng **không** ép danh sách vào chế độ sửa — lúc đó hệ thống giữ chạm cho việc
   kéo, nên mọi control trong hàng chết theo.

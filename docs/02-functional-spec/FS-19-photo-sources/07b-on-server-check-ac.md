@@ -55,4 +55,10 @@ Thư viện thử không có ảnh mặt người. Server thử: WebDAV cục b�
 | AC-106 | 2 | gộp Photos ↔ server bật | một lượt kiểm gộp 10 ảnh | 0 lần ghi sidecar lên NAS | `PhotoIdentityMergeTests.checkMergeWritesNoSidecar` (10 ảnh gộp, 0 dòng `pending_sidecar`, id Photos giữ lại) · `.deletingMergedKeepsServerCopy` · `.partialMatchStaysApart` |
 | AC-S1…S4 | — | spike §1 | — | số đo ghi vào intent | harness `OnServerSpike` (DEBUG, `-ShotDexOnServerSpike S1/S2/S4`) chạy trên sim; số đo ⚠️ cần máy thật — bảng trong intent |
 
-**Chưa chứng minh được:** cả bảng — tính năng chưa có code.
+**Chưa chứng minh được** (kiểm 2026-10-26, iPhone 17 iOS 26.5 qua WebDAV cục bộ):
+- AC-74, AC-93: so board ± 2pt (`Tools/design-board compare` qua `ui-drive`) và iOS 18.6 chưa chạy; số và chip đã có test.
+- AC-85: phần "có mặt trong **is**" sau một lượt Backup thật chưa có test đầu-cuối (SHA từ sổ đã có; truy vấn **is** đọc
+  SHA đó — `OnServerRuleTests`).
+- AC-92: ảnh dưới quyền `.limited` chưa chụp.
+- AC-91 và mọi AC có UI: ảnh iPad, Duo trong/ngoài chưa chụp (board đã vẽ).
+- S1–S4: cần iPhone thật — harness và log đã có (intent, mục Số đo spike).

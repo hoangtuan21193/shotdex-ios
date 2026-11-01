@@ -160,6 +160,40 @@ struct StatisticsQueries: Sendable {
         }
     }
 
+    /// The Utilities tab's Statistics card: visible photos, distinct camera
+    /// bodies and lenses, and the count per calendar month (local time) for
+    /// the `months` months ending with the one `now` falls in.
+    func overview(months: Int = 12, now: Date = Date(), calendar: Calendar = .current) throws -> StatsOverview {
+        guard let thisMonth = calendar.dateInterval(of: .month, for: now)?.start else { return .empty }
+        let starts = (0..<months).reversed().compactMap { calendar.date(byAdding: .month, value: -$0, to: thisMonth) }
+        guard let first = starts.first else { return .empty }
+        let key: (Date) -> String = { date in
+            let parts = calendar.dateComponents([.year, .month], from: date)
+            return String(format: "%04d-%02d", parts.year ?? 0, parts.month ?? 0)
+        }
+        return try database.reader.read { db in
+            let totals = try Row.fetchOne(db, sql: """
+                SELECT COUNT(*) AS photos,
+                       COUNT(DISTINCT NULLIF(normalizedCameraModel, '')) AS cameras,
+                       COUNT(DISTINCT NULLIF(normalizedLensModel, '')) AS lenses
+                FROM photo_metadata WHERE \(visible)
+                """)
+            let counts = try Row.fetchAll(db, sql: """
+                SELECT strftime('%Y-%m', creationDate, 'unixepoch', 'localtime') AS month, COUNT(*) AS count
+                FROM photo_metadata
+                WHERE \(visible) AND creationDate >= ?
+                GROUP BY month
+                """, arguments: [Int(first.timeIntervalSince1970)])
+            let byMonth = Dictionary(counts.map { (row: Row) -> (String, Int) in (row["month"], row["count"]) }, uniquingKeysWith: +)
+            return StatsOverview(
+                photos: totals?["photos"] ?? 0,
+                cameras: totals?["cameras"] ?? 0,
+                lenses: totals?["lenses"] ?? 0,
+                months: starts.map { StatsOverview.Month(start: $0, count: byMonth[key($0)] ?? 0) }
+            )
+        }
+    }
+
     /// Headline summary for the cards at the top of the Statistics screen.
     func summary(scope: StatsDateScope) throws -> StatsSummary {
         let total = try totalPhotos(scope: scope)

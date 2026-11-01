@@ -78,7 +78,17 @@ private struct SelectionBottomBar: View {
             SelectionCountCaption(model: model, action: showSelected)
                 .frame(maxWidth: .infinity)
 
-            if let onUnhide = model.onUnhide {
+            if let onRemoveFromDevice = model.onRemoveFromDevice {
+                SelectionPillButton(
+                    title: String(
+                        localized: "Remove from \(KeepDevice.name)",
+                        comment: "On This iPhone selection bar: delete the kept copies of the selected photos, not the photos"
+                    ),
+                    systemImage: "minus.circle",
+                    isEnabled: model.selectionCount > 0,
+                    action: onRemoveFromDevice
+                )
+            } else if let onUnhide = model.onUnhide {
                 SelectionPillButton(
                     title: String(
                         localized: "Unhide \(model.selectionCount) Photos",
@@ -139,7 +149,7 @@ struct SelectionCountCaption: View {
         guard model.selectionCount > 0 else { return "Select Items" }
         // Beside a worded trailing button (Unhide N Photos) the words go:
         // the pill keeps only what it counts (board `PH_Hidden`).
-        if model.onUnhide != nil { return "\(model.selectionCount)・\(sizeText)" }
+        if model.onUnhide != nil || model.onRemoveFromDevice != nil { return "\(model.selectionCount)・\(sizeText)" }
         return "Show Selected (\(model.selectionCount)・\(sizeText))"
     }
 
@@ -198,6 +208,7 @@ struct SelectionToolbarItems: ToolbarContent {
             || model.onDuplicate != nil || model.onUploadToServer != nil || model.assetActions != nil
             || model.offersFileExport
             || model.onSelectAll != nil || model.onRemoveFromAlbum != nil
+            || model.onKeepOnDevice != nil
     }
 
     var body: some ToolbarContent {
@@ -310,6 +321,12 @@ struct SelectionToolbarItems: ToolbarContent {
                     if let onDuplicate = model.onDuplicate {
                         Button(action: onDuplicate) {
                             PhotoCommand.duplicate.label
+                        }
+                        .disabled(model.selectionCount < 1)
+                    }
+                    if let onKeepOnDevice = model.onKeepOnDevice {
+                        Button(action: onKeepOnDevice) {
+                            Label(KeepRequest.menuTitle, systemImage: "arrow.down.circle")
                         }
                         .disabled(model.selectionCount < 1)
                     }

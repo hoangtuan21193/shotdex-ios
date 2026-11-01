@@ -1,0 +1,44 @@
+{
+  "steps": [
+    {
+      "action": "launch"
+    },
+    {
+      "action": "wait",
+      "seconds": 8
+    },
+    {
+      "action": "tap",
+      "label": "Utilities",
+      "type": "button"
+    },
+    {
+      "action": "wait",
+      "seconds": 4
+    },
+    {
+      "action": "dump",
+      "name": "20-utilities"
+    },
+    {
+      "action": "wait",
+      "seconds": 30
+    },
+    {
+      "action": "tap",
+      "label": "On This iPhone"
+    },
+    {
+      "action": "wait",
+      "seconds": 5
+    },
+    {
+      "action": "dump",
+      "name": "21-on-this-iphone"
+    },
+    {
+      "action": "wait",
+      "seconds": 30
+    }
+  ]
+}

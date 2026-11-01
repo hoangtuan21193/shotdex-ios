@@ -129,6 +129,10 @@ final class UIDriverTests: XCTestCase {
         case "tap", "tapIndex":
             if let point = coordinate(for: step) {
                 point.tap()
+            } else if let x = step.x, let y = step.y {
+                // A point inside a labelled element, normalized to its frame:
+                // the mark ring on a Duplicates tile has no element of its own.
+                try element(for: step).coordinate(withNormalizedOffset: CGVector(dx: x, dy: y)).tap()
             } else {
                 try element(for: step).tap()
             }

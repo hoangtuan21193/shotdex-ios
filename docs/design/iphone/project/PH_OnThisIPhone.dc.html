@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>iPhone · On This iPhone</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0}
+button{font-family:inherit}
+.a{position:absolute}
+.g{position:absolute;display:flex;align-items:center;justify-content:center;padding:0;border-radius:999px;box-sizing:border-box;cursor:default}
+button.a{background:none;border:0;padding:0}
+.col{display:flex;flex-direction:column;align-items:center;justify-content:center}
+.tnum{font-variant-numeric:tabular-nums}
+.hd{font-size:22px;font-weight:700;letter-spacing:0.2px}
+.cl{overflow:hidden;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2}
+</style>
+</helmet>
+<!-- ON THIS IPHONE (intent 2026-10-19-keep-offline): Utilities › On This iPhone — everything kept for offline use, from
+     every source. One card on top: the room kept copies take next to what is free, and while anything is coming down how
+     much is left, with Pause; a "could not download · Retry" line when some failed. Albums kept as a whole are chips (name,
+     how much is here; the ↓ glyph = keeps photos added later); a chip's menu toggles that or removes the album. Then every
+     kept photo and video that is here, newest first, with the count and size in the grid footer. Select → Remove from
+     iPhone deletes the kept copies, never the photos; ⋯ has Pause/Resume Downloads and Remove All from iPhone….
+     Named "On This iPhone", not "Offline": "Offline" already means a source that is not connected. -->
+<div style="width: 402px; height: 874px; position: relative; overflow: hidden; background: {{t.bg}}; color: {{t.label}}; font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', system-ui, sans-serif">
+
+<div class="a" style="left:16px;top:114px;width:370px;height:112px;border-radius:16px;background:{{s.cell2}};box-sizing:border-box;padding:12px">
+<div style="display:flex;align-items:baseline;justify-content:space-between"><span class="tnum" style="font-size:17px;font-weight:600">18.6 GB kept</span><span class="tnum" style="font-size:13px;color:{{t.label2}}">41.2 GB free on iPhone</span></div>
+<div style="position:relative;margin-top:8px;height:8px;border-radius:4px;background:{{t.fill}};overflow:hidden"><div style="position:absolute;left:0;top:0;bottom:0;width:69%;border-radius:4px;background:{{t.label3}};opacity:0.45"></div><div style="position:absolute;left:0;top:0;bottom:0;width:14%;border-radius:4px;background:{{t.tint}}"></div></div>
+<div style="margin-top:10px;display:flex;align-items:center;gap:8px"><div style="flex:1;min-width:0"><div class="tnum" style="font-size:15px;font-weight:600">Downloading · 188 left</div><div style="margin-top:6px;height:4px;border-radius:2px;background:{{t.fill}};overflow:hidden"><div style="width:62%;height:4px;background:{{t.tint}}"></div></div></div>
+<button aria-label="Pause Downloads" style="width:44px;height:44px;border:0;background:none;display:flex;align-items:center;justify-content:center;color:{{t.label}}"><svg viewBox="0 0 24 24" style="width:16px;height:16px;flex:none" fill="currentColor"><rect x="6" y="5" width="4" height="14" rx="1"></rect><rect x="14" y="5" width="4" height="14" rx="1"></rect></svg></button></div>
+</div>
+
+<div class="a" style="left:0;top:234px;width:402px;height:52px"><sc-for list="{{albums}}" as="c" hint-placeholder-count="3"><button aria-label="{{c.label}}" style="position:absolute;top:0;left:{{c.left}};width:{{c.width}};height:52px;border:0;border-radius:16px;background:{{s.cell2}};display:flex;align-items:center;gap:8px;padding:0 12px;box-sizing:border-box;text-align:left;color:{{t.label2}}"><svg viewBox="0 0 24 24" style="width:20px;height:20px;flex:none" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="{{c.glyph}}"></path></svg><span style="display:flex;flex-direction:column;min-width:0"><span style="font-size:15px;font-weight:600;color:{{t.label}};white-space:nowrap">{{c.name}}</span><span class="tnum" style="font-size:12px;color:{{t.label2}}">{{c.sub}}</span></span></button></sc-for></div>
+
+<div class="a" style="left:0;top:294px;width:402px;height:580px;overflow:hidden"><sc-for list="{{tiles}}" as="p" hint-placeholder-count="12"><div style="position:absolute;left:{{p.left}};top:{{p.top}};width:{{p.size}};height:{{p.size}};background:{{p.bg}}"><span class="tnum" style="position:absolute;right:5px;bottom:4px;font-size:11px;font-weight:600;color:#FFFFFF;text-shadow:0 1px 2px rgba(0,0,0,0.6);display:{{p.durDisplay}}">{{p.dur}}</span></div></sc-for></div>
+
+<div class="a" style="left:0;top:0;width:402px;height:114px;background:linear-gradient(180deg,{{t.bg}} 0%,{{t.bg}} 45%,rgba(0,0,0,0) 100%);opacity:0.92"></div>
+<button aria-label="Back" class="g" style="left:16px;top:62px;width:44px;height:44px;background:{{t.glass}};border:1px solid {{t.glassStroke}};box-shadow:{{t.glassShadow}};backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);color:{{t.label}}"><svg viewBox="0 0 24 24" style="width:18px;height:18px;flex:none" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"></path></svg></button>
+<div class="a" style="left:72px;top:62px;height:44px;display:flex;align-items:center;font-size:17px;font-weight:600;white-space:nowrap">On This iPhone</div>
+<div class="a" style="left:270px;top:62px;width:116px;height:44px;border-radius:22px;background:{{t.glass}};border:1px solid {{t.glassStroke}};box-shadow:{{t.glassShadow}};backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);box-sizing:border-box;display:flex;align-items:center">
+<button aria-label="More: Pause Downloads, Remove All from iPhone" style="width:44px;height:44px;border:0;background:none;display:flex;align-items:center;justify-content:center;color:{{t.label}}"><svg viewBox="0 0 24 24" style="width:18px;height:18px;flex:none" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 12h.01 M12 12h.01 M18 12h.01"></path></svg></button>
+<button aria-label="Select photos" style="flex:1;height:44px;border:0;background:none;font-size:17px;color:{{t.label}}">Select</button>
+</div>
+<div class="a" style="left:20px;top:778px;width:290px;height:62px;border-radius:31px;background:{{t.glass}};border:1px solid {{t.glassStroke}};box-shadow:{{t.glassShadow}};backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px)"></div><button class="a col" style="background:none;left:20.0px;top:778px;width:96.7px;height:62px;color:{{t.label}}"><svg viewBox="0 0 24 24" style="width:22px;height:22px;flex:none" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M7.5 6.5h13v11h-13z M4 9.5v11h13 M9.5 15l3-3 2.5 2.5 1.5-1.5 2.5 2.5"></path></svg><span style="font-size:10px;font-weight:500;margin-top:3px">Library</span></button><div class="a" style="left:217.3px;top:782px;width:88.7px;height:54px;border-radius:27px;background:{{t.fill}}"></div><button class="a col" style="background:none;left:116.7px;top:778px;width:96.7px;height:62px;color:{{t.label}}"><svg viewBox="0 0 24 24" style="width:22px;height:22px;flex:none" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M5 9.5h14v10.5H5z M7 6.5h10 M9 3.5h6"></path></svg><span style="font-size:10px;font-weight:500;margin-top:3px">Collections</span></button><button class="a col" style="background:none;left:213.3px;top:778px;width:96.7px;height:62px;color:{{t.tint}}"><svg viewBox="0 0 24 24" style="width:22px;height:22px;flex:none" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M14.6 3.6a4.2 4.2 0 0 0-4.5 5.6L3.8 15.5a1.9 1.9 0 0 0 2.7 2.7l6.3-6.3a4.2 4.2 0 0 0 5.6-4.5l-2.5 2.5-2.4-.6-.6-2.4z M4 3.5l1.5-.5 4 4-1 1-4-4z M13.5 14.5l5 5"></path></svg><span style="font-size:10px;font-weight:500;margin-top:3px">Utilities</span></button><button aria-label="Search" class="g" style="left:320px;top:778px;width:62px;height:62px;background:{{t.glass}};border:1px solid {{t.glassStroke}};box-shadow:{{t.glassShadow}};backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);color:{{t.label}}"><svg viewBox="0 0 24 24" style="width:22px;height:22px;flex:none" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M10.5 4a6.5 6.5 0 1 0 0 13a6.5 6.5 0 1 0 0-13z M15.5 15.5L20 20"></path></svg></button>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"dark":{"editor":"boolean","default":false},"$preview":{"width":402,"height":874}}'>
+
+const LIGHT = { bg:'#FFFFFF', grouped:'#F2F2F7', card:'#FFFFFF', label:'#000000', label2:'#6C6C70', label3:'#8E8E93',
+  sep:'#C6C6C8', fill:'#E9E9EB', fill2:'#F2F2F7', glass:'rgba(255,255,255,0.78)', glassStroke:'rgba(0,0,0,0.08)',
+  glassShadow:'0 4px 18px rgba(0,0,0,0.12)', tint:'#C6730E', red:'#FF3B30', green:'#34C759', orange:'#FF9500',
+  accent:'#C6730E', dim:'rgba(0,0,0,0.35)', sheet:'#FFFFFF', onAccent:'#FFFFFF' };
+const DARK = { bg:'#000000', grouped:'#000000', card:'#1C1C1E', label:'#FFFFFF', label2:'#98989F', label3:'#6C6C70',
+  sep:'#38383A', fill:'#2C2C2E', fill2:'#1C1C1E', glass:'rgba(44,44,46,0.78)', glassStroke:'rgba(255,255,255,0.10)',
+  glassShadow:'0 4px 18px rgba(0,0,0,0.5)', tint:'#EB9526', red:'#FF453A', green:'#30D158', orange:'#FF9F0A',
+  accent:'#EB9526', dim:'rgba(0,0,0,0.55)', sheet:'#1C1C1E', onAccent:'#000000' };
+const SKIES=[['#5B7FA6','#E8C39E'],['#2E4A6B','#9FB8C9'],['#7A5C8E','#F2A774'],['#3D6B5A','#C9D6A3'],['#8AA9C1','#F4E1C1'],
+ ['#1F3A4D','#D98C5F'],['#4F6D7A','#DDE2C6'],['#6B4E3D','#E2B07A'],['#355C7D','#C06C84'],['#2B5876','#4E4376'],['#A3B18A','#344E41'],['#D4A373','#606C38']];
+const DUR=['0:42','1:08','0:17','2:31','0:09'];
+function tile(i){ const s=SKIES[i%SKIES.length]; const h=46+((i*7)%22);
+  return 'linear-gradient(180deg,'+s[0]+' 0%,'+s[1]+' '+h+'%,#2F3B2F '+h+'%,#1E271E 100%)'; }
+function cover(i){ const s=SKIES[i%SKIES.length]; return 'linear-gradient(170deg,'+s[0]+' 0%,'+s[1]+' 100%)'; }
+function px(v){ return v.toFixed(2)+'px'; }
+const KEEPS_NEW = 'M12 3a9 9 0 1 0 0 18a9 9 0 1 0 0-18z M12 7.5v8 M8.5 12l3.5 3.5 3.5-3.5';
+const CHECK = 'M5 12.5l4.5 4.5L19 7.5';
+const RING = 2*Math.PI*14;
+
+class Component extends DCLogic {
+  renderVals() {
+    const dk = !!this.props.dark;
+    const t = dk ? DARK : LIGHT;
+    const s = { cell2: dk ? t.card : t.fill2 };
+    const KEEPS_NEW = 'M12 3a9 9 0 1 0 0 18a9 9 0 1 0 0-18z M12 7.5v8 M8.5 12l3.5 3.5 3.5-3.5';
+    const CHECK = 'M12 3a9 9 0 1 0 0 18a9 9 0 1 0 0-18z M8 12.5l3 3 5-6';
+    const albums = [
+      { left:'16px', width:'152px', name:'Iceland 2026', sub:'38 of 226', glyph:KEEPS_NEW, label:'Iceland 2026, 38 of 226, keeps new photos' },
+      { left:'176px', width:'124px', name:'Dolomites', sub:'96 items', glyph:KEEPS_NEW, label:'Dolomites, 96 items, keeps new photos' },
+      { left:'308px', width:'140px', name:'Client Proofs', sub:'40 items', glyph:CHECK, label:'Client Proofs, 40 items' }
+    ];
+    const g=2, w=(402-g*2)/3, tiles=[]; const vids=[1,5,9];
+    for(let i=0;i<15;i++){ const r=Math.floor(i/3), c=i%3; const v=vids.indexOf(i)>=0;
+      tiles.push({ left:px(c*(w+g)), top:px(r*(w+g)), size:px(w), bg:tile(20+i), durDisplay:v?'block':'none', dur:DUR[i%DUR.length] }); }
+    return { t, s, albums, tiles };
+  }
+}
+</script>
+</body>
+</html>

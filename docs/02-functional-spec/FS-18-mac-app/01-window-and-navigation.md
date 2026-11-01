@@ -28,10 +28,10 @@ sổ riêng là tuỳ chọn.
 
 - Bốn nhóm, tối đa 2 cấp: (không tiêu đề) All Photos · Favorites · Videos · RAW · Recently Added ·
   **Sources** `[+]` · **Collections** `[+]` (On This Day, Albums ›, smart album, Hidden — FS-19) · **Utilities**.
-- Utilities: Statistics · Places · Trips · Duplicates · Collages · Video Projects · On Server.
+- Utilities: Statistics · Duplicates · Collages · Video Projects · On Server (Places và Trips gỡ khỏi app 2026-10-24).
 - Albums luôn có chevron, đóng mặc định; mở ra là danh sách phẳng, không thư mục (D19).
-- Đếm có ở Library, Sources, Collections, Trips, Duplicates (số nhóm), Collages, Video Projects, On Server;
-  Statistics, Places, On This Day, Recently Added không có số.
+- Đếm có ở Library, Sources, Collections, Duplicates (số nhóm), Collages, Video Projects, On Server;
+  Statistics, On This Day, Recently Added không có số.
 - Hàng chọn = nền xám, icon accent. Icon hàng luôn amber (D11).
 - Chân sidebar: nghỉ thì "Up to date · indexed 2 min ago"; đang index thì "Indexing ‹nguồn› 41%" + thanh tiến độ.
 - Bốn trạng thái hàng nguồn (gắn ngoài, offline, đang thêm, cần cấp quyền) do FS-19 định nghĩa.

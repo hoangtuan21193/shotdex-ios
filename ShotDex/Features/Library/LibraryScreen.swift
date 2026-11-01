@@ -621,6 +621,7 @@ struct LibraryScreen: View {
             onAddToCollection: { addToCollection() },
             onExportEXIF: { exportEXIF(model) },
             onDuplicate: { duplicateSelected() },
+            onKeepOnDevice: { [selectedIds] in navigation.keepRequest = KeepRequest(ids: selectedIds) },
             onUploadToServer: presentServerUpload.map { present in { present(selectedIds, $0) } },
             offersCaptionKeywords: true,
             offersFileExport: true,

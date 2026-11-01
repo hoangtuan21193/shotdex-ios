@@ -46,7 +46,7 @@ Board: `PH_Statistics` · `IP_Statistics` · `DI_Statistics` · `DC_Statistics` 
 
 ## 3. Thanh công cụ
 
-- Trái: nút Settings. Phải: **một** nút `+` mở menu **Add Chart** · **Reorder Charts** (C6). Không còn nút ⇅.
+- Trái: nút Back về Collections (màn đẩy từ Utilities, tiêu đề inline **Statistics**; không còn nút Settings). Phải: **một** nút `+` mở menu **Add Chart** · **Reorder Charts** (C6). Không còn nút ⇅.
 - Chưa có biểu đồ nào: Reorder Charts mờ, không ẩn; Add Chart vẫn dùng được.
 - Đang sắp xếp: dashboard về một cột kéo-thả; nút `+` nhường chỗ cho nút chữ **Done**. Done → bố cục cũ.
 - iOS 26 và trước 26 cùng hai mục menu và cùng nút Done.

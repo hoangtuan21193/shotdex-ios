@@ -27,8 +27,6 @@ Luật gộp: sửa trong cùng lượt với code của AC tương ứng (docs/
 | FS-03.17 §3 · FS-03.17a (cả file) | cột 280, băng đĩa, dải 6 công cụ, phẳng không gập | toolbar + segmented, inspector 360 gập được, Presets ở sidebar |
 | FS-03.07 §4 + AC-11, AC-13 | hai pane, cột 400, nút chính ghim đáy | inspector 360, nút chính trên toolbar; dọc giữ cột ([02b §2](02b-screens.md)) |
 | FS-06.01 §2–§5 | tab Collections, hero 260, tile 192 | hàng Albums trong sidebar mở trang album; hero 764×150, tile 159 |
-| FS-06.02 | bản đồ toàn màn | bản đồ + inspector 360 của cụm |
-| FS-06.05 §4 + AC-1, AC-2, AC-5 | 4 cột 324 ở 1344pt; 3 cột ở dọc | 3 cột 328 ở 1016pt; dọc theo §4 với bề rộng nội dung |
 | FS-06.06 §7 · FS-06.06b §4 + AC-18 | thẻ xếp gạch ≥ 400, thanh dưới giữa màn | danh sách nhóm 360 + chi tiết; Delete N Photos trên toolbar |
 | FS-07.01 §6 · FS-07.03 AC-12, AC-29, AC-30 | 3 cột ở iPad ngang 1344pt | 3 cột 328 ở 1016pt; `+` trên toolbar giữ hai mục |
 | FS-08.05 AC-3, AC-12 | detail mở ở "Photo Library"; Done "về tab trước đó" | mở ở Sources; Done về hàng sidebar trước đó |
