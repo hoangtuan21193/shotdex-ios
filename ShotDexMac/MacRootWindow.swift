@@ -13,16 +13,21 @@ struct MacRootWindow: View {
     /// File › New Backup… asked for the sheet; the Backup screen opens it.
     @State private var opensNewBackup = false
     @State private var serverForm: MacServerFormRequest?
+    @State private var smartAlbumForm: MacSmartAlbumFormRequest?
+    @State private var smartAlbums: [SmartAlbum] = []
     @State private var viewMode = MacViewMode.grid
 
     var body: some View {
         NavigationSplitView {
             MacSidebar(selection: $selection, library: library, sources: (try? dependencies.sources.sources()) ?? [],
-                       backup: backupBadge)
+                       backup: backupBadge, smartAlbums: smartAlbums,
+                       newSmartAlbum: { smartAlbumForm = MacSmartAlbumFormRequest() })
                 .navigationSplitViewColumnWidth(MacWindowMetrics.sidebarWidth)
         } detail: {
             if selection == .backup {
                 MacBackupScreen(showsInspector: $showsBackupInspector, opensNewBackup: $opensNewBackup)
+            } else if case .smartAlbum(let id) = selection, let album = smartAlbums.first(where: { $0.id == id }) {
+                MacSmartAlbumScreen(album: album, edit: { smartAlbumForm = MacSmartAlbumFormRequest(editing: album) })
             } else {
                 libraryDetail
             }
@@ -30,9 +35,20 @@ struct MacRootWindow: View {
         .tint(MacTheme.accent)
         .task { await start() }
         .onReceive(NotificationCenter.default.publisher(for: .macShowBackup)) { _ in selection = .backup }
+        .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
+            dependencies.onServerCheck.appBecameActive()
+        }
         .onReceive(NotificationCenter.default.publisher(for: .macAddServer)) { note in
             serverForm = MacServerFormRequest(editing: (note.object as? String).flatMap { try? dependencies.fileServers.fetch(id: $0) })
         }
+        .sheet(item: $smartAlbumForm) { request in
+            MacSmartAlbumEditorSheet(existing: request.editing) { album in
+                smartAlbums = (try? dependencies.smartAlbums.fetchAllOrdered()) ?? []
+                selection = .smartAlbum(album.id)
+            }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .macNewSmartAlbum)) { _ in smartAlbumForm = MacSmartAlbumFormRequest() }
+        .onAppear { smartAlbums = (try? dependencies.smartAlbums.fetchAllOrdered()) ?? [] }
         .sheet(item: $serverForm) { request in
             MacServerFormSheet(editing: request.editing) { _ in
                 NotificationCenter.default.post(name: .macServersChanged, object: nil)
@@ -129,6 +145,8 @@ struct MacRootWindow: View {
         if MacDemoLibrary.section == "backup" { selection = .backup }
         if MacDemoLibrary.section == "addServer" { serverForm = MacServerFormRequest() }
         if MacDemoLibrary.section == "newBackup" { selection = .backup; opensNewBackup = true }
+        if MacDemoLibrary.section == "smartAlbum" { selection = .smartAlbum("demo-night") }
+        if MacDemoLibrary.section == "newSmartAlbum" { smartAlbumForm = MacSmartAlbumFormRequest() }
         if MacDemoLibrary.isOn {
             library?.loadIfNeeded()
             return
@@ -139,6 +157,8 @@ struct MacRootWindow: View {
         }
         // The helper runs the jobs, or the app while it is open (FS-22.06 §2).
         dependencies.backupControl.appStarted()
+        // On Server: each time the app comes forward (FS-19.07 §5, §11).
+        dependencies.onServerCheck.appBecameActive()
         #if DEBUG
         MacAgentProbe.runIfAsked(dependencies)
         #endif
@@ -149,6 +169,12 @@ struct MacRootWindow: View {
 }
 
 enum MacViewMode: Hashable { case grid, list }
+
+/// New Smart Album… or editing one.
+struct MacSmartAlbumFormRequest: Identifiable {
+    let id = UUID()
+    var editing: SmartAlbum?
+}
 
 /// Add a Server… or Edit Server for one connection.
 struct MacServerFormRequest: Identifiable {

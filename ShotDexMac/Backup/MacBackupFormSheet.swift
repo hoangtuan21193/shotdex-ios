@@ -23,6 +23,7 @@ struct MacBackupFormSheet: View {
             }
         }
         .frame(width: 640, height: 560)
+        .tint(MacTheme.accent)
         .sheet(isPresented: $choosingFolder) {
             if let server = model.connection {
                 MacServerFolderPicker(server: server, password: dependencies.fileServers.password(for: server.id) ?? "",

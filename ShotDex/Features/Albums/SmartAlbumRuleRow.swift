@@ -84,7 +84,7 @@ struct SmartAlbumRuleRow: View {
         .padding(.horizontal, 10)
         .padding(.vertical, 6)
         .background(Color(.secondarySystemFill), in: Capsule())
-        .foregroundStyle(Color(.label))
+        .foregroundStyle(Color.primary)
     }
 
     /// Switching field resets the operator to that field's default and clears
@@ -147,7 +147,9 @@ struct SmartAlbumRuleRow: View {
         VStack(alignment: .leading, spacing: 8) {
             TextField("Value", text: $rule.text)
                 .autocorrectionDisabled()
+#if os(iOS)
                 .textInputAutocapitalization(.never)
+#endif
                 .textFieldStyle(.roundedBorder)
             if !matchingSuggestions.isEmpty {
                 ScrollView(.horizontal, showsIndicators: false) {
@@ -159,7 +161,7 @@ struct SmartAlbumRuleRow: View {
                                     .padding(.horizontal, 10)
                                     .padding(.vertical, 5)
                                     .background(Color(.secondarySystemFill), in: Capsule())
-                                    .foregroundStyle(Color(.label))
+                                    .foregroundStyle(Color.primary)
                             }
                             .buttonStyle(.plain)
                         }
@@ -190,7 +192,7 @@ struct SmartAlbumRuleRow: View {
                     .foregroundStyle(.secondary)
                 Spacer()
                 Text(value)
-                    .foregroundStyle(Color(.label))
+                    .foregroundStyle(Color.primary)
                     .lineLimit(1)
                     .truncationMode(.head)
                 Image(systemName: "chevron.right")
@@ -216,7 +218,7 @@ struct SmartAlbumRuleRow: View {
         } label: {
             HStack {
                 Text(choiceLabel)
-                    .foregroundStyle(rule.text.isEmpty ? .secondary : Color(.label))
+                    .foregroundStyle(rule.text.isEmpty ? .secondary : Color.primary)
                 Spacer()
                 Image(systemName: "chevron.up.chevron.down")
                     .font(.caption)
@@ -330,7 +332,9 @@ struct SmartAlbumRuleRow: View {
     /// "mm" unit label so the user never types the unit into the value.
     private func numberField(_ prompt: String, text: Binding<String>) -> some View {
         TextField(prompt, text: text)
+#if os(iOS)
             .keyboardType(rule.field.numericKind == .shutter ? .default : .decimalPad)
+#endif
             .textFieldStyle(.roundedBorder)
             .overlay(alignment: .trailing) {
                 if rule.field == .focalLength {

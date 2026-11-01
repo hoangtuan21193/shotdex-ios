@@ -52,15 +52,16 @@ final class SmartAlbumDetailModel {
     /// Library). Cache misses paint placeholders while the chunk resolves.
     @ObservationIgnored private let assetCache: AsyncChunkedLookupCache<PHAsset>
 
-    init(album: SmartAlbum, dependencies: AppDependencies) {
-        self.libraryQueries = dependencies.libraryQueries
-        self.metadataStore = dependencies.metadataStore
-        self.photoLibrary = dependencies.photoLibrary
-        self.pipeline = dependencies.indexPipeline
+    init(album: SmartAlbum, libraryQueries: LibraryQueries, metadataStore: MetadataStore,
+         photoLibrary: PhotoLibraryService, pipeline: IndexPipeline, database: AppDatabase) {
+        self.libraryQueries = libraryQueries
+        self.metadataStore = metadataStore
+        self.photoLibrary = photoLibrary
+        self.pipeline = pipeline
         self.query = album.query
         self.albumId = album.id
-        self.sourceStore = SourceStore(database: dependencies.database)
-        self.database = dependencies.database
+        self.sourceStore = SourceStore(database: database)
+        self.database = database
         self.sortOrder = AlbumSortStore.order(for: album.id, isSmartAlbum: true)
         let assetCache = AsyncChunkedLookupCache<PHAsset>(
             chunkSize: 120,

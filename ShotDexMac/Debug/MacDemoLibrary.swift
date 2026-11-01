@@ -23,6 +23,11 @@ enum MacDemoLibrary {
         let dependencies = MacDependencies(database: database, photoLibrary: PhotoLibraryService())
         try? dependencies.metadataStore.saveBatch(rows(), cursorAssetId: nil)
         seedBackups(dependencies)
+        // A smart album as on board `MAC_SmartAlbum`'s sidebar.
+        try? dependencies.smartAlbums.upsert(SmartAlbum(
+            id: "demo-night", name: "Night ISO 3200+",
+            query: SmartAlbumQuery(rules: [SmartAlbumRule(field: .iso, op: .greaterThan, number: 3199)]),
+            createdAt: 1))
         return dependencies
     }
 

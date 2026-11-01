@@ -13,6 +13,8 @@ struct MacServerFormSheet: View {
     @State private var untrustedFingerprint: String?
     @State private var saveError: String?
     @State private var choosingFolder = false
+    /// Show in Sidebar (board): the connection's folder becomes a source.
+    @State private var showsInSidebar = true
 
     enum TestState: Equatable {
         case idle, running, passed
@@ -71,8 +73,10 @@ struct MacServerFormSheet: View {
                                 .disabled(draft.server.host.isEmpty || draft.server.username.isEmpty)
                         }
                     }
+                    Toggle(String(localized: "Show in Sidebar", comment: "Mac server form: add the folder as a source"), isOn: $showsInSidebar)
                 } footer: {
-                    Text("Choose… signs in and lists the folders this computer shares.", comment: "Mac server form: folder footer")
+                    Text("Choose… signs in and lists the folders this computer shares. Show in Sidebar adds a row for this folder under Sources.",
+                         comment: "Mac server form: folder footer")
                 }
                 Section {
                     HStack(spacing: 12) {
@@ -96,7 +100,11 @@ struct MacServerFormSheet: View {
             .padding(20)
         }
         .frame(width: 520, height: 600)
+        .tint(MacTheme.accent)
         .task {
+            if !draft.isNew {
+                showsInSidebar = ((try? SourceStore(database: dependencies.database).serverSourceId(connectionId: draft.server.id)) ?? nil) != nil
+            }
             guard draft.isNew, discovery == nil else { return }
             let model = ServerDiscoveryModel(browser: BonjourServerBrowser(), scanner: SubnetSMBScanner())
             discovery = model
@@ -208,7 +216,10 @@ struct MacServerFormSheet: View {
         do {
             try dependencies.fileServers.save(row, password: draft.password.isEmpty ? nil : draft.password)
             // The store numbers a taken name; read back what it kept.
-            saved((try? dependencies.fileServers.fetch(id: row.id)) ?? row)
+            let kept = (try? dependencies.fileServers.fetch(id: row.id)) ?? row
+            let (sources, isSource) = (dependencies.sourcesModel, showsInSidebar)
+            Task { await sources.setServerSource(isSource, connection: kept) }
+            saved(kept)
             dismiss()
         } catch {
             saveError = error.localizedDescription

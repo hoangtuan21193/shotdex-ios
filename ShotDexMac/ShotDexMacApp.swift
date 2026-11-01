@@ -50,6 +50,10 @@ enum MacWindowMetrics {
 struct MacBackupCommands: Commands {
     var body: some Commands {
         CommandGroup(after: .newItem) {
+            Button(String(localized: "New Smart Album…", comment: "Mac menu: File › New Smart Album…")) {
+                NotificationCenter.default.post(name: .macNewSmartAlbum, object: nil)
+            }
+            .keyboardShortcut("n", modifiers: [.option, .command])
             Button(String(localized: "New Backup…", comment: "Mac menu: File › New Backup…")) {
                 NotificationCenter.default.post(name: .macNewBackup, object: nil)
             }

@@ -1,0 +1,122 @@
+import Photos
+import SwiftUI
+
+/// A smart album in the Library window (board `MAC_SmartAlbum`, FS-19.07 §11):
+/// the read-only conditions and the On Server line under the toolbar, the
+/// grid with the "on server" glyph, and Delete (⌘⌫) through the gate that
+/// asks the server first (§9).
+struct MacSmartAlbumScreen: View {
+    let album: SmartAlbum
+    var edit: () -> Void
+    @Environment(MacDependencies.self) private var dependencies
+    @State private var model: SmartAlbumDetailModel?
+    @State private var selection: Set<String> = []
+    @State private var onServer: Set<String> = []
+    @State private var deletion = PhotoDeletionFlow()
+    @State private var deleteError: String?
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            if let model {
+                conditionsBar(model)
+                Divider()
+                MacPhotoGrid(items: model.items, photoLibrary: dependencies.photoLibrary,
+                             asset: { model.asset(for: $0) }, picture: MacRootWindow.demoPicture,
+                             isNewestFirst: true, onServer: onServer, onSelection: { selection = $0 })
+            } else {
+                ProgressView().frame(maxWidth: .infinity, maxHeight: .infinity)
+            }
+        }
+        .navigationTitle(album.name)
+        .navigationSubtitle(String(localized: "Smart Album", comment: "Mac toolbar subtitle of a smart album"))
+        .toolbar {
+            ToolbarItemGroup(placement: .primaryAction) {
+                Button(action: edit) {
+                    Label(String(localized: "Edit Smart Album…", comment: "Mac: edit the open smart album"), systemImage: "slider.horizontal.3")
+                }
+                Button(role: .destructive, action: delete) {
+                    Label(selection.count == 1
+                          ? String(localized: "Delete 1 Photo…", comment: "Mac: delete the selected photo")
+                          : String(localized: "Delete \(selection.count) Photos…", comment: "Mac: delete the selected photos"),
+                          systemImage: "trash")
+                }
+                .keyboardShortcut(.delete, modifiers: .command)
+                .disabled(selection.isEmpty || deletion.isChecking)
+            }
+        }
+        .photoDeletionPrompts(deletion)
+        .alert(String(localized: "Couldn't Delete", comment: "Mac: a delete failed"),
+               isPresented: Binding(get: { deleteError != nil }, set: { if !$0 { deleteError = nil } })) {
+            Button(String(localized: "OK", comment: "Delete: dismiss"), role: .cancel) {}
+        } message: {
+            Text(deleteError ?? "")
+        }
+        .task(id: album) {
+            let model = SmartAlbumDetailModel(album: album, libraryQueries: dependencies.libraryQueries,
+                                              metadataStore: dependencies.metadataStore, photoLibrary: dependencies.photoLibrary,
+                                              pipeline: dependencies.indexPipeline, database: dependencies.database)
+            self.model = model
+            selection = []
+            await model.load()
+        }
+        .task(id: "\(dependencies.onServerCheck.generation)-\(model != nil)") {
+            guard let model else { return }
+            await model.refreshOnServer(dependencies.onServerCheck,
+                                        isLimited: dependencies.photoLibrary.authorizationState == .limited)
+            let queries = OnServerProgressQueries(database: dependencies.database)
+            onServer = (try? await Task.detached { try queries.presentAnywhere() }.value) ?? []
+            if dependencies.onServerCheck.generation > 0 { await model.load() }
+        }
+    }
+
+    /// Under the toolbar (board `MAC_SmartAlbum`): the conditions as
+    /// read-only chips and the count on the left, the On Server line on the
+    /// right.
+    private func conditionsBar(_ model: SmartAlbumDetailModel) -> some View {
+        HStack(alignment: .top, spacing: 12) {
+            ForEach(album.query.validRules) { rule in
+                Text(rule.displaySummary(naming: model.sourceNames))
+                    .font(.callout)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 4)
+                    .background(.quaternary, in: Capsule())
+            }
+            Text(model.matchCount == 1
+                 ? String(localized: "1 photo", comment: "Mac toolbar subtitle")
+                 : String(localized: "\(model.matchCount.formatted()) photos", comment: "Mac toolbar subtitle"))
+                .font(.callout.weight(.semibold))
+                .monospacedDigit()
+                .padding(.vertical, 4)
+            Spacer(minLength: 12)
+            if !model.onServerLines.isEmpty {
+                VStack(alignment: .trailing, spacing: 2) {
+                    ForEach(model.onServerLines, id: \.self) { Text($0).lineLimit(1) }
+                }
+                .font(.caption)
+                .monospacedDigit()
+                .foregroundStyle(.secondary)
+                .accessibilityElement(children: .combine)
+                .accessibilityAddTraits(.updatesFrequently)
+            }
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 10)
+    }
+
+    /// Delete through the gate (FS-19.07 §9): photos that rely on a server
+    /// are checked there first; Can't Reach asks Delete Anyway or Cancel.
+    private func delete() {
+        guard let model, !selection.isEmpty else { return }
+        let ids = Array(selection)
+        deletion.delete(ids, gate: dependencies.photoDeletionGate, perform: { targets in
+            try await model.deleteAssets(ids: Set(targets), checkingServer: false)
+        }, finished: { result in
+            switch result {
+            case .success: selection = []
+            case .failure(let error) where error is CancellationError: break
+            case .failure(let error):
+                if (error as? PHPhotosError)?.code != .userCancelled { deleteError = error.localizedDescription }
+            }
+        })
+    }
+}

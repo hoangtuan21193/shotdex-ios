@@ -43,7 +43,7 @@ final class SourcesModel {
                 """).map { ($0["id"] as String, (status: $0["status"] as String?, lastRead: $0["lastRead"] as Int?,
                                                  protocol: $0["protocol"] as String?)) })
         }) ?? [:]
-        let access = SettingsSummary.accessTitle(photoLibrary.authorizationState)
+        let access = photoLibrary.authorizationState.title
         rows = sources.map { source in
             let info = statuses[source.id]
             let stored: SourceRowText.Status = switch info?.status {

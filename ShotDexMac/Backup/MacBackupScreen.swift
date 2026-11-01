@@ -211,6 +211,8 @@ extension Notification.Name {
     static let macShowBackup = Notification.Name("ShotDexMacShowBackup")
     /// A connection was added or edited — screens that read the list redraw.
     static let macServersChanged = Notification.Name("ShotDexMacServersChanged")
+    /// File › New Smart Album… ⌥⌘N (FS-18.01b).
+    static let macNewSmartAlbum = Notification.Name("ShotDexMacNewSmartAlbum")
 }
 
 /// One job (board `MAC_Backup`): the status glyph, `source → connection`,

@@ -11,6 +11,13 @@ struct MacPhotoGrid: NSViewRepresentable {
     let asset: (String) -> PHAsset?
     /// A picture by asset id, for a library that is not Photos (the demo).
     var picture: ((String) -> CGImage?)? = nil
+    /// The rows are already newest first (a smart album); the Library
+    /// model keeps the newest at the end.
+    var isNewestFirst = false
+    /// Photos with a copy on a server (FS-19.07 §8): the drive glyph.
+    var onServer: Set<String> = []
+    /// The selected asset ids, each time the selection changes.
+    var onSelection: ((Set<String>) -> Void)? = nil
 
     func makeCoordinator() -> Coordinator { Coordinator() }
 
@@ -45,7 +52,10 @@ struct MacPhotoGrid: NSViewRepresentable {
         coordinator.photoLibrary = photoLibrary
         coordinator.asset = asset
         coordinator.picture = picture
-        coordinator.update(items)
+        coordinator.onSelection = onSelection
+        let glyphsChanged = coordinator.onServer != onServer
+        coordinator.onServer = onServer
+        coordinator.update(items, isNewestFirst: isNewestFirst, forceReload: glyphsChanged)
     }
 
     @MainActor
@@ -54,14 +64,16 @@ struct MacPhotoGrid: NSViewRepresentable {
         var photoLibrary: PhotoLibraryService?
         var asset: (String) -> PHAsset? = { _ in nil }
         var picture: ((String) -> CGImage?)?
+        var onServer: Set<String> = []
+        var onSelection: ((Set<String>) -> Void)?
         private var rows: [LibraryGridItem] = []
         private var sections: [PhotoGridSection] = []
 
-        func update(_ items: [LibraryGridItem]) {
+        func update(_ items: [LibraryGridItem], isNewestFirst: Bool, forceReload: Bool) {
             // The model keeps the newest at the end (the iOS grid anchors at
             // the bottom); the Mac reads top-down, newest day first.
-            let newestFirst = Array(items.reversed())
-            guard newestFirst.map(\.assetId) != rows.map(\.assetId) else { return }
+            let newestFirst = isNewestFirst ? items : Array(items.reversed())
+            guard forceReload || newestFirst.map(\.assetId) != rows.map(\.assetId) else { return }
             rows = newestFirst
             sections = PhotoGridSectionBuilder.sections(creationDates: rows.map(\.creationDateValue), granularity: .day)
             collection?.reloadData()
@@ -77,8 +89,26 @@ struct MacPhotoGrid: NSViewRepresentable {
             let tile = collectionView.makeItem(withIdentifier: MacPhotoTile.identifier, for: indexPath) as! MacPhotoTile
             let row = rows[sections[indexPath.section].range.lowerBound + indexPath.item]
             tile.show(row, asset: asset(row.assetId), picture: picture?(row.assetId), photoLibrary: photoLibrary,
-                      side: (collectionView.collectionViewLayout as? NSCollectionViewFlowLayout)?.itemSize.width ?? 160)
+                      side: (collectionView.collectionViewLayout as? NSCollectionViewFlowLayout)?.itemSize.width ?? 160,
+                      isOnServer: onServer.contains(row.assetId))
             return tile
+        }
+
+        func collectionView(_ collectionView: NSCollectionView, didSelectItemsAt indexPaths: Set<IndexPath>) {
+            reportSelection(collectionView)
+        }
+
+        func collectionView(_ collectionView: NSCollectionView, didDeselectItemsAt indexPaths: Set<IndexPath>) {
+            reportSelection(collectionView)
+        }
+
+        private func reportSelection(_ collectionView: NSCollectionView) {
+            let ids = collectionView.selectionIndexPaths.compactMap { path -> String? in
+                guard path.section < sections.count else { return nil }
+                let index = sections[path.section].range.lowerBound + path.item
+                return index < rows.count ? rows[index].assetId : nil
+            }
+            onSelection?(Set(ids))
         }
 
         func collectionView(_ collectionView: NSCollectionView, viewForSupplementaryElementOfKind kind: NSCollectionView.SupplementaryElementKind,
@@ -119,6 +149,9 @@ final class MacPhotoTile: NSCollectionViewItem {
     private let photo = NSView()
     private let badge = NSTextField(labelWithString: "")
     private let exif = NSTextField(labelWithString: "")
+    /// "On server" (FS-19.07 §8): bottom-left, as on iOS.
+    private let serverGlyph = NSImageView(image: NSImage(systemSymbolName: "externaldrive.fill.badge.checkmark",
+                                                           accessibilityDescription: nil) ?? NSImage())
     private let shade = CAGradientLayer()
     private var requestId: PHImageRequestID?
     private weak var photoLibrary: PhotoLibraryService?
@@ -142,7 +175,9 @@ final class MacPhotoTile: NSCollectionViewItem {
         exif.font = .monospacedDigitSystemFont(ofSize: 11, weight: .semibold)
         exif.textColor = .white
         exif.alignment = .right
-        for subview in [photo, badge, exif] {
+        serverGlyph.contentTintColor = .white
+        serverGlyph.symbolConfiguration = .init(pointSize: 11, weight: .semibold)
+        for subview in [photo, badge, exif, serverGlyph] {
             subview.translatesAutoresizingMaskIntoConstraints = false
             view.addSubview(subview)
         }
@@ -155,7 +190,9 @@ final class MacPhotoTile: NSCollectionViewItem {
             badge.topAnchor.constraint(equalTo: view.topAnchor, constant: 8),
             exif.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -8),
             exif.bottomAnchor.constraint(equalTo: view.bottomAnchor, constant: -6),
-            exif.leadingAnchor.constraint(greaterThanOrEqualTo: view.leadingAnchor, constant: 8),
+            exif.leadingAnchor.constraint(greaterThanOrEqualTo: serverGlyph.trailingAnchor, constant: 4),
+            serverGlyph.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 8),
+            serverGlyph.bottomAnchor.constraint(equalTo: view.bottomAnchor, constant: -6),
         ])
     }
 
@@ -172,7 +209,8 @@ final class MacPhotoTile: NSCollectionViewItem {
         }
     }
 
-    func show(_ row: LibraryGridItem, asset: PHAsset?, picture: CGImage?, photoLibrary: PhotoLibraryService?, side: CGFloat) {
+    func show(_ row: LibraryGridItem, asset: PHAsset?, picture: CGImage?, photoLibrary: PhotoLibraryService?, side: CGFloat,
+              isOnServer: Bool = false) {
         // A reused tile drops a late result by its asset id, below.
         requestId = nil
         photo.layer?.contents = nil
@@ -182,7 +220,11 @@ final class MacPhotoTile: NSCollectionViewItem {
         badge.stringValue = format.map { " \($0) " } ?? ""
         badge.isHidden = format == nil
         exif.stringValue = MacPhotoTile.exifLine(row)
-        view.setAccessibilityLabel(row.originalFilename ?? "Photo")
+        serverGlyph.isHidden = !isOnServer
+        let name = row.originalFilename ?? String(localized: "Photo", comment: "Mac grid: a photo with no file name")
+        view.setAccessibilityLabel(isOnServer
+            ? String(localized: "\(name), On server", comment: "Mac grid: VoiceOver label of a photo that is on a server")
+            : name)
         if let picture {
             photo.layer?.contents = picture
             return

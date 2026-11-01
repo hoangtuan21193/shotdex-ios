@@ -662,3 +662,10 @@ struct SmartAlbumDetailScreen: View {
         }
     }
 }
+
+extension SmartAlbumDetailModel {
+    convenience init(album: SmartAlbum, dependencies: AppDependencies) {
+        self.init(album: album, libraryQueries: dependencies.libraryQueries, metadataStore: dependencies.metadataStore,
+                  photoLibrary: dependencies.photoLibrary, pipeline: dependencies.indexPipeline, database: dependencies.database)
+    }
+}

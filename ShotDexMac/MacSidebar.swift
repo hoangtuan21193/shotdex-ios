@@ -9,6 +9,8 @@ struct MacSidebar: View {
     /// The Backup row's count, or a warning dot when a job needs the user
     /// (FS-22.06 §5.1).
     var backup: (jobs: Int, needsAttention: Bool) = (0, false)
+    var smartAlbums: [SmartAlbum] = []
+    var newSmartAlbum: () -> Void = {}
 
     var body: some View {
         List(selection: $selection) {
@@ -23,8 +25,21 @@ struct MacSidebar: View {
                         .tag(MacSidebarItem.source(source.id))
                 }
             }
-            Section(String(localized: "Collections", comment: "Mac sidebar group")) {
+            Section {
                 ForEach(MacSidebarItem.collections) { row($0, count: nil) }
+                ForEach(smartAlbums) { album in
+                    Label(album.name, systemImage: MacSidebarItem.smartAlbum(album.id).systemImage)
+                        .tag(MacSidebarItem.smartAlbum(album.id))
+                }
+            } header: {
+                HStack {
+                    Text("Collections", comment: "Mac sidebar group")
+                    Spacer()
+                    Button(action: newSmartAlbum) { Image(systemName: "plus") }
+                        .buttonStyle(.borderless)
+                        .help(String(localized: "New Smart Album… (⌥⌘N)", comment: "Mac sidebar: add a smart album"))
+                        .accessibilityLabel(String(localized: "New Smart Album", comment: "Mac sidebar: add a smart album"))
+                }
             }
             Section(String(localized: "Utilities", comment: "Mac sidebar group")) {
                 ForEach(MacSidebarItem.utilities) { item in
@@ -104,10 +119,12 @@ enum MacSidebarItem: Hashable, Identifiable {
     case allPhotos, favorites, videos, raw, recentlyAdded
     case source(String)
     case onThisDay, albums
+    case smartAlbum(String)
     case backup, statistics, duplicates, collages, videoProjects, onServer
 
     var id: String {
         if case .source(let id) = self { return "source-" + id }
+        if case .smartAlbum(let id) = self { return "smart-" + id }
         return title
     }
 
@@ -125,6 +142,7 @@ enum MacSidebarItem: Hashable, Identifiable {
         case .source: String(localized: "Source", comment: "Mac sidebar: a photo source")
         case .onThisDay: String(localized: "On This Day", comment: "Mac sidebar")
         case .albums: String(localized: "Albums", comment: "Mac sidebar")
+        case .smartAlbum: String(localized: "Smart Album", comment: "Mac sidebar: a smart album")
         case .backup: String(localized: "Backup", comment: "Mac sidebar")
         case .statistics: String(localized: "Statistics", comment: "Mac sidebar")
         case .duplicates: String(localized: "Duplicates", comment: "Mac sidebar")
@@ -144,6 +162,7 @@ enum MacSidebarItem: Hashable, Identifiable {
         case .source: "folder"
         case .onThisDay: "calendar"
         case .albums: "rectangle.stack"
+        case .smartAlbum: "gearshape.2"
         case .backup: "clock.arrow.circlepath"
         case .statistics: "chart.bar"
         case .duplicates: "square.on.square"

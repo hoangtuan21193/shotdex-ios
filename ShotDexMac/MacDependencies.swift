@@ -36,6 +36,17 @@ final class MacDependencies: LibraryServices {
     /// Sends job commands to the helper, or to `backupCoordinator` when the
     /// app runs the jobs itself (FS-22.06 §2).
     let backupControl: MacBackupControl
+    let folderSources: FolderSourceRunner
+    let serverSources: ServerSourceRefresh
+    /// Sources in the sidebar: adding a server source, rescans (FS-19).
+    let sourcesModel: SourcesModel
+    /// Whether each Photos item has a byte-identical copy on a server
+    /// source (FS-19.07, §11 for the Mac).
+    let onServerCheck: OnServerCheck
+    /// Asks the server again before a Photos item that relies on it is
+    /// deleted (FS-19.07 §9).
+    let photoDeletionGate: PhotoDeletionGate
+    let smartAlbums: SmartAlbumStore
 
     init(database: AppDatabase, photoLibrary: PhotoLibraryService) {
         self.database = database
@@ -69,6 +80,36 @@ final class MacDependencies: LibraryServices {
             database: database, store: backups, servers: fileServers, roots: folderRoots, connectionLock: connectionLock
         ))
         backupControl = MacBackupControl(coordinator: backupCoordinator, photoLibrary: photoLibrary)
+        let folderSources = FolderSourceRunner(database: database, metadataStore: metadataStore)
+        self.folderSources = folderSources
+        let serverSources = ServerSourceRefresh(database: database, servers: fileServers,
+                                                composer: MetadataComposer(sensorLookup: SensorLookup(
+                                                    records: (try? SensorDatabaseLoader().loadRecords()) ?? [],
+                                                    customMappings: (try? metadataStore.customMappings()) ?? [])),
+                                                thumbnails: .standard,
+                                                makeClient: { server, password in
+                                                    LockedRemoteFileClient(RemoteFileClientFactory.make(for: server, password: password),
+                                                                           lock: connectionLock, connectionId: server.id, priority: .normal)
+                                                })
+        self.serverSources = serverSources
+        let sourcesModel = SourcesModel(database: database, runner: folderSources, servers: serverSources, photoLibrary: photoLibrary)
+        self.sourcesModel = sourcesModel
+        onServerCheck = OnServerCheck(environment: .live(
+            database: database, servers: fileServers, refresh: serverSources, connectionLock: connectionLock,
+            listingChanged: { await sourcesModel.serverListingChanged() }
+        ))
+        photoDeletionGate = PhotoDeletionGate(
+            database: database,
+            connect: { connectionId in
+                guard let server = try? fileServers.fetch(id: connectionId) else { return nil }
+                let client = LockedRemoteFileClient(RemoteFileClientFactory.make(for: server, password: fileServers.password(for: server.id) ?? ""),
+                                                    lock: connectionLock, connectionId: server.id, priority: .normal)
+                return (client, server.folder)
+            },
+            relist: { sourceId in _ = await serverSources.rescan(sourceId: sourceId) }
+        )
+        photoLibrary.deletionGate = photoDeletionGate
+        smartAlbums = SmartAlbumStore(database: database)
     }
 
     static func live() -> MacDependencies {

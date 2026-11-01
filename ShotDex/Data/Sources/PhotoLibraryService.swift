@@ -1327,3 +1327,16 @@ struct LibraryChangeTokens: Hashable, Sendable {
     let asset: Int
     let collection: Int
 }
+
+extension PhotoAuthorizationState {
+    /// "Full Access", "Limited Access"… — Settings and the Sources rows.
+    var title: String {
+        switch self {
+        case .notDetermined: String(localized: "Not Requested", comment: "Settings → Photo Library: photo access not asked for yet")
+        case .authorized: String(localized: "Full Access", comment: "Settings → Photo Library: photo access")
+        case .limited: String(localized: "Limited Access", comment: "Settings → Photo Library: photo access")
+        case .denied: String(localized: "Denied", comment: "Settings → Photo Library: photo access")
+        case .restricted: String(localized: "Restricted", comment: "Settings → Photo Library: photo access")
+        }
+    }
+}
