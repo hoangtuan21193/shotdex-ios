@@ -12,15 +12,30 @@ final class AppDatabase: Sendable {
         try Self.migrator.migrate(writer)
     }
 
-    /// Opens (or creates) the on-disk database in Application Support.
+    /// Opens (or creates) the on-disk database in Application Support — on
+    /// the Mac, the app group's, so the login-item helper that runs Backup
+    /// after Quit opens the same file (FS-22.06 §3).
     static func makeShared() throws -> AppDatabase {
-        let folderURL = try FileManager.default
-            .url(for: .applicationSupportDirectory, in: .userDomainMask, appropriateFor: nil, create: true)
-            .appendingPathComponent("Database", isDirectory: true)
+        let folderURL = try supportFolder().appendingPathComponent("Database", isDirectory: true)
         try FileManager.default.createDirectory(at: folderURL, withIntermediateDirectories: true)
         let databaseURL = folderURL.appendingPathComponent("shotdex.sqlite")
         let pool = try DatabasePool(path: databaseURL.path)
         return try AppDatabase(pool)
+    }
+
+    /// The app group the Mac app and its helper share. Team-prefixed: a
+    /// sandboxed Mac app reaches a `group.` container only with a
+    /// provisioning profile, and asks the user first without one.
+    static let macAppGroup = "MF2ESUE9HV.com.hoangtuan.shotdex"
+
+    private static func supportFolder() throws -> URL {
+        #if os(macOS)
+        if let group = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: macAppGroup) {
+            return group.appendingPathComponent("Library/Application Support", isDirectory: true)
+        }
+        #endif
+        return try FileManager.default
+            .url(for: .applicationSupportDirectory, in: .userDomainMask, appropriateFor: nil, create: true)
     }
 
     /// In-memory database for tests and previews.
