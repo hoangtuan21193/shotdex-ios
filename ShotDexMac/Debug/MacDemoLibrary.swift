@@ -1,5 +1,6 @@
 #if DEBUG
 import CoreGraphics
+import Photos
 import Foundation
 import ImageIO
 
@@ -230,6 +231,55 @@ enum MacSMBProbe {
                 let progress = try? OnServerProgressQueries(database: dependencies.database).progress(sourceId: sourceId, folder: "Shared")
                 log.notice("on server progress: \(String(describing: progress), privacy: .public); waits \(String(describing: dependencies.onServerCheck.waits), privacy: .public)")
                 open(.smartAlbum(albumId))
+            }
+        case "addPhotos":
+            // The share's pictures into Photos, byte for byte, so the check
+            // has something to match. Their ids are kept for `removePhotos`.
+            Task { @MainActor in
+                let folder = URL(fileURLWithPath: "/private/tmp/shotdex-mac/import")
+                let files = ((try? FileManager.default.contentsOfDirectory(at: folder, includingPropertiesForKeys: nil)) ?? [])
+                    .filter { $0.pathExtension.lowercased() == "heic" }
+                var ids: [String] = []
+                for file in files {
+                    var placeholder: String?
+                    do {
+                        try await PHPhotoLibrary.shared().performChanges {
+                            let request = PHAssetCreationRequest.forAsset()
+                            let options = PHAssetResourceCreationOptions()
+                            options.originalFilename = file.lastPathComponent
+                            request.addResource(with: .photo, fileURL: file, options: options)
+                            placeholder = request.placeholderForCreatedAsset?.localIdentifier
+                        }
+                        if let placeholder { ids.append(placeholder) }
+                    } catch {
+                        log.error("import \(file.lastPathComponent, privacy: .public) failed: \(String(describing: error), privacy: .public)")
+                    }
+                }
+                MacAgentLink.defaults.set(ids, forKey: "smbProbeAssets")
+                log.notice("imported \(ids.count) of \(files.count) pictures into Photos")
+                exit(0)
+            }
+        case "gateCheck":
+            // What Delete would be told for the album's photos — asks the
+            // server, deletes nothing.
+            Task { @MainActor in
+                let ids = MacAgentLink.defaults.stringArray(forKey: "smbProbeAssets") ?? []
+                let outcome = await dependencies.photoDeletionGate.check(photoIds: ids)
+                log.notice("gate: deletable \(outcome.deletable.count), verified \(outcome.verified.count), unreachable \(outcome.unreachable.keys.sorted(), privacy: .public), not on server \(outcome.notOnServer.keys.sorted(), privacy: .public)")
+                exit(0)
+            }
+        case "removePhotos":
+            Task { @MainActor in
+                let ids = MacAgentLink.defaults.stringArray(forKey: "smbProbeAssets") ?? []
+                let assets = PHAsset.fetchAssets(withLocalIdentifiers: ids, options: nil)
+                do {
+                    try await PHPhotoLibrary.shared().performChanges { PHAssetChangeRequest.deleteAssets(assets) }
+                    MacAgentLink.defaults.removeObject(forKey: "smbProbeAssets")
+                    log.notice("removed \(assets.count) probe pictures from Photos")
+                } catch {
+                    log.error("remove probe pictures failed: \(String(describing: error), privacy: .public)")
+                }
+                exit(0)
             }
         case "remove":
             Task { @MainActor in
