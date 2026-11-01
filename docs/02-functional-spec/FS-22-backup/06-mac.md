@@ -24,10 +24,14 @@ bằng giữ Mac thức (§4) · lịch chạy, menu bar icon. *Vì* helper đã
 
 ## 2. Helper
 
-- Target mới `ShotDexMacAgent`, nằm trong `ShotDex.app/Contents/Library/LoginItems/`, đăng ký bằng
-  `SMAppService.loginItem(identifier:)`. Không cửa sổ, không icon Dock, không menu bar (`LSUIElement`). Sandbox như app.
+- Helper là **chính file chạy của app** (`Contents/MacOS/ShotDex --agent`), đăng ký làm LaunchAgent bằng
+  `SMAppService.agent(plistName: "com.hoangtuan.shotdex.agent.plist")`; plist nằm ở `Contents/Library/LaunchAgents/`.
+  Không cửa sổ, không icon Dock, không menu bar. Sandbox và quyền y như app vì là cùng một file đã ký. (Đổi 2026-11-02
+  so với bản đầu "target `ShotDexMacAgent` + `SMAppService.loginItem`": một target thứ hai phải biên dịch lại toàn bộ
+  Data/Domain; người dùng thấy như nhau — một mục ShotDex trong Login Items.)
 - **Một người chạy tại một thời điểm.** Helper bật → mọi job Backup và lượt kiểm On Server chạy trong helper; app chỉ đọc
-  database và gửi lệnh (Pause, Resume, Back Up Now, Retry, job mới/sửa/xoá) qua XPC. Helper tắt (người dùng tắt, hay
+  database và gửi lệnh (Pause, Resume, Back Up Now, Retry, job mới/sửa/xoá) qua defaults của nhóm app + thông báo Darwin;
+  helper đăng lượt đang chạy và nhịp sống (0,5 s) theo cùng đường. Helper tắt (người dùng tắt, hay
   macOS từ chối) → app tự chạy job khi app đang mở, như iOS lúc ở trước mặt; Quit app là dừng.
 - Helper bật mặc định khi người dùng **tạo job Backup đầu tiên** hay mở smart album On Server đầu tiên; macOS hiện thông
   báo hệ thống "Background Items Added" — app không tự hiện câu nào thêm.
@@ -133,6 +137,11 @@ Server giả như 04: WebDAV (wsgidav) và SMB (impacket) ở 127.0.0.1. Máy: M
 | # | Câu hỏi | Đạt khi | Phụ thuộc |
 |---|---|---|---|
 | SM-1 | Helper sandbox giữ được bookmark của chính nó cho thư mục/ổ ngoài qua đăng nhập lại; mở được khi ổ cắm lại | 3/3 lần (khởi động lại, rút cắm ổ, đổi tên ổ) | Q-M1 |
-| SM-2 | PhotoKit trong helper (không phải app chính, `LSUIElement`) có quyền Photos của app không, hay hỏi lại? | dùng được quyền đã cấp, hay hỏi đúng một lần | §2; không đạt → helper chỉ chạy nguồn server/thư mục, Photos chạy khi app mở |
+| SM-2 | PhotoKit trong helper có quyền Photos của app không, hay hỏi lại? | dùng được quyền đã cấp, hay hỏi đúng một lần | **đạt** (2026-11-02, macOS 27, thư viện 55k): helper đọc Photos với quyền đã cấp, không hỏi lại |
 | SM-3 | `DatabasePool` hai tiến trình + Darwin notify: độ trễ app thấy dòng sổ mới | ≤ 1 s, 0 lỗi `SQLITE_BUSY` qua 10.000 file | §3 |
 | SM-4 | Hai thư viện SMB/SFTP chạy trong sandbox helper (FS-18.05 §6 đã ghi rủi ro) | liệt kê + ghi 1 GB | §2 |
+
+**Đo 2026-11-02 (máy này, thư viện Photos 55.648 mục):** đăng ký helper → launchd chạy ngay; Quit app → helper vẫn
+chạy; mở lại app → app thấy job và câu "Backups keep running after you quit ShotDex."; gỡ đăng ký → launchd dừng helper.
+Lượt đầu của job Photos liệt kê **toàn bộ** tài nguyên Photos trước khi chạm server (> 6 phút ở 55k mục), nên một server
+không tới được chỉ báo `Can't Reach` sau đó — `BackupRunner` nên thử kết nối trước khi liệt kê (cũng đúng cho iOS).

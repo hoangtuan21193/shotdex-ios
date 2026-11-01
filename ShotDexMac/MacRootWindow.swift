@@ -137,9 +137,11 @@ struct MacRootWindow: View {
         if dependencies.photoLibrary.authorizationState == .notDetermined {
             await dependencies.photoLibrary.requestAuthorization()
         }
-        // The app runs the jobs while it is open (FS-22.06 §2, helper off).
-        dependencies.backupCoordinator.startWatching(photoLibrary: dependencies.photoLibrary)
-        dependencies.backupCoordinator.appBecameActive()
+        // The helper runs the jobs, or the app while it is open (FS-22.06 §2).
+        dependencies.backupControl.appStarted()
+        #if DEBUG
+        MacAgentProbe.runIfAsked(dependencies)
+        #endif
         guard dependencies.photoLibrary.authorizationState.canReadLibrary, let library else { return }
         library.loadIfNeeded()
         library.startIndexing()

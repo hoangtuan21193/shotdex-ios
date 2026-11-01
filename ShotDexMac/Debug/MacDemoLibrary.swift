@@ -111,3 +111,57 @@ enum MacDemoLibrary {
     }
 }
 #endif
+
+#if DEBUG
+import os
+import ServiceManagement
+
+/// `-ShotDexAgentProbe seed|remove`: a test job for the helper on the real
+/// database — Photos → a WebDAV server at 127.0.0.1:1 that is never there,
+/// so the helper runs, writes Can't Reach and copies nothing. `remove`
+/// deletes it and unregisters the helper.
+enum MacAgentProbe {
+    static let serverName = "Agent Probe"
+    static let log = Logger(subsystem: "com.hoangtuan.shotdex", category: "agent")
+
+    static var mode: String? {
+        let arguments = ProcessInfo.processInfo.arguments
+        guard let index = arguments.firstIndex(of: "-ShotDexAgentProbe"), index + 1 < arguments.count else { return nil }
+        return arguments[index + 1]
+    }
+
+    @MainActor
+    static func runIfAsked(_ dependencies: MacDependencies) {
+        switch mode {
+        case "seed":
+            let existing = ((try? dependencies.fileServers.fetchAll()) ?? []).first { $0.name == serverName }
+            let server = existing ?? FileServer(name: serverName, transferProtocol: .webdav, host: "127.0.0.1", port: 1,
+                                                username: "probe", usesTLS: false)
+            if existing == nil { try? dependencies.fileServers.save(server, password: nil) }
+            var settings = BackupSettings()
+            settings.onlyOnWiFi = false
+            let job = BackupJob(sourceId: PhotoLibrarySource.id, connectionId: server.id, folder: "Probe", settings: settings)
+            if (try? dependencies.backups.existingJob(sourceId: job.sourceId, connectionId: server.id, folder: "Probe")) == nil {
+                try? dependencies.backups.add(job)
+                dependencies.backupControl.jobsChanged(start: job.id)
+            }
+            log.notice("probe seeded; agent status \(MacAgentLink.service.status.rawValue)")
+        case "remove":
+            for server in ((try? dependencies.fileServers.fetchAll()) ?? []) where server.name == serverName {
+                for job in ((try? dependencies.backups.jobs()) ?? []) where job.connectionId == server.id {
+                    try? dependencies.backups.delete(id: job.id)
+                }
+                try? dependencies.fileServers.delete(id: server.id)
+            }
+            dependencies.backupControl.jobsChanged()
+            Task {
+                try? await MacAgentLink.service.unregister()
+                log.notice("probe removed; agent status \(MacAgentLink.service.status.rawValue)")
+                exit(0)
+            }
+        default:
+            break
+        }
+    }
+}
+#endif

@@ -14,6 +14,7 @@ struct MacBackupScreen: View {
     @State private var serversVersion = 0
 
     private var coordinator: BackupCoordinator { dependencies.backupCoordinator }
+    private var control: MacBackupControl { dependencies.backupControl }
 
     var body: some View {
         let _ = serversVersion
@@ -40,7 +41,7 @@ struct MacBackupScreen: View {
         }
         .sheet(item: $form) { model in
             MacBackupFormSheet(model: model) { job in
-                coordinator.jobsChanged(start: model.editing == nil ? job.id : nil)
+                control.jobsChanged(start: model.editing == nil ? job.id : nil)
                 selection = job.id
             }
         }
@@ -50,16 +51,16 @@ struct MacBackupScreen: View {
             presenting: deleting
         ) { job in
             Button(String(localized: "Delete Backup", comment: "Backup: delete the job"), role: .destructive) {
-                coordinator.pause(job.id)
+                control.pause(job.id)
                 try? dependencies.backups.delete(id: job.id)
-                coordinator.jobsChanged()
+                control.jobsChanged()
             }
         } message: { _ in
             Text(String(localized: "Files already on the server stay there.", comment: "Backup: deleting a job deletes nothing on the server"))
         }
         .onAppear {
             coordinator.reload()
-            coordinator.sourcesTick()
+            if !control.usesAgent { coordinator.sourcesTick() }
             if selection == nil { selection = coordinator.jobs.first?.id }
         }
         .onReceive(NotificationCenter.default.publisher(for: .macServersChanged)) { _ in serversVersion += 1 }
@@ -98,10 +99,12 @@ struct MacBackupScreen: View {
         }
     }
 
-    /// FS-22.06 §5.2: the line says what Quit does today. The helper that
-    /// keeps going after Quit is not built yet, so Quit stops the jobs.
+    /// FS-22.06 §5.2: what Quit does — the helper keeps the jobs going, or
+    /// (helper off) Quit stops them.
     private var footer: some View {
-        Label(String(localized: "Backups stop when you quit ShotDex.", comment: "Mac Backup: the jobs run only while the app is open"),
+        Label(control.usesAgent
+              ? String(localized: "Backups keep running after you quit ShotDex.", comment: "Mac Backup: the helper runs the jobs")
+              : String(localized: "Backups stop when you quit ShotDex.", comment: "Mac Backup: the jobs run only while the app is open"),
               systemImage: "info.circle")
             .font(.callout)
             .foregroundStyle(.secondary)
@@ -130,11 +133,11 @@ struct MacBackupScreen: View {
     @ViewBuilder
     private func menu(for job: BackupJob) -> some View {
         Button(String(localized: "Edit…", comment: "Mac Backup: edit a job")) { openForm(editing: job) }
-        Button(String(localized: "Back Up Now", comment: "Backup: compare the whole source now")) { coordinator.backUpNow(job.id) }
+        Button(String(localized: "Back Up Now", comment: "Backup: compare the whole source now")) { control.backUpNow(job.id) }
         if coordinator.states[job.id]?.status == .pausedByUser {
-            Button(BackupStatusText.Action.resume.title) { coordinator.resume(job.id) }
+            Button(BackupStatusText.Action.resume.title) { control.resume(job.id) }
         } else {
-            Button(BackupStatusText.Action.pause.title) { coordinator.pause(job.id) }
+            Button(BackupStatusText.Action.pause.title) { control.pause(job.id) }
         }
         Divider()
         Button(String(localized: "Delete Backup…", comment: "Mac Backup: delete a job"), role: .destructive) { deleting = job }
@@ -144,18 +147,18 @@ struct MacBackupScreen: View {
     private var toolbar: some ToolbarContent {
         ToolbarItemGroup(placement: .primaryAction) {
             Button {
-                if let id = selection { coordinator.backUpNow(id) }
+                if let id = selection { control.backUpNow(id) }
             } label: {
                 Label(String(localized: "Back Up Now", comment: "Backup: compare the whole source now"), systemImage: "arrow.clockwise")
                     .labelStyle(.titleAndIcon)
             }
             .disabled(selection == nil)
             if let id = selection, coordinator.states[id]?.status == .pausedByUser {
-                Button { coordinator.resume(id) } label: {
+                Button { control.resume(id) } label: {
                     Label(BackupStatusText.Action.resume.title, systemImage: "play.fill")
                 }
             } else {
-                Button { if let id = selection { coordinator.pause(id) } } label: {
+                Button { if let id = selection { control.pause(id) } } label: {
                     Label(BackupStatusText.Action.pause.title, systemImage: "pause.fill")
                 }
                 .disabled(selection == nil)
@@ -174,9 +177,9 @@ struct MacBackupScreen: View {
 
     private func perform(_ action: BackupStatusText.Action, job: BackupJob) {
         switch action {
-        case .pause: coordinator.pause(job.id)
-        case .resume: coordinator.resume(job.id)
-        case .retry: coordinator.retry(job.id)
+        case .pause: control.pause(job.id)
+        case .resume: control.resume(job.id)
+        case .retry: control.retry(job.id)
         case .openSettings:
             if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Photos") {
                 NSWorkspace.shared.open(url)

@@ -36,7 +36,7 @@
 | H0 | Spike SM-2, SM-3, SM-4 trên máy này (macOS 27); SM-1 cần ổ ngoài của người dùng | — | số ghi vào intent |
 | H1 | Nhóm app + nhóm Keychain cho `ShotDexMac`; `AppDatabase.makeShared` trên macOS mở ở container nhóm app | nền AC-45 | `AppDatabaseLocationTests.macUsesAppGroup` |
 | H2 | Dời lõi `BackupCoordinator` sang `Domain/Backup/` (giữ `ScreenHolding` sau protocol, BGTask ở App/) — iOS không đổi hành vi | nền | `BackupCoordinatorTests` hiện có |
-| H3 | Target `ShotDexMacAgent` (LSUIElement, sandbox, nhúng `Contents/Library/LoginItems`), `SMAppService.loginItem` đăng ký/trạng thái | AC-46, 47 | `MacAgentStatusTests` |
+| H3 | ✅ 2026-11-02 Helper = chính file chạy với `--agent`, LaunchAgent qua `SMAppService.agent` (đổi từ target riêng) | AC-46, 47 | `MacAgentStatusTests` |
 | H4 | Agent chạy: coordinator + `OnServerCheck`; nghe đổi thư viện Photos, tick nguồn 5 phút, liệt kê server 30 phút, ngủ/thức, power assertion | AC-43, 44, 49, 50, 53, 109, 110 | `MacAgentTests.*` |
 | H5 | XPC lệnh app → agent; Darwin notify agent → app; một người chạy (agent bật thì app không chạy job) | AC-45 | `MacAgentTests.singleRunner` |
 | H6 | Quyền thư mục trong helper (Q-M1): helper hỏi một lần, giữ bookmark riêng; bảng mới qua `data-migration` | AC-48 | sau SM-1 |

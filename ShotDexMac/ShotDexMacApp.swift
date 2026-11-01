@@ -1,7 +1,18 @@
 import SwiftUI
 
-/// ShotDex for Mac (FS-18): one Library window — sidebar, toolbar, content.
+/// The executable's entry: the app, or with `--agent` the helper that runs
+/// Backup after the app quits (FS-22.06 §2).
 @main
+enum ShotDexMacMain {
+    static func main() {
+        if CommandLine.arguments.contains(MacAgentLink.agentArgument) {
+            MacAgent.run()
+        }
+        ShotDexMacApp.main()
+    }
+}
+
+/// ShotDex for Mac (FS-18): one Library window — sidebar, toolbar, content.
 struct ShotDexMacApp: App {
     @State private var dependencies: MacDependencies = {
         #if DEBUG

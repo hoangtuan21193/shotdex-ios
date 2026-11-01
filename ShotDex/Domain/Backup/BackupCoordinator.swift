@@ -185,6 +185,16 @@ final class BackupCoordinator {
         current?.cancel()
     }
 
+    /// Another process runs the jobs (the Mac's helper, FS-22.06 §2): show
+    /// its run as if it were this one's. nil = nothing running there.
+    func showRemoteRun(jobId: String?, progress live: BackupProgress?, bytesPerSecond speed: Double?) {
+        runningJobId = jobId
+        if let jobId {
+            progress[jobId] = live
+            bytesPerSecond[jobId] = speed
+        }
+    }
+
     /// Settles once the queue is empty — tests and background tasks wait on it.
     func waitUntilIdle() async {
         while let loop { await loop.value }

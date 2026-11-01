@@ -33,6 +33,9 @@ final class MacDependencies: LibraryServices {
     /// Runs the jobs while the app is open — until the login-item helper
     /// takes them over (FS-22.06 §2).
     let backupCoordinator: BackupCoordinator
+    /// Sends job commands to the helper, or to `backupCoordinator` when the
+    /// app runs the jobs itself (FS-22.06 §2).
+    let backupControl: MacBackupControl
 
     init(database: AppDatabase, photoLibrary: PhotoLibraryService) {
         self.database = database
@@ -65,6 +68,7 @@ final class MacDependencies: LibraryServices {
         backupCoordinator = BackupCoordinator(store: backups, environment: .live(
             database: database, store: backups, servers: fileServers, roots: folderRoots, connectionLock: connectionLock
         ))
+        backupControl = MacBackupControl(coordinator: backupCoordinator, photoLibrary: photoLibrary)
     }
 
     static func live() -> MacDependencies {

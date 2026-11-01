@@ -8,6 +8,7 @@ struct MacBackupInspector: View {
     @Environment(MacDependencies.self) private var dependencies
 
     private var coordinator: BackupCoordinator { dependencies.backupCoordinator }
+    private var control: MacBackupControl { dependencies.backupControl }
 
     var body: some View {
         let info = MacBackupJobInfo(job: job, dependencies: dependencies)
@@ -31,15 +32,15 @@ struct MacBackupInspector: View {
                         Text(status.title).font(.subheadline.weight(.semibold)).foregroundStyle(status.tone.macColor)
                         Text(status.detail).font(.subheadline).foregroundStyle(.secondary).monospacedDigit()
                         if coordinator.states[job.id]?.status == .pausedByUser {
-                            Button { coordinator.resume(job.id) } label: {
+                            Button { control.resume(job.id) } label: {
                                 Label(BackupStatusText.Action.resume.title, systemImage: "play.fill")
                             }
                         } else if isRunning {
-                            Button { coordinator.pause(job.id) } label: {
+                            Button { control.pause(job.id) } label: {
                                 Label(BackupStatusText.Action.pause.title, systemImage: "pause.fill")
                             }
                         } else if let action = status.action, action == .retry {
-                            Button(action.title) { coordinator.retry(job.id) }
+                            Button(action.title) { control.retry(job.id) }
                         }
                     }
                 }
