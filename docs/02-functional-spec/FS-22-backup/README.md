@@ -12,7 +12,8 @@ Board (iPhone, `docs/design/iphone/project/`, luồng 1→5): `PH_Backup` (1/5) 
 `PH_BackupOrganize` (3/5) · `PH_BackupCustomDate` (4/5) · `PH_BackupRunning` (5/5); lối vào `PH_Collections`.
 iPad (`docs/design/ipad/project/`): `IP_Backup` · `IP_BackupNew` · `IP_BackupOrganize` · `IP_BackupCustomDate` ·
 `IP_BackupRunning`, lối vào hàng **Backup** đầu Utilities ở sidebar. Duo (`docs/design/duo/project/`): trong `DI_Backup…`,
-ngoài `DC_Backup…` (cùng 5 bước), lối vào `DI_Collections` / `DC_Collections`. Mac: ngoài phạm vi FS-22.
+ngoài `DC_Backup…` (cùng 5 bước), lối vào `DI_Collections` / `DC_Collections`. Mac (2026-11-02): [06](06-mac.md) — `MAC_Backup` · `MAC_BackupNew` · `MAC_BackupOrganize`, lối vào hàng **Backup** đầu
+Utilities ở sidebar; job chạy trong helper login item cả khi app đã Quit.
 
 ## Các phần
 
@@ -23,6 +24,7 @@ ngoài `DC_Backup…` (cùng 5 bước), lối vào `DI_Collections` / `DC_Colle
 | 03 | [Dữ liệu](03-data.md) | bảng job, sổ từng file, mốc thay đổi, dùng lại bảng FS-15/FS-19 |
 | 04 | [Tiêu chí nghiệm thu](04-acceptance-criteria.md) | AC-1…AC-39 |
 | 05 | [Không chép trùng giữa các máy](05-duplicates-across-devices.md) | so SHA-256 với mọi file trong folder đích, sổ chung trên NAS, file có sẵn từ trước, phần mở rộng tải nền |
+| 06 | [Mac](06-mac.md) | helper chạy cả khi đã Quit, database nhóm app, điều kiện mạng/nguồn điện Mac, màn Mac, AC-40…AC-53 |
 
 ## 1. Người dùng cần gì
 

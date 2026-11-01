@@ -141,3 +141,25 @@ sau). Tải iCloud theo cổng khắt nhất của mọi connection có nguồn 
 Dòng Folder: `PH_/IP_/DI_/DC_SmartAlbumEditor` · dòng tiến độ + chip Source: `PH_/IP_/DI_/DC_SmartAlbum` (vẽ
 2026-10-25). Alert sau xoá và alert *Delete Anyway* là alert hệ thống, không vẽ — chữ ghi trong comment của
 `PH_/IP_/DI_DeleteCopies`. Mục On Server trong Photo Info: `PH_/IP_/DI_/DC_Metadata` (vẽ 2026-10-26, dưới Shutter Count).
+
+## 11. Mac (2026-11-02)
+
+Người dùng 2026-11-02: Mac ưu tiên quản lý ảnh — smart album "đã có trên NAS" có trên Mac, kiểm chạy cả khi app đã Quit.
+
+- Quy tắc khớp, hash, smart album, xoá (§3–§9) **giữ nguyên**; code `OnServerCheck`, `OnServerPresenceSQL`,
+  `PhotoDeletionGate` đã build cho macOS.
+- **Ai chạy:** helper `ShotDexMacAgent` của [FS-22.06 §2](../FS-22-backup/06-mac.md#2-helper) — một người chạy cho cả
+  Backup và kiểm; Backup đi trước, cùng khoá connection §5. Thay BGProcessingTask của §6 (đợt 2) trên Mac.
+  Helper tắt → kiểm chạy khi app mở; lý do chờ `Open ShotDex to continue` giữ nguyên.
+- **Khi nào:** cổng §6 giữ nguyên, với hàng điều kiện đổi tên theo FS-22.06 §4. Liệt kê server lại: mỗi lần app về trước
+  mặt (§5) **và** mỗi 30 phút trong helper — *vì* trên Mac không có "về trước mặt" khi app đã Quit.
+- **Smart album:** sheet `MAC_SmartAlbumEditor` — điều kiện Source với nguồn server có dòng **Folder** (popup + Choose…
+  mở `MAC_ServerBrowser`); album mở trong cửa sổ chính (`MAC_SmartAlbum`): chip Source và dòng tiến độ §7 nằm ở thanh
+  dưới toolbar, cùng hàng với số mục.
+- **Dấu lưới và Get Info:** glyph "trên server" ở góc ô lưới Mac như iOS; Get Info (`MAC_GetInfoSingle`) thêm mục
+  **On Server** — mỗi file một dòng `NAS Home` + đường dẫn.
+- **Xoá:** chọn trong album → Delete (⌘⌫) hoặc chuột phải › Delete N Photos… — đi qua `PhotoDeletionGate` như ba lối
+  đợt 1; alert là `NSAlert` (Delete Anyway đỏ, Cancel mặc định). Mọi lối xoá Photos khác trên Mac cũng qua cổng (N2).
+- **Ngoài phạm vi trên Mac lúc này:** Free Up Space (FS-15.02c) — chưa có màn Mac.
+
+AC: [07b §3](07b-on-server-check-ac.md#3-mac).

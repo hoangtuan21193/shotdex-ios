@@ -51,10 +51,10 @@ Support thành cửa sổ riêng.
 
 | Pane | Có gì | Từ mục iOS |
 |---|---|---|
-| General | Group Photos By · Open Photos (In the Same Window · In a New Window) · File Type Badge · Info on Thumbnails · Focal Length (Actual · Full-Frame Equivalent) · View Full HDR · Autoplay Videos · Show Insights in Statistics · On This Day Reminder | Display, Playback, Notifications |
+| General | Group Photos By · Open Photos (In the Same Window · In a New Window) · File Type Badge · Info on Thumbnails · Focal Length (Actual · Full-Frame Equivalent) · View Full HDR · Autoplay Videos · Show Insights in Statistics · On This Day Reminder · **Background**: Keep Working After Quit · Keep Mac Awake While Copying ([FS-22.06](../FS-22-backup/06-mac.md) §5.4) | Display, Playback, Notifications |
 | Sources | nguồn ảnh, quyền, `.xmp` sidecar, ổ và index, preview, People and Pets, Library Size, Re-index, Clear Local Metadata Index, các dòng Privacy — chi tiết FS-19 | Sources (tên mới của Photo Library, FS-21), People and Pets, Library Size, Privacy |
 | Editing | file mở khi có RAW+JPEG · câu về color profile · Export Defaults (Size, Format and Quality, File Names, If a File Exists, Metadata When Sharing, Watermark When Sharing) · bảng Presets | Export, Sharing |
-| Servers | bảng Connections (Name · Host · Protocol · Folder · Status) · Local Network Access · Keep Mac Awake While Uploading · Server Thumbnails | File Servers ([FS-15.01](../FS-15-server-upload/01-servers-and-settings.md)) |
+| Servers | bảng Connections (Name · Host · Protocol · Folder · Status) · Local Network Access · Server Thumbnails (Keep Mac Awake While Uploading gộp vào General › Background, 2026-11-02) | File Servers ([FS-15.01](../FS-15-server-upload/01-servers-and-settings.md)) |
 | Cameras | bảng máy, popup Sensor Format sửa tại chỗ; "Review Unknown Cameras" ở Sources nhảy tới đây | Camera Database (FS-08.03 §7) |
 
 - Không có hàng Accent Color (D11). Support mở từ menu Help, không từ Settings.

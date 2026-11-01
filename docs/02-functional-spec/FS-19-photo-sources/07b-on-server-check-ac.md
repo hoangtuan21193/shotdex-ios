@@ -62,3 +62,18 @@ Thư viện thử không có ảnh mặt người. Server thử: WebDAV cục b�
 - AC-92: ảnh dưới quyền `.limited` chưa chụp.
 - AC-91 và mọi AC có UI: ảnh iPad, Duo trong/ngoài chưa chụp (board đã vẽ).
 - S1–S4: cần iPhone thật — harness và log đã có (intent, mục Số đo spike).
+
+## 3. Mac
+
+Quy tắc: [07 §11](07-on-server-check.md#11-mac-2026-11-02). Helper và spike SM-1…4: [FS-22.06](../FS-22-backup/06-mac.md).
+Logic (AC-74…AC-106) không chứng minh lại; dưới đây chỉ phần Mac.
+
+| # | Cho | Khi | Thì | Chứng minh bằng |
+|---|---|---|---|---|
+| AC-107 | Mac, nguồn `NAS Home` gốc `iCloud Photo/`, như AC-74 | New Smart Album… ⌥⌘N: Source is NAS Home, Folder → Choose… chọn `Shared` | sheet hiện dòng Folder `Shared`; lưu → sidebar có album, mở ra *40 photos*, chip `Source: NAS Home › Shared` | ⚠️ chưa có (`mac-smart-album-onserver.json`) + `design-parity` `MAC_SmartAlbumEditor`, `MAC_SmartAlbum` |
+| AC-108 | album AC-107, kiểm 30/100 | nhìn thanh dưới toolbar | `Checking · 30 of 100` cùng hàng số mục; xong → `Checked … ago` | `OnServerProgressTests` (dùng lại) + ⚠️ chưa có (ảnh cửa sổ) |
+| AC-109 | còn 1.000 file chưa kiểm, helper bật | Quit ShotDex | helper kiểm tiếp; mở lại app sau 10 phút, tiến độ đã tăng | ⚠️ chưa có (`MacAgentTests.onServerRunsAfterQuit`) |
+| AC-110 | app đã Quit 30 phút, script xoá `Shared/2025/c.HEIC` | mở lại album | ảnh rời **is** mà không cần app về trước mặt trước đó (helper liệt kê lại theo 30 phút) | ⚠️ chưa có (`MacAgentTests.periodicRelisting`) |
+| AC-111 | album 20 mục, 2 file đã bị xoá trên NAS | ⌘A → ⌘⌫ → xác nhận | 18 vào Recently Deleted; `NSAlert` nêu 2 mục "no longer on NAS Home" | `PhotoDeletionGateTests.reverifiesServerCopy` (dùng lại) + ⚠️ chưa có (`mac-onserver-delete.json`) |
+| AC-112 | như AC-111, server tắt | ⌘⌫ → xác nhận | `NSAlert` "Can't reach NAS Home" · Delete Anyway (đỏ) · Cancel (mặc định); Return = Cancel, 0 mục bị xoá | ⚠️ chưa có (`mac-onserver-delete.json`) |
+| AC-113 | ảnh có bản ở `Shared/2025/a.HEIC` | chọn ảnh, ⌘I | Get Info có mục On Server: `NAS Home` / `iCloud Photo/Shared/2025/a.HEIC`; ô lưới có glyph | `OnServerIndexTests.photoInfoLocations` (dùng lại) + ⚠️ chưa có (`design-parity` `MAC_GetInfoSingle`) |

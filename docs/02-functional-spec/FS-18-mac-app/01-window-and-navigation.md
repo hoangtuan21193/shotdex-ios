@@ -28,7 +28,7 @@ sổ riêng là tuỳ chọn.
 
 - Bốn nhóm, tối đa 2 cấp: (không tiêu đề) All Photos · Favorites · Videos · RAW · Recently Added ·
   **Sources** `[+]` · **Collections** `[+]` (On This Day, Albums ›, smart album, Hidden — FS-19) · **Utilities**.
-- Utilities: Statistics · Duplicates · Collages · Video Projects · On Server (Places và Trips gỡ khỏi app 2026-10-24).
+- Utilities: Backup ([FS-22.06](../FS-22-backup/06-mac.md) §5.1, thêm 2026-11-02) · Statistics · Duplicates · Collages · Video Projects · On Server (Places và Trips gỡ khỏi app 2026-10-24).
 - Albums luôn có chevron, đóng mặc định; mở ra là danh sách phẳng, không thư mục (D19).
 - Đếm có ở Library, Sources, Collections, Duplicates (số nhóm), Collages, Video Projects, On Server;
   Statistics, On This Day, Recently Added không có số.

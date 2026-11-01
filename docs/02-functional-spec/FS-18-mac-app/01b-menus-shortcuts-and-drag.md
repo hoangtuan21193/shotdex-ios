@@ -23,7 +23,7 @@ phần theo ngữ cảnh.
 |---|---|
 | ShotDex | Settings… ⌘, · Hide ⌘H · Hide Others ⌥⌘H · Quit ⌘Q |
 | File | New Window · New Album ⌘N · New Album with Selection ⇧⌘N · New Smart Album… ⌥⌘N · New Video Project · New Chart… |
-| File | Add Folder… ⇧⌘O · Add Photos Library · Connect to Server… ⌘K · Import from Card… (FS-20) |
+| File | Add Folder… ⇧⌘O · Add Photos Library · Connect to Server… ⌘K · Import from Card… (FS-20) · New Backup… (FS-22.06) |
 | File | Open ⌘O · Open in New Window ⌥⌘O · Show in Finder ⇧⌘R · Reveal in Photos · Upload to Server… ⇧⌘U |
 | File | Export ▸ Export N Photos… ⇧⌘E · Export Unmodified Originals… ⌥⇧⌘E · Export EXIF as CSV… · Share ▸ · Eject "‹ổ›" · Remove Source… · Close ⌘W · Print… ⌘P |
 | Edit | Undo ⌘Z · Redo ⇧⌘Z · Cut/Copy/Paste ⌘X ⌘C ⌘V · Select All ⌘A · Deselect All ⇧⌘A |
@@ -36,7 +36,7 @@ phần theo ngữ cảnh.
 | Image | Adjust Date and Time… · Adjust Location… · Editor ▸ · Create ▸ (Collage… · Video Project…) · Combine Photos ▸ (Focus Stack… · Panorama… · HDR… · Stack Exposures…) · Resize… |
 | Image | Keep Only This · Merge N Groups… · Rescan Duplicates · Move N Rejected… (§1) · Duplicate ⌘D · Hide ⌘L · Move to Trash ⌘⌫ |
 | Go | Back ⌘[ · Forward ⌘] · Enclosing Album ⌘↑ · All Photos ⌥⌘1 · Favorites ⌥⌘2 · Videos ⌥⌘3 · RAW ⌥⌘4 · Recently Added ⌥⌘5 · Statistics ⌥⌘6 |
-| Go | On This Day · Albums · Duplicates · Collages · Video Projects · On Server · Go to Date… (không phím) |
+| Go | Backup ⌥⌘B (FS-22.06) · On This Day · Albums · Duplicates · Collages · Video Projects · On Server · Go to Date… (không phím) |
 | Window | Minimize ⌘M · Zoom · Fill · Video Studio ⌥⌘V · Activity ⌥⌘0 · Bring All to Front · danh sách cửa sổ |
 | Help | ShotDex Help · Search Syntax · Keyboard Shortcuts ⌘/ · ShotDex Support… |
 
