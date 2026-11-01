@@ -170,3 +170,80 @@ enum MacAgentProbe {
     }
 }
 #endif
+
+#if DEBUG
+/// `-ShotDexSMBProbe seed|remove`: the Mac path end to end against the local
+/// impacket server (127.0.0.1:4450, share `photos`, tester/secret) — the
+/// connection, Test Connection, a folder listing, the server source and its
+/// index, a smart album on `Source is SMB Test · Shared`, one On Server pass.
+/// Every step goes to the `agent` log. `remove` takes it all away again.
+enum MacSMBProbe {
+    static let name = "SMB Test"
+    static let albumId = "probe-smb-shared"
+
+    static var mode: String? {
+        let arguments = ProcessInfo.processInfo.arguments
+        guard let index = arguments.firstIndex(of: "-ShotDexSMBProbe"), index + 1 < arguments.count else { return nil }
+        return arguments[index + 1]
+    }
+
+    @MainActor
+    static func runIfAsked(_ dependencies: MacDependencies, open: @escaping (MacSidebarItem) -> Void) {
+        let log = MacAgentProbe.log
+        switch mode {
+        case "seed":
+            Task { @MainActor in
+                let servers = dependencies.fileServers
+                let server = ((try? servers.fetchAll()) ?? []).first { $0.name == name }
+                    ?? FileServer(name: name, transferProtocol: .smb, host: "127.0.0.1", port: 4450,
+                                  username: "tester", folder: "photos/Photos")
+                try? servers.save(server, password: "secret")
+                let client = RemoteFileClientFactory.make(for: server, password: "secret")
+                let outcome = await FileServerConnectionCheck.run(client: client, folder: server.folder)
+                log.notice("smb test connection: \(String(describing: outcome), privacy: .public)")
+                // As the Mac folder picker does: its own client, connected, then listed.
+                let browser = RemoteFileClientFactory.make(for: server, password: "secret")
+                do {
+                    try await browser.connect()
+                    let folders = try await browser.folderNames(in: server.folder)
+                    log.notice("smb folders in photos/Photos: \(folders.sorted().joined(separator: ", "), privacy: .public)")
+                } catch {
+                    log.error("smb folder listing failed: \(String(describing: error), privacy: .public)")
+                }
+                await browser.disconnect()
+                await dependencies.sourcesModel.setServerSource(true, connection: server)
+                let store = SourceStore(database: dependencies.database)
+                guard let sourceId = (try? store.serverSourceId(connectionId: server.id)) ?? nil else {
+                    log.error("smb source not created")
+                    return
+                }
+                let count = (try? store.photoCounts())?[sourceId] ?? 0
+                log.notice("smb source \(sourceId, privacy: .public) indexed \(count) photos")
+                let album = SmartAlbum(id: albumId, name: "On SMB — Shared",
+                                       query: SmartAlbumQuery(rules: [SmartAlbumRule(field: .source, text: sourceId, folder: "Shared")]),
+                                       createdAt: Int(Date().timeIntervalSince1970))
+                try? dependencies.smartAlbums.upsert(album)
+                let matching = (try? await dependencies.libraryQueries.count(matching: album.query)) ?? -1
+                log.notice("smart album Source is SMB Test · Shared matches \(matching)")
+                dependencies.onServerCheck.appBecameActive()
+                try? await Task.sleep(for: .seconds(20))
+                let progress = try? OnServerProgressQueries(database: dependencies.database).progress(sourceId: sourceId, folder: "Shared")
+                log.notice("on server progress: \(String(describing: progress), privacy: .public); waits \(String(describing: dependencies.onServerCheck.waits), privacy: .public)")
+                open(.smartAlbum(albumId))
+            }
+        case "remove":
+            Task { @MainActor in
+                try? dependencies.smartAlbums.delete(id: albumId)
+                for server in ((try? dependencies.fileServers.fetchAll()) ?? []) where server.name == name {
+                    await dependencies.sourcesModel.setServerSource(false, connection: server)
+                    try? dependencies.fileServers.delete(id: server.id)
+                }
+                log.notice("smb probe removed")
+                exit(0)
+            }
+        default:
+            break
+        }
+    }
+}
+#endif

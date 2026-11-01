@@ -161,6 +161,10 @@ struct MacRootWindow: View {
         dependencies.onServerCheck.appBecameActive()
         #if DEBUG
         MacAgentProbe.runIfAsked(dependencies)
+        MacSMBProbe.runIfAsked(dependencies) { item in
+            smartAlbums = (try? dependencies.smartAlbums.fetchAllOrdered()) ?? []
+            selection = item
+        }
         #endif
         guard dependencies.photoLibrary.authorizationState.canReadLibrary, let library else { return }
         library.loadIfNeeded()
