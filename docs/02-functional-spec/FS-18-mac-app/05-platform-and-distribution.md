@@ -30,7 +30,7 @@ tính năng qua Mac App Store, trong sandbox.
 | bookmark có phạm vi app (security-scoped) | giữ quyền vào thư mục/ổ đã thêm qua các lần mở app |
 | thư viện Photos | nguồn Photos Library |
 | kết nối mạng ra ngoài + mạng cục bộ | server SMB/SFTP/WebDAV, tìm server trong mạng, Support |
-| nhóm app `group.com.hoangtuan.shotdex` + nhóm Keychain | database và mật khẩu dùng chung app + helper `ShotDexMacAgent` ([FS-22.06](../FS-22-backup/06-mac.md) §2–§3, 2026-11-02) |
+| nhóm app `MF2ESUE9HV.com.hoangtuan.shotdex` + nhóm Keychain | database và mật khẩu dùng chung app + helper `ShotDexMacAgent` ([FS-22.06](../FS-22-backup/06-mac.md) §2–§3, 2026-11-02) |
 | login item (`SMAppService`) | helper chạy Backup và kiểm On Server cả khi app đã Quit |
 
 - Mỗi thư mục/ổ thêm vào lưu một bookmark; mở lại app không hỏi lại. Bookmark hỏng hay hết quyền → hàng nguồn

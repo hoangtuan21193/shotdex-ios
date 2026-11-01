@@ -46,7 +46,7 @@ nguồn, helper giữ bookmark của nó. Đã bỏ phương án "thư mục ch�
 
 ## 3. Dữ liệu dùng chung app + helper
 
-- Database ShotDex của Mac ở thư mục nhóm app `group.com.hoangtuan.shotdex` (không phải container riêng của app), mở bằng
+- Database ShotDex của Mac ở thư mục nhóm app `MF2ESUE9HV.com.hoangtuan.shotdex` (tiền tố team: nhóm `group.` trên Mac sandbox cần provisioning profile, thiếu thì macOS hỏi người dùng) (không phải container riêng của app), mở bằng
   `DatabasePool` ở cả hai tiến trình (WAL). App Mac chưa phát hành → không chuyển dữ liệu cũ (luật CLAUDE.md).
 - Màn của app thấy thay đổi do helper ghi trong ≤ 1 s: helper gửi thông báo Darwin sau mỗi transaction của sổ/trạng thái,
   app đọc lại. *Vì* `ValueObservation` của GRDB không thấy tiến trình khác ghi.
