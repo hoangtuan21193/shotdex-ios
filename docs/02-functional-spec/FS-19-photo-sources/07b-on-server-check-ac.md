@@ -70,7 +70,7 @@ Logic (AC-74…AC-106) không chứng minh lại; dưới đây chỉ phần Mac
 
 | # | Cho | Khi | Thì | Chứng minh bằng |
 |---|---|---|---|---|
-| AC-107 | Mac, nguồn `NAS Home` gốc `iCloud Photo/`, như AC-74 | New Smart Album… ⌥⌘N: Source is NAS Home, Folder → Choose… chọn `Shared` | sheet hiện dòng Folder `Shared`; lưu → sidebar có album, mở ra *40 photos*, chip `Source: NAS Home › Shared` | ⚠️ chưa có (`mac-smart-album-onserver.json`) + `design-parity` `MAC_SmartAlbumEditor`, `MAC_SmartAlbum` |
+| AC-107 | Mac, nguồn `NAS Home` gốc `iCloud Photo/`, như AC-74 | New Smart Album… ⌥⌘N: Source is NAS Home, Folder → Choose… chọn `Shared` | sheet hiện dòng Folder `Shared`; lưu → sidebar có album, mở ra *40 photos*, chip `Source is NAS Home › Shared` | ⚠️ chưa có (`mac-smart-album-onserver.json`) + `design-parity` `MAC_SmartAlbumEditor`, `MAC_SmartAlbum` |
 | AC-108 | album AC-107, kiểm 30/100 | nhìn thanh dưới toolbar | `Checking · 30 of 100` cùng hàng số mục; xong → `Checked … ago` | `OnServerProgressTests` (dùng lại) + ⚠️ chưa có (ảnh cửa sổ) |
 | AC-109 | còn 1.000 file chưa kiểm, helper bật | Quit ShotDex | helper kiểm tiếp; mở lại app sau 10 phút, tiến độ đã tăng | ⚠️ chưa có (`MacAgentTests.onServerRunsAfterQuit`) |
 | AC-110 | app đã Quit 30 phút, script xoá `Shared/2025/c.HEIC` | mở lại album | ảnh rời **is** mà không cần app về trước mặt trước đó (helper liệt kê lại theo 30 phút) | ⚠️ chưa có (`MacAgentTests.periodicRelisting`) |
