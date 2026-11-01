@@ -265,7 +265,6 @@
 				Features/Albums/SmartAlbumDetailScreen.swift,
 				Features/Albums/SmartAlbumEditorSheet.swift,
 				Features/Albums/SmartAlbumRuleRow.swift,
-				Features/Backup/BackupFormModel.swift,
 				Features/Backup/BackupFormSheet.swift,
 				Features/Backup/BackupListScreen.swift,
 				Features/Backup/BackupOrganizeScreen.swift,

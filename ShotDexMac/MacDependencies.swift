@@ -23,6 +23,16 @@ final class MacDependencies: LibraryServices {
     let powerStatus: PowerMonitor
     let indexTraffic: IndexTrafficMonitor
     let sources: SourceStore
+    let fileServers: FileServerStore
+    let folderRoots: FolderSourceRoots
+    /// One server call at a time per connection for Backup and the On Server
+    /// check (FS-19.07 §5).
+    let connectionLock: ConnectionLock
+    /// Backup jobs and their ledger (FS-22).
+    let backups: BackupStore
+    /// Runs the jobs while the app is open — until the login-item helper
+    /// takes them over (FS-22.06 §2).
+    let backupCoordinator: BackupCoordinator
 
     init(database: AppDatabase, photoLibrary: PhotoLibraryService) {
         self.database = database
@@ -44,6 +54,17 @@ final class MacDependencies: LibraryServices {
         networkStatus = NetworkMonitor()
         powerStatus = PowerMonitor()
         sources = SourceStore(database: database)
+        let fileServers = FileServerStore(database: database, passwords: KeychainPasswordStore())
+        self.fileServers = fileServers
+        let folderRoots = FolderSourceRoots(database: database)
+        self.folderRoots = folderRoots
+        let connectionLock = ConnectionLock()
+        self.connectionLock = connectionLock
+        let backups = BackupStore(database: database)
+        self.backups = backups
+        backupCoordinator = BackupCoordinator(store: backups, environment: .live(
+            database: database, store: backups, servers: fileServers, roots: folderRoots, connectionLock: connectionLock
+        ))
     }
 
     static func live() -> MacDependencies {

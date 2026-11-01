@@ -6,6 +6,9 @@ struct MacSidebar: View {
     @Binding var selection: MacSidebarItem?
     let library: LibraryModel?
     let sources: [SourceStore.Source]
+    /// The Backup row's count, or a warning dot when a job needs the user
+    /// (FS-22.06 §5.1).
+    var backup: (jobs: Int, needsAttention: Bool) = (0, false)
 
     var body: some View {
         List(selection: $selection) {
@@ -24,7 +27,13 @@ struct MacSidebar: View {
                 ForEach(MacSidebarItem.collections) { row($0, count: nil) }
             }
             Section(String(localized: "Utilities", comment: "Mac sidebar group")) {
-                ForEach(MacSidebarItem.utilities) { row($0, count: nil) }
+                ForEach(MacSidebarItem.utilities) { item in
+                    if item == .backup {
+                        backupRow
+                    } else {
+                        row(item, count: nil)
+                    }
+                }
             }
         }
         .safeAreaInset(edge: .bottom) { status }
@@ -43,6 +52,24 @@ struct MacSidebar: View {
             Image(systemName: item.systemImage)
         }
         .tag(item)
+    }
+
+    private var backupRow: some View {
+        Label {
+            HStack {
+                Text(MacSidebarItem.backup.title)
+                Spacer(minLength: 4)
+                if backup.needsAttention {
+                    Circle().fill(.orange).frame(width: 8, height: 8)
+                        .accessibilityLabel(String(localized: "Needs attention", comment: "Mac sidebar: a backup job has a problem"))
+                } else if backup.jobs > 0 {
+                    Text(backup.jobs.formatted()).font(.caption).monospacedDigit().foregroundStyle(.secondary)
+                }
+            }
+        } icon: {
+            Image(systemName: MacSidebarItem.backup.systemImage)
+        }
+        .tag(MacSidebarItem.backup)
     }
 
     @ViewBuilder
@@ -77,7 +104,7 @@ enum MacSidebarItem: Hashable, Identifiable {
     case allPhotos, favorites, videos, raw, recentlyAdded
     case source(String)
     case onThisDay, albums
-    case statistics, duplicates, collages, videoProjects, onServer
+    case backup, statistics, duplicates, collages, videoProjects, onServer
 
     var id: String {
         if case .source(let id) = self { return "source-" + id }
@@ -86,7 +113,7 @@ enum MacSidebarItem: Hashable, Identifiable {
 
     static let library: [MacSidebarItem] = [.allPhotos, .favorites, .videos, .raw, .recentlyAdded]
     static let collections: [MacSidebarItem] = [.onThisDay, .albums]
-    static let utilities: [MacSidebarItem] = [.statistics, .duplicates, .collages, .videoProjects, .onServer]
+    static let utilities: [MacSidebarItem] = [.backup, .statistics, .duplicates, .collages, .videoProjects, .onServer]
 
     var title: String {
         switch self {
@@ -98,6 +125,7 @@ enum MacSidebarItem: Hashable, Identifiable {
         case .source: String(localized: "Source", comment: "Mac sidebar: a photo source")
         case .onThisDay: String(localized: "On This Day", comment: "Mac sidebar")
         case .albums: String(localized: "Albums", comment: "Mac sidebar")
+        case .backup: String(localized: "Backup", comment: "Mac sidebar")
         case .statistics: String(localized: "Statistics", comment: "Mac sidebar")
         case .duplicates: String(localized: "Duplicates", comment: "Mac sidebar")
         case .collages: String(localized: "Collages", comment: "Mac sidebar")
@@ -116,6 +144,7 @@ enum MacSidebarItem: Hashable, Identifiable {
         case .source: "folder"
         case .onThisDay: "calendar"
         case .albums: "rectangle.stack"
+        case .backup: "clock.arrow.circlepath"
         case .statistics: "chart.bar"
         case .duplicates: "square.on.square"
         case .collages: "square.grid.2x2"

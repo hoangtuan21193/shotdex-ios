@@ -22,7 +22,41 @@ enum MacDemoLibrary {
         let database = (try? AppDatabase.makeEmpty()) ?? { fatalError("Cannot create database") }()
         let dependencies = MacDependencies(database: database, photoLibrary: PhotoLibraryService())
         try? dependencies.metadataStore.saveBatch(rows(), cursorAssetId: nil)
+        seedBackups(dependencies)
         return dependencies
+    }
+
+    /// Two jobs as on board `MAC_Backup`: one up to date, one whose server
+    /// is out of reach. Nothing runs in the demo; the states are written.
+    @MainActor
+    private static func seedBackups(_ dependencies: MacDependencies) {
+        let home = FileServer(name: "NAS Home", transferProtocol: .webdav, host: "nas.local", username: "demo")
+        let studio = FileServer(name: "Studio SMB", transferProtocol: .smb, host: "studio.local", username: "demo")
+        try? dependencies.fileServers.save(home, password: nil)
+        try? dependencies.fileServers.save(studio, password: nil)
+        var settings = BackupSettings()
+        settings.onlyOnWiFi = false
+        let first = BackupJob(sourceId: PhotoLibrarySource.id, connectionId: home.id, folder: "Backup/Mac", settings: settings)
+        let second = BackupJob(sourceId: PhotoLibrarySource.id, connectionId: studio.id, folder: "Clients/2026", settings: settings, sortOrder: 1)
+        try? dependencies.backups.add(first)
+        try? dependencies.backups.add(second)
+        var watching = BackupJobState(jobId: first.id)
+        watching.lastCheckedAt = Int(Date().timeIntervalSince1970) - 120
+        watching.hasFinishedFirstRun = true
+        var stuck = BackupJobState(jobId: second.id)
+        stuck.status = .unreachable
+        stuck.statusTotal = 12
+        stuck.statusDone = 0
+        try? dependencies.backups.save(watching)
+        try? dependencies.backups.save(stuck)
+        dependencies.backupCoordinator.reload()
+    }
+
+    /// `-ShotDexSection backup`: the sidebar place the window opens on.
+    static var section: String? {
+        let arguments = ProcessInfo.processInfo.arguments
+        guard let index = arguments.firstIndex(of: "-ShotDexSection"), index + 1 < arguments.count else { return nil }
+        return arguments[index + 1]
     }
 
     static func rows() -> [PhotoMetadata] {

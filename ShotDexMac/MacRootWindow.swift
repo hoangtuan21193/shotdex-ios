@@ -9,13 +9,41 @@ struct MacRootWindow: View {
     @State private var library: LibraryModel?
     @State private var searchText = ""
     @State private var showsInspector = false
+    @State private var showsBackupInspector = true
+    /// File › New Backup… asked for the sheet; the Backup screen opens it.
+    @State private var opensNewBackup = false
     @State private var viewMode = MacViewMode.grid
 
     var body: some View {
         NavigationSplitView {
-            MacSidebar(selection: $selection, library: library, sources: (try? dependencies.sources.sources()) ?? [])
+            MacSidebar(selection: $selection, library: library, sources: (try? dependencies.sources.sources()) ?? [],
+                       backup: backupBadge)
                 .navigationSplitViewColumnWidth(MacWindowMetrics.sidebarWidth)
         } detail: {
+            if selection == .backup {
+                MacBackupScreen(showsInspector: $showsBackupInspector, opensNewBackup: $opensNewBackup)
+            } else {
+                libraryDetail
+            }
+        }
+        .tint(MacTheme.accent)
+        .task { await start() }
+        .onReceive(NotificationCenter.default.publisher(for: .macShowBackup)) { _ in selection = .backup }
+        .onReceive(NotificationCenter.default.publisher(for: .macNewBackup)) { _ in
+            selection = .backup
+            opensNewBackup = true
+        }
+    }
+
+    /// Jobs, or a warning when one is stuck on something only the user can
+    /// fix (FS-22.06 §5.1).
+    private var backupBadge: (jobs: Int, needsAttention: Bool) {
+        let coordinator = dependencies.backupCoordinator
+        let stuck: Set<BackupJobState.Status> = [.unreachable, .destinationFull, .signInFailed, .noPhotosAccess]
+        return (coordinator.jobs.count, coordinator.states.values.contains { stuck.contains($0.status) })
+    }
+
+    private var libraryDetail: some View {
             content
                 .navigationTitle(selection?.title ?? "ShotDex")
                 .navigationSubtitle(subtitle)
@@ -27,9 +55,6 @@ struct MacRootWindow: View {
                         .foregroundStyle(.secondary)
                         .inspectorColumnWidth(MacWindowMetrics.inspectorWidth)
                 }
-        }
-        .tint(MacTheme.accent)
-        .task { await start() }
     }
 
     @ViewBuilder
@@ -92,6 +117,7 @@ struct MacRootWindow: View {
     private func start() async {
         if library == nil { library = LibraryModel(dependencies: dependencies) }
         #if DEBUG
+        if MacDemoLibrary.section == "backup" { selection = .backup }
         if MacDemoLibrary.isOn {
             library?.loadIfNeeded()
             return
@@ -100,6 +126,9 @@ struct MacRootWindow: View {
         if dependencies.photoLibrary.authorizationState == .notDetermined {
             await dependencies.photoLibrary.requestAuthorization()
         }
+        // The app runs the jobs while it is open (FS-22.06 §2, helper off).
+        dependencies.backupCoordinator.startWatching(photoLibrary: dependencies.photoLibrary)
+        dependencies.backupCoordinator.appBecameActive()
         guard dependencies.photoLibrary.authorizationState.canReadLibrary, let library else { return }
         library.loadIfNeeded()
         library.startIndexing()
