@@ -2,6 +2,7 @@
 import CoreGraphics
 import Photos
 import Foundation
+import GRDB
 import ImageIO
 
 /// `-ShotDexDemoLibrary`: the window over an in-memory library of landscape
@@ -266,6 +267,60 @@ enum MacSMBProbe {
                 let ids = MacAgentLink.defaults.stringArray(forKey: "smbProbeAssets") ?? []
                 let outcome = await dependencies.photoDeletionGate.check(photoIds: ids)
                 log.notice("gate: deletable \(outcome.deletable.count), verified \(outcome.verified.count), unreachable \(outcome.unreachable.keys.sorted(), privacy: .public), not on server \(outcome.notOnServer.keys.sorted(), privacy: .public)")
+                exit(0)
+            }
+        case "diagnose":
+            // Why a probe picture does or does not match: PhotoKit's size and
+            // bytes against the file it came from, and the check's rows.
+            Task { @MainActor in
+                let ids = MacAgentLink.defaults.stringArray(forKey: "smbProbeAssets") ?? []
+                let folder = URL(fileURLWithPath: "/private/tmp/shotdex-mac/import")
+                let work = FileManager.default.temporaryDirectory.appendingPathComponent("probe-diagnose", isDirectory: true)
+                try? FileManager.default.createDirectory(at: work, withIntermediateDirectories: true)
+                for asset in PhotoLibraryService.fetchAssets(ids: ids) {
+                    for file in PhotoKitOriginalExporter.uploadFiles(for: asset) {
+                        let source = folder.appendingPathComponent(file.filename)
+                        let sourceSize = (try? FileManager.default.attributesOfItem(atPath: source.path)[.size] as? NSNumber)?.int64Value ?? -1
+                        let sourceSHA = (try? FileChecksum.sha256(of: source)) ?? "-"
+                        var exportedSize: Int64 = -1
+                        var exportedSHA = "-"
+                        if let url = try? await PhotoKitOriginalExporter().export(assetId: asset.localIdentifier, file: file, into: work) {
+                            exportedSize = (try? FileManager.default.attributesOfItem(atPath: url.path)[.size] as? NSNumber)?.int64Value ?? -1
+                            exportedSHA = (try? FileChecksum.sha256(of: url)) ?? "-"
+                            try? FileManager.default.removeItem(at: url)
+                        }
+                        log.notice("diag \(file.filename, privacy: .public) key \(file.key, privacy: .public): photos size \(file.estimatedBytes) exported \(exportedSize) source \(sourceSize); sha equal \(exportedSHA == sourceSHA)")
+                    }
+                    let assetId = asset.localIdentifier
+                    let rows: [String] = (try? await dependencies.database.reader.read { db in
+                        try Row.fetchAll(db, sql: """
+                            SELECT f.fileKey, f.size, f.sha256 IS NOT NULL AS hashed, f.lastError
+                            FROM photo_copies c JOIN copy_files f ON f.copyId = c.id WHERE c.photoKitId = ?
+                            """, arguments: [assetId]).map { row -> String in
+                            let key: String = row["fileKey"] ?? "?"
+                            let size: Int64 = row["size"] ?? -1
+                            let hashed: Bool = row["hashed"] ?? false
+                            let error: String = row["lastError"] ?? "-"
+                            return "\(key) size \(size) hashed \(hashed) err \(error)"
+                        }
+                    }) ?? []
+                    let copies: Int = (try? await dependencies.database.reader.read { db in
+                        try Int.fetchOne(db, sql: "SELECT COUNT(*) FROM photo_copies WHERE photoKitId = ?", arguments: [assetId]) ?? 0
+                    }) ?? 0
+                    log.notice("diag rows for \(assetId, privacy: .public): copies \(copies), files \(rows.joined(separator: " | "), privacy: .public)")
+                }
+                let server: [String] = (try? await dependencies.database.reader.read { db in
+                    try Row.fetchAll(db, sql: """
+                        SELECT c.relativePath, f.size, f.sha256 IS NOT NULL AS hashed FROM photo_copies c
+                        JOIN copy_files f ON f.copyId = c.id WHERE c.kind = 'server'
+                        """).map { row -> String in
+                        let path: String = row["relativePath"] ?? "?"
+                        let size: Int64 = row["size"] ?? -1
+                        let hashed: Bool = row["hashed"] ?? false
+                        return "\(path) \(size) hashed \(hashed)"
+                    }
+                }) ?? []
+                log.notice("diag server files: \(server.joined(separator: " | "), privacy: .public)")
                 exit(0)
             }
         case "removePhotos":
