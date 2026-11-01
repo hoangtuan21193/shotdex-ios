@@ -73,8 +73,9 @@ struct CopyFileStore: Sendable {
 
     // MARK: - Photos
 
-    /// Photos copies whose files were never listed, or listed before the
-    /// asset last changed — newest photo first (FS-19.07 §4).
+    /// Assets whose files PhotoKit has not listed, or listed before their
+    /// last edit — what joined the library last first (`indexedAt`), then
+    /// newest capture (FS-19.07 §4, AC-114).
     func photosCopiesNeedingListing(limit: Int) throws -> [(copyId: String, assetId: String, stamp: Int?)] {
         try database.reader.read { db in
             try Row.fetchAll(db, sql: """
@@ -83,7 +84,7 @@ struct CopyFileStore: Sendable {
                 LEFT JOIN copy_file_listings l ON l.copyId = c.id
                 WHERE c.kind = 'photos' AND c.photoKitId IS NOT NULL
                   AND (l.copyId IS NULL OR l.stamp IS NOT m.modificationDate)
-                ORDER BY m.creationDate DESC, c.id LIMIT ?
+                ORDER BY m.indexedAt DESC, m.creationDate DESC, c.id LIMIT ?
                 """, arguments: [limit]).map { ($0[0], $0[1], $0[2]) }
         }
     }

@@ -54,7 +54,8 @@ dựa trên nguồn FS-19 · Folder trong điều kiện · một dấu lưới 
   file đó là ứng viên khi nguồn server có file nào đó.
 - Tải: thư mục tạm, **một file một lúc**, băm theo khối 1 MB, xoá ngay; không giữ cả file trong RAM; video đọc luồng.
 - Còn trống − cỡ file < 2 GB → chờ, `Waiting for space` (luật FS-22).
-- Mỗi file băm xong ghi ngay → bị dừng ở đâu làm tiếp ở file kế. Mục mới nhất trước. Đọc hỏng → ghi lỗi, đi tiếp, lượt sau
+- Mỗi file băm xong ghi ngay → bị dừng ở đâu làm tiếp ở file kế. Thứ tự liệt kê: **mục vào thư viện gần nhất trước** — theo lúc ShotDex index mục đó (`indexedAt`), rồi ngày chụp mới nhất
+  (đổi 2026-11-02: theo ngày chụp thì ảnh vừa nhập mà ngày chụp cũ nằm cuối hàng đợi 55k mục, lượt đầu ~55 phút). Đọc hỏng → ghi lỗi, đi tiếp, lượt sau
   mới thử lại — mục hỏng không chặn hàng.
 - `.limited`: chỉ mục được cấp; dòng tiến độ thêm "Only photos ShotDex can access are checked."
 

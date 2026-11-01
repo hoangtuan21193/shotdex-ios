@@ -42,6 +42,23 @@ import UniformTypeIdentifiers
         #expect(try store.photosCopiesNeedingHash(limit: 10).map(\.assetId) == ["gone"])
     }
 
+    /// FS-19.07 AC-114: the Photos side lists what joined the library last
+    /// first — a picture imported today with a 2017 capture date must not
+    /// wait behind 55,000 older shots — then newest capture first.
+    @Test func listsRecentlyAddedFirst() throws {
+        let database = try AppDatabase.makeEmpty()
+        var imported = PhotoMarksStoreTests.record("A", created: 1_500_000_000)
+        imported.indexedAt = 1_800_000_000
+        var recentShot = PhotoMarksStoreTests.record("B", created: 1_750_000_000)
+        recentShot.indexedAt = 1_700_000_000
+        var olderShot = PhotoMarksStoreTests.record("C", created: 1_600_000_000)
+        olderShot.indexedAt = 1_700_000_000
+        try MetadataStore(database: database).saveBatch([olderShot, imported, recentShot], cursorAssetId: nil)
+
+        let queue = try CopyFileStore(database: database).photosCopiesNeedingListing(limit: 10)
+        #expect(queue.map(\.assetId) == ["A", "B", "C"])
+    }
+
     /// FS-19.07 AC-100: assets Backup already copied, whose files still
     /// carry the stamp the ledger recorded, get the ledger's SHA-256 for
     /// every file — listed from PhotoKit, nothing downloaded, though the NAS
