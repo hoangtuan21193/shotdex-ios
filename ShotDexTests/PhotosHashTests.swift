@@ -59,6 +59,28 @@ import UniformTypeIdentifiers
         #expect(queue.map(\.assetId) == ["A", "B", "C"])
     }
 
+    /// A photo deleted from Photos takes its listed files and hashes with
+    /// it — they were left behind, unreachable, for every deleted photo.
+    @Test func deletedPhotoTakesItsFiles() throws {
+        let database = try AppDatabase.makeEmpty()
+        let metadata = MetadataStore(database: database)
+        try metadata.saveBatch(["A", "B"].map { PhotoMarksStoreTests.record($0) }, cursorAssetId: nil)
+        let store = CopyFileStore(database: database)
+        for copy in try store.photosCopiesNeedingListing(limit: 10) {
+            try store.saveListing(copyId: copy.copyId, stamp: copy.stamp,
+                                  files: [PhotosFile(fileKey: "1:\(copy.assetId).HEIC", role: .photo, size: 4_000, stamp: "s")])
+        }
+
+        try metadata.deleteAssets(ids: ["A"])
+
+        let left = try database.reader.read { db in
+            (try String.fetchAll(db, sql: "SELECT fileKey FROM copy_files ORDER BY fileKey"),
+             try Int.fetchOne(db, sql: "SELECT COUNT(*) FROM copy_file_listings") ?? 0)
+        }
+        #expect(left.0 == ["1:B.HEIC"])
+        #expect(left.1 == 1)
+    }
+
     /// FS-19.07 AC-100: assets Backup already copied, whose files still
     /// carry the stamp the ledger recorded, get the ledger's SHA-256 for
     /// every file — listed from PhotoKit, nothing downloaded, though the NAS

@@ -17,6 +17,7 @@ struct PhotoOrphanStore: Sendable {
             for chunk in stride(from: 0, to: ids.count, by: 500) {
                 let slice = Array(ids[chunk..<min(chunk + 500, ids.count)])
                 let marks = databaseQuestionMarks(count: slice.count)
+                try CopyFileStore.deletePhotosFiles(db, assetIds: slice)
                 try db.execute(
                     sql: "DELETE FROM photo_copies WHERE kind = 'photos' AND photoKitId IN (\(marks))",
                     arguments: StatementArguments(slice)

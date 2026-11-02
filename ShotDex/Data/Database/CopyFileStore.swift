@@ -69,6 +69,16 @@ struct PhotosFile: Hashable, Sendable {
 
 /// The per-file hashes behind "is it on the server" (FS-19.07 §4, §5).
 struct CopyFileStore: Sendable {
+    /// Before the Photos copies of `assetIds` are deleted: their listed
+    /// files and hashes go too. No foreign key does it, and the rows were
+    /// left behind for every photo deleted from Photos (2026-11-02).
+    static func deletePhotosFiles(_ db: Database, assetIds: [String]) throws {
+        guard !assetIds.isEmpty else { return }
+        let copies = "SELECT id FROM photo_copies WHERE kind = 'photos' AND photoKitId IN (\(databaseQuestionMarks(count: assetIds.count)))"
+        try db.execute(sql: "DELETE FROM copy_files WHERE copyId IN (\(copies))", arguments: StatementArguments(assetIds))
+        try db.execute(sql: "DELETE FROM copy_file_listings WHERE copyId IN (\(copies))", arguments: StatementArguments(assetIds))
+    }
+
     let database: AppDatabase
 
     // MARK: - Photos

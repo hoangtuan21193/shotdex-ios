@@ -152,6 +152,7 @@ struct MetadataStore: Sendable {
         _ = try database.writer.write { db in
             // The copy goes; the photo row stays, so its user data is still
             // anchored (the 30-day orphan rule, FS-19.05 §5).
+            try CopyFileStore.deletePhotosFiles(db, assetIds: ids)
             try db.execute(
                 sql: "DELETE FROM photo_copies WHERE kind = 'photos' AND photoKitId IN (\(databaseQuestionMarks(count: ids.count)))",
                 arguments: StatementArguments(ids)
