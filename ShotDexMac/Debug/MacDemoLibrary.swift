@@ -30,6 +30,11 @@ enum MacDemoLibrary {
             id: "demo-night", name: "Night ISO 3200+",
             query: SmartAlbumQuery(rules: [SmartAlbumRule(field: .iso, op: .greaterThan, number: 3199)]),
             createdAt: 1))
+        // One that matches nothing, for the empty state (`empty` tweak).
+        try? dependencies.smartAlbums.upsert(SmartAlbum(
+            id: "demo-empty", name: "ISO 100000+",
+            query: SmartAlbumQuery(rules: [SmartAlbumRule(field: .iso, op: .greaterThan, number: 99_999)]),
+            createdAt: 2))
         return dependencies
     }
 

@@ -14,6 +14,9 @@ struct MacPhotoGrid: NSViewRepresentable {
     /// The rows are already newest first (a smart album); the Library
     /// model keeps the newest at the end.
     var isNewestFirst = false
+    /// Day sections with headers (the Library, board `Main`); off, one flat
+    /// run of tiles (a smart album, board `MAC_SmartAlbum`, as on iOS).
+    var showsDays = true
     /// Photos with a copy on a server (FS-19.07 §8): the drive glyph.
     var onServer: Set<String> = []
     /// The selected asset ids, each time the selection changes.
@@ -28,7 +31,7 @@ struct MacPhotoGrid: NSViewRepresentable {
         layout.sectionInset = NSEdgeInsets(top: 0, left: MacGridMetrics.sideInset, bottom: MacGridMetrics.sectionGap,
                                            right: MacGridMetrics.sideInset)
         layout.headerReferenceSize = NSSize(width: 0, height: MacGridMetrics.headerHeight)
-        let collection = NSCollectionView()
+        let collection = MacGridCollectionView()
         collection.collectionViewLayout = layout
         collection.isSelectable = true
         collection.allowsMultipleSelection = true
@@ -55,7 +58,7 @@ struct MacPhotoGrid: NSViewRepresentable {
         coordinator.onSelection = onSelection
         let glyphsChanged = coordinator.onServer != onServer
         coordinator.onServer = onServer
-        coordinator.update(items, isNewestFirst: isNewestFirst, forceReload: glyphsChanged)
+        coordinator.update(items, isNewestFirst: isNewestFirst, showsDays: showsDays, forceReload: glyphsChanged)
     }
 
     @MainActor
@@ -69,13 +72,18 @@ struct MacPhotoGrid: NSViewRepresentable {
         private var rows: [LibraryGridItem] = []
         private var sections: [PhotoGridSection] = []
 
-        func update(_ items: [LibraryGridItem], isNewestFirst: Bool, forceReload: Bool) {
+        private var showsDays = true
+
+        func update(_ items: [LibraryGridItem], isNewestFirst: Bool, showsDays: Bool, forceReload: Bool) {
             // The model keeps the newest at the end (the iOS grid anchors at
             // the bottom); the Mac reads top-down, newest day first.
             let newestFirst = isNewestFirst ? items : Array(items.reversed())
-            guard forceReload || newestFirst.map(\.assetId) != rows.map(\.assetId) else { return }
+            guard forceReload || showsDays != self.showsDays || newestFirst.map(\.assetId) != rows.map(\.assetId) else { return }
             rows = newestFirst
-            sections = PhotoGridSectionBuilder.sections(creationDates: rows.map(\.creationDateValue), granularity: .day)
+            self.showsDays = showsDays
+            sections = showsDays
+                ? PhotoGridSectionBuilder.sections(creationDates: rows.map(\.creationDateValue), granularity: .day)
+                : rows.isEmpty ? [] : [PhotoGridSection(kind: .undated, range: 0..<rows.count)]
             collection?.reloadData()
         }
 
@@ -89,7 +97,7 @@ struct MacPhotoGrid: NSViewRepresentable {
             let tile = collectionView.makeItem(withIdentifier: MacPhotoTile.identifier, for: indexPath) as! MacPhotoTile
             let row = rows[sections[indexPath.section].range.lowerBound + indexPath.item]
             tile.show(row, asset: asset(row.assetId), picture: picture?(row.assetId), photoLibrary: photoLibrary,
-                      side: (collectionView.collectionViewLayout as? NSCollectionViewFlowLayout)?.itemSize.width ?? 160,
+                      side: MacGridMetrics.tileSide(contentWidth: collectionView.bounds.width),
                       isOnServer: onServer.contains(row.assetId))
             return tile
         }
@@ -124,6 +132,28 @@ struct MacPhotoGrid: NSViewRepresentable {
             let side = MacGridMetrics.tileSide(contentWidth: collectionView.bounds.width)
             return NSSize(width: side, height: side)
         }
+
+        func collectionView(_ collectionView: NSCollectionView, layout collectionViewLayout: NSCollectionViewLayout,
+                            referenceSizeForHeaderInSection section: Int) -> NSSize {
+            NSSize(width: 0, height: showsDays ? MacGridMetrics.headerHeight : 0)
+        }
+
+        func collectionView(_ collectionView: NSCollectionView, layout collectionViewLayout: NSCollectionViewLayout,
+                            insetForSectionAt section: Int) -> NSEdgeInsets {
+            NSEdgeInsets(top: showsDays ? 0 : MacGridMetrics.flatTopInset, left: MacGridMetrics.sideInset,
+                         bottom: MacGridMetrics.sectionGap, right: MacGridMetrics.sideInset)
+        }
+    }
+}
+
+/// Re-sizes the tiles whenever the width changes. The flow layout asks
+/// for item sizes once; without this a scroller appearing after the first
+/// layout leaves seven tiles too wide for the row, and it wraps at six.
+final class MacGridCollectionView: NSCollectionView {
+    override func setFrameSize(_ newSize: NSSize) {
+        let widthChanged = newSize.width != frame.width
+        super.setFrameSize(newSize)
+        if widthChanged { collectionViewLayout?.invalidateLayout() }
     }
 }
 
@@ -135,6 +165,8 @@ enum MacGridMetrics {
     static let sideInset: CGFloat = 16
     static let headerHeight: CGFloat = 44
     static let sectionGap: CGFloat = 12
+    /// A flat grid's gap under the bar above it (board `MAC_SmartAlbum`).
+    static let flatTopInset: CGFloat = 8
 
     static func tileSide(contentWidth: CGFloat) -> CGFloat {
         let usable = contentWidth - sideInset * 2 - spacing * CGFloat(columns - 1)

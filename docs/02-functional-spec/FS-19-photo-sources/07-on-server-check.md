@@ -156,7 +156,8 @@ Người dùng 2026-11-02: Mac ưu tiên quản lý ảnh — smart album "đã 
   mặt (§5) **và** mỗi 30 phút trong helper — *vì* trên Mac không có "về trước mặt" khi app đã Quit.
 - **Smart album:** sheet `MAC_SmartAlbumEditor` — điều kiện Source với nguồn server có dòng **Folder** (popup + Choose…
   mở `MAC_ServerBrowser`); album mở trong cửa sổ chính (`MAC_SmartAlbum`): chip Source và dòng tiến độ §7 nằm ở thanh
-  dưới toolbar, cùng hàng với số mục.
+  dưới toolbar, cùng hàng với số mục. Lưới phẳng 7 cột, mới nhất trước, không tiêu đề ngày (như iOS). Không ảnh nào
+  khớp → thanh điều kiện giữ nguyên, giữa màn là *No Photos Match* + nút **Edit Smart Album…** (tweak `empty`).
 - **Dấu lưới và Get Info:** glyph "trên server" ở góc ô lưới Mac như iOS; Get Info (`MAC_GetInfoSingle`) thêm mục
   **On Server** — mỗi file một dòng `NAS Home` + đường dẫn.
 - **Xoá:** chọn trong album → Delete (⌘⌫) hoặc chuột phải › Delete N Photos… — đi qua `PhotoDeletionGate` như ba lối

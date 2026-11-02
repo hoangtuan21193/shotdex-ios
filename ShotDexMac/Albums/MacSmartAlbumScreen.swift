@@ -14,15 +14,21 @@ struct MacSmartAlbumScreen: View {
     @State private var onServer: Set<String> = []
     @State private var deletion = PhotoDeletionFlow()
     @State private var deleteError: String?
+    /// The first load has finished; until then an empty list means "not yet".
+    @State private var hasLoaded = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             if let model {
                 conditionsBar(model)
                 Divider()
-                MacPhotoGrid(items: model.items, photoLibrary: dependencies.photoLibrary,
-                             asset: { model.asset(for: $0) }, picture: MacRootWindow.demoPicture,
-                             isNewestFirst: true, onServer: onServer, onSelection: { selection = $0 })
+                if hasLoaded, model.items.isEmpty, !model.isLoading {
+                    emptyState
+                } else {
+                    MacPhotoGrid(items: model.items, photoLibrary: dependencies.photoLibrary,
+                                 asset: { model.asset(for: $0) }, picture: MacRootWindow.demoPicture,
+                                 isNewestFirst: true, showsDays: false, onServer: onServer, onSelection: { selection = $0 })
+                }
             } else {
                 ProgressView().frame(maxWidth: .infinity, maxHeight: .infinity)
             }
@@ -57,7 +63,9 @@ struct MacSmartAlbumScreen: View {
                                               pipeline: dependencies.indexPipeline, database: dependencies.database)
             self.model = model
             selection = []
+            hasLoaded = false
             await model.load()
+            hasLoaded = true
         }
         .task(id: "\(dependencies.onServerCheck.generation)-\(model != nil)") {
             guard let model else { return }
@@ -67,6 +75,21 @@ struct MacSmartAlbumScreen: View {
             onServer = (try? await Task.detached { try queries.presentAnywhere() }.value) ?? []
             if dependencies.onServerCheck.generation > 0 { await model.load() }
         }
+    }
+
+    /// No photo matches (board `MAC_SmartAlbum`, `empty` tweak): say so in
+    /// the album's words and offer the one way out, editing the conditions.
+    private var emptyState: some View {
+        ContentUnavailableView {
+            Label(String(localized: "No Photos Match", comment: "Mac smart album: nothing matches the conditions"),
+                  systemImage: "gearshape.2")
+        } description: {
+            Text("Photos that match these conditions appear here as they're added.",
+                 comment: "Mac smart album: empty state explanation")
+        } actions: {
+            Button(String(localized: "Edit Smart Album…", comment: "Mac: edit the open smart album"), action: edit)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
     /// Under the toolbar (board `MAC_SmartAlbum`): the conditions as
