@@ -159,6 +159,7 @@ struct MacRootWindow: View {
         if MacDemoLibrary.section == "newSmartAlbum" { smartAlbumForm = MacSmartAlbumFormRequest() }
         if MacDemoLibrary.section == "settings" { openSettings() }
         if MacDemoLibrary.isOn {
+            library?.readsGridFromIndex = true
             library?.loadIfNeeded()
             return
         }

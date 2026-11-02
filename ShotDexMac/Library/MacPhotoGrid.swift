@@ -188,6 +188,8 @@ final class MacPhotoTile: NSCollectionViewItem {
     private var requestId: PHImageRequestID?
     private weak var photoLibrary: PhotoLibraryService?
     private var assetId: String?
+    /// One line of 11pt text 6pt off the bottom edge.
+    private static let shadeHeight: CGFloat = 24
 
     override func loadView() {
         view = NSView()
@@ -196,7 +198,11 @@ final class MacPhotoTile: NSCollectionViewItem {
         photo.layer?.contentsGravity = .resizeAspectFill
         photo.layer?.masksToBounds = true
         photo.layer?.backgroundColor = NSColor.quaternaryLabelColor.cgColor
-        shade.colors = [NSColor.clear.cgColor, NSColor.black.withAlphaComponent(0.45).cgColor]
+        // A layer-backed NSView is not flipped: y = 0 is the bottom edge, so
+        // the dark end is the start point. Same 24pt band and 55% as iOS.
+        shade.colors = [NSColor.black.withAlphaComponent(0.55).cgColor, NSColor.clear.cgColor]
+        shade.startPoint = CGPoint(x: 0.5, y: 0)
+        shade.endPoint = CGPoint(x: 0.5, y: 1)
         photo.layer?.addSublayer(shade)
         badge.font = .systemFont(ofSize: 10, weight: .bold)
         badge.textColor = .white
@@ -230,8 +236,10 @@ final class MacPhotoTile: NSCollectionViewItem {
 
     override func viewDidLayout() {
         super.viewDidLayout()
-        let height = view.bounds.height
-        shade.frame = CGRect(x: 0, y: 0, width: view.bounds.width, height: height * 0.4)
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
+        shade.frame = CGRect(x: 0, y: 0, width: view.bounds.width, height: Self.shadeHeight)
+        CATransaction.commit()
     }
 
     override var isSelected: Bool {
@@ -253,6 +261,7 @@ final class MacPhotoTile: NSCollectionViewItem {
         badge.isHidden = format == nil
         exif.stringValue = MacPhotoTile.exifLine(row)
         serverGlyph.isHidden = !isOnServer
+        shade.isHidden = exif.stringValue.isEmpty && !isOnServer
         let name = row.originalFilename ?? String(localized: "Photo", comment: "Mac grid: a photo with no file name")
         view.setAccessibilityLabel(isOnServer
             ? String(localized: "\(name), On server", comment: "Mac grid: VoiceOver label of a photo that is on a server")

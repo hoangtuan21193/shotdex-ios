@@ -304,6 +304,10 @@ final class LibraryModel {
 
     // MARK: Loading
 
+    /// Drives the grid from the index even when PhotoKit could serve it —
+    /// the Mac demo library, whose rows are not in Photos.
+    var readsGridFromIndex = false
+
     /// Newest slice shown at first paint on the PhotoKit fast path, before
     /// the full-library enumeration lands. Covers the visible grid plus a
     /// few screens of scroll headroom at the densest column setting.
@@ -330,7 +334,7 @@ final class LibraryModel {
         // back to the DB query.
         // PhotoKit only knows Photos: with a folder, drive or server photo in
         // the library the grid comes from the index (FS-19.05 §3).
-        let usePhotoKit = criteria.isEmpty && advancedQuery == nil && sort.photoKitSortKey != nil
+        let usePhotoKit = !readsGridFromIndex && criteria.isEmpty && advancedQuery == nil && sort.photoKitSortKey != nil
             && !((try? libraryQueries.hasPhotosOutsidePhotos()) ?? false)
         // The capped first-paint phase exists only for a grid with nothing on
         // screen (enumerating a large library takes seconds). With rows already
