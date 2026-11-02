@@ -436,11 +436,24 @@ actor IndexPipeline {
         )
         var summary = IndexRunSummary(indexed: 0, skipped: 0, pendingICloud: 0, failed: 0, deleted: 0, wasCancelled: false)
 
-        // Phase 1 — fast pass over brand-new assets.
-        try fastPass(
+        // Phase 1 — fast pass over brand-new assets. It walks every asset, so
+        // it also says which rows' assets left the library: they go now, not
+        // after the EXIF pass — on a first index that waits on iCloud for
+        // hours, and the gone photos sat in the grid and in smart albums as
+        // blank tiles the whole time (measured 2026-11-02, Mac, 453 rows).
+        let libraryIds = try fastPass(
             fetchResult: fetchResult, existingStates: existingStates,
             composer: composer, clock: clock, onWorkFound: signalWork
         )
+        var deletedIds: [String] = []
+        if let libraryIds, !fullReindex {
+            deletedIds = existing.keys.filter { !libraryIds.contains($0) }
+            if !deletedIds.isEmpty {
+                signalWork()
+                try metadataStore.deleteAssets(ids: deletedIds)
+                summary.deleted = deletedIds.count
+            }
+        }
 
         // Phase 2 — EXIF enrichment.
         //
@@ -455,7 +468,6 @@ actor IndexPipeline {
         var newlyDone = 0
         onProgress(IndexProgress(processed: baseline, total: total))
 
-        var seenAssetIds = Set<String>(minimumCapacity: total)
         var batch: [PHAsset] = []
         batch.reserveCapacity(Self.batchSize)
 
@@ -495,7 +507,6 @@ actor IndexPipeline {
         for index in 0..<total {
             if isCancelled { break }
             let asset = fetchResult.object(at: index)
-            seenAssetIds.insert(asset.localIdentifier)
 
             // Incremental diff: skip unchanged assets with a complete read.
             // Skipped assets are already counted in `baseline`, so they need
@@ -547,17 +558,6 @@ actor IndexPipeline {
             try metadataStore.updateAssetFacts(Dictionary(uniqueKeysWithValues: slice.map { ($0.key, $0.value) }))
         }
 
-        // Remove rows for assets that vanished from the library
-        // (only safe to compute after a full, uncancelled walk).
-        var deletedIds: [String] = []
-        if !isCancelled && !fullReindex {
-            deletedIds = existing.keys.filter { !seenAssetIds.contains($0) }
-            if !deletedIds.isEmpty {
-                signalWork()
-                try metadataStore.deleteAssets(ids: deletedIds)
-                summary.deleted = deletedIds.count
-            }
-        }
         await runObservers.deliver(IndexRunChanges(
             changed: readIds.union(drifted.keys),
             deleted: Set(deletedIds),
@@ -928,8 +928,8 @@ actor IndexPipeline {
         composer: MetadataComposer,
         clock: ContinuousClock,
         onWorkFound: () -> Void
-    ) throws {
-        guard !isCancelled else { return }
+    ) throws -> Set<String>? {
+        guard !isCancelled else { return nil }
         let start = clock.now
         let signpostState = Self.signposter.beginInterval("fastPass")
         defer { Self.signposter.endInterval("fastPass", signpostState) }
@@ -937,9 +937,11 @@ actor IndexPipeline {
         var rows: [PhotoMetadata] = []
         rows.reserveCapacity(Self.fastPassBatchSize)
         var written = 0
+        var libraryIds = Set<String>(minimumCapacity: fetchResult.count)
         for index in 0..<fetchResult.count {
             if isCancelled { break }
             let asset = fetchResult.object(at: index)
+            libraryIds.insert(asset.localIdentifier)
             guard existingStates[asset.localIdentifier] == nil else { continue }
             rows.append(composer.compose(
                 asset: Self.assetInfo(for: asset, fileSize: nil),
@@ -964,6 +966,7 @@ actor IndexPipeline {
         IndexTrafficMonitor.health(
             "fast pass: \(written) placeholder rows, scanned \(fetchResult.count) in \(Self.milliseconds(clock.now - start))ms"
         )
+        return isCancelled ? nil : libraryIds
     }
 
     // MARK: Batch processing
