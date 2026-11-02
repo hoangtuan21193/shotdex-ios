@@ -685,6 +685,7 @@ final class AppDatabase: Sendable {
         registerKept(&migrator)
         registerOnServerCheck(&migrator)
         registerSharedIndex(&migrator)
+        registerCommonPhotos(&migrator)
 
         return migrator
     }
