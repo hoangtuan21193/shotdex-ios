@@ -324,6 +324,32 @@ enum MacSMBProbe {
                 log.notice("diag server files: \(server.joined(separator: " | "), privacy: .public)")
                 exit(0)
             }
+        case "staleCheck":
+            // Rows for Photos items that are no longer in Photos, after the
+            // index has had its say: what a smart album could still show.
+            Task { @MainActor in
+                let database = dependencies.database
+                let ids: [String] = (try? await database.reader.read { db in
+                    try String.fetchAll(db, sql: "SELECT DISTINCT photoKitId FROM photo_copies WHERE kind = 'photos' AND photoKitId IS NOT NULL")
+                }) ?? []
+                var present = Set<String>()
+                for chunk in stride(from: 0, to: ids.count, by: 2_000) {
+                    let slice = Array(ids[chunk..<min(chunk + 2_000, ids.count)])
+                    let options = PHFetchOptions()
+                    options.includeHiddenAssets = true
+                    options.includeAllBurstAssets = true
+                    let found = PHAsset.fetchAssets(withLocalIdentifiers: slice, options: options)
+                    found.enumerateObjects { asset, _, _ in present.insert(asset.localIdentifier) }
+                }
+                let stale = ids.filter { !present.contains($0) }
+                let orphanFiles: Int = (try? await database.reader.read { db in
+                    try Int.fetchOne(db, sql: "SELECT COUNT(*) FROM copy_files WHERE copyId NOT IN (SELECT id FROM photo_copies)") ?? 0
+                }) ?? 0
+                let hiddenOrBurst = present.subtracting(PhotoLibraryService.fetchAssets(ids: Array(present)).map(\.localIdentifier)).count
+                log.notice("stale: hidden or burst \(hiddenOrBurst)")
+                log.notice("stale: \(stale.count) of \(ids.count) Photos copies point at items gone from Photos; \(orphanFiles) copy_files rows have no copy")
+                exit(0)
+            }
         case "removePhotos":
             Task { @MainActor in
                 let ids = MacAgentLink.defaults.stringArray(forKey: "smbProbeAssets") ?? []
