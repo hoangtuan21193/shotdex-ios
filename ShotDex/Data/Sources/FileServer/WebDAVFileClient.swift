@@ -143,8 +143,15 @@ final class WebDAVFileClient: NSObject, RemoteFileClient, URLSessionDelegate, UR
         get.setValue("bytes=\(offset)-\(offset + Int64(length) - 1)", forHTTPHeaderField: "Range")
         let (bytes, response) = try await perform { try await self.session.bytes(for: get) }
         try check(response, path: path, allow: [200, 206])
-        // A server that ignores Range sends the whole file from byte 0.
-        let skip = (response as? HTTPURLResponse)?.statusCode == 200 ? Int(offset) : 0
+        // A server that ignores Range sends the whole file from byte 0; one
+        // that answers 206 must answer for the bytes asked, or the caller
+        // would hash the wrong part of the file.
+        let http = response as? HTTPURLResponse
+        if http?.statusCode == 206, let start = Self.rangeStart(http?.value(forHTTPHeaderField: "Content-Range")), start != offset {
+            bytes.task.cancel()
+            throw RemoteFileError.other("server sent bytes from \(start), not \(offset)")
+        }
+        let skip = http?.statusCode == 200 ? Int(offset) : 0
         var result = Data()
         result.reserveCapacity(length)
         var skipped = 0
@@ -155,6 +162,13 @@ final class WebDAVFileClient: NSObject, RemoteFileClient, URLSessionDelegate, UR
         }
         bytes.task.cancel()
         return result
+    }
+
+    /// The first byte of a `Content-Range: bytes 100-199/1000` answer.
+    static func rangeStart(_ header: String?) -> Int64? {
+        guard let header, let range = header.split(separator: " ").last,
+              let first = range.split(separator: "-").first else { return nil }
+        return Int64(first)
     }
 
     func move(_ source: String, to destination: String) async throws {

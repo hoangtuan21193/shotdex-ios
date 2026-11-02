@@ -171,6 +171,9 @@ final class InMemoryRemoteFileClient: RemoteFileClient, @unchecked Sendable {
     /// After this many range reads, every read fails as if the server went
     /// away (nil = never) — a NAS switched off mid-download.
     var failRangeReadsAfter: Int?
+    /// Paths whose range reads come back half as long as asked — a read the
+    /// server cut short without an error.
+    var shortRangeReads: Set<String> = []
 
     func readRange(_ path: String, offset: Int64, length: Int) async throws -> Data {
         try lock.withLock {
@@ -178,7 +181,8 @@ final class InMemoryRemoteFileClient: RemoteFileClient, @unchecked Sendable {
             rangeReadPaths.append(path)
             guard let data = storage[path] else { throw RemoteFileError.other("missing \(path)") }
             let start = min(Int(offset), data.count)
-            let slice = data.subdata(in: start..<min(data.count, start + length))
+            var slice = data.subdata(in: start..<min(data.count, start + length))
+            if shortRangeReads.contains(path) { slice = slice.prefix(slice.count / 2) }
             bytesRead += slice.count
             return slice
         }
