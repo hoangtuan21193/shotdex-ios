@@ -37,7 +37,7 @@ struct MacRootWindow: View {
         .task { await start() }
         .onReceive(NotificationCenter.default.publisher(for: .macShowBackup)) { _ in selection = .backup }
         .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
-            dependencies.onServerCheck.appBecameActive()
+            dependencies.backupControl.appBecameActive()
         }
         .onReceive(NotificationCenter.default.publisher(for: .macAddServer)) { note in
             serverForm = MacServerFormRequest(editing: (note.object as? String).flatMap { try? dependencies.fileServers.fetch(id: $0) })
@@ -158,10 +158,10 @@ struct MacRootWindow: View {
         if dependencies.photoLibrary.authorizationState == .notDetermined {
             await dependencies.photoLibrary.requestAuthorization()
         }
-        // The helper runs the jobs, or the app while it is open (FS-22.06 §2).
+        // The helper runs the jobs and the On Server check, or the app while
+        // it is open (FS-22.06 §2, FS-19.07 §11); appStarted starts this
+        // side's pass when the app is the runner.
         dependencies.backupControl.appStarted()
-        // On Server: each time the app comes forward (FS-19.07 §5, §11).
-        dependencies.onServerCheck.appBecameActive()
         #if DEBUG
         MacAgentProbe.runIfAsked(dependencies)
         MacSMBProbe.runIfAsked(dependencies) { item in

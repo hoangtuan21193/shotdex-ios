@@ -16,18 +16,22 @@ enum MacAgentLink {
     /// Darwin notification names, scoped by the app group.
     static let commandsPosted = "\(AppDatabase.macAppGroup).agent.commands"
     static let agentChanged = "\(AppDatabase.macAppGroup).agent.changed"
+    static let onServerChanged = "\(AppDatabase.macAppGroup).agent.onServer"
 
     private static let commandsKey = "agentCommands"
     private static let runKey = "agentRun"
     private static let heartbeatKey = "agentHeartbeat"
     private static let keepsWorkingKey = "agentKeepsWorkingAfterQuit"
+    private static let onServerKey = "agentOnServer"
 
     static var defaults: UserDefaults { UserDefaults(suiteName: AppDatabase.macAppGroup) ?? .standard }
     static var service: SMAppService { SMAppService.agent(plistName: plistName) }
 
     // MARK: Commands
 
-    enum Action: String { case pause, resume, backUpNow, retry, jobsChanged, start }
+    /// `checkOnServer`: the app came forward — list the servers again
+    /// (FS-19.07 §5) and hash what is left.
+    enum Action: String { case pause, resume, backUpNow, retry, jobsChanged, start, checkOnServer }
 
     struct Command: Equatable {
         var action: Action
@@ -87,6 +91,62 @@ enum MacAgentLink {
         progress.failed = entry["failed"] as? Int ?? 0
         progress.currentFile = entry["file"] as? String
         return Run(jobId: jobId, progress: progress, bytesPerSecond: entry["bytesPerSecond"] as? Double)
+    }
+
+    // MARK: The On Server check (FS-19.07 §11)
+
+    /// What the helper's check waits for and when it last finished; the
+    /// counts themselves are in the shared database.
+    struct OnServerState: Equatable {
+        var waits: [String: OnServerSchedule.Wait] = [:]
+        var photosWait: OnServerSchedule.Wait?
+        var finishedAt: Date?
+        var isRunning = false
+    }
+
+    static func publish(_ state: OnServerState) {
+        var entry: [String: Any] = ["waits": state.waits.mapValues(encode), "isRunning": state.isRunning]
+        entry["photosWait"] = state.photosWait.map(encode)
+        entry["finishedAt"] = state.finishedAt?.timeIntervalSince1970
+        defaults.set(entry, forKey: onServerKey)
+        notify_post(onServerChanged)
+    }
+
+    static func currentOnServer() -> OnServerState {
+        guard let entry = defaults.dictionary(forKey: onServerKey) else { return OnServerState() }
+        return OnServerState(
+            waits: (entry["waits"] as? [String: String] ?? [:]).compactMapValues(decode),
+            photosWait: (entry["photosWait"] as? String).flatMap(decode),
+            finishedAt: (entry["finishedAt"] as? Double).map(Date.init(timeIntervalSince1970:)),
+            isRunning: entry["isRunning"] as? Bool ?? false
+        )
+    }
+
+    private static func encode(_ wait: OnServerSchedule.Wait) -> String {
+        switch wait {
+        case .wifi: "wifi"
+        case .charging: "charging"
+        case .space: "space"
+        case .openApp: "openApp"
+        case .unreachable(let name): "unreachable:" + name
+        }
+    }
+
+    private static func decode(_ text: String) -> OnServerSchedule.Wait? {
+        if text.hasPrefix("unreachable:") { return .unreachable(String(text.dropFirst("unreachable:".count))) }
+        return switch text {
+        case "wifi": .wifi
+        case "charging": .charging
+        case "space": .space
+        case "openApp": .openApp
+        default: nil
+        }
+    }
+
+    /// A server source exists, so the check has something to do — the
+    /// helper's other reason to run besides Backup jobs (FS-22.06 §2).
+    static func hasOnServerWork(_ database: AppDatabase) -> Bool {
+        !((try? SourceStore(database: database).serverConnections()) ?? [:]).isEmpty
     }
 
     // MARK: Liveness and registration

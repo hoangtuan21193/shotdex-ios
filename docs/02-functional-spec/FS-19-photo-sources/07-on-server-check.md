@@ -154,6 +154,10 @@ Người dùng 2026-11-02: Mac ưu tiên quản lý ảnh — smart album "đã 
   Helper tắt → kiểm chạy khi app mở; lý do chờ `Open ShotDex to continue` giữ nguyên.
 - **Khi nào:** cổng §6 giữ nguyên, với hàng điều kiện đổi tên theo FS-22.06 §4. Liệt kê server lại: mỗi lần app về trước
   mặt (§5) **và** mỗi 30 phút trong helper — *vì* trên Mac không có "về trước mặt" khi app đã Quit.
+  Code (2026-11-02): `MacAgent` chạy `OnServerCheck` lúc khởi động, sau khi máy thức, mỗi 30 phút và khi app về trước
+  mặt (lệnh `checkOnServer`; đến giữa lượt thì chạy lại ngay khi lượt xong). Helper đăng waits/finishedAt qua defaults
+  nhóm app + thông báo Darwin; app hiện bằng `OnServerCheck.showRemote`, số đếm đọc từ database chung. Không còn nguồn
+  server → lượt dừng giữa batch; không còn job lẫn nguồn → helper thoát.
 - **Smart album:** sheet `MAC_SmartAlbumEditor` — điều kiện Source với nguồn server có dòng **Folder** (popup + Choose…
   mở `MAC_ServerBrowser`); album mở trong cửa sổ chính (`MAC_SmartAlbum`): chip Source và dòng tiến độ §7 nằm ở thanh
   dưới toolbar, cùng hàng với số mục. Lưới phẳng 7 cột, mới nhất trước, không tiêu đề ngày (như iOS). Không ảnh nào

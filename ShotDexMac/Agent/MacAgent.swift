@@ -6,11 +6,21 @@ import IOKit.ps
 /// `--agent`. No window, no Dock icon, no menu bar. Runs every Backup job
 /// from the shared database, takes the app's commands, publishes the run in
 /// flight, keeps the Mac awake while copying, pauses for sleep, and quits
-/// once there is no job left.
+/// once there is no job left. It also runs the On Server check (FS-19.07
+/// §11): at start, when the app comes forward, after wake, and every 30
+/// minutes — the Mac has no "came forward" while the app is quit.
 @MainActor
 final class MacAgent {
     private let dependencies: MacDependencies
     private var coordinator: BackupCoordinator { dependencies.backupCoordinator }
+    private var check: OnServerCheck { dependencies.onServerCheck }
+    private var lastOnServer = MacAgentLink.OnServerState()
+    private var relist: Timer?
+    /// The app came forward while a pass ran: list again once it ends, so a
+    /// server that just came back is not left waiting 30 minutes.
+    private var relistsAfterPass = false
+    /// FS-19.07 §11: how often the helper lists the servers again.
+    static let relistInterval: TimeInterval = 30 * 60
     private var awake: NSObjectProtocol?
     private var lastRun: MacAgentLink.Run?
     private var tick: Timer?
@@ -35,21 +45,32 @@ final class MacAgent {
     private func start() {
         NSApplication.shared.setActivationPolicy(.prohibited)
         coordinator.reload()
-        guard !coordinator.jobs.isEmpty else { exit(0) }
+        guard hasWork else { exit(0) }
         MacAgentLink.beat()
         MacAgentLink.observe(MacAgentLink.commandsPosted) { [weak self] in self?.drainCommands() }
         let center = NSWorkspace.shared.notificationCenter
         center.addObserver(forName: NSWorkspace.willSleepNotification, object: nil, queue: .main) { [weak self] _ in
-            MainActor.assumeIsolated { self?.coordinator.systemWillStop() }
+            MainActor.assumeIsolated {
+                self?.coordinator.systemWillStop()
+                self?.check.appDidEnterBackground()
+            }
         }
         center.addObserver(forName: NSWorkspace.didWakeNotification, object: nil, queue: .main) { [weak self] _ in
-            MainActor.assumeIsolated { _ = self?.coordinator.appBecameActive() }
+            MainActor.assumeIsolated {
+                _ = self?.coordinator.appBecameActive()
+                self?.check.appBecameActive()
+            }
         }
         #if DEBUG
         MacAgentProbe.log.notice("agent started; jobs \(self.coordinator.jobs.count); photos \(String(describing: self.dependencies.photoLibrary.authorizationState))")
         #endif
         coordinator.startWatching(photoLibrary: dependencies.photoLibrary)
         coordinator.appBecameActive()
+        check.onBatch = { [weak self] in self?.publishOnServer() }
+        check.appBecameActive()
+        relist = Timer.scheduledTimer(withTimeInterval: Self.relistInterval, repeats: true) { [weak self] _ in
+            MainActor.assumeIsolated { self?.checkOnServer() }
+        }
         drainCommands()
         tick = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { [weak self] _ in
             MainActor.assumeIsolated { self?.publish() }
@@ -65,13 +86,58 @@ final class MacAgent {
             case .retry: command.jobId.map(coordinator.retry)
             case .jobsChanged: coordinator.jobsChanged()
             case .start: coordinator.jobsChanged(start: command.jobId)
+            case .checkOnServer: checkOnServer()
             }
         }
-        if coordinator.jobs.isEmpty, coordinator.isIdle {
+        quitIfIdle()
+        MacAgentLink.publish(lastRun)
+    }
+
+    private func checkOnServer() {
+        guard MacAgentLink.hasOnServerWork(dependencies.database) else {
+            // The last server source went: stop between batches.
+            check.appDidEnterBackground()
+            return
+        }
+        if check.isRunning { relistsAfterPass = true } else { check.appBecameActive() }
+    }
+
+    /// Backup jobs, or a server source for the On Server check.
+    private var hasWork: Bool {
+        !coordinator.jobs.isEmpty || MacAgentLink.hasOnServerWork(dependencies.database)
+    }
+
+    private func quitIfIdle() {
+        if coordinator.jobs.isEmpty, coordinator.isIdle, !check.isRunning, !hasWork {
             MacAgentLink.publish(nil)
             exit(0)
         }
-        MacAgentLink.publish(lastRun)
+    }
+
+    #if DEBUG
+    private var lastProgressLog = Date.distantPast
+
+    /// At most every 30 s while a pass runs: how far the check has got.
+    private func logCheckProgress() {
+        guard check.isRunning, Date().timeIntervalSince(lastProgressLog) >= 30 else { return }
+        lastProgressLog = Date()
+        let queries = OnServerProgressQueries(database: dependencies.database)
+        let sources = (try? SourceStore(database: dependencies.database).serverConnections().keys.sorted()) ?? []
+        let counts = sources.compactMap { try? queries.progress(sourceId: $0, folder: nil) }.map { "\($0.checked)/\($0.total)" }
+        MacAgentProbe.log.notice("agent on server pass: checked \(counts.joined(separator: ", "), privacy: .public)")
+    }
+    #endif
+
+    /// The check's waits and finish time, for the app's progress line.
+    private func publishOnServer() {
+        let state = MacAgentLink.OnServerState(waits: check.waits, photosWait: check.photosWait,
+                                               finishedAt: check.finishedAt, isRunning: check.isRunning)
+        guard state != lastOnServer else { return }
+        lastOnServer = state
+        MacAgentLink.publish(state)
+        #if DEBUG
+        MacAgentProbe.log.notice("agent on server: running \(state.isRunning), waits \(String(describing: state.waits), privacy: .public), photos \(String(describing: state.photosWait), privacy: .public), finished \(String(describing: state.finishedAt), privacy: .public)")
+        #endif
     }
 
     /// Twice a second: the heartbeat, the run in flight when it changed, and
@@ -87,6 +153,16 @@ final class MacAgent {
             MacAgentLink.publish(run)
         }
         holdAwake(run != nil && MacKeepAwake.current.applies)
+        // A pass's end bumps no batch; catch isRunning going false here.
+        publishOnServer()
+        if relistsAfterPass, !check.isRunning {
+            relistsAfterPass = false
+            check.appBecameActive()
+        }
+        #if DEBUG
+        logCheckProgress()
+        #endif
+        quitIfIdle()
     }
 
     private func holdAwake(_ hold: Bool) {

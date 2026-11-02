@@ -217,8 +217,11 @@ struct MacServerFormSheet: View {
             try dependencies.fileServers.save(row, password: draft.password.isEmpty ? nil : draft.password)
             // The store numbers a taken name; read back what it kept.
             let kept = (try? dependencies.fileServers.fetch(id: row.id)) ?? row
-            let (sources, isSource) = (dependencies.sourcesModel, showsInSidebar)
-            Task { await sources.setServerSource(isSource, connection: kept) }
+            let (sources, isSource, control) = (dependencies.sourcesModel, showsInSidebar, dependencies.backupControl)
+            Task {
+                await sources.setServerSource(isSource, connection: kept)
+                control.sourcesChanged()
+            }
             saved(kept)
             dismiss()
         } catch {

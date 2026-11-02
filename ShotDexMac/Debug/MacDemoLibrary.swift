@@ -246,7 +246,8 @@ enum MacSMBProbe {
                 try? dependencies.smartAlbums.upsert(album)
                 let matching = (try? await dependencies.libraryQueries.count(matching: album.query)) ?? -1
                 log.notice("smart album Source is SMB Test · Shared matches \(matching)")
-                dependencies.onServerCheck.appBecameActive()
+                // Through the control: the helper runs the pass when it is on.
+                dependencies.backupControl.sourcesChanged()
                 try? await Task.sleep(for: .seconds(20))
                 let progress = try? OnServerProgressQueries(database: dependencies.database).progress(sourceId: sourceId, folder: "Shared")
                 log.notice("on server progress: \(String(describing: progress), privacy: .public); waits \(String(describing: dependencies.onServerCheck.waits), privacy: .public)")
@@ -389,7 +390,9 @@ enum MacSMBProbe {
                     await dependencies.sourcesModel.setServerSource(false, connection: server)
                     try? dependencies.fileServers.delete(id: server.id)
                 }
+                dependencies.backupControl.sourcesChanged()
                 log.notice("smb probe removed")
+                try? await Task.sleep(for: .seconds(1))
                 exit(0)
             }
         default:

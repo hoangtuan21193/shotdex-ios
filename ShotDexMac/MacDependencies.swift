@@ -79,7 +79,6 @@ final class MacDependencies: LibraryServices {
         backupCoordinator = BackupCoordinator(store: backups, environment: .live(
             database: database, store: backups, servers: fileServers, roots: folderRoots, connectionLock: connectionLock
         ))
-        backupControl = MacBackupControl(coordinator: backupCoordinator, photoLibrary: photoLibrary)
         let folderSources = FolderSourceRunner(database: database, metadataStore: metadataStore)
         self.folderSources = folderSources
         let serverSources = ServerSourceRefresh(database: database, servers: fileServers,
@@ -98,6 +97,8 @@ final class MacDependencies: LibraryServices {
             database: database, servers: fileServers, refresh: serverSources, connectionLock: connectionLock,
             listingChanged: { await sourcesModel.serverListingChanged() }
         ))
+        backupControl = MacBackupControl(coordinator: backupCoordinator, photoLibrary: photoLibrary,
+                                         onServerCheck: onServerCheck, database: database)
         photoDeletionGate = PhotoDeletionGate(
             database: database,
             connect: { connectionId in

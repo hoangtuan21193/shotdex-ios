@@ -109,6 +109,18 @@ final class OnServerCheck {
         return started
     }
 
+    /// Shows a pass another process runs — the Mac helper (FS-19.07 §11):
+    /// its waits and finish time, then a new generation so screens read
+    /// progress again.
+    func showRemote(waits: [String: OnServerSchedule.Wait], photosWait: OnServerSchedule.Wait?,
+                    finishedAt: Date?, isRunning: Bool) {
+        self.waits = waits
+        self.photosWait = photosWait
+        self.finishedAt = finishedAt
+        self.isRunning = isRunning
+        generation &+= 1
+    }
+
     /// Some server source, or iCloud downloads, still has work or waits.
     var hasWorkLeft: Bool { finishedAt == nil || !waits.isEmpty || photosWait != nil }
 
