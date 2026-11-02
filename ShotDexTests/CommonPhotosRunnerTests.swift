@@ -42,6 +42,21 @@ import Testing
         var runner: CommonPhotosRunner { CommonPhotosRunner(client: nas, store: store, workDirectory: work) }
 
         func items() throws -> [CommonPhotosItem] { try store.items(runId: runId) }
+
+        /// Uploads of photos and sidecars, the run's CSV left out.
+        var photoUploads: Int {
+            nas.commands.filter { $0.hasPrefix("upload ") && !$0.contains(".csv") }.count
+        }
+
+        /// The destination's files, the run's CSV left out.
+        var destinationFiles: [String: Data] {
+            nas.files.filter { $0.key.hasPrefix("C/") && !$0.key.hasSuffix(".csv") }
+        }
+
+        var csv: (path: String, text: String)? {
+            nas.files.first { $0.key.hasPrefix("C/ShotDex Common Photos ") && $0.key.hasSuffix(".csv") }
+                .map { ($0.key, String(decoding: $0.value, as: UTF8.self)) }
+        }
     }
 
     /// AC-121: five Same photos copied; each one read back and matched; the
@@ -53,15 +68,15 @@ import Testing
 
         try await fixture.runner.run("R1")
 
-        let copied = fixture.nas.files.filter { $0.key.hasPrefix("C/") }
+        let copied = fixture.destinationFiles
         #expect(copied.count == 5)
         for (name, bytes) in fixture.photos { #expect(copied["C/\(name)"] == bytes) }
         #expect(fixture.nas.files.filter { !$0.key.hasPrefix("C/") } == before)
-        #expect(Set(fixture.nas.sha256Paths.filter { $0.hasPrefix("C/") }) == Set((1...5).map { "C/IMG_\($0).JPG.shotdex-part" }))
+        #expect(Set(fixture.nas.sha256Paths.filter { $0.hasPrefix("C/") && !$0.contains(".csv") }) == Set((1...5).map { "C/IMG_\($0).JPG.shotdex-part" }))
         let items = try fixture.items()
         #expect(items.map(\.status) == Array(repeating: .copied, count: 5))
         #expect(items.allSatisfy { $0.partPath == nil && $0.destinationPath?.hasPrefix("C/") == true })
-        #expect(try fixture.store.run(id: "R1")?.state == .finishing)
+        #expect(try fixture.store.run(id: "R1")?.state == .finished)
     }
 
     /// AC-122: the third read-back is wrong — its part is removed, nothing
@@ -234,7 +249,7 @@ import Testing
 
         try await fixture.runner.run("R1")
 
-        let destination = fixture.nas.files.filter { $0.key.hasPrefix("C/") }
+        let destination = fixture.destinationFiles
         #expect(Set(destination.keys) == ["C/IMG_1.JPG", "C/IMG_1.xmp", "C/IMG_1 (2).JPG", "C/IMG_1 (2).XMP"])
         #expect(destination["C/IMG_1.xmp"] == xmp)
         // Photo 2 is copied from A, which has no sidecar: B's goes with it.
@@ -254,7 +269,7 @@ import Testing
 
         try await fixture.runner.run("R1")
 
-        let destination = fixture.nas.files.filter { $0.key.hasPrefix("C/") }
+        let destination = fixture.destinationFiles
         #expect(Set(destination.keys) == ["C/IMG_1.JPG", "C/IMG_2.JPG", "C/IMG_2.JPG.xmp"])
         #expect(destination["C/IMG_2.JPG.xmp"] == Data("jpeg".utf8))
     }
@@ -275,7 +290,7 @@ import Testing
 
         #expect(try fixture.items().map(\.status) == [.copied])
         #expect(fixture.nas.files["C/IMG_1.xmp"] == Data("rating".utf8))
-        #expect(fixture.nas.uploadCount == 2)
+        #expect(fixture.photoUploads == 2)
     }
 
     /// A photo already in the destination is Skipped; its missing sidecar is
@@ -305,7 +320,7 @@ import Testing
         #expect(fixture.nas.files["C/IMG_1.xmp"] == Data("theirs".utf8))
         #expect(try fixture.items().map(\.status) == [.copied])
         #expect(try fixture.items().first?.failure?.reason == .sidecarNotCopied)
-        #expect(fixture.nas.uploadCount == 1)
+        #expect(fixture.photoUploads == 1)
     }
 
     /// AC-123: five Same photos, Move, one share — renamed into place, never
@@ -593,7 +608,7 @@ import Testing
         #expect(fixture.nas.files.keys.filter { $0.hasPrefix("A/") || $0.hasPrefix("B/") }.isEmpty)
         #expect(try fixture.items().first?.status == .moved)
         #expect(try fixture.items().first?.failure?.reason == .alreadyThere)
-        #expect(fixture.nas.downloadCount == 0 && fixture.nas.uploadCount == 0)
+        #expect(fixture.nas.downloadCount == 0 && fixture.photoUploads == 0)
     }
 
     /// AC-128: ten photos, the connection lost on the fifth; Resume carries
@@ -631,7 +646,7 @@ import Testing
         #expect(items.count == 10)
         #expect(items.map(\.status) == Array(repeating: action == .copy ? .copied : .moved, count: 10))
         #expect(items.allSatisfy { $0.partPath == nil && $0.destinationPath != nil })
-        let destination = fixture.nas.files.filter { $0.key.hasPrefix("C/") }
+        let destination = fixture.destinationFiles
         #expect(destination.count == 10)
         for (name, bytes) in fixture.photos { #expect(destination["C/\(name)"] == bytes) }
         let sources = fixture.nas.files.keys.filter { $0.hasPrefix("A/") || $0.hasPrefix("B/") }
@@ -684,22 +699,113 @@ import Testing
         try await fixture.runner.run("R1")
 
         #expect(try fixture.items().map(\.status) == [.copied, .copied, .copied])
-        #expect(Set(fixture.nas.files.keys.filter { $0.hasPrefix("C/") }) == ["C/IMG_1.JPG", "C/IMG_2.JPG", "C/IMG_3.JPG"])
+        #expect(Set(fixture.destinationFiles.keys) == ["C/IMG_1.JPG", "C/IMG_2.JPG", "C/IMG_3.JPG"])
         #expect(fixture.nas.files["C/IMG_3.JPG"] == fixture.photos["IMG_3.JPG"])
         #expect(fixture.nas.commands.filter { $0.hasPrefix("download") } == ["download A/IMG_3.JPG"])
     }
 
-    /// A run killed after its last photo (`finishing`) is accepted by Resume.
+    /// A run killed after its last photo (`finishing`): Resume writes the
+    /// CSV and finishes, touching no photo.
     @Test func finishingRunResumes() async throws {
         let fixture = try Fixture(count: 1)
         try await fixture.start()
         try await fixture.runner.run("R1")
-        let commands = fixture.nas.commands.count
+        let csv = try #require(fixture.csv)
+        fixture.nas.drop(csv.path)
+        try fixture.store.markState(.finishing, runId: "R1")
+        let downloads = fixture.nas.downloadCount
 
         try await fixture.runner.run("R1")
 
+        #expect(try fixture.store.run(id: "R1")?.state == .finished)
+        #expect(fixture.nas.downloadCount == downloads)
+        #expect(fixture.csv != nil)
+    }
+
+    /// AC-129: three copied, one skipped — the CSV in the destination has a
+    /// header and four rows, and the run points at it.
+    @Test func writesCsvLog() async throws {
+        var fixture = try Fixture(count: 4)
+        try await fixture.start()
+        fixture.nas.put("C/IMG_4.JPG", fixture.photos["IMG_4.JPG"]!)
+        let changes = OSAllocatedUnfairLock(initialState: [CommonPhotosLog.HistoryChange]())
+        var runner = fixture.runner
+        runner.now = { Date(timeIntervalSince1970: 1_762_061_400) }
+        runner.timeZone = TimeZone(identifier: "Asia/Tokyo")!
+        runner.afterRun = { _, list in changes.withLock { $0 = list } }
+        fixture.photos = [:]
+
+        try await runner.run("R1")
+
+        let csv = try #require(fixture.csv)
+        #expect(csv.path == "C/ShotDex Common Photos 2025-11-02 1430.csv")
+        #expect(csv.text.hasPrefix("\u{FEFF}"))
+        let rows = csv.text.dropFirst().components(separatedBy: "\r\n").filter { !$0.isEmpty }
+        #expect(rows.count == 5)
+        #expect(rows[0] == "Status,Name,From,To,SHA-256,Reason")
+        #expect(rows.dropFirst().map { $0.split(separator: ",").first.map(String.init) } == ["Copied", "Copied", "Copied", "Skipped"])
+        #expect(rows[4].hasSuffix(",already there"))
+        #expect(rows[1].contains("A/IMG_1.JPG; B/IMG_1.JPG"))
+        #expect(try fixture.store.run(id: "R1")?.csvPath == csv.path)
+        #expect(changes.withLock { $0 }.isEmpty)
+    }
+
+    /// A quit after the CSV name was chosen: Resume writes that same file,
+    /// never a second one beside it.
+    @Test func csvResumesUnderItsName() async throws {
+        let fixture = try Fixture(count: 1)
+        try await fixture.start()
+        var runner = fixture.runner
+        runner.afterRun = { _, _ in throw RemoteFileError.connectionLost }
+        await #expect(throws: RemoteFileError.connectionLost) { try await runner.run("R1") }
+        let path = try #require(try fixture.store.run(id: "R1")?.csvPath)
+        fixture.nas.drop(path)
+
+        try await fixture.runner.run("R1")
+
+        #expect(fixture.nas.files.keys.filter { $0.hasSuffix(".csv") } == [path])
+        #expect(try fixture.store.run(id: "R1")?.state == .finished)
+    }
+
+    /// Server names that would run as a spreadsheet formula are made text;
+    /// a CR LF inside a field keeps the row whole.
+    @Test func csvIsSafeToOpen() {
+        let item = CommonPhotosItem(runId: "R1", position: 0, sha256: "aa", size: 1,
+                                    sources: [.init(path: "A/=HYPERLINK(x).jpg", size: 1)], status: .failed,
+                                    reason: CommonPhotosItem.reason(.serverError, "line one\r\nline two"))
+
+        let rows = CommonPhotosLog.csv([item]).dropFirst().components(separatedBy: "\r\n").filter { !$0.isEmpty }
+
+        #expect(rows.count == 2 || rows[1].contains("\"server error: line one"))
+        #expect(rows[1].contains(",'=HYPERLINK(x).jpg,"))
+        #expect(rows[1].hasPrefix("Failed,"))
+    }
+
+    /// The history follows a Move: the renamed source now lives at its
+    /// destination, the other copies are gone.
+    @Test func moveReportsHistoryChanges() async throws {
+        let fixture = try Fixture(count: 1)
+        try await fixture.start(action: .move)
+        let changes = OSAllocatedUnfairLock(initialState: [CommonPhotosLog.HistoryChange]())
+        var runner = fixture.runner
+        runner.afterRun = { _, list in changes.withLock { $0 = list } }
+
+        try await runner.run("R1")
+
+        #expect(changes.withLock { $0 } == [.init(from: "A/IMG_1.JPG", to: "C/IMG_1.JPG"), .init(from: "B/IMG_1.JPG", to: "C/IMG_1.JPG")])
+    }
+
+    /// A rescan that fails leaves the run finishing, for Resume to do again.
+    @Test func failedAfterRunStaysFinishing() async throws {
+        let fixture = try Fixture(count: 1)
+        try await fixture.start()
+        var runner = fixture.runner
+        runner.afterRun = { _, _ in throw RemoteFileError.connectionLost }
+
+        await #expect(throws: RemoteFileError.connectionLost) { try await runner.run("R1") }
+
         #expect(try fixture.store.run(id: "R1")?.state == .finishing)
-        #expect(fixture.nas.commands.count == commands)
+        #expect(try fixture.store.unfinishedRuns().map(\.id) == ["R1"])
     }
 
     /// A stopped run is not resumed.

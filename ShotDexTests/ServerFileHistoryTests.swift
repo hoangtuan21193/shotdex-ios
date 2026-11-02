@@ -94,4 +94,29 @@ import Testing
         // Nothing left in the library for a place: it goes.
         #expect(UploadDestinations.group(rows, present: ["C"]).map(\.folder) == [""])
     }
+
+    /// FS-19.08 §6: a Move takes Backup's ledger along, for every job on a
+    /// connection to the same files.
+    @Test func moveTakesTheBackupLedgerAlong() throws {
+        let database = try AppDatabase.makeEmpty()
+        let servers = FileServerStore(database: database, passwords: InMemoryPasswordStore())
+        let nas = FileServer(name: "NAS", transferProtocol: .smb, host: "nas.local", username: "me", folder: "photos")
+        try servers.save(nas, password: "pw")
+        try database.writer.write { db in
+            try db.execute(sql: """
+                INSERT INTO backup_jobs (id, sourceId, connectionId, folder, sourceFolder, settings, sortOrder, createdAt)
+                VALUES ('J1', 'photos-library', ?, 'photos/Tuan', '', '{}', 0, 1)
+                """, arguments: [nas.id])
+            try db.execute(sql: """
+                INSERT INTO backup_ledger (jobId, itemKey, resourceKey, sourceStamp, remotePath, outcome, attempts, recordedAt)
+                VALUES ('J1', 'a', 'photo', 's', 'photos/Tuan/IMG_1.JPG', 'uploaded', 1, 1),
+                       ('J1', 'b', 'photo', 's', 'photos/Tuan/IMG_2.JPG', 'uploaded', 1, 1)
+                """)
+        }
+
+        try ServerFileHistory(database: database).move("photos/Tuan/IMG_1.JPG", to: "photos/Shared/IMG_1.JPG", on: nas)
+
+        let paths = try database.reader.read { db in try String.fetchAll(db, sql: "SELECT remotePath FROM backup_ledger ORDER BY itemKey") }
+        #expect(paths == ["photos/Shared/IMG_1.JPG", "photos/Tuan/IMG_2.JPG"])
+    }
 }

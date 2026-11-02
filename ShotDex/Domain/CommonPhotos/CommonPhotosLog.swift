@@ -1,0 +1,106 @@
+import Foundation
+
+/// What a common-photos run did, in words (FS-19.08 §7): the log window's
+/// rows, the CSV left in the destination, and the history the server's
+/// changes owe the app.
+enum CommonPhotosLog {
+    static func status(_ status: CommonPhotosItem.Status) -> String {
+        switch status {
+        case .pending: String(localized: "Waiting", comment: "Common photos log: a photo not reached yet")
+        case .copying: String(localized: "Copying…", comment: "Common photos log: a photo being copied")
+        case .moving, .placed: String(localized: "Moving…", comment: "Common photos log: a photo being moved")
+        case .copied: String(localized: "Copied", comment: "Common photos log status")
+        case .moved: String(localized: "Moved", comment: "Common photos log status")
+        case .skipped: String(localized: "Skipped", comment: "Common photos log status")
+        case .failed: String(localized: "Failed", comment: "Common photos log status")
+        }
+    }
+
+    static func reason(_ item: CommonPhotosItem) -> String {
+        guard let (code, detail) = item.failure else { return "" }
+        switch code {
+        case .alreadyThere: return String(localized: "already there", comment: "Common photos log reason: the same bytes were in the destination")
+        case .changedOnServer: return String(localized: "changed on server", comment: "Common photos log reason: a copy changed since the scan")
+        case .checksumMismatch: return String(localized: "checksum mismatch", comment: "Common photos log reason: the copy read back did not match")
+        case .noSource: return String(localized: "no source", comment: "Common photos log reason: the record lists no source file")
+        case .unreadableRecord: return String(localized: "record could not be read", comment: "Common photos log reason")
+        case .sidecarNotCopied: return String(localized: "sidecar not copied", comment: "Common photos log reason: the .xmp beside the photo was not copied")
+        case .serverError: return detail ?? String(localized: "server error", comment: "Common photos log reason")
+        }
+    }
+
+    /// The CSV left in the destination (FS-19.08 §6, AC-129): one row per
+    /// photo — Status, Name, From (every source, `; `-separated), To,
+    /// SHA-256, Reason. Fixed English words, whatever the Mac's language, so
+    /// a script or another Mac reads it the same; a UTF-8 BOM so Excel shows
+    /// `Tuấn` as written; names from the server that would read as a formula
+    /// (`=`, `+`, `-`, `@`) start with `'`.
+    static func csv(_ items: [CommonPhotosItem]) -> String {
+        var lines = [CSVField.line(["Status", "Name", "From", "To", "SHA-256", "Reason"])]
+        for item in items {
+            lines.append(CSVField.line([
+                csvStatus(item.status),
+                item.sources.first.map { ServerUploadPath.lastComponent(of: $0.path) } ?? "",
+                item.sources.map(\.path).joined(separator: "; "),
+                item.destinationPath ?? "",
+                item.sha256,
+                csvReason(item),
+            ].map(defused)))
+        }
+        return "\u{FEFF}" + lines.joined(separator: "\r\n") + "\r\n"
+    }
+
+    static func csvStatus(_ status: CommonPhotosItem.Status) -> String {
+        switch status {
+        case .pending: "Waiting"
+        case .copying, .moving, .placed: "Unfinished"
+        case .copied: "Copied"
+        case .moved: "Moved"
+        case .skipped: "Skipped"
+        case .failed: "Failed"
+        }
+    }
+
+    static func csvReason(_ item: CommonPhotosItem) -> String {
+        guard let (code, detail) = item.failure else { return "" }
+        switch code {
+        case .alreadyThere: return "already there"
+        case .changedOnServer: return "changed on server"
+        case .checksumMismatch: return "checksum mismatch"
+        case .noSource: return "no source"
+        case .unreadableRecord: return "record could not be read"
+        case .sidecarNotCopied: return "sidecar not copied"
+        case .serverError: return detail.map { "server error: \($0)" } ?? "server error"
+        }
+    }
+
+    /// A field a spreadsheet would run as a formula, made text.
+    private static func defused(_ field: String) -> String {
+        guard let first = field.unicodeScalars.first, "=+-@\t\r".unicodeScalars.contains(first) else { return field }
+        return "'" + field
+    }
+
+    /// `ShotDex Common Photos 2026-11-02 1430.csv`, in this Mac's time.
+    static func csvName(at date: Date, timeZone: TimeZone = .current) -> String {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.timeZone = timeZone
+        formatter.dateFormat = "yyyy-MM-dd HHmm"
+        return "ShotDex Common Photos \(formatter.string(from: date)).csv"
+    }
+
+    /// What the upload, download and backup history must follow (FS-17.01
+    /// §4b): every source this run removed or renamed now has its bytes at
+    /// the destination, so its proof moves there rather than going.
+    struct HistoryChange: Equatable, Sendable {
+        let from: String
+        let to: String
+    }
+
+    static func historyChanges(_ items: [CommonPhotosItem]) -> [HistoryChange] {
+        items.flatMap { item -> [HistoryChange] in
+            guard item.status == .moved || item.status == .failed, let destination = item.destinationPath else { return [] }
+            return item.sources.filter(\.isRemoved).map { HistoryChange(from: $0.path, to: destination) }
+        }
+    }
+}

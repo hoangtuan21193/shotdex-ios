@@ -54,6 +54,16 @@ struct ServerFileHistory: Sendable {
                     try db.execute(sql: "UPDATE \(table) SET remotePath = ? WHERE id = ?", arguments: [renamed, row["id"] as Int64])
                 }
             }
+            // Backup's ledger too (FS-19.08 §6): the backed-up bytes now live
+            // at the new path, and the on-server check seeds hashes from it.
+            let ledger = try Row.fetchAll(db, sql: """
+                SELECT l.id, l.remotePath FROM backup_ledger l JOIN backup_jobs j ON j.id = l.jobId
+                WHERE l.remotePath IS NOT NULL AND j.connectionId IN (\(Self.placeholders(ids.count)))
+                """, arguments: StatementArguments(ids))
+            for row in ledger {
+                guard let renamed = ServerHistoryPaths.renamed(row["remotePath"], from: path, to: newPath) else { continue }
+                try db.execute(sql: "UPDATE backup_ledger SET remotePath = ? WHERE id = ?", arguments: [renamed, row["id"] as Int64])
+            }
         }
     }
 

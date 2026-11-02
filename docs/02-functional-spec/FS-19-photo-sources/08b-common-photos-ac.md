@@ -21,13 +21,13 @@ có mặt người. Test domain chạy trên client giả của `ShotDexTests/Ba
 | AC-126 | đích đã có `IMG_1.JPG` cùng SHA và `IMG_2.JPG` khác SHA | Copy `IMG_1`, `IMG_2` | `IMG_1` Skipped (already there); `IMG_2` thành `IMG_2 (2).JPG`; không file nào bị ghi đè | ✅ `CommonPhotosRunnerTests.nameClashRules` (+ `sameNameTwiceInOneRun`) |
 | AC-127 | ảnh Same ở `A/2025/06/` và `B/x/` | Copy | file nằm thẳng ở đích (phẳng); `.xmp` cùng tên gốc đi theo | ✅ `CommonPhotosRunnerTests.flatDestinationWithSidecar` (+ `rawSidecarStaysWithTheRaw`, `sidecarRetriedOnResume`, `skippedPhotoGetsItsSidecar`, `sidecarNeverOverwrites`) |
 | AC-128 | 10 ảnh, mất kết nối sau ảnh thứ 4 | Resume khi server về | chạy tiếp từ ảnh 5; 4 ảnh đầu không đọc lại; tổng log 10 hàng | ✅ `CommonPhotosRunnerTests.resumeAfterDisconnect` (Copy + Move; + `killedMidCopyResumes`, `finishingRunResumes`, `secondRunnerIsTurnedAway`) |
-| AC-129 | lượt chạy xong 3 Copied, 1 Skipped | xong | đích có CSV `ShotDex Common Photos <ngày giờ>.csv`, 4 hàng + tiêu đề, cột Status/Name/From/To/SHA-256 | ⚠️ chưa có — `CommonPhotosRunnerTests.writesCsvLog` |
+| AC-129 | lượt chạy xong 3 Copied, 1 Skipped | xong | đích có CSV `ShotDex Common Photos <ngày giờ>.csv`, 4 hàng + tiêu đề, cột Status/Name/From/To/SHA-256 | ✅ `CommonPhotosRunnerTests.writesCsvLog` (+ `csvResumesUnderItsName`, `csvIsSafeToOpen`, `finishingRunResumes`) |
 | AC-130 | Mac, màn duyệt NAS cục bộ, ⌘-click 2 folder | chuột phải → Find Common Photos… → chọn đích → Scan → Copy | sheet và cửa sổ tiến độ khớp board `MAC_CommonPhotos` / `MAC_CommonPhotosRun` (lệch ≤ 2pt), sáng và tối | ⚠️ chưa có — `Tools/mac-shot` + `Tools/design-board compare` |
 
 Kiểm thêm khi `/verify`: folder chung nằm trong folder nguồn → sheet báo lỗi, nút chạy mờ; 1 folder → mục menu mờ; lịch
 sử upload trỏ tới file bị dời được sửa đường dẫn (`ServerFileHistory`).
 
-**Đã chứng minh (2026-11-03):** AC-115…128 — test chạy trên sim iPhone Duo 27.1; quét thêm e2e trên SMB ảo
+**Đã chứng minh (2026-11-03):** AC-115…129 — test chạy trên sim iPhone Duo 27.1; quét thêm e2e trên SMB ảo
 (impacket, `CommonPhotosSMBTests.scanFindsTheSharedPhotos`: 8 ảnh khác tên tìm ra Same; `.copyLandsVerified`: chép 8 ảnh
 thật, lượt 2 Skipped cả 8, nguồn nguyên).
-**Chưa chứng minh được:** AC-129, AC-130.
+**Chưa chứng minh được:** AC-130 (UI Mac). Lịch sử upload/backup đi theo ảnh bị dời: `ServerFileHistoryTests.moveTakesTheBackupLedgerAlong` + `CommonPhotosRunnerTests.moveReportsHistoryChanges`; nối vào app ở T10.

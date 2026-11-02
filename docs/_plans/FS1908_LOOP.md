@@ -37,8 +37,9 @@ của loop: mỗi vòng đọc nó trước, ghi lại sau.
 | T5 | xong | (xem git log) | sidecar theo luật RAW+JPEG, thử lại khi Resume; e2e Copy thật trên SMB |
 | T6 | xong | (xem git log) | Move: máy trạng thái; xoá = đổi tên sang `.shotdex-removing` → kiểm đích → xoá (chặn hai đường dẫn một file); e2e Move trên SMB |
 | T7 | xong | (xem git log) | Resume: chặn chạy hai lần (`isActive` cho banner), nhận `finishing`, lượt bị kill giữa chừng |
-| T8…T12 | chưa | — | |
+| T8 | xong | (xem git log) | CSV (tiếng Anh cố định, BOM, chặn công thức), `afterRun` + `HistoryChange`, sổ Backup đi theo; nối Mac ở T10 |
+| T9a…T12 | chưa | — | |
 
-Tiếp: T8 (CSV + Rescan + sửa lịch sử upload — AC-129).
+Tiếp: T9a (màn duyệt server Mac, board `MAC_ServerBrowser`).
 
 Bài học: không chạy test nền khi sắp dừng lượt — hook build-check build cùng `build/sim` và báo "database is locked".

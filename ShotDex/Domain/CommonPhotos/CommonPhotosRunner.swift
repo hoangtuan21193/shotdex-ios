@@ -1,3 +1,4 @@
+import CryptoKit
 import Foundation
 import os
 
@@ -26,6 +27,13 @@ struct CommonPhotosRunner: Sendable {
     let workDirectory: URL
     /// Free bytes on this Mac; nil = unknown.
     var freeBytes: @Sendable () -> Int64? = { nil }
+    /// After the last photo and the CSV (FS-19.08 §6): rescan the sources,
+    /// let the upload history follow what moved. Thrown errors leave the run
+    /// `finishing`, so Resume does it again.
+    var afterRun: @Sendable (CommonPhotosRun, [CommonPhotosLog.HistoryChange]) async throws -> Void = { _, _ in }
+    /// Now, and the zone it is told in, for the CSV's name.
+    var now: @Sendable () -> Date = { Date() }
+    var timeZone: TimeZone = .current
 
     /// What the progress window shows (FS-19.08 §7).
     struct Progress: Equatable, Sendable {
@@ -175,11 +183,47 @@ struct CommonPhotosRunner: Sendable {
                 state.currentStep = nil
                 progress(state)
             }
+            try store.markState(.finishing, runId: runId)
+            let csvPath = try await writeLog(items, run: run, into: destination)
+            try await afterRun(run, CommonPhotosLog.historyChanges(items))
+            try store.markState(.finished, runId: runId, csvPath: csvPath)
         } catch {
-            try? store.markState(.paused, runId: runId)
+            // Stopped after the last photo, it stays finishing: Resume writes
+            // what is left. A state that cannot be read is left alone.
+            if let state = try? store.run(id: runId)?.state, state != .finishing { try? store.markState(.paused, runId: runId) }
             throw error
         }
-        try store.markState(.finishing, runId: runId)
+    }
+
+    /// The CSV of the run beside the photos, through the same verified
+    /// write; written once — a Resume of a finishing run that has one keeps it.
+    private func writeLog(_ items: [CommonPhotosItem], run: CommonPhotosRun, into destination: Destination) async throws -> String {
+        // The name is recorded before the upload: a quit mid-write resumes
+        // into the same file rather than leaving a second one beside it.
+        let recorded = try store.run(id: run.id)?.csvPath
+        if let recorded, try await client.fileSize(at: recorded) != nil { return recorded }
+        let target = recorded ?? ServerUploadPath.join(destination.folder, ServerUploadPath.nextFreeName(
+            for: CommonPhotosLog.csvName(at: now(), timeZone: timeZone), existing: destination.names))
+        let name = ServerUploadPath.lastComponent(of: target)
+        try store.markState(.finishing, runId: run.id, csvPath: target)
+        let local = workDirectory.appendingPathComponent(UUID().uuidString + ".csv")
+        defer { try? FileManager.default.removeItem(at: local) }
+        let data = Data(CommonPhotosLog.csv(items).utf8)
+        try data.write(to: local)
+        let write = VerifiedRemoteWrite(client: client)
+        do {
+            try await write.uploadPart(local, for: target, progress: { _ in })
+            guard try await write.readBackSHA256(for: target, progress: { _ in }) == FileChecksum.hex(SHA256.hash(data: data)) else {
+                await write.discardPart(for: target)
+                throw RemoteFileError.other("checksum mismatch")
+            }
+            try await write.moveIntoPlace(target, replacing: false)
+        } catch {
+            await write.discardPart(for: target)
+            throw error
+        }
+        destination.sizes[name.lowercased()] = Int64(data.count)
+        return target
     }
 
     /// One photo, Copy. A failure of this photo alone is logged on it and
@@ -380,7 +424,9 @@ struct CommonPhotosRunner: Sendable {
                 if renamed {
                     guard try await isTheScannedBytes(at: target, renamedFrom: source, sha256: item.sha256) else {
                         // Moved, but not what the scan saw: kept where it is,
-                        // and no other copy is touched.
+                        // no other copy is touched, and the history follows
+                        // the file to where it now is.
+                        if let index = item.sources.firstIndex(where: { $0.path == source.path }) { item.sources[index].isRemoved = true }
                         try finish(&item, .failed, reason: .changedOnServer)
                         return
                     }
@@ -467,8 +513,7 @@ struct CommonPhotosRunner: Sendable {
             let source = item.sources[index]
             guard Self.comparable(source.path) != Self.comparable(placed),
                   Self.comparable(ServerUploadPath.parent(of: source.path)) != destinationFolder else {
-                // The destination itself: never removed.
-                item.sources[index].isRemoved = true
+                // The destination itself: never removed, never reported so.
                 continue
             }
             if !source.isRemoved {

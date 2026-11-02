@@ -86,7 +86,8 @@ struct CommonPhotosSMBTests {
         }
 
         let landed = try await smb.entries(in: destination).map(\.name)
-        #expect(landed.filter { !$0.lowercased().hasSuffix(".xmp") }.count == 8)
+        #expect(landed.filter { !$0.lowercased().hasSuffix(".xmp") && !$0.hasSuffix(".csv") }.count == 8)
+        #expect(landed.filter { $0.hasSuffix(".csv") }.count == 2)
         #expect(!landed.contains { $0.hasSuffix(ServerUploadPath.partSuffix) })
         #expect(try store.items(runId: "first").allSatisfy { $0.status == .copied })
         #expect(try store.items(runId: "second").allSatisfy { $0.status == .skipped })
@@ -130,7 +131,8 @@ struct CommonPhotosSMBTests {
 
             #expect(photos.count == 3)
             #expect(try store.items(runId: "move").allSatisfy { $0.status == .moved })
-            #expect(try await smb.entries(in: "\(root)/C").map(\.name).sorted() == ["IMG_0001.JPG", "IMG_0002.JPG", "IMG_0003.JPG"])
+            #expect(try await smb.entries(in: "\(root)/C").map(\.name).filter { !$0.hasSuffix(".csv") }.sorted()
+                    == ["IMG_0001.JPG", "IMG_0002.JPG", "IMG_0003.JPG"])
             #expect(try await scanner.list(folders).files.map { $0.map(\.name) } == [["IMG_0004.JPG"], []])
         } catch {
             try? await smb.removeFolderTree(root)

@@ -86,8 +86,10 @@ con · kết quả xem trước có hai mức Likely the same → Same · tiến
   thêm. Move: sidecar của các bản bị xoá cũng bị xoá.
 - Trùng tên ở folder chung: cùng SHA → **Skipped (already there)**; khác → `IMG_0001 (2).JPG`. Không ghi đè.
 - Một lệnh tới server một lúc mỗi connection ([03 §2](03-servers-as-sources.md)). Mac không ngủ khi đang chạy.
-- Xong lượt: ghi `ShotDex Common Photos 2026-11-02 1430.csv` vào folder chung; nguồn được **Rescan**; lịch sử
-  upload/backup trỏ tới đường dẫn bị dời hay xoá được sửa như Rename/Delete của FS-17.01 §4b.
+- Xong lượt: ghi `ShotDex Common Photos 2026-11-02 1430.csv` vào folder chung (chữ tiếng Anh cố định, UTF-8 có BOM, tên
+  bắt đầu bằng `=`/`+`/`-`/`@` thêm `'` để bảng tính không chạy công thức); nguồn được **Rescan**; lịch sử upload,
+  download và sổ Backup của mọi bản bị dời hay xoá **chuyển sang đường dẫn ở đích** (byte giống hệt đang nằm đó) như
+  Rename của FS-17.01 §4b. CSV, Rescan hay sửa lịch sử dở chừng → lượt ở `finishing`, Resume làm lại.
 
 ## 7. Cửa sổ tiến độ (`MAC_CommonPhotosRun`)
 

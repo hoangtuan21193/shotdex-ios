@@ -21,9 +21,9 @@ enum ExifCSVExporter {
 
     /// The full CSV text for the given rows (header line + one line per row).
     static func makeCSV(_ rows: [PhotoMetadata]) -> String {
-        var lines = [headers.map(escape).joined(separator: ",")]
+        var lines = [CSVField.line(headers)]
         for row in rows {
-            lines.append(fields(for: row).map(escape).joined(separator: ","))
+            lines.append(CSVField.line(fields(for: row)))
         }
         // Trailing newline so appenders and `wc -l` agree on the row count.
         return lines.joined(separator: "\n") + "\n"
@@ -81,14 +81,5 @@ enum ExifCSVExporter {
     /// Drops a trailing ".0" so whole numbers print as "85", not "85.0".
     private static func trim(_ value: Double) -> String {
         value == value.rounded() ? String(Int(value)) : String(format: "%.1f", value)
-    }
-
-    /// RFC-4180 escaping: wrap in quotes when the field holds a comma, quote or
-    /// newline, doubling any embedded quotes.
-    private static func escape(_ field: String) -> String {
-        guard field.contains(where: { $0 == "," || $0 == "\"" || $0 == "\n" || $0 == "\r" }) else {
-            return field
-        }
-        return "\"" + field.replacingOccurrences(of: "\"", with: "\"\"") + "\""
     }
 }

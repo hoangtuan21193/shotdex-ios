@@ -24,7 +24,9 @@ enum BackupDestinationScan {
         while let relative = pending.popLast() {
             try Task.checkCancellation()
             for entry in try await client.entries(in: ServerUploadPath.join(folder, relative)) {
-                if entry.name.hasPrefix(".") || entry.name.hasSuffix(ServerUploadPath.partSuffix) { continue }
+                // A part, or a common-photos copy being removed (FS-19.08 §6).
+                if entry.name.hasPrefix(".") || entry.name.hasSuffix(ServerUploadPath.partSuffix)
+                    || entry.name.hasSuffix(CommonPhotosRunner.removingSuffix) { continue }
                 let path = ServerUploadPath.join(relative, entry.name)
                 if entry.isDirectory {
                     pending.append(path)

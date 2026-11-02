@@ -6,7 +6,7 @@
 | Intent | [2026-11-02-common-photos-across-folders](../_intents/2026-11-02-common-photos-across-folders.md) |
 | Commit spec | `a64935f3` (intent `45653bb5`) |
 | Ngày | 2026-11-03 |
-| Trạng thái | đang làm — duyệt 2026-11-03 (Q1, Q2: dựng cả màn duyệt server lẫn Activity); T1+T2 `eefcf32c`, T3 `73c2c833`, T4 `abdfa2fc`, T5 `700e1af6`, T6 `f16d735b`, T7 xong (loop: [FS1908_LOOP.md](FS1908_LOOP.md)) |
+| Trạng thái | đang làm — duyệt 2026-11-03 (Q1, Q2: dựng cả màn duyệt server lẫn Activity); T1+T2 `eefcf32c`, T3 `73c2c833`, T4 `abdfa2fc`, T5 `700e1af6`, T6 `f16d735b`, T7 `8e18c6ca`, T8 xong (loop: [FS1908_LOOP.md](FS1908_LOOP.md)) |
 
 ## 1. Hiểu đúng chưa
 
@@ -104,7 +104,7 @@ Một task = một commit, test kèm; build iOS + `ShotDexMac` sau mỗi commit.
 | T8 | CSV vào folder chung + Rescan nguồn + sửa lịch sử upload (nối `fileHistory` cho Mac) | AC-129 + kiểm thêm | `.writesCsvLog`, `ServerFileHistoryTests` hiện có |
 | T9a | Màn duyệt server Mac (`MAC_ServerBrowser`): sidebar nguồn server → cột folder, liệt kê, Rescan, qua `ConnectionLock` | nền AC-130 | `mac-shot` sáng/tối + `design-board compare` |
 | T9b | Chọn nhiều folder (⌘/⇧-click) + chuột phải **Find Common Photos…** + File › Find Common Photos… ⇧⌘F; 1 folder → mục mờ | AC-130 (lối vào) | `mac-shot` |
-| T10 | Sheet `MAC_CommonPhotos`: folder, Save to + New Folder…, Copy/Move, Scan, kết quả, lỗi, xác nhận Move | AC-130 | `mac-shot` sáng/tối + `design-board compare` |
+| T10 | Nối `afterRun` phía Mac (review T8): `ServerFileHistory.move` cho từng `HistoryChange` (uploads, downloads, backup ledger); Rescan **mọi** nguồn chứa folder chạy **và** nguồn chứa đích; `ServerSourceRefresh` trả nil / `disconnected` / `stoppedBy` → throw để lượt ở `finishing` cho Resume; sheet cảnh báo khi đích không thuộc nguồn nào (ảnh dời sang đó thành mồ côi ở nguồn cũ). Sheet `MAC_CommonPhotos`: folder, Save to + New Folder…, Copy/Move, Scan, kết quả, lỗi, xác nhận Move | AC-130 | `mac-shot` sáng/tối + `design-board compare` |
 | T11 | Cửa sổ `MAC_CommonPhotosRun` + bảng log + giữ máy thức + banner Resume + chân sidebar | AC-130 | `mac-shot` sáng/tối + `design-board compare` |
 | T11a | Vẽ board `MAC_Activity` (sáng/tối, publish) | nền AC-130 | `Tools/design-board render` |
 | T11b | Protocol `LongRunningJob` + cửa sổ Activity ⌥⌘0; lượt gom là một hàng, **Show Log** mở `MAC_CommonPhotosRun`; đóng cửa sổ không dừng lượt | AC-130 | `mac-shot` + `design-board compare`; test Domain `LongRunningJobTests` nếu có logic |
