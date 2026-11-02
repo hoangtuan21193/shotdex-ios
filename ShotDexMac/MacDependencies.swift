@@ -119,6 +119,14 @@ final class MacDependencies: LibraryServices {
         smartAlbums = SmartAlbumStore(database: database)
     }
 
+    /// A client for `server` whose every call waits its turn on the
+    /// connection's lock (FS-19.07 §5) — what anything browsing a
+    /// connection uses, never a bare `RemoteFileClientFactory.make`.
+    func lockedClient(for server: FileServer) -> any RemoteFileClient {
+        LockedRemoteFileClient(RemoteFileClientFactory.make(for: server, password: fileServers.password(for: server.id) ?? ""),
+                               lock: connectionLock, connectionId: server.id, priority: .normal)
+    }
+
     static func live() -> MacDependencies {
         let database: AppDatabase
         do {

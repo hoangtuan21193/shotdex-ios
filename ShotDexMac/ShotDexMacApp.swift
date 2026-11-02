@@ -24,6 +24,12 @@ struct ShotDexMacApp: App {
     init() {
         #if DEBUG
         MacSnapshot.scheduleIfAsked()
+        // `-ShotDexAppearance dark|light`: the window's look for screenshots,
+        // whatever System Settings says.
+        if let index = CommandLine.arguments.firstIndex(of: "-ShotDexAppearance"), index + 1 < CommandLine.arguments.count {
+            let name: NSAppearance.Name = CommandLine.arguments[index + 1] == "dark" ? .darkAqua : .aqua
+            DispatchQueue.main.async { NSApplication.shared.appearance = NSAppearance(named: name) }
+        }
         #endif
     }
 

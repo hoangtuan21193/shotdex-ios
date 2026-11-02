@@ -65,6 +65,51 @@ enum MacDemoLibrary {
         dependencies.backupCoordinator.reload()
     }
 
+    /// `-ShotDexSection serverBrowser`: a server source on the local
+    /// impacket SMB server (127.0.0.1:4450, share `photos`, tester/secret;
+    /// the share is the source), read once, then opened.
+    /// The demo database is in memory, so nothing outlives the run but the
+    /// connection's Keychain item, kept under one fixed id.
+    @MainActor
+    static func seedServerSource(_ dependencies: MacDependencies) async -> MacSidebarItem? {
+        guard isOn else { return nil }
+        let server = FileServer(id: "demo-smb-browse", name: "Test SMB", transferProtocol: .smb, host: "127.0.0.1", port: 4450,
+                                username: "tester", folder: "photos")
+        try? dependencies.fileServers.save(server, password: "secret")
+        await dependencies.sourcesModel.setServerSource(true, connection: server)
+        guard let sourceId = (try? SourceStore(database: dependencies.database).serverSourceId(connectionId: server.id)) ?? nil
+        else { return nil }
+        // Marks as on the board: stars on two photos, a pick on one.
+        try? await dependencies.database.writer.write { db in
+            let photos = try String.fetchAll(db, sql: """
+                SELECT photoId FROM photo_copies WHERE sourceId = ? AND relativePathKey LIKE 'tuan/2025/06/%' ORDER BY relativePathKey LIMIT 3
+                """, arguments: [sourceId])
+            for (photoId, rating) in zip(photos, [3, 0, 5]) where rating > 0 {
+                try db.execute(sql: "INSERT OR REPLACE INTO photo_user_marks (photoId, rating, ratingAt) VALUES (?, ?, 1)", arguments: [photoId, rating])
+            }
+            if photos.count > 1 {
+                try db.execute(sql: "INSERT OR REPLACE INTO photo_flag (assetId, flag, flaggedAt) VALUES (?, ?, 1)",
+                               arguments: [photos[1], PhotoFlag.pick.rawValue])
+            }
+        }
+        return .source(sourceId)
+    }
+
+    /// `-ShotDexServerPath Tuan/2025`: the folder the server browser opens
+    /// on, relative to the source's root.
+    static var serverPath: String? {
+        let arguments = ProcessInfo.processInfo.arguments
+        guard let index = arguments.firstIndex(of: "-ShotDexServerPath"), index + 1 < arguments.count else { return nil }
+        return arguments[index + 1]
+    }
+
+    /// `-ShotDexServerLayout list`: the server browser's view mode.
+    static var serverLayout: String? {
+        let arguments = ProcessInfo.processInfo.arguments
+        guard let index = arguments.firstIndex(of: "-ShotDexServerLayout"), index + 1 < arguments.count else { return nil }
+        return arguments[index + 1]
+    }
+
     /// `-ShotDexSection backup`: the sidebar place the window opens on.
     static var section: String? {
         let arguments = ProcessInfo.processInfo.arguments

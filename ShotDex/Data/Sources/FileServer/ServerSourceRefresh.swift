@@ -14,8 +14,9 @@ actor ServerSourceRefresh {
     let thumbnails: FolderThumbnails?
     let makeClient: @Sendable (FileServer, String) -> any RemoteFileClient
 
-    /// Sources mid-pass: a second trigger while one runs is the same pass.
-    private var running: Set<String> = []
+    /// Sources mid-pass: a second trigger while one runs is the same pass,
+    /// and waits for its result.
+    private var running: [String: Task<ServerSourceIndexer.Summary?, Never>] = [:]
 
     init(database: AppDatabase, servers: FileServerStore, composer: MetadataComposer, thumbnails: FolderThumbnails? = nil,
          makeClient: @escaping @Sendable (FileServer, String) -> any RemoteFileClient = { RemoteFileClientFactory.make(for: $0, password: $1) }) {
@@ -61,8 +62,17 @@ actor ServerSourceRefresh {
     }
 
     private func refresh(_ sourceId: String) async -> ServerSourceIndexer.Summary? {
-        guard running.insert(sourceId).inserted else { return nil }
-        defer { running.remove(sourceId) }
+        if let pass = running[sourceId] { return await pass.value }
+        let pass = Task { await self.pass(sourceId) }
+        running[sourceId] = pass
+        // The caller that started the pass still stops it by cancelling, as
+        // when the pass ran in its own task; one that joined only waits.
+        let summary = await withTaskCancellationHandler { await pass.value } onCancel: { pass.cancel() }
+        running[sourceId] = nil
+        return summary
+    }
+
+    private func pass(_ sourceId: String) async -> ServerSourceIndexer.Summary? {
         let found: (connectionId: String?, pairs: Bool)? = try? await database.reader.read { db in
             try Row.fetchOne(db, sql: "SELECT connectionId, pairsRawAndJpeg FROM sources WHERE id = ?", arguments: [sourceId])
                 .map { ($0["connectionId"], $0["pairsRawAndJpeg"]) }

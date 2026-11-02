@@ -42,6 +42,8 @@ lấy từ preview nhúng, bản gốc chỉ tải khi mở, sửa hay xuất (D
 
 - Chạm nguồn server ở sidebar → màn duyệt kiểu Files (FS-17.01 §2): đường dẫn, ‹ ›, Icons/List, Sort By, New Folder,
   **Rescan**, **Upload…**, chân "1 folder · 36 photos · 2 other files hidden" và "15.21 GB free of 152.09 GB".
+- *Ngoại lệ tạm trên Mac (2026-11-03, FS-19.08 T9a):* **Upload…**, **New Folder** và **Show Inspector** vẽ nhưng mờ —
+  Mac chưa có sheet upload, luồng đặt tên folder, hay nội dung inspector cho file server. Ô search lọc theo tên trong folder đang mở.
 - Ảnh trong màn duyệt là **ảnh của thư viện**: cùng ô, cùng glyph sao/cờ, cùng menu như ở All Photos.
 - **Không có Import to Library** ở thiết bị nào (D5). Ai cần ảnh trong Photos dùng **Save to Photos** — một lệnh **xuất**
   (menu Share/Export, như xuất ảnh đã sửa): chép bản gốc vào Photos. Asset mới là một bản sao của **cùng ảnh** khi băm

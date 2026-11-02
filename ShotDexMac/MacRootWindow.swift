@@ -17,16 +17,20 @@ struct MacRootWindow: View {
     @State private var smartAlbumForm: MacSmartAlbumFormRequest?
     @State private var smartAlbums: [SmartAlbum] = []
     @State private var viewMode = MacViewMode.grid
+    /// The sidebar's sources, read when they change — not on every body.
+    @State private var sources: [SourceStore.Source] = []
 
     var body: some View {
         NavigationSplitView {
-            MacSidebar(selection: $selection, library: library, sources: (try? dependencies.sources.sources()) ?? [],
+            MacSidebar(selection: $selection, library: library, sources: sources,
                        backup: backupBadge, smartAlbums: smartAlbums,
                        newSmartAlbum: { smartAlbumForm = MacSmartAlbumFormRequest() })
                 .navigationSplitViewColumnWidth(MacWindowMetrics.sidebarWidth)
         } detail: {
             if selection == .backup {
                 MacBackupScreen(showsInspector: $showsBackupInspector, opensNewBackup: $opensNewBackup)
+            } else if let source = serverSource {
+                MacServerBrowserScreen(source: source)
             } else if case .smartAlbum(let id) = selection, let album = smartAlbums.first(where: { $0.id == id }) {
                 MacSmartAlbumScreen(album: album, edit: { smartAlbumForm = MacSmartAlbumFormRequest(editing: album) })
             } else {
@@ -34,6 +38,10 @@ struct MacRootWindow: View {
             }
         }
         .tint(MacTheme.accent)
+        .onAppear { reloadSources() }
+        .onChange(of: dependencies.sourcesModel.rows) { reloadSources() }
+        .onChange(of: selection) { reloadSources() }
+        .onReceive(NotificationCenter.default.publisher(for: .macServersChanged)) { _ in reloadSources() }
         .task { await start() }
         .onReceive(NotificationCenter.default.publisher(for: .macShowBackup)) { _ in selection = .backup }
         .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
@@ -67,6 +75,17 @@ struct MacRootWindow: View {
         .onReceive(NotificationCenter.default.publisher(for: .macIndexSettingsChanged)) { _ in
             library?.startIndexing()
         }
+    }
+
+    /// The server source picked in the sidebar: its browser fills the
+    /// content (board `MAC_ServerBrowser`, FS-19.03 §4).
+    private var serverSource: SourceStore.Source? {
+        guard case .source(let id) = selection else { return nil }
+        return sources.first { $0.id == id && $0.kind == "server" }
+    }
+
+    private func reloadSources() {
+        sources = (try? dependencies.sources.sources()) ?? []
     }
 
     /// Jobs, or a warning when one is stuck on something only the user can
@@ -158,6 +177,10 @@ struct MacRootWindow: View {
         if MacDemoLibrary.section == "emptySmartAlbum" { selection = .smartAlbum("demo-empty") }
         if MacDemoLibrary.section == "newSmartAlbum" { smartAlbumForm = MacSmartAlbumFormRequest() }
         if MacDemoLibrary.section == "settings" { openSettings() }
+        if MacDemoLibrary.section == "serverBrowser", let item = await MacDemoLibrary.seedServerSource(dependencies) {
+            reloadSources()
+            selection = item
+        }
         if MacDemoLibrary.isOn {
             library?.readsGridFromIndex = true
             library?.loadIfNeeded()

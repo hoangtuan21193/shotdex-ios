@@ -38,8 +38,11 @@ của loop: mỗi vòng đọc nó trước, ghi lại sau.
 | T6 | xong | (xem git log) | Move: máy trạng thái; xoá = đổi tên sang `.shotdex-removing` → kiểm đích → xoá (chặn hai đường dẫn một file); e2e Move trên SMB |
 | T7 | xong | (xem git log) | Resume: chặn chạy hai lần (`isActive` cho banner), nhận `finishing`, lượt bị kill giữa chừng |
 | T8 | xong | (xem git log) | CSV (tiếng Anh cố định, BOM, chặn công thức), `afterRun` + `HistoryChange`, sổ Backup đi theo; nối Mac ở T10 |
-| T9a…T12 | chưa | — | |
+| T9a | xong | (xem git log) | màn duyệt server Mac: cột + lưới, Rescan, sao/cờ, ⌘/⇧ sẵn cho T9b; accent sáng #C6730E; `ServerSourceRefresh` cho lượt sau chờ lượt đang chạy. Chưa bấm thử được (không có quyền Accessibility) |
+| T9b…T12 | chưa | — | |
 
-Tiếp: T9a (màn duyệt server Mac, board `MAC_ServerBrowser`).
+Tiếp: T9b (chọn nhiều folder + chuột phải Find Common Photos… + File menu ⇧⌘F).
+
+Chụp Mac: `ShotDex.app/Contents/MacOS/ShotDex -ApplePersistenceIgnoreState YES -ShotDexDemoLibrary -ShotDexSection serverBrowser -ShotDexServerPath Tuan/2025/06 [-ShotDexAppearance dark] [-ShotDexServerLayout list]` (DB demo trong RAM, connection "Test SMB" tới SMB ảo) + reopen Apple Event: scratchpad `tools/shot.sh`.
 
 Bài học: không chạy test nền khi sắp dừng lượt — hook build-check build cùng `build/sim` và báo "database is locked".
