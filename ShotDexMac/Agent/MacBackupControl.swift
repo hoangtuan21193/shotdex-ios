@@ -46,6 +46,18 @@ final class MacBackupControl {
         }
     }
 
+    /// Read the helper's state again — Settings opening, or the app coming
+    /// back from System Settings › Login Items.
+    func refreshAgentStatus() {
+        #if DEBUG
+        if let forced = MacDemoLibrary.agentStatus {
+            agentStatus = forced
+            return
+        }
+        #endif
+        if hasStarted { decide() } else { agentStatus = MacAgentLink.service.status }
+    }
+
     func pause(_ id: String) { send(.pause, id) { $0.pause(id) } }
     func resume(_ id: String) { send(.resume, id) { $0.resume(id) } }
     func backUpNow(_ id: String) { send(.backUpNow, id) { $0.backUpNow(id) } }

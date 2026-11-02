@@ -5,6 +5,7 @@ import SwiftUI
 /// over the content; the grid under it.
 struct MacRootWindow: View {
     @Environment(MacDependencies.self) private var dependencies
+    @Environment(\.openSettings) private var openSettings
     @State private var selection: MacSidebarItem? = .allPhotos
     @State private var library: LibraryModel?
     @State private var searchText = ""
@@ -148,6 +149,7 @@ struct MacRootWindow: View {
         if MacDemoLibrary.section == "smartAlbum" { selection = .smartAlbum("demo-night") }
         if MacDemoLibrary.section == "emptySmartAlbum" { selection = .smartAlbum("demo-empty") }
         if MacDemoLibrary.section == "newSmartAlbum" { smartAlbumForm = MacSmartAlbumFormRequest() }
+        if MacDemoLibrary.section == "settings" { openSettings() }
         if MacDemoLibrary.isOn {
             library?.loadIfNeeded()
             return

@@ -3,6 +3,7 @@ import CoreGraphics
 import Photos
 import Foundation
 import GRDB
+import ServiceManagement
 import ImageIO
 
 /// `-ShotDexDemoLibrary`: the window over an in-memory library of landscape
@@ -69,6 +70,19 @@ enum MacDemoLibrary {
         let arguments = ProcessInfo.processInfo.arguments
         guard let index = arguments.firstIndex(of: "-ShotDexSection"), index + 1 < arguments.count else { return nil }
         return arguments[index + 1]
+    }
+
+    /// `-ShotDexAgentStatus requiresApproval|enabled`: the helper state
+    /// Settings shows, without touching the real login item.
+    static var agentStatus: SMAppService.Status? {
+        let arguments = ProcessInfo.processInfo.arguments
+        guard let index = arguments.firstIndex(of: "-ShotDexAgentStatus"), index + 1 < arguments.count else { return nil }
+        switch arguments[index + 1] {
+        case "requiresApproval": return .requiresApproval
+        case "enabled": return .enabled
+        case "notRegistered": return .notRegistered
+        default: return nil
+        }
     }
 
     static func rows() -> [PhotoMetadata] {

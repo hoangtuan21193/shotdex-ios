@@ -49,7 +49,7 @@
 | U2 | Form server + duyệt folder (sheet) | AC-41 | `MAC_ServerForm`, `MAC_ServerBrowser` |
 | U3 | Màn Backup: danh sách + inspector, chuột phải, rỗng | AC-40, 41, 52 | `MAC_Backup` |
 | U4 | Sheet New/Edit + trang Organize + popover Custom (không hàng Wi‑Fi; Only on Power Adapter khi có pin) | AC-42, 51 | `MAC_BackupNew`, `MAC_BackupOrganize` |
-| U5 | Cửa sổ Settings › General › Background | AC-46, 50 | `MAC_SettingsGeneral` |
+| U5 | ✅ 2026-11-02 Cửa sổ Settings › General › Background | AC-46, 50 | `MAC_SettingsGeneral` |
 | U6 | Thêm nguồn server (FS-19) trên Mac | nền AC-107 | `MAC_AddSource` |
 | U7 | Smart album: editor sheet (điều kiện Source + Folder), màn album có chip + dòng tiến độ | AC-107, 108 | `MAC_SmartAlbumEditor`, `MAC_SmartAlbum` |
 | U8 | Xoá qua cổng (⌘⌫, NSAlert Delete Anyway/Cancel) | AC-111, 112 | — (alert hệ thống) |

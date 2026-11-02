@@ -36,6 +36,10 @@ struct ShotDexMacApp: App {
         .defaultSize(width: 1440, height: 900)
         .windowToolbarStyle(.unified)
         .commands { MacBackupCommands() }
+        Settings {
+            MacSettingsWindow()
+                .environment(dependencies)
+        }
     }
 }
 

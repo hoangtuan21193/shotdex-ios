@@ -110,6 +110,10 @@ nguồn, helper giữ bookmark của nó. Đã bỏ phương án "thư mục ch�
 | Keep Working After Quit | bật khi có job/smart album On Server đầu tiên | công tắc + trạng thái `Needs Approval` + Open Login Items Settings; chân: "Backups and On Server checks continue in the background." |
 | Keep Mac Awake While Copying | On Power Adapter | Never · On Power Adapter · Always |
 
+Code: `ShotDexMac/Settings/MacSettingsWindow.swift` (2026-11-02). Cửa sổ Settings mới có pane General với nhóm Background;
+các nhóm và pane khác của board (Library, Thumbnails, Viewing and Reminders; AI, Sources, Editing, Servers, Cameras) chưa có
+trên Mac — làm cùng tính năng của chúng.
+
 ## 6. Tiêu chí nghiệm thu (Mac)
 
 Server giả như 04: WebDAV (wsgidav) và SMB (impacket) ở 127.0.0.1. Máy: Mac Apple silicon, macOS 26 (macOS 15: chưa kiểm
@@ -123,7 +127,7 @@ Server giả như 04: WebDAV (wsgidav) và SMB (impacket) ở 127.0.0.1. Máy: M
 | AC-43 | job Photos 10 ảnh + 2 video, helper bật | Start, rồi **Quit ShotDex** ngay | sau Quit, helper chép đủ 12 file; đích khớp `shasum -a 256`; mở lại app thấy `Watching · Up to Date` | ⚠️ chưa có (`MacAgentTests.runsAfterAppQuits` + script host) |
 | AC-44 | helper đang chép file 5/12 | `kill -9` helper, mở lại app | file 1–4 trong sổ, lượt tiếp chép từ file 5; ≤ 1 `.shotdex-part` bị ghi đè | ⚠️ chưa có (`MacAgentTests.resumesAfterKill`) |
 | AC-45 | helper đang chạy job | app mở cùng lúc, nhấp Back Up Now | chỉ helper chép (0 byte app ghi lên đích); app hiện tiến độ đổi trong ≤ 1 s sau mỗi file | ⚠️ chưa có (`MacAgentTests.singleRunner` + `.appSeesAgentWritesWithinOneSecond`) |
-| AC-46 | người dùng tắt ShotDex trong System Settings › Login Items | mở Settings › General | Keep Working After Quit hiện `Needs Approval` + Open Login Items Settings; chân Backup ghi `Backups stop when you quit ShotDex.`; app tự chạy job khi đang mở | ⚠️ chưa có (`MacAgentStatusTests.needsApproval` + ảnh cửa sổ) |
+| AC-46 | người dùng tắt ShotDex trong System Settings › Login Items | mở Settings › General | Keep Working After Quit hiện `Needs Approval` + Open Login Items Settings; chân Backup ghi `Backups stop when you quit ShotDex.`; app tự chạy job khi đang mở | ⚠️ chưa có `MacAgentStatusTests.needsApproval`; ảnh cửa sổ Settings 2026-11-02 (demo `-ShotDexSection settings -ShotDexAgentStatus requiresApproval`) khớp tweak `needsApproval` của board |
 | AC-47 | không còn job nào, không smart album On Server | xoá job cuối | helper thoát trong ≤ 10 s; vẫn là login item | ⚠️ chưa có (`MacAgentTests.exitsWhenIdle`) |
 | AC-48 | job nguồn thư mục `T7 RAW Archive` (Q-M1) | Start | helper hiện hộp chọn thư mục điền sẵn; Allow → job chạy sau khi Quit; Cancel → `Allow access to keep backing up after quit` + Allow… | ⚠️ chưa có — chờ spike SM-1 |
 | AC-49 | Mac ngủ giữa file 7/20 | thức dậy | trạng thái `Paused · Mac was asleep` rồi tự chạy tiếp từ file 7 | ⚠️ chưa có (`MacAgentTests.sleepPausesAndResumes`, giả lập thông báo ngủ/thức) |
