@@ -596,6 +596,112 @@ import Testing
         #expect(fixture.nas.downloadCount == 0 && fixture.nas.uploadCount == 0)
     }
 
+    /// AC-128: ten photos, the connection lost on the fifth; Resume carries
+    /// on from the fifth, the first four not read again; ten log rows.
+    @Test(arguments: [CommonPhotosRun.Action.copy, .move]) func resumeAfterDisconnect(action: CommonPhotosRun.Action) async throws {
+        let fixture = try Fixture(count: 10)
+        try await fixture.start(action: action)
+        if action == .copy {
+            fixture.nas.dropConnectionOnDownload = 5
+        } else {
+            // Renamed on the server, then the line drops before it is checked.
+            let nas = fixture.nas
+            nas.onMove = { from, _ in if from == "A/IMG_5.JPG" { nas.entriesError = .connectionLost } }
+        }
+
+        await #expect(throws: RemoteFileError.connectionLost) { try await fixture.runner.run("R1") }
+        let done = try fixture.items().filter(\.isDone).map(\.position)
+        #expect(done == [0, 1, 2, 3])
+        #expect(try fixture.store.run(id: "R1")?.state == .paused)
+        let fifth = try #require(try fixture.items().dropFirst(4).first)
+        #expect(fifth.status == (action == .copy ? .pending : .moving))
+        let before = fixture.nas.commands.count
+        let reports = OSAllocatedUnfairLock(initialState: [CommonPhotosRunner.Progress]())
+        fixture.nas.dropConnectionOnDownload = nil
+        fixture.nas.onMove = nil
+        fixture.nas.entriesError = nil
+
+        try await fixture.runner.run("R1", progress: { report in reports.withLock { $0.append(report) } })
+
+        let later = fixture.nas.commands.dropFirst(before)
+        for index in 1...4 { #expect(!later.contains { $0.contains("/IMG_\(index).JPG") }) }
+        let first = try #require(reports.withLock { $0.first })
+        #expect(first.doneCount == 4 && first.totalCount == 10)
+        let items = try fixture.items()
+        #expect(items.count == 10)
+        #expect(items.map(\.status) == Array(repeating: action == .copy ? .copied : .moved, count: 10))
+        #expect(items.allSatisfy { $0.partPath == nil && $0.destinationPath != nil })
+        let destination = fixture.nas.files.filter { $0.key.hasPrefix("C/") }
+        #expect(destination.count == 10)
+        for (name, bytes) in fixture.photos { #expect(destination["C/\(name)"] == bytes) }
+        let sources = fixture.nas.files.keys.filter { $0.hasPrefix("A/") || $0.hasPrefix("B/") }
+        #expect(sources.count == (action == .copy ? 20 : 0))
+    }
+
+    /// Resume pressed twice: the second runner is turned away while the
+    /// first goes on, and the banner sees the run as going.
+    @Test func secondRunnerIsTurnedAway() async throws {
+        let fixture = try Fixture(count: 2)
+        try await fixture.start()
+        let runner = fixture.runner
+        let database = fixture.store.database
+        let second = OSAllocatedUnfairLock<(any Error)?>(initialState: nil)
+        let wasActive = OSAllocatedUnfairLock(initialState: false)
+        fixture.nas.whileUploading = { number in
+            guard number == 1 else { return }
+            wasActive.withLock { $0 = CommonPhotosRunner.isActive(runId: "R1", in: database) }
+            do { try await runner.run("R1") } catch { second.withLock { $0 = error } }
+        }
+
+        try await runner.run("R1")
+
+        #expect(wasActive.withLock { $0 })
+        #expect(second.withLock { $0 as? CommonPhotosRunner.Stop } == .alreadyRunning)
+        #expect(!CommonPhotosRunner.isActive(runId: "R1", in: database))
+        #expect(try fixture.items().map(\.status) == [.copied, .copied])
+    }
+
+    /// A process killed mid-copy: the run is left `running`, one photo
+    /// `copying` with its part on the server. Resume removes the part, copies
+    /// it under its own name, and reads nothing it had done.
+    @Test func killedMidCopyResumes() async throws {
+        let fixture = try Fixture(count: 3)
+        try await fixture.start()
+        var items = try fixture.items()
+        for index in 0..<2 {
+            fixture.nas.put("C/IMG_\(index + 1).JPG", fixture.photos["IMG_\(index + 1).JPG"]!)
+            items[index].status = .copied
+            items[index].destinationPath = "C/IMG_\(index + 1).JPG"
+            try fixture.store.update(items[index])
+        }
+        items[2].status = .copying
+        items[2].destinationPath = "C/IMG_3.JPG"
+        items[2].partPath = "C/IMG_3.JPG.shotdex-part"
+        try fixture.store.update(items[2])
+        fixture.nas.put("C/IMG_3.JPG.shotdex-part", Data(repeating: 0, count: 500))
+        #expect(try fixture.store.run(id: "R1")?.state == .running)
+
+        try await fixture.runner.run("R1")
+
+        #expect(try fixture.items().map(\.status) == [.copied, .copied, .copied])
+        #expect(Set(fixture.nas.files.keys.filter { $0.hasPrefix("C/") }) == ["C/IMG_1.JPG", "C/IMG_2.JPG", "C/IMG_3.JPG"])
+        #expect(fixture.nas.files["C/IMG_3.JPG"] == fixture.photos["IMG_3.JPG"])
+        #expect(fixture.nas.commands.filter { $0.hasPrefix("download") } == ["download A/IMG_3.JPG"])
+    }
+
+    /// A run killed after its last photo (`finishing`) is accepted by Resume.
+    @Test func finishingRunResumes() async throws {
+        let fixture = try Fixture(count: 1)
+        try await fixture.start()
+        try await fixture.runner.run("R1")
+        let commands = fixture.nas.commands.count
+
+        try await fixture.runner.run("R1")
+
+        #expect(try fixture.store.run(id: "R1")?.state == .finishing)
+        #expect(fixture.nas.commands.count == commands)
+    }
+
     /// A stopped run is not resumed.
     @Test func stoppedRunIsNotResumed() async throws {
         let fixture = try Fixture(count: 1)

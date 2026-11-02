@@ -16,6 +16,9 @@ final class InMemoryRemoteFileClient: RemoteFileClient, @unchecked Sendable {
     /// Called at the start of every upload with its 1-based number — where a
     /// test cancels the batch.
     var onUpload: (@Sendable (Int) -> Void)?
+    /// Awaited at the start of every upload — where a test does async work
+    /// while a run is held mid-photo.
+    var whileUploading: (@Sendable (Int) async -> Void)?
     private(set) var uploadCount = 0
     /// Segments of the Backup shared index (`.shotdex/`) written — kept out
     /// of `uploadCount`, which counts the user's files.
@@ -93,6 +96,7 @@ final class InMemoryRemoteFileClient: RemoteFileClient, @unchecked Sendable {
         }
         let number = lock.withLock { uploadCount += 1; commands.append("upload \(path)"); return uploadCount }
         onUpload?(number)
+        await whileUploading?(number)
         try Task.checkCancellation()
         let data = try Data(contentsOf: localURL)
         guard lock.withLock({ directories.contains(ServerUploadPath.parent(of: path)) }) else {

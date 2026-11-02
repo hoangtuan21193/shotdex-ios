@@ -36,6 +36,9 @@ của loop: mỗi vòng đọc nó trước, ghi lại sau.
 | T4 | xong | (xem git log) | runner Copy + trùng tên (AC-126 kéo từ T5), lý do lưu dạng mã |
 | T5 | xong | (xem git log) | sidecar theo luật RAW+JPEG, thử lại khi Resume; e2e Copy thật trên SMB |
 | T6 | xong | (xem git log) | Move: máy trạng thái; xoá = đổi tên sang `.shotdex-removing` → kiểm đích → xoá (chặn hai đường dẫn một file); e2e Move trên SMB |
-| T7…T12 | chưa | — | |
+| T7 | xong | (xem git log) | Resume: chặn chạy hai lần (`isActive` cho banner), nhận `finishing`, lượt bị kill giữa chừng |
+| T8…T12 | chưa | — | |
 
-Tiếp: T7 (Resume sau mất kết nối — AC-128).
+Tiếp: T8 (CSV + Rescan + sửa lịch sử upload — AC-129).
+
+Bài học: không chạy test nền khi sắp dừng lượt — hook build-check build cùng `build/sim` và báo "database is locked".

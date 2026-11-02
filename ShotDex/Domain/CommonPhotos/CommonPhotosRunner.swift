@@ -1,4 +1,5 @@
 import Foundation
+import os
 
 /// Carries out a common-photos run (FS-19.08 §6): every Same photo into the
 /// destination folder, one server command at a time, each step written to
@@ -34,8 +35,9 @@ struct CommonPhotosRunner: Sendable {
 
         var doneCount = 0
         var totalCount = 0
-        /// Bytes moved, the photo being worked on counted as it goes: its
-        /// download, upload and read-back each a third.
+        /// Bytes of the photos done, whatever became of them, and of the one
+        /// being worked on as it goes (its download, upload and read-back
+        /// each a third) — so the bar ends full.
         var doneBytes: Int64 = 0
         var totalBytes: Int64 = 0
         var currentName: String?
@@ -52,6 +54,8 @@ struct CommonPhotosRunner: Sendable {
         /// (FS-19.08 §4) — or, found while removing, is the same place as a
         /// source under another path.
         case destinationIsASource
+        /// This run is already going in this app (Resume pressed twice).
+        case alreadyRunning
     }
 
     /// The items of a new run, in the order they run: one per Same photo,
@@ -120,12 +124,27 @@ struct CommonPhotosRunner: Sendable {
         }
     }
 
+    /// Runs going in this process, by database and run: one runner per run,
+    /// whoever starts it. In-process only — the app and the Mac app each open
+    /// one shared database, and no extension runs this.
+    private struct RunKey: Hashable { let database: ObjectIdentifier; let runId: String }
+    private static let active = OSAllocatedUnfairLock(initialState: Set<RunKey>())
+
+    /// Whether a runner is going on this run now — the banner then shows it
+    /// in progress, never Resume · Discard.
+    static func isActive(runId: String, in database: AppDatabase) -> Bool {
+        active.withLock { $0.contains(RunKey(database: ObjectIdentifier(database), runId: runId)) }
+    }
+
     /// Runs every photo not done yet. Returns when all are done; throws when
     /// the server went away, the Mac ran out of room or the task was
     /// cancelled — the run is then paused, and done photos stay done.
     func run(_ runId: String, progress: @escaping @Sendable (Progress) -> Void = { _ in }) async throws {
+        let key = RunKey(database: ObjectIdentifier(store.database), runId: runId)
+        guard Self.active.withLock({ $0.insert(key).inserted }) else { throw Stop.alreadyRunning }
+        defer { _ = Self.active.withLock { $0.remove(key) } }
         guard let run = try store.run(id: runId) else { throw CommonPhotosStore.RunMissing(runId: runId) }
-        guard run.state == .running || run.state == .paused, run.canResume else { throw Stop.notResumable }
+        guard run.canResume else { throw Stop.notResumable }
         guard CommonPhotosSelection.problem(folders: run.folders, destination: run.destination) == nil else {
             throw Stop.destinationIsASource
         }
@@ -197,9 +216,8 @@ struct CommonPhotosRunner: Sendable {
                 try finish(&item, copied, reason: item.failure?.reason)
                 return
             }
-            if item.partPath != nil, await !write.discardPart(for: placed) {
-                throw RemoteFileError.permissionDenied(ServerUploadPath.partPath(for: placed))
-            }
+            // The part goes before anything else; a server still away says so.
+            if item.partPath != nil { try await client.remove(ServerUploadPath.partPath(for: placed)) }
             item.partPath = nil
         }
 
@@ -472,7 +490,16 @@ struct CommonPhotosRunner: Sendable {
                 item.sources[index].isRemoved = true
                 try store.update(item)
             }
-            if let sidecar = source.sidecar, !claimedSidecars.contains(sidecar), try await client.fileSize(at: sidecar) != nil {
+            if let sidecar = source.sidecar, !claimedSidecars.contains(sidecar),
+               let target = Self.sidecar(of: item).map({ Self.sidecarTarget($0.path, photoPath: $0.photo,
+                                                                         photoName: ServerUploadPath.lastComponent(of: placed),
+                                                                         folder: ServerUploadPath.parent(of: placed)) }),
+               try await client.fileSize(at: sidecar) == nil,
+               try await client.fileSize(at: sidecar + Self.removingSuffix) != nil,
+               let size = try await client.fileSize(at: target) {
+                // Set aside by a stop before it was deleted.
+                try await removeAside(sidecar + Self.removingSuffix, restoring: sidecar, placed: target, size: size)
+            } else if let sidecar = source.sidecar, !claimedSidecars.contains(sidecar), try await client.fileSize(at: sidecar) != nil {
                 if let placedSidecar, try await client.sha256(of: sidecar, progress: { _ in }) == placedSidecar,
                    let target = Self.sidecar(of: item).map({ Self.sidecarTarget($0.path, photoPath: $0.photo,
                                                                                  photoName: ServerUploadPath.lastComponent(of: placed),
