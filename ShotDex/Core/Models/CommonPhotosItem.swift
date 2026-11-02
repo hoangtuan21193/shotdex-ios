@@ -34,6 +34,9 @@ struct CommonPhotosItem: Hashable, Sendable {
     /// shown, so the log and the CSV follow the app's language.
     enum Reason: String, Sendable {
         case alreadyThere, changedOnServer, checksumMismatch, noSource, unreadableRecord
+        /// The photo is in place; its `.xmp` is not (name taken by other
+        /// bytes, or the copy failed).
+        case sidecarNotCopied
         /// The server's own words follow the code: `serverError:<text>`.
         case serverError
     }

@@ -71,7 +71,11 @@ con · kết quả xem trước có hai mức Likely the same → Same · tiến
   hỏi lại mọi bản còn lại đúng cỡ + ngày sửa → xoá chúng. Server từ chối đổi chỗ (khác share SMB) → chép như Copy, kiểm
   SHA ở đích, rồi xoá mọi bản nguồn. **Không bản nguồn nào bị xoá trước khi bản ở đích được kiểm.**
 - Một nội dung có nhiều bản trong cùng folder → folder chung nhận một bản; Move xoá mọi bản.
-- `.xmp` cùng tên gốc đi theo ảnh của nó (Move: sidecar của các bản bị xoá cũng bị xoá).
+- `.xmp` đi theo ảnh của nó, theo luật nguồn folder ([FS-19.01 §3](01-folders-and-drives.md)): `DSC0001.xmp` là của RAW; JPEG/HEIC
+  cạnh RAW chỉ nhận `DSC0001.JPG.xmp`. Lấy sidecar của bản được chép, bản đó không có thì của bản nguồn kế tiếp có. Ở
+  folder chung nó mang tên cuối của ảnh (`IMG_2 (2).xmp`, hay `IMG_2 (2).JPG.xmp` nếu nguồn đặt kiểu tên đủ). Tên sidecar
+  đã có byte khác → để nguyên, ảnh vẫn Copied, log ghi "sidecar not copied". Ảnh Skipped mà thiếu sidecar ở đích thì được
+  thêm. Move: sidecar của các bản bị xoá cũng bị xoá.
 - Trùng tên ở folder chung: cùng SHA → **Skipped (already there)**; khác → `IMG_0001 (2).JPG`. Không ghi đè.
 - Một lệnh tới server một lúc mỗi connection ([03 §2](03-servers-as-sources.md)). Mac không ngủ khi đang chạy.
 - Xong lượt: ghi `ShotDex Common Photos 2026-11-02 1430.csv` vào folder chung; nguồn được **Rescan**; lịch sử

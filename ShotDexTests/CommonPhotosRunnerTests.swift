@@ -34,7 +34,7 @@ import Testing
             let listing = try await scanner.list(["A", "B"])
             let found = try await CommonPhotosVerifier(client: nas).verify(CommonPhotosMatcher.preview(listing.files), folders: ["A", "B"])
             let items = CommonPhotosRunner.items(for: found.sorted { $0.size < $1.size }, runId: runId, folders: ["A", "B"],
-                                                 sidecars: listing.sidecars)
+                                                 files: listing.files, sidecars: listing.sidecars)
             try store.start(CommonPhotosRun(id: runId, connectionId: "S1", folders: ["A", "B"], destination: "C", action: action),
                             items: items)
         }
@@ -219,6 +219,93 @@ import Testing
         #expect(all.map(\.doneBytes) == all.map(\.doneBytes).sorted())
         let steps = all.compactMap(\.currentStep).reduce(into: [CommonPhotosRunner.Progress.Step]()) { if $0.last != $1 { $0.append($1) } }
         #expect(steps == [.downloading, .uploading, .readingBack, .downloading, .uploading, .readingBack])
+    }
+
+    /// AC-127: a photo in `A/2025/06/` and `B/x/` lands flat in the
+    /// destination, its `.xmp` beside it under the photo's final name.
+    @Test func flatDestinationWithSidecar() async throws {
+        let fixture = try Fixture(count: 2, layout: { index in
+            index == 1 ? ("2025/06/IMG_1.JPG", "x/IMG_1.JPG") : ("2025/07/IMG_1.JPG", "y/IMG_1.JPG")
+        })
+        let xmp = Data("<x:xmpmeta rating=5/>".utf8)
+        fixture.nas.put("A/2025/06/IMG_1.xmp", xmp)
+        fixture.nas.put("B/y/IMG_1.XMP", Data("<x:xmpmeta rating=2/>".utf8))
+        try await fixture.start()
+
+        try await fixture.runner.run("R1")
+
+        let destination = fixture.nas.files.filter { $0.key.hasPrefix("C/") }
+        #expect(Set(destination.keys) == ["C/IMG_1.JPG", "C/IMG_1.xmp", "C/IMG_1 (2).JPG", "C/IMG_1 (2).XMP"])
+        #expect(destination["C/IMG_1.xmp"] == xmp)
+        // Photo 2 is copied from A, which has no sidecar: B's goes with it.
+        #expect(destination["C/IMG_1 (2).XMP"] == Data("<x:xmpmeta rating=2/>".utf8))
+        #expect(destination["C/IMG_1.JPG"] == fixture.photos["2025/06/IMG_1.JPG"])
+    }
+
+    /// FS-19.01 §3: beside a RAW, `IMG_1.xmp` is the RAW's — the JPEG takes
+    /// only `IMG_1.JPG.xmp`, and keeps that full-name form in the destination.
+    @Test func rawSidecarStaysWithTheRaw() async throws {
+        let fixture = try Fixture(count: 2)
+        fixture.nas.put("A/IMG_1.CR3", Data(repeating: 9, count: 5_000))
+        fixture.nas.put("A/IMG_1.xmp", Data("raw".utf8))
+        fixture.nas.put("A/IMG_2.CR3", Data(repeating: 8, count: 6_000))
+        fixture.nas.put("A/IMG_2.JPG.xmp", Data("jpeg".utf8))
+        try await fixture.start()
+
+        try await fixture.runner.run("R1")
+
+        let destination = fixture.nas.files.filter { $0.key.hasPrefix("C/") }
+        #expect(Set(destination.keys) == ["C/IMG_1.JPG", "C/IMG_2.JPG", "C/IMG_2.JPG.xmp"])
+        #expect(destination["C/IMG_2.JPG.xmp"] == Data("jpeg".utf8))
+    }
+
+    /// A stop while the sidecar copies leaves the photo in place; Resume
+    /// finds it there, copies the sidecar and calls it Copied.
+    @Test func sidecarRetriedOnResume() async throws {
+        let fixture = try Fixture(count: 1)
+        fixture.nas.put("A/IMG_1.xmp", Data("rating".utf8))
+        try await fixture.start()
+        fixture.nas.dropConnectionOnDownload = 2
+
+        await #expect(throws: RemoteFileError.connectionLost) { try await fixture.runner.run("R1") }
+        #expect(try fixture.items().map(\.status) == [.copying])
+        #expect(!fixture.nas.files.keys.contains { $0.hasSuffix(ServerUploadPath.partSuffix) })
+        fixture.nas.dropConnectionOnDownload = nil
+        try await fixture.runner.run("R1")
+
+        #expect(try fixture.items().map(\.status) == [.copied])
+        #expect(fixture.nas.files["C/IMG_1.xmp"] == Data("rating".utf8))
+        #expect(fixture.nas.uploadCount == 2)
+    }
+
+    /// A photo already in the destination is Skipped; its missing sidecar is
+    /// put beside it.
+    @Test func skippedPhotoGetsItsSidecar() async throws {
+        let fixture = try Fixture(count: 1)
+        fixture.nas.put("A/IMG_1.xmp", Data("rating".utf8))
+        try await fixture.start()
+        fixture.nas.put("C/IMG_1.JPG", fixture.photos["IMG_1.JPG"]!)
+
+        try await fixture.runner.run("R1")
+
+        #expect(try fixture.items().map(\.status) == [.skipped])
+        #expect(fixture.nas.files["C/IMG_1.xmp"] == Data("rating".utf8))
+    }
+
+    /// A sidecar name already taken in the destination is left alone; the
+    /// photo is still Copied.
+    @Test func sidecarNeverOverwrites() async throws {
+        let fixture = try Fixture(count: 1)
+        fixture.nas.put("A/IMG_1.xmp", Data("new".utf8))
+        fixture.nas.put("C/IMG_1.xmp", Data("theirs".utf8))
+        try await fixture.start()
+
+        try await fixture.runner.run("R1")
+
+        #expect(fixture.nas.files["C/IMG_1.xmp"] == Data("theirs".utf8))
+        #expect(try fixture.items().map(\.status) == [.copied])
+        #expect(try fixture.items().first?.failure?.reason == .sidecarNotCopied)
+        #expect(fixture.nas.uploadCount == 1)
     }
 
     /// A stopped run is not resumed.

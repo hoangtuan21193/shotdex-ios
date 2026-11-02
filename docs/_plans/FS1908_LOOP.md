@@ -34,6 +34,7 @@ của loop: mỗi vòng đọc nó trước, ghi lại sau.
 | (T2) | gộp vào T1 (chung file test) | `eefcf32c` | `CommonPhotosVerifier`: đọc thiếu byte → bỏ file; SHA cache cần ngày sửa + băm lại một bản; WebDAV kiểm `Content-Range` |
 | T3 | xong | (xem git log) | migration `v46-commonPhotos`: trạng thái `copying`/`moving`/`placed`, `partPath`, nguồn có tem + `isRemoved`, run `finishing`, đọc hỏng → chỉ Discard |
 | T4 | xong | (xem git log) | runner Copy + trùng tên (AC-126 kéo từ T5), lý do lưu dạng mã |
-| T5…T12 | chưa | — | |
+| T5 | xong | (xem git log) | sidecar theo luật RAW+JPEG, thử lại khi Resume; e2e Copy thật trên SMB |
+| T6…T12 | chưa | — | |
 
-Tiếp: T5 (`.xmp` đi theo, đích phẳng — AC-127).
+Tiếp: T6 (Move — AC-123, 124, 125).

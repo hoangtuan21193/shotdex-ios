@@ -55,4 +55,42 @@ struct CommonPhotosSMBTests {
         #expect(photos.count == 8)
         #expect(photos.allSatisfy { $0.files[1].first?.relativePath.hasPrefix("from-tuan/") == true })
     }
+
+    /// Copy on the real server: the 8 shared photos land in a fresh folder
+    /// under `Shared`, each read back; the sources stay; a second run skips
+    /// them all as already there.
+    @Test func copyLandsVerified() async throws {
+        let smb = client()
+        try await smb.connect()
+        defer { Task { await smb.disconnect() } }
+        let folders = ["photos/Tuan", "photos/Vo"]
+        let destination = "photos/Shared/e2e-\(UUID().uuidString.prefix(8))"
+        let scanner = CommonPhotosScanner(client: smb)
+        let listing = try await scanner.list(folders)
+        let preview = CommonPhotosMatcher.preview(listing.files)
+        let photos = try await CommonPhotosVerifier(client: smb).verify(preview, folders: folders)
+        let store = CommonPhotosStore(database: try AppDatabase.makeEmpty())
+        let work = FileManager.default.temporaryDirectory.appendingPathComponent("CommonPhotosSMB-\(UUID().uuidString)")
+        let runner = CommonPhotosRunner(client: smb, store: store, workDirectory: work)
+
+        for runId in ["first", "second"] {
+            try store.start(CommonPhotosRun(id: runId, connectionId: "smb", folders: folders, destination: destination, action: .copy),
+                            items: CommonPhotosRunner.items(for: photos, runId: runId, folders: folders,
+                                                            files: listing.files, sidecars: listing.sidecars))
+            do {
+                try await runner.run(runId)
+            } catch {
+                try? await smb.removeFolderTree(destination)
+                throw error
+            }
+        }
+
+        let landed = try await smb.entries(in: destination).map(\.name)
+        #expect(landed.filter { !$0.lowercased().hasSuffix(".xmp") }.count == 8)
+        #expect(!landed.contains { $0.hasSuffix(ServerUploadPath.partSuffix) })
+        #expect(try store.items(runId: "first").allSatisfy { $0.status == .copied })
+        #expect(try store.items(runId: "second").allSatisfy { $0.status == .skipped })
+        #expect(try await scanner.list(folders).files.map(\.count) == [12, 13])
+        try await smb.removeFolderTree(destination)
+    }
 }

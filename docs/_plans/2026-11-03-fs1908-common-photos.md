@@ -6,7 +6,7 @@
 | Intent | [2026-11-02-common-photos-across-folders](../_intents/2026-11-02-common-photos-across-folders.md) |
 | Commit spec | `a64935f3` (intent `45653bb5`) |
 | Ngày | 2026-11-03 |
-| Trạng thái | đang làm — duyệt 2026-11-03 (Q1, Q2: dựng cả màn duyệt server lẫn Activity); T1+T2 `eefcf32c`, T3, T4 xong (loop: [FS1908_LOOP.md](FS1908_LOOP.md)) |
+| Trạng thái | đang làm — duyệt 2026-11-03 (Q1, Q2: dựng cả màn duyệt server lẫn Activity); T1+T2 `eefcf32c`, T3 `73c2c833`, T4 `abdfa2fc`, T5 xong (loop: [FS1908_LOOP.md](FS1908_LOOP.md)) |
 
 ## 1. Hiểu đúng chưa
 

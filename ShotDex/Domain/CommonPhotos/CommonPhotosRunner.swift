@@ -45,27 +45,48 @@ struct CommonPhotosRunner: Sendable {
     }
 
     /// The items of a new run, in the order they run: one per Same photo,
-    /// every copy of it as a source, first folder first, sidecars beside.
+    /// every copy of it as a source, first folder first, each with its
+    /// `.xmp` when it has one. `files` is the listing the photos came from:
+    /// which sidecar is a photo's follows the folder source rule (FS-19.01
+    /// §3) — `DSC0001.xmp` is the RAW's; a JPEG or HEIC beside that RAW owns
+    /// only `DSC0001.JPG.xmp`.
     static func items(for photos: [CommonPhoto], runId: String, folders: [String],
-                      sidecars: [[CommonPhotosFile]] = []) -> [CommonPhotosItem] {
-        let sidecarPaths = Dictionary(sidecars.joined().map { (Self.sidecarKey($0.folder, $0.relativePath), $0.relativePath) },
-                                      uniquingKeysWith: { first, _ in first })
+                      files: [[CommonPhotosFile]] = [], sidecars: [[CommonPhotosFile]] = []) -> [CommonPhotosItem] {
+        let sidecarPaths = Set(sidecars.joined().map { Self.lowercasedKey($0.folder, $0.relativePath) })
+        let spelled = Dictionary(sidecars.joined().map { (Self.lowercasedKey($0.folder, $0.relativePath), $0.relativePath) },
+                                 uniquingKeysWith: { first, _ in first })
+        let namesByFolder = Dictionary(grouping: files.joined()) { Self.lowercasedKey($0.folder, $0.subfolder) }
+            .mapValues { $0.map(\.name) }
         return photos.enumerated().map { position, photo in
             let sources = photo.files.joined().map { file in
-                CommonPhotosItem.Source(
+                let siblings = namesByFolder[Self.lowercasedKey(file.folder, file.subfolder)] ?? []
+                let stem = (file.relativePath as NSString).deletingPathExtension
+                let candidates = PairingRule.usesFullNameSidecar(file.name, siblings: siblings)
+                    ? [file.relativePath + ".xmp"]
+                    : [stem + ".xmp", file.relativePath + ".xmp"]
+                let sidecar = candidates.lazy
+                    .map { Self.lowercasedKey(file.folder, $0) }
+                    .first(where: sidecarPaths.contains)
+                    .flatMap { spelled[$0] }
+                return CommonPhotosItem.Source(
                     path: ServerUploadPath.join(folders[file.folder], file.relativePath),
                     size: file.size,
                     modifiedAt: file.modified.map { Int($0.timeIntervalSince1970) },
-                    sidecar: sidecarPaths[Self.sidecarKey(file.folder, file.relativePath)].map { ServerUploadPath.join(folders[file.folder], $0) })
+                    sidecar: sidecar.map { ServerUploadPath.join(folders[file.folder], $0) })
             }
             return CommonPhotosItem(runId: runId, position: position, sha256: photo.sha256, size: photo.size, sources: sources)
         }
     }
 
-    /// `IMG_1.JPG` and `IMG_1.xmp` share a key: folder, path without the
-    /// extension, any case.
-    private static func sidecarKey(_ folder: Int, _ relativePath: String) -> String {
-        "\(folder)/" + (relativePath as NSString).deletingPathExtension.lowercased()
+    private static func lowercasedKey(_ folder: Int, _ relativePath: String) -> String {
+        "\(folder)/" + relativePath.lowercased()
+    }
+
+    /// The sidecar that goes with the photo: the copied source's, else the
+    /// first other source's.
+    private static func sidecar(of item: CommonPhotosItem) -> (path: String, photo: String)? {
+        let source = item.sources.first(where: { $0.sidecar != nil })
+        return source.flatMap { source in source.sidecar.map { ($0, source.path) } }
     }
 
     /// The destination folder as this run sees it: lowercased name → size,
@@ -149,8 +170,8 @@ struct CommonPhotosRunner: Sendable {
             report(.checking, 0)
             if destination.sizes[ServerUploadPath.lastComponent(of: placed).lowercased()] == item.size,
                try await client.sha256(of: placed, progress: { _ in }) == item.sha256 {
-                destination.sizes[ServerUploadPath.lastComponent(of: placed).lowercased()] = item.size
-                try finish(&item, .copied)
+                try await placeSidecar(&item, besides: ServerUploadPath.lastComponent(of: placed), into: destination)
+                try finish(&item, .copied, reason: item.failure?.reason)
                 return
             }
             if item.partPath != nil, await !write.discardPart(for: placed) {
@@ -166,6 +187,7 @@ struct CommonPhotosRunner: Sendable {
             let there = destination.path(of: name)
             if try await client.sha256(of: there, progress: { _ in }) == item.sha256 {
                 item.destinationPath = there
+                try await placeSidecar(&item, besides: ServerUploadPath.lastComponent(of: there), into: destination)
                 try finish(&item, .skipped, reason: .alreadyThere)
                 return
             }
@@ -217,7 +239,56 @@ struct CommonPhotosRunner: Sendable {
             try finish(&item, .failed, reason: .serverError, detail: remote.localizedDescription)
             return
         }
-        try finish(&item, .copied)
+        // In place and recorded, still `copying`, before the sidecar is
+        // touched: a stop during the sidecar resumes through the in-place
+        // check above, which finds the photo there and tries the sidecar again.
+        item.partPath = nil
+        try store.update(item)
+        try await placeSidecar(&item, besides: freeName, into: destination)
+        try finish(&item, .copied, reason: item.failure?.reason)
+    }
+
+    /// The photo's `.xmp` beside it in the destination, named after the
+    /// photo's final name the way the source named it — `IMG_2 (2).xmp` for
+    /// `IMG_2 (2).JPG`, or `IMG_2 (2).JPG.xmp` for a full-name sidecar —
+    /// through the same verified write. A name already taken by other bytes
+    /// is left alone and noted on the photo (`sidecarNotCopied`); a sidecar
+    /// that will not copy never fails its photo. A stop is thrown, with the
+    /// sidecar's part removed first.
+    private func placeSidecar(_ item: inout CommonPhotosItem, besides photoName: String, into destination: Destination) async throws {
+        guard let (path, photoPath) = Self.sidecar(of: item) else { return }
+        let sidecarName = ServerUploadPath.lastComponent(of: path)
+        let isFullName = sidecarName.lowercased() == ServerUploadPath.lastComponent(of: photoPath).lowercased() + ".xmp"
+        let ext = (sidecarName as NSString).pathExtension
+        let name = isFullName ? photoName + "." + ext : (photoName as NSString).deletingPathExtension + "." + ext
+        let target = destination.path(of: name)
+        let write = VerifiedRemoteWrite(client: client)
+        let local = workDirectory.appendingPathComponent(UUID().uuidString + "-" + name)
+        defer { try? FileManager.default.removeItem(at: local) }
+        do {
+            let downloaded = try await client.download(path, to: local, progress: { _ in })
+            if let taken = destination.sizes[name.lowercased()] {
+                // Ours from an earlier try, or the same sidecar: nothing to do.
+                let sameSize = try taken == Int64(Data(contentsOf: local).count)
+                var same = false
+                if sameSize { same = try await client.sha256(of: target, progress: { _ in }) == downloaded }
+                if !same { item.reason = CommonPhotosItem.reason(.sidecarNotCopied) }
+                return
+            }
+            try await write.uploadPart(local, for: target, progress: { _ in })
+            guard try await write.readBackSHA256(for: target, progress: { _ in }) == downloaded else {
+                await write.discardPart(for: target)
+                item.reason = CommonPhotosItem.reason(.sidecarNotCopied)
+                return
+            }
+            try await write.moveIntoPlace(target, replacing: false)
+            destination.sizes[name.lowercased()] = Int64(try Data(contentsOf: local).count)
+        } catch {
+            await write.discardPart(for: target)
+            if error is CancellationError || Task.isCancelled { throw CancellationError() }
+            if let remote = error as? RemoteFileError, remote.stopsBatch { throw error }
+            item.reason = CommonPhotosItem.reason(.sidecarNotCopied)
+        }
     }
 
     private static func refusesEveryWrite(_ error: RemoteFileError) -> Bool {
