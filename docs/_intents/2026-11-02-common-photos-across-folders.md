@@ -5,7 +5,7 @@
 | Tác giả | Hoang Tuan (người dùng) · Claude soạn |
 | Ngày | 2026-11-02 |
 | Trạng thái | accepted (2026-11-02) |
-| Tiến độ | **đang làm** (2026-11-03) — task 9/15, 15/16 AC xanh; plan [2026-11-03-fs1908-common-photos](../_plans/2026-11-03-fs1908-common-photos.md) |
+| Tiến độ | **đang làm** (2026-11-03) — task 10/15, 15/16 AC xanh; plan [2026-11-03-fs1908-common-photos](../_plans/2026-11-03-fs1908-common-photos.md) |
 | Nguồn | phản hồi người dùng (2026-11-02: "trên ổ SMB có folder A và B, muốn tạo folder C chứa ảnh có ở cả A và B, Copy hoặc Move, mặc định Copy") |
 | Spec sinh ra từ đây | [FS-19.08](../02-functional-spec/FS-19-photo-sources/08-common-photos.md) · [08b](../02-functional-spec/FS-19-photo-sources/08b-common-photos-ac.md) |
 

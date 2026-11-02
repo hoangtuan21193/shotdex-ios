@@ -3,6 +3,7 @@ import Foundation
 import GRDB
 import ImageIO
 import Observation
+import os
 
 /// One thing the open folder shows, in drawing order: folders, then photos
 /// (FS-19.03 §4). Files that are not photos are only counted.
@@ -12,7 +13,7 @@ enum MacServerBrowserItem: Identifiable, Hashable {
 
     var id: String {
         switch self {
-        case .folder(let name): "folder:\(name)"
+        case .folder(let name): CommonPhotosEntry.folderId(name)
         case .photo(let photo): "photo:\(photo.id)"
         }
     }
@@ -23,6 +24,16 @@ enum MacServerBrowserItem: Identifiable, Hashable {
         case .photo(let photo): photo.primary.name
         }
     }
+}
+
+/// Find Common Photos… asked for, with what it starts from (FS-19.08 §3):
+/// a source connection and server paths of the folders picked — maybe
+/// none, from the menu bar.
+struct MacCommonPhotosRequest: Identifiable, Equatable {
+    let id = UUID()
+    let connectionId: String
+    let sourceId: String
+    let folders: [String]
 }
 
 /// What the library knows about a photo it shows from the server: its copy
@@ -88,10 +99,15 @@ final class MacServerBrowserModel {
     var searchText = "" {
         didSet { pruneSelection() }
     }
-    /// Items picked in the open folder, by `MacServerBrowserItem.id`.
-    private(set) var selection: Set<String> = []
-    /// Where a ⇧-click range starts: the last item clicked without ⇧.
-    private(set) var anchor: String?
+    /// What is picked, by `MacServerBrowserItem.id`, in `selectionFolder`.
+    private(set) var selection = ClickSelection()
+    /// The folder whose items `selection` picks: the open folder for the
+    /// grid and the list, or the folder a column lists when the ⌘/⇧-click
+    /// was made there (FS-19.08 §3). A click elsewhere starts over.
+    private(set) var selectionFolder = ""
+    /// File › Find Common Photos… or the context menu asked for the sheet
+    /// (FS-19.08 §4); the screen presents it from this (T10).
+    var commonPhotosRequest: MacCommonPhotosRequest?
 
     @ObservationIgnored private let client: any RemoteFileClient
     @ObservationIgnored private let refresh: ServerSourceRefresh
@@ -115,7 +131,9 @@ final class MacServerBrowserModel {
 
     init(sourceId: String, sourceName: String, server: FileServer, client: any RemoteFileClient,
          refresh: ServerSourceRefresh, database: AppDatabase, thumbnails: FolderThumbnails = .standard, start: String = "") {
-        history = BrowseHistory(start: ServerUploadPath.normalizedFolder(start))
+        let start = ServerUploadPath.normalizedFolder(start)
+        history = BrowseHistory(start: start)
+        selectionFolder = start
         self.sourceId = sourceId
         self.sourceName = sourceName
         self.server = server
@@ -164,18 +182,18 @@ final class MacServerBrowserModel {
     func open(folder name: String) { go(to: ServerUploadPath.join(path, name)) }
 
     func go(to newPath: String) {
-        clearSelection()
         history.open(newPath)
+        clearSelection()
     }
 
     func goBack() {
-        clearSelection()
         history.goBack()
+        clearSelection()
     }
 
     func goForward() {
-        clearSelection()
         history.goForward()
+        clearSelection()
     }
 
     // MARK: What it shows
@@ -224,50 +242,127 @@ final class MacServerBrowserModel {
 
     // MARK: Selection
 
-    /// A click on `item`: alone it picks only `item`; ⌘ (`extendsSelection`)
-    /// adds or removes it; ⇧ (`extendsRange`) picks everything from the
-    /// anchor to it, in drawing order.
-    func click(_ item: MacServerBrowserItem, extendsSelection: Bool = false, extendsRange: Bool = false) {
-        let ids = items.map(\.id)
-        if extendsRange, let anchor, let from = ids.firstIndex(of: anchor), let to = ids.firstIndex(of: item.id) {
-            let range = Set(ids[min(from, to)...max(from, to)])
-            selection = extendsSelection ? selection.union(range) : range
-            return
-        }
-        if extendsSelection {
-            if selection.contains(item.id) { selection.remove(item.id) } else { selection.insert(item.id) }
-        } else {
-            selection = [item.id]
-        }
-        anchor = item.id
+    /// What the open folder's grid and list show as picked: nothing when the
+    /// selection was made in a column above.
+    var openFolderSelection: Set<String> { selectionFolder == path ? selection.ids : [] }
+
+    /// Whether `item` of `folder` is picked.
+    func isSelected(_ item: MacServerBrowserItem, in folder: String) -> Bool {
+        folder == selectionFolder && selection.contains(item.id)
     }
 
-    /// The List view's own selection (it handles ⌘ and ⇧ itself); the anchor
-    /// follows the row it added last.
+    /// Every item `folder` draws, in order: the open folder's grid, or a
+    /// column's folders.
+    private func order(in folder: String) -> [String] {
+        folder == path ? items.map(\.id) : folders(in: folder).map(CommonPhotosEntry.folderId)
+    }
+
+    private func folders(in folder: String) -> [String] {
+        folder == path ? items.compactMap { if case .folder(let name) = $0 { name } else { nil } } : (contents(of: folder)?.folders ?? [])
+    }
+
+    /// A click on `item` drawn in `folder` (the open one unless a column):
+    /// alone it picks only `item`; ⌘ (`extendsSelection`) adds or removes
+    /// it; ⇧ (`extendsRange`) picks the run from the anchor in that folder.
+    func click(_ item: MacServerBrowserItem, in folder: String? = nil, extendsSelection: Bool = false, extendsRange: Bool = false) {
+        let folder = folder ?? path
+        if folder != selectionFolder {
+            selection.clear()
+            selectionFolder = folder
+        }
+        selection.click(item.id, in: order(in: folder), extendsSelection: extendsSelection, extendsRange: extendsRange)
+    }
+
+    /// The List view's own selection (it handles ⌘ and ⇧ itself).
     func setSelection(_ ids: Set<String>) {
-        if let added = ids.subtracting(selection).first { anchor = added }
-        selection = ids
-        if ids.isEmpty { anchor = nil }
+        if selectionFolder != path {
+            selection.clear()
+            selectionFolder = path
+        }
+        selection.replace(with: ids, in: order(in: path))
+    }
+
+    /// Picks folders of the open folder by name (`-ShotDexServerSelect`).
+    func selectFolders(named names: [String]) {
+        selectionFolder = path
+        let wanted = Set(names.map(CommonPhotosEntry.folderId))
+        selection.replace(with: wanted.intersection(order(in: path)), in: order(in: path))
     }
 
     func clearSelection() {
-        selection = []
-        anchor = nil
+        selection.clear()
+        selectionFolder = path
     }
 
-    /// Return: open the one folder picked. False when that is not what is picked.
+    /// The picked folders as paths under the source's root, in drawing order.
+    var selectedFolderPaths: [String] {
+        CommonPhotosEntry.picked(selection, selectionFolder: selectionFolder, folder: selectionFolder,
+                                 folders: folders(in: selectionFolder))
+    }
+
+    /// Return: open the one folder picked in the open folder.
     func openSelectedFolder() -> Bool {
-        guard selection.count == 1, let id = selection.first,
-              case .folder(let name) = items.first(where: { $0.id == id }) else { return false }
-        open(folder: name)
+        let folders = CommonPhotosEntry.picked(selection, selectionFolder: selectionFolder, folder: path, folders: folders(in: path))
+        guard selection.count == 1, folders.count == 1 else { return false }
+        go(to: folders[0])
         return true
     }
 
     private func pruneSelection() {
-        let ids = Set(items.map(\.id))
-        selection.formIntersection(ids)
-        if let anchor, !ids.contains(anchor) { self.anchor = nil }
+        selection.prune(to: order(in: selectionFolder))
     }
+
+    // MARK: Right-click
+
+    /// The item under the pointer, for the right-click that may follow.
+    @ObservationIgnored private var pointerTarget: (item: MacServerBrowserItem, folder: String)?
+
+    func pointer(isOver: Bool, item: MacServerBrowserItem, in folder: String) {
+        if isOver {
+            pointerTarget = (item, folder)
+        } else if pointerTarget?.item.id == item.id, pointerTarget?.folder == folder {
+            pointerTarget = nil
+        }
+    }
+
+    /// A right-click: as in Finder, an item that is not picked becomes the
+    /// selection first, so the highlight shows what the menu acts on.
+    func secondaryClick() {
+        guard let target = pointerTarget, !isSelected(target.item, in: target.folder) else { return }
+        click(target.item, in: target.folder)
+    }
+
+    // MARK: Find Common Photos (FS-19.08 §3)
+
+    /// The folders a right-click on `item` of `folder` acts on.
+    func commonPhotosFolders(for item: MacServerBrowserItem, in folder: String? = nil) -> [String] {
+        let folder = folder ?? path
+        guard case .folder(let name) = item else { return selectedFolderPaths }
+        return CommonPhotosEntry.targets(rightClicked: name, in: folder, selection: selection,
+                                         selectionFolder: selectionFolder, folders: folders(in: folder))
+    }
+
+    /// The open folder's folders among `ids` — a List right-click. Ids that
+    /// stand for a column's picks are not the open folder's.
+    func folderPaths(forIds ids: Set<String>) -> [String] {
+        folders(in: path).filter { ids.contains(CommonPhotosEntry.folderId($0)) }.map { ServerUploadPath.join(path, $0) }
+    }
+
+    /// Find Common Photos… with the folders picked now.
+    func findCommonPhotosInSelection() {
+        findCommonPhotos(folders: selectedFolderPaths, connectionId: server.id, sourceId: sourceId)
+    }
+
+    /// The hook the sheet (T10) presents from: `folders` are paths under
+    /// the source's root, made server paths here — the runner's terms.
+    func findCommonPhotos(folders: [String], connectionId: String, sourceId: String) {
+        let request = MacCommonPhotosRequest(connectionId: connectionId, sourceId: sourceId,
+                                             folders: CommonPhotosEntry.serverPaths(folders, connectionFolder: server.folder))
+        Self.log.notice("find common photos: \(request.folders.joined(separator: ", "), privacy: .private) on \(connectionId, privacy: .public)")
+        commonPhotosRequest = request
+    }
+
+    private static let log = Logger(subsystem: "com.hoangtuan.shotdex", category: "commonPhotos")
 
     // MARK: Loading
 

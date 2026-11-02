@@ -103,6 +103,14 @@ enum MacDemoLibrary {
         return arguments[index + 1]
     }
 
+    /// `-ShotDexServerSelect "Tuan,Vo"`: folders of the opened folder picked
+    /// once it is listed, as a ⌘-click would (FS-19.08 AC-130).
+    static var serverSelect: [String]? {
+        let arguments = ProcessInfo.processInfo.arguments
+        guard let index = arguments.firstIndex(of: "-ShotDexServerSelect"), index + 1 < arguments.count else { return nil }
+        return arguments[index + 1].split(separator: ",").map { $0.trimmingCharacters(in: .whitespaces) }
+    }
+
     /// `-ShotDexServerLayout list`: the server browser's view mode.
     static var serverLayout: String? {
         let arguments = ProcessInfo.processInfo.arguments

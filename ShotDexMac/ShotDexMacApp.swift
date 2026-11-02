@@ -41,7 +41,10 @@ struct ShotDexMacApp: App {
         }
         .defaultSize(width: 1440, height: 900)
         .windowToolbarStyle(.unified)
-        .commands { MacBackupCommands() }
+        .commands {
+            MacBackupCommands()
+            MacCommonPhotosCommands()
+        }
         Settings {
             MacSettingsWindow()
                 .environment(dependencies)
@@ -73,6 +76,24 @@ struct MacBackupCommands: Commands {
                 NotificationCenter.default.post(name: .macShowBackup, object: nil)
             }
             .keyboardShortcut("b", modifiers: [.option, .command])
+        }
+    }
+}
+
+/// File › Find Common Photos… ⇧⌘F (FS-19.08 §3): opens with the folders
+/// picked in the front window's server browser, maybe none. Only a server
+/// source has a browser, so a connection that is only an upload
+/// destination has no way in.
+struct MacCommonPhotosCommands: Commands {
+    @FocusedValue(\.macServerBrowser) private var browser
+
+    var body: some Commands {
+        CommandGroup(after: .newItem) {
+            Button(String(localized: "Find Common Photos…", comment: "Mac: compare folders for the same photos (FS-19.08)")) {
+                browser?.findCommonPhotosInSelection()
+            }
+            .keyboardShortcut("f", modifiers: [.command, .shift])
+            .disabled(browser == nil)
         }
     }
 }

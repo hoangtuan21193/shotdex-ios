@@ -61,6 +61,8 @@ private struct MacServerBrowserContent: View {
     @Bindable var model: MacServerBrowserModel
     @Environment(\.openSettings) private var openSettings
     @FocusState private var gridFocused: Bool
+    @State private var hasPreselected = false
+    @State private var rightClickMonitor: Any?
 
     /// Board `MAC_ServerBrowser`: two columns of 186 beside the files, 12
     /// apart; 8 in from the sidebar, 16 from the window's right edge.
@@ -87,7 +89,29 @@ private struct MacServerBrowserContent: View {
         .navigationTitle(model.title)
         .navigationSubtitle(subtitle)
         .toolbar { toolbar }
-        .task(id: model.path) { await model.visit() }
+        .task(id: model.path) {
+            await model.visit()
+            #if DEBUG
+            if !hasPreselected, let names = MacDemoLibrary.serverSelect, model.contents != nil {
+                hasPreselected = true
+                model.selectFolders(named: names)
+                if ProcessInfo.processInfo.arguments.contains("-ShotDexServerFindCommon") { model.findCommonPhotosInSelection() }
+            }
+            #endif
+        }
+        .focusedSceneValue(\.macServerBrowser, model)
+        .onAppear {
+            // A right-click retargets the selection before its menu opens;
+            // the event goes on to the menu untouched.
+            rightClickMonitor = NSEvent.addLocalMonitorForEvents(matching: .rightMouseDown) { [model] event in
+                model.secondaryClick()
+                return event
+            }
+        }
+        .onDisappear {
+            if let rightClickMonitor { NSEvent.removeMonitor(rightClickMonitor) }
+            rightClickMonitor = nil
+        }
         .alert(rescanAlertTitle, isPresented: Binding(get: { model.rescanProblem != nil }, set: { if !$0 { model.rescanProblem = nil } })) {
             Button(String(localized: "OK", comment: "Mac server browser: dismiss the Rescan alert"), role: .cancel) {}
         } message: {
@@ -178,6 +202,10 @@ private struct MacServerBrowserContent: View {
         guard let contents = model.contents(of: path) else { return "" }
         var parts = [Self.folderCount(contents.folders.count)]
         if !contents.photos.isEmpty { parts.append(Self.photoCount(contents.photos.count)) }
+        let picked = model.selectedFolderPaths.count
+        if path == model.selectionFolder, picked > 0 {
+            parts.append(String(localized: "\(picked.formatted()) selected", comment: "Mac server browser column foot: folders picked in it"))
+        }
         return parts.joined(separator: " · ")
     }
 
@@ -251,7 +279,7 @@ private struct MacServerBrowserContent: View {
                       spacing: MacGridMetrics.spacing) {
                 ForEach(model.items) { item in
                     MacServerTile(item: item, copy: copy(item), folderMeta: folderMeta(item),
-                                  isSelected: model.selection.contains(item.id), model: model)
+                                  isSelected: model.isSelected(item, in: model.path), model: model)
                         // The single click acts at once; the double click is
                         // seen alongside it, never waited for.
                         .onTapGesture {
@@ -262,6 +290,9 @@ private struct MacServerBrowserContent: View {
                         .simultaneousGesture(TapGesture(count: 2).onEnded {
                             if case .folder(let name) = item { model.open(folder: name) }
                         })
+                        .contextMenu {
+                            MacServerFolderMenu(model: model, item: item, folder: model.path)
+                        }
                 }
             }
         }
@@ -272,7 +303,7 @@ private struct MacServerBrowserContent: View {
     }
 
     private var table: some View {
-        Table(model.items, selection: Binding(get: { model.selection }, set: { model.setSelection($0) })) {
+        Table(model.items, selection: Binding(get: { model.openFolderSelection }, set: { model.setSelection($0) })) {
             TableColumn(String(localized: "Name", comment: "Mac server browser list: column")) { item in
                 HStack(spacing: 6) {
                     Image(systemName: itemSymbol(item))
@@ -300,9 +331,15 @@ private struct MacServerBrowserContent: View {
             .width(min: 120, ideal: 150)
         }
         .alternatingRowBackgrounds()
-        // No menu yet (T9b brings Find Common Photos…); this is the Table's
-        // only way to open a row on double-click and Return.
-        .contextMenu(forSelectionType: String.self) { _ in
+        // A right-click acts on the selection, or on the row under the
+        // pointer when that is not picked; double-click and Return open.
+        .contextMenu(forSelectionType: String.self) { ids in
+            let folders = model.folderPaths(forIds: ids)
+            if folders.count == 1 {
+                Button(String(localized: "Open", comment: "Mac server browser context menu: open the folder")) { model.go(to: folders[0]) }
+            } else if CommonPhotosEntry.canFind(folders) {
+                MacFindCommonPhotosButton(model: model, folders: folders)
+            }
         } primaryAction: { ids in
             guard ids.count == 1, let id = ids.first, let item = model.items.first(where: { $0.id == id }),
                   case .folder(let name) = item else { return }
@@ -407,9 +444,11 @@ private struct MacServerBrowserContent: View {
 
     private var pathBarStatus: String {
         var parts: [String] = []
-        let total = model.items.count
-        if !model.selection.isEmpty {
-            parts.append(String(localized: "\(model.selection.count.formatted()) of \(total.formatted()) selected",
+        // The open folder's picks only; a column's are counted at its foot.
+        let picked = model.openFolderSelection.count
+        if picked > 0 {
+            let total = model.items.count
+            parts.append(String(localized: "\(picked.formatted()) of \(total.formatted()) selected",
                                 comment: "Mac server browser path bar: how many items are selected"))
         }
         if let storage = model.storage { parts.append(storage.footerText) }
@@ -509,14 +548,29 @@ private struct MacServerColumnRow: View {
     var body: some View {
         let isOnPath = column.selected == name
         let childPath = ServerUploadPath.join(column.path, name)
-        let isOpen = isOnPath && childPath == model.path
-        Button { model.go(to: childPath) } label: {
+        // The open folder's row is amber unless folders are picked inside
+        // it: then the picked column has the amber and this one goes grey,
+        // as in Finder (board `MAC_CommonPhotos`).
+        let picksInside = !model.selection.isEmpty && model.selectionFolder == childPath
+        let isOpen = isOnPath && childPath == model.path && !picksInside
+        let isPicked = model.isSelected(.folder(name), in: column.path)
+        Button {
+            // ⌘/⇧-click picks folders in this column (FS-19.08 §3); a plain
+            // click opens, as in Finder's columns.
+            let flags = NSEvent.modifierFlags
+            if flags.contains(.command) || flags.contains(.shift) {
+                model.click(.folder(name), in: column.path,
+                            extendsSelection: flags.contains(.command), extendsRange: flags.contains(.shift))
+            } else {
+                model.go(to: childPath)
+            }
+        } label: {
             HStack(spacing: 7) {
                 Image(systemName: "folder")
                     .foregroundStyle(MacTheme.accent)
                     .frame(width: 15)
                 Text(name)
-                    .fontWeight(isOpen ? .semibold : .regular)
+                    .fontWeight(isOpen || isPicked ? .semibold : .regular)
                     .lineLimit(1)
                     .truncationMode(.tail)
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -531,12 +585,16 @@ private struct MacServerColumnRow: View {
             .padding(.leading, 8)
             .padding(.trailing, 6)
             .frame(height: 26)
-            .background(background(isOnPath: isOnPath, isOpen: isOpen), in: RoundedRectangle(cornerRadius: 6))
+            .background(background(isOnPath: isOnPath, isOpen: isOpen || isPicked), in: RoundedRectangle(cornerRadius: 6))
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .onHover { isHovered = $0 }
-        .accessibilityAddTraits(isOnPath ? .isSelected : [])
+        .onHover { isOver in
+            isHovered = isOver
+            model.pointer(isOver: isOver, item: .folder(name), in: column.path)
+        }
+        .accessibilityAddTraits(isOnPath || isPicked ? .isSelected : [])
+        .contextMenu { MacServerFolderMenu(model: model, item: .folder(name), folder: column.path) }
     }
 
     private func background(isOnPath: Bool, isOpen: Bool) -> Color {
@@ -574,7 +632,10 @@ private struct MacServerTile: View {
                 }
             }
             .contentShape(Rectangle())
-            .onHover { isHovered = $0 }
+            .onHover { isOver in
+                isHovered = isOver
+                model.pointer(isOver: isOver, item: item, in: model.path)
+            }
             .task(id: copy?.copyId) {
                 guard let copyId = copy?.copyId else {
                     thumbnail = nil
@@ -707,5 +768,54 @@ private struct MacToolbarSearchField: NSViewRepresentable {
             guard let field = notification.object as? NSSearchField else { return }
             text.wrappedValue = field.stringValue
         }
+    }
+}
+
+/// A folder's right-click menu (FS-19.08 §3): Open for one folder, then
+/// Find Common Photos… — dimmed under two folders. It acts on the picked
+/// folders when the one under the pointer is among them, else on that one.
+private struct MacServerFolderMenu: View {
+    let model: MacServerBrowserModel
+    let item: MacServerBrowserItem
+    let folder: String
+
+    var body: some View {
+        if case .folder(let name) = item {
+            // Context menus leave out what cannot run (HIG): Open for one
+            // folder, Find Common Photos… from two.
+            let folders = model.commonPhotosFolders(for: item, in: folder)
+            if CommonPhotosEntry.canFind(folders) {
+                MacFindCommonPhotosButton(model: model, folders: folders)
+            } else {
+                Button(String(localized: "Open", comment: "Mac server browser context menu: open the folder")) {
+                    model.go(to: ServerUploadPath.join(folder, name))
+                }
+            }
+        }
+    }
+}
+
+/// Find Common Photos… in a context menu, for `folders` (paths under the
+/// source's root). ⇧⌘F lives on the File menu's item only.
+private struct MacFindCommonPhotosButton: View {
+    let model: MacServerBrowserModel
+    let folders: [String]
+
+    var body: some View {
+        Button(String(localized: "Find Common Photos…", comment: "Mac: compare folders for the same photos (FS-19.08)")) {
+            model.findCommonPhotos(folders: folders, connectionId: model.server.id, sourceId: model.sourceId)
+        }
+    }
+}
+
+/// The server browser of the key window, for File › Find Common Photos….
+struct MacServerBrowserFocusKey: FocusedValueKey {
+    typealias Value = MacServerBrowserModel
+}
+
+extension FocusedValues {
+    var macServerBrowser: MacServerBrowserModel? {
+        get { self[MacServerBrowserFocusKey.self] }
+        set { self[MacServerBrowserFocusKey.self] = newValue }
     }
 }

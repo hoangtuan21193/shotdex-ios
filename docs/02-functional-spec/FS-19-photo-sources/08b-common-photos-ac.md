@@ -24,7 +24,7 @@ có mặt người. Test domain chạy trên client giả của `ShotDexTests/Ba
 | AC-129 | lượt chạy xong 3 Copied, 1 Skipped | xong | đích có CSV `ShotDex Common Photos <ngày giờ>.csv`, 4 hàng + tiêu đề, cột Status/Name/From/To/SHA-256 | ✅ `CommonPhotosRunnerTests.writesCsvLog` (+ `csvResumesUnderItsName`, `csvIsSafeToOpen`, `finishingRunResumes`) |
 | AC-130 | Mac, màn duyệt NAS cục bộ, ⌘-click 2 folder | chuột phải → Find Common Photos… → chọn đích → Scan → Copy | sheet và cửa sổ tiến độ khớp board `MAC_CommonPhotos` / `MAC_CommonPhotosRun` (lệch ≤ 2pt), sáng và tối | ⚠️ chưa có — `Tools/mac-shot` + `Tools/design-board compare` |
 
-Kiểm thêm khi `/verify`: folder chung nằm trong folder nguồn → sheet báo lỗi, nút chạy mờ; 1 folder → mục menu mờ; lịch
+Kiểm thêm khi `/verify`: folder chung nằm trong folder nguồn → sheet báo lỗi, nút chạy mờ; 1 folder → mục ẩn ở menu chuột phải; lịch
 sử upload trỏ tới file bị dời được sửa đường dẫn (`ServerFileHistory`).
 
 **Đã chứng minh (2026-11-03):** AC-115…129 — test chạy trên sim iPhone Duo 27.1; quét thêm e2e trên SMB ảo

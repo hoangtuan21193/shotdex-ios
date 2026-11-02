@@ -34,7 +34,8 @@ con · kết quả xem trước có hai mức Likely the same → Same · tiến
 ## 3. Lối vào
 
 - Màn duyệt server (board `MAC_ServerBrowser`, [03 §4](03-servers-as-sources.md)): ⌘-click / ⇧-click chọn nhiều folder
-  trong một cột hoặc ở ô folder của lưới. Chuột phải → **Find Common Photos…** (`⇧⌘F`). Có 1 folder → mục mờ.
+  trong một cột hoặc ở ô folder của lưới. Chuột phải → **Find Common Photos…** (phím `⇧⌘F` ghi ở menu File, không ở menu chuột phải). Dưới 2 folder → mục
+  **ẩn** khỏi menu chuột phải (HIG: menu ngữ cảnh ẩn mục không dùng được); menu File luôn có mục này, mờ khi không ở màn duyệt.
 - Menu bar **File › Find Common Photos…** cùng phím tắt, mở sheet với các folder đang chọn (có thể rỗng).
 - Sheet có **Add Folder…** (mở bộ chọn folder của chính connection đó) để thêm folder ở cột khác.
 - Chỉ connection là **nguồn** (có màn duyệt). Connection chỉ để upload không có lối vào ở bản này (người dùng chốt
