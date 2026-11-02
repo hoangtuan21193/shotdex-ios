@@ -1,7 +1,7 @@
 import Foundation
 
 /// Raw EXIF values as read from ImageIO, before any normalization.
-struct RawExif: Equatable, Sendable {
+struct RawExif: Equatable, Sendable, Codable {
     var make: String?
     var model: String?
     var lensMake: String?

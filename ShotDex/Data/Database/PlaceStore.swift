@@ -176,6 +176,9 @@ struct PlaceStore: Sendable {
                 ]
             )
             try Self.applyCell(db, cellKey: cellKey, place: place, searchText: searchText, at: now)
+            // The other devices of this iCloud account reuse the address
+            // instead of asking the geocoder again (SharedIndexStore).
+            try SharedIndexStore.enqueue(db, recordType: SharedIndexStore.placeCellType, recordName: cellKey, at: now)
         }
     }
 
@@ -227,7 +230,7 @@ struct PlaceStore: Sendable {
         }
     }
 
-    private static func applyCell(
+    static func applyCell(
         _ db: Database,
         cellKey: String,
         place: ResolvedPlace,

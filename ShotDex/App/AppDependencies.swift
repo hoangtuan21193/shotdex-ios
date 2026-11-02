@@ -42,6 +42,8 @@ final class AppDependencies {
     let networkStatus: NetworkMonitor
     let powerStatus: PowerMonitor
     let indexTraffic: IndexTrafficMonitor
+    /// Index results shared over iCloud; nil in previews and tests.
+    let indexShare: IndexShareService?
     let indexInteractionGate: IndexInteractionGate
     let placeStore: PlaceStore
     let placeGeocoding: PlaceGeocodingService
@@ -228,14 +230,18 @@ final class AppDependencies {
     /// iOS 26's continued processing for a card import (FS-20 AC-26).
     @ObservationIgnored lazy var ingestBackground = IngestBackgroundService(center: ingest)
 
-    init(database: AppDatabase, photoLibrary: PhotoLibraryService) {
+    init(database: AppDatabase, photoLibrary: PhotoLibraryService, sharesIndex: Bool = false) {
         let metadataStore = MetadataStore(database: database)
         let indexTraffic = IndexTrafficMonitor()
         let indexInteractionGate = IndexInteractionGate()
+        let indexShare = sharesIndex ? IndexShareService(store: SharedIndexStore(database: database)) : nil
+        self.indexShare = indexShare
         let indexPipeline = IndexPipeline(
             metadataStore: MetadataStore(database: database),
             exifReader: ExifReader(trafficMonitor: indexTraffic),
-            interactionGate: indexInteractionGate
+            interactionGate: indexInteractionGate,
+            sharedIndex: indexShare,
+            readsOriginalsOnly: { IndexReadPolicy.readsOriginalsOnly }
         )
         self.database = database
         self.metadataStore = metadataStore
@@ -752,7 +758,7 @@ final class AppDependencies {
             assertionFailure("Failed to open database: \(error)")
             database = (try? AppDatabase.makeEmpty()) ?? { fatalError("Cannot create database") }()
         }
-        return AppDependencies(database: database, photoLibrary: PhotoLibraryService())
+        return AppDependencies(database: database, photoLibrary: PhotoLibraryService(), sharesIndex: true)
     }
 
     static func preview() -> AppDependencies {

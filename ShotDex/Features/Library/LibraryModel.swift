@@ -60,6 +60,7 @@ final class LibraryModel {
     private let metadataStore: MetadataStore
     private let pipeline: IndexPipeline
     private let placeIndexPass: PlaceIndexPass
+    private let indexShare: IndexShareService?
     private let keywordMirror: ExtendedMetadataMirrorPass?
     private let unsupportedRAWIndex: UnsupportedRAWIndex
     private let backgroundIndex: any IndexRunAssertion
@@ -244,6 +245,7 @@ final class LibraryModel {
         self.metadataStore = dependencies.metadataStore
         self.pipeline = dependencies.indexPipeline
         self.placeIndexPass = dependencies.placeIndexPass
+        self.indexShare = dependencies.indexShare
         self.keywordMirror = dependencies.keywordMirror
         self.unsupportedRAWIndex = dependencies.unsupportedRAWIndex
         self.backgroundIndex = dependencies.indexRunAssertion
@@ -675,6 +677,7 @@ final class LibraryModel {
             )
             guard let self else { return }
             self.placeLookupRemaining = nil
+            if summary.didWork { self.pushSharedIndex() }
             // New place names mean new search vocabulary and new autosuggest
             // entries; without this refresh they only appear on the next launch.
             if summary.didWork { self.refreshFilterOptions(force: true) }
@@ -705,6 +708,15 @@ final class LibraryModel {
         return result
     }
 
+    // MARK: Shared index
+
+    /// Uploads what this device read since the last push. Its own task: the
+    /// run's indicator must not wait on CloudKit.
+    private func pushSharedIndex() {
+        guard let indexShare else { return }
+        Task(priority: .utility) { await indexShare.push() }
+    }
+
     // MARK: Indexing
 
     /// Streaming EXIF from iCloud is allowed on Wi-Fi; on cellular only when
@@ -715,7 +727,10 @@ final class LibraryModel {
     private var allowNetworkForIndexing: @Sendable () -> Bool {
         let networkStatus = self.networkStatus
         return {
-            !networkStatus.isExpensivePath
+            // Originals-only (the Mac's switch, or an iPhone the Mac indexes
+            // for) never streams from iCloud on its own — only "Index Now".
+            guard !IndexReadPolicy.readsOriginalsOnly else { return false }
+            return !networkStatus.isExpensivePath
                 || UserDefaults.standard.bool(forKey: SettingsKeys.allowCellularIndexing)
         }
     }
@@ -905,6 +920,11 @@ final class LibraryModel {
                 // needs an early out — so the rest lives in a method.
                 self.finishRun(trigger: trigger, seconds: seconds, generation: generation)
             }
+            // Other devices' results first (at most 30 s): every photo they
+            // already read is then composed from theirs instead of opened here.
+            if let indexShare = self.indexShare {
+                await indexShare.pull(waitingAtMost: .seconds(30))
+            }
             var summary: IndexRunSummary?
             do {
                 summary = try await operation(
@@ -929,6 +949,13 @@ final class LibraryModel {
                 )
             } catch {
                 self.loadError = "Indexing failed."
+            }
+            // Rows this run left waiting (no local original, or the network
+            // was off) take what other devices shared, and this run's reads go
+            // up for them.
+            if self.indexShare != nil, summary?.didNotStart != true {
+                _ = try? await pipeline.adoptSharedResults()
+                self.pushSharedIndex()
             }
             self.reload()
             self.refreshFilterOptions(force: true)

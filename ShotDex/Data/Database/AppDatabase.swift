@@ -684,6 +684,7 @@ final class AppDatabase: Sendable {
         registerCardImports(&migrator)
         registerKept(&migrator)
         registerOnServerCheck(&migrator)
+        registerSharedIndex(&migrator)
 
         return migrator
     }

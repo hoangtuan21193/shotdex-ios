@@ -46,6 +46,29 @@ enum SettingsKeys {
     /// false for an unwritten key). Uses the network, hence a switch: it is the
     /// only part of indexing that talks to a server about where the user has been.
     static let lookUpPlaces = "index.lookUpPlaces"
+
+    /// Share index results with the other devices on this iCloud account
+    /// through CloudKit (intent 2026-11-02-icloud-shared-index). Defaults to
+    /// **true**, read through an `object(forKey:)` nil check.
+    static let sharesIndex = "index.sharesAcrossDevices"
+    /// The CloudKit zone exists — skips one round trip per sync.
+    static let sharedIndexZoneCreated = "index.share.zoneCreated"
+    /// Archived `CKServerChangeToken` of the last pull.
+    static let sharedIndexChangeToken = "index.share.changeToken"
+    /// Seconds since 1970 of the last successful pull or push.
+    static let sharedIndexLastSync = "index.share.lastSync"
+    /// Mac: index only photos whose original is on this Mac — no iCloud
+    /// download, no derivative. Defaults to false.
+    static let indexesOriginalsOnly = "index.originalsOnly"
+    /// "The Mac indexes for every device." On the Mac, its own switch; on
+    /// iPhone and iPad, the value last pulled from iCloud.
+    static let macIndexesForAll = "index.macIndexesForAll"
+    /// Name of the Mac that turned `macIndexesForAll` on, for the iPhone's
+    /// Settings line.
+    static let macIndexesForAllName = "index.macIndexesForAllName"
+    /// iPhone/iPad: index here anyway even though the Mac indexes for every
+    /// device. Defaults to false.
+    static let ignoresMacIndex = "index.ignoresMacIndex"
     /// Seconds each photo is held during a slideshow.
     static let slideshowSeconds = "slideshow.seconds"
     /// Whether a video starts playing on its own when its page opens.

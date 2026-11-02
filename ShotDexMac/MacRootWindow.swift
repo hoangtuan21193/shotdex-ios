@@ -59,6 +59,14 @@ struct MacRootWindow: View {
             selection = .backup
             opensNewBackup = true
         }
+        // Settings › General › Indexing: "Index Now" reads what originals-only
+        // skipped, with iCloud allowed; a changed switch starts a fresh run.
+        .onReceive(NotificationCenter.default.publisher(for: .macIndexMissingNow)) { _ in
+            library?.reindexIncompleteAssets(manual: true)
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .macIndexSettingsChanged)) { _ in
+            library?.startIndexing()
+        }
     }
 
     /// Jobs, or a warning when one is stuck on something only the user can

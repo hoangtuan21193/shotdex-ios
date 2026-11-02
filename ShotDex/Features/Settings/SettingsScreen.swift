@@ -35,6 +35,11 @@ struct SettingsScreen: View {
     @AppStorage(SettingsKeys.showsInsights) private var showsInsights = true
     @AppStorage(SettingsKeys.keepScreenAwake) private var keepScreenAwake = false
     @AppStorage(SettingsKeys.lookUpPlaces) private var looksUpPlaces = true
+    @AppStorage(SettingsKeys.sharesIndex) private var sharesIndex = true
+    /// Pulled from iCloud: a Mac on this account indexes for every device.
+    @AppStorage(SettingsKeys.macIndexesForAll) private var macIndexesForAll = false
+    @AppStorage(SettingsKeys.macIndexesForAllName) private var macIndexesForAllName = ""
+    @AppStorage(SettingsKeys.ignoresMacIndex) private var ignoresMacIndex = false
     @AppStorage(SettingsKeys.onThisDayNotificationsEnabled) private var isOnThisDayReminderEnabled = false
     /// Minutes since local midnight. The default matches the scheduler's, which
     /// has to spell it out separately because `UserDefaults.integer` cannot tell
@@ -562,6 +567,11 @@ struct SettingsScreen: View {
     }
 
     /// "On · …" / "Off · …" — a switch's state, then what that state means.
+    /// The Mac that indexes for every device, as its own Settings named it.
+    private var macName: String {
+        macIndexesForAllName.isEmpty ? String(localized: "Your Mac", comment: "Settings: a Mac whose name is unknown") : macIndexesForAllName
+    }
+
     private func toggleValue(_ isOn: Bool, on: String, off: String) -> String {
         isOn
             ? SettingsSummary.joined(String(localized: "On", comment: "Settings: a switch that is on, at the start of its value line"), on)
@@ -649,17 +659,35 @@ struct SettingsScreen: View {
             Toggle(isOn: $looksUpPlaces) {
                 rowLabel(.lookUpPlaceNames, value: toggleValue(
                     looksUpPlaces,
-                    on: String(localized: "the only step that leaves this device", comment: "Settings, Look Up Place Names value line when on"),
+                    on: String(localized: "asks Apple Maps once per place", comment: "Settings, Look Up Place Names value line when on"),
                     off: String(localized: "places stay as coordinates", comment: "Settings, Look Up Place Names value line when off")
                 ))
             }
             .settingsRow(.lookUpPlaceNames)
+            Toggle(isOn: $sharesIndex) {
+                rowLabel(.shareIndexAcrossDevices, value: toggleValue(
+                    sharesIndex,
+                    on: String(localized: "your devices read each photo once, through iCloud", comment: "Settings, Share Index Across Devices value line when on"),
+                    off: String(localized: "this device reads every photo itself", comment: "Settings, Share Index Across Devices value line when off")
+                ))
+            }
+            .settingsRow(.shareIndexAcrossDevices)
+            // Only while a Mac indexes for every device (its own Settings):
+            // the one way to keep reading iCloud photos here anyway.
+            if sharesIndex && macIndexesForAll {
+                Toggle(isOn: $ignoresMacIndex) {
+                    rowLabel(.indexOnThisDevice, value: ignoresMacIndex
+                        ? String(localized: "On · reads photos in iCloud too", comment: "Settings, Index on This Device value line when on")
+                        : String(localized: "Off · \(macName) indexes photos in iCloud for this device", comment: "Settings, Index on This Device value line when off; the argument is the Mac's name"))
+                }
+                .settingsRow(.indexOnThisDevice)
+            }
         } header: {
             if showsHeader {
                 SettingsSectionHeader(LocalizedStringResource("Access and indexing", comment: "Settings → Photo Library: section header"))
             }
         } footer: {
-            Text("Indexing reads the camera, lens and exposure info out of each photo and video. In Low Power Mode automatic indexing pauses. Place names are looked up once per place, then remembered.", comment: "Settings → Photo Library: footer under the indexing switches")
+            Text("Indexing reads the camera, lens and exposure info out of each photo and video. In Low Power Mode automatic indexing pauses. Place names are looked up once per place, then remembered. Shared index results go to your own iCloud account only.", comment: "Settings → Photo Library: footer under the indexing switches")
         }
     }
 

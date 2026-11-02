@@ -25,4 +25,6 @@ protocol LibraryServices: AnyObject {
     var networkStatus: NetworkMonitor { get }
     var powerStatus: PowerMonitor { get }
     var indexTraffic: IndexTrafficMonitor { get }
+    /// Index results shared with the other devices on this iCloud account.
+    var indexShare: IndexShareService? { get }
 }

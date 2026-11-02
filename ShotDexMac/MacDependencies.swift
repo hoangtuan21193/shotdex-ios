@@ -22,6 +22,8 @@ final class MacDependencies: LibraryServices {
     let networkStatus: NetworkMonitor
     let powerStatus: PowerMonitor
     let indexTraffic: IndexTrafficMonitor
+    /// Index results shared over iCloud; nil in the demo library.
+    let indexShare: IndexShareService?
     let sources: SourceStore
     let fileServers: FileServerStore
     let folderRoots: FolderSourceRoots
@@ -48,16 +50,20 @@ final class MacDependencies: LibraryServices {
     let photoDeletionGate: PhotoDeletionGate
     let smartAlbums: SmartAlbumStore
 
-    init(database: AppDatabase, photoLibrary: PhotoLibraryService) {
+    init(database: AppDatabase, photoLibrary: PhotoLibraryService, sharesIndex: Bool = false) {
         self.database = database
         self.photoLibrary = photoLibrary
         metadataStore = MetadataStore(database: database)
         let indexTraffic = IndexTrafficMonitor()
         self.indexTraffic = indexTraffic
+        let indexShare = sharesIndex ? IndexShareService(store: SharedIndexStore(database: database)) : nil
+        self.indexShare = indexShare
         indexPipeline = IndexPipeline(
             metadataStore: MetadataStore(database: database),
             exifReader: ExifReader(trafficMonitor: indexTraffic),
-            interactionGate: IndexInteractionGate()
+            interactionGate: IndexInteractionGate(),
+            sharedIndex: indexShare,
+            readsOriginalsOnly: { IndexReadPolicy.readsOriginalsOnly }
         )
         let libraryQueries = LibraryQueries(database: database)
         self.libraryQueries = libraryQueries
@@ -121,7 +127,7 @@ final class MacDependencies: LibraryServices {
             assertionFailure("Failed to open database: \(error)")
             database = (try? AppDatabase.makeEmpty()) ?? { fatalError("Cannot create database") }()
         }
-        return MacDependencies(database: database, photoLibrary: PhotoLibraryService())
+        return MacDependencies(database: database, photoLibrary: PhotoLibraryService(), sharesIndex: true)
     }
 }
 

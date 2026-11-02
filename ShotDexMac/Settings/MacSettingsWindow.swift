@@ -1,9 +1,9 @@
 import ServiceManagement
 import SwiftUI
 
-/// ShotDex › Settings… ⌘, (board `MAC_SettingsGeneral`). Only the General
-/// pane's Background group exists so far (FS-22.06 §5.4); the board's other
-/// panes and groups come with the features they set.
+/// ShotDex › Settings… ⌘, (board `MAC_SettingsGeneral`). The General pane
+/// has its Indexing and Background groups so far (FS-22.06 §5.4); the board's
+/// other panes and groups come with the features they set.
 struct MacSettingsWindow: View {
     var body: some View {
         TabView {
@@ -28,6 +28,7 @@ struct MacGeneralSettings: View {
 
     var body: some View {
         Form {
+            MacIndexingSettings()
             Section {
                 LabeledContent {
                     HStack(spacing: 12) {

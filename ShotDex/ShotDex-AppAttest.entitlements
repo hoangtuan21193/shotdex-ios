@@ -18,5 +18,15 @@
 	<array>
 		<string>group.com.hoangtuan.shotdex</string>
 	</array>
+	<!-- CloudKit private database: index results shared between the
+	     devices of one iCloud account (intent 2026-11-02-icloud-shared-index). -->
+	<key>com.apple.developer.icloud-container-identifiers</key>
+	<array>
+		<string>iCloud.com.hoangtuan.shotdex</string>
+	</array>
+	<key>com.apple.developer.icloud-services</key>
+	<array>
+		<string>CloudKit</string>
+	</array>
 </dict>
 </plist>
