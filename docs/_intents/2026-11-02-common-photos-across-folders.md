@@ -5,9 +5,9 @@
 | Tác giả | Hoang Tuan (người dùng) · Claude soạn |
 | Ngày | 2026-11-02 |
 | Trạng thái | accepted (2026-11-02) |
-| Tiến độ | **chưa làm** (2026-11-02) — chưa có spec |
+| Tiến độ | **chưa làm** (2026-11-02) — spec FS-19.08, 16 AC |
 | Nguồn | phản hồi người dùng (2026-11-02: "trên ổ SMB có folder A và B, muốn tạo folder C chứa ảnh có ở cả A và B, Copy hoặc Move, mặc định Copy") |
-| Spec sinh ra từ đây | (điền khi sang Design) |
+| Spec sinh ra từ đây | [FS-19.08](../02-functional-spec/FS-19-photo-sources/08-common-photos.md) · [08b](../02-functional-spec/FS-19-photo-sources/08b-common-photos-ac.md) |
 
 ## Bối cảnh
 

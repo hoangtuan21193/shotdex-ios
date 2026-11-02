@@ -49,7 +49,7 @@ docs/
 │                             FS-10 Import (đã bỏ) · FS-11 Collage (2) · FS-12 Video Studio (25) · FS-13 Support
 │                             FS-14 Panorama (2) · FS-15 Upload lên file server (5)
 │                             FS-16 Kernel render bằng Metal · FS-17 Tải, sửa ảnh từ file server (6)
-│                             FS-18 App Mac (9) · FS-19 Nguồn ảnh: thư mục, ổ ngoài, server (10)
+│                             FS-18 App Mac (9) · FS-19 Nguồn ảnh: thư mục, ổ ngoài, server (12)
 │                             FS-20 Nhập từ thẻ nhớ (2) · FS-21 iPad kiểu Mac (7)
 │                             FS-22 Backup lên ổ mạng (4)
 │                             (FS-23 Thư viện phim chuyển sang app Movik, repo movik-ios, 2026-10-16)

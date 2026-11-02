@@ -17,6 +17,7 @@ Hai vợ chồng, hai Apple Account, cùng chụp ảnh con; ảnh gửi qua l�
 1. Trên NAS có folder gốc (ví dụ `iCloud Photo/`) với ba folder thật `Tuấn/`, `Vợ/`, `Shared/`.
 2. Mỗi iPhone dùng Backup của ShotDex (FS-22) chép bản gốc vào folder của người đó.
 3. **Một script riêng của người dùng, không phải ShotDex**, tìm ảnh trùng giữa hai folder và dời/gộp chúng vào `Shared/`.
+   *(2026-11-02: bước này vào ShotDex trên Mac — [common-photos-across-folders](2026-11-02-common-photos-across-folders.md), FS-19.08.)*
 4. Trên mỗi iPhone, một smart album gom những ảnh **đã có trên một folder NAS chỉ định** (ví dụ `Shared/`) → xoá trên
    máy để giải phóng iCloud, an toàn vì bản gốc đã nằm trên NAS.
 5. Khi iCloud có chỗ: tạo iCloud Shared Library, đưa ảnh từ `Shared/` về.

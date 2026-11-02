@@ -46,7 +46,7 @@ lấy từ preview nhúng, bản gốc chỉ tải khi mở, sửa hay xuất (D
 - **Không có Import to Library** ở thiết bị nào (D5). Ai cần ảnh trong Photos dùng **Save to Photos** — một lệnh **xuất**
   (menu Share/Export, như xuất ảnh đã sửa): chép bản gốc vào Photos. Asset mới là một bản sao của **cùng ảnh** khi băm
   xong ([02 §1b](02-identity-and-sidecars.md)) — số ảnh trong thư viện không tăng.
-- Rename theo FS-17.01 §4b (đường dẫn bản sao đổi theo, hash giữ danh tính). **Delete không có** — D6, chỉ Hide ([04](04-deleting-and-duplicates.md)).
+- Rename theo FS-17.01 §4b (đường dẫn bản sao đổi theo, hash giữ danh tính). **Delete không có** — D6, chỉ Hide ([04](04-deleting-and-duplicates.md)). Mac: chọn ≥ 2 folder → **Find Common Photos…** ([08](08-common-photos.md)), Move ở đó là ngoại lệ D6 duy nhất.
 - Tìm, lọc, thống kê chạy trên ảnh server như mọi nguồn — từ dữ liệu đã index, **không** hỏi server.
 
 ## 5. Thumbnail và bản gốc

@@ -14,6 +14,7 @@ chờ phiên đó commit.
 | DESIGN.md §10.2 | đầu nhóm ngày là ngoại lệ màn rộng (Mac, iPad, Duo trong) |
 | DESIGN.md §10.3 | bàn phím iPad theo bảng phím Mac (⇧⌘C/⇧⌘V, `\`, ⌃⌘S, Z) |
 | NF-05 §1 | Mac được có cách thao tác riêng (menu, phím, cửa sổ, Activity, kéo thả); **tính năng** Mac có thì iPhone/iPad cũng có |
+| NF-05 §1 | ngoại lệ có chủ ý: Find Common Photos ([FS-19.08](../FS-19-photo-sources/08-common-photos.md)) chỉ có trên Mac (người dùng 2026-11-02) |
 | NF-06 §1 | ngoại lệ Mac: vùng bấm ≥ 20×16 theo chuẩn con trỏ |
 | NF-02 | một cache chung có trần (2/5/10/25/50 GB; Mac 25, iOS 5), ở Application Support, loại khỏi backup |
 | NF-03 §2b | sidecar ghi lên server của người dùng |

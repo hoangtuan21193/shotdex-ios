@@ -23,7 +23,7 @@ phần theo ngữ cảnh.
 |---|---|
 | ShotDex | Settings… ⌘, · Hide ⌘H · Hide Others ⌥⌘H · Quit ⌘Q |
 | File | New Window · New Album ⌘N · New Album with Selection ⇧⌘N · New Smart Album… ⌥⌘N · New Video Project · New Chart… |
-| File | Add Folder… ⇧⌘O · Add Photos Library · Connect to Server… ⌘K · Import from Card… (FS-20) · New Backup… (FS-22.06) |
+| File | Add Folder… ⇧⌘O · Add Photos Library · Connect to Server… ⌘K · Import from Card… (FS-20) · New Backup… (FS-22.06) · Find Common Photos… ⇧⌘F (FS-19.08) |
 | File | Open ⌘O · Open in New Window ⌥⌘O · Show in Finder ⇧⌘R · Reveal in Photos · Upload to Server… ⇧⌘U |
 | File | Export ▸ Export N Photos… ⇧⌘E · Export Unmodified Originals… ⌥⇧⌘E · Export EXIF as CSV… · Share ▸ · Eject "‹ổ›" · Remove Source… · Close ⌘W · Print… ⌘P |
 | Edit | Undo ⌘Z · Redo ⇧⌘Z · Cut/Copy/Paste ⌘X ⌘C ⌘V · Select All ⌘A · Deselect All ⇧⌘A |

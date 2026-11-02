@@ -537,6 +537,22 @@
    "h": 900,
    "title": "Mac · Organize trang 2 của sheet New Backup + popover Custom… cạnh popup Day (FS-22.06 §5.3)",
    "radius": 16
+  },
+  "MAC_CommonPhotos.dc.html": {
+   "x": 10280,
+   "y": 6710,
+   "w": 1440,
+   "h": 900,
+   "radius": 16,
+   "title": "Mac · Find Common Photos: chọn Tuấn + Vợ, sheet sau Scan — Same 280 · Checking 32, Save to Shared, Copy 280 (FS-19.08)"
+  },
+  "MAC_CommonPhotosRun.dc.html": {
+   "x": 11800,
+   "y": 6710,
+   "w": 1440,
+   "h": 900,
+   "radius": 16,
+   "title": "Mac · Common Photos đang chạy: cửa sổ log từng file, Copying 120 of 280, Pause/Stop, lọc trạng thái (FS-19.08 §7)"
   }
  },
  "order": [
@@ -605,7 +621,9 @@
   "MAC_SmartAlbum.dc.html",
   "MAC_Backup.dc.html",
   "MAC_BackupNew.dc.html",
-  "MAC_BackupOrganize.dc.html"
+  "MAC_BackupOrganize.dc.html",
+  "MAC_CommonPhotos.dc.html",
+  "MAC_CommonPhotosRun.dc.html"
  ],
  "notes": {
   "row_lib": {

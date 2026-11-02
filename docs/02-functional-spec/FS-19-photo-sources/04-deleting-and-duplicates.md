@@ -15,7 +15,7 @@ nguồn, Statistics đếm mỗi ảnh một lần (D7).
 | Thư mục / ổ trên Mac | Thùng rác của macOS | Finder › Put Back |
 | Thư mục trên iPad, iPhone, Duo (On My iPad/iPhone, iCloud Drive) | Recently Deleted của Files | app Files |
 | Nơi không có Thùng rác (ổ USB-C trên iPad/iPhone/Duo, vài ổ exFAT/FAT, share mạng gắn bằng Finder) | **xoá hẳn** sau hộp đỏ thứ hai | không lấy lại được |
-| Server (NAS) là nguồn | **không xoá** — chỉ **Hide** trong ShotDex | Unhide (§3) |
+| Server (NAS) là nguồn | **không xoá** — chỉ **Hide** trong ShotDex (ngoại lệ: Move của [08](08-common-photos.md) trên Mac) | Unhide (§3) |
 
 - File ảnh đi vào Thùng rác **cùng file JPEG ghép cặp và sidecar `.xmp`** của nó — Put Back trả về đủ bộ, và lượt so lệch
   nối lại danh tính bằng hash ([02 §2](02-identity-and-sidecars.md)).
