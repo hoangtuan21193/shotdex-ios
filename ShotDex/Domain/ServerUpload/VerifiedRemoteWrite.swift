@@ -30,9 +30,12 @@ struct VerifiedRemoteWrite: Sendable {
 
     /// Removes the part. Runs even when the caller was cancelled: a cancelled
     /// task's own awaits may throw at once, and the part must still go.
-    func discardPart(for destination: String) async {
+    /// False when the server refused, so a caller that records the part can
+    /// keep pointing at it.
+    @discardableResult
+    func discardPart(for destination: String) async -> Bool {
         let client = client
         let part = ServerUploadPath.partPath(for: destination)
-        await Task.detached { try? await client.remove(part) }.value
+        return await Task.detached { (try? await client.remove(part)) != nil }.value
     }
 }

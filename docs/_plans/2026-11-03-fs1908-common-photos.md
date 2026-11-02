@@ -6,7 +6,7 @@
 | Intent | [2026-11-02-common-photos-across-folders](../_intents/2026-11-02-common-photos-across-folders.md) |
 | Commit spec | `a64935f3` (intent `45653bb5`) |
 | Ngày | 2026-11-03 |
-| Trạng thái | đã duyệt 2026-11-03 — Q1, Q2 chốt (dựng cả màn duyệt server lẫn Activity) |
+| Trạng thái | đang làm — duyệt 2026-11-03 (Q1, Q2: dựng cả màn duyệt server lẫn Activity); T1+T2 `eefcf32c`, T3, T4 xong (loop: [FS1908_LOOP.md](FS1908_LOOP.md)) |
 
 ## 1. Hiểu đúng chưa
 
@@ -71,9 +71,10 @@ Kiểm thêm của 08b:
 
 | Tầng | File | Đụng gì | Mới / sửa |
 |---|---|---|---|
-| Domain | `ShotDex/Domain/CommonPhotos/CommonPhotosMatcher.swift` | liệt kê → lọc cỡ → Likely → Same; nhận closure đọc đoạn/băm, SHA đã có | mới |
+| Domain | `ShotDex/Domain/CommonPhotos/CommonPhotosMatcher.swift`, `CommonPhotosCaptureKey.swift` | lọc cỡ → Likely (thuần); khoá ngày chụp từ đầu file | mới |
+| Data | `ShotDex/Data/Sources/FileServer/ServerTreeListing.swift` (tách từ `ServerSourceIndexer.list`), `CommonPhotos/CommonPhotosScanner.swift` | liệt kê cây, đọc đầu file — phần chạm server ở Data, không ở Domain | mới / sửa |
 | Domain | `ShotDex/Domain/CommonPhotos/CommonPhotosSelection.swift` | kiểm folder (≥ 2, lồng nhau, đích trong nguồn) | mới |
-| Domain | `ShotDex/Domain/CommonPhotos/CommonPhotosRunner.swift` | actor: Copy, Move, trùng tên, `.xmp`, kiểm lại trước xoá, tiến độ, huỷ, Resume | mới |
+| Domain | `ShotDex/Domain/CommonPhotos/CommonPhotosRunner.swift` | struct (một task tuần tự; `ConnectionLock` giữ một lệnh một lúc): Copy, Move, trùng tên, `.xmp`, kiểm lại trước xoá, tiến độ, huỷ, Resume | mới |
 | Domain | `ShotDex/Domain/CommonPhotos/CommonPhotosCSV.swift` | CSV log; helper escape dùng chung với `ExifCSVExporter` | mới + sửa nhỏ |
 | Data | `ShotDex/Data/Database/AppDatabase+CommonPhotos.swift` | migration **v46** `common_photo_runs`, `common_photo_items` (không đụng `photo_metadata`) | mới |
 | Data | `ShotDex/Data/Database/CommonPhotosStore.swift` | ghi/đọc lượt + mục, lượt dở | mới |
@@ -96,8 +97,8 @@ Một task = một commit, test kèm; build iOS + `ShotDexMac` sau mỗi commit.
 | T1 | Matcher bước 1–3: liệt kê, lọc cỡ, Likely (cùng tên / folder con / ngày chụp trong nhóm cùng cỡ) + fake log lệnh | AC-115 (phần lọc), 118, 120 | `CommonPhotosMatcherTests.sizeFilterReadsNothingElse`, `.sameCaptureDifferentSizeIgnored`, `.twentyThousandEachUnderOneSecond` |
 | T2 | Matcher bước 4–5: 3 đoạn 64 KB, SHA cả file (Likely trước), SHA đã có, giao mọi folder | AC-115, 116, 117, 119 | `.renamedFileMatches`, `.sameSizeDifferentBytesDropped`, `.intersectionOfAllFolders` |
 | T3 | Migration v46 + `CommonPhotosStore` (`data-migration` duyệt) | nền AC-128 | `CommonPhotosStoreTests.roundTrip`, `.unfinishedRun` |
-| T4 | Runner Copy: tải (băm) → part → đọc lại → đổi tên; lệch SHA → xoá part, Failed | AC-121, 122 | `CommonPhotosRunnerTests.copyVerifiesReadBack`, `.copyMismatchLeavesNothing` |
-| T5 | Trùng tên + đích phẳng + `.xmp` đi theo | AC-126, 127 | `.nameClashRules`, `.flatDestinationWithSidecar` |
+| T4 | Runner Copy: tải (băm) → part → đọc lại → đổi tên; lệch SHA → xoá part, Failed; **trùng tên kéo lên đây** (review: chép mà chưa kiểm tên là ghi đè được trên client không từ chối) | AC-121, 122, 126 | `CommonPhotosRunnerTests.copyVerifiesReadBack`, `.copyMismatchLeavesNothing`, `.nameClashRules` |
+| T5 | Đích phẳng + `.xmp` đi theo | AC-127 | `.flatDestinationWithSidecar` |
 | T6 | Runner Move: đổi chỗ → kiểm cỡ → hỏi lại bản còn lại → xoá; khác share → chép, kiểm, xoá | AC-123, 124, 125 | `.moveRenamesThenDeletes`, `.crossShareMoveCopiesFirst`, `.changedSourceNotDeleted` |
 | T7 | Resume sau mất kết nối (mục đã xong không đọc lại) | AC-128 | `.resumeAfterDisconnect` |
 | T8 | CSV vào folder chung + Rescan nguồn + sửa lịch sử upload (nối `fileHistory` cho Mac) | AC-129 + kiểm thêm | `.writesCsvLog`, `ServerFileHistoryTests` hiện có |
@@ -121,6 +122,8 @@ FS-22.06 U2 (bộ chọn folder) — làm một màn, không hai.
 | SMB song song làm hỏng phiên | vừa | mọi lệnh qua `LockedRemoteFileClient`; `swift-concurrency` duyệt |
 | Băm cả file lớn qua NAS chậm (video 4K) | cao về thời gian | chỉ băm sau khi 3 đoạn khớp; một file tạm một lúc; kiểm chỗ trống trước mỗi file (NF-02) |
 | WebDAV `sha256` = tải về rồi băm (`WebDAVFileClient.swift:126`) — đọc lại tốn gấp đôi | chắc chắn trên WebDAV | chấp nhận: đọc lại là điều kiện an toàn |
+| Đọc đầu file 64 KB tuần tự cho nhóm cùng cỡ khác tên (RAW không nén cùng cỡ, ví dụ 5k×5k → ~640 MB) | thấp | chỉ đọc khi tên/folder con chưa khớp; khoá từ index (`known`) không đọc lại; song song vô ích vì `ConnectionLock` một lệnh một lúc |
+| Khoá ngày chụp của RAW mà ImageIO không đọc được đầu (CR3, RAF) | chắc chắn | không có khoá (thiếu giây lẻ + máy, dễ khớp nhầm) — vẫn được băm, chỉ không gợi ý Likely |
 | 20k mục log trong bảng SwiftUI | vừa | `Table` lười + truy vấn theo trang; `perf-profiler` |
 | Không target test Mac | chắc chắn | lõi ở Domain/Data test trên iOS host; UI chứng minh bằng `mac-shot` + compare (như FS-22.06) — cần quyền Screen Recording cho Terminal |
 | Phiên khác đang sửa cùng checkout | đã thấy | chỉ stage đường dẫn mình đổi |
