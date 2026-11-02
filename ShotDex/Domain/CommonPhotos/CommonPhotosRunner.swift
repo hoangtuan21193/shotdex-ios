@@ -11,6 +11,12 @@ import Foundation
 /// then give it its real name. A name already taken in the destination is
 /// never written over: the same bytes there make the photo Skipped, other
 /// bytes give it the next free name (`IMG_1 (2).JPG`).
+///
+/// Move: rename the first source into the destination on the server (no
+/// bytes travel), check the size there, then — each one asked again for its
+/// size and write time first — remove every other copy. A server that will
+/// not rename (another SMB share) gets a Copy, read back, before anything is
+/// removed. No source is removed before the destination copy is checked.
 struct CommonPhotosRunner: Sendable {
     let client: any RemoteFileClient
     let store: CommonPhotosStore
@@ -42,6 +48,10 @@ struct CommonPhotosRunner: Sendable {
         case noRoom
         /// The run is stopped or finished; there is nothing to resume.
         case notResumable
+        /// The folders chosen overlap, or the destination is one of them
+        /// (FS-19.08 §4) — or, found while removing, is the same place as a
+        /// source under another path.
+        case destinationIsASource
     }
 
     /// The items of a new run, in the order they run: one per Same photo,
@@ -116,6 +126,9 @@ struct CommonPhotosRunner: Sendable {
     func run(_ runId: String, progress: @escaping @Sendable (Progress) -> Void = { _ in }) async throws {
         guard let run = try store.run(id: runId) else { throw CommonPhotosStore.RunMissing(runId: runId) }
         guard run.state == .running || run.state == .paused, run.canResume else { throw Stop.notResumable }
+        guard CommonPhotosSelection.problem(folders: run.folders, destination: run.destination) == nil else {
+            throw Stop.destinationIsASource
+        }
         try store.markState(.running, runId: runId)
         var items = try store.items(runId: runId)
         var state = Progress(doneCount: items.filter(\.isDone).count, totalCount: items.count,
@@ -129,7 +142,14 @@ struct CommonPhotosRunner: Sendable {
             let destination = Destination(folder: run.destination, entries: listing)
             for index in items.indices where !items[index].isDone {
                 try Task.checkCancellation()
-                try await copy(&items[index], into: destination, state: state, progress: progress)
+                switch run.action {
+                case .copy: try await copy(&items[index], into: destination, state: state, progress: progress)
+                case .move:
+                    // A sidecar two photos share (IMG_1.JPG and IMG_1.MOV)
+                    // stays until the last of them is done.
+                    let claimed = Set(items[(index + 1)...].filter { !$0.isDone }.flatMap { $0.sources.compactMap(\.sidecar) })
+                    try await move(&items[index], into: destination, claimedSidecars: claimed, state: state, progress: progress)
+                }
                 state.doneCount += 1
                 state.doneBytes += items[index].size
                 state.currentName = nil
@@ -147,8 +167,11 @@ struct CommonPhotosRunner: Sendable {
     /// the run goes on; one every later photo would meet too — the server
     /// gone, the destination refusing writes, a cancel — is thrown, with the
     /// part removed first.
+    /// `copied` and `skipped` are what the photo becomes; a Move passes
+    /// `placed` for both and removes the sources after.
     private func copy(_ item: inout CommonPhotosItem, into destination: Destination, state: Progress,
-                      progress: @escaping @Sendable (Progress) -> Void) async throws {
+                      progress: @escaping @Sendable (Progress) -> Void,
+                      copied: CommonPhotosItem.Status = .copied, skipped: CommonPhotosItem.Status = .skipped) async throws {
         guard let source = item.sources.first else {
             try finish(&item, .failed, reason: .noSource)
             return
@@ -171,7 +194,7 @@ struct CommonPhotosRunner: Sendable {
             if destination.sizes[ServerUploadPath.lastComponent(of: placed).lowercased()] == item.size,
                try await client.sha256(of: placed, progress: { _ in }) == item.sha256 {
                 try await placeSidecar(&item, besides: ServerUploadPath.lastComponent(of: placed), into: destination)
-                try finish(&item, .copied, reason: item.failure?.reason)
+                try finish(&item, copied, reason: item.failure?.reason)
                 return
             }
             if item.partPath != nil, await !write.discardPart(for: placed) {
@@ -188,7 +211,7 @@ struct CommonPhotosRunner: Sendable {
             if try await client.sha256(of: there, progress: { _ in }) == item.sha256 {
                 item.destinationPath = there
                 try await placeSidecar(&item, besides: ServerUploadPath.lastComponent(of: there), into: destination)
-                try finish(&item, .skipped, reason: .alreadyThere)
+                try finish(&item, skipped, reason: .alreadyThere)
                 return
             }
         }
@@ -245,7 +268,271 @@ struct CommonPhotosRunner: Sendable {
         item.partPath = nil
         try store.update(item)
         try await placeSidecar(&item, besides: freeName, into: destination)
-        try finish(&item, .copied, reason: item.failure?.reason)
+        try finish(&item, copied, reason: item.failure?.reason)
+    }
+
+    /// One photo, Move. A state machine over what the store says, each state
+    /// checked against the server before anything is removed:
+    /// - pending: the first source asked again; renamed into the destination
+    ///   on the server, or — refused — copied and read back;
+    /// - moving: a rename a stop interrupted, settled by looking at both ends;
+    /// - copying: the Copy fallback, resumed by `copy`;
+    /// - placed: the destination proved to hold the scanned bytes, then every
+    ///   other copy removed.
+    private func move(_ item: inout CommonPhotosItem, into destination: Destination, claimedSidecars: Set<String>,
+                      state: Progress, progress: @escaping @Sendable (Progress) -> Void) async throws {
+        guard let source = item.sources.first else {
+            try finish(&item, .failed, reason: .noSource)
+            return
+        }
+        let name = ServerUploadPath.lastComponent(of: source.path)
+        let report = { @Sendable (step: Progress.Step) in
+            var moving = state
+            moving.currentName = name
+            moving.currentStep = step
+            progress(moving)
+        }
+        var provedThisRun = false
+
+        switch item.status {
+        case .moving:
+            guard let target = item.destinationPath, let from = item.movedFrom else {
+                try reset(&item)
+                break
+            }
+            report(.checking)
+            let targetSize = try await client.fileSize(at: target)
+            let fromSize = try await client.fileSize(at: from)
+            if fromSize == nil, targetSize == item.size,
+               try await client.sha256(of: target, progress: { _ in }) == item.sha256 {
+                try markMoved(&item, from: from, target: target)
+                provedThisRun = true
+            } else if fromSize != nil, targetSize == nil {
+                try reset(&item)
+            } else {
+                // Neither end is what a rename leaves: nothing is removed.
+                try finish(&item, .failed, reason: .changedOnServer)
+                return
+            }
+        case .placed, .pending, .copying:
+            break
+        default:
+            try finish(&item, .failed, reason: .unreadableRecord)
+            return
+        }
+
+        if item.status == .pending {
+            guard !item.sources.contains(where: \.isRemoved) else {
+                // A source is gone but the photo is not placed: never guess.
+                try finish(&item, .failed, reason: .unreadableRecord)
+                return
+            }
+            report(.checking)
+            guard try await isUnchanged(source, sha256: item.sha256) else {
+                try finish(&item, .failed, reason: .changedOnServer)
+                return
+            }
+            let taken = destination.sizes[name.lowercased()]
+            var alreadyThere = false
+            if taken == item.size {
+                alreadyThere = try await client.sha256(of: destination.path(of: name), progress: { _ in }) == item.sha256
+            }
+            if alreadyThere {
+                item.destinationPath = destination.path(of: name)
+                try finish(&item, .placed, reason: .alreadyThere)
+                provedThisRun = true
+            } else {
+                let freeName = ServerUploadPath.nextFreeName(for: name, existing: destination.names)
+                let target = ServerUploadPath.join(destination.folder, freeName)
+                item.status = .moving
+                item.destinationPath = target
+                item.movedFrom = source.path
+                try store.update(item)
+                destination.sizes[freeName.lowercased()] = item.size
+                report(.moving)
+                var renamed = true
+                do {
+                    try await client.move(source.path, to: target)
+                } catch let error as RemoteFileError where !error.stopsBatch {
+                    // The reply can be an error after the server did it.
+                    let sourceGone = try await client.fileSize(at: source.path) == nil
+                    let targetSize = try await client.fileSize(at: target)
+                    renamed = sourceGone && targetSize == item.size
+                }
+                if renamed {
+                    guard try await isTheScannedBytes(at: target, renamedFrom: source, sha256: item.sha256) else {
+                        // Moved, but not what the scan saw: kept where it is,
+                        // and no other copy is touched.
+                        try finish(&item, .failed, reason: .changedOnServer)
+                        return
+                    }
+                    try markMoved(&item, from: source.path, target: target)
+                    provedThisRun = true
+                } else {
+                    // Refused (another share): Copy and read back instead.
+                    destination.sizes[freeName.lowercased()] = nil
+                    try reset(&item)
+                }
+            }
+        }
+
+        if item.status == .pending || item.status == .copying {
+            try await copy(&item, into: destination, state: state, progress: progress, copied: .placed, skipped: .placed)
+            guard item.status == .placed else { return }
+            provedThisRun = true
+        }
+        guard item.status == .placed, let placed = item.destinationPath else {
+            try finish(&item, .failed, reason: .unreadableRecord)
+            return
+        }
+        try await removeSources(&item, placed: placed, provedThisRun: provedThisRun, destination: destination,
+                                claimedSidecars: claimedSidecars, report: report)
+    }
+
+    private func reset(_ item: inout CommonPhotosItem) throws {
+        item.status = .pending
+        item.destinationPath = nil
+        item.movedFrom = nil
+        item.partPath = nil
+        try store.update(item)
+    }
+
+    /// The rename went through: the moved source is gone, the photo placed.
+    private func markMoved(_ item: inout CommonPhotosItem, from: String, target: String) throws {
+        if let index = item.sources.firstIndex(where: { $0.path == from }) { item.sources[index].isRemoved = true }
+        item.status = .placed
+        item.destinationPath = target
+        try store.update(item)
+    }
+
+    /// After a rename: the target has the source's size and the write time
+    /// a rename keeps; when the server gave no write time, or the two differ
+    /// (a WebDAV MOVE across mounts copies on the server), the SHA-256.
+    private func isTheScannedBytes(at target: String, renamedFrom source: CommonPhotosItem.Source, sha256: String) async throws -> Bool {
+        let name = ServerUploadPath.lastComponent(of: target)
+        let entry = try await client.entries(in: ServerUploadPath.parent(of: target)).first { $0.name == name && !$0.isDirectory }
+        guard let entry, entry.size == source.size else { return false }
+        if let modifiedAt = source.modifiedAt, entry.modified.map({ Int($0.timeIntervalSince1970) }) == modifiedAt { return true }
+        return try await client.sha256(of: target, progress: { _ in }) == sha256
+    }
+
+    /// Every copy not removed yet. First the destination is proved again —
+    /// its size, and its SHA-256 when a resume finds it placed by an earlier
+    /// run — and no source that is the destination, or sits in its folder, is
+    /// ever touched. Each copy is asked again for its size and write time; a
+    /// changed one is kept and fails the photo. Removing goes by renaming the
+    /// copy aside, checking the destination still answers — two paths to one
+    /// file (two shares over one volume) would make it vanish — and only then
+    /// deleting it. A source's sidecar goes the same way, and only when the
+    /// destination holds the same bytes and no photo still to run claims it.
+    private func removeSources(_ item: inout CommonPhotosItem, placed: String, provedThisRun: Bool, destination: Destination,
+                               claimedSidecars: Set<String>, report: @Sendable (Progress.Step) -> Void) async throws {
+        report(.checking)
+        var isProved = try await client.fileSize(at: placed) == item.size
+        if isProved, !provedThisRun { isProved = try await client.sha256(of: placed, progress: { _ in }) == item.sha256 }
+        guard isProved else {
+            try finish(&item, .failed, reason: .changedOnServer)
+            return
+        }
+        let wasThere = item.failure?.reason == .alreadyThere
+        var placedSidecar = try await sidecarHash(besides: placed, item: item)
+        if placedSidecar == nil, Self.sidecar(of: item) != nil {
+            try await placeSidecar(&item, besides: ServerUploadPath.lastComponent(of: placed), into: destination)
+            placedSidecar = try await sidecarHash(besides: placed, item: item)
+        }
+        report(.removing)
+        let destinationFolder = Self.comparable(destination.folder)
+        var changed = false
+        var keptSidecar = false
+        for index in item.sources.indices {
+            try Task.checkCancellation()
+            let source = item.sources[index]
+            guard Self.comparable(source.path) != Self.comparable(placed),
+                  Self.comparable(ServerUploadPath.parent(of: source.path)) != destinationFolder else {
+                // The destination itself: never removed.
+                item.sources[index].isRemoved = true
+                continue
+            }
+            if !source.isRemoved {
+                let aside = source.path + Self.removingSuffix
+                if try await client.fileSize(at: source.path) == nil {
+                    // Gone: removed by a stop before it was recorded, or set
+                    // aside and not yet deleted.
+                    if try await client.fileSize(at: aside) != nil {
+                        try await removeAside(aside, restoring: source.path, placed: placed, size: item.size)
+                    }
+                } else {
+                    guard try await isUnchanged(source, sha256: item.sha256) else {
+                        changed = true
+                        continue
+                    }
+                    try await client.move(source.path, to: aside)
+                    try await removeAside(aside, restoring: source.path, placed: placed, size: item.size)
+                }
+                item.sources[index].isRemoved = true
+                try store.update(item)
+            }
+            if let sidecar = source.sidecar, !claimedSidecars.contains(sidecar), try await client.fileSize(at: sidecar) != nil {
+                if let placedSidecar, try await client.sha256(of: sidecar, progress: { _ in }) == placedSidecar,
+                   let target = Self.sidecar(of: item).map({ Self.sidecarTarget($0.path, photoPath: $0.photo,
+                                                                                 photoName: ServerUploadPath.lastComponent(of: placed),
+                                                                                 folder: ServerUploadPath.parent(of: placed)) }),
+                   let size = try await client.fileSize(at: target) {
+                    let aside = sidecar + Self.removingSuffix
+                    try await client.move(sidecar, to: aside)
+                    try await removeAside(aside, restoring: sidecar, placed: target, size: size)
+                } else {
+                    keptSidecar = true
+                }
+            }
+        }
+        if changed {
+            try finish(&item, .failed, reason: .changedOnServer)
+        } else {
+            try finish(&item, .moved, reason: keptSidecar ? .sidecarNotCopied : wasThere ? .alreadyThere : nil)
+        }
+    }
+
+    /// What a copy is renamed to while it is being removed. Not a photo
+    /// extension, so no scan ever lists it.
+    static let removingSuffix = ".shotdex-removing"
+
+    /// Deletes a copy set aside — after checking the destination still has
+    /// its size. If it vanished with the rename, the two were one file: the
+    /// copy goes back where it was and the run stops.
+    private func removeAside(_ aside: String, restoring original: String, placed: String, size: Int64) async throws {
+        guard try await client.fileSize(at: placed) == size else {
+            try? await client.move(aside, to: original)
+            throw Stop.destinationIsASource
+        }
+        try await client.remove(aside)
+    }
+
+    private static func comparable(_ path: String) -> String {
+        ServerUploadPath.normalizedFolder(path).precomposedStringWithCanonicalMapping.lowercased()
+    }
+
+    /// The SHA-256 of the sidecar beside `photo` in the destination, if one.
+    private func sidecarHash(besides photo: String, item: CommonPhotosItem) async throws -> String? {
+        guard let (path, photoPath) = Self.sidecar(of: item) else { return nil }
+        let target = Self.sidecarTarget(path, photoPath: photoPath, photoName: ServerUploadPath.lastComponent(of: photo),
+                                        folder: ServerUploadPath.parent(of: photo))
+        guard try await client.fileSize(at: target) != nil else { return nil }
+        return try await client.sha256(of: target, progress: { _ in })
+    }
+
+    /// Asked again right before it is moved or removed: the same size and
+    /// write time as at the scan, or — with no write time to go by — the same
+    /// SHA-256.
+    private func isUnchanged(_ source: CommonPhotosItem.Source, sha256: String) async throws -> Bool {
+        let folder = ServerUploadPath.parent(of: source.path)
+        let name = ServerUploadPath.lastComponent(of: source.path)
+        guard let entry = try await client.entries(in: folder).first(where: { $0.name == name && !$0.isDirectory }),
+              entry.size == source.size else { return false }
+        if let modifiedAt = source.modifiedAt {
+            return entry.modified.map { Int($0.timeIntervalSince1970) } == modifiedAt
+        }
+        return try await client.sha256(of: source.path, progress: { _ in }) == sha256
     }
 
     /// The photo's `.xmp` beside it in the destination, named after the
@@ -257,10 +544,7 @@ struct CommonPhotosRunner: Sendable {
     /// sidecar's part removed first.
     private func placeSidecar(_ item: inout CommonPhotosItem, besides photoName: String, into destination: Destination) async throws {
         guard let (path, photoPath) = Self.sidecar(of: item) else { return }
-        let sidecarName = ServerUploadPath.lastComponent(of: path)
-        let isFullName = sidecarName.lowercased() == ServerUploadPath.lastComponent(of: photoPath).lowercased() + ".xmp"
-        let ext = (sidecarName as NSString).pathExtension
-        let name = isFullName ? photoName + "." + ext : (photoName as NSString).deletingPathExtension + "." + ext
+        let name = ServerUploadPath.lastComponent(of: Self.sidecarTarget(path, photoPath: photoPath, photoName: photoName, folder: ""))
         let target = destination.path(of: name)
         let write = VerifiedRemoteWrite(client: client)
         let local = workDirectory.appendingPathComponent(UUID().uuidString + "-" + name)
@@ -289,6 +573,17 @@ struct CommonPhotosRunner: Sendable {
             if let remote = error as? RemoteFileError, remote.stopsBatch { throw error }
             item.reason = CommonPhotosItem.reason(.sidecarNotCopied)
         }
+    }
+
+    /// Where a photo's sidecar goes beside `photoName` in `folder`: the
+    /// photo's final name with the sidecar's own form — `IMG_2 (2).xmp`, or
+    /// `IMG_2 (2).JPG.xmp` for a full-name sidecar.
+    private static func sidecarTarget(_ sidecar: String, photoPath: String, photoName: String, folder: String) -> String {
+        let sidecarName = ServerUploadPath.lastComponent(of: sidecar)
+        let isFullName = sidecarName.lowercased() == ServerUploadPath.lastComponent(of: photoPath).lowercased() + ".xmp"
+        let ext = (sidecarName as NSString).pathExtension
+        let name = isFullName ? photoName + "." + ext : (photoName as NSString).deletingPathExtension + "." + ext
+        return ServerUploadPath.join(folder, name)
     }
 
     private static func refusesEveryWrite(_ error: RemoteFileError) -> Bool {

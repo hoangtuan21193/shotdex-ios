@@ -308,6 +308,294 @@ import Testing
         #expect(fixture.nas.uploadCount == 1)
     }
 
+    /// AC-123: five Same photos, Move, one share — renamed into place, never
+    /// downloaded; both sources gone; five Moved.
+    @Test func moveRenamesThenDeletes() async throws {
+        let fixture = try Fixture(count: 5)
+        try await fixture.start(action: .move)
+
+        try await fixture.runner.run("R1")
+
+        let files = fixture.nas.files
+        #expect(files.keys.filter { $0.hasPrefix("A/") || $0.hasPrefix("B/") }.isEmpty)
+        for (name, bytes) in fixture.photos { #expect(files["C/\(name)"] == bytes) }
+        #expect(fixture.nas.commands.filter { $0.hasPrefix("move A/") }.count == 5)
+        #expect(fixture.nas.downloadCount == 0)
+        let commands = fixture.nas.commands
+        for index in 1...5 {
+            let name = "IMG_\(index).JPG"
+            let order = ["move A/\(name) → C/\(name)", "move B/\(name) → B/\(name).shotdex-removing", "remove B/\(name).shotdex-removing"]
+            let positions = order.compactMap { commands.firstIndex(of: $0) }
+            #expect(positions.count == 3)
+            #expect(positions == positions.sorted())
+        }
+        #expect(try fixture.items().map(\.status) == Array(repeating: .moved, count: 5))
+        #expect(try fixture.items().allSatisfy { $0.sources.allSatisfy(\.isRemoved) })
+    }
+
+    /// AC-124: the server will not rename across shares — copied, read back,
+    /// only then the sources removed.
+    @Test func crossShareMoveCopiesFirst() async throws {
+        let fixture = try Fixture(count: 2)
+        try await fixture.start(action: .move)
+        fixture.nas.refusesMovesAcrossTopFolders = true
+
+        try await fixture.runner.run("R1")
+
+        let commands = fixture.nas.commands
+        for index in 1...2 {
+            let name = "IMG_\(index).JPG"
+            let order = ["move A/\(name) → C/\(name)", "download A/\(name)", "upload C/\(name).shotdex-part",
+                         "sha256 C/\(name).shotdex-part", "move C/\(name).shotdex-part → C/\(name)",
+                         "remove A/\(name).shotdex-removing", "remove B/\(name).shotdex-removing"]
+            let positions = order.map { commands.firstIndex(of: $0) }
+            #expect(positions.allSatisfy { $0 != nil })
+            #expect(positions.compactMap { $0 } == positions.compactMap { $0 }.sorted())
+        }
+        #expect(fixture.nas.files.keys.filter { $0.hasPrefix("A/") || $0.hasPrefix("B/") }.isEmpty)
+        #expect(try fixture.items().map(\.status) == [.moved, .moved])
+    }
+
+    /// AC-125: B's copy changed size after the scan — it is kept, the photo
+    /// fails "changed on server", the destination copy stays.
+    @Test func changedSourceNotDeleted() async throws {
+        let fixture = try Fixture(count: 1)
+        try await fixture.start(action: .move)
+        fixture.nas.put("B/IMG_1.JPG", Data(repeating: 1, count: 2_000))
+
+        try await fixture.runner.run("R1")
+
+        #expect(fixture.nas.files["B/IMG_1.JPG"]?.count == 2_000)
+        #expect(fixture.nas.files["C/IMG_1.JPG"] == fixture.photos["IMG_1.JPG"])
+        #expect(try fixture.items().first?.status == .failed)
+        #expect(try fixture.items().first?.failure?.reason == .changedOnServer)
+    }
+
+    /// A write time that moved since the scan also keeps the copy.
+    @Test func changedWriteTimeNotDeleted() async throws {
+        let fixture = try Fixture(count: 1)
+        fixture.nas.modified = ["A/IMG_1.JPG": Date(timeIntervalSince1970: 100), "B/IMG_1.JPG": Date(timeIntervalSince1970: 200)]
+        try await fixture.start(action: .move)
+        fixture.nas.modified["B/IMG_1.JPG"] = Date(timeIntervalSince1970: 300)
+
+        try await fixture.runner.run("R1")
+
+        #expect(fixture.nas.files["B/IMG_1.JPG"] != nil)
+        #expect(try fixture.items().first?.failure?.reason == .changedOnServer)
+    }
+
+    /// A rename the server did before the reply was lost: Resume finds the
+    /// photo in place and removes the rest.
+    @Test func moveResumesAfterLostReply() async throws {
+        let fixture = try Fixture(count: 1)
+        try await fixture.start(action: .move)
+        var item = try #require(try fixture.items().first)
+        item.status = .moving
+        item.destinationPath = "C/IMG_1.JPG"
+        item.movedFrom = "A/IMG_1.JPG"
+        try fixture.store.update(item)
+        try await fixture.nas.move("A/IMG_1.JPG", to: "C/IMG_1.JPG")
+
+        try await fixture.runner.run("R1")
+
+        #expect(try fixture.items().map(\.status) == [.moved])
+        #expect(fixture.nas.files["B/IMG_1.JPG"] == nil)
+        #expect(fixture.nas.files["C/IMG_1.JPG"] == fixture.photos["IMG_1.JPG"])
+        #expect(fixture.nas.downloadCount == 0)
+    }
+
+    /// The rename is done but its reply is an error: the photo is found in
+    /// place, not copied again.
+    @Test func renameReplyLostButDone() async throws {
+        let fixture = try Fixture(count: 1)
+        try await fixture.start(action: .move)
+        fixture.nas.failMoveAfterDoing = true
+
+        try await fixture.runner.run("R1")
+
+        #expect(try fixture.items().map(\.status) == [.moved])
+        #expect(fixture.nas.downloadCount == 0)
+        #expect(fixture.nas.files["C/IMG_1.JPG"] == fixture.photos["IMG_1.JPG"])
+    }
+
+    /// A source removed by a stop before it was recorded is not "changed":
+    /// Resume finishes the photo Moved.
+    @Test func removedBeforeRecordedIsNotChanged() async throws {
+        let fixture = try Fixture(count: 1)
+        try await fixture.start(action: .move)
+        var item = try #require(try fixture.items().first)
+        try await fixture.nas.move("A/IMG_1.JPG", to: "C/IMG_1.JPG")
+        item.status = .placed
+        item.destinationPath = "C/IMG_1.JPG"
+        item.movedFrom = "A/IMG_1.JPG"
+        item.sources[0].isRemoved = true
+        try fixture.store.update(item)
+        fixture.nas.drop("B/IMG_1.JPG")
+
+        try await fixture.runner.run("R1")
+
+        #expect(try fixture.items().map(\.status) == [.moved])
+    }
+
+    /// A copy set aside and not yet deleted is deleted on Resume.
+    @Test func setAsideCopyIsDeletedOnResume() async throws {
+        let fixture = try Fixture(count: 1)
+        try await fixture.start(action: .move)
+        var item = try #require(try fixture.items().first)
+        try await fixture.nas.move("A/IMG_1.JPG", to: "C/IMG_1.JPG")
+        item.status = .placed
+        item.destinationPath = "C/IMG_1.JPG"
+        item.sources[0].isRemoved = true
+        try fixture.store.update(item)
+        try await fixture.nas.move("B/IMG_1.JPG", to: "B/IMG_1.JPG.shotdex-removing")
+
+        try await fixture.runner.run("R1")
+
+        #expect(try fixture.items().map(\.status) == [.moved])
+        #expect(!fixture.nas.files.keys.contains { $0.hasPrefix("B/") })
+    }
+
+    /// The first source rewritten at the same size since the scan: not
+    /// moved, no copy touched.
+    @Test func sameSizeEditOfTheFirstSourceIsNotMoved() async throws {
+        let fixture = try Fixture(count: 1)
+        try await fixture.start(action: .move)
+        fixture.nas.put("A/IMG_1.JPG", Data(repeating: 3, count: 1_001))
+
+        try await fixture.runner.run("R1")
+
+        #expect(try fixture.items().first?.failure?.reason == .changedOnServer)
+        #expect(fixture.nas.files["A/IMG_1.JPG"] != nil)
+        #expect(fixture.nas.files["B/IMG_1.JPG"] == fixture.photos["IMG_1.JPG"])
+        #expect(fixture.nas.files["C/IMG_1.JPG"] == nil)
+    }
+
+    /// The destination replaced while the run was paused: Resume proves it
+    /// again and removes nothing.
+    @Test func destinationChangedWhilePaused() async throws {
+        let fixture = try Fixture(count: 1)
+        try await fixture.start(action: .move)
+        var item = try #require(try fixture.items().first)
+        try await fixture.nas.move("A/IMG_1.JPG", to: "C/IMG_1.JPG")
+        item.status = .placed
+        item.destinationPath = "C/IMG_1.JPG"
+        item.sources[0].isRemoved = true
+        try fixture.store.update(item)
+        fixture.nas.put("C/IMG_1.JPG", Data(repeating: 4, count: 1_001))
+
+        try await fixture.runner.run("R1")
+
+        #expect(try fixture.items().first?.failure?.reason == .changedOnServer)
+        #expect(fixture.nas.files["B/IMG_1.JPG"] == fixture.photos["IMG_1.JPG"])
+    }
+
+    /// Two paths to one file: setting the source aside makes the destination
+    /// vanish — the source is put back and the run stops.
+    @Test func destinationThatIsASourceStopsTheRun() async throws {
+        let fixture = try Fixture(count: 1)
+        try await fixture.start(action: .move)
+        let nas = fixture.nas
+        nas.onMove = { from, to in
+            if from == "B/IMG_1.JPG", to.hasSuffix(".shotdex-removing") { nas.drop("C/IMG_1.JPG") }
+        }
+
+        await #expect(throws: CommonPhotosRunner.Stop.destinationIsASource) { try await fixture.runner.run("R1") }
+
+        #expect(nas.files["B/IMG_1.JPG"] == fixture.photos["IMG_1.JPG"])
+        #expect(try fixture.store.run(id: "R1")?.state == .paused)
+    }
+
+    /// A destination inside a source is refused before anything runs.
+    @Test func destinationInsideASourceIsRefused() async throws {
+        let fixture = try Fixture(count: 1)
+        let listing = try await CommonPhotosScanner(client: fixture.nas).list(["A", "B"])
+        let found = try await CommonPhotosVerifier(client: fixture.nas).verify(CommonPhotosMatcher.preview(listing.files), folders: ["A", "B"])
+        try fixture.store.start(CommonPhotosRun(id: "R1", connectionId: "S1", folders: ["A", "B"], destination: "B/Shared", action: .move),
+                                items: CommonPhotosRunner.items(for: found, runId: "R1", folders: ["A", "B"]))
+
+        await #expect(throws: CommonPhotosRunner.Stop.destinationIsASource) { try await fixture.runner.run("R1") }
+
+        #expect(fixture.nas.commands.isEmpty)
+    }
+
+    /// `IMG_1.JPG` and `IMG_1.MOV` share `IMG_1.xmp`: it stays in the source
+    /// until both are moved, then goes.
+    @Test func sharedSidecarWaitsForTheLastPhoto() async throws {
+        let fixture = try Fixture(count: 1)
+        let movie = Data(repeating: 6, count: 5_000)
+        fixture.nas.put("A/IMG_1.MOV", movie)
+        fixture.nas.put("B/IMG_1.MOV", movie)
+        fixture.nas.put("A/IMG_1.xmp", Data("edits".utf8))
+        fixture.nas.put("B/IMG_1.xmp", Data("edits".utf8))
+        try await fixture.start(action: .move)
+
+        try await fixture.runner.run("R1")
+
+        let commands = fixture.nas.commands
+        // The JPEG runs first (smaller) and leaves the shared sidecar; the
+        // movie's turn removes it.
+        let firstPhotoDone = try #require(commands.lastIndex { $0.hasPrefix("remove B/IMG_1.JPG") })
+        let movieStarts = try #require(commands.firstIndex { $0.hasPrefix("move A/IMG_1.MOV") })
+        let sidecarRemove = try #require(commands.firstIndex { $0.hasPrefix("remove A/IMG_1.xmp") })
+        #expect(sidecarRemove > firstPhotoDone && sidecarRemove > movieStarts)
+        #expect(try fixture.items().map(\.status) == [.moved, .moved])
+        #expect(fixture.nas.files["C/IMG_1.xmp"] == Data("edits".utf8))
+        #expect(fixture.nas.files["A/IMG_1.xmp"] == nil && fixture.nas.files["B/IMG_1.xmp"] == nil)
+    }
+
+    /// A moving row missing what it was moving is reset, never removed from.
+    @Test func damagedMovingRowStartsOver() async throws {
+        let fixture = try Fixture(count: 1)
+        try await fixture.start(action: .move)
+        var item = try #require(try fixture.items().first)
+        item.status = .moving
+        item.destinationPath = "C/IMG_1.JPG"
+        try fixture.store.update(item)
+
+        try await fixture.runner.run("R1")
+
+        #expect(try fixture.items().map(\.status) == [.moved])
+        #expect(fixture.nas.files["C/IMG_1.JPG"] == fixture.photos["IMG_1.JPG"])
+    }
+
+    /// Move takes the sidecars along: identical ones go, one with other
+    /// edits is kept and noted.
+    @Test func moveSidecars() async throws {
+        let fixture = try Fixture(count: 2)
+        fixture.nas.put("A/IMG_1.xmp", Data("same".utf8))
+        fixture.nas.put("B/IMG_1.xmp", Data("same".utf8))
+        fixture.nas.put("A/IMG_2.xmp", Data("rating=5".utf8))
+        fixture.nas.put("B/IMG_2.xmp", Data("rating=1".utf8))
+        try await fixture.start(action: .move)
+
+        try await fixture.runner.run("R1")
+
+        let files = fixture.nas.files
+        #expect(files["C/IMG_1.xmp"] == Data("same".utf8))
+        #expect(files["A/IMG_1.xmp"] == nil && files["B/IMG_1.xmp"] == nil)
+        #expect(files["C/IMG_2.xmp"] == Data("rating=5".utf8))
+        #expect(files["A/IMG_2.xmp"] == nil)
+        #expect(files["B/IMG_2.xmp"] == Data("rating=1".utf8))
+        let items = try fixture.items()
+        #expect(items.map(\.status) == [.moved, .moved])
+        #expect(items[1].failure?.reason == .sidecarNotCopied)
+    }
+
+    /// A Move whose photo already sits in the destination removes the
+    /// sources and says so.
+    @Test func moveAlreadyThere() async throws {
+        let fixture = try Fixture(count: 1)
+        try await fixture.start(action: .move)
+        fixture.nas.put("C/IMG_1.JPG", fixture.photos["IMG_1.JPG"]!)
+
+        try await fixture.runner.run("R1")
+
+        #expect(fixture.nas.files.keys.filter { $0.hasPrefix("A/") || $0.hasPrefix("B/") }.isEmpty)
+        #expect(try fixture.items().first?.status == .moved)
+        #expect(try fixture.items().first?.failure?.reason == .alreadyThere)
+        #expect(fixture.nas.downloadCount == 0 && fixture.nas.uploadCount == 0)
+    }
+
     /// A stopped run is not resumed.
     @Test func stoppedRunIsNotResumed() async throws {
         let fixture = try Fixture(count: 1)

@@ -15,9 +15,9 @@ có mặt người. Test domain chạy trên client giả của `ShotDexTests/Ba
 | AC-120 | A 20.000 file, B 20.000 file, 300 chung (danh sách giả) | chạy bước lọc cỡ + Likely | xong ≤ 1 s trên Mac M1; Likely ≥ 300 | ✅ `CommonPhotosMatcherTests.twentyThousandEachUnderOneSecond` (Debug, sim) |
 | AC-121 | 5 ảnh Same, folder chung rỗng, Copy | chạy | 5 file ở đích, SHA đọc lại khớp; A, B không đổi; 5 hàng log Copied | ✅ `CommonPhotosRunnerTests.copyVerifiesReadBack` |
 | AC-122 | như AC-121, client giả trả SHA đọc lại sai cho file thứ 3 | chạy | file part thứ 3 bị xoá, không có tên thật ở đích; log Failed "checksum mismatch"; 4 file kia Copied | ✅ `CommonPhotosRunnerTests.copyMismatchLeavesNothing` |
-| AC-123 | 5 ảnh Same, Move, cùng share | chạy | A, B mất 5 file; đích có 5; lệnh đổi chỗ dùng 5 lần, 0 lần tải; log Moved | ⚠️ chưa có — `CommonPhotosRunnerTests.moveRenamesThenDeletes` |
-| AC-124 | Move, client giả từ chối đổi chỗ (khác share) | chạy | chép + kiểm SHA rồi mới xoá; thứ tự lệnh: tải → đẩy → đọc lại → xoá | ⚠️ chưa có — `CommonPhotosRunnerTests.crossShareMoveCopiesFirst` |
-| AC-125 | Move, bản ở B đổi cỡ sau Scan | chạy tới ảnh đó | bản B không bị xoá; log Failed "changed on server"; bản ở đích giữ | ⚠️ chưa có — `CommonPhotosRunnerTests.changedSourceNotDeleted` |
+| AC-123 | 5 ảnh Same, Move, cùng share | chạy | A, B mất 5 file; đích có 5; lệnh đổi chỗ dùng 5 lần, 0 lần tải; log Moved | ✅ `CommonPhotosRunnerTests.moveRenamesThenDeletes` (+ e2e `CommonPhotosSMBTests.moveRenamesOnTheServer`) |
+| AC-124 | Move, client giả từ chối đổi chỗ (khác share) | chạy | chép + kiểm SHA rồi mới xoá; thứ tự lệnh: tải → đẩy → đọc lại → xoá | ✅ `CommonPhotosRunnerTests.crossShareMoveCopiesFirst` |
+| AC-125 | Move, bản ở B đổi cỡ sau Scan | chạy tới ảnh đó | bản B không bị xoá; log Failed "changed on server"; bản ở đích giữ | ✅ `CommonPhotosRunnerTests.changedSourceNotDeleted` (+ `changedWriteTimeNotDeleted`, `sameSizeEditOfTheFirstSourceIsNotMoved`, `destinationChangedWhilePaused`, `destinationThatIsASourceStopsTheRun`) |
 | AC-126 | đích đã có `IMG_1.JPG` cùng SHA và `IMG_2.JPG` khác SHA | Copy `IMG_1`, `IMG_2` | `IMG_1` Skipped (already there); `IMG_2` thành `IMG_2 (2).JPG`; không file nào bị ghi đè | ✅ `CommonPhotosRunnerTests.nameClashRules` (+ `sameNameTwiceInOneRun`) |
 | AC-127 | ảnh Same ở `A/2025/06/` và `B/x/` | Copy | file nằm thẳng ở đích (phẳng); `.xmp` cùng tên gốc đi theo | ✅ `CommonPhotosRunnerTests.flatDestinationWithSidecar` (+ `rawSidecarStaysWithTheRaw`, `sidecarRetriedOnResume`, `skippedPhotoGetsItsSidecar`, `sidecarNeverOverwrites`) |
 | AC-128 | 10 ảnh, mất kết nối sau ảnh thứ 4 | Resume khi server về | chạy tiếp từ ảnh 5; 4 ảnh đầu không đọc lại; tổng log 10 hàng | ⚠️ chưa có — `CommonPhotosRunnerTests.resumeAfterDisconnect` |
@@ -27,7 +27,7 @@ có mặt người. Test domain chạy trên client giả của `ShotDexTests/Ba
 Kiểm thêm khi `/verify`: folder chung nằm trong folder nguồn → sheet báo lỗi, nút chạy mờ; 1 folder → mục menu mờ; lịch
 sử upload trỏ tới file bị dời được sửa đường dẫn (`ServerFileHistory`).
 
-**Đã chứng minh (2026-11-03):** AC-115…122, 126, 127 — test chạy trên sim iPhone Duo 27.1; quét thêm e2e trên SMB ảo
+**Đã chứng minh (2026-11-03):** AC-115…127 — test chạy trên sim iPhone Duo 27.1; quét thêm e2e trên SMB ảo
 (impacket, `CommonPhotosSMBTests.scanFindsTheSharedPhotos`: 8 ảnh khác tên tìm ra Same; `.copyLandsVerified`: chép 8 ảnh
 thật, lượt 2 Skipped cả 8, nguồn nguyên).
-**Chưa chứng minh được:** AC-123…125, 128…130.
+**Chưa chứng minh được:** AC-128…130.

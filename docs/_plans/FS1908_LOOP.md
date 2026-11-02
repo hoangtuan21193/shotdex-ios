@@ -35,6 +35,7 @@ của loop: mỗi vòng đọc nó trước, ghi lại sau.
 | T3 | xong | (xem git log) | migration `v46-commonPhotos`: trạng thái `copying`/`moving`/`placed`, `partPath`, nguồn có tem + `isRemoved`, run `finishing`, đọc hỏng → chỉ Discard |
 | T4 | xong | (xem git log) | runner Copy + trùng tên (AC-126 kéo từ T5), lý do lưu dạng mã |
 | T5 | xong | (xem git log) | sidecar theo luật RAW+JPEG, thử lại khi Resume; e2e Copy thật trên SMB |
-| T6…T12 | chưa | — | |
+| T6 | xong | (xem git log) | Move: máy trạng thái; xoá = đổi tên sang `.shotdex-removing` → kiểm đích → xoá (chặn hai đường dẫn một file); e2e Move trên SMB |
+| T7…T12 | chưa | — | |
 
-Tiếp: T6 (Move — AC-123, 124, 125).
+Tiếp: T7 (Resume sau mất kết nối — AC-128).

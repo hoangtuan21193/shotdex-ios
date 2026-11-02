@@ -6,7 +6,7 @@
 | Intent | [2026-11-02-common-photos-across-folders](../_intents/2026-11-02-common-photos-across-folders.md) |
 | Commit spec | `a64935f3` (intent `45653bb5`) |
 | Ngày | 2026-11-03 |
-| Trạng thái | đang làm — duyệt 2026-11-03 (Q1, Q2: dựng cả màn duyệt server lẫn Activity); T1+T2 `eefcf32c`, T3 `73c2c833`, T4 `abdfa2fc`, T5 xong (loop: [FS1908_LOOP.md](FS1908_LOOP.md)) |
+| Trạng thái | đang làm — duyệt 2026-11-03 (Q1, Q2: dựng cả màn duyệt server lẫn Activity); T1+T2 `eefcf32c`, T3 `73c2c833`, T4 `abdfa2fc`, T5 `700e1af6`, T6 xong (loop: [FS1908_LOOP.md](FS1908_LOOP.md)) |
 
 ## 1. Hiểu đúng chưa
 
@@ -117,7 +117,7 @@ FS-22.06 U2 (bộ chọn folder) — làm một màn, không hai.
 
 | Rủi ro | Xác suất | Xử lý |
 |---|---|---|
-| Move xoá nhầm (file đổi giữa Scan và xoá, mất mạng giữa đổi chỗ và xoá) | thấp, hậu quả mất ảnh | hỏi lại cỡ + ngày sửa ngay trước xoá; mục ghi DB trước mỗi bước; T6/T7 test thứ tự lệnh |
+| Move xoá nhầm (file đổi giữa Scan và xoá, mất mạng giữa đổi chỗ và xoá; đích là một nguồn dưới đường dẫn khác) | thấp, hậu quả mất ảnh | hỏi lại cỡ + ngày sửa ngay trước xoá; mục ghi DB trước mỗi bước; T6/T7 test thứ tự lệnh |
 | `moveIntoPlace` xoá đích trước khi đổi tên nếu "replace" | chắc chắn nếu gọi nhầm | runner không bao giờ truyền replace; test AC-126 khoá |
 | SMB song song làm hỏng phiên | vừa | mọi lệnh qua `LockedRemoteFileClient`; `swift-concurrency` duyệt |
 | Băm cả file lớn qua NAS chậm (video 4K) | cao về thời gian | chỉ băm sau khi 3 đoạn khớp; một file tạm một lúc; kiểm chỗ trống trước mỗi file (NF-02) |

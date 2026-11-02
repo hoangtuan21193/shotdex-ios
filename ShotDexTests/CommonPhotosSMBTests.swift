@@ -93,4 +93,49 @@ struct CommonPhotosSMBTests {
         #expect(try await scanner.list(folders).files.map(\.count) == [12, 13])
         try await smb.removeFolderTree(destination)
     }
+
+    /// Move on the real server, in a scratch folder of its own: 3 photos put
+    /// in both `A` and `B` (renamed in `B`) plus one only in `A`; the 3 are
+    /// renamed into `C` on the server — no download — and gone from both
+    /// sources; the one of its own stays.
+    @Test func moveRenamesOnTheServer() async throws {
+        let smb = client()
+        try await smb.connect()
+        defer { Task { await smb.disconnect() } }
+        let root = "photos/e2e-move-\(UUID().uuidString.prefix(8))"
+        let work = FileManager.default.temporaryDirectory.appendingPathComponent("CommonPhotosSMB-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: work, withIntermediateDirectories: true)
+        do {
+            for index in 1...4 {
+                let name = String(format: "IMG_%04d.JPG", index)
+                let local = work.appendingPathComponent(name)
+                _ = try await smb.download("photos/Tuan/2025/06/\(name)", to: local, progress: { _ in })
+                try await smb.createDirectory("\(root)/A/2025")
+                try await smb.upload(local, to: "\(root)/A/2025/\(name)", progress: { _ in })
+                if index <= 3 {
+                    try await smb.createDirectory("\(root)/B")
+                    try await smb.upload(local, to: "\(root)/B/copy of \(name)", progress: { _ in })
+                }
+            }
+            let folders = ["\(root)/A", "\(root)/B"]
+            let scanner = CommonPhotosScanner(client: smb)
+            let listing = try await scanner.list(folders)
+            let photos = try await CommonPhotosVerifier(client: smb).verify(CommonPhotosMatcher.preview(listing.files), folders: folders)
+            let store = CommonPhotosStore(database: try AppDatabase.makeEmpty())
+            try store.start(CommonPhotosRun(id: "move", connectionId: "smb", folders: folders, destination: "\(root)/C", action: .move),
+                            items: CommonPhotosRunner.items(for: photos, runId: "move", folders: folders,
+                                                            files: listing.files, sidecars: listing.sidecars))
+
+            try await CommonPhotosRunner(client: smb, store: store, workDirectory: work).run("move")
+
+            #expect(photos.count == 3)
+            #expect(try store.items(runId: "move").allSatisfy { $0.status == .moved })
+            #expect(try await smb.entries(in: "\(root)/C").map(\.name).sorted() == ["IMG_0001.JPG", "IMG_0002.JPG", "IMG_0003.JPG"])
+            #expect(try await scanner.list(folders).files.map { $0.map(\.name) } == [["IMG_0004.JPG"], []])
+        } catch {
+            try? await smb.removeFolderTree(root)
+            throw error
+        }
+        try await smb.removeFolderTree(root)
+    }
 }

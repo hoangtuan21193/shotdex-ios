@@ -67,9 +67,17 @@ con · kết quả xem trước có hai mức Likely the same → Same · tiến
 ## 6. Chạy
 
 - **Copy**: tải bản ở folder nguồn đầu (băm khi tải) → đẩy lên folder chung dạng file part → đọc lại SHA-256 → đổi tên.
-- **Move**: dời bản ở folder nguồn đầu sang folder chung bằng lệnh đổi chỗ của server (không chép byte), kiểm cỡ ở đích →
-  hỏi lại mọi bản còn lại đúng cỡ + ngày sửa → xoá chúng. Server từ chối đổi chỗ (khác share SMB) → chép như Copy, kiểm
-  SHA ở đích, rồi xoá mọi bản nguồn. **Không bản nguồn nào bị xoá trước khi bản ở đích được kiểm.**
+- **Move**: hỏi lại bản ở folder nguồn đầu (cỡ + ngày sửa) → dời nó sang folder chung bằng lệnh đổi chỗ của server (không
+  chép byte) → kiểm ở đích cỡ + ngày sửa (đổi chỗ giữ ngày sửa; lệch hay không có ngày sửa thì SHA-256) → hỏi lại mọi bản
+  còn lại đúng cỡ + ngày sửa → xoá chúng. Server từ chối đổi chỗ (khác share SMB) → chép như Copy, kiểm SHA ở đích, rồi
+  xoá mọi bản nguồn. **Không bản nguồn nào bị xoá trước khi bản ở đích được kiểm.**
+  - Xoá một bản = đổi tên nó thành `<tên>.shotdex-removing`, kiểm bản ở đích còn đúng cỡ, rồi mới xoá. Đích biến mất theo
+    → hai đường dẫn là một file (hai share trên một ổ): đổi tên lại, dừng lượt chạy.
+  - Không bao giờ xoá bản trùng đường dẫn đích hay nằm trong folder đích; lượt chạy có folder chung trong folder nguồn bị
+    từ chối trước khi chạm server.
+  - Resume ở `placed`: đích được kiểm lại cả SHA-256 trước khi xoá gì. Một bản đã mất (bị xoá trước khi kịp ghi) không
+    tính là "changed".
+  - Sidecar nguồn chỉ xoá khi bản ở đích cùng byte, và khi không ảnh nào còn chạy cần nó (`IMG_1.JPG` + `IMG_1.MOV`).
 - Một nội dung có nhiều bản trong cùng folder → folder chung nhận một bản; Move xoá mọi bản.
 - `.xmp` đi theo ảnh của nó, theo luật nguồn folder ([FS-19.01 §3](01-folders-and-drives.md)): `DSC0001.xmp` là của RAW; JPEG/HEIC
   cạnh RAW chỉ nhận `DSC0001.JPG.xmp`. Lấy sidecar của bản được chép, bản đó không có thì của bản nguồn kế tiếp có. Ở

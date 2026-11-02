@@ -91,7 +91,7 @@ final class InMemoryRemoteFileClient: RemoteFileClient, @unchecked Sendable {
             try put(path, Data(contentsOf: localURL))
             return
         }
-        let number = lock.withLock { uploadCount += 1; return uploadCount }
+        let number = lock.withLock { uploadCount += 1; commands.append("upload \(path)"); return uploadCount }
         onUpload?(number)
         try Task.checkCancellation()
         let data = try Data(contentsOf: localURL)
@@ -111,7 +111,7 @@ final class InMemoryRemoteFileClient: RemoteFileClient, @unchecked Sendable {
     private(set) var sha256Paths: [String] = []
 
     func sha256(of path: String, progress: @escaping @Sendable (Int64) -> Void) async throws -> String {
-        lock.withLock { sha256Paths.append(path) }
+        lock.withLock { sha256Paths.append(path); commands.append("sha256 \(path)") }
         guard var data = lock.withLock({ storage[path] }) else { throw RemoteFileError.other("missing \(path)") }
         let original = String(path.dropLast(ServerUploadPath.partSuffix.count))
         if corruptReadBack.contains(path) || corruptReadBack.contains(original), !data.isEmpty {
@@ -189,7 +189,7 @@ final class InMemoryRemoteFileClient: RemoteFileClient, @unchecked Sendable {
     }
 
     func download(_ path: String, to localURL: URL, progress: @escaping @Sendable (Int64) -> Void) async throws -> String {
-        let number = lock.withLock { downloadCount += 1; return downloadCount }
+        let number = lock.withLock { downloadCount += 1; commands.append("download \(path)"); return downloadCount }
         try Task.checkCancellation()
         if dropConnectionOnDownload == number { throw RemoteFileError.connectionLost }
         if let refuseDownload, refuseDownload.number == number { throw refuseDownload.error }
@@ -207,8 +207,33 @@ final class InMemoryRemoteFileClient: RemoteFileClient, @unchecked Sendable {
     /// Every path removed, in order.
     private(set) var removed: [String] = []
 
+    /// Refuses a rename whose two paths start in different top folders — the
+    /// way SMB refuses one across shares.
+    var refusesMovesAcrossTopFolders = false
+    /// Every server command that reads, writes or removes a file, in order —
+    /// `download A/x`, `upload C/x.shotdex-part`, `sha256 …`, `move a → b`,
+    /// `remove …` — how a test proves the order of a Move.
+    private(set) var commands: [String] = []
+
+    func log(_ command: String) {
+        lock.withLock { commands.append(command) }
+    }
+
+    /// Called after a rename lands — where a test makes two paths one file
+    /// (the destination vanishing when a source is set aside).
+    var onMove: (@Sendable (String, String) -> Void)?
+    /// The next rename is done on the server and then reported as failed —
+    /// a reply lost on the way.
+    var failMoveAfterDoing = false
+
     func move(_ source: String, to destination: String) async throws {
+        log("move \(source) → \(destination)")
+        defer { onMove?(source, destination) }
+        if refusesMovesAcrossTopFolders, source.split(separator: "/").first != destination.split(separator: "/").first {
+            throw RemoteFileError.other("cross-share rename refused")
+        }
         try lock.withLock {
+            guard storage[source] != nil || directories.contains(source) else { throw RemoteFileError.other("missing \(source)") }
             guard storage[destination] == nil, !directories.contains(destination) else { throw RemoteFileError.other("exists") }
             if directories.contains(source) {
                 let prefix = source + "/"
@@ -223,9 +248,19 @@ final class InMemoryRemoteFileClient: RemoteFileClient, @unchecked Sendable {
                 storage[destination] = storage.removeValue(forKey: source)
             }
         }
+        if failMoveAfterDoing {
+            failMoveAfterDoing = false
+            throw RemoteFileError.other("gateway timeout")
+        }
+    }
+
+    /// Deletes a file behind the client's back, without logging it.
+    func drop(_ path: String) {
+        lock.withLock { _ = storage.removeValue(forKey: path) }
     }
 
     func remove(_ path: String) async throws {
+        log("remove \(path)")
         try lock.withLock {
             if refuseRemoving.contains(path) { throw RemoteFileError.permissionDenied(path) }
             if storage.removeValue(forKey: path) != nil { removed.append(path) }
