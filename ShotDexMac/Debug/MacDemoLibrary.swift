@@ -265,6 +265,7 @@ enum MacSMBProbe {
             // server, deletes nothing.
             Task { @MainActor in
                 let ids = MacAgentLink.defaults.stringArray(forKey: "smbProbeAssets") ?? []
+                log.notice("gate: \(PhotoLibraryService.fetchAssets(ids: ids).count) of \(ids.count) probe pictures still in Photos")
                 let outcome = await dependencies.photoDeletionGate.check(photoIds: ids)
                 log.notice("gate: deletable \(outcome.deletable.count), verified \(outcome.verified.count), unreachable \(outcome.unreachable.keys.sorted(), privacy: .public), not on server \(outcome.notOnServer.keys.sorted(), privacy: .public)")
                 exit(0)
