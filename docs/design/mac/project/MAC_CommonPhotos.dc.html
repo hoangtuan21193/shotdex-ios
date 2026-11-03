@@ -124,7 +124,7 @@ input{font-family:inherit}
 <!-- Save to + Action on one row -->
 <div style="display:flex;align-items:center;gap:8px;height:28px;flex:none">
 <span style="width:64px;flex:none;text-align:right;font-size:13px">Save to:</span>
-<button aria-label="Save to" aria-haspopup="menu" style="width:168px;height:28px;border-radius:8px;border:none;background:{{t.fill}};box-shadow:inset 0 0 0 0.5px {{t.sep}};display:flex;align-items:center;gap:6px;padding:0 6px 0 10px;box-sizing:border-box;color:{{t.label}};font-size:13px;white-space:nowrap;flex:none"><svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" style="flex:none;color:{{t.accent}}"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path></svg><span style="flex:1;min-width:0;text-align:left;overflow:hidden;text-overflow:ellipsis">Shared</span><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex:none;color:{{t.label2}}"><path d="M8 9.5l4-4 4 4 M8 14.5l4 4 4-4"></path></svg></button>
+<button aria-label="Save to" aria-haspopup="menu" style="width:168px;height:28px;border-radius:8px;border:none;background:{{t.fill}};box-shadow:inset 0 0 0 0.5px {{t.sep}};display:flex;align-items:center;gap:6px;padding:0 6px 0 10px;box-sizing:border-box;color:{{t.label}};font-size:13px;white-space:nowrap;flex:none"><svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" style="flex:none;color:{{t.accent}}"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path></svg><span style="flex:1;min-width:0;text-align:left;overflow:hidden;text-overflow:ellipsis;color:{{saveToFg}}">{{saveTo}}</span><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex:none;color:{{t.label2}}"><path d="M8 9.5l4-4 4 4 M8 14.5l4 4 4-4"></path></svg></button>
 <button style="height:28px;border-radius:8px;border:none;background:{{t.fill}};box-shadow:inset 0 0 0 0.5px {{t.sep}};color:{{t.label}};padding:0 12px;font-size:13px;white-space:nowrap;flex:none">New Folder…</button>
 <div style="flex:1"></div>
 <span style="font-size:13px;flex:none">Action:</span>
@@ -134,11 +134,11 @@ input{font-family:inherit}
 </div>
 <div style="height:1px;background:{{t.sep}};margin:12px 0;flex:none"></div>
 <!-- Result after Scan -->
-<div style="display:flex;align-items:center;gap:16px;height:28px;flex:none">
+<sc-if value="{{scanned}}" hint-placeholder-val="{{true}}"><div style="display:flex;align-items:center;gap:16px;height:28px;flex:none">
 <span style="flex:1;min-width:0;font-size:13px;font-weight:600;white-space:nowrap;font-variant-numeric:tabular-nums">{{headline}}</span>
 <span role="status" aria-label="Same, {{sameN}}" style="display:flex;align-items:center;gap:5px;font-size:13px;white-space:nowrap"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" style="color:{{S.greenText}}"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg><span style="color:{{t.label2}}">Same</span><span style="font-weight:600;font-variant-numeric:tabular-nums">{{sameN}}</span></span>
 <sc-if value="{{checking}}" hint-placeholder-val="{{true}}"><span role="status" aria-label="Checking, 32" style="display:flex;align-items:center;gap:5px;font-size:13px;white-space:nowrap"><svg width="13" height="13" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5" fill="none" stroke="{{t.track}}" stroke-width="3"></circle><path d="M12 3.5a8.5 8.5 0 0 1 8.5 8.5" fill="none" stroke="{{t.accent}}" stroke-width="3" stroke-linecap="round"></path></svg><span style="color:{{t.label2}}">Checking</span><span style="font-weight:600;font-variant-numeric:tabular-nums">32</span></span></sc-if>
-</div>
+</div></sc-if>
 <!-- §6c: the set gathered before — only new photos are checked; Scan Everything checks all of them again -->
 <sc-if value="{{againRow}}" hint-placeholder-val="{{false}}"><div style="display:flex;align-items:center;gap:8px;height:24px;margin-top:4px;flex:none">
 <svg aria-hidden="true" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:none;color:{{t.label2}}"><path d="M12 3a9 9 0 1 0 0.01 0z M12 7v5l3.5 2"></path></svg>
@@ -146,6 +146,11 @@ input{font-family:inherit}
 <button style="height:24px;border-radius:6px;border:none;background:{{t.fill}};box-shadow:inset 0 0 0 0.5px {{t.sep}};color:{{t.label}};padding:0 10px;font-size:12px;white-space:nowrap;flex:none">Scan Everything</button>
 </div></sc-if>
 <div style="height:8px;flex:none"></div>
+<!-- Before Scan, and while it lists the folders: one line in the middle, nothing to choose yet -->
+<sc-if value="{{waiting}}" hint-placeholder-val="{{false}}"><div role="status" style="flex:1;min-height:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;padding:0 40px;text-align:center">
+<sc-if value="{{listing}}" hint-placeholder-val="{{false}}"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5" fill="none" stroke="{{t.track}}" stroke-width="3"></circle><path d="M12 3.5a8.5 8.5 0 0 1 8.5 8.5" fill="none" stroke="{{t.accent}}" stroke-width="3" stroke-linecap="round"></path></svg></sc-if>
+<div style="font-size:13px;line-height:17px;color:{{t.label2}};font-variant-numeric:tabular-nums">{{waitingLine}}</div>
+</div></sc-if>
 <!-- Matches list (scrolls) -->
 <sc-if value="{{hasMatches}}" hint-placeholder-val="{{true}}"><div role="list" aria-label="Photos in both folders" style="flex:1;min-height:0;position:relative;border-radius:8px;border:1px solid {{t.sep}};background:{{t.field}};overflow:hidden">
 <sc-for list="{{matches}}" as="m" hint-placeholder-count="7"><div role="listitem" style="height:40px;display:flex;align-items:center;gap:10px;padding:0 12px 0 8px;background:{{m.rowBg}}">
@@ -172,9 +177,9 @@ input{font-family:inherit}
 <div style="height:12px;flex:none"></div>
 <!-- §6c: Keep gathering — the helper runs this set again every 15 minutes (off by default) -->
 <label style="display:flex;align-items:center;gap:8px;height:22px;flex:none;font-size:13px">
-<span aria-hidden="true" style="flex:none;width:14px;height:14px;border-radius:4px;box-sizing:border-box;border:1px solid {{t.checkboxStroke}};background:{{t.field}}"></span>
+<span aria-hidden="true" style="flex:none;width:14px;height:14px;border-radius:4px;box-sizing:border-box;border:1px solid {{t.checkboxStroke}};background:{{t.field}};opacity:{{keepOpacity}}"></span>
 <input type="checkbox" aria-label="Keep gathering new photos" style="position:absolute;opacity:0;width:1px;height:1px">
-<span>Keep gathering new photos</span>
+<span style="opacity:{{keepOpacity}}">Keep gathering new photos</span>
 <span style="font-size:12px;color:{{t.label2}};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Every 15 minutes while this Mac is plugged in.</span>
 </label>
 <div style="height:8px;flex:none"></div>
@@ -186,7 +191,7 @@ input{font-family:inherit}
 </div>
 </div>
 </x-dc>
-<script type="text/x-dc" data-dc-script data-props='{"dark":{"editor":"boolean","default":false},"state":{"editor":"select","options":["first","again","nothingNew"],"default":"first"},"$preview":{"width":1440,"height":900}}'>
+<script type="text/x-dc" data-dc-script data-props='{"dark":{"editor":"boolean","default":false},"state":{"editor":"select","options":["beforeScan","listing","first","again","nothingNew"],"default":"first"},"$preview":{"width":1440,"height":900}}'>
 const LIGHT = { content:'#FFFFFF', label:'rgba(0,0,0,0.88)', label2:'rgba(0,0,0,0.56)', label3:'rgba(0,0,0,0.28)',
   sep:'rgba(0,0,0,0.10)', fill:'rgba(0,0,0,0.05)', fill2:'#F2F2F4', pressed:'rgba(0,0,0,0.09)', track:'rgba(0,0,0,0.10)',
   glass:'rgba(255,255,255,0.72)', glassStroke:'rgba(0,0,0,0.08)', glassShadow:'0 2px 10px rgba(0,0,0,0.10)',
@@ -422,7 +427,8 @@ class Component extends DCLogic {
 
     // §6c: "again" — the set gathered on Nov 3; three new photos since. "nothingNew" — none.
     const state = this.props.state || 'first';
-    const again = state !== 'first', nothingNew = state === 'nothingNew';
+    const before = state === 'beforeScan', listing = state === 'listing', waiting = before || listing;
+    const again = state === 'again' || state === 'nothingNew', nothingNew = state === 'nothingNew';
     const NEW = [
       ['IMG_4512.HEIC', 'Tuấn/2025 · Vợ/Phone as 2025-11-04 IMG_4512.HEIC', '3.0 MB'],
       ['IMG_4513.HEIC', 'Tuấn/2025 · Vợ/Phone', '2.8 MB'],
@@ -433,12 +439,16 @@ class Component extends DCLogic {
     const sameN = state === 'first' ? '280' : (nothingNew ? '0' : '3');
     return { t, S, edge: dark?'rgba(28,28,30,0.85)':'rgba(255,255,255,0.85)', edgeClear: dark?'rgba(28,28,30,0)':'rgba(255,255,255,0)',
       groups, foot, columns, folderTiles, crumbs, srcFolders, action, matches: shown,
-      again, againRow: again && !nothingNew, nothingNew, hasMatches: !nothingNew, checking: state === 'first', sameN,
-      footHint: nothingNew ? '' : 'Only photos marked Same are copied.',
+      again, againRow: again && !nothingNew, nothingNew, hasMatches: !nothingNew && !waiting, checking: state === 'first', sameN,
+      scanned: !waiting, waiting, listing,
+      // Before Scan the sheet opens with no destination: Save to reads Choose…, Keep gathering waits for one.
+      saveTo: before ? 'Choose…' : 'Shared', saveToFg: before ? t.label2 : t.label, keepOpacity: before ? 0.45 : 1,
+      waitingLine: listing ? 'Listing… 12,408 files' : 'Scan finds the photos every folder holds, byte for byte. Nothing is copied or moved until you choose.',
+      footHint: nothingNew || before ? '' : 'Only photos marked Same are copied.',
       headline: state === 'first' ? '312 photos in both folders · 4.2 GB' : (nothingNew ? 'No new photos in both folders' : '3 new photos in both folders · 55 MB'),
       againLine: 'Last gathered Nov 3, 2:30 PM · 280 already gathered',
-      runLabel: state === 'first' ? 'Copy 280' : (nothingNew ? 'Copy' : 'Copy 3'),
-      runBg: nothingNew ? t.fill : t.accentFill, runFg: nothingNew ? t.label3 : t.onAccentFill,
+      runLabel: before ? 'Scan' : listing ? 'Stop' : state === 'first' ? 'Copy 280' : (nothingNew ? 'Copy' : 'Copy 3'),
+      runBg: nothingNew || listing ? t.fill : t.accentFill, runFg: nothingNew ? t.label3 : listing ? t.label : t.onAccentFill,
       title:'Family', subtitle:'NAS Home · SMB · indexed 5 min ago', pathStatus:'2 of 4 selected · 15.21 GB free of 152.09 GB' };
   }
 }
