@@ -146,6 +146,41 @@ import Testing
         #expect(hashed == 5)
     }
 
+    /// AC-157: the Mac hashing a NAS for everyone lets Backup in between
+    /// two files — Backup asks during file 2 and goes before file 3 — and
+    /// carries on from file 3, every file read once.
+    @MainActor
+    @Test func hashingYieldsToBackup() async throws {
+        let client = try Self.nas(files: 5)
+        let f = try OnServerFixture(photos: 0)
+        let servers = FileServerStore(database: f.database, passwords: InMemoryPasswordStore())
+        try servers.save(FileServer(id: "C1", name: "NAS Home", transferProtocol: .smb, host: "nas.local", username: "u",
+                                    folder: "iCloud Photo"), password: "pw")
+        _ = await ServerSourceRefresh(database: f.database, servers: servers, composer: ServerSourceIndexTests.composer) { _, _ in client }
+            .rescan(sourceId: f.source)
+        let lock = ConnectionLock()
+        let order = OrderLog()
+        client.whileHashing = { count in
+            await order.add("hash \(count)")
+            guard count == 2 else { return }
+            Task {
+                await lock.acquire("C1", priority: .backup)
+                await order.add("backup")
+                await lock.release("C1")
+            }
+            while await lock.waitingCount("C1") < 1 { await Task.yield() }
+        }
+        var pass = ServerFileHashPass(store: CopyFileStore(database: f.database),
+                                      client: LockedRemoteFileClient(client, lock: lock, connectionId: "C1", priority: .normal))
+        pass.hashesEverything = true
+
+        let summary = try await pass.run(sourceId: f.source, connectionId: "C1", folder: "iCloud Photo")
+
+        #expect(summary.hashed == 5)
+        #expect(await order.entries == ["hash 1", "hash 2", "backup", "hash 3", "hash 4", "hash 5"])
+        #expect(Set(client.sha256Paths).count == 5 && client.sha256Paths.count == 5)
+    }
+
     // MARK: Ledger on the NAS (§12.2)
 
     /// A device of its own (its own database) over one shared NAS.
@@ -693,4 +728,9 @@ private actor Tally {
         value += 1
         return value
     }
+}
+
+private actor OrderLog {
+    var entries: [String] = []
+    func add(_ entry: String) { entries.append(entry) }
 }

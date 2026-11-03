@@ -6,7 +6,7 @@
 | Intent | [2026-11-03-mac-hashes-for-on-server-check](../_intents/2026-11-03-mac-hashes-for-on-server-check.md) |
 | Commit spec | `0206b87e` (intent `8790f174`) |
 | Ngày | 2026-11-03 |
-| Trạng thái | đang làm — H1–H7 xong (loop: [FS1907_HASH_LOOP.md](FS1907_HASH_LOOP.md)) |
+| Trạng thái | gần xong — H1–H8 xong; còn spike S5–S9 cần thiết bị (loop: [FS1907_HASH_LOOP.md](FS1907_HASH_LOOP.md)) |
 
 ## 1. Hiểu đúng chưa
 

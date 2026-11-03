@@ -19,6 +19,8 @@ final class InMemoryRemoteFileClient: RemoteFileClient, @unchecked Sendable {
     /// Awaited at the start of every upload — where a test does async work
     /// while a run is held mid-photo.
     var whileUploading: (@Sendable (Int) async -> Void)?
+    /// Runs inside each `sha256(of:)`, with how many it has been asked for.
+    var whileHashing: (@Sendable (Int) async -> Void)?
     private(set) var uploadCount = 0
     /// Segments of the Backup shared index (`.shotdex/`) written — kept out
     /// of `uploadCount`, which counts the user's files.
@@ -118,7 +120,8 @@ final class InMemoryRemoteFileClient: RemoteFileClient, @unchecked Sendable {
     private(set) var sha256Paths: [String] = []
 
     func sha256(of path: String, progress: @escaping @Sendable (Int64) -> Void) async throws -> String {
-        lock.withLock { sha256Paths.append(path); commands.append("sha256 \(path)") }
+        let count = lock.withLock { sha256Paths.append(path); commands.append("sha256 \(path)"); return sha256Paths.count }
+        await whileHashing?(count)
         try countRead()
         guard var data = lock.withLock({ storage[path] }) else { throw RemoteFileError.other("missing \(path)") }
         let original = String(path.dropLast(ServerUploadPath.partSuffix.count))

@@ -106,6 +106,14 @@ Thư viện thử không có ảnh mặt người.
 | AC-154 | mục khớp **is** chỉ nhờ SHA từ Mac; file trên NAS bị xoá sau đó | xoá mục khỏi album | `PhotoDeletionGate` hỏi lại server, mục **không** bị xoá, alert "no longer on NAS Home" | ✅ `PhotoDeletionGateTests.sharedHashStillReverifies` |
 | AC-155 | *Share Index Across Devices* tắt (hoặc không có iCloud, hoặc Mac thiếu entitlement) | Mac và iPhone chạy kiểm | không kéo, không đẩy record nào; iPhone tự băm như hôm nay; không crash | ✅ `SharedHashTests.offDoesNothing` |
 | AC-156 | iPhone tự băm 2 mục Mac chưa băm tới | iPhone đẩy lên, rồi Mac kiểm | Mac dùng 2 SHA đó (0 lần đọc file cho chúng), `origin = shared` | ✅ `SharedHashTests.recordOwnQueuesOnlyOwnHashes` + `sharedNeverOverwritesOwn` (đẩy lên CloudKit thật: một phần) |
-| AC-157 | helper Mac đang băm file NAS thứ 40/100, Backup bắt đầu lượt | Backup cần connection | băm nhả khoá giữa hai file, Backup đi trước; sau Backup băm tiếp từ file 41; không file tạm nào còn lại | ⚠️ một phần — làm tiếp từ file kế: `SharedHashTests.macHashesEveryServerFile` (dừng sau 2, lượt sau 3, không đọc lại); nhả khoá cho Backup là `LockedRemoteFileClient` có sẵn, chưa test riêng |
+| AC-157 | helper Mac đang băm file NAS thứ 40/100, Backup bắt đầu lượt | Backup cần connection | băm nhả khoá giữa hai file, Backup đi trước; sau Backup băm tiếp từ file 41; không file tạm nào còn lại | ✅ `SharedHashTests.hashingYieldsToBackup` (Backup chen giữa file 2 và 3, mỗi file đọc một lần; băm server đọc qua lệnh SHA của client, không file tạm) + `macHashesEveryServerFile` (dừng rồi làm tiếp từ file kế) |
 | AC-158 | Mac và iPhone cùng ghi sổ vào một nguồn trong một lượt | cả hai ghi xong | hai đoạn riêng (`<mã Mac>-…`, `<mã iPhone>-…`), không dòng nào mất; máy thứ ba đọc được cả hai | ✅ `SharedHashTests.twoWritersTwoSegments` (hai máy ghi lần lượt; mỗi máy chỉ ghi đoạn của mình nên ghi đồng thời không đụng nhau) |
 
+**`/verify` §12 (băm dùng chung) 2026-11-03:** AC-144…158 có test xanh — 66 test ở 7 suite (SharedHash, PhotosHash,
+PhotoDeletionGate, OnServerProgress, OnServerSMB, SharedIndexStore, ConnectionLock) trên sim iPhone Duo 27.1, kèm e2e trên
+SMB ảo (`OnServerSMBTests.ledgerSavesDownloads`: sổ NAS + đọc lại file thật để kiểm ngẫu nhiên). CloudKit đi qua kênh giả
+(bảng cache), chưa chạy thật. Ảnh câu lệch: Duo màn ngoài sáng, màn trong tối, Mac sáng + tối.
+**Chưa chứng minh trọn:** spike S5–S9 (cần Mac + iPhone thật cùng iCloud); ảnh iPhone/iPad (máy này chỉ có runtime Duo).
+`Tools/gate` không xanh vì lỗi ngoài §12: treo ở `writesTheFormatAskedFor(type: heic)` trên Duo 27.1 như lần trước,
+`ServerEditHandoffTests.rafNeverLeaves` đỏ, các test đỏ có sẵn (SettingsSearch, PerceptualHashStore, GridICloudFree), và
+test đo thời gian đỏ khi máy đang tải nặng (`undoRunWords` chạy riêng thì xanh).

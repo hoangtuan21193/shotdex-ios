@@ -10,6 +10,7 @@ Sources: `hig-components` (two passes), `device-layout` (iPhone 17 + iPad Pro 13
 
 ## Should fix
 
+- [ ] `ShotDexTests/ServerEditHandoffTests.swift:117` `rafNeverLeaves` fails on the iPhone Duo 27.1 sim: "DSCF1000.RAF isn't an image ShotDex can read." (stage `.failed`, no sources). Not touched by FS-19.07 §12; seen in `Tools/gate` 2026-11-03 and alone. Check the RAF fixture/decoder on the 27.1 runtime.
 - [ ] **Release blocker** — CloudKit schema: record types `PhotoFileHash` / `ServerFileHash` (FS-19.07 §12.3) and their new `deviceName` field (§12.4) exist only in the Development environment; deploy the schema to Production before any TestFlight/App Store build or pushes fail. Found 2026-11-03 (H7 review).
 - [ ] `ShotDex/Resources/Localizable.xcstrings` — FS-19.07 §12.4 strings not in the catalog yet (the file was being edited by another session): "another device", "Hashes from %@ didn't match — checking on this iPhone." / "…iPad." / "…Mac.". Comments are in code. Found 2026-11-03 (H7).
 - [ ] `ShotDex/Data/Sources/OnServerMergePass.swift:19` — merges a server photo into a Photos item on any `copy_files.sha256`, including hashes from another device (FS-19.07 §12). A merge made before the random check catches that device stays after `distrust` drops its hashes (presence is hash-based so the `is` album corrects itself; the merged identity does not). Needs an unmerge, or merge only on hashes read here. Found 2026-11-03 (H6 review).
