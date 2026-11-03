@@ -133,7 +133,11 @@ SHA-256 với bản ở folder chung, nên trả về = chép lại đúng nhữ
   chung được Rescan; CSV của lượt bị xoá khi mọi hàng Copied/Moved đều Undone, còn không thì ghi thêm
   `ShotDex Common Photos <ngày giờ> Undo.csv` (cùng cột, Status = Undone / Not undone).
 - **Giữ bao lâu:** Activity giữ **20 lượt đã xong** gần nhất (cả lượt đã hoàn tác); lượt thứ 21 đẩy lượt cũ nhất cùng
-  các hàng của nó ra khỏi DB. Lượt dở dang không bao giờ bị đẩy ra. Hàng trong Activity có **Remove from List**.
+  các hàng của nó ra khỏi DB. Lượt dở dang không bao giờ bị đẩy ra. Hàng trong Activity có **Remove from List**, chân
+  Activity có **Remove Finished from List…** (thay "Clear" / "Clear Finished"); cả hai hỏi lại "Their logs are removed;
+  they can't be undone afterwards.", Cancel mặc định (người dùng 2026-11-03).
+- Lịch sử trả **đúng từng chỗ cũ**: lượt Move ghi lại hàng lịch sử nào đến từ bản nào; bản không trả được (chỗ bị chiếm)
+  thì lịch sử của nó ở lại đường dẫn đích (người dùng 2026-11-03).
 
 ## 7. Cửa sổ tiến độ (`MAC_CommonPhotosRun`)
 
@@ -157,7 +161,7 @@ SHA-256 với bản ở folder chung, nên trả về = chép lại đúng nhữ
 | | |
 |---|---|
 | Đọc từ | danh sách server (lệnh liệt kê) · SHA và ngày chụp đã có của bản sao server ([05](05-data.md), bảng file từng bản sao) |
-| Ghi vào | bảng mới **Lượt gom** (connection, folder nguồn, folder chung, Copy/Move, trạng thái, lúc) + **Mục gom** (SHA, đường dẫn từng nguồn, đích, trạng thái, lỗi; thêm cho §6b: sidecar lượt đã đặt ở đích + SHA của nó, trạng thái hoàn tác) |
+| Ghi vào | bảng mới **Lượt gom** (connection, folder nguồn, folder chung, Copy/Move, trạng thái, lúc) + **Mục gom** (SHA, đường dẫn từng nguồn, đích, trạng thái, lỗi; thêm cho §6b: sidecar lượt đã đặt ở đích + SHA của nó, trạng thái hoàn tác) + bảng phụ **hàng lịch sử đã dời** (lượt, ảnh, hàng lịch sử, đường dẫn trước khi dời) |
 | Người dùng tự nhập? | không — dữ liệu dẫn xuất, không vào `photo_metadata`; Clear Local Metadata Index không xoá lượt đang dở |
 
 ## 9. Ràng buộc
