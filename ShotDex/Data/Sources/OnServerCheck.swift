@@ -172,8 +172,8 @@ final class OnServerCheck {
                 if summary.stoppedBy != nil, let name = sources.first(where: { $0.id == source.id })?.name {
                     waits[source.id] = .unreachable(name)
                 }
-                lastPassHashed.server += summary.seeded + summary.hashed
-                didWork = didWork || summary.seeded + summary.hashed + summary.failed > 0
+                lastPassHashed.server += summary.seeded + summary.fromLedger + summary.hashed
+                didWork = didWork || summary.seeded + summary.fromLedger + summary.hashed + summary.failed > 0
             }
             if photosWait == nil, !Task.isCancelled, let summary = try? await environment.hashPhotos(start) {
                 if summary.waitingForSpace { photosWait = .space }
@@ -243,6 +243,9 @@ extension OnServerCheck.Environment {
                                                     lock: connectionLock, connectionId: server.id, priority: .normal)
                 var pass = ServerFileHashPass(store: store, client: client)
                 pass.hashesEverything = hashesEverything()
+                // The ledger on the NAS (FS-19.07 §12.2): every device reads
+                // it and writes what it hashed.
+                pass.deviceId = BackupDeviceIdentity.current()
                 return try await pass.run(sourceId: sourceId, connectionId: connectionId, folder: server.folder, now: now)
             },
             hashPhotos: { now in

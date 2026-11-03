@@ -82,5 +82,25 @@ extension AppDatabase {
             }
         }
     }
+
+    /// FS-19.07 §12.2: the lines of the NAS ledgers this device read, kept
+    /// so a file listed later still finds its line, and this device's own
+    /// lines, so what it already wrote is not written again — as Backup
+    /// keeps its shared index (FS-22.05 §2).
+    static func registerHashIndexLines(_ migrator: inout DatabaseMigrator) {
+        migrator.registerMigration("v49-hashIndexLines") { db in
+            try db.create(table: "hash_index_lines") { t in
+                t.column("sourceId", .text).notNull()
+                // `FolderSourceIndexer.pathKey` of the path under the source's root.
+                t.column("pathKey", .text).notNull()
+                t.column("device", .text).notNull()
+                t.column("size", .integer).notNull()
+                t.column("modifiedAt", .integer)
+                t.column("sha256", .text).notNull()
+                t.column("recordedAt", .integer).notNull()
+                t.primaryKey(["sourceId", "pathKey", "device"])
+            }
+        }
+    }
 }
 

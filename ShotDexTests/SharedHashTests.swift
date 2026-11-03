@@ -145,5 +145,196 @@ import Testing
         }
         #expect(hashed == 5)
     }
+
+    // MARK: Ledger on the NAS (§12.2)
+
+    /// A device of its own (its own database) over one shared NAS.
+    @MainActor
+    private struct Device {
+        let f: OnServerFixture
+        let refresh: ServerSourceRefresh
+        let store: CopyFileStore
+        let client: InMemoryRemoteFileClient
+        let id: String
+
+        init(_ id: String, nas client: InMemoryRemoteFileClient) async throws {
+            self.id = id
+            self.client = client
+            f = try OnServerFixture(photos: 0)
+            let servers = FileServerStore(database: f.database, passwords: InMemoryPasswordStore())
+            try servers.save(FileServer(id: "C1", name: "NAS Home", transferProtocol: .smb, host: "nas.local", username: "u",
+                                        folder: "iCloud Photo"), password: "pw")
+            refresh = ServerSourceRefresh(database: f.database, servers: servers, composer: ServerSourceIndexTests.composer) { _, _ in client }
+            store = CopyFileStore(database: f.database)
+            _ = await refresh.rescan(sourceId: f.source)
+        }
+
+        /// One pass of the server side, hashing everything (as the Mac does,
+        /// or as a phone whose Photos files make every file a candidate).
+        @discardableResult
+        func pass(everything: Bool = true) async throws -> ServerFileHashPass.Summary {
+            var pass = ServerFileHashPass(store: store, client: client)
+            pass.hashesEverything = everything
+            pass.deviceId = id
+            return try await pass.run(sourceId: f.source, connectionId: "C1", folder: "iCloud Photo")
+        }
+
+        func hashes() async throws -> [(origin: String?, from: String?)] {
+            try await f.database.reader.read { db in
+                try Row.fetchAll(db, sql: "SELECT origin, sharedFrom FROM copy_files ORDER BY copyId").map { ($0["origin"], $0["sharedFrom"]) }
+            }
+        }
+    }
+
+    private static func nas(files: Int = 5) throws -> InMemoryRemoteFileClient {
+        let client = InMemoryRemoteFileClient()
+        for n in 0..<files {
+            let path = "iCloud Photo/Shared/s\(n).ARW"
+            client.put(path, try ServerSourceIndexTests.raw(padding: 4_096 + n * 512, seed: UInt8(n)))
+            client.modified[path] = Date(timeIntervalSince1970: 1_000 + TimeInterval(n))
+        }
+        return client
+    }
+
+    private static let ledger = "iCloud Photo/.shotdex/hash-index"
+
+    /// AC-145: the Mac's hashes land in one segment at the source's root —
+    /// path under the root, size, write time, SHA — through a part file; a
+    /// second pass with nothing new writes nothing.
+    @MainActor
+    @Test func ledgerWrittenAtSourceRoot() async throws {
+        let nas = try Self.nas()
+        let mac = try await Device("MAC", nas: nas)
+
+        let summary = try await mac.pass()
+
+        #expect(summary.hashed == 5 && summary.published == 5)
+        let segment = try #require(nas.files["\(Self.ledger)/MAC-000001.jsonl"])
+        let lines = BackupContentIndex.decode(segment)
+        #expect(lines.count == 5)
+        #expect(Set(lines.map(\.path)) == Set((0..<5).map { "Shared/s\($0).ARW" }))
+        #expect(lines.allSatisfy { $0.device == "MAC" && $0.modified != nil })
+        #expect(!nas.files.keys.contains { $0.hasSuffix(ServerUploadPath.partSuffix) })
+
+        let again = try await mac.pass()
+        #expect(again.published == 0)
+        #expect(nas.files.keys.filter { $0.hasPrefix(Self.ledger) }.count == 1)
+    }
+
+    /// AC-146: a phone over the same NAS takes every hash from the ledger —
+    /// not one file read — each marked as the Mac's.
+    @MainActor
+    @Test func readerSkipsDownloads() async throws {
+        let nas = try Self.nas()
+        try await Device("MAC", nas: nas).pass()
+        let phone = try await Device("PHONE", nas: nas)
+        let reads = nas.sha256Paths.filter { !$0.contains(".shotdex") }.count
+
+        let summary = try await phone.pass()
+
+        #expect(summary.fromLedger == 5 && summary.hashed == 0)
+        #expect(nas.sha256Paths.filter { !$0.contains(".shotdex") }.count == reads)
+        #expect(try await phone.hashes().allSatisfy { $0.origin == "ledger" && $0.from == "MAC" })
+    }
+
+    /// AC-147: one file's write time moved after the Mac wrote its line —
+    /// that line is passed over and the file read; the other four are not.
+    @MainActor
+    @Test func staleLineIgnored() async throws {
+        let nas = try Self.nas()
+        try await Device("MAC", nas: nas).pass()
+        nas.modified["iCloud Photo/Shared/s1.ARW"] = Date(timeIntervalSince1970: 9_999)
+        let phone = try await Device("PHONE", nas: nas)
+        let reads = nas.sha256Paths.filter { !$0.contains(".shotdex") }
+
+        let summary = try await phone.pass()
+
+        #expect(summary.fromLedger == 4 && summary.hashed == 1)
+        #expect(Array(nas.sha256Paths.filter { !$0.contains(".shotdex") }.dropFirst(reads.count)) == ["iCloud Photo/Shared/s1.ARW"])
+    }
+
+    /// AC-148: the ledger is never a photo, a file count or a write outside
+    /// `.shotdex/`.
+    @MainActor
+    @Test func ledgerNeverAPhoto() async throws {
+        let nas = try Self.nas()
+        let mac = try await Device("MAC", nas: nas)
+        let before = nas.commands.count
+        try await mac.pass()
+        _ = await mac.refresh.rescan(sourceId: mac.f.source)
+
+        let copies = try await mac.f.database.reader.read { db in
+            try String.fetchAll(db, sql: "SELECT relativePath FROM photo_copies WHERE kind = 'server'")
+        }
+        #expect(copies.count == 5 && !copies.contains { $0.contains(".shotdex") })
+        let writes = nas.commands.dropFirst(before).filter { $0.hasPrefix("upload ") || $0.hasPrefix("move ") || $0.hasPrefix("remove ") }
+        #expect(!writes.isEmpty)
+        #expect(writes.allSatisfy { $0.contains("iCloud Photo/.shotdex/hash-index/") })
+    }
+
+    /// AC-158: two devices write in one run — two segments, nothing lost; a
+    /// third reads both.
+    @MainActor
+    @Test func twoWritersTwoSegments() async throws {
+        let nas = try Self.nas()
+        try await Device("MAC", nas: nas).pass()
+        try await Device("PHONE", nas: nas).pass(everything: true)
+        // The phone took the Mac's hashes, so it wrote nothing; make it hash
+        // a file of its own.
+        nas.put("iCloud Photo/Shared/s9.ARW", try ServerSourceIndexTests.raw(padding: 9_000, seed: 9))
+        nas.modified["iCloud Photo/Shared/s9.ARW"] = Date(timeIntervalSince1970: 1_009)
+        let phone = try await Device("PHONE", nas: nas)
+        try await phone.pass()
+
+        let segments = nas.files.keys.filter { $0.hasPrefix(Self.ledger) }.sorted()
+        #expect(segments == ["\(Self.ledger)/MAC-000001.jsonl", "\(Self.ledger)/PHONE-000001.jsonl"])
+        let third = try await Device("IPAD", nas: nas)
+        let summary = try await third.pass()
+        #expect(summary.fromLedger == 6 && summary.hashed == 0)
+    }
+
+    /// A ledger line is taken only from the device its segment is named
+    /// after, in lower case, and never from a device caught wrong before it
+    /// wrote the line.
+    @MainActor
+    @Test func ledgerTrustRules() async throws {
+        let nas = try Self.nas(files: 3)
+        try await Device("MAC", nas: nas).pass()
+        let mac = BackupContentIndex.decode(try #require(nas.files["\(Self.ledger)/MAC-000001.jsonl"]))
+        // A segment named after the iPad that claims to be the Mac, and an
+        // upper-case SHA in the Mac's own.
+        var forged = mac
+        for index in forged.indices { forged[index].device = "MAC" }
+        nas.put("\(Self.ledger)/IPAD-000001.jsonl", BackupContentIndex.encode(forged))
+        var upper = mac
+        for index in upper.indices { upper[index].sha256 = upper[index].sha256.uppercased() }
+        nas.put("\(Self.ledger)/MAC-000001.jsonl", BackupContentIndex.encode(upper))
+
+        let phone = try await Device("PHONE", nas: nas)
+        try phone.store.distrust(device: "MAC", at: Date(timeIntervalSince1970: TimeInterval(mac[0].recordedAt - 1)))
+        let summary = try await phone.pass()
+        #expect(summary.fromLedger == 3)
+        let kept = try await phone.f.database.reader.read { db in try String.fetchAll(db, sql: "SELECT DISTINCT device FROM hash_index_lines") }
+        #expect(kept == ["MAC"] || Set(kept) == ["MAC", "PHONE"])
+        let shas = try await phone.f.database.reader.read { db in try String.fetchAll(db, sql: "SELECT sha256 FROM copy_files") }
+        #expect(shas.allSatisfy { $0 == $0.lowercased() })
+
+        // Caught wrong after it wrote them: the same lines are refused.
+        let later = try await Device("PHONE2", nas: nas)
+        try later.store.distrust(device: "MAC", at: Date(timeIntervalSince1970: TimeInterval(mac[0].recordedAt)))
+        let refused = try await later.pass()
+        #expect(refused.fromLedger == 0 && refused.hashed == 3)
+    }
+
+    /// A server error at connect — a share gone, a refused login — stops the
+    /// source's pass and is reported, as before the ledger.
+    @MainActor
+    @Test func connectErrorStopsThePass() async throws {
+        let nas = try Self.nas(files: 1)
+        let mac = try await Device("MAC", nas: nas)
+        nas.connectError = .permissionDenied("photos")
+        let summary = try await mac.pass()
+        #expect(summary.stoppedBy == .permissionDenied("photos"))
+    }
 }
 

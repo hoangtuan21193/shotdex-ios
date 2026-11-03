@@ -230,6 +230,8 @@ struct CopyFileStore: Sendable {
         var fileKey: String
         var relativePath: String
         var size: Int64
+        /// The listing's write time; nil when the server gave none.
+        var modifiedAt: Int? = nil
     }
 
     /// Files of the source's server copies with no hash — the primary at the
@@ -237,14 +239,15 @@ struct CopyFileStore: Sendable {
     func unhashedServerFiles(sourceId: String) throws -> [UnhashedServerFile] {
         try database.reader.read { db in
             try Row.fetchAll(db, sql: """
-                SELECT f.copyId, f.fileKey, f.size,
+                SELECT f.copyId, f.fileKey, f.size, f.modifiedAt,
                        CASE f.fileKey WHEN 'companion' THEN c.pairedPath ELSE c.relativePath END AS path
                 FROM copy_files f JOIN photo_copies c ON c.id = f.copyId
                 WHERE c.sourceId = ? AND c.kind = 'server' AND c.missingSince IS NULL
                   AND f.sha256 IS NULL AND f.size IS NOT NULL
                 """, arguments: [sourceId]).compactMap { row in
                 guard let path: String = row["path"] else { return nil }
-                return UnhashedServerFile(copyId: row["copyId"], fileKey: row["fileKey"], relativePath: path, size: row["size"])
+                return UnhashedServerFile(copyId: row["copyId"], fileKey: row["fileKey"], relativePath: path, size: row["size"],
+                                          modifiedAt: row["modifiedAt"])
             }
         }
     }
@@ -325,6 +328,98 @@ struct CopyFileStore: Sendable {
                                  // any distrust, never let back in by one.
                                  min(Int((hashedAt ?? (origin.isFromAnotherDevice ? Date(timeIntervalSince1970: 0) : now))
                                      .timeIntervalSince1970), time), time, copyId, fileKey])
+        }
+    }
+
+    // MARK: - The ledger on the NAS (FS-19.07 §12.2)
+
+    /// One line of a source's ledger as kept here.
+    struct LedgerLine: Equatable, Sendable {
+        var pathKey: String
+        var device: String
+        var size: Int64
+        var modifiedAt: Int?
+        var sha256: String
+        var recordedAt: Int
+    }
+
+    /// Segments of the source's ledger read, by name, with the size read.
+    func ledgerSegments(sourceId: String) throws -> [String: Int64] {
+        try database.reader.read { db in
+            Dictionary(try Row.fetchAll(db, sql: "SELECT segment, size FROM hash_index_segments WHERE sourceId = ?",
+                                        arguments: [sourceId]).map { ($0["segment"], $0["size"]) },
+                       uniquingKeysWith: { first, _ in first })
+        }
+    }
+
+    /// A segment read (or written) and its lines, in one write: a line
+    /// newer than the one kept for its path and device replaces it.
+    func saveLedgerLines(_ lines: [LedgerLine], sourceId: String, segment: String, size: Int64) throws {
+        try database.writer.write { db in
+            let insert = try db.cachedStatement(sql: """
+                INSERT INTO hash_index_lines (sourceId, pathKey, device, size, modifiedAt, sha256, recordedAt)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+                ON CONFLICT(sourceId, pathKey, device) DO UPDATE SET size = excluded.size,
+                    modifiedAt = excluded.modifiedAt, sha256 = excluded.sha256, recordedAt = excluded.recordedAt
+                WHERE excluded.recordedAt >= hash_index_lines.recordedAt
+                """)
+            for line in lines {
+                try insert.execute(arguments: [sourceId, line.pathKey, line.device, line.size, line.modifiedAt, line.sha256, line.recordedAt])
+            }
+            try db.execute(sql: """
+                INSERT INTO hash_index_segments (sourceId, segment, size) VALUES (?, ?, ?)
+                ON CONFLICT(sourceId, segment) DO UPDATE SET size = excluded.size
+                """, arguments: [sourceId, segment, size])
+        }
+    }
+
+    /// The kept lines of the source for these path keys only — a source's
+    /// whole ledger (200k lines) is never held at once. `device` narrows it
+    /// to one device's lines.
+    func ledgerLines(sourceId: String, pathKeys: [String], device: String? = nil) throws -> [String: [LedgerLine]] {
+        try database.reader.read { db in
+            var out: [String: [LedgerLine]] = [:]
+            for start in stride(from: 0, to: pathKeys.count, by: 500) {
+                let chunk = Array(pathKeys[start..<min(start + 500, pathKeys.count)])
+                let rows = try Row.fetchAll(db, sql: """
+                    SELECT pathKey, device, size, modifiedAt, sha256, recordedAt FROM hash_index_lines
+                    WHERE sourceId = ? AND pathKey IN (\(databaseQuestionMarks(count: chunk.count)))\(device == nil ? "" : " AND device = ?")
+                    """, arguments: StatementArguments([sourceId] + chunk + (device.map { [$0] } ?? [])))
+                for row in rows {
+                    let line = LedgerLine(pathKey: row["pathKey"], device: row["device"], size: row["size"],
+                                          modifiedAt: row["modifiedAt"], sha256: row["sha256"], recordedAt: row["recordedAt"])
+                    out[line.pathKey, default: []].append(line)
+                }
+            }
+            return out
+        }
+    }
+
+    /// A server file this device hashed itself, for its own ledger segment.
+    struct OwnServerHash: Sendable {
+        var relativePath: String
+        var size: Int64
+        var modifiedAt: Int
+        var sha256: String
+        /// When this device hashed it.
+        var hashedAt: Int
+    }
+
+    /// Files of the source this device hashed itself, with a write time —
+    /// what its ledger segments may carry.
+    func ownServerHashes(sourceId: String) throws -> [OwnServerHash] {
+        try database.reader.read { db in
+            try Row.fetchAll(db, sql: """
+                SELECT f.size, f.modifiedAt, f.sha256, f.hashedAt,
+                       CASE f.fileKey WHEN 'companion' THEN c.pairedPath ELSE c.relativePath END AS path
+                FROM copy_files f JOIN photo_copies c ON c.id = f.copyId
+                WHERE c.sourceId = ? AND c.kind = 'server' AND c.missingSince IS NULL
+                  AND f.origin = 'hashed' AND f.sha256 IS NOT NULL AND f.size IS NOT NULL AND f.modifiedAt IS NOT NULL
+                """, arguments: [sourceId]).compactMap { row in
+                guard let path: String = row["path"] else { return nil }
+                return OwnServerHash(relativePath: path, size: row["size"], modifiedAt: row["modifiedAt"], sha256: row["sha256"],
+                                     hashedAt: row["hashedAt"] ?? 0)
+            }
         }
     }
 

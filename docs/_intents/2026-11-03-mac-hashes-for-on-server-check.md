@@ -5,7 +5,7 @@
 | Tác giả | Hoang Tuan (người dùng) · Claude soạn |
 | Ngày | 2026-11-03 |
 | Trạng thái | accepted (2026-11-03, người dùng duyệt trong phiên; phạm vi v1 chỉ FS-19.07 theo đề xuất) |
-| Tiến độ | **đang làm** (2026-11-03) — task 2/8, 2/15 AC xanh; spec FS-19.07 §12; plan [2026-11-03-fs1907-shared-hashing](../_plans/2026-11-03-fs1907-shared-hashing.md) |
+| Tiến độ | **đang làm** (2026-11-03) — task 3/8, 7/15 AC xanh; spec FS-19.07 §12; plan [2026-11-03-fs1907-shared-hashing](../_plans/2026-11-03-fs1907-shared-hashing.md) |
 | Nguồn | phản hồi người dùng (2026-11-03, trong phiên FS-19.08) |
 | Spec sinh ra từ đây | [FS-19.07 §12](../02-functional-spec/FS-19-photo-sources/07-on-server-check.md#12-băm-dùng-chung--mac-băm-hộ-máy-khác-chỉ-đọc-2026-11-03) · [07b §4](../02-functional-spec/FS-19-photo-sources/07b-on-server-check-ac.md#4-băm-dùng-chung-12) |
 
