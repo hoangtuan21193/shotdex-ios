@@ -191,7 +191,10 @@ final class AlbumsModel {
     private func insertIndexedPanoramas(libraryQueries: LibraryQueries) async {
         var criteria = FilterCriteria()
         criteria.mediaSubtypes = [.panorama]
-        guard let count = try? libraryQueries.count(matching: criteria), count > 0 else { return }
+        // Off the main actor: a count over the whole index stalls the UI
+        // while the indexer is writing.
+        let counted = await Task.detached(priority: .userInitiated) { try? libraryQueries.count(matching: criteria) }.value
+        guard let count = counted, count > 0 else { return }
         let coverId = try? await libraryQueries
             .gridItems(matching: criteria, sort: .dateTakenNewest, limit: 1)
             .first?.assetId
