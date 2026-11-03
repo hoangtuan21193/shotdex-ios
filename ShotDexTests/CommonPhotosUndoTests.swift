@@ -271,12 +271,209 @@ import Testing
         #expect(try undoItems(fixture).map(\.status) == [.undone])
     }
 
-    /// An undo of a Move is refused before the run is touched (U3 adds it).
-    @Test func undoMoveRefusedUntouched() async throws {
+
+    // MARK: Undo Move
+
+    private func sources(_ fixture: Fixture, count: Int) -> [String: Data] {
+        var files: [String: Data] = [:]
+        for index in 1...count {
+            files["A/IMG_\(index).JPG"] = fixture.photos["IMG_\(index).JPG"]
+            files["B/IMG_\(index).JPG"] = fixture.photos["IMG_\(index).JPG"]
+        }
+        return files
+    }
+
+    /// AC-134: five Moved on one share — A's copies renamed back (no upload
+    /// for them), B's uploaded and read back; the destination empty.
+    @Test func undoMoveSameShare() async throws {
+        let fixture = try Fixture(count: 5)
+        let undoer = try await gathered(fixture, action: .move)
+        #expect(sourceFiles(fixture).isEmpty)
+        let before = fixture.nas.commands.count
+
+        try await undoer.run("U1")
+
+        #expect(sourceFiles(fixture) == sources(fixture, count: 5))
+        #expect(fixture.destinationFiles.isEmpty)
+        let commands = fixture.nas.commands.dropFirst(before)
+        #expect(commands.filter { $0.hasPrefix("upload ") }.allSatisfy { $0.contains("B/") })
+        #expect(commands.filter { $0.hasPrefix("upload ") }.count == 5)
+        #expect(commands.contains("move C/IMG_1.JPG → A/IMG_1.JPG"))
+        #expect(try undoItems(fixture).map(\.status) == Array(repeating: .undone, count: 5))
+        #expect(try fixture.items().allSatisfy { $0.status == .undone && $0.sources.allSatisfy { !$0.isRemoved } })
+    }
+
+    /// AC-135: B's old path holds other bytes — never written over; A's copy
+    /// goes back; the photo is never without a copy.
+    @Test func undoMoveTakenPathIsSkipped() async throws {
+        let fixture = try Fixture(count: 3)
+        let undoer = try await gathered(fixture, action: .move)
+        fixture.nas.put("B/IMG_2.JPG", Data("someone else".utf8))
+
+        try await undoer.run("U1")
+
+        #expect(fixture.nas.files["B/IMG_2.JPG"] == Data("someone else".utf8))
+        #expect(fixture.nas.files["A/IMG_2.JPG"] == fixture.photos["IMG_2.JPG"])
+        #expect(fixture.nas.files["B/IMG_2 (2).JPG"] == nil)
+        let rows = try undoItems(fixture)
+        #expect(rows.map(\.status) == [.undone, .failed, .undone])
+        #expect(rows[1].failure?.reason == .nameTaken)
+        #expect(rows[1].failure?.detail == "B/IMG_2.JPG")
+        // The run's row: A is back, B still removed — a later undo tries B again.
+        let original = try fixture.items()[1]
+        #expect(original.status == .moved)
+        #expect(original.sources.map(\.isRemoved) == [false, true])
+    }
+
+    /// AC-136: a cross-share Move (copied, not renamed): every copy is
+    /// uploaded; the destination copy goes only once all are back. Photo 2's
+    /// A copy reads back wrong: its destination copy stays, its part goes.
+    @Test func undoCrossShareMoveKeepsTheCopyUntilAllAreBack() async throws {
+        let fixture = try Fixture(count: 3)
+        fixture.nas.refusesMovesAcrossTopFolders = true
+        let undoer = try await gathered(fixture, action: .move)
+        #expect(try fixture.items().allSatisfy { $0.movedFrom == nil || $0.status == .moved })
+        fixture.nas.corruptReadBack = ["A/IMG_2.JPG.shotdex-part"]
+
+        try await undoer.run("U1")
+
+        #expect(fixture.nas.files["C/IMG_2.JPG"] == fixture.photos["IMG_2.JPG"])
+        #expect(fixture.nas.files["A/IMG_2.JPG"] == nil)
+        #expect(fixture.nas.files["A/IMG_2.JPG.shotdex-part"] == nil)
+        #expect(fixture.nas.files["C/IMG_1.JPG"] == nil && fixture.nas.files["C/IMG_3.JPG"] == nil)
+        for index in [1, 3] {
+            #expect(fixture.nas.files["A/IMG_\(index).JPG"] == fixture.photos["IMG_\(index).JPG"])
+            #expect(fixture.nas.files["B/IMG_\(index).JPG"] == fixture.photos["IMG_\(index).JPG"])
+        }
+        #expect(try undoItems(fixture).map(\.status) == [.undone, .failed, .undone])
+    }
+
+    /// AC-138, Move: each removed `.xmp` comes back beside its photo; the
+    /// one the run wrote in the destination goes.
+    @Test func undoMoveSidecarsGoBack() async throws {
         let fixture = try Fixture(count: 1)
+        fixture.nas.put("A/IMG_1.xmp", Data("rated".utf8))
+        fixture.nas.put("B/IMG_1.xmp", Data("rated".utf8))
+        let undoer = try await gathered(fixture, action: .move)
+        #expect(fixture.nas.files["A/IMG_1.xmp"] == nil && fixture.nas.files["B/IMG_1.xmp"] == nil)
+
+        try await undoer.run("U1")
+
+        #expect(fixture.nas.files["A/IMG_1.xmp"] == Data("rated".utf8))
+        #expect(fixture.nas.files["B/IMG_1.xmp"] == Data("rated".utf8))
+        #expect(fixture.destinationFiles.isEmpty)
+    }
+
+    /// The same bytes were in the destination before the Move: that file
+    /// stays; both copies are written back.
+    @Test func undoMoveLeavesWhatWasThere() async throws {
+        let fixture = try Fixture(count: 1)
+        fixture.nas.put("C/IMG_1.JPG", fixture.photos["IMG_1.JPG"]!)
         let undoer = try await gathered(fixture, action: .move)
 
-        await #expect(throws: CommonPhotosRunner.Stop.notResumable) { try await undoer.run("U1") }
-        #expect(try fixture.store.run(id: "U1")?.state == .running)
+        try await undoer.run("U1")
+
+        #expect(fixture.nas.files["C/IMG_1.JPG"] == fixture.photos["IMG_1.JPG"])
+        #expect(sourceFiles(fixture) == sources(fixture, count: 1))
+        #expect(try undoItems(fixture).map(\.status) == [.undone])
+    }
+
+    /// A destination copy edited since the Move: nothing is written back.
+    @Test func undoMoveOfAnEditedCopyDoesNothing() async throws {
+        let fixture = try Fixture(count: 1)
+        fixture.nas.refusesMovesAcrossTopFolders = true
+        let undoer = try await gathered(fixture, action: .move)
+        var edited = fixture.photos["IMG_1.JPG"]!
+        edited[10] ^= 1
+        fixture.nas.put("C/IMG_1.JPG", edited)
+
+        try await undoer.run("U1")
+
+        #expect(sourceFiles(fixture).isEmpty)
+        #expect(fixture.nas.files["C/IMG_1.JPG"] == edited)
+        #expect(try undoItems(fixture).first?.failure?.reason == .changedInShared)
+    }
+
+    /// The same bytes were in the destination before the Move and a source
+    /// `.xmp` was kept (so the row's reason is "sidecar not copied"): the
+    /// file that was there still stays.
+    @Test func whatWasThereStaysWhateverTheReason() async throws {
+        let fixture = try Fixture(count: 1)
+        fixture.nas.put("C/IMG_1.JPG", fixture.photos["IMG_1.JPG"]!)
+        fixture.nas.put("C/IMG_1.xmp", Data("theirs".utf8))
+        fixture.nas.put("A/IMG_1.xmp", Data("mine".utf8))
+        let undoer = try await gathered(fixture, action: .move)
+        #expect(try fixture.items().first?.failure?.reason == .sidecarNotCopied)
+        #expect(try fixture.items().first?.destinationWasThere == true)
+
+        try await undoer.run("U1")
+
+        #expect(fixture.nas.files["C/IMG_1.JPG"] == fixture.photos["IMG_1.JPG"])
+        #expect(fixture.nas.files["C/IMG_1.xmp"] == Data("theirs".utf8))
+        #expect(sourceFiles(fixture)["A/IMG_1.JPG"] == fixture.photos["IMG_1.JPG"])
+        #expect(sourceFiles(fixture)["B/IMG_1.JPG"] == fixture.photos["IMG_1.JPG"])
+    }
+
+    /// A kill after the destination copy was set aside: resume finishes the
+    /// removal, nothing stays hidden.
+    @Test func undoMoveResumesASetAsideDestination() async throws {
+        let fixture = try Fixture(count: 1)
+        fixture.nas.refusesMovesAcrossTopFolders = true
+        let undoer = try await gathered(fixture, action: .move)
+        let photo = fixture.photos["IMG_1.JPG"]!
+        fixture.nas.put("A/IMG_1.JPG", photo)
+        fixture.nas.put("B/IMG_1.JPG", photo)
+        var row = try #require(try undoItems(fixture).first)
+        row.sources = row.sources.map { var source = $0; source.isRemoved = false; return source }
+        try fixture.store.update(row)
+        try await fixture.nas.move("C/IMG_1.JPG", to: "C/IMG_1.JPG" + CommonPhotosRunner.removingSuffix)
+
+        try await undoer.run("U1")
+
+        #expect(fixture.nas.files.keys.filter { $0.hasPrefix("C/") && !$0.hasSuffix(".csv") }.isEmpty)
+        #expect(try undoItems(fixture).map(\.status) == [.undone])
+    }
+
+    /// The rename back refused: the copy is written back instead.
+    @Test func refusedRenameBackIsWrittenInstead() async throws {
+        let fixture = try Fixture(count: 1)
+        let undoer = try await gathered(fixture, action: .move)
+        fixture.nas.refusesMovesAcrossTopFolders = true
+
+        try await undoer.run("U1")
+
+        #expect(sourceFiles(fixture) == sources(fixture, count: 1))
+        #expect(fixture.destinationFiles.isEmpty)
+        #expect(try undoItems(fixture).map(\.status) == [.undone])
+    }
+
+    /// A copy put back earlier and edited since: the destination copy, the
+    /// last of the original bytes, stays.
+    @Test func editedPutBackCopyKeepsTheDestination() async throws {
+        let fixture = try Fixture(count: 1)
+        fixture.nas.refusesMovesAcrossTopFolders = true
+        let undoer = try await gathered(fixture, action: .move)
+        var edited = fixture.photos["IMG_1.JPG"]!
+        edited[3] ^= 1
+        fixture.nas.put("A/IMG_1.JPG", edited)
+        fixture.nas.put("B/IMG_1.JPG", fixture.photos["IMG_1.JPG"]!)
+        var row = try #require(try undoItems(fixture).first)
+        row.sources = row.sources.map { var source = $0; source.isRemoved = false; return source }
+        try fixture.store.update(row)
+
+        try await undoer.run("U1")
+
+        #expect(fixture.nas.files["C/IMG_1.JPG"] == fixture.photos["IMG_1.JPG"])
+        #expect(try undoItems(fixture).first?.failure?.reason == .changedOnServer)
+    }
+
+    /// A Move that removed copies and then failed can be undone.
+    @Test func failedMoveWithRemovedCopiesIsUndoable() throws {
+        var item = CommonPhotosItem(runId: "R1", position: 0, sha256: "a", size: 1,
+                                    sources: [.init(path: "A/a", size: 1, modifiedAt: 1), .init(path: "B/a", size: 1, modifiedAt: 1)],
+                                    status: .failed, destinationPath: "C/a")
+        #expect(!item.isUndoable)
+        item.sources[1].isRemoved = true
+        #expect(item.isUndoable)
     }
 }

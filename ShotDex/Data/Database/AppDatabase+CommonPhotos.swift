@@ -74,6 +74,9 @@ extension AppDatabase {
                 // the write, and its SHA-256.
                 t.add(column: "sidecarPlaced", .text)
                 t.add(column: "sidecarSHA256", .text)
+                // The destination held these bytes before the run: that
+                // file is not the run's, and undo leaves it.
+                t.add(column: "destinationWasThere", .boolean).notNull().defaults(to: false)
             }
             try db.create(table: "common_photo_history_moves") { t in
                 t.autoIncrementedPrimaryKey("id")

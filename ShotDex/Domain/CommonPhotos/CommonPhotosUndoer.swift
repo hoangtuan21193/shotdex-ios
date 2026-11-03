@@ -13,6 +13,14 @@ import Foundation
 /// make it vanish), then deleted. The `.xmp` the run wrote goes with it,
 /// unless another photo of the run still needs it.
 ///
+/// Undo Move: each copy the run removed is written back from the bytes in
+/// the destination — uploaded as a part, read back, then given its name —
+/// unless its old path now holds other bytes, which are never written over.
+/// The copy the run renamed into the destination is renamed back when its
+/// old path is free. The destination copy goes last, and only once every
+/// removed copy is back; at every step the photo has at least one checked
+/// copy on the server.
+///
 /// Every row done here is written back to the run's own row as `undone`,
 /// so a second undo never takes the same photo back twice.
 struct CommonPhotosUndoer: Sendable {
@@ -21,6 +29,8 @@ struct CommonPhotosUndoer: Sendable {
     /// Where a photo sits on this Mac between download and upload (Undo
     /// Move) — one at a time.
     let workDirectory: URL
+    /// Free bytes on this Mac; nil = unknown.
+    var freeBytes: @Sendable () -> Int64? = { nil }
 
     typealias Progress = CommonPhotosRunner.Progress
     typealias Stop = CommonPhotosRunner.Stop
@@ -35,9 +45,6 @@ struct CommonPhotosUndoer: Sendable {
         defer { CommonPhotosRunner.release(runId: runId, in: store.database) }
         guard let run = try store.run(id: runId) else { throw CommonPhotosStore.RunMissing(runId: runId) }
         guard run.canResume, let originalId = run.undoOf else { throw Stop.notResumable }
-        // Undo Move lands with U3 of the plan; until then it is refused
-        // before anything is touched.
-        guard run.action == .copy else { throw Stop.notResumable }
         try store.markState(.running, runId: runId)
         // Rows a quit left undone here but not yet on the run's own row.
         try store.markUndone(runId: originalId, positions: try store.items(runId: runId).filter { $0.status == .undone }.map(\.position))
@@ -54,7 +61,7 @@ struct CommonPhotosUndoer: Sendable {
                 case .copy:
                     try await undoCopy(&items[index], originalId: originalId, originals: originals, state: state, progress: progress)
                 case .move:
-                    throw Stop.notResumable
+                    try await undoMove(&items[index], originalId: originalId, originals: originals, state: state, progress: progress)
                 }
                 if items[index].status == .undone { originals[items[index].position]?.status = .undone }
                 state.doneCount += 1
@@ -67,6 +74,201 @@ struct CommonPhotosUndoer: Sendable {
             try store.markState(.finished, runId: runId)
         } catch {
             if let state = try? store.run(id: runId)?.state, state != .finishing { try? store.markState(.paused, runId: runId) }
+            throw error
+        }
+    }
+
+    // MARK: Undo Move
+
+    /// What an old path holds now.
+    private enum PathState { case free, same, other }
+
+    private func state(of path: String, size: Int64, sha256: String) async throws -> PathState {
+        guard let found = try await client.fileSize(at: path) else { return .free }
+        guard found == size, try await client.sha256(of: path, progress: { _ in }) == sha256 else { return .other }
+        return .same
+    }
+
+    /// One photo, Move. Progress lives in the row's sources (`isRemoved`
+    /// cleared as each copy is back) and on the server, so a stop anywhere
+    /// resumes by looking again.
+    private func undoMove(_ item: inout CommonPhotosItem, originalId: String, originals: [Int: CommonPhotosItem],
+                          state progressState: Progress, progress: @escaping @Sendable (Progress) -> Void) async throws {
+        guard let placed = item.destinationPath, let original = originals[item.position] else {
+            try finish(&item, .failed, reason: .unreadableRecord)
+            return
+        }
+        // The same bytes were in the destination before the run: that file
+        // is not the run's and stays.
+        let wasThere = original.destinationWasThere || item.destinationWasThere || original.failure?.reason == .alreadyThere
+        let name = ServerUploadPath.lastComponent(of: placed)
+        let itemSize = item.size
+        let report = { @Sendable (step: Progress.Step, fraction: Double) in
+            var moving = progressState
+            moving.currentName = name
+            moving.currentStep = step
+            moving.doneBytes += Int64(Double(itemSize) * min(1, max(0, fraction)))
+            progress(moving)
+        }
+        let local = workDirectory.appendingPathComponent(UUID().uuidString + "-" + name)
+        defer { try? FileManager.default.removeItem(at: local) }
+        var hasLocal = false
+        var skipped: [String] = []
+        var writing: String?
+        let write = VerifiedRemoteWrite(client: client)
+        do {
+            report(.checking, 0)
+            try FileManager.default.createDirectory(at: workDirectory, withIntermediateDirectories: true)
+            let renamedFrom = item.movedFrom.flatMap { from in item.sources.firstIndex { $0.path == from && $0.isRemoved } }
+            let uploads = item.sources.indices.filter { item.sources[$0].isRemoved && $0 != renamedFrom }
+                + (renamedFrom.map { [$0] } ?? [])
+            var placedIsGone = false
+            for (step, index) in uploads.enumerated() {
+                try Task.checkCancellation()
+                let path = item.sources[index].path
+                // This copy's share of the photo's bar.
+                let share = { (fraction: Double) in (Double(step) + fraction) / Double(uploads.count) }
+                report(.checking, share(0))
+                switch try await state(of: path, size: item.size, sha256: item.sha256) {
+                case .same:
+                    break
+                case .other:
+                    skipped.append(path)
+                    continue
+                case .free:
+                    var renamedBack = false
+                    if index == renamedFrom, !wasThere,
+                       try await checks.holds(placed, size: item.size, sha256: item.sha256) {
+                        // Renamed back: no bytes travel. Refused (the
+                        // share's rules changed), it is written back instead.
+                        report(.moving, share(0))
+                        do {
+                            try await client.move(placed, to: path)
+                        } catch let error as RemoteFileError where !error.stopsBatch {
+                            guard try await client.fileSize(at: path) == nil else { throw error }
+                        }
+                        if try await client.fileSize(at: path) == item.size {
+                            renamedBack = true
+                            placedIsGone = true
+                        }
+                    }
+                    if !renamedBack {
+                        if let free = freeBytes(), free - item.size < BackupRunner.minimumFreeBytes {
+                            throw Stop.noRoom(needed: item.size + BackupRunner.minimumFreeBytes - free)
+                        }
+                        if !hasLocal {
+                            report(.downloading, share(0))
+                            guard try await fetch(item, placed: placed, to: local) else {
+                                try finish(&item, .failed, reason: .changedInShared)
+                                return
+                            }
+                            hasLocal = true
+                        }
+                        writing = path
+                        let size = Double(max(1, item.size))
+                        try await write.uploadPart(local, for: path, progress: { report(.uploading, share(Double($0) / size / 2)) })
+                        guard try await write.readBackSHA256(for: path, progress: { report(.readingBack, share(0.5 + Double($0) / size / 2)) })
+                                == item.sha256 else {
+                            throw RemoteFileError.other("checksum mismatch")
+                        }
+                        try await write.moveIntoPlace(path, replacing: false)
+                        writing = nil
+                    }
+                }
+                try await putBackSidecar(of: item.sources[index], item: item)
+                item.sources[index].isRemoved = false
+                try store.finishUndo(item, originalRunId: originalId)
+            }
+            // The destination copy goes last: the run's, every removed copy
+            // back, and each of them checked again now — a copy put back in
+            // an earlier session may have been edited since.
+            if !wasThere, !placedIsGone, skipped.isEmpty {
+                let aside = placed + CommonPhotosRunner.removingSuffix
+                let atPlaced = try await client.fileSize(at: placed) != nil
+                var atAside = false
+                if !atPlaced { atAside = try await client.fileSize(at: aside) != nil }
+                if atPlaced || atAside {
+                    let others = try await presentSources(of: item)
+                    guard others.count == item.sources.count(where: { !$0.isRemoved }) else {
+                        if atAside { await putBackIfAside(aside, placed: placed) }
+                        try finish(&item, .failed, reason: .changedOnServer)
+                        try store.finishUndo(item, originalRunId: originalId)
+                        return
+                    }
+                    guard try await checks.holds(atPlaced ? placed : aside, size: item.size, sha256: item.sha256) else {
+                        if atAside { await putBackIfAside(aside, placed: placed) }
+                        try finish(&item, .failed, reason: .changedInShared)
+                        try store.finishUndo(item, originalRunId: originalId)
+                        return
+                    }
+                    report(.removing, 1)
+                    do {
+                        // Set aside by a stop before it was deleted, or now.
+                        if atPlaced { try await client.move(placed, to: aside) }
+                        try await removeAside(aside, restoring: placed, others: others)
+                    } catch {
+                        await putBackIfAside(aside, placed: placed)
+                        throw error
+                    }
+                }
+            }
+            if skipped.isEmpty {
+                try await finishPhoto(&item, originalId: originalId, originals: originals)
+            } else {
+                // The copies that are back stay back; the photo is still
+                // whole in the destination or where it was renamed to.
+                item.status = .failed
+                item.reason = CommonPhotosItem.reason(.nameTaken, skipped.joined(separator: "; "))
+                try store.finishUndo(item, originalRunId: originalId)
+            }
+        } catch {
+            if let writing { await write.discardPart(for: writing) }
+            guard let remote = error as? RemoteFileError, !remote.stopsBatch else { throw error }
+            // A copy that landed before the error (a rename back whose
+            // check failed) is recorded as back, so the run's row says so.
+            for index in item.sources.indices where item.sources[index].isRemoved {
+                if (try? await state(of: item.sources[index].path, size: item.size, sha256: item.sha256)) == .same {
+                    item.sources[index].isRemoved = false
+                }
+            }
+            try finish(&item, .failed, reason: .serverError, detail: remote.localizedDescription)
+            try store.finishUndo(item, originalRunId: originalId)
+        }
+    }
+
+    /// The photo's bytes into `local`, from the destination or a copy
+    /// already put back — whichever still hashes to the photo's SHA-256.
+    private func fetch(_ item: CommonPhotosItem, placed: String, to local: URL) async throws -> Bool {
+        let candidates = [placed] + item.sources.filter { !$0.isRemoved }.map(\.path)
+        for path in candidates {
+            guard try await client.fileSize(at: path) == item.size else { continue }
+            if try await client.download(path, to: local, progress: { _ in }) == item.sha256 { return true }
+        }
+        return false
+    }
+
+    /// A source's `.xmp`, removed by the Move, written back from the one in
+    /// the destination when its old name is free. Best effort: a sidecar
+    /// that will not go back never holds the photo up.
+    private func putBackSidecar(of source: CommonPhotosItem.Source, item: CommonPhotosItem) async throws {
+        guard let sidecar = source.sidecar, let there = Self.sidecarInDestination(of: item) else { return }
+        let write = VerifiedRemoteWrite(client: client)
+        let local = workDirectory.appendingPathComponent(UUID().uuidString + ".xmp")
+        defer { try? FileManager.default.removeItem(at: local) }
+        do {
+            guard try await client.fileSize(at: sidecar) == nil, try await client.fileSize(at: there) != nil else { return }
+            let sha256 = try await client.download(there, to: local, progress: { _ in })
+            // Written by the run and edited since: not what was removed.
+            if item.sidecarPlaced == there, let recorded = item.sidecarSHA256, recorded != sha256 { return }
+            try await write.uploadPart(local, for: sidecar, progress: { _ in })
+            guard try await write.readBackSHA256(for: sidecar, progress: { _ in }) == sha256 else {
+                await write.discardPart(for: sidecar)
+                return
+            }
+            try await write.moveIntoPlace(sidecar, replacing: false)
+        } catch {
+            await write.discardPart(for: sidecar)
+            if let remote = error as? RemoteFileError, !remote.stopsBatch { return }
             throw error
         }
     }

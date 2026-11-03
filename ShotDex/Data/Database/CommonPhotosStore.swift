@@ -154,19 +154,24 @@ struct CommonPhotosStore: Sendable {
         }
     }
 
-    /// An undo row done, and the row it undoes marked `undone` — in one
-    /// write, so a quit never leaves one without the other.
+    /// An undo row written, and the row it undoes brought in line — in one
+    /// write, so a quit never leaves one without the other: each copy the
+    /// undo put back is no longer removed there, and an undone row is
+    /// `undone` there too.
     func finishUndo(_ item: CommonPhotosItem, originalRunId: String, now: Int = Int(Date().timeIntervalSince1970)) throws {
         var item = item
         item.updatedAt = now
         do {
             try database.writer.write { db in
                 try item.update(db)
-                if item.status == .undone {
-                    try db.execute(sql: """
-                        UPDATE common_photo_items SET status = ?, updatedAt = ? WHERE runId = ? AND position = ?
-                        """, arguments: [CommonPhotosItem.Status.undone.rawValue, now, originalRunId, item.position])
+                guard var original = try CommonPhotosItem.fetchOne(db, key: ["runId": originalRunId, "position": item.position]) else { return }
+                let restored = Set(item.sources.filter { !$0.isRemoved }.map(\.path))
+                for index in original.sources.indices where restored.contains(original.sources[index].path) {
+                    original.sources[index].isRemoved = false
                 }
+                if item.status == .undone { original.status = .undone }
+                original.updatedAt = now
+                try original.update(db)
             }
         } catch is RecordError {
             throw RunMissing(runId: item.runId)

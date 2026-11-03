@@ -24,7 +24,7 @@ loop: mỗi vòng đọc nó trước, ghi lại sau.
 |---|---|---|---|
 | U1 | xong | (xem git log) | v47: `undoOf`, `sidecarPlaced`/`sidecarSHA256`, bảng `common_photo_history_moves`; store `startUndo`, `recentRuns`, dọn trong `markState`; runner ghi sidecar trước khi ghi |
 | U2 | xong | (xem git log) | `CommonPhotosUndoer` (Copy) + `CommonPhotosServerChecks` tách từ runner; mọi bản nguồn kiểm lại sau khi để riêng; mọi lỗi sau khi để riêng thì trả file về tên cũ (detached); sidecar chỉ xoá khi còn bản nguồn cùng byte; `finishUndo` ghi 2 hàng một transaction |
-| U3 | chưa | | |
+| U3 | xong | (xem git log) | Undo Move: trả B bằng file part, đổi chỗ A về (bị từ chối thì ghi lại); đích xoá cuối, khi mọi bản đã về và kiểm lại (mtime hoặc SHA); `destinationWasThere` (cột mới trong v47, sửa tại chỗ vì chưa ship) thay cho việc đọc reason `alreadyThere`; hàng Move Failed còn bản đã xoá cũng hoàn tác được |
 | U4 | chưa | | |
 | U5 | chưa | | |
 | U6 | chưa | | |

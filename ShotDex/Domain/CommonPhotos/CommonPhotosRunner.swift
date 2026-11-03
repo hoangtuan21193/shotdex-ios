@@ -301,6 +301,7 @@ struct CommonPhotosRunner: Sendable {
             if try await client.sha256(of: there, progress: { _ in }) == item.sha256 {
                 item.destinationPath = there
                 try await placeSidecar(&item, besides: ServerUploadPath.lastComponent(of: there), into: destination)
+                item.destinationWasThere = true
                 try finish(&item, skipped, reason: .alreadyThere)
                 return
             }
@@ -431,6 +432,7 @@ struct CommonPhotosRunner: Sendable {
             }
             if alreadyThere {
                 item.destinationPath = destination.path(of: name)
+                item.destinationWasThere = true
                 try finish(&item, .placed, reason: .alreadyThere)
                 provedThisRun = true
             } else {

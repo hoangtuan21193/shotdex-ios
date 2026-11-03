@@ -70,6 +70,11 @@ struct CommonPhotosItem: Hashable, Sendable {
     /// removes only a sidecar the run put there.
     var sidecarPlaced: String?
     var sidecarSHA256: String?
+    /// The destination already held these bytes before the run (Skipped,
+    /// or a Move that removed every source): that file is not the run's,
+    /// and undo never removes it. Kept apart from `reason`, which a later
+    /// step may overwrite.
+    var destinationWasThere = false
     var updatedAt: Int
 
     init(runId: String, position: Int, sha256: String, size: Int64, sources: [Source], status: Status = .pending,
@@ -104,7 +109,12 @@ struct CommonPhotosItem: Hashable, Sendable {
     var isDone: Bool { [.copied, .moved, .skipped, .failed, .undone].contains(status) }
 
     /// What an undo can take back: a photo this run put in the destination.
-    var isUndoable: Bool { status == .copied || status == .moved }
+    /// A Move that removed some copies and then failed counts too: the
+    /// photo is whole in the destination and its removed copies can go back.
+    var isUndoable: Bool {
+        status == .copied || status == .moved
+            || (status == .failed && destinationPath != nil && sources.contains(where: \.isRemoved))
+    }
 }
 
 extension CommonPhotosItem: FetchableRecord, PersistableRecord {
@@ -129,6 +139,7 @@ extension CommonPhotosItem: FetchableRecord, PersistableRecord {
         reason = decoded == nil ? Reason.unreadableRecord.rawValue : row["reason"] as String?
         sidecarPlaced = row["sidecarPlaced"]
         sidecarSHA256 = row["sidecarSHA256"]
+        destinationWasThere = row["destinationWasThere"] ?? false
         updatedAt = row["updatedAt"]
     }
 
@@ -145,6 +156,7 @@ extension CommonPhotosItem: FetchableRecord, PersistableRecord {
         container["reason"] = reason
         container["sidecarPlaced"] = sidecarPlaced
         container["sidecarSHA256"] = sidecarSHA256
+        container["destinationWasThere"] = destinationWasThere
         container["updatedAt"] = updatedAt
     }
 }
