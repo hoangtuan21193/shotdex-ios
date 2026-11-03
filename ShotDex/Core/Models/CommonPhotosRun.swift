@@ -31,6 +31,10 @@ struct CommonPhotosRun: Hashable, Sendable, Identifiable {
     /// The run this one undoes (FS-19.08 §6b); nil for a run that gathers.
     /// Folders, destination and action are the undone run's.
     var undoOf: String?
+    /// Keep gathering (FS-19.08 §6c): the set's watch and the day this run
+    /// gathers for; nil for a run started from the sheet.
+    var watchId: String?
+    var day: String?
     /// False when a stored value could not be read back (folders, action):
     /// the banner offers Discard only, never Resume. Not stored.
     var isReadable = true
@@ -83,6 +87,8 @@ extension CommonPhotosRun: FetchableRecord, PersistableRecord {
         updatedAt = row["updatedAt"]
         csvPath = row["csvPath"]
         undoOf = row["undoOf"]
+        watchId = row["watchId"]
+        day = row["day"]
     }
 
     func encode(to container: inout PersistenceContainer) {
@@ -96,6 +102,8 @@ extension CommonPhotosRun: FetchableRecord, PersistableRecord {
         container["updatedAt"] = updatedAt
         container["csvPath"] = csvPath
         container["undoOf"] = undoOf
+        container["watchId"] = watchId
+        container["day"] = day
     }
 }
 

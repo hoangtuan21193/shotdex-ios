@@ -71,6 +71,8 @@ private struct MacCommonPhotosSheetContent: View {
     @State private var startError: String?
     /// The run is being written; a second click does nothing.
     @State private var isStarting = false
+    /// Keep gathering (FS-19.08 §6c): saved when the run starts.
+    @State private var keepsGathering = false
 
     /// Board `MAC_CommonPhotos`: the sheet at 640×560, labels in a 64pt column.
     static let size = CGSize(width: 640, height: 560)
@@ -116,8 +118,12 @@ private struct MacCommonPhotosSheetContent: View {
             Divider().padding(.vertical, 12)
             results
             Spacer().frame(height: 12)
+            keepGatheringRow
+            Spacer().frame(height: 8)
             footer
         }
+        // The set's own choice, read again whenever the set changes.
+        .task(id: "\(model.connectionId)|\(model.folders)|\(model.destination ?? "")") { readKeepGathering() }
         .padding(.horizontal, 24)
         .padding(.vertical, 20)
         .frame(width: Self.size.width, height: Self.size.height)
@@ -504,6 +510,50 @@ private struct MacCommonPhotosSheetContent: View {
         .accessibilityLabel("\(label), \(value)")
     }
 
+    // MARK: Keep gathering (FS-19.08 §6c)
+
+    private var keepGatheringRow: some View {
+        HStack(spacing: 8) {
+            Toggle(String(localized: "Keep gathering new photos", comment: "Mac common photos sheet: the helper runs this set again on its own"),
+                   isOn: $keepsGathering)
+                .toggleStyle(.checkbox)
+                .fixedSize()
+            Text("Every 15 minutes while this Mac is plugged in.", comment: "Mac common photos sheet: when Keep gathering runs")
+                .font(.callout).foregroundStyle(.secondary).lineLimit(1)
+        }
+        .disabled(model.destination == nil)
+    }
+
+    private func readKeepGathering() {
+        guard let destination = model.destination else { return keepsGathering = false }
+        let watch = try? CommonPhotosWatchStore(database: dependencies.database)
+            .watch(connectionId: model.connectionId, folders: model.folders, destination: destination)
+        keepsGathering = (watch ?? nil)?.isOn ?? false
+    }
+
+    /// The choice, saved as the run starts: on, the helper runs the set
+    /// from now on with this run's action; off, a set that was gathered
+    /// stops.
+    @discardableResult
+    private func saveKeepGathering() -> Bool {
+        guard let destination = model.destination else { return true }
+        let store = CommonPhotosWatchStore(database: dependencies.database)
+        do {
+            if keepsGathering {
+                try store.keepGathering(connectionId: model.connectionId, folders: model.folders, destination: destination,
+                                        action: model.action)
+            } else if let watch = try store.watch(connectionId: model.connectionId, folders: model.folders, destination: destination),
+                      watch.isOn {
+                try store.stopGathering(id: watch.id)
+            }
+        } catch {
+            startError = String(localized: "The run started, but Keep gathering couldn't be saved: \(error.localizedDescription)",
+                                comment: "Mac common photos sheet: saving Keep gathering failed")
+            return false
+        }
+        return true
+    }
+
     // MARK: Footer
 
     private var footer: some View {
@@ -606,6 +656,9 @@ private struct MacCommonPhotosSheetContent: View {
                 startError = problem
                 return
             }
+            // Saved once the run is under way; a failure keeps the sheet
+            // open to say so.
+            guard saveKeepGathering() else { return }
             close()
             // The run's window opens as it starts (FS-19.08 §7).
             openWindow(id: MacCommonPhotosRunWindow.id, value: made.run.id)

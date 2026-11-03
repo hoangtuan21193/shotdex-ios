@@ -139,4 +139,17 @@ extension AppDatabase {
             }
         }
     }
+
+    /// FS-19.08 §6c: a run Keep gathering made belongs to its set and its
+    /// day — every pass of a day adds its photos to that one run.
+    static func registerCommonPhotosDayRuns(_ migrator: inout DatabaseMigrator) {
+        migrator.registerMigration("v54-commonPhotosDayRuns") { db in
+            try db.alter(table: "common_photo_runs") { t in
+                t.add(column: "watchId", .text)
+                // `yyyy-MM-dd`, the Mac's time zone when the pass started.
+                t.add(column: "day", .text)
+            }
+            try db.create(index: "common_photo_runs_day", on: "common_photo_runs", columns: ["watchId", "day"])
+        }
+    }
 }

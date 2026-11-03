@@ -229,9 +229,16 @@ struct CommonPhotosRunner: Sendable {
         // The name is recorded before the upload: a quit mid-write resumes
         // into the same file rather than leaving a second one beside it.
         let recorded = try store.run(id: run.id)?.csvPath
-        if let recorded, try await client.fileSize(at: recorded) != nil { return recorded }
-        let target = recorded ?? ServerUploadPath.join(destination.folder, ServerUploadPath.nextFreeName(
-            for: CommonPhotosLog.csvName(at: now(), timeZone: timeZone), existing: destination.names))
+        // A day of Keep gathering (FS-19.08 §6c) writes its one log again
+        // after every pass, with every photo of the day.
+        let isDay = run.day != nil
+        if !isDay, let recorded, try await client.fileSize(at: recorded) != nil { return recorded }
+        let fresh = run.day.map(CommonPhotosLog.dayCSVName) ?? CommonPhotosLog.csvName(at: now(), timeZone: timeZone)
+        // The day's log keeps its one name: it is replaced, never doubled.
+        // Lost halfway (removed, not yet moved in), it is written again from
+        // the database by the next pass or a Resume.
+        let target = recorded ?? (isDay ? ServerUploadPath.join(destination.folder, fresh)
+            : ServerUploadPath.join(destination.folder, ServerUploadPath.nextFreeName(for: fresh, existing: destination.names)))
         let name = ServerUploadPath.lastComponent(of: target)
         try store.markState(.finishing, runId: run.id, csvPath: target)
         let local = workDirectory.appendingPathComponent(UUID().uuidString + ".csv")
@@ -245,7 +252,7 @@ struct CommonPhotosRunner: Sendable {
                 await write.discardPart(for: target)
                 throw RemoteFileError.other("checksum mismatch")
             }
-            try await write.moveIntoPlace(target, replacing: false)
+            try await write.moveIntoPlace(target, replacing: isDay)
         } catch {
             await write.discardPart(for: target)
             throw error

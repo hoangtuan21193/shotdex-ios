@@ -65,12 +65,13 @@ struct CommonPhotosStore: Sendable {
 
     /// The gathering runs whose group is kept: the newest `keptRunCount`
     /// whose every run is over, plus every group with a run still going.
-    /// A group is as new as its newest run — an undo just done keeps the
-    /// run it undid — then by insertion, so runs started in the same second
-    /// still fall in one order.
+    /// A group is as new as its newest run's last change — an undo just
+    /// done keeps the run it undid, and a day of Keep gathering stays as new
+    /// as its last pass (FS-19.08 §6c) — then by insertion, so runs started
+    /// in the same second still fall in one order.
     private static func keptRoots(_ db: Database) throws -> Set<String> {
         let rows = try Row.fetchAll(db, sql: """
-            SELECT id, undoOf, state FROM common_photo_runs ORDER BY createdAt DESC, rowid DESC
+            SELECT id, undoOf, state FROM common_photo_runs ORDER BY updatedAt DESC, createdAt DESC, rowid DESC
             """)
         let over: Set<String> = [CommonPhotosRun.State.stopped.rawValue, CommonPhotosRun.State.finished.rawValue]
         let runs = rows.map { (id: $0["id"] as String, root: ($0["undoOf"] as String?) ?? ($0["id"] as String),
@@ -178,22 +179,29 @@ struct CommonPhotosStore: Sendable {
                                                                           destination: $0.destination) == key }
             var out = Gathered()
             let decoder = JSONDecoder()
+            // A photo Keep gathering put there and the user undid stays
+            // undone: gathering it again 15 minutes later would undo the undo.
             let done = [CommonPhotosItem.Status.copied, .moved, .skipped].map(\.rawValue)
+                + [CommonPhotosItem.Status.undone.rawValue]
             for run in runs {
                 // The sources column only: a set's runs can hold many photos.
                 let rows = try Row.fetchAll(db, sql: """
-                    SELECT sources, size, destinationPath, sha256 FROM common_photo_items
+                    SELECT sources, size, destinationPath, sha256, status FROM common_photo_items
                     WHERE runId = ? AND status IN (\(databaseQuestionMarks(count: done.count)))
                     """, arguments: StatementArguments([run.id] + done))
                 guard !rows.isEmpty else { continue }
                 for row in rows {
-                    if let inDestination {
+                    let undone = (row["status"] as String?) == CommonPhotosItem.Status.undone.rawValue
+                    // Undone in a run from the sheet: offered again, as before.
+                    if undone, run.watchId == nil { continue }
+                    if let inDestination, !undone {
                         // Placed where, and is it still there at its size?
                         guard let placed: String = row["destinationPath"], let size: Int64 = row["size"],
                               inDestination[ServerUploadPath.lastComponent(of: placed).lowercased()]?.contains(size) == true
                         else { continue }
                     }
-                    if let sha: String = row["sha256"] { out.photos.insert(sha) }
+                    // Seen, not gathered: not in "N already gathered".
+                    if !undone, let sha: String = row["sha256"] { out.photos.insert(sha) }
                     let list: String = row["sources"]
                     guard let sources = try? decoder.decode([CommonPhotosItem.Source].self, from: Data(list.utf8)) else { continue }
                     for source in sources {
@@ -328,5 +336,67 @@ struct CommonPhotosStore: Sendable {
     /// runs — and nothing on the server changes.
     func discard(runId: String) throws {
         _ = try database.writer.write { db in try CommonPhotosRun.deleteOne(db, key: runId) }
+    }
+}
+
+// MARK: - Keep gathering's day runs (FS-19.08 §6c)
+
+extension CommonPhotosStore {
+    /// `yyyy-MM-dd` in the Mac's time zone: the day a pass gathers for.
+    static func day(of date: Date, timeZone: TimeZone = .current) -> String {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = timeZone
+        let parts = calendar.dateComponents([.year, .month, .day], from: date)
+        return String(format: "%04d-%02d-%02d", parts.year ?? 0, parts.month ?? 0, parts.day ?? 0)
+    }
+
+    /// The day's run is still going or being undone: nothing added.
+    struct DayRunBusy: Error, Equatable { let runId: String }
+
+    /// Puts what a pass found into the set's run of the day — a new one for
+    /// the day's first pass, or after the user stopped the day's run — and
+    /// returns its id, ready to run. Positions follow the ones already
+    /// there. Throws `DayRunBusy` while that run still goes.
+    func gatherIntoDay(_ run: CommonPhotosRun, items: [CommonPhotosItem], watchId: String, day: String,
+                       now: Int = Int(Date().timeIntervalSince1970)) throws -> String {
+        precondition(!items.isEmpty, "a day's run gains photos, never an empty pass")
+        return try database.writer.write { db in
+            let today = try CommonPhotosRun
+                .filter(Column("watchId") == watchId && Column("day") == day && Column("undoOf") == nil)
+                .order(Column("createdAt").desc)
+                .fetchOne(db)
+            if let today {
+                // Still going (running, paused, finishing) or being undone:
+                // this pass adds nothing — the next one will find the photos.
+                let undoing = try Bool.fetchOne(db, sql: """
+                    SELECT EXISTS (SELECT 1 FROM common_photo_runs WHERE undoOf = ? AND state NOT IN ('finished', 'stopped'))
+                    """, arguments: [today.id]) ?? false
+                if today.isUnfinished || undoing { throw DayRunBusy(runId: today.id) }
+            }
+            // A day the user stopped gets a run of its own for what follows.
+            if let open = today, open.state == .finished {
+                let next = (try Int.fetchOne(db, sql: "SELECT MAX(position) FROM common_photo_items WHERE runId = ?",
+                                             arguments: [open.id]) ?? -1) + 1
+                for (offset, item) in items.enumerated() {
+                    var item = item
+                    item.runId = open.id
+                    item.position = next + offset
+                    try item.insert(db)
+                }
+                try db.execute(sql: "UPDATE common_photo_runs SET state = ?, updatedAt = ? WHERE id = ?",
+                               arguments: [CommonPhotosRun.State.running.rawValue, now, open.id])
+                return open.id
+            }
+            var run = run
+            run.watchId = watchId
+            run.day = day
+            try run.insert(db)
+            for item in items {
+                var item = item
+                item.runId = run.id
+                try item.insert(db)
+            }
+            return run.id
+        }
     }
 }

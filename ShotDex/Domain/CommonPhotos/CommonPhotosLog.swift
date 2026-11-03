@@ -98,6 +98,12 @@ enum CommonPhotosLog {
     }
 
     /// `ShotDex Common Photos 2026-11-02 1430.csv`, in this Mac's time.
+    /// A Keep-gathering day's log (FS-19.08 §6c), written again after every
+    /// pass of the day: `ShotDex Common Photos 2026-11-03 auto.csv`.
+    static func dayCSVName(_ day: String) -> String {
+        "ShotDex Common Photos \(day) auto.csv"
+    }
+
     static func csvName(at date: Date, timeZone: TimeZone = .current) -> String {
         let formatter = DateFormatter()
         formatter.locale = Locale(identifier: "en_US_POSIX")

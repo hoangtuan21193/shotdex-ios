@@ -90,9 +90,13 @@ enum CommonPhotosJob {
         let folders = run.folders.map { ServerUploadPath.lastComponent(of: $0) }.joined(separator: " + ")
         let destination = ServerUploadPath.lastComponent(of: run.destination)
         let kind: LongRunningJob.Kind = run.isUndo ? .commonPhotosUndo : .commonPhotos
-        let title = run.isUndo
+        var title = run.isUndo
             ? String(localized: "Undo · \(destination) → \(folders)", comment: "Activity: an undo of a common-photos run")
             : String(localized: "Common photos · \(folders) → \(destination)", comment: "Activity: a common-photos run")
+        // Keep gathering (FS-19.08 §6c): one run a day, named by its day.
+        if let day = run.day.flatMap(dayDate) {
+            title += " · " + day.formatted(.dateTime.month(.abbreviated).day())
+        }
         let fraction = progress.totalBytes > 0 ? min(1, Double(progress.doneBytes) / Double(progress.totalBytes))
             : (progress.totalCount > 0 ? Double(progress.doneCount) / Double(progress.totalCount) : 0)
         let percent = fraction.formatted(.percent.precision(.fractionLength(0)))
@@ -165,6 +169,16 @@ enum CommonPhotosJob {
                                   status: String(localized: "Done — \(counts)", comment: "Activity: a run that finished"),
                                   detail: nil, state: state, actions: over)
         }
+    }
+
+    /// `2026-11-03` as a date at noon there, so no time zone moves its day.
+    static func dayDate(_ day: String) -> Date? {
+        let parts = day.split(separator: "-").compactMap { Int($0) }
+        guard parts.count == 3 else { return nil }
+        // The day was written in the Gregorian calendar (CommonPhotosStore.day).
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = .current
+        return calendar.date(from: DateComponents(year: parts[0], month: parts[1], day: parts[2], hour: 12))
     }
 
     /// The step the run is on, as the window and Activity say it.
