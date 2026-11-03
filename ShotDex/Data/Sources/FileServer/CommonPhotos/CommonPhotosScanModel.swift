@@ -274,6 +274,10 @@ final class CommonPhotosScanModel {
         let folders = folders
         let scanId = UUID()
         self.scanId = scanId
+        // A cut of the last results means nothing to this scan.
+        cutTask?.cancel()
+        cutTask = nil
+        isCutting = false
         phase = .listing
         preview = nil
         photos = []
@@ -312,9 +316,10 @@ final class CommonPhotosScanModel {
             await forget(notIn: listing, folders: folders)
             fileCounts = Dictionary(uniqueKeysWithValues: zip(folders, listing.files.map(\.count)))
             // Only new photos, when the set gathered before (§6c).
-            let gathered = scansEverything ? .init() : await gathered(folders: folders, destination: destination)
+            let scannedFor = destination
+            let gathered = scansEverything ? .init() : try await gathered(folders: folders, destination: scannedFor)
             lastGathered = gathered.lastAt.map { Date(timeIntervalSince1970: TimeInterval($0)) }
-            listingWasCut = !gathered.isEmpty
+            listingWasCut = !gathered.seen.isEmpty
             var checked = listing
             checked.files = CommonPhotosIncremental.listing(listing.files, folders: folders, seen: gathered.seen)
             let records = await scanRecords(checked, folders: folders)
@@ -365,7 +370,7 @@ final class CommonPhotosScanModel {
             bytesLeft = 0
             phase = .done
             // A destination chosen while it scanned: cut to it now.
-            if !listingWasCut, destination != nil { recut() }
+            if !listingWasCut, destination != scannedFor { recut() }
         } catch is CancellationError {
             return
         } catch {
@@ -432,7 +437,7 @@ final class CommonPhotosScanModel {
         isCutting = true
         cutTask = Task { [weak self] in
             guard let self else { return }
-            let gathered = scansEverything ? .init() : await gathered(folders: folders, destination: destination)
+            let gathered = scansEverything ? .init() : ((try? await gathered(folders: folders, destination: destination)) ?? .init())
             guard !Task.isCancelled, self.scanId == scanId, self.destination == destination else { return }
             photos = CommonPhotosIncremental.newPhotos(allPhotos, folders: folders, seen: gathered.seen)
             lastGathered = gathered.lastAt.map { Date(timeIntervalSince1970: TimeInterval($0)) }
@@ -440,13 +445,48 @@ final class CommonPhotosScanModel {
         }
     }
 
-    private func gathered(folders: [String], destination: String?) async -> CommonPhotosStore.Gathered {
+    /// What the set gathered before, against what its destination holds
+    /// now: a photo whose copy left it is gathered again (§6c). A
+    /// destination that cannot be listed counts nothing as gathered: better
+    /// a photo checked twice than one left out (Copy skips the bytes already
+    /// there). Cancellation goes through.
+    private func gathered(folders: [String], destination: String?) async throws -> CommonPhotosStore.Gathered {
         guard let database, let destination else { return .init() }
         let store = CommonPhotosStore(database: database)
         let connectionId = connectionId
+        guard let entries = try await destinationEntries(destination) else { return .init() }
         return (try? await Task.detached {
-            try store.gathered(connectionId: connectionId, folders: folders, destination: destination)
+            // The name → sizes map is built here, off the main actor.
+            var present: [String: Set<Int64>] = [:]
+            for entry in entries { present[entry.name.lowercased(), default: []].insert(entry.size) }
+            return try store.gathered(connectionId: connectionId, folders: folders, destination: destination, inDestination: present)
         }.value) ?? .init()
+    }
+
+    /// The destination's files. Empty when the folder is not there yet; one
+    /// reconnect when the session went away while the sheet sat idle; nil
+    /// when it still cannot be listed.
+    private func destinationEntries(_ destination: String) async throws -> [RemoteEntry]? {
+        for attempt in 0..<2 {
+            do {
+                if !isConnected {
+                    try await client.connect()
+                    isConnected = true
+                }
+                return try await client.entries(in: destination).filter { !$0.isDirectory }
+            } catch RemoteFileError.folderMissing {
+                return []
+            } catch let error as RemoteFileError where error.stopsBatch && attempt == 0 {
+                isConnected = false
+            } catch is CancellationError {
+                throw CancellationError()
+            } catch {
+                try Task.checkCancellation()
+                Self.logger.notice("destination not listed: \(error.localizedDescription, privacy: .public)")
+                return nil
+            }
+        }
+        return nil
     }
 
     /// Earlier scans' records of the listed files that still match them —

@@ -158,7 +158,11 @@ struct CommonPhotosStore: Sendable {
         var isEmpty: Bool { lastAt == nil }
     }
 
-    func gathered(connectionId: String, folders: [String], destination: String) throws -> Gathered {
+    /// `inDestination`, the sizes the destination holds now under each
+    /// lowercased name: a gathered photo whose copy there is gone or another
+    /// size is not counted, so it is gathered again (§6c). Nil: not checked.
+    func gathered(connectionId: String, folders: [String], destination: String,
+                  inDestination: [String: Set<Int64>]? = nil) throws -> Gathered {
         let key = CommonPhotosIncremental.setKey(connectionId: connectionId, folders: folders, destination: destination)
         return try database.reader.read { db in
             let runs = try CommonPhotosRun
@@ -172,11 +176,19 @@ struct CommonPhotosStore: Sendable {
             let done = [CommonPhotosItem.Status.copied, .moved, .skipped].map(\.rawValue)
             for run in runs {
                 // The sources column only: a set's runs can hold many photos.
-                let lists = try String.fetchAll(db, sql: """
-                    SELECT sources FROM common_photo_items WHERE runId = ? AND status IN (\(databaseQuestionMarks(count: done.count)))
+                let rows = try Row.fetchAll(db, sql: """
+                    SELECT sources, size, destinationPath FROM common_photo_items
+                    WHERE runId = ? AND status IN (\(databaseQuestionMarks(count: done.count)))
                     """, arguments: StatementArguments([run.id] + done))
-                guard !lists.isEmpty else { continue }
-                for list in lists {
+                guard !rows.isEmpty else { continue }
+                for row in rows {
+                    if let inDestination {
+                        // Placed where, and is it still there at its size?
+                        guard let placed: String = row["destinationPath"], let size: Int64 = row["size"],
+                              inDestination[ServerUploadPath.lastComponent(of: placed).lowercased()]?.contains(size) == true
+                        else { continue }
+                    }
+                    let list: String = row["sources"]
                     guard let sources = try? decoder.decode([CommonPhotosItem.Source].self, from: Data(list.utf8)) else { continue }
                     for source in sources {
                         out.seen.insert(.init(path: source.path, size: source.size, modifiedAt: source.modifiedAt))

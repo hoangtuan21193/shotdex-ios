@@ -35,7 +35,7 @@ import Testing
 
     private static func scan(_ sheet: CommonPhotosScanModel) async throws {
         sheet.scan()
-        for _ in 0..<600 where sheet.phase != .done {
+        for _ in 0..<600 where sheet.phase != .done || sheet.isCutting {
             if case .failed(let message) = sheet.phase { Issue.record("scan failed: \(message)"); return }
             try await Task.sleep(for: .milliseconds(20))
         }
@@ -196,15 +196,6 @@ import Testing
 
     // MARK: Only new photos (AC-160…162)
 
-    /// The sheet's photos recorded as one finished Copy run of the set, as
-    /// if copied to `photos/Shared`.
-    private static func gatherAll(_ sheet: CommonPhotosScanModel, _ database: AppDatabase) throws {
-        let made = try #require(sheet.makeRun())
-        let store = CommonPhotosStore(database: database)
-        try store.start(made.run, items: made.items.map { var item = $0; item.status = .copied; return item })
-        try store.markState(.finished, runId: made.run.id)
-    }
-
     private static func sheet(_ client: InMemoryRemoteFileClient, _ database: AppDatabase, action: CommonPhotosRun.Action = .copy) -> CommonPhotosScanModel {
         let sheet = CommonPhotosScanModel(connectionId: "C1", sourceId: "S", folders: ["photos/A", "photos/B"],
                                           client: client, database: database)
@@ -225,7 +216,7 @@ import Testing
         let database = try AppDatabase.makeEmpty()
         let first = Self.sheet(client, database)
         try await Self.scan(first)
-        try Self.gatherAll(first, database)
+        try Self.copyAll(first, database, into: client)
         for n in 3..<6 {
             Self.put(client, "photos/A/IMG_\(n).HEIC", Self.bytes(UInt8(n), size: Self.size + 10 * n))
             Self.put(client, "photos/B/from-a/copy \(n).HEIC", Self.bytes(UInt8(n), size: Self.size + 10 * n))
@@ -251,7 +242,7 @@ import Testing
         let database = try AppDatabase.makeEmpty()
         let first = Self.sheet(client, database)
         try await Self.scan(first)
-        try Self.gatherAll(first, database)
+        try Self.copyAll(first, database, into: client)
         Self.put(client, "photos/A/X.HEIC", Self.bytes(77, size: 300_123))
 
         let waiting = Self.sheet(client, database)
@@ -274,7 +265,7 @@ import Testing
         let database = try AppDatabase.makeEmpty()
         let first = Self.sheet(client, database)
         try await Self.scan(first)
-        try Self.gatherAll(first, database)
+        try Self.copyAll(first, database, into: client)
         Self.put(client, "photos/A/IMG_1.HEIC", Self.bytes(91, size: Self.size + 55))
         Self.put(client, "photos/B/from-a/copy 1.HEIC", Self.bytes(91, size: Self.size + 55))
         let before = client.sha256Paths.count
@@ -295,7 +286,7 @@ import Testing
         let database = try AppDatabase.makeEmpty()
         let first = Self.sheet(client, database)
         try await Self.scan(first)
-        try Self.gatherAll(first, database)
+        try Self.copyAll(first, database, into: client)
 
         let all = Self.sheet(client, database)
         all.scansEverything = true
@@ -337,7 +328,7 @@ import Testing
         let database = try AppDatabase.makeEmpty()
         let first = Self.sheet(client, database)
         try await Self.scan(first)
-        try Self.gatherAll(first, database)
+        try Self.copyAll(first, database, into: client)
         client.whileHashing = { _ in try? await Task.sleep(for: .milliseconds(30)) }
 
         let sheet = CommonPhotosScanModel(connectionId: "C1", sourceId: "S", folders: ["photos/A", "photos/B"],
@@ -351,6 +342,84 @@ import Testing
         #expect(shared.sameCount == 0)
         #expect(!shared.canRun)
         for model in [first, sheet, shared] { await model.close() }
+    }
+
+    // MARK: Gone from the destination (AC-163)
+
+    /// The sheet's photos as copied into `photos/Shared`: there for real,
+    /// and recorded so.
+    private static func copyAll(_ sheet: CommonPhotosScanModel, _ database: AppDatabase, into client: InMemoryRemoteFileClient) throws {
+        let made = try #require(sheet.makeRun())
+        let store = CommonPhotosStore(database: database)
+        let items = try made.items.map { item -> CommonPhotosItem in
+            var item = item
+            let source = try #require(item.sources.first)
+            let name = ServerUploadPath.lastComponent(of: source.path)
+            item.destinationPath = "photos/Shared/" + name
+            client.put(item.destinationPath!, try #require(client.files[source.path]))
+            item.status = .copied
+            return item
+        }
+        try store.start(made.run, items: items)
+        try store.markState(.finished, runId: made.run.id)
+    }
+
+    /// AC-163: a gathered photo whose copy left the destination comes back
+    /// and is copied again; the others, still there, are not read.
+    @Test func goneFromSharedComesBack() async throws {
+        let client = Self.nas()
+        let database = try AppDatabase.makeEmpty()
+        let first = Self.sheet(client, database)
+        try await Self.scan(first)
+        try Self.copyAll(first, database, into: client)
+
+        let unchanged = Self.sheet(client, database)
+        try await Self.scan(unchanged)
+        #expect(unchanged.sameCount == 0)
+
+        try await client.remove("photos/Shared/IMG_2.HEIC")
+        let before = client.sha256Paths.count
+        let again = Self.sheet(client, database)
+        try await Self.scan(again)
+
+        #expect(again.rows.map(\.name) == ["IMG_2.HEIC"])
+        // A Copy scan: its hashes are known, nothing is read again.
+        #expect(client.sha256Paths.count == before)
+        await first.close()
+        await unchanged.close()
+        await again.close()
+    }
+
+    /// Replaced in the destination by other bytes of another size: gathered
+    /// again; the destination missing altogether: everything comes back.
+    @Test func replacedOrMissingDestination() async throws {
+        let client = Self.nas()
+        let database = try AppDatabase.makeEmpty()
+        let first = Self.sheet(client, database)
+        try await Self.scan(first)
+        try Self.copyAll(first, database, into: client)
+        client.put("photos/Shared/IMG_0.HEIC", Data(repeating: 1, count: 10))
+
+        let again = Self.sheet(client, database)
+        try await Self.scan(again)
+        #expect(again.rows.map(\.name) == ["IMG_0.HEIC"])
+
+        // Shared cannot be listed: nothing counts as gathered, every photo
+        // is checked (Copy would skip the bytes already there).
+        client.entriesErrorPaths["photos/Shared"] = RemoteFileError.permissionDenied("photos/Shared")
+        let unlisted = Self.sheet(client, database)
+        try await Self.scan(unlisted)
+        #expect(unlisted.sameCount == 3)
+        #expect(unlisted.lastGathered == nil)
+        await unlisted.close()
+        client.entriesErrorPaths = [:]
+
+        for n in 0..<3 { try await client.remove("photos/Shared/IMG_\(n).HEIC") }
+        let empty = Self.sheet(client, database)
+        client.entriesErrorPaths["photos/Shared"] = RemoteFileError.folderMissing("photos/Shared")
+        try await Self.scan(empty)
+        #expect(empty.sameCount == 3)
+        for sheet in [first, again, empty] { await sheet.close() }
     }
 
     /// AC-159 on the local SMB test server (fixture: 8 of Tuấn's 12 photos
@@ -374,20 +443,63 @@ import Testing
         try await Self.scan(again)
         #expect(again.sameCount == 8)
         #expect(counting.reads == readsBefore)
-        // AC-160 on the server: once gathered to Shared, the set has no new
-        // photo and reads nothing.
-        again.destination = "photos/Shared"
-        for _ in 0..<100 where again.isCutting { try await Task.sleep(for: .milliseconds(10)) }
-        try Self.gatherAll(again, database)
         await again.close()
-        let third = CommonPhotosScanModel(connectionId: "smb", sourceId: "S", folders: ["photos/Vo", "photos/Tuan"],
-                                          client: counting, database: database)
-        third.destination = "photos/Shared"
-        try await Self.scan(third)
-        #expect(third.sameCount == 0)
-        #expect(third.lastGathered != nil)
-        #expect(counting.reads == readsBefore)
-        await third.close()
+    }
+
+    /// AC-163 on the local SMB test server: a real Copy into a scratch
+    /// folder; the set scanned again has nothing new; one copy removed from
+    /// the destination brings that photo back, and only it.
+    @Test(.enabled(if: LocalSMBTestServer.isListening))
+    func goneFromSharedOnTheServer() async throws {
+        let database = try AppDatabase.makeEmpty()
+        func smb() -> SMBFileClient {
+            SMBFileClient(server: FileServer(name: "Test SMB", transferProtocol: .smb, host: "127.0.0.1", port: 4450,
+                                             username: "tester", share: "photos"), password: "secret")
+        }
+        let destination = "photos/Shared/e2e-g3-\(UUID().uuidString.prefix(8))"
+        let runnerClient = smb()
+        try await runnerClient.connect()
+        let work = FileManager.default.temporaryDirectory.appendingPathComponent("CommonPhotosG3-\(UUID().uuidString)")
+        defer { try? FileManager.default.removeItem(at: work) }
+        var opened: [CommonPhotosScanModel] = []
+        func sheet() -> CommonPhotosScanModel {
+            let sheet = CommonPhotosScanModel(connectionId: "smb", sourceId: "S", folders: ["photos/Tuan", "photos/Vo"],
+                                              client: smb(), database: database)
+            sheet.destination = destination
+            opened.append(sheet)
+            return sheet
+        }
+        do {
+            let first = sheet()
+            try await Self.scan(first)
+            #expect(first.sameCount == 8)
+            let made = try #require(first.makeRun())
+            let store = CommonPhotosStore(database: database)
+            try store.start(made.run, items: made.items)
+            try await CommonPhotosRunner(client: runnerClient, store: store, workDirectory: work).run(made.run.id)
+            await first.close()
+
+            let nothing = sheet()
+            try await Self.scan(nothing)
+            #expect(nothing.sameCount == 0)
+            await nothing.close()
+
+            let placed = try #require(try store.items(runId: made.run.id).first { $0.destinationPath?.hasSuffix("IMG_0003.JPG") == true })
+            try await runnerClient.remove(try #require(placed.destinationPath))
+            let back = sheet()
+            try await Self.scan(back)
+            #expect(back.rows.map(\.name) == ["IMG_0003.JPG"])
+            await back.close()
+        } catch {
+            for model in opened { await model.close() }
+            try? await runnerClient.removeFolderTree(destination)
+            await runnerClient.disconnect()
+            throw error
+        }
+        do { try await runnerClient.removeFolderTree(destination) } catch {
+            Issue.record("left \(destination) on the test share: \(error)")
+        }
+        await runnerClient.disconnect()
     }
 }
 

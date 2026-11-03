@@ -170,7 +170,10 @@ Copy/Move vẫn là cùng bộ.
   ở folder chung vẫn giữ; trùng tên thì theo luật ` (2)`.
 - Ảnh đã gom mà bản ở **folder chung không còn** (người dùng xoá hay dời đi): lượt sau **chép lại**, miễn ảnh vẫn ở mọi
   folder nguồn (người dùng 2026-11-03). Mỗi lượt vì thế liệt kê cả folder chung (chỉ lệnh liệt kê, không đọc byte) để
-  biết bản nào còn. Bản ở folder chung còn đúng đường dẫn + cỡ thì coi là còn, không đọc lại.
+  biết bản nào còn. Bản ở folder chung còn đúng tên (không phân biệt hoa thường) + cỡ thì coi là còn, không đọc lại.
+  Đổi tên bản trong folder chung là "mất": ảnh được chép lại dưới tên cũ. Folder chung chưa có thì mọi ảnh là mới;
+  không liệt kê được (mất kết nối sau một lần nối lại, không có quyền) thì kiểm lại mọi ảnh — Copy vẫn bỏ qua bản đã
+  có cùng byte.
 - **Scan Everything** (nút phụ trong sheet khi bộ đã từng chạy): quét như lần đầu, vẫn dùng SHA đã nhớ.
 - "Lượt trước" = mọi lượt gom (không phải lượt hoàn tác) của bộ mà Activity còn giữ, đã xong, đã Stop hay đang
   `finishing`; tính ảnh Copied, Moved, Skipped (ảnh đã hoàn tác thì không). Server không cho ngày sửa thì so đường dẫn +

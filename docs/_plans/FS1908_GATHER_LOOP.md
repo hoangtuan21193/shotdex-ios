@@ -27,7 +27,7 @@ trí nhớ của loop: mỗi vòng đọc nó trước khi làm, ghi lại sau k
 |---|---|---|---|
 | G1 | xong | (xem git log) | v52 `common_photo_scan_records` (SHA + khoá ngày chụp theo connection + đường dẫn; `""` = đầu file không có khoá); quét Copy tin SHA đã nhớ ở mọi folder và bỏ đọc lại; quét Move giữ luật cũ; đổi sang Move trong/sau quét → bỏ kết quả, `canRun` chặn; prune theo khoảng `folder/`…`folder0` trước khi lưu; lưu theo lô 1.000, giữ 180 ngày, xoá khi xoá connection; hash 0 byte = lệch. e2e SMB ảo: lần quét 2 không đọc byte |
 | G2 | xong | (xem git log) | khoá bộ tính từ connection + folder (sắp) + đích, không cần cột; `CommonPhotosStore.gathered` đọc riêng cột `sources` của mục Copied/Moved/Skipped (gồm lượt `finishing`); quét cắt listing theo cỡ có file chưa thấy, rồi bỏ ảnh mà mọi bản đã thấy; chọn/đổi đích sau hay trong lúc quét → cắt lại từ kết quả đầy đủ (`allPhotos`, `recut`, `isCutting` chặn chạy); listing đã cắt mà đổi đích → quét lại. **G4 phải có:** câu trống "Nothing new since …" + Scan Everything khi bộ gom hết; số ảnh đã ẩn; câu báo khi kết quả bị bỏ (đổi đích, Copy→Move); Scan Everything là nút quét luôn, không phải công tắc. Ảnh mất ở Shared → G3 |
-| G3 | chưa | | |
+| G3 | xong | (xem git log) | quét và mỗi lần cắt lại liệt kê folder chung (phẳng, tên thường → các cỡ); mục đã gom mà bản ở đích mất / khác cỡ / không có đường dẫn đích → không tính đã gom; folder chưa có → `[]`; lỗi liệt kê → nối lại 1 lần rồi coi như chưa gom gì (Copy vẫn bỏ qua bản cùng byte); quét lại hủy lần cắt cũ. Test helper `copyAll` đặt file thật vào Shared. e2e SMB ảo `goneFromSharedOnTheServer` (scratch `photos/Shared/e2e-g3-*`, đã dọn) |
 | G4 | chưa | | |
 | G5 | chưa | | |
 | G6 | chưa | | |
