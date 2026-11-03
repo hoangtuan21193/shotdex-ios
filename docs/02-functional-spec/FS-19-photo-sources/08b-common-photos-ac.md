@@ -1,6 +1,6 @@
 # FS-19.08b — Gom ảnh chung: tiêu chí nghiệm thu
 
-`FS-19.08b` · cho [08](08-common-photos.md) · AC-115…AC-143, AC-159…173 · cập nhật 2026-11-03 (AC-131…143: hoàn tác, §6b; AC-159…173: chỉ ảnh mới + tự gom, §6c)
+`FS-19.08b` · cho [08](08-common-photos.md) · AC-115…AC-143, AC-159…191 · cập nhật 2026-11-04 (AC-131…143: hoàn tác, §6b; AC-159…173: chỉ ảnh mới + tự gom, §6c; AC-174…191: xem kết quả Scan rồi mới quyết + chạy nhanh hơn, §6d)
 
 Dữ liệu thử: server cục bộ (impacket smbserver + WebDAV trên Mac, memory `server-upload-fs15`), ảnh phong cảnh không
 có mặt người. Test domain chạy trên client giả của `ShotDexTests/BackupFakes.swift` và GRDB trong bộ nhớ.
@@ -79,3 +79,28 @@ Cùng dữ liệu thử như trên. "Bộ" = A + B → Shared trên một connec
 | AC-172 | bộ tự gom có 2 lượt đã gom | **Stop Gathering** | không lượt tự gom nào chạy nữa; log, CSV và hoàn tác của 2 lượt còn nguyên | ✅ `CommonPhotosGatherTests.stopGatheringKeepsTheRuns`, `stopDuringThePass`, `CommonPhotosWatchRowTests.stoppedByTheUserIsNotListed`; Activity › Gathering ⋯ › Stop Gathering… (ảnh `build/design/shots/G9/`) |
 | AC-173 | bộ Copy tự gom; ngày 3/11 có 3 lượt tự gom, mỗi lượt 2 ảnh; ngày 4/11 một lượt 1 ảnh | xem Activity | đúng 2 hàng cho bộ: "Nov 3 · 6 copied" (một CSV 6 hàng) và "Nov 4 · 1 copied"; hoàn tác hàng Nov 3 trả đủ 6 | ✅ `CommonPhotosGatherTests.oneRunPerDay`, `busyDayWaits`, `stoppedDayStartsAnother`, `undoneStaysUndone` (hàng Activity: G9) |
 
+## Xem kết quả Scan rồi mới quyết · chạy nhanh hơn (§6d)
+
+Cùng dữ liệu thử. "Bộ" như §6c. Client giả đếm từng lệnh (`sha256`, `download`, `readRange`, `upload`, server copy) và
+số byte qua mạng.
+
+| # | Cho | Khi | Thì | Chứng minh bằng |
+|---|---|---|---|---|
+| AC-174 | A, B có 312 ứng viên cùng cỡ; 280 đã băm xong là Same, 32 đang băm | xem danh sách | đúng 280 hàng, hàng nào cũng Same; không chữ "Likely" ở hàng, đếm hay nhãn VoiceOver; đầu danh sách "Checking 32" | ⚠️ chưa có |
+| AC-175 | Copy; Shared có `IMG_0001.JPG` khác byte và `IMG_0002.JPG` cùng SHA với ảnh chung | Scan xong | hàng `IMG_0001` ghi `→ Shared/IMG_0001 (2).JPG`; hàng `IMG_0002` mờ, ghi `Already in Shared`, không đếm vào nút; đầu danh sách "… · 1 already in Shared" | ⚠️ chưa có |
+| AC-176 | Move; ảnh có 1 bản ở A, 2 bản ở B | Scan xong | hàng ghi `→ Shared/<tên> · removes 3 copies`, tooltip liệt kê đủ 3 đường dẫn | ⚠️ chưa có |
+| AC-177 | Scan xong 3 ảnh Same (Copy), không file nào đổi | **Copy 3** | 0 lệnh `sha256` lên bản nguồn; 3 ảnh Copied; tên ở Shared đúng như hàng đã ghi | ⚠️ chưa có |
+| AC-178 | Scan xong 3 ảnh Same (Move), không file nào đổi | **Move 3** | 0 lệnh `sha256` lên bản nguồn (chỉ kiểm cỡ + ngày sửa); 3 ảnh Moved | ⚠️ chưa có |
+| AC-179 | Scan xong (Move); sau đó `Vợ/IMG_2.JPG` bị ghi đè nội dung mới | **Move N** | `IMG_2` Failed "changed on the server", không bản nào của nó bị xoá; ảnh khác vẫn Moved | ⚠️ chưa có (e2e SMB ảo) |
+| AC-180 | hàng ghi `→ Shared/IMG_0001 (2).JPG`; giữa Scan và chạy có người tạo `Shared/IMG_0001 (2).JPG` khác byte | **Copy** | ảnh nằm ở `IMG_0001 (3).JPG`; không file nào bị ghi đè; log và CSV ghi `(3)` | ⚠️ chưa có |
+| AC-181 | hàng Same, cả hai bản đã index | chọn hàng, **Space** | cửa sổ Compare: hai khung, trái `Tuấn/…`, phải `Vợ/…`, mỗi khung tên, cỡ, ngày chụp, SHA 8 ký tự giống nhau; "Same bytes — SHA-256 matches"; ↓ sang hàng kế; Esc đóng | ⚠️ chưa có (ảnh Mac sáng + tối, so board `MAC_CommonPhotosCompare`) |
+| AC-182 | hàng Same 48 MB `DSC04388.ARW`, folder không phải nguồn | mở Compare | mỗi khung có thanh tiến độ, tải đủ 2 bản rồi hiện; sang hàng kế giữa chừng thì lượt tải bị huỷ; đóng Compare thì thư mục tạm trống | ⚠️ chưa có |
+| AC-183 | Compare đang tải; server ngắt | — | khung ghi câu lỗi FS-15.01 §3 + **Try Again**; sheet giữ nguyên kết quả Scan, nút Copy vẫn bấm được | ⚠️ chưa có |
+| AC-184 | Scan đang chạy | mở Compare một hàng Same chưa index | khung ghi "Waiting for the scan…"; Scan không chậm hơn quá 5 % so với không mở Compare (đếm lệnh: lệnh Compare chỉ chạy khi Scan không có lệnh chờ) | ⚠️ chưa có |
+| AC-185 | hàng Same là video 10 s ở cả hai bản | **Play** rồi tua tới 6 s | hai bên cùng chạy; sau tua, chênh thời điểm hai bên ≤ 1 khung hình; tiếng chỉ bên trái | ⚠️ chưa có |
+| AC-186 | 280 hàng Same | bỏ chọn 2 hàng | nút "Copy 278"; chạy xong 278 Copied, 2 hàng kia không có lệnh nào tới server | ⚠️ chưa có |
+| AC-187 | bộ đã bỏ ra 2 ảnh (AC-186) | quét lại / Run Again / lượt tự gom | 2 ảnh không ở Same, nằm trong **Left Out (2)**; lượt tự gom không chép chúng | ⚠️ chưa có |
+| AC-188 | **Left Out (2)** | **Include** một ảnh rồi Scan | ảnh đó lại ở Same, được chọn; ảnh còn lại vẫn Left Out | ⚠️ chưa có |
+| AC-189 | bộ có 2 ảnh bỏ ra | Clear Local Metadata Index; sau đó xoá bộ (Remove from List) | sau Clear: vẫn 2 ảnh Left Out; sau xoá bộ: bảng Ảnh bỏ ra không còn hàng nào của bộ | ⚠️ chưa có |
+| AC-190 | bộ **Move** tự gom, ready 4 ảnh | trong cửa sổ log bỏ chọn 1 rồi **Move 3…** › xác nhận | hộp xác nhận nói 3; 3 ảnh Moved; ảnh thứ tư không bị đụng, nằm trong Left Out của bộ, lượt tự gom sau không đưa lại | ⚠️ chưa có |
+| AC-191 | Copy 1 GB phần chung trên SMB ảo (2 folder); server có copychunk | **Copy** | byte qua Mac ≤ 1.1 GB (đọc lại SHA ở đích); hôm nay ≈ 3 GB. Server từ chối copychunk (hay connection SFTP) → lùi về tải + đẩy, ảnh vẫn Copied, log ghi cách chép | ⚠️ chưa có (e2e SMB ảo, đếm byte) |

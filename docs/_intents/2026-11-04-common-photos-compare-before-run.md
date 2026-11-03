@@ -5,9 +5,9 @@
 | Tác giả | Tuấn (qua Claude) |
 | Ngày | 2026-11-04 |
 | Trạng thái | accepted (2026-11-04) |
-| Tiến độ | **chưa làm** (2026-11-04) — chưa có spec |
+| Tiến độ | **chưa làm** (2026-11-04) — spec FS-19.08 §6d, 18 AC (AC-174…191), 4 câu đã chốt |
 | Nguồn | phản hồi người dùng 2026-11-04: "có thể check trước khi copy hay move không, nghĩa là có chỗ để compare thật sự 2 ảnh giống nhau hay video giống nhau trước khi click move hay copy không" · "tôi chỉ cần same, k cần likely, dùng SHA thôi là đủ … làm sao để cải tiến tốc độ nữa … khi scan sẽ tổng hợp list các ảnh và video giống nhau, có sẵn thông tin sẽ move hay copy ảnh nào về đâu, rồi khi ấn move hay copy sẽ làm dựa trên kết quả scan, k băm lấy SHA lại" |
-| Spec sinh ra từ đây | (điền khi sang Design) |
+| Spec sinh ra từ đây | [FS-19.08 §6d](../02-functional-spec/FS-19-photo-sources/08-common-photos.md) · AC-174…191 ở [08b](../02-functional-spec/FS-19-photo-sources/08b-common-photos-ac.md) |
 
 ## Problem — vấn đề
 
@@ -111,7 +111,7 @@ Claude chọn sẵn, người dùng đổi được khi duyệt:
 7. **Ảnh chưa index:** mở so sánh thì tải cả file về để xem (HEIC/RAW không phải lúc nào cũng có preview nhúng).
    Cache tạm và trần dung lượng quyết ở `/spec`.
 
-Còn treo, cần đo trước khi `/spec` chốt:
+Chốt ở `/spec` (người dùng 2026-11-04): 8 → vá `SMBClient` trong repo + WebDAV `COPY`; 9 → vẫn đọc lại SHA ở đích; 10 → giữ một lệnh, chỉ xét lại khi có số đo trên NAS thật; cache Compare tối đa 2 GB. Câu hỏi gốc:
 
 8. **Copy ngay trên server.** SMB có lệnh để NAS tự chép (server-side copy), WebDAV có `COPY`, SFTP thì tuỳ server.
    - Client SMB của app và NAS của người dùng có hỗ trợ không: Claude thử trên SMB ảo + NAS thật.

@@ -2,7 +2,7 @@
 
 `FS-19.08` · tier A (sheet) + B (cửa sổ tiến độ) · chỉ **Mac** · board `MAC_CommonPhotos` · `MAC_CommonPhotosRun`
 · đề xuất `ShotDexMac/Servers/CommonPhotos/`, `ShotDex/Domain/CommonPhotos/` · AC ở [08b](08b-common-photos-ac.md)
-· cập nhật 2026-11-03 (thêm hoàn tác, §6b; chạy lại chỉ ảnh mới + tự gom, §6c)
+· cập nhật 2026-11-03 (thêm hoàn tác, §6b; chạy lại chỉ ảnh mới + tự gom, §6c) · 2026-11-04 (xem kết quả Scan rồi mới quyết, chạy nhanh hơn, §6d)
 
 **Một câu:** trong màn duyệt server trên Mac, chọn từ 2 folder trở lên → ShotDex tìm ảnh có **cùng nội dung** ở mọi
 folder đó và chép (mặc định) hay dời chúng vào một folder chung, có tiến độ, log từng file, và kiểm SHA-256 trước khi
@@ -50,7 +50,7 @@ con · kết quả xem trước có hai mức Likely the same → Same · tiến
 | Folders | danh sách folder đã chọn (đường dẫn rút gọn, số file), nút − từng dòng, **Add Folder…** |
 | Save to | popup chọn folder (bộ chọn folder của connection) + **New Folder…**; mặc định trống, nút chạy mờ tới khi chọn |
 | Action | segmented **Copy** · **Move**; Copy chọn sẵn. Move hiện câu: "Moved photos are removed from every folder above. The server has no Trash." |
-| Kết quả | sau **Scan**: "312 photos in all 3 folders · 4.2 GB", hai đếm **Same 280** · **Checking 32**, danh sách (thumbnail cache nếu có, tên, đường dẫn từng folder, cỡ) |
+| Kết quả | sau **Scan**: "312 photos in all 3 folders · 4.2 GB", hai đếm **Same 280** · **Checking 32**, danh sách (thumbnail cache nếu có, tên, đường dẫn từng folder, cỡ). **§6d:** danh sách chỉ gồm hàng Same, mỗi hàng ghi kế hoạch của nó, có ô chọn và mở so sánh được |
 | Nút | **Cancel** · **Scan** → sau khi quét xong thành **Copy 280** / **Move 280** (chỉ đếm Same); chân trái "Only photos marked Same are copied." |
 
 - Báo lỗi trong sheet, không chạy: folder chung nằm trong một folder nguồn · hai folder nguồn lồng nhau · < 2 folder.
@@ -62,7 +62,7 @@ con · kết quả xem trước có hai mức Likely the same → Same · tiến
 
 1. Liệt kê cây mọi folder (tên, cỡ, ngày sửa); bỏ mục ẩn, `.shotdex/`, file part; chỉ ảnh, video và `.xmp`.
 2. Giữ những cỡ có mặt ở **mọi** folder; còn lại loại, không đọc byte nào.
-3. **Likely the same** — trong nhóm cùng cỡ, có thêm cùng tên, cùng đường dẫn folder con, hoặc cùng ngày chụp (giây lẻ +
+3. **Likely the same** (§6d: chỉ dùng bên trong để xếp thứ tự băm, không hiện trên màn) — trong nhóm cùng cỡ, có thêm cùng tên, cùng đường dẫn folder con, hoặc cùng ngày chụp (giây lẻ +
    máy). Ngày chụp lấy từ index nếu folder là nguồn; chưa có thì đọc 64 KB đầu, chỉ file đã qua bước 2. Hiện ngay.
 4. Đọc 3 đoạn 64 KB (đầu, giữa, cuối) loại tiếp; rồi **SHA-256 cả file**, ứng viên Likely băm trước. Khớp → **Same**;
    lệch → rơi khỏi danh sách. SHA đã có (cùng cỡ + cùng ngày sửa) không băm lại.
@@ -244,6 +244,116 @@ Copy/Move vẫn là cùng bộ.
   gathering, nút Scan Everything) · `MAC_CommonPhotosRun` thêm trạng thái `readyToMove` · `MAC_Activity` thêm mục
   Gathering.
 
+## 6d. Xem kết quả Scan rồi mới quyết · chạy nhanh hơn (người dùng 2026-11-04)
+
+Nguồn: [intent 2026-11-04-common-photos-compare-before-run](../../_intents/2026-11-04-common-photos-compare-before-run.md).
+Board: `MAC_CommonPhotos` (sửa: hàng kế hoạch, ô chọn, mục Left Out) · `MAC_CommonPhotosCompare` (mới) ·
+`MAC_CommonPhotosRun` (danh sách ready có ô chọn). Vẽ board trước khi code (luật canvas). Tiền lệ phải đọc trước khi
+vẽ: board `MAC_Duplicates` (so A/B) và `PhotoCompareScreen` của iOS, để không thành hai kiểu so sánh.
+
+### Chỉ Same
+
+- Danh sách sau Scan chỉ có hàng **Same** (SHA-256 cả file trùng). Hàng chưa xong băm không hiện: đầu danh sách vẫn đếm
+  **Checking 32** như tiến độ, cho tới khi về 0.
+- Likely bỏ khỏi màn (nhãn, đếm, VoiceOver). Bên trong vẫn dùng để băm trước ứng viên Likely (§5 bước 4).
+- Luật §5 giữ nguyên: chỉ Same được chạy, tên hay ngày sửa không bao giờ làm hai file thành Same.
+
+### Kết quả Scan là kế hoạch
+
+Scan liệt kê luôn folder chung, nên mỗi hàng Same biết sẵn việc nó sẽ làm. Hàng ghi:
+
+| Trường hợp | Dòng phụ của hàng |
+|---|---|
+| Copy, tên còn trống ở folder chung | `→ Shared/IMG_4021.HEIC` |
+| Copy, folder chung có tên đó mà khác byte | `→ Shared/IMG_0001 (2).JPG` |
+| Folder chung đã có bản cùng SHA | `Already in Shared` (hàng mờ, không đếm vào nút; vẫn được thêm sidecar thiếu như §6) |
+| Move | `→ Shared/IMG_4021.HEIC · removes 2 copies` — rê chuột (`.help`) ra đủ đường dẫn từng bản sẽ bị xoá |
+
+- Đầu danh sách: "280 photos · 31 videos · 4.2 GB · 2 already in Shared".
+- **Bấm Copy N / Move N là chạy đúng kế hoạch đó.** Không băm lại SHA của bản nguồn:
+  - Copy: SHA tính ngay trong lúc tải bản nguồn đầu, không tốn thêm lượt đọc. Lệch so với Scan → ảnh Failed "changed on
+    the server", không ghi gì.
+  - Move: kiểm cỡ + ngày sửa từng bản (§6). Chỉ băm khi một trong hai lệch.
+- Folder chung đổi giữa Scan và chạy (có file mới trùng tên): lượt chạy chọn tên trống kế tiếp, không ghi đè (§6). Log
+  và CSV ghi tên cuối thật.
+- Kế hoạch là của lần Scan này. Đổi folder, đích, hay Copy ↔ Move thì bỏ kết quả, phải Scan lại (như §6c).
+
+### So sánh hai bản
+
+- Hàng Same → **Space** hay nhấp đúp → cửa sổ **Compare** (không modal, một cửa sổ cho cả sheet). ←/→ hoặc ↑/↓ sang
+  hàng kế; Esc đóng.
+- Hai khung cạnh nhau, mỗi khung một bản (folder đầu bên trái). Mỗi khung ghi: folder, tên, cỡ, ngày chụp, SHA-256 8 ký
+  tự đầu. Dưới hai khung: "Same bytes — SHA-256 matches", kèm SHA đủ (chọn được để chép).
+- Ba folder trở lên: khung phải có popup chọn bản để so với bản bên trái.
+- **Ảnh:** hiện vừa khung. Cùng zoom và cùng vị trí cho cả hai khung (cuộn hay zoom một bên, bên kia theo).
+- **Video:** một nút Play và một thanh tua cho cả hai; hai bên luôn cùng thời điểm (lệch ≤ 1 khung hình); tiếng chỉ bên
+  trái.
+- **Byte lấy ở đâu:** bản đã index thì dùng ảnh preview đã có. Chưa index thì **tải cả file** về thư mục tạm:
+  - thanh tiến độ từng khung;
+  - chỉ tải hai bản của hàng đang xem; sang hàng khác thì huỷ lượt tải dở;
+  - file tạm xoá khi đóng Compare.
+  - giữ tạm tối đa **2 GB** (người dùng 2026-11-04), bỏ cái cũ nhất trước, để quay lại hàng vừa xem không tải lại.
+- Tải để xem không chặn Scan đang chạy: lệnh của Compare xếp sau lệnh của Scan trên cùng connection (03 §2). Lúc Scan còn
+  chạy, khung ghi "Waiting for the scan…".
+- Mất kết nối khi đang tải: khung ghi câu lỗi FS-15.01 §3 + **Try Again**; sheet và Scan không bị ảnh hưởng.
+- RAW không giải mã được trên máy này: khung hiện preview nhúng nếu có, không có thì biểu tượng file + "No preview for
+  this RAW". Đây không phải lỗi.
+
+### Bỏ chọn từng hàng
+
+- Mỗi hàng Same có ô chọn, mặc định chọn hết. Chọn nhiều hàng rồi Space bật/tắt cả nhóm. Menu chuột phải: **Leave
+  Out** / **Include**, **Compare**.
+- Nút đếm đúng số đang chọn: **Copy 278** / **Move 278**. Bỏ hết → nút mờ.
+- Hàng bỏ ra được **nhớ cho bộ gom đó** (§6c), theo SHA-256 (đổi tên hay dời trong A/B vẫn nhận ra):
+  - lượt quét lại, Run Again và tự gom không chạy ảnh đó;
+  - danh sách có mục thu gọn **Left Out (2)** ở cuối, mở ra thấy hàng mờ với nút **Include**;
+  - Include → lần chạy sau tính lại ảnh đó.
+- Bảng riêng **Ảnh bỏ ra** (bộ gom, SHA-256, lúc bỏ). Đây là dữ liệu người dùng tự tạo (BD-02): không nằm trong
+  `photo_metadata` hay `common_photo_scan_records`. Clear Local Metadata Index không xoá. Xoá bộ gom (Remove from List,
+  xoá connection) thì xoá theo.
+
+### Danh sách Move chờ của tự gom
+
+- Cửa sổ log của lượt ready (§6c, AC-169) dùng cùng hàng: kế hoạch, ô chọn, Compare, Leave Out.
+- **Move N…** đếm theo số đang chọn. Hộp xác nhận nói đúng số đó.
+- Hàng bỏ ra ở đây cũng vào bảng Ảnh bỏ ra của bộ, nên lượt tự gom sau không đưa lại.
+
+### Chạy nhanh hơn
+
+Hôm nay Copy cho mỗi ảnh đi qua mạng **3 lần**: tải bản nguồn về Mac, đẩy lên folder chung, đọc lại bản ở đích để kiểm
+SHA. Move không chép byte. Scan phải băm mọi bản cùng cỡ: đọc **2 lần** phần chung (mỗi folder một lần), lần sau dùng
+SHA đã nhớ (§6c).
+
+1. **Copy ngay trên server.** NAS tự chép file, byte không qua Mac. Có hay không tuỳ loại connection:
+
+   | Connection | Lệnh | Hôm nay trong app |
+   |---|---|---|
+   | SMB | `FSCTL_SRV_COPYCHUNK` (Samba, Windows, Synology, QNAP có) | thư viện `SMBClient` có mã lệnh `srvCopyChunk` nhưng chưa có hàm gọi |
+   | WebDAV | `COPY` (RFC 4918) | client mới có `MOVE` |
+   | SFTP | không có trong giao thức (chỉ vài server có `copy-data`) | — |
+
+   Server không làm được (lệnh bị từ chối, khác share) → lùi về tải + đẩy như hôm nay, không báo lỗi. Log ghi cách đã chép.
+
+   Đã chốt (người dùng 2026-11-04): vá thêm hàm copychunk vào bản sao `SMBClient` trong repo (local package). Bản vá
+   phải ghi rõ để giữ khi cập nhật thư viện. WebDAV `COPY` làm cùng lúc.
+2. **Kiểm bản ở đích sau Copy.**
+
+   Đã chốt (người dùng 2026-11-04): vẫn **đọc lại SHA** bản ở đích. Với server copy, đây là lần duy nhất byte qua mạng:
+   1× thay cho 3×. Move giữ nguyên kiểm như §6.
+3. **Băm song song khi Scan.** Hôm nay một lệnh tới server một lúc mỗi connection (03 §2).
+
+   Đã chốt (người dùng 2026-11-04): **giữ một lệnh**. NAS một ổ cứng có thể chậm đi khi đọc hai file một lúc, và đo trên
+   SMB ảo không nói được gì về NAS thật. Song song hoá chỉ xét lại khi có số đo trên NAS của người dùng; không thuộc §6d.
+4. Không thêm cách nào bỏ băm khi Scan: SHA cả file là điều kiện của Same. Video lớn tốn thời gian theo đúng cỡ của nó.
+
+**Đích đo được** (SMB ảo, 1 GB phần chung, 2 folder):
+
+| Đo | Hôm nay | Sau §6d (phương án đề xuất) |
+|---|---|---|
+| Byte qua mạng khi Copy | ≈ 3 GB | ≤ 1.1 GB (server copy + đọc lại SHA) |
+| Lệnh `sha256` lên bản nguồn khi chạy (Copy và Move) | Copy 0, Move 0 khi không đổi | 0 |
+| Quét lại cùng bộ, không đổi | 0 byte (§6c) | 0 byte |
+
 ## 7. Cửa sổ tiến độ (`MAC_CommonPhotosRun`)
 
 | Trạng thái | Hiển thị |
@@ -268,7 +378,8 @@ Copy/Move vẫn là cùng bộ.
 | Đọc từ | danh sách server (lệnh liệt kê) · SHA và ngày chụp đã có của bản sao server ([05](05-data.md), bảng file từng bản sao) |
 | Ghi vào (§6c) | bảng **SHA đã đọc** (connection, đường dẫn, cỡ, ngày sửa, SHA, khoá ngày chụp, lúc đọc) · bảng **Bộ tự gom** (connection, folder nguồn, folder chung, Copy/Move, bật/tắt, lúc kiểm cuối, lý do chờ/dừng, số đã gom); lượt gom thêm cột bộ gom để biết "lượt xong gần nhất của bộ" |
 | Ghi vào | bảng mới **Lượt gom** (connection, folder nguồn, folder chung, Copy/Move, trạng thái, lúc) + **Mục gom** (SHA, đường dẫn từng nguồn, đích, trạng thái, lỗi; thêm cho §6b: sidecar lượt đã đặt ở đích + SHA của nó, trạng thái hoàn tác) + bảng phụ **hàng lịch sử đã dời** (lượt, ảnh, hàng lịch sử, đường dẫn trước khi dời) |
-| Người dùng tự nhập? | không — dữ liệu dẫn xuất, không vào `photo_metadata`; Clear Local Metadata Index không xoá lượt đang dở |
+| Ghi vào (§6d) | bảng **Ảnh bỏ ra** (bộ gom, SHA-256, lúc bỏ) — người dùng tự tạo, bảng riêng; kế hoạch của từng ảnh (tên dự kiến ở đích, Already in Shared) đi cùng kết quả Scan, ghi vào `common_photo_items` khi bấm chạy |
+| Người dùng tự nhập? | §6d: **có**, bảng Ảnh bỏ ra (Clear Local Metadata Index không xoá; xoá theo bộ gom). Còn lại không — dữ liệu dẫn xuất, không vào `photo_metadata`; Clear Local Metadata Index không xoá lượt đang dở |
 
 ## 9. Ràng buộc
 
@@ -291,4 +402,6 @@ Copy/Move vẫn là cùng bộ.
 | File ở folder chung bị sửa sau lượt chạy | SHA lệch → không trả bản đó, không xoá gì |
 | Hoàn tác Move chậm như lượt chạy | phải đẩy lại byte cho mọi bản không phải bản đã đổi chỗ; tiến độ đếm byte |
 | §6c: file đổi nội dung mà giữ nguyên cỡ và ngày sửa (công cụ ghi đè giữ mtime) | SHA cũ bị dùng lại, ảnh có thể bị coi là chung sai. Copy vẫn an toàn (chép byte thật, kiểm SHA khi đọc lại); Move hỏi lại cỡ + ngày sửa và kiểm SHA ở đích như §6, nên không xoá nhầm. Scan Everything không giúp; giới hạn đã biết |
+| §6d: server copy trên NAS ghi sai mà vẫn báo xong | đọc lại SHA ở đích (đã chốt) bắt được |
+| §6d: tải cả file để Compare với RAW/video lớn | chỉ hai bản của hàng đang xem, huỷ khi sang hàng khác, trần cache tạm, xoá khi đóng |
 | §6c: tự gom 15 phút trên NAS 50k file | mỗi lượt liệt kê lại hai cây (lệnh liệt kê, không đọc byte); đo ở `/verify`, nếu một lượt quá 2 phút thì giãn chu kỳ |
