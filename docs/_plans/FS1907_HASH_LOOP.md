@@ -26,7 +26,7 @@ nhớ của loop: mỗi vòng đọc nó trước khi làm, ghi lại sau khi l�
 | H1 | xong | (xem git log) | v48 `sharedFrom`, `hash_index_segments`, `distrusted_hash_devices`; origin `shared`/`ledger`; `distrust`/`accepts` |
 | H2 | xong | (xem git log) | cờ `everything` trong 2 câu ứng viên (thứ tự `indexedAt`, bỏ file hỏng 5 lần); Mac bật theo `indexShare != nil && sharesIndex`; ảnh PhotoKit không lấy được rời hàng đợi; file không rõ cỡ tính 2 GB; spike S9 (Photos có giữ bản tải không) |
 | H3 | xong | (xem git log) | sổ `.shotdex/hash-index/` ở gốc nguồn; v49 `hash_index_lines` (giữ dòng đã đọc, đọc theo lô key); chỉ nối server khi có ứng viên hay nợ sổ; một đoạn khi đọc xong nguồn (hoặc ≥ 5.000 dòng); dòng phải đúng máy tên đoạn, SHA viết thường; `recordedAt` = lúc băm; lỗi server lúc nối → `stoppedBy` như cũ; xoá nguồn xoá sổ |
-| H4 | chưa | | |
+| H4 | xong | (xem git log) | `OnServerSMBTests.ledgerSavesDownloads`: Mac ghi sổ trên SMB ảo, máy kia lấy 3/3 từ sổ, 0 lần băm; đường dẫn phải có tiền tố share `photos/`. Sai share làm rescan treo > 10 phút (`connectShare` không timeout) → REVIEW_QUEUE |
 | H5 | chưa | | |
 | H6 | chưa | | |
 | H7 | chưa | | |

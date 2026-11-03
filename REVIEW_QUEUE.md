@@ -10,6 +10,7 @@ Sources: `hig-components` (two passes), `device-layout` (iPhone 17 + iPad Pro 13
 
 ## Should fix
 
+- [ ] `ShotDex/Data/Sources/FileServer/SMBFileClient.swift:77` — `connectShare` has no `withConnectTimeout` (login does): a share name the server does not have (impacket log "TREE_CONNECT not found") made `ServerSourceRefresh.rescan` hang > 10 min instead of failing `folderMissing`. Found 2026-11-03 by `OnServerSMBTests` with a wrong folder (FS-19.07 §12 loop). Wrap it, test with the local SMB server.
 - [ ] **Mac Duplicates v3 code** — boards `MAC_DuplicatesSummary`, `MAC_Duplicates`, `MAC_BurstFrames` are drawn (canvas Mac, commit `160b3868`); no Mac code yet. Open choices from the board pass: sentence case vs MAC_STYLE title case on buttons; frame picker follows the Viewer (not tier D); Keep = `P` _(plan 2026-10-17-fs0606-duplicates-v3 §8.3)_
 - [ ] `DuplicatesModel.mergeBursts` — one `frames(ofBurst:)` fetch per burst on every `loadCache()`; cache by `assetChangeToken` and fetch in one detached pass; `PhotoKitBurstLibrary.assetsById` never pruned _(photokit-guard, FS-06.06 §4)_
 - [ ] `DuplicatesModel.readTraits` — favorite/album traits read once per screen visit; inheritance re-reads the keeper but not donors' albums; Delete waits on `loadAllTraits` with no visible progress for 200+ groups _(photokit-guard)_
