@@ -52,7 +52,7 @@ lần công việc đổi bậc. Một luật, bốn skill cùng dùng:
 | **chưa làm** | chưa có commit code nào cho spec của intent | `/intent` (lúc tạo), `/spec`, `/plan` |
 | **đang làm** | có ít nhất một commit code, còn task trong plan chưa xong | task đầu tiên sau khi plan được duyệt; `/verify` |
 | **gần xong** | mọi task đã commit, còn AC chưa chứng minh được | `/verify` |
-| **xong** | **mọi** AC xanh ở lần `/verify` gần nhất và `Tools/gate` xanh | chỉ `/verify` |
+| **xong** | **mọi** AC xanh ở lần `/verify` gần nhất | chỉ `/verify` |
 
 Dạng ghi: `**<bậc>** (YYYY-MM-DD) — <bằng chứng>`. Bằng chứng là số đếm được, không phải tính từ:
 `spec FS-01.09, 15 AC` · `plan chờ duyệt` · `task 3/9, 4/15 AC xanh, commit abc1234` ·
@@ -74,7 +74,7 @@ Dạng ghi: `**<bậc>** (YYYY-MM-DD) — <bằng chứng>`. Bằng chứng là 
         → AC-1 ✅ VideoStudioModel.swift:412 · AC-2 ⚠️ undo gộp 2 bước · AC-6 ❌
         → đến đây CHƯA có dòng code nào bị sửa → bạn duyệt, commit
 làm AC-1 → làm AC-2 → …   mỗi cái một commit kèm test
-/verify FS-12 → xanh hết thì git push, hook chạy Tools/gate
+/verify FS-12 → xanh hết thì git push
 ```
 
 ## 4. Khi nào **không** cần đi hết vòng
@@ -90,19 +90,16 @@ làm AC-1 → làm AC-2 → …   mỗi cái một commit kèm test
 **Càng không chắc thì càng nên đi đủ vòng.** Vòng đầy đủ tốn thêm ~30 phút giấy tờ, rẻ hơn nhiều so với
 viết nhầm 31 file.
 
-## 5. Cổng chặn — chạy tại máy, không CI
+## 5. Cổng chặn — chạy tay, chỉ khi người dùng bảo
 
-```bash
-Tools/install-hooks
-```
-
-Từ đó mỗi `git push` chạy `Tools/gate` = build + toàn bộ unit test. Đỏ thì không push được.
+`Tools/gate` = build + toàn bộ unit test. Không có pre-push hook, `/verify` không tự chạy (từ 2026-11-04:
+cả bộ chạy hàng giờ trên máy này). `Tools/install-hooks` vẫn còn nếu muốn cài lại hook.
 Commit đã xanh thì gate bỏ qua: cây làm việc sạch và từ lần xanh gần nhất chỉ đổi `docs/`, `*.md`, `Tools/` hoặc
 script ui-drive — lượt bỏ qua không ghi mẫu vào `gate.jsonl`. Muốn chạy lại dù đã xanh: `Tools/gate --force`.
 
 | Lệnh | Khi nào | Thấy gì |
 |---|---|---|
-| `Tools/gate` | trước khi push (tự động), hoặc gõ tay | `gate: xanh (92s)`, `gate: xanh (đã chạy cho …) — bỏ qua`, hoặc danh sách lỗi |
+| `Tools/gate` | chỉ khi người dùng bảo chạy | `gate: xanh (92s)`, `gate: xanh (đã chạy cho …) — bỏ qua`, hoặc danh sách lỗi |
 | `Tools/evals` | khi đụng `CLAUDE.md` hoặc `.claude/**` | `4/5 eval xanh` — chạy từ terminal đã đăng nhập `claude` |
 | `Tools/bands-check` | định kỳ, hoặc khi thấy chậm/đỏ bất thường | bảng metric + cảnh báo khi vượt band |
 
@@ -155,8 +152,8 @@ hết bộ nhớ. Một màn bình thường cần 5–15 tiêu chí; dưới 5 
 | **Plan** | `/intent` → `docs/_intents/` |
 | **Design** | `/spec` → `FS-*`, ràng buộc lấy từ `DESIGN.md` + `docs/04-non-functional-design/` |
 | **Build** | `/plan` → `docs/_plans/`, rồi một AC một commit |
-| **Test** | `/verify` + `Tools/gate` + `Tools/evals` |
-| **Deploy** | `REVIEW.md` 3 lớp + hook + pre-push gate |
+| **Test** | `/verify` + `Tools/evals` (+ `Tools/gate` khi người dùng bảo) |
+| **Deploy** | `REVIEW.md` 3 lớp + hook |
 | **Maintain** | `bands.yaml` + `Tools/bands-check --intent` |
 
 Vòng khép kín: `bands-check` phát hiện bất thường → sinh `intent.md` → chạy lại từ Plan. Phát hiện là

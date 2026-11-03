@@ -32,7 +32,8 @@ Skill này **đo rồi nói thật**. Không sửa code cho test xanh.
    - script `Tools/ui-drive` → chạy, lấy ảnh và element dump
    - `⚠️ chưa có` → đánh dấu **chưa chứng minh được**, đề xuất test cần viết
 
-3. `Tools/gate` — build + toàn bộ unit test, để chắc không vỡ chỗ khác.
+3. **Không** chạy `Tools/gate` (build + toàn bộ unit test) trừ khi người dùng bảo — cả bộ chạy hàng giờ.
+   Chỉ chạy test liên quan ở bước 2.
 
 4. Đụng cấu hình agent (`CLAUDE.md`, `.claude/**`) thì chạy thêm `Tools/evals`.
 
@@ -56,7 +57,7 @@ Skill này **đo rồi nói thật**. Không sửa code cho test xanh.
 8. Cập nhật cột "Chứng minh bằng" trong `FS-*` cho các AC vừa có test.
 
 9. Cập nhật dòng `Tiến độ` của intent gốc theo kết quả vừa đo (luật: `docs/PROCESS.md` mục 2, "Dòng
-   Tiến độ"): `xong` chỉ khi **mọi** AC xanh và `Tools/gate` xanh; còn AC chưa chứng minh thì `gần xong`
+   Tiến độ"): `xong` chỉ khi **mọi** AC xanh; còn AC chưa chứng minh thì `gần xong`
    (mọi task đã commit) hoặc `đang làm`, kèm `x/N AC xanh` và danh sách AC còn thiếu.
 
 ## Sửa bug

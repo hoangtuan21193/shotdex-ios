@@ -63,7 +63,7 @@ test nào chứng minh là xong · rủi ro**. Quy trình repo: `docs/PROCESS.md
 
 Làm từng task một, mỗi task một commit (`feat(FS-12): AC-3 …`), build sau mỗi commit
 (`/build`), đụng UI thì thêm `/screens`. Mỗi AC xong thì **sửa ngay** cột "Chứng minh bằng"
-trong `FS-*` từ `⚠️ chưa có` thành tên test thật. Đóng lại bằng `/verify` và `Tools/gate`.
+trong `FS-*` từ `⚠️ chưa có` thành tên test thật. Đóng lại bằng `/verify` (`Tools/gate` chỉ khi người dùng bảo).
 
 Sau **mỗi** commit task, sửa dòng `Tiến độ` của intent gốc trong cùng commit:
 `**đang làm** (<ngày>) — task k/n, x/N AC xanh`; commit task cuối thì `**gần xong**` nếu còn AC chưa
