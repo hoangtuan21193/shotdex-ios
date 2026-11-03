@@ -146,6 +146,32 @@ import UniformTypeIdentifiers
         #expect(try CopyFileStore(database: database).photosCandidates(triedBefore: .distantFuture, limit: 1_000).isEmpty)
     }
 
+    /// FS-19.07 AC-144 (§12.1): the Mac hashing for every device takes every
+    /// file — none has a file of its size on a server here — newest first,
+    /// one temporary file at a time, nothing left after. Off, none is taken.
+    @Test func macHashesEveryItem() async throws {
+        let (database, base, downloads) = try Self.library(count: 4)
+        var pass = base
+        let work = FileManager.default.temporaryDirectory.appendingPathComponent("OnServer-\(UUID().uuidString)", isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: work) }
+        pass.workDirectory = work
+        #expect(try await pass.run().hashed == 0)
+        // Indexed in the opposite order to capture, P3 with no metadata: the
+        // last indexed goes first, the one without a row last.
+        try await database.writer.write { db in
+            for n in 0..<3 { try db.execute(sql: "UPDATE photo_metadata SET indexedAt = ? WHERE assetId = ?", arguments: [2_000 - n, "P\(n)"]) }
+            try db.execute(sql: "DELETE FROM photo_metadata WHERE assetId = 'P3'")
+        }
+
+        pass.hashesEverything = true
+        let summary = try await pass.run(now: Date().addingTimeInterval(1))
+
+        #expect(summary.hashed == 4)
+        #expect(downloads.ids == ["P0", "P1", "P2", "P3"])
+        #expect(try FileManager.default.contentsOfDirectory(atPath: work.path).isEmpty)
+        #expect(try (0..<4).allSatisfy { try CopyFileStore(database: database).files(copyId: "photos:P\($0)").first?.origin == .hashed })
+    }
+
     /// FS-19.07 AC-82: three candidates are downloaded one temporary file at
     /// a time; each is gone before the next starts and nothing is left
     /// after. One that cannot be read is recorded and holds up none of the

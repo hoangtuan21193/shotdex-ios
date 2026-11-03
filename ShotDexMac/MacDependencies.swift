@@ -104,6 +104,9 @@ final class MacDependencies: LibraryServices {
         self.sourcesModel = sourcesModel
         onServerCheck = OnServerCheck(environment: .live(
             database: database, servers: fileServers, refresh: serverSources, connectionLock: connectionLock,
+            // FS-19.07 §12.1: the Mac hashes everything for the other devices
+            // while it shares the index.
+            hashesEverything: { [hasIndexShare = indexShare != nil] in hasIndexShare && IndexShareService.sharesIndex },
             listingChanged: { await sourcesModel.serverListingChanged() }
         ))
         backupControl = MacBackupControl(coordinator: backupCoordinator, photoLibrary: photoLibrary,

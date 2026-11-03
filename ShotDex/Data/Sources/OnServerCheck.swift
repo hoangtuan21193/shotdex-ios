@@ -200,8 +200,12 @@ extension OnServerCheck.Environment {
     /// jobs, the device's network and power, and the two hash passes. Every
     /// server call goes through the connection's lock, behind Backup.
     /// `listingChanged` runs when a listing found new or changed photos.
+    /// `hashesEverything` (the Mac with Share Index Across Devices on,
+    /// FS-19.07 §12.1): every Photos and server file is hashed, for the
+    /// other devices, not only the candidates of a size.
     static func live(database: AppDatabase, servers: FileServerStore, refresh: ServerSourceRefresh,
-                     connectionLock: ConnectionLock, listingChanged: @escaping @Sendable () async -> Void) -> Self {
+                     connectionLock: ConnectionLock, hashesEverything: @escaping @Sendable () -> Bool,
+                     listingChanged: @escaping @Sendable () async -> Void) -> Self {
         // Monitors of its own: the shared ones have a single handler slot.
         let network = NetworkMonitor()
         let power = PowerMonitor()
@@ -237,11 +241,14 @@ extension OnServerCheck.Environment {
                 guard let server = try? servers.fetch(id: connectionId) else { return .init() }
                 let client = LockedRemoteFileClient(RemoteFileClientFactory.make(for: server, password: servers.password(for: server.id) ?? ""),
                                                     lock: connectionLock, connectionId: server.id, priority: .normal)
-                return try await ServerFileHashPass(store: store, client: client)
-                    .run(sourceId: sourceId, connectionId: connectionId, folder: server.folder, now: now)
+                var pass = ServerFileHashPass(store: store, client: client)
+                pass.hashesEverything = hashesEverything()
+                return try await pass.run(sourceId: sourceId, connectionId: connectionId, folder: server.folder, now: now)
             },
             hashPhotos: { now in
-                try await PhotosFileHashPass(store: store, listFiles: PhotosFileHashPass.liveLister()).run(now: now)
+                var pass = PhotosFileHashPass(store: store, listFiles: PhotosFileHashPass.liveLister())
+                pass.hashesEverything = hashesEverything()
+                return try await pass.run(now: now)
             },
             observeConditions: { changed in
                 network.setPathChangeHandler { _, _ in changed() }

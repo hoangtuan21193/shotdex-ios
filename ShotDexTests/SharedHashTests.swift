@@ -113,5 +113,37 @@ import Testing
         try MetadataStore(database: database).deleteAll()
         #expect(try !store.accepts(device: "MAC", hashedAt: Date(timeIntervalSince1970: 100)))
     }
+
+    /// FS-19.07 AC-145 (§12.1), the hashing half: the Mac reads every file of
+    /// a server source, not only those the size of a Photos file; a pass
+    /// stopped midway goes on from the next file (AC-157).
+    @MainActor
+    @Test func macHashesEveryServerFile() async throws {
+        let client = InMemoryRemoteFileClient()
+        for n in 0..<5 {
+            client.put("iCloud Photo/Shared/s\(n).ARW", try ServerSourceIndexTests.raw(padding: 4_096 + n * 512, seed: UInt8(n)))
+        }
+        let f = try OnServerFixture(photos: 0)
+        let servers = FileServerStore(database: f.database, passwords: InMemoryPasswordStore())
+        try servers.save(FileServer(id: "C1", name: "NAS Home", transferProtocol: .smb, host: "nas.local", username: "u",
+                                    folder: "iCloud Photo"), password: "pw")
+        let refresh = ServerSourceRefresh(database: f.database, servers: servers, composer: ServerSourceIndexTests.composer) { _, _ in client }
+        _ = await refresh.rescan(sourceId: f.source)
+        let store = CopyFileStore(database: f.database)
+        var pass = ServerFileHashPass(store: store, client: client)
+
+        #expect(try await pass.run(sourceId: f.source, connectionId: "C1", folder: "iCloud Photo").hashed == 0)
+
+        pass.hashesEverything = true
+        let first = try await pass.run(sourceId: f.source, connectionId: "C1", folder: "iCloud Photo", limit: 2)
+        let rest = try await pass.run(sourceId: f.source, connectionId: "C1", folder: "iCloud Photo")
+
+        #expect(first.hashed == 2 && rest.hashed == 3)
+        #expect(Set(client.sha256Paths).count == 5 && client.sha256Paths.count == 5)
+        let hashed = try await f.database.reader.read { db in
+            try Int.fetchOne(db, sql: "SELECT COUNT(*) FROM copy_files WHERE sha256 IS NOT NULL AND origin = 'hashed'")
+        }
+        #expect(hashed == 5)
+    }
 }
 

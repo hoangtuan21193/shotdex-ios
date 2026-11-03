@@ -18,6 +18,12 @@ struct PhotosFileHashPass: Sendable {
     var download: @Sendable (_ assetId: String, _ fileKey: String, _ directory: URL) async throws -> URL = Self.liveDownloader()
     var workDirectory = FileManager.default.temporaryDirectory.appendingPathComponent("ShotDexOnServer", isDirectory: true)
     var freeBytes: @Sendable () -> Int64? = { DiskSpace.availableBytes() }
+    /// The Mac hashing for every device (FS-19.07 §12.1): every file, not
+    /// only those with a file of the same size on a server.
+    var hashesEverything = false
+
+    /// Room kept for a file whose size Photos did not report.
+    static let unknownSizeAllowance: Int64 = 2 << 30
 
     struct Summary: Equatable, Sendable {
         var listed = 0
@@ -39,19 +45,31 @@ struct PhotosFileHashPass: Sendable {
             try Task.checkCancellation()
             // An asset gone from the library since the index: the indexer
             // removes its copy; nothing to list.
-            guard let files = try? await listFiles(copy.assetId) else { continue }
+            let files: [PhotosFile]
+            do {
+                files = try await listFiles(copy.assetId)
+            } catch PhotosFileHashPass.ListError.missingAsset {
+                // PhotoKit cannot fetch it (hidden, Recently Deleted, another
+                // library): listed as having no files until it changes, so
+                // it does not sit at the head of the queue every round.
+                files = []
+            } catch {
+                continue
+            }
             try store.saveListing(copyId: copy.copyId, stamp: copy.stamp, files: files, at: now)
             summary.listed += 1
         }
         summary.seeded = try store.seedFromBackupLedger(at: now)
 
-        let candidates = try store.photosCandidates(triedBefore: now, limit: limit)
+        let candidates = try store.photosCandidates(triedBefore: now, limit: limit, everything: hashesEverything)
         guard !candidates.isEmpty else { return summary }
         try FileManager.default.createDirectory(at: workDirectory, withIntermediateDirectories: true)
         for file in candidates {
             try Task.checkCancellation()
             // The same rule as Backup: never fill the device (FS-22.02 §2).
-            if let free = freeBytes(), free - (file.size ?? 0) < BackupRunner.minimumFreeBytes {
+            // A size Photos did not give counts as 2 GB more: the download
+            // is not watched while it runs.
+            if let free = freeBytes(), free - (file.size ?? Self.unknownSizeAllowance) < BackupRunner.minimumFreeBytes {
                 summary.waitingForSpace = true
                 break
             }

@@ -10,6 +10,9 @@ struct ServerFileHashPass: Sendable {
     let store: CopyFileStore
     /// Locked per call (`LockedRemoteFileClient`), so Backup goes between files.
     let client: any RemoteFileClient
+    /// The Mac hashing for every device (FS-19.07 §12.1): every file of the
+    /// source, not only those the size of a Photos file.
+    var hashesEverything = false
 
     struct Summary: Equatable, Sendable {
         var seeded = 0
@@ -33,7 +36,7 @@ struct ServerFileHashPass: Sendable {
             summary.seeded += 1
         }
 
-        let candidates = try store.serverCandidates(sourceId: sourceId, triedBefore: now, limit: limit)
+        let candidates = try store.serverCandidates(sourceId: sourceId, triedBefore: now, limit: limit, everything: hashesEverything)
         guard !candidates.isEmpty else { return summary }
         let result: Result<Void, Error>
         do {

@@ -181,7 +181,9 @@ Quy tắc khớp (§3) và xoá (§9) **giữ nguyên**; mục này chỉ đổi
   mục Photos có `cloudIdentifier`, không chỉ mục có ứng viên cùng cỡ trên NAS. Mục mới vào thư viện được băm trước, như
   §4.
   - Bản gốc chưa có trên Mac (Mac cũng bật Optimize Storage): tải về thư mục tạm, băm, **xoá ngay**, một file một lúc
-    như §4. Bản trong Photos của Mac vẫn tối ưu như cũ. Luật chỗ trống (§4) giữ nguyên.
+    như §4. Photos có giữ bản gốc vừa tải trên Mac hay không thì PhotoKit không cho điều khiển: đo bằng spike S9 trước
+    khi hứa "vẫn tối ưu". Luật chỗ trống (§4) giữ nguyên; file không rõ cỡ tính thêm 2 GB. File hỏng 5 lần thì thôi băm
+    hết cho nó (vẫn băm khi có file server cùng cỡ).
 - **Phía NAS:** helper băm **mọi** file ảnh và video (các đuôi FS-19.01 nhận) trong mọi nguồn server, không chỉ ứng
   viên (§5). File có SHA sẵn (sổ Backup, sổ dưới đây, cache theo đường dẫn + cỡ + ngày sửa) thì không đọc lại.
 - **Thứ tự và cổng:** cùng khoá connection §5 (Backup đi trước, một lệnh một lúc), cùng cổng §6/§11.

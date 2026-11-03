@@ -168,18 +168,22 @@ struct CopyFileStore: Sendable {
     /// photo is already known not to be there. Photos does not always report
     /// a size; such a file is a candidate while any server file is known.
     /// Newest photo first; a file tried since `triedBefore` waits for the
-    /// next pass.
-    func photosCandidates(triedBefore: Date, limit: Int) throws -> [(copyId: String, assetId: String, fileKey: String, size: Int64?)] {
+    /// next pass. `everything` (the Mac hashing for every device, §12.1)
+    /// drops the size test: every file is a candidate, and what was indexed
+    /// last goes first (`indexedAt`, rewritten on a re-index — the same
+    /// order as the listing queue); a photo with no metadata row goes last.
+    func photosCandidates(triedBefore: Date, limit: Int, everything: Bool = false)
+        throws -> [(copyId: String, assetId: String, fileKey: String, size: Int64?)] {
         try database.reader.read { db in
             try Row.fetchAll(db, sql: """
                 SELECT f.copyId, c.photoKitId, f.fileKey, f.size FROM copy_files f
                 JOIN photo_copies c ON c.id = f.copyId AND c.kind = 'photos' AND c.photoKitId IS NOT NULL
                 LEFT JOIN photo_metadata m ON m.assetId = c.photoKitId
                 WHERE f.sha256 IS NULL AND (f.triedAt IS NULL OR f.triedAt < ?)
-                  AND EXISTS (
+                  AND (\(everything ? "f.attempts < \(Self.everythingAttempts)" : "0") OR EXISTS (
                     SELECT 1 FROM copy_files s JOIN photo_copies sc ON sc.id = s.copyId
-                    WHERE sc.kind = 'server' AND sc.missingSince IS NULL AND (f.size IS NULL OR s.size = f.size))
-                ORDER BY m.creationDate DESC, f.copyId, f.fileKey LIMIT ?
+                    WHERE sc.kind = 'server' AND sc.missingSince IS NULL AND (f.size IS NULL OR s.size = f.size)))
+                ORDER BY \(everything ? "COALESCE(m.indexedAt, 0) DESC, " : "")m.creationDate DESC, f.copyId, f.fileKey LIMIT ?
                 """, arguments: [Int(triedBefore.timeIntervalSince1970), limit]).map { ($0[0], $0[1], $0[2], $0[3]) }
         }
     }
@@ -274,8 +278,10 @@ struct CopyFileStore: Sendable {
     /// Server files worth reading whole (FS-19.07 §5): no hash yet, and the
     /// size of a Photos file that is not matched on this source — unhashed,
     /// or hashed with no server file of the same bytes here. A file tried
-    /// since `triedBefore` waits for the next pass.
-    func serverCandidates(sourceId: String, triedBefore: Date, limit: Int) throws -> [UnhashedServerFile] {
+    /// since `triedBefore` waits for the next pass. `everything` (§12.1)
+    /// drops the size test: every unhashed file of the source whose size
+    /// the listing gave.
+    func serverCandidates(sourceId: String, triedBefore: Date, limit: Int, everything: Bool = false) throws -> [UnhashedServerFile] {
         try database.reader.read { db in
             try Row.fetchAll(db, sql: """
                 SELECT f.copyId, f.fileKey, f.size,
@@ -283,11 +289,11 @@ struct CopyFileStore: Sendable {
                 FROM copy_files f JOIN photo_copies c ON c.id = f.copyId
                 WHERE c.sourceId = ?1 AND c.kind = 'server' AND c.missingSince IS NULL
                   AND f.sha256 IS NULL AND f.size IS NOT NULL AND (f.triedAt IS NULL OR f.triedAt < ?2)
-                  AND EXISTS (
+                  AND (\(everything ? "f.attempts < \(Self.everythingAttempts)" : "0") OR EXISTS (
                     SELECT 1 FROM copy_files p JOIN photo_copies pc ON pc.id = p.copyId AND pc.kind = 'photos'
                     WHERE p.size = f.size AND (p.sha256 IS NULL OR NOT EXISTS (
                         SELECT 1 FROM copy_files s JOIN photo_copies sc ON sc.id = s.copyId
-                        WHERE s.sha256 = p.sha256 AND sc.sourceId = ?1 AND sc.kind = 'server' AND sc.missingSince IS NULL)))
+                        WHERE s.sha256 = p.sha256 AND sc.sourceId = ?1 AND sc.kind = 'server' AND sc.missingSince IS NULL))))
                 ORDER BY c.relativePathKey, f.fileKey LIMIT ?3
                 """, arguments: [sourceId, Int(triedBefore.timeIntervalSince1970), limit]).compactMap { row in
                 guard let path: String = row["path"] else { return nil }
@@ -295,6 +301,12 @@ struct CopyFileStore: Sendable {
             }
         }
     }
+
+    /// Hashing everything, a file that failed this many times is left —
+    /// a resource iCloud will not hand over would be fetched every pass for
+    /// a photo that may never be asked about. It is still hashed when a
+    /// server file of its size makes it a real candidate.
+    static let everythingAttempts = 5
 
     /// `sharedFrom` names the device for a hash from another one (§12);
     /// `hashedAt` is then when that device hashed it, so a later random

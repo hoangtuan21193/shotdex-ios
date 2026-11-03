@@ -598,6 +598,8 @@ final class AppDependencies {
         self.sources = sources
         self.onServerCheck = OnServerCheck(environment: .live(
             database: database, servers: fileServers, refresh: serverSources, connectionLock: connectionLock,
+            // Only the Mac hashes everything for the other devices (FS-19.07 §12.1).
+            hashesEverything: { false },
             listingChanged: { await sources.serverListingChanged() }
         ))
         // The grid's "on server" glyph follows each batch of the check.

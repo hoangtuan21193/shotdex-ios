@@ -24,7 +24,7 @@ nhớ của loop: mỗi vòng đọc nó trước khi làm, ghi lại sau khi l�
 | Task | Trạng thái | Commit | Ghi chú |
 |---|---|---|---|
 | H1 | xong | (xem git log) | v48 `sharedFrom`, `hash_index_segments`, `distrusted_hash_devices`; origin `shared`/`ledger`; `distrust`/`accepts` |
-| H2 | chưa | | |
+| H2 | xong | (xem git log) | cờ `everything` trong 2 câu ứng viên (thứ tự `indexedAt`, bỏ file hỏng 5 lần); Mac bật theo `indexShare != nil && sharesIndex`; ảnh PhotoKit không lấy được rời hàng đợi; file không rõ cỡ tính 2 GB; spike S9 (Photos có giữ bản tải không) |
 | H3 | chưa | | |
 | H4 | chưa | | |
 | H5 | chưa | | |
