@@ -2,7 +2,7 @@
 
 `FS-19.08` · tier A (sheet) + B (cửa sổ tiến độ) · chỉ **Mac** · board `MAC_CommonPhotos` · `MAC_CommonPhotosRun`
 · đề xuất `ShotDexMac/Servers/CommonPhotos/`, `ShotDex/Domain/CommonPhotos/` · AC ở [08b](08b-common-photos-ac.md)
-· cập nhật 2026-11-02
+· cập nhật 2026-11-03 (thêm hoàn tác, §6b)
 
 **Một câu:** trong màn duyệt server trên Mac, chọn từ 2 folder trở lên → ShotDex tìm ảnh có **cùng nội dung** ở mọi
 folder đó và chép (mặc định) hay dời chúng vào một folder chung, có tiến độ, log từng file, và kiểm SHA-256 trước khi
@@ -20,7 +20,8 @@ Nguồn: [intent 2026-11-02](../../_intents/2026-11-02-common-photos-across-fold
 ## 2. Phạm vi
 
 **Có:** chọn ≥ 2 folder cùng connection · folder chung chọn có sẵn hoặc tạo mới · Copy (mặc định) / Move · quét cả folder
-con · kết quả xem trước có hai mức Likely the same → Same · tiến độ, dừng, làm tiếp · log trong app + CSV trong folder chung.
+con · kết quả xem trước có hai mức Likely the same → Same · tiến độ, dừng, làm tiếp · log trong app + CSV trong folder chung · **hoàn tác** cả lượt hoặc các hàng đã chọn
+(§6b, người dùng 2026-11-03).
 
 **Cố ý không có:**
 - iPhone, iPad, Duo — người dùng chọn chỉ Mac (2026-11-02).
@@ -28,7 +29,8 @@ con · kết quả xem trước có hai mức Likely the same → Same · tiến
   hợp Mac, iOS dừng app nền — người dùng chốt 2026-11-02, ghi ở [FS-18.07](../FS-18-mac-app/07-spec-deltas.md).
 - Ảnh cùng ngày chụp nhưng khác byte (nén lại, ghi thêm metadata, đã sửa) — không gợi ý, không gom (người dùng 2026-11-02).
 - Folder ở hai connection khác nhau — một lượt chạy trên một connection.
-- Hoàn tác sau khi Move — server không có thùng rác; thay bằng kiểm SHA trước khi xoá và CSV ghi đủ đường dẫn cũ.
+- Hoàn tác từ file CSV (DB của app mất, hoặc từ Mac khác) — chỉ hoàn tác từ log trong app (người dùng 2026-11-03).
+- Trả ngày sửa cũ cho bản được trả về — client server chưa có lệnh đặt ngày sửa; bản trả về mang ngày sửa lúc hoàn tác.
 - Folder chung giữ cây folder con — C phẳng (người dùng 2026-11-02).
 
 ## 3. Lối vào
@@ -53,7 +55,7 @@ con · kết quả xem trước có hai mức Likely the same → Same · tiến
 
 - Báo lỗi trong sheet, không chạy: folder chung nằm trong một folder nguồn · hai folder nguồn lồng nhau · < 2 folder.
 - **Move** bấm chạy → hộp xác nhận: "Move 280 photos to “Shared”?" · "Each photo is copied to “Shared” and verified, then
-  removed from Tuấn and Vợ. This can't be undone — the server has no Trash." · **Move** · **Cancel** (Cancel là nút mặc
+  removed from Tuấn and Vợ. The server has no Trash; you can undo the run from Activity." · **Move** · **Cancel** (Cancel là nút mặc
   định: Return không xoá gì).
 
 ## 5. Quét — nhanh rồi chắc
@@ -93,27 +95,69 @@ con · kết quả xem trước có hai mức Likely the same → Same · tiến
   download và sổ Backup của mọi bản bị dời hay xoá **chuyển sang đường dẫn ở đích** (byte giống hệt đang nằm đó) như
   Rename của FS-17.01 §4b. CSV, Rescan hay sửa lịch sử dở chừng → lượt ở `finishing`, Resume làm lại.
 
+## 6b. Hoàn tác (người dùng 2026-11-03)
+
+Hoàn tác đọc **log trong app** (bảng Lượt gom / Mục gom), không đọc CSV. Mỗi bản bị xoá ở lượt Move đã được kiểm cùng
+SHA-256 với bản ở folder chung, nên trả về = chép lại đúng những byte đó.
+
+- **Lối vào:** cửa sổ log (`MAC_CommonPhotosRun`) của lượt đã xong hoặc đã Stop có nút **Undo Copy…** / **Undo Move…**;
+  chọn hàng trong bảng log → chuột phải **Undo Selected…** (chỉ hàng Copied/Moved). Lượt đang chạy, tạm dừng hay
+  `finishing` thì không có nút này.
+- **Hộp xác nhận** (Cancel là nút mặc định):
+  - Copy: "Undo copying 280 photos?" · "The copies in “Shared” are removed. The photos in Tuấn and Vợ stay where they
+    are." · **Undo** · **Cancel**.
+  - Move: "Undo moving 280 photos?" · "Each photo is put back in Tuấn and Vợ and checked, then removed from “Shared”." ·
+    **Undo** · **Cancel**.
+- **Undo Copy, mỗi ảnh Copied:**
+  1. Hỏi lại một bản nguồn còn đúng cỡ + ngày sửa (lệch thì SHA-256). Không bản nào còn → **giữ** bản ở folder chung,
+     hàng "Not undone — no other copy" (không bao giờ xoá bản cuối cùng).
+  2. Bản ở folder chung phải còn đúng SHA-256 đã ghi; lệch (đã bị sửa) → giữ, "Not undone — changed in Shared".
+  3. Xoá theo cách của §6 (đổi tên `.shotdex-removing`, kiểm, xoá). Sidecar mà **chính lượt này** đặt vào cũng bị xoá
+     khi còn đúng SHA; sidecar có sẵn từ trước thì không đụng.
+- **Undo Move, mỗi ảnh Moved:**
+  1. Tải bản ở folder chung, băm khi tải; lệch SHA-256 đã ghi → không làm gì, "Not undone — changed in Shared".
+  2. Mỗi bản nguồn bị xoá (trừ bản đã đổi chỗ sang đích): đường dẫn cũ trống → đẩy lên dạng file part → đọc lại SHA →
+     đổi tên; đã có file **cùng byte** → coi như đã trả; có file **khác byte** → bỏ qua bản đó, log "Not put back —
+     name taken", không ghi đè, không đổi tên. Sidecar của nó trả theo cùng cách, từ sidecar ở folder chung.
+  3. Bản đã đổi chỗ (`movedFrom`): đường dẫn cũ trống → đổi chỗ bản ở folder chung về đó (không chép byte), sidecar đi
+     theo. Đường dẫn cũ bị chiếm, hoặc lượt Move đã chép thay vì đổi chỗ (khác share) → bản ở folder chung chỉ bị xoá
+     khi **mọi** bản nguồn đã được trả và kiểm; nếu không thì giữ lại ở folder chung.
+  4. **Bất biến:** ở mọi bước, ảnh còn ít nhất một bản đã kiểm SHA trên server.
+- Hàng Skipped, Failed, hay đã hoàn tác thì không đụng. Hoàn tác không hoàn tác được (không có "Redo").
+- Trạng thái mỗi hàng sau hoàn tác: **Undone** · **Not undone** (kèm lý do) — hàng Not undone có thể thử lại bằng
+  Undo Selected.
+- Tiến độ, Pause/Stop, mất kết nối, quit giữa chừng, Resume: như lượt chạy (§7), câu "Undoing 120 of 280"; banner lần
+  mở sau "Undo of common photos in “Shared” stopped at 120 of 280" + **Resume** · **Discard** (Discard để nguyên những
+  gì đã trả).
+- Xong: lịch sử upload/download và sổ Backup của các bản được trả **chuyển ngược** về đường dẫn cũ; nguồn và folder
+  chung được Rescan; CSV của lượt bị xoá khi mọi hàng Copied/Moved đều Undone, còn không thì ghi thêm
+  `ShotDex Common Photos <ngày giờ> Undo.csv` (cùng cột, Status = Undone / Not undone).
+- **Giữ bao lâu:** Activity giữ **20 lượt đã xong** gần nhất (cả lượt đã hoàn tác); lượt thứ 21 đẩy lượt cũ nhất cùng
+  các hàng của nó ra khỏi DB. Lượt dở dang không bao giờ bị đẩy ra. Hàng trong Activity có **Remove from List**.
+
 ## 7. Cửa sổ tiến độ (`MAC_CommonPhotosRun`)
 
 | Trạng thái | Hiển thị |
 |---|---|
 | đang quét | "Listing… 12,408 files" → "Checking 32 of 312 · 1.1 GB left" |
 | đang chạy | thanh tiến độ, "Copying 120 of 280 · 1.8 of 4.2 GB", dòng file đang làm ("IMG_4188.HEIC · reading back SHA-256 in Shared"), **Pause** · **Stop**; chân sidebar "Common photos · 120 of 280" |
-| xong | "280 copied · 12 skipped · 0 failed", **Show CSV in Browser** · **Done** |
+| xong | "280 copied · 12 skipped · 0 failed", **Undo Copy…** / **Undo Move…** · **Show CSV in Browser** · **Done** |
+| đang hoàn tác / đã hoàn tác | "Undoing 120 of 280" · Pause · Stop → "280 undone · 2 not undone" (§6b) |
 | lỗi nối | dừng ở file đang làm, câu lỗi FS-15.01 §3 + **Try Again**; phần đã xong giữ nguyên |
 | Mac thoát / app tắt giữa chừng | lần mở sau: banner "Common photos to “Shared” stopped at 120 of 280" + **Resume** · **Discard** |
 
 - Bảng log: một hàng mỗi ảnh — Status (Copying… · Copied · Moved · Skipped · Failed), Name, From (mọi đường dẫn nguồn), To, SHA-256
   rút gọn, lý do khi lỗi. Lọc theo Status, sắp được theo cột, ⌘C chép hàng.
 - Lượt chạy cũng là một hàng trong **Activity** (⌥⌘0, [FS-18.01](../FS-18-mac-app/01-window-and-navigation.md)) — không
-  modal; hàng có **Show Log** mở cửa sổ này. Đóng cửa sổ không dừng lượt chạy.
+  modal; hàng có **Show Log** mở cửa sổ này. Đóng cửa sổ không dừng lượt chạy. Lượt đã xong vẫn ở Activity qua các lần
+  mở app (20 lượt gần nhất, §6b) để còn mở log và hoàn tác.
 
 ## 8. Dữ liệu
 
 | | |
 |---|---|
 | Đọc từ | danh sách server (lệnh liệt kê) · SHA và ngày chụp đã có của bản sao server ([05](05-data.md), bảng file từng bản sao) |
-| Ghi vào | bảng mới **Lượt gom** (connection, folder nguồn, folder chung, Copy/Move, trạng thái, lúc) + **Mục gom** (SHA, đường dẫn từng nguồn, đích, trạng thái, lỗi) |
+| Ghi vào | bảng mới **Lượt gom** (connection, folder nguồn, folder chung, Copy/Move, trạng thái, lúc) + **Mục gom** (SHA, đường dẫn từng nguồn, đích, trạng thái, lỗi; thêm cho §6b: sidecar lượt đã đặt ở đích + SHA của nó, trạng thái hoàn tác) |
 | Người dùng tự nhập? | không — dữ liệu dẫn xuất, không vào `photo_metadata`; Clear Local Metadata Index không xoá lượt đang dở |
 
 ## 9. Ràng buộc
@@ -133,3 +177,6 @@ con · kết quả xem trước có hai mức Likely the same → Same · tiến
 | File bị đổi trên server giữa Scan và xoá | hỏi lại cỡ + ngày sửa ngay trước xoá; lệch → Failed, không xoá |
 | Mất mạng giữa đổi chỗ và xoá | đích đã kiểm, bản nguồn còn lại → lần sau Resume xoá tiếp, không mất ảnh |
 | C phẳng → nhiều tên trùng | luật ` (2)`, CSV ghi tên gốc |
+| Hoàn tác Copy xoá bản cuối cùng (người dùng đã xoá A, B sau khi chép) | hỏi lại một bản nguồn trước khi xoá; không còn → giữ |
+| File ở folder chung bị sửa sau lượt chạy | SHA lệch → không trả bản đó, không xoá gì |
+| Hoàn tác Move chậm như lượt chạy | phải đẩy lại byte cho mọi bản không phải bản đã đổi chỗ; tiến độ đếm byte |

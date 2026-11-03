@@ -1,6 +1,6 @@
 # FS-19.08b — Gom ảnh chung: tiêu chí nghiệm thu
 
-`FS-19.08b` · cho [08](08-common-photos.md) · AC-115…AC-130 · cập nhật 2026-11-02
+`FS-19.08b` · cho [08](08-common-photos.md) · AC-115…AC-143 · cập nhật 2026-11-03 (AC-131…143: hoàn tác, §6b)
 
 Dữ liệu thử: server cục bộ (impacket smbserver + WebDAV trên Mac, memory `server-upload-fs15`), ảnh phong cảnh không
 có mặt người. Test domain chạy trên client giả của `ShotDexTests/BackupFakes.swift` và GRDB trong bộ nhớ.
@@ -23,6 +23,19 @@ có mặt người. Test domain chạy trên client giả của `ShotDexTests/Ba
 | AC-128 | 10 ảnh, mất kết nối sau ảnh thứ 4 | Resume khi server về | chạy tiếp từ ảnh 5; 4 ảnh đầu không đọc lại; tổng log 10 hàng | ✅ `CommonPhotosRunnerTests.resumeAfterDisconnect` (Copy + Move; + `killedMidCopyResumes`, `finishingRunResumes`, `secondRunnerIsTurnedAway`) |
 | AC-129 | lượt chạy xong 3 Copied, 1 Skipped | xong | đích có CSV `ShotDex Common Photos <ngày giờ>.csv`, 4 hàng + tiêu đề, cột Status/Name/From/To/SHA-256 | ✅ `CommonPhotosRunnerTests.writesCsvLog` (+ `csvResumesUnderItsName`, `csvIsSafeToOpen`, `finishingRunResumes`) |
 | AC-130 | Mac, màn duyệt NAS cục bộ, ⌘-click 2 folder | chuột phải → Find Common Photos… → chọn đích → Scan → Copy | sheet và cửa sổ tiến độ khớp board `MAC_CommonPhotos` / `MAC_CommonPhotosRun` (lệch ≤ 2pt), sáng và tối | ⚠️ một phần — ảnh `Tools/mac-shot` sáng + tối ở `build/design/shots/T9a…T11b` so bằng mắt với render board; Copy/Move chạy thật từ app trên SMB ảo; luồng đi bằng launch arg DEBUG (máy không có quyền Accessibility để bấm), `design-board compare` chưa chạy được trên Mac (chưa có dump element) |
+| AC-131 | lượt Copy xong: 5 Copied, 1 Skipped (đích có sẵn); A, B còn nguyên | Undo Copy → Undo | 5 file Copied bị xoá khỏi đích, file Skipped còn; A, B không đổi; 5 hàng Undone; CSV của lượt bị xoá | ⚠️ chưa có |
+| AC-132 | lượt Copy xong; người dùng đã xoá cả bản A lẫn B của ảnh thứ 2 | Undo Copy | bản ở đích của ảnh 2 còn; hàng "Not undone — no other copy"; 4 ảnh kia Undone; không lệnh xoá nào tới đường dẫn ảnh 2 | ⚠️ chưa có |
+| AC-133 | lượt Copy xong; file ở đích của ảnh 3 bị sửa 1 byte | Undo Copy | file đó còn nguyên; "Not undone — changed in Shared" | ⚠️ chưa có |
+| AC-134 | lượt Move xong, cùng share, 5 ảnh ở A và B | Undo Move | A, B có lại 5 ảnh cùng SHA; đích rỗng; bản A về bằng lệnh đổi chỗ (0 lần đẩy cho A), bản B đẩy lên rồi đọc lại SHA; 5 hàng Undone | ⚠️ chưa có |
+| AC-135 | lượt Move xong; đường dẫn cũ `B/IMG_2.JPG` đã có file khác byte | Undo Move | file ở B không bị ghi đè hay đổi tên; bản B của ảnh 2 "Not put back — name taken"; bản A về chỗ cũ; ảnh 2 không mất bản nào | ⚠️ chưa có |
+| AC-136 | lượt Move khác share (đã chép thay vì đổi chỗ), 3 ảnh | Undo Move, client giả từ chối đọc lại SHA ở bản A của ảnh 2 | ảnh 2: bản ở đích **còn**; part ở A bị xoá; ảnh 1 và 3: A, B có lại, đích không còn; thứ tự lệnh: tải đích → đẩy → đọc lại → đổi tên → (mọi bản xong) xoá đích | ⚠️ chưa có |
+| AC-137 | lượt Move xong; ở mọi bước của hoàn tác, client giả ném lỗi (lần lượt từng lệnh) | Undo, rồi Resume | sau mỗi lần ném, mỗi ảnh còn ≥ 1 bản trên server có đúng SHA; Resume đi tới hết, kết quả như AC-134 | ⚠️ chưa có |
+| AC-138 | lượt Move xong, ảnh có `.xmp`; lượt Copy xong, đích đã có sẵn `IMG_4.xmp` cùng byte | Undo cả hai | Move: `.xmp` về cạnh từng bản được trả; Copy: `.xmp` lượt đặt bị xoá, `IMG_4.xmp` có sẵn còn | ⚠️ chưa có |
+| AC-139 | lượt 10 ảnh Copied, chọn hàng 2, 5 trong bảng log | chuột phải → Undo Selected… | chỉ 2 ảnh đó Undone; 8 hàng kia Copied; CSV lượt còn, thêm `… Undo.csv` 2 hàng | ⚠️ chưa có |
+| AC-140 | hoàn tác 10 ảnh, quit app sau ảnh 4 | mở lại → banner → Resume | chạy tiếp từ ảnh 5; 4 ảnh đầu không đọc lại; 10 hàng Undone | ⚠️ chưa có |
+| AC-141 | lượt Move xong đã chuyển lịch sử upload/Backup sang đích | Undo Move xong | lịch sử upload, download và sổ Backup trỏ lại đường dẫn cũ (`ServerFileHistory`) | ⚠️ chưa có |
+| AC-142 | DB có 20 lượt đã xong + 1 lượt dở | lượt thứ 21 xong | lượt xong cũ nhất cùng các hàng bị xoá khỏi DB; lượt dở còn; Activity liệt kê 20 lượt xong qua lần mở app sau | ⚠️ chưa có |
+| AC-143 | Mac, Activity có lượt đã xong | Show Log → Undo Copy… → Undo | hộp xác nhận (Cancel mặc định) và cửa sổ khớp board `MAC_CommonPhotosRun` / `MAC_Activity` sáng và tối; e2e trên SMB ảo: A, B, đích như AC-131/134 | ⚠️ chưa có |
 
 Kiểm thêm khi `/verify`: folder chung nằm trong folder nguồn → sheet báo lỗi, nút chạy mờ; 1 folder → mục ẩn ở menu chuột phải; lịch
 sử upload trỏ tới file bị dời được sửa đường dẫn (`ServerFileHistory`).
