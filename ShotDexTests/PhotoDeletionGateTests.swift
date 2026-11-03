@@ -32,6 +32,25 @@ struct PhotoDeletionGateTests {
         #expect(PhotoDeletionCopy.message(flow.prompt!.kind) == "They're no longer on NAS Home.")
     }
 
+    /// AC-154 (FS-19.07 §12): photos matched only by hashes another device
+    /// sent are still asked of the server first — one whose file was deleted
+    /// stays.
+    @Test func sharedHashStillReverifies() async throws {
+        let g = try GateFixture(photos: 3)
+        try await g.f.database.writer.write { db in
+            try db.execute(sql: "UPDATE copy_files SET origin = 'shared', sharedFrom = 'MAC'")
+        }
+        // Guards against a later change that trusts shared hashes without
+        // asking the server: the gate must not read origin at all.
+        #expect(try await g.f.database.reader.read { db in
+            try Int.fetchOne(db, sql: "SELECT COUNT(*) FROM copy_files WHERE origin = 'shared' AND sharedFrom = 'MAC'")
+        } ?? 0 > 0)
+        try await g.client.remove("iCloud Photo/Shared/IMG_1.HEIC")
+        let outcome = await g.gate.check(photoIds: g.ids)
+        #expect(Set(outcome.verified) == ["P0", "P2"])
+        #expect(outcome.notOnServer == ["NAS Home": ["P1"]])
+    }
+
     /// AC-89: the server is off. The alert offers Delete Anyway and Cancel;
     /// Cancel deletes nothing.
     @Test func unreachableAsks() async throws {

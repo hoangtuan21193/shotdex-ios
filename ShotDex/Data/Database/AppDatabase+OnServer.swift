@@ -51,4 +51,36 @@ extension AppDatabase {
             }
         }
     }
+
+    /// FS-19.07 §12: hashes another device worked out — over iCloud or from
+    /// a ledger on the NAS. `copy_files.sharedFrom` names the device, so a
+    /// random check that finds one wrong drops that device's hashes and
+    /// nothing else. A ledger segment read is remembered by size, as Backup
+    /// does; a device caught wrong is remembered with when.
+    static func registerSharedHashes(_ migrator: inout DatabaseMigrator) {
+        migrator.registerMigration("v48-sharedHashes") { db in
+            try db.alter(table: "copy_files") { t in
+                // The device whose hash this is, when it is not this one's.
+                t.add(column: "sharedFrom", .text)
+            }
+            // A distrust drops one device's hashes without a full scan.
+            try db.execute(sql: "CREATE INDEX copy_files_sharedFrom ON copy_files(sharedFrom) WHERE sharedFrom IS NOT NULL")
+            try db.create(table: "hash_index_segments") { t in
+                t.column("sourceId", .text).notNull()
+                t.column("segment", .text).notNull()
+                // The size read, so a segment grown since is read again.
+                t.column("size", .integer).notNull()
+                t.primaryKey(["sourceId", "segment"])
+            }
+            // Learned, not derived: Clear Local Metadata Index keeps it, or a
+            // device caught wrong would be believed again.
+            try db.create(table: "distrusted_hash_devices") { t in
+                t.primaryKey("device", .text)
+                // When a hash from it was found wrong: what it sent up to
+                // then is never used again.
+                t.column("since", .integer).notNull()
+            }
+        }
+    }
 }
+

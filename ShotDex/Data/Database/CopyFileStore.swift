@@ -43,6 +43,15 @@ struct CopyFile: Hashable, Sendable {
         case backup
         /// Read whole and hashed here.
         case hashed
+        /// Hashed by another device, over iCloud (FS-19.07 §12.3).
+        case shared
+        /// Hashed by another device, read from the ledger on the NAS
+        /// (§12.2).
+        case ledger
+
+        /// Worked out elsewhere: `CopyFile.sharedFrom` says by whom, and a
+        /// random check may drop it (§12.4).
+        var isFromAnotherDevice: Bool { self == .shared || self == .ledger }
     }
 
     var copyId: String
@@ -53,6 +62,8 @@ struct CopyFile: Hashable, Sendable {
     var stamp: String?
     var sha256: String?
     var origin: Origin?
+    /// The device that hashed it, for `shared` and `ledger`.
+    var sharedFrom: String?
     var attempts = 0
     var lastError: String?
     var triedAt: Int?
@@ -111,6 +122,7 @@ struct CopyFileStore: Sendable {
                         stamp = excluded.stamp,
                         sha256 = CASE WHEN stamp IS excluded.stamp THEN sha256 END,
                         origin = CASE WHEN stamp IS excluded.stamp THEN origin END,
+                        sharedFrom = CASE WHEN stamp IS excluded.stamp THEN sharedFrom END,
                         hashedAt = CASE WHEN stamp IS excluded.stamp THEN hashedAt END,
                         attempts = CASE WHEN stamp IS excluded.stamp THEN attempts ELSE 0 END,
                         lastError = CASE WHEN stamp IS excluded.stamp THEN lastError END,
@@ -135,7 +147,7 @@ struct CopyFileStore: Sendable {
     func seedFromBackupLedger(at now: Date = Date()) throws -> Int {
         try database.writer.write { db in
             try db.execute(sql: """
-                UPDATE copy_files SET sha256 = m.sha256, origin = 'backup', hashedAt = ?, lastError = NULL
+                UPDATE copy_files SET sha256 = m.sha256, origin = 'backup', sharedFrom = NULL, hashedAt = ?, lastError = NULL
                 FROM (
                     SELECT f.copyId, f.fileKey, MIN(l.sha256) AS sha256 FROM copy_files f
                     JOIN photo_copies c ON c.id = f.copyId AND c.kind = 'photos'
@@ -194,6 +206,7 @@ struct CopyFileStore: Sendable {
                     modifiedAt = excluded.modifiedAt,
                     sha256 = CASE WHEN \(Self.sameFile) THEN sha256 END,
                     origin = CASE WHEN \(Self.sameFile) THEN origin END,
+                    sharedFrom = CASE WHEN \(Self.sameFile) THEN sharedFrom END,
                     hashedAt = CASE WHEN \(Self.sameFile) THEN hashedAt END,
                     attempts = CASE WHEN \(Self.sameFile) THEN attempts ELSE 0 END,
                     lastError = CASE WHEN \(Self.sameFile) THEN lastError END,
@@ -283,15 +296,62 @@ struct CopyFileStore: Sendable {
         }
     }
 
-    func saveHash(_ sha256: String, copyId: String, fileKey: String, origin: CopyFile.Origin, at now: Date = Date()) throws {
+    /// `sharedFrom` names the device for a hash from another one (§12);
+    /// `hashedAt` is then when that device hashed it, so a later random
+    /// check can drop what it sent before being caught wrong.
+    func saveHash(_ sha256: String, copyId: String, fileKey: String, origin: CopyFile.Origin, sharedFrom: String? = nil,
+                  hashedAt: Date? = nil, at now: Date = Date()) throws {
         let time = Int(now.timeIntervalSince1970)
         try database.writer.write { db in
             try db.execute(sql: """
-                UPDATE copy_files SET sha256 = ?, origin = ?, hashedAt = ?, triedAt = ?, lastError = NULL
+                UPDATE copy_files SET sha256 = ?, origin = ?, sharedFrom = ?, hashedAt = ?, triedAt = ?, lastError = NULL
                 WHERE copyId = ? AND fileKey = ?
-                """, arguments: [sha256, origin.rawValue, time, time, copyId, fileKey])
+                """, arguments: [sha256, origin.rawValue, origin.isFromAnotherDevice ? (sharedFrom ?? Self.unknownDevice) : nil,
+                                 // Never later than now: a sender whose clock runs ahead
+                                 // must not slip a hash past a distrust (§12.4).
+                                 // A shared hash with no time counts as oldest: dropped by
+                                 // any distrust, never let back in by one.
+                                 min(Int((hashedAt ?? (origin.isFromAnotherDevice ? Date(timeIntervalSince1970: 0) : now))
+                                     .timeIntervalSince1970), time), time, copyId, fileKey])
         }
     }
+
+    // MARK: - Hashes from other devices (FS-19.07 §12.4)
+
+    /// A random check found a hash from `device` wrong at `now`: every hash
+    /// it sent up to then is dropped — those files are unchecked again and
+    /// hashed here — and remembered, so the same hashes are not taken back
+    /// in. Hashes worked out here, or by Backup, stay. Returns how many went.
+    @discardableResult
+    func distrust(device: String, at now: Date = Date()) throws -> Int {
+        let time = Int(now.timeIntervalSince1970)
+        return try database.writer.write { db in
+            try db.execute(sql: """
+                INSERT INTO distrusted_hash_devices (device, since) VALUES (?, ?)
+                ON CONFLICT(device) DO UPDATE SET since = MAX(since, excluded.since)
+                """, arguments: [device, time])
+            try db.execute(sql: """
+                UPDATE copy_files SET sha256 = NULL, origin = NULL, sharedFrom = NULL, hashedAt = NULL
+                WHERE sharedFrom = ? AND origin IN ('shared', 'ledger') AND (hashedAt IS NULL OR hashedAt <= ?)
+                """, arguments: [device, time])
+            return db.changesCount
+        }
+    }
+
+    /// Whether a hash `device` made at `hashedAt` may be used: never one
+    /// from before the device was caught wrong (§12.4).
+    /// The time is capped at now, as `saveHash` stores it.
+    func accepts(device: String, hashedAt: Date, now: Date = Date()) throws -> Bool {
+        try database.reader.read { db in
+            guard let since = try Int.fetchOne(db, sql: "SELECT since FROM distrusted_hash_devices WHERE device = ?",
+                                               arguments: [device]) else { return true }
+            return min(Int(hashedAt.timeIntervalSince1970), Int(now.timeIntervalSince1970)) > since
+        }
+    }
+
+    /// The sender of a shared hash that came without one: still droppable
+    /// as a group.
+    static let unknownDevice = "unknown"
 
     /// A read that failed: counted, kept for the progress line, tried again
     /// on a later pass — it never holds up the files behind it.
@@ -316,7 +376,7 @@ struct CopyFileStore: Sendable {
     static func file(_ row: Row) -> CopyFile {
         CopyFile(copyId: row["copyId"], fileKey: row["fileKey"], role: CopyFile.Role(rawValue: row["role"]) ?? .photo,
                  size: row["size"], modifiedAt: row["modifiedAt"], stamp: row["stamp"], sha256: row["sha256"],
-                 origin: (row["origin"] as String?).flatMap(CopyFile.Origin.init(rawValue:)),
+                 origin: (row["origin"] as String?).flatMap(CopyFile.Origin.init(rawValue:)), sharedFrom: row["sharedFrom"],
                  attempts: row["attempts"], lastError: row["lastError"], triedAt: row["triedAt"])
     }
 }
