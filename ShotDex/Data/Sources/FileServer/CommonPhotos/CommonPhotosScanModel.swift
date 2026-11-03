@@ -571,9 +571,9 @@ final class CommonPhotosScanModel {
             }
             let key = { (name: String) in ServerUploadPath.join(destination, name).lowercased() }
             var existing = entries.map { entry in
-                let known = destinationHashes[key(entry.name)]
+                let known = self.destinationHashes[key(entry.name)]
                 let holds = known != nil && known?.size == entry.size && entry.modified != nil && known?.modified == entry.modified
-                let placed = placedInDestination[entry.name.lowercased()].flatMap { $0.size == entry.size ? $0.sha256 : nil }
+                let placed = self.placedInDestination[entry.name.lowercased()].flatMap { $0.size == entry.size ? $0.sha256 : nil }
                 return CommonPhotosDestinationPlan.Existing(name: entry.name, size: entry.size,
                                                             sha256: holds ? known?.sha256 : placed)
             }
