@@ -23,7 +23,7 @@ loop: mỗi vòng đọc nó trước, ghi lại sau.
 | Task | Trạng thái | Commit | Ghi chú |
 |---|---|---|---|
 | U1 | xong | (xem git log) | v47: `undoOf`, `sidecarPlaced`/`sidecarSHA256`, bảng `common_photo_history_moves`; store `startUndo`, `recentRuns`, dọn trong `markState`; runner ghi sidecar trước khi ghi |
-| U2 | chưa | | |
+| U2 | xong | (xem git log) | `CommonPhotosUndoer` (Copy) + `CommonPhotosServerChecks` tách từ runner; mọi bản nguồn kiểm lại sau khi để riêng; mọi lỗi sau khi để riêng thì trả file về tên cũ (detached); sidecar chỉ xoá khi còn bản nguồn cùng byte; `finishUndo` ghi 2 hàng một transaction |
 | U3 | chưa | | |
 | U4 | chưa | | |
 | U5 | chưa | | |

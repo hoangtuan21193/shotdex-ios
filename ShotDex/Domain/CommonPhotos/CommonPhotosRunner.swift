@@ -154,6 +154,17 @@ struct CommonPhotosRunner: Sendable {
     private struct RunKey: Hashable { let database: ObjectIdentifier; let runId: String }
     private static let active = OSAllocatedUnfairLock(initialState: Set<RunKey>())
 
+    /// Marks `runId` as going in this process; false when it already is.
+    /// The undo runner takes the same claim, so Activity and the banner see
+    /// either kind of run as busy.
+    static func claim(runId: String, in database: AppDatabase) -> Bool {
+        active.withLock { $0.insert(RunKey(database: ObjectIdentifier(database), runId: runId)).inserted }
+    }
+
+    static func release(runId: String, in database: AppDatabase) {
+        _ = active.withLock { $0.remove(RunKey(database: ObjectIdentifier(database), runId: runId)) }
+    }
+
     /// Whether a runner is going on this run now — the banner then shows it
     /// in progress, never Resume · Discard.
     static func isActive(runId: String, in database: AppDatabase) -> Bool {
@@ -164,9 +175,8 @@ struct CommonPhotosRunner: Sendable {
     /// the server went away, the Mac ran out of room or the task was
     /// cancelled — the run is then paused, and done photos stay done.
     func run(_ runId: String, progress: @escaping @Sendable (Progress) -> Void = { _ in }) async throws {
-        let key = RunKey(database: ObjectIdentifier(store.database), runId: runId)
-        guard Self.active.withLock({ $0.insert(key).inserted }) else { throw Stop.alreadyRunning }
-        defer { _ = Self.active.withLock { $0.remove(key) } }
+        guard Self.claim(runId: runId, in: store.database) else { throw Stop.alreadyRunning }
+        defer { Self.release(runId: runId, in: store.database) }
         guard let run = try store.run(id: runId) else { throw CommonPhotosStore.RunMissing(runId: runId) }
         guard run.canResume else { throw Stop.notResumable }
         // An undo is taken back by the undo runner, never gathered again.
@@ -594,14 +604,16 @@ struct CommonPhotosRunner: Sendable {
     /// copy goes back where it was and the run stops.
     private func removeAside(_ aside: String, restoring original: String, placed: String, size: Int64) async throws {
         guard try await client.fileSize(at: placed) == size else {
-            try? await client.move(aside, to: original)
+            // Put back even while the task is being cancelled.
+            let client = client
+            try? await Task.detached { try await client.move(aside, to: original) }.value
             throw Stop.destinationIsASource
         }
         try await client.remove(aside)
     }
 
     private static func comparable(_ path: String) -> String {
-        ServerUploadPath.normalizedFolder(path).precomposedStringWithCanonicalMapping.lowercased()
+        CommonPhotosServerChecks.comparable(path)
     }
 
     /// The SHA-256 of the sidecar beside `photo` in the destination, if one.
@@ -617,14 +629,7 @@ struct CommonPhotosRunner: Sendable {
     /// write time as at the scan, or — with no write time to go by — the same
     /// SHA-256.
     private func isUnchanged(_ source: CommonPhotosItem.Source, sha256: String) async throws -> Bool {
-        let folder = ServerUploadPath.parent(of: source.path)
-        let name = ServerUploadPath.lastComponent(of: source.path)
-        guard let entry = try await client.entries(in: folder).first(where: { $0.name == name && !$0.isDirectory }),
-              entry.size == source.size else { return false }
-        if let modifiedAt = source.modifiedAt {
-            return entry.modified.map { Int($0.timeIntervalSince1970) } == modifiedAt
-        }
-        return try await client.sha256(of: source.path, progress: { _ in }) == sha256
+        try await CommonPhotosServerChecks(client: client).isUnchanged(source, sha256: sha256)
     }
 
     /// The photo's `.xmp` beside it in the destination, named after the
@@ -718,11 +723,7 @@ struct CommonPhotosRunner: Sendable {
     /// photo's final name with the sidecar's own form — `IMG_2 (2).xmp`, or
     /// `IMG_2 (2).JPG.xmp` for a full-name sidecar.
     private static func sidecarTarget(_ sidecar: String, photoPath: String, photoName: String, folder: String) -> String {
-        let sidecarName = ServerUploadPath.lastComponent(of: sidecar)
-        let isFullName = sidecarName.lowercased() == ServerUploadPath.lastComponent(of: photoPath).lowercased() + ".xmp"
-        let ext = (sidecarName as NSString).pathExtension
-        let name = isFullName ? photoName + "." + ext : (photoName as NSString).deletingPathExtension + "." + ext
-        return ServerUploadPath.join(folder, name)
+        CommonPhotosServerChecks.sidecarTarget(sidecar, photoPath: photoPath, photoName: photoName, folder: folder)
     }
 
     private static func refusesEveryWrite(_ error: RemoteFileError) -> Bool {

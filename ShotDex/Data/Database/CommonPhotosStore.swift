@@ -154,6 +154,37 @@ struct CommonPhotosStore: Sendable {
         }
     }
 
+    /// An undo row done, and the row it undoes marked `undone` — in one
+    /// write, so a quit never leaves one without the other.
+    func finishUndo(_ item: CommonPhotosItem, originalRunId: String, now: Int = Int(Date().timeIntervalSince1970)) throws {
+        var item = item
+        item.updatedAt = now
+        do {
+            try database.writer.write { db in
+                try item.update(db)
+                if item.status == .undone {
+                    try db.execute(sql: """
+                        UPDATE common_photo_items SET status = ?, updatedAt = ? WHERE runId = ? AND position = ?
+                        """, arguments: [CommonPhotosItem.Status.undone.rawValue, now, originalRunId, item.position])
+                }
+            }
+        } catch is RecordError {
+            throw RunMissing(runId: item.runId)
+        }
+    }
+
+    /// Marks rows of `runId` undone (an undo's rows found done on resume).
+    func markUndone(runId: String, positions: [Int], now: Int = Int(Date().timeIntervalSince1970)) throws {
+        guard !positions.isEmpty else { return }
+        try database.writer.write { db in
+            for position in positions {
+                try db.execute(sql: """
+                    UPDATE common_photo_items SET status = ?, updatedAt = ? WHERE runId = ? AND position = ?
+                    """, arguments: [CommonPhotosItem.Status.undone.rawValue, now, runId, position])
+            }
+        }
+    }
+
     /// Discard, and Remove from List: the run and its log go — with its undo
     /// runs — and nothing on the server changes.
     func discard(runId: String) throws {

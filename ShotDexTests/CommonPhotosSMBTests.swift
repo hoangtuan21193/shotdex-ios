@@ -140,4 +140,40 @@ struct CommonPhotosSMBTests {
         }
         try await smb.removeFolderTree(root)
     }
+
+    /// AC-131 on the real server: Copy the 8 shared photos into a fresh
+    /// folder, then Undo Copy — the folder holds only the run's CSV, and
+    /// Tuấn and Vợ are as they were.
+    @Test func undoCopyOnTheServer() async throws {
+        let smb = client()
+        try await smb.connect()
+        defer { Task { await smb.disconnect() } }
+        let folders = ["photos/Tuan", "photos/Vo"]
+        let destination = "photos/Shared/e2e-undo-\(UUID().uuidString.prefix(8))"
+        let scanner = CommonPhotosScanner(client: smb)
+        let before = try await scanner.list(folders)
+        let photos = try await CommonPhotosVerifier(client: smb).verify(CommonPhotosMatcher.preview(before.files), folders: folders)
+        let store = CommonPhotosStore(database: try AppDatabase.makeEmpty())
+        let work = FileManager.default.temporaryDirectory.appendingPathComponent("CommonPhotosSMB-\(UUID().uuidString)")
+        try store.start(CommonPhotosRun(id: "R1", connectionId: "smb", folders: folders, destination: destination, action: .copy),
+                        items: CommonPhotosRunner.items(for: photos, runId: "R1", folders: folders,
+                                                        files: before.files, sidecars: before.sidecars))
+        do {
+            try await CommonPhotosRunner(client: smb, store: store, workDirectory: work).run("R1")
+            try store.startUndo(of: "R1", id: "U1")
+            try await CommonPhotosUndoer(client: smb, store: store, workDirectory: work).run("U1")
+        } catch {
+            try? await smb.removeFolderTree(destination)
+            throw error
+        }
+
+        let left = try await smb.entries(in: destination).map(\.name)
+        #expect(left.allSatisfy { $0.hasSuffix(".csv") })
+        #expect(try store.items(runId: "U1").count == 8)
+        #expect(try store.items(runId: "U1").allSatisfy { $0.status == .undone })
+        #expect(try store.items(runId: "R1").allSatisfy { $0.status == .undone })
+        let after = try await scanner.list(folders)
+        #expect(after.files.map { $0.map(\.relativePath).sorted() } == before.files.map { $0.map(\.relativePath).sorted() })
+        try await smb.removeFolderTree(destination)
+    }
 }
