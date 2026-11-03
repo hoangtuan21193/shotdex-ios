@@ -88,7 +88,7 @@ số byte qua mạng.
 |---|---|---|---|---|
 | AC-174 | A, B có 312 ứng viên cùng cỡ; 280 đã băm xong là Same, 32 đang băm | xem danh sách | đúng 280 hàng, hàng nào cũng Same; không chữ "Likely" ở hàng, đếm hay nhãn VoiceOver; đầu danh sách "Checking 32" | ⚠️ chưa có |
 | AC-175 | Copy; Shared có `IMG_0001.JPG` khác byte và `IMG_0002.JPG` cùng SHA với ảnh chung | Scan xong | hàng `IMG_0001` ghi `→ Shared/IMG_0001 (2).JPG`; hàng `IMG_0002` mờ, ghi `Already in Shared`, không đếm vào nút; đầu danh sách "… · 1 already in Shared" | ⚠️ chưa có |
-| AC-176 | Move; ảnh có 1 bản ở A, 2 bản ở B | Scan xong | hàng ghi `→ Shared/<tên> · removes 3 copies`, tooltip liệt kê đủ 3 đường dẫn | ⚠️ chưa có |
+| AC-176 | Move; ảnh có 1 bản ở A, 2 bản ở B | Scan xong | hàng ghi `→ Shared/<tên>`, cột phải `Removes 3 copies`, tooltip liệt kê đủ 3 đường dẫn | ⚠️ chưa có |
 | AC-177 | Scan xong 3 ảnh Same (Copy), không file nào đổi | **Copy 3** | 0 lệnh `sha256` lên bản nguồn; 3 ảnh Copied; tên ở Shared đúng như hàng đã ghi | ✅ `CommonPhotosReviewTests.copyRunReadsNoSource`, `copyWithSidecarReadsNoSource` |
 | AC-178 | Scan xong 3 ảnh Same (Move), không file nào đổi | **Move 3** | 0 lệnh `sha256` lên bản nguồn (chỉ kiểm cỡ + ngày sửa); 3 ảnh Moved | ✅ `CommonPhotosReviewTests.moveRunReadsNoSource` (không một lệnh `sha256` nào, kể cả bản đã dời) |
 | AC-179 | Scan xong (Move); sau đó `Vợ/IMG_2.JPG` bị ghi đè nội dung mới | **Move N** | `IMG_2` Failed "changed on the server", không bản nào của nó bị xoá; ảnh khác vẫn Moved | ✅ `CommonPhotosReviewTests.changedAfterScanFails`, `firstCopyChangedAfterScanFails`; e2e SMB ảo `CommonPhotosSMBTests.changedAfterScanOnTheServer` |

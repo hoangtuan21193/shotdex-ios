@@ -151,21 +151,48 @@ input{font-family:inherit}
 <sc-if value="{{listing}}" hint-placeholder-val="{{false}}"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5" fill="none" stroke="{{t.track}}" stroke-width="3"></circle><path d="M12 3.5a8.5 8.5 0 0 1 8.5 8.5" fill="none" stroke="{{t.accent}}" stroke-width="3" stroke-linecap="round"></path></svg></sc-if>
 <div style="font-size:13px;line-height:17px;color:{{t.label2}};font-variant-numeric:tabular-nums">{{waitingLine}}</div>
 </div></sc-if>
-<!-- Matches list (scrolls) -->
-<sc-if value="{{hasMatches}}" hint-placeholder-val="{{true}}"><div role="list" aria-label="Photos in both folders" style="flex:1;min-height:0;position:relative;border-radius:8px;border:1px solid {{t.sep}};background:{{t.field}};overflow:hidden">
-<sc-for list="{{matches}}" as="m" hint-placeholder-count="7"><div role="listitem" style="height:40px;display:flex;align-items:center;gap:10px;padding:0 12px 0 8px;background:{{m.rowBg}}">
-<div style="flex:none;width:28px;height:28px;border-radius:4px;background:{{m.bg}}"></div>
-<div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:1px">
-<span style="font-size:13px;line-height:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{m.name}}</span>
-<span style="font-size:11px;line-height:14px;color:{{t.label2}};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{m.paths}}</span>
+<!-- §6d: the plan — only Same rows, each with its checkbox and what it becomes in the destination.
+     Unchecking leaves the photo out of this set for good (Left Out, Include brings it back). Space or a double-click
+     on one row opens Compare; the hovered row shows the same as a button. -->
+<sc-if value="{{hasMatches}}" hint-placeholder-val="{{true}}"><div role="list" aria-label="Photos in both folders" style="flex:1;min-height:0;position:relative;border-radius:8px;border:1px solid {{t.sep}};background:{{t.field}};overflow:hidden;display:flex;flex-direction:column">
+<div style="flex:1;min-height:0;overflow:hidden;position:relative">
+<sc-for list="{{matches}}" as="m" hint-placeholder-count="7"><div role="listitem" style="height:40px;display:flex;align-items:center;gap:10px;padding:0 12px 0 0;background:{{m.rowBg}}">
+<sc-if value="{{m.hasBox}}" hint-placeholder-val="{{true}}"><label style="position:relative;flex:none;width:34px;height:40px;display:flex;align-items:center;justify-content:center">
+<span aria-hidden="true" style="width:14px;height:14px;border-radius:4px;box-sizing:border-box;border:{{m.boxBorder}};background:{{m.boxBg}};display:flex;align-items:center;justify-content:center"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="{{t.onAccentFill}}" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round" style="visibility:{{m.checkVis}}"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg></span>
+<sc-if value="{{m.on}}" hint-placeholder-val="{{true}}"><input type="checkbox" checked aria-label="{{m.boxLabel}}" style="position:absolute;opacity:0;width:1px;height:1px"></sc-if>
+<sc-if value="{{m.off}}" hint-placeholder-val="{{false}}"><input type="checkbox" aria-label="{{m.boxLabel}}" style="position:absolute;opacity:0;width:1px;height:1px"></sc-if>
+</label></sc-if>
+<sc-if value="{{m.there}}" hint-placeholder-val="{{false}}"><span aria-hidden="true" style="flex:none;width:34px"></span></sc-if>
+<div style="flex:none;width:28px;height:28px;border-radius:4px;background:{{m.bg}};opacity:{{m.thumbDim}}"></div>
+<div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:1px" title="{{m.help}}">
+<span style="font-size:13px;line-height:16px;color:{{m.nameColor}};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{m.name}}</span>
+<span style="display:flex;min-width:0;font-size:11px;line-height:14px;color:{{t.label2}};white-space:nowrap"><span style="min-width:0;overflow:hidden;text-overflow:ellipsis">{{m.from}}</span><span style="flex:none">{{m.to}}</span></span>
 </div>
+<sc-if value="{{m.hover}}" hint-placeholder-val="{{false}}"><button aria-label="Compare" title="Compare (Space)" style="width:28px;height:22px;flex:none;border-radius:6px;border:none;background:{{t.fill}};box-shadow:inset 0 0 0 0.5px {{t.sep}};color:{{t.label}};display:flex;align-items:center;justify-content:center"><svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 5h7v14H3z M14 5h7v14h-7z"></path></svg></button></sc-if>
 <span style="width:64px;flex:none;text-align:right;font-size:12px;color:{{t.label2}};font-variant-numeric:tabular-nums">{{m.size}}</span>
-<span style="width:86px;flex:none;display:flex;align-items:center;gap:5px;font-size:12px;color:{{m.color}}">
-<sc-if value="{{m.same}}" hint-placeholder-val="{{true}}"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg></sc-if>
-<sc-if value="{{m.checking}}" hint-placeholder-val="{{false}}"><svg width="12" height="12" viewBox="0 0 24 24" style="flex:none"><circle cx="12" cy="12" r="8.5" fill="none" stroke="{{t.track}}" stroke-width="3"></circle><path d="M12 3.5a8.5 8.5 0 0 1 8.5 8.5" fill="none" stroke="{{t.accent}}" stroke-width="3" stroke-linecap="round"></path></svg></sc-if>
-<span>{{m.status}}</span></span>
+<span style="width:124px;flex:none;font-size:12px;color:{{t.label2}};white-space:nowrap">{{m.note}}</span>
 </div></sc-for>
-<div aria-hidden="true" style="position:absolute;right:3px;top:4px;width:5px;height:56px;border-radius:3px;background:{{S.scroller}}"></div>
+<!-- Left Out open: the list scrolled to its end, the section after the last photos -->
+<sc-if value="{{leftOutOpen}}" hint-placeholder-val="{{false}}"><div style="height:28px;display:flex;align-items:center;gap:6px;padding:0 12px 0 10px;border-top:1px solid {{t.sep}}">
+<button aria-label="Hide Left Out" aria-expanded="true" style="border:none;background:none;padding:0;display:flex;align-items:center;gap:6px;color:{{t.label}};font-size:12px;font-weight:600"><svg aria-hidden="true" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"></path></svg>Left Out (2)</button>
+<span style="font-size:11px;color:{{t.label2}}">{{leftOutLine}}</span>
+</div>
+<sc-for list="{{leftOut}}" as="l" hint-placeholder-count="2"><div role="listitem" style="height:40px;display:flex;align-items:center;gap:10px;padding:0 12px 0 34px;background:{{l.rowBg}}">
+<div style="flex:none;width:28px;height:28px;border-radius:4px;background:{{l.bg}};opacity:0.5"></div>
+<div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:1px">
+<span style="font-size:13px;line-height:16px;color:{{t.label2}};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{l.name}}</span>
+<span style="font-size:11px;line-height:14px;color:{{t.label2}};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{l.when}}</span>
+</div>
+<span style="width:64px;flex:none;text-align:right;font-size:12px;color:{{t.label2}};font-variant-numeric:tabular-nums">{{l.size}}</span>
+<span style="width:124px;flex:none;display:flex"><button style="height:22px;border-radius:6px;border:none;background:{{t.fill}};box-shadow:inset 0 0 0 0.5px {{t.sep}};color:{{t.label}};padding:0 10px;font-size:12px;white-space:nowrap">Include</button></span>
+</div></sc-for></sc-if>
+<div aria-hidden="true" style="position:absolute;right:3px;top:{{scrollTop}};width:5px;height:56px;border-radius:3px;background:{{S.scroller}}"></div>
+</div>
+<!-- Left Out closed: the list's foot -->
+<sc-if value="{{leftOutClosed}}" hint-placeholder-val="{{true}}"><div style="height:28px;flex:none;display:flex;align-items:center;gap:6px;padding:0 12px 0 10px;border-top:1px solid {{t.sep}}">
+<button aria-label="Show Left Out" aria-expanded="false" style="border:none;background:none;padding:0;display:flex;align-items:center;gap:6px;color:{{t.label}};font-size:12px;font-weight:600"><svg aria-hidden="true" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"></path></svg>Left Out (2)</button>
+<span style="font-size:11px;color:{{t.label2}}">{{leftOutLine}}</span>
+</div></sc-if>
 </div></sc-if>
 <!-- §6c: nothing new since the set last gathered -->
 <sc-if value="{{nothingNew}}" hint-placeholder-val="{{false}}"><div role="status" style="flex:1;min-height:0;border-radius:8px;border:1px solid {{t.sep}};background:{{t.field}};display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;padding:0 40px;text-align:center">
@@ -191,7 +218,7 @@ input{font-family:inherit}
 </div>
 </div>
 </x-dc>
-<script type="text/x-dc" data-dc-script data-props='{"dark":{"editor":"boolean","default":false},"state":{"editor":"select","options":["beforeScan","listing","first","again","nothingNew"],"default":"first"},"$preview":{"width":1440,"height":900}}'>
+<script type="text/x-dc" data-dc-script data-props='{"dark":{"editor":"boolean","default":false},"state":{"editor":"select","options":["beforeScan","listing","first","again","nothingNew"],"default":"first"},"action":{"editor":"select","options":["copy","move"],"default":"copy"},"leftOut":{"editor":"boolean","default":false},"$preview":{"width":1440,"height":900}}'>
 const LIGHT = { content:'#FFFFFF', label:'rgba(0,0,0,0.88)', label2:'rgba(0,0,0,0.56)', label3:'rgba(0,0,0,0.28)',
   sep:'rgba(0,0,0,0.10)', fill:'rgba(0,0,0,0.05)', fill2:'#F2F2F4', pressed:'rgba(0,0,0,0.09)', track:'rgba(0,0,0,0.10)',
   glass:'rgba(255,255,255,0.72)', glassStroke:'rgba(0,0,0,0.08)', glassShadow:'0 2px 10px rgba(0,0,0,0.10)',
@@ -411,43 +438,65 @@ class Component extends DCLogic {
       { path:'NAS Home › Family › Tuấn', count:'18,240 files', remove:'Remove Tuấn', rowBg:'transparent' },
       { path:'NAS Home › Family › Vợ', count:'15,902 files', remove:'Remove Vợ', rowBg:t.rowAlt }
     ];
-    const action = k.seg(['Copy', 'Move'], 0);
-    const M = [
-      ['IMG_4021.HEIC', 'Tuấn/2025/IMG_4021.HEIC · Vợ/Phone/2025-06-01 IMG_4021.HEIC', '2.9 MB', 'same'],
-      ['IMG_4022.HEIC', 'Tuấn/2025 · Vợ/Phone', '3.1 MB', 'same'],
-      ['DSC04388.ARW', 'Tuấn/Da Lat 2025 · Vợ/Da Lat', '48.6 MB', 'same'],
-      ['IMG_0007.JPG', 'Tuấn/Sent · Vợ/Messages', '1.2 MB', 'checking'],
-      ['DSC04392.ARW', 'Tuấn/Da Lat 2025 · Vợ/Da Lat', '47.9 MB', 'same'],
-      ['IMG_4107.MOV', 'Tuấn/2025 · Vợ/Phone', '212.4 MB', 'checking'],
-      ['IMG_4110.HEIC', 'Tuấn/2025 · Vợ/Phone', '2.7 MB', 'same']
+    const move = this.props.action === 'move';
+    const action = k.seg(['Copy', 'Move'], move ? 1 : 0);
+    const leftOutOpen = !!this.props.leftOut;
+    // §6d: only Same rows. [name, sources, name in Shared ('' = already there), size, checked, copies Move removes]
+    const PLAN = [
+      ['IMG_4021.HEIC', 'Tuấn/2025 · Vợ/Phone', 'IMG_4021.HEIC', '2.9 MB', true, 2],
+      ['IMG_4022.HEIC', 'Tuấn/2025 · Vợ/Phone', 'IMG_4022.HEIC', '3.1 MB', true, 2],
+      ['DSC04388.ARW', 'Tuấn/Da Lat 2025 · Vợ/Da Lat', 'DSC04388.ARW', '48.6 MB', true, 2],
+      ['IMG_0001.JPG', 'Tuấn/Sent · Vợ/Messages', 'IMG_0001 (2).JPG', '1.2 MB', false, 2],
+      ['IMG_4107.MOV', 'Tuấn/2025 · Vợ/Phone', 'IMG_4107.MOV', '212.4 MB', false, 2],
+      ['IMG_4110.HEIC', 'Tuấn/2025 · Vợ/Phone', '', '2.7 MB', false, 0],
+      ['DSC04392.ARW', 'Tuấn/Da Lat 2025 · Vợ/Da Lat ×2', 'DSC04392.ARW', '47.9 MB', true, 3]
     ];
-    const matches = M.map((m, i) => ({ name:m[0], paths:m[1], size:m[2], same: m[3]==='same', checking: m[3]==='checking',
-      status: m[3]==='same' ? 'Same' : 'Checking', color: m[3]==='same' ? S.greenText : t.label2,
-      bg: tile(i*5+4), rowBg: (i % 2) ? t.rowAlt : 'transparent' }));
+    const NEWPLAN = [
+      ['IMG_4512.HEIC', 'Tuấn/2025 · Vợ/Phone', 'IMG_4512.HEIC', '3.0 MB', true, 2],
+      ['IMG_4513.HEIC', 'Tuấn/2025 · Vợ/Phone', 'IMG_4513.HEIC', '2.8 MB', true, 2],
+      ['DSC04501.ARW', 'Tuấn/Hội An · Vợ/Hội An', 'DSC04501.ARW', '49.2 MB', true, 2]
+    ];
+    const row = (m, i, seed) => {
+      const there = m[2] === '', on = m[4] && !there;
+      const copies = m[5] === 1 ? '1 copy' : m[5] + ' copies';
+      return { name:m[0], from: m[1], to: there ? '' : '\u00a0→ Shared/' + m[2], size:m[3],
+        // §6d: Move says what goes, in its own column; unchecked rows say they stay out; full paths in the tooltip.
+        note: there ? 'Already in Shared' : !m[4] ? 'Left out from now on' : (move ? 'Removes ' + copies : ''),
+        help: m[1] + (there ? '' : ' → Shared/' + m[2]),
+        there, hasBox: !there, on, off: !there && !m[4], checkVis: on ? 'visible' : 'hidden',
+        thumbDim: there ? 0.5 : 1, nameColor: there ? t.label2 : t.label,
+        boxBg: on ? t.accentFill : t.field, boxBorder: on ? '1px solid ' + t.accentFill : '1px solid ' + t.checkboxStroke,
+        boxLabel: m[0],
+        hover: i === 1 && seed === 4,
+        bg: tile(i*5+seed), rowBg: i === 1 && seed === 4 ? t.rowSel : (i % 2) ? t.rowAlt : 'transparent' };
+    };
+    const matches = PLAN.map((m, i) => row(m, i, 4));
+    const leftOut = [['IMG_3954.HEIC', 'Left out Nov 3', '2.6 MB'], ['DSC03310.ARW', 'Left out Nov 3', '46.1 MB']]
+      .map((l, i) => ({ name:l[0], when:l[1], size:l[2], bg: tile(i*3+11), rowBg: (i % 2) ? t.rowAlt : 'transparent' }));
 
     // §6c: "again" — the set gathered on Nov 3; three new photos since. "nothingNew" — none.
     const state = this.props.state || 'first';
     const before = state === 'beforeScan', listing = state === 'listing', waiting = before || listing;
     const again = state === 'again' || state === 'nothingNew', nothingNew = state === 'nothingNew';
-    const NEW = [
-      ['IMG_4512.HEIC', 'Tuấn/2025 · Vợ/Phone as 2025-11-04 IMG_4512.HEIC', '3.0 MB'],
-      ['IMG_4513.HEIC', 'Tuấn/2025 · Vợ/Phone', '2.8 MB'],
-      ['DSC04501.ARW', 'Tuấn/Hội An · Vợ/Hội An', '49.2 MB']
-    ].map((m, i) => ({ name:m[0], paths:m[1], size:m[2], same:true, checking:false, status:'Same', color:S.greenText,
-      bg: tile(i*7+9), rowBg: (i % 2) ? t.rowAlt : 'transparent' }));
-    const shown = state === 'first' ? matches : (nothingNew ? [] : NEW);
-    const sameN = state === 'first' ? '280' : (nothingNew ? '0' : '3');
+    const NEW = NEWPLAN.map((m, i) => row(m, i, 9));
+    // Left Out open: the list scrolled to its end, the last photos then the section.
+    const shown = state === 'first' ? (leftOutOpen ? matches.slice(5) : matches) : (nothingNew ? [] : NEW);
+    const sameN = state === 'first' ? '282' : (nothingNew ? '0' : '3');
+    const verb = move ? 'Move' : 'Copy';
     return { t, S, edge: dark?'rgba(28,28,30,0.85)':'rgba(255,255,255,0.85)', edgeClear: dark?'rgba(28,28,30,0)':'rgba(255,255,255,0)',
       groups, foot, columns, folderTiles, crumbs, srcFolders, action, matches: shown,
+      leftOut, leftOutOpen: leftOutOpen && state === 'first', leftOutClosed: !leftOutOpen && state !== 'nothingNew',
+      leftOutLine: 'Skipped by every scan and gather of this set',
+      scrollTop: leftOutOpen ? 'calc(100% - 60px)' : '4px',
       again, againRow: again && !nothingNew, nothingNew, hasMatches: !nothingNew && !waiting, checking: state === 'first', sameN,
       scanned: !waiting, waiting, listing,
       // Before Scan the sheet opens with no destination: Save to reads Choose…, Keep gathering waits for one.
       saveTo: before ? 'Choose…' : 'Shared', saveToFg: before ? t.label2 : t.label, keepOpacity: before ? 0.45 : 1,
       waitingLine: listing ? 'Listing… 12,408 files' : 'Scan finds the photos every folder holds, byte for byte. Nothing is copied or moved until you choose.',
-      footHint: nothingNew || before ? '' : 'Only photos marked Same are copied.',
-      headline: state === 'first' ? '312 photos in both folders · 4.2 GB' : (nothingNew ? 'No new photos in both folders' : '3 new photos in both folders · 55 MB'),
+      footHint: nothingNew || before ? '' : listing ? 'Only Same photos are listed.' : move ? 'Verified in Shared, then removed from Tuấn and Vợ.' : 'Space to compare · unchecked photos stay out of this set.',
+      headline: state === 'first' ? '278 of 282 selected · 4.1 GB · 2 already in Shared' : (nothingNew ? 'No new photos in both folders' : '3 new photos in both folders · 55 MB'),
       againLine: 'Last gathered Nov 3, 2:30 PM · 280 already gathered',
-      runLabel: before ? 'Scan' : listing ? 'Stop' : state === 'first' ? 'Copy 280' : (nothingNew ? 'Copy' : 'Copy 3'),
+      runLabel: before ? 'Scan' : listing ? 'Stop' : (state === 'first' ? verb + ' 278' : (nothingNew ? verb : verb + ' 3')) + (move && !nothingNew ? '…' : ''),
       runBg: nothingNew || listing ? t.fill : t.accentFill, runFg: nothingNew ? t.label3 : listing ? t.label : t.onAccentFill,
       title:'Family', subtitle:'NAS Home · SMB · indexed 5 min ago', pathStatus:'2 of 4 selected · 15.21 GB free of 152.09 GB' };
   }

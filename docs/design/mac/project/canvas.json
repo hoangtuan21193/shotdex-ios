@@ -544,7 +544,7 @@
    "w": 1440,
    "h": 900,
    "radius": 16,
-   "title": "Mac · Find Common Photos: chọn Tuấn + Vợ, sheet sau Scan — Same 280 · Checking 32, Save to Shared, Copy 280 (FS-19.08)"
+   "title": "Mac · Find Common Photos: sheet trước Scan / đang liệt kê / sau Scan — §6d chỉ Same, mỗi hàng ô chọn + kế hoạch (→ Shared/tên, Already in Shared, Move: Removes N copies), hàng bỏ = Left out from now on, nút Compare khi rê chuột, Left Out (2) + Include, 278 of 282 selected · Copy 278 / Move 278… (FS-19.08)"
   },
   "MAC_CommonPhotosRun.dc.html": {
    "x": 11800,
@@ -552,7 +552,7 @@
    "w": 1440,
    "h": 900,
    "radius": 16,
-   "title": "Mac · Common Photos đang chạy: cửa sổ log từng file, Copying 120 of 280, Pause/Stop, lọc trạng thái (FS-19.08 §7)"
+   "title": "Mac · Common Photos đang chạy: cửa sổ log từng file, Copying 120 of 280, Pause/Stop, lọc trạng thái (FS-19.08 §7); readyToMove có ô chọn, Move 3… (§6d)"
   },
   "MAC_Activity.dc.html": {
    "x": 13320,
@@ -561,6 +561,14 @@
    "h": 560,
    "title": "Mac · Cửa sổ Activity ⌥⌘0: mỗi việc chạy lâu một kiểu hàng — Common photos đang chạy (Show Log), bị gián đoạn (Try Again), đã xong (Clear); index/backup chưa có nguồn dữ liệu trên Mac; tweak empty = No Activity",
    "radius": 16
+  },
+  "MAC_CommonPhotosCompare.dc.html": {
+   "x": 14300,
+   "y": 6710,
+   "w": 1180,
+   "h": 760,
+   "radius": 16,
+   "title": "Mac · Common Photos Compare (tier D): hai bản cạnh nhau, SHA trùng, ô Include in Copy, ↑↓ sang hàng; tweak photo · video (một Play, tua chung) · loading · waiting (chờ Scan) · noPreview (RAW) · error (Try Again) · threeFolders (popup chọn bản) — FS-19.08 §6d"
   }
  },
  "order": [
@@ -632,7 +640,8 @@
   "MAC_BackupOrganize.dc.html",
   "MAC_CommonPhotos.dc.html",
   "MAC_CommonPhotosRun.dc.html",
-  "MAC_Activity.dc.html"
+  "MAC_Activity.dc.html",
+  "MAC_CommonPhotosCompare.dc.html"
  ],
  "notes": {
   "row_lib": {

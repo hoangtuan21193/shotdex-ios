@@ -144,6 +144,7 @@ input{font-family:inherit}
 </div>
 <sc-for list="{{log}}" as="r" hint-placeholder-count="11"><div role="row" style="height:28px;display:flex;align-items:center;background:{{r.rowBg}};font-size:12px">
 <span role="cell" style="width:172px;flex:none;display:flex;align-items:center;gap:6px;padding:0 10px;box-sizing:border-box;color:{{r.color}};white-space:nowrap">
+<sc-if value="{{r.hasBox}}" hint-placeholder-val="{{false}}"><label style="position:relative;flex:none;width:14px;height:14px;display:flex"><span aria-hidden="true" style="width:14px;height:14px;border-radius:4px;box-sizing:border-box;border:{{r.boxBorder}};background:{{r.boxBg}};display:flex;align-items:center;justify-content:center"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="{{t.onAccentFill}}" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round" style="visibility:{{r.checkVis}}"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg></span><sc-if value="{{r.on}}" hint-placeholder-val="{{false}}"><input type="checkbox" checked aria-label="{{r.name}}" style="position:absolute;opacity:0;width:1px;height:1px"></sc-if><sc-if value="{{r.off}}" hint-placeholder-val="{{false}}"><input type="checkbox" aria-label="{{r.name}}" style="position:absolute;opacity:0;width:1px;height:1px"></sc-if></label></sc-if>
 <sc-if value="{{r.icon}}" hint-placeholder-val="{{true}}"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="{{r.icon}}"></path></svg></sc-if>
 <sc-if value="{{r.busy}}" hint-placeholder-val="{{false}}"><svg width="13" height="13" viewBox="0 0 24 24" style="flex:none"><circle cx="12" cy="12" r="8.5" fill="none" stroke="{{t.track}}" stroke-width="3"></circle><path d="M12 3.5a8.5 8.5 0 0 1 8.5 8.5" fill="none" stroke="{{t.accent}}" stroke-width="3" stroke-linecap="round"></path></svg></sc-if>
 <span style="overflow:hidden;text-overflow:ellipsis">{{r.status}}</span></span>
@@ -426,26 +427,29 @@ class Component extends DCLogic {
     const UNDO = 'M9 14L4 9l5-5 M4 9h10.5a5.5 5.5 0 0 1 0 11H11';
     // Finished: the busy row is done. An undo lists only the rows it takes back (Copied ones); one whose
     // copy in Shared was edited since is Not undone.
-    // Ready to move: what the last pass found, nothing placed or removed yet — To is blank until a name in Shared
-    // is chosen (one taken gets a free name then).
+    // Ready to move (§6d): what the last pass found, nothing placed or removed yet. Each row has its checkbox
+    // and its planned name in Shared; IMG_4204.MOV is left out — Move 3…, and the set never gathers it again.
     const READY = [
-      ['ready', 'IMG_4201.HEIC', 'Tuấn/2025 · Vợ/Phone', '', '1c3e…8a02', ''],
-      ['ready', 'IMG_4203.HEIC', 'Tuấn/2025 · Vợ/Phone', '', '7d41…e915', ''],
-      ['ready', 'IMG_4204.MOV', 'Tuấn/2025 · Vợ/Phone', '', 'a0b7…34cc', ''],
-      ['ready', 'IMG_4210.HEIC', 'Tuấn/2025 · Vợ/Phone', '', '55e2…f07d', '']
+      ['ready', 'IMG_4201.HEIC', 'Tuấn/2025 · Vợ/Phone', 'Shared/IMG_4201.HEIC', '1c3e…8a02', ''],
+      ['ready', 'IMG_4203.HEIC', 'Tuấn/2025 · Vợ/Phone', 'Shared/IMG_4203.HEIC', '7d41…e915', ''],
+      ['leftOut', 'IMG_4204.MOV', 'Tuấn/2025 · Vợ/Phone', 'Shared/IMG_4204.MOV', 'a0b7…34cc', 'left out of this set'],
+      ['ready', 'IMG_4210.HEIC', 'Tuấn/2025 · Vợ/Phone', 'Shared/IMG_4210 (2).HEIC', '55e2…f07d', '']
     ];
     const rows = state === 'readyToMove' ? READY : state === 'running' ? L
       : !isUndo ? L.map(r => r[0] === 'busy' ? ['ok', r[1], r[2], r[3], '4e7a…0c15', ''] : r)
       : L.filter(r => r[0] === 'ok' || r[0] === 'busy').map(r => r[0] === 'busy' ? [r[0], r[1], r[2], r[3], '4e7a…0c15', r[5]] : r).map((r, i) => i === 3 ? ['not', r[1], r[2], r[3], r[4], 'changed in Shared']
           : (state === 'undoing' && i === 6) ? ['undoBusy', r[1], r[2], r[3], r[4], ''] : (state === 'undoing' && i > 6) ? ['wait', r[1], r[2], r[3], r[4], '']
           : ['undone', r[1], r[2], r[3], r[4], '']);
-    const word = { ok:'Copied', skip:'Skipped (already there)', fail:'Failed', busy:'Copying…', ready:'Ready to move', undone:'Undone', not:'Not undone', undoBusy:'Undoing…', wait:'Waiting' };
+    const word = { ok:'Copied', skip:'Skipped (already there)', fail:'Failed', busy:'Copying…', ready:'Ready to move', leftOut:'Left out', undone:'Undone', not:'Not undone', undoBusy:'Undoing…', wait:'Waiting' };
     const log = rows.map((r, i) => ({ status: word[r[0]],
       icon: r[0]==='ok' ? OK : r[0]==='skip' ? SKIP : (r[0]==='fail' || r[0]==='not') ? FAIL : r[0]==='undone' ? UNDO : null,
       busy: r[0]==='busy' || r[0]==='undoBusy',
       color: (r[0]==='ok' || r[0]==='undone') ? S.greenText : (r[0]==='fail' || r[0]==='not') ? S.redText : t.label2,
       name:r[1], from:r[2], to:r[3], sha: r[4] || '—', reason: r[5], reasonColor: (r[0]==='fail' || r[0]==='not') ? S.redText : t.label2,
-      rowBg: (i % 2) ? t.rowAlt : 'transparent' }));
+      rowBg: (i % 2) ? t.rowAlt : 'transparent',
+      hasBox: r[0]==='ready' || r[0]==='leftOut', checkVis: r[0]==='ready' ? 'visible' : 'hidden',
+      boxBg: r[0]==='ready' ? t.accentFill : S.box, boxBorder: '1px solid ' + (r[0]==='ready' ? t.accentFill : t.checkboxStroke),
+      on: r[0]==='ready', off: r[0]==='leftOut' }));
     const fb = (label, kind, dis) => ({ label, dis: dis ? 'true' : 'false',
       bg: kind === 'default' ? t.accentFill : t.fill, fg: dis ? t.label3 : (kind === 'default' ? t.onAccentFill : t.label),
       weight: kind === 'default' ? '600' : '400' });
@@ -464,10 +468,10 @@ class Component extends DCLogic {
         detail:'1 not undone — select it and choose Undo Selected… to try again', pct:'100%',
         summary:'Log saved in Shared as “ShotDex Common Photos 2026-11-03 0958 Undo.csv”',
         footBtns:[ fb('Show in Browser'), fb('Done', 'default') ] },
-      readyToMove: { winTitle:'Common Photos — Tuấn + Vợ → Shared · Nov 3', head:'4 photos ready to move',
+      readyToMove: { winTitle:'Common Photos — Tuấn + Vợ → Shared · Nov 3', head:'4 photos ready to move · 3 checked',
         detail:'Keep gathering found them. Nothing has been moved yet.', pct:'0%',
-        summary:'Moving copies each photo to “Shared”, checks it, then removes it from Tuấn and Vợ.',
-        footBtns:[ fb('Show in Browser'), fb('Not Now'), fb('Move 4…', 'default') ] }
+        summary:'Space to compare · each checked photo is verified in “Shared”, then removed from Tuấn and Vợ.',
+        footBtns:[ fb('Show in Browser'), fb('Not Now'), fb('Move 3…', 'default') ] }
     }[state];
     const ready = state === 'readyToMove';
     const confirm = !!this.props.confirmUndo && (state === 'finished' || ready);
@@ -478,7 +482,7 @@ class Component extends DCLogic {
       barFg: going ? t.accent : S.greenText, hasBar: !ready, summary:V.summary, footBtns:V.footBtns, failNote:V.failNote || null, confirm,
       sysBlue: dark ? '#0A84FF' : '#007AFF',
       confirmAction: ready ? 'Move' : 'Undo Copy',
-      confirmTitle: ready ? 'Move 4 photos to “Shared”?' : 'Undo copying 278 photos?',
+      confirmTitle: ready ? 'Move 3 photos to “Shared”?' : 'Undo copying 278 photos?',
       confirmText: ready ? 'Each photo is copied to “Shared” and verified, then removed from Tuấn and Vợ. The server has no Trash; you can undo the run from Activity.'
         : 'The copies in “Shared” are removed. The photos in Tuấn and Vợ stay where they are.',
       title:'Shared', subtitle: state === 'running' ? 'NAS Home · SMB · copying 120 of 280' : state === 'undoing' ? 'NAS Home · SMB · undoing 120 of 278' : 'NAS Home · SMB',

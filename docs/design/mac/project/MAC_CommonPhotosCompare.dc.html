@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Mac · Common Photos Compare</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0}
+a{color:#EB9526}a:hover{color:#FFB65C}
+button{font-family:inherit}
+</style>
+</helmet>
+<!-- COMPARE WINDOW (FS-19.08 §6d): its own window, not modal, opened from a Same row with Space or a double-click.
+     Tier D (pixel surface): always dark. Two copies side by side, first folder on the left; ←/→ or ↑/↓ = next row, Esc closes. -->
+<div style="width:1180px;height:760px;border-radius:16px;overflow:hidden;position:relative;background:{{D.bg}};color:{{D.text}};font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text','Helvetica Neue',sans-serif;display:flex;flex-direction:column">
+<!-- Title row: traffic lights, title, row navigation, zoom -->
+<div style="height:44px;flex:none;display:flex;align-items:center;gap:12px;padding:0 12px 0 16px;background:{{D.panel}};border-bottom:1px solid {{D.hair}}">
+<div aria-hidden="true" style="display:flex;gap:8px;flex:none"><span style="width:12px;height:12px;border-radius:6px;background:#FF5F57"></span><span style="width:12px;height:12px;border-radius:6px;background:#FEBC2E"></span><span style="width:12px;height:12px;border-radius:6px;background:#28C840"></span></div>
+<div style="flex:1;min-width:0;text-align:center;font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-variant-numeric:tabular-nums">{{title}}</div>
+<div style="display:flex;gap:4px;flex:none">
+<button aria-label="Previous Row" style="width:32px;height:28px;border-radius:8px;border:none;background:{{D.control}};color:{{D.text}};display:flex;align-items:center;justify-content:center"><svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 15l6-6 6 6"></path></svg></button>
+<button aria-label="Next Row" style="width:32px;height:28px;border-radius:8px;border:none;background:{{D.control}};color:{{D.text}};display:flex;align-items:center;justify-content:center"><svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"></path></svg></button>
+</div>
+<div role="radiogroup" aria-label="Zoom" style="height:28px;border-radius:8px;background:{{D.control}};display:flex;align-items:center;padding:2px;box-sizing:border-box;flex:none">
+<sc-for list="{{zoom}}" as="z" hint-placeholder-count="2"><button role="radio" aria-checked="{{z.on}}" style="width:52px;height:24px;border-radius:6px;border:none;background:{{z.bg}};color:{{z.fg}};font-size:12px">{{z.label}}</button></sc-for>
+</div>
+</div>
+<!-- Two copies -->
+<div style="flex:1;min-height:0;display:flex;gap:1px;background:{{D.hair}}">
+<sc-for list="{{sides}}" as="p" hint-placeholder-count="2"><section aria-label="{{p.aria}}" style="flex:1;min-width:0;display:flex;flex-direction:column;background:{{D.bg}}">
+<div style="flex:1;min-height:0;position:relative;display:flex;align-items:center;justify-content:center;padding:16px">
+<sc-if value="{{p.shows}}" hint-placeholder-val="{{true}}"><div role="img" aria-label="{{p.name}}" style="width:{{p.imgW}};height:{{p.imgH}};border-radius:2px;background:{{p.tile}}"></div></sc-if>
+<sc-if value="{{p.video}}" hint-placeholder-val="{{false}}"><span style="position:absolute;left:24px;top:24px;height:20px;border-radius:5px;padding:0 6px;background:rgba(0,0,0,0.55);display:flex;align-items:center;font-size:11px;font-weight:600;font-variant-numeric:tabular-nums">0:06 / 0:10</span></sc-if>
+<sc-if value="{{p.loading}}" hint-placeholder-val="{{false}}"><div role="status" style="width:260px;display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center">
+<svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5" fill="none" stroke="{{D.track}}" stroke-width="2.6"></circle><path d="M12 3.5a8.5 8.5 0 0 1 8.5 8.5" fill="none" stroke="{{D.accent}}" stroke-width="2.6" stroke-linecap="round"></path></svg>
+<div style="font-size:13px">{{p.loadLine}}</div>
+<div aria-hidden="true" style="width:200px;height:4px;border-radius:2px;background:{{D.track}};overflow:hidden"><div style="width:{{p.pct}};height:4px;background:{{D.accent}}"></div></div>
+<div style="font-size:11px;color:{{D.text2}};font-variant-numeric:tabular-nums">{{p.loadBytes}}</div>
+</div></sc-if>
+<sc-if value="{{p.waiting}}" hint-placeholder-val="{{false}}"><div role="status" style="display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center">
+<svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="{{D.text2}}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a9 9 0 1 0 0.01 0z M12 7v5l3.5 2"></path></svg>
+<div style="font-size:13px">Waiting for the scan…</div>
+<div style="font-size:11px;color:{{D.text2}}">This copy loads when the scan has nothing else to read.</div>
+</div></sc-if>
+<sc-if value="{{p.noPreview}}" hint-placeholder-val="{{false}}"><div role="status" style="display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center">
+<svg aria-hidden="true" width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="{{D.text2}}" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2.5h8l4 4v15H6z M14 2.5v4h4"></path></svg>
+<div style="font-size:13px">No preview for this RAW</div>
+<div style="font-size:11px;color:{{D.text2}}">Its bytes still match: SHA-256 below.</div>
+</div></sc-if>
+<sc-if value="{{p.failed}}" hint-placeholder-val="{{false}}"><div role="status" style="width:300px;display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center">
+<svg aria-hidden="true" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="{{D.text2}}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l9.5 17h-19z M12 10v4.5 M12 17.5v0.5"></path></svg>
+<div style="font-size:13px;line-height:18px">Can't reach NAS Home. Check that it's on and on the same network.</div>
+<div style="font-size:12px;line-height:16px;color:{{D.text2}}">Your scan results are kept.</div>
+<button style="height:28px;border-radius:8px;border:none;background:{{D.control}};color:{{D.text}};padding:0 14px;font-size:13px">Try Again</button>
+</div></sc-if>
+</div>
+<!-- What this copy is -->
+<div style="height:58px;flex:none;display:flex;flex-direction:column;justify-content:center;gap:2px;padding:0 20px;border-top:1px solid {{D.hair}};background:{{D.panel}}">
+<div style="display:flex;align-items:center;gap:8px;font-size:13px;white-space:nowrap"><sc-if value="{{p.picker}}" hint-placeholder-val="{{false}}"><button aria-label="Copy to Compare" aria-haspopup="menu" style="height:22px;border-radius:6px;border:none;background:{{D.control}};color:{{D.text}};display:flex;align-items:center;gap:6px;padding:0 6px 0 8px;font-size:13px;font-weight:600">{{p.folder}}<svg aria-hidden="true" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M8 9l4-4 4 4 M8 15l4 4 4-4"></path></svg></button></sc-if><sc-if value="{{p.plain}}" hint-placeholder-val="{{true}}"><span style="font-weight:600;overflow:hidden;text-overflow:ellipsis">{{p.folder}}</span></sc-if><span style="color:{{D.text2}};overflow:hidden;text-overflow:ellipsis">{{p.name}}</span></div>
+<div style="font-size:11px;color:{{D.text2}};white-space:nowrap;font-variant-numeric:tabular-nums">{{p.meta}}</div>
+</div>
+</section></sc-for>
+</div>
+<!-- Video: one Play and one scrubber for both copies. It is the window's timeline, so it may sit in the bottom 60pt (MAC_STYLE) -->
+<sc-if value="{{video}}" hint-placeholder-val="{{false}}"><div style="height:44px;flex:none;display:flex;align-items:center;gap:12px;padding:0 20px;background:{{D.panel}};border-top:1px solid {{D.hair}}">
+<button aria-label="Pause" style="width:32px;height:28px;border-radius:8px;border:none;background:{{D.control}};color:{{D.text}};display:flex;align-items:center;justify-content:center;flex:none"><svg aria-hidden="true" width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M6 4h4v16H6z M14 4h4v16h-4z"></path></svg></button>
+<span style="font-size:11px;color:{{D.text2}};font-family:ui-monospace,Menlo,monospace;flex:none">0:06.12</span>
+<div role="slider" aria-label="Playhead" aria-valuetext="6 seconds of 10" style="flex:1;position:relative;height:16px;display:flex;align-items:center"><div style="width:100%;height:4px;border-radius:2px;background:{{D.track}}"></div><div style="position:absolute;left:0;width:61%;height:4px;border-radius:2px;background:{{D.accent}}"></div><div style="position:absolute;left:calc(61% - 6px);width:12px;height:12px;border-radius:6px;background:#FFFFFF"></div></div>
+<span style="font-size:11px;color:{{D.text2}};font-family:ui-monospace,Menlo,monospace;flex:none">0:10.00</span>
+<span style="font-size:11px;color:{{D.text2}};flex:none">Sound: left</span>
+</div></sc-if>
+<!-- Proof line: the SHA both copies share -->
+<div style="height:40px;flex:none;display:flex;align-items:center;gap:8px;padding:0 20px;background:{{D.panel}};border-top:1px solid {{D.hair}};font-size:12px">
+<label style="flex:none;display:flex;align-items:center;gap:6px;font-size:12px;position:relative"><span aria-hidden="true" style="width:14px;height:14px;border-radius:4px;background:{{D.accent}};display:flex;align-items:center;justify-content:center"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#000000" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg></span><input type="checkbox" checked aria-label="Include in Copy" style="position:absolute;opacity:0;width:1px;height:1px">Include in Copy</label>
+<div style="flex:1;min-width:0;display:flex;align-items:center;justify-content:center;gap:8px">
+<svg aria-hidden="true" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="{{proofColor}}" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="{{proofIcon}}"></path></svg>
+<span style="font-weight:600;color:{{proofColor}}">{{proof}}</span>
+<span style="color:{{D.text2}};font-family:ui-monospace,Menlo,monospace;user-select:text;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{sha}}</span>
+</div>
+<span style="flex:none;font-size:11px;color:{{D.text2}}">↑↓ next row · Esc close</span>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"state":{"editor":"select","options":["photo","video","loading","waiting","noPreview","error","threeFolders"],"default":"photo"},"$preview":{"width":1180,"height":760}}'>
+// Tier D tokens (ShotDex/Features/Editing/EditorTheme.swift): the window is always dark.
+const D = { bg:'#000000', panel:'#0E0E0E', control:'#1C1C1C', track:'#2A2A2A', hair:'rgba(255,255,255,0.09)',
+  text:'rgba(255,255,255,0.92)', text2:'rgba(255,255,255,0.55)', accent:'#EB9526', green:'#30D158' };
+const SKIES = [['#F2C38B', '#7A9CC6'], ['#E9A27C', '#5A6FA8'], ['#9EC4E4', '#486C9A'], ['#C7B4E0', '#6B5E9C']];
+const tile = (i) => { const s = SKIES[i % SKIES.length]; return 'linear-gradient(180deg,' + s[1] + ' 0%,' + s[0] + ' 58%,#2F3B2F 58%,#1E271E 100%)'; };
+const FULL = '1c3e8a02 5f77c1d9 0e4b6a13 9d20f48c 7a61e5b2 c3d08f19 46ab27e0 b9f17d64';
+
+class Component extends DCLogic {
+  renderVals() {
+    const state = this.props.state || 'photo';
+    const video = state === 'video', loading = state === 'loading', error = state === 'error';
+    const waiting = state === 'waiting', noPreview = state === 'noPreview', three = state === 'threeFolders';
+    const raw = loading || error || waiting || noPreview;
+    const name = video ? 'IMG_4107.MOV' : raw ? 'DSC04388.ARW' : 'IMG_4021.HEIC';
+    const row = video ? 5 : raw ? 3 : 1;
+    const size = video ? '212.4 MB' : raw ? '48.6 MB' : '2.9 MB';
+    const taken = video ? 'Jun 3, 2025 at 6:41 PM' : raw ? 'Jul 12, 2025 at 5:58 AM' : 'Jun 1, 2025 at 4:12 PM';
+    const side = (folder, file, i) => ({
+      folder, name: file, aria: folder + ', ' + file,
+      meta: size + ' · ' + taken + ' · SHA-256 1c3e8a02',
+      // Same bytes, so the same picture on both sides.
+      tile: tile(row), shows: !(loading || waiting || noPreview || (error && i === 1)), video,
+      waiting, noPreview: noPreview && i === 1, picker: three && i === 1, plain: !(three && i === 1),
+      imgW: '540px', imgH: '360px',
+      // Loading: both copies download (not indexed); Error: the right one lost the connection.
+      loading, pct: i === 0 ? '44%' : '18%',
+      loadLine: 'Downloading from NAS Home…', loadBytes: (i === 0 ? '21.4' : '8.8') + ' of 48.6 MB',
+      failed: error && i === 1 });
+    const sides = [
+      side(video ? 'Tuấn/2025' : raw ? 'Tuấn/Da Lat 2025' : 'Tuấn/2025', name, 0),
+      side(video ? 'Vợ/Phone' : raw ? 'Vợ/Da Lat' : 'Vợ/Phone', video ? name : raw ? name : '2025-06-01 ' + name, 1)
+    ];
+    if (error) sides[0].loading = false;
+    // No preview: the left copy is indexed, the right one is a RAW this Mac cannot draw.
+    if (noPreview) { sides[0].shows = true; }
+    // Waiting: the scan still reads; nothing loads until it has no command waiting.
+    if (three) { sides[1].folder = 'Phone Backup/2025'; }
+    const zoom = [['Fit', true], ['100%', false]].map(z => ({ label: z[0], on: z[1] ? 'true' : 'false',
+      bg: z[1] ? D.track : 'transparent', fg: z[1] ? D.text : D.text2 }));
+    const proven = !(loading || error || waiting);
+    return { D, sides, zoom, video,
+      title: 'Compare — ' + name + ' · ' + row + ' of 282 · included',
+      proof: proven ? 'Same bytes — SHA-256 matches' : 'Same bytes — SHA-256 matched in the scan',
+      proofIcon: 'M5 12.5l4.5 4.5L19 7.5', proofColor: proven ? D.green : D.text2,
+      sha: FULL };
+  }
+}
+</script>
+</body>
+</html>

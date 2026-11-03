@@ -267,7 +267,7 @@ Scan liệt kê luôn folder chung, nên mỗi hàng Same biết sẵn việc n�
 | Copy, tên còn trống ở folder chung | `→ Shared/IMG_4021.HEIC` |
 | Copy, folder chung có tên đó mà khác byte | `→ Shared/IMG_0001 (2).JPG` |
 | Folder chung đã có bản cùng SHA | `Already in Shared` (hàng mờ, không đếm vào nút; vẫn được thêm sidecar thiếu như §6) |
-| Move | `→ Shared/IMG_4021.HEIC · removes 2 copies` — rê chuột (`.help`) ra đủ đường dẫn từng bản sẽ bị xoá |
+| Move | `→ Shared/IMG_4021.HEIC`, cột phải `Removes 2 copies` — rê chuột (`.help`) ra đủ đường dẫn từng bản sẽ bị xoá |
 
 - Đầu danh sách: "280 photos · 31 videos · 4.2 GB · 2 already in Shared".
 - **Bấm Copy N / Move N là chạy đúng kế hoạch đó.** Không băm lại SHA của bản nguồn:
@@ -285,6 +285,8 @@ Scan liệt kê luôn folder chung, nên mỗi hàng Same biết sẵn việc n�
 - Hai khung cạnh nhau, mỗi khung một bản (folder đầu bên trái). Mỗi khung ghi: folder, tên, cỡ, ngày chụp, SHA-256 8 ký
   tự đầu. Dưới hai khung: "Same bytes — SHA-256 matches", kèm SHA đủ (chọn được để chép).
 - Ba folder trở lên: khung phải có popup chọn bản để so với bản bên trái.
+- Thanh dưới: ô **Include in Copy** (hay **Include in Move**). Bỏ ô = Leave Out, như ô chọn của hàng. Có thêm gợi ý
+  "↑↓ next row · Esc close". Tiêu đề cửa sổ ghi hàng thứ mấy và hàng đó đang được chọn hay đã bỏ.
 - **Ảnh:** hiện vừa khung. Cùng zoom và cùng vị trí cho cả hai khung (cuộn hay zoom một bên, bên kia theo).
 - **Video:** một nút Play và một thanh tua cho cả hai; hai bên luôn cùng thời điểm (lệch ≤ 1 khung hình); tiếng chỉ bên
   trái.
@@ -303,7 +305,10 @@ Scan liệt kê luôn folder chung, nên mỗi hàng Same biết sẵn việc n�
 
 - Mỗi hàng Same có ô chọn, mặc định chọn hết. Chọn nhiều hàng rồi Space bật/tắt cả nhóm. Menu chuột phải: **Leave
   Out** / **Include**, **Compare**.
-- Nút đếm đúng số đang chọn: **Copy 278** / **Move 278**. Bỏ hết → nút mờ.
+- Nút đếm đúng số đang chọn: **Copy 278** / **Move 278…** (Move có hộp xác nhận, §4). Bỏ hết → nút mờ.
+- Đầu danh sách đếm theo số đang chọn: "278 of 282 selected · 4.1 GB · 2 already in Shared". Hàng bỏ chọn ghi "Left out
+  from now on". Chân sheet: Copy "Space to compare · unchecked photos stay out of this set.", Move "Verified in Shared,
+  then removed from Tuấn and Vợ."
 - Hàng bỏ ra được **nhớ cho bộ gom đó** (§6c), theo SHA-256 (đổi tên hay dời trong A/B vẫn nhận ra):
   - lượt quét lại, Run Again và tự gom không chạy ảnh đó;
   - danh sách có mục thu gọn **Left Out (2)** ở cuối, mở ra thấy hàng mờ với nút **Include**;
