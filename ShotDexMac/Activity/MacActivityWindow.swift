@@ -17,11 +17,13 @@ struct MacActivityWindow: View {
     @State private var stopping: LongRunningJob?
     /// The Stop question's words, worked out once when it opens.
     @State private var stopText = (title: "", message: "")
+    /// Remove from List… / Remove Finished from List… asked: these runs.
+    @State private var removing: [String] = []
 
     struct Stored: Sendable {
         var run: CommonPhotosRun
         var progress: CommonPhotosRunner.Progress
-        var done = 0, skipped = 0, failed = 0
+        var done = 0, skipped = 0, failed = 0, undone = 0
     }
 
     private var runs: MacCommonPhotosRuns { dependencies.commonPhotos }
@@ -54,6 +56,22 @@ struct MacActivityWindow: View {
         } message: {
             Text(stopText.message)
         }
+        .alert(removeTitle, isPresented: Binding(get: { !removing.isEmpty }, set: { if !$0 { removing = [] } })) {
+            Button(String(localized: "Remove", comment: "Mac Activity: remove finished runs from the list")) {
+                runs.remove(runIds: removing)
+            }
+            Button(String(localized: "Cancel", comment: "Mac sheet: cancel"), role: .cancel) {}
+                .keyboardShortcut(.defaultAction)
+        } message: {
+            Text("Their logs are removed, so you can’t undo these runs afterwards. Nothing on the server changes.",
+                 comment: "Mac Activity: what Remove from List costs")
+        }
+    }
+
+    private var removeTitle: String {
+        removing.count == 1
+            ? String(localized: "Remove this run from the list?", comment: "Mac Activity: confirm Remove from List")
+            : String(localized: "Remove \(removing.count.formatted()) finished runs from the list?", comment: "Mac Activity: confirm Remove Finished from List")
     }
 
     // MARK: Jobs
@@ -74,6 +92,7 @@ struct MacActivityWindow: View {
             input.copiedOrMoved = info.done
             input.skipped = info.skipped
             input.failed = info.failed
+            input.undone = info.undone
             input.endedAt = Date(timeIntervalSince1970: TimeInterval(info.run.updatedAt))
             return CommonPhotosJob.job(input)
         }
@@ -81,12 +100,14 @@ struct MacActivityWindow: View {
     }
 
     private func readStore() async {
-        let (known, cleared) = runs.activityKnownRunIds
+        let known = runs.activityKnownRunIds
         let store = runs.store
         let read = await Task.detached(priority: .userInitiated) {
             var seen = Set<String>()
-            let ids = (known + ((try? store.unfinishedRuns()) ?? []).map(\.id))
-                .filter { !cleared.contains($0) && seen.insert($0).inserted }
+            // Finished runs stay, the last 20 groups (FS-19.08 §6b), so their
+            // log opens and they can be undone after a restart.
+            let ids = (known + ((try? store.unfinishedRuns()) ?? []).map(\.id) + ((try? store.keptRuns()) ?? []).map(\.id))
+                .filter { seen.insert($0).inserted }
             var out: [String: Stored] = [:]
             for id in ids {
                 guard let run = (try? store.run(id: id)) ?? nil else { continue }
@@ -96,9 +117,11 @@ struct MacActivityWindow: View {
                                  progress: CommonPhotosRunner.Progress(doneCount: done.count, totalCount: items.count,
                                                                        doneBytes: done.reduce(0) { $0 + $1.size },
                                                                        totalBytes: items.reduce(0) { $0 + $1.size }),
-                                 done: items.filter { $0.status == .copied || $0.status == .moved }.count,
+                                 // A gathering run's undone photos were copied or moved first.
+                                 done: items.filter { run.isUndo ? $0.status == .undone : [.copied, .moved, .undone].contains($0.status) }.count,
                                  skipped: items.filter { $0.status == .skipped }.count,
-                                 failed: items.filter { $0.status == .failed }.count)
+                                 failed: items.filter { $0.status == .failed }.count,
+                                 undone: run.isUndo ? 0 : items.filter { $0.status == .undone }.count)
             }
             return out
         }.value
@@ -126,13 +149,13 @@ struct MacActivityWindow: View {
 
     private var foot: some View {
         HStack(alignment: .top, spacing: 12) {
-            Text("Closing this window doesn’t stop anything — jobs keep running and show at the foot of the sidebar. A job stopped by quitting ShotDex comes back here with Resume.",
+            Text("Closing this window doesn’t stop anything — jobs keep running and show at the foot of the sidebar. A job stopped by quitting ShotDex comes back here with Resume. The last 20 finished runs stay here so you can undo them.",
                  comment: "Mac Activity: what closing the window does")
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
                 .frame(maxWidth: .infinity, alignment: .leading)
-            Button(String(localized: "Clear Finished", comment: "Mac Activity: remove every row that is over")) {
-                runs.clear(runIds: jobs.filter(\.isOver).map(\.id))
+            Button(String(localized: "Remove Finished from List…", comment: "Mac Activity: remove every row that is over, after asking")) {
+                removing = jobs.filter(\.isOver).map(\.id).filter { runs.canRemove(runId: $0) }
             }
             .buttonStyle(.bordered)
             .controlSize(.small)
@@ -162,7 +185,7 @@ struct MacActivityWindow: View {
             stopText = stopWords(job)
             stopping = job
         case .showLog: openWindow(id: MacCommonPhotosRunWindow.id, value: job.id)
-        case .clear: runs.clear(runIds: [job.id])
+        case .remove: if runs.canRemove(runId: job.id) { removing = [job.id] }
         }
     }
 
@@ -241,8 +264,8 @@ private struct MacActivityRow: View {
             textButton(String(localized: "Try Again", comment: "Mac Activity: run again after a connection error"), action)
         case .showLog:
             textButton(String(localized: "Show Log", comment: "Mac Activity: open the run's window"), action)
-        case .clear:
-            textButton(String(localized: "Clear", comment: "Mac Activity: remove a row that is over"), action)
+        case .remove:
+            textButton(String(localized: "Remove from List…", comment: "Mac Activity: remove a row that is over, after asking"), action)
         }
     }
 
@@ -292,10 +315,10 @@ private struct MacActivityRow: View {
 
     private var symbol: String {
         switch job.state {
-        case .running, .finishing: "square.on.square"
+        case .running, .finishing: job.kind == .commonPhotosUndo ? "arrow.uturn.backward" : "square.on.square"
         case .paused, .interrupted, .owesFinish: "pause.fill"
         case .stopped: "stop.fill"
-        case .done: "checkmark"
+        case .done: job.kind == .commonPhotosUndo ? "arrow.uturn.backward" : "checkmark"
         case .doneWithFailures: "exclamationmark.triangle"
         }
     }

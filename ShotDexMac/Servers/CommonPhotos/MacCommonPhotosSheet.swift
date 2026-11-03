@@ -480,11 +480,11 @@ private struct MacCommonPhotosSheetContent: View {
     }
 
     /// "Each photo is copied to “Shared” and verified, then removed from
-    /// Tuấn and Vợ. This can't be undone — the server has no Trash." (§4)
+    /// Tuấn and Vợ. The server has no Trash; you can undo the run from Activity." (§4, §6b)
     private var moveMessage: String {
         let names = model.folders.map { ServerUploadPath.lastComponent(of: $0) }.formatted(.list(type: .and))
         let destination = model.destination.map { ServerUploadPath.lastComponent(of: $0) } ?? ""
-        return String(localized: "Each photo is copied to “\(destination)” and verified, then removed from \(names). This can't be undone — the server has no Trash.",
+        return String(localized: "Each photo is copied to “\(destination)” and verified, then removed from \(names). The server has no Trash; you can undo the run from Activity.",
                       comment: "Mac common photos: Move confirmation message")
     }
 

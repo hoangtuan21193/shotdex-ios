@@ -69,15 +69,22 @@ final class MacCommonPhotosLogModel {
     }
 
     struct Counts: Equatable {
+        /// Copied or moved, undone since included — for an undo run, undone.
         var done = 0, skipped = 0, failed = 0
+        /// A gathering run's photos an undo took back since.
+        var undone = 0
     }
 
     let runId: String
     private(set) var rows: [Row] = [] {
-        didSet { counts = Self.counts(rows); reshow() }
+        didSet { counts = Self.counts(rows, isUndo: isUndo); reshow() }
     }
+    /// The run is an undo: its done rows are the undone ones.
+    private(set) var isUndo = false
     private(set) var shown: [Row] = []
     private(set) var counts = Counts()
+    /// Rows an undo took back — a change re-asks whether Undo is offered.
+    var undoneCount: Int { isUndo ? counts.done : counts.undone }
     /// The store's items as last read — the Move wording counts them.
     private(set) var items: [CommonPhotosItem] = []
     var filter = Filter.all { didSet { reshow() } }
@@ -100,17 +107,20 @@ final class MacCommonPhotosLogModel {
         shown = rows.filter { row in
             switch filter {
             case .all: true
-            case .done: row.status == .copied || row.status == .moved
+            case .done: isUndo ? row.status == .undone : [.copied, .moved, .undone].contains(row.status)
             case .skipped: row.status == .skipped
             case .failed: row.status == .failed
             }
         }.sorted(using: sortOrder)
     }
 
-    private static func counts(_ rows: [Row]) -> Counts {
+    private static func counts(_ rows: [Row], isUndo: Bool) -> Counts {
         rows.reduce(into: Counts()) { counts, row in
             switch row.status {
             case .copied, .moved: counts.done += 1
+            // A gathering run's undone photos were copied or moved first,
+            // as Activity counts them.
+            case .undone: counts.done += 1; if !isUndo { counts.undone += 1 }
             case .skipped: counts.skipped += 1
             case .failed: counts.failed += 1
             default: break
@@ -144,6 +154,7 @@ final class MacCommonPhotosLogModel {
         }.value
         guard let (run, items, rows) = read else { return }
         csvName = run.csvPath.map { ServerUploadPath.lastComponent(of: $0) }
+        isUndo = run.isUndo
         self.items = items
         if rows != self.rows { self.rows = rows }
     }
@@ -165,7 +176,11 @@ final class MacCommonPhotosLogModel {
     nonisolated private static func row(_ item: CommonPhotosItem, run: CommonPhotosRun) -> Row {
         let name = item.sources.first.map { ServerUploadPath.lastComponent(of: $0.path) } ?? ""
         var status = CommonPhotosLog.status(item.status)
-        if item.status == .skipped, item.failure?.0 == .alreadyThere {
+        if run.isUndo, item.status == .failed {
+            status = String(localized: "Not undone", comment: "Common photos undo log status: the photo was not taken back")
+        } else if run.isUndo, [.copying, .moving, .placed].contains(item.status) {
+            status = String(localized: "Undoing…", comment: "Common photos undo log status: the photo being taken back")
+        } else if item.status == .skipped, item.failure?.0 == .alreadyThere {
             status = String(localized: "Skipped (already there)", comment: "Common photos log status: same bytes in the destination")
         }
         return Row(id: item.position, status: item.status, statusText: status, name: name,
@@ -173,7 +188,8 @@ final class MacCommonPhotosLogModel {
                    to: item.destinationPath.map { ServerUploadPath.join(ServerUploadPath.lastComponent(of: run.destination), ServerUploadPath.lastComponent(of: $0)) } ?? "",
                    shortSHA: item.isDone && item.sha256.count > 8 ? "\(item.sha256.prefix(4))…\(item.sha256.suffix(4))" : "—",
                    reason: CommonPhotosLog.reason(item),
-                   csvStatus: CommonPhotosLog.csvStatus(item.status), csvReason: CommonPhotosLog.csvReason(item),
+                   csvStatus: run.isUndo && item.status == .failed ? "Not undone" : CommonPhotosLog.csvStatus(item.status),
+                   csvReason: CommonPhotosLog.csvReason(item),
                    fromPaths: item.sources.map(\.path).joined(separator: "; "), toPath: item.destinationPath ?? "",
                    sha256: item.sha256)
     }
@@ -196,7 +212,15 @@ private struct MacCommonPhotosRunContent: View {
     @Bindable var log: MacCommonPhotosLogModel
     @Environment(MacDependencies.self) private var dependencies
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.openWindow) private var openWindow
     @State private var confirmsStop = false
+    /// Undo Copy… / Undo Move… or Undo Selected… asked (FS-19.08 §6b): the
+    /// rows chosen, nil for the whole run.
+    @State private var undoing: Set<Int>??
+    @State private var undoProblem: String?
+    /// Whether Undo is offered, read from the store when the run's state or
+    /// its rows change — never per frame.
+    @State private var canUndo = false
 
     private var runs: MacCommonPhotosRuns { dependencies.commonPhotos }
     private var run: CommonPhotosRun { entry.run }
@@ -229,8 +253,38 @@ private struct MacCommonPhotosRunContent: View {
         .onChange(of: entry.progress.currentName) { log.runChanged() }
         .onChange(of: entry.state) { log.read() }
         .onChange(of: entry.isRunning) { log.read() }
-        .confirmationDialog(run.action == .move ? String(localized: "Stop moving?", comment: "Common photos: confirm Stop of a Move")
-                                                : String(localized: "Stop copying?", comment: "Common photos: confirm Stop of a Copy"),
+        // An undo of this run started or ended: its rows changed under it.
+        .onChange(of: runs.generation) { log.read() }
+        .task(id: "\(entry.state.rawValue)-\(entry.isRunning)-\(log.rows.count)-\(log.undoneCount)-\(runs.generation)") { refreshCanUndo() }
+        #if DEBUG
+        // `-ShotDexCommonPhotosAskUndo`: the Undo question once the run is done;
+        // `-ShotDexCommonPhotosUndoAfterRun`: undo it at once, for screenshots.
+        .task(id: "\(entry.state.rawValue)-\(log.rows.count)") {
+            guard entry.isFinished, !run.isUndo, !log.rows.isEmpty, runs.canUndo(runId: run.id) else { return }
+            let arguments = ProcessInfo.processInfo.arguments
+            if arguments.contains("-ShotDexCommonPhotosAskUndo") { undoing = .some(nil) }
+            if arguments.contains("-ShotDexCommonPhotosUndoAfterRun"), canUndo { startUndo(nil) }
+        }
+        #endif
+        .alert(undoTitle, isPresented: Binding(get: { undoing != nil }, set: { if !$0 { undoing = nil } })) {
+            Button(run.action == .move ? String(localized: "Undo Move", comment: "Common photos: confirm undoing a Move")
+                                       : String(localized: "Undo Copy", comment: "Common photos: confirm undoing a Copy")) {
+                if let chosen = undoing { startUndo(chosen) }
+            }
+            Button(String(localized: "Cancel", comment: "Mac sheet: cancel"), role: .cancel) {}
+                .keyboardShortcut(.defaultAction)
+        } message: {
+            Text(undoMessage)
+        }
+        .alert(String(localized: "Couldn’t Start the Undo", comment: "Common photos: the undo could not start"),
+               isPresented: Binding(get: { undoProblem != nil }, set: { if !$0 { undoProblem = nil } })) {
+            Button(String(localized: "OK", comment: "Mac alert: dismiss")) {}
+        } message: {
+            Text(undoProblem ?? "")
+        }
+        .confirmationDialog(run.isUndo ? String(localized: "Stop undoing?", comment: "Common photos: confirm Stop of an undo")
+                            : run.action == .move ? String(localized: "Stop moving?", comment: "Common photos: confirm Stop of a Move")
+                                                  : String(localized: "Stop copying?", comment: "Common photos: confirm Stop of a Copy"),
                             isPresented: $confirmsStop) {
             Button(String(localized: "Stop", comment: "Common photos: end the run for good"), role: .destructive) {
                 runs.stop(runId: run.id)
@@ -238,17 +292,74 @@ private struct MacCommonPhotosRunContent: View {
             Button(String(localized: "Keep Going", comment: "Common photos: do not stop the run"), role: .cancel) {}
                 .keyboardShortcut(.defaultAction)
         } message: {
-            Text(run.action == .move
+            Text(run.action == .move || run.isUndo
                  ? MacCommonPhotosWords.whatIsDone(log.items, run: run) + " " + String(localized: "You can't resume this run.", comment: "Common photos: Stop is permanent")
                  : String(localized: "Photos already copied stay where they are. The rest won't be copied, and you can't resume this run.",
                           comment: "Common photos: what Stop does to a Copy"))
         }
     }
 
-    /// "Common Photos — Tuấn + Vợ → Shared".
+    /// "Common Photos — Tuấn + Vợ → Shared"; "Undo — Shared → Tuấn + Vợ".
     private var title: String {
         let folders = run.folders.map { ServerUploadPath.lastComponent(of: $0) }.joined(separator: " + ")
-        return String(localized: "Common Photos — \(folders) → \(destinationName)", comment: "Common photos window title")
+        return run.isUndo
+            ? String(localized: "Undo — \(destinationName) → \(folders)", comment: "Common photos window title: an undo run")
+            : String(localized: "Common Photos — \(folders) → \(destinationName)", comment: "Common photos window title")
+    }
+
+    // MARK: Undo (FS-19.08 §6b)
+
+    /// The rows an undo would take back: the chosen ones, else all.
+    private func undoable(_ chosen: Set<Int>?) -> [CommonPhotosItem] {
+        // An undo's rows Not undone keep their run's row positions; the
+        // store checks those rows are still undoable.
+        log.items.filter { (run.isUndo ? $0.status == .failed : $0.isUndoable) && (chosen?.contains($0.position) ?? true) }
+    }
+
+    /// The run an undo from this window takes back: this one, or — in an
+    /// undo's window, to retry rows not undone — the run it undid.
+    private var undoTarget: String { run.undoOf ?? run.id }
+
+    private func refreshCanUndo() {
+        canUndo = (entry.isFinished || entry.isStopped) && runs.canUndo(runId: undoTarget)
+    }
+
+    private var undoTitle: String {
+        let count = undoable(undoing ?? nil).count
+        if count == 1 {
+            return run.action == .move
+                ? String(localized: "Undo moving 1 photo?", comment: "Common photos: confirm undoing a Move of one photo")
+                : String(localized: "Undo copying 1 photo?", comment: "Common photos: confirm undoing a Copy of one photo")
+        }
+        return run.action == .move
+            ? String(localized: "Undo moving \(count.formatted()) photos?", comment: "Common photos: confirm undoing a Move")
+            : String(localized: "Undo copying \(count.formatted()) photos?", comment: "Common photos: confirm undoing a Copy")
+    }
+
+    private var undoMessage: String {
+        let folders = ListFormatter.localizedString(byJoining: run.folders.map { ServerUploadPath.lastComponent(of: $0) })
+        return run.action == .move
+            ? String(localized: "Each photo is put back in \(folders) and checked, then removed from “\(destinationName)”.",
+                     comment: "Common photos: what undoing a Move does")
+            : String(localized: "The copies in “\(destinationName)” are removed. The photos in \(folders) stay where they are.",
+                     comment: "Common photos: what undoing a Copy does")
+    }
+
+    private func startUndo(_ chosen: Set<Int>?) {
+        do {
+            let undoId = try runs.startUndo(of: undoTarget, positions: chosen)
+            openWindow(id: MacCommonPhotosRunWindow.id, value: undoId)
+        } catch let refusal as CommonPhotosStore.UndoRefusal {
+            undoProblem = switch refusal {
+            case .notOver: String(localized: "Only a run that has finished or was stopped can be undone.", comment: "Common photos: undo refused")
+            case .undoUnfinished: String(localized: "An undo of this run hasn’t finished. Resume or discard it first.", comment: "Common photos: undo refused")
+            case .nothingToUndo: String(localized: "None of these photos was copied or moved by this run.", comment: "Common photos: undo refused")
+            }
+        } catch {
+            undoProblem = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
+        }
+        log.read()
+        refreshCanUndo()
     }
 
     // MARK: Header
@@ -292,7 +403,9 @@ private struct MacCommonPhotosRunContent: View {
             let position = String(localized: "\(entry.position.formatted()) of \(progress.totalCount.formatted())", comment: "Common photos window: photo N of M")
             let bytes = String(localized: "\(progress.doneBytes.formatted(.byteCount(style: .file))) of \(progress.totalBytes.formatted(.byteCount(style: .file)))",
                                comment: "Common photos window: bytes done of total")
-            return run.action == .move
+            return run.isUndo
+                ? String(localized: "Undoing \(position) · \(bytes)", comment: "Common photos window: running undo")
+                : run.action == .move
                 ? String(localized: "Moving \(position) · \(bytes)", comment: "Common photos window: running Move")
                 : String(localized: "Copying \(position) · \(bytes)", comment: "Common photos window: running Copy")
         }
@@ -307,7 +420,7 @@ private struct MacCommonPhotosRunContent: View {
             return String(localized: "Pause and Stop are off until it finishes.", comment: "Common photos window: finishing")
         }
         if entry.isRunning, let name = progress.currentName, let step = progress.currentStep {
-            var line = "\(name) · \(Self.words(step, destination: destinationName))"
+            var line = "\(name) · \(CommonPhotosJob.words(step, destination: destinationName, isUndo: run.isUndo))"
             if let seconds = entry.secondsLeft, seconds >= 1 { line += " · " + Self.timeLeft(seconds) }
             return line
         }
@@ -325,6 +438,18 @@ private struct MacCommonPhotosRunContent: View {
                           comment: "Common photos window: a run a quit interrupted")
         }
         if !entry.warnings.isEmpty { return entry.warnings.joined(separator: " ") }
+        if entry.isFinished, run.isUndo, log.counts.failed > 0 {
+            return log.counts.failed == 1
+                ? String(localized: "1 not undone — select it and choose Undo Selected… to try again",
+                         comment: "Common photos window: how to retry a row an undo left")
+                : String(localized: "\(log.counts.failed.formatted()) not undone — select them and choose Undo Selected… to try again",
+                         comment: "Common photos window: how to retry rows an undo left")
+        }
+        if canUndo, !run.isUndo {
+            return run.action == .move
+                ? String(localized: "Undo Move… puts these photos back where they were.", comment: "Common photos window: what Undo does")
+                : String(localized: "Undo Copy… takes these copies back out of “\(destinationName)”.", comment: "Common photos window: what Undo does")
+        }
         return nil
     }
 
@@ -361,11 +486,16 @@ private struct MacCommonPhotosRunContent: View {
         HStack {
             Picker(selection: $log.filter) {
                 Text("All", comment: "Common photos log filter").tag(MacCommonPhotosLogModel.Filter.all)
-                Text(run.action == .move ? String(localized: "Moved", comment: "Common photos log filter")
-                                         : String(localized: "Copied", comment: "Common photos log filter"))
-                    .tag(MacCommonPhotosLogModel.Filter.done)
-                Text("Skipped", comment: "Common photos log filter").tag(MacCommonPhotosLogModel.Filter.skipped)
-                Text("Failed", comment: "Common photos log filter").tag(MacCommonPhotosLogModel.Filter.failed)
+                if run.isUndo {
+                    Text("Undone", comment: "Common photos undo log filter").tag(MacCommonPhotosLogModel.Filter.done)
+                    Text("Not undone", comment: "Common photos undo log filter").tag(MacCommonPhotosLogModel.Filter.failed)
+                } else {
+                    Text(run.action == .move ? String(localized: "Moved", comment: "Common photos log filter")
+                                             : String(localized: "Copied", comment: "Common photos log filter"))
+                        .tag(MacCommonPhotosLogModel.Filter.done)
+                    Text("Skipped", comment: "Common photos log filter").tag(MacCommonPhotosLogModel.Filter.skipped)
+                    Text("Failed", comment: "Common photos log filter").tag(MacCommonPhotosLogModel.Filter.failed)
+                }
             } label: {
                 Text("Status", comment: "Common photos log filter")
             }
@@ -404,6 +534,14 @@ private struct MacCommonPhotosRunContent: View {
             .width(min: 60, ideal: 90)
         }
         .alternatingRowBackgrounds()
+        .contextMenu(forSelectionType: Int.self) { positions in
+            if !positions.isEmpty {
+                Button(String(localized: "Undo Selected…", comment: "Common photos log: undo the chosen rows")) {
+                    undoing = .some(positions)
+                }
+                .disabled(!canUndo || undoable(positions).isEmpty)
+            }
+        }
         .overlay {
             if log.shown.isEmpty, !log.rows.isEmpty { emptyFilter }
         }
@@ -453,7 +591,7 @@ private struct MacCommonPhotosRunContent: View {
             }
             Text(row.statusText).lineLimit(1)
         }
-        .foregroundStyle(row.status == .copied || row.status == .moved ? Color.green
+        .foregroundStyle(row.status == .copied || row.status == .moved || row.status == .undone ? Color.green
                          : row.status == .failed ? Color(nsColor: .systemRed) : .secondary)
     }
 
@@ -462,12 +600,21 @@ private struct MacCommonPhotosRunContent: View {
     /// "280 copied · 12 skipped · 0 failed".
     private var summary: String {
         let counts = log.counts
+        if run.isUndo {
+            return [String(localized: "\(counts.done.formatted()) undone", comment: "Common photos window: count"),
+                    String(localized: "\(counts.failed.formatted()) not undone", comment: "Common photos window: count")]
+                .joined(separator: " · ")
+        }
         let done = run.action == .move
             ? String(localized: "\(counts.done.formatted()) moved", comment: "Common photos window: count")
             : String(localized: "\(counts.done.formatted()) copied", comment: "Common photos window: count")
-        return [done,
-                String(localized: "\(counts.skipped.formatted()) skipped", comment: "Common photos window: count"),
-                failedText].joined(separator: " · ")
+        var parts = [done,
+                     String(localized: "\(counts.skipped.formatted()) skipped", comment: "Common photos window: count"),
+                     failedText]
+        if counts.undone > 0 {
+            parts.append(String(localized: "\(counts.undone.formatted()) undone", comment: "Common photos window: photos an undo took back"))
+        }
+        return parts.joined(separator: " · ")
     }
 
     private var failedText: String {
@@ -485,7 +632,13 @@ private struct MacCommonPhotosRunContent: View {
             }
             .font(.callout).monospacedDigit().foregroundStyle(.secondary).lineLimit(1)
             .frame(maxWidth: .infinity, alignment: .leading)
-            if log.counts.failed > 0 {
+            if canUndo, !run.isUndo {
+                Button(run.action == .move ? String(localized: "Undo Move…", comment: "Common photos window: take a Move back")
+                                           : String(localized: "Undo Copy…", comment: "Common photos window: take a Copy back")) {
+                    undoing = .some(nil)
+                }
+            }
+            if log.counts.failed > 0, !run.isUndo {
                 Text(failedText).font(.callout).monospacedDigit().foregroundStyle(Color(nsColor: .systemRed))
                 Button(String(localized: "Show Failed", comment: "Common photos window: filter the log to failures")) { log.filter = .failed }
             }

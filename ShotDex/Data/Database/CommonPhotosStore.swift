@@ -206,6 +206,18 @@ struct CommonPhotosStore: Sendable {
         }
     }
 
+    /// Whether any row of `runId` can be undone (`CommonPhotosItem.isUndoable`),
+    /// without reading every row: Copied, Moved, or a failed Move that
+    /// removed a copy.
+    func hasUndoableRows(runId: String) throws -> Bool {
+        try database.reader.read { db in
+            try Bool.fetchOne(db, sql: """
+                SELECT EXISTS (SELECT 1 FROM common_photo_items WHERE runId = ? AND (status IN ('copied', 'moved')
+                    OR (status = 'failed' AND destinationPath IS NOT NULL AND sources LIKE '%"isRemoved":true%')))
+                """, arguments: [runId]) ?? false
+        }
+    }
+
     /// The undo runs of `runId`, oldest first.
     func undoRuns(of runId: String) throws -> [CommonPhotosRun] {
         try database.reader.read { db in

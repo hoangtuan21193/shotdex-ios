@@ -112,7 +112,7 @@ input{font-family:inherit}
 <!-- LOG WINDOW (FS-19.08 §7): its own window, not modal — the browser stays usable; closing it does not stop the run (Activity › Show Log reopens it).
      Tweak "state": running (default) · finished (Undo Copy… in the footer, §6b) · undoing · undone (an undo is a run of its own,
      same window). Right-click on Copied/Moved rows offers Undo Selected… (a context menu, not drawn). Tweak "confirmUndo" draws
-     the confirmation over a finished run; Cancel is the default button, on the trailing side (HIG: the default trails). -->
+     the confirmation over a finished run; Cancel is the default button. -->
 <section role="dialog" aria-label="{{winTitle}}" style="position:absolute;left:300px;top:196px;width:900px;height:560px;border-radius:16px;background:{{S.panel}};border:1px solid {{t.glassStroke}};box-shadow:0 18px 50px rgba(0,0,0,0.28);overflow:hidden;color:{{t.label}};display:flex;flex-direction:column;z-index:30">
 <div style="position:relative;height:36px;flex:none;background:{{S.panelBar}};border-bottom:1px solid {{t.sep}}">
 <div style="position:absolute;left:12px;top:12px;display:flex;gap:8px"><div style="width:12px;height:12px;border-radius:6px;background:#FF5F57;box-shadow:inset 0 0 0 0.5px rgba(0,0,0,0.2)"></div><div style="width:12px;height:12px;border-radius:6px;background:#FEBC2E;box-shadow:inset 0 0 0 0.5px rgba(0,0,0,0.2)"></div><div style="width:12px;height:12px;border-radius:6px;background:#28C840;box-shadow:inset 0 0 0 0.5px rgba(0,0,0,0.2)"></div></div>
@@ -157,17 +157,18 @@ input{font-family:inherit}
 <!-- Footer -->
 <div style="height:52px;flex:none;display:flex;align-items:center;gap:8px;padding:0 16px">
 <span role="status" style="flex:1;min-width:0;font-size:12px;color:{{t.label2}};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-variant-numeric:tabular-nums">{{summary}}</span>
+<sc-if value="{{failNote}}" hint-placeholder-val="{{false}}"><span style="flex:none;font-size:12px;color:{{S.redText}};font-variant-numeric:tabular-nums">{{failNote}}</span></sc-if>
 <sc-for list="{{footBtns}}" as="b" hint-placeholder-count="3"><button aria-disabled="{{b.dis}}" style="height:28px;border-radius:8px;border:none;background:{{b.bg}};color:{{b.fg}};font-weight:{{b.weight}};padding:0 12px;font-size:13px;white-space:nowrap;flex:none">{{b.label}}</button></sc-for>
 </div>
-<!-- Undo confirmation (§6b): a sheet-style alert on the log window; Cancel is the default (Return takes nothing back) -->
+<!-- Undo confirmation (§6b): the system alert as macOS draws it — no icon, text leading, Cancel the default (blue, leading;
+     Return takes nothing back) -->
 <sc-if value="{{confirm}}" hint-placeholder-val="{{false}}"><div aria-hidden="true" style="position:absolute;inset:0;top:36px;background:{{t.scrim}}"></div>
-<div role="alertdialog" aria-label="{{confirmTitle}}" style="position:absolute;left:250px;top:120px;width:400px;border-radius:22px;background:{{t.sheet}};border:1px solid {{t.glassStroke}};box-shadow:{{t.sheetShadow}};padding:20px 16px 16px;box-sizing:border-box;display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center">
-<div style="width:56px;height:56px;border-radius:13px;background:linear-gradient(160deg,#F2B25C 0%,#C6730E 100%);display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,0.25)"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14L4 9l5-5 M4 9h10.5a5.5 5.5 0 0 1 0 11H11"></path></svg></div>
+<div role="alertdialog" aria-label="{{confirmTitle}}" style="position:absolute;left:320px;top:180px;width:260px;border-radius:14px;background:{{t.sheet}};border:1px solid {{t.glassStroke}};box-shadow:{{t.sheetShadow}};padding:16px;box-sizing:border-box;display:flex;flex-direction:column;gap:8px;text-align:left">
 <div style="font-size:13px;font-weight:700">{{confirmTitle}}</div>
-<div style="font-size:11px;line-height:15px">{{confirmText}}</div>
-<div style="display:flex;gap:8px;width:100%;margin-top:6px">
+<div style="font-size:13px;line-height:18px">{{confirmText}}</div>
+<div style="display:flex;gap:8px;width:100%;margin-top:8px">
+<button style="flex:1;height:28px;border-radius:8px;border:none;background:{{sysBlue}};color:#FFFFFF;font-size:13px;font-weight:500">Cancel</button>
 <button style="flex:1;height:28px;border-radius:8px;border:none;background:{{t.pressed}};color:{{t.label}};font-size:13px;font-weight:500">Undo Copy</button>
-<button style="flex:1;height:28px;border-radius:8px;border:none;background:{{t.accentFill}};color:{{t.onAccentFill}};font-size:13px;font-weight:600">Cancel</button>
 </div>
 </div></sc-if>
 </section>
@@ -442,14 +443,14 @@ class Component extends DCLogic {
     const V = {
       running: { winTitle:'Common Photos — Tuấn + Vợ → Shared', head:'Copying 120 of 280 · 1.8 of 4.2 GB',
         detail:'IMG_4188.HEIC · reading back SHA-256 in Shared', pct:'43%', summary:'120 copied · 1 skipped · 1 failed',
-        footBtns:[ fb('Show CSV in Browser', null, true) ] },
-      finished: { winTitle:'Common Photos — Tuấn + Vợ → Shared', head:'Done — 278 copied · 1 skipped · 1 failed',
-        detail:'Today, 9:42 AM · log saved in Shared', pct:'100%', summary:'Log saved in Shared as “ShotDex Common Photos 2026-11-03 0942.csv”',
-        footBtns:[ fb('Undo Copy…'), fb('Show in Browser'), fb('Done', 'default') ] },
+        footBtns:[ fb('Show Failed'), fb('Show in Browser', null, true) ], failNote:'1 failed' },
+      finished: { winTitle:'Common Photos — Tuấn + Vợ → Shared', head:'278 copied · 1 skipped · 1 failed',
+        detail:'Undo Copy… takes these copies back out of “Shared”.', pct:'100%', summary:'Log saved in Shared as “ShotDex Common Photos 2026-11-03 0942.csv”',
+        footBtns:[ fb('Undo Copy…'), fb('Show Failed'), fb('Show in Browser'), fb('Done', 'default') ], failNote:'1 failed' },
       undoing: { winTitle:'Undo — Shared → Tuấn + Vợ', head:'Undoing 120 of 278 · 1.8 of 4.2 GB',
-        detail:'IMG_4110.HEIC · checking the copy in Tuấn', pct:'43%', summary:'119 undone · 1 not undone',
+        detail:'IMG_4110.HEIC · checking the copies', pct:'43%', summary:'119 undone · 1 not undone',
         footBtns:[ fb('Show in Browser', null, true) ] },
-      undone: { winTitle:'Undo — Shared → Tuấn + Vợ', head:'Done — 277 undone · 1 not undone',
+      undone: { winTitle:'Undo — Shared → Tuấn + Vợ', head:'277 undone · 1 not undone',
         detail:'1 not undone — select it and choose Undo Selected… to try again', pct:'100%',
         summary:'Log saved in Shared as “ShotDex Common Photos 2026-11-03 0958 Undo.csv”',
         footBtns:[ fb('Show in Browser'), fb('Done', 'default') ] }
@@ -459,7 +460,8 @@ class Component extends DCLogic {
     return { t, S, edge: dark?'rgba(28,28,30,0.85)':'rgba(255,255,255,0.85)', edgeClear: dark?'rgba(28,28,30,0)':'rgba(255,255,255,0)',
       groups, foot, columns, files, crumbs, filter, cols, log,
       winTitle:V.winTitle, head:V.head, detail:V.detail, pct:V.pct, pctNum:V.pct.replace('%', ''), going,
-      barFg: going ? t.accent : S.greenText, summary:V.summary, footBtns:V.footBtns, confirm,
+      barFg: going ? t.accent : S.greenText, summary:V.summary, footBtns:V.footBtns, failNote:V.failNote || null, confirm,
+      sysBlue: dark ? '#0A84FF' : '#007AFF',
       confirmTitle:'Undo copying 278 photos?',
       confirmText:'The copies in “Shared” are removed. The photos in Tuấn and Vợ stay where they are.',
       title:'Shared', subtitle: state === 'running' ? 'NAS Home · SMB · copying 120 of 280' : state === 'undoing' ? 'NAS Home · SMB · undoing 120 of 278' : 'NAS Home · SMB',

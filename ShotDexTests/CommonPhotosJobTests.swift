@@ -60,12 +60,12 @@ import Testing
         #expect(CommonPhotosJob.job(unreadable).actions == [.showLog])
     }
 
-    @Test func overRowsHaveNoBarAndCanBeCleared() {
+    @Test func overRowsHaveNoBarAndCanBeRemoved() {
         let done = CommonPhotosJob.job(input(.finished, done: 268))
         #expect(done.state == .done)
         #expect(done.fraction == nil)
         #expect(done.status == "Done — 268 copied · 12 skipped · 0 failed")
-        #expect(done.actions == [.showLog, .clear])
+        #expect(done.actions == [.showLog, .remove])
         #expect(done.isOver)
         let failures = CommonPhotosJob.job(input(.finished, action: .move, done: 267, failed: 1))
         #expect(failures.state == .doneWithFailures)
@@ -73,7 +73,7 @@ import Testing
         let stopped = CommonPhotosJob.job(input(.stopped))
         #expect(stopped.state == .stopped)
         #expect(stopped.status.hasPrefix("Stopped — "))
-        #expect(stopped.actions == [.showLog, .clear])
+        #expect(stopped.actions == [.showLog, .remove])
     }
 }
 
@@ -105,15 +105,43 @@ import Testing
         #expect(job.actions == [.showLog])
     }
 
-    @Test func doneWithFailuresCanBeShownAndCleared() {
+    @Test func doneWithFailuresCanBeShownAndRemoved() {
         let job = CommonPhotosJob.job(input(.finished, done: 270, failed: 2))
         #expect(job.state == .doneWithFailures)
-        #expect(job.actions == [.showLog, .clear])
+        #expect(job.actions == [.showLog, .remove])
         #expect(job.fraction == nil)
     }
 
     @Test func moveWordsForDoneAndStopped() {
         #expect(CommonPhotosJob.job(input(.finished, action: .move, done: 268)).status == "Done — 268 moved · 12 skipped · 0 failed")
         #expect(CommonPhotosJob.job(input(.stopped, action: .move, done: 40)).status == "Stopped — 40 moved · 12 skipped · 0 failed")
+    }
+
+    /// §6b: an undo run reads as one — its own title, Undoing / undone /
+    /// not undone, and the steps of putting back.
+    @Test func undoRunWords() {
+        var going = input(.running, running: true)
+        going.run.undoOf = "R0"
+        going.progress.currentStep = .checking
+        let job = CommonPhotosJob.job(going)
+        #expect(job.title == "Undo · Shared → Tuấn + Vợ")
+        #expect(job.status.hasPrefix("Undoing 121 of 280 · "))
+        #expect(job.detail == "IMG_4188.HEIC · checking the copies")
+        #expect(job.actions == [.pause, .stop, .showLog])
+
+        var done = input(.finished, done: 277, failed: 1)
+        done.run.undoOf = "R0"
+        let over = CommonPhotosJob.job(done)
+        #expect(over.status == "Done — 277 undone · 1 not undone")
+        #expect(over.state == .doneWithFailures)
+        #expect(over.actions == [.showLog, .remove])
+    }
+
+    /// A run an undo took back says so in its row.
+    @Test func undoneRunSaysSo() {
+        var taken = input(.finished, done: 8)
+        taken.skipped = 0
+        taken.undone = 8
+        #expect(CommonPhotosJob.job(taken).status == "Done — 8 copied · 0 skipped · 0 failed · 8 undone")
     }
 }

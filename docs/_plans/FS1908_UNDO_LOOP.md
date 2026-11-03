@@ -29,7 +29,7 @@ loop: mỗi vòng đọc nó trước, ghi lại sau.
 | U5 | xong | (xem git log) | `ServerFileHistory.move` trả và ghi hàng đã dời (cùng transaction, `recording:`); `restore` chỉ xoá bản ghi đã xong; Undo.csv hoặc xoá CSV (chỉ khi đúng là log của ShotDex), `forgetCSVs`; nhóm mới theo lượt mới nhất của nhóm |
 | U6 | xong | (cùng U2/U3) | `CommonPhotosSMBTests.undoCopyOnTheServer` + `undoMoveOnTheServer` chạy xanh trên SMB ảo sau U5 (C rỗng cả CSV) |
 | U7 | xong | (xem git log) | board `MAC_CommonPhotosRun` thêm tweak `state` (running/finished/undoing/undone) + `confirmUndo`; `MAC_Activity` giữ lượt xong, hàng Undo, Remove from List…, `askRemove`; Cancel mặc định nằm bên phải (HIG), nút xác nhận “Undo Copy”/“Undo Move”; canvas v81 |
-| U8 | chưa | | |
+| U8 | xong | (xem git log) | Mac: `startUndo`/`canUndo` (một câu SQL, cache trong cửa sổ), undoer cho lượt `undoOf`, `afterUndo` + `rescanAfter` chung; Activity đọc `keptRuns`, Remove from List…; cửa sổ log Undo Copy…/Move…, Undo Selected… (cả cửa sổ lượt hoàn tác để thử lại); board khớp alert hệ thống; ảnh `build/design/shots/U8` |
 | U9 | chưa | | |
 
 ## Ghi chú cho các task sau (từ review U1)

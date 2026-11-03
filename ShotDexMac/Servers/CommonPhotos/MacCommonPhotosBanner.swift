@@ -118,7 +118,9 @@ struct MacCommonPhotosFoot: View {
     private func label(_ entry: MacCommonPhotosRuns.Entry) -> String {
         let position = String(localized: "\(entry.position.formatted()) of \(entry.progress.totalCount.formatted())",
                               comment: "Mac sidebar foot: photo N of M")
-        return String(localized: "Common photos · \(position)", comment: "Mac sidebar foot: a common-photos run")
+        return entry.run.isUndo
+            ? String(localized: "Undo · \(position)", comment: "Mac sidebar foot: an undo of a common-photos run")
+            : String(localized: "Common photos · \(position)", comment: "Mac sidebar foot: a common-photos run")
     }
 
     /// The percentage while it goes, else why it is not going.

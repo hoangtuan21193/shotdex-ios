@@ -47,13 +47,12 @@ input{font-family:inherit}
 </div></sc-if>
 <!-- Remove Finished from List… asks first: the logs go, and with them the way to undo (Cancel is the default) -->
 <sc-if value="{{askRemove}}" hint-placeholder-val="{{false}}"><div aria-hidden="true" style="position:absolute;inset:0;top:36px;background:{{t.scrim}}"></div>
-<div role="alertdialog" aria-label="Remove 2 finished runs from the list?" style="position:absolute;left:250px;top:110px;width:400px;border-radius:22px;background:{{t.sheet}};border:1px solid {{t.glassStroke}};box-shadow:{{t.sheetShadow}};padding:20px 16px 16px;box-sizing:border-box;display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center">
-<div style="width:56px;height:56px;border-radius:13px;background:linear-gradient(160deg,#F2B25C 0%,#C6730E 100%);display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,0.25)"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 8h12v12H8z M16 8V4H4v12h4"></path></svg></div>
+<div role="alertdialog" aria-label="Remove 2 finished runs from the list?" style="position:absolute;left:320px;top:140px;width:260px;border-radius:14px;background:{{t.sheet}};border:1px solid {{t.glassStroke}};box-shadow:{{t.sheetShadow}};padding:16px;box-sizing:border-box;display:flex;flex-direction:column;gap:8px;text-align:left">
 <div style="font-size:13px;font-weight:700">Remove 2 finished runs from the list?</div>
-<div style="font-size:11px;line-height:15px">Their logs are removed, so you can’t undo these runs afterwards. Nothing on the server changes.</div>
-<div style="display:flex;gap:8px;width:100%;margin-top:6px">
+<div style="font-size:13px;line-height:18px">Their logs are removed, so you can’t undo these runs afterwards. Nothing on the server changes.</div>
+<div style="display:flex;gap:8px;width:100%;margin-top:8px">
+<button style="flex:1;height:28px;border-radius:8px;border:none;background:{{sysBlue}};color:#FFFFFF;font-size:13px;font-weight:500">Cancel</button>
 <button style="flex:1;height:28px;border-radius:8px;border:none;background:{{t.pressed}};color:{{t.label}};font-size:13px;font-weight:500">Remove</button>
-<button style="flex:1;height:28px;border-radius:8px;border:none;background:{{t.accentFill}};color:{{t.onAccentFill}};font-size:13px;font-weight:600">Cancel</button>
 </div>
 </div></sc-if>
 <!-- EMPTY (tweak "empty"): nothing running and nothing finished left in the list -->
@@ -132,7 +131,7 @@ class Component extends DCLogic {
           btns:[ text('Try Again'), icon(G.stop, null, 'Stop Common Photos…'), text('Show Log') ] }),
       // §6b: an undo is a run of its own — Pause, Stop, Show Log as any run
       J({ title:'Undo · Shared → Tuấn + Vợ', d:G.undo, aside:'43%', bar:'43%', pct:'43',
-          sub:'Undoing 120 of 278 · 1.8 of 4.2 GB', detail:'IMG_4110.HEIC · checking the copy in Tuấn',
+          sub:'Undoing 120 of 278 · 1.8 of 4.2 GB', detail:'IMG_4110.HEIC · checking the copies',
           btns:[ icon(G.pause, null, 'Pause Undo'), icon(G.stop, null, 'Stop Undo…'), text('Show Log') ] }),
       // Finished runs stay (last 20) so they can be undone from their log
       J({ title:'Common photos · Tuấn + Vợ → Shared', d:G.check, iconBg:S.greenSoft, iconFg:S.greenText, aside:'Today, 9:42 AM',
@@ -142,7 +141,7 @@ class Component extends DCLogic {
           sub:'Done — 1,204 undone · 0 not undone', subColor:t.label2,
           btns:[ text('Show Log'), text('Remove from List…') ] })
     ].map((j, i) => Object.assign(j, { edge: i ? '1px solid ' + t.sep : 'none' }));
-    return { t, S, empty, hasJobs: !empty, jobs: empty ? [] : jobs, askRemove: !empty && !!this.props.askRemove };
+    return { t, S, empty, hasJobs: !empty, jobs: empty ? [] : jobs, askRemove: !empty && !!this.props.askRemove, sysBlue: dark ? '#0A84FF' : '#007AFF' };
   }
 }
 </script>

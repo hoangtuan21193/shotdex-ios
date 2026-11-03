@@ -68,6 +68,12 @@ final class MacCommonPhotosRuns {
         }
     }
 
+    struct ConnectionGone: Error, LocalizedError {
+        var errorDescription: String? {
+            String(localized: "The connection for this run was deleted.", comment: "Common photos: the run's connection is gone")
+        }
+    }
+
     struct RescanFailed: Error, LocalizedError {
         let sourceName: String
         var errorDescription: String? {
@@ -84,13 +90,6 @@ final class MacCommonPhotosRuns {
     /// Bumped when a run starts, ends or goes — not on progress — for views
     /// that only care which runs there are.
     private(set) var generation = 0
-    /// Runs that ended this launch (done or stopped): Activity lists them
-    /// until Clear, whether or not their window is open. For this launch
-    /// only — a finished row is not kept across launches (decided for T11b);
-    /// the CSV in the destination is the lasting record.
-    private(set) var endedThisLaunch: [String] = []
-    /// Rows Activity's Clear took away.
-    private(set) var cleared: Set<String> = []
     /// Show in Browser asked for a folder of a connection; the Library
     /// window opens its source there and clears this.
     var browserRequest: (connectionId: String, path: String)?
@@ -179,8 +178,18 @@ final class MacCommonPhotosRuns {
         #if DEBUG
         client = MacDemoLibrary.commonPhotosRunClient(client)
         #endif
-        let runner = CommonPhotosRunner(client: client, store: store, workDirectory: Self.workDirectory(runId),
-                                        freeBytes: { Self.freeBytes() }, afterRun: afterRun(runId: runId, server: server))
+        // An undo run goes through the undoer, a gathering run through the
+        // runner; both leave the run paused on a stop.
+        let work: @Sendable (@escaping @Sendable (CommonPhotosRunner.Progress) -> Void) async throws -> Void
+        if run.isUndo {
+            let undoer = CommonPhotosUndoer(client: client, store: store, workDirectory: Self.workDirectory(runId),
+                                            freeBytes: { Self.freeBytes() }, afterUndo: afterUndo(runId: runId, server: server))
+            work = { try await undoer.run(runId, progress: $0) }
+        } else {
+            let runner = CommonPhotosRunner(client: client, store: store, workDirectory: Self.workDirectory(runId),
+                                            freeBytes: { Self.freeBytes() }, afterRun: afterRun(runId: runId, server: server))
+            work = { try await runner.run(runId, progress: $0) }
+        }
         keepAwake()
         // Progress hops to the main actor in order: each carries a number,
         // and one older than what is shown — or after the run ended — is dropped.
@@ -190,7 +199,7 @@ final class MacCommonPhotosRuns {
             do {
                 // The runner never connects: it is handed a session.
                 try await client.connect()
-                try await runner.run(runId) { progress in
+                try await work { progress in
                     let number = sequence.withLock { value in
                         value += 1
                         return value
@@ -261,8 +270,6 @@ final class MacCommonPhotosRuns {
         } else {
             try? store.markState(.stopped, runId: runId)
             entries[runId]?.state = .stopped
-            // A row Activity lists from the store stays, now as stopped.
-            if !endedThisLaunch.contains(runId) { endedThisLaunch.append(runId) }
             refreshFoot()
         }
     }
@@ -270,8 +277,11 @@ final class MacCommonPhotosRuns {
     /// Whether Discard may forget the run: not while it runs, here or in
     /// another runner of this process.
     func canDiscard(runId: String) -> Bool {
-        tasks[runId] == nil && !CommonPhotosRunner.isActive(runId: runId, in: database)
-            && ((try? store.run(id: runId))??.state).map { $0 != .finished } ?? false
+        guard tasks[runId] == nil, !CommonPhotosRunner.isActive(runId: runId, in: database),
+              let run = (try? store.run(id: runId)) ?? nil, run.state != .finished else { return false }
+        // An undo owing its history and rescan finishes on Resume: discarded,
+        // the history would keep pointing at the destination (§6b).
+        return !(run.isUndo && run.state == .finishing)
     }
 
     /// Discard: the run and its log go; nothing on the server changes.
@@ -297,28 +307,66 @@ final class MacCommonPhotosRuns {
         return entry
     }
 
-    /// Activity's Clear and Clear Finished: ended rows leave the list, in
-    /// one change.
-    func clear(runIds: [String]) {
-        guard !runIds.isEmpty else { return }
-        cleared.formUnion(runIds)
-        generation += 1
+    /// Whether Remove from List may forget a run that is over (FS-19.08
+    /// §6b): not while it or an undo of it goes.
+    func canRemove(runId: String) -> Bool {
+        guard tasks[runId] == nil, !CommonPhotosRunner.isActive(runId: runId, in: database),
+              let run = (try? store.run(id: runId)) ?? nil, run.isOver else { return false }
+        let undos = run.isUndo ? [] : ((try? store.undoRuns(of: runId)) ?? [])
+        return undos.allSatisfy { $0.isOver && tasks[$0.id] == nil }
     }
 
-    /// The runs Activity lists that this launch knows without the store:
-    /// those in memory and those that ended. The store's unfinished runs are
-    /// added off the main actor; Clear takes away from both.
-    var activityKnownRunIds: (known: [String], cleared: Set<String>) {
-        (Array(entries.keys) + endedThisLaunch, cleared)
+    /// Remove from List and Remove Finished from List: each run that is over
+    /// goes with its log and its undo runs; nothing on the server changes.
+    /// Afterwards it can no longer be undone.
+    func remove(runIds: [String]) {
+        var removed = false
+        for runId in runIds where canRemove(runId: runId) {
+            let undos = (try? store.undoRuns(of: runId)) ?? []
+            try? store.discard(runId: runId)
+            entries[runId] = nil
+            for undo in undos { entries[undo.id] = nil }
+            removed = true
+        }
+        if removed { refreshFoot() }
     }
 
-    /// A window closed: a run that is over need not stay in memory.
+    /// The runs Activity lists that this launch holds in memory; the store's
+    /// unfinished and kept finished runs are added off the main actor.
+    var activityKnownRunIds: [String] { Array(entries.keys) }
+
+    /// A window closed: a run that is over need not stay in memory —
+    /// Activity lists it from the store.
     func release(runId: String) {
         guard let entry = entries[runId], !entry.isRunning, entry.isFinished || entry.isStopped else { return }
-        // Activity still lists it from the store.
-        if !endedThisLaunch.contains(runId) { endedThisLaunch.append(runId) }
         entries[runId] = nil
         refreshFoot()
+    }
+
+    // MARK: Undo (FS-19.08 §6b)
+
+    /// Whether the run's log offers Undo: a run that is over, not itself an
+    /// undo, with photos it put in place and no undo of it still to finish.
+    func canUndo(runId: String) -> Bool {
+        guard tasks[runId] == nil, let run = (try? store.run(id: runId)) ?? nil,
+              !run.isUndo, run.isOver, run.isReadable else { return false }
+        guard ((try? store.undoRuns(of: runId)) ?? []).allSatisfy(\.isOver) else { return false }
+        return (try? store.hasUndoableRows(runId: runId)) ?? false
+    }
+
+    /// Undo Copy… / Undo Move… and Undo Selected…: an undo run over the
+    /// chosen photos (every one when nil), started at once. Refused like a
+    /// new run when one going works in the same folders. Returns its id.
+    @discardableResult
+    func startUndo(of runId: String, positions: Set<Int>? = nil) throws -> String {
+        guard let original = try store.run(id: runId) else { throw CommonPhotosStore.RunMissing(runId: runId) }
+        // Nothing written for a connection that is gone: the undo could never run.
+        guard let server = try servers.fetch(id: original.connectionId) else { throw ConnectionGone() }
+        if overlapsARunGoing(original, on: server) { throw Overlaps() }
+        let undo = try store.startUndo(of: runId, positions: positions)
+        entries[undo.id] = Entry(run: undo)
+        resume(runId: undo.id)
+        return undo.id
     }
 
     private static func progress(_ items: [CommonPhotosItem]) -> CommonPhotosRunner.Progress {
@@ -367,7 +415,6 @@ final class MacCommonPhotosRuns {
         }
         defer {
             if let run = (try? store.run(id: runId)) ?? nil {
-                if run.state == .finished || run.state == .stopped, !endedThisLaunch.contains(runId) { endedThisLaunch.append(runId) }
                 entries[runId]?.run = run
                 entries[runId]?.state = run.state
                 entries[runId]?.progress = Self.progress((try? store.items(runId: runId)) ?? [])
@@ -410,15 +457,43 @@ final class MacCommonPhotosRuns {
     /// warns.
     private func afterRun(runId: String, server: FileServer) -> @Sendable (CommonPhotosRun, [CommonPhotosLog.HistoryChange]) async throws -> Void {
         let database = database
-        let servers = servers
-        let refresh = refresh
-        return { [weak self] run, changes in
-            let owner = self
+        let rescan = rescanAfter(runId: runId, server: server)
+        return { run, changes in
             // Recorded in the same write: an undo puts each row back
             // where it was (FS-19.08 §6b).
             try ServerFileHistory(database: database).move(changes.map { (from: $0.from, to: $0.to) }, on: server) { db, rows in
                 try CommonPhotosStore.recordHistoryMoves(db, runId: run.id, rows: rows)
             }
+            try await rescan(run)
+        }
+    }
+
+    /// After an undo's last row and its CSV (FS-19.08 §6b): the history
+    /// rows the Move moved go back to each copy written back, then the same
+    /// rescan as after a run.
+    private func afterUndo(runId: String, server: FileServer) -> @Sendable (CommonPhotosRun, Set<String>) async throws -> Void {
+        let database = database
+        let rescan = rescanAfter(runId: runId, server: server)
+        return { run, restored in
+            if let originalId = run.undoOf {
+                try CommonPhotosStore(database: database).restoreHistory(runId: originalId, restored: restored,
+                                                                         history: ServerFileHistory(database: database))
+            }
+            try await rescan(run)
+        }
+    }
+
+    /// Every source holding a run folder or the destination, or held by one,
+    /// rescanned — waiting out a pass that began before the changes. A
+    /// source of the run's connection that cannot be rescanned throws, so
+    /// the run stays `finishing` for Resume; one of another connection only
+    /// warns.
+    private func rescanAfter(runId: String, server: FileServer) -> @Sendable (CommonPhotosRun) async throws -> Void {
+        let database = database
+        let servers = servers
+        let refresh = refresh
+        return { [weak self] run in
+            let owner = self
             let store = SourceStore(database: database)
             let names = Dictionary(uniqueKeysWithValues: try store.sources().map { ($0.id, $0.name) })
             let sources = try store.serverConnections().compactMap { sourceId, connectionId in
@@ -485,6 +560,15 @@ enum MacCommonPhotosWords {
     /// moved — their other copies were removed. 1 is partway — some of its
     /// copies are still in place. The other 159 haven't been touched."
     static func whatIsDone(_ items: [CommonPhotosItem], run: CommonPhotosRun) -> String {
+        if run.isUndo {
+            // "120 taken back. The other 158 haven't been touched."
+            let undone = items.filter { $0.status == .undone }.count
+            let untouched = items.filter { !$0.isDone }.count
+            return String(localized: "\(undone.formatted()) taken back.", comment: "Common photos: what an undo has done so far") + " "
+                + (untouched == 1
+                   ? String(localized: "The other one hasn't been touched.", comment: "Common photos: undo, one photo not reached")
+                   : String(localized: "The other \(untouched.formatted()) haven't been touched.", comment: "Common photos: undo, photos not reached"))
+        }
         let moved = items.filter { $0.status == .moved }.count
         let copied = items.filter { $0.status == .copied }.count
         // Renamed into the destination, or being: its other copies are not
@@ -517,6 +601,10 @@ enum MacCommonPhotosWords {
     /// "Move to “Shared” interrupted at 120 of 280".
     static func interrupted(_ run: CommonPhotosRun, done: Int, total: Int) -> String {
         let destination = ServerUploadPath.lastComponent(of: run.destination)
+        if run.isUndo {
+            return String(localized: "Undo of common photos in “\(destination)” stopped at \(done.formatted()) of \(total.formatted())",
+                          comment: "Common photos: an undo left half done")
+        }
         return run.action == .move
             ? String(localized: "Move to “\(destination)” interrupted at \(done.formatted()) of \(total.formatted())",
                      comment: "Common photos: a Move left half done")
