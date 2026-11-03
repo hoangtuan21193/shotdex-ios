@@ -6,7 +6,7 @@
 | Intent | [2026-11-02-common-photos-across-folders](../_intents/2026-11-02-common-photos-across-folders.md) |
 | Commit spec | `a64935f3` (intent `45653bb5`) |
 | Ngày | 2026-11-03 |
-| Trạng thái | đang làm — duyệt 2026-11-03 (Q1, Q2: dựng cả màn duyệt server lẫn Activity); T1+T2 `eefcf32c`, T3 `73c2c833`, T4 `abdfa2fc`, T5 `700e1af6`, T6 `f16d735b`, T7 `8e18c6ca`, T8 `aad1cd00`, T9a `043fb941`, T9b `90aa1c82`, T10 `8e23a588`, T11a `fd447e02`, T11 `6b51d671`, T11b xong (loop: [FS1908_LOOP.md](FS1908_LOOP.md)) |
+| Trạng thái | đang làm — duyệt 2026-11-03 (Q1, Q2: dựng cả màn duyệt server lẫn Activity); T1+T2 `eefcf32c`, T3 `73c2c833`, T4 `abdfa2fc`, T5 `700e1af6`, T6 `f16d735b`, T7 `8e18c6ca`, T8 `aad1cd00`, T9a `043fb941`, T9b `90aa1c82`, T10 `8e23a588`, T11a `fd447e02`, T11 `6b51d671`, T11b `94c144ab`, T12 `/verify` xong — AC-130 một phần (loop: [FS1908_LOOP.md](FS1908_LOOP.md)) |
 
 ## 1. Hiểu đúng chưa
 

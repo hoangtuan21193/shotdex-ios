@@ -44,9 +44,9 @@ của loop: mỗi vòng đọc nó trước, ghi lại sau.
 | T11a | xong | (xem git log) | board `MAC_Activity` 900×560 sáng/tối + tweak empty, publish canvas Mac v76 |
 | T11 | xong | (xem git log) | cửa sổ `MAC_CommonPhotosRun` + log, Stop hỏi lại, câu Move kể đã xoá gì, chặn khi thoát, chân sidebar bấm được, banner lượt cũ; Resume sau kill chạy thật xong 8 ảnh |
 | T11b | xong | (xem git log) | cửa sổ Activity ⌥⌘0 (Window menu qua Commands), `LongRunningJob` thuần + test; board sửa theo code (HIG) + publish v78; Indexing/Backup chưa có nguồn dữ liệu Mac |
-| T12 | chưa | — | `/verify FS-19.08`, design-parity 3 board, `Tools/gate` |
+| T12 | xong (gần xong) | (xem git log) | `/verify`: AC-115…129 xanh (148 test); AC-130 một phần; gate treo ở test HEIC + 3 test đỏ của phần khác |
 
-Tiếp: T12.
+Loop dừng 2026-11-03. SMB ảo vẫn chạy (không xoá).
 
 DB demo: chạy app với `-ShotDexDemoDatabaseReset` để xoá `resume*.sqlite` trong tmp của container sandbox.
 
