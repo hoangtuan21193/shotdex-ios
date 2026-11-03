@@ -26,6 +26,16 @@ enum MacDemoLibrary {
         // app's temporary folder (the sandbox allows no other) that outlives
         // the run — what a Resume banner after a kill needs.
         let arguments = ProcessInfo.processInfo.arguments
+        // `-ShotDexDemoDatabaseReset`: delete every demo database file in the
+        // temporary folder first — the ones `-ShotDexDemoDatabase` left.
+        if arguments.contains("-ShotDexDemoDatabaseReset") {
+            let tmp = FileManager.default.temporaryDirectory
+            for name in (try? FileManager.default.contentsOfDirectory(atPath: tmp.path)) ?? []
+            where name.hasPrefix("resume") && name.contains(".sqlite") {
+                try? FileManager.default.removeItem(at: tmp.appendingPathComponent(name))
+                MacAgentProbe.log.notice("demo database removed: \(tmp.appendingPathComponent(name).path, privacy: .public)")
+            }
+        }
         let file = arguments.firstIndex(of: "-ShotDexDemoDatabase").flatMap { $0 + 1 < arguments.count ? arguments[$0 + 1] : nil }
             .map { FileManager.default.temporaryDirectory.appendingPathComponent($0).path }
         let isNewFile = file.map { !FileManager.default.fileExists(atPath: $0) } ?? true

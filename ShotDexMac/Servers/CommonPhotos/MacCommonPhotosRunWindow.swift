@@ -328,22 +328,10 @@ private struct MacCommonPhotosRunContent: View {
         return nil
     }
 
-    /// "about 3 h left".
-    static func timeLeft(_ seconds: Double) -> String {
-        let left = Duration.seconds(seconds.rounded())
-        let style: Duration.UnitsFormatStyle = .units(allowed: [.hours, .minutes, .seconds], width: .abbreviated, maximumUnitCount: 1)
-        return String(localized: "about \(left.formatted(style)) left", comment: "Common photos window: time left")
-    }
+    static func timeLeft(_ seconds: Double) -> String { CommonPhotosJob.timeLeft(seconds) }
 
     static func words(_ step: CommonPhotosRunner.Progress.Step, destination: String) -> String {
-        switch step {
-        case .checking: String(localized: "checking it hasn't changed", comment: "Common photos window: current step")
-        case .downloading: String(localized: "downloading", comment: "Common photos window: current step")
-        case .uploading: String(localized: "uploading to \(destination)", comment: "Common photos window: current step")
-        case .readingBack: String(localized: "reading back SHA-256 in \(destination)", comment: "Common photos window: current step")
-        case .moving: String(localized: "moving to \(destination)", comment: "Common photos window: current step")
-        case .removing: String(localized: "removing the other copies", comment: "Common photos window: current step")
-        }
+        CommonPhotosJob.words(step, destination: destination)
     }
 
     @ViewBuilder

@@ -20,7 +20,7 @@ input{font-family:inherit}
 <div role="dialog" aria-label="Activity" style="width: 900px; height: 560px; position: relative; overflow: hidden; border-radius: 16px; background: {{S.panel}}; color: {{t.label}}; font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', system-ui, sans-serif; font-size: 13px; display:flex; flex-direction:column">
 <div style="position:relative;height:36px;flex:none;background:{{S.panelBar}};border-bottom:1px solid {{t.sep}}">
 <div style="position:absolute;left:12px;top:12px;display:flex;gap:8px"><div style="width:12px;height:12px;border-radius:6px;background:#FF5F57;box-shadow:inset 0 0 0 0.5px rgba(0,0,0,0.2)"></div><div style="width:12px;height:12px;border-radius:6px;background:#FEBC2E;box-shadow:inset 0 0 0 0.5px rgba(0,0,0,0.2)"></div><div style="width:12px;height:12px;border-radius:6px;background:#28C840;box-shadow:inset 0 0 0 0.5px rgba(0,0,0,0.2)"></div></div>
-<div style="position:absolute;left:0;right:0;top:9px;text-align:center;font-size:13px;font-weight:600;line-height:18px">Activity</div>
+<div style="position:absolute;left:84px;right:0;top:9px;text-align:left;font-size:13px;font-weight:600;line-height:18px">Activity</div>
 </div>
 <!-- JOBS: running first, then paused, then finished; a finished row stays until Clear (or Clear Finished) -->
 <sc-if value="{{hasJobs}}" hint-placeholder-val="{{true}}"><div style="flex:1;min-height:0;padding:14px 16px 0;display:flex;flex-direction:column;gap:10px">
@@ -33,8 +33,8 @@ input{font-family:inherit}
 <div style="font-size:11px;color:{{j.subColor}};font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{j.sub}}</div>
 <sc-if value="{{j.detail}}" hint-placeholder-val="{{false}}"><div style="font-size:11px;color:{{t.label2}};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{j.detail}}</div></sc-if>
 </div>
-<div style="flex:none;width:140px;display:flex;align-items:center;justify-content:flex-end;gap:6px">
-<sc-for list="{{j.btns}}" as="b" hint-placeholder-count="3"><sc-if value="{{b.d}}" hint-placeholder-val="{{true}}"><button aria-label="{{b.aria}}" style="flex:none;width:26px;height:24px;border-radius:6px;border:none;background:{{t.fill}};display:flex;align-items:center;justify-content:center;color:{{t.label}}"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="{{b.d}}"></path></svg></button></sc-if><sc-if value="{{b.label}}" hint-placeholder-val="{{false}}"><button style="flex:none;height:24px;padding:0 10px;border-radius:6px;border:none;background:{{t.fill}};color:{{t.label}};font-size:12px;white-space:nowrap">{{b.label}}</button></sc-if></sc-for>
+<div style="flex:none;min-width:140px;display:flex;align-items:center;justify-content:flex-end;gap:6px">
+<sc-for list="{{j.btns}}" as="b" hint-placeholder-count="3"><sc-if value="{{b.d}}" hint-placeholder-val="{{true}}"><button aria-label="{{b.aria}}" style="flex:none;width:26px;height:24px;border-radius:6px;border:none;background:{{t.fill}};display:flex;align-items:center;justify-content:center;color:{{t.label}}"><svg width="12" height="12" viewBox="0 0 24 24" fill="{{b.fill}}" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="{{b.d}}"></path></svg></button></sc-if><sc-if value="{{b.label}}" hint-placeholder-val="{{false}}"><button style="flex:none;height:24px;padding:0 10px;border-radius:6px;border:none;background:{{t.fill}};color:{{t.label}};font-size:12px;white-space:nowrap">{{b.label}}</button></sc-if></sc-for>
 </div>
 </div></sc-for>
 </div>
@@ -47,7 +47,7 @@ input{font-family:inherit}
 <sc-if value="{{empty}}" hint-placeholder-val="{{false}}"><div role="status" style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding-bottom:36px">
 <svg aria-hidden="true" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="{{t.label2}}" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a9 9 0 1 0 0.01 0z M12 7v5l3.5 2"></path></svg>
 <h2 style="margin:14px 0 0;font-size:15px;font-weight:600;line-height:20px;color:{{t.label2}}">No Activity</h2>
-<p style="margin:6px 0 0;max-width:380px;text-align:center;font-size:13px;line-height:18px;color:{{t.label2}}">Indexing, imports, uploads, backups, exports and merges show here while they run.</p>
+<p style="margin:6px 0 0;max-width:380px;text-align:center;font-size:13px;line-height:18px;color:{{t.label2}}">Common-photos runs show here while they run; indexing, imports, uploads, backups and exports will join them.</p>
 </div></sc-if>
 </div>
 </x-dc>
@@ -89,7 +89,7 @@ function ui(dark){
   return { t, S };
 }
 const G = {
-  common:'M9 7a5 5 0 1 0 0.01 0z M15 7a5 5 0 1 0 0.01 0z',
+  common:'M8 8h12v12H8z M16 8V4H4v12h4',
   index:'M4 4h16v6H4z M4 14h16v6H4z M8 7h.01 M8 17h.01',
   backup:'M12 3a9 9 0 1 1-8.5 6 M3.5 4v5h5 M12 7.5V12l3 2',
   check:'M5 12.5l4.5 4.5L19 7.5',
@@ -102,7 +102,7 @@ class Component extends DCLogic {
     const dark = !!this.props.dark;
     const empty = !!this.props.empty;
     const k = ui(dark); const t = k.t; const S = k.S;
-    const icon = (d, label, aria) => ({ d, label:null, aria: aria || label });
+    const icon = (d, label, aria) => ({ d, label:null, aria: aria || label, fill: d === G.stop ? 'currentColor' : 'none' });
     const text = (label) => ({ d:null, label, aria:label });
     const J = (o) => Object.assign({ aside:'', bar:null, pct:'0', barFg:t.accent, subColor:t.label2, detail:null,
       iconBg:S.accentSoft, iconFg:t.accent }, o);
@@ -112,13 +112,10 @@ class Component extends DCLogic {
           sub:'Copying 120 of 280 · 1.8 of 4.2 GB · about 4 min left',
           detail:'IMG_4188.HEIC · reading back SHA-256 in Shared',
           btns:[ icon(G.pause, null, 'Pause Common Photos'), icon(G.stop, null, 'Stop Common Photos…'), text('Show Log') ] }),
-      J({ title:'Indexing NAS Home', d:G.index, aside:'34%', bar:'34%', pct:'34',
-          sub:'4,210 of 12,408 · Photos/2024 · about 9 min left',
-          btns:[ icon(G.pause, null, 'Pause Indexing'), icon(G.stop, null, 'Stop Indexing…') ] }),
-      // Paused by the job itself (server gone), not by the user: orange status line, Try Again instead of Resume
-      J({ title:'Backup to NAS Home', d:G.pause, iconBg:t.fill, iconFg:t.label2, bar:'31%', pct:'31', barFg:t.label3,
-          sub:'Paused — NAS Home is not reachable · 1,204 of 3,880 backed up', subColor:S.orangeText,
-          btns:[ text('Try Again'), icon(G.stop, null, 'Stop Backup…') ] }),
+      // FS-19.08 §7: interrupted by the server, not by the user — orange status line, Try Again
+      J({ title:'Common photos · Tuấn + Vợ → Shared', d:G.pause, iconBg:t.fill, iconFg:t.label2, bar:'31%', pct:'31', barFg:t.label3,
+          sub:'Interrupted — The connection to the server was lost. · 86 of 280 done', subColor:S.orangeText,
+          btns:[ text('Try Again'), icon(G.stop, null, 'Stop Common Photos…'), text('Show Log') ] }),
       J({ title:'Common photos · Tuấn + Vợ → Shared', d:G.check, iconBg:S.greenSoft, iconFg:S.greenText, aside:'Today, 9:42 AM',
           sub:'Done — 280 copied · 12 skipped · 0 failed', subColor:t.label2,
           btns:[ text('Show Log'), text('Clear') ] })

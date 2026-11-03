@@ -46,6 +46,7 @@ struct ShotDexMacApp: App {
         .commands {
             MacBackupCommands()
             MacCommonPhotosCommands()
+            MacActivityCommands()
         }
         // One window per common-photos run (FS-19.08 §7): not modal, and
         // closing it leaves the run going.
@@ -57,6 +58,15 @@ struct ShotDexMacApp: App {
         }
         .defaultSize(width: MacCommonPhotosRunWindow.size.width, height: MacCommonPhotosRunWindow.size.height)
         .windowToolbarStyle(.unified)
+        // Window › Activity ⌥⌘0 (FS-18.01 §4): one window, never a sheet.
+        Window(String(localized: "Activity", comment: "Mac window: long-running jobs"), id: MacActivityWindow.id) {
+            MacActivityWindow()
+                .environment(dependencies)
+        }
+        .defaultSize(width: MacActivityWindow.size.width, height: MacActivityWindow.size.height)
+        // The scene's own Window-menu item carries no shortcut; MacActivityCommands
+        // puts Activity ⌥⌘0 there instead (FS-18.01b).
+        .commandsRemoved()
         Settings {
             MacSettingsWindow()
                 .environment(dependencies)
@@ -135,5 +145,19 @@ final class MacAppDelegate: NSObject, NSApplicationDelegate {
         guard alert.runModal() == .alertFirstButtonReturn else { return .terminateCancel }
         runs.pauseAll { sender.reply(toApplicationShouldTerminate: true) }
         return .terminateLater
+    }
+}
+
+/// Window › Activity ⌥⌘0 (FS-18.01b).
+struct MacActivityCommands: Commands {
+    @Environment(\.openWindow) private var openWindow
+
+    var body: some Commands {
+        CommandGroup(before: .windowArrangement) {
+            Button(String(localized: "Activity", comment: "Mac menu: Window › Activity")) {
+                openWindow(id: MacActivityWindow.id)
+            }
+            .keyboardShortcut("0", modifiers: [.option, .command])
+        }
     }
 }

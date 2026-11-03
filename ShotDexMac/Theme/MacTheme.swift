@@ -19,6 +19,12 @@ enum MacTheme {
     static let accentSoft = dynamic(light: NSColor(red: 198 / 255, green: 115 / 255, blue: 14 / 255, alpha: 0.14),
                                     dark: NSColor(red: 235 / 255, green: 149 / 255, blue: 38 / 255, alpha: 0.18))
 
+    /// `fill`: a flat control's ground (DESIGN.md §10b).
+    static let fill = dynamic(light: NSColor(white: 0, alpha: 0.05), dark: NSColor(white: 1, alpha: 0.07))
+    /// `greenSoft`: the tile behind a done job's check (board `MAC_Activity`).
+    static let greenSoft = dynamic(light: NSColor(red: 52 / 255, green: 199 / 255, blue: 89 / 255, alpha: 0.16),
+                                   dark: NSColor(red: 48 / 255, green: 209 / 255, blue: 88 / 255, alpha: 0.18))
+
     /// `rowAlt`: every other row of a table or list (DESIGN.md §10b).
     static let rowAlternate = dynamic(light: NSColor(white: 0, alpha: 0.03), dark: NSColor(white: 1, alpha: 0.04))
 

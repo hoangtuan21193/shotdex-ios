@@ -6,6 +6,7 @@ import SwiftUI
 struct MacRootWindow: View {
     @Environment(MacDependencies.self) private var dependencies
     @Environment(\.openSettings) private var openSettings
+    @Environment(\.openWindow) private var openWindow
     @State private var selection: MacSidebarItem? = .allPhotos
     @State private var library: LibraryModel?
     @State private var searchText = ""
@@ -192,6 +193,21 @@ struct MacRootWindow: View {
         if MacDemoLibrary.section == "emptySmartAlbum" { selection = .smartAlbum("demo-empty") }
         if MacDemoLibrary.section == "newSmartAlbum" { smartAlbumForm = MacSmartAlbumFormRequest() }
         if MacDemoLibrary.section == "settings" { openSettings() }
+        if ProcessInfo.processInfo.arguments.contains("-ShotDexOpenActivity") { openWindow(id: MacActivityWindow.id) }
+        // `-ShotDexLogMenus`: what the Window menu holds, with its keys, to the log.
+        if ProcessInfo.processInfo.arguments.contains("-ShotDexLogMenus") {
+            Task { @MainActor in
+                try? await Task.sleep(for: .seconds(2))
+                for item in NSApp.mainMenu?.items ?? [] where item.title == "Window" {
+                    for entry in item.submenu?.items ?? [] where !entry.isSeparatorItem {
+                        let mods = entry.keyEquivalentModifierMask
+                        let keys = (mods.contains(.control) ? "⌃" : "") + (mods.contains(.option) ? "⌥" : "")
+                            + (mods.contains(.shift) ? "⇧" : "") + (mods.contains(.command) ? "⌘" : "") + entry.keyEquivalent
+                        MacAgentProbe.log.notice("window menu: \(entry.title, privacy: .public) \(entry.keyEquivalent.isEmpty ? "" : keys, privacy: .public)")
+                    }
+                }
+            }
+        }
         if MacDemoLibrary.section == "serverBrowser", let item = await MacDemoLibrary.seedServerSource(dependencies) {
             reloadSources()
             selection = item

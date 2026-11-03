@@ -84,6 +84,13 @@ final class MacCommonPhotosRuns {
     /// Bumped when a run starts, ends or goes — not on progress — for views
     /// that only care which runs there are.
     private(set) var generation = 0
+    /// Runs that ended this launch (done or stopped): Activity lists them
+    /// until Clear, whether or not their window is open. For this launch
+    /// only — a finished row is not kept across launches (decided for T11b);
+    /// the CSV in the destination is the lasting record.
+    private(set) var endedThisLaunch: [String] = []
+    /// Rows Activity's Clear took away.
+    private(set) var cleared: Set<String> = []
     /// Show in Browser asked for a folder of a connection; the Library
     /// window opens its source there and clears this.
     var browserRequest: (connectionId: String, path: String)?
@@ -129,7 +136,7 @@ final class MacCommonPhotosRuns {
     private func overlapsARunGoing(_ run: CommonPhotosRun, on server: FileServer) -> Bool {
         let paths = run.folders + [run.destination]
         return entries.values.contains { entry in
-            guard entry.isRunning, let other = try? servers.fetch(id: entry.run.connectionId),
+            guard entry.isRunning, entry.id != run.id, let other = try? servers.fetch(id: entry.run.connectionId),
                   ServerIdentity.sameFiles(other, server) else { return false }
             let otherPaths = entry.run.folders + [entry.run.destination]
             return paths.contains { path in
@@ -148,6 +155,13 @@ final class MacCommonPhotosRuns {
         guard let server = (try? servers.fetch(id: run.connectionId)) ?? nil else {
             var entry = entries[runId] ?? Entry(run: run)
             entry.problem = String(localized: "The connection for this run was deleted.", comment: "Common photos: the run's connection is gone")
+            entries[runId] = entry
+            return
+        }
+        // As at the start: never two runs over the same folders at once.
+        if overlapsARunGoing(run, on: server) {
+            var entry = entries[runId] ?? Entry(run: run)
+            entry.problem = Overlaps().errorDescription
             entries[runId] = entry
             return
         }
@@ -247,6 +261,8 @@ final class MacCommonPhotosRuns {
         } else {
             try? store.markState(.stopped, runId: runId)
             entries[runId]?.state = .stopped
+            // A row Activity lists from the store stays, now as stopped.
+            if !endedThisLaunch.contains(runId) { endedThisLaunch.append(runId) }
             refreshFoot()
         }
     }
@@ -281,9 +297,26 @@ final class MacCommonPhotosRuns {
         return entry
     }
 
+    /// Activity's Clear and Clear Finished: ended rows leave the list, in
+    /// one change.
+    func clear(runIds: [String]) {
+        guard !runIds.isEmpty else { return }
+        cleared.formUnion(runIds)
+        generation += 1
+    }
+
+    /// The runs Activity lists that this launch knows without the store:
+    /// those in memory and those that ended. The store's unfinished runs are
+    /// added off the main actor; Clear takes away from both.
+    var activityKnownRunIds: (known: [String], cleared: Set<String>) {
+        (Array(entries.keys) + endedThisLaunch, cleared)
+    }
+
     /// A window closed: a run that is over need not stay in memory.
     func release(runId: String) {
         guard let entry = entries[runId], !entry.isRunning, entry.isFinished || entry.isStopped else { return }
+        // Activity still lists it from the store.
+        if !endedThisLaunch.contains(runId) { endedThisLaunch.append(runId) }
         entries[runId] = nil
         refreshFoot()
     }
@@ -334,6 +367,7 @@ final class MacCommonPhotosRuns {
         }
         defer {
             if let run = (try? store.run(id: runId)) ?? nil {
+                if run.state == .finished || run.state == .stopped, !endedThisLaunch.contains(runId) { endedThisLaunch.append(runId) }
                 entries[runId]?.run = run
                 entries[runId]?.state = run.state
                 entries[runId]?.progress = Self.progress((try? store.items(runId: runId)) ?? [])
