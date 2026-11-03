@@ -336,5 +336,160 @@ import Testing
         let summary = try await mac.pass()
         #expect(summary.stoppedBy == .permissionDenied("photos"))
     }
+
+    // MARK: Over iCloud (§12.3)
+
+    /// The iCloud records as the pull leaves them: what the "channel" here is.
+    private static func exchange(_ f: OnServerFixture, device: String = "PHONE") -> SharedHashExchange {
+        SharedHashExchange(database: f.database, device: device, cloudIds: { ids in
+            Dictionary(uniqueKeysWithValues: ids.map { ($0, "CLOUD-" + $0) })
+        })
+    }
+
+    private func photoOffer(size: Int64 = 10, modified: Int = 1_700_000_000, device: String = "MAC",
+                            hashedAt: Int = 100) -> SharedPhotoHash {
+        SharedPhotoHash(cloudId: "CLOUD-P0", fileKey: "1:a.HEIC", assetModified: modified, size: size,
+                        sha256: sha, device: device, hashedAt: hashedAt)
+    }
+
+    private func photoHash(_ f: OnServerFixture) async throws -> (sha: String?, origin: String?, from: String?) {
+        try await f.database.reader.read { db in
+            let row = try Row.fetchOne(db, sql: "SELECT sha256, origin, sharedFrom FROM copy_files WHERE copyId = 'photos:P0'")
+            return (row?["sha256"], row?["origin"], row?["sharedFrom"])
+        }
+    }
+
+    /// AC-149: a Photos file the Mac hashed is filled here from the record,
+    /// with the Mac as its sender — nothing to download.
+    @MainActor
+    @Test func photoHashesFromMac() async throws {
+        let f = try OnServerFixture(photos: 1)
+        try f.photo(0, files: [("1:a.HEIC", .photo, 10, nil)])
+        try SharedIndexStore(database: f.database).saveRemote(photoHashes: [photoOffer()], serverHashes: [])
+
+        #expect(try await Self.exchange(f).adopt(now: Date(timeIntervalSince1970: 500)) == 1)
+
+        let hash = try await photoHash(f)
+        #expect(hash.sha == sha && hash.origin == "shared" && hash.from == "MAC")
+        #expect(try CopyFileStore(database: f.database).photosCandidates(triedBefore: Date(timeIntervalSince1970: 1_000), limit: 10).isEmpty)
+    }
+
+    /// AC-150: edited on this device since, a different size, or this
+    /// device's own record — none is taken, the file waits to be hashed here.
+    @MainActor
+    @Test func editedOnPhoneRehashes() async throws {
+        let f = try OnServerFixture(photos: 1)
+        try f.photo(0, files: [("1:a.HEIC", .photo, 10, nil)])
+        try SharedIndexStore(database: f.database).saveRemote(photoHashes: [
+            photoOffer(modified: 1_699_999_000), photoOffer(size: 11, device: "IPAD"), photoOffer(device: "PHONE"),
+        ], serverHashes: [])
+
+        #expect(try await Self.exchange(f).adopt(now: Date(timeIntervalSince1970: 500)) == 0)
+        #expect(try await photoHash(f).sha == nil)
+    }
+
+    /// AC-151: a server file takes the hash another device read from the
+    /// same server, path, size and write time — not one from another server
+    /// at the same path.
+    @MainActor
+    @Test func serverIdentityMustMatch() async throws {
+        let f = try OnServerFixture(photos: 0)
+        let server = FileServer(id: "C1", name: "NAS Home", transferProtocol: .smb, host: "nas.local", username: "u",
+                                share: "photos", folder: "iCloud Photo")
+        try FileServerStore(database: f.database, passwords: InMemoryPasswordStore()).save(server, password: "pw")
+        try f.server("Shared/a.ARW", size: 20, sha: nil)
+        try f.server("Shared/b.ARW", size: 20, sha: nil)
+        var other = server
+        other.host = "office.local"
+        let key = try #require(ServerIdentity.key(server))
+        let offers = [
+            SharedServerHash(serverKey: key, pathKey: SharedHashExchange.pathKey(server: server, relativePath: "Shared/a.ARW"),
+                             size: 20, modifiedAt: 1, sha256: sha, device: "MAC", hashedAt: 100),
+            SharedServerHash(serverKey: try #require(ServerIdentity.key(other)),
+                             pathKey: SharedHashExchange.pathKey(server: server, relativePath: "Shared/b.ARW"),
+                             size: 20, modifiedAt: 1, sha256: sha, device: "MAC", hashedAt: 100),
+        ]
+        try SharedIndexStore(database: f.database).saveRemote(photoHashes: [], serverHashes: offers)
+
+        #expect(try await Self.exchange(f).adopt(now: Date(timeIntervalSince1970: 500)) == 1)
+        let rows = try await f.database.reader.read { db in
+            try Row.fetchAll(db, sql: "SELECT copyId, sha256 FROM copy_files ORDER BY copyId").map { ($0["copyId"] as String, $0["sha256"] as String?) }
+        }
+        #expect(rows.map(\.1) == [sha, nil])
+    }
+
+    /// AC-155: with the index not shared there is no exchange at all — the
+    /// pass takes nothing from the records and sends nothing.
+    @MainActor
+    @Test func offDoesNothing() async throws {
+        let f = try OnServerFixture(photos: 1)
+        try f.photo(0, files: [("1:a.HEIC", .photo, 10, nil)])
+        try SharedIndexStore(database: f.database).saveRemote(photoHashes: [photoOffer()], serverHashes: [])
+        let servers = FileServerStore(database: f.database, passwords: InMemoryPasswordStore())
+        let refresh = ServerSourceRefresh(database: f.database, servers: servers, composer: ServerSourceIndexTests.composer) { _, _ in
+            InMemoryRemoteFileClient()
+        }
+        let environment = OnServerCheck.Environment.live(database: f.database, servers: servers, refresh: refresh,
+                                                         connectionLock: ConnectionLock(), hashesEverything: { false },
+                                                         indexShare: nil, listingChanged: {})
+
+        #expect(await environment.adoptShared(Date()) == 0)
+        await environment.publishShared(Date())
+        #expect(try await photoHash(f).sha == nil)
+        #expect(try SharedIndexStore(database: f.database).outboxCount() == 0)
+    }
+
+    /// AC-156: what this device hashed itself goes up once; a hash taken
+    /// from another device is not sent back.
+    @MainActor
+    @Test func recordOwnQueuesOnlyOwnHashes() async throws {
+        let f = try OnServerFixture(photos: 2)
+        try f.photo(0, files: [("1:a.HEIC", .photo, 10, sha)])
+        try f.photo(1, files: [("1:b.HEIC", .photo, 10, nil)])
+        try CopyFileStore(database: f.database).saveHash(sha, copyId: "photos:P1", fileKey: "1:b.HEIC", origin: .shared,
+                                                         sharedFrom: "MAC", hashedAt: Date(timeIntervalSince1970: 100))
+        let exchange = Self.exchange(f)
+        let shared = SharedIndexStore(database: f.database)
+
+        #expect(try await exchange.recordOwn(now: Date(timeIntervalSince1970: 500)) == 1)
+        #expect(try shared.outboxCount() == 1)
+        // Sent with when it was hashed, not when it was sent (§12.4).
+        let sent = try await f.database.reader.read { db in
+            try Int.fetchOne(db, sql: "SELECT hashedAt FROM shared_photo_hashes")
+        }
+        let hashed = try await f.database.reader.read { db in
+            try Int.fetchOne(db, sql: "SELECT hashedAt FROM copy_files WHERE copyId = 'photos:P0'")
+        }
+        #expect(sent == hashed && sent != 500)
+        // Nothing changed: not queued again, not even read again.
+        try shared.removeFromOutbox(try shared.outbox(limit: 10))
+        #expect(try await exchange.recordOwn(now: Date(timeIntervalSince1970: 600)) == 0)
+        #expect(try shared.outboxCount() == 0)
+        // Hashed again here: it goes up again.
+        try CopyFileStore(database: f.database).saveHash(String(repeating: "b", count: 64), copyId: "photos:P0",
+                                                         fileKey: "1:a.HEIC", origin: .hashed)
+        #expect(try await exchange.recordOwn(now: Date(timeIntervalSince1970: 700)) == 1)
+    }
+
+    /// A hash from another device never replaces one this device worked out
+    /// while the offer was being matched.
+    @Test func sharedNeverOverwritesOwn() throws {
+        let (store, _) = try store()
+        try store.saveHash(sha, copyId: "S1", fileKey: "primary", origin: .hashed)
+        #expect(try !store.saveHash(String(repeating: "b", count: 64), copyId: "S1", fileKey: "primary", origin: .shared,
+                                    sharedFrom: "MAC", hashedAt: Date(timeIntervalSince1970: 100)))
+        #expect(try store.files(copyId: "S1").first?.origin == .hashed)
+        #expect(try store.files(copyId: "S1").first?.sha256 == sha)
+    }
+
+    /// WebDAV over http and https on one port are two servers.
+    @Test func webdavTLSIsPartOfTheIdentity() {
+        var plain = FileServer(id: "W", name: "DAV", transferProtocol: .webdav, host: "nas.local", port: 5005, username: "u",
+                               share: "/dav")
+        var secure = plain
+        plain.usesTLS = false
+        secure.usesTLS = true
+        #expect(ServerIdentity.key(plain) != ServerIdentity.key(secure))
+    }
 }
 

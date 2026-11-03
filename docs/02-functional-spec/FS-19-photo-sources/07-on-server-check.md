@@ -210,16 +210,21 @@ Quy tắc khớp (§3) và xoá (§9) **giữ nguyên**; mục này chỉ đổi
 
 - Đi trong index dùng chung BD-03.05 (container `iCloud.com.hoangtuan.shotdex`, private database, zone `SharedIndex`),
   thêm hai loại record:
-  - **`PhotoFileHash`**: tên = cloud id + khoá file. Trường: cloud id, khoá file (`type:name` như sổ Backup), ngày
+  - **`PhotoFileHash`**: tên = SHA-256 của (máy, cloud id, khoá file) — mỗi máy một record, tên luôn dưới 255 byte. Trường: cloud id, khoá file (`type:name` như sổ Backup), ngày
     sửa ảnh (giây), cỡ, SHA-256, máy.
-  - **`ServerFileHash`**: tên = danh tính server + đường dẫn. Trường: danh tính server (giao thức, host, cổng, user
-    SFTP, share WebDAV — như `ServerIdentity.sameFiles`), đường dẫn đầy đủ trên server, cỡ, ngày sửa, SHA-256, máy.
+  - **`ServerFileHash`**: tên = SHA-256 của (máy, danh tính server, đường dẫn). Trường: danh tính server
+    (`ServerIdentity.key`: giao thức, host, cổng, user SFTP, share và http/https của WebDAV), đường dẫn đầy đủ trên server, cỡ, ngày sửa, SHA-256, máy.
 - **Dùng khi:**
   - Photos: cloud id ánh xạ ra ảnh trên máy, **ngày sửa ảnh trùng**, cỡ file trùng.
   - NAS: connection trên máy cùng danh tính, file đã liệt kê có **đường dẫn + cỡ + ngày sửa** trùng.
   - Lệch thì máy tự băm như §4–§5.
   - Danh tính khác nhau giữa các máy (một máy `nas.local`, máy kia IP) thì không khớp: giới hạn đã biết.
-- **Hai chiều:** máy nào băm trước thì đẩy lên. Bản tại chỗ có ngày sửa mới hơn được giữ (BD-03.05 §2).
+- **Thứ tự trong một lượt:** kéo record (chờ tối đa 10 giây, phần về muộn dùng ở lượt sau) → khớp → băm phần còn
+  lại. Ảnh Photos mới liệt kê được khớp ngay sau khi liệt kê, trước khi chọn file để tải, nên lượt đầu cũng không tải
+  file máy khác đã băm.
+- **Hai chiều:** máy nào băm trước thì đẩy lên, mỗi lượt tối đa 2.000 SHA của chính máy và 5 lô đẩy; phần còn lại đi ở
+  lượt sau. SHA gửi kèm **lúc băm**, không phải lúc gửi (§12.4 so theo lúc băm). Gửi lại khi máy băm lại file đó.
+  Record của máy khác không bao giờ đè record của máy này; SHA nhận về chỉ điền file chưa có SHA.
 - Lưu trên máy: SHA nhận được ghi vào `copy_files` với `origin = shared` và mã máy gửi, để §12.4 xoá được theo máy.
 - Tắt *Share Index Across Devices*, không có iCloud, hoặc bản Mac thiếu entitlement: không kéo, không đẩy, chạy như hôm
   nay.

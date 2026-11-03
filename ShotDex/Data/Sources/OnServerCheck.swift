@@ -1,6 +1,7 @@
 import Foundation
 import GRDB
 import Observation
+import os
 
 /// Runs the on-server check while ShotDex is in front (FS-19.07 §6, phase
 /// 1): each time the app comes to the foreground, every server source is
@@ -15,6 +16,7 @@ import Observation
 @MainActor
 @Observable
 final class OnServerCheck {
+    nonisolated static let logger = Logger(subsystem: "com.hoangtuan.shotdex", category: "OnServerCheck")
     /// The world the check runs in; closures, so tests need no server,
     /// library or network.
     struct Environment: Sendable {
@@ -34,6 +36,11 @@ final class OnServerCheck {
         /// Folds server photos into the Photos items they are byte for byte
         /// (phase 2, display only); returns how many.
         var merge: @Sendable () async throws -> Int = { 0 }
+        /// Pulls what the other devices on the same iCloud account hashed and
+        /// fills the files it matches (FS-19.07 §12.3); returns how many.
+        var adoptShared: @Sendable (_ now: Date) async -> Int = { _ in 0 }
+        /// Queues and uploads what this device hashed, for the others.
+        var publishShared: @Sendable (_ now: Date) async -> Void = { _ in }
     }
 
     private let environment: Environment
@@ -162,6 +169,9 @@ final class OnServerCheck {
         generation &+= 1
 
         lastPassHashed = (0, 0)
+        // Hashes the other devices worked out come first: what they read is
+        // not read here (§12.3).
+        if !Task.isCancelled, await environment.adoptShared(start) > 0 { generation &+= 1 }
         // Batches until a round does nothing: a Photos hash can make a
         // server file worth reading, and the other way round.
         while !Task.isCancelled {
@@ -177,7 +187,7 @@ final class OnServerCheck {
             }
             if photosWait == nil, !Task.isCancelled, let summary = try? await environment.hashPhotos(start) {
                 if summary.waitingForSpace { photosWait = .space }
-                lastPassHashed.photos += summary.seeded + summary.hashed
+                lastPassHashed.photos += summary.adopted + summary.seeded + summary.hashed
                 didWork = didWork || summary.listed + summary.seeded + summary.hashed + summary.failed > 0
             }
             generation &+= 1
@@ -186,6 +196,7 @@ final class OnServerCheck {
         if !Task.isCancelled, (try? await environment.merge()) ?? 0 > 0 {
             generation &+= 1
         }
+        if !Task.isCancelled { await environment.publishShared(start) }
         if Task.isCancelled {
             for source in openSources where waits[source.id] == nil { waits[source.id] = .openApp }
             if photosWait == nil { photosWait = .openApp }
@@ -205,11 +216,17 @@ extension OnServerCheck.Environment {
     /// other devices, not only the candidates of a size.
     static func live(database: AppDatabase, servers: FileServerStore, refresh: ServerSourceRefresh,
                      connectionLock: ConnectionLock, hashesEverything: @escaping @Sendable () -> Bool,
+                     indexShare: IndexShareService? = nil,
                      listingChanged: @escaping @Sendable () async -> Void) -> Self {
         // Monitors of its own: the shared ones have a single handler slot.
         let network = NetworkMonitor()
         let power = PowerMonitor()
         let store = CopyFileStore(database: database)
+        // FS-19.07 §12.3: only while the index is shared across devices.
+        let exchange = indexShare.map { _ in
+            SharedHashExchange(database: database, device: BackupDeviceIdentity.current(),
+                               cloudIds: { IndexShareService.cloudIdentifiers(for: $0) })
+        }
         return Self(
             serverSources: {
                 try database.reader.read { db in
@@ -251,6 +268,14 @@ extension OnServerCheck.Environment {
             hashPhotos: { now in
                 var pass = PhotosFileHashPass(store: store, listFiles: PhotosFileHashPass.liveLister())
                 pass.hashesEverything = hashesEverything()
+                if let exchange, IndexShareService.sharesIndex {
+                    pass.adoptListed = { copyIds, now in
+                        do { return try await exchange.adoptPhotos(copyIds: copyIds, now: now) } catch {
+                            OnServerCheck.logger.error("adopt listed: \(error.localizedDescription, privacy: .public)")
+                            return 0
+                        }
+                    }
+                }
                 return try await pass.run(now: now)
             },
             observeConditions: { changed in
@@ -261,6 +286,25 @@ extension OnServerCheck.Environment {
                 let merged = try OnServerMergePass(database: database).run()
                 if merged > 0 { await listingChanged() }
                 return merged
+            },
+            adoptShared: { now in
+                guard let exchange, let indexShare, IndexShareService.sharesIndex else { return 0 }
+                // Bounded: a slow or offline iCloud must not hold up hashing;
+                // what lands later is taken on the next pass.
+                await indexShare.pull(waitingAtMost: .seconds(10))
+                guard !Task.isCancelled else { return 0 }
+                do { return try await exchange.adopt(now: now) } catch {
+                    OnServerCheck.logger.error("adopt: \(error.localizedDescription, privacy: .public)")
+                    return 0
+                }
+            },
+            publishShared: { now in
+                guard let exchange, let indexShare, IndexShareService.sharesIndex else { return }
+                do { try await exchange.recordOwn(now: now) } catch {
+                    OnServerCheck.logger.error("record own hashes: \(error.localizedDescription, privacy: .public)")
+                }
+                // A few batches a pass; the rest go up on the next one.
+                await indexShare.push(batches: 5)
             }
         )
     }

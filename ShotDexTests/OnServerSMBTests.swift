@@ -78,9 +78,10 @@ struct OnServerSMBTests {
             #expect(read.hashed == 0)
             let rows = try await phone.f.database.reader.read { db in
                 try Row.fetchAll(db, sql: "SELECT origin, sharedFrom FROM copy_files WHERE sha256 IS NOT NULL")
+                    .map { ($0["origin"] as String?, $0["sharedFrom"] as String?) }
             }
             #expect(rows.count == 3)
-            #expect(rows.allSatisfy { ($0["origin"] as String?) == "ledger" && ($0["sharedFrom"] as String?) == "MAC" })
+            #expect(rows.allSatisfy { $0.0 == "ledger" && $0.1 == "MAC" })
             // The ledger is not a photo of the source.
             let copies = try await phone.f.database.reader.read { db in
                 try Int.fetchOne(db, sql: "SELECT COUNT(*) FROM photo_copies WHERE kind = 'server'")

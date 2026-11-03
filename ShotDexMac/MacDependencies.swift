@@ -107,6 +107,7 @@ final class MacDependencies: LibraryServices {
             // FS-19.07 §12.1: the Mac hashes everything for the other devices
             // while it shares the index.
             hashesEverything: { [hasIndexShare = indexShare != nil] in hasIndexShare && IndexShareService.sharesIndex },
+            indexShare: indexShare,
             listingChanged: { await sourcesModel.serverListingChanged() }
         ))
         backupControl = MacBackupControl(coordinator: backupCoordinator, photoLibrary: photoLibrary,

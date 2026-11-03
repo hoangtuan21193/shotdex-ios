@@ -102,5 +102,45 @@ extension AppDatabase {
             }
         }
     }
+
+    /// FS-19.07 §12.3: hashes that travel through iCloud — this device's
+    /// own, queued for upload (`origin = local`), and other devices', as
+    /// pulled (`origin = cloud`). One row per device and file, named as its
+    /// CloudKit record.
+    static func registerSharedHashCache(_ migrator: inout DatabaseMigrator) {
+        migrator.registerMigration("v50-sharedHashCache") { db in
+            try db.create(table: "shared_photo_hashes") { t in
+                t.primaryKey("recordName", .text)
+                t.column("cloudId", .text).notNull()
+                // `type:name`, as Backup's ledger keys a resource.
+                t.column("fileKey", .text).notNull()
+                // The asset's modification date when hashed, seconds.
+                t.column("assetModified", .integer)
+                t.column("size", .integer)
+                t.column("sha256", .text).notNull()
+                t.column("device", .text).notNull()
+                t.column("hashedAt", .integer).notNull()
+                t.column("origin", .text).notNull()
+            }
+            try db.create(index: "shared_photo_hashes_cloud", on: "shared_photo_hashes", columns: ["cloudId"])
+            try db.create(table: "shared_server_hashes") { t in
+                t.primaryKey("recordName", .text)
+                // `ServerIdentity.key`: the same files whatever the connection's name.
+                t.column("serverKey", .text).notNull()
+                // `FolderSourceIndexer.pathKey` of the path on the server.
+                t.column("pathKey", .text).notNull()
+                t.column("size", .integer).notNull()
+                t.column("modifiedAt", .integer)
+                t.column("sha256", .text).notNull()
+                t.column("device", .text).notNull()
+                t.column("hashedAt", .integer).notNull()
+                t.column("origin", .text).notNull()
+            }
+            try db.create(index: "shared_server_hashes_path", on: "shared_server_hashes", columns: ["serverKey", "pathKey"])
+            // When this device's own hash was queued for the others; NULL =
+            // not yet, and every new hash of the file clears it.
+            try db.alter(table: "copy_files") { t in t.add(column: "sharedAt", .integer) }
+        }
+    }
 }
 

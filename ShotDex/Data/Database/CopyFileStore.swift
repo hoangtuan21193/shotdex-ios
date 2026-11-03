@@ -314,20 +314,25 @@ struct CopyFileStore: Sendable {
     /// `sharedFrom` names the device for a hash from another one (§12);
     /// `hashedAt` is then when that device hashed it, so a later random
     /// check can drop what it sent before being caught wrong.
+    /// A hash from another device fills only a file still unhashed — one
+    /// worked out here meanwhile is kept. Returns whether the row changed.
+    @discardableResult
     func saveHash(_ sha256: String, copyId: String, fileKey: String, origin: CopyFile.Origin, sharedFrom: String? = nil,
-                  hashedAt: Date? = nil, at now: Date = Date()) throws {
+                  hashedAt: Date? = nil, at now: Date = Date()) throws -> Bool {
         let time = Int(now.timeIntervalSince1970)
-        try database.writer.write { db in
+        return try database.writer.write { db in
             try db.execute(sql: """
-                UPDATE copy_files SET sha256 = ?, origin = ?, sharedFrom = ?, hashedAt = ?, triedAt = ?, lastError = NULL
-                WHERE copyId = ? AND fileKey = ?
+                UPDATE copy_files SET sha256 = ?, origin = ?, sharedFrom = ?, hashedAt = ?, triedAt = ?, lastError = NULL,
+                    sharedAt = NULL
+                WHERE copyId = ? AND fileKey = ? AND (? = 0 OR sha256 IS NULL)
                 """, arguments: [sha256, origin.rawValue, origin.isFromAnotherDevice ? (sharedFrom ?? Self.unknownDevice) : nil,
                                  // Never later than now: a sender whose clock runs ahead
                                  // must not slip a hash past a distrust (§12.4).
                                  // A shared hash with no time counts as oldest: dropped by
                                  // any distrust, never let back in by one.
                                  min(Int((hashedAt ?? (origin.isFromAnotherDevice ? Date(timeIntervalSince1970: 0) : now))
-                                     .timeIntervalSince1970), time), time, copyId, fileKey])
+                                     .timeIntervalSince1970), time), time, copyId, fileKey, origin.isFromAnotherDevice])
+            return db.changesCount > 0
         }
     }
 
@@ -403,22 +408,39 @@ struct CopyFileStore: Sendable {
         var sha256: String
         /// When this device hashed it.
         var hashedAt: Int
+        var copyId = ""
+        var fileKey = ""
     }
 
     /// Files of the source this device hashed itself, with a write time —
     /// what its ledger segments may carry.
-    func ownServerHashes(sourceId: String) throws -> [OwnServerHash] {
+    /// `unshared`: only those not yet queued for iCloud (§12.3).
+    func ownServerHashes(sourceId: String, unshared: Bool = false, limit: Int = .max) throws -> [OwnServerHash] {
         try database.reader.read { db in
             try Row.fetchAll(db, sql: """
-                SELECT f.size, f.modifiedAt, f.sha256, f.hashedAt,
+                SELECT f.copyId, f.fileKey, f.size, f.modifiedAt, f.sha256, f.hashedAt,
                        CASE f.fileKey WHEN 'companion' THEN c.pairedPath ELSE c.relativePath END AS path
                 FROM copy_files f JOIN photo_copies c ON c.id = f.copyId
                 WHERE c.sourceId = ? AND c.kind = 'server' AND c.missingSince IS NULL
                   AND f.origin = 'hashed' AND f.sha256 IS NOT NULL AND f.size IS NOT NULL AND f.modifiedAt IS NOT NULL
-                """, arguments: [sourceId]).compactMap { row in
+                  \(unshared ? "AND f.sharedAt IS NULL" : "")
+                LIMIT ?
+                """, arguments: [sourceId, min(limit, Int(Int32.max))]).compactMap { row in
                 guard let path: String = row["path"] else { return nil }
                 return OwnServerHash(relativePath: path, size: row["size"], modifiedAt: row["modifiedAt"], sha256: row["sha256"],
-                                     hashedAt: row["hashedAt"] ?? 0)
+                                     hashedAt: row["hashedAt"] ?? 0, copyId: row["copyId"], fileKey: row["fileKey"])
+            }
+        }
+    }
+
+    /// These own hashes are queued for the other devices.
+    func markShared(_ files: [(copyId: String, fileKey: String)], at now: Date = Date()) throws {
+        guard !files.isEmpty else { return }
+        let time = Int(now.timeIntervalSince1970)
+        try database.writer.write { db in
+            for file in files {
+                try db.execute(sql: "UPDATE copy_files SET sharedAt = ? WHERE copyId = ? AND fileKey = ?",
+                               arguments: [time, file.copyId, file.fileKey])
             }
         }
     }

@@ -600,6 +600,7 @@ final class AppDependencies {
             database: database, servers: fileServers, refresh: serverSources, connectionLock: connectionLock,
             // Only the Mac hashes everything for the other devices (FS-19.07 §12.1).
             hashesEverything: { false },
+            indexShare: indexShare,
             listingChanged: { await sources.serverListingChanged() }
         ))
         // The grid's "on server" glyph follows each batch of the check.

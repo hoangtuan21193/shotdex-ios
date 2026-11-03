@@ -172,6 +172,27 @@ import UniformTypeIdentifiers
         #expect(try (0..<4).allSatisfy { try CopyFileStore(database: database).files(copyId: "photos:P\($0)").first?.origin == .hashed })
     }
 
+    /// FS-19.07 AC-149 (§12.3): on the very first pass, what another device
+    /// hashed is taken right after listing — before the pass picks what to
+    /// download — so the first round downloads only the rest.
+    @Test func adoptsBeforeDownloading() async throws {
+        let (database, base, downloads) = try Self.library(count: 2)
+        var pass = base
+        pass.hashesEverything = true
+        let sha = String(repeating: "c", count: 64)
+        pass.adoptListed = { copyIds, now in
+            #expect(Set(copyIds) == ["photos:P0", "photos:P1"])
+            let filled = try? CopyFileStore(database: database).saveHash(sha, copyId: "photos:P0", fileKey: "1:IMG_0.HEIC",
+                                                                       origin: .shared, sharedFrom: "MAC", at: now)
+            return filled == true ? 1 : 0
+        }
+
+        let summary = try await pass.run()
+
+        #expect(summary.adopted == 1 && summary.hashed == 1)
+        #expect(downloads.ids == ["P1"])
+    }
+
     /// FS-19.07 AC-82: three candidates are downloaded one temporary file at
     /// a time; each is gone before the next starts and nothing is left
     /// after. One that cannot be read is recorded and holds up none of the

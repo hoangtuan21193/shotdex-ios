@@ -151,6 +151,8 @@ actor IndexShareService: SharedIndexSource {
                 }
                 var exifRecords: [SharedExifRecord] = []
                 var cells: [SharedPlaceCell] = []
+                var photoHashes: [SharedPhotoHash] = []
+                var serverHashes: [SharedServerHash] = []
                 for result in changes.modificationResultsByID.values {
                     guard let record = try? result.get().record else { continue }
                     switch record.recordType {
@@ -158,6 +160,10 @@ actor IndexShareService: SharedIndexSource {
                         if let exif = Self.exifRecord(from: record) { exifRecords.append(exif) }
                     case SharedIndexStore.placeCellType:
                         if let cell = Self.placeCell(from: record) { cells.append(cell) }
+                    case SharedIndexStore.photoHashType:
+                        if let hash = Self.photoHash(from: record) { photoHashes.append(hash) }
+                    case SharedIndexStore.serverHashType:
+                        if let hash = Self.serverHash(from: record) { serverHashes.append(hash) }
                     case Self.settingsRecordName:
                         Self.applySettings(from: record)
                     default:
@@ -166,6 +172,7 @@ actor IndexShareService: SharedIndexSource {
                 }
                 received += try store.saveRemote(exifRecords)
                 try store.saveRemote(cells)
+                try store.saveRemote(photoHashes: photoHashes, serverHashes: serverHashes)
                 token = changes.changeToken
                 Self.saveChangeToken(changes.changeToken)
                 moreComing = changes.moreComing
@@ -210,12 +217,14 @@ actor IndexShareService: SharedIndexSource {
 
     // MARK: Push
 
-    /// Uploads everything queued in the outbox, 400 records at a time.
-    func push() async {
+    /// Uploads what is queued in the outbox, 400 records at a time, at most
+    /// `batches` of them; stops between batches when cancelled.
+    func push(batches: Int = .max) async {
         guard let database = await database() else { return }
         do {
             try await ensureZone(in: database)
-            while true {
+            for _ in 0..<batches {
+                try Task.checkCancellation()
                 let items = try store.outbox(limit: Self.pushBatchSize)
                 guard !items.isEmpty else { break }
                 let records = try makeRecords(for: items)
@@ -253,6 +262,32 @@ actor IndexShareService: SharedIndexSource {
             let record = CKRecord(recordType: SharedIndexStore.placeCellType,
                                   recordID: CKRecord.ID(recordName: cell.cellKey, zoneID: zoneID))
             record["cell"] = try encoder.encode(PlaceCellWire(cell))
+            records.append(record)
+        }
+        // FS-19.07 §12.3: file hashes, one record per device and file.
+        let hashNames = items.filter { $0.recordType == SharedIndexStore.photoHashType || $0.recordType == SharedIndexStore.serverHashType }
+            .map(\.recordName)
+        let hashes = try store.localHashes(recordNames: hashNames)
+        for hash in hashes.photos {
+            let record = CKRecord(recordType: SharedIndexStore.photoHashType, recordID: CKRecord.ID(recordName: hash.recordName, zoneID: zoneID))
+            record["cloudId"] = hash.cloudId
+            record["fileKey"] = hash.fileKey
+            record["assetModified"] = hash.assetModified.map { Int64($0) }
+            record["size"] = hash.size
+            record["sha256"] = hash.sha256
+            record["device"] = hash.device
+            record["hashedAt"] = Int64(hash.hashedAt)
+            records.append(record)
+        }
+        for hash in hashes.servers {
+            let record = CKRecord(recordType: SharedIndexStore.serverHashType, recordID: CKRecord.ID(recordName: hash.recordName, zoneID: zoneID))
+            record["serverKey"] = hash.serverKey
+            record["pathKey"] = hash.pathKey
+            record["size"] = hash.size
+            record["modifiedAt"] = hash.modifiedAt.map { Int64($0) }
+            record["sha256"] = hash.sha256
+            record["device"] = hash.device
+            record["hashedAt"] = Int64(hash.hashedAt)
             records.append(record)
         }
         return records
@@ -294,6 +329,22 @@ actor IndexShareService: SharedIndexSource {
             modificationDate: (record["modificationDate"] as? Int64).map { Int($0) },
             exif: exif
         )
+    }
+
+    private static func photoHash(from record: CKRecord) -> SharedPhotoHash? {
+        guard let cloudId = record["cloudId"] as? String, let fileKey = record["fileKey"] as? String,
+              let sha256 = record["sha256"] as? String, let device = record["device"] as? String,
+              let hashedAt = record["hashedAt"] as? Int64 else { return nil }
+        return SharedPhotoHash(cloudId: cloudId, fileKey: fileKey, assetModified: (record["assetModified"] as? Int64).map { Int($0) },
+                               size: record["size"] as? Int64, sha256: sha256, device: device, hashedAt: Int(hashedAt))
+    }
+
+    private static func serverHash(from record: CKRecord) -> SharedServerHash? {
+        guard let serverKey = record["serverKey"] as? String, let pathKey = record["pathKey"] as? String,
+              let size = record["size"] as? Int64, let sha256 = record["sha256"] as? String,
+              let device = record["device"] as? String, let hashedAt = record["hashedAt"] as? Int64 else { return nil }
+        return SharedServerHash(serverKey: serverKey, pathKey: pathKey, size: size, modifiedAt: (record["modifiedAt"] as? Int64).map { Int($0) },
+                                sha256: sha256, device: device, hashedAt: Int(hashedAt))
     }
 
     private static func placeCell(from record: CKRecord) -> SharedPlaceCell? {
