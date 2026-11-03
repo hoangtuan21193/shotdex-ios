@@ -138,6 +138,35 @@ final class MacCommonPhotosRuns {
         return .started
     }
 
+    /// How a run Keep gathering started came to an end (FS-19.08 §6c).
+    struct RunEnd {
+        /// Nil: every photo done.
+        var error: (any Error)?
+        /// Paused or stopped by the user, or the app quitting.
+        var byUser: Bool
+        /// Not run here at all: the other process has it. Nothing to report.
+        var elsewhere = false
+    }
+
+    @ObservationIgnored private var endWaiters: [String: [CheckedContinuation<RunEnd, Never>]] = [:]
+
+    /// Starts (resumes) `runId` and waits for it to end — Keep gathering's
+    /// run of the day, or one the server cut off. A run that could not
+    /// start says why, as a server-side refusal: the next pass tries again.
+    func runToEnd(runId: String) async -> RunEnd {
+        if CommonPhotosRunner.isActive(runId: runId, in: database) { return RunEnd(error: nil, byUser: false, elsewhere: true) }
+        resume(runId: runId)
+        guard tasks[runId] != nil else {
+            let problem = entries[runId]?.problem ?? String(localized: "This run could not start.", comment: "Common photos: Keep gathering could not start its run")
+            return RunEnd(error: RemoteFileError.other(problem), byUser: false)
+        }
+        return await withCheckedContinuation { endWaiters[runId, default: []].append($0) }
+    }
+
+    /// Another process (the helper, or the app) changed common-photos runs
+    /// or sets: what is shown is read again.
+    func storeChanged() { refreshFoot() }
+
     /// Run Again from Activity or a run's window.
     func runAgain(runId: String) {
         guard let run = (try? store.run(id: runId)) ?? nil, !run.isUndo, run.isReadable else { return }
@@ -203,6 +232,14 @@ final class MacCommonPhotosRuns {
         }
         // Ready to move (§6c): only Move N…, which confirms first, starts it.
         guard run.state != .ready else { return }
+        // Going in the other process (the helper, or the app): not twice.
+        guard !CommonPhotosRunner.isActive(runId: runId, in: database) else {
+            var entry = entries[runId] ?? Entry(run: run)
+            entry.problem = String(localized: "This run is going in ShotDex’s helper. Wait for it to finish.",
+                                   comment: "Common photos: the run is already going in the other process")
+            entries[runId] = entry
+            return
+        }
         guard let server = (try? servers.fetch(id: run.connectionId)) ?? nil else {
             var entry = entries[runId] ?? Entry(run: run)
             entry.problem = String(localized: "The connection for this run was deleted.", comment: "Common photos: the run's connection is gone")
@@ -315,7 +352,8 @@ final class MacCommonPhotosRuns {
     /// Whether Stop may end the run now: never while it is `finishing` (the
     /// store says so before the entry does), never once it is over.
     func canStop(runId: String) -> Bool {
-        guard let state = (try? store.run(id: runId))??.state else { return false }
+        guard let state = (try? store.run(id: runId))??.state,
+              !CommonPhotosClaims(database: database).isClaimedElsewhere(.run, id: runId) else { return false }
         return state != .finishing && state != .finished && state != .stopped && state != .ready
     }
 
@@ -471,6 +509,16 @@ final class MacCommonPhotosRuns {
     }
 
     private func finished(_ runId: String, _ outcome: Result<Void, Error>, cancelled: Bool) {
+        // Read before the stop below clears what the user asked.
+        let byUser = (entries[runId]?.isPausedByUser ?? false) || stopRequested.contains(runId)
+        if let waiters = endWaiters.removeValue(forKey: runId) {
+            let end: RunEnd
+            switch outcome {
+            case .success: end = RunEnd(error: nil, byUser: false)
+            case .failure(let error): end = RunEnd(error: cancelled && !byUser ? CancellationError() : error, byUser: byUser)
+            }
+            for waiter in waiters { waiter.resume(returning: end) }
+        }
         tasks[runId] = nil
         shownProgress[runId] = nil
         rateSamples[runId] = nil

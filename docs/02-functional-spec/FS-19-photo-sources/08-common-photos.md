@@ -226,6 +226,11 @@ Copy/Move vẫn là cùng bộ.
   connection bị xoá: cũng dừng.
 - Folder nguồn hay folder chung không còn trên server: bộ **tạm dừng**, hàng Activity "“Vợ” isn't on NAS Home anymore ·
   Stopped gathering", không thử lại cho tới khi người dùng bật lại.
+- Helper và app dùng chung một database. Mỗi bộ chỉ một lượt gom một lúc, mỗi lượt chạy chỉ một process: khoá trong DB,
+  hết hạn sau 2 phút không gia hạn. Helper gom. App chỉ gom khi helper không chạy job (Keep Working After Quit tắt, hay
+  macOS chưa cho). Khi đó ô Keep gathering ghi "… and ShotDex is open".
+- Giới hạn đã biết: lượt đã bắt đầu chạy tiếp dù Mac rút điện hay chuyển sang mạng tính tiền giữa chừng. Luật điện và
+  mạng chỉ áp lúc bắt đầu lượt.
 - **Danh sách bộ đang tự gom**: mục **Gathering** đầu cửa sổ Activity, mỗi bộ một hàng ("Tuấn + Vợ → Shared · Copy ·
   checked 3 min ago · 128 gathered"), menu hàng **Run Now** · **Stop Gathering**. Stop Gathering không đụng log hay
   file.

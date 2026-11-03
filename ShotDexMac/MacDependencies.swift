@@ -52,6 +52,9 @@ final class MacDependencies: LibraryServices {
     /// Find Common Photos runs (FS-19.08 §6): the run window and Activity
     /// read their progress here.
     let commonPhotos: MacCommonPhotosRuns
+    /// Keep gathering's passes (FS-19.08 §6c), in the helper — or here while
+    /// the helper does not run jobs.
+    let gatherer: MacCommonPhotosGatherer
 
     init(database: AppDatabase, photoLibrary: PhotoLibraryService, sharesIndex: Bool = false) {
         self.database = database
@@ -131,6 +134,48 @@ final class MacDependencies: LibraryServices {
             LockedRemoteFileClient(RemoteFileClientFactory.make(for: server, password: fileServers.password(for: server.id) ?? ""),
                                    lock: connectionLock, connectionId: server.id, priority: .normal)
         }
+        gatherer = MacCommonPhotosGatherer(database: database, servers: fileServers, runs: commonPhotos) { server in
+            LockedRemoteFileClient(RemoteFileClientFactory.make(for: server, password: fileServers.password(for: server.id) ?? ""),
+                                   lock: connectionLock, connectionId: server.id, priority: .normal)
+        }
+    }
+
+    private var gathersInApp = false
+
+    /// The app's side of Keep gathering (FS-19.08 §6c), once: its own
+    /// passes while the helper does not run jobs, and what the helper
+    /// changed read again. Never in the helper, which starts its own.
+    func startGatheringInApp() {
+        guard !gathersInApp else { return }
+        gathersInApp = true
+        let runs = commonPhotos
+        gatherer.isOn = { !MacAgentLink.agentRunsJobs }
+        #if DEBUG
+        // The demo library's database is not the helper's: the app gathers.
+        if MacDemoLibrary.isOn { gatherer.isOn = { true } }
+        #endif
+        gatherer.onChange = { runs.storeChanged() }
+        MacAgentLink.observe(MacAgentLink.commonPhotosChanged) { runs.storeChanged() }
+        gatherer.start()
+    }
+
+    /// Run Now (Activity): the helper's pass when it runs jobs, else ours.
+    func gatherNow(watchId: String) {
+        if MacAgentLink.agentRunsJobs {
+            MacAgentLink.post(.init(action: .gatherNow, jobId: watchId))
+        } else {
+            gatherer.gatherNow(watchId: watchId)
+        }
+    }
+
+    /// A set was turned on or off: the helper starts for it, or re-reads.
+    func watchesChanged() {
+        #if DEBUG
+        // The demo database is not the helper's: never register it for one.
+        if MacDemoLibrary.isOn { return }
+        #endif
+        MacAgentLink.ensureAgent(hasWork: MacCommonPhotosGatherer.hasWork(database))
+        MacAgentLink.post(.init(action: .watchesChanged, jobId: nil))
     }
 
     /// A client for `server` whose every call waits its turn on the

@@ -76,6 +76,14 @@ struct CommonPhotosWatchStore: Sendable {
         }
     }
 
+    /// Remove from List on a set that stopped by itself: the set goes;
+    /// its runs, logs and files stay.
+    func remove(id: String) throws {
+        try database.writer.write { db in
+            try db.execute(sql: "DELETE FROM common_photo_watches WHERE id = ? AND isOn = 0", arguments: [id])
+        }
+    }
+
     func watches() throws -> [CommonPhotosWatch] {
         try database.reader.read { db in
             try Row.fetchAll(db, sql: "SELECT * FROM common_photo_watches ORDER BY createdAt, id").map(Self.watch)

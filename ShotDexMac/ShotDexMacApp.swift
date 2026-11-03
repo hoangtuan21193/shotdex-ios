@@ -39,7 +39,10 @@ struct ShotDexMacApp: App {
         WindowGroup(id: MacMainWindow.id) {
             MacRootWindow()
                 .environment(dependencies)
-                .onAppear { appDelegate.runs = dependencies.commonPhotos }
+                .onAppear {
+                    appDelegate.runs = dependencies.commonPhotos
+                    dependencies.startGatheringInApp()
+                }
                 .frame(minWidth: MacWindowMetrics.minimumSize.width, minHeight: MacWindowMetrics.minimumSize.height)
         }
         .defaultSize(width: 1440, height: 900)
@@ -134,6 +137,12 @@ final class MacAppDelegate: NSObject, NSApplicationDelegate {
     @MainActor
     func applicationWillFinishLaunching(_ notification: Notification) {
         UNUserNotificationCenter.current().delegate = notices
+        // A click the helper took (it posts the notices while ShotDex is
+        // closed): the app opens on that run's window.
+        MacAgentLink.observe(MacAgentLink.noticeClicked) { [notices] in
+            if let runId = MacCommonPhotosNotices.takeHandedOver() { notices.received(runId: runId) }
+        }
+        if let runId = MacCommonPhotosNotices.takeHandedOver() { notices.received(runId: runId) }
     }
 
     @MainActor

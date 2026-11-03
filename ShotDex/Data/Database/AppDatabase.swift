@@ -695,6 +695,7 @@ final class AppDatabase: Sendable {
         registerCommonPhotosWatches(&migrator)
         registerCommonPhotosDayRuns(&migrator)
         registerCommonPhotosWatchResume(&migrator)
+        registerCommonPhotosClaims(&migrator)
 
         return migrator
     }

@@ -156,6 +156,19 @@ extension AppDatabase {
     /// FS-19.08 §6c: the set's run the server cut off mid-way — the next
     /// pass carries it on. Not a run the user paused: that one waits for
     /// the user.
+    /// FS-19.08 §6c: the app and its helper share the database; a run or a
+    /// set's pass is claimed by one process at a time (`CommonPhotosClaims`).
+    static func registerCommonPhotosClaims(_ migrator: inout DatabaseMigrator) {
+        migrator.registerMigration("v56-commonPhotosClaims") { db in
+            for table in ["common_photo_runs", "common_photo_watches"] {
+                try db.alter(table: table) { t in
+                    t.add(column: "claimedBy", .text)
+                    t.add(column: "claimedAt", .integer)
+                }
+            }
+        }
+    }
+
     static func registerCommonPhotosWatchResume(_ migrator: inout DatabaseMigrator) {
         migrator.registerMigration("v55-commonPhotosWatchResume") { db in
             try db.alter(table: "common_photo_watches") { t in

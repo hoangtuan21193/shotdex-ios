@@ -17,6 +17,8 @@ enum MacAgentLink {
     static let commandsPosted = "\(AppDatabase.macAppGroup).agent.commands"
     static let agentChanged = "\(AppDatabase.macAppGroup).agent.changed"
     static let onServerChanged = "\(AppDatabase.macAppGroup).agent.onServer"
+    /// Keep gathering changed a set or a run (FS-19.08 §6c): read again.
+    static let commonPhotosChanged = "\(AppDatabase.macAppGroup).agent.commonPhotos"
 
     private static let commandsKey = "agentCommands"
     private static let runKey = "agentRun"
@@ -31,7 +33,9 @@ enum MacAgentLink {
 
     /// `checkOnServer`: the app came forward — list the servers again
     /// (FS-19.07 §5) and hash what is left.
-    enum Action: String { case pause, resume, backUpNow, retry, jobsChanged, start, checkOnServer }
+    /// `gatherNow` (jobId: a Keep-gathering set's id), `watchesChanged`: a
+    /// set was turned on or off (FS-19.08 §6c).
+    enum Action: String { case pause, resume, backUpNow, retry, jobsChanged, start, checkOnServer, gatherNow, watchesChanged }
 
     struct Command: Equatable {
         var action: Action
@@ -55,6 +59,11 @@ enum MacAgentLink {
             entry["action"].flatMap(Action.init(rawValue:)).map { Command(action: $0, jobId: entry["jobId"]) }
         }
     }
+
+    static func postCommonPhotosChanged() { notify_post(commonPhotosChanged) }
+    /// The helper took a click on a Keep-gathering notice for the running app.
+    static let noticeClicked = "\(AppDatabase.macAppGroup).agent.noticeClicked"
+    static func post(noticeClicked: Void) { notify_post(Self.noticeClicked) }
 
     // MARK: The run in flight
 

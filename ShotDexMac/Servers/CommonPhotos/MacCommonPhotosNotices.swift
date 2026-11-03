@@ -1,3 +1,4 @@
+import AppKit
 import Foundation
 import os
 import UserNotifications
@@ -16,6 +17,40 @@ final class MacCommonPhotosNotices: NSObject, UNUserNotificationCenterDelegate {
     /// A click that launched the app lands before any window has handed
     /// over `runs`: kept until it does.
     private var pendingRunId: String?
+    /// In the helper: a click is handed to the app, which opens the window.
+    var handsOverToApp = false
+    nonisolated private static let handOverKey = "commonPhotosNoticeRunId"
+
+    /// The app's side: a click the helper took, if any — once.
+    static func takeHandedOver() -> String? {
+        let defaults = MacAgentLink.defaults
+        guard let runId = defaults.string(forKey: handOverKey) else { return nil }
+        defaults.removeObject(forKey: handOverKey)
+        return runId
+    }
+
+    /// The app (or the helper) was told of a click on `runId`'s notice.
+    func received(runId: String) {
+        pendingRunId = runId
+        deliverPending()
+    }
+
+    /// The helper took the click: the app opens on the run's window — the
+    /// running app is brought forward, or one is launched (the helper is
+    /// this same bundle, so not "the" running application).
+    private func handOver(_ runId: String) {
+        MacAgentLink.defaults.set(runId, forKey: Self.handOverKey)
+        let me = ProcessInfo.processInfo.processIdentifier
+        if let app = NSRunningApplication.runningApplications(withBundleIdentifier: Bundle.main.bundleIdentifier ?? "")
+            .first(where: { $0.processIdentifier != me }) {
+            app.activate()
+            MacAgentLink.post(noticeClicked: ())
+        } else {
+            let configuration = NSWorkspace.OpenConfiguration()
+            configuration.createsNewApplicationInstance = true
+            NSWorkspace.shared.openApplication(at: Bundle.main.bundleURL, configuration: configuration)
+        }
+    }
 
     private func deliverPending() {
         guard let runs, let runId = pendingRunId else { return }
@@ -53,8 +88,7 @@ final class MacCommonPhotosNotices: NSObject, UNUserNotificationCenterDelegate {
     nonisolated func userNotificationCenter(_ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse) async {
         guard let runId = response.notification.request.content.userInfo[Self.runKey] as? String else { return }
         await MainActor.run {
-            pendingRunId = runId
-            deliverPending()
+            if handsOverToApp { handOver(runId) } else { received(runId: runId) }
         }
     }
 

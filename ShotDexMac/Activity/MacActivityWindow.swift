@@ -19,6 +19,10 @@ struct MacActivityWindow: View {
     @State private var stopText = (title: "", message: "")
     /// Remove from List… / Remove Finished from List… asked: these runs.
     @State private var removing: [String] = []
+    /// Keep gathering's sets (FS-19.08 §6c), read with the runs.
+    @State private var watchRows: [CommonPhotosWatchRow] = []
+    /// Stop Gathering asked for this set.
+    @State private var stoppingWatch: CommonPhotosWatchRow?
 
     struct Stored: Sendable {
         var run: CommonPhotosRun
@@ -30,12 +34,15 @@ struct MacActivityWindow: View {
 
     var body: some View {
         Group {
-            if jobs.isEmpty {
+            if jobs.isEmpty && watchRows.isEmpty {
                 empty
             } else {
                 VStack(alignment: .leading, spacing: 10) {
-                    list
-                    foot
+                    if !watchRows.isEmpty { gathering }
+                    if !jobs.isEmpty {
+                        list
+                        foot
+                    }
                 }
                 .padding(.horizontal, 16)
                 .padding(.top, 14)
@@ -47,6 +54,24 @@ struct MacActivityWindow: View {
         .tint(MacTheme.accent)
         .navigationTitle(String(localized: "Activity", comment: "Mac window: long-running jobs"))
         .task(id: runs.generation) { await readStore() }
+        // "checked 3 min ago" and what the helper did meanwhile.
+        .task {
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .seconds(30))
+                await readStore()
+            }
+        }
+        .confirmationDialog(String(localized: "Stop gathering “\(stoppingWatch?.title ?? "")”?", comment: "Mac Activity: confirm Stop Gathering"),
+                            isPresented: Binding(get: { stoppingWatch != nil }, set: { if !$0 { stoppingWatch = nil } })) {
+            Button(String(localized: "Stop Gathering", comment: "Mac Activity: Keep gathering stops for the set")) {
+                if let row = stoppingWatch { stopGathering(row) }
+            }
+            Button(String(localized: "Cancel", comment: "Mac sheet: cancel"), role: .cancel) {}
+                .keyboardShortcut(.defaultAction)
+        } message: {
+            Text("No more photos are gathered for these folders. Runs, logs and files stay as they are.",
+                 comment: "Mac Activity: what Stop Gathering does")
+        }
         .confirmationDialog(stopText.title, isPresented: Binding(get: { stopping != nil }, set: { if !$0 { stopping = nil } })) {
             Button(String(localized: "Stop", comment: "Common photos: end the run for good"), role: .destructive) {
                 if let job = stopping { runs.stop(runId: job.id) }
@@ -112,6 +137,20 @@ struct MacActivityWindow: View {
     private func readStore() async {
         let known = runs.activityKnownRunIds
         let store = runs.store
+        let database = dependencies.database
+        let servers = dependencies.fileServers
+        let rows = await Task.detached(priority: .userInitiated) { () -> [CommonPhotosWatchRow] in
+            let ready = Dictionary(grouping: (try? store.readyRuns()) ?? [], by: { $0.watchId ?? "" })
+            return ((try? CommonPhotosWatchStore(database: database).watches()) ?? []).compactMap { watch in
+                let name = ((try? servers.fetch(id: watch.connectionId)) ?? nil)?.name ?? ""
+                let gathered = watch.isOn && watch.action == .copy
+                    ? ((try? store.gathered(connectionId: watch.connectionId, folders: watch.folders, destination: watch.destination))?.photoCount ?? 0)
+                    : 0
+                let waiting = ready[watch.id].map { runs in runs.reduce(0) { $0 + ((try? store.items(runId: $1.id)) ?? []).filter { $0.status == .pending }.count } } ?? 0
+                return CommonPhotosWatchRow.make(watch, connectionName: name, gathered: gathered, readyToMove: waiting)
+            }
+        }.value
+        if !Task.isCancelled { watchRows = rows }
         let read = await Task.detached(priority: .userInitiated) {
             var seen = Set<String>()
             // Finished runs stay, the last 20 groups (FS-19.08 §6b), so their
@@ -139,6 +178,45 @@ struct MacActivityWindow: View {
         // A newer read (a later generation) has the say.
         guard !Task.isCancelled else { return }
         stored = read
+    }
+
+    /// Board `MAC_Activity`, Gathering (FS-19.08 §6c): first in the window.
+    private var gathering: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text("Gathering", comment: "Mac Activity: the sets Keep gathering runs")
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(.secondary)
+                .padding(.horizontal, 2)
+                .accessibilityAddTraits(.isHeader)
+            VStack(spacing: 0) {
+                ForEach(Array(watchRows.enumerated()), id: \.element.id) { index, row in
+                    if index > 0 { Divider() }
+                    MacGatheringRow(row: row, perform: { perform($0, on: row) })
+                }
+            }
+            .background(.background)
+            .clipShape(RoundedRectangle(cornerRadius: 10))
+            .overlay(RoundedRectangle(cornerRadius: 10).strokeBorder(Color(nsColor: .separatorColor)))
+            .accessibilityElement(children: .contain)
+            .accessibilityLabel(String(localized: "Gathering", comment: "Mac Activity: the sets Keep gathering runs"))
+        }
+    }
+
+    private func perform(_ action: CommonPhotosWatchRow.Action, on row: CommonPhotosWatchRow) {
+        switch action {
+        case .runNow: dependencies.gatherNow(watchId: row.id)
+        case .stopGathering: stoppingWatch = row
+        case .remove:
+            try? CommonPhotosWatchStore(database: dependencies.database).remove(id: row.id)
+            Task { await readStore() }
+        }
+    }
+
+    private func stopGathering(_ row: CommonPhotosWatchRow) {
+        try? CommonPhotosWatchStore(database: dependencies.database).stopGathering(id: row.id)
+        dependencies.watchesChanged()
+        runs.storeChanged()
+        Task { await readStore() }
     }
 
     private var list: some View {
@@ -222,6 +300,58 @@ struct MacActivityWindow: View {
 
 /// One job (board `MAC_Activity`): its tile, title and aside, the bar, the
 /// status line and the step, its controls on the right.
+/// One set in Gathering: icon, folders, what the last pass said, and the
+/// ⋯ menu (board `MAC_Activity`).
+private struct MacGatheringRow: View {
+    let row: CommonPhotosWatchRow
+    let perform: (CommonPhotosWatchRow.Action) -> Void
+
+    var body: some View {
+        HStack(spacing: 12) {
+            // Board: a Copy set in accent; a Move set (it waits for the user)
+            // and a stopped one on the plain fill.
+            let accent = !row.isStopped && !row.isMove
+            Image(systemName: row.isStopped ? "exclamationmark.triangle" : "folder.badge.plus")
+                .font(.system(size: 14, weight: .medium))
+                .foregroundStyle(row.isStopped ? Color.orange : accent ? MacTheme.accent : .secondary)
+                .frame(width: 28, height: 28)
+                .background(accent ? MacTheme.accentSoft : MacTheme.fill, in: RoundedRectangle(cornerRadius: 8))
+                .accessibilityHidden(true)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(row.title).fontWeight(.semibold).lineLimit(1)
+                Text(row.detail).font(.subheadline).monospacedDigit().lineLimit(1)
+                    .foregroundStyle(row.isStopped ? Color.orange : .secondary)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            Menu {
+                ForEach(row.actions, id: \.self) { action in
+                    switch action {
+                    case .runNow:
+                        Button(String(localized: "Run Now", comment: "Mac Activity, Gathering: a pass for this set now")) { perform(action) }
+                    case .stopGathering:
+                        Button(String(localized: "Stop Gathering…", comment: "Mac Activity, Gathering: no more passes for this set, after asking")) { perform(action) }
+                    case .remove:
+                        Button(String(localized: "Remove from List", comment: "Mac Activity, Gathering: a set that stopped by itself leaves the list")) { perform(action) }
+                    }
+                }
+            } label: {
+                Image(systemName: "ellipsis").frame(width: 16, height: 14)
+            }
+            .menuStyle(.button)
+            .menuIndicator(.hidden)
+            .buttonStyle(.bordered)
+            .controlSize(.small)
+            .fixedSize()
+            .accessibilityLabel(String(localized: "Actions for \(row.title)", comment: "Mac Activity, Gathering: the row's menu"))
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 8)
+        .frame(minHeight: 44)
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel(row.title)
+    }
+}
+
 private struct MacActivityRow: View {
     let job: LongRunningJob
     var perform: (LongRunningJob.Action) -> Void

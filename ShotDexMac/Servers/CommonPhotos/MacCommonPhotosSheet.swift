@@ -174,6 +174,8 @@ private struct MacCommonPhotosSheetContent: View {
         // `-ShotDexCommonPhotosRunAtOnce`: the run starts as the scan ends,
         // for screenshots of a set that gathered before.
         .onChange(of: model.phase) {
+            // `-ShotDexCommonPhotosKeepGathering`: the box ticked, for an end-to-end run of Keep gathering.
+            if model.phase == .done, ProcessInfo.processInfo.arguments.contains("-ShotDexCommonPhotosKeepGathering") { keepsGathering = true }
             if model.phase == .done, model.canRun, ProcessInfo.processInfo.arguments.contains("-ShotDexCommonPhotosRunAtOnce") { start() }
             // `-ShotDexCommonPhotosGatherReady` (with `-ShotDexCommonPhotosAction move`):
             // what Keep gathering's pass does with these photos — a run ready
@@ -532,7 +534,10 @@ private struct MacCommonPhotosSheetContent: View {
                    isOn: $keepsGathering)
                 .toggleStyle(.checkbox)
                 .fixedSize()
-            Text("Every 15 minutes while this Mac is plugged in.", comment: "Mac common photos sheet: when Keep gathering runs")
+            Text(MacAgentLink.keepsWorkingAfterQuit
+                 ? String(localized: "Every 15 minutes while this Mac is plugged in.", comment: "Mac common photos sheet: when Keep gathering runs")
+                 : String(localized: "Every 15 minutes while this Mac is plugged in and ShotDex is open.",
+                          comment: "Mac common photos sheet: when Keep gathering runs, Keep Working After Quit being off"))
                 .font(.callout).foregroundStyle(.secondary).lineLimit(1)
         }
         .disabled(model.destination == nil)
@@ -559,9 +564,11 @@ private struct MacCommonPhotosSheetContent: View {
                 // A Move set tells the user when photos are ready (§6c):
                 // asked now, while the user is here.
                 if model.action == .move { MacCommonPhotosNotices.requestAuthorization() }
+                dependencies.watchesChanged()
             } else if let watch = try store.watch(connectionId: model.connectionId, folders: model.folders, destination: destination),
                       watch.isOn {
                 try store.stopGathering(id: watch.id)
+                dependencies.watchesChanged()
             }
         } catch {
             startError = String(localized: "The run started, but Keep gathering couldn't be saved: \(error.localizedDescription)",

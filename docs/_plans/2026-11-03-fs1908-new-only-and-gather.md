@@ -6,7 +6,7 @@
 | Intent | [2026-11-03-common-photos-new-only-and-sync](../_intents/2026-11-03-common-photos-new-only-and-sync.md) |
 | Commit spec | `463a5021` (intent `43c24873`) |
 | Ngày | 2026-11-03 |
-| Trạng thái | đang làm — G1–G8 xong (loop: [FS1908_GATHER_LOOP.md](FS1908_GATHER_LOOP.md)) |
+| Trạng thái | đang làm — G1–G9 xong (loop: [FS1908_GATHER_LOOP.md](FS1908_GATHER_LOOP.md)) |
 
 ## 1. Hiểu đúng chưa
 

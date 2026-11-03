@@ -104,6 +104,7 @@ final class MacBackupControl {
     /// user wants it; fall back to the app when macOS says no.
     private func decide() {
         let hasWork = !coordinator.jobs.isEmpty || MacAgentLink.hasOnServerWork(database)
+            || MacCommonPhotosGatherer.hasWork(database)
         MacAgentLink.ensureAgent(hasWork: hasWork)
         agentStatus = MacAgentLink.service.status
         let local = !(MacAgentLink.keepsWorkingAfterQuit && agentStatus == .enabled)

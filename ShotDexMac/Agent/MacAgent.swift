@@ -1,6 +1,7 @@
 import AppKit
 import Foundation
 import IOKit.ps
+import UserNotifications
 
 /// The helper (FS-22.06 §2): this executable started by launchd with
 /// `--agent`. No window, no Dock icon, no menu bar. Runs every Backup job
@@ -24,6 +25,7 @@ final class MacAgent {
     private var awake: NSObjectProtocol?
     private var lastRun: MacAgentLink.Run?
     private var tick: Timer?
+    private let notices = MacCommonPhotosNotices()
 
     private init() {
         dependencies = MacDependencies.live()
@@ -46,6 +48,13 @@ final class MacAgent {
         NSApplication.shared.setActivationPolicy(.prohibited)
         coordinator.reload()
         guard hasWork else { exit(0) }
+        // Keep gathering (FS-19.08 §6c): every 15 minutes, and what it
+        // changed reaches the app.
+        dependencies.gatherer.onChange = { MacAgentLink.postCommonPhotosChanged() }
+        // Its notices are clicked here while ShotDex is closed: handed to the app.
+        notices.handsOverToApp = true
+        UNUserNotificationCenter.current().delegate = notices
+        if MacCommonPhotosGatherer.hasWork(dependencies.database) { dependencies.gatherer.start() }
         MacAgentLink.beat()
         MacAgentLink.observe(MacAgentLink.commandsPosted) { [weak self] in self?.drainCommands() }
         let center = NSWorkspace.shared.notificationCenter
@@ -87,6 +96,10 @@ final class MacAgent {
             case .jobsChanged: coordinator.jobsChanged()
             case .start: coordinator.jobsChanged(start: command.jobId)
             case .checkOnServer: checkOnServer()
+            case .gatherNow: command.jobId.map(dependencies.gatherer.gatherNow)
+            case .watchesChanged:
+                // A set just turned on gets its first pass now (start() passes).
+                if MacCommonPhotosGatherer.hasWork(dependencies.database) { dependencies.gatherer.start() } else { dependencies.gatherer.stop() }
             }
         }
         quitIfIdle()
@@ -102,13 +115,16 @@ final class MacAgent {
         if check.isRunning { relistsAfterPass = true } else { check.appBecameActive() }
     }
 
-    /// Backup jobs, or a server source for the On Server check.
+    /// Backup jobs, a server source for the On Server check, or a set
+    /// Keep gathering runs.
     private var hasWork: Bool {
         !coordinator.jobs.isEmpty || MacAgentLink.hasOnServerWork(dependencies.database)
+            || MacCommonPhotosGatherer.hasWork(dependencies.database)
     }
 
     private func quitIfIdle() {
-        if coordinator.jobs.isEmpty, coordinator.isIdle, !check.isRunning, !hasWork {
+        if coordinator.jobs.isEmpty, coordinator.isIdle, !check.isRunning, !dependencies.gatherer.isBusy,
+           !dependencies.commonPhotos.isAnyRunning, !hasWork {
             MacAgentLink.publish(nil)
             exit(0)
         }

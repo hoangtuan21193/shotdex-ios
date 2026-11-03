@@ -154,21 +154,57 @@ struct CommonPhotosRunner: Sendable {
     private struct RunKey: Hashable { let database: ObjectIdentifier; let runId: String }
     private static let active = OSAllocatedUnfairLock(initialState: Set<RunKey>())
 
-    /// Marks `runId` as going in this process; false when it already is.
-    /// The undo runner takes the same claim, so Activity and the banner see
-    /// either kind of run as busy.
+    /// Renewing the database claim of each run going here.
+    private static let renewals = OSAllocatedUnfairLock(initialState: [RunKey: Task<Void, Never>]())
+    /// Runs whose claim another process took while they ran (a sleep past
+    /// the expiry): they stop before the next photo.
+    private static let lostClaims = OSAllocatedUnfairLock(initialState: Set<RunKey>())
+
+    /// The claim went to the other process: this runner must not go on.
+    static func hasLostClaim(runId: String, in database: AppDatabase) -> Bool {
+        lostClaims.withLock { $0.contains(RunKey(database: ObjectIdentifier(database), runId: runId)) }
+    }
+
+    /// Marks `runId` as going in this process; false when it already is —
+    /// here, or in the other process on the same database file (the Mac
+    /// app and its helper, FS-19.08 §6c), whose claim is renewed while it
+    /// runs. The undo runner takes the same claim, so Activity and the
+    /// banner see either kind of run as busy.
     static func claim(runId: String, in database: AppDatabase) -> Bool {
-        active.withLock { $0.insert(RunKey(database: ObjectIdentifier(database), runId: runId)).inserted }
+        let key = RunKey(database: ObjectIdentifier(database), runId: runId)
+        guard active.withLock({ $0.insert(key).inserted }) else { return false }
+        let claims = CommonPhotosClaims(database: database)
+        guard claims.claim(.run, id: runId) else {
+            _ = active.withLock { $0.remove(key) }
+            return false
+        }
+        let renewal = Task.detached(priority: .utility) {
+            while !Task.isCancelled {
+                try? await Task.sleep(for: CommonPhotosClaims.renewEvery)
+                if !Task.isCancelled, !claims.renew(.run, id: runId) {
+                    _ = lostClaims.withLock { $0.insert(key) }
+                    return
+                }
+            }
+        }
+        renewals.withLock { $0[key] = renewal }
+        return true
     }
 
     static func release(runId: String, in database: AppDatabase) {
-        _ = active.withLock { $0.remove(RunKey(database: ObjectIdentifier(database), runId: runId)) }
+        let key = RunKey(database: ObjectIdentifier(database), runId: runId)
+        renewals.withLock { $0.removeValue(forKey: key) }?.cancel()
+        // A claim lost is not ours to release.
+        if lostClaims.withLock({ $0.remove(key) }) == nil { CommonPhotosClaims(database: database).release(.run, id: runId) }
+        _ = active.withLock { $0.remove(key) }
     }
 
-    /// Whether a runner is going on this run now — the banner then shows it
-    /// in progress, never Resume · Discard.
+    /// Whether a runner is going on this run now, in this process or the
+    /// other one — the banner then shows it in progress, never Resume ·
+    /// Discard.
     static func isActive(runId: String, in database: AppDatabase) -> Bool {
         active.withLock { $0.contains(RunKey(database: ObjectIdentifier(database), runId: runId)) }
+            || CommonPhotosClaims(database: database).isClaimedElsewhere(.run, id: runId)
     }
 
     /// Runs every photo not done yet. Returns when all are done; throws when
@@ -196,6 +232,8 @@ struct CommonPhotosRunner: Sendable {
             let listing = try await client.entries(in: run.destination).filter { !$0.isDirectory }
             let destination = Destination(folder: run.destination, entries: listing)
             for index in items.indices where !items[index].isDone {
+                // The other process took the run over (FS-19.08 §6c).
+                if Self.hasLostClaim(runId: runId, in: store.database) { throw Stop.alreadyRunning }
                 try Task.checkCancellation()
                 switch run.action {
                 case .copy: try await copy(&items[index], into: destination, state: state, progress: progress)
