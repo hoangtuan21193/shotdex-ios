@@ -553,6 +553,14 @@
    "h": 900,
    "radius": 16,
    "title": "Mac · Common Photos đang chạy: cửa sổ log từng file, Copying 120 of 280, Pause/Stop, lọc trạng thái (FS-19.08 §7)"
+  },
+  "MAC_Activity.dc.html": {
+   "x": 13320,
+   "y": 6710,
+   "w": 900,
+   "h": 560,
+   "title": "Mac · Cửa sổ Activity ⌥⌘0: mọi việc chạy lâu một kiểu hàng — Common photos (Show Log), index NAS, backup tạm dừng (Try Again), lượt đã xong (Clear); tweak empty = No Activity",
+   "radius": 16
   }
  },
  "order": [
@@ -623,7 +631,8 @@
   "MAC_BackupNew.dc.html",
   "MAC_BackupOrganize.dc.html",
   "MAC_CommonPhotos.dc.html",
-  "MAC_CommonPhotosRun.dc.html"
+  "MAC_CommonPhotosRun.dc.html",
+  "MAC_Activity.dc.html"
  ],
  "notes": {
   "row_lib": {

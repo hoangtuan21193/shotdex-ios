@@ -41,7 +41,8 @@ của loop: mỗi vòng đọc nó trước, ghi lại sau.
 | T9a | xong | (xem git log) | màn duyệt server Mac: cột + lưới, Rescan, sao/cờ, ⌘/⇧ sẵn cho T9b; accent sáng #C6730E; `ServerSourceRefresh` cho lượt sau chờ lượt đang chạy. Chưa bấm thử được (không có quyền Accessibility) |
 | T9b | xong | (xem git log) | ⌘/⇧ chọn nhiều (ClickSelection, Domain), chuột phải chọn lại mục rồi mới mở menu, menu ẩn Find Common Photos… dưới 2 folder (HIG), File ⇧⌘F; hook `commonPhotosRequest` cho T10. Chưa bấm thử được |
 | T10 | xong | (xem git log) | sheet + `MacCommonPhotosRuns` (connect, giữ máy thức, afterRun: lịch sử 1 lần ghi + rescan `fresh`); chạy thật Copy 8 ảnh + Move 3 ảnh từ app trên SMB ảo (scratch, đã dọn); SHA cache chỉ cho bản folder đầu; `ServerIdentity` (SFTP username, WebDAV share) |
-| T11a…T12 | chưa | — | |
+| T11a | xong | (xem git log) | board `MAC_Activity` 900×560 sáng/tối + tweak empty, publish canvas Mac v76 |
+| T11, T11b, T12 | chưa | — | T11 đang làm |
 
 Tiếp: T11a (vẽ board `MAC_Activity`) → T11 (cửa sổ `MAC_CommonPhotosRun`) → T11b (Activity).
 
