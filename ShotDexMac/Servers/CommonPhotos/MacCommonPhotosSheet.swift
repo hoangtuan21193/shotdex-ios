@@ -367,6 +367,18 @@ private struct MacCommonPhotosSheetContent: View {
                         count(String(localized: "Checking", comment: "Mac common photos sheet: photos still being checked"),
                               model.checkingCount, done: false)
                     }
+                    if model.notCheckedCount > 0 {
+                        // A failed scan's leftovers: counted, never listed (§6d).
+                        HStack(spacing: 5) {
+                            Image(systemName: "exclamationmark.circle").foregroundStyle(.secondary)
+                            Text("Not checked", comment: "Mac common photos sheet: photos a failed scan never reached")
+                                .foregroundStyle(.secondary)
+                            Text(model.notCheckedCount.formatted()).fontWeight(.semibold).monospacedDigit()
+                        }
+                        .lineLimit(1)
+                        .fixedSize()
+                        .accessibilityElement(children: .combine)
+                    }
                 }
                 .frame(height: 28)
                 let isNothingNew = model.phase == .done && !model.isCutting && model.photos.isEmpty
@@ -390,8 +402,8 @@ private struct MacCommonPhotosSheetContent: View {
                     .listStyle(.bordered)
                     .alternatingRowBackgrounds()
                     .accessibilityLabel(model.folders.count == 2
-                                        ? String(localized: "Photos in both folders", comment: "Mac common photos sheet: results list")
-                                        : String(localized: "Photos in all folders", comment: "Mac common photos sheet: results list"))
+                                        ? String(localized: "Same photos in both folders", comment: "Mac common photos sheet: results list")
+                                        : String(localized: "Same photos in all folders", comment: "Mac common photos sheet: results list"))
                 }
             }
         }
@@ -690,9 +702,8 @@ private struct MacCommonPhotosSheetContent: View {
     }
 }
 
-/// One result: the photo's thumbnail from the index when a source holds it,
-/// its name and where it is in each folder, its size and Same / Likely /
-/// Checking.
+/// One Same photo: its thumbnail from the index when a source holds it, its
+/// name and where it is in each folder, and its size (§6d: only Same rows).
 private struct MacCommonPhotosRow: View {
     let row: CommonPhotosScanModel.Row
     let database: AppDatabase
@@ -716,32 +727,10 @@ private struct MacCommonPhotosRow: View {
             Text(row.size.formatted(.byteCount(style: .file)))
                 .font(.callout).monospacedDigit().foregroundStyle(.secondary)
                 .frame(width: 64, alignment: .trailing)
-            status.frame(width: 86, alignment: .leading)
         }
         .frame(height: 40)
         .accessibilityElement(children: .combine)
         .task(id: row.serverPath) { thumbnail = await loadThumbnail() }
-    }
-
-    @ViewBuilder
-    private var status: some View {
-        switch row.status {
-        case .same:
-            Label(String(localized: "Same", comment: "Mac common photos sheet: row status"), systemImage: "checkmark")
-                .foregroundStyle(.green)
-        case .likely:
-            Label(String(localized: "Likely", comment: "Mac common photos sheet: row status, looks the same, not yet proven"),
-                  systemImage: "circle.dashed")
-                .foregroundStyle(.secondary)
-        case .checking:
-            HStack(spacing: 5) {
-                ProgressView().controlSize(.mini)
-                Text("Checking", comment: "Mac common photos sheet: row status")
-            }
-            .foregroundStyle(.secondary)
-        case .notChecked:
-            Text("Not checked", comment: "Mac common photos sheet: row status after the scan failed").foregroundStyle(.secondary)
-        }
     }
 
     /// The index's thumbnail of this file, when a source on the server holds it.

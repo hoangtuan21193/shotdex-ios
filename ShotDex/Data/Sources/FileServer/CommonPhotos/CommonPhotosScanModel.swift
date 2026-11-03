@@ -5,8 +5,9 @@ import os
 
 /// What the Find Common Photos sheet holds (FS-19.08 §4–5, board
 /// `MAC_CommonPhotos`): the folders and where the common photos go, Copy or
-/// Move, and the scan — the listing, the Likely the same preview, then the
-/// SHA-256 check that makes each photo Same. The sheet draws this; the
+/// Move, and the scan — the listing, the size and Likely sort that orders
+/// the reads, then the SHA-256 check that makes each photo Same (§6d: only
+/// Same photos are rows). The sheet draws this; the
 /// engine (`CommonPhotosScanner`, `CommonPhotosMatcher`,
 /// `CommonPhotosVerifier`, `CommonPhotosRunner.items`) does the work.
 /// Every path is a server path; `client` is the connection's, behind its
@@ -30,15 +31,9 @@ final class CommonPhotosScanModel {
         case noDestination
     }
 
-    /// One row of the results: a photo of the first folder that can still be
-    /// common, and where it stands.
+    /// One row of the results: a photo proven Same (§6d — rows still being
+    /// checked are only counted, never listed).
     struct Row: Identifiable, Equatable {
-        enum Status: Equatable {
-            case checking, likely, same
-            /// The scan failed before reaching it.
-            case notChecked
-        }
-
         let id: String
         let name: String
         /// Folder and subfolder in each folder, "Tuan/2025/06 · Vo/from-tuan",
@@ -47,7 +42,6 @@ final class CommonPhotosScanModel {
         /// Every copy's whole path below its folder, for the tooltip.
         let fullPaths: String
         let size: Int64
-        let status: Status
         /// The first folder's copy, for its thumbnail.
         let serverPath: String
     }
@@ -116,7 +110,8 @@ final class CommonPhotosScanModel {
     private(set) var photos: [CommonPhoto] = []
     /// Files listed so far, while listing.
     private(set) var listedFiles = 0
-    /// First-folder candidates the verifier has decided; the rows follow this.
+    /// First-folder candidates the verifier has decided; Checking and Not
+    /// checked are counted from it.
     private(set) var checkedFiles = 0
     /// Bytes still to read, refreshed at most ten times a second.
     private(set) var bytesLeft: Int64 = 0
@@ -198,41 +193,18 @@ final class CommonPhotosScanModel {
 
     var checkingCount: Int { isScanning ? max(0, candidateCount - checkedFiles) : 0 }
 
+    /// First-folder candidates a failed scan never reached.
+    var notCheckedCount: Int { failure != nil ? max(0, candidateCount - checkedFiles) : 0 }
+
     var sameBytes: Int64 { photos.reduce(Int64(0)) { $0 + $1.size } }
 
-    /// Same first, in the order found, then what is still being checked —
-    /// or, after a failure, was never reached.
+    /// The Same photos, in the order found (§6d: Same only).
     var rows: [Row] {
-        guard let preview else { return [] }
-        var rows = photos.map { photo in
-            row(photo.files.map { $0[0] }, size: photo.size, status: .same)
-        }
-        guard phase != .done else { return rows }
-        let same = Set(photos.flatMap { $0.files[0] })
-        let stopped = failure != nil
-        for group in undecidedGroups(preview) {
-            for file in group.files[0] where !same.contains(file) {
-                let status: Row.Status = stopped ? .notChecked : (preview.likely.contains(file) ? .likely : .checking)
-                rows.append(row([file], size: file.size, status: status))
-            }
-        }
-        return rows
+        guard preview != nil else { return [] }
+        return photos.map { photo in row(photo.files.map { $0[0] }, size: photo.size) }
     }
 
-    /// The groups the verifier has not reached, in its order: groups holding
-    /// a Likely file first (`CommonPhotosVerifier.verify`).
-    private func undecidedGroups(_ preview: CommonPhotosMatcher.Preview) -> [CommonPhotosMatcher.SizeGroup] {
-        let holdsLikely = { (group: CommonPhotosMatcher.SizeGroup) in group.files.joined().contains(where: preview.likely.contains) }
-        let ordered = preview.groups.filter(holdsLikely) + preview.groups.filter { !holdsLikely($0) }
-        var checked = checkedFiles
-        return ordered.drop { group in
-            guard checked >= group.files[0].count else { return false }
-            checked -= group.files[0].count
-            return true
-        }.map { $0 }
-    }
-
-    private func row(_ files: [CommonPhotosFile], size: Int64, status: Row.Status) -> Row {
+    private func row(_ files: [CommonPhotosFile], size: Int64) -> Row {
         let first = files[0]
         let paths = files.map { file -> String in
             var place = ServerUploadPath.join(ServerUploadPath.lastComponent(of: folders[file.folder]), file.subfolder)
@@ -241,7 +213,7 @@ final class CommonPhotosScanModel {
         }
         let fullPaths = files.map { ServerUploadPath.join(ServerUploadPath.lastComponent(of: folders[$0.folder]), $0.relativePath) }
         return Row(id: "\(first.folder)/\(first.relativePath)", name: first.name, paths: paths.joined(separator: " · "),
-                   fullPaths: fullPaths.joined(separator: "\n"), size: size, status: status,
+                   fullPaths: fullPaths.joined(separator: "\n"), size: size,
                    serverPath: ServerUploadPath.join(folders[first.folder], first.relativePath))
     }
 
@@ -344,6 +316,11 @@ final class CommonPhotosScanModel {
         // saved even when the scan stops partway.
         let read = OSAllocatedUnfairLock(initialState: [CommonPhotosFile: String]())
         let readKeys = OSAllocatedUnfairLock(initialState: [CommonPhotosFile: String]())
+        // What the verifier decided and found, kept off the main actor: a
+        // failure can land before the callbacks' hops do (§6d: the list and
+        // "Not checked" must hold every group decided).
+        let decided = OSAllocatedUnfairLock(initialState: 0)
+        let foundSoFar = OSAllocatedUnfairLock(initialState: [CommonPhoto]())
         defer {
             remember(hashes: read.withLock { $0 }, keys: readKeys.withLock { $0 }, folders: folders)
         }
@@ -402,11 +379,14 @@ final class CommonPhotosScanModel {
                 preview, folders: folders, knownHashes: known, trustsCache: trustsCache,
                 hashed: { batch in read.withLock { $0.merge(batch, uniquingKeysWith: { _, new in new }) } },
                 found: { [weak self] batch in
+                let fresh = CommonPhotosIncremental.newPhotos(batch, folders: folders, seen: seen)
+                foundSoFar.withLock { $0 += fresh }
                 Task { @MainActor in
                     guard let self, self.scanId == scanId, self.phase == .checking else { return }
-                    self.photos += CommonPhotosIncremental.newPhotos(batch, folders: folders, seen: seen)
+                    self.photos += fresh
                 }
             }, progress: { [weak self] state in
+                decided.withLock { $0 = max($0, state.checkedFiles) }
                 let now = ContinuousClock.now
                 let isDue = lastUpdate.withLock { last in
                     guard now - last >= .milliseconds(100) else { return false }
@@ -434,6 +414,8 @@ final class CommonPhotosScanModel {
         } catch {
             guard !Task.isCancelled, self.scanId == scanId else { return }
             if (error as? RemoteFileError)?.stopsBatch == true { isConnected = false }
+            photos = foundSoFar.withLock { $0 }
+            checkedFiles = max(checkedFiles, decided.withLock { $0 })
             failureError = error as? RemoteFileError
             phase = .failed((error as? RemoteFileError)?.errorDescription ?? error.localizedDescription)
         }

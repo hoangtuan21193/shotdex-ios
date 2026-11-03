@@ -29,7 +29,7 @@ này là trí nhớ của loop: mỗi vòng đọc nó trước khi làm, ghi l�
 |---|---|---|---|
 | R1 | xong | (commit này) | test khoá AC-177…180 (`CommonPhotosReviewTests`, 6 test) + e2e SMB `changedAfterScanOnTheServer`; fake `move` giữ ngày sửa như SMB/WebDAV. Review: thêm ca bản đầu (A) đổi, sidecar, kiểm server; e2e chờ 2.1 s cho share giữ ngày sửa 2 giây |
 | R2 | xong | (commit này) | board Mac canvas v100: `MAC_CommonPhotos` (chỉ Same, ô chọn thật có `checked`, kế hoạch `→ Shared/tên` không bị cắt, Already in Shared mờ ảnh không mờ chữ, Move: cột Removes N copies + nút Move 278…, hàng bỏ = Left out from now on, nút Compare khi rê, Left Out ở chân danh sách; tweak `action`, `leftOut`), `MAC_CommonPhotosRun` readyToMove (ô chọn, tên dự kiến, Move 3…, Space to compare), `MAC_CommonPhotosCompare` mới tier D (photo/video/loading/waiting/noPreview/error/threeFolders, Include in Copy, câu lỗi FS-15.01 §3). Review design + UX: sửa hết điểm nên sửa; chưa vẽ: menu chuột phải, trạng thái 0 Same / bỏ hết. Spec §6d thêm Include in Compare, câu chân sheet, đếm theo số chọn |
-| R3 | chưa | | |
+| R3 | xong | (commit này) | `CommonPhotosScanModel.rows` chỉ Same (bỏ `Row.Status`), `notCheckedCount` sau Scan hỏng; sheet bỏ cột trạng thái, thêm "Not checked N" (có glyph, gộp VoiceOver), nhãn danh sách "Same photos in both folders". Review: race — lỗi tới trước khi callback về main actor thì mất nhóm vừa quyết; giữ `decided` + `foundSoFar` trong lock, đọc lại khi hỏng. Ảnh Mac `build/design/shots/R3/` (chưa có ô chọn/kế hoạch: R4–R5). Chưa chụp trạng thái Scan hỏng |
 | R4 | chưa | | |
 | R5 | chưa | | |
 | R6 | chưa | | |

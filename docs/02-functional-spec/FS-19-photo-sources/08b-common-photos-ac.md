@@ -86,7 +86,7 @@ số byte qua mạng.
 
 | # | Cho | Khi | Thì | Chứng minh bằng |
 |---|---|---|---|---|
-| AC-174 | A, B có 312 ứng viên cùng cỡ; 280 đã băm xong là Same, 32 đang băm | xem danh sách | đúng 280 hàng, hàng nào cũng Same; không chữ "Likely" ở hàng, đếm hay nhãn VoiceOver; đầu danh sách "Checking 32" | ⚠️ chưa có |
+| AC-174 | A, B có 312 ứng viên cùng cỡ; 280 đã băm xong là Same, 32 đang băm | xem danh sách | đúng 280 hàng, hàng nào cũng Same; không chữ "Likely" ở hàng, đếm hay nhãn VoiceOver; đầu danh sách "Checking 32" | ✅ `CommonPhotosScanModelTests.onlySameRows` (Scan hỏng giữa chừng: hàng = đúng các ảnh Same, phần chưa tới là đếm "Not checked"); ảnh Mac sáng/tối `build/design/shots/R3/` |
 | AC-175 | Copy; Shared có `IMG_0001.JPG` khác byte và `IMG_0002.JPG` cùng SHA với ảnh chung | Scan xong | hàng `IMG_0001` ghi `→ Shared/IMG_0001 (2).JPG`; hàng `IMG_0002` mờ, ghi `Already in Shared`, không đếm vào nút; đầu danh sách "… · 1 already in Shared" | ⚠️ chưa có |
 | AC-176 | Move; ảnh có 1 bản ở A, 2 bản ở B | Scan xong | hàng ghi `→ Shared/<tên>`, cột phải `Removes 3 copies`, tooltip liệt kê đủ 3 đường dẫn | ⚠️ chưa có |
 | AC-177 | Scan xong 3 ảnh Same (Copy), không file nào đổi | **Copy 3** | 0 lệnh `sha256` lên bản nguồn; 3 ảnh Copied; tên ở Shared đúng như hàng đã ghi | ✅ `CommonPhotosReviewTests.copyRunReadsNoSource`, `copyWithSidecarReadsNoSource` |
