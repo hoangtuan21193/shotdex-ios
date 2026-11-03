@@ -35,11 +35,25 @@ struct CommonPhotosScanner {
     /// none too; a server that went away stops the scan.
     func captureKeys(for groups: [CommonPhotosMatcher.SizeGroup], folders: [String],
                      known: [CommonPhotosFile: String] = [:]) async throws -> [CommonPhotosFile: String] {
+        try await readCaptureKeys(for: groups, folders: folders, known: known).keys
+    }
+
+    /// The same, also naming the files whose head was read and gave no key
+    /// — so an earlier scan's "none" (`knownNone`) is not read again
+    /// (FS-19.08 §6c).
+    /// `read` hears each head as it is read — its key, or nil — so what a
+    /// stopped scan read is not lost.
+    func readCaptureKeys(for groups: [CommonPhotosMatcher.SizeGroup], folders: [String],
+                         known: [CommonPhotosFile: String] = [:], knownNone: Set<CommonPhotosFile> = [],
+                         read: @Sendable (CommonPhotosFile, String?) -> Void = { _, _ in })
+        async throws -> (keys: [CommonPhotosFile: String], none: Set<CommonPhotosFile>) {
         var keys = known
+        var none: Set<CommonPhotosFile> = []
         for group in groups {
             let alike = CommonPhotosMatcher.likely(group)
             guard group.files.joined().contains(where: { !alike.contains($0) }) else { continue }
-            for file in group.files.joined() where keys[file] == nil && !FolderEnumeration.isMovie(URL(fileURLWithPath: file.name)) {
+            for file in group.files.joined() where keys[file] == nil && !knownNone.contains(file)
+                && !FolderEnumeration.isMovie(URL(fileURLWithPath: file.name)) {
                 try Task.checkCancellation()
                 let path = ServerUploadPath.join(folders[file.folder], file.relativePath)
                 let head: Data
@@ -48,9 +62,11 @@ struct CommonPhotosScanner {
                 } catch let error as RemoteFileError where !error.stopsBatch {
                     continue
                 }
-                if let key = CommonPhotosCaptureKey.key(fromHead: head) { keys[file] = key }
+                let key = CommonPhotosCaptureKey.key(fromHead: head)
+                if let key { keys[file] = key } else { none.insert(file) }
+                read(file, key)
             }
         }
-        return keys
+        return (keys, none)
     }
 }

@@ -91,7 +91,10 @@ struct FileServerStore: Sendable {
     /// foreign key nulls the id and the row keeps the name.
     func delete(id: String) throws {
         _ = try database.writer.write { db in
-            try FileServer.deleteOne(db, key: id)
+            // What Common Photos read of its files (FS-19.08 §6c) is of no
+            // use without it.
+            try CommonPhotosScanRecords.forget(connectionId: id, in: db)
+            return try FileServer.deleteOne(db, key: id)
         }
         passwords.removePassword(for: id)
     }

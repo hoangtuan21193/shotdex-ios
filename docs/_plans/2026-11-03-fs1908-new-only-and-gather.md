@@ -6,7 +6,7 @@
 | Intent | [2026-11-03-common-photos-new-only-and-sync](../_intents/2026-11-03-common-photos-new-only-and-sync.md) |
 | Commit spec | `463a5021` (intent `43c24873`) |
 | Ngày | 2026-11-03 |
-| Trạng thái | đã duyệt 2026-11-03 — 10 task (G1–G10), chưa làm |
+| Trạng thái | đang làm — G1 xong (loop: [FS1908_GATHER_LOOP.md](FS1908_GATHER_LOOP.md)) |
 
 ## 1. Hiểu đúng chưa
 
@@ -48,9 +48,9 @@ hôm nay phải quét lại từ đầu, và băm lại mọi file cùng cỡ �
 
 ### 2a. Tái dùng
 
-- `CommonPhotosVerifier` (mẫu 3 đoạn, SHA cả file, tham số `knownHashes`): chỉ đổi nguồn của `knownHashes` và bỏ giới
-  hạn `folder == 0`. Folder khác vẫn dùng SHA đã nhớ, vì Move hỏi lại cỡ + ngày sửa ngay trước khi xoá (§6) và kiểm
-  đích bằng SHA. Không có thêm rủi ro xoá nhầm.
+- `CommonPhotosVerifier` (mẫu 3 đoạn, SHA cả file, tham số `knownHashes`): thêm nguồn SHA đã nhớ; bỏ giới hạn
+  `folder == 0` **chỉ cho lượt quét Copy** (`trustsCache`). Move giữ luật cũ, vì Move xoá các bản ngoài folder đầu
+  chỉ sau khi hỏi lại cỡ + ngày sửa, không SHA (sửa khi làm G1).
 - `CommonPhotosScanner.captureKeys(known:)`: tham số đã có, chỉ cần truyền khoá đã nhớ.
 - `CommonPhotosRunner` (copy/move/skip/resume/CSV/undo): lượt tự gom là lượt thường, có thêm cột. Không viết runner thứ hai.
 - `OnServerSchedule.Wait` (`.charging`, `.wifi`, `.unreachable`) và chữ của nó (`OnServerProgressLine.text(for:)`).

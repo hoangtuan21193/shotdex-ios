@@ -153,6 +153,9 @@ Copy/Move vẫn là cùng bộ.
   `copy_files` hay `photo_metadata`.
 - Lần quét sau, file có **đường dẫn + cỡ + ngày sửa** trùng thì lấy SHA đã nhớ, không đọc byte nào. Ngày sửa chỉ dùng để
   biết file có đổi hay không, không bao giờ dùng để nói hai file giống nhau (giữ luật §5).
+- Chỉ lượt quét **Copy** tin SHA đã nhớ ở mọi folder: Copy không xoá gì và đọc lại SHA của bản nó ghi. Lượt quét
+  **Move** vẫn băm lại mọi bản ngoài folder đầu như §5, vì Move xoá trên những bản đó. Đổi Copy → Move sau hay trong
+  lúc quét thì kết quả bị bỏ, phải quét lại.
 - File không còn trên server ở lần liệt kê sau: bỏ khỏi bảng nhớ.
 
 ### Chạy lại chỉ ảnh mới

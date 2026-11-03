@@ -63,7 +63,7 @@ Cùng dữ liệu thử như trên. "Bộ" = A + B → Shared trên một connec
 
 | # | Cho | Khi | Thì | Chứng minh bằng |
 |---|---|---|---|---|
-| AC-159 | A, B không phải nguồn, mỗi bên 1.000 file, 300 chung; quét một lần | quét lại cùng bộ, không file nào đổi | 0 lệnh đọc byte (client giả đếm `sha256`/`download`/đọc đầu file); kết quả 300 Same như lần đầu | ⚠️ chưa có |
+| AC-159 | A, B không phải nguồn, mỗi bên 1.000 file, 300 chung; quét một lần | quét lại cùng bộ, không file nào đổi | 0 lệnh đọc byte (client giả đếm `sha256`/`download`/đọc đầu file); kết quả 300 Same như lần đầu | ✅ `CommonPhotosIncrementalTests.rescanReadsNothing` (+ `changedFileIsReadAgain`, `moveDoesNotTrustTheCache`, `moveMidScanCannotRunOnTrust`); e2e SMB ảo `rescanOnTheServerReadsNothing` |
 | AC-160 | lượt Copy xong 300 ảnh; sau đó thêm 3 ảnh cùng byte vào cả A và B | quét lại cùng bộ | danh sách đúng 3 ảnh mới; 300 ảnh cũ không hiện, không có lệnh nào tới đường dẫn của chúng ngoài liệt kê; nút **Copy 3** | ⚠️ chưa có |
 | AC-161 | như AC-160, thêm `X.JPG` chỉ vào A | quét lại | X không trong danh sách; lần quét sau khi B có X cùng byte thì X vào danh sách | ⚠️ chưa có |
 | AC-162 | ảnh `IMG_1.JPG` đã gom; sau đó ghi đè nội dung mới ở cả A và B (cỡ khác) | quét lại | IMG_1 được băm lại, là ảnh mới; Copy đặt `IMG_1 (2).JPG` ở Shared, bản cũ giữ nguyên | ⚠️ chưa có |

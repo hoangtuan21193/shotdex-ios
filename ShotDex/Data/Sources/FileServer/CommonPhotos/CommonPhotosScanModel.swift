@@ -14,6 +14,7 @@ import os
 @MainActor
 @Observable
 final class CommonPhotosScanModel {
+    nonisolated static let logger = Logger(subsystem: "com.hoangtuan.shotdex", category: "CommonPhotos")
     enum Phase: Equatable {
         case idle
         case listing
@@ -57,7 +58,15 @@ final class CommonPhotosScanModel {
     /// Photos and videos in each folder, once listed.
     private(set) var fileCounts: [String: Int] = [:]
     var destination: String?
-    var action = CommonPhotosRun.Action.copy
+    var action = CommonPhotosRun.Action.copy {
+        didSet {
+            // A Copy scan took earlier hashes on trust (FS-19.08 §6c); a
+            // Move deletes on them, so it scans again.
+            if action == .move, scannedTrustingCache { resetScan() }
+        }
+    }
+    /// The scan shown took every known hash on trust (a Copy scan).
+    private var scannedTrustingCache = false
     private(set) var phase = Phase.idle
     private(set) var preview: CommonPhotosMatcher.Preview?
     private(set) var photos: [CommonPhoto] = []
@@ -125,7 +134,10 @@ final class CommonPhotosScanModel {
     }
 
     /// A destination is set and Same photos are found: Copy N / Move N.
-    var canRun: Bool { phase == .done && problem == nil && !photos.isEmpty }
+    /// Never a Move on a scan that took earlier hashes on trust.
+    var canRun: Bool {
+        phase == .done && problem == nil && !photos.isEmpty && !(action == .move && scannedTrustingCache)
+    }
 
     /// Whether some source shows what lands in the destination.
     var isDestinationIndexed: Bool {
@@ -223,6 +235,7 @@ final class CommonPhotosScanModel {
         listedFiles = 0
         checkedFiles = 0
         bytesLeft = 0
+        scannedTrustingCache = false
     }
 
     private func runScan() async {
@@ -237,6 +250,16 @@ final class CommonPhotosScanModel {
         bytesLeft = 0
         // Ten updates a second at most: a big file's hash reports often.
         let lastUpdate = OSAllocatedUnfairLock(initialState: ContinuousClock.now - .seconds(1))
+        let trustsCache = action == .copy
+        // Set before any read: switching to Move mid-scan drops this scan.
+        scannedTrustingCache = trustsCache
+        // What this scan reads, kept for the next one (FS-19.08 §6c) —
+        // saved even when the scan stops partway.
+        let read = OSAllocatedUnfairLock(initialState: [CommonPhotosFile: String]())
+        let readKeys = OSAllocatedUnfairLock(initialState: [CommonPhotosFile: String]())
+        defer {
+            remember(hashes: read.withLock { $0 }, keys: readKeys.withLock { $0 }, folders: folders)
+        }
         do {
             if !isConnected {
                 try await client.connect()
@@ -252,6 +275,10 @@ final class CommonPhotosScanModel {
             let listing = try await scanner.list(folders)
             try Task.checkCancellation()
             self.listing = listing
+            // Forgotten before anything new is saved, so a save never
+            // brings back a file the listing no longer has.
+            await forget(notIn: listing, folders: folders)
+            let records = await scanRecords(listing, folders: folders)
             fileCounts = Dictionary(uniqueKeysWithValues: zip(folders, listing.files.map(\.count)))
             // What size and name say, shown at once; the heads refine it.
             let firstLook = CommonPhotosMatcher.preview(listing.files)
@@ -259,12 +286,20 @@ final class CommonPhotosScanModel {
             bytesLeft = firstLook.candidateBytes
             phase = .checking
             let groups = CommonPhotosMatcher.sizeGroups(listing.files)
-            let keys = try await scanner.captureKeys(for: groups, folders: folders)
+            let knownKeys = records.compactMapValues(\.captureKey).filter { !$0.value.isEmpty }
+            let knownNone = Set(records.filter { $0.value.captureKey == "" }.keys)
+            let keys = try await scanner.readCaptureKeys(for: groups, folders: folders, known: knownKeys, knownNone: knownNone,
+                                                         read: { file, key in readKeys.withLock { $0[file] = key ?? "" } }).keys
             try Task.checkCancellation()
             let preview = CommonPhotosMatcher.preview(listing.files, captureKeys: keys)
             self.preview = preview
-            let known = await knownHashes(preview, folders: folders)
-            let found = try await CommonPhotosVerifier(client: watched).verify(preview, folders: folders, knownHashes: known, found: { [weak self] batch in
+            // The index's hashes first, then what earlier scans read.
+            let known = (await knownHashes(preview, folders: folders))
+                .merging(records.compactMapValues(\.sha256), uniquingKeysWith: { index, _ in index })
+            let found = try await CommonPhotosVerifier(client: watched).verify(
+                preview, folders: folders, knownHashes: known, trustsCache: trustsCache,
+                hashed: { batch in read.withLock { $0.merge(batch, uniquingKeysWith: { _, new in new }) } },
+                found: { [weak self] batch in
                 Task { @MainActor in
                     guard let self, self.scanId == scanId, self.phase == .checking else { return }
                     self.photos += batch
@@ -334,6 +369,66 @@ final class CommonPhotosScanModel {
             known[file] = row.sha256
         }
         return known
+    }
+
+    // MARK: What earlier scans read (FS-19.08 §6c)
+
+    private var scanRecordStore: CommonPhotosScanRecords? { database.map(CommonPhotosScanRecords.init) }
+
+    private func path(of file: CommonPhotosFile, folders: [String]) -> String {
+        ServerUploadPath.join(folders[file.folder], file.relativePath)
+    }
+
+    /// Earlier scans' records of the listed files that still match them —
+    /// same size and write time; a file with no write time has none.
+    private func scanRecords(_ listing: CommonPhotosScanner.Listing, folders: [String]) async -> [CommonPhotosFile: CommonPhotosScanRecord] {
+        guard let store = scanRecordStore else { return [:] }
+        let files = listing.files.joined().filter { $0.modified != nil }
+        let paths = files.map { path(of: $0, folders: folders) }
+        let connectionId = connectionId
+        let byPath = (try? await Task.detached { try store.records(connectionId: connectionId, paths: paths) }.value) ?? [:]
+        var out: [CommonPhotosFile: CommonPhotosScanRecord] = [:]
+        for (file, path) in zip(files, paths) {
+            guard let record = byPath[path], let modified = file.modified, record.size == file.size,
+                  record.modifiedAt == Int(modified.timeIntervalSince1970) else { continue }
+            out[file] = record
+        }
+        return out
+    }
+
+    /// Saves what this scan read, for the next one — built and written off
+    /// the main actor.
+    private func remember(hashes: [CommonPhotosFile: String], keys: [CommonPhotosFile: String], folders: [String]) {
+        guard let store = scanRecordStore, !hashes.isEmpty || !keys.isEmpty else { return }
+        let connectionId = connectionId
+        Task.detached {
+            var records: [String: CommonPhotosScanRecord] = [:]
+            for file in Set(hashes.keys).union(keys.keys) {
+                guard let modified = file.modified else { continue }
+                let path = ServerUploadPath.join(folders[file.folder], file.relativePath)
+                records[path] = CommonPhotosScanRecord(path: path, size: file.size, modifiedAt: Int(modified.timeIntervalSince1970),
+                                                       sha256: hashes[file], captureKey: keys[file])
+            }
+            do { try store.save(connectionId: connectionId, Array(records.values)) } catch {
+                Self.logger.error("scan records not saved: \(error.localizedDescription, privacy: .public)")
+            }
+        }
+    }
+
+    /// Drops what earlier scans read of files these folders no longer hold.
+    private func forget(notIn listing: CommonPhotosScanner.Listing, folders: [String]) async {
+        guard let store = scanRecordStore else { return }
+        let connectionId = connectionId
+        let listed = zip(folders, listing.files).map { folder, files in
+            (folder, Set(files.map { ServerUploadPath.join(folder, $0.relativePath) }))
+        }
+        await Task.detached {
+            for (folder, paths) in listed {
+                do { try store.prune(connectionId: connectionId, under: folder, keeping: paths) } catch {
+                    Self.logger.error("scan records not pruned: \(error.localizedDescription, privacy: .public)")
+                }
+            }
+        }.value
     }
 
     // MARK: Run

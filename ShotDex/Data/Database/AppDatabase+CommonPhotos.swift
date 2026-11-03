@@ -94,4 +94,25 @@ extension AppDatabase {
             try db.create(index: "common_photo_history_moves_run", on: "common_photo_history_moves", columns: ["runId"])
         }
     }
+
+    /// FS-19.08 §6c: what a common-photos scan read of each file — its
+    /// SHA-256 and capture key — so the next scan of the same files reads
+    /// nothing again. Any folder, source or not; one row per path on a
+    /// connection, valid while size and write time stay the same.
+    static func registerCommonPhotosScanRecords(_ migrator: inout DatabaseMigrator) {
+        migrator.registerMigration("v52-commonPhotosScanRecords") { db in
+            try db.create(table: "common_photo_scan_records") { t in
+                t.column("connectionId", .text).notNull()
+                // The exact path on the server: two names that differ only
+                // in case are two files on WebDAV and SFTP.
+                t.column("path", .text).notNull()
+                t.column("size", .integer).notNull()
+                t.column("modifiedAt", .integer).notNull()
+                t.column("sha256", .text)
+                t.column("captureKey", .text)
+                t.column("readAt", .integer).notNull()
+                t.primaryKey(["connectionId", "path"])
+            }
+        }
+    }
 }

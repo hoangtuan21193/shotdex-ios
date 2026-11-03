@@ -36,13 +36,21 @@ struct CommonPhotosVerifier {
     }
 
     /// The photos every folder holds. `knownHashes` are SHA-256s taken
-    /// earlier for the same path, size and write time (`copy_files`), used
-    /// for the first folder's copies only; a file listed with no write time
-    /// has nothing to vouch for its hash, so its entry is ignored. `found` hears each size group's Same photos as they
-    /// are decided; `progress` hears after every group and while a big file
-    /// hashes. A server that went away stops the scan.
+    /// earlier for the same path, size and write time (`copy_files`, or an
+    /// earlier scan, FS-19.08 §6c); a file listed with no write time has
+    /// nothing to vouch for its hash, so its entry is ignored. They stand in
+    /// for the first folder's copies only — unless `trustsCache`, which a
+    /// Copy scan sets: a Copy deletes nothing and reads back what it writes,
+    /// so every copy's known hash stands and a group known throughout is not
+    /// read at all. A Move deletes the other copies, which are hashed now.
+    /// `hashed` hears every SHA-256 this scan worked out, group by group,
+    /// for the next scan. `found` hears each size group's Same photos as
+    /// they are decided; `progress` hears after every group and while a big
+    /// file hashes. A server that went away stops the scan.
     func verify(_ preview: CommonPhotosMatcher.Preview, folders: [String],
                 knownHashes: [CommonPhotosFile: String] = [:],
+                trustsCache: Bool = false,
+                hashed: @Sendable ([CommonPhotosFile: String]) -> Void = { _ in },
                 found: @Sendable ([CommonPhoto]) -> Void = { _ in },
                 progress: @escaping @Sendable (Progress) -> Void = { _ in }) async throws -> [CommonPhoto] {
         let holdsLikely = { (group: CommonPhotosMatcher.SizeGroup) in group.files.joined().contains(where: preview.likely.contains) }
@@ -51,6 +59,22 @@ struct CommonPhotosVerifier {
         var photos: [CommonPhoto] = []
         for group in groups {
             try Task.checkCancellation()
+            let known = group.files.joined().compactMap { file in
+                file.modified == nil ? nil : knownHashes[file].map { (file, $0) }
+            }
+            if trustsCache, known.count == group.files.joined().count {
+                // Every copy known, nothing changed since: no byte read.
+                let hashes = Dictionary(known, uniquingKeysWith: { first, _ in first })
+                let groupPhotos = CommonPhotosMatcher.shared(group.files, keys: hashes).sorted(by: { $0.key < $1.key })
+                    .map { CommonPhoto(sha256: $0.key, size: group.size, files: $0.value) }
+                photos += groupPhotos
+                state.checkedFiles += group.files[0].count
+                state.checkedBytes += group.size * Int64(group.files[0].count)
+                state.sameCount = photos.count
+                if !groupPhotos.isEmpty { found(groupPhotos) }
+                progress(state)
+                continue
+            }
             var samples: [CommonPhotosFile: String] = [:]
             for file in group.files.joined() {
                 try Task.checkCancellation()
@@ -68,9 +92,10 @@ struct CommonPhotosVerifier {
             } else if candidates.allSatisfy({ !$0.isEmpty }) {
                 for file in candidates.joined() {
                     // A cached hash stands in only for the first folder's
-                    // copy — the one a Move renames, never deletes. Every
-                    // other copy is hashed now: a Move deletes on it.
-                    if file.folder == 0, file.modified != nil, let known = knownHashes[file] {
+                    // copy — the one a Move renames, never deletes — unless
+                    // the scan trusts the cache. Every other copy is hashed
+                    // now: a Move deletes on it.
+                    if file.folder == 0 || trustsCache, file.modified != nil, let known = knownHashes[file] {
                         hashes[file] = known
                         continue
                     }
@@ -85,10 +110,13 @@ struct CommonPhotosVerifier {
                 }
             }
 
+            let worked = hashes.filter { fresh.contains($0.key) }
+            if !worked.isEmpty { hashed(worked) }
             var groupPhotos: [CommonPhoto] = []
             for (sha256, files) in CommonPhotosMatcher.shared(candidates, keys: hashes).sorted(by: { $0.key < $1.key }) {
-                // Nothing read this time vouches for these bytes: read one.
-                if !files.joined().contains(where: fresh.contains) {
+                // Nothing read this time vouches for these bytes: read one
+                // — not for a Copy, which reads every byte it writes back.
+                if !trustsCache, !files.joined().contains(where: fresh.contains) {
                     let check = try await skippingUnreadable { try await fullHash(files[0][0], folders: folders, state: state, progress: progress) }
                     guard check == sha256 else { continue }
                 }
@@ -138,7 +166,9 @@ struct CommonPhotosVerifier {
             progress(moving)
         }
         let total = hashed.withLock { $0 }
-        if total > 0, total != file.size { throw RemoteFileError.other("changed since listing") }
+        // A file that comes back with no bytes, or other than listed, has
+        // changed (a client that reports nothing hashed reports 0).
+        if total != file.size, total > 0 || file.size > 0 { throw RemoteFileError.other("changed since listing") }
         return sha256
     }
 
