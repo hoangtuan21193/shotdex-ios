@@ -108,9 +108,9 @@ struct UtilitiesScreen: View {
             if model.dependencies == nil { model.dependencies = dependencies }
             if model.albums.isEmpty { model.load(forChangeTokens: photoLibrary.collectionsTabTokens) }
         }
-        .task(id: dependencies.sources.readCount) { refreshHiddenCount() }
+        // Runs on every appearance too, so returning from Hidden recounts.
+        .task(id: dependencies.sources.readCount) { await refreshHiddenCount() }
         .task(id: photoLibrary.assetChangeToken) { await loadOverview() }
-        .onAppear { refreshHiddenCount() }
         .collectionsDestinations(model: model, isLibraryIndexing: isLibraryIndexing)
         .sheet(item: $combinePicking) { purpose in
             VideoMediaPicker(filter: .images) { picks in
@@ -321,8 +321,12 @@ struct UtilitiesScreen: View {
         if let loaded { overview = loaded }
     }
 
-    private func refreshHiddenCount() {
-        hiddenCount = (try? HiddenCopyStore(database: dependencies.database).hiddenCount()) ?? 0
+    /// Off the main thread: it walks every indexed photo, and while the
+    /// index is writing that froze the whole tab on a 55k library.
+    private func refreshHiddenCount() async {
+        let store = HiddenCopyStore(database: dependencies.database)
+        let count = await Task.detached(priority: .userInitiated) { (try? store.hiddenCount()) ?? 0 }.value
+        hiddenCount = count
     }
 
     /// How many duplicate groups the last scan found, as a bare number.
