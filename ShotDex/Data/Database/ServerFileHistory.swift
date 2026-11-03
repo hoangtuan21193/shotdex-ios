@@ -40,18 +40,36 @@ struct ServerFileHistory: Sendable {
     /// `path` became `newPath` on the server: both histories follow, so In
     /// Library marks and the upload proof keep matching.
     func move(_ path: String, to newPath: String, on server: FileServer) throws {
+        try move([(from: path, to: newPath)], on: server)
+    }
+
+    /// Several moves in one write (a common-photos run, FS-19.08 §6): every
+    /// history row is read once and each change applied in order.
+    func move(_ changes: [(from: String, to: String)], on server: FileServer) throws {
+        guard !changes.isEmpty else { return }
+        func renamed(_ path: String) -> String? {
+            var current = path
+            var changed = false
+            for change in changes {
+                if let next = ServerHistoryPaths.renamed(current, from: change.from, to: change.to) {
+                    current = next
+                    changed = true
+                }
+            }
+            return changed ? current : nil
+        }
         try database.writer.write { db in
             let ids = try Self.connectionIds(sameFilesAs: server, db)
             let tiles = try Row.fetchAll(db, sql: "SELECT id, path FROM server_shortcuts WHERE serverId IN (\(Self.placeholders(ids.count)))", arguments: StatementArguments(ids))
             for tile in tiles {
-                guard let renamed = ServerHistoryPaths.renamed(tile["path"], from: path, to: newPath) else { continue }
-                try db.execute(sql: "UPDATE OR IGNORE server_shortcuts SET path = ? WHERE id = ?", arguments: [renamed, tile["id"] as String])
+                guard let path = renamed(tile["path"]) else { continue }
+                try db.execute(sql: "UPDATE OR IGNORE server_shortcuts SET path = ? WHERE id = ?", arguments: [path, tile["id"] as String])
             }
             for table in ["server_uploads", "server_downloads"] {
                 let rows = try Row.fetchAll(db, sql: "SELECT id, remotePath FROM \(table) WHERE serverId IN (\(Self.placeholders(ids.count)))", arguments: StatementArguments(ids))
                 for row in rows {
-                    guard let renamed = ServerHistoryPaths.renamed(row["remotePath"], from: path, to: newPath) else { continue }
-                    try db.execute(sql: "UPDATE \(table) SET remotePath = ? WHERE id = ?", arguments: [renamed, row["id"] as Int64])
+                    guard let path = renamed(row["remotePath"]) else { continue }
+                    try db.execute(sql: "UPDATE \(table) SET remotePath = ? WHERE id = ?", arguments: [path, row["id"] as Int64])
                 }
             }
             // Backup's ledger too (FS-19.08 §6): the backed-up bytes now live
@@ -61,8 +79,8 @@ struct ServerFileHistory: Sendable {
                 WHERE l.remotePath IS NOT NULL AND j.connectionId IN (\(Self.placeholders(ids.count)))
                 """, arguments: StatementArguments(ids))
             for row in ledger {
-                guard let renamed = ServerHistoryPaths.renamed(row["remotePath"], from: path, to: newPath) else { continue }
-                try db.execute(sql: "UPDATE backup_ledger SET remotePath = ? WHERE id = ?", arguments: [renamed, row["id"] as Int64])
+                guard let path = renamed(row["remotePath"]) else { continue }
+                try db.execute(sql: "UPDATE backup_ledger SET remotePath = ? WHERE id = ?", arguments: [path, row["id"] as Int64])
             }
         }
     }
@@ -70,11 +88,10 @@ struct ServerFileHistory: Sendable {
     private static func connectionIds(sameFilesAs server: FileServer, _ db: Database) throws -> [String] {
         // Files folders have no host: each bookmark is its own place.
         guard server.transferProtocol.isNetwork else { return [server.id] }
-        let ids = try String.fetchAll(db, sql: """
-            SELECT id FROM file_servers
-            WHERE transferProtocol = ? AND lower(host) = lower(?) AND port = ?
-            """, arguments: [server.transferProtocol.rawValue, server.host, server.port])
-        return Array(Set(ids + [server.id]))
+        let candidates = try FileServer
+            .filter(Column("transferProtocol") == server.transferProtocol.rawValue)
+            .fetchAll(db)
+        return Array(Set(candidates.filter { ServerIdentity.sameFiles($0, server) }.map(\.id) + [server.id]))
     }
 
     private static func placeholders(_ count: Int) -> String {

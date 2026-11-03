@@ -208,13 +208,16 @@ struct MacServerFolderPicker: View {
     let server: FileServer
     let password: String
     let start: String
+    /// The client to list with — a locked one where other work shares the
+    /// connection (FS-19.07 §5); nil makes a plain one.
+    var client: (any RemoteFileClient)? = nil
     var chosen: (String) -> Void
     @Environment(\.dismiss) private var dismiss
     @State private var path = ""
     @State private var folders: [String] = []
     @State private var error: String?
     @State private var isLoading = false
-    @State private var client: (any RemoteFileClient)?
+    @State private var listingClient: (any RemoteFileClient)?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -248,17 +251,17 @@ struct MacServerFolderPicker: View {
         .padding(20)
         .frame(width: 480, height: 420)
         .task {
-            let client = RemoteFileClientFactory.make(for: server, password: password)
-            self.client = client
+            let client = self.client ?? RemoteFileClientFactory.make(for: server, password: password)
+            listingClient = client
             do { try await client.connect() } catch { self.error = error.localizedDescription }
             go(to: start)
         }
-        .onDisappear { if let client { Task { await client.disconnect() } } }
+        .onDisappear { if let listingClient { Task { await listingClient.disconnect() } } }
     }
 
     private func go(to folder: String) {
         path = folder
-        guard let client else { return }
+        guard let client = listingClient else { return }
         isLoading = true
         Task {
             do {

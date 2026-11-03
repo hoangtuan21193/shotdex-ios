@@ -51,8 +51,16 @@ actor ServerSourceRefresh {
 
     /// Rescan in the source's browse toolbar.
     @discardableResult
-    func rescan(sourceId: String) async -> ServerSourceIndexer.Summary? {
-        await refresh(sourceId)
+    /// `fresh`: a pass already running may have listed before the change
+    /// the caller just made (a common-photos run, FS-19.08 §6) — it is
+    /// waited for, then a new pass starts.
+    func rescan(sourceId: String, fresh: Bool = false) async -> ServerSourceIndexer.Summary? {
+        guard fresh, let earlier = running[sourceId] else { return await refresh(sourceId) }
+        _ = await earlier.value
+        // Still the earlier pass on record (its starter has not cleared it
+        // yet): start past it. A pass begun meanwhile began after the
+        // change, and is joined.
+        return await refresh(sourceId, joining: running[sourceId] != earlier)
     }
 
     private func serverSourceIds() throws -> [String] {
@@ -61,14 +69,14 @@ actor ServerSourceRefresh {
         }
     }
 
-    private func refresh(_ sourceId: String) async -> ServerSourceIndexer.Summary? {
-        if let pass = running[sourceId] { return await pass.value }
+    private func refresh(_ sourceId: String, joining: Bool = true) async -> ServerSourceIndexer.Summary? {
+        if joining, let pass = running[sourceId] { return await pass.value }
         let pass = Task { await self.pass(sourceId) }
         running[sourceId] = pass
         // The caller that started the pass still stops it by cancelling, as
         // when the pass ran in its own task; one that joined only waits.
         let summary = await withTaskCancellationHandler { await pass.value } onCancel: { pass.cancel() }
-        running[sourceId] = nil
+        if running[sourceId] == pass { running[sourceId] = nil }
         return summary
     }
 

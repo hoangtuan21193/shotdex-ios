@@ -147,6 +147,25 @@ import UniformTypeIdentifiers
         #expect(nas.rangeReadPaths.count == 6)
     }
 
+    /// A cached hash is not trusted for a copy outside the first folder —
+    /// Move deletes on those.
+    @Test func cachedHashOnlyForTheFirstFolder() async throws {
+        let nas = InMemoryRemoteFileClient()
+        let bytes = Data(repeating: 9, count: 500_000)
+        nas.put("A/p.jpg", bytes)
+        nas.put("B/q.jpg", bytes)
+        nas.modified = ["A/p.jpg": Date(timeIntervalSince1970: 1), "B/q.jpg": Date(timeIntervalSince1970: 2)]
+        let listing = try await CommonPhotosScanner(client: nas).list(["A", "B"])
+        let sha = FileChecksum.hex(SHA256.hash(data: bytes))
+
+        let photos = try await CommonPhotosVerifier(client: nas).verify(
+            CommonPhotosMatcher.preview(listing.files), folders: ["A", "B"],
+            knownHashes: Dictionary(uniqueKeysWithValues: listing.files.joined().map { ($0, sha) }))
+
+        #expect(photos.count == 1)
+        #expect(nas.sha256Paths == ["B/q.jpg"])
+    }
+
     /// A cached hash with no write time to vouch for it is ignored, and a
     /// photo whose every hash came from the cache is hashed once more — a
     /// wrong cache must not make a Move delete a unique photo.
@@ -167,7 +186,7 @@ import UniformTypeIdentifiers
             knownHashes: [file("p.jpg"): sha, file("q.jpg"): sha, file("r.jpg"): "stale", file("s.jpg"): "stale"])
 
         #expect(photos.count == 2)
-        #expect(Set(nas.sha256Paths) == ["A/p.jpg", "A/r.jpg", "B/s.jpg"])
+        #expect(Set(nas.sha256Paths) == ["B/q.jpg", "A/r.jpg", "B/s.jpg"])
     }
 
     /// A stale cache that agrees with itself but not with the server is not

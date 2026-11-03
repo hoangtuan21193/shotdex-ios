@@ -111,6 +111,25 @@ enum MacDemoLibrary {
         return arguments[index + 1].split(separator: ",").map { $0.trimmingCharacters(in: .whitespaces) }
     }
 
+    /// The Find Common Photos sheet as a screenshot wants it (FS-19.08
+    /// AC-130): `-ShotDexCommonPhotosDestination photos/Shared` (a server
+    /// path), `-ShotDexCommonPhotosAddFolder photos/Tuan/2025`, `-ShotDexCommonPhotosAction move`, `-ShotDexCommonPhotosScan`
+    /// (scan at once), `-ShotDexCommonPhotosSlow` (2 s before each read, to
+    /// catch it half done); `-ShotDexCommonPhotosConfirm` asks the Move
+    /// question once the scan is done.
+    @MainActor
+    static func prepareCommonPhotos(_ model: CommonPhotosScanModel) {
+        let arguments = ProcessInfo.processInfo.arguments
+        func value(_ name: String) -> String? {
+            arguments.firstIndex(of: name).flatMap { $0 + 1 < arguments.count ? arguments[$0 + 1] : nil }
+        }
+        if let destination = value("-ShotDexCommonPhotosDestination") { model.destination = destination }
+        if let folder = value("-ShotDexCommonPhotosAddFolder") { model.add(folder: folder) }
+        if value("-ShotDexCommonPhotosAction") == "move" { model.action = .move }
+        if arguments.contains("-ShotDexCommonPhotosSlow") { model.groupDelay = .seconds(2) }
+        if arguments.contains("-ShotDexCommonPhotosScan") { model.scan() }
+    }
+
     /// `-ShotDexServerLayout list`: the server browser's view mode.
     static var serverLayout: String? {
         let arguments = ProcessInfo.processInfo.arguments

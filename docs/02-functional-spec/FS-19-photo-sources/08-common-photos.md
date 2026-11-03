@@ -52,8 +52,9 @@ con · kết quả xem trước có hai mức Likely the same → Same · tiến
 | Nút | **Cancel** · **Scan** → sau khi quét xong thành **Copy 280** / **Move 280** (chỉ đếm Same); chân trái "Only photos marked Same are copied." |
 
 - Báo lỗi trong sheet, không chạy: folder chung nằm trong một folder nguồn · hai folder nguồn lồng nhau · < 2 folder.
-- **Move** bấm chạy → hộp xác nhận: "Move 280 photos to “Shared”?" · "They're removed from Tuấn and Vợ after each copy in
-  Shared is checked. The server has no Trash." · **Move** · Cancel.
+- **Move** bấm chạy → hộp xác nhận: "Move 280 photos to “Shared”?" · "Each photo is copied to “Shared” and verified, then
+  removed from Tuấn and Vợ. This can't be undone — the server has no Trash." · **Move** · **Cancel** (Cancel là nút mặc
+  định: Return không xoá gì).
 
 ## 5. Quét — nhanh rồi chắc
 

@@ -40,9 +40,10 @@ của loop: mỗi vòng đọc nó trước, ghi lại sau.
 | T8 | xong | (xem git log) | CSV (tiếng Anh cố định, BOM, chặn công thức), `afterRun` + `HistoryChange`, sổ Backup đi theo; nối Mac ở T10 |
 | T9a | xong | (xem git log) | màn duyệt server Mac: cột + lưới, Rescan, sao/cờ, ⌘/⇧ sẵn cho T9b; accent sáng #C6730E; `ServerSourceRefresh` cho lượt sau chờ lượt đang chạy. Chưa bấm thử được (không có quyền Accessibility) |
 | T9b | xong | (xem git log) | ⌘/⇧ chọn nhiều (ClickSelection, Domain), chuột phải chọn lại mục rồi mới mở menu, menu ẩn Find Common Photos… dưới 2 folder (HIG), File ⇧⌘F; hook `commonPhotosRequest` cho T10. Chưa bấm thử được |
-| T10…T12 | chưa | — | |
+| T10 | xong | (xem git log) | sheet + `MacCommonPhotosRuns` (connect, giữ máy thức, afterRun: lịch sử 1 lần ghi + rescan `fresh`); chạy thật Copy 8 ảnh + Move 3 ảnh từ app trên SMB ảo (scratch, đã dọn); SHA cache chỉ cho bản folder đầu; `ServerIdentity` (SFTP username, WebDAV share) |
+| T11a…T12 | chưa | — | |
 
-Tiếp: T10 (nối afterRun phía Mac + sheet `MAC_CommonPhotos`).
+Tiếp: T11a (vẽ board `MAC_Activity`) → T11 (cửa sổ `MAC_CommonPhotosRun`) → T11b (Activity).
 
 Chụp Mac: `ShotDex.app/Contents/MacOS/ShotDex -ApplePersistenceIgnoreState YES -ShotDexDemoLibrary -ShotDexSection serverBrowser -ShotDexServerPath Tuan/2025/06 [-ShotDexAppearance dark] [-ShotDexServerLayout list]` (DB demo trong RAM, connection "Test SMB" tới SMB ảo) + reopen Apple Event: scratchpad `tools/shot.sh`.
 

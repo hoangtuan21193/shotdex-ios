@@ -73,6 +73,36 @@ import Testing
         let known = try stores.downloads.knownFiles(serverId: a.id, paths: ["photos/Beach.JPG", "photos/A.JPG"])
         #expect(known.map(\.remotePath) == ["photos/Beach.JPG"])
     }
+
+    /// FS-19.08 §6: a run's moves in one write; an SFTP login with another
+    /// home is other files, so its history stays where it was.
+    @Test func batchMoveFollowsEveryChangeOnTheSameFilesOnly() throws {
+        let stores = try makeStores()
+        let me = FileServer(name: "Me", transferProtocol: .sftp, host: "nas.local", username: "me")
+        let alsoMe = FileServer(name: "Me again", transferProtocol: .sftp, host: "NAS.local", username: "me")
+        let you = FileServer(name: "You", transferProtocol: .sftp, host: "nas.local", username: "you")
+        for server in [me, alsoMe, you] { try stores.servers.save(server, password: "p") }
+        try stores.uploads.record(upload("1", "A/IMG_1.JPG", on: me))
+        try stores.uploads.record(upload("2", "B/IMG_2.JPG", on: alsoMe))
+        try stores.uploads.record(upload("3", "A/IMG_1.JPG", on: you))
+
+        try stores.history.move([(from: "A/IMG_1.JPG", to: "C/IMG_1.JPG"), (from: "B/IMG_2.JPG", to: "C/IMG_2.JPG")], on: me)
+
+        #expect(try stores.uploads.uploads(assetId: "1").map(\.remotePath) == ["C/IMG_1.JPG"])
+        #expect(try stores.uploads.uploads(assetId: "2").map(\.remotePath) == ["C/IMG_2.JPG"])
+        #expect(try stores.uploads.uploads(assetId: "3").map(\.remotePath) == ["A/IMG_1.JPG"])
+    }
+
+    @Test func sameFilesNeedsTheSameLoginOnSFTPAndTheSameBaseOnWebDAV() {
+        let smb = FileServer(name: "a", transferProtocol: .smb, host: "nas.local", port: 445, username: "me")
+        #expect(ServerIdentity.sameFiles(smb, FileServer(name: "b", transferProtocol: .smb, host: "NAS.local", port: 445, username: "you")))
+        #expect(!ServerIdentity.sameFiles(smb, FileServer(name: "c", transferProtocol: .smb, host: "nas.local", port: 4450, username: "me")))
+        let sftp = FileServer(name: "s", transferProtocol: .sftp, host: "nas.local", username: "me")
+        #expect(!ServerIdentity.sameFiles(sftp, FileServer(name: "t", transferProtocol: .sftp, host: "nas.local", username: "you")))
+        let dav = FileServer(name: "d", transferProtocol: .webdav, host: "nas.local", username: "me", share: "/dav/")
+        #expect(ServerIdentity.sameFiles(dav, FileServer(name: "e", transferProtocol: .webdav, host: "nas.local", username: "x", share: "dav")))
+        #expect(!ServerIdentity.sameFiles(dav, FileServer(name: "f", transferProtocol: .webdav, host: "nas.local", username: "me", share: "other")))
+    }
 }
 
 /// FS-15.02 §8 — FS-15 AC-49: Uploaded to Server lists where the copies are.

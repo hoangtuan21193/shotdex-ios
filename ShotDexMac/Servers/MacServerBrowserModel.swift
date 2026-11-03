@@ -393,6 +393,17 @@ final class MacServerBrowserModel {
         }
     }
 
+    /// The server changed under the browser (a common-photos run on this
+    /// connection ended): every folder is listed again as it comes up.
+    func refreshListings() {
+        start {
+            self.listings = [:]
+            self.copies = [:]
+            self.pruneSelection()
+            await self.visit()
+        }
+    }
+
     /// Try Again after a failed listing: a fresh session, then the visit.
     func retry() {
         start {

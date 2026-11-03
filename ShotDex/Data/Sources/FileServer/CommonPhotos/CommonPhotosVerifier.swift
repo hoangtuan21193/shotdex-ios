@@ -36,9 +36,9 @@ struct CommonPhotosVerifier {
     }
 
     /// The photos every folder holds. `knownHashes` are SHA-256s taken
-    /// earlier for the same path, size and write time (`copy_files`); a file
-    /// listed with no write time has nothing to vouch for its hash, so its
-    /// entry is ignored. `found` hears each size group's Same photos as they
+    /// earlier for the same path, size and write time (`copy_files`), used
+    /// for the first folder's copies only; a file listed with no write time
+    /// has nothing to vouch for its hash, so its entry is ignored. `found` hears each size group's Same photos as they
     /// are decided; `progress` hears after every group and while a big file
     /// hashes. A server that went away stops the scan.
     func verify(_ preview: CommonPhotosMatcher.Preview, folders: [String],
@@ -67,7 +67,10 @@ struct CommonPhotosVerifier {
                 fresh = Set(samples.keys)
             } else if candidates.allSatisfy({ !$0.isEmpty }) {
                 for file in candidates.joined() {
-                    if file.modified != nil, let known = knownHashes[file] {
+                    // A cached hash stands in only for the first folder's
+                    // copy — the one a Move renames, never deletes. Every
+                    // other copy is hashed now: a Move deletes on it.
+                    if file.folder == 0, file.modified != nil, let known = knownHashes[file] {
                         hashes[file] = known
                         continue
                     }

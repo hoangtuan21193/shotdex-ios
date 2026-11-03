@@ -59,6 +59,7 @@ struct MacServerBrowserScreen: View {
 /// The browser once its connection is known.
 private struct MacServerBrowserContent: View {
     @Bindable var model: MacServerBrowserModel
+    @Environment(MacDependencies.self) private var dependencies
     @Environment(\.openSettings) private var openSettings
     @FocusState private var gridFocused: Bool
     @State private var hasPreselected = false
@@ -100,6 +101,23 @@ private struct MacServerBrowserContent: View {
             #endif
         }
         .focusedSceneValue(\.macServerBrowser, model)
+        .sheet(item: $model.commonPhotosRequest) { request in
+            MacCommonPhotosSheet(request: request, server: model.server)
+        }
+        // A run on this connection ended: what the browser listed is stale.
+        .onChange(of: dependencies.commonPhotos.entries.values.filter(\.isFinished).map(\.id).sorted()) { old, finished in
+            let ended = finished.filter { !old.contains($0) }.compactMap { dependencies.commonPhotos.entries[$0]?.run }
+            guard !ended.isEmpty else { return }
+            #if DEBUG
+            // `-ShotDexCommonPhotosRunAfterScan`: open the destination, to see what landed.
+            if ProcessInfo.processInfo.arguments.contains("-ShotDexCommonPhotosRunAfterScan"), let run = ended.first {
+                let root = ServerUploadPath.normalizedFolder(model.server.folder)
+                let destination = ServerUploadPath.normalizedFolder(run.destination)
+                model.go(to: root.isEmpty ? destination : String(destination.dropFirst(root.count + 1)))
+            }
+            #endif
+            if ended.contains(where: { $0.connectionId == model.server.id }) { model.refreshListings() }
+        }
         .onAppear {
             // A right-click retargets the selection before its menu opens;
             // the event goes on to the menu untouched.

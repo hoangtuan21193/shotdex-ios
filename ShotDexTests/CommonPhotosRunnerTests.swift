@@ -130,7 +130,10 @@ import Testing
         var runner = fixture.runner
         runner.freeBytes = { 100 }
 
-        await #expect(throws: CommonPhotosRunner.Stop.noRoom) { try await runner.run("R1") }
+        let item = try #require(try fixture.store.items(runId: "R1").first)
+        await #expect(throws: CommonPhotosRunner.Stop.noRoom(needed: item.size + BackupRunner.minimumFreeBytes - 100)) {
+            try await runner.run("R1")
+        }
 
         #expect(fixture.nas.downloadCount == 0)
         #expect(try fixture.store.run(id: "R1")?.state == .paused)

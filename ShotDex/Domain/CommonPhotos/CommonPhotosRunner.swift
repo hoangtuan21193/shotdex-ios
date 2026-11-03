@@ -53,9 +53,9 @@ struct CommonPhotosRunner: Sendable {
     }
 
     /// Why a run stopped short; the run is left paused for Resume.
-    enum Stop: Error, Equatable {
-        /// This Mac lacks room for the next photo.
-        case noRoom
+    enum Stop: Error, Equatable, LocalizedError {
+        /// This Mac lacks room for the next photo: `needed` more bytes free.
+        case noRoom(needed: Int64)
         /// The run is stopped or finished; there is nothing to resume.
         case notResumable
         /// The folders chosen overlap, or the destination is one of them
@@ -64,6 +64,22 @@ struct CommonPhotosRunner: Sendable {
         case destinationIsASource
         /// This run is already going in this app (Resume pressed twice).
         case alreadyRunning
+
+        var errorDescription: String? {
+            switch self {
+            case .noRoom(let needed):
+                String(localized: "This Mac needs \(needed.formatted(.byteCount(style: .file))) more free space to copy the next photo. Free some space, then resume.",
+                       comment: "Common photos: no room on the Mac for the next photo")
+            case .notResumable:
+                String(localized: "This run was stopped or has finished; there is nothing to resume.",
+                       comment: "Common photos: resume of a run that is over")
+            case .destinationIsASource:
+                String(localized: "The destination is one of the folders being compared, or inside one. Choose another destination.",
+                       comment: "Common photos: destination overlaps a source folder")
+            case .alreadyRunning:
+                String(localized: "This run is already going.", comment: "Common photos: resume pressed while running")
+            }
+        }
     }
 
     /// The items of a new run, in the order they run: one per Same photo,
@@ -280,7 +296,9 @@ struct CommonPhotosRunner: Sendable {
         let freeName = ServerUploadPath.nextFreeName(for: name, existing: destination.names)
         let target = ServerUploadPath.join(destination.folder, freeName)
 
-        if let free = freeBytes(), free - item.size < BackupRunner.minimumFreeBytes { throw Stop.noRoom }
+        if let free = freeBytes(), free - item.size < BackupRunner.minimumFreeBytes {
+            throw Stop.noRoom(needed: item.size + BackupRunner.minimumFreeBytes - free)
+        }
         item.status = .copying
         item.destinationPath = target
         item.partPath = ServerUploadPath.partPath(for: target)
