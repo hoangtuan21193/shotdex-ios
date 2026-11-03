@@ -80,6 +80,11 @@ final class CommonPhotosScanModel {
             }
         }
     }
+    /// The server's error the last scan stopped on, for the helper to tell a
+    /// folder gone from a server away (FS-19.08 §6c).
+    private(set) var failureError: RemoteFileError?
+    /// Saving what the last scan read, so the helper can wait for it.
+    private var saving: Task<Void, Never>?
     /// The scan shown took every known hash on trust (a Copy scan).
     private var scannedTrustingCache = false
     /// Scan Everything (FS-19.08 §6c): check every photo, not only the new
@@ -251,6 +256,24 @@ final class CommonPhotosScanModel {
         scan(everything: false)
     }
 
+    /// One scan of only the new photos, to its end — the helper's pass
+    /// (FS-19.08 §6c), with no sheet to watch it. What it read is saved
+    /// before it returns.
+    func scanToEnd() async {
+        guard canScan else { return }
+        scansEverything = false
+        failureError = nil
+        phase = .listing
+        await runScan()
+        await saving?.value
+    }
+
+    /// The helper connected the client already (to check the folders): the
+    /// scan uses that session rather than logging in again.
+    func adoptConnection() {
+        isConnected = true
+    }
+
     private func scan(everything: Bool) {
         guard canScan else { return }
         scansEverything = everything
@@ -411,6 +434,7 @@ final class CommonPhotosScanModel {
         } catch {
             guard !Task.isCancelled, self.scanId == scanId else { return }
             if (error as? RemoteFileError)?.stopsBatch == true { isConnected = false }
+            failureError = error as? RemoteFileError
             phase = .failed((error as? RemoteFileError)?.errorDescription ?? error.localizedDescription)
         }
     }
@@ -491,12 +515,14 @@ final class CommonPhotosScanModel {
         let store = CommonPhotosStore(database: database)
         let connectionId = connectionId
         guard let entries = try await destinationEntries(destination) else { return .init() }
-        return (try? await Task.detached {
+        // A database that cannot say what was gathered fails the scan:
+        // taking it as "nothing gathered" would gather everything again.
+        return try await Task.detached {
             // The name → sizes map is built here, off the main actor.
             var present: [String: Set<Int64>] = [:]
             for entry in entries { present[entry.name.lowercased(), default: []].insert(entry.size) }
             return try store.gathered(connectionId: connectionId, folders: folders, destination: destination, inDestination: present)
-        }.value) ?? .init()
+        }.value
     }
 
     /// The destination's files. Empty when the folder is not there yet; one
@@ -547,7 +573,9 @@ final class CommonPhotosScanModel {
     private func remember(hashes: [CommonPhotosFile: String], keys: [CommonPhotosFile: String], folders: [String]) {
         guard let store = scanRecordStore, !hashes.isEmpty || !keys.isEmpty else { return }
         let connectionId = connectionId
-        Task.detached {
+        let previous = saving
+        saving = Task.detached {
+            await previous?.value
             var records: [String: CommonPhotosScanRecord] = [:]
             for file in Set(hashes.keys).union(keys.keys) {
                 guard let modified = file.modified else { continue }

@@ -115,4 +115,28 @@ extension AppDatabase {
             }
         }
     }
+
+    /// FS-19.08 §6c: the sets the helper gathers on its own (Keep gathering)
+    /// — one row per set, its action, whether it is on, when it last
+    /// checked, and why it waits or stopped.
+    static func registerCommonPhotosWatches(_ migrator: inout DatabaseMigrator) {
+        migrator.registerMigration("v53-commonPhotosWatches") { db in
+            try db.create(table: "common_photo_watches") { t in
+                t.primaryKey("id", .text)
+                // `CommonPhotosIncremental.setKey`: one row per set.
+                t.column("setKey", .text).notNull().unique()
+                t.column("connectionId", .text).notNull()
+                t.column("folders", .text).notNull()
+                t.column("destination", .text).notNull()
+                t.column("action", .text).notNull()
+                t.column("isOn", .boolean).notNull()
+                t.column("checkedAt", .integer)
+                // What the last pass waited for (`OnServerSchedule.Wait`
+                // as a code), or why gathering stopped.
+                t.column("waiting", .text)
+                t.column("stoppedBecause", .text)
+                t.column("createdAt", .integer).notNull()
+            }
+        }
+    }
 }

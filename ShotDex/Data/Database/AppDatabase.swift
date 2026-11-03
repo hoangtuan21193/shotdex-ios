@@ -692,6 +692,7 @@ final class AppDatabase: Sendable {
         registerSharedHashCache(&migrator)
         registerHashDeviceNames(&migrator)
         registerCommonPhotosScanRecords(&migrator)
+        registerCommonPhotosWatches(&migrator)
 
         return migrator
     }

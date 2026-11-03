@@ -39,6 +39,14 @@ final class InMemoryRemoteFileClient: RemoteFileClient, @unchecked Sendable {
         }
     }
 
+    /// A folder and everything in it gone, as if removed on the server.
+    func removeDirectory(_ path: String) {
+        lock.withLock {
+            directories = directories.filter { $0 != path && !$0.hasPrefix(path + "/") }
+            storage = storage.filter { !$0.key.hasPrefix(path + "/") }
+        }
+    }
+
     /// A folder and its parents, set up before a test.
     func addDirectory(_ path: String) {
         lock.withLock {
@@ -75,8 +83,12 @@ final class InMemoryRemoteFileClient: RemoteFileClient, @unchecked Sendable {
         }
     }
 
+    /// Thrown by every `folderNames(in:)` while set.
+    var folderNamesError: RemoteFileError?
+
     func folderNames(in directory: String) async throws -> Set<String> {
-        lock.withLock {
+        if let folderNamesError { throw folderNamesError }
+        return lock.withLock {
             Set(directories.filter { !$0.isEmpty && ServerUploadPath.parent(of: $0) == directory }.map(ServerUploadPath.lastComponent(of:)))
         }
     }

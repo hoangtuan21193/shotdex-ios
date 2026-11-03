@@ -202,6 +202,9 @@ Copy/Move vẫn là cùng bộ.
 - Lượt tự gom không tìm thấy gì: không thêm hàng Activity, chỉ cập nhật "Checked 3 min ago" của bộ.
 - Server không trả lời: bỏ lượt, ghi "NAS Home isn't reachable", lượt sau thử lại. Không bao giờ dừng giữa chừng một
   lượt Move mà không đi tiếp được theo §6 (Resume như cũ).
+- Folder chỉ tính là mất khi server nói hai lần: folder không có, **và** folder cha liệt kê được mà không có nó. Mọi
+  trường hợp khác (không liệt kê được, lỗi giữa chừng) là server vắng, thử lại lượt sau. Bộ không còn đủ 2 folder hay
+  connection bị xoá: cũng dừng.
 - Folder nguồn hay folder chung không còn trên server: bộ **tạm dừng**, hàng Activity "“Vợ” isn't on NAS Home anymore ·
   Stopped gathering", không thử lại cho tới khi người dùng bật lại.
 - **Danh sách bộ đang tự gom**: mục **Gathering** đầu cửa sổ Activity, mỗi bộ một hàng ("Tuấn + Vợ → Shared · Copy ·

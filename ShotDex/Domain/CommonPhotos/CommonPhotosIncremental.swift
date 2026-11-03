@@ -47,3 +47,19 @@ enum CommonPhotosIncremental {
         return photos.filter { photo in photo.files.joined().contains { !wasSeen($0, folders: folders, seen: seen) } }
     }
 }
+
+/// When the helper may gather a set on its own (FS-19.08 §6c): the Mac on
+/// power, on a network that is not metered (user 2026-11-03).
+enum CommonPhotosGatherRule {
+    /// Every 15 minutes (user 2026-11-03).
+    static let interval: TimeInterval = 15 * 60
+
+    /// `onPower`: on external power — charging or charged, as
+    /// `PowerMonitor.isCharging` says, so a Mac held at 80% still counts.
+    static func wait(isExpensivePath: Bool, onPower: Bool) -> OnServerSchedule.Wait? {
+        if !onPower { return .charging }
+        if isExpensivePath { return .wifi }
+        return nil
+    }
+}
+
