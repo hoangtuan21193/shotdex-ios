@@ -59,7 +59,8 @@ final class InMemoryRemoteFileClient: RemoteFileClient, @unchecked Sendable {
     func disconnect() async {}
 
     func fileSize(at path: String) async throws -> Int64? {
-        lock.withLock { storage[path].map { Int64($0.count) } }
+        try countRead()
+        return lock.withLock { storage[path].map { Int64($0.count) } }
     }
 
     func directoryExists(_ path: String) async throws -> Bool {
@@ -95,6 +96,7 @@ final class InMemoryRemoteFileClient: RemoteFileClient, @unchecked Sendable {
             return
         }
         let number = lock.withLock { uploadCount += 1; commands.append("upload \(path)"); return uploadCount }
+        let failsAfter = try countWrite()
         onUpload?(number)
         await whileUploading?(number)
         try Task.checkCancellation()
@@ -108,6 +110,7 @@ final class InMemoryRemoteFileClient: RemoteFileClient, @unchecked Sendable {
         }
         put(path, data)
         progress(Int64(data.count))
+        if failsAfter { throw RemoteFileError.connectionLost }
     }
 
     /// Every path `sha256(of:)` read, in order — how a test proves a file on
@@ -116,6 +119,7 @@ final class InMemoryRemoteFileClient: RemoteFileClient, @unchecked Sendable {
 
     func sha256(of path: String, progress: @escaping @Sendable (Int64) -> Void) async throws -> String {
         lock.withLock { sha256Paths.append(path); commands.append("sha256 \(path)") }
+        try countRead()
         guard var data = lock.withLock({ storage[path] }) else { throw RemoteFileError.other("missing \(path)") }
         let original = String(path.dropLast(ServerUploadPath.partSuffix.count))
         if corruptReadBack.contains(path) || corruptReadBack.contains(original), !data.isEmpty {
@@ -194,6 +198,7 @@ final class InMemoryRemoteFileClient: RemoteFileClient, @unchecked Sendable {
 
     func download(_ path: String, to localURL: URL, progress: @escaping @Sendable (Int64) -> Void) async throws -> String {
         let number = lock.withLock { downloadCount += 1; commands.append("download \(path)"); return downloadCount }
+        try countRead()
         try Task.checkCancellation()
         if dropConnectionOnDownload == number { throw RemoteFileError.connectionLost }
         if let refuseDownload, refuseDownload.number == number { throw refuseDownload.error }
@@ -223,6 +228,43 @@ final class InMemoryRemoteFileClient: RemoteFileClient, @unchecked Sendable {
         lock.withLock { commands.append(command) }
     }
 
+    /// The write (upload, move or remove, counted from 1 since it was set)
+    /// that loses the connection — before the server does it, or after.
+    /// How a test stops an operation at every step in turn.
+    var failOnWrite: (number: Int, afterDoing: Bool)? {
+        get { lock.withLock { failingWrite } }
+        set { lock.withLock { failingWrite = newValue; writeCount = 0 } }
+    }
+    private var failingWrite: (number: Int, afterDoing: Bool)?
+    private(set) var writeCount = 0
+
+    /// The read (size, SHA-256 or download, counted from 1 since it was
+    /// set) that loses the connection.
+    var failOnRead: Int? {
+        get { lock.withLock { failingRead } }
+        set { lock.withLock { failingRead = newValue; readCount = 0 } }
+    }
+    private var failingRead: Int?
+    private(set) var readCount = 0
+
+    private func countRead() throws {
+        try lock.withLock {
+            readCount += 1
+            if failingRead == readCount { throw RemoteFileError.connectionLost }
+        }
+    }
+
+    /// Counts a write; throws before it when it is the one to fail first.
+    /// Returns whether to throw after doing it.
+    private func countWrite() throws -> Bool {
+        try lock.withLock {
+            writeCount += 1
+            guard let failing = failingWrite, failing.number == writeCount else { return false }
+            if !failing.afterDoing { throw RemoteFileError.connectionLost }
+            return true
+        }
+    }
+
     /// Called after a rename lands — where a test makes two paths one file
     /// (the destination vanishing when a source is set aside).
     var onMove: (@Sendable (String, String) -> Void)?
@@ -232,6 +274,7 @@ final class InMemoryRemoteFileClient: RemoteFileClient, @unchecked Sendable {
 
     func move(_ source: String, to destination: String) async throws {
         log("move \(source) → \(destination)")
+        let failsAfter = try countWrite()
         defer { onMove?(source, destination) }
         if refusesMovesAcrossTopFolders, source.split(separator: "/").first != destination.split(separator: "/").first {
             throw RemoteFileError.other("cross-share rename refused")
@@ -256,6 +299,7 @@ final class InMemoryRemoteFileClient: RemoteFileClient, @unchecked Sendable {
             failMoveAfterDoing = false
             throw RemoteFileError.other("gateway timeout")
         }
+        if failsAfter { throw RemoteFileError.connectionLost }
     }
 
     /// Deletes a file behind the client's back, without logging it.
@@ -265,10 +309,12 @@ final class InMemoryRemoteFileClient: RemoteFileClient, @unchecked Sendable {
 
     func remove(_ path: String) async throws {
         log("remove \(path)")
+        let failsAfter = try countWrite()
         try lock.withLock {
             if refuseRemoving.contains(path) { throw RemoteFileError.permissionDenied(path) }
             if storage.removeValue(forKey: path) != nil { removed.append(path) }
         }
+        if failsAfter { throw RemoteFileError.connectionLost }
     }
 
     func removeEmptyDirectory(_ path: String) async throws {

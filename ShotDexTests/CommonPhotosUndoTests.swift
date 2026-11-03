@@ -476,4 +476,126 @@ import Testing
         item.sources[1].isRemoved = true
         #expect(item.isUndoable)
     }
+
+    // MARK: Every failure point (AC-137) and resume (AC-140)
+
+    /// Each photo has a copy with its bytes under a real name somewhere.
+    private func everyPhotoHasACopy(_ fixture: Fixture, count: Int) -> Bool {
+        let files = fixture.nas.files
+        return (1...count).allSatisfy { index in
+            guard let bytes = fixture.photos["IMG_\(index).JPG"] else { return false }
+            return ["A", "B", "C"].contains { files["\($0)/IMG_\(index).JPG"] == bytes }
+        }
+    }
+
+    /// What an undo leaves with no failure: the destination empty, every
+    /// photo in A and B with its bytes (and its `.xmp` when it had one).
+    private func expectCleanEnd(_ fixture: Fixture, count: Int, sidecars: Bool) {
+        #expect(fixture.destinationFiles.isEmpty)
+        var wanted = sources(fixture, count: count)
+        if sidecars {
+            for index in 1...count { wanted["A/IMG_\(index).xmp"] = Data("xmp \(index)".utf8) }
+        }
+        #expect(sourceFiles(fixture) == wanted)
+    }
+
+    private func sweepFixture(_ action: CommonPhotosRun.Action, crossShare: Bool, sidecars: Bool) async throws
+        -> (Fixture, CommonPhotosUndoer) {
+        let fixture = try Fixture(count: 3)
+        fixture.nas.refusesMovesAcrossTopFolders = crossShare
+        if sidecars {
+            for index in 1...3 { fixture.nas.put("A/IMG_\(index).xmp", Data("xmp \(index)".utf8)) }
+        }
+        return (fixture, try await gathered(fixture, action: action))
+    }
+
+    /// AC-137: the connection lost at every write of an undo in turn —
+    /// before the server does it and after — and at every read: every
+    /// photo still has a copy under its own name, and Resume then ends
+    /// where an undo with no failure ends. Writes are uploads, renames and
+    /// deletes — the only ones an undo makes.
+    @Test(arguments: [CommonPhotosRun.Action.move, .copy], [false, true])
+    func everyFailurePointKeepsACopy(action: CommonPhotosRun.Action, crossShare: Bool) async throws {
+        for sidecars in [false, true] {
+            let (clean, cleanUndoer) = try await sweepFixture(action, crossShare: crossShare, sidecars: sidecars)
+            clean.nas.failOnWrite = (Int.max, false)
+            clean.nas.failOnRead = Int.max
+            try await cleanUndoer.run("U1")
+            let writes = clean.nas.writeCount
+            let reads = clean.nas.readCount
+            expectCleanEnd(clean, count: 3, sidecars: sidecars)
+            #expect(writes > 0 && reads > 0)
+
+            var points: [(write: Int?, read: Int?, afterDoing: Bool)] = []
+            for number in 1...writes { points += [(number, nil, false), (number, nil, true)] }
+            for number in 1...reads { points.append((nil, number, false)) }
+            for point in points {
+                let label = "sidecars \(sidecars), write \(point.write ?? 0) after \(point.afterDoing), read \(point.read ?? 0)"
+                let (fixture, undoer) = try await sweepFixture(action, crossShare: crossShare, sidecars: sidecars)
+                if let write = point.write { fixture.nas.failOnWrite = (write, point.afterDoing) }
+                if let read = point.read { fixture.nas.failOnRead = read }
+
+                await #expect(throws: RemoteFileError.connectionLost, "\(label)") { try await undoer.run("U1") }
+
+                #expect(everyPhotoHasACopy(fixture, count: 3), "\(label)")
+                #expect(try fixture.store.run(id: "U1")?.state == .paused, "\(label)")
+                fixture.nas.failOnWrite = nil
+                fixture.nas.failOnRead = nil
+                try await undoer.run("U1")
+                expectCleanEnd(fixture, count: 3, sidecars: sidecars)
+                let rows = try undoItems(fixture)
+                #expect(rows.count == 3 && rows.allSatisfy { $0.status == .undone }, "\(label)")
+                #expect(try fixture.items().allSatisfy { $0.status == .undone }, "\(label)")
+            }
+        }
+    }
+
+    /// Undo Move, two shares over one volume: the destination copy is the
+    /// same file as a restored copy — it goes back and the undo stops.
+    @Test func undoMoveStopsWhenARestoredCopyIsTheDestination() async throws {
+        let fixture = try Fixture(count: 1)
+        let undoer = try await gathered(fixture, action: .move)
+        let nas = fixture.nas
+        nas.onMove = { from, _ in
+            if from == "C/IMG_1.JPG" { nas.drop("B/IMG_1.JPG") }
+        }
+        // A's copy is renamed back last; set B up so the destination is
+        // removed rather than renamed.
+        var row = try #require(try undoItems(fixture).first)
+        row.movedFrom = nil
+        try fixture.store.update(row)
+
+        await #expect(throws: CommonPhotosRunner.Stop.destinationIsASource) { try await undoer.run("U1") }
+
+        #expect(nas.files["C/IMG_1.JPG"] == fixture.photos["IMG_1.JPG"])
+        #expect(!nas.files.keys.contains { $0.hasSuffix(CommonPhotosRunner.removingSuffix) })
+        #expect(try undoItems(fixture).map(\.status) == [.pending])
+    }
+
+    /// AC-140: an undo of 10 stopped after the 4th — Resume carries on from
+    /// the 5th; the first four are not read again; 10 rows Undone.
+    @Test func resumeUndoAfterQuit() async throws {
+        let fixture = try Fixture(count: 10)
+        let undoer = try await gathered(fixture)
+        // Cancelled from inside the run, as Pause does — the progress call
+        // runs on the run's own task.
+        let run = Task {
+            try await undoer.run("U1", progress: { progress in
+                if progress.doneCount == 4 { withUnsafeCurrentTask { $0?.cancel() } }
+            })
+        }
+        await #expect(throws: CancellationError.self) { try await run.value }
+        #expect(try fixture.store.run(id: "U1")?.state == .paused)
+        #expect(try undoItems(fixture).filter { $0.status == .undone }.count == 4)
+        let before = fixture.nas.commands.count
+
+        try await undoer.run("U1")
+
+        let resumed = fixture.nas.commands.dropFirst(before)
+        #expect(resumed.contains { $0.contains("/IMG_5.JPG") })
+        for index in 1...4 { #expect(!resumed.contains { $0.contains("/IMG_\(index).JPG") }) }
+        #expect(try undoItems(fixture).map(\.status) == Array(repeating: .undone, count: 10))
+        #expect(fixture.destinationFiles.isEmpty)
+        #expect(try fixture.items().allSatisfy { $0.status == .undone })
+    }
 }
