@@ -1,6 +1,6 @@
 # FS-19.07b — Ảnh Photos đã có trên server: spike và tiêu chí nghiệm thu
 
-`FS-19.07b` · quy tắc: [07](07-on-server-check.md) · cập nhật 2026-10-25
+`FS-19.07b` · quy tắc: [07](07-on-server-check.md) · cập nhật 2026-11-03 (§4 băm dùng chung, AC-144…158; spike S5–S8)
 
 ## 1. Spike trên máy thật (đo trước, chốt AC sau)
 
@@ -13,6 +13,10 @@ Simulator không có iCloud thật, Optimize Storage hay lịch chạy nền th�
 | S2 | Photos có giữ bản gốc vừa tải (máy đầy dần)? | đo chỗ trống trước/sau tải 10 GB rồi xoá file tạm; đo lại sau 1 giờ và 24 giờ | giảm ≤ 1 GB sau 24 giờ | không đạt → thêm trần GB tải mỗi lượt |
 | S3 | Một đêm cắm sạc, tác vụ nền được bao nhiêu phút, băm bao nhiêu GB? | 20.000 mục, cắm sạc qua đêm, đọc log; iOS 26.5 và 18 | ghi số | thiết kế chạy nền đợt 2 |
 | S4 | Băm video 4K 3 GB đọc luồng: bộ nhớ đỉnh, thời gian, nhiệt? | Instruments, iPhone 17, 3 video | bộ nhớ tăng ≤ 64 MB; không bị giết | không đạt → giảm khối đọc, chỉ băm video khi sạc |
+| S5 | (§12) Cùng một ảnh trên Mac và iPhone: `cloudIdentifier` ánh xạ được, `modificationDate` (giây) trùng? | 200 ảnh, cả ảnh đã sửa; ghi cloud id + ngày sửa trên hai máy | ≥ 199/200 trùng | không đạt → khoá Photos thêm cỡ từng file, hoặc bỏ chia sẻ phía Photos |
+| S6 | (§12) Bản gốc **và bản sửa** tải qua iCloud có cùng byte trên hai máy? | 50 ảnh (20 đã sửa, 5 Live Photo, 5 RAW+JPEG); SHA từng file trên Mac và iPhone | 50/50 trùng, kể cả bản sửa | bản sửa lệch → không chia sẻ SHA bản sửa, máy nhận tự băm bản sửa |
+| S7 | (§12) CloudKit: đẩy lần đầu 70k `PhotoFileHash` + 200k `ServerFileHash` | Mac thật, đếm thời gian, lỗi throttle, dung lượng iCloud tăng | xong ≤ 2 giờ; không lỗi không thử lại được; tăng ≤ 100 MB | không đạt → đẩy theo lô nhỏ hơn, giãn thời gian; hoặc chỉ đẩy `ServerFileHash` của file có ứng viên |
+| S8 | (§12) Mac băm cả NAS qua mạng nhà | 1 TB ảnh/video trên NAS, Mac cắm dây và qua Wi‑Fi | ghi GB/giờ; Backup chạy cùng lúc không chậm quá 20% | thiết kế thứ tự và giới hạn tốc độ băm NAS |
 
 ## 2. Tiêu chí nghiệm thu
 
@@ -78,3 +82,29 @@ Logic (AC-74…AC-106) không chứng minh lại; dưới đây chỉ phần Mac
 | AC-112 | như AC-111, server tắt | ⌘⌫ → xác nhận | `NSAlert` "Can't reach NAS Home" · Delete Anyway (đỏ) · Cancel (mặc định); Return = Cancel, 0 mục bị xoá | ⚠️ chưa có (`mac-onserver-delete.json`) |
 | AC-113 | ảnh có bản ở `Shared/2025/a.HEIC` | chọn ảnh, ⌘I | Get Info có mục On Server: `NAS Home` / `iCloud Photo/Shared/2025/a.HEIC`; ô lưới có glyph | `OnServerIndexTests.photoInfoLocations` (dùng lại) + ⚠️ chưa có (`design-parity` `MAC_GetInfoSingle`) |
 | AC-114 | — | 3 mục Photos chưa liệt kê: A chụp 2017 nhưng index lúc 1.800.000.000, B chụp 2025 index lúc 1.700.000.000, C chụp 2020 index lúc 1.700.000.000 | lấy hàng đợi liệt kê | thứ tự A, B, C — mục vào thư viện gần nhất trước, cùng lúc thì ngày chụp mới hơn trước | `PhotosHashTests.listsRecentlyAddedFirst` |
+
+## 4. Băm dùng chung (§12)
+
+Quy tắc: [07 §12](07-on-server-check.md#12-băm-dùng-chung--mac-băm-hộ-máy-khác-chỉ-đọc-2026-11-03). Spike S5–S8 ở §1.
+Thư viện thử không có ảnh mặt người.
+- Server thử: SMB ảo `127.0.0.1:4450` (memory `common-photos-fs1908`) và WebDAV cục bộ.
+- CloudKit: test domain dùng kênh giả (`SharedIndexSource`); kênh thật cần thiết bị (như BD-03.05).
+
+| # | Cho | Khi | Thì | Chứng minh bằng |
+|---|---|---|---|---|
+| AC-144 | Mac, 4 mục Photos: 3 bản gốc có trên Mac, 1 chỉ-iCloud; *Share Index Across Devices* bật | một lượt helper | `copy_files` có SHA của cả 4 (`origin = hashed`); bản chỉ-iCloud được tải vào thư mục tạm, băm, thư mục tạm rỗng sau lượt; mục vào thư viện gần nhất được băm trước | ⚠️ chưa có |
+| AC-145 | nguồn server có 5 ảnh, không mục Photos nào cùng cỡ | lượt helper Mac | cả 5 được băm (không chỉ ứng viên); gốc nguồn có `.shotdex/hash-index/<mã máy>-000001.jsonl` 5 dòng (đường dẫn tương đối, cỡ, ngày sửa, SHA); không file part nào còn lại | ⚠️ chưa có |
+| AC-146 | sổ AC-145 trên NAS, iPhone chưa có SHA nào của nguồn | iPhone liệt kê nguồn rồi kiểm | 0 lệnh tải file nào từ NAS (client giả đếm); 5 file có SHA `origin = shared` | ⚠️ chưa có |
+| AC-147 | như AC-146, nhưng `b.HEIC` đổi ngày sửa sau khi Mac ghi sổ | iPhone kiểm | dòng của `b.HEIC` bị bỏ; đúng 1 file bị tải để băm; 4 file kia dùng sổ | ⚠️ chưa có |
+| AC-148 | nguồn có `.shotdex/hash-index/` | liệt kê nguồn, quét Find Common Photos (FS-19.08), đếm ảnh nguồn | không có file nào trong `.shotdex/` thành ảnh, ứng viên hay số đếm; không lệnh ghi nào ngoài `.shotdex/` (client giả ghi lại lệnh) | ⚠️ chưa có |
+| AC-149 | Mac đã đẩy `PhotoFileHash` của 10 mục; iPhone có 10 mục cùng cloud id, cùng ngày sửa, cả 10 chỉ-iCloud | iPhone kiểm (kênh giả) | 0 lần tải iCloud cho 10 mục; album **is** / **is not** đúng như khi iPhone tự băm | ⚠️ chưa có |
+| AC-150 | như AC-149, mục 3 sửa trên iPhone sau khi Mac băm (ngày sửa lệch) | iPhone kiểm | mục 3 được tải và băm lại trên iPhone; 9 mục kia không tải | ⚠️ chưa có |
+| AC-151 | `ServerFileHash` từ Mac cho connection `smb://nas.local`; iPhone có connection cùng danh tính và một connection `smb://192.168.1.5` | iPhone kiểm cả hai | connection cùng danh tính: 0 lần tải; connection khác danh tính: tự băm như hôm nay | ⚠️ chưa có |
+| AC-152 | 100 mục khớp **is** nhờ SHA từ Mac, K = 10 | một lượt kiểm trên iPhone | đúng 10 file được iPhone tự băm lại; khớp hết → 100 mục vẫn **is** | ⚠️ chưa có |
+| AC-153 | như AC-152, 1 trong 10 file kiểm ngẫu nhiên lệch SHA; sau đó Mac gửi thêm 5 SHA mới | lượt đó, rồi lượt sau | mọi SHA Mac gửi trước lúc lệch bị bỏ; các mục về "chưa kiểm xong" rồi iPhone tự băm; dòng tiến độ `Hashes from <tên Mac> didn't match — checking on this iPhone.`; không lượt xoá nào dùng SHA đã bỏ; lượt sau 5 SHA mới được dùng (kèm kiểm ngẫu nhiên) | ⚠️ chưa có |
+| AC-154 | mục khớp **is** chỉ nhờ SHA từ Mac; file trên NAS bị xoá sau đó | xoá mục khỏi album | `PhotoDeletionGate` hỏi lại server, mục **không** bị xoá, alert "no longer on NAS Home" | ⚠️ chưa có (mở rộng `PhotoDeletionGateTests.reverifiesServerCopy`) |
+| AC-155 | *Share Index Across Devices* tắt (hoặc không có iCloud, hoặc Mac thiếu entitlement) | Mac và iPhone chạy kiểm | không kéo, không đẩy record nào; iPhone tự băm như hôm nay; không crash | ⚠️ chưa có |
+| AC-156 | iPhone tự băm 2 mục Mac chưa băm tới | iPhone đẩy lên, rồi Mac kiểm | Mac dùng 2 SHA đó (0 lần đọc file cho chúng), `origin = shared` | ⚠️ chưa có |
+| AC-157 | helper Mac đang băm file NAS thứ 40/100, Backup bắt đầu lượt | Backup cần connection | băm nhả khoá giữa hai file, Backup đi trước; sau Backup băm tiếp từ file 41; không file tạm nào còn lại | ⚠️ chưa có |
+| AC-158 | Mac và iPhone cùng ghi sổ vào một nguồn trong một lượt | cả hai ghi xong | hai đoạn riêng (`<mã Mac>-…`, `<mã iPhone>-…`), không dòng nào mất; máy thứ ba đọc được cả hai | ⚠️ chưa có |
+
