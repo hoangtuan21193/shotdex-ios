@@ -1,6 +1,6 @@
 # FS-19.08b — Gom ảnh chung: tiêu chí nghiệm thu
 
-`FS-19.08b` · cho [08](08-common-photos.md) · AC-115…AC-143 · cập nhật 2026-11-03 (AC-131…143: hoàn tác, §6b)
+`FS-19.08b` · cho [08](08-common-photos.md) · AC-115…AC-143, AC-159…173 · cập nhật 2026-11-03 (AC-131…143: hoàn tác, §6b; AC-159…173: chỉ ảnh mới + tự gom, §6c)
 
 Dữ liệu thử: server cục bộ (impacket smbserver + WebDAV trên Mac, memory `server-upload-fs15`), ảnh phong cảnh không
 có mặt người. Test domain chạy trên client giả của `ShotDexTests/BackupFakes.swift` và GRDB trong bộ nhớ.
@@ -56,4 +56,26 @@ BackupRunner, ServerUploadSession, ClickSelection) chạy trên sim iPhone Duo 2
 **Chưa chứng minh trọn:** AC-143 (cùng lý do với AC-130: không bấm tay được, không có element dump trên Mac). Chuỗi mới
 chưa vào String Catalog (`Localizable.xcstrings` đang có sửa đổi của phiên khác). `Tools/gate` (cả bộ) không chạy trong
 loop này, theo luật "cả bộ một lần mỗi intent".
+
+## Chạy lại chỉ ảnh mới · tự gom (§6c)
+
+Cùng dữ liệu thử như trên. "Bộ" = A + B → Shared trên một connection.
+
+| # | Cho | Khi | Thì | Chứng minh bằng |
+|---|---|---|---|---|
+| AC-159 | A, B không phải nguồn, mỗi bên 1.000 file, 300 chung; quét một lần | quét lại cùng bộ, không file nào đổi | 0 lệnh đọc byte (client giả đếm `sha256`/`download`/đọc đầu file); kết quả 300 Same như lần đầu | ⚠️ chưa có |
+| AC-160 | lượt Copy xong 300 ảnh; sau đó thêm 3 ảnh cùng byte vào cả A và B | quét lại cùng bộ | danh sách đúng 3 ảnh mới; 300 ảnh cũ không hiện, không có lệnh nào tới đường dẫn của chúng ngoài liệt kê; nút **Copy 3** | ⚠️ chưa có |
+| AC-161 | như AC-160, thêm `X.JPG` chỉ vào A | quét lại | X không trong danh sách; lần quét sau khi B có X cùng byte thì X vào danh sách | ⚠️ chưa có |
+| AC-162 | ảnh `IMG_1.JPG` đã gom; sau đó ghi đè nội dung mới ở cả A và B (cỡ khác) | quét lại | IMG_1 được băm lại, là ảnh mới; Copy đặt `IMG_1 (2).JPG` ở Shared, bản cũ giữ nguyên | ⚠️ chưa có |
+| AC-163 | ảnh đã gom, người dùng xoá bản ở Shared; ảnh vẫn ở A và B | quét lại | ảnh vào lại danh sách và được chép lại; ảnh có bản ở Shared còn đúng đường dẫn + cỡ thì không bị đọc lại | ⚠️ chưa có |
+| AC-164 | Activity có lượt xong của bộ | **Run Again** | sheet mở đúng bộ, câu "Last gathered … · only new photos are checked", quét theo kiểu chỉ ảnh mới | ⚠️ chưa có |
+| AC-165 | bộ Copy đã bật Keep gathering; 2 ảnh mới chung xuất hiện | lượt tự gom 15 phút, Mac cắm điện, Wi‑Fi | 2 ảnh được chép như §6 (SHA đọc lại khớp), có log + hoàn tác được, không ai mở app | ⚠️ chưa có |
+| AC-166 | bộ tự gom, không có ảnh mới | lượt tự gom | không thêm hàng Activity; "checked … ago" của bộ cập nhật; 0 lệnh đọc byte | ⚠️ chưa có |
+| AC-167 | bộ tự gom; Mac chạy pin (hay mạng tính tiền) | tới giờ lượt tự gom | không lệnh nào tới server; bộ ghi "Waiting to Charge" (hay "Waiting for Wi‑Fi") | ⚠️ chưa có |
+| AC-168 | Backup đang chạy trên cùng connection | lượt tự gom tới giờ | lượt tự gom chờ khoá, Backup đi trước (thứ tự lệnh trên client giả) | ⚠️ chưa có |
+| AC-169 | bộ **Move** tự gom; 4 ảnh mới chung | lượt tự gom | 0 file bị dời hay xoá; một thông báo "4 photos are ready to move to “Shared”"; hàng Activity "Ready to move 4"; bấm **Move 4…** → hộp xác nhận → chạy như §6 | ⚠️ chưa có |
+| AC-170 | bộ tự gom; server ngắt giữa lượt Copy sau ảnh 1/3 | lượt tự gom | ảnh 1 xong, không xoá gì; bộ ghi "NAS Home isn't reachable"; lượt sau chép nốt ảnh 2, 3, không chép lại ảnh 1 | ⚠️ chưa có |
+| AC-171 | folder `Vợ` bị xoá trên server | lượt tự gom | bộ dừng, hàng "“Vợ” isn't on NAS Home anymore · Stopped gathering"; không lượt nào chạy nữa cho tới khi bật lại | ⚠️ chưa có |
+| AC-172 | bộ tự gom có 2 lượt đã gom | **Stop Gathering** | không lượt tự gom nào chạy nữa; log, CSV và hoàn tác của 2 lượt còn nguyên | ⚠️ chưa có |
+| AC-173 | bộ Copy tự gom; ngày 3/11 có 3 lượt tự gom, mỗi lượt 2 ảnh; ngày 4/11 một lượt 1 ảnh | xem Activity | đúng 2 hàng cho bộ: "Nov 3 · 6 copied" (một CSV 6 hàng) và "Nov 4 · 1 copied"; hoàn tác hàng Nov 3 trả đủ 6 | ⚠️ chưa có |
 

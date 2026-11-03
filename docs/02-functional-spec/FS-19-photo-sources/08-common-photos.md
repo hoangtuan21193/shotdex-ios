@@ -2,7 +2,7 @@
 
 `FS-19.08` · tier A (sheet) + B (cửa sổ tiến độ) · chỉ **Mac** · board `MAC_CommonPhotos` · `MAC_CommonPhotosRun`
 · đề xuất `ShotDexMac/Servers/CommonPhotos/`, `ShotDex/Domain/CommonPhotos/` · AC ở [08b](08b-common-photos-ac.md)
-· cập nhật 2026-11-03 (thêm hoàn tác, §6b)
+· cập nhật 2026-11-03 (thêm hoàn tác, §6b; chạy lại chỉ ảnh mới + tự gom, §6c)
 
 **Một câu:** trong màn duyệt server trên Mac, chọn từ 2 folder trở lên → ShotDex tìm ảnh có **cùng nội dung** ở mọi
 folder đó và chép (mặc định) hay dời chúng vào một folder chung, có tiến độ, log từng file, và kiểm SHA-256 trước khi
@@ -21,7 +21,7 @@ Nguồn: [intent 2026-11-02](../../_intents/2026-11-02-common-photos-across-fold
 
 **Có:** chọn ≥ 2 folder cùng connection · folder chung chọn có sẵn hoặc tạo mới · Copy (mặc định) / Move · quét cả folder
 con · kết quả xem trước có hai mức Likely the same → Same · tiến độ, dừng, làm tiếp · log trong app + CSV trong folder chung · **hoàn tác** cả lượt hoặc các hàng đã chọn
-(§6b, người dùng 2026-11-03).
+(§6b, người dùng 2026-11-03) · **chạy lại chỉ ảnh mới** và **tự gom** mỗi 15 phút (§6c, người dùng 2026-11-03).
 
 **Cố ý không có:**
 - iPhone, iPad, Duo — người dùng chọn chỉ Mac (2026-11-02).
@@ -139,6 +139,67 @@ SHA-256 với bản ở folder chung, nên trả về = chép lại đúng nhữ
 - Lịch sử trả **đúng từng chỗ cũ**: lượt Move ghi lại hàng lịch sử nào đến từ bản nào; bản không trả được (chỗ bị chiếm)
   thì lịch sử của nó ở lại đường dẫn đích (người dùng 2026-11-03).
 
+## 6c. Chạy lại chỉ ảnh mới · tự gom (người dùng 2026-11-03)
+
+Nguồn: [intent 2026-11-03-common-photos-new-only-and-sync](../../_intents/2026-11-03-common-photos-new-only-and-sync.md).
+
+**Bộ gom** = connection + các folder nguồn (không kể thứ tự) + folder chung. Hai lượt cùng bộ là cùng một việc, khác
+Copy/Move vẫn là cùng bộ.
+
+### Nhớ những gì đã đọc
+
+- Mỗi lần quét, ShotDex nhớ SHA-256 của **mọi file nó đã băm**: connection, đường dẫn trên server, cỡ, ngày sửa, SHA,
+  và khoá ngày chụp nếu đã đọc. Nhớ cả folder **không phải nguồn** (người dùng 2026-11-03). Bảng riêng, không đụng
+  `copy_files` hay `photo_metadata`.
+- Lần quét sau, file có **đường dẫn + cỡ + ngày sửa** trùng thì lấy SHA đã nhớ, không đọc byte nào. Ngày sửa chỉ dùng để
+  biết file có đổi hay không, không bao giờ dùng để nói hai file giống nhau (giữ luật §5).
+- File không còn trên server ở lần liệt kê sau: bỏ khỏi bảng nhớ.
+
+### Chạy lại chỉ ảnh mới
+
+- Chọn lại đúng một bộ đã từng chạy xong (từ sheet, hay **Run Again** ở hàng Activity / cửa sổ log), thì sheet ghi
+  "Last gathered Nov 3, 14:30 · only new photos are checked". Scan chỉ đưa vào danh sách:
+  - ảnh có mặt ở **mọi** folder nguồn, **và**
+  - có ít nhất một bản là file **mới hoặc đổi** (đường dẫn, cỡ hay ngày sửa khác) so với lượt xong gần nhất của bộ.
+- Ảnh đã có ở lượt trước với trạng thái Copied, Moved hay Skipped thì không hiện lại, không hỏi server.
+- Ảnh mới chỉ ở A, chưa có ở B: không phải ảnh chung, nên chưa hiện. Lần sau B có thì nó vào (người dùng 2026-11-03).
+- File đã gom, sau đó **đổi nội dung** ở A và B (cùng đường dẫn, cỡ hay ngày sửa khác): là ảnh mới, theo §5–§6. Bản cũ
+  ở folder chung vẫn giữ; trùng tên thì theo luật ` (2)`.
+- Ảnh đã gom mà bản ở **folder chung không còn** (người dùng xoá hay dời đi): lượt sau **chép lại**, miễn ảnh vẫn ở mọi
+  folder nguồn (người dùng 2026-11-03). Mỗi lượt vì thế liệt kê cả folder chung (chỉ lệnh liệt kê, không đọc byte) để
+  biết bản nào còn. Bản ở folder chung còn đúng đường dẫn + cỡ thì coi là còn, không đọc lại.
+- **Scan Everything** (nút phụ trong sheet khi bộ đã từng chạy): quét như lần đầu, vẫn dùng SHA đã nhớ.
+
+### Tự gom (Keep Gathering)
+
+- Sheet có ô **Keep gathering new photos** (tắt sẵn). Bật rồi chạy: sau lượt đầu, helper Mac (`--agent`, đã chạy kiểm
+  On Server, FS-19.07 §11) cứ **15 phút** chạy lại bộ đó theo kiểu "chỉ ảnh mới" (người dùng 2026-11-03), kể cả khi app
+  đóng.
+- Chỉ chạy khi Mac **cắm điện** và mạng **không tính tiền** (người dùng 2026-11-03); không đủ thì bỏ qua lượt đó, ghi lý
+  do ("Waiting to Charge", "Waiting for Wi‑Fi" — chữ có sẵn của FS-19.07). Backup trên cùng connection đi trước (khoá
+  kết nối, FS-19.07 §5).
+- **Copy**: lượt tự gom tìm thấy ảnh thì chạy luôn như §6, có log, CSV, hoàn tác §6b.
+- **Move**: lượt tự gom chỉ quét. Có ảnh thì gửi thông báo macOS "4 photos are ready to move to “Shared”" và hàng
+  Activity "Ready to move 4"; bấm vào mở cửa sổ log với nút **Move 4…**, hỏi lại như §4 rồi chạy như §6. Không có gì bị
+  dời hay xoá khi người dùng chưa bấm (người dùng 2026-11-03).
+- Lượt tự gom không tìm thấy gì: không thêm hàng Activity, chỉ cập nhật "Checked 3 min ago" của bộ.
+- Server không trả lời: bỏ lượt, ghi "NAS Home isn't reachable", lượt sau thử lại. Không bao giờ dừng giữa chừng một
+  lượt Move mà không đi tiếp được theo §6 (Resume như cũ).
+- Folder nguồn hay folder chung không còn trên server: bộ **tạm dừng**, hàng Activity "“Vợ” isn't on NAS Home anymore ·
+  Stopped gathering", không thử lại cho tới khi người dùng bật lại.
+- **Danh sách bộ đang tự gom**: mục **Gathering** đầu cửa sổ Activity, mỗi bộ một hàng ("Tuấn + Vợ → Shared · Copy ·
+  checked 3 min ago · 128 gathered"), menu hàng **Run Now** · **Stop Gathering**. Stop Gathering không đụng log hay
+  file.
+  Chỗ này là Activity, không phải Settings (người dùng 2026-11-03).
+- **Gộp theo ngày** (người dùng 2026-11-03): mọi lượt tự gom có ảnh trong một ngày (giờ máy) của một bộ là **một lượt**
+  trong Activity — "Tuấn + Vợ → Shared · Nov 3 · 12 copied". Mỗi lượt tự gom thêm hàng vào lượt đó và ghi lại CSV của
+  ngày (`ShotDex Common Photos 2026-11-03 auto.csv`). Hoàn tác cả ngày hay từng hàng như §6b. Ngày đã qua thì lượt của
+  nó đóng lại, tính vào giới hạn 20 lượt như lượt tay.
+- Bản cho iPhone/iPad: không (FS-19.08 chỉ Mac).
+- **Board** (vẽ trước khi code, canvas Mac): `MAC_CommonPhotos` thêm tweak `again` (câu "Last gathered…", ô Keep
+  gathering, nút Scan Everything) · `MAC_CommonPhotosRun` thêm trạng thái `readyToMove` · `MAC_Activity` thêm mục
+  Gathering.
+
 ## 7. Cửa sổ tiến độ (`MAC_CommonPhotosRun`)
 
 | Trạng thái | Hiển thị |
@@ -161,6 +222,7 @@ SHA-256 với bản ở folder chung, nên trả về = chép lại đúng nhữ
 | | |
 |---|---|
 | Đọc từ | danh sách server (lệnh liệt kê) · SHA và ngày chụp đã có của bản sao server ([05](05-data.md), bảng file từng bản sao) |
+| Ghi vào (§6c) | bảng **SHA đã đọc** (connection, đường dẫn, cỡ, ngày sửa, SHA, khoá ngày chụp, lúc đọc) · bảng **Bộ tự gom** (connection, folder nguồn, folder chung, Copy/Move, bật/tắt, lúc kiểm cuối, lý do chờ/dừng, số đã gom); lượt gom thêm cột bộ gom để biết "lượt xong gần nhất của bộ" |
 | Ghi vào | bảng mới **Lượt gom** (connection, folder nguồn, folder chung, Copy/Move, trạng thái, lúc) + **Mục gom** (SHA, đường dẫn từng nguồn, đích, trạng thái, lỗi; thêm cho §6b: sidecar lượt đã đặt ở đích + SHA của nó, trạng thái hoàn tác) + bảng phụ **hàng lịch sử đã dời** (lượt, ảnh, hàng lịch sử, đường dẫn trước khi dời) |
 | Người dùng tự nhập? | không — dữ liệu dẫn xuất, không vào `photo_metadata`; Clear Local Metadata Index không xoá lượt đang dở |
 
@@ -184,3 +246,5 @@ SHA-256 với bản ở folder chung, nên trả về = chép lại đúng nhữ
 | Hoàn tác Copy xoá bản cuối cùng (người dùng đã xoá A, B sau khi chép) | hỏi lại một bản nguồn trước khi xoá; không còn → giữ |
 | File ở folder chung bị sửa sau lượt chạy | SHA lệch → không trả bản đó, không xoá gì |
 | Hoàn tác Move chậm như lượt chạy | phải đẩy lại byte cho mọi bản không phải bản đã đổi chỗ; tiến độ đếm byte |
+| §6c: file đổi nội dung mà giữ nguyên cỡ và ngày sửa (công cụ ghi đè giữ mtime) | SHA cũ bị dùng lại, ảnh có thể bị coi là chung sai. Copy vẫn an toàn (chép byte thật, kiểm SHA khi đọc lại); Move hỏi lại cỡ + ngày sửa và kiểm SHA ở đích như §6, nên không xoá nhầm. Scan Everything không giúp; giới hạn đã biết |
+| §6c: tự gom 15 phút trên NAS 50k file | mỗi lượt liệt kê lại hai cây (lệnh liệt kê, không đọc byte); đo ở `/verify`, nếu một lượt quá 2 phút thì giãn chu kỳ |
