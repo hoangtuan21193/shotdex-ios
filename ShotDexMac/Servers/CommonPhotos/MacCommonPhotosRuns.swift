@@ -38,11 +38,13 @@ final class MacCommonPhotosRuns {
         }
 
         var isFinished: Bool { state == .finished }
+        /// Found for a Move set by Keep gathering; waits for Move N….
+        var isReady: Bool { state == .ready }
         var isStopped: Bool { state == .stopped }
         /// Every photo done; the CSV, history and rescan are being written.
         var isFinishing: Bool { state == .finishing }
         /// Over without the user choosing: a lost connection, a quit, a crash.
-        var isInterrupted: Bool { !isRunning && !isFinished && !isStopped && !isPausedByUser }
+        var isInterrupted: Bool { !isRunning && !isFinished && !isStopped && !isPausedByUser && !isReady }
 
         /// Photos done (or the one being worked on) of all — the one count the
         /// window, the foot and Activity show.
@@ -96,6 +98,45 @@ final class MacCommonPhotosRuns {
     /// Run Again (FS-19.08 §6c) asked for a finished run's set; the Library
     /// window opens its source and the sheet on it, and clears this.
     var runAgainRequest: CommonPhotosRun?
+
+    /// Move N… pressed in Activity: the run's window opens on its question.
+    var moveAsked: String?
+    /// Keep gathering's notice was clicked: the Library window opens this
+    /// run's window, and clears it — only while fresh, so a click with no
+    /// Library window open does not pop a window much later.
+    var logRequest: (runId: String, at: Date)?
+
+    enum MoveReadyOutcome: Equatable {
+        case started
+        /// A pass changed the list since the user saw it: ask again.
+        case listChanged
+        /// It cannot start (no connection, an overlapping run): it stays
+        /// ready, and the entry says why.
+        case refused
+    }
+
+    /// Move N… said yes in the run's window (FS-19.08 §6c): the ready run
+    /// becomes a run, started as a resumed one. What would stop it from
+    /// starting is checked first, so a refusal leaves it ready.
+    @discardableResult
+    func moveReady(runId: String, asOf: Int) -> MoveReadyOutcome {
+        guard let run = (try? store.run(id: runId)) ?? nil, run.state == .ready else { return .listChanged }
+        var problem: String?
+        if let server = (try? servers.fetch(id: run.connectionId)) ?? nil {
+            if overlapsARunGoing(run, on: server) { problem = Overlaps().errorDescription }
+        } else {
+            problem = String(localized: "The connection for this run was deleted.", comment: "Common photos: the run's connection is gone")
+        }
+        if let problem {
+            var entry = entries[runId] ?? Entry(run: run)
+            entry.problem = problem
+            entries[runId] = entry
+            return .refused
+        }
+        guard (try? store.confirmReady(runId: runId, asOf: asOf)) == true else { return .listChanged }
+        resume(runId: runId)
+        return .started
+    }
 
     /// Run Again from Activity or a run's window.
     func runAgain(runId: String) {
@@ -160,6 +201,8 @@ final class MacCommonPhotosRuns {
             entries[runId]?.problem = String(localized: "This run is no longer saved.", comment: "Common photos: resume of a discarded run")
             return
         }
+        // Ready to move (§6c): only Move N…, which confirms first, starts it.
+        guard run.state != .ready else { return }
         guard let server = (try? servers.fetch(id: run.connectionId)) ?? nil else {
             var entry = entries[runId] ?? Entry(run: run)
             entry.problem = String(localized: "The connection for this run was deleted.", comment: "Common photos: the run's connection is gone")
@@ -265,7 +308,7 @@ final class MacCommonPhotosRuns {
     /// store says so before the entry does), never once it is over.
     func canStop(runId: String) -> Bool {
         guard let state = (try? store.run(id: runId))??.state else { return false }
-        return state != .finishing && state != .finished && state != .stopped
+        return state != .finishing && state != .finished && state != .stopped && state != .ready
     }
 
     /// Stop: what is done stays done, nothing more is copied, and the run
@@ -287,7 +330,7 @@ final class MacCommonPhotosRuns {
     /// another runner of this process.
     func canDiscard(runId: String) -> Bool {
         guard tasks[runId] == nil, !CommonPhotosRunner.isActive(runId: runId, in: database),
-              let run = (try? store.run(id: runId)) ?? nil, run.state != .finished else { return false }
+              let run = (try? store.run(id: runId)) ?? nil, run.state != .finished, run.state != .ready else { return false }
         // An undo owing its history and rescan finishes on Resume: discarded,
         // the history would keep pointing at the destination (§6b).
         return !(run.isUndo && run.state == .finishing)
@@ -320,7 +363,7 @@ final class MacCommonPhotosRuns {
     /// §6b): not while it or an undo of it goes.
     func canRemove(runId: String) -> Bool {
         guard tasks[runId] == nil, !CommonPhotosRunner.isActive(runId: runId, in: database),
-              let run = (try? store.run(id: runId)) ?? nil, run.isOver else { return false }
+              let run = (try? store.run(id: runId)) ?? nil, run.isOver || run.state == .ready else { return false }
         let undos = run.isUndo ? [] : ((try? store.undoRuns(of: runId)) ?? [])
         return undos.allSatisfy { $0.isOver && tasks[$0.id] == nil }
     }
@@ -331,6 +374,13 @@ final class MacCommonPhotosRuns {
     func remove(runIds: [String]) {
         var removed = false
         for runId in runIds where canRemove(runId: runId) {
+            // A ready run loses only what it had not moved (§6c).
+            if (try? store.run(id: runId))??.state == .ready {
+                try? store.dropReady(runId: runId)
+                entries[runId] = nil
+                removed = true
+                continue
+            }
             let undos = (try? store.undoRuns(of: runId)) ?? []
             try? store.discard(runId: runId)
             entries[runId] = nil
@@ -565,6 +615,13 @@ final class MacCommonPhotosRuns {
 /// What a common-photos run has done, in the words every surface uses
 /// (FS-19.08 §7): the window, the Stop question, Discard, the banner.
 enum MacCommonPhotosWords {
+    /// The Move question's message (§4, §6b), in the sheet and on a ready run.
+    static func moveMessage(folders: [String], destination: String) -> String {
+        let names = folders.map { ServerUploadPath.lastComponent(of: $0) }.formatted(.list(type: .and))
+        return String(localized: "Each photo is copied to “\(destination)” and verified, then removed from \(names). The server has no Trash; you can undo the run from Activity.",
+                      comment: "Mac common photos: Move confirmation message")
+    }
+
     /// Copy: "120 copied. The other 160 haven't been copied." Move: "120
     /// moved — their other copies were removed. 1 is partway — some of its
     /// copies are still in place. The other 159 haven't been touched."

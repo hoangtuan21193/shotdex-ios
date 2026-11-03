@@ -60,9 +60,14 @@ struct CommonPhotosWatchStore: Sendable {
 
     /// Stop Gathering: no pass runs for it any more. Its runs, logs and
     /// files are left as they are.
+    /// Off: and the photos a Move set had ready go, unmoved (§6c).
     func stopGathering(id: String) throws {
         try database.writer.write { db in
             try db.execute(sql: "UPDATE common_photo_watches SET isOn = 0, waiting = NULL WHERE id = ?", arguments: [id])
+            for runId in try String.fetchAll(db, sql: "SELECT id FROM common_photo_runs WHERE watchId = ? AND state = ?",
+                                             arguments: [id, CommonPhotosRun.State.ready.rawValue]) {
+                try CommonPhotosStore.dropReady(runId: runId, in: db)
+            }
         }
     }
 

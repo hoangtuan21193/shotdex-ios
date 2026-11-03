@@ -402,14 +402,139 @@ import Testing
         #expect(after == before - 1)
     }
 
-    /// A Move set only finds its photos: no run, nothing moved (G7 asks).
-    @Test func moveSetMovesNothing() async throws {
+    /// AC-169: a Move set's pass moves nothing — its photos wait in a run
+    /// ready to move, the user hears once, a later pass refreshes the list
+    /// and speaks up only for photos not listed before; Move N… then runs it
+    /// as any Move.
+    @Test func moveWaitsForTheUser() async throws {
         let client = Self.nas()
         let database = try AppDatabase.makeEmpty()
         let watch = try Self.watch(database, action: .move)
-        let result = await Self.autoGather(client, database).gather(watch)
-        #expect(result.outcome == .found(3) && result.runId == nil)
+        var notices: [(count: Int, destination: String, runId: String)] = []
+        var gather = Self.autoGather(client, database)
+        gather.readyToMove = { notices.append(($0, $1, $2)) }
+        let day = Date(timeIntervalSince1970: 1_793_700_000)
+
+        let first = await gather.gather(watch, now: day)
+        #expect(first.outcome == .found(3))
+        let runId = try #require(first.runId)
+        let store = CommonPhotosStore(database: database)
+        #expect(try store.run(id: runId)?.state == .ready)
+        #expect(try store.items(runId: runId).allSatisfy { $0.status == .pending })
+        #expect(client.removed.isEmpty && client.files.keys.filter { $0.hasPrefix("photos/Shared/") }.isEmpty)
+        #expect(notices.count == 1 && notices[0].count == 3 && notices[0].destination == "photos/Shared" && notices[0].runId == runId)
+        // Waiting is neither Resume nor history.
+        #expect(try store.unfinishedRuns().isEmpty)
+        #expect(try store.readyRuns().map(\.id) == [runId])
+        #expect(try store.run(id: runId)?.canResume == false)
+
+        // Found again: the same run, the same 3, no second notice.
+        let again = await gather.gather(watch, now: day.addingTimeInterval(900))
+        #expect(again.runId == runId && notices.count == 1)
+        #expect(try store.items(runId: runId).count == 3)
+
+        Self.addCommon(client, "M4", seed: 94)
+        let more = await gather.gather(watch, now: day.addingTimeInterval(1_800))
+        #expect(more.outcome == .found(4) && more.runId == runId)
+        #expect(notices.count == 2 && notices[1].count == 4)
+        #expect(try store.items(runId: runId).map(\.position).sorted() == [0, 1, 2, 3])
+
+        // Move 4… said yes.
+        #expect(try store.confirmReady(runId: runId))
+        #expect(try store.confirmReady(runId: runId) == false)
+        try await Self.run(runId, client, database)
+        #expect(try store.run(id: runId)?.state == .finished)
+        #expect(try store.items(runId: runId).map(\.status) == Array(repeating: .moved, count: 4))
+        #expect(!client.removed.isEmpty)
+        let next = await gather.gather(watch, now: day.addingTimeInterval(2_700))
+        #expect(next.outcome == .nothingNew && notices.count == 2)
+    }
+
+    /// Move N… moves only the list the user saw: a pass that changed it
+    /// since makes the yes fail, and the window asks again.
+    @Test func confirmNeedsTheListTheUserSaw() async throws {
+        let client = Self.nas()
+        let database = try AppDatabase.makeEmpty()
+        let watch = try Self.watch(database, action: .move)
+        let gather = Self.autoGather(client, database)
+        let day = Date(timeIntervalSince1970: 1_793_700_000)
+        let runId = try #require(await gather.gather(watch, now: day).runId)
+        let store = CommonPhotosStore(database: database)
+        let seen = try #require(try store.run(id: runId)).updatedAt
+        Self.addCommon(client, "C4", seed: 95)
+        _ = await gather.gather(watch, now: day.addingTimeInterval(900))
+        #expect(try store.confirmReady(runId: runId, asOf: seen) == false)
+        #expect(try store.run(id: runId)?.state == .ready)
+        let now = try #require(try store.run(id: runId)).updatedAt
+        #expect(try store.confirmReady(runId: runId, asOf: now))
+    }
+
+    /// Stop Gathering and Remove from List drop a ready list, unmoved; the
+    /// photos a Move set moved earlier that day stay a finished run of
+    /// their own, still undoable.
+    @Test func stopGatheringDropsTheReadyList() async throws {
+        let client = Self.nas()
+        let database = try AppDatabase.makeEmpty()
+        let watch = try Self.watch(database, action: .move)
+        let gather = Self.autoGather(client, database)
+        let day = Date(timeIntervalSince1970: 1_793_700_000)
+        let store = CommonPhotosStore(database: database)
+        let runId = try #require(await gather.gather(watch, now: day).runId)
+        try CommonPhotosWatchStore(database: database).stopGathering(id: watch.id)
+        #expect(try store.run(id: runId) == nil)
+        #expect(try store.readyRuns().isEmpty)
         #expect(client.removed.isEmpty)
+
+        // Moved earlier today, then more found: a list of its own.
+        let again = try Self.watch(database, action: .move)
+        let first = try #require(await gather.gather(again, now: day).runId)
+        #expect(try store.confirmReady(runId: first))
+        try await Self.run(first, client, database)
+        Self.addCommon(client, "K1", seed: 96)
+        let more = try #require(await gather.gather(again, now: day.addingTimeInterval(900)).runId)
+        #expect(more != first)
+        #expect(try store.run(id: first)?.state == .finished)
+        #expect(try store.startUndo(of: first).undoOf == first)
+        try store.dropReady(runId: more)
+        #expect(try store.run(id: more) == nil)
+        #expect(try store.items(runId: first).map(\.status) == Array(repeating: .moved, count: 3))
+    }
+
+    /// The photos a ready list names went (moved by hand): the next pass
+    /// finds nothing, and the list goes with them.
+    @Test func goneFromTheSourcesDropsTheList() async throws {
+        let client = Self.nas()
+        let database = try AppDatabase.makeEmpty()
+        let watch = try Self.watch(database, action: .move)
+        let gather = Self.autoGather(client, database)
+        let day = Date(timeIntervalSince1970: 1_793_700_000)
+        _ = try #require(await gather.gather(watch, now: day).runId)
+        for n in 0..<3 { client.drop("photos/B/from-a/copy \(n).HEIC") }
+        let next = await gather.gather(watch, now: day.addingTimeInterval(900))
+        #expect(next.outcome == .nothingNew)
+        #expect(try CommonPhotosStore(database: database).readyRuns().isEmpty)
+    }
+
+    /// A set switched between Copy and Move never adds to the other
+    /// action's run of the day — a Copy pass never runs a Move.
+    @Test func switchingActionKeepsRunsApart() async throws {
+        let client = Self.nas()
+        let database = try AppDatabase.makeEmpty()
+        let gather = Self.autoGather(client, database)
+        let day = Date(timeIntervalSince1970: 1_793_700_000)
+        let store = CommonPhotosStore(database: database)
+        let move = try Self.watch(database, action: .move)
+        let moved = try #require(await gather.gather(move, now: day).runId)
+        #expect(try store.confirmReady(runId: moved))
+        try await Self.run(moved, client, database)
+
+        let copy = try Self.watch(database, action: .copy)
+        #expect(copy.id == move.id)
+        Self.addCommon(client, "X1", seed: 97)
+        let copied = try #require(await gather.gather(copy, now: day.addingTimeInterval(900)).runId)
+        #expect(copied != moved)
+        #expect(try store.run(id: copied)?.action == .copy)
+        #expect(try store.run(id: moved)?.state == .finished)
     }
 
     /// On the local SMB test server, in a scratch folder: a real Copy
@@ -470,6 +595,60 @@ import Testing
 
             try await admin.removeFolderTree("\(root)/B")
             #expect(await pass.run(watch) == .stopped(.folderGone("\(root)/B")))
+        } catch {
+            try? await admin.removeFolderTree(root)
+            await admin.disconnect()
+            throw error
+        }
+        do { try await admin.removeFolderTree(root) } catch { Issue.record("left \(root) on the test share: \(error)") }
+        await admin.disconnect()
+    }
+
+    /// AC-169 on the local SMB test server: a Move set's pass leaves every
+    /// file where it was; Move N… then moves them.
+    @Test(.enabled(if: LocalSMBTestServer.isListening))
+    func moveReadyOnTheServer() async throws {
+        func smb() -> SMBFileClient {
+            SMBFileClient(server: FileServer(name: "Test SMB", transferProtocol: .smb, host: "127.0.0.1", port: 4450,
+                                             username: "tester", share: "photos"), password: "secret")
+        }
+        let database = try AppDatabase.makeEmpty()
+        let root = "photos/e2e-g7-\(UUID().uuidString.prefix(8))"
+        let admin = smb()
+        try await admin.connect()
+        let work = FileManager.default.temporaryDirectory.appendingPathComponent("CommonPhotosG7-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: work, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: work) }
+        do {
+            for folder in ["A", "B", "Shared"] { try await admin.createDirectory("\(root)/\(folder)") }
+            for n in 5...6 {
+                let name = String(format: "IMG_%04d.JPG", n)
+                let local = work.appendingPathComponent(name)
+                _ = try await admin.download("photos/Tuan/2025/06/\(name)", to: local, progress: { _ in })
+                try await admin.upload(local, to: "\(root)/A/\(name)", progress: { _ in })
+                try await admin.upload(local, to: "\(root)/B/copy \(name)", progress: { _ in })
+            }
+            let watch = try CommonPhotosWatchStore(database: database).keepGathering(
+                connectionId: "smb", folders: ["\(root)/A", "\(root)/B"], destination: "\(root)/Shared", action: .move)
+            let reader = smb()
+            let pass = CommonPhotosGatherPass(database: database, connection: { _ in (reader, "Test SMB") },
+                                              conditions: { (false, true) })
+            var notices = 0
+            var gather = CommonPhotosAutoGather(database: database, pass: pass)
+            gather.readyToMove = { count, _, _ in notices += count }
+            let result = await gather.gather(watch)
+            #expect(result.outcome == .found(2) && notices == 2)
+            let runId = try #require(result.runId)
+            #expect(try await admin.entries(in: "\(root)/B").count == 2)
+            #expect(try await admin.entries(in: "\(root)/Shared").isEmpty)
+
+            let store = CommonPhotosStore(database: database)
+            #expect(try store.confirmReady(runId: runId))
+            try await CommonPhotosRunner(client: admin, store: store, workDirectory: work).run(runId)
+            #expect(try store.items(runId: runId).map(\.status) == [.moved, .moved])
+            let shared = try await admin.entries(in: "\(root)/Shared").map(\.name)
+            #expect(shared.contains("IMG_0005.JPG") && shared.contains("IMG_0006.JPG"))
+            #expect(try await admin.entries(in: "\(root)/B").isEmpty)
         } catch {
             try? await admin.removeFolderTree(root)
             await admin.disconnect()

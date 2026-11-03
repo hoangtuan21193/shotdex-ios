@@ -28,6 +28,20 @@ import Testing
         #expect(job.rank == 0)
     }
 
+    /// AC-169: a Move set's ready run waits for Move N…, ranked with the
+    /// paused ones, with no bar and nothing to resume or stop.
+    @Test func readyToMoveWaitsForTheUser() {
+        var ready = input(.ready, action: .move, done: 0)
+        ready.progress = CommonPhotosRunner.Progress(doneCount: 0, totalCount: 4, doneBytes: 0, totalBytes: 40_000_000)
+        ready.run.watchId = "W"
+        ready.run.day = "2026-11-03"
+        let job = CommonPhotosJob.job(ready)
+        #expect(job.state == .readyToMove && job.rank == 1 && !job.isOver)
+        #expect(job.status == "Ready to move 4 — nothing moved yet")
+        #expect(job.actions == [.moveReady(4), .showLog, .remove])
+        #expect(job.fraction == nil)
+    }
+
     @Test func finishingOffersOnlyTheLog() {
         let job = CommonPhotosJob.job(input(.finishing, running: true, done: 280))
         #expect(job.state == .finishing)

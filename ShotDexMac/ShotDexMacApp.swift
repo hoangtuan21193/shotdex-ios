@@ -1,4 +1,5 @@
 import SwiftUI
+import UserNotifications
 
 /// The executable's entry: the app, or with `--agent` the helper that runs
 /// Backup after the app quits (FS-22.06 §2).
@@ -123,7 +124,17 @@ struct MacCommonPhotosCommands: Commands {
 /// Quitting while a common-photos run goes (FS-19.08 §7): asks, then pauses
 /// every run and quits once each has stopped between steps; Cancel keeps it going.
 final class MacAppDelegate: NSObject, NSApplicationDelegate {
-    @MainActor weak var runs: MacCommonPhotosRuns?
+    @MainActor weak var runs: MacCommonPhotosRuns? {
+        didSet { notices.runs = runs }
+    }
+    /// Keep gathering's notice (FS-19.08 §6c): set before launch ends, so a
+    /// click that launched the app still lands.
+    @MainActor private let notices = MacCommonPhotosNotices()
+
+    @MainActor
+    func applicationWillFinishLaunching(_ notification: Notification) {
+        UNUserNotificationCenter.current().delegate = notices
+    }
 
     @MainActor
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {

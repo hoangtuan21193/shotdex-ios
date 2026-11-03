@@ -63,9 +63,19 @@ struct MacActivityWindow: View {
             Button(String(localized: "Cancel", comment: "Mac sheet: cancel"), role: .cancel) {}
                 .keyboardShortcut(.defaultAction)
         } message: {
-            Text("Their logs are removed, so you can’t undo these runs afterwards. Nothing on the server changes.",
-                 comment: "Mac Activity: what Remove from List costs")
+            if removesReady {
+                Text("Nothing was moved. While Keep gathering is on, its next check lists these photos again.",
+                     comment: "Mac Activity: what Remove from List does to photos ready to move")
+            } else {
+                Text("Their logs are removed, so you can’t undo these runs afterwards. Nothing on the server changes.",
+                     comment: "Mac Activity: what Remove from List costs")
+            }
         }
+    }
+
+    /// Remove from List on a row ready to move (§6c): its photos go, unmoved.
+    private var removesReady: Bool {
+        removing.count == 1 && jobs.first { $0.id == removing[0] }?.state == .readyToMove
     }
 
     private var removeTitle: String {
@@ -106,7 +116,8 @@ struct MacActivityWindow: View {
             var seen = Set<String>()
             // Finished runs stay, the last 20 groups (FS-19.08 §6b), so their
             // log opens and they can be undone after a restart.
-            let ids = (known + ((try? store.unfinishedRuns()) ?? []).map(\.id) + ((try? store.keptRuns()) ?? []).map(\.id))
+            let ids = (known + ((try? store.unfinishedRuns()) ?? []).map(\.id) + ((try? store.readyRuns()) ?? []).map(\.id)
+                       + ((try? store.keptRuns()) ?? []).map(\.id))
                 .filter { seen.insert($0).inserted }
             var out: [String: Stored] = [:]
             for id in ids {
@@ -189,6 +200,10 @@ struct MacActivityWindow: View {
             runs.runAgain(runId: job.id)
             MacMainWindow.bringForward(openWindow)
         case .remove: if runs.canRemove(runId: job.id) { removing = [job.id] }
+        case .moveReady:
+            // The run's window asks before anything moves (FS-19.08 §6c).
+            runs.moveAsked = job.id
+            openWindow(id: MacCommonPhotosRunWindow.id, value: job.id)
         }
     }
 
@@ -271,6 +286,8 @@ private struct MacActivityRow: View {
             textButton(String(localized: "Remove from List…", comment: "Mac Activity: remove a row that is over, after asking"), action)
         case .runAgain:
             textButton(String(localized: "Run Again…", comment: "Mac Activity: open Find Common Photos on the same folders, checking only new photos"), action)
+        case .moveReady(let count):
+            textButton(String(localized: "Move \(count.formatted())…", comment: "Mac Activity: move the photos Keep gathering found, after asking"), action)
         }
     }
 
@@ -312,6 +329,7 @@ private struct MacActivityRow: View {
         case .running: nil
         case .finishing: String(localized: "finishing", comment: "Mac Activity: progress state for VoiceOver")
         case .paused: String(localized: "paused", comment: "Mac Activity: progress state for VoiceOver")
+        case .readyToMove: String(localized: "ready to move", comment: "Mac Activity: progress state for VoiceOver")
         case .interrupted, .owesFinish: String(localized: "interrupted", comment: "Mac Activity: progress state for VoiceOver")
         case .stopped, .done, .doneWithFailures: nil
         }
@@ -322,6 +340,7 @@ private struct MacActivityRow: View {
         switch job.state {
         case .running, .finishing: job.kind == .commonPhotosUndo ? "arrow.uturn.backward" : "square.on.square"
         case .paused, .interrupted, .owesFinish: "pause.fill"
+        case .readyToMove: "arrow.down.to.line"
         case .stopped: "stop.fill"
         case .done: job.kind == .commonPhotosUndo ? "arrow.uturn.backward" : "checkmark"
         case .doneWithFailures: "exclamationmark.triangle"
@@ -330,7 +349,7 @@ private struct MacActivityRow: View {
 
     private var tileBackground: Color {
         switch job.state {
-        case .running, .finishing: MacTheme.accentSoft
+        case .running, .finishing, .readyToMove: MacTheme.accentSoft
         case .done: MacTheme.greenSoft
         default: MacTheme.rowSelection
         }
@@ -338,7 +357,7 @@ private struct MacActivityRow: View {
 
     private var tileForeground: Color {
         switch job.state {
-        case .running, .finishing: MacTheme.accent
+        case .running, .finishing, .readyToMove: MacTheme.accent
         case .done: Color.green
         case .doneWithFailures: Color(nsColor: .systemRed)
         default: .secondary

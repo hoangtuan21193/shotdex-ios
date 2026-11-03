@@ -175,6 +175,20 @@ private struct MacCommonPhotosSheetContent: View {
         // for screenshots of a set that gathered before.
         .onChange(of: model.phase) {
             if model.phase == .done, model.canRun, ProcessInfo.processInfo.arguments.contains("-ShotDexCommonPhotosRunAtOnce") { start() }
+            // `-ShotDexCommonPhotosGatherReady` (with `-ShotDexCommonPhotosAction move`):
+            // what Keep gathering's pass does with these photos — a run ready
+            // to move, nothing moved — and its window, for screenshots (§6c).
+            if model.phase == .done, ProcessInfo.processInfo.arguments.contains("-ShotDexCommonPhotosGatherReady"),
+               let destination = model.destination, let made = model.makeRun(), !made.items.isEmpty,
+               let watch = try? CommonPhotosWatchStore(database: dependencies.database).keepGathering(
+                   connectionId: model.connectionId, folders: model.folders, destination: destination, action: model.action),
+               let gathered = try? dependencies.commonPhotos.store.gatherIntoDay(
+                   made.run, items: made.items, watchId: watch.id, day: CommonPhotosStore.day(of: Date()), ready: true) {
+                close()
+                if ProcessInfo.processInfo.arguments.contains("-ShotDexCommonPhotosAskMove") { dependencies.commonPhotos.moveAsked = gathered.runId }
+                openWindow(id: MacCommonPhotosRunWindow.id, value: gathered.runId)
+                if ProcessInfo.processInfo.arguments.contains("-ShotDexOpenActivity") { openWindow(id: MacActivityWindow.id) }
+            }
         }
         #endif
     }
@@ -542,6 +556,9 @@ private struct MacCommonPhotosSheetContent: View {
             if keepsGathering {
                 try store.keepGathering(connectionId: model.connectionId, folders: model.folders, destination: destination,
                                         action: model.action)
+                // A Move set tells the user when photos are ready (§6c):
+                // asked now, while the user is here.
+                if model.action == .move { MacCommonPhotosNotices.requestAuthorization() }
             } else if let watch = try store.watch(connectionId: model.connectionId, folders: model.folders, destination: destination),
                       watch.isOn {
                 try store.stopGathering(id: watch.id)
@@ -640,10 +657,8 @@ private struct MacCommonPhotosSheetContent: View {
     /// "Each photo is copied to “Shared” and verified, then removed from
     /// Tuấn and Vợ. The server has no Trash; you can undo the run from Activity." (§4, §6b)
     private var moveMessage: String {
-        let names = model.folders.map { ServerUploadPath.lastComponent(of: $0) }.formatted(.list(type: .and))
-        let destination = model.destination.map { ServerUploadPath.lastComponent(of: $0) } ?? ""
-        return String(localized: "Each photo is copied to “\(destination)” and verified, then removed from \(names). The server has no Trash; you can undo the run from Activity.",
-                      comment: "Mac common photos: Move confirmation message")
+        MacCommonPhotosWords.moveMessage(folders: model.folders,
+                                         destination: model.destination.map { ServerUploadPath.lastComponent(of: $0) } ?? "")
     }
 
     private func start() {

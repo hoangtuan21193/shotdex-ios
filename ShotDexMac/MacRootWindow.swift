@@ -56,6 +56,13 @@ struct MacRootWindow: View {
             }
             selection = .source(sourceId)
         }
+        // Keep gathering's notice clicked (FS-19.08 §6c): the run's window.
+        .onChange(of: dependencies.commonPhotos.logRequest?.runId, initial: true) {
+            guard let request = dependencies.commonPhotos.logRequest else { return }
+            dependencies.commonPhotos.logRequest = nil
+            guard Date().timeIntervalSince(request.at) < 60 else { return }
+            openWindow(id: MacCommonPhotosRunWindow.id, value: request.runId)
+        }
         // Run Again (FS-19.08 §6c): the run's source opens; its browser
         // opens the sheet on the run's set.
         .onChange(of: dependencies.commonPhotos.runAgainRequest?.id, initial: true) {

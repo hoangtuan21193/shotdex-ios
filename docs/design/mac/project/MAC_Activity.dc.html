@@ -22,7 +22,7 @@ input{font-family:inherit}
 <div style="position:absolute;left:12px;top:12px;display:flex;gap:8px"><div style="width:12px;height:12px;border-radius:6px;background:#FF5F57;box-shadow:inset 0 0 0 0.5px rgba(0,0,0,0.2)"></div><div style="width:12px;height:12px;border-radius:6px;background:#FEBC2E;box-shadow:inset 0 0 0 0.5px rgba(0,0,0,0.2)"></div><div style="width:12px;height:12px;border-radius:6px;background:#28C840;box-shadow:inset 0 0 0 0.5px rgba(0,0,0,0.2)"></div></div>
 <div style="position:absolute;left:84px;right:0;top:9px;text-align:left;font-size:13px;font-weight:600;line-height:18px">Activity</div>
 </div>
-<!-- JOBS: running first, then paused, then finished. Finished runs stay across launches — the last 20 (FS-19.08 §6b) — so their
+<!-- JOBS: running first, then paused or waiting for the user (a Move set's photos ready to move, §6c), then finished. Finished runs stay across launches — the last 20 (FS-19.08 §6b) — so their
      log can be opened and the run undone; Remove from List (or Remove Finished from List…) drops them after asking.
      An undo is a run of its own and a row of its own. Tweak "askRemove" draws the question. -->
 <sc-if value="{{hasJobs}}" hint-placeholder-val="{{true}}"><div style="flex:1;min-height:0;padding:14px 16px 0;display:flex;flex-direction:column;gap:10px">
@@ -108,7 +108,8 @@ const G = {
   pause:'M8 5v14 M16 5v14',
   play:'M8 5l11 7-11 7z',
   stop:'M6 6h12v12H6z',
-  undo:'M9 14L4 9l5-5 M4 9h10.5a5.5 5.5 0 0 1 0 11H11'
+  undo:'M9 14L4 9l5-5 M4 9h10.5a5.5 5.5 0 0 1 0 11H11',
+  ready:'M12 4v10 M8 10l4 4 4-4 M5 18h14'
 };
 class Component extends DCLogic {
   renderVals() {
@@ -125,6 +126,12 @@ class Component extends DCLogic {
           sub:'Copying 120 of 280 · 1.8 of 4.2 GB · about 4 min left',
           detail:'IMG_4188.HEIC · reading back SHA-256 in Shared',
           btns:[ icon(G.pause, null, 'Pause Common Photos'), icon(G.stop, null, 'Stop Common Photos…'), text('Show Log') ] }),
+      // §6c: Keep gathering found photos for a Move set and moved nothing — waits for the user (Move N… asks first,
+      // in the log window); a later pass that finds more updates the count
+      J({ title:'Common photos · Tuấn + Vợ → Shared · Nov 3', d:G.ready,
+          sub:'Ready to move 4 — nothing moved yet', subColor:t.label2,
+          // Remove from List drops the list, unmoved (the next check lists them again while gathering is on)
+          btns:[ text('Move 4…'), text('Show Log'), text('Remove from List…') ] }),
       // FS-19.08 §7: interrupted by the server, not by the user — orange status line, Try Again
       J({ title:'Common photos · Tuấn + Vợ → Shared', d:G.pause, iconBg:t.fill, iconFg:t.label2, bar:'31%', pct:'31', barFg:t.label3,
           sub:'Interrupted — The connection to the server was lost. · 86 of 280 done', subColor:S.orangeText,

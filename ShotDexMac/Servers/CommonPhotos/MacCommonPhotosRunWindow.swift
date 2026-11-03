@@ -92,6 +92,9 @@ final class MacCommonPhotosLogModel {
     var selection: Set<Int> = []
     /// The CSV the run left in the destination, once written.
     private(set) var csvName: String?
+    /// The run's `updatedAt` when these rows were read (read first): Move
+    /// N… moves only the list the user saw (§6c).
+    private(set) var runUpdatedAt = 0
 
     @ObservationIgnored private let store: CommonPhotosStore
     @ObservationIgnored private var lastRead = ContinuousClock.now - .seconds(10)
@@ -143,7 +146,7 @@ final class MacCommonPhotosLogModel {
         Task { await readNow() }
     }
 
-    private func readNow() async {
+    func readNow() async {
         lastRead = .now
         let store = store
         let runId = runId
@@ -154,6 +157,7 @@ final class MacCommonPhotosLogModel {
         }.value
         guard let (run, items, rows) = read else { return }
         csvName = run.csvPath.map { ServerUploadPath.lastComponent(of: $0) }
+        runUpdatedAt = run.updatedAt
         isUndo = run.isUndo
         self.items = items
         if rows != self.rows { self.rows = rows }
@@ -180,13 +184,15 @@ final class MacCommonPhotosLogModel {
             status = String(localized: "Not undone", comment: "Common photos undo log status: the photo was not taken back")
         } else if run.isUndo, [.copying, .moving, .placed].contains(item.status) {
             status = String(localized: "Undoing…", comment: "Common photos undo log status: the photo being taken back")
+        } else if run.state == .ready, item.status == .pending {
+            status = String(localized: "Ready to move", comment: "Common photos log status: found by Keep gathering, not moved yet")
         } else if item.status == .skipped, item.failure?.0 == .alreadyThere {
             status = String(localized: "Skipped (already there)", comment: "Common photos log status: same bytes in the destination")
         }
         return Row(id: item.position, status: item.status, statusText: status, name: name,
                    from: item.sources.map { place($0.path, run: run, name: name) }.joined(separator: " · "),
                    to: item.destinationPath.map { ServerUploadPath.join(ServerUploadPath.lastComponent(of: run.destination), ServerUploadPath.lastComponent(of: $0)) } ?? "",
-                   shortSHA: item.isDone && item.sha256.count > 8 ? "\(item.sha256.prefix(4))…\(item.sha256.suffix(4))" : "—",
+                   shortSHA: (item.isDone || run.state == .ready) && item.sha256.count > 8 ? "\(item.sha256.prefix(4))…\(item.sha256.suffix(4))" : "—",
                    reason: CommonPhotosLog.reason(item),
                    csvStatus: run.isUndo && item.status == .failed ? "Not undone" : CommonPhotosLog.csvStatus(item.status),
                    csvReason: CommonPhotosLog.csvReason(item),
@@ -214,6 +220,8 @@ private struct MacCommonPhotosRunContent: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.openWindow) private var openWindow
     @State private var confirmsStop = false
+    /// Move N… on a ready run (FS-19.08 §6c): asked before anything moves.
+    @State private var confirmsMove = false
     /// Undo Copy… / Undo Move… or Undo Selected… asked (FS-19.08 §6b): the
     /// rows chosen, nil for the whole run.
     @State private var undoing: Set<Int>??
@@ -251,6 +259,28 @@ private struct MacCommonPhotosRunContent: View {
             #endif
         }
         .onChange(of: entry.progress.currentName) { log.runChanged() }
+        // Move N… in Activity opened this window to ask.
+        .task(id: runs.moveAsked) {
+            guard runs.moveAsked == run.id else { return }
+            runs.moveAsked = nil
+            await log.readNow()
+            if entry.isReady, readyCount > 0 { confirmsMove = true }
+        }
+        .alert(moveTitle, isPresented: $confirmsMove) {
+            Button(String(localized: "Move", comment: "Mac common photos: confirm the move"), role: .destructive) {
+                // Refused: it stays ready, and the header says why.
+                guard runs.moveReady(runId: run.id, asOf: log.runUpdatedAt) == .listChanged else { return }
+                // A pass changed the list meanwhile: show it and ask again.
+                Task {
+                    await log.readNow()
+                    if entry.isReady, readyCount > 0 { confirmsMove = true }
+                }
+            }
+            Button(String(localized: "Cancel", comment: "Mac sheet: cancel"), role: .cancel) {}
+                .keyboardShortcut(.defaultAction)
+        } message: {
+            Text(MacCommonPhotosWords.moveMessage(folders: run.folders, destination: destinationName))
+        }
         .onChange(of: entry.state) { log.read() }
         .onChange(of: entry.isRunning) { log.read() }
         // An undo of this run started or ended: its rows changed under it.
@@ -302,9 +332,14 @@ private struct MacCommonPhotosRunContent: View {
     /// "Common Photos — Tuấn + Vợ → Shared"; "Undo — Shared → Tuấn + Vợ".
     private var title: String {
         let folders = run.folders.map { ServerUploadPath.lastComponent(of: $0) }.joined(separator: " + ")
-        return run.isUndo
+        var title = run.isUndo
             ? String(localized: "Undo — \(destinationName) → \(folders)", comment: "Common photos window title: an undo run")
             : String(localized: "Common Photos — \(folders) → \(destinationName)", comment: "Common photos window title")
+        // Keep gathering's runs are named by their day, as in Activity (§6c).
+        if let day = run.day.flatMap(CommonPhotosJob.dayDate) {
+            title += " · " + day.formatted(.dateTime.month(.abbreviated).day())
+        }
+        return title
     }
 
     // MARK: Undo (FS-19.08 §6b)
@@ -378,7 +413,7 @@ private struct MacCommonPhotosRunContent: View {
                 actions
             }
             .frame(minHeight: 28)
-            if !entry.isFinished && !entry.isStopped {
+            if !entry.isFinished && !entry.isStopped && !entry.isReady {
                 ProgressView(value: entry.fraction)
                     .progressViewStyle(.linear)
                     .tint(MacTheme.accent)
@@ -395,6 +430,11 @@ private struct MacCommonPhotosRunContent: View {
     /// lost connection or a quit is "Interrupted".
     private var headline: String {
         if entry.isFinished { return summary }
+        if entry.isReady {
+            return readyCount == 1
+                ? String(localized: "1 photo ready to move", comment: "Common photos window: Keep gathering found one photo for a Move set")
+                : String(localized: "\(readyCount.formatted()) photos ready to move", comment: "Common photos window: Keep gathering found photos for a Move set")
+        }
         if entry.isStopped { return String(localized: "Stopped at \(ofTotal)", comment: "Common photos window: the user stopped the run") }
         if entry.isRunning && entry.isFinishing {
             return String(localized: "Writing the log and rescanning…", comment: "Common photos window: the run is finishing")
@@ -416,6 +456,10 @@ private struct MacCommonPhotosRunContent: View {
     /// The file being worked on and the time left, why it stopped, or what
     /// a Move has removed so far.
     private var detail: String? {
+        if entry.isReady, let problem = entry.problem { return problem }
+        if entry.isReady {
+            return String(localized: "Keep gathering found them. Nothing has been moved yet.", comment: "Common photos window: a ready run")
+        }
         if entry.isRunning && entry.isFinishing {
             return String(localized: "Pause and Stop are off until it finishes.", comment: "Common photos window: finishing")
         }
@@ -462,7 +506,7 @@ private struct MacCommonPhotosRunContent: View {
     @ViewBuilder
     private var actions: some View {
         let stoppable = runs.canStop(runId: run.id)
-        if entry.isFinished || entry.isStopped {
+        if entry.isFinished || entry.isStopped || entry.isReady {
             EmptyView()
         } else if entry.isRunning {
             Button { runs.pause(runId: run.id) } label: { Label(String(localized: "Pause", comment: "Common photos window"), systemImage: "pause.fill") }
@@ -617,6 +661,21 @@ private struct MacCommonPhotosRunContent: View {
         return parts.joined(separator: " · ")
     }
 
+    /// The photos a ready run still lists.
+    private var readyCount: Int { log.items.filter { $0.status == .pending }.count }
+
+    /// "Tuấn and Vợ".
+    private var folderList: String {
+        ListFormatter.localizedString(byJoining: run.folders.map { ServerUploadPath.lastComponent(of: $0) })
+    }
+
+    /// "Move 4 photos to “Shared”?"
+    private var moveTitle: String {
+        readyCount == 1
+            ? String(localized: "Move 1 photo to “\(destinationName)”?", comment: "Mac common photos: Move confirmation title")
+            : String(localized: "Move \(readyCount.formatted()) photos to “\(destinationName)”?", comment: "Mac common photos: Move confirmation title")
+    }
+
     private var failedText: String {
         String(localized: "\(log.counts.failed.formatted()) failed", comment: "Common photos window: count")
     }
@@ -626,6 +685,9 @@ private struct MacCommonPhotosRunContent: View {
             Group {
                 if let csv = log.csvName, entry.isFinished {
                     Text("Log saved in \(destinationName) as “\(csv)”", comment: "Common photos window: where the CSV is")
+                } else if entry.isReady {
+                    Text(String(localized: "Moving copies each photo to “\(destinationName)”, checks it, then removes it from \(folderList).",
+                                comment: "Common photos window: what Move does, on a ready run"))
                 } else {
                     Text(summary)
                 }
@@ -646,8 +708,8 @@ private struct MacCommonPhotosRunContent: View {
                 runs.browserRequest = (run.connectionId, run.destination)
                 MacMainWindow.bringForward()
             }
-            .disabled(!entry.isFinished)
-            .help(entry.isFinished
+            .disabled(!entry.isFinished && !entry.isReady)
+            .help(entry.isFinished || entry.isReady
                   ? String(localized: "Opens “\(destinationName)”, where the photos and the log are.", comment: "Common photos window: Show in Browser tooltip")
                   : String(localized: "Available when the run finishes.", comment: "Common photos window: Show in Browser is off"))
             if entry.isFinished || entry.isStopped, !run.isUndo {
@@ -659,6 +721,19 @@ private struct MacCommonPhotosRunContent: View {
             if entry.isFinished || entry.isStopped {
                 Button(String(localized: "Done", comment: "Common photos window: close")) { dismiss() }
                     .keyboardShortcut(.defaultAction)
+            }
+            if entry.isReady {
+                // Not Now leaves them listed; the next pass may add more.
+                Button(String(localized: "Not Now", comment: "Common photos window: close a ready run without moving")) { dismiss() }
+                Button(String(localized: "Move \(readyCount.formatted())…", comment: "Common photos window: move the photos Keep gathering found, after asking")) {
+                    // The list as it is now, before asking about it.
+                    Task {
+                        await log.readNow()
+                        confirmsMove = readyCount > 0
+                    }
+                }
+                .keyboardShortcut(.defaultAction)
+                .disabled(readyCount == 0)
             }
         }
     }

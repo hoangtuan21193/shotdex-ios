@@ -21,6 +21,9 @@ struct LongRunningJob: Identifiable, Equatable, Sendable {
         case owesFinish
         /// The user paused it.
         case paused
+        /// Found for a Move set by Keep gathering (FS-19.08 §6c): waits for
+        /// Move N…, nothing moved yet.
+        case readyToMove
         /// It stopped without being asked: a lost connection, a quit, a crash.
         case interrupted
         /// The user ended it for good.
@@ -30,8 +33,10 @@ struct LongRunningJob: Identifiable, Equatable, Sendable {
         case doneWithFailures
     }
 
-    enum Action: Equatable, Sendable {
+    enum Action: Hashable, Sendable {
         case pause, resume, stop, tryAgain, showLog
+        /// Move N… (FS-19.08 §6c): the run's window, which asks first.
+        case moveReady(Int)
         /// Run Again… (FS-19.08 §6c): the sheet on the same set, checking
         /// only photos new since.
         case runAgain
@@ -57,7 +62,7 @@ struct LongRunningJob: Identifiable, Equatable, Sendable {
     var rank: Int {
         switch state {
         case .running, .finishing: 0
-        case .paused, .interrupted, .owesFinish: 1
+        case .paused, .interrupted, .owesFinish, .readyToMove: 1
         case .stopped, .done, .doneWithFailures: 2
         }
     }
@@ -116,6 +121,7 @@ enum CommonPhotosJob {
         let over: [LongRunningJob.Action] = run.isUndo || !run.isReadable ? [.showLog, .remove] : [.runAgain, .showLog, .remove]
 
         let state: LongRunningJob.State = switch run.state {
+        case .ready: .readyToMove
         case .finished: input.failed > 0 ? .doneWithFailures : .done
         case .stopped: .stopped
         case .finishing: input.isRunning ? .finishing : .owesFinish
@@ -160,6 +166,14 @@ enum CommonPhotosJob {
                 : [.showLog]
             return LongRunningJob(id: run.id, kind: kind, title: title, aside: percent, fraction: fraction, status: status,
                                   detail: nil, state: state, actions: actions)
+        case .readyToMove:
+            let waiting = max(0, progress.totalCount - progress.doneCount)
+            var status = String(localized: "Ready to move \(waiting.formatted())", comment: "Activity: photos Keep gathering found for a Move set")
+            if progress.doneCount == 0 {
+                status += " — " + String(localized: "nothing moved yet", comment: "Activity: a Move set's ready run, before the user moves")
+            }
+            return LongRunningJob(id: run.id, kind: kind, title: title, aside: "", fraction: nil, status: status,
+                                  detail: nil, state: state, actions: run.isReadable ? [.moveReady(waiting), .showLog, .remove] : [.showLog, .remove])
         case .stopped:
             return LongRunningJob(id: run.id, kind: kind, title: title, aside: ended, fraction: nil,
                                   status: String(localized: "Stopped — \(counts)", comment: "Activity: a run the user stopped"),

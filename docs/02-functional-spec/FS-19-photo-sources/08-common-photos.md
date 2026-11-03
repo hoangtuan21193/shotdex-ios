@@ -199,6 +199,18 @@ Copy/Move vẫn là cùng bộ.
 - **Move**: lượt tự gom chỉ quét. Có ảnh thì gửi thông báo macOS "4 photos are ready to move to “Shared”" và hàng
   Activity "Ready to move 4"; bấm vào mở cửa sổ log với nút **Move 4…**, hỏi lại như §4 rồi chạy như §6. Không có gì bị
   dời hay xoá khi người dùng chưa bấm (người dùng 2026-11-03).
+  - Ảnh chờ nằm trong một lượt trạng thái `ready`, mỗi bộ chỉ một lượt như vậy. Lượt tự gom sau thay danh sách của nó
+    bằng kết quả mới, và chỉ gửi thông báo khi có ảnh chưa từng nằm trong danh sách. Lượt không tìm thấy gì thì xoá
+    danh sách (ảnh đã bị dời bằng tay).
+  - Lượt `ready` không có Resume, Stop, Discard hay hoàn tác, và không tính vào 20 lượt giữ lại. Ảnh đã dời trước đó
+    trong ngày vẫn là một lượt đã xong riêng, hoàn tác được. Vì vậy một bộ Move có thể có hai hàng trong cùng một ngày.
+  - Move N… chỉ dời đúng danh sách người dùng đang xem. Lượt tự gom đổi danh sách trong lúc hộp hỏi đang mở thì hỏi lại
+    với danh sách mới. Không có connection hoặc đang có lượt khác chạy trên cùng folder thì lượt vẫn ở `ready`, header
+    nói lý do.
+  - Remove from List…, Stop Gathering, hay xoá connection: bỏ danh sách, không dời gì. Bộ vẫn đang tự gom thì lần
+    kiểm sau liệt kê lại.
+  - Bộ đổi từ Copy sang Move hay ngược lại: không gom thêm vào lượt của hành động kia.
+  - Xin quyền thông báo khi bật Keep gathering cho bộ Move, không xin lúc mở app. Bấm thông báo mở cửa sổ log của lượt.
 - Lượt tự gom không tìm thấy gì: không thêm hàng Activity, chỉ cập nhật "Checked 3 min ago" của bộ.
 - Server không trả lời: bỏ lượt, ghi "NAS Home isn't reachable", lượt sau thử lại. Không bao giờ dừng giữa chừng một
   lượt Move mà không đi tiếp được theo §6 (Resume như cũ).

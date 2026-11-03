@@ -17,6 +17,10 @@ struct CommonPhotosRun: Hashable, Sendable, Identifiable {
         /// are not yet — a quit here resumes them.
         case finishing
         case finished
+        /// Keep gathering found photos for a Move set (FS-19.08 §6c):
+        /// listed, nothing moved or removed until the user says Move. Not
+        /// unfinished — no Resume, nothing runs it on its own.
+        case ready
     }
 
     var id: String

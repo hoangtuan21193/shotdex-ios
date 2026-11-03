@@ -111,7 +111,8 @@ input{font-family:inherit}
 </nav>
 <!-- LOG WINDOW (FS-19.08 §7): its own window, not modal — the browser stays usable; closing it does not stop the run (Activity › Show Log reopens it).
      Tweak "state": running (default) · finished (Undo Copy… in the footer, §6b) · undoing · undone (an undo is a run of its own,
-     same window). Right-click on Copied/Moved rows offers Undo Selected… (a context menu, not drawn). Tweak "confirmUndo" draws
+     same window) · readyToMove (§6c: Keep gathering found photos for a Move set and moved nothing; Move N… asks first,
+     tweak "confirm" draws that question). Right-click on Copied/Moved rows offers Undo Selected… (a context menu, not drawn). Tweak "confirmUndo" draws
      the confirmation over a finished run; Cancel is the default button. -->
 <section role="dialog" aria-label="{{winTitle}}" style="position:absolute;left:300px;top:196px;width:900px;height:560px;border-radius:16px;background:{{S.panel}};border:1px solid {{t.glassStroke}};box-shadow:0 18px 50px rgba(0,0,0,0.28);overflow:hidden;color:{{t.label}};display:flex;flex-direction:column;z-index:30">
 <div style="position:relative;height:36px;flex:none;background:{{S.panelBar}};border-bottom:1px solid {{t.sep}}">
@@ -128,7 +129,7 @@ input{font-family:inherit}
 <sc-if value="{{going}}" hint-placeholder-val="{{true}}"><button style="height:28px;border-radius:8px;border:none;background:{{t.fill}};box-shadow:inset 0 0 0 0.5px {{t.sep}};color:{{t.label}};display:flex;align-items:center;gap:6px;padding:0 12px;font-size:13px;white-space:nowrap;flex:none"><svg aria-hidden="true" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 5v14 M16 5v14"></path></svg>Pause</button>
 <button style="height:28px;border-radius:8px;border:none;background:{{t.fill}};box-shadow:inset 0 0 0 0.5px {{t.sep}};color:{{t.label}};display:flex;align-items:center;gap:6px;padding:0 12px;font-size:13px;white-space:nowrap;flex:none"><svg aria-hidden="true" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6h12v12H6z"></path></svg>Stop</button></sc-if>
 </div>
-<div role="progressbar" aria-label="{{head}}" aria-valuenow="{{pctNum}}" style="height:5px;border-radius:3px;background:{{t.track}}"><div style="width:{{pct}};height:5px;border-radius:3px;background:{{barFg}}"></div></div>
+<sc-if value="{{hasBar}}" hint-placeholder-val="{{true}}"><div role="progressbar" aria-label="{{head}}" aria-valuenow="{{pctNum}}" style="height:5px;border-radius:3px;background:{{t.track}}"><div style="width:{{pct}};height:5px;border-radius:3px;background:{{barFg}}"></div></div></sc-if>
 </div>
 <!-- Status filter -->
 <div style="display:flex;align-items:center;gap:8px;padding:14px 16px 10px;flex:none">
@@ -160,7 +161,7 @@ input{font-family:inherit}
 <sc-if value="{{failNote}}" hint-placeholder-val="{{false}}"><span style="flex:none;font-size:12px;color:{{S.redText}};font-variant-numeric:tabular-nums">{{failNote}}</span></sc-if>
 <sc-for list="{{footBtns}}" as="b" hint-placeholder-count="3"><button aria-disabled="{{b.dis}}" style="height:28px;border-radius:8px;border:none;background:{{b.bg}};color:{{b.fg}};font-weight:{{b.weight}};padding:0 12px;font-size:13px;white-space:nowrap;flex:none">{{b.label}}</button></sc-for>
 </div>
-<!-- Undo confirmation (§6b): the system alert as macOS draws it — no icon, text leading, Cancel the default (blue, leading;
+<!-- Undo confirmation (§6b), and Move N… on a ready run (§6c): the system alert as macOS draws it — no icon, text leading, Cancel the default (blue, leading;
      Return takes nothing back) -->
 <sc-if value="{{confirm}}" hint-placeholder-val="{{false}}"><div aria-hidden="true" style="position:absolute;inset:0;top:36px;background:{{t.scrim}}"></div>
 <div role="alertdialog" aria-label="{{confirmTitle}}" style="position:absolute;left:320px;top:180px;width:260px;border-radius:14px;background:{{t.sheet}};border:1px solid {{t.glassStroke}};box-shadow:{{t.sheetShadow}};padding:16px;box-sizing:border-box;display:flex;flex-direction:column;gap:8px;text-align:left">
@@ -168,13 +169,13 @@ input{font-family:inherit}
 <div style="font-size:13px;line-height:18px">{{confirmText}}</div>
 <div style="display:flex;gap:8px;width:100%;margin-top:8px">
 <button style="flex:1;height:28px;border-radius:8px;border:none;background:{{sysBlue}};color:#FFFFFF;font-size:13px;font-weight:500">Cancel</button>
-<button style="flex:1;height:28px;border-radius:8px;border:none;background:{{t.pressed}};color:{{t.label}};font-size:13px;font-weight:500">Undo Copy</button>
+<button style="flex:1;height:28px;border-radius:8px;border:none;background:{{t.pressed}};color:{{t.label}};font-size:13px;font-weight:500">{{confirmAction}}</button>
 </div>
 </div></sc-if>
 </section>
 </div>
 </x-dc>
-<script type="text/x-dc" data-dc-script data-props='{"dark":{"editor":"boolean","default":false},"state":{"editor":"select","options":["running","finished","undoing","undone"],"default":"running"},"confirmUndo":{"editor":"boolean","default":false},"$preview":{"width":1440,"height":900}}'>
+<script type="text/x-dc" data-dc-script data-props='{"dark":{"editor":"boolean","default":false},"state":{"editor":"select","options":["running","finished","undoing","undone","readyToMove"],"default":"running"},"confirmUndo":{"editor":"boolean","default":false},"$preview":{"width":1440,"height":900}}'>
 const LIGHT = { content:'#FFFFFF', label:'rgba(0,0,0,0.88)', label2:'rgba(0,0,0,0.56)', label3:'rgba(0,0,0,0.28)',
   sep:'rgba(0,0,0,0.10)', fill:'rgba(0,0,0,0.05)', fill2:'#F2F2F4', pressed:'rgba(0,0,0,0.09)', track:'rgba(0,0,0,0.10)',
   glass:'rgba(255,255,255,0.72)', glassStroke:'rgba(0,0,0,0.08)', glassShadow:'0 2px 10px rgba(0,0,0,0.10)',
@@ -385,7 +386,7 @@ class Component extends DCLogic {
     // A running task: the sidebar foot shows it (MAC_STYLE v2)
     const foot = state === 'running' ? { idle:false, busy:true, label:'Common photos · 120 of 280', pct:'43%' }
       : state === 'undoing' ? { idle:false, busy:true, label:'Undo · 120 of 278', pct:'43%' } : IDLE_FOOT;
-    const sharedCount = { running:'121', finished:'280', undoing:'158', undone:'2' }[state];
+    const sharedCount = { running:'121', finished:'280', undoing:'158', undone:'2', readyToMove:'280' }[state];
     const fi = (name, count, d, sel, cur) => ({ name, count, d: d || I.folder, sel: sel ? 'true' : 'false', bg: sel ? (cur ? S.accentSoft : t.rowSel) : 'transparent', w: cur ? '600' : '400' });
     const columns = [
       { title:'NAS Home', edge:'1px solid ' + t.sep, foot:'3 folders', items:[ fi('Family', '', null, true), fi('Photos'), fi('Scans') ] },
@@ -403,7 +404,7 @@ class Component extends DCLogic {
     if (state === 'undone') files.splice(2);
     const crumbs = [ { name:'NAS Home', d:I.server, sep:false, w:'400' }, { name:'Family', d:I.folder, sep:true, w:'400' }, { name:'Shared', d:I.folder, sep:true, w:'600' } ];
 
-    const filter = k.seg(isUndo ? ['All', 'Undone', 'Not undone'] : ['All', 'Copied', 'Skipped', 'Failed'], 0);
+    const filter = k.seg(isUndo ? ['All', 'Undone', 'Not undone'] : ['All', state === 'readyToMove' ? 'Moved' : 'Copied', 'Skipped', 'Failed'], 0);
     const C = [['Status',172],['Name',116],['From',180],['To',178],['SHA-256',76],['Reason',0]];
     const cols = C.map((c, i) => ({ label:c[0], aria:'Sort by ' + c[0], w: c[1] ? c[1] + 'px' : 'auto', flex: c[1] ? 'none' : '1',
       edge: i < C.length - 1 ? '1px solid ' + t.sep : 'none', sorted: c[0] === 'Name', sort: c[0] === 'Name' ? 'ascending' : 'none' }));
@@ -425,12 +426,20 @@ class Component extends DCLogic {
     const UNDO = 'M9 14L4 9l5-5 M4 9h10.5a5.5 5.5 0 0 1 0 11H11';
     // Finished: the busy row is done. An undo lists only the rows it takes back (Copied ones); one whose
     // copy in Shared was edited since is Not undone.
-    const rows = state === 'running' ? L
+    // Ready to move: what the last pass found, nothing placed or removed yet — To is blank until a name in Shared
+    // is chosen (one taken gets a free name then).
+    const READY = [
+      ['ready', 'IMG_4201.HEIC', 'Tuấn/2025 · Vợ/Phone', '', '1c3e…8a02', ''],
+      ['ready', 'IMG_4203.HEIC', 'Tuấn/2025 · Vợ/Phone', '', '7d41…e915', ''],
+      ['ready', 'IMG_4204.MOV', 'Tuấn/2025 · Vợ/Phone', '', 'a0b7…34cc', ''],
+      ['ready', 'IMG_4210.HEIC', 'Tuấn/2025 · Vợ/Phone', '', '55e2…f07d', '']
+    ];
+    const rows = state === 'readyToMove' ? READY : state === 'running' ? L
       : !isUndo ? L.map(r => r[0] === 'busy' ? ['ok', r[1], r[2], r[3], '4e7a…0c15', ''] : r)
       : L.filter(r => r[0] === 'ok' || r[0] === 'busy').map(r => r[0] === 'busy' ? [r[0], r[1], r[2], r[3], '4e7a…0c15', r[5]] : r).map((r, i) => i === 3 ? ['not', r[1], r[2], r[3], r[4], 'changed in Shared']
           : (state === 'undoing' && i === 6) ? ['undoBusy', r[1], r[2], r[3], r[4], ''] : (state === 'undoing' && i > 6) ? ['wait', r[1], r[2], r[3], r[4], '']
           : ['undone', r[1], r[2], r[3], r[4], '']);
-    const word = { ok:'Copied', skip:'Skipped (already there)', fail:'Failed', busy:'Copying…', undone:'Undone', not:'Not undone', undoBusy:'Undoing…', wait:'Waiting' };
+    const word = { ok:'Copied', skip:'Skipped (already there)', fail:'Failed', busy:'Copying…', ready:'Ready to move', undone:'Undone', not:'Not undone', undoBusy:'Undoing…', wait:'Waiting' };
     const log = rows.map((r, i) => ({ status: word[r[0]],
       icon: r[0]==='ok' ? OK : r[0]==='skip' ? SKIP : (r[0]==='fail' || r[0]==='not') ? FAIL : r[0]==='undone' ? UNDO : null,
       busy: r[0]==='busy' || r[0]==='undoBusy',
@@ -454,17 +463,24 @@ class Component extends DCLogic {
       undone: { winTitle:'Undo — Shared → Tuấn + Vợ', head:'277 undone · 1 not undone',
         detail:'1 not undone — select it and choose Undo Selected… to try again', pct:'100%',
         summary:'Log saved in Shared as “ShotDex Common Photos 2026-11-03 0958 Undo.csv”',
-        footBtns:[ fb('Show in Browser'), fb('Done', 'default') ] }
+        footBtns:[ fb('Show in Browser'), fb('Done', 'default') ] },
+      readyToMove: { winTitle:'Common Photos — Tuấn + Vợ → Shared · Nov 3', head:'4 photos ready to move',
+        detail:'Keep gathering found them. Nothing has been moved yet.', pct:'0%',
+        summary:'Moving copies each photo to “Shared”, checks it, then removes it from Tuấn and Vợ.',
+        footBtns:[ fb('Show in Browser'), fb('Not Now'), fb('Move 4…', 'default') ] }
     }[state];
-    const confirm = !!this.props.confirmUndo && state === 'finished';
+    const ready = state === 'readyToMove';
+    const confirm = !!this.props.confirmUndo && (state === 'finished' || ready);
 
     return { t, S, edge: dark?'rgba(28,28,30,0.85)':'rgba(255,255,255,0.85)', edgeClear: dark?'rgba(28,28,30,0)':'rgba(255,255,255,0)',
       groups, foot, columns, files, crumbs, filter, cols, log,
       winTitle:V.winTitle, head:V.head, detail:V.detail, pct:V.pct, pctNum:V.pct.replace('%', ''), going,
-      barFg: going ? t.accent : S.greenText, summary:V.summary, footBtns:V.footBtns, failNote:V.failNote || null, confirm,
+      barFg: going ? t.accent : S.greenText, hasBar: !ready, summary:V.summary, footBtns:V.footBtns, failNote:V.failNote || null, confirm,
       sysBlue: dark ? '#0A84FF' : '#007AFF',
-      confirmTitle:'Undo copying 278 photos?',
-      confirmText:'The copies in “Shared” are removed. The photos in Tuấn and Vợ stay where they are.',
+      confirmAction: ready ? 'Move' : 'Undo Copy',
+      confirmTitle: ready ? 'Move 4 photos to “Shared”?' : 'Undo copying 278 photos?',
+      confirmText: ready ? 'Each photo is copied to “Shared” and verified, then removed from Tuấn and Vợ. The server has no Trash; you can undo the run from Activity.'
+        : 'The copies in “Shared” are removed. The photos in Tuấn and Vợ stay where they are.',
       title:'Shared', subtitle: state === 'running' ? 'NAS Home · SMB · copying 120 of 280' : state === 'undoing' ? 'NAS Home · SMB · undoing 120 of 278' : 'NAS Home · SMB',
       browserCount: state === 'running' ? '121 photos · copying' : state === 'undoing' ? '158 photos · undoing' : state === 'undone' ? '2 photos' : '280 photos', pathStatus:'121 items · 13.41 GB free of 152.09 GB' };
   }

@@ -220,8 +220,9 @@ struct CommonPhotosStore: Sendable {
         try database.reader.read { db in
             try CommonPhotosRun
                 // Not "in running, paused": a state this build cannot read is
-                // listed too, so it can be discarded.
-                .filter(![CommonPhotosRun.State.stopped, .finished].map(\.rawValue).contains(Column("state")))
+                // listed too, so it can be discarded. A run ready to move waits
+                // for the user, not for Resume.
+                .filter(![CommonPhotosRun.State.stopped, .finished, .ready].map(\.rawValue).contains(Column("state")))
                 .order(Column("createdAt").desc)
                 .fetchAll(db)
         }
@@ -350,19 +351,114 @@ extension CommonPhotosStore {
         return String(format: "%04d-%02d-%02d", parts.year ?? 0, parts.month ?? 0, parts.day ?? 0)
     }
 
+    /// Runs Keep gathering found for a Move set, waiting for the user
+    /// (FS-19.08 §6c), newest first.
+    func readyRuns() throws -> [CommonPhotosRun] {
+        try database.reader.read { db in
+            try CommonPhotosRun.filter(Column("state") == CommonPhotosRun.State.ready.rawValue)
+                .order(Column("createdAt").desc)
+                .fetchAll(db)
+        }
+    }
+
+    /// Move N… said yes: a ready run becomes a run to resume. False when it
+    /// was not ready any more (moved, discarded), or — `asOf`, the
+    /// `updatedAt` the user's list was read at — a pass changed the list
+    /// since: nothing changes then, and the user is asked again.
+    func confirmReady(runId: String, asOf: Int? = nil, now: Int = Int(Date().timeIntervalSince1970)) throws -> Bool {
+        try database.writer.write { db in
+            try db.execute(sql: """
+                UPDATE common_photo_runs SET state = ?, updatedAt = ?
+                WHERE id = ? AND state = ? AND (? IS NULL OR updatedAt = ?)
+                """, arguments: [CommonPhotosRun.State.running.rawValue, now, runId, CommonPhotosRun.State.ready.rawValue, asOf, asOf])
+            return db.changesCount > 0
+        }
+    }
+
+    /// Not Now for good (Remove from List, Stop Gathering, the connection
+    /// deleted): the photos a ready run lists go — nothing was moved. Rows
+    /// it already moved on an earlier confirm stay, and their run is
+    /// finished again.
+    func dropReady(runId: String) throws {
+        try database.writer.write { db in try Self.dropReady(runId: runId, in: db) }
+    }
+
+    /// A Move set's pass found nothing: whatever its ready run listed went
+    /// (moved by hand, deleted), so the list goes too.
+    func dropReady(watchId: String) throws {
+        try database.writer.write { db in
+            for runId in try String.fetchAll(db, sql: "SELECT id FROM common_photo_runs WHERE watchId = ? AND state = ?",
+                                             arguments: [watchId, CommonPhotosRun.State.ready.rawValue]) {
+                try Self.dropReady(runId: runId, in: db)
+            }
+        }
+    }
+
+    static func dropReady(runId: String, in db: Database) throws {
+        guard try String.fetchOne(db, sql: "SELECT state FROM common_photo_runs WHERE id = ?", arguments: [runId])
+            == CommonPhotosRun.State.ready.rawValue else { return }
+        try db.execute(sql: "DELETE FROM common_photo_items WHERE runId = ? AND status = ?",
+                       arguments: [runId, CommonPhotosItem.Status.pending.rawValue])
+        let left = try Int.fetchOne(db, sql: "SELECT COUNT(*) FROM common_photo_items WHERE runId = ?", arguments: [runId]) ?? 0
+        if left == 0 {
+            try db.execute(sql: "DELETE FROM common_photo_runs WHERE id = ?", arguments: [runId])
+        } else {
+            try db.execute(sql: "UPDATE common_photo_runs SET state = ? WHERE id = ?",
+                           arguments: [CommonPhotosRun.State.finished.rawValue, runId])
+        }
+    }
+
     /// The day's run is still going or being undone: nothing added.
     struct DayRunBusy: Error, Equatable { let runId: String }
+
+    /// What a pass put into a run: which run, and how many of its photos
+    /// were not there before — a Move set's notice says so only then.
+    struct DayGathered: Equatable { let runId: String; let added: Int }
 
     /// Puts what a pass found into the set's run of the day — a new one for
     /// the day's first pass, or after the user stopped the day's run — and
     /// returns its id, ready to run. Positions follow the ones already
     /// there. Throws `DayRunBusy` while that run still goes.
-    func gatherIntoDay(_ run: CommonPhotosRun, items: [CommonPhotosItem], watchId: String, day: String,
-                       now: Int = Int(Date().timeIntervalSince1970)) throws -> String {
+    ///
+    /// `ready` (a Move set): a run of its own that waits for the user. A run
+    /// already waiting takes this pass's list in place of its own — the
+    /// photos it listed are found again, unless they went — so the set
+    /// never has two.
+    func gatherIntoDay(_ run: CommonPhotosRun, items: [CommonPhotosItem], watchId: String, day: String, ready: Bool = false,
+                       now: Int = Int(Date().timeIntervalSince1970)) throws -> DayGathered {
         precondition(!items.isEmpty, "a day's run gains photos, never an empty pass")
+        let state: CommonPhotosRun.State = ready ? .ready : .running
+        func firstPath(_ item: CommonPhotosItem) -> String? { item.sources.first?.path }
         return try database.writer.write { db in
+            if ready, let waiting = try CommonPhotosRun
+                .filter(Column("watchId") == watchId && Column("undoOf") == nil && Column("state") == CommonPhotosRun.State.ready.rawValue)
+                .filter(Column("action") == run.action.rawValue)
+                .order(Column("createdAt").desc)
+                .fetchOne(db) {
+                let old = try CommonPhotosItem.filter(Column("runId") == waiting.id).fetchAll(db)
+                let listed = Set(old.filter { $0.status == .pending }.compactMap(firstPath))
+                try db.execute(sql: "DELETE FROM common_photo_items WHERE runId = ? AND status = ?",
+                               arguments: [waiting.id, CommonPhotosItem.Status.pending.rawValue])
+                let kept = old.filter { $0.status != .pending }
+                let next = (kept.map(\.position).max() ?? -1) + 1
+                for (offset, item) in items.enumerated() {
+                    var item = item
+                    item.runId = waiting.id
+                    item.position = next + offset
+                    try item.insert(db)
+                }
+                // Nothing moved in it yet: it is today's list now. `updatedAt`
+                // moves on every change, even within a second — Move N…
+                // confirms against it.
+                try db.execute(sql: "UPDATE common_photo_runs SET day = ?, updatedAt = ? WHERE id = ?",
+                               arguments: [kept.isEmpty ? day : waiting.day, max(now, waiting.updatedAt + 1), waiting.id])
+                return DayGathered(runId: waiting.id, added: items.filter { !listed.contains(firstPath($0) ?? "") }.count)
+            }
+            // The set's own action only: a set switched from Move to Copy
+            // never adds to — and runs — a Move of the same day.
             let today = try CommonPhotosRun
                 .filter(Column("watchId") == watchId && Column("day") == day && Column("undoOf") == nil)
+                .filter(Column("action") == run.action.rawValue)
                 .order(Column("createdAt").desc)
                 .fetchOne(db)
             if let today {
@@ -374,7 +470,9 @@ extension CommonPhotosStore {
                 if today.isUnfinished || undoing { throw DayRunBusy(runId: today.id) }
             }
             // A day the user stopped gets a run of its own for what follows.
-            if let open = today, open.state == .finished {
+            // So does a Move set's list: the day's moved photos stay a
+            // finished run, kept and undoable, while the new ones wait.
+            if !ready, let open = today, open.state == .finished {
                 let next = (try Int.fetchOne(db, sql: "SELECT MAX(position) FROM common_photo_items WHERE runId = ?",
                                              arguments: [open.id]) ?? -1) + 1
                 for (offset, item) in items.enumerated() {
@@ -384,19 +482,20 @@ extension CommonPhotosStore {
                     try item.insert(db)
                 }
                 try db.execute(sql: "UPDATE common_photo_runs SET state = ?, updatedAt = ? WHERE id = ?",
-                               arguments: [CommonPhotosRun.State.running.rawValue, now, open.id])
-                return open.id
+                               arguments: [state.rawValue, now, open.id])
+                return DayGathered(runId: open.id, added: items.count)
             }
             var run = run
             run.watchId = watchId
             run.day = day
+            run.state = state
             try run.insert(db)
             for item in items {
                 var item = item
                 item.runId = run.id
                 try item.insert(db)
             }
-            return run.id
+            return DayGathered(runId: run.id, added: items.count)
         }
     }
 }
