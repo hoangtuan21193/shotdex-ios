@@ -4,10 +4,10 @@
 |---|---|
 | Tác giả | Hoang Tuan (người dùng) · Claude soạn |
 | Ngày | 2026-11-04 |
-| Trạng thái | draft |
-| Tiến độ | **chưa làm** (2026-11-04) — chưa có spec |
+| Trạng thái | accepted (2026-11-04, người dùng chốt các câu hỏi qua lựa chọn trong phiên) |
+| Tiến độ | **chưa làm** (2026-11-04) — spec FS-06.10, 15 AC |
 | Nguồn | phản hồi người dùng (2026-11-04, trong phiên kiểm luồng xoá của smart album "có trên NAS") |
-| Spec sinh ra từ đây | (điền khi sang Design) |
+| Spec sinh ra từ đây | [FS-06.10](../02-functional-spec/FS-06-collections/10-original-on-device.md) |
 
 Intent anh em: [2026-11-04-smart-album-shared-library](2026-11-04-smart-album-shared-library.md) (Shared Library hay
 Personal). Hai việc tách ra vì dữ liệu khác nhau, và việc kia có thể không làm được.
@@ -52,8 +52,9 @@ bản gốc. Mức độ: thấp đến vừa. Không mất dữ liệu, nhưng 
   điều kiện luôn đúng và có thể ẩn đi (Open question 4).
 - Tầng code: Data (một chỗ lưu trạng thái bản gốc cho từng ảnh, và một lượt quét để làm mới nó), Database
   (`SmartAlbumSQLBuilder`, có thể cả `FilterCriteria`), Core/Models (`RuleField`), Features (rule editor).
-- Dữ liệu đã lưu: cần thêm một bảng hoặc cột mới. Đây là trạng thái máy *đo được*, không phải dữ liệu người dùng gõ vào,
-  nên được phép nằm trong `photo_metadata`. Agent `data-migration` quyết định nằm ở đâu.
+- Dữ liệu đã lưu: cần một **bảng riêng**. Lượt index ghi đè cả dòng `photo_metadata`, và đây là kết quả của một lượt
+  quét đắt tiền ([BD-02](../01-basic-design/BD-02-database-design.md)). Sửa 2026-11-04 khi viết spec (bản đầu ghi nhầm
+  là được nằm trong `photo_metadata`).
 
 ## Constraints — ràng buộc
 
@@ -67,6 +68,9 @@ bản gốc. Mức độ: thấp đến vừa. Không mất dữ liệu, nhưng 
 - Giữ cả hai nhánh iOS 26 và trước 26 ở rule editor.
 
 ## Open questions — câu hỏi còn treo
+
+**Đã trả lời (người dùng, 2026-11-04):** Q1 spike đo cả hai cách rồi chọn · Q2 có, bộ lọc Library dùng chung dữ liệu ·
+Q3, Q4, Q5 nhận mặc định · Q6 để **dùng khi offline** và **giải phóng máy**.
 
 1. **Đo bằng gì?** Thử đọc bản gốc offline từng ảnh thì chắc chắn, nhưng 55k ảnh tốn bao lâu? Hay dùng key KVC
    `locallyAvailable` của `PHAssetResource`: nhanh, nhưng là API chưa công khai.

@@ -44,7 +44,7 @@ docs/
 ├── 01-basic-design/          BD-01 kiến trúc · BD-02 database · BD-03 index (4 phần)
 │                             BD-04 ngôn ngữ thiết kế · BD-05 quy tắc nghiệp vụ
 ├── 02-functional-spec/       FS-01 Library (14) · FS-02 Photo Detail (7) · FS-03 Editor (19)
-│                             FS-04 Màu (3) · FS-05 Markup (4) · FS-06 Collections (10)
+│                             FS-04 Màu (3) · FS-05 Markup (4) · FS-06 Collections (12)
 │                             FS-07 Statistics (3) · FS-08 Settings (7) · FS-09 Onboarding
 │                             FS-10 Import (đã bỏ) · FS-11 Collage (2) · FS-12 Video Studio (25) · FS-13 Support
 │                             FS-14 Panorama (2) · FS-15 Upload lên file server (5)

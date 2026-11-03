@@ -4,10 +4,10 @@
 |---|---|
 | Tác giả | Hoang Tuan (người dùng) · Claude soạn |
 | Ngày | 2026-11-04 |
-| Trạng thái | draft |
-| Tiến độ | **chưa làm** (2026-11-04) — chưa có spec; có thể không làm được (xem Problem) |
+| Trạng thái | accepted (2026-11-04, người dùng chốt các câu hỏi qua lựa chọn trong phiên) |
+| Tiến độ | **chưa làm** (2026-11-04) — spec FS-06.11, 7 AC; chờ spike AC-1 trên máy thật |
 | Nguồn | phản hồi người dùng (2026-11-04, trong phiên kiểm luồng xoá của smart album "có trên NAS") |
-| Spec sinh ra từ đây | (điền khi sang Design) |
+| Spec sinh ra từ đây | [FS-06.11](../02-functional-spec/FS-06-collections/11-shared-library.md) |
 
 Intent anh em: [2026-11-04-smart-album-local-original](2026-11-04-smart-album-local-original.md).
 
@@ -57,6 +57,9 @@ chưa tới), nên chưa ai bị ảnh hưởng.
 - Không đổi hành vi xoá hiện có cho ảnh Personal.
 
 ## Open questions — câu hỏi còn treo
+
+**Đã trả lời (người dùng, 2026-11-04):** Q1 spike trên máy thật · Q2 **không** làm cảnh báo dự phòng: không đọc được thì
+đóng intent · Q3 gia đình đã hoặc sắp bật Shared Library, nên có máy thật để chạy spike.
 
 1. **PhotoKit có cách nào công khai để biết ảnh thuộc Shared Library không?** Chẳng hạn một smart album hệ thống, một
    `PHAssetCollectionSubtype`, hay `PHFetchOptions` lọc được theo thư viện. Cũng cần xem iOS 27 có thêm gì không.
