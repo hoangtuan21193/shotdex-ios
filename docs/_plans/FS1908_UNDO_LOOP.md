@@ -30,7 +30,7 @@ loop: mỗi vòng đọc nó trước, ghi lại sau.
 | U6 | xong | (cùng U2/U3) | `CommonPhotosSMBTests.undoCopyOnTheServer` + `undoMoveOnTheServer` chạy xanh trên SMB ảo sau U5 (C rỗng cả CSV) |
 | U7 | xong | (xem git log) | board `MAC_CommonPhotosRun` thêm tweak `state` (running/finished/undoing/undone) + `confirmUndo`; `MAC_Activity` giữ lượt xong, hàng Undo, Remove from List…, `askRemove`; Cancel mặc định nằm bên phải (HIG), nút xác nhận “Undo Copy”/“Undo Move”; canvas v81 |
 | U8 | xong | (xem git log) | Mac: `startUndo`/`canUndo` (một câu SQL, cache trong cửa sổ), undoer cho lượt `undoOf`, `afterUndo` + `rescanAfter` chung; Activity đọc `keptRuns`, Remove from List…; cửa sổ log Undo Copy…/Move…, Undo Selected… (cả cửa sổ lượt hoàn tác để thử lại); board khớp alert hệ thống; ảnh `build/design/shots/U8` |
-| U9 | chưa | | |
+| U9 | xong | (xem git log) | `/verify`: 179 test ở 13 suite xanh; AC-143 một phần. Loop dừng 2026-11-03. SMB ảo vẫn chạy (không xoá). |
 
 ## Ghi chú cho các task sau (từ review U1)
 

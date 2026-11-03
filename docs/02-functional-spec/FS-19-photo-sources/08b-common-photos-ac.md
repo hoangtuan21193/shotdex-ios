@@ -48,3 +48,12 @@ báo lỗi (`build/design/shots/T10/light-error.png`), dưới 2 folder → mụ
 **Chưa chứng minh trọn:** AC-130 (xem dòng trên). `Tools/gate`: build xanh; toàn bộ test treo ở
 `writesTheFormatAskedFor(type: heic)` trên Duo 27.1 và có 3 test đỏ của phần khác (`PerceptualHashStoreTests`,
 `SettingsSearchTests`, `GridICloudFreeTests` — `PhotoGridCollectionView.swift` có chữ "icloud" từ `3f9f9c0c`), không do FS-19.08.
+
+**`/verify` hoàn tác 2026-11-03:** AC-131…142 xanh. Bằng chứng là 179 test ở 13 suite (CommonPhotos*, ServerFileHistory,
+BackupRunner, ServerUploadSession, ClickSelection) chạy trên sim iPhone Duo 27.1, kèm e2e trên SMB ảo
+(`CommonPhotosSMBTests.undoCopyOnTheServer`, `undoMoveOnTheServer`). Copy rồi Undo cũng đã chạy thật từ app Mac trên SMB
+ảo: Shared trống lại, CSV đi theo. Ảnh ở `build/design/shots/U8/`; board ở canvas Mac bản 82.
+**Chưa chứng minh trọn:** AC-143 (cùng lý do với AC-130: không bấm tay được, không có element dump trên Mac). Chuỗi mới
+chưa vào String Catalog (`Localizable.xcstrings` đang có sửa đổi của phiên khác). `Tools/gate` (cả bộ) không chạy trong
+loop này, theo luật "cả bộ một lần mỗi intent".
+
