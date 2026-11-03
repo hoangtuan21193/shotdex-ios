@@ -90,13 +90,25 @@ final class SmartAlbumDetailModel {
         }
         let queries = OnServerProgressQueries(database: database)
         let folder = rule.folder
+        let caught = check.caughtDevices
+        let shared = SharedIndexStore(database: database)
         let progress = (try? await Task.detached { try queries.progress(sourceId: rule.text, folder: folder) }.value)
             ?? OnServerProgress()
+        let names = (try? await Task.detached { try shared.deviceNames(caught) }.value) ?? [:]
         let wait = check.waits[rule.text] ?? (progress.checked < progress.total ? check.photosWait : nil)
         onServerLines = OnServerProgressLine.lines(.init(
             progress: progress, wait: wait, finishedAt: check.finishedAt,
-            sourceName: sourceNames[rule.text] ?? "", isLimited: isLimited
+            sourceName: sourceNames[rule.text] ?? "", isLimited: isLimited,
+            mismatchFrom: caught.map { names[$0] }, thisDevice: Self.thisDevice
         ))
+    }
+
+    private static var thisDevice: OnServerProgressLine.ThisDevice {
+        #if os(macOS)
+        .mac
+        #else
+        UIDevice.current.userInterfaceIdiom == .pad ? .iPad : .iPhone
+        #endif
     }
 
     func setSortOrder(_ order: AlbumSortOrder) async {

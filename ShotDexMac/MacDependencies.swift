@@ -112,6 +112,9 @@ final class MacDependencies: LibraryServices {
         ))
         backupControl = MacBackupControl(coordinator: backupCoordinator, photoLibrary: photoLibrary,
                                          onServerCheck: onServerCheck, database: database)
+        #if DEBUG
+        OnServerMismatchDemo.seed(database: database, servers: fileServers, check: onServerCheck)
+        #endif
         photoDeletionGate = PhotoDeletionGate(
             database: database,
             connect: { connectionId in

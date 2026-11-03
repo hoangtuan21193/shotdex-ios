@@ -142,5 +142,16 @@ extension AppDatabase {
             try db.alter(table: "copy_files") { t in t.add(column: "sharedAt", .integer) }
         }
     }
+
+    /// FS-19.07 §12.4: the names other devices sent with their hashes, so a
+    /// mismatch can say whose hashes were wrong ("Tuấn's MacBook").
+    static func registerHashDeviceNames(_ migrator: inout DatabaseMigrator) {
+        migrator.registerMigration("v51-hashDeviceNames") { db in
+            try db.create(table: "hash_device_names") { t in
+                t.primaryKey("device", .text)
+                t.column("name", .text).notNull()
+            }
+        }
+    }
 }
 

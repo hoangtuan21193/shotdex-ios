@@ -86,11 +86,12 @@ struct OnServerSMBTests {
             // the Mac's bytes; the random check reads the server file here
             // and finds the Mac right.
             let ledgerSha = try await phone.f.database.reader.read { db in
-                try String.fetchOne(db, sql: "SELECT sha256 FROM copy_files WHERE origin = 'ledger' ORDER BY copyId LIMIT 1")
+                try String.fetchOne(db, sql: "SELECT sha256 FROM copy_files WHERE origin = 'ledger' ORDER BY copyId LIMIT 1") ?? ""
             }
+            #expect(!ledgerSha.isEmpty)
             try MetadataStore(database: phone.f.database).saveBatch([PhotoMarksStoreTests.record("P0", created: 1_700_000_000)],
                                                                      cursorAssetId: nil)
-            try phone.f.photo(0, files: [("1:a.JPG", .photo, 10, try #require(ledgerSha))])
+            try phone.f.photo(0, files: [("1:a.JPG", .photo, 10, ledgerSha)])
             let audit = SharedHashAuditPass(store: phone.store) { file in
                 let reader = Self.client()
                 try? await reader.connect()

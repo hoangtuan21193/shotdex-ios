@@ -608,6 +608,9 @@ final class AppDependencies {
         let uploadIndex = serverUploadIndex
         onServerCheck.onBatch = { uploadIndex.reloadPresence { try presence.presentAnywhere() } }
         uploadIndex.reloadPresence { try presence.presentAnywhere() }
+        #if DEBUG
+        OnServerMismatchDemo.seed(database: database, servers: fileServers, check: onServerCheck)
+        #endif
         self.photoDeletionGate = PhotoDeletionGate(
             database: database,
             connect: { connectionId in

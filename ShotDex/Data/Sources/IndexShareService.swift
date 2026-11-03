@@ -153,6 +153,15 @@ actor IndexShareService: SharedIndexSource {
                 var cells: [SharedPlaceCell] = []
                 var photoHashes: [SharedPhotoHash] = []
                 var serverHashes: [SharedServerHash] = []
+                // The newest record's name per device, whatever order the
+                // batch comes in.
+                var deviceNames: [String: (name: String, at: Date)] = [:]
+                func noteName(_ device: String, _ record: CKRecord) {
+                    guard let name = record["deviceName"] as? String else { return }
+                    let at = record.modificationDate ?? .distantPast
+                    if let known = deviceNames[device], known.at > at { return }
+                    deviceNames[device] = (name, at)
+                }
                 for result in changes.modificationResultsByID.values {
                     guard let record = try? result.get().record else { continue }
                     switch record.recordType {
@@ -161,9 +170,15 @@ actor IndexShareService: SharedIndexSource {
                     case SharedIndexStore.placeCellType:
                         if let cell = Self.placeCell(from: record) { cells.append(cell) }
                     case SharedIndexStore.photoHashType:
-                        if let hash = Self.photoHash(from: record) { photoHashes.append(hash) }
+                        if let hash = Self.photoHash(from: record) {
+                            photoHashes.append(hash)
+                            noteName(hash.device, record)
+                        }
                     case SharedIndexStore.serverHashType:
-                        if let hash = Self.serverHash(from: record) { serverHashes.append(hash) }
+                        if let hash = Self.serverHash(from: record) {
+                            serverHashes.append(hash)
+                            noteName(hash.device, record)
+                        }
                     case Self.settingsRecordName:
                         Self.applySettings(from: record)
                     default:
@@ -173,6 +188,7 @@ actor IndexShareService: SharedIndexSource {
                 received += try store.saveRemote(exifRecords)
                 try store.saveRemote(cells)
                 try store.saveRemote(photoHashes: photoHashes, serverHashes: serverHashes)
+                try store.saveDeviceNames(deviceNames.mapValues(\.name))
                 token = changes.changeToken
                 Self.saveChangeToken(changes.changeToken)
                 moreComing = changes.moreComing
@@ -221,13 +237,14 @@ actor IndexShareService: SharedIndexSource {
     /// `batches` of them; stops between batches when cancelled.
     func push(batches: Int = .max) async {
         guard let database = await database() else { return }
+        let deviceName = await DeviceDisplayName.current()
         do {
             try await ensureZone(in: database)
             for _ in 0..<batches {
                 try Task.checkCancellation()
                 let items = try store.outbox(limit: Self.pushBatchSize)
                 guard !items.isEmpty else { break }
-                let records = try makeRecords(for: items)
+                let records = try makeRecords(for: items, deviceName: deviceName)
                 // `.allKeys` overwrites without a fetch first: each record is
                 // one device's answer for one photo, and the newest answer is
                 // the one to keep.
@@ -246,7 +263,7 @@ actor IndexShareService: SharedIndexSource {
         }
     }
 
-    private func makeRecords(for items: [SharedIndexStore.OutboxItem]) throws -> [CKRecord] {
+    private func makeRecords(for items: [SharedIndexStore.OutboxItem], deviceName: String?) throws -> [CKRecord] {
         let exifIds = items.filter { $0.recordType == SharedIndexStore.photoExifType }.map(\.recordName)
         let cellKeys = items.filter { $0.recordType == SharedIndexStore.placeCellType }.map(\.recordName)
         var records: [CKRecord] = []
@@ -276,6 +293,8 @@ actor IndexShareService: SharedIndexSource {
             record["size"] = hash.size
             record["sha256"] = hash.sha256
             record["device"] = hash.device
+            // Whose hashes a random check found wrong, in words (§12.4).
+            record["deviceName"] = deviceName
             record["hashedAt"] = Int64(hash.hashedAt)
             records.append(record)
         }
@@ -287,6 +306,7 @@ actor IndexShareService: SharedIndexSource {
             record["modifiedAt"] = hash.modifiedAt.map { Int64($0) }
             record["sha256"] = hash.sha256
             record["device"] = hash.device
+            record["deviceName"] = deviceName
             record["hashedAt"] = Int64(hash.hashedAt)
             records.append(record)
         }

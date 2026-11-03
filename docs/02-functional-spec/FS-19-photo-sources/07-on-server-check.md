@@ -242,7 +242,11 @@ Quy tắc khớp (§3) và xoá (§9) **giữ nguyên**; mục này chỉ đổi
 - **Lệch một file:**
   - Bỏ **mọi** SHA nhận từ máy đó và chưa được tự băm lại, ở cả hai kênh. Các mục đó quay về "chưa kiểm xong" rồi máy
     tự băm.
-  - Ghi dòng tiến độ: `Hashes from Tuấn's MacBook didn't match — checking on this iPhone.`
+  - Ghi dòng tiến độ: `Hashes from Tuấn's MacBook didn't match — checking on this iPhone.` (`this iPad` / `this
+    Mac` theo máy đang xem; nhiều máy thì nối tên kiểu danh sách). Tên là tên máy gửi kèm record iCloud (trường
+    `deviceName`, giữ trong bảng `hash_device_names`). Máy không gửi tên (chỉ qua sổ NAS) → `another device`.
+    iPhone/iPad không có entitlement tên máy chỉ gửi được `iPhone`/`iPad`: giới hạn đã biết. Câu này được xuống
+    dòng, không cắt chữ; nó mất khi lần kiểm sau đọc file của máy đó và thấy đúng.
   - Tin lại: SHA máy đó gửi **sau** lúc lệch được tin lại, vẫn kèm kiểm ngẫu nhiên (người dùng 2026-11-03). SHA gửi
     trước lúc lệch thì không bao giờ được dùng lại.
 - Xoá vẫn hỏi lại server từng file ngay trước khi gọi Photos (§9), dù SHA đến từ đâu.

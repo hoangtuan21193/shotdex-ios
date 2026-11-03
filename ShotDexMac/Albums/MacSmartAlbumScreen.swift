@@ -113,7 +113,11 @@ struct MacSmartAlbumScreen: View {
             Spacer(minLength: 12)
             if !model.onServerLines.isEmpty {
                 VStack(alignment: .trailing, spacing: 2) {
-                    ForEach(model.onServerLines, id: \.self) { Text($0).lineLimit(1) }
+                    // The counts keep to one line; the sentences after them
+                    // (a hash mismatch names a device, FS-19.07 §12.4) wrap.
+                    ForEach(Array(model.onServerLines.enumerated()), id: \.offset) { index, line in
+                        Text(line).lineLimit(index == 0 ? 1 : nil).multilineTextAlignment(.trailing)
+                    }
                 }
                 .font(.caption)
                 .monospacedDigit()

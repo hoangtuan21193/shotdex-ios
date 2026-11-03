@@ -136,6 +136,14 @@ final class OnServerCheck {
         generation &+= 1
     }
 
+    #if DEBUG
+    /// `-ShotDexHashMismatch`: the caught-device state, for screenshots.
+    func showCaughtForDemo(_ devices: [String]) {
+        caughtDevices = devices
+        generation &+= 1
+    }
+    #endif
+
     /// Some server source, or iCloud downloads, still has work or waits.
     var hasWorkLeft: Bool { finishedAt == nil || !waits.isEmpty || photosWait != nil }
 

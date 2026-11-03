@@ -259,6 +259,29 @@ struct SharedIndexStore: Sendable {
         }
     }
 
+    /// The names devices sent with their hashes; the latest wins.
+    func saveDeviceNames(_ names: [String: String]) throws {
+        guard !names.isEmpty else { return }
+        try database.writer.write { db in
+            for (device, name) in names where !name.isEmpty {
+                try db.execute(sql: """
+                    INSERT INTO hash_device_names (device, name) VALUES (?, ?)
+                    ON CONFLICT(device) DO UPDATE SET name = excluded.name
+                    """, arguments: [device, name])
+            }
+        }
+    }
+
+    /// Names by device, for those that sent one.
+    func deviceNames(_ devices: [String]) throws -> [String: String] {
+        guard !devices.isEmpty else { return [:] }
+        return try database.reader.read { db in
+            Dictionary(uniqueKeysWithValues: try Row.fetchAll(db, sql: """
+                SELECT device, name FROM hash_device_names WHERE device IN (\(databaseQuestionMarks(count: devices.count)))
+                """, arguments: StatementArguments(devices)).map { ($0["device"] as String, $0["name"] as String) })
+        }
+    }
+
     /// Other devices' hashes of these photos' files.
     func remotePhotoHashes(cloudIds: [String]) throws -> [SharedPhotoHash] {
         try database.reader.read { db in

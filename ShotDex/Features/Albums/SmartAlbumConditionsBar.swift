@@ -88,9 +88,12 @@ struct SmartAlbumConditionsBar: View {
             }
             if !statusLines.isEmpty {
                 VStack(alignment: .leading, spacing: 2) {
-                    ForEach(statusLines, id: \.self) { line in
+                    ForEach(Array(statusLines.enumerated()), id: \.offset) { index, line in
+                        // The first line is counts and keeps to one; the
+                        // sentences after it (a mismatch names a device,
+                        // §12.4) wrap rather than lose words.
                         Text(line)
-                            .lineLimit(1)
+                            .lineLimit(index == 0 ? 1 : nil)
                             .truncationMode(.tail)
                     }
                 }

@@ -81,8 +81,11 @@ struct MacIndexingSettings: View {
 
     private func publishIndexesForAll(_ isOn: Bool) {
         guard let indexShare = dependencies.indexShare else { return }
-        let name = Host.current().localizedName ?? String(localized: "Your Mac", comment: "Settings: a Mac whose name is unknown")
-        Task { await indexShare.publishMacIndexesForAll(isOn, deviceName: name) }
+        Task {
+            let name = await DeviceDisplayName.current()
+                ?? String(localized: "Your Mac", comment: "Settings: a Mac whose name is unknown")
+            await indexShare.publishMacIndexesForAll(isOn, deviceName: name)
+        }
     }
 }
 
