@@ -34,7 +34,7 @@ input{font-family:inherit}
 <!-- Files in Shared: filling while the run copies (last tiles still arriving) -->
 <div style="position:absolute;left:636px;right:16px;top:60px;bottom:32px;overflow:hidden">
 <div style="height:36px;display:flex;align-items:flex-end;justify-content:space-between;padding:0 4px 8px;box-sizing:border-box">
-<div style="display:flex;align-items:baseline;gap:8px"><span style="font-size:15px;font-weight:600">Shared</span><span style="font-size:13px;color:{{t.label2}};font-variant-numeric:tabular-nums">121 photos · copying</span></div>
+<div style="display:flex;align-items:baseline;gap:8px"><span style="font-size:15px;font-weight:600">Shared</span><span style="font-size:13px;color:{{t.label2}};font-variant-numeric:tabular-nums">{{browserCount}}</span></div>
 <button aria-label="Sort By Name" style="border:none;background:none;display:flex;align-items:center;gap:4px;font-size:12px;color:{{t.label2}}">Name<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V6 M6.5 11.5L12 6l5.5 5.5"></path></svg></button>
 </div>
 <div style="display:grid;grid-template-columns:repeat(5, minmax(0, 1fr));gap:2px">
@@ -109,23 +109,26 @@ input{font-family:inherit}
 <div style="height:4px;border-radius:2px;background:{{t.track}}"><div style="width:{{foot.pct}};height:4px;border-radius:2px;background:{{t.accent}}"></div></div>
 </div></sc-if>
 </nav>
-<!-- LOG WINDOW (FS-19.08 §7): its own window, not modal — the browser stays usable; closing it does not stop the run (Activity › Show Log reopens it) -->
-<section role="dialog" aria-label="Common Photos — Tuấn + Vợ → Shared" style="position:absolute;left:300px;top:196px;width:900px;height:560px;border-radius:16px;background:{{S.panel}};border:1px solid {{t.glassStroke}};box-shadow:0 18px 50px rgba(0,0,0,0.28);overflow:hidden;color:{{t.label}};display:flex;flex-direction:column;z-index:30">
+<!-- LOG WINDOW (FS-19.08 §7): its own window, not modal — the browser stays usable; closing it does not stop the run (Activity › Show Log reopens it).
+     Tweak "state": running (default) · finished (Undo Copy… in the footer, §6b) · undoing · undone (an undo is a run of its own,
+     same window). Right-click on Copied/Moved rows offers Undo Selected… (a context menu, not drawn). Tweak "confirmUndo" draws
+     the confirmation over a finished run; Cancel is the default button, on the trailing side (HIG: the default trails). -->
+<section role="dialog" aria-label="{{winTitle}}" style="position:absolute;left:300px;top:196px;width:900px;height:560px;border-radius:16px;background:{{S.panel}};border:1px solid {{t.glassStroke}};box-shadow:0 18px 50px rgba(0,0,0,0.28);overflow:hidden;color:{{t.label}};display:flex;flex-direction:column;z-index:30">
 <div style="position:relative;height:36px;flex:none;background:{{S.panelBar}};border-bottom:1px solid {{t.sep}}">
 <div style="position:absolute;left:12px;top:12px;display:flex;gap:8px"><div style="width:12px;height:12px;border-radius:6px;background:#FF5F57;box-shadow:inset 0 0 0 0.5px rgba(0,0,0,0.2)"></div><div style="width:12px;height:12px;border-radius:6px;background:#FEBC2E;box-shadow:inset 0 0 0 0.5px rgba(0,0,0,0.2)"></div><div style="width:12px;height:12px;border-radius:6px;background:#28C840;box-shadow:inset 0 0 0 0.5px rgba(0,0,0,0.2)"></div></div>
-<div style="position:absolute;left:0;right:0;top:9px;text-align:center;font-size:13px;font-weight:600;line-height:18px">Common Photos — Tuấn + Vợ → Shared</div>
+<div style="position:absolute;left:0;right:0;top:9px;text-align:center;font-size:13px;font-weight:600;line-height:18px">{{winTitle}}</div>
 </div>
 <!-- Progress header -->
 <div style="padding:14px 16px 0;display:flex;flex-direction:column;gap:8px;flex:none">
 <div style="display:flex;align-items:center;gap:8px;height:28px">
 <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:1px">
-<span style="font-size:13px;font-weight:600;line-height:16px;white-space:nowrap;font-variant-numeric:tabular-nums">Copying 120 of 280 · 1.8 of 4.2 GB</span>
-<span style="font-size:11px;line-height:14px;color:{{t.label2}};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-variant-numeric:tabular-nums">IMG_4188.HEIC · reading back SHA-256 in Shared</span>
+<span style="font-size:13px;font-weight:600;line-height:16px;white-space:nowrap;font-variant-numeric:tabular-nums">{{head}}</span>
+<span style="font-size:11px;line-height:14px;color:{{t.label2}};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-variant-numeric:tabular-nums">{{detail}}</span>
 </div>
-<button style="height:28px;border-radius:8px;border:none;background:{{t.fill}};box-shadow:inset 0 0 0 0.5px {{t.sep}};color:{{t.label}};display:flex;align-items:center;gap:6px;padding:0 12px;font-size:13px;white-space:nowrap;flex:none"><svg aria-hidden="true" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 5v14 M16 5v14"></path></svg>Pause</button>
-<button style="height:28px;border-radius:8px;border:none;background:{{t.fill}};box-shadow:inset 0 0 0 0.5px {{t.sep}};color:{{t.label}};display:flex;align-items:center;gap:6px;padding:0 12px;font-size:13px;white-space:nowrap;flex:none"><svg aria-hidden="true" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6h12v12H6z"></path></svg>Stop</button>
+<sc-if value="{{going}}" hint-placeholder-val="{{true}}"><button style="height:28px;border-radius:8px;border:none;background:{{t.fill}};box-shadow:inset 0 0 0 0.5px {{t.sep}};color:{{t.label}};display:flex;align-items:center;gap:6px;padding:0 12px;font-size:13px;white-space:nowrap;flex:none"><svg aria-hidden="true" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 5v14 M16 5v14"></path></svg>Pause</button>
+<button style="height:28px;border-radius:8px;border:none;background:{{t.fill}};box-shadow:inset 0 0 0 0.5px {{t.sep}};color:{{t.label}};display:flex;align-items:center;gap:6px;padding:0 12px;font-size:13px;white-space:nowrap;flex:none"><svg aria-hidden="true" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6h12v12H6z"></path></svg>Stop</button></sc-if>
 </div>
-<div role="progressbar" aria-label="Copying 120 of 280" aria-valuenow="43" style="height:5px;border-radius:3px;background:{{t.track}}"><div style="width:43%;height:5px;border-radius:3px;background:{{t.accent}}"></div></div>
+<div role="progressbar" aria-label="{{head}}" aria-valuenow="{{pctNum}}" style="height:5px;border-radius:3px;background:{{t.track}}"><div style="width:{{pct}};height:5px;border-radius:3px;background:{{barFg}}"></div></div>
 </div>
 <!-- Status filter -->
 <div style="display:flex;align-items:center;gap:8px;padding:14px 16px 10px;flex:none">
@@ -153,13 +156,24 @@ input{font-family:inherit}
 </div>
 <!-- Footer -->
 <div style="height:52px;flex:none;display:flex;align-items:center;gap:8px;padding:0 16px">
-<span role="status" style="flex:1;min-width:0;font-size:12px;color:{{t.label2}};white-space:nowrap;font-variant-numeric:tabular-nums">120 copied · 1 skipped · 1 failed</span>
-<button disabled style="height:28px;border-radius:8px;border:none;background:{{t.fill}};color:{{t.label3}};padding:0 12px;font-size:13px;white-space:nowrap;flex:none">Show CSV in Browser</button>
+<span role="status" style="flex:1;min-width:0;font-size:12px;color:{{t.label2}};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-variant-numeric:tabular-nums">{{summary}}</span>
+<sc-for list="{{footBtns}}" as="b" hint-placeholder-count="3"><button aria-disabled="{{b.dis}}" style="height:28px;border-radius:8px;border:none;background:{{b.bg}};color:{{b.fg}};font-weight:{{b.weight}};padding:0 12px;font-size:13px;white-space:nowrap;flex:none">{{b.label}}</button></sc-for>
 </div>
+<!-- Undo confirmation (§6b): a sheet-style alert on the log window; Cancel is the default (Return takes nothing back) -->
+<sc-if value="{{confirm}}" hint-placeholder-val="{{false}}"><div aria-hidden="true" style="position:absolute;inset:0;top:36px;background:{{t.scrim}}"></div>
+<div role="alertdialog" aria-label="{{confirmTitle}}" style="position:absolute;left:250px;top:120px;width:400px;border-radius:22px;background:{{t.sheet}};border:1px solid {{t.glassStroke}};box-shadow:{{t.sheetShadow}};padding:20px 16px 16px;box-sizing:border-box;display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center">
+<div style="width:56px;height:56px;border-radius:13px;background:linear-gradient(160deg,#F2B25C 0%,#C6730E 100%);display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,0.25)"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14L4 9l5-5 M4 9h10.5a5.5 5.5 0 0 1 0 11H11"></path></svg></div>
+<div style="font-size:13px;font-weight:700">{{confirmTitle}}</div>
+<div style="font-size:11px;line-height:15px">{{confirmText}}</div>
+<div style="display:flex;gap:8px;width:100%;margin-top:6px">
+<button style="flex:1;height:28px;border-radius:8px;border:none;background:{{t.pressed}};color:{{t.label}};font-size:13px;font-weight:500">Undo Copy</button>
+<button style="flex:1;height:28px;border-radius:8px;border:none;background:{{t.accentFill}};color:{{t.onAccentFill}};font-size:13px;font-weight:600">Cancel</button>
+</div>
+</div></sc-if>
 </section>
 </div>
 </x-dc>
-<script type="text/x-dc" data-dc-script data-props='{"dark":{"editor":"boolean","default":false},"$preview":{"width":1440,"height":900}}'>
+<script type="text/x-dc" data-dc-script data-props='{"dark":{"editor":"boolean","default":false},"state":{"editor":"select","options":["running","finished","undoing","undone"],"default":"running"},"confirmUndo":{"editor":"boolean","default":false},"$preview":{"width":1440,"height":900}}'>
 const LIGHT = { content:'#FFFFFF', label:'rgba(0,0,0,0.88)', label2:'rgba(0,0,0,0.56)', label3:'rgba(0,0,0,0.28)',
   sep:'rgba(0,0,0,0.10)', fill:'rgba(0,0,0,0.05)', fill2:'#F2F2F4', pressed:'rgba(0,0,0,0.09)', track:'rgba(0,0,0,0.10)',
   glass:'rgba(255,255,255,0.72)', glassStroke:'rgba(0,0,0,0.08)', glassShadow:'0 2px 10px rgba(0,0,0,0.10)',
@@ -362,26 +376,33 @@ class Component extends DCLogic {
   renderVals() {
     const dark = !!this.props.dark;
     const k = ui(dark); const t = k.t; const S = k.S;
+    const state = this.props.state || 'running';
+    const isUndo = state === 'undoing' || state === 'undone';
+    const going = state === 'running' || state === 'undoing';
 
     const groups = sidebar(t, {sel:'NAS Home'});
     // A running task: the sidebar foot shows it (MAC_STYLE v2)
-    const foot = { idle:false, busy:true, label:'Common photos · 120 of 280', pct:'43%' };
+    const foot = state === 'running' ? { idle:false, busy:true, label:'Common photos · 120 of 280', pct:'43%' }
+      : state === 'undoing' ? { idle:false, busy:true, label:'Undo · 120 of 278', pct:'43%' } : IDLE_FOOT;
+    const sharedCount = { running:'121', finished:'280', undoing:'158', undone:'2' }[state];
     const fi = (name, count, d, sel, cur) => ({ name, count, d: d || I.folder, sel: sel ? 'true' : 'false', bg: sel ? (cur ? S.accentSoft : t.rowSel) : 'transparent', w: cur ? '600' : '400' });
     const columns = [
       { title:'NAS Home', edge:'1px solid ' + t.sep, foot:'3 folders', items:[ fi('Family', '', null, true), fi('Photos'), fi('Scans') ] },
-      { title:'Family', edge:'none', foot:'4 folders', items:[ fi('Tuấn', '18,240'), fi('Vợ', '15,902'), fi('Shared', '121', null, true, true), fi('Phone Backup', '4,311') ] }
+      { title:'Family', edge:'none', foot:'4 folders', items:[ fi('Tuấn', '18,240'), fi('Vợ', '15,902'), fi('Shared', sharedCount, null, true, true), fi('Phone Backup', '4,311') ] }
     ];
     // Shared filling: copied photos in name order, the newest still arriving
     const NAMES = ['DSC04388.ARW','DSC04392.ARW','DSC04395.ARW','DSC04398.ARW','IMG_0007 (2).JPG','IMG_0012.JPG','IMG_4021.HEIC','IMG_4022.HEIC','IMG_4035.HEIC',
       'IMG_4041.HEIC','IMG_4056.HEIC','IMG_4063.HEIC','IMG_4071.HEIC','IMG_4078.HEIC','IMG_4090.HEIC','IMG_4102.HEIC','IMG_4107.MOV','IMG_4110.HEIC','IMG_4121.HEIC',
       'IMG_4133.HEIC','IMG_4150.HEIC','IMG_4166.HEIC','IMG_4188.HEIC','IMG_4190.HEIC'];
-    const files = NAMES.map((n, i) => { const pending = i >= 22; const ext = n.split('.').pop();
+    const files = NAMES.map((n, i) => { const pending = state === 'running' && i >= 22; const ext = n.split('.').pop();
       const ftl = ext === 'ARW' ? 'RAW' : ext;
       return { isFolder:false, isPhoto:!pending, pending, name:n, ft:ftl, bg: tile(i*5+4), sel:false, pick:false, rated:false, stars:'0',
         label: n + ', ' + ftl + (pending ? ', copying' : '') }; });
+    // Undone: only the Skipped photo and the one edited in Shared are left.
+    if (state === 'undone') files.splice(2);
     const crumbs = [ { name:'NAS Home', d:I.server, sep:false, w:'400' }, { name:'Family', d:I.folder, sep:true, w:'400' }, { name:'Shared', d:I.folder, sep:true, w:'600' } ];
 
-    const filter = k.seg(['All', 'Copied', 'Skipped', 'Failed'], 0);
+    const filter = k.seg(isUndo ? ['All', 'Undone', 'Not undone'] : ['All', 'Copied', 'Skipped', 'Failed'], 0);
     const C = [['Status',172],['Name',116],['From',180],['To',178],['SHA-256',76],['Reason',0]];
     const cols = C.map((c, i) => ({ label:c[0], aria:'Sort by ' + c[0], w: c[1] ? c[1] + 'px' : 'auto', flex: c[1] ? 'none' : '1',
       edge: i < C.length - 1 ? '1px solid ' + t.sep : 'none', sorted: c[0] === 'Name', sort: c[0] === 'Name' ? 'ascending' : 'none' }));
@@ -400,15 +421,49 @@ class Component extends DCLogic {
       ['busy', 'IMG_4188.HEIC', 'Tuấn/2025 · Vợ/Phone', 'Shared/IMG_4188.HEIC', '', ''],
       ['ok', 'IMG_4190.HEIC', 'Tuấn/2025 · Vợ/Phone', 'Shared/IMG_4190.HEIC', '92d4…3a7f', '']
     ];
-    const log = L.map((r, i) => ({ status: r[0]==='ok' ? 'Copied' : r[0]==='skip' ? 'Skipped (already there)' : r[0]==='fail' ? 'Failed' : 'Copying…',
-      icon: r[0]==='ok' ? OK : r[0]==='skip' ? SKIP : r[0]==='fail' ? FAIL : null, busy: r[0]==='busy',
-      color: r[0]==='ok' ? S.greenText : r[0]==='fail' ? S.redText : t.label2,
-      name:r[1], from:r[2], to:r[3], sha: r[4] || '—', reason: r[5], reasonColor: r[0]==='fail' ? S.redText : t.label2,
+    const UNDO = 'M9 14L4 9l5-5 M4 9h10.5a5.5 5.5 0 0 1 0 11H11';
+    // Finished: the busy row is done. An undo lists only the rows it takes back (Copied ones); one whose
+    // copy in Shared was edited since is Not undone.
+    const rows = state === 'running' ? L
+      : !isUndo ? L.map(r => r[0] === 'busy' ? ['ok', r[1], r[2], r[3], '4e7a…0c15', ''] : r)
+      : L.filter(r => r[0] === 'ok' || r[0] === 'busy').map(r => r[0] === 'busy' ? [r[0], r[1], r[2], r[3], '4e7a…0c15', r[5]] : r).map((r, i) => i === 3 ? ['not', r[1], r[2], r[3], r[4], 'changed in Shared']
+          : (state === 'undoing' && i === 6) ? ['undoBusy', r[1], r[2], r[3], r[4], ''] : (state === 'undoing' && i > 6) ? ['wait', r[1], r[2], r[3], r[4], '']
+          : ['undone', r[1], r[2], r[3], r[4], '']);
+    const word = { ok:'Copied', skip:'Skipped (already there)', fail:'Failed', busy:'Copying…', undone:'Undone', not:'Not undone', undoBusy:'Undoing…', wait:'Waiting' };
+    const log = rows.map((r, i) => ({ status: word[r[0]],
+      icon: r[0]==='ok' ? OK : r[0]==='skip' ? SKIP : (r[0]==='fail' || r[0]==='not') ? FAIL : r[0]==='undone' ? UNDO : null,
+      busy: r[0]==='busy' || r[0]==='undoBusy',
+      color: (r[0]==='ok' || r[0]==='undone') ? S.greenText : (r[0]==='fail' || r[0]==='not') ? S.redText : t.label2,
+      name:r[1], from:r[2], to:r[3], sha: r[4] || '—', reason: r[5], reasonColor: (r[0]==='fail' || r[0]==='not') ? S.redText : t.label2,
       rowBg: (i % 2) ? t.rowAlt : 'transparent' }));
+    const fb = (label, kind, dis) => ({ label, dis: dis ? 'true' : 'false',
+      bg: kind === 'default' ? t.accentFill : t.fill, fg: dis ? t.label3 : (kind === 'default' ? t.onAccentFill : t.label),
+      weight: kind === 'default' ? '600' : '400' });
+    const V = {
+      running: { winTitle:'Common Photos — Tuấn + Vợ → Shared', head:'Copying 120 of 280 · 1.8 of 4.2 GB',
+        detail:'IMG_4188.HEIC · reading back SHA-256 in Shared', pct:'43%', summary:'120 copied · 1 skipped · 1 failed',
+        footBtns:[ fb('Show CSV in Browser', null, true) ] },
+      finished: { winTitle:'Common Photos — Tuấn + Vợ → Shared', head:'Done — 278 copied · 1 skipped · 1 failed',
+        detail:'Today, 9:42 AM · log saved in Shared', pct:'100%', summary:'Log saved in Shared as “ShotDex Common Photos 2026-11-03 0942.csv”',
+        footBtns:[ fb('Undo Copy…'), fb('Show in Browser'), fb('Done', 'default') ] },
+      undoing: { winTitle:'Undo — Shared → Tuấn + Vợ', head:'Undoing 120 of 278 · 1.8 of 4.2 GB',
+        detail:'IMG_4110.HEIC · checking the copy in Tuấn', pct:'43%', summary:'119 undone · 1 not undone',
+        footBtns:[ fb('Show in Browser', null, true) ] },
+      undone: { winTitle:'Undo — Shared → Tuấn + Vợ', head:'Done — 277 undone · 1 not undone',
+        detail:'1 not undone — select it and choose Undo Selected… to try again', pct:'100%',
+        summary:'Log saved in Shared as “ShotDex Common Photos 2026-11-03 0958 Undo.csv”',
+        footBtns:[ fb('Show in Browser'), fb('Done', 'default') ] }
+    }[state];
+    const confirm = !!this.props.confirmUndo && state === 'finished';
 
     return { t, S, edge: dark?'rgba(28,28,30,0.85)':'rgba(255,255,255,0.85)', edgeClear: dark?'rgba(28,28,30,0)':'rgba(255,255,255,0)',
       groups, foot, columns, files, crumbs, filter, cols, log,
-      title:'Shared', subtitle:'NAS Home · SMB · copying 120 of 280', pathStatus:'121 items · 13.41 GB free of 152.09 GB' };
+      winTitle:V.winTitle, head:V.head, detail:V.detail, pct:V.pct, pctNum:V.pct.replace('%', ''), going,
+      barFg: going ? t.accent : S.greenText, summary:V.summary, footBtns:V.footBtns, confirm,
+      confirmTitle:'Undo copying 278 photos?',
+      confirmText:'The copies in “Shared” are removed. The photos in Tuấn and Vợ stay where they are.',
+      title:'Shared', subtitle: state === 'running' ? 'NAS Home · SMB · copying 120 of 280' : state === 'undoing' ? 'NAS Home · SMB · undoing 120 of 278' : 'NAS Home · SMB',
+      browserCount: state === 'running' ? '121 photos · copying' : state === 'undoing' ? '158 photos · undoing' : state === 'undone' ? '2 photos' : '280 photos', pathStatus:'121 items · 13.41 GB free of 152.09 GB' };
   }
 }
 </script>

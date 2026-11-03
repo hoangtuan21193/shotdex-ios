@@ -105,9 +105,9 @@ SHA-256 với bản ở folder chung, nên trả về = chép lại đúng nhữ
   `finishing` thì không có nút này.
 - **Hộp xác nhận** (Cancel là nút mặc định):
   - Copy: "Undo copying 280 photos?" · "The copies in “Shared” are removed. The photos in Tuấn and Vợ stay where they
-    are." · **Undo** · **Cancel**.
+    are." · **Undo Copy** · **Cancel**.
   - Move: "Undo moving 280 photos?" · "Each photo is put back in Tuấn and Vợ and checked, then removed from “Shared”." ·
-    **Undo** · **Cancel**.
+    **Undo Move** · **Cancel**.
 - **Undo Copy, mỗi ảnh Copied:**
   1. Hỏi lại một bản nguồn còn đúng cỡ + ngày sửa (lệch thì SHA-256). Không bản nào còn → **giữ** bản ở folder chung,
      hàng "Not undone — no other copy" (không bao giờ xoá bản cuối cùng).
@@ -133,9 +133,9 @@ SHA-256 với bản ở folder chung, nên trả về = chép lại đúng nhữ
   chung được Rescan; CSV của lượt bị xoá khi mọi hàng Copied/Moved đều Undone, còn không thì ghi thêm
   `ShotDex Common Photos <ngày giờ> Undo.csv` (cùng cột, Status = Undone / Not undone).
 - **Giữ bao lâu:** Activity giữ **20 lượt đã xong** gần nhất (cả lượt đã hoàn tác); lượt thứ 21 đẩy lượt cũ nhất cùng
-  các hàng của nó ra khỏi DB. Lượt dở dang không bao giờ bị đẩy ra. Hàng trong Activity có **Remove from List**, chân
-  Activity có **Remove Finished from List…** (thay "Clear" / "Clear Finished"); cả hai hỏi lại "Their logs are removed;
-  they can't be undone afterwards.", Cancel mặc định (người dùng 2026-11-03).
+  các hàng của nó ra khỏi DB. Lượt dở dang không bao giờ bị đẩy ra. Hàng trong Activity có **Remove from List…**, chân
+  Activity có **Remove Finished from List…** (thay "Clear" / "Clear Finished"); cả hai hỏi lại "Their logs are removed,
+  so you can't undo these runs afterwards. Nothing on the server changes.", Cancel mặc định (người dùng 2026-11-03).
 - Lịch sử trả **đúng từng chỗ cũ**: lượt Move ghi lại hàng lịch sử nào đến từ bản nào; bản không trả được (chỗ bị chiếm)
   thì lịch sử của nó ở lại đường dẫn đích (người dùng 2026-11-03).
 

@@ -28,7 +28,7 @@ loop: mỗi vòng đọc nó trước, ghi lại sau.
 | U4 | xong | (xem git log) | chỉ test: client giả có `failOnWrite`/`failOnRead`; quét mọi điểm lỗi (ghi trước/sau, đọc) × Move/Copy × share × sidecar; Resume sau khi dừng ở ảnh 4 |
 | U5 | xong | (xem git log) | `ServerFileHistory.move` trả và ghi hàng đã dời (cùng transaction, `recording:`); `restore` chỉ xoá bản ghi đã xong; Undo.csv hoặc xoá CSV (chỉ khi đúng là log của ShotDex), `forgetCSVs`; nhóm mới theo lượt mới nhất của nhóm |
 | U6 | xong | (cùng U2/U3) | `CommonPhotosSMBTests.undoCopyOnTheServer` + `undoMoveOnTheServer` chạy xanh trên SMB ảo sau U5 (C rỗng cả CSV) |
-| U7 | chưa | | |
+| U7 | xong | (xem git log) | board `MAC_CommonPhotosRun` thêm tweak `state` (running/finished/undoing/undone) + `confirmUndo`; `MAC_Activity` giữ lượt xong, hàng Undo, Remove from List…, `askRemove`; Cancel mặc định nằm bên phải (HIG), nút xác nhận “Undo Copy”/“Undo Move”; canvas v81 |
 | U8 | chưa | | |
 | U9 | chưa | | |
 
