@@ -57,7 +57,16 @@ final class CommonPhotosScanModel {
     private(set) var folders: [String]
     /// Photos and videos in each folder, once listed.
     private(set) var fileCounts: [String: Int] = [:]
-    var destination: String?
+    var destination: String? {
+        didSet {
+            guard destination != oldValue else { return }
+            // A scan whose listing was cut for another set never read what
+            // this set needs: scan again. Otherwise the results are cut
+            // again from the whole of them, now or when the scan ends
+            // (FS-19.08 §6c).
+            if listingWasCut { resetScan() } else if phase == .done { recut() }
+        }
+    }
     var action = CommonPhotosRun.Action.copy {
         didSet {
             // A Copy scan took earlier hashes on trust (FS-19.08 §6c); a
@@ -67,6 +76,23 @@ final class CommonPhotosScanModel {
     }
     /// The scan shown took every known hash on trust (a Copy scan).
     private var scannedTrustingCache = false
+    /// Scan Everything (FS-19.08 §6c): check every photo, not only the new
+    /// ones, even when the set gathered before.
+    var scansEverything = false {
+        didSet { if scansEverything != oldValue { resetScan() } }
+    }
+    /// When this set last gathered, once a scan looked; nil for a set that
+    /// never did — every photo is checked then.
+    private(set) var lastGathered: Date?
+    /// The scan read only the sizes new to its set (its destination was
+    /// known when it listed).
+    private var listingWasCut = false
+    /// What the scan found before the photos the set already gathered were
+    /// taken out, so another destination can cut it again.
+    private var allPhotos: [CommonPhoto] = []
+    private var cutTask: Task<Void, Never>?
+    /// Results are being cut to the destination chosen: not runnable yet.
+    private(set) var isCutting = false
     private(set) var phase = Phase.idle
     private(set) var preview: CommonPhotosMatcher.Preview?
     private(set) var photos: [CommonPhoto] = []
@@ -136,7 +162,7 @@ final class CommonPhotosScanModel {
     /// A destination is set and Same photos are found: Copy N / Move N.
     /// Never a Move on a scan that took earlier hashes on trust.
     var canRun: Bool {
-        phase == .done && problem == nil && !photos.isEmpty && !(action == .move && scannedTrustingCache)
+        phase == .done && !isCutting && problem == nil && !photos.isEmpty && !(action == .move && scannedTrustingCache)
     }
 
     /// Whether some source shows what lands in the destination.
@@ -236,6 +262,12 @@ final class CommonPhotosScanModel {
         checkedFiles = 0
         bytesLeft = 0
         scannedTrustingCache = false
+        lastGathered = nil
+        listingWasCut = false
+        allPhotos = []
+        cutTask?.cancel()
+        cutTask = nil
+        isCutting = false
     }
 
     private func runScan() async {
@@ -278,31 +310,38 @@ final class CommonPhotosScanModel {
             // Forgotten before anything new is saved, so a save never
             // brings back a file the listing no longer has.
             await forget(notIn: listing, folders: folders)
-            let records = await scanRecords(listing, folders: folders)
             fileCounts = Dictionary(uniqueKeysWithValues: zip(folders, listing.files.map(\.count)))
+            // Only new photos, when the set gathered before (§6c).
+            let gathered = scansEverything ? .init() : await gathered(folders: folders, destination: destination)
+            lastGathered = gathered.lastAt.map { Date(timeIntervalSince1970: TimeInterval($0)) }
+            listingWasCut = !gathered.isEmpty
+            var checked = listing
+            checked.files = CommonPhotosIncremental.listing(listing.files, folders: folders, seen: gathered.seen)
+            let records = await scanRecords(checked, folders: folders)
             // What size and name say, shown at once; the heads refine it.
-            let firstLook = CommonPhotosMatcher.preview(listing.files)
+            let firstLook = CommonPhotosMatcher.preview(checked.files)
             preview = firstLook
             bytesLeft = firstLook.candidateBytes
             phase = .checking
-            let groups = CommonPhotosMatcher.sizeGroups(listing.files)
+            let groups = CommonPhotosMatcher.sizeGroups(checked.files)
             let knownKeys = records.compactMapValues(\.captureKey).filter { !$0.value.isEmpty }
             let knownNone = Set(records.filter { $0.value.captureKey == "" }.keys)
             let keys = try await scanner.readCaptureKeys(for: groups, folders: folders, known: knownKeys, knownNone: knownNone,
                                                          read: { file, key in readKeys.withLock { $0[file] = key ?? "" } }).keys
             try Task.checkCancellation()
-            let preview = CommonPhotosMatcher.preview(listing.files, captureKeys: keys)
+            let preview = CommonPhotosMatcher.preview(checked.files, captureKeys: keys)
             self.preview = preview
             // The index's hashes first, then what earlier scans read.
             let known = (await knownHashes(preview, folders: folders))
                 .merging(records.compactMapValues(\.sha256), uniquingKeysWith: { index, _ in index })
+            let seen = gathered.seen
             let found = try await CommonPhotosVerifier(client: watched).verify(
                 preview, folders: folders, knownHashes: known, trustsCache: trustsCache,
                 hashed: { batch in read.withLock { $0.merge(batch, uniquingKeysWith: { _, new in new }) } },
                 found: { [weak self] batch in
                 Task { @MainActor in
                     guard let self, self.scanId == scanId, self.phase == .checking else { return }
-                    self.photos += batch
+                    self.photos += CommonPhotosIncremental.newPhotos(batch, folders: folders, seen: seen)
                 }
             }, progress: { [weak self] state in
                 let now = ContinuousClock.now
@@ -320,10 +359,13 @@ final class CommonPhotosScanModel {
             })
             try Task.checkCancellation()
             // The callbacks hop to the main actor; the result is the truth.
-            photos = found
+            allPhotos = found
+            photos = CommonPhotosIncremental.newPhotos(found, folders: folders, seen: gathered.seen)
             checkedFiles = preview.candidateCount
             bytesLeft = 0
             phase = .done
+            // A destination chosen while it scanned: cut to it now.
+            if !listingWasCut, destination != nil { recut() }
         } catch is CancellationError {
             return
         } catch {
@@ -377,6 +419,34 @@ final class CommonPhotosScanModel {
 
     private func path(of file: CommonPhotosFile, folders: [String]) -> String {
         ServerUploadPath.join(folders[file.folder], file.relativePath)
+    }
+
+    /// The whole results cut to what the current destination's set has not
+    /// gathered — every photo again for one that never did, or for Scan
+    /// Everything. The latest choice wins; until it lands, no run.
+    private func recut() {
+        cutTask?.cancel()
+        let scanId = scanId
+        let folders = folders
+        let destination = destination
+        isCutting = true
+        cutTask = Task { [weak self] in
+            guard let self else { return }
+            let gathered = scansEverything ? .init() : await gathered(folders: folders, destination: destination)
+            guard !Task.isCancelled, self.scanId == scanId, self.destination == destination else { return }
+            photos = CommonPhotosIncremental.newPhotos(allPhotos, folders: folders, seen: gathered.seen)
+            lastGathered = gathered.lastAt.map { Date(timeIntervalSince1970: TimeInterval($0)) }
+            isCutting = false
+        }
+    }
+
+    private func gathered(folders: [String], destination: String?) async -> CommonPhotosStore.Gathered {
+        guard let database, let destination else { return .init() }
+        let store = CommonPhotosStore(database: database)
+        let connectionId = connectionId
+        return (try? await Task.detached {
+            try store.gathered(connectionId: connectionId, folders: folders, destination: destination)
+        }.value) ?? .init()
     }
 
     /// Earlier scans' records of the listed files that still match them —

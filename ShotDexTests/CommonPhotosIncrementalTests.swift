@@ -194,6 +194,165 @@ import Testing
         #expect(try records.records(connectionId: "C1", paths: ["old", "new"]).keys.sorted() == ["new"])
     }
 
+    // MARK: Only new photos (AC-160…162)
+
+    /// The sheet's photos recorded as one finished Copy run of the set, as
+    /// if copied to `photos/Shared`.
+    private static func gatherAll(_ sheet: CommonPhotosScanModel, _ database: AppDatabase) throws {
+        let made = try #require(sheet.makeRun())
+        let store = CommonPhotosStore(database: database)
+        try store.start(made.run, items: made.items.map { var item = $0; item.status = .copied; return item })
+        try store.markState(.finished, runId: made.run.id)
+    }
+
+    private static func sheet(_ client: InMemoryRemoteFileClient, _ database: AppDatabase, action: CommonPhotosRun.Action = .copy) -> CommonPhotosScanModel {
+        let sheet = CommonPhotosScanModel(connectionId: "C1", sourceId: "S", folders: ["photos/A", "photos/B"],
+                                          client: client, database: database)
+        sheet.destination = "photos/Shared"
+        sheet.action = action
+        return sheet
+    }
+
+    private static func put(_ client: InMemoryRemoteFileClient, _ path: String, _ data: Data, at time: TimeInterval = 1_700_000_500) {
+        client.put(path, data)
+        client.modified[path] = Date(timeIntervalSince1970: time)
+    }
+
+    /// AC-160: after a run gathered 3, three more common photos arrive; the
+    /// next scan of the set lists those 3 only and reads nothing of the old.
+    @Test func onlyNewPhotos() async throws {
+        let client = Self.nas()
+        let database = try AppDatabase.makeEmpty()
+        let first = Self.sheet(client, database)
+        try await Self.scan(first)
+        try Self.gatherAll(first, database)
+        for n in 3..<6 {
+            Self.put(client, "photos/A/IMG_\(n).HEIC", Self.bytes(UInt8(n), size: Self.size + 10 * n))
+            Self.put(client, "photos/B/from-a/copy \(n).HEIC", Self.bytes(UInt8(n), size: Self.size + 10 * n))
+        }
+        let before = (sha: client.sha256Paths.count, ranges: client.rangeReadPaths.count)
+
+        let again = Self.sheet(client, database, action: .move)
+        try await Self.scan(again)
+
+        #expect(again.sameCount == 3)
+        #expect(again.lastGathered != nil)
+        #expect(Set(again.rows.map(\.name)) == ["IMG_3.HEIC", "IMG_4.HEIC", "IMG_5.HEIC"])
+        let touched = Set(client.sha256Paths.dropFirst(before.sha) + client.rangeReadPaths.dropFirst(before.ranges))
+        #expect(touched.allSatisfy { $0.contains("_3") || $0.contains("_4") || $0.contains("_5") || $0.contains(" 3") || $0.contains(" 4") || $0.contains(" 5") })
+        #expect(again.makeRun()?.items.count == 3)
+        await first.close()
+        await again.close()
+    }
+
+    /// AC-161: a new photo only in A is not common yet; once B has it, it is.
+    @Test func newInOneFolderWaits() async throws {
+        let client = Self.nas()
+        let database = try AppDatabase.makeEmpty()
+        let first = Self.sheet(client, database)
+        try await Self.scan(first)
+        try Self.gatherAll(first, database)
+        Self.put(client, "photos/A/X.HEIC", Self.bytes(77, size: 300_123))
+
+        let waiting = Self.sheet(client, database)
+        try await Self.scan(waiting)
+        #expect(waiting.sameCount == 0)
+
+        Self.put(client, "photos/B/X copy.HEIC", Self.bytes(77, size: 300_123), at: 1_700_000_900)
+        let ready = Self.sheet(client, database)
+        try await Self.scan(ready)
+        #expect(ready.rows.map(\.name) == ["X.HEIC"])
+        await first.close()
+        await waiting.close()
+        await ready.close()
+    }
+
+    /// AC-162: a gathered photo rewritten in both folders (other size) is
+    /// new again and read again.
+    @Test func changedFileIsNew() async throws {
+        let client = Self.nas()
+        let database = try AppDatabase.makeEmpty()
+        let first = Self.sheet(client, database)
+        try await Self.scan(first)
+        try Self.gatherAll(first, database)
+        Self.put(client, "photos/A/IMG_1.HEIC", Self.bytes(91, size: Self.size + 55))
+        Self.put(client, "photos/B/from-a/copy 1.HEIC", Self.bytes(91, size: Self.size + 55))
+        let before = client.sha256Paths.count
+
+        let again = Self.sheet(client, database)
+        try await Self.scan(again)
+
+        #expect(again.rows.map(\.name) == ["IMG_1.HEIC"])
+        #expect(Set(client.sha256Paths.dropFirst(before)) == ["photos/A/IMG_1.HEIC", "photos/B/from-a/copy 1.HEIC"])
+        await first.close()
+        await again.close()
+    }
+
+    /// Scan Everything lists every common photo again; another destination
+    /// is another set, with no earlier runs.
+    @Test func everythingAndOtherDestination() async throws {
+        let client = Self.nas()
+        let database = try AppDatabase.makeEmpty()
+        let first = Self.sheet(client, database)
+        try await Self.scan(first)
+        try Self.gatherAll(first, database)
+
+        let all = Self.sheet(client, database)
+        all.scansEverything = true
+        try await Self.scan(all)
+        #expect(all.sameCount == 3)
+        #expect(all.lastGathered == nil)
+
+        let elsewhere = Self.sheet(client, database)
+        elsewhere.destination = "photos/Elsewhere"
+        try await Self.scan(elsewhere)
+        #expect(elsewhere.sameCount == 3)
+
+        // Chosen after the scan: the gathered ones drop out.
+        let late = CommonPhotosScanModel(connectionId: "C1", sourceId: "S", folders: ["photos/B", "photos/A"],
+                                         client: client, database: database)
+        try await Self.scan(late)
+        #expect(late.sameCount == 3)
+        late.destination = "photos/Shared"
+        for _ in 0..<100 where late.sameCount != 0 { try await Task.sleep(for: .milliseconds(10)) }
+        #expect(late.sameCount == 0)
+        #expect(late.lastGathered != nil)
+        // Another destination: the whole results come back, no rescan.
+        late.destination = "photos/Elsewhere"
+        for _ in 0..<100 where late.sameCount != 3 { try await Task.sleep(for: .milliseconds(10)) }
+        #expect(late.sameCount == 3)
+        #expect(late.phase == .done)
+        // Scan Everything is never cut.
+        all.destination = "photos/Other"
+        all.destination = "photos/Shared"
+        for _ in 0..<50 where all.isCutting { try await Task.sleep(for: .milliseconds(10)) }
+        #expect(all.sameCount == 3)
+        for sheet in [first, all, elsewhere, late] { await sheet.close() }
+    }
+
+    /// A destination picked while the scan runs: the results are cut to it
+    /// when the scan ends.
+    @Test func destinationDuringTheScan() async throws {
+        let client = Self.nas()
+        let database = try AppDatabase.makeEmpty()
+        let first = Self.sheet(client, database)
+        try await Self.scan(first)
+        try Self.gatherAll(first, database)
+        client.whileHashing = { _ in try? await Task.sleep(for: .milliseconds(30)) }
+
+        let sheet = CommonPhotosScanModel(connectionId: "C1", sourceId: "S", folders: ["photos/A", "photos/B"],
+                                          client: client, database: try AppDatabase.makeEmpty())
+        let shared = CommonPhotosScanModel(connectionId: "C1", sourceId: "S", folders: ["photos/A", "photos/B"],
+                                           client: client, database: database)
+        shared.scan()
+        for _ in 0..<200 where shared.phase != .checking { try await Task.sleep(for: .milliseconds(5)) }
+        shared.destination = "photos/Shared"
+        for _ in 0..<600 where shared.phase != .done || shared.isCutting { try await Task.sleep(for: .milliseconds(10)) }
+        #expect(shared.sameCount == 0)
+        #expect(!shared.canRun)
+        for model in [first, sheet, shared] { await model.close() }
+    }
+
     /// AC-159 on the local SMB test server (fixture: 8 of Tuấn's 12 photos
     /// in Vợ's `from-tuan`, landscapes): the second scan reads no byte.
     @Test(.enabled(if: LocalSMBTestServer.isListening))
@@ -215,7 +374,20 @@ import Testing
         try await Self.scan(again)
         #expect(again.sameCount == 8)
         #expect(counting.reads == readsBefore)
+        // AC-160 on the server: once gathered to Shared, the set has no new
+        // photo and reads nothing.
+        again.destination = "photos/Shared"
+        for _ in 0..<100 where again.isCutting { try await Task.sleep(for: .milliseconds(10)) }
+        try Self.gatherAll(again, database)
         await again.close()
+        let third = CommonPhotosScanModel(connectionId: "smb", sourceId: "S", folders: ["photos/Vo", "photos/Tuan"],
+                                          client: counting, database: database)
+        third.destination = "photos/Shared"
+        try await Self.scan(third)
+        #expect(third.sameCount == 0)
+        #expect(third.lastGathered != nil)
+        #expect(counting.reads == readsBefore)
+        await third.close()
     }
 }
 

@@ -6,7 +6,7 @@
 | Intent | [2026-11-03-common-photos-new-only-and-sync](../_intents/2026-11-03-common-photos-new-only-and-sync.md) |
 | Commit spec | `463a5021` (intent `43c24873`) |
 | Ngày | 2026-11-03 |
-| Trạng thái | đang làm — G1 xong (loop: [FS1908_GATHER_LOOP.md](FS1908_GATHER_LOOP.md)) |
+| Trạng thái | đang làm — G1–G2 xong (loop: [FS1908_GATHER_LOOP.md](FS1908_GATHER_LOOP.md)) |
 
 ## 1. Hiểu đúng chưa
 
@@ -31,7 +31,7 @@ hôm nay phải quét lại từ đầu, và băm lại mọi file cùng cỡ �
 | AC | Trạng thái | Bằng chứng | Việc |
 |---|---|---|---|
 | AC-159 | ❌ một phần | `CommonPhotosScanModel.swift:305-337` `knownHashes` chỉ đọc `copy_files` của **nguồn**. `CommonPhotosVerifier.swift:73` chỉ dùng SHA đã có cho folder đầu (`file.folder == 0`). Không chỗ nào lưu SHA băm lúc quét. Khoá ngày chụp không được nhớ (`Scanner.swift:36`, model không truyền `known`, `:262`) | G1: bảng SHA đã đọc; verifier ghi vào; mọi folder dùng lại SHA nếu đường dẫn + cỡ + ngày sửa trùng |
-| AC-160 | ❌ | quét không biết lượt trước (`ScanModel:62-70`, chỉ giữ trong bộ nhớ); lượt không có khoá bộ (`common_photo_runs`, v46) | G2: cột `setKey`; Domain `CommonPhotosIncremental` lọc nhóm có bản mới/đổi so với mục của lượt xong gần nhất (`common_photo_items.sources` có path, size, modifiedAt) |
+| AC-160 | ❌ | quét không biết lượt trước (`ScanModel:62-70`, chỉ giữ trong bộ nhớ); lượt không có khoá bộ (`common_photo_runs`, v46) | G2: khoá bộ tính từ cột đã có (không thêm cột); Domain `CommonPhotosIncremental` lọc nhóm có bản mới/đổi so với mục của lượt xong gần nhất (`common_photo_items.sources` có path, size, modifiedAt) |
 | AC-161 | ❌ | như AC-160; bước cỡ (`Matcher.swift:41`) đã loại ảnh chỉ ở một folder | G2: test khoá lại (X chỉ ở A không vào; lần sau B có thì vào) |
 | AC-162 | ❌ | — | G2: file cùng đường dẫn mà cỡ hay ngày sửa khác là "đổi", băm lại; đặt tên ` (2)` theo `Runner.swift:309` có sẵn |
 | AC-163 | ❌ | folder chung chỉ được liệt kê lúc **chạy** (`Runner.swift:196-197`), không lúc quét | G3: quét liệt kê thêm folder chung; ảnh đã gom mà đích mất thì vào lại danh sách |

@@ -147,6 +147,47 @@ struct CommonPhotosStore: Sendable {
         }
     }
 
+    /// What earlier runs of a set gathered (FS-19.08 §6c): every source
+    /// file of a photo they copied, moved or found already there, and when
+    /// the newest of them ended. Undone photos are not counted: they are
+    /// back as they were. Runs being finished (`finishing`) count — every
+    /// photo of them is done. Only runs Activity still keeps are known.
+    struct Gathered: Equatable, Sendable {
+        var seen: Set<CommonPhotosIncremental.Stamp> = []
+        var lastAt: Int?
+        var isEmpty: Bool { lastAt == nil }
+    }
+
+    func gathered(connectionId: String, folders: [String], destination: String) throws -> Gathered {
+        let key = CommonPhotosIncremental.setKey(connectionId: connectionId, folders: folders, destination: destination)
+        return try database.reader.read { db in
+            let runs = try CommonPhotosRun
+                .filter(Column("connectionId") == connectionId && Column("undoOf") == nil)
+                .filter([CommonPhotosRun.State.stopped, .finished, .finishing].map(\.rawValue).contains(Column("state")))
+                .fetchAll(db)
+                .filter { $0.isReadable && CommonPhotosIncremental.setKey(connectionId: $0.connectionId, folders: $0.folders,
+                                                                          destination: $0.destination) == key }
+            var out = Gathered()
+            let decoder = JSONDecoder()
+            let done = [CommonPhotosItem.Status.copied, .moved, .skipped].map(\.rawValue)
+            for run in runs {
+                // The sources column only: a set's runs can hold many photos.
+                let lists = try String.fetchAll(db, sql: """
+                    SELECT sources FROM common_photo_items WHERE runId = ? AND status IN (\(databaseQuestionMarks(count: done.count)))
+                    """, arguments: StatementArguments([run.id] + done))
+                guard !lists.isEmpty else { continue }
+                for list in lists {
+                    guard let sources = try? decoder.decode([CommonPhotosItem.Source].self, from: Data(list.utf8)) else { continue }
+                    for source in sources {
+                        out.seen.insert(.init(path: source.path, size: source.size, modifiedAt: source.modifiedAt))
+                    }
+                }
+                out.lastAt = max(out.lastAt ?? 0, run.updatedAt)
+            }
+            return out
+        }
+    }
+
     /// Runs a quit or a lost connection left half done, newest first — the
     /// Resume · Discard banner (FS-19.08 §7).
     func unfinishedRuns() throws -> [CommonPhotosRun] {

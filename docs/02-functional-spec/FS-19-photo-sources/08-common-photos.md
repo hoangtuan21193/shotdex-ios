@@ -172,6 +172,14 @@ Copy/Move vẫn là cùng bộ.
   folder nguồn (người dùng 2026-11-03). Mỗi lượt vì thế liệt kê cả folder chung (chỉ lệnh liệt kê, không đọc byte) để
   biết bản nào còn. Bản ở folder chung còn đúng đường dẫn + cỡ thì coi là còn, không đọc lại.
 - **Scan Everything** (nút phụ trong sheet khi bộ đã từng chạy): quét như lần đầu, vẫn dùng SHA đã nhớ.
+- "Lượt trước" = mọi lượt gom (không phải lượt hoàn tác) của bộ mà Activity còn giữ, đã xong, đã Stop hay đang
+  `finishing`; tính ảnh Copied, Moved, Skipped (ảnh đã hoàn tác thì không). Server không cho ngày sửa thì so đường dẫn +
+  cỡ.
+- Chọn folder chung **sau** khi quét (hay trong lúc quét): kết quả bị bỏ những ảnh bộ đó đã gom, không quét lại; đổi
+  sang folder chung khác thì kết quả cắt lại theo bộ mới. Chỉ khi lượt quét đã chỉ đọc phần mới của một bộ thì đổi
+  folder chung mới phải quét lại.
+- Giới hạn đã biết: sidecar `.xmp` đổi hay mới thêm mà ảnh không đổi thì không làm ảnh thành "mới"; chọn folder
+  khác hoa thường (`Photos/Tuan` và `photos/tuan`) là bộ khác.
 
 ### Tự gom (Keep Gathering)
 
