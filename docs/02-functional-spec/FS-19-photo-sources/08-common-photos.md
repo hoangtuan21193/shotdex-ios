@@ -328,29 +328,30 @@ SHA đã nhớ (§6c).
 
    | Connection | Lệnh | Hôm nay trong app |
    |---|---|---|
-   | SMB | `FSCTL_SRV_COPYCHUNK` (Samba, Windows, Synology, QNAP có) | thư viện `SMBClient` có mã lệnh `srvCopyChunk` nhưng chưa có hàm gọi |
+   | SMB | `FSCTL_SRV_COPYCHUNK` (Samba, Windows, Synology, QNAP có) | thư viện `SMBClient` có mã lệnh nhưng hàm gửi là private — **không làm** (người dùng 2026-11-04: không vá thư viện) |
    | WebDAV | `COPY` (RFC 4918) | client mới có `MOVE` |
    | SFTP | không có trong giao thức (chỉ vài server có `copy-data`) | — |
 
    Server không làm được (lệnh bị từ chối, khác share) → lùi về tải + đẩy như hôm nay, không báo lỗi. Log ghi cách đã chép.
 
-   Đã chốt (người dùng 2026-11-04): vá thêm hàm copychunk vào bản sao `SMBClient` trong repo (local package). Bản vá
-   phải ghi rõ để giữ khi cập nhật thư viện. WebDAV `COPY` làm cùng lúc.
+   Đã chốt (người dùng 2026-11-04): **không vá `SMBClient`**. SMB vẫn tải + đẩy như hôm nay; xét lại khi thư viện tự có
+   copychunk. Chỉ WebDAV `COPY` được thêm, vì nó không cần đụng thư viện.
 2. **Kiểm bản ở đích sau Copy.**
 
-   Đã chốt (người dùng 2026-11-04): vẫn **đọc lại SHA** bản ở đích. Với server copy, đây là lần duy nhất byte qua mạng:
-   1× thay cho 3×. Move giữ nguyên kiểm như §6.
+   Đã chốt (người dùng 2026-11-04): vẫn **đọc lại SHA** bản ở đích. Với WebDAV `COPY`, đây là lần duy nhất byte qua
+   mạng: 1× thay cho 3×. SMB vẫn 3×. Move giữ nguyên kiểm như §6.
 3. **Băm song song khi Scan.** Hôm nay một lệnh tới server một lúc mỗi connection (03 §2).
 
    Đã chốt (người dùng 2026-11-04): **giữ một lệnh**. NAS một ổ cứng có thể chậm đi khi đọc hai file một lúc, và đo trên
    SMB ảo không nói được gì về NAS thật. Song song hoá chỉ xét lại khi có số đo trên NAS của người dùng; không thuộc §6d.
 4. Không thêm cách nào bỏ băm khi Scan: SHA cả file là điều kiện của Same. Video lớn tốn thời gian theo đúng cỡ của nó.
 
-**Đích đo được** (SMB ảo, 1 GB phần chung, 2 folder):
+**Đích đo được** (server cục bộ, 1 GB phần chung, 2 folder):
 
 | Đo | Hôm nay | Sau §6d (phương án đề xuất) |
 |---|---|---|
-| Byte qua mạng khi Copy | ≈ 3 GB | ≤ 1.1 GB (server copy + đọc lại SHA) |
+| Byte qua mạng khi Copy, WebDAV | ≈ 3 GB | ≤ 1.1 GB (`COPY` + đọc lại SHA) |
+| Byte qua mạng khi Copy, SMB | ≈ 3 GB | ≈ 3 GB (không đổi) |
 | Lệnh `sha256` lên bản nguồn khi chạy (Copy và Move) | Copy 0, Move 0 khi không đổi | 0 |
 | Quét lại cùng bộ, không đổi | 0 byte (§6c) | 0 byte |
 
@@ -402,6 +403,6 @@ SHA đã nhớ (§6c).
 | File ở folder chung bị sửa sau lượt chạy | SHA lệch → không trả bản đó, không xoá gì |
 | Hoàn tác Move chậm như lượt chạy | phải đẩy lại byte cho mọi bản không phải bản đã đổi chỗ; tiến độ đếm byte |
 | §6c: file đổi nội dung mà giữ nguyên cỡ và ngày sửa (công cụ ghi đè giữ mtime) | SHA cũ bị dùng lại, ảnh có thể bị coi là chung sai. Copy vẫn an toàn (chép byte thật, kiểm SHA khi đọc lại); Move hỏi lại cỡ + ngày sửa và kiểm SHA ở đích như §6, nên không xoá nhầm. Scan Everything không giúp; giới hạn đã biết |
-| §6d: server copy trên NAS ghi sai mà vẫn báo xong | đọc lại SHA ở đích (đã chốt) bắt được |
+| §6d: WebDAV `COPY` trên NAS ghi sai mà vẫn báo xong | đọc lại SHA ở đích (đã chốt) bắt được |
 | §6d: tải cả file để Compare với RAW/video lớn | chỉ hai bản của hàng đang xem, huỷ khi sang hàng khác, trần cache tạm, xoá khi đóng |
 | §6c: tự gom 15 phút trên NAS 50k file | mỗi lượt liệt kê lại hai cây (lệnh liệt kê, không đọc byte); đo ở `/verify`, nếu một lượt quá 2 phút thì giãn chu kỳ |

@@ -103,4 +103,4 @@ số byte qua mạng.
 | AC-188 | **Left Out (2)** | **Include** một ảnh rồi Scan | ảnh đó lại ở Same, được chọn; ảnh còn lại vẫn Left Out | ⚠️ chưa có |
 | AC-189 | bộ có 2 ảnh bỏ ra | Clear Local Metadata Index; sau đó xoá bộ (Remove from List) | sau Clear: vẫn 2 ảnh Left Out; sau xoá bộ: bảng Ảnh bỏ ra không còn hàng nào của bộ | ⚠️ chưa có |
 | AC-190 | bộ **Move** tự gom, ready 4 ảnh | trong cửa sổ log bỏ chọn 1 rồi **Move 3…** › xác nhận | hộp xác nhận nói 3; 3 ảnh Moved; ảnh thứ tư không bị đụng, nằm trong Left Out của bộ, lượt tự gom sau không đưa lại | ⚠️ chưa có |
-| AC-191 | Copy 1 GB phần chung trên SMB ảo (2 folder); server có copychunk | **Copy** | byte qua Mac ≤ 1.1 GB (đọc lại SHA ở đích); hôm nay ≈ 3 GB. Server từ chối copychunk (hay connection SFTP) → lùi về tải + đẩy, ảnh vẫn Copied, log ghi cách chép | ⚠️ chưa có (e2e SMB ảo, đếm byte) |
+| AC-191 | Copy 1 GB phần chung trên WebDAV cục bộ (2 folder) | **Copy** | byte qua Mac ≤ 1.1 GB (`COPY` trên server + đọc lại SHA ở đích); hôm nay ≈ 3 GB. Server từ chối `COPY` (hay connection SMB/SFTP) → tải + đẩy như cũ, ảnh vẫn Copied, log ghi cách chép | ⚠️ chưa có (e2e WebDAV cục bộ + SMB ảo, đếm byte) |
