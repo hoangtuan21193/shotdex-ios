@@ -5,7 +5,7 @@
 | Tác giả | Tuấn (qua Claude) |
 | Ngày | 2026-11-03 |
 | Trạng thái | accepted (2026-11-03) |
-| Tiến độ | **chưa làm** (2026-11-03) — spec FS-19.08 §6c, 15 AC (AC-159…173); 3 chỗ cần quyết đã chốt |
+| Tiến độ | **chưa làm** (2026-11-03) — plan [2026-11-03-fs1908-new-only-and-gather](../_plans/2026-11-03-fs1908-new-only-and-gather.md) chờ duyệt, 10 task |
 | Nguồn | phản hồi người dùng 2026-11-03: "chọn lại thư mục A và B, rồi cùng thư mục share, thì làm sao để chạy lại những ảnh mới thôi, không phải chạy lại từ đầu, hoặc phải có chức năng luôn sync liên tục để có ảnh mới là check liền" |
 | Spec sinh ra từ đây | [FS-19.08 §6c](../02-functional-spec/FS-19-photo-sources/08-common-photos.md) · AC-159…173 ở [08b](../02-functional-spec/FS-19-photo-sources/08b-common-photos-ac.md) |
 
