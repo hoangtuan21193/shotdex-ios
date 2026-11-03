@@ -33,10 +33,14 @@ struct MacCommonPhotosSheet: View {
             let model = CommonPhotosScanModel(connectionId: request.connectionId, sourceId: request.sourceId, folders: request.folders,
                                               client: dependencies.lockedClient(for: server), database: dependencies.database,
                                               sources: sources.map { CommonPhotosSources.Source(sourceId: $0.source.id, connection: $0.connection) })
+            // Run Again: the set as it ran, checked for new photos at once.
+            if let destination = request.destination { model.destination = destination }
+            if let action = request.action { model.action = action }
             #if DEBUG
             MacDemoLibrary.prepareCommonPhotos(model)
             #endif
             self.model = model
+            if request.scansAtOnce { model.scan() }
         }
         // However the sheet goes, the scan stops and the session ends.
         .onDisappear {
@@ -160,6 +164,13 @@ private struct MacCommonPhotosSheetContent: View {
             if phase == .done, ProcessInfo.processInfo.arguments.contains("-ShotDexCommonPhotosRunAfterScan"), model.canRun { start() }
             #endif
         }
+        #if DEBUG
+        // `-ShotDexCommonPhotosRunAtOnce`: the run starts as the scan ends,
+        // for screenshots of a set that gathered before.
+        .onChange(of: model.phase) {
+            if model.phase == .done, model.canRun, ProcessInfo.processInfo.arguments.contains("-ShotDexCommonPhotosRunAtOnce") { start() }
+        }
+        #endif
     }
 
     // MARK: Folders
@@ -311,6 +322,10 @@ private struct MacCommonPhotosSheetContent: View {
                         .foregroundStyle(.secondary)
                 } else if let failure = model.failure {
                     failureLine(failure)
+                } else if let notice = model.notice {
+                    Text(noticeText(notice))
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.center)
                 } else {
                     Text("Scan finds the photos every folder holds, byte for byte. Nothing is copied or moved until you choose.",
                          comment: "Mac common photos sheet: before the scan")
@@ -332,7 +347,14 @@ private struct MacCommonPhotosSheetContent: View {
                     }
                 }
                 .frame(height: 28)
-                if model.phase == .done, model.photos.isEmpty {
+                let isNothingNew = model.phase == .done && !model.isCutting && model.photos.isEmpty
+                    && model.lastGathered != nil && !model.scansEverything
+                if let gathered = model.lastGathered, !model.scansEverything, !isNothingNew {
+                    againLine(gathered)
+                }
+                if isNothingNew, let gathered = model.lastGathered {
+                    nothingNew(since: gathered)
+                } else if model.phase == .done, model.photos.isEmpty {
                     Text(model.folders.count == 2
                          ? String(localized: "No photos are in both folders.", comment: "Mac common photos sheet: nothing in common, two folders")
                          : String(localized: "No photos are in all \(model.folders.count) folders.", comment: "Mac common photos sheet: nothing in common"))
@@ -350,6 +372,78 @@ private struct MacCommonPhotosSheetContent: View {
                                         : String(localized: "Photos in all folders", comment: "Mac common photos sheet: results list"))
                 }
             }
+        }
+    }
+
+    /// §6c: the set gathered before — when, how many are left out, and the
+    /// way to check them all again.
+    private func againLine(_ date: Date) -> some View {
+        HStack(spacing: 8) {
+            Image(systemName: "clock").foregroundStyle(.secondary).accessibilityHidden(true)
+            Text("Last gathered \(Self.gatheredDate(date)) · \(model.alreadyGathered.formatted()) already gathered",
+                 comment: "Mac common photos sheet: the set gathered before; only new photos are listed")
+                .font(.callout).monospacedDigit().foregroundStyle(.secondary).lineLimit(2)
+                .fixedSize(horizontal: false, vertical: true)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            scanEverythingButton
+        }
+        .frame(minHeight: 24)
+    }
+
+    private var scanEverythingButton: some View {
+        Button(String(localized: "Scan Everything", comment: "Mac common photos sheet: check every common photo again, gathered or not")) {
+            model.scanEverything()
+        }
+        .controlSize(.small)
+        .disabled(model.isScanning)
+        .accessibilityHint(Text("Checks the photos already gathered too.", comment: "Mac common photos sheet: what Scan Everything does"))
+    }
+
+    /// §6c: the set has nothing new since it last gathered.
+    private func nothingNew(since date: Date) -> some View {
+        VStack(spacing: 6) {
+            Image(systemName: "checkmark").font(.system(size: 24, weight: .light)).foregroundStyle(.secondary)
+                .accessibilityHidden(true)
+            Text("Nothing new since \(Self.gatheredDate(date))",
+                 comment: "Mac common photos sheet: the set gathered everything before")
+                .fontWeight(.semibold)
+            Text(model.alreadyGathered == 1
+                 ? String(localized: "The photo these folders share is already in “\(destinationName)”.",
+                          comment: "Mac common photos sheet: one photo already gathered")
+                 : String(localized: "The \(model.alreadyGathered.formatted()) photos these folders share are already in “\(destinationName)”.",
+                          comment: "Mac common photos sheet: photos already gathered"))
+                .font(.callout).foregroundStyle(.secondary).multilineTextAlignment(.center)
+            scanEverythingButton
+                .padding(.top, 6)
+        }
+        .padding(.horizontal, 40)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(RoundedRectangle(cornerRadius: 8).fill(Color(nsColor: .textBackgroundColor)))
+        .overlay(RoundedRectangle(cornerRadius: 8).strokeBorder(Color(nsColor: .separatorColor)))
+        // The button stays its own control for VoiceOver and Voice Control.
+        .accessibilityElement(children: .contain)
+    }
+
+    /// "Nov 3, 2:30 PM" this year; with the year before that.
+    private static func gatheredDate(_ date: Date) -> String {
+        let sameYear = Calendar.current.isDate(date, equalTo: Date(), toGranularity: .year)
+        return sameYear ? date.formatted(.dateTime.month(.abbreviated).day().hour().minute())
+                        : date.formatted(.dateTime.year().month(.abbreviated).day().hour().minute())
+    }
+
+    private var destinationName: String {
+        model.destination.map { ServerUploadPath.lastComponent(of: $0) } ?? ""
+    }
+
+    /// Why results the user saw went (FS-19.08 §6c).
+    private func noticeText(_ notice: CommonPhotosScanModel.Notice) -> String {
+        switch notice {
+        case .moveChecksAgain:
+            String(localized: "Moving checks each copy before removing it. Scan again to list the photos.",
+                   comment: "Mac common photos sheet: results dropped after switching to Move")
+        case .otherDestination:
+            String(localized: "This folder has photos of its own already gathered. Scan again to list what's new.",
+                   comment: "Mac common photos sheet: results dropped after changing the destination")
         }
     }
 
@@ -380,6 +474,15 @@ private struct MacCommonPhotosSheetContent: View {
         }
         let count = model.sameCount
         let bytes = model.sameBytes.formatted(.byteCount(style: .file))
+        // §6c: a set that gathered before lists only what is new.
+        if model.lastGathered != nil, !model.scansEverything {
+            let new = count == 1 ? String(localized: "1 new photo", comment: "Mac common photos sheet: headline count, only new photos")
+                                 : String(localized: "\(count.formatted()) new photos", comment: "Mac common photos sheet: headline count, only new photos")
+            let place = folders == 2 ? String(localized: "in both folders", comment: "Mac common photos sheet: headline, two folders")
+                                     : String(localized: "in all \(folders) folders", comment: "Mac common photos sheet: headline, three or more")
+            return count == 0 ? String(localized: "No new photos \(place)", comment: "Mac common photos sheet: headline, nothing new")
+                              : "\(new) \(place) · \(bytes)"
+        }
         let photos = count == 1 ? String(localized: "1 photo", comment: "Mac common photos sheet: headline count")
                                 : String(localized: "\(count.formatted()) photos", comment: "Mac common photos sheet: headline count")
         let place = folders == 2 ? String(localized: "in both folders", comment: "Mac common photos sheet: headline, two folders")
@@ -441,7 +544,7 @@ private struct MacCommonPhotosSheetContent: View {
         } else if model.problem == .noDestination, model.phase == .done {
             Text("Choose where to save the common photos.", comment: "Mac common photos sheet: no destination yet")
                 .font(.callout).foregroundStyle(.secondary)
-        } else if model.phase == .done || model.isScanning {
+        } else if model.isScanning || (model.phase == .done && model.sameCount > 0) {
             Text(model.action == .move
                  ? String(localized: "Only photos marked Same are moved.", comment: "Mac common photos sheet: footer")
                  : String(localized: "Only photos marked Same are copied.", comment: "Mac common photos sheet: footer"))
@@ -463,6 +566,11 @@ private struct MacCommonPhotosSheetContent: View {
     }
 
     private var runTitle: String {
+        // Nothing to run: the verb alone, dimmed.
+        guard model.sameCount > 0 else {
+            return model.action == .move ? String(localized: "Move", comment: "Mac common photos sheet: run button, nothing to move")
+                                         : String(localized: "Copy", comment: "Mac common photos sheet: run button, nothing to copy")
+        }
         let count = model.sameCount.formatted()
         return model.action == .move
             ? String(localized: "Move \(count)", comment: "Mac common photos sheet: run button")

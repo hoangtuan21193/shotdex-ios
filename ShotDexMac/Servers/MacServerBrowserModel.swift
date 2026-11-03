@@ -34,6 +34,11 @@ struct MacCommonPhotosRequest: Identifiable, Equatable {
     let connectionId: String
     let sourceId: String
     let folders: [String]
+    /// Run Again (FS-19.08 §6c): the set's destination and action, and the
+    /// scan starts at once.
+    var destination: String?
+    var action: CommonPhotosRun.Action?
+    var scansAtOnce = false
 }
 
 /// What the library knows about a photo it shows from the server: its copy

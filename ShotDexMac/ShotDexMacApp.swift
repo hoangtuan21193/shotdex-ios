@@ -35,7 +35,7 @@ struct ShotDexMacApp: App {
     }
 
     var body: some Scene {
-        WindowGroup {
+        WindowGroup(id: MacMainWindow.id) {
             MacRootWindow()
                 .environment(dependencies)
                 .onAppear { appDelegate.runs = dependencies.commonPhotos }

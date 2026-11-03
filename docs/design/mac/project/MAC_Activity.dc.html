@@ -136,7 +136,8 @@ class Component extends DCLogic {
       // Finished runs stay (last 20) so they can be undone from their log
       J({ title:'Common photos · Tuấn + Vợ → Shared', d:G.check, iconBg:S.greenSoft, iconFg:S.greenText, aside:'Today, 9:42 AM',
           sub:'Done — 280 copied · 12 skipped · 0 failed', subColor:t.label2,
-          btns:[ text('Show Log'), text('Remove from List…') ] }),
+          // §6c: Run Again — the sheet on the same set, checking only photos new since
+          btns:[ text('Run Again…'), text('Show Log'), text('Remove from List…') ] }),
       J({ title:'Undo · Archive 2024 → Phone + Camera', d:G.undo, iconBg:S.greenSoft, iconFg:S.greenText, aside:'Yesterday, 6:15 PM',
           sub:'Done — 1,204 undone · 0 not undone', subColor:t.label2,
           btns:[ text('Show Log'), text('Remove from List…') ] })

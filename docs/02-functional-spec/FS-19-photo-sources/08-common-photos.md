@@ -160,8 +160,11 @@ Copy/Move vẫn là cùng bộ.
 
 ### Chạy lại chỉ ảnh mới
 
-- Chọn lại đúng một bộ đã từng chạy xong (từ sheet, hay **Run Again** ở hàng Activity / cửa sổ log), thì sheet ghi
-  "Last gathered Nov 3, 14:30 · only new photos are checked". Scan chỉ đưa vào danh sách:
+- Chọn lại đúng một bộ đã từng chạy xong hay đã Stop (từ sheet, hay **Run Again…** ở hàng Activity / cửa sổ log — nút
+  này mở cửa sổ Library nếu đã đóng, mở sheet đúng bộ và quét ngay), thì sheet ghi
+  "Last gathered Nov 3, 2:30 PM · 280 already gathered", tiêu đề kết quả đếm "3 new photos in both folders". Không có
+  ảnh mới: danh sách thay bằng "Nothing new since Nov 3, 2:30 PM" + nút **Scan Everything** (board `MAC_CommonPhotos`,
+  tweak `state`). Scan chỉ đưa vào danh sách:
   - ảnh có mặt ở **mọi** folder nguồn, **và**
   - có ít nhất một bản là file **mới hoặc đổi** (đường dẫn, cỡ hay ngày sửa khác) so với lượt xong gần nhất của bộ.
 - Ảnh đã có ở lượt trước với trạng thái Copied, Moved hay Skipped thì không hiện lại, không hỏi server.
@@ -210,7 +213,7 @@ Copy/Move vẫn là cùng bộ.
   ngày (`ShotDex Common Photos 2026-11-03 auto.csv`). Hoàn tác cả ngày hay từng hàng như §6b. Ngày đã qua thì lượt của
   nó đóng lại, tính vào giới hạn 20 lượt như lượt tay.
 - Bản cho iPhone/iPad: không (FS-19.08 chỉ Mac).
-- **Board** (vẽ trước khi code, canvas Mac): `MAC_CommonPhotos` thêm tweak `again` (câu "Last gathered…", ô Keep
+- **Board** (vẽ trước khi code, canvas Mac): `MAC_CommonPhotos` thêm tweak `state` (again · nothingNew: câu "Last gathered…", ô Keep
   gathering, nút Scan Everything) · `MAC_CommonPhotosRun` thêm trạng thái `readyToMove` · `MAC_Activity` thêm mục
   Gathering.
 

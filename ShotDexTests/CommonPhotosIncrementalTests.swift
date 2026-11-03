@@ -162,7 +162,10 @@ import Testing
         let sheet = CommonPhotosScanModel(connectionId: "C1", sourceId: "S", folders: ["photos/A", "photos/B"],
                                           client: client, database: database)
         sheet.destination = "photos/Shared"
+        client.whileHashing = { _ in try? await Task.sleep(for: .milliseconds(30)) }
         sheet.scan()
+        // Switched once the Copy scan has started trusting the cache.
+        for _ in 0..<200 where sheet.phase != .checking { try await Task.sleep(for: .milliseconds(2)) }
         sheet.action = .move
         for _ in 0..<100 where sheet.isScanning { try await Task.sleep(for: .milliseconds(20)) }
         #expect(!sheet.canRun)
@@ -289,10 +292,11 @@ import Testing
         try Self.copyAll(first, database, into: client)
 
         let all = Self.sheet(client, database)
-        all.scansEverything = true
-        try await Self.scan(all)
+        all.scanEverything()
+        for _ in 0..<600 where all.phase != .done { try await Task.sleep(for: .milliseconds(20)) }
         #expect(all.sameCount == 3)
         #expect(all.lastGathered == nil)
+        #expect(all.scansEverything)
 
         let elsewhere = Self.sheet(client, database)
         elsewhere.destination = "photos/Elsewhere"
@@ -319,6 +323,38 @@ import Testing
         for _ in 0..<50 where all.isCutting { try await Task.sleep(for: .milliseconds(10)) }
         #expect(all.sameCount == 3)
         for sheet in [first, all, elsewhere, late] { await sheet.close() }
+    }
+
+    /// Scan Everything is one scan's choice; the next Scan checks only new
+    /// photos again. A photo gathered twice (Copy, then Skipped by a Scan
+    /// Everything run) counts once.
+    @Test func everythingIsOneScan() async throws {
+        let client = Self.nas()
+        let database = try AppDatabase.makeEmpty()
+        let first = Self.sheet(client, database)
+        try await Self.scan(first)
+        try Self.copyAll(first, database, into: client)
+        let all = Self.sheet(client, database)
+        all.scanEverything()
+        for _ in 0..<600 where all.phase != .done { try await Task.sleep(for: .milliseconds(20)) }
+        #expect(all.sameCount == 3)
+        // Recorded again as already there: still 3 photos.
+        let made = try #require(all.makeRun())
+        let store = CommonPhotosStore(database: database)
+        try store.start(made.run, items: made.items.map { item in
+            var item = item
+            item.status = .skipped
+            item.destinationPath = "photos/Shared/" + ServerUploadPath.lastComponent(of: item.sources[0].path)
+            return item
+        })
+        try store.markState(.finished, runId: made.run.id)
+
+        try await Self.scan(all)
+        #expect(!all.scansEverything)
+        #expect(all.sameCount == 0)
+        #expect(all.alreadyGathered == 3)
+        await first.close()
+        await all.close()
     }
 
     /// A destination picked while the scan runs: the results are cut to it

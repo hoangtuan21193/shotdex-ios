@@ -65,7 +65,8 @@ import Testing
         #expect(done.state == .done)
         #expect(done.fraction == nil)
         #expect(done.status == "Done — 268 copied · 12 skipped · 0 failed")
-        #expect(done.actions == [.showLog, .remove])
+        // A gathering run that is over can run again on its set (FS-19.08 §6c).
+        #expect(done.actions == [.runAgain, .showLog, .remove])
         #expect(done.isOver)
         let failures = CommonPhotosJob.job(input(.finished, action: .move, done: 267, failed: 1))
         #expect(failures.state == .doneWithFailures)
@@ -73,7 +74,11 @@ import Testing
         let stopped = CommonPhotosJob.job(input(.stopped))
         #expect(stopped.state == .stopped)
         #expect(stopped.status.hasPrefix("Stopped — "))
-        #expect(stopped.actions == [.showLog, .remove])
+        #expect(stopped.actions == [.runAgain, .showLog, .remove])
+        // An undo has no set of its own to run again.
+        var undo = input(.finished)
+        undo.run.undoOf = "R0"
+        #expect(CommonPhotosJob.job(undo).actions == [.showLog, .remove])
     }
 }
 

@@ -650,6 +650,12 @@ private struct MacCommonPhotosRunContent: View {
             .help(entry.isFinished
                   ? String(localized: "Opens “\(destinationName)”, where the photos and the log are.", comment: "Common photos window: Show in Browser tooltip")
                   : String(localized: "Available when the run finishes.", comment: "Common photos window: Show in Browser is off"))
+            if entry.isFinished || entry.isStopped, !run.isUndo {
+                Button(String(localized: "Run Again…", comment: "Common photos window: open the sheet on the same folders, checking only new photos")) {
+                    runs.runAgain(runId: run.id)
+                    MacMainWindow.bringForward(openWindow)
+                }
+            }
             if entry.isFinished || entry.isStopped {
                 Button(String(localized: "Done", comment: "Common photos window: close")) { dismiss() }
                     .keyboardShortcut(.defaultAction)
@@ -660,10 +666,18 @@ private struct MacCommonPhotosRunContent: View {
 
 /// The Library window, remembered so another window can bring it forward.
 enum MacMainWindow {
+    /// The Library window group's id, to open one when none is left.
+    static let id = "library"
     @MainActor static weak var window: NSWindow?
 
     @MainActor static func bringForward() {
         window?.makeKeyAndOrderFront(nil)
+    }
+
+    /// Brings the Library window forward, opening one when it was closed —
+    /// so a request it routes (Run Again) is not left waiting.
+    @MainActor static func bringForward(_ openWindow: OpenWindowAction) {
+        if let window { window.makeKeyAndOrderFront(nil) } else { openWindow(id: id) }
     }
 }
 

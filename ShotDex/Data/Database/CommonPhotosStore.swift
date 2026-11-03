@@ -154,6 +154,11 @@ struct CommonPhotosStore: Sendable {
     /// photo of them is done. Only runs Activity still keeps are known.
     struct Gathered: Equatable, Sendable {
         var seen: Set<CommonPhotosIncremental.Stamp> = []
+        /// Photos gathered and still there, each once — a photo Scan
+        /// Everything found already there again is a second row, not a
+        /// second photo.
+        var photoCount: Int { photos.count }
+        var photos: Set<String> = []
         var lastAt: Int?
         var isEmpty: Bool { lastAt == nil }
     }
@@ -177,7 +182,7 @@ struct CommonPhotosStore: Sendable {
             for run in runs {
                 // The sources column only: a set's runs can hold many photos.
                 let rows = try Row.fetchAll(db, sql: """
-                    SELECT sources, size, destinationPath FROM common_photo_items
+                    SELECT sources, size, destinationPath, sha256 FROM common_photo_items
                     WHERE runId = ? AND status IN (\(databaseQuestionMarks(count: done.count)))
                     """, arguments: StatementArguments([run.id] + done))
                 guard !rows.isEmpty else { continue }
@@ -188,6 +193,7 @@ struct CommonPhotosStore: Sendable {
                               inDestination[ServerUploadPath.lastComponent(of: placed).lowercased()]?.contains(size) == true
                         else { continue }
                     }
+                    if let sha: String = row["sha256"] { out.photos.insert(sha) }
                     let list: String = row["sources"]
                     guard let sources = try? decoder.decode([CommonPhotosItem.Source].self, from: Data(list.utf8)) else { continue }
                     for source in sources {

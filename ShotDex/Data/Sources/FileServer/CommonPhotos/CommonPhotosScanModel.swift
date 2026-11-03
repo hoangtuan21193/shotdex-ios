@@ -64,26 +64,39 @@ final class CommonPhotosScanModel {
             // this set needs: scan again. Otherwise the results are cut
             // again from the whole of them, now or when the scan ends
             // (FS-19.08 §6c).
-            if listingWasCut { resetScan() } else if phase == .done { recut() }
+            if listingWasCut {
+                resetScan()
+                notice = .otherDestination
+            } else if phase == .done { recut() }
         }
     }
     var action = CommonPhotosRun.Action.copy {
         didSet {
             // A Copy scan took earlier hashes on trust (FS-19.08 §6c); a
             // Move deletes on them, so it scans again.
-            if action == .move, scannedTrustingCache { resetScan() }
+            if action == .move, scannedTrustingCache, phase != .idle {
+                resetScan()
+                notice = .moveChecksAgain
+            }
         }
     }
     /// The scan shown took every known hash on trust (a Copy scan).
     private var scannedTrustingCache = false
     /// Scan Everything (FS-19.08 §6c): check every photo, not only the new
     /// ones, even when the set gathered before.
-    var scansEverything = false {
-        didSet { if scansEverything != oldValue { resetScan() } }
-    }
+    /// The results shown came from Scan Everything (FS-19.08 §6c): every
+    /// common photo, none cut out. One scan's choice; the next Scan checks
+    /// only new photos again.
+    private(set) var scansEverything = false
     /// When this set last gathered, once a scan looked; nil for a set that
     /// never did — every photo is checked then.
     private(set) var lastGathered: Date?
+    /// How many photos the set gathered that are still in the destination
+    /// — the ones the results leave out.
+    private(set) var alreadyGathered = 0
+    /// Why the last results went (FS-19.08 §6c): said where they were.
+    enum Notice: Equatable { case moveChecksAgain, otherDestination }
+    private(set) var notice: Notice?
     /// The scan read only the sizes new to its set (its destination was
     /// known when it listed).
     private var listingWasCut = false
@@ -229,8 +242,20 @@ final class CommonPhotosScanModel {
 
     // MARK: Scan
 
+    /// Scan Everything (FS-19.08 §6c): every common photo, gathered or not.
+    func scanEverything() {
+        scan(everything: true)
+    }
+
     func scan() {
+        scan(everything: false)
+    }
+
+    private func scan(everything: Bool) {
         guard canScan else { return }
+        scansEverything = everything
+        // Listing from the press on: results of the scan before are gone.
+        phase = .listing
         scanTask?.cancel()
         scanTask = Task { await runScan() }
     }
@@ -262,7 +287,10 @@ final class CommonPhotosScanModel {
         checkedFiles = 0
         bytesLeft = 0
         scannedTrustingCache = false
+        scansEverything = false
         lastGathered = nil
+        alreadyGathered = 0
+        notice = nil
         listingWasCut = false
         allPhotos = []
         cutTask?.cancel()
@@ -318,11 +346,18 @@ final class CommonPhotosScanModel {
             // Only new photos, when the set gathered before (§6c).
             let scannedFor = destination
             let gathered = scansEverything ? .init() : try await gathered(folders: folders, destination: scannedFor)
+            // Stopped or replaced while the destination was listed: this
+            // scan is no longer the one shown.
+            try Task.checkCancellation()
+            guard self.scanId == scanId else { return }
             lastGathered = gathered.lastAt.map { Date(timeIntervalSince1970: TimeInterval($0)) }
+            alreadyGathered = gathered.photoCount
+            notice = nil
             listingWasCut = !gathered.seen.isEmpty
             var checked = listing
             checked.files = CommonPhotosIncremental.listing(listing.files, folders: folders, seen: gathered.seen)
             let records = await scanRecords(checked, folders: folders)
+            try Task.checkCancellation()
             // What size and name say, shown at once; the heads refine it.
             let firstLook = CommonPhotosMatcher.preview(checked.files)
             preview = firstLook
@@ -441,6 +476,7 @@ final class CommonPhotosScanModel {
             guard !Task.isCancelled, self.scanId == scanId, self.destination == destination else { return }
             photos = CommonPhotosIncremental.newPhotos(allPhotos, folders: folders, seen: gathered.seen)
             lastGathered = gathered.lastAt.map { Date(timeIntervalSince1970: TimeInterval($0)) }
+            alreadyGathered = gathered.photoCount
             isCutting = false
         }
     }

@@ -56,6 +56,18 @@ struct MacRootWindow: View {
             }
             selection = .source(sourceId)
         }
+        // Run Again (FS-19.08 §6c): the run's source opens; its browser
+        // opens the sheet on the run's set.
+        .onChange(of: dependencies.commonPhotos.runAgainRequest?.id, initial: true) {
+            guard let run = dependencies.commonPhotos.runAgainRequest else { return }
+            guard let sourceId = ((try? dependencies.sources.serverConnections()) ?? [:])
+                .filter({ $0.value == run.connectionId }).keys.sorted().first
+            else {
+                dependencies.commonPhotos.runAgainRequest = nil
+                return
+            }
+            selection = .source(sourceId)
+        }
         .background(MacMainWindowMarker())
         .onReceive(NotificationCenter.default.publisher(for: .macServersChanged)) { _ in reloadSources() }
         .task { await start() }

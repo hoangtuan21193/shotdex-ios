@@ -119,6 +119,14 @@ private struct MacServerBrowserContent: View {
                 model.go(to: String(destination.dropFirst(root.count + 1)))
             }
         }
+        // Run Again: the sheet on the run's set, scanning only new photos.
+        .onChange(of: dependencies.commonPhotos.runAgainRequest?.id, initial: true) {
+            guard let run = dependencies.commonPhotos.runAgainRequest, run.connectionId == model.server.id else { return }
+            dependencies.commonPhotos.runAgainRequest = nil
+            model.commonPhotosRequest = MacCommonPhotosRequest(connectionId: run.connectionId, sourceId: model.sourceId,
+                                                               folders: run.folders, destination: run.destination,
+                                                               action: run.action, scansAtOnce: true)
+        }
         // A run on this connection ended: what the browser listed is stale.
         // Keyed on `generation` (runs starting and ending), not on progress.
         .onChange(of: dependencies.commonPhotos.generation) {

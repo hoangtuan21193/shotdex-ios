@@ -93,6 +93,15 @@ final class MacCommonPhotosRuns {
     /// Show in Browser asked for a folder of a connection; the Library
     /// window opens its source there and clears this.
     var browserRequest: (connectionId: String, path: String)?
+    /// Run Again (FS-19.08 §6c) asked for a finished run's set; the Library
+    /// window opens its source and the sheet on it, and clears this.
+    var runAgainRequest: CommonPhotosRun?
+
+    /// Run Again from Activity or a run's window.
+    func runAgain(runId: String) {
+        guard let run = (try? store.run(id: runId)) ?? nil, !run.isUndo, run.isReadable else { return }
+        runAgainRequest = run
+    }
 
     @ObservationIgnored private let database: AppDatabase
     @ObservationIgnored private let servers: FileServerStore

@@ -32,6 +32,9 @@ struct LongRunningJob: Identifiable, Equatable, Sendable {
 
     enum Action: Equatable, Sendable {
         case pause, resume, stop, tryAgain, showLog
+        /// Run Again… (FS-19.08 §6c): the sheet on the same set, checking
+        /// only photos new since.
+        case runAgain
         /// Remove from List… (FS-19.08 §6b): the run and its log go after a
         /// question; it can no longer be undone.
         case remove
@@ -105,6 +108,8 @@ enum CommonPhotosJob {
                   ? " · " + String(localized: "\(input.undone.formatted()) undone", comment: "Activity: count of a run's photos taken back since")
                   : "")
         let ended = input.endedAt.map { $0.formatted(.relative(presentation: .named)) } ?? ""
+        // A gathering run that is over can run again on its set (§6c).
+        let over: [LongRunningJob.Action] = run.isUndo || !run.isReadable ? [.showLog, .remove] : [.runAgain, .showLog, .remove]
 
         let state: LongRunningJob.State = switch run.state {
         case .finished: input.failed > 0 ? .doneWithFailures : .done
@@ -154,11 +159,11 @@ enum CommonPhotosJob {
         case .stopped:
             return LongRunningJob(id: run.id, kind: kind, title: title, aside: ended, fraction: nil,
                                   status: String(localized: "Stopped — \(counts)", comment: "Activity: a run the user stopped"),
-                                  detail: nil, state: state, actions: [.showLog, .remove])
+                                  detail: nil, state: state, actions: over)
         case .done, .doneWithFailures:
             return LongRunningJob(id: run.id, kind: kind, title: title, aside: ended, fraction: nil,
                                   status: String(localized: "Done — \(counts)", comment: "Activity: a run that finished"),
-                                  detail: nil, state: state, actions: [.showLog, .remove])
+                                  detail: nil, state: state, actions: over)
         }
     }
 

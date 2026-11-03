@@ -446,7 +446,8 @@ class Component extends DCLogic {
         footBtns:[ fb('Show Failed'), fb('Show in Browser', null, true) ], failNote:'1 failed' },
       finished: { winTitle:'Common Photos — Tuấn + Vợ → Shared', head:'278 copied · 1 skipped · 1 failed',
         detail:'Undo Copy… takes these copies back out of “Shared”.', pct:'100%', summary:'Log saved in Shared as “ShotDex Common Photos 2026-11-03 0942.csv”',
-        footBtns:[ fb('Undo Copy…'), fb('Show Failed'), fb('Show in Browser'), fb('Done', 'default') ], failNote:'1 failed' },
+        // §6c: Run Again opens the sheet on the same set, checking only new photos
+        footBtns:[ fb('Undo Copy…'), fb('Show Failed'), fb('Show in Browser'), fb('Run Again…'), fb('Done', 'default') ], failNote:'1 failed' },
       undoing: { winTitle:'Undo — Shared → Tuấn + Vợ', head:'Undoing 120 of 278 · 1.8 of 4.2 GB',
         detail:'IMG_4110.HEIC · checking the copies', pct:'43%', summary:'119 undone · 1 not undone',
         footBtns:[ fb('Show in Browser', null, true) ] },

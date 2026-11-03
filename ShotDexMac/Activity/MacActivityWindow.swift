@@ -185,6 +185,9 @@ struct MacActivityWindow: View {
             stopText = stopWords(job)
             stopping = job
         case .showLog: openWindow(id: MacCommonPhotosRunWindow.id, value: job.id)
+        case .runAgain:
+            runs.runAgain(runId: job.id)
+            MacMainWindow.bringForward(openWindow)
         case .remove: if runs.canRemove(runId: job.id) { removing = [job.id] }
         }
     }
@@ -266,6 +269,8 @@ private struct MacActivityRow: View {
             textButton(String(localized: "Show Log", comment: "Mac Activity: open the run's window"), action)
         case .remove:
             textButton(String(localized: "Remove from List…", comment: "Mac Activity: remove a row that is over, after asking"), action)
+        case .runAgain:
+            textButton(String(localized: "Run Again…", comment: "Mac Activity: open Find Common Photos on the same folders, checking only new photos"), action)
         }
     }
 
