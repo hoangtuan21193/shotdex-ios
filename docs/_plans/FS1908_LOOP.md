@@ -42,9 +42,12 @@ của loop: mỗi vòng đọc nó trước, ghi lại sau.
 | T9b | xong | (xem git log) | ⌘/⇧ chọn nhiều (ClickSelection, Domain), chuột phải chọn lại mục rồi mới mở menu, menu ẩn Find Common Photos… dưới 2 folder (HIG), File ⇧⌘F; hook `commonPhotosRequest` cho T10. Chưa bấm thử được |
 | T10 | xong | (xem git log) | sheet + `MacCommonPhotosRuns` (connect, giữ máy thức, afterRun: lịch sử 1 lần ghi + rescan `fresh`); chạy thật Copy 8 ảnh + Move 3 ảnh từ app trên SMB ảo (scratch, đã dọn); SHA cache chỉ cho bản folder đầu; `ServerIdentity` (SFTP username, WebDAV share) |
 | T11a | xong | (xem git log) | board `MAC_Activity` 900×560 sáng/tối + tweak empty, publish canvas Mac v76 |
-| T11, T11b, T12 | chưa | — | T11 đang làm |
+| T11 | xong | (xem git log) | cửa sổ `MAC_CommonPhotosRun` + log, Stop hỏi lại, câu Move kể đã xoá gì, chặn khi thoát, chân sidebar bấm được, banner lượt cũ; Resume sau kill chạy thật xong 8 ảnh |
+| T11b, T12 | chưa | — | |
 
-Tiếp: T11a (vẽ board `MAC_Activity`) → T11 (cửa sổ `MAC_CommonPhotosRun`) → T11b (Activity).
+Tiếp: T11b (cửa sổ Activity ⌥⌘0 theo `MAC_Activity`; Show Log = `openWindow(id: MacCommonPhotosRunWindow.id, value: runId)`).
+
+Dọn tay khi xong: DB demo `resume-*.sqlite` trong tmp của container sandbox `com.hoangtuan.shotdex` (Terminal bị TCC chặn).
 
 Chụp Mac: `ShotDex.app/Contents/MacOS/ShotDex -ApplePersistenceIgnoreState YES -ShotDexDemoLibrary -ShotDexSection serverBrowser -ShotDexServerPath Tuan/2025/06 [-ShotDexAppearance dark] [-ShotDexServerLayout list]` (DB demo trong RAM, connection "Test SMB" tới SMB ảo) + reopen Apple Event: scratchpad `tools/shot.sh`.
 

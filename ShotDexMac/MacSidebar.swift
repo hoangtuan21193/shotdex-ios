@@ -11,6 +11,8 @@ struct MacSidebar: View {
     var backup: (jobs: Int, needsAttention: Bool) = (0, false)
     var smartAlbums: [SmartAlbum] = []
     var newSmartAlbum: () -> Void = {}
+    /// A long task's foot (a common-photos run), shown instead of the index line.
+    var busyFooter: AnyView? = nil
 
     var body: some View {
         List(selection: $selection) {
@@ -89,7 +91,9 @@ struct MacSidebar: View {
 
     @ViewBuilder
     private var status: some View {
-        if let library {
+        if let busyFooter {
+            busyFooter
+        } else if let library {
             HStack(spacing: 6) {
                 Image(systemName: library.isIndexing ? "arrow.triangle.2.circlepath" : "checkmark")
                 Text(library.isIndexing

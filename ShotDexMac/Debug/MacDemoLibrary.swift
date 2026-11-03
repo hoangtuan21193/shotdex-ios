@@ -22,8 +22,18 @@ enum MacDemoLibrary {
 
     @MainActor
     static func dependencies() -> MacDependencies {
-        let database = (try? AppDatabase.makeEmpty()) ?? { fatalError("Cannot create database") }()
+        // `-ShotDexDemoDatabase <name>`: the demo on a database file in the
+        // app's temporary folder (the sandbox allows no other) that outlives
+        // the run — what a Resume banner after a kill needs.
+        let arguments = ProcessInfo.processInfo.arguments
+        let file = arguments.firstIndex(of: "-ShotDexDemoDatabase").flatMap { $0 + 1 < arguments.count ? arguments[$0 + 1] : nil }
+            .map { FileManager.default.temporaryDirectory.appendingPathComponent($0).path }
+        let isNewFile = file.map { !FileManager.default.fileExists(atPath: $0) } ?? true
+        let database = file.flatMap { try? AppDatabase(DatabasePool(path: $0)) }
+            ?? (try? AppDatabase.makeEmpty()) ?? { fatalError("Cannot create database") }()
         let dependencies = MacDependencies(database: database, photoLibrary: PhotoLibraryService())
+        // A database file kept from an earlier launch is seeded once.
+        guard isNewFile else { return dependencies }
         try? dependencies.metadataStore.saveBatch(rows(), cursorAssetId: nil)
         seedBackups(dependencies)
         // A smart album as on board `MAC_SmartAlbum`'s sidebar.
@@ -128,6 +138,19 @@ enum MacDemoLibrary {
         if value("-ShotDexCommonPhotosAction") == "move" { model.action = .move }
         if arguments.contains("-ShotDexCommonPhotosSlow") { model.groupDelay = .seconds(2) }
         if arguments.contains("-ShotDexCommonPhotosScan") { model.scan() }
+    }
+
+    /// A run's client as a screenshot wants it (FS-19.08 §7):
+    /// `-ShotDexCommonPhotosRunSlow` waits 3 s before each upload and move, so
+    /// the window can be caught mid-run; `-ShotDexCommonPhotosFailAfter N`
+    /// drops the connection at the upload or move after the N-th.
+    static func commonPhotosRunClient(_ client: any RemoteFileClient) -> any RemoteFileClient {
+        let arguments = ProcessInfo.processInfo.arguments
+        let slow = arguments.contains("-ShotDexCommonPhotosRunSlow")
+        let failAfter = arguments.firstIndex(of: "-ShotDexCommonPhotosFailAfter")
+            .flatMap { $0 + 1 < arguments.count ? Int(arguments[$0 + 1]) : nil }
+        guard slow || failAfter != nil else { return client }
+        return MacDebugRunClient(base: client, delay: slow ? .seconds(3) : nil, failAfter: failAfter)
     }
 
     /// `-ShotDexServerLayout list`: the server browser's view mode.
@@ -471,5 +494,61 @@ enum MacSMBProbe {
             break
         }
     }
+}
+#endif
+
+#if DEBUG
+/// A run's client that waits and fails on cue (`commonPhotosRunClient`).
+private final class MacDebugRunClient: RemoteFileClient, @unchecked Sendable {
+    let base: any RemoteFileClient
+    let delay: Duration?
+    let failAfter: Int?
+    private let writes = OSAllocatedUnfairLock(initialState: 0)
+
+    init(base: any RemoteFileClient, delay: Duration?, failAfter: Int?) {
+        self.base = base
+        self.delay = delay
+        self.failAfter = failAfter
+    }
+
+    /// Before each write: wait, and past the cue, lose the connection.
+    private func write() async throws {
+        if let delay { try await Task.sleep(for: delay) }
+        let count = writes.withLock { value in
+            value += 1
+            return value
+        }
+        if let failAfter, count > failAfter { throw RemoteFileError.connectionLost }
+    }
+
+    func connect() async throws { try await base.connect() }
+    func disconnect() async { await base.disconnect() }
+    func fileSize(at path: String) async throws -> Int64? { try await base.fileSize(at: path) }
+    func directoryExists(_ path: String) async throws -> Bool { try await base.directoryExists(path) }
+    func fileNames(in directory: String) async throws -> Set<String> { try await base.fileNames(in: directory) }
+    func folderNames(in directory: String) async throws -> Set<String> { try await base.folderNames(in: directory) }
+    func createDirectory(_ path: String) async throws { try await base.createDirectory(path) }
+    func upload(_ localURL: URL, to path: String, progress: @escaping @Sendable (Int64) -> Void) async throws {
+        // The CSV at the end is a write too; the cue counts photos only.
+        if !path.hasSuffix(".csv") && !path.contains(".csv.") { try await write() }
+        try await base.upload(localURL, to: path, progress: progress)
+    }
+    func sha256(of path: String, progress: @escaping @Sendable (Int64) -> Void) async throws -> String {
+        try await base.sha256(of: path, progress: progress)
+    }
+    func entries(in directory: String) async throws -> [RemoteEntry] { try await base.entries(in: directory) }
+    func readRange(_ path: String, offset: Int64, length: Int) async throws -> Data {
+        try await base.readRange(path, offset: offset, length: length)
+    }
+    func download(_ path: String, to localURL: URL, progress: @escaping @Sendable (Int64) -> Void) async throws -> String {
+        try await base.download(path, to: localURL, progress: progress)
+    }
+    func move(_ source: String, to destination: String) async throws {
+        if !destination.hasSuffix(".csv") { try await write() }
+        try await base.move(source, to: destination)
+    }
+    func remove(_ path: String) async throws { try await base.remove(path) }
+    func removeEmptyDirectory(_ path: String) async throws { try await base.removeEmptyDirectory(path) }
+    func storageSpace(at path: String) async throws -> StorageSpace? { try await base.storageSpace(at: path) }
 }
 #endif

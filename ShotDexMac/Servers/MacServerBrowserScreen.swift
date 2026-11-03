@@ -64,6 +64,8 @@ private struct MacServerBrowserContent: View {
     @FocusState private var gridFocused: Bool
     @State private var hasPreselected = false
     @State private var rightClickMonitor: Any?
+    /// Runs seen finished, so each ending refreshes the listing once.
+    @State private var knownFinished: Set<String> = []
 
     /// Board `MAC_ServerBrowser`: two columns of 186 beside the files, 12
     /// apart; 8 in from the sidebar, 16 from the window's right edge.
@@ -76,6 +78,7 @@ private struct MacServerBrowserContent: View {
 
     var body: some View {
         VStack(spacing: 0) {
+            MacCommonPhotosResumeBanner(connectionId: model.server.id)
             HStack(alignment: .top, spacing: Self.gap) {
                 columnBrowser
                     .padding(.bottom, Self.gap)
@@ -104,9 +107,24 @@ private struct MacServerBrowserContent: View {
         .sheet(item: $model.commonPhotosRequest) { request in
             MacCommonPhotosSheet(request: request, server: model.server)
         }
+        // Show CSV in Browser: open the run's destination here.
+        .onChange(of: dependencies.commonPhotos.browserRequest?.path, initial: true) {
+            guard let request = dependencies.commonPhotos.browserRequest, request.connectionId == model.server.id else { return }
+            dependencies.commonPhotos.browserRequest = nil
+            let root = ServerUploadPath.normalizedFolder(model.server.folder)
+            let destination = ServerUploadPath.normalizedFolder(request.path)
+            if root.isEmpty {
+                model.go(to: destination)
+            } else if destination.hasPrefix(root + "/") {
+                model.go(to: String(destination.dropFirst(root.count + 1)))
+            }
+        }
         // A run on this connection ended: what the browser listed is stale.
-        .onChange(of: dependencies.commonPhotos.entries.values.filter(\.isFinished).map(\.id).sorted()) { old, finished in
-            let ended = finished.filter { !old.contains($0) }.compactMap { dependencies.commonPhotos.entries[$0]?.run }
+        // Keyed on `generation` (runs starting and ending), not on progress.
+        .onChange(of: dependencies.commonPhotos.generation) {
+            let finished = Set(dependencies.commonPhotos.entries.values.filter(\.isFinished).map(\.id))
+            let ended = finished.subtracting(knownFinished).compactMap { dependencies.commonPhotos.entries[$0]?.run }
+            knownFinished = finished
             guard !ended.isEmpty else { return }
             #if DEBUG
             // `-ShotDexCommonPhotosRunAfterScan`: open the destination, to see what landed.

@@ -24,7 +24,8 @@ struct MacRootWindow: View {
         NavigationSplitView {
             MacSidebar(selection: $selection, library: library, sources: sources,
                        backup: backupBadge, smartAlbums: smartAlbums,
-                       newSmartAlbum: { smartAlbumForm = MacSmartAlbumFormRequest() })
+                       newSmartAlbum: { smartAlbumForm = MacSmartAlbumFormRequest() },
+                       busyFooter: dependencies.commonPhotos.footRunId.map { AnyView(MacCommonPhotosFoot(runId: $0)) })
                 .navigationSplitViewColumnWidth(MacWindowMetrics.sidebarWidth)
         } detail: {
             if selection == .backup {
@@ -41,6 +42,20 @@ struct MacRootWindow: View {
         .onAppear { reloadSources() }
         .onChange(of: dependencies.sourcesModel.rows) { reloadSources() }
         .onChange(of: selection) { reloadSources() }
+        // Show CSV in Browser (FS-19.08 §7): the run's source opens; its
+        // browser goes to the destination.
+        .onChange(of: dependencies.commonPhotos.browserRequest?.path) {
+            guard let request = dependencies.commonPhotos.browserRequest else { return }
+            // One source per connection; sorted, so two would pick the same one every time.
+            guard let sourceId = ((try? dependencies.sources.serverConnections()) ?? [:])
+                .filter({ $0.value == request.connectionId }).keys.sorted().first
+            else {
+                dependencies.commonPhotos.browserRequest = nil
+                return
+            }
+            selection = .source(sourceId)
+        }
+        .background(MacMainWindowMarker())
         .onReceive(NotificationCenter.default.publisher(for: .macServersChanged)) { _ in reloadSources() }
         .task { await start() }
         .onReceive(NotificationCenter.default.publisher(for: .macShowBackup)) { _ in selection = .backup }

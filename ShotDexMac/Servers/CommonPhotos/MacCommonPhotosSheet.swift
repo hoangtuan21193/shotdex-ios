@@ -58,6 +58,7 @@ private struct MacCommonPhotosSheetContent: View {
     let sources: [(source: SourceStore.Source, connection: FileServer)]
     var close: () -> Void
     @Environment(MacDependencies.self) private var dependencies
+    @Environment(\.openWindow) private var openWindow
     @State private var picker: FolderChoice?
     @State private var isNamingFolder = false
     @State private var newFolderName = ""
@@ -498,6 +499,8 @@ private struct MacCommonPhotosSheetContent: View {
                 return
             }
             close()
+            // The run's window opens as it starts (FS-19.08 §7).
+            openWindow(id: MacCommonPhotosRunWindow.id, value: made.run.id)
         } catch {
             startError = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
         }

@@ -14,6 +14,7 @@ enum ShotDexMacMain {
 
 /// ShotDex for Mac (FS-18): one Library window — sidebar, toolbar, content.
 struct ShotDexMacApp: App {
+    @NSApplicationDelegateAdaptor(MacAppDelegate.self) private var appDelegate
     @State private var dependencies: MacDependencies = {
         #if DEBUG
         if MacDemoLibrary.isOn { return MacDemoLibrary.dependencies() }
@@ -37,6 +38,7 @@ struct ShotDexMacApp: App {
         WindowGroup {
             MacRootWindow()
                 .environment(dependencies)
+                .onAppear { appDelegate.runs = dependencies.commonPhotos }
                 .frame(minWidth: MacWindowMetrics.minimumSize.width, minHeight: MacWindowMetrics.minimumSize.height)
         }
         .defaultSize(width: 1440, height: 900)
@@ -45,6 +47,16 @@ struct ShotDexMacApp: App {
             MacBackupCommands()
             MacCommonPhotosCommands()
         }
+        // One window per common-photos run (FS-19.08 §7): not modal, and
+        // closing it leaves the run going.
+        WindowGroup(String(localized: "Common Photos", comment: "Mac window: a common-photos run"),
+                    id: MacCommonPhotosRunWindow.id, for: String.self) { $runId in
+            MacCommonPhotosRunWindow(runId: runId)
+                .environment(dependencies)
+                .onAppear { appDelegate.runs = dependencies.commonPhotos }
+        }
+        .defaultSize(width: MacCommonPhotosRunWindow.size.width, height: MacCommonPhotosRunWindow.size.height)
+        .windowToolbarStyle(.unified)
         Settings {
             MacSettingsWindow()
                 .environment(dependencies)
@@ -95,5 +107,33 @@ struct MacCommonPhotosCommands: Commands {
             .keyboardShortcut("f", modifiers: [.command, .shift])
             .disabled(browser == nil)
         }
+    }
+}
+
+/// Quitting while a common-photos run goes (FS-19.08 §7): asks, then pauses
+/// every run and quits once each has stopped between steps; Cancel keeps it going.
+final class MacAppDelegate: NSObject, NSApplicationDelegate {
+    @MainActor weak var runs: MacCommonPhotosRuns?
+
+    @MainActor
+    func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
+        guard let runs, runs.isAnyRunning else { return .terminateNow }
+        #if DEBUG
+        // `-ShotDexQuitPauses`: answer the question with Pause and Quit, as a test would.
+        if ProcessInfo.processInfo.arguments.contains("-ShotDexQuitPauses") {
+            runs.pauseAll { sender.reply(toApplicationShouldTerminate: true) }
+            return .terminateLater
+        }
+        #endif
+        let alert = NSAlert()
+        alert.messageText = String(localized: "A common-photos run is going. Pause it and quit?",
+                                   comment: "Mac quit with a common-photos run going")
+        alert.informativeText = String(localized: "What is done stays done; Resume continues from there next time.",
+                                       comment: "Mac quit with a common-photos run going: what Pause keeps")
+        alert.addButton(withTitle: String(localized: "Pause and Quit", comment: "Mac quit: pause the run, then quit"))
+        alert.addButton(withTitle: String(localized: "Cancel", comment: "Mac sheet: cancel"))
+        guard alert.runModal() == .alertFirstButtonReturn else { return .terminateCancel }
+        runs.pauseAll { sender.reply(toApplicationShouldTerminate: true) }
+        return .terminateLater
     }
 }
