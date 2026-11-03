@@ -537,6 +537,90 @@ import Testing
         #expect(try store.run(id: moved)?.state == .finished)
     }
 
+    /// AC-170: the server goes away after photo 1 of 3 — photo 1 stays
+    /// done, nothing is removed, the set says "NAS Home isn't reachable",
+    /// and the next pass carries the run on without a scan: photos 2 and 3,
+    /// photo 1 not copied again.
+    @Test func resumesNextPass() async throws {
+        let client = Self.nas()
+        let database = try AppDatabase.makeEmpty()
+        let watch = try Self.watch(database)
+        let gather = Self.autoGather(client, database)
+        let day = Date(timeIntervalSince1970: 1_793_700_000)
+        let runId = try #require(await gather.gather(watch, now: day).runId)
+        client.dropConnectionOnUpload = 2
+        var failure: (any Error)?
+        do { try await Self.run(runId, client, database) } catch { failure = error }
+        #expect(failure as? RemoteFileError == .connectionLost)
+        gather.ran(watch, runId: runId, connectionName: "NAS Home", error: failure)
+        let store = CommonPhotosStore(database: database)
+        #expect(try store.items(runId: runId).filter(\.isDone).count == 1)
+        // No source goes: every photo is still in A and B.
+        #expect(client.files.keys.filter { $0.hasPrefix("photos/A/") || $0.hasPrefix("photos/B/") }.count == 10)
+        let waiting = try #require(try CommonPhotosWatchStore(database: database).watch(id: watch.id))
+        #expect(waiting.waiting == .unreachable("NAS Home") && waiting.resumeRunId == runId)
+
+        client.dropConnectionOnUpload = nil
+        let uploadsBefore = client.commands.filter { $0.hasPrefix("upload ") }
+        let next = await gather.gather(waiting, now: day.addingTimeInterval(900))
+        #expect(next.outcome == .resumes(runId) && next.runId == runId)
+        try await Self.run(runId, client, database)
+        gather.ran(waiting, runId: runId, connectionName: "NAS Home", error: nil)
+        #expect(try store.items(runId: runId).map(\.status) == [.copied, .copied, .copied])
+        // The two photos left, and the day's log; photo 1 not again.
+        let uploaded = client.commands.filter { $0.hasPrefix("upload ") && !$0.contains(".csv") }.dropFirst(uploadsBefore.count)
+        #expect(uploaded.count == 2)
+        #expect(!uploaded.contains(uploadsBefore[0]))
+        let after = try #require(try CommonPhotosWatchStore(database: database).watch(id: watch.id))
+        #expect(after.resumeRunId == nil && after.waiting == nil)
+        #expect(await gather.gather(after, now: day.addingTimeInterval(1_800)).outcome == .nothingNew)
+    }
+
+    /// A run of an earlier day still to go on: the next day's pass adds
+    /// nothing — its photos are that run's, never copied twice.
+    @Test func earlierDayRunHoldsItsPhotos() async throws {
+        let client = Self.nas()
+        let database = try AppDatabase.makeEmpty()
+        let watch = try Self.watch(database)
+        let gather = Self.autoGather(client, database)
+        let day = Date(timeIntervalSince1970: 1_793_700_000)
+        let first = try #require(await gather.gather(watch, now: day).runId)
+        try CommonPhotosStore(database: database).markState(.paused, runId: first)
+        let next = await gather.gather(watch, now: day.addingTimeInterval(24 * 3600))
+        #expect(next.outcome == .found(3) && next.runId == nil)
+        #expect(try CommonPhotosStore(database: database).items(runId: first).count == 3)
+    }
+
+    /// A run the user paused is the user's: no pass carries it on.
+    @Test func userPauseIsNotCarriedOn() async throws {
+        let client = Self.nas()
+        let database = try AppDatabase.makeEmpty()
+        let watch = try Self.watch(database)
+        let gather = Self.autoGather(client, database)
+        let day = Date(timeIntervalSince1970: 1_793_700_000)
+        let runId = try #require(await gather.gather(watch, now: day).runId)
+        // The user's Pause cancels the run: a cancel is never carried on.
+        gather.ran(watch, runId: runId, connectionName: "NAS Home", error: CancellationError())
+        let watches = CommonPhotosWatchStore(database: database)
+        #expect(try watches.watch(id: watch.id)?.resumeRunId == nil)
+        // Recorded as cut off, then paused by the user: the user's.
+        gather.ran(watch, runId: runId, connectionName: "NAS Home", error: RemoteFileError.connectionLost)
+        #expect(try watches.watch(id: watch.id)?.resumeRunId == runId)
+        try watches.userTookOver(runId: runId)
+        let next = await gather.gather(try #require(try watches.watch(id: watch.id)), now: day.addingTimeInterval(900))
+        #expect(next.outcome != .resumes(runId))
+        #expect(try watches.watch(id: watch.id)?.resumeRunId == nil)
+        // Paused by the user while the client threw a connection error:
+        // still the user's.
+        gather.ran(watch, runId: runId, connectionName: "NAS Home", error: RemoteFileError.connectionLost, byUser: true)
+        #expect(try watches.watch(id: watch.id)?.resumeRunId == nil)
+        // A set switched to Move does not carry on its Copy run.
+        gather.ran(watch, runId: runId, connectionName: "NAS Home", error: RemoteFileError.connectionLost)
+        #expect(try watches.watch(id: watch.id)?.resumeRunId == runId)
+        let moving = try Self.watch(database, action: .move)
+        #expect(moving.resumeRunId == nil)
+    }
+
     /// On the local SMB test server, in a scratch folder: a real Copy
     /// gathers 3 photos; a pass then finds nothing new and reads no byte;
     /// a source folder removed on the server stops the set.
@@ -649,6 +733,79 @@ import Testing
             let shared = try await admin.entries(in: "\(root)/Shared").map(\.name)
             #expect(shared.contains("IMG_0005.JPG") && shared.contains("IMG_0006.JPG"))
             #expect(try await admin.entries(in: "\(root)/B").isEmpty)
+        } catch {
+            try? await admin.removeFolderTree(root)
+            await admin.disconnect()
+            throw error
+        }
+        do { try await admin.removeFolderTree(root) } catch { Issue.record("left \(root) on the test share: \(error)") }
+        await admin.disconnect()
+    }
+
+    /// AC-170 on the local SMB test server: the run's session is cut after
+    /// photo 1 of 3; the next pass carries it on, and photo 1 is not
+    /// written again.
+    @Test(.enabled(if: LocalSMBTestServer.isListening))
+    func resumesOnTheServer() async throws {
+        func smb() -> SMBFileClient {
+            SMBFileClient(server: FileServer(name: "Test SMB", transferProtocol: .smb, host: "127.0.0.1", port: 4450,
+                                             username: "tester", share: "photos"), password: "secret")
+        }
+        let database = try AppDatabase.makeEmpty()
+        let root = "photos/e2e-g8-\(UUID().uuidString.prefix(8))"
+        let admin = smb()
+        try await admin.connect()
+        let work = FileManager.default.temporaryDirectory.appendingPathComponent("CommonPhotosG8-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: work, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: work) }
+        do {
+            for folder in ["A", "B", "Shared"] { try await admin.createDirectory("\(root)/\(folder)") }
+            for n in 7...9 {
+                let name = String(format: "IMG_%04d.JPG", n)
+                let local = work.appendingPathComponent(name)
+                _ = try await admin.download("photos/Tuan/2025/06/\(name)", to: local, progress: { _ in })
+                try await admin.upload(local, to: "\(root)/A/\(name)", progress: { _ in })
+                try await admin.upload(local, to: "\(root)/B/copy \(name)", progress: { _ in })
+            }
+            let watch = try CommonPhotosWatchStore(database: database).keepGathering(
+                connectionId: "smb", folders: ["\(root)/A", "\(root)/B"], destination: "\(root)/Shared", action: .copy)
+            let reader = smb()
+            let pass = CommonPhotosGatherPass(database: database, connection: { _ in (reader, "Test SMB") },
+                                              conditions: { (false, true) })
+            let gather = CommonPhotosAutoGather(database: database, pass: pass)
+            let runId = try #require(await gather.gather(watch).runId)
+
+            // The session goes away once photo 1 is done.
+            let cut = smb()
+            try await cut.connect()
+            let store = CommonPhotosStore(database: database)
+            var failure: (any Error)?
+            do {
+                try await CommonPhotosRunner(client: cut, store: store, workDirectory: work).run(runId) { progress in
+                    if progress.doneCount == 1 { Task { await cut.disconnect() } }
+                }
+            } catch { failure = error }
+            // What the real SMB client throws counts as the server gone.
+            let thrown = try #require(failure)
+            #expect(CommonPhotosAutoGather.serverWentAway(thrown), "\(thrown)")
+            gather.ran(watch, runId: runId, connectionName: "Test SMB", error: thrown)
+            let done = try store.items(runId: runId).filter(\.isDone)
+            #expect(!done.isEmpty && done.count < 3)
+            #expect(try await admin.entries(in: "\(root)/B").count == 3)
+            let watches = CommonPhotosWatchStore(database: database)
+            #expect(try watches.watch(id: watch.id)?.waiting == .unreachable("Test SMB"))
+
+            let next = await gather.gather(try #require(try watches.watch(id: watch.id)))
+            #expect(next.outcome == .resumes(runId))
+            let again = smb()
+            try await again.connect()
+            try await CommonPhotosRunner(client: again, store: store, workDirectory: work).run(runId)
+            await again.disconnect()
+            gather.ran(watch, runId: runId, connectionName: "Test SMB", error: nil)
+            #expect(try store.items(runId: runId).map(\.status) == [.copied, .copied, .copied])
+            let shared = try await admin.entries(in: "\(root)/Shared").map(\.name)
+            #expect(shared.filter { $0.hasSuffix(".JPG") }.count == 3)
+            #expect(!shared.contains { $0.contains("(2)") || $0.hasSuffix(".shotdex-part") })
         } catch {
             try? await admin.removeFolderTree(root)
             await admin.disconnect()

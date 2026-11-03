@@ -152,4 +152,15 @@ extension AppDatabase {
             try db.create(index: "common_photo_runs_day", on: "common_photo_runs", columns: ["watchId", "day"])
         }
     }
+
+    /// FS-19.08 §6c: the set's run the server cut off mid-way — the next
+    /// pass carries it on. Not a run the user paused: that one waits for
+    /// the user.
+    static func registerCommonPhotosWatchResume(_ migrator: inout DatabaseMigrator) {
+        migrator.registerMigration("v55-commonPhotosWatchResume") { db in
+            try db.alter(table: "common_photo_watches") { t in
+                t.add(column: "resumeRunId", .text)
+            }
+        }
+    }
 }

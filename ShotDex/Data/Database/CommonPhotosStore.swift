@@ -469,6 +469,14 @@ extension CommonPhotosStore {
                     """, arguments: [today.id]) ?? false
                 if today.isUnfinished || undoing { throw DayRunBusy(runId: today.id) }
             }
+            // An earlier day's run still to go on holds these photos too:
+            // they wait for it, never in a second run (§6c).
+            if let earlier = try String.fetchOne(db, sql: """
+                SELECT id FROM common_photo_runs WHERE watchId = ? AND undoOf IS NULL AND state IN ('running', 'paused', 'finishing')
+                ORDER BY createdAt DESC LIMIT 1
+                """, arguments: [watchId]) {
+                throw DayRunBusy(runId: earlier)
+            }
             // A day the user stopped gets a run of its own for what follows.
             // So does a Move set's list: the day's moved photos stay a
             // finished run, kept and undoable, while the new ones wait.

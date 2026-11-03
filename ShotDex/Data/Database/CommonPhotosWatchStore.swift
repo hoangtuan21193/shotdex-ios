@@ -24,6 +24,8 @@ struct CommonPhotosWatch: Equatable, Sendable, Identifiable {
     var checkedAt: Date?
     var waiting: OnServerSchedule.Wait?
     var stopped: Stop?
+    /// The set's run the server cut off: the next pass carries it on.
+    var resumeRunId: String? = nil
 
     var setKey: String {
         CommonPhotosIncremental.setKey(connectionId: connectionId, folders: folders, destination: destination)
@@ -50,7 +52,9 @@ struct CommonPhotosWatchStore: Sendable {
                 INSERT INTO common_photo_watches (id, setKey, connectionId, folders, destination, action, isOn, createdAt)
                 VALUES (?, ?, ?, ?, ?, ?, 1, ?)
                 ON CONFLICT(setKey) DO UPDATE SET connectionId = excluded.connectionId, folders = excluded.folders,
-                    destination = excluded.destination, action = excluded.action, isOn = 1, stoppedBecause = NULL, waiting = NULL
+                    destination = excluded.destination, action = excluded.action, isOn = 1, stoppedBecause = NULL, waiting = NULL,
+                    resumeRunId = CASE WHEN common_photo_watches.action = excluded.action AND common_photo_watches.isOn = 1
+                                       THEN common_photo_watches.resumeRunId END
                 """, arguments: [id, key, connectionId, Self.encode(folders), destination, action.rawValue,
                                  Int(now.timeIntervalSince1970)])
             guard let watch = try Self.watch(db, id: id) else { throw NotASet() }
@@ -63,7 +67,8 @@ struct CommonPhotosWatchStore: Sendable {
     /// Off: and the photos a Move set had ready go, unmoved (§6c).
     func stopGathering(id: String) throws {
         try database.writer.write { db in
-            try db.execute(sql: "UPDATE common_photo_watches SET isOn = 0, waiting = NULL WHERE id = ?", arguments: [id])
+            try db.execute(sql: "UPDATE common_photo_watches SET isOn = 0, waiting = NULL, resumeRunId = NULL WHERE id = ?",
+                           arguments: [id])
             for runId in try String.fetchAll(db, sql: "SELECT id FROM common_photo_runs WHERE watchId = ? AND state = ?",
                                              arguments: [id, CommonPhotosRun.State.ready.rawValue]) {
                 try CommonPhotosStore.dropReady(runId: runId, in: db)
@@ -116,10 +121,48 @@ struct CommonPhotosWatchStore: Sendable {
         }
     }
 
+    /// The set's run stopped short because the server went away (FS-19.08
+    /// §6c): the set says so, and the next pass carries the run on. Never
+    /// for a run the user paused or stopped.
+    func interrupted(id: String, runId: String, connectionName: String) throws {
+        try database.writer.write { db in
+            // Only a run still to resume: one the user stopped meanwhile is over.
+            try db.execute(sql: """
+                UPDATE common_photo_watches SET waiting = ?, resumeRunId = ? WHERE id = ? AND isOn = 1
+                AND EXISTS (SELECT 1 FROM common_photo_runs WHERE id = ? AND watchId = ? AND state IN ('running', 'paused'))
+                """, arguments: [Self.code(.unreachable(connectionName)), runId, id, runId, id])
+        }
+    }
+
+    /// `runId` went on to its end: no pass carries it on, and the set is
+    /// reachable again. Another run recorded since is left alone.
+    func clearResume(id: String, runId: String) throws {
+        try database.writer.write { db in
+            try db.execute(sql: "UPDATE common_photo_watches SET resumeRunId = NULL, waiting = NULL WHERE id = ? AND resumeRunId = ?",
+                           arguments: [id, runId])
+        }
+    }
+
+    /// The run to carry on is not one any more (over, gone, the user's).
+    func forgetResume(id: String, runId: String) throws {
+        try database.writer.write { db in
+            try db.execute(sql: "UPDATE common_photo_watches SET resumeRunId = NULL WHERE id = ? AND resumeRunId = ?",
+                           arguments: [id, runId])
+        }
+    }
+
+    /// A run the user paused or stopped is the user's: whatever set it
+    /// belongs to no longer carries it on.
+    func userTookOver(runId: String) throws {
+        try database.writer.write { db in
+            try db.execute(sql: "UPDATE common_photo_watches SET resumeRunId = NULL WHERE resumeRunId = ?", arguments: [runId])
+        }
+    }
+
     /// Gathering stops until the user turns it on again.
     func stop(id: String, because stop: CommonPhotosWatch.Stop) throws {
         try database.writer.write { db in
-            try db.execute(sql: "UPDATE common_photo_watches SET isOn = 0, waiting = NULL, stoppedBecause = ? WHERE id = ? AND isOn = 1",
+            try db.execute(sql: "UPDATE common_photo_watches SET isOn = 0, waiting = NULL, resumeRunId = NULL, stoppedBecause = ? WHERE id = ? AND isOn = 1",
                            arguments: [Self.code(stop), id])
         }
     }
@@ -142,7 +185,8 @@ struct CommonPhotosWatchStore: Sendable {
         return CommonPhotosWatch(id: row["id"], connectionId: row["connectionId"], folders: folders, destination: row["destination"],
                                  action: action, isOn: row["isOn"],
                                  checkedAt: (row["checkedAt"] as Int?).map { Date(timeIntervalSince1970: TimeInterval($0)) },
-                                 waiting: (row["waiting"] as String?).flatMap(wait), stopped: (row["stoppedBecause"] as String?).flatMap(stop))
+                                 waiting: (row["waiting"] as String?).flatMap(wait), stopped: (row["stoppedBecause"] as String?).flatMap(stop),
+                                 resumeRunId: row["resumeRunId"])
     }
 
     private static func encode(_ list: [String]) -> String {

@@ -214,6 +214,13 @@ Copy/Move vẫn là cùng bộ.
 - Lượt tự gom không tìm thấy gì: không thêm hàng Activity, chỉ cập nhật "Checked 3 min ago" của bộ.
 - Server không trả lời: bỏ lượt, ghi "NAS Home isn't reachable", lượt sau thử lại. Không bao giờ dừng giữa chừng một
   lượt Move mà không đi tiếp được theo §6 (Resume như cũ).
+  - Server ngắt giữa lượt chạy: lượt sau (đủ điện, mạng, folder còn) chạy tiếp lượt đó, không quét lại. Ảnh đã xong
+    không làm lại. Chạy xong thì hết dòng "isn't reachable".
+  - Lượt người dùng tự Pause hay Stop, hay app thoát giữa chừng, là của người dùng: không lượt tự gom nào chạy tiếp nó.
+    Lỗi không phải do server (Mac hết chỗ, sai mật khẩu, không có quyền, server đầy) cũng không tự chạy tiếp.
+  - Một lượt của bộ còn dở, kể cả của ngày trước, giữ các ảnh của nó. Lượt tự gom sau không gom lại các ảnh đó vào
+    lượt khác.
+  - Bộ đổi Copy↔Move, bị dừng hay được bật lại: quên lượt đang chờ chạy tiếp.
 - Folder chỉ tính là mất khi server nói hai lần: folder không có, **và** folder cha liệt kê được mà không có nó. Mọi
   trường hợp khác (không liệt kê được, lỗi giữa chừng) là server vắng, thử lại lượt sau. Bộ không còn đủ 2 folder hay
   connection bị xoá: cũng dừng.

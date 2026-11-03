@@ -35,6 +35,9 @@ struct CommonPhotosGatherPass {
         case stopped(CommonPhotosWatch.Stop)
         /// The pass was cancelled (the helper quitting): nothing recorded.
         case cancelled
+        /// The set's run the server cut off last time is to go on: no
+        /// scan — its photos are listed already (FS-19.08 §6c).
+        case resumes(String)
     }
 
     private var store: CommonPhotosWatchStore { CommonPhotosWatchStore(database: database) }
@@ -73,6 +76,24 @@ struct CommonPhotosGatherPass {
             if error is CancellationError || Task.isCancelled { return .cancelled }
             record { try store.waits(id: watch.id, for: unreachable) }
             return .waiting(unreachable)
+        }
+
+        // A run the server cut off goes on before anything new is looked
+        // for: its photos would be found again, and wait behind it.
+        // Read now, not from the pass's start: the user may have taken the
+        // run over meanwhile.
+        if let runId = ((try? self.store.watch(id: watch.id)) ?? nil)?.resumeRunId {
+            let store = CommonPhotosStore(database: database)
+            if let run = (try? store.run(id: runId)) ?? nil, run.canResume, run.watchId == watch.id, run.action == watch.action,
+               !CommonPhotosRunner.isActive(runId: runId, in: database) {
+                await client.disconnect()
+                // Nothing was looked for: the last check and "isn't
+                // reachable" stay until the run has gone on.
+                guard (try? self.store.isOn(id: watch.id)) == true else { return .off }
+                return .resumes(runId)
+            }
+            // Finished, stopped or gone meanwhile: nothing to carry on.
+            record { try self.store.forgetResume(id: watch.id, runId: runId) }
         }
 
         // The same session for the scan: one login a pass.

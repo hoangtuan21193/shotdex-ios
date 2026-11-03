@@ -44,6 +44,37 @@ struct CommonPhotosAutoGather {
                 CommonPhotosGatherPass.logger.error("ready list not cleared: \(error.localizedDescription, privacy: .public)")
             }
         }
+        if case .resumes(let id) = outcome { runId = id }
         return Result(outcome: outcome, runId: runId)
+    }
+
+    /// The caller ran `runId`; `error` is how it stopped, nil at its end
+    /// (FS-19.08 §6c). The server going away partway: the set says "NAS
+    /// Home isn't reachable", and its next pass carries the run on — what
+    /// was done stays done. Paused or stopped by the user, a quit
+    /// (`byUser`, whatever the client threw on the cancel), or a refusal
+    /// the server is not behind (no room on the Mac) is left to the user:
+    /// no pass carries it on.
+    func ran(_ watch: CommonPhotosWatch, runId: String, connectionName: String, error: (any Error)?, byUser: Bool = false) {
+        let watches = CommonPhotosWatchStore(database: database)
+        do {
+            guard let error else { return try watches.clearResume(id: watch.id, runId: runId) }
+            guard !byUser, Self.serverWentAway(error) else { return try watches.forgetResume(id: watch.id, runId: runId) }
+            try watches.interrupted(id: watch.id, runId: runId, connectionName: connectionName)
+        } catch {
+            CommonPhotosGatherPass.logger.error("run outcome not recorded: \(error.localizedDescription, privacy: .public)")
+        }
+    }
+
+    /// The server went away, not the user, this Mac or a refusal the
+    /// server will repeat (login, permissions, full): only then does
+    /// carrying on later help.
+    static func serverWentAway(_ error: any Error) -> Bool {
+        if error is CancellationError || error is CommonPhotosRunner.Stop || error is CommonPhotosStore.RunMissing { return false }
+        guard let error = error as? RemoteFileError else { return !Task.isCancelled }
+        return switch error {
+        case .connectionLost, .unreachable, .other: true
+        default: false
+        }
     }
 }

@@ -294,6 +294,10 @@ final class MacCommonPhotosRuns {
     func pause(runId: String) {
         guard tasks[runId] != nil else { return }
         entries[runId]?.isPausedByUser = true
+        // Keep gathering no longer carries it on: the user paused it (§6c).
+        do { try CommonPhotosWatchStore(database: database).userTookOver(runId: runId) } catch {
+            Self.log.error("Keep gathering may carry on a run the user took over: \(error.localizedDescription, privacy: .public)")
+        }
         tasks[runId]?.cancel()
     }
 
@@ -301,7 +305,11 @@ final class MacCommonPhotosRuns {
     func pauseAll(then done: @escaping () -> Void) {
         guard !tasks.isEmpty else { return done() }
         onAllPaused = done
-        for runId in tasks.keys { pause(runId: runId) }
+        // A quit is not the user pausing a run: Keep gathering may carry on.
+        for runId in tasks.keys {
+            entries[runId]?.isPausedByUser = true
+            tasks[runId]?.cancel()
+        }
     }
 
     /// Whether Stop may end the run now: never while it is `finishing` (the
@@ -316,6 +324,9 @@ final class MacCommonPhotosRuns {
     /// and the rescan are owed for what moved.
     func stop(runId: String) {
         guard canStop(runId: runId) else { return }
+        do { try CommonPhotosWatchStore(database: database).userTookOver(runId: runId) } catch {
+            Self.log.error("Keep gathering may carry on a run the user took over: \(error.localizedDescription, privacy: .public)")
+        }
         if let task = tasks[runId] {
             stopRequested.insert(runId)
             task.cancel()
