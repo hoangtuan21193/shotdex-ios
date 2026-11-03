@@ -396,7 +396,8 @@ private struct MacCommonPhotosSheetContent: View {
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                 } else {
                     List(model.rows) { row in
-                        MacCommonPhotosRow(row: row, database: dependencies.database, sources: sources)
+                        MacCommonPhotosRow(row: row, destination: model.destination.map(ServerUploadPath.lastComponent(of:)),
+                                           action: model.action, database: dependencies.database, sources: sources)
                             .listRowInsets(EdgeInsets(top: 0, leading: 8, bottom: 0, trailing: 12))
                     }
                     .listStyle(.bordered)
@@ -515,13 +516,22 @@ private struct MacCommonPhotosSheetContent: View {
             let place = folders == 2 ? String(localized: "in both folders", comment: "Mac common photos sheet: headline, two folders")
                                      : String(localized: "in all \(folders) folders", comment: "Mac common photos sheet: headline, three or more")
             return count == 0 ? String(localized: "No new photos \(place)", comment: "Mac common photos sheet: headline, nothing new")
-                              : "\(new) \(place) · \(bytes)"
+                              : "\(new) \(place) · \(bytes)" + alreadyThereSuffix
         }
         let photos = count == 1 ? String(localized: "1 photo", comment: "Mac common photos sheet: headline count")
                                 : String(localized: "\(count.formatted()) photos", comment: "Mac common photos sheet: headline count")
         let place = folders == 2 ? String(localized: "in both folders", comment: "Mac common photos sheet: headline, two folders")
                                  : String(localized: "in all \(folders) folders", comment: "Mac common photos sheet: headline, three or more")
-        return "\(photos) \(place) · \(bytes)"
+        return "\(photos) \(place) · \(bytes)" + alreadyThereSuffix
+    }
+
+    /// §6d: how many Same photos the destination already holds.
+    private var alreadyThereSuffix: String {
+        let there = model.alreadyThereCount
+        guard there > 0, let destination = model.destination else { return "" }
+        let name = ServerUploadPath.lastComponent(of: destination)
+        return " · " + String(localized: "\(there.formatted()) already in \(name)",
+                              comment: "Mac common photos sheet: headline, Same photos the destination already holds")
     }
 
     private func count(_ label: String, _ value: Int, done: Bool) -> some View {
@@ -653,11 +663,11 @@ private struct MacCommonPhotosSheetContent: View {
 
     private var runTitle: String {
         // Nothing to run: the verb alone, dimmed.
-        guard model.sameCount > 0 else {
+        guard model.runCount > 0 else {
             return model.action == .move ? String(localized: "Move", comment: "Mac common photos sheet: run button, nothing to move")
                                          : String(localized: "Copy", comment: "Mac common photos sheet: run button, nothing to copy")
         }
-        let count = model.sameCount.formatted()
+        let count = model.runCount.formatted()
         return model.action == .move
             ? String(localized: "Move \(count)", comment: "Mac common photos sheet: run button")
             : String(localized: "Copy \(count)", comment: "Mac common photos sheet: run button")
@@ -706,6 +716,9 @@ private struct MacCommonPhotosSheetContent: View {
 /// name and where it is in each folder, and its size (§6d: only Same rows).
 private struct MacCommonPhotosRow: View {
     let row: CommonPhotosScanModel.Row
+    /// The destination folder's name, for the plan line (§6d).
+    let destination: String?
+    let action: CommonPhotosRun.Action
     let database: AppDatabase
     let sources: [(source: SourceStore.Source, connection: FileServer)]
     @State private var thumbnail: CGImage?
@@ -718,19 +731,55 @@ private struct MacCommonPhotosRow: View {
                     if let thumbnail { Image(decorative: thumbnail, scale: 1).resizable().scaledToFill() }
                 }
                 .clipShape(RoundedRectangle(cornerRadius: 4))
+                .opacity(isAlreadyThere ? 0.5 : 1)
             VStack(alignment: .leading, spacing: 1) {
-                Text(row.name).lineLimit(1)
-                Text(row.paths).font(.subheadline).foregroundStyle(.secondary).lineLimit(1).truncationMode(.middle)
+                Text(row.name).lineLimit(1).foregroundStyle(isAlreadyThere ? .secondary : .primary)
+                // Where it comes from, then where it goes: the destination name never truncates.
+                HStack(spacing: 0) {
+                    Text(row.paths).lineLimit(1).truncationMode(.middle)
+                    if let landing = landingText { Text(landing).lineLimit(1).fixedSize() }
+                }
+                .font(.subheadline).foregroundStyle(.secondary)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
-            .help(row.fullPaths)
+            .help(row.fullPaths + (landingText.map { "\n" + $0 } ?? ""))
             Text(row.size.formatted(.byteCount(style: .file)))
                 .font(.callout).monospacedDigit().foregroundStyle(.secondary)
                 .frame(width: 64, alignment: .trailing)
+            Text(note ?? "").font(.callout).foregroundStyle(.secondary).lineLimit(1)
+                .frame(width: 124, alignment: .leading)
         }
         .frame(height: 40)
         .accessibilityElement(children: .combine)
         .task(id: row.serverPath) { thumbnail = await loadThumbnail() }
+    }
+
+    private var isAlreadyThere: Bool {
+        if case .alreadyThere = row.landing { true } else { false }
+    }
+
+    /// " → Shared/IMG_0001 (2).JPG" once planned; on a Move, " → already in
+    /// Shared" (the note column says what it removes).
+    private var landingText: String? {
+        guard let destination, let landing = row.landing else { return nil }
+        switch landing {
+        case .name(let name): return "\u{00A0}→ " + ServerUploadPath.join(destination, name)
+        case .alreadyThere:
+            guard action == .move else { return nil }
+            return "\u{00A0}→ " + String(localized: "already in \(destination)", comment: "Mac common photos sheet: row plan, a Move whose bytes the destination holds")
+        }
+    }
+
+    /// Already there (Copy skips it), or on a Move the copies it takes out of
+    /// the folders — already there or not.
+    private var note: String? {
+        if isAlreadyThere, action == .copy {
+            return String(localized: "Already in \(destination ?? "")", comment: "Mac common photos sheet: row, the destination holds these bytes")
+        }
+        guard action == .move, row.landing != nil else { return nil }
+        return row.copies == 1
+            ? String(localized: "Removes 1 copy", comment: "Mac common photos sheet: row, a Move removes this copy")
+            : String(localized: "Removes \(row.copies) copies", comment: "Mac common photos sheet: row, a Move removes these copies")
     }
 
     /// The index's thumbnail of this file, when a source on the server holds it.

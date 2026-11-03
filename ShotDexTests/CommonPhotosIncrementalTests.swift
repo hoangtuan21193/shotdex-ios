@@ -35,7 +35,8 @@ import Testing
 
     private static func scan(_ sheet: CommonPhotosScanModel) async throws {
         sheet.scan()
-        for _ in 0..<600 where sheet.phase != .done || sheet.isCutting {
+        // The plan of the destination too: it reads there, and a test counts reads.
+        for _ in 0..<600 where sheet.phase != .done || sheet.isCutting || sheet.isPlanning {
             if case .failed(let message) = sheet.phase { Issue.record("scan failed: \(message)"); return }
             try await Task.sleep(for: .milliseconds(20))
         }
@@ -233,7 +234,8 @@ import Testing
         #expect(again.lastGathered != nil)
         #expect(Set(again.rows.map(\.name)) == ["IMG_3.HEIC", "IMG_4.HEIC", "IMG_5.HEIC"])
         let touched = Set(client.sha256Paths.dropFirst(before.sha) + client.rangeReadPaths.dropFirst(before.ranges))
-        #expect(touched.allSatisfy { $0.contains("_3") || $0.contains("_4") || $0.contains("_5") || $0.contains(" 3") || $0.contains(" 4") || $0.contains(" 5") })
+        #expect(touched.allSatisfy { $0.contains("_3") || $0.contains("_4") || $0.contains("_5") || $0.contains(" 3") || $0.contains(" 4") || $0.contains(" 5") },
+                "\(touched.sorted())")
         #expect(again.makeRun()?.items.count == 3)
         await first.close()
         await again.close()

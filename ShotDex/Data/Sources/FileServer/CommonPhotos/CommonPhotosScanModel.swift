@@ -42,6 +42,11 @@ final class CommonPhotosScanModel {
         /// Every copy's whole path below its folder, for the tooltip.
         let fullPaths: String
         let size: Int64
+        /// What it becomes in the destination (§6d); nil until the
+        /// destination is chosen and listed.
+        let landing: CommonPhotosDestinationPlan.Landing?
+        /// Every copy in the source folders — what a Move removes.
+        let copies: Int
         /// The first folder's copy, for its thumbnail.
         let serverPath: String
     }
@@ -103,6 +108,20 @@ final class CommonPhotosScanModel {
     /// taken out, so another destination can cut it again.
     private var allPhotos: [CommonPhoto] = []
     private var cutTask: Task<Void, Never>?
+    /// Lists the destination and works out each photo's landing (§6d).
+    private var planTask: Task<Void, Never>?
+    /// A plan is being worked out (the destination listed, a few files read).
+    private(set) var isPlanning = false
+    /// Each Same photo's landing, by row id; empty until planned.
+    private(set) var landings: [String: CommonPhotosDestinationPlan.Landing] = [:]
+    /// Destination SHA-256 read for a plan, by lowercased path, while its
+    /// size and write time hold: a flip back to a destination reads nothing again.
+    private var destinationHashes: [String: (size: Int64, modified: Date, sha256: String)] = [:]
+    /// What the set's runs put in the destination (`Gathered.placed`): the
+    /// plan takes those bytes as known, so a rescan reads nothing (AC-159).
+    private var placedInDestination: [String: CommonPhotosStore.Placed] = [:]
+    /// The helper's pass (`scanToEnd`) shows no rows: it plans nothing.
+    private var plansDestination = true
     /// Results are being cut to the destination chosen: not runnable yet.
     private(set) var isCutting = false
     private(set) var phase = Phase.idle
@@ -198,13 +217,26 @@ final class CommonPhotosScanModel {
 
     var sameBytes: Int64 { photos.reduce(Int64(0)) { $0 + $1.size } }
 
+    /// What the run button counts (§6d): a Copy skips the photos already in
+    /// the destination; a Move still takes every copy out of the folders.
+    var runCount: Int { action == .copy ? sameCount - alreadyThereCount : sameCount }
+
+    /// Same photos whose bytes the destination already holds (§6d).
+    var alreadyThereCount: Int {
+        landings.values.filter { if case .alreadyThere = $0 { true } else { false } }.count
+    }
+
     /// The Same photos, in the order found (§6d: Same only).
     var rows: [Row] {
         guard preview != nil else { return [] }
-        return photos.map { photo in row(photo.files.map { $0[0] }, size: photo.size) }
+        return photos.map { photo in
+            row(photo.files.map { $0[0] }, size: photo.size, copies: photo.files.joined().count)
+        }
     }
 
-    private func row(_ files: [CommonPhotosFile], size: Int64) -> Row {
+    private static func rowId(_ first: CommonPhotosFile) -> String { "\(first.folder)/\(first.relativePath)" }
+
+    private func row(_ files: [CommonPhotosFile], size: Int64, copies: Int) -> Row {
         let first = files[0]
         let paths = files.map { file -> String in
             var place = ServerUploadPath.join(ServerUploadPath.lastComponent(of: folders[file.folder]), file.subfolder)
@@ -212,8 +244,9 @@ final class CommonPhotosScanModel {
             return place
         }
         let fullPaths = files.map { ServerUploadPath.join(ServerUploadPath.lastComponent(of: folders[$0.folder]), $0.relativePath) }
-        return Row(id: "\(first.folder)/\(first.relativePath)", name: first.name, paths: paths.joined(separator: " · "),
-                   fullPaths: fullPaths.joined(separator: "\n"), size: size,
+        let id = Self.rowId(first)
+        return Row(id: id, name: first.name, paths: paths.joined(separator: " · "),
+                   fullPaths: fullPaths.joined(separator: "\n"), size: size, landing: landings[id], copies: copies,
                    serverPath: ServerUploadPath.join(folders[first.folder], first.relativePath))
     }
 
@@ -235,6 +268,7 @@ final class CommonPhotosScanModel {
         guard canScan else { return }
         scansEverything = false
         failureError = nil
+        plansDestination = false
         phase = .listing
         await runScan()
         await saving?.value
@@ -291,16 +325,24 @@ final class CommonPhotosScanModel {
         cutTask?.cancel()
         cutTask = nil
         isCutting = false
+        planTask?.cancel()
+        planTask = nil
+        landings = [:]
+        isPlanning = false
+        placedInDestination = [:]
     }
 
     private func runScan() async {
         let folders = folders
         let scanId = UUID()
         self.scanId = scanId
-        // A cut of the last results means nothing to this scan.
+        // A cut or plan of the last results means nothing to this scan.
         cutTask?.cancel()
         cutTask = nil
         isCutting = false
+        planTask?.cancel()
+        landings = [:]
+        isPlanning = false
         phase = .listing
         preview = nil
         photos = []
@@ -352,6 +394,7 @@ final class CommonPhotosScanModel {
             guard self.scanId == scanId else { return }
             lastGathered = gathered.lastAt.map { Date(timeIntervalSince1970: TimeInterval($0)) }
             alreadyGathered = gathered.photoCount
+            placedInDestination = gathered.placed
             notice = nil
             listingWasCut = !gathered.seen.isEmpty
             var checked = listing
@@ -401,6 +444,8 @@ final class CommonPhotosScanModel {
                 }
             })
             try Task.checkCancellation()
+            // A newer scan took over (one not run through scanTask cannot be cancelled).
+            guard self.scanId == scanId else { return }
             // The callbacks hop to the main actor; the result is the truth.
             allPhotos = found
             photos = CommonPhotosIncremental.newPhotos(found, folders: folders, seen: gathered.seen)
@@ -408,7 +453,18 @@ final class CommonPhotosScanModel {
             bytesLeft = 0
             phase = .done
             // A destination chosen while it scanned: cut to it now.
-            if !listingWasCut, destination != scannedFor { recut() }
+            if destination != scannedFor {
+                // Changed while it listed, after the listing was cut for the
+                // old set: this set's photos were never read — scan again.
+                if listingWasCut {
+                    resetScan()
+                    notice = .otherDestination
+                    return
+                }
+                recut()
+            } else {
+                replan()
+            }
         } catch is CancellationError {
             return
         } catch {
@@ -476,6 +532,11 @@ final class CommonPhotosScanModel {
         let folders = folders
         let destination = destination
         isCutting = true
+        // The old destination's plan must not show beside the new one.
+        planTask?.cancel()
+        planTask = nil
+        landings = [:]
+        isPlanning = false
         cutTask = Task { [weak self] in
             guard let self else { return }
             let gathered = scansEverything ? .init() : ((try? await gathered(folders: folders, destination: destination)) ?? .init())
@@ -483,7 +544,68 @@ final class CommonPhotosScanModel {
             photos = CommonPhotosIncremental.newPhotos(allPhotos, folders: folders, seen: gathered.seen)
             lastGathered = gathered.lastAt.map { Date(timeIntervalSince1970: TimeInterval($0)) }
             alreadyGathered = gathered.photoCount
+            placedInDestination = gathered.placed
             isCutting = false
+            replan()
+        }
+    }
+
+    /// Lists the destination and works out what each Same photo becomes
+    /// there (§6d), reading only the files a landing hangs on — same name
+    /// and size as a photo. A destination that cannot be listed leaves the
+    /// rows without a plan; the run names them anyway.
+    private func replan() {
+        planTask?.cancel()
+        landings = [:]
+        isPlanning = false
+        guard plansDestination, let destination, !photos.isEmpty else { return }
+        let scanId = scanId
+        let photos = photos
+        isPlanning = true
+        planTask = Task { [weak self] in
+            guard let self else { return }
+            defer { if self.scanId == scanId, self.destination == destination, !Task.isCancelled { self.isPlanning = false } }
+            guard let entries = try? await destinationEntries(destination) else { return }
+            let planned = photos.map {
+                CommonPhotosDestinationPlan.Photo(name: $0.files[0][0].name, size: $0.size, sha256: $0.sha256)
+            }
+            let key = { (name: String) in ServerUploadPath.join(destination, name).lowercased() }
+            var existing = entries.map { entry in
+                let known = destinationHashes[key(entry.name)]
+                let holds = known != nil && known?.size == entry.size && entry.modified != nil && known?.modified == entry.modified
+                let placed = placedInDestination[entry.name.lowercased()].flatMap { $0.size == entry.size ? $0.sha256 : nil }
+                return CommonPhotosDestinationPlan.Existing(name: entry.name, size: entry.size,
+                                                            sha256: holds ? known?.sha256 : placed)
+            }
+            let modified = Dictionary(entries.map { ($0.name, $0.modified) }, uniquingKeysWith: { first, _ in first })
+            // A file that would decide a row but could not be read: that row
+            // gets no plan rather than a guess the run would contradict.
+            var unread = Set<String>()
+            for there in CommonPhotosDestinationPlan.toHash(planned, in: existing) {
+                // Unread, it stays a name taken by other bytes: the plan
+                // shows the next free name, the run checks again.
+                let sha: String
+                do {
+                    sha = try await client.sha256(of: ServerUploadPath.join(destination, there.name), progress: { _ in })
+                    try Task.checkCancellation()
+                } catch is CancellationError {
+                    return
+                } catch {
+                    if Task.isCancelled { return }
+                    unread.insert(there.name.lowercased())
+                    continue
+                }
+                if let index = existing.firstIndex(where: { $0.name == there.name }) { existing[index].sha256 = sha }
+                if let date = modified[there.name] ?? nil { destinationHashes[key(there.name)] = (there.size, date, sha) }
+            }
+            guard !Task.isCancelled, self.scanId == scanId, self.destination == destination else { return }
+            let landings = CommonPhotosDestinationPlan.landings(planned, in: existing)
+            var byRow: [String: CommonPhotosDestinationPlan.Landing] = [:]
+            for (index, landing) in landings.enumerated() where !unread.contains(planned[index].name.lowercased()) {
+                let id = Self.rowId(photos[index].files[0][0])
+                if byRow[id] == nil { byRow[id] = landing }
+            }
+            self.landings = byRow
         }
     }
 
@@ -512,6 +634,8 @@ final class CommonPhotosScanModel {
     /// when it still cannot be listed.
     private func destinationEntries(_ destination: String) async throws -> [RemoteEntry]? {
         for attempt in 0..<2 {
+            // A cancelled caller (the sheet closed) never reconnects.
+            try Task.checkCancellation()
             do {
                 if !isConnected {
                     try await client.connect()

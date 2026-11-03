@@ -161,7 +161,16 @@ struct CommonPhotosStore: Sendable {
         var photoCount: Int { photos.count }
         var photos: Set<String> = []
         var lastAt: Int?
+        /// What the set's runs put in the destination and is still there at
+        /// its size, by lowercased file name (§6d: the plan knows those bytes
+        /// without reading them).
+        var placed: [String: Placed] = [:]
         var isEmpty: Bool { lastAt == nil }
+    }
+
+    struct Placed: Equatable, Sendable {
+        let size: Int64
+        let sha256: String
     }
 
     /// `inDestination`, the sizes the destination holds now under each
@@ -201,7 +210,12 @@ struct CommonPhotosStore: Sendable {
                         else { continue }
                     }
                     // Seen, not gathered: not in "N already gathered".
-                    if !undone, let sha: String = row["sha256"] { out.photos.insert(sha) }
+                    if !undone, let sha: String = row["sha256"] {
+                        out.photos.insert(sha)
+                        if let placed: String = row["destinationPath"], let size: Int64 = row["size"] {
+                            out.placed[ServerUploadPath.lastComponent(of: placed).lowercased()] = Placed(size: size, sha256: sha)
+                        }
+                    }
                     let list: String = row["sources"]
                     guard let sources = try? decoder.decode([CommonPhotosItem.Source].self, from: Data(list.utf8)) else { continue }
                     for source in sources {
