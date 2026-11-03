@@ -258,6 +258,60 @@ import Testing
         // Photo 2 is copied from A, which has no sidecar: B's goes with it.
         #expect(destination["C/IMG_1 (2).XMP"] == Data("<x:xmpmeta rating=2/>".utf8))
         #expect(destination["C/IMG_1.JPG"] == fixture.photos["2025/06/IMG_1.JPG"])
+        // Both sidecars are this run's: undo may take them back (§6b).
+        #expect(try fixture.items().map(\.sidecarPlaced) == ["C/IMG_1.xmp", "C/IMG_1 (2).XMP"])
+        #expect(try fixture.items().first?.sidecarSHA256 == FileChecksum.hex(SHA256.hash(data: xmp)))
+    }
+
+    /// §6b: a sidecar that did not land — read back wrong, or beaten to its
+    /// name by another client — is not claimed.
+    @Test func failedSidecarIsNotClaimed() async throws {
+        let fixture = try Fixture(count: 2)
+        fixture.nas.put("A/IMG_1.xmp", Data("one".utf8))
+        fixture.nas.put("A/IMG_2.xmp", Data("two".utf8))
+        try await fixture.start()
+        fixture.nas.corruptReadBack = ["C/IMG_1.xmp.shotdex-part"]
+        let nas = fixture.nas
+        // Upload 4 is IMG_2's sidecar: another client writes the name first.
+        nas.whileUploading = { number in
+            if number == 4 { nas.put("C/IMG_2.xmp", Data("theirs".utf8)) }
+        }
+
+        try await fixture.runner.run("R1")
+
+        let items = try fixture.items()
+        #expect(items.map(\.status) == [.copied, .copied])
+        #expect(items.map { $0.failure?.reason } == [.sidecarNotCopied, .sidecarNotCopied])
+        #expect(items.map(\.sidecarPlaced) == [nil, nil])
+        #expect(fixture.nas.files["C/IMG_2.xmp"] == Data("theirs".utf8))
+    }
+
+    /// An undo run is never gathered again by the runner.
+    @Test func undoRunIsNotRunAsAGather() async throws {
+        let fixture = try Fixture(count: 1)
+        try await fixture.start()
+        try await fixture.runner.run("R1")
+        try fixture.store.startUndo(of: "R1", id: "U1")
+
+        await #expect(throws: CommonPhotosRunner.Stop.notResumable) { try await fixture.runner.run("U1") }
+        #expect(fixture.photoUploads == 1)
+    }
+
+    /// §6b: a sidecar with the same bytes already in the destination is not
+    /// this run's — undo must leave it.
+    @Test func sidecarAlreadyThereIsNotOurs() async throws {
+        let fixture = try Fixture(count: 1)
+        fixture.nas.put("A/IMG_1.xmp", Data("same".utf8))
+        fixture.nas.put("C/IMG_1.xmp", Data("same".utf8))
+        try await fixture.start()
+
+        try await fixture.runner.run("R1")
+
+        let item = try #require(try fixture.items().first)
+        #expect(item.status == .copied)
+        #expect(item.failure == nil)
+        #expect(item.sidecarPlaced == nil)
+        #expect(item.sidecarSHA256 == nil)
     }
 
     /// FS-19.01 §3: beside a RAW, `IMG_1.xmp` is the RAW's — the JPEG takes
@@ -324,6 +378,7 @@ import Testing
         #expect(try fixture.items().map(\.status) == [.copied])
         #expect(try fixture.items().first?.failure?.reason == .sidecarNotCopied)
         #expect(fixture.photoUploads == 1)
+        #expect(try fixture.items().first?.sidecarPlaced == nil)
     }
 
     /// AC-123: five Same photos, Move, one share — renamed into place, never

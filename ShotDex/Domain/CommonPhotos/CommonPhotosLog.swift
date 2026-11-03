@@ -13,6 +13,7 @@ enum CommonPhotosLog {
         case .moved: String(localized: "Moved", comment: "Common photos log status")
         case .skipped: String(localized: "Skipped", comment: "Common photos log status")
         case .failed: String(localized: "Failed", comment: "Common photos log status")
+        case .undone: String(localized: "Undone", comment: "Common photos log status: the photo was taken back by an undo")
         }
     }
 
@@ -25,6 +26,11 @@ enum CommonPhotosLog {
         case .noSource: return String(localized: "no source", comment: "Common photos log reason: the record lists no source file")
         case .unreadableRecord: return String(localized: "record could not be read", comment: "Common photos log reason")
         case .sidecarNotCopied: return String(localized: "sidecar not copied", comment: "Common photos log reason: the .xmp beside the photo was not copied")
+        case .noOtherCopy: return String(localized: "no other copy", comment: "Common photos undo reason: no source copy is left, so the shared copy stays")
+        case .changedInShared: return String(localized: "changed in Shared", comment: "Common photos undo reason: the copy in the shared folder was edited since")
+        case .nameTaken:
+            let path = detail.map { " (\($0))" } ?? ""
+            return String(localized: "name taken\(path)", comment: "Common photos undo reason: the old path now holds other bytes; the path follows in brackets")
         case .serverError: return detail ?? String(localized: "server error", comment: "Common photos log reason")
         }
     }
@@ -58,6 +64,7 @@ enum CommonPhotosLog {
         case .moved: "Moved"
         case .skipped: "Skipped"
         case .failed: "Failed"
+        case .undone: "Undone"
         }
     }
 
@@ -70,6 +77,9 @@ enum CommonPhotosLog {
         case .noSource: return "no source"
         case .unreadableRecord: return "record could not be read"
         case .sidecarNotCopied: return "sidecar not copied"
+        case .noOtherCopy: return "no other copy"
+        case .changedInShared: return "changed in Shared"
+        case .nameTaken: return detail.map { "name taken: \($0)" } ?? "name taken"
         case .serverError: return detail.map { "server error: \($0)" } ?? "server error"
         }
     }

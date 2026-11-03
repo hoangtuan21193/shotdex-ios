@@ -28,12 +28,16 @@ struct CommonPhotosRun: Hashable, Sendable, Identifiable {
     var createdAt: Int
     var updatedAt: Int
     var csvPath: String?
+    /// The run this one undoes (FS-19.08 §6b); nil for a run that gathers.
+    /// Folders, destination and action are the undone run's.
+    var undoOf: String?
     /// False when a stored value could not be read back (folders, action):
     /// the banner offers Discard only, never Resume. Not stored.
     var isReadable = true
 
     init(id: String = UUID().uuidString, connectionId: String, folders: [String], destination: String,
-         action: Action, state: State = .running, createdAt: Int = Int(Date().timeIntervalSince1970), csvPath: String? = nil) {
+         action: Action, state: State = .running, createdAt: Int = Int(Date().timeIntervalSince1970), csvPath: String? = nil,
+         undoOf: String? = nil) {
         self.id = id
         self.connectionId = connectionId
         self.folders = folders
@@ -43,6 +47,7 @@ struct CommonPhotosRun: Hashable, Sendable, Identifiable {
         self.createdAt = createdAt
         self.updatedAt = createdAt
         self.csvPath = csvPath
+        self.undoOf = undoOf
     }
 
     /// Whether the next launch offers Resume · Discard (FS-19.08 §7).
@@ -50,6 +55,11 @@ struct CommonPhotosRun: Hashable, Sendable, Identifiable {
 
     /// Whether Resume can carry on from what is stored.
     var canResume: Bool { isUnfinished && isReadable && folders.count >= 2 }
+
+    var isUndo: Bool { undoOf != nil }
+
+    /// Over: what is done stays done, and an undo may take it back.
+    var isOver: Bool { state == .finished || state == .stopped }
 }
 
 extension CommonPhotosRun: FetchableRecord, PersistableRecord {
@@ -72,6 +82,7 @@ extension CommonPhotosRun: FetchableRecord, PersistableRecord {
         createdAt = row["createdAt"]
         updatedAt = row["updatedAt"]
         csvPath = row["csvPath"]
+        undoOf = row["undoOf"]
     }
 
     func encode(to container: inout PersistenceContainer) {
@@ -84,6 +95,7 @@ extension CommonPhotosRun: FetchableRecord, PersistableRecord {
         container["createdAt"] = createdAt
         container["updatedAt"] = updatedAt
         container["csvPath"] = csvPath
+        container["undoOf"] = undoOf
     }
 }
 

@@ -34,7 +34,7 @@ có mặt người. Test domain chạy trên client giả của `ShotDexTests/Ba
 | AC-139 | lượt 10 ảnh Copied, chọn hàng 2, 5 trong bảng log | chuột phải → Undo Selected… | chỉ 2 ảnh đó Undone; 8 hàng kia Copied; CSV lượt còn, thêm `… Undo.csv` 2 hàng | ⚠️ chưa có |
 | AC-140 | hoàn tác 10 ảnh, quit app sau ảnh 4 | mở lại → banner → Resume | chạy tiếp từ ảnh 5; 4 ảnh đầu không đọc lại; 10 hàng Undone | ⚠️ chưa có |
 | AC-141 | lượt Move xong đã chuyển lịch sử upload/Backup sang đích | Undo Move xong | lịch sử upload, download và sổ Backup trỏ lại đường dẫn cũ (`ServerFileHistory`) | ⚠️ chưa có |
-| AC-142 | DB có 20 lượt đã xong + 1 lượt dở | lượt thứ 21 xong | lượt xong cũ nhất cùng các hàng bị xoá khỏi DB; lượt dở còn; Activity liệt kê 20 lượt xong qua lần mở app sau | ⚠️ chưa có |
+| AC-142 | DB có 20 lượt đã xong + 1 lượt dở | lượt thứ 21 xong | lượt xong cũ nhất cùng các hàng bị xoá khỏi DB; lượt dở còn; Activity liệt kê 20 lượt xong qua lần mở app sau | ⚠️ một phần — DB: `CommonPhotosStoreTests.keepsTwentyFinishedRuns` (+ `unfinishedUndoKeepsItsGroup`, `sameSecondRunsKeepTheirOrder`, `discardTakesItsUndoRuns`); Activity ở U8 |
 | AC-143 | Mac, Activity có lượt đã xong | Show Log → Undo Copy… → Undo | hộp xác nhận (Cancel mặc định) và cửa sổ khớp board `MAC_CommonPhotosRun` / `MAC_Activity` sáng và tối; e2e trên SMB ảo: A, B, đích như AC-131/134 | ⚠️ chưa có |
 
 Kiểm thêm khi `/verify`: folder chung nằm trong folder nguồn → sheet báo lỗi, nút chạy mờ; 1 folder → mục ẩn ở menu chuột phải; lịch

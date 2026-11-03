@@ -149,4 +149,173 @@ import Testing
         #expect(try store.run(id: "R1") != nil)
         #expect(try store.items(runId: "R1").count == 1)
     }
+
+    // MARK: Undo (FS-19.08 §6b)
+
+    private func finishedRun(_ store: CommonPhotosStore, id: String, createdAt: Int = 1,
+                             statuses: [CommonPhotosItem.Status] = [.copied, .skipped, .copied, .failed]) throws {
+        let items = statuses.enumerated().map { index, status in
+            var item = CommonPhotosItem(runId: id, position: index, sha256: "s\(index)", size: 10,
+                                        sources: [source("A/\(index).jpg"), source("B/\(index).jpg")], status: status,
+                                        destinationPath: "C/\(index).jpg", updatedAt: 1)
+            if index == 0 {
+                item.sidecarPlaced = "C/0.xmp"
+                item.sidecarSHA256 = "x0"
+            }
+            return item
+        }
+        try store.start(CommonPhotosRun(id: id, connectionId: "S1", folders: ["A", "B"], destination: "C",
+                                        action: .copy, createdAt: createdAt), items: items)
+        try store.markState(.finished, runId: id, now: createdAt)
+    }
+
+    /// An undo is a run of its own over the Copied and Moved rows, each a
+    /// waiting copy keeping its position and what the run recorded.
+    @Test func undoRunCopiesUndoableRows() throws {
+        let store = try store()
+        try finishedRun(store, id: "R1")
+
+        let undo = try store.startUndo(of: "R1", id: "U1", now: 50)
+
+        #expect(undo.undoOf == "R1")
+        #expect(undo.action == .copy && undo.destination == "C" && undo.folders == ["A", "B"])
+        #expect(try store.run(id: "U1")?.undoOf == "R1")
+        let items = try store.items(runId: "U1")
+        #expect(items.map(\.position) == [0, 2])
+        #expect(items.allSatisfy { $0.status == .pending && $0.reason == nil })
+        #expect(items[0].sidecarPlaced == "C/0.xmp" && items[0].sidecarSHA256 == "x0")
+        #expect(items[0].destinationPath == "C/0.jpg")
+        // The run's own rows are untouched until the undo does its work.
+        #expect(try store.items(runId: "R1").map(\.status) == [.copied, .skipped, .copied, .failed])
+        #expect(try store.unfinishedRuns().map(\.id) == ["U1"])
+    }
+
+    @Test func undoSelectedRowsOnly() throws {
+        let store = try store()
+        try finishedRun(store, id: "R1")
+
+        try store.startUndo(of: "R1", positions: [1, 2], id: "U1")
+
+        // Row 1 is Skipped: never undone.
+        #expect(try store.items(runId: "U1").map(\.position) == [2])
+    }
+
+    @Test func undoRefusals() throws {
+        let store = try store()
+        try store.start(CommonPhotosRun(id: "going", connectionId: "S1", folders: ["A", "B"], destination: "C", action: .copy),
+                        items: [CommonPhotosItem(runId: "going", position: 0, sha256: "a", size: 1, sources: [source("A/a")], status: .copied)])
+        #expect(throws: CommonPhotosStore.UndoRefusal.notOver) { try store.startUndo(of: "going") }
+
+        try finishedRun(store, id: "R1", statuses: [.skipped, .failed])
+        #expect(throws: CommonPhotosStore.UndoRefusal.nothingToUndo) { try store.startUndo(of: "R1") }
+
+        try finishedRun(store, id: "R2")
+        try store.startUndo(of: "R2", positions: [0], id: "U1")
+        // One undo at a time per run; an undo is never undone.
+        #expect(throws: CommonPhotosStore.UndoRefusal.undoUnfinished) { try store.startUndo(of: "R2", positions: [2]) }
+        try store.markState(.finished, runId: "U1")
+        #expect(throws: CommonPhotosStore.UndoRefusal.notOver) { try store.startUndo(of: "U1") }
+        #expect(try store.startUndo(of: "R2", positions: [2]).undoOf == "R2")
+    }
+
+    /// AC-142: 20 finished runs are kept; the 21st pushes out the oldest with
+    /// its log and its undo runs. A run not over is never pushed out, and
+    /// lists past a restart.
+    @Test func keepsTwentyFinishedRuns() throws {
+        let store = try store()
+        try finishedRun(store, id: "old", createdAt: 1)
+        try store.startUndo(of: "old", id: "old-undo", now: 2)
+        try store.markState(.finished, runId: "old-undo", now: 2)
+        try store.start(CommonPhotosRun(id: "halted", connectionId: "S1", folders: ["A", "B"], destination: "C",
+                                        action: .copy, createdAt: 0), items: [])
+        try store.markState(.paused, runId: "halted")
+        for index in 2...20 { try finishedRun(store, id: "R\(index)", createdAt: index + 10) }
+        #expect(try store.keptRuns().count == 21)   // 20 groups: old + its undo, R2…R20
+        #expect(try store.run(id: "old") != nil)
+
+        try finishedRun(store, id: "R21", createdAt: 100)
+
+        #expect(try store.run(id: "old") == nil)
+        #expect(try store.run(id: "old-undo") == nil)
+        #expect(try store.items(runId: "old").isEmpty)
+        #expect(try store.run(id: "halted") != nil)
+        let recent = try store.keptRuns()
+        #expect(recent.count == 20)
+        #expect(recent.first?.id == "R21")
+        #expect(!recent.contains { $0.id == "halted" })
+    }
+
+    /// v47 columns round-trip.
+    @Test func undoColumnsRoundTrip() throws {
+        let store = try store()
+        try finishedRun(store, id: "R1")
+        let read = try #require(try store.items(runId: "R1").first)
+        #expect(read.sidecarPlaced == "C/0.xmp")
+        #expect(read.sidecarSHA256 == "x0")
+        #expect(try store.run(id: "R1")?.undoOf == nil)
+    }
+
+    /// A group with an undo still going is kept past the cut, and a stop
+    /// makes room as a finish does.
+    @Test func unfinishedUndoKeepsItsGroup() throws {
+        let store = try store()
+        try finishedRun(store, id: "old", createdAt: 1)
+        try store.startUndo(of: "old", id: "old-undo", now: 2)
+        try store.markState(.paused, runId: "old-undo")
+        for index in 2...21 { try finishedRun(store, id: "R\(index)", createdAt: index + 10) }
+        try store.start(CommonPhotosRun(id: "last", connectionId: "S1", folders: ["A", "B"], destination: "C",
+                                        action: .copy, createdAt: 99), items: [])
+        try store.markState(.stopped, runId: "last")
+
+        #expect(try store.run(id: "old") != nil)
+        #expect(try store.run(id: "old-undo") != nil)
+        // 21 over groups besides "old": R2 went when "last" stopped.
+        #expect(try store.run(id: "R2") == nil)
+        #expect(try store.run(id: "R3") != nil)
+    }
+
+    /// Runs started in the same second go in the order they were made.
+    @Test func sameSecondRunsKeepTheirOrder() throws {
+        let store = try store()
+        for index in 0...20 { try finishedRun(store, id: "R\(index)", createdAt: 5) }
+
+        #expect(try store.run(id: "R0") == nil)
+        #expect(try store.keptRuns().map(\.id) == (1...20).reversed().map { "R\($0)" })
+    }
+
+    @Test func undoOfRowsThatCannotBeUndoneIsRefused() throws {
+        let store = try store()
+        try finishedRun(store, id: "R1")
+        #expect(throws: CommonPhotosStore.UndoRefusal.nothingToUndo) { try store.startUndo(of: "R1", positions: [1, 3, 9]) }
+
+        let database = try AppDatabase.makeEmpty()
+        try database.writer.write { db in
+            try db.execute(sql: """
+                INSERT INTO common_photo_runs (id, connectionId, folders, destination, action, state, createdAt, updatedAt)
+                VALUES ('R1', 'S1', 'not json', 'C', 'copy', 'finished', 1, 1)
+                """)
+        }
+        #expect(throws: CommonPhotosStore.UndoRefusal.notOver) { try CommonPhotosStore(database: database).startUndo(of: "R1") }
+    }
+
+    /// Remove from List takes the run's undo runs, their photos and the
+    /// history records along.
+    @Test func discardTakesItsUndoRuns() throws {
+        let database = try AppDatabase.makeEmpty()
+        let store = CommonPhotosStore(database: database)
+        try finishedRun(store, id: "R1")
+        try store.startUndo(of: "R1", id: "U1")
+        try database.writer.write { db in
+            try db.execute(sql: """
+                INSERT INTO common_photo_history_moves (runId, historyTable, rowId, sourcePath, pathBefore, pathAfter)
+                VALUES ('R1', 'server_uploads', '1', 'B/0.jpg', 'B/0.jpg', 'C/0.jpg')
+                """)
+        }
+
+        try store.discard(runId: "R1")
+
+        #expect(try store.run(id: "U1") == nil)
+        #expect(try store.items(runId: "U1").isEmpty)
+        #expect(try database.reader.read { db in try Int.fetchOne(db, sql: "SELECT COUNT(*) FROM common_photo_history_moves") } == 0)
+    }
 }

@@ -169,6 +169,8 @@ struct CommonPhotosRunner: Sendable {
         defer { _ = Self.active.withLock { $0.remove(key) } }
         guard let run = try store.run(id: runId) else { throw CommonPhotosStore.RunMissing(runId: runId) }
         guard run.canResume else { throw Stop.notResumable }
+        // An undo is taken back by the undo runner, never gathered again.
+        guard !run.isUndo else { throw Stop.notResumable }
         guard CommonPhotosSelection.problem(folders: run.folders, destination: run.destination) == nil else {
             throw Stop.destinationIsASource
         }
@@ -639,30 +641,77 @@ struct CommonPhotosRunner: Sendable {
         let write = VerifiedRemoteWrite(client: client)
         let local = workDirectory.appendingPathComponent(UUID().uuidString + "-" + name)
         defer { try? FileManager.default.removeItem(at: local) }
+        var downloaded: String?
         do {
-            let downloaded = try await client.download(path, to: local, progress: { _ in })
+            let sha256 = try await client.download(path, to: local, progress: { _ in })
+            downloaded = sha256
             if let taken = destination.sizes[name.lowercased()] {
-                // Ours from an earlier try, or the same sidecar: nothing to do.
+                // Ours from an earlier try (still recorded as placed), or
+                // the same sidecar already there: nothing to do.
                 let sameSize = try taken == Int64(Data(contentsOf: local).count)
                 var same = false
-                if sameSize { same = try await client.sha256(of: target, progress: { _ in }) == downloaded }
-                if !same { item.reason = CommonPhotosItem.reason(.sidecarNotCopied) }
+                if sameSize { same = try await client.sha256(of: target, progress: { _ in }) == sha256 }
+                if !same {
+                    item.reason = CommonPhotosItem.reason(.sidecarNotCopied)
+                    try clearPlacedSidecar(&item, target: target)
+                }
                 return
             }
+            // Recorded before the write, as the photo's part is: a stop
+            // between the rename and the record must not leave undo
+            // believing someone else put it there.
+            item.sidecarPlaced = target
+            item.sidecarSHA256 = sha256
+            try record(item)
             try await write.uploadPart(local, for: target, progress: { _ in })
-            guard try await write.readBackSHA256(for: target, progress: { _ in }) == downloaded else {
+            guard try await write.readBackSHA256(for: target, progress: { _ in }) == sha256 else {
                 await write.discardPart(for: target)
                 item.reason = CommonPhotosItem.reason(.sidecarNotCopied)
+                try clearPlacedSidecar(&item, target: target)
                 return
             }
             try await write.moveIntoPlace(target, replacing: false)
             destination.sizes[name.lowercased()] = Int64(try Data(contentsOf: local).count)
         } catch {
             await write.discardPart(for: target)
+            // The record could not be written: that is not the sidecar's
+            // failure, and the run must hear it.
+            if let failure = error as? RecordFailure { throw failure.underlying }
             if error is CancellationError || Task.isCancelled { throw CancellationError() }
             if let remote = error as? RemoteFileError, remote.stopsBatch { throw error }
+            // The server still answers: keep the claim only on our bytes.
+            // (A stop above keeps it as recorded — undo removes a sidecar
+            // only while it holds the bytes recorded.)
+            if item.sidecarPlaced == target {
+                // Nil when the server could not say; .some(nil) when the
+                // name is free.
+                let size: Int64??
+                do { size = .some(try await client.fileSize(at: target)) } catch { size = nil }
+                var ours = false
+                if let known = size, known != nil, let downloaded {
+                    ours = (try? await client.sha256(of: target, progress: { _ in })) == downloaded
+                }
+                if !ours, size != nil { try? clearPlacedSidecar(&item, target: target) }
+            }
             item.reason = CommonPhotosItem.reason(.sidecarNotCopied)
         }
+    }
+
+    /// The sidecar at `target` is not this run's: undo must leave it.
+    private func clearPlacedSidecar(_ item: inout CommonPhotosItem, target: String) throws {
+        guard item.sidecarPlaced == target else { return }
+        item.sidecarPlaced = nil
+        item.sidecarSHA256 = nil
+        try record(item)
+    }
+
+    /// A store write inside `placeSidecar`, told apart from the server's
+    /// errors there: a sidecar that will not copy is noted on the photo, a
+    /// record that will not write stops the run.
+    private struct RecordFailure: Error { let underlying: Error }
+
+    private func record(_ item: CommonPhotosItem) throws {
+        do { try store.update(item) } catch { throw RecordFailure(underlying: error) }
     }
 
     /// Where a photo's sidecar goes beside `photoName` in `folder`: the

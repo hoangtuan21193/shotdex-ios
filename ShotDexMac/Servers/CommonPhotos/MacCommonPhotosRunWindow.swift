@@ -447,6 +447,7 @@ private struct MacCommonPhotosRunContent: View {
             case .copied, .moved: Image(systemName: "checkmark").fontWeight(.bold)
             case .skipped: Image(systemName: "minus.circle")
             case .failed: Image(systemName: "exclamationmark.triangle")
+            case .undone: Image(systemName: "arrow.uturn.backward")
             case .copying, .moving, .placed: ProgressView().controlSize(.mini)
             case .pending: EmptyView()
             }

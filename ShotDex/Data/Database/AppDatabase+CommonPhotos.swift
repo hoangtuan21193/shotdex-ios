@@ -57,4 +57,38 @@ extension AppDatabase {
             }
         }
     }
+
+    /// FS-19.08 §6b: undo. An undo is a run of its own (`undoOf` names the
+    /// run it takes back), so it pauses, resumes and shows in Activity like
+    /// any run. A photo records the sidecar this run put in the destination,
+    /// since only that one may go on undo; and a Move records which history
+    /// row it moved from which copy, so undo puts each back where it was.
+    static func registerCommonPhotosUndo(_ migrator: inout DatabaseMigrator) {
+        migrator.registerMigration("v47-commonPhotosUndo") { db in
+            try db.alter(table: "common_photo_runs") { t in
+                // The run this one undoes; its undo runs go with it.
+                t.add(column: "undoOf", .text).references("common_photo_runs", onDelete: .cascade)
+            }
+            try db.alter(table: "common_photo_items") { t in
+                // The `.xmp` this run wrote beside the photo, recorded before
+                // the write, and its SHA-256.
+                t.add(column: "sidecarPlaced", .text)
+                t.add(column: "sidecarSHA256", .text)
+            }
+            try db.create(table: "common_photo_history_moves") { t in
+                t.autoIncrementedPrimaryKey("id")
+                t.column("runId", .text).notNull()
+                    .references("common_photo_runs", onDelete: .cascade)
+                // server_shortcuts · server_uploads · server_downloads · backup_ledger
+                t.column("historyTable", .text).notNull()
+                // The history row's id, as text (shortcut ids are text).
+                t.column("rowId", .text).notNull()
+                // The copy whose removal moved the row.
+                t.column("sourcePath", .text).notNull()
+                t.column("pathBefore", .text).notNull()
+                t.column("pathAfter", .text).notNull()
+            }
+            try db.create(index: "common_photo_history_moves_run", on: "common_photo_history_moves", columns: ["runId"])
+        }
+    }
 }
