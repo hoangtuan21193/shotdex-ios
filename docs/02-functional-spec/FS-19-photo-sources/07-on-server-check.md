@@ -235,6 +235,10 @@ Quy tắc khớp (§3) và xoá (§9) **giữ nguyên**; mục này chỉ đổi
 - **Kiểm ngẫu nhiên** (người dùng 2026-11-03): mỗi lượt kiểm, mỗi máy gửi, iPhone/iPad tự băm lại **K** file chọn
   ngẫu nhiên trong những file mà SHA từ máy đó đang làm một mục khớp **is**. Đó là file NAS hoặc file Photos.
   **K = 10** mỗi máy gửi mỗi lượt (người dùng 2026-11-03); ít hơn 10 file như vậy thì kiểm hết.
+  - Chạy sau vòng băm, trước gộp ảnh (merge). Chỉ chọn file đọc được lúc này: ảnh iCloud khi luật Wi‑Fi/sạc cho phép,
+    file NAS của nguồn đang mở; ảnh Photos phải có danh sách file còn mới (chưa sửa sau lần liệt kê); file > 1 GB
+    không đưa vào mẫu. Đọc không được thì bỏ qua, không tính là lệch.
+  - File đọc lại khớp thì từ đó là SHA của máy này.
 - **Lệch một file:**
   - Bỏ **mọi** SHA nhận từ máy đó và chưa được tự băm lại, ở cả hai kênh. Các mục đó quay về "chưa kiểm xong" rồi máy
     tự băm.

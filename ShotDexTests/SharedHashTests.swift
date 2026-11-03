@@ -491,5 +491,206 @@ import Testing
         secure.usesTLS = true
         #expect(ServerIdentity.key(plain) != ServerIdentity.key(secure))
     }
+
+    // MARK: Random check (§12.4)
+
+    /// `count` server files whose hashes came from the Mac, each matching a
+    /// Photos file hashed here.
+    @MainActor
+    private static func matched(_ count: Int, from device: String = "MAC", hashedAt: Int = 100) throws -> OnServerFixture {
+        let f = try OnServerFixture(photos: count)
+        let store = CopyFileStore(database: f.database)
+        for n in 0..<count {
+            let sha = String(format: "%064x", n + 1)
+            try f.photo(n, files: [("1:p\(n).HEIC", .photo, 20, sha)])
+            try f.server("Shared/s\(n).HEIC", size: 20, sha: nil)
+            try store.saveHash(sha, copyId: "server:Shared/s\(n).HEIC", fileKey: "primary", origin: .shared, sharedFrom: device,
+                               hashedAt: Date(timeIntervalSince1970: TimeInterval(hashedAt)), at: Date(timeIntervalSince1970: 200))
+        }
+        return f
+    }
+
+    private static func origins(_ f: OnServerFixture) async throws -> [String: Int] {
+        try await f.database.reader.read { db in
+            Dictionary(uniqueKeysWithValues: try Row.fetchAll(db, sql: """
+                SELECT COALESCE(origin, 'none') AS origin, COUNT(*) AS n FROM copy_files
+                WHERE copyId LIKE 'server:%' GROUP BY 1
+                """).map { ($0["origin"] as String, $0["n"] as Int) })
+        }
+    }
+
+    /// AC-152: of 12 files matched on the Mac's word, exactly 10 are read
+    /// here; all agree, so every match stands and the 10 are now this
+    /// device's own hashes.
+    @MainActor
+    @Test func auditsTen() async throws {
+        let f = try Self.matched(12)
+        let read = ReadLog()
+        let pass = SharedHashAuditPass(store: CopyFileStore(database: f.database)) { file in
+            await read.add(file)
+            return file.sha256.uppercased()
+        }
+
+        let summary = try await pass.run(now: Date(timeIntervalSince1970: 500))
+
+        #expect(summary.checked == 10 && summary.caught.isEmpty && summary.dropped == 0 && summary.cleared == ["MAC"])
+        #expect(await read.files.allSatisfy { $0.kind == "server" && $0.device == "MAC" && $0.connectionId == "C1" })
+        #expect(Set(await read.files.map(\.copyId)).count == 10)
+        #expect(try await Self.origins(f) == ["hashed": 10, "shared": 2])
+    }
+
+    /// A hash that makes nothing match is not worth reading again.
+    @MainActor
+    @Test func auditSkipsUnmatched() async throws {
+        let f = try Self.matched(2)
+        try await f.database.writer.write { db in
+            try db.execute(sql: "UPDATE copy_files SET sha256 = ? WHERE copyId = 'photos:P0'", arguments: [String(repeating: "f", count: 64)])
+        }
+        #expect(try CopyFileStore(database: f.database).auditSample(device: "MAC", limit: 10).map(\.copyId) == ["server:Shared/s1.HEIC"])
+    }
+
+    /// AC-153: one of the files read here differs — the Mac's hashes up to
+    /// then all go, from iCloud and the ledger alike, and are tried again
+    /// here; one it sends later is taken (and checked the same way), one it
+    /// made before never.
+    @MainActor
+    @Test func mismatchDropsOlderHashes() async throws {
+        let f = try Self.matched(12)
+        let store = CopyFileStore(database: f.database)
+        let wrong = String(repeating: "e", count: 64)
+        let pass = SharedHashAuditPass(store: store) { _ in wrong }
+
+        let summary = try await pass.run(now: Date(timeIntervalSince1970: 500))
+
+        #expect(summary.checked == 1 && summary.caught == ["MAC"] && summary.dropped == 11)
+        #expect(try await Self.origins(f) == ["hashed": 1, "none": 11])
+        let tried = try await f.database.reader.read { db in
+            try Int.fetchOne(db, sql: "SELECT COUNT(*) FROM copy_files WHERE copyId LIKE 'server:%' AND triedAt IS NOT NULL")
+        }
+        #expect(tried == 1)
+        #expect(try store.auditDevices().isEmpty)
+        // Unmatched now, so nothing to read until the Mac sends again.
+        #expect(try await pass.run(now: Date(timeIntervalSince1970: 501)).checked == 0)
+    }
+
+    /// AC-153, later: what the Mac made after it was caught is trusted again;
+    /// what it made before is not, whichever channel brings it back.
+    @MainActor
+    @Test func newerHashesTrustedAgain() async throws {
+        let f = try OnServerFixture(photos: 1)
+        try f.photo(0, files: [("1:a.HEIC", .photo, 10, nil)])
+        try CopyFileStore(database: f.database).distrust(device: "MAC", at: Date(timeIntervalSince1970: 300))
+        let cloud = SharedIndexStore(database: f.database)
+        try cloud.saveRemote(photoHashes: [photoOffer(hashedAt: 250)], serverHashes: [])
+
+        #expect(try await Self.exchange(f).adopt(now: Date(timeIntervalSince1970: 500)) == 0)
+
+        try cloud.saveRemote(photoHashes: [photoOffer(hashedAt: 400)], serverHashes: [])
+        #expect(try await Self.exchange(f).adopt(now: Date(timeIntervalSince1970: 500)) == 1)
+        #expect(try await photoHash(f).from == "MAC")
+        #expect(try CopyFileStore(database: f.database).auditDevices() == ["MAC"])
+    }
+
+    /// A file that cannot be read now is skipped — not a mismatch — and a
+    /// source the rules hold back is not sampled at all.
+    @MainActor
+    @Test func unreadableIsNotWrong() async throws {
+        let f = try Self.matched(3)
+        let store = CopyFileStore(database: f.database)
+        var pass = SharedHashAuditPass(store: store) { _ in nil }
+        #expect(try await pass.run(now: Date(timeIntervalSince1970: 500)) == .init())
+        #expect(try await Self.origins(f) == ["shared": 3])
+
+        pass.sources = []
+        #expect(try store.auditSample(device: "MAC", limit: 10, sources: []).isEmpty)
+        #expect(try store.auditSample(device: "MAC", limit: 10, sources: [f.source]).count == 3)
+    }
+
+    /// A Photos file on the Mac's word is checked only when iCloud may be
+    /// read and its listing is current.
+    @MainActor
+    @Test func photosSideSampledWhenReadable() async throws {
+        let f = try OnServerFixture(photos: 1)
+        let store = CopyFileStore(database: f.database)
+        let sha = String(repeating: "d", count: 64)
+        try f.photo(0, files: [("1:a.HEIC", .photo, 20, nil)])
+        try f.server("Shared/a.HEIC", size: 20, sha: sha)
+        try store.saveHash(sha, copyId: "photos:P0", fileKey: "1:a.HEIC", origin: .shared, sharedFrom: "MAC",
+                           hashedAt: Date(timeIntervalSince1970: 100))
+        try await f.database.writer.write { db in
+            try db.execute(sql: "UPDATE photo_metadata SET modificationDate = (SELECT stamp FROM copy_file_listings WHERE copyId = 'photos:P0') WHERE assetId = 'P0'")
+        }
+
+        #expect(try store.auditSample(device: "MAC", limit: 10, photos: false).isEmpty)
+        #expect(try store.auditSample(device: "MAC", limit: 10).map(\.kind) == ["photos"])
+        // Changed in Photos since it was listed: not the Mac's fault if it differs.
+        try await f.database.writer.write { db in
+            try db.execute(sql: "UPDATE photo_metadata SET modificationDate = modificationDate + 1 WHERE assetId = 'P0'")
+        }
+        #expect(try store.auditSample(device: "MAC", limit: 10).isEmpty)
+    }
+
+    /// Cancelled after one device was caught: that catch is still reported.
+    @MainActor
+    @Test func cancelKeepsWhatWasCaught() async throws {
+        let f = try Self.matched(3, from: "IPAD")
+        let store = CopyFileStore(database: f.database)
+        // One file from a second device, checked first.
+        try await f.database.writer.write { db in
+            try db.execute(sql: "UPDATE copy_files SET sharedFrom = 'AMAC' WHERE copyId = 'server:Shared/s0.HEIC'")
+        }
+        let pass = SharedHashAuditPass(store: store) { file in
+            if file.device == "AMAC" {
+                withUnsafeCurrentTask { $0?.cancel() }
+                return String(repeating: "e", count: 64)
+            }
+            return file.sha256
+        }
+        let summary = try await Task { try await pass.run(now: Date(timeIntervalSince1970: 500)) }.value
+        #expect(summary == .init(checked: 1, caught: ["AMAC"]))
+    }
+
+    /// A pass that catches a device hashes again at once, and says which
+    /// device; a later check that finds its files right clears that.
+    @MainActor
+    @Test func checkHashesAgainAfterCatch() async throws {
+        let rounds = Tally()
+        let caught = Tally()
+        let check = OnServerCheck(environment: OnServerCheck.Environment(
+            serverSources: { [(id: "S1", name: "NAS Home", connectionId: "C1")] },
+            jobRules: { _ in [] },
+            conditions: { (false, false) },
+            list: { _ in true },
+            hashServer: { _, _, _ in await rounds.bump(); return .init() },
+            hashPhotos: { _ in .init() },
+            audit: { _, photos, sources in
+                #expect(photos && sources == ["S1"])
+                return await caught.bump() == 1 ? .init(checked: 1, caught: ["MAC"], dropped: 4)
+                    : .init(checked: 3, cleared: ["MAC"])
+            }
+        ))
+
+        await check.run()
+        #expect(check.caughtDevices == ["MAC"])
+        #expect(await rounds.value == 2)
+
+        await check.run()
+        #expect(check.caughtDevices.isEmpty)
+        #expect(await rounds.value == 3)
+    }
 }
 
+
+private actor ReadLog {
+    var files: [CopyFileStore.AuditFile] = []
+    func add(_ file: CopyFileStore.AuditFile) { files.append(file) }
+}
+
+private actor Tally {
+    var value = 0
+    @discardableResult
+    func bump() -> Int {
+        value += 1
+        return value
+    }
+}

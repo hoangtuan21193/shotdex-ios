@@ -453,17 +453,118 @@ struct CopyFileStore: Sendable {
     /// in. Hashes worked out here, or by Backup, stay. Returns how many went.
     @discardableResult
     func distrust(device: String, at now: Date = Date()) throws -> Int {
+        try database.writer.write { db in try Self.distrust(db, device: device, at: now) }
+    }
+
+    private static func distrust(_ db: Database, device: String, at now: Date) throws -> Int {
+        let time = Int(now.timeIntervalSince1970)
+        try db.execute(sql: """
+            INSERT INTO distrusted_hash_devices (device, since) VALUES (?, ?)
+            ON CONFLICT(device) DO UPDATE SET since = MAX(since, excluded.since)
+            """, arguments: [device, time])
+        // Unchecked again, with a clean slate of tries: hashed here next.
+        try db.execute(sql: """
+            UPDATE copy_files SET sha256 = NULL, origin = NULL, sharedFrom = NULL, hashedAt = NULL, triedAt = NULL,
+                attempts = 0
+            WHERE sharedFrom = ? AND origin IN ('shared', 'ledger') AND (hashedAt IS NULL OR hashedAt <= ?)
+            """, arguments: [device, time])
+        return db.changesCount
+    }
+
+    /// A file whose hash another device sent and which makes a photo match
+    /// right now — what the random check reads again (§12.4).
+    struct AuditFile: Equatable, Sendable {
+        var copyId: String
+        var fileKey: String
+        var sha256: String
+        var device: String
+        var size: Int64?
+        /// `photos` or `server`.
+        var kind: String
+        var assetId: String?
+        var sourceId: String?
+        var connectionId: String?
+        /// Under the source's root, for a server file.
+        var relativePath: String?
+    }
+
+    /// The devices this device holds hashes from.
+    func auditDevices() throws -> [String] {
+        try database.reader.read { db in
+            try String.fetchAll(db, sql: """
+                SELECT DISTINCT sharedFrom FROM copy_files
+                WHERE origin IN ('shared', 'ledger') AND sharedFrom IS NOT NULL AND sha256 IS NOT NULL
+                ORDER BY sharedFrom
+                """)
+        }
+    }
+
+    /// The files the random check reads at most (§12.4): the bytes it
+    /// reads are the price of the check, so the largest files sit out.
+    static let auditMaxSize: Int64 = 1 << 30
+
+    /// Up to `limit` of `device`'s hashes, picked from a random point of the
+    /// table, among those that match a file on the other side — a Photos
+    /// file listed since its photo last changed with a server file of the
+    /// same bytes, or the other way round — and that can be read now: Photos
+    /// files when `photos`, server files of `sources`.
+    func auditSample(device: String, limit: Int, photos: Bool = true, sources: Set<String>? = nil) throws -> [AuditFile] {
+        try database.reader.read { db in
+            let sourceList = sources.map(Array.init) ?? []
+            let sourceFilter = sources == nil ? "" : "AND c.sourceId IN (\(databaseQuestionMarks(count: max(sourceList.count, 1))))"
+            func fetch(_ condition: String, _ pivot: Int64, _ take: Int) throws -> [AuditFile] {
+                var arguments: StatementArguments = [device, Self.auditMaxSize, photos]
+                arguments += StatementArguments(sources == nil ? [] : (sourceList.isEmpty ? [""] : sourceList))
+                arguments += [pivot, take]
+                return try Row.fetchAll(db, sql: """
+                    SELECT f.copyId, f.fileKey, f.sha256, f.sharedFrom, f.size, c.kind, c.photoKitId, c.sourceId,
+                           s.connectionId, CASE f.fileKey WHEN 'companion' THEN c.pairedPath ELSE c.relativePath END AS path
+                    FROM copy_files f
+                    JOIN photo_copies c ON c.id = f.copyId
+                    LEFT JOIN sources s ON s.id = c.sourceId
+                    LEFT JOIN copy_file_listings l ON l.copyId = c.id
+                    LEFT JOIN photo_metadata pm ON pm.assetId = c.photoKitId
+                    WHERE f.sharedFrom = ? AND f.origin IN ('shared', 'ledger') AND f.sha256 IS NOT NULL
+                      AND f.size IS NOT NULL AND f.size <= ?
+                      AND ((? AND c.kind = 'photos' AND c.photoKitId IS NOT NULL AND l.stamp IS pm.modificationDate)
+                           OR (c.kind = 'server' AND c.missingSince IS NULL AND s.connectionId IS NOT NULL \(sourceFilter)))
+                      AND EXISTS (SELECT 1 FROM copy_files g JOIN photo_copies d ON d.id = g.copyId
+                                  WHERE g.sha256 = f.sha256
+                                    AND ((c.kind = 'photos' AND d.kind = 'server' AND d.missingSince IS NULL)
+                                         OR (c.kind = 'server' AND d.kind = 'photos')))
+                      AND f.rowid \(condition) ?
+                    ORDER BY f.rowid
+                    LIMIT ?
+                    """, arguments: arguments).map { row in
+                    AuditFile(copyId: row["copyId"], fileKey: row["fileKey"], sha256: row["sha256"], device: row["sharedFrom"],
+                              size: row["size"], kind: row["kind"], assetId: row["photoKitId"], sourceId: row["sourceId"],
+                              connectionId: row["connectionId"], relativePath: row["path"])
+                }
+            }
+            // A window of candidates from a random row on, wrapping round,
+            // then K of them at random: no sort of the whole table.
+            let window = max(limit * 20, 200)
+            let top = try Int64.fetchOne(db, sql: "SELECT MAX(rowid) FROM copy_files") ?? 0
+            let pivot = top > 0 ? Int64.random(in: 0...top) : 0
+            var pool = try fetch(">=", pivot, window)
+            if pool.count < window { pool += try fetch("<", pivot, window - pool.count) }
+            return Array(pool.shuffled().prefix(limit))
+        }
+    }
+
+    /// The random check read `copyId`'s file as `sha256`, which is not what
+    /// `device` sent: the read hash is kept, and every hash `device` sent up
+    /// to now is dropped — in one transaction, so a crash cannot keep one
+    /// without the other. Returns how many hashes were dropped.
+    func recordMismatch(_ sha256: String, copyId: String, fileKey: String, device: String, at now: Date = Date()) throws -> Int {
         let time = Int(now.timeIntervalSince1970)
         return try database.writer.write { db in
             try db.execute(sql: """
-                INSERT INTO distrusted_hash_devices (device, since) VALUES (?, ?)
-                ON CONFLICT(device) DO UPDATE SET since = MAX(since, excluded.since)
-                """, arguments: [device, time])
-            try db.execute(sql: """
-                UPDATE copy_files SET sha256 = NULL, origin = NULL, sharedFrom = NULL, hashedAt = NULL
-                WHERE sharedFrom = ? AND origin IN ('shared', 'ledger') AND (hashedAt IS NULL OR hashedAt <= ?)
-                """, arguments: [device, time])
-            return db.changesCount
+                UPDATE copy_files SET sha256 = ?, origin = 'hashed', sharedFrom = NULL, hashedAt = ?, triedAt = ?,
+                    lastError = NULL, sharedAt = NULL
+                WHERE copyId = ? AND fileKey = ?
+                """, arguments: [sha256, time, time, copyId, fileKey])
+            return try Self.distrust(db, device: device, at: now)
         }
     }
 

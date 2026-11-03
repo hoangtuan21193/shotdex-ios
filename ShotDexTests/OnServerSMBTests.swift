@@ -82,6 +82,24 @@ struct OnServerSMBTests {
             }
             #expect(rows.count == 3)
             #expect(rows.allSatisfy { $0.0 == "ledger" && $0.1 == "MAC" })
+            // §12.4 on the real share: the phone holds a Photos file with
+            // the Mac's bytes; the random check reads the server file here
+            // and finds the Mac right.
+            let ledgerSha = try await phone.f.database.reader.read { db in
+                try String.fetchOne(db, sql: "SELECT sha256 FROM copy_files WHERE origin = 'ledger' ORDER BY copyId LIMIT 1")
+            }
+            try MetadataStore(database: phone.f.database).saveBatch([PhotoMarksStoreTests.record("P0", created: 1_700_000_000)],
+                                                                     cursorAssetId: nil)
+            try phone.f.photo(0, files: [("1:a.JPG", .photo, 10, try #require(ledgerSha))])
+            let audit = SharedHashAuditPass(store: phone.store) { file in
+                let reader = Self.client()
+                try? await reader.connect()
+                let sha = try? await reader.sha256(of: ServerUploadPath.join(root, file.relativePath ?? ""), progress: { _ in })
+                await reader.disconnect()
+                return sha
+            }
+            let checked = try await audit.run()
+            #expect(checked.checked == 1 && checked.cleared == ["MAC"] && checked.caught.isEmpty)
             // The ledger is not a photo of the source.
             let copies = try await phone.f.database.reader.read { db in
                 try Int.fetchOne(db, sql: "SELECT COUNT(*) FROM photo_copies WHERE kind = 'server'")

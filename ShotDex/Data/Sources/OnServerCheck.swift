@@ -41,6 +41,10 @@ final class OnServerCheck {
         var adoptShared: @Sendable (_ now: Date) async -> Int = { _ in 0 }
         /// Queues and uploads what this device hashed, for the others.
         var publishShared: @Sendable (_ now: Date) async -> Void = { _ in }
+        /// The random check on other devices' hashes (§12.4), reading only
+        /// where the rules let this pass read — iCloud when `photos`, and
+        /// these server sources. Returns the devices caught wrong.
+        var audit: @Sendable (_ now: Date, _ photos: Bool, _ sources: Set<String>) async -> SharedHashAuditPass.Summary = { _, _, _ in .init() }
     }
 
     private let environment: Environment
@@ -54,6 +58,10 @@ final class OnServerCheck {
     private(set) var isRunning = false
     /// When a pass last went through with nothing left to do.
     private(set) var finishedAt: Date?
+    /// Devices whose hashes the random check last caught wrong (§12.4) —
+    /// their hashes were dropped and their files are read here. Cleared by
+    /// a check that reads some of their files and finds them right.
+    private(set) var caughtDevices: [String] = []
     /// Bumped after each batch, so a screen showing progress reads again.
     private(set) var generation = 0 {
         didSet { onBatch?() }
@@ -172,8 +180,34 @@ final class OnServerCheck {
         // Hashes the other devices worked out come first: what they read is
         // not read here (§12.3).
         if !Task.isCancelled, await environment.adoptShared(start) > 0 { generation &+= 1 }
-        // Batches until a round does nothing: a Photos hash can make a
-        // server file worth reading, and the other way round.
+        await hashRounds(openSources: openSources, sources: sources, start: start)
+        // The random check, once both sides are hashed (§12.4). A device
+        // caught wrong leaves files unhashed: they are read here now.
+        if !Task.isCancelled {
+            let open = Set(openSources.map(\.id).filter { waits[$0] == nil })
+            let audit = await environment.audit(start, photosWait == nil, open)
+            caughtDevices = Array(Set(caughtDevices).subtracting(audit.cleared).union(audit.caught)).sorted()
+            if !audit.caught.isEmpty {
+                generation &+= 1
+                await hashRounds(openSources: openSources, sources: sources, start: start)
+            }
+        }
+        if !Task.isCancelled, (try? await environment.merge()) ?? 0 > 0 {
+            generation &+= 1
+        }
+        if !Task.isCancelled { await environment.publishShared(start) }
+        if Task.isCancelled {
+            for source in openSources where waits[source.id] == nil { waits[source.id] = .openApp }
+            if photosWait == nil { photosWait = .openApp }
+        } else if waits.isEmpty, photosWait == nil {
+            finishedAt = now()
+        }
+    }
+
+    /// Batches until a round does nothing: a Photos hash can make a server
+    /// file worth reading, and the other way round.
+    private func hashRounds(openSources: [(id: String, connectionId: String)],
+                            sources: [(id: String, name: String, connectionId: String)], start: Date) async {
         while !Task.isCancelled {
             var didWork = false
             for source in openSources where waits[source.id] == nil {
@@ -192,16 +226,6 @@ final class OnServerCheck {
             }
             generation &+= 1
             guard didWork else { break }
-        }
-        if !Task.isCancelled, (try? await environment.merge()) ?? 0 > 0 {
-            generation &+= 1
-        }
-        if !Task.isCancelled { await environment.publishShared(start) }
-        if Task.isCancelled {
-            for source in openSources where waits[source.id] == nil { waits[source.id] = .openApp }
-            if photosWait == nil { photosWait = .openApp }
-        } else if waits.isEmpty, photosWait == nil {
-            finishedAt = now()
         }
     }
 }
@@ -305,6 +329,41 @@ extension OnServerCheck.Environment {
                 }
                 // A few batches a pass; the rest go up on the next one.
                 await indexShare.push(batches: 5)
+            },
+            audit: { now, photos, openSources in
+                let photosPass = PhotosFileHashPass(store: store, listFiles: PhotosFileHashPass.liveLister())
+                var pass = SharedHashAuditPass(store: store) { file in
+                    do {
+                        if file.kind == "photos" {
+                            guard photos, let assetId = file.assetId else { return nil }
+                            return try await photosPass.hashOne(assetId: assetId, fileKey: file.fileKey, size: file.size)
+                        }
+                        guard let sourceId = file.sourceId, openSources.contains(sourceId), let connectionId = file.connectionId,
+                              let path = file.relativePath, let server = try servers.fetch(id: connectionId) else { return nil }
+                        let client = LockedRemoteFileClient(
+                            RemoteFileClientFactory.make(for: server, password: servers.password(for: server.id) ?? ""),
+                            lock: connectionLock, connectionId: server.id, priority: .normal)
+                        // Always closed, and never held long: a NAS that stops
+                        // answering mid-read must not hold up the pass.
+                        let sha = try? await withConnectTimeout(host: server.host, seconds: 180) {
+                            try await client.connect()
+                            return try await client.sha256(of: ServerUploadPath.join(server.folder, path), progress: { _ in })
+                        }
+                        await client.disconnect()
+                        return sha
+                    } catch {
+                        // Unreadable now is not wrong: skipped, as the rules say.
+                        return nil
+                    }
+                }
+                pass.photos = photos
+                pass.sources = openSources
+                do { return try await pass.run(now: now) } catch {
+                    if !(error is CancellationError) {
+                        OnServerCheck.logger.error("audit: \(error.localizedDescription, privacy: .public)")
+                    }
+                    return .init()
+                }
             }
         )
     }

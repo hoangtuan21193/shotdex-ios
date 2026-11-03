@@ -105,6 +105,17 @@ struct PhotosFileHashPass: Sendable {
 extension PhotosFileHashPass {
     enum ListError: Error { case missingAsset }
 
+    /// One file read here on its own — the random check (FS-19.07 §12.4).
+    /// Nil when it would leave the device short of space, as for any
+    /// candidate.
+    func hashOne(assetId: String, fileKey: String, size: Int64?) async throws -> String? {
+        if let free = freeBytes(), free - (size ?? Self.unknownSizeAllowance) < BackupRunner.minimumFreeBytes { return nil }
+        try FileManager.default.createDirectory(at: workDirectory, withIntermediateDirectories: true)
+        let url = try await download(assetId, fileKey, workDirectory)
+        defer { try? FileManager.default.removeItem(at: url) }
+        return try FileChecksum.sha256(of: url)
+    }
+
     /// One original out of Photos into the folder, streamed — fetched from
     /// iCloud when the device holds only the Optimize Storage proxy.
     static func liveDownloader() -> @Sendable (String, String, URL) async throws -> URL {
