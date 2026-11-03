@@ -27,7 +27,7 @@ này là trí nhớ của loop: mỗi vòng đọc nó trước khi làm, ghi l�
 
 | Task | Trạng thái | Commit | Ghi chú |
 |---|---|---|---|
-| R1 | chưa | | |
+| R1 | xong | (commit này) | test khoá AC-177…180 (`CommonPhotosReviewTests`, 6 test) + e2e SMB `changedAfterScanOnTheServer`; fake `move` giữ ngày sửa như SMB/WebDAV. Review: thêm ca bản đầu (A) đổi, sidecar, kiểm server; e2e chờ 2.1 s cho share giữ ngày sửa 2 giây |
 | R2 | chưa | | |
 | R3 | chưa | | |
 | R4 | chưa | | |

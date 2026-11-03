@@ -6,7 +6,7 @@
 | Intent | [2026-11-04-common-photos-compare-before-run](../_intents/2026-11-04-common-photos-compare-before-run.md) |
 | Commit spec | `eb90a39c` (intent `2bc06c36`) |
 | Ngày | 2026-11-04 |
-| Trạng thái | đã duyệt (2026-11-04) |
+| Trạng thái | đang làm — R1 xong (loop: [FS1908_REVIEW_LOOP.md](FS1908_REVIEW_LOOP.md)) |
 
 ## 1. Hiểu đúng chưa
 

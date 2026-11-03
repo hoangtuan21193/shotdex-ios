@@ -308,6 +308,8 @@ final class InMemoryRemoteFileClient: RemoteFileClient, @unchecked Sendable {
                 }
             } else {
                 storage[destination] = storage.removeValue(forKey: source)
+                // A rename keeps the write time, as SMB and WebDAV MOVE do.
+                if let date = modified.removeValue(forKey: source) { modified[destination] = date }
             }
         }
         if failMoveAfterDoing {

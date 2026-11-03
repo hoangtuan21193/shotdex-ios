@@ -131,6 +131,59 @@ struct CommonPhotosSMBTests {
         try await smb.removeFolderTree(root)
     }
 
+    /// AC-179 on the real server: after the scan, B's copy of IMG_0002 is
+    /// rewritten — same size, other bytes. That photo fails "changed on the
+    /// server" and B keeps the new file; the other two are moved.
+    @Test func changedAfterScanOnTheServer() async throws {
+        let smb = client()
+        try await smb.connect()
+        defer { Task { await smb.disconnect() } }
+        let root = "photos/e2e-changed-\(UUID().uuidString.prefix(8))"
+        let work = FileManager.default.temporaryDirectory.appendingPathComponent("CommonPhotosSMB-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: work, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: work) }
+        do {
+            try await seedMoveFolders(smb, root: root, work: work)
+            let folders = ["\(root)/A", "\(root)/B"]
+            let listing = try await CommonPhotosScanner(client: smb).list(folders)
+            let photos = try await CommonPhotosVerifier(client: smb).verify(CommonPhotosMatcher.preview(listing.files), folders: folders)
+            let store = CommonPhotosStore(database: try AppDatabase.makeEmpty())
+            try store.start(CommonPhotosRun(id: "move", connectionId: "smb", folders: folders, destination: "\(root)/C", action: .move),
+                            items: CommonPhotosRunner.items(for: photos, runId: "move", folders: folders,
+                                                            files: listing.files, sidecars: listing.sidecars))
+            // Rewrite B's copy: one byte flipped, over 2 s later so the write time moves even on a
+            // share that keeps 2-second times.
+            let changedPath = "\(root)/B/copy of IMG_0002.JPG"
+            var bytes = try Data(contentsOf: work.appendingPathComponent("IMG_0002.JPG"))
+            bytes[bytes.count / 2] ^= 0xFF
+            let rewritten = work.appendingPathComponent("rewritten.JPG")
+            try bytes.write(to: rewritten)
+            try await Task.sleep(for: .seconds(2.1))
+            try await smb.remove(changedPath)
+            try await smb.upload(rewritten, to: changedPath, progress: { _ in })
+
+            try await CommonPhotosRunner(client: smb, store: store, workDirectory: work).run("move")
+
+            let items = try store.items(runId: "move")
+            let changed = try #require(items.first { $0.sources.contains { $0.path == changedPath } })
+            #expect(changed.status == .failed)
+            #expect(changed.failure?.reason == .changedOnServer)
+            #expect(items.filter { $0.status == .moved }.count == 2)
+            let after = work.appendingPathComponent("after.JPG")
+            _ = try await smb.download(changedPath, to: after, progress: { _ in })
+            #expect(try Data(contentsOf: after) == bytes)
+            // A's copy was renamed into C before B's was checked: it is there, whole, not removed.
+            let original = try Data(contentsOf: work.appendingPathComponent("IMG_0002.JPG"))
+            let kept = work.appendingPathComponent("kept.JPG")
+            _ = try await smb.download("\(root)/C/IMG_0002.JPG", to: kept, progress: { _ in })
+            #expect(try Data(contentsOf: kept) == original)
+        } catch {
+            try? await smb.removeFolderTree(root)
+            throw error
+        }
+        try await smb.removeFolderTree(root)
+    }
+
     /// A scratch tree for a Move: 4 of Tuấn's photos in `A/2025`, the first
     /// 3 also in `B` under other names.
     private func seedMoveFolders(_ smb: SMBFileClient, root: String, work: URL) async throws {
