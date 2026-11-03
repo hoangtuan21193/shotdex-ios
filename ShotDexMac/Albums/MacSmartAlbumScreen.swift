@@ -4,7 +4,9 @@ import SwiftUI
 /// A smart album in the Library window (board `MAC_SmartAlbum`, FS-19.07 §11):
 /// the read-only conditions and the On Server line under the toolbar, the
 /// grid with the "on server" glyph, and Delete (⌘⌫) through the gate that
-/// asks the server first (§9).
+/// asks the server first (§9). A selection with a folder or server copy goes
+/// through the sources instead (FS-19.04 §2), as on iOS: a server copy is
+/// hidden in ShotDex, never deleted on the server.
 struct MacSmartAlbumScreen: View {
     let album: SmartAlbum
     var edit: () -> Void
@@ -13,6 +15,7 @@ struct MacSmartAlbumScreen: View {
     @State private var selection: Set<String> = []
     @State private var onServer: Set<String> = []
     @State private var deletion = PhotoDeletionFlow()
+    @State private var sourceDeletion: DeletionTargetQueries.Request?
     @State private var deleteError: String?
     /// The first load has finished; until then an empty list means "not yet".
     @State private var hasLoaded = false
@@ -51,6 +54,10 @@ struct MacSmartAlbumScreen: View {
             }
         }
         .photoDeletionPrompts(deletion)
+        .sourceDeletion($sourceDeletion, context: dependencies.sourceDeletion) { removed, _ in
+            model?.removeDeleted(ids: removed)
+            selection.subtract(removed)
+        }
         .alert(String(localized: "Couldn't Delete", comment: "Mac: a delete failed"),
                isPresented: Binding(get: { deleteError != nil }, set: { if !$0 { deleteError = nil } })) {
             Button(String(localized: "OK", comment: "Delete: dismiss"), role: .cancel) {}
@@ -135,6 +142,14 @@ struct MacSmartAlbumScreen: View {
     private func delete() {
         guard let model, !selection.isEmpty else { return }
         let ids = Array(selection)
+        // Folder and server photos have no PHAsset: PhotoKit alone would
+        // drop them and report success (FS-19.04 §2).
+        let roots = dependencies.folderRoots
+        if let request = try? DeletionTargetQueries(database: dependencies.database, hasTrash: { roots.hasTrash($0) })
+            .request(photoIds: ids, selection: .photos) {
+            sourceDeletion = request
+            return
+        }
         deletion.delete(ids, gate: dependencies.photoDeletionGate, perform: { targets in
             try await model.deleteAssets(ids: Set(targets), checkingServer: false)
         }, finished: { result in

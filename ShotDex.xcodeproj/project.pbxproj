@@ -485,7 +485,7 @@
 				Features/Shared/ShareLevelRow.swift,
 				Features/Shared/ShareWatermarkContext.swift,
 				Features/Shared/SizeMeasurement.swift,
-				Features/Shared/SourceDeletionFlow.swift,
+				"Features/Shared/SourceDeletionFlow+App.swift",
 				Features/Shared/ToolChromeEnvironment.swift,
 				Features/Shared/UnsupportedRAWBatchPrompt.swift,
 				Features/Sources/AddSourceSheet.swift,

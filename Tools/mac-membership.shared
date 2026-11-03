@@ -11,3 +11,4 @@ Features/Albums/SmartAlbumDetailModel.swift
 Features/Albums/AlbumSortOrder.swift
 Features/Albums/SmartAlbumRuleRow.swift
 Features/Shared/PhotoDeletionFlow.swift
+Features/Shared/SourceDeletionFlow.swift

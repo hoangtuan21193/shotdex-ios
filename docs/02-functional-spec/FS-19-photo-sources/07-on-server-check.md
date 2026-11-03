@@ -166,6 +166,9 @@ Người dùng 2026-11-02: Mac ưu tiên quản lý ảnh — smart album "đã 
   **On Server** — mỗi file một dòng `NAS Home` + đường dẫn.
 - **Xoá:** chọn trong album → Delete (⌘⌫) hoặc chuột phải › Delete N Photos… — đi qua `PhotoDeletionGate` như ba lối
   đợt 1; alert là `NSAlert` (Delete Anyway đỏ, Cancel mặc định). Mọi lối xoá Photos khác trên Mac cũng qua cổng (N2).
+  Lựa chọn có ảnh mang bản sao thư mục hoặc server (không có PHAsset) đi qua nguồn như iOS
+  ([FS-19.04 §2](04-deleting-and-duplicates.md)): file vào Thùng rác, bản trên NAS chỉ **Hide** trong ShotDex — không bao giờ xoá trên
+  server. Trước đây (tới 2026-11-04) Mac chỉ gọi PhotoKit, nên ảnh chỉ có trên NAS bị bỏ qua mà vẫn báo xong.
 - **Ngoài phạm vi trên Mac lúc này:** Free Up Space (FS-15.02c) — chưa có màn Mac.
 
 AC: [07b §3](07b-on-server-check-ac.md#3-mac).

@@ -186,6 +186,26 @@ final class MacDependencies: LibraryServices {
                                lock: connectionLock, connectionId: server.id, priority: .normal)
     }
 
+    /// Move / Delete / Hide across sources (FS-19.04), as on iOS: Photos
+    /// through PhotoKit's dialog, files to the Trash of their volume, NAS
+    /// copies hidden — never deleted on the server.
+    var sourceDeletion: SourceDeletionContext {
+        let database = database
+        let photoLibrary = photoLibrary
+        let roots = folderRoots
+        return SourceDeletionContext(
+            makeService: {
+                DeletionService(
+                    database: database,
+                    deletePhotosAssets: { ids in try await photoLibrary.deleteAssetsCheckingServer(PhotoLibraryService.fetchAssets(ids: ids)) },
+                    root: { roots.root($0) }
+                )
+            },
+            makeQueries: { DeletionTargetQueries(database: database, hasTrash: { roots.hasTrash($0) }) },
+            showBanner: nil
+        )
+    }
+
     static func live() -> MacDependencies {
         let database: AppDatabase
         do {
