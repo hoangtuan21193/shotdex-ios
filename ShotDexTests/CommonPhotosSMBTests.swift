@@ -148,8 +148,7 @@ struct CommonPhotosSMBTests {
     }
 
     /// AC-134 on the real server: Move, then Undo Move — A's copies renamed
-    /// back, B's written back under their own names, `C` left with only the
-    /// run's CSV; the tree reads as before the Move.
+    /// back, B's written back under their own names, `C` left empty; the tree reads as before the Move.
     @Test func undoMoveOnTheServer() async throws {
         let smb = client()
         try await smb.connect()
@@ -174,7 +173,7 @@ struct CommonPhotosSMBTests {
 
             #expect(try store.items(runId: "undo").map(\.status) == [.undone, .undone, .undone])
             let left = try await smb.entries(in: "\(root)/C").map(\.name)
-            #expect(left.count == 1 && left.allSatisfy { $0.hasSuffix(".csv") })
+            #expect(left.isEmpty)
             let after = try await scanner.list(folders)
             #expect(after.files.map { $0.map(\.relativePath).sorted() } == before.files.map { $0.map(\.relativePath).sorted() })
             let again = try await CommonPhotosVerifier(client: smb).verify(CommonPhotosMatcher.preview(after.files), folders: folders)
@@ -187,7 +186,8 @@ struct CommonPhotosSMBTests {
     }
 
     /// AC-131 on the real server: Copy the 8 shared photos into a fresh
-    /// folder, then Undo Copy — the folder holds only the run's CSV, and
+    /// folder, then Undo Copy — the folder is left empty (the run's CSV goes
+    /// too), and
     /// Tuấn and Vợ are as they were.
     @Test func undoCopyOnTheServer() async throws {
         let smb = client()
@@ -213,7 +213,8 @@ struct CommonPhotosSMBTests {
         }
 
         let left = try await smb.entries(in: destination).map(\.name)
-        #expect(left.count == 1 && left.allSatisfy { $0.hasSuffix(".csv") })
+        // Every photo taken back: the run's CSV went too.
+        #expect(left.isEmpty)
         #expect(try store.items(runId: "U1").count == 8)
         #expect(try store.items(runId: "U1").allSatisfy { $0.status == .undone })
         #expect(try store.items(runId: "R1").allSatisfy { $0.status == .undone })

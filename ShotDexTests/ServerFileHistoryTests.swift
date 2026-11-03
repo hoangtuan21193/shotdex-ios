@@ -103,6 +103,53 @@ import Testing
         #expect(ServerIdentity.sameFiles(dav, FileServer(name: "e", transferProtocol: .webdav, host: "nas.local", username: "x", share: "dav")))
         #expect(!ServerIdentity.sameFiles(dav, FileServer(name: "f", transferProtocol: .webdav, host: "nas.local", username: "me", share: "other")))
     }
+
+    /// AC-141: a Move's finish records which history row came from which
+    /// copy; undo puts each row back where it was — A's to A, B's to B — and
+    /// a copy not written back keeps its rows at the destination.
+    @Test(arguments: [true, false])
+    func undoPutsEachRowBack(bothBack: Bool) throws {
+        let database = try AppDatabase.makeEmpty()
+        let servers = FileServerStore(database: database, passwords: InMemoryPasswordStore())
+        let uploads = ServerUploadStore(database: database)
+        let nas = FileServer(name: "NAS", transferProtocol: .smb, host: "nas.local", username: "me", folder: "photos")
+        try servers.save(nas, password: "pw")
+        try uploads.record(upload("1", "A/IMG_1.JPG", on: nas))
+        try uploads.record(upload("2", "B/IMG_1.JPG", on: nas))
+        try database.writer.write { db in
+            try db.execute(sql: """
+                INSERT INTO backup_jobs (id, sourceId, connectionId, folder, sourceFolder, settings, sortOrder, createdAt)
+                VALUES ('J1', 'photos-library', ?, 'B', '', '{}', 0, 1)
+                """, arguments: [nas.id])
+            try db.execute(sql: """
+                INSERT INTO backup_ledger (jobId, itemKey, resourceKey, sourceStamp, remotePath, outcome, attempts, recordedAt)
+                VALUES ('J1', 'b', 'photo', 's', 'B/IMG_1.JPG', 'uploaded', 1, 1)
+                """)
+        }
+        let store = CommonPhotosStore(database: database)
+        try store.start(CommonPhotosRun(id: "R1", connectionId: nas.id, folders: ["A", "B"], destination: "C", action: .move), items: [])
+        let history = ServerFileHistory(database: database)
+
+        let moved = try history.move([(from: "A/IMG_1.JPG", to: "C/IMG_1.JPG"), (from: "B/IMG_1.JPG", to: "C/IMG_1.JPG")], on: nas) { db, rows in
+            try CommonPhotosStore.recordHistoryMoves(db, runId: "R1", rows: rows)
+        }
+
+        #expect(moved.count == 3)
+        #expect(Set(moved.map(\.sourcePath)) == ["A/IMG_1.JPG", "B/IMG_1.JPG"])
+        #expect(try store.historyMoves(runId: "R1").count == 3)
+        #expect(try uploads.uploads(assetId: "2").map(\.remotePath) == ["C/IMG_1.JPG"])
+
+        let restored: Set<String> = bothBack ? ["A/IMG_1.JPG", "B/IMG_1.JPG"] : ["A/IMG_1.JPG"]
+        try store.restoreHistory(runId: "R1", restored: restored, history: history)
+        // Again, as after a quit between the restore and the cleanup.
+        try store.restoreHistory(runId: "R1", restored: restored, history: history)
+
+        let ledger = try database.reader.read { db in try String.fetchOne(db, sql: "SELECT remotePath FROM backup_ledger") }
+        #expect(try uploads.uploads(assetId: "1").map(\.remotePath) == ["A/IMG_1.JPG"])
+        #expect(try uploads.uploads(assetId: "2").map(\.remotePath) == [bothBack ? "B/IMG_1.JPG" : "C/IMG_1.JPG"])
+        #expect(ledger == (bothBack ? "B/IMG_1.JPG" : "C/IMG_1.JPG"))
+        #expect(try store.historyMoves(runId: "R1").count == (bothBack ? 0 : 2))
+    }
 }
 
 /// FS-15.02 §8 — FS-15 AC-49: Uploaded to Server lists where the copies are.

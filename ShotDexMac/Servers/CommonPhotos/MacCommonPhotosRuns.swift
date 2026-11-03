@@ -414,7 +414,11 @@ final class MacCommonPhotosRuns {
         let refresh = refresh
         return { [weak self] run, changes in
             let owner = self
-            try ServerFileHistory(database: database).move(changes.map { (from: $0.from, to: $0.to) }, on: server)
+            // Recorded in the same write: an undo puts each row back
+            // where it was (FS-19.08 §6b).
+            try ServerFileHistory(database: database).move(changes.map { (from: $0.from, to: $0.to) }, on: server) { db, rows in
+                try CommonPhotosStore.recordHistoryMoves(db, runId: run.id, rows: rows)
+            }
             let store = SourceStore(database: database)
             let names = Dictionary(uniqueKeysWithValues: try store.sources().map { ($0.id, $0.name) })
             let sources = try store.serverConnections().compactMap { sourceId, connectionId in

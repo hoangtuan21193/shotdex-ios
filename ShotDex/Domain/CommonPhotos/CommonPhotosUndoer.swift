@@ -1,3 +1,4 @@
+import CryptoKit
 import Foundation
 
 /// Carries out an undo run (FS-19.08 §6b): takes back what a common-photos
@@ -31,6 +32,15 @@ struct CommonPhotosUndoer: Sendable {
     let workDirectory: URL
     /// Free bytes on this Mac; nil = unknown.
     var freeBytes: @Sendable () -> Int64? = { nil }
+    /// After the last row and the CSV: put back the upload, download and
+    /// Backup history, rescan. `restored` is every source path the undo's
+    /// rows hold as not removed; only those a Move recorded moving history
+    /// from are acted on (`CommonPhotosStore.restoreHistory`). Thrown errors leave the undo `finishing`, so Resume does it
+    /// again.
+    var afterUndo: @Sendable (CommonPhotosRun, Set<String>) async throws -> Void = { _, _ in }
+    /// Now, and the zone it is told in, for the CSV's name.
+    var now: @Sendable () -> Date = { Date() }
+    var timeZone: TimeZone = .current
 
     typealias Progress = CommonPhotosRunner.Progress
     typealias Stop = CommonPhotosRunner.Stop
@@ -71,11 +81,71 @@ struct CommonPhotosUndoer: Sendable {
                 progress(state)
             }
             try store.markState(.finishing, runId: runId)
-            try store.markState(.finished, runId: runId)
+            let csvPath = try await writeLog(items, run: run, originalId: originalId)
+            let restored = Set(items.flatMap { $0.sources.filter { !$0.isRemoved }.map(\.path) })
+            try await afterUndo(run, restored)
+            try store.markState(.finished, runId: runId, csvPath: csvPath)
         } catch {
             if let state = try? store.run(id: runId)?.state, state != .finishing { try? store.markState(.paused, runId: runId) }
             throw error
         }
+    }
+
+    // MARK: CSV
+
+    /// Every photo of the run taken back: the run's CSV goes, with the CSVs
+    /// of earlier undos of it. Otherwise this undo's rows go in
+    /// `… Undo.csv` beside the photos, through the same verified write;
+    /// written once — a Resume finds the one it recorded.
+    private func writeLog(_ items: [CommonPhotosItem], run: CommonPhotosRun, originalId: String) async throws -> String? {
+        if !(try store.items(runId: originalId)).contains(where: \.isUndoable) {
+            let runs = ([try store.run(id: originalId)] + (try store.undoRuns(of: originalId)).filter { $0.id != run.id })
+                .compactMap { $0 }.filter { $0.csvPath != nil }
+            for log in runs {
+                guard let path = log.csvPath, try await isOurLog(path, destination: run.destination) else { continue }
+                try await client.remove(path)
+            }
+            try store.forgetCSVs(runIds: runs.map(\.id))
+            return nil
+        }
+        let recorded = try store.run(id: run.id)?.csvPath
+        if let recorded, try await isOurLog(recorded, destination: run.destination) { return recorded }
+        // The folder may be gone (the user deleted it): the log still goes
+        // where the photos went.
+        try await client.createDirectory(run.destination)
+        let names = Set(try await client.entries(in: run.destination).map(\.name))
+        let target = recorded ?? ServerUploadPath.join(run.destination, ServerUploadPath.nextFreeName(
+            for: CommonPhotosLog.undoCSVName(at: now(), timeZone: timeZone), existing: names))
+        try store.markState(.finishing, runId: run.id, csvPath: target)
+        try FileManager.default.createDirectory(at: workDirectory, withIntermediateDirectories: true)
+        let local = workDirectory.appendingPathComponent(UUID().uuidString + ".csv")
+        defer { try? FileManager.default.removeItem(at: local) }
+        let data = Data(CommonPhotosLog.csv(items, isUndo: true).utf8)
+        try data.write(to: local)
+        let write = VerifiedRemoteWrite(client: client)
+        do {
+            try await write.uploadPart(local, for: target, progress: { _ in })
+            guard try await write.readBackSHA256(for: target, progress: { _ in }) == FileChecksum.hex(SHA256.hash(data: data)) else {
+                throw RemoteFileError.other("checksum mismatch")
+            }
+            try await write.moveIntoPlace(target, replacing: false)
+        } catch {
+            await write.discardPart(for: target)
+            throw error
+        }
+        return target
+    }
+
+    /// Whether `path` is still a log a run wrote: in the destination, named
+    /// as ShotDex names its logs, starting with their header. A file the
+    /// user put under that name is left alone.
+    private func isOurLog(_ path: String, destination: String) async throws -> Bool {
+        let name = ServerUploadPath.lastComponent(of: path)
+        guard CommonPhotosServerChecks.comparable(ServerUploadPath.parent(of: path)) == CommonPhotosServerChecks.comparable(destination),
+              name.hasPrefix("ShotDex Common Photos "), name.lowercased().hasSuffix(".csv"),
+              try await client.fileSize(at: path) != nil else { return false }
+        let header = Data(CommonPhotosLog.csv([]).utf8)
+        return try await client.readRange(path, offset: 0, length: header.count) == header
     }
 
     // MARK: Undo Move

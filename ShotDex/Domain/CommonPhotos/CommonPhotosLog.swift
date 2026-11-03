@@ -41,11 +41,13 @@ enum CommonPhotosLog {
     /// a script or another Mac reads it the same; a UTF-8 BOM so Excel shows
     /// `Tuấn` as written; names from the server that would read as a formula
     /// (`=`, `+`, `-`, `@`) start with `'`.
-    static func csv(_ items: [CommonPhotosItem]) -> String {
+    /// An undo's CSV (`isUndo`) has the same columns; its rows read
+    /// Undone or Not undone (§6b).
+    static func csv(_ items: [CommonPhotosItem], isUndo: Bool = false) -> String {
         var lines = [CSVField.line(["Status", "Name", "From", "To", "SHA-256", "Reason"])]
         for item in items {
             lines.append(CSVField.line([
-                csvStatus(item.status),
+                isUndo ? (item.status == .undone ? "Undone" : item.isDone ? "Not undone" : csvStatus(item.status)) : csvStatus(item.status),
                 item.sources.first.map { ServerUploadPath.lastComponent(of: $0.path) } ?? "",
                 item.sources.map(\.path).joined(separator: "; "),
                 item.destinationPath ?? "",
@@ -88,6 +90,11 @@ enum CommonPhotosLog {
     private static func defused(_ field: String) -> String {
         guard let first = field.unicodeScalars.first, "=+-@\t\r".unicodeScalars.contains(first) else { return field }
         return "'" + field
+    }
+
+    /// `ShotDex Common Photos 2026-11-02 1430 Undo.csv`.
+    static func undoCSVName(at date: Date, timeZone: TimeZone = .current) -> String {
+        (csvName(at: date, timeZone: timeZone) as NSString).deletingPathExtension + " Undo.csv"
     }
 
     /// `ShotDex Common Photos 2026-11-02 1430.csv`, in this Mac's time.

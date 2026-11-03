@@ -1,5 +1,6 @@
 import CryptoKit
 import Foundation
+import os
 import Testing
 @testable import ShotDex
 
@@ -538,7 +539,8 @@ import Testing
                 await #expect(throws: RemoteFileError.connectionLost, "\(label)") { try await undoer.run("U1") }
 
                 #expect(everyPhotoHasACopy(fixture, count: 3), "\(label)")
-                #expect(try fixture.store.run(id: "U1")?.state == .paused, "\(label)")
+                // Paused, or — cut short in the CSV step — still finishing.
+                #expect([.paused, .finishing].contains(try fixture.store.run(id: "U1")?.state), "\(label)")
                 fixture.nas.failOnWrite = nil
                 fixture.nas.failOnRead = nil
                 try await undoer.run("U1")
@@ -597,5 +599,131 @@ import Testing
         #expect(try undoItems(fixture).map(\.status) == Array(repeating: .undone, count: 10))
         #expect(fixture.destinationFiles.isEmpty)
         #expect(try fixture.items().allSatisfy { $0.status == .undone })
+    }
+
+    // MARK: CSV and Undo Selected (AC-139)
+
+    private func csvFiles(_ fixture: Fixture) -> [String: String] {
+        fixture.nas.files.filter { $0.key.hasPrefix("C/ShotDex Common Photos ") && $0.key.hasSuffix(".csv") }
+            .mapValues { String(decoding: $0, as: UTF8.self) }
+    }
+
+    /// AC-139: two rows of ten chosen — only they are undone; the run's CSV
+    /// stays and `… Undo.csv` lists the two.
+    @Test func undoSelectedTwoRows() async throws {
+        let fixture = try Fixture(count: 10)
+        let undoer = try await gathered(fixture, positions: [1, 4])
+        let runCSV = try #require(try fixture.store.run(id: "R1")?.csvPath)
+
+        try await undoer.run("U1")
+
+        #expect(try fixture.items().map(\.status) == [.copied, .undone, .copied, .copied, .undone,
+                                                       .copied, .copied, .copied, .copied, .copied])
+        #expect(fixture.destinationFiles.count == 8)
+        let csvs = csvFiles(fixture)
+        #expect(csvs[runCSV] != nil)
+        let undoCSV = try #require(try fixture.store.run(id: "U1")?.csvPath)
+        #expect(undoCSV.hasSuffix(" Undo.csv"))
+        let lines = try #require(csvs[undoCSV]).split(separator: "\r\n")
+        #expect(lines.count == 3)
+        #expect(lines.dropFirst().allSatisfy { $0.hasPrefix("Undone,") })
+    }
+
+    /// Everything taken back in two undos: the run's CSV and the first
+    /// undo's CSV go with the second.
+    @Test func lastUndoTakesTheCSVs() async throws {
+        let fixture = try Fixture(count: 3)
+        let undoer = try await gathered(fixture, positions: [0])
+        try await undoer.run("U1")
+        #expect(csvFiles(fixture).count == 2)
+
+        try fixture.store.startUndo(of: "R1", id: "U2")
+        try await undoer.run("U2")
+
+        #expect(csvFiles(fixture).isEmpty)
+        #expect(try fixture.store.run(id: "U2")?.csvPath == nil)
+        #expect(try fixture.store.run(id: "R1")?.csvPath == nil)
+        #expect(try fixture.store.run(id: "U1")?.csvPath == nil)
+        #expect(try fixture.store.run(id: "U2")?.state == .finished)
+    }
+
+    /// A row not undone reads "Not undone" with its reason in the CSV.
+    @Test func undoCSVSaysNotUndone() async throws {
+        let fixture = try Fixture(count: 2)
+        let undoer = try await gathered(fixture)
+        fixture.nas.drop("A/IMG_2.JPG")
+        fixture.nas.drop("B/IMG_2.JPG")
+
+        try await undoer.run("U1")
+
+        let undoCSV = try #require(try fixture.store.run(id: "U1")?.csvPath)
+        let text = try #require(csvFiles(fixture)[undoCSV])
+        #expect(text.split(separator: "\r\n").count == 3)
+        #expect(text.contains("Undone,IMG_1.JPG"))
+        #expect(text.contains("Not undone,IMG_2.JPG"))
+        #expect(text.contains("no other copy"))
+    }
+
+    /// The copies written back reach the history step, which puts back
+    /// what the Move moved.
+    @Test func afterUndoHearsTheCopiesWrittenBack() async throws {
+        let fixture = try Fixture(count: 2)
+        try await fixture.start(action: .move)
+        try await fixture.runner.run("R1")
+        try fixture.store.startUndo(of: "R1", id: "U1")
+        let heard = OSAllocatedUnfairLock<Set<String>>(initialState: [])
+        var undoer = CommonPhotosUndoer(client: fixture.nas, store: fixture.store, workDirectory: fixture.work)
+        undoer.afterUndo = { _, restored in heard.withLock { $0 = restored } }
+
+        try await undoer.run("U1")
+
+        #expect(heard.withLock { $0 } == ["A/IMG_1.JPG", "B/IMG_1.JPG", "A/IMG_2.JPG", "B/IMG_2.JPG"])
+    }
+
+    /// The history step failing leaves the undo finishing; Resume does it.
+    @Test func failedHistoryStepResumes() async throws {
+        let fixture = try Fixture(count: 1)
+        try await fixture.start(action: .move)
+        try await fixture.runner.run("R1")
+        try fixture.store.startUndo(of: "R1", id: "U1")
+        var undoer = CommonPhotosUndoer(client: fixture.nas, store: fixture.store, workDirectory: fixture.work)
+        undoer.afterUndo = { _, _ in throw RemoteFileError.connectionLost }
+
+        await #expect(throws: RemoteFileError.connectionLost) { try await undoer.run("U1") }
+        #expect(try fixture.store.run(id: "U1")?.state == .finishing)
+
+        undoer.afterUndo = { _, _ in }
+        try await undoer.run("U1")
+        #expect(try fixture.store.run(id: "U1")?.state == .finished)
+    }
+
+    /// A file the user saved under the run's CSV name is not deleted.
+    @Test func foreignFileUnderTheLogNameStays() async throws {
+        let fixture = try Fixture(count: 1)
+        let undoer = try await gathered(fixture)
+        let runCSV = try #require(try fixture.store.run(id: "R1")?.csvPath)
+        fixture.nas.put(runCSV, Data("my notes".utf8))
+
+        try await undoer.run("U1")
+
+        #expect(fixture.nas.files[runCSV] == Data("my notes".utf8))
+    }
+
+    /// An undo that ends a group keeps the group among the 20 kept, even
+    /// when 20 newer runs finished meanwhile.
+    @Test func undoneGroupCountsAsNew() async throws {
+        let fixture = try Fixture(count: 1)
+        let undoer = try await gathered(fixture)
+        for index in 1...20 {
+            try fixture.store.start(CommonPhotosRun(id: "N\(index)", connectionId: "S1", folders: ["X", "Y"], destination: "Z",
+                                                    action: .copy, createdAt: Int(Date().timeIntervalSince1970) - 100 + index), items: [])
+            try fixture.store.markState(.finished, runId: "N\(index)")
+        }
+
+        try await undoer.run("U1")
+
+        #expect(try fixture.store.run(id: "R1") != nil)
+        #expect(try fixture.store.run(id: "U1")?.state == .finished)
+        #expect(try fixture.store.run(id: "N1") == nil)
     }
 }

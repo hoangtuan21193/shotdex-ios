@@ -26,7 +26,7 @@ loop: mỗi vòng đọc nó trước, ghi lại sau.
 | U2 | xong | (xem git log) | `CommonPhotosUndoer` (Copy) + `CommonPhotosServerChecks` tách từ runner; mọi bản nguồn kiểm lại sau khi để riêng; mọi lỗi sau khi để riêng thì trả file về tên cũ (detached); sidecar chỉ xoá khi còn bản nguồn cùng byte; `finishUndo` ghi 2 hàng một transaction |
 | U3 | xong | (xem git log) | Undo Move: trả B bằng file part, đổi chỗ A về (bị từ chối thì ghi lại); đích xoá cuối, khi mọi bản đã về và kiểm lại (mtime hoặc SHA); `destinationWasThere` (cột mới trong v47, sửa tại chỗ vì chưa ship) thay cho việc đọc reason `alreadyThere`; hàng Move Failed còn bản đã xoá cũng hoàn tác được |
 | U4 | xong | (xem git log) | chỉ test: client giả có `failOnWrite`/`failOnRead`; quét mọi điểm lỗi (ghi trước/sau, đọc) × Move/Copy × share × sidecar; Resume sau khi dừng ở ảnh 4 |
-| U5 | chưa | | |
+| U5 | xong | (xem git log) | `ServerFileHistory.move` trả và ghi hàng đã dời (cùng transaction, `recording:`); `restore` chỉ xoá bản ghi đã xong; Undo.csv hoặc xoá CSV (chỉ khi đúng là log của ShotDex), `forgetCSVs`; nhóm mới theo lượt mới nhất của nhóm |
 | U6 | chưa | | |
 | U7 | chưa | | |
 | U8 | chưa | | |
@@ -45,3 +45,6 @@ loop: mỗi vòng đọc nó trước, ghi lại sau.
 - **U8**: các chỗ đếm (`MacCommonPhotosRunWindow` counts, `MacActivityWindow.readStore`) chưa tính `.undone`.
 - Một item chỉ có một chỗ ghi sidecar. Ảnh copy lại sang tên mới khi Resume sẽ làm sidecar cũ thành mồ côi: undo để
   lại sidecar đó. Đây là hướng an toàn nên chấp nhận.
+- **U8 (từ review U5)**: chưa chỗ nào trong app tạo `CommonPhotosUndoer` hay gọi `startUndo`. Mac phải nối: `startUndo` →
+  undoer với `afterUndo` = `store.restoreHistory(runId: run.undoOf!, restored:, history:)` rồi Rescan như afterRun;
+  `freeBytes`; Resume/banner/Activity cho lượt `undoOf != nil`.

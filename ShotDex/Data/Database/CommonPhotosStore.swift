@@ -65,8 +65,9 @@ struct CommonPhotosStore: Sendable {
 
     /// The gathering runs whose group is kept: the newest `keptRunCount`
     /// whose every run is over, plus every group with a run still going.
-    /// Newest by creation, then by insertion — runs started in the same
-    /// second still fall in one order.
+    /// A group is as new as its newest run — an undo just done keeps the
+    /// run it undid — then by insertion, so runs started in the same second
+    /// still fall in one order.
     private static func keptRoots(_ db: Database) throws -> Set<String> {
         let rows = try Row.fetchAll(db, sql: """
             SELECT id, undoOf, state FROM common_photo_runs ORDER BY createdAt DESC, rowid DESC
@@ -75,7 +76,12 @@ struct CommonPhotosStore: Sendable {
         let runs = rows.map { (id: $0["id"] as String, root: ($0["undoOf"] as String?) ?? ($0["id"] as String),
                                isRoot: ($0["undoOf"] as String?) == nil, isOver: over.contains($0["state"] as String? ?? "")) }
         let unfinished = Set(runs.filter { !$0.isOver }.map(\.root))
-        let overRoots = runs.filter { $0.isRoot && !unfinished.contains($0.id) }.map(\.id)
+        // Rows come newest first, so a root's first appearance is its
+        // group's newest run.
+        var seen: Set<String> = []
+        let byNewest = runs.compactMap { run in seen.insert(run.root).inserted ? run.root : nil }
+        let rootIds = Set(runs.filter(\.isRoot).map(\.id))
+        let overRoots = byNewest.filter { rootIds.contains($0) && !unfinished.contains($0) }
         return unfinished.union(overRoots.prefix(keptRunCount))
     }
 
@@ -186,6 +192,63 @@ struct CommonPhotosStore: Sendable {
                 try db.execute(sql: """
                     UPDATE common_photo_items SET status = ?, updatedAt = ? WHERE runId = ? AND position = ?
                     """, arguments: [CommonPhotosItem.Status.undone.rawValue, now, runId, position])
+            }
+        }
+    }
+
+    /// The runs' CSVs were removed from the server: forget their paths.
+    func forgetCSVs(runIds: [String]) throws {
+        guard !runIds.isEmpty else { return }
+        try database.writer.write { db in
+            for id in runIds {
+                try db.execute(sql: "UPDATE common_photo_runs SET csvPath = NULL WHERE id = ?", arguments: [id])
+            }
+        }
+    }
+
+    /// The undo runs of `runId`, oldest first.
+    func undoRuns(of runId: String) throws -> [CommonPhotosRun] {
+        try database.reader.read { db in
+            try CommonPhotosRun.filter(Column("undoOf") == runId).order(Column("createdAt"), Column.rowID).fetchAll(db)
+        }
+    }
+
+    // MARK: History moves (FS-19.08 §6b)
+
+    /// Records the history rows a Move's finish rewrote, inside that write.
+    static func recordHistoryMoves(_ db: Database, runId: String, rows: [ServerFileHistory.MovedRow]) throws {
+        for row in rows {
+            try db.execute(sql: """
+                INSERT INTO common_photo_history_moves (runId, historyTable, rowId, sourcePath, pathBefore, pathAfter)
+                VALUES (?, ?, ?, ?, ?, ?)
+                """, arguments: [runId, row.table, row.rowId, row.sourcePath, row.pathBefore, row.pathAfter])
+        }
+    }
+
+    /// The history rows `runId` moved, with the record ids.
+    func historyMoves(runId: String) throws -> [(id: Int64, row: ServerFileHistory.MovedRow)] {
+        try database.reader.read { db in
+            try Row.fetchAll(db, sql: """
+                SELECT id, historyTable, rowId, sourcePath, pathBefore, pathAfter FROM common_photo_history_moves
+                WHERE runId = ? ORDER BY id
+                """, arguments: [runId]).map { row in
+                (row["id"], ServerFileHistory.MovedRow(table: row["historyTable"], rowId: row["rowId"], pathBefore: row["pathBefore"],
+                                                       pathAfter: row["pathAfter"], sourcePath: row["sourcePath"]))
+            }
+        }
+    }
+
+    /// Puts back the history rows `runId` moved away from `restored` — the
+    /// copies an undo wrote back — then forgets those records. Safe to run
+    /// again after a quit between the two: a row is put back only while it
+    /// still holds the path the move gave it.
+    func restoreHistory(runId: String, restored: Set<String>, history: ServerFileHistory) throws {
+        let moves = try historyMoves(runId: runId).filter { restored.contains($0.row.sourcePath) }
+        guard !moves.isEmpty else { return }
+        let settled = try history.restore(moves.map(\.row))
+        try database.writer.write { db in
+            for (move, isSettled) in zip(moves, settled) where isSettled {
+                try db.execute(sql: "DELETE FROM common_photo_history_moves WHERE id = ?", arguments: [move.id])
             }
         }
     }
