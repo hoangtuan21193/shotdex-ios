@@ -5,7 +5,7 @@
 | Đặc tả | [FS-18.04 §3](../02-functional-spec/FS-18-mac-app/04-other-screens.md) · AC-59, AC-67…AC-80 ở [FS-18.06](../02-functional-spec/FS-18-mac-app/06-acceptance-criteria.md) |
 | Intent | [2026-11-04-mac-settings-panes](../_intents/2026-11-04-mac-settings-panes.md) |
 | Ngày | 2026-11-04 |
-| Trạng thái | đang làm — S0, S1, S3–S5, S8–S12 xong, S2 và S7 một phần (AC-71 chờ `MacSidebar.swift`) (loop: [MAC_SETTINGS_LOOP.md](MAC_SETTINGS_LOOP.md)) |
+| Trạng thái | gần xong — S0, S1, S3–S5, S8–S13 xong; S2 (chân sidebar) và S7 (People and Pets) chờ file của phiên khác (AC-71 chờ `MacSidebar.swift`) (loop: [MAC_SETTINGS_LOOP.md](MAC_SETTINGS_LOOP.md)) |
 
 ## 1. Hiểu đúng chưa
 
@@ -112,3 +112,27 @@ S10 — xoá dữ liệu), `copy-consistency` (chuỗi mới), `a11y-voiceover` 
 - Ảnh (`Tools/mac-shot`, `-ShotDexDemoLibrary`): 6 pane sáng + tối; Sources lúc đang index và lúc xong; chân sidebar có
   cả index và Common Photos; lưới với 2 bộ trường; Cameras lọc Unknown.
 - Tài liệu: FS-18.06 cột chứng minh; FS-18.04 §3 nếu L1/L2 đổi; intent Tiến độ; `docs/design/README.md` nếu thêm board.
+
+## 9. Verify (S13, 2026-11-05)
+
+Test: 19 suite / 116 test xanh (`MacIndexSummaryTests`, `MacThumbnailInfoTests`, `MacSourcesSettingsTests`, `PowerPolicyTests`,
+`MacPreviewCacheTests`, `ThumbnailCacheTests`, `MacServersSettingsTests`, `LocalNetworkAccessTests`, `ServerDiscoveryModelTests`,
+`MacCameraSettingsTests` và các suite dùng chung bị đụng). Không chạy cả bộ, không `Tools/gate` (chỉ khi người dùng bảo).
+
+| AC | Kết quả |
+|---|---|
+| AC-59 | ⚠️ một phần: 6 pane có đủ, ảnh từng pane; script `mac-settings-panes.json` chưa có |
+| AC-67, AC-68, AC-69, AC-70, AC-72, AC-73, AC-75, AC-76, AC-77, AC-79, AC-80 | ✅ test + ảnh (cột Chứng minh bằng ở FS-18.06) |
+| AC-71 | ❌ chân sidebar chưa làm — `MacSidebar.swift` của phiên khác còn chưa commit (board đã vẽ) |
+| AC-74 | gỡ (cull đã bỏ) |
+| AC-78 | ⚠️ trạng thái Allowed có ảnh; tắt rồi bật lại quyền cần máy thật |
+
+`design-parity` (7 board): sửa nút Clear… của Index thành chữ đỏ (app), câu footer Cameras theo app (board, canvas v120).
+Để nguyên: chrome gốc macOS (tab, segmented, nền trắng, sọc Table); dữ liệu demo khác số board; pane AI/Editing mờ không hiện
+giá trị, không "Ready", không ví dụ File Names (tính năng chưa có trên Mac); Scan for People and Pets (chờ `project.pbxproj`).
+Chưa chụp: nhóm Background của General, popup Sensor Format đang mở, các trạng thái có dữ liệu (cache server, Presets,
+Providers, Index Now / Review… bật), hộp hỏi (không có quyền Accessibility để bấm).
+
+Việc còn lại khi file được giải phóng: S2 chân sidebar xếp chồng (AC-71), S7 hàng Scan for People and Pets
+(`SubjectScanModel` vào `Tools/mac-membership.shared`).
+

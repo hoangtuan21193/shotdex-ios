@@ -113,8 +113,11 @@ struct MacIndexSettingsSection: View {
                      : String(localized: "\(unknownCameras, format: .number) cameras need a sensor format", comment: "Mac Settings › Index: unknown cameras"))
             }
             LabeledContent {
-                Button(String(localized: "Clear…", comment: "Mac Settings › Index: clear the local metadata index"), role: .destructive) {
+                Button(role: .destructive) {
                     isConfirmingClear = true
+                } label: {
+                    // Red like the board: a bordered macOS button does not colour its role.
+                    Text("Clear…", comment: "Mac Settings › Index: clear the local metadata index").foregroundStyle(.red)
                 }
                 .disabled(dependencies.library == nil || dependencies.library?.isIndexRunActive == true)
                 .accessibilityLabel(String(localized: "Clear Local Metadata Index", comment: "Mac Settings › Index: VoiceOver"))
