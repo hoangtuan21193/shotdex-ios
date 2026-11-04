@@ -33,7 +33,7 @@ là trí nhớ của loop: mỗi vòng đọc nó trước khi làm, ghi lại s
 
 | Task | Trạng thái | Commit | Ghi chú |
 |---|---|---|---|
-| T0 | chưa | | board: trường Original trong editor (iPhone, iPad, Duo, Mac), dòng tiến độ ở smart album, mục menu Filter |
+| T0 | xong | (commit này) | 13 board: dòng rule *Original is iCloud Only* cuối editor (+ câu *Photos not checked yet aren't counted.*), tweak `original` off/checking/checked ở SmartAlbum (dòng *Checking originals · …* ngay dưới dòng On Server, có glyph iPhone-check; chip cuối, theo thứ tự rule), mục *Original on This iPhone* sau Favorites (PH_LibraryMore, DI_MoreMenus), Mac popover dòng *Storage*, Mac editor tweak `menu=field`. Canvas: iPhone v179, iPad v92, Duo v152, Mac v108. Review design + UX: bỏ chip *Source is Photos Library* (ngược điều kiện NAS), thống nhất chỗ dòng tiến độ và thứ tự chip, glyph menu khác Keep. Chưa vẽ: menu Filter iPad (không board nào vẽ), dòng tiến độ dưới thanh chip Library khi bật bộ lọc (để T9); Duo cover editor: dòng Original nằm dưới mép sheet. Commit kèm đổi icon Utilities chưa commit của phiên khác trong các board này (người dùng 2026-11-04) |
 | T1 | chưa | | harness DEBUG đo (a) probe offline mọi resource và (b) KVC; **số đo cần iPhone thật của người dùng** — harness làm trong loop, đo thì chờ người dùng |
 | T2 | chưa | | test phép theo mọi trường (AC-13) |
 | T3 | chưa | | Domain `OriginalPresence` (AC-3, AC-4) |

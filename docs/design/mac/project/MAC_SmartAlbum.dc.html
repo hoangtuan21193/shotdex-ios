@@ -18,12 +18,14 @@ input{font-family:inherit}
 <!-- CONTENT: smart album "On NAS — Shared" (FS-19.07 §7/§11). Bar under the toolbar: read-only Source chip, item count,
      and the On Server progress line (§7) for the album's first server Source condition; grid scrolls under the toolbar. -->
 <div style="position:absolute;left:244px;right:0px;top:0;bottom:0;overflow:hidden">
-<div style="position:absolute;left:16px;right:16px;top:64px;height:44px;display:flex;align-items:center;gap:12px">
+<div style="position:absolute;left:16px;right:16px;top:60px;height:44px;display:flex;align-items:center;gap:12px">
 <span aria-label="Condition: Source is NAS Home › Shared" style="flex:none;height:24px;border-radius:12px;background:{{t.fill}};display:flex;align-items:center;gap:6px;padding:0 10px;font-size:12px;color:{{t.label}};white-space:nowrap"><svg aria-hidden="true" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:none;color:{{t.label2}}"><path d="{{serverIcon}}"></path></svg>{{chip}}</span>
+<sc-if value="{{origOn}}" hint-placeholder-val="{{true}}"><span aria-label="Condition: Original is iCloud Only" style="flex:none;height:24px;border-radius:12px;background:{{t.fill}};display:flex;align-items:center;gap:6px;padding:0 10px;font-size:12px;color:{{t.label}};white-space:nowrap"><svg aria-hidden="true" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:none;color:{{t.label2}}"><path d="{{cloudIcon}}"></path></svg>{{origChip}}</span></sc-if>
 <span style="flex:none;font-size:13px;font-weight:600;white-space:nowrap;font-variant-numeric:tabular-nums">{{count}}</span>
 <div style="flex:1"></div>
-<div role="status" style="min-width:0;display:flex;flex-direction:column;align-items:flex-end;gap:2px">
+<div role="status" style="min-width:0;display:flex;flex-direction:column;align-items:flex-end;gap:1px">
 <div style="display:flex;align-items:center;gap:6px;font-size:12px;line-height:15px;color:{{t.label2}};white-space:nowrap;font-variant-numeric:tabular-nums"><svg aria-hidden="true" width="12" height="12" viewBox="0 0 24 24" style="flex:none"><circle cx="12" cy="12" r="9" fill="none" stroke="{{t.track}}" stroke-width="3"></circle><circle cx="12" cy="12" r="9" fill="none" stroke="{{t.accent}}" stroke-width="3" stroke-dasharray="{{dash}}" stroke-linecap="round" transform="rotate(-90 12 12)"></circle></svg><span>{{progress}}</span></div>
+<!-- FS-06.10 §3: originals check, same line style as On Server; "checked … ago" stays because Photos can drop originals without telling --><sc-if value="{{origChecking}}" hint-placeholder-val="{{true}}"><div style="display:flex;align-items:center;gap:6px;font-size:12px;line-height:15px;color:{{t.label2}};white-space:nowrap;font-variant-numeric:tabular-nums"><svg aria-hidden="true" width="12" height="12" viewBox="0 0 24 24" style="flex:none"><circle cx="12" cy="12" r="9" fill="none" stroke="{{t.track}}" stroke-width="3"></circle><circle cx="12" cy="12" r="9" fill="none" stroke="{{t.accent}}" stroke-width="3" stroke-dasharray="{{origDash}}" stroke-linecap="round" transform="rotate(-90 12 12)"></circle></svg><span>Checking originals · 12,400 of 55,000</span></div></sc-if><sc-if value="{{origChecked}}" hint-placeholder-val="{{false}}"><div style="display:flex;align-items:center;gap:6px;font-size:12px;line-height:15px;color:{{t.label2}};white-space:nowrap;font-variant-numeric:tabular-nums"><svg aria-hidden="true" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg><span>Originals checked 3 min ago</span></div></sc-if>
 <div style="font-size:11px;line-height:14px;color:{{t.label2}};white-space:nowrap;font-variant-numeric:tabular-nums">{{progress2}}</div><sc-if value="{{mismatch}}" hint-placeholder-val="{{false}}"><div style="font-size:11px;line-height:14px;color:{{t.label2}};white-space:nowrap">Hashes from Tuấn's iPhone didn't match — checking on this Mac.</div></sc-if>
 </div>
 </div>
@@ -107,7 +109,7 @@ input{font-family:inherit}
 </nav>
 </div>
 </x-dc>
-<script type="text/x-dc" data-dc-script data-props='{"dark":{"editor":"boolean","default":false},"mismatch":{"editor":"boolean","default":false},"empty":{"editor":"boolean","default":false},"$preview":{"width":1440,"height":900}}'>
+<script type="text/x-dc" data-dc-script data-props='{"dark":{"editor":"boolean","default":false},"mismatch":{"editor":"boolean","default":false},"empty":{"editor":"boolean","default":false},"original":{"editor":"select","options":["off","checking","checked"],"default":"checking"},"$preview":{"width":1440,"height":900}}'>
 // v2 tokens (MAC_STYLE v2 rules): accentFill/onAccentFill for every filled control with text, opaque menu,
 // one sheet grey, scrim drawn above sidebar and toolbar, rowAlt zebra, field = content + 1px sep.
 const LIGHT = { content:'#FFFFFF', label:'rgba(0,0,0,0.88)', label2:'rgba(0,0,0,0.56)', label3:'rgba(0,0,0,0.28)',
@@ -225,13 +227,15 @@ class Component extends DCLogic {
   renderVals() {
     const dark=!!this.props.dark; const t = dark ? DARK : LIGHT;
     const empty=!!this.props.empty;
+    const orig=this.props.original||'checking';
     const groups=sidebar(t,{sel:'On NAS — Shared', extraSmart:['On NAS — Shared', empty ? '0' : '40']});
     const e=edges(dark);
     // 12,408 of 54,920 checked = 22.6% of the ring's 56.5 circumference (r=9).
     return { t, groups, tiles: empty ? [] : tiles(40,3,{onServer:true, noVideo:true}), serverIcon: I.server, empty,
       chip:'Source is NAS Home › Shared', count: empty ? '0 photos' : '40 photos', dash:'12.8 100',
       progress:'Checking · 12,408 of 54,920 · 38 GB to download', progress2:'3 Edited — edit not on NAS Home',
-      mismatch: !!this.props.mismatch, edge:e.edge, edgeClear:e.edgeClear, foot:IDLE_FOOT };
+      mismatch: !!this.props.mismatch, origOn: orig!=='off', origChecking: orig==='checking', origChecked: orig==='checked',
+      origChip:'Original is iCloud Only', origDash:'12.7 100', cloudIcon:'M7 18h10a4 4 0 0 0 .6-7.95A6 6 0 0 0 6.2 9.2 4.5 4.5 0 0 0 7 18z', edge:e.edge, edgeClear:e.edgeClear, foot:IDLE_FOOT };
   }
 }
 </script>
