@@ -689,3 +689,7 @@ Outside the acceptance criteria of plan `docs/_plans/2026-10-03-vs-wide-and-duo-
 
 - [ ] Mac sidebar All Photos count shows the filtered grid's count (`MacSidebar.swift:21`, `library?.items.count`), not the library total the subtitle's "N of M" uses — pass the unfiltered count in _(FS-18.02 §5; file belonged to another session during T11)_
 - [ ] `SmartAlbumQuery.migrating` saves a one-sided range as strict `>`/`<`, while the quick filter is inclusive — an album misses photos exactly on the bound; needs `≥`/`≤` operators (or inclusive `greaterThan` semantics) _(FS-06.08, found in T11 review)_
+- [ ] Mac smart album window: reduced toolbar (filter + trash only; board `MAC_SmartAlbum` draws back/forward, grid/list, share, inspector, Search Album), content inset 16pt less than the board, no floating sidebar card — predates FS-06.10 _(design-parity T12, 2026-11-05)_
+- [ ] Mac smart album editor is a grouped Form (Name, Match, Conditions, red ⊖, Add Condition, OK) while board `MAC_SmartAlbumEditor` draws a predicate editor (title + "Matches N…" subtitle, rows with −/+, Create) — predates FS-06.10; decide which side moves _(design-parity T12)_
+- [ ] Duo inner rail buttons Back / Select / Filter are 38×38 (filter 29×36) in the accessibility frames vs 48×48 on `DI_SmartAlbum`; check drawn disc size before fixing _(design-parity T12)_
+- [ ] `DI_MoreMenus` draws the pre-rail top-bar Library chrome; the Duo Library has a right rail — board needs redrawing on the rail _(design-parity T12)_

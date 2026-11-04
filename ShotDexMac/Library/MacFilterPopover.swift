@@ -44,12 +44,12 @@ struct MacFilterPopover: View {
         // inside its 480 (MAC_STYLE).
         VStack(alignment: .leading, spacing: isAdvancedOn ? 4 : 6) {
             header
-            Divider()
+            sectionDivider
             if isAdvancedOn { advancedLine }
             row(String(localized: "Sort By", comment: "Mac Filter and Sort row")) { sortControls }
             quickRows
                 .disabled(isAdvancedOn)
-            Divider()
+            sectionDivider
             HStack(spacing: 8) {
                 Button(String(localized: "Advanced Filter…", comment: "Mac Filter and Sort: open the rule sheet"), action: advancedFilter)
                     .disabled(gapReason != nil)
@@ -95,10 +95,16 @@ struct MacFilterPopover: View {
         library.advancedQuery = nil
     }
 
+    /// Between sections: the board's 45pt section pitch against 34pt rows
+    /// (MAC_FilterPopover); tighter while the Advanced line takes a row.
+    private var sectionDivider: some View {
+        Divider().padding(.vertical, isAdvancedOn ? 0 : 2)
+    }
+
     @ViewBuilder
     private var quickRows: some View {
             row(String(localized: "Show", comment: "Mac Filter and Sort row: photos, videos or both")) { showControl }
-            Divider()
+            sectionDivider
             row(String(localized: "Marks", comment: "Mac Filter and Sort row: favorites and flags")) {
                 HStack(spacing: 16) {
                     Toggle(String(localized: "Favorites", comment: "Mac Filter and Sort: only favorites"), isOn: $library.criteria.favoritesOnly)
@@ -133,7 +139,7 @@ struct MacFilterPopover: View {
                 .labelsHidden()
                 .frame(width: Self.controlWidth, alignment: .leading)
             }
-            Divider()
+            sectionDivider
             row(String(localized: "Camera", comment: "Mac Filter and Sort row")) {
                 singlePicker(String(localized: "Camera", comment: "Mac Filter and Sort row"),
                              values: library.availableBodies, selection: $library.criteria.cameraBodies,
