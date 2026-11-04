@@ -67,6 +67,10 @@ final class MacCommonPhotosCompareModel {
     private(set) var failures: [String: String] = [:]
     /// Sides read whole that this Mac cannot draw (a RAW it does not know).
     private(set) var noPreview: Set<String> = []
+    /// Video sides read whole, by copy path.
+    private(set) var videoFiles: [String: URL] = [:]
+    /// Both sides' videos read: played as one (AC-185).
+    private(set) var videoPair: MacCommonPhotosVideoPair?
     /// Bumped by Try Again: the sides load again.
     private(set) var attempt = 0
     /// The one login of this session, shared by every load.
@@ -153,17 +157,23 @@ final class MacCommonPhotosCompareModel {
     /// behind every other call on the connection (AC-182…184). A cancelled
     /// load (the row changed) writes nothing and leaves no part file.
     func loadSides() async {
+        // Before the guard: a list emptied by a rescan stops the sound too.
+        videoPair?.stop()
+        videoPair = nil
         guard !isClosed, let sha256 = row?.sha256 else { return }
         let sides = sides
         let paths = Set(sides.map(\.path))
+        videoFiles = videoFiles.filter { paths.contains($0.key) }
         previews = previews.filter { paths.contains($0.key) }
         downloading = downloading.filter { paths.contains($0.key) }
         // A failure belongs to its row: another row's never shows or blocks.
         failures = failures.filter { paths.contains($0.key) }
         noPreview = noPreview.intersection(paths)
         cache.pin(paths: sides.map { ($0.path, sha256) })
-        for side in sides where previews[side.path] == nil && !noPreview.contains(side.path) && failures[side.path] == nil {
-            if let indexed = await MacCommonPhotosPreview.load(serverPath: side.path, sources: sources, database: database,
+        for side in sides where previews[side.path] == nil && videoFiles[side.path] == nil
+            && !noPreview.contains(side.path) && failures[side.path] == nil {
+            // A video is played from the file, never from the index's still.
+            if !Self.isVideo(side.path), let indexed = await MacCommonPhotosPreview.load(serverPath: side.path, sources: sources, database: database,
                                                                maxPixelSize: Self.previewPixels), indexed.image != nil {
                 guard !Task.isCancelled else { return }
                 previews[side.path] = indexed
@@ -171,6 +181,17 @@ final class MacCommonPhotosCompareModel {
             }
             guard !Task.isCancelled else { return }
             await download(side, sha256: sha256)
+        }
+        // Two videos: one transport for both.
+        guard !Task.isCancelled, !isClosed else { return }
+        if sides.count == 2, let left = videoFiles[sides[0].path], let right = videoFiles[sides[1].path] {
+            videoPair = MacCommonPhotosVideoPair(left: left, right: right)
+            #if DEBUG
+            if ProcessInfo.processInfo.arguments.contains("-ShotDexCommonPhotosComparePlay") { videoPair?.playFromSixTenths() }
+            #endif
+        } else {
+            // One video with nothing to play against: said, not a spinner.
+            for side in sides where videoFiles[side.path] != nil { noPreview.insert(side.path) }
         }
     }
 
@@ -180,14 +201,9 @@ final class MacCommonPhotosCompareModel {
                                          comment: "Common photos compare: no client to read the copy")
             return
         }
-        // A video plays in its own step (§6d); a whole movie is not read just
-        // to say there is no picture.
-        if Self.isVideo(side.path) {
-            noPreview.insert(side.path)
-            return
-        }
-        // Over the cap even alone: never read (§6d, at most 2 GB).
-        guard side.size <= cache.capacity else {
+        // Both copies of the row stay pinned, so together they fit the cap
+        // or neither side is read (§6d, at most 2 GB).
+        guard sides.reduce(0, { $0 + $1.size }) <= cache.capacity else {
             failures[side.path] = String(localized: "This copy is too large to show here.",
                                          comment: "Common photos compare: the copy is bigger than the cache")
             return
@@ -246,6 +262,11 @@ final class MacCommonPhotosCompareModel {
             failures[path] = (error as? RemoteFileError)?.errorDescription ?? error.localizedDescription
             return
         }
+        // A video is played, not drawn.
+        if Self.isVideo(path) {
+            videoFiles[path] = file
+            return
+        }
         let drawn = await Task.detached { Self.draw(file) }.value
         guard !Task.isCancelled else { return }
         if let drawn {
@@ -279,6 +300,8 @@ final class MacCommonPhotosCompareModel {
     /// files go.
     func close() async {
         isClosed = true
+        videoPair?.stop()
+        videoPair = nil
         // The files go first: the logoff may wait behind the scan's calls.
         cache.removeAll()
         guard let connecting, let client else { return }
@@ -337,6 +360,7 @@ private struct MacCommonPhotosCompareContent: View {
                 }
             }
             .background(MacTheme.Editor.hairline)
+            if let pair = model.videoPair, !pair.cannotPlay { MacCommonPhotosTransport(pair: pair) }
             proofBar
         }
         .navigationTitle(String(localized: "Compare — \(row.name)", comment: "Common photos compare window title"))
@@ -376,6 +400,12 @@ private struct MacCommonPhotosCompareContent: View {
         // ←→ step too while the picture fits; at 100% they scroll it.
         .onKeyPress(.rightArrow) { guard model.zoom == .fit else { return .ignored }; model.next(); return .handled }
         .onKeyPress(.leftArrow) { guard model.zoom == .fit else { return .ignored }; model.previous(); return .handled }
+        // Space plays a video pair; a focused checkbox or picker gets it first.
+        .onKeyPress(.space) {
+            guard let pair = model.videoPair, !pair.cannotPlay else { return .ignored }
+            pair.togglePlay()
+            return .handled
+        }
         .task(id: model.sidesKey) { await model.loadSides() }
     }
 
@@ -383,7 +413,9 @@ private struct MacCommonPhotosCompareContent: View {
         VStack(spacing: 0) {
             ZStack {
                 MacTheme.Editor.background
-                if let image = model.previews[side.path]?.image {
+                if let pair = model.videoPair, !pair.cannotPlay {
+                    MacCommonPhotosPlayerView(player: isRight ? pair.follower : pair.leader).padding(16)
+                } else if let image = model.previews[side.path]?.image {
                     let picture = Image(decorative: image, scale: 1)
                     if model.zoom == .fit {
                         picture.resizable().scaledToFit().padding(16)
@@ -399,7 +431,7 @@ private struct MacCommonPhotosCompareContent: View {
                         Button(String(localized: "Try Again", comment: "Common photos compare: load the copy again")) { model.tryAgain() }
                     }
                     .frame(maxWidth: 300)
-                } else if model.noPreview.contains(side.path) {
+                } else if model.noPreview.contains(side.path) || model.videoPair?.cannotPlay == true {
                     VStack(spacing: 8) {
                         Image(systemName: "doc").font(.title).foregroundStyle(MacTheme.Editor.secondaryText)
                         Text(MacCommonPhotosCompareModel.isVideo(side.path)

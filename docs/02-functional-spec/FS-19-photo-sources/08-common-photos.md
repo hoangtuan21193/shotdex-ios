@@ -290,8 +290,10 @@ Scan liệt kê luôn folder chung, nên mỗi hàng Same biết sẵn việc n�
   control nào ở 60pt đáy): dòng SHA và gợi ý "↑↓ next row · Esc close". Tiêu đề "Compare — <tên>", phụ đề "3 of 282".
 - Ảnh đã index: preview của index (400 px), nên 100% là cỡ của preview cho tới khi đọc cả file (phần chưa index).
 - **Ảnh:** hiện vừa khung. Cùng zoom và cùng vị trí cho cả hai khung (cuộn hay zoom một bên, bên kia theo).
-- **Video:** một nút Play và một thanh tua cho cả hai; hai bên luôn cùng thời điểm (lệch ≤ 1 khung hình); tiếng chỉ bên
-  trái.
+- **Video:** một nút Play (Space) và một thanh tua cho cả hai; tua và Play đưa cả hai về cùng thời điểm, cùng một giờ
+  máy; lúc chạy, bên phải lệch quá 2 khung hình (ít nhất 50 ms) thì được kéo lại; tiếng chỉ bên trái. Hết video thì
+  dừng, Play lại từ đầu. File máy Mac không phát được (AVI, hỏng) thì nói "No preview for this video", không có thanh
+  phát. Hai bản của hàng cùng ghim trong cache nên tổng hai bản phải vừa trần 2 GB.
 - **Byte lấy ở đâu:** bản đã index thì dùng ảnh preview đã có. Chưa index thì **tải cả file** về thư mục tạm:
   - thanh tiến độ từng khung;
   - chỉ tải hai bản của hàng đang xem; sang hàng khác thì huỷ lượt tải dở;

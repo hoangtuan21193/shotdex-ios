@@ -46,3 +46,27 @@ import Testing
         #expect(compare.currentId == nil)
     }
 }
+
+/// AC-185: one clock for the two copies of a video.
+@Suite struct CommonPhotosVideoSyncTests {
+    @Test func videoClockKeepsBothTogether() {
+        let frame = CommonPhotosVideoSync.frameDuration(fps: 30)
+        #expect(abs(frame - 1.0 / 30) < 1e-9)
+        #expect(CommonPhotosVideoSync.frameDuration(fps: 0) == 1.0 / 30)
+        // Within two frames: left alone; past them: put back on the leader's time.
+        #expect(!CommonPhotosVideoSync.needsSeek(leader: 6.0, follower: 6.06, frameDuration: frame))
+        #expect(CommonPhotosVideoSync.needsSeek(leader: 6.0, follower: 6.08, frameDuration: frame))
+        #expect(CommonPhotosVideoSync.needsSeek(leader: 6.08, follower: 6.0, frameDuration: frame))
+        // At 120 fps two frames is 17 ms: jitter that small is not drift.
+        #expect(!CommonPhotosVideoSync.needsSeek(leader: 6.0, follower: 6.04, frameDuration: 1.0 / 120))
+        // A scrub to 60 % of 10 s takes both to 6 s; out of range is clamped.
+        #expect(CommonPhotosVideoSync.time(at: 0.6, of: 10) == 6)
+        #expect(CommonPhotosVideoSync.time(at: 1.4, of: 10) == 10)
+        // Play at the end starts again; a length not read yet is never the end.
+        #expect(CommonPhotosVideoSync.isAtEnd(time: 9.99, duration: 10, frameDuration: frame))
+        #expect(!CommonPhotosVideoSync.isAtEnd(time: 9.9, duration: 10, frameDuration: frame))
+        #expect(!CommonPhotosVideoSync.isAtEnd(time: 0, duration: 0, frameDuration: frame))
+        #expect(CommonPhotosVideoSync.label(6.9) == "0:06")
+        #expect(CommonPhotosVideoSync.label(3_725) == "1:02:05")
+    }
+}
