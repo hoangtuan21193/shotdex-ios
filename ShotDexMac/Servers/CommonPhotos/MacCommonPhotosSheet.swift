@@ -68,6 +68,17 @@ private struct MacCommonPhotosSheetContent: View {
     @State private var newFolderName = ""
     @State private var newFolderError: String?
     @State private var confirmsMove = false
+    /// §6d: the Left Out list, open or not.
+    @State private var showsLeftOut = Self.showsLeftOutAtStart
+
+    /// `-ShotDexCommonPhotosShowLeftOut` (DEBUG): the Left Out list open, for screenshots.
+    private static let showsLeftOutAtStart: Bool = {
+        #if DEBUG
+        ProcessInfo.processInfo.arguments.contains("-ShotDexCommonPhotosShowLeftOut")
+        #else
+        false
+        #endif
+    }()
     @State private var startError: String?
     /// The run is being written; a second click does nothing.
     @State private var isStarting = false
@@ -387,14 +398,14 @@ private struct MacCommonPhotosSheetContent: View {
                     }
                 }
                 .frame(height: 28)
-                let isNothingNew = model.phase == .done && !model.isCutting && model.photos.isEmpty
+                let isNothingNew = model.phase == .done && !model.isCutting && model.sameCount == 0
                     && model.lastGathered != nil && !model.scansEverything
                 if let gathered = model.lastGathered, !model.scansEverything, !isNothingNew {
                     againLine(gathered)
                 }
                 if isNothingNew, let gathered = model.lastGathered {
                     nothingNew(since: gathered)
-                } else if model.phase == .done, model.photos.isEmpty {
+                } else if model.phase == .done, model.sameCount == 0 {
                     Text(model.folders.count == 2
                          ? String(localized: "No photos are in both folders.", comment: "Mac common photos sheet: nothing in common, two folders")
                          : String(localized: "No photos are in all \(model.folders.count) folders.", comment: "Mac common photos sheet: nothing in common"))
@@ -406,6 +417,20 @@ private struct MacCommonPhotosSheetContent: View {
                                            action: model.action, database: dependencies.database, sources: sources,
                                            setIncluded: { model.setIncluded($0, rows: [row.id]) })
                             .listRowInsets(EdgeInsets(top: 0, leading: 8, bottom: 0, trailing: 12))
+                            .contextMenu {
+                                // A Copy skips what is already there: nothing to leave out.
+                                if row.landing.map({ if case .alreadyThere = $0 { model.action == .copy } else { false } }) == true {
+                                    EmptyView()
+                                } else if row.isIncluded {
+                                    Button(String(localized: "Leave Out", comment: "Mac common photos sheet: row menu")) {
+                                        model.setIncluded(false, rows: [row.id])
+                                    }
+                                } else {
+                                    Button(String(localized: "Include", comment: "Mac common photos sheet: row menu")) {
+                                        model.setIncluded(true, rows: [row.id])
+                                    }
+                                }
+                            }
                     }
                     .listStyle(.bordered)
                     .alternatingRowBackgrounds()
@@ -413,8 +438,53 @@ private struct MacCommonPhotosSheetContent: View {
                                         ? String(localized: "Same photos in both folders", comment: "Mac common photos sheet: results list")
                                         : String(localized: "Same photos in all folders", comment: "Mac common photos sheet: results list"))
                 }
+                // Also with no rows: what was left out stays reachable.
+                if model.phase == .done, !model.leftOutEntries.isEmpty { leftOutSection }
             }
         }
+    }
+
+    /// §6d: what the user left out of this set before — never run until
+    /// Include.
+    private var leftOutSection: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            DisclosureGroup(isExpanded: $showsLeftOut) {
+                ScrollView {
+                    VStack(spacing: 0) {
+                        ForEach(model.leftOutEntries) { entry in
+                            HStack(spacing: 10) {
+                                VStack(alignment: .leading, spacing: 1) {
+                                    Text(entry.name).lineLimit(1).foregroundStyle(.secondary)
+                                    Text("Left out \(entry.leftOutAt.formatted(.dateTime.month(.abbreviated).day()))",
+                                         comment: "Mac common photos sheet: Left Out row, when")
+                                        .font(.subheadline).foregroundStyle(.secondary)
+                                }
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                Text(entry.size.formatted(.byteCount(style: .file)))
+                                    .font(.callout).monospacedDigit().foregroundStyle(.secondary)
+                                Button(String(localized: "Include", comment: "Mac common photos sheet: Left Out row")) {
+                                    model.include([entry.sha256])
+                                }
+                                .controlSize(.small)
+                                .accessibilityLabel(String(localized: "Include \(entry.name)", comment: "Mac common photos sheet: Left Out row, VoiceOver"))
+                            }
+                            .frame(height: 36)
+                            .padding(.leading, 20)
+                        }
+                    }
+                }
+                .frame(maxHeight: 112)
+            } label: {
+                HStack(spacing: 6) {
+                    Text("Left Out (\(model.leftOutEntries.count))", comment: "Mac common photos sheet: photos left out of this set")
+                        .fontWeight(.semibold)
+                    Text("Skipped by every scan and gather of this set", comment: "Mac common photos sheet: Left Out subtitle")
+                        .font(.subheadline).foregroundStyle(.secondary).lineLimit(1)
+                }
+            }
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 4)
     }
 
     /// §6c: the set gathered before — when, how many are left out, and the
@@ -507,7 +577,7 @@ private struct MacCommonPhotosSheetContent: View {
     private var headline: String {
         let folders = model.folders.count
         guard model.phase == .done else {
-            let confirmed = String(localized: "Checking · \(model.sameCount.formatted()) of \(model.candidateCount.formatted()) confirmed so far",
+            let confirmed = String(localized: "Checking · \(model.confirmedCount.formatted()) of \(model.candidateCount.formatted()) confirmed so far",
                                    comment: "Mac common photos sheet: headline while checking")
             guard model.isScanning else { return confirmed }
             let left = model.bytesLeft.formatted(.byteCount(style: .file))
@@ -668,7 +738,7 @@ private struct MacCommonPhotosSheetContent: View {
             return String(localized: "Nothing selected. Check a photo to include it.", comment: "Mac common photos sheet: footer, every row unchecked")
         }
         guard model.action == .move else {
-            return String(localized: "Unchecked photos are not copied.", comment: "Mac common photos sheet: footer, Copy")
+            return String(localized: "Unchecked photos stay out of this set.", comment: "Mac common photos sheet: footer, Copy")
         }
         let names = model.folders.map(ServerUploadPath.lastComponent(of:))
         let destination = model.destination.map(ServerUploadPath.lastComponent(of:)) ?? ""
@@ -817,7 +887,7 @@ private struct MacCommonPhotosRow: View {
     /// the folders — already there or not; unchecked, that it stays out.
     private var note: String? {
         if !row.isIncluded, !(isAlreadyThere && action == .copy) {
-            return String(localized: "Left out", comment: "Mac common photos sheet: row, unchecked")
+            return String(localized: "Left out from now on", comment: "Mac common photos sheet: row, unchecked")
         }
         if isAlreadyThere, action == .copy {
             return String(localized: "Already in \(destination ?? "")", comment: "Mac common photos sheet: row, the destination holds these bytes")

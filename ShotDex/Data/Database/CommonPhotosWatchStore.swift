@@ -76,11 +76,14 @@ struct CommonPhotosWatchStore: Sendable {
         }
     }
 
-    /// Remove from List on a set that stopped by itself: the set goes;
-    /// its runs, logs and files stay.
+    /// Remove from List on a set that stopped by itself: the set goes, and
+    /// what the user left out of it (§6d); its runs, logs and files stay.
     func remove(id: String) throws {
         try database.writer.write { db in
+            guard let setKey = try String.fetchOne(db, sql: "SELECT setKey FROM common_photo_watches WHERE id = ? AND isOn = 0",
+                                                   arguments: [id]) else { return }
             try db.execute(sql: "DELETE FROM common_photo_watches WHERE id = ? AND isOn = 0", arguments: [id])
+            try CommonPhotosLeftOutStore.forget(setKey: setKey, in: db)
         }
     }
 

@@ -62,6 +62,8 @@ final class CommonPhotosScanModel {
     var destination: String? {
         didSet {
             guard destination != oldValue else { return }
+            // Another set, another Left Out (§6d).
+            loadLeftOut()
             // A scan whose listing was cut for another set never read what
             // this set needs: scan again. Otherwise the results are cut
             // again from the whole of them, now or when the scan ends
@@ -170,11 +172,16 @@ final class CommonPhotosScanModel {
         guard !folders.contains(where: { $0.lowercased() == folder.lowercased() }) else { return }
         folders.append(folder)
         resetScan()
+        // Another set: its own Left Out; what was unchecked was of the old one.
+        leftOutPending = [:]
+        loadLeftOut()
     }
 
     func remove(folder: String) {
         folders.removeAll { $0 == folder }
         resetScan()
+        leftOutPending = [:]
+        loadLeftOut()
     }
 
     /// The first thing that stops a run, or nil (FS-19.08 §4).
@@ -204,16 +211,107 @@ final class CommonPhotosScanModel {
     }
 
     /// Photos the user left out, by SHA-256 (§6d): the run never touches them.
+    /// Stored for the set (`CommonPhotosLeftOutStore`) once it has a
+    /// destination; before that, kept here and stored when one is chosen.
     private(set) var leftOut: Set<String> = []
+    /// Left out by an earlier sheet: listed under Left Out, not as rows.
+    private(set) var leftOutBefore: Set<String> = []
+    /// The set's Left Out list, as stored.
+    private(set) var leftOutEntries: [CommonPhotosLeftOutStore.Entry] = []
+    /// Unchecked with no destination yet: no set to store them in.
+    private var leftOutPending: [String: CommonPhotosLeftOutStore.Photo] = [:]
 
-    /// Checks or unchecks rows; ids from `rows`.
+    /// The set the sheet gathers, once it has a destination.
+    var setKey: String? {
+        destination.map { CommonPhotosIncremental.setKey(connectionId: connectionId, folders: folders, destination: $0) }
+    }
+
+    private var leftOutStore: CommonPhotosLeftOutStore? { database.map(CommonPhotosLeftOutStore.init) }
+
+    /// Checks or unchecks rows; ids from `rows`. Unchecked is stored for the
+    /// set at once: every later scan, Run Again and Keep gathering skips it.
     func setIncluded(_ included: Bool, rows ids: Set<String>) {
-        let shas = Set(rows.filter { ids.contains($0.id) }.map(\.sha256))
-        if included { leftOut.subtract(shas) } else { leftOut.formUnion(shas) }
+        let chosen = rows.filter { ids.contains($0.id) }
+        let shas = Set(chosen.map(\.sha256))
+        if included {
+            leftOut.subtract(shas)
+            shas.forEach { leftOutPending[$0] = nil }
+            if let setKey { record { try $0.include(shas, setKey: setKey) } }
+        } else {
+            leftOut.formUnion(shas)
+            let photos = chosen.map { CommonPhotosLeftOutStore.Photo(sha256: $0.sha256, name: $0.name, size: $0.size) }
+            if let setKey {
+                record { try $0.leaveOut(photos, setKey: setKey, connectionId: connectionId) }
+            } else {
+                photos.forEach { leftOutPending[$0.sha256] = $0 }
+            }
+        }
+        reloadLeftOutEntries()
+    }
+
+    /// Include from the Left Out list: back as a row, checked, from the
+    /// next scan on (and now, when this scan found it).
+    func include(_ entries: Set<String>) {
+        leftOut.subtract(entries)
+        leftOutBefore.subtract(entries)
+        if let setKey { record { try $0.include(entries, setKey: setKey) } }
+        reloadLeftOutEntries()
+        // Found by this scan: a row again, with its place in the plan.
+        if phase == .done, photos.contains(where: { entries.contains($0.sha256) }) { replan() }
+    }
+
+    /// The set's stored Left Out, as the scan begins or the destination
+    /// changes; what was unchecked before a destination is stored now.
+    private func loadLeftOut() {
+        guard let setKey, let store = leftOutStore else {
+            // No set: only what was unchecked in this sheet stays out.
+            leftOut = Set(leftOutPending.keys)
+            leftOutBefore = []
+            leftOutEntries = []
+            return
+        }
+        let pending = Array(leftOutPending.values)
+        // Kept until stored: a failed write leaves them pending for the next set.
+        if record({ try $0.leaveOut(pending, setKey: setKey, connectionId: connectionId) }) { leftOutPending = [:] }
+        let stored = Set(((try? store.entries(setKey: setKey)) ?? []).map(\.sha256))
+        // Pending ones that could not be stored still stay out in this sheet.
+        leftOut = stored.union(leftOutPending.keys)
+        leftOutBefore = stored.subtracting(pending.map(\.sha256))
+        reloadLeftOutEntries()
+    }
+
+    private func reloadLeftOutEntries() {
+        guard let setKey, let store = leftOutStore else { leftOutEntries = []; return }
+        // Unchecked in this sheet: still a row; the list holds the earlier ones.
+        let found = Set(photos.map(\.sha256))
+        leftOutEntries = ((try? store.entries(setKey: setKey)) ?? []).filter { entry in
+            leftOutBefore.contains(entry.sha256) || !found.contains(entry.sha256)
+        }
+    }
+
+    /// A write to the Left Out table; a failure is logged, the choice still
+    /// holds in this sheet.
+    @discardableResult
+    private func record(_ write: (CommonPhotosLeftOutStore) throws -> Void) -> Bool {
+        guard let store = leftOutStore else { return false }
+        do {
+            try write(store)
+            return true
+        } catch {
+            Self.logger.error("left out not stored: \(error.localizedDescription, privacy: .public)")
+            return false
+        }
     }
 
     /// The Same photos the run takes.
     var includedPhotos: [CommonPhoto] { photos.filter { !leftOut.contains($0.sha256) } }
+
+    /// Every Same photo this scan proved, listed or left out before — what
+    /// "confirmed so far" counts against the candidates.
+    var confirmedCount: Int { photos.count }
+
+    /// The Same photos listed as rows: not those left out by an earlier sheet.
+    private var listed: [CommonPhoto] { photos.filter { !leftOutBefore.contains($0.sha256) } }
 
     /// Whether some source shows what lands in the destination.
     var isDestinationIndexed: Bool {
@@ -223,7 +321,8 @@ final class CommonPhotosScanModel {
 
     // MARK: Counts
 
-    var sameCount: Int { photos.count }
+    /// Same rows (Left Out from before not counted: they are listed apart).
+    var sameCount: Int { listed.count }
 
     /// First-folder candidates still to decide.
     var candidateCount: Int { preview?.candidateCount ?? 0 }
@@ -233,7 +332,7 @@ final class CommonPhotosScanModel {
     /// First-folder candidates a failed scan never reached.
     var notCheckedCount: Int { failure != nil ? max(0, candidateCount - checkedFiles) : 0 }
 
-    var sameBytes: Int64 { photos.reduce(Int64(0)) { $0 + $1.size } }
+    var sameBytes: Int64 { listed.reduce(Int64(0)) { $0 + $1.size } }
 
     /// What the run button counts (§6d): a Copy skips the photos already in
     /// the destination; a Move still takes every copy out of the folders.
@@ -247,8 +346,8 @@ final class CommonPhotosScanModel {
     var runBytes: Int64 { runnable.filter { !leftOut.contains($0.sha256) }.reduce(Int64(0)) { $0 + $1.size } }
 
     private var runnable: [CommonPhoto] {
-        guard action == .copy else { return photos }
-        return photos.filter { photo in
+        guard action == .copy else { return listed }
+        return listed.filter { photo in
             if case .alreadyThere? = landings[Self.rowId(photo.files[0][0])] { false } else { true }
         }
     }
@@ -261,7 +360,7 @@ final class CommonPhotosScanModel {
     /// The Same photos, in the order found (§6d: Same only).
     var rows: [Row] {
         guard preview != nil else { return [] }
-        return photos.map { photo in
+        return listed.map { photo in
             row(photo.files.map { $0[0] }, size: photo.size, copies: photo.files.joined().count, sha256: photo.sha256)
         }
     }
@@ -376,6 +475,7 @@ final class CommonPhotosScanModel {
         planTask?.cancel()
         landings = [:]
         isPlanning = false
+        loadLeftOut()
         phase = .listing
         preview = nil
         photos = []
@@ -588,12 +688,14 @@ final class CommonPhotosScanModel {
     /// and size as a photo. A destination that cannot be listed leaves the
     /// rows without a plan; the run names them anyway.
     private func replan() {
+        reloadLeftOutEntries()
         planTask?.cancel()
         landings = [:]
         isPlanning = false
+        // The rows only: a photo left out before claims no name in the plan.
+        let photos = listed
         guard plansDestination, let destination, !photos.isEmpty else { return }
         let scanId = scanId
-        let photos = photos
         isPlanning = true
         planTask = Task { [weak self] in
             guard let self else { return }

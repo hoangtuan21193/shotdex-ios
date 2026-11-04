@@ -169,6 +169,27 @@ extension AppDatabase {
     /// FS-19.08 §6c: the set's run the server cut off mid-way — the next
     /// pass carries it on. Not a run the user paused: that one waits for
     /// the user.
+    /// FS-19.08 §6d: the photos the user left out of a set — never run by
+    /// a scan, Run Again or Keep gathering of that set until Include. Typed
+    /// by the user, so a table of its own (BD-02): Clear Local Metadata Index
+    /// leaves it; removing the set or its connection takes it.
+    static func registerCommonPhotosLeftOut(_ migrator: inout DatabaseMigrator) {
+        migrator.registerMigration("v57-commonPhotosLeftOut") { db in
+            try db.create(table: "common_photo_left_out") { t in
+                // `CommonPhotosIncremental.setKey`.
+                t.column("setKey", .text).notNull()
+                t.column("connectionId", .text).notNull()
+                t.column("sha256", .text).notNull()
+                // What the Left Out list shows: the first copy's name and size.
+                t.column("name", .text).notNull()
+                t.column("size", .integer).notNull()
+                t.column("createdAt", .integer).notNull()
+                t.primaryKey(["setKey", "sha256"])
+            }
+            try db.create(index: "common_photo_left_out_connection", on: "common_photo_left_out", columns: ["connectionId"])
+        }
+    }
+
     static func registerCommonPhotosWatchResume(_ migrator: inout DatabaseMigrator) {
         migrator.registerMigration("v55-commonPhotosWatchResume") { db in
             try db.alter(table: "common_photo_watches") { t in

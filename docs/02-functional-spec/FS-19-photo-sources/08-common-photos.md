@@ -384,7 +384,7 @@ SHA đã nhớ (§6c).
 | Đọc từ | danh sách server (lệnh liệt kê) · SHA và ngày chụp đã có của bản sao server ([05](05-data.md), bảng file từng bản sao) |
 | Ghi vào (§6c) | bảng **SHA đã đọc** (connection, đường dẫn, cỡ, ngày sửa, SHA, khoá ngày chụp, lúc đọc) · bảng **Bộ tự gom** (connection, folder nguồn, folder chung, Copy/Move, bật/tắt, lúc kiểm cuối, lý do chờ/dừng, số đã gom); lượt gom thêm cột bộ gom để biết "lượt xong gần nhất của bộ" |
 | Ghi vào | bảng mới **Lượt gom** (connection, folder nguồn, folder chung, Copy/Move, trạng thái, lúc) + **Mục gom** (SHA, đường dẫn từng nguồn, đích, trạng thái, lỗi; thêm cho §6b: sidecar lượt đã đặt ở đích + SHA của nó, trạng thái hoàn tác) + bảng phụ **hàng lịch sử đã dời** (lượt, ảnh, hàng lịch sử, đường dẫn trước khi dời) |
-| Ghi vào (§6d) | bảng **Ảnh bỏ ra** (bộ gom, SHA-256, lúc bỏ) — người dùng tự tạo, bảng riêng; kế hoạch của từng ảnh (tên dự kiến ở đích, Already in Shared) đi cùng kết quả Scan, ghi vào `common_photo_items` khi bấm chạy |
+| Ghi vào (§6d) | bảng **Ảnh bỏ ra** `common_photo_left_out` (bộ gom, connection, SHA-256, tên + cỡ để hiện, lúc bỏ) — người dùng tự tạo, bảng riêng; mất khi Remove from List bộ đó hoặc xoá connection; bộ chưa từng bật Keep gathering không có hàng Remove from List, nên Ảnh bỏ ra của nó sống tới khi xoá connection (chấp nhận, 2026-11-04); kế hoạch của từng ảnh (tên dự kiến ở đích, Already in Shared) đi cùng kết quả Scan, ghi vào `common_photo_items` khi bấm chạy |
 | Người dùng tự nhập? | §6d: **có**, bảng Ảnh bỏ ra (Clear Local Metadata Index không xoá; xoá theo bộ gom). Còn lại không — dữ liệu dẫn xuất, không vào `photo_metadata`; Clear Local Metadata Index không xoá lượt đang dở |
 
 ## 9. Ràng buộc

@@ -94,6 +94,8 @@ struct FileServerStore: Sendable {
             // What Common Photos read of its files (FS-19.08 §6c) is of no
             // use without it.
             try CommonPhotosScanRecords.forget(connectionId: id, in: db)
+            // Nor what the user left out of its sets (§6d).
+            try CommonPhotosLeftOutStore.forget(connectionId: id, in: db)
             // Photos ready to move through it never can be (§6c).
             for runId in try String.fetchAll(db, sql: "SELECT id FROM common_photo_runs WHERE connectionId = ? AND state = ?",
                                              arguments: [id, CommonPhotosRun.State.ready.rawValue]) {
