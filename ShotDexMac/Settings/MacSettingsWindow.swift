@@ -88,52 +88,55 @@ struct MacGeneralSettings: View {
     private var needsApproval: Bool { keepsWorking && control.agentStatus == .requiresApproval }
 
     var body: some View {
-        Form {
-            MacThumbnailSettings()
-            // The Mac has no viewer, Statistics screen or reminder yet (FS-18.04 §3).
-            Section {
-                MacLaterSettingsRow(switchTitle: String(localized: "View Full HDR", comment: "Mac Settings row"))
-                MacLaterSettingsRow(switchTitle: String(localized: "Autoplay Videos", comment: "Mac Settings row"))
-                MacLaterSettingsRow(switchTitle: String(localized: "Show Insights in Statistics", comment: "Mac Settings row"))
-                MacLaterSettingsRow(switchTitle: String(localized: "On This Day Reminder", comment: "Mac Settings row"))
-            } header: {
-                Text("Viewing and Reminders", comment: "Mac Settings group")
-            }
-            MacIndexingSettings()
-            Section {
-                LabeledContent {
-                    HStack(spacing: 12) {
-                        if needsApproval {
-                            Button(String(localized: "Open Login Items Settings", comment: "Mac Settings: open System Settings › Login Items")) {
-                                SMAppService.openSystemSettingsLoginItems()
+        ScrollViewReader { proxy in
+            Form {
+                MacThumbnailSettings()
+                // The Mac has no viewer, Statistics screen or reminder yet (FS-18.04 §3).
+                Section {
+                    MacLaterSettingsRow(switchTitle: String(localized: "View Full HDR", comment: "Mac Settings row"))
+                    MacLaterSettingsRow(switchTitle: String(localized: "Autoplay Videos", comment: "Mac Settings row"))
+                    MacLaterSettingsRow(switchTitle: String(localized: "Show Insights in Statistics", comment: "Mac Settings row"))
+                    MacLaterSettingsRow(switchTitle: String(localized: "On This Day Reminder", comment: "Mac Settings row"))
+                } header: {
+                    Text("Viewing and Reminders", comment: "Mac Settings group")
+                }
+                MacIndexingSettings().id("indexing")
+                Section {
+                    LabeledContent {
+                        HStack(spacing: 12) {
+                            if needsApproval {
+                                Button(String(localized: "Open Login Items Settings", comment: "Mac Settings: open System Settings › Login Items")) {
+                                    SMAppService.openSystemSettingsLoginItems()
+                                }
                             }
+                            Toggle(String(localized: "Keep Working After Quit", comment: "Mac Settings row"), isOn: $keepsWorking)
+                                .toggleStyle(.switch)
+                                .labelsHidden()
+                                .tint(MacTheme.accent)
                         }
-                        Toggle(String(localized: "Keep Working After Quit", comment: "Mac Settings row"), isOn: $keepsWorking)
-                            .toggleStyle(.switch)
-                            .labelsHidden()
-                            .tint(MacTheme.accent)
+                    } label: {
+                        Text("Keep Working After Quit", comment: "Mac Settings row")
+                        if needsApproval {
+                            Label(String(localized: "Needs Approval", comment: "Mac Settings: the helper is off in Login Items"),
+                                  systemImage: "circle.fill")
+                                .labelStyle(MacStatusDotLabelStyle(color: .orange))
+                        }
                     }
-                } label: {
-                    Text("Keep Working After Quit", comment: "Mac Settings row")
-                    if needsApproval {
-                        Label(String(localized: "Needs Approval", comment: "Mac Settings: the helper is off in Login Items"),
-                              systemImage: "circle.fill")
-                            .labelStyle(MacStatusDotLabelStyle(color: .orange))
+                    Picker(String(localized: "Keep Mac Awake While Copying", comment: "Mac Settings row"), selection: $keepAwake) {
+                        ForEach(MacKeepAwake.allCases, id: \.self) { Text($0.title).tag($0) }
                     }
+                } header: {
+                    Text("Background", comment: "Mac Settings group")
+                } footer: {
+                    Text(control.usesAgent
+                         ? String(localized: "Backups and On Server checks continue in the background.", comment: "Mac Settings: the helper runs after Quit")
+                         : String(localized: "Backups stop when you quit ShotDex.", comment: "Mac Backup: the jobs run only while the app is open"))
+                        .foregroundStyle(.secondary)
                 }
-                Picker(String(localized: "Keep Mac Awake While Copying", comment: "Mac Settings row"), selection: $keepAwake) {
-                    ForEach(MacKeepAwake.allCases, id: \.self) { Text($0.title).tag($0) }
-                }
-            } header: {
-                Text("Background", comment: "Mac Settings group")
-            } footer: {
-                Text(control.usesAgent
-                     ? String(localized: "Backups and On Server checks continue in the background.", comment: "Mac Settings: the helper runs after Quit")
-                     : String(localized: "Backups stop when you quit ShotDex.", comment: "Mac Backup: the jobs run only while the app is open"))
-                    .foregroundStyle(.secondary)
             }
+            .formStyle(.grouped)
+            .settingsDebugScroll(proxy)
         }
-        .formStyle(.grouped)
         .onChange(of: keepsWorking) { _, on in control.setKeepsWorkingAfterQuit(on) }
         .onChange(of: keepAwake) { _, value in MacKeepAwake.current = value }
         // The user may have flipped the switch in System Settings meanwhile.
@@ -171,4 +174,21 @@ extension MacKeepAwake {
 extension Notification.Name {
     /// A pane of Settings to show, by `MacSettingsPane` raw value.
     static let macSettingsShowPane = Notification.Name("ShotDexMacSettingsShowPane")
+}
+
+extension View {
+    /// DEBUG `-ShotDexSettingsScroll <id>`: brings a group below the fold
+    /// into view, for screenshots. Nothing in a release build.
+    func settingsDebugScroll(_ proxy: ScrollViewProxy) -> some View {
+        #if DEBUG
+        task {
+            let arguments = ProcessInfo.processInfo.arguments
+            guard let index = arguments.firstIndex(of: "-ShotDexSettingsScroll"), index + 1 < arguments.count else { return }
+            try? await Task.sleep(for: .seconds(2))
+            proxy.scrollTo(arguments[index + 1], anchor: .top)
+        }
+        #else
+        self
+        #endif
+    }
 }
