@@ -15,6 +15,10 @@ struct MacSettingsWindow: View {
                 }
             }
         }
+        // Review Unknown Cameras in Sources › Index opens Cameras.
+        .onReceive(NotificationCenter.default.publisher(for: .macSettingsShowPane)) { note in
+            if let pane = (note.object as? String).flatMap(MacSettingsPane.init(rawValue:)) { self.pane = pane }
+        }
     }
 }
 
@@ -162,4 +166,9 @@ extension MacKeepAwake {
         case .always: String(localized: "Always", comment: "Mac Settings: Keep Mac Awake While Copying")
         }
     }
+}
+
+extension Notification.Name {
+    /// A pane of Settings to show, by `MacSettingsPane` raw value.
+    static let macSettingsShowPane = Notification.Name("ShotDexMacSettingsShowPane")
 }

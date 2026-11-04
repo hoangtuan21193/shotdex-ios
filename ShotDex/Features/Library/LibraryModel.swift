@@ -126,9 +126,10 @@ final class LibraryModel {
     /// reentrancy, not this.
     private(set) var isIndexing = false
     /// A pipeline run is in flight, whether or not it has found work — the
-    /// reentrancy guard for every start path. Not observed: no UI depends on a
-    /// run that may turn out to have nothing to do.
-    @ObservationIgnored private var isIndexRunActive = false
+    /// reentrancy guard for every start path. Observed for Mac Settings'
+    /// Clear Local Metadata Index, which must not land under a run still
+    /// walking the library (it changes at a run's start and end only).
+    private(set) var isIndexRunActive = false
     /// Bumped once per run. A run abandoned by the unwind watchdog compares
     /// this against the generation it started with, so if it ever does unwind it
     /// keeps its hands off state a newer run now owns.

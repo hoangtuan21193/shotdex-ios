@@ -423,7 +423,13 @@ struct MetadataStore: Sendable {
     /// Clears the whole index (Settings → Clear local metadata index).
     func deleteAll() throws {
         try database.writer.write { db in
-            _ = try PhotoMetadata.deleteAll(db)
+            // Only what an index run reads back from Photos. A file or server
+            // photo's row is written by its source's read, which skips files
+            // that did not change — cleared, it would never come back.
+            try db.execute(sql: """
+                DELETE FROM photo_metadata
+                WHERE assetId NOT IN (SELECT photoId FROM photo_copies WHERE kind IN ('file', 'server'))
+                """)
             // The caption/keyword mirror is a copy of Photos and is read again;
             // stars and flags (user data) stay.
             try PhotoKeywordStore.deleteAll(db)

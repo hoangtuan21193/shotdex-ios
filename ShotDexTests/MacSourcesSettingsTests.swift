@@ -1,4 +1,5 @@
 import Foundation
+import GRDB
 import Testing
 @testable import ShotDex
 
@@ -133,6 +134,62 @@ import Testing
             files[url] = data
         }
         return (folder, files)
+    }
+
+    /// AC-80: Clear Local Metadata Index forgets what was read from every
+    /// photo and keeps what the user made — an album and its 2 photos, a flag.
+    @Test func clearKeepsUserData() throws {
+        let database = try AppDatabase.makeEmpty()
+        let store = MetadataStore(database: database)
+        try store.upsert(Self.row("p1"))
+        try store.upsert(Self.row("p2"))
+        let albums = ShotDexAlbumStore(database: database)
+        let album = try albums.create(name: "Selects")
+        try albums.add(photoIds: ["p1", "p2"], to: album)
+        let marks = PhotoMarksStore(database: database)
+        try marks.setFlag(.pick, ids: ["p1"])
+
+        try store.deleteAll()
+
+        #expect(try store.rowCount() == 0)
+        // Members stay; the album lists them again as the index reads them back.
+        let members = try database.reader.read { db in
+            try String.fetchAll(db, sql: "SELECT photoId FROM shotdex_album_members WHERE albumId = ? ORDER BY photoId", arguments: [album])
+        }
+        #expect(members == ["p1", "p2"])
+        try store.upsert(Self.row("p1"))
+        #expect(try albums.photoIds(in: album) == ["p1"])
+        #expect(try marks.allFlags()["p1"] == .pick)
+    }
+
+    private static func row(_ assetId: String) -> PhotoMetadata {
+        PhotoMetadata(
+            assetId: assetId, creationDate: 1_700_000_000, modificationDate: 1_700_000_000, mediaType: MediaKind.photo.storedValue,
+            cameraManufacturer: nil, cameraModel: "X-T5", normalizedCameraModel: "X-T5", normalizedCameraManufacturer: nil,
+            lensManufacturer: nil, lensModel: nil, normalizedLensModel: nil, originalFilename: nil,
+            iso: 800, aperture: nil, shutterSpeedSeconds: nil, shutterSpeedDisplay: nil,
+            focalLength: nil, focalLengthIn35mm: nil, calculatedEquivalentFocalLength: nil, equivalentFocalLength: nil,
+            sensorFormat: nil, cropFactor: nil, width: 6000, height: 4000, fileSize: 1_000,
+            latitude: nil, longitude: nil, isFavorite: false, indexedAt: 1_700_000_000, exifStatus: ExifStatus.indexed.rawValue)
+    }
+
+    /// A folder photo's row is kept by Clear: only its source's read writes
+    /// it, and that read skips a file that did not change (AC-80).
+    @Test func clearKeepsFileSourceRows() async throws {
+        let folder = try Self.folder(photos: 2)
+        defer { try? FileManager.default.removeItem(at: folder.url) }
+        let database = try AppDatabase.makeEmpty()
+        let store = MetadataStore(database: database)
+        let runner = FolderSourceRunner(database: database, metadataStore: store, thumbnails: nil)
+        let sourceId = try await runner.add(folder: folder.url, includesSubfolders: true, pairsRawAndJpeg: true)
+        _ = try await runner.read(sourceId: sourceId)
+        try store.upsert(Self.row("photos-asset"))
+        #expect(try store.rowCount() == 3)
+
+        try store.deleteAll()
+
+        #expect(try store.rowCount() == 2)
+        #expect(try SourceStore(database: database).photoCounts()[sourceId] == 2)
     }
 
     /// The confirmation says the photos go and the files stay, by where they live.

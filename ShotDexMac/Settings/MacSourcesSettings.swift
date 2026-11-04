@@ -35,6 +35,10 @@ struct MacIndexSettingsSection: View {
     @State private var lastIndexed: Date?
     /// Photos not read yet, for Paused on battery.
     @State private var waiting = 0
+    /// Cameras whose sensor format nobody knows yet, for Review….
+    @State private var unknownCameras = 0
+    @State private var isConfirmingClear = false
+    @State private var clearFailure: String?
 
     private var library: LibraryModel? { dependencies.library }
 
@@ -63,6 +67,7 @@ struct MacIndexSettingsSection: View {
         Section {
             // The "indexed … ago" part ages while the pane stays open.
             TimelineView(.periodic(from: .now, by: 30)) { context in
+                HStack(alignment: .center, spacing: 8) {
                 VStack(alignment: .leading, spacing: 4) {
                     Text(IndexStatusLine.title(state, counts: counts))
                         .monospacedDigit()
@@ -83,11 +88,78 @@ struct MacIndexSettingsSection: View {
                     }
                 }
                 .accessibilityElement(children: .combine)
+                Spacer(minLength: 8)
+                // A run going reads everything already. A run started here goes even on battery.
+                Button(String(localized: "Re-index Library", comment: "Mac Settings › Index: read every photo again")) {
+                    dependencies.library?.startIndexing(fullReindex: true, manual: true)
+                }
+                .disabled(dependencies.library == nil || dependencies.library?.isIndexing == true)
+                .help(String(localized: "Reads every photo in Photos again; folders, drives and servers are read again from their own Re-index. Can take hours for a large library.", comment: "Mac Settings › Index: Re-index Library help"))
+                }
+            }
+            LabeledContent {
+                Button(String(localized: "Review…", comment: "Mac Settings › Index: open the camera list")) {
+                    NotificationCenter.default.post(name: .macSettingsShowPane, object: MacSettingsPane.cameras.rawValue)
+                }
+                .disabled(unknownCameras == 0)
+                .accessibilityLabel(String(localized: "Review Unknown Cameras", comment: "Mac Settings › Index: VoiceOver"))
+            } label: {
+                Text("Camera Database", comment: "Mac Settings › Index row")
+                Text(unknownCameras == 0
+                     ? String(localized: "Every camera has a sensor format", comment: "Mac Settings › Index: no unknown cameras")
+                     : unknownCameras == 1
+                     ? String(localized: "1 camera needs a sensor format", comment: "Mac Settings › Index: one unknown camera")
+                     : String(localized: "\(unknownCameras, format: .number) cameras need a sensor format", comment: "Mac Settings › Index: unknown cameras"))
+            }
+            LabeledContent {
+                Button(String(localized: "Clear…", comment: "Mac Settings › Index: clear the local metadata index"), role: .destructive) {
+                    isConfirmingClear = true
+                }
+                .disabled(dependencies.library == nil || dependencies.library?.isIndexRunActive == true)
+                .accessibilityLabel(String(localized: "Clear Local Metadata Index", comment: "Mac Settings › Index: VoiceOver"))
+            } label: {
+                Text("Clear Local Metadata Index", comment: "Mac Settings › Index row")
+                Text(dependencies.library?.isIndexRunActive == true
+                     ? String(localized: "Available when indexing finishes", comment: "Mac Settings › Index: why Clear is off")
+                     : String(localized: "Forgets what was read from your photos and reads them again", comment: "Mac Settings › Index row explanation"))
             }
         } header: {
             Text("Index", comment: "Mac Settings › Sources group")
         }
         .task(id: refreshKey) { await refresh() }
+        .alert(String(localized: "The Index Was Not Cleared", comment: "Mac Settings › Index: Clear failed"),
+               isPresented: Binding(get: { clearFailure != nil }, set: { if !$0 { clearFailure = nil } })) {
+            Button(String(localized: "OK", comment: "Mac Settings › Index: dismiss an error")) {}
+        } message: {
+            Text(clearFailure ?? "")
+        }
+        .confirmationDialog(String(localized: "Clear the Local Metadata Index?", comment: "Mac Settings › Index: Clear dialog title"),
+                            isPresented: $isConfirmingClear) {
+            Button(String(localized: "Clear and Re-index", comment: "Mac Settings › Index: confirm Clear"), role: .destructive) { clearIndex() }
+            Button(String(localized: "Cancel", comment: "Mac Settings › Index: keep the index"), role: .cancel) {}
+        } message: {
+            Text("ShotDex forgets what it read from every photo and reads the library again; this can take a while. Your photos, files, albums, ratings and flags stay.",
+                 comment: "Mac Settings › Index: Clear dialog message")
+        }
+    }
+
+    /// Forgets the camera info read from every photo, then reads the library
+    /// again; what the user made — albums, ratings, flags — is kept (AC-80).
+    private func clearIndex() {
+        let store = dependencies.metadataStore
+        Task {
+            // 55,000 rows: off the main actor.
+            let failed = await Task.detached { () -> String? in
+                do { try store.deleteAll(); return nil } catch { return error.localizedDescription }
+            }.value
+            if let failed {
+                clearFailure = failed
+                return
+            }
+            dependencies.library?.reload()
+            dependencies.library?.startIndexing(fullReindex: true, manual: true)
+            await refresh()
+        }
     }
 
     private func refresh() async {
@@ -95,6 +167,7 @@ struct MacIndexSettingsSection: View {
         let store = dependencies.metadataStore
         let seconds = await Task.detached { (try? store.indexState())?.lastIndexedAt }.value
         waiting = await Task.detached { (try? store.unfinishedCount()) ?? 0 }.value
+        unknownCameras = await Task.detached { (try? store.unknownCameraModels().count) ?? 0 }.value
         lastIndexed = seconds.map { Date(timeIntervalSince1970: TimeInterval($0)) }
     }
 }
