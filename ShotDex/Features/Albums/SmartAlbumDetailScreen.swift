@@ -246,6 +246,14 @@ struct SmartAlbumDetailScreen: View {
             }
     }
 
+    /// The original check's progress, for an album on the Original rule.
+    private var originalLine: String? {
+        guard album.query.usesOriginal else { return nil }
+        let check = dependencies.originalPresenceCheck
+        return OriginalPresenceProgressLine.text(checked: check.progress.checked, total: check.progress.total,
+                                                 finishedAt: check.pass?.finishedAt.map { Date(timeIntervalSince1970: TimeInterval($0)) })
+    }
+
     /// Library's Limited Access banner, then the saved conditions with the
     /// Filter menu's chips on the same row (FS-06.09 §4).
     private var topAccessories: some View {
@@ -264,6 +272,7 @@ struct SmartAlbumDetailScreen: View {
                     filterChips: filterChips,
                     sourceNames: model?.sourceNames ?? [:],
                     statusLines: model?.onServerLines ?? [],
+                    originalLine: originalLine,
                     onEditFilter: filter.advancedQuery != nil ? { isAdvancedFilterPresented = true } : nil,
                     onClearFilter: filter.isActive ? { filter.clear() } : nil
                 )

@@ -25,6 +25,12 @@ struct RuleBuilderSections: View {
     /// Hosts the Folder row's browser; without one the row is not offered.
     @Environment(SourceFolderPicker.self) private var folderPicker: SourceFolderPicker?
 
+    /// An Original condition while the check has photos left.
+    private var uncheckedOriginals: Bool {
+        guard query.usesOriginal, let check = dependencies?.originalPresenceCheck else { return false }
+        return check.progress.checked < check.progress.total
+    }
+
     /// Photo-vs-video as a scope control instead of a condition row. Backed by a
     /// single `.mediaType` rule so it compiles through the same SQL builder as
     /// everything else; "All" simply removes it.
@@ -144,7 +150,13 @@ struct RuleBuilderSections: View {
             Text("Conditions")
         } footer: {
             if let matchCount {
-                Text("Matches \(matchCount) photo.")
+                if uncheckedOriginals {
+                    // Unchecked photos match neither value (FS-06.10 §3):
+                    // the count grows as the check goes on.
+                    Text("Matches \(matchCount) photo. Photos not checked yet aren't counted.")
+                } else {
+                    Text("Matches \(matchCount) photo.")
+                }
             }
         }
         .task {

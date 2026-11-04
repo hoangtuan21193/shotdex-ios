@@ -26,6 +26,12 @@ struct SmartAlbumConditionsBar: View {
     var sourceNames: [String: String] = [:]
     /// The on-server check's progress under the conditions (FS-19.07 §7).
     var statusLines: [String] = []
+    /// The original-on-device check's line (FS-06.10 §3), under the first
+    /// on-server line, with the device's glyph so the two read apart.
+    var originalLine: String?
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+
+    private var countsLineLimit: Int? { dynamicTypeSize.isAccessibilitySize ? nil : 1 }
     var onEditFilter: (() -> Void)?
     var onClearFilter: (() -> Void)?
 
@@ -86,26 +92,61 @@ struct SmartAlbumConditionsBar: View {
                     }
                 }
             }
-            if !statusLines.isEmpty {
+            if !statusLines.isEmpty || originalLine != nil {
                 VStack(alignment: .leading, spacing: 2) {
-                    ForEach(Array(statusLines.enumerated()), id: \.offset) { index, line in
-                        // The first line is counts and keeps to one; the
-                        // sentences after it (a mismatch names a device,
-                        // §12.4) wrap rather than lose words.
-                        Text(line)
-                            .lineLimit(index == 0 ? 1 : nil)
+                    if let first = statusLines.first {
+                        // The first line is counts and keeps to one — at
+                        // accessibility sizes it wraps rather than lose the
+                        // count; the sentences after it (a mismatch names a
+                        // device, §12.4) always wrap.
+                        Text(first)
+                            .lineLimit(countsLineLimit)
                             .truncationMode(.tail)
+                            .accessibilityAddTraits(.updatesFrequently)
+                    }
+                    if let originalLine {
+                        // Its own element: the two checks tick apart.
+                        Label(originalLine, systemImage: Self.deviceSymbol)
+                            .labelStyle(StatusLineLabelStyle())
+                            .lineLimit(countsLineLimit)
+                            .truncationMode(.tail)
+                            .accessibilityElement(children: .ignore)
+                            .accessibilityLabel(originalLine.replacingOccurrences(of: " · ", with: ", "))
+                            .accessibilityAddTraits(.updatesFrequently)
+                    }
+                    ForEach(Array(statusLines.dropFirst().enumerated()), id: \.offset) { _, line in
+                        Text(line)
                     }
                 }
                 .font(.caption)
                 .monospacedDigit()
                 .foregroundStyle(.secondary)
-                .accessibilityElement(children: .combine)
-                .accessibilityAddTraits(.updatesFrequently)
+                .accessibilityElement(children: .contain)
             }
         }
         .padding(.horizontal)
         .padding(.vertical, 10)
         .background(.bar)
+    }
+}
+
+extension SmartAlbumConditionsBar {
+    /// The glyph of the device the originals are checked on.
+    static var deviceSymbol: String {
+        #if os(macOS)
+        "laptopcomputer"
+        #else
+        UIDevice.current.userInterfaceIdiom == .pad ? "ipad" : "iphone"
+        #endif
+    }
+}
+
+/// A status line's glyph sits tight against its text, at the text's size.
+private struct StatusLineLabelStyle: LabelStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: 4) {
+            configuration.icon.accessibilityHidden(true)
+            configuration.title
+        }
     }
 }

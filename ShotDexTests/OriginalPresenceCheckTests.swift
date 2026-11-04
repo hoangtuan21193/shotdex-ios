@@ -245,4 +245,21 @@ struct OriginalPresenceCheckTests {
         await check.run()
         #expect(probe.asked.joined().count == 8)
     }
+
+    /// Items indexed after a pass finished are checked, and the pass is
+    /// finished again then — the line's "checked … ago" is not the empty
+    /// pass from before the index.
+    @Test func newItemsRefreshTheFinishTime() async throws {
+        let database = try AppDatabase.makeEmpty()
+        let probe = Probe()
+        let clock = Clock()
+        let check = Self.check(database, probe, clock: clock)
+        await check.run()
+        #expect(check.pass?.finishedAt == 1_000)
+        try MetadataStore(database: database).saveBatch([PhotoMarksStoreTests.record("p0")], cursorAssetId: nil)
+        clock.seconds += 3_600
+        await check.run()
+        #expect(check.pass?.finishedAt == 4_600)
+        #expect(check.progress == .init(checked: 1, total: 1))
+    }
 }

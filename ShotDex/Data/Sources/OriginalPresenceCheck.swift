@@ -68,6 +68,10 @@ final class OriginalPresenceCheck {
         self.environment = environment
         // One row by key: cheap enough for the main actor, once.
         pass = try? environment.store.pass()
+        // An index run added rows the check has not seen.
+        NotificationCenter.default.addObserver(forName: .indexRunEnded, object: nil, queue: .main) { [weak self] _ in
+            MainActor.assumeIsolated { if self?.isInFront == true { self?.start() } }
+        }
     }
 
     /// The scene came to the foreground: new and changed items are checked.
@@ -162,6 +166,9 @@ final class OriginalPresenceCheck {
         if pass == nil { beginPass() }
         let store = environment.store
         await refreshProgress()
+        // Items checked by this run: a finished pass that took in new ones
+        // is finished again now, so "checked … ago" stays true.
+        var didCheck = false
         while !Task.isCancelled {
             hasMoreWork = false
             // Read every batch: a pass begun meanwhile moves the line.
@@ -189,13 +196,19 @@ final class OriginalPresenceCheck {
             let answers = gathered
             let now = Int64(environment.now().timeIntervalSince1970)
             try? await Self.offMain { try store.record(answers, at: now) }
+            didCheck = true
             await refreshProgress()
             generation &+= 1
         }
-        guard !Task.isCancelled, let current = pass, current.finishedAt == nil else { return }
+        guard !Task.isCancelled, let current = pass, current.finishedAt == nil || didCheck else { return }
         let now = Int64(environment.now().timeIntervalSince1970)
         try? store.finishPass(at: now)
         pass?.finishedAt = now
         generation &+= 1
     }
+}
+
+extension Notification.Name {
+    /// An index run ended: rows were added or refreshed.
+    static let indexRunEnded = Notification.Name("ShotDexIndexRunEnded")
 }

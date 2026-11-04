@@ -1010,6 +1010,8 @@ final class LibraryModel {
         indexNetworkStatus = nil
         indexDiagnostics = nil
         backgroundIndex.endRunAssertion()
+        // New rows are in: the original check looks at them (FS-06.10 §4).
+        NotificationCenter.default.post(name: .indexRunEnded, object: nil)
         startPendingRequestAfterRun()
     }
 

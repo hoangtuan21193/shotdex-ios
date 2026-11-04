@@ -111,7 +111,7 @@ Không đoán thay cho ảnh chưa kiểm.
 | AC-11 | Library 100 ảnh, 60 có trên máy, iOS 26.5 và 18.6 | menu Filter › bật *Original on This iPhone* | lưới còn 60; thanh chip có chip tương ứng; đang có truy vấn nâng cao thì truy vấn đó bị xoá | ⚠️ chưa có — `Tools/ui-drive` + ảnh cả hai nhánh |
 | AC-12 | Mac bật Download Originals, 200 ảnh | lượt kiểm xong | *is On This Mac* ra 200; trường vẫn có trong menu trường | ⚠️ chưa có — Mac |
 | AC-13 | mọi trường của bộ dựng | mở menu phép của *Original* | chỉ có *is* và *is not*; không có *is missing* | ✅ `SmartAlbumOperatorTests.everyFieldOperators`, `choiceFieldsOfferOnlyIsAndIsNot` |
-| AC-14 | iPhone, Duo trong, iPad, Mac | mở sheet editor và màn album có dòng tiến độ | khớp board từng máy, lệch ≤ 2pt | ⚠️ chưa có — `design-parity` |
+| AC-14 | iPhone, Duo trong, iPad, Mac | mở sheet editor và màn album có dòng tiến độ | khớp board từng máy, lệch ≤ 2pt | ⚠️ một phần — Duo trong: `build/design/shots/FS0610/T8/album-final.png` (ui-drive `fs0610-smart-album.json`); iPhone/iPad/Mac ở T12 `design-parity` |
 
 **Chưa chứng minh được:** AC-1…AC-14 (spec mới, chưa có code).
 
