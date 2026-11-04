@@ -46,20 +46,37 @@ Support thành cửa sổ riêng.
 
 ## 3. Cửa sổ Settings (⌘,)
 
-- Một cửa sổ rộng cố định **720**, cao ≤ **640** (thân cuộn); toolbar 5 pane **General · Sources · Editing · Servers ·
-  Cameras**; tiêu đề cửa sổ theo pane; nút thu nhỏ/phóng to tắt. **Không có nút Save** — đổi là áp ngay.
+Cập nhật 2026-11-04 ([intent](../../_intents/2026-11-04-mac-settings-panes.md)): sáu pane theo board, có pane AI; bỏ
+Group Photos By và Open Photos (nhóm ảnh và cách mở ảnh chỉnh ở menu View, không ở Settings).
 
-| Pane | Có gì | Từ mục iOS |
-|---|---|---|
-| General | Group Photos By · Open Photos (In the Same Window · In a New Window) · File Type Badge · Info on Thumbnails · Focal Length (Actual · Full-Frame Equivalent) · View Full HDR · Autoplay Videos · Show Insights in Statistics · On This Day Reminder · **Background**: Keep Working After Quit · Keep Mac Awake While Copying ([FS-22.06](../FS-22-backup/06-mac.md) §5.4) | Display, Playback, Notifications |
-| Sources | nguồn ảnh, quyền, `.xmp` sidecar, ổ và index, preview, People and Pets, Library Size, Re-index, Clear Local Metadata Index, các dòng Privacy — chi tiết FS-19 | Sources (tên mới của Photo Library, FS-21), People and Pets, Library Size, Privacy |
-| Editing | file mở khi có RAW+JPEG · câu về color profile · Export Defaults (Size, Format and Quality, File Names, If a File Exists, Metadata When Sharing, Watermark When Sharing) · bảng Presets | Export, Sharing |
-| Servers | bảng Connections (Name · Host · Protocol · Folder · Status) · Local Network Access · Server Thumbnails (Keep Mac Awake While Uploading gộp vào General › Background, 2026-11-02) | File Servers ([FS-15.01](../FS-15-server-upload/01-servers-and-settings.md)) |
-| Cameras | bảng máy, popup Sensor Format sửa tại chỗ; "Review Unknown Cameras" ở Sources nhảy tới đây | Camera Database (FS-08.03 §7) |
+- Một cửa sổ rộng cố định **720**, cao ≤ **640** (thân cuộn); toolbar 6 pane **General · AI · Sources · Editing ·
+  Servers · Cameras**; tiêu đề cửa sổ theo pane; nút thu nhỏ/phóng to tắt. **Không có nút Save** — đổi là áp ngay.
+- **Hàng chưa có tính năng phía sau** (Mac chưa có viewer, Export, AI Search…) vẫn hiện đúng chỗ trên board nhưng
+  **mờ và không bấm được**, kèm chữ phụ "Available in a later version". Board vẽ các hàng đó mờ. Khi tính năng tới Mac,
+  hàng sáng lên — không thêm, không dời hàng.
+  Chốt 2026-11-04: mờ ở mọi bản; tới lúc nộp App Store mới quyết có ẩn không (App Review 2.1/2.3).
 
+| Pane | Board | Hàng chạy thật | Hàng mờ (chưa có tính năng) | Từ mục iOS |
+|---|---|---|---|---|
+| General | `MAC_SettingsGeneral` | câu Thumbnail size (chỉ chữ) · File Type Badge · Info on Thumbnails (File Name, Capture Time, ISO, Aperture, Shutter Speed, Focal Length, Megapixels, File Size) · Focal Length (Actual · Full-Frame Equivalent) · **Indexing** (đã có) · **Background** (đã có, [FS-22.06](../FS-22-backup/06-mac.md) §5.4) | View Full HDR · Autoplay Videos · Show Insights in Statistics · On This Day Reminder | Display, Playback, Notifications |
+| AI | `MAC_SettingsAI`, `MAC_SettingsAIProvider` | — | cả pane: Use For › AI Search, bảng Providers và sheet sửa provider | AI ([FS-08.07](../FS-08-settings/)) |
+| Sources | `MAC_SettingsSources`, `MAC_SettingsSourcesCache` | bảng Photo Sources (Manage Access…, Re-index, Remove…, Grant Access…, Add Folder…, Connect to Server…, thả folder vào bảng) · Read and Write .xmp Sidecars · When a Drive Is Disconnected · Pause Indexing on Battery Power · Prevent Sleep While Indexing · Look Up Place Names · Scan for People and Pets (kèm "N of M items scanned") · Preview Cache (dung lượng, Clear Cache, Cache Size Limit 2/5/10/25/50 GB) · **Index** (đếm, dung lượng, tiến độ, Re-index Library) · Camera Database (số máy chưa rõ, Review Unknown Cameras) · Clear Local Metadata Index | Index New and Changed Files · Preview Cache › Change Location… · Keep Full-Size Previews · Keep Previews of Disconnected Drives | Sources (FS-21), People and Pets, Library Size, Privacy |
+| Editing | `MAC_SettingsEditing` | — | cả pane: RAW + JPEG Pairs, Export Defaults, Presets (Mac chưa có editor và Export) | Export, Sharing |
+| Servers | `MAC_SettingsServers` | bảng Connections (Name · Host · Protocol · Folder · Status; Add Connection…, Edit, Test, Delete) · Local Network Access + Open Privacy Settings… · Server Thumbnails (dung lượng, Clear Cache, Cache Size Limit) | — | File Servers ([FS-15.01](../FS-15-server-upload/01-servers-and-settings.md)) |
+| Cameras | `MAC_CameraDatabase` | bảng máy (tìm, Sensor Format sửa tại chỗ, Crop Factor, lọc Unknown); "Review Unknown Cameras" ở Sources nhảy tới đây | — | Camera Database (FS-08.03 §7) |
+
+- **Sources › Index** là chỗ xem index tới đâu: đang chạy thì "Indexing 12,400 of 55,231" + thanh tiến độ, xong thì
+  "up to date · indexed 2 min ago". Chân sidebar (board `MAC_SourceIndexing`) cũng ghi số và thanh, và **không bị khung
+  Common Photos che**: có cả hai thì xếp chồng, index ở trên.
+- Remove nguồn và Delete kết nối hỏi lại trước (hộp xác nhận nói rõ ảnh/file trên ổ và server **không** bị xoá). Clear
+  Local Metadata Index hỏi lại và giữ bảng dữ liệu người dùng ([BD-02](../../01-basic-design/)).
+- Prevent Sleep While Indexing tách khỏi Keep Mac Awake While Copying (Background): một cái cho index, một cái cho chép.
+  Pause Indexing on Battery Power dừng index khi Mac chạy pin (máy không có pin: hàng mờ, chữ phụ "This Mac has no
+  battery"); Low Power Mode luôn dừng như hôm nay.
+  Index New and Changed Files: hàng mờ, luôn bật — index luôn đọc file mới/đổi (chốt 2026-11-04).
 - Không có hàng Accent Color (D11). Support mở từ menu Help, không từ Settings.
 - **Không có Widgets** (Mac bản đầu không có widget), **không có pane Privacy** — các dòng Privacy nằm trong Sources —
-  và **không có ô tìm**: 5 pane đủ ngắn để nhìn hết ([FS-08.01](../FS-08-settings/01-layout-and-search.md) là của iOS).
+  và **không có ô tìm**: 6 pane đủ ngắn để nhìn hết ([FS-08.01](../FS-08-settings/01-layout-and-search.md) là của iOS).
 
 ## 4. Collage, Resize, Combine Photos (tầng D, D10)
 
