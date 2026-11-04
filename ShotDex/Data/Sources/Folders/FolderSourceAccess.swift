@@ -26,7 +26,7 @@ struct FolderSourceAccess: Sendable {
         let kind: String = row["kind"]
         let bookmark: Data? = row["bookmark"]
         var isStale = false
-        guard let bookmark, let url = try? URL(resolvingBookmarkData: bookmark, bookmarkDataIsStale: &isStale) else {
+        guard let bookmark, let url = try? SourceBookmark.resolve(bookmark, isStale: &isStale) else {
             return try mark(.needsAccess, sourceId: sourceId)
         }
         let isAccessing = url.startAccessingSecurityScopedResource()
@@ -34,7 +34,7 @@ struct FolderSourceAccess: Sendable {
         guard (try? url.checkResourceIsReachable()) == true else {
             return try mark(kind == "drive" ? .offline : .needsAccess, sourceId: sourceId)
         }
-        if isStale, let renewed = try? url.bookmarkData() {
+        if isStale, let renewed = try? SourceBookmark.make(for: url) {
             try database.writer.write { db in
                 try db.execute(sql: "UPDATE sources SET bookmark = ? WHERE id = ?", arguments: [renewed, sourceId])
             }
@@ -46,7 +46,9 @@ struct FolderSourceAccess: Sendable {
     /// is kept; the next read matches the files back to their photos by path
     /// and, where they moved, by hash — same ids, no duplicate.
     func grant(sourceId: String, folder: URL) throws {
-        let bookmark = try folder.bookmarkData()
+        let isAccessing = folder.startAccessingSecurityScopedResource()
+        defer { if isAccessing { folder.stopAccessingSecurityScopedResource() } }
+        let bookmark = try SourceBookmark.make(for: folder)
         try database.writer.write { db in
             try db.execute(sql: "UPDATE sources SET bookmark = ?, name = ? WHERE id = ?",
                            arguments: [bookmark, folder.lastPathComponent, sourceId])
@@ -98,6 +100,13 @@ final class FolderSourceRoots: @unchecked Sendable {
         _ = url.startAccessingSecurityScopedResource()
         lock.withLock { roots[sourceId] = url }
         return url
+    }
+
+    /// A source removed or pointed at another folder: its old folder's
+    /// scope closes and the next `root` opens what the bookmark says now.
+    func forget(_ sourceId: String) {
+        guard let known = lock.withLock({ roots.removeValue(forKey: sourceId) }) else { return }
+        known.stopAccessingSecurityScopedResource()
     }
 
     /// Whether files of `sourceId` can go to a Trash (FS-19.04 §1): a USB-C

@@ -1,11 +1,13 @@
 import SwiftUI
 
 /// Settings › Sources (boards `MAC_SettingsSources`, `MAC_SettingsSourcesCache`).
-/// So far the Index group (AC-70); the sources table, drives, previews and the
-/// index commands come with their tasks (plan 2026-11-04-mac-settings-panes).
+/// So far Photo Sources (AC-72) and Index (AC-70); adding a folder, drives,
+/// previews and the index commands come with their tasks (plan
+/// 2026-11-04-mac-settings-panes).
 struct MacSourcesSettings: View {
     var body: some View {
         Form {
+            MacPhotoSourcesSection()
             MacIndexSettingsSection()
         }
         .formStyle(.grouped)

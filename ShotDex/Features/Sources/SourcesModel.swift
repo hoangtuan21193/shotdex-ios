@@ -18,6 +18,8 @@ final class SourcesModel {
     private(set) var readingSourceId: String?
     /// Bumped after every read, so the grid and the tabs reload what changed.
     private(set) var readCount = 0
+    /// Remove… or Grant Access… did not go through; Settings says so.
+    var failure: String?
 
     @ObservationIgnored private let database: AppDatabase
     @ObservationIgnored private let runner: FolderSourceRunner
@@ -75,6 +77,9 @@ final class SourcesModel {
     }
 
     func read(sourceId: String) async {
+        // One read at a time: the runner refuses a second, and its nil must
+        // not end the first one's progress on the row.
+        guard readingSourceId == nil else { return }
         readingSourceId = sourceId
         load()
         _ = try? await runner.read(sourceId: sourceId)
@@ -101,6 +106,45 @@ final class SourcesModel {
             readCount += 1
         }
         load()
+    }
+
+    /// Remove… (Mac Settings › Sources, FS-18.04 §3 AC-72): the source's
+    /// photos leave ShotDex unless another source holds a copy; nothing in
+    /// the folder, on the drive or on the server is touched.
+    func remove(sourceId: String) async {
+        let database = database
+        do {
+            // Marks every copy missing: off the main actor for a 50,000-photo source.
+            try await Task.detached { try SourceStore(database: database).remove(sourceId: sourceId) }.value
+        } catch {
+            failure = String(localized: "ShotDex could not remove the source: \(error.localizedDescription)",
+                             comment: "Sources: Remove failed")
+        }
+        readCount += 1
+        load()
+    }
+
+    /// Grant Access…: the folder picked again; its files are read back to
+    /// the same photos (FS-19.01b §2).
+    func grantAccess(sourceId: String, folder: URL) async {
+        do {
+            try FolderSourceAccess(database: database).grant(sourceId: sourceId, folder: folder)
+        } catch {
+            failure = String(localized: "ShotDex could not keep access to “\(folder.lastPathComponent)”: \(error.localizedDescription)",
+                             comment: "Sources: Grant Access failed")
+            load()
+            return
+        }
+        await read(sourceId: sourceId)
+    }
+
+    /// Where a folder source was last seen, from its bookmark, for Grant
+    /// Access…'s panel to open next to it; nil when the bookmark says nothing.
+    func lastKnownPath(sourceId: String) -> URL? {
+        guard let source = (try? SourceStore(database: database).sources())?.first(where: { $0.id == sourceId }),
+              let bookmark = source.bookmark,
+              let values = URL.resourceValues(forKeys: [.pathKey], fromBookmarkData: bookmark), let path = values.path else { return nil }
+        return URL(fileURLWithPath: path, isDirectory: true)
     }
 
     /// A deletion through the sources from a screen with no grid of its own
@@ -163,7 +207,7 @@ final class SourcesModel {
 
     private static func isICloudDrive(_ bookmark: Data?) -> Bool {
         var stale = false
-        guard let bookmark, let url = try? URL(resolvingBookmarkData: bookmark, bookmarkDataIsStale: &stale) else { return false }
+        guard let bookmark, let url = try? SourceBookmark.resolve(bookmark, isStale: &stale) else { return false }
         return url.path.contains("/Mobile Documents/")
     }
 }

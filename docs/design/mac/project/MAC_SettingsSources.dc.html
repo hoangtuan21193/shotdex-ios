@@ -329,7 +329,7 @@ class Component extends DCLogic {
     const ri = (n, dis) => btn('Re-index', 'bordered', {aria:'Re-index ' + n, disabled:!!dis});
     const rm = (n) => btn('Remove…', 'bordered', {aria:'Remove ' + n});
     const folders = sections([
-      { title:'Photo Sources', aside: indexing ? '55,231 items · Indexing 22%' : battery === 'paused' ? '55,231 items · Paused on battery' : '55,231 items', rows:[
+      { title:'Photo Sources', aside: indexing ? 'Indexing 22%' : battery === 'paused' ? 'Paused on battery' : null, rows:[
         src({ label:'Photos Library', tag:'Photos', icon:I.library, iconBg:TILE.pink,
               sub:'System Photo Library · 23,904 items', btns:[btn('Manage Access…')] }, status('ok', 'Full Access')),
         src({ label:'2026 Japan', tag:'This Mac', icon:I.folder, iconBg:TILE.blue,
