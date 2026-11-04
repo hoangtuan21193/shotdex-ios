@@ -285,8 +285,10 @@ Scan liệt kê luôn folder chung, nên mỗi hàng Same biết sẵn việc n�
 - Hai khung cạnh nhau, mỗi khung một bản (folder đầu bên trái). Mỗi khung ghi: folder, tên, cỡ, ngày chụp, SHA-256 8 ký
   tự đầu. Dưới hai khung: "Same bytes — SHA-256 matches", kèm SHA đủ (chọn được để chép).
 - Ba folder trở lên: khung phải có popup chọn bản để so với bản bên trái.
-- Thanh dưới: ô **Include in Copy** (hay **Include in Move**). Bỏ ô = Leave Out, như ô chọn của hàng. Có thêm gợi ý
-  "↑↓ next row · Esc close". Tiêu đề cửa sổ ghi hàng thứ mấy và hàng đó đang được chọn hay đã bỏ.
+- Thanh trên (toolbar): ↑ ↓ (phím ↑↓, ←→ khi ảnh vừa khung), Fit/100%, ô **Include in Copy** (hay **Include in Move**).
+  Bỏ ô = Leave Out, như ô chọn của hàng; hàng Copy bỏ qua (đã có ở đích) thì ô mờ. Thanh dưới chỉ là chữ (MAC_STYLE: không
+  control nào ở 60pt đáy): dòng SHA và gợi ý "↑↓ next row · Esc close". Tiêu đề "Compare — <tên>", phụ đề "3 of 282".
+- Ảnh đã index: preview của index (400 px), nên 100% là cỡ của preview cho tới khi đọc cả file (phần chưa index).
 - **Ảnh:** hiện vừa khung. Cùng zoom và cùng vị trí cho cả hai khung (cuộn hay zoom một bên, bên kia theo).
 - **Video:** một nút Play và một thanh tua cho cả hai; hai bên luôn cùng thời điểm (lệch ≤ 1 khung hình); tiếng chỉ bên
   trái.

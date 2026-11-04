@@ -62,6 +62,13 @@ struct ShotDexMacApp: App {
         }
         .defaultSize(width: MacCommonPhotosRunWindow.size.width, height: MacCommonPhotosRunWindow.size.height)
         .windowToolbarStyle(.unified)
+        // Compare two copies of a Same photo (FS-19.08 §6d): one window, not
+        // modal, tier D.
+        Window(String(localized: "Compare", comment: "Mac window: two copies of a common photo"), id: MacCommonPhotosCompareWindow.id) {
+            MacCommonPhotosCompareWindow()
+                .environment(dependencies)
+        }
+        .defaultSize(width: MacCommonPhotosCompareWindow.size.width, height: MacCommonPhotosCompareWindow.size.height)
         // Window › Activity ⌥⌘0 (FS-18.01 §4): one window, never a sheet.
         Window(String(localized: "Activity", comment: "Mac window: long-running jobs"), id: MacActivityWindow.id) {
             MacActivityWindow()

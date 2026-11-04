@@ -34,3 +34,16 @@ enum MacTheme {
         })
     }
 }
+
+extension MacTheme {
+    /// Tier D, pixel surfaces (Compare): always dark, the values of the
+    /// editor's `EditorTheme` (iOS target) — MAC_STYLE "Mac mindset".
+    enum Editor {
+        static let background = Color.black
+        static let panel = Color(white: 0.055)
+        static let hairline = Color.white.opacity(0.09)
+        static let secondaryText = Color.white.opacity(0.55)
+        /// `#EB9526`.
+        static let accent = Color(red: 0xEB / 255, green: 0x95 / 255, blue: 0x26 / 255)
+    }
+}

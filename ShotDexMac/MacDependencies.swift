@@ -55,6 +55,9 @@ final class MacDependencies: LibraryServices {
     /// Keep gathering's passes (FS-19.08 §6c), in the helper — or here while
     /// the helper does not run jobs.
     let gatherer: MacCommonPhotosGatherer
+    /// The Compare window's row and scan (FS-19.08 §6d), set by the sheet
+    /// that opens it.
+    var commonPhotosCompare: MacCommonPhotosCompareModel?
 
     init(database: AppDatabase, photoLibrary: PhotoLibraryService, sharesIndex: Bool = false) {
         self.database = database

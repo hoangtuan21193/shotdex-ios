@@ -45,6 +45,8 @@ struct MacCommonPhotosSheet: View {
         // However the sheet goes, the scan stops and the session ends.
         .onDisappear {
             let model = model
+            // Compare showed this scan: it has nothing to show now.
+            if let model, dependencies.commonPhotosCompare?.scan === model { dependencies.commonPhotosCompare = nil }
             Task { await model?.close() }
         }
     }
@@ -70,6 +72,8 @@ private struct MacCommonPhotosSheetContent: View {
     @State private var confirmsMove = false
     /// §6d: the Left Out list, open or not.
     @State private var showsLeftOut = Self.showsLeftOutAtStart
+    /// Rows picked in the list: Space compares one, or checks several (§6d).
+    @State private var selectedRows = Set<String>()
 
     /// `-ShotDexCommonPhotosShowLeftOut` (DEBUG): the Left Out list open, for screenshots.
     private static let showsLeftOutAtStart: Bool = {
@@ -185,6 +189,12 @@ private struct MacCommonPhotosSheetContent: View {
         // `-ShotDexCommonPhotosRunAtOnce`: the run starts as the scan ends,
         // for screenshots of a set that gathered before.
         .onChange(of: model.phase) {
+            // `-ShotDexCommonPhotosCompare IMG_0001.JPG`: Compare opened on that row (§6d), for screenshots.
+            if model.phase == .done, let index = ProcessInfo.processInfo.arguments.firstIndex(of: "-ShotDexCommonPhotosCompare"),
+               index + 1 < ProcessInfo.processInfo.arguments.count,
+               let row = model.rows.first(where: { $0.name == ProcessInfo.processInfo.arguments[index + 1] }) {
+                compare(row.id)
+            }
             // `-ShotDexCommonPhotosLeaveOut IMG_0003.JPG,IMG_0005.JPG`: those rows unchecked (§6d), for screenshots.
             if model.phase == .done, let index = ProcessInfo.processInfo.arguments.firstIndex(of: "-ShotDexCommonPhotosLeaveOut"),
                index + 1 < ProcessInfo.processInfo.arguments.count {
@@ -412,12 +422,14 @@ private struct MacCommonPhotosSheetContent: View {
                         .foregroundStyle(.secondary)
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                 } else {
-                    List(model.rows) { row in
+                    List(model.rows, selection: $selectedRows) { row in
                         MacCommonPhotosRow(row: row, destination: model.destination.map(ServerUploadPath.lastComponent(of:)),
                                            action: model.action, database: dependencies.database, sources: sources,
-                                           setIncluded: { model.setIncluded($0, rows: [row.id]) })
+                                           setIncluded: { model.setIncluded($0, rows: [row.id]) },
+                                compare: { compare(row.id) })
                             .listRowInsets(EdgeInsets(top: 0, leading: 8, bottom: 0, trailing: 12))
                             .contextMenu {
+                                Button(String(localized: "Compare", comment: "Mac common photos sheet: row menu")) { compare(row.id) }
                                 // A Copy skips what is already there: nothing to leave out.
                                 if row.landing.map({ if case .alreadyThere = $0 { model.action == .copy } else { false } }) == true {
                                     EmptyView()
@@ -434,6 +446,28 @@ private struct MacCommonPhotosSheetContent: View {
                     }
                     .listStyle(.bordered)
                     .alternatingRowBackgrounds()
+                    // §6d: Space on one row compares it; on several, checks or unchecks them together.
+                    .onKeyPress(.space) {
+                        // Rows the list still has: a rescan may have taken some away.
+                        let picked = model.rows.filter { selectedRows.contains($0.id) }
+                        guard !picked.isEmpty else { return .ignored }
+                        if picked.count == 1 {
+                            compare(picked[0].id)
+                        } else {
+                            // Rows a Copy skips (already there) are no choice.
+                            let choices = picked.filter { row in
+                                if case .alreadyThere? = row.landing, model.action == .copy { false } else { true }
+                            }
+                            guard !choices.isEmpty else { return .handled }
+                            model.setIncluded(!choices.allSatisfy(\.isIncluded), rows: Set(choices.map(\.id)))
+                        }
+                        return .handled
+                    }
+                    .contextMenu(forSelectionType: String.self, menu: { _ in EmptyView() }, primaryAction: { ids in
+                        // A double-click on one row; several picked is no single photo to show.
+                        if ids.count == 1, let id = ids.first { compare(id) }
+                    })
+                    .onChange(of: model.rows.map(\.id)) { _, ids in selectedRows.formIntersection(ids) }
                     .accessibilityLabel(model.folders.count == 2
                                         ? String(localized: "Same photos in both folders", comment: "Mac common photos sheet: results list")
                                         : String(localized: "Same photos in all folders", comment: "Mac common photos sheet: results list"))
@@ -442,6 +476,18 @@ private struct MacCommonPhotosSheetContent: View {
                 if model.phase == .done, !model.leftOutEntries.isEmpty { leftOutSection }
             }
         }
+    }
+
+    /// §6d: opens Compare on this row (one window for the app).
+    private func compare(_ rowId: String) {
+        guard model.rows.contains(where: { $0.id == rowId }) else { return }
+        if let open = dependencies.commonPhotosCompare, open.scan === model {
+            open.show(rowId)
+        } else {
+            dependencies.commonPhotosCompare = MacCommonPhotosCompareModel(scan: model, database: dependencies.database,
+                                                                           sources: sources, showing: rowId)
+        }
+        openWindow(id: MacCommonPhotosCompareWindow.id)
     }
 
     /// §6d: what the user left out of this set before — never run until
@@ -822,7 +868,10 @@ private struct MacCommonPhotosRow: View {
     let sources: [(source: SourceStore.Source, connection: FileServer)]
     /// Checks or unchecks the row (§6d).
     let setIncluded: (Bool) -> Void
+    /// Opens Compare on it.
+    let compare: () -> Void
     @State private var thumbnail: CGImage?
+    @State private var isHovered = false
 
     var body: some View {
         HStack(spacing: 10) {
@@ -857,6 +906,12 @@ private struct MacCommonPhotosRow: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             .accessibilityElement(children: .combine)
             .help(row.fullPaths + (landingText.map { "\n" + $0 } ?? ""))
+            if isHovered {
+                Button(action: compare) { Image(systemName: "rectangle.split.2x1") }
+                    .buttonStyle(.borderless)
+                    .help(String(localized: "Compare (Space)", comment: "Mac common photos sheet: row button"))
+                    .accessibilityLabel(String(localized: "Compare", comment: "Mac common photos sheet: row button"))
+            }
             Text(row.size.formatted(.byteCount(style: .file)))
                 .font(.callout).monospacedDigit().foregroundStyle(.secondary)
                 .frame(width: 64, alignment: .trailing)
@@ -864,7 +919,12 @@ private struct MacCommonPhotosRow: View {
                 .frame(width: 124, alignment: .leading)
         }
         .frame(height: 40)
-        .task(id: row.serverPath) { thumbnail = await loadThumbnail() }
+        .onHover { isHovered = $0 }
+        .accessibilityAction(named: String(localized: "Compare", comment: "Mac common photos sheet: row action, VoiceOver"), compare)
+        .task(id: row.serverPath) {
+            thumbnail = await MacCommonPhotosPreview.load(serverPath: row.serverPath, sources: sources, database: database,
+                                                         maxPixelSize: 96)?.image
+        }
     }
 
     private var isAlreadyThere: Bool {
@@ -898,25 +958,5 @@ private struct MacCommonPhotosRow: View {
             : String(localized: "Removes \(row.copies) copies", comment: "Mac common photos sheet: row, a Move removes these copies")
     }
 
-    /// The index's thumbnail of this file, when a source on the server holds it.
-    private func loadThumbnail() async -> CGImage? {
-        guard let holder = sources.first(where: { CommonPhotosSelection.contains($0.connection.folder, row.serverPath) }) else { return nil }
-        let root = ServerUploadPath.normalizedFolder(holder.connection.folder)
-        let relative = root.isEmpty ? row.serverPath : String(row.serverPath.dropFirst(root.count + 1))
-        let key = FolderSourceIndexer.pathKey(relative)
-        let sourceId = holder.source.id
-        let copyId = try? await database.reader.read { db in
-            try String.fetchOne(db, sql: """
-                SELECT id FROM photo_copies WHERE sourceId = ? AND relativePathKey = ? AND missingSince IS NULL
-                """, arguments: [sourceId, key])
-        }
-        guard let copyId = copyId ?? nil else { return nil }
-        let url = FolderThumbnails.standard.url(copyId: copyId)
-        return await Task.detached {
-            guard let source = CGImageSourceCreateWithURL(url as CFURL, nil) else { return nil }
-            return CGImageSourceCreateThumbnailAtIndex(source, 0, [kCGImageSourceThumbnailMaxPixelSize: 96,
-                                                                   kCGImageSourceCreateThumbnailFromImageAlways: true] as CFDictionary)
-        }.value
-    }
 }
 

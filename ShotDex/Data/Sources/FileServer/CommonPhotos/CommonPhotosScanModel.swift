@@ -367,6 +367,11 @@ final class CommonPhotosScanModel {
 
     private static func rowId(_ first: CommonPhotosFile) -> String { "\(first.folder)/\(first.relativePath)" }
 
+    /// The Same photo behind a row (§6d: what Compare shows).
+    func photo(forRow id: String) -> CommonPhoto? {
+        photos.first { Self.rowId($0.files[0][0]) == id }
+    }
+
     private func row(_ files: [CommonPhotosFile], size: Int64, copies: Int, sha256: String) -> Row {
         let first = files[0]
         let paths = files.map { file -> String in
