@@ -167,7 +167,7 @@ Test theo lớp, không chạy cả bộ, không `Tools/gate`: 15 suite, **158 t
 Còn mở (không phải AC):
 
 - `Tools/gate` chưa chạy (chỉ khi người dùng bảo).
-- Cách chép (COPY hay đường dài) chỉ ở log hệ thống, chưa vào CSV.
+- Cách chép (COPY hay đường dài) chỉ ở log hệ thống, không vào CSV — user chốt 4/11, đóng.
 - NAS thật: % chậm của Scan khi Compare tải, video dài/4K, `COPY` trên Synology/QNAP chưa đo.
 - Compare 100%: hai bên chưa cuộn theo nhau; dòng Activity "Ready to move N" còn đếm ảnh bỏ ra.
 
