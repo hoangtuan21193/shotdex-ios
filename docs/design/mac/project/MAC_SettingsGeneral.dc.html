@@ -269,11 +269,11 @@ class Component extends DCLogic {
 
     const general = sections([
       { title:'Thumbnails', rows:[
-        row(Object.assign({ label:'File Type Badge', sub:'RAW, HEIC, JPG in the corner of each thumbnail' }, sw(false), { h:'44px' })),
-        row({ label:'Info on Thumbnails', h:'82px', checks:[chk('File Name',true),chk('Capture Time',false),chk('ISO',true),
+        row(Object.assign({ label:'File Type Badge', sub:'RAW, HEIC, JPG in the corner of each thumbnail' }, sw(true), { h:'44px' })),
+        row({ label:'Info on Thumbnails', h:'82px', checks:[chk('File Name',false),chk('Capture Time',false),chk('ISO',true),
               chk('Aperture',true),chk('Shutter Speed',false),chk('Focal Length',true),chk('Megapixels',false),chk('File Size',false)] }),
         row({ label:'Focal Length', seg: seg(['Actual','Full-Frame Equivalent'], 0) })
-      ], foot:'Thumbnail size: View › Zoom In and Zoom Out (⌘+ and ⌘−), or pinch on the trackpad.' },
+      ]},
       // FS-18.04 §3 (2026-11-04): the Mac has no viewer, Statistics screen or reminder yet — dimmed, in place.
       { title:'Viewing and Reminders', rows:[
         dim(row(Object.assign({ label:'View Full HDR' }, sw(false)))),

@@ -69,10 +69,37 @@ struct MacPhotoGrid: NSViewRepresentable {
         var picture: ((String) -> CGImage?)?
         var onServer: Set<String> = []
         var onSelection: ((Set<String>) -> Void)?
+        /// Settings › General › Thumbnails (AC-67, AC-68); a change redraws the tiles on screen.
+        private var fields = ThumbnailInfoFields.load()
         private var rows: [LibraryGridItem] = []
         private var sections: [PhotoGridSection] = []
 
         private var showsDays = true
+
+        override init() {
+            super.init()
+            // Selector-based: the center drops it when the coordinator goes.
+            NotificationCenter.default.addObserver(self, selector: #selector(defaultsChanged),
+                                                   name: UserDefaults.didChangeNotification, object: nil)
+        }
+
+        /// Any default changing posts this, on whatever thread wrote it.
+        @objc nonisolated private func defaultsChanged() {
+            Task { @MainActor [weak self] in self?.reloadFieldsIfChanged() }
+        }
+
+        private func reloadFieldsIfChanged() {
+            let loaded = ThumbnailInfoFields.load()
+            guard loaded != fields, let collection else { return }
+            fields = loaded
+            // Text only: the pictures stay, nothing is fetched again.
+            let side = MacGridMetrics.tileSide(contentWidth: collection.bounds.width)
+            for case let tile as MacPhotoTile in collection.visibleItems() {
+                guard let indexPath = collection.indexPath(for: tile) else { continue }
+                let row = rows[sections[indexPath.section].range.lowerBound + indexPath.item]
+                tile.showInfo(row, side: side, fields: fields, isOnServer: onServer.contains(row.assetId))
+            }
+        }
 
         func update(_ items: [LibraryGridItem], isNewestFirst: Bool, showsDays: Bool, forceReload: Bool) {
             // The model keeps the newest at the end (the iOS grid anchors at
@@ -98,7 +125,7 @@ struct MacPhotoGrid: NSViewRepresentable {
             let row = rows[sections[indexPath.section].range.lowerBound + indexPath.item]
             tile.show(row, asset: asset(row.assetId), picture: picture?(row.assetId), photoLibrary: photoLibrary,
                       side: MacGridMetrics.tileSide(contentWidth: collectionView.bounds.width),
-                      isOnServer: onServer.contains(row.assetId))
+                      fields: fields, isOnServer: onServer.contains(row.assetId))
             return tile
         }
 
@@ -181,6 +208,8 @@ final class MacPhotoTile: NSCollectionViewItem {
     private let photo = NSView()
     private let badge = NSTextField(labelWithString: "")
     private let exif = NSTextField(labelWithString: "")
+    /// File name and capture time, when Settings shows them: a line above the exposure.
+    private let caption = NSTextField(labelWithString: "")
     /// "On server" (FS-19.07 §8): bottom-left, as on iOS.
     private let serverGlyph = NSImageView(image: NSImage(systemSymbolName: "externaldrive.fill.badge.checkmark",
                                                            accessibilityDescription: nil) ?? NSImage())
@@ -188,8 +217,12 @@ final class MacPhotoTile: NSCollectionViewItem {
     private var requestId: PHImageRequestID?
     private weak var photoLibrary: PhotoLibraryService?
     private var assetId: String?
-    /// One line of 11pt text 6pt off the bottom edge.
+    /// One line of 11pt text 6pt off the bottom edge; two with a caption.
     private static let shadeHeight: CGFloat = 24
+    private static let captionedShadeHeight: CGFloat = 46
+    private var hasCaption = false
+    /// The exposure line keeps clear of the server glyph only while it shows.
+    private lazy var clearOfGlyph = exif.leadingAnchor.constraint(greaterThanOrEqualTo: serverGlyph.trailingAnchor, constant: 4)
 
     override func loadView() {
         view = NSView()
@@ -213,9 +246,26 @@ final class MacPhotoTile: NSCollectionViewItem {
         exif.font = .monospacedDigitSystemFont(ofSize: 11, weight: .semibold)
         exif.textColor = .white
         exif.alignment = .right
+        caption.font = .systemFont(ofSize: 10, weight: .semibold)
+        caption.textColor = .white
+        caption.alignment = .right
+        // The time at the end always stays; a long name loses its front ("…04100.HEIC · 18:00").
+        caption.lineBreakMode = .byTruncatingHead
+        // Both lines keep their edge on a bright sky the shade barely darkens.
+        for label in [caption, exif] {
+            label.wantsLayer = true
+            label.shadow = {
+                let shadow = NSShadow()
+                shadow.shadowColor = NSColor.black.withAlphaComponent(0.6)
+                shadow.shadowOffset = NSSize(width: 0, height: -1)
+                shadow.shadowBlurRadius = 2
+                return shadow
+            }()
+        }
+        caption.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
         serverGlyph.contentTintColor = .white
         serverGlyph.symbolConfiguration = .init(pointSize: 11, weight: .semibold)
-        for subview in [photo, badge, exif, serverGlyph] {
+        for subview in [photo, badge, caption, exif, serverGlyph] {
             subview.translatesAutoresizingMaskIntoConstraints = false
             view.addSubview(subview)
         }
@@ -228,7 +278,10 @@ final class MacPhotoTile: NSCollectionViewItem {
             badge.topAnchor.constraint(equalTo: view.topAnchor, constant: 8),
             exif.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -8),
             exif.bottomAnchor.constraint(equalTo: view.bottomAnchor, constant: -6),
-            exif.leadingAnchor.constraint(greaterThanOrEqualTo: serverGlyph.trailingAnchor, constant: 4),
+            exif.leadingAnchor.constraint(greaterThanOrEqualTo: view.leadingAnchor, constant: 8),
+            caption.trailingAnchor.constraint(equalTo: exif.trailingAnchor),
+            caption.bottomAnchor.constraint(equalTo: exif.topAnchor, constant: -1),
+            caption.leadingAnchor.constraint(greaterThanOrEqualTo: view.leadingAnchor, constant: 8),
             serverGlyph.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 8),
             serverGlyph.bottomAnchor.constraint(equalTo: view.bottomAnchor, constant: -6),
         ])
@@ -238,7 +291,8 @@ final class MacPhotoTile: NSCollectionViewItem {
         super.viewDidLayout()
         CATransaction.begin()
         CATransaction.setDisableActions(true)
-        shade.frame = CGRect(x: 0, y: 0, width: view.bounds.width, height: Self.shadeHeight)
+        shade.frame = CGRect(x: 0, y: 0, width: view.bounds.width,
+                             height: hasCaption ? Self.captionedShadeHeight : Self.shadeHeight)
         CATransaction.commit()
     }
 
@@ -250,18 +304,13 @@ final class MacPhotoTile: NSCollectionViewItem {
     }
 
     func show(_ row: LibraryGridItem, asset: PHAsset?, picture: CGImage?, photoLibrary: PhotoLibraryService?, side: CGFloat,
-              isOnServer: Bool = false) {
+              fields: ThumbnailInfoFields, isOnServer: Bool = false) {
         // A reused tile drops a late result by its asset id, below.
         requestId = nil
         photo.layer?.contents = nil
         assetId = row.assetId
         self.photoLibrary = photoLibrary
-        let format = MacPhotoTile.format(of: row.originalFilename)
-        badge.stringValue = format.map { " \($0) " } ?? ""
-        badge.isHidden = format == nil
-        exif.stringValue = MacPhotoTile.exifLine(row)
-        serverGlyph.isHidden = !isOnServer
-        shade.isHidden = exif.stringValue.isEmpty && !isOnServer
+        showInfo(row, side: side, fields: fields, isOnServer: isOnServer)
         let name = row.originalFilename ?? String(localized: "Photo", comment: "Mac grid: a photo with no file name")
         view.setAccessibilityLabel(isOnServer
             ? String(localized: "\(name), On server", comment: "Mac grid: VoiceOver label of a photo that is on a server")
@@ -280,23 +329,32 @@ final class MacPhotoTile: NSCollectionViewItem {
         }
     }
 
+    /// Badge, caption, exposure line and server glyph — everything over the
+    /// picture; Settings changing them redraws only this.
+    func showInfo(_ row: LibraryGridItem, side: CGFloat, fields: ThumbnailInfoFields, isOnServer: Bool) {
+        let format = MacPhotoTile.format(of: row.originalFilename)
+        badge.stringValue = format.map { " \($0) " } ?? ""
+        badge.isHidden = format == nil || !fields.showsFileTypeBadge
+        clearOfGlyph.isActive = isOnServer
+        let font = exif.font ?? .systemFont(ofSize: 11)
+        exif.stringValue = ThumbnailInfoFields.fitted(
+            fields.exposureFragments(for: row),
+            width: { Double(($0 as NSString).size(withAttributes: [.font: font]).width) },
+            within: ThumbnailInfoFields.room(side: Double(side), glyphWidth: isOnServer ? Double(serverGlyph.intrinsicContentSize.width) : nil))
+        caption.stringValue = fields.caption(for: row) ?? ""
+        caption.isHidden = caption.stringValue.isEmpty
+        hasCaption = !caption.isHidden
+        view.needsLayout = true
+        serverGlyph.isHidden = !isOnServer
+        shade.isHidden = exif.stringValue.isEmpty && caption.isHidden && !isOnServer
+    }
+
     /// `HEIC`, `RAW`, `JPG`, `MOV` — the extension, RAW formats as one word.
     static func format(of filename: String?) -> String? {
         guard let ext = filename.map({ ($0 as NSString).pathExtension.uppercased() }), !ext.isEmpty else { return nil }
         let raw: Set<String> = ["ARW", "CR2", "CR3", "NEF", "RAF", "ORF", "RW2", "DNG", "PEF", "SRW"]
         if raw.contains(ext) { return "RAW" }
         return ext == "JPEG" ? "JPG" : ext
-    }
-
-    /// `ISO 400 · 85mm · f/1.8`.
-    static func exifLine(_ row: LibraryGridItem) -> String {
-        var parts: [String] = []
-        if let iso = row.iso { parts.append("ISO \(iso)") }
-        if let focal = row.focalLength { parts.append("\(Int(focal.rounded()))mm") }
-        if let aperture = row.aperture {
-            parts.append("f/" + (aperture == aperture.rounded() ? String(Int(aperture)) : String(format: "%.1f", aperture)))
-        }
-        return parts.joined(separator: " · ")
     }
 }
 

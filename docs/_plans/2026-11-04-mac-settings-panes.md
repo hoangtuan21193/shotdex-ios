@@ -5,7 +5,7 @@
 | Đặc tả | [FS-18.04 §3](../02-functional-spec/FS-18-mac-app/04-other-screens.md) · AC-59, AC-67…AC-80 ở [FS-18.06](../02-functional-spec/FS-18-mac-app/06-acceptance-criteria.md) |
 | Intent | [2026-11-04-mac-settings-panes](../_intents/2026-11-04-mac-settings-panes.md) |
 | Ngày | 2026-11-04 |
-| Trạng thái | đang làm — S0–S1 xong, S2 một phần (AC-71 chờ `MacSidebar.swift`) (loop: [MAC_SETTINGS_LOOP.md](MAC_SETTINGS_LOOP.md)) |
+| Trạng thái | đang làm — S0, S1, S3 xong, S2 một phần (AC-71 chờ `MacSidebar.swift`) (loop: [MAC_SETTINGS_LOOP.md](MAC_SETTINGS_LOOP.md)) |
 
 ## 1. Hiểu đúng chưa
 
