@@ -508,6 +508,14 @@ final class AlbumDetailModel: PhotoBrowsingSource {
     /// Photos ShotDex stitched into a panorama, read from the index once per
     /// model (off the main actor) for the Panoramas capture-kind filter.
     private var stitchedPanoramaIds: [String] = []
+    /// Photos the original check found on this device, for the Filter menu's
+    /// "Original on This iPhone" (FS-06.10 §4). Re-read as the check moves.
+    /// Empty while the toggle is off: 55k ids are not read for nothing.
+    private var originalOnDeviceIds: [String] = []
+    /// The same ids for membership tests (`matchingIds`).
+    private var originalOnDeviceIdSet: Set<String> = []
+    /// Which `refreshOriginalOnDevice` read is the latest.
+    private var originalReadToken = 0
     /// The Unsupported RAW filter's ids, from the index (FS-03.04b AC-13).
     private let unsupportedRAWIndex: UnsupportedRAWIndex
     /// Stars and flags, answered by identifier in the album's fetch (FS-01.12 §7).
@@ -612,6 +620,31 @@ final class AlbumDetailModel: PhotoBrowsingSource {
                 self.restart()
             }
         }
+        // A model rebuilt with the toggle already on (a library change)
+        // reads the ids now; with it off they are never read.
+        if filter.criteria.originalOnDeviceOnly {
+            isAwaitingIndex = true
+            Task { [weak self] in await self?.refreshOriginalOnDevice(force: true) }
+        }
+    }
+
+    /// Re-reads which photos the original check has found on this device,
+    /// and re-pages when that moved what "Original on This iPhone" shows
+    /// (FS-06.10 §4). The screen calls it as the check advances, throttled.
+    /// `force` re-pages even when the ids did not move — the toggle just
+    /// turned on and the source was built without them. One read per call.
+    func refreshOriginalOnDevice(force: Bool = false) async {
+        guard let libraryQueries, filter.criteria.originalOnDeviceOnly else { return }
+        originalReadToken &+= 1
+        let token = originalReadToken
+        // Sorted by the query, so equal lists compare equal.
+        let onDevice = (try? await libraryQueries.originalOnDeviceIds()) ?? []
+        // A newer read, or the toggle turned off while this one ran.
+        guard token == originalReadToken, filter.criteria.originalOnDeviceOnly else { return }
+        guard force || onDevice != originalOnDeviceIds else { return }
+        originalOnDeviceIds = onDevice
+        originalOnDeviceIdSet = Set(onDevice)
+        restart()
     }
 
     /// The album, as values another thread can refetch it from — no PhotoKit
@@ -651,8 +684,20 @@ final class AlbumDetailModel: PhotoBrowsingSource {
     func setFilter(_ newValue: AlbumFilter) {
         guard newValue != filter else { return }
         assert(!AlbumFilterPredicate.needsIndex(newValue.criteria), "Album filters carry Photos-answerable rows only")
+        let turnsOnOriginal = newValue.criteria.originalOnDeviceOnly && !filter.criteria.originalOnDeviceOnly
         filter = newValue
-        restart()
+        if !newValue.criteria.originalOnDeviceOnly {
+            originalOnDeviceIds = []
+            originalOnDeviceIdSet = []
+        }
+        if turnsOnOriginal, libraryQueries != nil {
+            // The ids are read first, then the album pages once with them —
+            // not once empty and again a moment later. Selection pruning waits.
+            isAwaitingIndex = true
+            Task { [weak self] in await self?.refreshOriginalOnDevice(force: true) }
+        } else {
+            restart()
+        }
     }
 
     /// Rebuilds the source for the current order and filter and pages from
@@ -688,6 +733,10 @@ final class AlbumDetailModel: PhotoBrowsingSource {
             for: filter.criteria,
             stitchedPanoramaIds: stitchedPanoramaIds,
             unsupportedRAWIds: Array(unsupportedRAWIndex.assetIds),
+            // The album's own fetch has no cheaper way to ask Photos for a
+            // list of ids than `localIdentifier IN` chunks. What that costs
+            // with ~55k on-device ids is unmeasured (FS-06.10 T9 review).
+            originalOnDeviceIds: originalOnDeviceIds,
             marks: photoMarks.filterSnapshot
         )
         return Self.fetch(key: fetchKey, order: sortOrder, filter: predicate)
@@ -713,8 +762,18 @@ final class AlbumDetailModel: PhotoBrowsingSource {
             return Set(assets.lazy.map(\.localIdentifier).filter { wanted.contains($0) })
                 .subtracting(deletedIds)
         case .fetch:
+            // "Original on This iPhone" is a set test here, not a predicate:
+            // embedding every on-device id in each chunk's fetch would make
+            // Photos evaluate ~110 ORed IN clauses per 500 ids.
+            var criteria = filter.criteria
+            var ids = ids
+            if criteria.originalOnDeviceOnly {
+                ids = ids.filter(originalOnDeviceIdSet.contains)
+                criteria.originalOnDeviceOnly = false
+                if ids.isEmpty { return [] }
+            }
             let narrowing = AlbumFilterPredicate.predicate(
-                for: filter.criteria,
+                for: criteria,
                 stitchedPanoramaIds: stitchedPanoramaIds,
                 unsupportedRAWIds: Array(unsupportedRAWIndex.assetIds),
                 marks: photoMarks.filterSnapshot

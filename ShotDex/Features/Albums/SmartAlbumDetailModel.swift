@@ -40,6 +40,8 @@ final class SmartAlbumDetailModel {
     /// list so the grid animates the tiles out instead of reloading.
     private(set) var lastRemoval: PhotoGridRemoval?
     private(set) var isLoading = false
+    /// Which `load()` is the latest; earlier ones finishing late are dropped.
+    @ObservationIgnored private var loadToken = 0
     /// Source names by id, for the Source chip (FS-19.07 §7).
     private(set) var sourceNames: [String: String] = [:]
     /// The on-server check's line under the conditions, when a condition
@@ -132,6 +134,8 @@ final class SmartAlbumDetailModel {
 
     func load() async {
         isLoading = true
+        loadToken &+= 1
+        let token = loadToken
         sourceNames = Dictionary(((try? sourceStore.sources()) ?? []).map { ($0.id, $0.name) }) { first, _ in first }
         var filters: [LibraryQueries.IndexFilter] = [.query(query)]
         if let advanced = filter.advancedQuery {
@@ -147,9 +151,11 @@ final class SmartAlbumDetailModel {
         let total = filter.isActive
             ? ((try? await libraryQueries.count(matchingAll: [.query(query)])) ?? 0)
             : rows.count
-        // A newer filter or order has started its own load, and that load —
-        // not this one — says when loading is over.
-        guard requested == (filter, sortOrder) else { return }
+        // A newer load has started — a new filter or order, or a reload for
+        // fresh data (an original-check batch, FS-06.10) — and that load, not
+        // this one, says what the grid shows and when loading is over. Without
+        // the token an older load finishing last would put stale rows back.
+        guard token == loadToken, requested == (filter, sortOrder) else { return }
         isLoading = false
         unfilteredCount = total
         // The library-change reload after our own delete returns the list we

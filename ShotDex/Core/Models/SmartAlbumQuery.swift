@@ -466,6 +466,11 @@ struct SmartAlbumQuery: Codable, Equatable, Sendable {
             rules.append(SmartAlbumRule(field: .favorite, boolValue: true))
         }
 
+        // "Original on This iPhone" saves as the rule it is short for (FS-06.10 §4).
+        if criteria.originalOnDeviceOnly {
+            rules.append(SmartAlbumRule(field: .original, op: .isExactly, text: OriginalPresence.onDevice.rawValue))
+        }
+
         if let month = criteria.captureMonth {
             rules.append(SmartAlbumRule(
                 field: .dateTaken, op: .inMonth, number: month.anchorDate().timeIntervalSince1970

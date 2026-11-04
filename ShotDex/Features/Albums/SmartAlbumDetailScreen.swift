@@ -128,6 +128,12 @@ struct SmartAlbumDetailScreen: View {
             lastOriginalReload = Date()
             await model.load()
         }
+        // The Filter menu's "Original on This iPhone" on an album whose own
+        // query does not already use the rule (that case is handled above).
+        .watchesOriginalOnDevice(filter.criteria.originalOnDeviceOnly && !album.query.usesOriginal,
+                                 isPaused: isSelecting) {
+            await model?.load()
+        }
         .fullScreenCover(item: $viewerTarget) { target in
             if let model {
                 PhotoDetailScreen(model: model, currentIndex: target.startIndex)
@@ -248,7 +254,7 @@ struct SmartAlbumDetailScreen: View {
 
     /// The original check's progress, for an album on the Original rule.
     private var originalLine: String? {
-        guard album.query.usesOriginal else { return nil }
+        guard album.query.usesOriginal || filter.criteria.originalOnDeviceOnly else { return nil }
         let check = dependencies.originalPresenceCheck
         return OriginalPresenceProgressLine.text(checked: check.progress.checked, total: check.progress.total,
                                                  finishedAt: check.pass?.finishedAt.map { Date(timeIntervalSince1970: TimeInterval($0)) })

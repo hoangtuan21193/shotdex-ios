@@ -376,6 +376,16 @@ struct FilterTokenBar: View {
                 ) { $0.favoritesOnly = false }
             )
         }
+        if criteria.originalOnDeviceOnly {
+            let title = OriginalPresence.filterTitle
+            result.append(
+                FilterToken(
+                    id: "originalOnDevice",
+                    label: title,
+                    removalAccessibilityLabel: "Remove filter \(title)"
+                ) { $0.originalOnDeviceOnly = false }
+            )
+        }
         if let rating = criteria.ratingFilter {
             result.append(
                 FilterToken(
