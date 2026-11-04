@@ -184,9 +184,9 @@ final class MacDependencies: LibraryServices {
     /// A client for `server` whose every call waits its turn on the
     /// connection's lock (FS-19.07 §5) — what anything browsing a
     /// connection uses, never a bare `RemoteFileClientFactory.make`.
-    func lockedClient(for server: FileServer) -> any RemoteFileClient {
+    func lockedClient(for server: FileServer, priority: ConnectionLock.Priority = .normal) -> any RemoteFileClient {
         LockedRemoteFileClient(RemoteFileClientFactory.make(for: server, password: fileServers.password(for: server.id) ?? ""),
-                               lock: connectionLock, connectionId: server.id, priority: .normal)
+                               lock: connectionLock, connectionId: server.id, priority: priority)
     }
 
     /// Move / Delete / Hide across sources (FS-19.04), as on iOS: Photos

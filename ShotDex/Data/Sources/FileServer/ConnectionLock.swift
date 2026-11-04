@@ -7,7 +7,9 @@ import Foundation
 /// an original downloads from iCloud.
 actor ConnectionLock {
     enum Priority: Int, Comparable, Sendable {
-        case normal, backup
+        /// Looking at a file (FS-19.08 §6d Compare): after everyone else.
+        case compare = -1
+        case normal = 0, backup = 1
 
         static func < (lhs: Priority, rhs: Priority) -> Bool { lhs.rawValue < rhs.rawValue }
     }

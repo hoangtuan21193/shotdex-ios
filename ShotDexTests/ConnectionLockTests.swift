@@ -34,6 +34,22 @@ import Testing
         #expect(await log.entries == ["backup", "index"])
     }
 
+    /// AC-184: Compare queued first, a scan's call second — the scan's goes
+    /// first; Compare only runs when nothing else waits.
+    @Test func compareWaitsForEveryone() async {
+        let lock = ConnectionLock()
+        let log = Log()
+        await lock.acquire("nas", priority: .normal)
+        let compare = Task { await lock.acquire("nas", priority: .compare); await log.add("compare"); await lock.release("nas") }
+        await Self.waitUntil(lock, "nas", waiting: 1)
+        let scan = Task { await lock.acquire("nas", priority: .normal); await log.add("scan"); await lock.release("nas") }
+        await Self.waitUntil(lock, "nas", waiting: 2)
+        await lock.release("nas")
+        await compare.value
+        await scan.value
+        #expect(await log.entries == ["scan", "compare"])
+    }
+
     /// Backup finishes one file and asks again: the index call that was
     /// already waiting gets the connection in between.
     @Test func yieldsBetweenFiles() async {

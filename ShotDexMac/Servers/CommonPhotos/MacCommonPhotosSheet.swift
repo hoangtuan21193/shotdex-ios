@@ -46,7 +46,10 @@ struct MacCommonPhotosSheet: View {
         .onDisappear {
             let model = model
             // Compare showed this scan: it has nothing to show now.
-            if let model, dependencies.commonPhotosCompare?.scan === model { dependencies.commonPhotosCompare = nil }
+            if let model, let compare = dependencies.commonPhotosCompare, compare.scan === model {
+                dependencies.commonPhotosCompare = nil
+                Task { await compare.close() }
+            }
             Task { await model?.close() }
         }
     }
@@ -484,8 +487,13 @@ private struct MacCommonPhotosSheetContent: View {
         if let open = dependencies.commonPhotosCompare, open.scan === model {
             open.show(rowId)
         } else {
-            dependencies.commonPhotosCompare = MacCommonPhotosCompareModel(scan: model, database: dependencies.database,
-                                                                           sources: sources, showing: rowId)
+            let server = (try? dependencies.fileServers.fetch(id: model.connectionId)) ?? nil
+            if let previous = dependencies.commonPhotosCompare { Task { await previous.close() } }
+            dependencies.commonPhotosCompare = MacCommonPhotosCompareModel(
+                scan: model, database: dependencies.database, sources: sources,
+                // Its own session, behind the scan's calls (§6d, AC-184).
+                client: server.map { dependencies.lockedClient(for: $0, priority: .compare) },
+                serverName: server?.name ?? "", showing: rowId)
         }
         openWindow(id: MacCommonPhotosCompareWindow.id)
     }

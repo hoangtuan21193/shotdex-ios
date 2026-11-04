@@ -184,6 +184,31 @@ struct CommonPhotosSMBTests {
         try await smb.removeFolderTree(root)
     }
 
+    /// AC-182 on the real server: Compare downloads a copy whole through a
+    /// session of its own, checks its SHA-256, and a second look reads nothing.
+    @Test func compareDownloadsOnTheServer() async throws {
+        let smb = client()
+        try await smb.connect()
+        defer { Task { await smb.disconnect() } }
+        let path = "photos/Tuan/2025/06/IMG_0001.JPG"
+        let sha = try await smb.sha256(of: path, progress: { _ in })
+        let size = try #require(try await smb.fileSize(at: path))
+        let cache = CompareFileCache()
+        defer { cache.removeAll() }
+        let loader = CommonPhotosCompareLoader(client: smb, cache: cache)
+
+        let first = try await loader.load(path: path, sha256: sha, size: size)
+        let again = try await loader.load(path: path, sha256: sha, size: size)
+
+        guard case .file(let url) = first else { Issue.record("not loaded: \(first)"); return }
+        #expect(try FileChecksum.sha256(of: url) == sha)
+        // The second look reads nothing: the file is the first one, untouched.
+        let written = try FileManager.default.attributesOfItem(atPath: url.path)[.modificationDate] as? Date
+        let third = try await loader.load(path: path, sha256: sha, size: size)
+        #expect(again == first && third == first)
+        #expect(try FileManager.default.attributesOfItem(atPath: url.path)[.modificationDate] as? Date == written)
+    }
+
     /// A scratch tree for a Move: 4 of Tuấn's photos in `A/2025`, the first
     /// 3 also in `B` under other names.
     private func seedMoveFolders(_ smb: SMBFileClient, root: String, work: URL) async throws {

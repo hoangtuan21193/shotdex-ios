@@ -1,6 +1,7 @@
 import GRDB
 import ImageIO
 import SwiftUI
+import UniformTypeIdentifiers
 
 /// What the index shows of one copy on a server source: its preview and the
 /// capture date it read (FS-19.08 §6d). Nil when no source holds the copy,
@@ -13,6 +14,10 @@ enum MacCommonPhotosPreview {
 
     static func load(serverPath: String, sources: [(source: SourceStore.Source, connection: FileServer)],
                      database: AppDatabase, maxPixelSize: Int) async -> Indexed? {
+        #if DEBUG
+        // `-ShotDexCommonPhotosCompareSkipIndex`: as if nothing were indexed, so Compare downloads (screenshots).
+        if ProcessInfo.processInfo.arguments.contains("-ShotDexCommonPhotosCompareSkipIndex"), maxPixelSize > 96 { return nil }
+        #endif
         guard let holder = sources.first(where: { CommonPhotosSelection.contains($0.connection.folder, serverPath) }) else { return nil }
         let root = ServerUploadPath.normalizedFolder(holder.connection.folder)
         let relative = root.isEmpty ? serverPath : String(serverPath.dropFirst(root.count + 1))
@@ -39,19 +44,38 @@ enum MacCommonPhotosPreview {
 
 /// The Compare window's state (FS-19.08 §6d): the sheet's scan, the row
 /// shown, and what each side has loaded. One for the app; the sheet that
-/// opens the window sets it, and clears it when it closes.
+/// opens the window sets it, and closes it when the sheet goes.
 @MainActor
 @Observable
 final class MacCommonPhotosCompareModel {
     let scan: CommonPhotosScanModel
     let database: AppDatabase
     let sources: [(source: SourceStore.Source, connection: FileServer)]
+    /// Its own session, behind every other call on the connection
+    /// (`ConnectionLock.Priority.compare`); nil in tests and previews.
+    @ObservationIgnored private let client: (any RemoteFileClient)?
+    /// The server's name, for "Downloading from NAS Home…".
+    let serverName: String
+    @ObservationIgnored let cache: CompareFileCache
     private(set) var compare: CommonPhotosCompare
-    /// What the two sides of the row shown have loaded, by copy path; only
-    /// those two are kept.
+    /// What the two sides of the row shown show, by copy path; only those
+    /// two are kept.
     private(set) var previews: [String: MacCommonPhotosPreview.Indexed] = [:]
-    /// Sides of the row shown that the index has no picture of.
-    private(set) var notIndexed: Set<String> = []
+    /// Sides downloading: bytes read so far.
+    private(set) var downloading: [String: Int64] = [:]
+    /// Sides whose download failed, with the sentence to show.
+    private(set) var failures: [String: String] = [:]
+    /// Sides read whole that this Mac cannot draw (a RAW it does not know).
+    private(set) var noPreview: Set<String> = []
+    /// Bumped by Try Again: the sides load again.
+    private(set) var attempt = 0
+    /// The one login of this session, shared by every load.
+    @ObservationIgnored private var connecting: Task<Void, Error>?
+    /// Closed with the sheet: no load starts or writes after.
+    @ObservationIgnored private var isClosed = false
+    /// Which load owns each side's progress: a cancelled one never clears
+    /// or moves the next one's.
+    @ObservationIgnored private var loadTokens: [String: UUID] = [:]
     var zoom = Zoom.fit
 
     enum Zoom: String, CaseIterable, Identifiable {
@@ -59,15 +83,21 @@ final class MacCommonPhotosCompareModel {
         var id: Self { self }
     }
 
-    /// The index's preview, 400 pixels on its long edge: 100% shows it at
-    /// that size until the whole file is read (§6d, not indexed).
+    /// The index's preview, 400 pixels on its long edge.
     static let previewPixels = FolderThumbnails.longEdge
+    /// A downloaded copy is drawn at most this big: enough for 100% on a
+    /// 1180-point window side, without decoding a 60-megapixel RAW whole.
+    static let downloadedPixels = 4_096
 
     init(scan: CommonPhotosScanModel, database: AppDatabase,
-         sources: [(source: SourceStore.Source, connection: FileServer)], showing rowId: String) {
+         sources: [(source: SourceStore.Source, connection: FileServer)], client: (any RemoteFileClient)? = nil,
+         serverName: String = "", cache: CompareFileCache = CompareFileCache(), showing rowId: String) {
         self.scan = scan
         self.database = database
         self.sources = sources
+        self.client = client
+        self.serverName = serverName
+        self.cache = cache
         compare = CommonPhotosCompare(rowIds: scan.rows.map(\.id), showing: rowId)
     }
 
@@ -85,8 +115,8 @@ final class MacCommonPhotosCompareModel {
         return [all[0], all[min(compare.rightCopy, all.count - 1)]]
     }
 
-    /// What `loadSides` runs for: the row and the right side picked.
-    var sidesKey: String { "\(compare.currentId ?? "")|\(compare.rightCopy)" }
+    /// What `loadSides` runs for: the row, the right side picked, Try Again.
+    var sidesKey: String { "\(compare.currentId ?? "")|\(compare.rightCopy)|\(attempt)" }
 
     /// The row can be checked or unchecked: a Copy skips what is already
     /// in the destination, so that row is no choice (as in the sheet).
@@ -113,22 +143,147 @@ final class MacCommonPhotosCompareModel {
         scan.setIncluded(included, rows: [id])
     }
 
-    /// Loads the two sides of the row shown and lets go of every other.
-    /// A cancelled load (the row changed) writes nothing.
+    func tryAgain() {
+        failures = [:]
+        attempt += 1
+    }
+
+    /// Loads the two sides of the row shown and lets go of every other: the
+    /// index's preview when it has one, else the whole file, downloaded
+    /// behind every other call on the connection (AC-182…184). A cancelled
+    /// load (the row changed) writes nothing and leaves no part file.
     func loadSides() async {
+        guard !isClosed, let sha256 = row?.sha256 else { return }
+        let sides = sides
         let paths = Set(sides.map(\.path))
         previews = previews.filter { paths.contains($0.key) }
-        notIndexed = notIndexed.intersection(paths)
-        for side in sides where previews[side.path] == nil && !notIndexed.contains(side.path) {
-            let indexed = await MacCommonPhotosPreview.load(serverPath: side.path, sources: sources, database: database,
-                                                            maxPixelSize: Self.previewPixels)
-            guard !Task.isCancelled else { return }
-            if let indexed, indexed.image != nil {
+        downloading = downloading.filter { paths.contains($0.key) }
+        // A failure belongs to its row: another row's never shows or blocks.
+        failures = failures.filter { paths.contains($0.key) }
+        noPreview = noPreview.intersection(paths)
+        cache.pin(paths: sides.map { ($0.path, sha256) })
+        for side in sides where previews[side.path] == nil && !noPreview.contains(side.path) && failures[side.path] == nil {
+            if let indexed = await MacCommonPhotosPreview.load(serverPath: side.path, sources: sources, database: database,
+                                                               maxPixelSize: Self.previewPixels), indexed.image != nil {
+                guard !Task.isCancelled else { return }
                 previews[side.path] = indexed
-            } else {
-                notIndexed.insert(side.path)
+                continue
+            }
+            guard !Task.isCancelled else { return }
+            await download(side, sha256: sha256)
+        }
+    }
+
+    private func download(_ side: CommonPhotosCompare.Copy, sha256: String) async {
+        guard let client else {
+            failures[side.path] = String(localized: "The connection for this copy is gone.",
+                                         comment: "Common photos compare: no client to read the copy")
+            return
+        }
+        // A video plays in its own step (§6d); a whole movie is not read just
+        // to say there is no picture.
+        if Self.isVideo(side.path) {
+            noPreview.insert(side.path)
+            return
+        }
+        // Over the cap even alone: never read (§6d, at most 2 GB).
+        guard side.size <= cache.capacity else {
+            failures[side.path] = String(localized: "This copy is too large to show here.",
+                                         comment: "Common photos compare: the copy is bigger than the cache")
+            return
+        }
+        let directory = cache.directory
+        let loader = CommonPhotosCompareLoader(client: client, cache: cache, freeBytes: {
+            let url = FileManager.default.fileExists(atPath: directory.path) ? directory : directory.deletingLastPathComponent()
+            return (try? url.resourceValues(forKeys: [.volumeAvailableCapacityForImportantUsageKey]))?
+                .volumeAvailableCapacityForImportantUsage ?? .max
+        })
+        let path = side.path
+        let file: URL
+        let token = UUID()
+        loadTokens[path] = token
+        downloading[path] = 0
+        defer {
+            if loadTokens[path] == token {
+                loadTokens[path] = nil
+                downloading[path] = nil
             }
         }
+        do {
+            if cache.cached(path: path, sha256: sha256) == nil {
+                if connecting == nil { connecting = Task { try await client.connect() } }
+                do {
+                    try await connecting?.value
+                } catch {
+                    connecting = nil
+                    throw error
+                }
+            }
+            guard !isClosed else { return }
+            let outcome = try await loader.load(path: path, sha256: sha256, size: side.size, progress: { [weak self] bytes in
+                Task { @MainActor in
+                    // Hops arrive in any order: the bar never goes back.
+                    guard let self, self.loadTokens[path] == token else { return }
+                    self.downloading[path] = max(self.downloading[path] ?? 0, bytes)
+                }
+            })
+            guard !Task.isCancelled, !isClosed else { return }
+            switch outcome {
+            case .file(let url): file = url
+            case .changed:
+                failures[path] = String(localized: "This copy changed on the server since the scan.",
+                                        comment: "Common photos compare: the downloaded copy does not match")
+                return
+            case .noRoom:
+                failures[path] = String(localized: "Not enough space on this Mac to show this copy.",
+                                        comment: "Common photos compare: no room to download a copy")
+                return
+            }
+        } catch {
+            guard !Task.isCancelled, !isClosed, !(error is CancellationError) else { return }
+            // The session went: the next load logs in again.
+            if (error as? RemoteFileError)?.stopsBatch == true { connecting = nil }
+            failures[path] = (error as? RemoteFileError)?.errorDescription ?? error.localizedDescription
+            return
+        }
+        let drawn = await Task.detached { Self.draw(file) }.value
+        guard !Task.isCancelled else { return }
+        if let drawn {
+            previews[side.path] = drawn
+        } else {
+            noPreview.insert(side.path)
+        }
+    }
+
+    /// The picture and capture date of a whole file; nil when ImageIO
+    /// cannot draw it.
+    nonisolated private static func draw(_ file: URL) -> MacCommonPhotosPreview.Indexed? {
+        guard let source = CGImageSourceCreateWithURL(file as CFURL, nil),
+              let image = CGImageSourceCreateThumbnailAtIndex(source, 0, [
+                kCGImageSourceThumbnailMaxPixelSize: downloadedPixels,
+                // A RAW's own preview when it has one: no 60-megapixel decode.
+                kCGImageSourceCreateThumbnailFromImageIfAbsent: true,
+                kCGImageSourceCreateThumbnailWithTransform: true] as CFDictionary) else { return nil }
+        let properties = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [CFString: Any]
+        let exif = properties?[kCGImagePropertyExifDictionary] as? [CFString: Any]
+        // With its offset when the camera wrote one, as the index reads it.
+        let captured = exif.flatMap { EmbeddedPreview.captureDate(fromEXIF: $0) }
+        return MacCommonPhotosPreview.Indexed(image: image, captured: captured)
+    }
+
+    nonisolated static func isVideo(_ path: String) -> Bool {
+        UTType(filenameExtension: (path as NSString).pathExtension)?.conforms(to: .movie) == true
+    }
+
+    /// The sheet or the window went: no more loads, the session ends, the
+    /// files go.
+    func close() async {
+        isClosed = true
+        // The files go first: the logoff may wait behind the scan's calls.
+        cache.removeAll()
+        guard let connecting, let client else { return }
+        self.connecting = nil
+        if (try? await connecting.value) != nil { await client.disconnect() }
     }
 }
 
@@ -160,6 +315,12 @@ struct MacCommonPhotosCompareWindow: View {
         // Out here, so it runs when the rows empty too.
         .onChange(of: dependencies.commonPhotosCompare?.scan.rows.map(\.id)) { dependencies.commonPhotosCompare?.listChanged() }
         .onExitCommand { dismiss() }
+        // Closing Compare empties its folder (AC-182); it opens fresh next time.
+        .onDisappear {
+            guard let model = dependencies.commonPhotosCompare else { return }
+            dependencies.commonPhotosCompare = nil
+            Task { await model.close() }
+        }
     }
 }
 
@@ -229,12 +390,26 @@ private struct MacCommonPhotosCompareContent: View {
                     } else {
                         ScrollView([.horizontal, .vertical]) { picture }
                     }
-                } else if model.notIndexed.contains(side.path) {
-                    VStack(spacing: 8) {
-                        Image(systemName: "photo").font(.title).foregroundStyle(MacTheme.Editor.secondaryText)
-                        Text("No preview yet", comment: "Common photos compare: the copy is not in the index")
-                            .foregroundStyle(MacTheme.Editor.secondaryText)
+                } else if let failure = model.failures[side.path] {
+                    VStack(spacing: 10) {
+                        Image(systemName: "exclamationmark.triangle").font(.title2).foregroundStyle(MacTheme.Editor.secondaryText)
+                        Text(failure).multilineTextAlignment(.center)
+                        Text("Your scan results are kept.", comment: "Common photos compare: a copy could not load")
+                            .font(.caption).foregroundStyle(MacTheme.Editor.secondaryText)
+                        Button(String(localized: "Try Again", comment: "Common photos compare: load the copy again")) { model.tryAgain() }
                     }
+                    .frame(maxWidth: 300)
+                } else if model.noPreview.contains(side.path) {
+                    VStack(spacing: 8) {
+                        Image(systemName: "doc").font(.title).foregroundStyle(MacTheme.Editor.secondaryText)
+                        Text(MacCommonPhotosCompareModel.isVideo(side.path)
+                             ? String(localized: "No preview for this video", comment: "Common photos compare: a video copy")
+                             : String(localized: "No preview for this RAW", comment: "Common photos compare: this Mac cannot draw the copy"))
+                        Text("Its bytes still match: SHA-256 below.", comment: "Common photos compare: no preview, still Same")
+                            .font(.caption).foregroundStyle(MacTheme.Editor.secondaryText)
+                    }
+                } else if let read = model.downloading[side.path] {
+                    downloadingView(side, read: read)
                 } else {
                     ProgressView().controlSize(.small)
                 }
@@ -266,6 +441,28 @@ private struct MacCommonPhotosCompareContent: View {
             .background(MacTheme.Editor.panel)
         }
         .background(MacTheme.Editor.background)
+    }
+
+    /// The whole file coming from the server — or waiting while the scan
+    /// still reads (its calls go first, AC-184).
+    @ViewBuilder
+    private func downloadingView(_ side: CommonPhotosCompare.Copy, read: Int64) -> some View {
+        if read == 0, model.scan.isScanning {
+            VStack(spacing: 8) {
+                Image(systemName: "clock").font(.title2).foregroundStyle(MacTheme.Editor.secondaryText)
+                Text("Waiting for the scan…", comment: "Common photos compare: the download waits for the scan")
+                Text("This copy loads when the scan has nothing else to read.", comment: "Common photos compare: why it waits")
+                    .font(.caption).foregroundStyle(MacTheme.Editor.secondaryText)
+            }
+        } else {
+            VStack(spacing: 10) {
+                Text("Downloading from \(model.serverName)…", comment: "Common photos compare: the copy is not in the index")
+                ProgressView(value: Double(read), total: Double(max(side.size, 1))).frame(width: 200)
+                Text("\(read.formatted(.byteCount(style: .file))) of \(side.size.formatted(.byteCount(style: .file)))",
+                     comment: "Common photos compare: download progress")
+                    .font(.caption).monospacedDigit().foregroundStyle(MacTheme.Editor.secondaryText)
+            }
+        }
     }
 
     /// "2.9 MB · Jun 1, 2025 at 4:12 PM · SHA-256 1c3e8a02".

@@ -24,6 +24,9 @@ struct ShotDexMacApp: App {
     }()
 
     init() {
+        // Compare's downloads a crash left behind (FS-19.08 §6d). The app
+        // only: the helper never shows Compare.
+        CompareFileCache.sweepLeftovers()
         #if DEBUG
         MacSnapshot.scheduleIfAsked()
         // `-ShotDexAppearance dark|light`: the window's look for screenshots,
